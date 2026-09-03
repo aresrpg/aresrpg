@@ -80,14 +80,19 @@ export const sample_relief_grid = (
 
 /** Paint the cached grid hill-shaded (light from the north-west) onto the canvas. */
 export const paint_relief = (context: CanvasRenderingContext2D, grid: ReliefGrid, size: number): void => {
-  const { samples } = grid
+  const { samples, radius } = grid
   const cell = size / samples
+  // The local lenses sample every 4–8 blocks. Whole-world LOD samples hundreds of blocks per
+  // cell, so normalize the height delta by sample spacing or continental relief saturates the
+  // hill shade into alternating black and white cells.
+  const sample_step = (radius * 2) / samples
+  const shade_gain = 0.045 * Math.min(1, 8 / sample_step)
   for (let row = 0; row < samples; row += 1) {
     for (let col = 0; col < samples; col += 1) {
       const index = row * samples + col
       const height = grid.heights[index]!
       const upleft = grid.heights[Math.max(0, row - 1) * samples + Math.max(0, col - 1)]!
-      const shade = Math.min(1.25, Math.max(0.55, 1 + (height - upleft) * 0.045))
+      const shade = Math.min(1.25, Math.max(0.55, 1 + (height - upleft) * shade_gain))
       const r = Math.min(255, grid.colors[index * 3]! * shade)
       const g = Math.min(255, grid.colors[index * 3 + 1]! * shade)
       const b = Math.min(255, grid.colors[index * 3 + 2]! * shade)

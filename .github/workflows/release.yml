@@ -450,6 +450,16 @@ jobs:
           VERCEL_URL: ${{ needs.prepare-production.outputs.url }}
         run: |
           mkdir -p "$RUNNER_TEMP/production-release"
+          jq -e '
+            .testnet as $pins |
+            [
+              $pins.math_package_original, $pins.math_package,
+              $pins.control_package_original, $pins.control_package,
+              $pins.combat_package_original, $pins.combat_package,
+              $pins.seed_package_original, $pins.seed_package,
+              $pins.package_original, $pins.package
+            ] | all(type == "string" and test("^0x[0-9a-fA-F]+$"))
+          ' pins.json >/dev/null || { echo "::error::release requires complete five-package testnet pins"; exit 1; }
           jq -n \
             --arg version "$VERSION" \
             --arg source_sha "$GITHUB_SHA" \
@@ -461,6 +471,12 @@ jobs:
             --arg indexer_digest "$INDEXER_DIGEST" \
             --arg game_original "$(jq -r .testnet.package_original pins.json)" \
             --arg game_latest "$(jq -r .testnet.package pins.json)" \
+            --arg math_original "$(jq -r .testnet.math_package_original pins.json)" \
+            --arg math_latest "$(jq -r .testnet.math_package pins.json)" \
+            --arg control_original "$(jq -r .testnet.control_package_original pins.json)" \
+            --arg control_latest "$(jq -r .testnet.control_package pins.json)" \
+            --arg combat_original "$(jq -r .testnet.combat_package_original pins.json)" \
+            --arg combat_latest "$(jq -r .testnet.combat_package pins.json)" \
             --arg seed_original "$(jq -r .testnet.seed_package_original pins.json)" \
             --arg seed_latest "$(jq -r .testnet.seed_package pins.json)" \
             --argjson server_built "$SERVER_BUILT" \
@@ -474,6 +490,9 @@ jobs:
               network: "testnet",
               vercel: {staged_url: $vercel_url},
               packages: {
+                math: {original: $math_original, latest: $math_latest},
+                control: {original: $control_original, latest: $control_latest},
+                combat: {original: $combat_original, latest: $combat_latest},
                 game: {original: $game_original, latest: $game_latest},
                 seed: {original: $seed_original, latest: $seed_latest}
               },

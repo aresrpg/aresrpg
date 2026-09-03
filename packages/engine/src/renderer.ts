@@ -72,6 +72,7 @@ export const create_engine = ({
     projection: {},
   }
   let time_of_day = 0.31
+  let clouds_visible = true
   let flat_amount = 0
   let fight_board: FightBoardRender | null = null
   let entities: readonly EntityRender[] = Object.freeze([])
@@ -144,6 +145,7 @@ export const create_engine = ({
     next.set_camera(camera.position, camera.target, camera.projection)
     next.set_character_anchor(character_anchor)
     next.set_time_of_day(time_of_day)
+    next.set_clouds_visible(clouds_visible)
     next.set_flatten_amount(flat_amount)
     next.set_fight_board(fight_board)
     next.set_entities(entities)
@@ -236,6 +238,10 @@ export const create_engine = ({
     set_time_of_day: (time: number) => {
       time_of_day = ((time % 1) + 1) % 1
       backend?.set_time_of_day(time_of_day)
+    },
+    set_clouds_visible: (visible: boolean) => {
+      clouds_visible = visible
+      backend?.set_clouds_visible(visible)
     },
     set_flatten_amount: (next: number) => {
       flat_amount = Math.min(1, Math.max(0, next))

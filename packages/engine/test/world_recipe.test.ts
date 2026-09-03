@@ -129,6 +129,8 @@ describe('world recipes', () => {
       biomes: [
         {
           ...RECIPE.biomes[0],
+          mountain_passes: 'yes',
+          ravines: 'yes',
           landscape: [
             { x: 0.5, y: 1, land: { ...shore_land, surface: 'missing' } },
             { x: 0.5, y: 2 },
@@ -141,6 +143,8 @@ describe('world recipes', () => {
       expect.arrayContaining([
         'noise is engine-owned and must not be authored',
         'vertical_chunks is engine-owned and must not be authored',
+        'biomes[0].mountain_passes must be a boolean',
+        'biomes[0].ravines must be a boolean',
         'biomes[0].landscape[0].land.surface references unknown material "missing"',
         'biomes[0].landscape[1].x must be strictly greater than the previous x',
         'biome_slots.high_high must reference an authored biome',
@@ -258,6 +262,54 @@ describe('world recipes', () => {
 
     expect(ridge_range(90)).toBeLessThanOrEqual(12)
     expect(ridge_range(260)).toBeGreaterThanOrEqual(120)
+  })
+
+  test('carves a rare mountain pass through the canonical surface without raising low ground', () => {
+    const climate = { temperature: 0.5, humidity: 0.5, ground: 1, amplitude: 0.5, transition: 0.5 }
+    const mountain_recipe = {
+      ...RECIPE,
+      seed: 'pass-0',
+      sea_level: 60,
+      biomes: RECIPE.biomes.map((biome) => ({
+        ...biome,
+        mountain_passes: biome.name === 'meadow',
+        landscape: biome.landscape.map((knot) => ({ ...knot, y: 260 })),
+      })),
+    } satisfies WorldRecipe
+    const plain_recipe = {
+      ...mountain_recipe,
+      biomes: mountain_recipe.biomes.map((biome) => ({ ...biome, mountain_passes: false })),
+    } satisfies WorldRecipe
+    const carved = controlled_world(mountain_recipe, climate, 0.44)
+    const plain = controlled_world(plain_recipe, climate, 0.44)
+
+    expect(sample_world_column(plain, 984, 398).surface_y).toBe(260)
+    expect(sample_world_column(carved, 984, 398).surface_y).toBeLessThan(220)
+    expect(sample_world_column(carved, 0, 0).surface_y).toBe(260)
+  })
+
+  test('cuts rare deep ravines without creating a second terrain surface', () => {
+    const climate = { temperature: 0.5, humidity: 0.5, ground: 1, amplitude: 0.5, transition: 0.5 }
+    const ravine_recipe = {
+      ...RECIPE,
+      seed: 'ravine-0',
+      sea_level: 60,
+      biomes: RECIPE.biomes.map((biome) => ({
+        ...biome,
+        ravines: biome.name === 'meadow',
+        landscape: biome.landscape.map((knot) => ({ ...knot, y: 180 })),
+      })),
+    } satisfies WorldRecipe
+    const plain_recipe = {
+      ...ravine_recipe,
+      biomes: ravine_recipe.biomes.map((biome) => ({ ...biome, ravines: false })),
+    } satisfies WorldRecipe
+    const carved = controlled_world(ravine_recipe, climate, 0.44)
+    const plain = controlled_world(plain_recipe, climate, 0.44)
+
+    expect(sample_world_column(plain, 760, 480).surface_y).toBe(180)
+    expect(sample_world_column(carved, 760, 480).surface_y).toBeLessThan(120)
+    expect(sample_world_column(carved, 0, 0).surface_y).toBe(180)
   })
 
   test('selects block strata from a landscape threshold with real variance', () => {

@@ -5,8 +5,15 @@ import type { Material, Object3D } from 'three'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 
 type VariantMapping = Readonly<{ variants?: readonly number[]; material?: number }>
+type VariantDefinition = Readonly<{ name?: string; extras?: Readonly<{ scale?: number }> }>
 
 const normalized = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/gu, '')
+
+const variant_scale = (definition: VariantDefinition | undefined, variant: string): number => {
+  const scale = definition?.extras?.scale ?? 1
+  if (!Number.isFinite(scale) || scale <= 0) throw new TypeError(`Model variant ${variant} has invalid scale.`)
+  return scale
+}
 
 const material_for = async (
   gltf: GLTF,
@@ -34,7 +41,7 @@ const material_for = async (
 export const apply_gltf_variant = async (gltf: GLTF, root: Object3D, variant: string | null): Promise<void> => {
   if (!variant) return
   const json = gltf.parser.json as Readonly<{
-    extensions?: Readonly<{ KHR_materials_variants?: Readonly<{ variants?: readonly Readonly<{ name?: string }>[] }> }>
+    extensions?: Readonly<{ KHR_materials_variants?: Readonly<{ variants?: readonly VariantDefinition[] }> }>
   }>
   const variants = json.extensions?.KHR_materials_variants?.variants ?? []
   const variant_index = variants.findIndex(({ name }) => name?.toLowerCase() === variant.toLowerCase())
@@ -66,4 +73,5 @@ export const apply_gltf_variant = async (gltf: GLTF, root: Object3D, variant: st
     )
   })
   if (!(await Promise.all(changes)).some(Boolean)) throw new Error(`Model variant ${variant} has no material mapping.`)
+  root.scale.multiplyScalar(variant_scale(variants[variant_index], variant))
 }

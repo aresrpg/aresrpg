@@ -115,8 +115,8 @@ export const read_item_snapshot = async (
   })
 }
 
-/** One authenticated-session LRU. Promises are cached before awaiting, so concurrent hovers,
- *  successful reads, and failures all reuse one exact request. */
+/** One authenticated-session LRU. Concurrent hovers share one request; transient failures are
+ * evicted so the next hover can recover. */
 export const create_item_snapshot_reader = (
   client: ItemReadClient,
   type_package: string | null,
@@ -130,7 +130,10 @@ export const create_item_snapshot_reader = (
       entries.set(item_id, known)
       return known
     }
-    const pending = read_item_snapshot(client, type_package, item_id)
+    const pending = read_item_snapshot(client, type_package, item_id).catch((error: unknown) => {
+      if (entries.get(item_id) === pending) entries.delete(item_id)
+      throw error
+    })
     entries.set(item_id, pending)
     while (entries.size > capacity) entries.delete(entries.keys().next().value!)
     return pending

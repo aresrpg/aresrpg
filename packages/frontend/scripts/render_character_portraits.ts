@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Rebuilds the eight canonical character portraits from the composed GLBs. Run from this package:
-// `bun run portraits`. The production build maps the other classes to their established fallback.
+// Rebuilds the canonical authored character portraits from the composed GLBs. Run from this
+// package: `bun run portraits`. Production maps the remaining classes to the Senshi fallback.
 
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -11,8 +11,10 @@ import { join, resolve } from 'node:path'
 
 import { createServer, type Plugin } from 'vite'
 
+import { authored_character_model_classes } from '../src/content/character_model_catalog.ts'
+
 const EXPECTED = new Set(
-  ['senshi', 'shugo', 'tomoda', 'yajin'].flatMap((classe) => ['male', 'female'].map((sex) => `${classe}_${sex}.jpg`))
+  authored_character_model_classes.flatMap((classe) => ['male', 'female'].map((sex) => `${classe}_${sex}.jpg`))
 )
 const frontend_dir = resolve(import.meta.dir, '..')
 const repo_dir = resolve(frontend_dir, '../..')

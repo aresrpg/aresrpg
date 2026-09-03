@@ -4,6 +4,7 @@
 
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import { content_catalog } from '../content/catalog.ts'
 import type { create_world } from '../game/core/world.ts'
 import { owned_character_position, owned_character_presence_rows } from '../game/core/owned_character_feed.ts'
 import type { ChainAnchor } from '../game/core/position_store.ts'
@@ -69,12 +70,13 @@ export const sync_dungeon_scene = (world: ReturnType<typeof create_world> | null
   if (!world) return
   const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
   const run = selected?.dungeon_run
-  world.set_dungeon_portals(run ? Object.freeze([]) : dungeon_portal_markers(state.world, selected_world(state)))
+  world.set_dungeon_portals(run ? Object.freeze([]) : dungeon_portal_markers(selected_world(state)))
   if (!run) {
     world.set_dungeon_stage(null)
     return
   }
-  const x = chain_to_client_coordinate(run.x)
-  const z = chain_to_client_coordinate(run.z)
+  const city = content_catalog.world(selected.world ?? '')?.cities.find(({ dungeon }) => dungeon === run.dungeon)
+  const x = chain_to_client_coordinate(city?.x ?? 50_000)
+  const z = chain_to_client_coordinate(city?.z ?? 50_000)
   world.set_dungeon_stage(Object.freeze({ x, y: world.ground_height(x, z), z }))
 }

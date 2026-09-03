@@ -28,7 +28,7 @@ navigation: Navegación
 world: Mundo
 characters: Personajes
 leaderboard: Clasificación
-shop: Tienda
+mastery: Maestría
 encyclopedia: Enciclopedia
 marketplace: Mercado
 airdrop: Airdrop
@@ -230,6 +230,9 @@ world_hud:
   coordinates: Coordenadas
   biome: Bioma
   world_map: Mapa del mundo
+  world_map_zoom_in: Acercar
+  world_map_zoom_out: Alejar
+  world_map_extent: '{{blocks}} bloques'
   menu_group: Invitar al grupo
   menu_friend: Añadir amigo
   menu_trade: Comerciar
@@ -241,6 +244,7 @@ world_hud:
   mount_prompt: 'Pulsa {{key}} para montar'
   portal_prompt: 'Pulsa {{key}} para viajar a otro mundo'
   dungeon_portal: Portal de mazmorra
+  dungeon_city: 'Ciudad de {{city}}'
   dungeon_press_enter: Entrar
   dungeon_entry_body: Usa la llave de la mazmorra para entrar en la sala privada de este portal.
   dungeon_required_key: Llave necesaria
@@ -310,7 +314,6 @@ world_hud:
   zone_coordinates: 'Sector {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} monstruos encontrados'
   zone_resources_found: '{{count}} recursos encontrados'
-  zone_dungeon_spotted: 'Mazmorra avistada'
   spawn_group: 'Grupo de {{size}}'
   spawn_unknown_mob: 'Criatura desconocida'
   spawn_press_attack: 'Pulsa {{key}} para atacar'
@@ -369,7 +372,6 @@ demo_page:
   crowd_loading: Cargando modelos de personajes…
   crowd_result: Fase
   mob: Monstruo
-  hide_protectors: Ocultar protectores
   amount: Cantidad
   spawn_group: Generar grupo
   clear: Limpiar
@@ -445,37 +447,36 @@ marketplace_page:
   character_roster_full: Un 7.º personaje no cabe en tu plantilla — el límite es 6
   collect_pending: Recogiendo ingresos…
   collect_success: Ingresos recogidos
-shop_page:
-  title: 'Tienda'
-  subtitle: 'Compra objetos con SUI'
-  remaining_of_cap: '{{remaining}} de {{cap}} restantes'
-  processing: 'PROCESANDO'
-  sold_out: 'Agotado'
-  acquire: 'Adquirir'
-  wallet: 'Cartera'
-  filter_all: 'Todo'
-  sections:
-    pet_box: 'CAJAS DE MASCOTAS'
-    title: 'Títulos'
-    cloak: 'Capas'
-    hat: 'Sombreros'
-    companion: 'Companieros'
-    equipment: 'Equipamiento'
-    consumable: 'Consumibles'
-    resource: 'Recursos'
-  amount_title: 'Seleccionar cantidad'
-  amount_quantity: 'Cantidad'
-  amount_max: 'Máx'
-  amount_total: 'Total'
-  amount_available: '{{count}} disponibles'
-  amount_confirm: 'Adquirir {{count}}'
-  purchase_success_body: 'Tus nuevos objetos te esperan en tu inventario.'
-  see_inventory: 'Ver mi inventario'
-  buy_pending: 'Comprando…'
-  buy_success: '¡Compra completada!'
-  drop_rates: 'Probabilidades de botín'
-  pool_sub: 'Al abrir se sortea una mascota, ponderada exactamente como se indica abajo.'
-  acquisition_complete: 'Adquisicion Completada'
+mastery_page:
+  subtitle: Desafíos diarios
+  title: Maestría
+  lead: Completa mazmorras cada día para conseguir recompensas únicas.
+  balance: Puntos de maestría
+  daily_ready: Misión diaria disponible
+  daily_syncing: Actualizando la misión diaria…
+  daily_title: Empieza tu misión diaria
+  daily_lead: Elige un mundo. Los mundos de mayor nivel dan más puntos de maestría.
+  unknown_dungeon: Mazmorra desconocida
+  quest_reward: Gana {{points}} puntos de maestría
+  completed: Validada
+  in_progress: En curso
+  required_level: Requiere nivel {{level}}
+  dungeon_count: '{{count}} mazmorras'
+  starting: Asignando…
+  start: Iniciar misión diaria
+  locked: Bloqueado
+  world_reward: +{{points}}pts
+  offers_title: Recompensas de maestría
+  offers_lead: Gasta puntos de maestría para desbloquear cajas de botín únicas.
+  progression: Ruta de recompensas
+  offers_empty: Aún no hay ofertas de maestría
+  ready: Listo para desbloquear
+  missing: Faltan {{points}} puntos
+  unlocking: Desbloqueando…
+  unlock: Desbloquear · {{cost}} pts
+  quest_started: Misión diaria asignada.
+  offer_unlocked: Recompensa de maestría desbloqueada.
+
 airdrop_page:
   title: 'Airdrops'
   subtitle: 'Reclama objetos reservados para titulares elegibles'
@@ -485,6 +486,17 @@ airdrop_page:
   not_eligible: 'No elegible'
   claimed: 'Reclamado'
   claim: 'Reclamar'
+  holder_title: 'Billetera del titular'
+  holder_connect_hint: 'Conecta la billetera que contiene el NFT elegible'
+  holder_connect: 'Conectar billetera'
+  holder_connecting: 'Conectando…'
+  holder_wallet_missing: 'No hay una billetera Sui compatible instalada'
+  giftcards_title: 'Tarjetas regalo por canjear'
+  gift_login: 'Continúa con Google para recibir este regalo en tu billetera del juego'
+  gift_ready: 'Tu tarjeta regalo impresa está lista para reclamar'
+  gift_claiming: 'Reclamando tu tarjeta regalo impresa…'
+  gift_retry: 'Reclamar tarjeta'
+  redeem: 'Canjear'
   empty: 'No hay airdrops activos'
   empty_hint: 'Los airdrops para titulares de colecciones asociadas aparecerán aquí cuando se activen.'
   pending_claim: 'Reclamando airdrop…'
@@ -615,15 +627,12 @@ admin_page:
   player_activity_body: Actividad diaria y alcance móvil de 30 días
   stickiness: DAU / 30D
   online_players: Jugadores en línea
-  online_players_body: Conexiones autenticadas medias y máximas
+  online_players_body: Máximo de conexiones autenticadas por intervalo
   online_now: Jugadores en línea
-  average: Media
   peak: Pico
   revenue: Ingresos
   revenue_over_time: Ingresos a lo largo del tiempo
   revenue_over_time_body: Todos los ingresos del protocolo por fuente
-  shop: Tienda
-  shop_sales: Ventas de la tienda
   item_royalties: Regalías de objetos
   character_royalties: Regalías de personajes
   character_creation_revenue: Creación de personajes
@@ -657,10 +666,6 @@ admin_page:
   revenue_mtd: Ingresos del mes hasta hoy
   last_30_days: Últimos 30 días
   calendar_month_to_date: Mes calendario hasta hoy
-  recent_shop_sales: Ventas recientes de la tienda
-  sales_history: Historial de ventas de la tienda
-  sales_retention: Los detalles exactos de las transacciones se conservan 90 días
-  view_all_sales: Ver todas las ventas
   buyer: Comprador
   item: Objeto
   quantity: Cantidad
@@ -676,8 +681,6 @@ admin_page:
   loading: Cargando…
   load_more: Cargar más
   transactions: transacciones
-  no_sales_history: No hay ventas en este periodo
-  end_of_history: Fin del historial conservado
 simulator_page:
   title: Simulador de combate
   local_only: Configuración local determinista
@@ -879,14 +882,13 @@ wallet_legacy:
     mostrada arriba.
   faq: FAQ
   wallet_description: Tu billetera personal. Solo tu puedes acceder. Deposita SUI
-    para usarlo en la tienda.
+    para las tarifas de red y los intercambios entre jugadores.
   moonpay_desc: Tarjeta de credito, Apple Pay, transferencia bancaria
   transak_desc: Tarjeta de credito, transferencia bancaria, 100+ paises
   faq_what_is_sui: Que es SUI?
   faq_what_is_sui_answer: SUI es una moneda digital, como dinero electronico. Vive
     en una red rapida y segura llamada blockchain Sui. Usas pequenias cantidades de
-    SUI para comprar objetos en la tienda de AresRPG. Piensa en ello como creditos
-    de juego, excepto que nadie puede quitartelos.
+    SUI para las tarifas de red y los intercambios entre jugadores.
   faq_why_sui: Por que AresRPG usa SUI?
   faq_why_sui_answer: SUI es nuestro metodo de pago preferido. Las transacciones son
     instantaneas (menos de 1 segundo) y cuestan fracciones de centavo. Sin intermediarios.
@@ -896,8 +898,7 @@ wallet_legacy:
   faq_legal: Es legal?
   faq_legal_answer: Si. Comprar y poseer criptomonedas es legal en la mayoria de paises.
     SUI es un activo digital legitimo que se comercia en las principales plataformas
-    reguladas del mundo. Simplemente lo usas como metodo de pago en nuestra tienda.
-    Sin NFT, sin esquemas crypto.
+    reguladas del mundo. AresRPG lo usa para tarifas de red e intercambios entre jugadores.
   faq_eula: Esta permitido por los terminos del juego?
   faq_eula_answer: Si. Mientras las criptomonedas se usen unicamente como metodo de
     pago y no involucren NFT ni esquemas especulativos, es totalmente conforme. Muchas
@@ -906,8 +907,7 @@ wallet_legacy:
   faq_access_answer: 'Solo tu. Tu billetera se crea a partir de tu login de Google
     usando la tecnologia zkLogin de Sui. Nadie (ni siquiera el equipo de AresRPG)
     puede acceder a tus fondos o moverlos. Importante: esta billetera es solo para
-    compras en la tienda. No almacenes grandes cantidades aqui. Deposita solo lo que
-    planeas gastar.'
+    actividad de AresRPG. No almacenes grandes cantidades aqui.'
   faq_balance: Envie SUI pero mi saldo no se actualizo?
   faq_balance_answer: Tranquilo. Nuestro sistema de actualizacion puede estar temporalmente
     lento. Verifica que enviaste SUI a la direccion correcta (copiala de arriba),
@@ -1072,6 +1072,13 @@ encyclopedia_page:
   sort_name: NOMBRE A-Z
   clear_filters: BORRAR TODO
   no_results: NINGÚN OBJETO COINCIDE CON LOS FILTROS
+  filter_by_category: POR CATEGORÍA
+  filter_by_resource: POR TIPO DE RECURSO
+  filter_by_job: POR OFICIO
+  filter_by_world: POR MUNDO
+  filter_by_mob_family: POR FAMILIA DE MONSTRUOS
+  filter_biome: BIOMA
+  filter_city: CIUDAD
   group_armor: ARMADURA
   group_weapons: ARMAS
   group_accessories: ACCESORIOS
@@ -1080,7 +1087,11 @@ encyclopedia_page:
   group_relics: RELIQUIAS
   group_tools: HERRAMIENTAS
   group_consumables: CONSUMIBLES
-  group_resources: RECURSOS
+  group_raw_resources: RECURSOS BRUTOS
+  group_gatherable_resources: RECURSOS RECOLECTABLES
+  group_intermediary_resources: RECURSOS INTERMEDIOS
+  group_pet_food_resources: COMIDA PARA MASCOTAS
+  item_category_pet_food: COMIDA PARA MASCOTA
   stats_filter: STATS
   filter_life_steal: ROBO DE VIDA
   gameplay:
@@ -1150,18 +1161,18 @@ encyclopedia_page:
     stat_rolling: TIRADA DE STATS
     stat_rolling_desc: Cada stat se tira uniformemente dentro de su rango de plantilla. Cada valor tiene la misma probabilidad.
     archimobs: MOBS ARCHI
-    archimobs_desc: 0,5% de probabilidad de aparecer como el archimob del mob en su lugar — una variante con nombre, permanentemente más fuerte. El único mecanismo de rareza que tienen los mobs.
+    archimobs_desc: Cada monstruo apto tiene un 1 % de probabilidad de ser reemplazado por su archimonstruo con nombre y permanentemente más fuerte. Cada miembro hace su propia tirada.
     max_members: Miembros máx
     groups_desc: Un grupo es una plantilla compartida de hasta {{max}} jugadores con elección de líder. Estar agrupado no hace nada por sí solo en un combate — todos, agrupados o no, deben enviar su propia transacción de unión al combate para entrar; no hay inclusión pasiva ni por proximidad.
     groups_xp: REPARTO DE XP
     groups_xp_desc: Los mobs derrotados forman una reserva de XP base. Los combatientes aptos le dan el coeficiente de grupo Retro, la diferencia entre los niveles totales de jugadores y mobs la reduce y después cada jugador recibe la parte correspondiente a su nivel dentro del total del grupo. Un jugador por debajo de un tercio del nivel del jugador más alto no aumenta el coeficiente. La Sabiduría se aplica al final; el daño personal no importa.
     groups_loot: REPARTO DE BOTÍN
     groups_loot_desc: Cada mob derrotado realiza una única tirada de botín compartida. Los drops exitosos se asignan por turnos entre los jugadores ganadores; añadir jugadores no crea tiradas extra.
-    dungeons_desc: Encuentra un portal en una zona explorada, gasta su llave y completa las salas en orden. Cada portal tiene su propia sala de espera en vivo.
+    dungeons_desc: Viaja a la entrada de la mazmorra en su ciudad definida, gasta su llave y completa las salas en orden. Cada mazmorra tiene una sala de espera en vivo.
     dungeon_entry: Entrada
-    dungeon_entry_value: Una llave en un portal de zona descubierto
+    dungeon_entry_value: Una llave adecuada en la entrada de la ciudad
     dungeon_instance: Instancia
-    dungeon_instance_value: Sala local del portal con combates públicos o de grupo
+    dungeon_instance_value: Sala de mazmorra con combates públicos o de grupo
     dungeon_completion: Completar
     dungeon_completion_value: Despejar todas las salas
     dungeon_reward: Recompensa
@@ -1293,6 +1304,7 @@ encyclopedia_page:
   consumable_reset_stats: Reiniciar puntos de stats
   consumable_reset_spells: Reiniciar puntos de hechizos
   consumable_recall: Regresa al portal del mundo
+  consumable_city: 'Viaja a la ciudad de {{city}}'
   consumable_loot_box: Abre una recompensa aleatoria
   consumable_reward_heading: RECOMPENSA
   consumable_rewards: RECOMPENSAS POSIBLES
@@ -1360,7 +1372,6 @@ encyclopedia_page:
   no_mobs_onchain: Aún no hay criaturas on-chain
   obtention_crafted: Fabricable
   obtention_dropped_by: Soltado por {{count}} monstruos
-  obtention_shop: Disponible en la tienda
   obtention_unknown: Obtención desconocida
   total_supply: Suministro total
   marketcap: Capitalización
@@ -1390,10 +1401,7 @@ encyclopedia_page:
     arcane_spore: ''
     arcaneshroom: ''
     arcanite: ''
-    arcanite_hoe: ''
-    arcanite_pickaxe: ''
     arcanite_powder: ''
-    arcanite_sickle: ''
     arcanize_flour: ''
     barley_flour: ''
     basic_pickaxe: ''
@@ -1403,9 +1411,6 @@ encyclopedia_page:
     bloodstone_powder: ''
     bloodveil_orchid: ''
     burnt_wheat_flour: ''
-    copper_hoe: ''
-    copper_pickaxe: ''
-    copper_sickle: ''
     crimson_truffle: ''
     crimson_truffle_heart: ''
     crystallized_tanjirize: ''
@@ -1445,19 +1450,13 @@ encyclopedia_page:
     infinity_moonstone: ''
     infinity_obsidianite: ''
     infinity_quartz: ''
-    iron_sickle: ''
     ivory_orchid_paste: ''
     ivory_shrooms: ''
     jade: ''
-    jade_hoe: ''
-    jade_pickaxe: ''
     jade_powder: ''
     malt_flour: ''
     moonstone: ''
-    moonstone_hoe: ''
-    moonstone_pickaxe: ''
     moonstone_powder: ''
-    moonstone_sickle: ''
     nightcap: ''
     nightcap_elixir_base: ''
     obsidianite: ''
@@ -1507,6 +1506,8 @@ encyclopedia_page:
     rune_wisdom_ba: ''
     rune_wisdom_pa: ''
     rune_wisdom_ra: ''
+    scroll_of_oblivion: Devuelve todos los puntos de hechizo invertidos y restablece cada hechizo mejorado al nivel 1.
+    scroll_of_rebirth: Devuelve todos los puntos de características invertidos para poder reasignarlos.
     shiny_barley: ''
     smoldering_wheat: ''
     spectral_arcanize: ''

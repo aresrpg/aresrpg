@@ -41,18 +41,18 @@ const RoomMobBand = ({ mob_type }: Readonly<{ mob_type: string }>) => {
 }
 
 export const DungeonEditor = ({
-  world,
+  dungeon,
   change,
   mob_filters,
 }: Readonly<{
-  world: Readonly<Record<string, JsonValue>>
+  dungeon: Readonly<Record<string, JsonValue>>
   change: (path: JsonPath, value: JsonValue) => void
   mob_filters?: readonly MobFilterRow[]
 }>) => {
-  const dungeon = as_record(world.dungeon)
-  const key = typeof dungeon?.key === 'string' ? dungeon.key : ''
-  const rooms = Array.isArray(dungeon?.rooms) ? dungeon.rooms : []
-  const change_rooms = (next: readonly JsonValue[]): void => change(['dungeon', 'rooms'], next)
+  const row = dungeon
+  const key = typeof row.key === 'string' ? row.key : ''
+  const rooms = Array.isArray(row.rooms) ? row.rooms : []
+  const change_rooms = (next: readonly JsonValue[]): void => change(['rooms'], next)
 
   return (
     <div className="space-y-5" data-dungeon-editor="">
@@ -71,14 +71,14 @@ export const DungeonEditor = ({
             empty_sublabel="Required before players can enter"
             label="dungeon key"
             placeholder="Choose dungeon key"
-            select={(item_type) => change(['dungeon', 'key'], item_type)}
+            select={(item_type) => change(['key'], item_type)}
             value={key}
           />
           {key && (
             <button
               aria-label="Clear dungeon key"
               className="grid size-8 shrink-0 place-items-center text-[#873f55] hover:text-[#ff5a8b]"
-              onClick={() => change(['dungeon', 'key'], '')}
+              onClick={() => change(['key'], '')}
               type="button"
             >
               ×
@@ -142,7 +142,7 @@ export const DungeonEditor = ({
                       filter_rows={mob_filters}
                       label="room mob"
                       roles={DUNGEON_MOB_ROLES}
-                      select={(next) => change(['dungeon', 'rooms', room_index, member_index, 'mob_type'], next)}
+                      select={(next) => change(['rooms', room_index, member_index, 'mob_type'], next)}
                       value={mob_type}
                     />
                     <RoomMobBand mob_type={mob_type} />

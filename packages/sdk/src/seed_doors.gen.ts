@@ -30,67 +30,7 @@ export const create_world = (
   })
 
 /**
- * `shop::new_sale`
- * @arg cap — &AdminCap
- * @arg root — &mut Registry
- * @arg template — &ItemTemplate
- * @arg price — u64
- * @arg supply — u64
- * @arg infinite — bool
- * @arg enabled — bool
- */
-export const new_sale = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: {
-    cap: Resolvable
-    root: Resolvable
-    template: Resolvable
-    price: bigint | number | string
-    supply: bigint | number | string
-    infinite: boolean
-    enabled: boolean
-  }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::shop::new_sale`,
-    arguments: [
-      ctx.obj(tx, args.cap, false),
-      ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.template, false),
-      ctx.pure.u64(tx, args.price),
-      ctx.pure.u64(tx, args.supply),
-      ctx.pure.bool(tx, args.infinite),
-      ctx.pure.bool(tx, args.enabled),
-    ],
-  })
-
-/**
- * `shop::set_sale`
- * @arg cap — &AdminCap
- * @arg root — &mut Registry
- * @arg sale — &mut Sale
- * @arg price — u64
- * @arg enabled — bool
- */
-export const set_sale = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; sale: Resolvable; price: bigint | number | string; enabled: boolean }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::shop::set_sale`,
-    arguments: [
-      ctx.obj(tx, args.cap, false),
-      ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.sale, true),
-      ctx.pure.u64(tx, args.price),
-      ctx.pure.bool(tx, args.enabled),
-    ],
-  })
-
-/**
- * `shop::new_airdrop`
+ * `distribution::new_airdrop`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
  * @arg drop_id — String
@@ -111,7 +51,7 @@ export const new_airdrop = (
   }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::shop::new_airdrop`,
+    target: `${ctx.pins.package}::distribution::new_airdrop`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
@@ -123,7 +63,7 @@ export const new_airdrop = (
   })
 
 /**
- * `shop::new_giftcard`
+ * `distribution::new_giftcard`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
  * @arg card_id — String
@@ -136,7 +76,7 @@ export const new_giftcard = (
   args: { cap: Resolvable; root: Resolvable; card_id: string; template: Resolvable; amount: number }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::shop::new_giftcard`,
+    target: `${ctx.pins.package}::distribution::new_giftcard`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
@@ -202,6 +142,54 @@ export const clear_loot_table = (
   })
 
 /**
+ * `mastery::new_offer`
+ * @arg cap — &AdminCap
+ * @arg root — &mut Registry
+ * @arg template — &ItemTemplate
+ * @arg cost — u64
+ * @arg enabled — bool
+ */
+export const new_mastery_offer = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { cap: Resolvable; root: Resolvable; template: Resolvable; cost: bigint | number | string; enabled: boolean }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::mastery::new_offer`,
+    arguments: [
+      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.root, true),
+      ctx.obj(tx, args.template, false),
+      ctx.pure.u64(tx, args.cost),
+      ctx.pure.bool(tx, args.enabled),
+    ],
+  })
+
+/**
+ * `mastery::set_offer`
+ * @arg cap — &AdminCap
+ * @arg root — &mut Registry
+ * @arg offer — &mut MasteryOffer
+ * @arg cost — u64
+ * @arg enabled — bool
+ */
+export const set_mastery_offer = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { cap: Resolvable; root: Resolvable; offer: Resolvable; cost: bigint | number | string; enabled: boolean }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::mastery::set_offer`,
+    arguments: [
+      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.root, true),
+      ctx.obj(tx, args.offer, true),
+      ctx.pure.u64(tx, args.cost),
+      ctx.pure.bool(tx, args.enabled),
+    ],
+  })
+
+/**
  * `world_content::create`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
@@ -225,33 +213,55 @@ export const create = (
 
 /**
  * `world_content::share`
- * @arg wc — WorldContent
+ * @arg world_content — WorldContent
  */
-export const share = (tx: Transaction, ctx: DoorCtx, args: { wc: Resolvable }) =>
+export const share = (tx: Transaction, ctx: DoorCtx, args: { world_content: Resolvable }) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::share`,
-    arguments: [ctx.obj(tx, args.wc, true)],
+    arguments: [ctx.obj(tx, args.world_content, true)],
   })
 
 /**
  * `world_content::set_mobs`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
+ * @arg world_content — &mut WorldContent
  * @arg rows — vector<MobRow>
  */
 export const set_mobs = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; rows: readonly TransactionObjectArgument[] }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; rows: readonly TransactionObjectArgument[] }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::set_mobs`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
+      ctx.obj(tx, args.world_content, true),
       tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::MobRow`, elements: [...args.rows] }),
+    ],
+  })
+
+/**
+ * `world_content::set_archi_rows`
+ * @arg cap — &AdminCap
+ * @arg root — &mut Registry
+ * @arg world_content — &mut WorldContent
+ * @arg rows — vector<ArchiRow>
+ */
+export const set_archi_rows = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; rows: readonly TransactionObjectArgument[] }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.seed_package}::world_content::set_archi_rows`,
+    arguments: [
+      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.root, true),
+      ctx.obj(tx, args.world_content, true),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::ArchiRow`, elements: [...args.rows] }),
     ],
   })
 
@@ -259,20 +269,20 @@ export const set_mobs = (
  * `world_content::set_entry_level`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
+ * @arg world_content — &mut WorldContent
  * @arg entry_level — u16
  */
 export const set_entry_level = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; entry_level: number }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; entry_level: number }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::set_entry_level`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
+      ctx.obj(tx, args.world_content, true),
       ctx.pure.u16(tx, args.entry_level),
     ],
   })
@@ -281,7 +291,7 @@ export const set_entry_level = (
  * `world_content::set_biome_window`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
+ * @arg world_content — &mut WorldContent
  * @arg zone_x0 — u32
  * @arg zone_z0 — u32
  * @arg side — u16
@@ -289,14 +299,14 @@ export const set_entry_level = (
 export const set_biome_window = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; zone_x0: number; zone_z0: number; side: number }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; zone_x0: number; zone_z0: number; side: number }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::set_biome_window`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
+      ctx.obj(tx, args.world_content, true),
       ctx.pure.u32(tx, args.zone_x0),
       ctx.pure.u32(tx, args.zone_z0),
       ctx.pure.u16(tx, args.side),
@@ -307,20 +317,20 @@ export const set_biome_window = (
  * `world_content::append_biome_cells`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
+ * @arg world_content — &mut WorldContent
  * @arg cells — vector<u8>
  */
 export const append_biome_cells = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; cells: readonly number[] }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; cells: readonly number[] }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::append_biome_cells`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
+      ctx.obj(tx, args.world_content, true),
       ctx.pure.vector(tx, 'u8', args.cells),
     ],
   })
@@ -329,81 +339,100 @@ export const append_biome_cells = (
  * `world_content::clear_biome_map`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
+ * @arg world_content — &mut WorldContent
  */
 export const clear_biome_map = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::clear_biome_map`,
-    arguments: [ctx.obj(tx, args.cap, false), ctx.obj(tx, args.root, true), ctx.obj(tx, args.wc, true)],
+    arguments: [ctx.obj(tx, args.cap, false), ctx.obj(tx, args.root, true), ctx.obj(tx, args.world_content, true)],
   })
 
 /**
  * `world_content::set_resources`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
+ * @arg world_content — &mut WorldContent
  * @arg rows — vector<ResourceRow>
  */
 export const set_resources = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; rows: readonly TransactionObjectArgument[] }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; rows: readonly TransactionObjectArgument[] }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.seed_package}::world_content::set_resources`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
+      ctx.obj(tx, args.world_content, true),
       tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::ResourceRow`, elements: [...args.rows] }),
     ],
   })
 
 /**
- * `world_content::set_dungeon_key`
+ * `world_content::set_cities`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
- * @arg item_type — String
+ * @arg world_content — &mut WorldContent
+ * @arg cities — vector<City>
  */
-export const set_dungeon_key = (
+export const set_cities = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; item_type: string }
+  args: { cap: Resolvable; root: Resolvable; world_content: Resolvable; cities: readonly TransactionObjectArgument[] }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.seed_package}::world_content::set_dungeon_key`,
+    target: `${ctx.pins.seed_package}::world_content::set_cities`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
-      ctx.pure.string(tx, args.item_type),
+      ctx.obj(tx, args.world_content, true),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::city_map::City`, elements: [...args.cities] }),
     ],
   })
 
 /**
- * `world_content::set_dungeon_rooms`
+ * `dungeon_content::add`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
- * @arg wc — &mut WorldContent
- * @arg rooms — vector<DungeonRoom>
+ * @arg name — String
+ * @arg data — DungeonData
  */
-export const set_dungeon_rooms = (
+export const add_dungeon = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; wc: Resolvable; rooms: readonly TransactionObjectArgument[] }
+  args: { cap: Resolvable; root: Resolvable; name: string; data: TransactionObjectArgument }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.seed_package}::world_content::set_dungeon_rooms`,
+    target: `${ctx.pins.seed_package}::dungeon_content::add`,
+    arguments: [ctx.obj(tx, args.cap, false), ctx.obj(tx, args.root, true), ctx.pure.string(tx, args.name), args.data],
+  })
+
+/**
+ * `dungeon_content::overwrite`
+ * @arg cap — &AdminCap
+ * @arg root — &mut Registry
+ * @arg dungeon — &mut DungeonContent
+ * @arg name — String
+ * @arg data — DungeonData
+ */
+export const overwrite_dungeon = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { cap: Resolvable; root: Resolvable; dungeon: Resolvable; name: string; data: TransactionObjectArgument }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.seed_package}::dungeon_content::overwrite`,
     arguments: [
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
-      ctx.obj(tx, args.wc, true),
-      tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::DungeonRoom`, elements: [...args.rooms] }),
+      ctx.obj(tx, args.dungeon, true),
+      ctx.pure.string(tx, args.name),
+      args.data,
     ],
   })
 
@@ -961,6 +990,16 @@ export const consumable_recall = (tx: Transaction, ctx: DoorCtx, args: Record<st
   })
 
 /**
+ * `consumable_effect::city`
+ * @arg city — String
+ */
+export const consumable_city = (tx: Transaction, ctx: DoorCtx, args: { city: string }) =>
+  tx.moveCall({
+    target: `${ctx.pins.math_package}::consumable_effect::city`,
+    arguments: [ctx.pure.string(tx, args.city)],
+  })
+
+/**
  * `consumable_effect::loot_box`
  * (no caller arguments)
  */
@@ -1231,15 +1270,93 @@ export const new_grid_spec = (
   })
 
 /**
+ * `city_map::new_city`
+ * @arg name — String
+ * @arg x — u32
+ * @arg z — u32
+ * @arg dungeon — ID
+ */
+export const new_city = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { name: string; x: number; z: number; dungeon: string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.math_package}::city_map::new_city`,
+    arguments: [
+      ctx.pure.string(tx, args.name),
+      ctx.pure.u32(tx, args.x),
+      ctx.pure.u32(tx, args.z),
+      ctx.pure.id(tx, args.dungeon),
+    ],
+  })
+
+/**
+ * `dungeon_data::new_dungeon`
+ * @arg key — String
+ * @arg rooms — vector<DungeonRoomData>
+ */
+export const new_dungeon_data = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { key: string; rooms: readonly TransactionObjectArgument[] }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.math_package}::dungeon_data::new_dungeon`,
+    arguments: [
+      ctx.pure.string(tx, args.key),
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::dungeon_data::DungeonRoomData`, elements: [...args.rooms] }),
+    ],
+  })
+
+/**
+ * `dungeon_data::new_room`
+ * @arg mobs — vector<DungeonMob>
+ */
+export const new_dungeon_room_data = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { mobs: readonly TransactionObjectArgument[] }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.math_package}::dungeon_data::new_room`,
+    arguments: [
+      tx.makeMoveVec({ type: `${ctx.math_type_package}::dungeon_data::DungeonMob`, elements: [...args.mobs] }),
+    ],
+  })
+
+/**
+ * `dungeon_data::new_room_mob`
+ * @arg mob_type — String
+ */
+export const new_dungeon_room_mob = (tx: Transaction, ctx: DoorCtx, args: { mob_type: string }) =>
+  tx.moveCall({
+    target: `${ctx.pins.math_package}::dungeon_data::new_room_mob`,
+    arguments: [ctx.pure.string(tx, args.mob_type)],
+  })
+
+/**
+ * `world_map::new_archi_row`
+ * @arg ordinary_type — String
+ * @arg archi_type — String
+ */
+export const new_archi_row = (tx: Transaction, ctx: DoorCtx, args: { ordinary_type: string; archi_type: string }) =>
+  tx.moveCall({
+    target: `${ctx.pins.math_package}::world_map::new_archi_row`,
+    arguments: [ctx.pure.string(tx, args.ordinary_type), ctx.pure.string(tx, args.archi_type)],
+  })
+
+/**
  * `world_map::new_mob_row`
  * @arg mob_type — String
  * @arg weight_bp — u16
  * @arg biomes — vector<u8>
+ * @arg cities — vector<u8>
  */
 export const new_mob_row = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { mob_type: string; weight_bp: number; biomes: readonly number[] }
+  args: { mob_type: string; weight_bp: number; biomes: readonly number[]; cities: readonly number[] }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.math_package}::world_map::new_mob_row`,
@@ -1247,6 +1364,7 @@ export const new_mob_row = (
       ctx.pure.string(tx, args.mob_type),
       ctx.pure.u16(tx, args.weight_bp),
       ctx.pure.vector(tx, 'u8', args.biomes),
+      ctx.pure.vector(tx, 'u8', args.cities),
     ],
   })
 
@@ -1258,6 +1376,7 @@ export const new_mob_row = (
  * @arg protector — String
  * @arg rare_item_type — String
  * @arg biomes — vector<u8>
+ * @arg cities — vector<u8>
  */
 export const new_resource_row = (
   tx: Transaction,
@@ -1269,6 +1388,7 @@ export const new_resource_row = (
     protector: string
     rare_item_type: string
     biomes: readonly number[]
+    cities: readonly number[]
   }
 ) =>
   tx.moveCall({
@@ -1280,48 +1400,31 @@ export const new_resource_row = (
       ctx.pure.string(tx, args.protector),
       ctx.pure.string(tx, args.rare_item_type),
       ctx.pure.vector(tx, 'u8', args.biomes),
+      ctx.pure.vector(tx, 'u8', args.cities),
     ],
-  })
-
-/**
- * `world_map::new_room_mob`
- * @arg mob_type — String
- */
-export const new_room_mob = (tx: Transaction, ctx: DoorCtx, args: { mob_type: string }) =>
-  tx.moveCall({
-    target: `${ctx.pins.math_package}::world_map::new_room_mob`,
-    arguments: [ctx.pure.string(tx, args.mob_type)],
-  })
-
-/**
- * `world_map::new_dungeon_room`
- * @arg mobs — vector<RoomMob>
- */
-export const new_dungeon_room = (tx: Transaction, ctx: DoorCtx, args: { mobs: readonly TransactionObjectArgument[] }) =>
-  tx.moveCall({
-    target: `${ctx.pins.math_package}::world_map::new_dungeon_room`,
-    arguments: [tx.makeMoveVec({ type: `${ctx.math_type_package}::world_map::RoomMob`, elements: [...args.mobs] })],
   })
 
 /** Every door, by name — { params: caller-facing names, terminal: carries &Random }. */
 export const DOORS = {
   create_world: { params: ['cap', 'root', 'content'], terminal: false },
-  new_sale: { params: ['cap', 'root', 'template', 'price', 'supply', 'infinite', 'enabled'], terminal: false },
-  set_sale: { params: ['cap', 'root', 'sale', 'price', 'enabled'], terminal: false },
   new_airdrop: { params: ['cap', 'root', 'drop_id', 'template', 'amount_each', 'whitelist'], terminal: false },
   new_giftcard: { params: ['cap', 'root', 'card_id', 'template', 'amount'], terminal: false },
   add_loot_reward: { params: ['cap', 'root', 'box_template', 'reward_template', 'weight', 'amount'], terminal: false },
   clear_loot_table: { params: ['cap', 'root', 'box_template'], terminal: false },
+  new_mastery_offer: { params: ['cap', 'root', 'template', 'cost', 'enabled'], terminal: false },
+  set_mastery_offer: { params: ['cap', 'root', 'offer', 'cost', 'enabled'], terminal: false },
   create: { params: ['cap', 'root', 'name', 'entry_level'], terminal: false },
-  share: { params: ['wc'], terminal: false },
-  set_mobs: { params: ['cap', 'root', 'wc', 'rows'], terminal: false },
-  set_entry_level: { params: ['cap', 'root', 'wc', 'entry_level'], terminal: false },
-  set_biome_window: { params: ['cap', 'root', 'wc', 'zone_x0', 'zone_z0', 'side'], terminal: false },
-  append_biome_cells: { params: ['cap', 'root', 'wc', 'cells'], terminal: false },
-  clear_biome_map: { params: ['cap', 'root', 'wc'], terminal: false },
-  set_resources: { params: ['cap', 'root', 'wc', 'rows'], terminal: false },
-  set_dungeon_key: { params: ['cap', 'root', 'wc', 'item_type'], terminal: false },
-  set_dungeon_rooms: { params: ['cap', 'root', 'wc', 'rooms'], terminal: false },
+  share: { params: ['world_content'], terminal: false },
+  set_mobs: { params: ['cap', 'root', 'world_content', 'rows'], terminal: false },
+  set_archi_rows: { params: ['cap', 'root', 'world_content', 'rows'], terminal: false },
+  set_entry_level: { params: ['cap', 'root', 'world_content', 'entry_level'], terminal: false },
+  set_biome_window: { params: ['cap', 'root', 'world_content', 'zone_x0', 'zone_z0', 'side'], terminal: false },
+  append_biome_cells: { params: ['cap', 'root', 'world_content', 'cells'], terminal: false },
+  clear_biome_map: { params: ['cap', 'root', 'world_content'], terminal: false },
+  set_resources: { params: ['cap', 'root', 'world_content', 'rows'], terminal: false },
+  set_cities: { params: ['cap', 'root', 'world_content', 'cities'], terminal: false },
+  add_dungeon: { params: ['cap', 'root', 'name', 'data'], terminal: false },
+  overwrite_dungeon: { params: ['cap', 'root', 'dungeon', 'name', 'data'], terminal: false },
   add_mob: { params: ['cap', 'root', 'data'], terminal: false },
   overwrite_mob: { params: ['cap', 'root', 'template', 'data'], terminal: false },
   add_spell: { params: ['cap', 'root', 'name', 'classe', 'unlock_level', 'levels'], terminal: false },
@@ -1373,6 +1476,7 @@ export const DOORS = {
   consumable_reset_stats: { params: [], terminal: false },
   consumable_reset_spells: { params: [], terminal: false },
   consumable_recall: { params: [], terminal: false },
+  consumable_city: { params: ['city'], terminal: false },
   consumable_loot_box: { params: [], terminal: false },
   new_item_damages: { params: ['from', 'to', 'damage_type', 'element'], terminal: false },
   new_effect: {
@@ -1436,8 +1540,14 @@ export const DOORS = {
     params: ['width', 'height', 'shape_mask', 'obstacles', 'holes', 'start_cells_a', 'start_cells_b'],
     terminal: false,
   },
-  new_mob_row: { params: ['mob_type', 'weight_bp', 'biomes'], terminal: false },
-  new_resource_row: { params: ['item_type', 'job', 'tier', 'protector', 'rare_item_type', 'biomes'], terminal: false },
-  new_room_mob: { params: ['mob_type'], terminal: false },
-  new_dungeon_room: { params: ['mobs'], terminal: false },
+  new_city: { params: ['name', 'x', 'z', 'dungeon'], terminal: false },
+  new_dungeon_data: { params: ['key', 'rooms'], terminal: false },
+  new_dungeon_room_data: { params: ['mobs'], terminal: false },
+  new_dungeon_room_mob: { params: ['mob_type'], terminal: false },
+  new_archi_row: { params: ['ordinary_type', 'archi_type'], terminal: false },
+  new_mob_row: { params: ['mob_type', 'weight_bp', 'biomes', 'cities'], terminal: false },
+  new_resource_row: {
+    params: ['item_type', 'job', 'tier', 'protector', 'rare_item_type', 'biomes', 'cities'],
+    terminal: false,
+  },
 }

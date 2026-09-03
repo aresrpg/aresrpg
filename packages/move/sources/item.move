@@ -26,6 +26,7 @@ const ENotStackable: u64 = 202;
 const EWrongAmount: u64 = 203;
 const EWrongTemplate: u64 = 204;
 const EPlainNeedsRoll: u64 = 207; // mint_plain: a ranged template must roll — use `mint`
+const EDistributionNeedsNeutralShape: u64 = 208;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -45,15 +46,15 @@ public struct Item has key, store {
 /// An authenticated PTB-local mint value prepared from one immutable template before the
 /// terminal Random call. Private fields prevent a caller from forging item facts.
 public struct PM has drop {
-  t: ID,
-  n: String,
-  y: String,
-  c: String,
-  l: u8,
-  a: vector<u16>,
-  b: vector<u16>,
-  d: vector<ItemDamages>,
-  e: Option<ID>,
+  template: ID,
+  name: String,
+  item_type: String,
+  category: String,
+  level: u8,
+  stats_min: vector<u16>,
+  stats_max: vector<u16>,
+  damages: vector<ItemDamages>,
+  existing: Option<ID>,
 }
 
 /// One-time seal marker on the registry — its presence closes the seeding forever.
@@ -72,7 +73,7 @@ fun init(otw: ITEM, ctx: &mut TxContext) {
 }
 
 /// Display V2, once post-publish through `admin::create_item_display`. Returns the cap.
-public(package) fun nd(
+public(package) fun create_display(
   registry: &mut DisplayRegistry,
   publisher: &mut Publisher,
   ctx: &mut TxContext,
@@ -100,15 +101,15 @@ public(package) fun prepare_plan(template: &ItemTemplate, existing: Option<ID>):
   let stats_lo = if (has_stats) item_rows::stats_min(template).to_vector() else vector[];
   let stats_hi = if (has_stats) item_rows::stats_max(template).to_vector() else vector[];
   PM {
-    t: item_rows::template_id(template),
-    n: item_rows::template_name(template),
-    y: item_rows::template_type(template),
-    c: item_rows::template_category(template),
-    l: item_rows::template_level(template),
-    a: stats_lo,
-    b: stats_hi,
-    d: item_rows::damage_lines(template),
-    e: existing,
+    template: item_rows::template_id(template),
+    name: item_rows::template_name(template),
+    item_type: item_rows::template_type(template),
+    category: item_rows::template_category(template),
+    level: item_rows::template_level(template),
+    stats_min: stats_lo,
+    stats_max: stats_hi,
+    damages: item_rows::damage_lines(template),
+    existing,
   }
 }
 
@@ -121,19 +122,19 @@ public(package) fun deliver_drops(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   policy: &TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
   let mut i = 0;
-  while (i < plan.length() && &plan[i].y != wanted) i = i + 1;
+  while (i < plan.length() && &plan[i].item_type != wanted) i = i + 1;
   // A missing authenticated template aborts on the vector bound before any transaction commits.
   let row = plan.remove(i);
-  if (content_rules::is_stackable(&row.c)) {
-    deposit(kiosk, cap, policy, row.e, pm(&row, total, gen, ctx));
+  if (content_rules::is_stackable(&row.category)) {
+    deposit(kiosk, cap, policy, row.existing, mint_from_plan(&row, total, generator, ctx));
   } else {
     let mut n = 0;
     while (n < total) {
-      deposit(kiosk, cap, policy, option::none(), pm(&row, 1, gen, ctx));
+      deposit(kiosk, cap, policy, option::none(), mint_from_plan(&row, 1, generator, ctx));
       n = n + 1;
     };
   };
@@ -141,57 +142,86 @@ public(package) fun deliver_drops(
 
 // ╔════════════════ [ Package ] ══════════════════════════════════════════════ ]
 
-/// Mint an item off a frozen template — the only item factory. Consumers (gathering, shop,
-/// drops, crafting) call through. `amount` > 1 requires a stackable category. THE ROLL LIVES
-/// HERE (ruling 2026-08-09): when the template carries stat ranges, the mint itself rolls each
-/// stat uniformly through on-chain randomness — unskippable; damage lines snapshot verbatim.
+/// Mint an item off a frozen template. `amount` > 1 requires a stackable category. THE ROLL LIVES
+/// HERE (ruling 2026-08-09): when the template carries stat ranges, this boundary resolves each
+/// stat uniformly through on-chain randomness before the one internal constructor runs.
 public(package) fun mint(
   template: &ItemTemplate,
   amount: u32,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ): Item {
   let row = prepare_plan(template, option::none());
-  pm(&row, amount, gen, ctx)
+  mint_from_plan(&row, amount, generator, ctx)
 }
 
-fun pm(row: &PM, amount: u32, gen: &mut RandomGenerator, ctx: &mut TxContext): Item {
-  let mut minted = pb(row, amount, ctx);
-  if (!row.a.is_empty()) {
+fun mint_from_plan(row: &PM, amount: u32, generator: &mut RandomGenerator, ctx: &mut TxContext): Item {
+  let stats = if (!row.stats_min.is_empty()) {
     let mut rolled = vector[];
     let mut i = 0;
-    while (i < row.a.length()) {
-      rolled.push_back(gen.generate_u16_in_range(row.a[i], row.b[i]));
+    while (i < row.stats_min.length()) {
+      rolled.push_back(generator.generate_u16_in_range(row.stats_min[i], row.stats_max[i]));
       i = i + 1;
     };
-    dfield::add(&mut minted.id, StatsKey(), item_stats::from_vector(rolled));
-  };
-  minted
+    option::some(item_stats::from_vector(rolled))
+  } else option::none();
+  mint_resolved_from_plan(row, amount, stats, ctx)
 }
 
-fun pb(row: &PM, amount: u32, ctx: &mut TxContext): Item {
+/// THE item constructor. Every supply source resolves an optional stat block, then lands here;
+/// source identity cannot change the resulting Item shape.
+fun mint_resolved_from_plan(
+  row: &PM,
+  amount: u32,
+  stats: Option<ItemStatistics>,
+  ctx: &mut TxContext,
+): Item {
   assert!(amount >= 1, EWrongAmount);
-  if (amount > 1) assert!(content_rules::is_stackable(&row.c), ENotStackable);
+  if (amount > 1) assert!(content_rules::is_stackable(&row.category), ENotStackable);
   let mut item = Item {
     id: object::new(ctx),
-    template: row.t,
-    name: row.n,
-    item_type: row.y,
-    category: row.c,
-    level: row.l,
+    template: row.template,
+    name: row.name,
+    item_type: row.item_type,
+    category: row.category,
+    level: row.level,
     amount,
   };
-  if (!row.d.is_empty()) dfield::add(&mut item.id, DamagesKey(), row.d);
+  if (stats.is_some()) dfield::add(&mut item.id, StatsKey(), stats.destroy_some());
+  if (!row.damages.is_empty()) dfield::add(&mut item.id, DamagesKey(), row.damages);
   item
 }
 
-/// Mint WITHOUT a generator — legal only for templates that carry NO stat ranges (shop
-/// sales, airdrops, giftcards: owner 2026-08-10, "no stats there"). A ranged template MUST
-/// roll, so it aborts here — the rolling `mint` is its only door.
-public(package) fun mp(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
+/// Mint WITHOUT a generator — legal only for templates that carry NO stat ranges (Mastery
+/// rewards and runes). A ranged template MUST roll, so it aborts here — the rolling `mint`
+/// is its only door.
+public(package) fun mint_plain(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
   assert!(!item_rows::has_stats(template), EPlainNeedsRoll);
   let row = prepare_plan(template, option::none());
-  pb(&row, amount, ctx)
+  mint_resolved_from_plan(&row, amount, option::none(), ctx)
+}
+
+/// Distribution admits statless, damage-less items and one fixed-endpoint pet at a time.
+/// A pet stores its eventual fully-fed endpoint, while `pet::scaled_stats` contributes neutral
+/// live stats until feeding begins. Authoring rejects any voucher that redemption could not mint.
+public(package) fun assert_distribution(template: &ItemTemplate, amount: u32) {
+  let category = item_rows::template_category(template);
+  let is_pet = category == b"pet".to_string();
+  assert!(amount == 1 || content_rules::is_stackable(&category), ENotStackable);
+  assert!(item_rows::damage_lines(template).is_empty(), EDistributionNeedsNeutralShape);
+  if (is_pet) {
+    assert!(item_rows::has_stats(template), EDistributionNeedsNeutralShape);
+    assert!(item_rows::stats_min(template) == item_rows::stats_max(template), EDistributionNeedsNeutralShape);
+  } else {
+    assert!(!item_rows::has_stats(template), EDistributionNeedsNeutralShape);
+  };
+}
+
+public(package) fun mint_distribution(template: &ItemTemplate, amount: u32, ctx: &mut TxContext): Item {
+  assert_distribution(template, amount);
+  let row = prepare_plan(template, option::none());
+  let stats = if (item_rows::has_stats(template)) option::some(item_rows::stats_min(template)) else option::none();
+  mint_resolved_from_plan(&row, amount, stats, ctx)
 }
 
 /// Land a minted stack in the owner's kiosk: MERGE into the presented existing stack
@@ -295,7 +325,7 @@ public fun stats(self: &Item): ItemStatistics { *dfield::borrow(&self.id, StatsK
 
 /// Overwrite the rolled block — the forgemagie scribe's one writer (the item already carries a
 /// rolled block from mint; scribing replaces it). Aborts if the item was never rolled.
-public(package) fun ss(self: &mut Item, stats: ItemStatistics) {
+public(package) fun set_stats(self: &mut Item, stats: ItemStatistics) {
   *dfield::borrow_mut(&mut self.id, StatsKey()) = stats;
 }
 

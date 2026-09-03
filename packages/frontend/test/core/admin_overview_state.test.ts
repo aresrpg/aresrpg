@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import type { AdminOverviewResult, AdminShopSaleRow } from '@aresrpg/protocol'
+import type { AdminOverviewResult } from '@aresrpg/protocol'
 
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
@@ -15,14 +15,12 @@ const overview: AdminOverviewResult = Object.freeze({
   revenue: Object.freeze({
     days: 30,
     bucket: 'day',
-    shop_mist: '10',
-    shop_orders: '1',
     item_royalty_mist: '2',
     character_royalty_mist: '3',
     character_creation_mist: '0',
     kolizeum_mist: '0',
-    last_30d_revenue_mist: '15',
-    month_to_date_revenue_mist: '15',
+    last_30d_revenue_mist: '5',
+    month_to_date_revenue_mist: '5',
     money: Object.freeze([]),
   }),
   players: Object.freeze({
@@ -45,26 +43,11 @@ const overview: AdminOverviewResult = Object.freeze({
     days: 1,
     bucket: '15m',
     online_now: 4,
-    online_average: 3,
     online_peak: 5,
     online: Object.freeze([]),
   }),
   addresses: Object.freeze({ days: 30, bucket: 'day', total: 3, addresses: Object.freeze([]) }),
   characters: Object.freeze({ days: 30, bucket: 'day', total: 4, characters: Object.freeze([]) }),
-})
-
-const sale: AdminShopSaleRow = Object.freeze({
-  id: '1:2:3',
-  checkpoint: 1,
-  tx_digest: 'digest',
-  timestamp_ms: 1,
-  sale_id: '0xsale',
-  buyer: '0xbuyer',
-  item_type: 'potion',
-  quantity: 1,
-  unit_price_mist: '10',
-  total_mist: '10',
-  remaining_supply: '9',
 })
 
 test('the overview accepts only its correlated typed response and range changes reload it', () => {
@@ -141,7 +124,7 @@ test('a full refresh cannot overwrite a newer section range or discard its cache
   })
   const refreshing = reduce_app_state(section_requested, { type: 'admin/overview_refresh' })
   const refresh_requested = reduce_app_state(refreshing, { type: 'admin/overview_requested', request_id: 3 })
-  const seven_days = { ...overview.revenue, days: 7 as const, bucket: 'hour' as const, shop_mist: '70' }
+  const seven_days = { ...overview.revenue, days: 7 as const, bucket: 'hour' as const, item_royalty_mist: '70' }
   const section_first = reduce_app_state(refresh_requested, {
     type: 'server/packet',
     packet: {
@@ -174,25 +157,4 @@ test('a full refresh cannot overwrite a newer section range or discard its cache
     },
   })
   expect(section_last.admin.overview.result?.revenue).toEqual(seven_days)
-})
-
-test('the exact sales ledger appends cursor pages through its own correlated lane', () => {
-  const loading = reduce_app_state(state(), { type: 'admin/sales_refresh' })
-  const requested = reduce_app_state(loading, { type: 'admin/sales_requested', request_id: 8 })
-  const ready = reduce_app_state(requested, {
-    type: 'server/packet',
-    packet: {
-      type: 'packet/admin_response',
-      id: 8,
-      kind: 'shop_sales',
-      result: { as_of_checkpoint: 42, rows: [sale], next_cursor: '1:30' },
-    },
-  })
-  expect(ready.admin.sales).toMatchObject({ status: 'ready', rows: [sale], next_cursor: '1:30' })
-  expect(reduce_app_state(ready, { type: 'admin/sales_more' }).admin.sales.status).toBe('loading')
-  expect(reduce_app_state(ready, { type: 'admin/sales_refresh' }).admin.sales).toMatchObject({
-    status: 'loading',
-    rows: [],
-    next_cursor: null,
-  })
 })

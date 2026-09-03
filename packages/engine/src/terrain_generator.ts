@@ -3,6 +3,7 @@
 
 import type { ChunkRenderData, RenderChunkRequest, Vec3 } from './types.ts'
 import { CHUNK_EDGE, pack_voxel_occupancy, voxel_index } from './voxel_data.ts'
+import { apply_voxel_operation } from './voxel_operation.ts'
 import { for_each_structure_voxel, structure_placements, type StructurePlacement } from './structure_placement.ts'
 import {
   sample_world_column,
@@ -55,7 +56,9 @@ export const generate_chunk = (
 ): ChunkRenderData => {
   const origin = chunk_origin(request.coordinate)
   const overlay_edge = CHUNK_EDGE + 2
-  const structure_materials = new Uint16Array(overlay_edge ** 3)
+  // -1 means no structure operation. Zero is an explicit air operation used to carve terrain;
+  // positive values add or replace material. One tri-state owns render occupancy.
+  const structure_materials = new Int16Array(overlay_edge ** 3).fill(-1)
   const overlay_index = (x: number, y: number, z: number): number =>
     (y + 1) * overlay_edge * overlay_edge + (z + 1) * overlay_edge + x + 1
   const area = {
@@ -74,7 +77,8 @@ export const generate_chunk = (
         if (x < -1 || x > CHUNK_EDGE || y < -1 || y > CHUNK_EDGE || z < -1 || z > CHUNK_EDGE) return
         structure_materials[overlay_index(x, y, z)] = material_id
       },
-      { min: origin[1] - 1, max: origin[1] + CHUNK_EDGE }
+      { min: origin[1] - 1, max: origin[1] + CHUNK_EDGE },
+      area
     )
   )
   // Occupancy asks for a one-block halo; slope classification needs one more neighbour beyond it.
@@ -97,12 +101,12 @@ export const generate_chunk = (
     }
   const sample = (x: number, y: number, z: number): number => {
     const structure = structure_materials[overlay_index(x, y, z)]!
-    if (structure !== AIR) return structure
     const index = (z + 2) * column_edge + x + 2
     const column = columns[index]!
     const world_y = origin[1] + y
-    if (world_y >= column.surface_y) return AIR
-    return terrain_material_id(column, column.surface_y - world_y - 1, slopes[index]!)
+    const terrain =
+      world_y >= column.surface_y ? AIR : terrain_material_id(column, column.surface_y - world_y - 1, slopes[index]!)
+    return apply_voxel_operation(structure >= AIR ? structure : undefined, terrain)
   }
   const material_ids = new Uint16Array(CHUNK_EDGE ** 3)
   for (let y = 0; y < CHUNK_EDGE; y += 1)

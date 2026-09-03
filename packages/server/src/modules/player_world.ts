@@ -13,7 +13,7 @@ import {
 } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
-import { dungeon_portal, mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
+import { mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
 import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_zones } from '../reads/get_zones.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
@@ -199,9 +199,7 @@ export default {
     const forward_presence = (scope: Readonly<{ world: string; zx: number; zz: number }>) => (fact: MeshFact) => {
       if (fact.address === address) return // never echo the player to himself
       if (fact.kind === 'appear') {
-        // THE VISIBILITY CAP (owner 2026-08-12): a crowded zone never bloats the client —
-        // strangers drop past the cap, FRIENDS always pass. A capped-out stranger becomes
-        // visible on its next zone-cross (appear republishes there).
+        // Crowds cap strangers; friends always pass and a later zone-cross retries visibility.
         const known = visible.has(fact.player.character_id)
         if (!known && !get_state().friends.has(fact.address) && visible.size >= VISIBLE_PLAYERS_CAP) return
         const at = zone_of(fact.player.x, fact.player.z)
@@ -221,8 +219,7 @@ export default {
             me.world === known.world && Math.hypot(fact.x - me.x, fact.z - me.z) <= FAR_PLAYER_BLOCKS
         )
         const skipped = move_skips.get(fact.character_id) ?? 0
-        // the distance throttle drops POSITIONS, never a mount toggle: a player who mounts and
-        // stands still far away would otherwise never send another fact to carry the change
+        // Distance throttles positions, never a stationary mount change.
         const toggled = riding_seen.get(fact.character_id) !== fact.riding
         if (far && !toggled && skipped < FAR_MOVE_SKIP) {
           move_skips.set(fact.character_id, skipped + 1)
@@ -271,7 +268,6 @@ export default {
         zz,
         mobs: [...mob_groups(population, zx, zz, BigInt(seed))],
         resources: [...resource_packs(population, zx, zz, BigInt(seed))],
-        portal: dungeon_portal(population, zx, zz, BigInt(seed)),
       })
     }
 
@@ -300,9 +296,7 @@ export default {
         void get_fight(graph, { fight_id: fight })
           .then(([row]) => row && send({ type: 'packet/fight_created', fight: row }))
           .catch((error: Error) => log.warn({ fight, error: error.message }, 'fight marker read failed'))
-        // a mob engage CONSUMED the group it was born on — the zone's own bitmap says which,
-        // so the row alone retires the group for every tracker (a duel or a dungeon birth
-        // simply changes nothing in it)
+        // A mob engage consumes its source group; duel and dungeon births change no zone bitmap.
         const born = zone_of(x, z)
         if (has(mesh.pos(w, born.zx, born.zz))) void push_zone(w, born.zx, born.zz)
       }
@@ -313,11 +307,17 @@ export default {
           phase: payload.type === 'FightStarted' ? 'active' : 'ended',
         })
       if (payload.type === 'ZoneSearched') {
-        // a TRACKED zone was discovered or re-rolled: the row carries the real seed and the
-        // real searched_at_ms, and a seed this connection has no population for pulls the
-        // population down with it. Nothing here invents a field the chain owns.
-        const { world: w, zx, zz } = payload.data as { world: string; zx: number; zz: number }
-        if (has(mesh.pos(w, zx, zz))) void push_zone(w, zx, zz)
+        // A tracked discovery/re-roll pushes its projected row and newly derived population.
+        const {
+          world: w,
+          zone_x,
+          zone_z,
+        } = payload.data as {
+          world: string
+          zone_x: number
+          zone_z: number
+        }
+        if (has(mesh.pos(w, zone_x, zone_z))) void push_zone(w, zone_x, zone_z)
       }
       if (payload.type === 'ResourceGathered') {
         const { world: w, gatherer } = payload.data as { world: string; gatherer: string }

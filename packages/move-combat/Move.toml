@@ -1,0 +1,11 @@
+[package]
+name = "aresrpg_combat"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[dependencies]
+aresrpg_math = { local = "../move-math" }
+
+[addresses]
+aresrpg_combat = "0x0"

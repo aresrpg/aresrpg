@@ -261,7 +261,6 @@ const POPULATED_ZONE: readonly ServerPacket[] = [
       { index: 3, x: 49_710, z: 50_210, members: [{ mob_type: 'razkin', level_scalar: 60 }] },
     ],
     resources: [{ index: 0, x: 49_800, z: 50_180, item_type: 'green_mushroom', nodes: 3 }],
-    portal: null,
   },
 ]
 
@@ -298,8 +297,8 @@ test('spawn markers never leak retained discoveries from another world', () => {
 })
 
 test('only the matching reveal timer may clear the current zone discovery', () => {
-  const first = { id: 'first', zx: 97, zz: 98, mobs: 2, resources: 3, dungeon: false }
-  const second = { id: 'second', zx: 98, zz: 98, mobs: 4, resources: 5, dungeon: true }
+  const first = { id: 'first', zx: 97, zz: 98, mobs: 2, resources: 3 }
+  const second = { id: 'second', zx: 98, zz: 98, mobs: 4, resources: 5 }
   const revealed = world.reduce!(app_state(), { type: 'world/zone_revealed', reveal: first })
   const replaced = world.reduce!(revealed, { type: 'world/zone_revealed', reveal: second })
 
@@ -307,20 +306,37 @@ test('only the matching reveal timer may clear the current zone discovery', () =
   expect(world.reduce!(replaced, { type: 'world/zone_reveal_cleared', id: second.id }).world.zone_reveal).toBeNull()
 })
 
-test('dungeon portals project from the zone population into client-space markers', () => {
-  const packets = POPULATED_ZONE.map((packet) =>
-    packet.type === 'packet/zone_spawns' ? { ...packet, portal: { x: 49_900, z: 50_300 } } : packet
-  ) as readonly ServerPacket[]
-  const state = fold(packets)
-
-  expect(dungeon_portal_markers(state, 'overworld')).toEqual([
+test('dungeon portals project directly from authored cities without zone discovery', () => {
+  expect(dungeon_portal_markers('nauvis')).toEqual([
     {
-      id: 'dungeon:overworld:97:98:s7',
-      world: 'overworld',
-      x: -100,
-      z: 300,
-      zx: 97,
-      zz: 98,
+      id: 'dungeon:nauvis:thebes:gilded_lorito',
+      world: 'nauvis',
+      city: 'thebes',
+      dungeon: 'gilded_lorito',
+      x: 512,
+      z: 0,
+      zx: 98,
+      zz: 97,
+    },
+    {
+      id: 'dungeon:nauvis:the_ruins:tangled_aftermath',
+      world: 'nauvis',
+      city: 'the_ruins',
+      dungeon: 'tangled_aftermath',
+      x: -13_936,
+      z: -1_328,
+      zx: 70,
+      zz: 95,
+    },
+    {
+      id: 'dungeon:nauvis:fuwage:ivory_rampart',
+      world: 'nauvis',
+      city: 'fuwage',
+      dungeon: 'ivory_rampart',
+      x: -35_760,
+      z: -27_312,
+      zx: 27,
+      zz: 44,
     },
   ])
 })

@@ -1,0 +1,34 @@
+{
+  "offers": [
+    {
+      "item_type": "food_crate",
+      "cost": 3,
+      "enabled": true
+    },
+    {
+      "item_type": "resource_crate",
+      "cost": 2,
+      "enabled": true
+    },
+    {
+      "item_type": "pet_crate",
+      "cost": 25,
+      "enabled": true
+    },
+    {
+      "item_type": "sui_crate",
+      "cost": 50,
+      "enabled": true
+    },
+    {
+      "item_type": "scroll_of_oblivion",
+      "cost": 10,
+      "enabled": true
+    },
+    {
+      "item_type": "scroll_of_rebirth",
+      "cost": 10,
+      "enabled": true
+    }
+  ]
+}

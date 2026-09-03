@@ -14,6 +14,7 @@ import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import type { CSSProperties } from 'react'
 
 import './compass_strip.css'
+import { city_at_position } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { spawn_markers, zone_key } from '../../modules/world.ts'
 import { useAppStore } from '../../store.ts'
@@ -25,6 +26,7 @@ import {
   camera_heading,
   cap_nearest_pips,
   cluster_pips,
+  compass_target,
   nearest_zone_edges,
   neighbor_zone_key,
   pip_tier,
@@ -34,6 +36,36 @@ import {
 } from './compass_math.ts'
 
 const ORIGIN_ZONE = zone_of(world_center, world_center)
+type PortalMarker = Readonly<{ distance: number; x: number }>
+
+const city_portal_marker = (
+  world_name: string | null,
+  pose: Readonly<{ x: number; z: number }>,
+  heading: number
+): PortalMarker | null => {
+  const city = city_at_position(world_name, pose.x, pose.z)
+  if (!city) return null
+  const portal = compass_target(pose, { x: city.anchor_x, z: city.anchor_z }, heading)
+  return Object.freeze({ distance: portal.distance, x: portal.x })
+}
+
+const PortalCompassMarker = ({ marker, label }: Readonly<{ marker: PortalMarker | null; label: string }>) => {
+  if (!marker) return null
+  const distance = Math.round(marker.distance)
+  return (
+    <span
+      aria-label={`${label} · ${distance}m`}
+      className="gw-compass__portal"
+      style={{ left: `${marker.x * 100}%` }}
+      title={label}
+    >
+      <span aria-hidden="true" className="gw-compass__portal-icon">
+        ☠
+      </span>
+      <span className="gw-compass__portal-distance">{distance}m</span>
+    </span>
+  )
+}
 
 export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const pose = useWorldPose()
@@ -54,6 +86,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   )
 
   const heading = camera_heading(pose.yaw)
+  const portal = city_portal_marker(world_name, pose, heading)
   const marks = CARDINALS.map((cardinal) => ({
     ...cardinal,
     x: strip_x(relative_bearing(cardinal.bearing, heading)),
@@ -135,6 +168,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               {pip.show_label && <span className="gw-compass__pip-dist">{pip.dist}m</span>}
             </span>
           ))}
+          <PortalCompassMarker label={text('dungeon_portal')} marker={portal} />
           {edge_markers.map((marker) => (
             <span
               className={`gw-compass__edge gw-compass__edge--${marker.discovered ? 'discovered' : 'undiscovered'}`}

@@ -13,9 +13,10 @@
     "dev:app": "bun run --cwd packages/frontend dev --host 127.0.0.1 --port 5173 --strictPort",
     "dev:frontend": "bun run dev:app",
     "dev": "bun run dev:app",
-    "repin:local": "bun scripts/repin_local.mjs",
-    "reload:local": "bun scripts/reload_local.mjs",
     "complexity:baseline": "bun scripts/update_complexity_baseline.mjs",
+    "generate:cities": "bun scripts/generate_cities.mjs",
+    "snapshot:holders": "bun scripts/snapshot_sui_holders.mjs",
+    "giftcards:export": "bun scripts/export_giftcards.mjs",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0 && prettier . --check",
     "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
@@ -23,21 +24,25 @@
     "coverage:indexer": "sh scripts/coverage_indexer.sh",
     "coverage:move": "sh scripts/coverage_move.sh",
     "coverage:all": "bun run coverage:typescript && bun run coverage:indexer && bun run coverage:move",
-    "test": "bun run --cwd packages/fight generate:check && bun run coverage:typescript && node scripts/assert_seed_validation.mjs"
+    "test": "bun run --cwd packages/fight generate:check && bun scripts/generate_cities.mjs --check && bun run coverage:typescript && node scripts/assert_seed_validation.mjs && node scripts/assert_move_packages.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.2.0",
-    "eslint": "^10.8.1",
+    "@mysten/sui": "2.29.0",
+    "@mysten/zksend": "1.2.23",
+    "@types/node": "^26.4.1",
+    "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^10.0.0",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-sonarjs": "4.2.0",
-    "globals": "^17.10.0",
+    "globals": "^17.12.0",
     "prettier": "^3.9.6",
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.4",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.67.0"
+    "typescript-eslint": "^8.69.0"
   },
   "overrides": {
     "react": "19.2.7",

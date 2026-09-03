@@ -208,8 +208,8 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       .gather({
         character_id: selected_character_id,
         world: character.world,
-        zx: Number(zx),
-        zz: Number(zz),
+        zone_x: Number(zx),
+        zone_z: Number(zz),
         pack_index: found.index,
         item_type: pack.item_type,
         rare_item_type,

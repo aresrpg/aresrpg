@@ -18,7 +18,6 @@ export const ZoneRevealContent = ({
   const findings = [
     text('zone_mobs_found', { count: reveal.mobs }),
     text('zone_resources_found', { count: reveal.resources }),
-    ...(reveal.dungeon ? [text('zone_dungeon_spotted')] : []),
   ]
   return (
     <div aria-live="assertive" className="gw-reveal" key={reveal.id} role="status">

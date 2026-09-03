@@ -60,26 +60,7 @@ const send_overview_sections = ({ state, link, dispatch, next_id }: DashboardReq
   })
 }
 
-const send_sales_request = ({ state, previous, link, dispatch, next_id }: DashboardRequestWires): void => {
-  const started = previous.admin.sales.status !== 'loading'
-  const range_changed = state.admin.sales.range_days !== previous.admin.sales.range_days
-  if (state.admin.sales.status !== 'loading' || (!started && !range_changed)) return
-  const id = next_id()
-  dispatch({ type: 'admin/sales_requested', request_id: id })
-  if (
-    !link?.send({
-      type: 'packet/admin_request',
-      id,
-      kind: 'shop_sales',
-      days: state.admin.sales.range_days,
-      cursor: state.admin.sales.next_cursor,
-    })
-  )
-    dispatch({ type: 'admin/sales_failed', request_id: id, error: 'The game server is unavailable' })
-}
-
 export const send_admin_dashboard_requests = (wires: DashboardRequestWires): void => {
   send_overview_request(wires)
   send_overview_sections(wires)
-  send_sales_request(wires)
 }

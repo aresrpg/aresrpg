@@ -3,7 +3,29 @@
 
 import { expect, test } from 'bun:test'
 
-import { resolve_kiosk_cap } from '../src/kiosk_runner.ts'
+import { resolve_kiosk_cap, retry_stale_kiosk_ref } from '../src/kiosk_runner.ts'
+
+test('a cached kiosk cap retries one fresh lookup only when another tab advanced it', async () => {
+  const refreshes: boolean[] = []
+  const result = await retry_stale_kiosk_ref(async (fresh) => {
+    refreshes.push(fresh)
+    if (!fresh) throw new Error('provided version does not match, provided: 8 actual: 0x9')
+    return 'submitted'
+  })
+
+  expect(result).toBe('submitted')
+  expect(refreshes).toEqual([false, true])
+})
+
+test('encoded resolver errors use the same stale-cap classifier', async () => {
+  const refreshes: boolean[] = []
+  await retry_stale_kiosk_ref(async (fresh) => {
+    refreshes.push(fresh)
+    if (!fresh) throw new Error('provided%20version%20does%20not%20match,%20provided:%208%20actual:%200x9')
+    return 'submitted'
+  })
+  expect(refreshes).toEqual([false, true])
+})
 
 test('wire custody refreshes the mutable PersonalKioskCap before composition', async () => {
   const personal = `0x${'1'.repeat(64)}`

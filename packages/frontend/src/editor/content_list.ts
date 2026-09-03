@@ -5,7 +5,7 @@ import {
   class_names,
   craft_job_of,
   gatherable_catalog,
-  gatherable_of,
+  rare_pet_food_tier,
   item_categories,
   job_groups,
   job_slugs,
@@ -17,6 +17,7 @@ import {
   type MobFilterSource,
   type MobFilterWorldSource,
 } from '../content/mob_filters.ts'
+import { item_resource_kind, resource_kinds } from '../content/resource_kind.ts'
 
 import { seed_content_domains, type JsonValue, type SeedDomain, type SeedEntityRow } from './seed_editor.ts'
 
@@ -98,16 +99,6 @@ export const reordered_spell_levels = (
   return changes.length ? Object.freeze(Object.fromEntries(changes)) : null
 }
 
-export const item_category_rows = (
-  rows: readonly SeedEntityRow[]
-): readonly Readonly<{ category: string; count: number }>[] => {
-  const counts = rows.reduce<Record<string, number>>((result, row) => {
-    const category = content_row_category(row)
-    return category ? { ...result, [category]: (result[category] ?? 0) + 1 } : result
-  }, {})
-  return item_categories.map((category) => Object.freeze({ category, count: counts[category] ?? 0 }))
-}
-
 export const item_recipe_job_rows = (
   item_rows: readonly SeedEntityRow[],
   recipe_rows: readonly SeedEntityRow[]
@@ -127,30 +118,37 @@ export const item_recipe_job_rows = (
 }
 
 export const item_gatherable_job_rows = (
-  item_rows: readonly SeedEntityRow[],
-  world_rows: readonly SeedEntityRow[]
+  item_rows: readonly SeedEntityRow[]
 ): readonly Readonly<{ job: string; count: number; item_types: readonly string[] }>[] => {
   const item_ids = new Set(item_rows.map(({ id }) => id))
-  const resources = world_rows.flatMap((world_row) => {
-    const rows = record_value(world_row.value)?.resources
-    return Array.isArray(rows)
-      ? rows.flatMap((entry) => {
-          const resource = record_value(entry)
-          if (typeof resource?.item_type !== 'string') return []
-          const gatherable = gatherable_of(resource.item_type)
-          return gatherable ? [Object.freeze({ item_type: resource.item_type, job: gatherable.job })] : []
-        })
-      : []
-  })
   return job_groups.gathering.flatMap((job) => {
-    const item_types = Object.freeze([
-      ...new Set(
-        resources
-          .filter((resource) => resource.job === job && item_ids.has(resource.item_type))
-          .map(({ item_type }) => item_type)
-      ),
-    ])
+    const item_types = Object.freeze(
+      gatherable_catalog
+        .filter((resource) => resource.job === job && item_ids.has(resource.item_type))
+        .map(({ item_type }) => item_type)
+    )
     return item_types.length ? [Object.freeze({ job, count: item_types.length, item_types })] : []
+  })
+}
+
+export const item_resource_kind_rows = (
+  item_rows: readonly SeedEntityRow[],
+  recipe_rows: readonly SeedEntityRow[]
+): readonly Readonly<{ kind: string; count: number; item_types: readonly string[] }>[] => {
+  const outputs = new Set(recipe_rows.map(({ id }) => id))
+  const pet_foods = new Set(
+    recipe_rows.flatMap((row) => {
+      const recipe = record_value(row.value)
+      const inputs = record_value(recipe?.inputs)
+      return inputs && rare_pet_food_tier(Object.keys(inputs)) !== null ? [row.id] : []
+    })
+  )
+  const resources = item_rows.filter((row) => content_row_category(row) === 'resource')
+  return resource_kinds.map((kind) => {
+    const item_types = resources
+      .filter((row) => item_resource_kind(row.id, outputs.has(row.id), pet_foods.has(row.id)) === kind)
+      .map(({ id }) => id)
+    return Object.freeze({ kind, count: item_types.length, item_types: Object.freeze(item_types) })
   })
 }
 
@@ -180,109 +178,55 @@ export const item_mob_family_rows = (
     })
 }
 
-export type ItemReferenceFilterRow = Readonly<{
-  kind: 'category' | 'world' | 'family'
+export type ItemFilterKind = 'category' | 'resource' | 'craft' | 'gather' | 'mob-family'
+
+export type ItemFilterRow = Readonly<{
+  kind: ItemFilterKind
   id: string
   count: number
   item_types: readonly string[]
 }>
 
-/** Picker taxonomy stays derived from the live drafts: categories cover all items, while
- * World and Family intentionally expose only resources obtainable from their authored
- * gatherables, rares, roaming/protector/dungeon mob loot. */
-export const item_reference_filter_rows = (
+/** One live-draft taxonomy owns both item authoring and every recipe ingredient picker. */
+export const item_filter_rows = (
   item_rows: readonly SeedEntityRow[],
+  recipe_rows: readonly SeedEntityRow[],
   mob_rows: readonly SeedEntityRow[],
   world_rows: readonly SeedEntityRow[]
-): readonly ItemReferenceFilterRow[] => {
-  const resource_ids = new Set(item_rows.filter((row) => content_row_category(row) === 'resource').map(({ id }) => id))
-  const categories = item_categories.flatMap((category): readonly ItemReferenceFilterRow[] => {
-    const item_types = item_rows.filter((row) => content_row_category(row) === category).map(({ id }) => id)
-    return item_types.length
-      ? [
-          Object.freeze({
-            kind: 'category',
-            id: category,
-            count: item_types.length,
-            item_types: Object.freeze(item_types),
-          }),
-        ]
-      : []
-  })
-  const mobs_by_type = new Map(mob_rows.map((row) => [row.id, record_value(row.value)] as const))
-  const worlds = world_rows.flatMap((world_row): readonly ItemReferenceFilterRow[] => {
-    const world = record_value(world_row.value)
-    const world_id = typeof world?.world === 'string' ? world.world : world_row.id
-    const resources = Array.isArray(world?.resources) ? world.resources : []
-    const direct_resources = resources.flatMap((entry) => {
-      const item_type = record_value(entry)?.item_type
-      if (typeof item_type !== 'string') return []
-      const gatherable = gatherable_of(item_type)
-      return gatherable ? [item_type, gatherable.rare_item_type] : [item_type]
+): readonly ItemFilterRow[] => {
+  const categories = item_categories
+    .filter((category) => category !== 'resource')
+    .map((category): ItemFilterRow => {
+      const item_types = item_rows.filter((row) => content_row_category(row) === category).map(({ id }) => id)
+      return Object.freeze({
+        kind: 'category',
+        id: category,
+        count: item_types.length,
+        item_types: Object.freeze(item_types),
+      })
     })
-    const protectors = resources.flatMap((entry) => {
-      const item_type = record_value(entry)?.item_type
-      const gatherable = typeof item_type === 'string' ? gatherable_of(item_type) : null
-      return gatherable ? [gatherable.protector] : []
-    })
-    const roaming = Array.isArray(world?.mobs)
-      ? world.mobs.flatMap((entry) => {
-          const mob_type = record_value(entry)?.mob_type
-          return typeof mob_type === 'string' ? [mob_type] : []
-        })
-      : record_value(world?.mobs)
-        ? Object.keys(record_value(world?.mobs)!)
-        : []
-    const dungeon = record_value(world?.dungeon)
-    const dungeon_mobs = Array.isArray(dungeon?.rooms)
-      ? dungeon.rooms.flatMap((room) =>
-          Array.isArray(room)
-            ? room.flatMap((entry) => {
-                const mob_type = record_value(entry)?.mob_type
-                return typeof mob_type === 'string' ? [mob_type] : []
-              })
-            : []
-        )
-      : []
-    const loot = unique([...roaming, ...protectors, ...dungeon_mobs]).flatMap((mob_type) => {
-      const rows = mobs_by_type.get(mob_type)?.loot
-      return Array.isArray(rows)
-        ? rows.flatMap((entry) => {
-            const item_type = record_value(entry)?.item_type
-            return typeof item_type === 'string' ? [item_type] : []
-          })
-        : []
-    })
-    const item_types = unique([...direct_resources, ...loot]).filter((item_type) => resource_ids.has(item_type))
-    return item_types.length
-      ? [Object.freeze({ kind: 'world', id: world_id, count: item_types.length, item_types })]
-      : []
-  })
-  const families = item_mob_family_rows(item_rows, mob_rows).map(({ family, count, item_types }) =>
-    Object.freeze({ kind: 'family' as const, id: family, count, item_types })
+  const resources = item_resource_kind_rows(item_rows, recipe_rows).map(({ kind, count, item_types }) =>
+    Object.freeze({ kind: 'resource' as const, id: kind, count, item_types })
   )
-  return Object.freeze([...categories, ...worlds, ...families])
+  const crafts = item_recipe_job_rows(item_rows, recipe_rows).map(({ job, count, item_types }) =>
+    Object.freeze({ kind: 'craft' as const, id: job, count, item_types })
+  )
+  const gatherables = item_gatherable_job_rows(item_rows).map(({ job, count, item_types }) =>
+    Object.freeze({ kind: 'gather' as const, id: job, count, item_types })
+  )
+  const families = item_mob_family_rows(item_rows, mob_rows).map(({ family, count, item_types }) =>
+    Object.freeze({ kind: 'mob-family' as const, id: family, count, item_types })
+  )
+  return Object.freeze([...categories, ...resources, ...crafts, ...gatherables, ...families])
 }
 
 export const item_types_for_filter = (
   filter: string | null,
-  recipe_jobs: ReturnType<typeof item_recipe_job_rows>,
-  gatherable_jobs: ReturnType<typeof item_gatherable_job_rows>,
-  mob_families: ReturnType<typeof item_mob_family_rows>
+  rows: readonly ItemFilterRow[]
 ): ReadonlySet<string> | null => {
-  if (filter?.startsWith('craft:')) {
-    const selected_job = filter.slice('craft:'.length)
-    return new Set(recipe_jobs.find(({ job }) => job === selected_job)?.item_types ?? [])
-  }
-  if (filter?.startsWith('gather:')) {
-    const selected_job = filter.slice('gather:'.length)
-    return new Set(gatherable_jobs.find(({ job }) => job === selected_job)?.item_types ?? [])
-  }
-  if (filter?.startsWith('mob-family:')) {
-    const selected_family = filter.slice('mob-family:'.length)
-    return new Set(mob_families.find(({ family }) => family === selected_family)?.item_types ?? [])
-  }
-  return null
+  if (!filter) return null
+  const selected = rows.find(({ kind, id }) => `${kind}:${id}` === filter)
+  return selected ? new Set(selected.item_types) : null
 }
 
 export const content_result_columns = (domain: SeedDomain): 1 | 2 => (domain === 'items' ? 2 : 1)
@@ -300,6 +244,14 @@ export const content_page_columns = (domain: SeedDomain): string => {
 const string_list = (value: JsonValue | undefined): readonly string[] =>
   Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []
 
+const record_list = (value: JsonValue | undefined): readonly Readonly<Record<string, JsonValue>>[] =>
+  Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const record = record_value(entry)
+        return record ? [record] : []
+      })
+    : []
+
 const unique = (values: readonly string[]): readonly string[] => Object.freeze([...new Set(values)])
 
 export const mob_filter_rows = (
@@ -309,39 +261,36 @@ export const mob_filter_rows = (
   const mob_ids = new Set(mob_rows.map(({ id }) => id))
   const mobs = mob_rows.map((row): MobFilterSource => {
     const mob = record_value(row.value)
+    const role = typeof mob?.role === 'string' ? mob.role : ''
     return Object.freeze({
       mob_type: row.id,
       family: typeof mob?.family === 'string' ? mob.family : '',
-      element: typeof mob?.element === 'string' ? mob.element : '',
-      role: typeof mob?.role === 'string' ? mob.role : '',
+      element: role !== 'protector' && typeof mob?.element === 'string' ? mob.element : '',
+      role,
     })
   })
   const world_sources = world_rows.map((world_row): MobFilterWorldSource => {
     const world = record_value(world_row.value)
     const world_id = typeof world?.world === 'string' ? world.world : world_row.id
-    const roaming = Array.isArray(world?.mobs)
-      ? world.mobs.flatMap((entry) => {
-          const row = record_value(entry)
-          return typeof row?.mob_type === 'string'
-            ? [Object.freeze({ mob_type: row.mob_type, biomes: string_list(row.biomes) })]
-            : []
-        })
-      : []
-    const protectors = Array.isArray(world?.resources)
-      ? world.resources.flatMap((entry) => {
-          const row = record_value(entry)
-          const gatherable = typeof row?.item_type === 'string' ? gatherable_of(row.item_type) : null
-          return gatherable ? [Object.freeze({ mob_type: gatherable.protector, biomes: string_list(row?.biomes) })] : []
-        })
-      : []
+    const roaming = record_list(world?.mobs).flatMap((row) =>
+      typeof row.mob_type === 'string'
+        ? [
+            Object.freeze({
+              mob_type: row.mob_type,
+              biomes: string_list(row.biomes),
+              cities: string_list(row.cities),
+            }),
+          ]
+        : []
+    )
     const terrain = record_value(world?.terrain)
-    const biome_names = Array.isArray(terrain?.biomes)
-      ? terrain.biomes.flatMap((entry) => {
-          const biome = record_value(entry)
-          return typeof biome?.name === 'string' ? [biome.name] : []
-        })
-      : []
-    return Object.freeze({ world: world_id, biome_names, mobs: roaming, protectors })
+    const biome_names = record_list(terrain?.biomes).flatMap((biome) =>
+      typeof biome.name === 'string' ? [biome.name] : []
+    )
+    const cities = record_list(world?.cities).flatMap((city) =>
+      typeof city.city === 'string' ? [Object.freeze({ city: city.city })] : []
+    )
+    return Object.freeze({ world: world_id, biome_names, mobs: roaming, protectors: Object.freeze([]), cities })
   })
   const filters = derive_mob_filter_rows(mobs, world_sources)
   const protectors = job_slugs.flatMap((job): readonly MobFilterRow[] => {
@@ -355,19 +304,6 @@ export const mob_filter_rows = (
       : []
   })
   return Object.freeze([...filters, ...protectors])
-}
-
-export const mob_types_for_protector_visibility = (
-  rows: readonly SeedEntityRow[],
-  selected_types: ReadonlySet<string> | null,
-  hide_protectors: boolean
-): ReadonlySet<string> | null => {
-  if (!hide_protectors) return selected_types
-  return new Set(
-    rows
-      .filter((row) => record_value(row.value)?.role !== 'protector' && (!selected_types || selected_types.has(row.id)))
-      .map(({ id }) => id)
-  )
 }
 
 export const spell_class_rows = (

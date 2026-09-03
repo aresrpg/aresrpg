@@ -136,7 +136,7 @@ export const ItemPowerPanel = ({ value }: Readonly<{ value: JsonValue }>) => {
           />
           <p className="mt-2 text-[8px] tabular-nums text-[#9da1ab]">
             average/AP {power.weapon.average_per_ap} · maximum/AP {power.weapon.maximum_per_ap} ·{' '}
-            {power.weapon.sample_count} same-family donors
+            {power.weapon.sample_count} {power.weapon.donor_family} donors
           </p>
         </div>
       )}

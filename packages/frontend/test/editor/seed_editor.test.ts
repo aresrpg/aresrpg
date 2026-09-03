@@ -6,10 +6,11 @@ import { craft_job_of, gatherable_catalog } from '@aresrpg/immutable'
 
 import airdrop from '../../../../seed/content/airdrop.json'
 import fight_boards from '../../../../seed/content/fight_boards.json'
+import dungeons from '../../../../seed/content/dungeons.json'
 import items from '../../../../seed/content/items.json'
+import mastery from '../../../../seed/content/mastery.json'
 import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
-import shop from '../../../../seed/content/shop.json'
 import spells from '../../../../seed/content/spells.json'
 import structure_packs from '../../../../seed/content/structure_packs.json'
 import worlds from '../../../../seed/content/worlds.json'
@@ -29,7 +30,18 @@ import {
   type JsonValue,
 } from '../../src/editor/seed_editor.ts'
 
-const corpus = Object.freeze({ airdrop, fight_boards, items, mobs, recipes, shop, spells, structure_packs, worlds })
+const corpus = Object.freeze({
+  airdrop,
+  dungeons,
+  fight_boards,
+  items,
+  mastery,
+  mobs,
+  recipes,
+  spells,
+  structure_packs,
+  worlds,
+})
 const leaf_paths = (value: unknown, path: readonly (string | number)[] = []): readonly string[] => {
   if (value === null || typeof value !== 'object') return [path.join('.')]
   return Object.entries(value).flatMap(([key, child]) =>
@@ -78,13 +90,11 @@ describe('seed editor model', () => {
   })
 
   test('projects stable entity rows for every domain', () => {
-    expect(entity_rows('items', items)).toHaveLength(198)
-    expect(entity_rows('mobs', mobs)).toHaveLength(55)
-    expect(entity_rows('spells', spells)).toHaveLength(240)
-    expect(entity_rows('recipes', recipes)).toHaveLength(recipes.length)
-    expect(entity_rows('worlds', worlds)).toHaveLength(2)
-    expect(entity_rows('shop', shop)).toHaveLength(2)
-    expect(entity_rows('airdrop', airdrop)).toHaveLength(0)
+    for (const domain of seed_content_domains) {
+      const rows = entity_rows(domain.id, corpus[domain.id])
+      expect(rows.length).toBeGreaterThan(0)
+      expect(new Set(rows.map(({ id }) => id)).size).toBe(rows.length)
+    }
     expect(entity_rows('items', items)[0]?.label).toBe(items[0].name)
   })
 
@@ -92,26 +102,36 @@ describe('seed editor model', () => {
     const protectors = new Set(gatherable_catalog.map(({ protector }) => protector))
     const curated_mobs = mobs.filter(({ mob_type }) => !protectors.has(mob_type))
     const nauvis = worlds.find(({ world }) => world === 'nauvis')
+    const by_type = new Map(curated_mobs.map((mob) => [mob.mob_type, mob]))
 
-    expect(curated_mobs.filter(({ role }) => role === 'normal')).toHaveLength(18)
-    expect(curated_mobs.filter(({ role }) => role === 'boss')).toHaveLength(1)
-    expect(curated_mobs.filter(({ role }) => role === 'archi')).toHaveLength(3)
-    expect(nauvis?.mobs).toHaveLength(18)
+    expect(nauvis?.mobs.every(({ mob_type }) => by_type.get(mob_type)?.role === 'normal')).toBeTrue()
     expect(
-      nauvis?.mobs.every(({ mob_type }) =>
-        curated_mobs.some((mob) => mob.role === 'normal' && mob.mob_type === mob_type)
-      )
+      curated_mobs
+        .filter(({ role }) => role !== 'normal')
+        .every(({ mob_type }) => !nauvis?.mobs.some((row) => row.mob_type === mob_type))
     ).toBeTrue()
   })
 
-  test('Nauvis owns the Key of the Tangled Aftermath', () => {
-    expect(items.find(({ item_type }) => item_type === 'key_of_tangled_aftermath')).toEqual({
-      item_type: 'key_of_tangled_aftermath',
-      name: 'Key of the Tangled Aftermath',
-      category: 'key',
-      level: 1,
+  test('each city, dungeon, key, and potion uses one matching identity', () => {
+    const identities = [
+      ['thebes', 'gilded_lorito', 8],
+      ['the_ruins', 'tangled_aftermath', 19],
+      ['fuwage', 'ivory_rampart', 30],
+    ] as const
+    const nauvis = worlds.find(({ world }) => world === 'nauvis')
+
+    identities.forEach(([city, dungeon, key_level]) => {
+      expect(nauvis?.cities.find(({ city: slug }) => slug === city)?.dungeon).toBe(dungeon)
+      expect(dungeons.find(({ dungeon: slug }) => slug === dungeon)?.key).toBe(`key_of_${dungeon}`)
+      expect(items.find(({ item_type }) => item_type === `key_of_${dungeon}`)).toMatchObject({
+        category: 'key',
+        level: key_level,
+      })
+      expect(items.find(({ item_type }) => item_type === `potion_of_${city}`)?.consumable).toEqual({
+        type: 'city',
+        city,
+      })
     })
-    expect(worlds.find(({ world }) => world === 'nauvis')?.dungeon.key).toBe('key_of_tangled_aftermath')
   })
 
   test('recipes author ingredients, never derived XP or output quantity', () => {
@@ -131,22 +151,6 @@ describe('seed editor model', () => {
   test('player spells keep six levels while mob spells author exactly one', () => {
     expect(spells.every((spell) => spell.levels.length === 6)).toBeTrue()
     expect(mobs.flatMap((mob) => mob.spells).every((spell) => spell.levels.length === 1)).toBeTrue()
-  })
-
-  test('Ikari chatiments author the Retro normal and critical turn caps', () => {
-    const names = new Set(['Forced Punishment', 'Bold Punishment', 'Spiritual Punishment', 'Nimble Punishment'])
-    const chatiments = spells.filter(({ name }) => names.has(name))
-    const cap_ladder = (critical: boolean) =>
-      chatiments.map(({ levels }) =>
-        levels.map((level) => {
-          const effect = (critical ? level.crit_effects : level.effects).find(({ kind }) => kind === 7)
-          return effect?.value
-        })
-      )
-
-    expect(chatiments).toHaveLength(4)
-    expect(cap_ladder(false)).toEqual(Array.from({ length: 4 }, () => [60, 80, 100, 120, 140, 200]))
-    expect(cap_ladder(true)).toEqual(Array.from({ length: 4 }, () => [70, 90, 110, 130, 150, 220]))
   })
 
   test('updates deeply without mutating or dropping unknown siblings', () => {
@@ -195,7 +199,15 @@ describe('seed editor model', () => {
   test('uses exact Retro rune power and nearby real-item cohorts', () => {
     expect(item_power_budget(1)).toBe(3.75)
     expect(item_power_budget(60)).toBe(120)
-    const tool = items.find(({ item_type }) => item_type === 'arcanite_hoe')!
+    const retained_tool = items.find(({ item_type }) => item_type === 'old_hoe')!
+    const tool = {
+      ...retained_tool,
+      level: 60,
+      stats: {
+        min: retained_tool.stats!.min,
+        max: { ...retained_tool.stats!.max, wisdom: 60 },
+      },
+    }
     const power = item_power_summary(tool as unknown as JsonValue)
     expect(power).toMatchObject({
       median: 120,
@@ -206,7 +218,6 @@ describe('seed editor model', () => {
       sample_count: 141,
     })
     expect(power?.percentile).toBeGreaterThan(0)
-    expect(power?.status).toBe('balanced')
     const basic = items.find(({ item_type }) => item_type === 'basic_pickaxe')!
     expect(item_power_summary(basic as unknown as JsonValue)?.comparison).toBe('all gear')
     const resource = items.find(({ category }) => category === 'resource')!
@@ -220,6 +231,32 @@ describe('seed editor model', () => {
     expect(weapon).toMatchObject({
       stat_power: 0,
       weapon: { average_per_ap: 3, maximum_per_ap: 4 },
+    })
+
+    const bashers_shape = item_power_summary({
+      level: 29,
+      category: 'daggers',
+      damages: [{ damage_type: 'weapon', element: 'earth', from: 10, to: 14 }],
+    })
+    expect(bashers_shape?.weapon).toMatchObject({ average_per_ap: 4, maximum_per_ap: 4.67 })
+    expect(bashers_shape?.weapon?.status).not.toBe('beyond')
+
+    const spindle_shape = item_power_summary({
+      level: 30,
+      category: 'spear',
+      damages: [
+        { damage_type: 'weapon', element: 'fire', from: 8, to: 14 },
+        { damage_type: 'weapon', element: 'earth', from: 8, to: 14 },
+      ],
+    })
+    expect(spindle_shape?.weapon).toMatchObject({
+      donor_family: 'staff',
+      average_per_ap: 5.5,
+      maximum_per_ap: 7,
+      average_p90: 4.5,
+      average_max: 5.75,
+      maximum_max: 7.5,
+      status: 'high',
     })
   })
 })

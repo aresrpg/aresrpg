@@ -8,6 +8,7 @@ import {
   camera_heading,
   cap_nearest_pips,
   cluster_pips,
+  compass_target,
   nearest_zone_edges,
   neighbor_zone_key,
   relative_bearing,
@@ -24,6 +25,12 @@ test('the angle conventions hold: north is -Z, the camera heading is the negated
   // dead ahead maps to the strip center; outside the ±100° window unmounts
   expect(strip_x(relative_bearing(0.4, 0.4))).toBeCloseTo(0.5)
   expect(strip_x(Math.PI)).toBeNull()
+})
+
+test('a city portal compass target exposes its bearing position and exact distance', () => {
+  expect(compass_target({ x: 512, z: 100 }, { x: 512, z: 0 }, 0)).toEqual({ distance: 100, x: 0.5 })
+  expect(compass_target({ x: 512, z: 0 }, { x: 512, z: 0 }, 1.2)).toEqual({ distance: 0, x: 0.5 })
+  expect(compass_target({ x: 512, z: -100 }, { x: 512, z: 0 }, 0).x).toBe(0.1)
 })
 
 test('the pip pipeline caps per kind, merges near bearings across the ±π seam, and thins labels', () => {

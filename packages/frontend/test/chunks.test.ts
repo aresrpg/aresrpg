@@ -16,6 +16,7 @@ const create_engine_spy = () => {
     set_character_anchor: () => {},
     set_quality: () => {},
     set_time_of_day: () => {},
+    set_clouds_visible: () => {},
     set_flatten_amount: () => {},
     set_fight_board: () => {},
     set_entities: () => {},

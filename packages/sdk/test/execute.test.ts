@@ -16,6 +16,7 @@ import {
   type Receipt,
   type SuiTransport,
 } from '../src/client.ts'
+import { pre_submission_version_race } from '../src/transaction_error.ts'
 
 type ChangedRow = NonNullable<NonNullable<Receipt['effects']>['changedObjects']>[number]
 
@@ -48,10 +49,16 @@ const changed = (
 })
 
 const resolve_gas =
-  (calls: { resolutions: number }): TransactionPlugin =>
+  (
+    calls: { resolutions: number; simulations: number },
+    simulate_ok: boolean,
+    failure_message: string
+  ): TransactionPlugin =>
   async (transaction_data, options, next) => {
     calls.resolutions += 1
     if (!options.onlyTransactionKind) {
+      calls.simulations += 1
+      if (!simulate_ok) throw new Error(`[sdk] dry run failed — transaction NOT submitted: ${failure_message}`)
       transaction_data.gasData.price ??= '1000'
       transaction_data.gasData.budget ??= '5000000'
       transaction_data.gasData.payment ??= [{ objectId: id(50), version: '3', digest }]
@@ -94,7 +101,7 @@ const fake_client = ({
   return {
     calls,
     core: {
-      resolveTransactionPlugin: () => resolve_gas(calls),
+      resolveTransactionPlugin: () => resolve_gas(calls, simulate_ok, failure_message),
       getCurrentSystemState: async () => ({ systemState: { epoch: '1', referenceGasPrice: '1000' } }),
       getChainIdentifier: async () => ({ chainIdentifier: digest }),
       getBalance: async () => {
@@ -189,6 +196,12 @@ const game = async (client: ReturnType<typeof fake_client>) => {
 }
 
 describe('the execute gate (core interface)', () => {
+  test('pre-sign resolution lag is classified without retrying inside the SDK', () => {
+    const lag = new Error('provided version does not match for object 0x1, provided: 10 actual: 0x9')
+    expect(pre_submission_version_race(lag)).toBeTrue()
+    expect(pre_submission_version_race(new Error('[sdk] transaction DIGEST failed on-chain: stale'))).toBeFalse()
+  })
+
   test('game transactions reserve the owner-approved 0.2 SUI ceiling', () => {
     expect(GAS_BUDGET_MIST).toBe(200_000_000n)
   })
@@ -199,7 +212,7 @@ describe('the execute gate (core interface)', () => {
 
     await sdk.hydrate(Array.from({ length: 21 }, (_, index) => id(index + 100)))
 
-    expect(client.calls.hydrations.map(({ length }) => length)).toEqual([10, 10, 1])
+    expect(client.calls.hydrations.map(({ length }) => length)).toEqual([21])
   })
 
   test('an external id is read once and absence remains data', async () => {
@@ -235,9 +248,15 @@ describe('the execute gate (core interface)', () => {
   test('a simulated failure throws and the transaction is NEVER submitted', async () => {
     const client = fake_client({ simulate_ok: false })
     const sdk = await game(client)
-    await expect(
-      sdk.call.raise_stat({ kiosk: id(11), cap: id(13), character_id: id(13), stat: 'strength', points: 5 })
-    ).rejects.toThrow(/dry run failed.*NOT submitted.*scribe locked/)
+    const transaction = sdk.tx()
+    sdk.doors.raise_stat(transaction, {
+      kiosk: id(11),
+      cap: id(13),
+      character_id: id(13),
+      stat: 'strength',
+      points: 5,
+    })
+    await expect(sdk.execute(transaction)).rejects.toThrow(/dry run failed.*NOT submitted.*scribe locked/)
     expect(client.calls.simulations).toBe(1)
     expect(client.calls.executions).toBe(0)
   })
@@ -245,13 +264,15 @@ describe('the execute gate (core interface)', () => {
   test('a green simulation submits the same bytes and effects refresh the cache', async () => {
     const client = fake_client({ simulate_ok: true })
     const sdk = await game(client)
-    const receipt = await sdk.call.raise_stat({
+    const transaction = sdk.tx()
+    sdk.doors.raise_stat(transaction, {
       kiosk: id(11),
       cap: id(13),
       character_id: id(13),
       stat: 'strength',
       points: 5,
     })
+    const receipt = await sdk.execute(transaction)
     expect(receipt.Transaction?.digest).toBe('EXEC')
     expect(client.calls.simulations).toBe(1)
     expect(client.calls.executions).toBe(1)
@@ -338,7 +359,7 @@ describe('the execute gate (core interface)', () => {
     await sdk.execute(transaction)
 
     expect(signatures).toBe(1)
-    // strictly two roundtrips: ONE dry run, then the execution (owner 2026-08-21)
+    // one resolver simulation, then one execution; the SDK never adds another preflight
     expect(client.calls.simulations).toBe(1)
     expect(client.calls.executions).toBe(1)
     await sdk.read_sui_balance()

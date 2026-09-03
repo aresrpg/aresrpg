@@ -12,6 +12,7 @@ import { get_items } from '../reads/get_items.ts'
 import { get_claims, get_giftcards, get_kiosks, get_my_listings } from '../reads/get_user_economy.ts'
 import { get_fight_resolutions } from '../reads/get_fight_resolutions.ts'
 import { get_closable_fights } from '../reads/get_closable_fights.ts'
+import { get_mastery } from '../reads/get_mastery.ts'
 import logger from '../logger.ts'
 import type { PlayerModule } from '../player.ts'
 
@@ -36,7 +37,7 @@ export default {
     const { graph, address, send, dispatch } = context
     void (async () => {
       try {
-        const [kiosks, characters, items, claims, giftcards, listings, resolutions, closable_fights] =
+        const [kiosks, characters, items, claims, giftcards, listings, resolutions, closable_fights, mastery] =
           await Promise.all([
             get_kiosks(graph, { address }),
             get_characters(graph, { address }),
@@ -46,6 +47,7 @@ export default {
             get_my_listings(graph, { address }),
             get_fight_resolutions(graph, { address }),
             get_closable_fights(graph, { address }),
+            get_mastery(graph, { address }),
           ])
         const counts = {
           kiosk_count: kiosks.length,
@@ -73,6 +75,7 @@ export default {
         send({ type: 'packet/listings', listings })
         send({ type: 'packet/fight_resolutions', resolutions })
         send({ type: 'packet/closable_fights', fights: closable_fights })
+        send({ type: 'packet/mastery', ...mastery })
         send({ type: 'packet/characters', characters })
       } catch (error) {
         log.error({ address, error: (error as Error).message }, 'load snapshot failed')

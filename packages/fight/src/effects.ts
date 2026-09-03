@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
-// The one spell/weapon/zone resolver, ported in fight.move mutation order.
-import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line, zone_cells } from './combat_grid.ts'
-import { TARGET_FILTERS } from './move_contract.gen.ts'
+// The one spell/weapon/zone resolver, ported in move-combat's mutation order.
+import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line } from './combat_grid.ts'
 import { contest_points, deal, full_damage, life_steal, resist, roll_value } from './damage.ts'
+import { target_allowed, zone_targets } from './effect_targets.ts'
 import { amplify_damage, effect_seed, heal_amount, primary_stat, punishment_base } from './fight_math.ts'
 import {
   KINDS,
@@ -152,30 +152,6 @@ export const placement_rows_castable = (
 ): boolean => {
   const placements = rows.filter(is_placement)
   return placements.length === 0 || placement_anchor_available(runtime, placements, target_cell)
-}
-
-const zone_targets = (
-  runtime: FightRuntime,
-  caster: bigint,
-  row: SpellEffect,
-  anchor: bigint,
-  origin: bigint
-): bigint[] => {
-  const caster_fighter = runtime.contract.fighters[Number(caster)]
-  if (!caster_fighter || caster_fighter.dead) return []
-  if (row.target_filter === TARGET_FILTERS.only_caster) return [caster]
-  return zone_cells(row.area_shape, row.area_size, anchor, origin)
-    .map((cell) => fighter_at(runtime, cell))
-    .filter((seat): seat is bigint => seat !== null)
-    .filter((seat) => target_allowed(runtime, caster, row, seat))
-}
-
-const target_allowed = (runtime: FightReadState, caster: bigint, row: SpellEffect, target: bigint): boolean => {
-  const { team } = runtime.contract.fighters[Number(caster)]
-  if (row.target_filter === TARGET_FILTERS.not_team) return runtime.contract.fighters[Number(target)].team !== team
-  if (row.target_filter === TARGET_FILTERS.not_self) return target !== caster
-  if (row.target_filter === TARGET_FILTERS.not_enemy) return runtime.contract.fighters[Number(target)].team === team
-  return row.target_filter !== TARGET_FILTERS.only_caster || target === caster
 }
 
 const travel_order = (runtime: FightRuntime, targets: bigint[], pivot: bigint, push: boolean): bigint[] =>

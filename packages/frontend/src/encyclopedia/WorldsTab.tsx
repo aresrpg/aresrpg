@@ -179,30 +179,34 @@ export const WorldsTab = ({
             </div>
           </Section>
         )}
-        {detail.dungeon && (
-          <Section title={text('world_dungeon')}>
-            <Fact
-              label={text('world_dungeon')}
-              value={encyclopedia_catalog.item(detail.dungeon.key)?.item.name ?? titleize(detail.dungeon.key)}
-            />
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {detail.dungeon.rooms.map((room, index) => (
-                <div className="border border-border bg-white/2 p-3" key={index}>
-                  <p className="mb-2 text-[8px] tracking-[0.15em] text-[#c8963c] uppercase">
-                    {text('world_dungeon_room', { n: index + 1 })}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    {room.map(({ mob_type }) => (
-                      <LinkChip key={mob_type} select={() => select_mob(mob_type)}>
-                        {encyclopedia_catalog.mob(mob_type)?.mob.name ?? titleize(mob_type)}
-                      </LinkChip>
-                    ))}
+        {detail.cities.map((city) => {
+          const dungeon = encyclopedia_catalog.dungeon(city.dungeon)
+          if (!dungeon) return null
+          return (
+            <Section key={city.city} title={`${titleize(city.city)} · ${text('world_dungeon')}`}>
+              <Fact
+                label={text('world_dungeon')}
+                value={encyclopedia_catalog.item(dungeon.key)?.item.name ?? titleize(dungeon.key)}
+              />
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {dungeon.rooms.map((room, index) => (
+                  <div className="border border-border bg-white/2 p-3" key={index}>
+                    <p className="mb-2 text-[8px] tracking-[0.15em] text-[#c8963c] uppercase">
+                      {text('world_dungeon_room', { n: index + 1 })}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {room.map(({ mob_type }, seat) => (
+                        <LinkChip key={`${String(seat)}:${mob_type}`} select={() => select_mob(mob_type)}>
+                          {encyclopedia_catalog.mob(mob_type)?.mob.name ?? titleize(mob_type)}
+                        </LinkChip>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
+                ))}
+              </div>
+            </Section>
+          )
+        })}
       </div>
     </div>
   )

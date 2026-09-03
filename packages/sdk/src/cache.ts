@@ -13,7 +13,7 @@
 import { normalizeSuiObjectId } from '@mysten/sui/utils'
 
 export type OwnedRef = { objectId: string; version: string; digest: string }
-export type SharedEntry = { initialSharedVersion: string }
+export type SharedEntry = { initialSharedVersion: string; version?: string; digest?: string }
 export type ResolutionCache = {
   owned: Map<string, OwnedRef>
   shared: Map<string, SharedEntry>
@@ -149,30 +149,65 @@ const changed_rows = (receipt: Receipt | null | undefined): ChangedObject[] => {
   return effects?.gasObject ? [effects.gasObject, ...(effects.changedObjects ?? [])] : (effects?.changedObjects ?? [])
 }
 
+const is_newer = (known: string | undefined, candidate: string | number | bigint | undefined): boolean =>
+  candidate !== undefined && (known === undefined || BigInt(known) < BigInt(candidate))
+
+const absorb_shared = (
+  cache: ResolutionCache,
+  object_id: string,
+  initial_version: string | number | bigint,
+  version?: string | number | bigint,
+  digest?: string
+): void => {
+  const known = cache.shared.get(object_id)
+  if (known && !is_newer(known.version, version)) return
+  cache.shared.set(object_id, {
+    initialSharedVersion: known?.initialSharedVersion ?? String(initial_version),
+    ...(version !== undefined ? { version: String(version) } : {}),
+    ...(digest ? { digest } : {}),
+  })
+}
+
+const absorb_owned = (
+  cache: ResolutionCache,
+  object_id: string,
+  version?: string | number | bigint,
+  digest?: string
+): void => {
+  if (!version || !digest || !is_newer(cache.owned.get(object_id)?.version, version)) return
+  cache.owned.set(object_id, { objectId: object_id, version: String(version), digest })
+}
+
+const absorb_change = (cache: ResolutionCache, change: ChangedObject): void => {
+  const { objectId, outputState, outputVersion, outputDigest, outputOwner, idOperation } = change
+  if (!objectId) return
+  const object_id = normalizeSuiObjectId(objectId)
+  if (idOperation === 'Deleted' || outputState === 'DoesNotExist') {
+    cache.owned.delete(object_id)
+    cache.shared.delete(object_id)
+    return
+  }
+  const shared_version = shared_version_of(outputOwner)
+  if (shared_version !== undefined) absorb_shared(cache, object_id, shared_version, outputVersion, outputDigest)
+  else absorb_owned(cache, object_id, outputVersion, outputDigest)
+}
+
+export const receipt_gas_ref = (receipt: Receipt | null | undefined): OwnedRef | null => {
+  const gas = effects_of(receipt)?.gasObject
+  return gas?.objectId && gas.outputVersion && gas.outputDigest
+    ? {
+        objectId: normalizeSuiObjectId(gas.objectId),
+        version: String(gas.outputVersion),
+        digest: gas.outputDigest,
+      }
+    : null
+}
+
 /** The one write door: fold a transaction result's changed objects into the cache. Stale
  *  versions never regress a newer entry (results can land out of order). Deleted objects
  *  leave. Returns the same cache (the cache IS the store; this is its only writer). */
 export const absorb_receipt = (cache: ResolutionCache, receipt: Receipt | null | undefined): ResolutionCache => {
-  for (const change of changed_rows(receipt)) {
-    const { objectId, outputState, outputVersion, outputDigest, outputOwner, idOperation } = change
-    if (!objectId) continue
-    const canonical_id = normalizeSuiObjectId(objectId)
-    if (idOperation === 'Deleted' || outputState === 'DoesNotExist') {
-      cache.owned.delete(canonical_id)
-      cache.shared.delete(canonical_id)
-      continue
-    }
-    const shared_version = shared_version_of(outputOwner)
-    if (shared_version !== undefined) {
-      if (!cache.shared.has(canonical_id))
-        cache.shared.set(canonical_id, { initialSharedVersion: String(shared_version) })
-      continue
-    }
-    if (!outputVersion || !outputDigest) continue
-    const known = cache.owned.get(canonical_id)
-    if (known && BigInt(known.version) >= BigInt(outputVersion)) continue
-    cache.owned.set(canonical_id, { objectId: canonical_id, version: String(outputVersion), digest: outputDigest })
-  }
+  for (const change of changed_rows(receipt)) absorb_change(cache, change)
   return cache
 }
 
@@ -182,14 +217,8 @@ export const absorb_object = (cache: ResolutionCache, data: FetchedObject): Reso
   if (!data?.objectId) return cache
   const canonical_id = normalizeSuiObjectId(data.objectId)
   const shared_version = shared_version_of(data.owner)
-  if (shared_version !== undefined) {
-    cache.shared.set(canonical_id, { initialSharedVersion: String(shared_version) })
-  } else if (data.version && data.digest) {
-    const known = cache.owned.get(canonical_id)
-    if (!known || BigInt(known.version) < BigInt(data.version)) {
-      cache.owned.set(canonical_id, { objectId: canonical_id, version: String(data.version), digest: data.digest })
-    }
-  }
+  if (shared_version !== undefined) absorb_shared(cache, canonical_id, shared_version, data.version, data.digest)
+  else absorb_owned(cache, canonical_id, data.version, data.digest)
   return cache
 }
 
@@ -200,3 +229,9 @@ export const owned_ref = (cache: ResolutionCache, object_id: string): OwnedRef |
 /** Known SHARED shape ({initialSharedVersion}), or undefined. */
 export const shared_ref = (cache: ResolutionCache, object_id: string): SharedEntry | undefined =>
   cache.shared.get(normalizeSuiObjectId(object_id))
+
+export const object_revision = (cache: ResolutionCache, object_id: string): string | null => {
+  const id = normalizeSuiObjectId(object_id)
+  const ref = cache.owned.get(id) ?? cache.shared.get(id)
+  return ref?.version && ref.digest ? `${ref.version}:${ref.digest}` : null
+}

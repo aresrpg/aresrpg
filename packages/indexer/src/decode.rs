@@ -24,7 +24,7 @@
 //! testnet object contents — a self-round-trip encodes with the same struct it
 //! decodes with, so it can only prove internal consistency (the 2026-07-17 XP
 //! incident). Round-trip survives only for the shapes no live object carries
-//! yet (`Fight`, the equipment `VecMap`); each captured test names its object
+//! yet (`Fight`, `Mastery`, the equipment `VecMap`); each captured test names its object
 //! id, version, and capture date.
 
 use serde::{Deserialize, Serialize};
@@ -245,11 +245,11 @@ pub struct World {
 
 // ╔════════════════ [ aresrpg::zone — World DF ] ═════════════════════════════ ]
 
-/// `zone::ZoneKey { zx, zz }` — the DF key on the World UID.
+/// `zone::ZoneKey { zone_x, zone_z }` — the DF key on the World UID.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ZoneKey {
-    pub zx: u32,
-    pub zz: u32,
+    pub zone_x: u32,
+    pub zone_z: u32,
 }
 
 /// `zone::Zone` — the whole cost of a discovered zone.
@@ -282,10 +282,8 @@ pub type EquipmentMap = VecMap<String, EquippedRecord>;
 /// `dungeon::DungeonRun` — value of `Field<DungeonRunKey, DungeonRun>`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DungeonRun {
-    pub world: String,
+    pub dungeon: String,
     pub room: u64,
-    pub x: u32,
-    pub z: u32,
     /// Committed at ENTER (key-gated) — each room's board derives from it.
     pub seed: u64,
 }
@@ -342,38 +340,52 @@ pub struct Fight {
     pub world: String,
     pub x: u32,
     pub z: u32,
-    pub board: GridSpec,
-    pub closed: Vec<u64>,
     pub access_a: u8,
     pub access_b: u8,
     pub opener_a: Option<Id>,
     pub opener_b: Option<Id>,
+    pub authorities: Vec<FighterAuthority>,
+    pub combat: CombatState,
+    pub dungeon: Option<DungeonTag>,
+    pub door_policy: u64,
+    pub drops_rolled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum FighterAuthority {
+    Player { character: Id, owner: Addr },
+    Mob,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DungeonTag {
+    pub dungeon: String,
+    pub room: u64,
+}
+
+/// `aresrpg_combat::combat::State` — nested value state, never an independently owned object.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CombatState {
+    pub board: GridSpec,
+    pub closed: Vec<u64>,
     pub fighters: Vec<Fighter>,
     pub zones: Vec<BoardZone>,
     pub queue: Vec<u64>,
-    pub turn_ptr: u64,
+    pub turn_pointer: u64,
     pub round: u64,
     pub ended: bool,
     pub winner: Option<u8>,
-    pub dungeon: Option<u64>,
-    pub managed: bool,
-    pub wagered: bool,
-    pub drops_rolled: bool,
     pub turn_seed: u64,
-    pub turn_slot: u64,
+    pub turn_cast_index: u64,
     pub turn_casts: Vec<TurnCast>,
-    pub placement_ms: u64,
+    pub placement_started_ms: u64,
     pub turn_started_ms: u64,
 }
 
-/// `fight::FighterKind` — Player holds custody refs; Mob is a value snapshot.
+/// `aresrpg_combat::combat::FighterKind` — authority identities stay in core.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum FighterKind {
-    Player {
-        character: Id,
-        owner: Addr,
-        level: u16,
-    },
+    Player,
     Mob(MobSnapshot),
 }
 
@@ -381,6 +393,7 @@ pub enum FighterKind {
 pub struct Fighter {
     pub team: u8,
     pub kind: FighterKind,
+    pub stats: FighterStats,
     pub cell: u64,
     pub ready: bool,
     pub dead: bool,
@@ -395,18 +408,34 @@ pub struct Fighter {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FighterStats {
+    pub sheet: Sheet,
+    pub max_hp: u64,
+    pub base_ap: u64,
+    pub base_mp: u64,
+    pub earth_resistance: u64,
+    pub fire_resistance: u64,
+    pub water_resistance: u64,
+    pub air_resistance: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Sheet {
+    pub strength: u64,
+    pub intelligence: u64,
+    pub chance: u64,
+    pub agility: u64,
+    pub wisdom: u64,
+    pub raw_damage: u64,
+    pub critical: u64,
+    pub range_bonus: u64,
+    pub level: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MobSnapshot {
     pub mob_type: String,
     pub level: u64,
-    pub max_hp: u64,
-    pub ap: u64,
-    pub mp: u64,
-    pub agility: u64,
-    pub wisdom: u64,
-    pub earth_res: u64,
-    pub fire_res: u64,
-    pub water_res: u64,
-    pub air_res: u64,
     pub kit: Vec<KitSpell>,
     pub xp: u64,
     pub loot: Vec<LootEntry>,
@@ -490,7 +519,32 @@ pub struct FriendList {
     pub friends: VecSet<Addr>,
 }
 
-// ╔════════════════ [ aresrpg::kolizeum / shop / version ] ═══════════════════ ]
+/// `mastery::Mastery` — one soulbound daily progression row per address.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Mastery {
+    pub id: Id,
+    pub owner: Addr,
+    pub points: u64,
+    pub last_completed_epoch: Option<u64>,
+    pub quest_epoch: u64,
+    pub quest_started_ms: u64,
+    pub quest_world: String,
+    pub quest_dungeon: Id,
+    pub quest_reward: u8,
+    pub quest_completed: bool,
+}
+
+/// `mastery::MasteryOffer` — living cost/enabled state for one seeded statless item.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MasteryOffer {
+    pub id: Id,
+    pub item_type: String,
+    pub template: Id,
+    pub cost: u64,
+    pub enabled: bool,
+}
+
+// ╔═══════════ [ aresrpg::kolizeum / distribution / version ] ═══════════════ ]
 
 /// `kolizeum::Kolizeum` — the lobby + escrow (pot value is MIST → string prop).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -505,19 +559,7 @@ pub struct Kolizeum {
     pub allowed: Option<VecSet<Addr>>,
 }
 
-/// `shop::Sale` — the vending machine; `supply` is the only field that moves.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Sale {
-    pub id: Id,
-    pub item_type: String,
-    pub template: Id,
-    pub price: u64,
-    pub supply: u64,
-    pub infinite: bool,
-    pub enabled: bool,
-}
-
-/// `shop::Airdrop` — the whitelist IS the claim state (shrinks per claim).
+/// `distribution::Airdrop` — the whitelist IS the claim state (shrinks per claim).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Airdrop {
     pub id: Id,
@@ -527,7 +569,7 @@ pub struct Airdrop {
     pub whitelist: VecSet<Addr>,
 }
 
-/// `shop::Giftcard` — the zksend-portable voucher.
+/// `distribution::Giftcard` — the zksend-portable voucher.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Giftcard {
     pub id: Id,
@@ -620,12 +662,12 @@ pub enum TradePhase {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeState {
-    pub a: Addr,
-    pub b: Addr,
+    pub initiator: Addr,
+    pub invitee: Addr,
     pub phase: TradePhase,
     pub offer_revision: u64,
-    pub accept_a: bool,
-    pub accept_b: bool,
+    pub initiator_accepted: bool,
+    pub invitee_accepted: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -662,6 +704,36 @@ mod tests {
             action: 32769,
             critical: 32768,
             raw_damage: 32768,
+            earth_resistance: 32768,
+            fire_resistance: 32768,
+            water_resistance: 32768,
+            air_resistance: 32768,
+        }
+    }
+
+    fn fighter_stats(
+        level: u64,
+        max_hp: u64,
+        base_ap: u64,
+        base_mp: u64,
+        agility: u64,
+        wisdom: u64,
+    ) -> FighterStats {
+        FighterStats {
+            sheet: Sheet {
+                strength: 0,
+                intelligence: 0,
+                chance: 0,
+                agility,
+                wisdom,
+                raw_damage: 0,
+                critical: 0,
+                range_bonus: 0,
+                level,
+            },
+            max_hp,
+            base_ap,
+            base_mp,
             earth_resistance: 32768,
             fire_resistance: 32768,
             water_resistance: 32768,
@@ -803,149 +875,149 @@ mod tests {
             world: "01_first_shore".into(),
             x: 250_000,
             z: 250_100,
-            board: GridSpec {
-                width: 14,
-                height: 14,
-                shape_mask: vec![u64::MAX, 7],
-                obstacles: vec![17, 18],
-                holes: vec![40],
-                start_cells_a: vec![1, 2, 3, 4, 5, 6],
-                start_cells_b: vec![190, 191, 192, 193, 194, 195],
-            },
-            closed: vec![0, u64::MAX],
             access_a: 0,
             access_b: 255,
             opener_a: Some(Id([9; 32])),
             opener_b: None,
-            fighters: vec![
-                Fighter {
-                    team: 0,
-                    kind: FighterKind::Player {
-                        character: Id([9; 32]),
-                        owner: Addr([10; 32]),
-                        level: 10,
-                    },
-                    cell: 3,
-                    ready: true,
-                    dead: false,
-                    settled: false,
-                    forfeited: false,
-                    hp: 200,
-                    ap: 6,
-                    mp: 3,
-                    drops: vec![RolledDrop {
-                        item_type: "wooling_wool".into(),
-                        qty: 2,
-                    }],
-                    effects: vec![],
-                    cooldowns: vec![Cooldown {
-                        spell: "invisibility".into(),
-                        left: 2,
-                    }],
+            authorities: vec![
+                FighterAuthority::Player {
+                    character: Id([9; 32]),
+                    owner: Addr([10; 32]),
                 },
-                Fighter {
-                    team: 1,
-                    kind: FighterKind::Mob(MobSnapshot {
-                        mob_type: "wooling".into(),
-                        level: 5,
-                        max_hp: 60,
+                FighterAuthority::Mob,
+            ],
+            combat: CombatState {
+                board: GridSpec {
+                    width: 14,
+                    height: 14,
+                    shape_mask: vec![u64::MAX, 7],
+                    obstacles: vec![17, 18],
+                    holes: vec![40],
+                    start_cells_a: vec![1, 2, 3, 4, 5, 6],
+                    start_cells_b: vec![190, 191, 192, 193, 194, 195],
+                },
+                closed: vec![0, u64::MAX],
+                fighters: vec![
+                    Fighter {
+                        team: 0,
+                        kind: FighterKind::Player,
+                        stats: fighter_stats(10, 200, 6, 3, 20, 10),
+                        cell: 3,
+                        ready: true,
+                        dead: false,
+                        settled: false,
+                        forfeited: false,
+                        hp: 200,
+                        ap: 6,
+                        mp: 3,
+                        drops: vec![RolledDrop {
+                            item_type: "wooling_wool".into(),
+                            qty: 2,
+                        }],
+                        effects: vec![],
+                        cooldowns: vec![Cooldown {
+                            spell: "invisibility".into(),
+                            left: 2,
+                        }],
+                    },
+                    Fighter {
+                        team: 1,
+                        kind: FighterKind::Mob(MobSnapshot {
+                            mob_type: "wooling".into(),
+                            level: 5,
+                            kit: vec![KitSpell {
+                                name: "croc".into(),
+                                ordinal: 2,
+                                level: SpellLevel {
+                                    ap_cost: 3,
+                                    range_min: 1,
+                                    range_max: 1,
+                                    modifiable_range: false,
+                                    line_of_sight: true,
+                                    line_launch: false,
+                                    free_cell: false,
+                                    casts_per_turn: 2,
+                                    casts_per_target: 0,
+                                    cooldown_turns: 0,
+                                    crit_1_in: 20,
+                                    effects: vec![Effect {
+                                        kind: 0,
+                                        element: "earth".into(),
+                                        value: 4,
+                                        value_max: 7,
+                                        area_shape: 0,
+                                        area_size: 0,
+                                        target_filter: 0,
+                                        chance_bp: 10_000,
+                                        turns: 0,
+                                        stat: 0,
+                                    }],
+                                    crit_effects: vec![],
+                                },
+                            }],
+                            xp: 25,
+                            loot: vec![LootEntry {
+                                item_type: "wooling_wool".into(),
+                                chance_bp: 5_000,
+                                min_qty: 1,
+                                max_qty: 3,
+                            }],
+                        }),
+                        stats: fighter_stats(5, 60, 4, 3, 12, 3),
+                        cell: 190,
+                        ready: true,
+                        dead: false,
+                        settled: true,
+                        forfeited: false,
+                        hp: 60,
                         ap: 4,
                         mp: 3,
-                        agility: 12,
-                        wisdom: 3,
-                        earth_res: 32768,
-                        fire_res: 32768,
-                        water_res: 32700,
-                        air_res: 32768,
-                        kit: vec![KitSpell {
-                            name: "croc".into(),
-                            ordinal: 2,
-                            level: SpellLevel {
-                                ap_cost: 3,
-                                range_min: 1,
-                                range_max: 1,
-                                modifiable_range: false,
-                                line_of_sight: true,
-                                line_launch: false,
-                                free_cell: false,
-                                casts_per_turn: 2,
-                                casts_per_target: 0,
-                                cooldown_turns: 0,
-                                crit_1_in: 20,
-                                effects: vec![Effect {
-                                    kind: 0,
-                                    element: "earth".into(),
-                                    value: 4,
-                                    value_max: 7,
-                                    area_shape: 0,
-                                    area_size: 0,
-                                    target_filter: 0,
-                                    chance_bp: 10_000,
-                                    turns: 0,
-                                    stat: 0,
-                                }],
-                                crit_effects: vec![],
-                            },
-                        }],
-                        xp: 25,
-                        loot: vec![LootEntry {
-                            item_type: "wooling_wool".into(),
-                            chance_bp: 5_000,
-                            min_qty: 1,
-                            max_qty: 3,
-                        }],
-                    }),
-                    cell: 190,
-                    ready: true,
-                    dead: false,
-                    settled: true,
-                    forfeited: false,
-                    hp: 60,
-                    ap: 4,
-                    mp: 3,
-                    drops: vec![],
+                        drops: vec![],
+                        effects: vec![],
+                        cooldowns: vec![],
+                    },
+                ],
+                zones: vec![BoardZone {
+                    owner_fighter: 0,
+                    trap: true,
+                    shape: 1,
+                    size: 2,
+                    anchor: 77,
+                    turns_left: 0,
                     effects: vec![],
-                    cooldowns: vec![],
-                },
-            ],
-            zones: vec![BoardZone {
-                owner_fighter: 0,
-                trap: true,
-                shape: 1,
-                size: 2,
-                anchor: 77,
-                turns_left: 0,
-                effects: vec![],
-            }],
-            queue: vec![0, 1],
-            turn_ptr: 0,
-            round: 3,
-            ended: false,
-            winner: None,
-            dungeon: Some(2),
-            managed: true,
-            wagered: false,
+                }],
+                queue: vec![0, 1],
+                turn_pointer: 0,
+                round: 3,
+                ended: false,
+                winner: None,
+                turn_seed: u64::MAX,
+                turn_cast_index: 1,
+                turn_casts: vec![TurnCast {
+                    spell: "croc".into(),
+                    target: 0xFFFF_FFFF,
+                }],
+                placement_started_ms: 1_700_000_000_000,
+                turn_started_ms: 1_700_000_060_000,
+            },
+            dungeon: Some(DungeonTag {
+                dungeon: "tangled_aftermath".into(),
+                room: 2,
+            }),
+            door_policy: 13,
             drops_rolled: false,
-            turn_seed: u64::MAX,
-            turn_slot: 1,
-            turn_casts: vec![TurnCast {
-                spell: "croc".into(),
-                target: 0xFFFF_FFFF,
-            }],
-            placement_ms: 1_700_000_000_000,
-            turn_started_ms: 1_700_000_060_000,
         };
         let back = roundtrip(&fight);
-        let FighterKind::Player { level, .. } = &back.fighters[0].kind else {
+        let FighterAuthority::Player { .. } = &back.authorities[0] else {
             panic!("expected player");
         };
-        assert_eq!(*level, 10);
-        let FighterKind::Mob(snapshot) = &back.fighters[1].kind else {
+        assert_eq!(back.combat.fighters[0].stats.sheet.level, 10);
+        let FighterKind::Mob(snapshot) = &back.combat.fighters[1].kind else {
             panic!("expected mob");
         };
         assert_eq!(snapshot.kit[0].level.crit_1_in, 20);
-        assert_eq!(back.winner, None);
-        assert_eq!(back.dungeon, Some(2));
+        assert_eq!(back.combat.winner, None);
+        assert_eq!(back.dungeon.as_ref().map(|tag| tag.room), Some(2));
     }
 
     #[test]

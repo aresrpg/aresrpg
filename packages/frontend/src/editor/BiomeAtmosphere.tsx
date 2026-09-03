@@ -58,6 +58,34 @@ export const BiomeAtmosphere = ({
         </label>
         <span className="pb-2 text-[7px] text-[#777b86]">{selected.length} packs active</span>
       </section>
+      <button
+        className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.mountain_passes ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#ead8b3]' : 'border-[#292c34] bg-black/16 text-[#858994] hover:bg-white/[0.025]'}`}
+        onClick={() => {
+          begin_preview_update()
+          replace(['terrain', 'biomes', biome_index, 'mountain_passes'], !biome.mountain_passes)
+        }}
+        type="button"
+      >
+        <span>
+          <strong className="block text-[8px] tracking-[0.08em] uppercase">Colossal mountain passes</strong>
+          <span className="mt-0.5 block text-[6px] text-[#666b75]">Rare seeded cuts through tall terrain</span>
+        </span>
+        <span className="text-[7px] tracking-[0.1em] uppercase">{biome.mountain_passes ? 'On' : 'Off'}</span>
+      </button>
+      <button
+        className={`flex w-full items-center justify-between border-l-2 px-2.5 py-2 text-left ${biome.ravines ? 'border-[#a5634d] bg-[#a5634d]/10 text-[#e4c1ad]' : 'border-[#292c34] bg-black/16 text-[#858994] hover:bg-white/[0.025]'}`}
+        onClick={() => {
+          begin_preview_update()
+          replace(['terrain', 'biomes', biome_index, 'ravines'], !biome.ravines)
+        }}
+        type="button"
+      >
+        <span>
+          <strong className="block text-[8px] tracking-[0.08em] uppercase">Colossal ravines</strong>
+          <span className="mt-0.5 block text-[6px] text-[#666b75]">Rare deep fractures with feathered ends</span>
+        </span>
+        <span className="text-[7px] tracking-[0.1em] uppercase">{biome.ravines ? 'On' : 'Off'}</span>
+      </button>
       <div className="space-y-1">
         {ordered.map(([name, pack]) => {
           const active = selected.includes(name)

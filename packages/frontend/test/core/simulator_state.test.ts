@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test'
 import authored_boards from '../../../../seed/content/fight_boards.json'
 import { filter_picker_items } from '../../src/components/SearchPickerModal.tsx'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
+import { fight_character_entity_sources } from '../../src/game/fight/character_entity_sources.ts'
 import {
   can_start_simulator_fight,
   initial_simulator_state,
@@ -203,7 +204,7 @@ describe('local fight simulator setup', () => {
   })
 
   test('keeps the authored max-roll loadout on the local character', () => {
-    const character = { ...local_character(), loadout: { tool: 'arcanite_hoe', title: 'title_veteran' } }
+    const character = { ...local_character(), loadout: { tool: 'old_hoe', title: 'title_veteran' } }
     const saved = reduce_simulator_state(initial_simulator_state(), {
       type: 'simulator/character_saved',
       character,
@@ -326,7 +327,13 @@ describe('local fight simulator setup', () => {
   test('hands local birth inputs to the canonical fight factory', () => {
     const initial = reduce_simulator_state(initial_simulator_state(), {
       type: 'simulator/character_saved',
-      character: local_character(),
+      character: {
+        ...local_character(),
+        male: false,
+        colors: ['#102030', '#405060', '#708090'] as const,
+        level: 20,
+        loadout: { hat: 'lorito_hat__golden', cloak: 'lorito_cloak__golden' },
+      },
     })
     const board = simulator_board(initial)
     const with_ally = reduce_simulator_state(initial, {
@@ -350,6 +357,19 @@ describe('local fight simulator setup', () => {
     expect(fight.state().contract.fighters[1]?.kind.type).toBe('mob')
     expect(fight.state().sources.players.local_senshi?.folded_stats.chance).toBe(32_768n)
     expect(fight.state().sources.players.local_senshi?.weapon).toBeNull()
+    expect(fight.state().sources.players.local_senshi).toMatchObject({
+      name: 'Local Senshi',
+      sex: 'female',
+      color_1: 0x102030,
+      color_2: 0x405060,
+      color_3: 0x708090,
+      hat: 'lorito_hat__golden',
+      cloak: 'lorito_cloak__golden',
+    })
+    expect(fight_character_entity_sources(fight.state(), [])[0]?.loadout).toEqual({
+      hat: 'lorito_hat__golden',
+      cloak: 'lorito_cloak__golden',
+    })
     expect(fight.apply({ type: 'start', observed_ms: 60_000n }).error).toBeNull()
 
     const listeners = new Map<string, ((input: AppInput) => void)[]>()

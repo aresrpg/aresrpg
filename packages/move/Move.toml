@@ -11,6 +11,9 @@ Kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev 
 # The immutable static layer (curves, grids, formulas, prng, spell algebra) — published
 # first, pinned at publish; pure functions only, the client twin mirrors it byte for byte.
 aresrpg_math = { local = "../move-math" }
+# Authority-free tactical state and deterministic transitions. Core alone owns the real nested
+# state borrow, custody, entropy, events, and every cross-domain mutation.
+aresrpg_combat = { local = "../move-combat" }
 # The one application AdminCap type, shared by seed and core.
 aresrpg_control = { local = "../control" }
 # The living content layer (owner 2026-08-23): content objects + admin doors. Core reads

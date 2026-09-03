@@ -40,15 +40,19 @@ export const read_character_checkpoint = async (
   expected_world: string
 ): Promise<CharacterCheckpoint | null> => {
   if (!type_package) throw new Error('Character checkpoints are unavailable on this network')
-  const current = await client.core.getDynamicField({
-    parentId: character_id,
-    name: key(type_package, 'CurrentWorldKey'),
-  })
-  if (bcs.String.parse(current.dynamicField.value.bcs) !== expected_world) return null
-  const checkpoint = await client.core.getDynamicField({
-    parentId: character_id,
-    name: key(type_package, 'CheckpointKey', expected_world),
-  })
-  const value = CHECKPOINT_BCS.parse(checkpoint.dynamicField.value.bcs)
+  const [current, checkpoint] = await Promise.allSettled([
+    client.core.getDynamicField({
+      parentId: character_id,
+      name: key(type_package, 'CurrentWorldKey'),
+    }),
+    client.core.getDynamicField({
+      parentId: character_id,
+      name: key(type_package, 'CheckpointKey', expected_world),
+    }),
+  ])
+  if (current.status === 'rejected') throw current.reason
+  if (bcs.String.parse(current.value.dynamicField.value.bcs) !== expected_world) return null
+  if (checkpoint.status === 'rejected') throw checkpoint.reason
+  const value = CHECKPOINT_BCS.parse(checkpoint.value.dynamicField.value.bcs)
   return Object.freeze({ x: value.x, z: value.z })
 }

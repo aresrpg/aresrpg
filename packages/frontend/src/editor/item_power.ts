@@ -52,9 +52,10 @@ export const item_stat_weight = item_budget_stat_weight
 
 const weapon_power = (level: number, category: string, damages: readonly JsonValue[]): WeaponPowerSummary | null => {
   const physics = (WEAPON_PHYSICS as Readonly<Record<string, Readonly<{ ap: bigint }>>>)[category]
-  const envelope = dofus_weapon_damage_envelope(level, category)
-  if (!physics || !envelope || damages.length === 0) return null
+  if (!physics || damages.length === 0) return null
   const ap = Number(physics.ap)
+  const envelope = dofus_weapon_damage_envelope(level, category, ap)
+  if (!envelope) return null
   const totals = damages.reduce<Readonly<{ average: number; maximum: number }>>(
     (sum, damage) => {
       const line = json_record(damage)
@@ -74,6 +75,12 @@ const weapon_power = (level: number, category: string, damages: readonly JsonVal
   })
 }
 
+const supports_item_power = (
+  category: string,
+  stats: Readonly<Record<string, JsonValue>> | null,
+  damages: readonly JsonValue[]
+): boolean => category !== 'pet' && (stats !== null || damages.length > 0)
+
 export const item_power_summary = (value: JsonValue): ItemPowerSummary | null => {
   const item = json_record(value)
   if (!item) return null
@@ -81,7 +88,7 @@ export const item_power_summary = (value: JsonValue): ItemPowerSummary | null =>
   const category = typeof item.category === 'string' ? item.category : ''
   const stats = json_record(item.stats)
   const damages = Array.isArray(item.damages) ? item.damages : []
-  if (!stats && damages.length === 0) return null
+  if (!supports_item_power(category, stats, damages)) return null
   const maximum = json_record(stats?.max)
   const stat_contributions = Object.freeze(
     Object.fromEntries(

@@ -13,6 +13,12 @@ const DIR_NEGATIVE_X = BigInt(DIRECTIONS.negative_x)
 const DIR_POSITIVE_Y = BigInt(DIRECTIONS.positive_y)
 const DIR_NEGATIVE_Y = BigInt(DIRECTIONS.negative_y)
 const DIR_NONE = BigInt(DIRECTIONS.none)
+const DIRECTION_STEPS = Object.freeze([
+  Object.freeze({ x: 1n, y: 0n }),
+  Object.freeze({ x: -1n, y: 0n }),
+  Object.freeze({ x: 0n, y: 1n }),
+  Object.freeze({ x: 0n, y: -1n }),
+])
 
 export const CARDINAL_DIRECTIONS = Object.freeze([DIR_POSITIVE_X, DIR_NEGATIVE_X, DIR_POSITIVE_Y, DIR_NEGATIVE_Y])
 
@@ -259,6 +265,116 @@ export const in_zone = (shape_code: bigint, size: bigint, anchor: bigint, cell: 
   return distance <= size
 }
 
+const directed_distance = (origin: bigint, direction: bigint, cell: bigint): bigint | null => {
+  const step = DIRECTION_STEPS[Number(direction)]
+  if (!step) return null
+  const origin_x = cell_x(origin)
+  const origin_y = cell_y(origin)
+  const delta_x = cell_x(cell) - origin_x
+  const delta_y = cell_y(cell) - origin_y
+  const distance = delta_x * step.x + delta_y * step.y
+  const cross = delta_x * step.y - delta_y * step.x
+  return cross === 0n && distance >= 0n ? distance : null
+}
+
+const walk_rank = (origin: bigint, direction: bigint, size: bigint, cell: bigint): bigint | null => {
+  const distance = directed_distance(origin, direction, cell)
+  return distance !== null && distance >= 1n && distance <= size ? distance : null
+}
+
+const walk_capacity = (origin: bigint, direction: bigint, size: bigint): bigint => {
+  const step = DIRECTION_STEPS[Number(direction)]
+  if (!step) return 0n
+  const x = cell_x(origin)
+  const y = cell_y(origin)
+  const horizontal = step.x > 0n ? GRID_W - 1n - x : x
+  const vertical = step.y > 0n ? GRID_H - 1n - y : y
+  const available = step.x === 0n ? vertical : horizontal
+  return size < available ? size : available
+}
+
+const perpendicular_directions = (direction: bigint): readonly [bigint, bigint] =>
+  direction === DIR_POSITIVE_X || direction === DIR_NEGATIVE_X || direction === DIR_NONE
+    ? [DIR_POSITIVE_Y, DIR_NEGATIVE_Y]
+    : [DIR_POSITIVE_X, DIR_NEGATIVE_X]
+
+const line_rank = (anchor: bigint, caster: bigint, size: bigint, cell: bigint): bigint | null =>
+  cell === anchor ? 0n : walk_rank(anchor, away_dir(caster, anchor), size, cell)
+
+const tbar_rank = (anchor: bigint, caster: bigint, size: bigint, cell: bigint): bigint | null => {
+  if (cell === anchor) return 0n
+  const direction = away_dir(caster, anchor)
+  const [perpendicular_a, perpendicular_b] = perpendicular_directions(direction)
+  const first = walk_rank(anchor, perpendicular_a, size, cell)
+  if (first !== null) return first
+  const second = walk_rank(anchor, perpendicular_b, size, cell)
+  return second === null ? null : walk_capacity(anchor, perpendicular_a, size) + second
+}
+
+const tbar_length = (anchor: bigint, direction: bigint, size: bigint): bigint => {
+  const [perpendicular_a, perpendicular_b] = perpendicular_directions(direction)
+  return 1n + walk_capacity(anchor, perpendicular_a, size) + walk_capacity(anchor, perpendicular_b, size)
+}
+
+const cone_depth_start = (depth: bigint, width: bigint): bigint => (depth === 1n ? 0n : 1n + (depth - 2n) * width)
+
+const cone_side_rank = (
+  caster: bigint,
+  direction: bigint,
+  perpendicular: bigint,
+  size: bigint,
+  cell: bigint,
+  width: bigint,
+  offset: bigint
+): bigint | null => {
+  const center = step_cell(cell, opposite_dir(perpendicular))
+  if (center === null) return null
+  const depth = walk_rank(caster, direction, size, center)
+  if (depth === null || depth < 2n) return null
+  if (step_cell(center, perpendicular) !== cell) return null
+  return cone_depth_start(depth, width) + offset
+}
+
+const cone_rank = (anchor: bigint, caster: bigint, size: bigint, cell: bigint): bigint | null => {
+  const direction = away_dir(caster, anchor)
+  const first_center = step_cell(caster, direction)
+  if (first_center === null) return null
+  const [perpendicular_a, perpendicular_b] = perpendicular_directions(direction)
+  const has_a = step_cell(first_center, perpendicular_a) !== null
+  const has_b = step_cell(first_center, perpendicular_b) !== null
+  const width = 1n + (has_a ? 1n : 0n) + (has_b ? 1n : 0n)
+  const center_depth = walk_rank(caster, direction, size, cell)
+  if (center_depth !== null) return cone_depth_start(center_depth, width)
+  if (size < 2n) return null
+  const side_a = cone_side_rank(caster, direction, perpendicular_a, size, cell, width, 1n)
+  return side_a ?? cone_side_rank(caster, direction, perpendicular_b, size, cell, width, 1n + (has_a ? 1n : 0n))
+}
+
+const podium_rank = (anchor: bigint, caster: bigint, size: bigint, cell: bigint): bigint | null => {
+  const bar = tbar_rank(anchor, caster, size, cell)
+  if (bar !== null) return bar
+  const direction = away_dir(caster, anchor)
+  return step_cell(anchor, direction) === cell ? tbar_length(anchor, direction, size) : null
+}
+
+/** The target's deterministic position inside a cast zone. Runtime targeting asks this once
+ * per fighter instead of expanding a sparse roster into all 380 board cells. */
+export const zone_rank = (
+  shape_code: bigint,
+  size: bigint,
+  anchor: bigint,
+  caster: bigint,
+  cell: bigint
+): bigint | null => {
+  if (!in_grid(cell)) return null
+  if (shape_code === shape('point')) return cell === anchor ? 0n : null
+  if (shape_code === shape('line')) return line_rank(anchor, caster, size, cell)
+  if (shape_code === shape('tbar')) return tbar_rank(anchor, caster, size, cell)
+  if (shape_code === shape('podium')) return podium_rank(anchor, caster, size, cell)
+  if (shape_code === shape('cone')) return cone_rank(anchor, caster, size, cell)
+  return in_zone(shape_code, size, anchor, cell) ? cell : null
+}
+
 const walk_direction = (anchor: bigint, direction: bigint, count: bigint): bigint[] => {
   const out: bigint[] = []
   let current = anchor
@@ -275,19 +391,13 @@ const walk_direction = (anchor: bigint, direction: bigint, count: bigint): bigin
 
 const tbar_cells = (anchor: bigint, caster: bigint, size: bigint): bigint[] => {
   const direction = away_dir(caster, anchor)
-  const perpendicular =
-    direction === DIR_POSITIVE_X || direction === DIR_NEGATIVE_X || direction === DIR_NONE
-      ? [DIR_POSITIVE_Y, DIR_NEGATIVE_Y]
-      : [DIR_POSITIVE_X, DIR_NEGATIVE_X]
+  const perpendicular = perpendicular_directions(direction)
   return [anchor, ...walk_direction(anchor, perpendicular[0], size), ...walk_direction(anchor, perpendicular[1], size)]
 }
 
 const cone_cells = (anchor: bigint, caster: bigint, size: bigint): bigint[] => {
   const direction = away_dir(caster, anchor)
-  const perpendicular =
-    direction === DIR_POSITIVE_X || direction === DIR_NEGATIVE_X || direction === DIR_NONE
-      ? [DIR_POSITIVE_Y, DIR_NEGATIVE_Y]
-      : [DIR_POSITIVE_X, DIR_NEGATIVE_X]
+  const perpendicular = perpendicular_directions(direction)
   const out: bigint[] = []
   let center = caster
   let depth = 0n

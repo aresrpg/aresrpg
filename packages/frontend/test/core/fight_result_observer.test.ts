@@ -4,7 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import fight_result_module, { type FightResult, type ResultParticipant } from '../../src/modules/fight_result.ts'
-import { create_fight_result_observer } from '../../src/modules/fight_result_observer.ts'
+import { create_fight_result_observer, settlement_is_final } from '../../src/modules/fight_result_observer.ts'
 import session_module from '../../src/modules/session.ts'
 import { initial_app_state, type AppState } from '../../src/store.ts'
 
@@ -47,10 +47,17 @@ const fight_result = (own_seat: number, participants: readonly ResultParticipant
     level_up_acknowledged: false,
   })
 
+test('a solo PvM settlement is final while another unsettled player is not', () => {
+  const own = participant(0, '0xc1')
+  const mob = { ...participant(1, 'mob'), character_id: null, settled: true }
+
+  expect(settlement_is_final(fight_result(0, [own, mob]), new Set([0]))).toBeTrue()
+  expect(settlement_is_final(fight_result(0, [own, participant(1, '0xc2')]), new Set([0]))).toBeFalse()
+})
+
 test('owned fighters sharing one kiosk merge duplicate stacks after settlement projection', async () => {
   const listeners = new Map<string, ((...args: never[]) => void)[]>()
-  const settlement_loot: unknown[] = []
-  const settlement_modes: unknown[] = []
+  const settlement_batches: unknown[] = []
   const merge_calls: unknown[] = []
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const participants = Object.freeze([participant(0, '0xc1'), participant(1, '0xc2')])
@@ -65,10 +72,9 @@ test('owned fighters sharing one kiosk merge duplicate stacks after settlement p
       ] as never,
       wallet: {
         fight: {
-          settle: async ({ loot, last }: { loot: unknown; last: boolean }) => {
-            settlement_loot.push(loot)
-            settlement_modes.push(last)
-            return { digest: `settled-${settlement_loot.length}` }
+          settle: async ({ settlements, last }: { settlements: unknown; last: boolean }) => {
+            settlement_batches.push({ settlements, last })
+            return { digest: `settled-${settlement_batches.length}` }
           },
           gas_spent: () => 0n,
         },
@@ -103,8 +109,15 @@ test('owned fighters sharing one kiosk merge duplicate stacks after settlement p
 
   emit_state({ ...state, fight_result: { ...state.fight_result, current_by_character: {} } })
   await new Promise((resolve) => setTimeout(resolve, 0))
-  expect(settlement_loot).toEqual([[{ item_type: 'amber', existing: null }], [{ item_type: 'amber', existing: null }]])
-  expect(settlement_modes).toEqual([false, false])
+  expect(settlement_batches).toEqual([
+    {
+      settlements: [
+        { fighter_idx: 0n, loot: [{ item_type: 'amber', existing: null }] },
+        { fighter_idx: 1n, loot: [{ item_type: 'amber', existing: null }] },
+      ],
+      last: true,
+    },
+  ])
 
   const previous = state
   state = {

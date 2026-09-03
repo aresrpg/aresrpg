@@ -371,48 +371,1451 @@
   {
     "output_type": "cape_fuwa__white",
     "inputs": {
-      "fuwa_wool": 80,
-      "fuwa_hide": 30
+      "fuwa_fleece": 12,
+      "mushroom_tanned_leather": 8,
+      "wheatspun_sinew": 8
     }
   },
   {
     "output_type": "coiffe_fuwa__white",
     "inputs": {
-      "fuwa_horn": 30,
-      "fuwa_eye": 20,
-      "fuwa_wool": 50
+      "fuwa_fleece": 10,
+      "mushroom_lacquer": 8,
+      "quartz_set_trinket": 4
     }
   },
   {
     "output_type": "old_hoe",
     "inputs": {
-      "fuwa_hide": 5,
-      "fuwa_horn": 5
+      "gnawed_branch": 10,
+      "salvaged_scrap": 5
     },
     "job": "HANDYMAN"
   },
   {
-    "output_type": "key_of_tangled_aftermath",
-    "inputs": {
-      "fuwa_wool": 1,
-      "fuwa_hide": 1
-    }
-  },
-  {
     "output_type": "coiffe_fuwa__black",
     "inputs": {
-      "nifuwa_wool": 70,
-      "nifuwa_hide": 40,
-      "fuwa_horn": 20
+      "nifuwa_fleece": 12,
+      "fuwa_fleece": 8,
+      "mushroom_lacquer": 6
     }
   },
   {
     "output_type": "cape_fuwa__black",
     "inputs": {
-      "nifuwa_wool": 100,
-      "fuwa_eye": 30,
-      "fuwa_hide": 30,
-      "nifuwa_hide": 30
+      "nifuwa_fleece": 12,
+      "mushroom_tanned_leather": 8,
+      "wheatspun_sinew": 8
+    }
+  },
+  {
+    "output_type": "quartzbound_scrap",
+    "inputs": {
+      "salvaged_scrap": 1,
+      "quartz": 3,
+      "wheat_flour": 1
+    },
+    "job": "FORGER"
+  },
+  {
+    "output_type": "quartz_set_trinket",
+    "inputs": {
+      "shiny_trinket": 1,
+      "quartz_powder": 1,
+      "barley_flour": 1
+    },
+    "job": "JEWELER"
+  },
+  {
+    "output_type": "mushroom_dyed_plume",
+    "inputs": {
+      "lorito_feather": 1,
+      "green_mushroom_powder": 1,
+      "wheat_flour": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "quartz_honed_beak",
+    "inputs": {
+      "beak_shard": 1,
+      "quartz": 3,
+      "wheat_flour": 1
+    },
+    "job": "CARVER"
+  },
+  {
+    "output_type": "mushroom_tanned_leather",
+    "inputs": {
+      "rabbit_pelt": 2,
+      "green_mushroom_powder": 1
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "wheatspun_sinew",
+    "inputs": {
+      "rabbit_sinew": 2,
+      "wheat": 6
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "wheatbound_branch",
+    "inputs": {
+      "gnawed_branch": 4,
+      "wheat_flour": 1
+    },
+    "job": "CARVER"
+  },
+  {
+    "output_type": "mushroom_lacquer",
+    "inputs": {
+      "tree_resin": 2,
+      "green_mushroom_powder": 1
+    },
+    "job": "ALCHEMIST"
+  },
+  {
+    "output_type": "basic_pickaxe",
+    "inputs": {
+      "gnawed_branch": 10,
+      "beak_shard": 5
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "tool_herbalist",
+    "inputs": {
+      "gnawed_branch": 10,
+      "rabbit_sinew": 5
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "quartzbound_hoe",
+    "inputs": {
+      "gnawed_branch": 20,
+      "quartzbound_scrap": 10,
+      "sunforged_talon": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "quartzbound_pickaxe",
+    "inputs": {
+      "gnawed_branch": 20,
+      "quartz_honed_beak": 10
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "quartzbound_sickle",
+    "inputs": {
+      "gnawed_branch": 20,
+      "wheatspun_sinew": 10
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "lorito_hat__molted",
+    "inputs": {
+      "mushroom_dyed_plume": 2,
+      "mushroom_lacquer": 2
+    }
+  },
+  {
+    "output_type": "lorito_cloak__molted",
+    "inputs": {
+      "mushroom_dyed_plume": 5,
+      "mushroom_tanned_leather": 5
+    }
+  },
+  {
+    "output_type": "trashamulet",
+    "inputs": {
+      "quartz_set_trinket": 2,
+      "quartzbound_scrap": 2
+    }
+  },
+  {
+    "output_type": "bin_kickers",
+    "inputs": {
+      "quartzbound_scrap": 2,
+      "wheatspun_sinew": 2
+    }
+  },
+  {
+    "output_type": "wasteband",
+    "inputs": {
+      "mushroom_tanned_leather": 2,
+      "wheatspun_sinew": 1
+    }
+  },
+  {
+    "output_type": "pull_tab_ring",
+    "inputs": {
+      "quartz_set_trinket": 2,
+      "mushroom_lacquer": 2
+    }
+  },
+  {
+    "output_type": "trashcalibur",
+    "inputs": {
+      "quartzbound_scrap": 1,
+      "fuwa_fleece": 1
+    }
+  },
+  {
+    "output_type": "can_openers",
+    "inputs": {
+      "quartzbound_scrap": 3,
+      "quartz_honed_beak": 3
+    }
+  },
+  {
+    "output_type": "refuse_recurve",
+    "inputs": {
+      "wheatbound_branch": 2,
+      "mushroom_dyed_plume": 2
+    }
+  },
+  {
+    "output_type": "gutterspike",
+    "inputs": {
+      "wheatbound_branch": 2,
+      "quartz_honed_beak": 2
+    }
+  },
+  {
+    "output_type": "lid_splitter",
+    "inputs": {
+      "quartzbound_scrap": 2,
+      "quartz_honed_beak": 2
+    }
+  },
+  {
+    "output_type": "theban_scrapblade",
+    "inputs": {
+      "quartzbound_scrap": 15,
+      "quartz_honed_beak": 10
+    }
+  },
+  {
+    "output_type": "rooftop_talons",
+    "inputs": {
+      "quartzbound_scrap": 15,
+      "quartz_honed_beak": 10
+    }
+  },
+  {
+    "output_type": "amberwood_recurve",
+    "inputs": {
+      "wheatbound_branch": 10,
+      "wheatspun_sinew": 10,
+      "ember_lorito_plume": 20
+    }
+  },
+  {
+    "output_type": "lorito_pike",
+    "inputs": {
+      "wheatbound_branch": 5,
+      "quartz_honed_beak": 20,
+      "gale_lorito_plume": 22
+    }
+  },
+  {
+    "output_type": "salvagers_cleaver",
+    "inputs": {
+      "quartzbound_scrap": 15,
+      "quartz_honed_beak": 10,
+      "mushroom_lacquer": 10
+    }
+  },
+  {
+    "output_type": "rooftop_locket",
+    "inputs": {
+      "quartz_set_trinket": 10,
+      "quartzbound_scrap": 10
+    }
+  },
+  {
+    "output_type": "alley_striders",
+    "inputs": {
+      "mushroom_tanned_leather": 6,
+      "wheatspun_sinew": 10
+    }
+  },
+  {
+    "output_type": "salvagers_sash",
+    "inputs": {
+      "mushroom_tanned_leather": 6,
+      "wheatspun_sinew": 6
+    }
+  },
+  {
+    "output_type": "hoarders_loop",
+    "inputs": {
+      "quartz_set_trinket": 6,
+      "mushroom_lacquer": 10
+    }
+  },
+  {
+    "output_type": "lorito_hat__agility",
+    "inputs": {
+      "gale_lorito_plume": 6,
+      "mushroom_lacquer": 6
+    }
+  },
+  {
+    "output_type": "lorito_cloak__agility",
+    "inputs": {
+      "gale_lorito_plume": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "lorito_hat__vitality",
+    "inputs": {
+      "heart_lorito_plume": 6,
+      "mushroom_lacquer": 6
+    }
+  },
+  {
+    "output_type": "lorito_cloak__vitality",
+    "inputs": {
+      "heart_lorito_plume": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "lorito_hat__chance",
+    "inputs": {
+      "tide_lorito_plume": 6,
+      "mushroom_lacquer": 6
+    }
+  },
+  {
+    "output_type": "lorito_cloak__chance",
+    "inputs": {
+      "tide_lorito_plume": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "lorito_hat__intelligence",
+    "inputs": {
+      "ember_lorito_plume": 6,
+      "mushroom_lacquer": 6
+    }
+  },
+  {
+    "output_type": "lorito_cloak__intelligence",
+    "inputs": {
+      "ember_lorito_plume": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "lorito_hat__strength",
+    "inputs": {
+      "stone_lorito_plume": 6,
+      "mushroom_lacquer": 6
+    }
+  },
+  {
+    "output_type": "lorito_cloak__strength",
+    "inputs": {
+      "stone_lorito_plume": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "lorito_hat__wisdom",
+    "inputs": {
+      "sage_lorito_plume": 10,
+      "mushroom_lacquer": 10
+    }
+  },
+  {
+    "output_type": "lorito_cloak__wisdom",
+    "inputs": {
+      "sage_lorito_plume": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "gale_lorito_plume",
+    "inputs": {
+      "lorito_feather": 1,
+      "green_mushroom_powder": 1,
+      "wheat_flour": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "tide_lorito_plume",
+    "inputs": {
+      "lorito_feather": 1,
+      "water": 10,
+      "quartz_powder": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "ember_lorito_plume",
+    "inputs": {
+      "lorito_feather": 1,
+      "orchid_spore_blend": 1,
+      "barley_flour": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "stone_lorito_plume",
+    "inputs": {
+      "lorito_feather": 1,
+      "amber_powder": 1,
+      "wheat_flour": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "heart_lorito_plume",
+    "inputs": {
+      "lorito_down": 1,
+      "orchid_spore_blend": 1,
+      "green_mushroom_powder": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "sage_lorito_plume",
+    "inputs": {
+      "lorito_down": 1,
+      "quartz_powder": 1,
+      "wheat_flour": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "gilded_lorito_plume",
+    "inputs": {
+      "golden_lorito_feather": 4,
+      "amber": 2,
+      "amber_powder": 2,
+      "quartz_powder": 2
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "sunforged_talon",
+    "inputs": {
+      "gilded_talon": 3,
+      "amber": 2,
+      "amber_powder": 2,
+      "quartz_powder": 2
+    },
+    "job": "CARVER"
+  },
+  {
+    "output_type": "key_of_gilded_lorito",
+    "inputs": {
+      "stone_lorito_plume": 2,
+      "quartz_set_trinket": 2
+    }
+  },
+  {
+    "output_type": "key_of_tangled_aftermath",
+    "inputs": {
+      "aragne_fang": 5,
+      "aragne_carapace": 5,
+      "stone_aragne_silk": 5
+    }
+  },
+  {
+    "output_type": "key_of_ivory_rampart",
+    "inputs": {
+      "fuwa_wool": 3,
+      "fuwa_horn": 3,
+      "fuwa_eye": 3,
+      "fuwa_hide": 3
+    }
+  },
+  {
+    "output_type": "lorito_hat__golden",
+    "inputs": {
+      "gilded_lorito_plume": 6,
+      "sunforged_talon": 2,
+      "mushroom_dyed_plume": 8
+    }
+  },
+  {
+    "output_type": "lorito_cloak__golden",
+    "inputs": {
+      "gilded_lorito_plume": 5,
+      "mushroom_tanned_leather": 6,
+      "wheatspun_sinew": 20
+    }
+  },
+  {
+    "output_type": "golden_lorito_amulet",
+    "inputs": {
+      "sunforged_talon": 2,
+      "quartz_set_trinket": 4,
+      "amber_powder": 100
+    }
+  },
+  {
+    "output_type": "potion_of_thebes",
+    "inputs": {
+      "golden_lorito_feather": 1,
+      "water": 5
+    },
+    "job": "ALCHEMIST"
+  },
+  {
+    "output_type": "potion_of_the_ruins",
+    "inputs": {
+      "water": 5,
+      "araknomath_venom_gland": 1
+    },
+    "job": "ALCHEMIST"
+  },
+  {
+    "output_type": "potion_of_fuwage",
+    "inputs": {
+      "water": 5,
+      "golden_fleece": 1
+    },
+    "job": "ALCHEMIST"
+  },
+  {
+    "output_type": "colony_laminate",
+    "inputs": {
+      "red_ant_chitin": 3,
+      "white_ant_chitin": 3,
+      "ant_mandible": 2,
+      "amber_powder": 1
+    },
+    "job": "FORGER"
+  },
+  {
+    "output_type": "embertide_webbing",
+    "inputs": {
+      "ember_aragne_silk": 3,
+      "tide_aragne_silk": 3,
+      "orchid_spore_blend": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "galestone_webbing",
+    "inputs": {
+      "gale_aragne_silk": 3,
+      "stone_aragne_silk": 3,
+      "aragne_fang": 2,
+      "jade_powder": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "silkblade_thread",
+    "inputs": {
+      "silkblade_spinneret": 1,
+      "aragne_carapace": 3,
+      "ember_aragne_silk": 2,
+      "malt_flour": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "broodglass",
+    "inputs": {
+      "mossbound_eggshell": 2,
+      "araknomath_venom_gland": 2,
+      "stone_aragne_silk": 3,
+      "quartz_powder": 1
+    },
+    "job": "ALCHEMIST"
+  },
+  {
+    "output_type": "shellbound_plate",
+    "inputs": {
+      "crab_carapace": 3,
+      "crab_pincer": 2,
+      "quartz_powder": 1
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "crowani_scaleweave",
+    "inputs": {
+      "crowani_scale": 3,
+      "albino_crowani_scale": 3,
+      "crowani_fang": 2,
+      "amber_powder": 1
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "fuwa_fleece",
+    "inputs": {
+      "fuwa_wool": 4,
+      "fuwa_hide": 2,
+      "fuwa_horn": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "nifuwa_fleece",
+    "inputs": {
+      "nifuwa_wool": 4,
+      "nifuwa_hide": 2,
+      "fuwa_eye": 1
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "tidal_horn_core",
+    "inputs": {
+      "fukuo_tidal_horn": 1,
+      "fuwa_horn": 2,
+      "fuwa_eye": 2
+    },
+    "job": "CARVER"
+  },
+  {
+    "output_type": "emberstone_scaleplate",
+    "inputs": {
+      "ember_misui_scale": 3,
+      "stone_misui_scale": 3,
+      "misui_fin": 2
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "galetide_scaleweave",
+    "inputs": {
+      "gale_misui_scale": 3,
+      "tide_misui_scale": 3,
+      "misui_eye": 2
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "heartscale_membrane",
+    "inputs": {
+      "heart_misui_scale": 3,
+      "misui_fin": 2,
+      "misui_eye": 2
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "abyssal_oculus",
+    "inputs": {
+      "misunami_abyssal_eye": 1,
+      "tide_misui_scale": 3,
+      "misui_eye": 2
+    },
+    "job": "JEWELER"
+  },
+  {
+    "output_type": "gravebone_composite",
+    "inputs": {
+      "weathered_bone": 3,
+      "moka_skull": 1,
+      "barley_flour": 1
+    },
+    "job": "FORGER"
+  },
+  {
+    "output_type": "moka_arms_binding",
+    "inputs": {
+      "rusted_blade_fragment": 2,
+      "frayed_bowstring": 2,
+      "weathered_bone": 2
+    },
+    "job": "CARVER"
+  },
+  {
+    "output_type": "boarhide_laminate",
+    "inputs": {
+      "wild_boar_hide": 3,
+      "boar_tusk": 2,
+      "coarse_bristles": 3,
+      "jade_powder": 1
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "mokan",
+    "inputs": {
+      "gravebone_composite": 10,
+      "moka_arms_binding": 10,
+      "mushroom_lacquer": 20
+    }
+  },
+  {
+    "output_type": "momaku",
+    "inputs": {
+      "gravebone_composite": 20,
+      "moka_arms_binding": 20,
+      "mushroom_tanned_leather": 40,
+      "wheatspun_sinew": 15
+    }
+  },
+  {
+    "output_type": "drakar",
+    "inputs": {
+      "fuwa_fleece": 20,
+      "nifuwa_fleece": 10,
+      "mushroom_dyed_plume": 10,
+      "ivory_orchid_paste": 20
+    }
+  },
+  {
+    "output_type": "ekusoni",
+    "inputs": {
+      "boarhide_laminate": 20,
+      "colony_laminate": 20,
+      "gravebone_composite": 30,
+      "jade_powder": 50
+    }
+  },
+  {
+    "output_type": "casque_hayate",
+    "inputs": {
+      "shellbound_plate": 10,
+      "crowani_scaleweave": 5,
+      "galestone_webbing": 5,
+      "aloe_crystal_salve": 100
+    }
+  },
+  {
+    "output_type": "oeufterhead",
+    "inputs": {
+      "broodglass": 1,
+      "silkblade_thread": 1,
+      "abyssal_oculus": 1,
+      "moonstone_powder": 100
+    }
+  },
+  {
+    "output_type": "rootglass_token",
+    "inputs": {
+      "mushroom_lacquer": 2,
+      "quartz_powder": 10
+    }
+  },
+  {
+    "output_type": "hollowjaw_pendant",
+    "inputs": {
+      "gravebone_composite": 4,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "pincer_pearl",
+    "inputs": {
+      "shellbound_plate": 4,
+      "quartz_set_trinket": 8,
+      "quartz_powder": 50
+    }
+  },
+  {
+    "output_type": "emberweb_locket",
+    "inputs": {
+      "embertide_webbing": 4,
+      "galestone_webbing": 5,
+      "orchid_spore_blend": 50
+    }
+  },
+  {
+    "output_type": "tideglass_oculum",
+    "inputs": {
+      "galetide_scaleweave": 5,
+      "heartscale_membrane": 4,
+      "quartz_set_trinket": 10
+    }
+  },
+  {
+    "output_type": "fuwa_horn_torque",
+    "inputs": {
+      "fuwa_fleece": 10,
+      "tidal_horn_core": 1,
+      "mushroom_lacquer": 20
+    }
+  },
+  {
+    "output_type": "tuskward_fetish",
+    "inputs": {
+      "boarhide_laminate": 10,
+      "mushroom_tanned_leather": 10,
+      "amber_powder": 70
+    }
+  },
+  {
+    "output_type": "colony_mandible",
+    "inputs": {
+      "colony_laminate": 10,
+      "quartzbound_scrap": 5,
+      "shellbound_plate": 15,
+      "amber_powder": 40
+    }
+  },
+  {
+    "output_type": "albino_war_tooth",
+    "inputs": {
+      "crowani_scaleweave": 10,
+      "amber_powder": 50,
+      "ivory_orchid_paste": 100,
+      "quartz_set_trinket": 20
+    }
+  },
+  {
+    "output_type": "nauvis_concord",
+    "inputs": {
+      "colony_laminate": 8,
+      "boarhide_laminate": 7,
+      "broodglass": 5,
+      "crowani_scaleweave": 6
+    }
+  },
+  {
+    "output_type": "resin_seal_ring",
+    "inputs": {
+      "mushroom_lacquer": 2,
+      "quartz_powder": 20
+    }
+  },
+  {
+    "output_type": "marrow_loop",
+    "inputs": {
+      "gravebone_composite": 3,
+      "wheat_flour": 20
+    }
+  },
+  {
+    "output_type": "crabclasp",
+    "inputs": {
+      "shellbound_plate": 4,
+      "quartz_set_trinket": 9
+    }
+  },
+  {
+    "output_type": "galeweb_spiral",
+    "inputs": {
+      "galestone_webbing": 4,
+      "green_mushroom_powder": 30,
+      "quartz_set_trinket": 6
+    }
+  },
+  {
+    "output_type": "misui_iris",
+    "inputs": {
+      "galetide_scaleweave": 4,
+      "heartscale_membrane": 5,
+      "quartz_set_trinket": 2
+    }
+  },
+  {
+    "output_type": "fleecebound_band",
+    "inputs": {
+      "fuwa_fleece": 10,
+      "nifuwa_fleece": 4,
+      "wheatspun_sinew": 3
+    }
+  },
+  {
+    "output_type": "bristlecoil",
+    "inputs": {
+      "boarhide_laminate": 5,
+      "mushroom_lacquer": 20,
+      "amber_powder": 60
+    }
+  },
+  {
+    "output_type": "chitin_signet",
+    "inputs": {
+      "colony_laminate": 6,
+      "quartz_set_trinket": 4,
+      "jade_powder": 100,
+      "amber_powder": 100
+    }
+  },
+  {
+    "output_type": "crowani_scale_ring",
+    "inputs": {
+      "crowani_scaleweave": 20,
+      "amber_powder": 50,
+      "moonstone_powder": 30,
+      "quartz_set_trinket": 10
+    }
+  },
+  {
+    "output_type": "broodglass_orbit",
+    "inputs": {
+      "broodglass": 1,
+      "abyssal_oculus": 1,
+      "gilded_lorito_plume": 1,
+      "quartz_set_trinket": 10
+    }
+  },
+  {
+    "output_type": "wheatbound_cinch",
+    "inputs": {
+      "wheat_flour": 3,
+      "wheatspun_sinew": 2
+    }
+  },
+  {
+    "output_type": "gravecord",
+    "inputs": {
+      "moka_arms_binding": 4,
+      "gravebone_composite": 3
+    }
+  },
+  {
+    "output_type": "shellclasp_belt",
+    "inputs": {
+      "shellbound_plate": 8,
+      "mushroom_tanned_leather": 10,
+      "wheatspun_sinew": 2
+    }
+  },
+  {
+    "output_type": "stoneweb_sash",
+    "inputs": {
+      "galestone_webbing": 4,
+      "silkblade_thread": 1,
+      "quartzbound_scrap": 2
+    }
+  },
+  {
+    "output_type": "finwoven_belt",
+    "inputs": {
+      "galetide_scaleweave": 4,
+      "heartscale_membrane": 10,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "fuwa_horn_harness",
+    "inputs": {
+      "fuwa_fleece": 5,
+      "nifuwa_fleece": 4,
+      "wheatspun_sinew": 3
+    }
+  },
+  {
+    "output_type": "bristleback_girdle",
+    "inputs": {
+      "boarhide_laminate": 20,
+      "mushroom_tanned_leather": 20,
+      "amber_powder": 100
+    }
+  },
+  {
+    "output_type": "colony_harness",
+    "inputs": {
+      "colony_laminate": 10,
+      "shellbound_plate": 10,
+      "jade_powder": 40,
+      "wheatspun_sinew": 10
+    }
+  },
+  {
+    "output_type": "crowani_warbelt",
+    "inputs": {
+      "crowani_scaleweave": 15,
+      "quartz_set_trinket": 30,
+      "mushroom_tanned_leather": 40,
+      "malt_flour": 60
+    }
+  },
+  {
+    "output_type": "silk_and_bone_baldric",
+    "inputs": {
+      "silkblade_thread": 8,
+      "gravebone_composite": 6,
+      "broodglass": 5,
+      "mushroom_tanned_leather": 4
+    }
+  },
+  {
+    "output_type": "resin_tread_boots",
+    "inputs": {
+      "mushroom_lacquer": 3,
+      "mushroom_tanned_leather": 5
+    }
+  },
+  {
+    "output_type": "gravewalkers",
+    "inputs": {
+      "gravebone_composite": 10,
+      "mushroom_tanned_leather": 3
+    }
+  },
+  {
+    "output_type": "pincersteps",
+    "inputs": {
+      "shellbound_plate": 10,
+      "mushroom_tanned_leather": 3,
+      "wheatspun_sinew": 2
+    }
+  },
+  {
+    "output_type": "webskitters",
+    "inputs": {
+      "embertide_webbing": 4,
+      "galestone_webbing": 5,
+      "wheatspun_sinew": 7
+    }
+  },
+  {
+    "output_type": "misui_finsteps",
+    "inputs": {
+      "galetide_scaleweave": 10,
+      "heartscale_membrane": 7,
+      "mushroom_tanned_leather": 2
+    }
+  },
+  {
+    "output_type": "fuwa_hoofwraps",
+    "inputs": {
+      "fuwa_fleece": 8,
+      "nifuwa_fleece": 7,
+      "wheatspun_sinew": 3
+    }
+  },
+  {
+    "output_type": "boarhide_stompers",
+    "inputs": {
+      "boarhide_laminate": 7,
+      "mushroom_tanned_leather": 10,
+      "amber_powder": 60
+    }
+  },
+  {
+    "output_type": "colony_marchers",
+    "inputs": {
+      "colony_laminate": 10,
+      "shellbound_plate": 10,
+      "jade_powder": 60,
+      "mushroom_tanned_leather": 10
+    }
+  },
+  {
+    "output_type": "crowani_greaves",
+    "inputs": {
+      "crowani_scaleweave": 10,
+      "quartz_set_trinket": 20,
+      "mushroom_tanned_leather": 10,
+      "moonstone_powder": 60
+    }
+  },
+  {
+    "output_type": "nauvis_wayfarers",
+    "inputs": {
+      "boarhide_laminate": 15,
+      "colony_laminate": 15,
+      "crowani_scaleweave": 15,
+      "galetide_scaleweave": 15
+    }
+  },
+  {
+    "output_type": "resin_edge",
+    "inputs": {
+      "mushroom_lacquer": 3,
+      "wheatbound_branch": 3
+    }
+  },
+  {
+    "output_type": "gravebrand",
+    "inputs": {
+      "moka_arms_binding": 3,
+      "gravebone_composite": 3
+    }
+  },
+  {
+    "output_type": "emberweb_falchion",
+    "inputs": {
+      "embertide_webbing": 15,
+      "quartzbound_scrap": 3,
+      "orchid_spore_blend": 60
+    }
+  },
+  {
+    "output_type": "tuskspine",
+    "inputs": {
+      "boarhide_laminate": 7,
+      "moka_arms_binding": 1,
+      "amber_powder": 50
+    }
+  },
+  {
+    "output_type": "sunbound_concord",
+    "inputs": {
+      "sunforged_talon": 3,
+      "colony_laminate": 10,
+      "boarhide_laminate": 5,
+      "burnt_wheat_flour": 50
+    }
+  },
+  {
+    "output_type": "rootshivs",
+    "inputs": {
+      "wheatbound_branch": 3,
+      "quartz_powder": 2
+    }
+  },
+  {
+    "output_type": "crabclaw_knives",
+    "inputs": {
+      "shellbound_plate": 5,
+      "quartz_honed_beak": 10,
+      "wheatspun_sinew": 10
+    }
+  },
+  {
+    "output_type": "misui_razorfins",
+    "inputs": {
+      "emberstone_scaleplate": 10,
+      "galetide_scaleweave": 6,
+      "quartz_honed_beak": 2
+    }
+  },
+  {
+    "output_type": "chitin_stingers",
+    "inputs": {
+      "colony_laminate": 5,
+      "silkblade_thread": 1,
+      "quartzbound_scrap": 4,
+      "jade_powder": 3
+    }
+  },
+  {
+    "output_type": "broodglass_twins",
+    "inputs": {
+      "broodglass": 8,
+      "silkblade_thread": 6,
+      "abyssal_oculus": 5,
+      "sunforged_talon": 3
+    }
+  },
+  {
+    "output_type": "rootstring_shortbow",
+    "inputs": {
+      "wheatbound_branch": 3,
+      "wheatspun_sinew": 2
+    }
+  },
+  {
+    "output_type": "gravecord_bow",
+    "inputs": {
+      "moka_arms_binding": 6,
+      "wheatspun_sinew": 3
+    }
+  },
+  {
+    "output_type": "fleecehorn_bow",
+    "inputs": {
+      "fuwa_fleece": 5,
+      "nifuwa_fleece": 5,
+      "wheatbound_branch": 5
+    }
+  },
+  {
+    "output_type": "crowani_scale_bow",
+    "inputs": {
+      "crowani_scaleweave": 10,
+      "wheatbound_branch": 5,
+      "wheatspun_sinew": 5,
+      "malt_flour": 50
+    }
+  },
+  {
+    "output_type": "five_biome_greatbow",
+    "inputs": {
+      "crowani_scaleweave": 10,
+      "galetide_scaleweave": 10,
+      "embertide_webbing": 10,
+      "gravebone_composite": 10
+    }
+  },
+  {
+    "output_type": "resinpoint",
+    "inputs": {
+      "wheatbound_branch": 3,
+      "mushroom_lacquer": 2
+    }
+  },
+  {
+    "output_type": "pincer_lance",
+    "inputs": {
+      "shellbound_plate": 10,
+      "wheatbound_branch": 3,
+      "quartz_honed_beak": 2
+    }
+  },
+  {
+    "output_type": "stoneweb_spear",
+    "inputs": {
+      "galestone_webbing": 4,
+      "wheatbound_branch": 10,
+      "quartz_honed_beak": 10
+    }
+  },
+  {
+    "output_type": "boar_tusk_glaive",
+    "inputs": {
+      "boarhide_laminate": 6,
+      "moka_arms_binding": 9,
+      "wheatbound_branch": 7
+    }
+  },
+  {
+    "output_type": "araknomath_spindle",
+    "inputs": {
+      "broodglass": 8,
+      "silkblade_thread": 6,
+      "galestone_webbing": 5,
+      "sunforged_talon": 3
+    }
+  },
+  {
+    "output_type": "rootsplitter",
+    "inputs": {
+      "wheatbound_branch": 3,
+      "quartz_powder": 20
+    }
+  },
+  {
+    "output_type": "gravechop",
+    "inputs": {
+      "moka_arms_binding": 3,
+      "gravebone_composite": 3
+    }
+  },
+  {
+    "output_type": "fuwa_horncleaver",
+    "inputs": {
+      "fuwa_fleece": 10,
+      "tidal_horn_core": 1,
+      "wheatbound_branch": 10
+    }
+  },
+  {
+    "output_type": "colony_mandible_axe",
+    "inputs": {
+      "colony_laminate": 10,
+      "shellbound_plate": 10,
+      "quartzbound_scrap": 10,
+      "jade_powder": 60
+    }
+  },
+  {
+    "output_type": "mossbound_broadaxe",
+    "inputs": {
+      "broodglass": 8,
+      "boarhide_laminate": 7,
+      "heartscale_membrane": 5,
+      "moonstone_powder": 4
+    }
+  },
+  {
+    "output_type": "gilded_pet_food",
+    "inputs": {
+      "golden_wheat": 1,
+      "golden_mushroom": 1,
+      "infinity_quartz": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "bloodamber_pet_food",
+    "inputs": {
+      "shiny_barley": 1,
+      "bloodveil_orchid": 1,
+      "infinity_amber": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "jadeghost_pet_food",
+    "inputs": {
+      "pristine_malt": 1,
+      "ghost_cap": 1,
+      "infinity_jade": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "moonfire_pet_food",
+    "inputs": {
+      "smoldering_wheat": 1,
+      "verdant_aloe": 1,
+      "infinity_moonstone": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "bloodnight_pet_food",
+    "inputs": {
+      "crystallized_tanjirize": 1,
+      "golden_nightcap": 1,
+      "infinity_bloodstone": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "genesis_duskheart_pet_food",
+    "inputs": {
+      "genesis_suize": 1,
+      "crimson_truffle_heart": 1,
+      "infinity_duskite": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "phantom_obsidian_pet_food",
+    "inputs": {
+      "ethereal_ukranize": 1,
+      "phantom_essence": 1,
+      "infinity_obsidianite": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "abyssal_arcanite_pet_food",
+    "inputs": {
+      "abyssal_blood_wheat": 1,
+      "wither_petal": 1,
+      "infinity_arcanite": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "spectral_draconite_pet_food",
+    "inputs": {
+      "spectral_arcanize": 1,
+      "arcane_spore": 1,
+      "infinity_draconite": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "primordial_dragon_pet_food",
+    "inputs": {
+      "primordial_draconize": 1,
+      "dragon_pollen": 1,
+      "infinity_cursed_gem": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "cursed_diamond_pet_food",
+    "inputs": {
+      "cursed_wheat": 1,
+      "cursed_root": 1,
+      "infinity_diamond": 1
+    },
+    "job": "HANDYMAN"
+  },
+  {
+    "output_type": "fatewoven_silk",
+    "inputs": {
+      "venomwool": 3,
+      "dreadwool": 2,
+      "broodglass": 1,
+      "stone_aragne_silk": 3
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "venomglass_setting",
+    "inputs": {
+      "venomwool": 2,
+      "araknomath_venom_gland": 1,
+      "broodglass": 2,
+      "quartz": 2
+    },
+    "job": "JEWELER"
+  },
+  {
+    "output_type": "royal_woolweave",
+    "inputs": {
+      "golden_fleece": 3,
+      "cinderfleece": 2,
+      "fuwa_fleece": 3,
+      "nifuwa_fleece": 2
+    },
+    "job": "TAILOR"
+  },
+  {
+    "output_type": "gilded_horn_inlay",
+    "inputs": {
+      "royal_horn": 1,
+      "tidal_horn_core": 2,
+      "fuwa_eye": 3,
+      "amber_powder": 2
+    },
+    "job": "CARVER"
+  },
+  {
+    "output_type": "aragnid_loop",
+    "inputs": {
+      "fatewoven_silk": 3,
+      "venomglass_setting": 2,
+      "silkblade_thread": 3,
+      "galestone_webbing": 2
+    }
+  },
+  {
+    "output_type": "webbound_pendant",
+    "inputs": {
+      "fatewoven_silk": 4,
+      "venomglass_setting": 3,
+      "broodglass": 2,
+      "embertide_webbing": 2
+    }
+  },
+  {
+    "output_type": "broodstep_boots",
+    "inputs": {
+      "fatewoven_silk": 5,
+      "venomglass_setting": 2,
+      "silkblade_thread": 3,
+      "embertide_webbing": 3
+    }
+  },
+  {
+    "output_type": "rampart_signet",
+    "inputs": {
+      "royal_woolweave": 3,
+      "gilded_horn_inlay": 2,
+      "tidal_horn_core": 2,
+      "fuwa_fleece": 4
+    }
+  },
+  {
+    "output_type": "ivory_horn_torque",
+    "inputs": {
+      "royal_woolweave": 4,
+      "gilded_horn_inlay": 3,
+      "tidal_horn_core": 2,
+      "nifuwa_fleece": 3
+    }
+  },
+  {
+    "output_type": "cloudstep_greaves",
+    "inputs": {
+      "royal_woolweave": 5,
+      "gilded_horn_inlay": 2,
+      "fuwa_fleece": 4,
+      "nifuwa_fleece": 4
     }
   }
 ]

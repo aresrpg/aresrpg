@@ -46,6 +46,13 @@ test('authored copy names the universe and keeps item descriptions inside the lo
   expect(en).not.toHaveProperty('connecting')
   expect(english.encyclopedia_page.item_descriptions.water).toBe('')
   expect(french.encyclopedia_page.item_descriptions.water).toBe('')
+  const description_documents = [de, en, es, fr, ja, uk] as unknown as readonly {
+    encyclopedia_page: { item_descriptions: Record<string, string> }
+  }[]
+  for (const locale of description_documents) {
+    expect(locale.encyclopedia_page.item_descriptions.scroll_of_oblivion).not.toBe('')
+    expect(locale.encyclopedia_page.item_descriptions.scroll_of_rebirth).not.toBe('')
+  }
   expect(english.encyclopedia_page.item_descriptions).not.toHaveProperty('aberrant_edge')
 })
 

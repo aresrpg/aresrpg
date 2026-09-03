@@ -6,7 +6,7 @@
 // transform over CharacterRow — nothing is fetched, nothing is authoritative.
 
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
-import { item_stat_center, stat_names, type StatName } from '@aresrpg/immutable'
+import { item_stat_center, pet_max_feeds, stat_names, type StatName } from '@aresrpg/immutable'
 import type { CharacterRow, EquippedItem } from '@aresrpg/protocol'
 
 const SHIFT = item_stat_center
@@ -16,9 +16,6 @@ const BASE_AP = Number(CONTRACT_CONSTANTS.base_ap)
 const BASE_MP = Number(CONTRACT_CONSTANTS.base_mp)
 /** progression.move:19 — one hp per second, game-wide. */
 const HP_REGEN_MS_PER_HP = 1_000
-/** pet.move MAX_FEEDS — 60 feeds = full power. */
-export const PET_MAX_FEEDS = 60
-
 const RAW_MAX = 65_535
 
 /** One equipped item's SIGNED contribution to one stat. A PET contributes its POWER-scaled
@@ -27,8 +24,8 @@ const RAW_MAX = 65_535
 export const equipped_stat_offset = (item: Readonly<EquippedItem>, stat: StatName): number => {
   const offset = (item.stats?.[stat] ?? SHIFT) - SHIFT
   if (item.category !== 'pet') return offset
-  const power = Math.min(PET_MAX_FEEDS, Math.max(0, item.pet_power ?? 0))
-  return offset >= 0 ? Math.floor((offset * power) / PET_MAX_FEEDS) : -Math.floor((-offset * power) / PET_MAX_FEEDS)
+  const power = Math.min(pet_max_feeds, Math.max(0, item.pet_power ?? 0))
+  return offset >= 0 ? Math.floor((offset * power) / pet_max_feeds) : -Math.floor((-offset * power) / pet_max_feeds)
 }
 
 /** item_stats.move `fold`, twinned: sum every block's centered offsets per stat (pets

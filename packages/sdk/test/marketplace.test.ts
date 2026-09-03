@@ -26,7 +26,13 @@ const harness = () => {
     tx: () => new Transaction(),
     doors: {},
     door_context: {
+      pins: { package: id(2) },
+      obj: (_tx: Transaction, value: unknown) => value,
       pin: (tx: Transaction) => tx.object(id(8)),
+      pure: {
+        id: (tx: Transaction, value: string) => tx.pure.id(value),
+        u32: (tx: Transaction, value: number) => tx.pure.u32(value),
+      },
     },
     with_owner_kiosk: (
       tx: Transaction,

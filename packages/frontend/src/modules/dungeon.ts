@@ -21,7 +21,7 @@ export type DungeonState = Readonly<{
 export type DungeonInput =
   | Readonly<{
       type: 'dungeon/enter'
-      portal: Readonly<{ world: string; zx: number; zz: number; x: number; z: number }>
+      portal: Readonly<{ world: string; city: string; dungeon: string; zx: number; zz: number; x: number; z: number }>
     }>
   | Readonly<{ type: 'dungeon/start_fight'; access: 0 | 1 }>
   | Readonly<{ type: 'dungeon/join_fight'; fight: string }>
@@ -33,8 +33,7 @@ export type DungeonInput =
       run: NonNullable<CharacterRow['dungeon_run']> | null
     }>
 
-export const dungeon_lobby_key = ({ world, x, z }: Readonly<{ world: string; x: number; z: number }>): string =>
-  `${world}:${x}:${z}`
+export const dungeon_lobby_key = ({ dungeon }: Readonly<{ dungeon: string }>): string => dungeon
 
 export const dungeon_operation_reconciled = (operation: string, character: Readonly<CharacterRow> | null): boolean =>
   (operation === 'enter' && character?.dungeon_run !== undefined) ||
@@ -72,6 +71,16 @@ export const dungeon_entry_key = (state: Readonly<AppState>, item_type: string):
         item.item_type === item_type && item.kiosk === character.kiosk && item.amount > 0 && !listed.has(item.id)
     ) ?? null
   )
+}
+
+const start_fight_context = (state: Readonly<AppState>) => {
+  const character = selected_character(state.session)
+  const { wallet } = state.session
+  const run_state = character?.dungeon_run
+  if (!character?.world || !wallet || !run_state || state.dungeon.pending_by_character[character.id]) return null
+  const dungeon = content_catalog.dungeon(run_state.dungeon)
+  const room = dungeon?.rooms[run_state.room - 1]
+  return dungeon && room ? Object.freeze({ character, wallet, run_state, room, world: character.world }) : null
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
@@ -138,7 +147,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     const state = get_state()
     const character = selected_character(state.session)
     const { wallet } = state.session
-    const dungeon = content_catalog.world(portal.world)?.dungeon
+    const dungeon = content_catalog.dungeon(portal.dungeon)
     if (!character || !wallet || !dungeon || state.dungeon.pending_by_character[character.id]) return
     const key = dungeon_entry_key(state, dungeon.key)
     if (!key) {
@@ -150,7 +159,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     dispatch({
       type: 'dungeon/optimistic_run',
       character_id: character.id,
-      run: Object.freeze({ world: portal.world, room: 1, x: portal.x, z: portal.z }),
+      run: Object.freeze({ dungeon: portal.dungeon, room: 1 }),
     })
     run(
       character.id,
@@ -159,8 +168,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         character_id: character.id,
         custody: character_custody(character),
         world: portal.world,
-        zx: portal.zx,
-        zz: portal.zz,
+        dungeon: portal.dungeon,
         key_id: key.id,
       }),
       undefined,
@@ -170,21 +178,17 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
 
   events.on('dungeon/start_fight', ({ access }) => {
     const state = get_state()
-    const character = selected_character(state.session)
-    const { wallet } = state.session
-    const run_state = character?.dungeon_run
-    const world = run_state ? content_catalog.world(run_state.world) : null
-    const room = run_state ? world?.dungeon?.rooms[run_state.room - 1] : null
-    if (!character || !wallet || !run_state || !room || state.dungeon.pending_by_character[character.id]) return
+    const context = start_fight_context(state)
+    if (!context) return
+    const { character, wallet, run_state, room, world } = context
     run(
       character.id,
       'start',
       wallet.dungeon.start_fight({
         character_id: character.id,
         custody: character_custody(character),
-        world: run_state.world,
-        x: run_state.x,
-        z: run_state.z,
+        world,
+        dungeon: run_state.dungeon,
         mob_types: Object.freeze(room.map(({ mob_type }) => mob_type)),
         access,
       }),

@@ -69,7 +69,7 @@ public(package) fun craft(
   attempts: u16,
   protected_item: &AresRPG_TransferPolicy<Item>,
   item_policy: &TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
   let data = recipe_rows::active_data(recipe);
@@ -83,8 +83,8 @@ public(package) fun craft(
   );
 
   let current_xp = {
-    let chr: &Character = kiosk.borrow(cap, character_id);
-    progression::job_xp_of(chr, job)
+    let character: &Character = kiosk.borrow(cap, character_id);
+    progression::job_xp_of(character, job)
   };
   craft_batch::assert_level(data, current_xp); // ①
 
@@ -125,21 +125,21 @@ public(package) fun craft(
     i = i + 1;
   };
   // ② + ④: one fractional draw + one symmetric variance draw over aggregate level-band math.
-  let rounding_roll = gen.generate_u16_in_range(0, 9999);
-  let variance_roll = gen.generate_u16_in_range(0, 9999);
+  let rounding_roll = generator.generate_u16_in_range(0, 9999);
+  let variance_roll = generator.generate_u16_in_range(0, 9999);
   let (successes, gained_xp) = craft_batch::resolve(
     n, current_xp, attempts, rounding_roll, variance_roll,
   );
 
   // ⑤ Stackables collapse successes into one object; unique recipes stay one attempt.
   if (successes > 0) {
-    let minted = item::mint(output_template, successes as u32, gen, ctx);
+    let minted = item::mint(output_template, successes as u32, generator, ctx);
     item::deposit(kiosk, cap, item_policy, existing, minted);
   };
 
   {
-    let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-    progression::bank_job_xp(chr, job, gained_xp);
+    let character: &mut Character = kiosk.borrow_mut(cap, character_id);
+    progression::bank_job_xp(character, job, gained_xp);
   };
   event::emit(Crafted {
     recipe: object::id(recipe),

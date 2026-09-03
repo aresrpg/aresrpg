@@ -82,8 +82,8 @@ test('owned party followers join through repeated grouped doors in one kiosk tra
   expect(executions).toBe(1)
 })
 
-test('ready many submits terminal ready doors sequentially and stops when the fight starts', async () => {
-  const seats: unknown[] = []
+test('ready many batches non-final seats before one terminal ready door', async () => {
+  const calls: Readonly<{ door: string; fighter: unknown }>[] = []
   let executions = 0
   const sdk = {
     tx: () => ({}),
@@ -93,15 +93,15 @@ test('ready many submits terminal ready doors sequentially and stops when the fi
       return {
         Transaction: {
           digest: `ready-${executions}`,
-          events:
-            executions === 2
-              ? [{ type: `${id(2)}::fight::FightStarted`, json: { fight: id(1), queue: ['0', '1'] } }]
-              : [],
+          events: [{ type: `${id(2)}::fight::FightStarted`, json: { fight: id(1), queue: ['0', '1'] } }],
         },
       }
     },
     doors: {
-      ready_and_start_fight: (_tx: unknown, { fighter_idx }: { fighter_idx: unknown }) => seats.push(fighter_idx),
+      ready_fight: (_tx: unknown, { fighter_idx }: { fighter_idx: unknown }) =>
+        calls.push({ door: 'ready', fighter: fighter_idx }),
+      ready_and_start_fight: (_tx: unknown, { fighter_idx }: { fighter_idx: unknown }) =>
+        calls.push({ door: 'ready_and_start', fighter: fighter_idx }),
     },
   }
 
@@ -112,13 +112,14 @@ test('ready many submits terminal ready doors sequentially and stops when the fi
     on_progress: (row) => progress.push(row),
   })
 
-  expect(seats).toEqual([0n, 2n])
-  expect(executions).toBe(2)
-  expect(result).toMatchObject({ digest: 'ready-2', started: true })
-  expect(progress).toEqual([
-    { completed: 1, total: 3, fighter_idx: 0n, started: false },
-    { completed: 2, total: 3, fighter_idx: 2n, started: true },
+  expect(calls).toEqual([
+    { door: 'ready', fighter: 0n },
+    { door: 'ready', fighter: 2n },
+    { door: 'ready_and_start', fighter: 4n },
   ])
+  expect(executions).toBe(1)
+  expect(result).toMatchObject({ digest: 'ready-1', started: true })
+  expect(progress).toEqual([{ completed: 3, total: 3, fighter_idx: 4n, started: true }])
 })
 
 test('a drafted turn executes in order inside one transaction', async () => {

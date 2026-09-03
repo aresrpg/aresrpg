@@ -203,9 +203,9 @@ describe('revision-pinned offer projections', () => {
     expect(receipt.offer_revision).toBe(7)
     expect(targets(tx())).toEqual(
       expect.arrayContaining([
-        `${package_id}::api::trade_take_i`,
+        `${package_id}::api::trade_take_item`,
         `${package_id}::api::split_stack`,
-        `${package_id}::api::trade_put_i`,
+        `${package_id}::api::trade_put_item`,
         `${package_id}::trade::put_sui`,
       ])
     )
@@ -233,7 +233,7 @@ describe('revision-pinned offer projections', () => {
 
     expect(receipt.offer_revision).toBe(5)
     const calls = targets(tx())
-    const take = calls.indexOf(`${package_id}::api::trade_take_i`)
+    const take = calls.indexOf(`${package_id}::api::trade_take_item`)
     const returned = calls.findIndex((target) => target.endsWith('::kiosk::return_purchase_cap'))
     const merged = calls.indexOf(`${package_id}::api::merge_stacks`)
     expect(take).toBeGreaterThanOrEqual(0)
@@ -329,7 +329,7 @@ describe('terminal shrinking transactions', () => {
       clear_sui: 'b',
       closed: false,
     })
-    expect(targets(tx()).filter((target) => target === `${package_id}::api::trade_get_i`)).toHaveLength(3)
+    expect(targets(tx()).filter((target) => target === `${package_id}::api::trade_claim_item`)).toHaveLength(3)
     expect(targets(tx()).filter((target) => target === `${package_id}::api::merge_stacks`)).toHaveLength(2)
     expect(targets(tx())).toContain(`${package_id}::trade::claim_sui`)
     const transfers = tx()
@@ -372,7 +372,7 @@ describe('terminal shrinking transactions', () => {
     expect(targets(tx())).toEqual(
       expect.arrayContaining([
         `${package_id}::trade::cancel`,
-        `${package_id}::api::trade_recover_i`,
+        `${package_id}::api::trade_recover_item`,
         `${package_id}::trade::recover_sui`,
       ])
     )
@@ -387,7 +387,7 @@ describe('terminal shrinking transactions', () => {
       kiosk_cap: load_kiosk_cap,
     })
     await actions.settle_all({})
-    expect(targets(tx()).filter((target) => target === `${package_id}::api::trade_get_i`)).toHaveLength(20)
+    expect(targets(tx()).filter((target) => target === `${package_id}::api::trade_claim_item`)).toHaveLength(20)
     expect(targets(tx()).filter((target) => target === `${package_id}::api::merge_stacks`)).toHaveLength(19)
     expect((await tx().build({ onlyTransactionKind: true })).length).toBeLessThan(128 * 1024)
   })

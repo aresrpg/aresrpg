@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // LIVING CONTENT addresses (owner 2026-08-23): every content object derives under the seed
 // package's registry ROOT with its DEFINING (original) package's key types — items, mobs,
-// spells, recipes, worlds, boards. Supply objects (sales/airdrops/giftcards) claim under the
+// spells, recipes, worlds, boards. Distribution objects (airdrops/giftcards) claim under the
 // SAME root through core's living doors. The seal-era ids (core registry parent, marker
 // objects) are gone with the seal itself.
 
@@ -36,6 +36,9 @@ export const recipe_id = (content_root: string, seed_package_original: string, o
 export const world_content_id = (content_root: string, seed_package_original: string, world: string): string =>
   content_id(content_root, seed_package_original, SEED_STRING_KEYS.WorldContentKey, world)
 
+export const dungeon_content_id = (content_root: string, seed_package_original: string, dungeon: string): string =>
+  content_id(content_root, seed_package_original, SEED_STRING_KEYS.DungeonContentKey, dungeon)
+
 export const world_id = (content_root: string, game_package_original: string, world: string): string =>
   content_id(content_root, game_package_original, SEED_STRING_KEYS.WorldKey, world)
 
@@ -45,8 +48,8 @@ export const board_catalog_id = (content_root: string, seed_package_original: st
 
 /** Supply objects claim under the same root, but their key types are CORE's (the doors live
  * beside the objects they mint) — so the key's package is the GAME's defining id. */
-export const sale_id = (content_root: string, game_package_original: string, item_type: string): string =>
-  content_id(content_root, game_package_original, SEED_STRING_KEYS.SaleKey, item_type)
+export const mastery_offer_id = (content_root: string, game_package_original: string, item_type: string): string =>
+  content_id(content_root, game_package_original, SEED_STRING_KEYS.MasteryOfferKey, item_type)
 
 export const airdrop_id = (content_root: string, game_package_original: string, id: string): string =>
   content_id(content_root, game_package_original, SEED_STRING_KEYS.AirdropKey, id)

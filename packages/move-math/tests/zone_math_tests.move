@@ -3,7 +3,20 @@
 #[test_only]
 module aresrpg_math::zone_math_tests;
 
-use aresrpg_math::zone_math;
+use aresrpg_math::{world_map, zone_math};
+
+#[test]
+fun a_city_only_mob_row_needs_no_wilderness_biome() {
+  let row = world_map::new_mob_row(b"nook".to_string(), 1_000, vector[], vector[0]);
+  assert!(world_map::mob_row_biomes(&row).is_empty(), 0);
+  assert!(world_map::mob_row_cities(&row) == vector[0], 1);
+}
+
+#[test]
+#[expected_failure(abort_code = 306, location = aresrpg_math::world_map)]
+fun a_mob_row_with_no_spawn_membership_is_invalid() {
+  let _ = world_map::new_mob_row(b"nowhere".to_string(), 1_000, vector[], vector[]);
+}
 
 #[test]
 fun group_size_reaches_the_authored_average_three_at_two_thousand_blocks() {
@@ -24,11 +37,34 @@ fun mob_level_bounds_move_from_minimum_to_the_upper_quarter() {
 }
 
 #[test]
-fun dungeon_portal_uses_the_production_ten_percent_rate() {
-  let (present, x, z) = zone_math::portal_of(true, 8, 3, 4);
-  assert!(present && x == 1_649 && z == 2_490, 0);
-  let (present, _, _) = zone_math::portal_of(true, 7, 3, 4);
-  assert!(!present, 1);
-  let (present, _, _) = zone_math::portal_of(false, 8, 3, 4);
-  assert!(!present, 2);
+fun city_resource_packs_hold_fifty_percent_more_nodes_without_more_pack_rolls() {
+  assert!(zone_math::city_resource_nodes_for_testing(2) == 3, 0);
+  assert!(zone_math::city_resource_nodes_for_testing(16) == 24, 1);
+  assert!(zone_math::city_resource_nodes_for_testing(22) == 33, 2);
+}
+
+#[test]
+fun archimob_rate_is_exactly_one_percent() {
+  assert!(zone_math::archimob_bp_for_testing() == 100, 0);
+  let rows = vector[world_map::new_archi_row(b"fuwa".to_string(), b"fukuo".to_string())];
+  assert!(zone_math::replacement_for_roll_for_testing(&rows, b"fuwa".to_string(), 99) == b"fukuo".to_string(), 1);
+  assert!(zone_math::replacement_for_roll_for_testing(&rows, b"fuwa".to_string(), 100) == b"fuwa".to_string(), 2);
+  assert!(zone_math::replacement_for_roll_for_testing(&rows, b"ant".to_string(), 0) == b"ant".to_string(), 3);
+}
+
+#[test]
+fun archimob_population_fixture_matches_the_server_twin() {
+  let rows = vector[world_map::new_mob_row(b"fuwa".to_string(), 10_000, vector[0], vector[])];
+  let archis = vector[world_map::new_archi_row(b"fuwa".to_string(), b"fukuo".to_string())];
+  let map = world_map::empty_biome_map();
+  let cities = vector[];
+  let groups = zone_math::mob_groups_with_archis(rows, &archis, &map, &cities, 97, 97, 0, 0);
+  assert!(groups.length() == 56, 0);
+  let group = &groups[42];
+  assert!(zone_math::group_index(group) == 42, 1);
+  assert!(zone_math::group_x(group) == 49_816 && zone_math::group_z(group) == 50_068, 2);
+  let members = zone_math::group_members(group);
+  assert!(members.length() == 1, 3);
+  assert!(zone_math::member_type(&members[0]) == b"fukuo".to_string(), 4);
+  assert!(zone_math::member_level_scalar(&members[0]) == 0, 5);
 }

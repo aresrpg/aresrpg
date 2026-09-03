@@ -376,33 +376,19 @@ describe('the fight watch', () => {
 })
 
 describe('market + self stream + heartbeat', () => {
-  test('shop state streams exact external supply and airdrop counts, without echoing own receipts', async () => {
+  test('airdrop state streams exact external remaining counts', async () => {
     const { sent, ws, graph, pubsub } = wire()
     create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
     pubsub.emitter.emit('evt:economy', {
-      type: 'SaleBought',
-      data: { item_type: 'berserk', buyer: '0xher', supply: '75' },
-    })
-    pubsub.emitter.emit('evt:economy', {
       type: 'AirdropClaimed',
       data: { drop_id: 'founders', claimer: '0xher', remaining: '1' },
-    })
-    pubsub.emitter.emit('evt:economy', {
-      type: 'SaleBought',
-      data: { item_type: 'berserk', buyer: '0xme', supply: '74' },
-    })
-    expect(sent.find((packet) => packet.type === 'packet/shop_supply')).toEqual({
-      type: 'packet/shop_supply',
-      item_type: 'berserk',
-      supply: '75',
     })
     expect(sent.find((packet) => packet.type === 'packet/airdrop_remaining')).toEqual({
       type: 'packet/airdrop_remaining',
       drop_id: 'founders',
       eligible_count: 1,
     })
-    expect(sent.filter((packet) => packet.type === 'packet/shop_supply')).toHaveLength(1)
   })
 
   test('market_observe folds and pushes the slice; my kiosk sale always forwards', async () => {
@@ -508,12 +494,20 @@ describe('market + self stream + heartbeat', () => {
 
   test('the heartbeat pushes the cluster-wide count', async () => {
     const { sent, ws, graph, pubsub } = wire()
-    create_player({ ws, address: '0xme', admin: false, graph, pubsub, indexing_lag: async () => 42 })
+    create_player({
+      ws,
+      address: '0xme',
+      admin: false,
+      graph,
+      pubsub,
+      indexing_health: async () => ({ lag: 42, epoch: '9' }),
+    })
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/server_info')).toEqual({
       type: 'packet/server_info',
       online: 7,
       indexing_lag: 42,
+      current_epoch: '9',
     })
   })
 

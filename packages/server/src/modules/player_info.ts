@@ -14,19 +14,21 @@ const INFO_INTERVAL_MS = 5_000
 
 export default {
   name: 'player_info',
-  observe: ({ events, game_state, indexing_lag, pubsub, send, signal }) => {
+  observe: ({ events, game_state, indexing_health, pubsub, send, signal }) => {
     events.on('packet/ping', ({ id }: Extract<PlayerAction, { type: 'packet/ping' }>) =>
       send({ type: 'packet/pong', id })
     )
     const push = () =>
       Promise.all([
         pubsub.mesh.cluster_online(),
-        indexing_lag().catch((error: Error) => {
+        indexing_health().catch((error: Error) => {
           log.warn({ error: error.message }, 'indexing health failed')
-          return null
+          return Object.freeze({ lag: null, epoch: null })
         }),
       ])
-        .then(([online, indexing_lag]) => send({ type: 'packet/server_info', online, indexing_lag }))
+        .then(([online, health]) =>
+          send({ type: 'packet/server_info', online, indexing_lag: health.lag, current_epoch: health.epoch })
+        )
         .catch((error: Error) => log.warn({ error: error.message }, 'cluster count failed'))
     const timer = setInterval(() => void push(), INFO_INTERVAL_MS)
     const push_game_state = (frozen: boolean | null) => send({ type: 'packet/game_state', frozen })

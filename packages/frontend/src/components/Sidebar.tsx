@@ -6,8 +6,8 @@ import {
   Crosshair,
   Gamepad2,
   Gift,
+  Gem,
   Settings,
-  ShoppingBag,
   ShieldCheck,
   Store,
   Swords,
@@ -28,7 +28,7 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
     { page: 'world', label: 'world', Icon: Gamepad2, disabled: false },
     { page: 'characters', label: 'characters', Icon: Swords, disabled: false },
     { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
-    { page: 'shop', label: 'shop', Icon: ShoppingBag, disabled: false },
+    { page: 'mastery', label: 'mastery', Icon: Gem, disabled: false },
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
     { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: false },
     { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: false },
@@ -43,9 +43,10 @@ type SidebarProps = Readonly<{
   open_page: (page: Page) => void
   address: string | null
   network: Network
+  mastery_notification?: boolean
 }>
 
-export const Sidebar = ({ copy, page, open_page, address, network }: SidebarProps) => (
+export const Sidebar = ({ copy, page, open_page, address, network, mastery_notification = false }: SidebarProps) => (
   <aside
     data-app-sidebar=""
     className="pointer-events-auto flex w-[200px] shrink-0 flex-col border border-border bg-surface/80"
@@ -77,7 +78,9 @@ export const Sidebar = ({ copy, page, open_page, address, network }: SidebarProp
               ? 'cursor-not-allowed border-transparent text-[#6b7280] opacity-40'
               : page === item.page
                 ? 'cursor-pointer border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]'
-                : 'cursor-pointer border-transparent text-[#6b7280] hover:bg-[#c8963c]/5 hover:text-[#e8e4dc]'
+                : item.page === 'mastery' && mastery_notification
+                  ? 'cursor-pointer border-[#dc3152]/45 bg-[#dc3152]/[0.045] text-[#9397a2] hover:bg-[#dc3152]/[0.075] hover:text-[#e8e4dc]'
+                  : 'cursor-pointer border-transparent text-[#6b7280] hover:bg-[#c8963c]/5 hover:text-[#e8e4dc]'
           }`}
           disabled={item.disabled}
           data-page={item.page}
@@ -87,6 +90,16 @@ export const Sidebar = ({ copy, page, open_page, address, network }: SidebarProp
         >
           <item.Icon aria-hidden="true" className="opacity-60" size={14} />
           <span className="min-w-0 flex-1 text-[11px] tracking-[0.15em] uppercase">{copy[item.label]}</span>
+          {item.page === 'mastery' && mastery_notification && (
+            <span
+              aria-hidden="true"
+              className="relative grid size-3.5 place-items-center rounded-full border border-[#ff9aab] bg-[#dc3152] text-[7px] font-black leading-none text-white shadow-[0_0_7px_rgba(255,49,87,0.6)]"
+              data-nav-notification="mastery"
+            >
+              <span className="absolute -inset-0.5 animate-ping rounded-full bg-[#ff3157]/30" />
+              <span className="relative">1</span>
+            </span>
+          )}
         </button>
       ))}
     </nav>

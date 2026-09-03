@@ -86,7 +86,7 @@ fun init(_otw: CHARACTER, ctx: &mut TxContext) {
 
 /// Display V2 needs the shared `DisplayRegistry` (0xd), which init cannot take — runs once
 /// post-publish through `admin::create_character_display`. Returns the cap.
-public(package) fun nd(
+public(package) fun create_display(
   registry: &mut DisplayRegistry,
   publisher: &mut Publisher,
   ctx: &mut TxContext,
@@ -131,7 +131,7 @@ public(package) fun create_character(
   assert!(payment.value() == PRICE, EWrongPayment);
   transfer::public_transfer(payment, @treasury);
 
-  vc(classe);
+  assert_valid_class(classe);
   validate_range!(color_1, 0, MAX_COLOR_VALUE, EInvalidColor);
   validate_range!(color_2, 0, MAX_COLOR_VALUE, EInvalidColor);
   validate_range!(color_3, 0, MAX_COLOR_VALUE, EInvalidColor);
@@ -195,12 +195,12 @@ public fun available_points(self: &Character): u16 { self.available_points }
 public fun available_spell_points(self: &Character): u16 { self.available_spell_points }
 
 /// The spell-raise spend door — progression asserts affordability first.
-public(package) fun ssp(self: &mut Character, amount: u16) {
+public(package) fun spend_spell_points(self: &mut Character, amount: u16) {
   self.available_spell_points = self.available_spell_points - amount;
 }
 
 /// RESET SPELL POINTS: every point ever granted returns — the pool becomes level − 1.
-public(package) fun rsp(self: &mut Character) {
+public(package) fun reset_spell_points(self: &mut Character) {
   self.available_spell_points = self.level - 1;
 }
 
@@ -266,7 +266,7 @@ public(package) fun destroy(self: Character) {
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
 // verify_classe
-fun vc(classe: String) {
+fun assert_valid_class(classe: String) {
   assert!(content_rules::is_classe(&classe), EInvalidClasse);
 }
 
@@ -290,7 +290,7 @@ public fun test_claim_name(registry: &mut NameRegistry, name: String): UID {
 
 #[test_only]
 public fun test_character(classe: String, level: u16, available_points: u16, ctx: &mut TxContext): Character {
-  vc(classe);
+  assert_valid_class(classe);
   Character {
     id: object::new(ctx), name: b"tester".to_string(), classe, sex: b"male".to_string(),
     experience: 0, level, color_1: 0, color_2: 0, color_3: 0,

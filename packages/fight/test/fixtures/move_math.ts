@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Pinned by hand from the integer expressions in fight.move/fight_math.move.
+// Pinned by hand from the integer expressions in move-combat/fight_math.move.
 // Expected values are recorded parity answers; runtime code never regenerates them.
 
 export const MOVE_MATH_FIXTURE = Object.freeze({

@@ -16,7 +16,9 @@ These values never change after first publication:
 - spell: name and class;
 - mob: mob_type;
 - world: world name;
-- sale: item type and finite/infinite supply policy.
+- city: city slug;
+- dungeon: dungeon slug;
+- Mastery offer: statless item type.
 
 Retiring a row removes every live reference to it. A derived object is not deleted and recreated
 under the same identity.
@@ -30,10 +32,14 @@ Every player spell always has exactly six levels.
   recipe disables its existing chain object; re-adding the same output reactivates it.
 - Spells: all six level payloads. The class ladder slot stays fixed.
 - Mobs: full authored payload.
-- Worlds: entry level, mobs, resources, biome map, and dungeon rooms.
+- Worlds: entry level, mobs, resources, biome map, cities, city anchors, structures, and dungeon references.
+- Dungeons: key and ordered room compositions. Do not reorder or shrink rooms while any character
+  has an active run in that dungeon; a live run keeps its room number and committed seed, not a
+  room snapshot.
 - Boards: add, replace, reorder, and remove.
-- Sales: price and enabled state. Finite supply is never replenished. Removing an authored sale
-  disables its existing chain object.
+- Mastery offers: point cost and enabled state. Removing an authored offer disables its existing
+  chain object; redemption mints the referenced statless item. Loot boxes keep using their current
+  seeded table after redemption.
 
 Stackable consumables and loot boxes use their template's current behavior. Unstackable equipment
 keeps the stats and damages rolled when it was minted. Running fights keep their mob and board
@@ -76,6 +82,31 @@ Board synchronization reads the chain catalog length. It replaces shared indexes
 indexes, and removes the tail. `pins.json` records every derived address and authored fingerprint
 under its Registry root; the chain catalog length still decides board shape.
 
+## Printing giftcards
+
+Giftcard QR images are bearer secrets. Generate them only after the authored vouchers are published
+and owned by the signer address authored as their `custody`. A `pins.publisher` value is a Sui
+Publisher capability object ID, never a wallet address. The exporter verifies signer custody before
+creating one atomic zkSend transaction:
+
+```bash
+ARESRPG_OPERATOR_PRIVATE_KEY=suiprivkey... bun run giftcards:export -- \
+  --network testnet \
+  --item-type sui_crate \
+  --count 100 \
+  --claim-origin https://aresrpg.world \
+  --output giftcard-exports/sui-crates \
+  --execute
+```
+
+The command refuses to overwrite a folder. It prepares a private manifest and one 85×55 mm 300-DPI
+PNG per voucher before touching chain state, then marks the manifest live with the certified digest.
+Each QR opens AresRPG `/gift`; the zkSend key stays in the URL fragment, survives Google login in
+session storage, and is never sent to the application server.
+`giftcard-exports/` is ignored by Git. Never upload that folder before the cards are intentionally
+distributed. If execution returns a digest and fails, inspect that digest and current object custody;
+never rerun automatically.
+
 ## Adding and editing worlds
 
 The ordered rows in `seed/content/worlds.json` are the world roster. Add a row there to add a world;
@@ -95,23 +126,21 @@ Already minted unstackable items and already created fights remain unchanged by 
 
 Package deployment follows the dependency graph:
 
-    math → control → seed → core
+    math → combat
+    math + control → seed
+    math + control + combat + seed → core
 
 Upgrade only a package whose desired artifact changed. Reuse unchanged published dependencies.
 
-Republish abandons every active package lineage, publishes fresh math, control, seed, and core
-packages in dependency order, and creates a fresh empty Registry. Historical content ledgers remain
+Republish abandons every active package lineage, publishes fresh math, control, combat, seed, and
+core packages in dependency order, and creates a fresh empty Registry. Historical content ledgers remain
 namespaced by their old Registry roots for audit and recovery, but no active package or content
 object is reused. Compatibility belongs only to Upgrade; Republish never attempts selective reuse.
 
-Refresh the local read stack with the ceremony that matches the chain change:
-
-- after a fresh package publication, run `bun run repin:local`; it replaces the disposable local
-  FalkorDB projection because the original package lineage may have changed;
-- after a compatible package upgrade, run `bun run reload:local`; it preserves FalkorDB and its
-  watermark, refuses a changed original package id, rebuilds both reader images, and restarts the
-  indexer and server immediately. The client blocks play while the cached index lag is unknown or
-  above 300 checkpoints and shows catch-up progress instead of hiding the server.
+Local read stacks must replace their derived projection when the branch's game or seed original changes and
+may preserve it only across compatible upgrades of the same original. The client blocks play while
+cached index lag is unknown or above 300 checkpoints and shows catch-up progress instead of hiding
+the server.
 
 ## Permanent freeze
 
@@ -120,11 +149,11 @@ Permanent freeze is a separate cold-key ceremony, not a normal content upgrade.
 Before requesting approval:
 
 1. Confirm every authored row is published.
-2. Confirm the admin page discovers the Registry as unfrozen.
-3. Confirm the exact active math, control, seed, and core UpgradeCaps.
+2. Confirm release inspection discovers the Registry as unfrozen.
+3. Confirm the exact active math, control, combat, seed, and core UpgradeCaps.
 4. Run all repository gates.
 5. Record the intended package IDs and content state for human review.
 
 After explicit owner approval, one PTB freezes the Registry and calls
-Sui package::make_immutable for all four AresRPG UpgradeCaps. No content or package upgrade is
+Sui package::make_immutable for all five AresRPG UpgradeCaps. No content or package upgrade is
 possible afterward.

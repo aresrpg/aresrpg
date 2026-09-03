@@ -27,4 +27,5 @@ cover_package() {
 cover_package packages/control 60
 cover_package packages/seed 30
 cover_package packages/move-math 30
+cover_package packages/move-combat 25
 cover_package packages/move 25

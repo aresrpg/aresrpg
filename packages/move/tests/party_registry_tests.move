@@ -67,7 +67,7 @@ fun later_invitation_cannot_target_an_existing_party_member() {
   let occupied = object::id_from_address(CHARACTER);
   let mut row = party::inviting_for_testing(&mut registry, &leader, first_invited, scenario.ctx());
   party::claim_membership_for_testing(&mut registry, occupied, object::id_from_address(PARTY_A));
-  party::i(&registry, &mut row, object::id(&leader), occupied, true);
+  party::update_invitation(&registry, &mut row, object::id(&leader), occupied, true);
   party::disband(&mut registry, row, object::id(&leader));
   character::destroy(leader);
   party::destroy_registry_for_testing(registry);
@@ -99,7 +99,7 @@ fun an_accepted_member_can_invite() {
   let target = object::id_from_address(@0xCAFE);
   let mut row = party::inviting_for_testing(&mut registry, &leader, object::id(&member), scenario.ctx());
   party::accept(&mut registry, &mut row, object::id(&member));
-  party::i(&registry, &mut row, object::id(&member), target, true);
+  party::update_invitation(&registry, &mut row, object::id(&member), target, true);
   party::leave(&mut registry, &mut row, object::id(&leader));
   party::disband(&mut registry, row, object::id(&member));
   character::destroy(leader);
@@ -121,7 +121,7 @@ fun a_nonmember_character_cannot_invite() {
     object::id_from_address(@0xF1),
     scenario.ctx(),
   );
-  party::i(&registry, &mut row, object::id(&outsider), object::id_from_address(@0xCAFE), true);
+  party::update_invitation(&registry, &mut row, object::id(&outsider), object::id_from_address(@0xCAFE), true);
   abort 999
 }
 
@@ -143,6 +143,6 @@ fun a_party_member_cannot_be_deleted() {
   let mut registry = party::registry_for_testing(scenario.ctx());
   let character = object::id_from_address(CHARACTER);
   party::claim_membership_for_testing(&mut registry, character, object::id_from_address(PARTY_A));
-  party::af(&registry, character);
+  party::assert_membership_available(&registry, character);
   abort 999
 }

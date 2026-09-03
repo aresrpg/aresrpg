@@ -24,6 +24,7 @@ export const StructurePackEditor = ({
   const pack = as_record(value)
   if (!pack) return null
   const rows = Array.isArray(pack.types) ? pack.types : []
+  const scale = Array.isArray(pack.scale) ? pack.scale : [1, 1]
   const replace_rows = (next: readonly JsonValue[]): void => on_change(['types'], Object.freeze(next))
   return (
     <div className="mx-auto max-w-3xl space-y-5" data-content-editor="structure-pack">
@@ -64,6 +65,18 @@ export const StructurePackEditor = ({
             label="Bury"
             value={number_value(pack.bury)}
             width="w-16"
+          />
+          <NumberField
+            change={(next) => on_change(['scale'], Object.freeze([next, number_value(scale[1])]))}
+            label="Min scale"
+            value={number_value(scale[0])}
+            width="w-20"
+          />
+          <NumberField
+            change={(next) => on_change(['scale'], Object.freeze([number_value(scale[0]), next]))}
+            label="Max scale"
+            value={number_value(scale[1])}
+            width="w-20"
           />
         </div>
       </SheetSection>

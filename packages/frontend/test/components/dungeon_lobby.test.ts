@@ -42,17 +42,17 @@ test('a group fight accepts only a member of the opener party during placement',
 
 test('portal names advertise at range while interaction remains close', () => {
   const portals = [
-    { id: 'near', world: 'nauvis', x: 3, z: 0, zx: 1, zz: 1 },
-    { id: 'far', world: 'nauvis', x: 42, z: 0, zx: 1, zz: 2 },
-    { id: 'hidden', world: 'nauvis', x: 51, z: 0, zx: 1, zz: 3 },
+    { id: 'near', world: 'nauvis', city: 'thebes', dungeon: 'tangled_aftermath', x: 3, z: 0, zx: 1, zz: 1 },
+    { id: 'far', world: 'nauvis', city: 'thebes', dungeon: 'tangled_aftermath', x: 42, z: 0, zx: 1, zz: 2 },
+    { id: 'hidden', world: 'nauvis', city: 'thebes', dungeon: 'tangled_aftermath', x: 51, z: 0, zx: 1, zz: 3 },
   ]
   expect(dungeon_portal_targets(portals, 0, 0)).toEqual({ visible_ids: ['near', 'far'], focused_id: 'near' })
 })
 
 test('dungeon writes remain pending until the roster proves their state transition', () => {
-  const staged = { dungeon_run: { world: 'nauvis', room: 1, x: 1, z: 2 }, custody: 'kiosk' } as never
+  const staged = { dungeon_run: { dungeon: 'tangled_aftermath', room: 1 }, custody: 'kiosk' } as never
   const fighting = {
-    dungeon_run: { world: 'nauvis', room: 1, x: 1, z: 2 },
+    dungeon_run: { dungeon: 'tangled_aftermath', room: 1 },
     custody: 'fight',
   } as never
   expect(dungeon_operation_reconciled('enter', staged)).toBeTrue()
@@ -63,7 +63,7 @@ test('dungeon writes remain pending until the roster proves their state transiti
 })
 
 test('an entering character sees the expedition immediately while chain custody catches up', () => {
-  const optimistic = { world: 'nauvis', room: 1, x: 4, z: 7 }
+  const optimistic = { dungeon: 'tangled_aftermath', room: 1 }
   const state = {
     session: { selected_character_id: '0xc', characters: [{ id: '0xc' }] },
     dungeon: { optimistic_runs: { '0xc': optimistic } },

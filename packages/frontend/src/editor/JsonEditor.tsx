@@ -342,7 +342,7 @@ const section_for = (key: string): SectionId => {
   if (/^(?:level|level_min|level_max|unlock_level|tier|xp)$/.test(key)) return 'progression'
   if (/^(?:stats|damages|resistances|spells|levels|hp|ap|mp|agility|wisdom)$/.test(key)) return 'combat'
   if (/^(?:inputs|loot|rewards|price|supply|consumable)$/.test(key)) return 'economy'
-  if (/^(?:terrain|mobs|resources|dungeon|biomes)$/.test(key)) return 'world'
+  if (/^(?:terrain|mobs|resources|cities|dungeon|biomes|rooms)$/.test(key)) return 'world'
   if (/^(?:art|art_status|color|status|aura|aura_pending)$/.test(key)) return 'presentation'
   return 'other'
 }
@@ -375,7 +375,7 @@ const sections = Object.freeze([
   Object.freeze({
     id: 'world',
     label: 'World population',
-    note: 'Terrain, biomes, mobs, resources, and dungeons',
+    note: 'Terrain, biomes, cities, populations, and dungeons',
     tone: 'border-[#4a9eff]/40 text-[#78b7ff] bg-[#4a9eff]/[0.03]',
   }),
   Object.freeze({

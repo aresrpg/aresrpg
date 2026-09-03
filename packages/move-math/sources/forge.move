@@ -314,14 +314,14 @@ public fun zero_counts(): vector<u64> {
 
 // ╔════════════════ [ ForgeResult accessors ] ═══════════════════════════════ ]
 
-public fun outcome(r: &ForgeResult): u8 { r.outcome }
-public fun new_stats(r: &ForgeResult): vector<u64> { r.new_stats }
-public fun new_puits(r: &ForgeResult): u64 { r.new_puits }
-public fun applied_stat(r: &ForgeResult): u8 { r.applied_stat }
-public fun applied_value(r: &ForgeResult): u64 { r.applied_value }
-public fun lost_stat(r: &ForgeResult): u8 { r.lost_stat }
-public fun lost_amount(r: &ForgeResult): u64 { r.lost_amount }
-public fun has_loss(r: &ForgeResult): bool { r.lost_stat != NO_STAT }
+public fun outcome(result: &ForgeResult): u8 { result.outcome }
+public fun new_stats(result: &ForgeResult): vector<u64> { result.new_stats }
+public fun new_puits(result: &ForgeResult): u64 { result.new_puits }
+public fun applied_stat(result: &ForgeResult): u8 { result.applied_stat }
+public fun applied_value(result: &ForgeResult): u64 { result.applied_value }
+public fun lost_stat(result: &ForgeResult): u8 { result.lost_stat }
+public fun lost_amount(result: &ForgeResult): u64 { result.lost_amount }
+public fun has_loss(result: &ForgeResult): bool { result.lost_stat != NO_STAT }
 
 public fun outcome_cs(): u8 { OUTCOME_CS }
 public fun outcome_ns(): u8 { OUTCOME_NS }

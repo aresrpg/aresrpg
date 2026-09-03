@@ -14,7 +14,7 @@ export async function get_fight_resolutions(
   const rows = await graph.read(
     `MATCH (f:Fight)-[r:RESULT_FOR]->(:User {address: $address})
      OPTIONAL MATCH (k:Kolizeum {fight_id: f.id})
-     RETURN f.id AS fight, f.world AS world, f.dungeon_room AS dungeon, f.winner AS winner,
+     RETURN f.id AS fight, f.world AS world, f.dungeon AS dungeon, f.dungeon_room AS dungeon_room, f.winner AS winner,
             k.id AS kolizeum,
             r.seat AS fighter, r.character AS character,
             r.team AS team, r.dead AS dead, r.settled AS settled,
@@ -24,7 +24,8 @@ export async function get_fight_resolutions(
   return rows.map((row) => ({
     fight: String(row.fight),
     world: String(row.world),
-    dungeon: row.dungeon === null || row.dungeon === undefined ? null : Number(row.dungeon),
+    dungeon: row.dungeon === null || row.dungeon === undefined ? null : String(row.dungeon),
+    dungeon_room: row.dungeon_room === null || row.dungeon_room === undefined ? null : Number(row.dungeon_room),
     kolizeum: typeof row.kolizeum === 'string' ? row.kolizeum : null,
     fighter: Number(row.fighter),
     character: String(row.character),

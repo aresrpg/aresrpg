@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
-// Fighter access and writes mirror fight.move's single branch and single death door.
+// Fighter access and writes mirror move-combat's single branch and single death door.
 
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from './move_contract.gen.ts'
 import { xp_for_player } from './fight_math.ts'
@@ -121,7 +121,7 @@ export const modifiable_range_max = (runtime: FightReadState, seat: bigint, auth
   )
 }
 
-/** Exact fight.move `xs`/`sc` settlement award from the ended checkpoint. */
+/** Exact move-combat settlement award from the ended checkpoint. */
 export const xp_award_of = (checkpoint: FightReadState, seat: bigint): bigint => {
   const fighter = checkpoint.contract.fighters[Number(seat)]
   if (!fighter || fighter.kind.type !== 'player' || checkpoint.contract.winner !== fighter.team) return 0n
@@ -289,7 +289,7 @@ export const add_mp = (runtime: FightRuntime, seat: bigint, amount: bigint, reas
   pool_change(runtime, seat, fighter.ap, fighter.mp + amount, reason, source)
 }
 
-/** Living fighters on a side — the client's mirror of the chain's `lc` (fight.move): it counts
+/** Living fighters on a side — the client's mirror of move-combat: it counts
  *  the NOT-DEAD, mobs included, and never inspects `settled`, so a forfeited seat is already out
  *  (forfeit runs the kill door). The ONE home of this rule: the start gate, the wipe check, and
  *  the placement view all read it here rather than restating the predicate. */

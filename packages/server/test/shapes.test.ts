@@ -30,9 +30,9 @@ describe('shape_character', () => {
     expect(
       shape_character({
         id: '0xchar',
-        dungeon_run: '{"world":"nauvis","room":"2","x":1536,"z":2048,"seed":"99"}',
+        dungeon_run: '{"dungeon":"tangled_aftermath","room":"2","seed":"99"}',
       }).dungeon_run
-    ).toEqual({ world: 'nauvis', room: 2, x: 1536, z: 2048 })
+    ).toEqual({ dungeon: 'tangled_aftermath', room: 2 })
   })
 
   test('folded_stats becomes a named record; spells parse from their JSON string', () => {
@@ -71,7 +71,8 @@ test('RESULT_FOR rows preserve the exact stranded loot needed after reconnect', 
       {
         fight: '0xf1',
         world: 'astral',
-        dungeon: 2,
+        dungeon: 'tangled_aftermath',
+        dungeon_room: 2,
         kolizeum: '0xk1',
         winner: 0,
         fighter: 2,
@@ -89,7 +90,8 @@ test('RESULT_FOR rows preserve the exact stranded loot needed after reconnect', 
     {
       fight: '0xf1',
       world: 'astral',
-      dungeon: 2,
+      dungeon: 'tangled_aftermath',
+      dungeon_room: 2,
       kolizeum: '0xk1',
       winner: 0,
       fighter: 2,

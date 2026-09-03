@@ -359,6 +359,48 @@ fn emit_object(
     if is_game(t, game, "friends", "FriendList") {
         return emit_friend_list(cypher, o);
     }
+    if is_game(t, game, "mastery", "Mastery") {
+        let mastery = decode::from_bytes::<decode::Mastery>(o.bytes)
+            .map_err(|error| drift("mastery::Mastery", o.id, error))?;
+        let owner = q(&mastery.owner.hex());
+        let last_completed = mastery
+            .last_completed_epoch
+            .map_or_else(|| "NULL".to_string(), |epoch| q(&epoch.to_string()));
+        cypher.push(format!(
+            "MERGE (u:User {{address: {owner}}}) SET u.mastery_id = {id}, \
+             u.mastery_points = {points}, u.mastery_last_completed_epoch = {last_completed}, \
+             u.mastery_quest_epoch = {quest_epoch}, u.mastery_quest_world = {world}, \
+             u.mastery_quest_started_ms = {started_ms}, \
+             u.mastery_quest_dungeon = {dungeon}, u.mastery_quest_reward = {reward}, \
+             u.mastery_quest_completed = {completed}",
+            id = q_id(&mastery.id),
+            points = q(&mastery.points.to_string()),
+            quest_epoch = q(&mastery.quest_epoch.to_string()),
+            started_ms = q(&mastery.quest_started_ms.to_string()),
+            world = q(&mastery.quest_world),
+            dungeon = q_id(&mastery.quest_dungeon),
+            reward = mastery.quest_reward,
+            completed = mastery.quest_completed,
+        ));
+        return Ok(());
+    }
+    if is_game(t, game, "mastery", "MasteryOffer") {
+        let offer = decode::from_bytes::<decode::MasteryOffer>(o.bytes)
+            .map_err(|error| drift("mastery::MasteryOffer", o.id, error))?;
+        merge_set(
+            cypher,
+            "MasteryOffer",
+            &offer.id,
+            ckpt,
+            &[
+                format!("v.item_type = {}", q(&offer.item_type)),
+                format!("v.template = {}", q_id(&offer.template)),
+                format!("v.cost = {}", q(&offer.cost.to_string())),
+                format!("v.enabled = {}", offer.enabled),
+            ],
+        );
+        return Ok(());
+    }
     if is_game(t, game, "kolizeum", "Kolizeum") {
         let k = decode::from_bytes::<decode::Kolizeum>(o.bytes)
             .map_err(|e| drift("kolizeum::Kolizeum", o.id, e))?;
@@ -383,28 +425,9 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "shop", "Sale") {
-        let s = decode::from_bytes::<decode::Sale>(o.bytes)
-            .map_err(|e| drift("shop::Sale", o.id, e))?;
-        merge_set(
-            cypher,
-            "Sale",
-            &s.id,
-            ckpt,
-            &[
-                format!("v.item_type = {}", q(&s.item_type)),
-                format!("v.template = {}", q_id(&s.template)),
-                format!("v.price = {}", q(&s.price.to_string())),
-                format!("v.supply = {}", q(&s.supply.to_string())),
-                format!("v.infinite = {}", s.infinite),
-                format!("v.enabled = {}", s.enabled),
-            ],
-        );
-        return Ok(());
-    }
-    if is_game(t, game, "shop", "Airdrop") {
+    if is_game(t, game, "distribution", "Airdrop") {
         let a = decode::from_bytes::<decode::Airdrop>(o.bytes)
-            .map_err(|e| drift("shop::Airdrop", o.id, e))?;
+            .map_err(|e| drift("distribution::Airdrop", o.id, e))?;
         let whitelist = addr_array(&a.whitelist.contents);
         merge_set(
             cypher,
@@ -420,9 +443,9 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "shop", "Giftcard") {
+    if is_game(t, game, "distribution", "Giftcard") {
         let g = decode::from_bytes::<decode::Giftcard>(o.bytes)
-            .map_err(|e| drift("shop::Giftcard", o.id, e))?;
+            .map_err(|e| drift("distribution::Giftcard", o.id, e))?;
         merge_set(
             cypher,
             "Giftcard",
@@ -755,10 +778,8 @@ fn emit_field(
         let f = decode::from_bytes::<Field<MarkerKey, decode::DungeonRun>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
         let run = json!({
-            "world": f.value.world.clone(),
+            "dungeon": f.value.dungeon.clone(),
             "room": f.value.room.to_string(),
-            "x": f.value.x,
-            "z": f.value.z,
             "seed": f.value.seed.to_string(),
         });
         child_set(
@@ -769,10 +790,8 @@ fn emit_field(
             ckpt,
             &[
                 format!("v.dungeon_run = {}", q_json(&run)),
-                format!("v.dungeon_world = {}", q(&f.value.world)),
+                format!("v.dungeon = {}", q(&f.value.dungeon)),
                 format!("v.dungeon_room = {}", f.value.room),
-                format!("v.dungeon_x = {}", f.value.x),
-                format!("v.dungeon_z = {}", f.value.z),
                 format!("v.dungeon_seed = {}", q(&f.value.seed.to_string())),
             ],
         );
@@ -918,8 +937,8 @@ fn emit_field(
         cypher.push(format!(
             "MERGE (v:Zone {{world: {w}, zx: {zx}, zz: {zz}}}) SET {set}",
             w = q(&world_name),
-            zx = f.name.zx,
-            zz = f.name.zz,
+            zx = f.name.zone_x,
+            zz = f.name.zone_z,
             set = assigns.join(", "),
         ));
         return Ok(());
@@ -958,15 +977,16 @@ fn emit_field(
 fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::Result<()> {
     let f =
         decode::from_bytes::<decode::Fight>(o.bytes).map_err(|e| drift("fight::Fight", o.id, e))?;
-    let phase = if f.ended {
+    let phase = if f.combat.ended {
         "ended"
-    } else if f.round == 0 {
+    } else if f.combat.round == 0 {
         "placement"
     } else {
         "active"
     };
-    let closable = f.ended
-        && f.fighters
+    let closable = f.combat.ended
+        && f.combat
+            .fighters
             .iter()
             .all(|fighter| fighter.settled && fighter.drops.is_empty());
     merge_set(
@@ -979,7 +999,7 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             format!("v.x = {}", f.x),
             format!("v.z = {}", f.z),
             format!("v.phase = {}", q(phase)),
-            match f.winner {
+            match f.combat.winner {
                 Some(team) => format!("v.winner = {team}"),
                 None => "v.winner = NULL".to_string(),
             },
@@ -997,19 +1017,23 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
                 Some(id) => format!("v.opener_b = {}", q(&id.hex())),
                 None => "v.opener_b = NULL".to_string(),
             },
-            format!("v.managed = {}", f.managed),
-            format!("v.wagered = {}", f.wagered),
-            match f.dungeon {
-                Some(room) => format!("v.dungeon_room = {room}"),
+            format!("v.managed = {}", f.door_policy & 1 != 0),
+            format!("v.wagered = {}", f.door_policy == 31),
+            match &f.dungeon {
+                Some(tag) => format!("v.dungeon_room = {}", tag.room),
                 None => "v.dungeon_room = NULL".to_string(),
+            },
+            match &f.dungeon {
+                Some(tag) => format!("v.dungeon = {}", q(&tag.dungeon)),
+                None => "v.dungeon = NULL".to_string(),
             },
             format!("v.drops_rolled = {}", f.drops_rolled),
             format!("v.closable = {closable}"),
-            format!("v.turn_ptr = {}", f.turn_ptr),
-            format!("v.round = {}", f.round),
-            format!("v.turn_seed = {}", q(&f.turn_seed.to_string())),
-            format!("v.placement_ms = {}", f.placement_ms),
-            format!("v.turn_started_ms = {}", f.turn_started_ms),
+            format!("v.turn_ptr = {}", f.combat.turn_pointer),
+            format!("v.round = {}", f.combat.round),
+            format!("v.turn_seed = {}", q(&f.combat.turn_seed.to_string())),
+            format!("v.placement_ms = {}", f.combat.placement_started_ms),
+            format!("v.turn_started_ms = {}", f.combat.turn_started_ms),
             format!("v.machine = {}", q_json(&fight_machine(&f))),
         ],
     );
@@ -1019,11 +1043,11 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
     ));
     if closable {
         let closers = f
-            .fighters
+            .authorities
             .iter()
-            .filter_map(|fighter| match &fighter.kind {
-                decode::FighterKind::Player { owner, .. } => Some(owner.hex()),
-                decode::FighterKind::Mob(_) => None,
+            .filter_map(|authority| match authority {
+                decode::FighterAuthority::Player { owner, .. } => Some(owner.hex()),
+                decode::FighterAuthority::Mob => None,
             })
             .collect::<BTreeSet<_>>();
         for owner in closers {
@@ -1041,11 +1065,11 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
         "MATCH (f:Fight {{id: {}}}) OPTIONAL MATCH (f)-[r:RESULT_FOR]->() DELETE r",
         q_id(&f.id)
     ));
-    if f.ended {
-        for (seat, fighter) in f.fighters.iter().enumerate() {
-            let decode::FighterKind::Player {
+    if f.combat.ended {
+        for (seat, fighter) in f.combat.fighters.iter().enumerate() {
+            let decode::FighterAuthority::Player {
                 character, owner, ..
-            } = &fighter.kind
+            } = &f.authorities[seat]
             else {
                 continue;
             };
@@ -1057,8 +1081,9 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
                 .iter()
                 .map(|drop| json!({ "item_type": drop.item_type, "qty": drop.qty }))
                 .collect::<Vec<_>>());
-            let loot_types = if f.winner == Some(fighter.team) {
+            let loot_types = if f.combat.winner == Some(fighter.team) {
                 json!(f
+                    .combat
                     .fighters
                     .iter()
                     .filter(|candidate| candidate.team != fighter.team)
@@ -1068,7 +1093,7 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
                             .iter()
                             .map(|row| row.item_type.clone())
                             .collect::<Vec<_>>(),
-                        decode::FighterKind::Player { .. } => vec![],
+                        decode::FighterKind::Player => vec![],
                     })
                     .collect::<BTreeSet<_>>())
             } else {
@@ -1095,52 +1120,56 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
 /// The machine blob — everything the server replays, one latest-wins document.
 /// Seeds and bitmask words are STRINGS (2⁵³ law); small counters stay numbers.
 fn fight_machine(f: &decode::Fight) -> Value {
+    let state = &f.combat;
     json!({
         "board": {
-            "width": f.board.width,
-            "height": f.board.height,
-            "shape_mask": strs_u64(&f.board.shape_mask),
-            "obstacles": f.board.obstacles,
-            "holes": f.board.holes,
-            "start_cells_a": f.board.start_cells_a,
-            "start_cells_b": f.board.start_cells_b,
+            "width": state.board.width,
+            "height": state.board.height,
+            "shape_mask": strs_u64(&state.board.shape_mask),
+            "obstacles": state.board.obstacles,
+            "holes": state.board.holes,
+            "start_cells_a": state.board.start_cells_a,
+            "start_cells_b": state.board.start_cells_b,
         },
-        "closed": strs_u64(&f.closed),
+        "closed": strs_u64(&state.closed),
         "opener_a": f.opener_a.as_ref().map(Id::hex),
         "opener_b": f.opener_b.as_ref().map(Id::hex),
-        "queue": f.queue,
-        "turn_slot": f.turn_slot,
-        "turn_casts": f.turn_casts.iter().map(|c| json!({
+        "queue": state.queue,
+        "turn_slot": state.turn_cast_index,
+        "turn_casts": state.turn_casts.iter().map(|c| json!({
             "spell": c.spell,
             "target": c.target.to_string(),
         })).collect::<Vec<_>>(),
-        "zones": f.zones.iter().map(board_zone_json).collect::<Vec<_>>(),
-        "fighters": f.fighters.iter().map(fighter_json).collect::<Vec<_>>(),
+        "zones": state.zones.iter().map(board_zone_json).collect::<Vec<_>>(),
+        "fighters": state.fighters.iter().zip(&f.authorities)
+            .map(|(fighter, authority)| fighter_json(fighter, authority)).collect::<Vec<_>>(),
     })
 }
 
-fn fighter_json(fighter: &decode::Fighter) -> Value {
-    let kind = match &fighter.kind {
-        decode::FighterKind::Player {
-            character,
-            owner,
-            level,
-        } => json!({
-            "player": { "character": character.hex(), "owner": owner.hex(), "level": level },
-        }),
-        decode::FighterKind::Mob(m) => json!({
+fn fighter_json(fighter: &decode::Fighter, authority: &decode::FighterAuthority) -> Value {
+    let kind = match (&fighter.kind, authority) {
+        (decode::FighterKind::Player, decode::FighterAuthority::Player { character, owner }) => {
+            json!({
+                "player": {
+                    "character": character.hex(),
+                    "owner": owner.hex(),
+                    "level": fighter.stats.sheet.level,
+                },
+            })
+        }
+        (decode::FighterKind::Mob(m), decode::FighterAuthority::Mob) => json!({
             "mob": {
                 "mob_type": m.mob_type,
                 "level": m.level,
-                "max_hp": m.max_hp,
-                "ap": m.ap,
-                "mp": m.mp,
-                "agility": m.agility,
-                "wisdom": m.wisdom,
-                "earth_res": m.earth_res,
-                "fire_res": m.fire_res,
-                "water_res": m.water_res,
-                "air_res": m.air_res,
+                "max_hp": fighter.stats.max_hp,
+                "ap": fighter.stats.base_ap,
+                "mp": fighter.stats.base_mp,
+                "agility": fighter.stats.sheet.agility,
+                "wisdom": fighter.stats.sheet.wisdom,
+                "earth_res": fighter.stats.earth_resistance,
+                "fire_res": fighter.stats.fire_resistance,
+                "water_res": fighter.stats.water_resistance,
+                "air_res": fighter.stats.air_resistance,
                 "xp": m.xp,
                 "kit": m.kit.iter().map(|k| json!({
                     "name": k.name,
@@ -1155,6 +1184,7 @@ fn fighter_json(fighter: &decode::Fighter) -> Value {
                 })).collect::<Vec<_>>(),
             },
         }),
+        _ => panic!("fight authority and combat fighter variants diverged"),
     };
     json!({
         "team": fighter.team,
@@ -1244,15 +1274,15 @@ fn emit_fight_seat_teams(
     }
     let f =
         decode::from_bytes::<decode::Fight>(o.bytes).map_err(|e| drift("fight::Fight", o.id, e))?;
-    for (seat, fighter) in f.fighters.iter().enumerate() {
-        if let decode::FighterKind::Player {
+    for (seat, authority) in f.authorities.iter().enumerate() {
+        if let decode::FighterAuthority::Player {
             character, owner, ..
-        } = &fighter.kind
+        } = authority
         {
             cypher.push(format!(
                 "MATCH (:Fight {{id: {id}}})-[r:FIGHTER {{seat: {seat}}}]->() SET r.team = {team}",
                 id = q_id(&f.id),
-                team = fighter.team,
+                team = f.combat.fighters[seat].team,
             ));
             cypher.push(format!(
                 "MATCH (c:Character {{id: {c}}}) SET c.owner = {u}",
@@ -1290,12 +1320,12 @@ fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
         &t.id,
         ckpt,
         &[
-            format!("v.a = {}", q(&t.state.a.hex())),
-            format!("v.b = {}", q(&t.state.b.hex())),
+            format!("v.a = {}", q(&t.state.initiator.hex())),
+            format!("v.b = {}", q(&t.state.invitee.hex())),
             format!("v.phase = {}", q(trade_phase(&t.state.phase))),
             format!("v.offer_revision = {}", t.state.offer_revision),
-            format!("v.accept_a = {}", t.state.accept_a),
-            format!("v.accept_b = {}", t.state.accept_b),
+            format!("v.accept_a = {}", t.state.initiator_accepted),
+            format!("v.accept_b = {}", t.state.invitee_accepted),
             format!("v.sui_a = {}", q(&t.sui_a.value.to_string())),
             format!("v.sui_b = {}", q(&t.sui_b.value.to_string())),
             format!("v.caps_a = {}", q(&ids(&t.caps_a))),
@@ -1429,8 +1459,8 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         ("fight", "Fight", "Fight"),
         ("party", "Party", "Party"),
         ("kolizeum", "Kolizeum", "Kolizeum"),
-        ("shop", "Giftcard", "Giftcard"),
-        ("shop", "Airdrop", "Airdrop"),
+        ("distribution", "Giftcard", "Giftcard"),
+        ("distribution", "Airdrop", "Airdrop"),
         ("loot_box", "BoxClaim", "BoxClaim"),
         ("forgemagie", "CrushClaim", "CrushClaim"),
         ("trade", "Trade", "Trade"),
@@ -1451,8 +1481,8 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         if key == game_key(game, "dungeon::DungeonRunKey") {
             if let OwnerKind::Object(character) = gone.owner {
                 cypher.push(format!(
-                    "MATCH (c:Character {{id: {id}}}) SET c.dungeon_run = NULL, c.dungeon_world = NULL, \
-                     c.dungeon_room = NULL, c.dungeon_x = NULL, c.dungeon_z = NULL, c.dungeon_seed = NULL",
+                    "MATCH (c:Character {{id: {id}}}) SET c.dungeon_run = NULL, c.dungeon = NULL, \
+                     c.dungeon_room = NULL, c.dungeon_seed = NULL",
                     id = q_id(&character),
                 ));
             }
@@ -1552,6 +1582,36 @@ mod tests {
         // per-property law: hp/world/jobs are OTHER sources' props — untouched.
         assert!(!cypher[0].contains("v.hp"));
         assert!(!cypher[0].contains("v.world"));
+    }
+
+    #[test]
+    fn mastery_object_replaces_the_address_wide_score_and_quest() {
+        let mastery = crate::decode::Mastery {
+            id: Id([1; 32]),
+            owner: Addr([2; 32]),
+            points: 7,
+            last_completed_epoch: Some(8),
+            quest_epoch: 9,
+            quest_started_ms: 100,
+            quest_world: "nauvis".into(),
+            quest_dungeon: Id([3; 32]),
+            quest_reward: 2,
+            quest_completed: false,
+        };
+        let bytes = bcs::to_bytes(&mastery).unwrap();
+        let ty = t(GAME, "mastery", "Mastery", &[]);
+        let outputs = [ObjView {
+            id: mastery.id,
+            owner: OwnerKind::Address(mastery.owner),
+            type_key: &ty,
+            bytes: &bytes,
+        }];
+        let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
+        assert_eq!(cypher.len(), 1);
+        assert!(cypher[0].starts_with("MERGE (u:User {address: '0x"));
+        assert!(cypher[0].contains("u.mastery_points = '7'"));
+        assert!(cypher[0].contains("u.mastery_quest_world = 'nauvis'"));
+        assert!(cypher[0].contains("u.mastery_quest_started_ms = '100'"));
     }
 
     #[test]
@@ -1759,7 +1819,10 @@ mod tests {
         );
         let zone = bcs::to_bytes(&Field {
             id: Id([9; 32]),
-            name: decode::ZoneKey { zx: 97, zz: 98 },
+            name: decode::ZoneKey {
+                zone_x: 97,
+                zone_z: 98,
+            },
             value: decode::Zone {
                 seed: 4_163_223_416,
                 searched_at_ms: 1_787_383_013_369,
@@ -1810,7 +1873,10 @@ mod tests {
         );
         let zone = bcs::to_bytes(&Field {
             id: Id([9; 32]),
-            name: decode::ZoneKey { zx: 1, zz: 2 },
+            name: decode::ZoneKey {
+                zone_x: 1,
+                zone_z: 2,
+            },
             value: decode::Zone {
                 seed: 7,
                 searched_at_ms: 1,

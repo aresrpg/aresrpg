@@ -3,7 +3,7 @@
 /// Immutable mob spell and loot rows embedded in frozen game templates.
 module aresrpg_math::mob_data;
 
-use aresrpg_math::{item_damages, spell_effect::SpellLevel};
+use aresrpg_math::{item_damages, spell_effect::{Self, SpellLevel}};
 use std::string::String;
 
 const ETooManySpells: u64 = 1202;
@@ -12,6 +12,8 @@ const EInvalidQty: u64 = 1206;
 const EInvalidLevelBand: u64 = 1201;
 const ETooMuchLoot: u64 = 1203;
 const EInvalidElement: u64 = 1204;
+const ETooMuchTurnWork: u64 = 1207;
+const MAX_MOB_ROW_CASTS: u64 = 10;
 
 public struct MobSpell has copy, drop, store {
   name: String,
@@ -68,12 +70,35 @@ public fun new_mob_data(
 ): MobData {
   assert!(level_min <= level_max, EInvalidLevelBand);
   assert!(spells.length() <= 5, ETooManySpells);
+  assert_turn_work(ap, &spells);
   assert!(loot.length() <= 16, ETooMuchLoot);
   assert!(item_damages::is_element(&element), EInvalidElement);
   MobData {
     name, mob_type, element, level_min, level_max, hp, ap, mp, agility, wisdom,
     earth_resistance, fire_resistance, water_resistance, air_resistance, spells, loot, xp,
   }
+}
+
+/// Conservative authored ceiling: combine the cheapest cast with the largest effect branch.
+/// Geometry separately caps every row at twelve fighter checks, so their product bounds a mob
+/// turn without storing or charging a runtime work meter.
+fun assert_turn_work(ap: u8, spells: &vector<MobSpell>) {
+  if (spells.is_empty()) return;
+  let mut cheapest = 256;
+  let mut largest_branch = 0;
+  let mut index = 0;
+  while (index < spells.length()) {
+    let level = &spells[index].level;
+    let cost = spell_effect::ap_cost(level) as u64;
+    assert!(cost > 0, ETooMuchTurnWork);
+    if (cost < cheapest) cheapest = cost;
+    let normal = spell_effect::effects(level).length();
+    let critical = spell_effect::crit_effects(level).length();
+    let rows = if (normal > critical) normal else critical;
+    if (rows > largest_branch) largest_branch = rows;
+    index = index + 1;
+  };
+  assert!((ap as u64) / cheapest * largest_branch <= MAX_MOB_ROW_CASTS, ETooMuchTurnWork);
 }
 
 public fun name(data: &MobData): String { data.name }

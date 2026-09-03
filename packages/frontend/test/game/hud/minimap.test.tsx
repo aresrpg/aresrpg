@@ -9,10 +9,11 @@ import { MinimapReadout } from '../../../src/game/hud/Minimap.tsx'
 test('shows the biome left of the coordinate chips', () => {
   const html = renderToStaticMarkup(
     <MinimapReadout
-      biome_label="Biome"
-      biome_name="Shore Plains"
+      city={false}
       coordinates={{ x: -210, y: 85, z: 139 }}
       coordinates_label="Coordinates"
+      location_label="Biome"
+      location_name="Shore Plains"
     />
   )
 
@@ -20,4 +21,19 @@ test('shows the biome left of the coordinate chips', () => {
   expect(html).toContain('Shore Plains')
   expect(html).toContain('aria-label="Coordinates"')
   expect(html.indexOf('Shore Plains')).toBeLessThan(html.indexOf('aria-label="Coordinates"'))
+})
+
+test('uses the city treatment for an authored city location', () => {
+  const html = renderToStaticMarkup(
+    <MinimapReadout
+      city
+      coordinates={{ x: 512, y: 167, z: 0 }}
+      coordinates_label="Coordinates"
+      location_label="City of Thebes"
+      location_name="City of Thebes"
+    />
+  )
+
+  expect(html).toContain('gw-minimap__biome--city')
+  expect(html).toContain('City of Thebes')
 })

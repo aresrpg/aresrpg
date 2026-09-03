@@ -131,7 +131,7 @@ describe('a zone is searchable before discovery and after the chain reroll TTL',
     expect(zone_search_arrived(previous, null)).toBeTrue()
   })
 
-  test('discovery waits for population and reports mobs, resource nodes, and a dungeon', () => {
+  test('discovery waits for population and reports mobs plus resource nodes', () => {
     const zone = row('01_first_shore', 1, 1, 10_001)
     const population = {
       mobs: [
@@ -150,12 +150,11 @@ describe('a zone is searchable before discovery and after the chain reroll TTL',
         { index: 0, x: 1, z: 1, item_type: 'wheat', nodes: 4 },
         { index: 1, x: 2, z: 2, item_type: 'aloe', nodes: 5 },
       ],
-      portal: { x: 3, z: 3 },
     }
 
     expect(zone_discovery_arrived(zone, undefined, 10_000)).toBeFalse()
     expect(zone_discovery_arrived(zone, population, 10_000)).toBeTrue()
-    expect(zone_discovery_summary(population)).toEqual({ mobs: 3, resources: 9, dungeon: true })
+    expect(zone_discovery_summary(population)).toEqual({ mobs: 3, resources: 9 })
   })
 
   test('a NEIGHBOUR zone being searched does not satisfy the one under our feet', () => {

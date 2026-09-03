@@ -11,6 +11,7 @@ import {
   absorb_object,
   changed_object_ids,
   owned_ref,
+  receipt_gas_ref,
   shared_ref,
   type Receipt,
 } from '../src/cache.ts'
@@ -66,7 +67,7 @@ describe('resolution cache', () => {
         },
       ])
     )
-    expect(shared_ref(cache, id(2))).toEqual({ initialSharedVersion: '4' })
+    expect(shared_ref(cache, id(2))).toEqual({ initialSharedVersion: '4', version: '9', digest: 'd9' })
     expect(owned_ref(cache, id(2))).toBeUndefined()
   })
 
@@ -92,7 +93,7 @@ describe('resolution cache', () => {
       owner: { $kind: 'Shared', Shared: { initialSharedVersion: '3' } },
     })
     expect(owned_ref(cache, id(1))).toEqual({ objectId: id(1), version: '2', digest: 'd2' })
-    expect(shared_ref(cache, id(2))).toEqual({ initialSharedVersion: '3' })
+    expect(shared_ref(cache, id(2))).toEqual({ initialSharedVersion: '3', version: '5', digest: 'd5' })
   })
 
   test('canonical Sui IDs resolve through their short form', () => {
@@ -105,13 +106,22 @@ describe('resolution cache', () => {
       owner: { $kind: 'Shared', Shared: { initialSharedVersion: '3' } },
     })
 
-    expect(shared_ref(cache, '0xd')).toEqual({ initialSharedVersion: '3' })
+    expect(shared_ref(cache, '0xd')).toEqual({ initialSharedVersion: '3', version: '5', digest: 'd5' })
   })
 
   test('a receipt without objectChanges is a clean no-op', () => {
     const cache = create_cache()
     expect(absorb_receipt(cache, {})).toBe(cache)
     expect(absorb_receipt(cache, undefined)).toBe(cache)
+  })
+
+  test('the certified gas output exposes the exact ref needed for convergence', () => {
+    const gas = owned(id(6), '11', 'gas-digest')
+    expect(receipt_gas_ref({ effects: { gasObject: gas } })).toEqual({
+      objectId: id(6),
+      version: '11',
+      digest: 'gas-digest',
+    })
   })
 
   test('changed object ids select only live objects of the requested receipt type', () => {

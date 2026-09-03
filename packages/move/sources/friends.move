@@ -33,13 +33,14 @@ const MAX_FRIENDS: u64 = 100;
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// Shared social uniqueness anchor: one FriendList per address and one Party per character.
+/// Shared address/character uniqueness anchor: social rows and other address-bound player rows
+/// derive distinct typed keys beneath this one stable root.
 public struct FriendRegistry has key {
   id: UID,
 }
 
-public(package) fun u(registry: &FriendRegistry): &UID { &registry.id }
-public(package) fun um(registry: &mut FriendRegistry): &mut UID { &mut registry.id }
+public(package) fun uid(registry: &FriendRegistry): &UID { &registry.id }
+public(package) fun uid_mut(registry: &mut FriendRegistry): &mut UID { &mut registry.id }
 
 /// Keys a list's derived address by its OWNER address (`copy + drop + store` — derived-object law).
 public struct FriendKey(address) has copy, drop, store;
@@ -92,7 +93,7 @@ public(package) fun set(list: &mut FriendList, addr: address, present: bool, ctx
 
 /// The whitelist as an owned set — a kolizeum SNAPSHOTS it at creation (the list is soulbound
 /// to the owner, so a joiner can never present it live; the lobby carries the frozen copy).
-public(package) fun s(list: &FriendList): VecSet<address> { list.friends }
+public(package) fun snapshot(list: &FriendList): VecSet<address> { list.friends }
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
 

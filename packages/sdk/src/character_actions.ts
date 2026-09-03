@@ -16,6 +16,7 @@ import { changed_object_ids, created_object_id, receipt_digest, receipt_event } 
 import { living_content } from './client.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { created_fight_id, type FightCreatedReceipt } from './fight.ts'
+import { event_boolean, event_integer, event_string } from './receipt_decode.ts'
 import {
   board_catalog_id,
   item_template_id,
@@ -28,29 +29,6 @@ import {
 
 type GameSdk = ReturnType<typeof SDK>
 
-const CLAIM_PROPAGATION_DELAYS_MS = Object.freeze([500, 1_000, 2_000])
-const retryable_object_resolution = (error: unknown): boolean =>
-  error instanceof Error &&
-  !error.message.includes('[sdk] transaction ') &&
-  /object .* not found|unresolved object/i.test(error.message)
-
-export const retry_object_propagation = async <T>(
-  action: () => Promise<T>,
-  pause: (delay_ms: number) => Promise<void>
-): Promise<T> => {
-  let attempt = 0
-  for (;;) {
-    try {
-      return await action()
-    } catch (error) {
-      const delay = CLAIM_PROPAGATION_DELAYS_MS[attempt]
-      if (delay === undefined || !retryable_object_resolution(error)) throw error
-      await pause(delay)
-      attempt += 1
-    }
-  }
-}
-
 export type CharacterReceipt = { digest: string }
 
 export type EquipChange = Readonly<{ slot: string; item_id: string }>
@@ -61,9 +39,9 @@ const craft_outcome = (
 ): Readonly<{ attempts: number; successes: number; job_xp_gained: number }> => {
   const event = receipt_event(receipt, '::crafting::Crafted')
   if (!event) throw new Error('The craft receipt carried no Crafted event')
-  const attempts = Number(event.attempts)
-  const successes = Number(event.successes)
-  const job_xp_gained = Number(event.job_xp_gained)
+  const attempts = event_integer(event, 'attempts')
+  const successes = event_integer(event, 'successes')
+  const job_xp_gained = event_integer(event, 'job_xp_gained')
   const identity_matches = [
     event.recipe === expected.recipe,
     event.character === expected.character,
@@ -179,18 +157,25 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       character_id,
       item_id,
       item_type,
+      world,
       custody,
     }: {
       character_id: string
       item_id: string
       item_type: string
+      world?: string
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const template = item_template_id(content_root, seed_package_original, item_type)
-      await sdk.hydrate_unknown([template])
+      const world_content = world ? world_content_id(content_root, seed_package_original, world) : null
+      await sdk.hydrate_unknown([template, ...(world_content ? [world_content] : [])])
       const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.use_consumable(tx, { kiosk, cap, character_id, item_id, template }),
+        (tx, kiosk, cap) => {
+          if (world_content)
+            sdk.doors.use_city_consumable(tx, { kiosk, cap, character_id, item_id, template, world_content })
+          else sdk.doors.use_consumable(tx, { kiosk, cap, character_id, item_id, template })
+        },
         { custody }
       )
       return { digest: receipt_digest(receipt) }
@@ -225,12 +210,12 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       // certified deltas immediately; the streamed Item remains the complete reconciliation.
       return Object.freeze({
         digest: receipt_digest(receipt),
-        stat: Number(event.stat),
-        outcome: Number(event.outcome),
-        applied_value: Number(event.applied_value),
-        lost_stat: Number(event.lost_stat),
-        lost_amount: Number(event.lost_amount),
-        new_puits: Number(event.new_puits),
+        stat: event_integer(event, 'stat'),
+        outcome: event_integer(event, 'outcome'),
+        applied_value: event_integer(event, 'applied_value'),
+        lost_stat: event_integer(event, 'lost_stat'),
+        lost_amount: event_integer(event, 'lost_amount'),
+        new_puits: event_integer(event, 'new_puits'),
       })
     },
 
@@ -282,8 +267,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return Object.freeze({
         digest: receipt_digest(receipt),
         claim_id,
-        rolled_template: String(event.rolled_template),
-        amount: Number(event.amount),
+        rolled_template: event_string(event, 'rolled_template'),
+        amount: event_integer(event, 'amount'),
       })
     },
 
@@ -336,28 +321,24 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       claim_id,
       runes,
       custody,
-      pause,
     }: {
       claim_id: string
       runes: readonly Readonly<{ item_type: string; existing: string | null }>[]
       custody?: KioskCustody
-      pause: (delay_ms: number) => Promise<void>
     }): Promise<Readonly<{ digest: string; item_ids: readonly string[] }>> => {
       if (!runes.length) throw new Error('The rune roster is empty')
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const templates = runes.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
-      const receipt = await retry_object_propagation(async () => {
-        await sdk.hydrate_unknown([claim_id, ...templates])
-        return with_kiosk(
-          (tx, kiosk, cap) => {
-            runes.forEach(({ existing }, index) =>
-              sdk.doors.redeem_rune(tx, { claim: claim_id, template: templates[index]!, existing, kiosk, cap })
-            )
-            sdk.doors.discard_crush_claim(tx, { claim: claim_id })
-          },
-          { include: { objectTypes: true }, custody }
-        )
-      }, pause)
+      await sdk.hydrate_unknown([claim_id, ...templates])
+      const receipt = await with_kiosk(
+        (tx, kiosk, cap) => {
+          runes.forEach(({ existing }, index) =>
+            sdk.doors.redeem_rune(tx, { claim: claim_id, template: templates[index]!, existing, kiosk, cap })
+          )
+          sdk.doors.discard_crush_claim(tx, { claim: claim_id })
+        },
+        { include: { objectTypes: true }, custody }
+      )
       return Object.freeze({ digest: receipt_digest(receipt), item_ids: changed_object_ids(receipt, '::item::Item') })
     },
 
@@ -450,10 +431,10 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return Object.freeze({
         digest: receipt_digest(receipt),
         joined: Object.freeze({
-          world: String(event.world),
-          x: Number(event.x),
-          z: Number(event.z),
-          first_join: Boolean(event.first_join),
+          world: event_string(event, 'world'),
+          x: event_integer(event, 'x'),
+          z: event_integer(event, 'z'),
+          first_join: event_boolean(event, 'first_join'),
         }),
       })
     },
@@ -479,10 +460,10 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       const { content_root, seed_package_original } = living_content(sdk, 'World transaction')
       const game_original = sdk.game_type_package
       if (!game_original) throw new Error('World transaction unavailable: pins.json has no original game package')
-      const w = world_id(content_root, game_original, world)
-      await sdk.hydrate_unknown([w])
+      const world_object = world_id(content_root, game_original, world)
+      await sdk.hydrate_unknown([world_object])
       const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) => sdk.doors.search_zone(tx, { kiosk, personal, character_id, x, z, w }),
+        (tx, kiosk, personal) => sdk.doors.search_zone(tx, { kiosk, personal, character_id, x, z, world_object }),
         { custody }
       )
       return Object.freeze({ digest: receipt_digest(receipt) })
@@ -499,8 +480,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
     gather: async ({
       character_id,
       world,
-      zx,
-      zz,
+      zone_x,
+      zone_z,
       pack_index,
       item_type,
       rare_item_type,
@@ -510,8 +491,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
     }: {
       character_id: string
       world: string
-      zx: number
-      zz: number
+      zone_x: number
+      zone_z: number
       pack_index: number
       item_type: string
       /** the row's linked rare, or null when it has none */
@@ -528,19 +509,19 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
         : template
       const game_original = sdk.game_type_package
       if (!game_original) throw new Error('Character transaction unavailable: pins.json has no original game package')
-      const w = world_id(content_root, game_original, world)
-      const wc = world_content_id(content_root, seed_package_original, world)
-      await sdk.hydrate_unknown([template, rare_template, w, wc])
+      const world_object = world_id(content_root, game_original, world)
+      const world_content = world_content_id(content_root, seed_package_original, world)
+      await sdk.hydrate_unknown([template, rare_template, world_object, world_content])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.gather(tx, {
-            w,
-            wc,
+            world_object,
+            world_content,
             kiosk,
             personal,
             character_id,
-            zx,
-            zz,
+            zone_x,
+            zone_z,
             pack_index,
             template,
             rare_template,
@@ -553,8 +534,8 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       if (!event) throw new Error('The gather receipt carried no ResourceGathered event')
       return Object.freeze({
         digest: receipt_digest(receipt),
-        quantity: Number(event.quantity),
-        ambushed: Boolean(event.protector),
+        quantity: event_integer(event, 'quantity'),
+        ambushed: event_boolean(event, 'protector'),
       })
     },
 

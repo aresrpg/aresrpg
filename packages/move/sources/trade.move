@@ -102,7 +102,7 @@ public fun recover_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext
 fun take_terminal_cap(trade: &mut Trade, item: ID, own: bool, sender: address): PurchaseCap<Item> {
   trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
   trade_state::assert_party(&trade.state, sender);
-  let manifest = if (trade_state::is_a(&trade.state, sender) == own) &mut trade.caps_a else &mut trade.caps_b;
+  let manifest = if (trade_state::is_initiator(&trade.state, sender) == own) &mut trade.caps_a else &mut trade.caps_b;
   remove_from(manifest, item);
   dof::remove(&mut trade.id, item)
 }
@@ -110,7 +110,7 @@ fun take_terminal_sui(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<S
   trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
   let sender = ctx.sender();
   trade_state::assert_party(&trade.state, sender);
-  let balance = if (trade_state::is_a(&trade.state, sender) == own) &mut trade.sui_a else &mut trade.sui_b;
+  let balance = if (trade_state::is_initiator(&trade.state, sender) == own) &mut trade.sui_a else &mut trade.sui_b;
   trade_state::assert_positive(balance.value());
   coin::from_balance(balance.withdraw_all(), ctx)
 }
@@ -121,10 +121,10 @@ public fun close(trade: Trade, version: &Version, ctx: &TxContext) {
 }
 
 fun my_manifest(trade: &mut Trade, sender: address): &mut vector<ID> {
-  if (trade_state::is_a(&trade.state, sender)) &mut trade.caps_a else &mut trade.caps_b
+  if (trade_state::is_initiator(&trade.state, sender)) &mut trade.caps_a else &mut trade.caps_b
 }
 fun my_balance(trade: &mut Trade, sender: address): &mut Balance<SUI> {
-  if (trade_state::is_a(&trade.state, sender)) &mut trade.sui_a else &mut trade.sui_b
+  if (trade_state::is_initiator(&trade.state, sender)) &mut trade.sui_a else &mut trade.sui_b
 }
 fun remove_from(manifest: &mut vector<ID>, item: ID) {
   let index = trade_state::item_index(manifest, item);
@@ -172,6 +172,6 @@ public(package) fun close_for_testing(trade: Trade, ctx: &TxContext) {
 public(package) fun assert_claimable_sui_for_testing(trade: &Trade, sender: address) {
   trade_state::assert_phase(&trade.state, trade_state::settling());
   trade_state::assert_party(&trade.state, sender);
-  let balance = if (trade_state::is_a(&trade.state, sender)) &trade.sui_b else &trade.sui_a;
+  let balance = if (trade_state::is_initiator(&trade.state, sender)) &trade.sui_b else &trade.sui_a;
   trade_state::assert_positive(balance.value());
 }

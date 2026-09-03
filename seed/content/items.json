@@ -3,7 +3,7 @@
     "item_type": "abyssal_blood_wheat",
     "name": "Abyssal Blood Wheat",
     "category": "resource",
-    "level": 145
+    "level": 70
   },
   {
     "item_type": "aloe_crystal_salve",
@@ -39,151 +39,25 @@
     "item_type": "arcane_spore",
     "name": "Arcane Spore",
     "category": "resource",
-    "level": 30
+    "level": 80
   },
   {
     "item_type": "arcaneshroom",
     "name": "Arcaneshroom",
     "category": "resource",
-    "level": 60
+    "level": 80
   },
   {
     "item_type": "arcanite",
     "name": "Arcanite",
     "category": "resource",
-    "level": 52
-  },
-  {
-    "item_type": "arcanite_hoe",
-    "name": "Arcanite Hoe",
-    "category": "tool_farmer",
-    "level": 60,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 60,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
-    "item_type": "arcanite_pickaxe",
-    "name": "Arcanite Pickaxe",
-    "category": "tool_miner",
-    "level": 60,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 60,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
+    "level": 70
   },
   {
     "item_type": "arcanite_powder",
     "name": "Arcanite Powder",
     "category": "resource",
     "level": 60
-  },
-  {
-    "item_type": "arcanite_sickle",
-    "name": "Arcanite Sickle",
-    "category": "tool_herbalist",
-    "level": 60,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 60,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
   },
   {
     "item_type": "arcanize_flour",
@@ -199,7 +73,7 @@
   },
   {
     "item_type": "basic_pickaxe",
-    "name": "Broken Pickaxe",
+    "name": "Scrap Pickaxe",
     "category": "tool_miner",
     "level": 1,
     "stats": {
@@ -255,7 +129,7 @@
     "item_type": "blood_wheat",
     "name": "Blood Wheat",
     "category": "resource",
-    "level": 52
+    "level": 70
   },
   {
     "item_type": "blood_wheat_flour",
@@ -267,7 +141,7 @@
     "item_type": "bloodstone",
     "name": "Bloodstone",
     "category": "resource",
-    "level": 32
+    "level": 40
   },
   {
     "item_type": "bloodstone_powder",
@@ -279,7 +153,7 @@
     "item_type": "bloodveil_orchid",
     "name": "Bloodveil Orchid",
     "category": "resource",
-    "level": 180
+    "level": 10
   },
   {
     "item_type": "burnt_wheat_flour",
@@ -288,148 +162,22 @@
     "level": 20
   },
   {
-    "item_type": "copper_hoe",
-    "name": "Copper Hoe",
-    "category": "tool_farmer",
-    "level": 30,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 30,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
-    "item_type": "copper_pickaxe",
-    "name": "Copper Pickaxe",
-    "category": "tool_miner",
-    "level": 30,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 30,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
-    "item_type": "copper_sickle",
-    "name": "Copper Sickle",
-    "category": "tool_herbalist",
-    "level": 30,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 30,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
     "item_type": "crimson_truffle",
     "name": "Crimson Truffle",
     "category": "resource",
-    "level": 45
+    "level": 50
   },
   {
     "item_type": "crimson_truffle_heart",
     "name": "Crimson Truffle Heart",
     "category": "resource",
-    "level": 22
+    "level": 50
   },
   {
     "item_type": "crystallized_tanjirize",
     "name": "Crystallized Tanjirize",
     "category": "resource",
-    "level": 172
+    "level": 40
   },
   {
     "item_type": "cursed_amalgam",
@@ -441,13 +189,13 @@
     "item_type": "cursed_fungus",
     "name": "Cursed Fungus",
     "category": "resource",
-    "level": 75
+    "level": 100
   },
   {
     "item_type": "cursed_gem",
     "name": "Cursed Gem",
     "category": "resource",
-    "level": 68
+    "level": 90
   },
   {
     "item_type": "cursed_gem_powder",
@@ -459,19 +207,19 @@
     "item_type": "cursed_root",
     "name": "Cursed Root",
     "category": "resource",
-    "level": 34
+    "level": 100
   },
   {
     "item_type": "cursed_wheat",
     "name": "Cursed Wheat",
     "category": "resource",
-    "level": 105
+    "level": 100
   },
   {
     "item_type": "diamond",
     "name": "Diamond",
     "category": "resource",
-    "level": 75
+    "level": 100
   },
   {
     "item_type": "diamond_powder",
@@ -483,7 +231,7 @@
     "item_type": "draconite",
     "name": "Draconite",
     "category": "resource",
-    "level": 60
+    "level": 80
   },
   {
     "item_type": "draconite_powder",
@@ -507,19 +255,19 @@
     "item_type": "dragon_pollen",
     "name": "Dragon Pollen",
     "category": "resource",
-    "level": 178
+    "level": 90
   },
   {
     "item_type": "dragonlily",
     "name": "Dragonlily",
     "category": "resource",
-    "level": 68
+    "level": 90
   },
   {
     "item_type": "duskite",
     "name": "Duskite",
     "category": "resource",
-    "level": 45
+    "level": 50
   },
   {
     "item_type": "duskite_powder",
@@ -531,13 +279,13 @@
     "item_type": "ethereal_ukranize",
     "name": "Ethereal Ukranize",
     "category": "resource",
-    "level": 155
+    "level": 60
   },
   {
     "item_type": "genesis_suize",
     "name": "Genesis Suize",
     "category": "resource",
-    "level": 175
+    "level": 50
   },
   {
     "item_type": "fuwa_eye",
@@ -567,25 +315,25 @@
     "item_type": "ghost_cap",
     "name": "Ghost Cap",
     "category": "resource",
-    "level": 140
+    "level": 20
   },
   {
     "item_type": "golden_mushroom",
     "name": "Golden Mushroom",
     "category": "resource",
-    "level": 136
+    "level": 1
   },
   {
     "item_type": "golden_nightcap",
     "name": "Golden Nightcap",
     "category": "resource",
-    "level": 100
+    "level": 40
   },
   {
     "item_type": "golden_wheat",
     "name": "Golden Wheat",
     "category": "resource",
-    "level": 84
+    "level": 1
   },
   {
     "item_type": "green_mushroom",
@@ -609,109 +357,67 @@
     "item_type": "infinity_amber",
     "name": "Infinity Amber",
     "category": "resource",
-    "level": 107
+    "level": 10
   },
   {
     "item_type": "infinity_arcanite",
     "name": "Infinity Arcanite",
     "category": "resource",
-    "level": 98
+    "level": 70
   },
   {
     "item_type": "infinity_bloodstone",
     "name": "Infinity Bloodstone",
     "category": "resource",
-    "level": 133
+    "level": 40
   },
   {
     "item_type": "infinity_cursed_gem",
     "name": "Infinity Cursed Gem",
     "category": "resource",
-    "level": 125
+    "level": 90
   },
   {
     "item_type": "infinity_diamond",
     "name": "Infinity Diamond",
     "category": "resource",
-    "level": 150
+    "level": 100
   },
   {
     "item_type": "infinity_draconite",
     "name": "Infinity Draconite",
     "category": "resource",
-    "level": 113
+    "level": 80
   },
   {
     "item_type": "infinity_duskite",
     "name": "Infinity Duskite",
     "category": "resource",
-    "level": 160
+    "level": 50
   },
   {
     "item_type": "infinity_jade",
     "name": "Infinity Jade",
     "category": "resource",
-    "level": 94
+    "level": 20
   },
   {
     "item_type": "infinity_moonstone",
     "name": "Infinity Moonstone",
     "category": "resource",
-    "level": 120
+    "level": 30
   },
   {
     "item_type": "infinity_obsidianite",
     "name": "Infinity Obsidianite",
     "category": "resource",
-    "level": 188
+    "level": 60
   },
   {
     "item_type": "infinity_quartz",
     "name": "Infinity Quartz",
     "category": "resource",
-    "level": 184
-  },
-  {
-    "item_type": "iron_sickle",
-    "name": "Iron Sickle",
-    "category": "tool_herbalist",
-    "level": 20,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 15,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
+    "level": 1
   },
   {
     "item_type": "ivory_orchid_paste",
@@ -732,100 +438,10 @@
     "level": 20
   },
   {
-    "item_type": "jade_hoe",
-    "name": "Jade Hoe",
-    "category": "tool_farmer",
-    "level": 20,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 15,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
-    "item_type": "jade_pickaxe",
-    "name": "Jade Pickaxe",
-    "category": "tool_miner",
-    "level": 20,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 15,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
     "item_type": "jade_powder",
     "name": "Jade Powder",
     "category": "resource",
     "level": 20
-  },
-  {
-    "item_type": "key_of_tangled_aftermath",
-    "name": "Key of the Tangled Aftermath",
-    "category": "key",
-    "level": 1
   },
   {
     "item_type": "malt_flour",
@@ -840,142 +456,16 @@
     "level": 30
   },
   {
-    "item_type": "moonstone_hoe",
-    "name": "Moonstone Hoe",
-    "category": "tool_farmer",
-    "level": 32,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 40,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
-    "item_type": "moonstone_pickaxe",
-    "name": "Moonstone Pickaxe",
-    "category": "tool_miner",
-    "level": 32,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 40,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
     "item_type": "moonstone_powder",
     "name": "Moonstone Powder",
     "category": "resource",
     "level": 20
   },
   {
-    "item_type": "moonstone_sickle",
-    "name": "Moonstone Sickle",
-    "category": "tool_herbalist",
-    "level": 32,
-    "stats": {
-      "min": {
-        "vitality": 0,
-        "wisdom": 1,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      },
-      "max": {
-        "vitality": 0,
-        "wisdom": 40,
-        "strength": 0,
-        "intelligence": 0,
-        "chance": 0,
-        "agility": 0,
-        "range": 0,
-        "movement": 0,
-        "action": 0,
-        "critical": 0,
-        "raw_damage": 0,
-        "earth_resistance": 0,
-        "fire_resistance": 0,
-        "water_resistance": 0,
-        "air_resistance": 0
-      }
-    }
-  },
-  {
     "item_type": "nightcap",
     "name": "Nightcap",
     "category": "resource",
-    "level": 32
+    "level": 40
   },
   {
     "item_type": "nightcap_elixir_base",
@@ -987,7 +477,7 @@
     "item_type": "obsidianite",
     "name": "Obsidianite",
     "category": "resource",
-    "level": 48
+    "level": 60
   },
   {
     "item_type": "obsidianite_powder",
@@ -997,7 +487,7 @@
   },
   {
     "item_type": "old_hoe",
-    "name": "Chittin Hoe",
+    "name": "Scrap Hoe",
     "category": "tool_farmer",
     "level": 1,
     "stats": {
@@ -1053,25 +543,55 @@
     "item_type": "phantom_essence",
     "name": "Phantom Essence",
     "category": "resource",
-    "level": 115
+    "level": 60
   },
   {
     "item_type": "phantom_spore",
     "name": "Phantom Spore",
     "category": "resource",
-    "level": 48
+    "level": 60
+  },
+  {
+    "item_type": "potion_of_thebes",
+    "name": "Potion of Thebes",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "city",
+      "city": "thebes"
+    }
+  },
+  {
+    "item_type": "potion_of_the_ruins",
+    "name": "Potion of the Ruins",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "city",
+      "city": "the_ruins"
+    }
+  },
+  {
+    "item_type": "potion_of_fuwage",
+    "name": "Potion of Fuwage",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "city",
+      "city": "fuwage"
+    }
   },
   {
     "item_type": "primordial_draconize",
     "name": "Primordial Draconize",
     "category": "resource",
-    "level": 170
+    "level": 90
   },
   {
     "item_type": "pristine_malt",
     "name": "Pristine Malt",
     "category": "resource",
-    "level": 110
+    "level": 20
   },
   {
     "item_type": "quartz",
@@ -1323,19 +843,19 @@
     "item_type": "shiny_barley",
     "name": "Shiny Barley",
     "category": "resource",
-    "level": 95
+    "level": 10
   },
   {
     "item_type": "smoldering_wheat",
     "name": "Smoldering Wheat",
     "category": "resource",
-    "level": 125
+    "level": 30
   },
   {
     "item_type": "spectral_arcanize",
     "name": "Spectral Arcanize",
     "category": "resource",
-    "level": 145
+    "level": 80
   },
   {
     "item_type": "suize_flour",
@@ -1357,7 +877,7 @@
   },
   {
     "item_type": "tool_herbalist",
-    "name": "Peasant's popsickle",
+    "name": "Tin-Edge Sickle",
     "category": "tool_herbalist",
     "level": 1,
     "stats": {
@@ -1413,7 +933,7 @@
     "item_type": "verdant_aloe",
     "name": "Verdant Aloe",
     "category": "resource",
-    "level": 88
+    "level": 30
   },
   {
     "item_type": "water",
@@ -1443,7 +963,7 @@
     "item_type": "wheat_draconize",
     "name": "Draconize",
     "category": "resource",
-    "level": 68
+    "level": 90
   },
   {
     "item_type": "wheat_flour",
@@ -1461,31 +981,31 @@
     "item_type": "wheat_purple",
     "name": "Arcanize",
     "category": "resource",
-    "level": 60
+    "level": 80
   },
   {
     "item_type": "wheat_suize",
     "name": "Suize",
     "category": "resource",
-    "level": 45
+    "level": 50
   },
   {
     "item_type": "wheat_tanjirize",
     "name": "Tanjirize",
     "category": "resource",
-    "level": 32
+    "level": 40
   },
   {
     "item_type": "wheat_ukraine",
     "name": "Ukranize",
     "category": "resource",
-    "level": 48
+    "level": 60
   },
   {
     "item_type": "wheat_white",
     "name": "Himalayan Wheat",
     "category": "resource",
-    "level": 75
+    "level": 100
   },
   {
     "item_type": "fuwa_wool",
@@ -1503,13 +1023,13 @@
     "item_type": "wither_petal",
     "name": "Wither Petal",
     "category": "resource",
-    "level": 129
+    "level": 70
   },
   {
     "item_type": "witherbloom",
     "name": "Witherbloom",
     "category": "resource",
-    "level": 52
+    "level": 70
   },
   {
     "item_type": "bag_aloe_vera",
@@ -2174,6 +1694,3416 @@
       "min": {
         "vitality": 1,
         "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 40,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 40,
+        "agility": 40,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "salvaged_scrap",
+    "name": "Salvaged Scrap",
+    "category": "resource",
+    "level": 3
+  },
+  {
+    "item_type": "shiny_trinket",
+    "name": "Shiny Trinket",
+    "category": "resource",
+    "level": 3
+  },
+  {
+    "item_type": "lorito_feather",
+    "name": "Lorito Feather",
+    "category": "resource",
+    "level": 5
+  },
+  {
+    "item_type": "beak_shard",
+    "name": "Beak Shard",
+    "category": "resource",
+    "level": 5
+  },
+  {
+    "item_type": "rabbit_pelt",
+    "name": "Rabbit Pelt",
+    "category": "resource",
+    "level": 2
+  },
+  {
+    "item_type": "rabbit_sinew",
+    "name": "Rabbit Sinew",
+    "category": "resource",
+    "level": 2
+  },
+  {
+    "item_type": "gnawed_branch",
+    "name": "Gnawed Branch",
+    "category": "resource",
+    "level": 4
+  },
+  {
+    "item_type": "tree_resin",
+    "name": "Tree Resin",
+    "category": "resource",
+    "level": 4
+  },
+  {
+    "item_type": "quartzbound_scrap",
+    "name": "Quartzbound Scrap",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "quartz_set_trinket",
+    "name": "Quartz-Set Trinket",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "mushroom_dyed_plume",
+    "name": "Mushroom-Dyed Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "quartz_honed_beak",
+    "name": "Quartz-Honed Beak",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "mushroom_tanned_leather",
+    "name": "Mushroom-Tanned Leather",
+    "category": "resource",
+    "level": 8
+  },
+  {
+    "item_type": "wheatspun_sinew",
+    "name": "Wheatspun Sinew",
+    "category": "resource",
+    "level": 8
+  },
+  {
+    "item_type": "wheatbound_branch",
+    "name": "Wheatbound Branch",
+    "category": "resource",
+    "level": 9
+  },
+  {
+    "item_type": "mushroom_lacquer",
+    "name": "Mushroom Lacquer",
+    "category": "resource",
+    "level": 9
+  },
+  {
+    "item_type": "lorito_hat__molted",
+    "name": "Molted Lorito Hood",
+    "category": "hat",
+    "level": 3,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__molted",
+    "name": "Molted Lorito Cloak",
+    "category": "cloak",
+    "level": 3,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 1,
+        "chance": 1,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 2,
+        "intelligence": 2,
+        "chance": 2,
+        "agility": 2,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "trashamulet",
+    "name": "Trashamulet",
+    "category": "amulet",
+    "level": 3,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 6,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "bin_kickers",
+    "name": "Bin Kickers",
+    "category": "boots",
+    "level": 3,
+    "stats": {
+      "min": {
+        "vitality": 7,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": -1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 1,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 23,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": -1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 5,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "wasteband",
+    "name": "Wasteband",
+    "category": "belt",
+    "level": 3,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 3,
+        "intelligence": 0,
+        "chance": -10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 6,
+        "intelligence": 0,
+        "chance": -1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "pull_tab_ring",
+    "name": "Pull-Tab Ring",
+    "category": "ring",
+    "level": 3,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "trashcalibur",
+    "name": "Trashcalibur",
+    "category": "sword",
+    "level": 3,
+    "damages": [
+      {
+        "from": 3,
+        "to": 8,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 6,
+        "wisdom": 0,
+        "strength": 2,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "can_openers",
+    "name": "Can-Openers",
+    "category": "daggers",
+    "level": 2,
+    "damages": [
+      {
+        "from": 1,
+        "to": 2,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 3,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "refuse_recurve",
+    "name": "Refuse Recurve",
+    "category": "bow",
+    "level": 3,
+    "damages": [
+      {
+        "from": 2,
+        "to": 5,
+        "damage_type": "weapon",
+        "element": "water"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "gutterspike",
+    "name": "Gutterspike",
+    "category": "spear",
+    "level": 3,
+    "damages": [
+      {
+        "from": 3,
+        "to": 10,
+        "element": "fire",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 1,
+        "to": 7,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 3,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 1,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 3,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lid_splitter",
+    "name": "Lid Splitter",
+    "category": "axe",
+    "level": 3,
+    "damages": [
+      {
+        "from": 1,
+        "to": 7,
+        "damage_type": "weapon",
+        "element": "air"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 3,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 5,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "quartzbound_hoe",
+    "name": "Quartzbound Hoe",
+    "category": "tool_farmer",
+    "level": 10,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "quartzbound_pickaxe",
+    "name": "Quartzbound Pickaxe",
+    "category": "tool_miner",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "quartzbound_sickle",
+    "name": "Quartzbound Sickle",
+    "category": "tool_herbalist",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "theban_scrapblade",
+    "name": "Theban Scrapblade",
+    "category": "sword",
+    "level": 8,
+    "damages": [
+      {
+        "from": 14,
+        "to": 16,
+        "element": "fire",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 6,
+        "to": 10,
+        "damage_type": "weapon",
+        "element": "water"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 3,
+        "strength": 0,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "rooftop_talons",
+    "name": "Rooftop Talons",
+    "category": "daggers",
+    "level": 9,
+    "damages": [
+      {
+        "from": 4,
+        "to": 8,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 4,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 3,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "amberwood_recurve",
+    "name": "Amberwood Recurve",
+    "category": "bow",
+    "level": 14,
+    "damages": [
+      {
+        "from": 6,
+        "to": 8,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": -20,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 12,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": -10,
+        "wisdom": 8,
+        "strength": 0,
+        "intelligence": 24,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_pike",
+    "name": "Lorito Pike",
+    "category": "spear",
+    "level": 12,
+    "damages": [
+      {
+        "from": 7,
+        "to": 11,
+        "element": "air",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 4,
+        "to": 9,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 4,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 14,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "salvagers_cleaver",
+    "name": "Salvager's Cleaver",
+    "category": "axe",
+    "level": 12,
+    "damages": [
+      {
+        "from": 7,
+        "to": 15,
+        "damage_type": "weapon",
+        "element": "water"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 4,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 30,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "rooftop_locket",
+    "name": "Rooftop Locket",
+    "category": "amulet",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 15,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "alley_striders",
+    "name": "Alley Striders",
+    "category": "boots",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 3,
+        "chance": 0,
+        "agility": 2,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 12,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "salvagers_sash",
+    "name": "Salvager's Sash",
+    "category": "belt",
+    "level": 7,
+    "stats": {
+      "min": {
+        "vitality": -7,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": -1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "hoarders_loop",
+    "name": "Hoarder's Loop",
+    "category": "ring",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 6,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_hat__agility",
+    "name": "Gale Lorito Hood",
+    "category": "hat",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 20,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__agility",
+    "name": "Gale Lorito Cloak",
+    "category": "cloak",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 1
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 2
+      }
+    }
+  },
+  {
+    "item_type": "lorito_hat__vitality",
+    "name": "Heart Lorito Hood",
+    "category": "hat",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 60,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__vitality",
+    "name": "Heart Lorito Cloak",
+    "category": "cloak",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 1,
+        "fire_resistance": 1,
+        "water_resistance": 1,
+        "air_resistance": 1
+      }
+    }
+  },
+  {
+    "item_type": "lorito_hat__chance",
+    "name": "Tide Lorito Hood",
+    "category": "hat",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 20,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__chance",
+    "name": "Tide Lorito Cloak",
+    "category": "cloak",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 1,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 2,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_hat__intelligence",
+    "name": "Ember Lorito Hood",
+    "category": "hat",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 20,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__intelligence",
+    "name": "Ember Lorito Cloak",
+    "category": "cloak",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 1,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 2,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_hat__strength",
+    "name": "Stone Lorito Hood",
+    "category": "hat",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 20,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__strength",
+    "name": "Stone Lorito Cloak",
+    "category": "cloak",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 1,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 2,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_hat__wisdom",
+    "name": "Sage Lorito Hood",
+    "category": "hat",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 20,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__wisdom",
+    "name": "Sage Lorito Cloak",
+    "category": "cloak",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 5,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 30,
+        "wisdom": 10,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_down",
+    "name": "Lorito Down",
+    "category": "resource",
+    "level": 5
+  },
+  {
+    "item_type": "gale_lorito_plume",
+    "name": "Gale Lorito Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "tide_lorito_plume",
+    "name": "Tide Lorito Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "ember_lorito_plume",
+    "name": "Ember Lorito Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "stone_lorito_plume",
+    "name": "Stone Lorito Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "heart_lorito_plume",
+    "name": "Heart Lorito Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "sage_lorito_plume",
+    "name": "Sage Lorito Plume",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "key_of_gilded_lorito",
+    "name": "Key of the Gilded Lorito",
+    "category": "key",
+    "level": 8
+  },
+  {
+    "item_type": "key_of_tangled_aftermath",
+    "name": "Key of the Tangled Aftermath",
+    "category": "key",
+    "level": 19
+  },
+  {
+    "item_type": "key_of_ivory_rampart",
+    "name": "Key of the Ivory Rampart",
+    "category": "key",
+    "level": 30
+  },
+  {
+    "item_type": "golden_lorito_feather",
+    "name": "Golden Lorito Feather",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "gilded_talon",
+    "name": "Gilded Talon",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "gilded_lorito_plume",
+    "name": "Gilded Lorito Plume",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "sunforged_talon",
+    "name": "Sunforged Talon",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "lorito_hat__golden",
+    "name": "Golden Lorito Hood",
+    "category": "hat",
+    "level": 16,
+    "stats": {
+      "min": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 50,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 50,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 2,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "lorito_cloak__golden",
+    "name": "Golden Lorito Cloak",
+    "category": "cloak",
+    "level": 16,
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": -15,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 60,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 25,
+        "chance": 0,
+        "agility": -5,
+        "range": 1,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "golden_lorito_amulet",
+    "name": "Golden Lorito Amulet",
+    "category": "amulet",
+    "level": 14,
+    "stats": {
+      "min": {
+        "vitality": 5,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 40,
+        "wisdom": 0,
+        "strength": 20,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 20,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "red_ant_chitin",
+    "name": "Red Ant Chitin",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "white_ant_chitin",
+    "name": "White Ant Chitin",
+    "category": "resource",
+    "level": 13
+  },
+  {
+    "item_type": "ant_mandible",
+    "name": "Ant Mandible",
+    "category": "resource",
+    "level": 16
+  },
+  {
+    "item_type": "ember_aragne_silk",
+    "name": "Ember Aragne Silk",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "tide_aragne_silk",
+    "name": "Tide Aragne Silk",
+    "category": "resource",
+    "level": 14
+  },
+  {
+    "item_type": "gale_aragne_silk",
+    "name": "Gale Aragne Silk",
+    "category": "resource",
+    "level": 9
+  },
+  {
+    "item_type": "stone_aragne_silk",
+    "name": "Stone Aragne Silk",
+    "category": "resource",
+    "level": 8
+  },
+  {
+    "item_type": "aragne_fang",
+    "name": "Aragne Fang",
+    "category": "resource",
+    "level": 8
+  },
+  {
+    "item_type": "aragne_carapace",
+    "name": "Aragne Carapace",
+    "category": "resource",
+    "level": 8
+  },
+  {
+    "item_type": "silkblade_spinneret",
+    "name": "Silkblade Spinneret",
+    "category": "resource",
+    "level": 19
+  },
+  {
+    "item_type": "mossbound_eggshell",
+    "name": "Mossbound Eggshell",
+    "category": "resource",
+    "level": 27
+  },
+  {
+    "item_type": "araknomath_venom_gland",
+    "name": "Araknomath Venom Gland",
+    "category": "resource",
+    "level": 27
+  },
+  {
+    "item_type": "crab_carapace",
+    "name": "Crab Carapace",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "crab_pincer",
+    "name": "Crab Pincer",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "crowani_scale",
+    "name": "Crowani Scale",
+    "category": "resource",
+    "level": 9
+  },
+  {
+    "item_type": "albino_crowani_scale",
+    "name": "Albino Crowani Scale",
+    "category": "resource",
+    "level": 15
+  },
+  {
+    "item_type": "crowani_fang",
+    "name": "Crowani Fang",
+    "category": "resource",
+    "level": 12
+  },
+  {
+    "item_type": "ember_misui_scale",
+    "name": "Ember Misui Scale",
+    "category": "resource",
+    "level": 6
+  },
+  {
+    "item_type": "stone_misui_scale",
+    "name": "Stone Misui Scale",
+    "category": "resource",
+    "level": 8
+  },
+  {
+    "item_type": "gale_misui_scale",
+    "name": "Gale Misui Scale",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "tide_misui_scale",
+    "name": "Tide Misui Scale",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "heart_misui_scale",
+    "name": "Heart Misui Scale",
+    "category": "resource",
+    "level": 13
+  },
+  {
+    "item_type": "misui_fin",
+    "name": "Misui Fin",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "misui_eye",
+    "name": "Misui Eye",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "misunami_abyssal_eye",
+    "name": "Misunami's Abyssal Eye",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "weathered_bone",
+    "name": "Weathered Bone",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "moka_skull",
+    "name": "Moka Skull",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "rusted_blade_fragment",
+    "name": "Rusted Blade Fragment",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "frayed_bowstring",
+    "name": "Frayed Bowstring",
+    "category": "resource",
+    "level": 7
+  },
+  {
+    "item_type": "wild_boar_hide",
+    "name": "Wild Boar Hide",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "boar_tusk",
+    "name": "Boar Tusk",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "coarse_bristles",
+    "name": "Coarse Bristles",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "mokan",
+    "name": "Mokan",
+    "category": "hat",
+    "level": 15,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 60,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "momaku",
+    "name": "Momaku",
+    "category": "cloak",
+    "level": 23,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 30,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 30,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "drakar",
+    "name": "Drakar Hat",
+    "category": "hat",
+    "level": 20,
+    "stats": {
+      "min": {
+        "vitality": -32,
+        "wisdom": 0,
+        "strength": -35,
+        "intelligence": 0,
+        "chance": -40,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": -6,
+        "wisdom": 0,
+        "strength": -10,
+        "intelligence": 0,
+        "chance": -20,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 7,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "ekusoni",
+    "name": "Ekusoni Hat",
+    "category": "hat",
+    "level": 26,
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 12,
+        "intelligence": 0,
+        "chance": 9,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 65,
+        "wisdom": 0,
+        "strength": 55,
+        "intelligence": 0,
+        "chance": 55,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "casque_hayate",
+    "name": "Casque Hayate",
+    "category": "hat",
+    "level": 22,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 1,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 35,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 3,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "oeufterhead",
+    "name": "Oeufterhead",
+    "category": "hat",
+    "level": 29,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 1
+      },
+      "max": {
+        "vitality": 50,
+        "wisdom": 12,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 60,
+        "range": 1,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 4
+      }
+    }
+  },
+  {
+    "item_type": "rootglass_token",
+    "name": "Rootglass Token",
+    "category": "amulet",
+    "level": 5,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "hollowjaw_pendant",
+    "name": "Hollowjaw Pendant",
+    "category": "amulet",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "pincer_pearl",
+    "name": "Pincer Pearl",
+    "category": "amulet",
+    "level": 10,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 5,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 1,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 15,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 4,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "emberweb_locket",
+    "name": "Emberweb Locket",
+    "category": "amulet",
+    "level": 12,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 1,
+        "water_resistance": -5,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 15,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 15,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 4,
+        "water_resistance": -1,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "tideglass_oculum",
+    "name": "Tideglass Oculum",
+    "category": "amulet",
+    "level": 14,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 7,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 20,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fuwa_horn_torque",
+    "name": "Fuwa Horn Torque",
+    "category": "amulet",
+    "level": 16,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 1,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 1,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "tuskward_fetish",
+    "name": "Tuskward Fetish",
+    "category": "amulet",
+    "level": 18,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "colony_mandible",
+    "name": "Colony Mandible",
+    "category": "amulet",
+    "level": 21,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 5,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 25,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "albino_war_tooth",
+    "name": "Albino War-Tooth",
+    "category": "amulet",
+    "level": 24,
+    "stats": {
+      "min": {
+        "vitality": 5,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 30,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 35,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 3
+      }
+    }
+  },
+  {
+    "item_type": "nauvis_concord",
+    "name": "Nauvis Concord",
+    "category": "amulet",
+    "level": 30,
+    "stats": {
+      "min": {
+        "vitality": 13,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 65,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 5,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "resin_seal_ring",
+    "name": "Resin-Seal Ring",
+    "category": "ring",
+    "level": 5,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "marrow_loop",
+    "name": "Marrow Loop",
+    "category": "ring",
+    "level": 7,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "crabclasp",
+    "name": "Crabclasp",
+    "category": "ring",
+    "level": 9,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 12,
+        "agility": 3,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "galeweb_spiral",
+    "name": "Galeweb Spiral",
+    "category": "ring",
+    "level": 11,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 15,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "misui_iris",
+    "name": "Misui Iris",
+    "category": "ring",
+    "level": 13,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": -15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 1,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": -5,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 1,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fleecebound_band",
+    "name": "Fleecebound Band",
+    "category": "ring",
+    "level": 15,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "bristlecoil",
+    "name": "Bristlecoil",
+    "category": "ring",
+    "level": 18,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 3,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "chitin_signet",
+    "name": "Chitin Signet",
+    "category": "ring",
+    "level": 20,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 15,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 2,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "crowani_scale_ring",
+    "name": "Crowani Scale Ring",
+    "category": "ring",
+    "level": 24,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 1,
+        "water_resistance": 1,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 40,
+        "wisdom": 0,
+        "strength": 26,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 3,
+        "water_resistance": 3,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "broodglass_orbit",
+    "name": "Broodglass Orbit",
+    "category": "ring",
+    "level": 29,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 15,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 45,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "wheatbound_cinch",
+    "name": "Wheatbound Cinch",
+    "category": "belt",
+    "level": 5,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": -5,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": -1,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "gravecord",
+    "name": "Gravecord",
+    "category": "belt",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "shellclasp_belt",
+    "name": "Shellclasp Belt",
+    "category": "belt",
+    "level": 10,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 15,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "stoneweb_sash",
+    "name": "Stoneweb Sash",
+    "category": "belt",
+    "level": 12,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 20,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 40,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "finwoven_belt",
+    "name": "Finwoven Belt",
+    "category": "belt",
+    "level": 14,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 15,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 25,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fuwa_horn_harness",
+    "name": "Fuwa Horn Harness",
+    "category": "belt",
+    "level": 16,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
         "strength": 1,
         "intelligence": 1,
         "chance": 0,
@@ -2189,10 +5119,3337 @@
         "air_resistance": 0
       },
       "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 15,
+        "intelligence": 15,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 3,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "bristleback_girdle",
+    "name": "Bristleback Girdle",
+    "category": "belt",
+    "level": 18,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 5,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "colony_harness",
+    "name": "Colony Harness",
+    "category": "belt",
+    "level": 21,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 50,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "crowani_warbelt",
+    "name": "Crowani Warbelt",
+    "category": "belt",
+    "level": 24,
+    "stats": {
+      "min": {
+        "vitality": 25,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 60,
+        "wisdom": 0,
+        "strength": 45,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "silk_and_bone_baldric",
+    "name": "Silk-and-Bone Baldric",
+    "category": "belt",
+    "level": 30,
+    "stats": {
+      "min": {
+        "vitality": 15,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 25,
+        "wisdom": 20,
+        "strength": 0,
+        "intelligence": 40,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "resin_tread_boots",
+    "name": "Resin-Tread Boots",
+    "category": "boots",
+    "level": 5,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "gravewalkers",
+    "name": "Gravewalkers",
+    "category": "boots",
+    "level": 8,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 16,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "pincersteps",
+    "name": "Pincersteps",
+    "category": "boots",
+    "level": 10,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 10,
+        "chance": 10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "webskitters",
+    "name": "Webskitters",
+    "category": "boots",
+    "level": 12,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 20,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "misui_finsteps",
+    "name": "Misui Finsteps",
+    "category": "boots",
+    "level": 14,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 50,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fuwa_hoofwraps",
+    "name": "Fuwa Hoofwraps",
+    "category": "boots",
+    "level": 16,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 30,
+        "intelligence": 30,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "boarhide_stompers",
+    "name": "Boarhide Stompers",
+    "category": "boots",
+    "level": 18,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 30,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 3,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "colony_marchers",
+    "name": "Colony Marchers",
+    "category": "boots",
+    "level": 21,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 1
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 15,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 20,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 5
+      }
+    }
+  },
+  {
+    "item_type": "crowani_greaves",
+    "name": "Crowani Greaves",
+    "category": "boots",
+    "level": 24,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": -25,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 30,
+        "wisdom": 0,
+        "strength": 35,
+        "intelligence": -5,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "nauvis_wayfarers",
+    "name": "Nauvis Wayfarers",
+    "category": "boots",
+    "level": 30,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "sun_eyed_lorito",
+    "name": "The Sun-Eyed Lorito",
+    "category": "relic",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 20,
+        "wisdom": 10,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 100,
+        "wisdom": 40,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "resin_edge",
+    "name": "Resin-Edge",
+    "category": "sword",
+    "level": 5,
+    "damages": [
+      {
+        "from": 5,
+        "to": 16,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 2,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": -8,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 8,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": -1,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "gravebrand",
+    "name": "Gravebrand",
+    "category": "sword",
+    "level": 8,
+    "damages": [
+      {
+        "from": 10,
+        "to": 18,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "emberweb_falchion",
+    "name": "Emberweb Falchion",
+    "category": "sword",
+    "level": 12,
+    "damages": [
+      {
+        "from": 1,
+        "to": 35,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "tuskspine",
+    "name": "Tuskspine",
+    "category": "sword",
+    "level": 18,
+    "damages": [
+      {
+        "from": 14,
+        "to": 26,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 1
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 20,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 2
+      }
+    }
+  },
+  {
+    "item_type": "sunbound_concord",
+    "name": "Sunbound Concord",
+    "category": "sword",
+    "level": 30,
+    "damages": [
+      {
+        "from": 23,
+        "to": 32,
+        "element": "air",
+        "damage_type": "weapon"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 2,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "rootshivs",
+    "name": "Rootshivs",
+    "category": "daggers",
+    "level": 5,
+    "damages": [
+      {
+        "from": 2,
+        "to": 6,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 1,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "crabclaw_knives",
+    "name": "Crabclaw Knives",
+    "category": "daggers",
+    "level": 10,
+    "damages": [
+      {
+        "from": 1,
+        "to": 12,
+        "damage_type": "weapon",
+        "element": "water"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 5,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "misui_razorfins",
+    "name": "Misui Razorfins",
+    "category": "daggers",
+    "level": 14,
+    "damages": [
+      {
+        "from": 3,
+        "to": 6,
+        "element": "water",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 1,
+        "to": 3,
+        "damage_type": "weapon",
+        "element": "air"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "chitin_stingers",
+    "name": "Chitin Stingers",
+    "category": "daggers",
+    "level": 21,
+    "damages": [
+      {
+        "from": 9,
+        "to": 15,
+        "damage_type": "weapon",
+        "element": "air"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 15,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 40,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 40,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "broodglass_twins",
+    "name": "Broodglass Twins",
+    "category": "daggers",
+    "level": 30,
+    "damages": [
+      {
+        "from": 16,
+        "to": 21,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": -1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
         "vitality": 40,
         "wisdom": 0,
         "strength": 40,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": -1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 4,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "rootstring_shortbow",
+    "name": "Rootstring Shortbow",
+    "category": "bow",
+    "level": 5,
+    "damages": [
+      {
+        "from": 5,
+        "to": 9,
+        "damage_type": "weapon",
+        "element": "air"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 9,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "gravecord_bow",
+    "name": "Gravecord Bow",
+    "category": "bow",
+    "level": 8,
+    "damages": [
+      {
+        "from": 5,
+        "to": 11,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 1,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 5,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fleecehorn_bow",
+    "name": "Fleecehorn Bow",
+    "category": "bow",
+    "level": 16,
+    "damages": [
+      {
+        "from": 5,
+        "to": 12,
+        "damage_type": "weapon",
+        "element": "water"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 1,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 35,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 5,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "crowani_scale_bow",
+    "name": "Crowani Scale Bow",
+    "category": "bow",
+    "level": 24,
+    "damages": [
+      {
+        "from": 10,
+        "to": 16,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 15,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 2,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "five_biome_greatbow",
+    "name": "Five-Biome Greatbow",
+    "category": "bow",
+    "level": 30,
+    "damages": [
+      {
+        "from": 2,
+        "to": 3,
+        "element": "earth",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 2,
+        "to": 3,
+        "element": "fire",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 2,
+        "to": 3,
+        "element": "water",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 2,
+        "to": 3,
+        "damage_type": "weapon",
+        "element": "air"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 8,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 25,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 3,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "resinpoint",
+    "name": "Resinpoint",
+    "category": "spear",
+    "level": 5,
+    "damages": [
+      {
+        "from": 6,
+        "to": 10,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 9,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "pincer_lance",
+    "name": "Pincer Lance",
+    "category": "spear",
+    "level": 10,
+    "damages": [
+      {
+        "from": 10,
+        "to": 15,
+        "damage_type": "weapon",
+        "element": "water"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": -10,
+        "chance": 1,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 1,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": -1,
+        "chance": 10,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 3,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "stoneweb_spear",
+    "name": "Stoneweb Spear",
+    "category": "spear",
+    "level": 12,
+    "damages": [
+      {
+        "from": 4,
+        "to": 6,
+        "element": "air",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 1,
+        "to": 2,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 15,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "boar_tusk_glaive",
+    "name": "Boar-Tusk Glaive",
+    "category": "spear",
+    "level": 18,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 20,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "damages": [
+      {
+        "from": 9,
+        "to": 15,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ]
+  },
+  {
+    "item_type": "araknomath_spindle",
+    "name": "Araknomath Spindle",
+    "category": "spear",
+    "level": 30,
+    "damages": [
+      {
+        "from": 8,
+        "to": 14,
+        "element": "fire",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 8,
+        "to": 14,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 10,
+        "wisdom": 10,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 40,
+        "wisdom": 30,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "rootsplitter",
+    "name": "Rootsplitter",
+    "category": "axe",
+    "level": 5,
+    "damages": [
+      {
+        "from": 5,
+        "to": 13,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 4,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 9,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "gravechop",
+    "name": "Gravechop",
+    "category": "axe",
+    "level": 8,
+    "damages": [
+      {
+        "from": 8,
+        "to": 16,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 1,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 5,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fuwa_horncleaver",
+    "name": "Fuwa Horncleaver",
+    "category": "axe",
+    "level": 16,
+    "damages": [
+      {
+        "from": 8,
+        "to": 11,
+        "element": "earth",
+        "damage_type": "weapon"
+      },
+      {
+        "from": 8,
+        "to": 11,
+        "damage_type": "weapon",
+        "element": "fire"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 30,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 100,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "colony_mandible_axe",
+    "name": "Colony Mandible Axe",
+    "category": "axe",
+    "level": 21,
+    "damages": [
+      {
+        "from": 11,
+        "to": 17,
+        "damage_type": "weapon",
+        "element": "air"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "mossbound_broadaxe",
+    "name": "Mossbound Broadaxe",
+    "category": "axe",
+    "level": 30,
+    "damages": [
+      {
+        "from": 13,
+        "to": 18,
+        "damage_type": "weapon",
+        "element": "earth"
+      }
+    ],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 5,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 5,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 20,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 20,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "colony_laminate",
+    "name": "Colony Laminate",
+    "category": "resource",
+    "level": 25
+  },
+  {
+    "item_type": "embertide_webbing",
+    "name": "Embertide Webbing",
+    "category": "resource",
+    "level": 19
+  },
+  {
+    "item_type": "galestone_webbing",
+    "name": "Galestone Webbing",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "silkblade_thread",
+    "name": "Silkblade Thread",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "broodglass",
+    "name": "Broodglass",
+    "category": "resource",
+    "level": 23
+  },
+  {
+    "item_type": "shellbound_plate",
+    "name": "Shellbound Plate",
+    "category": "resource",
+    "level": 12
+  },
+  {
+    "item_type": "crowani_scaleweave",
+    "name": "Crowani Scaleweave",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "fuwa_fleece",
+    "name": "Fuwa Fleece",
+    "category": "resource",
+    "level": 19
+  },
+  {
+    "item_type": "nifuwa_fleece",
+    "name": "Nifuwa Fleece",
+    "category": "resource",
+    "level": 19
+  },
+  {
+    "item_type": "tidal_horn_core",
+    "name": "Tidal Horn Core",
+    "category": "resource",
+    "level": 19
+  },
+  {
+    "item_type": "emberstone_scaleplate",
+    "name": "Emberstone Scaleplate",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "galetide_scaleweave",
+    "name": "Galetide Scaleweave",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "heartscale_membrane",
+    "name": "Heartscale Membrane",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "abyssal_oculus",
+    "name": "Abyssal Oculus",
+    "category": "resource",
+    "level": 18
+  },
+  {
+    "item_type": "gravebone_composite",
+    "name": "Gravebone Composite",
+    "category": "resource",
+    "level": 13
+  },
+  {
+    "item_type": "moka_arms_binding",
+    "name": "Moka Arms Binding",
+    "category": "resource",
+    "level": 13
+  },
+  {
+    "item_type": "boarhide_laminate",
+    "name": "Boarhide Laminate",
+    "category": "resource",
+    "level": 25
+  },
+  {
+    "item_type": "gilded_pet_food",
+    "name": "Gilded Pet Food",
+    "category": "resource",
+    "level": 1
+  },
+  {
+    "item_type": "bloodamber_pet_food",
+    "name": "Bloodamber Pet Food",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "jadeghost_pet_food",
+    "name": "Jadeghost Pet Food",
+    "category": "resource",
+    "level": 20
+  },
+  {
+    "item_type": "moonfire_pet_food",
+    "name": "Moonfire Pet Food",
+    "category": "resource",
+    "level": 30
+  },
+  {
+    "item_type": "bloodnight_pet_food",
+    "name": "Bloodnight Pet Food",
+    "category": "resource",
+    "level": 40
+  },
+  {
+    "item_type": "genesis_duskheart_pet_food",
+    "name": "Genesis Duskheart Pet Food",
+    "category": "resource",
+    "level": 50
+  },
+  {
+    "item_type": "phantom_obsidian_pet_food",
+    "name": "Phantom Obsidian Pet Food",
+    "category": "resource",
+    "level": 60
+  },
+  {
+    "item_type": "abyssal_arcanite_pet_food",
+    "name": "Abyssal Arcanite Pet Food",
+    "category": "resource",
+    "level": 70
+  },
+  {
+    "item_type": "spectral_draconite_pet_food",
+    "name": "Spectral Draconite Pet Food",
+    "category": "resource",
+    "level": 80
+  },
+  {
+    "item_type": "primordial_dragon_pet_food",
+    "name": "Primordial Dragon Pet Food",
+    "category": "resource",
+    "level": 90
+  },
+  {
+    "item_type": "cursed_diamond_pet_food",
+    "name": "Cursed Diamond Pet Food",
+    "category": "resource",
+    "level": 100
+  },
+  {
+    "item_type": "siluri",
+    "name": "Siluri",
+    "category": "pet",
+    "level": 1,
+    "pet_foods": ["gilded_pet_food"],
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 80,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 80,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "oeuftermath",
+    "name": "Oeuftermath",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 60,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 60,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["bloodamber_pet_food"]
+  },
+  {
+    "item_type": "suicune",
+    "name": "Suicune",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 2,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 2,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["spectral_draconite_pet_food"]
+  },
+  {
+    "item_type": "suifren_bullshark",
+    "name": "Suifren Bullshark",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 40,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 40,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["moonfire_pet_food"]
+  },
+  {
+    "item_type": "suifren_capy",
+    "name": "Suifren Capy",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 40,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 40,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["moonfire_pet_food"]
+  },
+  {
+    "item_type": "vaporeon",
+    "name": "Vaporeon",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 60,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 60,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["abyssal_arcanite_pet_food"]
+  },
+  {
+    "item_type": "corbac",
+    "name": "Corbac",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["cursed_diamond_pet_food"]
+  },
+  {
+    "item_type": "primemachin",
+    "name": "Primemachin",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 5,
+        "fire_resistance": 5,
+        "water_resistance": 5,
+        "air_resistance": 5
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 5,
+        "fire_resistance": 5,
+        "water_resistance": 5,
+        "air_resistance": 5
+      }
+    },
+    "pet_foods": ["jadeghost_pet_food"]
+  },
+  {
+    "item_type": "coiffe_pepe",
+    "name": "Coiffe Pepe",
+    "category": "hat",
+    "level": 1
+  },
+  {
+    "item_type": "coiffe_pepe_royal",
+    "name": "Coiffe Pepe Royal",
+    "category": "hat",
+    "level": 1
+  },
+  {
+    "item_type": "fud",
+    "name": "Fud",
+    "category": "hat",
+    "level": 1
+  },
+  {
+    "item_type": "sam",
+    "name": "Sam",
+    "category": "hat",
+    "level": 1
+  },
+  {
+    "item_type": "suicunio",
+    "name": "Suicunio",
+    "category": "hat",
+    "level": 1
+  },
+  {
+    "item_type": "sui_helmet",
+    "name": "Sui Helmet",
+    "category": "hat",
+    "level": 1
+  },
+  {
+    "item_type": "food_crate",
+    "name": "Food Crate",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "loot_box",
+      "rewards": [
+        {
+          "item_type": "gilded_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "bloodamber_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "jadeghost_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "moonfire_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "bloodnight_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "genesis_duskheart_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "phantom_obsidian_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "abyssal_arcanite_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "spectral_draconite_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "primordial_dragon_pet_food",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "cursed_diamond_pet_food",
+          "weight": 1,
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "item_type": "resource_crate",
+    "name": "Resource Crate",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "loot_box",
+      "rewards": [
+        {
+          "item_type": "gilded_talon",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "golden_lorito_feather",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "fukuo_tidal_horn",
+          "weight": 2,
+          "amount": 1
+        },
+        {
+          "item_type": "misunami_abyssal_eye",
+          "weight": 2,
+          "amount": 1
+        },
+        {
+          "item_type": "silkblade_spinneret",
+          "weight": 2,
+          "amount": 1
+        },
+        {
+          "item_type": "araknomath_venom_gland",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "mossbound_eggshell",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "golden_fleece",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "royal_horn",
+          "weight": 1,
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "item_type": "pet_crate",
+    "name": "Pet Crate",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "loot_box",
+      "rewards": [
+        {
+          "item_type": "corbac",
+          "weight": 6,
+          "amount": 1
+        },
+        {
+          "item_type": "beru",
+          "weight": 2,
+          "amount": 1
+        },
+        {
+          "item_type": "krinan",
+          "weight": 100,
+          "amount": 1
+        },
+        {
+          "item_type": "mosho",
+          "weight": 100,
+          "amount": 1
+        },
+        {
+          "item_type": "talokan",
+          "weight": 100,
+          "amount": 1
+        },
+        {
+          "item_type": "yago",
+          "weight": 30,
+          "amount": 1
+        },
+        {
+          "item_type": "zot",
+          "weight": 60,
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "item_type": "sui_crate",
+    "name": "Sui Crate",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "loot_box",
+      "rewards": [
+        {
+          "item_type": "coiffe_pepe",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "coiffe_pepe_royal",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "fud",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "sam",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "sui_helmet",
+          "weight": 1,
+          "amount": 1
+        },
+        {
+          "item_type": "suicunio",
+          "weight": 1,
+          "amount": 1
+        }
+      ]
+    }
+  },
+  {
+    "item_type": "krinan",
+    "name": "Krinan",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 60,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 60,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["jadeghost_pet_food"]
+  },
+  {
+    "item_type": "mosho",
+    "name": "Mosho",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 60,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 60,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["phantom_obsidian_pet_food"]
+  },
+  {
+    "item_type": "beru",
+    "name": "Beru",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 1,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 1,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["cursed_diamond_pet_food"]
+  },
+  {
+    "item_type": "talokan",
+    "name": "Talokan",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 60,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 60,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["bloodnight_pet_food"]
+  },
+  {
+    "item_type": "yago",
+    "name": "Yago",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 10,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 10,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["primordial_dragon_pet_food"]
+  },
+  {
+    "item_type": "zot",
+    "name": "Zot",
+    "category": "pet",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 7,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 7,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    },
+    "pet_foods": ["genesis_duskheart_pet_food"]
+  },
+  {
+    "item_type": "venomwool",
+    "name": "Venomwool",
+    "category": "resource",
+    "level": 15
+  },
+  {
+    "item_type": "cinderfleece",
+    "name": "Cinderfleece",
+    "category": "resource",
+    "level": 24
+  },
+  {
+    "item_type": "dreadwool",
+    "name": "Dreadwool",
+    "category": "resource",
+    "level": 36
+  },
+  {
+    "item_type": "golden_fleece",
+    "name": "Golden Fleece",
+    "category": "resource",
+    "level": 48
+  },
+  {
+    "item_type": "royal_horn",
+    "name": "Royal Horn",
+    "category": "resource",
+    "level": 50
+  },
+  {
+    "item_type": "fatewoven_silk",
+    "name": "Fatewoven Silk",
+    "category": "resource",
+    "level": 28
+  },
+  {
+    "item_type": "venomglass_setting",
+    "name": "Venomglass Setting",
+    "category": "resource",
+    "level": 22
+  },
+  {
+    "item_type": "royal_woolweave",
+    "name": "Royal Woolweave",
+    "category": "resource",
+    "level": 29
+  },
+  {
+    "item_type": "gilded_horn_inlay",
+    "name": "Gilded Horn Inlay",
+    "category": "resource",
+    "level": 28
+  },
+  {
+    "item_type": "aragnid_loop",
+    "name": "Aragnid Loop",
+    "category": "ring",
+    "level": 28,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 40,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 1,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "webbound_pendant",
+    "name": "Webbound Pendant",
+    "category": "amulet",
+    "level": 30,
+    "stats": {
+      "min": {
+        "vitality": 15,
+        "wisdom": 5,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 10,
+        "agility": 10,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 65,
+        "wisdom": 12,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 20,
+        "agility": 40,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "broodstep_boots",
+    "name": "Broodstep Boots",
+    "category": "boots",
+    "level": 32,
+    "stats": {
+      "min": {
+        "vitality": 15,
+        "wisdom": 8,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 30,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 25,
+        "wisdom": 20,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 50,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "rampart_signet",
+    "name": "Rampart Signet",
+    "category": "ring",
+    "level": 31,
+    "stats": {
+      "min": {
+        "vitality": 15,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 10,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": -1,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 65,
+        "wisdom": 0,
+        "strength": 40,
         "intelligence": 40,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 1,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "ivory_horn_torque",
+    "name": "Ivory Horn Torque",
+    "category": "amulet",
+    "level": 33,
+    "stats": {
+      "min": {
+        "vitality": 20,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 70,
+        "wisdom": 0,
+        "strength": 50,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 1,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "cloudstep_greaves",
+    "name": "Cloudstep Greaves",
+    "category": "boots",
+    "level": 35,
+    "stats": {
+      "min": {
+        "vitality": 25,
+        "wisdom": 0,
+        "strength": 10,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 2,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 50,
+        "wisdom": 0,
+        "strength": 40,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 1,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 5,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "aragnids_thread_of_fate",
+    "name": "Aragnid's Thread of Fate",
+    "category": "relic",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 1,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 1,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 0,
+        "wisdom": 0,
+        "strength": 0,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 100,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 10,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      }
+    }
+  },
+  {
+    "item_type": "fuwartunes_favor",
+    "name": "Fuwartune's Favor",
+    "category": "relic",
+    "level": 1,
+    "stats": {
+      "min": {
+        "vitality": 1,
+        "wisdom": 0,
+        "strength": 1,
+        "intelligence": 0,
+        "chance": 0,
+        "agility": 0,
+        "range": 0,
+        "movement": 0,
+        "action": 0,
+        "critical": 0,
+        "raw_damage": 0,
+        "earth_resistance": 0,
+        "fire_resistance": 0,
+        "water_resistance": 0,
+        "air_resistance": 0
+      },
+      "max": {
+        "vitality": 50,
+        "wisdom": 0,
+        "strength": 100,
+        "intelligence": 0,
         "chance": 0,
         "agility": 0,
         "range": 0,

@@ -7,11 +7,17 @@
 // Self-gates on the pose feed.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { compile_world_recipe, parse_world_recipe, sample_world_column, type CompiledWorld } from '@aresrpg/engine'
+import {
+  city_map_overlays,
+  compile_world_recipe,
+  parse_world_recipe,
+  sample_world_column,
+  type CompiledWorld,
+} from '@aresrpg/engine'
 
 import './minimap.css'
 import { titleize } from '../../content/catalog.ts'
-import { world_terrain } from '../../content/worlds.ts'
+import { city_at_position, world_terrain } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
 import { useAppStore } from '../../store.ts'
@@ -20,6 +26,7 @@ import { useWorldPose } from '../core/pose_feed.ts'
 import { camera_heading } from './compass_math.ts'
 import {
   draw_dungeon_portal_markers,
+  draw_city_layer,
   draw_players,
   draw_self_arrow,
   draw_spawn_markers,
@@ -40,19 +47,21 @@ const AXES = ['x', 'y', 'z'] as const
 type Coordinates = Readonly<Record<(typeof AXES)[number], number>>
 
 export const MinimapReadout = ({
-  biome_name,
-  biome_label,
+  location_name,
+  location_label,
+  city,
   coordinates,
   coordinates_label,
 }: Readonly<{
-  biome_name: string
-  biome_label: string
+  location_name: string
+  location_label: string
+  city: boolean
   coordinates: Coordinates
   coordinates_label: string
 }>) => (
   <div className="gw-minimap__readout">
-    <span aria-label={biome_label} className="gw-minimap__biome">
-      {biome_name}
+    <span aria-label={location_label} className={`gw-minimap__biome${city ? ' gw-minimap__biome--city' : ''}`}>
+      {location_name}
     </span>
     <div aria-label={coordinates_label} className="gw-minimap__coords">
       {AXES.map((axis) => (
@@ -86,6 +95,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       return null
     }
   }, [world_name])
+  const cities = useMemo(() => (compiled ? city_map_overlays(compiled) : Object.freeze([])), [compiled])
 
   useEffect(() => {
     const canvas = canvas_ref.current
@@ -99,16 +109,19 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     const view = { center_x: grid.center_x, center_z: grid.center_z, size: SIZE, radius: VIEW_RADIUS_BLOCKS }
     paint_relief(context, grid, SIZE)
     draw_zone_layer(context, view, (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false))
+    draw_city_layer(context, view, cities)
     draw_spawn_markers(context, view, spawn_markers(world_state, world_name))
-    draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_state, world_name))
+    draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name))
     draw_players(context, view, Object.values(world_state.players))
     draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
-  }, [pose, compiled, world_state, world_name])
+  }, [cities, pose, compiled, world_state, world_name])
 
   if (!pose || !compiled) return null
 
   const coords = { x: Math.round(pose.x), y: Math.round(pose.y), z: Math.round(pose.z) }
+  const city = city_at_position(world_name, coords.x, coords.z)
   const biome_name = titleize(sample_world_column(compiled, coords.x, coords.z).biome.name)
+  const location_name = city ? text('dungeon_city', { city: titleize(city.id) }) : biome_name
 
   return (
     <div className="gw-minimap" data-minimap="">
@@ -131,10 +144,11 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </span>
       </div>
       <MinimapReadout
-        biome_label={text('biome')}
-        biome_name={biome_name}
+        city={city !== null}
         coordinates={coords}
         coordinates_label={text('coordinates')}
+        location_label={city ? location_name : text('biome')}
+        location_name={location_name}
       />
       {map_open && <WorldMap compiled={compiled} copy={copy} on_close={() => set_map_open(false)} />}
     </div>

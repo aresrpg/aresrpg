@@ -650,6 +650,7 @@ export const create_webgpu_backend = async (
       analytic_sky.set_time_of_day(time)
       apply_sky_lighting()
     },
+    set_clouds_visible: clouds.set_enabled,
     set_flatten_amount: (amount: number) => {
       flatten_amount = amount
       if (flatten.set(amount)) sun.shadow.needsUpdate = true

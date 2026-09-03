@@ -52,8 +52,8 @@ export const cloud_sample_xz = (
 }
 
 export const cloud_shadow_strength = (quality: EngineQuality): number => (quality === 'low' ? 0 : CLOUD_SHADOW[quality])
-export const cloud_layer_visible = (quality: EngineQuality, fight_active: boolean): boolean =>
-  quality !== 'low' && !fight_active
+export const cloud_layer_visible = (quality: EngineQuality, fight_active: boolean, enabled = true): boolean =>
+  enabled && quality !== 'low' && !fight_active
 
 export const cloud_coverage_threshold = (humidity: number): number => {
   const amount = Math.min(1, Math.max(0, humidity))
@@ -66,6 +66,7 @@ export type Clouds = Readonly<{
   set_humidity: (humidity: number) => void
   set_quality: (quality: EngineQuality) => void
   set_active: (active: boolean) => void
+  set_enabled: (enabled: boolean) => void
   dispose: () => void
 }>
 
@@ -82,6 +83,7 @@ export const create_clouds = ({
 }>): Clouds => {
   const seed_value = derive_sub_seed(seed, 'clouds') / 0xffffffff
   let active = true
+  let enabled = true
   let current_quality = quality
   const seed_offset = vec2(seed_value * 173.7, seed_value * -91.3)
   const humidity = uniform(0.55)
@@ -151,13 +153,18 @@ export const create_clouds = ({
     },
     set_quality: (next: EngineQuality) => {
       current_quality = next
-      mesh.visible = cloud_layer_visible(current_quality, !active)
-      shadow_strength.value = active ? cloud_shadow_strength(current_quality) : 0
+      mesh.visible = cloud_layer_visible(current_quality, !active, enabled)
+      shadow_strength.value = enabled && active ? cloud_shadow_strength(current_quality) : 0
     },
     set_active: (next: boolean) => {
       active = next
-      mesh.visible = cloud_layer_visible(current_quality, !active)
-      shadow_strength.value = active ? cloud_shadow_strength(current_quality) : 0
+      mesh.visible = cloud_layer_visible(current_quality, !active, enabled)
+      shadow_strength.value = enabled && active ? cloud_shadow_strength(current_quality) : 0
+    },
+    set_enabled: (next: boolean) => {
+      enabled = next
+      mesh.visible = cloud_layer_visible(current_quality, !active, enabled)
+      shadow_strength.value = enabled && active ? cloud_shadow_strength(current_quality) : 0
     },
     dispose: () => {
       scene.remove(mesh)

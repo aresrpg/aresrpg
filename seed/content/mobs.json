@@ -304,9 +304,9 @@
     "element": "air",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 50,
-    "level_max": 70,
-    "hp": 499,
+    "level_min": 70,
+    "level_max": 90,
+    "hp": 1400,
     "ap": 6,
     "mp": 5,
     "agility": 120,
@@ -462,7 +462,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 12706
+    "xp": 21000
   },
   {
     "mob_type": "protector_arcanite",
@@ -470,9 +470,9 @@
     "element": "air",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 42,
-    "level_max": 62,
-    "hp": 676,
+    "level_min": 60,
+    "level_max": 80,
+    "hp": 1400,
     "ap": 6,
     "mp": 2,
     "agility": 27,
@@ -595,7 +595,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 11530
+    "xp": 19000
   },
   {
     "mob_type": "protector_arcanize_bricheton",
@@ -603,9 +603,9 @@
     "element": "air",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 50,
-    "level_max": 70,
-    "hp": 666,
+    "level_min": 70,
+    "level_max": 90,
+    "hp": 1300,
     "ap": 6,
     "mp": 4,
     "agility": 55,
@@ -716,7 +716,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 12706
+    "xp": 25000
   },
   {
     "mob_type": "protector_barley_bricheton",
@@ -833,9 +833,9 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 42,
-    "level_max": 62,
-    "hp": 540,
+    "level_min": 60,
+    "level_max": 80,
+    "hp": 1200,
     "ap": 6,
     "mp": 4,
     "agility": 48,
@@ -946,7 +946,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 11530
+    "xp": 16000
   },
   {
     "mob_type": "protector_bloodstone",
@@ -954,8 +954,8 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 22,
-    "level_max": 42,
+    "level_min": 30,
+    "level_max": 50,
     "hp": 349,
     "ap": 6,
     "mp": 2,
@@ -1220,9 +1220,9 @@
     "element": "earth",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 65,
-    "level_max": 85,
-    "hp": 758,
+    "level_min": 90,
+    "level_max": 110,
+    "hp": 2800,
     "ap": 6,
     "mp": 4,
     "agility": 69,
@@ -1357,7 +1357,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 12676
+    "xp": 30000
   },
   {
     "mob_type": "protector_cursed_gaia",
@@ -1365,9 +1365,9 @@
     "element": "earth",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 65,
-    "level_max": 85,
-    "hp": 569,
+    "level_min": 90,
+    "level_max": 110,
+    "hp": 2589,
     "ap": 6,
     "mp": 5,
     "agility": 150,
@@ -1535,7 +1535,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 12676
+    "xp": 33560
   },
   {
     "mob_type": "protector_cursed_gem",
@@ -1543,9 +1543,9 @@
     "element": "earth",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 58,
-    "level_max": 78,
-    "hp": 1001,
+    "level_min": 80,
+    "level_max": 100,
+    "hp": 1800,
     "ap": 6,
     "mp": 2,
     "agility": 34,
@@ -1668,7 +1668,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 18341
+    "xp": 34000
   },
   {
     "mob_type": "protector_diamond",
@@ -1676,9 +1676,9 @@
     "element": "earth",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 65,
-    "level_max": 85,
-    "hp": 947,
+    "level_min": 90,
+    "level_max": 110,
+    "hp": 3400,
     "ap": 6,
     "mp": 2,
     "agility": 38,
@@ -1801,7 +1801,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 12676
+    "xp": 40000
   },
   {
     "mob_type": "protector_draconite",
@@ -1809,9 +1809,9 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 50,
-    "level_max": 70,
-    "hp": 832,
+    "level_min": 70,
+    "level_max": 90,
+    "hp": 1500,
     "ap": 6,
     "mp": 2,
     "agility": 30,
@@ -1934,7 +1934,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 12706
+    "xp": 21000
   },
   {
     "mob_type": "protector_draconize_bricheton",
@@ -1942,9 +1942,9 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 58,
-    "level_max": 78,
-    "hp": 801,
+    "level_min": 80,
+    "level_max": 100,
+    "hp": 1600,
     "ap": 6,
     "mp": 4,
     "agility": 62,
@@ -2067,7 +2067,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 18341
+    "xp": 29000
   },
   {
     "mob_type": "protector_dragon_gaia",
@@ -2075,9 +2075,9 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 58,
-    "level_max": 78,
-    "hp": 601,
+    "level_min": 80,
+    "level_max": 100,
+    "hp": 1450,
     "ap": 6,
     "mp": 5,
     "agility": 137,
@@ -2233,7 +2233,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 18341
+    "xp": 22800
   },
   {
     "mob_type": "protector_duskite",
@@ -2241,8 +2241,8 @@
     "element": "air",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 35,
-    "level_max": 55,
+    "level_min": 40,
+    "level_max": 60,
     "hp": 572,
     "ap": 6,
     "mp": 2,
@@ -2915,8 +2915,8 @@
     "element": "water",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 22,
-    "level_max": 42,
+    "level_min": 30,
+    "level_max": 50,
     "hp": 209,
     "ap": 6,
     "mp": 5,
@@ -3081,9 +3081,9 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_miner",
-    "level_min": 38,
-    "level_max": 58,
-    "hp": 486,
+    "level_min": 50,
+    "level_max": 70,
+    "hp": 950,
     "ap": 6,
     "mp": 2,
     "agility": 24,
@@ -3206,7 +3206,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 7919
+    "xp": 14800
   },
   {
     "mob_type": "protector_orchid_gaia",
@@ -3380,9 +3380,9 @@
     "element": "air",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 38,
-    "level_max": 58,
-    "hp": 291,
+    "level_min": 50,
+    "level_max": 70,
+    "hp": 800,
     "ap": 6,
     "mp": 5,
     "agility": 97,
@@ -3538,7 +3538,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 7919
+    "xp": 11976
   },
   {
     "mob_type": "protector_quartz",
@@ -3845,8 +3845,8 @@
     "element": "water",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 35,
-    "level_max": 55,
+    "level_min": 40,
+    "level_max": 60,
     "hp": 458,
     "ap": 6,
     "mp": 4,
@@ -3978,8 +3978,8 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 22,
-    "level_max": 42,
+    "level_min": 30,
+    "level_max": 50,
     "hp": 279,
     "ap": 6,
     "mp": 4,
@@ -4099,9 +4099,9 @@
     "element": "fire",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 35,
-    "level_max": 55,
-    "hp": 343,
+    "level_min": 40,
+    "level_max": 60,
+    "hp": 420,
     "ap": 6,
     "mp": 5,
     "agility": 90,
@@ -4265,9 +4265,9 @@
     "element": "air",
     "role": "protector",
     "family": "protector_bricheton",
-    "level_min": 38,
-    "level_max": 58,
-    "hp": 389,
+    "level_min": 50,
+    "level_max": 70,
+    "hp": 700,
     "ap": 6,
     "mp": 4,
     "agility": 44,
@@ -4390,7 +4390,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 7919
+    "xp": 12850
   },
   {
     "mob_type": "protector_wheat_bricheton",
@@ -4507,9 +4507,9 @@
     "element": "earth",
     "role": "protector",
     "family": "protector_gaia",
-    "level_min": 42,
-    "level_max": 62,
-    "hp": 406,
+    "level_min": 60,
+    "level_max": 80,
+    "hp": 1050,
     "ap": 6,
     "mp": 5,
     "agility": 104,
@@ -4665,7 +4665,7 @@
         "max_qty": 1
       }
     ],
-    "xp": 11530
+    "xp": 17200
   },
   {
     "mob_type": "ant_red",
@@ -4778,7 +4778,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "red_ant_chitin",
+        "chance_bp": 7340,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "ant_mandible",
+        "chance_bp": 2860,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "colony_mandible_axe",
+        "chance_bp": 23,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 3616
   },
   {
@@ -4892,7 +4911,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "white_ant_chitin",
+        "chance_bp": 4875,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "ant_mandible",
+        "chance_bp": 6180,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "chitin_signet",
+        "chance_bp": 79,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 1674
   },
   {
@@ -5006,7 +5044,32 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "ember_aragne_silk",
+        "chance_bp": 6810,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_fang",
+        "chance_bp": 3740,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "aragne_carapace",
+        "chance_bp": 2280,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "emberweb_locket",
+        "chance_bp": 113,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 591
   },
   {
@@ -5132,7 +5195,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "tide_aragne_silk",
+        "chance_bp": 7925,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_fang",
+        "chance_bp": 2190,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "aragne_carapace",
+        "chance_bp": 4630,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 2200
   },
   {
@@ -5246,7 +5328,32 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "gale_aragne_silk",
+        "chance_bp": 5370,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_fang",
+        "chance_bp": 4865,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "aragne_carapace",
+        "chance_bp": 1740,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "webskitters",
+        "chance_bp": 67,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 1075
   },
   {
@@ -5360,7 +5467,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "stone_aragne_silk",
+        "chance_bp": 4180,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_fang",
+        "chance_bp": 2575,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "aragne_carapace",
+        "chance_bp": 7010,
+        "min_qty": 1,
+        "max_qty": 2
+      }
+    ],
     "xp": 975
   },
   {
@@ -5371,7 +5497,7 @@
     "family": "aragne",
     "level_min": 13,
     "level_max": 25,
-    "hp": 257,
+    "hp": 400,
     "ap": 7,
     "mp": 6,
     "agility": 52,
@@ -5519,8 +5645,33 @@
         ]
       }
     ],
-    "loot": [],
-    "xp": 8839
+    "loot": [
+      {
+        "item_type": "ember_aragne_silk",
+        "chance_bp": 8640,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_fang",
+        "chance_bp": 6380,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_carapace",
+        "chance_bp": 4525,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "silkblade_spinneret",
+        "chance_bp": 10000,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 8200
   },
   {
     "mob_type": "araknomath",
@@ -5780,7 +5931,74 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "stone_aragne_silk",
+        "chance_bp": 9460,
+        "min_qty": 2,
+        "max_qty": 4
+      },
+      {
+        "item_type": "aragne_fang",
+        "chance_bp": 5835,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "aragne_carapace",
+        "chance_bp": 8870,
+        "min_qty": 1,
+        "max_qty": 3
+      },
+      {
+        "item_type": "mossbound_eggshell",
+        "chance_bp": 4120,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "araknomath_venom_gland",
+        "chance_bp": 6000,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "oeufterhead",
+        "chance_bp": 90,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "araknomath_spindle",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "aragnids_thread_of_fate",
+        "chance_bp": 2,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "aragnid_loop",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "webbound_pendant",
+        "chance_bp": 55,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "broodstep_boots",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 16548
   },
   {
@@ -5939,7 +6157,32 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "crab_carapace",
+        "chance_bp": 8435,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "crab_pincer",
+        "chance_bp": 3270,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "pincer_pearl",
+        "chance_bp": 137,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "crabclaw_knives",
+        "chance_bp": 29,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 700
   },
   {
@@ -6086,7 +6329,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "crowani_scale",
+        "chance_bp": 5715,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "crowani_fang",
+        "chance_bp": 4380,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "crowani_scale_bow",
+        "chance_bp": 19,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 1361
   },
   {
@@ -6221,7 +6483,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "albino_crowani_scale",
+        "chance_bp": 3925,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "crowani_fang",
+        "chance_bp": 6840,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "albino_war_tooth",
+        "chance_bp": 53,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 3609
   },
   {
@@ -6306,31 +6587,25 @@
     "loot": [
       {
         "item_type": "fuwa_wool",
-        "chance_bp": 6000,
+        "chance_bp": 6350,
         "min_qty": 1,
         "max_qty": 1
       },
       {
         "item_type": "fuwa_hide",
-        "chance_bp": 4000,
+        "chance_bp": 4825,
         "min_qty": 1,
         "max_qty": 1
       },
       {
         "item_type": "fuwa_horn",
-        "chance_bp": 3000,
+        "chance_bp": 2740,
         "min_qty": 1,
         "max_qty": 1
       },
       {
         "item_type": "fuwa_eye",
-        "chance_bp": 3000,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "key_of_tangled_aftermath",
-        "chance_bp": 300,
+        "chance_bp": 3615,
         "min_qty": 1,
         "max_qty": 1
       },
@@ -6343,6 +6618,12 @@
       {
         "item_type": "cape_fuwa__white",
         "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "fleecebound_band",
+        "chance_bp": 107,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -6464,31 +6745,25 @@
     "loot": [
       {
         "item_type": "nifuwa_wool",
-        "chance_bp": 6000,
+        "chance_bp": 5725,
         "min_qty": 1,
         "max_qty": 1
       },
       {
         "item_type": "nifuwa_hide",
-        "chance_bp": 4000,
+        "chance_bp": 4150,
         "min_qty": 1,
         "max_qty": 1
       },
       {
         "item_type": "fuwa_horn",
-        "chance_bp": 4000,
+        "chance_bp": 5320,
         "min_qty": 1,
         "max_qty": 1
       },
       {
         "item_type": "fuwa_eye",
-        "chance_bp": 4000,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "key_of_tangled_aftermath",
-        "chance_bp": 300,
+        "chance_bp": 2465,
         "min_qty": 1,
         "max_qty": 1
       },
@@ -6501,6 +6776,12 @@
       {
         "item_type": "coiffe_fuwa__black",
         "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "fleecehorn_bow",
+        "chance_bp": 37,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -6635,19 +6916,19 @@
     "loot": [
       {
         "item_type": "fuwa_hide",
-        "chance_bp": 8000,
+        "chance_bp": 8260,
         "min_qty": 1,
         "max_qty": 2
       },
       {
         "item_type": "fuwa_horn",
-        "chance_bp": 8000,
+        "chance_bp": 7695,
         "min_qty": 1,
         "max_qty": 2
       },
       {
         "item_type": "fuwa_eye",
-        "chance_bp": 8000,
+        "chance_bp": 8935,
         "min_qty": 1,
         "max_qty": 2
       },
@@ -6656,15 +6937,601 @@
         "chance_bp": 10000,
         "min_qty": 1,
         "max_qty": 1
+      }
+    ],
+    "xp": 9000
+  },
+  {
+    "mob_type": "fuwa__venom",
+    "name": "Venom Fuwa",
+    "element": "air",
+    "role": "normal",
+    "family": "fuwa",
+    "level_min": 10,
+    "level_max": 20,
+    "hp": 120,
+    "ap": 6,
+    "mp": 4,
+    "agility": 70,
+    "wisdom": 90,
+    "resistances": {
+      "earth": 32768,
+      "fire": 32758,
+      "water": 32773,
+      "air": 32783
+    },
+    "spells": [
+      {
+        "name": "Venomous Charge",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 2,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "air",
+                "value": 20,
+                "value_max": 28,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 5,
+                "element": "air",
+                "value": 5,
+                "value_max": 8,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 12
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
       },
       {
-        "item_type": "key_of_tangled_aftermath",
-        "chance_bp": 8000,
+        "name": "Toxic Fleece",
+        "levels": [
+          {
+            "ap_cost": 2,
+            "range_min": 0,
+            "range_max": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 4,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 14,
+                "element": "air",
+                "value": 12,
+                "value_max": 18,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 4,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "venomwool",
+        "chance_bp": 6500,
         "min_qty": 1,
         "max_qty": 2
       }
     ],
-    "xp": 9000
+    "xp": 2600
+  },
+  {
+    "mob_type": "fuwa__magma",
+    "name": "Magma Fuwa",
+    "element": "fire",
+    "role": "normal",
+    "family": "fuwa",
+    "level_min": 18,
+    "level_max": 30,
+    "hp": 190,
+    "ap": 7,
+    "mp": 3,
+    "agility": 60,
+    "wisdom": 70,
+    "resistances": {
+      "earth": 32773,
+      "fire": 32793,
+      "water": 32753,
+      "air": 32768
+    },
+    "spells": [
+      {
+        "name": "Magma Ram",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "fire",
+                "value": 35,
+                "value_max": 48,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 8,
+                "element": "",
+                "value": 2,
+                "value_max": 2,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Molten Fleece",
+        "levels": [
+          {
+            "ap_cost": 3,
+            "range_min": 0,
+            "range_max": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 4,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 4,
+                "element": "fire",
+                "value": 14,
+                "value_max": 20,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 4,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 11
+              },
+              {
+                "kind": 15,
+                "element": "",
+                "value": 7,
+                "value_max": 10,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 4,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "cinderfleece",
+        "chance_bp": 6500,
+        "min_qty": 1,
+        "max_qty": 2
+      }
+    ],
+    "xp": 5200
+  },
+  {
+    "mob_type": "fuwa__dread",
+    "name": "Dread Fuwa",
+    "element": "air",
+    "role": "normal",
+    "family": "fuwa",
+    "level_min": 27,
+    "level_max": 45,
+    "hp": 280,
+    "ap": 8,
+    "mp": 4,
+    "agility": 160,
+    "wisdom": 180,
+    "resistances": {
+      "earth": 32753,
+      "fire": 32773,
+      "water": 32773,
+      "air": 32798
+    },
+    "spells": [
+      {
+        "name": "Dread Ram",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 2,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "air",
+                "value": 45,
+                "value_max": 62,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 6,
+                "element": "",
+                "value": 12,
+                "value_max": 18,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 3
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Evil Eye",
+        "levels": [
+          {
+            "ap_cost": 3,
+            "range_min": 2,
+            "range_max": 6,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 1,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "water",
+                "value": 25,
+                "value_max": 35,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 5,
+                "element": "",
+                "value": 1,
+                "value_max": 1,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 1,
+                "stat": 7
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "dreadwool",
+        "chance_bp": 6500,
+        "min_qty": 1,
+        "max_qty": 2
+      }
+    ],
+    "xp": 9500
+  },
+  {
+    "mob_type": "fuwa__royal",
+    "name": "Royal Fuwa",
+    "element": "earth",
+    "role": "boss",
+    "family": "fuwa",
+    "level_min": 40,
+    "level_max": 55,
+    "hp": 1400,
+    "ap": 9,
+    "mp": 4,
+    "agility": 180,
+    "wisdom": 200,
+    "resistances": {
+      "earth": 32803,
+      "fire": 32778,
+      "water": 32748,
+      "air": 32778
+    },
+    "spells": [
+      {
+        "name": "Sovereign Fleece",
+        "levels": [
+          {
+            "ap_cost": 3,
+            "range_min": 0,
+            "range_max": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 5,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 14,
+                "element": "",
+                "value": 40,
+                "value_max": 55,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 4,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 0
+              },
+              {
+                "kind": 15,
+                "element": "",
+                "value": 12,
+                "value_max": 18,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 4,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Royal Decree",
+        "levels": [
+          {
+            "ap_cost": 3,
+            "range_min": 1,
+            "range_max": 8,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 4,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 20,
+                "element": "",
+                "value": 1,
+                "value_max": 1,
+                "area_shape": 6,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 7
+              },
+              {
+                "kind": 5,
+                "element": "",
+                "value": 20,
+                "value_max": 30,
+                "area_shape": 6,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 8
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Golden Stampede",
+        "levels": [
+          {
+            "ap_cost": 5,
+            "range_min": 1,
+            "range_max": 3,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "earth",
+                "value": 65,
+                "value_max": 90,
+                "area_shape": 7,
+                "area_size": 2,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 8,
+                "element": "",
+                "value": 3,
+                "value_max": 3,
+                "area_shape": 7,
+                "area_size": 2,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Crownfall",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 2,
+            "range_max": 6,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 1,
+            "cooldown_turns": 1,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "earth",
+                "value": 50,
+                "value_max": 70,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 9,
+                "element": "",
+                "value": 2,
+                "value_max": 2,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "golden_fleece",
+        "chance_bp": 10000,
+        "min_qty": 1,
+        "max_qty": 3
+      },
+      {
+        "item_type": "royal_horn",
+        "chance_bp": 10000,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "fuwartunes_favor",
+        "chance_bp": 2,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "rampart_signet",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "ivory_horn_torque",
+        "chance_bp": 30,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "cloudstep_greaves",
+        "chance_bp": 40,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 32000
   },
   {
     "mob_type": "misui__fire",
@@ -6745,7 +7612,32 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "ember_misui_scale",
+        "chance_bp": 7270,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misui_fin",
+        "chance_bp": 3185,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "misui_eye",
+        "chance_bp": 1260,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "misui_razorfins",
+        "chance_bp": 61,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 1000
   },
   {
@@ -6815,7 +7707,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "stone_misui_scale",
+        "chance_bp": 6510,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misui_fin",
+        "chance_bp": 4075,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "misui_eye",
+        "chance_bp": 1830,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 1300
   },
   {
@@ -6909,7 +7820,26 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "gale_misui_scale",
+        "chance_bp": 4460,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misui_fin",
+        "chance_bp": 7165,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "misui_eye",
+        "chance_bp": 990,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 1500
   },
   {
@@ -6982,9 +7912,33 @@
     "loot": [
       {
         "item_type": "water",
-        "chance_bp": 7500,
+        "chance_bp": 7635,
         "min_qty": 1,
         "max_qty": 20
+      },
+      {
+        "item_type": "tide_misui_scale",
+        "chance_bp": 5840,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misui_fin",
+        "chance_bp": 6290,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "misui_eye",
+        "chance_bp": 2735,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "tideglass_oculum",
+        "chance_bp": 89,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 2000
@@ -7174,9 +8128,27 @@
     "loot": [
       {
         "item_type": "water",
-        "chance_bp": 5000,
+        "chance_bp": 4970,
         "min_qty": 1,
         "max_qty": 20
+      },
+      {
+        "item_type": "heart_misui_scale",
+        "chance_bp": 8125,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misui_fin",
+        "chance_bp": 2840,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "misui_eye",
+        "chance_bp": 5120,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 2300
@@ -7337,7 +8309,32 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "tide_misui_scale",
+        "chance_bp": 9130,
+        "min_qty": 2,
+        "max_qty": 3
+      },
+      {
+        "item_type": "misui_fin",
+        "chance_bp": 7425,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misui_eye",
+        "chance_bp": 6640,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "misunami_abyssal_eye",
+        "chance_bp": 10000,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 10033
   },
   {
@@ -7394,7 +8391,44 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "weathered_bone",
+        "chance_bp": 7665,
+        "min_qty": 1,
+        "max_qty": 3
+      },
+      {
+        "item_type": "moka_skull",
+        "chance_bp": 1475,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "rusted_blade_fragment",
+        "chance_bp": 4230,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "mokan",
+        "chance_bp": 83,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "hollowjaw_pendant",
+        "chance_bp": 121,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "gravebrand",
+        "chance_bp": 41,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 700
   },
   {
@@ -7508,7 +8542,995 @@
         ]
       }
     ],
-    "loot": [],
+    "loot": [
+      {
+        "item_type": "weathered_bone",
+        "chance_bp": 5290,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "frayed_bowstring",
+        "chance_bp": 6835,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "gravewalkers",
+        "chance_bp": 93,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
     "xp": 665
+  },
+  {
+    "mob_type": "nook",
+    "name": "Nook",
+    "element": "earth",
+    "role": "normal",
+    "family": "nook",
+    "level_min": 4,
+    "level_max": 10,
+    "hp": 36,
+    "ap": 6,
+    "mp": 4,
+    "agility": 18,
+    "wisdom": 8,
+    "resistances": {
+      "earth": 32768,
+      "fire": 32760,
+      "water": 32768,
+      "air": 32776
+    },
+    "spells": [
+      {
+        "name": "Scavenger Swipe",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "earth",
+                "value": 12,
+                "value_max": 18,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "salvaged_scrap",
+        "chance_bp": 6735,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "shiny_trinket",
+        "chance_bp": 2840,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "trashamulet",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "pull_tab_ring",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "trashcalibur",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lid_splitter",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 750
+  },
+  {
+    "mob_type": "lorito__earth",
+    "name": "Stone Lorito",
+    "element": "earth",
+    "role": "normal",
+    "family": "lorito",
+    "level_min": 3,
+    "level_max": 10,
+    "hp": 32,
+    "ap": 6,
+    "mp": 8,
+    "agility": 24,
+    "wisdom": 12,
+    "resistances": {
+      "earth": 32778,
+      "fire": 32768,
+      "water": 32760,
+      "air": 32768
+    },
+    "spells": [
+      {
+        "name": "Talon Dive",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "earth",
+                "value": 11,
+                "value_max": 17,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "lorito_feather",
+        "chance_bp": 5835,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "beak_shard",
+        "chance_bp": 4220,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_down",
+        "chance_bp": 1765,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_hat__strength",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_cloak__strength",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_gilded_lorito",
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "siluri",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 600
+  },
+  {
+    "mob_type": "lorito__fire",
+    "name": "Magma Lorito",
+    "element": "fire",
+    "role": "normal",
+    "family": "lorito",
+    "level_min": 3,
+    "level_max": 10,
+    "hp": 32,
+    "ap": 6,
+    "mp": 8,
+    "agility": 24,
+    "wisdom": 12,
+    "resistances": {
+      "earth": 32768,
+      "fire": 32778,
+      "water": 32768,
+      "air": 32760
+    },
+    "spells": [
+      {
+        "name": "Talon Dive",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "fire",
+                "value": 11,
+                "value_max": 17,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "lorito_feather",
+        "chance_bp": 7160,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "beak_shard",
+        "chance_bp": 2875,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_down",
+        "chance_bp": 3940,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_hat__intelligence",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_cloak__intelligence",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_gilded_lorito",
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "siluri",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 600
+  },
+  {
+    "mob_type": "lorito__water",
+    "name": "Lorito Nakwa",
+    "element": "water",
+    "role": "normal",
+    "family": "lorito",
+    "level_min": 3,
+    "level_max": 10,
+    "hp": 32,
+    "ap": 6,
+    "mp": 8,
+    "agility": 24,
+    "wisdom": 12,
+    "resistances": {
+      "earth": 32768,
+      "fire": 32760,
+      "water": 32778,
+      "air": 32768
+    },
+    "spells": [
+      {
+        "name": "Talon Dive",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "water",
+                "value": 11,
+                "value_max": 17,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "lorito_feather",
+        "chance_bp": 6475,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "beak_shard",
+        "chance_bp": 4385,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_down",
+        "chance_bp": 2190,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_hat__chance",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_cloak__chance",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_gilded_lorito",
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "siluri",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 600
+  },
+  {
+    "mob_type": "lorito__air",
+    "name": "Gale Lorito",
+    "element": "air",
+    "role": "normal",
+    "family": "lorito",
+    "level_min": 3,
+    "level_max": 10,
+    "hp": 32,
+    "ap": 6,
+    "mp": 8,
+    "agility": 24,
+    "wisdom": 12,
+    "resistances": {
+      "earth": 32760,
+      "fire": 32768,
+      "water": 32768,
+      "air": 32778
+    },
+    "spells": [
+      {
+        "name": "Talon Dive",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "air",
+                "value": 11,
+                "value_max": 17,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "lorito_feather",
+        "chance_bp": 5290,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "beak_shard",
+        "chance_bp": 3665,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_down",
+        "chance_bp": 4725,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_hat__agility",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_cloak__agility",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_gilded_lorito",
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "siluri",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 600
+  },
+  {
+    "mob_type": "bramble",
+    "name": "Bramble",
+    "element": "air",
+    "role": "normal",
+    "family": "bramble",
+    "level_min": 1,
+    "level_max": 8,
+    "hp": 30,
+    "ap": 6,
+    "mp": 8,
+    "agility": 28,
+    "wisdom": 6,
+    "resistances": {
+      "earth": 32760,
+      "fire": 32768,
+      "water": 32768,
+      "air": 32778
+    },
+    "spells": [
+      {
+        "name": "Bramble Kick",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "air",
+                "value": 12,
+                "value_max": 18,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "rabbit_pelt",
+        "chance_bp": 7485,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "rabbit_sinew",
+        "chance_bp": 3175,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "bin_kickers",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "wasteband",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 520
+  },
+  {
+    "mob_type": "tinker",
+    "name": "Tinker",
+    "element": "air",
+    "role": "normal",
+    "family": "tinker",
+    "level_min": 2,
+    "level_max": 9,
+    "hp": 28,
+    "ap": 7,
+    "mp": 5,
+    "agility": 18,
+    "wisdom": 10,
+    "resistances": {
+      "earth": 32760,
+      "fire": 32768,
+      "water": 32768,
+      "air": 32778
+    },
+    "spells": [
+      {
+        "name": "Poisoned Acorn",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 3,
+            "range_max": 7,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "air",
+                "value": 8,
+                "value_max": 12,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 5,
+                "element": "air",
+                "value": 3,
+                "value_max": 5,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 12
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Resin Breaker",
+        "levels": [
+          {
+            "ap_cost": 3,
+            "range_min": 2,
+            "range_max": 6,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 0,
+            "casts_per_target": 1,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 5,
+                "element": "",
+                "value": 5,
+                "value_max": 8,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 2,
+                "stat": 11
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "gnawed_branch",
+        "chance_bp": 5820,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "tree_resin",
+        "chance_bp": 4615,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "refuse_recurve",
+        "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "resin_seal_ring",
+        "chance_bp": 101,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 560
+  },
+  {
+    "mob_type": "golden_lorito",
+    "name": "Golden Lorito",
+    "element": "fire",
+    "role": "boss",
+    "family": "lorito",
+    "level_min": 10,
+    "level_max": 20,
+    "hp": 500,
+    "ap": 7,
+    "mp": 9,
+    "agility": 150,
+    "wisdom": 100,
+    "resistances": {
+      "earth": 32780,
+      "fire": 32780,
+      "water": 32758,
+      "air": 32774
+    },
+    "spells": [
+      {
+        "name": "Gilded Hush",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 0,
+            "range_max": 0,
+            "modifiable_range": false,
+            "line_of_sight": false,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 5,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 5,
+                "element": "",
+                "value": 10,
+                "value_max": 15,
+                "area_shape": 6,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 3,
+                "stat": 9
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Solar Quill",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 8,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "fire",
+                "value": 36,
+                "value_max": 55,
+                "area_shape": 3,
+                "area_size": 2,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "golden_lorito_feather",
+        "chance_bp": 8145,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "gilded_talon",
+        "chance_bp": 6275,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "lorito_hat__golden",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "lorito_cloak__golden",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "sun_eyed_lorito",
+        "chance_bp": 2,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 9000
+  },
+  {
+    "mob_type": "wild_boar",
+    "name": "Wild Boar",
+    "element": "earth",
+    "role": "normal",
+    "family": "boar",
+    "level_min": 11,
+    "level_max": 25,
+    "hp": 155,
+    "ap": 6,
+    "mp": 4,
+    "agility": 250,
+    "wisdom": 18,
+    "resistances": {
+      "earth": 32792,
+      "fire": 32775,
+      "water": 32772,
+      "air": 32750
+    },
+    "spells": [
+      {
+        "name": "Tusk Ram",
+        "levels": [
+          {
+            "ap_cost": 4,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 0,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "earth",
+                "value": 30,
+                "value_max": 42,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 8,
+                "element": "",
+                "value": 4,
+                "value_max": 4,
+                "area_shape": 0,
+                "area_size": 0,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      },
+      {
+        "name": "Mud Stomp",
+        "levels": [
+          {
+            "ap_cost": 2,
+            "range_min": 1,
+            "range_max": 1,
+            "modifiable_range": false,
+            "line_of_sight": true,
+            "line_launch": false,
+            "free_cell": false,
+            "casts_per_turn": 1,
+            "casts_per_target": 0,
+            "cooldown_turns": 2,
+            "crit_1_in": 0,
+            "effects": [
+              {
+                "kind": 0,
+                "element": "earth",
+                "value": 9,
+                "value_max": 13,
+                "area_shape": 1,
+                "area_size": 1,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              },
+              {
+                "kind": 8,
+                "element": "",
+                "value": 1,
+                "value_max": 1,
+                "area_shape": 1,
+                "area_size": 1,
+                "target_filter": 1,
+                "chance_bp": 10000,
+                "turns": 0,
+                "stat": 0
+              }
+            ],
+            "crit_effects": []
+          }
+        ]
+      }
+    ],
+    "loot": [
+      {
+        "item_type": "wild_boar_hide",
+        "chance_bp": 6325,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "boar_tusk",
+        "chance_bp": 2870,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "coarse_bristles",
+        "chance_bp": 7765,
+        "min_qty": 1,
+        "max_qty": 3
+      },
+      {
+        "item_type": "tuskward_fetish",
+        "chance_bp": 97,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "boar_tusk_glaive",
+        "chance_bp": 31,
+        "min_qty": 1,
+        "max_qty": 1
+      }
+    ],
+    "xp": 5500
   }
 ]

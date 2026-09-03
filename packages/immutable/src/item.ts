@@ -72,7 +72,13 @@ export const craft_batch_limit = (category: string): number =>
 export const element_names = Object.freeze(['earth', 'fire', 'water', 'air'] as const)
 export type ElementName = (typeof element_names)[number]
 
-export const character_consumable_types = Object.freeze(['heal', 'reset_stats', 'reset_spells', 'recall'] as const)
+export const character_consumable_types = Object.freeze([
+  'heal',
+  'reset_stats',
+  'reset_spells',
+  'recall',
+  'city',
+] as const)
 export type CharacterConsumableType = (typeof character_consumable_types)[number]
 
 export const consumable_types = Object.freeze([...character_consumable_types, 'loot_box'] as const)

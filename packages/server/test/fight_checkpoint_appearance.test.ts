@@ -18,6 +18,8 @@ test('fight hydration carries remote wearables and immutable wager terms', async
             fight: node({
               id: '0xfight',
               world: 'nauvis',
+              dungeon: 'tangled_aftermath',
+              dungeon_room: 2,
               phase: 'placement',
               machine: JSON.stringify({
                 fighters: [{ kind: { player: { character: '0xcharacter', owner: '0xowner', level: 10 } } }],
@@ -53,4 +55,5 @@ test('fight hydration carries remote wearables and immutable wager terms', async
     cloak: 'cape_fuwa_black',
   })
   expect(checkpoint?.kolizeum).toEqual({ id: '0xkolizeum', pledge_mist: '200000000' })
+  expect(checkpoint?.contract).toMatchObject({ dungeon: 'tangled_aftermath', dungeon_room: 2 })
 })

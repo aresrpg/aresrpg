@@ -22,7 +22,6 @@ import { is_rune } from '../characters/forge_eligibility.ts'
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 
 const RETRY_COOLDOWN_MS = 30_000
-const wait = (delay_ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, delay_ms))
 /** the indexer projects a yield a beat after finality — one per-item request covers it */
 
 /** template id → item_type over the authored catalog — PURE derivation, zero chain reads. */
@@ -107,7 +106,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       claim_id: claim.id,
       runes,
       custody,
-      pause: wait,
     })
     pending_crush_results.set(claim.id, Object.freeze({ digest, item_ids, previous_amounts }))
     dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })

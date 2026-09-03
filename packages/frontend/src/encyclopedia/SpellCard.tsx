@@ -220,6 +220,18 @@ const SpellEffects = ({
   </>
 )
 
+const SpellArt = ({
+  visible,
+  name,
+  classe,
+  spell_name,
+}: Readonly<{ visible: boolean; name: string; classe: string; spell_name: string }>) =>
+  visible ? (
+    <span className="contents" data-spell-art="">
+      <EntityIcon label={name} size="size-18" src={spell_icon(classe, spell_name)} />
+    </span>
+  ) : null
+
 export const SpellCard = ({
   spell,
   text = english,
@@ -228,6 +240,7 @@ export const SpellCard = ({
   small = false,
   effects_footer,
   display_name,
+  show_icon,
 }: Readonly<{
   spell: SpellCardSpell
   text?: EncyclopediaText
@@ -236,6 +249,7 @@ export const SpellCard = ({
   small?: boolean
   effects_footer?: EffectsFooter
   display_name?: string
+  show_icon?: boolean
 }>) => {
   const [level_index, set_level_index] = useState(Math.max(0, initial_level - 1))
   const safe_index = Math.min(level_index, spell.levels.length - 1)
@@ -274,8 +288,8 @@ export const SpellCard = ({
 
   return (
     <article className="mx-auto w-full max-w-3xl space-y-4" data-spell-detail-card="">
-      <header className="flex min-h-20 items-center gap-4">
-        <EntityIcon label={name} size="size-18" src={spell_icon(spell.classe, spell.name)} />
+      <header className="flex items-center gap-4">
+        <SpellArt classe={spell.classe} name={name} spell_name={spell.name} visible={show_icon !== false} />
         <div className="min-w-0 flex-1">
           <InlineField
             class_name="block max-w-full"

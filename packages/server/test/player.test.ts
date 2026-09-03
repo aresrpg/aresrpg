@@ -23,21 +23,9 @@ const wire = () => {
       if (cypher.includes('WHERE c.owner IS NOT NULL'))
         return [{ character_id: params?.character_id, name: 'nox', owner: '0xowner' }]
       if (cypher.includes(':FRIEND')) return [{ address: '0xpal', characters: ['nyx'] }]
-      if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER')) return []
-      if (cypher.includes('MATCH (s:Sale)'))
-        return [
-          {
-            sale: {
-              properties: {
-                item_type: 'berserk',
-                price: '220000000000',
-                supply: '76',
-                infinite: false,
-                enabled: true,
-              },
-            },
-          },
-        ]
+      if (cypher.includes('HOLDS_CLAIM')) return []
+      if (cypher.includes('HOLDS_VOUCHER'))
+        return [{ giftcard: { properties: { id: '0xgift', template: '0xtemplate', amount: 1 } } }]
       if (cypher.includes('MATCH (a:Airdrop)'))
         return [
           {
@@ -90,7 +78,6 @@ const wire = () => {
       analytics_counts: async (keys: readonly string[]) => keys.map(() => 0),
       analytics_sums: async (keys: readonly string[]) => keys.map(() => 0),
       analytics_cumulative_counts: async (_key: string, maxes: readonly number[]) => [...maxes.map(() => 0), 0],
-      shop_sales: async () => [],
     },
     mesh: {
       ...bus,
@@ -120,7 +107,7 @@ describe('the player harness (push model)', () => {
     await flush()
     expect(
       queries
-        .filter(({ cypher }) => !cypher.includes('MATCH (s:Sale)') && !cypher.includes('MATCH (a:Airdrop)'))
+        .filter(({ cypher }) => !cypher.includes('MATCH (a:Airdrop)'))
         .every(({ params }) => params?.address === '0xme')
     ).toBe(true)
     const types = sent.map((packet) => packet.type)
@@ -132,14 +119,17 @@ describe('the player harness (push model)', () => {
       'packet/giftcards',
       'packet/listings',
       'packet/trades',
-      'packet/shop_state',
+      'packet/airdrop_state',
     ] as const)
       expect(types).toContain(expected)
     expect(types.indexOf('packet/listings')).toBeLessThan(types.indexOf('packet/characters'))
-    expect(sent.find((packet) => packet.type === 'packet/shop_state')).toEqual({
-      type: 'packet/shop_state',
-      sales: [{ item_type: 'berserk', price: '220000000000', supply: '76', infinite: false, enabled: true }],
+    expect(sent.find((packet) => packet.type === 'packet/airdrop_state')).toEqual({
+      type: 'packet/airdrop_state',
       airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
+    })
+    expect(sent.find((packet) => packet.type === 'packet/giftcards')).toEqual({
+      type: 'packet/giftcards',
+      giftcards: [{ id: '0xgift', template: '0xtemplate', amount: 1 }],
     })
   })
 
@@ -260,6 +250,19 @@ describe('the player harness (push model)', () => {
     })
   })
 
+  test('a game session can inspect a separately connected holder wallet', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    player.on_message(JSON.stringify({ type: 'packet/airdrop_eligibility_request', address: '0xpal' }))
+    await flush()
+    expect(sent).toContainEqual({
+      type: 'packet/airdrop_eligibility',
+      address: '0xpal',
+      airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
+    })
+  })
+
   test('all correlated requests share the injected global limiter', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const request_limiter = create_request_limiter({ capacity: 1 })
@@ -353,6 +356,43 @@ describe('the player harness (push model)', () => {
       { type: 'packet/item_removed', item: '0xburned' },
       { type: 'packet/item_removed', item: '0xforeign' },
     ])
+    player.on_close()
+  })
+
+  test('a characterless buyer discovers the personal kiosk created by its first purchase', async () => {
+    const { pubsub } = wire()
+    const sent: ServerPacket[] = []
+    const ws = { send: (raw: string) => sent.push(JSON.parse(raw)), close: () => 0 }
+    let purchased = false
+    const graph = {
+      read: async (cypher: string, params?: Record<string, unknown>) => {
+        if (cypher.includes('OWNS]->(k:Kiosk) RETURN k.id')) return purchased ? [{ kiosk: '0xnew-kiosk' }] : []
+        if (cypher.includes('HOLDS]->(i:Item {id:'))
+          return [
+            {
+              item: { properties: { id: params?.id, name: 'Fuwa Horn', item_type: 'fuwa_horn' } },
+              kiosk: '0xnew-kiosk',
+            },
+          ]
+        return []
+      },
+      close: async () => {},
+    }
+    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    purchased = true
+
+    pubsub.emitter.emit('evt:economy', {
+      type: 'ItemWritten',
+      data: { item: '0xhorn', holder: '0xnew-kiosk' },
+    })
+    await flush()
+    await flush()
+
+    expect(sent).toContainEqual({
+      type: 'packet/item_updated',
+      item: expect.objectContaining({ id: '0xhorn', kiosk: '0xnew-kiosk' }),
+    })
     player.on_close()
   })
 })

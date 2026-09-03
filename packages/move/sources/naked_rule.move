@@ -25,9 +25,9 @@ public fun add(policy: &mut TransferPolicy<Character>, cap: &TransferPolicyCap<C
 }
 
 /// The marketplace sale law's one home.
-fun assert_sellable(chr: &Character) {
-  assert!(!equipment::has_any_equipped(chr), ENotNaked);
-  assert!(chr.level() >= MIN_SALE_LEVEL, ELevelTooLow);
+fun assert_sellable(character: &Character) {
+  assert!(!equipment::has_any_equipped(character), ENotNaked);
+  assert!(character.level() >= MIN_SALE_LEVEL, ELevelTooLow);
 }
 
 /// Buyer: borrow the character just locked into YOUR kiosk and prove it qualifies for sale.
@@ -39,4 +39,4 @@ public fun prove(purchased: &Character, request: &mut TransferRequest<Character>
 }
 
 #[test_only]
-public(package) fun assert_sellable_for_testing(chr: &Character) { assert_sellable(chr); }
+public(package) fun assert_sellable_for_testing(character: &Character) { assert_sellable(character); }

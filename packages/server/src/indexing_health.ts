@@ -5,6 +5,24 @@
 
 export const INDEXED_CHECKPOINT_KEY = 'idx:checkpoint:latest'
 
+export type IndexedState = Readonly<{ sequence_number: number; epoch: string }>
+export type IndexingHealth = Readonly<{ lag: number | null; epoch: string | null }>
+
+export const parse_indexed_state = (raw: string | null): IndexedState | null => {
+  if (raw === null) return null
+  const value: unknown = JSON.parse(raw)
+  if (typeof value !== 'object' || value === null) return null
+  const { sequence_number, epoch } = value as { sequence_number?: unknown; epoch?: unknown }
+  const invalid = [
+    !Number.isSafeInteger(sequence_number),
+    Number(sequence_number) < 0,
+    !['number', 'string'].includes(typeof epoch),
+    !/^\d+$/.test(String(epoch)),
+  ].some(Boolean)
+  if (invalid) return null
+  return Object.freeze({ sequence_number: Number(sequence_number), epoch: String(epoch) })
+}
+
 export const parse_indexed_checkpoint = (raw: string | null): number | null => {
   if (raw === null) return null
   const value: unknown = JSON.parse(raw)
@@ -20,33 +38,36 @@ export const checkpoint_lag = (chain_checkpoint: number, indexed_checkpoint: num
 
 type IndexingHealthOptions = Readonly<{
   chain_checkpoint: () => Promise<number>
-  indexed_checkpoint: () => Promise<number | null>
+  indexed_state: () => Promise<IndexedState | null>
   now?: () => number
   cache_ms?: number
 }>
 
 export const create_indexing_health = ({
   chain_checkpoint,
-  indexed_checkpoint,
+  indexed_state,
   now = Date.now,
   cache_ms = 4_000,
-}: IndexingHealthOptions): (() => Promise<number | null>) => {
-  let cached: Readonly<{ at_ms: number; lag: number | null }> | null = null
-  let pending: Promise<number | null> | null = null
+}: IndexingHealthOptions): (() => Promise<IndexingHealth>) => {
+  let cached: Readonly<{ at_ms: number; health: IndexingHealth }> | null = null
+  let pending: Promise<IndexingHealth> | null = null
 
   return async () => {
     const at_ms = now()
-    if (cached && at_ms - cached.at_ms < cache_ms) return cached.lag
+    if (cached && at_ms - cached.at_ms < cache_ms) return cached.health
     if (pending) return pending
 
-    const request = Promise.all([chain_checkpoint(), indexed_checkpoint()]).then(([chain, indexed]) =>
-      indexed === null ? null : checkpoint_lag(chain, indexed)
+    const request = Promise.all([chain_checkpoint(), indexed_state()]).then(([chain, indexed]) =>
+      Object.freeze({
+        lag: indexed === null ? null : checkpoint_lag(chain, indexed.sequence_number),
+        epoch: indexed?.epoch ?? null,
+      })
     )
     pending = request
     try {
-      const lag = await request
-      cached = Object.freeze({ at_ms: now(), lag })
-      return lag
+      const health = await request
+      cached = Object.freeze({ at_ms: now(), health })
+      return health
     } finally {
       if (pending === request) pending = null
     }

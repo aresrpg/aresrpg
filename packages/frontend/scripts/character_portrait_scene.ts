@@ -19,9 +19,8 @@ import {
 } from 'three'
 
 import { create_character_model } from '../../engine/src/character_model.ts'
-import { character_model_basenames } from '../src/content/character_model_catalog.ts'
+import { authored_character_model_classes, character_model_basenames } from '../src/content/character_model_catalog.ts'
 
-const PORTRAIT_CLASSES = Object.freeze(['senshi', 'shugo', 'tomoda', 'yajin'] as const)
 const PORTRAIT_SIZE = 500
 
 const blob_of = (canvas: HTMLCanvasElement): Promise<Blob> =>
@@ -35,7 +34,7 @@ const blob_of = (canvas: HTMLCanvasElement): Promise<Blob> =>
 
 const next_frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()))
 
-const render_portrait = async (classe: (typeof PORTRAIT_CLASSES)[number], male: boolean): Promise<void> => {
+const render_portrait = async (classe: string, male: boolean): Promise<void> => {
   const model_names = character_model_basenames(classe, male)
   const model = await create_character_model({
     body_url: `/seed/models/characters/${model_names.body}.glb`,
@@ -97,7 +96,8 @@ const render_portrait = async (classe: (typeof PORTRAIT_CLASSES)[number], male: 
 }
 
 const run = async (): Promise<void> => {
-  for (const classe of PORTRAIT_CLASSES) for (const male of [true, false]) await render_portrait(classe, male)
+  for (const classe of authored_character_model_classes)
+    for (const male of [true, false]) await render_portrait(classe, male)
   document.body.dataset.portraitsComplete = 'true'
 }
 

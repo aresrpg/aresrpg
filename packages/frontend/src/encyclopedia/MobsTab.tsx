@@ -21,6 +21,7 @@ import {
   Section,
 } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
+import { EncyclopediaItemIcon } from './EncyclopediaItemIcon.tsx'
 import { SpellCard } from './SpellCard.tsx'
 
 const LEVEL_BRACKETS = Object.freeze([
@@ -31,11 +32,20 @@ const LEVEL_BRACKETS = Object.freeze([
   { label: '121+', minimum: 121, maximum: Number.POSITIVE_INFINITY },
 ])
 
+type MobLootRow = NonNullable<ReturnType<typeof encyclopedia_catalog.mob>>['loot'][number]
+const mob_loot_view = ({ drop, item }: MobLootRow) =>
+  Object.freeze({
+    chance: drop.chance_bp / 100,
+    quantity: drop.min_qty === drop.max_qty ? `×${drop.min_qty}` : `×${drop.min_qty}–${drop.max_qty}`,
+    category: item?.category ?? '',
+    name: item?.name ?? titleize(drop.item_type),
+  })
+
 const mob_facet_options = (text: EncyclopediaText): readonly FacetOption[] =>
   encyclopedia_catalog.mob_filters.map((row, index) => {
     const previous = encyclopedia_catalog.mob_filters[index - 1]
     const section =
-      row.kind === 'world' && previous?.kind !== 'world' && previous?.kind !== 'biome'
+      row.kind === 'world' && previous?.kind !== 'world' && !previous?.parent
         ? text('worlds_tab')
         : row.kind === 'family' && previous?.kind !== 'family'
           ? text('all_families')
@@ -44,11 +54,11 @@ const mob_facet_options = (text: EncyclopediaText): readonly FacetOption[] =>
             : undefined
     return Object.freeze({
       value: `${row.kind}:${row.id}`,
-      label: titleize(row.kind === 'biome' ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
+      label: titleize(row.parent ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
       count: row.count,
       color: row.kind === 'element' ? element_colors[row.id] : undefined,
       section,
-      indent: row.kind === 'biome',
+      indent: Boolean(row.parent),
     })
   })
 
@@ -209,49 +219,13 @@ export const MobsTab = ({
             })}
           </div>
         </Section>
-        {detail.mob.spells.length > 0 && (
-          <Section title={text('mob_spells')}>
-            <div className="border border-border" data-mob-spell-tabs="">
-              <div className="flex min-w-0 overflow-x-auto border-b border-border bg-black/15" role="tablist">
-                {detail.mob.spells.map((spell, index) => (
-                  <button
-                    aria-selected={index === spell_index}
-                    className={`shrink-0 border-b-2 px-4 py-2.5 text-[9px] tracking-[0.08em] uppercase ${index === spell_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#6b7280] hover:text-[#a9a49a]'}`}
-                    key={`${spell.name}-${index}`}
-                    onClick={() => set_spell_index(index)}
-                    role="tab"
-                    type="button"
-                  >
-                    {spell.name}
-                  </button>
-                ))}
-              </div>
-              <div className="min-w-0 p-4">
-                {selected_spell && (
-                  <SpellCard
-                    key={selected_spell.name}
-                    spell={{
-                      classe: detail.mob.mob_type,
-                      levels: selected_spell.levels,
-                      name: selected_spell.name,
-                      unlock_level: 1,
-                    }}
-                    text={text}
-                  />
-                )}
-              </div>
-            </div>
-          </Section>
-        )}
         <Section title={text('gameplay.section_loot')}>
           {detail.loot.length === 0 ? (
             <p className="text-[9px] italic text-[#6b7280]">{text('no_drops')}</p>
           ) : (
             <div className="flex flex-col gap-1">
               {detail.loot.map(({ drop, item }) => {
-                const chance = drop.chance_bp / 100
-                const quantity = drop.min_qty === drop.max_qty ? `×${drop.min_qty}` : `×${drop.min_qty}–${drop.max_qty}`
-                const category = item?.category ?? ''
+                const { chance, quantity, category, name } = mob_loot_view({ drop, item })
                 return (
                   <button
                     className="flex cursor-pointer flex-col bg-white/2 px-2 py-1.5 text-left hover:bg-[#c8963c]/8"
@@ -261,9 +235,8 @@ export const MobsTab = ({
                   >
                     <span className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate text-[10px] text-[#e8e4dc]">
-                          {item?.name ?? titleize(drop.item_type)}
-                        </span>
+                        <EncyclopediaItemIcon item_type={drop.item_type} label={name} />
+                        <span className="truncate text-[10px] text-[#e8e4dc]">{name}</span>
                         {category && (
                           <span
                             className="shrink-0 text-[8px] tracking-wide uppercase"
@@ -316,6 +289,41 @@ export const MobsTab = ({
                   </button>
                 )
               })}
+            </div>
+          </Section>
+        )}
+        {detail.mob.spells.length > 0 && (
+          <Section title={text('mob_spells')}>
+            <div className="border border-border" data-mob-spell-tabs="">
+              <div className="flex min-w-0 overflow-x-auto border-b border-border bg-black/15" role="tablist">
+                {detail.mob.spells.map((spell, index) => (
+                  <button
+                    aria-selected={index === spell_index}
+                    className={`shrink-0 border-b-2 px-4 py-2.5 text-[9px] tracking-[0.08em] uppercase ${index === spell_index ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#6b7280] hover:text-[#a9a49a]'}`}
+                    key={`${spell.name}-${index}`}
+                    onClick={() => set_spell_index(index)}
+                    role="tab"
+                    type="button"
+                  >
+                    {spell.name}
+                  </button>
+                ))}
+              </div>
+              <div className="min-w-0 p-4">
+                {selected_spell && (
+                  <SpellCard
+                    key={selected_spell.name}
+                    show_icon={false}
+                    spell={{
+                      classe: detail.mob.mob_type,
+                      levels: selected_spell.levels,
+                      name: selected_spell.name,
+                      unlock_level: 1,
+                    }}
+                    text={text}
+                  />
+                )}
+              </div>
             </div>
           </Section>
         )}

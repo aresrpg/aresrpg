@@ -6,7 +6,7 @@ import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import type { Sdk } from '../src/client.ts'
 import { create_seed_plan, recipe_door_args, type SeedContent } from '../src/seed.ts'
-import { board_catalog_id, item_template_id, world_content_id, world_id } from '../src/seed_ids.ts'
+import { board_catalog_id, item_template_id, mob_template_id, world_content_id, world_id } from '../src/seed_ids.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
 
 const REGISTRY = `0x${'11'.repeat(32)}`
@@ -39,8 +39,9 @@ const content: SeedContent = {
   spells: [],
   mobs: [],
   recipes: [],
+  dungeons: [],
   worlds: [],
-  shop: { sales: [] },
+  mastery: { offers: [] },
   airdrop: {
     drops: [{ id: 'launch', item_type: 'ore', amount_each: 2, whitelist: [`0x${'44'.repeat(32)}`] }],
     giftcards: [{ id: 'press', item_type: 'ore', amount: 3, custody: `0x${'55'.repeat(32)}` }],
@@ -123,6 +124,13 @@ describe('seed plan', () => {
     expect(plan.batches.filter(({ phase }) => phase === 'items')).toHaveLength(2)
   })
 
+  test('mastery offers publish only after their referenced item exists', () => {
+    const plan = create_seed_plan(sdk, { ...content, mastery: { offers: [{ item_type: 'ore', cost: 5 }] } })
+    const [offer] = plan.batches.filter(({ phase }) => phase === 'mastery_offers')
+    expect(offer?.dependencies).toHaveLength(1)
+    expect(plan.batches.indexOf(offer!)).toBeGreaterThan(plan.batches.findIndex(({ phase }) => phase === 'items'))
+  })
+
   test('interns repeated pure values inside one generated transaction', () => {
     const seeded = game()
     seeded.cache.owned.set(REGISTRY, { objectId: REGISTRY, version: '1', digest: 'digest' })
@@ -148,9 +156,10 @@ describe('seed plan', () => {
         {
           world: 'nauvis',
           entry_level: 1,
+          archis: [{ ordinary_type: 'fuwa', archi_type: 'fukuo' }],
+          cities: [],
           mobs: [],
           resources: [],
-          dungeon: { key: '', rooms: [] },
         },
       ],
     })
@@ -167,23 +176,10 @@ describe('seed plan', () => {
       world_id(root, PACKAGE, 'nauvis'),
     ])
     expect(calls).toContain('world_content::create')
+    expect(calls).toContain('world_content::set_archi_rows')
+    expect(calls).toContain('world_map::new_archi_row')
     expect(calls).toContain('world::create')
-  })
-
-  test('seeds authored SUI shop prices as MIST', () => {
-    const seeded = game()
-    const template = item_template_id('0xc0'.padEnd(66, '0'), '0x5eed'.padEnd(66, '0'), 'ore')
-    seeded.cache.owned.set(template, { objectId: template, version: '1', digest: 'digest' })
-    const plan = create_seed_plan(seeded, {
-      ...content,
-      shop: { sales: [{ item_type: 'ore', price: 5, supply: 8 }] },
-    })
-    const batch = plan.batches.find(({ phase }) => phase === 'sales')
-    const transaction = batch?.build({ admin_cap: ADMIN_CAP, content_root: ADMIN_CAP }, new Set<string>())
-
-    expect(transaction).toBeDefined()
-    expect(pure_u64s(transaction!)).toContain(5_000_000_000n)
-    expect(pure_u64s(transaction!)).not.toContain(5n)
+    expect(batch.dependencies).toContain(mob_template_id(root, seed_original, 'fukuo'))
   })
 
   test('refuses two authored rows that would claim the same derived address', () => {

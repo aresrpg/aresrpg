@@ -27,11 +27,29 @@ export default {
       })
       .catch((error: Error) => log.warn({ address, error: error.message }, 'kiosk census failed'))
 
+    let kiosk_refresh: Promise<void> | null = null
+    const refresh_kiosks = (): Promise<void> => {
+      if (kiosk_refresh) return kiosk_refresh
+      kiosk_refresh = get_kiosks(graph, { address })
+        .then((kiosks) => {
+          for (const kiosk of kiosks) mine.add(kiosk)
+        })
+        .finally(() => {
+          kiosk_refresh = null
+        })
+      return kiosk_refresh
+    }
+    const owns_kiosk = async (kiosk: string): Promise<boolean> => {
+      if (mine.has(kiosk)) return true
+      await refresh_kiosks()
+      return mine.has(kiosk)
+    }
     const push_item = (id: string, previous_holder?: string | null) =>
       get_item_row(graph, { id })
-        .then((item) => {
-          if (item && mine.has(item.kiosk)) send({ type: 'packet/item_updated', item })
-          else if (previous_holder && mine.has(previous_holder)) send({ type: 'packet/item_removed', item: id })
+        .then(async (item) => {
+          if (item && (await owns_kiosk(item.kiosk))) send({ type: 'packet/item_updated', item })
+          else if (previous_holder && (await owns_kiosk(previous_holder)))
+            send({ type: 'packet/item_removed', item: id })
         })
         .catch((error: Error) => log.warn({ id, error: error.message }, 'item stream read failed'))
 

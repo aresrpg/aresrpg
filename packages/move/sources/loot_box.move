@@ -96,7 +96,7 @@ public fun add_loot_reward(
   amount: u32,
   ctx: &TxContext,
 ) {
-  assert!(igb(box_template), ENotBox);
+  assert!(is_gacha_box(box_template), ENotBox);
   assert!(amount > 0, EZeroAmount);
   assert!(amount == 1 || content_rules::is_stackable(&item_rows::template_category(reward_template)), EUnstackableAmount);
   let box_id = item_rows::template_id(box_template);
@@ -129,6 +129,11 @@ public(package) fun has_valid_table(registry: &LootRegistry, box_template: &Item
   registry.tables.contains(box_id) && loot_table::total_weight(registry.tables.borrow(box_id)) > 0
 }
 
+public(package) fun assert_valid_box(registry: &LootRegistry, box_template: &ItemTemplate) {
+  assert!(is_gacha_box(box_template), ENotBox);
+  assert!(has_valid_table(registry, box_template), ENoTable);
+}
+
 // ╔════════════════ [ OPEN — terminal &Random: burn, roll, mint the claim ] ══ ]
 
 /// Burn one box unit and roll its pool into a soulbound claim. Every refusal fires before the burn.
@@ -139,10 +144,10 @@ public(package) fun open_box(
   box_item_id: ID,
   box_template: &ItemTemplate,
   protected_item: &AresRPG_TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  assert!(igb(box_template), ENotBox);
+  assert!(is_gacha_box(box_template), ENotBox);
   let box_tid = item_rows::template_id(box_template);
   assert!(registry.tables.contains(box_tid), ENoTable);
   let entries = *registry.tables.borrow(box_tid); // local copy — no borrow held across the burn
@@ -152,7 +157,7 @@ public(package) fun open_box(
   assert!({ let it: &Item = kiosk.borrow(cap, box_item_id); it.template() } == box_tid, ENotBox);
   item::burn(kiosk, cap, protected_item, box_item_id, 1, ctx);
 
-  let picked = loot_table::pick(&entries, gen.generate_u64_in_range(0, sum - 1));
+  let picked = loot_table::pick(&entries, generator.generate_u64_in_range(0, sum - 1));
   let rolled_template = loot_table::template(&picked);
   let amount = loot_table::amount(&picked);
   let opener = ctx.sender();
@@ -173,12 +178,12 @@ public(package) fun claim_loot(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   item_policy: &TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
   let BoxClaim { id, box_template, rolled_template: rolled_tid, amount } = claim;
   assert!(item_rows::template_id(rolled_template) == rolled_tid, EClaimMismatch);
-  let loot = item::mint(rolled_template, amount, gen, ctx); // any item type — stats roll here if it has ranges
+  let loot = item::mint(rolled_template, amount, generator, ctx); // any item type — stats roll here if it has ranges
   item::deposit(kiosk, cap, item_policy, existing, loot);
   event::emit(LootClaimed { box_template, rolled_template: rolled_tid, amount, opener: ctx.sender() });
   id.delete();
@@ -188,7 +193,7 @@ public(package) fun claim_loot(
 
 // is_gacha_box
 /// A box is a consumable template carrying the typed `LootBox` effect — nothing else opens.
-fun igb(template: &ItemTemplate): bool {
+fun is_gacha_box(template: &ItemTemplate): bool {
   {
     let effect = item_rows::consumable_effect(template);
     effect.is_some() && aresrpg_math::consumable_effect::is_loot_box(effect.borrow())

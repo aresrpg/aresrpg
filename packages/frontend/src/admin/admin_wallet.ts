@@ -92,9 +92,6 @@ export const reduce_admin_wallet = (admin: AdminState, input: AppInput): AdminSt
         session: null,
         error: null,
       }),
-      snapshot: null,
-      status: 'idle',
-      operation: null,
     })
   if (input.type === 'admin/wallet_failed' && ['loading', 'connecting', 'selecting'].includes(admin.wallet.status))
     return Object.freeze({
@@ -111,10 +108,12 @@ export const reduce_admin_wallet = (admin: AdminState, input: AppInput): AdminSt
   return null
 }
 
-export const observe_admin_wallet = (
-  { events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0],
-  invalidate_seed_session: () => void
-): void => {
+export const observe_admin_wallet = ({
+  events,
+  dispatch,
+  get_state,
+  signal,
+}: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let auth: Awaited<ReturnType<typeof import('../auth.ts').create_admin_auth>> | null = null
   let selected_wallet: SelectableAuthWallet | null = null
   let stop_invalidation: (() => void) | null = null
@@ -182,7 +181,6 @@ export const observe_admin_wallet = (
             current.requested_address !== requested_address
           )
             return
-          invalidate_seed_session()
           stop_invalidation?.()
           stop_invalidation =
             session.on_invalidated?.(() => {
@@ -202,7 +200,6 @@ export const observe_admin_wallet = (
     }
     if (wallet.status === 'connecting' && old_wallet.status === 'connected' && old_wallet.session) {
       const request = ++generation
-      invalidate_seed_session()
       stop_invalidation?.()
       stop_invalidation = null
       selected_wallet = null

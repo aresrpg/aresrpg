@@ -4,10 +4,9 @@
    deterministic command boundary (the validator carries the same exemption); splitting the
    phases apart forces six shared helpers into a cyclic module. */
 // Pure seed data → generated Move calls. Content stays outside the SDK; this module only knows
-// the writer schema and deterministic batching law used by the admin page.
+// the writer schema and deterministic batching law used by trusted release tooling.
 
 import type { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
-import { MIST_PER_SUI } from '@mysten/sui/utils'
 import { craft_job_of, craft_max_ingredients, item_stat_center, stat_names, type StatName } from '@aresrpg/immutable'
 
 import { bind_doors, type BoundDoors, type Resolvable, type Sdk } from './client.ts'
@@ -15,11 +14,12 @@ import * as seed_projection from './seed_doors.gen.ts'
 import {
   airdrop_id,
   board_catalog_id,
+  dungeon_content_id,
   giftcard_id,
   item_template_id,
+  mastery_offer_id,
   mob_template_id,
   recipe_id,
-  sale_id,
   spell_template_id,
   world_content_id,
   world_id,
@@ -30,6 +30,7 @@ import type {
   SeedBuildContext,
   SeedConsumable,
   SeedContent,
+  SeedDungeon,
   SeedEffect,
   SeedItem,
   SeedMob,
@@ -42,11 +43,12 @@ import type {
 
 export {
   airdrop_id,
+  dungeon_content_id,
   giftcard_id,
   item_template_id,
+  mastery_offer_id,
   mob_template_id,
   recipe_id,
-  sale_id,
   spell_template_id,
 } from './seed_ids.ts'
 export type * from './seed_types.ts'
@@ -124,16 +126,27 @@ const consume_effect = (
   template: Resolvable,
   consumable: SeedConsumable
 ): void => {
-  const effect =
-    consumable.type === 'heal'
-      ? sdk.seed_doors.consumable_heal(tx, { amount: consumable.amount })
-      : consumable.type === 'reset_stats'
-        ? sdk.seed_doors.consumable_reset_stats(tx, {})
-        : consumable.type === 'reset_spells'
-          ? sdk.seed_doors.consumable_reset_spells(tx, {})
-          : consumable.type === 'recall'
-            ? sdk.seed_doors.consumable_recall(tx, {})
-            : sdk.seed_doors.consumable_loot_box(tx, {})
+  let effect: TransactionObjectArgument
+  switch (consumable.type) {
+    case 'heal':
+      effect = sdk.seed_doors.consumable_heal(tx, { amount: consumable.amount })
+      break
+    case 'reset_stats':
+      effect = sdk.seed_doors.consumable_reset_stats(tx, {})
+      break
+    case 'reset_spells':
+      effect = sdk.seed_doors.consumable_reset_spells(tx, {})
+      break
+    case 'recall':
+      effect = sdk.seed_doors.consumable_recall(tx, {})
+      break
+    case 'city':
+      effect = sdk.seed_doors.consumable_city(tx, { city: consumable.city })
+      break
+    case 'loot_box':
+      effect = sdk.seed_doors.consumable_loot_box(tx, {})
+      break
+  }
   sdk.seed_doors.set_effect(tx, { cap, root, template, effect })
 }
 
@@ -548,27 +561,115 @@ const recipe_batches = (
   )
 }
 
-const sale_batches = (sdk: SeedSdk, sales: SeedContent['shop']['sales']): readonly SeedBatch[] => {
+const mastery_offer_batches = (sdk: SeedSdk, offers: SeedContent['mastery']['offers']): readonly SeedBatch[] => {
   const content_root = content_root_id_of(sdk)
   const seed_original = package_id_of(sdk, 'seed_package_original')
   const game_type = game_type_of(sdk)
-  return pack(sales, () => 1).map((rows, index) =>
+  return pack(offers, () => 1).map((rows, index) =>
     living_batch(sdk, {
-      id: `sales:${index}`,
-      phase: 'sales',
+      id: `mastery_offers:${index}`,
+      phase: 'mastery_offers',
       rows,
-      target: (sale) => sale_id(content_root, game_type, sale.item_type),
-      dependencies: (sale) => [item_template_id(content_root, seed_original, sale.item_type)],
-      compose: (game_sdk, tx, cap, root, sale) => {
-        game_sdk.seed_doors.new_sale(tx, {
+      target: (offer) => mastery_offer_id(content_root, game_type, offer.item_type),
+      dependencies: (offer) => [item_template_id(content_root, seed_original, offer.item_type)],
+      compose: (game_sdk, tx, cap, root, offer) => {
+        game_sdk.seed_doors.new_mastery_offer(tx, {
           cap,
           root,
-          template: item_template_id(content_root, seed_original, sale.item_type),
-          price: BigInt(sale.price) * MIST_PER_SUI,
-          supply: sale.supply ?? 0,
-          infinite: sale.supply === null,
-          enabled: sale.enabled ?? true,
+          template: item_template_id(content_root, seed_original, offer.item_type),
+          cost: offer.cost,
+          enabled: offer.enabled ?? true,
         })
+      },
+    })
+  )
+}
+
+export const dungeon_data_value = (sdk: SeedSdk, tx: Transaction, dungeon: SeedDungeon) => {
+  const rooms = dungeon.rooms.map((room) =>
+    sdk.seed_doors.new_dungeon_room_data(tx, {
+      mobs: room.map(({ mob_type }) => sdk.seed_doors.new_dungeon_room_mob(tx, { mob_type })),
+    })
+  )
+  return sdk.seed_doors.new_dungeon_data(tx, { key: dungeon.key, rooms })
+}
+
+export const world_content_values = (
+  sdk: SeedSdk,
+  tx: Transaction,
+  world: SeedContent['worlds'][number],
+  content_root: string,
+  seed_original: string
+) => {
+  const biome_names = world.terrain?.biomes.map(({ name }) => name) ?? []
+  const biome_ids = (names?: readonly string[]): readonly number[] => {
+    if (!world.terrain) return [0]
+    return (names ?? []).map((name) => {
+      const index = biome_names.indexOf(name)
+      if (index < 0) throw new Error(`${world.world} references unknown biome ${name}`)
+      return index
+    })
+  }
+  const city_ids = (names?: readonly string[]): readonly number[] =>
+    (names ?? []).map((name) => {
+      const index = world.cities.findIndex(({ city }) => city === name)
+      if (index < 0) throw new Error(`${world.world} references unknown city ${name}`)
+      return index
+    })
+  const cities = world.cities.map(({ city, x, z, dungeon }) =>
+    sdk.seed_doors.new_city(tx, {
+      name: city,
+      x,
+      z,
+      dungeon: dungeon_content_id(content_root, seed_original, dungeon),
+    })
+  )
+  const mobs = Array.isArray(world.mobs)
+    ? world.mobs
+    : Object.entries(world.mobs).map(([mob_type, weight_bp]) => ({ mob_type, weight_bp, biomes: [] }))
+  const mob_rows = mobs.map((row) =>
+    sdk.seed_doors.new_mob_row(tx, {
+      mob_type: row.mob_type,
+      weight_bp: row.weight_bp,
+      biomes: biome_ids(row.biomes),
+      cities: city_ids(row.cities),
+    })
+  )
+  const archi_rows = world.archis.map((row) =>
+    sdk.seed_doors.new_archi_row(tx, { ordinary_type: row.ordinary_type, archi_type: row.archi_type })
+  )
+  const resource_rows = world.resources.map((row) =>
+    sdk.seed_doors.new_resource_row(tx, {
+      item_type: row.item_type,
+      job: row.job,
+      tier: row.tier,
+      protector: row.protector,
+      rare_item_type: row.rare_item_type,
+      biomes: biome_ids(row.biomes),
+      cities: city_ids(row.cities),
+    })
+  )
+  return Object.freeze({ cities, mob_rows, archi_rows, resource_rows })
+}
+
+const dungeon_batches = (sdk: SeedSdk, dungeons: readonly SeedDungeon[]): readonly SeedBatch[] => {
+  const content_root = content_root_id_of(sdk)
+  const seed_original = package_id_of(sdk, 'seed_package_original')
+  return dungeons.map((dungeon, index) =>
+    living_batch(sdk, {
+      id: `dungeons:${index}:${dungeon.dungeon}`,
+      phase: 'dungeons',
+      rows: [dungeon],
+      target: (row) => dungeon_content_id(content_root, seed_original, row.dungeon),
+      dependencies: (row) => [
+        item_template_id(content_root, seed_original, row.key),
+        ...row.rooms.flatMap((room) =>
+          room.map(({ mob_type }) => mob_template_id(content_root, seed_original, mob_type))
+        ),
+      ],
+      compose: (game_sdk, tx, cap, root, row) => {
+        const data = dungeon_data_value(game_sdk, tx, row)
+        game_sdk.seed_doors.add_dungeon(tx, { cap, root, name: row.dungeon, data })
       },
     })
   )
@@ -627,15 +728,13 @@ const world_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[]
     ...(Array.isArray(world.mobs) ? world.mobs.map(({ mob_type }) => mob_type) : Object.keys(world.mobs)).map(
       (mob_type) => mob_template_id(content_root, seed_original, mob_type)
     ),
+    ...world.archis.map(({ archi_type }) => mob_template_id(content_root, seed_original, archi_type)),
     ...world.resources.flatMap(({ item_type, protector, rare_item_type }) => [
       item_template_id(content_root, seed_original, item_type),
       ...(protector ? [mob_template_id(content_root, seed_original, protector)] : []),
       ...(rare_item_type ? [item_template_id(content_root, seed_original, rare_item_type)] : []),
     ]),
-    ...(world.dungeon.key ? [item_template_id(content_root, seed_original, world.dungeon.key)] : []),
-    ...world.dungeon.rooms.flatMap((room) =>
-      room.map(({ mob_type }) => mob_template_id(content_root, seed_original, mob_type))
-    ),
+    ...world.cities.map(({ dungeon }) => dungeon_content_id(content_root, seed_original, dungeon)),
   ]
   return content.worlds.map((world, world_index) => {
     const content_id = world_content_id(content_root, seed_original, world.world)
@@ -655,60 +754,38 @@ const world_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[]
         const cap = context.admin_cap
         const root = context.content_root
         if (!has_content) {
-          const wc = sdk.seed_doors.create(tx, { cap, root, name: world.world, entry_level: world.entry_level })
-          const biome_names = world.terrain?.biomes.map(({ name }) => name) ?? []
-          const biome_ids = (names?: readonly string[]): readonly number[] => {
-            if (!world.terrain) return [0]
-            return (names ?? []).map((name) => {
-              const id = biome_names.indexOf(name)
-              if (id < 0) throw new Error(`${world.world} references unknown biome ${name}`)
-              return id
-            })
-          }
-          const mobs = Array.isArray(world.mobs)
-            ? world.mobs
-            : Object.entries(world.mobs).map(([mob_type, weight_bp]) => ({ mob_type, weight_bp, biomes: [] }))
-          const mob_rows = mobs.map((row) =>
-            sdk.seed_doors.new_mob_row(tx, {
-              mob_type: row.mob_type,
-              weight_bp: row.weight_bp,
-              biomes: biome_ids(row.biomes),
-            })
+          const world_content = sdk.seed_doors.create(tx, {
+            cap,
+            root,
+            name: world.world,
+            entry_level: world.entry_level,
+          })
+          const { cities, mob_rows, archi_rows, resource_rows } = world_content_values(
+            sdk,
+            tx,
+            world,
+            content_root,
+            seed_original
           )
-          sdk.seed_doors.set_mobs(tx, { cap, root, wc, rows: mob_rows })
-          const resource_rows = world.resources.map((row) =>
-            sdk.seed_doors.new_resource_row(tx, {
-              item_type: row.item_type,
-              job: row.job,
-              tier: row.tier,
-              protector: row.protector,
-              rare_item_type: row.rare_item_type,
-              biomes: biome_ids(row.biomes),
-            })
-          )
-          sdk.seed_doors.set_resources(tx, { cap, root, wc, rows: resource_rows })
+          sdk.seed_doors.set_cities(tx, { cap, root, world_content, cities })
+          sdk.seed_doors.set_mobs(tx, { cap, root, world_content, rows: mob_rows })
+          sdk.seed_doors.set_archi_rows(tx, { cap, root, world_content, rows: archi_rows })
+          sdk.seed_doors.set_resources(tx, { cap, root, world_content, rows: resource_rows })
           const map = maps.get(world.world)
           if (map) {
             sdk.seed_doors.set_biome_window(tx, {
               cap,
               root,
-              wc,
+              world_content,
               zone_x0: map.zone_x0,
               zone_z0: map.zone_z0,
               side: map.side,
             })
             for (const cells of slice_chunks(map.cells, MAX_BIOME_CELLS_PER_ARGUMENT))
-              sdk.seed_doors.append_biome_cells(tx, { cap, root, wc, cells })
+              sdk.seed_doors.append_biome_cells(tx, { cap, root, world_content, cells })
           }
-          sdk.seed_doors.set_dungeon_key(tx, { cap, root, wc, item_type: world.dungeon.key })
-          const rooms = world.dungeon.rooms.map((room) =>
-            sdk.seed_doors.new_dungeon_room(tx, {
-              mobs: room.map((mob) => sdk.seed_doors.new_room_mob(tx, { mob_type: mob.mob_type })),
-            })
-          )
-          sdk.seed_doors.set_dungeon_rooms(tx, { cap, root, wc, rooms })
-          if (!has_gameplay) sdk.seed_doors.create_world(tx, { cap, root, content: wc })
-          sdk.seed_doors.share(tx, { wc })
+          if (!has_gameplay) sdk.seed_doors.create_world(tx, { cap, root, content: world_content })
+          sdk.seed_doors.share(tx, { world_content })
         } else if (!has_gameplay) sdk.seed_doors.create_world(tx, { cap, root, content: content_id })
         return bounded_transaction(tx, `worlds:${world_index}:${world.world}`)
       },
@@ -761,10 +838,11 @@ export const create_seed_plan = (sdk: Sdk, content: SeedContent): SeedPlan => {
   const writer = seed_sdk(sdk)
   const batches = [
     ...item_batches(writer, content.items),
+    ...mastery_offer_batches(writer, content.mastery.offers),
     ...spell_batches(writer, content.spells),
     ...mob_batches(writer, content.mobs),
     ...recipe_batches(writer, content.recipes, content.items),
-    ...sale_batches(writer, content.shop.sales),
+    ...dungeon_batches(writer, content.dungeons),
     ...world_batches(writer, content),
     ...board_batches(writer, content.boards),
     ...supply_batches(writer, content),

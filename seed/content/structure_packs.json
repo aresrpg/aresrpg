@@ -935,6 +935,96 @@
         }
       ]
     },
+    "nauvis_plains_landmarks": {
+      "category": "ruins",
+      "spacing": 896,
+      "density_bp": 6500,
+      "max_slope": 6,
+      "bury": 4,
+      "scale": [3, 5],
+      "types": [
+        {
+          "type": "nauvis_plains_pandora_gate",
+          "weight": 3
+        },
+        {
+          "type": "nauvis_plains_ruined_skywatch",
+          "weight": 2
+        }
+      ]
+    },
+    "nauvis_forest_landmarks": {
+      "category": "ruins",
+      "spacing": 896,
+      "density_bp": 6500,
+      "max_slope": 10,
+      "bury": 6,
+      "scale": [3, 5],
+      "types": [
+        {
+          "type": "nauvis_forest_fallen_titan",
+          "weight": 3
+        },
+        {
+          "type": "nauvis_forest_hollow_colossus",
+          "weight": 2
+        }
+      ]
+    },
+    "nauvis_rainforest_landmarks": {
+      "category": "ruins",
+      "spacing": 960,
+      "density_bp": 6000,
+      "max_slope": 12,
+      "bury": 8,
+      "scale": [3, 5],
+      "types": [
+        {
+          "type": "nauvis_rainforest_canopy_temple",
+          "weight": 3
+        },
+        {
+          "type": "nauvis_rainforest_root_bridge",
+          "weight": 2
+        }
+      ]
+    },
+    "nauvis_highland_landmarks": {
+      "category": "ruins",
+      "spacing": 1024,
+      "density_bp": 6500,
+      "max_slope": 24,
+      "bury": 12,
+      "scale": [3, 5],
+      "types": [
+        {
+          "type": "nauvis_highland_shattered_peak",
+          "weight": 3
+        },
+        {
+          "type": "nauvis_highland_cairn_gate",
+          "weight": 2
+        }
+      ]
+    },
+    "nauvis_desert_landmarks": {
+      "category": "ruins",
+      "spacing": 896,
+      "density_bp": 6500,
+      "max_slope": 10,
+      "bury": 8,
+      "scale": [3, 5],
+      "types": [
+        {
+          "type": "nauvis_desert_colossus_ribs",
+          "weight": 3
+        },
+        {
+          "type": "nauvis_desert_buried_skull",
+          "weight": 2
+        }
+      ]
+    },
     "temperate_ruins": {
       "category": "ruins",
       "spacing": 320,

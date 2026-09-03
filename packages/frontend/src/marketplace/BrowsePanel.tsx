@@ -3,11 +3,10 @@
 
 import { Search, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { class_names, item_is_stackable } from '@aresrpg/immutable'
-import { MAX_TRACKED_CHARACTERS, type ListingRow } from '@aresrpg/protocol'
+import { class_names, item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
+import type { ListingRow } from '@aresrpg/protocol'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { ModalFrame } from '../components/ModalFrame.tsx'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, market_group_count, market_observation, type MarketGroup } from '../modules/marketplace.ts'
@@ -33,7 +32,6 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
   const [subcategory, set_subcategory] = useState<string | null>(null)
   const [selected_type, set_selected_type] = useState<string | null>(null)
   const [search, set_search] = useState('')
-  const [confirm, set_confirm] = useState<string | null>(null)
   const [minimum_level, set_minimum_level] = useState('')
   const [maximum_level, set_maximum_level] = useState('')
   const [character_class, set_character_class] = useState<string | null>(null)
@@ -83,7 +81,6 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
     set_subcategory(null)
     set_selected_type(null)
     set_search('')
-    set_confirm(null)
     dispatch_app({ type: 'market/group_selected', group })
   }
 
@@ -157,12 +154,10 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                 <AskRow
                   address={address}
                   balance={balance}
-                  confirm={confirm}
                   index={index}
                   key={listing.id}
                   listing={listing}
                   pending={market.pending}
-                  set_confirm={set_confirm}
                   text={text}
                 />
               ))
@@ -221,7 +216,6 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   key={item_type}
                   onClick={() => {
                     set_selected_type(item_type)
-                    set_confirm(null)
                   }}
                   type="button"
                 >
@@ -279,10 +273,12 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                         address={address}
                         asks={asks}
                         balance={balance}
-                        confirm={confirm}
                         pending={market.pending}
-                        set_confirm={set_confirm}
-                        sizes={item_is_stackable(item?.category ?? selected[1][0]!.category ?? '') ? LOT_SIZES : [1]}
+                        sizes={
+                          item_is_stackable(item?.category ?? selected[1][0]!.category ?? '')
+                            ? marketplace_lot_sizes
+                            : [1]
+                        }
                         text={text}
                       />
                     </div>
@@ -306,81 +302,21 @@ const Empty = ({ text }: Readonly<{ text: string }>) => (
   </div>
 )
 
-const PurchaseConfirm = ({
-  close,
-  listing,
-  pending,
-  text,
-}: Readonly<{ close: () => void; listing: ListingRow; pending: string | null; text: CopyText }>) => {
-  const total = buyer_total(BigInt(listing.price_mist))
-  const roster_count = useAppStore(({ session }) => session.characters.length)
-  const roster_full = listing.kind === 'character' && roster_count >= MAX_TRACKED_CHARACTERS
-  return (
-    <ModalFrame close={close} close_label={text('cancel')} label={text('buy')} max_width="max-w-sm" soft>
-      <div className="p-6" data-marketplace-buy-confirm>
-        <p className="text-[8px] tracking-[0.2em] text-[#777b86] uppercase">{text('buy')}</p>
-        <h3 className="mt-2 text-[13px] font-semibold tracking-[0.14em] text-[#e8e4dc] uppercase">
-          {listing_name(listing)}
-        </h3>
-        <div className="mt-5 grid grid-cols-2 gap-px border border-white/8 bg-white/8 text-[8px] uppercase">
-          <div className="bg-surface-high p-3">
-            <span className="block tracking-[0.14em] text-[#646a75]">{text('lot_size')}</span>
-            <span className="mt-1 block text-[10px] text-[#c6c9cf]">×{listing.amount}</span>
-          </div>
-          <div className="bg-surface-high p-3 text-right">
-            <span className="block tracking-[0.14em] text-[#646a75]">{text('price')}</span>
-            <span className="mt-1 inline-flex items-center justify-end gap-1 text-[10px] tabular-nums text-[#c8963c]">
-              {format_sui(total, 2)} <SuiUnit />
-            </span>
-          </div>
-        </div>
-        {roster_full && (
-          <p className="mt-4 text-[8px] tracking-[0.14em] text-[#f85149] uppercase">{text('character_roster_full')}</p>
-        )}
-        <div className="mt-5 flex justify-end gap-2">
-          <button
-            className="h-9 cursor-pointer px-4 text-[8px] tracking-[0.14em] text-[#777b86] uppercase"
-            onClick={close}
-            type="button"
-          >
-            {text('cancel')}
-          </button>
-          <button
-            className="h-9 cursor-pointer border border-[#c8963c]/55 bg-[#c8963c]/10 px-5 text-[8px] tracking-[0.16em] text-[#c8963c] uppercase disabled:opacity-40"
-            disabled={!!pending || roster_full}
-            onClick={() => dispatch_app({ type: 'market/buy_requested', listing })}
-            type="button"
-          >
-            {text('pay')} · {format_sui(total, 2)} <SuiUnit />
-          </button>
-        </div>
-      </div>
-    </ModalFrame>
-  )
-}
-
-const LOT_SIZES = [1, 10, 100, 1000] as const
-
 const CheapestLotMarket = ({
   address,
   asks,
   balance,
-  confirm,
   pending,
-  set_confirm,
   sizes,
   text,
 }: Readonly<{
   address: string | null
   asks: readonly ListingRow[]
   balance: bigint | null
-  confirm: string | null
   pending: string | null
-  set_confirm: (id: string | null) => void
   sizes: readonly number[]
   text: CopyText
 }>) => {
-  const armed = asks.find(({ id }) => id === confirm) ?? null
   return (
     <div
       className="mx-auto w-full max-w-[560px] overflow-hidden rounded-[5px] border border-border bg-surface shadow-[0_10px_28px_rgba(0,0,0,0.16)]"
@@ -425,7 +361,7 @@ const CheapestLotMarket = ({
                 className="h-10 w-full min-w-0 cursor-pointer overflow-hidden border border-[#c8963c]/45 bg-[#c8963c]/8 px-3 text-ellipsis whitespace-nowrap text-[8px] font-semibold tracking-[0.13em] text-[#efbd45] uppercase hover:bg-[#c8963c]/13 disabled:cursor-not-allowed disabled:border-white/7 disabled:bg-transparent disabled:text-[#555b66]"
                 disabled={!purchasable}
                 onClick={() => {
-                  if (ask) set_confirm(ask.id)
+                  if (ask) dispatch_app({ type: 'market/buy_requested', listing: ask })
                 }}
                 type="button"
               >
@@ -435,7 +371,6 @@ const CheapestLotMarket = ({
           )
         })}
       </div>
-      {armed && <PurchaseConfirm close={() => set_confirm(null)} listing={armed} pending={pending} text={text} />}
     </div>
   )
 }
@@ -443,73 +378,60 @@ const CheapestLotMarket = ({
 const AskRow = ({
   address,
   balance,
-  confirm,
   index,
   listing,
   pending,
-  set_confirm,
   text,
 }: Readonly<{
   address: string | null
   balance: bigint | null
-  confirm: string | null
   index: number
   listing: ListingRow
   pending: string | null
-  set_confirm: (id: string | null) => void
   text: CopyText
 }>) => {
   const total = buyer_total(BigInt(listing.price_mist))
   const own = listing.seller === address
   const insufficient = balance !== null && balance < total
-  const armed = confirm === listing.id
   const purchasable = !own && !insufficient && !pending
   return (
-    <>
-      <div
-        className={`flex min-w-0 items-center gap-2 border-b border-white/7 px-3 py-2 transition-colors ${armed ? 'bg-[#c8963c]/8' : index % 2 ? 'bg-white/[0.018]' : ''}`}
-        data-marketplace-listing-row
-        onClick={() => {
-          if (purchasable) set_confirm(listing.id)
-        }}
-        role="presentation"
-      >
-        <ListingIcon listing={listing} size={34} />
-        <div className="flex min-w-0 flex-[1_1_130px] flex-col">
-          <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('seller')}</span>
-          <span className="truncate text-[9px] tracking-[0.08em] text-[#a2a6ae]">
-            {listing.kind === 'character' ? listing.name : short_address(listing.seller)}
+    <div
+      className={`flex min-w-0 items-center gap-2 border-b border-white/7 px-3 py-2 transition-colors ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+      data-marketplace-listing-row
+    >
+      <ListingIcon listing={listing} size={34} />
+      <div className="flex min-w-0 flex-[1_1_130px] flex-col">
+        <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('seller')}</span>
+        <span className="truncate text-[9px] tracking-[0.08em] text-[#a2a6ae]">
+          {listing.kind === 'character' ? listing.name : short_address(listing.seller)}
+        </span>
+        {listing.kind === 'character' && (
+          <span className="truncate text-[7px] text-[#646a75]">
+            LV. {listing.level} · {listing.classe ?? '—'} · {short_address(listing.seller)}
           </span>
-          {listing.kind === 'character' && (
-            <span className="truncate text-[7px] text-[#646a75]">
-              LV. {listing.level} · {listing.classe ?? '—'} · {short_address(listing.seller)}
-            </span>
-          )}
-        </div>
-        {listing.amount > 1 && (
-          <span className="shrink-0 text-[9px] tracking-[0.15em] text-[#777b86]">×{listing.amount}</span>
         )}
-        <span className="min-w-2 flex-1" />
-        <div className="flex min-w-0 max-w-28 shrink flex-col items-end overflow-hidden">
-          <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('price')}</span>
-          <span className="max-w-full truncate whitespace-nowrap text-[10px] tabular-nums text-[#c8963c]">
-            {format_sui(total, 2)} <SuiUnit />
-          </span>
-        </div>
-        <button
-          aria-expanded={armed}
-          className="h-8 min-w-0 max-w-24 shrink cursor-pointer overflow-hidden border border-[#c8963c]/35 px-2 text-ellipsis whitespace-nowrap text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:cursor-not-allowed disabled:opacity-35"
-          disabled={!purchasable}
-          onClick={(event) => {
-            event.stopPropagation()
-            if (purchasable) set_confirm(listing.id)
-          }}
-          type="button"
-        >
-          {own ? text('yours') : insufficient ? text('insufficient') : text('buy')}
-        </button>
       </div>
-      {armed && <PurchaseConfirm close={() => set_confirm(null)} listing={listing} pending={pending} text={text} />}
-    </>
+      {listing.amount > 1 && (
+        <span className="shrink-0 text-[9px] tracking-[0.15em] text-[#777b86]">×{listing.amount}</span>
+      )}
+      <span className="min-w-2 flex-1" />
+      <div className="flex min-w-0 max-w-28 shrink flex-col items-end overflow-hidden">
+        <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('price')}</span>
+        <span className="max-w-full truncate whitespace-nowrap text-[10px] tabular-nums text-[#c8963c]">
+          {format_sui(total, 2)} <SuiUnit />
+        </span>
+      </div>
+      <button
+        className="h-8 min-w-0 max-w-24 shrink cursor-pointer overflow-hidden border border-[#c8963c]/35 px-2 text-ellipsis whitespace-nowrap text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:cursor-not-allowed disabled:opacity-35"
+        disabled={!purchasable}
+        onClick={(event) => {
+          event.stopPropagation()
+          if (purchasable) dispatch_app({ type: 'market/buy_requested', listing })
+        }}
+        type="button"
+      >
+        {own ? text('yours') : insufficient ? text('insufficient') : text('buy')}
+      </button>
+    </div>
   )
 }

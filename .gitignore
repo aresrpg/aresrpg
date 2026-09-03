@@ -1,4 +1,5 @@
 node_modules
+giftcard-exports/
 bun.lockb
 
 # The pre-rewrite app — kept on disk as the extraction reference until the purge completes,
@@ -61,3 +62,4 @@ packages/*/.coverage_map.mvcov
 packages/move/node_modules
 vfx/**.zip
 BETA_ANNOUNCEMENT.md
+packages/move-combat/traces/

@@ -4,12 +4,11 @@
 /// authority, clock, entropy, event, or dynamic field; the game package owns every state write.
 module aresrpg_math::world_map;
 
-use aresrpg_math::prng;
+use aresrpg_math::city_map::{Self, City};
 use std::string::String;
 
 const EInvalidRate: u64 = 306;
 const EInvalidJob: u64 = 308;
-const EEmptyRoom: u64 = 310;
 const EInvalidBiomeMap: u64 = 311;
 const ENoSuchResource: u64 = 309;
 
@@ -28,15 +27,22 @@ public struct BiomeMap has copy, drop, store {
   cells: vector<u8>,
 }
 
-public struct DungeonRoom has copy, drop, store { mobs: vector<RoomMob> }
-
-public struct RoomMob has copy, drop, store { mob_type: String }
-
 public struct MobRow has copy, drop, store {
   mob_type: String,
   weight_bp: u16,
   biomes: vector<u8>,
+  cities: vector<u8>,
 }
+
+public struct ArchiRow has copy, drop, store { ordinary_type: String, archi_type: String }
+
+public fun new_archi_row(ordinary_type: String, archi_type: String): ArchiRow {
+  ArchiRow { ordinary_type, archi_type }
+}
+
+public fun archi_row_ordinary(row: &ArchiRow): String { row.ordinary_type }
+
+public fun archi_row_replacement(row: &ArchiRow): String { row.archi_type }
 
 public struct ResourceRow has copy, drop, store {
   item_type: String,
@@ -45,6 +51,7 @@ public struct ResourceRow has copy, drop, store {
   protector: String,
   rare_item_type: String,
   biomes: vector<u8>,
+  cities: vector<u8>,
 }
 
 /// The authored payload of a World. The game object owns custody; this value module owns its
@@ -53,8 +60,7 @@ public struct ResourceRow has copy, drop, store {
 public struct WorldContent has copy, drop, store {
   mobs: vector<MobRow>,
   resources: vector<ResourceRow>,
-  dungeon_key: Option<String>,
-  dungeon_rooms: vector<DungeonRoom>,
+  cities: vector<City>,
   biome_map: BiomeMap,
 }
 
@@ -70,8 +76,7 @@ public fun empty_world_content(): WorldContent {
   WorldContent {
     mobs: vector[],
     resources: vector[],
-    dungeon_key: option::none(),
-    dungeon_rooms: vector[],
+    cities: vector[],
     biome_map: empty_biome_map(),
   }
 }
@@ -90,33 +95,18 @@ public fun set_mobs(content: &mut WorldContent, rows: vector<MobRow>) { content.
 
 public fun set_resources(content: &mut WorldContent, rows: vector<ResourceRow>) { content.resources = rows; }
 
-public fun set_dungeon_key(content: &mut WorldContent, item_type: String) {
-  content.dungeon_key = option::some(item_type);
-}
-
-public fun set_dungeon_rooms(content: &mut WorldContent, rooms: vector<DungeonRoom>) {
-  content.dungeon_rooms = rooms;
+public fun set_cities(content: &mut WorldContent, cities: vector<City>) {
+  city_map::assert_valid(&cities);
+  content.cities = cities;
 }
 
 public fun mobs(content: &WorldContent): vector<MobRow> { content.mobs }
 
 public fun resources(content: &WorldContent): vector<ResourceRow> { content.resources }
 
+public fun cities(content: &WorldContent): vector<City> { content.cities }
+
 public fun biome_map(content: &WorldContent): &BiomeMap { &content.biome_map }
-
-public fun dungeon_key(content: &WorldContent): Option<String> { content.dungeon_key }
-
-public fun dungeon_room_count(content: &WorldContent): u64 { content.dungeon_rooms.length() }
-
-public fun dungeon_room_at(content: &WorldContent, room: u64): vector<RoomMob> {
-  dungeon_room_mobs(&content.dungeon_rooms[room - 1])
-}
-
-/// One run-room seed commits every seat's full-band mob roll. A retried engage therefore
-/// reproduces levels exactly instead of opening a reroll surface.
-public fun dungeon_level_scalar(room_seed: u64, seat: u64): u8 {
-  (prng::mix(room_seed, seat) % 101) as u8
-}
 
 public fun resource_row_of(content: &WorldContent, item_type: String): ResourceRow {
   let mut i = 0;
@@ -139,10 +129,10 @@ public fun append_biome_cells(map: &BiomeMap, cells: vector<u8>): BiomeMap {
   BiomeMap { zone_x0: map.zone_x0, zone_z0: map.zone_z0, side: map.side, cells: combined }
 }
 
-public fun new_mob_row(mob_type: String, weight_bp: u16, biomes: vector<u8>): MobRow {
+public fun new_mob_row(mob_type: String, weight_bp: u16, biomes: vector<u8>, cities: vector<u8>): MobRow {
   assert!(weight_bp > 0 && weight_bp <= 10_000, EInvalidRate);
-  assert!(!biomes.is_empty(), EInvalidRate);
-  MobRow { mob_type, weight_bp, biomes }
+  assert!(!biomes.is_empty() || !cities.is_empty(), EInvalidRate);
+  MobRow { mob_type, weight_bp, biomes, cities }
 }
 
 public fun new_resource_row(
@@ -152,31 +142,23 @@ public fun new_resource_row(
   protector: String,
   rare_item_type: String,
   biomes: vector<u8>,
+  cities: vector<u8>,
 ): ResourceRow {
   assert!(
     job == b"FARMER".to_string() || job == b"HERBALIST".to_string() || job == b"MINER".to_string(),
     EInvalidJob,
   );
   // Empty means the resource remains in the content catalog without spawning in this world.
-  ResourceRow { item_type, job, tier, protector, rare_item_type, biomes }
+  ResourceRow { item_type, job, tier, protector, rare_item_type, biomes, cities }
 }
-
-public fun new_room_mob(mob_type: String): RoomMob { RoomMob { mob_type } }
-
-public fun new_dungeon_room(mobs: vector<RoomMob>): DungeonRoom {
-  assert!(!mobs.is_empty(), EEmptyRoom);
-  DungeonRoom { mobs }
-}
-
-public fun dungeon_room_mobs(room: &DungeonRoom): vector<RoomMob> { room.mobs }
-
-public fun room_mob_type(mob: &RoomMob): String { mob.mob_type }
 
 public fun mob_row_type(row: &MobRow): String { row.mob_type }
 
 public fun mob_row_weight_bp(row: &MobRow): u16 { row.weight_bp }
 
 public fun mob_row_biomes(row: &MobRow): vector<u8> { row.biomes }
+
+public fun mob_row_cities(row: &MobRow): vector<u8> { row.cities }
 
 public fun resource_row_type(row: &ResourceRow): String { row.item_type }
 
@@ -190,13 +172,15 @@ public fun resource_row_rare(row: &ResourceRow): String { row.rare_item_type }
 
 public fun resource_row_biomes(row: &ResourceRow): vector<u8> { row.biomes }
 
-public fun biome_of_zone(map: &BiomeMap, zx: u32, zz: u32): u8 {
+public fun resource_row_cities(row: &ResourceRow): vector<u8> { row.cities }
+
+public fun biome_of_zone(map: &BiomeMap, zone_x: u32, zone_z: u32): u8 {
   if (map.side == 0) return 0;
   let side = map.side as u64;
   assert!(map.cells.length() == side * side, EInvalidBiomeMap);
   let last = (map.side as u32) - 1;
-  let cx = clamp_to_window(zx, map.zone_x0, last);
-  let cz = clamp_to_window(zz, map.zone_z0, last);
+  let cx = clamp_to_window(zone_x, map.zone_x0, last);
+  let cz = clamp_to_window(zone_z, map.zone_z0, last);
   map.cells[(cz as u64) * side + (cx as u64)]
 }
 

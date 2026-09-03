@@ -36,7 +36,7 @@ export type AppCopy = Readonly<{
   world: string
   characters: string
   leaderboard: string
-  shop: string
+  mastery: string
   encyclopedia: string
   marketplace: string
   airdrop: string
@@ -122,7 +122,7 @@ export type AppCopy = Readonly<{
   simulator_page: Readonly<Record<string, string>>
   fight_hud: Readonly<Record<string, string>>
   admin_page: Readonly<Record<string, string>>
-  shop_page: Readonly<Record<string, unknown>>
+  mastery_page: Readonly<Record<string, unknown>>
   airdrop_page: Readonly<Record<string, unknown>>
   marketplace_page: Readonly<Record<string, unknown>>
   kolizeum_page: Readonly<Record<string, string>>

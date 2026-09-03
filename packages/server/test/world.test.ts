@@ -109,7 +109,7 @@ const wire = ({
       if (cypher.includes('HOLDS_CLAIM') || cypher.includes('HOLDS_VOUCHER') || cypher.includes('CAN_BUY')) return []
       if (cypher.includes('LISTED_IN')) return []
       if (cypher.includes(':Zone')) return [{ zone: { properties: { world: 'overworld', zx: 0, zz: 0, seed: '7' } } }]
-      if (cypher.includes('dungeon_world') && cypher.includes('RETURN c.id'))
+      if (cypher.includes('MATCH (c:Character {dungeon:') && cypher.includes('RETURN c.id'))
         return [{ character_id: '0xabc', name: 'nox', level: 10, room: 1 }]
       if (cypher.includes(':Fight')) return []
       return [{ character, kiosk: '0xk', equipment: [], item: { properties: {} }, label: 'User', count: 1 }]
@@ -223,7 +223,7 @@ describe('the world module', () => {
   })
 
   test('a dungeon character leaves world presence, ignores movement, and receives only its lobby', async () => {
-    const dungeon_run = '{"world":"overworld","room":"1","x":120,"z":140,"seed":"9"}'
+    const dungeon_run = '{"dungeon":"tangled_aftermath","room":"1","seed":"9"}'
     const { sent, ws, graph, pubsub, published, dropped } = wire({ dungeon_run, character_ids: ['0xabc'] })
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
@@ -235,14 +235,12 @@ describe('the world module', () => {
     expect(sent).toContainEqual({
       type: 'packet/dungeon_lobby',
       lobby: {
-        world: 'overworld',
-        x: 120,
-        z: 140,
+        dungeon: 'tangled_aftermath',
         players: [{ character_id: '0xabc', name: 'nox', level: 10, room: 1 }],
         fights: [],
       },
     })
-    pubsub.emitter.emit('evt:dungeon:overworld:120:140', {
+    pubsub.emitter.emit('evt:dungeon:tangled_aftermath', {
       ckpt: 2,
       tx: 0,
       evt: 0,

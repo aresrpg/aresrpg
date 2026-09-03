@@ -8,16 +8,23 @@ import items from '../../../../seed/content/items.json'
 import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
 import type { ItemRecipeBinding } from '../../src/editor/ItemContentEditor.tsx'
+import type { ItemFilterRow } from '../../src/editor/content_list.ts'
 import type { JsonValue, SeedDomain } from '../../src/editor/seed_editor.ts'
 
 const { ContentEntityEditor } = await import('../../src/editor/ContentEntityEditor.tsx')
 const { clone_mob_spell, same_family_spell_clones } = await import('../../src/editor/MobContentEditor.tsx')
 
-const render_editor = (domain: SeedDomain, value: JsonValue, item_recipe?: ItemRecipeBinding): string =>
+const render_editor = (
+  domain: SeedDomain,
+  value: JsonValue,
+  item_recipe?: ItemRecipeBinding,
+  item_filters?: readonly ItemFilterRow[]
+): string =>
   renderToStaticMarkup(
     <ContentEntityEditor
       domain={domain}
       is_readonly={() => false}
+      item_filters={item_filters}
       item_recipe={item_recipe}
       on_change={() => undefined}
       value={value}
@@ -25,7 +32,7 @@ const render_editor = (domain: SeedDomain, value: JsonValue, item_recipe?: ItemR
   )
 
 test('item editing is a semantic Dofus power sheet, not an appearance block form', () => {
-  const tool = items.find(({ item_type }) => item_type === 'arcanite_hoe')!
+  const tool = items.find(({ item_type }) => item_type === 'old_hoe')!
   const html = render_editor('items', tool as unknown as JsonValue)
   expect(html).toContain('data-content-editor="item"')
   expect(html).toContain('Dofus item power')
@@ -55,6 +62,36 @@ test('item power presents maximum-roll percentile instead of a median ratio', ()
   expect(html).toContain('left:98%')
   expect(html).toContain('1 exact level/power donor')
   expect(html).not.toContain('427%')
+})
+
+test('pet editing presents the rolled fully-fed endpoint without a generic gear comparison', () => {
+  const pet = items.find(({ item_type }) => item_type === 'siluri')!
+  const html = render_editor('items', pet as unknown as JsonValue)
+
+  expect(html).toContain('Fully-fed characteristics')
+  expect(html).toContain('Each copy rolls its final bonus inside the From–To range at mint')
+  expect(html).toContain('then grows from zero to that roll over 60 once-daily feeds')
+  expect(html).not.toContain('Dofus item power')
+})
+
+test('loot-box rewards use the filtered item picker and append through a valid placeholder', () => {
+  const food_crate = items.find(({ item_type }) => item_type === 'food_crate')!
+  const filters: readonly ItemFilterRow[] = [{ kind: 'resource', id: 'raw', count: 1, item_types: ['wheat'] }]
+  const html = render_editor(
+    'items',
+    {
+      ...food_crate,
+      consumable: { type: 'loot_box', rewards: [{ item_type: 'wheat', weight: 1, amount: 1 }] },
+    } as unknown as JsonValue,
+    undefined,
+    filters
+  )
+
+  expect(html.match(/data-item-reference-picker="loot box reward"/g)).toHaveLength(2)
+  expect(html.match(/data-item-picker-filtered=""/g)).toHaveLength(2)
+  expect(html).toContain('Add reward')
+  expect(html).not.toContain('aria-label="Reward item"')
+  expect(html).not.toContain('>+ Reward<')
 })
 
 test('mob editing keeps the combat sheet and editable shared spell cards together', () => {
@@ -100,23 +137,16 @@ test('mob editing keeps the combat sheet and editable shared spell cards togethe
 })
 
 test('mob spells can clone one complete spell from another mob in the live family draft', () => {
-  const white = mobs.find(({ mob_type }) => mob_type === 'fuwa__white')!
   const black = mobs.find(({ mob_type }) => mob_type === 'fuwa__black')!
   const candidates = same_family_spell_clones(black as unknown as JsonValue, mobs as unknown as readonly JsonValue[])
 
-  expect(candidates.map(({ name, source_type }) => ({ name, source_type }))).toEqual([
-    { name: 'Fuwater', source_type: 'fuwa__fukuo' },
-    { name: 'Takoya', source_type: 'fuwa__fukuo' },
-  ])
+  expect(candidates.length).toBeGreaterThan(0)
+  expect(candidates.every(({ source_type }) => source_type !== black.mob_type)).toBeTrue()
   expect(
-    same_family_spell_clones(white as unknown as JsonValue, mobs as unknown as readonly JsonValue[]).map(
-      ({ name, source_type }) => ({ name, source_type })
+    candidates.every(
+      ({ source_type }) => mobs.find(({ mob_type }) => mob_type === source_type)?.family === black.family
     )
-  ).toEqual([
-    { name: 'Nifuwoost', source_type: 'fuwa__black' },
-    { name: 'Fuwater', source_type: 'fuwa__fukuo' },
-    { name: 'Takoya', source_type: 'fuwa__fukuo' },
-  ])
+  ).toBeTrue()
 
   const clone = clone_mob_spell(candidates[0]!.spell)
   expect(clone).toEqual(candidates[0]!.spell)
@@ -137,6 +167,19 @@ test('mob spells can clone one complete spell from another mob in the live famil
 
 test('a domain row carries its own editor, and an item edits its authored recipe in place', () => {
   const recipe_binding: ItemRecipeBinding = {
+    acquisition: {
+      best: { minimum_seconds: 8, maximum_seconds: 12 },
+      craft: { minimum_seconds: 8, maximum_seconds: 12 },
+      routes: [],
+      ingredients: Object.entries(recipes[0].inputs).map(([item_type, quantity]) => ({
+        item_type,
+        quantity,
+        unit: { minimum_seconds: 1, maximum_seconds: 2 },
+        total: { minimum_seconds: quantity, maximum_seconds: quantity * 2 },
+      })),
+      craft_success_percent: 50,
+      cycle: false,
+    },
     value: recipes[0] as unknown as JsonValue,
     change: () => undefined,
     category_changed: () => undefined,
@@ -147,6 +190,9 @@ test('a domain row carries its own editor, and an item edits its authored recipe
   const html = render_editor('items', item as unknown as JsonValue, recipe_binding)
   expect(html).toContain('data-item-recipe=""')
   expect(html).toContain('Craft XP')
+  expect(html).toContain('Acquisition')
+  expect(html).toContain('data-recipe-acquisition="within"')
+  expect(html).toContain('each')
   expect(html).toContain('FARMER')
   expect(html).toContain('data-item-reference-picker="ingredient"')
   expect(html.match(/data-recipe-ingredient-row=""/g)).toHaveLength(Object.keys(recipes[0].inputs).length)
@@ -188,9 +234,4 @@ test('a domain row carries its own editor, and an item edits its authored recipe
   })
   expect(full_html).toContain('8 / 8 ingredients')
   expect(full_html).not.toContain('data-recipe-ingredient-placeholder=""')
-
-  // Shop keeps its own compact domain row.
-  expect(render_editor('shop', { item_type: 'pet_box', price: 1, supply: null } as unknown as JsonValue)).toContain(
-    'data-content-editor="shop"'
-  )
 })

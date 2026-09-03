@@ -15,7 +15,7 @@ fun creation_contains_its_first_friend() {
   let mut scenario = test_scenario::begin(OWNER);
   let list = friends::list_for_testing(OWNER, FIRST, scenario.ctx());
   let first = FIRST;
-  assert!(friends::s(&list).contains(&first), 0);
+  assert!(friends::snapshot(&list).contains(&first), 0);
   friends::destroy_for_testing(list);
   scenario.end();
 }

@@ -78,4 +78,5 @@ export const item_category_colors: Readonly<Record<string, string>> = Object.fre
   tool_miner: '#22c55e',
   consumable: '#6b7280',
   resource: '#6b7280',
+  pet_food: '#ef8bbd',
 })

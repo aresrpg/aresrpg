@@ -7,7 +7,7 @@ import { compile_world_recipe, parse_world_recipe, sample_world_column, type Com
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { world_terrain } from '../../content/worlds.ts'
+import { city_at_position, world_city_areas, world_terrain } from '../../content/worlds.ts'
 import { world_scene_active } from '../../modules/navigation.ts'
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
@@ -19,6 +19,20 @@ import {
 } from './biome_music.ts'
 
 const MUSIC_VOLUME = 0.35
+type MusicPosition = Readonly<{ x: number; z: number }>
+
+const music_area_at = (
+  world_name: string | null,
+  position: MusicPosition | null,
+  compiled: CompiledWorld | null
+): string | null => {
+  if (!position || !compiled) return null
+  const city = city_at_position(world_name, position.x, position.z)
+  const area = city
+    ? `city:${city.id}`
+    : sample_world_column(compiled, Math.round(position.x), Math.round(position.z)).biome.name
+  return `${world_name ?? 'guest'}:${area}`
+}
 
 const play = (player: HTMLAudioElement): void => {
   void player.play().catch((error: unknown) => {
@@ -57,22 +71,22 @@ export const BiomeMusic = () => {
       ? Object.freeze({ x: chain_to_client_coordinate(character.x), z: chain_to_client_coordinate(character.z) })
       : null
   const position = biome_music_position(pose, fight_active, checkpoint_position)
-  const sampled_biome =
-    position && compiled
-      ? sample_world_column(compiled, Math.round(position.x), Math.round(position.z)).biome.name
-      : null
+  const sampled_music_key = music_area_at(world_name, position, compiled)
 
   useEffect(() => set_biome_follow(initial_biome_music_follow()), [world_name])
   useEffect(() => {
-    if (sampled_biome)
-      set_biome_follow((current) => follow_biome_music(current, `${world_name ?? 'guest'}:${sampled_biome}`))
+    if (sampled_music_key) set_biome_follow((current) => follow_biome_music(current, sampled_music_key))
     // The pose identity is the sampling clock. Depending only on sampled_biome would feed a
     // candidate once, then leave the hysteresis streak permanently one short of switching.
-  }, [sampled_biome, world_name, pose])
+  }, [sampled_music_key, world_name, pose])
 
   const biome_key = biome_follow.armed
   const biome_keys = useMemo(
-    () => Object.freeze((compiled?.biomes ?? []).map(({ name }) => `${world_name ?? 'guest'}:${name}`)),
+    () =>
+      Object.freeze([
+        ...(compiled?.biomes ?? []).map(({ name }) => `${world_name ?? 'guest'}:${name}`),
+        ...world_city_areas(world_name).map(({ id }) => `${world_name ?? 'guest'}:city:${id}`),
+      ]),
     [compiled, world_name]
   )
   const source =

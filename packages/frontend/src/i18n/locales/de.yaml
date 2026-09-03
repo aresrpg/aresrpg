@@ -28,7 +28,7 @@ navigation: Navigation
 world: Welt
 characters: Charaktere
 leaderboard: Rangliste
-shop: Shop
+mastery: Meisterschaft
 encyclopedia: Enzyklopädie
 marketplace: Marktplatz
 airdrop: Airdrop
@@ -230,6 +230,9 @@ world_hud:
   coordinates: Koordinaten
   biome: Biom
   world_map: Weltkarte
+  world_map_zoom_in: Heranzoomen
+  world_map_zoom_out: Herauszoomen
+  world_map_extent: '{{blocks}} Blöcke'
   menu_group: In die Gruppe einladen
   menu_friend: Freund hinzufügen
   menu_trade: Handeln
@@ -241,6 +244,7 @@ world_hud:
   mount_prompt: 'Drücke {{key}} zum Aufsteigen'
   portal_prompt: 'Drücke {{key}}, um in eine andere Welt zu reisen'
   dungeon_portal: Dungeonportal
+  dungeon_city: 'Stadt {{city}}'
   dungeon_press_enter: Betreten
   dungeon_entry_body: Benutze den Dungeonschlüssel, um die private Lobby dieses Portals zu betreten.
   dungeon_required_key: Benötigter Schlüssel
@@ -310,7 +314,6 @@ world_hud:
   zone_coordinates: 'Sektor {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} Monster gefunden'
   zone_resources_found: '{{count}} Ressourcen gefunden'
-  zone_dungeon_spotted: 'Dungeon entdeckt'
   spawn_group: 'Rudel aus {{size}}'
   spawn_unknown_mob: 'Unbekannte Kreatur'
   spawn_press_attack: 'Drücke {{key}} zum Angreifen'
@@ -369,7 +372,6 @@ demo_page:
   crowd_loading: Charaktermodelle werden geladen…
   crowd_result: Phase
   mob: Monster
-  hide_protectors: Beschützer ausblenden
   amount: Anzahl
   spawn_group: Gruppe erzeugen
   clear: Leeren
@@ -445,37 +447,36 @@ marketplace_page:
   character_roster_full: Ein 7. Charakter passt nicht in deine Liste — 6 ist das Maximum
   collect_pending: Erlöse werden abgeholt…
   collect_success: Erlöse abgeholt
-shop_page:
-  title: 'Laden'
-  subtitle: 'Gegenstände mit SUI kaufen'
-  remaining_of_cap: '{{remaining}} von {{cap}} übrig'
-  processing: 'VERARBEITUNG'
-  sold_out: 'Ausverkauft'
-  acquire: 'Erwerben'
-  wallet: 'Geldbörse'
-  filter_all: 'Alle'
-  sections:
-    pet_box: 'HAUSTIER-BOXEN'
-    title: 'Titel'
-    cloak: 'Umhänge'
-    hat: 'Hüte'
-    companion: 'Begleiter'
-    equipment: 'Ausrüstung'
-    consumable: 'Verbrauchsgüter'
-    resource: 'Ressourcen'
-  amount_title: 'Menge wählen'
-  amount_quantity: 'Menge'
-  amount_max: 'Max'
-  amount_total: 'Gesamt'
-  amount_available: '{{count}} verfügbar'
-  amount_confirm: '{{count}} erwerben'
-  purchase_success_body: 'Deine neuen Gegenstände warten in deinem Inventar.'
-  see_inventory: 'Inventar ansehen'
-  buy_pending: 'Kauf läuft…'
-  buy_success: 'Kauf erfolgreich!'
-  drop_rates: 'Drop-Chancen'
-  pool_sub: 'Beim Öffnen wird genau ein Begleiter gezogen, gewichtet wie unten aufgeführt.'
-  acquisition_complete: 'Erwerb abgeschlossen'
+mastery_page:
+  subtitle: Tägliche Herausforderungen
+  title: Meisterschaft
+  lead: Schließe jeden Tag Dungeons ab und erhalte einzigartige Belohnungen.
+  balance: Meisterschaftspunkte
+  daily_ready: Tägliche Quest verfügbar
+  daily_syncing: Tägliche Quest wird aktualisiert…
+  daily_title: Starte deine tägliche Quest
+  daily_lead: Wähle eine Welt. Höherstufige Welten geben mehr Meisterschaftspunkte.
+  unknown_dungeon: Unbekannter Dungeon
+  quest_reward: Erhalte {{points}} Meisterschaftspunkte
+  completed: Bestätigt
+  in_progress: Läuft
+  required_level: Benötigt Stufe {{level}}
+  dungeon_count: '{{count}} Dungeons'
+  starting: Zuweisung…
+  start: Tägliche Quest starten
+  locked: Gesperrt
+  world_reward: +{{points}}pts
+  offers_title: Meisterschaftsbelohnungen
+  offers_lead: Gib Meisterschaftspunkte aus, um einzigartige Lootboxen freizuschalten.
+  progression: Belohnungspfad
+  offers_empty: Noch keine Meisterschaftsangebote erstellt
+  ready: Bereit zum Freischalten
+  missing: '{{points}} Punkte fehlen'
+  unlocking: Wird freigeschaltet…
+  unlock: Freischalten · {{cost}} Pkt.
+  quest_started: Tägliche Quest zugewiesen.
+  offer_unlocked: Meisterschaftsbelohnung freigeschaltet.
+
 airdrop_page:
   title: 'Airdrops'
   subtitle: 'Reservierte Gegenstände für berechtigte Inhaber einlösen'
@@ -485,6 +486,17 @@ airdrop_page:
   not_eligible: 'Nicht berechtigt'
   claimed: 'Eingelöst'
   claim: 'Einlösen'
+  holder_title: 'Inhaber-Wallet'
+  holder_connect_hint: 'Verbinde das Wallet mit dem berechtigten NFT'
+  holder_connect: 'Wallet verbinden'
+  holder_connecting: 'Verbindung…'
+  holder_wallet_missing: 'Kein kompatibles Sui-Wallet installiert'
+  giftcards_title: 'Einlösbare Geschenkkarten'
+  gift_login: 'Fahre mit Google fort, um dieses Geschenk in dein Spiel-Wallet zu übertragen'
+  gift_ready: 'Deine gedruckte Geschenkkarte kann jetzt abgeholt werden'
+  gift_claiming: 'Gedruckte Geschenkkarte wird abgeholt…'
+  gift_retry: 'Geschenkkarte abholen'
+  redeem: 'Einlösen'
   empty: 'Keine aktiven Airdrops'
   empty_hint: 'Airdrops für Inhaber von Partner-Kollektionen erscheinen hier, sobald sie live gehen.'
   pending_claim: 'Airdrop wird eingelöst…'
@@ -615,15 +627,12 @@ admin_page:
   player_activity_body: Tägliche Aktivität und gleitende 30-Tage-Reichweite
   stickiness: DAU / 30T
   online_players: Spieler online
-  online_players_body: Durchschnittliche und maximale authentifizierte Verbindungen
+  online_players_body: Maximale authentifizierte Verbindungen pro Zeitfenster
   online_now: Spieler online
-  average: Durchschnitt
   peak: Spitze
   revenue: Einnahmen
   revenue_over_time: Einnahmen im Zeitverlauf
   revenue_over_time_body: Alle Protokolleinnahmen nach Quelle
-  shop: Shop
-  shop_sales: Shop-Verkäufe
   item_royalties: Objektgebühren
   character_royalties: Charaktergebühren
   character_creation_revenue: Charaktererstellung
@@ -657,10 +666,6 @@ admin_page:
   revenue_mtd: Umsatz im laufenden Monat
   last_30_days: Letzte 30 Tage
   calendar_month_to_date: Laufender Kalendermonat
-  recent_shop_sales: Neueste Shop-Verkäufe
-  sales_history: Shop-Verkaufsverlauf
-  sales_retention: Exakte Transaktionsdetails werden 90 Tage aufbewahrt
-  view_all_sales: Alle Verkäufe anzeigen
   buyer: Käufer
   item: Objekt
   quantity: Menge
@@ -676,8 +681,6 @@ admin_page:
   loading: Wird geladen…
   load_more: Mehr laden
   transactions: Transaktionen
-  no_sales_history: Keine Verkäufe in diesem Zeitraum
-  end_of_history: Ende des gespeicherten Verlaufs
 simulator_page:
   title: Kampfsimulator
   local_only: Lokale deterministische Aufstellung
@@ -878,15 +881,14 @@ wallet_legacy:
   withdraw_to_wallet: Kaufe SUI auf einer Börse und überweise es an die oben angezeigte
     Wallet-Adresse.
   faq: FAQ
-  wallet_description: Dein persönliches Wallet. Nur du hast Zugriff. Zahle SUI ein,
-    um es im Laden zu verwenden.
+  wallet_description: Dein persönliches Wallet. Nur du hast Zugriff. Zahle SUI für
+    Netzwerkgebühren und Handel mit anderen Spielern ein.
   moonpay_desc: Kreditkarte, Apple Pay, Banküberweisung
   transak_desc: Kreditkarte, Banküberweisung, 100+ Länder
   faq_what_is_sui: Was ist SUI?
   faq_what_is_sui_answer: SUI ist eine digitale Währung, wie digitales Bargeld. Sie
     existiert auf einem schnellen, sicheren Netzwerk namens Sui blockchain. Du verwendest
-    kleine Beträge an SUI, um Gegenstände im AresRPG-Laden zu kaufen. Stell es dir
-    wie Spielguthaben vor, nur dass wir es dir nicht wegnehmen können.
+    kleine Beträge für Netzwerkgebühren und den Handel mit anderen Spielern.
   faq_why_sui: Warum nutzt AresRPG SUI?
   faq_why_sui_answer: SUI ist unsere bevorzugte Zahlungsmethode. Transaktionen sind
     sofort (unter 1 Sekunde) und kosten Bruchteile eines Cents. Keine Zwischenhändler-Gebühren.
@@ -896,17 +898,16 @@ wallet_legacy:
   faq_legal: Ist das legal?
   faq_legal_answer: Ja. Der Kauf und Besitz von Kryptowährung ist in den meisten Ländern
     legal. SUI ist ein legitimes digitales Asset, das auf großen regulierten Börsen
-    weltweit gehandelt wird. Du verwendest es einfach als Zahlungsmittel für unseren
-    Laden. Keine NFTs, keine Krypto-Machenschaften.
+    weltweit gehandelt wird. AresRPG nutzt es für Netzwerkgebühren und den Handel zwischen Spielern.
   faq_eula: Ist es laut den Nutzungsbedingungen des Spiels erlaubt?
   faq_eula_answer: Ja. Solange Kryptowährung ausschließlich als Zahlungsmittel verwendet
     wird und keine NFTs oder spekulative Krypto-Machenschaften involviert sind, ist
-    es vollständig konform. Viele große Spiele-Shops unterstützen sogar Krypto-Zahlungen.
+    es vollständig konform. Viele Spiele unterstützen sogar Krypto-Zahlungen.
   faq_access: Wer kann auf mein Wallet zugreifen?
   faq_access_answer: "Nur du. Dein Wallet wird aus deinem Google-Login über Sui's
     zkLogin-Technologie erstellt. Niemand (nicht einmal das AresRPG-Team) kann auf
-    deine Mittel zugreifen oder sie bewegen. Wichtig: Dieses Wallet ist nur für Shop-Käufe
-    gedacht. Lagere hier keine großen Beträge. Zahle nur ein, was du ausgeben willst."
+    deine Mittel zugreifen oder sie bewegen. Wichtig: Dieses Wallet ist nur für AresRPG-Aktivitäten
+    gedacht. Lagere hier keine großen Beträge."
   faq_balance: Ich habe SUI gesendet, aber mein Guthaben hat sich nicht aktualisiert?
   faq_balance_answer: Keine Sorge. Unser Aktualisierungssystem kann vorübergehend
     langsam sein. Überprüfe, ob du SUI an die richtige Adresse gesendet hast (kopiere
@@ -1072,6 +1073,13 @@ encyclopedia_page:
   sort_name: NAME A-Z
   clear_filters: ALLE LÖSCHEN
   no_results: KEINE GEGENSTÄNDE ENTSPRECHEN DEN FILTERN
+  filter_by_category: NACH KATEGORIE
+  filter_by_resource: NACH RESSOURCENTYP
+  filter_by_job: NACH HANDWERKSBERUF
+  filter_by_world: NACH WELT
+  filter_by_mob_family: NACH MONSTERFAMILIE
+  filter_biome: BIOM
+  filter_city: STADT
   group_armor: RÜSTUNG
   group_weapons: WAFFEN
   group_accessories: ZUBEHÖR
@@ -1080,7 +1088,11 @@ encyclopedia_page:
   group_relics: RELIKTE
   group_tools: WERKZEUGE
   group_consumables: VERBRAUCHSGÜTER
-  group_resources: RESSOURCEN
+  group_raw_resources: ROHSTOFFE
+  group_gatherable_resources: SAMMELBARE RESSOURCEN
+  group_intermediary_resources: ZWISCHENRESSOURCEN
+  group_pet_food_resources: HAUSTIERFUTTER
+  item_category_pet_food: HAUSTIERFUTTER
   stats_filter: STATS
   filter_life_steal: LEBENSRAUB
   gameplay:
@@ -1150,18 +1162,18 @@ encyclopedia_page:
     stat_rolling: STAT-WÜRFE
     stat_rolling_desc: Jeder Stat wird gleichmäßig in seiner Template-Reichweite gewürfelt. Jeder Wert ist gleich wahrscheinlich.
     archimobs: ARCHI-MOBS
-    archimobs_desc: 0,5% Chance, stattdessen als Archimob zu spawnen — eine benannte, dauerhaft stärkere Variante. Der einzige Seltenheits-Mechanismus, den Mobs haben.
+    archimobs_desc: Jeder geeignete Mob hat eine Chance von 1 %, durch seinen benannten, dauerhaft stärkeren Archimob ersetzt zu werden. Jedes Mitglied würfelt unabhängig.
     max_members: Max Mitglieder
     groups_desc: Eine Gruppe ist ein gemeinsamer Kader von bis zu {{max}} Spielern mit Anführerwahl. Gruppiert zu sein bewirkt in einem Kampf für sich genommen nichts — jeder, gruppiert oder nicht, muss seine eigene Kampfbeitritts-Transaktion senden, um teilzunehmen; es gibt keine passive Aufnahme oder Aufnahme durch Nähe.
     groups_xp: EP-AUFTEILUNG
     groups_xp_desc: Besiegte Mobs bilden einen Basis-EP-Pool. Berechtigte Kämpfer geben ihm den Retro-Gruppenfaktor, unpassende Gesamtstufen von Spielern und Mobs verringern ihn, danach erhält jeder Spieler den Anteil seiner Stufe an der Gruppenstufe. Ein Spieler unter einem Drittel der Stufe des höchsten Spielers erhöht den Faktor nicht. Weisheit gilt zuletzt; persönlicher Schaden spielt keine Rolle.
     groups_loot: BEUTE-AUFTEILUNG
     groups_loot_desc: Jedes besiegte Monster führt einen gemeinsamen Beutewurf aus. Erfolgreiche Drops werden reihum an die siegreichen Spieler vergeben; zusätzliche Spieler erzeugen keine weiteren Würfe.
-    dungeons_desc: Finde ein Dungeonportal in einer erkundeten Zone, verbrauche den Schlüssel und räume die Räume der Reihe nach. Jedes Portal hat eine eigene Live-Lobby.
+    dungeons_desc: Reise zum Dungeoneingang in seiner festgelegten Stadt, verbrauche den Schlüssel und räume die Räume der Reihe nach. Jeder Dungeon hat eine eigene Live-Lobby.
     dungeon_entry: Eingang
-    dungeon_entry_value: Ein Schlüssel an einem entdeckten Zonenportal
+    dungeon_entry_value: Ein passender Schlüssel am Stadteingang
     dungeon_instance: Instanz
-    dungeon_instance_value: Portal-lokale Lobby mit öffentlichen oder Gruppenkämpfen
+    dungeon_instance_value: Dungeon-Lobby mit öffentlichen oder Gruppenkämpfen
     dungeon_completion: Abschluss
     dungeon_completion_value: Jeden Raum leeren
     dungeon_reward: Belohnung
@@ -1293,6 +1305,7 @@ encyclopedia_page:
   consumable_reset_stats: Statpunkte zurücksetzen
   consumable_reset_spells: Zauberpunkte zurücksetzen
   consumable_recall: Kehrt zum Weltportal zurück
+  consumable_city: 'Reist zur Stadt {{city}}'
   consumable_loot_box: Öffnet eine zufällige Belohnung
   consumable_reward_heading: BELOHNUNG
   consumable_rewards: MÖGLICHE BELOHNUNGEN
@@ -1360,7 +1373,6 @@ encyclopedia_page:
   no_mobs_onchain: Noch keine Kreaturen on-chain
   obtention_crafted: Herstellbar
   obtention_dropped_by: Fällt von {{count}} Monstern
-  obtention_shop: Im Shop erhältlich
   obtention_unknown: Herkunft unbekannt
   total_supply: Gesamtmenge
   marketcap: Marktwert
@@ -1390,10 +1402,7 @@ encyclopedia_page:
     arcane_spore: ''
     arcaneshroom: ''
     arcanite: ''
-    arcanite_hoe: ''
-    arcanite_pickaxe: ''
     arcanite_powder: ''
-    arcanite_sickle: ''
     arcanize_flour: ''
     barley_flour: ''
     basic_pickaxe: ''
@@ -1403,9 +1412,6 @@ encyclopedia_page:
     bloodstone_powder: ''
     bloodveil_orchid: ''
     burnt_wheat_flour: ''
-    copper_hoe: ''
-    copper_pickaxe: ''
-    copper_sickle: ''
     crimson_truffle: ''
     crimson_truffle_heart: ''
     crystallized_tanjirize: ''
@@ -1445,19 +1451,13 @@ encyclopedia_page:
     infinity_moonstone: ''
     infinity_obsidianite: ''
     infinity_quartz: ''
-    iron_sickle: ''
     ivory_orchid_paste: ''
     ivory_shrooms: ''
     jade: ''
-    jade_hoe: ''
-    jade_pickaxe: ''
     jade_powder: ''
     malt_flour: ''
     moonstone: ''
-    moonstone_hoe: ''
-    moonstone_pickaxe: ''
     moonstone_powder: ''
-    moonstone_sickle: ''
     nightcap: ''
     nightcap_elixir_base: ''
     obsidianite: ''
@@ -1507,6 +1507,8 @@ encyclopedia_page:
     rune_wisdom_ba: ''
     rune_wisdom_pa: ''
     rune_wisdom_ra: ''
+    scroll_of_oblivion: Gibt alle investierten Zauberpunkte zurück und setzt jeden verbesserten Zauber auf Stufe 1 zurück.
+    scroll_of_rebirth: Gibt alle investierten Attributspunkte zurück, damit sie neu verteilt werden können.
     shiny_barley: ''
     smoldering_wheat: ''
     spectral_arcanize: ''

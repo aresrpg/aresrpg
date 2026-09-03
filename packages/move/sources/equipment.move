@@ -53,14 +53,14 @@ public struct ItemUnequipped has copy, drop { character: ID, slot: String, item:
 
 /// Equip: record the snapshot, send the item to the character's address. The caller picked the
 /// slot (that is how a ring chooses a hand); the door checks it is legal for the category.
-public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
+public(package) fun equip(character: &mut Character, slot: String, item: Item) {
   assert!(content_rules::is_slot(&slot), EInvalidSlot);
   assert!(content_rules::category_fits(&slot, &item.category()), EWrongCategory);
-  assert!((chr.level() as u64) >= (item.level() as u64), ELevelTooLow);
+  assert!((character.level() as u64) >= (item.level() as u64), ELevelTooLow);
 
-  let character_id = chr.id();
+  let character_id = character.id();
   let character_address = character_id.to_address();
-  let map = bmm(chr);
+  let map = borrow_equipment_mut(character);
   assert!(!map.contains(&slot), ESlotTaken);
 
   // A relic of the same TEMPLATE can be worn only once across the six slots.
@@ -83,68 +83,68 @@ public(package) fun equip(chr: &mut Character, slot: String, item: Item) {
     damages: if (item.has_damages()) item.damages() else vector[],
   };
   map.insert(slot, record);
-  r1(chr);
+  refold(character);
   event::emit(ItemEquipped { character: character_id, slot, item: object::id(&item) });
   transfer::public_transfer(item, character_address);
 }
 
 /// Unequip: receive the item back off the character, erase the record, hand the item to the
 /// caller (the api door re-locks it in the kiosk).
-public(package) fun unequip(chr: &mut Character, slot: String, receiving: Receiving<Item>): Item {
+public(package) fun unequip(character: &mut Character, slot: String, receiving: Receiving<Item>): Item {
   assert!(content_rules::is_slot(&slot), EInvalidSlot);
-  let character_id = chr.id();
-  let map = bmm(chr);
+  let character_id = character.id();
+  let map = borrow_equipment_mut(character);
   assert!(map.contains(&slot), ENotEquipped);
   let (_, record) = map.remove(&slot);
 
-  let item = transfer::public_receive(character::uid_mut(chr), receiving);
+  let item = transfer::public_receive(character::uid_mut(character), receiving);
   assert!(object::id(&item) == record.item, EWrongItem);
-  r1(chr);
+  refold(character);
   event::emit(ItemUnequipped { character: character_id, slot, item: record.item });
   item
 }
 
 /// Rewrite one slot's stat snapshot and refold — the PET seam: feeding scales the pet's
 /// stats, and the sent-away item can't be re-read, so the feeder hands the fresh numbers in.
-public(package) fun set_slot_stats(chr: &mut Character, slot: String, stats: ItemStatistics) {
-  let map = bmm(chr);
+public(package) fun set_slot_stats(character: &mut Character, slot: String, stats: ItemStatistics) {
+  let map = borrow_equipment_mut(character);
   assert!(map.contains(&slot), ENotEquipped);
   let record = map.get_mut(&slot);
   record.stats = option::some(stats);
-  r1(chr);
+  refold(character);
 }
 
 /// Is a pet on the pet slot? (The travel checkpoint's ×1.5 flag reads this.)
-public(package) fun pet_equipped(chr: &Character): bool {
-  equipped(chr).contains(&b"pet".to_string())
+public(package) fun pet_equipped(character: &Character): bool {
+  equipped(character).contains(&b"pet".to_string())
 }
 
 /// The delete guard reads this: a character with anything equipped cannot die.
-public(package) fun has_any_equipped(chr: &Character): bool {
-  let uid = chr.uid();
+public(package) fun has_any_equipped(character: &Character): bool {
+  let uid = character.uid();
   dfield::exists(uid, EquipmentKey()) &&
     !dfield::borrow<EquipmentKey, VecMap<String, EquippedRecord>>(uid, EquipmentKey()).is_empty()
 }
 
 /// The gathering gate's read: the equipped tool's category (`tool_farmer` | `tool_herbalist`
 /// | `tool_miner`), or empty when the tool slot is bare — the honest "no tool" state.
-public(package) fun tool_of(chr: &Character): String {
-  let map = equipped(chr);
+public(package) fun tool_of(character: &Character): String {
+  let map = equipped(character);
   let slot = b"tool".to_string();
   if (!map.contains(&slot)) return b"".to_string();
   map[&slot].category
 }
 
 /// The fight's read: every equipped record (stats fold there, not here).
-public(package) fun equipped(chr: &Character): VecMap<String, EquippedRecord> {
-  let uid = chr.uid();
+public(package) fun equipped(character: &Character): VecMap<String, EquippedRecord> {
+  let uid = character.uid();
   if (!dfield::exists(uid, EquipmentKey())) return vec_map::empty();
   *dfield::borrow(uid, EquipmentKey())
 }
 
 /// The folded gear total — every reader's door (hp regen, fight entry, UI). Neutral when bare.
-public(package) fun folded(chr: &Character): ItemStatistics {
-  let uid = chr.uid();
+public(package) fun folded(character: &Character): ItemStatistics {
+  let uid = character.uid();
   if (!dfield::exists(uid, FoldedKey())) return item_stats::zero();
   *dfield::borrow(uid, FoldedKey())
 }
@@ -156,8 +156,8 @@ public(package) fun record_damages(record: &EquippedRecord): vector<ItemDamages>
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
 // borrow_map_mut
-fun bmm(chr: &mut Character): &mut VecMap<String, EquippedRecord> {
-  let uid = character::uid_mut(chr);
+fun borrow_equipment_mut(character: &mut Character): &mut VecMap<String, EquippedRecord> {
+  let uid = character::uid_mut(character);
   if (!dfield::exists(uid, EquipmentKey())) {
     dfield::add(uid, EquipmentKey(), vec_map::empty<String, EquippedRecord>());
   };
@@ -166,9 +166,9 @@ fun bmm(chr: &mut Character): &mut VecMap<String, EquippedRecord> {
 
 // refold
 /// Recompute the folded total from the slot map — called by the two writers only.
-fun r1(chr: &mut Character) {
+fun refold(character: &mut Character) {
   let mut blocks = vector[];
-  let map = equipped(chr);
+  let map = equipped(character);
   let keys = map.keys();
   let mut i = 0;
   while (i < keys.length()) {
@@ -177,7 +177,7 @@ fun r1(chr: &mut Character) {
     i = i + 1;
   };
   let folded = item_stats::fold(&blocks);
-  let uid = character::uid_mut(chr);
+  let uid = character::uid_mut(character);
   if (dfield::exists(uid, FoldedKey())) {
     *dfield::borrow_mut(uid, FoldedKey()) = folded;
   } else {

@@ -100,7 +100,7 @@ export type CharacterRow = {
     hp: string
   }>
   /** Live dungeon staging identity. Presence and zone tracking stop while this exists. */
-  dungeon_run?: Readonly<{ world: string; room: number; x: number; z: number }>
+  dungeon_run?: Readonly<{ dungeon: string; room: number }>
   /** the chain's own equipment fold (FoldedKey DF), stat_names order, RAW centered values —
    *  absent while the character never equipped anything (fold neutral) */
   folded_stats?: Record<string, number>
@@ -157,9 +157,6 @@ export type ResourcePackRow = {
   nodes: number
 }
 
-/** One dungeon entrance derived from a searched zone's seed; chain-space coordinates. */
-export type DungeonPortalRow = { x: number; z: number }
-
 /** A live fight marker in the world — enough to render and approach; details come on watch.
  *  `placement_ms` is the chain's birth wall-clock (u64 as string): it drives the join-window
  *  clock every surface derives (the sword's sink, join/spectate gating). */
@@ -198,9 +195,7 @@ export type DungeonLobbyFightRow = {
 }
 
 export type DungeonLobbyRow = {
-  world: string
-  x: number
-  z: number
+  dungeon: string
   players: readonly DungeonLobbyPlayerRow[]
   fights: readonly DungeonLobbyFightRow[]
 }
@@ -311,8 +306,6 @@ export type AdminBucket = '15m' | 'hour' | 'day' | 'week' | 'month'
 
 export type AdminMoneyPoint = Readonly<{
   at_ms: number
-  shop_mist: string
-  shop_orders: string
   item_royalty_mist: string
   character_royalty_mist: string
   character_creation_mist: string
@@ -326,28 +319,12 @@ export type AdminActivityPoint = Readonly<{
 
 export type AdminTransactionPoint = Readonly<{ at_ms: number; transactions: number }>
 
-export type AdminOnlinePoint = Readonly<{ at_ms: number; average: number; peak: number }>
+export type AdminOnlinePoint = Readonly<{ at_ms: number; peak: number }>
 export type AdminTotalPoint = Readonly<{ at_ms: number; total: number }>
-
-export type AdminShopSaleRow = Readonly<{
-  id: string
-  checkpoint: number
-  tx_digest: string
-  timestamp_ms: number
-  sale_id: string
-  buyer: string
-  item_type: string
-  quantity: number
-  unit_price_mist: string
-  total_mist: string
-  remaining_supply: string
-}>
 
 export type AdminRevenueOverview = Readonly<{
   days: AdminRangeDays
   bucket: AdminBucket
-  shop_mist: string
-  shop_orders: string
   item_royalty_mist: string
   character_royalty_mist: string
   character_creation_mist: string
@@ -379,7 +356,6 @@ export type AdminOnlineOverview = Readonly<{
   days: AdminRangeDays
   bucket: AdminBucket
   online_now: number
-  online_average: number
   online_peak: number
   online: readonly AdminOnlinePoint[]
 }>
@@ -417,12 +393,6 @@ export type AdminOverviewSectionResult =
   | Readonly<{ section: 'online'; data: AdminOnlineOverview }>
   | Readonly<{ section: 'addresses'; data: AdminAddressesOverview }>
   | Readonly<{ section: 'characters'; data: AdminCharactersOverview }>
-
-export type AdminShopSalesResult = Readonly<{
-  as_of_checkpoint: number | null
-  rows: readonly AdminShopSaleRow[]
-  next_cursor: string | null
-}>
 
 /** The exact chain categories wanted by the current browse group. `characters` is separate
  * because Character is not an Item category. Null closes the marketplace subscription. */
@@ -479,12 +449,37 @@ export type TradeRow = {
  *  carries its projected roll so the redeem transaction composes without any chain read. */
 export type ClaimRow = { id: string; kind: 'crush' | 'box'; rolled_template?: string; amount?: number }
 
+/** Portable distribution voucher. It remains recoverable from the holder snapshot until redeemed. */
+export type GiftcardRow = Readonly<{ id: string; template: string; amount: number }>
+
+export type MasteryRow = Readonly<{
+  id: string
+  owner: string
+  points: string
+  last_completed_epoch: string | null
+  quest_epoch: string
+  quest_started_ms: string
+  quest_world: string
+  quest_dungeon: string
+  quest_reward: number
+  quest_completed: boolean
+}>
+
+export type MasteryOfferRow = Readonly<{
+  id: string
+  item_type: string
+  template: string
+  cost: string
+  enabled: boolean
+}>
+
 /** Durable post-fight work projected from an ended Fight. Presence means settlement or loot is
  *  still owed; disappearance is the chain proof that the seat is completely reconciled. */
 export type FightResolutionRow = {
   fight: string
   world: string
-  dungeon: number | null
+  dungeon: string | null
+  dungeon_room: number | null
   kolizeum: string | null
   fighter: number
   character: string
@@ -524,20 +519,11 @@ export type KolizeumLobbyRow = Readonly<{
 
 export type ClosableFightRow = Readonly<{ fight: string; kolizeum: string | null }>
 
-/** Mutable shop state. Presentation and immutable supply policy remain authored in seed/. */
-export type ShopSaleState = Readonly<{
-  item_type: string
-  price: string
-  supply: string
-  infinite: boolean
-  enabled: boolean
-}>
 export type AirdropState = Readonly<{
   drop_id: string
   eligible: boolean
   eligible_count: number
 }>
-export type ShopState = Readonly<{ sales: readonly ShopSaleState[]; airdrops: readonly AirdropState[] }>
 
 /** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
 export const ZONE_SIZE = 512
@@ -732,6 +718,8 @@ export type ClientPackets = {
   /** Registry + name derived the character ID client-side. Current wallet custody is mutable,
    *  so this narrowly asks the indexed owner of that exact object. */
   'packet/character_owner_request': { id: number; character_id: string }
+  /** Public airdrop claim state for a separately connected holder wallet. */
+  'packet/airdrop_eligibility_request': { address: string }
   /** Privileged dashboard request — whitelisted addresses only; everyone else gets a refusal. */
   'packet/admin_request':
     | {
@@ -745,7 +733,6 @@ export type ClientPackets = {
         characters_days: AdminRangeDays
       }
     | { id: number; kind: 'overview_section'; section: AdminOverviewSection; days: AdminRangeDays }
-    | { id: number; kind: 'shop_sales'; days: AdminRangeDays; cursor: string | null }
   /** Authenticated transport probe. The server echoes the opaque id; neither side stores it. */
   'packet/ping': { id: number }
 }
@@ -771,20 +758,22 @@ export type ServerPackets = {
   /** Fully settled fights this participant may reclaim after reconnect. */
   'packet/closable_fights': { fights: ClosableFightRow[] }
   /** Held giftcard vouchers. */
-  'packet/giftcards': { giftcards: { id: string; template: string; amount: number }[] }
+  'packet/giftcards': { giftcards: GiftcardRow[] }
   /** The player's own ACTIVE market listings. */
   'packet/listings': { listings: ListingRow[] }
+  'packet/mastery': { mastery: MasteryRow | null; offers: MasteryOfferRow[] }
   /** The player's OPEN trades (either side) — the escrow replaces transferred caps. */
   'packet/trades': { trades: TradeRow[] }
   'packet/trade_destroyed': { trade: string }
-  /** Current mutable shop state; immutable presentation remains the local seed catalog. */
-  'packet/shop_state': ShopState
+  /** Current airdrop eligibility and remaining recipient counts. */
+  'packet/airdrop_state': { airdrops: AirdropState[] }
 
   // ── cluster + indexer heartbeat (5s cadence, decorrelated from user activity) ──
-  'packet/server_info': { online: number; indexing_lag: number | null }
+  'packet/server_info': { online: number; indexing_lag: number | null; current_epoch: string | null }
   /** Version 0 is the global emergency brake; null means the projection is not available yet. */
   'packet/game_state': { frozen: boolean | null }
   'packet/character_owner_response': { id: number; character_id: string; name: string; owner: string }
+  'packet/airdrop_eligibility': { address: string; airdrops: AirdropState[] }
 
   // ── the world (pushed on embody + as the tracked spiral moves; owner: chunk-spiral law) ──
   /** The complete zone subscription window for this connection. Rows outside it are obsolete;
@@ -804,9 +793,8 @@ export type ServerPackets = {
     zz: number
     mobs: MobGroupRow[]
     resources: ResourcePackRow[]
-    portal: DungeonPortalRow | null
   }
-  /** One portal-scoped dungeon lobby; refreshed from graph truth on run/fight writes. */
+  /** One dungeon-slug-scoped lobby; refreshed from graph truth on run/fight writes. */
   'packet/dungeon_lobby': { lobby: DungeonLobbyRow }
 
   // ── the presence mesh (other players in tracked zones) ──
@@ -878,8 +866,6 @@ export type ServerPackets = {
   /** One of YOUR listings sold (the buyer's transaction — money arrived in your kiosk). */
   'packet/listing_sold': { sale: MarketSaleRow }
 
-  // ── primary shop stream (other players' transactions only) ──
-  'packet/shop_supply': { item_type: string; supply: string }
   'packet/airdrop_remaining': { drop_id: string; eligible_count: number }
 
   // ── kolizeum live directory ──
@@ -889,7 +875,6 @@ export type ServerPackets = {
   'packet/admin_response':
     | { id: number; kind: 'overview'; result: AdminOverviewResult }
     | { id: number; kind: 'overview_section'; result: AdminOverviewSectionResult }
-    | { id: number; kind: 'shop_sales'; result: AdminShopSalesResult }
 
   // ── refusals — instruments THROW server-side, the wire answers honestly ──
   'packet/error': { id?: number; reason: string }
@@ -914,16 +899,18 @@ export const SESSION_PACKETS = [
   'packet/giftcards',
   'packet/item_updated',
   'packet/item_removed',
-  'packet/shop_state',
+  'packet/airdrop_state',
   'packet/server_info',
   'packet/game_state',
   'packet/character_owner_response',
+  'packet/airdrop_eligibility',
   'packet/market_delisted',
   'packet/listing_sold',
-  'packet/shop_supply',
   'packet/airdrop_remaining',
   'packet/error',
 ] as const
+
+export const MASTERY_PACKETS = ['packet/mastery'] as const
 
 export const WORLD_PACKETS = [
   'packet/tracked_zones',
@@ -982,6 +969,7 @@ export const SERVER_PACKET_TYPES = [
   ...FRIEND_PACKETS,
   ...PARTY_PACKETS,
   ...TRADE_PACKETS,
+  ...MASTERY_PACKETS,
   ...IGNORED_PACKETS,
   ...TRANSPORT_PACKETS,
 ] as const satisfies readonly ServerPacket['type'][]
@@ -997,6 +985,7 @@ export type KolizeumPacket = Extract<ServerPacket, { type: (typeof KOLIZEUM_PACK
 export type FriendPacket = Extract<ServerPacket, { type: (typeof FRIEND_PACKETS)[number] }>
 export type PartyPacket = Extract<ServerPacket, { type: (typeof PARTY_PACKETS)[number] }>
 export type TradePacket = Extract<ServerPacket, { type: (typeof TRADE_PACKETS)[number] }>
+export type MasteryPacket = Extract<ServerPacket, { type: (typeof MASTERY_PACKETS)[number] }>
 
 type RoutedPacketType =
   | (typeof SESSION_PACKETS)[number]
@@ -1007,6 +996,7 @@ type RoutedPacketType =
   | (typeof FRIEND_PACKETS)[number]
   | (typeof PARTY_PACKETS)[number]
   | (typeof TRADE_PACKETS)[number]
+  | (typeof MASTERY_PACKETS)[number]
   | (typeof IGNORED_PACKETS)[number]
   | (typeof TRANSPORT_PACKETS)[number]
 // The census seal: this line reds the moment a declared server packet joins no domain list.
@@ -1027,6 +1017,7 @@ export const CLIENT_PACKET_TYPES = [
   'packet/spectate',
   'packet/fight_preview',
   'packet/character_owner_request',
+  'packet/airdrop_eligibility_request',
   'packet/admin_request',
   'packet/ping',
 ] as const satisfies readonly (keyof ClientPackets)[]
@@ -1034,6 +1025,20 @@ export const CLIENT_PACKET_TYPES = [
 const is_finite_number = (value: unknown): value is number => Number.isFinite(value)
 
 const is_id = (value: unknown): value is string => typeof value === 'string' && value.startsWith('0x')
+const CORRELATED_READ_PACKETS: ReadonlySet<unknown> = new Set([
+  'packet/character_owner_request',
+  'packet/airdrop_eligibility_request',
+])
+
+const parse_correlated_read_packet = (type: string, packet: Record<string, unknown>): ClientPacket => {
+  if (type === 'packet/character_owner_request') {
+    if (!Number.isInteger(packet.id)) throw new Error('packet/character_owner_request needs an integer id')
+    if (!is_id(packet.character_id)) throw new Error('packet/character_owner_request needs a character id')
+    return packet as ClientPacket
+  }
+  if (!is_id(packet.address)) throw new Error('packet/airdrop_eligibility_request needs an address')
+  return packet as ClientPacket
+}
 
 const chat_part_record = (part: unknown): Record<string, unknown> => {
   if (typeof part !== 'object' || part === null || Array.isArray(part)) throw new Error('chat part is invalid')
@@ -1138,8 +1143,6 @@ const parse_market_observe_packet = (
   }
 }
 
-const valid_sales_cursor = (cursor: unknown): cursor is string | null =>
-  cursor === null || (typeof cursor === 'string' && cursor.length <= 64)
 const valid_admin_range = (days: unknown): days is AdminRangeDays =>
   typeof days === 'number' && [1, 7, 30, 90, 365].includes(days)
 const valid_overview_ranges = (packet: Readonly<Record<string, unknown>>): boolean =>
@@ -1191,16 +1194,9 @@ const parse_overview_section_request: AdminRequestParser = (packet, id) => {
   }
 }
 
-const parse_shop_sales_request: AdminRequestParser = (packet, id) => {
-  if (!valid_admin_range(packet.days)) throw new Error('packet/admin_request needs a supported day range')
-  if (!valid_sales_cursor(packet.cursor)) throw new Error('packet/admin_request needs a bounded sales cursor')
-  return { type: 'packet/admin_request', id, kind: 'shop_sales', days: packet.days, cursor: packet.cursor }
-}
-
 const ADMIN_REQUEST_PARSERS: Readonly<Record<string, AdminRequestParser>> = Object.freeze({
   overview: parse_overview_request,
   overview_section: parse_overview_section_request,
-  shop_sales: parse_shop_sales_request,
 })
 
 const parse_admin_request_packet = (
@@ -1264,11 +1260,7 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
     if (packet.fight !== null && !is_id(packet.fight)) throw new Error('packet/spectate needs a fight id or null')
     return packet as ClientPacket
   }
-  if (type === 'packet/character_owner_request') {
-    if (!Number.isInteger(packet.id)) throw new Error('packet/character_owner_request needs an integer id')
-    if (!is_id(packet.character_id)) throw new Error('packet/character_owner_request needs a character id')
-    return packet as ClientPacket
-  }
+  if (CORRELATED_READ_PACKETS.has(type)) return parse_correlated_read_packet(type as string, packet)
   if (type === 'packet/admin_request') return parse_admin_request_packet(packet)
   if (type === 'packet/ping') {
     if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')

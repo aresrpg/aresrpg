@@ -16,14 +16,22 @@ export const encumbered_asset_ids = (
     ...trades.flatMap(({ caps_a, caps_b }) => [...caps_a, ...caps_b].map(({ object }) => object)),
   ])
 
+/** Items still projected under a personal kiosk but available for ordinary inventory actions. */
+export const available_inventory_items = (
+  inventory: readonly Readonly<ItemRow>[],
+  encumbered: ReadonlySet<string>,
+  kiosk?: string
+): readonly Readonly<ItemRow>[] =>
+  inventory.filter((item) => (!kiosk || item.kiosk === kiosk) && !encumbered.has(item.id))
+
 export const available_item_stacks = (
   inventory: readonly Readonly<ItemRow>[],
   encumbered: ReadonlySet<string>,
   item_type: string,
   kiosk?: string
 ): readonly Readonly<ItemRow>[] => {
-  return inventory
-    .filter((row) => row.item_type === item_type && (!kiosk || row.kiosk === kiosk) && !encumbered.has(row.id))
+  return available_inventory_items(inventory, encumbered, kiosk)
+    .filter((row) => row.item_type === item_type)
     .toSorted((left, right) => right.amount - left.amount || left.id.localeCompare(right.id))
 }
 

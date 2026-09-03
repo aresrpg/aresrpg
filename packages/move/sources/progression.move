@@ -41,18 +41,18 @@ public struct Hp has copy, drop, store {
 /// tools + 12 craft jobs). Levels come off the immutable `job_xp` curve.
 public struct JobXpKey(String) has copy, drop, store;
 
-public fun job_xp_of(chr: &Character, job: String): u64 {
-  let uid = chr.uid();
+public fun job_xp_of(character: &Character, job: String): u64 {
+  let uid = character.uid();
   if (!dfield::exists(uid, JobXpKey(job))) return 0;
   *dfield::borrow(uid, JobXpKey(job))
 }
 
-public fun job_level_of(chr: &Character, job: String): u64 {
-  job_xp::level_from_xp(job_xp_of(chr, job))
+public fun job_level_of(character: &Character, job: String): u64 {
+  job_xp::level_from_xp(job_xp_of(character, job))
 }
 
-public(package) fun bank_job_xp(chr: &mut Character, job: String, gained: u64) {
-  let uid = chr.uid_mut();
+public(package) fun bank_job_xp(character: &mut Character, job: String, gained: u64) {
+  let uid = character.uid_mut();
   if (dfield::exists(uid, JobXpKey(job))) {
     let xp: &mut u64 = dfield::borrow_mut(uid, JobXpKey(job));
     *xp = *xp + gained;
@@ -62,17 +62,17 @@ public(package) fun bank_job_xp(chr: &mut Character, job: String, gained: u64) {
 }
 
 /// Max hp = 50 + 5×level + allocated vitality + the folded gear bonus (malus floored at 1).
-public(package) fun max_hp(chr: &Character): u64 {
-  let base = BASE_HP + HP_PER_LEVEL * (chr.level() as u64) + (chr.vitality() as u64);
-  item_stats::apply_centered_to_base(base, equipment::folded(chr).vitality() as u64)
+public(package) fun max_hp(character: &Character): u64 {
+  let base = BASE_HP + HP_PER_LEVEL * (character.level() as u64) + (character.vitality() as u64);
+  item_stats::apply_centered_to_base(base, equipment::folded(character).vitality() as u64)
 }
 
 /// The checkpoint door: apply lazy regen (whole ticks only — the remainder stays banked in
 /// `last_ms`), clamp to max, return current. First touch initializes at full hp.
-public(package) fun touch(chr: &mut Character, clock: &Clock): u64 {
-  let max = max_hp(chr);
+public(package) fun touch(character: &mut Character, clock: &Clock): u64 {
+  let max = max_hp(character);
   let now = clock.timestamp_ms();
-  let uid = character::uid_mut(chr);
+  let uid = character::uid_mut(character);
   if (!dfield::exists(uid, HpKey())) {
     dfield::add(uid, HpKey(), Hp { current: max, last_ms: now });
     return max
@@ -88,9 +88,9 @@ public(package) fun touch(chr: &mut Character, clock: &Clock): u64 {
 
 /// Invested level of a spell — 1 the moment the character reaches its unlock level (spells
 /// learn themselves, the Dofus law), 0 before.
-public fun spell_level(chr: &Character, spell: &SpellTemplate): u64 {
-  if ((chr.level() as u64) < (spell.unlock_level() as u64)) return 0;
-  let uid = chr.uid();
+public fun spell_level(character: &Character, spell: &SpellTemplate): u64 {
+  if ((character.level() as u64) < (spell.unlock_level() as u64)) return 0;
+  let uid = character.uid();
   if (!dfield::exists(uid, SpellBookKey())) return 1;
   let book: &VecMap<String, u8> = dfield::borrow(uid, SpellBookKey());
   let name = spell.name();
@@ -99,15 +99,15 @@ public fun spell_level(chr: &Character, spell: &SpellTemplate): u64 {
 
 /// Raise a spell one level. Cost = the CURRENT level (n → n+1 costs n points), 1.29 exact.
 /// The pool lives on the character (`available_spell_points`, granted 1 per level from 2).
-public(package) fun raise_spell(chr: &mut Character, spell: &SpellTemplate) {
-  let current = spell_level(chr, spell);
+public(package) fun raise_spell(character: &mut Character, spell: &SpellTemplate) {
+  let current = spell_level(character, spell);
   assert!(current >= 1, ENotLearned);
   assert!(current < spell.max_spell_level(), ESpellCapped);
-  assert!((chr.available_spell_points() as u64) >= current, ENoSpellPoints);
-  character::ssp(chr, (current as u16));
+  assert!((character.available_spell_points() as u64) >= current, ENoSpellPoints);
+  character::spend_spell_points(character, (current as u16));
 
   let name = spell.name();
-  let uid = character::uid_mut(chr);
+  let uid = character::uid_mut(character);
   if (!dfield::exists(uid, SpellBookKey())) {
     dfield::add(uid, SpellBookKey(), vec_map::empty<String, u8>());
   };
@@ -122,27 +122,27 @@ public(package) fun raise_spell(chr: &mut Character, spell: &SpellTemplate) {
 
 /// RESET SPELL POINTS (the consumable): clear the whole raised-spell book and refill the pool
 /// to level − 1 — every spell drops to its self-learned level 1, all points refunded.
-public(package) fun reset_spells(chr: &mut Character) {
-  let uid = character::uid_mut(chr);
+public(package) fun reset_spells(character: &mut Character) {
+  let uid = character::uid_mut(character);
   if (dfield::exists(uid, SpellBookKey())) {
     *dfield::borrow_mut(uid, SpellBookKey()) = vec_map::empty<String, u8>();
   };
-  character::rsp(chr);
+  character::reset_spell_points(character);
 }
 
 /// HEAL the character by `amount`, capped at max hp (regen banked first). The consumable's
 /// answer to the slow high-level regen.
-public(package) fun heal(chr: &mut Character, amount: u64, clock: &Clock) {
-  let max = max_hp(chr);
-  let current = touch(chr, clock); // banks regen, returns current
+public(package) fun heal(character: &mut Character, amount: u64, clock: &Clock) {
+  let max = max_hp(character);
+  let current = touch(character, clock); // banks regen, returns current
   let healed = if (current + amount > max) max else current + amount;
-  set_hp(chr, healed, clock);
+  set_hp(character, healed, clock);
 }
 
 /// The fight's write-back (loss/forfeit passes 1 — zero never exists outside a fight).
-public(package) fun set_hp(chr: &mut Character, value: u64, clock: &Clock) {
+public(package) fun set_hp(character: &mut Character, value: u64, clock: &Clock) {
   let now = clock.timestamp_ms();
-  let uid = character::uid_mut(chr);
+  let uid = character::uid_mut(character);
   if (dfield::exists(uid, HpKey())) {
     let hp: &mut Hp = dfield::borrow_mut(uid, HpKey());
     hp.current = value;

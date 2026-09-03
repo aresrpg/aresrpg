@@ -103,8 +103,8 @@ test('fight custody invites through the controlled fighter without borrowing the
     {
       door: 'fight_invitation',
       args: {
-        p: party.id,
-        f: actor.active_fight!.id,
+        party_object: party.id,
+        fight_object: actor.active_fight!.id,
         fighter_idx: 1,
         actor_id: actor.id,
         invited_character: id(3),

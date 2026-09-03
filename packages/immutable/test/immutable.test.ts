@@ -40,6 +40,7 @@ import {
   model_variant_identity,
   pet_max_feeds,
   protector_level_range,
+  rare_pet_food_tier,
   rune_effect,
   rune_unit_weight,
   rune_weight_scale,
@@ -120,6 +121,8 @@ describe('immutable vocabularies', () => {
       rare_item_type: 'golden_wheat',
     })
     expect(gatherable_of('golden_wheat')).toBeNull()
+    expect(rare_pet_food_tier(['golden_wheat', 'golden_mushroom', 'infinity_quartz'])).toBe(1)
+    expect(rare_pet_food_tier(['golden_wheat', 'golden_mushroom', 'infinity_amber'])).toBeNull()
   })
 
   test('protector levels use fixed introductory bands then follow resource level', () => {
@@ -221,7 +224,11 @@ test('craft batch caps follow output object cost', () => {
 describe('Dofus Retro item power', () => {
   test('ships the complete anonymous projection extracted from the official client', () => {
     expect(Object.values(DOFUS_GEAR_POWER).flat()).toHaveLength(900)
-    expect(Object.values(DOFUS_WEAPON_POWER).flat()).toHaveLength(353)
+    expect(Object.values(DOFUS_WEAPON_POWER).flat()).toHaveLength(415)
+    expect(Object.keys(DOFUS_WEAPON_POWER)).toEqual(['bow', 'staff', 'daggers', 'sword', 'hammer'])
+    // Official item 1363, Bâton Tont'Ata: level 40, 79 rune power, 16–30 earth.
+    expect(DOFUS_WEAPON_POWER.staff).toContainEqual([40, 7_900, 230, 300])
+    expect(DOFUS_WEAPON_POWER.hammer).toHaveLength(114)
   })
 
   test('uses nearby real Retro donors instead of a fitted level curve', () => {
@@ -264,19 +271,24 @@ describe('Dofus Retro item power', () => {
   })
 
   test('keeps weapon output separate and compares damage per AP by family', () => {
-    expect(dofus_weapon_damage_envelope(50, 'sword')).toEqual({
-      average_p10: 2.3,
-      average_median: 3.9,
-      average_p90: 6.1,
-      average_max: 9.75,
-      maximum_p10: 3.1,
-      maximum_median: 4.8,
-      maximum_p90: 8.33,
-      maximum_max: 14,
+    expect(dofus_weapon_damage_envelope(50, 'sword', 5)).toEqual({
+      donor_family: 'sword',
+      average_p10: 4.6,
+      average_median: 7.8,
+      average_p90: 12.2,
+      average_max: 19.5,
+      maximum_p10: 6.2,
+      maximum_median: 9.6,
+      maximum_p90: 16.66,
+      maximum_max: 28,
       sample_count: 21,
       level_min: 40,
       level_max: 60,
     })
+    expect(item_budget_envelope(30, 'spear').comparison).toBe('staff')
+    expect(item_budget_envelope(30, 'axe').comparison).toBe('hammer')
+    expect(dofus_weapon_damage_envelope(30, 'spear', 4)?.donor_family).toBe('staff')
+    expect(dofus_weapon_damage_envelope(30, 'axe', 5)?.donor_family).toBe('hammer')
   })
 })
 

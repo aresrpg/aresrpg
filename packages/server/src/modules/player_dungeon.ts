@@ -12,7 +12,7 @@ import type { PlayerModule, PlayerState } from '../player.ts'
 
 const log = logger(import.meta)
 
-const lobby_key = ({ world, x, z }: Readonly<{ world: string; x: number; z: number }>): string => `${world}:${x}:${z}`
+const lobby_key = ({ dungeon }: Readonly<{ dungeon: string }>): string => dungeon
 
 const runs_of = (state: PlayerState) =>
   new Map(
@@ -42,10 +42,10 @@ export default {
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       const before = runs_of(previous)
       const current = runs_of(state)
-      for (const [key, run] of before) if (!current.has(key)) unwatch(channels.dungeon(run.world, run.x, run.z))
+      for (const [key, run] of before) if (!current.has(key)) unwatch(channels.dungeon(run.dungeon))
       for (const [key, run] of current) {
         if (before.has(key)) continue
-        void watch(channels.dungeon(run.world, run.x, run.z), forward(key) as (payload: never) => void)
+        void watch(channels.dungeon(run.dungeon), forward(key) as (payload: never) => void)
           .then(() => {
             if (runs_of(get_state()).has(key)) refresh(key)
           })

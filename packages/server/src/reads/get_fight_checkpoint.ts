@@ -38,6 +38,7 @@ const weapon_of = (item: Record<string, unknown> | null): FightPlayerSourceRow['
 
 const item_type_of = (item: Record<string, unknown> | null): string | null =>
   typeof item?.item_type === 'string' ? item.item_type : null
+const nullable = <Value>(value: Value | null | undefined): Value | null => value ?? null
 
 const kolizeum_of = (node: Node): FightStateRow['kolizeum'] => {
   const kolizeum = node?.properties
@@ -112,8 +113,9 @@ export async function get_fight_checkpoint(
     access_a: fight.access_a,
     access_b: fight.access_b,
     ended: fight.phase === 'ended',
-    winner: fight.winner ?? null,
-    dungeon: fight.dungeon_room ?? null,
+    winner: nullable(fight.winner),
+    dungeon: nullable(fight.dungeon),
+    dungeon_room: nullable(fight.dungeon_room),
     managed: Boolean(fight.managed),
     wagered: Boolean(fight.wagered),
     drops_rolled: Boolean(fight.drops_rolled),

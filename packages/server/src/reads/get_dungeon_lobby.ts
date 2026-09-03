@@ -15,22 +15,22 @@ const player_row = (row: Record<string, unknown>): DungeonLobbyPlayerRow =>
 
 export const get_dungeon_lobby = async (
   graph: Graph,
-  { world, x, z }: Readonly<{ world: string; x: number; z: number }>
+  { dungeon }: Readonly<{ dungeon: string }>
 ): Promise<DungeonLobbyRow> => {
   const [occupant_rows, fight_rows] = await Promise.all([
     graph.read(
       `
-      MATCH (c:Character {dungeon_world: $world, dungeon_x: $x, dungeon_z: $z})
+      MATCH (c:Character {dungeon: $dungeon})
       RETURN c.id AS character_id, c.name AS name, c.level AS level, c.dungeon_room AS room`,
-      { world, x, z }
+      { dungeon }
     ),
     graph.read(
       `
-      MATCH (f:Fight {world: $world, x: $x, z: $z})
-      WHERE f.dungeon_room IS NOT NULL AND f.phase <> 'ended'
+      MATCH (f:Fight {dungeon: $dungeon})
+      WHERE f.phase <> 'ended'
       OPTIONAL MATCH (f)-[:FIGHTER]->(c:Character)
       RETURN f AS fight, collect({ character_id: c.id, name: c.name, level: c.level, room: c.dungeon_room }) AS players`,
-      { world, x, z }
+      { dungeon }
     ),
   ])
   const players = Object.freeze(
@@ -55,5 +55,5 @@ export const get_dungeon_lobby = async (
       })
       .sort((left, right) => left.room - right.room || left.id.localeCompare(right.id))
   )
-  return Object.freeze({ world, x, z, players, fights })
+  return Object.freeze({ dungeon, players, fights })
 }

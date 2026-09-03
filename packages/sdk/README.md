@@ -1,13 +1,14 @@
 # @aresrpg/sdk
 
 The game client's ONE write surface — a **generated projection of the Move contract**. Every
-public/entry function of `packages/move/sources/api.move` becomes one PTB builder in
+public/entry function of `packages/move/sources/api.move` and `trade.move` becomes one PTB builder in
 `src/doors.gen.ts`; the generator (`bun run generate`) reads the Move source, so the SDK can
 never drift from the chain surface — a Move door change lands with its regenerated builder in
 the same commit, and the test suite is red otherwise (the regen-clean tooth).
 
-Write-only by design: reads flow through the indexer, content lives in `seed/`, deployment ids
-live in the repo-root `pins.json`. A missing pin throws at the door — never a guess.
+Gameplay writes are the primary surface. Narrow wallet, object-reference, and explicit tooltip reads
+remain here when no projection can own them. Content lives in `seed/`; deployment ids live in the
+repo-root `pins.json`. A missing pin throws at the door — never a guess.
 
 ## The pre-resolved game-object law
 
@@ -30,25 +31,36 @@ import { SDK } from '@aresrpg/sdk'
 const sdk = SDK({ client, signer })
 await sdk.hydrate([kiosk, cap]) // once per session
 
-// one-shot: build → dry-run exact unsigned bytes → sign → execute → receipt
-// `points` is exact capital spent; Move derives the whole natural-stat gain.
-const receipt = await sdk.call.raise_stat({ kiosk, cap, character_id, stat: 'strength', points: 5 })
+// one door: compose → resolver simulation → sign → execute → receipt
+const stat_tx = sdk.tx()
+sdk.doors.raise_stat(stat_tx, { kiosk, cap, character_id, stat: 'strength', points: 5 })
+const receipt = await sdk.execute(stat_tx)
 
 // composed PTB (hot potatoes chain through returned results)
 const tx = sdk.tx()
-const build = sdk.doors.engage_fight(tx, { kiosk, cap, character_id, w: world, zx, zz, group_index: 0, access: 0 })
+const build = sdk.doors.engage_fight(tx, {
+  kiosk,
+  cap,
+  character_id,
+  world_object,
+  world_content,
+  zone_x,
+  zone_z,
+  group_index: 0,
+  access: 0,
+  catalog,
+})
 sdk.doors.add_fight_mob(tx, { build, template })
 sdk.doors.launch_fight(tx, { build })
 await sdk.execute(tx)
 ```
 
-- `sdk.execute(tx)` resolves sender/gas, dry-runs the exact unsigned bytes, signs only a green
+- `sdk.execute(tx)` lets the official resolver select gas and simulate once, signs only a green
   transaction, executes once, logs digest plus net gas, **throws on any failed status** (a digest
   exists = gas burned — never auto-retry), absorbs the receipt into the cache, and returns it for
   client prediction.
-- `sdk.with_kiosk(tx, kiosk_client, cap, (kiosk, kiosk_cap) => …)` — kiosk composition through
-  the official `@mysten/kiosk` `KioskTransaction` (`cap` from `getOwnedKiosks`, fetched once per
-  session): a personal cap is borrowed/returned automatically; doors take the bare
-  `&KioskOwnerCap` (the wrapper stays out of Move by ruling).
+- Authenticated actions resolve the stable kiosk identity once per session. The shared kiosk runner
+  overlays receipt-fresh cap refs and performs one fresh lookup only after a proven pre-submission
+  stale-cap failure.
 - Doors marked **TERMINAL** take `&Random`: such a call must be the LAST command of its
   transaction (the terminal-random law).

@@ -6,6 +6,8 @@
 // uses) picks the kind family through its preset, and every color derives from the authored
 // material colors — nothing here owns a palette. Rendering lives in scatter_layer.ts.
 
+import type { CityNatureKind } from './cities/types.ts'
+import { generated_city_land_use } from './cities/generated_city.ts'
 import type { MaterialPreset } from './material_presets.ts'
 import type { StructurePlacement } from './structure_placement.ts'
 import type { Vec3 } from './types.ts'
@@ -13,7 +15,7 @@ import { CHUNK_EDGE } from './voxel_data.ts'
 import { field_value, hash_position } from './world_noise.ts'
 import { sample_world_column, terrain_material_id, terrain_slope, type CompiledWorld } from './world_recipe.ts'
 
-export type ScatterKind = 'tuft' | 'bush' | 'flower' | 'mushroom' | 'twig' | 'pebble' | 'spike'
+export type ScatterKind = 'tuft' | 'bush' | 'flower' | 'mushroom' | 'twig' | 'pebble' | 'spike' | CityNatureKind
 /** Pre-built geometry variants per kind (scatter_layer bakes them; placement only picks an index). */
 export const RECIPE_VARIANTS = 8
 type Rgb = readonly [number, number, number]
@@ -67,7 +69,6 @@ const PRESET_RULES: Readonly<Record<MaterialPreset, readonly ScatterRule[]>> = O
   foliage: [],
   water: [],
 })
-
 const SALT_SPAWN = 0x51afd7e9
 const SALT_PATCH = 0x3f6b8d21
 const SALT_JITTER_X = 0x6d2e4b17
@@ -134,48 +135,72 @@ const saturate = (color: Rgb, amount: number): Rgb => {
 }
 
 type ColumnColors = Readonly<{ surface: Rgb; subsurface: Rgb; filler: Rgb }>
+type ScatterColors = Readonly<{ color: Rgb; accent: Rgb }>
+type ColorDeriver = (colors: ColumnColors, roll: number) => ScatterColors
+
+const COLOR_DERIVERS = Object.freeze({
+  tuft: ((colors, roll) => {
+    const body = scale_rgb(colors.surface, 0.5 + roll * 0.25)
+    return { color: body, accent: saturate(scale_rgb(colors.surface, 1.2 + roll * 0.25), 0.12) }
+  }) satisfies ColorDeriver,
+  bush: ((colors, roll) => {
+    const body = scale_rgb(colors.surface, 0.4 + roll * 0.2)
+    return { color: body, accent: saturate(scale_rgb(colors.surface, 0.95 + roll * 0.25), 0.15) }
+  }) satisfies ColorDeriver,
+  flower: ((colors, roll) => {
+    const [surface_hue] = rgb_to_hsv(colors.surface)
+    const petal_hue = (surface_hue + (100 + roll * 200) / 360) % 1
+    return { color: scale_rgb(colors.surface, 0.55), accent: hsv_to_rgb([petal_hue, 0.85, 0.95]) }
+  }) satisfies ColorDeriver,
+  mushroom: ((colors, roll) => ({
+    color: lighten(colors.subsurface, 0.45),
+    accent: saturate(hue_rotate(colors.subsurface, -40 + roll * 60), 0.2),
+  })) satisfies ColorDeriver,
+  twig: ((colors, roll) => {
+    const wood = scale_rgb(colors.subsurface, 0.45 + roll * 0.25)
+    return { color: wood, accent: wood }
+  }) satisfies ColorDeriver,
+  pebble: ((colors, roll) => {
+    const body = scale_rgb(colors.filler, 0.75 + roll * 0.35)
+    return { color: body, accent: lighten(body, 0.18) }
+  }) satisfies ColorDeriver,
+  spike: ((colors) => ({
+    color: scale_rgb(colors.surface, 0.9),
+    accent: lighten(colors.surface, 0.5),
+  })) satisfies ColorDeriver,
+  cobweb: ((colors) => ({
+    color: lighten(colors.filler, 0.62),
+    accent: lighten(colors.filler, 0.86),
+  })) satisfies ColorDeriver,
+  dry_reed: ((colors) => ({
+    color: scale_rgb(colors.subsurface, 0.75),
+    accent: lighten(colors.subsurface, 0.28),
+  })) satisfies ColorDeriver,
+  city_shrub: ((colors) => ({
+    color: scale_rgb(colors.surface, 0.42),
+    accent: saturate(lighten(colors.surface, 0.18), 0.12),
+  })) satisfies ColorDeriver,
+  field_crop: ((colors, roll) => ({
+    color: saturate(hue_rotate(scale_rgb(colors.surface, 0.72 + roll * 0.12), 36), 0.1),
+    accent: saturate(hue_rotate(lighten(colors.surface, 0.28), 58), 0.18),
+  })) satisfies ColorDeriver,
+} satisfies Readonly<Record<ScatterKind, ColorDeriver>>)
 
 /** Every scatter color is a transform of the authored block colors — the biome recolors its own clutter. */
-const derive_colors = (
-  kind: ScatterKind,
-  colors: ColumnColors,
-  roll: number
-): Readonly<{ color: Rgb; accent: Rgb }> => {
-  switch (kind) {
-    case 'tuft': {
-      // Dark rooted base, brighter saturated tip — the gradient reads as depth inside the clump.
-      const body = scale_rgb(colors.surface, 0.5 + roll * 0.25)
-      return { color: body, accent: saturate(scale_rgb(colors.surface, 1.2 + roll * 0.25), 0.12) }
-    }
-    case 'bush': {
-      // Deeper green than the carpet — a bush is denser foliage than the ground it sits on.
-      const body = scale_rgb(colors.surface, 0.4 + roll * 0.2)
-      return { color: body, accent: saturate(scale_rgb(colors.surface, 0.95 + roll * 0.25), 0.15) }
-    }
-    case 'flower': {
-      // Only the HUE derives from the ground — petals force full saturation and brightness,
-      // otherwise a muted field breeds grey blooms (owner 2026-08-19: "grey, feels a bit sad").
-      const [surface_hue] = rgb_to_hsv(colors.surface)
-      const petal_hue = (surface_hue + (100 + roll * 200) / 360) % 1
-      return { color: scale_rgb(colors.surface, 0.55), accent: hsv_to_rgb([petal_hue, 0.85, 0.95]) }
-    }
-    case 'mushroom':
-      return {
-        color: lighten(colors.subsurface, 0.45),
-        accent: saturate(hue_rotate(colors.subsurface, -40 + roll * 60), 0.2),
-      }
-    case 'twig': {
-      const wood = scale_rgb(colors.subsurface, 0.45 + roll * 0.25)
-      return { color: wood, accent: wood }
-    }
-    case 'pebble': {
-      const body = scale_rgb(colors.filler, 0.75 + roll * 0.35)
-      return { color: body, accent: lighten(body, 0.18) }
-    }
-    case 'spike':
-      return { color: scale_rgb(colors.surface, 0.9), accent: lighten(colors.surface, 0.5) }
-  }
+const derive_colors = (kind: ScatterKind, colors: ColumnColors, roll: number): ScatterColors =>
+  COLOR_DERIVERS[kind](colors, roll)
+
+const city_nature_at = (world: CompiledWorld, x: number, z: number): readonly ScatterRule[] | null => {
+  const city = world.structures.cities.find(
+    ({ area }) => x >= area.min_x && x <= area.max_x && z >= area.min_z && z <= area.max_z
+  )
+  if (!city) return null
+  const use = generated_city_land_use(city.id, x, z)
+  return city.nature_at(use)
 }
+
+const scatter_rules_at = (world: CompiledWorld, x: number, z: number, preset: MaterialPreset): readonly ScatterRule[] =>
+  city_nature_at(world, x, z) ?? PRESET_RULES[preset]
 
 /** Deterministic clutter for the chunk at `origin` — only columns whose top solid voxel lies in
  * this chunk's vertical slab spawn here, so every (x,z) has exactly one owning chunk. Columns
@@ -219,7 +244,7 @@ export const chunk_scatter = (
         )
       )
         continue
-      for (const rule of PRESET_RULES[material.preset]) {
+      for (const rule of scatter_rules_at(world, world_x, world_z, material.preset)) {
         const broad = field_value(
           world.decoration_seed,
           `scatter:${rule.kind}`,

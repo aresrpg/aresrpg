@@ -88,4 +88,50 @@ describe('ground scatter', () => {
     const world = world_with('grass', 30)
     expect(chunk_scatter(world, [0, 0, 0])).toEqual([])
   })
+
+  test('a city replaces biome grass with land-use-specific nature', () => {
+    const world = compile_world_recipe({
+      seed: 'city-scatter-test',
+      sea_level: 8,
+      materials: {
+        rock: { color: '#787878', preset: 'stone' },
+        soil: { color: '#6e4f38', preset: 'earth' },
+        cover: { color: '#5c8c3c', preset: 'grass' },
+        thebes_limestone: { color: '#d7c39a', preset: 'stone' },
+        thebes_sandstone: { color: '#b98254', preset: 'stone' },
+        thebes_tile: { color: '#247d86', preset: 'stone' },
+        thebes_copper: { color: '#aa654c', preset: 'stone' },
+        temperate_wood: { color: '#765038', preset: 'wood' },
+      },
+      biome_slots: Object.fromEntries(BIOME_SLOTS.map((slot) => [slot, 'test'])) as WorldRecipe['biome_slots'],
+      biomes: [
+        {
+          name: 'test',
+          landscape: [
+            { x: 0, y: 20, land: { surface: 'cover', subsurface: 'soil', filler: 'rock' } },
+            { x: 1, y: 20 },
+          ],
+        },
+      ],
+      structure_areas: [
+        {
+          id: 'thebes',
+          min_x: 0,
+          max_x: 95,
+          min_z: 0,
+          max_z: 31,
+          anchor_x: 16,
+          anchor_z: 16,
+          structure_packs: [],
+        },
+      ],
+    })
+    const instances = [0, 32, 64].flatMap((x) => [...chunk_scatter(world, [x, 0, 0])])
+
+    expect(instances.length).toBeGreaterThan(0)
+    instances.forEach(({ kind }) =>
+      expect(['dry_reed', 'city_shrub', 'pebble', 'field_crop', 'flower']).toContain(kind)
+    )
+    expect(instances.some(({ kind }) => kind === 'field_crop')).toBeTrue()
+  })
 })

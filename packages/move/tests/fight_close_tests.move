@@ -28,7 +28,7 @@ fun a_stranger_cannot_collect_the_deposit() {
 }
 
 #[test]
-#[expected_failure(abort_code = 1712, location = aresrpg::fight)]
+#[expected_failure(abort_code = 1712, location = aresrpg_combat::combat)]
 fun an_unsettled_seat_blocks_the_door() {
   let mut scenario = test_scenario::begin(PLAYER);
   fight::close_for_testing(PLAYER, false, scenario.ctx());
@@ -43,10 +43,18 @@ fun the_final_settler_is_accepted_before_the_atomic_random_door() {
 }
 
 #[test]
-#[expected_failure(abort_code = 1729, location = aresrpg::fight)]
+#[expected_failure(abort_code = 1729, location = aresrpg_combat::combat)]
 fun another_unsettled_player_refuses_the_atomic_last_settlement() {
   let mut scenario = test_scenario::begin(PLAYER);
   fight::assert_last_settler_for_testing(PLAYER, false, scenario.ctx());
+  abort 999
+}
+
+#[test]
+#[expected_failure(abort_code = 1731, location = aresrpg::fight)]
+fun a_duplicate_final_batch_refuses_before_randomness() {
+  let mut scenario = test_scenario::begin(PLAYER);
+  fight::assert_duplicate_last_settlers_for_testing(PLAYER, scenario.ctx());
   abort 999
 }
 
@@ -58,7 +66,7 @@ fun the_only_live_placement_player_may_take_the_atomic_exit() {
 }
 
 #[test]
-#[expected_failure(abort_code = 1729, location = aresrpg::fight)]
+#[expected_failure(abort_code = 1729, location = aresrpg_combat::combat)]
 fun another_live_placement_player_refuses_the_atomic_exit() {
   let mut scenario = test_scenario::begin(PLAYER);
   fight::assert_last_live_player_for_testing(PLAYER, false, scenario.ctx());

@@ -79,4 +79,41 @@ describe('admin wallet selection', () => {
     notify_change?.({ accounts: [accounts[0]!] })
     expect(invalidated).toBe(true)
   })
+
+  test('forwards silent wallet restoration without changing account selection', async () => {
+    const accounts = Object.freeze([account('0xfirst')])
+    let connect_options: { silent?: boolean } | undefined
+    const wallet = {
+      version: '1.0.0',
+      name: 'Silent Test Wallet',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"/>',
+      chains: ['sui:testnet'],
+      accounts,
+      features: {
+        'standard:connect': {
+          version: '1.0.0',
+          connect: async (options?: { silent?: boolean }) => {
+            connect_options = options
+            return { accounts }
+          },
+        },
+        'standard:events': { version: '1.0.0', on: () => () => undefined },
+        'sui:signPersonalMessage': {
+          version: '1.1.0',
+          signPersonalMessage: async () => ({ bytes: '', signature: '' }),
+        },
+        'sui:signTransaction': {
+          version: '2.0.0',
+          signTransaction: async () => ({ bytes: '', signature: '' }),
+        },
+      },
+    } as unknown as Wallet
+    unregister = getWallets().register(wallet)
+    const auth = create_wallet_auth({ graphql_url: 'https://example.invalid/graphql', network: 'testnet' })
+    const selectable = auth.wallets().find(({ name }) => name === wallet.name)
+    if (!selectable) throw new Error('The silent test wallet was not discovered')
+
+    expect(await selectable.authorize(true)).toEqual(['0xfirst'])
+    expect(connect_options).toEqual({ silent: true })
+  })
 })

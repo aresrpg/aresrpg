@@ -16,13 +16,28 @@ export {
   quality_pixel_ratio,
 } from './quality.ts'
 export { CHUNK_EDGE } from './voxel_data.ts'
+export { apply_voxel_operation } from './voxel_operation.ts'
 export { CELESTIAL_CYCLE_MS, DAY_FRAC } from './sky/celestial_motion.ts'
 export { MATERIAL_PRESETS, material_pattern } from './material_presets.ts'
 export { create_world_preview } from './world_preview.ts'
+export {
+  city_at_position,
+  client_world_position,
+  world_city_areas,
+  world_terrain,
+  worlds_source,
+  type WorldCityArea,
+} from './world_catalog.ts'
 export { DUNGEON_PORTAL_LABEL_HEIGHT, DUNGEON_PORTAL_ROOT_HEIGHT } from './dungeon_portals.ts'
 export { preload_mob_model } from './mob_model.ts'
 export { create_terrain_planner } from './terrain_planner.ts'
-export { structure_voxels } from './structure_placement.ts'
+export { city_map_overlays, structure_voxels } from './structure_placement.ts'
+export {
+  generated_city_intersects,
+  load_generated_city_artifacts,
+  load_generated_city_artifacts_for,
+} from './cities/generated_city.ts'
+export type { CityMapOverlay } from './structure_placement.ts'
 export { STRUCTURE_PACKS, STRUCTURE_TYPES } from './structures.ts'
 export {
   create_flat_projection,

@@ -229,6 +229,42 @@ export const ground_height_below = (
   return null
 }
 
+/** A collisionless follower stays on the same vertical world layer as its owner. This keeps it
+ * on bridges and roofs while the terrain height remains the fallback before structures load. */
+export const following_pet_ground_height = (
+  solid: SolidFn,
+  px: number,
+  pz: number,
+  owner_y: number,
+  terrain_y: number
+): number => ground_height_below(solid, px, owner_y, pz, 256) ?? terrain_y
+
+/** Lowest standable air pocket at or above authored terrain. A floor plus a tall-enough room
+ * wins over its roof; a wall, trunk, or cramped cavity lifts the spawn above the obstruction. */
+export const walkable_spawn_height = (
+  solid: SolidFn,
+  px: number,
+  base_y: number,
+  pz: number,
+  clearance = 3,
+  max_rise = 32
+): number => {
+  const x = Math.floor(px)
+  const z = Math.floor(pz)
+  const start = Math.floor(base_y)
+  for (let y = start; y <= start + max_rise; y += 1) {
+    if (!solid(x, y - 1, z)) continue
+    let clear = true
+    for (let offset = 0; offset < clearance; offset += 1)
+      if (solid(x, y + offset, z)) {
+        clear = false
+        break
+      }
+    if (clear) return y
+  }
+  return base_y
+}
+
 export const EJECT_MAX_UP = 32
 export const EJECT_RING = 2
 

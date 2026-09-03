@@ -54,7 +54,7 @@ fun physics_of(category: &String): (u16, u8, u8, u8, bool, bool, u8, u8) {
   if (*category == b"daggers".to_string()) (30, 3, 1, 1, false, false, 0, 0)
   else if (*category == b"spear".to_string()) (70, 4, 1, 1, false, false, 4, 1)
   else if (*category == b"bow".to_string()) (60, 4, 6, 2, true, false, 0, 0)
-  else if (*category == b"axe".to_string()) (55, 5, 1, 1, false, false, 4, 1)
+  else if (*category == b"axe".to_string()) (55, 5, 1, 1, false, false, 8, 1)
   else if (*category == b"sword".to_string()) (50, 5, 1, 1, false, false, 0, 0)
   else (100, 4, 1, 1, false, false, 0, 0) // bare hands
 }

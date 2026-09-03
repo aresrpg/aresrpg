@@ -32,6 +32,20 @@ export const relative_bearing = (target_bearing: number, heading: number): numbe
 export const strip_x = (rel: number, half_span: number = HALF_SPAN): number | null =>
   Math.abs(rel) > half_span ? null : 0.5 + rel / (2 * half_span)
 
+export const compass_target = (
+  origin: Readonly<{ x: number; z: number }>,
+  target: Readonly<{ x: number; z: number }>,
+  heading: number
+): Readonly<{ distance: number; x: number }> => {
+  const dx = target.x - origin.x
+  const dz = target.z - origin.z
+  const distance = Math.hypot(dx, dz)
+  const bearing = distance < 1 ? heading : bearing_of(dx, dz)
+  const relative = relative_bearing(bearing, heading)
+  const projected = strip_x(relative)
+  return Object.freeze({ distance, x: projected ?? (relative < 0 ? 0.1 : 0.9) })
+}
+
 /** The 8 compass points the strip labels, by bearing. Majors (N/E/S/W) render bigger. */
 export const CARDINALS = Object.freeze([
   { label: 'N', bearing: 0, major: true },

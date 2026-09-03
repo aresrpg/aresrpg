@@ -112,17 +112,17 @@ public(package) fun scribe(
   gear_template: &ItemTemplate,
   rune_item_id: ID,
   protected_item: &AresRPG_TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
   // the rune identity — aborts if the consumed item is not a catalog rune
-  let rune_type = { let r: &Item = kiosk.borrow(cap, rune_item_id); r.item_type() };
+  let rune_type = { let rune_item: &Item = kiosk.borrow(cap, rune_item_id); rune_item.item_type() };
   let (rune_stat, rune_tier) = cat::rune_of(rune_type);
 
   // the forgery job from the gear's category — a pure gate (no odds scaling)
   let job = {
-    let chr: &Character = kiosk.borrow(cap, character_id);
-    fj(chr, item_rows::template_category(gear_template))
+    let character: &Character = kiosk.borrow(cap, character_id);
+    forgery_job(character, item_rows::template_category(gear_template))
   };
 
   // consume exactly one rune unit BEFORE the roll — identical write whatever the outcome
@@ -130,14 +130,14 @@ public(package) fun scribe(
 
   let rune_value = cat::rune_amount(rune_stat, rune_tier);
   let rune_weight = cat::rune_weight(rune_stat, rune_tier);
-  let seed = gen.generate_u64();
+  let seed = generator.generate_u64();
 
   let (outcome, applied_value, lost_stat, lost_amount, new_puits, xp) = {
     let gear: &mut Item = kiosk.borrow_mut(cap, gear_id);
     assert!(item::template(gear) == item_rows::template_id(gear_template), EWrongItem);
     assert!(item::has_stats(gear), EWrongItem);
     let stats = item::stats(gear);
-    efs(gear);
+    ensure_forge_state(gear);
     let state = *df::borrow<ForgeKey, ForgeState>(item::uid(gear), ForgeKey());
     let cap_apps = cat::rune_max_apps(rune_stat);
     assert!(cap_apps == 0 || (state.apps[rune_stat as u64] as u64) < cap_apps, EMaxApps);
@@ -149,7 +149,7 @@ public(package) fun scribe(
       rune_stat, rune_value, rune_weight, FORGE_LEVEL, state.puits, &mut rng,
     );
 
-    item::ss(gear, stats.apply_raw(&forge::new_stats(&res)));
+    item::set_stats(gear, stats.apply_raw(&forge::new_stats(&res)));
 
     let succeeded = forge::outcome(&res) != forge::outcome_cf();
     let mut apps = state.apps;
@@ -163,8 +163,8 @@ public(package) fun scribe(
   };
 
   {
-    let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-    progression::bank_job_xp(chr, job, xp);
+    let character: &mut Character = kiosk.borrow_mut(cap, character_id);
+    progression::bank_job_xp(character, job, xp);
   };
 
   event::emit(RuneScribed {
@@ -184,10 +184,10 @@ public(package) fun crush(
   cap: &KioskOwnerCap,
   gear_ids: vector<ID>,
   protected_item: &AresRPG_TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  let seed = gen.generate_u64();
+  let seed = generator.generate_u64();
   let mut raws = vector<u64>[];
   let n = gear_ids.length();
   let mut i = 0;
@@ -222,22 +222,22 @@ public(package) fun redeem_rune(
   item_policy: &TransferPolicy<Item>,
   ctx: &mut TxContext,
 ) {
-  er1(claim); // deterministic first-touch reveal off the committed seed
+  ensure_revealed(claim); // deterministic first-touch reveal off the committed seed
   let (stat, tier) = cat::rune_of(item_rows::template_type(template));
   let idx = (stat as u64) * 3 + (tier as u64) - 1;
   let qty = claim.owed[idx];
   if (qty == 0) return;
   *&mut claim.owed[idx] = 0;
-  let stack = item::mp(template, qty as u32, ctx); // runes are stackable + stat-less
+  let stack = item::mint_plain(template, qty as u32, ctx); // runes are stackable + stat-less
   item::deposit(kiosk, cap, item_policy, existing, stack);
 }
 
 /// Consume the claim once every owed rune has been redeemed — a leftover row means a yielded rune
 /// was never claimed (client bug), so this aborts and the whole redeem reverts (the claim survives).
 public(package) fun discard_claim(mut claim: CrushClaim) {
-  er1(&mut claim); // reveal first — an unrevealed claim's owed is all-zero and would delete the runes
+  ensure_revealed(&mut claim); // reveal first — an unrevealed claim's owed is all-zero and would delete the runes
   let CrushClaim { id, seed: _, raws: _, revealed: _, owed } = claim;
-  aoe(&owed);
+  assert_owed_empty(&owed);
   id.delete();
 }
 
@@ -248,11 +248,11 @@ public(package) fun discard_claim(mut claim: CrushClaim) {
 /// `content_rules::craft_job_of` (shared with crafting, so a sword is `FORGER` for both, no drift).
 /// Only craftable gear is forgeable; a category with no job aborts. (A non-gear category that DOES
 /// carry a job, e.g. `key`, still fails scribe later on `has_stats` — keys carry no rolled block.)
-fun fj(chr: &Character, category: String): String {
+fun forgery_job(character: &Character, category: String): String {
   let job = content_rules::craft_job_of(&category);
   assert!(job.is_some(), ENotForgeable);
   let job = job.destroy_some();
-  assert!(progression::job_level_of(chr, job) >= RUNE_UNLOCK_LEVEL, EScribeLocked);
+  assert!(progression::job_level_of(character, job) >= RUNE_UNLOCK_LEVEL, EScribeLocked);
   job
 }
 
@@ -270,8 +270,8 @@ public(package) fun assert_crushable_for_testing(category: String, has_stats: bo
 }
 
 #[test_only]
-public(package) fun assert_scribe_job_for_testing(chr: &Character, category: String) {
-  fj(chr, category);
+public(package) fun assert_scribe_job_for_testing(character: &Character, category: String) {
+  forgery_job(character, category);
 }
 
 // ensure_revealed
@@ -279,7 +279,7 @@ public(package) fun assert_scribe_job_for_testing(chr: &Character, category: Str
 /// `crush_lines` per stored raw block, in the SAME order phase 1 snapshotted them — identical
 /// stream, deterministic result. No randomness remains for a gas budget to filter (the seed is
 /// already sealed), so this variable-cost work is safe in phase 2.
-fun er1(claim: &mut CrushClaim) {
+fun ensure_revealed(claim: &mut CrushClaim) {
   if (claim.revealed) return;
   let stride = cat::stat_count();
   let mut rng = prng::rng_seed(claim.seed);
@@ -297,7 +297,7 @@ fun er1(claim: &mut CrushClaim) {
 }
 
 // ensure_forge_state
-fun efs(gear: &mut Item) {
+fun ensure_forge_state(gear: &mut Item) {
   if (!df::exists(item::uid(gear), ForgeKey())) {
     let mut apps = vector<u8>[];
     let mut i = 0;
@@ -309,7 +309,7 @@ fun efs(gear: &mut Item) {
 // assert_owed_empty
 /// Every owed row zero after the mint walk — a leftover means a yielded rune's template was not
 /// committed: abort so the WHOLE crush reverts (burns included) and the gear survives.
-fun aoe(owed: &vector<u64>) {
+fun assert_owed_empty(owed: &vector<u64>) {
   let mut i = 0;
   while (i < owed.length()) {
     assert!(owed[i] == 0, EMissingTemplate);

@@ -29,11 +29,25 @@ describe('seed door generation', () => {
     expect(readFileSync(SEED_DOORS_OUT_PATH, 'utf8')).toBe(await generate_seed_doors())
   })
 
+  test('every game-package seed door is excluded from gameplay analytics', () => {
+    const source = readFileSync(new URL('../../indexer/src/pipeline.rs', import.meta.url), 'utf8')
+    const start = source.indexOf('pub(crate) fn is_deployment_only_target')
+    const end = source.indexOf('\n}\n\nfn game_activity_txs', start)
+    const exclusions = source.slice(start, end)
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    const game_seed_targets = seed_doors()
+      .filter(({ package_key }) => package_key === 'package')
+      .map(({ module, name }) => `${module}::${name}`)
+    expect(game_seed_targets).toHaveLength(7)
+    for (const target of game_seed_targets) expect(exclusions).toContain(`"${target}"`)
+  })
+
   test('derived object key descriptors are byte-identical to Move source generation', async () => {
     expect(seed_string_keys().map(({ name }) => name)).toEqual([
-      'SaleKey',
       'AirdropKey',
       'GiftcardKey',
+      'MasteryOfferKey',
       'WorldKey',
       'CheckpointKey',
       'ItemKey',
@@ -41,6 +55,7 @@ describe('seed door generation', () => {
       'SpellKey',
       'RecipeKey',
       'WorldContentKey',
+      'DungeonContentKey',
     ])
     expect(readFileSync(SEED_CONTRACT_OUT_PATH, 'utf8')).toBe(await generate_seed_contract())
   })

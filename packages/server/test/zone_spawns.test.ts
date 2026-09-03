@@ -6,10 +6,11 @@
 
 import { readFileSync } from 'node:fs'
 
+import { archimob_appearance_bp } from '@aresrpg/immutable'
 import { expect, test } from 'bun:test'
 
 import {
-  dungeon_portal,
+  archimob_type_for_roll,
   mob_group_size_bounds,
   mob_groups,
   mob_level_scalar_bounds,
@@ -17,10 +18,16 @@ import {
   world_population,
 } from '../src/zone_spawns.ts'
 
+test('every eligible member has an independent exact one-percent replacement boundary', () => {
+  const rows = [{ ordinary_type: 'fuwa', archi_type: 'fukuo' }]
+  expect([99n, 100n, 0n].map((roll) => archimob_type_for_roll('fuwa', rows, roll))).toEqual(['fukuo', 'fuwa', 'fukuo'])
+  expect(archimob_type_for_roll('ant', rows, 0n)).toBe('ant')
+})
+
 const world = world_population('nauvis')!
 const world_with_mobs = {
   ...world,
-  mobs: [{ mob_type: 'protector_wheat_bricheton', weight_bp: 10_000n, biomes: [...Array(9).keys()] }],
+  mobs: [{ mob_type: 'protector_wheat_bricheton', weight_bp: 10_000n, biomes: [...Array(9).keys()], cities: [0] }],
 } as never
 const CENTER_ZONE = { zx: 97, zz: 97 } // center starter zone, authored plains — level floor 0 territory
 const OCEAN_ZONE = { zx: 88, zz: 85 }
@@ -33,6 +40,8 @@ test('every hand-mirrored zone constant matches Move', () => {
     'GROUPS_MAX',
     'RES_PACKS_MIN',
     'RES_PACKS_MAX',
+    'CITY_RESOURCE_NODE_NUMERATOR',
+    'CITY_RESOURCE_NODE_DENOMINATOR',
     'GROUP_SIZE_FULL_AT',
     'GROUP_SIZE_AVG3_AT',
     'LEVEL_RAMP_AT',
@@ -40,19 +49,76 @@ test('every hand-mirrored zone constant matches Move', () => {
     'LEVEL_HIGH_CAP',
     'NODES_RAMP_AT',
     'HOMOGENEOUS_BP',
-    'PORTAL_BP',
   ]
   const value = (source: string, name: string, move: boolean): string | null =>
     new RegExp(`const ${name}${move ? ': u64' : ''} = ([\\d_]+)${move ? ';' : 'n'}`).exec(source)?.[1] ?? null
 
   names.forEach((name) => expect(value(twin_source, name, false), name).toBe(value(move_source, name, true)))
+  expect(new RegExp('const ARCHIMOB_BP: u64 = ([\\d_]+);').exec(move_source)?.[1]).toBe(String(archimob_appearance_bp))
 })
 
 test('Nauvis exposes its exact hand-authored roaming roster', () => {
-  expect(world.mobs).toHaveLength(18)
-  expect(new Set(world.mobs.map(({ mob_type }) => mob_type))).toHaveLength(18)
+  expect(world.mobs).toHaveLength(26)
+  expect(new Set(world.mobs.map(({ mob_type }) => mob_type))).toHaveLength(26)
   expect(world.mobs.some(({ mob_type }) => mob_type === 'araknomath')).toBeFalse()
+  expect(world.mobs.find(({ mob_type }) => mob_type === 'nook')?.biomes).toEqual([1])
+  expect(world.mobs.find(({ mob_type }) => mob_type === 'nook')?.cities).toEqual([0])
   expect(mob_groups(world, CENTER_ZONE.zx, CENTER_ZONE.zz, 1n)).not.toEqual([])
+})
+
+test('Nook materializes in the City of Thebes population', () => {
+  const city_members = mob_groups(world, 98, 97, 1n).flatMap(({ members }) => members.map(({ mob_type }) => mob_type))
+
+  expect(city_members).toContain('nook')
+})
+
+test('the independent archimob stream changes only eligible member identity', () => {
+  const ordinary = mob_groups({ ...world, archis: [] }, 94, 94, 0n)
+  const substituted = mob_groups(world, 94, 94, 0n)
+
+  expect(ordinary[24]?.members[2]).toEqual({ mob_type: 'fuwa__black', level_scalar: 7 })
+  expect(substituted[24]?.members[2]).toEqual({ mob_type: 'fuwa__fukuo', level_scalar: 7 })
+  expect(
+    substituted.map(({ index, x, z, members }) => ({
+      index,
+      x,
+      z,
+      levels: members.map(({ level_scalar }) => level_scalar),
+    }))
+  ).toEqual(
+    ordinary.map(({ index, x, z, members }) => ({
+      index,
+      x,
+      z,
+      levels: members.map(({ level_scalar }) => level_scalar),
+    }))
+  )
+})
+
+test('the fixed archimob population vector matches Move', () => {
+  const population = {
+    mobs: [{ mob_type: 'fuwa', weight_bp: 10_000n, biomes: [0], cities: [] }],
+    resources: [],
+    cities: [],
+    archis: [{ ordinary_type: 'fuwa', archi_type: 'fukuo' }],
+    map: { side: 0, cells: new Uint8Array(), zone_x0: 0, zone_z0: 0 },
+  } as never
+  const groups = mob_groups(population, 97, 97, 0n)
+
+  expect(groups).toHaveLength(56)
+  expect(groups[42]).toEqual({ index: 42, x: 49_816, z: 50_068, members: [{ mob_type: 'fukuo', level_scalar: 0 }] })
+})
+
+test('city fauna enters Thebes only through explicit city membership', () => {
+  const city_fauna = ['nook', 'lorito__earth', 'lorito__fire', 'lorito__water', 'lorito__air', 'bramble', 'tinker']
+  const city_only = new Set(['lorito__earth', 'lorito__fire', 'lorito__water', 'lorito__air'])
+
+  for (const mob_type of city_fauna)
+    expect(world.mobs.find((row) => row.mob_type === mob_type)).toMatchObject({
+      biomes: city_only.has(mob_type) ? [] : [1],
+      cities: [0],
+    })
+  expect(world.mobs.filter(({ cities }) => cities.includes(0)).map(({ mob_type }) => mob_type)).toEqual(city_fauna)
 })
 
 test('the ocean biome generates neither mobs nor resource packs', () => {
@@ -82,12 +148,6 @@ test('the population derives deterministically from the zone seed', () => {
     expect(Math.floor(group.z / 512)).toBe(CENTER_ZONE.zz)
     expect(group.members.length).toBeGreaterThanOrEqual(1)
   }
-})
-
-test('the dungeon portal is the exact zone_math seed draw and absent without dungeon content', () => {
-  expect(dungeon_portal(world, 3, 4, 8n)).toEqual({ x: 1_649, z: 2_490 })
-  expect(dungeon_portal({ ...world, has_dungeon: false }, 3, 4, 8n)).toBeNull()
-  expect(dungeon_portal(world, 3, 4, 7n)).toBeNull()
 })
 
 test('group size reaches average three at 2,000 blocks and grows before then', () => {
@@ -123,6 +183,14 @@ test('resource packs carry the TOTAL nodes the seed drew, consumption unapplied'
     expect(Math.floor(pack.z / 512)).toBe(CENTER_ZONE.zz)
   }
   expect(resource_packs(world, CENTER_ZONE.zx, CENTER_ZONE.zz, 7n)).toEqual(packs)
+})
+
+test('city resource abundance is the exact Move 3/2 node multiplier without extra packs', () => {
+  const city = resource_packs(world, 98, 97, 7n)
+  const ordinary = resource_packs({ ...world, cities: [] }, 98, 97, 7n)
+
+  expect(city).toHaveLength(ordinary.length)
+  city.forEach((pack, index) => expect(pack.nodes).toBe(Math.floor(ordinary[index]!.nodes * 1.5)))
 })
 
 test('distance ramps the level window: center mobs are minimum and frontier mobs are upper-band', () => {

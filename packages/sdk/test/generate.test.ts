@@ -36,9 +36,22 @@ describe('door parsing (positive controls against the real api.move)', () => {
     expect(api_source).not.toMatch(/public fun trade_get_[ic]\s*\([^)]*\)\s*:\s*PurchaseCap</)
   })
 
-  test('generic fight cleanup explicitly rejects wagered fights', () => {
+  test('generic fight cleanup explicitly checks its lifecycle door policy', () => {
     const body = /entry fun close_fight[\s\S]*?\n}/.exec(api_source)?.[0] ?? ''
-    expect(body).toContain('!fight::is_wagered(&f)')
+    expect(body).toContain('fight::assert_close_door_open(&fight_object)')
+  })
+
+  test('fight settlement exposes batch doors only, plus explicit close recovery', () => {
+    const names = doors.map(({ name }: ParsedDoor) => name)
+    expect(names.filter((name) => /^(?:settle.*fight|close_fight)/u.test(name)).toSorted()).toEqual([
+      'close_fight',
+      'settle_fight',
+      'settle_last_fight',
+    ])
+    expect(names.filter((name) => /settle.*dungeon_room/u.test(name)).toSorted()).toEqual([
+      'settle_dungeon_room',
+      'settle_last_dungeon_room',
+    ])
   })
 
   test('attacker-controlled social manifests have explicit chain bounds', () => {

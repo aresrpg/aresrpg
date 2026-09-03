@@ -63,6 +63,7 @@ test('the shared spell card keeps its read layout at every size and opens on the
   )
 
   expect(html).toContain('data-spell-detail-card=""')
+  expect(html).toContain('data-spell-art=""')
   expect(html).toContain('data-spell-inline-edit="spell name"')
   expect(html).toContain('data-spell-effect-field="effect kind"')
   expect(html).toContain('data-spell-effect-field="effect power"')

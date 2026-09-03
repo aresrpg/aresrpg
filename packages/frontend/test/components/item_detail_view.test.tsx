@@ -57,6 +57,7 @@ test('the shared item detail exposes click-to-edit fields without changing read-
   const readonly = renderToStaticMarkup(<ItemDetailView {...common} />)
 
   expect(editable).toContain('data-item-detail-editable=""')
+  expect(readonly).toContain('data-item-detail-name=""')
   expect(editable).toContain('data-item-inline-edit="Vitality"')
   expect(editable).toContain('data-item-stat="wisdom"')
   expect(readonly).not.toContain('data-item-detail-editable=""')

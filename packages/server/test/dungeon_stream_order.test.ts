@@ -34,7 +34,7 @@ const tracked_state = ({ dungeon = false, party = null as string | null } = {}):
         fight: null,
         fight_seat: null,
         active_fighter: null,
-        dungeon_run: dungeon ? { world: 'nauvis', room: 1, x: 1649, z: 2490 } : null,
+        dungeon_run: dungeon ? { dungeon: 'tangled_aftermath', room: 1 } : null,
       },
     },
   }) as unknown as PlayerState
@@ -142,7 +142,7 @@ test('a stale dungeon baseline cannot overwrite a newer lobby invalidation', asy
 
   events.emit('STATE_UPDATED', current, empty_state())
   await flush()
-  pubsub.graph.emitter.emit('evt:dungeon:nauvis:1649:2490', {
+  pubsub.graph.emitter.emit('evt:dungeon:tangled_aftermath', {
     type: 'DungeonLobbyChanged',
     data: { world: 'nauvis', x: 1649, z: 2490 },
   })

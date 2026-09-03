@@ -2,7 +2,16 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 export type SeedDomain =
-  'airdrop' | 'fight_boards' | 'items' | 'mobs' | 'recipes' | 'shop' | 'spells' | 'structure_packs' | 'worlds'
+  | 'airdrop'
+  | 'dungeons'
+  | 'fight_boards'
+  | 'items'
+  | 'mastery'
+  | 'mobs'
+  | 'recipes'
+  | 'spells'
+  | 'structure_packs'
+  | 'worlds'
 export type JsonPrimitive = string | number | boolean | null
 export type JsonValue = JsonPrimitive | readonly JsonValue[] | Readonly<{ [key: string]: JsonValue }>
 export type JsonPath = readonly (string | number)[]
@@ -21,11 +30,12 @@ export type EntityAssetReference =
 
 export const seed_content_domains = Object.freeze([
   Object.freeze({ id: 'airdrop', file: 'airdrop.json', label: 'Airdrop' }),
+  Object.freeze({ id: 'dungeons', file: 'dungeons.json', label: 'Dungeons' }),
   Object.freeze({ id: 'fight_boards', file: 'fight_boards.json', label: 'Fight boards' }),
   Object.freeze({ id: 'items', file: 'items.json', label: 'Items' }),
+  Object.freeze({ id: 'mastery', file: 'mastery.json', label: 'Mastery' }),
   Object.freeze({ id: 'mobs', file: 'mobs.json', label: 'Mobs' }),
   Object.freeze({ id: 'recipes', file: 'recipes.json', label: 'Recipes' }),
-  Object.freeze({ id: 'shop', file: 'shop.json', label: 'Shop' }),
   Object.freeze({ id: 'spells', file: 'spells.json', label: 'Spells' }),
   Object.freeze({ id: 'structure_packs', file: 'structure_packs.json', label: 'Structure packs' }),
   Object.freeze({ id: 'worlds', file: 'worlds.json', label: 'Worlds' }),
@@ -38,21 +48,21 @@ export const is_seed_file = (
 ): file is Readonly<{ file: SeedFileName; revision: string; value: JsonValue }> =>
   seed_file_names.has(file.file as SeedFileName)
 
+const identity_field: Readonly<Record<SeedDomain, string>> = Object.freeze({
+  airdrop: 'id',
+  dungeons: 'dungeon',
+  fight_boards: 'id',
+  items: 'item_type',
+  mastery: 'item_type',
+  mobs: 'mob_type',
+  recipes: 'output_type',
+  spells: 'name',
+  structure_packs: 'id',
+  worlds: 'world',
+})
+
 const row_name = (domain: SeedDomain, value: Readonly<Record<string, JsonValue>>, index: number): string => {
-  const key =
-    domain === 'items'
-      ? 'item_type'
-      : domain === 'mobs'
-        ? 'mob_type'
-        : domain === 'spells'
-          ? 'name'
-          : domain === 'recipes'
-            ? 'output_type'
-            : domain === 'worlds'
-              ? 'world'
-              : domain === 'shop'
-                ? 'item_type'
-                : 'id'
+  const key = identity_field[domain]
   const identity = value[key]
   return typeof identity === 'string' && identity.length > 0 ? identity : `${domain}-${index + 1}`
 }
@@ -65,6 +75,11 @@ const as_object = (value: JsonValue): Readonly<Record<string, JsonValue>> | null
 const string_field = (value: Readonly<Record<string, JsonValue>>, key: string): string | null =>
   typeof value[key] === 'string' && value[key].length > 0 ? value[key] : null
 
+const item_reference_domains: readonly SeedDomain[] = ['items', 'mastery']
+const array_sections: Readonly<Partial<Record<SeedDomain, string>>> = Object.freeze({
+  mastery: 'offers',
+})
+
 export const is_readonly_seed_path = (domain: SeedDomain, path: JsonPath): boolean =>
   (domain === 'items' && path.length === 1 && (path[0] === 'item_type' || path[0] === 'category')) ||
   (domain === 'mobs' && path.length === 1 && path[0] === 'mob_type')
@@ -72,7 +87,7 @@ export const is_readonly_seed_path = (domain: SeedDomain, path: JsonPath): boole
 export const entity_asset_reference = (domain: SeedDomain, value: JsonValue): EntityAssetReference | null => {
   const object = as_object(value)
   if (!object) return null
-  if (domain === 'items' || domain === 'shop') {
+  if (item_reference_domains.includes(domain)) {
     const id = string_field(object, 'item_type')
     return id ? Object.freeze({ kind: 'item', id }) : null
   }
@@ -118,7 +133,8 @@ export const entity_rows = (domain: SeedDomain, value: unknown): readonly SeedEn
   if (Array.isArray(json)) return array_rows(domain, json)
   const object = as_object(json)
   if (!object) return []
-  if (domain === 'shop') return array_rows(domain, Array.isArray(object.sales) ? object.sales : [], ['sales'])
+  const section = array_sections[domain]
+  if (section) return array_rows(domain, Array.isArray(object[section]) ? object[section] : [], [section])
   if (domain === 'airdrop')
     return ['drops', 'giftcards', 'legacy_pool', 'pending', 'showcase'].flatMap((section) => {
       const rows = object[section]
@@ -139,6 +155,11 @@ export const entity_rows = (domain: SeedDomain, value: unknown): readonly SeedEn
     Object.freeze({ id: key, label: key, path: Object.freeze([key]), value: child })
   )
 }
+
+export const entity_rows_from_draft = (
+  domain: SeedDomain,
+  draft: Readonly<{ value: JsonValue }> | undefined
+): readonly SeedEntityRow[] => entity_rows(domain, draft?.value)
 
 export const editable_json_paths = (value: unknown, path: JsonPath = []): readonly string[] => {
   if (value === null || typeof value !== 'object') return [path.join('.')]

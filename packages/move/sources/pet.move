@@ -67,7 +67,7 @@ public(package) fun feed_kiosk_pet(
   assert!(content_rules::pet_accepts(&item_rows::pet_foods(pet_template), &food_type), ENotFood);
   item::burn(kiosk, cap, protected_item, food_id, 1, ctx);
   let pet: &mut Item = kiosk.borrow_mut(cap, pet_id);
-  f1(pet, clock, ctx);
+  feed(pet, clock, ctx);
 }
 
 // ╔════════════════ [ Reads (the equip door folds through `scaled_stats`) ] ══ ]
@@ -90,7 +90,7 @@ public fun scaled_stats(pet: &Item): ItemStatistics {
 
 // feed
 /// One feed: today's UTC day must be NEW, the pet not maxed. State initializes lazily.
-fun f1(pet: &mut Item, clock: &Clock, ctx: &TxContext) {
+fun feed(pet: &mut Item, clock: &Clock, ctx: &TxContext) {
   assert!(pet.category() == b"pet".to_string(), ENotPet);
   let today = clock.timestamp_ms() / DAY_MS;
   let uid = item::uid_mut(pet);

@@ -17,6 +17,7 @@ import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
+import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
 import { scribe_outcome_kind, type ScribeHistoryEntry, type ScribeOutcomeKind } from '../modules/runeforge.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -183,10 +184,13 @@ export default function RuneforgeTab({
   const encyclopedia = encyclopedia_text(copy)
   const wallet = useAppStore(({ session }) => session.wallet)
   const all_inventory = useAppStore(({ session }) => session.inventory)
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
   const history_by_gear = useAppStore(({ runeforge }) => runeforge.history_by_gear)
+  const encumbered = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
   const inventory = useMemo(
-    () => all_inventory.filter(({ kiosk }) => kiosk === character.kiosk),
-    [all_inventory, character.kiosk]
+    () => available_inventory_items(all_inventory, encumbered, character.kiosk),
+    [all_inventory, character.kiosk, encumbered]
   )
   const [gear_id, set_gear_id] = useState<string | null>(null)
   const [rune_id, set_rune_id] = useState<string | null>(null)

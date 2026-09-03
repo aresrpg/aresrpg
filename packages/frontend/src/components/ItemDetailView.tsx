@@ -132,6 +132,9 @@ const item_has_characteristics = (
   stat_rows: readonly ItemStatRow[]
 ): boolean => rune_effect(item_type) !== null || damages.length > 0 || stat_rows.length > 0
 
+const CharacteristicsNote = ({ note }: Readonly<{ note?: string }>) =>
+  note ? <p className="text-[8px] leading-relaxed text-[#686d77]">{note}</p> : null
+
 const StatLine = ({
   edit,
   labels,
@@ -318,7 +321,13 @@ type ItemDetailProps = Readonly<{
   description?: string | null
   edit?: ItemDetailEdit
   item_type: string
-  labels: Readonly<{ characteristics: string; damages: string; level_short: string; range_to: string }>
+  labels: Readonly<{
+    characteristics: string
+    characteristics_note?: string
+    damages: string
+    level_short: string
+    range_to: string
+  }>
   level: number
   name: string
   obtention?: string | null
@@ -366,7 +375,10 @@ export const ItemDetailView = ({
             <InlineField
               class_name="min-w-0 flex-1"
               display={
-                <span className="block truncate text-[13px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
+                <span
+                  className="block truncate text-[13px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase"
+                  data-item-detail-name=""
+                >
                   {name}
                 </span>
               }
@@ -445,6 +457,7 @@ export const ItemDetailView = ({
           <h3 className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">
             {labels.characteristics}
           </h3>
+          <CharacteristicsNote note={labels.characteristics_note} />
           <RuneEffectLine item_type={item_type} />
           {(damages.length > 0 || allow_damage_add) && (
             <div className="flex flex-col gap-1" data-item-damages="">

@@ -21,6 +21,26 @@ import { initial_session_state } from '../../src/modules/session.ts'
 
 const shell_source = readFileSync(new URL('../../src/components/AppShell.tsx', import.meta.url), 'utf8')
 
+test('the routed shell lazy-loads the dedicated Mastery page', () => {
+  expect(shell_source).toContain("import('../mastery/MasteryPage.tsx')")
+  expect(shell_source).toContain("page === 'mastery'")
+})
+
+test('the sidebar marks an unstarted daily quest without storing notification state', async () => {
+  const copy = await load_app_copy('en')
+  const html = renderToStaticMarkup(
+    <Sidebar
+      address={null}
+      copy={copy}
+      mastery_notification
+      network="testnet"
+      open_page={() => undefined}
+      page="world"
+    />
+  )
+  expect(html).toContain('data-nav-notification="mastery"')
+})
+
 test('switching tabs inside one fight does not remount its presentation layer', () => {
   const key_selector = shell_source.slice(
     shell_source.indexOf('const environment_key'),
@@ -35,6 +55,7 @@ test('the account card sits below navigation and above language with row actions
   const wallet = Object.freeze({
     address: '0x123456789',
     wallet_name: 'Google',
+    identity: 'zklogin' as const,
     sign_personal_message: async () => ({ bytes: '', signature: '' }),
     read_sui_balance: async () => 0n,
     gas_spent_24h: () => 0n,
@@ -47,6 +68,7 @@ test('the account card sits below navigation and above language with row actions
     kolizeum: {} as never,
     friends: {} as never,
     party: {} as never,
+    mastery: {} as never,
     character: {} as never,
     read_character_checkpoint: async () => null,
     read_item: async () => ({}) as never,
@@ -56,13 +78,20 @@ test('the account card sits below navigation and above language with row actions
     trade: () => ({}) as never,
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
-    send_sui: async () => ({ digest: null }),
-    buy_shop_item: async () => ({ digest: '' }),
-    claim_airdrop: async () => ({ digest: '' }),
+    send_sui: async () => ({ digest: 'digest' }),
+    claim_airdrop: async () => ({
+      digest: '',
+      giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
+    }),
+    claim_giftcard_link: async () => ({
+      digest: '',
+      giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
+    }),
+    redeem_giftcard: async () => ({ digest: '' }),
     create_seed_admin: async () => {
       throw new Error('not used while rendering')
     },
-    authorize_temp_admin: async () => ({ digest: '', admin_cap: {} as never }),
+    authorize_temp_admin: async () => ({ digest: '' }),
     publish_contract: async () => ({ receipt: {}, objects: [] }),
     upgrade_contract: async () => ({ receipt: {} }),
     read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),
@@ -107,7 +136,7 @@ test('the account card sits below navigation and above language with row actions
   expect(html).toContain('TESTNET')
   expect(html).toContain('class="flex flex-col gap-1"')
   expect(html).not.toContain('data-page="simulator"')
-  for (const page of ['shop', 'airdrop', 'kolizeum', 'settings']) {
+  for (const page of ['airdrop', 'kolizeum', 'settings']) {
     const button = html.match(new RegExp(`<button[^>]*data-page="${page}"[^>]*>`))?.[0]
     expect(button).toBeDefined()
     expect(button).not.toContain('disabled')
@@ -237,7 +266,7 @@ test('the character tab strip lives on character-scoped pages and selects throug
     kiosk: '0xk1',
     equipment: [],
   }
-  const shell = (page: 'world' | 'shop') =>
+  const shell = (page: 'world' | 'settings') =>
     renderToStaticMarkup(
       <AppShell
         change_locale={() => undefined}
@@ -266,7 +295,7 @@ test('the character tab strip lives on character-scoped pages and selects throug
   expect(world).toContain('aria-pressed="true"')
   expect(world).toContain('Oeuftermath')
   expect(world).toContain('data-character-tab-create')
-  expect(shell('shop')).not.toContain('data-character-tabs')
+  expect(shell('settings')).not.toContain('data-character-tabs')
 
   const capped = renderToStaticMarkup(
     <CharacterTabs

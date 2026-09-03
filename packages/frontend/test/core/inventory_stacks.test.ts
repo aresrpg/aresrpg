@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   allocate_stack_amount,
+  available_inventory_items,
   available_item_stacks,
   coalesced_stack_groups,
   craft_output_stack_plan,
@@ -126,5 +127,17 @@ describe('inventory stack selection', () => {
       [{ caps_a: [{ object: 'offered' }], caps_b: [{ object: 'claimed' }] } as never]
     )
     expect([...encumbered].sort()).toEqual(['claimed', 'listed', 'offered'])
+    expect(
+      available_inventory_items(
+        [
+          stack('available', 1),
+          stack('listed', 1),
+          stack('offered', 1),
+          stack('other-kiosk', 1, 'resource', '0xother'),
+        ],
+        encumbered,
+        '0xk'
+      ).map(({ id }) => id)
+    ).toEqual(['available'])
   })
 })

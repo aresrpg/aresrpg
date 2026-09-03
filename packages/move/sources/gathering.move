@@ -101,56 +101,56 @@ public struct RareGathered has copy, drop { world: String, x: u32, z: u32, gathe
 // ╔════════════════ [ The gather door ] ══════════════════════════════════════ ]
 
 public(package) fun gather(
-  w: &mut World,
-  wc: &WorldContent,
+  world_object: &mut World,
+  world_content: &WorldContent,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
-  zx: u32,
-  zz: u32,
+  zone_x: u32,
+  zone_z: u32,
   pack_index: u64,
   template: &ItemTemplate,
   rare_template: &ItemTemplate,
   existing: Option<ID>, // the gatherer's held stack of this resource — the yield merges in
   existing_rare: Option<ID>, // ditto for the rare variant
   item_policy: &TransferPolicy<Item>,
-  gen: &mut RandomGenerator,
+  generator: &mut RandomGenerator,
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
   // The live pack (a read — remaining nodes asserted) and its authored row.
-  let pack = zone::resource_pack_at(w, wc, zx, zz, pack_index);
+  let pack = zone::resource_pack_at(world_object, world_content, zone_x, zone_z, pack_index);
   let item_type = pack.pack_item_type();
-  let row = world_map::resource_row_of(world_content::data(wc), item_type);
+  let row = world_map::resource_row_of(world_content::data(world_content), item_type);
   assert!(item_rows::template_type(template) == item_type, ETemplateMismatch);
 
   // Gates on the character, then the job-xp write — all refusals before any state moves.
   let (quantity, gained_xp, protector) = {
-    let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-    let current = world::prove_move(chr, pack.pack_x(), pack.pack_z(), clock);
-    assert!(current == w.name(), EWrongWorld);
+    let character: &mut Character = kiosk.borrow_mut(cap, character_id);
+    let current = world::prove_move(character, pack.pack_x(), pack.pack_z(), clock);
+    assert!(current == world_object.name(), EWrongWorld);
     let job = row.resource_row_job();
-    assert!(equipment::tool_of(chr) == job_xp::gathering_tool(&job), ENoTool);
+    assert!(equipment::tool_of(character) == job_xp::gathering_tool(&job), ENoTool);
 
-    let job_level = progression::job_level_of(chr, job);
+    let job_level = progression::job_level_of(character, job);
     let required = job_xp::tier_to_level(row.resource_row_tier() as u64);
     assert!(job_level >= required, ETierLocked);
 
     // ONE yield roll in the reference band: both bounds climb with the job level.
     let (min_quantity, max_quantity) = job_xp::gather_quantity_bounds(job_level, required);
-    let quantity = gen.generate_u64_in_range(min_quantity, max_quantity);
+    let quantity = generator.generate_u64_in_range(min_quantity, max_quantity);
 
     // THE PROTECTOR VERDICT — gas-uniform by construction (Sui `&Random` law): every draw
     // happens and the SAME fixed-shape verdict writes on BOTH outcomes, so no gas budget
     // can tell a fired ambush from a quiet gather and abort it into a re-roll. The fight
     // itself spawns in `resolve_ambush` — a later tx with nothing left to re-roll.
-    let ambush_rolled = gen.generate_u64_in_range(0, 9999) < PROTECTOR_BP;
+    let ambush_rolled = generator.generate_u64_in_range(0, 9999) < PROTECTOR_BP;
     let protector = ambush_rolled && !row.resource_row_protector().is_empty();
-    let (level_lo, level_hi) = zone::level_bounds(zx, zz);
-    let scalar = level_lo + gen.generate_u64_in_range(0, level_hi - level_lo);
-    let board_seed = gen.generate_u64();
-    let hp = progression::touch(chr, clock);
-    wv(chr, PendingAmbush {
+    let (level_lo, level_hi) = zone::level_bounds(zone_x, zone_z);
+    let scalar = level_lo + generator.generate_u64_in_range(0, level_hi - level_lo);
+    let board_seed = generator.generate_u64();
+    let hp = progression::touch(character, clock);
+    write_ambush_verdict(character, PendingAmbush {
       fires: protector,
       protector: row.resource_row_protector(),
       x: pack.pack_x(),
@@ -161,30 +161,30 @@ public(package) fun gather(
     });
 
     let gained_xp = job_xp::gather_xp(required);
-    progression::bank_job_xp(chr, job, gained_xp);
+    progression::bank_job_xp(character, job, gained_xp);
     // GATHER TIME roots the gatherer; a fired verdict roots UNTIL RESOLVED — same stamp,
     // same gas, different horizon.
     let root = if (protector) ROOT_UNTIL_RESOLVED_MS else job_xp::gather_time_ms(job_level);
-    world::delay_checkpoint(chr, root, clock);
+    world::delay_checkpoint(character, root, clock);
     (quantity, gained_xp, protector)
   };
 
   // WRITES: one node leaves the pack, the yield lands in the kiosk (merged or fresh).
-  zone::consume_resource_node(w, wc, zx, zz, pack_index);
-  item::deposit(kiosk, cap, item_policy, existing, item::mint(template, quantity as u32, gen, ctx));
+  zone::consume_resource_node(world_object, world_content, zone_x, zone_z, pack_index);
+  item::deposit(kiosk, cap, item_policy, existing, item::mint(template, quantity as u32, generator, ctx));
 
   // GOLDEN-GATHER: identity asserted BEFORE the draw — a won jackpot always mints.
   let rare = row.resource_row_rare();
   if (!rare.is_empty()) {
     assert!(item_rows::template_type(rare_template) == rare, ERareMismatch);
-    if (gen.generate_u64_in_range(0, 9999) < RARE_BP) {
-      item::deposit(kiosk, cap, item_policy, existing_rare, item::mint(rare_template, 1, gen, ctx));
-      event::emit(RareGathered { world: w.name(), x: pack.pack_x(), z: pack.pack_z(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
+    if (generator.generate_u64_in_range(0, 9999) < RARE_BP) {
+      item::deposit(kiosk, cap, item_policy, existing_rare, item::mint(rare_template, 1, generator, ctx));
+      event::emit(RareGathered { world: world_object.name(), x: pack.pack_x(), z: pack.pack_z(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
     };
   };
 
   event::emit(ResourceGathered {
-    world: w.name(),
+    world: world_object.name(),
     x: pack.pack_x(),
     z: pack.pack_z(),
     gatherer: ctx.sender(),
@@ -211,15 +211,15 @@ public(package) fun resolve_ambush(
   ctx: &mut TxContext,
 ) {
   let verdict = {
-    let chr: &mut Character = kiosk.borrow_mut(cap, character_id);
-    let uid = chr.uid_mut();
+    let character: &mut Character = kiosk.borrow_mut(cap, character_id);
+    let uid = character.uid_mut();
     assert!(dfield::exists(uid, AmbushKey()), ENoAmbush);
     let pending: &mut PendingAmbush = dfield::borrow_mut(uid, AmbushKey());
     assert!(pending.fires, ENoAmbush);
     pending.fires = false;
     let verdict = *pending;
     // unroot — the fight's own admission re-proves the (zero-distance) walk to the node
-    world::delay_checkpoint(chr, 0, clock);
+    world::delay_checkpoint(character, 0, clock);
     verdict
   };
   assert!(mob_data::mob_type(protector_template.data()) == verdict.protector, EWrongProtector);
@@ -243,8 +243,8 @@ public(package) fun resolve_ambush(
 /// Is a FIRED verdict pending? The character-delete door refuses while true (audit
 /// 2026-08-10: deleting the character was the last way to dodge the protector — the yield
 /// lives in the kiosk and would have survived the dodge).
-public(package) fun has_fired_verdict(chr: &Character): bool {
-  let uid = chr.uid();
+public(package) fun has_fired_verdict(character: &Character): bool {
+  let uid = character.uid();
   dfield::exists(uid, AmbushKey()) &&
     dfield::borrow<AmbushKey, PendingAmbush>(uid, AmbushKey()).fires
 }
@@ -253,8 +253,8 @@ public(package) fun has_fired_verdict(chr: &Character): bool {
 
 // write_verdict
 /// Overwrite-or-add the verdict DF — the same bytes land on both outcomes (the gas law).
-fun wv(chr: &mut Character, verdict: PendingAmbush) {
-  let uid = chr.uid_mut();
+fun write_ambush_verdict(character: &mut Character, verdict: PendingAmbush) {
+  let uid = character.uid_mut();
   if (dfield::exists(uid, AmbushKey())) {
     *dfield::borrow_mut(uid, AmbushKey()) = verdict;
   } else {

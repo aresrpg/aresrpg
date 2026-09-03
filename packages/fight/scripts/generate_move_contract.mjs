@@ -17,6 +17,7 @@ const output_path = join(package_root, 'src/move_contract.gen.ts')
 
 const source_paths = [
   'packages/move/sources/fight.move',
+  'packages/move-combat/sources/combat.move',
   'packages/move/sources/api.move',
   'packages/move/sources/character.move',
   'packages/move/sources/equipment.move',
@@ -240,6 +241,7 @@ const source_hash = createHash('sha256')
   .digest('hex')
 
 const fight = sources['packages/move/sources/fight.move']
+const combat = sources['packages/move-combat/sources/combat.move']
 const api = sources['packages/move/sources/api.move']
 const progression = sources['packages/move/sources/progression.move']
 const forgemagie = sources['packages/move/sources/forgemagie.move']
@@ -253,14 +255,14 @@ const selected_structs = {
   SpellLevel: struct_schema(spell_effect, 'SpellLevel'),
   GridSpec: struct_schema(combat_grid, 'GridSpec'),
   Fight: struct_schema(fight, 'Fight'),
-  Fighter: struct_schema(fight, 'Fighter'),
-  MobSnapshot: struct_schema(fight, 'MobSnapshot'),
-  KitSpell: struct_schema(fight, 'KitSpell'),
-  TurnCast: struct_schema(fight, 'TurnCast'),
-  ActiveEffect: struct_schema(fight, 'ActiveEffect'),
-  Cooldown: struct_schema(fight, 'Cooldown'),
-  BoardZone: struct_schema(fight, 'BoardZone'),
-  RolledDrop: struct_schema(fight, 'RolledDrop'),
+  Fighter: struct_schema(combat, 'Fighter'),
+  MobSnapshot: struct_schema(combat, 'MobSnapshot'),
+  KitSpell: struct_schema(combat, 'KitSpell'),
+  TurnCast: struct_schema(combat, 'TurnCast'),
+  ActiveEffect: struct_schema(combat, 'ActiveEffect'),
+  Cooldown: struct_schema(combat, 'Cooldown'),
+  BoardZone: struct_schema(combat, 'BoardZone'),
+  RolledDrop: struct_schema(combat, 'RolledDrop'),
   FightCreated: struct_schema(fight, 'FightCreated'),
   FighterJoined: struct_schema(fight, 'FighterJoined'),
   FightStarted: struct_schema(fight, 'FightStarted'),
@@ -283,7 +285,14 @@ const integer_widths = Object.fromEntries(
 )
 
 const contract_constants = {
-  ...selected_constants(fight, ['BASE_AP', 'BASE_MP', 'PLACEMENT_FORCE_MS', 'TURN_MIN_MS', 'TURN_MAX_MS', 'NO_TARGET']),
+  ...selected_constants(combat, [
+    'BASE_AP',
+    'BASE_MP',
+    'PLACEMENT_FORCE_MS',
+    'TURN_MIN_MS',
+    'TURN_MAX_MS',
+    'NO_TARGET',
+  ]),
   ...selected_constants(spell_effect, ['CHATIMENT_TURNS']),
   ...selected_constants(forgemagie, ['RUNE_UNLOCK_LEVEL']),
   ...selected_constants(combat_grid, [
@@ -328,8 +337,8 @@ const output = `// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 
 export const MOVE_SOURCE_HASH = '${source_hash}'
 
-export const EFFECT_KINDS = Object.freeze(${literal(consts(fight, 'K_'), true)})
-export const CHANNELS = Object.freeze(${literal(consts(fight, 'STAT_'), true)})
+export const EFFECT_KINDS = Object.freeze(${literal(consts(combat, 'K_'), true)})
+export const CHANNELS = Object.freeze(${literal(consts(combat, 'STAT_'), true)})
 export const AREA_SHAPES = Object.freeze(${literal(shape_values(spell_effect), true)})
 export const BOARD_SHAPES = Object.freeze(${literal(consts(combat_grid, 'SHAPE_'), true)})
 export const DIRECTIONS = Object.freeze(${literal(direction_values(combat_grid), true)})

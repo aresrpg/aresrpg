@@ -12,6 +12,7 @@ import type { GameSettings } from '../game/core/settings.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
 import { read_scene, subscribe_scene } from '../game/core/scene_feed.ts'
 import { useAppStore } from '../store.ts'
+import { mastery_reminder_visible } from '../mastery/model.ts'
 
 import { fight_surface_visible } from './app_layout.ts'
 import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
@@ -24,7 +25,7 @@ import { TradeInbox } from './TradeInbox.tsx'
 
 const EncyclopediaPage = lazy(() => import('../encyclopedia/EncyclopediaPage.tsx'))
 const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
-const ShopPage = lazy(() => import('../shop/ShopPage.tsx'))
+const MasteryPage = lazy(() => import('../mastery/MasteryPage.tsx'))
 const AirdropPage = lazy(() => import('../airdrop/AirdropPage.tsx'))
 const SettingsPage = lazy(() => import('../settings/SettingsPage.tsx'))
 const CharactersPage = lazy(() => import('../characters/CharactersPage.tsx'))
@@ -36,6 +37,18 @@ const PageFallback = ({ label }: Readonly<{ label: string }>) => (
     {label}
   </section>
 )
+
+const ROUTED_PAGES: readonly Page[] = [
+  'world',
+  'encyclopedia',
+  'admin',
+  'mastery',
+  'airdrop',
+  'settings',
+  'characters',
+  'marketplace',
+  'kolizeum',
+]
 
 const RoutedPage = memo(
   ({
@@ -68,9 +81,9 @@ const RoutedPage = memo(
           <AdminPage copy={copy.admin_page} />
         </Suspense>
       )}
-      {page === 'shop' && (
+      {page === 'mastery' && (
         <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <ShopPage copy={copy} navigate={open_path} session={session} />
+          <MasteryPage copy={copy} />
         </Suspense>
       )}
       {page === 'airdrop' && (
@@ -98,23 +111,15 @@ const RoutedPage = memo(
           <KolizeumPage copy={copy} />
         </Suspense>
       )}
-      {page !== 'world' &&
-        page !== 'encyclopedia' &&
-        page !== 'admin' &&
-        page !== 'shop' &&
-        page !== 'airdrop' &&
-        page !== 'settings' &&
-        page !== 'characters' &&
-        page !== 'marketplace' &&
-        page !== 'kolizeum' && (
-          <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-surface-low/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-            <div>
-              <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
-              <h2 className="mt-3 text-base font-semibold">{copy.page_pending_title}</h2>
-              <p className="mt-2 text-[10px] text-[#777b86]">{copy.page_pending_body}</p>
-            </div>
-          </section>
-        )}
+      {!ROUTED_PAGES.includes(page) && (
+        <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-surface-low/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <div>
+            <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
+            <h2 className="mt-3 text-base font-semibold">{copy.page_pending_title}</h2>
+            <p className="mt-2 text-[10px] text-[#777b86]">{copy.page_pending_body}</p>
+          </div>
+        </section>
+      )}
     </>
   )
 )
@@ -162,6 +167,9 @@ export const AppShell = ({
   select_character: (character_id: string) => void
 }>) => {
   const fight_mounted = useAppStore((state) => state.fight.mounted)
+  const mastery_notification = useAppStore((state) =>
+    mastery_reminder_visible(state.session.characters.length, state.mastery.row, state.session.current_epoch)
+  )
   return (
     <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
@@ -175,6 +183,7 @@ export const AppShell = ({
               open_page={open_page}
               page={page}
               network={network}
+              mastery_notification={mastery_notification}
             />
             <WalletCard copy={copy} disconnect={disconnect} session={session} />
             <LanguageCard change_locale={change_locale} locale={locale} />

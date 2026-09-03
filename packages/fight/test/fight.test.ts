@@ -20,6 +20,7 @@ import { effect_seed } from '../src/fight_math.ts'
 import { xp_award_of } from '../src/fighters.ts'
 import { fight_path_to, reachable_fight_cells } from '../src/movement.ts'
 import { mix } from '../src/prng.ts'
+import { normalize_checkpoint } from '../src/normalize.ts'
 
 import { create_fixture } from './helpers.ts'
 
@@ -28,6 +29,14 @@ describe('fight API', () => {
     expect(create_fixture().checkpoint).toEqual(create_fixture().checkpoint)
   })
 
+  test('dungeon identity and room remain distinct through checkpoint normalization', () => {
+    const { checkpoint } = create_fixture()
+    const normalized = normalize_checkpoint({
+      ...checkpoint,
+      contract: { ...checkpoint.contract, dungeon: 'tangled_aftermath', dungeon_room: '2' },
+    })
+    expect(normalized.contract).toMatchObject({ dungeon: 'tangled_aftermath', dungeon_room: 2n })
+  })
   test('mob birth derives the exact Move band and spell level from template plus scalar', () => {
     const level = (ap_cost: bigint) => ({
       ap_cost,

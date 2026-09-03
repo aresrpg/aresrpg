@@ -1,34 +1,25 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The CHECK-CHANGES lane: compare the authored JSON against what was last written on chain
-// and turn the difference into the rebalance doors. pins.json durably records every derived
-// address, authored hash, and immutable identity fact, namespaced by Registry root. This record
-// is deployment state: it must survive because omitted rows have no current JSON address source.
-// Rows fall into four buckets:
-//   new        — the object does not exist yet (the publish lane creates it)
-//   changed    — the object exists and the file no longer matches the last write (apply here)
-//   removed    — the file dropped a row the chain still holds (shown, never deleted — things
-//                leave play by editing what points at them); omitted sales and recipes are the
-//                exceptions: their existing living rows are disabled automatically
-//   fixed      — airdrops/giftcards are one-shot objects with no rewrite door; a change here
-//                needs a new row under a new name
+// CHECK-CHANGES compares authored JSON with the last chain write and composes rebalance doors.
+// pins.json owns derived addresses, fingerprints, and immutable identity facts by Registry root.
+// New rows publish, changed rows rewrite, and omitted recipes retire. Other removals stay
+// visible because their chain objects persist. One-shot airdrops and giftcards cannot be rewritten.
 
 import type { Transaction } from '@mysten/sui/transactions'
-import { MIST_PER_SUI } from '@mysten/sui/utils'
 
+import { canonical_json } from './canonical_json.ts'
 import type { Resolvable } from './client.ts'
 import {
   board_value,
-  bounded_transaction,
   box_rewards,
   content_root_id_of,
+  dungeon_data_value,
   game_type_of,
   item_cost,
   replace_item_facts,
   level_value,
   mob_cost,
   mob_data_value,
-  pack,
   package_id_of,
   recipe_door_args,
   recipe_input_args,
@@ -36,21 +27,24 @@ import {
   seed_sdk,
   slice_chunks,
   spell_cost,
+  world_content_values,
   type SeedSdk,
 } from './seed.ts'
 import {
   airdrop_id,
   board_catalog_id,
+  dungeon_content_id,
   giftcard_id,
   item_template_id,
+  mastery_offer_id,
   mob_template_id,
   recipe_id,
-  sale_id,
   spell_template_id,
   world_content_id,
   world_id,
 } from './seed_ids.ts'
 import type { SeedBoard, SeedContent } from './seed_types.ts'
+import { retired_seed_row } from './seed_retirements.ts'
 
 /** One ledger entry: the fingerprint of the row as last written, plus immutable identity facts. */
 export type SeedLedger = Readonly<
@@ -61,10 +55,12 @@ export type SeedLedger = Readonly<
       label: string
       /** Every chain object address this authored identity owns. */
       addresses?: readonly string[]
+      /** Chain revisions observed after the authored value was written. */
+      revisions?: Readonly<Record<string, string>>
       domain?: string
       item?: Readonly<{ category: string }>
-      sale?: Readonly<{ infinite: boolean; supply: number }>
       spell?: Readonly<{ classe: string; unlock_level?: number }>
+      world?: Readonly<{ cities: readonly string[] }>
     }>
   >
 >
@@ -75,11 +71,11 @@ export type SeedSyncRow = Readonly<{
   label: string
   hash: string
   kind: 'template' | 'board' | 'supply'
-  domain: 'item' | 'spell' | 'mob' | 'recipe' | 'world' | 'board' | 'sale' | 'airdrop' | 'giftcard'
+  domain: 'item' | 'spell' | 'mob' | 'recipe' | 'dungeon' | 'world' | 'board' | 'mastery_offer' | 'airdrop' | 'giftcard'
   item?: Readonly<{ category: string }>
-  sale?: Readonly<{ infinite: boolean; supply: number }>
   /** spell rows carry their immutable class so the ledger can refuse illegal rewrites */
   spell?: Readonly<{ classe: string; unlock_level: number }>
+  world?: Readonly<{ cities: readonly string[] }>
   /** the chain object whose existence says "already created" (the shared catalog for boards) */
   chain_id: string
   /** Durable address book persisted in pins.json. */
@@ -94,6 +90,24 @@ export type SeedSyncRow = Readonly<{
   board_source?: SeedBoard
 }>
 
+export const created_seed_row_keys = (
+  rows: readonly Pick<SeedSyncRow, 'key' | 'kind' | 'addresses'>[],
+  ledger: SeedLedger,
+  targets: ReadonlySet<string>,
+  exists: (id: string) => boolean
+): ReadonlySet<string> =>
+  new Set(
+    rows
+      .filter(
+        (row) =>
+          row.kind !== 'board' &&
+          !ledger[row.key] &&
+          row.addresses.length > 0 &&
+          row.addresses.every((address) => targets.has(address) && exists(address))
+      )
+      .map(({ key }) => key)
+  )
+
 export type SeedSyncView = Readonly<{
   new_rows: readonly SeedSyncRow[]
   changed: readonly SeedSyncRow[]
@@ -106,10 +120,12 @@ export type SeedSyncView = Readonly<{
   errors: readonly string[]
 }>
 
-// FNV-1a 64-bit over the canonical JSON — collisions are ~impossible at this corpus size,
+export { canonical_json } from './canonical_json.ts'
+
+// FNV-1a 64-bit over canonical JSON — collisions are ~impossible at this corpus size,
 // and a collision's worst case is one missed rewrite caught by the next content edit.
 const fingerprint = (value: unknown): string => {
-  const text = JSON.stringify(value)
+  const text = canonical_json(value)
   let hash = 0xcbf29ce484222325n
   for (let index = 0; index < text.length; index += 1) {
     hash ^= BigInt(text.charCodeAt(index))
@@ -117,6 +133,58 @@ const fingerprint = (value: unknown): string => {
   }
   return hash.toString(16).padStart(16, '0')
 }
+
+type LedgerEntry = SeedLedger[string]
+
+const item_identity_error = (row: SeedSyncRow, recorded: LedgerEntry | undefined): string | null =>
+  row.domain === 'item' && row.item && recorded?.item && recorded.item.category !== row.item.category
+    ? `${row.label} moved from category ${recorded.item.category} to ${row.item.category} — an item keeps its category forever`
+    : null
+
+const spell_identity_errors = (row: SeedSyncRow, recorded: LedgerEntry | undefined): readonly string[] => {
+  if (row.domain !== 'spell' || !row.spell || !recorded?.spell) return []
+  const errors: string[] = []
+  if (recorded.spell.classe !== row.spell.classe)
+    errors.push(
+      `${row.label} moved from ${recorded.spell.classe} to ${row.spell.classe} — a written spell keeps its class forever`
+    )
+  if (recorded.spell.unlock_level !== undefined && recorded.spell.unlock_level !== row.spell.unlock_level)
+    errors.push(
+      `${row.label} moved from unlock level ${recorded.spell.unlock_level} to ${row.spell.unlock_level} — a written spell keeps its slot on the ladder`
+    )
+  return Object.freeze(errors)
+}
+
+const world_identity_errors = (row: SeedSyncRow, recorded: LedgerEntry | undefined): readonly string[] => {
+  if (row.domain !== 'world' || !row.world || !recorded?.world) return []
+  const removed = recorded.world.cities.filter((city) => !row.world!.cities.includes(city))
+  return removed.length
+    ? [
+        `${row.label} removed or renamed stable city ${removed.join(', ')} — restore it and edit its mutable fields instead`,
+      ]
+    : []
+}
+
+const immutable_identity_errors = (row: SeedSyncRow, recorded: LedgerEntry | undefined): readonly string[] =>
+  Object.freeze(
+    [item_identity_error(row, recorded)]
+      .filter((error): error is string => error !== null)
+      .concat(spell_identity_errors(row, recorded), world_identity_errors(row, recorded))
+  )
+
+const removed_identity_errors = (ledger: SeedLedger, current: ReadonlySet<string>): readonly string[] =>
+  Object.entries(ledger).flatMap(([key, entry]) => {
+    if (current.has(key)) return []
+    if (entry.domain === 'spell' || entry.label.startsWith('spell '))
+      return [
+        `${entry.label} was removed from the files, but a written spell stays in its class's kit forever — restore the row and rebalance it instead`,
+      ]
+    if (entry.domain === 'dungeon' || entry.label.startsWith('dungeon '))
+      return [
+        `${entry.label} was removed or renamed, but a published dungeon keeps its stable slug forever — restore the row and edit its rooms instead`,
+      ]
+    return []
+  })
 
 /** Every authored row, flattened with its fingerprint and its rewrite composer. */
 export const seed_sync_rows = (
@@ -237,6 +305,25 @@ export const seed_sync_rows = (
     })
   })
 
+  const dungeons: SeedSyncRow[] = content.dungeons.map((dungeon) => {
+    const id = dungeon_content_id(content_root, seed_original, dungeon.dungeon)
+    return Object.freeze({
+      key: id,
+      label: `dungeon ${dungeon.dungeon}`,
+      hash: fingerprint(dungeon),
+      kind: 'template' as const,
+      domain: 'dungeon' as const,
+      chain_id: id,
+      addresses: Object.freeze([id]),
+      hydrate: [id],
+      cost: 3 + dungeon.rooms.reduce((total, room) => total + room.length + 1, 0),
+      update: (game_sdk, tx, cap, root) => {
+        const data = dungeon_data_value(game_sdk, tx, dungeon)
+        game_sdk.seed_doors.overwrite_dungeon(tx, { cap, root, dungeon: id, name: dungeon.dungeon, data })
+      },
+    })
+  })
+
   const worlds: SeedSyncRow[] = content.worlds.map((world) => {
     const id = world_content_id(content_root, seed_original, world.world)
     const gameplay_id = world_id(content_root, game_type, world.world)
@@ -247,75 +334,37 @@ export const seed_sync_rows = (
       hash: fingerprint({ world, map }),
       kind: 'template' as const,
       domain: 'world' as const,
+      world: Object.freeze({ cities: Object.freeze(world.cities.map(({ city }) => city)) }),
       chain_id: id,
       addresses: Object.freeze([id, gameplay_id]),
       hydrate: [id, gameplay_id],
-      cost: 8 + (map ? 1 + Math.ceil(map.cells.length / 16_381) : 0),
+      cost: 9 + world.archis.length + (map ? 1 + Math.ceil(map.cells.length / 16_381) : 0),
       update: (game_sdk, tx, cap, root) => {
-        game_sdk.seed_doors.set_entry_level(tx, { cap, root, wc: id, entry_level: world.entry_level })
-        const biome_names = world.terrain?.biomes.map(({ name }) => name) ?? []
-        const biome_ids = (names?: readonly string[]): readonly number[] => {
-          if (!world.terrain) return [0]
-          return (names ?? []).map((name) => {
-            const index = biome_names.indexOf(name)
-            if (index < 0) throw new Error(`${world.world} references unknown biome ${name}`)
-            return index
-          })
-        }
-        const mob_list = Array.isArray(world.mobs)
-          ? world.mobs
-          : Object.entries(world.mobs).map(([mob_type, weight_bp]) => ({ mob_type, weight_bp, biomes: [] }))
-        game_sdk.seed_doors.set_mobs(tx, {
-          cap,
-          root,
-          wc: id,
-          rows: mob_list.map((row) =>
-            game_sdk.seed_doors.new_mob_row(tx, {
-              mob_type: row.mob_type,
-              weight_bp: row.weight_bp,
-              biomes: biome_ids(row.biomes),
-            })
-          ),
-        })
-        game_sdk.seed_doors.set_resources(tx, {
-          cap,
-          root,
-          wc: id,
-          rows: world.resources.map((row) =>
-            game_sdk.seed_doors.new_resource_row(tx, {
-              item_type: row.item_type,
-              job: row.job,
-              tier: row.tier,
-              protector: row.protector,
-              rare_item_type: row.rare_item_type,
-              biomes: biome_ids(row.biomes),
-            })
-          ),
-        })
+        game_sdk.seed_doors.set_entry_level(tx, { cap, root, world_content: id, entry_level: world.entry_level })
+        const { cities, mob_rows, archi_rows, resource_rows } = world_content_values(
+          game_sdk,
+          tx,
+          world,
+          content_root,
+          seed_original
+        )
+        game_sdk.seed_doors.set_cities(tx, { cap, root, world_content: id, cities })
+        game_sdk.seed_doors.set_mobs(tx, { cap, root, world_content: id, rows: mob_rows })
+        game_sdk.seed_doors.set_archi_rows(tx, { cap, root, world_content: id, rows: archi_rows })
+        game_sdk.seed_doors.set_resources(tx, { cap, root, world_content: id, rows: resource_rows })
         if (map) {
           // setting the window RESETS the stored grid, so the rewrite is create-identical
           game_sdk.seed_doors.set_biome_window(tx, {
             cap,
             root,
-            wc: id,
+            world_content: id,
             zone_x0: map.zone_x0,
             zone_z0: map.zone_z0,
             side: map.side,
           })
           for (const cells of slice_chunks(map.cells, 16_381))
-            game_sdk.seed_doors.append_biome_cells(tx, { cap, root, wc: id, cells })
-        } else game_sdk.seed_doors.clear_biome_map(tx, { cap, root, wc: id })
-        game_sdk.seed_doors.set_dungeon_key(tx, { cap, root, wc: id, item_type: world.dungeon.key })
-        game_sdk.seed_doors.set_dungeon_rooms(tx, {
-          cap,
-          root,
-          wc: id,
-          rooms: world.dungeon.rooms.map((room) =>
-            game_sdk.seed_doors.new_dungeon_room(tx, {
-              mobs: room.map((mob) => game_sdk.seed_doors.new_room_mob(tx, { mob_type: mob.mob_type })),
-            })
-          ),
-        })
+            game_sdk.seed_doors.append_biome_cells(tx, { cap, root, world_content: id, cells })
+        } else game_sdk.seed_doors.clear_biome_map(tx, { cap, root, world_content: id })
       },
     })
   })
@@ -342,26 +391,25 @@ export const seed_sync_rows = (
   )
 
   const supply: SeedSyncRow[] = [
-    ...content.shop.sales.map((sale) => {
-      const id = sale_id(content_root, game_type, sale.item_type)
+    ...content.mastery.offers.map((offer) => {
+      const id = mastery_offer_id(content_root, game_type, offer.item_type)
       return Object.freeze({
         key: id,
-        label: `sale ${sale.item_type}`,
-        hash: fingerprint(sale),
+        label: `mastery offer ${offer.item_type}`,
+        hash: fingerprint(offer),
         kind: 'template' as const,
-        domain: 'sale' as const,
-        sale: Object.freeze({ infinite: sale.supply === null, supply: sale.supply ?? 0 }),
+        domain: 'mastery_offer' as const,
         chain_id: id,
         addresses: Object.freeze([id]),
-        hydrate: [id],
+        hydrate: Object.freeze([id]),
         cost: 1,
         update: (game_sdk: SeedSdk, tx: Transaction, cap: Resolvable, root: Resolvable) =>
-          game_sdk.seed_doors.set_sale(tx, {
+          game_sdk.seed_doors.set_mastery_offer(tx, {
             cap,
             root,
-            sale: id,
-            price: BigInt(sale.price) * MIST_PER_SUI,
-            enabled: sale.enabled ?? true,
+            offer: id,
+            cost: offer.cost,
+            enabled: offer.enabled ?? true,
           }),
       })
     }),
@@ -393,16 +441,49 @@ export const seed_sync_rows = (
     ),
   ]
 
-  return Object.freeze([...items, ...spells, ...mobs, ...recipes, ...worlds, ...boards, ...supply])
+  return Object.freeze([...items, ...spells, ...mobs, ...recipes, ...dungeons, ...worlds, ...boards, ...supply])
 }
 
 /** Sort every row into its bucket. `exists` answers from the hydrated cache. */
-/* eslint-disable complexity -- One pure partition reports every domain and immutable identity violation. */
+type RowState = 'new' | 'changed' | 'fixed' | 'unchanged'
+
+const board_state = (
+  row: SeedSyncRow,
+  recorded: SeedLedger[string] | undefined,
+  exists: (id: string) => boolean,
+  board_len: number
+): RowState => {
+  if (!exists(row.chain_id)) return 'new'
+  if (Number(row.key.slice('board:'.length)) >= board_len) return 'changed'
+  return recorded?.hash === row.hash ? 'unchanged' : 'changed'
+}
+
+const revisions_match = (
+  row: SeedSyncRow,
+  recorded: SeedLedger[string] | undefined,
+  revision: (id: string) => string | null
+): boolean =>
+  row.kind === 'supply' ||
+  (recorded?.revisions !== undefined &&
+    row.addresses.every((address) => recorded.revisions?.[address] === revision(address)))
+
+const content_state = (
+  row: SeedSyncRow,
+  recorded: SeedLedger[string] | undefined,
+  exists: (id: string) => boolean,
+  revision: (id: string) => string | null
+): RowState => {
+  if (!exists(row.chain_id)) return 'new'
+  if (recorded?.hash === row.hash && revisions_match(row, recorded, revision)) return 'unchanged'
+  return row.kind === 'supply' ? 'fixed' : 'changed'
+}
+
 export const seed_sync_view = (
   rows: readonly SeedSyncRow[],
   ledger: SeedLedger,
   exists: (id: string) => boolean,
-  board_len = 0
+  board_len = 0,
+  revision: (id: string) => string | null = () => null
 ): SeedSyncView => {
   const new_rows: SeedSyncRow[] = []
   const changed: SeedSyncRow[] = []
@@ -410,24 +491,14 @@ export const seed_sync_view = (
   let unchanged = 0
   for (const row of rows) {
     const recorded = ledger[row.key]
-    if (row.kind === 'board') {
-      // the catalog itself is created by the publish lane; boards wait for it
-      if (!exists(row.chain_id)) new_rows.push(row)
-      else if (Number(row.key.slice('board:'.length)) >= board_len) changed.push(row)
-      else if (recorded?.hash === row.hash) unchanged += 1
-      else changed.push(row)
-      continue
-    }
-    if (!exists(row.chain_id)) {
-      new_rows.push(row)
-      continue
-    }
-    if (recorded?.hash === row.hash) {
-      unchanged += 1
-      continue
-    }
-    if (row.kind === 'supply') fixed.push(row)
-    else changed.push(row)
+    const state =
+      row.kind === 'board'
+        ? board_state(row, recorded, exists, board_len)
+        : content_state(row, recorded, exists, revision)
+    if (state === 'new') new_rows.push(row)
+    else if (state === 'changed') changed.push(row)
+    else if (state === 'fixed') fixed.push(row)
+    else unchanged += 1
   }
   const current = new Set(rows.map(({ key }) => key))
   const authored_board_len = rows.filter(({ kind }) => kind === 'board').length
@@ -439,38 +510,8 @@ export const seed_sync_view = (
   )
   for (const [key, entry] of Object.entries(ledger)) {
     if (current.has(key)) continue
-    if (entry.domain === 'sale' || entry.label.startsWith('sale '))
-      changed.push(
-        Object.freeze({
-          key,
-          label: `retire ${entry.label}`,
-          hash: 'retired',
-          kind: 'template' as const,
-          domain: 'sale' as const,
-          chain_id: key,
-          addresses: Object.freeze([key]),
-          hydrate: Object.freeze([key]),
-          cost: 1,
-          update: (game_sdk: SeedSdk, tx: Transaction, cap: Resolvable, root: Resolvable) =>
-            game_sdk.seed_doors.set_sale(tx, { cap, root, sale: key, price: 0n, enabled: false }),
-        })
-      )
-    else if (entry.domain === 'recipe' || entry.label.startsWith('recipe '))
-      changed.push(
-        Object.freeze({
-          key,
-          label: `retire ${entry.label}`,
-          hash: 'retired',
-          kind: 'template' as const,
-          domain: 'recipe' as const,
-          chain_id: key,
-          addresses: Object.freeze([key]),
-          hydrate: Object.freeze([key]),
-          cost: 1,
-          update: (game_sdk: SeedSdk, tx: Transaction, cap: Resolvable, root: Resolvable) =>
-            game_sdk.seed_doors.retire_recipe(tx, { cap, root, recipe: key }),
-        })
-      )
+    const retirement = retired_seed_row(key, entry)
+    if (retirement) changed.push(retirement)
   }
   const removed = Object.entries(ledger)
     .filter(
@@ -478,41 +519,12 @@ export const seed_sync_view = (
         !current.has(key) &&
         !key.startsWith('board:') &&
         !(entry.domain === 'sale' || entry.label.startsWith('sale ')) &&
+        !(entry.domain === 'mastery_offer' || entry.label.startsWith('mastery offer ')) &&
         !(entry.domain === 'recipe' || entry.label.startsWith('recipe '))
     )
     .map(([key, { label }]) => Object.freeze({ key, label }))
-  const errors: string[] = []
-  // a spell object IS part of its class's kit forever — dropping the row cannot take it back
-  for (const [key, entry] of Object.entries(ledger))
-    if (!current.has(key) && (entry.domain === 'spell' || entry.label.startsWith('spell ')))
-      errors.push(
-        `${entry.label} was removed from the files, but a written spell stays in its class's kit forever — restore the row and rebalance it instead`
-      )
-  // item category and spell class are identity; their overwrite doors deliberately omit them
-  for (const row of changed) {
-    const recorded = ledger[row.key]
-    if (row.domain === 'item' && row.item && recorded?.item && recorded.item.category !== row.item.category)
-      errors.push(
-        `${row.label} moved from category ${recorded.item.category} to ${row.item.category} — an item keeps its category forever`
-      )
-    if (
-      row.domain === 'sale' &&
-      row.sale &&
-      recorded?.sale &&
-      (recorded.sale.infinite !== row.sale.infinite || recorded.sale.supply !== row.sale.supply)
-    )
-      errors.push(`${row.label} changed its immutable supply policy — create another item sale instead`)
-    if (row.domain === 'spell' && row.spell && recorded?.spell) {
-      if (recorded.spell.classe !== row.spell.classe)
-        errors.push(
-          `${row.label} moved from ${recorded.spell.classe} to ${row.spell.classe} — a written spell keeps its class forever`
-        )
-      if (recorded.spell.unlock_level !== undefined && recorded.spell.unlock_level !== row.spell.unlock_level)
-        errors.push(
-          `${row.label} moved from unlock level ${recorded.spell.unlock_level} to ${row.spell.unlock_level} — a written spell keeps its slot on the ladder`
-        )
-    }
-  }
+  const errors = [...removed_identity_errors(ledger, current)]
+  for (const row of changed) errors.push(...immutable_identity_errors(row, ledger[row.key]))
   return Object.freeze({
     new_rows: Object.freeze(new_rows),
     changed: Object.freeze(changed),
@@ -523,69 +535,5 @@ export const seed_sync_view = (
     errors: Object.freeze(errors),
   })
 }
-/* eslint-enable complexity */
 
-/** The rewrite transactions for the changed rows, packed under the command ceiling. A board
- * beyond the last written index APPENDS (the catalog grows in file order); every other
- * changed board replaces in place. */
-export const seed_update_transactions = (
-  sdk_in: Parameters<typeof seed_sdk>[0],
-  rows: readonly SeedSyncRow[],
-  context: Readonly<{ admin_cap: Resolvable; content_root: Resolvable }>,
-  boards: Readonly<{ chain_len: number; authored_len: number }> = { chain_len: 0, authored_len: 0 }
-): readonly Transaction[] => {
-  const sdk = seed_sdk(sdk_in)
-  const content_root = content_root_id_of(sdk)
-  const seed_original = package_id_of(sdk, 'seed_package_original')
-  const catalog = board_catalog_id(content_root, seed_original)
-  const updates = pack(
-    rows,
-    ({ cost }) => cost,
-    undefined,
-    ({ label }) => label
-  ).map((group, index) => {
-    const tx = sdk.tx()
-    for (const row of group) {
-      if (row.kind === 'board' && Number(row.key.slice('board:'.length)) >= boards.chain_len && row.board_source) {
-        const board = board_value(sdk, tx, row.board_source)
-        sdk.seed_doors.add_board(tx, { cap: context.admin_cap, root: context.content_root, catalog, board })
-      } else row.update?.(sdk, tx, context.admin_cap, context.content_root)
-    }
-    return bounded_transaction(tx, `changes:${index}`)
-  })
-  if (boards.chain_len <= boards.authored_len) return updates
-  const tx = sdk.tx()
-  let remaining = boards.chain_len - boards.authored_len
-  while (remaining > 0) {
-    sdk.seed_doors.remove_last_board(tx, { cap: context.admin_cap, root: context.content_root, catalog })
-    remaining -= 1
-  }
-  return Object.freeze([...updates, bounded_transaction(tx, 'boards:remove')])
-}
-
-/** The ledger as it stands after a successful apply: every current row that now exists and
- * matches its file, fingerprinted; dropped rows leave the ledger with the files. */
-export const seed_ledger_after = (
-  rows: readonly SeedSyncRow[],
-  ledger: SeedLedger,
-  written: ReadonlySet<string>,
-  exists: (id: string) => boolean
-): SeedLedger =>
-  Object.freeze(
-    Object.fromEntries(
-      rows
-        .filter((row) => written.has(row.key) || (exists(row.chain_id) && ledger[row.key]?.hash === row.hash))
-        .map((row) => [
-          row.key,
-          Object.freeze({
-            hash: row.hash,
-            label: row.label,
-            addresses: row.addresses,
-            domain: row.domain,
-            ...(row.item ? { item: row.item } : {}),
-            ...(row.sale ? { sale: row.sale } : {}),
-            ...(row.spell ? { spell: row.spell } : {}),
-          }),
-        ])
-    )
-  )
+export { seed_ledger_after, seed_ledger_after_batch } from './seed_ledger.ts'

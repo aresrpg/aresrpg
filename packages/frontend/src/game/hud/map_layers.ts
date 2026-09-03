@@ -7,6 +7,7 @@
 
 import { chain_to_client_coordinate, client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
 import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
+import type { CityMapOverlay } from '@aresrpg/engine'
 
 import type { spawn_markers } from '../../modules/world.ts'
 import type { DungeonPortalMarker } from '../../modules/world_spawns.ts'
@@ -16,6 +17,72 @@ import { to_canvas } from './minimap_render.ts'
 const ORIGIN_ZONE = zone_of(world_center, world_center)
 
 export type MapView = Readonly<{ center_x: number; center_z: number; size: number; radius: number }>
+
+const CITY_STRUCTURE_COLORS = Object.freeze([
+  ['_road', 'rgba(185, 139, 85, 0.88)'],
+  ['_field', 'rgba(137, 139, 63, 0.58)'],
+  ['_garden', 'rgba(60, 125, 79, 0.68)'],
+  ['_river', 'rgba(45, 122, 176, 0.82)'],
+  ['_bridge', 'rgba(112, 76, 48, 0.9)'],
+  ['_plaza', 'rgba(216, 200, 155, 0.92)'],
+  ['_ruin', 'rgba(112, 119, 119, 0.86)'],
+  ['_temple', 'rgba(47, 127, 134, 0.9)'],
+  ['_gate', 'rgba(168, 95, 63, 0.9)'],
+] as const)
+const city_structure_color = (type: string): string =>
+  CITY_STRUCTURE_COLORS.find(([suffix]) => type.endsWith(suffix))?.[1] ?? 'rgba(216, 200, 155, 0.78)'
+
+const canvas_bounds = (
+  view: MapView,
+  bounds: Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>
+) => {
+  const a = to_canvas(bounds.min_x, bounds.min_z, view.center_x, view.center_z, view.size, view.radius)
+  const b = to_canvas(bounds.max_x + 1, bounds.max_z + 1, view.center_x, view.center_z, view.size, view.radius)
+  return Object.freeze({ x: a.px, y: a.pz, width: b.px - a.px, height: b.pz - a.pz })
+}
+
+const visible_in_view = (
+  view: MapView,
+  bounds: Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>
+): boolean =>
+  bounds.max_x >= view.center_x - view.radius &&
+  bounds.min_x <= view.center_x + view.radius &&
+  bounds.max_z >= view.center_z - view.radius &&
+  bounds.min_z <= view.center_z + view.radius
+
+export const draw_city_layer = (
+  context: CanvasRenderingContext2D,
+  view: MapView,
+  cities: readonly CityMapOverlay[]
+): void => {
+  const pixels_per_block = view.size / (view.radius * 2)
+  for (const city of cities) {
+    const territory = canvas_bounds(view, city.bounds)
+    context.save()
+    context.fillStyle = 'rgba(200, 150, 60, 0.055)'
+    context.fillRect(territory.x, territory.y, territory.width, territory.height)
+    context.strokeStyle = 'rgba(245, 196, 92, 0.95)'
+    context.lineWidth = 2
+    context.shadowColor = 'rgba(245, 196, 92, 0.85)'
+    context.shadowBlur = 8
+    context.strokeRect(territory.x + 1, territory.y + 1, territory.width - 2, territory.height - 2)
+    const core = canvas_bounds(view, city.core)
+    context.shadowBlur = 0
+    context.setLineDash([6, 4])
+    context.strokeStyle = 'rgba(88, 255, 148, 0.72)'
+    context.lineWidth = 1.5
+    context.strokeRect(core.x + 0.5, core.y + 0.5, core.width - 1, core.height - 1)
+    context.setLineDash([])
+    if (pixels_per_block >= 0.12)
+      for (const structure of city.structures) {
+        if (!visible_in_view(view, structure.bounds)) continue
+        const footprint = canvas_bounds(view, structure.bounds)
+        context.fillStyle = city_structure_color(structure.type)
+        context.fillRect(footprint.x, footprint.y, Math.max(1, footprint.width), Math.max(1, footprint.height))
+      }
+    context.restore()
+  }
+}
 
 export const draw_zone_layer = (
   context: CanvasRenderingContext2D,
@@ -83,7 +150,8 @@ export const draw_dungeon_portal_markers = (
   context: CanvasRenderingContext2D,
   view: MapView,
   markers: readonly DungeonPortalMarker[],
-  now = Date.now()
+  now = Date.now(),
+  city_label?: (city: string) => string
 ): void => {
   const pulse = 4.5 + (Math.sin(now * 0.006) + 1) * 1.25
   for (const marker of markers) {
@@ -102,6 +170,13 @@ export const draw_dungeon_portal_markers = (
     context.beginPath()
     context.arc(px, pz, 3.5, 0, Math.PI * 2)
     context.fill()
+    if (city_label) {
+      const name = marker.city.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+      context.fillStyle = '#d8f9e4'
+      context.font = '9px "JetBrains Mono", monospace'
+      context.textAlign = 'center'
+      context.fillText(city_label(name), px, pz - 10)
+    }
     context.restore()
   }
 }

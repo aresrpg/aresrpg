@@ -14,7 +14,10 @@ import {
   structure_material_uses,
   validate_biome_structure_packs,
   type CompiledStructures,
+  type StructureAreaSource,
 } from './structures.ts'
+import { generated_city_surface_y } from './cities/generated_city.ts'
+import { carved_terrain_surface_y } from './terrain_carving.ts'
 
 export type SplineKnot = readonly [x: number, y: number]
 export const WORLD_HEIGHT = 384
@@ -39,6 +42,8 @@ export type WorldBiome = Readonly<{
   name: string
   landscape: readonly LandscapeKnot[]
   structure_packs?: readonly string[]
+  mountain_passes?: boolean
+  ravines?: boolean
 }>
 export type WorldOcean = Readonly<{ biome: string; ground_max: number }>
 export type WorldRecipe = Readonly<{
@@ -48,6 +53,7 @@ export type WorldRecipe = Readonly<{
   materials: Readonly<Record<string, WorldMaterial>>
   biome_slots: Readonly<Record<BiomeSlot, string>>
   biomes: readonly WorldBiome[]
+  structure_areas?: readonly StructureAreaSource[]
   ocean?: WorldOcean
 }>
 
@@ -64,6 +70,7 @@ export type CompiledWorld = Readonly<{
   decoration_seed: number
   materials: CompiledMaterials
   structures: CompiledStructures
+  city_terrain: boolean
   sample_climate: (x: number, z: number) => SampledClimate
   sample_ridges: (x: number, z: number) => number
   biomes: readonly CompiledBiome[]
@@ -144,10 +151,59 @@ const validate_biomes = (value: unknown, materials: unknown): readonly string[] 
       errors.push(`biomes[${index}].name must be non-empty`)
     else if (names.has(biome.name)) errors.push(`biomes[${index}].name must be unique`)
     else names.add(biome.name)
+    errors.push(
+      ...(['mountain_passes', 'ravines'] as const).flatMap((feature) =>
+        biome[feature] !== undefined && typeof biome[feature] !== 'boolean'
+          ? [`biomes[${index}].${feature} must be a boolean`]
+          : []
+      )
+    )
     errors.push(...validate_landscape(biome.landscape, materials, `biomes[${index}].landscape`))
     errors.push(...validate_biome_structure_packs(biome.structure_packs, materials, `biomes[${index}].structure_packs`))
     return errors
   })
+}
+
+const validate_area_id = (value: unknown, ids: Set<string>, prefix: string): readonly string[] => {
+  if (typeof value !== 'string' || value.length === 0) return [`${prefix}.id must be non-empty`]
+  if (ids.has(value)) return [`${prefix}.id must be unique`]
+  ids.add(value)
+  return []
+}
+
+const validate_area_anchor = (area: Readonly<Record<string, unknown>>, prefix: string): readonly string[] => {
+  if (area.anchor_x === undefined && area.anchor_z === undefined) return []
+  if (!finite(area.anchor_x) || !finite(area.anchor_z))
+    return [`${prefix}.anchor_x and anchor_z must be finite and provided together`]
+  return []
+}
+
+const validate_structure_area = (
+  candidate: unknown,
+  index: number,
+  ids: Set<string>,
+  materials: unknown
+): readonly string[] => {
+  const area = record(candidate)
+  const prefix = `structure_areas[${index}]`
+  if (!area) return [`${prefix} must be an object`]
+  const errors = [...validate_area_id(area.id, ids, prefix)]
+  for (const field of ['min_x', 'max_x', 'min_z', 'max_z'] as const)
+    if (!finite(area[field])) errors.push(`${prefix}.${field} must be finite`)
+  errors.push(...validate_area_anchor(area, prefix))
+  if (finite(area.min_x) && finite(area.max_x) && area.min_x > area.max_x)
+    errors.push(`${prefix}.min_x must not exceed max_x`)
+  if (finite(area.min_z) && finite(area.max_z) && area.min_z > area.max_z)
+    errors.push(`${prefix}.min_z must not exceed max_z`)
+  errors.push(...validate_biome_structure_packs(area.structure_packs, materials, `${prefix}.structure_packs`))
+  return errors
+}
+
+const validate_structure_areas = (value: unknown, materials: unknown): readonly string[] => {
+  if (value === undefined) return []
+  if (!Array.isArray(value)) return ['structure_areas must be an array']
+  const ids = new Set<string>()
+  return value.flatMap((candidate, index) => validate_structure_area(candidate, index, ids, materials))
 }
 
 const validate_slots = (value: unknown, biomes: unknown): readonly string[] => {
@@ -191,6 +247,7 @@ export const validate_world_recipe = (recipe: unknown): Readonly<{ ok: boolean; 
   for (const removed of ['noise', 'biome_selection', 'splines', 'vertical_chunks'] as const)
     if (removed in candidate) errors.push(`${removed} is engine-owned and must not be authored`)
   errors.push(...validate_biomes(candidate.biomes, candidate.materials))
+  errors.push(...validate_structure_areas(candidate.structure_areas, candidate.materials))
   errors.push(...validate_slots(candidate.biome_slots, candidate.biomes))
   errors.push(...validate_ocean(candidate.ocean, candidate.biomes, candidate.biome_slots))
   return { ok: errors.length === 0, errors }
@@ -270,7 +327,7 @@ export const balance_climate = (value: number): number => Math.max(0, Math.min(1
 
 export const compile_world_recipe = (
   input: WorldRecipe,
-  options: Readonly<{ structures?: boolean }> = {}
+  options: Readonly<{ structures?: boolean; city_terrain?: boolean }> = {}
 ): CompiledWorld => {
   const recipe = parse_world_recipe(input)
   const biomes = recipe.biomes.map((biome) => ({
@@ -314,15 +371,16 @@ export const compile_world_recipe = (
   const include_structures = options.structures !== false
   const materials = compile_materials(recipe.materials, [
     ...material_uses(recipe.biomes),
-    ...(include_structures ? structure_material_uses(recipe.biomes) : []),
+    ...(include_structures ? structure_material_uses(recipe.biomes, recipe.structure_areas) : []),
   ])
   return Object.freeze({
     recipe,
     decoration_seed: derive_sub_seed(recipe.seed, 'decoration'),
     materials,
     structures: include_structures
-      ? compile_structures(recipe.biomes, materials)
-      : Object.freeze({ packs: Object.freeze([]), max_footprint: 0 }),
+      ? compile_structures(recipe.biomes, materials, recipe.structure_areas)
+      : Object.freeze({ packs: Object.freeze([]), cities: Object.freeze([]) }),
+    city_terrain: options.city_terrain !== false,
     biomes: Object.freeze(biomes),
     slots: Object.freeze(slots),
     ocean,
@@ -359,12 +417,12 @@ export const sample_world_column = (world: CompiledWorld, x: number, z: number):
   const cached = cache.get(key)
   if (cached !== undefined) return cached
   if (cache.size >= COLUMN_CACHE_CAP) cache.clear()
-  const column = sample_column_uncached(world, x, z)
+  const column = sample_base_column(world, x, z)
   cache.set(key, column)
   return column
 }
 
-const sample_column_uncached = (world: CompiledWorld, x: number, z: number): WorldColumn => {
+const sample_base_column = (world: CompiledWorld, x: number, z: number): WorldColumn => {
   const climate = world.sample_climate(x, z)
   const influences =
     world.ocean && climate.ground < world.ocean.ground_max
@@ -382,7 +440,21 @@ const sample_column_uncached = (world: CompiledWorld, x: number, z: number): Wor
   // mean, while the 32-block foothill dead zone keeps ordinary terrain calm.
   const ridge_carving = (world.sample_ridges(x, z) - 0.44) * mountain_relief * 0.75 * ruggedness
   const detail = (climate.amplitude - 0.5) * 12 * ruggedness + ridge_carving
-  const surface_y = Math.max(1, Math.min(MAX_SURFACE_Y, Math.floor(authored_height + detail + Number.EPSILON * 64)))
+  const base_surface_y = Math.max(
+    1,
+    Math.min(MAX_SURFACE_Y, Math.floor(authored_height + detail + Number.EPSILON * 64))
+  )
+  const carved_surface_y = carved_terrain_surface_y(
+    terrain_biome,
+    world.decoration_seed,
+    world.recipe.sea_level,
+    x,
+    z,
+    base_surface_y
+  )
+  const surface_y = world.city_terrain
+    ? generated_city_surface_y(world.recipe.structure_areas ?? [], x, z, carved_surface_y)
+    : carved_surface_y
   const biome = world.ocean && surface_y < world.recipe.sea_level ? world.ocean.biome : terrain_biome
   const land = land_at(biome, climate.ground, climate.transition)
   return {

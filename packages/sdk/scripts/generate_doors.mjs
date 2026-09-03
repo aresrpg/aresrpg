@@ -95,9 +95,12 @@ const MOVE_VALUE_TYPES = Object.freeze({
   MobSpell: { type_package: 'math_type_package', module: 'mob_data' },
   LootEntry: { type_package: 'math_type_package', module: 'mob_data' },
   MobRow: { type_package: 'math_type_package', module: 'world_map' },
+  ArchiRow: { type_package: 'math_type_package', module: 'world_map' },
   ResourceRow: { type_package: 'math_type_package', module: 'world_map' },
-  RoomMob: { type_package: 'math_type_package', module: 'world_map' },
-  DungeonRoom: { type_package: 'math_type_package', module: 'world_map' },
+  City: { type_package: 'math_type_package', module: 'city_map' },
+  DungeonData: { type_package: 'math_type_package', module: 'dungeon_data' },
+  DungeonRoomData: { type_package: 'math_type_package', module: 'dungeon_data' },
+  DungeonMob: { type_package: 'math_type_package', module: 'dungeon_data' },
 })
 
 /** @param {string} type @returns {DoorStrategy} */
@@ -300,22 +303,18 @@ const TRADE_DOORS = Object.freeze({
   create: 'trade_create',
   join: 'trade_join',
   cancel: 'trade_cancel',
-  put_sui: 'trade_put_s',
-  take_sui: 'trade_take_s',
+  put_sui: 'trade_put_sui',
+  take_sui: 'trade_take_sui',
   accept: 'trade_accept',
-  claim_sui: 'trade_get_s',
-  recover_sui: 'trade_recover_s',
+  claim_sui: 'trade_claim_sui',
+  recover_sui: 'trade_recover_sui',
   close: 'trade_close',
 })
 
 export const generate_game_doors = async (api_source, trade_source) => {
   const names = new Set([...Object.keys(TRADE_DOORS), 'end_request'])
   const trade = parse_doors(trade_source, names).flatMap((door) => {
-    const projected = {
-      ...door,
-      params: door.params.map((param) => (param.name === 'trade' ? { ...param, name: 't' } : param)),
-      module: 'trade',
-    }
+    const projected = { ...door, module: 'trade' }
     return door.name === 'end_request'
       ? [
           { ...projected, export_name: 'trade_cancel_request' },

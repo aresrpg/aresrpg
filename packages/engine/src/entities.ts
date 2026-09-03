@@ -97,8 +97,8 @@ type ActiveAnimation = Readonly<{ action: AnimationAction; clip: AnimationClip; 
 
 const LOCOMOTION_PREFERENCES: Readonly<Record<EntityLocomotion, readonly string[]>> = Object.freeze({
   IDLE: Object.freeze(['IDLE']),
-  WALK: Object.freeze(['WALK', 'RUN']),
-  RUN: Object.freeze(['RUN', 'WALK']),
+  WALK: Object.freeze(['WALK', 'RUN', 'IDLE']),
+  RUN: Object.freeze(['RUN', 'WALK', 'IDLE']),
   JUMP: Object.freeze(['JUMP']),
   JUMP_RUN: Object.freeze(['JUMP_RUN', 'JUMP', 'RUN']),
   FALL: Object.freeze(['FALL', 'JUMP']),

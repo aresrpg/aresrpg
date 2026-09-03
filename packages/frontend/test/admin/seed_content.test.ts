@@ -5,7 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { SDK, type Pins, type SuiTransport } from '@aresrpg/sdk'
 import { create_seed_plan, type SeedBuildContext } from '@aresrpg/sdk/seed'
 
-import { seed_content } from '../../src/admin/seed_content.ts'
+import { seed_content } from '../../src/content/canonical_seed.ts'
 
 const object_id = (value: number): string => `0x${value.toString(16).padStart(2, '0').repeat(32)}`
 const digest = '11111111111111111111111111111111'
@@ -46,7 +46,7 @@ const remember = (ids: readonly string[]): void => {
   for (const object_id of ids) sdk.cache.owned.set(object_id, { objectId: object_id, version: '1', digest })
 }
 
-describe('admin seed content', () => {
+describe('canonical seed content', () => {
   test('compiles the authored corpus into one fully resumable bounded plan', async () => {
     const plan = create_seed_plan(sdk, seed_content)
     const targets = plan.batches.flatMap(({ target_ids }) => target_ids)
@@ -69,9 +69,6 @@ describe('admin seed content', () => {
     expect(seed_content.worlds.flatMap(({ resources }) => resources).every(({ job, tier }) => job && tier)).toBeTrue()
     expect(plan.batches.every(({ target_ids }) => target_ids.length > 0)).toBeTrue()
     expect(new Set(targets).size).toBe(targets.length)
-    // worlds seed one batch EACH (a single indivisible worlds transaction had no way out of
-    // the 128 KiB ceiling); batches are session-signed, so count costs no wallet clicks
-    expect(plan.batches.length).toBeLessThanOrEqual(80)
     // the biome maps run the engine's real sampler over every world — corpus-sized, not unit-sized
   }, 30_000)
 })

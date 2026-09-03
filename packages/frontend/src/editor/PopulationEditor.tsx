@@ -16,16 +16,28 @@ const as_record = (value: JsonValue | undefined): Readonly<Record<string, JsonVa
     ? (value as Readonly<Record<string, JsonValue>>)
     : null
 
-const BiomeChips = ({
+const MembershipChips = ({
+  kind,
   names,
   selected,
   change,
-}: Readonly<{ names: readonly string[]; selected: readonly string[]; change: (value: readonly string[]) => void }>) => (
-  <div className="flex min-w-0 flex-wrap items-center gap-1" data-population-biomes="">
+}: Readonly<{
+  kind: 'biomes' | 'cities'
+  names: readonly string[]
+  selected: readonly string[]
+  change: (value: readonly string[]) => void
+}>) => (
+  <div className="flex min-w-0 flex-wrap items-center gap-1" data-population-membership={kind}>
     {names.map((name) => (
       <button
         aria-pressed={selected.includes(name)}
-        className={`h-6 px-2 text-[7px] tracking-[0.06em] uppercase ${selected.includes(name) ? 'bg-[#4a9eff]/12 text-[#8fc4ff]' : 'text-[#565d68] hover:text-[#9ba2ad]'}`}
+        className={`h-6 px-2 text-[7px] tracking-[0.06em] uppercase ${
+          selected.includes(name)
+            ? kind === 'cities'
+              ? 'bg-[#c8963c]/12 text-[#e0b86b]'
+              : 'bg-[#4a9eff]/12 text-[#8fc4ff]'
+            : 'text-[#565d68] hover:text-[#9ba2ad]'
+        }`}
         key={name}
         onClick={() =>
           change(selected.includes(name) ? selected.filter((value) => value !== name) : [...selected, name])
@@ -79,16 +91,17 @@ const InlineNumber = ({
 type PopulationProps = Readonly<{
   rows: readonly JsonValue[]
   biome_names: readonly string[]
+  city_names: readonly string[]
   change: (path: JsonPath, value: JsonValue) => void
 }>
 
-const selected_biomes = (row: Readonly<Record<string, JsonValue>>): readonly string[] =>
-  Array.isArray(row.biomes) ? row.biomes.filter((name): name is string => typeof name === 'string') : []
+const selected_names = (row: Readonly<Record<string, JsonValue>>, field: 'biomes' | 'cities'): readonly string[] =>
+  Array.isArray(row[field]) ? row[field].filter((name): name is string => typeof name === 'string') : []
 
 const remove_row = (rows: readonly JsonValue[], index: number): readonly JsonValue[] =>
   rows.filter((_, row_index) => row_index !== index)
 
-const MobsPopulation = ({ rows, biome_names, change }: PopulationProps) => {
+const MobsPopulation = ({ rows, biome_names, city_names, change }: PopulationProps) => {
   const used = rows.flatMap((value) => {
     const mob_type = as_record(value)?.mob_type
     return typeof mob_type === 'string' ? [mob_type] : []
@@ -98,7 +111,7 @@ const MobsPopulation = ({ rows, biome_names, change }: PopulationProps) => {
       <header className="flex items-end justify-between border-b border-white/8 pb-2">
         <div>
           <h3 className="text-[9px] tracking-[0.15em] text-[#c8963c] uppercase">Mobs</h3>
-          <p className="mt-1 text-[7px] text-[#626670]">Spawn weight and biome membership.</p>
+          <p className="mt-1 text-[7px] text-[#626670]">Spawn weight, biome and city membership.</p>
         </div>
         <span className="text-[7px] tabular-nums text-[#555b66]">{rows.length}</span>
       </header>
@@ -135,12 +148,24 @@ const MobsPopulation = ({ rows, biome_names, change }: PopulationProps) => {
             </div>
             <div className="flex items-start gap-2 pl-7 pb-1">
               <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#4f5560] uppercase">Biomes</span>
-              <BiomeChips
+              <MembershipChips
                 change={(next) => change(['mobs', index, 'biomes'], next)}
+                kind="biomes"
                 names={biome_names}
-                selected={selected_biomes(row)}
+                selected={selected_names(row, 'biomes')}
               />
             </div>
+            {city_names.length > 0 && (
+              <div className="flex items-start gap-2 pl-7 pb-1">
+                <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#665a45] uppercase">Cities</span>
+                <MembershipChips
+                  change={(next) => change(['mobs', index, 'cities'], next)}
+                  kind="cities"
+                  names={city_names}
+                  selected={selected_names(row, 'cities')}
+                />
+              </div>
+            )}
           </div>
         )
       })}
@@ -153,7 +178,7 @@ const MobsPopulation = ({ rows, biome_names, change }: PopulationProps) => {
           label="add world mob"
           placeholder="Add mob"
           roles={NORMAL_MOB_ROLES}
-          select={(mob_type) => change(['mobs'], [...rows, { mob_type, weight_bp: 1_000, biomes: [] }])}
+          select={(mob_type) => change(['mobs'], [...rows, { mob_type, weight_bp: 1_000, biomes: [], cities: [] }])}
           value=""
         />
       </div>
@@ -161,7 +186,7 @@ const MobsPopulation = ({ rows, biome_names, change }: PopulationProps) => {
   )
 }
 
-const ResourcesPopulation = ({ rows, biome_names, change }: PopulationProps) => {
+const ResourcesPopulation = ({ rows, biome_names, city_names, change }: PopulationProps) => {
   const used = rows.flatMap((value) => {
     const item_type = as_record(value)?.item_type
     return typeof item_type === 'string' ? [item_type] : []
@@ -171,7 +196,7 @@ const ResourcesPopulation = ({ rows, biome_names, change }: PopulationProps) => 
       <header className="flex items-end justify-between border-b border-white/8 pb-2">
         <div>
           <h3 className="text-[9px] tracking-[0.15em] text-[#65c993] uppercase">Resources</h3>
-          <p className="mt-1 text-[7px] text-[#626670]">Assign immutable gatherables to biome pools.</p>
+          <p className="mt-1 text-[7px] text-[#626670]">Assign immutable gatherables to biome and city pools.</p>
         </div>
         <span className="text-[7px] tabular-nums text-[#555b66]">{rows.length}</span>
       </header>
@@ -210,12 +235,24 @@ const ResourcesPopulation = ({ rows, biome_names, change }: PopulationProps) => 
             </div>
             <div className="flex items-start gap-2 pl-7 pb-1">
               <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#4f5560] uppercase">Biomes</span>
-              <BiomeChips
+              <MembershipChips
                 change={(next) => change(['resources', index, 'biomes'], next)}
+                kind="biomes"
                 names={biome_names}
-                selected={selected_biomes(row)}
+                selected={selected_names(row, 'biomes')}
               />
             </div>
+            {city_names.length > 0 && (
+              <div className="flex items-start gap-2 pl-7 pb-1">
+                <span className="pt-1.5 text-[6px] tracking-[0.1em] text-[#665a45] uppercase">Cities</span>
+                <MembershipChips
+                  change={(next) => change(['resources', index, 'cities'], next)}
+                  kind="cities"
+                  names={city_names}
+                  selected={selected_names(row, 'cities')}
+                />
+              </div>
+            )}
           </div>
         )
       })}
@@ -229,7 +266,7 @@ const ResourcesPopulation = ({ rows, biome_names, change }: PopulationProps) => 
           item_types={gatherable_item_types}
           label="add world resource"
           placeholder="Add resource"
-          select={(item_type) => change(['resources'], [...rows, { item_type, biomes: [] }])}
+          select={(item_type) => change(['resources'], [...rows, { item_type, biomes: [], cities: [] }])}
           value=""
         />
       </div>
@@ -240,17 +277,25 @@ const ResourcesPopulation = ({ rows, biome_names, change }: PopulationProps) => 
 export const PopulationEditor = ({
   world,
   biome_names,
+  city_names,
   change,
 }: Readonly<{
   world: Readonly<Record<string, JsonValue>>
   biome_names: readonly string[]
+  city_names: readonly string[]
   change: (path: JsonPath, value: JsonValue) => void
 }>) => (
   <div className="space-y-5" data-population-editor="">
-    <MobsPopulation biome_names={biome_names} change={change} rows={Array.isArray(world.mobs) ? world.mobs : []} />
+    <MobsPopulation
+      biome_names={biome_names}
+      change={change}
+      city_names={city_names}
+      rows={Array.isArray(world.mobs) ? world.mobs : []}
+    />
     <ResourcesPopulation
       biome_names={biome_names}
       change={change}
+      city_names={city_names}
       rows={Array.isArray(world.resources) ? world.resources : []}
     />
   </div>

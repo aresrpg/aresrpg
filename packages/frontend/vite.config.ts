@@ -13,7 +13,6 @@ import { parse } from 'yaml'
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { display_assets_plugin } from './display_assets.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
-import { deployment_dev_plugin } from './deployment_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
@@ -55,7 +54,8 @@ const yaml_plugin = (): Plugin => ({
 
 export default defineConfig(({ mode }) => {
   // Env is PER-DEPLOYABLE (owner 2026-08-16): this package's own .env, never a repo-root file.
-  const env = resolve_env(loadEnv(mode, '.', 'VITE_'))
+  const loaded_env = loadEnv(mode, '.', '')
+  const env = resolve_env(loaded_env)
   return {
     plugins: [
       html_env_plugin(env),
@@ -67,10 +67,7 @@ export default defineConfig(({ mode }) => {
         items_dir: resolve(repo_dir, 'seed/icons/items'),
       }),
       ...(mode === 'development'
-        ? [
-            seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') }),
-            deployment_dev_plugin({ repo_dir }),
-          ]
+        ? [seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') })]
         : []),
       react(),
       tailwindcss(),
@@ -112,7 +109,9 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     // WebGPU lights and node materials rely on shared Three.js class identity.
-    resolve: { dedupe: ['three', 'three/webgpu'] },
+    resolve: {
+      dedupe: ['three', 'three/webgpu'],
+    },
     // Workspace source must stay live during development. Prebundling freezes engine edits and
     // SDK subpath exports at server boot, which makes newly generated surfaces appear missing.
     optimizeDeps: { exclude: ['@aresrpg/engine', '@aresrpg/sdk'] },

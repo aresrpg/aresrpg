@@ -11,13 +11,15 @@ test('population is a compact searchable assignment sheet', () => {
   const html = renderToStaticMarkup(
     <PopulationEditor
       biome_names={['plains', 'forest']}
+      city_names={['thebes']}
       change={() => undefined}
       world={{
-        mobs: [{ mob_type: 'ant_red', weight_bp: 1_000, biomes: ['plains'] }],
+        mobs: [{ mob_type: 'ant_red', weight_bp: 1_000, biomes: ['plains'], cities: ['thebes'] }],
         resources: [
           {
             item_type: 'wheat',
             biomes: ['plains', 'forest'],
+            cities: ['thebes'],
           },
         ],
       }}
@@ -30,6 +32,9 @@ test('population is a compact searchable assignment sheet', () => {
   expect(html).toContain('data-population-placeholder="mob"')
   expect(html).toContain('data-population-placeholder="resource"')
   expect(html).toContain('data-mob-reference-picker="world mob"')
+  expect(html).toContain('data-population-membership="cities"')
+  expect(html).toMatch(/data-population-membership="cities"[\s\S]*aria-pressed="true"[\s\S]*>thebes<\/button>/u)
+  expect(html.match(/data-population-membership="cities"/gu)).toHaveLength(2)
   expect(html).toContain('data-item-reference-picker="world resource"')
   expect(html).toContain('aria-label="Edit Weight"')
   expect(html).toContain('aria-label="Remove mob"')

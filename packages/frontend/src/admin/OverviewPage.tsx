@@ -20,7 +20,7 @@ import { admin_range_label, AdminRangeSelector } from './AdminRangeSelector.tsx'
 import { useAdminRevenue } from './AdminWalletPanel.tsx'
 import type { AdminRevenue } from './AdminWalletPanel.tsx'
 import type { AdminOverviewState } from './admin_state.ts'
-import { MetricChart, type MetricSeries } from './MetricChart.tsx'
+import { MetricChart, type MetricSeries, type MetricValueKind } from './MetricChart.tsx'
 
 const COLORS = Object.freeze({
   gold: '#c8963c',
@@ -34,6 +34,8 @@ const text = (copy: Readonly<Record<string, string>>, key: string, fallback: str
 const sui_number = (mist: string): number => Number(BigInt(mist)) / 1_000_000_000
 const display_count = (value: number | null | undefined): string =>
   typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString() : '—'
+const display_sui = (value: unknown): string =>
+  typeof value === 'string' && /^\d+$/.test(value) ? `${format_sui(BigInt(value), 4)} SUI` : '—'
 const bucket_label = (copy: Readonly<Record<string, string>>, bucket: AdminBucket): string =>
   text(copy, `bucket_${bucket}`, bucket === '15m' ? '15-minute buckets' : `${bucket} buckets`)
 type KpiTone = 'gold' | 'blue' | 'green'
@@ -105,6 +107,8 @@ const ChartPanel = ({
   days,
   change,
   series,
+  timestamps,
+  value_kind,
   bucket,
   loading,
 }: Readonly<{
@@ -114,6 +118,8 @@ const ChartPanel = ({
   days: AdminRangeDays
   change: (days: AdminRangeDays) => void
   series: readonly MetricSeries[]
+  timestamps: readonly number[]
+  value_kind: MetricValueKind
   bucket: AdminBucket
   loading: boolean
 }>) => (
@@ -139,7 +145,7 @@ const ChartPanel = ({
       </span>
     </div>
     <div className="px-4 py-3">
-      <MetricChart className="h-44" label={title} series={series} />
+      <MetricChart className="h-44" label={title} series={series} timestamps={timestamps} value_kind={value_kind} />
     </div>
   </section>
 )
@@ -149,11 +155,6 @@ const revenue_series = (
   revenue: AdminRevenueOverview
 ): readonly MetricSeries[] =>
   Object.freeze([
-    Object.freeze({
-      label: text(copy, 'shop', 'Shop'),
-      color: COLORS.gold,
-      values: revenue.money.map((row) => sui_number(row.shop_mist)),
-    }),
     Object.freeze({
       label: text(copy, 'item_royalties', 'Item royalties'),
       color: COLORS.violet,
@@ -205,15 +206,10 @@ const transaction_series = (
 const online_series = (copy: Readonly<Record<string, string>>, online: AdminOnlineOverview): readonly MetricSeries[] =>
   Object.freeze([
     Object.freeze({
-      label: text(copy, 'average', 'Average'),
-      color: COLORS.blue,
-      values: online.online.map((row) => row.average),
-      area: true,
-    }),
-    Object.freeze({
       label: text(copy, 'peak', 'Peak'),
       color: COLORS.white,
       values: online.online.map((row) => row.peak),
+      area: true,
     }),
   ])
 
@@ -331,7 +327,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           ↻ {text(copy, 'refresh', 'Refresh')}
         </button>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" data-admin-kpis="">
+      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4" data-admin-kpis="">
         <KpiCard
           detail={text(copy, 'last_30_days', 'Last 30 days')}
           label={text(copy, 'revenue_30d', '30-day revenue')}
@@ -343,11 +339,6 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           label={text(copy, 'revenue_mtd', 'Month-to-date revenue')}
           tone="gold"
           value={`${format_sui(BigInt(revenue.month_to_date_revenue_mist), 2)} SUI`}
-        />
-        <KpiCard
-          detail={admin_range_label(copy, overview.ranges.revenue)}
-          label={text(copy, 'shop_sales', 'Shop sales')}
-          value={BigInt(revenue.shop_orders).toLocaleString()}
         />
         <KpiCard
           detail={text(copy, 'today', 'Today')}
@@ -385,18 +376,18 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           })}
           right={Object.freeze({
             label: text(copy, 'all_time', 'All time'),
-            value: transactions.all_time.toLocaleString(),
+            value: display_count(transactions.all_time),
           })}
         />
         <SplitKpiCard
           label={text(copy, 'game_gas_fees', 'Game gas fees')}
           left={Object.freeze({
             label: admin_range_label(copy, overview.ranges.transactions),
-            value: `${format_sui(BigInt(transactions.gas_range_mist), 4)} SUI`,
+            value: display_sui(transactions.gas_range_mist),
           })}
           right={Object.freeze({
             label: text(copy, 'all_time', 'All time'),
-            value: `${format_sui(BigInt(transactions.gas_all_time_mist), 4)} SUI`,
+            value: display_sui(transactions.gas_all_time_mist),
           })}
           tone="gold"
         />
@@ -414,7 +405,9 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             loading={!!overview.pending.revenue}
             series={revenue_series(copy, revenue)}
             subtitle={text(copy, 'revenue_over_time_body', 'All protocol revenue by source')}
+            timestamps={revenue.money.map(({ at_ms }) => at_ms)}
             title={text(copy, 'revenue_over_time', 'Revenue over time')}
+            value_kind="continuous"
           />
           <ChartPanel
             bucket={transactions.bucket}
@@ -424,7 +417,9 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             loading={!!overview.pending.transactions}
             series={transaction_series(copy, transactions)}
             subtitle={text(copy, 'game_transactions_body', 'Successful AresRPG transactions, counted once per PTB')}
+            timestamps={transactions.transactions.map(({ at_ms }) => at_ms)}
             title={text(copy, 'game_transactions_over_time', 'Transactions over time')}
+            value_kind="count"
           />
         </div>
         <div className="grid gap-3 xl:grid-cols-2">
@@ -436,7 +431,9 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             loading={!!overview.pending.players}
             series={player_series(copy, players)}
             subtitle={text(copy, 'player_activity_body', 'Daily activity and rolling 30-day reach')}
+            timestamps={players.activity.map(({ at_ms }) => at_ms)}
             title={text(copy, 'player_activity', 'Player activity')}
+            value_kind="count"
           />
           <ChartPanel
             bucket={online.bucket}
@@ -445,8 +442,10 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             days={overview.ranges.online}
             loading={!!overview.pending.online}
             series={online_series(copy, online)}
-            subtitle={text(copy, 'online_players_body', 'Average and peak authenticated connections')}
+            subtitle={text(copy, 'online_players_body', 'Peak authenticated connections per bucket')}
+            timestamps={online.online.map(({ at_ms }) => at_ms)}
             title={text(copy, 'online_players', 'Online players')}
+            value_kind="count"
           />
         </div>
         <div className="grid gap-3 xl:grid-cols-2">
@@ -458,7 +457,9 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             loading={!!overview.pending.addresses}
             series={address_series(copy, addresses)}
             subtitle={text(copy, 'unique_addresses_body', 'Addresses with successful AresRPG module calls')}
+            timestamps={addresses.addresses.map(({ at_ms }) => at_ms)}
             title={text(copy, 'unique_addresses_over_time', 'Unique addresses over time')}
+            value_kind="count"
           />
           <ChartPanel
             bucket={characters.bucket}
@@ -468,7 +469,9 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             loading={!!overview.pending.characters}
             series={character_series(copy, characters)}
             subtitle={text(copy, 'total_characters_body', 'Current on-chain Character objects')}
+            timestamps={characters.characters.map(({ at_ms }) => at_ms)}
             title={text(copy, 'characters_over_time', 'Characters over time')}
+            value_kind="count"
           />
         </div>
       </div>

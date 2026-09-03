@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Public composition lab. It owns controls only; every rendered fact crosses a production boundary.
-import { effective_flattened, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
+import { effective_flattened, parse_world_recipe, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
 import { Boxes, FlaskConical, Grid2X2, Mountain, Package, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -10,7 +10,7 @@ import { FpsPanel } from '../components/FpsPanel.tsx'
 import { fight_lab_surface } from '../components/app_layout.ts'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
 import { content_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
-import { worlds_source } from '../content/worlds.ts'
+import { client_world_position, worlds_source, world_terrain } from '../content/worlds.ts'
 import { load_pet_companion } from '../content/pet_models.ts'
 import { worn_equipment_options } from '../content/worn_equipment.ts'
 import { create_world } from '../game/core/world.ts'
@@ -25,7 +25,9 @@ import SimulatorPage from '../simulator/SimulatorPage.tsx'
 
 import { BoardGallery } from './BoardGallery.tsx'
 import { CharacterCrowdLab } from './CharacterCrowdLab.tsx'
+import { DemoCheckbox } from './DemoCheckbox.tsx'
 import { DemoDevPage } from './DemoDevPage.tsx'
+import { demo_world_coordinate } from './world_target.ts'
 
 type DemoView = 'world' | 'fight' | 'boards' | 'content' | 'biomes'
 const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
@@ -42,6 +44,7 @@ const initial_view = (): DemoView => {
   const [hash = ''] = globalThis.location.hash.slice(1).split('/')
   return (DEMO_VIEWS as readonly string[]).includes(hash) ? (hash as DemoView) : 'world'
 }
+const initial_target = (): string => globalThis.location.hash.slice(1).split('/')[1] ?? ''
 type SpawnedGroup = Readonly<{ mob_type: string; amount: number; serial: number }>
 type DemoWorld = ReturnType<typeof create_world>
 
@@ -118,10 +121,12 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   const settings = useAppStore((state) => state.settings)
   const [canvas, set_canvas] = useState<HTMLCanvasElement | null>(null)
   const [world_id, set_world_id] = useState(initial_world?.world ?? '')
+  const [target, set_target] = useState(initial_target)
   const [world_api, set_world_api] = useState<ReturnType<typeof create_world> | null>(null)
   const [status, set_status] = useState<EngineStatus>({ state: 'initializing', backend: 'none' })
   const [time, set_time] = useState(0.31)
   const [live_time, set_live_time] = useState(true)
+  const [clouds_visible, set_clouds_visible] = useState(true)
   const [classe, set_classe] = useState<(typeof class_names)[number]>('senshi')
   const [male, set_male] = useState(true)
   const [colors, set_colors] = useState<readonly [string, string, string]>(DEFAULT_COLORS)
@@ -147,6 +152,12 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   )
 
   useEffect(() => {
+    const update_target = (): void => set_target(initial_target())
+    globalThis.addEventListener('hashchange', update_target)
+    return () => globalThis.removeEventListener('hashchange', update_target)
+  }, [])
+
+  useEffect(() => {
     if (!mob_rows.some((row) => row.mob_type === mob_type)) set_mob_type(mob_rows[0]?.mob_type ?? '')
   }, [mob_rows, mob_type])
 
@@ -155,7 +166,16 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
     // only hidden by CSS, so building the world eagerly meant a second live WebGPU engine — and a
     // second publisher of the one scene — for anyone who never opened the biome editor at all.
     if (!active || !canvas || !selected_world?.terrain) return undefined
-    const created = create_world({ canvas, world: selected_world.terrain, quality: settings.quality })
+    const terrain = world_terrain(selected_world.world)
+    if (!terrain) return undefined
+    const city = selected_world.cities.find(({ city: slug }) => slug === target)
+    const initial_focus = city ? client_world_position(city.x, city.z) : demo_world_coordinate(target)
+    const created = create_world({
+      canvas,
+      world: parse_world_recipe(terrain),
+      quality: settings.quality,
+      ...(initial_focus ? { initial_focus } : {}),
+    })
     const unsubscribe = created.subscribe_status(set_status)
     set_world_api(created)
     return () => {
@@ -163,9 +183,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       created.dispose()
       set_world_api((current) => (current === created ? null : current))
     }
-    // World identity is the lifetime boundary; settings update through their own production doors.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, canvas, world_id])
+  }, [active, canvas, target, world_id])
 
   useEffect(() => {
     world_api?.set_active(active)
@@ -180,6 +199,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   useEffect(() => {
     world_api?.set_time_of_day(live_time ? null : time)
   }, [live_time, time, world_api])
+
+  useEffect(() => world_api?.set_clouds_visible(clouds_visible), [clouds_visible, world_api])
 
   useEffect(() => {
     if (!world_api || !character_enabled) {
@@ -302,7 +323,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
                 ))}
               </select>
             </label>
-            <div className="grid grid-cols-[1fr_auto] gap-2">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-2">
               <label className={label_class}>
                 {text.time}
                 <input
@@ -316,15 +337,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
                   value={time}
                 />
               </label>
-              <label className="flex cursor-pointer items-end gap-2 pb-2 text-[7px] tracking-[0.14em] text-[#777b86] uppercase">
-                {text.live}
-                <input
-                  checked={live_time}
-                  className="cursor-pointer accent-[#4a9eff]"
-                  onChange={(event) => set_live_time(event.target.checked)}
-                  type="checkbox"
-                />
-              </label>
+              <DemoCheckbox checked={live_time} label={text.live} on_change={set_live_time} />
+              <DemoCheckbox checked={clouds_visible} label="Clouds" on_change={set_clouds_visible} />
             </div>
           </div>
 
@@ -555,7 +569,7 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </section>
       )}
       {view === 'boards' && <BoardGallery text={text} />}
-      <DemoDevPage text={text} view={view} />
+      <DemoDevPage view={view} />
       <HudPanel className="pointer-events-auto fixed top-3 left-1/2 z-50 flex -translate-x-1/2 overflow-hidden text-[8px] tracking-[0.16em] uppercase">
         {DEMO_VIEWS.map((candidate) => {
           const ViewIcon = VIEW_ICONS[candidate]

@@ -3,7 +3,13 @@
 import { describe, expect, test } from 'bun:test'
 
 import { create_character_controller } from '../../src/game/core/character.ts'
-import { eject_from_solid, resolve_movement, type SolidFn } from '../../src/game/core/collision.ts'
+import {
+  eject_from_solid,
+  following_pet_ground_height,
+  resolve_movement,
+  walkable_spawn_height,
+  type SolidFn,
+} from '../../src/game/core/collision.ts'
 import { CONTROLLER_CONSTANTS, create_controller_state, step_controller } from '../../src/game/core/controller.ts'
 
 // Synthetic worlds: a flat floor at y=0 (solid below), with optional walls/steps.
@@ -22,6 +28,24 @@ const run_steps = (state: ReturnType<typeof create_controller_state>, input: obj
 }
 
 describe('collision solver (legacy port)', () => {
+  test('mob spawn height prefers a clear house interior over its roof', () => {
+    const house: SolidFn = (_x, y) => y < 10 || y === 10 || y === 15
+
+    expect(walkable_spawn_height(house, 0, 10, 0)).toBe(11)
+  })
+
+  test('mob spawn height rises above a solid structure column', () => {
+    const wall: SolidFn = (_x, y) => y < 10 || (y >= 10 && y <= 15)
+
+    expect(walkable_spawn_height(wall, 0, 10, 0)).toBe(16)
+  })
+
+  test('a follower samples the structure layer beneath its owner instead of the terrain below', () => {
+    const bridge: SolidFn = (_x, y) => y < 10 || y === 15
+
+    expect(following_pet_ground_height(bridge, 0, 0, 16, 10)).toBe(16)
+    expect(following_pet_ground_height(bridge, 0, 0, 10, 4)).toBe(10)
+  })
   test('auto-climbs a 1-block step, refuses a 2-block wall', () => {
     const stepped: SolidFn = (x, y) => y < 0 || (x >= 2 && y < 1)
     const walled: SolidFn = (x, y) => y < 0 || (x >= 2 && y < 2)

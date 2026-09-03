@@ -125,7 +125,7 @@ test('an indexed zone discovery streams its generated mob population', async () 
   zone_visible = true
   graph_events.emit(channels.zone('nauvis', 97, 97), {
     type: 'ZoneSearched',
-    data: { world: 'nauvis', zx: 97, zz: 97 },
+    data: { world: 'nauvis', zone_x: 97, zone_z: 97 },
   })
   await flush()
   await flush()

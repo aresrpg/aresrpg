@@ -28,7 +28,7 @@ navigation: Navigation
 world: World
 characters: Characters
 leaderboard: Leaderboard
-shop: Shop
+mastery: Mastery
 encyclopedia: Encyclopedia
 marketplace: Marketplace
 airdrop: Airdrop
@@ -230,6 +230,9 @@ world_hud:
   coordinates: Coordinates
   biome: Biome
   world_map: World map
+  world_map_zoom_in: Zoom in
+  world_map_zoom_out: Zoom out
+  world_map_extent: '{{blocks}} blocks'
   menu_group: Invite to group
   menu_friend: Add friend
   menu_trade: Trade
@@ -241,6 +244,7 @@ world_hud:
   mount_prompt: 'Press {{key}} to mount'
   portal_prompt: 'Press {{key}} to travel to another world'
   dungeon_portal: Dungeon portal
+  dungeon_city: 'City of {{city}}'
   dungeon_press_enter: Enter
   dungeon_entry_body: Use the dungeon key to enter this portal's private staging lobby.
   dungeon_required_key: Required key
@@ -310,7 +314,6 @@ world_hud:
   zone_coordinates: 'Sector {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} mobs found'
   zone_resources_found: '{{count}} resources found'
-  zone_dungeon_spotted: 'Dungeon spotted'
   spawn_group: 'Pack of {{size}}'
   spawn_unknown_mob: 'Unknown creature'
   spawn_press_attack: 'Press {{key}} to attack'
@@ -369,7 +372,6 @@ demo_page:
   crowd_loading: Loading character models…
   crowd_result: Phase
   mob: Mob
-  hide_protectors: Hide protectors
   amount: Amount
   spawn_group: Spawn group
   clear: Clear
@@ -445,37 +447,36 @@ marketplace_page:
   character_roster_full: A 7th character cannot join your roster — 6 is the cap
   collect_pending: Collecting marketplace proceeds…
   collect_success: Marketplace proceeds collected
-shop_page:
-  title: 'Shop'
-  subtitle: 'Purchase items with SUI'
-  remaining_of_cap: '{{remaining}} of {{cap}} remaining'
-  processing: 'PROCESSING'
-  sold_out: 'Sold out'
-  acquire: 'Acquire'
-  wallet: 'Wallet'
-  filter_all: 'All'
-  sections:
-    pet_box: 'PET BOXES'
-    title: 'Titles'
-    cloak: 'Cloaks'
-    hat: 'Hats'
-    companion: 'Companions'
-    equipment: 'Equipment'
-    consumable: 'Consumables'
-    resource: 'Resources'
-  amount_title: 'Select amount'
-  amount_quantity: 'Quantity'
-  amount_max: 'Max'
-  amount_total: 'Total'
-  amount_available: '{{count}} available'
-  amount_confirm: 'Acquire {{count}}'
-  purchase_success_body: 'Your new items are waiting in your inventory.'
-  see_inventory: 'See your inventory'
-  buy_pending: 'Buying items…'
-  buy_success: 'Purchase complete!'
-  drop_rates: 'Drop rates'
-  pool_sub: 'One pet is rolled on open, weighted exactly as listed below.'
-  acquisition_complete: 'Acquisition Complete'
+mastery_page:
+  subtitle: Daily challenges
+  title: Mastery
+  lead: Complete dungeons every day to get unique rewards.
+  balance: Mastery points
+  daily_ready: Daily quest available
+  daily_syncing: Updating daily quest…
+  daily_title: Start your daily quest
+  daily_lead: Choose a world. Higher-level worlds give more Mastery points.
+  unknown_dungeon: Unknown dungeon
+  quest_reward: Earn {{points}} Mastery points
+  completed: Validated
+  in_progress: In progress
+  required_level: Requires level {{level}}
+  dungeon_count: '{{count}} dungeons'
+  starting: Assigning…
+  start: Start daily quest
+  locked: Locked
+  world_reward: +{{points}}pts
+  offers_title: Mastery unlocks
+  offers_lead: Spend Mastery points to unlock unique loot boxes.
+  progression: Reward path
+  offers_empty: No Mastery offers are authored yet
+  ready: Ready to unlock
+  missing: '{{points}} points missing'
+  unlocking: Unlocking…
+  unlock: Unlock · {{cost}} pts
+  quest_started: Daily quest assigned.
+  offer_unlocked: Mastery reward unlocked.
+
 airdrop_page:
   title: 'Airdrops'
   subtitle: 'Claim reserved items for eligible holders'
@@ -485,6 +486,17 @@ airdrop_page:
   not_eligible: 'Not eligible'
   claimed: 'Claimed'
   claim: 'Claim'
+  holder_title: 'Holder wallet'
+  holder_connect_hint: 'Connect the wallet holding the eligible NFT'
+  holder_connect: 'Connect wallet'
+  holder_connecting: 'Connecting…'
+  holder_wallet_missing: 'No compatible Sui wallet installed'
+  giftcards_title: 'Giftcards awaiting redemption'
+  gift_login: 'Continue with Google to claim this gift into your game wallet'
+  gift_ready: 'Your printed giftcard is ready to claim'
+  gift_claiming: 'Claiming your printed giftcard…'
+  gift_retry: 'Claim giftcard'
+  redeem: 'Redeem'
   empty: 'No active airdrops'
   empty_hint: 'Airdrops for holders of partner collections will appear here when they go live.'
   pending_claim: 'Claiming airdrop…'
@@ -615,15 +627,12 @@ admin_page:
   player_activity_body: Daily activity and rolling 30-day reach
   stickiness: DAU / 30D
   online_players: Online players
-  online_players_body: Average and peak authenticated connections
+  online_players_body: Peak authenticated connections per bucket
   online_now: Players online
-  average: Average
   peak: Peak
   revenue: Revenue
   revenue_over_time: Revenue over time
   revenue_over_time_body: All protocol revenue by source
-  shop: Shop
-  shop_sales: Shop sales
   item_royalties: Item royalties
   character_royalties: Character royalties
   character_creation_revenue: Character creation
@@ -657,10 +666,6 @@ admin_page:
   revenue_mtd: Month-to-date revenue
   last_30_days: Last 30 days
   calendar_month_to_date: Calendar month to date
-  recent_shop_sales: Recent shop sales
-  sales_history: Shop sales history
-  sales_retention: Exact transaction details are retained for 90 days
-  view_all_sales: View all sales
   buyer: Buyer
   item: Item
   quantity: Quantity
@@ -676,8 +681,6 @@ admin_page:
   loading: Loading…
   load_more: Load more
   transactions: transactions
-  no_sales_history: No sales in this period
-  end_of_history: End of retained history
 simulator_page:
   title: Fight simulator
   local_only: Local deterministic setup
@@ -878,15 +881,14 @@ wallet_legacy:
   withdraw_to_wallet: Buy SUI on an exchange, then withdraw it to your wallet address
     shown above.
   faq: FAQ
-  wallet_description: Your personal wallet. Only you can access it. Deposit SUI to
-    use in the shop.
+  wallet_description: Your personal wallet. Only you can access it. Deposit SUI for
+    network fees and peer marketplace trades.
   moonpay_desc: Credit card, Apple Pay, bank transfer
   transak_desc: Credit card, bank transfer, 100+ countries
   faq_what_is_sui: What is SUI?
   faq_what_is_sui_answer: SUI is a digital currency, like digital cash. It lives on
     a fast, secure network called the Sui blockchain. You use small amounts of SUI
-    to buy items in the AresRPG shop. Think of it like game credits, except we can't
-    take them from you.
+    for network fees and may trade directly with other players in the marketplace.
   faq_why_sui: Why does AresRPG use SUI?
   faq_why_sui_answer: SUI is our preferred payment method. Transactions are instant
     (under 1 second) and cost fractions of a cent. No middleman fees. We may support
@@ -895,8 +897,7 @@ wallet_legacy:
   faq_legal: Is it legal?
   faq_legal_answer: Yes. Buying and holding cryptocurrency is legal in most countries.
     SUI is a legitimate digital asset traded on major regulated exchanges worldwide.
-    You're simply using it as a payment method to spend on our shop. No NFTs, no crypto
-    schemes.
+    AresRPG uses it for network fees and peer marketplace trades.
   faq_eula: Is it allowed by the game's terms?
   faq_eula_answer: Yes. As long as cryptocurrency is used solely as a payment method
     and doesn't involve NFTs or speculative crypto schemes, it's fully compliant.
@@ -904,8 +905,8 @@ wallet_legacy:
   faq_access: Who can access my wallet?
   faq_access_answer: "Only you. Your wallet is created from your Google login using
     Sui's zkLogin technology. Nobody (not even the AresRPG team) can access your
-    funds or move them. Important: this wallet is meant for shop purchases only. Do
-    not store large amounts here. Deposit only what you plan to spend."
+    funds or move them. Important: this wallet is meant for AresRPG activity only. Do
+    not store large amounts here. Deposit only what you plan to use."
   faq_balance: I sent SUI but my balance didn't update?
   faq_balance_answer: No worries. Our refresh system might be temporarily slow. Double
     check that you sent SUI to the correct address (copy it from above), and if it
@@ -1100,6 +1101,13 @@ encyclopedia_page:
   sort_newest: NEWEST
   clear_filters: CLEAR ALL
   no_results: NO ITEMS MATCH YOUR FILTERS
+  filter_by_category: BY CATEGORY
+  filter_by_resource: BY RESOURCE TYPE
+  filter_by_job: BY CRAFTING JOB
+  filter_by_world: BY WORLD
+  filter_by_mob_family: BY MOB FAMILY
+  filter_biome: BIOME
+  filter_city: CITY
   group_armor: ARMOR
   group_weapons: WEAPONS
   group_accessories: ACCESSORIES
@@ -1108,7 +1116,11 @@ encyclopedia_page:
   group_relics: RELICS
   group_tools: TOOLS
   group_consumables: CONSUMABLES
-  group_resources: RESOURCES
+  group_raw_resources: RAW RESOURCES
+  group_gatherable_resources: GATHERABLE RESOURCES
+  group_intermediary_resources: INTERMEDIARY RESOURCES
+  group_pet_food_resources: PET FOODS
+  item_category_pet_food: PET FOOD
   boss_only: BOSS ONLY
   view_all: ALL
   item_type: TYPE
@@ -1185,18 +1197,18 @@ encyclopedia_page:
     stat_rolling: STAT ROLLING
     stat_rolling_desc: Each stat is rolled uniformly within its template range. Every value is equally likely.
     archimobs: ARCHIMOBS
-    archimobs_desc: 0.5% chance to spawn as the mob's archimob instead — a named, permanently stronger variant. The only rarity mechanic mobs have.
+    archimobs_desc: Each eligible mob has a 1% chance to be replaced by its named, permanently stronger archimob. Every member rolls independently.
     max_members: Max members
     groups_desc: A party is a shared roster of up to {{max}} players with leader election. Being partied does nothing by itself in a fight — everyone, partied or not, must send their own join-fight transaction to enter; there is no passive or proximity inclusion.
     groups_xp: XP SHARING
     groups_xp_desc: Defeated mobs form one base-XP pool. Eligible fighters give it the Retro party coefficient, mismatched total player and mob levels reduce it, then each player receives their level's share of the party total. A player below one third of the highest player's level does not increase the coefficient. Wisdom applies last; personal damage does not matter.
     groups_loot: LOOT SHARING
     groups_loot_desc: Each defeated mob makes one shared loot roll. Successful drops are assigned round-robin across winning players; adding players never creates extra rolls.
-    dungeons_desc: Find a dungeon portal in a searched zone, spend its key, then clear the rooms in order. Each portal has its own live staging lobby.
+    dungeons_desc: Travel to the dungeon entrance in its authored city, spend its key, then clear the rooms in order. Each dungeon has one live staging lobby.
     dungeon_entry: Entry
-    dungeon_entry_value: A key at a discovered zone portal
+    dungeon_entry_value: A matching key at the city entrance
     dungeon_instance: Instance
-    dungeon_instance_value: Portal-local lobby with public or group fights
+    dungeon_instance_value: Dungeon lobby with public or group fights
     dungeon_completion: Completion
     dungeon_completion_value: Clear every room
     dungeon_reward: Reward
@@ -1291,6 +1303,7 @@ encyclopedia_page:
   consumable_reset_stats: Reset stat points
   consumable_reset_spells: Reset spell points
   consumable_recall: Returns to the world portal
+  consumable_city: 'Travels to the City of {{city}}'
   consumable_loot_box: Opens a random reward
   consumable_reward_heading: REWARD
   consumable_rewards: POSSIBLE REWARDS
@@ -1358,7 +1371,6 @@ encyclopedia_page:
   no_mobs_onchain: No creatures on-chain
   obtention_crafted: Craftable
   obtention_dropped_by: Dropped by {{count}} mobs
-  obtention_shop: Available in the shop
   obtention_unknown: Obtention unknown
   total_supply: Total supply
   marketcap: Marketcap
@@ -1388,10 +1400,7 @@ encyclopedia_page:
     arcane_spore: ''
     arcaneshroom: ''
     arcanite: ''
-    arcanite_hoe: ''
-    arcanite_pickaxe: ''
     arcanite_powder: ''
-    arcanite_sickle: ''
     arcanize_flour: ''
     barley_flour: ''
     basic_pickaxe: ''
@@ -1401,9 +1410,6 @@ encyclopedia_page:
     bloodstone_powder: ''
     bloodveil_orchid: ''
     burnt_wheat_flour: ''
-    copper_hoe: ''
-    copper_pickaxe: ''
-    copper_sickle: ''
     crimson_truffle: ''
     crimson_truffle_heart: ''
     crystallized_tanjirize: ''
@@ -1443,19 +1449,13 @@ encyclopedia_page:
     infinity_moonstone: ''
     infinity_obsidianite: ''
     infinity_quartz: ''
-    iron_sickle: ''
     ivory_orchid_paste: ''
     ivory_shrooms: ''
     jade: ''
-    jade_hoe: ''
-    jade_pickaxe: ''
     jade_powder: ''
     malt_flour: ''
     moonstone: ''
-    moonstone_hoe: ''
-    moonstone_pickaxe: ''
     moonstone_powder: ''
-    moonstone_sickle: ''
     nightcap: ''
     nightcap_elixir_base: ''
     obsidianite: ''
@@ -1505,6 +1505,8 @@ encyclopedia_page:
     rune_wisdom_ba: ''
     rune_wisdom_pa: ''
     rune_wisdom_ra: ''
+    scroll_of_oblivion: Returns all invested spell points and resets every upgraded spell to level 1.
+    scroll_of_rebirth: Returns all invested characteristic points so they can be assigned again.
     shiny_barley: ''
     smoldering_wheat: ''
     spectral_arcanize: ''

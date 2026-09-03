@@ -29,6 +29,8 @@ test('every character progression tab crosses the wallet action and proven recei
   expect(jobs).toContain("type: 'inventory/stacks_merged'")
   expect(jobs).toContain("type: 'character/crafted'")
   expect(jobs).toContain("t('jobs.craft.starting_chance')")
+  expect(jobs).toContain('onClick={() => open_ingredient(item_type)}')
+  expect(jobs).toContain('open_ingredient={open_ingredient}')
   expect(forge).toContain('.scribe_rune(')
   expect(forge).toContain("type: 'runeforge/scribed'")
   expect(forge.match(/set_rune_id\(null\)/g)?.length).toBe(1)

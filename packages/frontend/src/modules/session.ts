@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { AirdropState, CharacterRow, ClaimRow, ItemRow, ServerPacket, ShopState } from '@aresrpg/protocol'
+import type { AirdropState, CharacterRow, ClaimRow, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
 import { client_to_chain_coordinate, type CharacteristicName } from '@aresrpg/immutable'
 
@@ -27,6 +27,7 @@ import { fold_character_receipt } from './character_folds.ts'
 import { reduce_craft_character_selection, with_craft_character_session } from './craft_character_lock.ts'
 import { fight_environment } from './fight.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
+import { fold_link_input } from './session_link.ts'
 
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
@@ -41,12 +42,13 @@ export type SessionState = Readonly<{
   link_violation: string | null // red until a connection is accepted after a server rule violation
   latency_ms: number | null
   indexing_lag: number | null
+  current_epoch: string | null
   game_frozen: boolean | null
   roster_loaded: boolean
   characters: readonly CharacterRow[]
   inventory: readonly ItemRow[]
   claims: readonly ClaimRow[]
-  giftcards: readonly { id: string; template: string; amount: number }[]
+  giftcards: readonly GiftcardRow[]
   selected_character_id: string | null
   online: number | null
   auth_ready: boolean
@@ -54,7 +56,7 @@ export type SessionState = Readonly<{
   wallet: AuthSession | null
   sui_balance_mist: bigint | null
   gas_spent_mist: bigint
-  shop: Readonly<ShopState> | null
+  airdrops: readonly AirdropState[] | null
 }>
 
 export type SessionInput =
@@ -76,8 +78,9 @@ export type SessionInput =
   | Readonly<{ type: 'character/select'; character_id: string }>
   | Readonly<{ type: 'wallet/refresh' }>
   | Readonly<{ type: 'wallet/refreshed'; balance_mist: bigint; gas_spent_mist: bigint }>
-  | Readonly<{ type: 'shop/purchased'; item_type: string; quantity: number }>
   | Readonly<{ type: 'airdrop/claimed'; drop_id: string }>
+  | Readonly<{ type: 'giftcard/received'; giftcard: GiftcardRow }>
+  | Readonly<{ type: 'giftcard/redeemed'; giftcard: string }>
   | Readonly<{
       type: 'character/equip_folded'
       character_id: string
@@ -94,7 +97,7 @@ export type SessionInput =
       type: 'character/consumed'
       character_id: string
       item_id: string
-      effect: 'heal' | 'reset_stats' | 'reset_spells' | 'recall'
+      effect: 'heal' | 'reset_stats' | 'reset_spells' | 'recall' | 'city'
       heal: number
     }>
   | Readonly<{
@@ -134,6 +137,7 @@ export const initial_session_state = (): SessionState =>
     link_violation: null,
     latency_ms: null,
     indexing_lag: null,
+    current_epoch: null,
     game_frozen: null,
     roster_loaded: false,
     characters: [],
@@ -147,40 +151,38 @@ export const initial_session_state = (): SessionState =>
     wallet: null,
     sui_balance_mist: null,
     gas_spent_mist: 0n,
-    shop: null,
+    airdrops: null,
   })
 
 const with_session = (state: AppState, session: SessionState): AppState => Object.freeze({ ...state, session })
-
-const with_sale_supply = (session: SessionState, item_type: string, supply: string): SessionState => {
-  if (!session.shop) return session
-  const sales = session.shop.sales.map((sale) => (sale.item_type === item_type ? { ...sale, supply } : sale))
-  return Object.freeze({ ...session, shop: Object.freeze({ ...session.shop, sales: Object.freeze(sales) }) })
-}
 
 const with_airdrop = (
   session: SessionState,
   drop_id: string,
   update: (airdrop: AirdropState) => AirdropState
 ): SessionState => {
-  if (!session.shop) return session
-  const airdrops = session.shop.airdrops.map((airdrop) => (airdrop.drop_id === drop_id ? update(airdrop) : airdrop))
-  return Object.freeze({ ...session, shop: Object.freeze({ ...session.shop, airdrops: Object.freeze(airdrops) }) })
+  if (!session.airdrops) return session
+  const airdrops = session.airdrops.map((airdrop) => (airdrop.drop_id === drop_id ? update(airdrop) : airdrop))
+  return Object.freeze({ ...session, airdrops: Object.freeze(airdrops) })
 }
 
-const fold_shop_receipt = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type === 'shop/purchased') {
-    const sale = session.shop?.sales.find(({ item_type }) => item_type === input.item_type)
-    if (!sale || sale.infinite) return session
-    const supply = BigInt(sale.supply) - BigInt(input.quantity)
-    return with_sale_supply(session, input.item_type, String(supply < 0n ? 0n : supply))
-  }
+const fold_airdrop_receipt = (session: SessionState, input: AppInput): SessionState => {
   if (input.type !== 'airdrop/claimed') return session
   return with_airdrop(session, input.drop_id, (airdrop) => ({
     ...airdrop,
     eligible: false,
     eligible_count: Math.max(0, airdrop.eligible_count - 1),
   }))
+}
+
+const fold_giftcard_input = (session: SessionState, input: AppInput): SessionState => {
+  if (input.type === 'giftcard/received')
+    return session.giftcards.some(({ id }) => id === input.giftcard.id)
+      ? session
+      : Object.freeze({ ...session, giftcards: Object.freeze([...session.giftcards, input.giftcard]) })
+  if (input.type === 'giftcard/redeemed')
+    return Object.freeze({ ...session, giftcards: session.giftcards.filter(({ id }) => id !== input.giftcard) })
+  return session
 }
 
 type ItemPacket = Extract<ServerPacket, { type: 'packet/item_updated' | 'packet/item_removed' }>
@@ -210,19 +212,20 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
     })
   }
   if (packet.type === 'packet/server_info')
-    return Object.freeze({ ...session, online: packet.online, indexing_lag: packet.indexing_lag })
+    return Object.freeze({
+      ...session,
+      online: packet.online,
+      indexing_lag: packet.indexing_lag,
+      current_epoch: packet.current_epoch,
+    })
   if (packet.type === 'packet/game_state') return Object.freeze({ ...session, game_frozen: packet.frozen })
   if (packet.type === 'packet/inventory') return Object.freeze({ ...session, inventory: packet.items })
   if (is_item_packet(packet))
     return Object.freeze({ ...session, inventory: fold_item_packet(session.inventory, packet) })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
   if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
-  if (packet.type === 'packet/shop_state')
-    return Object.freeze({
-      ...session,
-      shop: Object.freeze({ sales: Object.freeze(packet.sales), airdrops: Object.freeze(packet.airdrops) }),
-    })
-  if (packet.type === 'packet/shop_supply') return with_sale_supply(session, packet.item_type, packet.supply)
+  if (packet.type === 'packet/airdrop_state')
+    return Object.freeze({ ...session, airdrops: Object.freeze(packet.airdrops) })
   if (packet.type === 'packet/airdrop_remaining')
     return with_airdrop(session, packet.drop_id, (airdrop) => ({ ...airdrop, eligible_count: packet.eligible_count }))
   if (packet.type === 'packet/error')
@@ -230,46 +233,10 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
   return session
 }
 
-const fold_link_input = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type === 'link/connecting')
-    return Object.freeze({
-      ...session,
-      link_status: 'connecting',
-      link_error: null,
-      latency_ms: null,
-      indexing_lag: null,
-    })
-  if (input.type === 'link/rejected' || input.type === 'link/replaced')
-    return Object.freeze({
-      ...session,
-      link_status: input.type === 'link/replaced' ? ('replaced' as const) : ('idle' as const),
-      link_error: input.type === 'link/rejected' ? input.reason : null,
-      latency_ms: null,
-      indexing_lag: null,
-    })
-  if (input.type === 'link/violation')
-    return Object.freeze({
-      ...session,
-      link_status: 'idle',
-      link_error: input.reason,
-      link_violation: input.reason,
-      latency_ms: null,
-    })
-  if (input.type === 'link/failed')
-    return Object.freeze({
-      ...session,
-      link_status: 'connecting',
-      link_error: input.error,
-      latency_ms: null,
-      indexing_lag: null,
-    })
-  return session
-}
-
 const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
-  const receipt = fold_character_receipt(fold_shop_receipt(current, input), input)
+  const receipt = fold_giftcard_input(fold_character_receipt(fold_airdrop_receipt(current, input), input), input)
   if (receipt !== current) return with_session(state, receipt)
   const link_state = fold_link_input(current, input)
   if (link_state !== current) return with_session(state, link_state)
@@ -419,6 +386,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       .catch((error) => console.warn('Wallet balance could not be refreshed.', error))
   }
   events.on('wallet/refresh', refresh_wallet)
+  events.on('distribution/holder_connected', ({ session: holder }) => {
+    if (!link?.send({ type: 'packet/airdrop_eligibility_request', address: holder.address }))
+      dispatch({ type: 'distribution/failed', error: 'The game server is unavailable' })
+  })
   const balance_timer = setInterval(refresh_wallet, BALANCE_POLL_MS)
   events.on('wallet/resolve_character', ({ name, resolve, reject }) => {
     const connected = get_state().session.wallet

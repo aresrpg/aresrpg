@@ -22,6 +22,8 @@ import { create_watcher } from '../pubsub_bus.ts'
 const log = logger(import.meta)
 
 const is_visible_slot = (slot: string): slot is VisibleSlot => (VISIBLE_SLOTS as readonly string[]).includes(slot)
+const refreshes_roster = (type: string): boolean =>
+  ['DungeonEntered', 'DungeonRoomCleared', 'DungeonEnded', 'CharacterTeleported'].includes(type)
 
 export default {
   name: 'player_events',
@@ -90,8 +92,7 @@ export default {
         dispatch({ type: 'action/fight', character_id: character, fight: null })
         refresh_roster()
       }
-      if (payload.type === 'DungeonEntered' || payload.type === 'DungeonRoomCleared' || payload.type === 'DungeonEnded')
-        refresh_roster()
+      if (refreshes_roster(payload.type)) refresh_roster()
       if (payload.type === 'FightResolutionChanged' || payload.type === 'CharacterHeld') refresh_resolutions()
       if (payload.type === 'ItemEquipped' || payload.type === 'ItemUnequipped') {
         const { slot, item } = payload.data as { slot: string; item: string }

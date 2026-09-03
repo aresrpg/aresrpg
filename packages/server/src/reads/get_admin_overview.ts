@@ -18,8 +18,6 @@ import type {
   AdminRangeDays,
   AdminRevenueOverview,
   AdminTransactionsOverview,
-  AdminShopSaleRow,
-  AdminShopSalesResult,
 } from '@aresrpg/protocol'
 
 import type { Graph } from '../graph.ts'
@@ -29,8 +27,6 @@ const INTERVAL_MS = 15 * 60 * 1_000
 const HOUR_MS = 60 * 60 * 1_000
 const DAY_MS = 24 * 60 * 60 * 1_000
 const WEEK_MS = 7 * DAY_MS
-const SHOP_RETENTION_MS = 90 * DAY_MS
-const SHOP_PAGE = 30
 const TRANSACTIONS_ALL_KEY = 'analytics:transactions:all'
 const GAS_ALL_KEY = 'analytics:gas:all'
 
@@ -74,7 +70,6 @@ const range_buckets = (days: AdminRangeDays, now_ms: number) => {
 }
 const bigint = (value: string | undefined): bigint => BigInt(value ?? '0')
 const integer = (value: string | undefined): number => Number.parseInt(value ?? '0', 10) || 0
-const average = (sum: number, count: number): number => (count > 0 ? Math.round(sum / count) : 0)
 const sum_hash_values = (rows: readonly Readonly<Record<string, string>>[]): bigint =>
   rows.reduce((total, row) => total + Object.values(row).reduce((sum, value) => sum + BigInt(value), 0n), 0n)
 const safe_count = (value: bigint, label: string): number => {
@@ -98,8 +93,6 @@ const graph_doors = (graph: GraphBus) => {
 
 type MoneyObservation = Readonly<{
   ts_ms: number
-  shop_mist: string
-  shop_orders: string
   item_royalty_mist: string
   character_royalty_mist: string
   character_creation_mist: string
@@ -114,7 +107,7 @@ const optional_revenue = (value: unknown): string => {
 
 const parse_money = (raw: string): MoneyObservation => {
   const row = JSON.parse(raw) as Record<string, unknown>
-  const strings = ['shop_mist', 'shop_orders', 'item_royalty_mist', 'character_royalty_mist']
+  const strings = ['item_royalty_mist', 'character_royalty_mist']
   if (typeof row.ts_ms !== 'number' || !strings.every((field) => typeof row[field] === 'string'))
     throw new Error('admin money observation has an invalid shape')
   const { character_creation_mist, kolizeum_mist } = row
@@ -128,8 +121,6 @@ const parse_money = (raw: string): MoneyObservation => {
 const money_point = (at_ms: number, rows: readonly MoneyObservation[]): AdminMoneyPoint =>
   Object.freeze({
     at_ms,
-    shop_mist: rows.reduce((sum, row) => sum + bigint(row.shop_mist), 0n).toString(),
-    shop_orders: rows.reduce((sum, row) => sum + bigint(row.shop_orders), 0n).toString(),
     item_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.item_royalty_mist), 0n).toString(),
     character_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.character_royalty_mist), 0n).toString(),
     character_creation_mist: rows.reduce((sum, row) => sum + bigint(row.character_creation_mist), 0n).toString(),
@@ -159,52 +150,18 @@ const money_points = (
   return Object.freeze(buckets.values.map((bucket) => money_point(bucket, grouped.get(bucket) ?? [])))
 }
 
-const online_point = (at_ms: number, samples: readonly number[]): AdminOnlinePoint => {
-  const sum = samples.reduce((total, value) => total + value, 0)
-  return Object.freeze({ at_ms, average: average(sum, samples.length), peak: Math.max(0, ...samples) })
-}
-
-const parse_shop_sale = (member: string): AdminShopSaleRow => {
-  const separator = member.indexOf('|')
-  if (separator < 0) throw new Error('admin shop sale has no coordinate')
-  const id = member.slice(0, separator)
-  const row = JSON.parse(member.slice(separator + 1)) as Record<string, unknown>
-  const required = ['tx_digest', 'sale_id', 'buyer', 'item_type', 'unit_price_mist', 'total_mist', 'remaining_supply']
-  if (
-    !required.every((field) => typeof row[field] === 'string') ||
-    typeof row.checkpoint !== 'number' ||
-    typeof row.timestamp_ms !== 'number' ||
-    typeof row.quantity !== 'number'
-  )
-    throw new Error('admin shop sale has an invalid shape')
-  return Object.freeze({
-    id,
-    checkpoint: row.checkpoint,
-    tx_digest: row.tx_digest as string,
-    timestamp_ms: row.timestamp_ms,
-    sale_id: row.sale_id as string,
-    buyer: row.buyer as string,
-    item_type: row.item_type as string,
-    quantity: row.quantity,
-    unit_price_mist: row.unit_price_mist as string,
-    total_mist: row.total_mist as string,
-    remaining_supply: row.remaining_supply as string,
-  })
-}
+const online_point = (at_ms: number, samples: readonly number[]): AdminOnlinePoint =>
+  Object.freeze({ at_ms, peak: Math.max(0, ...samples) })
 
 const sum_money = (rows: readonly AdminMoneyPoint[]) =>
   rows.reduce(
     (total, row) => ({
-      shop_mist: total.shop_mist + bigint(row.shop_mist),
-      shop_orders: total.shop_orders + bigint(row.shop_orders),
       item_royalty_mist: total.item_royalty_mist + bigint(row.item_royalty_mist),
       character_royalty_mist: total.character_royalty_mist + bigint(row.character_royalty_mist),
       character_creation_mist: total.character_creation_mist + bigint(row.character_creation_mist),
       kolizeum_mist: total.kolizeum_mist + bigint(row.kolizeum_mist),
     }),
     {
-      shop_mist: 0n,
-      shop_orders: 0n,
       item_royalty_mist: 0n,
       character_royalty_mist: 0n,
       character_creation_mist: 0n,
@@ -236,18 +193,10 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     ),
   ])
   const revenue_total = (row: ReturnType<typeof sum_money>): string =>
-    (
-      row.shop_mist +
-      row.item_royalty_mist +
-      row.character_royalty_mist +
-      row.character_creation_mist +
-      row.kolizeum_mist
-    ).toString()
+    (row.item_royalty_mist + row.character_royalty_mist + row.character_creation_mist + row.kolizeum_mist).toString()
   return Object.freeze({
     days,
     bucket: buckets.tier,
-    shop_mist: selected.shop_mist.toString(),
-    shop_orders: selected.shop_orders.toString(),
     item_royalty_mist: selected.item_royalty_mist.toString(),
     character_royalty_mist: selected.character_royalty_mist.toString(),
     character_creation_mist: selected.character_creation_mist.toString(),
@@ -321,15 +270,10 @@ const load_online = async (mesh: MeshBus, days: AdminRangeDays, now_ms: number):
   const keys = buckets.values.map((bucket) => `analytics:online:${buckets.tier}:${bucket}`)
   const rows = await online_samples(keys)
   const online = Object.freeze(buckets.values.map((bucket, index) => online_point(bucket, rows[index] ?? [])))
-  const samples = rows.flat()
   return Object.freeze({
     days,
     bucket: buckets.tier,
     online_now: await mesh.cluster_online(),
-    online_average: average(
-      samples.reduce((sum, value) => sum + value, 0),
-      samples.length
-    ),
     online_peak: online.reduce((peak, point) => Math.max(peak, point.peak), 0),
     online,
   })
@@ -440,30 +384,5 @@ export const get_admin_overview = async (
     online,
     addresses,
     characters,
-  })
-}
-
-const cursor_parts = (cursor: string | null, now_ms: number): readonly [number, number] => {
-  if (!cursor) return [now_ms, 0]
-  const [as_of, offset] = cursor.split(':').map(Number)
-  if (!Number.isSafeInteger(as_of) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1_000_000)
-    throw new Error('invalid shop sales cursor')
-  return [as_of!, offset!]
-}
-
-export const get_admin_shop_sales = async (
-  graph: GraphBus,
-  { days, cursor, now_ms = Date.now() }: Readonly<{ days: AdminRangeDays; cursor: string | null; now_ms?: number }>
-): Promise<AdminShopSalesResult> => {
-  const { shop_sales } = graph
-  if (!shop_sales) throw new Error('admin shop ledger is unavailable')
-  const [as_of_ms, offset] = cursor_parts(cursor, now_ms)
-  const min_ms = Math.max(as_of_ms - days * DAY_MS, as_of_ms - SHOP_RETENTION_MS)
-  const members = await shop_sales(min_ms, as_of_ms, offset, SHOP_PAGE + 1)
-  const has_more = members.length > SHOP_PAGE
-  return Object.freeze({
-    as_of_checkpoint: await graph.indexed_checkpoint(),
-    rows: Object.freeze(members.slice(0, SHOP_PAGE).map(parse_shop_sale)),
-    next_cursor: has_more ? `${as_of_ms}:${offset + SHOP_PAGE}` : null,
   })
 }

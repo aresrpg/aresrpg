@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Turn ownership for lasting rows and board zones. These are the presentation-facing semantics
-// shared with fight.move: another fighter's turn never consumes your effects or your glyphs.
+// shared with move-combat: another fighter's turn never consumes your effects or your glyphs.
 
 import { describe, expect, test } from 'bun:test'
 

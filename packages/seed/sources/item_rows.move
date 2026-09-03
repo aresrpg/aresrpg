@@ -5,8 +5,9 @@
 /// overwrite/attach doors until `freeze_forever`. Stat ranges, damage lines, and the
 /// consumable effect attach as dynamic fields exactly as the seal era authored them — the
 /// module-split attachment pattern survives, only the owner package and the doors change.
-/// Minted items COPY what they need at mint (stats roll into the item, the consumable
-/// effect imprints) — a rebalance tunes FUTURE mints, never a bought item.
+/// Minted unstackable items copy their rolled stats and damage lines. Stackable consumables
+/// deliberately read the template's live effect when used, so merged units never carry
+/// conflicting behavior and one template remains the effect authority.
 module aresrpg_seed::item_rows;
 
 use aresrpg_math::{

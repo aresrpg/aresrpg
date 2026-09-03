@@ -202,7 +202,6 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
         "CREATE INDEX FOR (n:Fight) ON (n.id)",
         "CREATE INDEX FOR (n:Party) ON (n.id)",
         "CREATE INDEX FOR (n:Kolizeum) ON (n.id)",
-        "CREATE INDEX FOR (n:Sale) ON (n.id)",
         "CREATE INDEX FOR (n:Airdrop) ON (n.id)",
         "CREATE INDEX FOR (n:Giftcard) ON (n.id)",
         "CREATE INDEX FOR (n:Zone) ON (n.world, n.zx, n.zz)",

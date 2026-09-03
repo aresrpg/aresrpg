@@ -10,7 +10,7 @@ export const pages = [
   'world',
   'characters',
   'leaderboard',
-  'shop',
+  'mastery',
   'encyclopedia',
   'marketplace',
   'airdrop',
@@ -49,6 +49,7 @@ export const normalize_pathname = (pathname: string): string => {
 
 export const page_from_pathname = (pathname: string): Page => {
   const [segment = ''] = normalize_pathname(pathname).split('/').filter(Boolean)
+  if (segment === 'gift') return 'airdrop'
   return pages.find((page) => page === segment) ?? 'world'
 }
 
@@ -99,6 +100,11 @@ const return_from_kolizeum_fight = (
   return selected && input.checkpoint.contract.ended && managed ? open_page(state, 'world') : state
 }
 
+const logged_out_navigation = (state: AppState): NavigationState =>
+  state.distribution.gift_link_ready
+    ? Object.freeze({ ...initial_navigation_state(), page: 'airdrop', pathname: '/gift' })
+    : initial_navigation_state()
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'fight_result/checkpoint') return return_from_kolizeum_fight(state, input)
   if (input.type === 'page/open') return open_page(state, input.page)
@@ -111,7 +117,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       navigation: Object.freeze({ ...state.navigation, guest_spectating: input.enabled }),
     })
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
-    return Object.freeze({ ...state, navigation: initial_navigation_state() })
+    return Object.freeze({ ...state, navigation: logged_out_navigation(state) })
   if (input.type === 'server/packet' && input.packet.type === 'packet/characters')
     return Object.freeze({
       ...state,

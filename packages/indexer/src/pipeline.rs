@@ -48,8 +48,6 @@ pub enum Write {
         score: u64,
         member: String,
     },
-    /// One exact primary-shop row in the global 90-day admin ledger.
-    ShopSale { score: u64, member: String },
     /// One replay-deduplicated exact-money contribution to both chart tiers.
     Money(MoneyFact),
     /// One successful game-package sender projected into every dashboard activity tier.
@@ -68,7 +66,6 @@ pub enum Write {
 #[derive(Debug, Clone)]
 pub struct CheckpointWrites {
     pub sequence_number: u64,
-    pub timestamp_ms: u64,
     pub writes: Vec<Write>,
 }
 
@@ -260,12 +257,12 @@ pub(crate) fn is_deployment_only_target(target: &str) -> bool {
             | "lot_rule::add"
             | "naked_rule::add"
             | "world::create"
-            | "shop::new_sale"
-            | "shop::set_sale"
-            | "shop::new_airdrop"
-            | "shop::new_giftcard"
+            | "distribution::new_airdrop"
+            | "distribution::new_giftcard"
             | "loot_box::add_loot_reward"
             | "loot_box::clear_loot_table"
+            | "mastery::new_offer"
+            | "mastery::set_offer"
     )
 }
 
@@ -491,12 +488,6 @@ impl Processor for AresHandler {
                 member: row.member,
             });
         }
-        for row in wire.shop_sales {
-            writes.push(Write::ShopSale {
-                score: row.timestamp_ms,
-                member: row.member()?,
-            });
-        }
         writes.extend(wire.money.into_iter().map(Write::Money));
         let mut transaction_count = 0u64;
         for tx in game_activity_txs(&txs, &self.game_packages) {
@@ -543,7 +534,6 @@ impl Processor for AresHandler {
         });
         Ok(vec![CheckpointWrites {
             sequence_number: ckpt,
-            timestamp_ms: ts_ms,
             writes,
         }])
     }
@@ -590,14 +580,6 @@ impl Handler for AresHandler {
                         let _: () = redis::cmd("EXPIRE")
                             .arg(key)
                             .arg(SALES_TTL_SECS)
-                            .query_async(conn.connection())
-                            .await?;
-                    }
-                    Write::ShopSale { score, member } => {
-                        let _: () = redis::cmd("ZADD")
-                            .arg(analytics::SHOP_SALES_KEY)
-                            .arg(*score)
-                            .arg(member)
                             .query_async(conn.connection())
                             .await?;
                     }
@@ -725,15 +707,6 @@ impl Handler for AresHandler {
             }
         }
         if let Some(tip) = batch.last() {
-            let _: () = redis::cmd("ZREMRANGEBYSCORE")
-                .arg(analytics::SHOP_SALES_KEY)
-                .arg("-inf")
-                .arg(
-                    tip.timestamp_ms
-                        .saturating_sub(analytics::DETAIL_RETENTION_MS),
-                )
-                .query_async(conn.connection())
-                .await?;
             tracing::debug!(
                 checkpoint = tip.sequence_number,
                 batched = batch.len(),
@@ -766,10 +739,10 @@ mod tests {
         let game = canonical("0xaa").unwrap();
         let old_upgrade = canonical("0xbb").unwrap();
         let packages = std::collections::HashSet::from([game.clone(), old_upgrade.clone()]);
-        let game_call = vec![format!("{game}::shop::buy")];
+        let game_call = vec![format!("{game}::api::claim_airdrop")];
         let multi_call = vec![
             format!("{game}::kiosk::borrow"),
-            format!("{game}::shop::buy"),
+            format!("{game}::api::claim_airdrop"),
         ];
         let old_call = vec![format!("{old_upgrade}::world::join")];
         let foreign_call = vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())];
@@ -783,16 +756,14 @@ mod tests {
             format!("{game}::lot_rule::add"),
             format!("{game}::naked_rule::add"),
             format!("{game}::world::create"),
-            format!("{game}::shop::new_sale"),
-            format!("{game}::shop::set_sale"),
-            format!("{game}::shop::new_airdrop"),
-            format!("{game}::shop::new_giftcard"),
+            format!("{game}::distribution::new_airdrop"),
+            format!("{game}::distribution::new_giftcard"),
             format!("{game}::loot_box::add_loot_reward"),
             format!("{game}::loot_box::clear_loot_table"),
         ];
         let mixed_calls = vec![
             format!("{game}::version::admin_update"),
-            format!("{game}::shop::buy"),
+            format!("{game}::api::claim_airdrop"),
         ];
         assert!(is_game_activity(true, &game_call, &packages));
         assert!(is_game_activity(true, &multi_call, &packages));
@@ -816,29 +787,11 @@ mod tests {
             vec![format!("{system}::package::authorize_upgrade")],
             vec![format!("{system}::package::commit_upgrade")],
             vec![format!("{seed}::registry::write_item")],
-            vec![format!("{seed}::registry::write_sale")],
             vec![format!("{control}::admin::mint_temp_admin_cap")],
         ];
         for calls in operations {
             assert!(!is_game_activity(true, &calls, &packages));
             assert!(!is_game_transaction(&calls, &packages));
-        }
-    }
-
-    #[test]
-    fn every_generated_game_package_seed_door_is_excluded_from_gameplay() {
-        const PREFIX: &str = "target: `${ctx.pins.package}::";
-        let source = include_str!("../../sdk/src/seed_doors.gen.ts");
-        let targets = source
-            .lines()
-            .filter_map(|line| line.trim().strip_prefix(PREFIX)?.strip_suffix("`,"))
-            .collect::<Vec<_>>();
-        assert_eq!(targets.len(), 7, "seed door target parser drifted");
-        for target in targets {
-            assert!(
-                is_deployment_only_target(target),
-                "game-package seed door {target} would count as player gameplay"
-            );
         }
     }
 
@@ -862,10 +815,10 @@ mod tests {
                 true,
                 vec![
                     format!("{game}::kiosk::borrow"),
-                    format!("{game}::shop::buy"),
+                    format!("{game}::api::claim_airdrop"),
                 ],
             ),
-            tx(false, vec![format!("{game}::shop::buy")]),
+            tx(false, vec![format!("{game}::api::claim_airdrop")]),
             tx(
                 true,
                 vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())],

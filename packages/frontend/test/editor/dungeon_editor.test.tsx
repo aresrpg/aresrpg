@@ -4,17 +4,19 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-const { DungeonEditor } = await import('../../src/editor/DungeonEditor.tsx')
+import dungeons from '../../../../seed/content/dungeons.json'
 
-test('a world dungeon is an ordered room composition sheet', () => {
+const { DungeonEditor } = await import('../../src/editor/DungeonEditor.tsx')
+const { ContentEntityEditor } = await import('../../src/editor/ContentEntityEditor.tsx')
+
+test('an independent dungeon is an ordered room composition sheet', () => {
   const html = renderToStaticMarkup(
     <DungeonEditor
       change={() => undefined}
-      world={{
-        dungeon: {
-          key: 'key_of_tangled_aftermath',
-          rooms: [[{ mob_type: 'ant_red' }], [{ mob_type: 'araknomath' }]],
-        },
+      dungeon={{
+        dungeon: 'tangled_aftermath',
+        key: 'key_of_tangled_aftermath',
+        rooms: [[{ mob_type: 'ant_red' }], [{ mob_type: 'araknomath' }]],
       }}
     />
   )
@@ -31,4 +33,13 @@ test('a world dungeon is an ordered room composition sheet', () => {
   expect(html).toContain('Random Lv. 25–30')
   expect(html).not.toContain('Edit room mob level')
   expect(html).not.toContain('level_scalar')
+})
+
+test('/demo routes the dungeons content domain to the room composition editor', () => {
+  const html = renderToStaticMarkup(
+    <ContentEntityEditor domain="dungeons" is_readonly={() => false} on_change={() => undefined} value={dungeons[0]!} />
+  )
+
+  expect(html).toContain('data-dungeon-editor=""')
+  expect(html).toContain('data-dungeon-room="6"')
 })

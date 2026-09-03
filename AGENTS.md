@@ -101,7 +101,7 @@ bun run coverage:all
 
 `bun run test` is the canonical repository suite and includes Bun's native 60% line / 75% function
 coverage gate over handwritten JS/TS. `bun run coverage:all` additionally runs the Rust indexer's
-65% LLVM line floor and Sui-native Move floors: control 60%, seed 30%, math 30%, and game 25%.
+65% LLVM line floor and Sui-native Move floors: control 60%, seed 30%, math 30%, combat 25%, and game 25%.
 Every lane targets more than 80%; raise its enforced floor in the same change as meaningful test
 coverage gains, and never lower a floor. No authored module is excluded. Rust coverage requires `cargo-llvm-cov` 0.9.0 plus
 `llvm-tools-preview` or Homebrew LLVM. The complete CI gate also includes indexer parity/package-size

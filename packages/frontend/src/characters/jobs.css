@@ -566,6 +566,14 @@
   padding-bottom: var(--s-5);
 }
 
+.jobs__item-detail [data-item-detail-name] {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
 /* X close (top-right of the item-detail pane), mirroring .enc__detail-close. The detail now sits BESIDE
    the browse list (not replacing it), so it closes — it doesn't "go back". */
 .jobs__detail-close {
@@ -619,10 +627,17 @@
 
 .jobs__ingredient {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: var(--s-2);
   padding: var(--s-1) var(--s-2);
   border-radius: var(--r-1);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .jobs__ingredient:hover {
   background: var(--surface-2);

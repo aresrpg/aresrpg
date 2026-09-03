@@ -86,3 +86,32 @@ test('the authenticated reader keeps one 20-entry promise LRU', async () => {
   await read('0xb')
   expect(calls).toEqual(['0xa', '0xb', '0xc', '0xb'])
 })
+
+test('a transient item read failure is not cached', async () => {
+  let calls = 0
+  const client = {
+    core: {
+      getObjects: async () => {
+        calls += 1
+        if (calls === 1) throw new Error('temporary read failure')
+        return {
+          objects: [
+            {
+              objectId: '0xhat',
+              type: '0xgame::item::Item',
+              json: { name: 'Hat', item_type: 'hat', category: 'hat', level: 1 },
+            },
+          ],
+        }
+      },
+      listDynamicFields: async () => ({ dynamicFields: [] }),
+      getDynamicField: async () => {
+        throw new Error('no dynamic fields')
+      },
+    },
+  }
+  const read = create_item_snapshot_reader(client as never, '0xgame')
+  await expect(read('0xhat')).rejects.toThrow('temporary read failure')
+  expect(await read('0xhat')).toMatchObject({ id: '0xhat', name: 'Hat' })
+  expect(calls).toBe(2)
+})

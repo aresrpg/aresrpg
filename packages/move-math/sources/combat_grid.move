@@ -429,8 +429,132 @@ public fun in_zone(shape: u8, size: u64, anchor: u64, cell: u64): bool {
   d <= size
 }
 
+/// The target's deterministic position inside a cast zone, or none when it is outside.
+/// Runtime targeting asks this once per fighter; it never expands a sparse roster into the
+/// board's 380 cells. The rank preserves `zone_cells`' historical effect-resolution order.
+public fun zone_rank(shape: u8, size: u64, anchor: u64, caster: u64, cell: u64): Option<u64> {
+  if (!in_grid(cell)) return option::none();
+  if (shape == spell_effect::shape_point()) {
+    return if (cell == anchor) option::some(0) else option::none()
+  };
+  if (shape == spell_effect::shape_line()) return line_rank(anchor, caster, size, cell);
+  if (shape == spell_effect::shape_tbar()) return tbar_rank(anchor, caster, size, cell);
+  if (shape == spell_effect::shape_podium()) {
+    let bar = tbar_rank(anchor, caster, size, cell);
+    if (bar.is_some()) return bar;
+    let dir = away_dir(caster, anchor);
+    let forward = step_cell(anchor, dir);
+    return if (forward.is_some() && *forward.borrow() == cell)
+      option::some(tbar_length(anchor, dir, size))
+      else option::none()
+  };
+  if (shape == spell_effect::shape_cone()) return cone_rank(anchor, caster, size, cell);
+  if (!in_zone(shape, size, anchor, cell)) return option::none();
+  // allmap and the row-major static shapes already enumerate by encoded cell.
+  option::some(cell)
+}
+
+fun directed_distance(origin: u64, dir: u8, cell: u64): Option<u64> {
+  let ox = cell_x(origin);
+  let oy = cell_y(origin);
+  let x = cell_x(cell);
+  let y = cell_y(cell);
+  if (dir == 0 && y == oy && x >= ox) return option::some(x - ox);
+  if (dir == 1 && y == oy && x <= ox) return option::some(ox - x);
+  if (dir == 2 && x == ox && y >= oy) return option::some(y - oy);
+  if (dir == 3 && x == ox && y <= oy) return option::some(oy - y);
+  option::none()
+}
+
+fun walk_rank(origin: u64, dir: u8, size: u64, cell: u64): Option<u64> {
+  let distance = directed_distance(origin, dir, cell);
+  if (distance.is_none()) return option::none();
+  let value = *distance.borrow();
+  if (value >= 1 && value <= size) option::some(value) else option::none()
+}
+
+fun walk_capacity(origin: u64, dir: u8, size: u64): u64 {
+  let x = cell_x(origin);
+  let y = cell_y(origin);
+  let available = if (dir == 0) GRID_W - 1 - x
+    else if (dir == 1) x
+    else if (dir == 2) GRID_H - 1 - y
+    else if (dir == 3) y
+    else 0;
+  min_u64(size, available)
+}
+
+fun perpendicular_dirs(dir: u8): (u8, u8) {
+  if (dir == 0 || dir == 1 || dir == DIR_NONE) (2, 3) else (0, 1)
+}
+
+fun line_rank(anchor: u64, caster: u64, size: u64, cell: u64): Option<u64> {
+  if (cell == anchor) option::some(0) else walk_rank(anchor, away_dir(caster, anchor), size, cell)
+}
+
+fun tbar_rank(anchor: u64, caster: u64, size: u64, cell: u64): Option<u64> {
+  if (cell == anchor) return option::some(0);
+  let dir = away_dir(caster, anchor);
+  let (perp_a, perp_b) = perpendicular_dirs(dir);
+  let first = walk_rank(anchor, perp_a, size, cell);
+  if (first.is_some()) return first;
+  let second = walk_rank(anchor, perp_b, size, cell);
+  if (second.is_some()) option::some(walk_capacity(anchor, perp_a, size) + *second.borrow())
+  else option::none()
+}
+
+fun tbar_length(anchor: u64, dir: u8, size: u64): u64 {
+  let (perp_a, perp_b) = perpendicular_dirs(dir);
+  1 + walk_capacity(anchor, perp_a, size) + walk_capacity(anchor, perp_b, size)
+}
+
+fun cone_depth_start(depth: u64, width: u64): u64 {
+  if (depth == 1) 0 else 1 + (depth - 2) * width
+}
+
+fun step_equals(origin: u64, dir: u8, cell: u64): bool {
+  let stepped = step_cell(origin, dir);
+  stepped.is_some() && *stepped.borrow() == cell
+}
+
+fun cone_rank(anchor: u64, caster: u64, size: u64, cell: u64): Option<u64> {
+  let dir = away_dir(caster, anchor);
+  let first_center = step_cell(caster, dir);
+  if (first_center.is_none()) return option::none();
+  let (perp_a, perp_b) = perpendicular_dirs(dir);
+  let first = *first_center.borrow();
+  let has_a = step_cell(first, perp_a).is_some();
+  let has_b = step_cell(first, perp_b).is_some();
+  let width = 1 + (if (has_a) 1 else 0) + (if (has_b) 1 else 0);
+
+  let center_depth = walk_rank(caster, dir, size, cell);
+  if (center_depth.is_some()) {
+    return option::some(cone_depth_start(*center_depth.borrow(), width))
+  };
+  if (size < 2) return option::none();
+
+  let from_a = step_cell(cell, opposite_dir(perp_a));
+  if (from_a.is_some()) {
+    let center = *from_a.borrow();
+    let depth = walk_rank(caster, dir, size, center);
+    if (depth.is_some() && *depth.borrow() >= 2 && step_equals(center, perp_a, cell)) {
+      return option::some(cone_depth_start(*depth.borrow(), width) + 1)
+    };
+  };
+  let from_b = step_cell(cell, opposite_dir(perp_b));
+  if (from_b.is_some()) {
+    let center = *from_b.borrow();
+    let depth = walk_rank(caster, dir, size, center);
+    if (depth.is_some() && *depth.borrow() >= 2 && step_equals(center, perp_b, cell)) {
+      return option::some(cone_depth_start(*depth.borrow(), width) + 1 + (if (has_a) 1 else 0))
+    };
+  };
+  option::none()
+}
+
 /// Every in-grid cell of a `(shape, size)` zone anchored at `anchor`, cast from `caster` (the
 /// direction source for line/tbar/cone/podium).
+#[test_only]
 public fun zone_cells(shape: u8, size: u64, anchor: u64, caster: u64): vector<u64> {
   if (shape == spell_effect::shape_point()) return vector[anchor];
   if (shape == spell_effect::shape_line()) return line_cells(anchor, caster, size);
@@ -468,6 +592,7 @@ public fun zone_cells(shape: u8, size: u64, anchor: u64, caster: u64): vector<u6
 }
 
 /// LINE: `anchor` + up to `size` cells continuing along the caster→anchor axis.
+#[test_only]
 fun line_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   let mut out = vector[anchor];
   out.append(walk(anchor, away_dir(caster, anchor), size));
@@ -475,9 +600,10 @@ fun line_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
 }
 
 /// TBAR: a bar perpendicular to the caster→anchor axis, `size` cells each way from `anchor`.
+#[test_only]
 fun tbar_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   let along = away_dir(caster, anchor);
-  let (perp_a, perp_b) = if (along == 0 || along == 1 || along == DIR_NONE) (2u8, 3u8) else (0u8, 1u8);
+  let (perp_a, perp_b) = perpendicular_dirs(along);
   let mut out = vector[anchor];
   out.append(walk(anchor, perp_a, size));
   out.append(walk(anchor, perp_b, size));
@@ -486,6 +612,7 @@ fun tbar_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
 
 /// PODIUM: the tbar arc at `anchor` PLUS one cell beyond along the strike
 /// axis. At size 1 it touches exactly 4 cells.
+#[test_only]
 fun podium_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   let mut out = tbar_cells(anchor, caster, size);
   let fwd = step_cell(anchor, away_dir(caster, anchor));
@@ -495,9 +622,10 @@ fun podium_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
 
 /// CONE: a wedge fanning from the caster toward `anchor`, `size` deep — 1 cell at depth 1,
 /// 3 wide from depth 2. The caster's own cell is excluded.
+#[test_only]
 fun cone_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
   let dir = away_dir(caster, anchor);
-  let (perp_a, perp_b) = if (dir == 0 || dir == 1 || dir == DIR_NONE) (2u8, 3u8) else (0u8, 1u8);
+  let (perp_a, perp_b) = perpendicular_dirs(dir);
   let mut out = vector[];
   let mut center = caster;
   let mut k = 0;
@@ -518,6 +646,7 @@ fun cone_cells(anchor: u64, caster: u64, size: u64): vector<u64> {
 }
 
 /// `count` cells stepping from `anchor` (exclusive) in `dir`, stopping at the edge.
+#[test_only]
 fun walk(anchor: u64, dir: u8, count: u64): vector<u64> {
   let mut out = vector[];
   let mut cur = anchor;
@@ -579,13 +708,13 @@ public fun grid_spec(
   assert!(shape_mask.length() == MASK_WORDS, EBadBoard);
   assert!(start_cells_a.length() == START_CELLS, EBadBoard);
   assert!(start_cells_b.length() == START_CELLS, EBadBoard);
-  aos(&shape_mask, &obstacles);
-  aos(&shape_mask, &holes);
+  assert_cells_on_shape(&shape_mask, &obstacles);
+  assert_cells_on_shape(&shape_mask, &holes);
   let mut blockers = obstacles;
   blockers.append(holes);
   let blocked = mask_from_cells(&blockers);
-  aof(&shape_mask, &blocked, &start_cells_a);
-  aof(&shape_mask, &blocked, &start_cells_b);
+  assert_open_footing(&shape_mask, &blocked, &start_cells_a);
+  assert_open_footing(&shape_mask, &blocked, &start_cells_b);
   assert_unique_starts(&start_cells_a, &start_cells_b);
   GridSpec { width, height, shape_mask, obstacles, holes, start_cells_a, start_cells_b }
 }
@@ -608,7 +737,7 @@ fun assert_unique_starts(a: &vector<u64>, b: &vector<u64>) {
 }
 
 // assert_on_shape
-fun aos(shape: &vector<u64>, cells: &vector<u64>) {
+fun assert_cells_on_shape(shape: &vector<u64>, cells: &vector<u64>) {
   let mut i = 0;
   while (i < cells.length()) {
     assert!(in_grid(cells[i]) && mask_get(shape, cells[i]), EBadBoard);
@@ -617,8 +746,8 @@ fun aos(shape: &vector<u64>, cells: &vector<u64>) {
 }
 
 // assert_open_footing — a start cell is on-shape AND unblocked
-fun aof(shape: &vector<u64>, blocked: &vector<u64>, cells: &vector<u64>) {
-  aos(shape, cells);
+fun assert_open_footing(shape: &vector<u64>, blocked: &vector<u64>, cells: &vector<u64>) {
+  assert_cells_on_shape(shape, cells);
   let mut i = 0;
   while (i < cells.length()) {
     assert!(!mask_get(blocked, cells[i]), EBadBoard);
@@ -682,7 +811,6 @@ fun build_shape(mut s: u64, shape_code: u8, width: u64, height: u64): (u64, vect
   }
 }
 
-#[test_only]
 fun min_u64(a: u64, b: u64): u64 { if (a < b) a else b }
 
 /// Fill row `y`'s cells `x ∈ [lo, hi)` — the single-contiguous-run primitive every outline uses.

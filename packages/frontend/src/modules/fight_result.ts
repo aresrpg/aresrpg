@@ -47,7 +47,7 @@ export type ResultParticipant = Readonly<{
 
 export type FightResult = Readonly<{
   fight: string
-  dungeon: Readonly<{ world: string; room: number }> | null
+  dungeon: Readonly<{ dungeon: string; room: number }> | null
   kolizeum: string | null
   /** Immutable stake plus certified gross payout; absent for non-Kolizeum and recovery without terms. */
   kolizeum_wager: Readonly<{ stake_mist: bigint; payout_mist: bigint | null }> | null
@@ -202,10 +202,10 @@ const merge_participants = (
 
 const projected_dungeon = (
   checkpoint: Readonly<HydratedFightCheckpoint>
-): Readonly<{ world: string; room: number }> | null =>
-  checkpoint.contract.dungeon === null
+): Readonly<{ dungeon: string; room: number }> | null =>
+  checkpoint.contract.dungeon === null || checkpoint.contract.dungeon_room === null
     ? null
-    : Object.freeze({ world: checkpoint.contract.world, room: Number(checkpoint.contract.dungeon) })
+    : Object.freeze({ dungeon: checkpoint.contract.dungeon, room: Number(checkpoint.contract.dungeon_room) })
 
 const progression_state = (
   state: AppState,

@@ -76,6 +76,7 @@ describe('fight entity rendering', () => {
       // The requested clip wins over an earlier compound jump clip.
       { clips, requested: 'RUN', resolved: 'RUN' },
       { clips, requested: 'WALK', resolved: 'Armature|WALK' },
+      { clips: [new AnimationClip('IDLE', 1)], requested: 'RUN', resolved: 'IDLE' },
       { clips: namespaced, requested: 'JUMP_RUN', resolved: 'Armature|JUMP_RUN' },
       { clips: namespaced, requested: 'FALL', resolved: 'Armature|FALL' },
       { clips: namespaced, requested: 'SWIM', resolved: 'Armature|WALK' },

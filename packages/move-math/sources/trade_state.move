@@ -19,18 +19,24 @@ const MAX_CAPS_PER_SIDE: u64 = 20;
 
 public enum TradePhase has copy, drop, store { Requested, Negotiating, Settling, Cancelled }
 public struct TradeState has copy, drop, store {
-  a: address, b: address, phase: TradePhase, offer_revision: u64, accept_a: bool, accept_b: bool,
+  initiator: address,
+  invitee: address,
+  phase: TradePhase,
+  offer_revision: u64,
+  initiator_accepted: bool,
+  invitee_accepted: bool,
 }
 
-public fun new(a: address, b: address): TradeState {
-  assert!(a != b, ESelfTrade);
-  TradeState { a, b, phase: TradePhase::Requested, offer_revision: 0, accept_a: false, accept_b: false }
+public fun new(initiator: address, invitee: address): TradeState {
+  assert!(initiator != invitee, ESelfTrade);
+  TradeState {
+    initiator, invitee, phase: TradePhase::Requested, offer_revision: 0,
+    initiator_accepted: false, invitee_accepted: false,
+  }
 }
-public fun a(state: &TradeState): address { state.a }
-public fun b(state: &TradeState): address { state.b }
 public fun phase(state: &TradeState): TradePhase { state.phase }
 public fun offer_revision(state: &TradeState): u64 { state.offer_revision }
-public fun accepts(state: &TradeState): (bool, bool) { (state.accept_a, state.accept_b) }
+public fun accepts(state: &TradeState): (bool, bool) { (state.initiator_accepted, state.invitee_accepted) }
 public fun requested(): TradePhase { TradePhase::Requested }
 public fun negotiating(): TradePhase { TradePhase::Negotiating }
 public fun settling(): TradePhase { TradePhase::Settling }
@@ -38,7 +44,7 @@ public fun cancelled(): TradePhase { TradePhase::Cancelled }
 
 public fun join(state: &mut TradeState, seen: u64, sender: address) {
   assert_phase(state, TradePhase::Requested);
-  assert!(sender == state.b, ENotInvitee);
+  assert!(sender == state.invitee, ENotInvitee);
   assert_revision(state, seen);
   state.phase = TradePhase::Negotiating;
   touch(state);
@@ -52,18 +58,18 @@ public fun cancel(state: &mut TradeState, seen: u64, sender: address) {
   assert_editable(state, seen, sender);
   state.phase = TradePhase::Cancelled;
   state.offer_revision = state.offer_revision + 1;
-  state.accept_a = false;
-  state.accept_b = false;
+  state.initiator_accepted = false;
+  state.invitee_accepted = false;
 }
 public fun accept(state: &mut TradeState, seen: u64, sender: address) {
   assert_phase(state, TradePhase::Negotiating);
   assert_revision(state, seen);
   assert_party(state, sender);
-  let side_a = is_a(state, sender);
-  assert!(!(if (side_a) state.accept_a else state.accept_b), EAlreadyAccepted);
-  state.accept_a = state.accept_a || side_a;
-  state.accept_b = state.accept_b || !side_a;
-  if (state.accept_a && state.accept_b) {
+  let initiator = is_initiator(state, sender);
+  assert!(!(if (initiator) state.initiator_accepted else state.invitee_accepted), EAlreadyAccepted);
+  state.initiator_accepted = state.initiator_accepted || initiator;
+  state.invitee_accepted = state.invitee_accepted || !initiator;
+  if (state.initiator_accepted && state.invitee_accepted) {
     state.phase = TradePhase::Settling;
     state.offer_revision = state.offer_revision + 1;
   };
@@ -75,13 +81,13 @@ public fun assert_editable(state: &TradeState, seen: u64, sender: address) {
 }
 public fun touch(state: &mut TradeState) {
   state.offer_revision = state.offer_revision + 1;
-  state.accept_a = false;
-  state.accept_b = false;
+  state.initiator_accepted = false;
+  state.invitee_accepted = false;
 }
 public fun assert_party(state: &TradeState, sender: address) {
-  assert!(sender == state.a || sender == state.b, ENotAParty);
+  assert!(sender == state.initiator || sender == state.invitee, ENotAParty);
 }
-public fun is_a(state: &TradeState, sender: address): bool { sender == state.a }
+public fun is_initiator(state: &TradeState, sender: address): bool { sender == state.initiator }
 public fun assert_phase(state: &TradeState, expected: TradePhase) { assert!(state.phase == expected, EWrongPhase); }
 public fun assert_terminal(state: &TradeState) {
   assert!(state.phase == TradePhase::Settling || state.phase == TradePhase::Cancelled, EWrongPhase);
@@ -99,7 +105,10 @@ public fun item_index(manifest: &vector<ID>, item: ID): u64 {
 
 #[test_only]
 public fun state_for_testing(a: address, b: address, phase: u8, revision: u64): TradeState {
-  TradeState { a, b, phase: phase_from_u8(phase), offer_revision: revision, accept_a: false, accept_b: false }
+  TradeState {
+    initiator: a, invitee: b, phase: phase_from_u8(phase), offer_revision: revision,
+    initiator_accepted: false, invitee_accepted: false,
+  }
 }
 #[test_only]
 public fun to_u8(phase: TradePhase): u64 {

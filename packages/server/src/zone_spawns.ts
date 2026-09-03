@@ -12,7 +12,9 @@ import { draw, mix, rng_seed } from '@aresrpg/fight/prng'
 import { sample_biome_grid, type BiomeGrid } from '@aresrpg/engine/biomes'
 import { parse_world_recipe } from '@aresrpg/engine/recipe'
 import { ZONE_SIZE as ZONE_BLOCKS, type MobGroupRow, type ResourcePackRow } from '@aresrpg/protocol'
+import { archimob_appearance_bp, archimob_rows, type ArchimobRow } from '@aresrpg/immutable'
 
+import mobs_source from '../../../seed/content/mobs.json'
 import worlds_source from '../../../seed/content/worlds.json'
 
 /** the wire's zone unit, not a second opinion — protocol is this side's one home */
@@ -23,6 +25,8 @@ const GROUPS_MIN = 48n
 const GROUPS_MAX = 64n
 const RES_PACKS_MIN = 24n
 const RES_PACKS_MAX = 42n
+const CITY_RESOURCE_NODE_NUMERATOR = 3n
+const CITY_RESOURCE_NODE_DENOMINATOR = 2n
 const GROUP_SIZE_FULL_AT = 10_000n
 const GROUP_SIZE_AVG3_AT = 2_000n
 const LEVEL_RAMP_AT = 20_000n
@@ -30,15 +34,17 @@ const LEVEL_LOW_CAP = 75n
 const LEVEL_HIGH_CAP = 100n
 const NODES_RAMP_AT = 20_000n
 const HOMOGENEOUS_BP = 5_000n
-const PORTAL_BP = 1_000n
+const ARCHIMOB_BP = BigInt(archimob_appearance_bp)
 
-type MobRow = Readonly<{ mob_type: string; weight_bp: bigint; biomes: readonly number[] }>
-type ResourceRow = Readonly<{ item_type: string; biomes: readonly number[] }>
+type MobRow = Readonly<{ mob_type: string; weight_bp: bigint; biomes: readonly number[]; cities: readonly number[] }>
+type ResourceRow = Readonly<{ item_type: string; biomes: readonly number[]; cities: readonly number[] }>
+type CityRow = Readonly<{ city: string; dungeon: string; x: number; z: number }>
 type WorldPopulation = Readonly<{
   mobs: readonly MobRow[]
   resources: readonly ResourceRow[]
+  cities: readonly CityRow[]
+  archis: readonly ArchimobRow[]
   map: BiomeGrid
-  has_dungeon: boolean
 }>
 
 const populations = new Map<string, WorldPopulation | null>()
@@ -54,28 +60,53 @@ export const world_population = (world: string): WorldPopulation | null => {
     return null
   }
   const biome_id = (name: string): number => terrain.biomes.findIndex((biome) => biome.name === name)
-  const mobs = (source.mobs as readonly { mob_type: string; weight_bp: number; biomes: readonly string[] }[]).map(
-    (row) =>
-      Object.freeze({
-        mob_type: row.mob_type,
-        weight_bp: BigInt(row.weight_bp),
-        biomes: Object.freeze(row.biomes.map(biome_id)),
-      })
+  const cities = (source.cities as readonly CityRow[]).map(({ city, dungeon, x, z }) =>
+    Object.freeze({ city, dungeon, x, z })
   )
-  const resources = (source.resources as readonly { item_type: string; biomes: readonly string[] }[]).map((row) =>
-    Object.freeze({ item_type: row.item_type, biomes: Object.freeze(row.biomes.map(biome_id)) })
+  const city_id = (name: string): number => cities.findIndex((city) => city.city === name)
+  const mobs = (
+    source.mobs as readonly {
+      mob_type: string
+      weight_bp: number
+      biomes: readonly string[]
+      cities?: readonly string[]
+    }[]
+  ).map((row) =>
+    Object.freeze({
+      mob_type: row.mob_type,
+      weight_bp: BigInt(row.weight_bp),
+      biomes: Object.freeze(row.biomes.map(biome_id)),
+      cities: Object.freeze((row.cities ?? []).map(city_id)),
+    })
+  )
+  const archis = archimob_rows(
+    mobs_source,
+    mobs.map(({ mob_type }) => mob_type)
+  )
+  const resources = (
+    source.resources as readonly {
+      item_type: string
+      biomes: readonly string[]
+      cities?: readonly string[]
+    }[]
+  ).map((row) =>
+    Object.freeze({
+      item_type: row.item_type,
+      biomes: Object.freeze(row.biomes.map(biome_id)),
+      cities: Object.freeze((row.cities ?? []).map(city_id)),
+    })
   )
   const map = sample_biome_grid(parse_world_recipe(source.terrain), {
     world_size: WORLD_SIZE,
     world_center: Number(WORLD_CENTER),
     cell_size: Number(ZONE_SIZE),
   })
-  const dungeon = source.dungeon as Readonly<{ rooms?: readonly unknown[] }> | undefined
   const population = Object.freeze({
     mobs: Object.freeze(mobs),
     resources: Object.freeze(resources),
+    cities: Object.freeze(cities),
+    archis,
     map,
-    has_dungeon: (dungeon?.rooms?.length ?? 0) > 0,
   })
   populations.set(world, population)
   return population
@@ -113,20 +144,21 @@ export const mob_group_size_bounds = (distance: bigint): readonly [bigint, bigin
 export const mob_level_scalar_bounds = (distance: bigint): readonly [bigint, bigint] =>
   Object.freeze([ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_LOW_CAP), ramp(distance, LEVEL_RAMP_AT, 0n, LEVEL_HIGH_CAP)])
 
-/** zone_math::portal_of — one optional portal per searched zone, before no other population draw. */
-export const dungeon_portal = (
+const city_index_at = (population: WorldPopulation, zx: number, zz: number): number =>
+  population.cities.findIndex(
+    ({ x, z }) => Math.abs(zx - Math.floor(x / ZONE_BLOCKS)) <= 1 && Math.abs(zz - Math.floor(z / ZONE_BLOCKS)) <= 1
+  )
+
+const population_rows = <Row extends Readonly<{ biomes: readonly number[]; cities: readonly number[] }>>(
   population: WorldPopulation,
+  rows: readonly Row[],
   zx: number,
-  zz: number,
-  seed: bigint
-): Readonly<{ x: number; z: number }> | null => {
-  if (!population.has_dungeon) return null
-  const cursor = { state: rng_seed(mix(seed, 5n)) }
-  if (draw(cursor) % 10_000n >= PORTAL_BP) return null
-  return Object.freeze({
-    x: Number(BigInt(zx) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)),
-    z: Number(BigInt(zz) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)),
-  })
+  zz: number
+): readonly Row[] => {
+  const city = city_index_at(population, zx, zz)
+  if (city >= 0) return rows.filter((row) => row.cities.includes(city))
+  const biome = biome_of_zone(population.map, zx, zz)
+  return rows.filter((row) => row.biomes.includes(biome))
 }
 
 const weighted_family = (rows: readonly MobRow[], total: bigint, cursor: { state: bigint }): string => {
@@ -137,6 +169,12 @@ const weighted_family = (rows: readonly MobRow[], total: bigint, cursor: { state
     if (roll < accumulated) return row.mob_type
   }
   return rows.at(-1)!.mob_type // unreachable when weights sum to total — Move loops forever here
+}
+
+export const archimob_type_for_roll = (ordinary_type: string, archis: readonly ArchimobRow[], roll: bigint): string => {
+  if (roll >= ARCHIMOB_BP) return ordinary_type
+  const replacement = archis.find((row) => row.ordinary_type === ordinary_type)
+  return replacement?.archi_type ?? ordinary_type
 }
 
 /** zone_math::mob_groups, MINUS its taken filter: every group the seed draws, in draw order.
@@ -150,12 +188,12 @@ export const mob_groups = (
   zz: number,
   seed: bigint
 ): readonly MobGroupRow[] => {
-  const biome = biome_of_zone(population.map, zx, zz)
-  const rows = population.mobs.filter((row) => row.biomes.includes(biome))
+  const rows = population_rows(population, population.mobs, zx, zz)
   if (rows.length === 0) return []
   const total = rows.reduce((sum, row) => sum + row.weight_bp, 0n)
   const distance = distance_blocks(BigInt(zx), BigInt(zz))
   const cursor = { state: rng_seed(mix(seed, 2n)) }
+  const archi_cursor = { state: rng_seed(mix(seed, 4n)) }
   const count = GROUPS_MIN + (draw(cursor) % (GROUPS_MAX - GROUPS_MIN + 1n))
   const [size_lo, size_hi] = mob_group_size_bounds(distance)
   const [level_lo, level_hi] = mob_level_scalar_bounds(distance)
@@ -168,8 +206,9 @@ export const mob_groups = (
     const family = weighted_family(rows, total, cursor)
     const members: MobGroupRow['members'] = []
     for (let member = 0n; member < size; member += 1n) {
-      const mob_type = homogeneous ? family : weighted_family(rows, total, cursor)
+      const ordinary_type = homogeneous ? family : weighted_family(rows, total, cursor)
       const scalar = level_lo + (draw(cursor) % (level_hi - level_lo + 1n))
+      const mob_type = archimob_type_for_roll(ordinary_type, population.archis, draw(archi_cursor) % 10_000n)
       members.push({ mob_type, level_scalar: Number(scalar) })
     }
     groups.push({ index: Number(index), x: Number(x), z: Number(z), members })
@@ -186,9 +225,9 @@ export const resource_packs = (
   zz: number,
   seed: bigint
 ): readonly ResourcePackRow[] => {
-  const biome = biome_of_zone(population.map, zx, zz)
-  const rows = population.resources.filter((row) => row.biomes.includes(biome))
+  const rows = population_rows(population, population.resources, zx, zz)
   if (rows.length === 0) return []
+  const city = city_index_at(population, zx, zz) >= 0
   const distance = distance_blocks(BigInt(zx), BigInt(zz))
   const cursor = { state: rng_seed(mix(seed, 3n)) }
   const nodes_lo = ramp(distance, NODES_RAMP_AT, 2n, 16n)
@@ -199,7 +238,10 @@ export const resource_packs = (
     const x = BigInt(zx) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
     const z = BigInt(zz) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
     const row = rows[Number(draw(cursor) % BigInt(rows.length))]!
-    const nodes = nodes_lo + (draw(cursor) % (nodes_hi - nodes_lo + 1n))
+    const ordinary_nodes = nodes_lo + (draw(cursor) % (nodes_hi - nodes_lo + 1n))
+    const nodes = city
+      ? (ordinary_nodes * CITY_RESOURCE_NODE_NUMERATOR) / CITY_RESOURCE_NODE_DENOMINATOR
+      : ordinary_nodes
     packs.push({ index: Number(index), x: Number(x), z: Number(z), item_type: row.item_type, nodes: Number(nodes) })
   }
   return packs

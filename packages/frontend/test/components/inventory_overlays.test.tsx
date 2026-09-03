@@ -18,7 +18,7 @@ const item = Object.freeze({
   kiosk: '0xkiosk',
 }) satisfies ItemRow
 
-test('every inventory NFT links its object ID, including chain-locked listings', async () => {
+test('the inventory menu links its exact item object ID', async () => {
   Object.defineProperties(globalThis, {
     innerHeight: { configurable: true, value: 800 },
     innerWidth: { configurable: true, value: 1200 },

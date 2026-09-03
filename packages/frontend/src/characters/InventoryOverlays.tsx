@@ -7,17 +7,17 @@
 // crush-result modal.
 
 import { useEffect, useMemo, useState } from 'react'
+import { pet_max_feeds } from '@aresrpg/immutable'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Cat, ExternalLink, Gift, Hammer, Loader2, MessageSquarePlus, Trash2 } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { env } from '../env.ts'
 import { explorer_object_url } from '../explorer.ts'
-import { PET_MAX_FEEDS } from '../game/character_stats.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { encumbered_asset_ids } from '../inventory_stacks.ts'
+import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { crush_results } from '../crush_result.ts'
@@ -41,14 +41,19 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
   // the live pet row — folds repaint power/day through the store
   const live = inventory.find(({ id }) => id === pet.id) ?? pet
   const [feeding, set_feeding] = useState(false)
   const diet = encyclopedia_catalog.item(pet.item_type)?.item.pet_foods ?? []
-  const foods = inventory.filter((row) => row.kiosk === pet.kiosk && diet.includes(row.item_type))
+  const encumbered = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
+  const foods = available_inventory_items(inventory, encumbered, pet.kiosk).filter((row) =>
+    diet.includes(row.item_type)
+  )
   const power = live.pet_power ?? 0
   const fed_today = (live.pet_last_day ?? 0) >= utc_day()
-  const full = power >= PET_MAX_FEEDS
+  const full = power >= pet_max_feeds
   const gate = full ? t('feed_full') : fed_today ? t('feed_already_today') : null
 
   const feed = (food: Readonly<ItemRow>): void => {
@@ -85,11 +90,11 @@ const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; c
             <div className="mt-1 flex items-baseline justify-between">
               <span className="text-[8px] tracking-[0.2em] text-muted uppercase">{t('feed_power_label')}</span>
               <span className="text-[10px] text-gold tabular-nums">
-                {t('feed_power', { count: power, max: PET_MAX_FEEDS })}
+                {t('feed_power', { count: power, max: pet_max_feeds })}
               </span>
             </div>
             <div className="chr-bar mt-1">
-              <div className="chr-bar__fill chr-bar__fill--xp" style={{ width: `${(power / PET_MAX_FEEDS) * 100}%` }} />
+              <div className="chr-bar__fill chr-bar__fill--xp" style={{ width: `${(power / pet_max_feeds) * 100}%` }} />
             </div>
           </div>
         </div>
@@ -283,7 +288,7 @@ export const InventoryActionOverlays = ({
       .finally(() => set_busy(false))
   }
 
-  // A listed item is chain-locked, but its object remains inspectable on the explorer.
+  // If encumbrance arrives while this menu is open, expose no custody-changing action.
   const entries =
     menu && !listed.has(menu.item.id)
       ? [

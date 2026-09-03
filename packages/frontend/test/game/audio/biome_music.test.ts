@@ -54,6 +54,14 @@ describe('biome music', () => {
     expect(tracks[keys.indexOf('nauvis:plains')]).not.toBe(tracks[keys.indexOf('nauvis:highlands')])
   })
 
+  test('Thebes keeps one soundtrack pair across its complete 3x3 city footprint', () => {
+    const key = 'nauvis:city:thebes'
+
+    expect(key).toBe('nauvis:city:thebes')
+    expect(biome_music_track(key)).toBe('desert')
+    expect(biome_music_pair(key)).toEqual({ roam: '/music/desert.mp3', battle: '/music/desert_battle.mp3' })
+  })
+
   test('arms immediately and rejects a flapping biome border', () => {
     const shore = follow_biome_music(initial_biome_music_follow(), 'world:shore', 3)
     const hill_once = follow_biome_music(shore, 'world:hill', 3)

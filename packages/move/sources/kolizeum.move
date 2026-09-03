@@ -54,7 +54,6 @@ const ESideFull: u64 = 2805; // the side is at the format's per-side cap
 const ENotFriend: u64 = 2806; // a friends-only lobby, sender not on the creation snapshot
 const EWrongFight: u64 = 2808; // the passed fight is not this lobby's fight
 const ENotEmpty: u64 = 2809; // sweep: the pot still holds money
-const ENotWagered: u64 = 2810; // forfeit: the fight is not a wagered kolizeum fight
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -99,7 +98,7 @@ public(package) fun create(
 ) {
   assert!(format == 1 || format == 3 || format == 6, EBadFormat);
   assert!(level_min <= level_max, ELevelOutOfRange);
-  gc(kiosk, cap, character_id, level_min, level_max, clock);
+  assert_eligible_character(kiosk, cap, character_id, level_min, level_max, clock);
 
   let mut allowed = allowed;
   if (allowed.is_some()) {
@@ -141,7 +140,7 @@ public(package) fun join(
   assert!(object::id(fight) == lobby.fight, EWrongFight);
   assert!(pledge_coin.value() == lobby.pledge, EPledgeMismatch);
   if (lobby.allowed.is_some()) assert!(lobby.allowed.borrow().contains(&ctx.sender()), ENotFriend);
-  gc(kiosk, cap, character_id, lobby.level_min, lobby.level_max, clock);
+  assert_eligible_character(kiosk, cap, character_id, lobby.level_min, lobby.level_max, clock);
   assert!(fight::side_players(fight, side) < lobby.format, ESideFull);
 
   lobby.pot.join(pledge_coin.into_balance());
@@ -156,11 +155,11 @@ public(package) fun join(
 }
 
 /// Begin the fight — takes the 10% platform cut to the treasury (once, off the full pot).
-public(package) fun start(lobby: &mut Kolizeum, fight: &mut Fight, gen: &mut RandomGenerator, clock: &Clock, ctx: &mut TxContext) {
+public(package) fun start(lobby: &mut Kolizeum, fight: &mut Fight, generator: &mut RandomGenerator, clock: &Clock, ctx: &mut TxContext) {
   assert!(object::id(fight) == lobby.fight, EWrongFight);
   let cut = lobby.pot.value() * CUT_BPS / 10_000;
   if (cut > 0) transfer::public_transfer(coin::take(&mut lobby.pot, cut, ctx), @treasury);
-  fight::start(fight, gen, clock);
+  fight::start(fight, generator, clock);
 }
 
 /// Settle a seat out of the ended fight; a winner is paid `pot / winners-still-unsettled` (the
@@ -199,7 +198,7 @@ public(package) fun settle_last(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  fight::assert_last_settler(&fight, fighter_idx, ctx);
+  fight::assert_last_settlers(&fight, &vector[fighter_idx], ctx);
   // the lobby/fight pairing (EWrongFight) is asserted inside `settle`
   settle(&mut lobby, &mut fight, fighter_idx, kiosk, cap, policy, clock, ctx);
   assert!(lobby.pot.value() == 0, ENotEmpty);
@@ -259,7 +258,7 @@ public(package) fun forfeit(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  assert!(fight::is_wagered(fight), ENotWagered);
+  fight::assert_kolizeum_controlled(fight);
   assert!(!fight::in_placement(fight), EWrongFight);
   fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
@@ -299,12 +298,12 @@ public(package) fun placement_clock_for_testing(format: u64, side_a: u64, side_b
 /// A joiner/creator must be within the level range and NOT rooted (a gather-time root or a
 /// fired protector verdict holds them — arena joins are travel-free, so we gate it here, the
 /// same escape the recall-potion exploit taught us).
-fun gc(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, level_min: u16, level_max: u16, clock: &Clock) {
-  let chr: &Character = kiosk.borrow(cap, character_id);
-  let lvl = chr.level();
+fun assert_eligible_character(kiosk: &Kiosk, cap: &KioskOwnerCap, character_id: ID, level_min: u16, level_max: u16, clock: &Clock) {
+  let character: &Character = kiosk.borrow(cap, character_id);
+  let lvl = character.level();
   assert!(lvl >= level_min && lvl <= level_max, ELevelOutOfRange);
-  assert!(!world::is_rooted(chr, clock), ERooted);
-  assert!(!dungeon::has_run(chr), ERooted);
+  assert!(!world::is_rooted(character, clock), ERooted);
+  assert!(!dungeon::has_run(character), ERooted);
 }
 
 #[test_only]

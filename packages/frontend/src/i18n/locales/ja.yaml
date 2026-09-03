@@ -28,7 +28,7 @@ navigation: ナビゲーション
 world: ワールド
 characters: キャラクター
 leaderboard: ランキング
-shop: ショップ
+mastery: マスタリー
 encyclopedia: エンサイクロペディア
 marketplace: マーケット
 airdrop: エアドロップ
@@ -230,6 +230,9 @@ world_hud:
   coordinates: 座標
   biome: バイオーム
   world_map: ワールドマップ
+  world_map_zoom_in: 拡大
+  world_map_zoom_out: 縮小
+  world_map_extent: '{{blocks}} ブロック'
   menu_group: グループに招待
   menu_friend: フレンド追加
   menu_trade: 取引
@@ -241,6 +244,7 @@ world_hud:
   mount_prompt: '{{key}} で騎乗'
   portal_prompt: '{{key}} を押して別のワールドへ移動'
   dungeon_portal: ダンジョンポータル
+  dungeon_city: '{{city}}の都市'
   dungeon_press_enter: 入る
   dungeon_entry_body: ダンジョンキーを使い、このポータル専用のロビーに入ります。
   dungeon_required_key: 必要な鍵
@@ -310,7 +314,6 @@ world_hud:
   zone_coordinates: 'セクター {{zx}} · {{zz}}'
   zone_mobs_found: 'モンスター {{count}} 体を発見'
   zone_resources_found: '資源 {{count}} 個を発見'
-  zone_dungeon_spotted: 'ダンジョンを発見'
   spawn_group: '{{size}}体の群れ'
   spawn_unknown_mob: '未知の生物'
   spawn_press_attack: '{{key}} を押して攻撃'
@@ -369,7 +372,6 @@ demo_page:
   crowd_loading: キャラクターモデルを読み込み中…
   crowd_result: フェーズ
   mob: モブ
-  hide_protectors: プロテクターを非表示
   amount: 数量
   spawn_group: グループを出現
   clear: クリア
@@ -445,37 +447,36 @@ marketplace_page:
   character_roster_full: 7人目のキャラクターは追加できません — 上限は6人です
   collect_pending: 売上を回収中…
   collect_success: 売上を回収しました
-shop_page:
-  title: 'ショップ'
-  subtitle: 'SUIでアイテムを購入'
-  remaining_of_cap: '残り {{remaining}} / {{cap}}'
-  processing: '処理中'
-  sold_out: '完売'
-  acquire: '入手'
-  wallet: 'ウォレット'
-  filter_all: 'すべて'
-  sections:
-    pet_box: 'ペットボックス'
-    title: '称号'
-    cloak: 'マント'
-    hat: '帽子'
-    companion: 'コンパニオン'
-    equipment: '装備'
-    consumable: '消耗品'
-    resource: '素材'
-  amount_title: '数量を選択'
-  amount_quantity: '数量'
-  amount_max: '最大'
-  amount_total: '合計'
-  amount_available: '残り{{count}}'
-  amount_confirm: '{{count}}個を購入'
-  purchase_success_body: '新しいアイテムはインベントリにあります。'
-  see_inventory: 'インベントリを見る'
-  buy_pending: '購入中…'
-  buy_success: '購入完了！'
-  drop_rates: 'ドロップ率'
-  pool_sub: '開封時に下記の重み付けどおりに1体が抽選されます。'
-  acquisition_complete: '購入完了'
+mastery_page:
+  subtitle: デイリーチャレンジ
+  title: マスタリー
+  lead: 毎日ダンジョンをクリアして、特別な報酬を手に入れよう。
+  balance: マスタリーポイント
+  daily_ready: デイリークエストに挑戦できます
+  daily_syncing: デイリークエストを更新中…
+  daily_title: デイリークエストを始める
+  daily_lead: ワールドを選ぼう。高レベルのワールドほど多くのマスタリーポイントを獲得できます。
+  unknown_dungeon: 不明なダンジョン
+  quest_reward: マスタリーポイントを{{points}}獲得
+  completed: 達成済み
+  in_progress: 進行中
+  required_level: 必要レベル {{level}}
+  dungeon_count: '{{count}} ダンジョン'
+  starting: 割り当て中…
+  start: デイリークエスト開始
+  locked: ロック中
+  world_reward: +{{points}}pts
+  offers_title: マスタリー報酬
+  offers_lead: マスタリーポイントを使って特別なルートボックスを解放しよう。
+  progression: 報酬ルート
+  offers_empty: マスタリーオファーはまだありません
+  ready: 解放可能
+  missing: あと{{points}}ポイント
+  unlocking: 解放中…
+  unlock: 解放 · {{cost}} pts
+  quest_started: デイリークエストを割り当てました。
+  offer_unlocked: マスタリー報酬を解放しました。
+
 airdrop_page:
   title: 'エアドロップ'
   subtitle: '対象ホルダー向けの限定アイテムを受け取る'
@@ -485,6 +486,17 @@ airdrop_page:
   not_eligible: '対象外'
   claimed: '受取済み'
   claim: '受け取る'
+  holder_title: '保有者ウォレット'
+  holder_connect_hint: '対象NFTを保有するウォレットを接続してください'
+  holder_connect: 'ウォレットを接続'
+  holder_connecting: '接続中…'
+  holder_wallet_missing: '対応するSuiウォレットがありません'
+  giftcards_title: '未交換のギフトカード'
+  gift_login: 'Googleで続行して、このギフトをゲームウォレットで受け取ります'
+  gift_ready: '印刷されたギフトカードを受け取れます'
+  gift_claiming: '印刷されたギフトカードを受け取り中…'
+  gift_retry: 'ギフトカードを受け取る'
+  redeem: '交換'
   empty: '有効なエアドロップはありません'
   empty_hint: '提携コレクションのホルダー向けエアドロップは、開始時にここに表示されます。'
   pending_claim: 'エアドロップを受取中…'
@@ -615,15 +627,12 @@ admin_page:
   player_activity_body: 日次活動と移動30日リーチ
   stickiness: DAU / 30日
   online_players: オンラインプレイヤー
-  online_players_body: 認証済み接続の平均とピーク
+  online_players_body: バケットごとの認証済み接続数のピーク
   online_now: オンラインプレイヤー
-  average: 平均
   peak: ピーク
   revenue: 収益
   revenue_over_time: 収益の推移
   revenue_over_time_body: 収益源別の全プロトコル収益
-  shop: ショップ
-  shop_sales: ショップ売上
   item_royalties: アイテムロイヤリティ
   character_royalties: キャラクターロイヤリティ
   character_creation_revenue: キャラクター作成
@@ -657,10 +666,6 @@ admin_page:
   revenue_mtd: 月初来収益
   last_30_days: 過去30日
   calendar_month_to_date: 今月の月初来
-  recent_shop_sales: 最近のショップ売上
-  sales_history: ショップ売上履歴
-  sales_retention: 正確な取引詳細は90日間保持されます
-  view_all_sales: すべての売上を見る
   buyer: 購入者
   item: アイテム
   quantity: 数量
@@ -676,8 +681,6 @@ admin_page:
   loading: 読み込み中…
   load_more: さらに読み込む
   transactions: トランザクション
-  no_sales_history: この期間の売上はありません
-  end_of_history: 保持履歴の末尾
 simulator_page:
   title: 戦闘シミュレーター
   local_only: ローカル決定論セットアップ
@@ -877,19 +880,19 @@ wallet_legacy:
   buy_on_exchange: 取引所で購入
   withdraw_to_wallet: 取引所でSUIを購入し、上記のウォレットアドレスに出金してください。
   faq: よくある質問
-  wallet_description: あなた専用のウォレットです。あなただけがアクセスできます。ショップで使うSUIを入金してください。
+  wallet_description: あなた専用のウォレットです。ネットワーク手数料とプレイヤー間取引に使うSUIを入金してください。
   moonpay_desc: クレジットカード、Apple Pay、銀行振込
   transak_desc: クレジットカード、銀行振込、100ヶ国以上対応
   faq_what_is_sui: SUIとは？
-  faq_what_is_sui_answer: SUIはデジタル通貨で、電子マネーのようなものです。Suiブロックチェーンという高速で安全なネットワーク上にあります。AresRPGショップでアイテムを購入するために少額のSUIを使用します。ゲーム内通貨のようなものですが、私たちがあなたから取り上げることはできません。
+  faq_what_is_sui_answer: SUIはSuiブロックチェーン上のデジタル通貨です。AresRPGではネットワーク手数料とプレイヤー間取引に少額を使用します。
   faq_why_sui: なぜAresRPGはSUIを使うの？
   faq_why_sui_answer: SUIは私たちの推奨決済方法です。取引は即座（1秒以内）に完了し、手数料はほぼゼロ。仲介者手数料もかかりません。将来的には従来の通貨（USD、EURなど）にも対応する予定ですが、法的手続きが膨大で、高額な手数料や税金が発生するため、まだ準備が整っていません。
   faq_legal: 合法ですか？
-  faq_legal_answer: はい。暗号通貨の購入と保有は、ほとんどの国で合法です。SUIは世界中の主要な規制された取引所で取引されている正当なデジタル資産です。ショップでの支払い手段として使用するだけであり、NFTや暗号通貨スキームは一切ありません。
+  faq_legal_answer: SUIは世界中の主要な取引所で取引されるデジタル資産です。AresRPGではネットワーク手数料とプレイヤー間取引に使用します。
   faq_eula: ゲームの利用規約で許可されていますか？
   faq_eula_answer: はい。暗号通貨が純粋に支払い手段として使用され、NFTや投機的な暗号通貨スキームを含まない限り、完全に準拠しています。多くの大手ゲームストアでさえ暗号通貨決済に対応しています。
   faq_access: 誰が私のウォレットにアクセスできますか？
-  faq_access_answer: あなただけです。ウォレットはSuiのzkLogin技術を使い、Googleログインから作成されます。AresRPGチームを含め、誰もあなたの資金にアクセスしたり移動したりすることはできません。重要：このウォレットはショップでの購入専用です。大量の資金を保管しないでください。使う分だけ入金してください。
+  faq_access_answer: あなただけです。ウォレットはSuiのzkLogin技術を使って作成されます。AresRPGの利用に必要な分だけ入金し、大量の資金を保管しないでください。
   faq_balance: SUIを送ったのに残高が更新されない？
   faq_balance_answer: ご安心ください。更新システムが一時的に遅れている場合があります。正しいアドレス（上記からコピー）にSUIを送金したことを確認し、それでも反映されない場合はトランザクションIDを添えてDiscordのチームまでお問い合わせください。
   add_funds: 残高を追加
@@ -1046,6 +1049,13 @@ encyclopedia_page:
   sort_name: 名前 A-Z
   clear_filters: すべてクリア
   no_results: フィルターに一致するアイテムがありません
+  filter_by_category: カテゴリ別
+  filter_by_resource: 素材タイプ別
+  filter_by_job: 製作職業別
+  filter_by_world: ワールド別
+  filter_by_mob_family: モンスター系統別
+  filter_biome: バイオーム
+  filter_city: 都市
   group_armor: 防具
   group_weapons: 武器
   group_accessories: アクセサリー
@@ -1054,7 +1064,11 @@ encyclopedia_page:
   group_relics: 遺物
   group_tools: 道具
   group_consumables: 消耗品
-  group_resources: 素材
+  group_raw_resources: 原材料
+  group_gatherable_resources: 採集資源
+  group_intermediary_resources: 中間素材
+  group_pet_food_resources: ペットフード
+  item_category_pet_food: ペットフード
   stats_filter: ステータス
   filter_life_steal: ライフスティール
   gameplay:
@@ -1124,18 +1138,18 @@ encyclopedia_page:
     stat_rolling: ステータスロール
     stat_rolling_desc: 各ステータスはテンプレート範囲内で均一にロールされます。すべての値が等確率です。
     archimobs: アーキモブ
-    archimobs_desc: 代わりにそのモブのアーキモブとして出現する確率0.5%——名前を持つ、永続的に強化されたバリアントです。モブが持つ唯一のレア度システムです。
+    archimobs_desc: 対象となる各モブは1%の確率で、固有名を持つ恒久的に強化されたアーキモブに置き換わります。各メンバーは個別に抽選されます。
     max_members: 最大メンバー数
     groups_desc: パーティーは最大{{max}}人で構成される共有名簿で、リーダーが選出されます。パーティーを組んでいるだけでは戦闘において何の効果もありません——パーティーの有無にかかわらず、全員が自分自身の参加トランザクションを送って戦闘に入る必要があり、自動参加や近接による参加はありません。
     groups_xp: XPの分配
     groups_xp_desc: 倒したモブの基礎XPを一つのプールに合算します。条件を満たす戦闘員の人数でRetro式のグループ係数を掛け、プレイヤー側とモブ側の合計レベル差で減額し、最後に各プレイヤーのレベルがパーティ合計レベルに占める割合で分配します。最高レベルの3分の1未満のプレイヤーは係数を増やしません。知恵は最後に適用され、個人の与ダメージは影響しません。
     groups_loot: 戦利品の分配
     groups_loot_desc: 倒された各モブは共有の戦利品判定を1回行います。成功したドロップは勝利したプレイヤーへ順番に割り当てられ、参加者が増えても判定回数は増えません。
-    dungeons_desc: 探索済みゾーンでポータルを見つけ、鍵を使い、順番にルームを攻略します。各ポータルには専用のライブロビーがあります。
+    dungeons_desc: 設定された都市のダンジョン入口へ行き、鍵を使い、順番にルームを攻略します。各ダンジョンには1つのライブロビーがあります。
     dungeon_entry: 入場
-    dungeon_entry_value: 発見済みゾーンのポータルで鍵を使用
+    dungeon_entry_value: 都市の入口で対応する鍵を使用
     dungeon_instance: インスタンス
-    dungeon_instance_value: ポータル別ロビー、公開またはグループ戦闘
+    dungeon_instance_value: ダンジョンロビー、公開またはグループ戦闘
     dungeon_completion: クリア
     dungeon_completion_value: すべての部屋をクリア
     dungeon_reward: 報酬
@@ -1267,6 +1281,7 @@ encyclopedia_page:
   consumable_reset_stats: ステータスポイントリセット
   consumable_reset_spells: スペルポイントリセット
   consumable_recall: ワールドポータルに戻る
+  consumable_city: '{{city}}の都市へ移動する'
   consumable_loot_box: ランダム報酬を開く
   consumable_reward_heading: 報酬
   consumable_rewards: 入手可能な報酬
@@ -1334,7 +1349,6 @@ encyclopedia_page:
   no_mobs_onchain: オンチェーンのモンスターはまだいません
   obtention_crafted: クラフト可能
   obtention_dropped_by: '{{count}}体のモブがドロップ'
-  obtention_shop: ショップで入手可能
   obtention_unknown: 入手方法不明
   total_supply: 総供給量
   marketcap: 時価総額
@@ -1364,10 +1378,7 @@ encyclopedia_page:
     arcane_spore: ''
     arcaneshroom: ''
     arcanite: ''
-    arcanite_hoe: ''
-    arcanite_pickaxe: ''
     arcanite_powder: ''
-    arcanite_sickle: ''
     arcanize_flour: ''
     barley_flour: ''
     basic_pickaxe: ''
@@ -1377,9 +1388,6 @@ encyclopedia_page:
     bloodstone_powder: ''
     bloodveil_orchid: ''
     burnt_wheat_flour: ''
-    copper_hoe: ''
-    copper_pickaxe: ''
-    copper_sickle: ''
     crimson_truffle: ''
     crimson_truffle_heart: ''
     crystallized_tanjirize: ''
@@ -1419,19 +1427,13 @@ encyclopedia_page:
     infinity_moonstone: ''
     infinity_obsidianite: ''
     infinity_quartz: ''
-    iron_sickle: ''
     ivory_orchid_paste: ''
     ivory_shrooms: ''
     jade: ''
-    jade_hoe: ''
-    jade_pickaxe: ''
     jade_powder: ''
     malt_flour: ''
     moonstone: ''
-    moonstone_hoe: ''
-    moonstone_pickaxe: ''
     moonstone_powder: ''
-    moonstone_sickle: ''
     nightcap: ''
     nightcap_elixir_base: ''
     obsidianite: ''
@@ -1481,6 +1483,8 @@ encyclopedia_page:
     rune_wisdom_ba: ''
     rune_wisdom_pa: ''
     rune_wisdom_ra: ''
+    scroll_of_oblivion: 使用したすべてのスペルポイントを返還し、強化したスペルをレベル1に戻します。
+    scroll_of_rebirth: 使用したすべてのステータスポイントを返還し、振り直せるようにします。
     shiny_barley: ''
     smoldering_wheat: ''
     spectral_arcanize: ''

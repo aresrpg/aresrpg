@@ -18,7 +18,7 @@ import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { character_max_hp, fold_equipment_stats, projected_hp } from '../game/character_stats.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
-import { encumbered_asset_ids } from '../inventory_stacks.ts'
+import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
@@ -66,9 +66,10 @@ export default function EquipmentTab({
   const all_inventory = useAppStore(({ session }) => session.inventory)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
   const trades = useAppStore(({ trade }) => trade.rows)
+  const encumbered_ids = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
   const inventory = useMemo(
-    () => all_inventory.filter(({ kiosk }) => kiosk === character.kiosk),
-    [all_inventory, character.kiosk]
+    () => available_inventory_items(all_inventory, encumbered_ids, character.kiosk),
+    [all_inventory, character.kiosk, encumbered_ids]
   )
   const real = useMemo(() => equipment_map_of(character), [character])
   const [staged, set_staged] = useState<EquipmentMap | null>(null)
@@ -82,7 +83,6 @@ export default function EquipmentTab({
   const equipment = staged ?? real
   const changes = useMemo(() => equipment_change_set(equipment, real), [equipment, real])
   const dirty = changes.to_equip.length > 0 || changes.to_unequip.length > 0
-  const listed_ids = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
   const staged_ids = useMemo(
     () => new Set(Object.values(equipment).flatMap((item) => (item ? [item.id] : []))),
     [equipment]
@@ -118,7 +118,13 @@ export default function EquipmentTab({
     null
 
   const refuse = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot): boolean => {
-    const refusal = equip_refusal({ item, slot, character_level: character.level, equipment, listed_ids })
+    const refusal = equip_refusal({
+      item,
+      slot,
+      character_level: character.level,
+      equipment,
+      listed_ids: encumbered_ids,
+    })
     if (refusal) toast.add(t(`refusal_${refusal}`), 'info')
     return refusal !== null
   }
@@ -134,12 +140,14 @@ export default function EquipmentTab({
   const drink = (item: Readonly<ItemRow>): void => {
     const action = consumable_action(item, character)
     if (!action || !wallet) return
+    if (action.effect.type === 'city' && !character.world) return
     if (action.already_full) return void toast.add(t('already_full_hp'), 'info')
     const transaction = run_direct_transaction(() =>
       wallet.character.use_consumable({
         character_id: character.id,
         item_id: item.id,
         item_type: item.item_type,
+        ...(action.effect.type === 'city' ? { world: character.world } : {}),
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
     )
@@ -162,7 +170,7 @@ export default function EquipmentTab({
   }
 
   const activate = (item: Readonly<ItemRow>): void => {
-    if (listed_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
+    if (encumbered_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
     if (is_loot_box(item)) return set_reveal_box(item)
     const seed = encyclopedia_catalog.item(item.item_type)?.item
     if (seed?.consumable) return drink(item)
@@ -262,7 +270,13 @@ export default function EquipmentTab({
             const dragged = dragging_id ? bag.find(({ id }) => id === dragging_id) : null
             const valid =
               !!dragged &&
-              !equip_refusal({ item: dragged, slot, character_level: character.level, equipment, listed_ids })
+              !equip_refusal({
+                item: dragged,
+                slot,
+                character_level: character.level,
+                equipment,
+                listed_ids: encumbered_ids,
+              })
             return {
               valid,
               staged: changes.to_equip.some((change) => change.slot === slot),
@@ -347,7 +361,7 @@ export default function EquipmentTab({
         <div className="chr-equip__grid">
           {grid_items.map((item) => (
             <InventoryItemCell
-              class_name={`${selected_id === item.id ? 'is-selected' : ''} ${listed_ids.has(item.id) ? 'is-listed' : ''}`.trim()}
+              class_name={selected_id === item.id ? 'is-selected' : ''}
               draggable
               item={item}
               key={item.id}

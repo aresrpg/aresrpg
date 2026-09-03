@@ -11,7 +11,12 @@ import { load_game_settings } from './game/core/settings.ts'
 import { load_locale } from './i18n/locale.ts'
 import { load_app_copy } from './i18n/copy.ts'
 import { register_service_worker } from './pwa.ts'
-import { MOBILE_VIEWPORT_QUERY, MobileUnavailableScreen } from './components/MobileUnavailableScreen.tsx'
+import { has_stored_gift_link } from './modules/distribution.ts'
+import {
+  MOBILE_VIEWPORT_QUERY,
+  mobile_app_unavailable,
+  MobileUnavailableScreen,
+} from './components/MobileUnavailableScreen.tsx'
 import './tailwind.css'
 
 const requested_quality = import.meta.env.DEV ? new URLSearchParams(globalThis.location.search).get('quality') : null
@@ -22,7 +27,13 @@ const root = createRoot(document.getElementById('root')!)
 const demo_route = globalThis.location.pathname.replace(/\/+$/, '') === '/demo'
 
 const boot = async (): Promise<void> => {
-  if (globalThis.matchMedia?.(MOBILE_VIEWPORT_QUERY).matches === true) {
+  if (
+    mobile_app_unavailable(
+      globalThis.location.pathname,
+      globalThis.matchMedia?.(MOBILE_VIEWPORT_QUERY).matches === true,
+      has_stored_gift_link()
+    )
+  ) {
     const copy = await load_app_copy(locale)
     root.render(
       <StrictMode>

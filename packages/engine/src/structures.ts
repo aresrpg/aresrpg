@@ -4,6 +4,8 @@
 import packs_source from '../../../seed/content/structure_packs.json'
 import types_source from '../../../seed/structures/types.json'
 
+import { city_material_uses, compile_cities } from './cities/index.ts'
+import type { CompiledCity } from './cities/types.ts'
 import type { CompiledMaterials, MaterialUse } from './world_materials.ts'
 
 export type StructureTypeSource = Readonly<{
@@ -19,6 +21,7 @@ export type StructurePackSource = Readonly<{
   density_bp: number
   max_slope: number
   bury: number
+  scale?: readonly [number, number]
   types: readonly Readonly<{ type: string; weight: number }>[]
 }>
 
@@ -44,25 +47,46 @@ export type CompiledStructurePack = Readonly<{
   density_bp: number
   max_slope: number
   bury: number
+  scale_min: number
+  scale_max: number
   biomes: readonly string[]
+  fixed_areas: readonly StructureAreaSource[]
   types: readonly Readonly<{ type: CompiledStructureType; weight: number }>[]
   weight_sum: number
+  max_footprint: number
 }>
 
 export type CompiledStructures = Readonly<{
   packs: readonly CompiledStructurePack[]
-  max_footprint: number
+  cities: readonly CompiledCity[]
 }>
 
 type BiomeStructureSource = Readonly<{ name: string; structure_packs?: readonly string[] }>
+export type StructureAreaSource = Readonly<{
+  id: string
+  min_x: number
+  max_x: number
+  min_z: number
+  max_z: number
+  anchor_x?: number
+  anchor_z?: number
+  structure_packs: readonly string[]
+}>
 
-const referenced_pack_names = (biomes: readonly BiomeStructureSource[]): readonly string[] =>
-  biomes
-    .flatMap(({ structure_packs = [] }) => structure_packs)
-    .filter((name, index, names) => names.indexOf(name) === index)
+const referenced_pack_names = (
+  biomes: readonly BiomeStructureSource[],
+  fixed_areas: readonly StructureAreaSource[] = []
+): readonly string[] =>
+  [
+    ...biomes.flatMap(({ structure_packs = [] }) => structure_packs),
+    ...fixed_areas.flatMap(({ structure_packs }) => structure_packs),
+  ].filter((name, index, names) => names.indexOf(name) === index)
 
-const referenced_type_names = (biomes: readonly BiomeStructureSource[]): readonly string[] =>
-  referenced_pack_names(biomes)
+const referenced_type_names = (
+  biomes: readonly BiomeStructureSource[],
+  fixed_areas: readonly StructureAreaSource[] = []
+): readonly string[] =>
+  referenced_pack_names(biomes, fixed_areas)
     .flatMap((name) => STRUCTURE_PACKS[name]?.types.map(({ type }) => type) ?? [])
     .filter((name, index, names) => names.indexOf(name) === index)
 
@@ -94,12 +118,17 @@ export const validate_biome_structure_packs = (
   })
 }
 
-export const structure_material_uses = (biomes: readonly BiomeStructureSource[]): readonly MaterialUse[] =>
-  referenced_type_names(biomes)
+export const structure_material_uses = (
+  biomes: readonly BiomeStructureSource[],
+  fixed_areas: readonly StructureAreaSource[] = []
+): readonly MaterialUse[] => [
+  ...referenced_type_names(biomes, fixed_areas)
     .flatMap((name) => STRUCTURE_TYPES[name]?.palette ?? [])
     .filter((name) => name !== 'air')
     .filter((name, index, names) => names.indexOf(name) === index)
-    .map((name) => ({ name, role: 'filler' as const }))
+    .map((name) => ({ name, role: 'filler' as const })),
+  ...city_material_uses(fixed_areas),
+]
 
 const compile_type = (name: string, materials: CompiledMaterials): CompiledStructureType => {
   const source = STRUCTURE_TYPES[name]
@@ -139,7 +168,8 @@ const compile_type = (name: string, materials: CompiledMaterials): CompiledStruc
 
 export const compile_structures = (
   biomes: readonly BiomeStructureSource[],
-  materials: CompiledMaterials
+  materials: CompiledMaterials,
+  fixed_areas: readonly StructureAreaSource[] = []
 ): CompiledStructures => {
   const compiled_types = new Map<string, CompiledStructureType>()
   const type_for = (name: string): CompiledStructureType => {
@@ -149,9 +179,10 @@ export const compile_structures = (
     compiled_types.set(name, compiled)
     return compiled
   }
-  const packs = referenced_pack_names(biomes).map((name) => {
+  const packs = referenced_pack_names(biomes, fixed_areas).map((name) => {
     const source = STRUCTURE_PACKS[name]!
     const types = source.types.map(({ type, weight }) => Object.freeze({ type: type_for(type), weight }))
+    const [scale_min, scale_max] = source.scale ?? [1, 1]
     return Object.freeze({
       name,
       category: source.category,
@@ -159,18 +190,20 @@ export const compile_structures = (
       density_bp: source.density_bp,
       max_slope: source.max_slope,
       bury: source.bury,
+      scale_min,
+      scale_max,
       biomes: Object.freeze(
         biomes.filter(({ structure_packs = [] }) => structure_packs.includes(name)).map(({ name: biome }) => biome)
       ),
+      fixed_areas: Object.freeze(fixed_areas.filter(({ structure_packs }) => structure_packs.includes(name))),
       types: Object.freeze(types),
       weight_sum: types.reduce((sum, { weight }) => sum + weight, 0),
+      max_footprint: Math.max(...types.map(({ type }) => type.footprint)) * scale_max,
     })
   })
+  const cities = compile_cities(fixed_areas)
   return Object.freeze({
     packs: Object.freeze(packs),
-    max_footprint: packs.reduce(
-      (largest, pack) => Math.max(largest, ...pack.types.map(({ type }) => type.footprint)),
-      0
-    ),
+    cities,
   })
 }

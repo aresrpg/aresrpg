@@ -15,7 +15,7 @@ const ENothingThere: u64 = 1302;
 const ENotSearched: u64 = 1303;
 const RESEARCH_TTL_MS: u64 = 7_200_000;
 
-public struct ZoneKey has copy, drop, store { zx: u32, zz: u32 }
+public struct ZoneKey has copy, drop, store { zone_x: u32, zone_z: u32 }
 
 public struct Zone has copy, drop, store {
   seed: u64,
@@ -24,7 +24,7 @@ public struct Zone has copy, drop, store {
   res_taken: vector<u8>,
 }
 
-public struct ZoneSearched has copy, drop { world: String, zx: u32, zz: u32, seed: u64, fresh: bool }
+public struct ZoneSearched has copy, drop { world: String, zone_x: u32, zone_z: u32, seed: u64, fresh: bool }
 
 public(package) fun search(
   character: &mut Character,
@@ -37,8 +37,8 @@ public(package) fun search(
   let current = world::prove_move(character, x, z, clock);
   assert!(current == world_object.name(), EWrongWorld);
   let size = zone_math::zone_size();
-  let (zx, zz) = (x / size, z / size);
-  let key = ZoneKey { zx, zz };
+  let (zone_x, zone_z) = (x / size, z / size);
+  let key = ZoneKey { zone_x, zone_z };
   let now = clock.timestamp_ms();
   let uid = world::uid_mut(world_object);
   let (seed, fresh) = if (dfield::exists(uid, key)) {
@@ -57,94 +57,88 @@ public(package) fun search(
     dfield::add(uid, key, Zone { seed, searched_at_ms: now, mob_taken: 0, res_taken: vector[] });
     (seed, true)
   };
-  event::emit(ZoneSearched { world: current, zx, zz, seed, fresh });
+  event::emit(ZoneSearched { world: current, zone_x, zone_z, seed, fresh });
 }
 
-public fun mob_groups(world_object: &World, wc: &WorldContent, zx: u32, zz: u32): vector<MobGroup> {
-  cw(world_object, wc);
-  let zone = lz(world_object, zx, zz);
-  zone_math::mob_groups(
-    world_map::mobs(world_content::data(wc)),
-    world_map::biome_map(world_content::data(wc)),
-    zx,
-    zz,
+public fun mob_groups(world_object: &World, world_content: &WorldContent, zone_x: u32, zone_z: u32): vector<MobGroup> {
+  assert_world_content(world_object, world_content);
+  let zone = live_zone(world_object, zone_x, zone_z);
+  zone_math::mob_groups_with_archis(
+    world_map::mobs(world_content::data(world_content)),
+    &world_content::archi_rows(world_content),
+    world_map::biome_map(world_content::data(world_content)),
+    &world_map::cities(world_content::data(world_content)),
+    zone_x,
+    zone_z,
     zone.seed,
     zone.mob_taken,
   )
 }
 
-public(package) fun consume_mob_group(world_object: &mut World, zx: u32, zz: u32, index: u64) {
+public(package) fun consume_mob_group(world_object: &mut World, zone_x: u32, zone_z: u32, index: u64) {
   assert!(index < 128, ENothingThere);
-  let zone = lzm(world_object, zx, zz);
+  let zone = live_zone_mut(world_object, zone_x, zone_z);
   let bit = 1u128 << (index as u8);
   assert!(zone.mob_taken & bit == 0, ENothingThere);
   zone.mob_taken = zone.mob_taken | bit;
 }
 
-public fun resource_pack_at(world_object: &World, wc: &WorldContent, zx: u32, zz: u32, index: u64): ResourcePack {
-  cw(world_object, wc);
-  let zone = lz(world_object, zx, zz);
+public fun resource_pack_at(world_object: &World, world_content: &WorldContent, zone_x: u32, zone_z: u32, index: u64): ResourcePack {
+  assert_world_content(world_object, world_content);
+  let zone = live_zone(world_object, zone_x, zone_z);
   zone_math::resource_pack_at(
-    world_map::resources(world_content::data(wc)),
-    world_map::biome_map(world_content::data(wc)),
-    zx,
-    zz,
+    world_map::resources(world_content::data(world_content)),
+    world_map::biome_map(world_content::data(world_content)),
+    &world_map::cities(world_content::data(world_content)),
+    zone_x,
+    zone_z,
     zone.seed,
     &zone.res_taken,
     index,
   )
 }
 
-public(package) fun consume_resource_node(world_object: &mut World, wc: &WorldContent, zx: u32, zz: u32, index: u64) {
-  cw(world_object, wc);
-  let zone_read = lz(world_object, zx, zz);
+public(package) fun consume_resource_node(world_object: &mut World, world_content: &WorldContent, zone_x: u32, zone_z: u32, index: u64) {
+  assert_world_content(world_object, world_content);
+  let zone_read = live_zone(world_object, zone_x, zone_z);
   let total = zone_math::total_resource_nodes(
-    world_map::resources(world_content::data(wc)),
-    world_map::biome_map(world_content::data(wc)),
-    zx,
-    zz,
+    world_map::resources(world_content::data(world_content)),
+    world_map::biome_map(world_content::data(world_content)),
+    &world_map::cities(world_content::data(world_content)),
+    zone_x,
+    zone_z,
     zone_read.seed,
     index,
   );
-  let zone = lzm(world_object, zx, zz);
+  let zone = live_zone_mut(world_object, zone_x, zone_z);
   while ((zone.res_taken.length() as u64) <= index) zone.res_taken.push_back(0);
   let taken = &mut zone.res_taken[index];
   assert!(*taken < total, ENothingThere);
   *taken = *taken + 1;
 }
 
-public fun seed_of(world_object: &World, zx: u32, zz: u32): u64 {
-  lz(world_object, zx, zz).seed
+public fun seed_of(world_object: &World, zone_x: u32, zone_z: u32): u64 {
+  live_zone(world_object, zone_x, zone_z).seed
 }
 
-public fun portal_of(world_object: &World, wc: &WorldContent, zx: u32, zz: u32): (bool, u32, u32) {
-  cw(world_object, wc);
-  zone_math::portal_of(
-    world_map::dungeon_room_count(world_content::data(wc)) > 0,
-    seed_of(world_object, zx, zz),
-    zx,
-    zz,
-  )
-}
-
-public fun level_bounds(zx: u32, zz: u32): (u64, u64) { zone_math::level_bounds(zx, zz) }
+public fun level_bounds(zone_x: u32, zone_z: u32): (u64, u64) { zone_math::level_bounds(zone_x, zone_z) }
 
 // check_world
 /// Content from one world must never resolve another's spawns — the seam's one assert.
-fun cw(world_object: &World, wc: &WorldContent) {
-  assert!(world_content::name(wc) == world_object.name(), EWrongWorld);
+fun assert_world_content(world_object: &World, world_content: &WorldContent) {
+  assert!(world_content::name(world_content) == world_object.name(), EWrongWorld);
 }
 
 // live_zone
-fun lz(world_object: &World, zx: u32, zz: u32): Zone {
+fun live_zone(world_object: &World, zone_x: u32, zone_z: u32): Zone {
   let uid = world::uid(world_object);
-  assert!(dfield::exists(uid, ZoneKey { zx, zz }), ENotSearched);
-  *dfield::borrow(uid, ZoneKey { zx, zz })
+  assert!(dfield::exists(uid, ZoneKey { zone_x, zone_z }), ENotSearched);
+  *dfield::borrow(uid, ZoneKey { zone_x, zone_z })
 }
 
 // live_zone_mut
-fun lzm(world_object: &mut World, zx: u32, zz: u32): &mut Zone {
+fun live_zone_mut(world_object: &mut World, zone_x: u32, zone_z: u32): &mut Zone {
   let uid = world::uid_mut(world_object);
-  assert!(dfield::exists(uid, ZoneKey { zx, zz }), ENotSearched);
-  dfield::borrow_mut(uid, ZoneKey { zx, zz })
+  assert!(dfield::exists(uid, ZoneKey { zone_x, zone_z }), ENotSearched);
+  dfield::borrow_mut(uid, ZoneKey { zone_x, zone_z })
 }

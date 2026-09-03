@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { basis_points, marketplace_lot_sizes, marketplace_royalty_bps } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
+import { ROYALTY_FLOOR_MIST } from '@aresrpg/sdk/marketplace'
 
 import { item_icon } from '../content/assets.ts'
 import { content_catalog, titleize } from '../content/catalog.ts'
@@ -47,7 +49,11 @@ export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => (
   </span>
 )
 
-export const buyer_total = (ask: bigint): bigint => ask + (ask / 10n > 10_000_000n ? ask / 10n : 10_000_000n)
+export const buyer_total = (ask: bigint): bigint => {
+  const royalty = (ask * BigInt(marketplace_royalty_bps)) / BigInt(basis_points)
+  return ask + (royalty > ROYALTY_FLOOR_MIST ? royalty : ROYALTY_FLOOR_MIST)
+}
 
 export const legal_lot = (listing: Readonly<Pick<ListingRow, 'category' | 'amount'>>): boolean =>
-  !['resource', 'consumable', 'rune'].includes(listing.category ?? '') || [1, 10, 100, 1000].includes(listing.amount)
+  !['resource', 'consumable', 'rune'].includes(listing.category ?? '') ||
+  marketplace_lot_sizes.includes(listing.amount as (typeof marketplace_lot_sizes)[number])

@@ -15,6 +15,7 @@ import { AppShell } from './components/AppShell.tsx'
 import {
   CANVAS_OVERLAY_CLASS,
   dungeon_lobby_visible,
+  graphics_notice_visible,
   social_hud_visible,
   WORLD_FRAME_LAYER,
   world_frame_visibility,
@@ -46,7 +47,7 @@ import { HUD_PANEL_CLASS, HudPanel } from './components/ui/HudPanel.tsx'
 import { dispatch_app, useAppStore } from './store.ts'
 import { worlds_source } from './content/worlds.ts'
 import { env } from './env.ts'
-import type { AppCopy } from './i18n/copy.ts'
+import { copy_text, type AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
 import type { Page } from './modules/navigation.ts'
 import { selected_dungeon_run } from './modules/dungeon.ts'
@@ -88,6 +89,9 @@ const GoogleIcon = () => (
 
 const Divider = () => <div className="h-px bg-white/10" />
 
+const login_lead = (copy: AppCopy, gift: boolean): string =>
+  gift ? copy_text(copy.airdrop_page)('gift_login') : copy.sign_in_to_play
+
 const Login = ({
   auth_ready,
   wallets,
@@ -97,6 +101,7 @@ const Login = ({
   login_google,
   login_wallet,
   spectate,
+  gift,
 }: Readonly<{
   auth_ready: boolean
   wallets: readonly string[]
@@ -106,6 +111,7 @@ const Login = ({
   login_google: () => void
   login_wallet: (name: string) => void
   spectate: () => void
+  gift: boolean
 }>) => {
   const auth_status = useAppStore(({ session }) => session.auth_status)
   const error = useAppStore(({ session }) => session.auth_error)
@@ -118,7 +124,7 @@ const Login = ({
         <img className="size-[72px] drop-shadow-[0_0_20px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />
         <div className="text-center">
           <h1 className="mb-2 pl-[0.35em] text-sm font-semibold tracking-[0.35em] uppercase">AresRPG</h1>
-          <p className="text-[10px] tracking-[0.3em] text-gray-500">{copy.sign_in_to_play}</p>
+          <p className="text-[10px] tracking-[0.3em] text-gray-500">{login_lead(copy, gift)}</p>
         </div>
         <div className="flex w-full flex-col gap-3 [&_button]:h-[46px] [&_button]:w-full [&_button]:cursor-pointer [&_button]:rounded-[5px] [&_button]:transition-all [&_button]:duration-150 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-45">
           <button
@@ -129,40 +135,44 @@ const Login = ({
             <GoogleIcon />
             {loading ? copy.loading_universe : copy.continue_google}
           </button>
-          {import.meta.env.DEV && auth_ready && (
+          <div className="contents" hidden={gift}>
+            {import.meta.env.DEV && auth_ready && (
+              <>
+                <Divider />
+                <button
+                  className="border border-[#c8963c]/35 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#c8963c] uppercase hover:border-[#c8963c]/70 hover:bg-[#c8963c]/8"
+                  onClick={() => set_show_wallets(!show_wallets)}
+                >
+                  {copy.connect_wallet}
+                </button>
+                {show_wallets && (
+                  <div className="flex flex-col gap-1.5 border border-white/8 bg-black/18 p-2">
+                    {wallets.map((wallet) => (
+                      <button
+                        className="!h-9 border border-white/8 bg-white/4 text-[11px] text-[#e8e4dc]"
+                        key={wallet}
+                        onClick={() => login_wallet(wallet)}
+                      >
+                        {wallet}
+                      </button>
+                    ))}
+                    {wallets.length === 0 && (
+                      <span className="p-[7px] text-center text-[10px] text-gray-500">{copy.no_wallet}</span>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
             <>
               <Divider />
               <button
-                className="border border-[#c8963c]/35 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#c8963c] uppercase hover:border-[#c8963c]/70 hover:bg-[#c8963c]/8"
-                onClick={() => set_show_wallets(!show_wallets)}
+                className="border border-[#4a9eff]/30 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#67adff] uppercase hover:border-[#4a9eff]/70 hover:bg-[#4a9eff]/8"
+                onClick={spectate}
               >
-                {copy.connect_wallet}
+                {copy.watch_world}
               </button>
-              {show_wallets && (
-                <div className="flex flex-col gap-1.5 border border-white/8 bg-black/18 p-2">
-                  {wallets.map((wallet) => (
-                    <button
-                      className="!h-9 border border-white/8 bg-white/4 text-[11px] text-[#e8e4dc]"
-                      key={wallet}
-                      onClick={() => login_wallet(wallet)}
-                    >
-                      {wallet}
-                    </button>
-                  ))}
-                  {wallets.length === 0 && (
-                    <span className="p-[7px] text-center text-[10px] text-gray-500">{copy.no_wallet}</span>
-                  )}
-                </div>
-              )}
             </>
-          )}
-          <Divider />
-          <button
-            className="border border-[#4a9eff]/30 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#67adff] uppercase hover:border-[#4a9eff]/70 hover:bg-[#4a9eff]/8"
-            onClick={spectate}
-          >
-            {copy.watch_world}
-          </button>
+          </div>
           {error && <div className="text-center text-[10px] leading-6 text-[#ff7d7d]">{error}</div>}
         </div>
       </section>
@@ -232,6 +242,7 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
+  const gift_link_ready = useAppStore((state) => state.distribution.gift_link_ready)
   const fight_active = useAppStore((state) => {
     const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     return (
@@ -307,9 +318,13 @@ export function App() {
   )
   const sui_insufficient = character_creation_insufficient(session.sui_balance_mist)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
-  const show_graphics_notice =
-    (engine_status.state === 'failed' && !world_unavailable) ||
-    (!graphics_notice_dismissed && (world_unavailable || engine_status.state === 'degraded'))
+  const show_graphics_notice = graphics_notice_visible(
+    gift_link_ready,
+    engine_status.state === 'failed',
+    world_unavailable,
+    graphics_notice_dismissed,
+    engine_status.state === 'degraded'
+  )
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
   if (!copy) return <main className="fixed inset-0 bg-bg" />
 
@@ -458,6 +473,7 @@ export function App() {
           auth_ready={session.auth_ready}
           wallets={session.wallets}
           copy={copy}
+          gift={gift_link_ready}
           login_google={() => dispatch_app({ type: 'auth/login_google' })}
           login_wallet={(name) => dispatch_app({ type: 'auth/login_wallet', name })}
           set_show_wallets={set_show_wallets}

@@ -34,10 +34,8 @@ export const shape_character = (props: Record<string, unknown>) => {
     ...(run
       ? {
           dungeon_run: Object.freeze({
-            world: String(run.world),
+            dungeon: String(run.dungeon),
             room: Number(run.room),
-            x: Number(run.x),
-            z: Number(run.z),
           }),
         }
       : {}),

@@ -23,15 +23,12 @@ import { fight_result_error_text } from '../../src/modules/fight_result_error.ts
 import { initial_app_state, type AppState } from '../../src/store.ts'
 import { toast, type Toast } from '../../src/toast.ts'
 import { pre_submission_version_race, retry_after_version_race } from '../../src/transaction_guard.ts'
-
 const observe_fight_results = create_fight_result_observer(async () => undefined)
-
 test('only a certified newly-closable settlement needs a follow-up close', () => {
   expect(settlement_needs_close({ closable: true, closed: false })).toBeTrue()
   expect(settlement_needs_close({ closable: true, closed: true })).toBeFalse()
   expect(settlement_needs_close({ closable: false, closed: false })).toBeFalse()
 })
-
 test('settlement retries one zero-gas object-version race without delaying the normal path', async () => {
   const waits: number[] = []
   let attempts = 0
@@ -46,27 +43,22 @@ test('settlement retries one zero-gas object-version race without delaying the n
   expect({ attempts, settled, waits }).toEqual({ attempts: 2, settled: 'settled', waits: [250] })
   expect(pre_submission_version_race(new Error('[sdk] transaction abc failed on-chain: version'))).toBeFalse()
 })
-
 test('a residual settlement version race is explained beside Retry without Sui internals', () => {
   const raw = "provided version doesn't match for object 0x00d606, provided: 997517726 actual: 0x3b74e986"
   const copy = { result_version_changed: 'Fight rewards changed. Retry safely.' }
-
   expect(fight_result_error_text(copy, raw)).toBe('Fight rewards changed. Retry safely.')
   expect(fight_result_error_text(copy, 'wallet cancelled')).toBe('wallet cancelled')
 })
-
 test('an ended fight keeps its result and settlement behind the terminal presentation', () => {
   expect(fight_result_available({ checkpoint: { contract: { id: '0xf1' } } } as never, '0xf1')).toBeFalse()
   expect(fight_result_available({ checkpoint: null } as never, '0xf1')).toBeTrue()
   expect(fight_result_available({ checkpoint: { contract: { id: '0xf2' } } } as never, '0xf1')).toBeTrue()
 })
-
 test('the result card owns the surface until Continue reveals level-up', () => {
   expect(fight_result_surface({ result_open: true, level_up_open: true } as never)).toBe('result')
   expect(fight_result_surface({ result_open: false, level_up_open: true } as never)).toBe('level_up')
   expect(fight_result_surface({ result_open: false, level_up_open: false } as never)).toBeNull()
 })
-
 test('fight duration is the nonnegative wall time between start and terminal observation', () => {
   expect(fight_duration(1_000, 126_900)).toBe(125_900)
   expect(fight_duration(1_000n, 126_900n)).toBe(125_900)
@@ -105,10 +97,15 @@ test('durable recovery collects settlement and every loot type through one trans
 })
 
 test('an ordinary resolution with pre-migration dungeon fields never enters dungeon settlement', () => {
-  expect(fight_resolution_dungeon({ dungeon: undefined, world: undefined })).toBeNull()
-  expect(fight_resolution_dungeon({ dungeon: null, world: 'nauvis' })).toBeNull()
-  expect(() => fight_resolution_dungeon({ dungeon: 2, world: undefined })).toThrow('incomplete dungeon identity')
-  expect(fight_resolution_dungeon({ dungeon: 2, world: 'nauvis' })).toEqual({ room: 2, world: 'nauvis' })
+  expect(fight_resolution_dungeon({ dungeon: undefined, dungeon_room: undefined })).toBeNull()
+  expect(fight_resolution_dungeon({ dungeon: null, dungeon_room: 2 })).toBeNull()
+  expect(() => fight_resolution_dungeon({ dungeon: 'tangled_aftermath', dungeon_room: undefined })).toThrow(
+    'incomplete dungeon identity'
+  )
+  expect(fight_resolution_dungeon({ dungeon: 'tangled_aftermath', dungeon_room: 2 })).toEqual({
+    dungeon: 'tangled_aftermath',
+    room: 2,
+  })
 })
 
 const result = (overrides: Partial<FightResult> = {}): FightResult =>
@@ -179,6 +176,7 @@ test('an empty durable-resolution snapshot proves the own settlement completed',
     fight: '0xf1',
     world: 'nauvis',
     dungeon: null,
+    dungeon_room: null,
     kolizeum: null,
     fighter: 0,
     character: '0xc1',
@@ -221,6 +219,7 @@ test('a durable resolution received before the roster becomes visible when the C
     fight: '0xf1',
     world: 'nauvis',
     dungeon: null,
+    dungeon_room: null,
     kolizeum: null,
     fighter: 0,
     character: '0xc1',
@@ -263,6 +262,7 @@ test('nonzero-seat recovery keeps array position separate from the chain fighter
     fight: '0xf1',
     world: 'nauvis',
     dungeon: null,
+    dungeon_room: null,
     kolizeum: null,
     fighter: 2,
     character: '0xc1',

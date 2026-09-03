@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { consumable_types, is_weapon_category, item_is_stackable, stat_names } from '@aresrpg/immutable'
+import { consumable_types, is_weapon_category, item_is_stackable, pet_max_feeds, stat_names } from '@aresrpg/immutable'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { item_icon } from '../content/assets.ts'
 
-import { as_record, button_class, NumberField, SelectField, SheetSection, string_value } from './ContentFields.tsx'
+import {
+  as_record,
+  button_class,
+  NumberField,
+  SelectField,
+  SheetSection,
+  string_value,
+  TextField,
+} from './ContentFields.tsx'
 import { ItemPowerPanel } from './ItemPowerPanel.tsx'
 import { ItemRecipeEditor, type ItemRecipeBinding } from './ItemRecipeEditor.tsx'
 import { ItemReferencePicker } from './ItemReferencePicker.tsx'
-import type { ItemReferenceFilterRow } from './content_list.ts'
+import type { ItemFilterRow } from './content_list.ts'
 import { JsonEditor } from './JsonEditor.tsx'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
@@ -19,7 +26,7 @@ type EditorProps = Readonly<{
   on_change: (path: JsonPath, value: JsonValue) => void
   is_readonly: (path: JsonPath) => boolean
   item_recipe?: ItemRecipeBinding
-  item_filters?: readonly ItemReferenceFilterRow[]
+  item_filters?: readonly ItemFilterRow[]
   save?: () => void
 }>
 
@@ -73,6 +80,16 @@ const detail_damages = (item: Readonly<Record<string, JsonValue>>) =>
     })
   )
 
+const item_detail_labels = (category: string, level: number) => {
+  const shared = Object.freeze({ damages: 'damages', level_short: `Lv. ${level}`, range_to: 'to' })
+  if (category !== 'pet') return Object.freeze({ ...shared, characteristics: 'Characteristics' })
+  return Object.freeze({
+    ...shared,
+    characteristics: 'Fully-fed characteristics',
+    characteristics_note: `Each copy rolls its final bonus inside the From–To range at mint, then grows from zero to that roll over ${pet_max_feeds} once-daily feeds.`,
+  })
+}
+
 const PetFoodsEditor = ({
   item,
   on_change,
@@ -121,12 +138,23 @@ const PetFoodsEditor = ({
 
 const ConsumableEditor = ({
   item,
+  item_filters,
   on_change,
-}: Readonly<{ item: Readonly<Record<string, JsonValue>>; on_change: EditorProps['on_change'] }>) => {
+}: Readonly<{
+  item: Readonly<Record<string, JsonValue>>
+  item_filters?: readonly ItemFilterRow[]
+  on_change: EditorProps['on_change']
+}>) => {
   const consumable = as_record(item.consumable)
   if (!consumable) return null
   const type = string_value(consumable.type)
   const rewards = Array.isArray(consumable.rewards) ? consumable.rewards : []
+  const reward_types = rewards.flatMap((value) => {
+    const item_type = string_value(as_record(value)?.item_type)
+    return item_type ? [item_type] : []
+  })
+  const excluded_types = (current = ''): ReadonlySet<string> =>
+    new Set(reward_types.filter((item_type) => item_type !== current))
   return (
     <SheetSection accent="#65c993" note="The effect applied when this item is consumed." title="Consumable">
       <div className="flex flex-wrap items-end gap-3">
@@ -138,7 +166,9 @@ const ConsumableEditor = ({
                 ? { type: next, amount: 1 }
                 : next === 'loot_box'
                   ? { type: next, rewards: [] }
-                  : { type: next }
+                  : next === 'city'
+                    ? { type: next, city: '' }
+                    : { type: next }
             )
           }
           label="Effect"
@@ -152,6 +182,13 @@ const ConsumableEditor = ({
             value={typeof consumable.amount === 'number' ? consumable.amount : 0}
           />
         )}
+        {type === 'city' && (
+          <TextField
+            change={(next) => on_change(['consumable', 'city'], next)}
+            label="City slug"
+            value={string_value(consumable.city)}
+          />
+        )}
       </div>
       {type === 'loot_box' && (
         <div className="mt-3 space-y-1">
@@ -161,16 +198,15 @@ const ConsumableEditor = ({
             const item_type = string_value(reward.item_type)
             return (
               <div
-                className="grid min-h-11 grid-cols-[30px_minmax(150px,1fr)_78px_78px_auto] items-center gap-2 border-b border-white/6"
+                className="grid min-h-11 grid-cols-[minmax(180px,1fr)_78px_78px_auto] items-center gap-2 border-b border-white/6"
                 key={`${item_type}-${index}`}
               >
-                <span className="grid size-7 place-items-center">
-                  {item_icon(item_type) && <img alt="" className="size-7 object-contain" src={item_icon(item_type)!} />}
-                </span>
-                <input
-                  aria-label="Reward item"
-                  className="h-7 min-w-0 border border-white/10 bg-bg px-2 text-[9px]"
-                  onChange={(event) => on_change(['consumable', 'rewards', index, 'item_type'], event.target.value)}
+                <ItemReferencePicker
+                  class_name="!h-11 !border-0 !bg-transparent !px-1 hover:!border-0"
+                  excluded={excluded_types(item_type)}
+                  filter_rows={item_filters}
+                  label="loot box reward"
+                  select={(next) => on_change(['consumable', 'rewards', index, 'item_type'], next)}
                   value={item_type}
                 />
                 <label className="flex items-center gap-1 text-[8px] text-[#777b86]">
@@ -212,13 +248,17 @@ const ConsumableEditor = ({
               </div>
             )
           })}
-          <button
-            className={button_class}
-            onClick={() => on_change(['consumable', 'rewards'], [...rewards, { item_type: '', weight: 1, amount: 1 }])}
-            type="button"
-          >
-            + Reward
-          </button>
+          <ItemReferencePicker
+            class_name="mt-2 w-full"
+            excluded={excluded_types()}
+            filter_rows={item_filters}
+            label="loot box reward"
+            placeholder="Add reward"
+            select={(item_type) =>
+              on_change(['consumable', 'rewards'], [...rewards, { item_type, weight: 1, amount: 1 }])
+            }
+            value=""
+          />
         </div>
       )}
     </SheetSection>
@@ -260,15 +300,17 @@ export const ItemContentEditor = ({ value, on_change, is_readonly, item_recipe, 
         damages={detail_damages(item)}
         edit={{ change: edit_item, save: save ?? (() => undefined) }}
         item_type={string_value(item.item_type)}
-        labels={{ characteristics: 'Characteristics', damages: 'damages', level_short: `Lv. ${level}`, range_to: 'to' }}
+        labels={item_detail_labels(category, level)}
         level={level}
         name={string_value(item.name)}
         stat_budget={<ItemPowerPanel value={value} />}
         stats={detail_stats(item)}
       />
       {category === 'pet' && <PetFoodsEditor item={item} on_change={on_change} />}
-      <ConsumableEditor item={item} on_change={on_change} />
-      {item_recipe && <ItemRecipeEditor category={category} filter_rows={item_filters} recipe={item_recipe} />}
+      <ConsumableEditor item={item} item_filters={item_filters} on_change={on_change} />
+      {item_recipe && (
+        <ItemRecipeEditor category={category} filter_rows={item_filters} level={level} recipe={item_recipe} />
+      )}
       {Object.keys(unknown).length > 0 && (
         <SheetSection title="Additional authored fields">
           <JsonEditor is_readonly={is_readonly} on_change={on_change} value={unknown} />

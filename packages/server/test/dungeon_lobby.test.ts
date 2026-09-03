@@ -5,10 +5,10 @@ import { expect, test } from 'bun:test'
 
 import { get_dungeon_lobby } from '../src/reads/get_dungeon_lobby.ts'
 
-test('a dungeon lobby projects portal-scoped occupants and room fights', async () => {
+test('a dungeon lobby projects dungeon-scoped occupants and room fights', async () => {
   const graph = {
     read: async (query: string) =>
-      query.includes('dungeon_world') && query.includes('RETURN c.id')
+      query.includes('MATCH (c:Character {dungeon:') && query.includes('RETURN c.id')
         ? [{ character_id: '0xc1', name: 'Nox', level: 12, room: 2 }]
         : [
             {
@@ -27,10 +27,8 @@ test('a dungeon lobby projects portal-scoped occupants and room fights', async (
     close: async () => undefined,
   }
 
-  expect(await get_dungeon_lobby(graph, { world: 'nauvis', x: 1_649, z: 2_490 })).toEqual({
-    world: 'nauvis',
-    x: 1_649,
-    z: 2_490,
+  expect(await get_dungeon_lobby(graph, { dungeon: 'tangled_aftermath' })).toEqual({
+    dungeon: 'tangled_aftermath',
     players: [{ character_id: '0xc1', name: 'Nox', level: 12, room: 2 }],
     fights: [
       {

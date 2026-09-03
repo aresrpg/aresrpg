@@ -36,7 +36,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const state = useAppStore((value) => value)
   const character = selected_character(state.session)
   const run = selected_dungeon_run(state)
-  const authored = run ? content_catalog.world(run.world)?.dungeon : null
+  const authored = run ? content_catalog.dungeon(run.dungeon) : null
   const lobby = run ? state.dungeon.lobbies[dungeon_lobby_key(run)] : null
   const party = selected_party(state)
   const party_members = party?.members.map(({ character_id }) => character_id) ?? []
@@ -61,7 +61,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         <div className="min-w-0 flex-1">
           <p className="text-[8px] tracking-[0.26em] text-[#67b8dc] uppercase">{text('dungeon_instance')}</p>
           <h2 className="mt-1 truncate text-lg tracking-[0.1em] text-[#e7e3da] uppercase">
-            {run.world} · {text('dungeon_room').replace('{{room}}', String(run.room))}
+            {authored.dungeon} · {text('dungeon_room').replace('{{room}}', String(run.room))}
           </h2>
         </div>
         <div className="hidden items-center gap-2 border border-white/8 bg-black/25 px-3 py-2 text-[8px] tracking-[0.16em] text-[#8b949e] uppercase sm:flex">

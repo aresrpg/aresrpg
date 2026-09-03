@@ -44,7 +44,8 @@ export type SeedSpellLevel = Readonly<{
 
 export type SeedConsumable =
   | Readonly<{ type: 'heal'; amount: number }>
-  | Readonly<{ type: Exclude<CharacterConsumableType, 'heal'> }>
+  | Readonly<{ type: Exclude<CharacterConsumableType, 'heal' | 'city'> }>
+  | Readonly<{ type: 'city'; city: string }>
   | Readonly<{
       type: 'loot_box'
       rewards: readonly Readonly<{ item_type: string; weight: number; amount: number }>[]
@@ -98,9 +99,16 @@ export type SeedRecipe = Readonly<{
 export type SeedWorld = Readonly<{
   world: string
   entry_level: number
+  archis: readonly Readonly<{ ordinary_type: string; archi_type: string }>[]
+  cities: readonly Readonly<{ city: string; x: number; z: number; dungeon: string }>[]
   terrain?: Readonly<{ biomes: readonly Readonly<{ name: string }>[] }>
   mobs:
-    | readonly Readonly<{ mob_type: string; weight_bp: number; biomes: readonly string[] }>[]
+    | readonly Readonly<{
+        mob_type: string
+        weight_bp: number
+        biomes: readonly string[]
+        cities?: readonly string[]
+      }>[]
     | Readonly<Record<string, number>>
   resources: readonly Readonly<{
     item_type: string
@@ -109,11 +117,14 @@ export type SeedWorld = Readonly<{
     protector: string
     rare_item_type: string
     biomes?: readonly string[]
+    cities?: readonly string[]
   }>[]
-  dungeon: Readonly<{
-    key: string
-    rooms: readonly (readonly Readonly<{ mob_type: string }>[])[]
-  }>
+}>
+
+export type SeedDungeon = Readonly<{
+  dungeon: string
+  key: string
+  rooms: readonly (readonly Readonly<{ mob_type: string }>[])[]
 }>
 
 /** One authored fight board — a row of seed/content/fight_boards.json. Boards live at an
@@ -141,9 +152,10 @@ export type SeedContent = Readonly<{
   spells: readonly SeedSpell[]
   mobs: readonly SeedMob[]
   recipes: readonly SeedRecipe[]
+  dungeons: readonly SeedDungeon[]
   worlds: readonly SeedWorld[]
-  shop: Readonly<{
-    sales: readonly Readonly<{ item_type: string; price: number; supply: number | null; enabled?: boolean }>[]
+  mastery: Readonly<{
+    offers: readonly Readonly<{ item_type: string; cost: number; enabled?: boolean }>[]
   }>
   airdrop: Readonly<{
     drops: readonly Readonly<{ id: string; item_type: string; amount_each: number; whitelist: readonly string[] }>[]
@@ -154,7 +166,16 @@ export type SeedContent = Readonly<{
 }>
 
 export type SeedPhase =
-  'items' | 'loot_boxes' | 'spells' | 'mobs' | 'recipes' | 'sales' | 'worlds' | 'boards' | 'supply'
+  | 'items'
+  | 'loot_boxes'
+  | 'spells'
+  | 'mobs'
+  | 'recipes'
+  | 'mastery_offers'
+  | 'dungeons'
+  | 'worlds'
+  | 'boards'
+  | 'supply'
 
 export type SeedBuildContext = Readonly<{
   /** the control package's one AdminCap — every content door writes through it */

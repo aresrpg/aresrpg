@@ -25,6 +25,7 @@ import logger from './logger.ts'
 import { channels } from './protocol.ts'
 import type { Graph } from './graph.ts'
 import type { GameState } from './game_state.ts'
+import type { IndexingHealth } from './indexing_health.ts'
 import type { Pubsub } from './pubsub_bus.ts'
 import player_load from './modules/player_load.ts'
 import player_info from './modules/player_info.ts'
@@ -36,7 +37,7 @@ import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
 import player_items from './modules/player_items.ts'
 import player_market from './modules/player_market.ts'
-import player_shop from './modules/player_shop.ts'
+import player_airdrop from './modules/player_airdrop.ts'
 import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
 import player_friends from './modules/player_friends.ts'
@@ -123,7 +124,7 @@ export type PlayerContext = {
    *  cluster redis for player-published ephemera); channel names route via create_watcher */
   pubsub: Pubsub
   /** Shared cached comparison of indexed checkpoint against the fullnode head. */
-  indexing_lag: () => Promise<number | null>
+  indexing_health: () => Promise<IndexingHealth>
   /** Process-wide chain game state, loaded once and updated by the indexer wire. */
   game_state: GameState
   /** Whether this process observed a content write after loading its bundled seed. */
@@ -164,7 +165,7 @@ const MODULES: PlayerModule[] = [
   player_party,
   player_market,
   player_items,
-  player_shop,
+  player_airdrop,
   player_trade,
   player_kolizeum,
   player_requests,
@@ -196,7 +197,7 @@ const INITIAL_STATE = (): PlayerState => ({
 
 type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {
   game_state?: GameState
-  indexing_lag?: () => Promise<number | null>
+  indexing_health?: () => Promise<IndexingHealth>
   request_limiter?: RequestLimiter
   realtime_limiter?: RequestLimiter
   ws: { send: (raw: string) => unknown; close: (code?: number, reason?: string) => unknown }
@@ -216,7 +217,7 @@ export function create_player({
   graph,
   pubsub,
   game_state = UNKNOWN_GAME_STATE,
-  indexing_lag = async () => null,
+  indexing_health = async () => Object.freeze({ lag: null, epoch: null }),
   request_limiter = create_request_limiter(),
   realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
 }: PlayerWires): Player {
@@ -234,7 +235,7 @@ export function create_player({
     graph,
     pubsub,
     game_state,
-    indexing_lag,
+    indexing_health,
     events,
     send,
     drop,

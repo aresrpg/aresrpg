@@ -57,3 +57,11 @@ test('production SPA rewrites never capture stable Sui Display assets', async ()
   expect(rewrite.test('/classe/yogan_male.jpg')).toBeFalse()
   expect(rewrite.test('/encyclopedia/items')).toBeTrue()
 })
+
+test('production CSP permits the official zkSend hosted claim origin', async () => {
+  const config = JSON.parse(await Bun.file(new URL('../vercel.json', import.meta.url)).text()) as {
+    headers: readonly Readonly<{ headers: readonly Readonly<{ key: string; value: string }>[] }>[]
+  }
+  const policy = config.headers.flatMap(({ headers }) => headers).find(({ key }) => key === 'Content-Security-Policy')
+  expect(policy?.value).toContain('https://api.slush.app')
+})

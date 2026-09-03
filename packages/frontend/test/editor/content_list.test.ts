@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { item_categories } from '@aresrpg/immutable'
+import { gatherable_catalog, item_categories, tier_unlock_level } from '@aresrpg/immutable'
 
 import {
   content_navigation_domains,
@@ -11,14 +11,13 @@ import {
   filter_content_rows,
   find_selected_row,
   content_result_columns,
-  item_category_rows,
+  item_filter_rows,
   item_gatherable_job_rows,
   item_mob_family_rows,
-  item_reference_filter_rows,
+  item_resource_kind_rows,
   item_recipe_job_rows,
   item_types_for_filter,
   mob_filter_rows,
-  mob_types_for_protector_visibility,
   order_content_rows,
   reordered_spell_levels,
   row_address,
@@ -35,12 +34,12 @@ test('recipes stay loaded data, and items order by level then name beside a cate
 
   const rows = [row('late', 'Zulu', 'bow', 80), row('alpha', 'Alpha', 'sword', 10), row('beta', 'Beta', 'sword', 10)]
   expect(order_content_rows('items', rows).map(({ id }) => id)).toEqual(['alpha', 'beta', 'late'])
-  const categories = item_category_rows(rows)
-  expect(categories.map(({ category }) => category)).toEqual([...item_categories])
-  expect(categories.find(({ category }) => category === 'bow')?.count).toBe(1)
-  expect(categories.find(({ category }) => category === 'sword')?.count).toBe(2)
-  expect(categories.find(({ category }) => category === 'hat')?.count).toBe(0)
-  expect(categories.find(({ category }) => category === 'consumable')?.count).toBe(0)
+  const categories = item_filter_rows(rows, [], [], []).filter(({ kind }) => kind === 'category')
+  expect(categories.map(({ id }) => id)).toEqual(item_categories.filter((category) => category !== 'resource'))
+  expect(categories.find(({ id }) => id === 'bow')?.count).toBe(1)
+  expect(categories.find(({ id }) => id === 'sword')?.count).toBe(2)
+  expect(categories.find(({ id }) => id === 'hat')?.count).toBe(0)
+  expect(categories.find(({ id }) => id === 'consumable')?.count).toBe(0)
 })
 
 test('item recipe facets follow effective jobs and item results use two columns', () => {
@@ -70,23 +69,15 @@ test('item recipe facets follow effective jobs and item results use two columns'
   expect(filter_content_rows(items, 'FLOUR', null, null, new Set(['flour'])).map(({ id }) => id)).toEqual(['flour'])
 })
 
-test('item gatherable facets derive profession groups from world resources', () => {
-  const items = [row('wheat', 'Wheat', 'resource', 1), row('aloe_vera', 'Aloe', 'resource', 10)]
-  const worlds: SeedEntityRow[] = [
-    Object.freeze({
-      id: 'nauvis',
-      label: 'Nauvis',
-      path: Object.freeze([0]),
-      value: Object.freeze({
-        world: 'nauvis',
-        resources: Object.freeze([{ item_type: 'wheat' }, { item_type: 'aloe_vera' }]),
-      }),
-    }),
-  ]
+test('item gatherable facets derive all profession resources from the immutable catalog', () => {
+  const items = gatherable_catalog.map(({ item_type, tier }) =>
+    row(item_type, item_type, 'resource', tier_unlock_level(tier))
+  )
 
-  expect(item_gatherable_job_rows(items, worlds)).toEqual([
-    { job: 'FARMER', count: 1, item_types: ['wheat'] },
-    { job: 'HERBALIST', count: 1, item_types: ['aloe_vera'] },
+  expect(item_gatherable_job_rows(items).map(({ job, count }) => ({ job, count }))).toEqual([
+    { job: 'FARMER', count: 11 },
+    { job: 'HERBALIST', count: 11 },
+    { job: 'MINER', count: 11 },
   ])
 })
 
@@ -136,16 +127,56 @@ test('item mob-resource facets derive family ownership from authored loot', () =
       item_types: ['fuwa_wool', 'fuwa_hide', 'nifuwa_wool', 'nifuwa_hide', 'fukuo_tidal_horn'],
     },
   ])
-  expect([...item_types_for_filter('mob-family:fuwa', [], [], families)!]).toEqual([
-    'fuwa_wool',
-    'fuwa_hide',
-    'nifuwa_wool',
-    'nifuwa_hide',
-    'fukuo_tidal_horn',
-  ])
+  expect([
+    ...item_types_for_filter(
+      'mob-family:fuwa',
+      families.map(({ family, count, item_types }) => ({ kind: 'mob-family', id: family, count, item_types }))
+    )!,
+  ]).toEqual(['fuwa_wool', 'fuwa_hide', 'nifuwa_wool', 'nifuwa_hide', 'fukuo_tidal_horn'])
 })
 
-test('recipe item filters derive resource availability by world and mob family', () => {
+test('resource facets are disjoint across raw, gatherable, intermediary, and pet-food acquisition', () => {
+  const items = [
+    row('wheat', 'Wheat', 'resource', 1),
+    row('wheat_flour', 'Wheat Flour', 'resource', 1),
+    row('fuwa_wool', 'Fuwa Wool', 'resource', 9),
+    row('gilded_pet_food', 'Gilded Pet Food', 'resource', 1),
+    row('sword', 'Sword', 'sword', 10),
+  ]
+  const recipes: SeedEntityRow[] = [
+    Object.freeze({
+      id: 'wheat_flour',
+      label: 'Wheat Flour',
+      path: Object.freeze([0]),
+      value: Object.freeze({ output_type: 'wheat_flour', inputs: Object.freeze({ wheat: 2 }) }),
+    }),
+    Object.freeze({
+      id: 'gilded_pet_food',
+      label: 'Gilded Pet Food',
+      path: Object.freeze([1]),
+      value: Object.freeze({
+        output_type: 'gilded_pet_food',
+        inputs: Object.freeze({ golden_wheat: 1, golden_mushroom: 1, infinity_quartz: 1 }),
+      }),
+    }),
+  ]
+  const resources = item_resource_kind_rows(items, recipes)
+
+  expect(resources).toEqual([
+    { kind: 'raw', count: 1, item_types: ['fuwa_wool'] },
+    { kind: 'gatherable', count: 1, item_types: ['wheat'] },
+    { kind: 'intermediary', count: 1, item_types: ['wheat_flour'] },
+    { kind: 'pet_food', count: 1, item_types: ['gilded_pet_food'] },
+  ])
+  expect([
+    ...item_types_for_filter(
+      'resource:intermediary',
+      resources.map(({ kind, count, item_types }) => ({ kind: 'resource', id: kind, count, item_types }))
+    )!,
+  ]).toEqual(['wheat_flour'])
+})
+
+test('item filters share category, resource, craft, gather, and mob-family membership', () => {
   const items = [
     row('wheat', 'Wheat', 'resource', 1),
     row('golden_wheat', 'Golden Wheat', 'resource', 1),
@@ -181,22 +212,50 @@ test('recipe item filters derive resource availability by world and mob family',
       }),
     }),
   ]
+  const recipes: SeedEntityRow[] = [
+    Object.freeze({
+      id: 'foreign_ore',
+      label: 'Foreign Ore',
+      path: Object.freeze([0]),
+      value: Object.freeze({ output_type: 'foreign_ore', job: 'MINER', inputs: Object.freeze({ wheat: 2 }) }),
+    }),
+    Object.freeze({
+      id: 'sword',
+      label: 'Sword',
+      path: Object.freeze([1]),
+      value: Object.freeze({ output_type: 'sword', inputs: Object.freeze({ foreign_ore: 2 }) }),
+    }),
+  ]
 
-  expect(item_reference_filter_rows(items, mobs, worlds)).toEqual([
-    { kind: 'category', id: 'sword', count: 1, item_types: ['sword'] },
-    {
-      kind: 'category',
-      id: 'resource',
-      count: 5,
-      item_types: ['wheat', 'golden_wheat', 'ant_chitin', 'boss_eye', 'foreign_ore'],
-    },
-    { kind: 'world', id: 'nauvis', count: 4, item_types: ['wheat', 'golden_wheat', 'ant_chitin', 'boss_eye'] },
-    { kind: 'family', id: 'ant', count: 1, item_types: ['ant_chitin'] },
-    { kind: 'family', id: 'boss', count: 1, item_types: ['boss_eye'] },
+  const filters = item_filter_rows(items, recipes, mobs, worlds).filter(({ count }) => count > 0)
+  expect(filters.map(({ kind }) => kind)).toEqual([
+    'category',
+    'resource',
+    'resource',
+    'resource',
+    'craft',
+    'craft',
+    'gather',
+    'mob-family',
+    'mob-family',
   ])
+  expect(filters).toContainEqual({ kind: 'category', id: 'sword', count: 1, item_types: ['sword'] })
+  expect(filters).toContainEqual({
+    kind: 'resource',
+    id: 'raw',
+    count: 3,
+    item_types: ['golden_wheat', 'ant_chitin', 'boss_eye'],
+  })
+  expect(filters).toContainEqual({ kind: 'resource', id: 'gatherable', count: 1, item_types: ['wheat'] })
+  expect(filters).toContainEqual({ kind: 'resource', id: 'intermediary', count: 1, item_types: ['foreign_ore'] })
+  expect(filters).toContainEqual({ kind: 'craft', id: 'MINER', count: 1, item_types: ['foreign_ore'] })
+  expect(filters).toContainEqual({ kind: 'craft', id: 'FORGER', count: 1, item_types: ['sword'] })
+  expect(filters).toContainEqual({ kind: 'gather', id: 'FARMER', count: 1, item_types: ['wheat'] })
+  expect(filters).toContainEqual({ kind: 'mob-family', id: 'ant', count: 1, item_types: ['ant_chitin'] })
+  expect(filters).toContainEqual({ kind: 'mob-family', id: 'boss', count: 1, item_types: ['boss_eye'] })
 })
 
-test('mob facets derive world biomes, families, elements, and protector professions', () => {
+test('protector mobs appear only in family and protector facets', () => {
   const mobs: SeedEntityRow[] = [
     Object.freeze({
       id: 'ant',
@@ -248,15 +307,14 @@ test('mob facets derive world biomes, families, elements, and protector professi
   ]
 
   expect(mob_filter_rows(mobs, worlds)).toEqual([
-    { kind: 'world', id: 'nauvis', count: 3, mob_types: ['ant', 'ant__samurai', 'protector_wheat_bricheton'] },
+    { kind: 'world', id: 'nauvis', count: 2, mob_types: ['ant', 'ant__samurai'] },
     {
       kind: 'biome',
       id: 'nauvis:plains',
       parent: 'nauvis',
-      count: 3,
-      mob_types: ['ant', 'ant__samurai', 'protector_wheat_bricheton'],
+      count: 2,
+      mob_types: ['ant', 'ant__samurai'],
     },
-    { kind: 'biome', id: 'nauvis:forest', parent: 'nauvis', count: 1, mob_types: ['protector_wheat_bricheton'] },
     { kind: 'family', id: 'ant', count: 2, mob_types: ['ant', 'ant__samurai'] },
     {
       kind: 'family',
@@ -264,24 +322,47 @@ test('mob facets derive world biomes, families, elements, and protector professi
       count: 2,
       mob_types: ['protector_wheat_bricheton', 'protector_obsidianite'],
     },
-    {
-      kind: 'element',
-      id: 'earth',
-      count: 2,
-      mob_types: ['protector_wheat_bricheton', 'protector_obsidianite'],
-    },
     { kind: 'element', id: 'fire', count: 2, mob_types: ['ant', 'ant__samurai'] },
     { kind: 'protector', id: 'FARMER', count: 1, mob_types: ['protector_wheat_bricheton'] },
     { kind: 'protector', id: 'MINER', count: 1, mob_types: ['protector_obsidianite'] },
   ])
+})
 
-  expect(mob_types_for_protector_visibility(mobs, null, true)).toEqual(new Set(['ant', 'ant__samurai']))
-  expect(mob_types_for_protector_visibility(mobs, new Set(['ant', 'protector_wheat_bricheton']), true)).toEqual(
-    new Set(['ant'])
-  )
-  expect(mob_types_for_protector_visibility(mobs, new Set(['protector_wheat_bricheton']), false)).toEqual(
-    new Set(['protector_wheat_bricheton'])
-  )
+test('city facets derive only explicit city spawn membership', () => {
+  const mobs: SeedEntityRow[] = [
+    Object.freeze({
+      id: 'ant',
+      label: 'Ant',
+      path: Object.freeze([0]),
+      value: Object.freeze({ mob_type: 'ant', family: 'ant', element: 'fire' }),
+    }),
+    Object.freeze({
+      id: 'city_boss',
+      label: 'City Boss',
+      path: Object.freeze([1]),
+      value: Object.freeze({ mob_type: 'city_boss', family: 'boss', element: 'water', role: 'boss' }),
+    }),
+  ]
+  const worlds: SeedEntityRow[] = [
+    Object.freeze({
+      id: 'nauvis',
+      label: 'Nauvis',
+      path: Object.freeze([0]),
+      value: Object.freeze({
+        world: 'nauvis',
+        terrain: Object.freeze({ biomes: Object.freeze([{ name: 'plains' }]) }),
+        mobs: Object.freeze([
+          { mob_type: 'ant', biomes: Object.freeze(['plains']), cities: Object.freeze(['thebes']) },
+        ]),
+        cities: Object.freeze([{ city: 'thebes', dungeon: 'gilded_lorito' }]),
+      }),
+    }),
+  ]
+  expect(mob_filter_rows(mobs, worlds).slice(0, 3)).toEqual([
+    { kind: 'world', id: 'nauvis', count: 1, mob_types: ['ant'] },
+    { kind: 'biome', id: 'nauvis:plains', parent: 'nauvis', count: 1, mob_types: ['ant'] },
+    { kind: 'city', id: 'nauvis:thebes', parent: 'nauvis', count: 1, mob_types: ['ant'] },
+  ])
 })
 
 test('mobs order by level-band midpoint then name', () => {

@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/client.ts",
     "./auth": "./src/auth.ts",
+    "./operator-auth": "./src/operator_auth.ts",
     "./doors": "./src/doors.gen.ts",
     "./seed": "./src/seed.ts",
     "./seed-admin": "./src/seed_admin.ts",
@@ -23,12 +24,13 @@
     "./item-snapshot": "./src/item_snapshot.ts",
     "./balance": "./src/balance.ts",
     "./gas-budget": "./src/gas_budget.ts",
+    "./transaction-error": "./src/transaction_error.ts",
     "./marketplace-admin": "./src/marketplace_admin.ts",
     "./marketplace": "./src/marketplace.ts",
     "./stacks": "./src/stacks.ts",
     "./admin-overview": "./src/admin_overview.ts",
     "./deployment-admin": "./src/deployment_admin.ts",
-    "./shop": "./src/shop.ts",
+    "./distribution": "./src/distribution.ts",
     "./sui-transfer": "./src/sui_transfer.ts",
     "./seed-ids": "./src/seed_ids.ts"
   },
@@ -40,13 +42,14 @@
   "dependencies": {
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
-    "@mysten/enoki": "^1.2.3",
-    "@mysten/kiosk": "1.4.4",
-    "@mysten/sui": "2.26.2",
-    "@mysten/wallet-standard": "^0.21.5"
+    "@mysten/enoki": "^1.2.20",
+    "@mysten/kiosk": "1.4.8",
+    "@mysten/sui": "2.29.0",
+    "@mysten/wallet-standard": "^0.21.22",
+    "@mysten/zksend": "1.2.23"
   },
   "devDependencies": {
     "typescript": "~6.0.3",
-    "@types/bun": "latest"
+    "@types/bun": "^1.4.0"
   }
 }

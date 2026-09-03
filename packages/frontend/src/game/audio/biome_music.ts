@@ -22,6 +22,7 @@ const AUTHORED_TRACKS: Readonly<Record<string, (typeof MUSIC_TRACKS)[number]>> =
   'nauvis:highlands': 'taiga',
   'nauvis:desert': 'desert',
   'nauvis:ocean': 'swamp',
+  'nauvis:city:thebes': 'desert',
   'yakutia:taiga': 'taiga',
   'yakutia:black_ice': 'glacier',
   'yakutia:ice_peaks': 'arctic',

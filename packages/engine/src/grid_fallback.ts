@@ -126,6 +126,7 @@ export const create_grid_fallback = (
       quality = next
     },
     set_time_of_day: () => {},
+    set_clouds_visible: () => {},
     set_flatten_amount: () =>
       resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active })),
     set_fight_board: (board) => {

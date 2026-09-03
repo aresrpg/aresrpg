@@ -54,12 +54,12 @@ export const mob_picker_facets = (
         first_kind.add(row.kind)
         return Object.freeze({
           id: picker_facet_id(row),
-          label: titleize(row.kind === 'biome' ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
+          label: titleize(row.parent ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
           ...(first
             ? {
                 section:
                   row.kind === 'world'
-                    ? 'Worlds & biomes'
+                    ? 'Worlds, biomes & cities'
                     : row.kind === 'family'
                       ? 'Families'
                       : row.kind === 'element'

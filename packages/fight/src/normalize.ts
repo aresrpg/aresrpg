@@ -192,6 +192,11 @@ const normalize_zone = (input: unknown): BoardZone => {
   }
 }
 
+const nullable_string = (value: unknown): string | null =>
+  value === null || value === undefined ? null : String(value)
+const nullable_bigint = (value: unknown, label: string): bigint | null =>
+  value === null || value === undefined ? null : as_bigint(value, label)
+
 export const normalize_contract = (input: unknown): FightContract | null => {
   const contract = input === null ? null : raw_record(input)
   if (contract === null) return null
@@ -212,10 +217,9 @@ export const normalize_contract = (input: unknown): FightContract | null => {
     turn_ptr: as_bigint(contract.turn_ptr ?? 0, 'fight.turn_ptr'),
     round: as_bigint(contract.round ?? 0, 'fight.round'),
     ended: Boolean(contract.ended),
-    winner:
-      contract.winner === null || contract.winner === undefined ? null : as_bigint(contract.winner, 'fight.winner'),
-    dungeon:
-      contract.dungeon === null || contract.dungeon === undefined ? null : as_bigint(contract.dungeon, 'fight.dungeon'),
+    winner: nullable_bigint(contract.winner, 'fight.winner'),
+    dungeon: nullable_string(contract.dungeon),
+    dungeon_room: nullable_bigint(contract.dungeon_room, 'fight.dungeon_room'),
     managed: Boolean(contract.managed),
     wagered: Boolean(contract.wagered),
     drops_rolled: Boolean(contract.drops_rolled),

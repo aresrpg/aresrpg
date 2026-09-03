@@ -3,6 +3,7 @@
 // Package publication and live-version administration. Compilation stays at the local tooling
 // boundary; this module owns the resulting Sui transactions and receipt projection.
 
+import { marketplace_royalty_bps } from '@aresrpg/immutable'
 import { Transaction } from '@mysten/sui/transactions'
 import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
@@ -11,7 +12,7 @@ import type { Sdk } from './client.ts'
 import { ROYALTY_FLOOR_MIST } from './marketplace.ts'
 
 export type ContractArtifact = Readonly<{
-  package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_seed' | 'aresrpg'
+  package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_combat' | 'aresrpg_seed' | 'aresrpg'
   digest: readonly number[]
   modules: readonly string[]
   dependencies: readonly string[]
@@ -35,6 +36,7 @@ export type GameDeployment = Readonly<{
   friend_registry?: SharedDeploymentPin
 }>
 export type MathDeployment = Readonly<{ package: string; upgrade_cap: string }>
+export type CombatDeployment = Readonly<{ package: string; upgrade_cap: string }>
 /** The one application-authority package: every AresRPG package imports this AdminCap type. */
 export type ControlDeployment = Readonly<{
   package: string
@@ -176,7 +178,7 @@ export const create_deployment_bootstrap_transaction = async ({
   ): Promise<void> => {
     const policy = sdk.transfer_policy_transaction(transaction, kiosk_package)
     await policy.create({ type, publisher, skipCheck: true })
-    policy.addRoyaltyRule(1000, Number(ROYALTY_FLOOR_MIST))
+    policy.addRoyaltyRule(marketplace_royalty_bps, Number(ROYALTY_FLOOR_MIST))
     policy.addPersonalKioskRule()
     policy.addLockRule()
     if (!policy.policy || !policy.policyCap) throw new Error(`Transfer policy for ${type} was not created`)
@@ -205,6 +207,12 @@ export const project_package_id = (receipt: DeploymentReceipt): string => {
 }
 
 export const project_math_deployment = (receipt: DeploymentReceipt): MathDeployment =>
+  Object.freeze({
+    package: project_package_id(receipt),
+    upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
+  })
+
+export const project_combat_deployment = (receipt: DeploymentReceipt): CombatDeployment =>
   Object.freeze({
     package: project_package_id(receipt),
     upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),

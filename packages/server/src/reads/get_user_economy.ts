@@ -3,7 +3,7 @@
 // The load snapshot's economy slice, one home: the user's kiosks, pending grind-safe claims,
 // giftcard vouchers, ACTIVE listings, and pending exclusive offers (held PurchaseCaps).
 
-import type { ClaimRow, ListingRow } from '@aresrpg/protocol'
+import type { ClaimRow, GiftcardRow, ListingRow } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
@@ -31,14 +31,17 @@ export async function get_claims(graph: Graph, { address }: { address: string })
     })
 }
 
-export async function get_giftcards(graph: Graph, { address }: { address: string }) {
+export async function get_giftcards(graph: Graph, { address }: { address: string }): Promise<GiftcardRow[]> {
   const rows = await graph.read(
     `MATCH (:User {address: $address})-[:HOLDS_VOUCHER]->(g:Giftcard) RETURN g AS giftcard`,
     { address }
   )
   return rows
     .filter(({ giftcard }) => giftcard)
-    .map(({ giftcard }) => (giftcard as Node)!.properties as { id: string; template: string; amount: number })
+    .map(({ giftcard }) => {
+      const { id, template, amount } = (giftcard as Node)!.properties
+      return { id: String(id), template: String(template), amount: Number(amount) }
+    })
 }
 
 /** The user's own ACTIVE listings — whatever price tag hangs off their kiosks. */

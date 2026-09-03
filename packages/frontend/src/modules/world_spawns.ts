@@ -5,13 +5,9 @@
 // HUD's client-space markers. The reducer stays in world.ts; nothing here writes.
 
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
-import {
-  live_mob_groups,
-  live_resource_packs,
-  type DungeonPortalRow,
-  type MobGroupRow,
-  type ResourcePackRow,
-} from '@aresrpg/protocol'
+import { live_mob_groups, live_resource_packs, type MobGroupRow, type ResourcePackRow } from '@aresrpg/protocol'
+
+import { content_catalog } from '../content/catalog.ts'
 
 import type { WorldState } from './world.ts'
 
@@ -57,13 +53,15 @@ export type SpawnMarker = Readonly<{
 export type DungeonPortalMarker = Readonly<{
   id: string
   world: string
+  city: string
+  dungeon: string
   x: number
   z: number
   zx: number
   zz: number
 }>
 
-const EMPTY_POPULATION = Object.freeze({ mobs: Object.freeze([]), resources: Object.freeze([]), portal: null })
+const EMPTY_POPULATION = Object.freeze({ mobs: Object.freeze([]), resources: Object.freeze([]) })
 
 /** THE LIVE POPULATION of one tracked zone: the seed's draw crossed with the zone's own
  *  consumption. Every surface that shows a zone's contents goes through here — the HUD markers,
@@ -76,7 +74,6 @@ export const live_spawns = (
 ): Readonly<{
   mobs: readonly MobGroupRow[]
   resources: readonly ResourcePackRow[]
-  portal: DungeonPortalRow | null
 }> => {
   const population = world.spawns[key]
   const zone = world.zones[key]
@@ -88,7 +85,6 @@ export const live_spawns = (
       ({ index }) => !(mob_group_id(key, zone.seed, index) in world.pending_engages)
     ),
     resources: live_resource_packs(population.resources, zone),
-    portal: population.portal,
   })
 }
 
@@ -128,24 +124,18 @@ export const spawn_markers = (
       })
     : Object.freeze([])
 
-export const dungeon_portal_markers = (
-  world: WorldState,
-  selected_world: string | null
-): readonly DungeonPortalMarker[] =>
+export const dungeon_portal_markers = (selected_world: string | null): readonly DungeonPortalMarker[] =>
   selected_world
-    ? Object.entries(world.spawns).flatMap(([key, population]) => {
-        const seed = world.zones[key]?.seed
-        if (!key.startsWith(`${selected_world}:`) || !population.portal || !seed) return []
-        const [, zx = '0', zz = '0'] = key.split(':')
-        return [
-          Object.freeze({
-            id: `dungeon:${key}:s${seed}`,
-            world: selected_world,
-            x: chain_to_client_coordinate(population.portal.x),
-            z: chain_to_client_coordinate(population.portal.z),
-            zx: Number(zx),
-            zz: Number(zz),
-          }),
-        ]
-      })
+    ? (content_catalog.world(selected_world)?.cities ?? []).map(({ city, dungeon, x, z }) =>
+        Object.freeze({
+          id: `dungeon:${selected_world}:${city}:${dungeon}`,
+          world: selected_world,
+          city,
+          dungeon,
+          x: chain_to_client_coordinate(x),
+          z: chain_to_client_coordinate(z),
+          zx: Math.floor(x / 512),
+          zz: Math.floor(z / 512),
+        })
+      )
     : Object.freeze([])

@@ -5,16 +5,6 @@ import { describe, expect, test } from 'bun:test'
 import { DEFAULT_ADMIN_ADDRESS, type CharacterRow } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
-import {
-  can_reuse_core_artifact,
-  dependency_artifact_changed,
-  deployment_can_publish,
-  deployment_compile_target,
-  game_upgrade_step,
-  republish_needs_seed_cleanup,
-} from '../../src/admin/admin_deployment.ts'
-import { RPC_PROPAGATION_MS, wait_for_rpc_propagation } from '../../src/rpc_propagation.ts'
-import { settle_seed_cleanup } from '../../src/modules/admin.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
@@ -28,6 +18,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
   Object.freeze({
     address,
     wallet_name: 'Google',
+    identity: 'zklogin',
     sign_personal_message: async () => ({ bytes: '', signature: '' }),
     read_sui_balance: async () => 0n,
     gas_spent_24h: () => 0n,
@@ -40,6 +31,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     kolizeum: {} as never,
     friends: {} as never,
     party: {} as never,
+    mastery: {} as never,
     character: {} as never,
     read_character_checkpoint: async () => null,
     read_item: async () => ({}) as never,
@@ -49,13 +41,20 @@ const auth_session = (address = '0xowner'): AuthSession =>
     trade: () => ({}) as never,
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
-    send_sui: async () => ({ digest: null }),
-    buy_shop_item: async () => ({ digest: '', items: [] }),
-    claim_airdrop: async () => ({ digest: '' }),
+    send_sui: async () => ({ digest: 'digest' }),
+    claim_airdrop: async () => ({
+      digest: '',
+      giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
+    }),
+    claim_giftcard_link: async () => ({
+      digest: '',
+      giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
+    }),
+    redeem_giftcard: async () => ({ digest: '' }),
     create_seed_admin: async () => {
       throw new Error('unused in reducer tests')
     },
-    authorize_temp_admin: async () => ({ digest: '', admin_cap: {} as never }),
+    authorize_temp_admin: async () => ({ digest: '' }),
     publish_contract: async () => ({ receipt: {}, objects: [] }),
     upgrade_contract: async () => ({ receipt: {} }),
     read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),
@@ -97,104 +96,68 @@ const character = (id: string): CharacterRow => ({
 })
 
 describe('app state', () => {
-  test('republish skips seed-session cleanup until a Registry and central authority exist', () => {
-    expect(republish_needs_seed_cleanup(null)).toBeFalse()
-    expect(
-      republish_needs_seed_cleanup({
-        control_package: '0xcontrol',
-        admin_cap: '0xadmin',
-        seed_package: '0xseed',
-        content_root: { id: null, shared_version: null },
-      } as never)
-    ).toBeFalse()
-    expect(
-      republish_needs_seed_cleanup({
-        control_package: '0xcontrol',
-        admin_cap: '0xadmin',
-        seed_package: '0xseed',
-        content_root: { id: '0xroot', shared_version: '1' },
-      } as never)
-    ).toBeTrue()
+  test('logout preserves a scanned gift intent without retaining either wallet', () => {
+    const ready = reduce_app_state(create_state(), { type: 'distribution/gift_link_ready' })
+    const connected = reduce_app_state(ready, { type: 'distribution/holder_connected', session: auth_session() })
+    const disconnected = reduce_app_state(connected, { type: 'auth/disconnected' })
+
+    expect(disconnected.distribution).toMatchObject({ gift_link_ready: true, holder: null })
   })
 
-  test('package publication compiles math before any consumer of its published ABI', () => {
-    expect(deployment_compile_target(null)).toBe('math')
-    expect(
-      deployment_compile_target({
-        math_package: '0xmath',
-        math_upgrade_cap: '0xmathcap',
-        control_package: '0xcontrol',
-        control_upgrade_cap: '0xcontrolcap',
-        seed_package: '0xseed',
-        seed_upgrade_cap: '0xseedcap',
-      } as never)
-    ).toBe('math')
-  })
-
-  test('a retained dependency without the matching artifact fingerprint must publish fresh', () => {
-    const artifact = { package_name: 'aresrpg_math', digest: [0x01, 0xab], modules: [], dependencies: [] } as const
-    expect(dependency_artifact_changed(null, artifact)).toBeTrue()
-    expect(dependency_artifact_changed('deadbeef', artifact)).toBeTrue()
-    expect(dependency_artifact_changed('01ab', artifact)).toBeFalse()
-  })
-
-  test('a fresh dependency publication invalidates a previously compiled core artifact', () => {
-    const artifact = { package_name: 'aresrpg', digest: [], modules: [], dependencies: [] } as const
-    expect(can_reuse_core_artifact(artifact, false)).toBeTrue()
-    expect(can_reuse_core_artifact(artifact, true)).toBeFalse()
-  })
-
-  test('an upgraded artifact with a stale live Version resumes at activation', () => {
-    expect(game_upgrade_step({ artifact_changed: true, current_version: 7, source_version: 7 })).toBe('upgrade')
-    expect(game_upgrade_step({ artifact_changed: false, current_version: 7, source_version: 8 })).toBe('activate')
-    expect(game_upgrade_step({ artifact_changed: false, current_version: 8, source_version: 8 })).toBe('unchanged')
-  })
-
-  test('a game package published before bootstrap can resume without its in-memory artifact', () => {
-    const base = create_state()
-    const resumable = {
-      ...base,
-      admin: {
-        ...base.admin,
-        deployment: {
-          ...base.admin.deployment,
-          status: 'ready' as const,
-          artifact: null,
-          pins: {
-            package: '0xpackage',
-            math_package: null,
-            upgrade_cap: null,
-            math_upgrade_cap: null,
-            publisher: null,
-            version: { id: null, shared_version: null },
-            loot_registry: { id: null, shared_version: null },
-          },
-        },
+  test('holder eligibility and recoverable giftcards remain separate from the game wallet', () => {
+    const holder = auth_session('0xholder')
+    const card = { id: '0xgift', template: '0xtemplate', amount: 1 }
+    const connected = reduce_app_state(create_state(), { type: 'distribution/holder_connected', session: holder })
+    const eligible = reduce_app_state(connected, {
+      type: 'server/packet',
+      packet: {
+        type: 'packet/airdrop_eligibility',
+        address: holder.address,
+        airdrops: [{ drop_id: 'vaporeon', eligible: true, eligible_count: 22 }],
       },
-    }
-
-    expect(deployment_can_publish(resumable.admin.deployment)).toBeTrue()
-    expect(reduce_app_state(resumable, { type: 'admin/contracts_publish' }).admin.deployment).toMatchObject({
-      status: 'publishing',
-      operation: 'publish',
     })
+    const received = reduce_app_state(eligible, { type: 'giftcard/received', giftcard: card })
+    const redeemed = reduce_app_state(received, { type: 'giftcard/redeemed', giftcard: card.id })
+
+    expect(eligible.distribution.holder_airdrops).toEqual([{ drop_id: 'vaporeon', eligible: true, eligible_count: 22 }])
+    expect(received.session.giftcards).toEqual([card])
+    expect(redeemed.session.giftcards).toEqual([])
   })
 
-  test('receipt-derived shop facts survive routed page changes without a transaction reducer', () => {
+  test('the initial mastery snapshot stays in its own address-wide reducer', () => {
+    const loaded = reduce_app_state(create_state(), {
+      type: 'server/packet',
+      packet: {
+        type: 'packet/mastery',
+        mastery: {
+          id: '0xm',
+          owner: '0xowner',
+          points: '4',
+          last_completed_epoch: '8',
+          quest_epoch: '9',
+          quest_started_ms: '100',
+          quest_world: 'nauvis',
+          quest_dungeon: '0xd',
+          quest_reward: 1,
+          quest_completed: false,
+        },
+        offers: [{ id: '0xo', item_type: 'box', template: '0xt', cost: '3', enabled: true }],
+      },
+    })
+    expect(loaded.mastery.row?.points).toBe('4')
+    expect(loaded.mastery.offers[0]?.cost).toBe('3')
+  })
+
+  test('receipt-derived airdrop facts survive routed page changes', () => {
     const loaded = reduce_app_state(connect(), {
       type: 'server/packet',
       packet: {
-        type: 'packet/shop_state',
-        sales: [{ item_type: 'pet_lootbox', price: '1000000000', supply: '8', infinite: false, enabled: true }],
+        type: 'packet/airdrop_state',
         airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
       },
     })
-    const bought = reduce_app_state(loaded, { type: 'shop/purchased', item_type: 'pet_lootbox', quantity: 2 })
-    const claimed = reduce_app_state(bought, { type: 'airdrop/claimed', drop_id: 'founders' })
-    expect(claimed.session.shop).toEqual({
-      sales: [{ item_type: 'pet_lootbox', price: '1000000000', supply: '6', infinite: false, enabled: true }],
-      airdrops: [{ drop_id: 'founders', eligible: false, eligible_count: 1 }],
-    })
+    const claimed = reduce_app_state(loaded, { type: 'airdrop/claimed', drop_id: 'founders' })
+    expect(claimed.session.airdrops).toEqual([{ drop_id: 'founders', eligible: false, eligible_count: 1 }])
   })
 
   test('login never guesses an empty roster before the server snapshot', () => {
@@ -240,7 +203,7 @@ describe('app state', () => {
   test('server facts and display settings fold through the same reducer', () => {
     const online = reduce_app_state(create_state(), {
       type: 'server/packet',
-      packet: { type: 'packet/server_info', online: 42, indexing_lag: 7 },
+      packet: { type: 'packet/server_info', online: 42, indexing_lag: 7, current_epoch: '9' },
     })
     expect(online.session.online).toBe(42)
     expect(online.session.indexing_lag).toBe(7)
@@ -259,7 +222,7 @@ describe('app state', () => {
     const measured = reduce_app_state(admitted, { type: 'link/latency', latency_ms: 42 })
     const indexed = reduce_app_state(measured, {
       type: 'server/packet',
-      packet: { type: 'packet/server_info', online: 42, indexing_lag: 12 },
+      packet: { type: 'packet/server_info', online: 42, indexing_lag: 12, current_epoch: '9' },
     })
     const reconnecting = reduce_app_state(indexed, { type: 'link/failed', error: 'Connection lost' })
 
@@ -288,56 +251,7 @@ describe('app state', () => {
     expect(rejected.session.auth_error).toBe('Session expired')
     expect(rejected.navigation).toEqual({ page: 'world', pathname: '/', dialog: null, guest_spectating: false })
   })
-
-  test('admin opens only for the publisher wallet, behind an explicit separate signer', () => {
-    // only the publisher wallet can open admin and only the next inspected batch can execute
-    {
-      const outsider = reduce_app_state(create_state(), { type: 'page/open', page: 'admin' })
-      expect(outsider.navigation.page).toBe('world')
-
-      const authenticated = connect(DEFAULT_ADMIN_ADDRESS)
-      const opened = reduce_app_state(authenticated, { type: 'page/open', page: 'admin' })
-      const loading = reduce_app_state(opened, { type: 'admin/refresh' })
-      const inspected = reduce_app_state(loading, {
-        type: 'admin/refreshed',
-        snapshot: {
-          batches: [
-            { id: 'items:0', phase: 'items', state: 'ready', targets: 10, missing_dependencies: [] },
-            { id: 'items:1', phase: 'items', state: 'pending', targets: 10, missing_dependencies: [] },
-          ],
-        },
-      })
-      const compared = reduce_app_state(inspected, {
-        type: 'admin/changes_checked',
-        changes: {
-          new_count: 10,
-          changed: [],
-          board_removals: [],
-          removed: [],
-          fixed: [],
-          unchanged: 0,
-          errors: [],
-        },
-      })
-      const ready = reduce_app_state(compared, { type: 'admin/frozen_discovered', frozen: false })
-
-      expect(opened.navigation.page).toBe('admin')
-      expect(reduce_app_state(ready, { type: 'admin/execute', batch: 'items:1' })).toBe(ready)
-      const executing = reduce_app_state(ready, { type: 'admin/execute', batch: 'items:0' })
-      expect(executing.admin.operation).toEqual({
-        type: 'batch',
-        batch: 'items:0',
-      })
-      expect(
-        reduce_app_state(executing, {
-          type: 'admin/batch_succeeded',
-          batch: 'items:1',
-          snapshot: { batches: [] },
-        })
-      ).toBe(executing)
-    }
-
-    // the separate admin signer requires an explicit provider and account choice
+  test('the separate admin signer requires an explicit provider and account choice', () => {
     {
       const available = reduce_app_state(create_state(), { type: 'admin/wallets_loaded', wallets: ['Sui Wallet'] })
       const authorizing = reduce_app_state(available, { type: 'admin/wallet_connect', wallet_name: 'Sui Wallet' })
@@ -366,195 +280,12 @@ describe('app state', () => {
     }
   })
 
-  test('deployment pins, contract maintenance, and every guarded operation hold their states', () => {
-    // deployment pins derive seed inputs without exposing editable object ids
-    {
-      const loading = reduce_app_state(create_state(), { type: 'admin/deployment_load' })
-      const loaded = reduce_app_state(loading, {
-        type: 'admin/deployment_loaded',
-        network: 'testnet',
-        token: 'token',
-        revision: 'revision',
-        pins: {
-          package: '0xpackage',
-          math_package: '0xmath',
-          upgrade_cap: '0xupgrade',
-          math_upgrade_cap: '0xmathupgrade',
-          publisher: '0xpublisher',
-          version: { id: '0xversion', shared_version: '1' },
-          loot_registry: { id: '0xloot', shared_version: '1' },
-        },
-      })
-
-      expect(loaded.admin.config).toEqual({
-        admin_cap: '',
-        content_root: '',
-        upgrade_caps: [
-          { cap: '0xmathupgrade', package: '0xmath' },
-          { cap: '0xupgrade', package: '0xpackage' },
-        ],
-      })
-      expect(loaded.admin.deployment.status).toBe('ready')
-    }
-
-    // contract maintenance has guarded upgrade and two-step republish states
-    {
-      const base = create_state()
-      const ready = {
-        ...base,
-        admin: {
-          ...base.admin,
-          snapshot: { batches: [], sealed: true },
-          cleanup: 'closed' as const,
-          deployment: {
-            ...base.admin.deployment,
-            status: 'ready' as const,
-            network: 'testnet' as const,
-            revision: 'one',
-            paused: false,
-            pins: {
-              package: '0xpackage',
-              math_package: '0xmath',
-              upgrade_cap: '0xupgrade',
-              math_upgrade_cap: '0xmathupgrade',
-              admin_cap: '0xadmin',
-              publisher: '0xpublisher',
-              version: { id: '0xversion', shared_version: '1' },
-              template_registry: { id: '0xtemplates', shared_version: '1' },
-              loot_registry: { id: '0xloot', shared_version: '1' },
-              item_policy: { id: '0xitempolicy', shared_version: '1' },
-              character_policy: { id: '0xcharacterpolicy', shared_version: '1' },
-              item_protected_policy: { id: '0xitemprotected', shared_version: '1' },
-              character_protected_policy: { id: '0xcharacterprotected', shared_version: '1' },
-            },
-          },
-        },
-      }
-      expect(reduce_app_state(ready, { type: 'admin/contracts_upgrade' }).admin.deployment.status).toBe('upgrading')
-
-      const armed = reduce_app_state(ready, { type: 'admin/republish_armed', armed: true })
-      const resetting = reduce_app_state(armed, { type: 'admin/contracts_republish' })
-      const republished = reduce_app_state(resetting, {
-        type: 'admin/contracts_republished',
-        revision: 'two',
-        pins: { ...ready.admin.deployment.pins!, package: null },
-      })
-      expect(resetting.admin.deployment.status).toBe('resetting')
-      expect(republished.admin.snapshot).toBeNull()
-      expect(republished.admin.cleanup).toBe('unknown')
-      expect(republished.admin.deployment.pins?.package).toBeNull()
-    }
-
-    // publish all is one guarded resumable operation
-    {
-      const inspected = {
-        ...create_state(),
-        admin: {
-          ...create_state().admin,
-          status: 'ready' as const,
-          changes: {
-            new_count: 2,
-            changed: [],
-            board_removals: [],
-            removed: [],
-            fixed: [],
-            unchanged: 0,
-            errors: [],
-          },
-          snapshot: {
-            sealed: false,
-            batches: [{ id: 'items:0', phase: 'items', state: 'ready' as const, targets: 2, missing_dependencies: [] }],
-          },
-        },
-      }
-      expect(reduce_app_state(inspected, { type: 'admin/publish_all' }).admin.operation).toEqual({ type: 'all' })
-      const invalid = {
-        ...inspected,
-        admin: { ...inspected.admin, changes: { ...inspected.admin.changes, errors: ['immutable identity changed'] } },
-      }
-      expect(reduce_app_state(invalid, { type: 'admin/publish_all' }).admin.operation).toBeNull()
-    }
-
-    // completed seed inspection exposes an explicit recoverable cleanup operation
-    {
-      const loading = reduce_app_state(create_state(), { type: 'admin/refresh' })
-      const progressing = reduce_app_state(loading, {
-        type: 'admin/progress',
-        progress: { phase: 'inspection', current: 4, total: 10, label: 'spells:3' },
-      })
-      const inspected = reduce_app_state(progressing, {
-        type: 'admin/refreshed',
-        snapshot: {
-          batches: [{ id: 'items:0', phase: 'items', state: 'complete', targets: 2, missing_dependencies: [] }],
-        },
-      })
-      expect(inspected.admin.status).toBe('loading')
-      expect(inspected.admin.progress).toEqual(progressing.admin.progress)
-      const compared = reduce_app_state(inspected, {
-        type: 'admin/changes_checked',
-        changes: {
-          new_count: 0,
-          changed: [],
-          board_removals: [],
-          removed: [],
-          fixed: [],
-          unchanged: 1,
-          errors: [],
-        },
-      })
-      expect(compared.admin.status).toBe('loading')
-      expect(compared.admin.progress).toEqual(progressing.admin.progress)
-      const finalized = reduce_app_state(compared, { type: 'admin/frozen_discovered', frozen: false })
-      const releasing = reduce_app_state(finalized, { type: 'admin/release' })
-      const released = reduce_app_state(releasing, { type: 'admin/released' })
-
-      expect(progressing.admin.progress).toMatchObject({ current: 4, total: 10, label: 'spells:3' })
-      expect(finalized.admin.status).toBe('ready')
-      expect(finalized.admin.progress).toBeNull()
-      expect(finalized.admin.cleanup).toBe('needed')
-      expect(releasing.admin.operation).toEqual({ type: 'release' })
-      expect(released.admin.cleanup).toBe('closed')
-    }
-
-    // deployment progress is retained as a bounded terminal log
-    {
-      const logged = Array.from({ length: 105 }, (_, index) => index).reduce(
-        (state, index) =>
-          reduce_app_state(state, {
-            type: 'admin/log',
-            tone: index === 104 ? 'success' : 'info',
-            message: `step ${index}`,
-          }),
-        create_state()
-      )
-
-      expect(logged.admin.log).toHaveLength(100)
-      expect(logged.admin.log[0]?.message).toBe('step 5')
-      expect(logged.admin.log.at(-1)).toMatchObject({ id: 105, tone: 'success', message: 'step 104' })
-    }
-  })
-
   test('correlated request errors do not become connection errors', () => {
     const state = reduce_app_state(create_state(), {
       type: 'server/packet',
       packet: { type: 'packet/error', id: 7, reason: 'character not found' },
     })
     expect(state.session.link_error).toBeNull()
-  })
-
-  test('package upgrades wait before the next RPC node must resolve the new package', async () => {
-    const waits: number[] = []
-    await wait_for_rpc_propagation(async (milliseconds) => void waits.push(milliseconds))
-    expect(waits).toEqual([RPC_PROPAGATION_MS])
-  })
-
-  test('automatic seed cleanup waits for the final write before draining its gas coin', async () => {
-    const order: string[] = []
-    await settle_seed_cleanup(
-      async () => void order.push('release'),
-      async () => void order.push('propagated')
-    )
-    expect(order).toEqual(['propagated', 'release'])
   })
 })
 

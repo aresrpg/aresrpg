@@ -8,17 +8,20 @@
 import { class_spell_shape_errors } from '@aresrpg/immutable'
 import { normalizeSuiObjectId } from '@mysten/sui/utils'
 
-import { owned_ref, receipt_digest, shared_ref, type OwnedRef, type Receipt } from './cache.ts'
+import { object_revision, owned_ref, receipt_digest, shared_ref, type OwnedRef, type Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
 import { create_freeze_forever_transaction, create_seed_plan, type SeedContent } from './seed.ts'
 import {
   seed_ledger_after,
+  seed_ledger_after_batch,
+  created_seed_row_keys,
   seed_sync_rows,
   seed_sync_view,
-  seed_update_transactions,
   type SeedLedger,
+  type SeedSyncRow,
   type SeedSyncView,
 } from './seed_sync.ts'
+import { seed_update_batches, type SeedUpdateBatch } from './seed_updates.ts'
 
 export type { SeedLedger, SeedSyncView } from './seed_sync.ts'
 
@@ -29,12 +32,18 @@ export type SeedApplyResult = Readonly<{
   view: SeedSyncView
 }>
 
+export type SeedApplyProgress = Readonly<{ digest: string; ledger: SeedLedger }>
+export type SeedApplyHooks = Readonly<{
+  before_execute: (written: readonly string[]) => Promise<void>
+  checkpoint: (progress: SeedApplyProgress) => Promise<void>
+}>
+
 export type SeedAdminConfig = Readonly<{
   /** the control package's one AdminCap — every content door writes through it */
   admin_cap: string
   /** the seed package's Registry root object */
   content_root: string
-  /** math, control, seed, core — verified and consumed only by the permanent freeze. */
+  /** math, control, combat, seed, core — verified and consumed only by the permanent freeze. */
   upgrade_caps?: readonly Readonly<{ cap: string; package: string }>[]
 }>
 
@@ -74,10 +83,10 @@ export type SeedAdminSession = Readonly<{
   read_frozen: () => Promise<boolean>
   /** compare the authored files against the last chain write — new / changed / removed / fixed */
   check_changes: (ledger: SeedLedger) => Promise<SeedSyncView>
-  /** rewrite every changed row on chain and return the fresh ledger to persist */
-  apply_changes: (ledger: SeedLedger) => Promise<SeedApplyResult>
+  /** Rewrite mutable rows, durably checkpointing each certified transaction before the next. */
+  apply_changes: (ledger: SeedLedger, hooks: SeedApplyHooks) => Promise<SeedApplyResult>
   /** the ledger entries covering rows the publish lane just created — persisted by the caller */
-  created_ledger: (ledger: SeedLedger) => Promise<SeedLedger>
+  created_ledger: (ledger: SeedLedger, batch: string) => Promise<SeedLedger>
   /** Every currently discoverable derived address; pins.json retains historical entries. */
   address_book: () => Promise<Readonly<Record<string, string>>>
   /** the endgame: permanently freezes EVERY content door — cold-key-only on chain, irreversible */
@@ -88,10 +97,29 @@ export type SeedAdminSession = Readonly<{
 const DEFAULT_MAX_TRANSACTION_BYTES = 131_072
 const DEFAULT_MAX_COMMANDS = 1_024
 const TRANSACTION_DATA_HEADROOM = 1_024
-const TARGET_CONVERGENCE_READS = 4
 // Current testnet corpus consumed ~36 SUI during the 2026-08-17 full publish proof. This is
 // working capital, not a gas budget: the release PTB returns whatever the seed signer did not use.
 export const SEED_SESSION_GAS = 50_000_000_000n
+
+export const apply_seed_update_batches = async (
+  batches: readonly SeedUpdateBatch[],
+  rows: readonly SeedSyncRow[],
+  ledger: SeedLedger,
+  execute: (batch: SeedUpdateBatch) => Promise<string>,
+  hooks: SeedApplyHooks,
+  revision: (id: string) => string | null = () => null
+): Promise<Readonly<{ digests: readonly string[]; ledger: SeedLedger }>> => {
+  const digests: string[] = []
+  let current = ledger
+  for (const batch of batches) {
+    await hooks.before_execute(batch.written)
+    const digest = await execute(batch)
+    current = seed_ledger_after_batch(rows, current, batch.written, revision)
+    await hooks.checkpoint(Object.freeze({ digest, ledger: current }))
+    digests.push(digest)
+  }
+  return Object.freeze({ digests: Object.freeze(digests), ledger: current })
+}
 
 const protocol_number = (value: string | null | undefined, fallback: number): number => {
   const parsed = Number(value)
@@ -143,15 +171,16 @@ export const verify_upgrade_cap_targets = async (
   sdk: Sdk,
   targets: readonly Readonly<{ cap: string; package: string }>[]
 ): Promise<readonly string[]> => {
-  if (targets.length !== 4) throw new Error('Permanent freeze requires math, control, seed, and core UpgradeCaps')
+  if (targets.length !== 5)
+    throw new Error('Permanent freeze requires math, control, combat, seed, and core UpgradeCaps')
   const normalized = targets.map(({ cap, package: package_id }) =>
     Object.freeze({ cap: normalizeSuiObjectId(cap), package: normalizeSuiObjectId(package_id) })
   )
   if (
-    new Set(normalized.map(({ cap }) => cap)).size !== 4 ||
-    new Set(normalized.map(({ package: id }) => id)).size !== 4
+    new Set(normalized.map(({ cap }) => cap)).size !== 5 ||
+    new Set(normalized.map(({ package: id }) => id)).size !== 5
   )
-    throw new Error('Permanent freeze requires four distinct UpgradeCaps and package lineages')
+    throw new Error('Permanent freeze requires five distinct UpgradeCaps and package lineages')
   const { objects } = await sdk.sui_client.core.getObjects({
     objectIds: normalized.map(({ cap }) => cap),
     include: { json: true },
@@ -192,8 +221,15 @@ export const create_seed_admin = async ({
     admin_cap: config.admin_cap,
     content_root: config.content_root,
   })
+  const absent = new Set<string>()
   const hydrate_ids = async (ids: readonly string[]): Promise<void> => {
-    await sdk.hydrate_unknown(ids)
+    const unchecked = [...new Set(ids)].filter((id) => !absent.has(id))
+    if (!unchecked.length) return
+    await sdk.hydrate_unknown(unchecked)
+    for (const id of unchecked) {
+      if (object_exists(sdk, id)) absent.delete(id)
+      else absent.add(id)
+    }
   }
   const context_ids = [config.admin_cap, config.content_root]
   await hydrate_ids(context_ids)
@@ -250,10 +286,10 @@ export const create_seed_admin = async ({
   }
 
   const refresh_after_write = async (batch_id: string, digest: string): Promise<SeedAdminSnapshot> => {
-    for (let read = 0; read < TARGET_CONVERGENCE_READS; read += 1) {
-      const snapshot = await refresh()
-      if (snapshot.batches.find(({ id }) => id === batch_id)?.state === 'complete') return snapshot
-    }
+    const targets = plan.batches.find(({ id }) => id === batch_id)?.target_ids ?? []
+    for (const id of targets) absent.delete(id)
+    const snapshot = await refresh()
+    if (snapshot.batches.find(({ id }) => id === batch_id)?.state === 'complete') return snapshot
     throw new Error(
       `Seed batch ${batch_id} published · ${digest}, but its derived target is not readable yet. ` +
         'Do not republish it; check seed status after the read node catches up.'
@@ -262,6 +298,7 @@ export const create_seed_admin = async ({
 
   const sync_rows = seed_sync_rows(sdk, content)
   const exists = (id: string): boolean => object_exists(sdk, id)
+  const revision = (id: string): string | null => object_revision(sdk.cache, id)
   const board_catalog = sync_rows.find(({ domain }) => domain === 'board')?.chain_id ?? null
   /** Chain truth for the endgame flag — read once per check, never polled: the flag only
    * matters to this admin page, and every write door re-asserts it on chain anyway. */
@@ -291,7 +328,7 @@ export const create_seed_admin = async ({
   const sync_addresses = Object.freeze([...new Set(sync_rows.flatMap(({ addresses }) => addresses))])
   const check_changes = async (ledger: SeedLedger): Promise<SeedSyncView> => {
     await hydrate_ids(sync_addresses)
-    const view = seed_sync_view(sync_rows, ledger, exists, await read_board_len())
+    const view = seed_sync_view(sync_rows, ledger, exists, await read_board_len(), revision)
     return law_errors.length ? Object.freeze({ ...view, errors: Object.freeze([...law_errors, ...view.errors]) }) : view
   }
   const address_book = async (): Promise<Readonly<Record<string, string>>> => {
@@ -309,37 +346,37 @@ export const create_seed_admin = async ({
     check_changes,
     address_book,
     read_frozen,
-    apply_changes: async (ledger) => {
+    apply_changes: async (ledger, hooks) => {
       const view = await check_changes(ledger)
       if (view.errors.length) throw new Error(`Nothing was written — fix the files first: ${view.errors.join(' · ')}`)
       const board_len = await read_board_len()
       await hydrate_ids(view.changed.flatMap(({ hydrate }) => hydrate))
-      const transactions = seed_update_transactions(sdk, view.changed, context, {
+      const batches = seed_update_batches(sdk, view.changed, context, {
         chain_len: board_len,
         authored_len: content.boards.length,
       })
-      const digests: string[] = []
-      for (const transaction of transactions) {
-        const receipt = await sdk.execute(transaction)
-        digests.push(receipt_digest(receipt))
-      }
-      const written = new Set(view.changed.map(({ key }) => key))
-      const next_ledger = seed_ledger_after(sync_rows, ledger, written, exists)
+      const applied = await apply_seed_update_batches(
+        batches,
+        sync_rows,
+        ledger,
+        async ({ transaction }) => receipt_digest(await sdk.execute(transaction)),
+        hooks,
+        revision
+      )
       return Object.freeze({
-        digests: Object.freeze(digests),
-        ledger: next_ledger,
-        view: seed_sync_view(sync_rows, next_ledger, exists, content.boards.length),
+        digests: applied.digests,
+        ledger: applied.ledger,
+        view: seed_sync_view(sync_rows, applied.ledger, exists, content.boards.length, revision),
       })
     },
-    created_ledger: async (ledger) => {
+    created_ledger: async (ledger, batch_id) => {
       await hydrate_ids(sync_addresses)
-      // a freshly created row's file IS what was written — record it as up to date
-      const created = new Set(
-        sync_rows
-          .filter((row) => row.kind !== 'board' && !ledger[row.key] && row.addresses.every(exists))
-          .map(({ key }) => key)
-      )
-      return seed_ledger_after(sync_rows, ledger, created, exists)
+      const batch = plan.batches.find(({ id }) => id === batch_id)
+      if (!batch) throw new Error(`Unknown seed batch ${batch_id}`)
+      // Only this certified batch can advance creation fingerprints. Deterministic objects from
+      // an older partial run may already exist without having received today's authored value.
+      const created = created_seed_row_keys(sync_rows, ledger, new Set(batch.target_ids), exists)
+      return seed_ledger_after(sync_rows, ledger, created, exists, revision)
     },
     execute: async (batch_id, ledger) => {
       const changes = await check_changes(ledger)

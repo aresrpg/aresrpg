@@ -13,6 +13,7 @@ import {
 import { board_catalog_id } from './seed_ids.ts'
 import { friends_actions } from './friends.ts'
 import { owned_ref } from './cache.ts'
+import { event_u64 } from './receipt_decode.ts'
 
 type GameSdk = ReturnType<typeof SDK>
 export type KolizeumActionsCtx = Readonly<{ kiosk_cap: KioskCapLoader; address: string }>
@@ -104,7 +105,7 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
         (tx, kiosk, cap) =>
           sdk.doors.join_kolizeum(tx, {
             lobby: kolizeum,
-            f: fight,
+            fight_object: fight,
             pledge: sdk.coin_of(tx, pledge_mist),
             side,
             kiosk,
@@ -118,12 +119,14 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
 
     ready: async ({ kolizeum, fight, fighter_idx }: { kolizeum: string; fight: string; fighter_idx: bigint }) => {
       await sdk.hydrate_unknown([kolizeum, fight])
-      return boundary(fight, (tx) => sdk.doors.ready_and_start_kolizeum(tx, { lobby: kolizeum, f: fight, fighter_idx }))
+      return boundary(fight, (tx) =>
+        sdk.doors.ready_and_start_kolizeum(tx, { lobby: kolizeum, fight_object: fight, fighter_idx })
+      )
     },
 
     start: async ({ kolizeum, fight }: { kolizeum: string; fight: string }) => {
       await sdk.hydrate_unknown([kolizeum, fight])
-      return boundary(fight, (tx) => sdk.doors.start_kolizeum(tx, { lobby: kolizeum, f: fight }))
+      return boundary(fight, (tx) => sdk.doors.start_kolizeum(tx, { lobby: kolizeum, fight_object: fight }))
     },
 
     exit: async ({
@@ -141,7 +144,7 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
       const execute_exit = (last: boolean) =>
         with_kiosk(
           (tx, kiosk, cap) => {
-            const args = { lobby: kolizeum, f: fight, fighter_idx, kiosk, cap }
+            const args = { lobby: kolizeum, fight_object: fight, fighter_idx, kiosk, cap }
             if (last) sdk.doors.exit_last_kolizeum(tx, args)
             else sdk.doors.exit_kolizeum(tx, args)
           },
@@ -165,7 +168,7 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
     }) => {
       await sdk.hydrate_unknown([fight])
       const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.forfeit_kolizeum(tx, { f: fight, fighter_idx, kiosk, cap }),
+        (tx, kiosk, cap) => sdk.doors.forfeit_kolizeum(tx, { fight_object: fight, fighter_idx, kiosk, cap }),
         { custody, gas_scope: `fight:${fight}` }
       )
       return Object.freeze({ digest: receipt_digest(receipt) })
@@ -188,7 +191,7 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
       const execute_settlement = (last: boolean) =>
         with_terminal_kiosk(
           (tx, kiosk, personal) => {
-            const args = { lobby: kolizeum, f: fight, fighter_idx, kiosk, personal }
+            const args = { lobby: kolizeum, fight_object: fight, fighter_idx, kiosk, personal }
             if (last) sdk.doors.settle_last_kolizeum(tx, args)
             else sdk.doors.settle_kolizeum(tx, args)
           },
@@ -197,14 +200,14 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
       const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
         digest: receipt_digest(receipt),
-        paid_mist: BigInt(String(receipt_event(receipt, '::kolizeum::KolizeumPaid')?.amount ?? 0)),
+        paid_mist: BigInt(event_u64(receipt_event(receipt, '::kolizeum::KolizeumPaid') ?? {}, 'amount')),
         closed: receipt_event(receipt, '::fight::FightClosed') !== null,
       })
     },
 
     close: async ({ kolizeum, fight }: { kolizeum: string; fight: string }) => {
       await sdk.hydrate_unknown([kolizeum, fight])
-      return submit(`fight:${fight}`, (tx) => sdk.doors.close_kolizeum(tx, { lobby: kolizeum, f: fight }))
+      return submit(`fight:${fight}`, (tx) => sdk.doors.close_kolizeum(tx, { lobby: kolizeum, fight_object: fight }))
     },
   })
 }

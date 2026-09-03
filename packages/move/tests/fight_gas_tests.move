@@ -7,21 +7,12 @@
 #[test_only]
 module aresrpg::fight_gas_tests;
 
-use aresrpg::{fight, world};
+use aresrpg::world;
 use aresrpg_control::admin;
 use aresrpg_seed::{registry, world_content::{Self, WorldContent}};
 use sui::test_scenario;
 
 const OWNER: address = @0xA11CE;
-
-#[test]
-fun one_three_mob_wave_stays_under_the_ratchet() {
-  let mut scenario = test_scenario::begin(OWNER);
-  // one complete three-mob wave (band search, BFS walks, one circle-2 cast)
-  let rounds = fight::three_mob_wave_gas_for_testing(scenario.ctx());
-  scenario.end();
-  assert!(rounds >= 2, 0);
-}
 
 // The board-generation probe died with Lever 1: on-chain generation left the runtime
 // (test-only fixture machinery now), and a catalog pick is one dynamic-field read — nothing

@@ -43,11 +43,12 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { retry_after_version_race, run_direct_transaction } from '../transaction_guard.ts'
 
+import { ingredient_destination, job_from_path, job_path } from './job_navigation.ts'
+
 import './jobs.css'
 import './jobs_adviser.css'
 
 const CATEGORY_ORDER = Object.freeze(Object.keys(job_groups) as JobKind[])
-const JOBS = Object.freeze(CATEGORY_ORDER.flatMap((kind) => job_groups[kind]))
 const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
   gathering: 'jobs.category.gathering',
   weapon_craft: 'jobs.category.weapon',
@@ -112,13 +113,6 @@ const kind_of = (job: JobSlug): JobKind =>
     jobs.includes(job)
   )![0]
 
-export const job_from_path = (pathname: string): JobSlug => {
-  const selected = new URLSearchParams(pathname.split('?')[1]?.split('#')[0] ?? '').get('job')
-  return selected && JOBS.includes(selected as JobSlug) ? (selected as JobSlug) : 'FARMER'
-}
-
-export const job_path = (job: JobSlug): string => `/characters/jobs?job=${encodeURIComponent(job)}`
-
 export const craft_result_tone = (successes: number): 'error' | 'success' => (successes === 0 ? 'error' : 'success')
 
 export const better_job_character = (
@@ -143,12 +137,14 @@ const CraftControls = ({
   job,
   level,
   t,
+  open_ingredient,
 }: Readonly<{
   recipe: Readonly<SeedRecipe>
   character: Readonly<CharacterRow>
   job: JobSlug
   level: number
   t: CopyText
+  open_ingredient: (item_type: string) => void
 }>) => {
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
@@ -235,7 +231,12 @@ const CraftControls = ({
         {rows.map(({ item_type, need, have, enough }) => {
           const seed = encyclopedia_catalog.item(item_type)?.item
           return (
-            <div className="jobs__ingredient" key={item_type}>
+            <button
+              className="jobs__ingredient"
+              key={item_type}
+              onClick={() => open_ingredient(item_type)}
+              type="button"
+            >
               <JobItemIcon icon={item_type} size={32} />
               <span className="jobs__ingredient-id">
                 <span className="jobs__ingredient-name">{seed?.name ?? titleize(item_type)}</span>
@@ -244,7 +245,7 @@ const CraftControls = ({
               <span className={`jobs__ingredient-amt hud-num ${enough ? 'is-enough' : 'is-short'}`}>
                 {have} / {need}
               </span>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -325,6 +326,12 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
   const is_gathering = kind_of(selected_job) === 'gathering'
 
   const selected_seed = selected ? (encyclopedia_catalog.item(selected.item_type)?.item ?? null) : null
+  const open_ingredient = (item_type: string): void => {
+    const destination = ingredient_destination(item_type)
+    set_selected_job((current) => destination.job ?? current)
+    set_selected(destination.selection)
+    dispatch_app({ type: 'path/open', pathname: destination.pathname })
+  }
   const { unlocked, locked } = useMemo(() => {
     const rows = detail?.recipes ?? []
     return {
@@ -551,6 +558,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
                       job={selected_job}
                       key={selected.recipe.output_type}
                       level={level}
+                      open_ingredient={open_ingredient}
                       recipe={selected.recipe}
                       t={t}
                     />

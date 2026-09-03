@@ -10,13 +10,17 @@ import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
 import type { SeedContent } from '../src/seed.ts'
 import { board_catalog_id, item_template_id, spell_template_id } from '../src/seed_ids.ts'
 import {
+  apply_seed_update_batches,
   create_seed_admin,
   create_seed_session_authorization_transaction,
   next_seed_batch,
   project_temp_admin_cap,
   SEED_SESSION_GAS,
   verify_upgrade_cap_targets,
+  type SeedApplyProgress,
 } from '../src/seed_admin.ts'
+import { seed_sync_rows } from '../src/seed_sync.ts'
+import type { SeedUpdateBatch } from '../src/seed_updates.ts'
 
 const object_id = (value: number): string => `0x${value.toString(16).padStart(2, '0').repeat(32)}`
 const package_id = object_id(1)
@@ -40,8 +44,9 @@ const content: SeedContent = {
   spells: [],
   mobs: [],
   recipes: [],
+  dungeons: [],
   worlds: [],
-  shop: { sales: [] },
+  mastery: { offers: [] },
   airdrop: { drops: [], giftcards: [] },
   biome_maps: [],
   boards: [],
@@ -95,6 +100,46 @@ const sdk_with = (
   })
 
 describe('seed admin progress', () => {
+  test('mutable updates checkpoint each certified receipt before executing the next batch', async () => {
+    const sdk = sdk_with(new Set())
+    const [row] = seed_sync_rows(sdk, content)
+    const batches: readonly SeedUpdateBatch[] = [
+      Object.freeze({ transaction: sdk.tx(), written: Object.freeze([row!.key]) }),
+      Object.freeze({ transaction: sdk.tx(), written: Object.freeze(['retired']) }),
+    ]
+    const checkpoints: SeedApplyProgress[] = []
+    const pending: (readonly string[])[] = []
+    let executions = 0
+
+    await expect(
+      apply_seed_update_batches(
+        batches,
+        [row!],
+        { [row!.key]: { hash: 'old', label: row!.label }, retired: { hash: 'old', label: 'sale retired' } },
+        async () => {
+          executions += 1
+          if (executions === 2) throw new Error('second transaction failed')
+          return 'FIRST_DIGEST'
+        },
+        {
+          before_execute: async (written) => {
+            pending.push(written)
+          },
+          checkpoint: async (progress) => {
+            checkpoints.push(progress)
+          },
+        }
+      )
+    ).rejects.toThrow('second transaction failed')
+
+    expect(executions).toBe(2)
+    expect(pending).toHaveLength(2)
+    expect(checkpoints).toHaveLength(1)
+    expect(checkpoints[0]?.digest).toBe('FIRST_DIGEST')
+    expect(checkpoints[0]?.ledger[row!.key]?.hash).toBe(row!.hash)
+    expect(checkpoints[0]?.ledger.retired).toBeDefined()
+  })
+
   test('authorizes the local signer and funds it in one wallet transaction', () => {
     const sdk = sdk_with(new Set())
     sdk.cache.owned.set(admin_cap_id, {
@@ -172,7 +217,7 @@ describe('seed admin progress', () => {
     })
   })
 
-  test('waits for a published target to become readable instead of returning the same ready batch', async () => {
+  test('a published target hidden by the read node stops after one convergence read', async () => {
     const spells = class_names.flatMap((classe) =>
       class_spell_unlocks.map((unlock_level, index) => ({
         name: `${classe}_${index}`,
@@ -228,12 +273,12 @@ describe('seed admin progress', () => {
       config: { admin_cap: admin_cap_id, content_root: content_root_id },
     })
 
-    const result = await session.execute('boards:catalog', {})
+    await expect(session.execute('boards:catalog', {})).rejects.toThrow(
+      /published · CATALOG_CREATED.*Do not republish it/u
+    )
 
     expect(executions).toBe(1)
-    expect(post_publish_reads).toBe(2)
-    expect(result.digest).toBe('CATALOG_CREATED')
-    expect(result.snapshot.batches.find(({ id }) => id === 'boards:catalog')?.state).toBe('complete')
+    expect(post_publish_reads).toBe(1)
   })
 
   test('creation batches refuse immutable identity errors from the current lineage ledger', async () => {
@@ -259,15 +304,18 @@ describe('seed admin progress', () => {
     await expect(session.execute(next!.id, incompatible_ledger)).rejects.toThrow(
       'spell Legacy Name was removed from the files'
     )
-    await expect(session.apply_changes(incompatible_ledger)).rejects.toThrow(
-      'spell Legacy Name was removed from the files'
-    )
+    await expect(
+      session.apply_changes(incompatible_ledger, {
+        before_execute: async () => undefined,
+        checkpoint: async () => undefined,
+      })
+    ).rejects.toThrow('spell Legacy Name was removed from the files')
     expect(executions).toBe(0)
   })
 
-  test('the permanent freeze verifies four distinct caps against their active packages', async () => {
-    const caps = [object_id(20), object_id(21), object_id(22), object_id(23)]
-    const packages = [object_id(30), object_id(31), object_id(32), object_id(33)]
+  test('the permanent freeze verifies five distinct caps against their active packages', async () => {
+    const caps = [object_id(20), object_id(21), object_id(22), object_id(23), object_id(24)]
+    const packages = [object_id(30), object_id(31), object_id(32), object_id(33), object_id(34)]
     const sdk = sdk_with(
       new Set(caps),
       Object.freeze(Object.fromEntries(caps.map((cap, index) => [cap, { package: packages[index] }])))
@@ -278,12 +326,12 @@ describe('seed admin progress', () => {
     await expect(
       verify_upgrade_cap_targets(
         sdk,
-        targets.map((target, index) => (index === 3 ? { ...target, package: object_id(40) } : target))
+        targets.map((target, index) => (index === 4 ? { ...target, package: object_id(40) } : target))
       )
     ).rejects.toThrow('does not control active package')
-    await expect(verify_upgrade_cap_targets(sdk, [targets[0]!, targets[0]!, targets[2]!, targets[3]!])).rejects.toThrow(
-      'four distinct'
-    )
+    await expect(
+      verify_upgrade_cap_targets(sdk, [targets[0]!, targets[0]!, targets[2]!, targets[3]!, targets[4]!])
+    ).rejects.toThrow('five distinct')
   })
 
   test('recovers finished progress from chain state alone — every target already exists', async () => {
@@ -310,6 +358,30 @@ describe('seed admin progress', () => {
     const snapshot = await session.refresh(({ inspected }) => progress.push(inspected))
 
     expect(progress).toEqual(snapshot.batches.map((_batch, index) => index + 1))
+  })
+
+  test('remembers missing authored addresses instead of rescanning them for every seed batch', async () => {
+    const template_id = item_template_id(pinned_content_root_id, seed_package_id, 'ore')
+    let missing_reads = 0
+    const session = await create_seed_admin({
+      sdk: sdk_with(
+        new Set([admin_cap_id, content_root_id]),
+        {},
+        {
+          before_objects: (ids) => {
+            if (ids.includes(template_id)) missing_reads += 1
+          },
+        }
+      ),
+      content,
+      config: { admin_cap: admin_cap_id, content_root: content_root_id },
+    })
+
+    await session.check_changes({})
+    await session.refresh()
+    await session.check_changes({})
+
+    expect(missing_reads).toBe(1)
   })
 
   test('diffs board replacements, appends, and removals from the catalog length read by the admin session', async () => {

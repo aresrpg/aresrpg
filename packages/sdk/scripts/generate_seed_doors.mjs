@@ -15,7 +15,7 @@ export const SEED_DOORS_OUT_PATH = join(root, 'src/seed_doors.gen.ts')
 export const SEED_CONTRACT_OUT_PATH = join(root, 'src/seed_contract.gen.ts')
 
 const modules = [
-  // Core's LIVING supply + loot-pool doors (they claim/bump through the seed registry —
+  // Core's LIVING distribution + loot-pool doors (they claim/bump through the seed registry —
   // the freeze_forever flag closes them with all content).
   {
     path: join(root, '../move/sources/world.move'),
@@ -24,12 +24,10 @@ const modules = [
     selected: { create: 'create_world' },
   },
   {
-    path: join(root, '../move/sources/shop.move'),
-    module: 'shop',
+    path: join(root, '../move/sources/distribution.move'),
+    module: 'distribution',
     package_key: 'package',
     selected: {
-      new_sale: 'new_sale',
-      set_sale: 'set_sale',
       new_airdrop: 'new_airdrop',
       new_giftcard: 'new_giftcard',
     },
@@ -39,6 +37,12 @@ const modules = [
     module: 'loot_box',
     package_key: 'package',
     selected: { add_loot_reward: 'add_loot_reward', clear_loot_table: 'clear_loot_table' },
+  },
+  {
+    path: join(root, '../move/sources/mastery.move'),
+    module: 'mastery',
+    package_key: 'package',
+    selected: { new_offer: 'new_mastery_offer', set_offer: 'set_mastery_offer' },
   },
   // The living-content layer (owner 2026-08-23): world content + fight boards live in the
   // seed PACKAGE behind AdminCap doors — the ceremony and every later rebalance compose these.
@@ -51,13 +55,19 @@ const modules = [
       share: 'share',
       set_entry_level: 'set_entry_level',
       set_mobs: 'set_mobs',
+      set_archi_rows: 'set_archi_rows',
       set_biome_window: 'set_biome_window',
       append_biome_cells: 'append_biome_cells',
       clear_biome_map: 'clear_biome_map',
       set_resources: 'set_resources',
-      set_dungeon_key: 'set_dungeon_key',
-      set_dungeon_rooms: 'set_dungeon_rooms',
+      set_cities: 'set_cities',
     },
+  },
+  {
+    path: join(root, '../seed/sources/dungeon_content.move'),
+    module: 'dungeon_content',
+    package_key: 'seed_package',
+    selected: { add: 'add_dungeon', overwrite: 'overwrite_dungeon' },
   },
   {
     path: join(root, '../seed/sources/mob_rows.move'),
@@ -129,6 +139,7 @@ const modules = [
       reset_stats: 'consumable_reset_stats',
       reset_spells: 'consumable_reset_spells',
       recall: 'consumable_recall',
+      city: 'consumable_city',
       loot_box: 'consumable_loot_box',
     },
   },
@@ -161,14 +172,29 @@ const modules = [
     selected: { grid_spec: 'new_grid_spec' },
   },
   {
+    path: join(root, '../move-math/sources/city_map.move'),
+    module: 'city_map',
+    package_key: 'math_package',
+    selected: { new_city: 'new_city' },
+  },
+  {
+    path: join(root, '../move-math/sources/dungeon_data.move'),
+    module: 'dungeon_data',
+    package_key: 'math_package',
+    selected: {
+      new_dungeon: 'new_dungeon_data',
+      new_room: 'new_dungeon_room_data',
+      new_room_mob: 'new_dungeon_room_mob',
+    },
+  },
+  {
     path: join(root, '../move-math/sources/world_map.move'),
     module: 'world_map',
     package_key: 'math_package',
     selected: {
       new_mob_row: 'new_mob_row',
+      new_archi_row: 'new_archi_row',
       new_resource_row: 'new_resource_row',
-      new_room_mob: 'new_room_mob',
-      new_dungeon_room: 'new_dungeon_room',
     },
   },
 ]
@@ -193,15 +219,17 @@ export const generate_seed_doors = () =>
   })
 
 const key_sources = [
-  ...['shop', 'world'].map((module) => ({
+  ...['distribution', 'mastery', 'world'].map((module) => ({
     module,
     path: join(root, `../move/sources/${module}.move`),
   })),
   // living-content key types (the seed PACKAGE — derivations anchor on the registry root)
-  ...['item_rows', 'mob_rows', 'spell_rows', 'recipe_rows', 'world_content', 'board_catalog'].map((module) => ({
-    module,
-    path: join(root, `../seed/sources/${module}.move`),
-  })),
+  ...['item_rows', 'mob_rows', 'spell_rows', 'recipe_rows', 'world_content', 'dungeon_content', 'board_catalog'].map(
+    (module) => ({
+      module,
+      path: join(root, `../seed/sources/${module}.move`),
+    })
+  ),
 ]
 
 export const seed_string_keys = () =>

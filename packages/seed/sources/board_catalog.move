@@ -43,14 +43,14 @@ public fun create_catalog(cap: &AdminCap, root: &mut Registry, ctx: &TxContext) 
 public fun add_board(cap: &AdminCap, root: &mut Registry, catalog: &mut BoardCatalog, board: GridSpec, ctx: &TxContext) {
   dfield::add(&mut catalog.id, catalog.len, board);
   catalog.len = catalog.len + 1;
-  registry::bump(cap, root, DOMAIN.to_string(), ks(catalog.len - 1), ctx);
+  registry::bump(cap, root, DOMAIN.to_string(), index_key(catalog.len - 1), ctx);
 }
 
 /// Overwrite one board in place — live fights are untouched (they copied at creation).
 public fun replace_board(cap: &AdminCap, root: &mut Registry, catalog: &mut BoardCatalog, index: u64, board: GridSpec, ctx: &TxContext) {
   assert!(index < catalog.len, ENoSuchBoard);
   *dfield::borrow_mut(&mut catalog.id, index) = board;
-  registry::bump(cap, root, DOMAIN.to_string(), ks(index), ctx);
+  registry::bump(cap, root, DOMAIN.to_string(), index_key(index), ctx);
 }
 
 /// Remove the current tail. The off-chain reconciler rewrites shifted indexes first, so this
@@ -60,7 +60,7 @@ public fun remove_last_board(cap: &AdminCap, root: &mut Registry, catalog: &mut 
   let index = catalog.len - 1;
   let _: GridSpec = dfield::remove(&mut catalog.id, index);
   catalog.len = index;
-  registry::bump(cap, root, DOMAIN.to_string(), ks(index), ctx);
+  registry::bump(cap, root, DOMAIN.to_string(), index_key(index), ctx);
 }
 
 /// The game's read: one board by entropy — only the picked child's bytes load.
@@ -71,7 +71,15 @@ public fun pick(catalog: &BoardCatalog, seed: u64): GridSpec {
 
 public fun len(catalog: &BoardCatalog): u64 { catalog.len }
 
+#[test_only]
+public fun catalog_for_testing(ctx: &mut TxContext): BoardCatalog {
+  BoardCatalog { id: object::new(ctx), len: 0 }
+}
+
+#[test_only]
+public fun share_for_testing(catalog: BoardCatalog) { transfer::share_object(catalog); }
+
 // key_string — the event key for one board index
-fun ks(index: u64): String {
+fun index_key(index: u64): String {
   index.to_string()
 }

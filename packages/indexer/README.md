@@ -5,7 +5,7 @@ Sui checkpoints through one sequential Rust pipeline and produces four rebuildab
 
 1. The graph: current live state and relationships.
 2. Per-address sales ZSETs: bounded player marketplace history.
-3. Analytics: exact activity membership, decimal money buckets, and 90-day primary-shop detail.
+3. Analytics: exact activity membership and decimal money buckets.
 4. `evt:*` pub/sub: post-projection change notifications.
 
 One server stack consumes its own indexer. Any number of indexers may run independently around the
@@ -52,7 +52,7 @@ and append the configured latest package to the stored activity lineage.
   every non-deployment game attempt uses parallel exact-MIST hashes, including failed executions;
   publish, upgrade, seed, bootstrap, and pause/resume costs stay outside gameplay analytics. Replays
   overwrite the same checkpoint fields. There are no transaction digests, custom Lua, or analytics schema state.
-- Shop details prune by timestamp to 90 days. Server-mesh online samples are best effort and expire.
+- Server-mesh online samples are best effort and expire.
 - Every large integer and money value is stored as a decimal string.
 - Writers update only the properties they own; sparse dynamic-field outputs never replace a node.
 - Custody transitions replace the old edge and create the new edge in one checkpoint batch.
@@ -69,7 +69,7 @@ covered by server/indexer gates. Do not maintain another schema table here.
 ```text
 src/
 ├── main.rs       boot and sequential pipeline assembly
-├── analytics.rs  exact activity, money buckets, and primary-shop history
+├── analytics.rs  exact activity and money buckets
 ├── boot.rs       indexes, package binding, lineage, start checkpoint
 ├── pipeline.rs   checkpoint filtering and write-batch composition
 ├── decode.rs     BCS layout twins

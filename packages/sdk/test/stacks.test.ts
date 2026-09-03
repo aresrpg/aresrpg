@@ -7,11 +7,12 @@ import { stack_actions } from '../src/stacks.ts'
 
 const digest = '11111111111111111111111111111111'
 const receipt = { $kind: 'Transaction', Transaction: { digest } }
+const owner = { objectId: '0xcap', kioskId: '0xkiosk', isPersonal: true, version: '1', digest }
 
 const harness = () => {
   const calls: unknown[] = []
   const tx = {
-    pure: { id: (value: string) => value },
+    pure: { id: (value: string) => value, u32: (value: number) => value },
     moveCall: (call: unknown) => {
       calls.push(call)
       return {} as never
@@ -20,14 +21,19 @@ const harness = () => {
   const sdk = {
     pins: { package: '0xpackage' },
     tx: () => tx,
-    door_context: { pin: (_tx: unknown, name: string) => name },
+    door_context: {
+      pins: { package: '0xpackage' },
+      obj: (_tx: unknown, value: unknown) => value,
+      pin: (_tx: unknown, name: string) => name,
+      pure: { id: (_tx: unknown, value: string) => value, u32: (_tx: unknown, value: number) => value },
+    },
     with_owner_kiosk: (transaction: unknown, _cap: unknown, compose: (kiosk: string, cap: string) => void) => {
       expect(transaction).toBe(tx)
       compose('0xkiosk', '0xcap')
     },
     execute: async () => receipt,
   }
-  return { actions: stack_actions(sdk as never, { kiosk_cap: async () => ({}) as never }), calls }
+  return { actions: stack_actions(sdk as never, { kiosk_cap: async () => owner as never }), calls }
 }
 
 describe('stack batch actions', () => {

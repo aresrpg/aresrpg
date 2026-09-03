@@ -241,3 +241,14 @@ const gatherables_by_type = Object.freeze(
 ) as Readonly<Record<string, Gatherable>>
 
 export const gatherable_of = (item_type: string): Gatherable | null => gatherables_by_type[item_type] ?? null
+
+/** The three rare gathering identities of one tier form its pet food. Returns that tier only
+ * for an exact farmer/herbalist/miner rare triad, independent of input order. */
+export const rare_pet_food_tier = (input_types: readonly string[]): number | null => {
+  if (input_types.length !== 3 || new Set(input_types).size !== 3) return null
+  const inputs = new Set(input_types)
+  const tier = gatherable_catalog.find(({ rare_item_type }) => inputs.has(rare_item_type))?.tier
+  if (!tier) return null
+  const expected = gatherable_catalog.filter((row) => row.tier === tier).map(({ rare_item_type }) => rare_item_type)
+  return expected.length === 3 && expected.every((item_type) => inputs.has(item_type)) ? tier : null
+}

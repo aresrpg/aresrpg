@@ -4,6 +4,7 @@
 // the Character ID; only current wallet custody reaches this graph door.
 
 import { get_character_owner } from '../reads/get_character_owner.ts'
+import { get_airdrop_state } from '../reads/get_airdrop_state.ts'
 import logger from '../logger.ts'
 import type { PlayerAction, PlayerModule } from '../player.ts'
 
@@ -23,6 +24,17 @@ export default {
           .catch((error: Error) => {
             log.error({ character_id, error: error.message }, 'character owner read failed')
             send({ type: 'packet/error', id, reason: 'character lookup failed' })
+          })
+      }
+    )
+    events.on(
+      'packet/airdrop_eligibility_request',
+      ({ address: holder }: Extract<PlayerAction, { type: 'packet/airdrop_eligibility_request' }>) => {
+        void get_airdrop_state(graph, { address: holder })
+          .then((airdrops) => send({ type: 'packet/airdrop_eligibility', address: holder, airdrops: [...airdrops] }))
+          .catch((error: Error) => {
+            log.error({ holder, error: error.message }, 'airdrop eligibility read failed')
+            send({ type: 'packet/error', reason: 'airdrop eligibility failed — retry' })
           })
       }
     )

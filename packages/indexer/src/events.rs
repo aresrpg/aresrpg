@@ -161,6 +161,8 @@ events! {
         => |e: &ItemUnequipped| format!("evt:character:{}", e.character.hex()),
     world::WorldJoined { character: Id, world: String, x: u32, z: u32, first_join: bool }
         => |e: &WorldJoined| format!("evt:character:{}", e.character.hex()),
+    world::CharacterTeleported { character: Id, world: String, x: u32, z: u32 }
+        => |event: &CharacterTeleported| format!("evt:character:{}", event.character.hex()),
 
     // ── dungeons (a character's own run) ──
     dungeon::DungeonEntered { character: Id, world: String, x: u32, z: u32 }
@@ -198,8 +200,8 @@ events! {
         => |e: &DropsRolled| format!("evt:fight:{}", e.fight.hex()),
 
     // ── world surface (zone-local presence — NOTHING rides a world-global channel) ──
-    zone::ZoneSearched { world: String, zx: u32, zz: u32, seed: u64, fresh: bool }
-        => |e: &ZoneSearched| format!("evt:zone:{}:{}:{}", e.world, e.zx, e.zz),
+    zone::ZoneSearched { world: String, zone_x: u32, zone_z: u32, seed: u64, fresh: bool }
+        => |event: &ZoneSearched| format!("evt:zone:{}:{}:{}", event.world, event.zone_x, event.zone_z),
     gathering::ResourceGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, tier: u8, quantity: u64, job_xp_gained: u64, protector: bool }
         => |e: &ResourceGathered| zone_topic(&e.world, e.x, e.z),
     gathering::RareGathered { world: String, x: u32, z: u32, gatherer: Addr, item_type: String, rare_item_type: String }
@@ -215,15 +217,20 @@ events! {
         => |_: &KolizeumPaid| "evt:kolizeum".to_string(),
 
     // ── economy ──
-    shop::SaleBought { sale: Id, item_type: String, buyer: Addr, quantity: u64, paid: u64, supply: u64 }
-        => |_: &SaleBought| "evt:economy".to_string(),
-    shop::AirdropCreated { airdrop: Id, template: Id, addresses: u64 }
+    distribution::AirdropCreated { airdrop: Id, template: Id, addresses: u64 }
         => |_: &AirdropCreated| "evt:economy".to_string(),
-    shop::AirdropClaimed { airdrop: Id, drop_id: String, claimer: Addr, remaining: u64 }
+    distribution::AirdropClaimed {
+        airdrop: Id,
+        drop_id: String,
+        claimer: Addr,
+        recipient: Addr,
+        giftcard: Id,
+        remaining: u64,
+    }
         => |_: &AirdropClaimed| "evt:economy".to_string(),
-    shop::GiftcardMinted { giftcard: Id, template: Id, amount: u32 }
+    distribution::GiftcardMinted { giftcard: Id, template: Id, amount: u32 }
         => |_: &GiftcardMinted| "evt:economy".to_string(),
-    shop::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
+    distribution::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
         => |_: &GiftcardRedeemed| "evt:economy".to_string(),
     crafting::Crafted {
         recipe: Id,
@@ -311,34 +318,6 @@ mod tests {
         assert_eq!(routed.topic, format!("evt:social:0x{}", "07".repeat(32)));
         assert_eq!(routed.data["name"], "aiden");
         assert_eq!(routed.data["character"], format!("0x{}", "01".repeat(32)));
-    }
-
-    #[test]
-    fn u64_serializes_as_string() {
-        #[derive(serde::Serialize)]
-        struct Wire {
-            sale: [u8; 32],
-            item_type: String,
-            buyer: [u8; 32],
-            quantity: u64,
-            paid: u64,
-            supply: u64,
-        }
-        let bytes = bcs::to_bytes(&Wire {
-            sale: [2; 32],
-            item_type: "berserk".to_string(),
-            buyer: [3; 32],
-            quantity: 10,
-            paid: 15_000_000_000,
-            supply: 76,
-        })
-        .unwrap();
-        let routed = route("shop", "SaleBought", &bytes).unwrap().unwrap();
-        assert_eq!(routed.topic, "evt:economy");
-        assert_eq!(routed.data["paid"], "15000000000");
-        assert_eq!(routed.data["quantity"], "10");
-        assert_eq!(routed.data["item_type"], "berserk");
-        assert_eq!(routed.data["supply"], "76");
     }
 
     #[test]

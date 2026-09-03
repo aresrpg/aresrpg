@@ -44,6 +44,12 @@ import party_follow from './modules/party_follow.ts'
 import run_to, { initial_run_to_state, type RunToInput, type RunToState } from './modules/run_to.ts'
 import trade, { initial_trade_state, type TradeInput, type TradeState } from './modules/trade.ts'
 import runeforge, { initial_runeforge_state, type RuneforgeInput, type RuneforgeState } from './modules/runeforge.ts'
+import mastery, { initial_mastery_state, type MasteryInput, type MasteryState } from './modules/mastery.ts'
+import distribution, {
+  initial_distribution_state,
+  type DistributionInput,
+  type DistributionState,
+} from './modules/distribution.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -67,6 +73,8 @@ export type AppState = Readonly<{
   run_to: RunToState
   trade: TradeState
   runeforge: RuneforgeState
+  mastery: MasteryState
+  distribution: DistributionState
 }>
 
 export type AppInput =
@@ -91,6 +99,8 @@ export type AppInput =
   | RunToInput
   | TradeInput
   | RuneforgeInput
+  | MasteryInput
+  | DistributionInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -138,6 +148,8 @@ const MODULES = Object.freeze([
   party_follow,
   trade,
   runeforge,
+  mastery,
+  distribution,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -168,6 +180,8 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     run_to: initial_run_to_state(),
     trade: initial_trade_state(),
     runeforge: initial_runeforge_state(),
+    mastery: initial_mastery_state(),
+    distribution: initial_distribution_state(),
   })
 
 const create_events = () => {

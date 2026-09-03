@@ -44,8 +44,7 @@ test('a dungeon room fight composes its authored mobs in order and tags the crea
     character_id: id(20),
     custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     world: 'nauvis',
-    x: 1649,
-    z: 2490,
+    dungeon: 'tangled_aftermath',
     mob_types: ['misui', 'minosui'],
     access: 1,
   })
@@ -84,17 +83,37 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
   const actions = dungeon_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
   const custody = { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId }
 
-  await actions.enter({ character_id: id(20), custody, world: 'nauvis', zx: 3, zz: 4, key_id: id(21) })
+  await actions.enter({
+    character_id: id(20),
+    custody,
+    world: 'nauvis',
+    dungeon: 'tangled_aftermath',
+    key_id: id(21),
+  })
   await actions.join_fight({ fight, character_id: id(20), custody, party: null })
   await actions.join_fight({ fight, character_id: id(20), custody, party: id(22) })
-  await actions.settle_fight({
+  await actions.settle({
     fight,
-    fighter_idx: 2n,
-    world: 'nauvis',
+    dungeon: 'tangled_aftermath',
     custody,
-    loot: [
-      { item_type: 'silk', existing: id(30) },
-      { item_type: 'fang', existing: null },
+    settlements: [
+      {
+        fighter_idx: 2n,
+        loot: [
+          { item_type: 'silk', existing: id(30) },
+          { item_type: 'fang', existing: null },
+        ],
+      },
+    ],
+  })
+  await actions.settle({
+    fight,
+    dungeon: 'tangled_aftermath',
+    custody,
+    last: true,
+    settlements: [
+      { fighter_idx: 2n, loot: [{ item_type: 'silk', existing: id(30) }] },
+      { fighter_idx: 3n, loot: [{ item_type: 'fang', existing: null }] },
     ],
   })
   await actions.give_up_fight({ fight, fighter_idx: 2n, custody })
@@ -107,11 +126,21 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
     'prepare_loot',
     'prepare_loot',
     'settle_last',
+    'prepare_loot',
+    'prepare_loot',
+    'settle_last',
     'give_up',
     'abandon',
   ])
-  expect(calls[0]?.args).toMatchObject({ character_id: id(20), zx: 3, zz: 4, key_id: id(21) })
+  expect(calls[0]?.args).toMatchObject({ character_id: id(20), key_id: id(21) })
+  expect(calls[0]?.args).not.toHaveProperty('zx')
+  expect(calls[0]?.args).toHaveProperty('dungeon_content')
   expect(calls[1]?.args).not.toHaveProperty('shared_party')
   expect(calls[2]?.args).toMatchObject({ shared_party: id(22) })
-  expect(calls[5]?.args).toMatchObject({ fighter_idx: 2n, plan: ['prepare_loot-result', 'prepare_loot-result'] })
+  expect(calls[5]?.args).toMatchObject({
+    fighter_indices: [2n],
+    plan_lengths: [2],
+    plan: ['prepare_loot-result', 'prepare_loot-result'],
+  })
+  expect(calls[8]?.args).toMatchObject({ fighter_indices: [2n, 3n], plan_lengths: [1, 1] })
 })

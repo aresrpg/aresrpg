@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// The consumable EFFECT — a math value type so the seed package can author it on templates
-/// and core can COPY it into every minted item (the owned-item split, owner ruling
-/// 2026-08-23: the effect IS the item's value, frozen at mint; a template rebalance never
-/// rewrites a bought potion). Validation lives with the type, constructor-only.
+/// The consumable effect value authored live on one ItemTemplate. Stackable items keep only
+/// their template identity, so split and merge cannot create conflicting behavior; core reads
+/// this current value when one unit burns. Validation lives with the constructor-only type.
 module aresrpg_math::consumable_effect;
 
+use std::string::String;
+
 const EZeroHeal: u64 = 1901; // a heal consumable must change state
+const EEmptyCity: u64 = 1902;
 
 public enum Effect has copy, drop, store {
   Heal(u32),
   ResetStats,
   ResetSpells,
   Recall,
+  City(String),
   LootBox,
 }
 
@@ -26,6 +29,11 @@ public fun reset_stats(): Effect { Effect::ResetStats }
 public fun reset_spells(): Effect { Effect::ResetSpells }
 
 public fun recall(): Effect { Effect::Recall }
+
+public fun city(city: String): Effect {
+  assert!(!city.is_empty(), EEmptyCity);
+  Effect::City(city)
+}
 
 public fun loot_box(): Effect { Effect::LootBox }
 
@@ -54,4 +62,8 @@ public fun is_reset_spells(effect: &Effect): bool {
 
 public fun is_recall(effect: &Effect): bool {
   match (effect) { Effect::Recall => true, _ => false }
+}
+
+public fun city_name(effect: &Effect): Option<String> {
+  match (effect) { Effect::City(city) => option::some(*city), _ => option::none() }
 }

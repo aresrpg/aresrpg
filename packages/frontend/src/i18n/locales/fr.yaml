@@ -28,7 +28,7 @@ navigation: Navigation
 world: Monde
 characters: Personnages
 leaderboard: Classement
-shop: Boutique
+mastery: Maîtrise
 encyclopedia: Encyclopédie
 marketplace: Marché
 airdrop: Airdrop
@@ -230,6 +230,9 @@ world_hud:
   coordinates: Coordonnées
   biome: Biome
   world_map: Carte du monde
+  world_map_zoom_in: Zoomer
+  world_map_zoom_out: Dézoomer
+  world_map_extent: '{{blocks}} blocs'
   menu_group: Inviter dans le groupe
   menu_friend: Ajouter aux amis
   menu_trade: Échanger
@@ -241,6 +244,7 @@ world_hud:
   mount_prompt: 'Appuyez sur {{key}} pour monter'
   portal_prompt: 'Appuyez sur {{key}} pour voyager vers un autre monde'
   dungeon_portal: Portail de donjon
+  dungeon_city: 'Cité de {{city}}'
   dungeon_press_enter: Entrer
   dungeon_entry_body: Utilisez la clé du donjon pour rejoindre le vestibule privé de ce portail.
   dungeon_required_key: Clé requise
@@ -310,7 +314,6 @@ world_hud:
   zone_coordinates: 'Secteur {{zx}} · {{zz}}'
   zone_mobs_found: '{{count}} monstres trouvés'
   zone_resources_found: '{{count}} ressources trouvées'
-  zone_dungeon_spotted: 'Donjon repéré'
   spawn_group: 'Groupe de {{size}}'
   spawn_unknown_mob: 'Créature inconnue'
   spawn_press_attack: 'Appuyez sur {{key}} pour attaquer'
@@ -369,7 +372,6 @@ demo_page:
   crowd_loading: Chargement des modèles de personnages…
   crowd_result: Phase
   mob: Monstre
-  hide_protectors: Masquer les protecteurs
   amount: Quantité
   spawn_group: Faire apparaître
   clear: Effacer
@@ -445,37 +447,36 @@ marketplace_page:
   character_roster_full: Un 7e personnage ne peut pas rejoindre votre effectif — la limite est de 6
   collect_pending: Retrait des revenus…
   collect_success: Revenus retirés
-shop_page:
-  title: 'Boutique'
-  subtitle: 'Achetez des objets avec du SUI'
-  remaining_of_cap: '{{remaining}} sur {{cap}} restants'
-  processing: 'TRAITEMENT'
-  sold_out: 'Épuisé'
-  acquire: 'Acquérir'
-  wallet: 'Portefeuille'
-  filter_all: 'Tout'
-  sections:
-    pet_box: 'COFFRES À FAMILIERS'
-    title: 'Titres'
-    cloak: 'Capes'
-    hat: 'Chapeaux'
-    companion: 'Compagnons'
-    equipment: 'Équipement'
-    consumable: 'Consommables'
-    resource: 'Ressources'
-  amount_title: 'Choisir la quantité'
-  amount_quantity: 'Quantité'
-  amount_max: 'Max'
-  amount_total: 'Total'
-  amount_available: '{{count}} disponibles'
-  amount_confirm: 'Acquérir {{count}}'
-  purchase_success_body: 'Vos nouveaux objets vous attendent dans votre inventaire.'
-  see_inventory: 'Voir mon inventaire'
-  buy_pending: 'Achat en cours…'
-  buy_success: 'Achat réussi !'
-  drop_rates: "Chances d'obtention"
-  pool_sub: "Un familier est tiré à l'ouverture, pondéré exactement comme listé ci-dessous."
-  acquisition_complete: 'Acquisition Terminée'
+mastery_page:
+  subtitle: Défis quotidiens
+  title: Maîtrise
+  lead: Terminez des donjons chaque jour pour obtenir des récompenses uniques.
+  balance: Points de maîtrise
+  daily_ready: Quête quotidienne disponible
+  daily_syncing: Mise à jour de la quête quotidienne…
+  daily_title: Commencez votre quête quotidienne
+  daily_lead: Choisissez un monde. Les mondes de haut niveau donnent plus de points de maîtrise.
+  unknown_dungeon: Donjon inconnu
+  quest_reward: Gagnez {{points}} points de maîtrise
+  completed: Validé
+  in_progress: En cours
+  required_level: Niveau {{level}} requis
+  dungeon_count: '{{count}} donjons'
+  starting: Attribution…
+  start: Commencer la quête
+  locked: Verrouillé
+  world_reward: +{{points}}pts
+  offers_title: Récompenses de maîtrise
+  offers_lead: Dépensez vos points de maîtrise pour débloquer des boîtes à butin uniques.
+  progression: Parcours de récompenses
+  offers_empty: Aucune offre de maîtrise n’est encore créée
+  ready: Prêt à débloquer
+  missing: Il manque {{points}} points
+  unlocking: Déblocage…
+  unlock: Débloquer · {{cost}} pts
+  quest_started: Quête quotidienne attribuée.
+  offer_unlocked: Récompense de maîtrise débloquée.
+
 airdrop_page:
   title: 'Airdrops'
   subtitle: 'Réclamez des objets réservés aux détenteurs éligibles'
@@ -485,6 +486,17 @@ airdrop_page:
   not_eligible: 'Non éligible'
   claimed: 'Réclamé'
   claim: 'Réclamer'
+  holder_title: 'Portefeuille détenteur'
+  holder_connect_hint: 'Connectez le portefeuille qui détient le NFT éligible'
+  holder_connect: 'Connecter le portefeuille'
+  holder_connecting: 'Connexion…'
+  holder_wallet_missing: 'Aucun portefeuille Sui compatible installé'
+  giftcards_title: 'Cartes cadeaux à utiliser'
+  gift_login: 'Continuez avec Google pour recevoir ce cadeau dans votre portefeuille de jeu'
+  gift_ready: 'Votre carte cadeau imprimée est prête à être récupérée'
+  gift_claiming: 'Récupération de votre carte cadeau imprimée…'
+  gift_retry: 'Récupérer la carte'
+  redeem: 'Utiliser'
   empty: 'Aucun airdrop actif'
   empty_hint: 'Les airdrops pour les détenteurs de collections partenaires apparaîtront ici à leur lancement.'
   pending_claim: "Réclamation de l'airdrop…"
@@ -615,15 +627,12 @@ admin_page:
   player_activity_body: Activité quotidienne et portée glissante sur 30 jours
   stickiness: JAU / 30J
   online_players: Joueurs en ligne
-  online_players_body: Connexions authentifiées moyennes et maximales
+  online_players_body: Pic de connexions authentifiées par intervalle
   online_now: Joueurs en ligne
-  average: Moyenne
   peak: Pic
   revenue: Revenus
   revenue_over_time: Revenus au fil du temps
   revenue_over_time_body: Tous les revenus du protocole par source
-  shop: Boutique
-  shop_sales: Ventes de la boutique
   item_royalties: Redevances des objets
   character_royalties: Redevances des personnages
   character_creation_revenue: Création de personnages
@@ -657,10 +666,6 @@ admin_page:
   revenue_mtd: Revenus du mois en cours
   last_30_days: 30 derniers jours
   calendar_month_to_date: Mois calendaire en cours
-  recent_shop_sales: Ventes récentes de la boutique
-  sales_history: Historique des ventes de la boutique
-  sales_retention: Les détails exacts des transactions sont conservés 90 jours
-  view_all_sales: Voir toutes les ventes
   buyer: Acheteur
   item: Objet
   quantity: Quantité
@@ -676,8 +681,6 @@ admin_page:
   loading: Chargement…
   load_more: Charger plus
   transactions: transactions
-  no_sales_history: Aucune vente sur cette période
-  end_of_history: Fin de l’historique conservé
 simulator_page:
   title: Simulateur de combat
   local_only: Configuration locale déterministe
@@ -879,14 +882,13 @@ wallet_legacy:
     de votre portefeuille ci-dessus.
   faq: FAQ
   wallet_description: Votre portefeuille personnel. Vous seul pouvez y accéder. Déposez
-    du SUI pour l'utiliser dans la boutique.
+    du SUI pour les frais réseau et les échanges entre joueurs.
   moonpay_desc: Carte bancaire, Apple Pay, virement
   transak_desc: Carte bancaire, virement, 100+ pays
   faq_what_is_sui: Qu'est-ce que le SUI ?
   faq_what_is_sui_answer: Le SUI est une monnaie numérique, comme de l'argent dématérialisé.
     Il vit sur un réseau rapide et sécurisé appelé la blockchain Sui. Vous utilisez
-    de petites quantités de SUI pour acheter des objets dans la boutique AresRPG.
-    Voyez ça comme des crédits de jeu, sauf que personne ne peut vous les retirer.
+    de petites quantités de SUI pour les frais réseau et les échanges entre joueurs.
   faq_why_sui: Pourquoi AresRPG utilise le SUI ?
   faq_why_sui_answer: Le SUI est notre moyen de paiement privilégié. Les transactions
     sont instantanées (moins d'1 seconde) et coûtent une fraction de centime. Aucun
@@ -896,8 +898,8 @@ wallet_legacy:
   faq_legal: Est-ce légal ?
   faq_legal_answer: Oui. Acheter et détenir de la cryptomonnaie est légal dans la
     plupart des pays. Le SUI est un actif numérique légitime échangé sur les principales
-    plateformes réglementées au monde. Vous l'utilisez simplement comme moyen de paiement
-    dans notre boutique. Pas de NFT, pas de combine crypto.
+    plateformes réglementées au monde. AresRPG l'utilise pour les frais réseau et les
+    échanges entre joueurs.
   faq_eula: Est-ce autorisé par les conditions du jeu ?
   faq_eula_answer: Oui. Tant que la cryptomonnaie est utilisée uniquement comme moyen
     de paiement et n'implique pas de NFT ou de schémas spéculatifs, c'est totalement
@@ -907,8 +909,7 @@ wallet_legacy:
   faq_access_answer: "Vous seul. Votre portefeuille est créé à partir de votre connexion
     Google via la technologie zkLogin de Sui. Personne (pas même l'équipe AresRPG)
     ne peut accéder à vos fonds ou les déplacer. Important : ce portefeuille est destiné
-    uniquement aux achats en boutique. N'y stockez pas de grosses sommes. Déposez
-    uniquement ce que vous comptez dépenser."
+    uniquement à votre activité AresRPG. N'y stockez pas de grosses sommes."
   faq_balance: J'ai envoyé du SUI mais mon solde n'a pas changé ?
   faq_balance_answer: Pas de panique. Notre système de rafraîchissement peut être
     temporairement lent. Vérifiez que vous avez envoyé le SUI à la bonne adresse (copiez-la
@@ -1077,6 +1078,13 @@ encyclopedia_page:
   sort_name: NOM A-Z
   clear_filters: TOUT EFFACER
   no_results: AUCUN OBJET NE CORRESPOND AUX FILTRES
+  filter_by_category: PAR CATÉGORIE
+  filter_by_resource: PAR TYPE DE RESSOURCE
+  filter_by_job: PAR MÉTIER
+  filter_by_world: PAR MONDE
+  filter_by_mob_family: PAR FAMILLE DE MONSTRES
+  filter_biome: BIOME
+  filter_city: CITÉ
   group_armor: ARMURE
   group_weapons: ARMES
   group_accessories: ACCESSOIRES
@@ -1085,7 +1093,11 @@ encyclopedia_page:
   group_relics: RELIQUES
   group_tools: OUTILS
   group_consumables: CONSOMMABLES
-  group_resources: RESSOURCES
+  group_raw_resources: RESSOURCES BRUTES
+  group_gatherable_resources: RESSOURCES RÉCOLTABLES
+  group_intermediary_resources: RESSOURCES INTERMÉDIAIRES
+  group_pet_food_resources: NOURRITURES POUR FAMILIERS
+  item_category_pet_food: NOURRITURE POUR FAMILIER
   stats_filter: STATS
   filter_life_steal: VOL DE VIE
   gameplay:
@@ -1155,18 +1167,18 @@ encyclopedia_page:
     stat_rolling: JET DE STATS
     stat_rolling_desc: Chaque stat est tirée uniformément dans sa plage de template. Chaque valeur a la même probabilité.
     archimobs: MOBS ARCHI
-    archimobs_desc: 0,5% de chance d'apparaître à la place sous la forme du mob archi — une variante nommée, en permanence plus forte. Le seul mécanisme de rareté que les mobs possèdent.
+    archimobs_desc: Chaque monstre éligible a 1 % de chance d’être remplacé par son archimonstre nommé, définitivement plus puissant. Chaque membre effectue son propre jet.
     max_members: Membres max
     groups_desc: Un groupe est un roster partagé de jusqu'à {{max}} joueurs, avec élection de leader. Être en groupe ne fait rien à lui seul en combat — tout le monde, groupé ou non, doit envoyer sa propre transaction de participation au combat pour y entrer ; il n'y a aucune inclusion passive ou de proximité.
     groups_xp: PARTAGE DE L'XP
     groups_xp_desc: Les mobs vaincus forment une réserve d'XP de base. Les combattants éligibles lui donnent le coefficient de groupe Rétro, l'écart entre les niveaux totaux des joueurs et des mobs la réduit, puis chaque joueur reçoit la part correspondant à son niveau dans le total du groupe. Un joueur sous le tiers du niveau du plus haut joueur n'augmente pas le coefficient. La Sagesse s'applique en dernier ; les dégâts personnels ne comptent pas.
     groups_loot: PARTAGE DU BUTIN
     groups_loot_desc: Chaque monstre vaincu effectue un unique jet de butin partagé. Les drops réussis sont attribués à tour de rôle aux joueurs victorieux ; ajouter des joueurs ne crée aucun jet supplémentaire.
-    dungeons_desc: Trouvez un portail dans une zone explorée, dépensez sa clé, puis terminez les salles dans l'ordre. Chaque portail possède son propre vestibule en direct.
+    dungeons_desc: Rejoignez l'entrée du donjon dans sa ville définie, dépensez sa clé, puis terminez les salles dans l'ordre. Chaque donjon possède un vestibule en direct.
     dungeon_entry: Entrée
-    dungeon_entry_value: Une clé à un portail de zone découvert
+    dungeon_entry_value: Une clé correspondante à l'entrée de la ville
     dungeon_instance: Instance
-    dungeon_instance_value: Vestibule local au portail, combats publics ou de groupe
+    dungeon_instance_value: Vestibule du donjon, combats publics ou de groupe
     dungeon_completion: Complétion
     dungeon_completion_value: Nettoyer toutes les salles
     dungeon_reward: Récompense
@@ -1298,6 +1310,7 @@ encyclopedia_page:
   consumable_reset_stats: Réinitialiser les points de stats
   consumable_reset_spells: Réinitialiser les points de sorts
   consumable_recall: Retourne au portail du monde
+  consumable_city: 'Voyage vers la cité de {{city}}'
   consumable_loot_box: Ouvre une récompense aléatoire
   consumable_reward_heading: RÉCOMPENSE
   consumable_rewards: RÉCOMPENSES POSSIBLES
@@ -1365,7 +1378,6 @@ encyclopedia_page:
   no_mobs_onchain: Aucune créature sur la blockchain
   obtention_crafted: Fabricable
   obtention_dropped_by: Lâché par {{count}} monstres
-  obtention_shop: Disponible en boutique
   obtention_unknown: Obtention inconnue
   total_supply: Offre totale
   marketcap: Capitalisation
@@ -1395,10 +1407,7 @@ encyclopedia_page:
     arcane_spore: ''
     arcaneshroom: ''
     arcanite: ''
-    arcanite_hoe: ''
-    arcanite_pickaxe: ''
     arcanite_powder: ''
-    arcanite_sickle: ''
     arcanize_flour: ''
     barley_flour: ''
     basic_pickaxe: ''
@@ -1408,9 +1417,6 @@ encyclopedia_page:
     bloodstone_powder: ''
     bloodveil_orchid: ''
     burnt_wheat_flour: ''
-    copper_hoe: ''
-    copper_pickaxe: ''
-    copper_sickle: ''
     crimson_truffle: ''
     crimson_truffle_heart: ''
     crystallized_tanjirize: ''
@@ -1450,19 +1456,13 @@ encyclopedia_page:
     infinity_moonstone: ''
     infinity_obsidianite: ''
     infinity_quartz: ''
-    iron_sickle: ''
     ivory_orchid_paste: ''
     ivory_shrooms: ''
     jade: ''
-    jade_hoe: ''
-    jade_pickaxe: ''
     jade_powder: ''
     malt_flour: ''
     moonstone: ''
-    moonstone_hoe: ''
-    moonstone_pickaxe: ''
     moonstone_powder: ''
-    moonstone_sickle: ''
     nightcap: ''
     nightcap_elixir_base: ''
     obsidianite: ''
@@ -1512,6 +1512,8 @@ encyclopedia_page:
     rune_wisdom_ba: ''
     rune_wisdom_pa: ''
     rune_wisdom_ra: ''
+    scroll_of_oblivion: Rend tous les points de sorts investis et ramène chaque sort amélioré au niveau 1.
+    scroll_of_rebirth: Rend tous les points de caractéristiques investis afin de pouvoir les réattribuer.
     shiny_barley: ''
     smoldering_wheat: ''
     spectral_arcanize: ''

@@ -299,6 +299,7 @@ export const create_fight_state = ({
       ended: false,
       winner: null,
       dungeon: null,
+      dungeon_room: null,
       managed: false,
       wagered: false,
       drops_rolled: false,

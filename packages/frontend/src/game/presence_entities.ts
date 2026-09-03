@@ -57,13 +57,30 @@ type PresenceSlot = {
   pet_motion: PetMotion
 }
 
+const pet_world_position = (
+  slot: Readonly<Pick<PresenceSlot, 'x' | 'y' | 'z' | 'pet_motion'>>,
+  mounted: boolean,
+  locomotion: PetLocomotion,
+  now: number,
+  ground_height: (x: number, z: number, owner_y: number) => number
+): readonly [number, number, number] => {
+  if (mounted) return Object.freeze([slot.x, slot.y, slot.z] as const)
+  const following = Number.isFinite(slot.pet_motion.x)
+  const x = following ? slot.pet_motion.x : slot.x
+  const z = following ? slot.pet_motion.z : slot.z
+  const y = ground_height(x, z, slot.y) + pet_vertical_offset(locomotion, now / 1000)
+  return Object.freeze([x, y, z] as const)
+}
+
 export const create_presence_renderer = ({
   submit,
   entity_height,
+  pet_ground_height,
   label,
 }: Readonly<{
   submit: (entities: readonly EntityRender[]) => void
   entity_height: (id: string) => number | null
+  pet_ground_height: (x: number, z: number, owner_y: number) => number
   /** the engine's crown-label door — nametags ride the SAME CSS2D pass as every other tag */
   label: (character_id: string, element: HTMLElement | null) => void
 }>) => {
@@ -167,10 +184,7 @@ export const create_presence_renderer = ({
       if (!slot.loaded.pet) return [character]
       // ridden: the pet carries the rider at their position; unridden: it walks its own leash
       const follower = !mounted && Number.isFinite(slot.pet_motion.x)
-      const pet_y = slot.y + pet_vertical_offset(slot.loaded.pet.locomotion, now / 1000)
-      const pet_position = follower
-        ? Object.freeze([slot.pet_motion.x, pet_y, slot.pet_motion.z] as const)
-        : Object.freeze([slot.x, mounted ? slot.y : pet_y, slot.z] as const)
+      const pet_position = pet_world_position(slot, mounted, slot.loaded.pet.locomotion, now, pet_ground_height)
       const pet_moving = follower ? slot.pet_motion.moving : moving
       return [
         character,

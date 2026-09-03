@@ -12,6 +12,10 @@ import { MeshStandardNodeMaterial } from 'three/webgpu'
 import { Fn, attribute, float, positionWorld } from 'three/tsl'
 
 import { flower_bloom } from './nature/flower_bloom.ts'
+import { thebes_courtyard_shrub } from './cities/thebes/nature/courtyard_shrub.ts'
+import { thebes_dry_reed } from './cities/thebes/nature/dry_reed.ts'
+import { thebes_field_crop } from './cities/thebes/nature/field_crop.ts'
+import { ruins_cobweb } from './cities/the_ruins/nature/cobweb.ts'
 import { herb_bush } from './nature/herb_bush.ts'
 import { herb_fern } from './nature/herb_fern.ts'
 import { herb_sedge } from './nature/herb_sedge.ts'
@@ -41,6 +45,10 @@ const RECIPES: Readonly<Record<ScatterKind, readonly (readonly RecipeVertex[])[]
   twig: variant_pool(4, [twig_branch]),
   pebble: variant_pool(5, [rock_pebbles]),
   spike: variant_pool(6, [ice_spike]),
+  cobweb: variant_pool(11, [ruins_cobweb]),
+  dry_reed: variant_pool(8, [thebes_dry_reed]),
+  city_shrub: variant_pool(9, [thebes_courtyard_shrub]),
+  field_crop: variant_pool(10, [thebes_field_crop]),
 })
 
 /** Sway keeps a vertex within ~0.2 blocks; +3 covers it and the tallest scaled recipe. */

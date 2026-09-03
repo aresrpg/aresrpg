@@ -75,7 +75,7 @@ test('fight cleanup waits through bounded pre-submission 1712 projection lag', a
     async () => {
       attempts += 1
       if (attempts < 3)
-        throw new Error("Transaction resolution failed: MoveAbort abort code: 1712 in '0x1::fight::close'")
+        throw new Error("Transaction resolution failed: MoveAbort abort code: 1712 in '0x1::combat::assert_closable'")
       return 'closed'
     },
     async (milliseconds) => void waits.push(milliseconds)

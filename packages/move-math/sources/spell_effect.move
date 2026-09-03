@@ -21,7 +21,11 @@ const EBadChance: u64 = 1406; // chance above 100%
 const EBadLevel: u64 = 1407; // new_spell_level: range out of order, or crit quotation of 1
 const EBadStat: u64 = 1408; // stat id addresses the wrong channel for the effect kind
 const EBadTurns: u64 = 1409; // instantaneous/timed kind carries the wrong duration class
+const ETooManyRows: u64 = 1410; // one branch exceeds the bounded resolver envelope
+const EBadAreaSize: u64 = 1411; // authored area exceeds the board-scale envelope
 const CHATIMENT_TURNS: u8 = 5;
+const MAX_EFFECT_ROWS: u64 = 8;
+const MAX_AREA_SIZE: u8 = 10;
 
 /// The effect kinds — the sealed list (owner 2026-08-09; collapsed 2026-08-12 "optimize for
 /// deletion": every number-changing kind is one of THREE channelled kinds — add / remove /
@@ -108,6 +112,7 @@ public fun new_effect(
 ): Effect {
   assert!(kind < KIND_COUNT, EBadKind);
   assert!(area_shape < SHAPE_COUNT, EBadShape);
+  assert!(area_size <= MAX_AREA_SIZE, EBadAreaSize);
   assert!(target_filter < FILTER_COUNT, EBadFilter);
   assert!(element.is_empty() || item_damages::is_element(&element), EBadElement);
   assert!(value <= value_max, EBadValues);
@@ -159,8 +164,9 @@ public fun new_spell_level(
   effects: vector<Effect>,
   crit_effects: vector<Effect>,
 ): SpellLevel {
-  assert!(range_min <= range_max, EBadLevel);
+  assert!(ap_cost > 0 && range_min <= range_max, EBadLevel);
   assert!(crit_1_in != 1, EBadLevel); // 1-in-1 is not a crit; 0 = never, else 1 in X ≥ 2
+  assert!(effects.length() <= MAX_EFFECT_ROWS && crit_effects.length() <= MAX_EFFECT_ROWS, ETooManyRows);
   SpellLevel {
     ap_cost,
     range_min,

@@ -2,6 +2,29 @@
   {
     "world": "nauvis",
     "entry_level": 1,
+    "cities": [
+      {
+        "city": "thebes",
+        "x": 50512,
+        "z": 50000,
+        "structure_packs": ["temperate_trees", "temperate_ruins"],
+        "dungeon": "gilded_lorito"
+      },
+      {
+        "city": "the_ruins",
+        "x": 36064,
+        "z": 48672,
+        "structure_packs": ["tropical_trees", "nauvis_rainforest_rocks", "temperate_ruins"],
+        "dungeon": "tangled_aftermath"
+      },
+      {
+        "city": "fuwage",
+        "x": 14240,
+        "z": 22688,
+        "structure_packs": [],
+        "dungeon": "ivory_rampart"
+      }
+    ],
     "terrain": {
       "seed": "ares-nauvis-europe",
       "sea_level": 60,
@@ -17,6 +40,66 @@
         "limestone": {
           "color": "#958d75",
           "preset": "stone"
+        },
+        "thebes_limestone": {
+          "color": "#d8c89b",
+          "preset": "stone"
+        },
+        "thebes_sandstone": {
+          "color": "#b98b55",
+          "preset": "sand"
+        },
+        "thebes_tile": {
+          "color": "#2f7f86",
+          "preset": "stone"
+        },
+        "thebes_copper": {
+          "color": "#a85f3f",
+          "preset": "stone"
+        },
+        "the_ruins_stone": {
+          "color": "#252a2d",
+          "preset": "stone"
+        },
+        "the_ruins_masonry": {
+          "color": "#4a4044",
+          "preset": "stone"
+        },
+        "the_ruins_timber": {
+          "color": "#3a261f",
+          "preset": "wood"
+        },
+        "the_ruins_silk": {
+          "color": "#b9c4bd",
+          "preset": "snow"
+        },
+        "the_ruins_iron": {
+          "color": "#34383d",
+          "preset": "stone"
+        },
+        "the_ruins_bone": {
+          "color": "#c8b99a",
+          "preset": "stone"
+        },
+        "fuwage_stone": {
+          "color": "#b7aea0",
+          "preset": "stone"
+        },
+        "fuwage_dark_stone": {
+          "color": "#343a43",
+          "preset": "stone"
+        },
+        "fuwage_timber": {
+          "color": "#6a4932",
+          "preset": "wood"
+        },
+        "fuwage_tile": {
+          "color": "#6f3034",
+          "preset": "stone"
+        },
+        "fuwage_banner": {
+          "color": "#e8ddd0",
+          "preset": "snow"
         },
         "gravel": {
           "color": "#766f61",
@@ -115,7 +198,7 @@
       "biomes": [
         {
           "name": "plains",
-          "structure_packs": ["nauvis_plains_trees", "grassland_rocks"],
+          "structure_packs": ["nauvis_plains_trees", "grassland_rocks", "nauvis_plains_landmarks"],
           "landscape": [
             {
               "x": 0,
@@ -195,7 +278,7 @@
         },
         {
           "name": "forest",
-          "structure_packs": ["temperate_trees", "temperate_rocks", "temperate_ruins"],
+          "structure_packs": ["temperate_trees", "temperate_rocks", "temperate_ruins", "nauvis_forest_landmarks"],
           "landscape": [
             {
               "x": 0,
@@ -285,7 +368,8 @@
         },
         {
           "name": "rainforest",
-          "structure_packs": ["tropical_trees", "nauvis_rainforest_rocks"],
+          "structure_packs": ["tropical_trees", "nauvis_rainforest_rocks", "nauvis_rainforest_landmarks"],
+          "ravines": true,
           "landscape": [
             {
               "x": 0,
@@ -369,7 +453,8 @@
         },
         {
           "name": "highlands",
-          "structure_packs": ["nauvis_highland_trees", "taiga_rocks"],
+          "structure_packs": ["nauvis_highland_trees", "taiga_rocks", "nauvis_highland_landmarks"],
+          "mountain_passes": true,
           "landscape": [
             {
               "x": 0,
@@ -477,7 +562,8 @@
         },
         {
           "name": "desert",
-          "structure_packs": ["nauvis_desert_scrub", "desert_rocks", "desert_ruins"],
+          "structure_packs": ["nauvis_desert_scrub", "desert_rocks", "desert_ruins", "nauvis_desert_landmarks"],
+          "ravines": true,
           "landscape": [
             {
               "x": 0,
@@ -619,22 +705,26 @@
       {
         "mob_type": "aragne__fire",
         "weight_bp": 1000,
-        "biomes": ["desert"]
+        "biomes": ["desert"],
+        "cities": ["the_ruins"]
       },
       {
         "mob_type": "aragne__water",
         "weight_bp": 1000,
-        "biomes": ["rainforest"]
+        "biomes": ["rainforest"],
+        "cities": ["the_ruins"]
       },
       {
         "mob_type": "aragne__air",
         "weight_bp": 1000,
-        "biomes": ["plains", "highlands"]
+        "biomes": ["plains", "highlands"],
+        "cities": ["the_ruins"]
       },
       {
         "mob_type": "aragne__earth",
         "weight_bp": 1000,
-        "biomes": ["plains", "forest"]
+        "biomes": ["plains", "forest"],
+        "cities": ["the_ruins"]
       },
       {
         "mob_type": "crab",
@@ -654,12 +744,19 @@
       {
         "mob_type": "fuwa__white",
         "weight_bp": 1000,
-        "biomes": ["plains", "highlands"]
+        "biomes": ["plains", "highlands"],
+        "cities": ["fuwage"]
       },
       {
         "mob_type": "fuwa__black",
         "weight_bp": 1000,
-        "biomes": ["forest", "rainforest"]
+        "biomes": ["forest", "rainforest"],
+        "cities": ["fuwage"]
+      },
+      {
+        "mob_type": "wild_boar",
+        "weight_bp": 1000,
+        "biomes": ["plains", "forest"]
       },
       {
         "mob_type": "misui__fire",
@@ -695,20 +792,65 @@
         "mob_type": "moyumi",
         "weight_bp": 1000,
         "biomes": ["highlands", "desert"]
+      },
+      {
+        "mob_type": "nook",
+        "weight_bp": 1000,
+        "biomes": ["forest"],
+        "cities": ["thebes"]
+      },
+      {
+        "mob_type": "lorito__earth",
+        "weight_bp": 1000,
+        "biomes": [],
+        "cities": ["thebes"]
+      },
+      {
+        "mob_type": "lorito__fire",
+        "weight_bp": 1000,
+        "biomes": [],
+        "cities": ["thebes"]
+      },
+      {
+        "mob_type": "lorito__water",
+        "weight_bp": 1000,
+        "biomes": [],
+        "cities": ["thebes"]
+      },
+      {
+        "mob_type": "lorito__air",
+        "weight_bp": 1000,
+        "biomes": [],
+        "cities": ["thebes"]
+      },
+      {
+        "mob_type": "bramble",
+        "weight_bp": 1000,
+        "biomes": ["forest"],
+        "cities": ["thebes"]
+      },
+      {
+        "mob_type": "tinker",
+        "weight_bp": 1000,
+        "biomes": ["forest"],
+        "cities": ["thebes"]
       }
     ],
     "resources": [
       {
         "item_type": "wheat",
-        "biomes": ["plains"]
+        "biomes": ["plains"],
+        "cities": ["thebes"]
       },
       {
         "item_type": "green_mushroom",
-        "biomes": ["forest", "rainforest"]
+        "biomes": ["forest", "rainforest"],
+        "cities": ["thebes"]
       },
       {
         "item_type": "quartz",
-        "biomes": ["highlands"]
+        "biomes": ["highlands"],
+        "cities": ["thebes"]
       },
       {
         "item_type": "wheat_barley",
@@ -720,147 +862,30 @@
       },
       {
         "item_type": "amber",
-        "biomes": ["highlands"]
+        "biomes": ["highlands"],
+        "cities": ["the_ruins"]
       },
       {
         "item_type": "wheat_malt",
-        "biomes": ["plains"]
+        "biomes": ["plains"],
+        "cities": ["fuwage"]
       },
       {
         "item_type": "ivory_shrooms",
-        "biomes": ["forest", "rainforest"]
+        "biomes": ["forest", "rainforest"],
+        "cities": ["the_ruins"]
       },
       {
         "item_type": "jade",
-        "biomes": ["desert"]
+        "biomes": ["desert"],
+        "cities": ["fuwage"]
       }
-    ],
-    "dungeon": {
-      "key": "key_of_tangled_aftermath",
-      "rooms": [
-        [
-          {
-            "mob_type": "fuwa__white"
-          },
-          {
-            "mob_type": "fuwa__white"
-          },
-          {
-            "mob_type": "fuwa__black"
-          },
-          {
-            "mob_type": "moka"
-          },
-          {
-            "mob_type": "moyumi"
-          }
-        ],
-        [
-          {
-            "mob_type": "moka"
-          },
-          {
-            "mob_type": "moka"
-          },
-          {
-            "mob_type": "moka"
-          },
-          {
-            "mob_type": "fuwa__black"
-          },
-          {
-            "mob_type": "fuwa__black"
-          },
-          {
-            "mob_type": "fuwa__black"
-          }
-        ],
-        [
-          {
-            "mob_type": "moyumi"
-          },
-          {
-            "mob_type": "moyumi"
-          },
-          {
-            "mob_type": "aragne__earth"
-          },
-          {
-            "mob_type": "aragne__earth"
-          },
-          {
-            "mob_type": "aragne__earth"
-          },
-          {
-            "mob_type": "aragne__air"
-          }
-        ],
-        [
-          {
-            "mob_type": "aragne__air"
-          },
-          {
-            "mob_type": "aragne__air"
-          },
-          {
-            "mob_type": "aragne__fire"
-          },
-          {
-            "mob_type": "aragne__fire"
-          },
-          {
-            "mob_type": "aragne__water"
-          },
-          {
-            "mob_type": "ant_white"
-          }
-        ],
-        [
-          {
-            "mob_type": "ant_white"
-          },
-          {
-            "mob_type": "ant_red"
-          },
-          {
-            "mob_type": "misui__vitality"
-          },
-          {
-            "mob_type": "moyumi"
-          },
-          {
-            "mob_type": "ant_white"
-          },
-          {
-            "mob_type": "ant_white"
-          }
-        ],
-        [
-          {
-            "mob_type": "araknomath"
-          },
-          {
-            "mob_type": "ant_red"
-          },
-          {
-            "mob_type": "ant_red"
-          },
-          {
-            "mob_type": "ant_red"
-          },
-          {
-            "mob_type": "misui__vitality"
-          },
-          {
-            "mob_type": "misui__vitality"
-          }
-        ]
-      ]
-    }
+    ]
   },
   {
     "world": "yakutia",
     "entry_level": 20,
+    "cities": [],
     "terrain": {
       "seed": "ares-yakutia",
       "sea_level": 60,
@@ -1441,10 +1466,6 @@
         "item_type": "duskite",
         "biomes": ["ice_peaks"]
       }
-    ],
-    "dungeon": {
-      "key": "",
-      "rooms": []
-    }
+    ]
   }
 ]

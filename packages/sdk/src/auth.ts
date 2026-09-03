@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
 import { registerEnokiWallets } from '@mysten/enoki'
+import type { KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import type { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress } from '@mysten/sui/utils'
-import type { TradeRow } from '@aresrpg/protocol'
+import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import {
   getWallets,
   isWalletWithRequiredFeatureSet,
@@ -25,31 +25,22 @@ import { character_claim_id, character_create, character_id, type CharacterCreat
 import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
 import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.ts'
 import { gas_mist_from_receipt } from './gas.ts'
-import { SDK, type Pins, type SuiTransport } from './client.ts'
-import type { SeedAdminConfig, SeedAdminSession } from './seed_admin.ts'
-import type { SeedContent } from './seed.ts'
+import { SDK, sui_transport, type TransactionSigner } from './client.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
 import type { MarketplaceRoyalty } from './marketplace_admin.ts'
 import { marketplace_actions, type MarketplaceActions } from './marketplace.ts'
 import { stack_actions, type StackActions } from './stacks.ts'
 import { trade_actions, trade_create, type TradeActions } from './trade.ts'
-import type { AirdropClaim, ShopPurchase } from './shop.ts'
+import type { AirdropClaim, GiftcardRedeem } from './distribution.ts'
 import { character_actions, type CharacterActions } from './character_actions.ts'
 import { fight_actions, type FightActions } from './fight.ts'
 import { dungeon_actions, type DungeonActions } from './dungeon.ts'
 import { kolizeum_actions, type KolizeumActions } from './kolizeum.ts'
 import { friends_actions, type FriendsActions } from './friends.ts'
 import { party_actions, type PartyActions } from './party.ts'
-import { receipt_digest, receipt_digest_or_null, type OwnedRef, type Receipt } from './cache.ts'
-import { create_personal_kiosk_runner } from './ptb.ts'
-import {
-  create_deployment_bootstrap_transaction,
-  create_package_publish_transaction,
-  create_package_upgrade_transaction,
-  DISPLAY_REGISTRY_ID,
-  type ContractArtifact,
-  type GameDeployment,
-} from './deployment_admin.ts'
+import { mastery_actions, type MasteryActions } from './mastery.ts'
+import { receipt_digest } from './cache.ts'
+import { create_personal_kiosk_runner, retry_stale_kiosk_ref } from './kiosk_runner.ts'
 
 export type { CharacterActions, ScribeOutcome } from './character_actions.ts'
 export type { FightActions } from './fight.ts'
@@ -57,10 +48,22 @@ export type { DungeonActions } from './dungeon.ts'
 export type { KolizeumActions } from './kolizeum.ts'
 export type { FriendsActions } from './friends.ts'
 export type { PartyActions } from './party.ts'
+export type { MasteryActions } from './mastery.ts'
 export type { ItemSnapshot } from './item_snapshot.ts'
+
+const select_personal_kiosk = (caps: readonly KioskOwnerCap[], kiosk_id?: string): KioskOwnerCap | null =>
+  (kiosk_id ? caps.find(({ kioskId }) => kioskId === kiosk_id) : caps[0]) ?? null
+
+const receipt_fresh_kiosk_cap = (sdk: ReturnType<typeof SDK>, cap: KioskOwnerCap, fresh: boolean): KioskOwnerCap => {
+  if (fresh) return cap
+  const current = sdk.ref(cap.objectId)
+  return current ? Object.freeze({ ...cap, ...current }) : cap
+}
+
 export type AuthSession = Readonly<{
   address: string
   wallet_name: string
+  identity: 'zklogin' | 'wallet'
   sign_personal_message: (message: Uint8Array) => Promise<{ bytes: string; signature: string }>
   read_sui_balance: () => Promise<bigint>
   gas_spent_24h: () => bigint
@@ -76,6 +79,7 @@ export type AuthSession = Readonly<{
   kolizeum: KolizeumActions
   friends: FriendsActions
   party: PartyActions
+  mastery: MasteryActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
   read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
@@ -89,34 +93,10 @@ export type AuthSession = Readonly<{
   trade: (trade: TradeRow) => TradeActions
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
-  send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string | null }>>
-  buy_shop_item: (purchase: ShopPurchase) => Promise<Readonly<{ digest: string }>>
-  claim_airdrop: (claim: AirdropClaim) => Promise<Readonly<{ digest: string }>>
-  create_seed_admin: (content: SeedContent, config: SeedAdminConfig, pins?: Pins) => Promise<SeedAdminSession>
-  authorize_temp_admin: (to: string, mist: bigint) => Promise<Readonly<{ digest: string; admin_cap: OwnedRef }>>
-  publish_contract: (artifact: ContractArtifact) => Promise<
-    Readonly<{
-      receipt: Receipt
-    }>
-  >
-  upgrade_contract: (
-    deployment: Readonly<{
-      artifact: ContractArtifact
-      upgrade_cap: string
-    }>
-  ) => Promise<Readonly<{ receipt: Receipt }>>
-  read_package_upgrade: (upgrade_cap: string) => Promise<Readonly<{ package: string; version: number; policy: number }>>
-  bootstrap_deployment?: (deployment: GameDeployment) => Promise<Receipt>
-  read_game_version: (version: string) => Promise<number>
-  read_game_paused: (version: string) => Promise<boolean>
-  set_game_paused: (
-    deployment: Readonly<{
-      package_id: string
-      version: string
-      admin_cap: string
-      paused: boolean
-    }>
-  ) => Promise<Readonly<{ digest: string }>>
+  send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string }>>
+  claim_airdrop: (claim: AirdropClaim) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>>
+  claim_giftcard_link: (url: string) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>>
+  redeem_giftcard: (redemption: GiftcardRedeem) => Promise<Readonly<{ digest: string }>>
   read_marketplace_royalties: () => Promise<readonly MarketplaceRoyalty[]>
   claim_marketplace_royalties: () => Promise<
     Readonly<{
@@ -136,7 +116,7 @@ export type AuthWallet = Readonly<{
 
 export type SelectableAuthWallet = Readonly<{
   name: string
-  authorize: () => Promise<readonly string[]>
+  authorize: (silent?: boolean) => Promise<readonly string[]>
   connect: (address: string) => Promise<AuthSession>
   disconnect: () => Promise<void>
 }>
@@ -150,6 +130,23 @@ export type BrowserAuthOptions = Readonly<{
   rpc_url?: string
 }>
 export type WalletAuthOptions = Pick<BrowserAuthOptions, 'graphql_url' | 'network' | 'rpc_url'>
+
+export type OperatorWalletContext = Readonly<{
+  account: WalletAccount
+  network: BrowserAuthOptions['network']
+  read_client: SuiGraphQLClient
+  resolution_client: SuiGrpcClient
+  sdk: ReturnType<typeof SDK>
+  sign_transaction: TransactionSigner
+}>
+
+const operator_wallet_contexts = new WeakMap<AuthSession, OperatorWalletContext>()
+
+export const operator_wallet_context = (session: AuthSession): OperatorWalletContext => {
+  const context = operator_wallet_contexts.get(session)
+  if (!context) throw new Error('The wallet session has no operator context')
+  return context
+}
 
 const installed_wallets = (): readonly Wallet[] =>
   getWallets()
@@ -198,57 +195,42 @@ const create_wallet_session = (
       chain: `sui:${network}`,
     })
   const sdk = SDK({
-    client: resolution_client as unknown as SuiTransport,
+    client: sui_transport(resolution_client),
     address: account.address,
     network,
     sign_transaction,
   })
   const read_item = create_item_snapshot_reader(client, sdk.game_type_package)
   const registry_pin = (PINS as Record<string, { name_registry?: { id?: string | null } }>)[network]?.name_registry?.id
-  // The found cap is cached for the session (kiosks are for life); an EMPTY answer is never
-  // cached — the player whose first purchase creates their kiosk must be found on the next call.
-  /** Custody doors must present the kiosk that HOLDS the acted-on object — with several
-   *  personal kiosks on one address (2026-08-21 legacy: broken lookups minted spares), the
-   *  first cap is the wrong one whenever the character lives elsewhere. Callers that know
-   *  the holding kiosk pass its id; the first personal cap remains the creation-time default. */
-  const kiosk_cap = async (kiosk_id?: string) => {
-    const { kioskOwnerCaps } = await sdk.get_owned_kiosks(account.address)
-    const personal = kioskOwnerCaps.filter(({ isPersonal }) => isPersonal)
-    return (kiosk_id ? personal.find(({ kioskId }) => kioskId === kiosk_id) : personal[0]) ?? null
+  let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
+  const kiosk_cap = async (kiosk_id?: string, fresh = false) => {
+    const request = fresh || !kiosk_caps ? sdk.get_owned_kiosks(account.address) : kiosk_caps
+    kiosk_caps = request
+    try {
+      const { kioskOwnerCaps } = await request
+      const cap = select_personal_kiosk(
+        kioskOwnerCaps.filter(({ isPersonal }) => isPersonal),
+        kiosk_id
+      )
+      if (!cap) {
+        kiosk_caps = null
+        return null
+      }
+      return receipt_fresh_kiosk_cap(sdk, cap, fresh)
+    } catch (error) {
+      kiosk_caps = null
+      throw error
+    }
   }
   const personal_kiosk_action = create_personal_kiosk_runner(kiosk_cap)
   const require_registry = (): string => {
     if (!registry_pin) throw new Error('The character registry is not published on this network')
     return registry_pin
   }
-  const read_game_version = async (version: string): Promise<number> => {
-    const { objects } = await client.core.getObjects({ objectIds: [version], include: { json: true } })
-    const object = objects.find((candidate) => !(candidate instanceof Error) && candidate.objectId === version)
-    if (!object || object instanceof Error) throw new Error('The published Version object is unavailable')
-    const current_version = Number(object.json?.current_version)
-    if (!Number.isSafeInteger(current_version) || current_version < 0)
-      throw new Error('The published Version value is invalid')
-    return current_version
-  }
-  const read_package_upgrade = async (
-    upgrade_cap: string
-  ): Promise<Readonly<{ package: string; version: number; policy: number }>> => {
-    const { objects } = await client.core.getObjects({ objectIds: [upgrade_cap], include: { json: true } })
-    const capability = objects.find((candidate) => !(candidate instanceof Error) && candidate.objectId === upgrade_cap)
-    if (!capability || capability instanceof Error) throw new Error('The package UpgradeCap is unavailable')
-    const package_id = capability.json?.package
-    const version = Number(capability.json?.version)
-    const policy = Number(capability.json?.policy)
-    if (typeof package_id !== 'string' || !isValidSuiAddress(package_id))
-      throw new Error('The package UpgradeCap has an invalid package ID')
-    if (!Number.isSafeInteger(version) || version < 1) throw new Error('The package UpgradeCap has an invalid version')
-    if (!Number.isInteger(policy) || policy < 0 || policy > 255)
-      throw new Error('The package UpgradeCap has an invalid policy')
-    return Object.freeze({ package: package_id, version, policy })
-  }
-  return Object.freeze({
+  const session: AuthSession = Object.freeze({
     address: account.address,
     wallet_name: wallet.name,
+    identity: 'enoki:getSession' in wallet.features ? 'zklogin' : 'wallet',
     sign_personal_message: (message: Uint8Array) =>
       sign_feature.signPersonalMessage({
         message,
@@ -268,6 +250,7 @@ const create_wallet_session = (
     kolizeum: kolizeum_actions(sdk, { kiosk_cap, address: account.address }),
     friends: friends_actions(sdk, { address: account.address }),
     party: party_actions(sdk, { kiosk_cap }),
+    mastery: mastery_actions(sdk, { address: account.address, kiosk_cap }),
     character: character_actions(sdk, { kiosk_cap }),
     read_character_checkpoint: (id, world) => read_checkpoint(client, sdk.game_type_package, id, world),
     read_item,
@@ -312,180 +295,33 @@ const create_wallet_session = (
       })
       const receipt = await sdk.execute(transaction)
       if (receipt.$kind === 'FailedTransaction') throw new Error('The SUI transfer failed on-chain')
-      return Object.freeze({ digest: receipt_digest_or_null(receipt) })
-    },
-    buy_shop_item: async (purchase) => {
-      const { buy_shop_item } = await import('./shop.ts')
-      if (purchase.existing_kiosk_id) {
-        const cap = await kiosk_cap(purchase.existing_kiosk_id)
-        if (!cap) throw new Error('The merge-target kiosk is unavailable.')
-        const result = await buy_shop_item(sdk, cap, purchase)
-        return Object.freeze({ digest: result.digest })
-      }
-      return personal_kiosk_action(async (kiosk_cap) => {
-        const result = await buy_shop_item(sdk, kiosk_cap, purchase)
-        return Object.freeze({
-          value: Object.freeze({ digest: result.digest }),
-          kiosk_cap: result.kiosk_cap,
-        })
-      })
+      return Object.freeze({ digest: receipt_digest(receipt) })
     },
     claim_airdrop: async (claim) => {
-      const { claim_airdrop } = await import('./shop.ts')
-      if (claim.existing_kiosk_id) {
-        const cap = await kiosk_cap(claim.existing_kiosk_id)
-        if (!cap) throw new Error('The merge-target kiosk is unavailable.')
-        const result = await claim_airdrop(sdk, cap, claim)
-        return Object.freeze({ digest: result.digest })
+      const { claim_airdrop } = await import('./distribution.ts')
+      return claim_airdrop(sdk, claim)
+    },
+    claim_giftcard_link: async (url) => {
+      const { claim_giftcard_link } = await import('./distribution.ts')
+      return claim_giftcard_link(resolution_client, sdk, url, account.address)
+    },
+    redeem_giftcard: async (redemption) => {
+      const { redeem_giftcard } = await import('./distribution.ts')
+      if (redemption.existing_kiosk_id) {
+        return retry_stale_kiosk_ref(async (fresh) => {
+          const cap = await kiosk_cap(redemption.existing_kiosk_id ?? undefined, fresh)
+          if (!cap) throw new Error('The merge-target kiosk is unavailable.')
+          const result = await redeem_giftcard(sdk, cap, redemption)
+          return Object.freeze({ digest: result.digest })
+        })
       }
       return personal_kiosk_action(async (kiosk_cap) => {
-        const result = await claim_airdrop(sdk, kiosk_cap, claim)
+        const result = await redeem_giftcard(sdk, kiosk_cap, redemption)
         return Object.freeze({
           value: Object.freeze({ digest: result.digest }),
           kiosk_cap: result.kiosk_cap,
         })
       })
-    },
-    create_seed_admin: async (content, config, current_pins = sdk.pins) => {
-      const { create_seed_admin } = await import('./seed_admin.ts')
-      const { browser_seed_session_store, create_seed_session } = await import('./seed_session.ts')
-      const seed_sdk =
-        current_pins === sdk.pins
-          ? SDK({
-              client: resolution_client as unknown as SuiTransport,
-              address: account.address,
-              network,
-              pins: current_pins,
-              sign_transaction,
-              // a seed batch is a HUNDRED-command ceremony — pricing belongs to the resolver
-              gas_budget: 'estimate',
-            })
-          : SDK({
-              client: resolution_client as unknown as SuiTransport,
-              address: account.address,
-              network,
-              pins: current_pins,
-              sign_transaction,
-              // a seed batch is a HUNDRED-command ceremony — pricing belongs to the resolver
-              gas_budget: 'estimate',
-            })
-      const super_session = await create_seed_admin({ sdk: seed_sdk, content, config })
-      const { control_package } = seed_sdk.pins
-      if (typeof control_package !== 'string' || !control_package)
-        throw new Error('The seed session needs a published control package in pins.json')
-      let delegated: SeedAdminSession | null = null
-      const session = create_seed_session({
-        store: browser_seed_session_store(network, account.address),
-        super_sdk: seed_sdk,
-        super_admin_cap: config.admin_cap,
-        network,
-        owner: account.address,
-        package_id: control_package,
-        build_session_sdk: (keypair) =>
-          SDK({
-            client: resolution_client as unknown as SuiTransport,
-            signer: keypair,
-            network,
-            pins: seed_sdk.pins,
-            gas_budget: 'estimate',
-          }),
-      })
-
-      const delegated_session = async (): Promise<SeedAdminSession> => {
-        if (delegated) return delegated
-        await seed_sdk.hydrate([config.admin_cap])
-        const { sdk: session_sdk, admin_cap } = await session.ensure()
-        delegated = await create_seed_admin({
-          sdk: session_sdk,
-          content,
-          config: { ...config, admin_cap },
-        })
-        return delegated
-      }
-
-      const release = async (): Promise<void> => {
-        await session.release()
-        delegated = null
-      }
-
-      return Object.freeze({
-        refresh: super_session.refresh,
-        execute: async (batch, ledger) => (await delegated_session()).execute(batch, ledger),
-        check_changes: super_session.check_changes,
-        address_book: super_session.address_book,
-        read_frozen: super_session.read_frozen,
-        // rewrites are bulk work like batches — they run on the funded temporary signer
-        apply_changes: async (ledger) => (await delegated_session()).apply_changes(ledger),
-        created_ledger: super_session.created_ledger,
-        freeze_forever: super_session.freeze_forever,
-        release,
-      })
-    },
-    authorize_temp_admin: async (to, mist) => (await import('./delegated_admin.ts')).delegate(sdk, to, mist),
-    publish_contract: async (artifact) => {
-      const receipt = await sdk.execute(create_package_publish_transaction({ artifact, recipient: account.address }), {
-        budget: 'estimate',
-        include: { objectTypes: true },
-      })
-      return Object.freeze({ receipt })
-    },
-    upgrade_contract: async ({ artifact, upgrade_cap }) => {
-      await sdk.hydrate([upgrade_cap])
-      const { package: package_id, policy } = await read_package_upgrade(upgrade_cap)
-      const receipt = await sdk.execute(
-        create_package_upgrade_transaction({ sdk, artifact, package: package_id, upgrade_cap, policy }),
-        { budget: 'estimate', include: { objectTypes: true } }
-      )
-      return Object.freeze({ receipt })
-    },
-    read_package_upgrade,
-    bootstrap_deployment: async (deployment) => {
-      // A fresh publish changes the game package identity before pins.json can be reloaded.
-      // Bootstrap must therefore own a deployment-bound cache/context; reusing the login SDK
-      // lets an old package pin leak into post-publish resolution.
-      const bootstrap_sdk = SDK({
-        client: resolution_client as unknown as SuiTransport,
-        address: account.address,
-        network,
-        sign_transaction,
-        pins: {
-          ...sdk.pins,
-          package: deployment.package,
-          package_original: deployment.package,
-          kiosk_package: deployment.kiosk_package,
-          version: deployment.version,
-          loot_registry: deployment.loot_registry,
-          name_registry: deployment.name_registry,
-          friend_registry: deployment.friend_registry,
-        },
-      })
-      await bootstrap_sdk.hydrate([deployment.publisher, DISPLAY_REGISTRY_ID])
-      return bootstrap_sdk.execute(
-        await create_deployment_bootstrap_transaction({
-          sdk: bootstrap_sdk,
-          package_id: deployment.package,
-          kiosk_package: deployment.kiosk_package,
-          publisher: deployment.publisher,
-          recipient: account.address,
-        }),
-        { budget: 'estimate', include: { objectTypes: true } }
-      )
-    },
-    read_game_version,
-    read_game_paused: async (version) => (await read_game_version(version)) === 0,
-    set_game_paused: async ({ package_id, version, admin_cap, paused }) => {
-      await sdk.hydrate([version, admin_cap])
-      const { create_version_admin_transaction } = await import('./deployment_admin.ts')
-      const receipt = await sdk.execute(
-        create_version_admin_transaction({
-          sdk,
-          package_id,
-          version,
-          admin_cap,
-          action: paused ? 'pause' : 'resume',
-        })
-      )
-      return Object.freeze({ digest: receipt_digest(receipt) })
     },
     read_marketplace_royalties: async () => {
       const { read_marketplace_royalties } = await import('./marketplace_admin.ts')
@@ -507,6 +343,11 @@ const create_wallet_session = (
       await disconnect?.disconnect?.()
     },
   })
+  operator_wallet_contexts.set(
+    session,
+    Object.freeze({ account, network, read_client: client, resolution_client, sdk, sign_transaction })
+  )
+  return session
 }
 
 const connect_wallet = async (
@@ -565,8 +406,8 @@ export const create_wallet_auth = (options: WalletAuthOptions) => {
     const disconnect = wallet.features['standard:disconnect'] as { disconnect?: () => Promise<void> } | undefined
     return Object.freeze({
       name: wallet.name,
-      authorize: async () => {
-        accounts = await request_wallet_accounts(wallet)
+      authorize: async (silent = false) => {
+        accounts = await request_wallet_accounts(wallet, silent)
         return Object.freeze(accounts.map(({ address }) => address))
       },
       connect: async (address: string) => {

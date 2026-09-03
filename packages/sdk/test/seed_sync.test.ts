@@ -9,9 +9,60 @@ import { describe, expect, test } from 'bun:test'
 import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
-import type { SeedContent } from '../src/seed.ts'
+import { create_seed_plan, type SeedContent } from '../src/seed.ts'
 import { board_catalog_id, item_template_id, recipe_id, spell_template_id } from '../src/seed_ids.ts'
-import { seed_ledger_after, seed_sync_rows, seed_sync_view, seed_update_transactions } from '../src/seed_sync.ts'
+import {
+  canonical_json,
+  created_seed_row_keys,
+  seed_ledger_after,
+  seed_ledger_after_batch,
+  seed_sync_rows,
+  seed_sync_view,
+  type SeedSyncRow,
+} from '../src/seed_sync.ts'
+import { seed_update_batches } from '../src/seed_updates.ts'
+
+test('creation ledger advances only rows targeted by the certified batch', () => {
+  const rows = [
+    { key: 'old', kind: 'template', addresses: ['0xold'] },
+    { key: 'created', kind: 'template', addresses: ['0xcreated'] },
+  ] as never
+
+  expect(created_seed_row_keys(rows, {}, new Set(['0xcreated']), () => true)).toEqual(new Set(['created']))
+})
+
+test('content fingerprints ignore JSON object key order', () => {
+  expect(canonical_json({ z: 1, nested: { b: 2, a: 1 }, rows: [{ y: 2, x: 1 }] })).toBe(
+    canonical_json({ rows: [{ x: 1, y: 2 }], nested: { a: 1, b: 2 }, z: 1 })
+  )
+})
+
+test('a newer chain revision invalidates a matching mutable ledger fingerprint', () => {
+  const row = {
+    key: '0xrow',
+    label: 'world nauvis',
+    hash: 'authored',
+    kind: 'template',
+    domain: 'world',
+    chain_id: '0xrow',
+    addresses: ['0xrow'],
+    hydrate: [],
+    cost: 1,
+  } as SeedSyncRow
+  const ledger = {
+    '0xrow': { hash: row.hash, label: row.label, addresses: row.addresses, revisions: { '0xrow': '7:old' } },
+  }
+
+  const view = seed_sync_view(
+    [row],
+    ledger,
+    () => true,
+    0,
+    () => '8:new'
+  )
+  expect(view.changed).toEqual([row])
+  expect(view.unchanged).toBe(0)
+})
 
 const REGISTRY = `0x${'11'.repeat(32)}`
 const PACKAGE = `0x${'22'.repeat(32)}`
@@ -58,8 +109,9 @@ const content: SeedContent = {
   ],
   mobs: [],
   recipes: [],
+  dungeons: [],
   worlds: [],
-  shop: { sales: [{ item_type: 'ore', price: 5, supply: 10 }] },
+  mastery: { offers: [] },
   airdrop: { drops: [], giftcards: [] },
   biome_maps: [],
   boards: [
@@ -83,6 +135,13 @@ const content: SeedContent = {
     },
   ],
 }
+
+test('creation planning and reconciliation own the same derived address set', () => {
+  const sdk = game()
+  const planned = new Set(create_seed_plan(sdk, content).batches.flatMap(({ target_ids }) => target_ids))
+  const reconciled = new Set(seed_sync_rows(sdk, content).flatMap(({ addresses }) => addresses))
+  expect([...planned].toSorted()).toEqual([...reconciled].toSorted())
+})
 
 const armed = () => {
   const sdk = game()
@@ -131,6 +190,50 @@ const spark_id = spell_template_id(CONTENT_ROOT, SEED_PACKAGE, 'spark')
 const catalog_id = board_catalog_id(CONTENT_ROOT, SEED_PACKAGE)
 
 describe('check changes', () => {
+  test('a published dungeon slug cannot be removed or renamed', () => {
+    const view = seed_sync_view(
+      [],
+      {
+        '0xdungeon': Object.freeze({ hash: 'old', label: 'dungeon keep', domain: 'dungeon' }),
+      },
+      () => true
+    )
+
+    expect(view.errors).toEqual([
+      'dungeon keep was removed or renamed, but a published dungeon keeps its stable slug forever — restore the row and edit its rooms instead',
+    ])
+  })
+
+  test('a published city slug cannot be removed or renamed', () => {
+    const row = Object.freeze({
+      key: '0xworld',
+      label: 'world nauvis',
+      hash: 'new',
+      kind: 'template' as const,
+      domain: 'world' as const,
+      world: Object.freeze({ cities: Object.freeze(['new_thebes']) }),
+      chain_id: '0xworld',
+      addresses: Object.freeze(['0xworld']),
+      hydrate: Object.freeze([]),
+      cost: 1,
+    }) satisfies SeedSyncRow
+    const view = seed_sync_view(
+      [row],
+      {
+        '0xworld': Object.freeze({
+          hash: 'old',
+          label: 'world nauvis',
+          domain: 'world',
+          world: Object.freeze({ cities: Object.freeze(['thebes']) }),
+        }),
+      },
+      () => true
+    )
+    expect(view.errors).toEqual([
+      'world nauvis removed or renamed stable city thebes — restore it and edit its mutable fields instead',
+    ])
+  })
+
   test('sorts rows into new, changed, removed, up to date, and cannot-rewrite', () => {
     const sdk = game()
     const rows = seed_sync_rows(sdk, content)
@@ -139,7 +242,6 @@ describe('check changes', () => {
       [ore_id]: { hash: ore.hash, label: 'item ore' }, // untouched
       [spark_id]: { hash: 'stale', label: 'spell spark' }, // edited in the files
       '0xdead': { hash: 'x', label: 'item old_relic' }, // dropped from the files
-      [rows.find(({ label }) => label === 'sale ore')!.key]: { hash: 'stale', label: 'sale ore' },
     }
     // everything except the box exists on chain; boards wait for their catalog
     const exists = (id: string): boolean => id !== box_id && id !== catalog_id
@@ -147,36 +249,27 @@ describe('check changes', () => {
     const view = seed_sync_view(rows, ledger, exists)
 
     expect(view.new_rows.map(({ label }) => label)).toEqual(['item box', 'board #0', 'board #1'])
-    expect(view.changed.map(({ label }) => label)).toEqual(['spell spark', 'sale ore'])
+    expect(view.changed.map(({ label }) => label)).toEqual(['item ore', 'spell spark'])
     expect(view.removed).toEqual([{ key: '0xdead', label: 'item old_relic' }])
     expect(view.fixed).toEqual([])
-    expect(view.unchanged).toBe(1)
+    expect(view.unchanged).toBe(0)
   })
 
-  test('omitting an existing sale retires it instead of leaving the old shop row enabled', () => {
+  test('omitting an existing mastery offer disables its point-mint door', () => {
     const sdk = armed()
-    const sale = seed_sync_rows(sdk, content).find(({ domain }) => domain === 'sale')!
-    sdk.cache.shared.set(sale.key, { initialSharedVersion: '1' })
-    const without_sales = seed_sync_rows(sdk, { ...content, shop: { sales: [] } })
-    const ledger = {
-      [sale.key]: {
-        hash: sale.hash,
-        label: sale.label,
-        domain: 'sale',
-        sale: sale.sale,
-      },
-    }
-
-    const view = seed_sync_view(without_sales, ledger, () => true)
-    expect(view.removed).toEqual([])
-    const retirements = view.changed.filter(({ domain }) => domain === 'sale')
-    expect(retirements.map(({ label }) => label)).toEqual(['retire sale ore'])
-
-    const [tx] = seed_update_transactions(sdk, retirements, {
-      admin_cap: ADMIN_CAP,
-      content_root: REGISTRY,
-    })
-    expect(move_call_targets(tx!)).toContain(`${PACKAGE}::shop::set_sale`)
+    const with_offer = { ...content, mastery: { offers: [{ item_type: 'box', cost: 5 }] } }
+    const offer = seed_sync_rows(sdk, with_offer).find(({ domain }) => domain === 'mastery_offer')!
+    sdk.cache.shared.set(offer.key, { initialSharedVersion: '1' })
+    const rows = seed_sync_rows(sdk, content)
+    const view = seed_sync_view(
+      rows,
+      { [offer.key]: { hash: offer.hash, label: offer.label, domain: 'mastery_offer' } },
+      () => true
+    )
+    const [retirement] = view.changed.filter(({ domain }) => domain === 'mastery_offer')
+    expect(retirement?.label).toBe('retire mastery offer box')
+    const [batch] = seed_update_batches(sdk, [retirement!], { admin_cap: ADMIN_CAP, content_root: REGISTRY })
+    expect(move_call_targets(batch!.transaction)).toContain(`${PACKAGE}::mastery::set_offer`)
   })
 
   test('omitting an existing recipe retires its direct craft door', () => {
@@ -192,11 +285,11 @@ describe('check changes', () => {
     const retirements = view.changed.filter(({ key }) => key === old_recipe)
     expect(retirements.map(({ label }) => label)).toEqual(['retire recipe old_tool'])
 
-    const [tx] = seed_update_transactions(sdk, retirements, {
+    const [batch] = seed_update_batches(sdk, retirements, {
       admin_cap: ADMIN_CAP,
       content_root: REGISTRY,
     })
-    expect(move_call_targets(tx!)).toContain(`${SEED_PACKAGE}::recipe_rows::retire_recipe`)
+    expect(move_call_targets(batch!.transaction)).toContain(`${SEED_PACKAGE}::recipe_rows::retire_recipe`)
   })
 
   test('a changed row composes its real rewrite doors', () => {
@@ -207,45 +300,45 @@ describe('check changes', () => {
     const rows = seed_sync_rows(sdk, content)
     const changed = rows.filter(({ label }) => label === 'item box' || label === 'spell spark')
 
-    const [tx, ...rest] = seed_update_transactions(sdk, changed, { admin_cap: ADMIN_CAP, content_root: REGISTRY })
+    const [batch, ...rest] = seed_update_batches(sdk, changed, { admin_cap: ADMIN_CAP, content_root: REGISTRY })
 
     expect(rest).toEqual([])
-    const targets = move_call_targets(tx!)
+    const targets = move_call_targets(batch!.transaction)
+    expect(batch!.written).toEqual(changed.map(({ key }) => key))
     expect(targets).toContain(`${SEED_PACKAGE}::item_rows::overwrite_item`)
     expect(targets).toContain(`${PACKAGE}::loot_box::clear_loot_table`)
     expect(targets).toContain(`${PACKAGE}::loot_box::add_loot_reward`)
     expect(targets).toContain(`${SEED_PACKAGE}::spell_rows::overwrite_spell`)
   })
 
-  test('a dungeon room edit diffs the world and replaces its complete ordered composition', () => {
+  test('a dungeon room edit rewrites its independent content without touching the world', () => {
     const sdk = armed()
-    const world = {
-      world: 'nauvis',
-      entry_level: 1,
-      mobs: [],
-      resources: [],
-      dungeon: { key: 'ore', rooms: [[{ mob_type: 'ant' }]] },
+    const dungeon = {
+      dungeon: 'keep',
+      key: 'ore',
+      rooms: [[{ mob_type: 'ant' }]],
     } as const
-    const previous = seed_sync_rows(sdk, { ...content, worlds: [world] }).find(({ domain }) => domain === 'world')!
+    const previous = seed_sync_rows(sdk, { ...content, dungeons: [dungeon] }).find(
+      ({ domain }) => domain === 'dungeon'
+    )!
     sdk.cache.shared.set(previous.key, { initialSharedVersion: '1' })
     const changed_content = {
       ...content,
-      worlds: [{ ...world, dungeon: { ...world.dungeon, rooms: [[{ mob_type: 'boss' }]] } }],
+      dungeons: [{ ...dungeon, rooms: [[{ mob_type: 'boss' }]] }],
     } satisfies SeedContent
     const rows = seed_sync_rows(sdk, changed_content)
     const view = seed_sync_view(rows, { [previous.key]: { hash: previous.hash, label: previous.label } }, () => true)
-    const changed_worlds = view.changed.filter(({ domain }) => domain === 'world')
+    const changed_dungeons = view.changed.filter(({ domain }) => domain === 'dungeon')
 
-    expect(changed_worlds.map(({ label }) => label)).toEqual(['world nauvis'])
-    const [tx] = seed_update_transactions(sdk, changed_worlds, {
+    expect(changed_dungeons.map(({ label }) => label)).toEqual(['dungeon keep'])
+    const [batch] = seed_update_batches(sdk, changed_dungeons, {
       admin_cap: ADMIN_CAP,
       content_root: REGISTRY,
     })
-    const targets = move_call_targets(tx!)
-    expect(targets).toContain(`${SEED_PACKAGE}::world_content::set_dungeon_key`)
-    expect(targets).toContain(`${SEED_PACKAGE}::world_content::set_dungeon_rooms`)
-    expect(targets).toContain(`${MATH_PACKAGE}::world_map::new_dungeon_room`)
-    expect(targets).toContain(`${MATH_PACKAGE}::world_map::new_room_mob`)
+    const targets = move_call_targets(batch!.transaction)
+    expect(targets).toContain(`${SEED_PACKAGE}::dungeon_content::overwrite`)
+    expect(targets).toContain(`${MATH_PACKAGE}::dungeon_data::new_room`)
+    expect(targets).toContain(`${MATH_PACKAGE}::dungeon_data::new_room_mob`)
   })
 
   test('a board past the last written index appends; a changed one replaces in place', () => {
@@ -255,14 +348,14 @@ describe('check changes', () => {
     const boards = rows.filter(({ kind }) => kind === 'board')
     const ledger = { 'board:0': { hash: 'stale', label: 'board #0' } } // board #1 never written
 
-    const [tx] = seed_update_transactions(
+    const [batch] = seed_update_batches(
       sdk,
       boards,
       { admin_cap: ADMIN_CAP, content_root: REGISTRY },
       { chain_len: 1, authored_len: 2 }
     )
 
-    const targets = move_call_targets(tx!)
+    const targets = move_call_targets(batch!.transaction)
     expect(targets.filter((target) => target.endsWith('::board_catalog::replace_board'))).toHaveLength(1)
     expect(targets.filter((target) => target.endsWith('::board_catalog::add_board'))).toHaveLength(1)
   })
@@ -271,16 +364,17 @@ describe('check changes', () => {
     const sdk = armed()
     sdk.cache.shared.set(catalog_id, { initialSharedVersion: '1' })
 
-    const transactions = seed_update_transactions(
+    const batches = seed_update_batches(
       sdk,
       [],
       { admin_cap: ADMIN_CAP, content_root: REGISTRY },
       { chain_len: 3, authored_len: 1 }
     )
-    const calls = transactions.flatMap(move_call_targets)
+    const calls = batches.flatMap(({ transaction }) => move_call_targets(transaction))
     const view = seed_sync_view(seed_sync_rows(sdk, content), {}, () => true, 3)
 
     expect(calls.filter((target) => target.endsWith('::board_catalog::remove_last_board'))).toHaveLength(2)
+    expect(batches.at(-1)?.written).toEqual(['board:1', 'board:2'])
     expect(view.board_removals).toEqual([{ key: 'board:2', label: 'board #2' }])
     expect(view.removed).toEqual([])
   })
@@ -342,5 +436,24 @@ describe('check changes', () => {
     expect(next[spark_id]?.addresses).toEqual([spark_id])
     expect(next['0xdead']).toBeUndefined() // dropped rows leave with the files
     expect(next[box_id]).toBeUndefined() // never-created rows stay out
+  })
+
+  test('one certified update advances only its own ledger rows', () => {
+    const sdk = game()
+    const rows = seed_sync_rows(sdk, content)
+    const ore = rows.find(({ key }) => key === ore_id)!
+    const spark = rows.find(({ key }) => key === spark_id)!
+    const ledger = {
+      [ore.key]: { hash: 'old', label: ore.label },
+      [spark.key]: { hash: 'old', label: spark.label },
+      retired: { hash: 'old', label: 'sale retired', domain: 'sale' },
+    }
+
+    const after_ore = seed_ledger_after_batch(rows, ledger, [ore.key])
+    const after_retirement = seed_ledger_after_batch(rows, after_ore, ['retired'])
+
+    expect(after_ore[ore.key]?.hash).toBe(ore.hash)
+    expect(after_ore[spark.key]?.hash).toBe('old')
+    expect(after_retirement.retired).toBeUndefined()
   })
 })

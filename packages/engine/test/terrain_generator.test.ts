@@ -4,10 +4,12 @@
 import { describe, expect, test } from 'bun:test'
 
 import worlds from '../../../seed/content/worlds.json'
+import { compile_city_structure } from '../src/cities/city_structure.ts'
 import { flat_burn_field } from '../src/flat_nodes.ts'
 import { greedy_mesh } from '../src/greedy_mesher.ts'
 import { get_quality_profile } from '../src/quality.ts'
 import { structure_placements } from '../src/structure_placement.ts'
+import type { StructurePlacement } from '../src/structure_placement.ts'
 import { create_terrain_planner } from '../src/terrain_planner.ts'
 import { chunk_origin, generate_chunk, surface_chunk_layers } from '../src/terrain_generator.ts'
 import { TERRAIN_POOL_LAYOUT } from '../src/terrain_pool.ts'
@@ -130,6 +132,30 @@ describe('terrain generation', () => {
     expect(first.material_ids).toHaveLength(32 ** 3)
     expect(new Set(first.material_ids).size).toBeGreaterThan(2)
     expect(first.halo_occupancy).toHaveLength(Math.ceil(34 ** 3 / 32))
+  })
+
+  test('an explicit city air operation subtracts procedural terrain', () => {
+    const type = compile_city_structure(
+      { name: 'air', size: [1, 1, 1], anchor: [0, 0, 0], blocks: [[0, 0, 0, 'air']] },
+      WORLD.materials
+    )
+    const bounds = Object.freeze({ min_x: 16, max_x: 16, min_y: 5, max_y: 5, min_z: 16, max_z: 16 })
+    const placement: StructurePlacement = Object.freeze({
+      id: 'air',
+      pack: 'city:test',
+      type,
+      origin: [16, 5, 16] as const,
+      rotation: 0,
+      scale: 1,
+      bounds,
+      overlap_bounds: bounds,
+    })
+    const request = { key: 'air', coordinate: { x: 0, y: 0, z: 0 }, lod: 'near' as const }
+    const solid = generate_chunk(WORLD, request)
+    const carved = generate_chunk(WORLD, request, [placement])
+
+    expect(solid.material_ids[voxel_index(16, 5, 16)]).not.toBe(0)
+    expect(carved.material_ids[voxel_index(16, 5, 16)]).toBe(0)
   })
 
   test('direct terrain labels keep one crack-free voxel resolution', () => {

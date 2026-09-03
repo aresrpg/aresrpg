@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "max_bytecode_bytes": 96000,
+  "packages": [
+    {
+      "slot": "math",
+      "path": "packages/move-math",
+      "package_name": "aresrpg_math",
+      "dependencies": []
+    },
+    {
+      "slot": "control",
+      "path": "packages/control",
+      "package_name": "aresrpg_control",
+      "dependencies": []
+    },
+    {
+      "slot": "combat",
+      "path": "packages/move-combat",
+      "package_name": "aresrpg_combat",
+      "dependencies": ["math"]
+    },
+    {
+      "slot": "seed",
+      "path": "packages/seed",
+      "package_name": "aresrpg_seed",
+      "dependencies": ["math", "control"]
+    },
+    {
+      "slot": "game",
+      "path": "packages/move",
+      "package_name": "aresrpg",
+      "dependencies": ["math", "control", "combat", "seed"]
+    }
+  ]
+}

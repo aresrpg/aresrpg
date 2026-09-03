@@ -1,0 +1,414 @@
+[
+  {
+    "dungeon": "gilded_lorito",
+    "key": "key_of_gilded_lorito",
+    "rooms": [
+      [
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "bramble"
+        },
+        {
+          "mob_type": "bramble"
+        }
+      ],
+      [
+        {
+          "mob_type": "bramble"
+        },
+        {
+          "mob_type": "bramble"
+        },
+        {
+          "mob_type": "bramble"
+        },
+        {
+          "mob_type": "lorito__earth"
+        },
+        {
+          "mob_type": "lorito__earth"
+        }
+      ],
+      [
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "tinker"
+        },
+        {
+          "mob_type": "tinker"
+        },
+        {
+          "mob_type": "tinker"
+        },
+        {
+          "mob_type": "lorito__water"
+        }
+      ],
+      [
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "tinker"
+        },
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "bramble"
+        }
+      ],
+      [
+        {
+          "mob_type": "nook"
+        },
+        {
+          "mob_type": "lorito__fire"
+        },
+        {
+          "mob_type": "lorito__fire"
+        },
+        {
+          "mob_type": "lorito__earth"
+        },
+        {
+          "mob_type": "lorito__earth"
+        },
+        {
+          "mob_type": "lorito__water"
+        }
+      ],
+      [
+        {
+          "mob_type": "lorito__water"
+        },
+        {
+          "mob_type": "lorito__water"
+        },
+        {
+          "mob_type": "lorito__water"
+        },
+        {
+          "mob_type": "lorito__water"
+        },
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "lorito__air"
+        }
+      ],
+      [
+        {
+          "mob_type": "lorito__fire"
+        },
+        {
+          "mob_type": "lorito__fire"
+        },
+        {
+          "mob_type": "lorito__fire"
+        },
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "lorito__earth"
+        },
+        {
+          "mob_type": "tinker"
+        }
+      ],
+      [
+        {
+          "mob_type": "lorito__earth"
+        },
+        {
+          "mob_type": "lorito__fire"
+        },
+        {
+          "mob_type": "lorito__water"
+        },
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "lorito__air"
+        },
+        {
+          "mob_type": "golden_lorito"
+        }
+      ]
+    ]
+  },
+  {
+    "dungeon": "tangled_aftermath",
+    "key": "key_of_tangled_aftermath",
+    "rooms": [
+      [
+        {
+          "mob_type": "aragne__fire"
+        },
+        {
+          "mob_type": "aragne__fire"
+        },
+        {
+          "mob_type": "aragne__fire"
+        },
+        {
+          "mob_type": "moka"
+        },
+        {
+          "mob_type": "moyumi"
+        },
+        {
+          "mob_type": "aragne__fire"
+        }
+      ],
+      [
+        {
+          "mob_type": "moka"
+        },
+        {
+          "mob_type": "aragne__earth"
+        },
+        {
+          "mob_type": "aragne__earth"
+        },
+        {
+          "mob_type": "aragne__earth"
+        },
+        {
+          "mob_type": "aragne__earth"
+        },
+        {
+          "mob_type": "aragne__fire"
+        }
+      ],
+      [
+        {
+          "mob_type": "moyumi"
+        },
+        {
+          "mob_type": "moyumi"
+        },
+        {
+          "mob_type": "aragne__air"
+        },
+        {
+          "mob_type": "aragne__air"
+        },
+        {
+          "mob_type": "aragne__air"
+        },
+        {
+          "mob_type": "aragne__air"
+        }
+      ],
+      [
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "ant_white"
+        }
+      ],
+      [
+        {
+          "mob_type": "ant_white"
+        },
+        {
+          "mob_type": "ant_red"
+        },
+        {
+          "mob_type": "aragne__air"
+        },
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "ant_white"
+        },
+        {
+          "mob_type": "ant_white"
+        }
+      ],
+      [
+        {
+          "mob_type": "araknomath"
+        },
+        {
+          "mob_type": "ant_red"
+        },
+        {
+          "mob_type": "ant_red"
+        },
+        {
+          "mob_type": "ant_red"
+        },
+        {
+          "mob_type": "aragne__water"
+        },
+        {
+          "mob_type": "aragne__water"
+        }
+      ]
+    ]
+  },
+  {
+    "dungeon": "ivory_rampart",
+    "key": "key_of_ivory_rampart",
+    "rooms": [
+      [
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        }
+      ],
+      [
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__black"
+        },
+        {
+          "mob_type": "fuwa__black"
+        },
+        {
+          "mob_type": "fuwa__black"
+        }
+      ],
+      [
+        {
+          "mob_type": "fuwa__black"
+        },
+        {
+          "mob_type": "fuwa__black"
+        },
+        {
+          "mob_type": "fuwa__white"
+        },
+        {
+          "mob_type": "fuwa__venom"
+        },
+        {
+          "mob_type": "fuwa__venom"
+        },
+        {
+          "mob_type": "fuwa__magma"
+        }
+      ],
+      [
+        {
+          "mob_type": "fuwa__venom"
+        },
+        {
+          "mob_type": "fuwa__venom"
+        },
+        {
+          "mob_type": "fuwa__magma"
+        },
+        {
+          "mob_type": "fuwa__magma"
+        },
+        {
+          "mob_type": "fuwa__black"
+        },
+        {
+          "mob_type": "fuwa__black"
+        }
+      ],
+      [
+        {
+          "mob_type": "fuwa__magma"
+        },
+        {
+          "mob_type": "fuwa__magma"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__venom"
+        }
+      ],
+      [
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__dread"
+        },
+        {
+          "mob_type": "fuwa__royal"
+        }
+      ]
+    ]
+  }
+]

@@ -22,10 +22,9 @@ import { BiomeAtmosphere } from './BiomeAtmosphere.tsx'
 import { MaterialEditor, PopulationEditor, SplineEditor } from './BiomeControls.tsx'
 import { BiomeCoverage, BiomeMap, TerrainPreview } from './BiomePreviews.tsx'
 import { ClimateSlots, type LandscapeSelection } from './ClimateSlots.tsx'
-import { DungeonEditor } from './DungeonEditor.tsx'
+import { JsonEditor } from './JsonEditor.tsx'
 import { LiveTerrainPreview } from './LiveTerrainPreview.tsx'
 import { move_spline_knot, sample_biome_cell, world_height_domain, world_height_graph_domain } from './biome_editor.ts'
-import { mob_filter_rows } from './content_list.ts'
 import { entity_rows, type JsonPath, type JsonValue } from './seed_editor.ts'
 
 const action_class =
@@ -38,8 +37,16 @@ const record = (value: JsonValue | undefined): Readonly<Record<string, JsonValue
   value !== null && value !== undefined && typeof value === 'object' && !Array.isArray(value)
     ? (value as Readonly<Record<string, JsonValue>>)
     : null
+const is_city_identity = (path: JsonPath): boolean => ['city', 'dungeon'].includes(String(path.at(-1)))
+const city_rows = (world: Readonly<Record<string, JsonValue>>): readonly JsonValue[] =>
+  Array.isArray(world.cities) ? world.cities : []
+const city_names = (world: Readonly<Record<string, JsonValue>>): readonly string[] =>
+  city_rows(world).flatMap((value) => {
+    const city = record(value)?.city
+    return typeof city === 'string' ? [city] : []
+  })
 
-type BiomeTab = 'landscape' | 'materials' | 'atmosphere' | 'population' | 'dungeon'
+type BiomeTab = 'landscape' | 'materials' | 'atmosphere' | 'population' | 'cities'
 type PreviewMode = 'live' | 'height' | 'map'
 const tabs: readonly Readonly<{ id: BiomeTab; label: string; help: string; icon: ComponentType<{ size?: number }> }>[] =
   Object.freeze([
@@ -51,8 +58,8 @@ const tabs: readonly Readonly<{ id: BiomeTab; label: string; help: string; icon:
       help: 'Assign deterministic structure packs to each biome.',
       icon: TreePine,
     },
-    { id: 'population', label: 'Population', help: 'Assign mobs and resources to biome pools.', icon: Boxes },
-    { id: 'dungeon', label: 'Dungeon', help: 'Author the key and ordered room compositions.', icon: DoorOpen },
+    { id: 'population', label: 'Population', help: 'Assign mobs and resources to biomes and cities.', icon: Boxes },
+    { id: 'cities', label: 'Cities', help: 'Place fixed city anchors and bind their dungeons.', icon: DoorOpen },
   ])
 
 const roles = ['surface', 'subsurface', 'filler'] as const
@@ -333,10 +340,6 @@ export const BiomePage = () => {
   const editor = useAppStore((state) => state.editor)
   const file = editor.files.worlds
   const worlds = useMemo(() => (file ? entity_rows('worlds', file.value) : []), [file])
-  const mob_filters = useMemo(
-    () => mob_filter_rows(entity_rows('mobs', editor.files.mobs?.value), worlds),
-    [editor.files.mobs, worlds]
-  )
   const terrain_worlds = worlds.filter(({ value }) => record(value)?.terrain)
   const selected = terrain_worlds.find(({ id }) => id === editor.entity_id) ?? terrain_worlds[0]
   const world = record(selected?.value)
@@ -523,9 +526,20 @@ export const BiomePage = () => {
               />
             )}
             {tab === 'population' && (
-              <PopulationEditor biome_names={recipe.biomes.map(({ name }) => name)} change={replace} world={world} />
+              <PopulationEditor
+                biome_names={recipe.biomes.map(({ name }) => name)}
+                change={replace}
+                city_names={city_names(world)}
+                world={world}
+              />
             )}
-            {tab === 'dungeon' && <DungeonEditor change={replace} mob_filters={mob_filters} world={world} />}
+            {tab === 'cities' && (
+              <JsonEditor
+                is_readonly={is_city_identity}
+                on_change={(path, value) => replace(['cities', ...path], value)}
+                value={city_rows(world)}
+              />
+            )}
           </div>
         </aside>
       )}

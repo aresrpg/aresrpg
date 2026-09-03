@@ -19,3 +19,11 @@ export const dungeon_lobby_visible = (page: Page, fight_active: boolean, dungeon
 
 export const social_hud_visible = (page: Page, fight_active: boolean, dungeon_active: boolean): boolean =>
   page === 'world' && !dungeon_lobby_visible(page, fight_active, dungeon_active)
+
+export const graphics_notice_visible = (
+  gift_route: boolean,
+  failed: boolean,
+  world_unavailable: boolean,
+  dismissed: boolean,
+  degraded: boolean
+): boolean => !gift_route && ((failed && !world_unavailable) || (!dismissed && (world_unavailable || degraded)))

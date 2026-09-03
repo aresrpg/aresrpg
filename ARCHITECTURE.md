@@ -47,20 +47,23 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 
 ## Package ownership
 
-| Home                 | Owns                                                                                                                                                                               | Must not own                                         |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `packages/move-math` | Pure on-chain values, validation, curves, grids, deterministic transforms                                                                                                          | Objects, capabilities, clocks, entropy, state writes |
-| `packages/move`      | Sui objects, authority, custody, dynamic fields, events, randomness, clocks, state transitions                                                                                     | Browser or indexer policy                            |
-| `packages/fight`     | Deterministic TypeScript fight runtime and presentation inputs mirroring Move                                                                                                      | Chain access, React, rendering                       |
-| `packages/immutable` | Shared TypeScript vocabularies and tested mirrors of stable game math                                                                                                              | Live state, network access                           |
-| `packages/sdk`       | Every client-side Sui transaction plus the explicit one-shot Party checkpoint and linked-Item tooltip reads, PTB composition, object-ref cache, receipt projection, gas accounting | General player-facing reads, app state               |
-| `packages/indexer`   | Checkpoint decoding and the only writes to the FalkorDB projection and indexer pub/sub                                                                                             | Game authority, authored content                     |
-| `packages/server`    | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                     |
-| `packages/protocol`  | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                           |
-| `packages/frontend`  | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state    |
-| `packages/engine`    | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                  |
-| `seed/`              | Authored items, mobs, spells, recipes, worlds, boards, shops, structures, and assets                                                                                               | Live player state                                    |
-| `pins.json`          | Deployment lineage, shared object addresses, and published content fingerprints                                                                                                    | Authored gameplay values                             |
+| Home                   | Owns                                                                                                                                                                               | Must not own                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `packages/move-math`   | Pure on-chain values, validation, curves, grids, and deterministic transforms                                                                                                      | Objects, capabilities, clocks, entropy, state writes                                |
+| `packages/control`     | The deployment lineage's administrative capability and freeze authority                                                                                                            | Gameplay, content values, player state                                              |
+| `packages/move-combat` | Authority-free deterministic fight state and transitions over plain values                                                                                                         | UID, keys, custody, transfers, events, clocks, entropy sources, transaction context |
+| `packages/seed`        | Registry-rooted living content objects and AdminCap-gated content mutation                                                                                                         | Player state or gameplay custody                                                    |
+| `packages/move`        | Player and world objects, authority, custody, events, randomness, clocks, and the thin fight lifecycle wrapper                                                                     | Duplicated combat rules, authored content, browser or indexer policy                |
+| `packages/fight`       | Deterministic TypeScript fight runtime and presentation inputs mirroring Move                                                                                                      | Chain access, React, rendering                                                      |
+| `packages/immutable`   | Shared TypeScript vocabularies and tested mirrors of stable game math                                                                                                              | Live state, network access                                                          |
+| `packages/sdk`         | Every client-side Sui transaction plus the explicit one-shot Party checkpoint and linked-Item tooltip reads, PTB composition, object-ref cache, receipt projection, gas accounting | General player-facing reads, app state                                              |
+| `packages/indexer`     | Checkpoint decoding and the only writes to the FalkorDB projection and indexer pub/sub                                                                                             | Game authority, authored content                                                    |
+| `packages/server`      | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                                                    |
+| `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                          |
+| `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                   |
+| `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                 |
+| `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                   |
+| `pins.json`            | Deployment lineage, shared object addresses, and published content fingerprints                                                                                                    | Authored gameplay values                                                            |
 
 Dependencies point toward smaller owners: frontend composes engine/fight/immutable/protocol/SDK;
 server composes engine/fight/protocol; protocol composes fight/immutable. Engine, fight, and
@@ -126,8 +129,7 @@ transaction volume stores one replay-safe numeric count per checkpoint in those 
 buckets plus a permanent all-time hash. Net gas uses the same checkpoint identity for every
 submitted gameplay attempt, including executed failures, while deployment-only core calls and
 publish, upgrade, and seed transactions contribute neither gas nor player/address activity.
-Primary-shop details retain a strict rolling 90-day window. Rebuilding analytics means replaying
-that indexer from the original publication checkpoint.
+Rebuilding analytics means replaying that indexer from the original publication checkpoint.
 
 Item deltas are bidirectional: current kiosk custody streams the complete row, while pre-state
 custody streams removal when an item moves away or is destroyed. Clients never retain absent graph rows.
@@ -174,7 +176,10 @@ state from chain—the app becomes ready only after the server's indexed snapsho
 The selected character's projected checkpoint and live pose compose one SDK action. Move proves
 travel and writes the result. The receipt folds facts it certifies; the indexer/server projection
 reconciles surrounding world state. Zone populations are server-derived from published content,
-never re-rolled by the client.
+never re-rolled by the client. WorldContent stores seed-derived ordinary-mob-to-archimob mappings
+in an upgrade-safe dynamic field. Move and the server twin use a separate deterministic stream to
+give every generated eligible member one independent 1% identity replacement while preserving its
+group, position, and level scalar.
 
 Party run-to is the sole direct player checkpoint read. The authenticated SDK reads another
 member's current-world and checkpoint dynamic fields once, refuses a different world, then the
@@ -182,19 +187,60 @@ client runs toward that immutable snapshot. It never polls or claims to know the
 
 ### Fights
 
-Move owns the fight object. `packages/fight` is its deterministic presentation twin. Local drafts
-relay through the mesh for immediate presentation; End Turn commits the ordered draft as one PTB.
-Receipts and indexed witnesses converge through structural turn identities.
+Core Move owns Fight identity, player authority, character custody, entropy, events, and settlement.
+`packages/move-combat` owns the deterministic authority-free state machine embedded in that object.
+Core authenticates an action and supplies bounded plain entropy and time values; combat returns one
+deterministic transition. `packages/fight` is the TypeScript presentation twin. Local drafts relay
+through the mesh for immediate presentation; End Turn commits the ordered draft as one PTB. Receipts
+and indexed witnesses converge through structural turn identities.
 
-The terminal checkpoint supplies the settlement plan after presentation drains. The certified
-settlement receipt enables Continue immediately. `RESULT_FOR` exists only for interrupted-client
-recovery. Character level and experience come from the projected Character row. Result presents
-before level-up.
+The terminal checkpoint supplies the settlement plan after presentation drains. Owned participants
+returning to one personal kiosk settle and collect through one Random-bound PTB; different kiosks
+form separate batches. The certified settlement receipt enables Continue immediately. `RESULT_FOR`
+exists only for interrupted-client recovery. Character level and experience come from the projected
+Character row. Result presents before level-up.
+
+Biome structure packs own sparse deterministic slots, weighted voxel types, terrain-fit limits, and an optional
+integer scale range. Each placement derives its type, 90-degree rotation, and scale from its world cell. Search
+margins derive per pack, so a colossal landmark never makes dense tree packs scan its footprint. A biome may opt
+into rare engine-shaped mountain passes or ravines; the canonical column sampler subtracts their feathered cuts
+before city terrain, so near terrain, far terrain, preview, scatter, and collision consume the same surface.
+
+World content owns cities: fixed 3x3 regions, stable slugs, anchors, structure packs, and one dungeon slug each.
+Dungeon content independently owns each stable dungeon slug, key, and ordered room composition.
+The `/demo` content editor authors both sources directly. City structures and map entrances derive
+from world content; zone discovery carries no copied portal fact.
+The city build registry maps a slug to one city-specific deterministic compiler; cities share artifact mechanics,
+not a universal settlement grammar. Each compiler owns its complete 3x3 land-use map, sparse eight-block target
+height grid, structures, and local dressing rules. Thebes plans organic streets, a river, fields, gardens, districts,
+and connected WFC interiors; other cities may instead preserve ravines, terraces, caves, or fortifications. One
+target-height adapter drives near terrain, far terrain, collision, roads, bridges, and plateaus. Generated voxel
+operations are tri-state: absent preserves procedural terrain, a material adds or replaces it, and explicit air
+subtracts it. The same operation function owns render and collision occupancy, so caves create no parallel world
+store or gameplay coordinate system; dungeon entrances remain at the authored surface anchor. Generation
+partitions final operations into provenance-hashed, palette-compressed 32³ chunks. Runtime solves nothing:
+workers compile terrain immediately, request only intersecting city artifacts, and decode/cache only intersecting
+chunks. The ordinary collision and WebGPU voxel-mesh paths remain the consumers.
 
 Dungeon runs are Character dynamic-field state coordinated by `packages/move/sources/dungeon.move`.
-Rooms compose ordinary fights; the fight machine does not gain a parallel dungeon combat path.
-World content owns the key and ordered room compositions. The server/UI scope a lobby to one
-portal for presentation, while Move remains the authority on legal run and room transitions.
+Entering proves travel to the authored city anchor and burns the dungeon's key. Rooms compose
+ordinary fights; the fight machine has no parallel dungeon path. A run stores only dungeon slug,
+room, and committed seed. The server/UI scope its lobby by dungeon slug, while Move remains the
+authority on legal run and room transitions.
+
+Mastery is one soulbound derived object per address. Once per Sui epoch, an owned free Character
+proves access to a player-chosen WorldContent; Move draws one of that world's city dungeons and
+snapshots the entry-level reward. Any owned winner may validate it only through a final-room Fight
+created in the assigned world strictly after assignment. Missing an epoch expires the spendable score.
+Seed-authored MasteryOffer objects exchange that score for statless items. Loot-box rewards retain
+their existing open/claim randomness, while direct consumables such as reset scrolls mint directly.
+Seed-authored airdrops and giftcards create portable distribution vouchers. An eligible external
+holder pays to send its airdrop voucher to the authenticated game wallet; that wallet pays a
+separate redemption into its personal kiosk. Redemption is the one final-item mint: statless items
+and fixed-endpoint pets need no entropy, and pet feed scaling keeps the stored endpoint neutral
+until the owner feeds the pet. Printed cards use an AresRPG `/gift` URL whose fragment carries the
+zkSend bearer key across Google login; zkSend transports the voucher to the game wallet, then the
+same ordinary redemption path runs. The bearer fragment never reaches the server.
 
 ### Content
 

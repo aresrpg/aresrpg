@@ -378,7 +378,7 @@ describe('the character builder', () => {
 
     await actions.search_zone({ character_id: id(20), world: 'nauvis', x: 1, z: 2 })
 
-    expect(door_args!.w).toBe(world_id(id(61), id(1), 'nauvis'))
+    expect(door_args!.world_object).toBe(world_id(id(61), id(1), 'nauvis'))
   })
 
   test('a world whose derived object does not exist fails during explicit hydration', async () => {
@@ -410,7 +410,7 @@ describe('the character builder', () => {
       character_id: id(20),
       x: 49_700,
       z: 50_200,
-      w: world_id(id(61), id(1), 'nauvis'),
+      world_object: world_id(id(61), id(1), 'nauvis'),
     })
     expect(out).toEqual({ digest })
   })
@@ -425,8 +425,8 @@ describe('the character builder', () => {
     const out = await actions.gather({
       character_id: id(20),
       world: '01_first_shore',
-      zx: 97,
-      zz: 98,
+      zone_x: 97,
+      zone_z: 98,
       pack_index: 4,
       item_type: 'green_mushroom',
       rare_item_type: 'arcaneshroom',
@@ -434,7 +434,7 @@ describe('the character builder', () => {
       existing_rare: null,
     })
 
-    expect(door_args).toMatchObject({ zx: 97, zz: 98, pack_index: 4, existing: null })
+    expect(door_args).toMatchObject({ zone_x: 97, zone_z: 98, pack_index: 4, existing: null })
     expect(door_args!.template).not.toBe(door_args!.rare_template)
     // a fired verdict ROOTS the character until resolve_ambush — the caller must learn it here
     expect(out).toEqual({ digest, quantity: 3, ambushed: true })
@@ -452,8 +452,8 @@ describe('the character builder', () => {
     const out = await actions.gather({
       character_id: id(20),
       world: '01_first_shore',
-      zx: 97,
-      zz: 98,
+      zone_x: 97,
+      zone_z: 98,
       pack_index: 0,
       item_type: 'wheat',
       rare_item_type: null,
@@ -487,8 +487,8 @@ describe('the character builder', () => {
       actions.gather({
         character_id: id(20),
         world: '01_first_shore',
-        zx: 97,
-        zz: 98,
+        zone_x: 97,
+        zone_z: 98,
         pack_index: 0,
         item_type: 'wheat',
         rare_item_type: null,
@@ -544,19 +544,24 @@ describe('the character builder', () => {
     }
     const result = await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
       fight: id(40),
-      fighter_idx: 2n,
-      loot: [
-        { item_type: 'silk', existing: id(41) },
-        { item_type: 'fang', existing: null },
-        { item_type: 'silk', existing: id(41) },
+      settlements: [
+        {
+          fighter_idx: 2n,
+          loot: [
+            { item_type: 'silk', existing: id(41) },
+            { item_type: 'fang', existing: null },
+            { item_type: 'silk', existing: id(41) },
+          ],
+        },
       ],
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
     expect(executions).toBe(1)
     expect(calls.map(({ door }) => door)).toEqual(['prepare', 'prepare', 'settle_last'])
     expect(calls[2]?.args).toMatchObject({
-      f: id(40),
-      fighter_idx: 2n,
+      fight_object: id(40),
+      fighter_indices: [2n],
+      plan_lengths: [2],
       plan: ['prepared-1', 'prepared-2'],
       kiosk: kiosk_cap.kioskId,
       personal: kiosk_ref,
@@ -579,17 +584,15 @@ describe('the character builder', () => {
       execute: async () => {
         executions += 1
         if (executions === 1)
-          throw new Error("Transaction resolution failed: MoveAbort abort code: 1729 in '0x1::fight::settle_last'")
+          throw new Error("Transaction resolution failed: MoveAbort abort code: 1729 in '0x1::fight::settle_many_last'")
         return { $kind: 'Transaction', Transaction: { digest, events: [] } } as unknown as Receipt
       },
     }
     const result = await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
       fight: id(40),
-      fighter_idx: 0n,
-      loot: [{ item_type: 'silk', existing: null }],
+      settlements: [{ fighter_idx: 0n, loot: [{ item_type: 'silk', existing: null }] }],
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
-
     expect(calls).toEqual(['last', 'ordinary'])
     expect(executions).toBe(2)
     expect(result).toMatchObject({ digest, closed: false })

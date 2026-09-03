@@ -4,7 +4,7 @@
 
 import { element_names } from '@aresrpg/immutable'
 
-export type MobFilterKind = 'world' | 'biome' | 'family' | 'element'
+export type MobFilterKind = 'world' | 'biome' | 'city' | 'family' | 'element'
 
 export type MobFilterRow = Readonly<{
   kind: MobFilterKind | 'protector'
@@ -21,11 +21,18 @@ export type MobFilterSource = Readonly<{
   role: string
 }>
 
+type MobFilterMembership = Readonly<{
+  mob_type: string
+  biomes: readonly string[]
+  cities?: readonly string[]
+}>
+
 export type MobFilterWorldSource = Readonly<{
   world: string
   biome_names: readonly string[]
-  mobs: readonly Readonly<{ mob_type: string; biomes: readonly string[] }>[]
-  protectors: readonly Readonly<{ mob_type: string; biomes: readonly string[] }>[]
+  mobs: readonly MobFilterMembership[]
+  protectors: readonly MobFilterMembership[]
+  cities: readonly Readonly<{ city: string }>[]
 }>
 
 export type MobFilterSelection = Readonly<{ kind: MobFilterKind; ids: readonly string[] }>
@@ -39,12 +46,12 @@ export const derive_mob_filter_rows = (
   const mobs_by_type = new Map(mobs.map((mob) => [mob.mob_type, mob] as const))
   const mob_ids = new Set(mobs_by_type.keys())
   const places = world_sources.flatMap((world): readonly MobFilterRow[] => {
-    const inherited_archis = world.mobs.flatMap(({ mob_type, biomes }) => {
+    const inherited_archis = world.mobs.flatMap(({ mob_type, biomes, cities }) => {
       const family = mobs_by_type.get(mob_type)?.family
       return family
         ? mobs
             .filter((mob) => mob.role === 'archi' && mob.family === family)
-            .map((mob) => Object.freeze({ mob_type: mob.mob_type, biomes }))
+            .map((mob) => Object.freeze({ mob_type: mob.mob_type, biomes, cities }))
         : []
     })
     const memberships = [...world.mobs, ...inherited_archis, ...world.protectors].filter(({ mob_type }) =>
@@ -67,8 +74,28 @@ export const derive_mob_filter_rows = (
           ]
         : []
     })
+    const cities = world.cities.flatMap(({ city }): readonly MobFilterRow[] => {
+      const members = memberships.flatMap(({ mob_type, cities: city_names }) =>
+        city_names?.includes(city) ? [mob_type] : []
+      )
+      return members.length
+        ? [
+            Object.freeze({
+              kind: 'city',
+              id: `${world.world}:${city}`,
+              parent: world.world,
+              count: members.length,
+              mob_types: Object.freeze(members),
+            }),
+          ]
+        : []
+    })
     return world_mobs.length
-      ? [Object.freeze({ kind: 'world', id: world.world, count: world_mobs.length, mob_types: world_mobs }), ...biomes]
+      ? [
+          Object.freeze({ kind: 'world', id: world.world, count: world_mobs.length, mob_types: world_mobs }),
+          ...biomes,
+          ...cities,
+        ]
       : []
   })
   const field_rows = (kind: 'family' | 'element', ids: readonly string[]): readonly MobFilterRow[] =>

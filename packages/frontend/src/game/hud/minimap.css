@@ -138,6 +138,13 @@
   white-space: nowrap;
 }
 
+.gw-minimap__biome--city {
+  border-color: rgba(76, 139, 205, 0.42);
+  background: rgba(7, 20, 42, 0.82);
+  color: #8cc8ff;
+  text-shadow: 0 0 8px rgba(74, 158, 255, 0.36);
+}
+
 .gw-minimap__coords {
   display: flex;
   flex: none;

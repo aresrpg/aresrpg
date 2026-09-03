@@ -357,6 +357,7 @@ export type Engine = Readonly<{
   set_character_anchor: (position: Vec3 | null) => void
   set_quality: (quality: EngineQuality, render_distance?: number | null) => void
   set_time_of_day: (time: number) => void
+  set_clouds_visible: (visible: boolean) => void
   set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void

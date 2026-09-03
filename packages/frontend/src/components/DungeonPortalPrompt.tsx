@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { item_icon } from '../content/assets.ts'
-import { content_catalog } from '../content/catalog.ts'
+import { content_catalog, titleize } from '../content/catalog.ts'
 import { useDungeonPortalPrompt } from '../game/core/dungeon_portal_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -25,7 +25,7 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const pending = useAppStore(selected_dungeon_pending)
   const text = copy_text(copy.world_hud)
   const portal = open_id ? prompt.portals[open_id] : null
-  const dungeon = portal ? content_catalog.world(portal.world)?.dungeon : null
+  const dungeon = portal ? content_catalog.dungeon(portal.dungeon) : null
   const entry_key = useAppStore((state) => (dungeon ? dungeon_entry_key(state, dungeon.key) : null))
 
   useEffect(() => {
@@ -78,7 +78,9 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[8px] tracking-[0.24em] text-[#c8963c] uppercase">{text('dungeon_portal')}</p>
-                <h2 className="mt-1 text-[16px] tracking-[0.1em] text-[#e8e4dc] uppercase">{portal.world}</h2>
+                <h2 className="mt-1 text-[16px] tracking-[0.1em] text-[#e8e4dc] uppercase">
+                  {text('dungeon_city', { city: titleize(portal.city) })}
+                </h2>
                 <p className="mt-1 text-[8px] tracking-[0.14em] text-[#626975]">
                   [{portal.zx}, {portal.zz}]
                 </p>

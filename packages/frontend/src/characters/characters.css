@@ -166,10 +166,6 @@
   background: rgba(200, 150, 60, 0.09);
 }
 
-.chr-cell.is-listed {
-  opacity: 0.5;
-}
-
 .chr-cell--empty {
   cursor: default;
   opacity: 0.35;

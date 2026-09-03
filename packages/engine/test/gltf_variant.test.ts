@@ -23,7 +23,7 @@ test('a named material disambiguates duplicate exporter mappings', async () => {
   root.add(mesh)
   const gltf = {
     parser: {
-      json: { extensions: { KHR_materials_variants: { variants: [{ name: 'shiny' }] } } },
+      json: { extensions: { KHR_materials_variants: { variants: [{ name: 'shiny', extras: { scale: 1.25 } }] } } },
       getDependency: (_kind: string, index: number) => Promise.resolve([fallback, selected][index]),
     },
   } as unknown as GLTF
@@ -31,6 +31,7 @@ test('a named material disambiguates duplicate exporter mappings', async () => {
   await apply_gltf_variant(gltf, root, 'shiny')
 
   expect(mesh.material).toBe(selected)
+  expect(root.scale.toArray()).toEqual([1.25, 1.25, 1.25])
 })
 
 test('a missing model variant fails instead of silently rendering the fallback', async () => {

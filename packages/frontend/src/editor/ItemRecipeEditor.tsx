@@ -2,20 +2,27 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import {
+  acquisition_average_seconds,
+  acquisition_target_range,
+  acquisition_target_status,
   craft_job_of,
   craft_max_ingredients,
   craft_required_level,
   craft_xp_from_ingredient_count,
   job_slugs,
+  type AcquisitionEstimate,
+  type AcquisitionIngredient,
+  type AcquisitionRange,
 } from '@aresrpg/immutable'
 import { X } from 'lucide-react'
 
 import { as_record, button_class, SheetSection, string_value, titleize_field } from './ContentFields.tsx'
 import { ItemReferencePicker } from './ItemReferencePicker.tsx'
-import type { ItemReferenceFilterRow } from './content_list.ts'
+import type { ItemFilterRow } from './content_list.ts'
 import type { JsonPath, JsonValue } from './seed_editor.ts'
 
 export type ItemRecipeBinding = Readonly<{
+  acquisition?: AcquisitionEstimate
   value: JsonValue | null
   change: (path: JsonPath, value: JsonValue) => void
   category_changed: (category: string) => void
@@ -23,14 +30,59 @@ export type ItemRecipeBinding = Readonly<{
   remove: () => void
 }>
 
+const duration = (seconds: number): string => {
+  if (seconds < 60) return `${Math.round(seconds)}s`
+  if (seconds < 3_600) return `${Math.round(seconds / 60)}m`
+  const hours = seconds / 3_600
+  return `${hours < 10 ? hours.toFixed(1) : Math.round(hours)}h`
+}
+const average_duration = (value: AcquisitionRange): string => duration(acquisition_average_seconds(value))
+const range_duration = (value: AcquisitionRange): string =>
+  `${duration(value.minimum_seconds)}–${duration(value.maximum_seconds)}`
+const acquisition_class = (status: ReturnType<typeof acquisition_target_status>): string => {
+  if (status === 'within') return 'text-[#65c993]'
+  if (status === 'unavailable') return 'text-[#ff8caa]'
+  return 'text-[#ffca57]'
+}
+const AcquisitionSummary = ({
+  acquisition,
+  category,
+  level,
+}: Readonly<{ acquisition?: AcquisitionEstimate; category: string; level: number }>) => {
+  const target = acquisition_target_range({ item_type: '', category, level })
+  const status = acquisition_target_status(acquisition?.craft ?? null, target)
+  const label = acquisition?.craft
+    ? `~${average_duration(acquisition.craft)} (${range_duration(acquisition.craft)})`
+    : 'unavailable'
+  return (
+    <span
+      className={acquisition_class(status)}
+      data-recipe-acquisition={status}
+      title={`Target ${range_duration(target)}`}
+    >
+      Acquisition <strong className="font-normal">{label}</strong>
+    </span>
+  )
+}
+const IngredientAcquisition = ({ row }: Readonly<{ row?: AcquisitionIngredient }>) => (
+  <span
+    className="w-24 shrink-0 text-right text-[7px] tabular-nums text-[#8c82a5]"
+    title={row?.unit ? `${average_duration(row.unit)} each` : 'No obtainable source'}
+  >
+    {row?.total ? `~${average_duration(row.total)}` : 'unavailable'}
+  </span>
+)
+
 export const ItemRecipeEditor = ({
   category,
+  level,
   recipe,
   filter_rows,
 }: Readonly<{
   category: string
+  level: number
   recipe: ItemRecipeBinding
-  filter_rows?: readonly ItemReferenceFilterRow[]
+  filter_rows?: readonly ItemFilterRow[]
 }>) => {
   const value = as_record(recipe.value ?? undefined)
   if (!value)
@@ -47,6 +99,7 @@ export const ItemRecipeEditor = ({
   const derived_job = craft_job_of(category)
   const job = derived_job ?? string_value(value.job)
   const required_level = craft_required_level(ingredients.length)
+  const { acquisition } = recipe
   const excluded_types = (except = ''): ReadonlySet<string> =>
     new Set(ingredients.map(([item_type]) => item_type).filter((item_type) => item_type !== except))
   const replace_ingredient = (current_type: string, next_type: string, amount: number): void =>
@@ -107,6 +160,7 @@ export const ItemRecipeEditor = ({
           <span className="text-[#737985]">
             {ingredients.length} / {craft_max_ingredients} ingredients
           </span>
+          <AcquisitionSummary acquisition={acquisition} category={category} level={level} />
           <button
             aria-label="Remove recipe"
             className="ml-auto grid size-7 cursor-pointer place-items-center text-[#9a5367] transition hover:text-[#ff6f98]"
@@ -139,6 +193,7 @@ export const ItemRecipeEditor = ({
                 <span className="w-20 shrink-0 text-right text-[7px] tracking-[0.08em] text-[#666d78] uppercase">
                   Job Lv. {craft_required_level(index + 1)}
                 </span>
+                <IngredientAcquisition row={acquisition?.ingredients[index]} />
                 <label className="ml-3 flex shrink-0 items-center gap-1 text-[10px] text-[#737985]">
                   <span aria-hidden="true">×</span>
                   <input

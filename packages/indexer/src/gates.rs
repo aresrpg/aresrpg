@@ -44,10 +44,11 @@ mod tests {
         ("fight", "Fight"),
         ("party", "Party"),
         ("friends", "FriendList"),
+        ("mastery", "Mastery"),
+        ("mastery", "MasteryOffer"),
         ("kolizeum", "Kolizeum"),
-        ("shop", "Sale"),
-        ("shop", "Airdrop"),
-        ("shop", "Giftcard"),
+        ("distribution", "Airdrop"),
+        ("distribution", "Giftcard"),
         ("loot_box", "BoxClaim"),
         ("forgemagie", "CrushClaim"),
         ("trade", "Trade"),
@@ -63,15 +64,8 @@ mod tests {
         ("progression", "Hp"),
         ("forgemagie", "ForgeState"),
         ("pet", "FeedState"),
-        ("fight", "Fighter"),
-        ("fight", "FighterKind"),
-        ("fight", "MobSnapshot"),
-        ("fight", "KitSpell"),
-        ("fight", "TurnCast"),
-        ("fight", "ActiveEffect"),
-        ("fight", "Cooldown"),
-        ("fight", "BoardZone"),
-        ("fight", "RolledDrop"),
+        ("fight", "FighterAuthority"),
+        ("fight", "DungeonTag"),
         ("fight", "FighterKey"),
         // dynamic-field keys the dispatch matches on
         ("progression", "HpKey"),
@@ -92,6 +86,7 @@ mod tests {
         ("equipment", "ItemEquipped"),
         ("equipment", "ItemUnequipped"),
         ("world", "WorldJoined"),
+        ("world", "CharacterTeleported"),
         ("dungeon", "DungeonEntered"),
         ("dungeon", "DungeonRoomCleared"),
         ("dungeon", "DungeonEnded"),
@@ -109,11 +104,10 @@ mod tests {
         ("gathering", "RareGathered"),
         ("kolizeum", "KolizeumCreated"),
         ("kolizeum", "KolizeumPaid"),
-        ("shop", "SaleBought"),
-        ("shop", "AirdropCreated"),
-        ("shop", "AirdropClaimed"),
-        ("shop", "GiftcardMinted"),
-        ("shop", "GiftcardRedeemed"),
+        ("distribution", "AirdropCreated"),
+        ("distribution", "AirdropClaimed"),
+        ("distribution", "GiftcardMinted"),
+        ("distribution", "GiftcardRedeemed"),
         ("crafting", "Crafted"),
         ("forgemagie", "RuneScribed"),
         ("forgemagie", "GearCrushed"),
@@ -121,6 +115,22 @@ mod tests {
         ("loot_box", "LootTableSet"),
         ("loot_box", "LootBoxOpened"),
         ("loot_box", "LootClaimed"),
+        ("mastery", "MasteryUpdated"),
+    ];
+
+    const COMBAT: &[(&str, &str)] = &[
+        ("combat", "State"),
+        ("combat", "Fighter"),
+        ("combat", "FighterKind"),
+        ("combat", "FighterStats"),
+        ("combat", "Sheet"),
+        ("combat", "MobSnapshot"),
+        ("combat", "KitSpell"),
+        ("combat", "TurnCast"),
+        ("combat", "ActiveEffect"),
+        ("combat", "Cooldown"),
+        ("combat", "BoardZone"),
+        ("combat", "RolledDrop"),
     ];
 
     /// Math-package value types embedded in game objects.
@@ -149,7 +159,15 @@ mod tests {
     /// reason. `world::WorldCreated` fires once per world at seeding time, before
     /// any player can be watching, and the World object's own projection carries
     /// everything the event would have said.
-    const DEFERRED_EVENTS: &[(&str, &str)] = &[("world", "WorldCreated")];
+    const DEFERRED_EVENTS: &[(&str, &str)] = &[
+        ("world", "WorldCreated"),
+        // Registry::ContentWritten is the canonical content invalidation. This birth receipt
+        // carries no additional runtime projection fact.
+        ("dungeon_content", "DungeonContentCreated"),
+        // Owner-only writes fold this full row from their certified receipt; reconnect reads
+        // the projected Mastery object, so no realtime event channel has a consumer.
+        ("mastery", "MasteryUpdated"),
+    ];
 
     fn repo_root() -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -191,62 +209,69 @@ mod tests {
     }
 
     #[test]
-    fn game_package_keeps_publish_headroom() {
+    fn every_package_respects_the_shared_publish_limit() {
         // The 2026-08-30 transaction rejected 97,048 raw bytes as a 102,559-byte package
         // object. The shared 96,000-byte ceiling preserves roughly 1 KB below Sui's 102,400-byte
         // object limit after the observed linkage/type-origin metadata.
-        let max_game_bytecode_bytes = serde_json::from_str::<serde_json::Value>(include_str!(
-            "../../move/package-size-budget.json"
-        ))
-        .expect("parsing the shared game package-size budget")["max_game_bytecode_bytes"]
-            .as_u64()
-            .expect("game package-size budget is a u64");
+        let max_bytecode_bytes =
+            serde_json::from_str::<serde_json::Value>(include_str!("../../../move-packages.json"))
+                .expect("parsing the shared package-size limit")["max_bytecode_bytes"]
+                .as_u64()
+                .expect("package-size limit is a u64");
 
         let root = repo_root();
-        let install_dir =
-            std::env::temp_dir().join(format!("aresrpg-size-gate-{}", std::process::id()));
-        if install_dir.exists() {
-            std::fs::remove_dir_all(&install_dir).expect("removing stale package-size build");
+        let packages = [
+            ("math", "packages/move-math", "aresrpg_math"),
+            ("control", "packages/control", "aresrpg_control"),
+            ("combat", "packages/move-combat", "aresrpg_combat"),
+            ("seed", "packages/seed", "aresrpg_seed"),
+            ("game", "packages/move", "aresrpg"),
+        ];
+        for (slot, package_path, package_name) in packages {
+            let install_dir = std::env::temp_dir()
+                .join(format!("aresrpg-size-gate-{}-{slot}", std::process::id()));
+            if install_dir.exists() {
+                std::fs::remove_dir_all(&install_dir).expect("removing stale package-size build");
+            }
+            let output = Command::new("sui")
+                .args([
+                    "move",
+                    "build",
+                    "--path",
+                    package_path,
+                    "--build-env",
+                    "testnet",
+                    "--warnings-are-errors",
+                    "--install-dir",
+                ])
+                .arg(&install_dir)
+                .current_dir(&root)
+                .output()
+                .expect("running a production package-size build");
+            assert!(
+                output.status.success(),
+                "{slot} production package-size build failed:\n{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            let build_dir = install_dir.join(format!("build/{package_name}/bytecode_modules"));
+            let bytes = std::fs::read_dir(&build_dir)
+                .unwrap_or_else(|error| panic!("listing {slot} bytecode modules: {error}"))
+                .map(|entry| entry.expect("bytecode module entry").path())
+                .filter(|path| path.extension().is_some_and(|extension| extension == "mv"))
+                .map(|path| {
+                    std::fs::metadata(&path)
+                        .expect("reading bytecode module metadata")
+                        .len()
+                })
+                .sum::<u64>();
+            std::fs::remove_dir_all(&install_dir).expect("removing package-size build");
+            assert!(
+                bytes <= max_bytecode_bytes,
+                "{slot} bytecode is {bytes} bytes; the shared {max_bytecode_bytes}-byte limit \
+                 leaves room for Sui package metadata under the 102,400-byte object limit"
+            );
         }
-        let output = Command::new("sui")
-            .args([
-                "move",
-                "build",
-                "--path",
-                "packages/move",
-                "--build-env",
-                "testnet",
-                "--warnings-are-errors",
-                "--install-dir",
-            ])
-            .arg(&install_dir)
-            .current_dir(&root)
-            .output()
-            .expect("running the production package-size build");
-        assert!(
-            output.status.success(),
-            "production package-size build failed:\n{}\n{}",
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-        let build_dir = install_dir.join("build/aresrpg/bytecode_modules");
-        let bytes = std::fs::read_dir(&build_dir)
-            .expect("listing game bytecode modules")
-            .map(|entry| entry.expect("game bytecode module entry").path())
-            .filter(|path| path.extension().is_some_and(|extension| extension == "mv"))
-            .map(|path| {
-                std::fs::metadata(&path)
-                    .expect("reading game bytecode module metadata")
-                    .len()
-            })
-            .sum::<u64>();
-        std::fs::remove_dir_all(&install_dir).expect("removing package-size build");
-
-        assert!(
-            bytes <= max_game_bytecode_bytes,
-            "game bytecode is {bytes} bytes; the {max_game_bytecode_bytes}-byte budget leaves \
-             room for Sui package metadata under the 102,400-byte object limit"
-        );
     }
 
     /// Render a type compactly: primitives lowercase, datatypes as
@@ -429,6 +454,8 @@ mod tests {
     fn move_layouts_match_the_committed_snapshot() {
         let root = repo_root();
         let game = load_modules(&root.join("packages/move/build/aresrpg/bytecode_modules"));
+        let combat =
+            load_modules(&root.join("packages/move-combat/build/aresrpg_combat/bytecode_modules"));
         let math =
             load_modules(&root.join("packages/move-math/build/aresrpg_math/bytecode_modules"));
         let seed = load_modules(&root.join("packages/seed/build/aresrpg_seed/bytecode_modules"));
@@ -439,6 +466,9 @@ mod tests {
         );
         for (module, datatype) in GAME {
             writeln!(snapshot, "{}", layout_line(&game, module, datatype)).unwrap();
+        }
+        for (module, datatype) in COMBAT {
+            writeln!(snapshot, "{}", layout_line(&combat, module, datatype)).unwrap();
         }
         for (module, datatype) in MATH {
             writeln!(snapshot, "{}", layout_line(&math, module, datatype)).unwrap();
@@ -481,6 +511,7 @@ mod tests {
         let mut emitted: Vec<(String, String)> = vec![];
         for sources in [
             repo_root().join("packages/move-math/sources"),
+            repo_root().join("packages/move-combat/sources"),
             repo_root().join("packages/move/sources"),
             repo_root().join("packages/seed/sources"),
         ] {
@@ -495,6 +526,7 @@ mod tests {
                     .find_map(|line| {
                         line.trim()
                             .strip_prefix("module aresrpg_math::")
+                            .or_else(|| line.trim().strip_prefix("module aresrpg_combat::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
                             .map(|rest| rest.trim_end_matches(';').to_string())
@@ -561,8 +593,10 @@ mod tests {
                     ty.strip_prefix("Option<").and_then(|t| t.strip_suffix('>'))
                 {
                     format!("option::Option<{}>", rust_as_move(inner, module))
+                } else if ty == "RolledDrop" {
+                    "combat::RolledDrop".to_string()
                 } else {
-                    // a value type of the event's own module (fight::RolledDrop, …)
+                    // a value type of the event's own module
                     format!("{module}::{ty}")
                 }
             }
@@ -653,7 +687,7 @@ mod tests {
     /// here before it ships.
     #[test]
     fn only_the_own_cap_withdraw_doors_return_a_purchase_cap() {
-        const ALLOWED: &[&str] = &["trade_take_i", "trade_recover_i"];
+        const ALLOWED: &[&str] = &["trade_take_item", "trade_recover_item"];
         let sources = repo_root().join("packages/move/sources");
         let mut leaks = vec![];
         for entry in std::fs::read_dir(&sources).expect("listing move sources") {

@@ -3,7 +3,7 @@
 // The ONE query exception (push model): a whitelisted address may ask for dashboard data.
 // Everyone else's admin packet answers a refusal and touches nothing.
 
-import { get_admin_overview, get_admin_overview_section, get_admin_shop_sales } from '../reads/get_admin_overview.ts'
+import { get_admin_overview, get_admin_overview_section } from '../reads/get_admin_overview.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerAction } from '../player.ts'
 
@@ -29,16 +29,9 @@ export default {
             addresses_days: request.addresses_days,
             characters_days: request.characters_days,
           }).then((result) => ({ type: 'packet/admin_response' as const, id, kind, result }))
-        if (kind === 'overview_section')
-          return get_admin_overview_section(graph, pubsub.graph, pubsub.mesh, request.section, request.days).then(
-            (result) => ({ type: 'packet/admin_response' as const, id, kind, result })
-          )
-        return get_admin_shop_sales(pubsub.graph, { days: request.days, cursor: request.cursor }).then((result) => ({
-          type: 'packet/admin_response' as const,
-          id,
-          kind,
-          result,
-        }))
+        return get_admin_overview_section(graph, pubsub.graph, pubsub.mesh, request.section, request.days).then(
+          (result) => ({ type: 'packet/admin_response' as const, id, kind, result })
+        )
       })()
       answer.then(send).catch((error: Error) => {
         log.error({ kind, error: error.message }, 'admin read failed')

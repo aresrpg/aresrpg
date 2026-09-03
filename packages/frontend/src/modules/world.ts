@@ -10,7 +10,6 @@ import {
   ZONE_RESEARCH_TTL_MS,
   zone_of,
   type FightRow,
-  type DungeonPortalRow,
   type MobGroupRow,
   type PresenceRow,
   type ResourcePackRow,
@@ -91,13 +90,11 @@ export type ZoneReveal = Readonly<{
   zz: number
   mobs: number
   resources: number
-  dungeon: boolean
 }>
 
 export type ZonePopulation = Readonly<{
   mobs: readonly MobGroupRow[]
   resources: readonly ResourcePackRow[]
-  portal: DungeonPortalRow | null
 }>
 
 export type { PendingGather } from './world_gather.ts'
@@ -203,7 +200,6 @@ const fold_union = (world: WorldState, packet: Readonly<ServerPacket>): WorldSta
         [key]: Object.freeze({
           mobs: Object.freeze(packet.mobs),
           resources: Object.freeze(packet.resources),
-          portal: packet.portal ? Object.freeze(packet.portal) : null,
         }),
       }),
     })
@@ -412,11 +408,10 @@ export const zone_discovery_arrived = (
 
 export const zone_discovery_summary = (
   population: Readonly<ZonePopulation>
-): Readonly<{ mobs: number; resources: number; dungeon: boolean }> =>
+): Readonly<{ mobs: number; resources: number }> =>
   Object.freeze({
     mobs: population.mobs.reduce((total, group) => total + group.members.length, 0),
     resources: population.resources.reduce((total, pack) => total + pack.nodes, 0),
-    dungeon: population.portal !== null,
   })
 
 /** How long the world has to actually SHOW a searched zone before we call it a failure. The
@@ -551,8 +546,8 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         character_id: selected_character_id,
         custody: character_custody(character),
         world: character.world,
-        zx: Number(zx),
-        zz: Number(zz),
+        zone_x: Number(zx),
+        zone_z: Number(zz),
         group_index: pending_engage.index,
         access: pending_engage.access,
         // the ROSTER the chain will seat, in the order it drew it — the members are the fight

@@ -7,8 +7,8 @@
 #[test_only]
 module aresrpg::world_biomes_tests;
 
-use aresrpg_math::{world_map::{Self, MobRow, WorldContent}, zone_math};
-use sui::test_scenario;
+use aresrpg_math::{city_map, world_map::{Self, MobRow, ResourceRow, WorldContent}, zone_math};
+use sui::{object, test_scenario};
 
 const OWNER: address = @0xA11CE;
 
@@ -19,6 +19,7 @@ fun families(w: &WorldContent, zx: u32, zz: u32): vector<std::string::String> {
   zone_math::families(
     world_map::mobs(w),
     world_map::biome_map(w),
+    &world_map::cities(w),
     zx,
     zz,
   )
@@ -28,14 +29,40 @@ fun resource_families(w: &WorldContent, zx: u32, zz: u32): vector<std::string::S
   zone_math::resource_families(
     world_map::resources(w),
     world_map::biome_map(w),
+    &world_map::cities(w),
     zx,
     zz,
   )
 }
 
+fun mob_row(mob_type: std::string::String, weight: u16, biomes: vector<u8>): MobRow {
+  world_map::new_mob_row(mob_type, weight, biomes, vector[])
+}
+
+fun resource_row(
+  item_type: std::string::String,
+  job: std::string::String,
+  tier: u8,
+  protector: std::string::String,
+  rare: std::string::String,
+  biomes: vector<u8>,
+): ResourceRow {
+  world_map::new_resource_row(item_type, job, tier, protector, rare, biomes, vector[])
+}
+
 fun seed_map(w: &mut WorldContent, x0: u32, z0: u32, side: u16, cells: vector<u8>) {
   world_map::set_biome_map_window(w, x0, z0, side);
   world_map::append_biome_map_cells(w, cells);
+}
+
+fun repeated_cells(count: u64, value: u8): vector<u8> {
+  let mut cells = vector[];
+  let mut index = 0;
+  while (index < count) {
+    cells.push_back(value);
+    index = index + 1;
+  };
+  cells
 }
 
 fun world_with(
@@ -52,8 +79,8 @@ fun zone_families_respect_the_biome_map() {
   let mut scenario = test_scenario::begin(OWNER);
   let mut w = world_with(
     vector[
-      world_map::new_mob_row(b"wooling".to_string(), 8000, vector[1]),
-      world_map::new_mob_row(b"bonelet".to_string(), 8000, vector[2]),
+      mob_row(b"wooling".to_string(), 8000, vector[1]),
+      mob_row(b"bonelet".to_string(), 8000, vector[2]),
     ],
     &mut scenario,
   );
@@ -71,7 +98,7 @@ fun zone_families_respect_the_biome_map() {
 #[test]
 fun a_biome_without_rows_spawns_nothing() {
   let mut scenario = test_scenario::begin(OWNER);
-  let mut w = world_with(vector[world_map::new_mob_row(b"wooling".to_string(), 8000, vector[1])], &mut scenario);
+  let mut w = world_with(vector[mob_row(b"wooling".to_string(), 8000, vector[1])], &mut scenario);
   // The whole window is biome 0 (ocean) — no row lives there.
   seed_map(&mut w, 0, 0, 1, vector[0]);
 
@@ -84,7 +111,7 @@ fun a_biome_without_rows_spawns_nothing() {
 fun an_empty_map_reads_biome_zero_everywhere() {
   let mut scenario = test_scenario::begin(OWNER);
   // No map seeded: the flat legacy shape — rows authored as biome 0 spawn in every zone.
-  let w = world_with(vector[world_map::new_mob_row(b"wooling".to_string(), 8000, vector[0])], &mut scenario);
+  let w = world_with(vector[mob_row(b"wooling".to_string(), 8000, vector[0])], &mut scenario);
 
   assert!(families(&w, 0, 0) == vector[b"wooling".to_string()], 0);
   assert!(families(&w, 512, 700) == vector[b"wooling".to_string()], 1);
@@ -99,11 +126,11 @@ fun a_zone_spawns_its_biome_s_whole_list() {
   let mut scenario = test_scenario::begin(OWNER);
   let w = world_with(
     vector[
-      world_map::new_mob_row(b"wooling".to_string(), 8000, vector[0]),
-      world_map::new_mob_row(b"razkin".to_string(), 8000, vector[0]),
-      world_map::new_mob_row(b"piglet".to_string(), 8000, vector[0]),
-      world_map::new_mob_row(b"bonelet".to_string(), 8000, vector[0]),
-      world_map::new_mob_row(b"grainfox".to_string(), 444, vector[0]),
+      mob_row(b"wooling".to_string(), 8000, vector[0]),
+      mob_row(b"razkin".to_string(), 8000, vector[0]),
+      mob_row(b"piglet".to_string(), 8000, vector[0]),
+      mob_row(b"bonelet".to_string(), 8000, vector[0]),
+      mob_row(b"grainfox".to_string(), 444, vector[0]),
     ],
     &mut scenario,
   );
@@ -114,15 +141,38 @@ fun a_zone_spawns_its_biome_s_whole_list() {
 }
 
 #[test]
+fun city_population_replaces_the_underlying_biome_instead_of_mixing() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let mut w = world_with(
+    vector[
+      mob_row(b"biome_mob".to_string(), 8000, vector[1]),
+      world_map::new_mob_row(b"city_mob".to_string(), 8000, vector[2], vector[0]),
+    ],
+    &mut scenario,
+  );
+  world_map::set_cities(
+    &mut w,
+    vector[city_map::new_city(b"thebes".to_string(), 50_512, 50_000, object::id_from_address(@0xD))],
+  );
+  let city_x = 50_512 / 512;
+  let city_z = 50_000 / 512;
+  seed_map(&mut w, city_x - 2, city_z - 2, 5, repeated_cells(25, 1));
+
+  assert!(families(&w, city_x, city_z) == vector[b"city_mob".to_string()], 0);
+  assert!(families(&w, city_x + 2, city_z) == vector[b"biome_mob".to_string()], 1);
+  scenario.end();
+}
+
+#[test]
 fun zone_resources_respect_the_biome_map() {
   let mut scenario = test_scenario::begin(OWNER);
   let mut w = world_with(vector[], &mut scenario);
   world_map::set_resources(
     &mut w,
     vector[
-      world_map::new_resource_row(b"wheat".to_string(), b"FARMER".to_string(), 1, b"".to_string(), b"".to_string(), vector[1]),
-      world_map::new_resource_row(b"quartz".to_string(), b"MINER".to_string(), 1, b"".to_string(), b"".to_string(), vector[1, 2]),
-      world_map::new_resource_row(b"moonstone".to_string(), b"MINER".to_string(), 4, b"".to_string(), b"".to_string(), vector[]),
+      resource_row(b"wheat".to_string(), b"FARMER".to_string(), 1, b"".to_string(), b"".to_string(), vector[1]),
+      resource_row(b"quartz".to_string(), b"MINER".to_string(), 1, b"".to_string(), b"".to_string(), vector[1, 2]),
+      resource_row(b"moonstone".to_string(), b"MINER".to_string(), 4, b"".to_string(), b"".to_string(), vector[]),
     ],
   );
   seed_map(&mut w, 0, 0, 2, vector[1, 2, 1, 2]);
@@ -141,8 +191,8 @@ fun zones_below_the_window_origin_clamp_to_its_first_cell() {
   let mut scenario = test_scenario::begin(OWNER);
   let mut w = world_with(
     vector[
-      world_map::new_mob_row(b"wooling".to_string(), 8000, vector[1]),
-      world_map::new_mob_row(b"bonelet".to_string(), 8000, vector[2]),
+      mob_row(b"wooling".to_string(), 8000, vector[1]),
+      mob_row(b"bonelet".to_string(), 8000, vector[2]),
     ],
     &mut scenario,
   );
@@ -171,7 +221,7 @@ fun a_half_filled_map_refuses_every_read() {
   // A declared window with missing cells is a half-run seeding — reads abort rather than
   // serve a wrong biome; the window + appends share one PTB precisely for this.
   let mut scenario = test_scenario::begin(OWNER);
-  let mut w = world_with(vector[world_map::new_mob_row(b"wooling".to_string(), 8000, vector[0])], &mut scenario);
+  let mut w = world_with(vector[mob_row(b"wooling".to_string(), 8000, vector[0])], &mut scenario);
   world_map::set_biome_map_window(&mut w, 0, 0, 2);
   world_map::append_biome_map_cells(&mut w, vector[1, 2]);
   families(&w, 0, 0);

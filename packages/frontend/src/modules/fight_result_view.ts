@@ -32,17 +32,17 @@ export const fight_result_available = (
 ): boolean => fight.checkpoint?.contract.id !== result_fight
 
 export const fight_resolution_dungeon = (
-  row: Readonly<{ dungeon?: unknown; world?: unknown }>
-): Readonly<{ world: string; room: number }> | null => {
+  row: Readonly<{ dungeon?: unknown; dungeon_room?: unknown }>
+): Readonly<{ dungeon: string; room: number }> | null => {
   if (row.dungeon === null || row.dungeon === undefined) return null
   if (
-    !Number.isSafeInteger(row.dungeon) ||
-    Number(row.dungeon) < 0 ||
-    typeof row.world !== 'string' ||
-    row.world.length === 0
+    typeof row.dungeon !== 'string' ||
+    row.dungeon.length === 0 ||
+    !Number.isSafeInteger(row.dungeon_room) ||
+    Number(row.dungeon_room) < 0
   )
     throw new Error('Fight resolution carries an incomplete dungeon identity.')
-  return Object.freeze({ world: row.world, room: Number(row.dungeon) })
+  return Object.freeze({ dungeon: row.dungeon, room: Number(row.dungeon_room) })
 }
 
 export const fight_result_surface = (

@@ -75,6 +75,7 @@ jobs:
           # This job reads only the Move packages — never the 1.8GB asset tree.
           sparse-checkout: |
             packages/move
+            packages/move-combat
             packages/move-math
             packages/control
             packages/seed
@@ -83,7 +84,7 @@ jobs:
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
         # Move toolchain — a floating version would shift the compiler under the bytecode gates.
-        run: echo "version=testnet-v1.78.0" >> "$GITHUB_OUTPUT"
+        run: echo "version=testnet-v1.78.1" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -101,22 +102,25 @@ jobs:
           fi
       - name: move-math — build
         run: sui move build --path packages/move-math
-      - name: control + seed — build
+      - name: control + combat + seed — build
         run: |
           sui move build --path packages/control
+          sui move build --path packages/move-combat
           sui move build --path packages/seed
       - name: move — build
         run: sui move build --path packages/move
       - name: coverage (all Move packages)
         run: sh scripts/coverage_move.sh
       - name: move — gas ratchet
-        # The ÷10 plan's micro-ratchet: one complete three-mob wave runs under its own
-        # unit-test gas ceiling. It guards instruction growth; executed receipt benchmarks
-        # separately own transaction floors, storage, and rebates. A fight-path inflation reds HERE
-        # before it reaches a player. The craft siblings use the same eight-input fixture at one
-        # and 1,000 attempts, proving the amount field adds no linear work. Ceilings only ratchet DOWN.
+        # Runtime-shaped combat probes live with the production machine. White Ant covers two
+        # full-map colony rows over nine fighters; Cro Wani reproduces testnet FUAVPN…WJe's
+        # ten-fighter circle buff + attack (68.2M computation before fighter-first targeting).
+        # Executed receipts separately own transaction floors, storage, and rebates. Ceilings only
+        # ratchet DOWN.
         run: |
-          sui move test --path packages/move one_three_mob_wave --gas-limit 120000000 --statistics
+          sui move test --path packages/move-combat one_three_mob_wave --gas-limit 45000000 --statistics
+          sui move test --path packages/move-combat one_white_ant_turn --gas-limit 300000 --statistics
+          sui move test --path packages/move-combat one_crowani_turn --gas-limit 400000 --statistics
           sui move test --path packages/move single_stackable_craft --gas-limit 1100000 --statistics
           sui move test --path packages/move maximum_stackable_craft --gas-limit 1100000 --statistics
   tests_indexer:
@@ -133,6 +137,7 @@ jobs:
           # Indexer + the Move packages its parity gates compile — never the asset tree.
           sparse-checkout: |
             packages/move
+            packages/move-combat
             packages/move-math
             packages/control
             packages/seed
@@ -142,7 +147,7 @@ jobs:
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
         # Move toolchain — a floating version would shift the compiler under the bytecode gates.
-        run: echo "version=testnet-v1.78.0" >> "$GITHUB_OUTPUT"
+        run: echo "version=testnet-v1.78.1" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -162,6 +167,7 @@ jobs:
         run: |
           sui move build --path packages/move-math
           sui move build --path packages/control
+          sui move build --path packages/move-combat
           sui move build --path packages/seed
           sui move build --path packages/move
       - name: cache cargo

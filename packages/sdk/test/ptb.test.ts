@@ -7,12 +7,8 @@ import { describe, expect, test } from 'bun:test'
 import { Transaction } from '@mysten/sui/transactions'
 import { KioskClient, type KioskOwnerCap } from '@mysten/kiosk'
 
-import {
-  create_personal_kiosk_runner,
-  receipt_personal_kiosk_cap,
-  with_kiosk,
-  with_personal_kiosk,
-} from '../src/ptb.ts'
+import { receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from '../src/ptb.ts'
+import { create_personal_kiosk_runner } from '../src/kiosk_runner.ts'
 
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 // A REAL KioskClient over a stub transport: the personal-kiosk package ids are baked per

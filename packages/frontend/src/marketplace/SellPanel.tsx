@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { item_is_stackable } from '@aresrpg/immutable'
+import { item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
 import { MIN_CHARACTER_SALE_LEVEL, type CharacterRow, type ItemRow, type ListingRow } from '@aresrpg/protocol'
 import { Package, Store, Tag } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { coalesced_stack_groups, encumbered_asset_ids } from '../inventory_stacks.ts'
+import { available_inventory_items, coalesced_stack_groups, encumbered_asset_ids } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
@@ -60,7 +60,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
   const [price, set_price] = useState('')
   const [lot, set_lot] = useState(1)
   const encumbered = encumbered_asset_ids(market.own_listings, trades)
-  const inventory = session.inventory.filter(({ id }) => !encumbered.has(id))
+  const inventory = available_inventory_items(session.inventory, encumbered)
   const stack_groups = coalesced_stack_groups(session.inventory, encumbered)
   const items: readonly ItemSelection[] = [
     ...inventory
@@ -77,9 +77,13 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
   const parsed_price = parse_sui_amount(price)
   const stackable = selected?.kind === 'item' && item_is_stackable(selected.row.category)
   const lot_sizes =
-    selected?.kind === 'item' ? [1, 10, 100, 1000].filter((amount) => amount <= selected.total_amount) : []
+    selected?.kind === 'item' ? marketplace_lot_sizes.filter((amount) => amount <= selected.total_amount) : []
   const can_list =
-    !!selected && !!parsed_price && (!stackable || lot_sizes.includes(lot)) && !market.pending && !!session.wallet
+    !!selected &&
+    !!parsed_price &&
+    (!stackable || lot_sizes.some((amount) => amount === lot)) &&
+    !market.pending &&
+    !!session.wallet
 
   const choose = (selection: Selection): void => {
     set_selected(selection)

@@ -98,7 +98,7 @@ test('create and join preserve the selected format, cap range, stake, and explic
   expect(coins).toEqual([2_000_000_000n, 2_000_000_000n, 2_000_000_000n])
   expect(calls[0]).toMatchObject({ door: 'create', args: { format: 6, level_min: 12, level_max: 34, access: 0 } })
   expect(calls[1]).toMatchObject({ door: 'create_friends', args: { format: 3, list } })
-  expect(calls[2]).toMatchObject({ door: 'join', args: { lobby: kolizeum, f: fight, side: 1 } })
+  expect(calls[2]).toMatchObject({ door: 'join', args: { lobby: kolizeum, fight_object: fight, side: 1 } })
   expect(scopes).toEqual(['kolizeum:create', 'kolizeum:create', `fight:${fight}`])
 })
 

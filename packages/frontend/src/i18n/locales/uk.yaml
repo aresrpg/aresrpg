@@ -28,7 +28,7 @@ navigation: Навігація
 world: Світ
 characters: Персонажі
 leaderboard: Рейтинг
-shop: Крамниця
+mastery: Майстерність
 encyclopedia: Енциклопедія
 marketplace: Ринок
 airdrop: Аірдроп
@@ -230,6 +230,9 @@ world_hud:
   coordinates: Координати
   biome: Біом
   world_map: Карта світу
+  world_map_zoom_in: Збільшити
+  world_map_zoom_out: Зменшити
+  world_map_extent: '{{blocks}} блоків'
   menu_group: Запросити до групи
   menu_friend: Додати друга
   menu_trade: Торгувати
@@ -241,6 +244,7 @@ world_hud:
   mount_prompt: 'Натисніть {{key}}, щоб осідлати'
   portal_prompt: 'Натисніть {{key}}, щоб подорожувати до іншого світу'
   dungeon_portal: Портал підземелля
+  dungeon_city: 'Місто {{city}}'
   dungeon_press_enter: Увійти
   dungeon_entry_body: Використайте ключ підземелля, щоб увійти до приватного лобі цього порталу.
   dungeon_required_key: Потрібний ключ
@@ -310,7 +314,6 @@ world_hud:
   zone_coordinates: 'Сектор {{zx}} · {{zz}}'
   zone_mobs_found: 'Знайдено мобів: {{count}}'
   zone_resources_found: 'Знайдено ресурсів: {{count}}'
-  zone_dungeon_spotted: 'Виявлено підземелля'
   spawn_group: 'Зграя з {{size}}'
   spawn_unknown_mob: 'Невідома істота'
   spawn_press_attack: 'Натисніть {{key}}, щоб атакувати'
@@ -369,7 +372,6 @@ demo_page:
   crowd_loading: Завантаження моделей персонажів…
   crowd_result: Фаза
   mob: Монстр
-  hide_protectors: Приховати захисників
   amount: Кількість
   spawn_group: Створити групу
   clear: Очистити
@@ -445,37 +447,36 @@ marketplace_page:
   character_roster_full: Сьомий персонаж не поміститься у ваш список — межа 6
   collect_pending: Отримання виручки…
   collect_success: Виручку отримано
-shop_page:
-  title: 'Крамниця'
-  subtitle: 'Купуйте предмети за SUI'
-  remaining_of_cap: '{{remaining}} з {{cap}} залишилось'
-  processing: 'ОБРОБКА'
-  sold_out: 'Розпродано'
-  acquire: 'Придбати'
-  wallet: 'Гаманець'
-  filter_all: 'Усі'
-  sections:
-    pet_box: 'СКРИНІ З УЛЮБЛЕНЦЯМИ'
-    title: 'Титули'
-    cloak: 'Плащі'
-    hat: 'Головні убори'
-    companion: 'Компаньйони'
-    equipment: 'Спорядження'
-    consumable: 'Витратні матеріали'
-    resource: 'Ресурси'
-  amount_title: 'Виберіть кількість'
-  amount_quantity: 'Кількість'
-  amount_max: 'Макс'
-  amount_total: 'Разом'
-  amount_available: '{{count}} доступно'
-  amount_confirm: 'Придбати {{count}}'
-  purchase_success_body: 'Ваші нові предмети чекають в інвентарі.'
-  see_inventory: 'Переглянути інвентар'
-  buy_pending: 'Купівля…'
-  buy_success: 'Покупку завершено!'
-  drop_rates: 'Шанси випадіння'
-  pool_sub: 'Під час відкриття випадає один улюбленець, з вагами точно як у списку нижче.'
-  acquisition_complete: 'Придбання завершено'
+mastery_page:
+  subtitle: Щоденні випробування
+  title: Майстерність
+  lead: Проходьте підземелля щодня та отримуйте унікальні нагороди.
+  balance: Очки майстерності
+  daily_ready: Щоденне завдання доступне
+  daily_syncing: Оновлення щоденного завдання…
+  daily_title: Почніть щоденне завдання
+  daily_lead: Оберіть світ. Світи вищого рівня дають більше очок майстерності.
+  unknown_dungeon: Невідоме підземелля
+  quest_reward: Отримайте {{points}} очок майстерності
+  completed: Підтверджено
+  in_progress: Виконується
+  required_level: Потрібен рівень {{level}}
+  dungeon_count: '{{count}} підземель'
+  starting: Призначення…
+  start: Почати щоденне завдання
+  locked: Заблоковано
+  world_reward: +{{points}}pts
+  offers_title: Нагороди майстерності
+  offers_lead: Витрачайте очки майстерності, щоб розблокувати унікальні лутбокси.
+  progression: Шлях нагород
+  offers_empty: Пропозицій майстерності ще немає
+  ready: Готово до розблокування
+  missing: Бракує {{points}} очок
+  unlocking: Розблокування…
+  unlock: Розблокувати · {{cost}} оч.
+  quest_started: Щоденне завдання призначено.
+  offer_unlocked: Нагороду майстерності розблоковано.
+
 airdrop_page:
   title: 'Ейрдропи'
   subtitle: 'Отримайте зарезервовані предмети для відповідних власників'
@@ -485,6 +486,17 @@ airdrop_page:
   not_eligible: 'Не відповідає умовам'
   claimed: 'Отримано'
   claim: 'Отримати'
+  holder_title: 'Гаманець власника'
+  holder_connect_hint: 'Підключіть гаманець із відповідним NFT'
+  holder_connect: 'Підключити гаманець'
+  holder_connecting: 'Підключення…'
+  holder_wallet_missing: 'Сумісний гаманець Sui не встановлено'
+  giftcards_title: 'Подарункові картки для погашення'
+  gift_login: 'Продовжте через Google, щоб отримати цей подарунок у свій ігровий гаманець'
+  gift_ready: 'Ваша друкована подарункова картка готова до отримання'
+  gift_claiming: 'Отримання друкованої подарункової картки…'
+  gift_retry: 'Отримати картку'
+  redeem: 'Погасити'
   empty: 'Немає активних ейрдропів'
   empty_hint: "Ейрдропи для власників партнерських колекцій з'являться тут після запуску."
   pending_claim: 'Отримання ейрдропу…'
@@ -615,15 +627,12 @@ admin_page:
   player_activity_body: Денна активність і ковзне охоплення за 30 днів
   stickiness: DAU / 30Д
   online_players: Гравці онлайн
-  online_players_body: Середня та пікова кількість автентифікованих з’єднань
+  online_players_body: Пікова кількість автентифікованих з’єднань за інтервал
   online_now: Гравці онлайн
-  average: Середнє
   peak: Пік
   revenue: Дохід
   revenue_over_time: Дохід у часі
   revenue_over_time_body: Усі доходи протоколу за джерелами
-  shop: Магазин
-  shop_sales: Продажі магазину
   item_royalties: Роялті предметів
   character_royalties: Роялті персонажів
   character_creation_revenue: Створення персонажів
@@ -657,10 +666,6 @@ admin_page:
   revenue_mtd: Дохід від початку місяця
   last_30_days: Останні 30 днів
   calendar_month_to_date: Від початку календарного місяця
-  recent_shop_sales: Останні продажі магазину
-  sales_history: Історія продажів магазину
-  sales_retention: Точні деталі транзакцій зберігаються 90 днів
-  view_all_sales: Переглянути всі продажі
   buyer: Покупець
   item: Предмет
   quantity: Кількість
@@ -676,8 +681,6 @@ admin_page:
   loading: Завантаження…
   load_more: Завантажити ще
   transactions: транзакцій
-  no_sales_history: За цей період продажів немає
-  end_of_history: Кінець збереженої історії
 simulator_page:
   title: Симулятор бою
   local_only: Локальне детерміноване налаштування
@@ -879,14 +882,13 @@ wallet_legacy:
     вказану вище.
   faq: FAQ
   wallet_description: Ваш особистий гаманець. Лише ви маєте до нього доступ. Поповніть
-    SUI для використання в крамниці.
+    SUI для мережевих комісій та обміну між гравцями.
   moonpay_desc: Кредитна картка, Apple Pay, банківський переказ
   transak_desc: Кредитна картка, банківський переказ, 100+ країн
   faq_what_is_sui: Що таке SUI?
   faq_what_is_sui_answer: 'SUI: це цифрова валюта, як цифрова готівка. Вона існує
     на швидкій та безпечній мережі під назвою Sui blockchain. Ви використовуєте невеликі
-    суми SUI для покупки предметів у крамниці AresRPG. Думайте про це як про ігрові
-    кредити, тільки ми не можемо їх у вас забрати.'
+    суми SUI для мережевих комісій та обміну між гравцями.'
   faq_why_sui: Чому AresRPG використовує SUI?
   faq_why_sui_answer: 'SUI: наш основний спосіб оплати. Транзакції миттєві (менше
     1 секунди) і коштують частки цента. Без посередницьких комісій. У майбутньому
@@ -896,8 +898,7 @@ wallet_legacy:
   faq_legal: Чи це законно?
   faq_legal_answer: 'Так. Купівля та зберігання криптовалюти є законною у більшості
     країн. SUI: це легітимний цифровий актив, що торгується на великих регульованих
-    біржах по всьому світу. Ви просто використовуєте його як спосіб оплати в нашій
-    крамниці. Жодних NFT, жодних криптосхем.'
+    біржах по всьому світу. AresRPG використовує його для мережевих комісій та обміну між гравцями.'
   faq_eula: Чи дозволено це за умовами гри?
   faq_eula_answer: Так. Доки криптовалюта використовується виключно як спосіб оплати
     без NFT чи спекулятивних криптосхем, це повністю відповідає правилам. Багато великих
@@ -906,8 +907,7 @@ wallet_legacy:
   faq_access_answer: 'Тільки ви. Ваш гаманець створюється через ваш Google-вхід за
     допомогою технології zkLogin від Sui. Ніхто (навіть команда AresRPG) не може отримати
     доступ до ваших коштів чи переміщувати їх. Важливо: цей гаманець призначений лише
-    для покупок у крамниці. Не зберігайте тут великі суми. Поповнюйте лише те, що
-    плануєте витратити.'
+    для активності в AresRPG. Не зберігайте тут великі суми.'
   faq_balance: Я надіслав SUI, але мій баланс не оновився?
   faq_balance_answer: Не хвилюйтесь. Наша система оновлення може тимчасово працювати
     повільно. Переконайтеся, що ви надіслали SUI на правильну адресу (скопіюйте її
@@ -1070,6 +1070,13 @@ encyclopedia_page:
   sort_name: НАЗВА А-Я
   clear_filters: ОЧИСТИТИ ВСЕ
   no_results: ЖОДЕН ПРЕДМЕТ НЕ ВІДПОВІДАЄ ФІЛЬТРАМ
+  filter_by_category: ЗА КАТЕГОРІЄЮ
+  filter_by_resource: ЗА ТИПОМ РЕСУРСУ
+  filter_by_job: ЗА ПРОФЕСІЄЮ
+  filter_by_world: ЗА СВІТОМ
+  filter_by_mob_family: ЗА РОДИНОЮ МОНСТРІВ
+  filter_biome: БІОМ
+  filter_city: МІСТО
   group_armor: БРОНЯ
   group_weapons: ЗБРОЯ
   group_accessories: АКСЕСУАРИ
@@ -1078,7 +1085,11 @@ encyclopedia_page:
   group_relics: РЕЛІКВІЇ
   group_tools: ІНСТРУМЕНТИ
   group_consumables: ВИТРАТНІ
-  group_resources: РЕСУРСИ
+  group_raw_resources: СИРОВИНА
+  group_gatherable_resources: ЗБИРАЛЬНІ РЕСУРСИ
+  group_intermediary_resources: ПРОМІЖНІ РЕСУРСИ
+  group_pet_food_resources: КОРМ ДЛЯ УЛЮБЛЕНЦІВ
+  item_category_pet_food: КОРМ ДЛЯ УЛЮБЛЕНЦЯ
   stats_filter: СТАТИСТИКА
   filter_life_steal: КРАДІЖКА ЖИТТЯ
   gameplay:
@@ -1148,18 +1159,18 @@ encyclopedia_page:
     stat_rolling: КИДКИ СТАТІВ
     stat_rolling_desc: Кожен стат кидається рівномірно в діапазоні шаблону. Кожне значення рівноймовірне.
     archimobs: АРХІ-МОБИ
-    archimobs_desc: 0,5% шанс з'явитися як архі-моб замість звичайного — іменований, постійно сильніший варіант. Єдиний механізм рідкості, який мають моби.
+    archimobs_desc: Кожен придатний моб має 1% шанс бути заміненим своїм іменованим, постійно сильнішим архімобом. Кожен учасник кидає незалежно.
     max_members: Макс учасників
     groups_desc: Група — це спільний ростер до {{max}} гравців з обранням лідера. Перебування в групі саме по собі нічого не дає в бою — кожен, у групі чи ні, має надіслати власну транзакцію приєднання до бою, щоб увійти; немає ні пасивного, ні за близькістю включення.
     groups_xp: РОЗПОДІЛ XP
     groups_xp_desc: Переможені моби утворюють базовий запас XP. Допущені бійці дають йому груповий коефіцієнт Retro, невідповідність сумарних рівнів гравців і мобів зменшує його, після чого кожен гравець отримує частку свого рівня в сумарному рівні групи. Гравець нижче третини рівня найсильнішого гравця не збільшує коефіцієнт. Мудрість застосовується останньою; особиста шкода не має значення.
     groups_loot: РОЗПОДІЛ ЗДОБИЧІ
     groups_loot_desc: Кожен переможений монстр виконує один спільний кидок здобичі. Успішні предмети по черзі призначаються гравцям команди-переможця; додаткові гравці не створюють нових кидків.
-    dungeons_desc: Знайдіть портал у дослідженій зоні, витратьте ключ і проходьте кімнати по черзі. Кожен портал має власне живе лобі.
+    dungeons_desc: Дістаньтеся входу до підземелля в його визначеному місті, витратьте ключ і проходьте кімнати по черзі. Кожне підземелля має одне живе лобі.
     dungeon_entry: Вхід
-    dungeon_entry_value: Ключ біля відкритого порталу зони
+    dungeon_entry_value: Відповідний ключ біля входу до міста
     dungeon_instance: Інстанс
-    dungeon_instance_value: Локальне лобі порталу з публічними або груповими боями
+    dungeon_instance_value: Лобі підземелля з публічними або груповими боями
     dungeon_completion: Завершення
     dungeon_completion_value: Пройти всі кімнати
     dungeon_reward: Нагорода
@@ -1291,6 +1302,7 @@ encyclopedia_page:
   consumable_reset_stats: Скинути очки характеристик
   consumable_reset_spells: Скинути очки заклинань
   consumable_recall: Повертає до порталу світу
+  consumable_city: 'Переміщує до міста {{city}}'
   consumable_loot_box: Відкриває випадкову нагороду
   consumable_reward_heading: НАГОРОДА
   consumable_rewards: МОЖЛИВІ НАГОРОДИ
@@ -1358,7 +1370,6 @@ encyclopedia_page:
   no_mobs_onchain: Ще немає істот у мережі
   obtention_crafted: Можна виготовити
   obtention_dropped_by: Випадає з {{count}} монстрів
-  obtention_shop: Доступно в крамниці
   obtention_unknown: Спосіб отримання невідомий
   total_supply: Загальна кількість
   marketcap: Капіталізація
@@ -1388,10 +1399,7 @@ encyclopedia_page:
     arcane_spore: ''
     arcaneshroom: ''
     arcanite: ''
-    arcanite_hoe: ''
-    arcanite_pickaxe: ''
     arcanite_powder: ''
-    arcanite_sickle: ''
     arcanize_flour: ''
     barley_flour: ''
     basic_pickaxe: ''
@@ -1401,9 +1409,6 @@ encyclopedia_page:
     bloodstone_powder: ''
     bloodveil_orchid: ''
     burnt_wheat_flour: ''
-    copper_hoe: ''
-    copper_pickaxe: ''
-    copper_sickle: ''
     crimson_truffle: ''
     crimson_truffle_heart: ''
     crystallized_tanjirize: ''
@@ -1443,19 +1448,13 @@ encyclopedia_page:
     infinity_moonstone: ''
     infinity_obsidianite: ''
     infinity_quartz: ''
-    iron_sickle: ''
     ivory_orchid_paste: ''
     ivory_shrooms: ''
     jade: ''
-    jade_hoe: ''
-    jade_pickaxe: ''
     jade_powder: ''
     malt_flour: ''
     moonstone: ''
-    moonstone_hoe: ''
-    moonstone_pickaxe: ''
     moonstone_powder: ''
-    moonstone_sickle: ''
     nightcap: ''
     nightcap_elixir_base: ''
     obsidianite: ''
@@ -1505,6 +1504,8 @@ encyclopedia_page:
     rune_wisdom_ba: ''
     rune_wisdom_pa: ''
     rune_wisdom_ra: ''
+    scroll_of_oblivion: Повертає всі вкладені очки заклинань і скидає кожне покращене заклинання до 1-го рівня.
+    scroll_of_rebirth: Повертає всі вкладені очки характеристик, щоб їх можна було розподілити знову.
     shiny_barley: ''
     smoldering_wheat: ''
     spectral_arcanize: ''

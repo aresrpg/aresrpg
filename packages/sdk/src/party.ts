@@ -45,12 +45,12 @@ export const party_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk_cap:
     await sdk.hydrate_unknown([party.id, active.id])
     const tx = sdk.tx()
     const shared = {
-      f: active.id,
+      fight_object: active.id,
       fighter_idx: active.seat,
       actor_id: actor.id,
       invited_character: invited.id,
     }
-    sdk.doors.party_invitation_from_fight(tx, { p: party.id, ...shared })
+    sdk.doors.party_invitation_from_fight(tx, { party_object: party.id, ...shared })
     const receipt = await sdk.execute(tx, { gas_scope: `fight:${active.id}` })
     return Object.freeze({ digest: receipt_digest(receipt) })
   }
@@ -60,7 +60,7 @@ export const party_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk_cap:
       if (!party) return create_invitation(actor, invited)
       return mutate(party.id, actor, (tx, kiosk, cap) =>
         sdk.doors.party_invitation(tx, {
-          p: party.id,
+          party_object: party.id,
           kiosk,
           cap,
           actor_id: actor.id,
@@ -71,12 +71,12 @@ export const party_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk_cap:
     },
     accept: (party: string, character: CharacterRow) =>
       mutate(party, character, (tx, kiosk, cap) =>
-        sdk.doors.party_accept(tx, { p: party, kiosk, cap, character_id: character.id })
+        sdk.doors.party_accept(tx, { party_object: party, kiosk, cap, character_id: character.id })
       ),
     decline: (party: string, character: CharacterRow) =>
       mutate(party, character, (tx, kiosk, cap) =>
         sdk.doors.party_invitation(tx, {
-          p: party,
+          party_object: party,
           kiosk,
           cap,
           actor_id: character.id,
@@ -87,7 +87,7 @@ export const party_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk_cap:
     rescind: (party: PartyRow, leader: CharacterRow, invited_character: string) =>
       mutate(party.id, leader, (tx, kiosk, cap) =>
         sdk.doors.party_invitation(tx, {
-          p: party.id,
+          party_object: party.id,
           kiosk,
           cap,
           actor_id: leader.id,
@@ -97,15 +97,15 @@ export const party_actions = (sdk: GameSdk, { kiosk_cap }: Readonly<{ kiosk_cap:
       ),
     leave: (party: PartyRow, character: CharacterRow) =>
       mutate(party.id, character, (tx, kiosk, cap) =>
-        sdk.doors.party_leave(tx, { p: party.id, kiosk, cap, character_id: character.id })
+        sdk.doors.party_leave(tx, { party_object: party.id, kiosk, cap, character_id: character.id })
       ),
     kick: (party: PartyRow, leader: CharacterRow, target_character: string) =>
       mutate(party.id, leader, (tx, kiosk, cap) =>
-        sdk.doors.party_kick(tx, { p: party.id, kiosk, cap, leader_id: leader.id, target_character })
+        sdk.doors.party_kick(tx, { party_object: party.id, kiosk, cap, leader_id: leader.id, target_character })
       ),
     disband: (party: PartyRow, leader: CharacterRow) =>
       mutate(party.id, leader, (tx, kiosk, cap) =>
-        sdk.doors.party_disband(tx, { p: party.id, kiosk, cap, leader_id: leader.id })
+        sdk.doors.party_disband(tx, { party_object: party.id, kiosk, cap, leader_id: leader.id })
       ),
   })
 }

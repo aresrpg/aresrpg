@@ -4,7 +4,9 @@
 import { describe, expect, test } from 'bun:test'
 import { gatherable_catalog } from '@aresrpg/immutable'
 
+import airdrop from '../../../../seed/content/airdrop.json'
 import items from '../../../../seed/content/items.json'
+import mastery from '../../../../seed/content/mastery.json'
 import mobs from '../../../../seed/content/mobs.json'
 import recipes from '../../../../seed/content/recipes.json'
 import spells from '../../../../seed/content/spells.json'
@@ -43,10 +45,30 @@ describe('local encyclopedia catalog', () => {
     )
   })
 
-  test('keeps pets absent and restores only the deterministic protector resource bags', () => {
-    expect(encyclopedia_catalog.items.filter(({ category }) => category === 'pet')).toEqual([])
+  test('keeps Siluri feedable and exposes the airdrop pets', () => {
+    const pets = encyclopedia_catalog.items.filter(({ category }) => category === 'pet')
+    expect(pets.map(({ item_type }) => item_type)).toEqual([
+      'siluri',
+      'oeuftermath',
+      'suicune',
+      'suifren_bullshark',
+      'suifren_capy',
+      'vaporeon',
+      'corbac',
+      'primemachin',
+      'krinan',
+      'mosho',
+      'beru',
+      'talokan',
+      'yago',
+      'zot',
+    ])
+    expect(pets[0]).toEqual(expect.objectContaining({ item_type: 'siluri', pet_foods: ['gilded_pet_food'] }))
+
     const bags = encyclopedia_catalog.items.flatMap((item) =>
-      item.consumable?.type === 'loot_box' ? [{ ...item, consumable: item.consumable }] : []
+      item.item_type.startsWith('bag_') && item.consumable?.type === 'loot_box'
+        ? [{ ...item, consumable: item.consumable }]
+        : []
     )
     expect(bags).toHaveLength(33)
     for (const gatherable of gatherable_catalog) {
@@ -65,14 +87,30 @@ describe('local encyclopedia catalog', () => {
         }))
       ).toEqual([{ item_type: bag.item_type, chance_bp: 10_000, min_qty: 1, max_qty: 1 }])
     }
-    expect(encyclopedia_catalog.shop.sales.map(({ item: _item, ...sale }) => sale)).toEqual([
-      { item_type: 'scroll_of_oblivion', price: 5, supply: null, enabled: true },
-      { item_type: 'scroll_of_rebirth', price: 5, supply: null, enabled: true },
+    expect(encyclopedia_catalog.mastery.offers.map(({ item: _item, ...offer }) => offer)).toEqual(mastery.offers)
+  })
+
+  test('authors the holder airdrop and one hundred individual Sui Crate giftcards', () => {
+    expect(encyclopedia_catalog.airdrop.showcase.map(({ id }) => id)).toEqual([
+      'oeuftermath',
+      'suicune',
+      'suifren_bullshark',
+      'suifren_capy',
+      'primemachin',
     ])
-    expect(encyclopedia_catalog.shop.sales.map(({ item }) => item?.item_type)).toEqual([
-      'scroll_of_oblivion',
-      'scroll_of_rebirth',
-    ])
+    const [vaporeon] = encyclopedia_catalog.airdrop.drops
+    expect(vaporeon).toMatchObject({
+      id: 'vaporeon_holders_318251937',
+      item_type: 'vaporeon',
+      amount_each: 1,
+    })
+    expect(vaporeon?.whitelist).toHaveLength(22)
+    expect(new Set(vaporeon?.whitelist).size).toBe(22)
+    expect(encyclopedia_catalog.airdrop.giftcards).toEqual(airdrop.giftcards)
+    expect(airdrop.giftcards).toHaveLength(100)
+    expect(new Set(airdrop.giftcards.map(({ id }) => id)).size).toBe(100)
+    expect(airdrop.giftcards.every(({ item_type, amount }) => item_type === 'sui_crate' && amount === 1)).toBeTrue()
+    expect(airdrop.giftcards.reduce((total, { amount }) => total + amount, 0)).toBe(100)
   })
 
   test('derives class and job views from immutable identities', () => {
@@ -85,7 +123,25 @@ describe('local encyclopedia catalog', () => {
     expect(encyclopedia_catalog.job('FARMER')?.recipes).toHaveLength(11)
     expect(encyclopedia_catalog.job('HERBALIST')?.recipes).toHaveLength(11)
     expect(encyclopedia_catalog.job('MINER')?.recipes).toHaveLength(11)
-    expect(encyclopedia_catalog.job('FORGER')?.recipes).toHaveLength(0)
+    expect(
+      Object.fromEntries(
+        ['FORGER', 'CARVER', 'TAILOR', 'TANNER', 'JEWELER', 'HANDYMAN', 'ALCHEMIST'].map((job) => [
+          job,
+          encyclopedia_catalog.job(job)?.recipes.length,
+        ])
+      )
+    ).toEqual({ FORGER: 24, CARVER: 20, TAILOR: 42, TANNER: 33, JEWELER: 32, HANDYMAN: 20, ALCHEMIST: 5 })
+  })
+
+  test('reset scrolls are direct Mastery rewards, never Sui Crate contents', () => {
+    const scrolls = ['scroll_of_oblivion', 'scroll_of_rebirth']
+    expect(
+      mastery.offers.filter(({ item_type }) => scrolls.includes(item_type)).map(({ item_type }) => item_type)
+    ).toEqual(scrolls)
+    const crate = items.find(({ item_type }) => item_type === 'sui_crate')
+    const rewards = crate?.consumable && 'rewards' in crate.consumable ? crate.consumable.rewards : null
+    if (!rewards) throw new Error('sui_crate is not a loot box')
+    expect(rewards.some(({ item_type }) => scrolls.includes(item_type))).toBeFalse()
   })
 
   test('has one filename-addressable icon for every authored spell', () => {

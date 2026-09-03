@@ -6,11 +6,13 @@ import {
   CHUNK_EDGE,
   CELESTIAL_CYCLE_MS,
   DUNGEON_PORTAL_LABEL_HEIGHT,
+  apply_voxel_operation,
   compile_world_recipe,
   create_flat_projection,
   create_engine,
   create_terrain_planner,
   effective_flattened,
+  load_generated_city_artifacts_for,
   parse_world_recipe,
   project_height,
   sample_world_column,
@@ -45,7 +47,7 @@ import {
 } from './cameras.ts'
 import { create_character_controller, type CharacterTransform } from './character.ts'
 import { create_chunk_manager } from './chunks.ts'
-import { CHARACTER_HEIGHT } from './collision.ts'
+import { CHARACTER_HEIGHT, following_pet_ground_height, walkable_spawn_height } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
 import { publish_portal_prompt } from './portal_prompt_feed.ts'
@@ -68,6 +70,42 @@ export type WorldState = Readonly<{
   chunks: ReturnType<ReturnType<typeof create_chunk_manager>['stats']>
   displayed_chunks: number
 }>
+
+export const city_collision_readiness = (
+  world: ReturnType<typeof compile_world_recipe>,
+  on_ready: () => void,
+  load_artifacts: typeof load_generated_city_artifacts_for = load_generated_city_artifacts_for
+): ((area: Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>) => boolean) => {
+  const ready = new Set<string>()
+  const requested = new Set<string>()
+  return (area) => {
+    const city = world.structures.cities.find(
+      ({ area: city_area }) =>
+        city_area.max_x >= area.min_x &&
+        city_area.min_x <= area.max_x &&
+        city_area.max_z >= area.min_z &&
+        city_area.min_z <= area.max_z
+    )
+    if (!city || ready.has(city.id)) return true
+    if (!requested.has(city.id)) {
+      requested.add(city.id)
+      void load_artifacts([city], area)
+        .then(() => {
+          ready.add(city.id)
+          on_ready()
+        })
+        .catch((error: unknown) => console.error('City collision artifact failed to load.', error))
+    }
+    return false
+  }
+}
+
+const structure_collision_available = (
+  world: ReturnType<typeof compile_world_recipe>,
+  city_ready: boolean,
+  flat_amount: number
+): boolean =>
+  (world.structures.packs.length > 0 || world.structures.cities.length > 0) && city_ready && flat_amount === 0
 
 export const compose_world_entities = (
   controlled: EntityRender | null,
@@ -141,24 +179,26 @@ export const create_world = ({
   }
   const projected_surface_y = (x: number, z: number): number => project_height(surface_y(x, z), flat_projection.amount)
   const structure_chunks = new Map<string, ReadonlyMap<number, number>>()
+  const city_artifacts_ready = city_collision_readiness(compiled, () => structure_chunks.clear())
   const structure_material_at = (x: number, y: number, z: number): number | undefined => {
-    if (compiled.structures.packs.length === 0 || flat_projection.amount > 0) return undefined
     const block_x = Math.floor(x)
     const block_y = Math.floor(y)
     const block_z = Math.floor(z)
     const chunk_x = Math.floor(block_x / CHUNK_EDGE)
     const chunk_z = Math.floor(block_z / CHUNK_EDGE)
+    const area = {
+      min_x: chunk_x * CHUNK_EDGE,
+      max_x: (chunk_x + 1) * CHUNK_EDGE - 1,
+      min_z: chunk_z * CHUNK_EDGE,
+      max_z: (chunk_z + 1) * CHUNK_EDGE - 1,
+    }
+    if (!structure_collision_available(compiled, city_artifacts_ready(area), flat_projection.amount)) return undefined
     const key = `${chunk_x}:${chunk_z}`
     let materials = structure_chunks.get(key)
     if (!materials) {
       if (structure_chunks.size > 256) structure_chunks.clear()
       materials = new Map(
-        structure_voxels(compiled, {
-          min_x: chunk_x * CHUNK_EDGE,
-          max_x: (chunk_x + 1) * CHUNK_EDGE - 1,
-          min_z: chunk_z * CHUNK_EDGE,
-          max_z: (chunk_z + 1) * CHUNK_EDGE - 1,
-        }).map(({ x: world_x, y: world_y, z: world_z, material_id }) => [
+        structure_voxels(compiled, area).map(({ x: world_x, y: world_y, z: world_z, material_id }) => [
           (world_y << 10) | ((world_z - chunk_z * CHUNK_EDGE) << 5) | (world_x - chunk_x * CHUNK_EDGE),
           material_id,
         ])
@@ -167,9 +207,17 @@ export const create_world = ({
     }
     return materials.get((block_y << 10) | ((block_z - chunk_z * CHUNK_EDGE) << 5) | (block_x - chunk_x * CHUNK_EDGE))
   }
-  const structure_solid_at = (x: number, y: number, z: number): boolean => structure_material_at(x, y, z) !== undefined
-  const solid_at = (x: number, y: number, z: number): boolean =>
-    y < projected_surface_y(x, z) || structure_solid_at(x, y, z)
+  const solid_at = (x: number, y: number, z: number): boolean => {
+    const operation = structure_material_at(x, y, z)
+    return apply_voxel_operation(operation, y < projected_surface_y(x, z) ? 1 : 0) !== 0
+  }
+  const mob_ground_height = (x: number, z: number): number =>
+    walkable_spawn_height(solid_at, x, projected_surface_y(x, z), z)
+  // Followers have no collision body, so ground them against the same solid world as the player.
+  // The owner's feet select the vertical layer: a pet follows across a bridge or roof instead of
+  // snapping to terrain below it, without climbing onto roofs while its owner walks indoors.
+  const pet_ground_height = (x: number, z: number, owner_y: number): number =>
+    following_pet_ground_height(solid_at, x, z, owner_y, projected_surface_y(x, z))
   const liquid_at = (x: number, y: number, z: number): boolean =>
     flat_projection.amount < 1 && y < compiled.recipe.sea_level && y >= projected_surface_y(x, z)
 
@@ -183,7 +231,8 @@ export const create_world = ({
     const [x, y, z] = transform.position
     const surface = compiled.materials.entries[column_at(x, z).surface_id]?.preset ?? 'earth'
     const structure_id = structure_material_at(x, y - 0.01, z)
-    const structure = structure_id === undefined ? undefined : compiled.materials.entries[structure_id]?.preset
+    const structure =
+      structure_id === undefined || structure_id === 0 ? undefined : compiled.materials.entries[structure_id]?.preset
     return footstep_preset({ surface, structure, liquid: liquid_preset, in_water: transform.in_water })
   }
   let character_render: LoadedCharacterRender | null = null
@@ -206,8 +255,8 @@ export const create_world = ({
   }> | null = null
   const pressed = { forward: new Set<string>(), strafe: new Set<string>() }
   const held = { forward: 0, strafe: 0 }
-  const spectate = { x: 0, z: 0 }
-  let spectate_y = surface_y(0, 0)
+  const spectate = { x: initial_focus[0], z: initial_focus[1] }
+  let spectate_y = surface_y(spectate.x, spectate.z)
   let spectate_zoom = 180
   let spectate_yaw = Math.PI * 0.25
   let spectate_pitch = 0.55
@@ -575,14 +624,14 @@ export const create_world = ({
       label_pet(null)
       return changed
     }
-    const [owner_x, , owner_z] = transform.position
+    const [owner_x, owner_y, owner_z] = transform.position
     pet_elapsed_seconds += delta_seconds
     if (!riding) pet_motion = step_pet_follow(pet_motion, { x: owner_x, z: owner_z }, delta_seconds)
     const x = riding ? owner_x : pet_motion.x
     const z = riding ? owner_z : pet_motion.z
     const y = riding
       ? transform.visual_y
-      : projected_surface_y(x, z) + pet_vertical_offset(pet.locomotion, pet_elapsed_seconds)
+      : pet_ground_height(x, z, owner_y) + pet_vertical_offset(pet.locomotion, pet_elapsed_seconds)
     // a FOLLOWING pet animates from ITS OWN motion — the owner's pose drives it only when ridden
     // (a follower jumping in sync with the player was the bug, owner 2026-08-21)
     const animation =
@@ -728,6 +777,7 @@ export const create_world = ({
       pinned_time = time
       if (time !== null) engine.set_time_of_day(time)
     },
+    set_clouds_visible: engine.set_clouds_visible,
     set_view: ({ focus }: WorldView) => {
       spectate.x = focus[0]
       spectate.z = focus[1]
@@ -781,6 +831,8 @@ export const create_world = ({
     set_riding,
     riding: () => riding,
     ground_height: (x: number, z: number) => projected_surface_y(x, z),
+    mob_ground_height,
+    pet_ground_height,
     /// Where the camera currently looks — its ground focus. The natural spawn when handing
     /// control to a character mid-session.
     camera_focus: () => Object.freeze({ x: spectate.x, z: spectate.z }),

@@ -2,15 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 //! Replay-safe dashboard facts and bucket policy.
 
-use serde::Serialize;
-
 use crate::decode::Addr;
 
 pub const BUCKET_15M_MS: u64 = 15 * 60 * 1_000;
 pub const HOUR_MS: u64 = 60 * 60 * 1_000;
 pub const DAY_MS: u64 = 24 * 60 * 60 * 1_000;
 pub const WEEK_MS: u64 = 7 * DAY_MS;
-pub const DETAIL_RETENTION_MS: u64 = 90 * DAY_MS;
 pub const INTERVAL_RETENTION_MS: u64 = 2 * DAY_MS;
 pub const HOURLY_RETENTION_MS: u64 = 8 * DAY_MS;
 pub const WEEKLY_RETENTION_MS: u64 = 105 * DAY_MS;
@@ -19,7 +16,6 @@ pub const DAILY_ACTIVITY_RETENTION_MS: u64 = 400 * DAY_MS;
 pub const ROYALTY_FLOOR_MIST: u64 = 10_000_000;
 pub const CHARACTER_CREATION_MIST: u64 = 1_000_000_000;
 
-pub const SHOP_SALES_KEY: &str = "analytics:shop:sales";
 pub const ADDRESS_FIRST_SEEN_KEY: &str = "analytics:addresses";
 pub const TRANSACTIONS_ALL_KEY: &str = "analytics:transactions:all";
 pub const GAS_ALL_KEY: &str = "analytics:gas:all";
@@ -98,8 +94,6 @@ pub fn expiry_seconds(bucket_ms: u64, bucket_width_ms: u64, retention_ms: u64) -
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct MoneyDelta {
-    pub shop_mist: u64,
-    pub shop_orders: u64,
     pub item_royalty_mist: u64,
     pub character_royalty_mist: u64,
     pub character_creation_mist: u64,
@@ -117,8 +111,6 @@ impl MoneyFact {
     pub fn value(&self) -> String {
         serde_json::json!({
             "ts_ms": self.ts_ms,
-            "shop_mist": self.delta.shop_mist.to_string(),
-            "shop_orders": self.delta.shop_orders.to_string(),
             "item_royalty_mist": self.delta.item_royalty_mist.to_string(),
             "character_royalty_mist": self.delta.character_royalty_mist.to_string(),
             "character_creation_mist": self.delta.character_creation_mist.to_string(),
@@ -157,31 +149,6 @@ impl CharacterFact {
 
 pub fn series_key(domain: &str, tier: &str, bucket: u64) -> String {
     format!("analytics:{domain}:{tier}:{bucket}")
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct ShopSaleFact {
-    pub coordinate: String,
-    pub checkpoint: u64,
-    pub tx_digest: String,
-    pub timestamp_ms: u64,
-    pub sale_id: String,
-    pub buyer: String,
-    pub item_type: String,
-    pub quantity: u64,
-    pub unit_price_mist: String,
-    pub total_mist: String,
-    pub remaining_supply: String,
-}
-
-impl ShopSaleFact {
-    pub fn member(&self) -> anyhow::Result<String> {
-        Ok(format!(
-            "{}|{}",
-            self.coordinate,
-            serde_json::to_string(self)?
-        ))
-    }
 }
 
 #[cfg(test)]

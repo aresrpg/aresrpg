@@ -16,19 +16,28 @@ const CHARACTER_MODELS: Readonly<
 > = Object.freeze({
   senshi: SENSHI_MODELS,
   shugo: Object.freeze({
-    male: Object.freeze({ body: 'shugo_male' }),
-    female: Object.freeze({ body: 'shugo_female' }),
+    male: Object.freeze({ body: 'shugo_male', hair: 'shugo_male_hair' }),
+    female: Object.freeze({ body: 'shugo_female', hair: 'shugo_female_hair' }),
   }),
   tomoda: Object.freeze({
-    male: Object.freeze({ body: 'tomoda_male' }),
-    // This body already carries Material.008 hair. The standalone extraction duplicates it.
-    female: Object.freeze({ body: 'tomoda_female' }),
+    male: Object.freeze({ body: 'tomoda_male', hair: 'tomoda_male_hair' }),
+    female: Object.freeze({ body: 'tomoda_female', hair: 'tomoda_female_hair' }),
   }),
   yajin: Object.freeze({
     male: Object.freeze({ body: 'yajin_male', hair: 'yajin_male_hair' }),
     female: Object.freeze({ body: 'yajin_female', hair: 'yajin_female_hair' }),
   }),
+  rojin: Object.freeze({
+    male: Object.freeze({ body: 'rojin_male', hair: 'rojin_male_hair' }),
+    female: Object.freeze({ body: 'rojin_female', hair: 'rojin_female_hair' }),
+  }),
+  tokei: Object.freeze({
+    male: Object.freeze({ body: 'tokei_male', hair: 'tokei_male_hair' }),
+    female: Object.freeze({ body: 'tokei_female', hair: 'tokei_female_hair' }),
+  }),
 })
+
+export const authored_character_model_classes = Object.freeze(Object.keys(CHARACTER_MODELS))
 
 export const character_model_basenames = (classe: string, male: boolean): CharacterModelBasenames =>
   CHARACTER_MODELS[classe.toLowerCase()]?.[male ? 'male' : 'female'] ?? SENSHI_MODELS[male ? 'male' : 'female']

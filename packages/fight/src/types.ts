@@ -163,7 +163,8 @@ export type FightContract = {
   round: MoveInteger
   ended: boolean
   winner: MoveInteger | null
-  dungeon: MoveInteger | null
+  dungeon: string | null
+  dungeon_room: MoveInteger | null
   managed: boolean
   wagered: boolean
   drops_rolled: boolean

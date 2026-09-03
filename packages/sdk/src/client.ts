@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The SDK factory — WRITE-ONLY: it composes PTBs whose game-object inputs are PRE-RESOLVED.
-// It never reads game state (reads are the indexer's job) and carries zero content. Pins come
-// from the ONE committed repo-root pins.json. `hydrate()` seeds game refs; the Sui core client
+// The SDK factory composes PTBs whose game-object inputs are PRE-RESOLVED and exposes only narrow
+// reads needed by wallet-owned state. It carries zero content. Pins default to root pins.json; `hydrate()` seeds game refs. The Sui client
 // separately resolves gas payment and budget because wallet coin state is its concern.
 
 import { KioskClient, TransferPolicyTransaction, type KioskOwnerCap, type TransferPolicyCap } from '@mysten/kiosk'
@@ -46,6 +45,7 @@ export type SharedPin = { id: string | null; shared_version: string | null }
 export type Pins = Readonly<Record<string, unknown>> & {
   package?: string | null
   math_package?: string | null
+  combat_package?: string | null
   seed_package?: string | null
 }
 
@@ -103,6 +103,11 @@ export interface SuiTransport {
   }
 }
 
+/** Upstream GraphQL and gRPC clients expose the same Core methods through distinct nominal types.
+ * Keep that compatibility assertion at this one boundary so callers stay structurally checked. */
+export const sui_transport = (client: SuiGraphQLClient | SuiGrpcClient): SuiTransport =>
+  client as unknown as SuiTransport
+
 export type SdkNetwork = 'testnet' | 'mainnet'
 
 export type TransactionSigner = (
@@ -129,6 +134,19 @@ export type SdkOptions = {
   /** optional explicit budget in MIST; `'estimate'` lets the Sui resolver price the
    *  transaction itself (deployment-sized surfaces); otherwise the game-door law applies */
   gas_budget?: bigint | 'estimate'
+}
+
+const GAS_BUDGET_REFUSAL = /insufficient.?gas|gas.?budget/i
+const refusal_error = (refusal: string): Error =>
+  GAS_BUDGET_REFUSAL.test(refusal)
+    ? new Error(`[sdk] gas budget exceeded — this action needs more than ${GAS_BUDGET_MIST} MIST; NOT submitted`)
+    : new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
+const transaction_resolution_error = (error: unknown): unknown => {
+  const message = error instanceof Error ? error.message : String(error)
+  if (GAS_BUDGET_REFUSAL.test(message)) return refusal_error(message)
+  if (!message.includes('NOT submitted') && /transaction resolution failed/i.test(message))
+    return refusal_error(message)
+  return error
 }
 
 /** What the resolver accepts: a bare id (cache-resolved), an explicit ref, or an in-PTB value. */
@@ -192,8 +210,7 @@ export const bind_doors = <T extends Readonly<{ DOORS: Readonly<Record<string, u
  *
  * Composition-first: `sdk.tx()` opens a Transaction, `sdk.doors.<door>(tx, args)` composes
  * calls onto it (hot potatoes chain through returned results), `sdk.execute(tx)` signs,
- * dry-runs, executes, absorbs the receipt into the cache, and returns the receipt. One-shot:
- * `sdk.call.<door>(args)`.
+ * dry-runs, executes, absorbs the receipt into the cache, and returns the receipt.
  *
  * THE RESOLVER LAW: an object argument that is a bare id string resolves from the cache —
  * shared → sharedObjectRef (stable initial version), owned → exact objectRef — and an id the
@@ -214,9 +231,9 @@ export function SDK({
   const sui_client =
     client ??
     (rpc_url
-      ? (new SuiGrpcClient({ network, baseUrl: rpc_url }) as unknown as SuiTransport)
+      ? sui_transport(new SuiGrpcClient({ network, baseUrl: rpc_url }))
       : graphql_url
-        ? (new SuiGraphQLClient({ network, url: graphql_url }) as unknown as SuiTransport)
+        ? sui_transport(new SuiGraphQLClient({ network, url: graphql_url }))
         : null)
   if (!sui_client)
     throw new Error('[sdk] SDK({ client }), SDK({ rpc_url }), or SDK({ graphql_url }) needs a chain transport')
@@ -357,19 +374,15 @@ export function SDK({
     },
   }
 
-  type DoorName = keyof typeof doors.DOORS
   const bound_doors = bind_doors(doors, ctx)
 
   // ── the ONE sanctioned roundtrip: seed object refs. Sui cold-resolves gas. ─────────────
-  const hydrate_objects = async (ids: readonly string[]) => {
-    const groups = Array.from({ length: Math.ceil(ids.length / 10) }, (_, index) =>
-      ids.slice(index * 10, index * 10 + 10)
+  const hydrate_objects = async (ids: readonly string[]): Promise<void> => {
+    const groups = Array.from({ length: Math.ceil(ids.length / 50) }, (_, index) =>
+      ids.slice(index * 50, index * 50 + 50)
     )
-    for (const group of groups) {
-      const { objects } = await sui_client.core.getObjects({ objectIds: group })
-      for (const row of objects) absorb_object(cache, row)
-    }
-    return cache
+    const results = await Promise.all(groups.map((object_ids) => sui_client.core.getObjects({ objectIds: object_ids })))
+    for (const { objects } of results) for (const row of objects) absorb_object(cache, row)
   }
 
   const unresolved_ids = (ids: readonly string[]): readonly string[] =>
@@ -410,15 +423,8 @@ export function SDK({
    *  fault. The budget is ours and constant, so `InsufficientGas` means the action outgrew it —
    *  a bug to fix here, never "top up your wallet". The raw verdict is deliberately NOT quoted:
    *  the app's out-of-SUI prompt watches for that vocabulary. */
-  const GAS_BUDGET_REFUSAL = /insufficient.?gas|gas.?budget/i
-  const refusal_error = (refusal: string): Error =>
-    GAS_BUDGET_REFUSAL.test(refusal)
-      ? new Error(`[sdk] gas budget exceeded — this action needs more than ${GAS_BUDGET_MIST} MIST; NOT submitted`)
-      : new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
-
-  // ── execute: fully-formed tx in, sub-second receipt out — and a tx that would FAIL never
-  // leaves the client (owner 2026-08-12): resolve gas, sign ONCE, SIMULATE the exact
-  // bytes, refuse on any simulated failure (zero gas, no digest), then submit those same bytes.
+  // The official Core resolver selects gas and simulates once before signing. A successful
+  // resolution is signed once and submitted unchanged; a failed transaction never leaves.
   // An EXECUTED failure still throws and is never auto-retried (a digest exists = gas burned).
   // GAS PAYMENT IS THE RESOLVER'S (2026-08-21, the duel incident): the SDK used to pin the
   // receipt's gas coin onto the next transaction, with no fallback when that single ref stopped
@@ -433,7 +439,11 @@ export function SDK({
   ) => {
     tx.setSenderIfNotSet(sender_address)
     if (budget !== 'estimate') tx.setGasBudgetIfNotSet(budget ?? GAS_BUDGET_MIST)
-    await tx.build({ client: sui_client as never })
+    try {
+      await tx.build({ client: sui_client as never })
+    } catch (error) {
+      throw transaction_resolution_error(error)
+    }
   }
 
   const execute_signed = async (
@@ -480,16 +490,6 @@ export function SDK({
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
     await prepare_transaction(tx, sender, { budget })
-    // THE ONE DRY RUN (owner 2026-08-21: a transaction is strictly two roundtrips). It runs on
-    // the UNSIGNED bytes — a signature is not part of what a simulation sees, so these are the
-    // exact bytes that will be submitted — and it runs BEFORE signing, so a doomed transaction
-    // never opens the player's wallet. A refusal here means nothing was submitted: zero gas.
-    const preflight = await sui_client.core.simulateTransaction({
-      transaction: await tx.build(),
-      include: { effects: true },
-    })
-    const refusal = failure_of(preflight)
-    if (refusal !== null) throw refusal_error(refusal)
     const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
     if (!signed) throw new Error('[sdk] execute needs a signer')
     const { bytes, signature } = signed
@@ -522,20 +522,6 @@ export function SDK({
     return Object.freeze({ receipt, kiosk_cap })
   }
 
-  const call = Object.fromEntries(
-    (Object.keys(doors.DOORS) as DoorName[]).map((name) => [
-      name,
-      async (args: Record<string, unknown>, opts?: { budget?: bigint | 'estimate'; include?: object }) => {
-        const tx = create_transaction()
-        ;(bound_doors[name] as (transaction: Transaction, input: never) => unknown)(tx, args as never)
-        return execute(tx, opts)
-      },
-    ])
-  ) as Record<
-    DoorName,
-    (args: Record<string, unknown>, opts?: { budget?: bigint | 'estimate'; include?: object }) => Promise<Receipt>
-  >
-
   return {
     network,
     pins,
@@ -544,7 +530,6 @@ export function SDK({
     cache,
     sui_client,
     hydrate,
-    hydrate_objects,
     hydrate_unknown,
     // lookup by the DEFINING package (the default client) — see the lineage-split note above
     get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
@@ -573,7 +558,6 @@ export function SDK({
     tx: create_transaction,
     door_context: ctx,
     doors: bound_doors,
-    call,
     execute,
     execute_personal_kiosk,
     read_sui_balance: () => {
@@ -582,7 +566,6 @@ export function SDK({
     },
     gas_spent_24h: gas_ledger.spent_24h,
     tag_gas: gas_ledger.tag,
-    with_kiosk,
     with_owner_kiosk: <T>(tx: Transaction, cap: KioskOwnerCap | null, compose: Parameters<typeof with_kiosk<T>>[3]) => {
       if (!cap) throw new Error('No owned kiosk cap is available for this transaction.')
       return with_kiosk(tx, kiosk_transaction_client, cap, compose)

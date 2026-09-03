@@ -18,3 +18,12 @@ test('the SDK has no polling or wait-for-node API', () => {
   expect(source).not.toContain('hydrate_owned_current')
   expect(source).not.toContain('owned object node lag')
 })
+
+test('the player wallet session does not carry deployment or seed administration', () => {
+  const source = readFileSync(resolve(import.meta.dir, '../src/auth.ts'), 'utf8')
+  expect(source).not.toContain('deployment_admin')
+  expect(source).not.toContain('seed_admin')
+  expect(source).not.toContain('delegate(sdk')
+  expect(source).not.toContain('publish_contract')
+  expect(source).not.toContain('upgrade_contract')
+})

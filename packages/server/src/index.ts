@@ -38,9 +38,9 @@ const decrement_upgrade = (address: string): void => {
 const request_limiter = create_request_limiter()
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()
-const indexing_lag = create_indexing_health({
+const indexing_health = create_indexing_health({
   chain_checkpoint: latest_checkpoint,
-  indexed_checkpoint: pubsub.graph.indexed_checkpoint,
+  indexed_state: pubsub.graph.indexed_state!,
 })
 const game_state = create_game_state({ graph, pubsub: pubsub.graph })
 await game_state.start()
@@ -108,7 +108,7 @@ const server = Bun.serve<{ address: string }>({
               graph,
               pubsub,
               game_state,
-              indexing_lag,
+              indexing_health,
               request_limiter,
             })
             connections.set(address, { ws, player })

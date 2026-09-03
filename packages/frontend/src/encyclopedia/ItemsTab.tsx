@@ -1,44 +1,28 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import {
-  accessory_categories,
-  armor_categories,
-  pet_max_feeds,
-  tool_categories,
-  weapon_categories,
-  type RuneEffect,
-  type StatName,
-} from '@aresrpg/immutable'
+import { pet_max_feeds, type RuneEffect, type StatName } from '@aresrpg/immutable'
 import { MapPin, Search, Skull, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { item_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { item_icon, mob_icon } from '../content/assets.ts'
+import { encyclopedia_catalog, titleize, type ItemDetail } from '../content/catalog.ts'
+import { filter_item_types } from '../content/item_filters.ts'
 
-import { category_pill, Empty, encyclopedia_layout, EntityButton, EntityGrid, SearchField } from './components.tsx'
+import { Empty, encyclopedia_layout, EntityButton, EntityGrid, EntityIcon, SearchField } from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
+import { EncyclopediaItemIcon } from './EncyclopediaItemIcon.tsx'
+import { ItemFilterRail, type ItemFilterSelection } from './ItemFilterRail.tsx'
 import { loot_box_is_random } from './loot_box.ts'
 
-type Group =
-  'ALL' | 'ARMOR' | 'WEAPONS' | 'ACCESSORIES' | 'PETS' | 'RUNES' | 'RELICS' | 'TOOLS' | 'CONSUMABLES' | 'RESOURCES'
-
-const GROUPS: Readonly<Record<Group, ReadonlySet<string> | null>> = Object.freeze({
-  ALL: null,
-  ARMOR: new Set(armor_categories),
-  WEAPONS: new Set(weapon_categories),
-  ACCESSORIES: new Set(accessory_categories),
-  PETS: new Set(['pet']),
-  RUNES: new Set(['rune']),
-  RELICS: new Set(['relic']),
-  TOOLS: new Set(tool_categories),
-  CONSUMABLES: new Set(['consumable', 'key']),
-  RESOURCES: new Set(['resource']),
-})
-
-const group_label = (group: Group, text: EncyclopediaText): string =>
-  group === 'ALL' ? text('view_all') : text(`group_${group.toLowerCase()}`)
+const pet_food_item_types = new Set(
+  encyclopedia_catalog.item_filters.find(({ group, id }) => group === 'resource' && id === 'pet_food')?.item_types ?? []
+)
+const item_display_category = (item_type: string, category: string): string =>
+  pet_food_item_types.has(item_type) ? 'pet_food' : category
+const item_category_label = (item_type: string, category: string, text: EncyclopediaText): string =>
+  pet_food_item_types.has(item_type) ? text('item_category_pet_food') : titleize(category)
 
 const Divider = () => <div className="h-px w-full bg-white/6" />
 
@@ -82,27 +66,79 @@ const consumable_effect_text = (
   if (consumable.type === 'reset_stats') return text('consumable_reset_stats')
   if (consumable.type === 'reset_spells') return text('consumable_reset_spells')
   if (consumable.type === 'recall') return text('consumable_recall')
+  if (consumable.type === 'city') return text('consumable_city', { city: titleize(consumable.city) })
   return text('consumable_loot_box')
 }
 
 const RecipeLink = ({
   index,
+  item_type,
   name,
   quantity,
   select,
-}: Readonly<{ index: number; name: string; quantity: number; select: () => void }>) => (
-  <button
-    className="flex w-full cursor-pointer items-center gap-3 border-l-2 border-l-[#c8963c]/25 px-3 py-2 text-left transition-none hover:border-l-[#c8963c] hover:bg-[#c8963c]/8 hover:shadow-[0_0_12px_rgba(200,150,60,0.1)]"
-    onClick={select}
-    style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)' }}
-    type="button"
-  >
-    <span className="shrink-0 border border-[#c8963c]/20 bg-[#c8963c]/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
-      ×{quantity}
-    </span>
-    <span className="text-[10px] tracking-[0.1em] text-[#e8e4dc] uppercase">{name}</span>
-  </button>
-)
+}: Readonly<{ index: number; item_type: string; name: string; quantity: number; select: () => void }>) => {
+  return (
+    <button
+      className="flex w-full cursor-pointer items-center gap-3 border-l-2 border-l-[#c8963c]/25 px-3 py-2 text-left transition-none hover:border-l-[#c8963c] hover:bg-[#c8963c]/8 hover:shadow-[0_0_12px_rgba(200,150,60,0.1)]"
+      onClick={select}
+      style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)' }}
+      type="button"
+    >
+      <EncyclopediaItemIcon item_type={item_type} label={name} />
+      <span className="shrink-0 border border-[#c8963c]/20 bg-[#c8963c]/10 px-2 py-0.5 text-[9px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
+        ×{quantity}
+      </span>
+      <span className="min-w-0 truncate text-[10px] tracking-[0.1em] text-[#e8e4dc] uppercase">{name}</span>
+    </button>
+  )
+}
+
+const PetDietSection = ({
+  detail,
+  select_item,
+  text,
+}: Readonly<{ detail: ItemDetail; select_item: (id: string) => void; text: EncyclopediaText }>) => {
+  if (detail.item.category !== 'pet') return null
+  if (detail.pet_foods.length === 0)
+    return (
+      <div className="border border-white/8 bg-white/2 px-3 py-3 text-[9px] tracking-[0.15em] text-[#6b7280] italic uppercase">
+        {text('no_diet')}
+      </div>
+    )
+  return (
+    <>
+      <div className="border border-[#c8963c]/20 bg-[#c8963c]/5 px-2 py-1.5 text-[9px] leading-relaxed text-[#6b7280]">
+        {text('pet_full_fed_note', { count: pet_max_feeds })}
+      </div>
+      <Divider />
+      <section className="flex flex-col gap-2">
+        <DetailTitle>{text('pet_food')}</DetailTitle>
+        <span className="text-[9px] leading-relaxed text-[#6b7280]">
+          {text('pet_diet_note', { count: detail.pet_foods.length })}
+        </span>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-1">
+          {detail.pet_foods.map((food, index) => (
+            <button
+              className="flex cursor-pointer items-center gap-2 border-l-2 border-l-[#c8963c]/25 px-2 py-1.5 text-left hover:border-l-[#c8963c] hover:bg-[#c8963c]/8"
+              key={food.item_type}
+              onClick={() => select_item(food.item_type)}
+              style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)' }}
+              type="button"
+            >
+              {item_icon(food.item_type) && (
+                <img alt="" className="size-6 shrink-0 object-contain" src={item_icon(food.item_type)!} />
+              )}
+              <span className="min-w-0 flex-1 truncate text-[9px] tracking-[0.1em] text-[#e8e4dc] uppercase">
+                {food.name}
+              </span>
+              <span className="shrink-0 text-[8px] text-[#6b7280]">{text('level_short', { level: food.level })}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </>
+  )
+}
 
 export const ItemsTab = ({
   selected_id,
@@ -120,33 +156,30 @@ export const ItemsTab = ({
   text: EncyclopediaText
 }>) => {
   const [search, set_search] = useState('')
-  const [group, set_group] = useState<Group>('ALL')
-  const [subcategory, set_subcategory] = useState<string | null>(null)
+  const [facet_selection, set_facet_selection] = useState<ItemFilterSelection>({})
   const [minimum_level, set_minimum_level] = useState('')
   const [maximum_level, set_maximum_level] = useState('')
   const [sort, set_sort] = useState('level_asc')
-  const group_items = useMemo(() => {
-    const categories = GROUPS[group]
-    return categories
-      ? encyclopedia_catalog.items.filter(({ category }) => categories.has(category))
-      : encyclopedia_catalog.items
-  }, [group])
-  const subcategories = useMemo(
+  const matching_types = useMemo(
     () =>
-      [...new Set(group_items.map(({ category }) => category))]
-        .map((type) => Object.freeze({ type, count: group_items.filter(({ category }) => category === type).length }))
-        .toSorted((left, right) => right.count - left.count || left.type.localeCompare(right.type)),
-    [group_items]
+      new Set(
+        filter_item_types(
+          encyclopedia_catalog.items.map(({ item_type }) => item_type),
+          encyclopedia_catalog.item_filters,
+          facet_selection
+        )
+      ),
+    [facet_selection]
   )
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
     const minimum = Number(minimum_level) || 0
     const maximum = Number(maximum_level) || Number.POSITIVE_INFINITY
-    return group_items
+    return encyclopedia_catalog.items
       .filter(
         (item) =>
           (!query || item.name.toLowerCase().includes(query) || item.item_type.includes(query)) &&
-          (!subcategory || item.category === subcategory) &&
+          matching_types.has(item.item_type) &&
           item.level >= minimum &&
           item.level <= maximum
       )
@@ -157,7 +190,7 @@ export const ItemsTab = ({
             ? right.level - left.level || left.name.localeCompare(right.name)
             : left.level - right.level || left.name.localeCompare(right.name)
       )
-  }, [group_items, maximum_level, minimum_level, search, sort, subcategory])
+  }, [matching_types, maximum_level, minimum_level, search, sort])
   const detail = selected_id ? encyclopedia_catalog.item(selected_id) : null
   const description_key = detail ? `item_descriptions.${detail.item.item_type}` : ''
   const description = description_key ? text(description_key) : ''
@@ -183,21 +216,6 @@ export const ItemsTab = ({
           <option value="name_asc">{text('sort_name_asc')}</option>
         </select>
       </div>
-      <div className="flex flex-wrap gap-1">
-        {(Object.keys(GROUPS) as Group[]).map((name) => (
-          <button
-            className={category_pill(group === name)}
-            key={name}
-            onClick={() => {
-              set_group(name)
-              set_subcategory(null)
-            }}
-            type="button"
-          >
-            {group_label(name, text)}
-          </button>
-        ))}
-      </div>
       <div className="flex items-center gap-1.5">
         <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">LVL</span>
         <input
@@ -221,33 +239,6 @@ export const ItemsTab = ({
     </div>
   )
 
-  const type_rail = subcategories.length > 1 && (
-    <nav className="w-40 shrink-0 overflow-y-auto border-r border-border">
-      {subcategories.map(({ type, count }, index) => {
-        const active = type === subcategory
-        return (
-          <button
-            className="flex w-full items-center justify-between gap-3 border-l-2 px-4 py-2.5 text-left"
-            key={type}
-            onClick={() => set_subcategory(active ? null : type)}
-            style={{
-              borderLeftColor: active ? '#c8963c' : 'transparent',
-              background: active ? 'rgba(200,150,60,0.08)' : index % 2 ? 'rgba(255,255,255,0.018)' : 'transparent',
-            }}
-            type="button"
-          >
-            <span
-              className={`truncate text-[9px] tracking-[0.1em] uppercase ${active ? 'text-[#c8963c]' : 'text-[#6b7280]'}`}
-            >
-              {titleize(type)}
-            </span>
-            <span className="shrink-0 text-[8px] text-[#6b7280]/50 tabular-nums">{count}</span>
-          </button>
-        )
-      })}
-    </nav>
-  )
-
   const list = (
     <div className={encyclopedia_layout.list}>
       {filtered.length === 0 ? (
@@ -264,7 +255,7 @@ export const ItemsTab = ({
               icon={item_icon(item.item_type)}
               index={index}
               key={item.item_type}
-              meta={titleize(item.category)}
+              meta={item_category_label(item.item_type, item.category, text)}
               name={item.name}
               select={() => select_item(item.item_type)}
             />
@@ -277,7 +268,7 @@ export const ItemsTab = ({
   const detail_panel = detail && (
     <div className="flex-1 overflow-y-auto p-4 pt-14">
       <ItemDetailView
-        category={detail.item.category}
+        category={item_display_category(detail.item.item_type, detail.item.category)}
         damages={detail.item.damages ?? []}
         description={description === description_key ? '' : description}
         item_type={detail.item.item_type}
@@ -317,6 +308,7 @@ export const ItemsTab = ({
                     return (
                       <RecipeLink
                         index={index}
+                        item_type={reward.item_type}
                         key={reward.item_type}
                         name={
                           random_loot_box
@@ -336,49 +328,7 @@ export const ItemsTab = ({
             )}
           </>
         )}
-        {detail.item.category === 'pet' && (
-          <>
-            <div className="border border-[#c8963c]/20 bg-[#c8963c]/5 px-2 py-1.5 text-[9px] leading-relaxed text-[#6b7280]">
-              {text('pet_full_fed_note', { count: pet_max_feeds })}
-            </div>
-            <Divider />
-            <section className="flex flex-col gap-2">
-              <DetailTitle>{text('pet_food')}</DetailTitle>
-              {detail.pet_foods.length > 0 ? (
-                <>
-                  <span className="text-[9px] leading-relaxed text-[#6b7280]">
-                    {text('pet_diet_note', { count: detail.pet_foods.length })}
-                  </span>
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-1">
-                    {detail.pet_foods.map((food, index) => (
-                      <button
-                        className="flex cursor-pointer items-center gap-2 border-l-2 border-l-[#c8963c]/25 px-2 py-1.5 text-left hover:border-l-[#c8963c] hover:bg-[#c8963c]/8"
-                        key={food.item_type}
-                        onClick={() => select_item(food.item_type)}
-                        style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)' }}
-                        type="button"
-                      >
-                        {item_icon(food.item_type) && (
-                          <img alt="" className="size-6 shrink-0 object-contain" src={item_icon(food.item_type)!} />
-                        )}
-                        <span className="min-w-0 flex-1 truncate text-[9px] tracking-[0.1em] text-[#e8e4dc] uppercase">
-                          {food.name}
-                        </span>
-                        <span className="shrink-0 text-[8px] text-[#6b7280]">
-                          {text('level_short', { level: food.level })}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <span className="bg-white/2 px-3 py-3 text-[9px] tracking-[0.15em] text-[#6b7280] italic uppercase">
-                  {text('no_diet')}
-                </span>
-              )}
-            </section>
-          </>
-        )}
+        <PetDietSection detail={detail} select_item={select_item} text={text} />
         <Divider />
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -401,6 +351,7 @@ export const ItemsTab = ({
               {detail.recipe.ingredients.map((ingredient, index) => (
                 <RecipeLink
                   index={index}
+                  item_type={ingredient.item_type}
                   key={ingredient.item_type}
                   name={ingredient.item?.name ?? titleize(ingredient.item_type)}
                   quantity={ingredient.quantity}
@@ -420,6 +371,7 @@ export const ItemsTab = ({
               {detail.ingredient_of.map(({ recipe, output }, index) => (
                 <RecipeLink
                   index={index}
+                  item_type={recipe.output_type}
                   key={recipe.output_type}
                   name={output?.name ?? titleize(recipe.output_type)}
                   quantity={recipe.inputs[detail.item.item_type] ?? 1}
@@ -444,8 +396,13 @@ export const ItemsTab = ({
                   style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)' }}
                   type="button"
                 >
-                  <span className="text-[10px] font-semibold tracking-[0.1em] text-[#c8963c] uppercase">
-                    {mob.name}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="contents" data-encyclopedia-mob-icon={mob.mob_type}>
+                      <EntityIcon label={mob.name} size="size-8" src={mob_icon(mob.mob_type)} />
+                    </span>
+                    <span className="truncate text-[10px] font-semibold tracking-[0.1em] text-[#c8963c] uppercase">
+                      {mob.name}
+                    </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-3">
                     <span className="text-[10px] font-semibold text-[#c8963c] tabular-nums">
@@ -491,7 +448,13 @@ export const ItemsTab = ({
 
   return (
     <div className="flex min-h-0 flex-1">
-      {type_rail}
+      <ItemFilterRail
+        rows={encyclopedia_catalog.item_filters}
+        select={set_facet_selection}
+        selected={facet_selection}
+        text={text}
+        total={encyclopedia_catalog.items.length}
+      />
       <div className={`flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
         {filters}
         {list}

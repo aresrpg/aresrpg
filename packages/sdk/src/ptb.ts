@@ -71,29 +71,6 @@ export const receipt_personal_kiosk_cap = (receipt: Receipt): KioskOwnerCap | nu
   })
 }
 
-type PersonalKioskAction<T> = Readonly<{ value: T; kiosk_cap: KioskOwnerCap }>
-
-/** Serialize the session's first personal-custody transition. Concurrent actions cannot both
- * observe absence: the first receipt supplies the permanent cap before the second action builds. */
-export const create_personal_kiosk_runner = (load: () => Promise<KioskOwnerCap | null>) => {
-  let known: KioskOwnerCap | null = null
-  let tail = Promise.resolve()
-  return <T>(action: (cap: KioskOwnerCap | null) => Promise<PersonalKioskAction<T>>): Promise<T> => {
-    const pending = tail.then(async () => {
-      const loaded = await load()
-      const current = known && (!loaded || BigInt(known.version) >= BigInt(loaded.version)) ? known : loaded
-      const result = await action(current)
-      known = result.kiosk_cap
-      return result.value
-    })
-    tail = pending.then(
-      () => undefined,
-      () => undefined
-    )
-    return pending
-  }
-}
-
 /** Split `amount` MIST off the gas coin — the payment shape every paying door takes. */
 export const coin_of = (tx: Transaction, amount: bigint | number): TransactionObjectArgument => {
   const [coin] = tx.splitCoins(tx.gas, [amount])

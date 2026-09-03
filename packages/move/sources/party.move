@@ -49,30 +49,30 @@ public(package) fun create_inviting(
     members: vector[actor],
     pending: vector[invited],
   };
-  cm(registry, actor);
-  af(registry, invited);
+  claim_membership(registry, actor);
+  assert_membership_available(registry, invited);
   transfer::share_object(party);
 }
 
 /// Any accepted member records an invitation — intent only, membership waits for `accept`.
-public(package) fun i(registry: &FriendRegistry, party: &mut Party, actor: ID, invited: ID, present: bool) {
+public(package) fun update_invitation(registry: &FriendRegistry, party: &mut Party, actor: ID, invited: ID, present: bool) {
   if (present) {
-    assert!(m(party, actor), ENotMember);
-    af(registry, invited);
+    assert!(is_member(party, actor), ENotMember);
+    assert_membership_available(registry, invited);
     assert!(!party.pending.contains(&invited), EAlreadyInvited);
     assert!(party.members.length() < MAX_MEMBERS && party.pending.length() < MAX_MEMBERS, EPartyFull);
     party.pending.push_back(invited);
   } else {
     assert!(actor == invited || party.members[0] == actor, ENotLeader);
-    rp(party, invited);
+    remove_pending_invitation(party, invited);
   };
 }
 
 /// The invited character's CURRENT owner takes the slot.
 public(package) fun accept(registry: &mut FriendRegistry, party: &mut Party, id: ID) {
-  rp(party, id);
+  remove_pending_invitation(party, id);
   assert!(party.members.length() < MAX_MEMBERS, EPartyFull);
-  cm(registry, id);
+  claim_membership(registry, id);
   party.members.push_back(id);
 }
 
@@ -82,7 +82,7 @@ public(package) fun leave(registry: &mut FriendRegistry, party: &mut Party, id: 
   let (found, idx) = party.members.index_of(&id);
   assert!(found, ENotMember);
   if (idx == 0) assert!(party.members.length() > 1, ELeaderAlone);
-  rm(registry, id);
+  release_membership(registry, id);
   party.members.remove(idx);
 }
 
@@ -92,7 +92,7 @@ public(package) fun kick(registry: &mut FriendRegistry, party: &mut Party, leade
   let (found, idx) = party.members.index_of(&target);
   assert!(found, ENotMember);
   assert!(idx != 0, ECannotKickLeader);
-  rm(registry, target);
+  release_membership(registry, target);
   party.members.remove(idx);
 }
 
@@ -100,7 +100,7 @@ public(package) fun kick(registry: &mut FriendRegistry, party: &mut Party, leade
 public(package) fun disband(registry: &mut FriendRegistry, party: Party, leader: ID) {
   assert!(party.members[0] == leader, ENotLeader);
   assert!(party.members.length() == 1, EPartyNotSolo);
-  rm(registry, leader);
+  release_membership(registry, leader);
   let Party { id: uid, .. } = party;
   uid.delete();
 }
@@ -108,32 +108,32 @@ public(package) fun disband(registry: &mut FriendRegistry, party: Party, leader:
 // ╔════════════════ [ Reads (the fight's group gate lives on these) ] ════════ ]
 
 /// The fight's group gate is the only reader — a member check by character id.
-public fun m(party: &Party, chr: ID): bool {
-  party.members.contains(&chr)
+public fun is_member(party: &Party, character: ID): bool {
+  party.members.contains(&character)
 }
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
 // remove_pending
 /// Drop `id` from the pending list (accept/decline/rescind share this) — absent aborts.
-fun rp(party: &mut Party, id: ID) {
+fun remove_pending_invitation(party: &mut Party, id: ID) {
   let (found, idx) = party.pending.index_of(&id);
   assert!(found, EInviteNotFound);
   party.pending.remove(idx);
 }
 
-fun cm(registry: &mut FriendRegistry, character: ID) {
-  assert!(!df::exists(friends::u(registry), character), EAlreadyMember);
-  df::add(friends::um(registry), character, true);
+fun claim_membership(registry: &mut FriendRegistry, character: ID) {
+  assert!(!df::exists(friends::uid(registry), character), EAlreadyMember);
+  df::add(friends::uid_mut(registry), character, true);
 }
 
-fun rm(registry: &mut FriendRegistry, character: ID) {
-  assert!(df::exists(friends::u(registry), character), ENotMember);
-  let _: bool = df::remove(friends::um(registry), character);
+fun release_membership(registry: &mut FriendRegistry, character: ID) {
+  assert!(df::exists(friends::uid(registry), character), ENotMember);
+  let _: bool = df::remove(friends::uid_mut(registry), character);
 }
 
-public(package) fun af(registry: &FriendRegistry, character: ID) {
-  assert!(!df::exists(friends::u(registry), character), EAlreadyMember);
+public(package) fun assert_membership_available(registry: &FriendRegistry, character: ID) {
+  assert!(!df::exists(friends::uid(registry), character), EAlreadyMember);
 }
 
 #[test_only]
@@ -144,13 +144,13 @@ public(package) fun registry_for_testing(ctx: &mut TxContext): FriendRegistry {
 #[test_only]
 public(package) fun claim_membership_for_testing(registry: &mut FriendRegistry, character: ID, party: ID) {
   let _ = party;
-  cm(registry, character);
+  claim_membership(registry, character);
 }
 
 #[test_only]
 public(package) fun release_membership_for_testing(registry: &mut FriendRegistry, character: ID, party: ID) {
   let _ = party;
-  rm(registry, character);
+  release_membership(registry, character);
 }
 
 #[test_only]
@@ -161,15 +161,15 @@ public(package) fun destroy_registry_for_testing(registry: FriendRegistry) {
 #[test_only]
 public(package) fun inviting_for_testing(
   registry: &mut FriendRegistry,
-  chr: &Character,
+  character: &Character,
   invited: ID,
   ctx: &mut TxContext,
 ): Party {
-  assert!(character::id(chr) != invited, EAlreadyMember);
-  af(registry, invited);
-  let actor = character::id(chr);
+  assert!(character::id(character) != invited, EAlreadyMember);
+  assert_membership_available(registry, invited);
+  let actor = character::id(character);
   let party = Party { id: object::new(ctx), members: vector[actor], pending: vector[invited] };
-  cm(registry, actor);
+  claim_membership(registry, actor);
   party
 }
 

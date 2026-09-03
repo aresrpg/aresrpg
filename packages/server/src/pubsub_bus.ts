@@ -11,7 +11,12 @@
 
 import { EventEmitter } from 'node:events'
 
-import { INDEXED_CHECKPOINT_KEY, parse_indexed_checkpoint } from './indexing_health.ts'
+import {
+  INDEXED_CHECKPOINT_KEY,
+  parse_indexed_checkpoint,
+  parse_indexed_state,
+  type IndexedState,
+} from './indexing_health.ts'
 import { is_indexer_channel } from './protocol.ts'
 import logger from './logger.ts'
 
@@ -61,6 +66,7 @@ export type Bus = {
 export type GraphBus = Omit<Bus, 'publish'> & {
   /** Latest checkpoint the bound indexer committed to both graph and its redis. */
   indexed_checkpoint: () => Promise<number | null>
+  indexed_state?: () => Promise<IndexedState | null>
   /** Immutable retained sale rows for one player, newest first. */
   sales_history: (address: string) => Promise<readonly string[]>
   analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
@@ -68,7 +74,6 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   analytics_counts?: (keys: readonly string[]) => Promise<readonly number[]>
   analytics_sums?: (keys: readonly string[]) => Promise<readonly number[]>
   analytics_cumulative_counts?: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
-  shop_sales?: (min_ms: number, max_ms: number, offset: number, count: number) => Promise<readonly string[]>
 }
 
 export type MeshBus = Bus & {
@@ -206,11 +211,17 @@ export const create_graph_bus = ({
     analytics_sums: (keys) => Promise.all(keys.map(async (key) => sum_checkpoint_counts(await publisher.hvals(key)))),
     analytics_cumulative_counts: (key, maxes) =>
       Promise.all([...maxes.map((max) => publisher.zcount(key, 0, max)), publisher.zcard(key)]),
-    shop_sales: (min_ms, max_ms, offset, count) =>
-      publisher.zrevrangebyscore('analytics:shop:sales', max_ms, min_ms, 'LIMIT', offset, count),
     indexed_checkpoint: async () => {
       try {
         return parse_indexed_checkpoint(await publisher.get(INDEXED_CHECKPOINT_KEY))
+      } catch (error) {
+        log.warn({ error: (error as Error).message }, 'indexer checkpoint marker is malformed')
+        return null
+      }
+    },
+    indexed_state: async () => {
+      try {
+        return parse_indexed_state(await publisher.get(INDEXED_CHECKPOINT_KEY))
       } catch (error) {
         log.warn({ error: (error as Error).message }, 'indexer checkpoint marker is malformed')
         return null

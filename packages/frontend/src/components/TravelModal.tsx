@@ -6,10 +6,8 @@
 import { Lock, MapPin, Snowflake, Trees } from 'lucide-react'
 import { useState } from 'react'
 
-import nauvis_art from '../assets/worlds/nauvis.webp'
-import yakutia_art from '../assets/worlds/yakutia.webp'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
-import { worlds_source } from '../content/worlds.ts'
+import { titleize } from '../content/catalog.ts'
+import { world_card_rows } from '../content/world_cards.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -17,20 +15,6 @@ import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
-
-const WORLD_ART = Object.freeze({ nauvis: nauvis_art, yakutia: yakutia_art })
-
-export const world_card_rows = () =>
-  worlds_source.map((world) =>
-    Object.freeze({
-      id: world.world,
-      label: titleize(world.world),
-      entry_level: world.entry_level,
-      biomes:
-        encyclopedia_catalog.world(world.world)?.terrain?.biomes.map(({ name }) => titleize(name)) ?? Object.freeze([]),
-      art: WORLD_ART[world.world as keyof typeof WORLD_ART] ?? null,
-    })
-  )
 
 export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const wallet = useAppStore((state) => state.session.wallet)

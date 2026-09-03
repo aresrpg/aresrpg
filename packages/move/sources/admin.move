@@ -17,7 +17,7 @@ public fun create_character_display(
   publisher: &mut Publisher,
   ctx: &mut TxContext,
 ): display_registry::DisplayCap<Character> {
-  character::nd(registry, publisher, ctx)
+  character::create_display(registry, publisher, ctx)
 }
 
 public fun create_item_display(
@@ -25,5 +25,5 @@ public fun create_item_display(
   publisher: &mut Publisher,
   ctx: &mut TxContext,
 ): display_registry::DisplayCap<Item> {
-  item::nd(registry, publisher, ctx)
+  item::create_display(registry, publisher, ctx)
 }

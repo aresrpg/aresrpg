@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useMemo, useState } from 'react'
-import { Gift, Package, Skull, Sparkles, Store, Trees, type LucideIcon } from 'lucide-react'
-import { craft_job_of } from '@aresrpg/immutable'
+import { craft_job_of, item_acquisition, type AcquisitionContent, type AcquisitionEstimate } from '@aresrpg/immutable'
 
 import { item_icon, mob_icon, spell_icon } from '../content/assets.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
@@ -14,9 +13,10 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { element_colors, item_category_colors } from '../visual_identity.ts'
 
 import { ContentEntityEditor } from './ContentEntityEditor.tsx'
+import { content_domain_icon } from './content_domain_icons.ts'
 import { titleize_field } from './ContentFields.tsx'
 import { SpellAutosaveBoundary } from './SpellAutosaveBoundary.tsx'
-import type { SeedEditorStatus, SeedFileDraft } from './editor_state.ts'
+import type { SeedEditorState, SeedEditorStatus, SeedFileDraft } from './editor_state.ts'
 import {
   content_navigation_domains,
   content_category_for_filter,
@@ -27,14 +27,10 @@ import {
   content_types_for_domain,
   filter_content_rows,
   find_selected_row,
-  item_category_rows,
-  item_gatherable_job_rows,
-  item_mob_family_rows,
-  item_reference_filter_rows,
-  item_recipe_job_rows,
+  item_filter_rows,
+  type ItemFilterRow,
   item_types_for_filter,
   mob_filter_rows,
-  mob_types_for_protector_visibility,
   order_content_rows,
   reordered_spell_levels,
   row_address,
@@ -42,6 +38,7 @@ import {
   spell_row_has_effects,
 } from './content_list.ts'
 import { useContentEditorRoute } from './content_route.ts'
+import { item_filter_view } from './item_filter_view.ts'
 import type { ItemRecipeBinding } from './ItemRecipeEditor.tsx'
 import {
   entity_asset_reference,
@@ -50,11 +47,15 @@ import {
   type EntityAssetReference,
   type JsonPath,
   type JsonValue,
+  type SeedDomain,
   type SeedEntityRow,
 } from './seed_editor.ts'
+import { ValidationCounters, type ValidationKind, ValidationPanel } from './ValidationReport.tsx'
+
 const item_recipe_binding = (
   selected: SeedEntityRow | undefined,
-  recipes_file: SeedFileDraft | undefined
+  recipes_file: SeedFileDraft | undefined,
+  acquisition: AcquisitionEstimate | undefined
 ): ItemRecipeBinding | undefined => {
   if (!selected || !recipes_file) return undefined
   const recipe_rows = entity_rows('recipes', recipes_file.value)
@@ -62,6 +63,7 @@ const item_recipe_binding = (
   const replace_file = (value: JsonValue): void =>
     dispatch_app({ type: 'editor/value_changed', domain: 'recipes', path: [], value })
   return Object.freeze({
+    acquisition,
     value: recipe_row?.value ?? null,
     change: (path: JsonPath, value: JsonValue): void => {
       if (!recipe_row) return
@@ -109,14 +111,6 @@ const item_recipe_binding = (
     },
   })
 }
-const domain_icons: Readonly<Record<string, LucideIcon>> = Object.freeze({
-  airdrop: Gift,
-  items: Package,
-  mobs: Skull,
-  shop: Store,
-  spells: Sparkles,
-  structure_packs: Trees,
-})
 const icon_url = (reference: EntityAssetReference | null, detail = false): string | null => {
   if (!reference) return null
   if (reference.kind === 'item') return detail ? item_detail_icon(reference.id) : item_icon(reference.id)
@@ -140,28 +134,11 @@ const EntityIcon = ({
     </div>
   )
 }
-const ProtectorVisibilityToggle = ({
-  visible,
-  hidden,
-  label,
-  change,
-}: Readonly<{ visible: boolean; hidden: boolean; label: string; change: (hidden: boolean) => void }>) =>
-  visible ? (
-    <label className="flex cursor-pointer items-center gap-1.5 text-[8px] tracking-[0.08em] text-[#858b98] uppercase hover:text-[#d8d4cc]">
-      <input
-        checked={hidden}
-        className="size-3 accent-[#c8963c]"
-        onChange={(event) => change(event.target.checked)}
-        type="checkbox"
-      />
-      {label}
-    </label>
-  ) : null
 const mob_facet_options = (rows: ReturnType<typeof mob_filter_rows>): readonly FacetOption[] =>
   rows.map((row, index) => {
     const previous = rows[index - 1]
     const section =
-      row.kind === 'world' && previous?.kind !== 'world' && previous?.kind !== 'biome'
+      row.kind === 'world' && previous?.kind !== 'world' && !previous?.parent
         ? 'Worlds'
         : row.kind === 'family' && previous?.kind !== 'family'
           ? 'Families'
@@ -173,7 +150,7 @@ const mob_facet_options = (rows: ReturnType<typeof mob_filter_rows>): readonly F
     const label =
       row.kind === 'protector'
         ? `Protector ${titleize_field(row.id)}`
-        : row.kind === 'biome'
+        : row.parent
           ? titleize_field(row.id.slice(row.id.indexOf(':') + 1))
           : titleize_field(row.id)
     return Object.freeze({
@@ -182,10 +159,9 @@ const mob_facet_options = (rows: ReturnType<typeof mob_filter_rows>): readonly F
       count: row.count,
       color: row.kind === 'element' ? element_colors[row.id] : row.kind === 'protector' ? '#65c993' : undefined,
       section,
-      indent: row.kind === 'biome',
+      indent: Boolean(row.parent),
     })
   })
-
 const mob_types_for_filter = (
   filter: string | null,
   rows: ReturnType<typeof mob_filter_rows>
@@ -194,7 +170,27 @@ const mob_types_for_filter = (
   const selected = rows.find((row) => `${row.kind}:${row.id}` === filter)
   return new Set(selected?.mob_types ?? [])
 }
-
+const resource_filter_colors: Readonly<Record<string, string>> = Object.freeze({
+  pet_food: '#ef8bbd',
+  gatherable: '#4a9eff',
+  intermediary: '#b584e8',
+  raw: '#9a795d',
+})
+const item_filter_color = ({ kind, id }: ItemFilterRow): string | undefined => {
+  if (kind === 'category') return item_category_colors[id]
+  if (kind === 'resource') return resource_filter_colors[id]
+  if (kind === 'craft') return '#65c993'
+  if (kind === 'gather') return '#4a9eff'
+  return '#e8b44f'
+}
+const item_facet_options = (rows: readonly ItemFilterRow[]): readonly FacetOption[] =>
+  rows.map((row, index) =>
+    Object.freeze({
+      ...item_filter_view(row, rows[index - 1]?.kind),
+      color: item_filter_color(row),
+      count: row.count,
+    })
+  )
 const content_gate = (status: SeedEditorStatus): Readonly<{ class_name: string; message: string }> | null => {
   if (status === 'loading' || status === 'idle')
     return Object.freeze({
@@ -226,13 +222,39 @@ const EffectlessSpellBadge = ({ visible }: Readonly<{ visible: boolean }>) =>
       No effects
     </span>
   ) : null
-export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, string>> }>) => {
+const draft_value = (files: SeedEditorState['files'], domain: SeedDomain): JsonValue | undefined => files[domain]?.value
+const acquisition_from_drafts = (
+  files: SeedEditorState['files'],
+  item_type: string | undefined
+): AcquisitionEstimate | undefined => {
+  const items = draft_value(files, 'items')
+  const recipes = draft_value(files, 'recipes')
+  const mobs = draft_value(files, 'mobs')
+  const worlds = draft_value(files, 'worlds')
+  const dungeons = draft_value(files, 'dungeons')
+  const spells = draft_value(files, 'spells')
+  if (!item_type || ![items, recipes, mobs, worlds, dungeons, spells].every(Array.isArray)) return undefined
+  return item_acquisition(
+    {
+      items: items as unknown as AcquisitionContent['items'],
+      recipes: recipes as unknown as AcquisitionContent['recipes'],
+      mobs: mobs as unknown as AcquisitionContent['mobs'],
+      worlds: worlds as unknown as AcquisitionContent['worlds'],
+      dungeons: dungeons as unknown as AcquisitionContent['dungeons'],
+      spells: spells as unknown as NonNullable<AcquisitionContent['spells']>,
+    },
+    item_type
+  )
+}
+const selected_item_identity = (domain: SeedDomain, selected: SeedEntityRow | undefined): string | undefined =>
+  domain === 'items' ? selected?.id : undefined
+export const ContentPage = () => {
   const editor = useAppStore((state) => state.editor)
   const [item_filter, set_item_filter] = useState<string | null>(null)
   const [mob_filter, set_mob_filter] = useState<string | null>(null)
-  const [hide_protectors, set_hide_protectors] = useState(false)
   const [drag_from, set_drag_from] = useState<number | null>(null)
   const [drag_over, set_drag_over] = useState<number | null>(null)
+  const [validation_kind, set_validation_kind] = useState<ValidationKind>(null)
   const file = editor.files[editor.domain]
   const rows = useMemo(
     () => order_content_rows(editor.domain, file ? entity_rows(editor.domain, file.value) : []),
@@ -243,49 +265,32 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
     editor.entity_id,
     rows
   )
-  const categories = useMemo(() => (editor.domain === 'items' ? item_category_rows(rows) : []), [editor.domain, rows])
   const recipe_rows = useMemo(
     () => (editor.files.recipes ? entity_rows('recipes', editor.files.recipes.value) : []),
     [editor.files.recipes]
-  )
-  const recipe_jobs = useMemo(
-    () => (editor.domain === 'items' ? item_recipe_job_rows(rows, recipe_rows) : []),
-    [editor.domain, recipe_rows, rows]
   )
   const world_rows = useMemo(
     () => (editor.files.worlds ? entity_rows('worlds', editor.files.worlds.value) : []),
     [editor.files.worlds]
   )
-  const gatherable_jobs = useMemo(
-    () => (editor.domain === 'items' ? item_gatherable_job_rows(rows, world_rows) : []),
-    [editor.domain, rows, world_rows]
-  )
   const item_mob_rows = useMemo(
     () => (editor.files.mobs ? entity_rows('mobs', editor.files.mobs.value) : []),
     [editor.files.mobs]
   )
-  const item_mob_families = useMemo(
-    () => (editor.domain === 'items' ? item_mob_family_rows(rows, item_mob_rows) : []),
-    [editor.domain, item_mob_rows, rows]
+  const item_filters = useMemo(
+    () => (editor.domain === 'items' ? item_filter_rows(rows, recipe_rows, item_mob_rows, world_rows) : []),
+    [editor.domain, item_mob_rows, recipe_rows, rows, world_rows]
   )
-  const item_reference_filters = item_reference_filter_rows(rows, item_mob_rows, world_rows)
   const mob_facets = useMemo(
     () => (editor.domain === 'mobs' ? mob_filter_rows(rows, world_rows) : []),
     [editor.domain, rows, world_rows]
   )
   const classes = useMemo(() => (editor.domain === 'spells' ? spell_class_rows(rows) : []), [editor.domain, rows])
   const selected_item_types = useMemo(
-    () => item_types_for_filter(item_filter, recipe_jobs, gatherable_jobs, item_mob_families),
-    [gatherable_jobs, item_filter, item_mob_families, recipe_jobs]
+    () => item_types_for_filter(item_filter, item_filters),
+    [item_filter, item_filters]
   )
   const selected_mob_types = useMemo(() => mob_types_for_filter(mob_filter, mob_facets), [mob_facets, mob_filter])
-  const visible_mob_types = useMemo(
-    () =>
-      editor.domain === 'mobs'
-        ? mob_types_for_protector_visibility(rows, selected_mob_types, hide_protectors)
-        : selected_mob_types,
-    [editor.domain, hide_protectors, rows, selected_mob_types]
-  )
   const filtered = useMemo(
     () =>
       filter_content_rows(
@@ -293,11 +298,16 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
         editor.query,
         content_category_for_filter(editor.domain, item_filter),
         editor.domain === 'spells' ? spell_classe : null,
-        content_types_for_domain(editor.domain, selected_item_types, visible_mob_types)
+        content_types_for_domain(editor.domain, selected_item_types, selected_mob_types)
       ),
-    [editor.domain, editor.query, item_filter, selected_item_types, spell_classe, rows, visible_mob_types]
+    [editor.domain, editor.query, item_filter, selected_item_types, selected_mob_types, spell_classe, rows]
   )
   const selected = find_selected_row(filtered, editor.entity_id) ?? filtered[0]
+  const selected_item_type = selected_item_identity(editor.domain, selected)
+  const acquisition = useMemo(
+    () => acquisition_from_drafts(editor.files, selected_item_type),
+    [editor.files, selected_item_type]
+  )
   const gate = content_gate(editor.status)
   if (gate) return <div className={gate.class_name}>{gate.message}</div>
   if (!file)
@@ -306,7 +316,6 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
         {editor.error ?? 'Seed files unavailable'}
       </div>
     )
-
   const replace = (relative_path: JsonPath, value: JsonValue): void => {
     if (!selected) return
     if (is_readonly_seed_path(editor.domain, relative_path)) return
@@ -343,8 +352,11 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
     })
   }
   const selected_asset = selected ? entity_asset_reference(editor.domain, selected.value) : null
-  const item_recipe = item_recipe_binding(editor.domain === 'items' ? selected : undefined, editor.files.recipes)
-
+  const item_recipe = item_recipe_binding(
+    editor.domain === 'items' ? selected : undefined,
+    editor.files.recipes,
+    acquisition
+  )
   return (
     <div
       className={`grid min-h-0 flex-1 overflow-hidden bg-bg ${content_page_columns(editor.domain)}`}
@@ -354,7 +366,7 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
         {content_navigation_domains.map((domain) => {
           const domain_file = editor.files[domain.id]
           const count = domain_file ? entity_rows(domain.id, domain_file.value).length : 0
-          const DomainIcon = domain_icons[domain.id]!
+          const DomainIcon = content_domain_icon(domain.id)
           return (
             <button
               className={`flex w-full items-center justify-between border-l-2 px-3 py-2.5 text-left text-[9px] uppercase ${
@@ -377,7 +389,6 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
           )
         })}
       </nav>
-
       {editor.domain === 'items' && (
         <FacetRail
           all_label="All items"
@@ -385,40 +396,11 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
             set_item_filter(value)
             dispatch_app({ type: 'editor/entity_selected', entity_id: null })
           }}
-          options={[
-            ...categories.map(({ category, count }) => ({
-              color: item_category_colors[category],
-              count,
-              label: titleize_field(category),
-              value: `category:${category}`,
-            })),
-            ...recipe_jobs.map(({ job, count }, index) => ({
-              color: '#65c993',
-              count,
-              label: `Crafts ${titleize_field(job)}`,
-              section: index === 0 ? 'Recipe outputs' : undefined,
-              value: `craft:${job}`,
-            })),
-            ...gatherable_jobs.map(({ job, count }, index) => ({
-              color: '#4a9eff',
-              count,
-              label: `Gatherables ${titleize_field(job)}`,
-              section: index === 0 ? 'Gatherables' : undefined,
-              value: `gather:${job}`,
-            })),
-            ...item_mob_families.map(({ family, count }, index) => ({
-              color: '#e8b44f',
-              count,
-              label: titleize_field(family),
-              section: index === 0 ? 'Mob resources' : undefined,
-              value: `mob-family:${family}`,
-            })),
-          ]}
+          options={item_facet_options(item_filters)}
           selected={item_filter}
           total={rows.length}
         />
       )}
-
       {editor.domain === 'spells' && (
         <FacetRail
           all_label="All spells"
@@ -428,7 +410,6 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
           total={rows.length}
         />
       )}
-
       {editor.domain === 'mobs' && (
         <FacetRail
           all_label="All mobs"
@@ -441,7 +422,6 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
           total={rows.length}
         />
       )}
-
       <aside className="flex min-h-0 flex-col border-r border-white/10 bg-surface">
         <div className="border-b border-white/10 bg-surface-high p-3">
           <input
@@ -455,15 +435,6 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
               {filtered.length.toLocaleString()} rows
               {ladder_reorder && <span className="text-[#626670]"> · drag to move a spell up the unlock ladder</span>}
             </p>
-            <ProtectorVisibilityToggle
-              change={(hidden) => {
-                set_hide_protectors(hidden)
-                dispatch_app({ type: 'editor/entity_selected', entity_id: null })
-              }}
-              hidden={hide_protectors}
-              label={text.hide_protectors}
-              visible={editor.domain === 'mobs'}
-            />
           </div>
         </div>
         <div
@@ -522,7 +493,6 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
           })}
         </div>
       </aside>
-
       <main className="min-h-0 overflow-y-auto bg-surface-high p-4">
         <header className="sticky top-0 z-[2] -mx-4 -mt-4 mb-4 flex items-center justify-between gap-3 border-b border-white/12 bg-surface-raised/96 px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.16)] backdrop-blur-lg">
           <div className="flex min-w-0 items-center gap-3">
@@ -533,16 +503,7 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            {editor.validation && (editor.validation.reds.length > 0 || editor.validation.warns.length > 0) && (
-              <p className="flex items-center gap-2 text-[8px] tracking-[0.12em] uppercase">
-                {editor.validation.reds.length > 0 && (
-                  <span className="text-[#ff8caa]">{editor.validation.reds.length} red</span>
-                )}
-                {editor.validation.warns.length > 0 && (
-                  <span className="text-[#ffca57]">{editor.validation.warns.length} warn</span>
-                )}
-              </p>
-            )}
+            <ValidationCounters active={validation_kind} report={editor.validation} select={set_validation_kind} />
             <p className="text-[8px] tracking-[0.14em] uppercase">
               {editor.status === 'saving' ? (
                 <span className="animate-pulse text-[#efbd45]">Saving…</span>
@@ -555,11 +516,7 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
           </div>
         </header>
         <div className="mb-4 h-[68px] shrink-0" data-editor-error-lane="">
-          {editor.error && (
-            <div className="h-full overflow-y-auto whitespace-pre-wrap border border-[#ff5a8b]/30 bg-[#ff5a8b]/6 p-3 text-[9px] leading-5 text-[#ff8caa]">
-              {editor.error}
-            </div>
-          )}
+          <ValidationPanel active={validation_kind} error={editor.error} report={editor.validation} />
         </div>
         {selected && (
           <div className="space-y-4">
@@ -586,7 +543,7 @@ export const ContentPage = ({ text }: Readonly<{ text: Readonly<Record<string, s
                 mob_templates={editor.domain === 'mobs' && Array.isArray(file.value) ? file.value : undefined}
                 on_change={replace}
                 item_recipe={item_recipe}
-                item_filters={item_reference_filters}
+                item_filters={item_filters}
                 save={() => dispatch_app({ type: 'editor/save', domain: editor.domain })}
                 value={selected.value}
               />

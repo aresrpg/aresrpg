@@ -40,7 +40,7 @@
     },
     "packages/fight/src/combat_grid.ts": {
       "blocks": [11],
-      "cone_cells": [12],
+      "cone_cells": [11],
       "step_cell": [12],
       "zone_cells": [18]
     },
@@ -71,31 +71,18 @@
     "packages/immutable/src/identity.ts": {
       "class_spell_shape_errors": [11]
     },
-    "packages/frontend/deployment_dev_server.ts": {
-      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [11],
-      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next) > read_json(request) .then[0](body)": [
-        27
-      ]
-    },
     "packages/frontend/seed_dev_server.ts": {
       "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [12]
     },
     "packages/frontend/src/app.tsx": {
-      "App": [17]
+      "App": [15]
+    },
+    "packages/frontend/src/mastery/MasteryPage.tsx": {
+      "MasteryPage": [13]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
       "BrowsePanel": [12],
       "CheapestLotMarket > sizes.map[0](size,index)": [12]
-    },
-    "packages/frontend/src/admin/PublishPage.tsx": {
-      "PublishPage": [47]
-    },
-    "packages/frontend/src/admin/admin_deployment.ts": {
-      "observe_admin_deployment > events.on[1](state,previous)": [16],
-      "observe_admin_deployment > publish > import('@aresrpg/sdk/deployment-admin') .then[0]({ project_bootstrap_deployment, project_control_deployment, project_game_deployment, project_kiosk_package, project_math_deployment, project_seed_deployment, })": [
-        40
-      ],
-      "reduce_admin_deployment": [34]
     },
     "packages/frontend/src/admin/admin_wallet.ts": {
       "observe_admin_wallet > events.on[1](state,previous)": [14],
@@ -154,7 +141,7 @@
       "create_world > sync_dungeon_portal_labels": [13]
     },
     "packages/frontend/src/game/presence_entities.ts": {
-      "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [21],
+      "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [18],
       "create_presence_renderer > tick": [12],
       "create_presence_renderer > update": [18]
     },
@@ -179,7 +166,7 @@
       "CompassStrip": [16]
     },
     "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
-      "ItemsTab": [18]
+      "ItemsTab": [16]
     },
     "packages/frontend/src/encyclopedia/MobsTab.tsx": {
       "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [11]
@@ -232,15 +219,11 @@
       "market_observation": [15],
       "reduce": [24]
     },
-    "packages/frontend/src/modules/admin.ts": {
-      "observe > events.on[1](state,previous)": [15],
-      "reduce": [43]
-    },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [11]
     },
     "packages/frontend/src/modules/session.ts": {
-      "fold_packet": [15],
+      "fold_packet": [14],
       "observe > events.on[1](state,previous)": [22],
       "reduce": [26]
     },
@@ -254,20 +237,19 @@
       "reduce": [11]
     },
     "packages/frontend/src/modules/world.ts": {
-      "fold_union": [25],
+      "fold_union": [23],
       "observe: NonNullable<AppModule['observe']> > settle_arrivals": [12],
       "reduce": [28]
     },
     "packages/frontend/src/editor/ContentPage.tsx": {
-      "ContentPage": [17],
+      "ContentPage": [15],
       "mob_facet_options > rows.map[0](row,index)": [20]
     },
     "packages/frontend/src/editor/BiomePage.tsx": {
       "BiomePage": [11]
     },
     "packages/frontend/src/editor/seed_editor.ts": {
-      "entity_asset_reference": [17],
-      "row_name": [23]
+      "entity_asset_reference": [17]
     },
     "packages/frontend/src/editor/JsonEditor.tsx": {
       "Field": [11],
@@ -302,10 +284,7 @@
       "create_request_limiter > take": [18]
     },
     "packages/protocol/src/packets.ts": {
-      "parse_client_packet": [37]
-    },
-    "packages/sdk/scripts/e2e_admin_publish.ts": {
-      "main": [23]
+      "parse_client_packet": [33]
     },
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [15]
@@ -315,13 +294,10 @@
     },
     "packages/sdk/src/seed.ts": {
       "validate_biome_maps": [15],
-      "world_batches > content.worlds.map[0](world,world_index) > build": [13]
-    },
-    "packages/sdk/src/cache.ts": {
-      "absorb_receipt": [15]
+      "world_batches > content.worlds.map[0](world,world_index) > build": [11]
     },
     "packages/sdk/src/seed_sync.ts": {
-      "seed_sync_view": [43]
+      "seed_sync_view": [14]
     },
     "packages/engine/test/greedy_mesher.test.ts": {
       "describe[1]() > test[1]()": [20]
@@ -383,8 +359,8 @@
   },
   "cyclomatic": {
     "scripts/validate_seed.mjs": {
-      "check_consumable": [10],
       "check_effect": [34],
+      "check_level": [9],
       "check_loot_rewards": [12],
       "fight_boards.forEach[0](board,i)": [36]
     },
@@ -400,6 +376,9 @@
       "generated_ruins > generated_type[1](x,y,z)": [16, 14],
       "parse_nbt > payload": [14],
       "structure_material": [23]
+    },
+    "scripts/deployment_build.ts": {
+      "parse_contract_artifact": [9]
     },
     "scripts/generate_fight_boards.mjs": {
       "fully_connected": [10]
@@ -437,9 +416,9 @@
     },
     "packages/fight/src/combat_grid.ts": {
       "blocks": [17],
-      "cone_cells": [9],
       "step_cell": [9],
-      "zone_cells": [15]
+      "zone_cells": [15],
+      "zone_rank": [9]
     },
     "packages/fight/src/fight_math.ts": {
       "xp_for_player": [10]
@@ -466,7 +445,7 @@
     },
     "packages/fight/src/normalize.ts": {
       "as_bigint": [9],
-      "normalize_contract": [22],
+      "normalize_contract": [18],
       "normalize_effect": [9],
       "normalize_player": [13]
     },
@@ -497,16 +476,6 @@
     "packages/frontend/test/encyclopedia/catalog.test.ts": {
       "describe[1]() > test[1]()": [9]
     },
-    "packages/frontend/deployment_dev_server.ts": {
-      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [16],
-      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next) > read_json(request) .then[0](body: Record<string, unknown>)": [
-        10
-      ],
-      "deployment_dev_plugin > configureServer > server.middlewares.use[0](request,response,next) > read_json(request) .then[0](body)": [
-        29
-      ],
-      "merge_seed_ledger_pins": [11]
-    },
     "packages/frontend/seed_dev_server.ts": {
       "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [15]
     },
@@ -523,14 +492,19 @@
       "BoardGallery": [18]
     },
     "packages/frontend/src/app.tsx": {
-      "App": [55],
+      "App": [51],
       "App > useCallback[0](character: CharacterCreateInput)": [10]
     },
     "packages/frontend/src/kolizeum/KolizeumPage.tsx": {
       "KolizeumPage": [17]
     },
+    "packages/frontend/src/mastery/MasteryPage.tsx": {
+      "MasteryPage": [10],
+      "MasteryPage > offers.map[0]({ state, item },index)": [11],
+      "MasteryPage > world_card_rows().map[0](card)": [10]
+    },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "AskRow": [13],
+      "AskRow": [11],
       "BrowsePanel": [29],
       "CheapestLotMarket > sizes.map[0](size,index)": [15]
     },
@@ -538,24 +512,8 @@
       "SellPanel": [17],
       "SellPanel > items.map[0](selection)": [9]
     },
-    "packages/frontend/src/shop/model.ts": {
-      "shop_section": [10]
-    },
     "packages/frontend/src/server_link.ts": {
       "connect_server > open > next.addEventListener[1]({ data })": [10]
-    },
-    "packages/frontend/src/admin/PublishPage.tsx": {
-      "PublishPage": [103]
-    },
-    "packages/frontend/src/admin/admin_deployment.ts": {
-      "deployment_bootstrapped": [10],
-      "observe_admin_deployment > events.on[1](state,previous)": [18],
-      "observe_admin_deployment > publish > import('@aresrpg/sdk/deployment-admin') .then[0]({ project_bootstrap_deployment, project_control_deployment, project_game_deployment, project_kiosk_package, project_math_deployment, project_seed_deployment, })": [
-        46
-      ],
-      "observe_admin_deployment > upgrade": [17],
-      "reduce_admin_deployment": [41],
-      "seed_config_from": [14]
     },
     "packages/frontend/src/admin/AdminWalletControl.tsx": {
       "AdminWalletControl": [13]
@@ -648,7 +606,7 @@
       "create_world > tick": [12]
     },
     "packages/frontend/src/game/presence_entities.ts": {
-      "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [18],
+      "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [16],
       "create_presence_renderer > tick": [14],
       "create_presence_renderer > update": [25]
     },
@@ -658,7 +616,7 @@
       ]
     },
     "packages/frontend/src/game/audio/BiomeMusic.tsx": {
-      "BiomeMusic": [13]
+      "BiomeMusic": [11]
     },
     "packages/frontend/src/game/resource_nodes.ts": {
       "create_resource_renderer > update": [10]
@@ -677,10 +635,10 @@
       "ClassesTab": [12]
     },
     "packages/frontend/src/encyclopedia/WorldsTab.tsx": {
-      "WorldsTab": [15]
+      "WorldsTab": [12]
     },
     "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
-      "ItemsTab": [30],
+      "ItemsTab": [27],
       "ItemsTab > detail.item.consumable.rewards.map[0](reward,index,rewards)": [9]
     },
     "packages/frontend/src/encyclopedia/SpellCard.tsx": {
@@ -725,7 +683,7 @@
       "TradeDialog": [11]
     },
     "packages/frontend/src/components/DungeonLobby.tsx": {
-      "DungeonLobby": [18],
+      "DungeonLobby": [17],
       "DungeonLobby > authored.rooms.map[0](mobs,index)": [10]
     },
     "packages/frontend/src/components/SendSuiModal.tsx": {
@@ -735,11 +693,11 @@
     },
     "packages/frontend/src/components/AppShell.tsx": {
       "memo[0]({ copy, locale, page, pathname, session, settings, fight_mounted, open_path, }: Readonly<{ copy: AppCopy locale: Locale page: Page pathname: string session: SessionState settings: GameSettings fight_mounted: boolean open_path: (pathname: string) => void }>)": [
-        19
+        11
       ]
     },
     "packages/frontend/src/components/DungeonPortalPrompt.tsx": {
-      "DungeonPortalPrompt": [11]
+      "DungeonPortalPrompt": [10]
     },
     "packages/frontend/src/components/SpawnNametag.tsx": {
       "resource_at": [16],
@@ -852,24 +810,13 @@
       "observe > execute": [12],
       "reduce": [25]
     },
-    "packages/frontend/src/modules/admin.ts": {
-      "can_seal": [10],
-      "observe > events.on[1](state,previous)": [15],
-      "observe > events.on[1](state,previous) > async () => { const ledger = await get_ledger() const { changes } = get_state().admin const count = (changes?.changed.length ?? 0) + (changes?.board_removals.length ?? 0) log(`Rewriting ${count} changed row${count === 1 ? '' : 's'} on chain…`) const result = await active.apply_changes(ledger) await put_ledger(result.ledger, await active.address_book()) for (const digest of result.digests) log(`Changes written · ${digest}`, 'success') if (signal.aborted || request !== generation) return log('Every changed row now matches its file.', 'success') dispatch({ type: 'admin/changes_applied', changes: changes_summary(result.view) }) }[-1]()": [
-        9
-      ],
-      "observe > events.on[1](state,previous) > import('../admin/seed_content.ts') .then(({ seed_content }) => connected.create_seed_admin(seed_content, state.admin.config, state.admin.deployment.pins ?? undefined) ) .then[0](created)": [
-        9
-      ],
-      "reduce": [61]
-    },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [27],
       "observe > hover_under_cursor": [9],
-      "observe > mount": [14]
+      "observe > mount": [13]
     },
     "packages/frontend/src/modules/session.ts": {
-      "fold_packet": [16],
+      "fold_packet": [15],
       "observe > events.on[1](state,previous)": [18],
       "reduce": [27]
     },
@@ -898,25 +845,25 @@
     },
     "packages/frontend/src/modules/dungeon.ts": {
       "dungeon_operation_reconciled": [10],
-      "observe: NonNullable<AppModule['observe']> > events.on[1]({ access })": [11],
       "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight })": [17],
-      "observe: NonNullable<AppModule['observe']> > events.on[1]({ portal })": [10]
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ portal })": [9],
+      "start_fight_context": [10]
     },
     "packages/frontend/src/modules/duel.ts": {
       "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous)": [10]
+    },
+    "packages/frontend/src/modules/engine_selection.ts": {
+      "sync_dungeon_scene": [11]
     },
     "packages/frontend/src/modules/friends.ts": {
       "reduce": [11]
     },
     "packages/frontend/src/modules/world.ts": {
-      "fold_union": [19],
+      "fold_union": [18],
       "observe: NonNullable<AppModule['observe']> > settle_arrivals": [9],
       "observe: NonNullable<AppModule['observe']> > submit_engage": [9],
       "reduce": [28],
       "searchable_zone": [21]
-    },
-    "packages/frontend/src/airdrop/AirdropPage.tsx": {
-      "AirdropPage > content_catalog.airdrop.drops.map[0](drop)": [15]
     },
     "packages/frontend/src/editor/ItemReferencePicker.tsx": {
       "ItemReferencePicker": [13]
@@ -930,7 +877,7 @@
       "ItemContentEditor > edit_item": [11]
     },
     "packages/frontend/src/editor/ContentPage.tsx": {
-      "ContentPage": [30],
+      "ContentPage": [24],
       "ContentPage > filtered.map[0](row,index)": [9],
       "mob_facet_options > rows.map[0](row,index)": [19]
     },
@@ -942,18 +889,14 @@
       "LandscapeControls": [14]
     },
     "packages/frontend/src/editor/seed_editor.ts": {
-      "entity_asset_reference": [14],
-      "replace_json_value": [10],
-      "row_name": [9]
+      "entity_asset_reference": [13],
+      "replace_json_value": [10]
     },
     "packages/frontend/src/editor/ItemRecipeEditor.tsx": {
       "ItemRecipeEditor": [9]
     },
     "packages/frontend/src/editor/content_list.ts": {
-      "item_recipe_job_rows > recipe_rows.reduce[0](result,row)": [9],
-      "item_reference_filter_rows > world_rows.flatMap[0](world_row)": [14],
-      "item_types_for_filter": [13],
-      "mob_filter_rows > world_rows.map[0](world_row)": [10]
+      "item_recipe_job_rows > recipe_rows.reduce[0](result,row)": [9]
     },
     "packages/frontend/src/editor/mob_power.ts": {
       "turn_damage > spells.flatMap[0](value)": [14]
@@ -979,7 +922,7 @@
       "wire > read": [25]
     },
     "packages/server/test/player.test.ts": {
-      "wire > read": [12]
+      "wire > read": [11]
     },
     "packages/server/test/helpers/stream_wire.ts": {
       "wire > read": [21]
@@ -987,12 +930,18 @@
     "packages/server/src/connection.ts": {
       "create_authenticated_connection > on_message": [10]
     },
+    "packages/server/src/reads/get_mastery.ts": {
+      "shape_mastery": [9]
+    },
     "packages/server/src/reads/get_fight_checkpoint.ts": {
-      "get_fight_checkpoint": [11]
+      "get_fight_checkpoint": [9]
     },
     "packages/server/src/reads/get_kolizeums.ts": {
       "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters })": [11],
       "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters }) > fighters.flatMap[0](fighter,seat)": [10]
+    },
+    "packages/server/src/reads/get_fight_resolutions.ts": {
+      "get_fight_resolutions > rows.map[0](row)": [10]
     },
     "packages/server/src/reads/get_owned_character.ts": {
       "get_owned_character": [12]
@@ -1021,21 +970,17 @@
       "reduce": [11]
     },
     "packages/server/src/modules/player_events.ts": {
-      "observe > forward_self > anonymous(payload: EventEnvelope)": [15]
+      "observe > forward_self > anonymous(payload: EventEnvelope)": [13]
     },
     "packages/server/src/request_limiter.ts": {
       "create_request_limiter > take": [9]
     },
     "packages/protocol/src/packets.ts": {
       "assert_bounded_json": [9],
-      "parse_client_packet": [36]
+      "parse_client_packet": [34]
     },
     "packages/sdk/scripts/generate_doors.mjs": {
       "arg_expr": [11]
-    },
-    "packages/sdk/scripts/e2e_admin_publish.ts": {
-      "main": [23],
-      "pins_from": [31]
     },
     "packages/sdk/src/seed_admin.ts": {
       "assert_config": [11],
@@ -1052,11 +997,9 @@
       "create_seed_session > release": [15]
     },
     "packages/sdk/src/seed.ts": {
-      "validate_biome_maps": [12],
-      "world_batches > content.worlds.map[0](world,world_index) > build": [11]
+      "validate_biome_maps": [12]
     },
     "packages/sdk/src/cache.ts": {
-      "absorb_receipt": [11],
       "created_object_id": [9],
       "receipt_events > visit": [10]
     },
@@ -1067,16 +1010,16 @@
     "packages/sdk/src/ptb.ts": {
       "receipt_personal_kiosk_cap": [13]
     },
+    "packages/sdk/src/mastery.ts": {
+      "option_u64": [9]
+    },
     "packages/sdk/src/seed_sync.ts": {
-      "seed_sync_view": [41]
+      "seed_sync_view": [12]
     },
     "packages/sdk/src/gas.ts": {
       "gas_used_of": [9],
       "log_transaction_receipt": [12],
       "valid_entries > value.flatMap[0](candidate)": [9]
-    },
-    "packages/sdk/src/auth.ts": {
-      "create_wallet_session > read_package_upgrade": [13]
     },
     "packages/engine/test/greedy_mesher.test.ts": {
       "describe[1]() > test[1]()": [11]
@@ -1137,6 +1080,7 @@
     "packages/engine/src/world_recipe.ts": {
       "validate_landscape > value.flatMap[0](candidate,index)": [13],
       "validate_ocean": [12],
+      "validate_structure_area": [10],
       "validate_world_recipe": [12]
     },
     "packages/engine/src/fight_board.ts": {

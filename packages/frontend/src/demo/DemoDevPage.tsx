@@ -3,8 +3,6 @@
 
 import { lazy, Suspense } from 'react'
 
-import type { AppCopy } from '../i18n/copy.ts'
-
 const ContentPage = import.meta.env.DEV
   ? lazy(() => import('../editor/ContentPage.tsx').then((module) => ({ default: module.ContentPage })))
   : (): null => null
@@ -18,13 +16,13 @@ const Loading = ({ children }: Readonly<{ children: string }>) => (
   </div>
 )
 
-export const DemoDevPage = ({ view, text }: Readonly<{ view: string; text: AppCopy['demo_page'] }>) => {
+export const DemoDevPage = ({ view }: Readonly<{ view: string }>) => {
   if (!import.meta.env.DEV) return null
   if (view !== 'content' && view !== 'biomes') return null
   return (
     <section className="absolute inset-0 flex flex-col bg-bg pt-14">
       <Suspense fallback={<Loading>Loading seed files…</Loading>}>
-        {view === 'content' ? <ContentPage text={text} /> : <BiomePage />}
+        {view === 'content' ? <ContentPage /> : <BiomePage />}
       </Suspense>
     </section>
   )

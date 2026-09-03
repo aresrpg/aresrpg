@@ -23,6 +23,7 @@ export {
   xp_for_level,
 } from './experience.ts'
 export { MODEL_VARIANT_SEPARATOR, model_variant_identity, type ModelVariantIdentity } from './model_variant.ts'
+export { archimob_rows, type ArchimobRow } from './archimob.ts'
 export {
   characteristic_allocation_quote,
   characteristic_cost_step,
@@ -39,6 +40,7 @@ export {
   gatherable_catalog,
   gatherable_item_types,
   gatherable_of,
+  rare_pet_food_tier,
   protector_level_range,
   type Gatherable,
   type GatheringJob,
@@ -83,6 +85,22 @@ export {
   type WeaponDamageEnvelope,
 } from './item_power.ts'
 export {
+  acquisition_catalog,
+  archimob_appearance_bp,
+  acquisition_average_seconds,
+  acquisition_target_range,
+  acquisition_target_status,
+  intermediary_source_level,
+  item_acquisition,
+  recipe_slot_issue,
+  type AcquisitionContent,
+  type AcquisitionEstimate,
+  type AcquisitionIngredient,
+  type AcquisitionRange,
+  type AcquisitionRoute,
+  type AcquisitionTargetStatus,
+} from './acquisition.ts'
+export {
   dofus_mob_power_envelope,
   mob_power_cohort_of_role,
   type MobPowerBand,
@@ -118,6 +136,7 @@ export {
   type WeaponCategory,
 } from './item.ts'
 export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, world_size } from './world.ts'
+export { basis_points, marketplace_lot_sizes, marketplace_royalty_bps } from './marketplace.ts'
 export {
   character_equipment_slots,
   combat_equipment_slots,

@@ -2,8 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { coalesced_stack_groups, encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
+import { content_catalog } from '../content/catalog.ts'
+import { mastery_dungeon_slug } from '../mastery/model.ts'
 import { toast } from '../toast.ts'
-import type { AppModule } from '../store.ts'
+import type { AppModule, AppState } from '../store.ts'
 import { retry_after_version_race, retry_close_after_projection_lag } from '../transaction_guard.ts'
 
 import { fight_resolution_dungeon, fight_result_available } from './fight_result_view.ts'
@@ -11,11 +13,56 @@ import { fight_result_error_text } from './fight_result_error.ts'
 
 type Attempt = Readonly<{ latched: boolean }>
 
+const mastery_completion = (
+  state: Readonly<AppState>,
+  dungeon: Readonly<{ dungeon: string; room: number }> | null,
+  candidates: readonly Readonly<{ fighter: number; won: boolean }>[]
+): Readonly<{ id: string; fighter_idx: bigint }> | null => {
+  const mastery = state.mastery.row
+  const { current_epoch } = state.session
+  const final_room = dungeon ? content_catalog.dungeon(dungeon.dungeon)?.rooms.length : null
+  const winner = candidates.find(({ won }) => won)
+  if (!mastery || !winner) return null
+  const { id, quest_completed, quest_dungeon, quest_epoch } = mastery
+  const eligible = [
+    current_epoch !== null,
+    quest_epoch === current_epoch,
+    !quest_completed,
+    dungeon?.dungeon === mastery_dungeon_slug(quest_dungeon),
+    dungeon?.room === final_room,
+  ].every(Boolean)
+  return eligible ? Object.freeze({ id, fighter_idx: BigInt(winner.fighter) }) : null
+}
+
 export const settlement_needs_close = (receipt: unknown): boolean =>
   typeof receipt === 'object' &&
   receipt !== null &&
   Reflect.get(receipt, 'closable') === true &&
   Reflect.get(receipt, 'closed') !== true
+
+export const settlement_is_final = (
+  result: Readonly<{
+    participants: readonly Readonly<{
+      seat: number
+      character_id: string | null
+      forfeited: boolean
+      settled: boolean
+    }>[]
+  }>,
+  settling: ReadonlySet<number>
+): boolean =>
+  result.participants.every(
+    ({ seat, character_id, forfeited, settled }) => character_id === null || forfeited || settled || settling.has(seat)
+  )
+
+const settlement_batch_is_final = (
+  state: Readonly<AppState>,
+  character_id: string,
+  settlements: readonly Readonly<{ fighter_idx: bigint }>[]
+): boolean => {
+  const result = state.fight_result.current_by_character[character_id]
+  return !!result && settlement_is_final(result, new Set(settlements.map(({ fighter_idx }) => Number(fighter_idx))))
+}
 
 const kolizeum_payment = (kolizeum: string | null, receipt: unknown): bigint | null => {
   if (!kolizeum || typeof receipt !== 'object' || receipt === null) return null
@@ -116,6 +163,7 @@ const observe_with_wait = (
               loot_types: result.loot_types,
               dungeon: result.dungeon,
               kolizeum: result.kolizeum,
+              won: result.winner !== null && result.winner === own.team,
             }),
           ]
         : []
@@ -128,85 +176,111 @@ const observe_with_wait = (
         loot_types: row.loot_types,
         dungeon: fight_resolution_dungeon(row),
         kolizeum: row.kolizeum,
+        won: row.winner !== null && row.winner === row.team,
       })
     )
-    const pending = [...live, ...recoveries].find((candidate) => {
+    const pending_rows = [
+      ...new Map(
+        [...live, ...recoveries].map((candidate) => [`${candidate.fight}:${candidate.fighter}:settle`, candidate])
+      ).values(),
+    ].filter((candidate) => {
       const key = `${candidate.fight}:${candidate.fighter}:settle`
       return !attempts.get(key)?.latched && fight_result_available(state.fight, candidate.fight)
     })
-    if (!pending) return
-    const key = `${pending.fight}:${pending.fighter}:settle`
-    const character = characters.find(({ id }) => id === pending.character)
-    if (!character) return
-    active = key
-    const custody = { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap }
+    const [first] = pending_rows
+    if (!first) return
+    const first_character = characters.find(({ id }) => id === first.character)
+    if (!first_character) return
+    const batch = pending_rows.filter((candidate) => {
+      const character = characters.find(({ id }) => id === candidate.character)
+      return (
+        !first.kolizeum &&
+        !candidate.kolizeum &&
+        candidate.fight === first.fight &&
+        candidate.dungeon?.dungeon === first.dungeon?.dungeon &&
+        character?.kiosk === first_character.kiosk
+      )
+    })
+    const pending = batch.length > 0 ? batch : [first]
+    const keys = pending.map(({ fight, fighter }) => `${fight}:${fighter}:settle`)
+    active = keys.join('|')
+    const custody = { kiosk: first_character.kiosk, kiosk_cap: first_character.kiosk_cap }
     const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
-    const loot = pending.loot_types.map((item_type) => ({
-      item_type,
-      existing: stack_merge_target(inventory, encumbered, item_type, custody.kiosk),
-    }))
+    const settlements = pending.map((candidate) =>
+      Object.freeze({
+        fighter_idx: BigInt(candidate.fighter),
+        loot: candidate.loot_types.map((item_type) => ({
+          item_type,
+          existing: stack_merge_target(inventory, encumbered, item_type, custody.kiosk),
+        })),
+      })
+    )
+    const mastery = mastery_completion(state, first.dungeon, pending)
+    const final_settlement = settlement_batch_is_final(state, first.character, settlements)
     const transaction = () =>
-      pending.kolizeum
+      first.kolizeum
         ? wallet.kolizeum.settle({
-            kolizeum: pending.kolizeum,
-            fight: pending.fight,
-            fighter_idx: BigInt(pending.fighter),
+            kolizeum: first.kolizeum,
+            fight: first.fight,
+            fighter_idx: BigInt(first.fighter),
             custody,
-            last: false,
+            last: final_settlement,
           })
-        : pending.dungeon
-          ? wallet.dungeon.settle_fight({
-              fight: pending.fight,
-              fighter_idx: BigInt(pending.fighter),
-              world: pending.dungeon.world,
-              loot,
+        : first.dungeon
+          ? wallet.dungeon.settle({
+              fight: first.fight,
+              dungeon: first.dungeon.dungeon,
+              settlements,
               custody,
-              last: false,
+              mastery,
+              last: final_settlement,
             })
-          : wallet.fight.settle({
-              fight: pending.fight,
-              fighter_idx: BigInt(pending.fighter),
-              loot,
-              custody,
-              last: false,
-            })
+          : wallet.fight.settle({ fight: first.fight, settlements, custody, last: final_settlement })
     void retry_after_version_race(transaction, wait)
       .then((receipt) => {
-        if (!pending.kolizeum) settled_kiosks.add(custody.kiosk)
-        attempts.set(key, Object.freeze({ latched: true }))
-        dispatch({
-          type: 'fight_result/settled',
-          character_id: pending.character,
-          fight: pending.fight,
-          paid_mist: kolizeum_payment(pending.kolizeum, receipt),
+        const mastery_row = typeof receipt === 'object' && receipt !== null ? Reflect.get(receipt, 'mastery') : null
+        if (mastery_row) dispatch({ type: 'mastery/reconciled', mastery: mastery_row })
+        if (!first.kolizeum) settled_kiosks.add(custody.kiosk)
+        pending.forEach((candidate, index) => {
+          attempts.set(keys[index]!, Object.freeze({ latched: true }))
+          dispatch({
+            type: 'fight_result/settled',
+            character_id: candidate.character,
+            fight: candidate.fight,
+            paid_mist: kolizeum_payment(candidate.kolizeum, receipt),
+          })
         })
-        if (settlement_needs_close(receipt)) close_once({ fight: pending.fight, kolizeum: pending.kolizeum })
+        if (settlement_needs_close(receipt)) close_once({ fight: first.fight, kolizeum: first.kolizeum })
         return true
       })
       .catch((error: unknown) => {
         // Every refusal waits for the explicit Retry action. Re-entering sweep here would
         // reopen signing or dry-run the same doomed bytes in a tight loop.
-        attempts.set(key, Object.freeze({ latched: true }))
         const raw_error = error instanceof Error ? error.message : String(error)
-        dispatch({
-          type: 'fight_result/claim_failed',
-          character_id: pending.character,
-          fight: pending.fight,
-          error: raw_error,
+        pending.forEach((candidate, index) => {
+          attempts.set(keys[index]!, Object.freeze({ latched: true }))
+          dispatch({
+            type: 'fight_result/claim_failed',
+            character_id: candidate.character,
+            fight: candidate.fight,
+            error: raw_error,
+          })
         })
         const copy = get_state().copy?.fight_hud
         toast.add(copy ? new Error(fight_result_error_text(copy, raw_error)) : error)
         return false
       })
       .then((settled) => {
-        const gas_spent_mist = get_state().session.wallet?.fight.gas_spent(pending.fight)
+        const gas_spent_mist = get_state().session.wallet?.fight.gas_spent(first.fight)
         if (gas_spent_mist !== undefined)
-          dispatch({
-            type: 'fight_result/gas_updated',
-            character_id: pending.character,
-            fight: pending.fight,
-            gas_spent_mist,
-          })
+          pending.forEach((candidate) =>
+            dispatch({
+              type: 'fight_result/gas_updated',
+              character_id: candidate.character,
+              fight: candidate.fight,
+              gas_spent_mist,
+            })
+          )
         active = null
         if (settled) sweep()
         if (!active) normalize_settled_stacks()

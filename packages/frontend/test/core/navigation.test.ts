@@ -17,6 +17,7 @@ describe('app navigation routes', () => {
     expect(page_from_pathname('/')).toBe('world')
     expect(page_from_pathname('/encyclopedia')).toBe('encyclopedia')
     expect(page_from_pathname('/encyclopedia/items/aberrant_edge')).toBe('encyclopedia')
+    expect(page_from_pathname('/gift')).toBe('airdrop')
     expect(page_from_pathname('/simulator')).toBe('world')
     expect(page_from_pathname('/not-a-page')).toBe('world')
   })
@@ -25,6 +26,22 @@ describe('app navigation routes', () => {
     expect(pathname_for_page('world')).toBe('/')
     expect(pathname_for_page('encyclopedia')).toBe('/encyclopedia/items')
     expect(normalize_pathname('/encyclopedia/items/aberrant_edge/')).toBe('/encyclopedia/items/aberrant_edge')
+  })
+
+  test('logout keeps a pending printed gift on its Google-first route', () => {
+    const base = initial_app_state(
+      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    )
+    const state = Object.freeze({
+      ...base,
+      navigation: Object.freeze({ ...base.navigation, page: 'airdrop' as const, pathname: '/gift' }),
+      distribution: Object.freeze({ ...base.distribution, gift_link_ready: true }),
+    })
+
+    expect(reduce_app_state(state, { type: 'auth/disconnected' }).navigation).toMatchObject({
+      page: 'airdrop',
+      pathname: '/gift',
+    })
   })
 
   test('keeps the world scene running for a mounted Kolizeum board', () => {

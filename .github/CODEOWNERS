@@ -4,6 +4,7 @@
 
 # Contracts are money.
 /packages/move/     @Sceat
+/packages/move-combat/ @Sceat
 # The deterministic core + the replay gate — the correctness spine.
 /packages/fight/    @Sceat
 # CI and release control are execution policy.

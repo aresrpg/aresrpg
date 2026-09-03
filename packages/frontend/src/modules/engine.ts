@@ -159,9 +159,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     )
   }
 
-  // THE OVERWORLD'S ENTITY LIST has two writers — the other players and the zone's own mobs —
-  // and the scene takes ONE list per source. Each holds its own half here and the composed
-  // whole is what reaches the door, so neither can wipe the other by writing first.
+  // Players and zone mobs keep separate source lists; only their composition reaches the scene.
   let presence_entities: readonly EntityRender[] = Object.freeze([])
   let spawn_entities: readonly EntityRender[] = Object.freeze([])
   const submit_world_entities = (): void =>
@@ -174,7 +172,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         spawn_entities = entities
         submit_world_entities()
       },
-      ground_height: api.ground_height,
+      ground_height: api.mob_ground_height,
       entity_height: api.entity_height,
       label: (group_id, element, position) => api.set_world_label(group_id, element, position),
     })
@@ -444,7 +442,9 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const world_content = content_catalog.world(world_name ?? '')
     const world_mobs = [
       ...(world_content?.mobs ?? []),
-      ...(world_content?.dungeon?.rooms.flatMap((room) => room) ?? []),
+      ...(world_content?.cities.flatMap(
+        ({ dungeon }) => content_catalog.dungeon(dungeon)?.rooms.flatMap((room) => room) ?? []
+      ) ?? []),
     ]
     void import('../game/mob_entities.ts').then(({ preload_world_mobs }) => preload_world_mobs(world_mobs))
     const own_generation = generation
@@ -465,16 +465,16 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
             dispatch({ type: 'run_to/stopped', reason, restore_flat: get_state().run_to.restore_flat }),
         })
         world = created
-        // Publish the running scene; the fight board mounts inside this engine, never a second one.
+        // Publish the running scene; the fight board mounts here, never in a second engine.
         publish_scene(created)
         presence = create_presence_renderer({
-          // presence no longer writes the entity list directly: it holds it only while no
-          // board is mounted (owner 2026-08-21 — a fight shows its fighters and nobody else)
+          // Presence holds its list only outside fights; a fight board shows fighters alone.
           submit: (entities) => {
             presence_entities = entities
             submit_world_entities()
           },
           entity_height: created.entity_height,
+          pet_ground_height: created.pet_ground_height,
           label: (character_id, element) => created.set_entity_label(character_id, element),
         })
         // the spawn lane stays DYNAMIC for the same reason fight_models and pet_models do: it

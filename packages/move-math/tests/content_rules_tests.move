@@ -93,7 +93,8 @@ fun weapon_areas_are_the_five_authored_shapes() {
   assert!(spell_effect::area_shape(&bow[0]) == spell_effect::shape_point());
   assert!(spell_effect::area_shape(&spear[0]) == spell_effect::shape_tbar());
   assert!(spell_effect::area_size(&spear[0]) == 1);
-  assert!(spell_effect::area_shape(&axe[0]) == spell_effect::shape_tbar());
+  assert!(spell_effect::area_shape(&axe[0]) == spell_effect::shape_podium());
   assert!(spell_effect::area_size(&axe[0]) == 1);
   assert!(combat_grid::zone_cells(spell_effect::shape_tbar(), 1, 41, 40).length() == 3);
+  assert!(combat_grid::zone_cells(spell_effect::shape_podium(), 1, 41, 40).length() == 4);
 }
