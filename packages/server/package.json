@@ -13,7 +13,7 @@
   "dependencies": {
     "@aresrpg/immutable": "workspace:*",
     "@mysten/sui": "2.29.0",
-    "falkordb": "^6.2.07",
+    "falkordb": "^6.8.0",
     "ioredis": "^6.0.0",
     "pino": "^10.3.1",
     "@aresrpg/protocol": "workspace:*",
