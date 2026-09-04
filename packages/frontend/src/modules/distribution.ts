@@ -244,6 +244,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const recipient = state.session.wallet
     const drop = content_catalog.airdrop.drops.find(({ id }) => id === drop_id)
     if (!holder || !recipient || !drop || state.distribution.pending) return
+    if (recipient.identity !== 'zklogin') return fail_holder(new Error('Continue with Google to receive this airdrop.'))
     dispatch({ type: 'distribution/pending', operation: `claim:${drop_id}` })
     void holder
       .claim_airdrop({ drop_id, item_type: drop.item_type, recipient: recipient.address })

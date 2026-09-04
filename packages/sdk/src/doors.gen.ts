@@ -135,7 +135,7 @@ export const join_world = (
   })
 
 /**
- * `api::search_zone` — TERMINAL (&Random): last command of its transaction.
+ * `api::create_zone` — TERMINAL (&Random): last command of its transaction.
  * @arg kiosk — &mut Kiosk
  * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
@@ -143,7 +143,7 @@ export const join_world = (
  * @arg z — u32
  * @arg world_object — &mut World
  */
-export const search_zone = (
+export const create_zone = (
   tx: Transaction,
   ctx: DoorCtx,
   args: {
@@ -156,7 +156,7 @@ export const search_zone = (
   }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::search_zone`,
+    target: `${ctx.pins.package}::api::create_zone`,
     arguments: [
       ctx.obj(tx, args.kiosk, true),
       ctx.obj(tx, args.personal, false),
@@ -164,6 +164,35 @@ export const search_zone = (
       ctx.pure.u32(tx, args.x),
       ctx.pure.u32(tx, args.z),
       ctx.obj(tx, args.world_object, true),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
+ * `api::refresh_zone` — TERMINAL (&Random): last command of its transaction.
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ * @arg character_id — ID
+ * @arg x — u32
+ * @arg z — u32
+ * @arg zone_object — &mut Zone
+ */
+export const refresh_zone = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { kiosk: Resolvable; personal: Resolvable; character_id: string; x: number; z: number; zone_object: Resolvable }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::refresh_zone`,
+    arguments: [
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pure.id(tx, args.character_id),
+      ctx.pure.u32(tx, args.x),
+      ctx.pure.u32(tx, args.z),
+      ctx.obj(tx, args.zone_object, true),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
       tx.object.clock(),
@@ -323,12 +352,10 @@ export const delete_character = (
 /**
  * `api::engage_fight`
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
- * @arg world_object — &mut World
+ * @arg zone_object — &mut Zone
  * @arg world_content — &WorldContent
- * @arg zone_x — u32
- * @arg zone_z — u32
  * @arg group_index — u64
  * @arg access — u8
  * @arg catalog — &BoardCatalog
@@ -338,12 +365,10 @@ export const engage_fight = (
   ctx: DoorCtx,
   args: {
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
-    world_object: Resolvable
+    zone_object: Resolvable
     world_content: Resolvable
-    zone_x: number
-    zone_z: number
     group_index: bigint | number | string
     access: number
     catalog: Resolvable
@@ -353,12 +378,10 @@ export const engage_fight = (
     target: `${ctx.pins.package}::api::engage_fight`,
     arguments: [
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
-      ctx.obj(tx, args.world_object, true),
+      ctx.obj(tx, args.zone_object, true),
       ctx.obj(tx, args.world_content, false),
-      ctx.pure.u32(tx, args.zone_x),
-      ctx.pure.u32(tx, args.zone_z),
       ctx.pure.u64(tx, args.group_index),
       ctx.pure.u8(tx, args.access),
       ctx.pin(tx, 'character_protected_policy', false),
@@ -380,13 +403,13 @@ export const add_fight_mob = (tx: Transaction, ctx: DoorCtx, args: { build: Reso
   })
 
 /**
- * `api::launch_fight`
+ * `api::launch_fight` — TERMINAL (&Random): last command of its transaction.
  * @arg build — FightBuild
  */
 export const launch_fight = (tx: Transaction, ctx: DoorCtx, args: { build: Resolvable }) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::launch_fight`,
-    arguments: [ctx.obj(tx, args.build, true), tx.object.clock()],
+    arguments: [ctx.obj(tx, args.build, true), tx.object.random(), tx.object.clock()],
   })
 
 /**
@@ -646,6 +669,16 @@ export const move_fighter = (
       ctx.pure.vector(tx, 'u64', args.path),
       ctx.pin(tx, 'version', false),
     ],
+  })
+
+/**
+ * `api::seal_fight_loot` — TERMINAL (&Random): last command of its transaction.
+ * @arg fight_object — &mut Fight
+ */
+export const seal_fight_loot = (tx: Transaction, ctx: DoorCtx, args: { fight_object: Resolvable }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::seal_fight_loot`,
+    arguments: [ctx.obj(tx, args.fight_object, true), tx.object.random(), ctx.pin(tx, 'version', false)],
   })
 
 /**
@@ -1180,13 +1213,11 @@ export const use_city_consumable = (
 
 /**
  * `api::gather` — TERMINAL (&Random): last command of its transaction.
- * @arg world_object — &mut World
+ * @arg zone_object — &mut Zone
  * @arg world_content — &WorldContent
  * @arg kiosk — &mut Kiosk
  * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
- * @arg zone_x — u32
- * @arg zone_z — u32
  * @arg pack_index — u64
  * @arg template — &ItemTemplate
  * @arg rare_template — &ItemTemplate
@@ -1197,13 +1228,11 @@ export const gather = (
   tx: Transaction,
   ctx: DoorCtx,
   args: {
-    world_object: Resolvable
+    zone_object: Resolvable
     world_content: Resolvable
     kiosk: Resolvable
     personal: Resolvable
     character_id: string
-    zone_x: number
-    zone_z: number
     pack_index: bigint | number | string
     template: Resolvable
     rare_template: Resolvable
@@ -1214,13 +1243,11 @@ export const gather = (
   tx.moveCall({
     target: `${ctx.pins.package}::api::gather`,
     arguments: [
-      ctx.obj(tx, args.world_object, true),
+      ctx.obj(tx, args.zone_object, true),
       ctx.obj(tx, args.world_content, false),
       ctx.obj(tx, args.kiosk, true),
       ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
-      ctx.pure.u32(tx, args.zone_x),
-      ctx.pure.u32(tx, args.zone_z),
       ctx.pure.u64(tx, args.pack_index),
       ctx.obj(tx, args.template, false),
       ctx.obj(tx, args.rare_template, false),
@@ -1317,6 +1344,8 @@ export const craft = (
  * @arg gear_id — ID
  * @arg gear_template — &ItemTemplate
  * @arg rune_item_id — ID
+ * @arg rune_stat — u8
+ * @arg rune_tier — u8
  */
 export const scribe_rune = (
   tx: Transaction,
@@ -1328,6 +1357,8 @@ export const scribe_rune = (
     gear_id: string
     gear_template: Resolvable
     rune_item_id: string
+    rune_stat: number
+    rune_tier: number
   }
 ) =>
   tx.moveCall({
@@ -1339,6 +1370,8 @@ export const scribe_rune = (
       ctx.pure.id(tx, args.gear_id),
       ctx.obj(tx, args.gear_template, false),
       ctx.pure.id(tx, args.rune_item_id),
+      ctx.pure.u8(tx, args.rune_stat),
+      ctx.pure.u8(tx, args.rune_tier),
       ctx.pin(tx, 'item_protected_policy', false),
       tx.object.random(),
       ctx.pin(tx, 'version', false),
@@ -1369,9 +1402,21 @@ export const crush_gear = (
   })
 
 /**
+ * `api::reveal_crush_claim`
+ * @arg claim — &mut CrushClaim
+ */
+export const reveal_crush_claim = (tx: Transaction, ctx: DoorCtx, args: { claim: Resolvable }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::reveal_crush_claim`,
+    arguments: [ctx.obj(tx, args.claim, true), ctx.pin(tx, 'version', false)],
+  })
+
+/**
  * `api::redeem_rune`
  * @arg claim — &mut CrushClaim
  * @arg template — &ItemTemplate
+ * @arg stat — u8
+ * @arg tier — u8
  * @arg existing — Option<ID>
  * @arg kiosk — &mut Kiosk
  * @arg cap — &KioskOwnerCap
@@ -1382,6 +1427,8 @@ export const redeem_rune = (
   args: {
     claim: Resolvable
     template: Resolvable
+    stat: number
+    tier: number
     existing: string | null | undefined
     kiosk: Resolvable
     cap: Resolvable
@@ -1392,6 +1439,8 @@ export const redeem_rune = (
     arguments: [
       ctx.obj(tx, args.claim, true),
       ctx.obj(tx, args.template, false),
+      ctx.pure.u8(tx, args.stat),
+      ctx.pure.u8(tx, args.tier),
       ctx.pure.option(tx, 'id', args.existing ?? null),
       ctx.obj(tx, args.kiosk, true),
       ctx.obj(tx, args.cap, false),
@@ -1592,7 +1641,7 @@ export const enter_dungeon = (
  * @arg world_content — &WorldContent
  * @arg dungeon_content — &DungeonContent
  * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
+ * @arg personal — &PersonalKioskCap
  * @arg character_id — ID
  * @arg access — u8
  * @arg catalog — &BoardCatalog
@@ -1605,7 +1654,7 @@ export const engage_dungeon_room = (
     world_content: Resolvable
     dungeon_content: Resolvable
     kiosk: Resolvable
-    cap: Resolvable
+    personal: Resolvable
     character_id: string
     access: number
     catalog: Resolvable
@@ -1618,7 +1667,7 @@ export const engage_dungeon_room = (
       ctx.obj(tx, args.world_content, false),
       ctx.obj(tx, args.dungeon_content, false),
       ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.personal, false),
       ctx.pure.id(tx, args.character_id),
       ctx.pure.u8(tx, args.access),
       ctx.pin(tx, 'character_protected_policy', false),
@@ -2418,7 +2467,8 @@ export const DOORS = {
     terminal: false,
   },
   join_world: { params: ['kiosk', 'cap', 'character_id', 'destination'], terminal: false },
-  search_zone: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'world_object'], terminal: true },
+  create_zone: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'world_object'], terminal: true },
+  refresh_zone: { params: ['kiosk', 'personal', 'character_id', 'x', 'z', 'zone_object'], terminal: true },
   raise_stat: { params: ['kiosk', 'cap', 'character_id', 'stat', 'points'], terminal: false },
   raise_spell: { params: ['kiosk', 'cap', 'character_id', 'spell'], terminal: false },
   equip_item: { params: ['kiosk', 'cap', 'character_id', 'slot', 'item_id'], terminal: false },
@@ -2426,22 +2476,11 @@ export const DOORS = {
   feed_kiosk_pet: { params: ['kiosk', 'cap', 'pet_template', 'pet_id', 'food_id'], terminal: false },
   delete_character: { params: ['kiosk', 'cap', 'character_id'], terminal: false },
   engage_fight: {
-    params: [
-      'kiosk',
-      'cap',
-      'character_id',
-      'world_object',
-      'world_content',
-      'zone_x',
-      'zone_z',
-      'group_index',
-      'access',
-      'catalog',
-    ],
+    params: ['kiosk', 'personal', 'character_id', 'zone_object', 'world_content', 'group_index', 'access', 'catalog'],
     terminal: false,
   },
   add_fight_mob: { params: ['build', 'template'], terminal: false },
-  launch_fight: { params: ['build'], terminal: false },
+  launch_fight: { params: ['build'], terminal: true },
   challenge_duel: {
     params: ['kiosk', 'personal', 'character_id', 'target', 'x', 'z', 'access', 'catalog'],
     terminal: true,
@@ -2458,6 +2497,7 @@ export const DOORS = {
   cast_spell: { params: ['fight_object', 'fighter_idx', 'spell', 'target_cell'], terminal: false },
   weapon_strike: { params: ['fight_object', 'fighter_idx', 'target_cell'], terminal: false },
   move_fighter: { params: ['fight_object', 'path'], terminal: false },
+  seal_fight_loot: { params: ['fight_object'], terminal: true },
   end_fight_turn: { params: ['fight_object'], terminal: true },
   crank_fight: { params: ['fight_object'], terminal: true },
   forfeit_fight: { params: ['fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
@@ -2504,13 +2544,11 @@ export const DOORS = {
   },
   gather: {
     params: [
-      'world_object',
+      'zone_object',
       'world_content',
       'kiosk',
       'personal',
       'character_id',
-      'zone_x',
-      'zone_z',
       'pack_index',
       'template',
       'rare_template',
@@ -2534,11 +2572,12 @@ export const DOORS = {
     terminal: true,
   },
   scribe_rune: {
-    params: ['kiosk', 'personal', 'character_id', 'gear_id', 'gear_template', 'rune_item_id'],
+    params: ['kiosk', 'personal', 'character_id', 'gear_id', 'gear_template', 'rune_item_id', 'rune_stat', 'rune_tier'],
     terminal: true,
   },
   crush_gear: { params: ['kiosk', 'personal', 'gear_ids'], terminal: true },
-  redeem_rune: { params: ['claim', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
+  reveal_crush_claim: { params: ['claim'], terminal: false },
+  redeem_rune: { params: ['claim', 'template', 'stat', 'tier', 'existing', 'kiosk', 'cap'], terminal: false },
   discard_crush_claim: { params: ['claim'], terminal: false },
   open_loot_box: { params: ['kiosk', 'personal', 'box_item_id', 'box_template'], terminal: true },
   claim_loot: { params: ['claim', 'rolled_template', 'existing', 'kiosk', 'personal'], terminal: true },
@@ -2550,7 +2589,16 @@ export const DOORS = {
     terminal: true,
   },
   engage_dungeon_room: {
-    params: ['world_object', 'world_content', 'dungeon_content', 'kiosk', 'cap', 'character_id', 'access', 'catalog'],
+    params: [
+      'world_object',
+      'world_content',
+      'dungeon_content',
+      'kiosk',
+      'personal',
+      'character_id',
+      'access',
+      'catalog',
+    ],
     terminal: false,
   },
   join_dungeon_room: { params: ['fight_object', 'kiosk', 'cap', 'character_id'], terminal: false },

@@ -454,28 +454,29 @@ mastery_page:
   balance: マスタリーポイント
   daily_ready: デイリークエストに挑戦できます
   daily_syncing: デイリークエストを更新中…
-  daily_title: デイリークエストを始める
-  daily_lead: ワールドを選ぼう。高レベルのワールドほど多くのマスタリーポイントを獲得できます。
+  daily_title: 今日のダンジョンクエストを選択
+  daily_lead: ワールドを選ぶと、見つけてクリアするダンジョンが1つ割り当てられます。
   unknown_dungeon: 不明なダンジョン
   quest_reward: マスタリーポイントを{{points}}獲得
+  quest_objective_before: ダンジョン
+  quest_objective_after: を見つけてクリアし、マスタリーポイントを受け取ろう。
   completed: 達成済み
   in_progress: 進行中
   required_level: 必要レベル {{level}}
   dungeon_count: '{{count}} ダンジョン'
-  starting: 割り当て中…
-  start: デイリークエスト開始
+  starting: ダンジョンを割り当て中…
+  start: デイリークエストを開始
   locked: ロック中
   world_reward: +{{points}}pts
-  offers_title: マスタリー報酬
-  offers_lead: マスタリーポイントを使って特別なルートボックスを解放しよう。
-  progression: 報酬ルート
-  offers_empty: マスタリーオファーはまだありません
-  ready: 解放可能
-  missing: あと{{points}}ポイント
-  unlocking: 解放中…
-  unlock: 解放 · {{cost}} pts
+  shop_title: マスタリーショップ
+  shop_lead: マスタリーポイントを使って特別なルートボックスを購入しよう。
+  shop_empty: 販売中のマスタリーアイテムはまだありません
+  ready_to_buy: 購入可能
+  points_missing: あと{{points}}ポイント
+  buying: 購入中…
+  buy: 購入 · {{cost}} pts
   quest_started: デイリークエストを割り当てました。
-  offer_unlocked: マスタリー報酬を解放しました。
+  offer_purchased: マスタリー報酬を購入しました。
 
 airdrop_page:
   title: 'エアドロップ'
@@ -490,6 +491,9 @@ airdrop_page:
   holder_connect_hint: '対象NFTを保有するウォレットを接続してください'
   holder_connect: 'ウォレットを接続'
   holder_connecting: '接続中…'
+  holder_connected: '接続済み'
+  holder_select: '選択'
+  holder_close: 'ウォレット選択を閉じる'
   holder_wallet_missing: '対応するSuiウォレットがありません'
   giftcards_title: '未交換のギフトカード'
   gift_login: 'Googleで続行して、このギフトをゲームウォレットで受け取ります'
@@ -624,6 +628,7 @@ admin_page:
   active_30d: 30日間アクティブプレイヤー
   active_last_30d: 過去30日間のアクティブ
   player_activity: プレイヤー活動
+  population: プレイヤー人口
   player_activity_body: 日次活動と移動30日リーチ
   stickiness: DAU / 30日
   online_players: オンラインプレイヤー
@@ -1573,7 +1578,7 @@ characters_page:
   max: 最大
   resources: 素材
   back: 戻る
-  gate_note: 装備のクラフト職業レベル{{level}}が必要です
+  gate_note: 対応するクラフト職業のレベル{{level}}から利用可能
   detail_title: アイテム
   forge_title: 鍛冶台
   inventory_title: インベントリ

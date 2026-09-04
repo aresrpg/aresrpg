@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, test } from 'bun:test'
 
 import {
@@ -11,6 +13,14 @@ import {
 } from '../src/server_link.ts'
 
 describe('server authentication link', () => {
+  test('transport open cannot erase reconnect backoff before authentication succeeds', () => {
+    const source = readFileSync(new URL('../src/server_link.ts', import.meta.url), 'utf8')
+    expect(source).not.toContain("addEventListener('open'")
+    expect(source).toContain(
+      "if (packet.type === 'packet/connection_accepted') {\n            accepted = true\n            retry_ms = BACKOFF_START_MS"
+    )
+  })
+
   test('signs the server challenge on the socket that issued it', async () => {
     const response = await create_login_response(
       {

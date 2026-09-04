@@ -6,7 +6,14 @@ import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import type { Sdk } from '../src/client.ts'
 import { create_seed_plan, recipe_door_args, type SeedContent } from '../src/seed.ts'
-import { board_catalog_id, item_template_id, mob_template_id, world_content_id, world_id } from '../src/seed_ids.ts'
+import {
+  board_catalog_id,
+  item_template_id,
+  mob_template_id,
+  world_content_id,
+  world_id,
+  zone_id,
+} from '../src/seed_ids.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
 
 const REGISTRY = `0x${'11'.repeat(32)}`
@@ -70,6 +77,11 @@ test('fieldless BoardCatalogKey derives the catalog created on Testnet', () => {
   ).toBe('0x759f42d1cdbc221789b9010d4a12a7dc53ea8b651180fb69417c2d35cb361a73')
 })
 
+test('ZoneKey field order derives the captured zone address', () => {
+  const id = (value: number) => `0x${String(value).padStart(64, '0')}`
+  expect(zone_id(id(15), id(1), 97, 98)).toBe('0x221731cc0747bc9266dd567cfc5210c7a61badf0e016635df20e96f5dbccb8a9')
+})
+
 const game = () => {
   const result = SDK({
     address: `0x${'99'.repeat(32)}`,
@@ -85,6 +97,7 @@ const game = () => {
         getObjects: async () => ({ objects: [] }),
         simulateTransaction: async () => ({}),
         executeTransaction: async () => ({}),
+        waitForTransaction: async () => ({}),
       },
     } as SuiTransport,
   })

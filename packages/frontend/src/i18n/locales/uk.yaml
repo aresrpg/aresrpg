@@ -454,28 +454,29 @@ mastery_page:
   balance: Очки майстерності
   daily_ready: Щоденне завдання доступне
   daily_syncing: Оновлення щоденного завдання…
-  daily_title: Почніть щоденне завдання
-  daily_lead: Оберіть світ. Світи вищого рівня дають більше очок майстерності.
+  daily_title: Оберіть сьогоднішнє завдання підземелля
+  daily_lead: Оберіть світ. Вам призначать підземелля, яке потрібно знайти й пройти.
   unknown_dungeon: Невідоме підземелля
   quest_reward: Отримайте {{points}} очок майстерності
+  quest_objective_before: Знайдіть і пройдіть підземелля
+  quest_objective_after: щоб отримати очки майстерності.
   completed: Підтверджено
   in_progress: Виконується
   required_level: Потрібен рівень {{level}}
   dungeon_count: '{{count}} підземель'
-  starting: Призначення…
+  starting: Призначення підземелля…
   start: Почати щоденне завдання
   locked: Заблоковано
   world_reward: +{{points}}pts
-  offers_title: Нагороди майстерності
-  offers_lead: Витрачайте очки майстерності, щоб розблокувати унікальні лутбокси.
-  progression: Шлях нагород
-  offers_empty: Пропозицій майстерності ще немає
-  ready: Готово до розблокування
-  missing: Бракує {{points}} очок
-  unlocking: Розблокування…
-  unlock: Розблокувати · {{cost}} оч.
+  shop_title: Крамниця майстерності
+  shop_lead: Витрачайте очки майстерності, щоб купувати унікальні скриньки зі здобиччю.
+  shop_empty: У крамниці майстерності ще немає товарів
+  ready_to_buy: Можна купити
+  points_missing: Бракує {{points}} очок
+  buying: Купівля…
+  buy: Купити · {{cost}} оч.
   quest_started: Щоденне завдання призначено.
-  offer_unlocked: Нагороду майстерності розблоковано.
+  offer_purchased: Нагороду майстерності придбано.
 
 airdrop_page:
   title: 'Ейрдропи'
@@ -490,6 +491,9 @@ airdrop_page:
   holder_connect_hint: 'Підключіть гаманець із відповідним NFT'
   holder_connect: 'Підключити гаманець'
   holder_connecting: 'Підключення…'
+  holder_connected: 'Підключено'
+  holder_select: 'Обрати'
+  holder_close: 'Закрити вибір гаманця'
   holder_wallet_missing: 'Сумісний гаманець Sui не встановлено'
   giftcards_title: 'Подарункові картки для погашення'
   gift_login: 'Продовжте через Google, щоб отримати цей подарунок у свій ігровий гаманець'
@@ -624,6 +628,7 @@ admin_page:
   active_30d: Активні гравці за 30 днів
   active_last_30d: активні за останні 30 днів
   player_activity: Активність гравців
+  population: Населення
   player_activity_body: Денна активність і ковзне охоплення за 30 днів
   stickiness: DAU / 30Д
   online_players: Гравці онлайн
@@ -1594,7 +1599,7 @@ characters_page:
   max: Макс
   resources: Ресурси
   back: Назад
-  gate_note: Потрібен {{level}} рівень ремісничої професії предмета
+  gate_note: Доступно з {{level}} рівня відповідної ремісничої професії
   detail_title: Предмет
   forge_title: Кузня
   inventory_title: Інвентар

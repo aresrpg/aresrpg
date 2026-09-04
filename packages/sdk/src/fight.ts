@@ -16,6 +16,7 @@ import {
   mob_template_id,
   world_content_id,
   world_id,
+  zone_id,
 } from './seed_ids.ts'
 
 type GameSdk = ReturnType<typeof SDK>
@@ -130,12 +131,11 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
     }): Promise<FightCreatedReceipt> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Fight transaction')
       const catalog = board_catalog_id(content_root, seed_package_original)
-      await sdk.hydrate_unknown([catalog])
       // TERMINAL (&Random) door — the reference borrow keeps it the last command
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.challenge_duel(tx, { kiosk, personal, character_id, target, x, z, access, catalog }),
-        { custody }
+        { custody, inputs: [catalog] }
       )
       const fight = created_fight_id(receipt)
       sdk.tag_gas?.(receipt, scope_of(fight))
@@ -168,18 +168,16 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       const game_original = sdk.game_type_package
       if (!game_original) throw new Error('Fight transaction unavailable: pins.json has no original game package')
       const world_object = world_id(content_root, game_original, world)
+      const zone_object = zone_id(world_object, game_original, zone_x, zone_z)
       const world_content = world_content_id(content_root, seed_package_original, world)
-      await sdk.hydrate_unknown([...templates, catalog, world_object, world_content])
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => {
+      const receipt = await with_terminal_kiosk(
+        (tx, kiosk, personal) => {
           const build = sdk.doors.engage_fight(tx, {
             kiosk,
-            cap,
+            personal,
             character_id,
-            world_object,
+            zone_object,
             world_content,
-            zone_x,
-            zone_z,
             group_index,
             access,
             catalog,
@@ -190,7 +188,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
           )
           sdk.doors.launch_fight(tx, { build: grown })
         },
-        { custody }
+        { custody, inputs: [...templates, catalog, zone_object, world_content] }
       )
       const fight = created_fight_id(receipt)
       sdk.tag_gas?.(receipt, scope_of(fight))
@@ -315,7 +313,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       return project_fight_boundary_receipt(receipt)
     },
 
-    /** One staged turn becomes one PTB. A lethal action is already its terminal boundary. */
+    /** One staged turn becomes one PTB. A lethal action seals team-loot entropy terminally. */
     commit_turn: async ({
       fight,
       actions,
@@ -352,7 +350,8 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
             target_cell: action.target_cell,
           })
       })
-      if (!ended) sdk.doors.end_fight_turn(tx, { fight_object: fight })
+      if (ended) sdk.doors.seal_fight_loot(tx, { fight_object: fight })
+      else sdk.doors.end_fight_turn(tx, { fight_object: fight })
       const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
       return Object.freeze({
         digest: receipt_digest(receipt),

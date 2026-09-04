@@ -33,6 +33,7 @@ const sdk = SDK({
       getObjects: async () => ({ objects: [] }),
       simulateTransaction: async () => ({}),
       executeTransaction: async () => ({}),
+      waitForTransaction: async () => ({}),
     },
   } satisfies SuiTransport,
 })

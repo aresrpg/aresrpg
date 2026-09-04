@@ -53,11 +53,9 @@ mod tests {
         ("forgemagie", "CrushClaim"),
         ("trade", "Trade"),
         ("version", "Version"),
-        ("world", "World"),
+        ("zone", "Zone"),
         // embedded value types
         ("world", "Checkpoint"),
-        ("zone", "ZoneKey"),
-        ("zone", "Zone"),
         ("equipment", "EquippedRecord"),
         ("dungeon", "DungeonRun"),
         ("gathering", "PendingAmbush"),
@@ -167,6 +165,9 @@ mod tests {
         // Owner-only writes fold this full row from their certified receipt; reconnect reads
         // the projected Mastery object, so no realtime event channel has a consumer.
         ("mastery", "MasteryUpdated"),
+        // The SDK consumes the deterministic vector from its own receipt to avoid composing
+        // zero-owed rune calls. The CrushClaim object remains reconnect authority.
+        ("forgemagie", "CrushRevealed"),
     ];
 
     fn repo_root() -> PathBuf {

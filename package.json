@@ -16,7 +16,6 @@
     "complexity:baseline": "bun scripts/update_complexity_baseline.mjs",
     "generate:cities": "bun scripts/generate_cities.mjs",
     "snapshot:holders": "bun scripts/snapshot_sui_holders.mjs",
-    "giftcards:export": "bun scripts/export_giftcards.mjs",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0 && prettier . --check",
     "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck",
     "format": "prettier . --write && eslint . --fix",
@@ -29,7 +28,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@mysten/sui": "2.29.0",
-    "@mysten/zksend": "1.2.23",
     "@types/node": "^26.4.1",
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
@@ -39,8 +37,6 @@
     "eslint-plugin-sonarjs": "4.2.0",
     "globals": "^17.12.0",
     "prettier": "^3.9.6",
-    "qrcode": "^1.5.4",
-    "sharp": "^0.35.4",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.69.0"
   },

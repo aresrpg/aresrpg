@@ -3,8 +3,8 @@
 /// A world's authored content as its OWN shared object — the ÷10 plan's Lever 2: the mutable
 /// gameplay `World` in core shrinks to id+name, and the 39KB of map data stops riding every
 /// search/gather/engage transaction. One object per world, derived by name under the registry
-/// root; core doors take it read-only beside the `World` and ASSERT the names match (content
-/// from one world must never resolve another's spawns). The six writers follow the door
+/// root; core doors take it read-only beside the independent `Zone` and ASSERT names match
+/// (content from one world must never resolve another's spawns). The six writers follow the door
 /// contract (registry.move); the biome map still arrives in ≤16KB pure-argument slices — all
 /// in one PTB, reads abort on a half-filled map (world_map owns that law).
 module aresrpg_seed::world_content;

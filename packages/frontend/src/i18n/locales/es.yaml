@@ -454,28 +454,29 @@ mastery_page:
   balance: Puntos de maestría
   daily_ready: Misión diaria disponible
   daily_syncing: Actualizando la misión diaria…
-  daily_title: Empieza tu misión diaria
-  daily_lead: Elige un mundo. Los mundos de mayor nivel dan más puntos de maestría.
+  daily_title: Elige la misión de mazmorra de hoy
+  daily_lead: Elige un mundo. Se te asignará una mazmorra que deberás encontrar y completar.
   unknown_dungeon: Mazmorra desconocida
   quest_reward: Gana {{points}} puntos de maestría
+  quest_objective_before: Encuentra y completa la mazmorra
+  quest_objective_after: para reclamar tus puntos de maestría.
   completed: Validada
   in_progress: En curso
   required_level: Requiere nivel {{level}}
   dungeon_count: '{{count}} mazmorras'
-  starting: Asignando…
+  starting: Asignando mazmorra…
   start: Iniciar misión diaria
   locked: Bloqueado
   world_reward: +{{points}}pts
-  offers_title: Recompensas de maestría
-  offers_lead: Gasta puntos de maestría para desbloquear cajas de botín únicas.
-  progression: Ruta de recompensas
-  offers_empty: Aún no hay ofertas de maestría
-  ready: Listo para desbloquear
-  missing: Faltan {{points}} puntos
-  unlocking: Desbloqueando…
-  unlock: Desbloquear · {{cost}} pts
+  shop_title: Tienda de maestría
+  shop_lead: Gasta puntos de maestría para comprar cajas de botín únicas.
+  shop_empty: Aún no hay objetos de maestría a la venta
+  ready_to_buy: Listo para comprar
+  points_missing: Faltan {{points}} puntos
+  buying: Comprando…
+  buy: Comprar · {{cost}} pts
   quest_started: Misión diaria asignada.
-  offer_unlocked: Recompensa de maestría desbloqueada.
+  offer_purchased: Recompensa de maestría comprada.
 
 airdrop_page:
   title: 'Airdrops'
@@ -490,6 +491,9 @@ airdrop_page:
   holder_connect_hint: 'Conecta la billetera que contiene el NFT elegible'
   holder_connect: 'Conectar billetera'
   holder_connecting: 'Conectando…'
+  holder_connected: 'Conectada'
+  holder_select: 'Seleccionar'
+  holder_close: 'Cerrar selección de billetera'
   holder_wallet_missing: 'No hay una billetera Sui compatible instalada'
   giftcards_title: 'Tarjetas regalo por canjear'
   gift_login: 'Continúa con Google para recibir este regalo en tu billetera del juego'
@@ -624,6 +628,7 @@ admin_page:
   active_30d: Jugadores activos en 30 días
   active_last_30d: activos en los últimos 30 días
   player_activity: Actividad de jugadores
+  population: Población
   player_activity_body: Actividad diaria y alcance móvil de 30 días
   stickiness: DAU / 30D
   online_players: Jugadores en línea
@@ -1596,7 +1601,7 @@ characters_page:
   max: Máx
   resources: Recursos
   back: Volver
-  gate_note: Requiere el oficio de artesanía del objeto al nivel {{level}}
+  gate_note: Disponible desde el nivel {{level}} del oficio asociado
   detail_title: Objeto
   forge_title: Forja
   inventory_title: Inventario

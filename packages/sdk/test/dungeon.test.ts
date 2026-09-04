@@ -51,6 +51,7 @@ test('a dungeon room fight composes its authored mobs in order and tags the crea
 
   expect(calls.map(({ door }) => door)).toEqual(['engage', 'mob', 'mob', 'launch'])
   expect(hydrated).toHaveLength(1)
+  expect(hydrated[0]).toContain(kiosk_cap.kioskId)
   expect(tagged).toEqual([`fight:${fight}`])
   expect(result).toEqual({ digest, fight })
 })

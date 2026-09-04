@@ -14177,18 +14177,6 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 6,
-            "value_max": 10,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
           }
         ],
         "crit_effects": [
@@ -14209,18 +14197,6 @@
             "element": "",
             "value": 1,
             "value_max": 3,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 11,
-            "value_max": 15,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 3,
@@ -14266,18 +14242,6 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 6,
-            "value_max": 12,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
           }
         ],
         "crit_effects": [
@@ -14298,18 +14262,6 @@
             "element": "",
             "value": 1,
             "value_max": 4,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 13,
-            "value_max": 17,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 3,
@@ -14355,18 +14307,6 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 6,
-            "value_max": 14,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
           }
         ],
         "crit_effects": [
@@ -14387,18 +14327,6 @@
             "element": "",
             "value": 1,
             "value_max": 4,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 15,
-            "value_max": 19,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 3,
@@ -14444,18 +14372,6 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 6,
-            "value_max": 16,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
           }
         ],
         "crit_effects": [
@@ -14476,18 +14392,6 @@
             "element": "",
             "value": 1,
             "value_max": 5,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 17,
-            "value_max": 21,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 3,
@@ -14533,18 +14437,6 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 6,
-            "value_max": 18,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
           }
         ],
         "crit_effects": [
@@ -14565,18 +14457,6 @@
             "element": "",
             "value": 1,
             "value_max": 5,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 3,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          },
-          {
-            "kind": 4,
-            "element": "",
-            "value": 19,
-            "value_max": 23,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 3,
@@ -27246,7 +27126,7 @@
         "free_cell": false,
         "casts_per_turn": 0,
         "casts_per_target": 0,
-        "cooldown_turns": 4,
+        "cooldown_turns": 6,
         "crit_1_in": 2,
         "effects": [
           {
@@ -27266,89 +27146,7 @@
           {
             "kind": 4,
             "element": "",
-            "value": 5,
-            "value_max": 10,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 4,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          }
-        ]
-      },
-      {
-        "ap_cost": 2,
-        "range_min": 0,
-        "range_max": 0,
-        "modifiable_range": false,
-        "line_of_sight": false,
-        "line_launch": false,
-        "free_cell": false,
-        "casts_per_turn": 0,
-        "casts_per_target": 0,
-        "cooldown_turns": 4,
-        "crit_1_in": 2,
-        "effects": [
-          {
-            "kind": 1,
-            "element": "earth",
             "value": 10,
-            "value_max": 10,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 4,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 0
-          }
-        ],
-        "crit_effects": [
-          {
-            "kind": 4,
-            "element": "",
-            "value": 6,
-            "value_max": 12,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 4,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          }
-        ]
-      },
-      {
-        "ap_cost": 2,
-        "range_min": 0,
-        "range_max": 0,
-        "modifiable_range": false,
-        "line_of_sight": false,
-        "line_launch": false,
-        "free_cell": false,
-        "casts_per_turn": 0,
-        "casts_per_target": 0,
-        "cooldown_turns": 4,
-        "crit_1_in": 2,
-        "effects": [
-          {
-            "kind": 1,
-            "element": "earth",
-            "value": 10,
-            "value_max": 10,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 4,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 0
-          }
-        ],
-        "crit_effects": [
-          {
-            "kind": 4,
-            "element": "",
-            "value": 8,
             "value_max": 15,
             "area_shape": 0,
             "area_size": 0,
@@ -27369,7 +27167,7 @@
         "free_cell": false,
         "casts_per_turn": 0,
         "casts_per_target": 0,
-        "cooldown_turns": 4,
+        "cooldown_turns": 6,
         "crit_1_in": 2,
         "effects": [
           {
@@ -27389,8 +27187,8 @@
           {
             "kind": 4,
             "element": "",
-            "value": 10,
-            "value_max": 18,
+            "value": 11,
+            "value_max": 16,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 4,
@@ -27410,7 +27208,7 @@
         "free_cell": false,
         "casts_per_turn": 0,
         "casts_per_target": 0,
-        "cooldown_turns": 4,
+        "cooldown_turns": 6,
         "crit_1_in": 2,
         "effects": [
           {
@@ -27430,49 +27228,131 @@
           {
             "kind": 4,
             "element": "",
-            "value": 12,
-            "value_max": 22,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 4,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 12
-          }
-        ]
-      },
-      {
-        "ap_cost": 2,
-        "range_min": 0,
-        "range_max": 0,
-        "modifiable_range": false,
-        "line_of_sight": false,
-        "line_launch": false,
-        "free_cell": false,
-        "casts_per_turn": 0,
-        "casts_per_target": 0,
-        "cooldown_turns": 4,
-        "crit_1_in": 2,
-        "effects": [
-          {
-            "kind": 1,
-            "element": "earth",
-            "value": 10,
-            "value_max": 10,
-            "area_shape": 0,
-            "area_size": 0,
-            "target_filter": 4,
-            "chance_bp": 10000,
-            "turns": 0,
-            "stat": 0
-          }
-        ],
-        "crit_effects": [
-          {
-            "kind": 4,
-            "element": "",
-            "value": 15,
+            "value": 20,
             "value_max": 28,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
+          }
+        ]
+      },
+      {
+        "ap_cost": 2,
+        "range_min": 0,
+        "range_max": 0,
+        "modifiable_range": false,
+        "line_of_sight": false,
+        "line_launch": false,
+        "free_cell": false,
+        "casts_per_turn": 0,
+        "casts_per_target": 0,
+        "cooldown_turns": 6,
+        "crit_1_in": 2,
+        "effects": [
+          {
+            "kind": 1,
+            "element": "earth",
+            "value": 10,
+            "value_max": 10,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 4,
+            "element": "",
+            "value": 30,
+            "value_max": 35,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
+          }
+        ]
+      },
+      {
+        "ap_cost": 2,
+        "range_min": 0,
+        "range_max": 0,
+        "modifiable_range": false,
+        "line_of_sight": false,
+        "line_launch": false,
+        "free_cell": false,
+        "casts_per_turn": 0,
+        "casts_per_target": 0,
+        "cooldown_turns": 5,
+        "crit_1_in": 2,
+        "effects": [
+          {
+            "kind": 1,
+            "element": "earth",
+            "value": 10,
+            "value_max": 10,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 4,
+            "element": "",
+            "value": 36,
+            "value_max": 40,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
+          }
+        ]
+      },
+      {
+        "ap_cost": 2,
+        "range_min": 0,
+        "range_max": 0,
+        "modifiable_range": false,
+        "line_of_sight": false,
+        "line_launch": false,
+        "free_cell": false,
+        "casts_per_turn": 0,
+        "casts_per_target": 0,
+        "cooldown_turns": 4,
+        "crit_1_in": 2,
+        "effects": [
+          {
+            "kind": 1,
+            "element": "earth",
+            "value": 10,
+            "value_max": 10,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 4,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 0
+          }
+        ],
+        "crit_effects": [
+          {
+            "kind": 4,
+            "element": "",
+            "value": 50,
+            "value_max": 50,
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 4,

@@ -347,6 +347,25 @@ fn emit_object(
         );
         return Ok(());
     }
+    if is_game(t, game, "zone", "Zone") {
+        let zone = decode::from_bytes::<decode::Zone>(o.bytes)
+            .map_err(|error| drift("zone::Zone", o.id, error))?;
+        let taken = Value::Array(zone.res_taken.iter().map(|count| json!(count)).collect());
+        cypher.push(format!(
+            "MERGE (v:Zone {{world: {world}, zx: {zone_x}, zz: {zone_z}}}) SET \
+             v.id = {id}, v.seed = {seed}, v.searched_at_ms = {searched_at_ms}, \
+             v.mob_taken = {mob_taken}, v.res_taken = {res_taken}, v.ckpt = {ckpt}",
+            world = q(&zone.world),
+            zone_x = zone.zone_x,
+            zone_z = zone.zone_z,
+            id = q_id(&zone.id),
+            seed = q(&zone.seed.to_string()),
+            searched_at_ms = zone.searched_at_ms,
+            mob_taken = q(&zone.mob_taken.to_string()),
+            res_taken = taken,
+        ));
+        return Ok(());
+    }
     if is_game(t, game, "fight", "Fight") {
         return emit_fight(cypher, o, ckpt);
     }
@@ -895,52 +914,6 @@ fn emit_field(
                 format!("v.pet_last_day = {}", f.value.last_day),
             ],
         );
-        return Ok(());
-    }
-
-    // ── World DFs: zones ──
-    if key == game_key(game, "zone::ZoneKey") {
-        let Some((parent, _)) = df_parent(o, outputs, game, "world", "World") else {
-            return Ok(());
-        };
-        let f = decode::from_bytes::<Field<decode::ZoneKey, decode::Zone>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
-        // A zone is addressed by its WORLD'S NAME, like every other node in this graph (a Fight
-        // carries `world` as the name too). The DF hangs off the World OBJECT, so the name has to
-        // be read off the parent — and it is always there to read: every Move door that writes a
-        // zone DF takes `&mut World` (search, consume_mob_group, consume_resource_node), so the
-        // World is a mutated output of the same transaction, always.
-        //
-        // Keying on the parent's OBJECT ID instead (with the name kept beside it as a second
-        // property) is what this used to do, and it made every zone unreadable: the server asks
-        // for `{world: "01_first_shore"}` because that is the only world identity the chain gives
-        // a player, and nothing ever matched.
-        let Some(world) = outputs.iter().find(|w| w.id == parent) else {
-            return Err(anyhow::anyhow!(
-                "zone {} wrote without its parent World {} in the same checkpoint — the world \
-                 name is this node's key and is never invented",
-                o.id.hex(),
-                parent.hex(),
-            ));
-        };
-        let world_name = decode::from_bytes::<decode::World>(world.bytes)
-            .map_err(|e| drift("world::World", world.id, e))?
-            .name;
-        let taken = Value::Array(f.value.res_taken.iter().map(|n| json!(n)).collect());
-        let assigns = [
-            format!("v.seed = {}", q(&f.value.seed.to_string())),
-            format!("v.searched_at_ms = {}", f.value.searched_at_ms),
-            format!("v.mob_taken = {}", q(&f.value.mob_taken.to_string())),
-            format!("v.res_taken = {}", taken),
-            format!("v.ckpt = {}", ckpt),
-        ];
-        cypher.push(format!(
-            "MERGE (v:Zone {{world: {w}, zx: {zx}, zz: {zz}}}) SET {set}",
-            w = q(&world_name),
-            zx = f.name.zone_x,
-            zz = f.name.zone_z,
-            set = assigns.join(", "),
-        ));
         return Ok(());
     }
 
@@ -1790,113 +1763,35 @@ mod tests {
         assert!(!active.contains("WHERE v.world"));
     }
 
-    /// A World is id + NAME — all a zone needs from it (slim by law, Lever 2).
-    fn world_bytes(name: &str) -> Vec<u8> {
-        bcs::to_bytes(&decode::World {
-            id: Id([1; 32]),
-            name: name.into(),
-        })
-        .unwrap()
-    }
-
     #[test]
-    fn a_zone_is_keyed_by_its_world_name_like_every_other_node() {
-        // 2026-08-22: this node used to key on the parent World's OBJECT ID and keep the name
-        // beside it as `world_name`. Every read asks for `{world: "01_first_shore"}` — the only
-        // world identity the chain hands a player — so nothing ever matched and a searched zone
-        // came back empty: no mobs, no resources, no compass pips, and a discovery prompt that
-        // never went away because the row it waits for could not arrive.
-        let world_ty = t(GAME, "world", "World", &[]);
-        let world = world_bytes("01_first_shore");
-        let zone_ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[
-                &format!("{GAME}::zone::ZoneKey"),
-                &format!("{GAME}::zone::Zone"),
-            ],
-        );
-        let zone = bcs::to_bytes(&Field {
+    fn an_independent_zone_projects_without_its_world_parent() {
+        let zone_ty = t(GAME, "zone", "Zone", &[]);
+        let zone = bcs::to_bytes(&decode::Zone {
             id: Id([9; 32]),
-            name: decode::ZoneKey {
-                zone_x: 97,
-                zone_z: 98,
-            },
-            value: decode::Zone {
-                seed: 4_163_223_416,
-                searched_at_ms: 1_787_383_013_369,
-                mob_taken: 5,
-                res_taken: vec![1, 2],
-            },
+            world: "01_first_shore".into(),
+            zone_x: 97,
+            zone_z: 98,
+            seed: 4_163_223_416,
+            searched_at_ms: 1_787_383_013_369,
+            mob_taken: 5,
+            res_taken: vec![1, 2],
         })
         .unwrap();
-        let outputs = [
-            ObjView {
-                id: Id([1; 32]),
-                owner: OwnerKind::Shared,
-                type_key: &world_ty,
-                bytes: &world,
-            },
-            ObjView {
-                id: Id([9; 32]),
-                owner: OwnerKind::Object(Id([1; 32])),
-                type_key: &zone_ty,
-                bytes: &zone,
-            },
-        ];
+        let outputs = [ObjView {
+            id: Id([9; 32]),
+            owner: OwnerKind::Shared,
+            type_key: &zone_ty,
+            bytes: &zone,
+        }];
 
         let cypher = project(&view(&outputs, &[], &[]), GAME).unwrap();
         let write = cypher.iter().find(|c| c.contains(":Zone")).unwrap();
 
         assert!(write.contains("MERGE (v:Zone {world: '01_first_shore', zx: 97, zz: 98})"));
-        // the name is the KEY, never a second property beside an id key
-        assert!(!write.contains("world_name"));
-        assert!(!write.contains("0x0101"));
+        assert!(write.contains("v.id = '0x0909"));
         assert!(write.contains("v.seed = '4163223416'"));
         assert!(write.contains("v.mob_taken = '5'"));
         assert!(write.contains("v.res_taken = [1,2]"));
-    }
-
-    #[test]
-    fn a_zone_without_its_parent_world_fails_loudly_rather_than_unkeyed() {
-        // the name cannot be invented, and a zone written under a guessed key is worse than one
-        // not written at all — it would be permanently invisible to every read
-        let zone_ty = t(
-            crate::ownership::SUI_FRAMEWORK,
-            "dynamic_field",
-            "Field",
-            &[
-                &format!("{GAME}::zone::ZoneKey"),
-                &format!("{GAME}::zone::Zone"),
-            ],
-        );
-        let zone = bcs::to_bytes(&Field {
-            id: Id([9; 32]),
-            name: decode::ZoneKey {
-                zone_x: 1,
-                zone_z: 2,
-            },
-            value: decode::Zone {
-                seed: 7,
-                searched_at_ms: 1,
-                mob_taken: 0,
-                res_taken: vec![],
-            },
-        })
-        .unwrap();
-        let outputs = [ObjView {
-            id: Id([9; 32]),
-            owner: OwnerKind::Object(Id([1; 32])),
-            type_key: &zone_ty,
-            bytes: &zone,
-        }];
-
-        let failure = project(&view(&outputs, &[], &[]), GAME)
-            .unwrap_err()
-            .to_string();
-
-        assert!(failure.contains("without its parent World"));
     }
 
     #[test]

@@ -78,7 +78,7 @@
       "App": [15]
     },
     "packages/frontend/src/mastery/MasteryPage.tsx": {
-      "MasteryPage": [13]
+      "MasteryPage": [11]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
       "BrowsePanel": [12],
@@ -500,8 +500,7 @@
     },
     "packages/frontend/src/mastery/MasteryPage.tsx": {
       "MasteryPage": [10],
-      "MasteryPage > offers.map[0]({ state, item },index)": [11],
-      "MasteryPage > world_card_rows().map[0](card)": [10]
+      "MasteryPage > world_cards.map[0](card)": [10]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
       "AskRow": [11],

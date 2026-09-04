@@ -36,22 +36,21 @@ const stat_tx = sdk.tx()
 sdk.doors.raise_stat(stat_tx, { kiosk, cap, character_id, stat: 'strength', points: 5 })
 const receipt = await sdk.execute(stat_tx)
 
-// composed PTB (hot potatoes chain through returned results)
+// composed PvM birth: the packed personal cap keeps terminal Random truly last
+await sdk.hydrate([kiosk, personal, zone_object, world_content, catalog, template])
 const tx = sdk.tx()
 const build = sdk.doors.engage_fight(tx, {
   kiosk,
-  cap,
+  personal,
   character_id,
-  world_object,
+  zone_object,
   world_content,
-  zone_x,
-  zone_z,
   group_index: 0,
   access: 0,
   catalog,
 })
-sdk.doors.add_fight_mob(tx, { build, template })
-sdk.doors.launch_fight(tx, { build })
+const grown = sdk.doors.add_fight_mob(tx, { build, template })
+sdk.doors.launch_fight(tx, { build: grown }) // terminal &Random command
 await sdk.execute(tx)
 ```
 

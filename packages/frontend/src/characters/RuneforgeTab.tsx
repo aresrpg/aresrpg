@@ -5,7 +5,7 @@
 // the bag pool (gear / runes tabs). The outcome is the chain's random roll — no success
 // percentage is ever shown (honest-data law); the RuneScribed event is the one truth and one
 // certified input folds both the item delta and the session ledger. The gear category's
-// forgery job comes from the shared category map and must be level 70, matching Move.
+// forgery job comes from the shared category map and is available from level 1, matching Move.
 
 import { useMemo, useState } from 'react'
 import { craft_job_of, item_stat_center, rune_effect, rune_max_apps, stat_names } from '@aresrpg/immutable'
@@ -216,6 +216,7 @@ export default function RuneforgeTab({
         gear_id: sel_gear.id,
         gear_item_type: sel_gear.item_type,
         rune_item_id: sel_rune.id,
+        rune_item_type: sel_rune.item_type,
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
     )

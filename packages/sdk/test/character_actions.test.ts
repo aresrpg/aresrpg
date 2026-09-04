@@ -12,7 +12,7 @@ import { SDK, absorb_receipt, type Receipt, type SuiTransport } from '../src/cli
 import { character_create } from '../src/character.ts'
 import { character_actions as gate_actions } from '../src/character_actions.ts'
 import { fight_actions } from '../src/fight.ts'
-import { item_template_id, recipe_id, world_content_id, world_id } from '../src/seed_ids.ts'
+import { item_template_id, recipe_id, world_content_id, world_id, zone_id } from '../src/seed_ids.ts'
 
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
@@ -287,15 +287,14 @@ describe('the character builder', () => {
       ]
     )
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
-
     const outcome = await actions.scribe_rune({
       character_id: id(20),
       gear_id: id(21),
       gear_item_type: 'straw_hat',
       rune_item_id: id(22),
+      rune_item_type: 'rune_vitality_ba',
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
-
     expect(door_args).toMatchObject({
       kiosk: kiosk_cap.kioskId,
       personal: kiosk_ref,
@@ -303,6 +302,8 @@ describe('the character builder', () => {
       gear_id: id(21),
       gear_template: item_template_id(id(61), id(60), 'straw_hat'),
       rune_item_id: id(22),
+      rune_stat: 0,
+      rune_tier: 1,
     })
     expect(outcome).toMatchObject({
       stat: 0,
@@ -313,7 +314,6 @@ describe('the character builder', () => {
       new_puits: 7,
     })
   })
-
   test('craft composes one terminal batch and projects its aggregate receipt', async () => {
     let door_args: Record<string, unknown> | null = null
     const sdk = terminal_sdk({ craft: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) }, [
@@ -367,42 +367,20 @@ describe('the character builder', () => {
     ).rejects.toThrow('1 to 1000')
   })
 
-  test('a world door receives the World OBJECT, never the world NAME', async () => {
-    // 2026-08-22: pressing G failed with "invalid object_id: Unable to parse Address (must be hex
-    // string of length 32)". `api::search_zone` takes `&mut World` — an OBJECT — while the app
-    // knows a world by its authored name; passing the name straight through handed Sui a
-    // non-address. The SDK derives the object from the Registry root and core type package.
-    let door_args: Record<string, unknown> | null = null
-    const sdk = terminal_sdk({ search_zone: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) })
-    const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
-
-    await actions.search_zone({ character_id: id(20), world: 'nauvis', x: 1, z: 2 })
-
-    expect(door_args!.world_object).toBe(world_id(id(61), id(1), 'nauvis'))
-  })
-
-  test('a world whose derived object does not exist fails during explicit hydration', async () => {
-    const sdk = {
-      ...terminal_sdk({ search_zone: () => {} }),
-      hydrate_unknown: async () => {
-        throw new Error('unknown world 99_nowhere')
-      },
-    }
-    const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
-
-    await expect(actions.search_zone({ character_id: id(20), world: '99_nowhere', x: 1, z: 2 })).rejects.toThrow(
-      '99_nowhere'
-    )
-  })
-
   test('search_zone proves the walk with the pose it was given and folds NOTHING', async () => {
     // the search's whole output is zone state — a seed read off this receipt would race the
     // projected row that carries it, so the client waits for the stream instead
     let door_args: Record<string, unknown> | null = null
-    const sdk = terminal_sdk({ search_zone: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) })
+    const sdk = terminal_sdk({ create_zone: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) })
     const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
 
-    const out = await actions.search_zone({ character_id: id(20), world: 'nauvis', x: 49_700, z: 50_200 })
+    const out = await actions.search_zone({
+      character_id: id(20),
+      world: 'nauvis',
+      x: 49_700,
+      z: 50_200,
+      refresh: false,
+    })
 
     expect(door_args).toMatchObject({
       kiosk: kiosk_cap.kioskId,
@@ -413,6 +391,22 @@ describe('the character builder', () => {
       world_object: world_id(id(61), id(1), 'nauvis'),
     })
     expect(out).toEqual({ digest })
+  })
+
+  test('an expired zone refreshes its derived shared object without touching World', async () => {
+    let door_args: Record<string, unknown> | null = null
+    const sdk = terminal_sdk({ refresh_zone: (_tx: unknown, args: Record<string, unknown>) => void (door_args = args) })
+    const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
+    const world_object = world_id(id(61), id(1), 'nauvis')
+
+    await actions.search_zone({ character_id: id(20), world: 'nauvis', x: 49_700, z: 50_200, refresh: true })
+
+    expect(door_args).toMatchObject({
+      zone_object: zone_id(world_object, id(1), 97, 98),
+      x: 49_700,
+      z: 50_200,
+    })
+    expect(door_args).not.toHaveProperty('world_object')
   })
 
   test('gather passes the row own rare link, and reports the protector verdict it drew', async () => {
@@ -434,7 +428,11 @@ describe('the character builder', () => {
       existing_rare: null,
     })
 
-    expect(door_args).toMatchObject({ zone_x: 97, zone_z: 98, pack_index: 4, existing: null })
+    expect(door_args).toMatchObject({
+      zone_object: zone_id(world_id(id(61), id(1), '01_first_shore'), id(1), 97, 98),
+      pack_index: 4,
+      existing: null,
+    })
     expect(door_args!.template).not.toBe(door_args!.rare_template)
     // a fired verdict ROOTS the character until resolve_ambush — the caller must learn it here
     expect(out).toEqual({ digest, quantity: 3, ambushed: true })

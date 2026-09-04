@@ -125,13 +125,11 @@ describe('generated doors through the bound resolver', () => {
     const tx = sdk.tx()
     const build = sdk.doors.engage_fight(tx, {
       kiosk: id(11),
-      cap: id(13),
+      personal: id(13),
       character_id: id(13),
-      world_object: id(15),
+      zone_object: id(15),
       world_content: { objectId: id(21), initialSharedVersion: '7' },
       catalog: { objectId: id(22), initialSharedVersion: '8' },
-      zone_x: 0,
-      zone_z: 0,
       group_index: 0,
       access: 0,
     })

@@ -118,9 +118,6 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
       const next = new WebSocket(url)
       socket = next
       accepted = false
-      next.addEventListener('open', () => {
-        retry_ms = BACKOFF_START_MS
-      })
       next.addEventListener('message', ({ data }) => {
         if (disposed || socket !== next) return
         try {
@@ -147,7 +144,10 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
               })
             return
           }
-          if (packet.type === 'packet/connection_accepted') accepted = true
+          if (packet.type === 'packet/connection_accepted') {
+            accepted = true
+            retry_ms = BACKOFF_START_MS
+          }
           dispatch({ type: 'server/packet', packet })
           if (packet.type === 'packet/connection_accepted') start_latency()
         } catch (error) {

@@ -104,7 +104,7 @@ fun searched_group_fight_returns_both_characters_and_closes() {
   let content = scenario.take_shared<world_content::WorldContent>();
   let clock = scenario.take_shared<clock::Clock>();
   let mut generator = random::new_generator_from_seed_for_testing(b"zone-search");
-  zone::search(
+  zone::create(
     kiosk.borrow_mut(personal_kiosk::borrow(&personal), first_id),
     CENTER,
     CENTER,
@@ -122,24 +122,21 @@ fun searched_group_fight_returns_both_characters_and_closes() {
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
   let personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
   let protected = scenario.take_from_sender<protected_policy::AresRPG_TransferPolicy<character::Character>>();
-  let mut world = scenario.take_shared<world::World>();
+  let mut zone = scenario.take_shared<zone::Zone>();
   let content = scenario.take_shared<world_content::WorldContent>();
   let catalog = scenario.take_shared<board_catalog::BoardCatalog>();
   let mob = scenario.take_shared<mob_rows::MobTemplate>();
   let version = scenario.take_shared<version::Version>();
   let mut clock = scenario.take_shared<clock::Clock>();
   clock::increment_for_testing(&mut clock, 1_000_000);
-  let groups = zone::mob_groups(&world, &content, 97, 97);
+  let groups = zone::mob_groups(&zone, &content);
   let group_index = groups[0].group_index();
-  let kiosk_cap = personal_kiosk::borrow(&personal);
   let build = api::engage_fight(
     &mut kiosk,
-    kiosk_cap,
+    &personal,
     first_id,
-    &mut world,
+    &mut zone,
     &content,
-    97,
-    97,
     group_index,
     0,
     &protected,
@@ -149,13 +146,14 @@ fun searched_group_fight_returns_both_characters_and_closes() {
     scenario.ctx(),
   );
   let build = api::add_fight_mob(build, &mob);
-  api::launch_fight(build, &clock, scenario.ctx());
+  let mut first_turn_entropy = random::new_generator_from_seed_for_testing(b"first-turn");
+  fight::launch(build, &mut first_turn_entropy, &clock, scenario.ctx());
   assert!(!kiosk.has_item(first_id), 0);
   assert!(event::events_by_type<fight::FightCreated>().length() == 1, 5);
   transfer::public_transfer(kiosk, OWNER);
   personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   transfer::public_transfer(protected, OWNER);
-  test_scenario::return_shared(world);
+  test_scenario::return_shared(zone);
   test_scenario::return_shared(content);
   test_scenario::return_shared(catalog);
   test_scenario::return_shared(mob);
@@ -197,6 +195,8 @@ fun searched_group_fight_returns_both_characters_and_closes() {
   let mut turn_entropy = random::new_generator_from_seed_for_testing(b"fight-turns");
   fight::start(&mut fight, &mut turn_entropy, &clock);
   api::weapon_strike(&mut fight, 0, 106, &version, scenario.ctx());
+  let mut loot_commit = random::new_generator_from_seed_for_testing(b"loot-commit");
+  fight::seal_end(&mut fight, &mut loot_commit);
   let mut loot_entropy = random::new_generator_from_seed_for_testing(b"fight-loot");
   let fighters = vector[0, 2];
   fight::assert_last_settlers(&fight, &fighters, scenario.ctx());

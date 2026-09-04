@@ -30,7 +30,7 @@ use aresrpg::{
   protected_policy::AresRPG_TransferPolicy,
   version::Version,
   world::{Self, World},
-  zone,
+  zone::{Self, Zone},
 };
 use aresrpg_seed::{
   dungeon_content::DungeonContent,
@@ -145,9 +145,9 @@ public fun join_world(
   world::join_world(character, destination, clock);
 }
 
-/// Discover (or refresh after the TTL) the zone at the character's claimed position — the
-/// walk is proven, then fresh entropy draws what lives there. ENTRY: `&Random` law.
-entry fun search_zone(
+/// First discovery of the zone at the character's claimed position. The walk is proven,
+/// then fresh entropy draws what lives there. ENTRY: `&Random` law.
+entry fun create_zone(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
@@ -163,7 +163,26 @@ entry fun search_zone(
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   let character: &mut Character = kiosk.borrow_mut(cap, character_id);
-  zone::search(character, x, z, world_object, &mut generator, clock);
+  zone::create(character, x, z, world_object, &mut generator, clock);
+}
+
+/// Refresh a previously discovered zone without touching the World root. ENTRY: `&Random` law.
+entry fun refresh_zone(
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  character_id: ID,
+  x: u32,
+  z: u32,
+  zone_object: &mut Zone,
+  randomness: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
+  let character: &mut Character = kiosk.borrow_mut(cap, character_id);
+  zone::refresh(character, x, z, zone_object, &mut generator, clock);
 }
 
 /// Spend exact available capital through the character class's characteristic ladder.
@@ -280,12 +299,10 @@ public fun delete_character(
 /// `launch_fight` — one transaction.
 public fun engage_fight(
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
-  world_object: &mut World,
+  zone_object: &mut Zone,
   world_content: &WorldContent,
-  zone_x: u32,
-  zone_z: u32,
   group_index: u64,
   access: u8, // 0 public — anyone joins your side · 1 group-only
   protected: &AresRPG_TransferPolicy<Character>,
@@ -294,10 +311,10 @@ public fun engage_fight(
   clock: &Clock,
   ctx: &mut TxContext,
 ): FightBuild {
-  version.assert_latest();
+  let cap = personal_cap(personal, version);
   fight::engage(
-    protected, kiosk, cap, character_id, world_object, world_content, zone_x, zone_z,
-    group_index, access, catalog, clock, ctx,
+    protected, kiosk, cap, character_id, zone_object, world_content, group_index, access,
+    catalog, clock, ctx,
   )
 }
 
@@ -305,13 +322,22 @@ public fun add_fight_mob(build: FightBuild, template: &MobTemplate): FightBuild 
   fight::add_mob(build, template)
 }
 
-public fun launch_fight(build: FightBuild, clock: &Clock, ctx: &mut TxContext) {
-  fight::launch(build, clock, ctx)
+/// Materialize the fight and commit its first boundary entropy. No random-dependent work runs
+/// after the draw. ENTRY: `&Random` law and the final command of the build PTB.
+entry fun launch_fight(
+  build: FightBuild,
+  randomness: &Random,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let mut generator = randomness.new_generator(ctx);
+  fight::launch(build, &mut generator, clock, ctx)
 }
 
 /// Challenge a DUEL at your proven spot — side B is RESERVED for `target`, so the challenge
-/// itself is the invitation and no bystander can take that seat. ENTRY: `&Random` law (the
-/// board rolls fresh). Duels never touch persistent hp, xp, or loot.
+/// itself is the invitation and no bystander can take that seat. The board derives from match
+/// identity; terminal Random commits only the first turn boundary. Duels never touch persistent
+/// hp, xp, or loot.
 entry fun challenge_duel(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
@@ -465,6 +491,19 @@ public fun move_fighter(fight_object: &mut Fight, path: vector<u64>, version: &V
   fight::move_fighter(fight_object, &path, ctx);
 }
 
+/// Seal retry-stable team-loot entropy after a player action ended combat. The normal
+/// start/end/crank boundaries seal automatically. ENTRY: `&Random` law.
+entry fun seal_fight_loot(
+  fight_object: &mut Fight,
+  randomness: &Random,
+  version: &Version,
+  ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  let mut generator = randomness.new_generator(ctx);
+  fight::seal_end(fight_object, &mut generator);
+}
+
 entry fun end_fight_turn(
   fight_object: &mut Fight,
   randomness: &Random,
@@ -473,8 +512,8 @@ entry fun end_fight_turn(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  // terminal &Random: the mob wave draws its entropy HERE, so it can't be composed + inspected +
-  // aborted for a free re-roll, and no future turn is previewable from a stored stream.
+  // The mob wave uses the previously committed entropy. This terminal draw can only seed the
+  // following boundary, so aborting this transaction cannot reroll the work it just performed.
   let mut generator = randomness.new_generator(ctx);
   fight::end_turn(fight_object, &mut generator, clock, ctx);
 }
@@ -509,8 +548,8 @@ public fun forfeit_fight(
   fight::forfeit(fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
-/// Walk out of an ended fight: hp writes back, winners take xp and roll their drops off
-/// FRESH entropy (the loot draw is value-bearing — the RANDOMNESS LAW). ENTRY: `&Random`.
+/// Prepare one possible loot type for settlement. Team drops use entropy sealed when combat
+/// ended; settlement Random rolls only fixed-shape item statistics.
 public fun prepare_fight_loot(template: &ItemTemplate, existing: Option<ID>): PM {
   item::prepare_plan(template, existing)
 }
@@ -778,13 +817,11 @@ public fun use_city_consumable(
 /// `resolve_ambush`). ENTRY: `&Random` law. Pass the base template again as `rare_template`
 /// when the row has no link.
 entry fun gather(
-  world_object: &mut World,
+  zone_object: &mut Zone,
   world_content: &WorldContent,
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
   character_id: ID,
-  zone_x: u32,
-  zone_z: u32,
   pack_index: u64,
   template: &ItemTemplate,
   rare_template: &ItemTemplate,
@@ -800,13 +837,11 @@ entry fun gather(
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   gathering::gather(
-    world_object,
+    zone_object,
     world_content,
     kiosk,
     cap,
     character_id,
-    zone_x,
-    zone_z,
     pack_index,
     template,
     rare_template,
@@ -895,6 +930,8 @@ entry fun scribe_rune(
   gear_id: ID,
   gear_template: &ItemTemplate,
   rune_item_id: ID,
+  rune_stat: u8,
+  rune_tier: u8,
   protected_item: &AresRPG_TransferPolicy<Item>,
   randomness: &Random,
   version: &Version,
@@ -910,14 +947,15 @@ entry fun scribe_rune(
     gear_id,
     gear_template,
     rune_item_id,
+    rune_stat,
+    rune_tier,
     protected_item,
     &mut generator,
     ctx,
   );
 }
 
-/// Open the staged crush with the rune-template ids the closing PTB supplies positionally.
-/// Phase 1 — burn gear and ROLL the runes into a soulbound claim (terminal `&Random`, so the roll
+/// Phase 1 — burn gear and commit the roll into a soulbound claim (terminal `&Random`, so the roll
 /// can't be composed + inspected + aborted for a free re-roll).
 entry fun crush_gear(
   kiosk: &mut Kiosk,
@@ -934,11 +972,20 @@ entry fun crush_gear(
   forgemagie::crush(kiosk, cap, gear_ids, protected_item, &mut generator, ctx);
 }
 
-/// Phase 2 — redeem ONE owed rune type off its real template (no randomness). Called once per
-/// yielded rune type in the redeem PTB, then `discard_crush_claim` consumes the emptied claim.
+/// Phase 2a — reveal the deterministic committed counts. Safe to retry: an already revealed claim
+/// emits the same vector, and no randomness remains to filter.
+public fun reveal_crush_claim(claim: &mut CrushClaim, version: &Version) {
+  version.assert_latest();
+  forgemagie::reveal_claim(claim);
+}
+
+/// Phase 2b — redeem ONE nonzero owed rune type off its real template (no randomness), then
+/// `discard_crush_claim` consumes the emptied claim.
 public fun redeem_rune(
   claim: &mut CrushClaim,
   template: &ItemTemplate,
+  stat: u8,
+  tier: u8,
   existing: Option<ID>,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -947,7 +994,7 @@ public fun redeem_rune(
   ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  forgemagie::redeem_rune(claim, template, existing, kiosk, cap, item_policy, ctx);
+  forgemagie::redeem_rune(claim, template, stat, tier, existing, kiosk, cap, item_policy, ctx);
 }
 
 /// Consume an emptied crush claim (aborts if any owed rune is still unredeemed).
@@ -1076,7 +1123,7 @@ public fun engage_dungeon_room(
   world_content: &WorldContent,
   dungeon_content: &DungeonContent,
   kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
+  personal: &PersonalKioskCap,
   character_id: ID,
   access: u8,
   protected: &AresRPG_TransferPolicy<Character>,
@@ -1085,7 +1132,7 @@ public fun engage_dungeon_room(
   clock: &Clock,
   ctx: &mut TxContext,
 ): FightBuild {
-  version.assert_latest();
+  let cap = personal_cap(personal, version);
   dungeon::engage_room(
     world_object, world_content, dungeon_content, protected, kiosk, cap, character_id, access,
     catalog, clock, ctx,
@@ -1224,7 +1271,7 @@ public fun abandon_dungeon_run(
 
 // ╔════════════════ [ Kolizeum — wagered arena duels ] ═══════════════════════ ]
 
-/// Open a PUBLIC wagered arena (the board rolls from fresh entropy). ENTRY: `&Random` law.
+/// Open a PUBLIC wagered arena. Its board is retry-stable; Random commits turn entropy.
 entry fun create_kolizeum(
   pledge: Coin<SUI>,
   format: u64,

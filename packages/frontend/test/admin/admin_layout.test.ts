@@ -7,7 +7,7 @@ import { expect, test } from 'bun:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { SplitKpiCard } from '../../src/admin/OverviewPage.tsx'
+import { TimelineKpiCard } from '../../src/admin/OverviewPage.tsx'
 import {
   chart_hover_index,
   chart_point_values,
@@ -28,12 +28,23 @@ test('overview restores KPI-first hierarchy and compact width-first charts', () 
   const overview = source('OverviewPage.tsx')
   expect(overview.match(/<ChartPanel/g)).toHaveLength(6)
   expect(overview.match(/<KpiCard/g)).toHaveLength(7)
-  expect(overview.match(/<SplitKpiCard/g)).toHaveLength(2)
+  expect(overview.match(/<TimelineKpiCard/g)).toHaveLength(2)
+  expect(overview.match(/<KpiGroup/g)).toHaveLength(4)
+  expect(overview).toContain('w-max max-w-full')
+  expect(overview).toContain('flex h-32 w-max')
+  expect(overview).toContain('flex h-full w-max')
+  expect(overview).toContain('flex flex-wrap items-stretch gap-3')
+  expect(overview).toContain('data-kpi-group={tone}')
+  expect(overview).toContain('transactions.last_24h')
+  expect(overview).toContain('transactions.last_30d')
   expect(overview).toContain('transactions.all_time')
-  expect(overview).toContain('transactions.gas_range_mist')
+  expect(overview).toContain('transactions.gas_last_24h_mist')
+  expect(overview).toContain('transactions.gas_last_30d_mist')
   expect(overview).toContain('transactions.gas_all_time_mist')
   expect(overview).not.toContain('transactions.all_time.toLocaleString()')
   expect(overview).toContain('display_sui(transactions.gas_all_time_mist)')
+  expect(overview).toContain('format_sui(BigInt(value), 2)')
+  expect(overview).not.toMatch(/format_sui\([^\n]+, [34]\)/)
   expect(overview).toContain('data-admin-kpis=""')
   expect(overview).toContain('data-admin-charts=""')
   expect(overview.indexOf('data-admin-kpis')).toBeLessThan(overview.indexOf('data-admin-charts'))
@@ -65,18 +76,23 @@ test('range controls wrap without a scrollbar and chart labels never stretch ins
   expect(markup).not.toContain('<text')
 })
 
-test('transaction KPI cards split the selected range and all-time values equally', () => {
+test('transaction KPI cards keep fixed 24-hour, 30-day, and all-time values together', () => {
   const markup = renderToStaticMarkup(
-    createElement(SplitKpiCard, {
+    createElement(TimelineKpiCard, {
+      entries: [
+        { label: '24 hours', value: '12' },
+        { label: '30 days', value: '42' },
+        { label: 'All time', value: '84' },
+      ],
       label: 'Game transactions',
-      left: { label: '30 days', value: '42' },
-      right: { label: 'All time', value: '84' },
     })
   )
-  expect(markup).toContain('grid-cols-2')
+  expect(markup).toContain('grid-cols-[repeat(3,max-content)]')
   expect(markup).toContain('border-l')
+  expect(markup).toContain('24 hours')
   expect(markup).toContain('30 days')
   expect(markup).toContain('All time')
+  expect(markup).toContain('12')
   expect(markup).toContain('42')
   expect(markup).toContain('84')
 })

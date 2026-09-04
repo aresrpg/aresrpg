@@ -95,6 +95,7 @@ const sdk_with = (
         }),
         simulateTransaction: async () => ({}),
         executeTransaction: async () => behavior.execute?.() ?? {},
+        waitForTransaction: async () => ({}),
       },
     } as SuiTransport,
   })

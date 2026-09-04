@@ -63,7 +63,7 @@ describe('Move contract generation', () => {
   })
 
   test('projects the forgemagie unlock gate from Move', () => {
-    expect(CONTRACT_CONSTANTS.rune_unlock_level).toBe(70n)
+    expect(CONTRACT_CONSTANTS.rune_unlock_level).toBe(1n)
   })
 
   test('preserves the steered movement path as vector<u64>', () => {

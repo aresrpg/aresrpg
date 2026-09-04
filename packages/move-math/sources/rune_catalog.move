@@ -16,8 +16,8 @@
 ///
 /// ── RUNE IDENTITY (engine-canonical slugs) ─────────────────────────────────────────────────
 /// Each rune is a hardcoded stackable item template whose `item_type` is `rune_<stat>_<tier>`
-/// (e.g. `rune_strength_ra`). `rune_of` maps that frozen slug → (stat, tier); the seed authors
-/// the templates to match. Single-tier majors carry `_ba` only.
+/// (e.g. `rune_strength_ra`). Runtime callers provide coordinates and Move verifies this canonical
+/// slug in constant time. The seed authors matching templates. Single-tier majors carry `_ba` only.
 ///
 /// | id | field            | Ba amt | Pa amt | Ra amt | unit wt ×20 | max apps |
 /// |----|------------------|--------|--------|--------|------------|----------|
@@ -57,7 +57,6 @@ const TIER_RA: u8 = 3;
 
 const EBadStat: u64 = 1; // stat id outside 0..16
 const ENotRuneable: u64 = 2; // (stat, tier) has no rune in the catalog
-const EUnknownRune: u64 = 3; // rune_of: the item_type is not a catalog rune slug
 
 // ╔════════════════ [ Tables (index = stat id 0..14) ] ══════════════════════ ]
 
@@ -139,26 +138,6 @@ public fun rune_amount(stat: u8, tier: u8): u64 {
 public fun rune_weight(stat: u8, tier: u8): u64 {
   let raw = rune_amount(stat, tier) * stat_unit_weight(stat);
   ((raw + WEIGHT_SCALE - 1) / WEIGHT_SCALE) * WEIGHT_SCALE
-}
-
-// ╔════════════════ [ rune_of — the frozen slug → (stat, tier) map ] ═════════ ]
-
-/// Map a rune item's `item_type` slug (`rune_<stat>_<tier>`) to its catalog coords. Aborts if
-/// the slug is not a catalog rune — the scribe door asserts a real rune this way, no registry.
-public fun rune_of(item_type: String): (u8, u8) {
-  let mut s = 0;
-  while (s < STAT_COUNT) {
-    let stat = s as u8;
-    if (is_runeable(stat)) {
-      let mut tier = TIER_BA;
-      while (tier <= max_tier(stat)) {
-        if (has_rune(stat, tier) && slug(stat, tier) == item_type) return (stat, tier);
-        tier = tier + 1;
-      };
-    };
-    s = s + 1;
-  };
-  abort EUnknownRune
 }
 
 /// The canonical `item_type` of the `(stat, tier)` rune — `rune_<stat>_<tier>`. The single home

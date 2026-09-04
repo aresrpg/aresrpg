@@ -14,6 +14,8 @@ import { SEED_STRING_KEYS } from './seed_contract.gen.ts'
 const wrapped_string_bytes = (value: string): Uint8Array =>
   bcs.struct('StringKey', { value: bcs.String }).serialize({ value }).toBytes()
 
+const ZONE_KEY_BCS = bcs.struct('ZoneKey', { zone_x: bcs.u32(), zone_z: bcs.u32() })
+
 const content_id = (
   root: string,
   package_id: string,
@@ -41,6 +43,10 @@ export const dungeon_content_id = (content_root: string, seed_package_original: 
 
 export const world_id = (content_root: string, game_package_original: string, world: string): string =>
   content_id(content_root, game_package_original, SEED_STRING_KEYS.WorldKey, world)
+
+/** One shared Zone is derived under its World from the exact Move `zone::ZoneKey` bytes. */
+export const zone_id = (world: string, game_package_original: string, zone_x: number, zone_z: number): string =>
+  deriveObjectID(world, `${game_package_original}::zone::ZoneKey`, ZONE_KEY_BCS.serialize({ zone_x, zone_z }).toBytes())
 
 export const board_catalog_id = (content_root: string, seed_package_original: string): string =>
   // Move injects `dummy_field: bool` into a fieldless struct, so `BoardCatalogKey()` is BCS 0x00.

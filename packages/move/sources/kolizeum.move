@@ -5,8 +5,8 @@
 /// coin; this module is the escrow + the settings gate, composing the shipped fight doors.
 ///
 /// The pot flow is fully DERIVED, nothing about it stored beyond the balance itself:
-///   · CREATE stakes the creator's pledge and births the managed arena fight (board from
-///     fresh entropy — neither player picks it); the lobby links the fight id.
+///   · CREATE stakes the creator's pledge and births the managed arena fight (board fixed by
+///     creator identity + epoch, visible before entry); the lobby links the fight id.
 ///   · JOIN stakes a matching pledge and seats a challenger on a side (format-capped), gated
 ///     by level range and — if friends-only — the creator's SNAPSHOTTED whitelist.
 ///   · START takes the 10% platform cut to @treasury (once, off the full pot) and begins.
@@ -78,8 +78,8 @@ public struct KolizeumPaid has copy, drop { kolizeum: ID, winner: address, amoun
 
 /// Open a wagered arena. `allowed` = none is public; some(set) is friends-only (the api
 /// builds the snapshot from the creator's own list — the two entry doors exist only because
-/// Move has no optional reference for the `&FriendList`). `board_seed` is fresh entropy so
-/// neither player picks the board.
+/// Move has no optional reference for the `&FriendList`). The board derives from match identity,
+/// so gas-aborted creation retries cannot filter it; the opponent sees it before joining.
 public(package) fun create(
   pledge_coin: Coin<SUI>,
   format: u64,
@@ -91,7 +91,7 @@ public(package) fun create(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
-  board_seed: u64,
+  next_turn_entropy: u64,
   catalog: &BoardCatalog,
   clock: &Clock,
   ctx: &mut TxContext,
@@ -106,7 +106,9 @@ public(package) fun create(
     if (!entries.contains(&ctx.sender())) entries.insert(ctx.sender());
   };
   let pledge = pledge_coin.value();
-  let fight_id = fight::kolizeum_birth(protected, kiosk, cap, character_id, board_seed, access, catalog, clock, ctx);
+  let fight_id = fight::kolizeum_birth(
+    protected, kiosk, cap, character_id, next_turn_entropy, access, catalog, clock, ctx,
+  );
   let lobby = Kolizeum {
     id: object::new(ctx),
     pot: pledge_coin.into_balance(),

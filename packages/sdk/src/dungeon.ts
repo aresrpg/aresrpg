@@ -55,7 +55,6 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
     }) => {
       const { world_object, world_content } = world_refs(world, 'Dungeon entry')
       const dungeon_content = dungeon_ref(dungeon, 'Dungeon entry')
-      await sdk.hydrate_unknown([world_object, world_content, dungeon_content, key_id])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.enter_dungeon(tx, {
@@ -67,7 +66,11 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
             dungeon_content,
             key_id,
           }),
-        { custody, gas_scope: `dungeon-entry:${dungeon}` }
+        {
+          custody,
+          gas_scope: `dungeon-entry:${dungeon}`,
+          inputs: [world_object, world_content, dungeon_content, key_id],
+        }
       )
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
@@ -91,15 +94,14 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       const dungeon_content = dungeon_ref(dungeon, 'Dungeon fight')
       const catalog = board_catalog_id(content_root, seed_package_original)
       const templates = mob_types.map((mob_type) => mob_template_id(content_root, seed_package_original, mob_type))
-      await sdk.hydrate_unknown([world_object, world_content, dungeon_content, catalog, ...templates])
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => {
+      const receipt = await with_terminal_kiosk(
+        (tx, kiosk, personal) => {
           const build = sdk.doors.engage_dungeon_room(tx, {
             world_object,
             world_content,
             dungeon_content,
             kiosk,
-            cap,
+            personal,
             character_id,
             access,
             catalog,
@@ -110,7 +112,11 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
           )
           sdk.doors.launch_fight(tx, { build: grown })
         },
-        { custody, gas_scope: scope(dungeon) }
+        {
+          custody,
+          gas_scope: scope(dungeon),
+          inputs: [world_object, world_content, dungeon_content, catalog, ...templates],
+        }
       )
       const fight = created_fight_id(receipt)
       sdk.tag_gas?.(receipt, `fight:${fight}`)

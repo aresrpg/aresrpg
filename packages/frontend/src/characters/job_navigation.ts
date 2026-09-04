@@ -4,6 +4,7 @@
 import { job_groups, type JobSlug } from '@aresrpg/immutable'
 
 import { encyclopedia_catalog, type ItemDetail, type SeedRecipe } from '../content/catalog.ts'
+import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
 
 const ALL_JOBS = Object.freeze(Object.values(job_groups).flat())
 
@@ -41,7 +42,7 @@ export const ingredient_destination = (item_type: string): IngredientDestination
       })
     : Object.freeze({
         kind: 'encyclopedia',
-        pathname: `/encyclopedia/items/${encodeURIComponent(item_type)}`,
+        pathname: encyclopedia_item_path(item_type),
         job: null,
         selection: null,
       })

@@ -170,6 +170,89 @@ fun airdrop_rejects_ranged_pet_endpoint_at_authoring() {
   abort 0
 }
 
+#[test, expected_failure(abort_code = 0, location = sui::vec_set)]
+fun airdrop_rejects_duplicate_whitelist_entries() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let cap = admin::cap_for_testing(scenario.ctx());
+  let mut root = registry::registry_for_testing(scenario.ctx());
+  let template = item_rows::template_for_testing(
+    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  distribution::new_airdrop(
+    &cap, &mut root, b"duplicate".to_string(), &template, 1, vector[OWNER, OWNER], scenario.ctx(),
+  );
+  abort 1
+}
+
+#[test, expected_failure(abort_code = 2405, location = aresrpg::distribution)]
+fun airdrop_rejects_an_address_outside_its_snapshot() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let cap = admin::cap_for_testing(scenario.ctx());
+  let mut root = registry::registry_for_testing(scenario.ctx());
+  let template = item_rows::template_for_testing(
+    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  distribution::new_airdrop(
+    &cap, &mut root, b"private".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
+  );
+  registry::destroy_for_testing(root);
+  admin::destroy_for_testing(cap);
+  item_rows::share_item(template);
+  scenario.next_tx(RECIPIENT);
+  let template = scenario.take_shared<item_rows::ItemTemplate>();
+  let mut drop = scenario.take_shared<distribution::Airdrop>();
+  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
+  abort 0
+}
+
+#[test, expected_failure(abort_code = 2405, location = aresrpg::distribution)]
+fun airdrop_cannot_be_claimed_twice() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let cap = admin::cap_for_testing(scenario.ctx());
+  let mut root = registry::registry_for_testing(scenario.ctx());
+  let template = item_rows::template_for_testing(
+    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  distribution::new_airdrop(
+    &cap, &mut root, b"once".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
+  );
+  registry::destroy_for_testing(root);
+  admin::destroy_for_testing(cap);
+  item_rows::share_item(template);
+  scenario.next_tx(OWNER);
+  let template = scenario.take_shared<item_rows::ItemTemplate>();
+  let mut drop = scenario.take_shared<distribution::Airdrop>();
+  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
+  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
+  abort 0
+}
+
+#[test, expected_failure(abort_code = 2401, location = aresrpg::distribution)]
+fun airdrop_rejects_the_wrong_template_before_consuming_eligibility() {
+  let mut scenario = test_scenario::begin(OWNER);
+  let cap = admin::cap_for_testing(scenario.ctx());
+  let mut root = registry::registry_for_testing(scenario.ctx());
+  let template = item_rows::template_for_testing(
+    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  let wrong = item_rows::template_for_testing(
+    b"other_resource".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  let wrong_id = object::id(&wrong);
+  distribution::new_airdrop(
+    &cap, &mut root, b"typed".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
+  );
+  registry::destroy_for_testing(root);
+  admin::destroy_for_testing(cap);
+  item_rows::share_item(template);
+  item_rows::share_item(wrong);
+  scenario.next_tx(OWNER);
+  let wrong = scenario.take_shared_by_id<item_rows::ItemTemplate>(wrong_id);
+  let mut drop = scenario.take_shared<distribution::Airdrop>();
+  distribution::claim_airdrop(&mut drop, &wrong, RECIPIENT, scenario.ctx());
+  abort 0
+}
+
 fun fixed_pet_endpoint(): item_stats::ItemStatistics {
   let center = item_stats::shift();
   item_stats::new(

@@ -454,28 +454,29 @@ mastery_page:
   balance: Meisterschaftspunkte
   daily_ready: Tägliche Quest verfügbar
   daily_syncing: Tägliche Quest wird aktualisiert…
-  daily_title: Starte deine tägliche Quest
-  daily_lead: Wähle eine Welt. Höherstufige Welten geben mehr Meisterschaftspunkte.
+  daily_title: Wähle die heutige Dungeon-Quest
+  daily_lead: Wähle eine Welt. Dir wird ein Dungeon zugewiesen, den du finden und abschließen musst.
   unknown_dungeon: Unbekannter Dungeon
   quest_reward: Erhalte {{points}} Meisterschaftspunkte
+  quest_objective_before: Finde und schließe den Dungeon
+  quest_objective_after: ab, um deine Meisterschaftspunkte zu erhalten.
   completed: Bestätigt
   in_progress: Läuft
   required_level: Benötigt Stufe {{level}}
   dungeon_count: '{{count}} Dungeons'
-  starting: Zuweisung…
+  starting: Dungeon wird zugewiesen…
   start: Tägliche Quest starten
   locked: Gesperrt
   world_reward: +{{points}}pts
-  offers_title: Meisterschaftsbelohnungen
-  offers_lead: Gib Meisterschaftspunkte aus, um einzigartige Lootboxen freizuschalten.
-  progression: Belohnungspfad
-  offers_empty: Noch keine Meisterschaftsangebote erstellt
-  ready: Bereit zum Freischalten
-  missing: '{{points}} Punkte fehlen'
-  unlocking: Wird freigeschaltet…
-  unlock: Freischalten · {{cost}} Pkt.
+  shop_title: Meisterschaftsladen
+  shop_lead: Gib Meisterschaftspunkte aus, um einzigartige Lootboxen zu kaufen.
+  shop_empty: Noch keine Meisterschaftsgegenstände im Angebot
+  ready_to_buy: Kaufbereit
+  points_missing: '{{points}} Punkte fehlen'
+  buying: Wird gekauft…
+  buy: Kaufen · {{cost}} Pkt.
   quest_started: Tägliche Quest zugewiesen.
-  offer_unlocked: Meisterschaftsbelohnung freigeschaltet.
+  offer_purchased: Meisterschaftsbelohnung gekauft.
 
 airdrop_page:
   title: 'Airdrops'
@@ -490,6 +491,9 @@ airdrop_page:
   holder_connect_hint: 'Verbinde das Wallet mit dem berechtigten NFT'
   holder_connect: 'Wallet verbinden'
   holder_connecting: 'Verbindung…'
+  holder_connected: 'Verbunden'
+  holder_select: 'Auswählen'
+  holder_close: 'Wallet-Auswahl schließen'
   holder_wallet_missing: 'Kein kompatibles Sui-Wallet installiert'
   giftcards_title: 'Einlösbare Geschenkkarten'
   gift_login: 'Fahre mit Google fort, um dieses Geschenk in dein Spiel-Wallet zu übertragen'
@@ -624,6 +628,7 @@ admin_page:
   active_30d: 30 Tage aktive Spieler
   active_last_30d: aktiv in den letzten 30 Tagen
   player_activity: Spieleraktivität
+  population: Population
   player_activity_body: Tägliche Aktivität und gleitende 30-Tage-Reichweite
   stickiness: DAU / 30T
   online_players: Spieler online
@@ -1597,7 +1602,7 @@ characters_page:
   max: Max
   resources: Ressourcen
   back: Zurück
-  gate_note: Erfordert den Handwerksberuf des Gegenstands auf Stufe {{level}}
+  gate_note: Ab Stufe {{level}} des zugehörigen Handwerks verfügbar
   detail_title: Gegenstand
   forge_title: Schmiede
   inventory_title: Inventar

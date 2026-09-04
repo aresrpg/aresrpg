@@ -16,7 +16,7 @@ import {
   type Receipt,
   type SuiTransport,
 } from '../src/client.ts'
-import { pre_submission_version_race } from '../src/transaction_error.ts'
+import { executed_transaction_digest, pre_submission_version_race } from '../src/transaction_error.ts'
 
 type ChangedRow = NonNullable<NonNullable<Receipt['effects']>['changedObjects']>[number]
 
@@ -73,6 +73,8 @@ const fake_client = ({
   simulate_ok,
   execution_ok = true,
   execution_gate,
+  visibility_gate,
+  visibility_failures = 0,
   failure_branch = 'FailedTransaction',
   failure_message = 'MoveAbort(2701) — scribe locked',
   resolution_failure,
@@ -82,6 +84,9 @@ const fake_client = ({
   simulate_ok: boolean
   execution_ok?: boolean
   execution_gate?: Promise<void>
+  visibility_gate?: Promise<void>
+  /** how many predecessor visibility checks fail before the ledger catches up */
+  visibility_failures?: number
   /** what the simulated failure says — the SDK reads it to tell OUR budget from THEIR wallet */
   failure_message?: string
   /** raw error thrown while building, before signing or submission */
@@ -102,6 +107,7 @@ const fake_client = ({
     hydrations: [] as string[][],
     active_executions: 0,
     max_active_executions: 0,
+    visibility_waits: [] as string[],
   }
   return {
     calls,
@@ -185,6 +191,15 @@ const fake_client = ({
           },
         }
       },
+      waitForTransaction: async ({ digest: previous }: { digest: string }) => {
+        calls.visibility_waits.push(previous)
+        await visibility_gate
+        if (visibility_failures > 0) {
+          visibility_failures -= 1
+          throw new Error('ledger has not indexed the transaction')
+        }
+        return { $kind: 'Transaction', Transaction: { digest: previous } }
+      },
     },
   }
 }
@@ -213,6 +228,11 @@ describe('the execute gate (core interface)', () => {
         new Error('[sdk] transaction DIGEST failed on-chain: NOT submitted; provided version does not match')
       )
     ).toBeFalse()
+  })
+
+  test('an executed failure exposes its terminal digest without classifying pre-submit errors', () => {
+    expect(executed_transaction_digest(new Error('[sdk] transaction 7abc failed on-chain: abort'))).toBe('7abc')
+    expect(executed_transaction_digest(new Error('transaction resolution failed — NOT submitted'))).toBeNull()
   })
 
   test('a raw build failure is marked as not submitted at the actual pre-sign boundary', async () => {
@@ -465,6 +485,44 @@ describe('the execute gate (core interface)', () => {
 
     expect(client.calls.executions).toBe(2)
     expect(client.calls.max_active_executions).toBe(1)
+  })
+
+  test('a lazy visibility barrier blocks only the next transaction before resolution or signing', async () => {
+    const client = fake_client({ simulate_ok: true, visibility_failures: 1 })
+    let signatures = 0
+    const sdk = SDK({
+      address: id(99),
+      client,
+      pins,
+      sign_transaction: async () => {
+        signatures += 1
+        return { bytes: new Uint8Array([1]), signature: 'wallet-signature' }
+      },
+    })
+
+    await sdk.execute(sdk.tx())
+    expect(client.calls.visibility_waits).toEqual([])
+    expect(signatures).toBe(1)
+
+    await expect(sdk.execute(sdk.tx())).rejects.toThrow(/next transaction NOT submitted.*ledger has not indexed/)
+    expect(client.calls).toMatchObject({ executions: 1, resolutions: 1, simulations: 1 })
+    expect(signatures).toBe(1)
+
+    await sdk.execute(sdk.tx())
+    expect(client.calls.visibility_waits).toEqual(['EXEC', 'EXEC'])
+    expect(client.calls).toMatchObject({ executions: 2, resolutions: 2, simulations: 2 })
+    expect(signatures).toBe(2)
+  })
+
+  test('an executed failure also arms the next-write visibility barrier', async () => {
+    const client = fake_client({ simulate_ok: true, execution_ok: false })
+    const sdk = SDK({ client, signer, pins })
+
+    await expect(sdk.execute(sdk.tx())).rejects.toThrow(/failed on-chain/)
+    await expect(sdk.execute(sdk.tx())).rejects.toThrow(/failed on-chain/)
+
+    expect(client.calls.visibility_waits).toEqual(['EXEC'])
+    expect(client.calls.executions).toBe(2)
   })
 
   test('delegates gas selection and estimation to the configured Sui resolver', async () => {

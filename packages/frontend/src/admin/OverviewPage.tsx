@@ -11,6 +11,7 @@ import type {
   AdminRevenueOverview,
   AdminTransactionsOverview,
 } from '@aresrpg/protocol'
+import type { ReactNode } from 'react'
 
 import { PANEL } from '../encyclopedia/components.tsx'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -35,10 +36,41 @@ const sui_number = (mist: string): number => Number(BigInt(mist)) / 1_000_000_00
 const display_count = (value: number | null | undefined): string =>
   typeof value === 'number' && Number.isFinite(value) ? value.toLocaleString() : '—'
 const display_sui = (value: unknown): string =>
-  typeof value === 'string' && /^\d+$/.test(value) ? `${format_sui(BigInt(value), 4)} SUI` : '—'
+  typeof value === 'string' && /^\d+$/.test(value) ? `${format_sui(BigInt(value), 2)} SUI` : '—'
 const bucket_label = (copy: Readonly<Record<string, string>>, bucket: AdminBucket): string =>
   text(copy, `bucket_${bucket}`, bucket === '15m' ? '15-minute buckets' : `${bucket} buckets`)
-type KpiTone = 'gold' | 'blue' | 'green'
+type DashboardTone = 'revenue' | 'activity' | 'population' | 'transactions'
+type KpiTone = 'gold' | 'blue' | 'green' | 'violet'
+const DASHBOARD_TONES = Object.freeze({
+  revenue: Object.freeze({
+    group:
+      'border-[#c8963c]/30 bg-[radial-gradient(circle_at_12%_0%,rgba(200,150,60,0.14),transparent_46%),repeating-linear-gradient(135deg,rgba(200,150,60,0.025)_0,rgba(200,150,60,0.025)_1px,transparent_1px,transparent_9px)]',
+    heading: 'border-[#c8963c]/20 text-[#d6aa58]',
+    chart:
+      'border-[#c8963c]/25 bg-[radial-gradient(circle_at_8%_0%,rgba(200,150,60,0.09),transparent_42%),rgba(18,18,26,0.96)]',
+  }),
+  activity: Object.freeze({
+    group:
+      'border-[#55c7b6]/28 bg-[linear-gradient(rgba(85,199,182,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(85,199,182,0.025)_1px,transparent_1px),radial-gradient(circle_at_12%_0%,rgba(85,199,182,0.13),transparent_48%)] bg-[size:12px_12px,12px_12px,auto]',
+    heading: 'border-[#55c7b6]/18 text-[#6dd6c6]',
+    chart:
+      'border-[#55c7b6]/22 bg-[radial-gradient(circle_at_8%_0%,rgba(85,199,182,0.08),transparent_42%),rgba(18,18,26,0.96)]',
+  }),
+  population: Object.freeze({
+    group:
+      'border-[#ac8dde]/28 bg-[radial-gradient(circle_at_12%_0%,rgba(172,141,222,0.13),transparent_48%),repeating-linear-gradient(90deg,rgba(172,141,222,0.022)_0,rgba(172,141,222,0.022)_1px,transparent_1px,transparent_11px)]',
+    heading: 'border-[#ac8dde]/18 text-[#bd9ee9]',
+    chart:
+      'border-[#ac8dde]/22 bg-[radial-gradient(circle_at_8%_0%,rgba(172,141,222,0.08),transparent_42%),rgba(18,18,26,0.96)]',
+  }),
+  transactions: Object.freeze({
+    group:
+      'border-[#70bdf2]/28 bg-[radial-gradient(circle_at_12%_0%,rgba(112,189,242,0.13),transparent_48%),repeating-linear-gradient(0deg,rgba(112,189,242,0.024)_0,rgba(112,189,242,0.024)_1px,transparent_1px,transparent_9px)]',
+    heading: 'border-[#70bdf2]/18 text-[#83c8f7]',
+    chart:
+      'border-[#70bdf2]/22 bg-[radial-gradient(circle_at_8%_0%,rgba(112,189,242,0.08),transparent_42%),rgba(18,18,26,0.96)]',
+  }),
+})
 const kpi_value_color = (tone?: KpiTone): string =>
   tone === 'gold'
     ? 'text-[#c8963c]'
@@ -46,7 +78,28 @@ const kpi_value_color = (tone?: KpiTone): string =>
       ? 'text-[#70bdf2]'
       : tone === 'green'
         ? 'text-[#77d99a]'
-        : 'text-[#e8e4dc]'
+        : tone === 'violet'
+          ? 'text-[#bd9ee9]'
+          : 'text-[#e8e4dc]'
+
+const KpiGroup = ({ children, label, tone }: Readonly<{ children: ReactNode; label: string; tone: DashboardTone }>) => {
+  const colors = DASHBOARD_TONES[tone]
+  return (
+    <section
+      className={`flex h-32 w-max max-w-full flex-col overflow-hidden border ${colors.group}`}
+      data-kpi-group={tone}
+    >
+      <h2
+        className={`border-b bg-black/12 px-4 py-2 text-[8px] font-semibold tracking-[0.18em] uppercase ${colors.heading}`}
+      >
+        {label}
+      </h2>
+      <div className="flex min-h-0 max-w-full flex-1 flex-wrap items-stretch divide-x divide-white/[0.07]">
+        {children}
+      </div>
+    </section>
+  )
+}
 
 const Stat = ({ label, value }: Readonly<{ label: string; value: string }>) => (
   <div className="min-w-0 border-r border-border px-3 last:border-r-0">
@@ -61,37 +114,35 @@ const KpiCard = ({
   tone,
   value,
 }: Readonly<{ detail: string; label: string; tone?: KpiTone; value: string }>) => (
-  <article
-    className={`${PANEL} flex min-h-24 min-w-0 flex-col justify-between bg-[linear-gradient(145deg,rgba(200,150,60,0.035),transparent_62%)] p-4`}
-  >
-    <span className="truncate text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">{label}</span>
-    <strong className={`mt-3 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
+  <article className="flex h-full w-max max-w-64 min-w-40 flex-col justify-between bg-black/10 px-4 py-3.5">
+    <span className="truncate text-[8px] tracking-[0.15em] text-[#777d89] uppercase">{label}</span>
+    <strong className={`mt-2 truncate text-xl font-semibold tracking-[-0.035em] tabular-nums ${kpi_value_color(tone)}`}>
       {value}
     </strong>
-    <span className="mt-1 truncate text-[8px] text-[#555b66]">{detail}</span>
+    <span className="mt-0.5 truncate text-[8px] text-[#5f6570]">{detail}</span>
   </article>
 )
 
-export const SplitKpiCard = ({
+export const TimelineKpiCard = ({
+  entries,
   label,
-  left,
-  right,
   tone,
 }: Readonly<{
+  entries: readonly Readonly<{ label: string; value: string }>[]
   label: string
-  left: Readonly<{ label: string; value: string }>
-  right: Readonly<{ label: string; value: string }>
   tone?: KpiTone
 }>) => (
-  <article
-    className={`${PANEL} flex min-h-24 min-w-0 flex-col bg-[linear-gradient(145deg,rgba(200,150,60,0.035),transparent_62%)] p-4`}
-  >
-    <span className="truncate text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">{label}</span>
-    <div className="mt-3 grid min-w-0 flex-1 grid-cols-2">
-      {[left, right].map((row, index) => (
-        <div className={`min-w-0 ${index === 0 ? 'pr-3' : 'border-l border-border pl-3'}`} key={row.label}>
-          <span className="block truncate text-[7px] tracking-[0.12em] text-[#555b66] uppercase">{row.label}</span>
-          <strong className={`mt-1 block truncate text-sm font-semibold tabular-nums ${kpi_value_color(tone)}`}>
+  <article className="flex h-full w-max max-w-full flex-col bg-black/10 px-4 py-3.5">
+    <span className="text-[8px] tracking-[0.15em] text-[#777d89] uppercase">{label}</span>
+    <div className="mt-2 grid flex-1 grid-cols-[repeat(3,max-content)] items-end">
+      {entries.map((row, index) => (
+        <div className={index === 0 ? 'pr-3' : 'border-l border-white/[0.07] px-3'} key={row.label}>
+          <span className="block text-[8px] tracking-[0.12em] whitespace-nowrap text-[#5f6570] uppercase">
+            {row.label}
+          </span>
+          <strong
+            className={`mt-1 block text-base font-semibold whitespace-nowrap tabular-nums ${kpi_value_color(tone)}`}
+          >
             {row.value}
           </strong>
         </div>
@@ -111,6 +162,7 @@ const ChartPanel = ({
   value_kind,
   bucket,
   loading,
+  tone,
 }: Readonly<{
   copy: Readonly<Record<string, string>>
   title: string
@@ -122,8 +174,11 @@ const ChartPanel = ({
   value_kind: MetricValueKind
   bucket: AdminBucket
   loading: boolean
+  tone: DashboardTone
 }>) => (
-  <section className={`${PANEL} min-w-0 overflow-hidden`}>
+  <section
+    className={`min-w-0 overflow-hidden border shadow-[0_18px_50px_rgba(0,0,0,0.24)] ${DASHBOARD_TONES[tone].chart}`}
+  >
     <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-3">
       <div className="min-w-0">
         <h2 className="truncate text-[10px] font-semibold tracking-[0.16em] text-[#d9d5cd] uppercase">{title}</h2>
@@ -242,10 +297,10 @@ const character_series = (
 const claim_label = (copy: Readonly<Record<string, string>>, revenue: AdminRevenue, claimable: bigint): string => {
   if (revenue.claiming) return text(copy, 'claiming', 'Claiming…')
   if (revenue.claim_armed) return text(copy, 'confirm_claim', 'Confirm claim')
-  return `${text(copy, 'claim', 'Claim')} ${claimable > 0n ? `${format_sui(claimable, 3)} SUI` : ''}`
+  return `${text(copy, 'claim', 'Claim')} ${claimable > 0n ? `${format_sui(claimable, 2)} SUI` : ''}`
 }
 const treasury_value = (revenue: AdminRevenue): string =>
-  revenue.treasury_mist === null ? '—' : `${format_sui(revenue.treasury_mist, 3)} SUI`
+  revenue.treasury_mist === null ? '—' : `${format_sui(revenue.treasury_mist, 2)} SUI`
 const claim_disabled = (revenue: AdminRevenue): boolean =>
   !revenue.connected || revenue.claimable <= 0n || revenue.claiming
 
@@ -264,10 +319,10 @@ const TreasuryStrip = ({
         </span>
         <strong className="ml-3 text-[12px] font-medium text-[#c8963c] tabular-nums">{treasury_value(revenue)}</strong>
       </div>
-      <Stat label={text(copy, 'item_royalties', 'Item royalties')} value={`${format_sui(item, 3)} SUI`} />
+      <Stat label={text(copy, 'item_royalties', 'Item royalties')} value={`${format_sui(item, 2)} SUI`} />
       <Stat
         label={text(copy, 'character_royalties', 'Character royalties')}
-        value={`${format_sui(character, 3)} SUI`}
+        value={`${format_sui(character, 2)} SUI`}
       />
       <button
         className="h-8 shrink-0 border border-[#c8963c]/40 bg-[#c8963c]/8 px-4 text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:opacity-30"
@@ -327,70 +382,78 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           ↻ {text(copy, 'refresh', 'Refresh')}
         </button>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4" data-admin-kpis="">
-        <KpiCard
-          detail={text(copy, 'last_30_days', 'Last 30 days')}
-          label={text(copy, 'revenue_30d', '30-day revenue')}
-          tone="gold"
-          value={`${format_sui(BigInt(revenue.last_30d_revenue_mist), 2)} SUI`}
-        />
-        <KpiCard
-          detail={text(copy, 'calendar_month_to_date', 'Calendar month to date')}
-          label={text(copy, 'revenue_mtd', 'Month-to-date revenue')}
-          tone="gold"
-          value={`${format_sui(BigInt(revenue.month_to_date_revenue_mist), 2)} SUI`}
-        />
-        <KpiCard
-          detail={text(copy, 'today', 'Today')}
-          label={text(copy, 'daily_active', 'Daily active players')}
-          tone="blue"
-          value={players.dau.toLocaleString()}
-        />
-        <KpiCard
-          detail={text(copy, 'active_last_30d', 'Active in the last 30 days')}
-          label={text(copy, 'active_30d', '30-day active players')}
-          tone="blue"
-          value={players.rolling_30d.toLocaleString()}
-        />
-        <KpiCard
-          detail={`${text(copy, 'peak', 'Peak')} ${display_count(online.online_peak)}`}
-          label={text(copy, 'online_now', 'Players online')}
-          tone="green"
-          value={display_count(online.online_now)}
-        />
-        <KpiCard
-          detail={text(copy, 'successful_game_calls', 'Successful game-module callers')}
-          label={text(copy, 'unique_addresses', 'Unique addresses')}
-          value={addresses.total.toLocaleString()}
-        />
-        <KpiCard
-          detail={text(copy, 'current_characters', 'Current on-chain characters')}
-          label={text(copy, 'total_characters', 'Total characters')}
-          value={characters.total.toLocaleString()}
-        />
-        <SplitKpiCard
-          label={text(copy, 'game_transactions', 'Game transactions')}
-          left={Object.freeze({
-            label: admin_range_label(copy, overview.ranges.transactions),
-            value: transactions.total.toLocaleString(),
-          })}
-          right={Object.freeze({
-            label: text(copy, 'all_time', 'All time'),
-            value: display_count(transactions.all_time),
-          })}
-        />
-        <SplitKpiCard
-          label={text(copy, 'game_gas_fees', 'Game gas fees')}
-          left={Object.freeze({
-            label: admin_range_label(copy, overview.ranges.transactions),
-            value: display_sui(transactions.gas_range_mist),
-          })}
-          right={Object.freeze({
-            label: text(copy, 'all_time', 'All time'),
-            value: display_sui(transactions.gas_all_time_mist),
-          })}
-          tone="gold"
-        />
+      <div className="mt-3 flex flex-wrap items-stretch gap-3" data-admin-kpis="">
+        <KpiGroup label={text(copy, 'revenue', 'Revenue')} tone="revenue">
+          <KpiCard
+            detail={text(copy, 'last_30_days', 'Last 30 days')}
+            label={text(copy, 'revenue_30d', '30-day revenue')}
+            tone="gold"
+            value={`${format_sui(BigInt(revenue.last_30d_revenue_mist), 2)} SUI`}
+          />
+          <KpiCard
+            detail={text(copy, 'calendar_month_to_date', 'Calendar month to date')}
+            label={text(copy, 'revenue_mtd', 'Month-to-date revenue')}
+            tone="gold"
+            value={`${format_sui(BigInt(revenue.month_to_date_revenue_mist), 2)} SUI`}
+          />
+        </KpiGroup>
+        <KpiGroup label={text(copy, 'player_activity', 'Player activity')} tone="activity">
+          <KpiCard
+            detail={text(copy, 'today', 'Today')}
+            label={text(copy, 'daily_active', 'Daily active players')}
+            tone="blue"
+            value={players.dau.toLocaleString()}
+          />
+          <KpiCard
+            detail={text(copy, 'active_last_30d', 'Active in the last 30 days')}
+            label={text(copy, 'active_30d', '30-day active players')}
+            tone="blue"
+            value={players.rolling_30d.toLocaleString()}
+          />
+          <KpiCard
+            detail={`${text(copy, 'peak', 'Peak')} ${display_count(online.online_peak)}`}
+            label={text(copy, 'online_now', 'Players online')}
+            tone="green"
+            value={display_count(online.online_now)}
+          />
+        </KpiGroup>
+        <KpiGroup label={text(copy, 'population', 'Population')} tone="population">
+          <KpiCard
+            detail={text(copy, 'successful_game_calls', 'Successful game-module callers')}
+            label={text(copy, 'unique_addresses', 'Unique addresses')}
+            tone="violet"
+            value={addresses.total.toLocaleString()}
+          />
+          <KpiCard
+            detail={text(copy, 'current_characters', 'Current on-chain characters')}
+            label={text(copy, 'total_characters', 'Total characters')}
+            tone="violet"
+            value={characters.total.toLocaleString()}
+          />
+        </KpiGroup>
+        <KpiGroup label={text(copy, 'game_transactions', 'Game transactions')} tone="transactions">
+          <TimelineKpiCard
+            entries={Object.freeze([
+              Object.freeze({ label: admin_range_label(copy, 1), value: display_count(transactions.last_24h) }),
+              Object.freeze({ label: admin_range_label(copy, 30), value: display_count(transactions.last_30d) }),
+              Object.freeze({ label: text(copy, 'all_time', 'All time'), value: display_count(transactions.all_time) }),
+            ])}
+            label={text(copy, 'game_transactions', 'Game transactions')}
+            tone="blue"
+          />
+          <TimelineKpiCard
+            entries={Object.freeze([
+              Object.freeze({ label: admin_range_label(copy, 1), value: display_sui(transactions.gas_last_24h_mist) }),
+              Object.freeze({ label: admin_range_label(copy, 30), value: display_sui(transactions.gas_last_30d_mist) }),
+              Object.freeze({
+                label: text(copy, 'all_time', 'All time'),
+                value: display_sui(transactions.gas_all_time_mist),
+              }),
+            ])}
+            label={text(copy, 'game_gas_fees', 'Game gas fees')}
+            tone="gold"
+          />
+        </KpiGroup>
       </div>
       <div className="mt-3">
         <TreasuryStrip copy={copy} revenue={revenue_wallet} />
@@ -407,6 +470,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             subtitle={text(copy, 'revenue_over_time_body', 'All protocol revenue by source')}
             timestamps={revenue.money.map(({ at_ms }) => at_ms)}
             title={text(copy, 'revenue_over_time', 'Revenue over time')}
+            tone="revenue"
             value_kind="continuous"
           />
           <ChartPanel
@@ -419,6 +483,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             subtitle={text(copy, 'game_transactions_body', 'Successful AresRPG transactions, counted once per PTB')}
             timestamps={transactions.transactions.map(({ at_ms }) => at_ms)}
             title={text(copy, 'game_transactions_over_time', 'Transactions over time')}
+            tone="transactions"
             value_kind="count"
           />
         </div>
@@ -433,6 +498,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             subtitle={text(copy, 'player_activity_body', 'Daily activity and rolling 30-day reach')}
             timestamps={players.activity.map(({ at_ms }) => at_ms)}
             title={text(copy, 'player_activity', 'Player activity')}
+            tone="activity"
             value_kind="count"
           />
           <ChartPanel
@@ -445,6 +511,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             subtitle={text(copy, 'online_players_body', 'Peak authenticated connections per bucket')}
             timestamps={online.online.map(({ at_ms }) => at_ms)}
             title={text(copy, 'online_players', 'Online players')}
+            tone="activity"
             value_kind="count"
           />
         </div>
@@ -459,6 +526,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             subtitle={text(copy, 'unique_addresses_body', 'Addresses with successful AresRPG module calls')}
             timestamps={addresses.addresses.map(({ at_ms }) => at_ms)}
             title={text(copy, 'unique_addresses_over_time', 'Unique addresses over time')}
+            tone="population"
             value_kind="count"
           />
           <ChartPanel
@@ -471,6 +539,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             subtitle={text(copy, 'total_characters_body', 'Current on-chain Character objects')}
             timestamps={characters.characters.map(({ at_ms }) => at_ms)}
             title={text(copy, 'characters_over_time', 'Characters over time')}
+            tone="population"
             value_kind="count"
           />
         </div>

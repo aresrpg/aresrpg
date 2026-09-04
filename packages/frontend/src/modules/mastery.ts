@@ -101,7 +101,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       .then(({ mastery }) => {
         dispatch({ type: 'mastery/reconciled', mastery })
         const text = state.copy ? copy_text(state.copy.mastery_page) : (key: string) => key
-        toast.add(text('offer_unlocked'))
+        toast.add(text('offer_purchased'))
       })
       .catch(fail)
   })

@@ -82,6 +82,49 @@ test('owned party followers join through repeated grouped doors in one kiosk tra
   expect(executions).toBe(1)
 })
 
+test('roaming fight creation keeps Random terminal and cold-hydrates one object batch', async () => {
+  const calls: string[] = []
+  const hydrated: string[][] = []
+  const custody = kiosk_cap(id(4), id(5))
+  const sdk = {
+    pins: { content_root: { id: id(61), shared_version: '1' }, seed_package_original: id(60) },
+    game_type_package: id(2),
+    tx: () => ({}),
+    hydrate_unknown: async (values: readonly string[]) => void hydrated.push([...values]),
+    execute: async () => ({
+      Transaction: {
+        digest: 'created',
+        events: [{ type: `${id(2)}::fight::FightCreated`, json: { fight: id(9) } }],
+      },
+    }),
+    doors: {
+      engage_fight: () => {
+        calls.push('engage')
+        return 'build'
+      },
+      add_fight_mob: () => {
+        calls.push('mob')
+        return 'grown'
+      },
+      launch_fight: () => void calls.push('launch'),
+    },
+  }
+
+  await fight_actions(sdk as never, { kiosk_cap: async () => custody }).engage({
+    character_id: id(3),
+    custody: { kiosk: custody.kioskId, kiosk_cap: custody.objectId },
+    world: 'nauvis',
+    zone_x: 97,
+    zone_z: 98,
+    group_index: 4,
+    mob_types: ['wooling'],
+  })
+
+  expect(calls).toEqual(['engage', 'mob', 'launch'])
+  expect(hydrated).toHaveLength(1)
+  expect(hydrated[0]).toContain(custody.kioskId)
+})
+
 test('ready many batches non-final seats before one terminal ready door', async () => {
   const calls: Readonly<{ door: string; fighter: unknown }>[] = []
   let executions = 0
@@ -149,6 +192,7 @@ test('a drafted turn executes in order inside one transaction', async () => {
       cast_spell: () => calls.push('cast'),
       weapon_strike: () => calls.push('strike'),
       end_fight_turn: () => calls.push('end'),
+      seal_fight_loot: () => calls.push('seal'),
     },
   }
   const actions = fight_actions(sdk as never, { kiosk_cap: async () => null })
@@ -179,7 +223,7 @@ test('a drafted turn executes in order inside one transaction', async () => {
     actions: [{ type: 'cast', fighter_idx: 0n, spell: 'slash', target_cell: 5n }],
     ended: true,
   })
-  expect(calls).toEqual(['cast'])
+  expect(calls).toEqual(['cast', 'seal'])
 })
 
 test('Ready plus Start projects its receipt phase and turn witnesses immediately', async () => {

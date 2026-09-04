@@ -94,11 +94,15 @@ the demo owns content editing and local simulation. Their arming sets live in
 
 The frontend never imports `@mysten/*`. It asks the SDK to compose a transaction from resolved
 objects, simulates the exact unsigned bytes, signs once, executes once, and folds the certified
-receipt. An executed failure has a digest and is never automatically retried.
+receipt. An executed failure has a digest and is never automatically retried. Each SDK session
+retains the last executed digest and lazily waits for that transaction to become visible through
+its write transport before resolving or signing the next write. This propagation barrier never
+delays the completed receipt; if it fails, the next transaction remains unsubmitted.
 
 The SDK logs every certified transaction once with digest and net gas. Its receipt-fed cache owns
 fresh object references; explicit hydration is the only bootstrap read for unknown transaction
-inputs. Two narrow presentation reads are explicit exceptions: Party may snapshot one external
+inputs, while the lazy previous-digest barrier synchronizes consecutive writes. Two narrow
+presentation reads are explicit exceptions: Party may snapshot one external
 character checkpoint for run-to, and a chat item hover may read that exact Item plus its rolled
 stat field through a session-bounded LRU. Package type identity uses original package IDs;
 Move-call targets use latest package IDs.
@@ -175,8 +179,11 @@ state from chain—the app becomes ready only after the server's indexed snapsho
 
 The selected character's projected checkpoint and live pose compose one SDK action. Move proves
 travel and writes the result. The receipt folds facts it certifies; the indexer/server projection
-reconciles surrounding world state. Zone populations are server-derived from published content,
-never re-rolled by the client. WorldContent stores seed-derived ordinary-mob-to-archimob mappings
+reconciles surrounding world state. Each discovered zone is a deterministic shared object derived
+under its slim World. Only first discovery mutates World to claim that address; refresh, gather, and
+engage mutate the target Zone, so unrelated zones never share a consensus write. Zone populations
+are server-derived from published content, never re-rolled by the client. WorldContent stores
+seed-derived ordinary-mob-to-archimob mappings
 in an upgrade-safe dynamic field. Move and the server twin use a separate deterministic stream to
 give every generated eligible member one independent 1% identity replacement while preserving its
 group, position, and level scalar.
@@ -190,13 +197,17 @@ client runs toward that immutable snapshot. It never polls or claims to know the
 Core Move owns Fight identity, player authority, character custody, entropy, events, and settlement.
 `packages/move-combat` owns the deterministic authority-free state machine embedded in that object.
 Core authenticates an action and supplies bounded plain entropy and time values; combat returns one
-deterministic transition. `packages/fight` is the TypeScript presentation twin. Local drafts relay
+deterministic transition. Fight entropy is pipelined one boundary ahead: each boundary executes the
+previously committed `u64`, then its terminal Random draw commits the next one. An out-of-gas retry
+therefore repeats the same combat result without adding a second transaction. `packages/fight` is
+the TypeScript presentation twin. Local drafts relay
 through the mesh for immediate presentation; End Turn commits the ordered draft as one PTB. Receipts
 and indexed witnesses converge through structural turn identities.
 
 The terminal checkpoint supplies the settlement plan after presentation drains. Owned participants
 returning to one personal kiosk settle and collect through one Random-bound PTB; different kiosks
-form separate batches. The certified settlement receipt enables Continue immediately. `RESULT_FOR`
+form separate batches. Team drop selection uses entropy sealed when combat ended, while settlement
+Random rolls only fixed-shape item statistics. The certified settlement receipt enables Continue immediately. `RESULT_FOR`
 exists only for interrupted-client recovery. Character level and experience come from the projected
 Character row. Result presents before level-up.
 
@@ -241,6 +252,8 @@ and fixed-endpoint pets need no entropy, and pet feed scaling keeps the stored e
 until the owner feeds the pet. Printed cards use an AresRPG `/gift` URL whose fragment carries the
 zkSend bearer key across Google login; zkSend transports the voucher to the game wallet, then the
 same ordinary redemption path runs. The bearer fragment never reaches the server.
+The private operator prepares printable bearer files before its named web-signer action; no wallet
+private key or generic transaction surface exists in this repository.
 
 ### Content
 

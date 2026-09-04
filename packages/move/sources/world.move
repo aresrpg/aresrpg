@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /// Dynamic authored worlds + everything about a character's place in them. Position lives as
 /// dynamic fields ON the character (one checkpoint per visited world — automatic memory), so
-/// joining and moving touch zero shared objects. The shared `World` owns identity and live zone
-/// state only; living WorldContent and DungeonContent own authored settings.
+/// joining and moving touch zero shared objects. The shared `World` owns identity and the derived
+/// address namespace for first zone discovery; living content owns authored settings.
 module aresrpg::world;
 
 use aresrpg::{character::Character, equipment, progression};
@@ -30,7 +30,7 @@ const START_WORLD: vector<u8> = b"nauvis";
 /// One shared object per world — SLIM by law (the ÷10 plan, Lever 2: a mutable object pays
 /// storage at its full size on every touch, so the 39KB of authored content lives in the
 /// seed package's own `WorldContent` object, passed read-only beside this one). This object
-/// carries identity + the zone dynamic fields, nothing else.
+/// carries identity and claims each deterministic Zone address once, nothing else.
 public struct World has key {
   id: UID,
   name: String,
@@ -71,9 +71,7 @@ public fun create(cap: &AdminCap, root: &mut Registry, content: &WorldContent, c
   transfer::share_object(world);
 }
 
-/// Zone state rides the World's UID — the zone module is the only writer.
-public(package) fun uid(world: &World): &UID { &world.id }
-
+/// First discovery claims an independent shared Zone under this UID. No hot action touches World.
 public(package) fun uid_mut(world: &mut World): &mut UID { &mut world.id }
 
 // ╔════════════════ [ Content reads ] ═════════════════════════════════════════ ]

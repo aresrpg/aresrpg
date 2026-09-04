@@ -346,8 +346,12 @@ export type AdminTransactionsOverview = Readonly<{
   days: AdminRangeDays
   bucket: AdminBucket
   total: number
+  last_24h: number
+  last_30d: number
   all_time: number
   gas_range_mist: string
+  gas_last_24h_mist: string
+  gas_last_30d_mist: string
   gas_all_time_mist: string
   transactions: readonly AdminTransactionPoint[]
 }>

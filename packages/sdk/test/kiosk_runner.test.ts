@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { resolve_kiosk_cap, retry_stale_kiosk_ref } from '../src/kiosk_runner.ts'
+import { create_kiosk_runner, resolve_kiosk_cap, retry_stale_kiosk_ref } from '../src/kiosk_runner.ts'
 
 test('a cached kiosk cap retries one fresh lookup only when another tab advanced it', async () => {
   const refreshes: boolean[] = []
@@ -90,4 +90,25 @@ test('a loader result for another kiosk is refused', async () => {
       { kiosk: '0xwanted' }
     )
   ).rejects.toThrow('The requested PersonalKioskCap is unavailable')
+})
+
+test('a terminal kiosk action hydrates its kiosk and game inputs in one batch', async () => {
+  const hydrated: string[][] = []
+  const cap = {
+    objectId: '0xcap',
+    kioskId: '0xkiosk',
+    isPersonal: true,
+    version: '1',
+    digest: '11111111111111111111111111111111',
+  }
+  const sdk = {
+    tx: () => ({}),
+    hydrate_unknown: async (ids: readonly string[]) => void hydrated.push([...ids]),
+    execute: async () => ({ Transaction: { digest: 'done' } }),
+  }
+  const { with_terminal_kiosk } = create_kiosk_runner(sdk as never, async () => cap)
+
+  await with_terminal_kiosk(() => undefined, { inputs: ['0xzone', '0xcontent'] })
+
+  expect(hydrated).toEqual([['0xkiosk', '0xzone', '0xcontent']])
 })

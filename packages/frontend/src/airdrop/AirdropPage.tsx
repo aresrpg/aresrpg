@@ -3,7 +3,9 @@
 
 import { Cat, Check, Gift, Loader2, Lock, Shirt, Sparkles, Star, WalletCards, type LucideIcon } from 'lucide-react'
 import type { AirdropState } from '@aresrpg/protocol'
+import { useState } from 'react'
 
+import { ModalFrame } from '../components/ModalFrame.tsx'
 import { content_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { env } from '../env.ts'
@@ -151,6 +153,97 @@ const GiftLinkClaim = ({ ready, busy, t }: Readonly<{ ready: boolean; busy: stri
   )
 }
 
+export const HolderWalletModal = ({
+  wallets,
+  busy,
+  close,
+  connect,
+  t,
+}: Readonly<{
+  wallets: readonly string[]
+  busy: string | null
+  close: () => void
+  connect: (wallet: string) => void
+  t: CopyText
+}>) => (
+  <ModalFrame close={close} close_label={t('holder_close')} label={t('holder_title')} max_width="max-w-sm" soft>
+    <div className="flex flex-col gap-5 p-6">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <div className="grid size-11 place-items-center border border-cyan/30 bg-cyan/6 text-cyan shadow-[0_0_24px_rgba(72,207,207,0.08)]">
+          <WalletCards size={19} />
+        </div>
+        <h2 className="text-[11px] font-semibold tracking-[0.22em] text-cyan uppercase">{t('holder_title')}</h2>
+        <p className="max-w-xs text-[9px] leading-5 tracking-[0.06em] text-muted">{t('holder_connect_hint')}</p>
+      </div>
+      {wallets.length === 0 ? (
+        <div className="border border-border bg-black/25 px-4 py-3 text-center text-[9px] tracking-[0.12em] text-muted uppercase">
+          {t('holder_wallet_missing')}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {wallets.map((wallet) => (
+            <button
+              className="flex w-full cursor-pointer items-center gap-3 border border-white/10 bg-black/25 px-4 py-3 text-left transition-colors hover:border-cyan/45 hover:bg-cyan/6 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={busy !== null}
+              key={wallet}
+              onClick={() => connect(wallet)}
+              type="button"
+            >
+              <WalletCards className="shrink-0 text-cyan" size={14} />
+              <span className="min-w-0 flex-1 truncate text-[10px] font-semibold tracking-[0.08em] text-text">
+                {wallet}
+              </span>
+              <span className="text-[8px] tracking-[0.16em] text-cyan/75 uppercase">{t('holder_select')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  </ModalFrame>
+)
+
+export const HolderWalletConnect = ({
+  address,
+  wallets,
+  busy,
+  t,
+}: Readonly<{ address: string | null; wallets: readonly string[]; busy: string | null; t: CopyText }>) => {
+  const [open, set_open] = useState(false)
+  const connect = (wallet: string): void => {
+    set_open(false)
+    dispatch_app({ type: 'distribution/connect_holder', wallet })
+  }
+  return (
+    <section className="flex flex-col items-center gap-3 border border-cyan/20 bg-[radial-gradient(circle_at_50%_0%,rgba(72,207,207,0.08),transparent_70%)] px-5 py-5 text-center">
+      <WalletCards className="text-cyan" size={18} />
+      <div>
+        <div className="text-[9px] tracking-[0.2em] text-cyan uppercase">{t('holder_title')}</div>
+        <div className="mt-1 max-w-md font-mono text-[8px] leading-4 text-muted">
+          {address ?? t('holder_connect_hint')}
+        </div>
+      </div>
+      {address ? (
+        <span className="inline-flex items-center gap-1.5 border border-emerald-400/30 px-3 py-1.5 text-[8px] tracking-[0.15em] text-emerald-400 uppercase">
+          <Check size={10} /> {t('holder_connected')}
+        </span>
+      ) : (
+        <button
+          className="inline-flex min-w-48 cursor-pointer items-center justify-center gap-2 border border-cyan/45 bg-cyan/7 px-5 py-2.5 text-[9px] font-semibold tracking-[0.18em] text-cyan uppercase shadow-[0_0_22px_rgba(72,207,207,0.07)] transition-colors hover:border-cyan/75 hover:bg-cyan/12 disabled:cursor-not-allowed disabled:opacity-45"
+          disabled={busy !== null}
+          onClick={() => set_open(true)}
+          type="button"
+        >
+          {busy === 'connect' ? <Loader2 className="animate-spin" size={12} /> : <WalletCards size={12} />}
+          {t(busy === 'connect' ? 'holder_connecting' : 'holder_connect')}
+        </button>
+      )}
+      {open && (
+        <HolderWalletModal busy={busy} close={() => set_open(false)} connect={connect} t={t} wallets={wallets} />
+      )}
+    </section>
+  )
+}
+
 const ShowcaseTile = ({ row, t }: Readonly<{ row: ShowcaseRow; t: CopyText }>) => {
   const Glyph = glyphs[row.kind] ?? Sparkles
   const icon = item_detail_icon(row.id)
@@ -205,30 +298,12 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
         <GiftLinkClaim busy={busy} ready={distribution.gift_link_ready} t={t} />
-        <div className="flex flex-wrap items-center gap-3 border border-cyan/20 bg-cyan/4 p-3">
-          <WalletCards className="text-cyan" size={15} />
-          <div className="mr-auto min-w-0">
-            <div className="text-[9px] tracking-[0.18em] text-cyan uppercase">{t('holder_title')}</div>
-            <div className="mt-1 truncate font-mono text-[8px] text-muted">
-              {distribution.holder?.address ?? t('holder_connect_hint')}
-            </div>
-          </div>
-          {!distribution.holder &&
-            distribution.wallets.map((wallet) => (
-              <button
-                className="border border-cyan/30 px-3 py-2 text-[8px] tracking-[0.14em] text-cyan uppercase disabled:opacity-40"
-                disabled={busy !== null}
-                key={wallet}
-                onClick={() => dispatch_app({ type: 'distribution/connect_holder', wallet })}
-                type="button"
-              >
-                {busy === 'connect' ? t('holder_connecting') : `${t('holder_connect')} · ${wallet}`}
-              </button>
-            ))}
-          {!distribution.holder && distribution.wallets.length === 0 && (
-            <span className="text-[8px] tracking-[0.12em] text-muted uppercase">{t('holder_wallet_missing')}</span>
-          )}
-        </div>
+        <HolderWalletConnect
+          address={distribution.holder?.address ?? null}
+          busy={busy}
+          t={t}
+          wallets={distribution.wallets}
+        />
 
         {content_catalog.airdrop.drops.length === 0 ? (
           <div className="flex items-center gap-2.5 border border-border/60 px-3 py-2.5 text-muted">
@@ -244,7 +319,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
                 <AirdropDropCard
                   busy={busy}
                   drop={drop}
-                  has_game_wallet={session.wallet !== null}
+                  has_game_wallet={session.wallet?.identity === 'zklogin'}
                   key={drop.id}
                   state={state}
                   t={t}

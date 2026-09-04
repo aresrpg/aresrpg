@@ -10,10 +10,12 @@
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { craft_stackable_batch_limit, type CharacteristicName } from '@aresrpg/immutable'
+import { zone_of } from '@aresrpg/protocol'
 
 import type { SDK } from './client.ts'
 import { changed_object_ids, created_object_id, receipt_digest, receipt_event } from './cache.ts'
 import { living_content } from './client.ts'
+import { crush_owed_from_receipt, rune_coordinates } from './forgemagie.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { created_fight_id, type FightCreatedReceipt } from './fight.ts'
 import { event_boolean, event_integer, event_string } from './receipt_decode.ts'
@@ -25,10 +27,10 @@ import {
   spell_template_id,
   world_content_id,
   world_id,
+  zone_id,
 } from './seed_ids.ts'
 
 type GameSdk = ReturnType<typeof SDK>
-
 export type CharacterReceipt = { digest: string }
 
 export type EquipChange = Readonly<{ slot: string; item_id: string }>
@@ -188,20 +190,32 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       gear_id,
       gear_item_type,
       rune_item_id,
+      rune_item_type,
       custody,
     }: {
       character_id: string
       gear_id: string
       gear_item_type: string
       rune_item_id: string
+      rune_item_type: string
       custody?: KioskCustody
     }): Promise<ScribeOutcome> => {
+      const rune = rune_coordinates(rune_item_type)
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const gear_template = item_template_id(content_root, seed_package_original, gear_item_type)
       await sdk.hydrate_unknown([gear_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
-          sdk.doors.scribe_rune(tx, { kiosk, personal, character_id, gear_id, gear_template, rune_item_id }),
+          sdk.doors.scribe_rune(tx, {
+            kiosk,
+            personal,
+            character_id,
+            gear_id,
+            gear_template,
+            rune_item_id,
+            rune_stat: rune.stat,
+            rune_tier: rune.tier,
+          }),
         { custody }
       )
       const event = receipt_event(receipt, '::forgemagie::RuneScribed')
@@ -314,9 +328,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return Object.freeze({ digest: receipt_digest(receipt), claim_id })
     },
 
-    /** Redeem a CrushClaim (phase 2, deterministic): one redeem_rune call PER AUTHORED RUNE
-     *  TYPE — zero-owed types no-op on-chain — then discard the emptied claim. The proven
-     *  yield is read off the receipt's touched rune stacks. */
+    /** Reveal a CrushClaim, redeem only nonzero rune types, discard it, and return final touched stacks. */
     redeem_crush: async ({
       claim_id,
       runes,
@@ -327,18 +339,36 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       custody?: KioskCustody
     }): Promise<Readonly<{ digest: string; item_ids: readonly string[] }>> => {
       if (!runes.length) throw new Error('The rune roster is empty')
+      const rune_by_index = new Map(runes.map((rune) => [rune_coordinates(rune.item_type).index, rune]))
+      if (rune_by_index.size !== runes.length) throw new Error('The rune roster contains duplicate catalog entries')
+      const reveal_tx = sdk.tx()
+      sdk.doors.reveal_crush_claim(reveal_tx, { claim: claim_id })
+      const owed = crush_owed_from_receipt(await sdk.execute(reveal_tx), claim_id)
+      const missing = owed.findIndex((amount, index) => amount > 0 && !rune_by_index.has(index))
+      if (missing >= 0) throw new Error(`The rune roster cannot redeem committed catalog entry ${missing}`)
+      const awarded = owed.flatMap((amount, index) => (amount > 0 ? [rune_by_index.get(index)!] : []))
+      if (!awarded.length) {
+        const close_tx = sdk.tx()
+        sdk.doors.discard_crush_claim(close_tx, { claim: claim_id })
+        return Object.freeze({ digest: receipt_digest(await sdk.execute(close_tx)), item_ids: Object.freeze([]) })
+      }
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
-      const templates = runes.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
-      // The just-created claim may be known to this cache before the resolver's selected read
-      // node has converged. One explicit read is the synchronization edge; templates remain
-      // ordinary cache-once content refs.
-      await sdk.hydrate([claim_id])
+      const templates = awarded.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
       await sdk.hydrate_unknown(templates)
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
-          runes.forEach(({ existing }, index) =>
-            sdk.doors.redeem_rune(tx, { claim: claim_id, template: templates[index]!, existing, kiosk, cap })
-          )
+          awarded.forEach(({ item_type, existing }, index) => {
+            const rune = rune_coordinates(item_type)
+            sdk.doors.redeem_rune(tx, {
+              claim: claim_id,
+              template: templates[index]!,
+              stat: rune.stat,
+              tier: rune.tier,
+              existing,
+              kiosk,
+              cap,
+            })
+          })
           sdk.doors.discard_crush_claim(tx, { claim: claim_id })
         },
         { include: { objectTypes: true }, custody }
@@ -443,44 +473,40 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       })
     },
 
-    /** Discover (or re-roll, past the 2h TTL) the zone the character stands in. The walk is
-     *  proven on chain against the claimed position, so x/z is the character's OWN pose, not a
-     *  chosen cell. Nothing is folded from the receipt: the search's whole output is zone state,
-     *  which the indexer projects and the server streams — the seed a client read off its own
-     *  receipt would race the row that carries it. */
+    /** Discover or refresh the zone at the character's chain-proven pose. */
     search_zone: async ({
       character_id,
       world,
       x,
       z,
+      refresh,
       custody,
     }: {
       character_id: string
       world: string
       x: number
       z: number
+      /** false for first discovery; true when the derived Zone object already exists */
+      refresh: boolean
       custody?: KioskCustody
     }): Promise<CharacterReceipt> => {
       const { content_root, seed_package_original } = living_content(sdk, 'World transaction')
       const game_original = sdk.game_type_package
       if (!game_original) throw new Error('World transaction unavailable: pins.json has no original game package')
       const world_object = world_id(content_root, game_original, world)
-      await sdk.hydrate_unknown([world_object])
+      const { zx, zz } = zone_of(x, z)
+      const zone_object = zone_id(world_object, game_original, zx, zz)
       const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) => sdk.doors.search_zone(tx, { kiosk, personal, character_id, x, z, world_object }),
-        { custody }
+        (tx, kiosk, personal) =>
+          refresh
+            ? sdk.doors.refresh_zone(tx, { kiosk, personal, character_id, x, z, zone_object })
+            : sdk.doors.create_zone(tx, { kiosk, personal, character_id, x, z, world_object }),
+        { custody, inputs: [refresh ? zone_object : world_object] }
       )
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
 
-    /** Harvest ONE node off a resource pack. The chain gates tool + tier itself; the app's
-     *  pre-check only spares the player a doomed transaction. `rare_template` is the row's
-     *  linked golden-gather variant — the base template again when the row has no link, which
-     *  is `gathering.move`'s own convention, not a placeholder.
-     *
-     *  A gather can fire the 2% PROTECTOR verdict, which ROOTS the character until
-     *  `resolve_ambush`. The receipt's own ResourceGathered event says whether it fired, so the
-     *  caller learns it from what it holds rather than waiting on a stream. */
+    /** Harvest one node; the receipt reports the chain's yield and protector verdict. */
     gather: async ({
       character_id,
       world,
@@ -514,25 +540,23 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       const game_original = sdk.game_type_package
       if (!game_original) throw new Error('Character transaction unavailable: pins.json has no original game package')
       const world_object = world_id(content_root, game_original, world)
+      const zone_object = zone_id(world_object, game_original, zone_x, zone_z)
       const world_content = world_content_id(content_root, seed_package_original, world)
-      await sdk.hydrate_unknown([template, rare_template, world_object, world_content])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.gather(tx, {
-            world_object,
+            zone_object,
             world_content,
             kiosk,
             personal,
             character_id,
-            zone_x,
-            zone_z,
             pack_index,
             template,
             rare_template,
             existing,
             existing_rare,
           }),
-        { custody }
+        { custody, inputs: [template, rare_template, zone_object, world_content] }
       )
       const event = receipt_event(receipt, '::gathering::ResourceGathered')
       if (!event) throw new Error('The gather receipt carried no ResourceGathered event')

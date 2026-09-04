@@ -471,6 +471,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         world: target.world,
         x: target.x,
         z: target.z,
+        refresh: target.kind === 'reroll',
         custody: character_custody(character),
       })
       // The receipt proves submission, not the projected zone. Keep the notice pending until

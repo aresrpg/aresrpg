@@ -454,28 +454,29 @@ mastery_page:
   balance: Points de maîtrise
   daily_ready: Quête quotidienne disponible
   daily_syncing: Mise à jour de la quête quotidienne…
-  daily_title: Commencez votre quête quotidienne
-  daily_lead: Choisissez un monde. Les mondes de haut niveau donnent plus de points de maîtrise.
+  daily_title: Choisissez la quête de donjon du jour
+  daily_lead: Choisissez un monde. Un donjon à trouver et terminer vous sera attribué.
   unknown_dungeon: Donjon inconnu
   quest_reward: Gagnez {{points}} points de maîtrise
+  quest_objective_before: Trouvez et terminez le donjon
+  quest_objective_after: pour récupérer vos points de maîtrise.
   completed: Validé
   in_progress: En cours
   required_level: Niveau {{level}} requis
   dungeon_count: '{{count}} donjons'
-  starting: Attribution…
-  start: Commencer la quête
+  starting: Attribution du donjon…
+  start: Commencer la quête quotidienne
   locked: Verrouillé
   world_reward: +{{points}}pts
-  offers_title: Récompenses de maîtrise
-  offers_lead: Dépensez vos points de maîtrise pour débloquer des boîtes à butin uniques.
-  progression: Parcours de récompenses
-  offers_empty: Aucune offre de maîtrise n’est encore créée
-  ready: Prêt à débloquer
-  missing: Il manque {{points}} points
-  unlocking: Déblocage…
-  unlock: Débloquer · {{cost}} pts
+  shop_title: Boutique de maîtrise
+  shop_lead: Dépensez vos points de maîtrise pour acheter des boîtes à butin uniques.
+  shop_empty: Aucun objet de maîtrise n’est encore en vente
+  ready_to_buy: Prêt à acheter
+  points_missing: Il manque {{points}} points
+  buying: Achat…
+  buy: Acheter · {{cost}} pts
   quest_started: Quête quotidienne attribuée.
-  offer_unlocked: Récompense de maîtrise débloquée.
+  offer_purchased: Récompense de maîtrise achetée.
 
 airdrop_page:
   title: 'Airdrops'
@@ -490,6 +491,9 @@ airdrop_page:
   holder_connect_hint: 'Connectez le portefeuille qui détient le NFT éligible'
   holder_connect: 'Connecter le portefeuille'
   holder_connecting: 'Connexion…'
+  holder_connected: 'Connecté'
+  holder_select: 'Sélectionner'
+  holder_close: 'Fermer la sélection du portefeuille'
   holder_wallet_missing: 'Aucun portefeuille Sui compatible installé'
   giftcards_title: 'Cartes cadeaux à utiliser'
   gift_login: 'Continuez avec Google pour recevoir ce cadeau dans votre portefeuille de jeu'
@@ -624,6 +628,7 @@ admin_page:
   active_30d: Joueurs actifs sur 30 jours
   active_last_30d: actifs sur les 30 derniers jours
   player_activity: Activité des joueurs
+  population: Population
   player_activity_body: Activité quotidienne et portée glissante sur 30 jours
   stickiness: JAU / 30J
   online_players: Joueurs en ligne
@@ -1602,7 +1607,7 @@ characters_page:
   max: Max
   resources: Ressources
   back: Retour
-  gate_note: Nécessite le métier d'artisanat de l'objet au niveau {{level}}
+  gate_note: Disponible dès le niveau {{level}} du métier associé
   detail_title: Objet
   forge_title: Forge
   inventory_title: Inventaire

@@ -35,6 +35,8 @@ type RunOptions = Readonly<{
   custody?: KioskCustody
   gas_scope?: string
   budget?: bigint | 'estimate'
+  /** Other objects needed by a terminal door; hydrated with the kiosk in one cold read. */
+  inputs?: readonly string[]
 }>
 
 const same_object_id = (expected: string | undefined, current: string | undefined): boolean =>
@@ -117,7 +119,7 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
       retry_stale_kiosk_ref(async (fresh) => {
         const personal = await resolve_kiosk_cap(kiosk_cap, options.custody, fresh)
         if (!personal) throw new Error('No personal kiosk exists for this session yet')
-        await sdk.hydrate_unknown([personal.kioskId])
+        await sdk.hydrate_unknown([personal.kioskId, ...(options.inputs ?? [])])
         const tx = sdk.tx()
         compose(tx, personal.kioskId, object_ref(personal))
         return sdk.execute(tx, options)

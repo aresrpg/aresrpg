@@ -242,23 +242,45 @@ const load_transactions = async (
 ): Promise<AdminTransactionsOverview> => {
   const { analytics_hashes, analytics_sums } = graph_doors(graph)
   const buckets = range_buckets(days, now_ms)
+  const last_24h = range_buckets(1, now_ms)
+  const last_30d = range_buckets(30, now_ms)
   const keys = buckets.values.map((bucket) => `analytics:transactions:${buckets.tier}:${bucket}`)
   const gas_keys = buckets.values.map((bucket) => `analytics:gas:${buckets.tier}:${bucket}`)
-  const [counts, [all_transactions], gas] = await Promise.all([
-    analytics_sums(keys),
-    analytics_hashes([TRANSACTIONS_ALL_KEY]),
-    analytics_hashes([GAS_ALL_KEY, ...gas_keys]),
+  const last_24h_keys = last_24h.values.map((bucket) => `analytics:transactions:${last_24h.tier}:${bucket}`)
+  const last_30d_keys = last_30d.values.map((bucket) => `analytics:transactions:${last_30d.tier}:${bucket}`)
+  const gas_last_24h_keys = last_24h.values.map((bucket) => `analytics:gas:${last_24h.tier}:${bucket}`)
+  const gas_last_30d_keys = last_30d.values.map((bucket) => `analytics:gas:${last_30d.tier}:${bucket}`)
+  const count_keys = [...new Set([...keys, ...last_24h_keys, ...last_30d_keys])]
+  const queried_gas_keys = [...new Set([...gas_keys, ...gas_last_24h_keys, ...gas_last_30d_keys])]
+  const [counts, hashes] = await Promise.all([
+    analytics_sums(count_keys),
+    analytics_hashes([TRANSACTIONS_ALL_KEY, GAS_ALL_KEY, ...queried_gas_keys]),
   ])
+  const count_by_key = new Map(count_keys.map((key, index) => [key, counts[index] ?? 0]))
+  const hash_by_key = new Map(
+    [TRANSACTIONS_ALL_KEY, GAS_ALL_KEY, ...queried_gas_keys].map((key, index) => [key, hashes[index] ?? {}])
+  )
+  const count_total = (selected: readonly string[], label: string): number =>
+    safe_count(
+      selected.reduce((total, key) => total + BigInt(count_by_key.get(key) ?? 0), 0n),
+      label
+    )
+  const gas_total = (selected: readonly string[]): string =>
+    sum_hash_values(selected.map((key) => hash_by_key.get(key) ?? {})).toString()
   const transactions = Object.freeze(
-    buckets.values.map((at_ms, index) => Object.freeze({ at_ms, transactions: counts[index] ?? 0 }))
+    buckets.values.map((at_ms, index) => Object.freeze({ at_ms, transactions: count_by_key.get(keys[index]!) ?? 0 }))
   )
   return Object.freeze({
     days,
     bucket: buckets.tier,
     total: transactions.reduce((total, point) => total + point.transactions, 0),
-    all_time: safe_count(sum_hash_values([all_transactions ?? {}]), 'all-time transaction count'),
-    gas_range_mist: sum_hash_values(gas.slice(1)).toString(),
-    gas_all_time_mist: sum_hash_values(gas.slice(0, 1)).toString(),
+    last_24h: count_total(last_24h_keys, '24-hour transaction count'),
+    last_30d: count_total(last_30d_keys, '30-day transaction count'),
+    all_time: safe_count(sum_hash_values([hash_by_key.get(TRANSACTIONS_ALL_KEY) ?? {}]), 'all-time transaction count'),
+    gas_range_mist: gas_total(gas_keys),
+    gas_last_24h_mist: gas_total(gas_last_24h_keys),
+    gas_last_30d_mist: gas_total(gas_last_30d_keys),
+    gas_all_time_mist: gas_total([GAS_ALL_KEY]),
     transactions,
   })
 }

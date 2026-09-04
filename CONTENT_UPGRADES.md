@@ -86,26 +86,19 @@ under its Registry root; the chain catalog length still decides board shape.
 
 Giftcard QR images are bearer secrets. Generate them only after the authored vouchers are published
 and owned by the signer address authored as their `custody`. A `pins.publisher` value is a Sui
-Publisher capability object ID, never a wallet address. The exporter verifies signer custody before
-creating one atomic zkSend transaction:
+Publisher capability object ID, never a wallet address. Run `aresrpg-operator`, choose
+`Create Sui Crate giftcards`, review its three-phase plan, type `CREATE 100 CARDS`, and confirm the
+single Slush transaction in the web signer.
 
-```bash
-ARESRPG_OPERATOR_PRIVATE_KEY=suiprivkey... bun run giftcards:export -- \
-  --network testnet \
-  --item-type sui_crate \
-  --count 100 \
-  --claim-origin https://aresrpg.world \
-  --output giftcard-exports/sui-crates \
-  --execute
-```
-
-The command refuses to overwrite a folder. It prepares a private manifest and one 85×55 mm 300-DPI
-PNG per voucher before touching chain state, then marks the manifest live with the certified digest.
+The operator prepares a private recovery manifest and one 85×55 mm 300-DPI PNG per voucher before
+touching chain state, then marks the manifest live with the certified digest. It resumes the same
+prepared links when every voucher remains in custody, recovers a completed common transaction, and
+refuses mixed or unknown custody instead of generating replacement secrets.
 Each QR opens AresRPG `/gift`; the zkSend key stays in the URL fragment, survives Google login in
 session storage, and is never sent to the application server.
-`giftcard-exports/` is ignored by Git. Never upload that folder before the cards are intentionally
-distributed. If execution returns a digest and fails, inspect that digest and current object custody;
-never rerun automatically.
+The output lives under the operator's ignored, owner-only `.operator/branches/<branch>/giftcards/`
+directory. Never upload it before the cards are intentionally distributed. If execution returns a
+digest and fails, inspect that digest and current object custody; never retry automatically.
 
 ## Adding and editing worlds
 

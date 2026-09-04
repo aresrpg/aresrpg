@@ -25,7 +25,7 @@ use aresrpg::{
   item::{Self, Item},
   progression,
   protected_policy::AresRPG_TransferPolicy,
-  world::{Self, World},
+  world,
   zone,
 };
 use aresrpg_seed::{mob_rows::MobTemplate, spell_rows::SpellTemplate, board_catalog::BoardCatalog, world_content::{Self, WorldContent}};
@@ -101,13 +101,11 @@ public struct RareGathered has copy, drop { world: String, x: u32, z: u32, gathe
 // ╔════════════════ [ The gather door ] ══════════════════════════════════════ ]
 
 public(package) fun gather(
-  world_object: &mut World,
+  zone_object: &mut zone::Zone,
   world_content: &WorldContent,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   character_id: ID,
-  zone_x: u32,
-  zone_z: u32,
   pack_index: u64,
   template: &ItemTemplate,
   rare_template: &ItemTemplate,
@@ -119,7 +117,7 @@ public(package) fun gather(
   ctx: &mut TxContext,
 ) {
   // The live pack (a read — remaining nodes asserted) and its authored row.
-  let pack = zone::resource_pack_at(world_object, world_content, zone_x, zone_z, pack_index);
+  let pack = zone::resource_pack_at(zone_object, world_content, pack_index);
   let item_type = pack.pack_item_type();
   let row = world_map::resource_row_of(world_content::data(world_content), item_type);
   assert!(item_rows::template_type(template) == item_type, ETemplateMismatch);
@@ -128,7 +126,7 @@ public(package) fun gather(
   let (quantity, gained_xp, protector) = {
     let character: &mut Character = kiosk.borrow_mut(cap, character_id);
     let current = world::prove_move(character, pack.pack_x(), pack.pack_z(), clock);
-    assert!(current == world_object.name(), EWrongWorld);
+    assert!(current == zone::world_name(zone_object), EWrongWorld);
     let job = row.resource_row_job();
     assert!(equipment::tool_of(character) == job_xp::gathering_tool(&job), ENoTool);
 
@@ -146,7 +144,7 @@ public(package) fun gather(
     // itself spawns in `resolve_ambush` — a later tx with nothing left to re-roll.
     let ambush_rolled = generator.generate_u64_in_range(0, 9999) < PROTECTOR_BP;
     let protector = ambush_rolled && !row.resource_row_protector().is_empty();
-    let (level_lo, level_hi) = zone::level_bounds(zone_x, zone_z);
+    let (level_lo, level_hi) = zone::level_bounds(zone_object);
     let scalar = level_lo + generator.generate_u64_in_range(0, level_hi - level_lo);
     let board_seed = generator.generate_u64();
     let hp = progression::touch(character, clock);
@@ -170,7 +168,7 @@ public(package) fun gather(
   };
 
   // WRITES: one node leaves the pack, the yield lands in the kiosk (merged or fresh).
-  zone::consume_resource_node(world_object, world_content, zone_x, zone_z, pack_index);
+  zone::consume_resource_node(zone_object, world_content, pack_index);
   item::deposit(kiosk, cap, item_policy, existing, item::mint(template, quantity as u32, generator, ctx));
 
   // GOLDEN-GATHER: identity asserted BEFORE the draw — a won jackpot always mints.
@@ -179,12 +177,12 @@ public(package) fun gather(
     assert!(item_rows::template_type(rare_template) == rare, ERareMismatch);
     if (generator.generate_u64_in_range(0, 9999) < RARE_BP) {
       item::deposit(kiosk, cap, item_policy, existing_rare, item::mint(rare_template, 1, generator, ctx));
-      event::emit(RareGathered { world: world_object.name(), x: pack.pack_x(), z: pack.pack_z(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
+      event::emit(RareGathered { world: zone::world_name(zone_object), x: pack.pack_x(), z: pack.pack_z(), gatherer: ctx.sender(), item_type, rare_item_type: rare });
     };
   };
 
   event::emit(ResourceGathered {
-    world: world_object.name(),
+    world: zone::world_name(zone_object),
     x: pack.pack_x(),
     z: pack.pack_z(),
     gatherer: ctx.sender(),

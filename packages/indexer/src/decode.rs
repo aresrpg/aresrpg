@@ -234,27 +234,15 @@ pub struct Checkpoint {
     pub pet: bool,
 }
 
-/// `world::World` — decoded ONLY for the id → name map. SLIM by law since the ÷10 plan's
-/// Lever 2: authored content lives in the seed package's own `WorldContent` object (corpus —
-/// the projection never reads it), so the mutable World carries identity alone.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct World {
-    pub id: Id,
-    pub name: String,
-}
+// ╔════════════════ [ aresrpg::zone — independent shared object ] ════════════ ]
 
-// ╔════════════════ [ aresrpg::zone — World DF ] ═════════════════════════════ ]
-
-/// `zone::ZoneKey { zone_x, zone_z }` — the DF key on the World UID.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct ZoneKey {
-    pub zone_x: u32,
-    pub zone_z: u32,
-}
-
-/// `zone::Zone` — the whole cost of a discovered zone.
+/// `zone::Zone` — independent mutable state for one discovered zone.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Zone {
+    pub id: Id,
+    pub world: String,
+    pub zone_x: u32,
+    pub zone_z: u32,
     pub seed: u64,
     pub searched_at_ms: u64,
     pub mob_taken: u128,
@@ -349,6 +337,8 @@ pub struct Fight {
     pub dungeon: Option<DungeonTag>,
     pub door_policy: u64,
     pub drops_rolled: bool,
+    pub next_turn_entropy: u64,
+    pub loot_entropy_ready: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1006,6 +996,8 @@ mod tests {
             }),
             door_policy: 13,
             drops_rolled: false,
+            next_turn_entropy: 42,
+            loot_entropy_ready: true,
         };
         let back = roundtrip(&fight);
         let FighterAuthority::Player { .. } = &back.authorities[0] else {

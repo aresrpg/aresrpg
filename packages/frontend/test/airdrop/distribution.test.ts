@@ -5,6 +5,7 @@ import { afterEach, expect, test } from 'bun:test'
 
 import { rolled_item_types } from '../../src/modules/claims.ts'
 import { gift_link_from_url } from '../../src/modules/distribution.ts'
+import { content_catalog } from '../../src/content/catalog.ts'
 import { create_app } from '../../src/store.ts'
 
 const location_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
@@ -116,5 +117,34 @@ test('a printed gift refuses an ordinary wallet as recipient B', () => {
     error: 'Continue with Google to receive this gift.',
   })
   expect(values.size).toBe(1)
+  stop()
+})
+
+test('a whitelist holder cannot route its voucher into an ordinary wallet B', () => {
+  let claims = 0
+  const [drop] = content_catalog.airdrop.drops
+  if (!drop) throw new Error('an authored airdrop is required')
+  const app = create_app()
+  const stop = app.observe(['distribution'])
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({
+    type: 'auth/connected',
+    session: { address: '0xordinary', identity: 'wallet' } as never,
+  })
+  app.dispatch({
+    type: 'distribution/holder_connected',
+    session: {
+      address: '0xholder',
+      claim_airdrop: async () => {
+        claims += 1
+        throw new Error('must not run')
+      },
+      disconnect: async () => undefined,
+    } as never,
+  })
+  app.dispatch({ type: 'distribution/claim', drop_id: drop.id })
+
+  expect(claims).toBe(0)
+  expect(app.store.getState().distribution.error).toBe('Continue with Google to receive this airdrop.')
   stop()
 })

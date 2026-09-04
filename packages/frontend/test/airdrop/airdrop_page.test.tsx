@@ -4,7 +4,7 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import AirdropPage, { AirdropDropCard } from '../../src/airdrop/AirdropPage.tsx'
+import AirdropPage, { AirdropDropCard, HolderWalletConnect, HolderWalletModal } from '../../src/airdrop/AirdropPage.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { rolled_item_types } from '../../src/modules/claims.ts'
@@ -54,4 +54,46 @@ test('a held voucher resolves its authored item from the template and stays rede
   expect(html).toContain('Sui Crate')
   expect(html).toContain('Giftcards awaiting redemption')
   expect(html).toContain('type="button">Redeem</button>')
+})
+
+test('holder connection stays one visible centered action until its wallet modal opens', async () => {
+  const copy = await load_app_copy('en')
+  const t = copy_text(copy.airdrop_page)
+  const closed = renderToStaticMarkup(
+    <HolderWalletConnect address={null} busy={null} t={t} wallets={['Phantom', 'Slush']} />
+  )
+  const modal = renderToStaticMarkup(
+    <HolderWalletModal
+      busy={null}
+      close={() => undefined}
+      connect={() => undefined}
+      t={t}
+      wallets={['Phantom', 'Slush']}
+    />
+  )
+
+  expect(closed).toContain('>Connect wallet</button>')
+  expect(closed).not.toContain('Phantom')
+  expect(closed).not.toContain('Slush')
+  expect(modal).toContain('role="dialog"')
+  expect(modal).toContain('aria-modal="true"')
+  expect(modal).toContain('Phantom')
+  expect(modal).toContain('Slush')
+})
+
+test('the holder surface keeps pending and connected states explicit', async () => {
+  const copy = await load_app_copy('en')
+  const t = copy_text(copy.airdrop_page)
+  const pending = renderToStaticMarkup(
+    <HolderWalletConnect address={null} busy="connect" t={t} wallets={['Phantom']} />
+  )
+  const connected = renderToStaticMarkup(
+    <HolderWalletConnect address="0xholder" busy={null} t={t} wallets={['Phantom']} />
+  )
+
+  expect(pending).toContain('Connecting…')
+  expect(pending).toContain('disabled=""')
+  expect(connected).toContain('0xholder')
+  expect(connected).toContain('Connected')
+  expect(connected).not.toContain('>Connect wallet</button>')
 })

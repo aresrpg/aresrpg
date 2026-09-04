@@ -48,6 +48,7 @@ describe('deployment admin', () => {
           getObjects: async () => ({ objects: [] }),
           simulateTransaction: async () => ({}),
           executeTransaction: async () => ({}),
+          waitForTransaction: async () => ({}),
         },
       } as SuiTransport,
     })
@@ -111,6 +112,7 @@ describe('deployment admin', () => {
           getObjects: async () => ({ objects: [] }),
           simulateTransaction: async () => ({}),
           executeTransaction: async () => ({}),
+          waitForTransaction: async () => ({}),
         },
       } as SuiTransport,
     })
@@ -148,6 +150,7 @@ describe('deployment admin', () => {
           }),
           simulateTransaction: async () => ({}),
           executeTransaction: async () => ({}),
+          waitForTransaction: async () => ({}),
         },
       } as SuiTransport,
     })

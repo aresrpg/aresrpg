@@ -414,7 +414,7 @@
   {
     "output_type": "old_hoe",
     "inputs": {
-      "gnawed_branch": 10,
+      "gnawed_branch": 5,
       "salvaged_scrap": 5
     },
     "job": "HANDYMAN"
@@ -505,7 +505,7 @@
   {
     "output_type": "basic_pickaxe",
     "inputs": {
-      "gnawed_branch": 10,
+      "gnawed_branch": 5,
       "beak_shard": 5
     },
     "job": "HANDYMAN"
@@ -513,7 +513,7 @@
   {
     "output_type": "tool_herbalist",
     "inputs": {
-      "gnawed_branch": 10,
+      "gnawed_branch": 5,
       "rabbit_sinew": 5
     },
     "job": "HANDYMAN"

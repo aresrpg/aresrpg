@@ -7,7 +7,7 @@
 ///   • SCRIBE (`scribe`) — apply ONE rune to a kiosk-held gear item. The rune is a stackable
 ///     item whose `item_type` maps to its catalog coords (`rune_of`); exactly 1 unit burns
 ///     BEFORE the roll (identical write-set every outcome). Gate: the gear's CATEGORY names its
-///     forgery job (owner: "its category defines the job to scribe"); that job must be ≥ 70. The
+///     forgery job (owner: "its category defines the job to scribe"); level 1 grants immediate access. The
 ///     3-outcome puits gamble runs off `apply_rune`; the new rolled block + the per-item
 ///     `ForgeState` DF (puits + application counts) are written; job xp banks on the forgery job.
 ///
@@ -16,10 +16,9 @@
 ///     `crush` is FIXED-cost — it only burns the gear, snapshots each item's raw stat block, and
 ///     commits ONE `&Random` seed into a SOULBOUND `CrushClaim` (no tier math runs yet, so an
 ///     outcome-dependent gas budget cannot OOG-revert a bad roll to filter for Ra-heavy claims —
-///     audit 2026-08-11). Phase 2 `redeem_rune` reveals the owed runes DETERMINISTICALLY off the
-///     committed seed (no randomness left to filter) and mints ONE type per call — a real
-///     `&ItemTemplate` each, dodging the illegal `vector<&ItemTemplate>`. `discard_claim` closes an
-///     emptied claim.
+///     audit 2026-08-11). Phase 2 reveals the owed runes DETERMINISTICALLY off the committed seed
+///     (no randomness left to filter); the receipt lets the client redeem ONLY nonzero types
+///     through their real `&ItemTemplate`, then `discard_claim` closes the emptied claim.
 module aresrpg::forgemagie;
 
 use aresrpg_seed::item_rows::{Self, ItemTemplate};
@@ -41,8 +40,9 @@ use sui::{
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
-const RUNE_UNLOCK_LEVEL: u64 = 70;
-/// Forgemagie has NO progression (owner 2026-08-11): the craft job only gates access, it never
+const RUNE_UNLOCK_LEVEL: u64 = 1;
+/// Forgemagie has NO odds progression (owner 2026-08-11): the craft job names the XP bank and its
+/// level-1 baseline grants access immediately; it never
 /// improves the odds. The ported `apply_rune` takes a runic level (Dofus fed the forgemage's own
 /// level), so we PIN it at the production mastery level — everyone scribes at qualified-master competence,
 /// a FLAT gamble driven by proximity to the template max + the item's puits. Dofus-faithful rates.
@@ -56,6 +56,7 @@ const EWrongItem: u64 = 2704; // scribe: gear/template mismatch, or the gear car
 const ENotForgeable: u64 = 2705; // the item's category has no forgery job (not gear)
 const EMissingTemplate: u64 = 2709; // close_crush: a yielded rune's template was not snapshotted
 const ENoStats: u64 = 2710; // crush: a gear item carries no rolled block
+const EWrongRune: u64 = 2711; // caller coordinates do not match the owned rune/template identity
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
@@ -100,10 +101,14 @@ public struct RuneScribed has copy, drop {
 
 public struct GearCrushed has copy, drop { crusher: address, items: u64 }
 
+/// Deterministic committed yield. Re-emitted unchanged on retry so a revealed claim remains
+/// recoverable without projecting private claim internals into the player protocol.
+public struct CrushRevealed has copy, drop { claim: ID, owed: vector<u64> }
+
 // ╔════════════════ [ SCRIBE ] ═══════════════════════════════════════════════ ]
 
-/// Apply one rune to `gear_id`. Consumes 1 unit of the rune stack, gates on the gear's forgery
-/// job (≥ 70), rolls the 3-outcome gamble, writes the new block + the ForgeState DF, banks xp.
+/// Apply one rune to `gear_id`. Consumes 1 unit of the rune stack, resolves the gear's forgery
+/// job (available from level 1), rolls the 3-outcome gamble, writes ForgeState, and banks XP.
 public(package) fun scribe(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -111,15 +116,17 @@ public(package) fun scribe(
   gear_id: ID,
   gear_template: &ItemTemplate,
   rune_item_id: ID,
+  rune_stat: u8,
+  rune_tier: u8,
   protected_item: &AresRPG_TransferPolicy<Item>,
   generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  // the rune identity — aborts if the consumed item is not a catalog rune
+  // Coordinates avoid a linear catalog scan, but the owned item's identity remains authority.
   let rune_type = { let rune_item: &Item = kiosk.borrow(cap, rune_item_id); rune_item.item_type() };
-  let (rune_stat, rune_tier) = cat::rune_of(rune_type);
+  assert_rune_identity(rune_type, rune_stat, rune_tier);
 
-  // the forgery job from the gear's category — a pure gate (no odds scaling)
+  // the forgery job from the gear's category — level 1 grants access; no odds scaling
   let job = {
     let character: &Character = kiosk.borrow(cap, character_id);
     forgery_job(character, item_rows::template_category(gear_template))
@@ -209,13 +216,24 @@ public(package) fun crush(
 
 // ╔════════════════ [ CRUSH — phase 2: deterministic redeem (no randomness) ] ═ ]
 
+/// Reveal the committed rune counts without minting. Idempotent: once revealed, every retry emits
+/// the same vector. This separates the unavoidable variable-cost math from the exact template set,
+/// so redemption never pays one Move call for every zero-owed catalog rune.
+public(package) fun reveal_claim(claim: &mut CrushClaim) {
+  ensure_revealed(claim);
+  event::emit(CrushRevealed { claim: claim.id.to_inner(), owed: claim.owed });
+}
+
 /// Redeem ONE owed rune type: mint its owed quantity off the real `template` and merge into the
 /// crusher's `existing` stack (no dust). Called once per yielded rune type in the redeem PTB —
 /// each call carries the REAL `&ItemTemplate`, so no snapshot dance and no `vector<&ItemTemplate>`.
-/// A rune with nothing owed (or already redeemed) no-ops; a non-rune template aborts via `rune_of`.
+/// A rune with nothing owed (or already redeemed) no-ops; caller coordinates are verified against
+/// the template's canonical catalog slug before any claim write.
 public(package) fun redeem_rune(
   claim: &mut CrushClaim,
   template: &ItemTemplate,
+  stat: u8,
+  tier: u8,
   existing: Option<ID>,
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -223,7 +241,7 @@ public(package) fun redeem_rune(
   ctx: &mut TxContext,
 ) {
   ensure_revealed(claim); // deterministic first-touch reveal off the committed seed
-  let (stat, tier) = cat::rune_of(item_rows::template_type(template));
+  assert_rune_identity(item_rows::template_type(template), stat, tier);
   let idx = (stat as u64) * 3 + (tier as u64) - 1;
   let qty = claim.owed[idx];
   if (qty == 0) return;
@@ -264,9 +282,18 @@ fun assert_crushable(category: String, has_stats: bool) {
   );
 }
 
+fun assert_rune_identity(item_type: String, stat: u8, tier: u8) {
+  assert!(cat::has_rune(stat, tier) && cat::slug(stat, tier) == item_type, EWrongRune);
+}
+
 #[test_only]
 public(package) fun assert_crushable_for_testing(category: String, has_stats: bool) {
   assert_crushable(category, has_stats);
+}
+
+#[test_only]
+public(package) fun assert_rune_identity_for_testing(item_type: String, stat: u8, tier: u8) {
+  assert_rune_identity(item_type, stat, tier);
 }
 
 #[test_only]

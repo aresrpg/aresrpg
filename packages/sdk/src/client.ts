@@ -76,7 +76,7 @@ const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_v
 /**
  * The transport the SDK needs — the modern CORE interface, identical on the gRPC and GraphQL
  * clients (`client.core.*`; JSON-RPC is dead — owner 2026-08-12). Structural on purpose so any
- * flavor or test fake fits: hydrate + resolve gas + simulate + execute.
+ * flavor or test fake fits: hydrate, resolve gas, simulate, execute, and synchronize the next write.
  */
 export interface SuiTransport {
   core: {
@@ -100,6 +100,7 @@ export interface SuiTransport {
     getObjects: (input: { objectIds: string[]; include?: { json?: boolean } }) => Promise<{ objects: FetchedObject[] }>
     simulateTransaction: (input: { transaction: Uint8Array; include?: object }) => Promise<Receipt>
     executeTransaction: (input: { transaction: Uint8Array; signatures: string[]; include?: object }) => Promise<Receipt>
+    waitForTransaction: (input: { digest: string; timeout?: number; pollSchedule?: number[] }) => Promise<Receipt>
   }
 }
 
@@ -274,6 +275,7 @@ export function SDK({
   const cache = create_cache()
   const pure_inputs = new WeakMap<Transaction, Map<string, TransactionArgument>>()
   let execution_tail: Promise<unknown> = Promise.resolve()
+  let pending_visibility_digest: string | null = null
   const sender = address ?? signer?.toSuiAddress() ?? null
   const gas_ledger = create_gas_ledger({ address: sender, network })
   const balance = create_balance_cache({
@@ -456,6 +458,8 @@ export function SDK({
       signatures: [signature],
       include: { effects: true, events: true, ...include },
     })
+    // Failures also advance gas/touched refs, so arm the next-write barrier before classification.
+    pending_visibility_digest = receipt_digest(receipt)
     log_transaction_receipt(receipt)
     gas_ledger.record(receipt)
     if (gas_scope) gas_ledger.tag(receipt, gas_scope)
@@ -469,6 +473,20 @@ export function SDK({
     return receipt
   }
 
+  const await_previous_visibility = async (): Promise<void> => {
+    const digest = pending_visibility_digest
+    if (!digest) return
+    try {
+      await sui_client.core.waitForTransaction({ digest })
+      pending_visibility_digest = null
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `[sdk] previous transaction ${digest} is not yet visible — next transaction NOT submitted: ${message}`,
+        { cause: error }
+      )
+    }
+  }
   const simulate = async (
     tx: Transaction,
     { budget = gas_budget, include }: { budget?: bigint | 'estimate'; include?: object } = {}
@@ -488,6 +506,7 @@ export function SDK({
     }: { budget?: bigint | 'estimate'; include?: object; gas_scope?: string } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
+    await await_previous_visibility()
     await prepare_transaction(tx, sender, { budget })
     const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
     if (!signed) throw new Error('[sdk] execute needs a signer')

@@ -9,6 +9,11 @@ export const readable_transaction_error = (error: unknown): string => {
   })
 }
 
+/** The SDK's executed-failure envelope. A digest means the transaction is terminal even when
+ * its game effects rolled back; operational callers must journal it instead of retrying. */
+export const executed_transaction_digest = (error: unknown): string | null =>
+  readable_transaction_error(error).match(/^\[sdk\] transaction (\S+) failed on-chain:/)?.[1] ?? null
+
 /** A receipt-fresh owned ref may reach one resolver before another. Only pre-submission failures
  * are retry candidates; a digest-bearing execution is terminal. Timing belongs to the caller. */
 export const pre_submission_version_race = (error: unknown): boolean => {

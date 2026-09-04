@@ -172,6 +172,7 @@ const game = () => {
         getObjects: async () => ({ objects: [] }),
         simulateTransaction: async () => ({}),
         executeTransaction: async () => ({}),
+        waitForTransaction: async () => ({}),
       },
     } as SuiTransport,
   })
