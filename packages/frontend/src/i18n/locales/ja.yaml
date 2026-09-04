@@ -1744,6 +1744,11 @@ characters_page:
     crit_val: 'クリ {{value}}'
     range_fixed: '固定 — 射程ステータスは無効'
   jobs:
+    level_up_title: 職業レベルアップ
+    level_up_reached: 到達レベル
+    level_up_character: '{{name}}が成長しました'
+    level_up_progress: 'レベル {{before}} → {{after}}'
+    level_up_continue: 続ける
     category:
       gathering: '採集'
       weapon: '武器製作'

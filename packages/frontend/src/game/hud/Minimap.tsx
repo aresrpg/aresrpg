@@ -9,7 +9,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   city_map_overlays,
-  compile_world_recipe,
+  compile_runtime_world_recipe,
   parse_world_recipe,
   sample_world_column,
   type CompiledWorld,
@@ -109,7 +109,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     const terrain = world_terrain(world_name)
     if (!terrain) return null
     try {
-      return compile_world_recipe(parse_world_recipe(terrain))
+      return compile_runtime_world_recipe(parse_world_recipe(terrain))
     } catch (error) {
       console.error('The minimap could not compile the world recipe.', error)
       return null

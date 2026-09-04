@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { create_bounded_memo, type BoundedMemo } from './bounded_memo.ts'
 import {
   compile_materials,
   validate_materials,
@@ -68,6 +69,7 @@ type CompiledBiome = WorldBiome & Readonly<{ height_points: readonly SplineKnot[
 export type CompiledWorld = Readonly<{
   recipe: WorldRecipe
   decoration_seed: number
+  column_cache_capacity: number
   materials: CompiledMaterials
   structures: CompiledStructures
   city_terrain: boolean
@@ -325,9 +327,13 @@ export const CLIMATE_FIELDS = Object.freeze({
 })
 export const balance_climate = (value: number): number => Math.max(0, Math.min(1, (value - 0.5) * 1.5 + 0.5))
 
+const GENERATION_WORLD_COLUMN_CACHE_CAPACITY = 262_144
+/** One complete high-quality far grid is 56,644 columns; runtime needs locality, not travel history. */
+export const RUNTIME_WORLD_COLUMN_CACHE_CAPACITY = 65_536
+
 export const compile_world_recipe = (
   input: WorldRecipe,
-  options: Readonly<{ structures?: boolean; city_terrain?: boolean }> = {}
+  options: Readonly<{ structures?: boolean; city_terrain?: boolean; column_cache_capacity?: number }> = {}
 ): CompiledWorld => {
   const recipe = parse_world_recipe(input)
   const biomes = recipe.biomes.map((biome) => ({
@@ -376,6 +382,10 @@ export const compile_world_recipe = (
   return Object.freeze({
     recipe,
     decoration_seed: derive_sub_seed(recipe.seed, 'decoration'),
+    column_cache_capacity: Math.max(
+      1,
+      Math.trunc(options.column_cache_capacity ?? GENERATION_WORLD_COLUMN_CACHE_CAPACITY)
+    ),
     materials,
     structures: include_structures
       ? compile_structures(recipe.biomes, materials, recipe.structure_areas)
@@ -395,6 +405,13 @@ export const compile_world_recipe = (
   })
 }
 
+/** Runtime compilation owns one bounded locality policy across every worker and presentation consumer. */
+export const compile_runtime_world_recipe = (
+  input: WorldRecipe,
+  options: Readonly<{ structures?: boolean; city_terrain?: boolean }> = {}
+): CompiledWorld =>
+  compile_world_recipe(input, { ...options, column_cache_capacity: RUNTIME_WORLD_COLUMN_CACHE_CAPACITY })
+
 const land_at = (biome: CompiledBiome, ground: number, transition: number): BiomeLand =>
   biome.landscape.reduce((selected, knot) => {
     const threshold = knot.x + (transition - 0.5) * (knot.variance ?? 0)
@@ -404,22 +421,16 @@ const land_at = (biome: CompiledBiome, ground: number, transition: number): Biom
 /** Column memo — the sampler is pure and every stage of a chunk's build (structure search,
  *  generation halo, ground scatter) plus physics and the minimap ask for overlapping columns;
  *  one bounded cache at the SOURCE means nobody ever pays the climate stack twice. */
-const COLUMN_CACHE_CAP = 262_144
-const column_caches = new WeakMap<CompiledWorld, Map<number, WorldColumn>>()
+const column_caches = new WeakMap<CompiledWorld, BoundedMemo<number, WorldColumn>>()
 
 export const sample_world_column = (world: CompiledWorld, x: number, z: number): WorldColumn => {
   let cache = column_caches.get(world)
   if (!cache) {
-    cache = new Map()
+    cache = create_bounded_memo(world.column_cache_capacity)
     column_caches.set(world, cache)
   }
   const key = x * 200_003 + z
-  const cached = cache.get(key)
-  if (cached !== undefined) return cached
-  if (cache.size >= COLUMN_CACHE_CAP) cache.clear()
-  const column = sample_base_column(world, x, z)
-  cache.set(key, column)
-  return column
+  return cache.get(key, () => sample_base_column(world, x, z))
 }
 
 const sample_base_column = (world: CompiledWorld, x: number, z: number): WorldColumn => {

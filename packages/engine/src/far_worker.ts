@@ -6,7 +6,7 @@ import { material_pattern } from './material_presets.ts'
 import type { EngineQuality } from './types.ts'
 import { WATER_SURFACE_LAYOUT } from './water_surface_layout.ts'
 import {
-  compile_world_recipe,
+  compile_runtime_world_recipe,
   sample_world_column,
   surface_layer_for_slope,
   terrain_slope,
@@ -23,7 +23,7 @@ let world: CompiledWorld | null = null
 
 self.addEventListener('message', ({ data }: MessageEvent<Request>) => {
   if (data.type === 'initialize') {
-    world = compile_world_recipe(data.world, { structures: false })
+    world = compile_runtime_world_recipe(data.world, { structures: false })
     return
   }
   if (!world) throw new Error('far worker received work before its world recipe')

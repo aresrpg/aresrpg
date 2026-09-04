@@ -57,6 +57,7 @@ import { toast } from './toast.ts'
 import { TutorialHost } from './tutorial/TutorialHost.tsx'
 import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
+import { JobLevelUpCard } from './game/jobs/JobLevelUpCard.tsx'
 import { FriendsPanel } from './components/FriendsPanel.tsx'
 import { PartyFrame } from './components/PartyFrame.tsx'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
@@ -418,6 +419,7 @@ export function App() {
             <FightLevelUpCard copy={copy} />
           </>
         )}
+        <JobLevelUpCard copy={copy} />
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
       <PlayerContextMenu copy={copy} />

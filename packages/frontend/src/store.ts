@@ -50,6 +50,11 @@ import distribution, {
   type DistributionInput,
   type DistributionState,
 } from './modules/distribution.ts'
+import job_level_up, {
+  initial_job_level_up_state,
+  type JobLevelUpInput,
+  type JobLevelUpState,
+} from './modules/job_level_up.ts'
 
 export type AppState = Readonly<{
   session: SessionState
@@ -75,6 +80,7 @@ export type AppState = Readonly<{
   runeforge: RuneforgeState
   mastery: MasteryState
   distribution: DistributionState
+  job_level_up: JobLevelUpState
 }>
 
 export type AppInput =
@@ -101,6 +107,7 @@ export type AppInput =
   | RuneforgeInput
   | MasteryInput
   | DistributionInput
+  | JobLevelUpInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -150,6 +157,7 @@ const MODULES = Object.freeze([
   runeforge,
   mastery,
   distribution,
+  job_level_up,
 ]) satisfies readonly AppModule[]
 
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -182,6 +190,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     runeforge: initial_runeforge_state(),
     mastery: initial_mastery_state(),
     distribution: initial_distribution_state(),
+    job_level_up: initial_job_level_up_state(),
   })
 
 const create_events = () => {

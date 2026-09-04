@@ -8,7 +8,7 @@ import { structure_placements, type StructurePlacement } from './structure_place
 import { generate_chunk } from './terrain_generator.ts'
 import type { RenderChunkRequest, RenderedChunk } from './types.ts'
 import { CHUNK_EDGE } from './voxel_data.ts'
-import { compile_world_recipe, type CompiledWorld, type WorldRecipe } from './world_recipe.ts'
+import { compile_runtime_world_recipe, type CompiledWorld, type WorldRecipe } from './world_recipe.ts'
 
 type WorkerRequest =
   | Readonly<{ type: 'initialize'; world: WorldRecipe }>
@@ -19,7 +19,7 @@ const structure_cache = new Map<string, readonly StructurePlacement[]>()
 
 self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
   if (data.type === 'initialize') {
-    world_ready = Promise.resolve(compile_world_recipe(data.world))
+    world_ready = Promise.resolve(compile_runtime_world_recipe(data.world))
     structure_cache.clear()
     return
   }

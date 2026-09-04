@@ -1768,6 +1768,11 @@ characters_page:
     crit_val: 'krit {{value}}'
     range_fixed: 'FEST — REICHWEITE-STAT WIRKT NICHT'
   jobs:
+    level_up_title: Berufsstufe
+    level_up_reached: Stufe erreicht
+    level_up_character: '{{name}} hat sich verbessert'
+    level_up_progress: 'Stufe {{before}} → {{after}}'
+    level_up_continue: Weiter
     category:
       gathering: 'Sammeln'
       weapon: 'Waffenhandwerk'

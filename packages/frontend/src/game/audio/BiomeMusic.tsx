@@ -3,7 +3,12 @@
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- HTML media and its React ref are browser-owned mutable effect boundaries. */
 // Presentation-edge observer: current biome selects the bed; mounted fight state selects its twin.
 
-import { compile_world_recipe, parse_world_recipe, sample_world_column, type CompiledWorld } from '@aresrpg/engine'
+import {
+  compile_runtime_world_recipe,
+  parse_world_recipe,
+  sample_world_column,
+  type CompiledWorld,
+} from '@aresrpg/engine'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
@@ -59,7 +64,7 @@ export const BiomeMusic = () => {
     const terrain = world_terrain(world_name)
     if (!terrain) return null
     try {
-      return compile_world_recipe(parse_world_recipe(terrain))
+      return compile_runtime_world_recipe(parse_world_recipe(terrain))
     } catch (error) {
       console.error('Biome music could not compile the world recipe.', error)
       return null

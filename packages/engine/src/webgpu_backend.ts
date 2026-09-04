@@ -61,7 +61,7 @@ import type {
   RenderedChunk,
   Vec3,
 } from './types.ts'
-import { compile_world_recipe, sample_world_column, type WorldRecipe } from './world_recipe.ts'
+import { compile_runtime_world_recipe, sample_world_column, type WorldRecipe } from './world_recipe.ts'
 
 const FOG_COOL_TILT = [0.62, 0.75, 1] as const
 
@@ -153,7 +153,7 @@ export const create_webgpu_backend = async (
   // remains layer 0 and never draws that duplicate.
   sun.shadow.camera.layers.enable(1)
   const analytic_sky = create_sky_node({ seed: world.seed })
-  const compiled_world = compile_world_recipe(world, { structures: false })
+  const compiled_world = compile_runtime_world_recipe(world, { structures: false })
   const liquid_material =
     world.liquid === undefined ? null : compiled_world.materials.entries[compiled_world.materials.id_for(world.liquid)]!
   const water_palette = liquid_palette(liquid_material?.color ?? [0, 0, 0])

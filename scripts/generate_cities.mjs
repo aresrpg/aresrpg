@@ -32,6 +32,7 @@ const source_paths = async (id) => {
   return [
     'scripts/generate_cities.mjs',
     'seed/content/worlds.json',
+    'packages/engine/src/bounded_memo.ts',
     'packages/engine/src/cities/city_structure.ts',
     'packages/engine/src/cities/city_terrain.ts',
     'packages/engine/src/cities/registry.ts',

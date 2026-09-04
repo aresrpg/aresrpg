@@ -1765,6 +1765,11 @@ characters_page:
     crit_val: 'крит {{value}}'
     range_fixed: 'ФІКСОВАНА — СТАТ. ДАЛЬНОСТІ НЕ ДІЄ'
   jobs:
+    level_up_title: Новий рівень професії
+    level_up_reached: Досягнуто рівня
+    level_up_character: '{{name}} вдосконалюється'
+    level_up_progress: 'Рівень {{before}} → {{after}}'
+    level_up_continue: Продовжити
     category:
       gathering: 'Збиральництво'
       weapon: 'Виготовлення зброї'

@@ -52,6 +52,7 @@ export {
 export { mulberry } from './nature/sprite_kit.ts'
 export {
   BIOME_SLOTS,
+  compile_runtime_world_recipe,
   compile_world_recipe,
   landscape_height,
   MAX_SURFACE_Y,

@@ -1771,6 +1771,11 @@ characters_page:
     crit_val: 'crit {{value}}'
     range_fixed: 'FIXED — +RANGE STAT DOES NOT APPLY'
   jobs:
+    level_up_title: Profession level up
+    level_up_reached: Level reached
+    level_up_character: '{{name}} improved'
+    level_up_progress: 'Level {{before}} → {{after}}'
+    level_up_continue: Continue
     category:
       gathering: 'Gathering'
       weapon: 'Weapon craft'

@@ -23,6 +23,7 @@ describe('app module arming sets', () => {
     expect(PLAYER_APP_MODULES).toContain('fight_chain')
     expect(PLAYER_APP_MODULES).toContain('party_follow')
     expect(PLAYER_APP_MODULES).toContain('run_to')
+    expect(PLAYER_APP_MODULES).toContain('job_level_up')
     // the world observer fires the zone-search transaction (2026-08-22) — it was the exempted
     // "reduce-only" module until it grew an effect, which is exactly how the exemption below
     // turns from documentation into a trap

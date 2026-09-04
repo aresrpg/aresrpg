@@ -1767,6 +1767,11 @@ characters_page:
     crit_val: 'crít {{value}}'
     range_fixed: 'FIJO — LA ESTAD. ALCANCE NO SE APLICA'
   jobs:
+    level_up_title: Nivel de oficio
+    level_up_reached: Nivel alcanzado
+    level_up_character: '{{name}} ha mejorado'
+    level_up_progress: 'Nivel {{before}} → {{after}}'
+    level_up_continue: Continuar
     category:
       gathering: 'Recolección'
       weapon: 'Artesanía de armas'

@@ -7,7 +7,7 @@ import {
   CELESTIAL_CYCLE_MS,
   DUNGEON_PORTAL_LABEL_HEIGHT,
   apply_voxel_operation,
-  compile_world_recipe,
+  compile_runtime_world_recipe,
   create_flat_projection,
   create_engine,
   create_terrain_planner,
@@ -72,7 +72,7 @@ export type WorldState = Readonly<{
 }>
 
 export const city_collision_readiness = (
-  world: ReturnType<typeof compile_world_recipe>,
+  world: ReturnType<typeof compile_runtime_world_recipe>,
   on_ready: () => void,
   load_artifacts: typeof load_generated_city_artifacts_for = load_generated_city_artifacts_for
 ): ((area: Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>) => boolean) => {
@@ -101,7 +101,7 @@ export const city_collision_readiness = (
 }
 
 const structure_collision_available = (
-  world: ReturnType<typeof compile_world_recipe>,
+  world: ReturnType<typeof compile_runtime_world_recipe>,
   city_ready: boolean,
   flat_amount: number
 ): boolean =>
@@ -145,7 +145,7 @@ export const create_world = ({
   on_run_stopped?: (reason: 'arrived' | 'manual' | 'blocked' | 'inactive') => void
   initial_focus?: readonly [number, number]
 }>) => {
-  const compiled = compile_world_recipe(parse_world_recipe(world))
+  const compiled = compile_runtime_world_recipe(parse_world_recipe(world))
   const engine = create_engine({ canvas, quality, world, initial_focus })
   const terrain_planner = create_terrain_planner(compiled.recipe)
   const chunks = create_chunk_manager({
@@ -157,17 +157,8 @@ export const create_world = ({
   // World oracles for the ported physics/camera: columns are analytic (the compiled recipe), so
   // solidity is "below the surface" and liquid fills up to the authored absolute sea plane — the
   // faithful adaptation until client-side block edits exist (legacy read per-block ids).
-  type SampledColumn = ReturnType<typeof sample_world_column>
-  const column_cache = new Map<number, SampledColumn>()
-  const column_at = (x: number, z: number): SampledColumn => {
-    const key = x * 200_003 + z
-    const hit = column_cache.get(key)
-    if (hit !== undefined) return hit
-    if (column_cache.size > 65_536) column_cache.clear()
-    const value = sample_world_column(compiled, x, z)
-    column_cache.set(key, value)
-    return value
-  }
+  const column_at = (x: number, z: number): ReturnType<typeof sample_world_column> =>
+    sample_world_column(compiled, x, z)
   const surface_y = (x: number, z: number): number => column_at(x, z).surface_y
   // One projection state drives both the renderer and collision. The engine owns the pure
   // projection law; game core owns this one current frame snapshot.

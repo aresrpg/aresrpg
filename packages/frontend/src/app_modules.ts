@@ -43,6 +43,7 @@ export const PLAYER_APP_MODULES = Object.freeze([
   'runeforge',
   'mastery',
   'distribution',
+  'job_level_up',
 ]) satisfies readonly AppModuleName[]
 
 export const DEMO_APP_MODULES = Object.freeze([

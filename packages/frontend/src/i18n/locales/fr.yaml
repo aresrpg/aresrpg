@@ -1773,6 +1773,11 @@ characters_page:
     crit_val: 'crit {{value}}'
     range_fixed: "FIXE — LA STAT PORTÉE N'A AUCUN EFFET"
   jobs:
+    level_up_title: Niveau de métier
+    level_up_reached: Niveau atteint
+    level_up_character: '{{name}} progresse'
+    level_up_progress: 'Niveau {{before}} → {{after}}'
+    level_up_continue: Continuer
     category:
       gathering: 'Récolte'
       weapon: "Artisanat d'armes"

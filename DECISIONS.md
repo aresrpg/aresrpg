@@ -6,6 +6,9 @@ personal attribution, or conversational incident history. Search the domain bein
 treat the file as a second architecture. One line owns each decision. When a decision changes, amend or
 delete its row; superseded decisions never remain.
 
+- 2026-09-04 · RUNTIME TERRAIN MEMOS RETAIN LOCALITY, NOT TRAVEL HISTORY: every runtime mesh, planning, far-terrain, and main-thread compiler requests a 65,536-entry column FIFO—enough for the complete 56,644-column high-quality far grid—while offline generation may retain its broader working set. Structure candidates keep only 16,384 FIFO entries. Advancing evicts the oldest quarter in bounded batches; full-cache flushes, per-miss iterator churn, and duplicate caller-side column maps are forbidden. Offline generation and runtime use the same deterministic sampler, while cache policy changes neither terrain output nor authored content.
+- 2026-09-04 · JOB LEVEL-UP IS A GLOBAL CYAN CEREMONY: every increase derived from an existing character's canonical job-XP level—whether folded immediately from crafting or arriving in the post-gather roster—queues one global profession card; initial login snapshots and non-increases stay silent. The card shows the complete crossed range, queues simultaneous gains, and uses a cyan/teal grid identity distinct from the fight card's ember/gold ceremony.
+
 ## Patterns — how to think here
 
 - 2026-09-02 · JOB INGREDIENT LINKS FOLLOW THE NEXT PLAYER ACTION: clicking a raw, gathered, or dropped ingredient opens that item in the encyclopedia; clicking an intermediary resource selects its effective crafting profession and opens that recipe inside the Character Jobs detail, where the existing affordability, level, and transaction gates remain authoritative. The compiled catalog's resource kind and effective recipe job decide the destination; UI labels never infer it.

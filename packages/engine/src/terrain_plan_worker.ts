@@ -6,7 +6,7 @@ import { load_generated_city_artifacts_for } from './cities/generated_city.ts'
 import { structure_placements } from './structure_placement.ts'
 import { CHUNK_EDGE } from './voxel_data.ts'
 import type { TerrainColumnCoordinate, TerrainColumnPlan } from './terrain_planner.ts'
-import { compile_world_recipe, type CompiledWorld, type WorldRecipe } from './world_recipe.ts'
+import { compile_runtime_world_recipe, type CompiledWorld, type WorldRecipe } from './world_recipe.ts'
 
 type WorkerRequest =
   | Readonly<{ type: 'initialize'; world: WorldRecipe }>
@@ -16,7 +16,7 @@ let world_ready: Promise<CompiledWorld> | null = null
 
 self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
   if (data.type === 'initialize') {
-    world_ready = Promise.resolve(compile_world_recipe(data.world))
+    world_ready = Promise.resolve(compile_runtime_world_recipe(data.world))
     return
   }
   if (!world_ready) throw new Error('terrain planner received work before its world recipe')

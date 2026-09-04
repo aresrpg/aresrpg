@@ -8748,12 +8748,6 @@
         "chance_bp": 300,
         "min_qty": 1,
         "max_qty": 1
-      },
-      {
-        "item_type": "siluri",
-        "chance_bp": 100,
-        "min_qty": 1,
-        "max_qty": 1
       }
     ],
     "xp": 600
@@ -8846,12 +8840,6 @@
       {
         "item_type": "key_of_gilded_lorito",
         "chance_bp": 300,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "siluri",
-        "chance_bp": 100,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -8948,12 +8936,6 @@
         "chance_bp": 300,
         "min_qty": 1,
         "max_qty": 1
-      },
-      {
-        "item_type": "siluri",
-        "chance_bp": 100,
-        "min_qty": 1,
-        "max_qty": 1
       }
     ],
     "xp": 600
@@ -9046,12 +9028,6 @@
       {
         "item_type": "key_of_gilded_lorito",
         "chance_bp": 300,
-        "min_qty": 1,
-        "max_qty": 1
-      },
-      {
-        "item_type": "siluri",
-        "chance_bp": 100,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -9382,6 +9358,18 @@
       {
         "item_type": "sun_eyed_lorito",
         "chance_bp": 2,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "siluri",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_gilded_lorito",
+        "chance_bp": 500,
         "min_qty": 1,
         "max_qty": 1
       }

@@ -10,12 +10,14 @@ import {
   biome_influences,
   CLIMATE_FIELDS,
   climate_band_weights,
+  compile_runtime_world_recipe,
   compile_world_recipe,
   landscape_height,
   MAX_SURFACE_Y,
   sample_world_column,
   surface_layer_for_slope,
   validate_world_recipe,
+  RUNTIME_WORLD_COLUMN_CACHE_CAPACITY,
   WORLD_HEIGHT,
   type WorldRecipe,
 } from '../src/world_recipe.ts'
@@ -340,6 +342,24 @@ describe('world recipes', () => {
     expect(first.surface_y).toBeInteger()
     expect(first.surface_id).toBe(world.materials.id_for(first.land.surface, 'surface', first.land.subsurface))
     expect(structuredClone(RECIPE)).toEqual(RECIPE)
+  })
+
+  test('bounds retained column history to one high-quality far grid', () => {
+    const source = compile_runtime_world_recipe(RECIPE, { structures: false })
+    let sampled = 0
+    const world = Object.freeze({
+      ...source,
+      sample_climate: (x: number, z: number) => {
+        sampled += 1
+        return source.sample_climate(x, z)
+      },
+    })
+    const first = sample_world_column(world, 0, 0)
+    for (let x = 1; x <= RUNTIME_WORLD_COLUMN_CACHE_CAPACITY; x += 1) sample_world_column(world, x, 0)
+    const resampled = sample_world_column(world, 0, 0)
+
+    expect(sampled).toBe(RUNTIME_WORLD_COLUMN_CACHE_CAPACITY + 2)
+    expect(resampled).toEqual(first)
   })
 
   test('traverses an authored elevation curve inside one admin voxel field', () => {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { create_bounded_memo, type BoundedMemo } from './bounded_memo.ts'
 import type { CompiledStructurePack, CompiledStructureType } from './structures.ts'
 import { compile_city_placements, map_city } from './cities/index.ts'
 import { generated_city_land_use } from './cities/generated_city.ts'
@@ -140,7 +141,8 @@ const weighted_type = (pack: CompiledStructurePack, roll: number): CompiledStruc
 
 /** Cell memo — a candidate is a pure function of (world, pack, cell); every chunk whose search
  *  margin covers the cell re-asks the exact same question, so the answer is computed once. */
-const candidate_caches = new WeakMap<CompiledWorld, Map<string, StructurePlacement | null>>()
+const STRUCTURE_CANDIDATE_CACHE_CAPACITY = 16_384
+const candidate_caches = new WeakMap<CompiledWorld, BoundedMemo<string, StructurePlacement | null>>()
 
 const candidate = (
   world: CompiledWorld,
@@ -150,16 +152,11 @@ const candidate = (
 ): StructurePlacement | null => {
   let cache = candidate_caches.get(world)
   if (!cache) {
-    cache = new Map()
+    cache = create_bounded_memo(STRUCTURE_CANDIDATE_CACHE_CAPACITY)
     candidate_caches.set(world, cache)
   }
   const key = `${pack.name}:${cell_x}:${cell_z}`
-  const cached = cache.get(key)
-  if (cached !== undefined) return cached
-  if (cache.size >= 65_536) cache.clear()
-  const placement = compute_candidate(world, pack, cell_x, cell_z)
-  cache.set(key, placement)
-  return placement
+  return cache.get(key, () => compute_candidate(world, pack, cell_x, cell_z))
 }
 
 const compute_candidate = (
