@@ -329,7 +329,11 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       if (!runes.length) throw new Error('The rune roster is empty')
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const templates = runes.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
-      await sdk.hydrate_unknown([claim_id, ...templates])
+      // The just-created claim may be known to this cache before the resolver's selected read
+      // node has converged. One explicit read is the synchronization edge; templates remain
+      // ordinary cache-once content refs.
+      await sdk.hydrate([claim_id])
+      await sdk.hydrate_unknown(templates)
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
           runes.forEach(({ existing }, index) =>

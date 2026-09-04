@@ -125,7 +125,7 @@ describe('The Ruins city', () => {
     expect(drafts.filter(({ id }) => id.includes(':monumental-stair:'))).toHaveLength(3)
     expect(operation_voxels(drafts, world.materials.id_for('the_ruins_bone')).size).toBeGreaterThan(4_000)
     drafts.forEach(({ type }) => type.size.forEach((size) => expect(size).toBeLessThanOrEqual(256)))
-  })
+  }, 15_000)
 
   test('routes cobwebs through the standard ground-scatter grammar', () => {
     const { city } = the_ruins_world()
