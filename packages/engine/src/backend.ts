@@ -28,6 +28,7 @@ export type EngineBackend = Readonly<{
    * this, never the camera target (which leads the character). Null when nobody is followed. */
   set_character_anchor: (position: Vec3 | null) => void
   set_quality: (quality: EngineQuality, render_distance?: number | null) => void
+  set_audio_volume: (volume: number) => void
   set_time_of_day: (time: number) => void
   set_clouds_visible: (visible: boolean) => void
   set_flatten_amount: (amount: number) => void

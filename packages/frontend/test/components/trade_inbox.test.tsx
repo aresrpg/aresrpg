@@ -17,6 +17,7 @@ import {
 import {
   stage_trade_addition,
   stage_trade_offer_addition,
+  trade_offer_draft_key,
   trade_draft_inventory,
 } from '../../src/components/trade_view.ts'
 
@@ -158,6 +159,18 @@ test('draft confirmation belongs to Your Offer, never the acceptance footer', ()
   expect(offer).toContain("text('discard_changes')")
   expect(footer).not.toContain("text('confirm_changes')")
   expect(footer).toContain("type: 'trade/accept'")
+})
+
+test('counterparty confirmation and offer changes never reset my local offer draft', () => {
+  const initial = trade('negotiating')
+  const key = trade_offer_draft_key(initial, 'b')
+
+  expect(trade_offer_draft_key({ ...initial, accept_a: true }, 'b')).toBe(key)
+  expect(
+    trade_offer_draft_key({ ...initial, offer_revision: 2, caps_a: [{ ...cap, object: '0xother' }], sui_a: '12' }, 'b')
+  ).toBe(key)
+  expect(trade_offer_draft_key({ ...initial, caps_b: [{ ...cap, amount: 9 }] }, 'b')).not.toBe(key)
+  expect(trade_offer_draft_key({ ...initial, sui_b: '1' }, 'b')).not.toBe(key)
 })
 
 test('acceptance cost detail stays available without occupying the action bar', () => {

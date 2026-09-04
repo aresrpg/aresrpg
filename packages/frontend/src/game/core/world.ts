@@ -770,6 +770,7 @@ export const create_world = ({
       engine.set_quality(quality, render_distance)
       chunks.set_quality(quality, render_distance)
     },
+    set_audio_volume: engine.set_audio_volume,
     set_footsteps_enabled: footsteps.set_enabled,
     backend: engine.backend,
     subscribe_status: engine.subscribe_status,

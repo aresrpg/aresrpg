@@ -11,6 +11,7 @@ import { city_at_position, world_city_areas, world_terrain } from '../../content
 import { world_scene_active } from '../../modules/navigation.ts'
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
+import { master_volume_from, scale_audio_volume } from '../core/audio_volume.ts'
 import {
   biome_music_pair,
   biome_music_position,
@@ -45,6 +46,7 @@ export const BiomeMusic = () => {
   const pose = useWorldPose()
   const page = useAppStore(({ navigation }) => navigation.page)
   const enabled = useAppStore(({ settings }) => settings.music_enabled)
+  const master_volume = useAppStore(({ settings }) => master_volume_from(settings.master_volume))
   const fight_active = useAppStore(({ fight }) => fight.mode !== null && fight.mounted)
   const character = useAppStore(({ session }) =>
     session.characters.find(({ id }) => id === session.selected_character_id)
@@ -106,10 +108,14 @@ export const BiomeMusic = () => {
     active_player.src = source
     active_player.loop = true
     active_player.preload = 'auto'
-    active_player.volume = MUSIC_VOLUME
+    active_player.volume = scale_audio_volume(MUSIC_VOLUME)
     active_player.load()
     play(active_player)
   }, [source])
+
+  useEffect(() => {
+    if (player_ref.current) player_ref.current.volume = scale_audio_volume(MUSIC_VOLUME, master_volume)
+  }, [master_volume])
 
   useEffect(() => {
     const resume = (): void => {

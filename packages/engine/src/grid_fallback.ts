@@ -75,6 +75,7 @@ export const create_grid_fallback = (
   const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const presentation = create_hack_presentation(scene)
   let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
+  let audio_volume = 1
   let quality = initial_quality
   let board_active = false
   let previous_frame = performance.now()
@@ -125,6 +126,10 @@ export const create_grid_fallback = (
     set_quality: (next: EngineQuality) => {
       quality = next
     },
+    set_audio_volume: (volume) => {
+      audio_volume = volume
+      fight_swords?.set_volume(volume)
+    },
     set_time_of_day: () => {},
     set_clouds_visible: () => {},
     set_flatten_amount: () =>
@@ -141,10 +146,12 @@ export const create_grid_fallback = (
     set_fight_swords: (url, impact_sound_url, markers) => {
       fight_swords ??= create_fight_sword_layer({
         scene,
+        camera,
         url,
         impact_sound_url,
         impact: effects.play_sword_impact,
       })
+      fight_swords.set_volume(audio_volume)
       fight_swords.set_flatten(1)
       fight_swords.set_visible(fight_swords_visible(board_active))
       fight_swords.set_markers(markers)

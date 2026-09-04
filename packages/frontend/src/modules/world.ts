@@ -18,6 +18,7 @@ import {
 } from '@aresrpg/protocol'
 
 import { copy_text } from '../i18n/copy.ts'
+import { world_biome_at_zone } from '../content/worlds.ts'
 import { read_pose } from '../game/core/pose_feed.ts'
 import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
 import { toast } from '../toast.ts'
@@ -88,6 +89,7 @@ export type ZoneReveal = Readonly<{
   id: string
   zx: number
   zz: number
+  biome: string
   mobs: number
   resources: number
 }>
@@ -414,6 +416,9 @@ export const zone_discovery_summary = (
     resources: population.resources.reduce((total, pack) => total + pack.nodes, 0),
   })
 
+const zone_biome_name = (world: string, zone_x: number, zone_z: number): string =>
+  world_biome_at_zone(world, zone_x, zone_z) ?? 'unknown'
+
 /** How long the world has to actually SHOW a searched zone before we call it a failure. The
  *  transaction is certified in a second or two; the row still has to be projected by the indexer
  *  and streamed by the server. Generous, because a slow answer is not a wrong one. */
@@ -510,6 +515,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
           id: `${key}:${zone.seed}:${zone.searched_at_ms}`,
           zx: zone.zx,
           zz: zone.zz,
+          biome: zone_biome_name(zone.world, zone.zx, zone.zz),
           ...summary,
         })
         settle(key, (pending) => {

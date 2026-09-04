@@ -64,8 +64,9 @@ snapshots.
 12. Record every successful transaction digest.
 13. Never retry a transaction that executed and returned a digest.
 14. If a batch stops, inspect chain state and resume only the missing rows.
-15. Run the prepared Kubernetes repository's Helmfile diff and sync. The composite game+seed
-    projection identity decides whether this retains the store or replaces it for a repin.
+15. When Move, server, or indexer changed, run the prepared Kubernetes repository's Helmfile diff
+    and sync. A pure app tag skips this step. The composite game+seed projection identity decides
+    whether this retains the store or replaces it for a repin.
 16. Trigger the manual production-activation workflow; it promotes the staged Vercel deployment
     without rebuilding, verifies production, publishes the draft release, and announces it.
 17. Exercise one affected action against chain truth.

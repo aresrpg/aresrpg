@@ -4,6 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import {
+  FIGHT_SWORD_AUDIO,
   FIGHT_SWORD_TILT,
   fight_sword_frame,
   fight_sword_ground_height,
@@ -11,6 +12,16 @@ import {
   fight_sword_plant_height,
   fight_swords_visible,
 } from '../src/fight_swords.ts'
+
+test('the sword impact is a bounded positional sound', () => {
+  expect(FIGHT_SWORD_AUDIO).toEqual({
+    distance_model: 'linear',
+    ref_distance: 4,
+    max_distance: 50,
+    rolloff_factor: 1,
+    volume: 0.8,
+  })
+})
 
 test('every sword plays the legacy grow, spinning fall, impact, then placement sink', () => {
   const born_late = fight_sword_frame(10_000, 30_000, 30_000)

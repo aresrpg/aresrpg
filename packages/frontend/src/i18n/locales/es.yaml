@@ -522,6 +522,8 @@ airdrop_page:
 settings_page:
   title: 'Ajustes'
   subtitle: 'Tus preferencias de AresRPG'
+  master_volume_label: Volumen general
+  master_volume_hint: Ajusta toda la música y los efectos de sonido.
   music_label: 'Música'
   music_hint: 'Reproduce la música del mundo y de los combates.'
   footsteps_label: Pasos
@@ -1629,6 +1631,7 @@ characters_page:
   menu_consume: Consumir
   menu_crush: Triturar
   menu_destroy: Destruir
+  menu_view_recipes: Ver recetas
   menu_explorer: Ver en el explorador
   menu_link_chat: Enlazar en el chat
   feed_title: Alimentar mascota

@@ -123,6 +123,32 @@ export const draw_zone_layer = (
   }
 }
 
+/** The active position run owns the selected zone highlight on the full map. */
+export const draw_zone_selection = (
+  context: CanvasRenderingContext2D,
+  view: MapView,
+  zone: Readonly<{ zx: number; zz: number }> | null
+): void => {
+  if (!zone) return
+  const x = chain_to_client_coordinate(zone.zx * ZONE_SIZE)
+  const z = chain_to_client_coordinate(zone.zz * ZONE_SIZE)
+  const area = canvas_bounds(view, {
+    min_x: x,
+    max_x: x + ZONE_SIZE - 1,
+    min_z: z,
+    max_z: z + ZONE_SIZE - 1,
+  })
+  context.save()
+  context.fillStyle = 'rgba(72, 207, 207, 0.18)'
+  context.fillRect(area.x, area.y, area.width, area.height)
+  context.strokeStyle = '#48cfcf'
+  context.lineWidth = 2
+  context.shadowColor = 'rgba(72, 207, 207, 0.9)'
+  context.shadowBlur = 10
+  context.strokeRect(area.x + 1, area.y + 1, Math.max(1, area.width - 2), Math.max(1, area.height - 2))
+  context.restore()
+}
+
 export const draw_spawn_markers = (
   context: CanvasRenderingContext2D,
   view: MapView,

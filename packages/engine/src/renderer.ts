@@ -66,6 +66,7 @@ export const create_engine = ({
   let status: EngineStatus = Object.freeze({ state: 'initializing', backend: 'none' })
   let quality = initial_quality
   let render_distance: number | null = null
+  let audio_volume = 1
   let camera: Readonly<{ position: Vec3; target: Vec3; projection: CameraProjection }> = {
     position: [initial_focus[0] + 36, 34, initial_focus[1] + 36],
     target: [initial_focus[0], 0, initial_focus[1]],
@@ -142,6 +143,7 @@ export const create_engine = ({
     }
     backend = next
     next.set_quality(quality, render_distance)
+    next.set_audio_volume(audio_volume)
     next.set_camera(camera.position, camera.target, camera.projection)
     next.set_character_anchor(character_anchor)
     next.set_time_of_day(time_of_day)
@@ -234,6 +236,10 @@ export const create_engine = ({
       quality = next
       render_distance = next_render_distance
       backend?.set_quality(next, next_render_distance)
+    },
+    set_audio_volume: (volume: number) => {
+      audio_volume = Math.min(1, Math.max(0, volume))
+      backend?.set_audio_volume(audio_volume)
     },
     set_time_of_day: (time: number) => {
       time_of_day = ((time % 1) + 1) % 1

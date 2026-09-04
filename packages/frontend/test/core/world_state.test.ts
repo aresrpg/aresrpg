@@ -297,8 +297,8 @@ test('spawn markers never leak retained discoveries from another world', () => {
 })
 
 test('only the matching reveal timer may clear the current zone discovery', () => {
-  const first = { id: 'first', zx: 97, zz: 98, mobs: 2, resources: 3 }
-  const second = { id: 'second', zx: 98, zz: 98, mobs: 4, resources: 5 }
+  const first = { id: 'first', zx: 97, zz: 98, biome: 'plains', mobs: 2, resources: 3 }
+  const second = { id: 'second', zx: 98, zz: 98, biome: 'forest', mobs: 4, resources: 5 }
   const revealed = world.reduce!(app_state(), { type: 'world/zone_revealed', reveal: first })
   const replaced = world.reduce!(revealed, { type: 'world/zone_revealed', reveal: second })
 

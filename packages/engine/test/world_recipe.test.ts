@@ -3,7 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { sample_biome_grid } from '../src/biome_grid.ts'
+import { sample_biome_cell, sample_biome_grid } from '../src/biome_grid.ts'
 import {
   BIOME_SLOTS,
   balance_climate,
@@ -370,5 +370,7 @@ describe('world recipes', () => {
     expect(grid.side).toBe(2)
     expect(grid.cells).toHaveLength(4)
     expect([...grid.cells].every((biome) => biome < RECIPE.biomes.length)).toBeTrue()
+    const world = compile_world_recipe(RECIPE, { structures: false })
+    expect(sample_biome_cell(world, 1, 0, { world_center: 512, cell_size: 512 })).toBe(grid.cells[1])
   })
 })

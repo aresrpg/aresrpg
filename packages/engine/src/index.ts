@@ -7,7 +7,7 @@ export { fight_path_gait, mob_entity_scale } from './entities.ts'
 export { fight_placement_blobs } from './fight_blobs.ts'
 export { fight_blob_preset } from './fight_blob_presets.ts'
 export type { FightBlobPreset } from './fight_blob_presets.ts'
-export { sample_biome_grid } from './biome_grid.ts'
+export { sample_biome_cell, sample_biome_grid } from './biome_grid.ts'
 export {
   effective_render_distance,
   get_quality_profile,

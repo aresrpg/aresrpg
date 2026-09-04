@@ -59,6 +59,9 @@ test('each standalone screen exposes only its own surface', async () => {
   const settings = renderToStaticMarkup(<SettingsPage copy={copy} settings={SETTINGS} />)
 
   expect(settings).toContain('Music')
+  expect(settings).toContain('General volume')
+  expect(settings).toContain('type="range"')
+  expect(settings).toContain('100%')
   expect(settings).toContain('Footsteps')
   expect(settings).toContain('Tutorials')
   expect(settings).toContain('Always craft from')

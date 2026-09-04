@@ -46,6 +46,16 @@ const SIZE = 288
 const AXES = ['x', 'y', 'z'] as const
 type Coordinates = Readonly<Record<(typeof AXES)[number], number>>
 
+export const toggles_world_map = (event: Readonly<Pick<KeyboardEvent, 'code' | 'repeat' | 'target'>>): boolean => {
+  const target = event.target as Readonly<{ isContentEditable?: boolean; tagName?: string }> | null
+  return (
+    event.code === 'KeyM' &&
+    !event.repeat &&
+    !target?.isContentEditable &&
+    !['INPUT', 'TEXTAREA'].includes(target?.tagName ?? '')
+  )
+}
+
 export const MinimapReadout = ({
   location_name,
   location_label,
@@ -84,6 +94,16 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const grid_ref = useRef<Readonly<{ key: string; grid: ReliefGrid }> | null>(null)
   const [map_open, set_map_open] = useState(false)
   const text = copy_text(copy.world_hud)
+
+  useEffect(() => {
+    const toggle = (event: Readonly<KeyboardEvent>): void => {
+      if (!toggles_world_map(event)) return
+      event.preventDefault()
+      set_map_open((open) => !open)
+    }
+    globalThis.addEventListener('keydown', toggle)
+    return () => globalThis.removeEventListener('keydown', toggle)
+  }, [])
 
   const compiled: CompiledWorld | null = useMemo(() => {
     const terrain = world_terrain(world_name)

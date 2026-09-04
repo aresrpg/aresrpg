@@ -206,6 +206,7 @@ export const create_app = () => {
     quality: 'medium',
     flat_mode: false,
     music_enabled: true,
+    master_volume: 1,
     footsteps_enabled: true,
     completed_tutorials: Object.freeze([]),
     follow_leader: false,

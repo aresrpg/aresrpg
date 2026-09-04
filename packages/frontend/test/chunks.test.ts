@@ -15,6 +15,7 @@ const create_engine_spy = () => {
     set_camera: () => {},
     set_character_anchor: () => {},
     set_quality: () => {},
+    set_audio_volume: () => {},
     set_time_of_day: () => {},
     set_clouds_visible: () => {},
     set_flatten_amount: () => {},

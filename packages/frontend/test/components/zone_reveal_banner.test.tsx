@@ -11,18 +11,20 @@ const copy = {
   world_hud: {
     zone_revealed: 'ZONE REVEALED',
     zone_coordinates: 'SECTOR {{zx}} · {{zz}}',
+    biome: 'BIOME',
     zone_mobs_found: '{{count}} MOBS FOUND',
     zone_resources_found: '{{count}} RESOURCES FOUND',
   },
 } as unknown as AppCopy
 
 test('zone discovery restores the center reveal with population findings', () => {
-  const reveal = Object.freeze({ id: 'nauvis:97:98:s7', zx: 97, zz: 98, mobs: 3, resources: 9 })
+  const reveal = Object.freeze({ id: 'nauvis:97:98:s7', zx: 97, zz: 98, biome: 'plains', mobs: 3, resources: 9 })
   const html = renderToStaticMarkup(<ZoneRevealContent copy={copy} reveal={reveal} />)
 
   expect(html).toContain('gw-reveal')
   expect(html).toContain('ZONE REVEALED')
   expect(html).toContain('SECTOR 97 · 98')
+  expect(html).toContain('BIOME · Plains')
   expect(html).toContain('3 MOBS FOUND · 9 RESOURCES FOUND')
 })
 

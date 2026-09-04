@@ -39,7 +39,7 @@ import { liquid_palette } from './liquid_palette.ts'
 import { create_portal } from './portal.ts'
 import { create_dungeon_portals } from './dungeon_portals.ts'
 import { create_dungeon_stage } from './dungeon_stage.ts'
-import { get_quality_profile, quality_pixel_ratio } from './quality.ts'
+import { get_quality_profile, quality_pixel_ratio, uses_world_post_processing } from './quality.ts'
 import type { ScatterInstance } from './scatter.ts'
 import { create_scatter_layer } from './scatter_layer.ts'
 import { create_resource_node_layer, resource_nodes_visible as should_show_resource_nodes } from './resource_nodes.ts'
@@ -83,6 +83,40 @@ export const write_orthographic_projection = (
   coordinate_system: CoordinateSystem
 ): Matrix4 => target.makeOrthographic(left, right, top, bottom, near, far, coordinate_system)
 
+export const surface_is_drawable = (
+  css_width: number,
+  css_height: number,
+  pixel_ratio: number,
+  smallest_attachment_scale: number
+): boolean => {
+  const inputs_are_finite =
+    Number.isFinite(css_width) &&
+    Number.isFinite(css_height) &&
+    Number.isFinite(pixel_ratio) &&
+    Number.isFinite(smallest_attachment_scale)
+  if (!inputs_are_finite || Math.min(css_width, css_height, pixel_ratio, smallest_attachment_scale) <= 0) return false
+  const buffer_width = Math.floor(css_width * pixel_ratio)
+  const buffer_height = Math.floor(css_height * pixel_ratio)
+  return (
+    Math.floor(buffer_width * smallest_attachment_scale) > 0 &&
+    Math.floor(buffer_height * smallest_attachment_scale) > 0
+  )
+}
+
+export const create_upload_capacity_gate = () => {
+  let blocked = false
+  return Object.freeze({
+    can_drain: (): boolean => !blocked,
+    block: (): void => {
+      blocked = true
+    },
+    release: (): void => {
+      blocked = false
+    },
+    blocked_count: (pending: number): number => (blocked ? pending : 0),
+  })
+}
+
 export const create_webgpu_backend = async (
   canvas: HTMLCanvasElement,
   initial_quality: EngineQuality,
@@ -101,6 +135,7 @@ export const create_webgpu_backend = async (
   const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
+  let audio_volume = 1
   const entities = create_entity_layer({ scene })
   const character_crowd = create_character_crowd_layer({ scene })
   const entity_anchors = Object.freeze({
@@ -203,7 +238,7 @@ export const create_webgpu_backend = async (
   const completions = new Map<string, Readonly<{ revision: number; resolve: (outcome: ChunkRenderOutcome) => void }>>()
   const pending_uploads = new Map<string, PendingUpload>()
   const retry_timers = new Map<string, ReturnType<typeof setTimeout>>()
-  const pool_full_chunks = new Set<string>()
+  const upload_capacity = create_upload_capacity_gate()
   const failed_chunks = new Set<string>()
   let upload_order: readonly PendingUpload[] = []
   let uploads_dirty = false
@@ -376,9 +411,9 @@ export const create_webgpu_backend = async (
     camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert()
   }
 
-  const resize = (): void => {
-    const width = Math.max(1, canvas.clientWidth)
-    const height = Math.max(1, canvas.clientHeight)
+  const resize = (): boolean => {
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
     const pixel_ratio = quality_pixel_ratio({
       quality,
       css_width: width,
@@ -386,7 +421,14 @@ export const create_webgpu_backend = async (
       device_pixel_ratio: devicePixelRatio,
       presentation,
     })
-    if (width === render_width && height === render_height && pixel_ratio === render_pixel_ratio) return
+    const profile = get_quality_profile(quality)
+    const smallest_attachment_scale = uses_world_post_processing(quality, presentation)
+      ? Math.min(profile.render.scene_scale, profile.effects.sun_shafts?.resolution ?? 1)
+      : 1
+    // Route transitions can briefly collapse the canvas. Three floors every scaled pass size;
+    // rendering then would create a zero-sized GPU texture and poison all later attachment views.
+    if (!surface_is_drawable(width, height, pixel_ratio, smallest_attachment_scale)) return false
+    if (width === render_width && height === render_height && pixel_ratio === render_pixel_ratio) return true
     render_width = width
     render_height = height
     render_pixel_ratio = pixel_ratio
@@ -395,10 +437,11 @@ export const create_webgpu_backend = async (
     entity_labels.resize(width, height)
     camera.aspect = width / height
     apply_projection()
+    return true
   }
 
   const drain_uploads = (): void => {
-    if (pending_uploads.size === 0) return
+    if (pending_uploads.size === 0 || !upload_capacity.can_drain()) return
     if (uploads_dirty) {
       upload_order = [...pending_uploads.values()].sort((left, right) => {
         const left_x = left.chunk.origin[0] - camera.position.x
@@ -423,11 +466,8 @@ export const create_webgpu_backend = async (
       }
       const result = terrain.upload(entry.chunk, entry.data)
       if (result === 'full') {
-        if (!pool_full_chunks.has(entry.chunk.key)) {
-          pool_full_chunks.add(entry.chunk.key)
-          console.warn(`Terrain pool is full; chunk ${entry.chunk.key} remains queued until capacity is available.`)
-        }
-        continue
+        upload_capacity.block()
+        break
       }
       if (result === 'too_large') {
         pending_uploads.delete(entry.chunk.key)
@@ -436,7 +476,6 @@ export const create_webgpu_backend = async (
         continue
       }
       pending_uploads.delete(entry.chunk.key)
-      pool_full_chunks.delete(entry.chunk.key)
       scatter.add(entry.chunk, entry.scatter)
       settle_chunk(entry.chunk.key, entry.revision, 'rendered')
       sun.shadow.needsUpdate = true
@@ -455,7 +494,6 @@ export const create_webgpu_backend = async (
   const draw = (now = performance.now()): void => {
     const delta_seconds = Math.min(0.1, Math.max(0, now - previous_frame) / 1000)
     previous_frame = now
-    resize()
     drain_uploads()
     if (presentation === 'world') {
       const camera_column = sample_world_column(compiled_world, camera.position.x, camera.position.z)
@@ -546,13 +584,12 @@ export const create_webgpu_backend = async (
     revisions.set(key, previous_revision + 1)
     settle_chunk(key, previous_revision, 'removed')
     pending_uploads.delete(key)
-    pool_full_chunks.delete(key)
     failed_chunks.delete(key)
     mesh_pool.cancel(key)
     const retry_timer = retry_timers.get(key)
     if (retry_timer !== undefined) clearTimeout(retry_timer)
     retry_timers.delete(key)
-    terrain.remove(key)
+    if (terrain.remove(key)) upload_capacity.release()
     scatter.remove(key)
     sun.shadow.needsUpdate = true
   }
@@ -603,7 +640,9 @@ export const create_webgpu_backend = async (
   }
   return Object.freeze({
     kind: 'webgpu',
-    render: draw,
+    render: (now = performance.now()) => {
+      if (resize()) draw(now)
+    },
     set_camera: (position: Vec3, target: Vec3, projection: CameraProjection = {}) => {
       const { fov, ortho_blend: next_ortho_blend, ortho_height: next_ortho_height } = projection
       camera.position.set(...position)
@@ -645,6 +684,11 @@ export const create_webgpu_backend = async (
         far_terrain.set_quality(next, render_distance)
       }
       if (next !== quality) apply_quality(next)
+    },
+    set_audio_volume: (volume) => {
+      audio_volume = volume
+      dungeon_portals.set_volume(volume)
+      fight_swords?.set_volume(volume)
     },
     set_time_of_day: (time: number) => {
       analytic_sky.set_time_of_day(time)
@@ -710,10 +754,12 @@ export const create_webgpu_backend = async (
     set_fight_swords: (url, impact_sound_url, markers) => {
       fight_swords ??= create_fight_sword_layer({
         scene,
+        camera,
         url,
         impact_sound_url,
         impact: effects.play_sword_impact,
       })
+      fight_swords.set_volume(audio_volume)
       fight_swords.set_flatten(flatten_amount)
       fight_swords.set_visible(fight_swords_visible(board_footprint !== null) && !dungeon_stage_active)
       fight_swords.set_markers(markers)
@@ -780,7 +826,7 @@ export const create_webgpu_backend = async (
         mesh_queued: mesh.queued,
         mesh_active: mesh.active,
         uploads_pending: pending_uploads.size,
-        uploads_blocked: pool_full_chunks.size,
+        uploads_blocked: upload_capacity.blocked_count(pending_uploads.size),
         retries_pending: retry_timers.size,
         failed_chunks: failed_chunks.size,
         far_ready: far_terrain.ready(),
@@ -804,7 +850,7 @@ export const create_webgpu_backend = async (
       disposed = true
       mesh_pool.dispose()
       pending_uploads.clear()
-      pool_full_chunks.clear()
+      upload_capacity.release()
       failed_chunks.clear()
       retry_timers.forEach(clearTimeout)
       retry_timers.clear()

@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import fight_chain_module from '../../src/modules/fight_chain.ts'
-import fight_module, { create_fight_session } from '../../src/modules/fight.ts'
+import fight_module, { create_fight_session, fight_should_close } from '../../src/modules/fight.ts'
 import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
 import { initial_app_state, reduce_app_state, type AppInput, type AppState } from '../../src/store.ts'
 
@@ -94,7 +94,6 @@ describe('the remote fight fold', () => {
     expect(session.state()?.checkpoint.contract.id).toBe('0xf1')
     expect(session.state()?.checkpoint.contract.fighters).toHaveLength(2)
   })
-
   test('an authoritative restore discards a refused boundary pending its turn seed', () => {
     const session = create_fight_session({ now: () => 99_000n, reconcile: () => undefined })
     const checkpoint = raw_checkpoint() as never
@@ -105,7 +104,6 @@ describe('the remote fight fold', () => {
 
     expect(session.state()?.error?.code).toBe('unexpected_turn_seed')
   })
-
   test('the fight module forwards `state` through fight/opened (audit blocker regression)', () => {
     const listeners = new Map<string, ((payload: never) => void)[]>()
     const base = initial_app_state(settings)
@@ -268,6 +266,7 @@ describe('the remote fight fold', () => {
   test('releasing one owned seat preserves the shared fight for another owned character', () => {
     const active = drive_fight_state('0xme')
     const checkpoint = structuredClone(active.fight.checkpoint!)
+    checkpoint.contract.fighters[0]!.settled = true
     checkpoint.contract.fighters[1]!.kind = { type: 'player', character: '0xb', owner: '0xme', level: 10n }
     const shared = {
       ...active,
@@ -281,7 +280,8 @@ describe('the remote fight fold', () => {
     const released = reduce_app_state(shared, { type: 'fight/released', character_id: '0xa' })
     expect(released.fight.mounted).toBeFalse()
     expect(released.fight.cached['0xf1']).toBeDefined()
-
+    expect(fight_module.reduce!(released, { type: 'fight/released', character_id: '0xa' })).toBe(released)
+    expect(fight_should_close(released.fight, '0xa')).toBeFalse()
     const switched = reduce_app_state(released, { type: 'character/select', character_id: '0xb' })
     expect(switched.fight.checkpoint?.contract.id).toBe('0xf1')
     expect(switched.fight.mounted).toBeTrue()

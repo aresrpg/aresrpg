@@ -92,6 +92,17 @@ describe('app navigation routes', () => {
     expect(returned.navigation.dialog).toBe('character_create')
   })
 
+  test('opens character creation on its World host from every character-scoped page', () => {
+    const base = initial_app_state(
+      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    )
+    for (const page of ['characters', 'kolizeum'] as const) {
+      const outside_world = reduce_app_state(base, { type: 'page/open', page })
+      const creating = reduce_app_state(outside_world, { type: 'dialog/open', dialog: 'character_create' })
+      expect(creating.navigation).toMatchObject({ page: 'world', pathname: '/', dialog: 'character_create' })
+    }
+  })
+
   test('waits for remembered authentication before consuming the initial admin route', async () => {
     const location_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
     const history_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'history')

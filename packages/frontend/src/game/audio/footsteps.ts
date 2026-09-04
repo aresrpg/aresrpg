@@ -6,6 +6,7 @@
 import type { MaterialPreset } from '@aresrpg/engine'
 
 import { load_footstep_recordings, pick_footstep_recording, recorded_footstep_preset } from './footstep_recordings.ts'
+import { scale_audio_volume } from '../core/audio_volume.ts'
 
 type FootstepVoice = Readonly<{
   response: 'solid' | 'soft' | 'vegetation' | 'aggregate' | 'liquid'
@@ -435,7 +436,7 @@ export const create_footsteps = (
     /* eslint-disable functional/immutable-data -- Web Audio nodes are mutable browser effect handles. */
     source.buffer = buffer
     source.playbackRate.value = jitter(1, 0.025, random) * dynamics.pitch * treatment.pitch
-    output.gain.value = treatment.gain
+    output.gain.value = scale_audio_volume(treatment.gain)
     panner.pan.value = right ? 0.12 : -0.12
     if (treatment.cutoff === null) source.connect(output)
     else {
@@ -476,7 +477,7 @@ export const create_footsteps = (
     filter.frequency.value = jitter(voice.cutoff, 0.09, random)
     filter.Q.value = voice.q
     const output = context.createGain()
-    output.gain.value = jitter(voice.gain, 0.12, random) * FOOTSTEP_GAIN_MULTIPLIER
+    output.gain.value = scale_audio_volume(jitter(voice.gain, 0.12, random) * FOOTSTEP_GAIN_MULTIPLIER)
     source.connect(filter)
     filter.connect(output)
     const friction_source = context.createBufferSource()

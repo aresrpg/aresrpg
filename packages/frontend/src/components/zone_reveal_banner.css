@@ -35,6 +35,13 @@
   letter-spacing: 0.3em;
   text-transform: uppercase;
 }
+.gw-reveal__biome {
+  color: var(--color-cyan);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
 .gw-reveal__findings {
   color: #f5d0a9;
   font-size: 14px;

@@ -41,9 +41,9 @@ semver tag; a normal `edge` push never moves `aresrpg.world`.
 3. The tag triggers `release.yml`. It waits for the exact SHA's green gate, builds only changed
    server/indexer images into public GHCR, and creates a production-variable Vercel deployment
    with `--skip-domain`. The GitHub Release remains draft and production stays unchanged.
-4. During the maintenance window, the owner reconciles changed content and applies the prepared
-   Kubernetes Helmfile diff. The composite game+seed projection identity chooses a store-preserving
-   roll or a fresh repin.
+4. During the maintenance window, the owner reconciles changed content. When Move, server, or
+   indexer changed, apply the prepared Kubernetes Helmfile diff; a pure app tag skips the cluster.
+   The composite game+seed projection identity chooses a store-preserving roll or a fresh repin.
 5. The owner manually triggers `activate-production.yml` with the prepared version. It verifies the
    retained manifest, promotes the staged Vercel deployment without rebuilding, checks production,
    and publishes the generated GitHub Release. Gameplay resumes only after these checks pass.

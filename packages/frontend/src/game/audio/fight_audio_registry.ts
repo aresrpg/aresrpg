@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Exact key -> seed-derived public path home for fight one-shots.
 
+import { scale_audio_volume } from '../core/audio_volume.ts'
+
 const FIXED_AUDIO = Object.freeze({
   absorb_1: '/sound_effect/absorb-1.ogg',
   absorb_2: '/sound_effect/absorb-2.ogg',
@@ -116,7 +118,7 @@ export const play_fight_audio = (key: string, volume = 0.4): void => {
   const player = audio_pool.get(key)?.find(({ paused, ended }) => paused || ended) ?? create_audio_player(key)
   if (!player) return
   // eslint-disable-next-line functional/immutable-data -- HTML media is a mutable browser effect boundary.
-  player.volume = volume
+  player.volume = scale_audio_volume(volume)
   // eslint-disable-next-line functional/immutable-data -- Reusing the preloaded player avoids first-cast network/decode work.
   player.currentTime = 0
   void player.play().catch((error: unknown) => console.warn(`Fight sound ${key} could not play.`, error))

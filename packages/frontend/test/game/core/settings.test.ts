@@ -21,6 +21,7 @@ describe('game settings', () => {
       quality: 'medium',
       flat_mode: false,
       music_enabled: true,
+      master_volume: 1,
       footsteps_enabled: true,
       completed_tutorials: [],
       follow_leader: false,
@@ -42,6 +43,7 @@ describe('game settings', () => {
         quality: 'high',
         flat_mode: true,
         music_enabled: false,
+        master_volume: 0.4,
         footsteps_enabled: false,
         completed_tutorials: ['world', 'fight'],
         follow_leader: true,
@@ -60,6 +62,7 @@ describe('game settings', () => {
       quality: 'high',
       flat_mode: true,
       music_enabled: false,
+      master_volume: 0.4,
       footsteps_enabled: false,
       completed_tutorials: ['world', 'fight'],
       follow_leader: true,
@@ -81,6 +84,7 @@ describe('game settings', () => {
       quality: 'high',
       flat_mode: true,
       music_enabled: true,
+      master_volume: 1,
       footsteps_enabled: true,
       completed_tutorials: [],
       follow_leader: false,
@@ -99,6 +103,16 @@ describe('game settings', () => {
     const storage = memory_storage(JSON.stringify({ flat_mode: true, fight_access: 7 }))
 
     expect(load_game_settings('medium', null, storage)).toMatchObject({ flat_mode: true, fight_access: 0 })
+  })
+
+  test('defaults legacy volume and clamps persisted master volume to the playable range', () => {
+    expect(load_game_settings('medium', null, memory_storage()).master_volume).toBe(1)
+    expect(
+      load_game_settings('medium', null, memory_storage(JSON.stringify({ master_volume: -2 }))).master_volume
+    ).toBe(0)
+    expect(load_game_settings('medium', null, memory_storage(JSON.stringify({ master_volume: 7 }))).master_volume).toBe(
+      1
+    )
   })
 
   test('accepts only a concrete character identity for the crafting lock', () => {

@@ -44,6 +44,7 @@ export type CityCompassMarker = Readonly<{
   distance: number
   x: number
   dungeon: boolean
+  show_label: boolean
 }>
 
 export const city_compass_markers = (
@@ -61,6 +62,7 @@ export const city_compass_markers = (
         distance: target.distance,
         x: target.x,
         dungeon: city.id === current,
+        show_label: city.id !== current,
       })
     })
   )
@@ -79,9 +81,11 @@ const CityCompassMarkerView = ({ marker, city_label }: Readonly<{ marker: CityCo
         <Building2 size={13} strokeWidth={1.8} />
         {marker.dungeon && <span className="gw-compass__city-dungeon">☠</span>}
       </span>
-      <span className="gw-compass__city-label">
-        {marker.label} · {distance}m
-      </span>
+      {marker.show_label && (
+        <span className="gw-compass__city-label">
+          {marker.label} · {distance}m
+        </span>
+      )}
     </span>
   )
 }

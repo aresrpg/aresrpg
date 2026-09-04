@@ -13,6 +13,7 @@ import type { StructurePlacement } from '../src/structure_placement.ts'
 import { create_terrain_planner } from '../src/terrain_planner.ts'
 import { chunk_origin, generate_chunk, surface_chunk_layers } from '../src/terrain_generator.ts'
 import { TERRAIN_POOL_LAYOUT } from '../src/terrain_pool.ts'
+import { create_upload_capacity_gate } from '../src/webgpu_backend.ts'
 import {
   BIOME_SLOTS,
   compile_world_recipe,
@@ -43,6 +44,18 @@ const WORLD = compile_world_recipe({
       ],
     },
   ],
+})
+
+test('terrain upload backpressure sleeps until resident capacity is released', () => {
+  const gate = create_upload_capacity_gate()
+
+  expect(gate.can_drain()).toBeTrue()
+  gate.block()
+  expect(gate.can_drain()).toBeFalse()
+  expect(gate.blocked_count(37)).toBe(37)
+  gate.release()
+  expect(gate.can_drain()).toBeTrue()
+  expect(gate.blocked_count(37)).toBe(0)
 })
 
 describe('terrain generation', () => {

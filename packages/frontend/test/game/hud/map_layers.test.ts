@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { draw_city_layer, draw_spawn_markers } from '../../../src/game/hud/map_layers.ts'
+import { draw_city_layer, draw_spawn_markers, draw_zone_selection } from '../../../src/game/hud/map_layers.ts'
 
 test('a visible mob is painted as the red map dot', () => {
   const arcs: unknown[][] = []
@@ -57,4 +57,20 @@ test('a city paints its authored border and top-down structure footprints', () =
   expect(strokes).toHaveLength(2)
   expect(fills).toHaveLength(2)
   expect(fills[1]).toEqual([120, 120, 17, 17])
+})
+
+test('the active run target highlights its whole selected zone', () => {
+  const fills: unknown[][] = []
+  const strokes: unknown[][] = []
+  const context = {
+    fillRect: (...arguments_: unknown[]) => fills.push(arguments_),
+    restore: () => {},
+    save: () => {},
+    strokeRect: (...arguments_: unknown[]) => strokes.push(arguments_),
+  } as unknown as CanvasRenderingContext2D
+
+  draw_zone_selection(context, { center_x: -80, center_z: -80, size: 256, radius: 256 }, { zx: 97, zz: 97 })
+
+  expect(fills).toEqual([[0, 0, 256, 256]])
+  expect(strokes).toEqual([[1, 1, 254, 254]])
 })

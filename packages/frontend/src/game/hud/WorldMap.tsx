@@ -6,7 +6,7 @@
 // the player remain. Each LOD samples progressively in row bands and completed grids are cached.
 // Closes on the backdrop or Escape.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg/immutable'
 import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import { city_map_overlays, type CompiledWorld } from '@aresrpg/engine'
@@ -14,7 +14,7 @@ import { city_map_overlays, type CompiledWorld } from '@aresrpg/engine'
 import './world_map.css'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
-import { useAppStore } from '../../store.ts'
+import { dispatch_app, useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 
 import { camera_heading } from './compass_math.ts'
@@ -25,9 +25,16 @@ import {
   draw_self_arrow,
   draw_spawn_markers,
   draw_zone_layer,
+  draw_zone_selection,
 } from './map_layers.ts'
 import { empty_relief_grid, fill_relief_rows, paint_relief, type ReliefGrid } from './minimap_render.ts'
-import { step_world_map_lod, WORLD_MAP_LAST_LOD, world_map_lod, world_map_zone_lod } from './world_map_lod.ts'
+import {
+  step_world_map_lod,
+  WORLD_MAP_LAST_LOD,
+  world_map_lod,
+  world_map_zone_lod,
+  world_map_zone_target,
+} from './world_map_lod.ts'
 
 const MAP_SAMPLES = 192
 const MAP_SIZE = 768
@@ -73,6 +80,7 @@ export const WorldMap = ({
   const world_name = useAppStore(
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
   )
+  const run = useAppStore(({ run_to }) => run_to.run)
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
   const panel_ref = useRef<HTMLDivElement | null>(null)
   const wheel_at = useRef(-Infinity)
@@ -86,6 +94,11 @@ export const WorldMap = ({
   const [grid, set_grid] = useState<ReliefGrid>(() => empty_relief_grid(center_x, center_z, radius, MAP_SAMPLES))
   const [sampled_rows, set_sampled_rows] = useState(0)
   const cities = useMemo(() => city_map_overlays(compiled), [compiled])
+  const selected_zone = useMemo(
+    () =>
+      run?.status === 'running' && run.source === 'position' && run.world === world_name ? zone_of(run.x, run.z) : null,
+    [run, world_name]
+  )
 
   useEffect(() => {
     const cache_key = `${world_name ?? ''}:${center_x}:${center_z}:${radius}`
@@ -155,15 +168,27 @@ export const WorldMap = ({
         zone_lod.labels
       )
     draw_city_layer(context, view, cities)
+    draw_zone_selection(context, view, selected_zone)
     draw_spawn_markers(context, view, spawn_markers(world_state, world_name))
     draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name), Date.now(), (city) =>
       copy_text(copy.world_hud)('dungeon_city', { city })
     )
     draw_players(context, view, Object.values(world_state.players))
     draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
-  }, [cities, copy, grid, sampled_rows, pose, world_state, world_name])
+  }, [cities, copy, grid, sampled_rows, pose, selected_zone, world_state, world_name])
 
   const change_lod = (direction: -1 | 1): void => set_lod_level((level) => step_world_map_lod(level, direction))
+  const select_zone = (event: Readonly<MouseEvent<HTMLCanvasElement>>): void => {
+    if (!world_name) return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const target = world_map_zone_target(
+      lod,
+      ((event.clientX - bounds.left) * MAP_SIZE) / bounds.width,
+      ((event.clientY - bounds.top) * MAP_SIZE) / bounds.height,
+      MAP_SIZE
+    )
+    dispatch_app({ type: 'run_to/position', world: world_name, x: target.x, z: target.z })
+  }
 
   return (
     <div aria-label={text('world_map')} className="gw-worldmap" onClick={on_close} role="dialog">
@@ -191,7 +216,15 @@ export const WorldMap = ({
           </div>
         </header>
         <div className="gw-worldmap__lens-wrap">
-          <canvas className="gw-worldmap__lens" height={MAP_SIZE} ref={canvas_ref} width={MAP_SIZE} />
+          <canvas
+            aria-label={text('world_map')}
+            className="gw-worldmap__lens"
+            height={MAP_SIZE}
+            onClick={select_zone}
+            ref={canvas_ref}
+            role="button"
+            width={MAP_SIZE}
+          />
           <div aria-hidden="true" className="gw-worldmap__scanlines" />
           <span aria-hidden="true" className="gw-worldmap__corner gw-worldmap__corner--tl" />
           <span aria-hidden="true" className="gw-worldmap__corner gw-worldmap__corner--tr" />

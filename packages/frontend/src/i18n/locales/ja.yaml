@@ -522,6 +522,8 @@ airdrop_page:
 settings_page:
   title: '設定'
   subtitle: 'AresRPGの設定'
+  master_volume_label: 全体音量
+  master_volume_hint: すべての音楽と効果音の音量を調整します。
   music_label: '音楽'
   music_hint: 'ワールドと戦闘の音楽を再生します。'
   footsteps_label: 足音
@@ -1606,6 +1608,7 @@ characters_page:
   menu_consume: 使用する
   menu_crush: 粉砕する
   menu_destroy: 破棄する
+  menu_view_recipes: レシピを見る
   menu_explorer: エクスプローラーで見る
   menu_link_chat: チャットにリンク
   feed_title: ペットに餌をあげる

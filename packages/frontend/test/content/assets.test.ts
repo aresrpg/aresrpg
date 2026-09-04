@@ -17,6 +17,7 @@ import { mob_model_identity } from '../../src/content/mob_models.ts'
 import {
   city_at_position,
   client_world_position,
+  world_biome_at_zone,
   world_city_areas,
   world_terrain,
   worlds_source,
@@ -585,6 +586,8 @@ describe('shipped content assets', () => {
     expect(city_at_position('nauvis', -13_936, -1_328)?.id).toBe('the_ruins')
     expect(city_at_position('nauvis', -35_760, -27_312)?.id).toBe('fuwage')
     expect(city_at_position('nauvis', -337, 0)).toBeNull()
+    expect(world_biome_at_zone('nauvis', 97, 97)).toBe('plains')
+    expect(world_biome_at_zone('unknown_world', 97, 97)).toBeNull()
     expect(world_terrain('unknown_world')).toBeNull()
     expect(world_terrain(null)).toEqual(world_terrain('nauvis'))
   })

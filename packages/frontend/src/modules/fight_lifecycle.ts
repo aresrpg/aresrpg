@@ -18,6 +18,7 @@ export const same_fight_turn = (
 type FightLifecycle = Readonly<{
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null
+  mounted?: boolean
   presentations: readonly unknown[]
   canonical_ended?: boolean
 }>
@@ -27,6 +28,7 @@ export const fight_should_close = (fight: FightLifecycle, character_id: string |
   if (fight.mode === 'local') return fight.checkpoint.contract.ended
   if (fight.mode !== 'remote') return false
   if (fight.canonical_ended) return true
+  if (fight.mounted === false) return false
   return (
     !!character_id &&
     fight.checkpoint.contract.fighters.some(

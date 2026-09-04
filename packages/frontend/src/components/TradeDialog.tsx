@@ -25,6 +25,7 @@ import {
   stage_trade_offer_addition,
   TRADE_INVENTORY_CATEGORIES,
   trade_display_name,
+  trade_offer_draft_key,
   trade_inventory_category,
   trade_draft_inventory,
   type TradeDraftAddition,
@@ -399,6 +400,7 @@ export const TradeDialog = ({
   const other_side = own_side === 'a' ? ('b' as const) : ('a' as const)
   const own_caps = active[`caps_${own_side}`]
   const own_sui = BigInt(active[`sui_${own_side}`])
+  const own_offer_key = trade_offer_draft_key(active, own_side)
   const pending = !!pending_operation
   const [sui, set_sui] = useState('0')
   const [kept_caps, set_kept_caps] = useState<readonly TradeCapRow[]>(own_caps)
@@ -411,7 +413,8 @@ export const TradeDialog = ({
     set_sui(input_sui(own_sui))
     set_kept_caps(own_caps)
     set_additions([])
-  }, [active.id, active.offer_revision, own_caps, own_sui])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- own_offer_key alone encodes this side's canonical offer; counterparty rows must preserve the local draft.
+  }, [own_offer_key])
 
   const encumbered = encumbered_asset_ids(listings, rows)
   const kept_ids = new Set(kept_caps.map(({ object }) => object))

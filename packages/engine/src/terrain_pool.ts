@@ -65,7 +65,7 @@ const MATERIAL_TEXTURE_BLOCK_SPAN = 4
 export type TerrainPool = Readonly<{
   set_visible: (visible: boolean) => void
   upload: (chunk: RenderedChunk, data: GreedyMeshData) => 'uploaded' | 'full' | 'too_large'
-  remove: (key: string) => void
+  remove: (key: string) => boolean
   set_quality: (quality: EngineQuality) => void
   set_flatten_active: (active: boolean) => void
   /** swap the see-through variant in while a fight board is mounted */
@@ -421,10 +421,11 @@ export const create_terrain_pool = ({
     indirect_attr.needsUpdate = true
   }
 
-  const remove = (key: string): void => {
-    if (!release_chunk(key)) return
+  const remove = (key: string): boolean => {
+    if (!release_chunk(key)) return false
     update_buffers()
     rebuild_draws()
+    return true
   }
 
   return Object.freeze({

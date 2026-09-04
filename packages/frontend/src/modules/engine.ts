@@ -5,6 +5,7 @@
 import { parse_world_recipe, type EngineStatus, type EntityRender } from '@aresrpg/engine'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import { master_volume_from } from '../game/core/audio_volume.ts'
 import type { create_world, WorldView } from '../game/core/world.ts'
 import { character_render_source, load_character_appearance } from '../game/character_entities.ts'
 import {
@@ -106,6 +107,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const sync_settings = (state: AppState): void => {
     if (!world) return
     world.set_quality(state.settings.quality, state.settings.render_distance)
+    world.set_audio_volume(master_volume_from(state.settings.master_volume))
     world.set_flattened(state.settings.flat_mode)
     world.set_footsteps_enabled(state.settings.footsteps_enabled !== false)
   }
@@ -336,8 +338,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     sync_pet(state)
     sync_fights(state)
     world?.set_run_target(run_to_target(state))
-    // The published demo's target is its known origin. The player app must likewise resolve
-    // its real first target before workers receive a batch, rather than mesh origin then cancel.
+    // Resolve the real first target before workers receive a batch; never mesh origin then cancel.
     if (initial_position) {
       world?.point_at(initial_position)
       sync_activity(state)
@@ -356,8 +357,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     presence = null
     spawns = null
     resources = null
-    // both halves of the composed list go with the world that held them, or the next world's
-    // first submit would concat a dead crowd behind its own
+    // Clear both source lists so the next world cannot inherit a dead crowd.
     presence_entities = Object.freeze([])
     spawn_entities = Object.freeze([])
     unsubscribe_status?.()

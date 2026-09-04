@@ -522,6 +522,8 @@ airdrop_page:
 settings_page:
   title: 'Einstellungen'
   subtitle: 'Deine AresRPG-Einstellungen'
+  master_volume_label: Gesamtlautstärke
+  master_volume_hint: Regelt die Lautstärke aller Musik- und Soundeffekte.
   music_label: 'Musik'
   music_hint: 'Spielt die Musik der Welt und der Kämpfe.'
   footsteps_label: Schritte
@@ -1630,6 +1632,7 @@ characters_page:
   menu_consume: Verbrauchen
   menu_crush: Zerschlagen
   menu_destroy: Zerstören
+  menu_view_recipes: Rezepte ansehen
   menu_explorer: Im Explorer ansehen
   menu_link_chat: Im Chat verlinken
   feed_title: Begleiter füttern

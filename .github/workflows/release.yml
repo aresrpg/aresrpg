@@ -137,10 +137,8 @@ jobs:
       previous_tag: ${{ steps.plan.outputs.previous_tag }}
       server: ${{ steps.plan.outputs.server }}
       server_version: ${{ steps.plan.outputs.server_version }}
-      server_previous_version: ${{ steps.plan.outputs.server_previous_version }}
       indexer: ${{ steps.plan.outputs.indexer }}
       indexer_version: ${{ steps.plan.outputs.indexer_version }}
-      indexer_previous_version: ${{ steps.plan.outputs.indexer_previous_version }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -159,14 +157,10 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           sparse-checkout: |
-            bun.lock
-            package.json
-            packages/engine
             packages/fight
             packages/immutable
             packages/indexer
             packages/protocol
-            packages/sdk/package.json
             packages/server
             seed/content
             seed/structures
@@ -177,41 +171,30 @@ jobs:
           previous_tag=$(git tag --list 'v[0-9]*' --sort=-version:refname | grep -Fxv "$current_tag" | head -1 || true)
           server_version="${{ needs.tag-and-release.outputs.version }}"
           indexer_version="${{ needs.tag-and-release.outputs.version }}"
-          server_previous_version=""
-          indexer_previous_version=""
           server=true
           indexer=true
 
           if [ -n "$previous_tag" ]; then
-            server_previous_version=$(git show "$previous_tag:packages/server/package.json" | node -e \
-              "let value=''; process.stdin.on('data', chunk => value += chunk).on('end', () => console.log(JSON.parse(value).version))")
-            indexer_previous_version=$(git show "$previous_tag:packages/indexer/Cargo.toml" | awk -F'"' '/^version = / { print $2; exit }')
             server=false
             indexer=false
             if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- \
-              packages/engine/package.json packages/engine/src \
               packages/fight/package.json packages/fight/src \
               packages/immutable/package.json packages/immutable/src \
               packages/protocol/package.json packages/protocol/src \
-              packages/server/package.json packages/server/src packages/server/Dockerfile \
-              seed/content seed/structures; then server=true; fi
-            if ! diff -q \
-              <(git show "$previous_tag:bun.lock" | sed -E '/^[[:space:]]+"version": "[0-9]+\.[0-9]+\.[0-9]+",$/d') \
-              <(sed -E '/^[[:space:]]+"version": "[0-9]+\.[0-9]+\.[0-9]+",$/d' bun.lock) >/dev/null; then
+              packages/server seed/content seed/structures; then
               server=true
             fi
-            if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- \
-              packages/indexer/Cargo.toml packages/indexer/Cargo.lock packages/indexer/Dockerfile packages/indexer/src; then indexer=true; fi
+            if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- packages/indexer; then
+              indexer=true
+            fi
           fi
 
           {
             echo "previous_tag=$previous_tag"
             echo "server=$server"
             echo "server_version=$server_version"
-            echo "server_previous_version=$server_previous_version"
             echo "indexer=$indexer"
             echo "indexer_version=$indexer_version"
-            echo "indexer_previous_version=$indexer_previous_version"
           } >> "$GITHUB_OUTPUT"
 
   build-server:
@@ -260,9 +243,6 @@ jobs:
               previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
               previous_release="${previous_release#v}"
               source="ghcr.io/${{ github.repository_owner }}/server:$previous_release"
-              if ! docker manifest inspect "$source" >/dev/null 2>&1; then
-                source="ghcr.io/${{ github.repository_owner }}/server:${{ needs.backend-plan.outputs.server_previous_version }}"
-              fi
               expected=$(docker buildx imagetools inspect "$source" --format '{{json .Manifest.Digest}}' | tr -d '"')
               actual=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
               [ "$actual" = "$expected" ] || {
@@ -303,9 +283,6 @@ jobs:
           previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
           previous_release="${previous_release#v}"
           source="$repository:$previous_release"
-          if ! docker manifest inspect "$source" >/dev/null 2>&1; then
-            source="$repository:${{ needs.backend-plan.outputs.server_previous_version }}"
-          fi
           docker manifest inspect "$source" >/dev/null || { echo "::error::no previous server image exists"; exit 1; }
           docker buildx imagetools create --tag "$repository:${{ needs.backend-plan.outputs.server_version }}" "$source"
           digest=$(docker buildx imagetools inspect "$repository:${{ needs.backend-plan.outputs.server_version }}" \
@@ -360,9 +337,6 @@ jobs:
               previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
               previous_release="${previous_release#v}"
               source="ghcr.io/${{ github.repository_owner }}/indexer:$previous_release"
-              if ! docker manifest inspect "$source" >/dev/null 2>&1; then
-                source="ghcr.io/${{ github.repository_owner }}/indexer:${{ needs.backend-plan.outputs.indexer_previous_version }}"
-              fi
               expected=$(docker buildx imagetools inspect "$source" --format '{{json .Manifest.Digest}}' | tr -d '"')
               actual=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
               [ "$actual" = "$expected" ] || {
@@ -403,9 +377,6 @@ jobs:
           previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
           previous_release="${previous_release#v}"
           source="$repository:$previous_release"
-          if ! docker manifest inspect "$source" >/dev/null 2>&1; then
-            source="$repository:${{ needs.backend-plan.outputs.indexer_previous_version }}"
-          fi
           docker manifest inspect "$source" >/dev/null || { echo "::error::no previous indexer image exists"; exit 1; }
           docker buildx imagetools create --tag "$repository:${{ needs.backend-plan.outputs.indexer_version }}" "$source"
           digest=$(docker buildx imagetools inspect "$repository:${{ needs.backend-plan.outputs.indexer_version }}" \

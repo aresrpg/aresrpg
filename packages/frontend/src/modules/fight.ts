@@ -473,7 +473,7 @@ const close_fight_preview = (state: Readonly<AppState>, fight: string): AppState
 
 const release_character_fight = (state: Readonly<AppState>, character_id: string): AppState => {
   const { checkpoint } = state.fight
-  if (!checkpoint) return state
+  if (!checkpoint || !state.fight.mounted) return state
   const roster = new Set(state.session.characters.map(({ id }) => id))
   const another_seated = checkpoint.contract.fighters.some(
     (fighter) =>

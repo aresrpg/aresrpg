@@ -4,6 +4,7 @@
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
+import { titleize } from '../content/catalog.ts'
 import type { ZoneReveal } from '../modules/world.ts'
 import { useAppStore } from '../store.ts'
 
@@ -23,6 +24,9 @@ export const ZoneRevealContent = ({
     <div aria-live="assertive" className="gw-reveal" key={reveal.id} role="status">
       <div className="gw-reveal__title">{text('zone_revealed')}</div>
       <div className="gw-reveal__coords">{text('zone_coordinates', { zx: reveal.zx, zz: reveal.zz })}</div>
+      <div className="gw-reveal__biome">
+        {text('biome')} · {titleize(reveal.biome)}
+      </div>
       <div className="gw-reveal__findings">{findings.join(' · ')}</div>
     </div>
   )

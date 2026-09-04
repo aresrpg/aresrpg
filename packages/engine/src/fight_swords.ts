@@ -6,7 +6,7 @@
 // an optional DOM element slot floating above it (the prompt/lock tag), positioned by the
 // SAME CSS2D pass the entity labels use.
 
-import { Box3, Object3D, type Scene } from 'three'
+import { AudioListener, AudioLoader, Box3, Object3D, PositionalAudio, type Scene } from 'three'
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 
 import { project_height } from './flatten.ts'
@@ -26,6 +26,13 @@ const PLANT_SCALE = 2.5
 const LABEL_WORLD_HEIGHT = 3
 
 export const FIGHT_SWORD_TILT = Object.freeze({ x: 0.035, z: -0.09 })
+export const FIGHT_SWORD_AUDIO = Object.freeze({
+  distance_model: 'linear' as const,
+  ref_distance: 4,
+  max_distance: 50,
+  rolloff_factor: 1,
+  volume: 0.8,
+})
 export const fight_sword_plant_height = (minimum_y: number, maximum_y: number): number => -(minimum_y + maximum_y) / 2
 export const fight_sword_label_offset = (scale: number): number => LABEL_WORLD_HEIGHT / Math.max(scale, 0.001)
 export const fight_sword_ground_height = (source_y: number, flatten_amount: number): number =>
@@ -79,17 +86,29 @@ type Planted = Readonly<{
 
 export const create_fight_sword_layer = ({
   scene,
+  camera,
   url,
   impact_sound_url,
   impact,
 }: Readonly<{
   scene: Scene
+  camera: Object3D
   url: string
   impact_sound_url: string
   impact?: (position: readonly [number, number, number]) => void
 }>) => {
-  const impact_audio = typeof Audio === 'undefined' ? null : new Audio(impact_sound_url)
-  if (impact_audio) impact_audio.preload = 'auto'
+  const listener = new AudioListener()
+  camera.add(listener)
+  const sounds = new Set<PositionalAudio>()
+  let impact_buffer: AudioBuffer | null = null
+  new AudioLoader().load(
+    impact_sound_url,
+    (buffer) => {
+      impact_buffer = buffer
+    },
+    undefined,
+    (error) => console.warn('Fight sword impact sound failed to load.', error)
+  )
   let template: Object3D | null = null
   let plant_height = HANDLE_HEIGHT
   void load_gltf_source(url)
@@ -111,6 +130,24 @@ export const create_fight_sword_layer = ({
   const planted = new Map<string, Planted>()
   let visible = true
   let flatten_amount = 0
+
+  const play_impact = (root: Object3D): void => {
+    if (!impact_buffer) return
+    const sound = new PositionalAudio(listener)
+    sound.setBuffer(impact_buffer)
+    sound.setDistanceModel(FIGHT_SWORD_AUDIO.distance_model)
+    sound.setRefDistance(FIGHT_SWORD_AUDIO.ref_distance)
+    sound.setMaxDistance(FIGHT_SWORD_AUDIO.max_distance)
+    sound.setRolloffFactor(FIGHT_SWORD_AUDIO.rolloff_factor)
+    sound.setVolume(FIGHT_SWORD_AUDIO.volume)
+    sound.onEnded = () => {
+      sounds.delete(sound)
+      root.remove(sound)
+    }
+    sounds.add(sound)
+    root.add(sound)
+    sound.play()
+  }
 
   /** blade-down stance baked ONCE — no per-frame rotation theatrics */
   const rebuild = (root: Object3D): void => {
@@ -184,10 +221,7 @@ export const create_fight_sword_layer = ({
       }
       if (impacted && !entry.impacted) {
         impact?.([marker.x, ground_y, marker.z])
-        if (impact_audio) {
-          impact_audio.currentTime = 0
-          void impact_audio.play().catch((error: unknown) => console.warn('Fight sword impact sound failed.', error))
-        }
+        play_impact(root)
         planted.set(id, Object.freeze({ ...entry, impacted: true }))
       }
       root.updateWorldMatrix(true, false)
@@ -195,6 +229,12 @@ export const create_fight_sword_layer = ({
   }
 
   const dispose = (): void => {
+    sounds.forEach((sound) => {
+      if (sound.isPlaying) sound.stop()
+      sound.removeFromParent()
+    })
+    sounds.clear()
+    camera.remove(listener)
     planted.forEach(({ root }) => scene.remove(root))
     planted.clear()
     template = null
@@ -203,6 +243,7 @@ export const create_fight_sword_layer = ({
   return Object.freeze({
     set_markers,
     set_label,
+    set_volume: (volume: number) => listener.setMasterVolume(volume),
     set_flatten: (amount: number) => {
       flatten_amount = amount
     },

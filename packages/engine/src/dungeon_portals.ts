@@ -20,7 +20,8 @@ const PARTICLES = 22
 const BLUE = [0.08, 0.48, 1] as const
 const HUM_RANGE = 28
 
-export const portal_hum_gain = (distance: number): number => 0.055 * Math.max(0, 1 - Math.max(0, distance) / HUM_RANGE)
+export const portal_hum_gain = (distance: number, volume = 1): number =>
+  0.055 * volume * Math.max(0, 1 - Math.max(0, distance) / HUM_RANGE)
 
 type PortalSlot = Readonly<{ root: Group; particles: Points; base_y: number }>
 
@@ -49,6 +50,7 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
   let markers: readonly DungeonPortalMarker[] = Object.freeze([])
   let flatten = 0
   let active = true
+  let volume = 1
   let audio: Readonly<{ context: AudioContext; gain: GainNode; oscillators: readonly OscillatorNode[] }> | null = null
 
   const unlock_audio = (): void => {
@@ -125,6 +127,9 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
       active = next
       if (!active) slots.forEach(({ root }) => (root.visible = false))
     },
+    set_volume: (next: number): void => {
+      volume = next
+    },
     tick: (now: number, viewer_x: number, viewer_y: number, viewer_z: number): void => {
       let nearest = Number.POSITIVE_INFINITY
       slots.forEach(({ root, particles }) => {
@@ -136,7 +141,8 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
         particles.rotation.z = now * 0.00018
         particles.scale.setScalar(0.96 + Math.sin(now * 0.0015 + root.position.x) * 0.05)
       })
-      if (audio) audio.gain.gain.setTargetAtTime(active ? portal_hum_gain(nearest) : 0, audio.context.currentTime, 0.12)
+      if (audio)
+        audio.gain.gain.setTargetAtTime(active ? portal_hum_gain(nearest, volume) : 0, audio.context.currentTime, 0.12)
     },
     dispose: () => {
       globalThis.removeEventListener?.('pointerdown', unlock_audio)

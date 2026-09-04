@@ -522,6 +522,8 @@ airdrop_page:
 settings_page:
   title: 'Налаштування'
   subtitle: 'Твої налаштування AresRPG'
+  master_volume_label: Загальна гучність
+  master_volume_hint: Налаштовує гучність усієї музики та звукових ефектів.
   music_label: 'Музика'
   music_hint: 'Відтворює музику світу та боїв.'
   footsteps_label: Кроки
@@ -1627,6 +1629,7 @@ characters_page:
   menu_consume: Спожити
   menu_crush: Розтрощити
   menu_destroy: Знищити
+  menu_view_recipes: Переглянути рецепти
   menu_explorer: Переглянути в оглядачі
   menu_link_chat: Додати посилання в чат
   feed_title: Годування улюбленця

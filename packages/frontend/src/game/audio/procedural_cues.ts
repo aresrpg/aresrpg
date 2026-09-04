@@ -5,6 +5,8 @@
 
 /* eslint-disable functional/immutable-data -- Web Audio nodes are mutable browser effect handles. */
 
+import { scale_audio_volume } from '../core/audio_volume.ts'
+
 export type ProceduralCue = 'city' | 'discovery' | 'gather' | 'sale' | 'level_up' | 'victory' | 'defeat'
 type Tone = Readonly<{
   frequency: number
@@ -88,6 +90,8 @@ export const create_procedural_cues = (context_factory: () => AudioContext | nul
       void context.resume().catch((error: unknown) => console.warn('Procedural cue audio could not resume.', error))
     const now = context.currentTime
     PROCEDURAL_CUE_TONES[cue].forEach((tone) => {
+      const gain = scale_audio_volume(tone.gain)
+      if (gain === 0) return
       const start = now + tone.delay
       const oscillator = context!.createOscillator()
       const envelope = context!.createGain()
@@ -95,7 +99,7 @@ export const create_procedural_cues = (context_factory: () => AudioContext | nul
       oscillator.frequency.setValueAtTime(tone.frequency, start)
       if (tone.to) oscillator.frequency.exponentialRampToValueAtTime(tone.to, start + tone.duration)
       envelope.gain.setValueAtTime(0, start)
-      envelope.gain.linearRampToValueAtTime(tone.gain, start + 0.008)
+      envelope.gain.linearRampToValueAtTime(gain, start + 0.008)
       envelope.gain.exponentialRampToValueAtTime(0.0001, start + tone.duration)
       oscillator.connect(envelope)
       envelope.connect(context!.destination)

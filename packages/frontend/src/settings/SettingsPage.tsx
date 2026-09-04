@@ -2,7 +2,16 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { get_quality_profile } from '@aresrpg/engine'
-import { Footprints, Hammer, Mountain, Music2, RotateCcw, Settings as SettingsIcon, Swords } from 'lucide-react'
+import {
+  Footprints,
+  Hammer,
+  Mountain,
+  Music2,
+  RotateCcw,
+  Settings as SettingsIcon,
+  Swords,
+  Volume2,
+} from 'lucide-react'
 
 import {
   effective_render_distance,
@@ -10,6 +19,7 @@ import {
   RENDER_DISTANCE_MIN,
   type GameSettings,
 } from '../game/core/settings.ts'
+import { master_volume_from } from '../game/core/audio_volume.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
@@ -42,6 +52,8 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
     characters.find(({ id }) => id === selected_character_id)?.id ?? characters[0]?.id ?? null
   const change_music = (music_enabled: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, music_enabled }) })
+  const change_master_volume = (master_volume: number): void =>
+    dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, master_volume }) })
   const change_footsteps = (footsteps_enabled: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, footsteps_enabled }) })
   const change_auto_switch = (auto_switch_fighter: boolean): void =>
@@ -62,6 +74,7 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
     get_quality_profile(settings.quality).chunks.far_radius,
     settings.render_distance
   )
+  const master_volume_percent = Math.round(master_volume_from(settings.master_volume) * 100)
 
   return (
     <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-bg/97 p-3 lg:p-8">
@@ -76,6 +89,29 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
       </header>
 
       <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:mt-8 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Volume2 className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{t('master_volume_label')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('master_volume_hint')}</div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-3">
+          <input
+            aria-label={t('master_volume_label')}
+            className="w-32 cursor-pointer accent-gold"
+            max={100}
+            min={0}
+            onChange={(event) => change_master_volume(Number(event.target.value) / 100)}
+            step={5}
+            type="range"
+            value={master_volume_percent}
+          />
+          <output className="min-w-8 text-right text-[11px] text-gold tabular-nums">{master_volume_percent}%</output>
+        </div>
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
         <div className="flex min-w-0 items-center gap-3">
           <Music2 className="shrink-0 text-gold opacity-70" size={15} />
           <div className="min-w-0">

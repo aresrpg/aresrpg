@@ -9,10 +9,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { pet_max_feeds } from '@aresrpg/immutable'
 import type { ItemRow } from '@aresrpg/protocol'
-import { Cat, ExternalLink, Gift, Hammer, Loader2, MessageSquarePlus, Trash2 } from 'lucide-react'
+import { BookOpen, Cat, ExternalLink, Gift, Hammer, Loader2, MessageSquarePlus, Trash2 } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { env } from '../env.ts'
+import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
 import { explorer_object_url } from '../explorer.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
@@ -173,14 +174,27 @@ export const InventoryMenu = ({
   entries: readonly InventoryMenuEntry[]
 }>) => {
   const t = copy_text(copy.characters_page)
+  const recipe_path = encyclopedia_item_path(menu.item.item_type)
   return (
     <div
       className="fixed z-[60] flex min-w-[150px] flex-col border border-border bg-surface-low shadow-[0_14px_40px_rgba(0,0,0,0.6)]"
       style={{
         left: Math.min(menu.x, globalThis.innerWidth - 170),
-        top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 2) * 34 - 10),
+        top: Math.min(menu.y, globalThis.innerHeight - (entries.length + 3) * 34 - 10),
       }}
     >
+      <a
+        className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
+        href={recipe_path}
+        onClick={(event) => {
+          event.preventDefault()
+          close_menu()
+          dispatch_app({ type: 'path/open', pathname: recipe_path })
+        }}
+      >
+        <BookOpen className="opacity-60" size={11} />
+        {t('menu_view_recipes')}
+      </a>
       <a
         className="flex items-center gap-2.5 px-3.5 py-2 text-left text-[9px] tracking-[0.16em] text-text uppercase hover:bg-gold/10 hover:text-gold"
         href={explorer_object_url(env.network, menu.item.id)}

@@ -94,6 +94,9 @@ export const trade_display_name = (
 
 export const input_sui = (mist: bigint): string => format_sui(mist, 9).replace(/0+$/, '').replace(/\.$/, '')
 
+export const trade_offer_draft_key = (trade: Readonly<TradeRow>, side: 'a' | 'b'): string =>
+  JSON.stringify([trade.id, trade[`sui_${side}`], trade[`caps_${side}`].map(({ object, amount }) => [object, amount])])
+
 export const trade_modal_visible = (trade: Readonly<TradeRow>): boolean =>
   trade.phase !== 'requested' &&
   (trade.phase === 'negotiating' ||

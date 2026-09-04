@@ -331,11 +331,8 @@
       "herb_bush: SpriteBuilder": [18]
     },
     "packages/engine/src/webgpu_backend.ts": {
-      "create_webgpu_backend > drain_uploads": [20],
+      "create_webgpu_backend > drain_uploads": [17],
       "create_webgpu_backend > draw": [20]
-    },
-    "packages/engine/src/biome_grid.ts": {
-      "sample_biome_grid": [13]
     },
     "packages/engine/src/fight_presentation.ts": {
       "create_fight_presentation > play": [27]
@@ -1068,9 +1065,6 @@
       "create_webgpu_backend > draw": [24],
       "create_webgpu_backend > set_camera": [9],
       "create_webgpu_backend > use_sky_quality": [13]
-    },
-    "packages/engine/src/biome_grid.ts": {
-      "sample_biome_grid": [10]
     },
     "packages/engine/src/fight_presentation.ts": {
       "create_fight_presentation > play": [22]

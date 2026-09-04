@@ -18,4 +18,5 @@ test('dungeon portal hum fades smoothly and stops outside its ambience radius', 
   expect(portal_hum_gain(14)).toBeCloseTo(0.0275)
   expect(portal_hum_gain(28)).toBe(0)
   expect(portal_hum_gain(100)).toBe(0)
+  expect(portal_hum_gain(0, 0.25)).toBeCloseTo(0.01375)
 })

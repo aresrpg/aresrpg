@@ -91,6 +91,11 @@ const open_path = (state: AppState, requested_pathname: string): AppState => {
   })
 }
 
+const open_dialog = (state: AppState, dialog: AppDialog | null): AppState => {
+  const host = dialog === 'character_create' ? open_page(state, 'world') : state
+  return Object.freeze({ ...host, navigation: Object.freeze({ ...host.navigation, dialog }) })
+}
+
 const return_from_kolizeum_fight = (
   state: AppState,
   input: Extract<AppInput, { type: 'fight_result/checkpoint' }>
@@ -109,8 +114,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'fight_result/checkpoint') return return_from_kolizeum_fight(state, input)
   if (input.type === 'page/open') return open_page(state, input.page)
   if (input.type === 'path/open' || input.type === 'route/changed') return open_path(state, input.pathname)
-  if (input.type === 'dialog/open')
-    return Object.freeze({ ...state, navigation: Object.freeze({ ...state.navigation, dialog: input.dialog }) })
+  if (input.type === 'dialog/open') return open_dialog(state, input.dialog)
   if (input.type === 'spectate/changed')
     return Object.freeze({
       ...state,

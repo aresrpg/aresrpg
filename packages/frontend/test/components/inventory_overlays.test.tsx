@@ -29,6 +29,8 @@ test('the inventory menu links its exact item object ID', async () => {
   )
 
   expect(markup).toContain('href="https://testnet.suivision.xyz/object/0xitem"')
+  expect(markup).toContain('href="/encyclopedia/items/0x2%3A%3Aitem%3A%3ARelic"')
+  expect(markup).toContain('View recipes')
   expect(markup).toContain('See on explorer')
   expect(markup).toContain('Link in chat')
   expect(markup).not.toContain('Destroy')
