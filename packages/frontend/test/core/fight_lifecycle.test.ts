@@ -4,7 +4,10 @@
 import { expect, test } from 'bun:test'
 
 import { end_turn_retry_delay_ms, turn_too_soon_refusal } from '../../src/modules/fight_chain.ts'
-import { terminal_remote_draft_needs_commit } from '../../src/modules/fight_lifecycle.ts'
+import {
+  end_turn_submission_after_reconcile,
+  terminal_remote_draft_needs_commit,
+} from '../../src/modules/fight_lifecycle.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
@@ -59,4 +62,10 @@ test('a zero-gas too-soon refusal requeues, while an executed failure never retr
 test('a pre-submission refusal always waits before retrying despite client clock skew', () => {
   expect(end_turn_retry_delay_ms(0, 10_500, 10_000)).toBe(500)
   expect(end_turn_retry_delay_ms(2_000, 10_500, 10_000)).toBe(2_000)
+})
+
+test('a receipt-projected ending retains the submitted boundary until canonical truth arrives', () => {
+  const submitted = { end_turn_submitted: true }
+  expect(end_turn_submission_after_reconcile(submitted, false, true)).toBeTrue()
+  expect(end_turn_submission_after_reconcile(submitted, false, false)).toBeFalse()
 })

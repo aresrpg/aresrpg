@@ -7,7 +7,8 @@
 /// Buyer flow (same PTB as the purchase): lock into your kiosk → borrow → `prove` → confirm.
 module aresrpg::naked_rule;
 
-use aresrpg::{character::Character, equipment, version::Version};
+use aresrpg::{character::Character, equipment, listing_rule, version::Version};
+use sui::kiosk::Kiosk;
 use sui::transfer_policy::{Self, TransferPolicy, TransferPolicyCap, TransferRequest};
 
 const MIN_SALE_LEVEL: u16 = 30; // below this a character cannot change owners
@@ -15,6 +16,7 @@ const MIN_SALE_LEVEL: u16 = 30; // below this a character cannot change owners
 const ENotNaked: u64 = 821; // the character still wears something — unequip first
 const ENakedWrongItem: u64 = 822; // prove: the proven character is not the one being purchased
 const ELevelTooLow: u64 = 823; // the character is below the minimum sale level
+
 
 public struct NakedRule has drop {}
 public struct NakedConfig has drop, store {}
@@ -31,8 +33,9 @@ fun assert_sellable(character: &Character) {
 }
 
 /// Buyer: borrow the character just locked into YOUR kiosk and prove it qualifies for sale.
-public fun prove(purchased: &Character, request: &mut TransferRequest<Character>, version: &Version) {
+public fun prove(purchased: &Character, request: &mut TransferRequest<Character>, version: &Version, seller: &Kiosk) {
   version.assert_latest();
+  listing_rule::prove_seller(request, seller);
   assert!(object::id(purchased) == transfer_policy::item(request), ENakedWrongItem);
   assert_sellable(purchased);
   transfer_policy::add_receipt(NakedRule {}, request);

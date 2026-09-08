@@ -38,7 +38,7 @@ describe('Move contract generation', () => {
       FightStarted: ['fight', 'world', 'x', 'z', 'queue'],
       FightEnded: ['fight', 'world', 'x', 'z', 'winner'],
       TurnSeedUsed: ['fight', 'seat', 'seed'],
-      DropsRolled: ['fight', 'fighter', 'drops'],
+      DropsRolled: ['fight', 'fighter', 'drops', 'kares'],
     })
     expect(STRUCT_SCHEMAS.TurnSeedUsed).toEqual([
       { name: 'fight', type: 'ID' },

@@ -210,10 +210,11 @@ describe('the fight watch', () => {
     })
     pubsub.emitter.emit('evt:fight:0xf1', {
       type: 'DropsRolled',
-      data: { fight: '0xf1', fighter: '0', drops: [{ item_type: 'silk', qty: 3 }] },
+      data: { fight: '0xf1', fighter: '0', kares: '0', drops: [{ item_type: 'silk', qty: 3 }] },
     })
     expect(sent.find((packet) => packet.type === 'packet/fight_drops')).toEqual({
       type: 'packet/fight_drops',
+      kares: '0',
       fight: '0xf1',
       fighter: '0',
       drops: [{ item_type: 'silk', qty: 3 }],
@@ -376,21 +377,6 @@ describe('the fight watch', () => {
 })
 
 describe('market + self stream + heartbeat', () => {
-  test('airdrop state streams exact external remaining counts', async () => {
-    const { sent, ws, graph, pubsub } = wire()
-    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    pubsub.emitter.emit('evt:economy', {
-      type: 'AirdropClaimed',
-      data: { drop_id: 'founders', claimer: '0xher', remaining: '1' },
-    })
-    expect(sent.find((packet) => packet.type === 'packet/airdrop_remaining')).toEqual({
-      type: 'packet/airdrop_remaining',
-      drop_id: 'founders',
-      eligible_count: 1,
-    })
-  })
-
   test('market_observe folds and pushes the slice; my kiosk sale always forwards', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })

@@ -255,7 +255,6 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
               'success_rate',
               'puits',
               'over_maging',
-              'forgemagie_xp',
               'forgemagie_tips',
             ].map((key) => (
               <div className="space-y-2" key={key}>

@@ -9,7 +9,7 @@ test('a cached kiosk cap retries one fresh lookup only when another tab advanced
   const refreshes: boolean[] = []
   const result = await retry_stale_kiosk_ref(async (fresh) => {
     refreshes.push(fresh)
-    if (!fresh) throw new Error('provided version does not match, provided: 8 actual: 0x9')
+    if (!fresh) throw new Error('NOT submitted: provided version does not match, provided: 8 actual: 0x9')
     return 'submitted'
   })
 
@@ -21,7 +21,8 @@ test('encoded resolver errors use the same stale-cap classifier', async () => {
   const refreshes: boolean[] = []
   await retry_stale_kiosk_ref(async (fresh) => {
     refreshes.push(fresh)
-    if (!fresh) throw new Error('provided%20version%20does%20not%20match,%20provided:%208%20actual:%200x9')
+    if (!fresh)
+      throw new Error('NOT%20submitted:%20provided%20version%20does%20not%20match,%20provided:%208%20actual:%200x9')
     return 'submitted'
   })
   expect(refreshes).toEqual([false, true])
@@ -111,4 +112,78 @@ test('a terminal kiosk action hydrates its kiosk and game inputs in one batch', 
   await with_terminal_kiosk(() => undefined, { inputs: ['0xzone', '0xcontent'] })
 
   expect(hydrated).toEqual([['0xkiosk', '0xzone', '0xcontent']])
+})
+
+test('client-side merges precede a Random door, with the cap returned before that final command', async () => {
+  const calls: string[][] = []
+  const cap = { objectId: 'cap', kioskId: 'kiosk', isPersonal: true }
+  const sdk = {
+    tx: () => ({ commands: [] as string[] }),
+    hydrate_unknown: async () => undefined,
+    with_owner_kiosk: (tx: { commands: string[] }, _cap: unknown, compose: (kiosk: never, cap: never) => void) => {
+      tx.commands.push('borrow')
+      compose('kiosk' as never, 'cap' as never)
+      tx.commands.push('return')
+    },
+    doors: {
+      merge_stacks: (tx: { commands: string[] }, { source_id }: { source_id: string }) =>
+        tx.commands.push('merge:' + source_id),
+    },
+    execute: async (tx: { commands: string[] }) => {
+      calls.push(tx.commands)
+      return { Transaction: { digest: 'done' } }
+    },
+  }
+  const runner = create_kiosk_runner(sdk as never, async () => cap as never)
+  await runner.with_terminal_kiosk(
+    (tx) => {
+      ;(tx as never as { commands: string[] }).commands.push('random')
+    },
+    { merges: [{ target_id: 'target', source_ids: ['a', 'b'] }] }
+  )
+  await runner.with_terminal_kiosk(
+    (tx) => {
+      ;(tx as never as { commands: string[] }).commands.push('random')
+    },
+    { merges: [{ target_id: 'target', source_ids: [] }] }
+  )
+  expect(calls).toEqual([['borrow', 'merge:a', 'merge:b', 'return', 'random'], ['random']])
+})
+
+test('optional merge preflight may fall back once, but an executed failure never retries', async () => {
+  for (const preflight of [true, false]) {
+    let tries = 0
+    const commands: string[][] = []
+    const sdk = {
+      tx: () => ({ commands: [] as string[] }),
+      with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: never, cap: never) => void) =>
+        compose('k' as never, 'c' as never),
+      doors: { merge_stacks: (tx: { commands: string[] }) => tx.commands.push('merge') },
+      execute: async (tx: { commands: string[] }) => {
+        tries++
+        commands.push(tx.commands)
+        if (tries === 1)
+          throw new Error(
+            preflight
+              ? '[sdk] transaction resolution failed — NOT submitted: missing merge source'
+              : 'failed on-chain: receipt digest is known'
+          )
+        return { Transaction: { digest: 'done' } }
+      },
+    }
+    const runner = create_kiosk_runner(sdk as never, async () => ({ objectId: 'c', kioskId: 'k' }) as never)
+    const result = runner.with_kiosk(
+      (tx) => {
+        ;(tx as never as { commands: string[] }).commands.push('use')
+      },
+      { merges: [{ target_id: 'target', source_ids: ['source'] }] }
+    )
+    if (preflight) {
+      await result
+      expect(commands).toEqual([['merge', 'use'], ['use']])
+    } else {
+      await expect(result).rejects.toThrow('failed on-chain')
+      expect(tries).toBe(1)
+    }
+  }
 })

@@ -1,24 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The character builder — the app's ONE door to the character's own transactions: equipment
-// changes, stat allocation, spell raises, consumables, rune scribing, and the world actions a
-// character takes where it stands (searching a zone, gathering a node, facing the protector a
-// gather woke). Every
-// action composes the PTB against the wallet's personal kiosk (the character's custody home)
-// and executes; the caller folds the proven receipt client-side — the server streams only
-// facts this player's own transactions did not cause.
+// Custody-proven character actions. The SDK composes PTBs; Move verifies their effects.
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { craft_stackable_batch_limit, type CharacteristicName } from '@aresrpg/immutable'
 import { zone_of } from '@aresrpg/protocol'
 
 import type { SDK } from './client.ts'
-import { changed_object_ids, created_object_id, receipt_digest, receipt_event } from './cache.ts'
+import { changed_object_ids, created_object_id, spending_receipt, receipt_digest, receipt_event } from './cache.ts'
+import { character_delete, type CharacterDeleteInput } from './character.ts'
 import { living_content } from './client.ts'
-import { crush_owed_from_receipt, rune_coordinates } from './forgemagie.ts'
+import { crush_owed_from_receipt, rune_coordinates, scribe_losses } from './forgemagie.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { created_fight_id, type FightCreatedReceipt } from './fight.ts'
-import { event_boolean, event_integer, event_string } from './receipt_decode.ts'
+import { event_boolean, event_integer, event_string, event_u64 } from './receipt_decode.ts'
 import {
   board_catalog_id,
   item_template_id,
@@ -62,32 +57,30 @@ const craft_outcome = (
 }
 
 /** The RuneScribed event, projected — the ONLY truth about a scribe's random outcome. */
-export type ScribeOutcome = Readonly<{
-  digest: string
-  /** catalog stat id (stat_names order) the rune targeted */
-  stat: number
-  /** 0 = success, then the degraded outcomes (forge.move outcome codes) */
-  outcome: number
-  applied_value: number
-  lost_stat: number
-  lost_amount: number
-  new_puits: number
-}>
+export type ScribeOutcome = Readonly<
+  Partial<ReturnType<typeof spending_receipt>> & {
+    digest: string
+    /** catalog stat id (stat_names order) the rune targeted */
+    stat: number
+    /** 0 = success, then the degraded outcomes (forge.move outcome codes) */
+    outcome: number
+    applied_value: number
+    lost_amounts: readonly number[]
+    new_puits: string
+  }
+>
 
 export type CharacterActionsCtx = {
   /** async loader — the session's cached personal kiosk caps (kiosks are for life) */
   kiosk_cap: KioskCapLoader
 }
 
-/** The builder: every character-upkeep chain action. */
 export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsCtx) => {
-  // the ONE kiosk execution bracket, shared with fight.ts (kiosk_runner.ts owns the why)
   const { with_kiosk, with_terminal_kiosk } = create_kiosk_runner(sdk, kiosk_cap)
 
   return {
-    /** Apply one staged equipment change-set in ONE transaction: unequips first (freeing
-     *  slots), then equips. Unequipped items are Receiving<Item> off the character, so their
-     *  exact owned refs hydrate first. */
+    delete: (input: CharacterDeleteInput) => character_delete(sdk, kiosk_cap, input),
+    /** Hydrate receiving items, then unequip and equip atomically. */
     equip: async ({
       character_id,
       to_equip,
@@ -161,13 +154,15 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       item_type,
       world,
       custody,
+      merge_sources = [],
     }: {
       character_id: string
       item_id: string
       item_type: string
       world?: string
+      merge_sources?: readonly string[]
       custody?: KioskCustody
-    }): Promise<CharacterReceipt> => {
+    }): Promise<ReturnType<typeof spending_receipt>> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const template = item_template_id(content_root, seed_package_original, item_type)
       const world_content = world ? world_content_id(content_root, seed_package_original, world) : null
@@ -178,13 +173,12 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
             sdk.doors.use_city_consumable(tx, { kiosk, cap, character_id, item_id, template, world_content })
           else sdk.doors.use_consumable(tx, { kiosk, cap, character_id, item_id, template })
         },
-        { custody }
+        { custody, merges: [{ target_id: item_id, source_ids: merge_sources }] }
       )
-      return { digest: receipt_digest(receipt) }
+      return spending_receipt(receipt)
     },
 
-    /** Scribe ONE rune onto a gear item — the outcome is the chain's random roll; the
-     *  RuneScribed event is the one truth the caller folds (honest-data law: no local odds). */
+    /** Scribe one rune and return its certified stat and quantity changes. */
     scribe_rune: async ({
       character_id,
       gear_id,
@@ -192,18 +186,19 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       rune_item_id,
       rune_item_type,
       custody,
+      merge_sources = [],
     }: {
       character_id: string
       gear_id: string
       gear_item_type: string
       rune_item_id: string
       rune_item_type: string
+      merge_sources?: readonly string[]
       custody?: KioskCustody
     }): Promise<ScribeOutcome> => {
       const rune = rune_coordinates(rune_item_type)
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const gear_template = item_template_id(content_root, seed_package_original, gear_item_type)
-      await sdk.hydrate_unknown([gear_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.scribe_rune(tx, {
@@ -216,70 +211,76 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
             rune_stat: rune.stat,
             rune_tier: rune.tier,
           }),
-        { custody }
+        { custody, inputs: [gear_template], merges: [{ target_id: rune_item_id, source_ids: merge_sources }] }
       )
       const event = receipt_event(receipt, '::forgemagie::RuneScribed')
       if (!event) throw new Error('The scribe receipt carried no RuneScribed event')
-      // The event carries exact capped gain/loss and the new puits. The client folds those
+      // The event carries exact net gain/loss and the new puits. The client folds those
       // certified deltas immediately; the streamed Item remains the complete reconciliation.
       return Object.freeze({
-        digest: receipt_digest(receipt),
+        ...spending_receipt(receipt),
         stat: event_integer(event, 'stat'),
         outcome: event_integer(event, 'outcome'),
         applied_value: event_integer(event, 'applied_value'),
-        lost_stat: event_integer(event, 'lost_stat'),
-        lost_amount: event_integer(event, 'lost_amount'),
-        new_puits: event_integer(event, 'new_puits'),
+        lost_amounts: scribe_losses(event),
+        new_puits: event_u64(event, 'new_puits'),
       })
     },
 
-    /** Feed the pet ONE unit of a diet food (pet.move: once per UTC day, 60 feeds max —
-     *  the chain re-asserts both; predict them client-side so a doomed tx never fires). */
+    /** Feed one food unit; Move enforces the daily limit. */
     feed_pet: async ({
       pet_id,
       pet_item_type,
       food_id,
       custody,
+      merge_sources = [],
     }: {
       pet_id: string
       pet_item_type: string
       food_id: string
+      merge_sources?: readonly string[]
       custody?: KioskCustody
-    }): Promise<CharacterReceipt> => {
+    }): Promise<ReturnType<typeof spending_receipt>> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const pet_template = item_template_id(content_root, seed_package_original, pet_item_type)
       await sdk.hydrate_unknown([pet_template])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => sdk.doors.feed_kiosk_pet(tx, { kiosk, cap, pet_template, pet_id, food_id }),
-        { custody }
+        { custody, merges: [{ target_id: food_id, source_ids: merge_sources }] }
       )
-      return { digest: receipt_digest(receipt) }
+      return spending_receipt(receipt)
     },
 
-    /** Open a gacha box: burn one unit, roll on-chain, land a soulbound BoxClaim. The
-     *  LootBoxOpened event + the created claim id are the reveal — claiming is a second,
-     *  terminal transaction (grind-safe two-phase, loot_box.move). */
+    /** Burn a box and return its durable reveal claim. */
     open_loot_box: async ({
       box_item_id,
       box_item_type,
       custody,
+      merge_sources = [],
     }: {
       box_item_id: string
       box_item_type: string
+      merge_sources?: readonly string[]
       custody?: KioskCustody
-    }): Promise<Readonly<{ digest: string; claim_id: string; rolled_template: string; amount: number }>> => {
+    }): Promise<
+      Readonly<ReturnType<typeof spending_receipt> & { claim_id: string; rolled_template: string; amount: number }>
+    > => {
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const box_template = item_template_id(content_root, seed_package_original, box_item_type)
-      await sdk.hydrate_unknown([box_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) => sdk.doors.open_loot_box(tx, { kiosk, personal, box_item_id, box_template }),
-        { include: { objectTypes: true }, custody }
+        {
+          include: { objectTypes: true },
+          custody,
+          inputs: [box_template],
+          merges: [{ target_id: box_item_id, source_ids: merge_sources }],
+        }
       )
       const event = receipt_event(receipt, '::loot_box::LootBoxOpened')
       const claim_id = created_object_id(receipt, '::loot_box::BoxClaim')
       if (!event || !claim_id) throw new Error('The open receipt carried no LootBoxOpened reveal')
       return Object.freeze({
-        digest: receipt_digest(receipt),
+        ...spending_receipt(receipt),
         claim_id,
         rolled_template: event_string(event, 'rolled_template'),
         amount: event_integer(event, 'amount'),
@@ -300,11 +301,10 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
     }): Promise<Readonly<{ digest: string }>> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const template = item_template_id(content_root, seed_package_original, rolled_item_type)
-      await sdk.hydrate_unknown([claim_id, template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.claim_loot(tx, { claim: claim_id, rolled_template: template, existing, kiosk, personal }),
-        { custody }
+        { custody, inputs: [claim_id, template] }
       )
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
@@ -376,9 +376,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return Object.freeze({ digest: receipt_digest(receipt), item_ids: changed_object_ids(receipt, '::item::Item') })
     },
 
-    /** Craft one bounded batch: inputs and XP aggregate, while each attempt keeps its exact
-     *  evolving-level roll. The aggregate Crafted event is receipt truth; minted outputs
-     *  continue to stream from the projection. */
+    /** Craft a bounded batch with optional merge preparation and exact receipt outcomes. */
     craft: async ({
       character_id,
       output_type,
@@ -386,21 +384,24 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       existing,
       attempts,
       custody,
+      merges = [],
     }: {
       character_id: string
       output_type: string
       input_item_ids: readonly string[]
       existing: string | null
       attempts: number
+      merges?: readonly Readonly<{ target_id: string; source_ids: readonly string[] }>[]
       custody?: KioskCustody
-    }): Promise<Readonly<{ digest: string; attempts: number; successes: number; job_xp_gained: number }>> => {
+    }): Promise<
+      Readonly<ReturnType<typeof spending_receipt> & { attempts: number; successes: number; job_xp_gained: number }>
+    > => {
       if (!input_item_ids.length) throw new Error('The craft has no ingredients')
       if (!Number.isSafeInteger(attempts) || attempts < 1 || attempts > craft_stackable_batch_limit)
         throw new Error(`Craft attempts must be an integer from 1 to ${craft_stackable_batch_limit}`)
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const recipe = recipe_id(content_root, seed_package_original, output_type)
       const output_template = item_template_id(content_root, seed_package_original, output_type)
-      await sdk.hydrate_unknown([recipe, output_template])
       const receipt = await with_terminal_kiosk(
         (tx, kiosk, personal) =>
           sdk.doors.craft(tx, {
@@ -413,11 +414,11 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
             existing,
             attempts,
           }),
-        { custody }
+        { custody, inputs: [recipe, output_template], merges }
       )
       const outcome = craft_outcome(receipt, { recipe, character: character_id, output_template, attempts })
       return Object.freeze({
-        digest: receipt_digest(receipt),
+        ...spending_receipt(receipt),
         ...outcome,
       })
     },
@@ -427,21 +428,22 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       item_id,
       amount,
       custody,
+      merge_sources = [],
     }: {
       item_id: string
       amount: number
+      merge_sources?: readonly string[]
       custody?: KioskCustody
-    }): Promise<CharacterReceipt> => {
+    }): Promise<ReturnType<typeof spending_receipt>> => {
       if (!Number.isSafeInteger(amount) || amount < 1) throw new Error('The burn amount must be a positive integer')
       const receipt = await with_kiosk((tx, kiosk, cap) => sdk.doors.burn_item(tx, { kiosk, cap, item_id, amount }), {
         custody,
+        merges: [{ target_id: item_id, source_ids: merge_sources }],
       })
-      return { digest: receipt_digest(receipt) }
+      return spending_receipt(receipt)
     },
 
-    /** Walk through the star gate (world.move): the chain re-proves the walk to THIS world's
-     *  center, then re-materializes the character at the DESTINATION's gate. The WorldJoined
-     *  event is the one fold truth — the caller never invents the arrival coordinates. */
+    /** Join the destination world after Move verifies travel to the current gate. */
     join_world: async ({
       character_id,
       world,
@@ -533,7 +535,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
     }): Promise<Readonly<{ digest: string; quantity: number; ambushed: boolean }>> => {
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const template = item_template_id(content_root, seed_package_original, item_type)
-      // no link = the base template again (gathering.move asserts identity before any draw)
+      // No rare link uses the base template; Move validates a linked rare before its jackpot draw.
       const rare_template = rare_item_type
         ? item_template_id(content_root, seed_package_original, rare_item_type)
         : template

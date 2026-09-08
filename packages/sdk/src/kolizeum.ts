@@ -4,15 +4,11 @@
 import { SDK, living_content } from './client.ts'
 import { receipt_digest, receipt_event, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import {
-  execute_settlement_mode,
-  last_settler_refusal,
-  project_fight_boundary_receipt,
-  type FightReceipt,
-} from './fight.ts'
+import { project_fight_boundary_receipt, type FightReceipt } from './fight.ts'
 import { board_catalog_id } from './seed_ids.ts'
 import { friends_actions } from './friends.ts'
 import { owned_ref } from './cache.ts'
+import { pre_submission_failure } from './transaction_error.ts'
 import { event_u64 } from './receipt_decode.ts'
 
 type GameSdk = ReturnType<typeof SDK>
@@ -23,6 +19,21 @@ const created_ids = (receipt: Receipt) => {
   if (typeof event?.kolizeum !== 'string' || typeof event.fight !== 'string')
     throw new Error('The Kolizeum creation receipt carried no lobby/fight identity.')
   return Object.freeze({ kolizeum: event.kolizeum, fight: event.fight })
+}
+
+/** Closing may be optimistic, but only a rejected preflight can fall back to leaving the pair open. */
+const with_optional_close = async (
+  last: boolean | undefined,
+  execute: (close: boolean) => Promise<Receipt>
+): Promise<Receipt> => {
+  try {
+    return await execute(last ?? true)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    const still_live = /abort code:\s*(1710|1712|2809)\b/i.test(message)
+    if (last !== undefined || !pre_submission_failure(error) || !still_live) throw error
+    return execute(false)
+  }
 }
 
 export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumActionsCtx) => {
@@ -145,15 +156,12 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
         with_kiosk(
           (tx, kiosk, cap) => {
             const args = { lobby: kolizeum, fight_object: fight, fighter_idx, kiosk, cap }
-            if (last) sdk.doors.exit_last_kolizeum(tx, args)
-            else sdk.doors.exit_kolizeum(tx, args)
+            sdk.doors.exit_kolizeum(tx, args)
+            if (last) sdk.doors.close_kolizeum(tx, { lobby: kolizeum, fight_object: fight })
           },
           { custody, gas_scope: `fight:${fight}` }
         )
-      const receipt = await execute_exit(true).catch((error: unknown) => {
-        if (!last_settler_refusal(error)) throw error
-        return execute_exit(false)
-      })
+      const receipt = await with_optional_close(undefined, execute_exit)
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
 
@@ -192,15 +200,16 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
         with_terminal_kiosk(
           (tx, kiosk, personal) => {
             const args = { lobby: kolizeum, fight_object: fight, fighter_idx, kiosk, personal }
-            if (last) sdk.doors.settle_last_kolizeum(tx, args)
-            else sdk.doors.settle_kolizeum(tx, args)
+            sdk.doors.settle_kolizeum(tx, args)
+            if (last) sdk.doors.close_kolizeum(tx, { lobby: kolizeum, fight_object: fight })
           },
           { custody, gas_scope: `fight:${fight}` }
         )
-      const receipt = await execute_settlement_mode(last, execute_settlement)
+      const receipt = await with_optional_close(last, execute_settlement)
+      const paid = receipt_event(receipt, '::kolizeum::KolizeumPaid')
       return Object.freeze({
         digest: receipt_digest(receipt),
-        paid_mist: BigInt(event_u64(receipt_event(receipt, '::kolizeum::KolizeumPaid') ?? {}, 'amount')),
+        paid_mist: paid ? BigInt(event_u64(paid, 'amount')) : 0n,
         closed: receipt_event(receipt, '::fight::FightClosed') !== null,
       })
     },

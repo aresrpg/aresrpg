@@ -9,6 +9,7 @@ import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { item_icon, mob_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type ItemDetail } from '../content/catalog.ts'
 import { filter_item_types } from '../content/item_filters.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 import { Empty, encyclopedia_layout, EntityButton, EntityGrid, EntityIcon, SearchField } from './components.tsx'
 import { ConsumableEffectSection } from './ConsumableEffectSection.tsx'
@@ -22,8 +23,6 @@ const pet_food_item_types = new Set(
 )
 const item_display_category = (item_type: string, category: string): string =>
   pet_food_item_types.has(item_type) ? 'pet_food' : category
-const item_category_label = (item_type: string, category: string, text: EncyclopediaText): string =>
-  pet_food_item_types.has(item_type) ? text('item_category_pet_food') : titleize(category)
 
 const Divider = () => <div className="h-px w-full bg-white/6" />
 
@@ -145,6 +144,7 @@ export const ItemsTab = ({
   text: EncyclopediaText
 }>) => {
   const [search, set_search] = useState('')
+  const category_name = useItemCategoryName()
   const [facet_selection, set_facet_selection] = useState<ItemFilterSelection>({})
   const [minimum_level, set_minimum_level] = useState('')
   const [maximum_level, set_maximum_level] = useState('')
@@ -244,7 +244,9 @@ export const ItemsTab = ({
               icon={item_icon(item.item_type)}
               index={index}
               key={item.item_type}
-              meta={item_category_label(item.item_type, item.category, text)}
+              meta={
+                pet_food_item_types.has(item.item_type) ? text('item_category_pet_food') : category_name(item.category)
+              }
               name={item.name}
               select={() => select_item(item.item_type)}
             />

@@ -141,3 +141,20 @@ describe('inventory stack selection', () => {
     ).toEqual(['available'])
   })
 })
+
+test('visual balances combine fragments without changing the underlying item rows', async () => {
+  const { inventory_groups, stack_merge_sources } = await import('../../src/inventory_stacks.ts')
+  const rows = [stack('a', 2), stack('b', 3), stack('hat1', 1, 'hat'), stack('hat2', 1, 'hat')]
+  expect(inventory_groups(rows)).toEqual([
+    { item: rows[1], amount: 5 },
+    { item: rows[2], amount: 1 },
+    { item: rows[3], amount: 1 },
+  ])
+  expect(rows[0]!.amount).toBe(2)
+  expect(rows[1]!.amount).toBe(3)
+  expect(stack_merge_sources(rows, new Set(), rows[1]!)).toEqual(['a'])
+  expect(stack_merge_sources(rows, new Set(['a']), rows[1]!)).toEqual([])
+  expect(
+    stack_merge_sources([stack('full', 4_294_967_295), stack('extra', 1)], new Set(), stack('full', 4_294_967_295))
+  ).toEqual([])
+})

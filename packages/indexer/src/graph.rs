@@ -19,10 +19,9 @@
 //!   matches nothing (this still keeps ceremony-template DFs out of the item space).
 //! * **Strings ≥ 2⁵³** — seeds, bitmasks, MIST are string properties.
 //!
-//! Statement order per checkpoint: nodes (tx order) → dynamic fields (tx order) → custody
-//! edges → fight seat-team fixups → deletes → market stamps. Fields run after nodes because
-//! relationship fields may name a node born in the same checkpoint. An object created and
-//! deleted in one checkpoint ends deleted; replay converges to the same final state.
+//! Each transaction applies consumed pre-state before its surviving final outputs: nodes,
+//! dependent fields, custody and seat fixups. The pipeline preserves transaction order.
+//! Historical event stamps are independent of these final object effects.
 
 use std::collections::BTreeSet;
 
@@ -48,20 +47,21 @@ pub struct FightLifecycleStamp {
     pub ts_ms: u64,
 }
 
-/// Everything one checkpoint gives the projection.
+/// One transaction's final effects, or the checkpoint's trailing event-derived stamps.
 pub struct CheckpointView<'a> {
+    pub lamport_version: u64,
     pub ckpt: u64,
     pub ts_ms: u64,
-    /// Output objects, transaction order.
+    /// Surviving outputs from exactly one transaction.
     pub outputs: &'a [ObjView<'a>],
-    /// PRE-STATE views of this checkpoint's deleted ids (law 2).
+    /// PRE-STATE views of that transaction's deleted ids (law 2).
     pub deleted: &'a [ObjView<'a>],
     pub custody: &'a [Custody],
     pub market: &'a [MarketStamp],
     pub fight_lifecycle: &'a [FightLifecycleStamp],
 }
 
-/// Project one checkpoint into Cypher statements.
+/// Project one transaction into Cypher statements; the pipeline retains certified transaction order.
 ///
 /// A decode failure of a type-matched game object is LAYOUT DRIFT, never noise
 /// (type identity pins these types to our package) — it errors the checkpoint,
@@ -69,6 +69,11 @@ pub struct CheckpointView<'a> {
 /// unprojected state (the no-silent-failures law).
 pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<String>> {
     let mut cypher = vec![];
+    for gone in view.deleted {
+        if !view.outputs.iter().any(|output| output.id == gone.id) {
+            emit_delete(&mut cypher, gone, game)?;
+        }
+    }
     for output in view
         .outputs
         .iter()
@@ -83,14 +88,41 @@ pub fn project(view: &CheckpointView<'_>, game: &str) -> anyhow::Result<Vec<Stri
     {
         emit_object(&mut cypher, output, view, game)?;
     }
-    for fact in view.custody {
+    for fact in view
+        .custody
+        .iter()
+        .filter(|fact| matches!(fact, Custody::KioskOwned { .. }))
+    {
+        emit_custody(&mut cypher, fact);
+    }
+    for fact in view
+        .custody
+        .iter()
+        .filter(|fact| !matches!(fact, Custody::KioskOwned { .. }))
+    {
         emit_custody(&mut cypher, fact);
     }
     for output in view.outputs {
         emit_fight_seat_teams(&mut cypher, output, game)?;
     }
-    for gone in view.deleted {
-        emit_delete(&mut cypher, gone, game)?;
+    // The catalogue revision follows all of its relation writes. A read cannot certify an
+    // older catalogue with the transaction's newer native version.
+    let listing_key = format!("{SUI_FRAMEWORK}::kiosk::Listing");
+    let kiosks: BTreeSet<_> = view
+        .outputs
+        .iter()
+        .chain(view.deleted)
+        .filter_map(|object| match (field_key(object.type_key), object.owner) {
+            (Some(key), OwnerKind::Object(kiosk)) if key == listing_key => Some(kiosk.hex()),
+            _ => None,
+        })
+        .collect();
+    for kiosk in kiosks {
+        cypher.push(format!(
+            "MATCH (k:Kiosk {{id: {kiosk}}}) SET k.market_version = {version}",
+            kiosk = q(&kiosk),
+            version = q(&view.lamport_version.to_string())
+        ));
     }
     for stamp in view.market {
         cypher.push(format!(
@@ -223,7 +255,7 @@ fn field_key(t: &TypeKey) -> Option<&str> {
 }
 
 /// The parent of a DF, from its owner edge. The bool marks TYPED CO-PRESENCE: the parent
-/// object rode the same checkpoint (a fresh parent+DF birth — write with MERGE, order-free).
+/// object rode the same transaction (a fresh parent+DF birth — write with MERGE, order-free).
 /// A DF arriving ALONE (equip/hp/scribe mutate only the child — measured 2026-08-21: the
 /// equip projection silently dropped for every real player) writes MATCH-guarded instead:
 /// the GRAPH's own label is the type guard, a foreign parent matches nothing.
@@ -343,6 +375,7 @@ fn emit_object(
                 format!("v.category = {}", q(&i.category)),
                 format!("v.level = {}", i.level),
                 format!("v.amount = {}", i.amount),
+                format!("v.version = {}", q(&o.version.to_string())),
             ],
         );
         return Ok(());
@@ -444,24 +477,6 @@ fn emit_object(
         );
         return Ok(());
     }
-    if is_game(t, game, "distribution", "Airdrop") {
-        let a = decode::from_bytes::<decode::Airdrop>(o.bytes)
-            .map_err(|e| drift("distribution::Airdrop", o.id, e))?;
-        let whitelist = addr_array(&a.whitelist.contents);
-        merge_set(
-            cypher,
-            "Airdrop",
-            &a.id,
-            ckpt,
-            &[
-                format!("v.drop_id = {}", q(&a.drop_id)),
-                format!("v.template = {}", q_id(&a.template)),
-                format!("v.amount_each = {}", a.amount_each),
-                format!("v.whitelist = {whitelist}"),
-            ],
-        );
-        return Ok(());
-    }
     if is_game(t, game, "distribution", "Giftcard") {
         let g = decode::from_bytes::<decode::Giftcard>(o.bytes)
             .map_err(|e| drift("distribution::Giftcard", o.id, e))?;
@@ -542,33 +557,6 @@ fn emit_object(
             ckpt,
             &[format!("v.profits = {}", q(&k.profits.value.to_string()))],
         );
-        // OWNS is the kiosk's one incoming edge — replaced, never accumulated.
-        cypher.push(format!(
-            "MATCH (k:Kiosk {{id: {id}}})<-[r:OWNS]-() DELETE r",
-            id = q_id(&k.id),
-        ));
-        cypher.push(format!(
-            "MATCH (k:Kiosk {{id: {id}}}) MERGE (u:User {{address: {owner}}}) CREATE (u)-[:OWNS]->(k)",
-            id = q_id(&k.id),
-            owner = q(&k.owner.hex()),
-        ));
-        return Ok(());
-    }
-
-    // ── the personal kiosk wrapper (Mysten's official rule package — the one that mints
-    //    every live cap). The projected cap id is what the wire hands the client for custody
-    //    transactions: the client never discovers kiosks over RPC (owner 2026-08-21). ──
-    if is_personal_kiosk_cap(t) {
-        let p = decode::from_bytes::<decode::PersonalKioskCap>(o.bytes)
-            .map_err(|e| drift("personal_kiosk::PersonalKioskCap", o.id, e))?;
-        // a borrowed cap (None) is a mid-transaction state no checkpoint output persists
-        if let Some(inner) = &p.cap {
-            cypher.push(format!(
-                "MERGE (k:Kiosk {{id: {kiosk}}}) SET k.personal_cap = {cap}, k.ckpt = {ckpt}",
-                kiosk = q_id(&inner.for_),
-                cap = q(&p.id.hex()),
-            ));
-        }
         return Ok(());
     }
 
@@ -577,20 +565,6 @@ fn emit_object(
         emit_field(cypher, o, key, view, game)?;
     }
     Ok(())
-}
-
-/// The two OFFICIAL personal-kiosk rule packages (@mysten/kiosk constants — protocol-stable).
-const PERSONAL_KIOSK_PACKAGES: [&str; 2] = [
-    // testnet
-    "0x06f6bdd3f2e2e759d8a4b9c252f379f7a05e72dfe4c0b9311cdac27b8eb791b1",
-    // mainnet
-    "0x0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802",
-];
-
-fn is_personal_kiosk_cap(t: &TypeKey) -> bool {
-    t.module == "personal_kiosk"
-        && t.name == "PersonalKioskCap"
-        && PERSONAL_KIOSK_PACKAGES.contains(&t.package.as_str())
 }
 
 // ╔════════════════ [ Dynamic fields ] ═══════════════════════════════════════ ]
@@ -847,7 +821,7 @@ fn emit_field(
         let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
             return Ok(());
         };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::ItemStatistics>>(o.bytes)
+        let f = decode::from_bytes::<Field<MarkerKey, decode::RolledStats>>(o.bytes)
             .map_err(|e| drift(key, o.id, e))?;
         child_set(
             cypher,
@@ -855,7 +829,10 @@ fn emit_field(
             "Item",
             &parent,
             ckpt,
-            &[format!("v.stats = {}", stats_array(&f.value))],
+            &[
+                format!("v.stats = {}", stats_array(&f.value.statistics)),
+                format!("v.puits = {}", q(&f.value.puits.to_string())),
+            ],
         );
         return Ok(());
     }
@@ -874,26 +851,6 @@ fn emit_field(
             &parent,
             ckpt,
             &[format!("v.damages = {}", q_json(&damages_json(&f.value)))],
-        );
-        return Ok(());
-    }
-    if key == game_key(game, "forgemagie::ForgeKey") {
-        let Some((parent, co_present)) = df_parent(o, outputs, game, "item", "Item") else {
-            return Ok(());
-        };
-        let f = decode::from_bytes::<Field<MarkerKey, decode::ForgeState>>(o.bytes)
-            .map_err(|e| drift(key, o.id, e))?;
-        let apps = Value::Array(f.value.apps.iter().map(|a| json!(a)).collect());
-        child_set(
-            cypher,
-            co_present,
-            "Item",
-            &parent,
-            ckpt,
-            &[
-                format!("v.puits = {}", q(&f.value.puits.to_string())),
-                format!("v.apps = {}", apps),
-            ],
         );
         return Ok(());
     }
@@ -934,9 +891,10 @@ fn emit_field(
             ));
             cypher.push(format!(
                 "MATCH (o:{label} {{id: {listed}}}) MERGE (k:Kiosk {{id: {kiosk}}}) \
-                 CREATE (o)-[:LISTED_IN {{price: {price}, exclusive: {exclusive}, at_ms: {ts}}}]->(k)",
+                 CREATE (o)-[:LISTED_IN {{price: {price}, exclusive: {exclusive}, at_ms: {ts}, version: {version}}}]->(k)",
                 kiosk = q_id(&kiosk),
                 price = q(&f.value.to_string()),
+                version = q(&o.version.to_string()),
                 exclusive = f.name.is_exclusive,
                 ts = view.ts_ms,
             ));
@@ -1001,6 +959,11 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
                 None => "v.dungeon = NULL".to_string(),
             },
             format!("v.drops_rolled = {}", f.drops_rolled),
+            format!("v.boss_weight = {}", f.rewards.weight),
+            format!(
+                "v.kares_reward = {}",
+                q(&f.rewards.paid.unwrap_or(0).to_string())
+            ),
             format!("v.closable = {closable}"),
             format!("v.turn_ptr = {}", f.combat.turn_pointer),
             format!("v.round = {}", f.combat.round),
@@ -1301,6 +1264,8 @@ fn emit_trade(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             format!("v.accept_b = {}", t.state.invitee_accepted),
             format!("v.sui_a = {}", q(&t.sui_a.value.to_string())),
             format!("v.sui_b = {}", q(&t.sui_b.value.to_string())),
+            format!("v.kares_a = {}", q(&t.kares_a.value.to_string())),
+            format!("v.kares_b = {}", q(&t.kares_b.value.to_string())),
             format!("v.caps_a = {}", q(&ids(&t.caps_a))),
             format!("v.caps_b = {}", q(&ids(&t.caps_b))),
         ],
@@ -1357,6 +1322,20 @@ fn emit_friend_list(cypher: &mut Vec<String>, o: &ObjView<'_>) -> anyhow::Result
 
 fn emit_custody(cypher: &mut Vec<String>, fact: &Custody) {
     match fact {
+        Custody::KioskOwned {
+            kiosk,
+            owner,
+            personal_cap,
+        } => {
+            cypher.push(format!("MERGE (k:Kiosk {{id: {kiosk}}}) WITH k OPTIONAL MATCH ()-[r:OWNS]->(k) DELETE r WITH DISTINCT k MERGE (u:User {{address: {owner}}}) MERGE (u)-[:OWNS]->(k)", kiosk = q_id(kiosk), owner = q(&owner.hex())));
+            if let Some(cap) = personal_cap {
+                cypher.push(format!(
+                    "MATCH (k:Kiosk {{id: {kiosk}}}) SET k.personal_cap = {cap}",
+                    kiosk = q_id(kiosk),
+                    cap = q_id(cap)
+                ));
+            }
+        }
         Custody::KioskHolds {
             kiosk,
             object,
@@ -1372,7 +1351,7 @@ fn emit_custody(cypher: &mut Vec<String>, fact: &Custody) {
                 k = q_id(kiosk),
             ));
             // Character.owner stays fresh through custody (README schema) —
-            // the kiosk's owner rode along whenever the kiosk was co-present.
+            // personal cap or marker observations provide its immutable owner.
             if *label == "Character" {
                 if let Some(owner) = owner {
                     cypher.push(format!(
@@ -1433,7 +1412,6 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         ("party", "Party", "Party"),
         ("kolizeum", "Kolizeum", "Kolizeum"),
         ("distribution", "Giftcard", "Giftcard"),
-        ("distribution", "Airdrop", "Airdrop"),
         ("loot_box", "BoxClaim", "BoxClaim"),
         ("forgemagie", "CrushClaim", "CrushClaim"),
         ("trade", "Trade", "Trade"),
@@ -1465,11 +1443,15 @@ fn emit_delete(cypher: &mut Vec<String>, gone: &ObjView<'_>, game: &str) -> anyh
         if key == format!("{SUI_FRAMEWORK}::kiosk::Listing") {
             let f = decode::from_bytes::<Field<decode::KioskListingKey, u64>>(gone.bytes)
                 .map_err(|e| drift("deleted kiosk::Listing", gone.id, e))?;
-            for label in ["Item", "Character"] {
-                cypher.push(format!(
-                    "MATCH (:{label} {{id: {id}}})-[r:LISTED_IN]->() DELETE r",
-                    id = q_id(&f.name.id),
-                ));
+            if let OwnerKind::Object(kiosk) = gone.owner {
+                for label in ["Item", "Character"] {
+                    cypher.push(format!(
+                        "MATCH (:{label} {{id: {id}}})-[r:LISTED_IN]->(:Kiosk {{id: {kiosk}}}) WHERE r.exclusive = {exclusive} DELETE r",
+                        id = q_id(&f.name.id),
+                        kiosk = q_id(&kiosk),
+                        exclusive = f.name.is_exclusive,
+                    ));
+                }
             }
         }
     }
@@ -1494,12 +1476,39 @@ mod tests {
         }
     }
 
+    #[test]
+    fn item_projection_keeps_the_certified_version_without_js_number_rounding() {
+        let item_type = t(GAME, "item", "Item", &[]);
+        let bytes = bcs::to_bytes(&decode::Item {
+            id: Id([1; 32]),
+            template: Id([2; 32]),
+            name: "Wool".into(),
+            item_type: "wool".into(),
+            category: "resource".into(),
+            level: 1,
+            amount: 3,
+        })
+        .unwrap();
+        let outputs = [ObjView {
+            id: Id([1; 32]),
+            version: 9_007_199_254_740_993,
+            owner: OwnerKind::Object(Id([3; 32])),
+            type_key: &item_type,
+            bytes: &bytes,
+        }];
+        let writes = project(&view(&outputs, &[], &[]), GAME).unwrap();
+        assert!(writes
+            .iter()
+            .any(|write| write.contains("v.version = '9007199254740993'")));
+    }
+
     fn view<'a>(
         outputs: &'a [ObjView<'a>],
         deleted: &'a [ObjView<'a>],
         custody: &'a [Custody],
     ) -> CheckpointView<'a> {
         CheckpointView {
+            lamport_version: 2,
             ckpt: 100,
             ts_ms: 1_700_000_000_000,
             outputs,
@@ -1542,6 +1551,7 @@ mod tests {
         let bytes = bcs::to_bytes(&chr).unwrap();
         let ty = t(GAME, "character", "Character", &[]);
         let outputs = [ObjView {
+            version: 1,
             id: Id([1; 32]),
             owner: OwnerKind::Shared,
             type_key: &ty,
@@ -1574,6 +1584,7 @@ mod tests {
         let bytes = bcs::to_bytes(&mastery).unwrap();
         let ty = t(GAME, "mastery", "Mastery", &[]);
         let outputs = [ObjView {
+            version: 1,
             id: mastery.id,
             owner: OwnerKind::Address(mastery.owner),
             type_key: &ty,
@@ -1609,6 +1620,7 @@ mod tests {
         // character IF the graph knows it, and on nothing otherwise (2026-08-21: equip/hp
         // transactions mutate only the DF — the old drop-it rule lost every such write)
         let orphan = [ObjView {
+            version: 1,
             id: Id([9; 32]),
             owner: OwnerKind::Object(Id([1; 32])),
             type_key: &ty,
@@ -1647,12 +1659,14 @@ mod tests {
         .unwrap();
         let outputs = [
             ObjView {
+                version: 1,
                 id: Id([1; 32]),
                 owner: OwnerKind::Shared,
                 type_key: &chr_ty,
                 bytes: &chr_bytes,
             },
             ObjView {
+                version: 1,
                 id: Id([9; 32]),
                 owner: OwnerKind::Object(Id([1; 32])),
                 type_key: &ty,
@@ -1712,6 +1726,7 @@ mod tests {
         .unwrap();
 
         let lone_checkpoint = [ObjView {
+            version: 1,
             id: Id([9; 32]),
             owner: OwnerKind::Object(character),
             type_key: &checkpoint_ty,
@@ -1722,12 +1737,14 @@ mod tests {
 
         let stale_outputs = [
             ObjView {
+                version: 1,
                 id: Id([9; 32]),
                 owner: OwnerKind::Object(character),
                 type_key: &checkpoint_ty,
                 bytes: &checkpoint_nauvis,
             },
             ObjView {
+                version: 1,
                 id: Id([8; 32]),
                 owner: OwnerKind::Object(character),
                 type_key: &current_ty,
@@ -1741,12 +1758,14 @@ mod tests {
 
         let current_outputs = [
             ObjView {
+                version: 1,
                 id: Id([7; 32]),
                 owner: OwnerKind::Object(character),
                 type_key: &checkpoint_ty,
                 bytes: &checkpoint_yakutia,
             },
             ObjView {
+                version: 1,
                 id: Id([8; 32]),
                 owner: OwnerKind::Object(character),
                 type_key: &current_ty,
@@ -1778,6 +1797,7 @@ mod tests {
         })
         .unwrap();
         let outputs = [ObjView {
+            version: 1,
             id: Id([9; 32]),
             owner: OwnerKind::Shared,
             type_key: &zone_ty,
@@ -1812,6 +1832,7 @@ mod tests {
     fn deleted_character_is_detach_deleted() {
         let ty = t(GAME, "character", "Character", &[]);
         let gone = [ObjView {
+            version: 1,
             id: Id([1; 32]),
             owner: OwnerKind::Shared,
             type_key: &ty,
@@ -1841,6 +1862,7 @@ mod tests {
             &[&key, "u64"],
         );
         let gone = [ObjView {
+            version: 1,
             id: Id([9; 32]),
             owner: OwnerKind::Object(Id([2; 32])),
             type_key: &ty,
@@ -1848,12 +1870,44 @@ mod tests {
         }];
         // one labeled reap per possible label — the wrong one MATCHes nothing
         let cypher = project(&view(&[], &gone, &[]), GAME).unwrap();
-        assert_eq!(cypher.len(), 2);
+        assert_eq!(cypher.len(), 3);
         assert!(cypher[0].contains(":Item") && cypher[1].contains(":Character"));
-        for statement in &cypher {
+        for statement in &cypher[..2] {
             assert!(statement.contains("[r:LISTED_IN]"));
             assert!(statement.contains(&Id([5; 32]).hex()));
         }
+    }
+
+    #[test]
+    fn surviving_listing_wins_over_consumed_pre_state_in_one_transaction() {
+        let key = format!("{SUI_FRAMEWORK}::kiosk::Listing");
+        let ty = t(SUI_FRAMEWORK, "dynamic_field", "Field", &[&key, "u64"]);
+        let bytes = bcs::to_bytes(&Field {
+            id: Id([9; 32]),
+            name: decode::KioskListingKey {
+                id: Id([5; 32]),
+                is_exclusive: false,
+            },
+            value: 1000u64,
+        })
+        .unwrap();
+        let output = ObjView {
+            version: 2,
+            id: Id([9; 32]),
+            owner: OwnerKind::Object(Id([3; 32])),
+            type_key: &ty,
+            bytes: &bytes,
+        };
+        let gone = ObjView {
+            version: 1,
+            owner: OwnerKind::Object(Id([2; 32])),
+            ..output.clone()
+        };
+        let statements = project(&view(&[output], &[gone], &[]), GAME).unwrap();
+        assert!(statements
+            .iter()
+            .any(|statement| statement.contains("CREATE (o)-[:LISTED_IN")));
+        assert!(statements.last().unwrap().contains("SET k.market_version"));
     }
 
     #[test]
@@ -1889,12 +1943,14 @@ mod tests {
         // Sui may return the listing field before the split Item it names.
         let outputs = [
             ObjView {
+                version: 1,
                 id: Id([9; 32]),
                 owner: OwnerKind::Object(Id([2; 32])),
                 type_key: &listing_ty,
                 bytes: &listing,
             },
             ObjView {
+                version: 1,
                 id: item_id,
                 owner: OwnerKind::Object(Id([2; 32])),
                 type_key: &item_ty,
@@ -1923,6 +1979,7 @@ mod tests {
             ts_ms: 1_700_000_000_000,
         }];
         let v = CheckpointView {
+            lamport_version: 2,
             ckpt: 100,
             ts_ms: 1_700_000_000_000,
             outputs: &[],
@@ -1952,6 +2009,7 @@ mod tests {
             },
         ];
         let v = CheckpointView {
+            lamport_version: 2,
             ckpt: 100,
             ts_ms: 135_000,
             outputs: &[],
@@ -1978,6 +2036,7 @@ mod tests {
         let bytes = bcs::to_bytes(&list).unwrap();
         let ty = t(GAME, "friends", "FriendList", &[]);
         let outputs = [ObjView {
+            version: 1,
             id: Id([3; 32]),
             owner: OwnerKind::Address(Addr([1; 32])),
             type_key: &ty,
@@ -1990,3 +2049,7 @@ mod tests {
         assert!(cypher[0].contains("CREATE (u)-[:FRIEND]->(f)"));
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/graph/transaction_order.rs"]
+mod transaction_order_tests;

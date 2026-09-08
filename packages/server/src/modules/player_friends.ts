@@ -15,7 +15,7 @@ export default {
   reduce: (state, action) =>
     action.type === 'action/friends' ? { ...state, friends: new Set(action.friends) } : state,
   observe: ({ pubsub, graph, address, signal, channels, send, dispatch }) => {
-    const { watch, unwatch, watched } = create_watcher(pubsub)
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
     const refresh = latest_reader(
       () => get_friends(graph, { address }),
       (friends) => {
@@ -30,7 +30,9 @@ export default {
         )
     }
     void watch(channels.social(address), forward as (payload: never) => void)
-      .then(refresh)
+      .then(() => {
+        if (!signal.aborted) return refresh()
+      })
       .catch((error: Error) => log.error({ address, error: error.message }, 'friend list watch failed'))
     signal.addEventListener('abort', () => {
       for (const channel of watched()) unwatch(channel)

@@ -2,12 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Check, Copy, ExternalLink, X } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, type ReactNode } from 'react'
 
 import { env } from '../env.ts'
 import { explorer_transaction_url } from '../explorer.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+
+import { NativeModal } from './ModalFrame.tsx'
 
 export const truncate_digest = (digest: string): string =>
   digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
@@ -70,32 +71,16 @@ export const SendModalShell = ({
   title: string
   tone?: 'default' | 'success' | 'danger'
 }>) => {
-  useEffect(() => {
-    if (locked) return
-    const handler = (event: Readonly<KeyboardEvent>): void => {
-      if (event.key === 'Escape') close()
-    }
-    globalThis.addEventListener('keydown', handler)
-    return () => globalThis.removeEventListener('keydown', handler)
-  }, [close, locked])
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
-  const border_color =
-    tone === 'success' ? 'rgba(52,211,153,0.5)' : tone === 'danger' ? 'rgba(239,68,68,0.45)' : 'var(--color-border)'
-  const glow =
-    tone === 'success' ? '0 0 30px rgba(52,211,153,0.12)' : tone === 'danger' ? '0 0 30px rgba(239,68,68,0.10)' : 'none'
-  const title_color = tone === 'success' ? '#34d399' : tone === 'danger' ? '#f87171' : '#c8963c'
-  return createPortal(
-    <div
+  const { border_color, glow, title_color } = {
+    default: { border_color: 'var(--color-border)', glow: 'none', title_color: '#c8963c' },
+    success: { border_color: 'rgba(52,211,153,0.5)', glow: '0 0 30px rgba(52,211,153,0.12)', title_color: '#34d399' },
+    danger: { border_color: 'rgba(239,68,68,0.45)', glow: '0 0 30px rgba(239,68,68,0.10)', title_color: '#f87171' },
+  }[tone]
+  return (
+    <NativeModal
+      close={locked ? null : close}
+      label={title}
       className="pointer-events-auto fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm max-sm:p-0"
-      onClick={(event) => {
-        if (!locked && event.target === event.currentTarget) close()
-      }}
     >
       <div
         className="flex max-h-[90vh] w-full max-w-xl flex-col bg-surface max-sm:h-full max-sm:max-h-none"
@@ -119,7 +104,6 @@ export const SendModalShell = ({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
       </div>
-    </div>,
-    document.body
+    </NativeModal>
   )
 }

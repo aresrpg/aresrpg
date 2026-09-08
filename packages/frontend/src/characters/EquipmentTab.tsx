@@ -5,7 +5,7 @@
 // SDK transaction and the proven receipt folds through the session reducer (the server
 // never re-sends what this player's own transaction caused). Click a bag item to inspect
 // it, double-click to equip (or drink), drag it onto a slot to aim a specific slot, click
-// a filled slot to stage its unequip.
+// a filled slot to inspect it, double-click to stage its unequip.
 
 import { useMemo, useState } from 'react'
 import type { CharacterEquipmentSlot } from '@aresrpg/immutable'
@@ -16,9 +16,15 @@ import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
-import { character_max_hp, fold_equipment_stats, projected_hp } from '../game/character_stats.ts'
+import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
+import { character_max_hp, fold_equipment_stats, item_stat_offset, projected_hp } from '../game/character_stats.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
-import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
+import {
+  available_inventory_items,
+  encumbered_asset_ids,
+  inventory_groups,
+  stack_merge_sources,
+} from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
@@ -32,8 +38,10 @@ import {
   stage_unequip,
   type EquipmentMap,
 } from './equipment_stage.ts'
+import { PendingClaims } from './PendingClaims.tsx'
 import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
+import { PetPower } from './PetPower.tsx'
 
 const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
 type BagCategory = (typeof BAG_CATEGORIES)[number]
@@ -101,16 +109,23 @@ export default function EquipmentTab({
     () => [...inventory.filter((item) => !staged_ids.has(item.id)), ...freed],
     [inventory, staged_ids, freed]
   )
+  const display_bag = useMemo(() => inventory_groups(bag), [bag])
   const counts = useMemo(
     () =>
-      bag.reduce((totals, item) => ({ ...totals, [bag_category_of(item)]: totals[bag_category_of(item)] + 1 }), {
-        equipment: 0,
-        consumables: 0,
-        resources: 0,
-      }),
-    [bag]
+      display_bag.reduce(
+        (totals, { item }) => ({ ...totals, [bag_category_of(item)]: totals[bag_category_of(item)] + 1 }),
+        {
+          equipment: 0,
+          consumables: 0,
+          resources: 0,
+        }
+      ),
+    [display_bag]
   )
-  const grid_items = useMemo(() => bag.filter((item) => bag_category_of(item) === category), [bag, category])
+  const grid_items = useMemo(
+    () => display_bag.filter(({ item }) => bag_category_of(item) === category),
+    [display_bag, category]
+  )
 
   const selected =
     bag.find(({ id }) => id === selected_id) ??
@@ -147,6 +162,7 @@ export default function EquipmentTab({
         character_id: character.id,
         item_id: item.id,
         item_type: item.item_type,
+        merge_sources: stack_merge_sources(all_inventory, encumbered_ids, item),
         ...(action.effect.type === 'city' ? { world: character.world } : {}),
         custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
       })
@@ -155,7 +171,8 @@ export default function EquipmentTab({
     set_committing(true)
     const pending = toast.loading(t('consume_pending'))
     void transaction
-      .then(() => {
+      .then(({ inventory_changes }) => {
+        dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         dispatch_app({
           type: 'character/consumed',
           character_id: character.id,
@@ -216,19 +233,17 @@ export default function EquipmentTab({
   const detail = useMemo(() => {
     if (!selected) return null
     const seed = encyclopedia_catalog.item(selected.item_type)?.item ?? null
-    const rolled = selected.stats
-      ? Object.fromEntries(
-          Object.entries(selected.stats)
-            .map(([stat, value]) => [stat, value - item_stat_center])
-            .filter(([, value]) => value !== 0)
-        )
-      : null
+    const rolled = Object.fromEntries(
+      stat_names.map((stat) => [stat, item_stat_offset(selected, stat)]).filter(([, value]) => value !== 0)
+    )
     return {
       name: selected.name,
       category: selected.category,
       level: selected.level,
       item_type: selected.item_type,
-      stats: rolled ? { min: rolled, max: rolled } : seed?.stats,
+      stats: { min: rolled, max: rolled },
+      pet_power: selected.pet_power,
+      consumable: seed?.consumable,
       damages: (selected.damages ?? seed?.damages ?? []).map((line) => ({
         element: line.element,
         from: Number(line.from),
@@ -264,7 +279,6 @@ export default function EquipmentTab({
             const worn = equipment[slot]
             if (!worn) return
             set_selected_id(worn.id)
-            set_staged(stage_unequip(equipment, slot))
           }}
           slot_state={(slot) => {
             const dragged = dragging_id ? bag.find(({ id }) => id === dragging_id) : null
@@ -280,6 +294,10 @@ export default function EquipmentTab({
             return {
               valid,
               staged: changes.to_equip.some((change) => change.slot === slot),
+              on_double_click: () => {
+                if (committing || !equipment[slot]) return
+                set_staged(stage_unequip(equipment, slot))
+              },
               on_drop: (event) => {
                 event.preventDefault()
                 const item = bag.find(({ id }) => id === event.dataTransfer.getData('text/plain'))
@@ -338,13 +356,17 @@ export default function EquipmentTab({
               level={detail.level}
               name={detail.name}
               stats={detail.stats}
-            />
+            >
+              <ConsumableEffectSection consumable={detail.consumable} text={encyclopedia} />
+              <PetPower item={detail} text={t} />
+            </ItemDetailView>
           </div>
         )}
       </div>
 
       {/* RIGHT — the bag: category tabs + grid */}
       <div className="chr-equip__bag" data-tutorial-target="shared_inventory">
+        <PendingClaims copy={copy} />
         <div className="chr-equip__bagtabs">
           {BAG_CATEGORIES.map((key) => (
             <button
@@ -359,8 +381,9 @@ export default function EquipmentTab({
           ))}
         </div>
         <div className="chr-equip__grid">
-          {grid_items.map((item) => (
+          {grid_items.map(({ item, amount }) => (
             <InventoryItemCell
+              amount={amount}
               class_name={selected_id === item.id ? 'is-selected' : ''}
               draggable
               item={item}

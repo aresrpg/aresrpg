@@ -4,19 +4,9 @@ import { registerEnokiWallets } from '@mysten/enoki'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
-import type { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress } from '@mysten/sui/utils'
 import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
-import {
-  getWallets,
-  isWalletWithRequiredFeatureSet,
-  SuiSignPersonalMessage,
-  SuiSignTransaction,
-  type SuiSignPersonalMessageFeature,
-  type SuiSignTransactionFeature,
-  type Wallet,
-  type WalletAccount,
-} from '@mysten/wallet-standard'
+import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 
 import PINS from '../../../pins.json' with { type: 'json' }
 
@@ -25,13 +15,13 @@ import { character_claim_id, character_create, character_id, type CharacterCreat
 import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
 import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.ts'
 import { gas_mist_from_receipt } from './gas.ts'
-import { SDK, sui_transport, type TransactionSigner } from './client.ts'
+import { SDK, sui_transport, type TransactionSigner, type Pins } from './client.ts'
 import { sui_transfer_ptb } from './sui_transfer.ts'
-import type { MarketplaceRoyalty } from './marketplace_admin.ts'
+import type { MarketplaceRoyalty, claim_marketplace_royalties as claim_royalties } from './marketplace_admin.ts'
 import { marketplace_actions, type MarketplaceActions } from './marketplace.ts'
 import { stack_actions, type StackActions } from './stacks.ts'
 import { trade_actions, trade_create, type TradeActions } from './trade.ts'
-import type { AirdropClaim, GiftcardRedeem } from './distribution.ts'
+import type { GiftcardTransfer, GiftcardRedeem } from './distribution.ts'
 import { character_actions, type CharacterActions } from './character_actions.ts'
 import { fight_actions, type FightActions } from './fight.ts'
 import { dungeon_actions, type DungeonActions } from './dungeon.ts'
@@ -39,6 +29,14 @@ import { kolizeum_actions, type KolizeumActions } from './kolizeum.ts'
 import { friends_actions, type FriendsActions } from './friends.ts'
 import { party_actions, type PartyActions } from './party.ts'
 import { mastery_actions, type MasteryActions } from './mastery.ts'
+import { kares_actions, type KaresActions } from './kares_actions.ts'
+import {
+  create_wallet_binding,
+  installed_wallets,
+  on_wallets_changed,
+  request_wallet_accounts,
+  selectable_wallet,
+} from './wallet_standard.ts'
 import { receipt_digest } from './cache.ts'
 import { create_personal_kiosk_runner, retry_stale_kiosk_ref } from './kiosk_runner.ts'
 
@@ -66,6 +64,7 @@ export type AuthSession = Readonly<{
   identity: 'zklogin' | 'wallet'
   sign_personal_message: (message: Uint8Array) => Promise<{ bytes: string; signature: string }>
   read_sui_balance: () => Promise<bigint>
+  read_kares_balance: () => Promise<bigint | null>
   gas_spent_24h: () => bigint
   derive_character_id: (name: string) => string
   is_character_name_claimed: (name: string) => Promise<boolean>
@@ -80,6 +79,7 @@ export type AuthSession = Readonly<{
   friends: FriendsActions
   party: PartyActions
   mastery: MasteryActions
+  kares: KaresActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
   read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
@@ -94,17 +94,15 @@ export type AuthSession = Readonly<{
   resolve_suins_address: (name: string) => Promise<string | null>
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
   send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string }>>
-  claim_airdrop: (claim: AirdropClaim) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>>
+  read_giftcards: () => Promise<readonly GiftcardRow[]>
+  transfer_giftcards: (
+    transfers: readonly GiftcardTransfer[]
+  ) => Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>>
   claim_giftcard_link: (url: string) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>>
   redeem_giftcard: (redemption: GiftcardRedeem) => Promise<Readonly<{ digest: string }>>
   read_marketplace_royalties: () => Promise<readonly MarketplaceRoyalty[]>
-  claim_marketplace_royalties: () => Promise<
-    Readonly<{
-      digest: string
-      amount_mist: bigint
-      policies: readonly ('item' | 'character')[]
-    }>
-  >
+  claim_marketplace_royalties: () => ReturnType<typeof claim_royalties>
+  dispose?: () => void
   on_invalidated?: (listener: () => void) => () => void
   disconnect: () => Promise<void>
 }>
@@ -128,8 +126,9 @@ export type BrowserAuthOptions = Readonly<{
   network: 'testnet' | 'mainnet'
   redirect_url: string
   rpc_url?: string
+  pins?: Pins
 }>
-export type WalletAuthOptions = Pick<BrowserAuthOptions, 'graphql_url' | 'network' | 'rpc_url'>
+export type WalletAuthOptions = Pick<BrowserAuthOptions, 'graphql_url' | 'network' | 'rpc_url' | 'pins'>
 
 export type OperatorWalletContext = Readonly<{
   account: WalletAccount
@@ -148,60 +147,27 @@ export const operator_wallet_context = (session: AuthSession): OperatorWalletCon
   return context
 }
 
-const installed_wallets = (): readonly Wallet[] =>
-  getWallets()
-    .get()
-    .filter(
-      (wallet) =>
-        !('enoki:getSession' in wallet.features) &&
-        isWalletWithRequiredFeatureSet(wallet, ['sui:signPersonalMessage', 'sui:signTransaction'])
-    )
-const request_wallet_accounts = async (wallet: Wallet, silent = false): Promise<readonly WalletAccount[]> => {
-  const connect_feature = wallet.features['standard:connect'] as {
-    connect: (options?: { silent?: boolean }) => Promise<{ accounts: readonly WalletAccount[] }>
-  }
-  const { accounts } = await connect_feature.connect(silent ? { silent: true } : undefined)
-  if (!accounts.length) throw new Error(`${wallet.name} returned no account`)
-  return accounts
-}
 const create_wallet_session = (
   wallet: Wallet,
   account: WalletAccount,
   network: BrowserAuthOptions['network'],
   client: SuiGraphQLClient,
-  resolution_client: SuiGrpcClient
+  resolution_client: SuiGrpcClient,
+  pins?: Pins
 ): AuthSession => {
-  const sign_feature = (wallet.features as unknown as SuiSignPersonalMessageFeature)[SuiSignPersonalMessage]
-  if (!sign_feature) throw new Error(`${wallet.name} cannot sign the login proof`)
-  type SignInput = Parameters<typeof sign_feature.signPersonalMessage>[0]
-  const sign_transaction_feature = (wallet.features as unknown as SuiSignTransactionFeature)[SuiSignTransaction]
-  if (!sign_transaction_feature) throw new Error(`${wallet.name} cannot sign SUI transfers`)
-  type SignTransactionInput = Parameters<typeof sign_transaction_feature.signTransaction>[0]
-  const disconnect = wallet.features['standard:disconnect'] as { disconnect?: () => Promise<void> } | undefined
-  const events = wallet.features['standard:events'] as {
-    on: (
-      event: 'change',
-      listener: (properties: Readonly<{ accounts?: readonly WalletAccount[] }>) => void
-    ) => () => void
-  }
-  let invalidated_listener: (() => void) | null = null
-  const stop_events = events.on('change', ({ accounts }) => {
-    if (accounts && !accounts.some(({ address }) => address === account.address)) invalidated_listener?.()
-  })
-  const sign_transaction = (transaction: Transaction) =>
-    sign_transaction_feature.signTransaction({
-      transaction,
-      account: account as SignTransactionInput['account'],
-      chain: `sui:${network}`,
-    })
+  const binding = create_wallet_binding(wallet, account, network)
+  const { sign_transaction } = binding
   const sdk = SDK({
     client: sui_transport(resolution_client),
     address: account.address,
     network,
     sign_transaction,
+    pins,
   })
   const read_item = create_item_snapshot_reader(client, sdk.game_type_package)
-  const registry_pin = (PINS as Record<string, { name_registry?: { id?: string | null } }>)[network]?.name_registry?.id
+  const registry_pin = (
+    (pins ?? (PINS as Record<string, Pins>)[network]).name_registry as { id?: string | null } | undefined
+  )?.id
   let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
   const kiosk_cap = async (kiosk_id?: string, fresh = false) => {
     const request = fresh || !kiosk_caps ? sdk.get_owned_kiosks(account.address) : kiosk_caps
@@ -231,13 +197,9 @@ const create_wallet_session = (
     address: account.address,
     wallet_name: wallet.name,
     identity: 'enoki:getSession' in wallet.features ? 'zklogin' : 'wallet',
-    sign_personal_message: (message: Uint8Array) =>
-      sign_feature.signPersonalMessage({
-        message,
-        account: account as SignInput['account'],
-        chain: `sui:${network}`,
-      }),
+    sign_personal_message: binding.sign_personal_message,
     read_sui_balance: sdk.read_sui_balance,
+    read_kares_balance: sdk.read_kares_balance,
     gas_spent_24h: sdk.gas_spent_24h,
     derive_character_id: (name: string) => character_id(require_registry(), name),
     is_character_name_claimed: async (name: string) => {
@@ -251,6 +213,7 @@ const create_wallet_session = (
     friends: friends_actions(sdk, { address: account.address }),
     party: party_actions(sdk, { kiosk_cap }),
     mastery: mastery_actions(sdk, { address: account.address, kiosk_cap }),
+    kares: kares_actions({ sdk, client: resolution_client, address: account.address }),
     character: character_actions(sdk, { kiosk_cap }),
     read_character_checkpoint: (id, world) => read_checkpoint(client, sdk.game_type_package, id, world),
     read_item,
@@ -297,9 +260,13 @@ const create_wallet_session = (
       if (receipt.$kind === 'FailedTransaction') throw new Error('The SUI transfer failed on-chain')
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
-    claim_airdrop: async (claim) => {
-      const { claim_airdrop } = await import('./distribution.ts')
-      return claim_airdrop(sdk, claim)
+    read_giftcards: async () => {
+      const { read_giftcards } = await import('./distribution.ts')
+      return read_giftcards(resolution_client, sdk, account.address)
+    },
+    transfer_giftcards: async (transfers) => {
+      const { transfer_giftcards } = await import('./distribution.ts')
+      return transfer_giftcards(resolution_client, sdk, account.address, transfers)
     },
     claim_giftcard_link: async (url) => {
       const { claim_giftcard_link } = await import('./distribution.ts')
@@ -331,17 +298,9 @@ const create_wallet_session = (
       const { claim_marketplace_royalties } = await import('./marketplace_admin.ts')
       return claim_marketplace_royalties(sdk, account.address)
     },
-    on_invalidated: (listener) => {
-      invalidated_listener = listener
-      return () => {
-        if (invalidated_listener === listener) invalidated_listener = null
-      }
-    },
-    disconnect: async () => {
-      stop_events()
-      invalidated_listener = null
-      await disconnect?.disconnect?.()
-    },
+    dispose: binding.dispose,
+    on_invalidated: binding.on_invalidated,
+    disconnect: binding.disconnect,
   })
   operator_wallet_contexts.set(
     session,
@@ -355,11 +314,12 @@ const connect_wallet = async (
   network: BrowserAuthOptions['network'],
   client: SuiGraphQLClient,
   resolution_client: SuiGrpcClient,
-  silent = false
+  silent = false,
+  pins?: Pins
 ): Promise<AuthSession> => {
   const [account] = await request_wallet_accounts(wallet, silent)
   if (!account) throw new Error(`${wallet.name} returned no account`)
-  return create_wallet_session(wallet, account, network, client, resolution_client)
+  return create_wallet_session(wallet, account, network, client, resolution_client, pins)
 }
 
 export const create_browser_auth = (options: BrowserAuthOptions) => {
@@ -378,18 +338,18 @@ export const create_browser_auth = (options: BrowserAuthOptions) => {
   const wrap = (wallet: Wallet): AuthWallet =>
     Object.freeze({
       name: wallet.name,
-      connect: () => connect_wallet(wallet, options.network, client, resolution_client),
+      connect: () => connect_wallet(wallet, options.network, client, resolution_client, false, options.pins),
     })
 
   return Object.freeze({
     connect_google: () => {
       if (!google) throw new Error('Google login is unavailable')
-      return connect_wallet(google, options.network, client, resolution_client)
+      return connect_wallet(google, options.network, client, resolution_client, false, options.pins)
     },
     wallets: (): readonly AuthWallet[] => installed_wallets().map(wrap),
     restore: async (wallet_name: string): Promise<AuthSession | null> => {
       const wallet = [google, ...getWallets().get()].find((candidate) => candidate?.name === wallet_name)
-      return wallet ? connect_wallet(wallet, options.network, client, resolution_client, true) : null
+      return wallet ? connect_wallet(wallet, options.network, client, resolution_client, true, options.pins) : null
     },
     dispose: () => registration.unregister(),
   })
@@ -401,28 +361,13 @@ export const create_wallet_auth = (options: WalletAuthOptions) => {
     network: options.network,
     baseUrl: options.rpc_url ?? `https://fullnode.${options.network}.sui.io:443`,
   })
-  const wrap = (wallet: Wallet): SelectableAuthWallet => {
-    let accounts: readonly WalletAccount[] | null = null
-    const disconnect = wallet.features['standard:disconnect'] as { disconnect?: () => Promise<void> } | undefined
-    return Object.freeze({
-      name: wallet.name,
-      authorize: async (silent = false) => {
-        accounts = await request_wallet_accounts(wallet, silent)
-        return Object.freeze(accounts.map(({ address }) => address))
-      },
-      connect: async (address: string) => {
-        const account = accounts?.find((candidate) => candidate.address === address)
-        if (!account) throw new Error(`${address} is not authorized in ${wallet.name}`)
-        return create_wallet_session(wallet, account, options.network, client, resolution_client)
-      },
-      disconnect: async () => {
-        accounts = null
-        await disconnect?.disconnect?.()
-      },
-    })
-  }
+  const wrap = (wallet: Wallet): SelectableAuthWallet =>
+    selectable_wallet(wallet, (selected_wallet, account) =>
+      create_wallet_session(selected_wallet, account, options.network, client, resolution_client, options.pins)
+    )
   return Object.freeze({
     wallets: (): readonly SelectableAuthWallet[] => installed_wallets().map(wrap),
+    on_wallets_changed,
   })
 }
 

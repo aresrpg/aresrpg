@@ -2,13 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { fromBase64 } from '@mysten/sui/utils'
+import { fromHex } from '@mysten/sui/utils'
 
 import { create_item_snapshot_reader, LINKED_ITEM_CACHE_CAPACITY, read_item_snapshot } from '../src/item_snapshot.ts'
+import rolled_fixture from '../../indexer/tests/rolled_stats.localnet.json'
 
-// Live testnet ItemStatistics from Fuwa Hat template
-// 0xc7dd4637…ac55f @ version 993653972, captured 2026-08-28.
-const stats = fromBase64('AIAAgAGAAYAAgACAAIAAgACAAIAAgACAAIAAgACA')
+// getDynamicField returns the value, excluding the captured Field UID (32 bytes) and marker key (1).
+const stats = fromHex(rolled_fixture.bcs_hex).subarray(33)
 test('reads the exact linked item and its captured stat dynamic field', async () => {
   const fields = [{ name: { type: '0xgame::item::StatsKey', bcs: new Uint8Array([0]) } }]
   const client = {
@@ -33,8 +33,15 @@ test('reads the exact linked item and its captured stat dynamic field', async ()
     item_type: 'fuwa_hat',
     category: 'hat',
     level: 12,
-    stats: { strength: 32_769, intelligence: 32_769 },
+    stats: { strength: 32_772, wisdom: 32_779 },
   })
+  const truncated = {
+    core: {
+      ...client.core,
+      getDynamicField: async () => ({ dynamicField: { value: { bcs: stats.subarray(0, 30) } } }),
+    },
+  }
+  await expect(read_item_snapshot(truncated, '0xgame', '0xhat')).rejects.toThrow()
 })
 
 test('rejects an Item lookalike from another package before decoding its fields', async () => {

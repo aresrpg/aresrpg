@@ -28,7 +28,6 @@ const modules = [
     module: 'distribution',
     package_key: 'package',
     selected: {
-      new_airdrop: 'new_airdrop',
       new_giftcard: 'new_giftcard',
     },
   },
@@ -42,7 +41,11 @@ const modules = [
     path: join(root, '../move/sources/mastery.move'),
     module: 'mastery',
     package_key: 'package',
-    selected: { new_offer: 'new_mastery_offer', set_offer: 'set_mastery_offer' },
+    selected: {
+      new_offer: 'new_mastery_offer',
+      set_offer: 'set_mastery_offer',
+      set_enabled: 'set_mastery_offer_enabled',
+    },
   },
   // The living-content layer (owner 2026-08-23): world content + fight boards live in the
   // seed PACKAGE behind AdminCap doors — the ceremony and every later rebalance compose these.

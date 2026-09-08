@@ -39,7 +39,7 @@ export const STATS = Object.fromEntries(
 ) as Record<keyof typeof CHANNELS, bigint>
 
 export const is_mob = (fighter: Fighter): fighter is MobFighter => fighter.kind.type === 'mob'
-export const is_player = (fighter: Fighter): fighter is PlayerFighter => fighter.kind.type === 'player'
+export const is_player = (fighter: Fighter | undefined): fighter is PlayerFighter => fighter?.kind.type === 'player'
 export const mob_snapshot = (fighter: MobFighter): MobSnapshot => fighter.kind.snapshot
 
 /** Would every living player be ready after `seat` readies? Mobs never hold placement open. */
@@ -156,13 +156,9 @@ export const xp_award_of = (checkpoint: FightReadState, seat: bigint): bigint =>
   )
 }
 
-export const effective_stat = (runtime: FightRuntime, seat: bigint, stat: bigint): bigint => {
+export const contest_stat = (runtime: FightRuntime, seat: bigint, stat: bigint): bigint => {
   const sheet = sheet_of(runtime, seat)
-  if (stat === STATS.strength) return sheet.strength
-  if (stat === STATS.intelligence) return sheet.intelligence
-  if (stat === STATS.chance) return sheet.chance
-  if (stat === STATS.agility) return sheet.agility
-  return sheet.wisdom
+  return stat === STATS.agility ? sheet.agility : sheet.wisdom
 }
 
 export const max_hp_of = (runtime: FightRuntime, seat: bigint): bigint => {

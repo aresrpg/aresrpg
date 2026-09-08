@@ -7,7 +7,7 @@
 // definition (the presence contract) — the pet renders under a seated rider.
 
 import type { CharacterAnimationName, EntityRender } from '@aresrpg/engine'
-import { chain_to_client_coordinate } from '@aresrpg/immutable'
+import { chain_to_client_coordinate, worn_appearance } from '@aresrpg/immutable'
 import type { PresenceRow } from '@aresrpg/protocol'
 
 import { load_character_appearance, presence_render_source, world_character_entity } from './character_entities.ts'
@@ -260,7 +260,8 @@ export const create_presence_renderer = ({
       }
       for (const [character_id, row] of Object.entries(rows)) {
         if (character_id === own_character_id) continue
-        const source_key = [row.classe, row.sex, row.color_1, row.color_2, row.color_3, row.hat, row.cloak, row.pet]
+        const { hat, cloak } = worn_appearance(row)
+        const source_key = [row.classe, row.sex, row.color_1, row.color_2, row.color_3, hat, cloak, row.pet]
           .map(String)
           .join('|')
         // presence rides the wire in chain space — the scene lives in client coordinates

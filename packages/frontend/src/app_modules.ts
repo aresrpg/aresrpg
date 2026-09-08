@@ -9,6 +9,7 @@ import type { AppModuleName } from './store.ts'
 
 export const PLAYER_APP_MODULES = Object.freeze([
   'session',
+  'external_wallet',
   'navigation',
   'settings',
   'locale',
@@ -40,6 +41,7 @@ export const PLAYER_APP_MODULES = Object.freeze([
   'party_follow',
   'trade',
   'marketplace',
+  'leaderboards',
   'runeforge',
   'mastery',
   'distribution',

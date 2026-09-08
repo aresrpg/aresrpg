@@ -74,8 +74,8 @@ const authored_content = Object.freeze({
   worlds: chain_worlds,
   mastery: mastery_source,
   airdrop: Object.freeze({
-    drops: airdrop_source.drops,
     giftcards: airdrop_source.giftcards,
+    giftcard_batches: airdrop_source.giftcard_batches,
   }),
   biome_maps: Object.freeze(biome_maps),
   boards: boards_source.boards,

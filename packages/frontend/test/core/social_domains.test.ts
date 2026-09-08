@@ -31,6 +31,8 @@ const trade = (id = '0xt', overrides: Partial<TradeRow> = {}): TradeRow => ({
   accept_b: false,
   sui_a: '0',
   sui_b: '0',
+  kares_a: '0',
+  kares_b: '0',
   caps_a: [],
   caps_b: [],
   ...overrides,
@@ -405,6 +407,8 @@ test('terminal projections form a shrinking lattice under concurrent settlement'
     offer_revision: 3,
     sui_a: '10',
     sui_b: '20',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [cap_a],
     caps_b: [cap_b],
   })
@@ -413,6 +417,8 @@ test('terminal projections form a shrinking lattice under concurrent settlement'
   expect(reconcile_trade_row(settled_a, settled_b)).toMatchObject({
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   })

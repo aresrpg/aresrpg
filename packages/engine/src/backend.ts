@@ -59,3 +59,6 @@ export type EngineBackend = Readonly<{
   flattened: () => boolean
   dispose: () => void
 }>
+
+/** Adapter/device acquisition failed before WebGPU bound the canvas. */
+export class WebGPUUnavailableError extends Error {}

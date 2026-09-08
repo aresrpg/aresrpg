@@ -145,8 +145,7 @@ export type CraftStackPlan = StackMergePlan &
     total_amount: number
   }>
 
-/** One ordered no-dust stack per recipe ingredient. Fragmented holdings become one optional
- *  deterministic merge transaction before the terminal craft. */
+/** One spend target per ingredient. Optional merges precede crafting in the same client PTB. */
 export const craft_stack_plan = (
   inputs: Readonly<Record<string, number>>,
   attempts: number,
@@ -156,15 +155,18 @@ export const craft_stack_plan = (
 ): readonly CraftStackPlan[] | null => {
   const groups = Object.entries(inputs).map(([item_type, per_attempt]) => {
     const stacks = available_item_stacks(inventory, encumbered, item_type, kiosk)
-    const [target, ...sources] = stacks
+    const [target] = stacks
+    const sources = target ? stack_merge_sources(inventory, encumbered, target) : []
     const amount = per_attempt * attempts
-    const total_amount = stacks.reduce((total, stack) => total + stack.amount, 0)
+    const total_amount = stacks
+      .filter(({ id }) => id === target?.id || sources.includes(id))
+      .reduce((total, stack) => total + stack.amount, 0)
     if (!target || !item_is_stackable(target.category) || total_amount < amount || total_amount > 4_294_967_295)
       return null
     return Object.freeze({
       item_type,
       target_id: target.id,
-      source_ids: Object.freeze(sources.map(({ id }) => id)),
+      source_ids: Object.freeze(sources),
       amount,
       total_amount,
       kiosk,
@@ -215,4 +217,31 @@ export const allocate_stack_amount = (
     })
   )
   return folded.remaining === 0 ? folded.plan : null
+}
+
+/** One visual balance per stackable type and kiosk; unique items retain their own cells. */
+export const inventory_groups = (inventory: readonly Readonly<ItemRow>[]) => {
+  const groups = new Map<string, Readonly<{ item: Readonly<ItemRow>; amount: number }>>()
+  for (const item of inventory) {
+    const key = item_is_stackable(item.category) ? [item.kiosk, item.item_type].join(':') : item.id
+    const previous = groups.get(key)
+    const representative = previous && previous.item.amount >= item.amount ? previous.item : item
+    groups.set(key, Object.freeze({ item: representative, amount: (previous?.amount ?? 0) + item.amount }))
+  }
+  return Object.freeze([...groups.values()])
+}
+
+/** Same-kiosk, unlocked candidates. Move decides which candidates still fit at execution. */
+export const stack_merge_sources = (
+  inventory: readonly Readonly<ItemRow>[],
+  encumbered: ReadonlySet<string>,
+  target: Readonly<ItemRow>
+): readonly string[] => {
+  if (!item_is_stackable(target.category)) return []
+  let room = MAX_STACK_AMOUNT - target.amount
+  return available_item_stacks(inventory, encumbered, target.item_type, target.kiosk).flatMap((item) => {
+    if (item.id === target.id || item.amount > room || item.category !== target.category) return []
+    room -= item.amount
+    return [item.id]
+  })
 }

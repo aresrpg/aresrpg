@@ -52,13 +52,15 @@ const shape_trade = (props: Record<string, unknown>, caps: ReadonlyMap<string, T
     accept_b: Boolean(props.accept_b),
     sui_a: String(props.sui_a ?? '0'),
     sui_b: String(props.sui_b ?? '0'),
+    kares_a: String(props.kares_a),
+    kares_b: String(props.kares_b),
     caps_a: resolved('a'),
     caps_b: resolved('b'),
   }
 }
 
 export async function get_trades(graph: Graph, { address }: { address: string }): Promise<TradeRow[]> {
-  const essential_filter = `(t.phase <> 'requested' OR t.sui_a <> '0' OR t.sui_b <> '0' OR
+  const essential_filter = `(t.phase <> 'requested' OR t.sui_a <> '0' OR t.sui_b <> '0' OR t.kares_a <> '0' OR t.kares_b <> '0' OR
                        t.caps_a <> '[]' OR t.caps_b <> '[]')`
   const request_query = (side: 'a' | 'b') =>
     `MATCH (t:Trade) WHERE t.${side} = $address AND NOT ${essential_filter}

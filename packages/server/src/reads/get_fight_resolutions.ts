@@ -15,7 +15,8 @@ export async function get_fight_resolutions(
     `MATCH (f:Fight)-[r:RESULT_FOR]->(:User {address: $address})
      OPTIONAL MATCH (k:Kolizeum {fight_id: f.id})
      RETURN f.id AS fight, f.world AS world, f.dungeon AS dungeon, f.dungeon_room AS dungeon_room, f.winner AS winner,
-            k.id AS kolizeum,
+            k.id AS kolizeum, f.boss_weight AS boss_weight,
+            CASE WHEN f.winner = r.team THEN f.kares_reward ELSE '0' END AS kares,
             r.seat AS fighter, r.character AS character,
             r.team AS team, r.dead AS dead, r.settled AS settled,
             r.loot_types AS loot_types, r.drops AS drops`,
@@ -28,6 +29,8 @@ export async function get_fight_resolutions(
     dungeon_room: row.dungeon_room === null || row.dungeon_room === undefined ? null : Number(row.dungeon_room),
     kolizeum: typeof row.kolizeum === 'string' ? row.kolizeum : null,
     fighter: Number(row.fighter),
+    boss_weight: Number(row.boss_weight),
+    kares: String(row.kares),
     character: String(row.character),
     team: Number(row.team),
     winner: row.winner === null || row.winner === undefined ? null : Number(row.winner),

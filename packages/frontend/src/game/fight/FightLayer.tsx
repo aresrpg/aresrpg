@@ -49,6 +49,7 @@ import {
 import type { FightCuePhase } from './fight_presenter.ts'
 import { FightViewport } from './FightViewport.tsx'
 import { FightHud } from './FightHud.tsx'
+import { FightSpectatorExit, selected_spectator } from './FightSpectatorExit.tsx'
 import { fight_fighter_name, fight_turn_key, type FightActionSelection } from './fight_projection.ts'
 import {
   fight_turn_announcement_after_cue,
@@ -587,6 +588,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
       />
       {placement.warning}
       <FightSimulatorExit copy={copy} visible={fight.mode === 'local'} />
+      <FightSpectatorExit character_id={selected_spectator({ fight, session })} copy={copy} />
     </section>
   )
 }

@@ -8,6 +8,7 @@ import { item_icon } from '../../content/assets.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import { copy_text } from '../../i18n/copy.ts'
 import type { PendingGather } from '../../modules/world.ts'
+import { selected_gathering } from '../../modules/world_gather.ts'
 import { useAppStore } from '../../store.ts'
 import { HudPanel } from '../../components/ui/HudPanel.tsx'
 
@@ -24,11 +25,7 @@ export const gather_progress = (
 }
 
 export const GatherProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const gathering = useAppStore(({ world, session }) =>
-    world.gathering?.character_id === session.selected_character_id && !world.gathering.ambushed
-      ? world.gathering
-      : null
-  )
+  const gathering = useAppStore(selected_gathering)
   const [now, set_now] = useState(Date.now())
   useEffect(() => {
     if (!gathering) return undefined
@@ -36,7 +33,7 @@ export const GatherProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     const timer = setInterval(() => set_now(Date.now()), 100)
     return () => clearInterval(timer)
   }, [gathering])
-  if (!gathering) return null
+  if (!gathering || gathering.ambushed) return null
   const text = copy_text(copy.world_hud)
   const item = content_catalog.item(gathering.item_type)?.item
   const name = item?.name ?? gathering.item_type

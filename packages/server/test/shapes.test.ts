@@ -70,6 +70,8 @@ test('RESULT_FOR rows preserve the exact stranded loot needed after reconnect', 
     read: async () => [
       {
         fight: '0xf1',
+        boss_weight: 0,
+        kares: '0',
         world: 'astral',
         dungeon: 'tangled_aftermath',
         dungeon_room: 2,
@@ -89,6 +91,8 @@ test('RESULT_FOR rows preserve the exact stranded loot needed after reconnect', 
   expect(await get_fight_resolutions(graph, { address: '0xme' })).toEqual([
     {
       fight: '0xf1',
+      boss_weight: 0,
+      kares: '0',
       world: 'astral',
       dungeon: 'tangled_aftermath',
       dungeon_room: 2,

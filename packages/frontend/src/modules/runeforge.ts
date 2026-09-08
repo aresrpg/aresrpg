@@ -19,10 +19,9 @@ export type ScribeHistoryEntry = Readonly<{
   outcome: ScribeOutcomeKind
   applied_stat: StatName
   applied_value: number
-  lost_stat: StatName | null
-  lost_amount: number
-  puits_before: number
-  puits_after: number
+  losses: readonly Readonly<{ stat: StatName; amount: number }>[]
+  puits_before: string
+  puits_after: string
 }>
 
 export type RuneforgeState = Readonly<{
@@ -48,9 +47,12 @@ const history_entry = (input: Readonly<RuneforgeInput>): ScribeHistoryEntry =>
     outcome: scribe_outcome_kind(input.outcome.outcome),
     applied_stat: stat_names[input.outcome.stat]!,
     applied_value: input.outcome.applied_value,
-    lost_stat: stat_names[input.outcome.lost_stat] ?? null,
-    lost_amount: input.outcome.lost_amount,
-    puits_before: Number(input.gear_before.puits ?? 0),
+    losses: Object.freeze(
+      input.outcome.lost_amounts.flatMap((amount, index) =>
+        amount > 0 ? [Object.freeze({ stat: stat_names[index]!, amount })] : []
+      )
+    ),
+    puits_before: input.gear_before.puits ?? '0',
     puits_after: input.outcome.new_puits,
   })
 

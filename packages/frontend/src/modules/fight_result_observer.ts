@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { coalesced_stack_groups, encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { mastery_dungeon_slug } from '../mastery/model.ts'
 import { toast } from '../toast.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { retry_after_version_race, retry_close_after_projection_lag } from '../transaction_guard.ts'
 
-import { fight_resolution_dungeon, fight_result_available } from './fight_result_view.ts'
+import { own_result_kares, fight_resolution_dungeon, fight_result_available } from './fight_result_view.ts'
 import { fight_result_error_text } from './fight_result_error.ts'
 
 type Attempt = Readonly<{ latched: boolean }>
@@ -78,14 +78,11 @@ const observe_with_wait = (
   const attempts = new Map<string, Attempt>()
   const closing = new Set<string>()
   const close_notices = new Map<string, () => void>()
-  const settled_kiosks = new Set<string>()
   let active: string | null = null
   const locks = globalThis.navigator?.locks
   let settlement_owner = !locks
   let lease_address: string | null = null
   let release_lease: (() => void) | null = null
-  let normalizing_kiosk: string | null = null
-  let observed_inventory = get_state().session.inventory
   const close_once = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
     const { fight } = row
     const { wallet } = get_state().session
@@ -115,49 +112,18 @@ const observe_with_wait = (
     close_notices.set(fight, dismiss)
   }
 
-  const normalize_settled_stacks = (): void => {
-    const state = get_state()
-    if (active || normalizing_kiosk || state.session.inventory === observed_inventory) return
-    observed_inventory = state.session.inventory
-    const { wallet } = state.session
-    if (!wallet) return
-    const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
-    const duplicate_groups = coalesced_stack_groups(state.session.inventory, encumbered).filter(
-      ({ target, source_ids }) => settled_kiosks.has(target.kiosk) && source_ids.length > 0
-    )
-    const kiosk = duplicate_groups[0]?.target.kiosk
-    if (!kiosk) return
-    const plan = duplicate_groups
-      .filter(({ target }) => target.kiosk === kiosk)
-      .map(({ target, source_ids }) => Object.freeze({ kiosk, target_id: target.id, source_ids }))
-    normalizing_kiosk = kiosk
-    void wallet.stacks
-      .merge_many(plan)
-      .then(() => {
-        dispatch({ type: 'inventory/stacks_merged', groups: plan })
-        return true
-      })
-      .catch((error: unknown) => {
-        toast.add(error)
-        return false
-      })
-      .then((normalized) => {
-        normalizing_kiosk = null
-        if (normalized) normalize_settled_stacks()
-      })
-  }
-
   const sweep = (): void => {
     if (!settlement_owner || active) return
     const state = get_state()
     const { wallet, inventory, characters } = state.session
     if (!wallet || state.session.link_status !== 'ready') return
     const live = Object.values(state.fight_result.current_by_character).flatMap((result) => {
-      const own = result.own_seat === null ? null : result.participants[result.own_seat]
+      const own = result.participants[result.own_seat ?? -1]
       return own?.character_id && !own.forfeited && !result.settlement_confirmed
         ? [
             Object.freeze({
               fight: result.fight,
+              boss_rewards: result.boss_weight > 0,
               fighter: own.seat,
               character: own.character_id,
               loot_types: result.loot_types,
@@ -171,6 +137,7 @@ const observe_with_wait = (
     const recoveries = state.fight_result.resolutions.map((row) =>
       Object.freeze({
         fight: row.fight,
+        boss_rewards: row.boss_weight > 0,
         fighter: row.fighter,
         character: row.character,
         loot_types: row.loot_types,
@@ -233,14 +200,20 @@ const observe_with_wait = (
               settlements,
               custody,
               mastery,
+              boss_rewards: first.boss_rewards,
               last: final_settlement,
             })
-          : wallet.fight.settle({ fight: first.fight, settlements, custody, last: final_settlement })
+          : wallet.fight.settle({
+              fight: first.fight,
+              settlements,
+              custody,
+              last: final_settlement,
+              boss_rewards: first.boss_rewards,
+            })
     void retry_after_version_race(transaction, wait)
       .then((receipt) => {
         const mastery_row = typeof receipt === 'object' && receipt !== null ? Reflect.get(receipt, 'mastery') : null
         if (mastery_row) dispatch({ type: 'mastery/reconciled', mastery: mastery_row })
-        if (!first.kolizeum) settled_kiosks.add(custody.kiosk)
         pending.forEach((candidate, index) => {
           attempts.set(keys[index]!, Object.freeze({ latched: true }))
           dispatch({
@@ -248,6 +221,7 @@ const observe_with_wait = (
             character_id: candidate.character,
             fight: candidate.fight,
             paid_mist: kolizeum_payment(candidate.kolizeum, receipt),
+            kares_rewards: 'kares_rewards' in receipt ? receipt.kares_rewards : [],
           })
         })
         if (settlement_needs_close(receipt)) close_once({ fight: first.fight, kolizeum: first.kolizeum })
@@ -283,7 +257,6 @@ const observe_with_wait = (
           )
         active = null
         if (settled) sweep()
-        if (!active) normalize_settled_stacks()
       })
   }
 
@@ -340,10 +313,16 @@ const observe_with_wait = (
     sweep()
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    const received_kares = Object.entries(state.fight_result.current_by_character).some(([character, result]) => {
+      const before = previous.fight_result.current_by_character[character]
+      return own_result_kares(result) > own_result_kares(before?.fight === result.fight ? before : undefined)
+    })
+    if (received_kares) dispatch({ type: 'wallet/refresh' })
+  })
+  events.on('STATE_UPDATED', (state, previous) => {
     ensure_settlement_lease()
     if (state.fight_result.closable_fights !== previous.fight_result.closable_fights)
       state.fight_result.closable_fights.forEach(close_once)
-    normalize_settled_stacks()
     if (
       state.fight !== previous.fight ||
       state.fight_result.resolutions !== previous.fight_result.resolutions ||

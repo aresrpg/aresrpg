@@ -63,12 +63,6 @@ describe('the wire contract', () => {
     expect(
       parse_client_packet(JSON.stringify({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' }))
     ).toEqual({ type: 'packet/character_owner_request', id: 7, character_id: '0xabc' })
-    expect(
-      parse_client_packet(JSON.stringify({ type: 'packet/airdrop_eligibility_request', address: '0xabc' }))
-    ).toEqual({
-      type: 'packet/airdrop_eligibility_request',
-      address: '0xabc',
-    })
     expect(parse_client_packet(JSON.stringify({ type: 'packet/ping', id: 8 }))).toEqual({
       type: 'packet/ping',
       id: 8,
@@ -151,10 +145,10 @@ describe('the wire contract', () => {
       'packet/fight_action',
       'packet/fight_resync',
       'packet/market_observe',
+      'packet/leaderboard_observe',
       'packet/spectate',
       'packet/fight_preview',
       'packet/character_owner_request',
-      'packet/airdrop_eligibility_request',
       'packet/admin_request',
       'packet/ping',
     ])

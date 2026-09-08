@@ -31,6 +31,7 @@ type CastCellSearch = {
   range_min: bigint
   range_max: bigint
   needs_los: boolean
+  line_launch: boolean
   obstacles: bigint[]
 }
 
@@ -147,16 +148,22 @@ export const approach_field = (target: bigint, wall_mask: Mask, until: bigint): 
   return field
 }
 
-const cell_can_cast = (
+export const cell_can_cast = (
   from: bigint,
   target: bigint,
   range_min: bigint,
   range_max: bigint,
   needs_los: boolean,
-  obstacles: bigint[]
+  line_launch: boolean,
+  obstacles: readonly bigint[]
 ): boolean => {
   const distance = manhattan(from, target)
-  return distance >= range_min && distance <= range_max && (!needs_los || line_of_sight(from, target, obstacles))
+  return (
+    distance >= range_min &&
+    distance <= range_max &&
+    (!line_launch || same_line(from, target)) &&
+    (!needs_los || line_of_sight(from, target, obstacles))
+  )
 }
 
 export const bfs_cast_cell = ({
@@ -167,11 +174,12 @@ export const bfs_cast_cell = ({
   range_min,
   range_max,
   needs_los,
+  line_launch,
   obstacles,
 }: CastCellSearch): bigint | null => {
   if (!in_grid(start)) return null
   let best = start
-  let found = cell_can_cast(start, target, range_min, range_max, needs_los, obstacles)
+  let found = cell_can_cast(start, target, range_min, range_max, needs_los, line_launch, obstacles)
   let best_distance = found ? manhattan(start, target) : 0n
   let visited = mask_from_cells([start])
   let frontier = [start]
@@ -184,7 +192,7 @@ export const bfs_cast_cell = ({
         if (!mask_get(visited, candidate) && !mask_get(wall_mask, candidate)) {
           visited = mask_add_cells(visited, [candidate])
           next.push(candidate)
-          if (cell_can_cast(candidate, target, range_min, range_max, needs_los, obstacles)) {
+          if (cell_can_cast(candidate, target, range_min, range_max, needs_los, line_launch, obstacles)) {
             const distance = manhattan(candidate, target)
             if (!found || distance < best_distance || (distance === best_distance && candidate < best)) {
               best = candidate

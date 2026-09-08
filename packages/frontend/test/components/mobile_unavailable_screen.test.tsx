@@ -22,11 +22,11 @@ test('the mobile gate presents the dedicated desktop handoff', async () => {
   expect(html).toContain('/logo.png')
 })
 
-test('printed giftcards alone may enter the authentication flow on mobile', () => {
+test('giftcard routes may enter the authentication flow on mobile', () => {
   expect(mobile_app_unavailable('/', true)).toBeTrue()
   expect(mobile_app_unavailable('/gift', true)).toBeFalse()
+  expect(mobile_app_unavailable('/claim', true)).toBeFalse()
   expect(mobile_app_unavailable('/gift/', true)).toBeFalse()
-  expect(mobile_app_unavailable('/enoki', true, true)).toBeFalse()
-  expect(mobile_app_unavailable('/enoki', true, false)).toBeTrue()
+  expect(mobile_app_unavailable('/enoki', true)).toBeTrue()
   expect(mobile_app_unavailable('/giftcard', true)).toBeTrue()
 })

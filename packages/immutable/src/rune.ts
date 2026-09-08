@@ -3,6 +3,7 @@
 // Runtime mirror of move-math/rune_catalog.move. The immutable test parses the Move vectors so drift reds.
 
 import { is_stat_name, stat_names, type StatName } from './identity.ts'
+import { item_stat_center } from './item.ts'
 
 export type RuneTier = 'ba' | 'pa' | 'ra'
 
@@ -28,10 +29,34 @@ export const rune_unit_weights = Object.freeze(
   Object.fromEntries(stat_names.map((stat) => [stat, rune_unit_weight(stat)])) as Record<StatName, number>
 )
 
-/** Hard per-item application cap (0 = uncapped) — rune_catalog.move MAX_APPS. */
-const rune_apps_caps = Object.freeze([0, 0, 0, 0, 0, 0, 1, 1, 1, 10, 0, 0, 0, 0, 0])
+/** Whole-line and combined excess limit, mirrored from forge.move. Inputs are signed points. */
+export const rune_max_weight = 101
+export const rune_can_apply = (
+  current: Readonly<Partial<Record<StatName, number>>>,
+  maximum: Readonly<Partial<Record<StatName, number>>>,
+  rune: RuneEffect
+): boolean => {
+  const value = current[rune.stat] ?? 0
+  const natural = maximum[rune.stat] ?? 0
+  const price = rune_unit_weight(rune.stat)
+  const next = value + rune.amount
+  const ceiling = Math.max(natural, Math.floor(rune_max_weight / price))
+  if (next > ceiling || next > 65_535 - item_stat_center) return false
+  const over = stat_names.reduce(
+    (sum, stat) => sum + Math.max(0, (current[stat] ?? 0) - (maximum[stat] ?? 0)) * rune_unit_weight(stat),
+    0
+  )
+  const next_over = over - Math.max(0, value - natural) * price + Math.max(0, next - natural) * price
+  return next_over <= rune_max_weight || next_over <= over
+}
 
-export const rune_max_apps = (stat: StatName): number => rune_apps_caps[stat_names.indexOf(stat)] ?? 0
+export const format_rune_weight = (scaled: string): string => {
+  const value = BigInt(scaled)
+  const scale = BigInt(rune_weight_scale)
+  const whole = value / scale
+  const fraction = ((value % scale) * 100n) / scale
+  return fraction === 0n ? String(whole) : `${whole}.${String(fraction).padStart(2, '0').replace(/0$/, '')}`
+}
 
 const rune_pattern = /^rune_(.+)_(ba|pa|ra)$/
 

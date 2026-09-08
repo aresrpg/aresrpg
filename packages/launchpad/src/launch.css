@@ -1,0 +1,401 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+@import '@aresrpg/frontend/tokens.css';
+@source '../../frontend/src/kares';
+@source './';
+
+.kares-launch {
+  z-index: 1;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.kares-launch ::selection {
+  background: #c8963c55;
+  color: #fff2d6;
+}
+.kares-launch :is(a, button, select):focus-visible {
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 4px;
+}
+.kares-launch :is(button, .finance-button):not([data-wallet-connect]) {
+  --button-face: #30243d;
+  --button-ink: #e4bd77;
+  --button-edge: #917346;
+  --button-shadow: #110c1b;
+  min-height: 44px;
+  padding: 0.65rem 1rem;
+  border: 2px solid #171120;
+  border-radius: 0;
+  background: var(--button-face);
+  color: var(--button-ink);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow:
+    inset 0 1px 0 #ffffff18,
+    0 0 0 1px var(--button-edge),
+    4px 4px 0 var(--button-shadow);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    filter 120ms ease;
+}
+.kares-launch [data-finance-claim] {
+  --button-face: #173e34;
+  --button-ink: #77e5ba;
+  --button-edge: #398b6d;
+  --button-shadow: #0b201a;
+}
+.kares-launch [data-wallet-account] {
+  --button-face: #282334;
+  --button-ink: #d4d7df;
+  --button-edge: #61536f;
+}
+.kares-launch :is(button, .finance-button):not([data-wallet-connect]) svg {
+  color: currentColor;
+}
+.kares-launch :is(button, .finance-button):not([data-wallet-connect]):hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translate(-1px, -1px);
+  box-shadow:
+    inset 0 1px 0 #ffffff18,
+    0 0 0 1px var(--button-edge),
+    5px 5px 0 var(--button-shadow);
+}
+.kares-launch :is(button, .finance-button):not([data-wallet-connect]):active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow:
+    inset 0 1px 0 #ffffff10,
+    0 0 0 1px var(--button-edge),
+    1px 1px 0 var(--button-shadow);
+}
+.kares-launch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow:
+    0 0 0 1px var(--button-edge),
+    2px 2px 0 var(--button-shadow);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kares-launch *,
+  .kares-launch *::before,
+  .kares-launch *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.funding-panel {
+  background: linear-gradient(125deg, #24212fe8, #10101bdd 55%);
+}
+.sale-size-transition {
+  transition: height 300ms ease;
+}
+
+.sale-stage[aria-current='step'] {
+  border-color: #c8963c73;
+  background: #c8963c1a;
+  color: var(--color-gold-light);
+}
+.sale-stage[data-reached='true'] {
+  border-color: #85dec166;
+  background: #85dec112;
+  color: #85dec1;
+}
+.funding-panel-oversubscribed::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.7;
+  background: linear-gradient(120deg, transparent 45%, #b66caa18);
+}
+.funding-fill {
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--color-cyan), var(--color-gold) var(--funding-gold)),
+    color-mix(in srgb, var(--color-cyan), var(--color-gold-light) var(--funding-gold))
+  );
+  box-shadow: 0 0 22px #e6aa3e60;
+  transition: width 0.7s ease;
+}
+.funding-texture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+.funding-texture[data-renderer='webgl'] {
+  opacity: 1;
+}
+
+html:has(.kares-launch) {
+  scroll-behavior: smooth;
+}
+.kares-launch .launch-section,
+.kares-launch #funding,
+.kares-launch #contribute {
+  scroll-margin-top: 80px;
+}
+.benefit-card {
+  box-shadow:
+    inset 0 1px 0 #ffffff09,
+    0 15px 50px #0003;
+}
+.benefit-revenue {
+  background: linear-gradient(145deg, #223240, var(--color-surface-low));
+}
+.benefit-baseline {
+  background: linear-gradient(145deg, #342d2e, var(--color-surface-low));
+}
+.benefit-crates {
+  background: linear-gradient(120deg, var(--color-surface-low), #292336);
+}
+.benefit-art {
+  animation: benefit-float 5s ease-in-out infinite alternate;
+}
+@keyframes benefit-float {
+  from {
+    translate: 0 -4px;
+  }
+  to {
+    translate: 0 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.kares-launch) {
+    scroll-behavior: auto;
+  }
+  .kares-launch .benefit-art {
+    animation: none !important;
+  }
+}
+
+.launch-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(165deg, #363047, #182231 65%, #111927);
+}
+.launch-atmosphere-scene {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(calc(100vw + 12px), calc(100vh * 1672 / 941 + 24px));
+  aspect-ratio: 1672 / 941;
+  transform: translate(-50%, -50%);
+}
+.launch-atmosphere-image,
+.launch-atmosphere-trees {
+  position: absolute;
+  inset: 0;
+  background: url('/night-landscape.png') center / 100% 100% no-repeat;
+}
+.launch-atmosphere-image {
+  filter: blur(2px);
+}
+.launch-atmosphere-trees {
+  clip-path: inset(45% 0 0);
+  mask-image: linear-gradient(90deg, #000 0%, transparent 24%, transparent 76%, #000 100%);
+  transform-origin: 50% 100%;
+  filter: blur(1px);
+  animation: landscape-tree-sway 5s ease-in-out infinite alternate;
+}
+.launch-atmosphere-water {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(11% 71%, 73% 71%, 83% 80%, 73% 89%, 27% 89%, 15% 80%);
+  background: url('/night-landscape.png') center / 100% 100% no-repeat;
+  filter: url('#launch-water-distortion') brightness(1.12) blur(0.5px);
+  animation: landscape-water-drift 4s ease-in-out infinite alternate;
+}
+.launch-atmosphere-reflection {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #d9edff70 0%, #abd4ff40 28%, #72adff12 52%, transparent 72%);
+  filter: blur(2px);
+  animation: landscape-reflection-light 3.8s ease-in-out infinite alternate;
+}
+.launch-atmosphere-wind {
+  position: absolute;
+  inset: 29% 15% 42%;
+  background: linear-gradient(
+    175deg,
+    transparent 42%,
+    #bdcbdf22 42.3%,
+    transparent 42.8%,
+    transparent 67%,
+    #bdcbdf14 67.3%,
+    transparent 67.8%
+  );
+  animation: landscape-wind-drift 14s ease-in-out infinite;
+}
+.launch-atmosphere-stars {
+  position: absolute;
+  inset: 0;
+}
+.launch-atmosphere-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #eff6ff;
+  box-shadow:
+    0 0 5px 2px #c8deffcc,
+    0 0 16px 4px #82b4ff66;
+  animation: landscape-star-twinkle 2.8s ease-in-out infinite alternate;
+}
+.launch-atmosphere-star::before,
+.launch-atmosphere-star::after {
+  content: '';
+  position: absolute;
+  background: #d5e8ffbb;
+}
+.launch-atmosphere-star::before {
+  inset: -3px 1px;
+}
+.launch-atmosphere-star::after {
+  inset: 1px -3px;
+}
+.launch-atmosphere-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #070b177a, #070b179e 58%, #060916bf);
+}
+.launch-atmosphere-grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.13;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch' seed='8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+}
+.funding-playhead {
+  position: absolute;
+  top: -7px;
+  height: 62px;
+  width: 2px;
+  color: #ffe1a1;
+  background: currentColor;
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px #ffe1a170;
+  transition: left 0.7s ease;
+  pointer-events: none;
+}
+.funding-playhead::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -2px;
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+.funding-playhead::after {
+  content: '';
+  position: absolute;
+  inset: -2px -4px;
+  border: 1px solid currentColor;
+  animation: funding-playhead-pulse 1.8s ease-out infinite;
+}
+[data-funding-known='false'] .funding-playhead {
+  color: #a5a9b6;
+}
+@keyframes funding-playhead-pulse {
+  from {
+    opacity: 0.65;
+    scale: 0.6 1;
+  }
+  to {
+    opacity: 0;
+    scale: 1.8 1.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kares-launch .funding-playhead::after {
+    animation: none !important;
+  }
+}
+
+.funding-success-marker {
+  position: absolute;
+  top: 0;
+  height: 48px;
+  width: 2px;
+  border-left: 2px dashed #8d9aa8;
+}
+.funding-success-label {
+  color: var(--color-muted);
+}
+[data-minimum-reached='true'] .funding-success-marker {
+  border-color: #85dec1;
+  box-shadow: 0 0 8px #85dec144;
+}
+[data-minimum-reached='true'] .funding-success-label {
+  color: #85dec1;
+}
+@keyframes landscape-tree-sway {
+  from {
+    transform: skewX(-0.45deg) translateX(-4px);
+  }
+  to {
+    transform: skewX(0.45deg) translateX(4px);
+  }
+}
+@keyframes landscape-water-drift {
+  from {
+    transform: translate(-4px, -1px) scaleX(1.005);
+    opacity: 0.45;
+  }
+  to {
+    transform: translate(4px, 1px) scaleX(1.012);
+    opacity: 0.85;
+  }
+}
+@keyframes landscape-wind-drift {
+  0%,
+  100% {
+    transform: translateX(-4%);
+    opacity: 0;
+  }
+  50% {
+    transform: translateX(4%);
+    opacity: 0.3;
+  }
+}
+@keyframes landscape-star-twinkle {
+  from {
+    opacity: 0.35;
+    scale: 0.8;
+  }
+  to {
+    opacity: 1;
+    scale: 1.4;
+  }
+}
+@keyframes landscape-reflection-light {
+  from {
+    opacity: 0.2;
+    transform: translateX(-3px) scale(0.8);
+  }
+  to {
+    opacity: 0.65;
+    transform: translateX(3px) scale(1.2);
+  }
+}
+@media (max-width: 767px) {
+  .launch-atmosphere-wind {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .launch-atmosphere * {
+    animation: none !important;
+  }
+  .launch-atmosphere-water {
+    filter: brightness(1.12) blur(0.5px);
+  }
+}

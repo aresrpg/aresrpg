@@ -1,0 +1,36 @@
+{
+  "date": "2026-09-08",
+  "collections": [
+    {
+      "item_type": "oeuftermath",
+      "types": ["0x484932c474bf09f002b82e4a57206a6658a0ca6dbdb15896808dcd1929c77820::egg::AfEgg"],
+      "recipient": "wallet"
+    },
+    {
+      "item_type": "suicune",
+      "types": ["0x256cf2cbe798fd0458fa04464a7b6e127d57f754535d20b96243e231c1964910::SWEEBS::SweebNFT"],
+      "recipient": "wallet"
+    },
+    {
+      "item_type": "suifren_bullshark",
+      "types": [
+        "0xee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::suifrens::SuiFren<0x8894fa02fc6f36cbc485ae9145d05f247a78e220814fb8419ab261bd81f08f32::bullshark::Bullshark>"
+      ],
+      "recipient": "wallet",
+      "limit": 500
+    },
+    {
+      "item_type": "suifren_capy",
+      "types": [
+        "0xee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::suifrens::SuiFren<0xee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::capy::Capy>"
+      ],
+      "recipient": "wallet",
+      "limit": 500
+    },
+    {
+      "item_type": "primemachin",
+      "types": ["0x034c162f6b594cb5a1805264dd01ca5d80ce3eca6522e6ee37fd9ebfb9d3ddca::factory::PrimeMachin"],
+      "recipient": "object"
+    }
+  ]
+}

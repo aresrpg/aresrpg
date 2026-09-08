@@ -3,37 +3,35 @@
 
 import { expect, test } from 'bun:test'
 
-import { encyclopedia_catalog } from '../../src/content/catalog.ts'
-import { filter_item_types } from '../../src/content/item_filters.ts'
+import { derive_item_filter_rows, filter_item_types } from '../../src/content/item_filters.ts'
 
-const item_types = encyclopedia_catalog.items.map(({ item_type }) => item_type)
+const items = [
+  { item_type: 'fixture_grain', category: 'resource' },
+  { item_type: 'fixture_flour', category: 'resource' },
+  { item_type: 'fixture_hat', category: 'hat' },
+]
+const item_types = items.map(({ item_type }) => item_type)
+const facets = derive_item_filter_rows(
+  items,
+  [{ output_type: 'fixture_flour', inputs: { fixture_grain: 2 } }],
+  () => 'FARMER',
+  [{ mob_type: 'fixture_mob', loot: [{ item_type: 'fixture_hat' }] }],
+  [{ kind: 'family', id: 'fixture_family', count: 1, mob_types: ['fixture_mob'] }],
+  [{ world: 'fixture_world', cities: [], resources: [{ item_type: 'fixture_grain', biomes: [], cities: [] }] }]
+)
 const matching = (selected: Parameters<typeof filter_item_types>[2]): readonly string[] =>
-  filter_item_types(item_types, encyclopedia_catalog.item_filters, selected)
+  filter_item_types(item_types, facets, selected)
 
-test('item facets derive category, resource, crafting, location, and loot-family membership', () => {
-  encyclopedia_catalog.item_filters.forEach(({ item_types: members }) =>
-    members.forEach((item_type) => expect(item_types).toContain(item_type))
-  )
-  expect(matching({ category: 'resource' })).toContain('wheat')
-  expect(matching({ resource: 'gatherable' })).toContain('wheat')
-  expect(matching({ resource: 'intermediary' })).toContain('wheat_flour')
-  expect(matching({ resource: 'pet_food' })).toHaveLength(11)
-  expect(matching({ resource: 'pet_food' })).toContain('gilded_pet_food')
-  expect(matching({ resource: 'intermediary' })).not.toContain('gilded_pet_food')
-  expect(matching({ job: 'FARMER' })).toContain('wheat_flour')
-  expect(matching({ world: 'nauvis' })).toContain('wheat')
-  expect(matching({ world: 'nauvis:plains' })).toContain('wheat')
-  expect(matching({ world: 'nauvis:thebes' })).toContain('wheat')
-  expect(matching({ family: 'fuwa' })).toContain('fuwa_wool')
+test('item facets derive category, crafting, location, and loot membership from supplied content', () => {
+  expect(matching({ category: 'resource' })).toEqual(['fixture_grain', 'fixture_flour'])
+  expect(matching({ resource: 'intermediary' })).toEqual(['fixture_flour'])
+  expect(matching({ job: 'FARMER' })).toEqual(['fixture_flour'])
+  expect(matching({ world: 'fixture_world' })).toEqual(['fixture_grain'])
+  expect(matching({ family: 'fixture_family' })).toEqual(['fixture_hat'])
 })
 
-test('item facets intersect distinct sections without inventing alternate memberships', () => {
-  const farmer_intermediaries = matching({ resource: 'intermediary', job: 'FARMER' })
-  expect(farmer_intermediaries).toContain('wheat_flour')
-  farmer_intermediaries.forEach((item_type) => {
-    expect(matching({ resource: 'intermediary' })).toContain(item_type)
-    expect(matching({ job: 'FARMER' })).toContain(item_type)
-  })
-  expect(matching({ category: 'hat', family: 'fuwa' })).toContain('coiffe_fuwa__white')
-  expect(matching({ category: 'hat', resource: 'raw' })).toEqual([])
+test('item facets intersect sections without inventing memberships', () => {
+  expect(matching({ resource: 'intermediary', job: 'FARMER' })).toEqual(['fixture_flour'])
+  expect(matching({ category: 'hat', family: 'fixture_family' })).toEqual(['fixture_hat'])
+  expect(matching({ category: 'hat', resource: 'intermediary' })).toEqual([])
 })

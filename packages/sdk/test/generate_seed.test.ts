@@ -45,7 +45,6 @@ describe('seed door generation', () => {
 
   test('derived object key descriptors are byte-identical to Move source generation', async () => {
     expect(seed_string_keys().map(({ name }) => name)).toEqual([
-      'AirdropKey',
       'GiftcardKey',
       'MasteryOfferKey',
       'WorldKey',

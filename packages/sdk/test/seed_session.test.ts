@@ -14,6 +14,8 @@ import { SDK, type Receipt, type SuiTransport } from '../src/client.ts'
 import { absorb_receipt } from '../src/cache.ts'
 import { create_seed_session, type SeedSessionRecord, type SeedSessionStore } from '../src/seed_session.ts'
 
+import { execution_receipt } from './helpers/execution_receipt.ts'
+
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
 const package_id = id(1)
@@ -94,9 +96,9 @@ const fake_transport = ({ epoch = '7', balance = '0' }: { epoch?: string; balanc
       executeTransaction: async ({ transaction }: { transaction: Uint8Array }): Promise<Receipt> => {
         log.push('execute')
         submitted.push(transaction)
-        if (!state.releasing) return authorization_receipt()
+        if (!state.releasing) return execution_receipt(transaction, authorization_receipt())
         state.balance = '0'
-        return release_receipt()
+        return execution_receipt(transaction, release_receipt())
       },
     },
   }

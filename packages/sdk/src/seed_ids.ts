@@ -2,17 +2,20 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // LIVING CONTENT addresses (owner 2026-08-23): every content object derives under the seed
 // package's registry ROOT with its DEFINING (original) package's key types — items, mobs,
-// spells, recipes, worlds, boards. Distribution objects (airdrops/giftcards) claim under the
+// spells, recipes, worlds, boards. Giftcards claim under the
 // SAME root through core's living doors. The seal-era ids (core registry parent, marker
 // objects) are gone with the seal itself.
 
 import { bcs } from '@mysten/sui/bcs'
-import { deriveObjectID } from '@mysten/sui/utils'
+import { deriveDynamicFieldID, deriveObjectID, normalizeSuiAddress } from '@mysten/sui/utils'
 
 import { SEED_STRING_KEYS } from './seed_contract.gen.ts'
 
 const wrapped_string_bytes = (value: string): Uint8Array =>
   bcs.struct('StringKey', { value: bcs.String }).serialize({ value }).toBytes()
+
+export const giftcard_recipient_key = (batch: string, recipient: string): string =>
+  `${batch}_${normalizeSuiAddress(recipient).slice(2)}`
 
 const ZONE_KEY_BCS = bcs.struct('ZoneKey', { zone_x: bcs.u32(), zone_z: bcs.u32() })
 
@@ -57,8 +60,9 @@ export const board_catalog_id = (content_root: string, seed_package_original: st
 export const mastery_offer_id = (content_root: string, game_package_original: string, item_type: string): string =>
   content_id(content_root, game_package_original, SEED_STRING_KEYS.MasteryOfferKey, item_type)
 
-export const airdrop_id = (content_root: string, game_package_original: string, id: string): string =>
-  content_id(content_root, game_package_original, SEED_STRING_KEYS.AirdropKey, id)
-
 export const giftcard_id = (content_root: string, game_package_original: string, id: string): string =>
   content_id(content_root, game_package_original, SEED_STRING_KEYS.GiftcardKey, id)
+
+/** This permanent framework marker survives voucher redemption. */
+export const giftcard_claim_id = (content_root: string, giftcard: string): string =>
+  deriveDynamicFieldID(content_root, '0x2::derived_object::Claimed', bcs.Address.serialize(giftcard).toBytes())

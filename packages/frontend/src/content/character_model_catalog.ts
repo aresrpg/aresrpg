@@ -42,10 +42,16 @@ export const authored_character_model_classes = Object.freeze(Object.keys(CHARAC
 export const character_model_basenames = (classe: string, male: boolean): CharacterModelBasenames =>
   CHARACTER_MODELS[classe.toLowerCase()]?.[male ? 'male' : 'female'] ?? SENSHI_MODELS[male ? 'male' : 'female']
 
+export const worn_equipment_category = (category: string): 'hat' | 'cloak' | null => {
+  if (category === 'hat' || category === 'cosmetic_hat') return 'hat'
+  if (category === 'cloak' || category === 'cosmetic_cloak') return 'cloak'
+  return null
+}
+
 export const worn_equipment_model_of = (
   item: WornItem,
   available: ReadonlySet<string>
 ): Readonly<{ basename: string; variant: string | null }> | null => {
-  if (item.category !== 'hat' && item.category !== 'cloak') return null
+  if (!worn_equipment_category(item.category)) return null
   return model_variant_identity(item.item_type, [...available])
 }

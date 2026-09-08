@@ -12,6 +12,7 @@ import {
   changed_object_ids,
   owned_ref,
   receipt_gas_ref,
+  receipt_version,
   shared_ref,
   type Receipt,
 } from '../src/cache.ts'
@@ -147,4 +148,35 @@ describe('resolution cache', () => {
 
     expect(changed_object_ids(receipt, '::item::Item')).toEqual([rune_stack])
   })
+})
+
+test('quantity receipts retain final amounts and exact versions, including spent merge sources', async () => {
+  const { spending_receipt } = await import('../src/cache.ts')
+  const result = spending_receipt({
+    Transaction: {
+      digest: 'tx',
+      effects: { changedObjects: [{ objectId: id(1), outputVersion: '9007199254740993' }] },
+      events: [
+        { type: '0x1::item::AmountChanged', json: { item: id(1), amount: 10 } },
+        { type: '0x1::item::AmountChanged', json: { item: id(2), amount: 0 } },
+        { type: '0x1::item::AmountChanged', json: { item: id(1), amount: '9' } },
+      ],
+    },
+  })
+  expect(result.inventory_changes).toEqual([
+    { id: id(1), amount: 9, version: '9007199254740993' },
+    { id: id(2), amount: 0, version: '9007199254740993' },
+  ])
+})
+
+test('certified market revisions prefer native Lamport and retain the older receipt fallback', () => {
+  expect(
+    receipt_version({ Transaction: { effects: { lamportVersion: '9007199254740993', changedObjects: [] } } })
+  ).toBe('9007199254740993')
+  expect(
+    receipt_version({ Transaction: { effects: { changedObjects: [{ outputVersion: '9' }, { outputVersion: '10' }] } } })
+  ).toBe('10')
+  expect(receipt_version({ Transaction: { effects: { gasObject: { outputVersion: '11' } } } })).toBe('11')
+  expect(receipt_version({ Transaction: { effects: { changedObjects: [{ objectId: id(1) }] } } })).toBeNull()
+  expect(receipt_version({})).toBeNull()
 })

@@ -292,6 +292,46 @@ test('switching spectator fights evicts the last unreferenced environment', () =
   stop()
 })
 
+test('leaving spectating clears only that character and cannot remount on later packets', () => {
+  const app = create_app()
+  app.initialize(settings)
+  const stop = app.observe(['fight'])
+  app.dispatch({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/characters',
+      characters: [
+        { id: '0xa', custody: 'kiosk' },
+        { id: '0xb', custody: 'kiosk' },
+      ],
+    } as never,
+  })
+  app.dispatch({ type: 'character/select', character_id: '0xa' })
+  app.dispatch({ type: 'fight/spectating', character_id: '0xa', fight: '0xf1' })
+  app.dispatch({ type: 'fight/spectating', character_id: '0xb', fight: '0xf1' })
+  const packet = { type: 'packet/fight_state', fight: '0xf1', state: checkpoint('0xf1', '0xfoe'), seat: {} } as never
+  app.dispatch({ type: 'server/packet', packet })
+  expect(app.store.getState().fight.mounted).toBeTrue()
+
+  app.dispatch({ type: 'fight/spectating', character_id: '0xa', fight: null })
+  expect(app.store.getState().fight.spectating_by_character['0xa']).toBeUndefined()
+  expect(app.store.getState().fight.spectating_by_character['0xb']).toBe('0xf1')
+  expect(app.store.getState().fight.mounted).toBeFalse()
+  expect(app.store.getState().fight.cached['0xf1']).toBeDefined()
+  app.dispatch({ type: 'server/packet', packet })
+  app.dispatch({ type: 'character/select', character_id: '0xa' })
+  expect(app.store.getState().fight.mounted).toBeFalse()
+  app.dispatch({ type: 'character/select', character_id: '0xb' })
+  expect(app.store.getState().fight.mounted).toBeTrue()
+  app.dispatch({ type: 'fight/spectating', character_id: '0xb', fight: null })
+  expect(app.store.getState().fight.cached['0xf1']).toBeUndefined()
+  expect(app.store.getState().fight.environments['0xf1']).toBeUndefined()
+  expect(app.store.getState().fight.mounted).toBeFalse()
+  app.dispatch({ type: 'server/packet', packet })
+  expect(app.store.getState().fight.mounted).toBeFalse()
+  stop()
+})
+
 test('a queued background turn remains executable without its FightLayer mounted', () => {
   const base = initial_app_state(settings)
   const raw = checkpoint('0xfa', '0xa')
@@ -343,6 +383,35 @@ test('a queued background turn remains executable without its FightLayer mounted
   // A stale presentation witness may block local replay, but never the authoritative chain
   // submission. Otherwise this exact account state leaves the turn to force-crank.
   expect(queued_end_turn(state, '0xfa', 10_000)).toEqual({ fighter: 0n, delay_ms: 0 })
+})
+
+test('clearing a spectator intent cannot release an actual participant seat', () => {
+  const app = create_app()
+  app.initialize(settings)
+  const stop = app.observe(['fight'])
+  app.dispatch({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/characters',
+      characters: [{ id: '0xa', custody: 'fight', active_fight: { id: '0xf1', seat: 0 } }],
+    } as never,
+  })
+  app.dispatch({ type: 'character/select', character_id: '0xa' })
+  app.dispatch({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/fight_state',
+      fight: '0xf1',
+      state: checkpoint('0xf1', '0xa'),
+      seat: 0,
+    } as never,
+  })
+  app.dispatch({ type: 'fight/spectating', character_id: '0xa', fight: '0xf1' })
+  app.dispatch({ type: 'fight/spectating', character_id: '0xa', fight: null })
+  expect(app.store.getState().fight.spectating_by_character['0xa']).toBeUndefined()
+  expect(app.store.getState().fight.mounted).toBeTrue()
+  expect(app.store.getState().fight.checkpoint?.contract.id).toBe('0xf1')
+  stop()
 })
 
 test('the transaction observer drains A queued turn while B remains visible', async () => {
@@ -414,7 +483,7 @@ test('the transaction observer drains A queued turn while B remains visible', as
   listeners.get('STATE_UPDATED')?.forEach((listener) => listener(state as never, previous as never))
   await new Promise((resolve) => setTimeout(resolve, 0))
 
-  expect(commits).toEqual([{ fight: '0xfa', actions: [], ended: false }])
+  expect(commits).toEqual([{ fight: '0xfa', actions: [] }])
   expect(state.fight.checkpoint?.contract.id).toBe('0xfb')
 })
 
@@ -499,8 +568,8 @@ test('a pre-submission too-soon refusal retains the draft before requeueing', as
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(commits).toEqual([
-    { fight: '0xfa', actions: [{ type: 'move', path: [1n] }], ended: false },
-    { fight: '0xfa', actions: [{ type: 'move', path: [1n] }], ended: false },
+    { fight: '0xfa', actions: [{ type: 'move', path: [1n] }] },
+    { fight: '0xfa', actions: [{ type: 'move', path: [1n] }] },
   ])
   expect(state.fight.awaiting_turn_witness).toBeTrue()
   expect(state.fight.end_turn_queued).toBeFalse()

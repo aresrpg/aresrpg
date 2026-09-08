@@ -4,33 +4,60 @@
 
 /* eslint-disable functional/prefer-immutable-types -- DOM lifecycle boundary. */
 import { X } from 'lucide-react'
-import { useEffect, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, type MouseEvent as ReactMouseEvent, type ReactNode, type ComponentProps } from 'react'
 import { createPortal } from 'react-dom'
 
 type CloseDoor = (() => void) | null
 
-const useModalDismissal = (close: CloseDoor): void => {
-  useEffect(() => {
-    if (!close) return
-    const keydown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') close()
-    }
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    globalThis.addEventListener('keydown', keydown)
+const useModalDialog = () => {
+  const dialog = useRef<HTMLDialogElement>(null)
+  useLayoutEffect(() => {
+    const element = dialog.current
+    if (!element) return
+    element.showModal()
     return () => {
-      globalThis.removeEventListener('keydown', keydown)
-      document.body.style.overflow = previous
+      element.close()
     }
-  }, [close])
+  }, [])
+  return dialog
 }
 
-const dismiss_scrim = (event: Readonly<ReactMouseEvent<HTMLDivElement>>, close: CloseDoor): void => {
+const dismiss_scrim = (event: Readonly<ReactMouseEvent<HTMLDialogElement>>, close: CloseDoor): void => {
   if (close && event.target === event.currentTarget) close()
 }
 
 const mount_modal = (content: ReactNode): ReactNode =>
   typeof document === 'undefined' ? content : createPortal(content, document.body)
+
+/** All modal surfaces share browser focus/top-layer ownership; card visuals stay with their owner. */
+export const NativeModal = ({
+  children,
+  close,
+  label,
+  className = '',
+  onClick,
+  ...attributes
+}: Readonly<Omit<ComponentProps<'dialog'>, 'ref' | 'open' | 'onCancel'> & { close: CloseDoor; label: string }>) => {
+  const dialog = useModalDialog()
+  return mount_modal(
+    <dialog
+      {...attributes}
+      aria-label={label}
+      className={`fixed inset-0 m-0 h-full max-h-none w-full max-w-none border-0 p-0 text-inherit ${className}`}
+      onCancel={(event) => {
+        // React propagates cancel through portal parents; only the top dialog owns it.
+        event.stopPropagation()
+        event.preventDefault()
+        close?.()
+      }}
+      onClick={onClick ?? ((event) => dismiss_scrim(event, close))}
+      ref={dialog}
+      role="dialog"
+    >
+      {children}
+    </dialog>
+  )
+}
 
 const CloseButton = ({ close, label }: Readonly<{ close: CloseDoor; label: string }>) =>
   close ? (
@@ -59,20 +86,15 @@ export const ModalFrame = ({
   max_width?: string
   soft?: boolean
 }>) => {
-  useModalDismissal(close)
-
-  const content = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={(event) => dismiss_scrim(event, close)}
-      role="presentation"
+  return (
+    <NativeModal
+      close={close}
+      label={label}
+      className="open:flex open:items-center open:justify-center"
       style={{ backgroundColor: soft ? 'rgba(0,0,0,0.68)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
     >
       <div
-        aria-label={label}
-        aria-modal="true"
         className={`relative mx-4 max-h-[90vh] w-full ${max_width} overflow-y-auto ${soft ? 'rounded-xl bg-surface/97' : 'bg-surface'}`}
-        role="dialog"
         style={{
           animation: 'modal-enter 0.3s ease-out',
           border: soft ? '1px solid rgba(200,150,60,0.28)' : '1px solid var(--color-border)',
@@ -85,7 +107,6 @@ export const ModalFrame = ({
         <CloseButton close={close} label={close_label} />
         {children}
       </div>
-    </div>
+    </NativeModal>
   )
-  return mount_modal(content)
 }

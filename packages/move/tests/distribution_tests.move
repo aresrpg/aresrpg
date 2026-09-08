@@ -3,7 +3,7 @@
 #[test_only]
 module aresrpg::distribution_tests;
 
-use aresrpg::{distribution, item, pet};
+use aresrpg::{api, distribution, item, pet, version};
 use aresrpg_control::admin;
 use aresrpg_math::item_stats;
 use aresrpg_seed::{item_rows, registry};
@@ -13,9 +13,10 @@ const OWNER: address = @0xA11CE;
 const RECIPIENT: address = @0xB0B;
 
 #[test]
-fun airdrop_and_giftcard_share_one_stack() {
+fun transferred_giftcard_redeems_into_existing_stack() {
   let mut scenario = test_scenario::begin(OWNER);
   item::test_init(scenario.ctx());
+  version::test_init(scenario.ctx());
   scenario.next_tx(OWNER);
 
   let publisher = scenario.take_from_sender<Publisher>();
@@ -43,9 +44,6 @@ fun airdrop_and_giftcard_share_one_stack() {
   assert!(pet::scaled_stats(&pet) == item_stats::zero(), 3);
   item::destroy_for_testing(pet);
   item_rows::destroy_for_testing(pet_template);
-  distribution::new_airdrop(
-    &cap, &mut root, b"launch".to_string(), &template, 3, vector[OWNER], scenario.ctx(),
-  );
   let card = distribution::new_giftcard(
     &cap, &mut root, b"welcome".to_string(), &template, 4, scenario.ctx(),
   );
@@ -60,13 +58,6 @@ fun airdrop_and_giftcard_share_one_stack() {
   item_rows::share_item(template);
   transfer::public_transfer(card, RECIPIENT);
 
-  scenario.next_tx(OWNER);
-  let template = scenario.take_shared<item_rows::ItemTemplate>();
-  let mut drop = scenario.take_shared<distribution::Airdrop>();
-  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
-  test_scenario::return_shared(template);
-  test_scenario::return_shared(drop);
-
   scenario.next_tx(RECIPIENT);
   let publisher = scenario.take_from_sender<Publisher>();
   let item_policy = scenario.take_from_sender<transfer_policy::TransferPolicy<item::Item>>();
@@ -74,23 +65,17 @@ fun airdrop_and_giftcard_share_one_stack() {
   let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
   let kiosk_cap = scenario.take_from_sender<kiosk::KioskOwnerCap>();
   let template = scenario.take_shared<item_rows::ItemTemplate>();
-  let airdrop_card_id = test_scenario::most_recent_id_for_sender<distribution::Giftcard>(&scenario).destroy_some();
   let card = scenario.take_from_sender_by_id<distribution::Giftcard>(seeded_card_id);
-  let airdrop_card = scenario.take_from_sender_by_id<distribution::Giftcard>(airdrop_card_id);
-  let drop = scenario.take_shared<distribution::Airdrop>();
   let target = item::mint_plain(&template, 1, scenario.ctx());
   let target_id = object::id(&target);
   kiosk.place(&kiosk_cap, target);
 
-  distribution::redeem_giftcard(
+  let version = scenario.take_shared<version::Version>();
+  api::redeem_giftcard(
     card, &template, option::some(target_id), &mut kiosk, &kiosk_cap, &item_policy,
-    scenario.ctx(),
+    &version, scenario.ctx(),
   );
-  distribution::redeem_giftcard(
-    airdrop_card, &template, option::some(target_id), &mut kiosk, &kiosk_cap, &item_policy,
-    scenario.ctx(),
-  );
-  assert!(item::amount(kiosk.borrow(&kiosk_cap, target_id)) == 8, 0);
+  assert!(item::amount(kiosk.borrow(&kiosk_cap, target_id)) == 5, 0);
 
   let item = kiosk.take<item::Item>(&kiosk_cap, target_id);
   item::destroy_for_testing(item);
@@ -98,21 +83,32 @@ fun airdrop_and_giftcard_share_one_stack() {
   transfer_policy::destroy_and_withdraw(item_policy, item_policy_cap, scenario.ctx()).into_balance().destroy_zero();
   publisher.burn();
   test_scenario::return_shared(template);
-  test_scenario::return_shared(drop);
+  test_scenario::return_shared(version);
   scenario.end();
 }
 
+#[test, expected_failure(abort_code = 2404, location = aresrpg::distribution)]
+fun a_giftcard_cannot_promise_zero_items() {
+  let mut ctx = tx_context::dummy();
+  let cap = admin::cap_for_testing(&mut ctx);
+  let mut root = registry::registry_for_testing(&mut ctx);
+  let template = item_rows::template_for_testing(b"empty".to_string(), b"resource".to_string(), &mut ctx);
+  let _unexpected = distribution::new_giftcard(&cap, &mut root, b"empty".to_string(), &template, 0, &ctx);
+  abort 999
+}
+
 #[test, expected_failure(abort_code = 202, location = aresrpg::item)]
-fun airdrop_rejects_multiple_nonstackable_items_at_authoring() {
+fun giftcard_rejects_multiple_nonstackable_items_at_authoring() {
   let mut scenario = test_scenario::begin(OWNER);
   let cap = admin::cap_for_testing(scenario.ctx());
   let mut root = registry::registry_for_testing(scenario.ctx());
   let template = item_rows::template_for_testing(
     b"distribution_hat".to_string(), b"hat".to_string(), scenario.ctx(),
   );
-  distribution::new_airdrop(
-    &cap, &mut root, b"bad_hat_drop".to_string(), &template, 2, vector[OWNER], scenario.ctx(),
+  let card = distribution::new_giftcard(
+    &cap, &mut root, b"bad_hat_drop".to_string(), &template, 2, scenario.ctx(),
   );
+  transfer::public_transfer(card, OWNER);
   abort 0
 }
 
@@ -149,7 +145,7 @@ fun giftcard_rejects_pet_without_endpoint_at_authoring() {
 }
 
 #[test, expected_failure(abort_code = 208, location = aresrpg::item)]
-fun airdrop_rejects_ranged_pet_endpoint_at_authoring() {
+fun giftcard_rejects_ranged_pet_endpoint_at_authoring() {
   let mut scenario = test_scenario::begin(OWNER);
   let cap = admin::cap_for_testing(scenario.ctx());
   let mut root = registry::registry_for_testing(scenario.ctx());
@@ -164,92 +160,10 @@ fun airdrop_rejects_ranged_pet_endpoint_at_authoring() {
     item_stats::shift(), item_stats::shift(), item_stats::shift(),
   );
   item_rows::set_stats(&cap, &mut root, &mut template, min, max, scenario.ctx());
-  distribution::new_airdrop(
-    &cap, &mut root, b"bad_pet_drop".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
+  let card = distribution::new_giftcard(
+    &cap, &mut root, b"bad_pet_drop".to_string(), &template, 1, scenario.ctx(),
   );
-  abort 0
-}
-
-#[test, expected_failure(abort_code = 0, location = sui::vec_set)]
-fun airdrop_rejects_duplicate_whitelist_entries() {
-  let mut scenario = test_scenario::begin(OWNER);
-  let cap = admin::cap_for_testing(scenario.ctx());
-  let mut root = registry::registry_for_testing(scenario.ctx());
-  let template = item_rows::template_for_testing(
-    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
-  );
-  distribution::new_airdrop(
-    &cap, &mut root, b"duplicate".to_string(), &template, 1, vector[OWNER, OWNER], scenario.ctx(),
-  );
-  abort 1
-}
-
-#[test, expected_failure(abort_code = 2405, location = aresrpg::distribution)]
-fun airdrop_rejects_an_address_outside_its_snapshot() {
-  let mut scenario = test_scenario::begin(OWNER);
-  let cap = admin::cap_for_testing(scenario.ctx());
-  let mut root = registry::registry_for_testing(scenario.ctx());
-  let template = item_rows::template_for_testing(
-    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
-  );
-  distribution::new_airdrop(
-    &cap, &mut root, b"private".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
-  );
-  registry::destroy_for_testing(root);
-  admin::destroy_for_testing(cap);
-  item_rows::share_item(template);
-  scenario.next_tx(RECIPIENT);
-  let template = scenario.take_shared<item_rows::ItemTemplate>();
-  let mut drop = scenario.take_shared<distribution::Airdrop>();
-  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
-  abort 0
-}
-
-#[test, expected_failure(abort_code = 2405, location = aresrpg::distribution)]
-fun airdrop_cannot_be_claimed_twice() {
-  let mut scenario = test_scenario::begin(OWNER);
-  let cap = admin::cap_for_testing(scenario.ctx());
-  let mut root = registry::registry_for_testing(scenario.ctx());
-  let template = item_rows::template_for_testing(
-    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
-  );
-  distribution::new_airdrop(
-    &cap, &mut root, b"once".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
-  );
-  registry::destroy_for_testing(root);
-  admin::destroy_for_testing(cap);
-  item_rows::share_item(template);
-  scenario.next_tx(OWNER);
-  let template = scenario.take_shared<item_rows::ItemTemplate>();
-  let mut drop = scenario.take_shared<distribution::Airdrop>();
-  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
-  distribution::claim_airdrop(&mut drop, &template, RECIPIENT, scenario.ctx());
-  abort 0
-}
-
-#[test, expected_failure(abort_code = 2401, location = aresrpg::distribution)]
-fun airdrop_rejects_the_wrong_template_before_consuming_eligibility() {
-  let mut scenario = test_scenario::begin(OWNER);
-  let cap = admin::cap_for_testing(scenario.ctx());
-  let mut root = registry::registry_for_testing(scenario.ctx());
-  let template = item_rows::template_for_testing(
-    b"distribution_resource".to_string(), b"resource".to_string(), scenario.ctx(),
-  );
-  let wrong = item_rows::template_for_testing(
-    b"other_resource".to_string(), b"resource".to_string(), scenario.ctx(),
-  );
-  let wrong_id = object::id(&wrong);
-  distribution::new_airdrop(
-    &cap, &mut root, b"typed".to_string(), &template, 1, vector[OWNER], scenario.ctx(),
-  );
-  registry::destroy_for_testing(root);
-  admin::destroy_for_testing(cap);
-  item_rows::share_item(template);
-  item_rows::share_item(wrong);
-  scenario.next_tx(OWNER);
-  let wrong = scenario.take_shared_by_id<item_rows::ItemTemplate>(wrong_id);
-  let mut drop = scenario.take_shared<distribution::Airdrop>();
-  distribution::claim_airdrop(&mut drop, &wrong, RECIPIENT, scenario.ctx());
+  transfer::public_transfer(card, OWNER);
   abort 0
 }
 
@@ -259,4 +173,29 @@ fun fixed_pet_endpoint(): item_stats::ItemStatistics {
     center, center, center, center, center + 60, center, center, center,
     center, center, center, center, center, center, center,
   )
+}
+
+#[test, expected_failure(abort_code = 2401, location = aresrpg::distribution)]
+fun giftcard_rejects_a_different_redemption_template() {
+  let mut scenario = test_scenario::begin(OWNER);
+  item::test_init(scenario.ctx());
+  scenario.next_tx(OWNER);
+  let publisher = scenario.take_from_sender<Publisher>();
+  let (policy, _policy_cap) = transfer_policy::new<item::Item>(&publisher, scenario.ctx());
+  let (mut kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
+  let cap = admin::cap_for_testing(scenario.ctx());
+  let mut root = registry::registry_for_testing(scenario.ctx());
+  let template = item_rows::template_for_testing(
+    b"gift".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  let wrong = item_rows::template_for_testing(
+    b"other".to_string(), b"resource".to_string(), scenario.ctx(),
+  );
+  let card = distribution::new_giftcard(
+    &cap, &mut root, b"typed".to_string(), &template, 1, scenario.ctx(),
+  );
+  distribution::redeem_giftcard(
+    card, &wrong, option::none(), &mut kiosk, &kiosk_cap, &policy, scenario.ctx(),
+  );
+  abort 0
 }

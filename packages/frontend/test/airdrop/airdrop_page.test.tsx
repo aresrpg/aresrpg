@@ -4,7 +4,8 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import AirdropPage, { AirdropDropCard, HolderWalletConnect, HolderWalletModal } from '../../src/airdrop/AirdropPage.tsx'
+import { wallet_view } from '../kares/fixture.ts'
+import AirdropPage, { HolderWalletConnect } from '../../src/airdrop/AirdropPage.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { rolled_item_types } from '../../src/modules/claims.ts'
@@ -14,30 +15,10 @@ test('the airdrop page shows curated pets while holder drops stay claimable data
   const copy = await load_app_copy('en')
   const html = renderToStaticMarkup(<AirdropPage copy={copy} session={initial_session_state()} />)
 
-  expect(content_catalog.airdrop.drops).toHaveLength(1)
   for (const pet of content_catalog.airdrop.showcase) {
     expect(pet.kind).toBe('pet_glb')
     expect(html).toContain(pet.name)
   }
-})
-
-test('an eligible Vaporeon holder sees a live claim button', async () => {
-  const copy = await load_app_copy('en')
-  const [drop] = content_catalog.airdrop.drops
-  if (!drop) throw new Error('the Vaporeon holder drop is missing')
-  const html = renderToStaticMarkup(
-    <AirdropDropCard
-      busy={null}
-      drop={drop}
-      has_game_wallet
-      state={{ drop_id: drop.id, eligible: true, eligible_count: drop.whitelist.length }}
-      t={copy_text(copy.airdrop_page)}
-    />
-  )
-
-  expect(html).toContain('Vaporeon')
-  expect(html).toContain('vaporeon holders 318251937')
-  expect(html).not.toContain('disabled=""')
 })
 
 test('a held voucher resolves its authored item from the template and stays redeemable', async () => {
@@ -56,44 +37,12 @@ test('a held voucher resolves its authored item from the template and stays rede
   expect(html).toContain('type="button">Redeem</button>')
 })
 
-test('holder connection stays one visible centered action until its wallet modal opens', async () => {
+test('holder connection uses the same wallet control and exposes its shared address', async () => {
   const copy = await load_app_copy('en')
   const t = copy_text(copy.airdrop_page)
-  const closed = renderToStaticMarkup(
-    <HolderWalletConnect address={null} busy={null} t={t} wallets={['Phantom', 'Slush']} />
-  )
-  const modal = renderToStaticMarkup(
-    <HolderWalletModal
-      busy={null}
-      close={() => undefined}
-      connect={() => undefined}
-      t={t}
-      wallets={['Phantom', 'Slush']}
-    />
-  )
-
-  expect(closed).toContain('>Connect wallet</button>')
-  expect(closed).not.toContain('Phantom')
-  expect(closed).not.toContain('Slush')
-  expect(modal).toContain('role="dialog"')
-  expect(modal).toContain('aria-modal="true"')
-  expect(modal).toContain('Phantom')
-  expect(modal).toContain('Slush')
-})
-
-test('the holder surface keeps pending and connected states explicit', async () => {
-  const copy = await load_app_copy('en')
-  const t = copy_text(copy.airdrop_page)
-  const pending = renderToStaticMarkup(
-    <HolderWalletConnect address={null} busy="connect" t={t} wallets={['Phantom']} />
-  )
-  const connected = renderToStaticMarkup(
-    <HolderWalletConnect address="0xholder" busy={null} t={t} wallets={['Phantom']} />
-  )
-
-  expect(pending).toContain('Connecting…')
-  expect(pending).toContain('disabled=""')
+  const closed = renderToStaticMarkup(<HolderWalletConnect wallet={wallet_view()} copy={copy} t={t} />)
+  const connected = renderToStaticMarkup(<HolderWalletConnect wallet={wallet_view('0xholder')} copy={copy} t={t} />)
+  expect(closed).toContain(copy.kares_page.connect)
+  expect(closed).toContain('data-wallet-menu')
   expect(connected).toContain('0xholder')
-  expect(connected).toContain('Connected')
-  expect(connected).not.toContain('>Connect wallet</button>')
 })

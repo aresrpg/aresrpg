@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { ArrowUpRight, Check, Gem, Loader2, LockKeyhole, Sparkles } from 'lucide-react'
+import { Check, Gem, Loader2, Sparkles } from 'lucide-react'
 import type { MasteryRow } from '@aresrpg/protocol'
 import type { CSSProperties } from 'react'
 
 import { content_catalog, titleize } from '../content/catalog.ts'
-import { item_icon } from '../content/assets.ts'
 import { world_card_rows } from '../content/world_cards.ts'
-import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { MasteryShop } from './MasteryShop.tsx'
 import {
   effective_mastery_points,
   mastery_dungeon_slug,
@@ -19,13 +18,6 @@ import {
   mastery_reward,
   mastery_world_witness,
 } from './model.ts'
-
-const offer_redeem_disabled = (
-  affordable: boolean,
-  pending: string | null,
-  connected: boolean,
-  current_epoch: string | null
-): boolean => !affordable || pending !== null || !connected || current_epoch === null
 
 const world_art_style = (art: string | null | undefined): CSSProperties =>
   Object.freeze({ backgroundImage: art ? `url(${JSON.stringify(art)})` : 'none' })
@@ -49,16 +41,6 @@ export default function MasteryPage({ copy }: Readonly<{ copy: AppCopy }>) {
   const world_cards = world_card_rows()
   const { dungeon, world_card: quest_world_card } = mastery_quest_identity(mastery.row, world_cards)
   const dungeon_name = dungeon ? titleize(dungeon) : text('unknown_dungeon')
-  const offers = mastery.offers
-    .flatMap((state) => {
-      const authored = content_catalog.mastery.offers.find(({ item_type }) => item_type === state.item_type)
-      return state.enabled && authored?.item ? [Object.freeze({ state, authored, item: authored.item })] : []
-    })
-    .toSorted((left, right) => {
-      const left_cost = BigInt(left.state.cost)
-      const right_cost = BigInt(right.state.cost)
-      return left_cost < right_cost ? -1 : left_cost > right_cost ? 1 : 0
-    })
 
   return (
     <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-bg/97 p-3 lg:p-8">
@@ -189,83 +171,7 @@ export default function MasteryPage({ copy }: Readonly<{ copy: AppCopy }>) {
         )}
       </section>
 
-      <section className="mt-5 border border-border bg-surface-low/78 p-4 lg:p-5">
-        <div className="border-b border-border pb-4">
-          <div className="text-[9px] font-semibold tracking-[0.24em] text-gold uppercase">{text('shop_title')}</div>
-          <p className="mt-1 text-[9px] text-muted">{text('shop_lead')}</p>
-        </div>
-
-        {offers.length === 0 ? (
-          <div className="py-12 text-center text-[9px] tracking-[0.16em] text-muted uppercase">
-            {text('shop_empty')}
-          </div>
-        ) : (
-          <div
-            className="mt-5 grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-            data-mastery-shop=""
-          >
-            {offers.map(({ state, item }) => {
-              const cost = BigInt(state.cost)
-              const affordable = points >= cost
-              const busy = mastery.pending === `redeem:${state.item_type}`
-              const icon = item_icon(item.item_type)
-              return (
-                <article
-                  className={`flex h-full min-h-56 flex-col border p-4 ${
-                    affordable
-                      ? 'border-gold/28 bg-[radial-gradient(circle_at_85%_0%,rgba(200,150,60,0.13),transparent_38%),linear-gradient(145deg,rgba(200,150,60,0.07),rgba(72,207,207,0.025))] hover:border-gold/50'
-                      : 'border-white/7 bg-black/15 opacity-48 grayscale'
-                  } transition-colors`}
-                  data-mastery-offer={state.item_type}
-                  key={state.item_type}
-                >
-                  <button
-                    aria-label={item.name}
-                    className="group flex min-w-0 flex-1 cursor-pointer flex-col text-left"
-                    onClick={() =>
-                      dispatch_app({ type: 'path/open', pathname: encyclopedia_item_path(state.item_type) })
-                    }
-                    type="button"
-                  >
-                    <div className="flex w-full items-start justify-between gap-4">
-                      <div className="grid size-20 shrink-0 place-items-center border border-white/8 bg-black/20 transition-colors group-hover:border-gold/35 group-hover:bg-gold/5">
-                        {icon ? (
-                          <img alt="" className="size-16 object-contain" src={icon} />
-                        ) : (
-                          <Gem className="text-gold/40" size={28} />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 border border-gold/25 bg-gold/7 px-3 py-2 text-sm font-semibold text-gold tabular-nums">
-                        <Gem size={13} /> {state.cost}
-                      </div>
-                    </div>
-                    <div className="mt-4 min-w-0 flex-1">
-                      <h3 className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-text uppercase transition-colors group-hover:text-gold">
-                        <span className="truncate">{item.name}</span>
-                        <ArrowUpRight className="shrink-0 opacity-45 group-hover:opacity-100" size={12} />
-                      </h3>
-                      <div className="mt-2 text-[9px] text-muted">
-                        {affordable
-                          ? text('ready_to_buy')
-                          : text('points_missing', { points: (cost - points).toString() })}
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    className="mt-5 flex h-10 w-full cursor-pointer items-center justify-center gap-2 border border-gold/35 bg-gold/8 px-4 text-[8px] tracking-[0.17em] text-gold uppercase hover:bg-gold/13 disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/3 disabled:text-muted"
-                    disabled={offer_redeem_disabled(affordable, mastery.pending, connected, current_epoch)}
-                    onClick={() => dispatch_app({ type: 'mastery/redeem', item_type: state.item_type })}
-                    type="button"
-                  >
-                    {busy ? <Loader2 className="animate-spin" size={11} /> : <LockKeyhole size={11} />}
-                    {busy ? text('buying') : text('buy', { cost: state.cost })}
-                  </button>
-                </article>
-              )
-            })}
-          </div>
-        )}
-      </section>
+      <MasteryShop copy={copy} />
     </section>
   )
 }

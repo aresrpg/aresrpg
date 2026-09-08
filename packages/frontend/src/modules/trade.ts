@@ -6,6 +6,7 @@ import type { AuthSession } from '@aresrpg/sdk/auth'
 import {
   trade_incoming,
   trade_is_drained,
+  trade_offer_has_value,
   trade_own_offer,
   trade_offer_post_removal_amounts,
   type TradeOfferAddition,
@@ -96,6 +97,7 @@ export type TradeInput =
       additions: readonly TradeOfferAddition[]
       removals: readonly TradeOfferRemoval[]
       sui: bigint
+      kares: bigint
     }>
   | Readonly<{ type: 'trade/accept'; trade: string }>
   | Readonly<{ type: 'trade/cancel'; trade: string }>
@@ -129,7 +131,7 @@ const cap_intersection = (left: readonly TradeCapRow[], right: readonly TradeCap
   return Object.freeze(left.filter(({ object }) => right_ids.has(object)))
 }
 
-const min_sui = (left: string, right: string): string => {
+const min_balance = (left: string, right: string): string => {
   const a = BigInt(left)
   const b = BigInt(right)
   return (a < b ? a : b).toString()
@@ -146,8 +148,10 @@ export const reconcile_trade_row = (current: Readonly<TradeRow>, incoming: Reado
       ...incoming,
       caps_a: cap_intersection(current.caps_a, incoming.caps_a),
       caps_b: cap_intersection(current.caps_b, incoming.caps_b),
-      sui_a: min_sui(current.sui_a, incoming.sui_a),
-      sui_b: min_sui(current.sui_b, incoming.sui_b),
+      sui_a: min_balance(current.sui_a, incoming.sui_a),
+      sui_b: min_balance(current.sui_b, incoming.sui_b),
+      kares_a: min_balance(current.kares_a, incoming.kares_a),
+      kares_b: min_balance(current.kares_b, incoming.kares_b),
     })
   return Object.freeze({
     ...incoming,
@@ -159,6 +163,8 @@ export const reconcile_trade_row = (current: Readonly<TradeRow>, incoming: Reado
 const same_offer = (packet: Readonly<TradeRow>, projected: Readonly<TradeRow>): boolean =>
   packet.sui_a === projected.sui_a &&
   packet.sui_b === projected.sui_b &&
+  packet.kares_a === projected.kares_a &&
+  packet.kares_b === projected.kares_b &&
   packet.caps_a.length === projected.caps_a.length &&
   packet.caps_b.length === projected.caps_b.length
 
@@ -169,7 +175,9 @@ const terminal_covers = (packet: Readonly<TradeRow>, projected: Readonly<TradeRo
     packet.caps_a.every(({ object }) => projected_a.has(object)) &&
     packet.caps_b.every(({ object }) => projected_b.has(object)) &&
     BigInt(packet.sui_a) <= BigInt(projected.sui_a) &&
-    BigInt(packet.sui_b) <= BigInt(projected.sui_b)
+    BigInt(packet.sui_b) <= BigInt(projected.sui_b) &&
+    BigInt(packet.kares_a) <= BigInt(projected.kares_a) &&
+    BigInt(packet.kares_b) <= BigInt(projected.kares_b)
   )
 }
 
@@ -190,8 +198,10 @@ const apply_terminal_delta = (trade: Readonly<TradeRow>, delta: Readonly<TradeTe
     accept_b: false,
     caps_a: Object.freeze(trade.caps_a.filter(({ object }) => !removed.has(object))),
     caps_b: Object.freeze(trade.caps_b.filter(({ object }) => !removed.has(object))),
-    sui_a: delta.clear_sui === 'a' ? '0' : trade.sui_a,
-    sui_b: delta.clear_sui === 'b' ? '0' : trade.sui_b,
+    sui_a: delta.clear_balances === 'a' ? '0' : trade.sui_a,
+    sui_b: delta.clear_balances === 'b' ? '0' : trade.sui_b,
+    kares_a: delta.clear_balances === 'a' ? '0' : trade.kares_a,
+    kares_b: delta.clear_balances === 'b' ? '0' : trade.kares_b,
   })
 }
 
@@ -498,7 +508,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   events.on('trade/withdraw_cap', ({ trade, cap }) =>
     row_action(trade, 'withdraw_cap', (wallet, row) => wallet.trade(row).withdraw_cap(cap), project)
   )
-  events.on('trade/commit_offer', ({ trade, additions, removals, sui }) => {
+  events.on('trade/commit_offer', ({ trade, additions, removals, sui, kares }) => {
     const state = get_state()
     if (!trade_offer_additions_available(state, additions, removals)) {
       toast.add(copy_text(state.copy?.trade_panel ?? {})('offer_item_unavailable'))
@@ -507,7 +517,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     row_action(
       trade,
       'commit_offer',
-      (wallet, row) => wallet.trade(row).commit_offer({ additions, removals, sui }),
+      (wallet, row) => wallet.trade(row).commit_offer({ additions, removals, sui, kares }),
       ({ offer_revision }) => {
         const current = get_state().trade.rows.find(({ id }) => id === trade)
         dispatch({
@@ -553,7 +563,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     if (!row || !wallet || state.trade.pending || running.size > 0 || row.phase !== 'settling') return
     const incoming = trade_incoming(row, wallet.address)
     dispatch({ type: 'trade/settlement_armed', trade: trade_id, revision: null })
-    if (incoming.caps.length === 0 && incoming.sui === 0n) {
+    if (!trade_offer_has_value(incoming)) {
       dispatch({ type: 'trade/open', trade: null })
       return
     }

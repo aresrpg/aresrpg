@@ -19,6 +19,7 @@ packages/indexer/
 bun.lock
 dist/
 node_modules/
+**/test-results/
 deprecated/
 .claude/
 packages-old/

@@ -29,11 +29,31 @@ export const pre_submission_stale_owned_ref = (error: unknown): boolean => {
   const versions = message.match(
     /provided version (?:doesn't|does not) match[^]*?provided:\s*(\d+)\s+actual:\s*(0x[\da-f]+|\d+)/i
   )
-  return !message.includes('failed on-chain') && !!versions && BigInt(versions[1]!) < BigInt(versions[2]!)
+  return (
+    !message.includes('failed on-chain') &&
+    message.includes('NOT submitted') &&
+    !!versions &&
+    BigInt(versions[1]!) < BigInt(versions[2]!)
+  )
 }
 
 export const pre_submission_close_projection_lag = (error: unknown): boolean => {
   const message = readable_transaction_error(error)
   const close_guard = /::fight::close|::combat::assert_closable/i.test(message)
-  return !message.includes('failed on-chain') && /abort code:\s*1712/i.test(message) && close_guard
+  return (
+    !message.includes('failed on-chain') &&
+    message.includes('NOT submitted') &&
+    /abort code:\s*1712/i.test(message) &&
+    close_guard
+  )
+}
+
+/** Only errors produced by our unsigned transaction-preparation boundary permit rebuilding a PTB. */
+export const pre_submission_failure = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : ''
+  return (
+    message.startsWith('[sdk] transaction resolution failed — NOT submitted:') ||
+    message.startsWith('[sdk] dry run failed — transaction NOT submitted (zero gas):') ||
+    (message.startsWith('[sdk] gas budget exceeded') && message.includes('NOT submitted'))
+  )
 }

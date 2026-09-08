@@ -21,12 +21,18 @@ twin, SDK, indexer, server, protocol, immutable rules, and the authored seed cor
 ```bash
 bun install
 bun run dev            # frontend at localhost:5173
+bun run dev:launchpad  # independent public-sale page at localhost:4174
+bun run build:launchpad # independent deployment artifact
 bun run lint           # eslint + prettier
 bun run test           # every package's unit tests — same command CI runs
 ```
 
 Each branch owns its deployment through the root `pins.json`. A new development branch republishes
 its inherited lineage on first sync, then records those pins here. Run the frontend normally.
+
+The offering site is a separate Vercel project rooted at `packages/launchpad`, targeting
+`launchpad.aresrpg.world`. Its environment selects `VITE_NETWORK` and `VITE_SUI_RPC_URL`.
+The app's `/kares` page hosts staking; the encyclopedia explains the tokenomics.
 
 ## Contributing
 

@@ -14,7 +14,7 @@
 #   PORT, SUI_NETWORK, SUI_RPC_URL, ALLOWED_ORIGINS, MAX_PLAYERS
 # =============================================================================
 
-FROM oven/bun:1.3-slim AS runtime
+FROM oven/bun:1.3.5-slim@sha256:6111acec4c5a703f2069d6e681967c047920ff2883e7e5a5e64f4ac95ddeb27f AS runtime
 WORKDIR /app
 
 # The frozen lockfile spans the whole workspace, so every member's manifest must be
@@ -24,6 +24,7 @@ COPY package.json bun.lock ./
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/frontend/package.json packages/frontend/
+COPY packages/launchpad/package.json packages/launchpad/
 COPY packages/immutable/package.json packages/immutable/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/sdk/package.json packages/sdk/

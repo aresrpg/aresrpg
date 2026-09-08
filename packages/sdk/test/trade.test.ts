@@ -11,6 +11,8 @@ import { absorb_receipt, type Receipt } from '../src/cache.ts'
 import { SDK, type SuiTransport } from '../src/client.ts'
 import { trade_actions, trade_is_drained } from '../src/trade.ts'
 
+import { execution_receipt } from './helpers/execution_receipt.ts'
+
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
 const package_id = id(1)
@@ -27,6 +29,8 @@ const trade_row = (overrides: Partial<TradeRow> = {}): TradeRow => ({
   accept_b: false,
   sui_a: '1000',
   sui_b: '0',
+  kares_a: '0',
+  kares_b: '0',
   caps_a: [],
   caps_b: [],
   ...overrides,
@@ -64,7 +68,8 @@ const fake_client = () => ({
       })),
     }),
     simulateTransaction: async (): Promise<Receipt> => ({ $kind: 'Transaction', Transaction: { digest } }),
-    executeTransaction: async (): Promise<Receipt> => ({ $kind: 'Transaction', Transaction: { digest } }),
+    executeTransaction: async ({ transaction }: { transaction: Uint8Array }): Promise<Receipt> =>
+      execution_receipt(transaction),
   },
 })
 
@@ -198,6 +203,7 @@ describe('revision-pinned offer projections', () => {
       additions: [{ item, amount: 4 }],
       removals: [{ cap: offered }],
       sui: 1250n,
+      kares: 0n,
     })
 
     expect(receipt.offer_revision).toBe(7)
@@ -229,6 +235,7 @@ describe('revision-pinned offer projections', () => {
       additions: [],
       removals: [{ cap: offered, target: { id: id(40), kiosk: id(31), amount: 5 } }],
       sui: 1000n,
+      kares: 0n,
     })
 
     expect(receipt.offer_revision).toBe(5)
@@ -267,6 +274,7 @@ describe('revision-pinned offer projections', () => {
         { cap: second, target: merge_target },
       ],
       sui: 1000n,
+      kares: 0n,
     })
 
     const { commands } = tx().getData()
@@ -285,7 +293,7 @@ describe('revision-pinned offer projections', () => {
       kiosk_cap: load_kiosk_cap,
     })
     await expect(
-      actions.commit_offer({ additions: [], removals: [{ cap: first }, { cap: first }], sui: 1000n })
+      actions.commit_offer({ additions: [], removals: [{ cap: first }, { cap: first }], sui: 1000n, kares: 0n })
     ).rejects.toThrow('removed twice')
     const target = { id: id(40), kiosk: id(31), amount: 0xffff_ffff - 15 }
     await expect(
@@ -296,6 +304,7 @@ describe('revision-pinned offer projections', () => {
           { cap: second, target },
         ],
         sui: 1000n,
+        kares: 0n,
       })
     ).rejects.toThrow('cannot absorb')
   })
@@ -326,7 +335,7 @@ describe('terminal shrinking transactions', () => {
       phase: 'settling',
       offer_revision: 5,
       remove_caps: [id(30), id(32), id(34)],
-      clear_sui: 'b',
+      clear_balances: 'b',
       closed: false,
     })
     expect(targets(tx()).filter((target) => target === `${package_id}::api::trade_claim_item`)).toHaveLength(3)
@@ -366,7 +375,7 @@ describe('terminal shrinking transactions', () => {
       phase: 'cancelled',
       offer_revision: 5,
       remove_caps: [id(30)],
-      clear_sui: 'a',
+      clear_balances: 'a',
       closed: false,
     })
     expect(targets(tx())).toEqual(
@@ -396,4 +405,48 @@ describe('terminal shrinking transactions', () => {
     expect(trade_is_drained(trade_row())).toBeFalse()
     expect(trade_is_drained(trade_row({ sui_a: '0' }))).toBeTrue()
   })
+})
+
+test('a KARES-only offer is funded with the native coin intent and advances its reviewed revision', async () => {
+  const { sdk } = game()
+  let composed: Transaction | null = null
+  const submitting = {
+    ...sdk,
+    pins: { ...sdk.pins, kares_package_original: id(15) },
+    execute: async (tx: Transaction) => {
+      composed = tx
+      return { Transaction: { digest } }
+    },
+  }
+  const actions = trade_actions(submitting as never, { trade: trade_row(), address: me, kiosk_cap: load_kiosk_cap })
+  const receipt = await actions.commit_offer({ additions: [], removals: [], sui: 1000n, kares: 10_000_000_000n })
+  expect(receipt.offer_revision).toBe(5)
+  expect(targets(composed!)).toContain(`${package_id}::trade::put_kares`)
+  expect(targets(composed!)).not.toContain(`${package_id}::trade::put_sui`)
+  expect(
+    JSON.stringify(composed!.getData().commands, (_, value) => (typeof value === 'bigint' ? value.toString() : value))
+  ).toContain(`${id(15)}::kares::KARES`)
+  expect(pure_u64s(composed!)).toContain(4n)
+})
+
+test('KARES alone keeps terminal trades recoverable and prevents premature close', async () => {
+  const row = trade_row({ phase: 'settling', sui_a: '0', kares_a: '7', kares_b: '9' })
+  expect(trade_is_drained(row)).toBeFalse()
+  const { sdk, tx } = game()
+  const receipt = await trade_actions(sdk as never, { trade: row, address: me, kiosk_cap: load_kiosk_cap }).settle_all(
+    {}
+  )
+  expect(targets(tx())).toContain(`${package_id}::trade::claim_kares`)
+  expect(targets(tx())).not.toContain(`${package_id}::trade::close`)
+  expect(receipt.delta).toMatchObject({ clear_balances: 'b', closed: false })
+  const recovery = game()
+  const cancelled = { ...row, phase: 'cancelled' as const, kares_b: '0' }
+  const recovered = await trade_actions(recovery.sdk as never, {
+    trade: cancelled,
+    address: me,
+    kiosk_cap: load_kiosk_cap,
+  }).recover_all()
+  expect(targets(recovery.tx())).toContain(`${package_id}::trade::recover_kares`)
+  expect(targets(recovery.tx())).toContain(`${package_id}::trade::close`)
+  expect(recovered.delta).toMatchObject({ clear_balances: 'a', closed: true })
 })

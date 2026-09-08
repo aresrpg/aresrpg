@@ -142,11 +142,12 @@ test('placement exit tries atomic final cleanup before the ordinary refund door'
     with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: string, cap: string) => void) =>
       compose(kiosk_cap.kioskId, kiosk_cap.objectId),
     execute: async () => {
-      if (calls.at(-1) === 'last') throw new Error('Transaction resolution failed: abort code: 1729')
+      if (calls.at(-1) === 'last')
+        throw new Error('[sdk] transaction resolution failed — NOT submitted: abort code: 2809')
       return { Transaction: { digest } }
     },
     doors: {
-      exit_last_kolizeum: () => calls.push('last'),
+      close_kolizeum: () => calls.push('last'),
       exit_kolizeum: () => calls.push('ordinary'),
     },
   }
@@ -157,5 +158,44 @@ test('placement exit tries atomic final cleanup before the ordinary refund door'
     fighter_idx: 0n,
     custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
   })
-  expect(calls).toEqual(['last', 'ordinary'])
+  expect(calls).toEqual(['ordinary', 'last', 'ordinary'])
+})
+
+test('arena settlement composes ordinary settlement and close, including a zero-payout loser', async () => {
+  const calls: string[] = []
+  const sdk = {
+    tx: () => ({}),
+    hydrate_unknown: async () => undefined,
+    execute: async () => ({ Transaction: { digest, events: [{ type: id(1) + '::fight::FightClosed', json: {} }] } }),
+    doors: { settle_kolizeum: () => calls.push('settle'), close_kolizeum: () => calls.push('close') },
+  }
+  const result = await kolizeum_actions(sdk as never, { kiosk_cap: async () => kiosk_cap, address: id(99) }).settle({
+    kolizeum,
+    fight,
+    fighter_idx: 0n,
+    last: true,
+  })
+  expect(calls).toEqual(['settle', 'close'])
+  expect(result).toEqual({ digest, paid_mist: 0n, closed: true })
+})
+
+test('arena close fallback never repeats an executed settlement', async () => {
+  let attempts = 0
+  const sdk = {
+    tx: () => ({}),
+    hydrate_unknown: async () => undefined,
+    execute: async () => {
+      attempts++
+      throw new Error('failed on-chain: abort code: 2809, digest known')
+    },
+    doors: { settle_kolizeum: () => undefined, close_kolizeum: () => undefined },
+  }
+  await expect(
+    kolizeum_actions(sdk as never, { kiosk_cap: async () => kiosk_cap, address: id(99) }).settle({
+      kolizeum,
+      fight,
+      fighter_idx: 0n,
+    })
+  ).rejects.toThrow('failed on-chain')
+  expect(attempts).toBe(1)
 })

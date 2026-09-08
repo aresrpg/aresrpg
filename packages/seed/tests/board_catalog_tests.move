@@ -13,7 +13,7 @@ use sui::test_scenario;
 
 const OWNER: address = @0xA11CE;
 
-fun fixture_board(): combat_grid::GridSpec {
+fun fixture_board(pillar_x: u64): combat_grid::GridSpec {
   let mut mask = combat_grid::empty_mask();
   let mut y = 0;
   while (y < 10) {
@@ -26,7 +26,7 @@ fun fixture_board(): combat_grid::GridSpec {
   };
   combat_grid::grid_spec(
     10, 10, mask,
-    vector[combat_grid::encode(5, 5)],
+    vector[combat_grid::encode(pillar_x, 5)],
     vector[],
     vector[
       combat_grid::encode(0, 0), combat_grid::encode(1, 0), combat_grid::encode(2, 0),
@@ -47,15 +47,17 @@ fun adds_are_dense_picks_copy_and_the_revision_counts() {
   board_catalog::create_catalog(&cap, &mut root, scenario.ctx());
   scenario.next_tx(OWNER);
   let mut catalog = scenario.take_shared<BoardCatalog>();
-  board_catalog::add_board(&cap, &mut root, &mut catalog, fixture_board(), scenario.ctx());
-  board_catalog::add_board(&cap, &mut root, &mut catalog, fixture_board(), scenario.ctx());
+  board_catalog::add_board(&cap, &mut root, &mut catalog, fixture_board(5), scenario.ctx());
+  board_catalog::add_board(&cap, &mut root, &mut catalog, fixture_board(5), scenario.ctx());
   assert!(board_catalog::len(&catalog) == 2, 0);
   // create + 2 adds = 3 writes on the one revision stream
   assert!(registry::revision(&root) == 3, 1);
   // any entropy maps into the dense range and copies the stored board out
   let picked = board_catalog::pick(&catalog, 7);
   assert!(picked.width() == 10 && !picked.start_cells_a().is_empty(), 2);
-  board_catalog::replace_board(&cap, &mut root, &mut catalog, 1, fixture_board(), scenario.ctx());
+  board_catalog::replace_board(&cap, &mut root, &mut catalog, 1, fixture_board(6), scenario.ctx());
+  assert!(board_catalog::pick(&catalog, 1) == fixture_board(6), 5);
+  assert!(board_catalog::pick(&catalog, 0) == fixture_board(5), 6);
   assert!(registry::revision(&root) == 4 && board_catalog::len(&catalog) == 2, 3);
   board_catalog::remove_last_board(&cap, &mut root, &mut catalog, scenario.ctx());
   assert!(registry::revision(&root) == 5 && board_catalog::len(&catalog) == 1, 4);
@@ -76,7 +78,7 @@ fun freeze_forever_closes_every_door() {
   let mut catalog = scenario.take_shared<BoardCatalog>();
   registry::freeze_forever(&cap, &mut root);
   // the era is over — the add door aborts, forever
-  board_catalog::add_board(&cap, &mut root, &mut catalog, fixture_board(), scenario.ctx());
+  board_catalog::add_board(&cap, &mut root, &mut catalog, fixture_board(5), scenario.ctx());
   abort 999
 }
 
@@ -107,3 +109,19 @@ fun an_empty_catalog_refuses_to_pick() {
   let _ = board_catalog::pick(&catalog, 42);
   abort 999
 }
+
+fun reject_empty_edit(remove: bool) {
+  let mut scenario = test_scenario::begin(OWNER);
+  let cap = admin::cap_for_testing(scenario.ctx());
+  let mut root = registry::registry_for_testing(scenario.ctx());
+  board_catalog::create_catalog(&cap, &mut root, scenario.ctx());
+  scenario.next_tx(OWNER);
+  let mut catalog = scenario.take_shared<BoardCatalog>();
+  if (remove) board_catalog::remove_last_board(&cap, &mut root, &mut catalog, scenario.ctx())
+  else board_catalog::replace_board(&cap, &mut root, &mut catalog, 0, fixture_board(5), scenario.ctx());
+  abort 999
+}
+#[test, expected_failure(abort_code = 4201, location = aresrpg_seed::board_catalog)]
+fun an_empty_catalog_has_no_tail_to_remove() { reject_empty_edit(true); }
+#[test, expected_failure(abort_code = 4201, location = aresrpg_seed::board_catalog)]
+fun replacement_cannot_create_a_catalog_hole() { reject_empty_edit(false); }

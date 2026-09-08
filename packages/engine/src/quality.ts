@@ -64,7 +64,7 @@ export const QUALITY_PROFILES = Object.freeze({
       horizon_step: 16,
     }),
     sky: 'high',
-    terrain: Object.freeze({ kind: 'pbr', texture_size: 32 }),
+    terrain: Object.freeze({ kind: 'lit', texture_size: 32 }),
     fog: Object.freeze({ near: 500, far: 1750 }),
     shadows: Object.freeze({ kind: 'soft', map_size: 2048 }),
     effects: Object.freeze({

@@ -1,243 +1,226 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// FORGE — the rune math. Two lanes, both PURE (no objects, no events, no `sui::random` — rng
-/// threads as `&mut u64` per `prng`; stats arrive as a raw `vector<u64>` of length 15, index =
-/// `rune_catalog` stat id, magnitudes above centre):
-///
-///   • SCRIBE (`apply_rune`) — a VERBATIM port of the sealed 1.29 `applyRune` closed form. Three
-///     outcomes (CRITICAL_SUCCESS / NEUTRAL_SUCCESS / CRITICAL_FAILURE) driven by proximity to
-///     the template max, an exotic floor, an over-mage penalty, a runic-level bonus, and a crit
-///     ratio. NS weight + CF loss are paid PUITS-FIRST, overflowing into a random over-maged
-///     stat reduction with the destroyed-weight overshoot re-banked into puits. WRITE-SET PARITY:
-///     `ForgeResult` populates every field in all three outcomes (kills gas-based outcome
-///     filtering); the outcome is DATA, never a different write set.
-///
-///   • CRUSH (`crush_lines`) — STATELESS + LINEAR + LOSSY (owner 2026-08-11: no taux economy).
-///     Each positive runeable stat line yields `value / ba_amount × CRUSH_KEEP` base runes
-///     (EV-preserving stochastic rounding — small stats often give nothing: lossy by design),
-///     then a per-rune tier roll. No coefficient, no bracket, no shared state.
-///
-/// FIXED-POINT: rates in [0,1] are `u64` ×`RATE_SCALE` (1e6). Puits / weight / stat math is
-/// INTEGER in the ×20 weight domain (`rune_catalog::weight_scale`) so puits stays exact.
+/// Rune outcomes over signed item statistics and one puits ledger. Crushing retains its
+/// separate committed-seed flow. All weights use rune_catalog's exact integer scale.
 module aresrpg_math::forge;
 
-use aresrpg_math::{prng, rune_catalog as cat};
-
-// ╔════════════════ [ Fixed-point + 1.29 constants (verbatim) ] ═════════════ ]
+use aresrpg_math::{item_stats::{Self, ItemStatistics}, prng, rune_catalog as cat};
+use std::bcs;
 
 const RATE_SCALE: u64 = 1_000_000;
-
-const PROX_BASE: u64 = 990_000; // 0.99 — proximityRate at 0% proximity
-const PROX_SLOPE: u64 = 490_000; // 0.49 — proximityRate = 0.99 − proximity·0.49
-const EXOTIC_RATE: u64 = 10_000; // 0.01 — exotic / floor rate
-const OVERMAGE_COEF: u64 = 800_000; // 0.8 — over-mage penalty = overRatio²·0.8
-const LEVEL_BONUS_PER: u64 = 4_000; // 0.004 per runic level above 1
-const RATE_MIN: u64 = 10_000; // 0.01 — finalRate clamp floor
-const RATE_MAX: u64 = 990_000; // 0.99 — finalRate clamp ceiling
-const CRIT_BASE: u64 = 650_000; // 0.65
-const CRIT_PROX_SLOPE: u64 = 500_000; // 0.50 — critRatio = 0.65 − proximity·0.50 + level·0.002
-const CRIT_LEVEL_PER: u64 = 2_000; // 0.002 per runic level above 1
-const CRIT_RATIO_MIN: u64 = 150_000; // 0.15
-const CRIT_RATIO_MAX: u64 = 700_000; // 0.70
-const CRIT_CHANCE_MIN: u64 = 10_000; // 0.01
-const CRIT_CHANCE_MAX: u64 = 600_000; // 0.60
-
-/// `MAX_STAT_WEIGHT` (101) in the ×20 domain: the gain hard-cap is
-/// `templateMax + floor(2020/(unit×20))` ≡ `templateMax + floor(101/unit)`.
-const MAX_STAT_WEIGHT_SCALED: u64 = 2_020;
-
-/// OURS (owner 2026-08-11): crushing is LOSSY — the rune pool is `CRUSH_KEEP_NUM/CRUSH_KEEP_DEN`
-/// of the stat's points (currently 1/4 ≈ a quarter back, always less than the item). One knob.
+const PERCENT: u64 = 10_000;
+const MAX_OVER_WEIGHT: u64 = 101;
+const MAX_U64: u64 = 0xffff_ffff_ffff_ffff;
 const CRUSH_KEEP_NUM: u64 = 1;
 const CRUSH_KEEP_DEN: u64 = 4;
+const OUTCOME_CS: u8 = 0;
+const OUTCOME_NS: u8 = 1;
+const OUTCOME_CF: u8 = 2;
+const EStatLimit: u64 = 1;
+const EZeroDen: u64 = 2;
+const EPuitsTooLarge: u64 = 3;
 
-// ╔════════════════ [ Outcomes + sentinels ] ════════════════════════════════ ]
-
-const OUTCOME_CS: u8 = 0; // CRITICAL_SUCCESS — rune passes, no loss, puits unchanged
-const OUTCOME_NS: u8 = 1; // NEUTRAL_SUCCESS — rune passes, weight balanced (puits/loss)
-const OUTCOME_CF: u8 = 2; // CRITICAL_FAILURE — rune fails, weight lost (puits/loss)
-
-const NO_STAT: u8 = 255; // "no stat" sentinel (valid ids are 0..14)
-
-const EBadLen: u64 = 1; // a stat vector was not exactly 15 long
-const EZeroDen: u64 = 2; // stochastic_round: division by zero
-
-// ╔════════════════ [ IO structs (copy/drop — pure data, never stored) ] ════ ]
-
-/// The result of one rune application. `new_stats` = the full 15-field raw block after the rune.
-/// `lost_stat == NO_STAT` ⇒ nothing was destroyed (puits absorbed it, or CS).
 public struct ForgeResult has copy, drop {
   outcome: u8,
-  new_stats: vector<u64>,
+  new_stats: ItemStatistics,
   new_puits: u64,
-  applied_stat: u8,
   applied_value: u64,
-  lost_stat: u8,
-  lost_amount: u64,
+  lost_amounts: vector<u64>,
 }
 
-/// The pick made by `select_stat_to_reduce`. `found == false` ⇒ no reducible stat existed.
-public struct StatLoss has copy, drop {
-  found: bool,
-  stat: u8,
-  new_value: u64,
-  amount: u64,
-}
-
-// ╔════════════════ [ SCRIBE — applyRune (verbatim) ] ═══════════════════════ ]
-
-/// Apply one rune to `current` (15 raw magnitudes) against `template_max` (15 raw maxes).
-/// `rune_value` / `rune_weight` come from `rune_catalog`; `runic_level` is the scribe job level
-/// (≥1); `current_puits` the item's sink balance; `rng` the threaded prng. Does NOT mutate inputs.
-public fun apply_rune(
-  current: vector<u64>,
-  template_max: vector<u64>,
-  rune_stat: u8,
-  rune_value: u64,
-  rune_weight: u64,
-  runic_level: u64,
-  current_puits: u64,
-  rng: &mut u64,
-): ForgeResult {
-  assert!(current.length() == cat::stat_count(), EBadLen);
-  assert!(template_max.length() == cat::stat_count(), EBadLen);
-
-  let mut stats = current;
-  let cur = stats[rune_stat as u64];
-  let max_stat = template_max[rune_stat as u64];
-  let exotic = max_stat == 0; // stat absent from the template
-  let lvl = if (runic_level > 0) runic_level - 1 else 0;
-
-  // proximity ×1e6 (1.0 when the template grants none of this stat)
-  let proximity = if (max_stat > 0) cur * RATE_SCALE / max_stat else RATE_SCALE;
-
-  // proximityRate = max(0, 0.99 − proximity·0.49); exotic overrides to 0.01
-  let mut rate = sat_sub(PROX_BASE, proximity * PROX_SLOPE / RATE_SCALE);
-  if (exotic) rate = EXOTIC_RATE;
-
-  // over-mage: currentStatValue > maxStat → steep exponential penalty (or 0.01 when maxStat==0)
-  if (cur > max_stat) {
-    if (max_stat > 0) {
-      let over = (cur - max_stat) * RATE_SCALE / max_stat; // overRatio ×1e6
-      let penalty = over * over / RATE_SCALE * OVERMAGE_COEF / RATE_SCALE; // overRatio²·0.8
-      rate = max_u64(EXOTIC_RATE, sat_sub(rate, penalty));
-    } else {
-      rate = EXOTIC_RATE;
-    };
-  };
-
-  // level bonus + clamp; exotic bypasses the level bonus (flat 0.01)
-  let mut final_rate = clamp(rate + lvl * LEVEL_BONUS_PER, RATE_MIN, RATE_MAX);
-  if (exotic) final_rate = EXOTIC_RATE;
-
-  // critRatio = clamp(0.65 − proximity·0.50 + level·0.002, 0.15, 0.70)
-  let crit_ratio = clamp(
-    sat_sub(CRIT_BASE + lvl * CRIT_LEVEL_PER, proximity * CRIT_PROX_SLOPE / RATE_SCALE),
-    CRIT_RATIO_MIN,
-    CRIT_RATIO_MAX,
-  );
-  // critChance = clamp(finalRate · critRatio, 0.01, 0.60)
-  let crit_chance = clamp(final_rate * crit_ratio / RATE_SCALE, CRIT_CHANCE_MIN, CRIT_CHANCE_MAX);
-
-  // roll ∈ [0, 1e6): CS < critChance ≤ NS < finalRate ≤ CF
-  let roll = prng::draw(rng) % RATE_SCALE;
-  let outcome = if (roll < crit_chance) OUTCOME_CS
-    else if (roll < final_rate) OUTCOME_NS
-    else OUTCOME_CF;
-
-  let mut new_puits = current_puits;
-  let mut lost_stat = NO_STAT;
-  let mut lost_amount = 0;
-
-  // GAS-UNIFORM (owner gas law): every outcome runs the SAME compute — one gain, and one loss
-  // SELECTION (the 15-stat loop + its single draw), UNCONDITIONALLY — then writes only what the
-  // outcome calls for. `scribe` burns the rune BEFORE this roll, so an uneven compute cost would
-  // let a gas-budget attacker OOG-revert the expensive failure (rune refunded) while committing
-  // the cheap success — a filter. The write divergence below is one vector store, gas-negligible.
-  let gained = gain_capped(cur, rune_value, max_stat, rune_stat);
-  let protected = if (outcome == OUTCOME_CF) NO_STAT else rune_stat;
-  let remaining = if (new_puits >= rune_weight) 0 else rune_weight - new_puits;
-  let loss = select_stat_to_reduce(&stats, &template_max, protected, remaining, rng);
-
-  if (outcome != OUTCOME_CF) *&mut stats[rune_stat as u64] = gained; // CS + NS raise the target
-  if (outcome != OUTCOME_CS) {
-    // pay the rune's weight: puits FIRST, else the precomputed loss (re-banking the overshoot)
-    if (new_puits >= rune_weight) {
-      new_puits = new_puits - rune_weight;
-    } else if (loss.found) {
-      *&mut stats[loss.stat as u64] = loss.new_value;
-      let lost_weight = loss.amount * cat::stat_unit_weight(loss.stat);
-      new_puits = if (lost_weight > remaining) lost_weight - remaining else 0;
-      lost_stat = loss.stat; lost_amount = loss.amount;
-    } else {
-      new_puits = 0;
-    };
-  };
-
-  // Report the points the capped write ACTUALLY added, not the rune's nominal amount. The
-  // certified event and every client history row must stay exact at an overmage cap.
-  let applied_value = if (outcome != OUTCOME_CF) gained - cur else 0;
-  ForgeResult { outcome, new_stats: stats, new_puits, applied_stat: rune_stat, applied_value, lost_stat, lost_amount }
-}
-
-/// Select which stat to reduce to burn `weight_needed`: prefer OVER-MAGED stats (value >
-/// templateMax), else any positive stat; pick uniformly at random; lose `min(current, max(1,
-/// ceil(weight_needed / unitWeight)))` points. `protected` is skipped.
-public fun select_stat_to_reduce(
-  stats: &vector<u64>,
-  template_max: &vector<u64>,
-  protected: u8,
-  weight_needed: u64,
-  rng: &mut u64,
-): StatLoss {
-  let mut over_maged = vector<u8>[];
-  let mut candidates = vector<u8>[];
-  let count = cat::stat_count();
+/// Natural maxima above 101 weight remain valid. Overmages use the whole-line limit,
+/// and the combined excess over all natural maxima may not grow beyond 101 weight.
+public fun can_apply_rune(
+  current: &ItemStatistics, natural_max: &ItemStatistics, stat: u8, tier: u8,
+): bool {
+  if (!cat::has_rune(stat, tier)) return false;
+  let values = current.to_vector();
+  let maxima = natural_max.to_vector();
+  let index = stat as u64;
+  let value = values[index] as u64;
+  let maximum = maxima[index] as u64;
+  let next = value + cat::rune_amount(stat, tier);
+  let unit = cat::stat_unit_weight(stat);
+  let limit = MAX_OVER_WEIGHT * cat::weight_scale();
+  let ceiling = max_u64(maximum, (item_stats::shift() as u64) + limit / unit);
+  if (next > ceiling) return false;
+  let mut over = 0;
   let mut i = 0;
-  while (i < count) {
-    let val = stats[i];
-    let id = i as u8;
-    if (id != protected && val > 0) {
-      if (val > template_max[i]) over_maged.push_back(id) else candidates.push_back(id);
-    };
+  while (i < cat::stat_count()) {
+    over = over + sat_sub(values[i] as u64, maxima[i] as u64) * cat::stat_unit_weight(i as u8);
     i = i + 1;
   };
-
-  // Draw UNCONDITIONALLY, before the empty check — gas-uniformity law (owner): if the runed stat
-  // is the gear's only positive stat, CS/NS protect it (empty pool) while CF does not (non-empty).
-  // Drawing only on a non-empty pool would make CF cost a draw that CS skips → gas-based filtering.
-  let roll = prng::draw(rng) as u64;
-  let pool = if (!over_maged.is_empty()) over_maged else candidates;
-  if (pool.is_empty()) return StatLoss { found: false, stat: NO_STAT, new_value: 0, amount: 0 };
-
-  let chosen = pool[roll % pool.length()];
-  let unit = cat::stat_unit_weight(chosen);
-  let ceil_div = (weight_needed + unit - 1) / unit;
-  let mut amount = if (ceil_div < 1) 1 else ceil_div;
-  let cur = stats[chosen as u64];
-  if (amount > cur) amount = cur;
-  StatLoss { found: true, stat: chosen, new_value: cur - amount, amount }
+  let next_over = over - sat_sub(value, maximum) * unit + sat_sub(next, maximum) * unit;
+  next_over <= limit || next_over <= over
 }
 
-/// The scribe gain hard-cap: `min(current + value, templateMax + floor(101 / unitWeight))`,
-/// computed in the ×20 domain (exact equivalence). Applies on CS and NS.
-public fun gain_capped(current: u64, value: u64, template_max: u64, stat: u8): u64 {
-  let cap = template_max + MAX_STAT_WEIGHT_SCALED / cat::stat_unit_weight(stat);
-  let nv = current + value;
-  if (nv < cap) nv else cap
+/// Qualified Retro-emulator probability model, adapted to signed natural ranges.
+/// Reference: StarLoco JobAction.craftMaging1, revision 038dd961. This is an explicit
+/// emulator model, not a claim to possess Ankama's unpublished server formula.
+public fun outcome_chances(
+  current: &ItemStatistics, natural_min: &ItemStatistics, natural_max: &ItemStatistics,
+  stat: u8, tier: u8,
+): (u64, u64) {
+  let values = current.to_vector();
+  let minima = natural_min.to_vector();
+  let maxima = natural_max.to_vector();
+  let index = stat as u64;
+  let center = item_stats::shift() as u64;
+  let value = values[index] as u64;
+  let minimum = minima[index] as u64;
+  let maximum = maxima[index] as u64;
+  let amount = cat::rune_amount(stat, tier);
+  let weight = cat::rune_weight(stat, tier);
+  let scale = cat::weight_scale();
+  let unit = cat::stat_unit_weight(stat);
+  let exotic = minimum == center && maximum == center;
+  if (exotic && weight > 50 * scale) return (PERCENT, PERCENT);
+  let mut current_weight = 0;
+  let mut minimum_weight = 0;
+  let mut maximum_weight = 0;
+  let mut i = 0;
+  while (i < cat::stat_count()) {
+    let price = cat::stat_unit_weight(i as u8);
+    current_weight = current_weight + (values[i] as u64) * price;
+    minimum_weight = minimum_weight + (minima[i] as u64) * price;
+    maximum_weight = maximum_weight + (maxima[i] as u64) * price;
+    i = i + 1;
+  };
+  let mut line = max_u64(60 * PERCENT, quality(value + amount, minimum, maximum));
+  let mut whole = max_u64(15 * PERCENT, quality(current_weight, minimum_weight, maximum_weight));
+  let ratio = if (exotic) sat_sub(value, center) * RATE_SCALE
+    else if (maximum > center) sat_sub(value, center) * RATE_SCALE / (maximum - center)
+    else quality(value, minimum, maximum);
+  let over = value + amount > maximum;
+  if (exotic || over) line = RATE_SCALE;
+  if (weight <= 3 * scale && unit == scale && ratio > 65 * PERCENT) line = 150 * PERCENT;
+  if (!exotic && weight <= 3 * scale && unit == scale && ratio > 80 * PERCENT) line = 300 * PERCENT;
+  if (!exotic && weight <= 3 * scale && unit == 3 * scale && ratio > 85 * PERCENT) line = 200 * PERCENT;
+  let line_factor = if (exotic) 40 else if (over) 60 else 47;
+  let whole_factor = if (exotic || over) 54 else 50;
+  if (exotic) whole = 15 * PERCENT + sat_sub(value, center) * unit * PERCENT / scale
+    + weight * 3 * PERCENT / scale;
+  let line_cost = line * line_factor / 100;
+  let whole_cost = if (!exotic && whole < 50 * PERCENT) whole else whole * whole_factor / 100;
+  let raw_critical = sat_sub(RATE_SCALE, line_cost + whole_cost + 5 * PERCENT);
+  let mut critical = (raw_critical + PERCENT - 1) / PERCENT * PERCENT;
+  let mut neutral = if (critical > 50 * PERCENT) RATE_SCALE - critical
+    else if (critical < 25 * PERCENT) critical + 10 * PERCENT else 50 * PERCENT;
+  if (over && !exotic) {
+    if (critical <= PERCENT) { critical = PERCENT; neutral = 22 * PERCENT; };
+  } else if (!exotic && critical < 15 * PERCENT) {
+    critical = 15 * PERCENT;
+    neutral = 50 * PERCENT;
+  };
+  (critical, critical + neutral)
 }
 
-/// XP for a successful rune application: `max(1, floor(weight · (1 + itemLevel/50) · tierMult))`,
-/// tierMult = 2 for Ra else 1. `rune_weight` arrives ×20; the integer form divides the scale out.
-public fun compute_xp(tier: u8, rune_weight: u64, item_level: u64): u64 {
-  let tier_mult = if (tier >= cat::tier_ra()) 2 else 1;
-  let xp = rune_weight * (50 + item_level) * tier_mult / (50 * cat::weight_scale());
-  if (xp < 1) 1 else xp
+fun quality(value: u64, minimum: u64, maximum: u64): u64 {
+  if (maximum <= minimum) 0 else sat_sub(value, minimum) * RATE_SCALE / (maximum - minimum)
 }
+
+/// One rune, one transaction. After the outcome draw, all loops have fixed lengths and
+/// all value choices use fixed-width selection. No result changes the number of stat visits,
+/// RNG draws, result fields, or written fields.
+public fun apply_rune(
+  current: ItemStatistics, natural_min: ItemStatistics, natural_max: ItemStatistics,
+  rune_stat: u8, rune_tier: u8, current_puits: u64, rng: &mut u64,
+): ForgeResult {
+  assert!(can_apply_rune(&current, &natural_max, rune_stat, rune_tier), EStatLimit);
+  let (critical, success) = outcome_chances(&current, &natural_min, &natural_max, rune_stat, rune_tier);
+  let before = current.to_vector().map!(|value| value as u64);
+  let minima = natural_min.to_vector().map!(|value| value as u64);
+  let maxima = natural_max.to_vector().map!(|value| value as u64);
+  let floors = vector::tabulate!(cat::stat_count(), |i| min_u64(before[i], min_u64(minima[i], item_stats::shift() as u64)));
+  let prices = vector::tabulate!(cat::stat_count(), |i| cat::stat_unit_weight(i as u8));
+  let mut largest_price = 0;
+  prices.do_ref!(|price| largest_price = max_u64(largest_price, *price));
+  assert!(current_puits <= MAX_U64 - largest_price, EPuitsTooLarge);
+  let amount = cat::rune_amount(rune_stat, rune_tier);
+  let weight = cat::rune_weight(rune_stat, rune_tier);
+  let target = rune_stat as u64;
+
+  let roll = prng::draw(rng) % RATE_SCALE;
+  let outcome = (flag(roll >= critical) + flag(roll >= success)) as u8;
+  let mut stats = before;
+  *stats.borrow_mut(target) = stats[target] + choose(outcome != OUTCOME_CF, amount, 0);
+  let mut remaining = choose(outcome != OUTCOME_CS, weight, 0);
+  let mut puits = current_puits;
+  let order = shuffled_stats(rng);
+
+  // Other over/exo lines, then puits, then the target's over/exo portion.
+  let mut i = 0;
+  while (i < cat::stat_count()) {
+    let index = order[i];
+    pay_stat(&mut stats, index, maxima[index], prices[index], index != target, &mut remaining, &mut puits);
+    i = i + 1;
+  };
+  let from_puits = min_u64(puits, remaining);
+  puits = puits - from_puits;
+  remaining = remaining - from_puits;
+  pay_stat(&mut stats, target, maxima[target], prices[target], true, &mut remaining, &mut puits);
+
+  // Ordinary lines can pay across several stats. The target pays last, including its new gain.
+  i = 0;
+  while (i < cat::stat_count()) {
+    let index = order[i];
+    pay_stat(&mut stats, index, floors[index], prices[index], index != target, &mut remaining, &mut puits);
+    i = i + 1;
+  };
+  pay_stat(&mut stats, target, floors[target], prices[target], true, &mut remaining, &mut puits);
+  let applied_value = sat_sub(stats[target], before[target]);
+  let lost_amounts = vector::tabulate!(cat::stat_count(), |index| sat_sub(before[index], stats[index]));
+  ForgeResult { outcome, new_stats: item_stats::from_vector(stats.map!(|value| value as u16)),
+    new_puits: puits, applied_value, lost_amounts }
+}
+
+fun pay_stat(
+  stats: &mut vector<u64>, index: u64, floor: u64, price: u64, eligible: bool,
+  remaining: &mut u64, puits: &mut u64,
+) {
+  let available = sat_sub(stats[index], floor);
+  let required = (*remaining + price - 1) / price;
+  let removed = min_u64(available, required) * flag(eligible);
+  *stats.borrow_mut(index) = stats[index] - removed;
+  let paid = removed * price;
+  *puits = *puits + sat_sub(paid, *remaining);
+  *remaining = sat_sub(*remaining, paid);
+}
+
+fun shuffled_stats(rng: &mut u64): vector<u64> {
+  let mut order = vector::tabulate!(cat::stat_count(), |index| index);
+  let mut remaining = cat::stat_count();
+  while (remaining > 1) {
+    let index = prng::draw(rng) % remaining;
+    remaining = remaining - 1;
+    let last = order[remaining];
+    let selected = order[index];
+    *order.borrow_mut(remaining) = selected;
+    *order.borrow_mut(index) = last;
+  };
+  order
+}
+
+// Native BCS encodes either boolean in one byte. Fixed-width indexing avoids branching on
+// a random-derived amount; both alternatives must be safe to evaluate.
+fun flag(value: bool): u64 { bcs::to_bytes(&value)[0] as u64 }
+fun choose(condition: bool, yes: u64, no: u64): u64 { vector[no, yes][flag(condition)] }
+fun min_u64(a: u64, b: u64): u64 { choose(a < b, a, b) }
+fun max_u64(a: u64, b: u64): u64 { choose(a > b, a, b) }
+fun sat_sub(a: u64, b: u64): u64 { a - min_u64(a, b) }
+
+public fun outcome(result: &ForgeResult): u8 { result.outcome }
+public fun new_stats(result: &ForgeResult): ItemStatistics { result.new_stats }
+public fun new_puits(result: &ForgeResult): u64 { result.new_puits }
+public fun applied_value(result: &ForgeResult): u64 { result.applied_value }
+public fun lost_amounts(result: &ForgeResult): vector<u64> { result.lost_amounts }
+public fun outcome_cs(): u8 { OUTCOME_CS }
+public fun outcome_ns(): u8 { OUTCOME_NS }
+public fun outcome_cf(): u8 { OUTCOME_CF }
 
 // ╔════════════════ [ CRUSH — stateless, linear, lossy ] ════════════════════ ]
 
-/// One item's raw stat block → a 51-vector of owed runes (index `stat×3 + (tier−1)`). Per
+/// One item's raw stat block → a stat_count × 3 vector of owed runes (index `stat×3 + (tier−1)`). Per
 /// positive runeable line: a give-back POOL of `value × CRUSH_KEEP` stat-points (lossy — always
 /// LESS than the stat, owner 2026-08-11), then runes are drawn from the pool — tier rolled by the
 /// stat value (higher tiers rarer AND costlier), each CONSUMING its amount from the pool so the
@@ -249,7 +232,7 @@ public fun crush_lines(raw: &vector<u64>, rng: &mut u64): vector<u64> {
   while (s < count) {
     let value = raw[s];
     let stat = s as u8;
-    if (value > 0 && cat::is_runeable(stat)) {
+    if (value > 0) {
       let mut pool = stochastic_round(value * CRUSH_KEEP_NUM, CRUSH_KEEP_DEN, rng);
       while (pool > 0) {
         let mut tier = roll_tier(stat, value, rng);
@@ -304,37 +287,10 @@ public fun add_counts(owed: &mut vector<u64>, counts: &vector<u64>) {
   };
 }
 
-/// A fresh all-zero 51-vector (`stat_count × 3` tiers) — the crush accumulator shape.
+/// A fresh all-zero stat_count × 3 vector (`stat_count × 3` tiers) — the crush accumulator shape.
 public fun zero_counts(): vector<u64> {
   let mut v = vector<u64>[];
   let mut i = 0;
   while (i < cat::stat_count() * 3) { v.push_back(0); i = i + 1; };
   v
 }
-
-// ╔════════════════ [ ForgeResult accessors ] ═══════════════════════════════ ]
-
-public fun outcome(result: &ForgeResult): u8 { result.outcome }
-public fun new_stats(result: &ForgeResult): vector<u64> { result.new_stats }
-public fun new_puits(result: &ForgeResult): u64 { result.new_puits }
-public fun applied_stat(result: &ForgeResult): u8 { result.applied_stat }
-public fun applied_value(result: &ForgeResult): u64 { result.applied_value }
-public fun lost_stat(result: &ForgeResult): u8 { result.lost_stat }
-public fun lost_amount(result: &ForgeResult): u64 { result.lost_amount }
-public fun has_loss(result: &ForgeResult): bool { result.lost_stat != NO_STAT }
-
-public fun outcome_cs(): u8 { OUTCOME_CS }
-public fun outcome_ns(): u8 { OUTCOME_NS }
-public fun outcome_cf(): u8 { OUTCOME_CF }
-public fun no_stat(): u8 { NO_STAT }
-
-public fun loss_found(l: &StatLoss): bool { l.found }
-public fun loss_stat(l: &StatLoss): u8 { l.stat }
-public fun loss_new_value(l: &StatLoss): u64 { l.new_value }
-public fun loss_amount(l: &StatLoss): u64 { l.amount }
-
-// ╔════════════════ [ Integer helpers ] ═════════════════════════════════════ ]
-
-fun sat_sub(a: u64, b: u64): u64 { if (a > b) a - b else 0 }
-fun max_u64(a: u64, b: u64): u64 { if (a > b) a else b }
-fun clamp(v: u64, lo: u64, hi: u64): u64 { if (v < lo) lo else if (v > hi) hi else v }

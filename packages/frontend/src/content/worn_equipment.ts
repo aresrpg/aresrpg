@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Hat and cloak models are real equipment: one item identity, one same-named GLB.
+// Both regular and cosmetic equipment resolve through the same anatomical model groups.
 
 import { content_catalog } from './catalog.ts'
+import { worn_equipment_category } from './character_model_catalog.ts'
 
 export type WornEquipmentOption = Readonly<{
   item_type: string
@@ -13,7 +14,7 @@ export type WornEquipmentOption = Readonly<{
 const options = (category: WornEquipmentOption['category']): readonly WornEquipmentOption[] =>
   Object.freeze(
     content_catalog.items
-      .filter((item) => item.category === category)
+      .filter((item) => worn_equipment_category(item.category) === category)
       .map(({ item_type, name }) => Object.freeze({ item_type, name, category }))
   )
 

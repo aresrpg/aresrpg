@@ -2,11 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Check, ChevronDown, Copy, ExternalLink, Wallet, X } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, type ReactNode } from 'react'
 
 import { env, type Network } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+
+import { NativeModal } from './ModalFrame.tsx'
 
 export const SUI_FAUCET_URL = 'https://faucet.sui.io/'
 export const add_funds_surface = (network: Network): 'faucet' | 'providers' =>
@@ -275,35 +276,20 @@ export const AddFundsModal = ({
   const [show_exchanges, set_show_exchanges] = useState(false)
   const [show_faq, set_show_faq] = useState(true)
   const testnet = add_funds_surface(network) === 'faucet'
+  const title = wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
 
-  useEffect(() => {
-    const handler = (event: Readonly<KeyboardEvent>): void => {
-      if (event.key === 'Escape') on_close()
-    }
-    globalThis.addEventListener('keydown', handler)
-    return () => globalThis.removeEventListener('keydown', handler)
-  }, [on_close])
-  useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = previous
-    }
-  }, [])
-
-  return createPortal(
-    <div
+  return (
+    <NativeModal
+      close={on_close}
+      label={title}
       className="pointer-events-auto fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={on_close}
     >
       <div
         className="mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col border border-border bg-surface"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-border p-4">
-          <h2 className="text-[13px] font-semibold tracking-[0.2em] text-gold uppercase">
-            {wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')}
-          </h2>
+          <h2 className="text-[13px] font-semibold tracking-[0.2em] text-gold uppercase">{title}</h2>
           <button
             aria-label={copy.wallet_close}
             className="cursor-pointer opacity-40 transition-opacity hover:opacity-80"
@@ -424,7 +410,6 @@ export const AddFundsModal = ({
           />
         </div>
       </div>
-    </div>,
-    document.body
+    </NativeModal>
   )
 }

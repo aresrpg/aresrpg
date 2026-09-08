@@ -47,6 +47,7 @@ public struct MobData has copy, drop, store {
   spells: vector<MobSpell>,
   loot: vector<LootEntry>,
   xp: u64,
+  is_boss: bool,
 }
 
 public fun new_mob_data(
@@ -67,6 +68,7 @@ public fun new_mob_data(
   spells: vector<MobSpell>,
   loot: vector<LootEntry>,
   xp: u64,
+  is_boss: bool,
 ): MobData {
   assert!(level_min <= level_max, EInvalidLevelBand);
   assert!(spells.length() <= 5, ETooManySpells);
@@ -75,13 +77,13 @@ public fun new_mob_data(
   assert!(item_damages::is_element(&element), EInvalidElement);
   MobData {
     name, mob_type, element, level_min, level_max, hp, ap, mp, agility, wisdom,
-    earth_resistance, fire_resistance, water_resistance, air_resistance, spells, loot, xp,
+    earth_resistance, fire_resistance, water_resistance, air_resistance, spells, loot, xp, is_boss,
   }
 }
 
-/// Conservative authored ceiling: combine the cheapest cast with the largest effect branch.
-/// Geometry separately caps every row at twelve fighter checks, so their product bounds a mob
-/// turn without storing or charging a runtime work meter.
+/// Conservative authored estimate: combine base AP, the cheapest cast, and largest branch.
+/// Combat separately bounds runtime row-work through its existing cast ledger, including AP
+/// scaling and refunds; this constructor alone cannot establish turn termination.
 fun assert_turn_work(ap: u8, spells: &vector<MobSpell>) {
   if (spells.is_empty()) return;
   let mut cheapest = 256;
@@ -90,7 +92,7 @@ fun assert_turn_work(ap: u8, spells: &vector<MobSpell>) {
   while (index < spells.length()) {
     let level = &spells[index].level;
     let cost = spell_effect::ap_cost(level) as u64;
-    assert!(cost > 0, ETooMuchTurnWork);
+    // SpellLevel's sole constructor already guarantees a positive AP cost.
     if (cost < cheapest) cheapest = cost;
     let normal = spell_effect::effects(level).length();
     let critical = spell_effect::crit_effects(level).length();
@@ -100,6 +102,8 @@ fun assert_turn_work(ap: u8, spells: &vector<MobSpell>) {
   };
   assert!((ap as u64) / cheapest * largest_branch <= MAX_MOB_ROW_CASTS, ETooMuchTurnWork);
 }
+
+public fun is_boss(data: &MobData): bool { data.is_boss }
 
 public fun name(data: &MobData): String { data.name }
 

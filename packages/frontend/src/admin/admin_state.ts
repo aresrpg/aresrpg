@@ -8,8 +8,6 @@ import type {
   AdminRangeDays,
 } from '@aresrpg/protocol'
 
-import type { AuthSession } from '../auth.ts'
-
 export type AdminOverviewState = Readonly<{
   status: 'idle' | 'loading' | 'ready' | 'failed'
   request_id: number | null
@@ -21,30 +19,11 @@ export type AdminOverviewState = Readonly<{
   >
   error: string | null
 }>
-export type AdminWalletState = Readonly<{
-  status: 'loading' | 'ready' | 'connecting' | 'selecting' | 'connected'
-  wallets: readonly string[]
-  requested_wallet: string | null
-  accounts: readonly string[]
-  requested_address: string | null
-  session: AuthSession | null
-  error: string | null
-}>
 export type AdminState = Readonly<{
   overview: AdminOverviewState
-  wallet: AdminWalletState
 }>
 
 export type AdminInput =
-  | Readonly<{ type: 'admin/wallets_loaded'; wallets: readonly string[] }>
-  | Readonly<{ type: 'admin/wallet_connect'; wallet_name: string }>
-  | Readonly<{ type: 'admin/wallet_accounts_loaded'; accounts: readonly string[] }>
-  | Readonly<{ type: 'admin/wallet_account_select'; address: string }>
-  | Readonly<{ type: 'admin/wallet_picker_cancel' }>
-  | Readonly<{ type: 'admin/wallet_connected'; session: AuthSession }>
-  | Readonly<{ type: 'admin/wallet_disconnect' }>
-  | Readonly<{ type: 'admin/wallet_disconnected' }>
-  | Readonly<{ type: 'admin/wallet_failed'; error: string }>
   | Readonly<{ type: 'admin/overview_refresh' }>
   | Readonly<{
       type: 'admin/overview_range_changed'
@@ -72,15 +51,6 @@ export const initial_admin_state = (): AdminState =>
       result: null,
       cache: Object.freeze({}),
       pending: Object.freeze({}),
-      error: null,
-    }),
-    wallet: Object.freeze({
-      status: 'loading',
-      wallets: Object.freeze([]),
-      requested_wallet: null,
-      accounts: Object.freeze([]),
-      requested_address: null,
-      session: null,
       error: null,
     }),
   })

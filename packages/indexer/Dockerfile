@@ -29,22 +29,22 @@ RUN apt-get update \
         pkg-config \
         protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
-RUN cargo install cargo-chef --locked
+RUN cargo install cargo-chef --version 0.1.78 --locked
 WORKDIR /app
 
 # --- 2. planner: capture the dependency recipe -------------------------------
 FROM chef AS planner
-COPY Cargo.toml Cargo.lock* ./
+COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 RUN cargo chef prepare --recipe-path recipe.json
 
 # --- 3. builder: cached deps layer, then the crate ---------------------------
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-COPY Cargo.toml Cargo.lock* ./
+RUN cargo chef cook --locked --release --recipe-path recipe.json
+COPY Cargo.toml Cargo.lock ./
 COPY src ./src
-RUN cargo build --release --bin aresrpg-indexer \
+RUN cargo build --locked --release --bin aresrpg-indexer \
     && cp target/release/aresrpg-indexer /usr/local/bin/aresrpg-indexer
 
 # --- 4. runtime: slim image with just the binary -----------------------------

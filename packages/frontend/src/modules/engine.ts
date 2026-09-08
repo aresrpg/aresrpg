@@ -97,11 +97,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
 
   const sync_activity = (state: AppState): void => {
     if (!world) return
+    const world_page = is_world_page(state.navigation.page)
     world.set_active(world_scene_active(state.navigation.page, state.fight.mounted))
-    world.set_interactive(
-      is_world_page(state.navigation.page) && (!!state.session.wallet || state.navigation.guest_spectating)
-    )
-    world.set_action_lock(is_world_page(state.navigation.page) ? selected_world_action_lock(state) : null)
+    world.set_interactive(world_page && (!!state.session.wallet || state.navigation.guest_spectating))
+    world.set_action_lock(world_page ? selected_world_action_lock(state) : null)
   }
 
   const sync_settings = (state: AppState): void => {
@@ -477,9 +476,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           pet_ground_height: created.pet_ground_height,
           label: (character_id, element) => created.set_entity_label(character_id, element),
         })
-        // the spawn lane stays DYNAMIC for the same reason fight_models and pet_models do: it
-        // reaches content/mob_models.ts, whose import.meta.glob is a build-only door — a static
-        // edge here drags Vite's glob into every consumer of the store, tests included
+        // Spawn models use Vite's import.meta.glob. Keep that edge lazy so store/tests remain build-independent.
         void create_spawns(created).then((renderer) => {
           if (signal.aborted || world !== created) {
             renderer.dispose()
@@ -489,7 +486,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           sync_spawns(get_state())
         })
         resources = create_resources(created)
-        unsubscribe_status = created.subscribe_status((status) => dispatch({ type: 'engine/status', status }))
+        unsubscribe_status = created.subscribe_status((status) => {
+          if (status.state === 'failed') dispose_world()
+          dispatch({ type: 'engine/status', status })
+        })
         sync(get_state(), initial_position ?? undefined)
         if (import.meta.env.DEV)
           visual_global.__ares_visual__ = Object.freeze({

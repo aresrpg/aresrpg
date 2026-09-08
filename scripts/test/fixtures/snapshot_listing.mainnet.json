@@ -1,0 +1,107 @@
+{
+  "network": "mainnet",
+  "endpoint": "https://graphql.mainnet.sui.io/graphql",
+  "checkpoint": {
+    "sequenceNumber": 320090977,
+    "timestamp": "2026-09-08T05:58:25.936Z"
+  },
+  "objects": [
+    {
+      "address": "0xa6b0a1815c74e77d819d8f5c9004d79e8d51372e2e551e7b3dc310c63e720953",
+      "version": 1595452,
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0x8b0e1169b99772347d21df73671221023f718d6a1a6443c35ea15ec54098679a"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0xee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::suifrens::SuiFren<0xee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::capy::Capy>"
+          },
+          "json": {
+            "id": "0xa6b0a1815c74e77d819d8f5c9004d79e8d51372e2e551e7b3dc310c63e720953",
+            "generation": "0",
+            "birthdate": "1683129599509",
+            "cohort": 1,
+            "genes": "uq3BMOgj8LeKLNeoyylQwE0VZ8ScQ76PkWq4fuCsezc=",
+            "attributes": ["cheetah", "6FBBEE", "CF9696", "relaxed", "ear2"],
+            "birth_location": "HK"
+          }
+        }
+      }
+    },
+    {
+      "address": "0x8b0e1169b99772347d21df73671221023f718d6a1a6443c35ea15ec54098679a",
+      "version": 1595452,
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0xa6d9bbd33b96596165d6cf892d42b02bffed1b4db12b9c69fc6e3ffa0daf68ce"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<bool>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>"
+          },
+          "json": {
+            "id": "0x8b0e1169b99772347d21df73671221023f718d6a1a6443c35ea15ec54098679a",
+            "name": {
+              "name": true
+            },
+            "value": "0xa6b0a1815c74e77d819d8f5c9004d79e8d51372e2e551e7b3dc310c63e720953"
+          }
+        }
+      }
+    },
+    {
+      "address": "0xa6d9bbd33b96596165d6cf892d42b02bffed1b4db12b9c69fc6e3ffa0daf68ce",
+      "version": 1595452,
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0xbe77125a11fc106edea5cb05caa9d6db7409ddc1d363cb90465292f0e22d9ee5"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0xd5dd28cc24009752905689b2ba2bf90bfc8de4549b9123f93519bb8ba9bf9981::marketplace::Listing"
+          },
+          "json": {
+            "id": "0xa6d9bbd33b96596165d6cf892d42b02bffed1b4db12b9c69fc6e3ffa0daf68ce",
+            "amount": "500000000000",
+            "owner": "0x86baad8b94c783e4e11303a3b827db887642078370af887f8a290dc8edbc4328",
+            "nft_type": "ee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::suifrens::SuiFren<ee496a0cc04d06a345982ba6697c90c619020de9e274408c7819f787ff66e1a1::capy::Capy>"
+          }
+        }
+      }
+    },
+    {
+      "address": "0xbe77125a11fc106edea5cb05caa9d6db7409ddc1d363cb90465292f0e22d9ee5",
+      "version": 1595452,
+      "owner": {
+        "__typename": "ObjectOwner",
+        "address": {
+          "address": "0x09e24b156b08e7bc5272f9b731e93b80b458f0b79a5195eb81a471d514f1b1b8"
+        }
+      },
+      "asMoveObject": {
+        "contents": {
+          "type": {
+            "repr": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_object_field::Wrapper<0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>,0x0000000000000000000000000000000000000000000000000000000000000002::object::ID>"
+          },
+          "json": {
+            "id": "0xbe77125a11fc106edea5cb05caa9d6db7409ddc1d363cb90465292f0e22d9ee5",
+            "name": {
+              "name": "0xa6b0a1815c74e77d819d8f5c9004d79e8d51372e2e551e7b3dc310c63e720953"
+            },
+            "value": "0xa6d9bbd33b96596165d6cf892d42b02bffed1b4db12b9c69fc6e3ffa0daf68ce"
+          }
+        }
+      }
+    }
+  ]
+}

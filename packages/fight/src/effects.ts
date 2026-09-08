@@ -3,7 +3,7 @@
 /* eslint-disable no-param-reassign, fp-law/no-mutating-methods -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 // The one spell/weapon/zone resolver, ported in move-combat's mutation order.
 import { GRID_CELLS, in_grid, line_of_sight, manhattan, mask_get, same_line } from './combat_grid.ts'
-import { contest_points, deal, full_damage, life_steal, resist, roll_value } from './damage.ts'
+import { contest_points, deal, full_damage, life_steal, resist, roll_value, rolls_magnitude } from './damage.ts'
 import { target_allowed, zone_targets } from './effect_targets.ts'
 import { amplify_damage, effect_seed, heal_amount, primary_stat, punishment_base } from './fight_math.ts'
 import {
@@ -227,12 +227,12 @@ const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_le
     if (row.kind === KINDS.add && turns === 0n) {
       heal_seat(runtime, {
         target,
-        amount: heal_amount(roll_value(row, cursor), sheet.intelligence),
+        amount: heal_amount(row.value, sheet.intelligence),
         source: caster,
         cause: 'instant_heal',
       })
     } else if (row.kind === KINDS.add) {
-      push_row(runtime, target, row, caster, heal_amount(roll_value(row, cursor), sheet.intelligence))
+      push_row(runtime, target, row, caster, heal_amount(row.value, sheet.intelligence))
     } else if (row.kind === KINDS.steal && turns === 0n) {
       life_steal({
         runtime,
@@ -240,11 +240,11 @@ const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_le
         sheet,
         target,
         element: row.element,
-        base: roll_value(row, cursor),
+        base: row.value,
         cast_level,
       })
     } else {
-      push_row(runtime, target, row, caster, full_damage(runtime, sheet, target, row.element, roll_value(row, cursor)))
+      push_row(runtime, target, row, caster, full_damage(runtime, sheet, target, row.element, row.value))
     }
     return
   }
@@ -261,14 +261,26 @@ const apply_number_row = ({ runtime, caster, sheet, row, target, cursor, cast_le
 
 type ApplyToInput = NumberRowInput & { origin: bigint; cause: string }
 
-const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_level, cause }: ApplyToInput): void => {
+const apply_to = ({
+  runtime,
+  caster,
+  sheet,
+  row: authored,
+  target,
+  origin,
+  cursor,
+  cast_level,
+  cause,
+}: ApplyToInput): void => {
+  const value = rolls_magnitude(authored) ? roll_value(authored, cursor) : authored.value
+  const row = { ...authored, value, value_max: value }
   if (row.kind === KINDS.damage) {
-    deal({ runtime, caster, sheet, target, element: row.element, base: roll_value(row, cursor), cast_level, cause })
+    deal({ runtime, caster, sheet, target, element: row.element, base: row.value, cast_level, cause })
   } else if (row.kind === KINDS.pct_life) {
     const maximum = max_hp_of(runtime, target)
     hit(runtime, {
       target,
-      amount: resist(runtime, target, row.element, (maximum * roll_value(row, cursor)) / 100n),
+      amount: resist(runtime, target, row.element, (maximum * row.value) / 100n),
       source: caster,
       cause: 'percent_life',
       element: row.element,
@@ -276,7 +288,7 @@ const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_le
   } else if (row.kind === KINDS.caster_damage) {
     hit(runtime, {
       target: caster,
-      amount: resist(runtime, caster, row.element, roll_value(row, cursor)),
+      amount: resist(runtime, caster, row.element, row.value),
       source: caster,
       cause: 'caster_damage',
       element: row.element,
@@ -288,11 +300,7 @@ const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_le
       sheet,
       target,
       element: row.element,
-      base: punishment_base(
-        roll_value(row, cursor),
-        runtime.contract.fighters[Number(caster)].hp,
-        max_hp_of(runtime, caster)
-      ),
+      base: punishment_base(row.value, runtime.contract.fighters[Number(caster)].hp, max_hp_of(runtime, caster)),
       cast_level,
       cause: 'punishment',
     })
@@ -300,8 +308,6 @@ const apply_to = ({ runtime, caster, sheet, row, target, origin, cursor, cast_le
     push_row(runtime, target, row, caster, amplify_damage(row.value, primary_stat(row.element, sheet), 0n))
   } else if ([KINDS.add, KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(row.kind)) {
     apply_number_row({ runtime, caster, sheet, row, target, cursor, cast_level })
-  } else if (row.kind === KINDS.chatiment) {
-    push_row(runtime, target, row, caster, row.value)
   } else if (row.kind === KINDS.push || row.kind === KINDS.pull) {
     displace({
       runtime,

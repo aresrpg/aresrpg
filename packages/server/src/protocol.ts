@@ -23,6 +23,7 @@ export type EventEnvelope = {
 
 /** Channel builders — the exact topics events.rs routes to. */
 export const channels = {
+  leaderboards: 'evt:leaderboards',
   character: (id: string) => `evt:character:${id}`,
   /** one zone's indexer facts (fights, gathers, zone re-rolls) — a pod subscribes exactly the
    *  zones its players track; presence spam never rides a world-global wire */
@@ -101,7 +102,6 @@ export const labels = [
   'Trade',
   'Giftcard',
   'Sale',
-  'Airdrop',
   'Meta',
 ] as const
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The character builder's receipt law: exact capital spending reaches character.move unchanged,
-// so SDK composition never invents natural stat gains.
+// Character builders compose exact capital spending and project only certified receipt facts.
 
 import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
@@ -13,6 +12,9 @@ import { character_create } from '../src/character.ts'
 import { character_actions as gate_actions } from '../src/character_actions.ts'
 import { fight_actions } from '../src/fight.ts'
 import { item_template_id, recipe_id, world_content_id, world_id, zone_id } from '../src/seed_ids.ts'
+
+import { execution_receipt } from './helpers/execution_receipt.ts'
+import scribe_fixture from './fixtures/forgemagie.localnet.json'
 
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
@@ -49,7 +51,8 @@ const fake_client = (receipt: () => Receipt) => ({
       })),
     }),
     simulateTransaction: async (): Promise<Receipt> => ({ $kind: 'Transaction', Transaction: { digest } }),
-    executeTransaction: async (): Promise<Receipt> => receipt(),
+    executeTransaction: async ({ transaction }: { transaction: Uint8Array }): Promise<Receipt> =>
+      execution_receipt(transaction, receipt()),
   },
 })
 
@@ -282,7 +285,7 @@ describe('the character builder', () => {
       [
         {
           type: `${id(1)}::forgemagie::RuneScribed`,
-          json: { stat: 0, outcome: 1, applied_value: 3, lost_stat: 4, lost_amount: 2, new_puits: 7 },
+          json: scribe_fixture.parsed_json,
         },
       ]
     )
@@ -292,7 +295,7 @@ describe('the character builder', () => {
       gear_id: id(21),
       gear_item_type: 'straw_hat',
       rune_item_id: id(22),
-      rune_item_type: 'rune_vitality_ba',
+      rune_item_type: 'rune_strength_ba',
       custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
     })
     expect(door_args).toMatchObject({
@@ -302,16 +305,15 @@ describe('the character builder', () => {
       gear_id: id(21),
       gear_template: item_template_id(id(61), id(60), 'straw_hat'),
       rune_item_id: id(22),
-      rune_stat: 0,
+      rune_stat: 2,
       rune_tier: 1,
     })
     expect(outcome).toMatchObject({
-      stat: 0,
+      stat: 2,
       outcome: 1,
-      applied_value: 3,
-      lost_stat: 4,
-      lost_amount: 2,
-      new_puits: 7,
+      applied_value: 1,
+      lost_amounts: Array.from({ length: 15 }, (_, index) => (index === 1 ? 1 : 0)),
+      new_puits: '40',
     })
   })
   test('craft composes one terminal batch and projects its aggregate receipt', async () => {
@@ -564,7 +566,7 @@ describe('the character builder', () => {
       kiosk: kiosk_cap.kioskId,
       personal: kiosk_ref,
     })
-    expect(hydrated).toHaveLength(2)
+    expect(hydrated).toHaveLength(1)
     expect(result.closable).toBeTrue()
     expect(result.closed).toBeTrue()
     expect(sdk).not.toHaveProperty('hydrate_owned_current')

@@ -10,6 +10,8 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { parse } from 'yaml'
 
+import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
+
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { display_assets_plugin } from './display_assets.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
@@ -58,6 +60,7 @@ export default defineConfig(({ mode }) => {
   const env = resolve_env(loaded_env)
   return {
     plugins: [
+      browser_pins_plugin(),
       html_env_plugin(env),
       yaml_plugin(),
       ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
@@ -116,6 +119,25 @@ export default defineConfig(({ mode }) => {
     // SDK subpath exports at server boot, which makes newly generated surfaces appear missing.
     optimizeDeps: { exclude: ['@aresrpg/engine', '@aresrpg/sdk'] },
     // Three.js is isolated in the lazy world chunk; 550 kB keeps the warning meaningful for accidental growth.
-    build: { chunkSizeWarningLimit: 550 },
+    build: {
+      chunkSizeWarningLimit: 550,
+      ...(mode === 'test'
+        ? {
+            rollupOptions: {
+              input: {
+                app: resolve(frontend_dir, 'index.html'),
+                workload: resolve(frontend_dir, 'e2e/fixtures/workload.html'),
+                staking: resolve(frontend_dir, 'e2e/fixtures/staking.html'),
+                inventory: resolve(frontend_dir, 'e2e/fixtures/inventory.html'),
+                public_sale_card: resolve(frontend_dir, 'e2e/fixtures/public_sale_card.html'),
+                leaderboard: resolve(frontend_dir, 'e2e/fixtures/leaderboard.html'),
+                character_delete: resolve(frontend_dir, 'e2e/fixtures/character_delete.html'),
+                interaction: resolve(frontend_dir, 'e2e/fixtures/interaction.html'),
+                engine_lifecycle: resolve(frontend_dir, 'e2e/fixtures/engine_lifecycle.html'),
+              },
+            },
+          }
+        : {}),
+    },
   }
 })

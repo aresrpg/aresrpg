@@ -111,3 +111,9 @@ public fun entry_level(world_content: &WorldContent): u16 {
 public fun archi_rows(world_content: &WorldContent): vector<ArchiRow> {
   if (dfield::exists(&world_content.id, ArchiRowsKey())) *dfield::borrow(&world_content.id, ArchiRowsKey()) else vector[]
 }
+
+// Model the pre-entry-level object shape; this attachment did not exist on older worlds.
+#[test_only]
+public fun remove_entry_level_for_testing(content: &mut WorldContent) {
+  let _: u16 = dfield::remove(&mut content.id, EntryLevelKey());
+}

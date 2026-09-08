@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { Fighter, HydratedFightCheckpoint } from '@aresrpg/fight'
 import { experience_progress } from '@aresrpg/immutable'
 
 import type { FightResult, ResultParticipant } from './fight_result.ts'
@@ -108,3 +109,29 @@ export const fight_result_complete = (result: FightResult | null): boolean => {
   if (own?.forfeited) return true
   return result.settlement_confirmed
 }
+
+export const result_accounting = (
+  indexed_started_ms: bigint | null,
+  indexed_ended_ms: bigint | null,
+  observed_started_ms: number | null,
+  observed_at_ms: number,
+  gas_spent_mist: bigint,
+  existing: FightResult | null
+) =>
+  Object.freeze({
+    duration_ms:
+      existing?.duration_ms ??
+      fight_duration(indexed_started_ms ?? observed_started_ms, indexed_ended_ms ?? observed_at_ms),
+    gas_spent_mist,
+  })
+
+export const participant_kares = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  fighter: Readonly<Fighter>
+): bigint => {
+  if (fighter.kind.type !== 'player' || fighter.forfeited) return 0n
+  return fighter.team === checkpoint.contract.winner ? checkpoint.contract.kares_reward : 0n
+}
+
+export const own_result_kares = (result?: FightResult): bigint =>
+  result?.participants[result.own_seat ?? -1]?.kares ?? 0n

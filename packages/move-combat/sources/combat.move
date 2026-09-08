@@ -6,8 +6,62 @@
 /// transition.
 module aresrpg_combat::combat;
 
+#[test_only]
+public fun captured_dungeon_wave_for_testing(): State {
+  State {
+    board: combat_grid::grid_spec(13, 12, vector[17294947370570613247, 18375249361442374143, 18442275654192853023, 274342084352, 0, 0], vector[104, 124, 66, 86, 48, 68, 88, 21, 41, 61, 70], vector[126, 127, 128, 43, 101, 108, 107, 87, 149, 148, 169, 168, 170, 150, 129], vector[22, 24, 26, 82, 84, 106], vector[203, 205, 185, 183, 187, 207]),
+    closed: vector[3457932182447717888, 15059501897415196244, 4476116105433059, 18446743799367467263, 18446744073709551615, 1152921504606846975],
+    fighters: vector[
+      Fighter { team: 0, kind: FighterKind::Player,
+        stats: FighterStats { sheet: Sheet { strength: 47, intelligence: 0, chance: 0, agility: 0, wisdom: 5, raw_damage: 0, critical: 0, range_bonus: 0, level: 11 }, max_hp: 105, base_ap: 6, base_mp: 3, earth_resistance: 32768, fire_resistance: 32768, water_resistance: 32768, air_resistance: 32768 },
+        cell: 125, ready: true, dead: false, settled: false, forfeited: false, hp: 77, ap: 0, mp: 1, drops: vector[],
+        effects: vector[ActiveEffect { kind: 5, element: x"616972".to_string(), value: 4, turns_left: 2, source: 3, stat: 12 }, ActiveEffect { kind: 5, element: x"616972".to_string(), value: 3, turns_left: 2, source: 3, stat: 12 }],
+        cooldowns: vector[] },
+      Fighter { team: 1, kind: FighterKind::Mob(MobSnapshot { mob_type: x"6e6f6f6b".to_string(), level: 5, kit: vector[KitSpell { name: x"53636176656e676572205377697065".to_string(), ordinal: 1, level: spell_effect::new_spell_level(4, 1, 1, false, true, false, false, 0, 0, 0, 0, vector[spell_effect::new_effect(0, x"6561727468".to_string(), 9, 13, 0, 0, 1, 10000, 0, 0)], vector[]) }], xp: 575, loot: vector[mob_data::new_loot_entry(x"73616c76616765645f7363726170".to_string(), 5837, 1, 1), mob_data::new_loot_entry(x"7368696e795f7472696e6b6574".to_string(), 2461, 1, 1), mob_data::new_loot_entry(x"7472617368616d756c6574".to_string(), 43, 1, 1), mob_data::new_loot_entry(x"70756c6c5f7461625f72696e67".to_string(), 43, 1, 1), mob_data::new_loot_entry(x"747261736863616c69627572".to_string(), 43, 1, 1), mob_data::new_loot_entry(x"6c69645f73706c6974746572".to_string(), 43, 1, 1)] }),
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 13, wisdom: 6, raw_damage: 0, critical: 0, range_bonus: 0, level: 5 }, max_hp: 27, base_ap: 6, base_mp: 4, earth_resistance: 32768, fire_resistance: 32757, water_resistance: 32768, air_resistance: 32774 },
+        cell: 144, ready: true, dead: false, settled: true, forfeited: false, hp: 27, ap: 6, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[] },
+      Fighter { team: 1, kind: FighterKind::Mob(MobSnapshot { mob_type: x"6e6f6f6b".to_string(), level: 6, kit: vector[KitSpell { name: x"53636176656e676572205377697065".to_string(), ordinal: 1, level: spell_effect::new_spell_level(4, 1, 1, false, true, false, false, 0, 0, 0, 0, vector[spell_effect::new_effect(0, x"6561727468".to_string(), 11, 16, 0, 0, 1, 10000, 0, 0)], vector[]) }], xp: 700, loot: vector[mob_data::new_loot_entry(x"73616c76616765645f7363726170".to_string(), 6286, 1, 1), mob_data::new_loot_entry(x"7368696e795f7472696e6b6574".to_string(), 2650, 1, 1), mob_data::new_loot_entry(x"7472617368616d756c6574".to_string(), 46, 1, 1), mob_data::new_loot_entry(x"70756c6c5f7461625f72696e67".to_string(), 46, 1, 1), mob_data::new_loot_entry(x"747261736863616c69627572".to_string(), 46, 1, 1), mob_data::new_loot_entry(x"6c69645f73706c6974746572".to_string(), 46, 1, 1)] }),
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 16, wisdom: 7, raw_damage: 0, critical: 0, range_bonus: 0, level: 6 }, max_hp: 33, base_ap: 7, base_mp: 4, earth_resistance: 32768, fire_resistance: 32758, water_resistance: 32768, air_resistance: 32775 },
+        cell: 165, ready: true, dead: false, settled: true, forfeited: false, hp: 17, ap: 7, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[] },
+      Fighter { team: 1, kind: FighterKind::Mob(MobSnapshot { mob_type: x"74696e6b6572".to_string(), level: 6, kit: vector[KitSpell { name: x"506f69736f6e65642041636f726e".to_string(), ordinal: 1, level: spell_effect::new_spell_level(4, 1, 7, false, true, false, false, 0, 0, 0, 0, vector[spell_effect::new_effect(0, x"616972".to_string(), 9, 14, 0, 0, 1, 10000, 0, 0), spell_effect::new_effect(5, x"616972".to_string(), 3, 5, 0, 0, 1, 10000, 2, 12)], vector[]) }, KitSpell { name: x"526573696e20427265616b6572".to_string(), ordinal: 1, level: spell_effect::new_spell_level(3, 1, 6, false, true, false, false, 0, 1, 0, 0, vector[spell_effect::new_effect(5, x"".to_string(), 5, 9, 0, 0, 1, 10000, 2, 11)], vector[]) }], xp: 656, loot: vector[mob_data::new_loot_entry(x"676e617765645f6272616e6368".to_string(), 5986, 1, 1), mob_data::new_loot_entry(x"747265655f726573696e".to_string(), 4746, 1, 1), mob_data::new_loot_entry(x"7265667573655f72656375727665".to_string(), 51, 1, 1), mob_data::new_loot_entry(x"726573696e5f7365616c5f72696e67".to_string(), 103, 1, 1)] }),
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 21, wisdom: 11, raw_damage: 0, critical: 0, range_bonus: 0, level: 6 }, max_hp: 32, base_ap: 8, base_mp: 6, earth_resistance: 32760, fire_resistance: 32768, water_resistance: 32768, air_resistance: 32779 },
+        cell: 145, ready: true, dead: false, settled: true, forfeited: false, hp: 21, ap: 0, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[] },
+      Fighter { team: 1, kind: FighterKind::Mob(MobSnapshot { mob_type: x"74696e6b6572".to_string(), level: 5, kit: vector[KitSpell { name: x"506f69736f6e65642041636f726e".to_string(), ordinal: 1, level: spell_effect::new_spell_level(4, 1, 7, false, true, false, false, 0, 0, 0, 0, vector[spell_effect::new_effect(0, x"616972".to_string(), 8, 12, 0, 0, 1, 10000, 0, 0), spell_effect::new_effect(5, x"616972".to_string(), 3, 5, 0, 0, 1, 10000, 2, 12)], vector[]) }, KitSpell { name: x"526573696e20427265616b6572".to_string(), ordinal: 1, level: spell_effect::new_spell_level(3, 1, 6, false, true, false, false, 0, 1, 0, 0, vector[spell_effect::new_effect(5, x"".to_string(), 5, 8, 0, 0, 1, 10000, 2, 11)], vector[]) }], xp: 576, loot: vector[mob_data::new_loot_entry(x"676e617765645f6272616e6368".to_string(), 5653, 1, 1), mob_data::new_loot_entry(x"747265655f726573696e".to_string(), 4483, 1, 1), mob_data::new_loot_entry(x"7265667573655f72656375727665".to_string(), 48, 1, 1), mob_data::new_loot_entry(x"726573696e5f7365616c5f72696e67".to_string(), 98, 1, 1)] }),
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 18, wisdom: 10, raw_damage: 0, critical: 0, range_bonus: 0, level: 5 }, max_hp: 28, base_ap: 8, base_mp: 6, earth_resistance: 32759, fire_resistance: 32768, water_resistance: 32768, air_resistance: 32778 },
+        cell: 183, ready: true, dead: false, settled: true, forfeited: false, hp: 28, ap: 0, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[] },
+      Fighter { team: 1, kind: FighterKind::Mob(MobSnapshot { mob_type: x"74696e6b6572".to_string(), level: 7, kit: vector[KitSpell { name: x"506f69736f6e65642041636f726e".to_string(), ordinal: 1, level: spell_effect::new_spell_level(4, 1, 7, false, true, false, false, 0, 0, 0, 0, vector[spell_effect::new_effect(0, x"616972".to_string(), 10, 15, 0, 0, 1, 10000, 0, 0), spell_effect::new_effect(5, x"616972".to_string(), 3, 6, 0, 0, 1, 10000, 2, 12)], vector[]) }, KitSpell { name: x"526573696e20427265616b6572".to_string(), ordinal: 1, level: spell_effect::new_spell_level(3, 1, 6, false, true, false, false, 0, 1, 0, 0, vector[spell_effect::new_effect(5, x"".to_string(), 6, 10, 0, 0, 1, 10000, 2, 11)], vector[]) }], xp: 736, loot: vector[mob_data::new_loot_entry(x"676e617765645f6272616e6368".to_string(), 6318, 1, 1), mob_data::new_loot_entry(x"747265655f726573696e".to_string(), 5010, 1, 1), mob_data::new_loot_entry(x"7265667573655f72656375727665".to_string(), 54, 1, 1), mob_data::new_loot_entry(x"726573696e5f7365616c5f72696e67".to_string(), 109, 1, 1)] }),
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 23, wisdom: 13, raw_damage: 0, critical: 0, range_bonus: 0, level: 7 }, max_hp: 36, base_ap: 9, base_mp: 6, earth_resistance: 32761, fire_resistance: 32768, water_resistance: 32768, air_resistance: 32781 },
+        cell: 187, ready: true, dead: false, settled: true, forfeited: false, hp: 36, ap: 0, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[] },
+      Fighter { team: 1, kind: FighterKind::Mob(MobSnapshot { mob_type: x"6c6f7269746f5f5f7761746572".to_string(), level: 4, kit: vector[KitSpell { name: x"54616c6f6e2044697665".to_string(), ordinal: 1, level: spell_effect::new_spell_level(4, 1, 1, false, true, false, false, 0, 0, 0, 0, vector[spell_effect::new_effect(0, x"7761746572".to_string(), 8, 12, 0, 0, 1, 10000, 0, 0)], vector[]) }], xp: 445, loot: vector[mob_data::new_loot_entry(x"6c6f7269746f5f66656174686572".to_string(), 5550, 1, 1), mob_data::new_loot_entry(x"6265616b5f7368617264".to_string(), 3758, 1, 1), mob_data::new_loot_entry(x"6c6f7269746f5f646f776e".to_string(), 1877, 1, 1), mob_data::new_loot_entry(x"6c6f7269746f5f6861745f5f6368616e6365".to_string(), 42, 1, 1), mob_data::new_loot_entry(x"6c6f7269746f5f636c6f616b5f5f6368616e6365".to_string(), 42, 1, 1), mob_data::new_loot_entry(x"6b65795f6f665f67696c6465645f6c6f7269746f".to_string(), 257, 1, 1)] }),
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 17, wisdom: 8, raw_damage: 0, critical: 0, range_bonus: 0, level: 4 }, max_hp: 23, base_ap: 6, base_mp: 8, earth_resistance: 32768, fire_resistance: 32757, water_resistance: 32775, air_resistance: 32768 },
+        cell: 207, ready: true, dead: false, settled: true, forfeited: false, hp: 23, ap: 0, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[] },
+      Fighter { team: 0, kind: FighterKind::Player,
+        stats: FighterStats { sheet: Sheet { strength: 0, intelligence: 0, chance: 0, agility: 0, wisdom: 16, raw_damage: 0, critical: 0, range_bonus: 0, level: 12 }, max_hp: 110, base_ap: 6, base_mp: 3, earth_resistance: 32768, fire_resistance: 32768, water_resistance: 32768, air_resistance: 32768 },
+        cell: 106, ready: true, dead: false, settled: false, forfeited: false, hp: 110, ap: 2, mp: 0, drops: vector[],
+        effects: vector[],
+        cooldowns: vector[Cooldown { spell: x"5061636b20546f74656d".to_string(), left: 6 }] }
+    ],
+    zones: vector[BoardZone { owner_fighter: 0, trap: true, shape: 0, size: 0, anchor: 163, turns_left: 0,
+        effects: vector[spell_effect::new_effect(0, x"6561727468".to_string(), 7, 11, 0, 0, 1, 10000, 0, 0), spell_effect::new_effect(4, x"".to_string(), 4, 5, 0, 0, 3, 5000, 0, 12)] }, BoardZone { owner_fighter: 7, trap: false, shape: 1, size: 1, anchor: 105, turns_left: 3,
+        effects: vector[spell_effect::new_effect(4, x"".to_string(), 16, 16, 0, 0, 3, 10000, 1, 9), spell_effect::new_effect(5, x"".to_string(), 16, 16, 0, 0, 1, 10000, 1, 9)] }],
+    queue: vector[0, 1, 2, 3, 7, 4, 5, 6], turn_pointer: 4, round: 1, ended: false, winner: option::none(), turn_seed: 1556891806, turn_cast_index: 1, turn_casts: vector[TurnCast { spell: x"5061636b20546f74656d".to_string(), target: 4294967295 }],
+    placement_started_ms: 1788543090335, turn_started_ms: 1788543124947 }
+}
+
 use aresrpg_math::{
-  combat_grid::{Self, GridSpec},
+  combat_grid::{Self, DistanceField, GridSpec},
   fight_math,
   item_stats::{Self, ItemStatistics},
   mob_data::{Self, LootEntry},
@@ -37,6 +91,7 @@ const ENotLastSettler: u64 = 1729;
 const PLACEMENT_FORCE_MS: u64 = 60_000;
 const TURN_MIN_MS: u64 = 3_000;
 const TURN_MAX_MS: u64 = 45_000;
+const MAX_MOB_ROW_CASTS_PER_TURN: u64 = 16;
 const NO_TARGET: u64 = 0xFFFF_FFFF;
 const BASE_AP: u64 = 6;
 const BASE_MP: u64 = 3;
@@ -341,6 +396,8 @@ public fun scaled_mob_fighter(data: &aresrpg_math::mob_data::MobData, scalar: u6
   new_mob_fighter(1, cell, stats, snapshot)
 }
 
+public fun level(fighter: &Fighter): u64 { fighter.stats.sheet.level }
+
 public fun cap_fighter_hp(mut fighter: Fighter, maximum: u64): Fighter {
   if (fighter.hp > maximum) fighter.hp = maximum;
   fighter
@@ -407,11 +464,15 @@ public fun set_placement_started_ms(state: &mut State, value: u64) { state.place
 public fun first_free_start(state: &State, team: u8): Option<u64> {
   let starts = if (team == 0) state.board.start_cells_a() else state.board.start_cells_b();
   let mut occupied = vector[];
+  let mut admitted = 0;
   let mut fighter = 0;
   while (fighter < state.fighters.length()) {
+    if (state.fighters[fighter].team == team) admitted = admitted + 1;
     if (!state.fighters[fighter].settled) occupied.push_back(state.fighters[fighter].cell);
     fighter = fighter + 1;
   };
+  // Start cells bound lifetime admissions. A forfeit returns custody, not another admission.
+  if (admitted >= starts.length()) return option::none();
   combat_grid::first_free(&starts, &occupied)
 }
 
@@ -556,17 +617,6 @@ public fun assert_last_settlers(state: &State, fighters: &vector<u64>) {
   while (other < state.fighters.length()) {
     if (!fighters.contains(&other))
       assert!(state.fighters[other].settled && state.fighters[other].drops.is_empty(), ENotLastSettler);
-    other = other + 1;
-  };
-}
-
-public fun assert_last_live_player(state: &State, fighter: u64) {
-  assert!(in_placement(state), ENotPlacement);
-  assert!(!state.fighters[fighter].settled, EAlreadySettled);
-  let mut other = 0;
-  while (other < state.fighters.length()) {
-    if (other != fighter && !is_mob(&state.fighters[other]))
-      assert!(state.fighters[other].settled, ENotLastSettler);
     other = other + 1;
   };
 }
@@ -909,20 +959,27 @@ fun sheet_of(state: &State, fighter: u64): Sheet {
 }
 
 fun adjusted_stat(state: &State, fighter: u64, base: u64, stat: u8): u64 {
-  let bonus = sum_effects(state, fighter, K_ADD, stat);
-  let malus = sum_effects(state, fighter, K_REMOVE, stat)
-    + sum_effects(state, fighter, K_STEAL, stat)
-    + sum_effects(state, fighter, K_FIXED_REMOVE, stat);
+  let effects = &state.fighters[fighter].effects;
+  let mut bonus = 0;
+  let mut malus = 0;
+  let mut index = 0;
+  while (index < effects.length()) {
+    let effect = &effects[index];
+    if (effect.stat == stat) {
+      if (effect.kind == K_ADD) bonus = bonus + effect.value
+      else if (effect.kind == K_REMOVE || effect.kind == K_STEAL || effect.kind == K_FIXED_REMOVE)
+        malus = malus + effect.value;
+    };
+    index = index + 1;
+  };
   fight_math::sat_sub(base + bonus, malus)
 }
 
-fun effective_stat(state: &State, fighter: u64, stat: u8): u64 {
-  let sheet = sheet_of(state, fighter);
-  if (stat == STAT_STRENGTH) sheet.strength
-  else if (stat == STAT_INTELLIGENCE) sheet.intelligence
-  else if (stat == STAT_CHANCE) sheet.chance
-  else if (stat == STAT_AGILITY) sheet.agility
-  else sheet.wisdom
+fun contest_stat(state: &State, fighter: u64, stat: u8): u64 {
+  let sheet = &state.fighters[fighter].stats.sheet;
+  let base = if (stat == STAT_AGILITY) sheet.agility else sheet.wisdom;
+  let power = if (stat == STAT_AGILITY) adjusted_stat(state, fighter, 0, STAT_POWER) else 0;
+  adjusted_stat(state, fighter, base, stat) + power
 }
 
 fun adjusted_range(state: &State, fighter: u64, authored_max: u64): u64 {
@@ -1090,18 +1147,20 @@ fun walk_toward(state: &mut State, fighter: u64, target: u64) {
   let start = state.fighters[fighter].cell;
   if (start == target) return;
   let field = combat_grid::bfs_distance_field(target, &walls, state.fighters[fighter].mp);
-  assert!(field[start] <= state.fighters[fighter].mp, ENoPath);
+  assert!(combat_grid::distance_at(&field, start) <= state.fighters[fighter].mp, ENoPath);
   walk_down(state, fighter, field);
 }
 
-fun walk_down(state: &mut State, fighter: u64, field: vector<u64>) {
+fun walk_down(state: &mut State, fighter: u64, field: DistanceField) {
   let mut contested = vector[];
   loop {
     let current = state.fighters[fighter].cell;
-    if (field[current] == 0 || state.fighters[fighter].mp == 0) return;
+    if (state.fighters[fighter].mp == 0) return;
+    let distance = combat_grid::distance_at(&field, current);
+    if (distance == 0) return;
     contest_tackle(state, fighter, current, &mut contested);
     if (state.fighters[fighter].mp == 0) return;
-    let next = combat_grid::best_step(current, &field);
+    let next = combat_grid::best_step(current, &field, distance);
     if (next.is_none()) return;
     let next = next.destroy_some();
     if (fighter_at(state, next).is_some()) return;
@@ -1116,7 +1175,7 @@ fun contest_tackle(state: &mut State, fighter: u64, cell: u64, contested: &mut v
   let (fresh, agilities) = fresh_lockers(state, fighter, cell, contested);
   if (fresh.is_empty()) return;
   contested.append(fresh);
-  let agility = effective_stat(state, fighter, STAT_AGILITY);
+  let agility = contest_stat(state, fighter, STAT_AGILITY);
   let (numerator, denominator) = fight_math::tackle_contest(agility, &agilities);
   if (numerator >= denominator) return;
   let mp = state.fighters[fighter].mp;
@@ -1150,7 +1209,7 @@ fun fresh_lockers(
     if (index != fighter && !row.dead && row.team != team && !contested.contains(&index)
       && combat_grid::manhattan(row.cell, cell) == 1) {
       indices.push_back(index);
-      agilities.push_back(effective_stat(state, index, STAT_AGILITY));
+      agilities.push_back(contest_stat(state, index, STAT_AGILITY));
     };
     index = index + 1;
   };
@@ -1173,7 +1232,17 @@ const MOB_STEP_CAST: u8 = 1;
 const MOB_STEP_MOVED: u8 = 2;
 
 fun mob_turn(state: &mut State, mob: u64) {
-  loop {
+  // AP can be refunded. Charge every cast for the kit's largest possible branch, including
+  // critical rows, so the ceiling does not depend on the rolled outcome or require new state.
+  let mut rows_per_cast = 1;
+  mob_snapshot(&state.fighters[mob]).kit.do_ref!(|spell| {
+    let normal = spell.level.effects().length();
+    let critical = spell.level.crit_effects().length();
+    if (normal > rows_per_cast) rows_per_cast = normal;
+    if (critical > rows_per_cast) rows_per_cast = critical;
+  });
+  let cast_limit = MAX_MOB_ROW_CASTS_PER_TURN / rows_per_cast;
+  while (state.turn_casts.length() < cast_limit) {
     if (state.ended || state.fighters[mob].dead) return;
     let enemy = nearest_enemy(state, mob);
     if (enemy.is_none()) {
@@ -1216,30 +1285,20 @@ fun mob_step(state: &mut State, mob: u64, enemy: u64): u8 {
         spell_index = spell_index + 1;
         continue
       };
-      if (mob_castable(state, mob, &level, state.fighters[mob].cell, anchor)) {
+      if (mob_castable(&level, state.fighters[mob].cell, anchor, &sight_blockers(state, mob, anchor))) {
         cast_mob_spell(state, mob, &name, anchor);
         return MOB_STEP_CAST
       };
       if (!heal && !caster_only && combat_grid::manhattan(state.fighters[mob].cell, anchor)
         <= state.fighters[mob].mp + (level.range_max() as u64)) {
-        let walls = wall_mask(state, mob);
-        let cast_cell = combat_grid::bfs_cast_cell(
-          state.fighters[mob].cell,
-          anchor,
-          &walls,
-          state.fighters[mob].mp,
-          level.range_min() as u64,
-          level.range_max() as u64,
-          level.line_of_sight(),
-          &sight_blockers(state, mob, anchor),
-        );
+        let cast_cell = mob_cast_cell(state, mob, &level, anchor);
         if (cast_cell.is_some()) {
           walk_toward(state, mob, cast_cell.destroy_some());
           if (state.ended || state.fighters[mob].dead) return MOB_STEP_MOVED;
           let landed = state.fighters[mob].cell;
           let aim = state.fighters[target].cell;
           if (placement_rows_valid(state, &level, aim)
-            && mob_castable(state, mob, &level, landed, aim)
+            && mob_castable(&level, landed, aim, &sight_blockers(state, mob, aim))
             && state.fighters[mob].ap >= level.ap_cost() as u64) {
             cast_mob_spell(state, mob, &name, aim);
             return MOB_STEP_CAST
@@ -1263,7 +1322,7 @@ fun mob_cast_cap_available(state: &State, name: &String, level: &SpellLevel, tar
 fun rush_toward(state: &mut State, mob: u64, target: u64) {
   let walls = wall_mask(state, mob);
   let field = combat_grid::approach_field(target, &walls, state.fighters[mob].cell);
-  if (field[state.fighters[mob].cell] == combat_grid::path_unreachable()) return;
+  if (combat_grid::distance_at(&field, state.fighters[mob].cell) == combat_grid::path_unreachable()) return;
   walk_down(state, mob, field);
 }
 
@@ -1281,13 +1340,15 @@ fun cast_mob_spell(state: &mut State, fighter: u64, name: &String, target_cell: 
   abort ENotAMob
 }
 
-fun mob_castable(state: &State, mob: u64, level: &SpellLevel, from: u64, anchor: u64): bool {
-  let distance = combat_grid::manhattan(from, anchor);
-  if (distance < level.range_min() as u64 || distance > level.range_max() as u64) return false;
-  if (level.line_launch() && !combat_grid::same_line(from, anchor)) return false;
-  if (level.line_of_sight()
-    && !combat_grid::line_of_sight(from, anchor, &sight_blockers(state, mob, anchor))) return false;
-  true
+fun mob_castable(level: &SpellLevel, from: u64, anchor: u64, blockers: &vector<u64>): bool {
+  combat_grid::cell_can_cast(from, anchor, level.range_min() as u64, level.range_max() as u64,
+    level.line_of_sight(), level.line_launch(), blockers)
+}
+
+fun mob_cast_cell(state: &State, mob: u64, level: &SpellLevel, anchor: u64): Option<u64> {
+  combat_grid::bfs_cast_cell(state.fighters[mob].cell, anchor, &wall_mask(state, mob), state.fighters[mob].mp,
+    level.range_min() as u64, level.range_max() as u64, level.line_of_sight(), level.line_launch(),
+    &sight_blockers(state, mob, anchor))
 }
 
 fun placement_rows_valid(state: &State, level: &SpellLevel, anchor: u64): bool {
@@ -1536,29 +1597,31 @@ fun apply_to_fighter(
 ) {
   let kind = effect.kind();
   let element = effect.element();
-  let value = effect.value() as u64;
+  // Resolve meaningful magnitudes once per eligible target. Control rows carry metadata.
+  let value = if (kind <= K_PULL || kind == K_REDUCE || kind == K_REFLECT || kind == K_FIXED_REMOVE)
+    fight_math::roll_effect_value(effect, entropy) else effect.value() as u64;
   let turns = effect.turns() as u64;
   if (kind == K_DAMAGE) {
     deal_damage(
       state, caster, sheet, target, &element,
-      fight_math::roll_effect_value(effect, entropy), learned_level,
+      value, learned_level,
     );
   } else if (kind == K_PCT_LIFE) {
-    let base = state.fighters[target].stats.max_hp * fight_math::roll_effect_value(effect, entropy) / 100;
+    let base = state.fighters[target].stats.max_hp * value / 100;
     let damage = fight_math::resist(
       base, resistance(state, target, &element), item_stats::shift() as u64,
     );
     hit(state, target, damage, caster);
   } else if (kind == K_CASTER_DAMAGE) {
     let damage = fight_math::resist(
-      fight_math::roll_effect_value(effect, entropy),
+      value,
       resistance(state, caster, &element),
       item_stats::shift() as u64,
     );
     hit(state, caster, damage, caster);
   } else if (kind == K_PUNISHMENT) {
     let base = fight_math::punishment_base(
-      fight_math::roll_effect_value(effect, entropy),
+      value,
       state.fighters[caster].hp,
       state.fighters[caster].stats.max_hp,
     );
@@ -1576,22 +1639,22 @@ fun apply_to_fighter(
       if (kind == K_ADD && turns == 0) {
         heal(
           state, target,
-          fight_math::heal_amount(fight_math::roll_effect_value(effect, entropy), sheet.intelligence),
+          fight_math::heal_amount(value, sheet.intelligence),
         );
       } else if (kind == K_ADD) {
         let per_tick = fight_math::heal_amount(
-          fight_math::roll_effect_value(effect, entropy), sheet.intelligence,
+          value, sheet.intelligence,
         );
         add_active_effect(state, target, effect, caster, per_tick);
       } else if (kind == K_STEAL && turns == 0) {
         let dealt = deal_damage(
           state, caster, sheet, target, &element,
-          fight_math::roll_effect_value(effect, entropy), learned_level,
+          value, learned_level,
         );
         heal(state, caster, dealt / 2);
       } else {
         let per_tick = fight_math::resolved_damage(
-          fight_math::roll_effect_value(effect, entropy),
+          value,
           fight_math::primary_stat(
             &element, sheet.strength, sheet.intelligence, sheet.chance, sheet.agility,
           ),
@@ -1614,7 +1677,7 @@ fun apply_to_fighter(
         };
         if (!target_is_active || turns > 0) add_active_effect(state, target, effect, caster, value);
       } else {
-        let removed = contest_points(state, sheet, target, effect, entropy);
+        let removed = contest_points(state, sheet, target, effect, value, entropy);
         if (removed > 0) {
           if (target_is_active) {
             if (stat == STAT_AP) spend_ap(state, target, removed) else spend_mp(state, target, removed);
@@ -1637,8 +1700,6 @@ fun apply_to_fighter(
         stat,
       });
     };
-  } else if (kind == K_CHATIMENT) {
-    add_active_effect(state, target, effect, caster, value);
   } else if (kind == K_PUSH || kind == K_PULL) {
     displace(state, sheet, caster, target, value, kind == K_PUSH, origin, entropy);
   } else if (kind == K_RETURN) {
@@ -1721,6 +1782,7 @@ fun contest_points(
   sheet: &Sheet,
   target: u64,
   effect: &Effect,
+  value: u64,
   entropy: &mut u64,
 ): u64 {
   let action_points = effect.stat() == STAT_AP;
@@ -1733,10 +1795,10 @@ fun contest_points(
   );
   let (next, removed) = fight_math::remove_points(
     prng::draw(entropy),
-    effect.value() as u64,
+    value,
     true,
     sheet.wisdom,
-    effective_stat(state, target, STAT_WISDOM),
+    contest_stat(state, target, STAT_WISDOM),
     current,
     max,
   );
@@ -2143,9 +2205,9 @@ public fun matching_drops_for_testing(): vector<u32> {
   let board = combat_grid::generate(1, 0);
   let mut fighter = fighter_for_testing(0, board.start_cells_a()[0], 6, 3);
   fighter.drops = vector[
-    RolledDrop { item_type: b"silk".to_string(), qty: 2 },
-    RolledDrop { item_type: b"fang".to_string(), qty: 1 },
-    RolledDrop { item_type: b"silk".to_string(), qty: 3 },
+    new_rolled_drop(b"silk".to_string(), 2),
+    new_rolled_drop(b"fang".to_string(), 1),
+    new_rolled_drop(b"silk".to_string(), 3),
   ];
   let mut state = new_state(board, vector[fighter], 0);
   let total = take_matching_drops(&mut state, 0, &b"silk".to_string());
@@ -3038,4 +3100,102 @@ fun fighter_at(state: &State, cell: u64): Option<u64> {
     fighter = fighter + 1;
   };
   option::none()
+}
+
+#[test_only]
+public fun numeric_rows_for_testing(rows: vector<Effect>, seed: u64): vector<u64> {
+  let board = gas_board_for_testing();
+  let mut state = active_state_for_testing(board, vector[
+    fighter_for_testing(0, 100, 6, 3), fighter_for_testing(1, 101, 6, 3),
+    fighter_for_testing(1, 102, 6, 3),
+  ], 0);
+  let sheet = sheet_of(&state, 0);
+  let mut entropy = seed;
+  resolve_effects(&mut state, 0, &sheet, &rows, 101, 100, &mut entropy, 6);
+  let mut answer = vector[entropy];
+  let mut fighter = 0;
+  while (fighter < 3) {
+    answer.push_back(state.fighters[fighter].hp);
+    answer.push_back(state.fighters[fighter].ap);
+    state.fighters[fighter].effects.do_ref!(|effect| answer.push_back(effect.value));
+    fighter = fighter + 1;
+  };
+  destroy(state);
+  answer
+}
+
+#[test_only]
+public fun self_lethal_state_for_testing(): State {
+  let board = gas_board_for_testing();
+  let mut state = active_state_for_testing(board, vector[
+    fighter_for_testing(0, 100, 6, 3), fighter_for_testing(0, 101, 6, 3),
+    fighter_for_testing(1, 102, 6, 3),
+  ], 0);
+  let level = spell_effect::new_spell_level(1, 0, 0, false, false, false, false, 0, 0, 0, 0,
+    vector[spell_effect::new_effect(K_CASTER_DAMAGE, b"".to_string(), 100, 100, 0, 0, 4, 10000, 0, 0)], vector[]);
+  cast(&mut state, 0, &level, b"Self Cost".to_string(), 100, 1);
+  assert!(state.fighters[0].dead && !state.ended && active_fighter(&state) == 0, 0);
+  state
+}
+
+#[test_only]
+public fun cast_destination_for_testing(line_launch: bool, mp: u64, obstacles: vector<u64>, trap: vector<Effect>): vector<u64> {
+  let board = gas_board_for_testing();
+  let level = spell_effect::new_spell_level(2, 3, 5, false, true, line_launch, false, 0, 0, 0, 0,
+    vector[spell_effect::new_effect(K_DAMAGE, b"".to_string(), 10, 10, 0, 0, 1, 10000, 0, 0)], vector[]);
+  let mut mob = mob_for_testing(1, 104, 2, mp);
+  mob.kind = FighterKind::Mob(MobSnapshot { mob_type: b"protector".to_string(), level: 1,
+    kit: vector[KitSpell { name: b"Ray".to_string(), ordinal: 1, level }], xp: 0, loot: vector[] });
+  let mut state = active_state_for_testing(board, vector[fighter_for_testing(0, 127, 6, 3), mob], 1);
+  state.closed = combat_grid::mask_from_cells(&obstacles);
+  let destination = mob_cast_cell(&state, 1, &level, 127).get_with_default(380);
+  if (!trap.is_empty()) state.zones.push_back(BoardZone {
+    owner_fighter: 0, trap: true, shape: 0, size: 0, anchor: 124, turns_left: 0, effects: trap,
+  });
+  mob_turn(&mut state, 1);
+  let answer = vector[destination, state.fighters[0].hp, state.fighters[1].cell, state.fighters[1].ap];
+  destroy(state);
+  answer
+}
+
+#[test_only]
+public fun fighter_resources_for_testing(state: &State, seat: u64): vector<u64> {
+  let fighter = &state.fighters[seat];
+  vector[fighter.hp, fighter.ap, fighter.mp, fighter.effects.length()]
+}
+
+#[test_only]
+public fun retained_history_for_testing(history: u64): State {
+  let board = gas_board_for_testing();
+  let mut fighters = vector[fighter_for_testing(0, 100, 6, 3), fighter_for_testing(1, 200, 6, 3)];
+  // Exact settled/dead shape left by repeated placement forfeits; identities belong to core.
+  fighters.append(vector::tabulate!(history, |_| {
+    let mut fighter = fighter_for_testing(0, 101, 6, 3);
+    fighter.dead = true;
+    fighter.settled = true;
+    fighter.forfeited = true;
+    fighter.hp = 0;
+    fighter.ap = 0;
+    fighter.mp = 0;
+    fighter.ready = false;
+    fighter
+  }));
+  new_state(board, fighters, 1)
+}
+
+#[test_only]
+public fun reordered_targets_for_testing(): vector<u64> {
+  let mut state = active_state_for_testing(gas_board_for_testing(), vector[
+    fighter_for_testing(0, 102, 6, 3), fighter_for_testing(1, 100, 6, 3),
+    fighter_for_testing(1, 101, 6, 3),
+  ], 0);
+  let effect = spell_effect::new_effect(K_ADD, b"".to_string(), 2, 30,
+    spell_effect::shape_allmap(), 0, 0, 10000, 2, STAT_RAW_DAMAGE);
+  let sheet = sheet_of(&state, 0);
+  let mut entropy = 1;
+  resolve_effects(&mut state, 0, &sheet, &vector[effect], 100, 102, &mut entropy, 1);
+  let result = vector[state.fighters[0].effects[0].value, state.fighters[1].effects[0].value,
+    state.fighters[2].effects[0].value];
+  destroy(state);
+  result
 }

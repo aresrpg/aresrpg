@@ -5,9 +5,11 @@ import { describe, expect, test } from 'bun:test'
 import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import type { Sdk } from '../src/client.ts'
-import { create_seed_plan, recipe_door_args, type SeedContent } from '../src/seed.ts'
+import { create_seed_plan, giftcards_for_network, recipe_door_args, type SeedContent } from '../src/seed.ts'
+import { seed_sync_rows } from '../src/seed_sync.ts'
 import {
   board_catalog_id,
+  giftcard_id,
   item_template_id,
   mob_template_id,
   world_content_id,
@@ -50,7 +52,6 @@ const content: SeedContent = {
   worlds: [],
   mastery: { offers: [] },
   airdrop: {
-    drops: [{ id: 'launch', item_type: 'ore', amount_each: 2, whitelist: [`0x${'44'.repeat(32)}`] }],
     giftcards: [
       { id: 'press', item_type: 'ore', amount: 3, custody: `0x${'55'.repeat(32)}` },
       { id: 'partner', item_type: 'ore', amount: 4, custody: `0x${'66'.repeat(32)}` },
@@ -122,9 +123,9 @@ describe('seed plan', () => {
     const supply = plan.batches.filter(({ phase }) => phase === 'supply')
 
     expect(phases.indexOf('items')).toBeLessThan(phases.indexOf('loot_boxes'))
-    expect(supply).toHaveLength(2)
-    expect(supply.map(({ target_ids }) => target_ids.length)).toEqual([1, 2])
-    expect(new Set(supply.flatMap(({ target_ids }) => target_ids)).size).toBe(3)
+    expect(supply).toHaveLength(1)
+    expect(supply.map(({ target_ids }) => target_ids.length)).toEqual([2])
+    expect(new Set(supply.flatMap(({ target_ids }) => target_ids)).size).toBe(2)
     expect(supply.every(({ dependencies }) => dependencies.length === 1)).toBeTrue()
   })
 
@@ -202,8 +203,53 @@ describe('seed plan', () => {
     expect(() =>
       create_seed_plan(sdk, {
         ...content,
-        airdrop: { ...content.airdrop, drops: [content.airdrop.drops[0], content.airdrop.drops[0]] },
+        airdrop: { ...content.airdrop, giftcards: [content.airdrop.giftcards[0]!, content.airdrop.giftcards[0]!] },
       })
     ).toThrow('is claimed by both')
+  })
+
+  test('creation and reconciliation exclude giftcards for another network', () => {
+    const scoped_content = {
+      ...content,
+      airdrop: {
+        giftcards: [
+          { ...content.airdrop.giftcards[0]!, id: 'mainnet_holder', network: 'mainnet' },
+          { ...content.airdrop.giftcards[0]!, id: 'test_bundle', network: 'testnet' },
+          { ...content.airdrop.giftcards[0]!, id: 'both' },
+        ],
+      },
+    } as SeedContent
+    for (const network of ['testnet', 'mainnet'] as const) {
+      const scoped_sdk = { ...sdk, network }
+      const wanted = network === 'testnet' ? 'test_bundle' : 'mainnet_holder'
+      const ids = [wanted, 'both'].map((name) => giftcard_id('0xc0'.padEnd(66, '0'), PACKAGE, name))
+      expect(
+        create_seed_plan(scoped_sdk, scoped_content)
+          .batches.filter(({ phase }) => phase === 'supply')
+          .flatMap(({ target_ids }) => target_ids)
+      ).toEqual(ids)
+      expect(
+        seed_sync_rows(scoped_sdk, scoped_content)
+          .filter(({ domain }) => domain === 'giftcard')
+          .map(({ chain_id }) => chain_id)
+      ).toEqual(ids)
+    }
+  })
+
+  test('compact holder batches expand into stable individual vouchers only on their network', () => {
+    const custody = `0x${'77'.repeat(32)}`
+    const batch = { id: 'holders', item_type: 'ore', amount: 1, network: 'mainnet' as const, recipients: [custody] }
+    const compact = { ...content, airdrop: { giftcards: [], giftcard_batches: [batch] } }
+    const id = `holders_${'77'.repeat(32)}`
+    expect(giftcards_for_network('testnet', compact)).toEqual([])
+    expect(giftcards_for_network('mainnet', compact)).toEqual([
+      { id, item_type: 'ore', amount: 1, network: 'mainnet', custody },
+    ])
+    const mainnet = { ...sdk, network: 'mainnet' as const }
+    const duplicate = {
+      ...compact,
+      airdrop: { ...compact.airdrop, giftcards: [{ id, item_type: 'ore', amount: 1, custody }] },
+    }
+    expect(() => create_seed_plan(mainnet, duplicate)).toThrow('is claimed by both')
   })
 })

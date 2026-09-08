@@ -14,7 +14,6 @@ import world, {
 } from '../../src/modules/world.ts'
 import { engage_conflict_refusal, new_pending_engages, sword_fights } from '../../src/modules/world_engage.ts'
 import {
-  automatic_authoritative_ambush_input,
   automatic_ambush_input,
   selected_world_action_lock,
   selected_world_ambush,
@@ -53,6 +52,8 @@ const presence = (character_id: string, x: number, z: number): PresenceRow => ({
   color_3: 0,
   hat: null,
   cloak: null,
+  cosmetic_hat: null,
+  cosmetic_cloak: null,
   title: null,
   pet: null,
   riding: false,
@@ -107,6 +108,7 @@ test('gathering stays locked through its receipt and adopts the chain checkpoint
   state = world.reduce!(state, {
     type: 'world/gather_started',
     gathering: {
+      attempt_id: 'first',
       character_id: '0xc',
       item_type: 'ivory_shrooms',
       protector: 'protector_ivory_gaia',
@@ -127,23 +129,34 @@ test('gathering stays locked through its receipt and adopts the chain checkpoint
   ).toEqual({ character_id: '0xc', animation: 'gather' })
   state = world.reduce!(state, {
     type: 'world/gather_confirmed',
+    attempt_id: 'first',
     character_id: '0xc',
     fallback_ends_at_ms: 14_500,
     ambushed: false,
     quantity: 7,
   })
-  expect(state.world.gathering).toMatchObject({ confirmed: true, ends_at_ms: 14_500, authoritative: false })
+  expect(state.world.gathering['0xc']).toMatchObject({ confirmed: true, ends_at_ms: 14_500, authoritative: false })
 
   state = world.reduce!(state, {
     type: 'server/packet',
     packet: { type: 'packet/characters', characters: [{ id: '0xc', at_ms: 13_420 }] } as never,
   })
-  expect(state.world.gathering).toMatchObject({ ends_at_ms: 13_420, authoritative: true })
+  expect(state.world.gathering['0xc']).toMatchObject({ ends_at_ms: 13_420, authoritative: true })
 
-  state = world.reduce!(state, { type: 'world/gather_finished', character_id: '0xc', ends_at_ms: 14_500 })
-  expect(state.world.gathering).not.toBeNull()
-  state = world.reduce!(state, { type: 'world/gather_finished', character_id: '0xc', ends_at_ms: 13_420 })
-  expect(state.world.gathering).toBeNull()
+  state = world.reduce!(state, {
+    type: 'world/gather_finished',
+    character_id: '0xc',
+    attempt_id: 'first',
+    ends_at_ms: 14_500,
+  })
+  expect(state.world.gathering['0xc']).toBeDefined()
+  state = world.reduce!(state, {
+    type: 'world/gather_finished',
+    character_id: '0xc',
+    attempt_id: 'first',
+    ends_at_ms: 13_420,
+  })
+  expect(state.world.gathering).toEqual({})
 })
 
 test('an ambush receipt replaces gathering animation and automatically resolves the protector', () => {
@@ -153,6 +166,7 @@ test('an ambush receipt replaces gathering animation and automatically resolves 
     gathering: {
       character_id: '0xc',
       item_type: 'wheat',
+      attempt_id: 'second',
       protector: 'protector_wheat_bricheton',
       started_at_ms: 1_000,
       duration_ms: 12_000,
@@ -170,11 +184,12 @@ test('an ambush receipt replaces gathering animation and automatically resolves 
       characters: [{ id: '0xc', ambush: { protector: 'protector_wheat_bricheton' } }],
     } as never,
   })
-  expect(state.world.gathering).toMatchObject({ ambushed: true, quantity: null })
+  expect(state.world.gathering['0xc']).toMatchObject({ ambushed: true, quantity: null })
   state = world.reduce!(state, {
     type: 'world/gather_confirmed',
     character_id: '0xc',
     fallback_ends_at_ms: 14_000,
+    attempt_id: 'second',
     ambushed: true,
     quantity: 1,
   })
@@ -185,17 +200,20 @@ test('an ambush receipt replaces gathering animation and automatically resolves 
 
   expect(selected_world_ambush(selected)).toBe('protector_wheat_bricheton')
   expect(selected_world_action_lock(selected)).toEqual({ character_id: '0xc', animation: null })
-  expect(automatic_ambush_input(state.world.gathering)).toEqual({ type: 'world/resolve_ambush' })
+  expect(automatic_ambush_input(state.world.gathering['0xc']!)).toEqual({
+    type: 'world/resolve_ambush',
+    character_id: '0xc',
+  })
 
   const refreshed = {
     ...state,
-    world: { ...state.world, gathering: null },
+    world: { ...state.world, gathering: {} },
     session: {
       ...state.session,
       characters: [{ id: '0xc', ambush: { protector: 'protector_wheat_bricheton' } }],
     },
   } as never
-  expect(automatic_authoritative_ambush_input(refreshed)).toEqual({ type: 'world/resolve_ambush' })
+  expect(selected_world_ambush(refreshed)).toBe('protector_wheat_bricheton')
 })
 
 test('players appear, move by id, and leave — a move for an unknown player is dropped', () => {

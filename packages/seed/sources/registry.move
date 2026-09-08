@@ -83,3 +83,6 @@ public fun destroy_for_testing(root: Registry) {
   let Registry { id, .. } = root;
   id.delete();
 }
+
+#[test_only]
+public fun test_init(ctx: &mut TxContext) { init(ctx) }

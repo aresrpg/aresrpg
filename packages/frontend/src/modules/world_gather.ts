@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Gathering's client boundary: mirror the chain root, suppress doomed repeats, and project the
-// receipt's exact reward. World population remains in world.ts; this module owns only the one
-// selected character's in-progress harvest.
+// receipt's exact reward. World population remains in world.ts; this module owns the
+// characters' in-progress harvests. Selection changes presentation, never ownership.
 
 import { gather_time_ms, job_level_from_xp } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
@@ -21,6 +21,7 @@ import { character_custody, selected_character } from './session.ts'
 import { live_spawns, parse_resource_pack_id } from './world_spawns.ts'
 
 export type PendingGather = Readonly<{
+  attempt_id: string
   character_id: string
   item_type: string
   protector: string
@@ -38,30 +39,38 @@ export type WorldGatherInput =
   | Readonly<{ type: 'world/gather_started'; gathering: PendingGather }>
   | Readonly<{
       type: 'world/gather_confirmed'
+      attempt_id: string
       character_id: string
       fallback_ends_at_ms: number
       ambushed: boolean
       quantity: number
     }>
-  | Readonly<{ type: 'world/gather_failed'; character_id: string }>
-  | Readonly<{ type: 'world/gather_finished'; character_id: string; ends_at_ms: number }>
-  | Readonly<{ type: 'world/resolve_ambush' }>
+  | Readonly<{ type: 'world/gather_failed'; character_id: string; attempt_id: string }>
+  | Readonly<{ type: 'world/gather_finished'; character_id: string; attempt_id: string; ends_at_ms: number }>
+  | Readonly<{ type: 'world/resolve_ambush'; character_id: string }>
 
-export const selected_world_ambush = (state: Readonly<AppState>): string | null => {
-  const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
+export type Gatherings = Readonly<Record<string, PendingGather>>
+export const selected_gathering = (state: Readonly<Pick<AppState, 'world' | 'session'>>): PendingGather | null =>
+  state.world.gathering[state.session.selected_character_id ?? ''] ?? null
+
+const world_ambush = (state: Readonly<AppState>, character_id: string | null): string | null => {
+  const character = state.session.characters.find(({ id }) => id === character_id)
   if (!character) return null
   if (character.ambush) return character.ambush.protector
-  const { gathering } = state.world
+  const gathering = state.world.gathering[character.id]
   return gathering?.character_id === character.id && gathering.ambushed ? gathering.protector : null
 }
+
+export const selected_world_ambush = (state: Readonly<AppState>): string | null =>
+  world_ambush(state, state.session.selected_character_id)
 
 export const selected_world_action_lock = (
   state: Readonly<AppState>
 ): Readonly<{ character_id: string; animation: 'gather' | null }> | null => {
   const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
   if (!character) return null
-  if (state.world.gathering?.character_id === character.id)
-    return Object.freeze({ character_id: character.id, animation: state.world.gathering.ambushed ? null : 'gather' })
+  const gathering = selected_gathering(state)
+  if (gathering) return Object.freeze({ character_id: character.id, animation: gathering.ambushed ? null : 'gather' })
   if (character.dungeon_run) return Object.freeze({ character_id: character.id, animation: null })
   return character.ambush ? Object.freeze({ character_id: character.id, animation: null }) : null
 }
@@ -75,7 +84,7 @@ export const reduce_gathering = (
   input: Extract<WorldGatherInput, { type: `world/gather_${string}` }>
 ): PendingGather | null => {
   if (input.type === 'world/gather_started') return input.gathering
-  if (!gathering || gathering.character_id !== input.character_id) return gathering
+  if (!gathering || gathering.attempt_id !== input.attempt_id) return gathering
   if (input.type === 'world/gather_failed') return null
   if (input.type === 'world/gather_finished') return gathering.ends_at_ms === input.ends_at_ms ? null : gathering
   return Object.freeze({
@@ -89,6 +98,20 @@ export const reduce_gathering = (
   })
 }
 
+export const reduce_gatherings = (
+  rows: Gatherings,
+  input: Extract<WorldGatherInput, { type: `world/gather_${string}` }>
+): Gatherings => {
+  const id = input.type === 'world/gather_started' ? input.gathering.character_id : input.character_id
+  const previous = rows[id] ?? null
+  if (input.type === 'world/gather_started' && previous) return rows
+  const next = reduce_gathering(previous, input)
+  if (next === previous) return rows
+  return Object.freeze(
+    next ? { ...rows, [id]: next } : Object.fromEntries(Object.entries(rows).filter(([key]) => key !== id))
+  )
+}
+
 export const gather_completion_ready = (gathering: Readonly<PendingGather>, now_ms: number): boolean =>
   gathering.confirmed && gathering.quantity !== null && (gathering.ambushed || now_ms >= gathering.ends_at_ms)
 
@@ -96,14 +119,7 @@ export const automatic_ambush_input = (
   gathering: Readonly<PendingGather> | null
 ): Extract<WorldGatherInput, { type: 'world/resolve_ambush' }> | null =>
   gathering?.confirmed && gathering.ambushed && gathering.quantity !== null
-    ? Object.freeze({ type: 'world/resolve_ambush' })
-    : null
-
-export const automatic_authoritative_ambush_input = (
-  state: Readonly<AppState>
-): Extract<WorldGatherInput, { type: 'world/resolve_ambush' }> | null =>
-  state.world.gathering === null && selected_world_ambush(state)
-    ? Object.freeze({ type: 'world/resolve_ambush' })
+    ? Object.freeze({ type: 'world/resolve_ambush', character_id: gathering.character_id })
     : null
 
 export const gathering_from_characters = (
@@ -119,21 +135,43 @@ export const gathering_from_characters = (
     : gathering
 }
 
+export const gatherings_from_characters = (
+  rows: Gatherings,
+  characters: readonly Readonly<CharacterRow>[]
+): Gatherings =>
+  Object.freeze(
+    Object.fromEntries(
+      Object.entries(rows).flatMap(([id, gathering]) => {
+        const next = gathering_from_characters(gathering, characters)
+        return next ? [[id, next]] : []
+      })
+    )
+  )
+
 export const observe_world_gather = ({ events, get_state, dispatch, signal }: AppContext): void => {
   const in_flight = new Set<string>()
   const notices = new Map<string, ReturnType<typeof toast.loading>>()
-  let gather_timer: ReturnType<typeof setTimeout> | null = null
+  const gather_timers = new Map<string, ReturnType<typeof setTimeout>>()
 
   const complete_gather = (gathering: Readonly<PendingGather>): void => {
-    const current = get_state().world.gathering
+    const current = get_state().world.gathering[gathering.character_id]
     if (
       !current ||
-      current.character_id !== gathering.character_id ||
+      current.attempt_id !== gathering.attempt_id ||
       current.ends_at_ms !== gathering.ends_at_ms ||
       !gather_completion_ready(current, Date.now())
     )
       return
-    const notice = notices.get(current.character_id)
+    // State completion is independent of audio and toast lifetimes.
+    if (!current.ambushed)
+      dispatch({
+        type: 'world/gather_finished',
+        character_id: current.character_id,
+        attempt_id: current.attempt_id,
+        ends_at_ms: current.ends_at_ms,
+      })
+    const notice = notices.get(current.attempt_id)
+    notices.delete(current.attempt_id)
     if (!notice || current.quantity === null) return
     const state = get_state()
     const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
@@ -146,13 +184,30 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       }),
       item_icon(current.item_type) ?? undefined
     )
-    notices.delete(current.character_id)
-    if (!current.ambushed)
-      dispatch({
-        type: 'world/gather_finished',
-        character_id: current.character_id,
-        ends_at_ms: current.ends_at_ms,
-      })
+  }
+
+  const schedule_gather = (gathering: PendingGather): void => {
+    if (signal.aborted || !gathering.confirmed || gathering.quantity === null) return
+    const automatic = automatic_ambush_input(gathering)
+    if (automatic) dispatch(automatic)
+    if (gather_completion_ready(gathering, Date.now())) complete_gather(gathering)
+    else
+      gather_timers.set(
+        gathering.attempt_id,
+        setTimeout(
+          () => {
+            const current = get_state().world.gathering[gathering.character_id]
+            if (current?.attempt_id === gathering.attempt_id) schedule_gather(current)
+          },
+          Math.max(1, gathering.ends_at_ms - Date.now())
+        )
+      )
+  }
+
+  const sync_gathers = (): void => {
+    gather_timers.forEach(clearTimeout)
+    gather_timers.clear()
+    Object.values(get_state().world.gathering).forEach(schedule_gather)
   }
 
   events.on('world/gather', ({ node }) => {
@@ -166,7 +221,7 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       !selected_character_id ||
       !character?.world ||
       !found ||
-      state.world.gathering?.character_id === selected_character_id ||
+      state.world.gathering[selected_character_id] ||
       in_flight.has(node_id!.pack_id)
     )
       return
@@ -185,9 +240,11 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
     const job_level = job_level_from_xp(Number(character.jobs[resource.job] ?? 0))
     const duration_ms = gather_time_ms(job_level)
     const started_at_ms = Date.now()
+    const attempt_id = crypto.randomUUID()
     dispatch({
       type: 'world/gather_started',
       gathering: Object.freeze({
+        attempt_id,
         character_id: selected_character_id,
         item_type: pack.item_type,
         protector: resource.protector,
@@ -203,7 +260,17 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
     in_flight.add(node_id!.pack_id)
     const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
     const notice = toast.loading(text('resource_gathering'))
-    notices.set(selected_character_id, notice)
+    notices.set(attempt_id, notice)
+    const is_current = (): boolean => {
+      const current =
+        get_state().session.wallet === wallet &&
+        get_state().world.gathering[selected_character_id]?.attempt_id === attempt_id
+      if (!current) {
+        notice.dismiss()
+        notices.delete(attempt_id)
+      }
+      return current
+    }
     void wallet.character
       .gather({
         character_id: selected_character_id,
@@ -218,8 +285,10 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
         custody: character_custody(character),
       })
       .then(({ ambushed, quantity }) => {
+        if (!is_current()) return
         dispatch({
           type: 'world/gather_confirmed',
+          attempt_id,
           character_id: selected_character_id,
           fallback_ends_at_ms: Date.now() + duration_ms,
           ambushed,
@@ -227,8 +296,9 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
         })
       })
       .catch((error: unknown) => {
-        dispatch({ type: 'world/gather_failed', character_id: selected_character_id })
-        notices.delete(selected_character_id)
+        if (!is_current()) return
+        dispatch({ type: 'world/gather_failed', character_id: selected_character_id, attempt_id })
+        notices.delete(attempt_id)
         console.error('Resource gathering failed.', error)
         notice.error(error)
       })
@@ -236,31 +306,19 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
   })
 
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.world.gathering !== previous.world.gathering) {
-      if (gather_timer) clearTimeout(gather_timer)
-      gather_timer = null
-      const { gathering } = state.world
-      if (gathering?.confirmed && gathering.quantity !== null) {
-        if (gathering.ambushed) {
-          complete_gather(gathering)
-          const automatic = automatic_ambush_input(gathering)
-          if (automatic) dispatch(automatic)
-        } else
-          gather_timer = setTimeout(() => complete_gather(gathering), Math.max(0, gathering.ends_at_ms - Date.now()))
-      }
-    }
-    const current_ambush = selected_world_ambush(state)
-    const previous_ambush = selected_world_ambush(previous)
-    if (current_ambush !== previous_ambush) {
-      const automatic = automatic_authoritative_ambush_input(state)
-      if (automatic) dispatch(automatic)
-    }
+    if (state.world.gathering !== previous.world.gathering) sync_gathers()
+    state.session.characters.forEach((character) => {
+      const before = previous.session.characters.find(({ id }) => id === character.id)
+      if (character.ambush && character.ambush.board_seed !== before?.ambush?.board_seed)
+        dispatch({ type: 'world/resolve_ambush', character_id: character.id })
+    })
   })
 
-  events.on('world/resolve_ambush', () => {
+  events.on('world/resolve_ambush', ({ character_id }) => {
     const state = get_state()
-    const character = selected_character(state.session)
-    const ambush = selected_world_ambush(state)
+    const character = state.session.characters.find(({ id }) => id === character_id)
+    const gathering = state.world.gathering[character_id]
+    const ambush = world_ambush(state, character_id)
     const { wallet } = state.session
     if (!wallet || !character || !ambush) return
     const key = `ambush:${character.id}`
@@ -275,11 +333,17 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
         custody: character_custody(character),
       })
       .then(({ fight }) => {
+        if (get_state().session.wallet !== wallet) return
         notice.dismiss()
         dispatch({ type: 'fight/watch', character_id: character.id, fight })
-        const { gathering } = get_state().world
-        if (gathering?.character_id === character.id)
-          dispatch({ type: 'world/gather_finished', character_id: character.id, ends_at_ms: gathering.ends_at_ms })
+        const current = get_state().world.gathering[character.id]
+        if (current && current.attempt_id === gathering?.attempt_id)
+          dispatch({
+            type: 'world/gather_finished',
+            character_id: character.id,
+            attempt_id: current.attempt_id,
+            ends_at_ms: current.ends_at_ms,
+          })
       })
       .catch((error: unknown) => {
         console.error('Resource ambush resolution failed.', error)
@@ -288,12 +352,14 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       .finally(() => in_flight.delete(key))
   })
 
-  const initial_automatic = automatic_authoritative_ambush_input(get_state())
-  if (initial_automatic) dispatch(initial_automatic)
+  sync_gathers()
+  get_state().session.characters.forEach((character) => {
+    if (character.ambush) dispatch({ type: 'world/resolve_ambush', character_id: character.id })
+  })
 
   signal.addEventListener('abort', () => {
-    if (gather_timer) clearTimeout(gather_timer)
-    gather_timer = null
+    gather_timers.forEach(clearTimeout)
+    gather_timers.clear()
     notices.forEach((notice) => notice.dismiss())
     notices.clear()
   })

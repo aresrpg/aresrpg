@@ -2,19 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One marketplace reducer: server projections in, user intents out, SDK receipts re-enter.
 
-import {
-  accessory_categories,
-  armor_categories,
-  tool_categories,
-  weapon_categories,
-  type ItemCategory,
-} from '@aresrpg/immutable'
+import { equipment_categories, type ItemCategory } from '@aresrpg/immutable'
 import {
   MAX_TRACKED_CHARACTERS,
+  MARKET_WINDOW_SIZE,
   type ListingRow,
   type MarketCounts,
   type MarketObservation,
   type MarketSaleRow,
+  type MarketSnapshot,
   type ServerPacket,
 } from '@aresrpg/protocol'
 
@@ -29,13 +25,7 @@ import { format_sui } from '../wallet_amount.ts'
 export const MARKET_GROUPS = ['EQUIPMENT', 'PETS', 'RUNES', 'CONSUMABLE', 'RESOURCES', 'CHARACTERS'] as const
 export type MarketGroup = (typeof MARKET_GROUPS)[number]
 
-const equipment = Object.freeze([
-  ...armor_categories,
-  ...accessory_categories,
-  ...weapon_categories,
-  ...tool_categories,
-  'relic',
-] as ItemCategory[])
+const equipment = Object.freeze(equipment_categories.filter((category) => category !== 'pet'))
 
 export const market_observation = (group: MarketGroup): MarketObservation =>
   Object.freeze({
@@ -69,6 +59,8 @@ export type MarketplaceState = Readonly<{
   observation: MarketObservation | null
   listings: readonly ListingRow[]
   own_listings: readonly ListingRow[]
+  catalogues: Readonly<Record<string, Readonly<{ version: string; owned: boolean }>>>
+  departures: Readonly<Record<string, Readonly<Record<string, string>>>>
   history: readonly MarketSaleRow[]
   revenue_30d_mist: string
   history_total: number
@@ -80,14 +72,20 @@ export type MarketplaceInput =
   | Readonly<{ type: 'market/group_selected'; group: MarketGroup }>
   | Readonly<{
       type: 'market/list_requested'
-      listing: ListingRow
+      listing: Omit<ListingRow, 'version'>
       source_amount: number
       merge_sources: readonly string[]
     }>
   | Readonly<{ type: 'market/delist_requested'; listing: ListingRow }>
   | Readonly<{ type: 'market/buy_requested'; listing: ListingRow }>
   | Readonly<{ type: 'market/collect_requested' }>
-  | Readonly<{ type: 'market/write_succeeded'; operation: 'list' | 'delist' | 'buy' | 'collect'; listing?: ListingRow }>
+  | Readonly<{
+      type: 'market/write_succeeded'
+      operation: 'list' | 'delist' | 'buy'
+      listing: ListingRow
+      version: string
+    }>
+  | Readonly<{ type: 'market/write_succeeded'; operation: 'collect' }>
   | Readonly<{ type: 'market/write_failed'; error: string }>
 
 export const initial_marketplace_state = (): MarketplaceState =>
@@ -97,6 +95,8 @@ export const initial_marketplace_state = (): MarketplaceState =>
     observation: null,
     listings: [],
     own_listings: [],
+    catalogues: {},
+    departures: {},
     history: [],
     revenue_30d_mist: '0',
     history_total: 0,
@@ -104,11 +104,19 @@ export const initial_marketplace_state = (): MarketplaceState =>
     pending: null,
   })
 
-const upsert = (rows: readonly ListingRow[], listing: Readonly<ListingRow>): readonly ListingRow[] =>
-  Object.freeze([...rows.filter(({ id }) => id !== listing.id), listing])
+const latest_listings = (current: readonly ListingRow[], incoming: readonly ListingRow[]): readonly ListingRow[] => {
+  const rows = new Map(current.map((row) => [row.id, row]))
+  incoming.forEach((row) => {
+    if (BigInt(row.version) >= BigInt(rows.get(row.id)?.version ?? '0')) rows.set(row.id, row)
+  })
+  return Object.freeze([...rows.values()])
+}
 
-const without = (rows: readonly ListingRow[], id: string): readonly ListingRow[] =>
-  rows.some((listing) => listing.id === id) ? Object.freeze(rows.filter((listing) => listing.id !== id)) : rows
+const public_window = (current: readonly ListingRow[], incoming: readonly ListingRow[]): readonly ListingRow[] =>
+  Object.freeze([...latest_listings(current, incoming)].sort((a, b) => b.at_ms - a.at_ms).slice(0, MARKET_WINDOW_SIZE))
+
+const without_relation = (rows: readonly ListingRow[], gone: Readonly<ListingRow>): readonly ListingRow[] =>
+  rows.filter((row) => row.id !== gone.id || row.kiosk !== gone.kiosk)
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1_000
 const revenue_after_sale = (current: string, sale: Readonly<MarketSaleRow>, known: boolean, now_ms: number): string =>
@@ -116,14 +124,10 @@ const revenue_after_sale = (current: string, sale: Readonly<MarketSaleRow>, know
 
 const fold_sale = (market: MarketplaceState, sale: Readonly<MarketSaleRow>, now_ms = Date.now()): MarketplaceState => {
   const known = market.history.some(({ id }) => id === sale.id)
-  const listings = without(market.listings, sale.object)
-  const own_listings = without(market.own_listings, sale.object)
-  if (known && listings === market.listings && own_listings === market.own_listings) return market
+  if (known) return market
   const history = known ? market.history : Object.freeze([sale, ...market.history].slice(0, 200))
   return Object.freeze({
     ...market,
-    listings,
-    own_listings,
     history,
     revenue_30d_mist: revenue_after_sale(market.revenue_30d_mist, sale, known, now_ms),
     history_total: known ? market.history_total : market.history_total + 1,
@@ -162,34 +166,102 @@ const listing_is_observed = (observation: MarketObservation | null, listing: Rea
     ? observation.characters
     : !!listing.category && (observation.categories as readonly string[]).includes(listing.category))
 
-type ListingPacket = Extract<
-  ServerPacket,
-  { type: 'packet/market_listed' | 'packet/market_delisted' | 'packet/listing_sold' }
->
-
-const is_listing_packet = (packet: Readonly<ServerPacket>): packet is ListingPacket =>
-  packet.type === 'packet/market_listed' ||
-  packet.type === 'packet/market_delisted' ||
-  packet.type === 'packet/listing_sold'
-
-const fold_listing_packet = (
+const fold_catalogue = (
   market: MarketplaceState,
-  packet: Readonly<ListingPacket>,
+  snapshot: Readonly<MarketSnapshot>,
+  own: boolean,
   address: string | null
 ): MarketplaceState => {
-  if (packet.type === 'packet/listing_sold') return fold_sale(market, packet.sale)
-  if (packet.type === 'packet/market_delisted')
+  const current_source = (kiosk: string): boolean =>
+    BigInt(snapshot.kiosk_versions[kiosk] ?? '0') >= BigInt(market.catalogues[kiosk]?.version ?? '0')
+  const incoming = snapshot.listings.filter(
+    (row) => current_source(row.kiosk) && BigInt(row.version) > BigInt(market.departures[row.kiosk]?.[row.id] ?? '-1')
+  )
+  const previous = own ? market.own_listings : market.listings
+  const rows = latest_listings(
+    previous.filter((row) =>
+      own
+        ? BigInt(snapshot.kiosk_versions[row.kiosk] ?? '0') <= BigInt(market.catalogues[row.kiosk]?.version ?? '0')
+        : !current_source(row.kiosk)
+    ),
+    incoming
+  )
+  const own_listings = own
+    ? rows
+    : latest_listings(
+        market.own_listings,
+        incoming.filter((row) => row.seller === address)
+      )
+  const public_rows = own ? market.listings : rows
+  const owned_relations = new Set([...market.own_listings, ...own_listings].map((row) => `${row.kiosk}:${row.id}`))
+  const listings = public_window(
+    public_rows.filter((row) => row.seller !== address && !owned_relations.has(`${row.kiosk}:${row.id}`)),
+    own_listings.filter((row) => listing_is_observed(market.observation, row))
+  )
+  const departures = Object.fromEntries(
+    Object.entries(market.departures).flatMap(([kiosk, removed]) => {
+      const retained = Object.fromEntries(
+        Object.entries(removed).filter(
+          ([, version]) => BigInt(version) > BigInt(snapshot.kiosk_versions[kiosk] ?? '-1')
+        )
+      )
+      return Object.keys(retained).length ? [[kiosk, retained]] : []
+    })
+  )
+  const versions = {
+    ...market.catalogues,
+    ...Object.fromEntries(
+      Object.entries(snapshot.kiosk_versions).map(([kiosk, version]) => [
+        kiosk,
+        {
+          version: current_source(kiosk) ? version : market.catalogues[kiosk]!.version,
+          owned: own || !!market.catalogues[kiosk]?.owned,
+        },
+      ])
+    ),
+  }
+  const observed = new Set([
+    ...listings.map(({ kiosk }) => kiosk),
+    ...Object.keys(snapshot.kiosk_versions),
+    ...Object.keys(departures),
+  ])
+  const catalogues = Object.fromEntries(
+    Object.entries(versions).filter(([kiosk, value]) => value.owned || observed.has(kiosk))
+  )
+  return Object.freeze({ ...market, own_listings, listings, catalogues, departures })
+}
+
+const fold_write = (
+  market: MarketplaceState,
+  input: Extract<MarketplaceInput, { type: 'market/write_succeeded' }>
+): MarketplaceState => {
+  if (input.operation === 'collect') return Object.freeze({ ...market, pending: null, profits: [] })
+  const { version, listing } = input
+  const current = market.catalogues[listing.kiosk] ?? { version: '0', owned: false }
+  if (BigInt(current.version) > BigInt(version)) return Object.freeze({ ...market, pending: null })
+  const catalogues = {
+    ...market.catalogues,
+    [listing.kiosk]: { version, owned: current.owned || input.operation !== 'buy' },
+  }
+  const row = { ...listing, version }
+  if (input.operation === 'list')
     return Object.freeze({
       ...market,
-      listings: without(market.listings, packet.object),
-      own_listings: without(market.own_listings, packet.object),
+      pending: null,
+      catalogues,
+      own_listings: latest_listings(market.own_listings, [row]),
+      listings: listing_is_observed(market.observation, row) ? public_window(market.listings, [row]) : market.listings,
     })
   return Object.freeze({
     ...market,
-    listings: listing_is_observed(market.observation, packet.listing)
-      ? upsert(market.listings, packet.listing)
-      : market.listings,
-    own_listings: packet.listing.seller === address ? upsert(market.own_listings, packet.listing) : market.own_listings,
+    pending: null,
+    catalogues,
+    departures: {
+      ...market.departures,
+      [listing.kiosk]: { ...market.departures[listing.kiosk], [listing.id]: version },
+    },
+    own_listings: without_relation(market.own_listings, listing),
+    listings: without_relation(market.listings, listing),
   })
 }
 
@@ -198,11 +270,10 @@ const fold_packet = (
   packet: Readonly<ServerPacket>,
   address: string | null
 ): MarketplaceState => {
-  if (packet.type === 'packet/listings')
-    return Object.freeze({ ...market, own_listings: Object.freeze(packet.listings) })
+  if (packet.type === 'packet/listings') return fold_catalogue(market, packet, true, address)
   if (packet.type === 'packet/market_slice')
     return same_observation(market.observation, packet.observation)
-      ? Object.freeze({ ...market, listings: Object.freeze(packet.listings) })
+      ? fold_catalogue(market, packet, false, address)
       : market
   if (packet.type === 'packet/market_counts') return Object.freeze({ ...market, counts: packet.counts })
   if (packet.type === 'packet/market_history')
@@ -213,7 +284,7 @@ const fold_packet = (
       history_total: packet.total,
       profits: Object.freeze(packet.profits),
     })
-  if (is_listing_packet(packet)) return fold_listing_packet(market, packet, address)
+  if (packet.type === 'packet/listing_sold') return fold_sale(market, packet.sale)
   return market
 }
 
@@ -246,40 +317,15 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: 'collect' }) })
   if (input.type === 'market/write_failed')
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: null }) })
-  if (input.type === 'market/write_succeeded') {
-    const { listing } = input
-    if (input.operation === 'list' && listing)
-      return Object.freeze({
-        ...state,
-        marketplace: Object.freeze({
-          ...market,
-          pending: null,
-          listings: listing_is_observed(market.observation, listing)
-            ? upsert(market.listings, listing)
-            : market.listings,
-          own_listings: upsert(market.own_listings, listing),
-        }),
-      })
-    if ((input.operation === 'delist' || input.operation === 'buy') && listing)
-      return Object.freeze({
-        ...state,
-        marketplace: Object.freeze({
-          ...market,
-          pending: null,
-          listings: without(market.listings, listing.id),
-          own_listings: without(market.own_listings, listing.id),
-        }),
-      })
-    if (input.operation === 'collect')
-      return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: null, profits: [] }) })
-  }
+  if (input.type === 'market/write_succeeded')
+    return Object.freeze({ ...state, marketplace: fold_write(market, input) })
   return state
 }
 
 const market_merge_target = (
   state: Readonly<AppState>,
   operation: 'list' | 'delist' | 'buy',
-  listing: Readonly<ListingRow>
+  listing: Readonly<Omit<ListingRow, 'version'>>
 ) => {
   if ((operation !== 'buy' && operation !== 'delist') || !listing.item_type) return null
   return stack_merge_target_row(
@@ -291,7 +337,7 @@ const market_merge_target = (
 }
 
 const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
-  const in_flight = new Set<string>()
+  const in_flight = new Set<NonNullable<AppState['session']['wallet']>>()
   const notified_sales = new Set<string>()
   events.on('server/packet', ({ packet }) => {
     if (packet.type !== 'packet/listing_sold' || notified_sales.has(packet.sale.id)) return
@@ -307,7 +353,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   })
   const execute = (
     operation: 'list' | 'delist' | 'buy',
-    listing: Readonly<ListingRow>,
+    listing: Readonly<Omit<ListingRow, 'version'>>,
     run: (
       asset: Readonly<{
         kind: 'item' | 'character'
@@ -320,14 +366,13 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         destination_kiosk?: string | null
         merge_sources?: readonly string[]
       }>
-    ) => Promise<Readonly<{ digest: string; listed_id?: string }>>,
+    ) => Promise<Readonly<{ digest: string; listed_id?: string; version: string }>>,
     source_amount?: number
   ): void => {
-    const operation_key = `${operation}:${listing.id}`
-    if (in_flight.size > 0) return
     const { wallet } = get_state().session
     if (!wallet) return dispatch({ type: 'market/write_failed', error: 'The wallet session is unavailable.' })
-    in_flight.add(operation_key)
+    if (in_flight.has(wallet)) return
+    in_flight.add(wallet)
     const text = copy_text(get_state().copy?.marketplace_page ?? {})
     const pending = toast.loading(text(`${operation}_pending`))
     const state = get_state()
@@ -342,21 +387,24 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         ? { existing: existing?.id ?? null, destination_kiosk: existing?.kiosk ?? null }
         : {}),
     })
-      .then(({ listed_id }) => {
+      .then(({ listed_id, version }) => {
         pending.success(text(`${operation}_success`))
+        if (signal.aborted || get_state().session.wallet !== wallet) return
         dispatch({
           type: 'market/write_succeeded',
           operation,
-          listing: listed_id ? Object.freeze({ ...listing, id: listed_id }) : listing,
+          version,
+          listing: Object.freeze({ ...listing, id: listed_id ?? listing.id, version }),
         })
         dispatch({ type: 'wallet/refresh' })
       })
       .catch((error) => {
         console.error(`Marketplace ${operation} failed.`, error)
         pending.error(error)
+        if (signal.aborted || get_state().session.wallet !== wallet) return
         dispatch({ type: 'market/write_failed', error: error instanceof Error ? error.message : String(error) })
       })
-      .finally(() => in_flight.delete(operation_key))
+      .finally(() => in_flight.delete(wallet))
   }
   events.on('market/list_requested', ({ listing, source_amount, merge_sources }) => {
     const action = get_state().session.wallet?.marketplace.list
@@ -378,11 +426,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (action) execute('buy', listing, action)
   })
   events.on('market/collect_requested', () => {
-    if (in_flight.size > 0) return
     const { wallet } = get_state().session
     if (!wallet) return dispatch({ type: 'market/write_failed', error: 'The wallet session is unavailable.' })
-    const operation_key = 'collect'
-    in_flight.add(operation_key)
+    if (in_flight.has(wallet)) return
+    in_flight.add(wallet)
     const { marketplace } = wallet
     const text = copy_text(get_state().copy?.marketplace_page ?? {})
     const pending = toast.loading(text('collect_pending'))
@@ -390,15 +437,17 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       .collect(get_state().marketplace.profits.map(({ kiosk }) => kiosk))
       .then(() => {
         pending.success(text('collect_success'))
+        if (signal.aborted || get_state().session.wallet !== wallet) return
         dispatch({ type: 'market/write_succeeded', operation: 'collect' })
         dispatch({ type: 'wallet/refresh' })
       })
       .catch((error) => {
         console.error('Marketplace proceeds collection failed.', error)
         pending.error(error)
+        if (signal.aborted || get_state().session.wallet !== wallet) return
         dispatch({ type: 'market/write_failed', error: error instanceof Error ? error.message : String(error) })
       })
-      .finally(() => in_flight.delete(operation_key))
+      .finally(() => in_flight.delete(wallet))
   })
   signal.addEventListener(
     'abort',

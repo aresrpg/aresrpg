@@ -9,6 +9,84 @@ module aresrpg_math::content_rules_tests;
 use aresrpg_math::{combat_grid, content_rules, item_damages, spell_effect, weapon};
 
 #[test]
+fun the_equipment_slot_matrix_refuses_cross_category_equips() {
+  let slots = vector[b"hat", b"cloak", b"belt", b"boots", b"amulet", b"pet", b"title", b"cosmetic_hat", b"cosmetic_cloak"];
+  slots.do_ref!(|slot| {
+    let slot = (*slot).to_string();
+    assert!(content_rules::is_slot(&slot) && content_rules::is_category(&slot), 0);
+    assert!(content_rules::category_fits(&slot, &slot), 1);
+    assert!(!content_rules::category_fits(&slot, &b"resource".to_string()), 2);
+  });
+  let weapons = vector[b"daggers", b"spear", b"bow", b"axe", b"sword"];
+  weapons.do_ref!(|family| {
+    let family = (*family).to_string();
+    assert!(content_rules::is_category(&family), 3);
+    assert!(content_rules::category_fits(&b"weapon".to_string(), &family), 4);
+  });
+  let tools = vector[b"tool_farmer", b"tool_herbalist", b"tool_miner"];
+  tools.do_ref!(|category| {
+    let category = (*category).to_string();
+    assert!(content_rules::is_category(&category), 5);
+    assert!(content_rules::category_fits(&b"tool".to_string(), &category), 6);
+  });
+  assert!(content_rules::is_slot(&b"weapon".to_string()) && content_rules::is_slot(&b"tool".to_string()), 7);
+  assert!(!content_rules::category_fits(&b"weapon".to_string(), &b"tool_miner".to_string()), 8);
+  assert!(!content_rules::category_fits(&b"tool".to_string(), &b"sword".to_string()), 9);
+  let rings = vector[b"left_ring", b"right_ring"];
+  rings.do_ref!(|slot| {
+    let slot = (*slot).to_string();
+    assert!(content_rules::is_slot(&slot), 10);
+    assert!(content_rules::category_fits(&slot, &b"ring".to_string()), 11);
+    assert!(!content_rules::category_fits(&slot, &b"amulet".to_string()), 12);
+  });
+  let relic_slots = vector[b"relic_1", b"relic_2", b"relic_3", b"relic_4", b"relic_5", b"relic_6"];
+  let mut i = 0;
+  while (i < 6) {
+    let slot = content_rules::relic_slot((i + 1) as u8);
+    assert!(slot == relic_slots[i].to_string(), 13);
+    assert!(content_rules::is_slot(&slot), 14);
+    assert!(content_rules::category_fits(&slot, &b"relic".to_string()), 15);
+    assert!(!content_rules::category_fits(&slot, &b"ring".to_string()), 16);
+    i = i + 1;
+  };
+  assert!(content_rules::is_category(&b"relic".to_string()), 17);
+}
+
+#[test]
+fun authored_classes_stackables_and_uncraftable_categories_are_explicit() {
+  let classes = vector[b"shugo", b"tomoda", b"rojin", b"yajin", b"tokei", b"asobi", b"iyashi", b"senshi", b"yogan", b"mori", b"ikari", b"shusen"];
+  classes.do_ref!(|classe| assert!(content_rules::is_classe(&(*classe).to_string()), 0));
+  assert!(!content_rules::is_classe(&b"unknown".to_string()), 1);
+  let stackables = vector[b"consumable", b"resource", b"rune", b"key"];
+  stackables.do_ref!(|category| {
+    let category = (*category).to_string();
+    assert!(content_rules::is_category(&category) && content_rules::is_stackable(&category), 2);
+    assert!(!content_rules::is_slot(&category), 3);
+  });
+  assert!(content_rules::craft_job_of(&b"key".to_string()) == option::some(b"HANDYMAN".to_string()), 4);
+  assert!(content_rules::craft_job_of(&b"pet".to_string()).is_none(), 5);
+  assert!(!content_rules::is_relic_slot(&b"relic_7".to_string()), 6);
+  assert!(content_rules::is_printable_ascii(&b"!~".to_string()), 7);
+}
+
+#[test]
+fun cosmetics_are_unique_and_fit_only_their_own_slot() {
+  let categories = vector[b"cosmetic_hat".to_string(), b"cosmetic_cloak".to_string()];
+  categories.do_ref!(|category| {
+    assert!(content_rules::is_category(category));
+    assert!(content_rules::is_slot(category));
+    assert!(!content_rules::is_stackable(category));
+    assert!(content_rules::category_fits(category, category));
+    assert!(!content_rules::category_fits(&b"hat".to_string(), category));
+    assert!(!content_rules::category_fits(&b"cloak".to_string(), category));
+    assert!(!content_rules::category_fits(category, &b"hat".to_string()));
+    assert!(!content_rules::category_fits(category, &b"cloak".to_string()));
+  });
+  assert!(!content_rules::category_fits(&categories[0], &categories[1]));
+  assert!(!content_rules::category_fits(&categories[1], &categories[0]));
+}
+
+#[test]
 fun printable_ascii_names_pass() {
   assert!(content_rules::is_printable_ascii(&b"aiden".to_string()));
   assert!(content_rules::is_printable_ascii(&b"x_42-Z!".to_string()));

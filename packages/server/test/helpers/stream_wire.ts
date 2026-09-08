@@ -101,7 +101,7 @@ export const wire = ({
   const graph = {
     read: async (cypher: string, params?: Record<string, unknown>) => {
       if (cypher.includes(':Fight {id:')) return fight_read ? fight_read(String(params?.fight_id)) : [{ fight }]
-      if (cypher.includes('WHERE c.id IN')) return [{ character, weapon: null }]
+      if (cypher.includes('WHERE c.id IN')) return [{ character, weapon: null, worn: [] }]
       if (cypher.includes(':Fight {world:')) return []
       // seated: the kiosk's HOLDS edge is severed by law, so custody proves nothing and the
       // embody gate must read the seat out of the fight's machine document instead
@@ -135,6 +135,8 @@ export const wire = ({
                 locked: false,
                 sui_a: '0',
                 sui_b: '1000',
+                kares_a: '0',
+                kares_b: '0',
                 caps_a: '[]',
                 caps_b: '[]',
               },

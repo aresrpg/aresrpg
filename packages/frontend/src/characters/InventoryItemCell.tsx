@@ -10,6 +10,7 @@ type InventoryItemCellProps = Readonly<Omit<ButtonHTMLAttributes<HTMLButtonEleme
   Readonly<{
     class_name?: string
     item: Readonly<ItemRow>
+    amount?: number
     show_level?: boolean
   }>
 
@@ -18,6 +19,7 @@ export const InventoryItemCell = ({
   class_name = '',
   item,
   show_level = false,
+  amount = item.amount,
   title = item.name,
   type = 'button',
   ...button_props
@@ -28,7 +30,7 @@ export const InventoryItemCell = ({
     ) : (
       <span className="chr-cell__fallback">{item.name.slice(0, 1).toUpperCase()}</span>
     )}
-    {item.amount > 1 && <span className="chr-cell__amount tabular-nums">×{item.amount}</span>}
+    {amount > 1 && <span className="chr-cell__amount tabular-nums">×{amount}</span>}
     {show_level && <span className="chr-cell__lvl tabular-nums">{item.level}</span>}
   </button>
 )

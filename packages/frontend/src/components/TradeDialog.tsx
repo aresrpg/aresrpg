@@ -4,7 +4,7 @@
 import { item_is_stackable } from '@aresrpg/immutable'
 import type { ItemRow, TradeCapRow, TradeRow } from '@aresrpg/protocol'
 import { ROYALTY_FLOOR_MIST } from '@aresrpg/sdk/marketplace'
-import { trade_incoming, trade_own_offer } from '@aresrpg/sdk/trade'
+import { trade_incoming, trade_own_offer, trade_offer_has_value } from '@aresrpg/sdk/trade'
 import { Check, Handshake, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -16,8 +16,10 @@ import { SuiUnit } from '../marketplace/marketplace_model.tsx'
 import { selected_character } from '../modules/session.ts'
 import { visible_trade_rows } from '../modules/trade.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
+import { format_sui } from '../wallet_amount.ts'
+import { parse_amount } from '../kares/model.ts'
 
+import { KaresLogo } from './KaresLogo.tsx'
 import { ModalFrame } from './ModalFrame.tsx'
 import { OfferCaps } from './TradeOfferCaps.tsx'
 import {
@@ -50,36 +52,48 @@ const OfferHeader = ({
   </header>
 )
 
-const OfferSui = ({
+type TradeCurrency = 'sui' | 'kares'
+type CurrencyDraft = Readonly<Record<TradeCurrency, string>>
+
+const OfferCurrency = ({
+  currency,
   amount,
   editable,
   pending,
-  sui,
-  set_sui,
-  commit_sui,
+  value,
+  set_amount,
+  normalize_amount,
   text,
 }: Readonly<{
+  currency: TradeCurrency
   amount: bigint
   editable: boolean
   pending: boolean
-  sui: string
-  set_sui: (value: string) => void
-  commit_sui: () => void
+  value: string
+  set_amount: (value: string) => void
+  normalize_amount: () => void
   text: CopyText
 }>) => (
   <label className="trade-sui">
-    <SuiUnit size={12} />
+    {currency === 'sui' ? (
+      <SuiUnit size={12} />
+    ) : (
+      <>
+        <KaresLogo size={12} />
+        <span>KARES</span>
+      </>
+    )}
     {editable ? (
       <input
-        aria-label={text('sui')}
+        aria-label={text(currency)}
         disabled={pending}
         inputMode="decimal"
-        onBlur={commit_sui}
-        onChange={(event) => set_sui(event.target.value)}
+        onBlur={normalize_amount}
+        onChange={(event) => set_amount(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') event.currentTarget.blur()
         }}
-        value={sui}
+        value={value}
       />
     ) : (
       <strong>{input_sui(amount)}</strong>
@@ -92,9 +106,9 @@ const OfferPanel = ({
   side,
   own,
   pending,
-  sui,
-  set_sui,
-  commit_sui,
+  currencies,
+  set_currency,
+  commit_currency,
   add_asset,
   name,
   text,
@@ -107,9 +121,9 @@ const OfferPanel = ({
   side: 'a' | 'b'
   own: boolean
   pending: boolean
-  sui: string
-  set_sui: (value: string) => void
-  commit_sui: () => void
+  currencies: CurrencyDraft
+  set_currency: (asset: TradeCurrency, value: string) => void
+  commit_currency: (asset: TradeCurrency) => void
   add_asset: (id: string) => void
   name: string
   text: CopyText
@@ -141,15 +155,19 @@ const OfferPanel = ({
         text={text}
         trade={trade}
       />
-      <OfferSui
-        amount={BigInt(trade[`sui_${side}`])}
-        commit_sui={commit_sui}
-        editable={own && trade.phase === 'negotiating'}
-        pending={pending}
-        set_sui={set_sui}
-        sui={sui}
-        text={text}
-      />
+      {(['sui', 'kares'] as const).map((asset) => (
+        <OfferCurrency
+          amount={BigInt(trade[`${asset}_${side}`])}
+          normalize_amount={() => commit_currency(asset)}
+          currency={asset}
+          editable={own && trade.phase === 'negotiating'}
+          key={asset}
+          pending={pending}
+          set_amount={(value) => set_currency(asset, value)}
+          value={currencies[asset]}
+          text={text}
+        />
+      ))}
       <OfferDraftActions actions={draft_actions} pending={pending} text={text} />
     </section>
   )
@@ -256,7 +274,7 @@ const TerminalFooter = ({
   text,
 }: Readonly<{ trade: TradeRow; address: string; pending: boolean; text: CopyText }>) => {
   const offer = trade.phase === 'settling' ? trade_incoming(trade, address) : trade_own_offer(trade, address)
-  const actionable = offer.caps.length > 0 || offer.sui > 0n
+  const actionable = trade_offer_has_value(offer)
   const operation = trade.phase === 'settling' ? ('settle' as const) : ('recover' as const)
   return (
     <footer>
@@ -373,14 +391,6 @@ const draft_cap = ({ item, amount }: Readonly<{ item: Readonly<ItemRow>; amount:
     kiosk: item.kiosk,
   })
 
-const trade_draft_dirty = (
-  addition_count: number,
-  kept_count: number,
-  own_count: number,
-  sui: bigint | null,
-  own_sui: bigint
-): boolean => addition_count > 0 || kept_count !== own_count || (sui !== null && sui !== own_sui)
-
 export const TradeDialog = ({
   copy,
   active,
@@ -399,10 +409,12 @@ export const TradeDialog = ({
   const own_side = active.a === address ? ('a' as const) : ('b' as const)
   const other_side = own_side === 'a' ? ('b' as const) : ('a' as const)
   const own_caps = active[`caps_${own_side}`]
-  const own_sui = BigInt(active[`sui_${own_side}`])
+  const own_amounts = { sui: BigInt(active[`sui_${own_side}`]), kares: BigInt(active[`kares_${own_side}`]) }
   const own_offer_key = trade_offer_draft_key(active, own_side)
   const pending = !!pending_operation
-  const [sui, set_sui] = useState('0')
+  const [currencies, set_currencies] = useState<CurrencyDraft>({ sui: '0', kares: '0' })
+  const set_currency = (asset: TradeCurrency, value: string): void =>
+    set_currencies((current) => ({ ...current, [asset]: value }))
   const [kept_caps, set_kept_caps] = useState<readonly TradeCapRow[]>(own_caps)
   const [additions, set_additions] = useState<readonly TradeDraftAddition[]>([])
   const [amount_item, set_amount_item] = useState<Readonly<ItemRow> | null>(null)
@@ -410,7 +422,7 @@ export const TradeDialog = ({
     trade_display_name(player_address, address, own_name, Object.values(players))
 
   useEffect(() => {
-    set_sui(input_sui(own_sui))
+    set_currencies({ sui: input_sui(own_amounts.sui), kares: input_sui(own_amounts.kares) })
     set_kept_caps(own_caps)
     set_additions([])
     // eslint-disable-next-line react-hooks/exhaustive-deps -- own_offer_key alone encodes this side's canonical offer; counterparty rows must preserve the local draft.
@@ -435,8 +447,16 @@ export const TradeDialog = ({
   const available_items = trade_draft_inventory(inventory, encumbered, additions, removals)
   const can_edit = active.phase === 'negotiating' && !pending
   const displayed_caps = Object.freeze([...kept_caps, ...additions.map(draft_cap)])
-  const parsed_sui = sui.trim() === '0' ? 0n : parse_sui_amount(sui)
-  const dirty = trade_draft_dirty(additions.length, kept_caps.length, own_caps.length, parsed_sui, own_sui)
+  const parse_currency = (asset: TradeCurrency): bigint | null =>
+    currencies[asset].trim() === '0' ? 0n : parse_amount(currencies[asset])
+  const parsed_sui = parse_currency('sui')
+  const parsed_kares = parse_currency('kares')
+  const dirty = [
+    additions.length > 0,
+    kept_caps.length !== own_caps.length,
+    parsed_sui !== own_amounts.sui,
+    parsed_kares !== own_amounts.kares,
+  ].some(Boolean)
   const stage_asset = (item: Readonly<ItemRow>, amount: number): void => {
     const draft = stage_trade_offer_addition(additions, kept_caps, item, amount)
     set_additions(draft.additions)
@@ -449,23 +469,24 @@ export const TradeDialog = ({
     if (!item) return
     item_is_stackable(item.category) && item.amount > 1 ? set_amount_item(item) : stage_asset(item, item.amount)
   }
-  const commit_sui = (): void => {
-    const amount = sui.trim() === '0' ? 0n : parse_sui_amount(sui)
-    if (amount === null || pending || active.phase !== 'negotiating') set_sui(input_sui(own_sui))
+  const commit_currency = (asset: TradeCurrency): void => {
+    if (parse_currency(asset) === null || pending || active.phase !== 'negotiating')
+      set_currency(asset, input_sui(own_amounts[asset]))
   }
   const discard = (): void => {
     set_kept_caps(own_caps)
     set_additions([])
-    set_sui(input_sui(own_sui))
+    set_currencies({ sui: input_sui(own_amounts.sui), kares: input_sui(own_amounts.kares) })
   }
   const confirm = (): void => {
-    if (parsed_sui === null) return
+    if (parsed_sui === null || parsed_kares === null) return
     dispatch_app({
       type: 'trade/commit_offer',
       trade: active.id,
       additions,
       removals,
       sui: parsed_sui,
+      kares: parsed_kares,
     })
   }
   const remove_cap = (cap: Readonly<TradeCapRow>): void => {
@@ -507,29 +528,29 @@ export const TradeDialog = ({
           <OfferPanel
             add_asset={add_asset}
             caps={displayed_caps}
-            commit_sui={commit_sui}
+            commit_currency={commit_currency}
             copy={copy}
             draft_actions={Object.freeze({ confirm, discard, visible: dirty })}
             name={display_name(active[own_side])}
             own
             pending={pending}
             remove_cap={remove_cap}
-            set_sui={set_sui}
+            set_currency={set_currency}
             side={own_side}
-            sui={sui}
+            currencies={currencies}
             text={text}
             trade={active}
           />
           <OfferPanel
             add_asset={add_asset}
-            commit_sui={commit_sui}
+            commit_currency={commit_currency}
             copy={copy}
             name={display_name(active[other_side])}
             own={false}
             pending={pending}
-            set_sui={set_sui}
+            set_currency={set_currency}
             side={other_side}
-            sui={sui}
+            currencies={currencies}
             text={text}
             trade={active}
           />

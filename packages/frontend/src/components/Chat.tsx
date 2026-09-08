@@ -7,7 +7,6 @@
 // values); this component localizes live and paints tokens from the chat palette.
 
 import { expand_chat_message, type ChatMessagePart } from '@aresrpg/protocol'
-import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -16,6 +15,7 @@ import {
   chat_line_in_party,
   chat_message_from_draft,
   character_chat_context,
+  chat_part_text,
   type ChatLine,
   type ChatLineValue,
 } from '../modules/chat.ts'
@@ -52,15 +52,16 @@ type ChatToken = Readonly<{
 }>
 
 const part_token = (part: Readonly<ChatMessagePart>, cls: string): ChatToken => {
+  const text = chat_part_text(part)
   if (part.kind === 'position')
     return Object.freeze({
-      text: `[${part.world} · ${Math.round(chain_to_client_coordinate(part.x))}, ${Math.round(chain_to_client_coordinate(part.z))}]`,
+      text,
       cls: 'position',
       position: Object.freeze({ world: part.world, x: part.x, z: part.z }),
     })
   if (part.kind === 'item')
-    return Object.freeze({ text: `[${part.name}]`, cls: 'item', item: Object.freeze({ id: part.id, name: part.name }) })
-  return Object.freeze({ text: part.text, cls })
+    return Object.freeze({ text, cls: 'item', item: Object.freeze({ id: part.id, name: part.name }) })
+  return Object.freeze({ text, cls })
 }
 
 export const selected_chat_name = (
@@ -140,18 +141,20 @@ const spoken_line = ({
   party,
   parts,
   speaker,
+  character_id,
 }: Readonly<{
   channel: 'general' | 'party'
   party: string | null
   parts: readonly ChatMessagePart[]
   speaker: string
+  character_id: string
 }>): ChatLine => {
   const scoped = channel === 'party' && party !== null
   const content = Object.freeze({
     id: `say:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`,
     key: scoped ? 'chat_party_line' : 'chat_line',
     values: Object.freeze({
-      name: Object.freeze({ text: speaker, cls: scoped ? 'party' : 'self' }),
+      name: Object.freeze({ text: speaker, character_id, cls: scoped ? 'party' : 'self' }),
       message: Object.freeze({ text: '', parts, cls: scoped ? 'party' : 'says' }),
     }),
   })
@@ -246,7 +249,14 @@ export const Chat = ({
     dispatch_app({ type: 'chat/draft_sent' })
     dispatch_app({
       type: 'chat/line',
-      line: spoken_line({ channel: speak_channel, party: party?.id ?? null, parts, speaker: self_name }),
+      at_ms: Date.now(),
+      line: spoken_line({
+        channel: speak_channel,
+        party: party?.id ?? null,
+        parts,
+        speaker: self_name,
+        character_id: speaker.id,
+      }),
     })
   }
 

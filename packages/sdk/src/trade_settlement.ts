@@ -10,7 +10,7 @@ export type TradeTerminalDelta = Readonly<{
   phase: Extract<TradePhase, 'settling' | 'cancelled'>
   offer_revision: number
   remove_caps: readonly string[]
-  clear_sui: 'a' | 'b' | null
+  clear_balances: 'a' | 'b' | null
   closed: boolean
 }>
 export type TradeStackTargets = Readonly<Record<string, Readonly<{ id: string; kiosk: string }> | undefined>>

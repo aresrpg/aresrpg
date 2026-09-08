@@ -20,6 +20,8 @@ aresrpg_control = { local = "../control" }
 # content as DATA through dumb accessors only — never logic across the boundary (Sui pins a
 # dependent's code version).
 aresrpg_seed = { local = "../seed" }
+# Independent currency lineage survives every game republish.
+aresrpg_kares = { local = "../kares" }
 
 [addresses]
 # Fixed proceeds sink (one home, never a per-sale field).

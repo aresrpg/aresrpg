@@ -8,7 +8,8 @@
 
 import { channels, type EventEnvelope } from '../protocol.ts'
 import { get_market_history } from '../reads/get_market_history.ts'
-import { get_market_counts, get_market_listing, get_market_slice } from '../reads/get_market_slice.ts'
+import { get_market_counts, get_market_slice } from '../reads/get_market_slice.ts'
+import { create_watcher } from '../pubsub_bus.ts'
 import { latest_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
@@ -24,7 +25,7 @@ export default {
     return state
   },
 
-  observe: ({ pubsub, graph, events, send, address, get_state, signal }) => {
+  observe: ({ pubsub, graph, events, send, address, get_state, signal, dispatch }) => {
     const read_latest_counts = latest_reader(
       () => get_market_counts(graph),
       (counts) => send({ type: 'packet/market_counts', counts })
@@ -44,9 +45,34 @@ export default {
       )
     }
 
+    let previous_kiosks: readonly string[] = []
+    const read_slice = latest_reader(
+      async () => {
+        const observation = get_state().market_observation
+        return observation
+          ? { observation, ...(await get_market_slice(graph, { observation, kiosks: previous_kiosks })) }
+          : null
+      },
+      (result) => {
+        if (!signal.aborted && result && get_state().market_observation === result.observation) {
+          previous_kiosks = [...new Set(result.listings.map(({ kiosk }) => kiosk))]
+          send({ type: 'packet/market_slice', ...result })
+        }
+      }
+    )
+    const push_slice = (): void => {
+      void read_slice().catch((error: Error) => log.warn({ error: error.message }, 'market slice failed'))
+    }
+    const { watch } = create_watcher(pubsub, signal)
+
     const forward_economy = (payload: EventEnvelope) => {
       const observed = get_state().market_observation
-      if (observed && ['MarketListed', 'MarketDelisted', 'MarketPurchased'].includes(payload.type)) push_counts()
+      if (payload.data.seller === address && ['MarketListed', 'MarketDelisted'].includes(payload.type))
+        dispatch({ type: 'action/refresh_account', domain: 'listings' })
+      if (observed && ['MarketListed', 'MarketDelisted', 'MarketPurchased'].includes(payload.type)) {
+        push_counts()
+        push_slice()
+      }
       if (payload.type === 'MarketPurchased') {
         const { seller, object, buyer, kind, name, item_type, amount, price_mist } = payload.data as {
           seller: string | null
@@ -74,45 +100,22 @@ export default {
             },
           })
           push_history()
+          dispatch({ type: 'action/refresh_account', domain: 'listings' })
         }
         return
       }
-      if (!observed) return
-      if (payload.type === 'MarketListed') {
-        const { object } = payload.data as { object: string }
-        void get_market_listing(graph, { id: object })
-          .then((listing) => {
-            if (!listing) return
-            const visible =
-              listing.kind === 'character'
-                ? observed.characters
-                : !!listing.category && (observed.categories as readonly string[]).includes(listing.category)
-            if (visible) send({ type: 'packet/market_listed', listing })
-          })
-          .catch((error: Error) => log.warn({ object, error: error.message }, 'listing enrichment failed'))
-      }
-      if (payload.type === 'MarketDelisted') {
-        const { object } = payload.data as { object: string }
-        send({ type: 'packet/market_delisted', object })
-      }
     }
 
-    pubsub.graph.emitter.on(channels.economy, forward_economy as (payload: unknown) => void)
-    void pubsub.graph.subscribe(channels.economy)
+    void watch(channels.economy, forward_economy as (payload: never) => void).catch((error: Error) =>
+      log.warn({ error: error.message }, 'market watch failed')
+    )
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
-      if (state.market_observation === previous.market_observation || !state.market_observation) return
-      const observation = state.market_observation
+      if (state.market_observation === previous.market_observation) return
+      push_slice()
+      if (!state.market_observation) return
       push_counts()
       push_history()
-      void get_market_slice(graph, { observation })
-        .then((listings) => send({ type: 'packet/market_slice', observation, listings }))
-        .catch((error: Error) => log.warn({ observation, error: error.message }, 'market slice failed'))
-    })
-
-    signal.addEventListener('abort', () => {
-      pubsub.graph.emitter.off(channels.economy, forward_economy as (payload: unknown) => void)
-      void pubsub.graph.unsubscribe(channels.economy)
     })
   },
 } satisfies PlayerModule

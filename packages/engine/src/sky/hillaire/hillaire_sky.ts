@@ -10,7 +10,7 @@
 // renderer.js chooses which node is assigned to scene.backgroundNode / scene.fogNode.
 
 import { PerspectiveCamera, Vector3 } from 'three'
-import type { ComputeNode, Node, WebGPURenderer } from 'three/webgpu'
+import type { ComputeNode, Node, Renderer } from 'three/webgpu'
 import {
   abs,
   cameraPosition,
@@ -383,8 +383,8 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   }
 
   // ── lifecycle ─────────────────────────────────────────────────────────────────────────────────────
-  /** @param {*} renderer WebGPURenderer */
-  const bake = async (renderer: WebGPURenderer): Promise<void> => {
+  /** @param {*} renderer Renderer */
+  const bake = async (renderer: Renderer): Promise<void> => {
     k_transmittance = luts.build_transmittance_kernel()
     k_multiscatter = luts.build_multiscatter_kernel()
     k_skyview = luts.build_skyview_kernel()
@@ -412,7 +412,7 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   }
 
   /** @param {*} renderer @param {*} camera @param {number} _dt */
-  const tick = (renderer: WebGPURenderer, camera: PerspectiveCamera, _dt: number): void => {
+  const tick = (renderer: Renderer, camera: PerspectiveCamera, _dt: number): void => {
     if (!k_skyview) return // disposed — inert (two-phase law)
     if (camera) update_dynamic(camera)
     night.tick(sun_direction.value) // planet drift follows the sun azimuth (a few flops CPU)

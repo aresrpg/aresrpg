@@ -11,7 +11,7 @@ import type { AppModule, AppState } from '../store.ts'
 
 import { active_owned_character, holds_character_seat } from './fight_identity.ts'
 import type { FightKolizeumManager, FightPresentationBatch } from './fight.ts'
-import { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
+import { active_seat_is_dead, fight_should_close, local_draft_finished_turn } from './fight_lifecycle.ts'
 import { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 
 export type FightPhaseRank = 0 | 1 | 2
@@ -138,6 +138,18 @@ export const observe_fights = ({
     }
   const create_session = (fight_id: string | null): Runtime =>
     create_fight_session({ now: () => BigInt(Date.now()), reconcile: reconcile(fight_id) })
+  const apply_input = (
+    session: Runtime,
+    input: Readonly<FightInput>,
+    origin: 'local' | 'streamed'
+  ): ActiveFightSession | null => {
+    const before = session.state()
+    session.apply(input)
+    const after = session.state()
+    if (local_draft_finished_turn(get_state().fight, input, origin, before, after))
+      dispatch({ type: 'fight/end_turn_queued', fight: after!.checkpoint.contract.id, queued: true })
+    return after
+  }
   const remote_session = (fight_id: string): Runtime => {
     const existing = sessions.get(fight_id)
     if (existing) return existing
@@ -231,8 +243,8 @@ export const observe_fights = ({
     const witness_key = input.type === 'turn_seed' ? `${input.fighter}:${input.seed}` : null
     const applied = fight_id ? witnesses.get(fight_id) : null
     if (witness_key && applied?.has(witness_key)) return
-    session.apply(input)
-    if (witness_key && session.state()?.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
+    const after = apply_input(session, input, origin)
+    if (witness_key && after?.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
   })
   events.on('fight/runtime_input', ({ fight, input }) => {
     const session = sessions.get(fight)
@@ -351,10 +363,6 @@ export const observe_fights = ({
     })
     if (state.session.link_status === 'ready' && previous.session.link_status !== 'ready')
       previews.forEach((fight, character_id) => dispatch({ type: 'fight/watch', character_id, fight }))
-    if (state.fight !== previous.fight && terminal_remote_draft_needs_commit(state.fight)) {
-      dispatch({ type: 'fight/end_turn_queued', fight: state.fight.checkpoint!.contract.id, queued: true })
-      return
-    }
     if (state.fight !== previous.fight && fight_should_close(state.fight, state.session.selected_character_id)) {
       const selected = state.session.selected_character_id
       if (state.fight.mode === 'remote' && !state.fight.checkpoint?.contract.ended && selected)
@@ -373,11 +381,15 @@ export const observe_fights = ({
     if (fight_id) project_session(fight_id)
   })
   events.on('STATE_UPDATED', (state, previous) => {
+    if (state.fight !== previous.fight && state.fight.mode === 'local' && active_seat_is_dead(state.fight.checkpoint))
+      local_session?.simulate_turn()
+  })
+  events.on('STATE_UPDATED', (state, previous) => {
     const character_id = automatic_turn_character(state, previous)
     if (character_id) dispatch({ type: 'character/select', character_id })
   })
   events.on('fight/spectating', ({ character_id, fight }) => {
-    if (get_state().session.selected_character_id === character_id) project_session(fight)
+    if (fight && get_state().session.selected_character_id === character_id) project_session(fight)
   })
   events.on('fight/replaced', ({ checkpoint }) => sessions.get(checkpoint.contract.id)?.replace(checkpoint))
   events.on('fight/restored', ({ checkpoint }) => sessions.get(checkpoint.contract.id)?.restore(checkpoint))

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { WorldRecipe } from './world_recipe.ts'
+import type { WorkerReply } from './worker_reply.ts'
 
 export type TerrainColumnCoordinate = Readonly<{ x: number; z: number }>
 export type TerrainColumnPlan = TerrainColumnCoordinate & Readonly<{ layers: readonly number[] }>
@@ -29,30 +30,39 @@ export const create_terrain_planner = (
   let queued: PlannerRequest | null = null
   let disposed = false
   let worker_error: Error | null = null
-  const start = (request: PlannerRequest): void => {
-    active = request
-    worker.postMessage({ type: 'plan', id: request.id, columns: request.columns })
-  }
-  worker.postMessage({ type: 'initialize', world })
-  worker.addEventListener(
-    'message',
-    ({ data }: MessageEvent<Readonly<{ id: number; plans: readonly TerrainColumnPlan[] }>>) => {
-      const request = active
-      if (!request || request.id !== data.id) return
-      active = null
-      request.resolve(data.plans)
-      const next = queued
-      queued = null
-      if (next) start(next)
-    }
-  )
-  worker.addEventListener('error', (event) => {
-    worker_error = new Error(event.message)
-    active?.reject(worker_error)
-    queued?.reject(worker_error)
+  const report_failure = (error: Error): void => {
+    worker_error = error
+    active?.reject(error)
+    queued?.reject(error)
     active = null
     queued = null
+    worker.terminate()
+  }
+  const start = (request: PlannerRequest): void => {
+    active = request
+    try {
+      worker.postMessage({ type: 'plan', id: request.id, columns: request.columns })
+    } catch (error) {
+      report_failure(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+  worker.addEventListener('message', ({ data }: MessageEvent<WorkerReply<readonly TerrainColumnPlan[]>>) => {
+    const request = active
+    if (!request || request.id !== data.id) return
+    active = null
+    if ('error' in data) request.reject(new Error(data.error))
+    else request.resolve(data.result)
+    const next = queued
+    queued = null
+    if (next) start(next)
   })
+  worker.addEventListener('error', (event) => report_failure(new Error(event.message)))
+  worker.addEventListener('messageerror', () => report_failure(new Error('terrain planner reply could not be decoded')))
+  try {
+    worker.postMessage({ type: 'initialize', world })
+  } catch (error) {
+    report_failure(error instanceof Error ? error : new Error(String(error)))
+  }
   return Object.freeze({
     plan: (columns) => {
       if (disposed) return Promise.reject(new Error('terrain planner is disposed'))

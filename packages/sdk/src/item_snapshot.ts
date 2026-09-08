@@ -41,6 +41,12 @@ const ITEM_STATS_BCS = bcs.struct('ItemStatistics', {
   air_resistance: bcs.u16(),
 })
 
+const ROLLED_STATS_BCS = bcs.struct('RolledStats', {
+  statistics: ITEM_STATS_BCS,
+  puits: bcs.u64(),
+  revision: bcs.u64(),
+})
+
 export type ItemSnapshot = Readonly<{
   id: string
   name: string
@@ -88,7 +94,7 @@ const item_stats_value = async (
 
 const stats_record = (stats_field: Awaited<ReturnType<typeof item_stats_value>>) => {
   if (!stats_field) return undefined
-  const stats = ITEM_STATS_BCS.parse(stats_field.dynamicField.value.bcs)
+  const { statistics: stats } = ROLLED_STATS_BCS.parse(stats_field.dynamicField.value.bcs)
   return Object.freeze(Object.fromEntries(stat_names.map((name) => [name, Number(stats[name])])))
 }
 

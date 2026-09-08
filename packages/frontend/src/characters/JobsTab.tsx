@@ -28,7 +28,6 @@ import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import {
   available_item_stacks,
-  coalesced_stack_groups,
   craft_output_stack_plan,
   craft_stack_plan,
   encumbered_asset_ids,
@@ -196,30 +195,26 @@ const CraftControls = ({
       attempts,
       input_ids
     )
-    const merge_groups = coalesced_stack_groups(inventory, encumbered)
-      .filter(({ target }) => target.kiosk === character.kiosk)
-      .map(({ target, source_ids }) => ({ kiosk: target.kiosk, target_id: target.id, source_ids }))
     const transaction = run_direct_transaction(() =>
-      retry_after_version_race(() => wallet.stacks.merge_many(merge_groups)).then(() => {
-        dispatch_app({ type: 'inventory/stacks_merged', groups: merge_groups })
-        return retry_after_version_race(() =>
-          wallet.character.craft({
-            character_id: character.id,
-            output_type: recipe.output_type,
-            input_item_ids: stack_plan.map(({ target_id }) => target_id),
-            existing: output_plan?.target_id ?? null,
-            attempts,
-            custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
-          })
-        )
-      })
+      retry_after_version_race(() =>
+        wallet.character.craft({
+          character_id: character.id,
+          output_type: recipe.output_type,
+          input_item_ids: stack_plan.map(({ target_id }) => target_id),
+          merges: stack_plan,
+          existing: output_plan?.target_id ?? null,
+          attempts,
+          custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+        })
+      )
     )
     if (!transaction) return
     set_pending(true)
     const { name } = output
     const pending_toast = toast.loading(t('jobs.craft.prepare_tooltip', { count: attempts, name }))
     void transaction
-      .then(({ attempts: completed_attempts, successes, job_xp_gained }) => {
+      .then(({ attempts: completed_attempts, successes, job_xp_gained, inventory_changes }) => {
+        dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         dispatch_app({
           type: 'character/crafted',
           character_id: character.id,

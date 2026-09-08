@@ -18,6 +18,16 @@ const GRID_W: u64 = 20; // encoding STRIDE + max width — every reader (chain +
 const GRID_H: u64 = 19; // max rows
 const GRID_CELLS: u64 = GRID_W * GRID_H; // 380 — cell-index bound + shape-mask bit count
 const MASK_WORDS: u64 = (GRID_CELLS + 63) / 64; // 6 u64 words, one bit per cell, row-major
+const FIRST_LOW: u256 = 0x1000010000100001000010000100001000010000100001000010000100001;
+const FIRST_HIGH: u256 = 0x100001000010000100001000010;
+const LAST_LOW: u256 = 0x800008000080000800008000080000800008000080000800008000080000;
+const LAST_HIGH: u256 = 0x8000080000800008000080000800008;
+const ALL_BITS: u256 = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+const HIGH_BITS: u256 = 0xfffffffffffffffffffffffffffffff;
+
+/// Ephemeral BFS layers. No stored Fight layout depends on this search representation.
+public struct DistanceField has drop { layers: vector<SearchMask> }
+public struct SearchMask has copy, drop { low: u256, high: u256 }
 
 // Board-generation dials (owner 2026-08-09: more blockers than the old boards, multi-cell).
 #[test_only]
@@ -61,9 +71,9 @@ const EBadBoard: u64 = 1101; // grid_spec: an authored board violates the cheap 
 
 fun abs_diff(a: u64, b: u64): u64 { if (a > b) a - b else b - a }
 
-fun cell_x(cell: u64): u64 { cell % GRID_W }
+macro fun cell_x($cell: u64): u64 { $cell % GRID_W }
 
-fun cell_y(cell: u64): u64 { cell / GRID_W }
+macro fun cell_y($cell: u64): u64 { $cell / GRID_W }
 
 public fun encode(x: u64, y: u64): u64 { y * GRID_W + x }
 
@@ -73,21 +83,18 @@ public fun grid_cells(): u64 { GRID_CELLS }
 
 /// MANHATTAN distance — THE fight metric (4-directional, no diagonals).
 public fun manhattan(a: u64, b: u64): u64 {
-  abs_diff(cell_x(a), cell_x(b)) + abs_diff(cell_y(a), cell_y(b))
+  abs_diff(cell_x!(a), cell_x!(b)) + abs_diff(cell_y!(a), cell_y!(b))
 }
 
 /// Do two cells share a row or a column? The linearity gate (`line_launch` spells, the
 /// line-only strikes).
-public fun same_line(a: u64, b: u64): bool { cell_x(a) == cell_x(b) || cell_y(a) == cell_y(b) }
+public fun same_line(a: u64, b: u64): bool { cell_x!(a) == cell_x!(b) || cell_y!(a) == cell_y!(b) }
 
 // ╔════════════════ [ Bitmasks — O(1) membership for walls and shapes ] ══════ ]
 
 /// A fresh all-zero mask (MASK_WORDS words).
 public fun empty_mask(): vector<u64> {
-  let mut m = vector[];
-  let mut i = 0;
-  while (i < MASK_WORDS) { m.push_back(0); i = i + 1; };
-  m
+  vector[0, 0, 0, 0, 0, 0]
 }
 
 /// Set bit `cell` (row-major). Out-of-board is a defensive no-op.
@@ -137,75 +144,15 @@ public fun path_is_walkable(start: u64, path: &vector<u64>, wall_mask: &vector<u
 
 // ╔════════════════ [ BFS — pathing over a wall bitset ] ═════════════════════ ]
 
-/// The 4-connected shortest-path STEP COUNT from `start` to `target` around `wall_mask`
-/// (obstacles ∪ holes ∪ off-shape ∪ bodies). Exactly the MP cost when reachable within
-/// `max_steps`, else `path_unreachable()`.
-public fun bfs_path_cost(start: u64, target: u64, wall_mask: &vector<u64>, max_steps: u64): u64 {
-  if (start == target) return 0;
-  if (!in_grid(start) || !in_grid(target) || mask_get(wall_mask, target)) return GRID_CELLS;
-  let mut visited = empty_mask();
-  mask_set(&mut visited, start);
-  let mut frontier = vector[start];
-  let mut steps = 0;
-  while (steps < max_steps && !frontier.is_empty()) {
-    steps = steps + 1;
-    let mut next = vector[];
-    let mut j = 0;
-    let fl = frontier.length();
-    while (j < fl) {
-      let nbrs = neighbours(frontier[j]);
-      let mut k = 0;
-      while (k < nbrs.length()) {
-        let n = nbrs[k];
-        if (!mask_get(&visited, n) && !mask_get(wall_mask, n)) {
-          if (n == target) return steps;
-          mask_set(&mut visited, n);
-          next.push_back(n);
-        };
-        k = k + 1;
-      };
-      j = j + 1;
-    };
-    frontier = next;
-  };
-  GRID_CELLS
+
+/// Distances to the target, retained as compact BFS layers for movement queries.
+/// Walls and unreached cells read `path_unreachable()`.
+public fun bfs_distance_field(target: u64, wall_mask: &vector<u64>, max_steps: u64): DistanceField {
+  if (!in_grid(target) || mask_get(wall_mask, target)) return DistanceField { layers: vector[] };
+  distance_field(vector[target], wall_mask, max_steps, GRID_CELLS)
 }
 
-/// The DISTANCE FIELD to `target`: one flood fill answering `bfs_path_cost(cell, target, …)`
-/// for every cell at once (the movement walker reads it ~25 times per move). Walls and
-/// unreached cells read `path_unreachable()`.
-public fun bfs_distance_field(target: u64, wall_mask: &vector<u64>, max_steps: u64): vector<u64> {
-  let mut field = vector[];
-  let mut i = 0;
-  while (i < GRID_CELLS) { field.push_back(GRID_CELLS); i = i + 1; };
-  if (!in_grid(target) || mask_get(wall_mask, target)) return field;
-
-  *&mut field[target] = 0;
-  let mut frontier = vector[target];
-  let mut steps = 0;
-  while (steps < max_steps && !frontier.is_empty()) {
-    steps = steps + 1;
-    let mut next = vector[];
-    let mut j = 0;
-    while (j < frontier.length()) {
-      let nbrs = neighbours(frontier[j]);
-      let mut k = 0;
-      while (k < nbrs.length()) {
-        let n = nbrs[k];
-        if (field[n] == GRID_CELLS && !mask_get(wall_mask, n)) {
-          *&mut field[n] = steps;
-          next.push_back(n);
-        };
-        k = k + 1;
-      };
-      j = j + 1;
-    };
-    frontier = next;
-  };
-  field
-}
-
-/// The sentinel `bfs_path_cost` returns when no path within budget exists.
+/// The distance sentinel when no path within budget exists.
 public fun path_unreachable(): u64 { GRID_CELLS }
 
 /// The APPROACH FIELD to `target`: distances to the nearest of the target's open flanks
@@ -213,42 +160,80 @@ public fun path_unreachable(): u64 { GRID_CELLS }
 /// wall). One flood answers "which way around" for the whole board, so a rusher just walks
 /// DOWN it; the flood stops early once `until` (the rusher's cell) is assigned. A sealed
 /// target has no open flank — everything reads `path_unreachable()` and the rusher holds.
-public fun approach_field(target: u64, wall_mask: &vector<u64>, until: u64): vector<u64> {
-  let mut field = vector[];
-  let mut i = 0;
-  while (i < GRID_CELLS) { field.push_back(GRID_CELLS); i = i + 1; };
+public fun approach_field(target: u64, wall_mask: &vector<u64>, until: u64): DistanceField {
   let flanks = neighbours(target);
-  let mut frontier = vector[];
+  let mut starts = vector[];
   let mut j = 0;
   while (j < flanks.length()) {
     let f = flanks[j];
     if (!mask_get(wall_mask, f)) {
-      *&mut field[f] = 0;
-      frontier.push_back(f);
+      starts.push_back(f);
     };
     j = j + 1;
   };
-  let mut steps = 0;
-  while (!frontier.is_empty() && field[until] == GRID_CELLS) {
-    steps = steps + 1;
-    let mut next = vector[];
-    let mut j = 0;
-    while (j < frontier.length()) {
-      let nbrs = neighbours(frontier[j]);
-      let mut k = 0;
-      while (k < nbrs.length()) {
-        let n = nbrs[k];
-        if (field[n] == GRID_CELLS && !mask_get(wall_mask, n)) {
-          *&mut field[n] = steps;
-          next.push_back(n);
-        };
-        k = k + 1;
-      };
-      j = j + 1;
-    };
-    frontier = next;
+  distance_field(starts, wall_mask, GRID_CELLS, until)
+}
+
+// Two machine integers expand an entire layer. Column masks prevent horizontal wrapping.
+fun expand_frontier(frontier: &SearchMask, visited: &SearchMask): SearchMask {
+  let low = frontier.low;
+  let high = frontier.high;
+  let low_east = (low << 1) & (ALL_BITS ^ FIRST_LOW);
+  let high_east = ((high << 1) | (low >> 255)) & (ALL_BITS ^ FIRST_HIGH);
+  let low_west = ((low >> 1) | (high << 255)) & (ALL_BITS ^ LAST_LOW);
+  let high_west = (high >> 1) & (ALL_BITS ^ LAST_HIGH);
+  SearchMask {
+    low: (low_east | low_west | (low << 20) | (low >> 20) | (high << 236)) & (ALL_BITS ^ visited.low),
+    high: (high_east | high_west | (high << 20) | (low >> 236) | (high >> 20))
+      & (ALL_BITS ^ visited.high) & HIGH_BITS,
+  }
+}
+
+fun search_mask(mask: &vector<u64>): SearchMask {
+  let mut mask = *mask;
+  while (mask.length() < MASK_WORDS) mask.push_back(0);
+  SearchMask {
+    low: (mask[0] as u256) | ((mask[1] as u256) << 64) | ((mask[2] as u256) << 128) | ((mask[3] as u256) << 192),
+    high: (mask[4] as u256) | ((mask[5] as u256) << 64),
+  }
+}
+
+fun search_contains(mask: &SearchMask, cell: u64): bool {
+  if (cell >= GRID_CELLS) return false;
+  if (cell < 256) (mask.low & (1u256 << (cell as u8))) != 0
+  else (mask.high & (1u256 << ((cell - 256) as u8))) != 0
+}
+
+public fun distance_at(field: &DistanceField, cell: u64): u64 {
+  if (cell >= GRID_CELLS) return GRID_CELLS;
+  let high = cell >= 256;
+  let bit = 1u256 << ((cell % 256) as u8);
+  let mut distance = field.layers.length();
+  while (distance > 0) {
+    distance = distance - 1;
+    let layer = &field.layers[distance];
+    let bits = if (high) layer.high else layer.low;
+    if ((bits & bit) != 0) return distance;
   };
-  field
+  GRID_CELLS
+}
+
+fun distance_field(
+  starts: vector<u64>, walls: &vector<u64>, max_steps: u64, until: u64,
+): DistanceField {
+  let mut layers = vector[];
+  let mut frontier = search_mask(&mask_from_cells(&starts));
+  let mut visited = search_mask(walls);
+  let mut distance = 0;
+  loop {
+    if (frontier.low == 0 && frontier.high == 0) return DistanceField { layers };
+    visited.low = visited.low | frontier.low;
+    visited.high = visited.high | frontier.high;
+    layers.push_back(frontier);
+    if (distance >= max_steps || search_contains(&frontier, until)) return DistanceField { layers };
+    frontier = expand_frontier(&frontier, &visited);
+    distance = distance + 1;
+  }
 }
 
 /// The cell a mob should stand on to CAST a `[range_min, range_max]` (LOS-aware) spell at
@@ -263,13 +248,14 @@ public fun bfs_cast_cell(
   range_min: u64,
   range_max: u64,
   needs_los: bool,
+  line_launch: bool,
   los_obstacles: &vector<u64>,
 ): Option<u64> {
   if (!in_grid(start)) return option::none();
   let mut best = start;
   let mut found = false;
   let mut best_dist = 0;
-  if (cell_can_cast(start, target, range_min, range_max, needs_los, los_obstacles)) {
+  if (cell_can_cast(start, target, range_min, range_max, needs_los, line_launch, los_obstacles)) {
     found = true;
     best_dist = manhattan(start, target);
   };
@@ -291,7 +277,7 @@ public fun bfs_cast_cell(
         if (!mask_get(&visited, n) && !mask_get(wall_mask, n)) {
           mask_set(&mut visited, n);
           next.push_back(n);
-          if (cell_can_cast(n, target, range_min, range_max, needs_los, los_obstacles)) {
+          if (cell_can_cast(n, target, range_min, range_max, needs_los, line_launch, los_obstacles)) {
             let d = manhattan(n, target);
             if (!found || d < best_dist || (d == best_dist && n < best)) {
               best = n;
@@ -310,8 +296,8 @@ public fun bfs_cast_cell(
 }
 
 fun neighbours(c: u64): vector<u64> {
-  let x = cell_x(c);
-  let y = cell_y(c);
+  let x = cell_x!(c);
+  let y = cell_y!(c);
   let mut out = vector[];
   if (x > 0) out.push_back(c - 1);
   if (x + 1 < GRID_W) out.push_back(c + 1);
@@ -329,9 +315,9 @@ public fun first_free(starts: &vector<u64>, occupied: &vector<u64>): Option<u64>
   option::none()
 }
 
-fun cell_can_cast(from: u64, target: u64, range_min: u64, range_max: u64, needs_los: bool, los_obstacles: &vector<u64>): bool {
+public fun cell_can_cast(from: u64, target: u64, range_min: u64, range_max: u64, needs_los: bool, line_launch: bool, los_obstacles: &vector<u64>): bool {
   let d = manhattan(from, target);
-  d >= range_min && d <= range_max && (!needs_los || line_of_sight(from, target, los_obstacles))
+  d >= range_min && d <= range_max && (!line_launch || same_line(from, target)) && (!needs_los || line_of_sight(from, target, los_obstacles))
 }
 
 // ╔════════════════ [ Line of sight — integer 1.29 reference shadow-casting ] ═ ]
@@ -340,10 +326,17 @@ fun cell_can_cast(from: u64, target: u64, range_min: u64, range_max: u64, needs_
 /// of the 1.29 reference shadow-casting; every float slope compare is a cross-multiplication.
 /// The client ports this SAME function 1:1 so the two sides can never diverge.
 public fun line_of_sight(from: u64, to: u64, obstacles: &vector<u64>): bool {
+  let ox = cell_x!(from);
+  let oy = cell_y!(from);
+  let tx = cell_x!(to);
+  let ty = cell_y!(to);
+  let cx = abs_diff(tx, ox);
+  let cy = abs_diff(ty, oy);
   let n = obstacles.length();
   let mut i = 0;
   while (i < n) {
-    if (blocks(from, obstacles[i], to)) return false;
+    let blocker = obstacles[i];
+    if (blocker != from && blocker != to && blocks(ox, oy, tx, ty, cx, cy, blocker)) return false;
     i = i + 1;
   };
   true
@@ -352,19 +345,14 @@ public fun line_of_sight(from: u64, to: u64, obstacles: &vector<u64>): bool {
 /// Does obstacle `b` occlude target `t` seen from origin `o`? The per-cell shadow-wedge test:
 /// a target is shadowed iff its center slope falls inside the obstacle's half-cell wedge on
 /// the obstacle's side of the origin, beyond the obstacle. Axis cases handled explicitly.
-fun blocks(o: u64, b: u64, t: u64): bool {
-  if (b == o || b == t) return false;
-  let ox = cell_x(o);
-  let oy = cell_y(o);
-  let bx = cell_x(b);
-  let by = cell_y(b);
+fun blocks(ox: u64, oy: u64, tx: u64, ty: u64, cx: u64, cy: u64, b: u64): bool {
+  let bx = cell_x!(b);
+  let by = cell_y!(b);
+  if (bx != ox && ((bx >= ox) != (tx >= ox))) return false;
+  if (by != oy && ((by >= oy) != (ty >= oy))) return false;
   let ax = abs_diff(bx, ox);
   let ay = abs_diff(by, oy);
-  let cx = abs_diff(cell_x(t), ox);
-  let cy = abs_diff(cell_y(t), oy);
   // a target on the opposite x/y side of the origin from the obstacle is never in its shadow.
-  if (bx != ox && ((bx >= ox) != (cell_x(t) >= ox))) return false;
-  if (by != oy && ((by >= oy) != (cell_y(t) >= oy))) return false;
   if (cx < ax || cy < ay) return false;
   if (cx == ax && cy == ay) return false;
   // slope > slope1 = (2ax-1)/(2ay+1): cy==0 → +inf (true); ax==0 → RHS ≤ 0 (true); else cross-multiply.
@@ -383,10 +371,10 @@ public fun dir_none(): u8 { DIR_NONE }
 /// Dominant-axis cardinal direction FROM `pivot` TOWARD `subject` — the push-AWAY direction.
 /// Tie breaks to the x axis; `DIR_NONE` when the cells coincide.
 public fun away_dir(pivot: u64, subject: u64): u8 {
-  let px = cell_x(pivot);
-  let py = cell_y(pivot);
-  let sx = cell_x(subject);
-  let sy = cell_y(subject);
+  let px = cell_x!(pivot);
+  let py = cell_y!(pivot);
+  let sx = cell_x!(subject);
+  let sy = cell_y!(subject);
   let adx = abs_diff(sx, px);
   let ady = abs_diff(sy, py);
   if (adx == 0 && ady == 0) return DIR_NONE;
@@ -402,8 +390,8 @@ fun opposite_dir(dir: u8): u8 {
 
 /// Step one cell in `dir`; `none` off the encoding grid or for `DIR_NONE`.
 public fun step_cell(cell: u64, dir: u8): Option<u64> {
-  let x = cell_x(cell);
-  let y = cell_y(cell);
+  let x = cell_x!(cell);
+  let y = cell_y!(cell);
   if (dir == 0) { if (x + 1 < GRID_W) option::some(encode(x + 1, y)) else option::none() }
   else if (dir == 1) { if (x >= 1) option::some(encode(x - 1, y)) else option::none() }
   else if (dir == 2) { if (y + 1 < GRID_H) option::some(encode(x, y + 1)) else option::none() }
@@ -424,7 +412,7 @@ public fun in_zone(shape: u8, size: u64, anchor: u64, cell: u64): bool {
   let d = manhattan(anchor, cell);
   if (shape == spell_effect::shape_ring()) return d == size;
   if (shape == spell_effect::shape_cross()) {
-    return d <= size && (cell_x(cell) == cell_x(anchor) || cell_y(cell) == cell_y(anchor))
+    return d <= size && (cell_x!(cell) == cell_x!(anchor) || cell_y!(cell) == cell_y!(anchor))
   };
   d <= size
 }
@@ -455,10 +443,10 @@ public fun zone_rank(shape: u8, size: u64, anchor: u64, caster: u64, cell: u64):
 }
 
 fun directed_distance(origin: u64, dir: u8, cell: u64): Option<u64> {
-  let ox = cell_x(origin);
-  let oy = cell_y(origin);
-  let x = cell_x(cell);
-  let y = cell_y(cell);
+  let ox = cell_x!(origin);
+  let oy = cell_y!(origin);
+  let x = cell_x!(cell);
+  let y = cell_y!(cell);
   if (dir == 0 && y == oy && x >= ox) return option::some(x - ox);
   if (dir == 1 && y == oy && x <= ox) return option::some(ox - x);
   if (dir == 2 && x == ox && y >= oy) return option::some(y - oy);
@@ -474,8 +462,8 @@ fun walk_rank(origin: u64, dir: u8, size: u64, cell: u64): Option<u64> {
 }
 
 fun walk_capacity(origin: u64, dir: u8, size: u64): u64 {
-  let x = cell_x(origin);
-  let y = cell_y(origin);
+  let x = cell_x!(origin);
+  let y = cell_y!(origin);
   let available = if (dir == 0) GRID_W - 1 - x
     else if (dir == 1) x
     else if (dir == 2) GRID_H - 1 - y
@@ -572,8 +560,8 @@ public fun zone_cells(shape: u8, size: u64, anchor: u64, caster: u64): vector<u6
     return out
   };
   // circle / cross / ring / blob live inside the anchor's ±size box — scan that, not 380.
-  let ax = cell_x(anchor);
-  let ay = cell_y(anchor);
+  let ax = cell_x!(anchor);
+  let ay = cell_y!(anchor);
   let x0 = if (ax > size) ax - size else 0;
   let y0 = if (ay > size) ay - size else 0;
   let x1 = if (ax + size < GRID_W - 1) ax + size else GRID_W - 1;
@@ -940,8 +928,8 @@ fun ring_safe_cells(mask: &vector<u64>): vector<u64> {
 #[test_only]
 fun ring_on_mask(mask: &vector<u64>, cell: u64): bool {
   if (!mask_get(mask, cell)) return false;
-  let x = cell_x(cell);
-  let y = cell_y(cell);
+  let x = cell_x!(cell);
+  let y = cell_y!(cell);
   if (x == 0 || y == 0 || x + 1 >= GRID_W || y + 1 >= GRID_H) return false;
   let mut dy = 0;
   while (dy < 3) {
@@ -969,7 +957,7 @@ fun group_placeable(mask: &vector<u64>, blocked: &vector<u64>, cells: &vector<u6
     let mut j = 0;
     while (j < bn) {
       let b = blocked[j];
-      if (abs_diff(cell_x(b), cell_x(c)) <= 1 && abs_diff(cell_y(b), cell_y(c)) <= 1) return false;
+      if (abs_diff(cell_x!(b), cell_x!(c)) <= 1 && abs_diff(cell_y!(b), cell_y!(c)) <= 1) return false;
       j = j + 1;
     };
     i = i + 1;
@@ -1060,18 +1048,21 @@ fun split_at(v: &vector<u64>, at: u64): (vector<u64>, vector<u64>) {
 }
 
 /// The neighbouring cell strictly closer on a distance field, tie-breaking by cell index.
-public fun best_step(current: u64, field: &vector<u64>): Option<u64> {
+public fun best_step(current: u64, field: &DistanceField, distance: u64): Option<u64> {
   let mut best = option::none();
-  let mut best_value = field[current];
+  let mut best_distance = distance;
+  if (distance == 0 || field.layers.is_empty()) return best;
+  let layer = if (distance == GRID_CELLS) field.layers.length() - 1 else distance - 1;
   let mut direction = 0u8;
   while (direction < 4) {
     let step = step_cell(current, direction);
     if (step.is_some()) {
       let cell = step.destroy_some();
-      let value = field[cell];
-      if (value < best_value || (value == best_value && best.is_some() && cell < *best.borrow())) {
+      let candidate = if (distance == GRID_CELLS) distance_at(field, cell)
+        else if (search_contains(&field.layers[layer], cell)) layer else GRID_CELLS;
+      if (candidate < best_distance || (candidate == best_distance && best.is_some() && cell < *best.borrow())) {
         best = option::some(cell);
-        best_value = value;
+        best_distance = candidate;
       };
     };
     direction = direction + 1;

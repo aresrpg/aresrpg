@@ -4,6 +4,8 @@
 // structure and CSS remain recognizable instead of being reinterpreted in utility classes.
 
 import { useEffect, type CSSProperties } from 'react'
+import { KaresLogo } from '../../components/KaresLogo.tsx'
+import { format_amount } from '../../kares/model.ts'
 
 import { item_icon, spell_icon } from '../../content/assets.ts'
 import { content_catalog, titleize } from '../../content/catalog.ts'
@@ -166,6 +168,15 @@ const ResultRow = ({
         </>
       )}
       <div className="fe-tiles">
+        {participant.kares > 0n && (
+          <div aria-label="KARES" className="fe-tile">
+            <KaresLogo size={32} />
+            <span className="fe-tile__qty">×{format_amount(participant.kares)}</span>
+            <span className="fe-tile__tooltip" role="tooltip">
+              KARES
+            </span>
+          </div>
+        )}
         {participant.loot.slice(0, 8).map((loot) => {
           const item_name = content_catalog.item(loot.item_type)?.item.name ?? titleize(loot.item_type)
           return (

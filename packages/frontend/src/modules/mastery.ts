@@ -22,15 +22,18 @@ export type MasteryState = Readonly<{
 
 export type MasteryInput =
   | Readonly<{ type: 'mastery/start'; world: string }>
-  | Readonly<{ type: 'mastery/redeem'; item_type: string }>
+  | Readonly<{ type: 'mastery/redeem'; item_type: string; payment?: 'mastery' | 'kares' }>
   | Readonly<{ type: 'mastery/pending'; operation: string | null }>
-  | Readonly<{ type: 'mastery/reconciled'; mastery: MasteryRow }>
+  | Readonly<{ type: 'mastery/reconciled'; mastery: MasteryRow | null }>
   | Readonly<{ type: 'mastery/failed'; error: string }>
 
 export const initial_mastery_state = (): MasteryState =>
   Object.freeze({ loaded: false, row: null, offers: Object.freeze([]), pending: null, error: null })
 
 const with_mastery = (state: AppState, mastery: MasteryState): AppState => Object.freeze({ ...state, mastery })
+
+const reconciled_mastery = (state: MasteryState, row: MasteryRow | null): MasteryState =>
+  Object.freeze({ ...state, loaded: true, row: row ?? state.row, pending: null, error: null })
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'server/packet' && input.packet.type === 'packet/mastery')
@@ -40,17 +43,13 @@ const reduce = (state: AppState, input: AppInput): AppState => {
         loaded: true,
         row: input.packet.mastery,
         offers: Object.freeze(input.packet.offers),
-        pending: null,
+        pending: state.mastery.pending,
         error: null,
       })
     )
   if (input.type === 'mastery/pending')
     return with_mastery(state, Object.freeze({ ...state.mastery, pending: input.operation, error: null }))
-  if (input.type === 'mastery/reconciled')
-    return with_mastery(
-      state,
-      Object.freeze({ ...state.mastery, loaded: true, row: input.mastery, pending: null, error: null })
-    )
+  if (input.type === 'mastery/reconciled') return with_mastery(state, reconciled_mastery(state.mastery, input.mastery))
   if (input.type === 'mastery/failed')
     return with_mastery(state, Object.freeze({ ...state.mastery, pending: null, error: input.error }))
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
@@ -80,7 +79,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       })
       .catch(fail)
   })
-  events.on('mastery/redeem', ({ item_type }) => {
+  events.on('mastery/redeem', ({ item_type, payment }) => {
     const state = get_state()
     const { wallet, inventory, characters } = state.session
     if (!wallet || state.mastery.pending) return
@@ -95,13 +94,15 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     void wallet.mastery
       .redeem({
         item_type,
+        payment,
+        expected_cost: BigInt(offer.cost),
         existing: existing?.id ?? null,
         custody: custody_character ? character_custody(custody_character) : undefined,
       })
       .then(({ mastery }) => {
         dispatch({ type: 'mastery/reconciled', mastery })
         const text = state.copy ? copy_text(state.copy.mastery_page) : (key: string) => key
-        toast.add(text('offer_purchased'))
+        toast.add(text('offer_purchased'), 'success')
       })
       .catch(fail)
   })

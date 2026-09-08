@@ -126,6 +126,8 @@ export type EngineIssueCode =
   | 'advanced_sky_failed'
   | 'graphics_unavailable'
   | 'world_unavailable'
+  | 'webgpu_device_lost'
+  | 'terrain_failed'
 export type EngineIssue = Readonly<{ code: EngineIssueCode; detail?: string }>
 export type EngineStatus = Readonly<{
   state: 'initializing' | 'ready' | 'degraded' | 'failed'
@@ -162,7 +164,7 @@ export type QualityProfile = Readonly<{
     horizon_step: number
   }>
   sky: EngineQuality
-  terrain: Readonly<{ kind: 'flat' | 'lit' | 'pbr'; texture_size: 16 | 32 }>
+  terrain: Readonly<{ kind: 'flat' | 'lit'; texture_size: 16 | 32 }>
   fog: Readonly<{ near: number; far: number }>
   shadows: Readonly<{ kind: 'none' | 'basic' | 'soft'; map_size: number }>
   effects: Readonly<{
@@ -391,6 +393,7 @@ export type Engine = Readonly<{
   quality: () => EngineQuality
   flattened: () => boolean
   backend: () => 'initializing' | 'webgpu' | 'grid'
+  fail: (issue: EngineIssue) => void
   status: () => EngineStatus
   subscribe_status: (listener: (status: EngineStatus) => void) => () => void
   dispose: () => void

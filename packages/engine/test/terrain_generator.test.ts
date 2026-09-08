@@ -259,11 +259,11 @@ describe('terrain streaming', () => {
     ])
     expect(await superseded).toBe('terrain plan was superseded by a newer focus')
 
-    listeners.get('message')?.(new MessageEvent('message', { data: { id: 1, plans: [] } }))
+    listeners.get('message')?.(new MessageEvent('message', { data: { id: 1, result: [] } }))
     await first
     expect(messages.at(-1)).toEqual({ type: 'plan', id: 3, columns: [{ x: 2, z: 0 }] })
 
-    listeners.get('message')?.(new MessageEvent('message', { data: { id: 3, plans: [] } }))
+    listeners.get('message')?.(new MessageEvent('message', { data: { id: 3, result: [] } }))
     await latest
     planner.dispose()
   })

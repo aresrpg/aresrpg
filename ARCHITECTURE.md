@@ -51,6 +51,7 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `packages/move-math`   | Pure on-chain values, validation, curves, grids, and deterministic transforms                                                                                                      | Objects, capabilities, clocks, entropy, state writes                                |
 | `packages/control`     | The deployment lineage's administrative capability and freeze authority                                                                                                            | Gameplay, content values, player state                                              |
+| `packages/kares`       | Independent burn-only currency, one-use offering setup, escrow settlement, staking principal and reward schedules                                                                  | Game state, content, external pool creation                                         |
 | `packages/move-combat` | Authority-free deterministic fight state and transitions over plain values                                                                                                         | UID, keys, custody, transfers, events, clocks, entropy sources, transaction context |
 | `packages/seed`        | Registry-rooted living content objects and AdminCap-gated content mutation                                                                                                         | Player state or gameplay custody                                                    |
 | `packages/move`        | Player and world objects, authority, custody, events, randomness, clocks, and the thin fight lifecycle wrapper                                                                     | Duplicated combat rules, authored content, browser or indexer policy                |
@@ -61,9 +62,14 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | `packages/server`      | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                                                    |
 | `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                          |
 | `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                   |
+| `packages/launchpad`   | Independently deployed offering UI at `launchpad.aresrpg.world`, using the SDK and neutral frontend finance exports                                                                | Staking UI, game startup, a second finance state authority                          |
 | `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                 |
 | `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                   |
 | `pins.json`            | Deployment lineage, shared object addresses, and published content fingerprints                                                                                                    | Authored gameplay values                                                            |
+
+Frontend and launchpad builds project root pins through `scripts/browser_pins.ts`, excluding
+`seed_ledgers` and `seed_addresses`. Deployment tooling retains the complete canonical file;
+the browser projection is generated at import time and has no independent source of truth.
 
 Dependencies point toward smaller owners: frontend composes engine/fight/immutable/protocol/SDK;
 server composes engine/fight/protocol; protocol composes fight/immutable. Engine, fight, and
@@ -86,33 +92,75 @@ input ──▶ pure reducer ──▶ new state ──▶ observer ──▶ ef
 - Presentation fires from state deltas. Events may enrich a delta but do not make arrival order
   authoritative.
 
+Development module reloads retain the same app-store instance for mounted and lazy consumers.
+Stateful core edits restart the app to rebuild reducer and observer lifecycles together.
+
 The player app and `/demo` arm different observers. The player app owns wallet/server effects;
 the demo owns content editing and local simulation. Their arming sets live in
 `packages/frontend/src/app_modules.ts` and are census-tested.
 
+The `/kares` staking route uses the same app entry, navigation reducer and persistent sidebar as
+other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,
+staking, and gift import. It stores only the selected provider name and exact public address per
+network and origin, restores through silent authorization, and forgets the selection on disconnect
+or provider invalidation. Connecting it never replaces the game account. Finance runtimes bind a
+session for their lifetime and own only disposable read projections and pending actions. The SDK projects the pool’s next-24-hour funded emissions across schedule boundaries. Staking
+presentation derives current rewards and proposed-stake gains from each account’s changing pool
+share. The session reducer alone owns game-wallet SUI and KARES balances; staking and Mastery
+consume those values directly. Managed staking reads positions and shared finance state without
+querying or retaining another balance. External finance sessions own their separate wallet balances.
+Staking presents one aggregate per account; the SDK claims rewards or distributes a withdrawal
+across its underlying positions in one atomic PTB. Position objects never become UI selections.
+The separate launchpad package contains only the offering surface and boots independently of the game.
+It reuses the neutral wallet reducer, observer, picker, and finance exports; the launchpad never
+imports the player entry or its environment.
+
+The frontend production entry initializes Vercel Web Analytics and Speed Insights once for both
+game and wallet-finance routes. The independent launchpad entry initializes Vercel Web Analytics.
+Telemetry strips URL queries and fragments before sending, so
+claim bearer keys never become analytics data. Development and browser-test builds omit the trackers.
+
 ## Chain write law
+
+The SDK owns batching, optional preparation, framework Display setup, and non-random action-plus-close
+composition. Move exposes the smallest custody-safe primitives. Branches over current shared truth,
+sealed randomness, and inseparable authority checks remain on-chain; no client hint becomes authority.
 
 The frontend never imports `@mysten/*`. It asks the SDK to compose a transaction from resolved
 objects, simulates the exact unsigned bytes, signs once, executes once, and folds the certified
-receipt. An executed failure has a digest and is never automatically retried. Each SDK session
-retains the last executed digest and lazily waits for that transaction to become visible through
-its write transport before resolving or signing the next write. This propagation barrier never
-delays the completed receipt; if it fails, the next transaction remains unsubmitted.
+receipt. An executed failure has a digest and is never automatically retried. The SDK derives the
+digest from the signed bytes before submitting once. A bounded submission request that loses its
+response recovers that exact receipt through the gRPC Core transaction reader. GraphQL remains
+available for reads; its capped event pages cannot supply complete business receipts for writes. Missing or incomplete
+receipts remain uncertain; no retry handler may treat them as an unsubmitted transaction.
+One pending record owns both submission recovery and the next-write visibility barrier. Browser
+tabs persist uncertain digests and receipt requirements in session storage, scoped by network and
+account, before submission; signatures and transaction bytes are never stored. Reloading cannot
+erase uncertainty. Recovery before a later write rejects that stale intent and earlier queued
+intents; that SDK session requires a refresh after resolving the previous outcome. The normal
+visibility barrier remains lazy and never delays an already completed receipt.
+
+Wallet asset selection, including address balances, uses the official Sui coin intent and resolver
+before signing. It does not add a second transaction executor or a gameplay-object read fallback.
 
 The SDK logs every certified transaction once with digest and net gas. Its receipt-fed cache owns
 fresh object references; explicit hydration is the only bootstrap read for unknown transaction
-inputs, while the lazy previous-digest barrier synchronizes consecutive writes. Two narrow
-presentation reads are explicit exceptions: Party may snapshot one external
+inputs, while the lazy previous-digest barrier synchronizes consecutive writes. Narrow presentation reads are explicit exceptions: Party may snapshot one external
 character checkpoint for run-to, and a chat item hover may read that exact Item plus its rolled
-stat field through a session-bounded LRU. Package type identity uses original package IDs;
+stat field through a session-bounded LRU. The external-wallet giftcard import explicitly inspects only that
+wallet's canonical vouchers through the SDK, on connection or manual refresh. Game-wallet holdings
+remain indexed and pushed. Package type identity uses original package IDs;
 Move-call targets use latest package IDs.
 
 ## Projection law
 
-The indexer is a layout twin of Move and the sole FalkorDB writer. Output objects and deleted
-pre-state write the graph. Events publish receipt/lifecycle facts; authoritative object writes
+The indexer is a layout twin of Move and the sole FalkorDB writer. Transactions retain checkpoint
+order. Each removes consumed pre-state before applying surviving outputs; a surviving same-ID
+output wins. Custody and current-world context resolve within that transaction. Events publish receipt/lifecycle facts; authoritative object writes
 may publish full-row invalidations after projection. The graph is a rebuildable current-state
-cache, not another authority.
+cache, not another authority. Personal-kiosk ownership comes from certified personal caps and
+immutable owner markers, including input observations; the native Kiosk owner label is cosmetic
+and never writes ownership edges.
 
 Each indexer owns one private disposable FalkorDB and can run independently in any location.
 Nothing coordinates or migrates databases between indexers; a destroyed store replays from the
@@ -135,8 +183,35 @@ submitted gameplay attempt, including executed failures, while deployment-only c
 publish, upgrade, and seed transactions contribute neither gas nor player/address activity.
 Rebuilding analytics means replaying that indexer from the original publication checkpoint.
 
+Leaderboards are another projection of that same checkpoint pass. Seasons span 30 Sui epochs
+from original game publication; each transaction contributes in its checkpoint epoch. Earned combat
+and job XP stay with the earning address across character transfers. Fight victories count mobs once
+per winning address, while successful dungeon completion counts once per fight and address even
+when settlement crosses seasons. Public marketplace purchase receipts own gross buying and selling
+volume; mandatory game policy proofs emit the immutable seller address so historical checkpoints
+need not retain read-only owner-marker objects. Exclusive listings and private trades do not contribute.
+Kolizeum payouts, first Zone creation, pet-feeding actions, and harvested resource quantities supply the other rankings. No
+connection, roster cap, or name registration gates participation. Exact integer totals and ordered
+ranks commit through replayable absolute replacements; a bounded pending batch prevents partial
+Redis failures from double-counting. Previous seasons remain readable after rollover.
+
+Item rows and departures carry certified versions; inventory rejects stale rows and retains deletion
+tombstones. Quantity receipts fold exact final balances without waiting for the indexer.
+Stack fragments are normal. The UI groups available same-type holdings, while spend-time SDK PTBs
+attempt feasible merges before the action. Deposit targets are hints: Move merges a fitting live stack
+or locks a new one. Optional preparation may be dropped after a rejected unsigned preflight, never
+after an executed transaction.
 Item deltas are bidirectional: current kiosk custody streams the complete row, while pre-state
 custody streams removal when an item moves away or is destroyed. Clients never retain absent graph rows.
+The graph bus resolves each item invalidation once and delivers only to its pre/post custodians.
+
+Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
+query, including empty owned catalogues. Catalogue markers follow their relation writes. The client
+reconciles receipts and snapshots by version and `(asset,kiosk)` relation, then prunes confirmed
+departures. Own listings supply the owned rows of the bounded public window. Sale history never
+deletes a current listing: the same asset may already have been relisted.
+Marketplace write effects retain their originating wallet session. Account changes cannot let an
+old completion clear another account's proceeds, pending state, or operation slot.
 
 Indexer writes complete before their pub/sub notification. The server can therefore re-read the
 graph on a notification or gap. Async reads are latest-request-wins per identity.
@@ -152,12 +227,16 @@ Each connection owns one server reducer tracking every allowed character. The gr
 fight-action courtesy relays.
 
 Online history is the deliberate exception to chain replay: authenticated websocket presence is
-off-chain. Server heartbeats collapse cluster totals into one-minute samples, 15-minute aggregates
-through seven days, and daily aggregates afterward. The admin surface labels their separate source
-and freshness; the indexer never pretends it can reconstruct past connections.
+off-chain. Each server heartbeat publishes its short-lived authenticated-address snapshot; their
+cluster union collapses into one-minute samples, 15-minute aggregates through seven days, and daily
+aggregates afterward. Rolling replicas cannot multiply one player. The admin surface labels this
+separate source and freshness; the indexer never pretends it can reconstruct past connections.
 
-The server sends an ordered initial snapshot; `packet/characters` is the ready barrier. After
-that, graph events and narrow reads push deltas. The server validates identity, locality, rate,
+One latest reader per account domain serves baseline and refresh demand. Required subscriptions
+precede baseline reads; `packet/characters` becomes the ready barrier only after every prerequisite
+completes. Connection closure terminates its reducer and subscription lifetime, including pending
+acquisitions. Unverified transports and verifiers share one finite admission budget; a claimed
+address grants no capacity exemption. After readiness, graph events and narrow reads push deltas. The server validates identity, locality, rate,
 and relay voice, but it never becomes game authority.
 
 Reader processes boot independently of projection freshness. The server pushes its cached
@@ -165,15 +244,33 @@ checkpoint lag every five seconds; a connected client blocks interaction while f
 unknown or more than 300 checkpoints behind, shows rolling progress and ETA, and unlocks
 automatically inside that safe window.
 
+The leaderboard server observes one category and season per connection and pushes its top 100
+addresses plus that address's personal rank. SuiNS default-name lookup is an explicit direct-read
+exception for optional display enrichment. One expiring 2,000-entry LRU per server process caches
+verified names and misses, with a short failure cache. Optional names and badges share a 250 ms
+deadline, so each refresh publishes one coherent window without waiting on stalled enrichment.
+Lookup failure leaves the address visible and never changes a score.
+
 ## Critical workflows
 
 ### Authentication
+
+The `/enoki` OAuth callback is a passive popup. It never starts application observers, navigation,
+or telemetry. Enoki in the original tab consumes its callback URL and closes the popup.
 
 The frontend obtains an Enoki or wallet-backed signing session, then opens the websocket. The
 server issues a challenge and verifies the personal-message signature. Until
 `packet/connection_accepted`, the socket carries no application packets. One address owns one live
 connection; replacement is terminal until the player explicitly reconnects. Login reads no game
 state from chain—the app becomes ready only after the server's indexed snapshot.
+
+### Equipment
+
+The Character's existing equipment map owns both stat gear and the statless `cosmetic_hat` and
+`cosmetic_cloak` slots. All slots use the same equip/unequip custody flow. Seed rejects cosmetic
+stats and damage lines. Presence retains the raw slots; one shared pure presentation rule selects
+each cosmetic before its regular hat or cloak. Equip and unequip refresh the indexed visible slots
+through latest-request-wins reads, so delayed enrichment cannot restore removed equipment.
 
 ### World actions
 
@@ -188,6 +285,14 @@ in an upgrade-safe dynamic field. Move and the server twin use a separate determ
 give every generated eligible member one independent 1% identity replacement while preserving its
 group, position, and level scalar.
 
+Move consumes a resource node, banks job XP, deposits the harvest, and retains a protector verdict.
+A fired verdict roots the character until deterministic fight creation uses its committed board,
+level scalar, and gather-moment HP cap. The frontend retains one attempt per character.
+Receipt callbacks match that attempt identity;
+Character projections own its root deadline and protector obligation. Observers rebuild timers
+from retained state and recheck deadlines on wake. Toast and audio lifetimes cannot gate gameplay
+completion, and authoritative protectors can resolve independently of a delayed gather receipt.
+
 Party run-to is the sole direct player checkpoint read. The authenticated SDK reads another
 member's current-world and checkpoint dynamic fields once, refuses a different world, then the
 client runs toward that immutable snapshot. It never polls or claims to know the member's live pose.
@@ -197,12 +302,24 @@ client runs toward that immutable snapshot. It never polls or claims to know the
 Core Move owns Fight identity, player authority, character custody, entropy, events, and settlement.
 `packages/move-combat` owns the deterministic authority-free state machine embedded in that object.
 Core authenticates an action and supplies bounded plain entropy and time values; combat returns one
-deterministic transition. Fight entropy is pipelined one boundary ahead: each boundary executes the
+deterministic transition. Mob turns derive a cast limit from the Move-owned row-work ceiling and
+the kit's largest normal-or-critical branch. The existing cast ledger enforces it even when spells
+refund AP; the presentation twin imports the generated ceiling. Fight entropy is pipelined one boundary ahead: each boundary executes the
 previously committed `u64`, then its terminal Random draw commits the next one. An out-of-gas retry
 therefore repeats the same combat result without adding a second transaction. `packages/fight` is
-the TypeScript presentation twin. Local drafts relay
+the TypeScript presentation twin. One terminal end-turn door reads the post-command Fight state: it
+advances a live turn or seals loot entropy after a lethal action, so clients never predict which
+chain door applies. Local drafts relay
 through the mesh for immediate presentation; End Turn commits the ordered draft as one PTB. Receipts
 and indexed witnesses converge through structural turn identities.
+Only a successful locally authored action may queue an automatic remote commit when it ends combat
+or kills the active player. Streamed courtesy drafts never authorize spending. The terminal door
+accepts that dead but unsettled owned seat; live-action gates remain intact. Local simulation advances
+through its existing turn boundary. Each eligible numeric effect application resolves one magnitude
+from the committed stream; fixed-valued/control rows add no magnitude draw, and duration rows retain their roll.
+Each side's six start cells also bound its lifetime admissions. Forfeits return character custody
+but do not restore admission capacity; leaving and settlement remain available. Placement occupancy
+still follows living fighters, so a departed fighter's cell can be used by a remaining teammate.
 
 The terminal checkpoint supplies the settlement plan after presentation drains. Owned participants
 returning to one personal kiosk settle and collect through one Random-bound PTB; different kiosks
@@ -211,11 +328,23 @@ Random rolls only fixed-shape item statistics. The certified settlement receipt 
 exists only for interrupted-client recovery. Character level and experience come from the projected
 Character row. Result presents before level-up.
 
+### Terrain presentation
+
 Biome structure packs own sparse deterministic slots, weighted voxel types, terrain-fit limits, and an optional
 integer scale range. Each placement derives its type, 90-degree rotation, and scale from its world cell. Search
 margins derive per pack, so a colossal landmark never makes dense tree packs scan its footprint. A biome may opt
 into rare engine-shaped mountain passes or ravines; the canonical column sampler subtracts their feathered cuts
 before city terrain, so near terrain, far terrain, preview, scatter, and collision consume the same surface.
+
+The game chunk manager owns effective terrain residency. It starts at the requested quality and
+distance, then contracts outer rings when the engine reports blocked GPU uploads. The visible voxel footprint drives the far-terrain opening. Fully flat presentation hides all voxel draws and uses the existing ground-only far surface across the whole view.
+Trees and buildings disappear; voxel residency stays cached for restoration. Movement retains that capacity bound; an explicit quality or
+distance change starts a new request. The GPU pool never grows to absorb an oversized residency plan.
+That manager also owns bounded planning and meshing retries, including stationary focus. Worker
+replies settle their exact request, and cancelled or superseded requests settle explicitly. Backend
+request serials remain monotonic while per-key metadata follows only live work. Exhaustion or device
+loss terminates the world lifetime and exposes Reload; late sky success cannot revive a failed engine.
+Each resource owner releases its workers, GPU objects, audio nodes, and callbacks on teardown.
 
 World content owns cities: fixed 3x3 regions, stable slugs, anchors, structure packs, and one dungeon slug each.
 Dungeon content independently owns each stable dungeon slug, key, and ordered room composition.
@@ -233,6 +362,8 @@ partitions final operations into provenance-hashed, palette-compressed 32³ chun
 workers compile terrain immediately, request only intersecting city artifacts, and decode/cache only intersecting
 chunks. The ordinary collision and WebGPU voxel-mesh paths remain the consumers.
 
+### Dungeons and progression
+
 Dungeon runs are Character dynamic-field state coordinated by `packages/move/sources/dungeon.move`.
 Entering proves travel to the authored city anchor and burns the dungeon's key. Rooms compose
 ordinary fights; the fight machine has no parallel dungeon path. A run stores only dungeon slug,
@@ -242,18 +373,50 @@ authority on legal run and room transitions.
 Mastery is one soulbound derived object per address. Once per Sui epoch, an owned free Character
 proves access to a player-chosen WorldContent; Move draws one of that world's city dungeons and
 snapshots the entry-level reward. Any owned winner may validate it only through a final-room Fight
-created in the assigned world strictly after assignment. Missing an epoch expires the spendable score.
-Seed-authored MasteryOffer objects exchange that score for statless items. Loot-box rewards retain
+created in the assigned world strictly after assignment. Earned points persist across missed epochs.
+Seed-authored MasteryOffer objects have immutable prices and mutable availability. They exchange
+earned points or the same number of burned whole KARES for statless items. KARES redemption neither
+requires a Mastery quest object nor changes earned points. Loot-box rewards retain
 their existing open/claim randomness, while direct consumables such as reset scrolls mint directly.
-Seed-authored airdrops and giftcards create portable distribution vouchers. An eligible external
-holder pays to send its airdrop voucher to the authenticated game wallet; that wallet pays a
-separate redemption into its personal kiosk. Redemption is the one final-item mint: statless items
-and fixed-endpoint pets need no entropy, and pet feed scaling keeps the stored endpoint neutral
-until the owner feeds the pet. Printed cards use an AresRPG `/gift` URL whose fragment carries the
-zkSend bearer key across Google login; zkSend transports the voucher to the game wallet, then the
-same ordinary redemption path runs. The bearer fragment never reaches the server.
-The private operator prepares printable bearer files before its named web-signer action; no wallet
-private key or generic transaction surface exists in this repository.
+Seed-authored Giftcards are the only distribution entitlement. Each is a portable `key + store`
+object with a template and amount; possession authorizes its one burn-on-redemption mint into a
+personal kiosk. Statless items and fixed-endpoint pets need no entropy; pet feed scaling keeps the
+stored endpoint neutral until feeding. Issuance is AdminCap-gated and stops at permanent freeze.
+Ordinary transfers distribute existing vouchers without mint authority, whitelists, or claim counters.
+The operator prepares holder allocations from saved, checkpoint-scoped mainnet collection snapshots.
+Content sync mints each configured voucher directly to its custody address. The operator also exposes
+one reviewed send row per gift type on the selected network. It reuses the seed administrator scoped
+to that gift, without changing content or gameplay pause state. Permanent derived claim markers
+keep redeemed vouchers complete during issuance recovery. Compact recipient batches
+expand in the SDK into ordinary per-recipient vouchers. Giftcard rows may select
+one network; creation and reconciliation use the same network filter. Prime Machin allocations target
+mainnet NFT object IDs. The local Sui CLI batch sender transfers already-issued vouchers; collection
+snapshots and partner-specific receiving remain outside the runtime projection.
+`/claim` imports wallet-held vouchers into the authenticated zkLogin account and automatically
+redeems them. The external wallet pays transport; the game wallet pays redemption. A failed
+redemption leaves the voucher recoverable. Browser-local attempt markers, scoped by network and
+account, are retained before the SDK call and prevent automatic retries across reloads, including
+certified failures. Missing or unavailable persistence disables automation; manual redemption remains explicit.
+Box and crush claims use the same one-attempt rule and remain visible for explicit collection in
+inventory. Their automation markers are written before submission and survive reloads; a failed
+attempt never creates an automatic retry timer.
+Voucher pre/post ownership invalidates both custodians through the indexer, including plain transfers
+without game events. Certified redemption tombstones prevent stale snapshots resurrecting spent cards.
+Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
+which survives Google login without reaching the server. zkSend transports the voucher, then ordinary
+redemption runs. The private operator prepares printable bearer files before its named web-signer
+action; the local batch sender uses the owner's configured Sui CLI signer and journals each submission.
+
+### Forging
+
+Pure forging math owns signed-stat eligibility, outcome probabilities, and the loss ledger.
+The game consumes one rune and resolves scribing through one terminal-randomness transaction.
+Every outcome visits the same fixed stat block and writes the same event shape. Item-owned
+RolledStats stores statistics, exact ×20 puits, and one write revision in the same dynamic field.
+Every attempt increments that revision, so Sui cannot omit an unchanged child write. The revision
+never gates rune eligibility, and scribing grants no profession XP. The receipt carries
+net gain and all fifteen net losses, which the frontend folds before indexed reconciliation.
+Crushing retains its separate committed seed, deterministic reveal, and explicit redemption.
 
 ### Content
 
@@ -267,6 +430,60 @@ diffs authored content against published content and writes only the required ba
 Sui Kiosk objects own listings and custody. The indexer projects the current market and sales
 history. The server pushes one observed category window plus aggregate counts. The frontend
 reconciles packets and its own certified receipts in one marketplace reducer.
+
+### KARES and the offering
+
+KARES is an independent package lineage published before the game. Its native Sui Currency is
+burn-only: initialization mints the complete supply once and consumes mint authority. Metadata authority
+is separate; setup delivers the native MetadataCap to the community cold wallet. Only name,
+description and icon URL are exposed by the operator's metadata action.
+
+Setup consumes Genesis and the genuine first-publication UpgradeCap, permanently sealing the monetary
+package in the same transaction. Its cap package ID must match KARES's original type address and
+its version must be one; a foreign cap or previously upgraded lineage cannot initialize the sale.
+One setup creates the canonical inactive offering, empty combat pot and inactive funded staking pool.
+Durations and recipients become immutable before contribution. Only the configured treasury can start
+the sale once; its native-clock timestamp owns the derived closing time. The
+operator configures a 15-minute testnet sale and a seven-day mainnet sale. There is no restart, extension,
+or pause after activation. Settlement allocates accepted SUI between the
+treasury and liquidity wallet, transfers the liquidity KARES allocation, retains excess refunds,
+and activates staking and participant claims atomically. A participant claim finalizes a successful
+sale when needed, so claim availability does not depend on the operator. Repeated finalization is
+idempotent and cannot transfer the allocations twice. The owner creates any market pool manually;
+the offering guarantees allocation, not external liquidity creation or locking. Offerings below the minimum at closing refund contributions. Successful offerings remain claimable
+indefinitely; no later deadline can change their outcome. Claim rounding is conservative and independent of order.
+
+The offering also escrows the 110,000 KARES community allocation. Successful settlement starts a
+1,825-day wall-clock release, independent of staking activity. Only the immutable treasury address
+can claim the unlocked balance. Cumulative vesting minus previous withdrawals preserves rounding
+across arbitrary claim cadence. Unlocked coins may then be distributed or burned through the
+existing native burn door. Failed sales never start community vesting.
+
+The offering reserves another 100,000 KARES for combat. Only its immutable treasury may seed the
+canonical public pot and authorize a game witness type. KARES imports no game package. Core constructs
+the private BossVictory witness only for a proved victory. The pot enforces its daily ceiling regardless
+of game upgrades: floor(100,000 KARES / 1,825), with no catch-up debt. Donations only extend runway.
+Each chain epoch lazily averages the prior quota with observed boss levels per elapsed day, with a
+20,000-level floor. Fight snapshots authored boss identity and actual scaled levels. Its first winning
+settlement pays one proportional bounty equally to all non-forfeited winning seats, including dead or
+disconnected characters, before terminal item randomness. Fight records even a zero payout exactly once.
+Quiet days preserve the reserve. There is no direct treasury withdrawal or counter-reset door. Treasury controls witness eligibility,
+so a malicious authorization can redirect the daily allowance but cannot exceed its monetary ceiling.
+
+Staking keeps principal separate from KARES and SUI rewards. Its active clock pauses when principal
+is zero. The initial reward stream lasts 1,825 active days; public supplementary deposits share a
+bounded daily schedule beginning at the next active-day boundary and lasting 30 active days.
+Cumulative per-asset indexes retain earned rewards across stake changes and anytime claims.
+
+Wallet finance is an explicit SDK read exception: canonical Currency, offering, combat pot and staking objects,
+owned positions, balances and chain time come directly from Sui, including before game publication.
+The SDK rejects foreign identities and receipt-older snapshots. The UI derives estimated accrual;
+certified execution owns the actual payout. Finance receipts do not create another game projection.
+
+The admin claim PTB combines the two policy withdrawals, splits their actual on-chain amount through
+the KARES funding door, and delivers the remainder to the selected treasury wallet. Its certified
+RoyaltyFunded event owns displayed claim amounts. Policy-cap custody remains with the owner;
+the PTB split is not a claim that every possible cap withdrawal is mechanically constrained.
 
 ## Extending the system
 
@@ -286,8 +503,7 @@ If the explanation needs two owners for one fact, the data model is wrong.
 
 - `ARCHITECTURE.md`: current system topology and laws.
 - `DECISIONS.md`: active rulings and their motives; search the domain being changed.
-- `AGENTS.md`: repository working agreement, safety, and required gates.
-- `.claude/rules/code-law.md`: detailed rationale for executable TypeScript lint laws.
+- `AGENTS.md`: repository working agreement, TypeScript code law, safety, and required gates.
 - `CONTENT_UPGRADES.md`: content and package publication operations.
 - `CONTRIBUTING.md`: branch, release, and contributor workflow.
 - Package READMEs: package-specific operation only; they do not redefine this file.

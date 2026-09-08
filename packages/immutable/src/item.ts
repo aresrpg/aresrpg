@@ -6,10 +6,12 @@ import type { JobSlug } from './identity.ts'
 export const weapon_categories = Object.freeze(['daggers', 'spear', 'bow', 'axe', 'sword'] as const)
 
 export const armor_categories = Object.freeze(['hat', 'cloak', 'belt', 'boots'] as const)
+export const cosmetic_categories = Object.freeze(['cosmetic_hat', 'cosmetic_cloak'] as const)
 export const accessory_categories = Object.freeze(['amulet', 'ring', 'title'] as const)
 export const tool_categories = Object.freeze(['tool_farmer', 'tool_herbalist', 'tool_miner'] as const)
 
 export const equipment_categories = Object.freeze([
+  ...cosmetic_categories,
   ...armor_categories,
   ...accessory_categories,
   'pet',
@@ -36,6 +38,8 @@ export const is_weapon_category = (category: string): category is WeaponCategory
   (weapon_categories as readonly string[]).includes(category)
 export const is_equipment_category = (category: string): category is EquipmentCategory =>
   (equipment_categories as readonly string[]).includes(category)
+export const is_cosmetic_category = (category: string): boolean =>
+  (cosmetic_categories as readonly string[]).includes(category)
 export const is_tool_category = (category: string): boolean => (tool_categories as readonly string[]).includes(category)
 
 // Mirrors move-math/content_rules.move::craft_job_of. Categories absent here deliberately use

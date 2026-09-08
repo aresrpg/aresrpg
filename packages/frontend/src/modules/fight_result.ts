@@ -8,7 +8,12 @@ import { encyclopedia_catalog } from '../content/catalog.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { observe_fight_results } from './fight_result_observer.ts'
-import { fight_duration, fight_resolution_dungeon, fight_result_available } from './fight_result_view.ts'
+import {
+  result_accounting,
+  participant_kares,
+  fight_resolution_dungeon,
+  fight_result_available,
+} from './fight_result_view.ts'
 
 export {
   compact_xp,
@@ -42,11 +47,13 @@ export type ResultParticipant = Readonly<{
   forfeited: boolean
   settled: boolean
   xp_awarded: number
+  kares: bigint
   loot: readonly ResultLoot[]
 }>
 
 export type FightResult = Readonly<{
   fight: string
+  boss_weight: number
   dungeon: Readonly<{ dungeon: string; room: number }> | null
   kolizeum: string | null
   /** Immutable stake plus certified gross payout; absent for non-Kolizeum and recovery without terms. */
@@ -87,7 +94,13 @@ export type FightResultInput =
   | Readonly<{ type: 'fight_result/gas_updated'; character_id: string; fight: string; gas_spent_mist: bigint }>
   | Readonly<{ type: 'fight_result/retry'; character_id: string }>
   | Readonly<{ type: 'fight_result/claim_failed'; character_id: string; fight: string; error: string }>
-  | Readonly<{ type: 'fight_result/settled'; character_id: string; fight: string; paid_mist: bigint | null }>
+  | Readonly<{
+      type: 'fight_result/settled'
+      character_id: string
+      fight: string
+      paid_mist: bigint | null
+      kares_rewards?: readonly Readonly<{ fighter: bigint; amount: bigint }>[]
+    }>
   | Readonly<{ type: 'fight_result/level_acknowledged'; character_id: string }>
   | Readonly<{ type: 'fight_result/closed'; character_id: string }>
   | Readonly<{ type: 'fight_result/close_succeeded'; fight: string }>
@@ -117,21 +130,6 @@ export const merge_result_loot = (
   return Object.freeze([...quantities].map(([item_type, qty]) => Object.freeze({ item_type, qty })))
 }
 
-const result_accounting = (
-  indexed_started_ms: bigint | null,
-  indexed_ended_ms: bigint | null,
-  observed_started_ms: number | null,
-  observed_at_ms: number,
-  gas_spent_mist: bigint,
-  existing: FightResult | null
-) =>
-  Object.freeze({
-    duration_ms:
-      existing?.duration_ms ??
-      fight_duration(indexed_started_ms ?? observed_started_ms, indexed_ended_ms ?? observed_at_ms),
-    gas_spent_mist,
-  })
-
 const participant_from = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   fighter: Readonly<Fighter>,
@@ -160,6 +158,7 @@ const participant_from = (
     forfeited: fighter.forfeited,
     settled: fighter.settled,
     xp_awarded,
+    kares: participant_kares(checkpoint, fighter),
     loot: aggregate_result_loot(fighter.drops),
   })
 }
@@ -194,6 +193,7 @@ const merge_participants = (
             level_after: Math.max(before.level_after, row.level_after),
             settled: before.settled || row.settled,
             xp_awarded: Math.max(before.xp_awarded, row.xp_awarded),
+            kares: before.kares > row.kares ? before.kares : row.kares,
             loot: merge_result_loot(before.loot, row.loot),
           })
         : row
@@ -274,6 +274,7 @@ const merge_checkpoint = (
   )
   return Object.freeze({
     fight: checkpoint.contract.id,
+    boss_weight: Number(checkpoint.contract.boss_weight),
     dungeon: projected_dungeon(checkpoint),
     ...kolizeum_result,
     winner: checkpoint.contract.winner === null ? null : Number(checkpoint.contract.winner),
@@ -302,6 +303,7 @@ const merge_resolution = (participant: ResultParticipant, row: Readonly<FightRes
     forfeited: participant.forfeited,
     settled: row.settled,
     xp_awarded: participant.xp_awarded,
+    kares: participant.kares > BigInt(row.kares) ? participant.kares : BigInt(row.kares),
     loot: merge_result_loot(participant.loot, aggregate_result_loot(row.drops)),
   })
 }
@@ -325,10 +327,12 @@ const recover_result = (state: AppState, row: Readonly<FightResolutionRow>): Fig
     forfeited: false,
     settled: row.settled,
     xp_awarded: 0,
+    kares: BigInt(row.kares),
     loot: aggregate_result_loot(row.drops),
   })
   return Object.freeze({
     fight: row.fight,
+    boss_weight: row.boss_weight,
     dungeon: fight_resolution_dungeon(row),
     kolizeum: row.kolizeum,
     kolizeum_wager: null,
@@ -473,6 +477,7 @@ const fold_packet = (state: AppState, packet: Readonly<ServerPacket>): AppState 
                   participant.seat === fighter
                     ? Object.freeze({
                         ...participant,
+                        kares: participant.kares > BigInt(packet.kares) ? participant.kares : BigInt(packet.kares),
                         loot: merge_result_loot(participant.loot, aggregate_result_loot(packet.drops)),
                       })
                     : participant
@@ -556,9 +561,15 @@ const reduce = (state: AppState, input: AppInput): AppState => {
                 : Object.freeze({ ...result.kolizeum_wager, payout_mist: input.paid_mist }),
             settlement_confirmed: true,
             participants: Object.freeze(
-              result.participants.map((participant, index) =>
-                index === result.own_seat ? Object.freeze({ ...participant, settled: true }) : participant
-              )
+              result.participants.map((participant, index) => {
+                const paid =
+                  input.kares_rewards?.find(({ fighter }) => fighter === BigInt(participant.seat))?.amount ?? 0n
+                return Object.freeze({
+                  ...participant,
+                  settled: participant.settled || index === result.own_seat,
+                  kares: participant.kares > paid ? participant.kares : paid,
+                })
+              })
             ),
           })
     )

@@ -892,6 +892,16 @@
     }
   },
   {
+    "output_type": "recall_potion",
+    "inputs": {
+      "water": 2,
+      "fuwa_eye": 2,
+      "barley_flour": 2,
+      "aloe_crystal_salve": 2
+    },
+    "job": "ALCHEMIST"
+  },
+  {
     "output_type": "potion_of_thebes",
     "inputs": {
       "golden_lorito_feather": 1,

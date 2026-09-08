@@ -17,6 +17,7 @@ import {
   type ChatMessagePart,
   type ServerPacket,
 } from '@aresrpg/protocol'
+import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import type { ChatChannel } from '../game/core/chat_preferences.ts'
@@ -24,6 +25,7 @@ import type { ChatChannel } from '../game/core/chat_preferences.ts'
 export type { ChatChannel } from '../game/core/chat_preferences.ts'
 
 const MAX_LINES = 100
+export const SPEECH_DURATION_MS = 6_000
 
 // One colored token. `cls` picks the palette class (chat.css); `seat` marks a fighter
 // reference so the renderer prefers the live fight name over the baked fallback text;
@@ -56,10 +58,16 @@ export type ChatLine = ChatLineContent &
   >
 
 export type ChatDraft = Readonly<{ text: string; items: readonly ChatItemLink[] }>
-export type ChatState = Readonly<{ lines: readonly ChatLine[]; draft: ChatDraft }>
+export type PlayerSpeech = Readonly<{ line: ChatLine; expires_at: number }>
+export type ChatState = Readonly<{
+  lines: readonly ChatLine[]
+  draft: ChatDraft
+  speech: Readonly<Record<string, PlayerSpeech>>
+}>
 
 export type ChatInput =
-  | Readonly<{ type: 'chat/line'; line: ChatLine; replaces?: string }>
+  | Readonly<{ type: 'chat/line'; line: ChatLine; replaces?: string; at_ms?: number }>
+  | Readonly<{ type: 'chat/speech_expired'; now_ms: number }>
   // the outbound door — the reducer ignores it (the local echo is its own chat/line from the
   // speaker's edge); the session module owns the link and forwards the typed parts as packet/chat
   | Readonly<{ type: 'chat/speak'; channel: 'general' | 'party'; parts: readonly ChatMessagePart[] }>
@@ -70,7 +78,37 @@ export type ChatInput =
 
 const empty_draft = (): ChatDraft => Object.freeze({ text: '', items: Object.freeze([]) })
 
-export const initial_chat_state = (): ChatState => Object.freeze({ lines: Object.freeze([]), draft: empty_draft() })
+export const initial_chat_state = (): ChatState =>
+  Object.freeze({ lines: Object.freeze([]), draft: empty_draft(), speech: Object.freeze({}) })
+
+export const chat_part_text = (part: Readonly<ChatMessagePart>): string => {
+  switch (part.kind) {
+    case 'text':
+      return part.text
+    case 'item':
+      return `[${part.name}]`
+    case 'position':
+      return `[${part.world} · ${Math.round(chain_to_client_coordinate(part.x))}, ${Math.round(chain_to_client_coordinate(part.z))}]`
+  }
+}
+
+const speech_for_line = (
+  speech: ChatState['speech'],
+  { line, replaces, at_ms }: Extract<ChatInput, { type: 'chat/line' }>
+): ChatState['speech'] => {
+  if (replaces !== undefined)
+    return Object.freeze(
+      Object.fromEntries(
+        Object.entries(speech).map(([id, current]) => [
+          id,
+          current.line.id === replaces ? Object.freeze({ ...current, line }) : current,
+        ])
+      )
+    )
+  const character_id = line.values.name?.character_id
+  if (line.channel !== 'general' || !character_id || at_ms === undefined) return speech
+  return Object.freeze({ ...speech, [character_id]: Object.freeze({ line, expires_at: at_ms + SPEECH_DURATION_MS }) })
+}
 
 export const chat_message_from_draft = (draft: Readonly<ChatDraft>): ChatMessage =>
   Object.freeze({ text: draft.text.trim(), items: draft.items })
@@ -123,6 +161,12 @@ const fold_draft = (state: AppState, input: AppInput): AppState | null => {
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
+  if (input.type === 'chat/speech_expired') {
+    const speech = Object.freeze(
+      Object.fromEntries(Object.entries(state.chat.speech).filter(([, bubble]) => bubble.expires_at > input.now_ms))
+    )
+    return Object.freeze({ ...state, chat: Object.freeze({ ...state.chat, speech }) })
+  }
   const drafted = fold_draft(state, input)
   if (drafted) return drafted
   if (input.type !== 'chat/line') return state
@@ -130,19 +174,23 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (replaces === undefined)
     return Object.freeze({
       ...state,
-      chat: Object.freeze({ ...state.chat, lines: Object.freeze([...state.chat.lines, line].slice(-MAX_LINES)) }),
+      chat: Object.freeze({
+        ...state.chat,
+        lines: Object.freeze([...state.chat.lines, line].slice(-MAX_LINES)),
+        speech: speech_for_line(state.chat.speech, input),
+      }),
     })
   const at = state.chat.lines.findIndex((existing) => existing.id === replaces)
   // A correction addressing a line that scrolled away writes nothing: a bare corrected
   // number with no cast above it reads as a hit that never happened.
   if (at < 0) return state
+  const corrected_line = Object.freeze({ ...line, id: replaces })
   return Object.freeze({
     ...state,
     chat: Object.freeze({
       ...state.chat,
-      lines: Object.freeze(
-        state.chat.lines.map((existing, index) => (index === at ? { ...line, id: replaces } : existing))
-      ),
+      speech: speech_for_line(state.chat.speech, { ...input, line: corrected_line }),
+      lines: Object.freeze(state.chat.lines.map((existing, index) => (index === at ? corrected_line : existing))),
     }),
   })
 }
@@ -174,11 +222,26 @@ const wire_chat_line = (packet: Readonly<Extract<ServerPacket, { type: 'packet/c
 
 // Incoming wire chat re-enters through the reducer door as a chat/line; the id is generated
 // HERE at the effect edge so the reducer stays pure.
-const observe: NonNullable<AppModule['observe']> = ({ events, dispatch }) => {
+const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const schedule_expiry = (speech: ChatState['speech']): void => {
+    clearTimeout(timer)
+    const deadlines = Object.values(speech).map(({ expires_at }) => expires_at)
+    if (deadlines.length === 0) return
+    timer = setTimeout(
+      () => dispatch({ type: 'chat/speech_expired', now_ms: Date.now() }),
+      Math.max(0, Math.min(...deadlines) - Date.now())
+    )
+  }
+  events.on('STATE_UPDATED', (state, previous) => {
+    if (state.chat.speech !== previous.chat.speech) schedule_expiry(state.chat.speech)
+  })
+  schedule_expiry(get_state().chat.speech)
+  signal.addEventListener('abort', () => clearTimeout(timer))
   events.on('server/packet', ({ packet }) => {
     if (packet.type !== 'packet/chat_message') return
     const line = wire_chat_line(packet)
-    if (line) dispatch({ type: 'chat/line', line })
+    if (line) dispatch({ type: 'chat/line', line, at_ms: Date.now() })
   })
 }
 

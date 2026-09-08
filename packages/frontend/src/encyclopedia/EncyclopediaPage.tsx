@@ -5,6 +5,7 @@ import { useMemo } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { spell_name, stat_name } from '../i18n/copy.ts'
+import { TokenomicsTab } from '../kares/TokenomicsTab.tsx'
 
 import { ClassesTab } from './ClassesTab.tsx'
 import { category_pill, encyclopedia_layout } from './components.tsx'
@@ -15,7 +16,7 @@ import { JobsTab } from './JobsTab.tsx'
 import { MobsTab } from './MobsTab.tsx'
 import { WorldsTab } from './WorldsTab.tsx'
 
-type Tab = 'items' | 'bestiary' | 'classes' | 'jobs' | 'worlds' | 'gameplay'
+type Tab = 'items' | 'bestiary' | 'classes' | 'jobs' | 'worlds' | 'gameplay' | 'kares'
 
 const TABS: readonly Readonly<{ id: Tab; label: string }>[] = Object.freeze([
   { id: 'items', label: 'items' },
@@ -24,6 +25,7 @@ const TABS: readonly Readonly<{ id: Tab; label: string }>[] = Object.freeze([
   { id: 'jobs', label: 'jobs_tab' },
   { id: 'worlds', label: 'worlds_tab' },
   { id: 'gameplay', label: 'gameplay_tab' },
+  { id: 'kares', label: 'kares' },
 ])
 
 const route_view = (pathname: string): Readonly<{ tab: Tab; id: string | null }> => {
@@ -57,7 +59,7 @@ export const EncyclopediaPage = ({
             onClick={() => navigate(route(tab.id))}
             type="button"
           >
-            {text(tab.label)}
+            {tab.id === 'kares' ? copy.kares : text(tab.label)}
           </button>
         ))}
       </nav>
@@ -105,6 +107,7 @@ export const EncyclopediaPage = ({
             text={text}
           />
         )}
+        {view.tab === 'kares' && <TokenomicsTab copy={copy.kares_page} />}
         {view.tab === 'gameplay' && <GameplayTab text={text} />}
       </div>
     </section>

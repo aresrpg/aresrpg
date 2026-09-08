@@ -14,7 +14,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { holds_character_seat } from './fight_identity.ts'
 import { fight_latch } from './fight_latch.ts'
-import { same_fight_turn } from './fight_lifecycle.ts'
+import { end_turn_submission_after_reconcile, same_fight_turn } from './fight_lifecycle.ts'
 import { is_fight_board_page } from './navigation.ts'
 import { observe_fights } from './fight_observer.ts'
 export { create_fight_session, type ActiveFightSession } from './fight_session.ts'
@@ -119,7 +119,7 @@ export type FightSessionInput =
       cue: FightPresentationCue
       phase: 'start' | 'complete'
     }>
-  | Readonly<{ type: 'fight/spectating'; character_id: string; fight: string }>
+  | Readonly<{ type: 'fight/spectating'; character_id: string; fight: string | null }>
   | Readonly<{ type: 'fight/preview_closed'; character_id: string; fight: string }>
   | Readonly<{ type: 'fight/started_at'; fight: string; at_ms: number }>
   | Readonly<{ type: 'fight/transaction_pending'; fight: string; pending: boolean }>
@@ -279,7 +279,7 @@ const reconcile_fight = (
     ready_submitted_seats: ready_confirmed ? Object.freeze([]) : previous.ready_submitted_seats,
     ready_all_progress: ready_progress_after_reconcile(previous.ready_all_progress, ready_confirmed),
     end_turn_queued: same_turn ? previous.end_turn_queued : false,
-    end_turn_submitted: same_turn ? previous.end_turn_submitted : false,
+    end_turn_submitted: end_turn_submission_after_reconcile(previous, same_turn, input.checkpoint.contract.ended),
     restore_serial: previous.restore_serial,
     awaiting_turn_witness: input.awaiting_turn_witness,
   })
@@ -501,26 +501,23 @@ const spectate_fight = (
   state: Readonly<AppState>,
   input: Extract<AppInput, { type: 'fight/spectating' }>
 ): AppState => {
-  const checkpoint = state.fight.cached[input.fight]
-  const swapping = !!checkpoint && state.fight.checkpoint?.contract.id !== input.fight
-  return Object.freeze({
+  const next = Object.freeze({
     ...state,
     fight: Object.freeze({
       ...state.fight,
-      ...(checkpoint ? { mode: 'remote' as const, checkpoint } : {}),
-      ...(swapping
-        ? {
-            environments: drop_presentation_queue(state.fight.environments, state.fight.checkpoint?.contract.id),
-            presentations: Object.freeze([]),
-          }
-        : {}),
-      spectating_by_character: Object.freeze({
-        ...state.fight.spectating_by_character,
-        [input.character_id]: input.fight,
-      }),
-      mounted: state.session.selected_character_id === input.character_id && !!checkpoint,
+      spectating_by_character: Object.freeze(
+        Object.fromEntries([
+          ...Object.entries(state.fight.spectating_by_character).filter(
+            ([character]) => character !== input.character_id
+          ),
+          ...(input.fight ? [[input.character_id, input.fight]] : []),
+        ])
+      ),
     }),
   })
+  return state.session.selected_character_id === input.character_id
+    ? select_character_fight(next, input.character_id)
+    : next
 }
 
 const close_requested_fight = (state: AppState, fight: string | null): AppState =>

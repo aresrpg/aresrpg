@@ -19,6 +19,11 @@ fun world_entry_level_sets_the_exact_mastery_reward() {
 }
 
 #[test]
+fun mastery_points_accumulate_after_skipped_epochs() {
+  assert!(mastery::accumulated_points_for_testing(7, 3) == 10);
+}
+
+#[test]
 fun a_pre_assignment_or_cross_world_fight_cannot_validate_the_quest() {
   assert!(!mastery::completion_scope_for_testing(
     100, b"nauvis".to_string(), 99, b"nauvis".to_string(),

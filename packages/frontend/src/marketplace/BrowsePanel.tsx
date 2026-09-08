@@ -15,7 +15,7 @@ import { format_sui } from '../wallet_amount.ts'
 
 import {
   buyer_total,
-  category_name,
+  CategoryName,
   legal_lot,
   ListingIcon,
   listing_name,
@@ -182,7 +182,9 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   type="button"
                 >
                   <span className="flex items-center justify-between gap-3">
-                    <span>{category_name(category)}</span>
+                    <span>
+                      <CategoryName category={category} />
+                    </span>
                     <span className="text-[8px] tabular-nums text-[#626773]">
                       {Math.max(
                         market.counts.categories[category] ?? 0,

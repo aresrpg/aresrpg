@@ -60,8 +60,8 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
         { transfer: mesh.quads.length > 0 ? [mesh.quads.buffer] : [] }
       )
     })
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- the failure is returned through its exact worker request ID.
     .catch((error: unknown) => {
-      console.error('Mesh worker city initialization failed.', error)
-      throw error
+      self.postMessage({ id: data.id, error: error instanceof Error ? error.message : String(error) })
     })
 })

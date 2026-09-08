@@ -8,9 +8,11 @@ import type { AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
+import { format_amount } from '../kares/model.ts'
 
 import { AddFundsModal } from './AddFundsModal.tsx'
 import { SendSuiModal } from './SendSuiModal.tsx'
+import { KaresLogo } from './KaresLogo.tsx'
 
 const short_address = (address: string): string => `${address.slice(0, 8)}…${address.slice(-5)}`
 
@@ -59,6 +61,13 @@ export const WalletCard = ({
             {session.sui_balance_mist === null ? '---.--' : format_sui(session.sui_balance_mist, 2)}
           </span>
           <span className="text-[9px] tracking-wide text-[#777b86] uppercase">SUI</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-gold" data-kares-balance="">
+          <KaresLogo size={16} />
+          <span className="tabular-nums">
+            {session.kares_balance === null ? '—' : format_amount(session.kares_balance)}
+          </span>
+          <span className="text-[9px] text-muted">KARES</span>
         </div>
         <div className="flex flex-col gap-1" data-wallet-actions="">
           <button

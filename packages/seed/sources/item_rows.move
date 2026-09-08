@@ -22,7 +22,7 @@ use std::string::String;
 use sui::{derived_object, dynamic_field as dfield, event};
 
 const EWrongCategory: u64 = 4501; // add: a category outside the sealed set
-const EStackableStats: u64 = 4502; // stats/damages: a stackable carries neither
+const EStatlessCategory: u64 = 4502; // stackables and cosmetics carry neither stats nor damages
 const EInvalidStatRange: u64 = 4503; // a min above its max would poison every mint
 const ENotConsumable: u64 = 4504; // effect: only a consumable carries one
 
@@ -108,7 +108,7 @@ public fun set_stats(
   max: ItemStatistics,
   ctx: &TxContext,
 ) {
-  assert!(!content_rules::is_stackable(&template.category), EStackableStats);
+  assert!(!content_rules::is_stackable(&template.category) && !content_rules::is_cosmetic(&template.category), EStatlessCategory);
   let (lo, hi) = (min.to_vector(), max.to_vector());
   let mut i = 0;
   while (i < lo.length()) {
@@ -141,7 +141,7 @@ public fun set_damages(
   lines: vector<ItemDamages>,
   ctx: &TxContext,
 ) {
-  assert!(!content_rules::is_stackable(&template.category), EStackableStats);
+  assert!(!content_rules::is_stackable(&template.category) && !content_rules::is_cosmetic(&template.category), EStatlessCategory);
   if (dfield::exists(&template.id, DamagesKey())) {
     *dfield::borrow_mut(&mut template.id, DamagesKey()) = lines;
   } else {

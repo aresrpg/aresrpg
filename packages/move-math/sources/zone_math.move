@@ -8,6 +8,7 @@ use aresrpg_math::{city_map::{Self, City}, prng, world_map::{Self, ArchiRow, Bio
 use std::string::String;
 
 const ENothingThere: u64 = 1302;
+const EInvalidZone: u64 = 1303;
 const ZONE_SIZE: u32 = 512;
 const GROUPS_MIN: u64 = 48;
 const GROUPS_MAX: u64 = 64;
@@ -60,6 +61,14 @@ fun replacement_for_roll(rows: &vector<ArchiRow>, ordinary_type: String, roll: u
 }
 
 public fun zone_size(): u32 { ZONE_SIZE }
+
+fun zone_axis(index: u32): (u32, u64) {
+  let origin = (index as u64) * (ZONE_SIZE as u64);
+  let world_size = world_map::world_size() as u64;
+  assert!(origin < world_size, EInvalidZone);
+  let remaining = world_size - origin;
+  (origin as u32, if (remaining < ZONE_SIZE as u64) remaining else ZONE_SIZE as u64)
+}
 
 fun distance_blocks(zone_x: u32, zone_z: u32): u64 {
   let center = world_map::world_center() as u64;
@@ -124,6 +133,8 @@ fun mob_groups_inner(
   seed: u64,
   taken: u128,
 ): vector<MobGroup> {
+  let (origin_x, span_x) = zone_axis(zone_x);
+  let (origin_z, span_z) = zone_axis(zone_z);
   let rows = population_mob_rows(rows, map, cities, zone_x, zone_z);
   if (rows.is_empty()) return vector[];
   let total = rows.fold!(0u64, |sum, row| sum + (world_map::mob_row_weight_bp(&row) as u64));
@@ -136,8 +147,8 @@ fun mob_groups_inner(
   let mut groups = vector[];
   let mut index = 0u64;
   while (index < count) {
-    let x = (zone_x * ZONE_SIZE) + ((prng::draw(&mut state) % (ZONE_SIZE as u64)) as u32);
-    let z = (zone_z * ZONE_SIZE) + ((prng::draw(&mut state) % (ZONE_SIZE as u64)) as u32);
+    let x = origin_x + ((prng::draw(&mut state) % span_x) as u32);
+    let z = origin_z + ((prng::draw(&mut state) % span_z) as u32);
     let size = size_lo + prng::draw(&mut state) % (size_hi - size_lo + 1);
     let homogeneous = prng::draw(&mut state) % 10_000 < HOMOGENEOUS_BP;
     let family = weighted_family(&rows, total, &mut state);
@@ -212,6 +223,8 @@ fun all_resource_packs(
   zone_z: u32,
   seed: u64,
 ): vector<ResourcePack> {
+  let (origin_x, span_x) = zone_axis(zone_x);
+  let (origin_z, span_z) = zone_axis(zone_z);
   let families = resource_families(rows, map, cities, zone_x, zone_z);
   if (families.is_empty()) return vector[];
   let city = city_map::city_index_at(cities, zone_x, zone_z).is_some();
@@ -223,8 +236,8 @@ fun all_resource_packs(
   let mut packs = vector[];
   let mut index = 0u64;
   while (index < count) {
-    let x = (zone_x * ZONE_SIZE) + ((prng::draw(&mut state) % (ZONE_SIZE as u64)) as u32);
-    let z = (zone_z * ZONE_SIZE) + ((prng::draw(&mut state) % (ZONE_SIZE as u64)) as u32);
+    let x = origin_x + ((prng::draw(&mut state) % span_x) as u32);
+    let z = origin_z + ((prng::draw(&mut state) % span_z) as u32);
     let item_type = families[prng::draw(&mut state) % families.length()];
     let nodes = nodes_lo + prng::draw(&mut state) % (nodes_hi - nodes_lo + 1);
     let nodes = if (city) nodes * CITY_RESOURCE_NODE_NUMERATOR / CITY_RESOURCE_NODE_DENOMINATOR else nodes;

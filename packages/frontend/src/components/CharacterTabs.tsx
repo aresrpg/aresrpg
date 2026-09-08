@@ -11,11 +11,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 
-import type { AppCopy } from '../i18n/copy.ts'
+import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { is_jobs_pathname, type Page } from '../modules/navigation.ts'
 import { owned_party_invite_view } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { CharacterDeleteModal } from './CharacterDeleteModal.tsx'
 import { HUD_PANEL_CLASS } from './ui/HudPanel.tsx'
 
 /** The pages whose content is scoped to ONE owned character — the tab strip only lives there. */
@@ -50,6 +51,9 @@ export const CharacterTabs = ({
   select_character: (character_id: string) => void
   selected_character_id: string | null
 }>) => {
+  const wallet = useAppStore((state) => state.session.wallet)
+  const [delete_target, set_delete_target] = useState<string | null>(null)
+  useEffect(() => set_delete_target(null), [wallet])
   const party_by_character = useAppStore((state) => state.party.party_by_character)
   const parties = useAppStore((state) => state.party.by_id)
   const pending_by_character = useAppStore((state) => state.party.pending_by_character)
@@ -153,8 +157,20 @@ export const CharacterTabs = ({
           >
             {copy.world_hud.menu_group}
           </button>
+          <button
+            className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#ff7d94] hover:bg-[#ff496c]/10"
+            onClick={() => {
+              set_delete_target(menu.character_id)
+              set_menu(null)
+            }}
+            role="menuitem"
+            type="button"
+          >
+            {copy_text(copy.characters_page)('delete_character')}
+          </button>
         </div>
       )}
+      <CharacterDeleteModal character_id={delete_target} close={() => set_delete_target(null)} copy={copy} />
     </>
   )
 }

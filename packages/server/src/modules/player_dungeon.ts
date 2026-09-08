@@ -24,7 +24,7 @@ const runs_of = (state: PlayerState) =>
 export default {
   name: 'player_dungeon',
   observe: ({ pubsub, events, signal, graph, send, channels, get_state }) => {
-    const { watch, unwatch, watched } = create_watcher(pubsub)
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
     const push = latest_keyed_reader(
       (key) => {
         const run = runs_of(get_state()).get(key)

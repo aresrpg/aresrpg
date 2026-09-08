@@ -27,11 +27,11 @@ updates:
         patterns: ['*']
         update-types: ['minor', 'patch']
 
-  # packages/rpc/indexer — the money-path read layer. Its sui-indexer-alt-framework dependency is
+  # packages/indexer — the money-path read layer. Its sui-indexer-alt-framework dependency is
   # a git rev pinned to the mainnet framework and stays hand-managed (the rev must match the sui
   # CLI, see its Cargo.toml); this entry covers the crates.io half, which was covered by nothing.
   - package-ecosystem: 'cargo'
-    directory: '/packages/rpc/indexer'
+    directory: '/packages/indexer'
     target-branch: 'edge'
     schedule:
       interval: 'weekly'

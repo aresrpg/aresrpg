@@ -10,8 +10,14 @@ import { SDK, living_content } from './client.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { event_boolean, event_integer, event_string, event_u64 } from './receipt_decode.ts'
 import { item_template_id, mastery_offer_id, world_content_id } from './seed_ids.ts'
+import { KARES_UNIT, kares_payment } from './kares.ts'
 
 type GameSdk = ReturnType<typeof SDK>
+type OfferInput = Omit<Parameters<GameSdk['doors']['redeem_mastery_offer']>[1], 'mastery_object'>
+type PreparedPayment = Readonly<{
+  compose: (tx: ReturnType<GameSdk['tx']>, input: OfferInput) => void
+  project: (receipt: Receipt) => MasteryRow | null
+}>
 
 const address_registry = (sdk: GameSdk): string => {
   const id = (sdk.pins.friend_registry as Readonly<{ id?: unknown }> | undefined)?.id
@@ -54,12 +60,42 @@ export const mastery_receipt_row = (receipt: Receipt): MasteryRow | null => {
 
 export const mastery_actions = (
   sdk: GameSdk,
-  { address, kiosk_cap }: Readonly<{ address: string; kiosk_cap: KioskCapLoader }>
+  {
+    address,
+    kiosk_cap,
+  }: Readonly<{
+    address: string
+    kiosk_cap: KioskCapLoader
+  }>
 ) => {
   const { with_kiosk, with_terminal_kiosk } = create_kiosk_runner(sdk, kiosk_cap)
   const id = () => {
     if (!sdk.game_type_package) throw new Error('Mastery is unavailable: the defining package is missing.')
     return mastery_id(address_registry(sdk), sdk.game_type_package, address)
+  }
+  const prepare_payment: Readonly<
+    Record<'mastery' | 'kares', (cost?: bigint) => PreparedPayment | Promise<PreparedPayment>>
+  > = {
+    mastery: async () => {
+      const mastery = id()
+      await sdk.hydrate_unknown([mastery])
+      return {
+        compose: (tx, input) => sdk.doors.redeem_mastery_offer(tx, { ...input, mastery_object: mastery }),
+        project: (receipt) => {
+          const row = mastery_receipt_row(receipt)
+          if (!row) throw new Error('The redemption receipt carried no MasteryUpdated state.')
+          return row
+        },
+      }
+    },
+    kares: (cost = 0n) => ({
+      compose: (tx, input) =>
+        sdk.doors.redeem_mastery_offer_kares(tx, {
+          ...input,
+          payment: kares_payment(sdk, tx, cost * KARES_UNIT),
+        }),
+      project: () => null,
+    }),
   }
   return Object.freeze({
     get id() {
@@ -91,28 +127,26 @@ export const mastery_actions = (
       item_type,
       existing,
       custody,
-    }: Readonly<{ item_type: string; existing: string | null; custody?: KioskCustody }>) => {
-      const mastery = id()
+      payment = 'mastery',
+      expected_cost,
+    }: Readonly<{
+      item_type: string
+      existing: string | null
+      custody?: KioskCustody
+      payment?: 'mastery' | 'kares'
+      expected_cost?: bigint
+    }>) => {
       const { content_root, seed_package_original } = living_content(sdk, 'Mastery redemption')
       if (!sdk.game_type_package) throw new Error('Mastery is unavailable: the defining package is missing.')
       const offer = mastery_offer_id(content_root, sdk.game_type_package, item_type)
       const template = item_template_id(content_root, seed_package_original, item_type)
-      await sdk.hydrate_unknown([mastery, offer, template, ...(existing ? [existing] : [])])
+      await sdk.hydrate_unknown([offer, template, ...(existing ? [existing] : [])])
+      const prepared = await prepare_payment[payment](expected_cost)
       const receipt = await with_kiosk(
-        (tx, kiosk, cap) =>
-          sdk.doors.redeem_mastery_offer(tx, {
-            mastery_object: mastery,
-            offer,
-            template,
-            existing,
-            kiosk,
-            cap,
-          }),
+        (tx, kiosk, cap) => prepared.compose(tx, { offer, template, existing, kiosk, cap }),
         { custody, gas_scope: `mastery:${address}` }
       )
-      const row = mastery_receipt_row(receipt)
-      if (!row) throw new Error('The redemption receipt carried no MasteryUpdated state.')
-      return Object.freeze({ digest: receipt_digest(receipt), mastery: row })
+      return Object.freeze({ digest: receipt_digest(receipt), mastery: prepared.project(receipt) })
     },
   })
 }

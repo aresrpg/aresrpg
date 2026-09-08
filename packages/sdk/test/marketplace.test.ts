@@ -45,7 +45,10 @@ const harness = () => {
         $kind: 'Transaction',
         Transaction: {
           digest: 'digest',
-          effects: { changedObjects: [{ objectId: id(14), idOperation: 'Created' }] },
+          effects: {
+            lamportVersion: '10',
+            changedObjects: [{ objectId: id(14), idOperation: 'Created', outputVersion: '10' }],
+          },
           objectTypes: { [id(14)]: `${id(1)}::item::Item` },
         },
       }
@@ -65,6 +68,14 @@ const targets = (transaction: Transaction): readonly string[] =>
       command.MoveCall ? [`${command.MoveCall.package}::${command.MoveCall.module}::${command.MoveCall.function}`] : []
     )
 
+const expect_seller_proof = (tx: Transaction, module: string, seller: string): void => {
+  const data = tx.getData()
+  const proof = data.commands.find((command) => command.MoveCall?.module === module)?.MoveCall
+  const argument = proof?.arguments[3]
+  if (argument?.$kind !== 'Input') throw new Error('seller proof must use the source kiosk input')
+  expect(data.inputs[argument.Input]?.UnresolvedObject?.objectId).toBe(seller)
+}
+
 describe('marketplace SDK', () => {
   test('a large stack becomes one legal listed lot through the composition door', async () => {
     const { actions, tx } = harness()
@@ -82,6 +93,7 @@ describe('marketplace SDK', () => {
     expect(calls).toContain(`${id(2)}::kiosk::list`)
     expect(calls.indexOf(`${id(2)}::api::merge_stacks`)).toBeLessThan(calls.indexOf(`${id(2)}::api::split_stack`))
     expect(receipt.listed_id).toBe(id(14))
+    expect(receipt.version).toBe('10')
   })
 
   test('an item buy proves game rules before locking and confirms every policy witness', async () => {
@@ -95,6 +107,7 @@ describe('marketplace SDK', () => {
       destination_kiosk: id(4),
     })
     const calls = targets(tx())
+    expect_seller_proof(tx(), 'listing_rule', id(11))
     expect(calls).toContain(`${id(2)}::listing_rule::prove`)
     expect(calls).toContain(`${id(2)}::lot_rule::prove`)
     expect(calls).toContain(`${id(5)}::royalty_rule::pay`)
@@ -114,6 +127,7 @@ describe('marketplace SDK', () => {
     const { actions, tx } = harness()
     await actions.buy({ kind: 'character', id: id(12), kiosk: id(13), price_mist: 2_000_000_000n })
     const calls = targets(tx())
+    expect_seller_proof(tx(), 'naked_rule', id(13))
     expect(calls).toContain(`${id(2)}::kiosk::borrow_val`)
     expect(calls).toContain(`${id(2)}::naked_rule::prove`)
     expect(calls).toContain(`${id(2)}::kiosk::return_val`)

@@ -18,7 +18,7 @@ export default {
   observe: ({ pubsub, events, send, address, get_state, signal }) => {
     /** the flood clock — validation bookkeeping, one law for all three doors */
     const clock = { last_ms: 0 }
-    const { watch, unwatch, watched } = create_watcher(pubsub)
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
 
     const flood_gated = (): boolean => {
       const now = Date.now()

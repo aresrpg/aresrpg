@@ -20,5 +20,5 @@ export const create_auth = () =>
 
 export type Auth = ReturnType<typeof create_auth>
 
-export const create_admin_auth = () =>
+export const create_external_auth = () =>
   create_wallet_auth({ graphql_url: env.graphql_url, network: env.network, rpc_url: env.sui_rpc_url })

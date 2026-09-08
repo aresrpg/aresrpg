@@ -8,11 +8,12 @@ type PlaneLike = Readonly<{ normal: Readonly<{ x: number; y: number; z: number }
 export const chunk_in_frustum = (
   origin: readonly [number, number, number],
   edge: number,
-  planes: readonly PlaneLike[]
+  planes: readonly PlaneLike[],
+  height_scale = 1
 ): boolean =>
   planes.every(({ normal, constant }) => {
     const x = origin[0] + (normal.x >= 0 ? edge : 0)
-    const y = origin[1] + (normal.y >= 0 ? edge : 0)
+    const y = (origin[1] + (normal.y >= 0 ? edge : 0)) * height_scale
     const z = origin[2] + (normal.z >= 0 ? edge : 0)
     return normal.x * x + normal.y * y + normal.z * z + constant >= 0
   })

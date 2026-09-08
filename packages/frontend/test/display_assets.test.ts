@@ -21,7 +21,6 @@ test('every emitted Sui Display image URL resolves to one authored source asset'
   const routes = new Set(rows.map(({ route }) => route))
 
   expect(routes.size).toBe(rows.length)
-  expect(routes.has('/item/water_hd.png')).toBeTrue()
   for (const classe of class_names)
     for (const sex of ['male', 'female']) expect(routes.has(`/classe/${classe}_${sex}.jpg`)).toBeTrue()
   expect(rows.every(({ source_path }) => existsSync(source_path))).toBeTrue()

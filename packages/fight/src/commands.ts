@@ -28,18 +28,20 @@ import type {
 } from './types.ts'
 
 const placement_open = (runtime: FightRuntime): boolean => runtime.contract.round === 0n && !runtime.contract.ended
-const assert_actor = (runtime: FightRuntime, fighter: bigint): boolean => {
+const assert_actor = (runtime: FightRuntime, fighter: bigint, needs_alive = true): boolean => {
   if (runtime.contract.round < 1n || runtime.contract.ended) return false
   const actor = runtime.contract.queue[Number(runtime.contract.turn_ptr)]
   return (
     actor === fighter &&
     is_player(runtime.contract.fighters[Number(fighter)]) &&
-    !runtime.contract.fighters[Number(fighter)].dead
+    !runtime.contract.fighters[Number(fighter)].settled &&
+    (!needs_alive || !runtime.contract.fighters[Number(fighter)].dead)
   )
 }
 
 const free_start_cell = (runtime: FightRuntime, team: bigint): bigint | null => {
   const cells = team === 0n ? runtime.contract.board.start_cells_a : runtime.contract.board.start_cells_b
+  if (runtime.contract.fighters.filter((fighter) => fighter.team === team).length >= cells.length) return null
   return (
     cells.find((cell) => !runtime.contract.fighters.some((fighter) => !fighter.settled && fighter.cell === cell)) ??
     null
@@ -105,13 +107,13 @@ const join = (runtime: FightRuntime, action: JoinAction): FightRuntime => {
 const place = (runtime: FightRuntime, action: PlaceAction): FightRuntime => {
   if (!placement_open(runtime)) return fail(runtime, 'not_placement')
   const fighter = runtime.contract.fighters[Number(action.fighter)]
-  if (!fighter || !is_player(fighter)) return fail(runtime, 'not_your_fighter')
+  if (!is_player(fighter)) return fail(runtime, 'not_your_fighter')
   const starts = fighter.team === 0n ? runtime.contract.board.start_cells_a : runtime.contract.board.start_cells_b
-  if (!starts.includes(action.cell)) return fail(runtime, 'bad_cell')
   if (
-    runtime.contract.fighters.some(
-      (candidate, index) => BigInt(index) !== action.fighter && candidate.cell === action.cell
-    )
+    fighter.dead ||
+    fighter.settled ||
+    !starts.includes(action.cell) ||
+    runtime.contract.fighters.some((candidate) => !candidate.dead && candidate.cell === action.cell)
   )
     return fail(runtime, 'bad_cell')
   const from = fighter.cell
@@ -123,7 +125,7 @@ const place = (runtime: FightRuntime, action: PlaceAction): FightRuntime => {
 const ready = (runtime: FightRuntime, action: ReadyAction): FightRuntime => {
   if (!placement_open(runtime)) return fail(runtime, 'not_placement')
   const fighter = runtime.contract.fighters[Number(action.fighter)]
-  if (!fighter || !is_player(fighter) || fighter.dead) return fail(runtime, 'not_your_fighter')
+  if (!is_player(fighter) || fighter.dead) return fail(runtime, 'not_your_fighter')
   if (!fighter.ready) {
     fighter.ready = true
     emit(runtime, 'fighter_ready', { fighter: action.fighter })
@@ -202,7 +204,8 @@ const boundary = (runtime: FightRuntime, action: BoundaryAction, options: Comman
   if (runtime.contract.round < 1n || runtime.contract.ended) return fail(runtime, 'not_active')
   const actor = runtime.contract.queue[Number(runtime.contract.turn_ptr)]
   if (action.type === 'end_turn') {
-    if (actor !== action.fighter || !assert_actor(runtime, action.fighter)) return fail(runtime, 'not_your_fighter')
+    if (actor !== action.fighter || !assert_actor(runtime, action.fighter, false))
+      return fail(runtime, 'not_your_fighter')
     if (options.observed_ms! < runtime.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms)
       return fail(runtime, 'too_soon')
     tick_turn_end(runtime, actor)
@@ -226,7 +229,7 @@ const boundary = (runtime: FightRuntime, action: BoundaryAction, options: Comman
 const forfeit = (runtime: FightRuntime, action: ForfeitAction): FightRuntime => {
   if (runtime.contract.ended) return fail(runtime, 'already_ended')
   const fighter = runtime.contract.fighters[Number(action.fighter)]
-  if (!fighter || !is_player(fighter) || fighter.settled) return fail(runtime, 'already_settled')
+  if (!is_player(fighter) || fighter.settled) return fail(runtime, 'already_settled')
   const persistent_hp = runtime.contract.fighters.some(is_mob) ? 1n : null
   fighter.settled = true
   fighter.forfeited = true

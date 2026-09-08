@@ -113,7 +113,7 @@ const tagged_distance = (id: string, state: AppState, own: InteractionPose | nul
 
 const interaction_target = (ids: readonly string[], state: AppState, own: InteractionPose | null): string | null => {
   const selected = selected_character(state.session)
-  if (selected?.ambush || state.world.gathering?.character_id === selected?.id) return null
+  if (selected?.ambush || state.world.gathering[selected?.id ?? '']) return null
   const mob = nearest_tagged_group(ids, state.world, own)
   const resource = nearest_tagged_resource(ids, state, own)
   return (

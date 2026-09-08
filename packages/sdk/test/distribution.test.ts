@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Airdrop claims drive the real SDK over a fake transport: the composed transaction must name
-// the exact Move door and derived objects.
+// Voucher transport and redemption drive the real SDK over a fake transport.
 
 import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
@@ -10,8 +9,15 @@ import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 import { ZkSendClient } from '@mysten/zksend'
 
 import { SDK, type Receipt, type SuiTransport } from '../src/client.ts'
-import { canonical_zksend_gift_url, claim_airdrop, claim_giftcard_link, redeem_giftcard } from '../src/distribution.ts'
-import { airdrop_id, item_template_id } from '../src/seed_ids.ts'
+import {
+  canonical_zksend_gift_url,
+  read_giftcards,
+  transfer_giftcards,
+  claim_giftcard_link,
+  redeem_giftcard,
+} from '../src/distribution.ts'
+
+import { execution_receipt } from './helpers/execution_receipt.ts'
 
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
@@ -81,7 +87,13 @@ const fake_client = () => {
         }
       },
       simulateTransaction: async (): Promise<Receipt> => ({ $kind: 'Transaction', Transaction: { digest } }),
-      executeTransaction: async (): Promise<Receipt> => ({ $kind: 'Transaction', Transaction: { digest } }),
+      executeTransaction: async ({ transaction }: { transaction: Uint8Array }): Promise<Receipt> =>
+        execution_receipt(transaction, {
+          Transaction: {
+            objectTypes: { [id(80)]: `${defining_package_id}::item::Item` },
+            effects: { changedObjects: [{ objectId: id(80), idOperation: 'Created', outputVersion: '10' }] },
+          },
+        }),
     },
   }
 }
@@ -117,48 +129,6 @@ describe('distribution SDK actions', () => {
     expect(client.owned_types).not.toContain(`${kiosk_package_id}::personal_kiosk::PersonalKioskCap`)
   })
 
-  test('claim composes the real api::claim_airdrop door over the derived drop id', async () => {
-    const { client, sdk } = game()
-    let composed: Transaction | null = null
-    const recipient = id(77)
-    const giftcard = id(78)
-    const template = item_template_id(content_root_id, seed_package_id, 'vaporeon')
-    const capturing_sdk = {
-      ...sdk,
-      execute: async (tx: Transaction) => {
-        composed = tx
-        return {
-          $kind: 'Transaction',
-          Transaction: {
-            digest,
-            events: [
-              { type: `${package_id}::distribution::GiftcardMinted`, json: { giftcard, template, amount: 1 } },
-              {
-                type: `${package_id}::distribution::AirdropClaimed`,
-                json: { giftcard, recipient, drop_id: 'vaporeon_holders', claimer: id(76), remaining: '21' },
-              },
-            ],
-          },
-        }
-      },
-    }
-
-    const result = await claim_airdrop(capturing_sdk as never, {
-      drop_id: 'vaporeon_holders',
-      item_type: 'vaporeon',
-      recipient,
-    })
-    expect(result).toEqual({
-      digest,
-      giftcard: { id: giftcard, template, amount: 1 },
-    })
-    expect(client.hydrations[0]).toEqual([
-      airdrop_id(content_root_id, defining_package_id, 'vaporeon_holders'),
-      template,
-    ])
-    expect(move_call_targets(composed!)).toContain(`${package_id}::api::claim_airdrop`)
-  })
-
   test('redeem composes the voucher into the recipient personal kiosk', async () => {
     const { sdk } = game()
     let composed: Transaction | null = null
@@ -174,7 +144,7 @@ describe('distribution SDK actions', () => {
 
     const result = await redeem_giftcard(capturing_sdk as never, kiosk_cap, { card, category: 'consumable' })
 
-    expect(result).toEqual({ digest, kiosk_cap })
+    expect(result).toEqual({ digest: await composed!.getDigest(), kiosk_cap })
     expect(move_call_targets(composed!)).toContain(`${package_id}::api::redeem_giftcard`)
   })
 
@@ -234,4 +204,84 @@ describe('distribution SDK actions', () => {
       'network is invalid'
     )
   })
+})
+
+test('wallet import paginates canonical cards and transfers without an airdrop Move call', async () => {
+  const { sdk } = game()
+  const owner = id(91)
+  const recipient = id(92)
+  const cards = [93, 94].map((n) => ({ id: id(n), template: id(95), amount: 1 }))
+  const objects = cards.map((card) => ({
+    objectId: card.id,
+    version: '1',
+    digest,
+    type: `${defining_package_id}::distribution::Giftcard`,
+    owner: { $kind: 'AddressOwner', AddressOwner: owner },
+    json: { template: card.template, amount: card.amount },
+  }))
+  const cursors: unknown[] = []
+  const client = {
+    core: {
+      listOwnedObjects: async ({ cursor, type }: { cursor?: string; type: string }) => {
+        expect(type).toBe(objects[0]!.type)
+        cursors.push(cursor)
+        return { objects: [objects[cursor ? 1 : 0]], hasNextPage: !cursor, cursor: cursor ? null : 'next' }
+      },
+      getObjects: async () => ({ objects }),
+    },
+  }
+  expect(await read_giftcards(client as never, sdk, owner)).toEqual(cards)
+  expect(cursors).toEqual([undefined, 'next'])
+  let composed: Transaction | null = null
+  const capture = {
+    ...sdk,
+    execute: async (tx: Transaction) => {
+      composed = tx
+      return { $kind: 'Transaction', Transaction: { digest } }
+    },
+  }
+  const sent = await transfer_giftcards(
+    client as never,
+    capture as never,
+    owner,
+    cards.map((card) => ({ id: card.id, recipient }))
+  )
+  expect(sent.giftcards).toEqual(cards)
+  expect(composed!.getData().commands.map(({ $kind }) => $kind)).toEqual(['TransferObjects', 'TransferObjects'])
+})
+
+test('giftcard transfers reject duplicates, foreign types, and another owner before execution', async () => {
+  const { sdk } = game()
+  const owner = id(91)
+  const transfer = { id: id(93), recipient: id(92) }
+  let executions = 0
+  const capture = {
+    ...sdk,
+    execute: async () => {
+      executions++
+      throw new Error('must not execute')
+    },
+  }
+  await expect(transfer_giftcards({} as never, capture as never, owner, [transfer, transfer])).rejects.toThrow('twice')
+  for (const [type, address] of [
+    [`${id(99)}::distribution::Giftcard`, owner],
+    [`${defining_package_id}::distribution::Giftcard`, id(99)],
+  ]) {
+    const client = {
+      core: {
+        getObjects: async () => ({
+          objects: [
+            {
+              objectId: transfer.id,
+              type,
+              owner: { $kind: 'AddressOwner', AddressOwner: address },
+              json: { template: id(95), amount: 1 },
+            },
+          ],
+        }),
+      },
+    }
+    await expect(transfer_giftcards(client as never, capture as never, owner, [transfer])).rejects.toThrow()
+  }
+  expect(executions).toBe(0)
 })

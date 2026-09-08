@@ -10,7 +10,14 @@ import { normalizeSuiObjectId } from '@mysten/sui/utils'
 
 import { object_revision, owned_ref, receipt_digest, shared_ref, type OwnedRef, type Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
-import { create_freeze_forever_transaction, create_seed_plan, type SeedContent } from './seed.ts'
+import {
+  create_freeze_forever_transaction,
+  create_seed_plan,
+  giftcards_for_network,
+  game_type_of,
+  type SeedContent,
+} from './seed.ts'
+import { giftcard_claim_id, giftcard_id } from './seed_ids.ts'
 import {
   seed_ledger_after,
   seed_ledger_after_batch,
@@ -78,7 +85,11 @@ export type SeedBatchReceipt = Readonly<{
 
 export type SeedAdminSession = Readonly<{
   refresh: (on_progress?: (progress: SeedInspectionProgress) => void) => Promise<SeedAdminSnapshot>
-  execute: (batch: string, ledger: SeedLedger) => Promise<SeedBatchReceipt>
+  execute: (
+    batch: string,
+    ledger: SeedLedger,
+    checkpoint?: (digest: string) => Promise<void>
+  ) => Promise<SeedBatchReceipt>
   /** chain truth of the permanent freeze — read at page refresh, no polling */
   read_frozen: () => Promise<boolean>
   /** compare the authored files against the last chain write — new / changed / removed / fixed */
@@ -208,22 +219,49 @@ const assert_config = (sdk: Sdk, content: SeedContent, config: SeedAdminConfig):
 
 export const create_seed_admin = async ({
   sdk,
-  content,
+  content: authored_content,
   config,
+  gift_item_type,
 }: Readonly<{
   sdk: Sdk
   content: SeedContent
   config: SeedAdminConfig
+  gift_item_type?: string
 }>): Promise<SeedAdminSession> => {
+  const content =
+    gift_item_type === undefined
+      ? authored_content
+      : {
+          ...authored_content,
+          airdrop: {
+            giftcards: giftcards_for_network(sdk.network, authored_content).filter(
+              (card) => card.item_type === gift_item_type
+            ),
+          },
+        }
+  if (gift_item_type !== undefined && !content.airdrop.giftcards.length)
+    throw new Error(`No configured ${gift_item_type} gifts on ${sdk.network}`)
   assert_config(sdk, content, config)
-  const plan = create_seed_plan(sdk, content)
+  const full_plan = create_seed_plan(sdk, content)
+  const plan = {
+    batches: full_plan.batches.filter((batch) => gift_item_type === undefined || batch.phase === 'supply'),
+  }
+  const claims = new Map(
+    giftcards_for_network(sdk.network, content).map((card) => {
+      const id = giftcard_id(config.content_root, game_type_of(sdk), card.id)
+      return [id, giftcard_claim_id(config.content_root, id)] as const
+    })
+  )
+  const exists = (id: string): boolean => object_exists(sdk, id) || object_exists(sdk, claims.get(id) ?? id)
   const context = Object.freeze({
     admin_cap: config.admin_cap,
     content_root: config.content_root,
   })
   const absent = new Set<string>()
   const hydrate_ids = async (ids: readonly string[]): Promise<void> => {
-    const unchecked = [...new Set(ids)].filter((id) => !absent.has(id))
+    const unchecked = [...new Set(ids.flatMap((id) => [id, ...(claims.has(id) ? [claims.get(id)!] : [])]))].filter(
+      (id) => !absent.has(id)
+    )
     if (!unchecked.length) return
     await sdk.hydrate_unknown(unchecked)
     for (const id of unchecked) {
@@ -233,7 +271,7 @@ export const create_seed_admin = async ({
   }
   const context_ids = [config.admin_cap, config.content_root]
   await hydrate_ids(context_ids)
-  const missing_context = context_ids.filter((id) => !object_exists(sdk, id))
+  const missing_context = context_ids.filter((id) => !exists(id))
   if (missing_context.length) throw new Error(`Seed object IDs do not exist: ${missing_context.join(', ')}`)
 
   const refresh = async (on_progress?: (progress: SeedInspectionProgress) => void): Promise<SeedAdminSnapshot> => {
@@ -256,7 +294,7 @@ export const create_seed_admin = async ({
         continue
       }
       if (batch.target_ids.length) await hydrate_ids(batch.target_ids)
-      const complete = batch.target_ids.every((id) => object_exists(sdk, id))
+      const complete = batch.target_ids.every(exists)
       if (complete) {
         const view = Object.freeze({
           id: batch.id,
@@ -270,7 +308,7 @@ export const create_seed_admin = async ({
         continue
       }
       await hydrate_ids(batch.dependencies)
-      const missing_dependencies = batch.dependencies.filter((id) => !object_exists(sdk, id))
+      const missing_dependencies = batch.dependencies.filter((id) => !exists(id))
       next_batch = batch.id
       const view = Object.freeze({
         id: batch.id,
@@ -287,7 +325,10 @@ export const create_seed_admin = async ({
 
   const refresh_after_write = async (batch_id: string, digest: string): Promise<SeedAdminSnapshot> => {
     const targets = plan.batches.find(({ id }) => id === batch_id)?.target_ids ?? []
-    for (const id of targets) absent.delete(id)
+    for (const id of targets) {
+      absent.delete(id)
+      absent.delete(claims.get(id) ?? id)
+    }
     const snapshot = await refresh()
     if (snapshot.batches.find(({ id }) => id === batch_id)?.state === 'complete') return snapshot
     throw new Error(
@@ -296,8 +337,9 @@ export const create_seed_admin = async ({
     )
   }
 
-  const sync_rows = seed_sync_rows(sdk, content)
-  const exists = (id: string): boolean => object_exists(sdk, id)
+  const sync_rows = seed_sync_rows(sdk, content).filter(
+    (row) => gift_item_type === undefined || row.domain === 'giftcard'
+  )
   const revision = (id: string): string | null => object_revision(sdk.cache, id)
   const board_catalog = sync_rows.find(({ domain }) => domain === 'board')?.chain_id ?? null
   /** Chain truth for the endgame flag — read once per check, never polled: the flag only
@@ -324,12 +366,23 @@ export const create_seed_admin = async ({
   // THE CLASS SPELL LAW: exactly twenty spells per class on the Dofus unlock ladder. The
   // validator enforces it in CI; this second gate stops a locally edited file from ever
   // being written (chain objects are forever). Reads still work so the page can SHOW it.
-  const law_errors = class_spell_shape_errors(content.spells)
+  const law_errors = gift_item_type === undefined ? class_spell_shape_errors(content.spells) : []
   const sync_addresses = Object.freeze([...new Set(sync_rows.flatMap(({ addresses }) => addresses))])
   const check_changes = async (ledger: SeedLedger): Promise<SeedSyncView> => {
     await hydrate_ids(sync_addresses)
-    const view = seed_sync_view(sync_rows, ledger, exists, await read_board_len(), revision)
-    return law_errors.length ? Object.freeze({ ...view, errors: Object.freeze([...law_errors, ...view.errors]) }) : view
+    const scoped_ledger =
+      gift_item_type === undefined
+        ? ledger
+        : Object.fromEntries(sync_rows.flatMap(({ key }) => (ledger[key] ? [[key, ledger[key]]] : [])))
+    const view = seed_sync_view(sync_rows, scoped_ledger, exists, await read_board_len(), revision)
+    const errors = [
+      ...law_errors,
+      ...view.errors,
+      ...view.fixed
+        .filter(({ key, domain }) => domain === 'giftcard' && scoped_ledger[key])
+        .map(({ label }) => `${label} was already issued with another allocation`),
+    ]
+    return Object.freeze({ ...view, errors: Object.freeze(errors) })
   }
   const address_book = async (): Promise<Readonly<Record<string, string>>> => {
     await hydrate_ids(sync_addresses)
@@ -347,6 +400,7 @@ export const create_seed_admin = async ({
     address_book,
     read_frozen,
     apply_changes: async (ledger, hooks) => {
+      if (gift_item_type !== undefined) throw new Error('Gift issuance cannot update content')
       const view = await check_changes(ledger)
       if (view.errors.length) throw new Error(`Nothing was written — fix the files first: ${view.errors.join(' · ')}`)
       const board_len = await read_board_len()
@@ -378,17 +432,21 @@ export const create_seed_admin = async ({
       const created = created_seed_row_keys(sync_rows, ledger, new Set(batch.target_ids), exists)
       return seed_ledger_after(sync_rows, ledger, created, exists, revision)
     },
-    execute: async (batch_id, ledger) => {
+    execute: async (batch_id, ledger, checkpoint = async () => {}) => {
       const changes = await check_changes(ledger)
       if (changes.errors.length)
         throw new Error(`Nothing was written — fix the files first: ${changes.errors.join(' · ')}`)
       const before = await refresh()
-      const view = before.batches.find(({ id }) => id === batch_id)
-      if (next_seed_batch(before)?.id !== batch_id || view?.state !== 'ready')
+      const next = next_seed_batch(before)
+      if (next?.id !== batch_id || next.state !== 'ready')
         throw new Error(`Seed batch ${batch_id} is not the next ready batch`)
       const batch = plan.batches.find(({ id }) => id === batch_id)
       if (!batch) throw new Error(`Unknown seed batch ${batch_id}`)
-      const existing = new Set([...sdk.cache.owned.keys(), ...sdk.cache.shared.keys()])
+      const existing = new Set([
+        ...sdk.cache.owned.keys(),
+        ...sdk.cache.shared.keys(),
+        ...[...claims.keys()].filter(exists),
+      ])
       const transaction = batch.build(context, existing)
       if (!transaction) throw new Error(`Seed batch ${batch_id} contains no pending work`)
       const protocol = await sdk.sui_client.core.getProtocolConfig?.()
@@ -407,9 +465,11 @@ export const create_seed_admin = async ({
       // refuses before submission (and the wallet path preflights before the wallet opens).
       const receipt = await sdk.execute(transaction)
       const digest = receipt_digest(receipt)
+      await checkpoint(digest)
       return Object.freeze({ batch: batch_id, digest, snapshot: await refresh_after_write(batch_id, digest) })
     },
     freeze_forever: async () => {
+      if (gift_item_type !== undefined) throw new Error('Gift issuance cannot freeze content')
       const snapshot = await refresh()
       if (snapshot.batches.some(({ state }) => state !== 'complete'))
         throw new Error('Every seed batch must complete before freezing the game forever')

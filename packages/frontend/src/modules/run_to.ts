@@ -71,7 +71,7 @@ const character_can_run = (state: Readonly<AppState>): boolean => {
     controlled.active_fight,
     controlled.dungeon_run,
     controlled.ambush,
-    state.world.gathering,
+    state.world.gathering[controlled.id],
     state.fight.mounted,
     state.session.link_status !== 'ready',
   ].some(Boolean)

@@ -177,28 +177,8 @@ public(package) fun join_room_grouped(
 fun assert_same_dungeon_room(fight: &Fight, character: &Character) {
   let (run_dungeon, run_room, _) = read_run(character);
   let tag = dungeon_tag(fight);
-  gate_join_scope(fight::dungeon_name(&tag), fight::dungeon_room(&tag), run_dungeon, run_room);
+  assert!(fight::dungeon_name(&tag) == run_dungeon && fight::dungeon_room(&tag) == run_room, EWrongRoom);
   assert!(fight::fight_world(fight) == world::current_world(character), EWrongWorld);
-}
-
-fun gate_join_scope(fight_dungeon: String, fight_room: u64, run_dungeon: String, run_room: u64) {
-  assert!(fight_dungeon == run_dungeon && fight_room == run_room, EWrongRoom);
-}
-
-/// Test seam over the production join scope. Coordinates are accepted only to prove they are
-/// deliberately irrelevant: the chain dungeon is WORLD + ROOM, never the entry portal.
-#[test_only]
-public(package) fun join_scope_for_testing(
-  fight_dungeon: String,
-  fight_room: u64,
-  _fight_x: u32,
-  _fight_z: u32,
-  run_dungeon: String,
-  run_room: u64,
-  _run_x: u32,
-  _run_z: u32,
-) {
-  gate_join_scope(fight_dungeon, fight_room, run_dungeon, run_room);
 }
 
 // ╔════════════════ [ Settle / give up ] ═════════════════════════════════════ ]

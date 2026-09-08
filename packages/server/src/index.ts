@@ -18,23 +18,19 @@ import { mesh } from './protocol.ts'
 import { create_player, type Player } from './player.ts'
 import logger from './logger.ts'
 import { create_request_limiter } from './request_limiter.ts'
-import { latest_checkpoint } from './sui.ts'
+import { latest_checkpoint, sui_client } from './sui.ts'
+import { create_pending_admission } from './admission.ts'
+import { create_suins_resolver } from './suins.ts'
 
 const log = logger(import.meta)
 
-type Connection = ServerWebSocket<{ address: string }>
+type ConnectionData = { address: string; release_pending: () => void }
+type Connection = ServerWebSocket<ConnectionData>
 
 /** address → the live seat (one per address; a second login evicts the first) */
 const connections = new Map<string, { ws: Connection; player: Player }>()
-const pending = new Set<Connection>()
+const pending = create_pending_admission()
 const handlers = new Map<Connection, AuthenticatedConnection>()
-const upgrading = new Map<string, number>()
-const upgrading_count = (): number => [...upgrading.values()].reduce((total, count) => total + count, 0)
-const decrement_upgrade = (address: string): void => {
-  const count = upgrading.get(address) ?? 0
-  if (count <= 1) upgrading.delete(address)
-  else upgrading.set(address, count - 1)
-}
 const request_limiter = create_request_limiter()
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()
@@ -45,12 +41,13 @@ const indexing_health = create_indexing_health({
 const game_state = create_game_state({ graph, pubsub: pubsub.graph })
 await game_state.start()
 
-// ── the cluster half (per-POD, legacy law): the 20s-TTL heartbeat key any pod count sums,
-//    and the player_connect beacon that evicts a duplicate login on ANOTHER pod ──
+// ── the cluster half: 20s-TTL pod snapshots union addresses across rolling replicas,
+//    while the player_connect beacon evicts a duplicate login on ANOTHER pod ──
+const resolve_name = create_suins_resolver({ client: sui_client })
 const HEARTBEAT_MS = 5_000
 setInterval(() => {
   void pubsub.mesh
-    .heartbeat(SERVER_ID, connections.size)
+    .heartbeat(SERVER_ID, [...connections.keys()])
     .then(() => pubsub.mesh.cluster_online())
     .then((online) => pubsub.mesh.record_online?.(online, Date.now()))
     .catch((error: Error) => log.warn({ error: error.message }, 'heartbeat failed'))
@@ -63,7 +60,7 @@ pubsub.mesh.emitter.on(mesh.player_connect, (payload) => {
 })
 void pubsub.mesh.subscribe(mesh.player_connect)
 
-const server = Bun.serve<{ address: string }>({
+const server = Bun.serve<ConnectionData>({
   port: PORT,
   async fetch(request, bun_server) {
     const url = new URL(request.url)
@@ -76,20 +73,21 @@ const server = Bun.serve<{ address: string }>({
     if (!claimed_address || !isValidSuiAddress(claimed_address)) return new Response('invalid address', { status: 401 })
     const address = normalizeSuiAddress(claimed_address)
     if (bans.is_banned(address)) return new Response('cooling off', { status: 403 })
-    if (connections.size + pending.size + upgrading_count() >= MAX_PLAYERS && !connections.has(address))
-      return new Response('server full', { status: 503 })
-
-    upgrading.set(address, (upgrading.get(address) ?? 0) + 1)
-    const upgraded = bun_server.upgrade(request, { data: { address } })
-    if (!upgraded) decrement_upgrade(address)
-    return upgraded ? undefined : new Response('upgrade failed', { status: 500 })
+    const release_pending = pending.reserve()
+    if (!release_pending) return new Response('authentication full', { status: 503 })
+    try {
+      const upgraded = bun_server.upgrade(request, { data: { address, release_pending } })
+      if (!upgraded) release_pending()
+      return upgraded ? undefined : new Response('upgrade failed', { status: 500 })
+    } catch (error) {
+      release_pending()
+      throw error
+    }
   },
   websocket: {
     maxPayloadLength: 64 * 1024,
     open(ws: Connection) {
       const { address } = ws.data
-      decrement_upgrade(address)
-      pending.add(ws)
       handlers.set(
         ws,
         create_authenticated_connection({
@@ -97,8 +95,8 @@ const server = Bun.serve<{ address: string }>({
           send: (packet) => void ws.send(JSON.stringify(packet)),
           close: (code, reason) => ws.close(code, reason),
           verify: verify_login,
+          release_pending: ws.data.release_pending,
           promote: () => {
-            pending.delete(ws)
             if (connections.size >= MAX_PLAYERS && !connections.has(address)) return null
             connections.get(address)?.ws.close(1000, 'REPLACED')
             const player = create_player({
@@ -110,6 +108,7 @@ const server = Bun.serve<{ address: string }>({
               game_state,
               indexing_health,
               request_limiter,
+              resolve_name,
             })
             connections.set(address, { ws, player })
             void pubsub.mesh.publish(mesh.player_connect, { address, server_id: SERVER_ID })
@@ -124,9 +123,10 @@ const server = Bun.serve<{ address: string }>({
     },
     close(ws: Connection, code: number, reason: string) {
       if (code === 1008 && BANNABLE_REASONS.has(reason)) bans.ban(ws.data.address)
-      pending.delete(ws)
       const { address } = ws.data
-      handlers.get(ws)?.on_close()
+      const handler = handlers.get(ws)
+      if (handler) handler.on_close()
+      else ws.data.release_pending()
       handlers.delete(ws)
       const seat = connections.get(address)
       if (seat?.ws !== ws) return // an evicted elder closing late must not tear down its replacement

@@ -146,8 +146,8 @@ public fun from_vector(v: vector<u16>): ItemStatistics {
 
 // ╔════════════════ [ Raw magnitudes (the forge lane) ] ══════════════════════ ]
 
-/// The block as RAW magnitudes above centre — `v ≥ SHIFT ? v − SHIFT : 0`. A malus (below
-/// centre) reads 0: the forge treats it as an absent stat and never touches it.
+/// Positive raw magnitudes for crushing. Negative lines contribute no recoverable runes;
+/// scribing uses the complete signed ItemStatistics instead.
 public fun to_raw(self: &ItemStatistics): vector<u64> {
   let v = self.to_vector();
   let shift = SHIFT as u64;
@@ -159,23 +159,6 @@ public fun to_raw(self: &ItemStatistics): vector<u64> {
     i = i + 1;
   };
   raw
-}
-
-/// Re-centre a forge result: apply the per-field RAW delta (`new_raw − old_raw`) onto the
-/// current centred block. Untouched fields (every malus, every stat the forge left alone) keep
-/// their exact value — only the changed magnitudes move. Clamps to [0, 65535].
-public fun apply_raw(self: &ItemStatistics, new_raw: &vector<u64>): ItemStatistics {
-  let cur = self.to_vector();
-  let old_raw = self.to_raw();
-  let mut out = vector[];
-  let mut i = 0;
-  while (i < cur.length()) {
-    let base = (cur[i] as u64) + new_raw[i];
-    let centred = if (base >= old_raw[i]) base - old_raw[i] else 0;
-    out.push_back((if (centred > 65535) 65535 else centred) as u16);
-    i = i + 1;
-  };
-  from_vector(out)
 }
 
 /// Scale every signed magnitude away from neutral by `numerator / denominator`.

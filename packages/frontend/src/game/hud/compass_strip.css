@@ -215,10 +215,9 @@
   gap: 2px;
 }
 
-.gw-compass__city-dungeon {
+.gw-compass__city--dungeon {
   color: #9bd4ff;
-  font-size: 11px;
-  line-height: 1;
+  filter: drop-shadow(0 0 6px rgba(155, 212, 255, 0.5));
 }
 
 .gw-compass__city-label {

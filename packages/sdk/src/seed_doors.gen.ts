@@ -30,39 +30,6 @@ export const create_world = (
   })
 
 /**
- * `distribution::new_airdrop`
- * @arg cap — &AdminCap
- * @arg root — &mut Registry
- * @arg drop_id — String
- * @arg template — &ItemTemplate
- * @arg amount_each — u32
- * @arg whitelist — vector<address>
- */
-export const new_airdrop = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: {
-    cap: Resolvable
-    root: Resolvable
-    drop_id: string
-    template: Resolvable
-    amount_each: number
-    whitelist: readonly string[]
-  }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::distribution::new_airdrop`,
-    arguments: [
-      ctx.obj(tx, args.cap, false),
-      ctx.obj(tx, args.root, true),
-      ctx.pure.string(tx, args.drop_id),
-      ctx.obj(tx, args.template, false),
-      ctx.pure.u32(tx, args.amount_each),
-      ctx.pure.vector(tx, 'address', args.whitelist),
-    ],
-  })
-
-/**
  * `distribution::new_giftcard`
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
@@ -170,13 +137,19 @@ export const new_mastery_offer = (
  * @arg cap — &AdminCap
  * @arg root — &mut Registry
  * @arg offer — &mut MasteryOffer
- * @arg cost — u64
+ * @arg expected_cost — u64
  * @arg enabled — bool
  */
 export const set_mastery_offer = (
   tx: Transaction,
   ctx: DoorCtx,
-  args: { cap: Resolvable; root: Resolvable; offer: Resolvable; cost: bigint | number | string; enabled: boolean }
+  args: {
+    cap: Resolvable
+    root: Resolvable
+    offer: Resolvable
+    expected_cost: bigint | number | string
+    enabled: boolean
+  }
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::mastery::set_offer`,
@@ -184,7 +157,29 @@ export const set_mastery_offer = (
       ctx.obj(tx, args.cap, false),
       ctx.obj(tx, args.root, true),
       ctx.obj(tx, args.offer, true),
-      ctx.pure.u64(tx, args.cost),
+      ctx.pure.u64(tx, args.expected_cost),
+      ctx.pure.bool(tx, args.enabled),
+    ],
+  })
+
+/**
+ * `mastery::set_enabled`
+ * @arg cap — &AdminCap
+ * @arg root — &mut Registry
+ * @arg offer — &mut MasteryOffer
+ * @arg enabled — bool
+ */
+export const set_mastery_offer_enabled = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { cap: Resolvable; root: Resolvable; offer: Resolvable; enabled: boolean }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::mastery::set_enabled`,
+    arguments: [
+      ctx.obj(tx, args.cap, false),
+      ctx.obj(tx, args.root, true),
+      ctx.obj(tx, args.offer, true),
       ctx.pure.bool(tx, args.enabled),
     ],
   })
@@ -1149,6 +1144,7 @@ export const new_spell_level = (
  * @arg spells — vector<MobSpell>
  * @arg loot — vector<LootEntry>
  * @arg xp — u64
+ * @arg is_boss — bool
  */
 export const new_mob_data = (
   tx: Transaction,
@@ -1171,6 +1167,7 @@ export const new_mob_data = (
     spells: readonly TransactionObjectArgument[]
     loot: readonly TransactionObjectArgument[]
     xp: bigint | number | string
+    is_boss: boolean
   }
 ) =>
   tx.moveCall({
@@ -1193,6 +1190,7 @@ export const new_mob_data = (
       tx.makeMoveVec({ type: `${ctx.math_type_package}::mob_data::MobSpell`, elements: [...args.spells] }),
       tx.makeMoveVec({ type: `${ctx.math_type_package}::mob_data::LootEntry`, elements: [...args.loot] }),
       ctx.pure.u64(tx, args.xp),
+      ctx.pure.bool(tx, args.is_boss),
     ],
   })
 
@@ -1407,12 +1405,12 @@ export const new_resource_row = (
 /** Every door, by name — { params: caller-facing names, terminal: carries &Random }. */
 export const DOORS = {
   create_world: { params: ['cap', 'root', 'content'], terminal: false },
-  new_airdrop: { params: ['cap', 'root', 'drop_id', 'template', 'amount_each', 'whitelist'], terminal: false },
   new_giftcard: { params: ['cap', 'root', 'card_id', 'template', 'amount'], terminal: false },
   add_loot_reward: { params: ['cap', 'root', 'box_template', 'reward_template', 'weight', 'amount'], terminal: false },
   clear_loot_table: { params: ['cap', 'root', 'box_template'], terminal: false },
   new_mastery_offer: { params: ['cap', 'root', 'template', 'cost', 'enabled'], terminal: false },
-  set_mastery_offer: { params: ['cap', 'root', 'offer', 'cost', 'enabled'], terminal: false },
+  set_mastery_offer: { params: ['cap', 'root', 'offer', 'expected_cost', 'enabled'], terminal: false },
+  set_mastery_offer_enabled: { params: ['cap', 'root', 'offer', 'enabled'], terminal: false },
   create: { params: ['cap', 'root', 'name', 'entry_level'], terminal: false },
   share: { params: ['world_content'], terminal: false },
   set_mobs: { params: ['cap', 'root', 'world_content', 'rows'], terminal: false },
@@ -1531,6 +1529,7 @@ export const DOORS = {
       'spells',
       'loot',
       'xp',
+      'is_boss',
     ],
     terminal: false,
   },

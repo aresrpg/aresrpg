@@ -12,7 +12,7 @@ import type { Sdk } from './client.ts'
 import { ROYALTY_FLOOR_MIST } from './marketplace.ts'
 
 export type ContractArtifact = Readonly<{
-  package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_combat' | 'aresrpg_seed' | 'aresrpg'
+  package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_combat' | 'aresrpg_seed' | 'aresrpg_kares' | 'aresrpg'
   digest: readonly number[]
   modules: readonly string[]
   dependencies: readonly string[]
@@ -60,7 +60,8 @@ export const DISPLAY_REGISTRY_ID = '0xd'
 
 const changed_objects = (receipt: DeploymentReceipt) => receipt.Transaction?.effects?.changedObjects ?? []
 const type_entries = (receipt: DeploymentReceipt): readonly (readonly [string, string])[] =>
-  Object.entries(receipt.Transaction?.objectTypes ?? {})
+  // Core includes the package object itself with this sentinel, which is not a Move struct tag.
+  Object.entries(receipt.Transaction?.objectTypes ?? {}).filter(([, type]) => type !== 'package')
 const id_of_type = (receipt: DeploymentReceipt, suffix: string): string => {
   const found = type_entries(receipt).find(([, type]) => type.endsWith(suffix))?.[0]
   if (!found) throw new Error(`Published package did not create ${suffix}`)
@@ -151,14 +152,41 @@ export const create_deployment_bootstrap_transaction = async ({
   const publisher_arg = sdk.door_context.obj(transaction, publisher, false)
   const item_type = `${package_id}::item::Item`
   const character_type = `${package_id}::character::Character`
-  const item_display = transaction.moveCall({
-    target: `${package_id}::admin::create_item_display`,
-    arguments: [display_registry, publisher_arg],
-  })
-  const character_display = transaction.moveCall({
-    target: `${package_id}::admin::create_character_display`,
-    arguments: [display_registry, publisher_arg],
-  })
+  const create_display = (type: string, link: string, image: string, description: string) => {
+    const [display, cap] = transaction.moveCall({
+      target: '0x2::display_registry::new_with_publisher',
+      typeArguments: [type],
+      arguments: [display_registry, publisher_arg],
+    })
+    const fields = {
+      name: '{name}',
+      link,
+      image_url: image,
+      description,
+      project_url: 'https://aresrpg.world',
+      creator: 'AresRPG',
+    }
+    for (const [name, value] of Object.entries(fields))
+      transaction.moveCall({
+        target: '0x2::display_registry::set',
+        typeArguments: [type],
+        arguments: [display, cap, transaction.pure.string(name), transaction.pure.string(value)],
+      })
+    transaction.moveCall({ target: '0x2::display_registry::share', typeArguments: [type], arguments: [display] })
+    return cap
+  }
+  const item_display = create_display(
+    item_type,
+    'https://aresrpg.world',
+    'https://aresrpg.world/item/{item_type}_hd.png',
+    'Item from the AresRPG universe.'
+  )
+  const character_display = create_display(
+    character_type,
+    'https://app.aresrpg.world',
+    'https://aresrpg.world/classe/{classe}_{sex}.jpg',
+    'Level {level} {classe} of the AresRPG universe.'
+  )
   transaction.transferObjects([item_display, character_display], recipient)
   transaction.moveCall({
     target: `${package_id}::protected_policy::mint_and_share`,
@@ -231,6 +259,42 @@ export const project_seed_deployment = (receipt: DeploymentReceipt): SeedDeploym
     upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
     content_root: shared_pin(receipt, id_of_type(receipt, '::registry::Registry')),
   })
+
+/** Publication precedes native Currency registration and the one-shot offering setup. */
+export const project_kares_deployment = (receipt: DeploymentReceipt) => {
+  const package_id = project_package_id(receipt)
+  const currency_type = normalizeStructTag(`0x2::coin_registry::Currency<${package_id}::kares::KARES>`)
+  const currency = type_entries(receipt).find(([, type]) => normalizeStructTag(type) === currency_type)?.[0]
+  if (!currency) throw new Error('KARES publication did not create its native Currency')
+  return Object.freeze({
+    package: package_id,
+    upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
+    genesis: id_of_type(receipt, `${package_id}::kares::Genesis`),
+    currency,
+  })
+}
+
+export const project_kares_setup = (receipt: DeploymentReceipt, original: string) => {
+  const shared_ids = new Set(
+    changed_objects(receipt)
+      .filter(({ outputOwner }) => outputOwner?.Shared?.initialSharedVersion !== undefined)
+      .map(({ objectId }) => objectId)
+  )
+  const shared = (type: string): SharedDeploymentPin => {
+    const expected = normalizeStructTag(type)
+    const id = type_entries(receipt).find(
+      ([id, actual]) => shared_ids.has(id) && normalizeStructTag(actual) === expected
+    )?.[0]
+    if (!id) throw new Error(`KARES setup did not create ${type}`)
+    return shared_pin(receipt, id)
+  }
+  return Object.freeze({
+    currency: shared(`0x2::coin_registry::Currency<${original}::kares::KARES>`),
+    pool: shared(`${original}::staking::StakingPool`),
+    combat_pot: shared(`${original}::combat_rewards::CombatPot`),
+    offering: shared(`${original}::offering::Offering`),
+  })
+}
 
 export const project_kiosk_package = (artifact: ContractArtifact, local_packages: readonly string[]): string => {
   const canonical_id = (value: string) => normalizeSuiObjectId(value)

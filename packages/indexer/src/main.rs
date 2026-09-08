@@ -12,11 +12,15 @@
 
 mod analytics;
 mod boot;
+mod character_deletions;
 mod decode;
 mod events;
 mod gates;
 mod graph;
+mod leaderboard_store;
+mod leaderboards;
 mod ownership;
+mod personal_kiosk;
 mod pipeline;
 mod publish;
 mod store;
@@ -142,6 +146,13 @@ async fn main() -> Result<()> {
     // (README): lineage was validated when the store was fresh, and the store
     // itself is bound to its chain by the chain-id guard.
     let fresh = !boot::has_watermark(&mut boot_conn).await?;
+    if !fresh {
+        let initialized: bool = redis::cmd("EXISTS")
+            .arg(leaderboards::META_KEY)
+            .query_async(&mut boot_conn)
+            .await?;
+        anyhow::ensure!(initialized, "leaderboards require a complete replay from original publication; rebuild this disposable indexer store");
+    }
     if fresh {
         args.indexer.first_checkpoint = Some(
             boot::publish_checkpoint(&args.graphql_url, &package_original)

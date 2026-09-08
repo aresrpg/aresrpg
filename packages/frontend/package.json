@@ -11,7 +11,8 @@
     "lint": "eslint . && prettier . --check",
     "format": "prettier . --write && eslint . --fix",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:test": "vite build --mode test --outDir ../../test-results/browser-build --emptyOutDir"
   },
   "dependencies": {
     "@aresrpg/engine": "workspace:*",
@@ -19,6 +20,8 @@
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
     "@aresrpg/sdk": "workspace:*",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^1.40.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -36,5 +39,14 @@
     "vite-plugin-pwa": "^1.3.0",
     "workbox-window": "^7.4.1",
     "yaml": "^2.9.0"
+  },
+  "exports": {
+    "./finance": "./src/kares/index.ts",
+    "./finance/runtime": "./src/kares/useFinance.ts",
+    "./wallet/runtime": "./src/wallet/runtime.ts",
+    "./i18n": "./src/i18n/copy.ts",
+    "./locale": "./src/i18n/locale.ts",
+    "./tokens.css": "./src/tailwind.css",
+    "./world-art/nauvis.webp": "./src/assets/worlds/nauvis.webp"
   }
 }

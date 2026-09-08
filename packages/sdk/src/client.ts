@@ -4,8 +4,8 @@
 // reads needed by wallet-owned state. It carries zero content. Pins default to root pins.json; `hydrate()` seeds game refs. The Sui client
 // separately resolves gas payment and budget because wallet coin state is its concern.
 
-import { KioskClient, TransferPolicyTransaction, type KioskOwnerCap, type TransferPolicyCap } from '@mysten/kiosk'
-import { SuiGraphQLClient } from '@mysten/sui/graphql'
+import { KioskClient, TransferPolicyTransaction, type KioskOwnerCap } from '@mysten/kiosk'
+import { SuiGraphQLClient, isSuiGraphQLClient } from '@mysten/sui/graphql'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import {
   Transaction,
@@ -30,9 +30,11 @@ import {
   type FetchedObject,
 } from './cache.ts'
 import { create_balance_cache } from './balance.ts'
+import { kares_coin_type } from './kares_ptb.ts'
 import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from './ptb.ts'
 import { create_gas_ledger, log_transaction_receipt } from './gas.ts'
 import { GAS_BUDGET_MIST } from './gas_budget.ts'
+import { create_transaction_execution, type ExecutionCore, type TransactionStorage } from './transaction_execution.ts'
 
 export { doors }
 export { DOORS } from './doors.gen.ts'
@@ -84,7 +86,7 @@ export interface SuiTransport {
     getProtocolConfig?: () => Promise<{
       protocolConfig: { protocolVersion: string; attributes: Record<string, string | null> }
     }>
-    getBalance: (input: { owner: string }) => Promise<{
+    getBalance: (input: { owner: string; coinType?: string }) => Promise<{
       balance: { balance: string | bigint; addressBalance?: string | bigint; coinBalance?: string | bigint }
     }>
     getCurrentSystemState: () => Promise<{
@@ -99,8 +101,8 @@ export interface SuiTransport {
     }>
     getObjects: (input: { objectIds: string[]; include?: { json?: boolean } }) => Promise<{ objects: FetchedObject[] }>
     simulateTransaction: (input: { transaction: Uint8Array; include?: object }) => Promise<Receipt>
-    executeTransaction: (input: { transaction: Uint8Array; signatures: string[]; include?: object }) => Promise<Receipt>
-    waitForTransaction: (input: { digest: string; timeout?: number; pollSchedule?: number[] }) => Promise<Receipt>
+    executeTransaction: ExecutionCore['executeTransaction']
+    waitForTransaction: ExecutionCore['waitForTransaction']
   }
 }
 
@@ -126,15 +128,16 @@ export type SdkOptions = {
   sign_transaction?: TransactionSigner
   /** pins.json key */
   network?: SdkNetwork
-  /** constructs the production GraphQL transport when client is omitted */
+  /** constructs a read-only GraphQL transport when client is omitted */
   graphql_url?: string
-  /** Sui gRPC endpoint used to resolve transaction gas and validity */
+  /** Sui gRPC endpoint for resolution, submission, and complete receipt recovery */
   rpc_url?: string
   /** override for tests/local publishes; defaults to pins.json[network] */
   pins?: Pins
   /** optional explicit budget in MIST; `'estimate'` lets the Sui resolver price the
    *  transaction itself (deployment-sized surfaces); otherwise the game-door law applies */
   gas_budget?: bigint | 'estimate'
+  transaction_storage?: TransactionStorage | null
 }
 
 const GAS_BUDGET_REFUSAL = /insufficient.?gas|gas.?budget/i
@@ -227,6 +230,7 @@ export function SDK({
   rpc_url,
   pins = (PINS as Record<string, Pins>)[network],
   gas_budget,
+  transaction_storage,
 }: SdkOptions = {}) {
   const sui_client =
     client ??
@@ -275,7 +279,6 @@ export function SDK({
   const cache = create_cache()
   const pure_inputs = new WeakMap<Transaction, Map<string, TransactionArgument>>()
   let execution_tail: Promise<unknown> = Promise.resolve()
-  let pending_visibility_digest: string | null = null
   const sender = address ?? signer?.toSuiAddress() ?? null
   const gas_ledger = create_gas_ledger({ address: sender, network })
   const balance = create_balance_cache({
@@ -447,45 +450,30 @@ export function SDK({
     }
   }
 
+  const execution = create_transaction_execution({
+    core: sui_client.core,
+    key: `aresrpg:transaction:${network}:${sender}`,
+    storage: transaction_storage,
+    on_receipt: (receipt, gas_scope) => {
+      log_transaction_receipt(receipt)
+      gas_ledger.record(receipt)
+      if (gas_scope) gas_ledger.tag(receipt, gas_scope)
+      if (sender) balance.invalidate(sender)
+      absorb_receipt(cache, receipt)
+    },
+  })
   const execute_signed = async (
     bytes: string | Uint8Array,
     signature: string,
-    { include, gas_scope }: { include?: object; gas_scope?: string } = {}
+    options: { include?: object; gas_scope?: string } = {}
   ) => {
     const raw = typeof bytes === 'string' ? fromBase64(bytes) : bytes
-    const receipt = await sui_client.core.executeTransaction({
-      transaction: raw,
-      signatures: [signature],
-      include: { effects: true, events: true, ...include },
-    })
-    // Failures also advance gas/touched refs, so arm the next-write barrier before classification.
-    pending_visibility_digest = receipt_digest(receipt)
-    log_transaction_receipt(receipt)
-    gas_ledger.record(receipt)
-    if (gas_scope) gas_ledger.tag(receipt, gas_scope)
-    if (sender) balance.invalidate(sender)
+    const receipt = await execution.submit(raw, signature, options)
     const failure = failure_of(receipt)
     if (failure !== null) {
-      absorb_receipt(cache, receipt) // owned game objects the failed tx still touched stay fresh
       throw new Error(`[sdk] transaction ${receipt_digest(receipt)} failed on-chain: ${failure}`)
     }
-    absorb_receipt(cache, receipt)
     return receipt
-  }
-
-  const await_previous_visibility = async (): Promise<void> => {
-    const digest = pending_visibility_digest
-    if (!digest) return
-    try {
-      await sui_client.core.waitForTransaction({ digest })
-      pending_visibility_digest = null
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      throw new Error(
-        `[sdk] previous transaction ${digest} is not yet visible — next transaction NOT submitted: ${message}`,
-        { cause: error }
-      )
-    }
   }
   const simulate = async (
     tx: Transaction,
@@ -506,7 +494,9 @@ export function SDK({
     }: { budget?: bigint | 'estimate'; include?: object; gas_scope?: string } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
-    await await_previous_visibility()
+    if (isSuiGraphQLClient(sui_client))
+      throw new Error('[sdk] writes require a gRPC client or rpc_url for complete transaction receipts')
+    await execution.before_next()
     await prepare_transaction(tx, sender, { budget })
     const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
     if (!signed) throw new Error('[sdk] execute needs a signer')
@@ -568,8 +558,6 @@ export function SDK({
           : kiosk_client,
         transaction,
       }),
-    withdraw_transfer_policy: (tx: Transaction, cap: TransferPolicyCap, recipient: string) =>
-      new TransferPolicyTransaction({ kioskClient: kiosk_client, transaction: tx, cap }).withdraw(recipient),
     simulate,
     /** Freshest known owned ref (receipt-fed), or undefined. */
     ref: (object_id: string) => owned_ref(cache, object_id),
@@ -581,6 +569,13 @@ export function SDK({
     read_sui_balance: () => {
       if (!sender) throw new Error('[sdk] balance reads need an address')
       return balance.read(sender)
+    },
+    read_kares_balance: async (): Promise<bigint | null> => {
+      if (!sender) throw new Error('[sdk] balance reads need an address')
+      if (!pins.kares_package_original) return null
+      const coin_type = kares_coin_type(pins.kares_package_original)
+      const result = await sui_client.core.getBalance({ owner: sender, coinType: coin_type })
+      return BigInt(result.balance.balance)
     },
     gas_spent_24h: gas_ledger.spent_24h,
     tag_gas: gas_ledger.tag,

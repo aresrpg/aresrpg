@@ -66,7 +66,6 @@ test('fight duration is the nonnegative wall time between start and terminal obs
   expect(fight_duration(null, 126_900)).toBeNull()
   expect(fight_duration(2_000, 1_000)).toBe(0)
 })
-
 test('the result receipt aggregates declarations once and never shrinks when claims remove chain rows', () => {
   const declared = aggregate_result_loot([
     { item_type: 'silk', qty: 2 },
@@ -80,12 +79,10 @@ test('the result receipt aggregates declarations once and never shrinks when cla
   expect(merge_result_loot(declared, [])).toEqual(declared)
   expect(merge_result_loot(declared, [{ item_type: 'silk', qty: 2 }])).toEqual(declared)
 })
-
 test('a settled fighter source already includes its certified XP award', () => {
   expect(fight_experience_after(800, 577, false)).toBe(1_377)
   expect(fight_experience_after(1_377, 577, true)).toBe(1_377)
 })
-
 test('durable recovery collects settlement and every loot type through one transaction', () => {
   const row = {
     settled: false,
@@ -95,7 +92,6 @@ test('durable recovery collects settlement and every loot type through one trans
   expect(next_fight_resolution_step(row)).toEqual({ type: 'settle' })
   expect(next_fight_resolution_step({ ...row, settled: true })).toEqual({ type: 'settle' })
 })
-
 test('an ordinary resolution with pre-migration dungeon fields never enters dungeon settlement', () => {
   expect(fight_resolution_dungeon({ dungeon: undefined, dungeon_room: undefined })).toBeNull()
   expect(fight_resolution_dungeon({ dungeon: null, dungeon_room: 2 })).toBeNull()
@@ -163,18 +159,18 @@ const result = (overrides: Partial<FightResult> = {}): FightResult =>
     ]),
     ...overrides,
   }) as FightResult
-
 test('a certified settlement receipt releases Continue without waiting for graph reconciliation', () => {
   expect(fight_result_complete(result())).toBeFalse()
   expect(fight_result_complete(result({ settlement_confirmed: true }))).toBeTrue()
 })
-
 test('an empty durable-resolution snapshot proves the own settlement completed', () => {
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const current = result()
   const pending = {
     fight: '0xf1',
     world: 'nauvis',
+    boss_weight: 0,
+    kares: '0',
     dungeon: null,
     dungeon_room: null,
     kolizeum: null,
@@ -199,7 +195,6 @@ test('an empty durable-resolution snapshot proves the own settlement completed',
   expect(projected.participants[0]?.settled).toBeTrue()
   expect(fight_result_complete(projected)).toBeTrue()
 })
-
 test('an unrelated empty recovery snapshot cannot certify a newly ended fight', () => {
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const current = result()
@@ -212,12 +207,13 @@ test('an unrelated empty recovery snapshot cannot certify a newly ended fight', 
   )
   expect(state.fight_result.current_by_character['0xc1']?.settlement_confirmed).toBeFalse()
 })
-
 test('a durable resolution received before the roster becomes visible when the Character row arrives', () => {
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const resolution = {
     fight: '0xf1',
     world: 'nauvis',
+    boss_weight: 0,
+    kares: '0',
     dungeon: null,
     dungeon_room: null,
     kolizeum: null,
@@ -255,12 +251,13 @@ test('a durable resolution received before the roster becomes visible when the C
   )
   expect(loaded.fight_result.current_by_character['0xc1']).toMatchObject({ fight: '0xf1', loot_types: ['silk'] })
 })
-
 test('nonzero-seat recovery keeps array position separate from the chain fighter index', () => {
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const resolution = {
     fight: '0xf1',
     world: 'nauvis',
+    boss_weight: 0,
+    kares: '0',
     dungeon: null,
     dungeon_room: null,
     kolizeum: null,
@@ -300,13 +297,13 @@ test('nonzero-seat recovery keeps array position separate from the chain fighter
   expect(recovered).toMatchObject({ own_seat: 0, participants: [{ seat: 2, level_after: 2 }] })
   const settled = fight_result_module.reduce!(projected, {
     type: 'fight_result/settled',
+    kares_rewards: [],
     character_id: '0xc1',
     fight: '0xf1',
     paid_mist: null,
   })
   expect(settled.fight_result.current_by_character['0xc1']?.participants[0]?.settled).toBeTrue()
 })
-
 test('a forfeiter has no durable loot work and may leave the result immediately', () => {
   const current = result({
     winner: 1,
@@ -317,7 +314,6 @@ test('a forfeiter has no durable loot work and may leave the result immediately'
   })
   expect(fight_result_complete(current)).toBeTrue()
 })
-
 test('the projected level-up overlays the still-retained fight result', () => {
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const current = result({ settlement_confirmed: true })
@@ -366,7 +362,6 @@ test('the projected level-up overlays the still-retained fight result', () => {
   const continued = fight_result_module.reduce!(projected, { type: 'fight_result/closed', character_id: '0xc1' })
   expect(fight_result_surface(continued.fight_result.current_by_character['0xc1']!)).toBe('level_up')
 })
-
 test('a failed settlement result may close without discarding its durable recovery row', () => {
   const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
   const result = {
@@ -393,7 +388,6 @@ test('a failed settlement result may close without discarding its durable recove
   expect(state.fight_result.current_by_character['0xc1']).toBeUndefined()
   expect(state.fight_result.resolutions).toEqual([resolution])
 })
-
 test('durable closable recovery closes automatically without a routine finalize toast', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const close_calls: string[] = []
@@ -436,7 +430,6 @@ test('durable closable recovery closes automatically without a routine finalize 
   expect(notice).toBeNull()
   unsubscribe()
 })
-
 test('a successful final ordinary settlement closes its newly drained fight', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const settlement_calls: string[] = []
@@ -485,12 +478,12 @@ test('a successful final ordinary settlement closes its newly drained fight', as
   expect(close_calls).toEqual(['close'])
   expect(dispatched).toContainEqual({
     type: 'fight_result/settled',
+    kares_rewards: [],
     character_id: '0xc1',
     fight: '0xf1',
     paid_mist: null,
   })
 })
-
 test('a wagered result settles through the Kolizeum escrow manager', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const calls: unknown[] = []
@@ -544,12 +537,12 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
   ])
   expect(dispatched).toContainEqual({
     type: 'fight_result/settled',
+    kares_rewards: [],
     character_id: '0xc1',
     fight: '0xf1',
     paid_mist: 9n,
   })
 })
-
 test('a refused settlement waits for explicit Retry instead of reopening signing', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   let settlement_calls = 0

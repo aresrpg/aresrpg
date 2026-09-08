@@ -4,14 +4,14 @@
 /// per transaction (owner 2026-08-10): prove the walk to the pack, prove the matching job
 /// tool is equipped (ANY tool of the type — tool level never gates), gate the node's tier
 /// against the JOB level, roll the yield off the job level, bank job xp, consume the node,
-/// then the two jackpot draws from the SAME rng: GOLDEN-GATHER (0.1% — a resource with an
+/// then jackpot draws from the SAME rng: GOLDEN-GATHER (0.1% — a resource with an
 /// authored rare link mints ONE rare unit IN ADDITION) and the PROTECTOR (2% — the row's
 /// pinned mob ambushes into a real solo fight; the yield lands FIRST, the ambush never eats
-/// the harvest). Both templates are asserted against the world row BEFORE any draw — a
-/// wrong client aborts deterministically, never only on the jackpot.
+/// the harvest). The rare template is checked before its jackpot draw; the protector
+/// template is checked against the retained verdict when resolving the ambush.
 ///
-/// A character already fighting cannot gather BY CONSTRUCTION: fight custody means it is
-/// not in the kiosk — legacy's whole "unfinished business" marking machinery evaporates.
+/// Fight custody keeps a fighter outside the kiosk. Before fight creation, the pending
+/// protector holds the checkpoint root until its deterministic resolution.
 ///
 /// JOB XP banks through progression (the one job-xp home — crafting is the other writer);
 /// levels come off the immutable `job_xp` curve.
@@ -28,7 +28,7 @@ use aresrpg::{
   world,
   zone,
 };
-use aresrpg_seed::{mob_rows::MobTemplate, spell_rows::SpellTemplate, board_catalog::BoardCatalog, world_content::{Self, WorldContent}};
+use aresrpg_seed::{mob_rows::MobTemplate, board_catalog::BoardCatalog, world_content::{Self, WorldContent}};
 use aresrpg_math::{job_xp, mob_data, world_map};
 use std::string::String;
 use sui::{
@@ -63,12 +63,10 @@ const ROOT_UNTIL_RESOLVED_MS: u64 = 3_153_600_000_000;
 //   gatherXp(req)   = 10 + req/2  — off the RESOURCE's required level, every gather
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// The GAS-UNIFORM ambush verdict (Sui `&Random` law, owner 2026-08-10: every outcome must
-/// cost the SAME gas — an expensive in-line ambush could be aborted out-of-gas and
-/// re-rolled). EVERY gather writes this fixed-shape DF, fire or not; a `fires` verdict
-/// roots the character until `resolve_ambush` — a second transaction with NO randomness,
-/// so aborting it re-rolls nothing. `hp` snapshots the gather moment: waiting rooted to
-/// regen buys nothing.
+/// Every harvest writes one fixed-shape verdict. Combat creation runs later in
+/// `resolve_ambush`, so the Random-bound harvest never pays an inline fight-creation cost.
+/// A fired verdict roots the character until that deterministic resolution. `hp` retains
+/// the gather-moment cap; waiting rooted to regenerate cannot improve fight admission.
 public struct AmbushKey() has copy, drop, store;
 
 public struct PendingAmbush has copy, drop, store {
@@ -138,10 +136,8 @@ public(package) fun gather(
     let (min_quantity, max_quantity) = job_xp::gather_quantity_bounds(job_level, required);
     let quantity = generator.generate_u64_in_range(min_quantity, max_quantity);
 
-    // THE PROTECTOR VERDICT — gas-uniform by construction (Sui `&Random` law): every draw
-    // happens and the SAME fixed-shape verdict writes on BOTH outcomes, so no gas budget
-    // can tell a fired ambush from a quiet gather and abort it into a re-roll. The fight
-    // itself spawns in `resolve_ambush` — a later tx with nothing left to re-roll.
+    // Both outcomes draw level and board entropy and retain the same verdict fields.
+    // The later deterministic resolution owns fight creation; retrying it cannot reroll.
     let ambush_rolled = generator.generate_u64_in_range(0, 9999) < PROTECTOR_BP;
     let protector = ambush_rolled && !row.resource_row_protector().is_empty();
     let (level_lo, level_hi) = zone::level_bounds(zone_object);
@@ -160,8 +156,7 @@ public(package) fun gather(
 
     let gained_xp = job_xp::gather_xp(required);
     progression::bank_job_xp(character, job, gained_xp);
-    // GATHER TIME roots the gatherer; a fired verdict roots UNTIL RESOLVED — same stamp,
-    // same gas, different horizon.
+    // The same checkpoint field holds the normal deadline or the unresolved protector root.
     let root = if (protector) ROOT_UNTIL_RESOLVED_MS else job_xp::gather_time_ms(job_level);
     world::delay_checkpoint(character, root, clock);
     (quantity, gained_xp, protector)
@@ -249,8 +244,7 @@ public(package) fun has_fired_verdict(character: &Character): bool {
 
 // ╔════════════════ [ Internals ] ════════════════════════════════════════════ ]
 
-// write_verdict
-/// Overwrite-or-add the verdict DF — the same bytes land on both outcomes (the gas law).
+/// Retain the same verdict fields on both outcomes; the stored flag owns the obligation.
 fun write_ambush_verdict(character: &mut Character, verdict: PendingAmbush) {
   let uid = character.uid_mut();
   if (dfield::exists(uid, AmbushKey())) {

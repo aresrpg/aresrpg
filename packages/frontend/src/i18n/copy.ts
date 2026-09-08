@@ -3,12 +3,17 @@
 
 import type { StatName } from '@aresrpg/immutable'
 
+import type { KaresCopy } from '../kares/copy.ts'
+
 import type { Locale } from './locale.ts'
 
 export type AppCopy = Readonly<{
+  item_categories: Readonly<Record<string, string>>
   title: string
   body: string
   fatal: string
+  engine_recovery: string
+  engine_reload: string
   world_unavailable_title: string
   world_unavailable: string
   mobile_unavailable_label: string
@@ -37,6 +42,8 @@ export type AppCopy = Readonly<{
   characters: string
   leaderboard: string
   mastery: string
+  kares: string
+  kares_page: KaresCopy
   encyclopedia: string
   marketplace: string
   airdrop: string
@@ -46,6 +53,7 @@ export type AppCopy = Readonly<{
   online: string
   account: string
   join_discord: string
+  join_telegram: string
   sui_universe: string
   server_disconnected: string
   server_connecting: string
@@ -70,6 +78,8 @@ export type AppCopy = Readonly<{
   game_maintenance_title: string
   game_maintenance_body: string
   gas_budget_toast: string
+  transaction_unknown_toast: string
+  transaction_recovered_toast: string
   game_paused_toast: string
   movement_sync_toast: string
   fight_path_changed_toast: string
@@ -124,6 +134,7 @@ export type AppCopy = Readonly<{
   admin_page: Readonly<Record<string, string>>
   mastery_page: Readonly<Record<string, unknown>>
   airdrop_page: Readonly<Record<string, unknown>>
+  leaderboard_page: Readonly<Record<string, string>>
   marketplace_page: Readonly<Record<string, unknown>>
   kolizeum_page: Readonly<Record<string, string>>
   friends_panel: Readonly<Record<string, string>>

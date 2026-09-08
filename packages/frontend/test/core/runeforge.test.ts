@@ -40,9 +40,8 @@ test('runeforge history is newest-first, per gear, deduplicated, and session-bou
       stat: 0,
       outcome: 0,
       applied_value: 3,
-      lost_stat: 255,
-      lost_amount: 0,
-      new_puits: 2,
+      lost_amounts: Array.from({ length: 15 }, () => 0),
+      new_puits: '2',
     },
   }
   const first = reduce_app_state(base, input)
@@ -60,10 +59,9 @@ test('runeforge history is newest-first, per gear, deduplicated, and session-bou
       outcome: 'critical_success',
       applied_stat: 'vitality',
       applied_value: 3,
-      lost_stat: null,
-      lost_amount: 0,
-      puits_before: 2,
-      puits_after: 2,
+      losses: [],
+      puits_before: '2',
+      puits_after: '2',
     },
   ])
   expect(duplicate.runeforge).toBe(first.runeforge)

@@ -74,6 +74,7 @@ export const create_grid_fallback = (
   const effects = create_transient_effects({ scene, entities })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const presentation = create_hack_presentation(scene)
+  let disposed = false
   let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
   let audio_volume = 1
   let quality = initial_quality
@@ -144,6 +145,7 @@ export const create_grid_fallback = (
     },
     set_entities: (next) => entities.set(Object.freeze(next.map(flatten_grid_entity))),
     set_fight_swords: (url, impact_sound_url, markers) => {
+      if (disposed) return
       fight_swords ??= create_fight_sword_layer({
         scene,
         camera,
@@ -195,6 +197,9 @@ export const create_grid_fallback = (
     }),
     flattened: () => true,
     dispose: () => {
+      if (disposed) return
+      disposed = true
+      fight_swords?.dispose()
       entity_labels.dispose()
       fight_board.dispose()
       effects.dispose()

@@ -3,7 +3,13 @@
 // Lazy seed adapter for local fight birth inputs. Combat remains entirely inside @aresrpg/fight.
 
 import { create_character_source, mob_scalar_for_level, player_max_hp, type FightSetup } from '@aresrpg/fight'
-import { equipment_slot_accepts, item_stat_center, stat_names, type CharacterEquipmentSlot } from '@aresrpg/immutable'
+import {
+  equipment_slot_accepts,
+  item_stat_center,
+  stat_names,
+  worn_appearance,
+  type CharacterEquipmentSlot,
+} from '@aresrpg/immutable'
 
 import { simulator_board } from '../modules/simulator.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
@@ -33,8 +39,7 @@ const loadout_source = (loadout: Readonly<Record<string, string>>) => {
   )
   const weapon = rows.find(({ slot }) => slot === 'weapon')?.item
   return {
-    hat: loadout.hat ?? null,
-    cloak: loadout.cloak ?? null,
+    ...worn_appearance(loadout),
     folded_stats,
     weapon: weapon
       ? {

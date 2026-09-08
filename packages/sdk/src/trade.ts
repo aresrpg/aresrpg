@@ -9,6 +9,7 @@ import type { Transaction, TransactionArgument, TransactionObjectArgument } from
 
 import { created_object_id, receipt_digest } from './cache.ts'
 import { SDK } from './client.ts'
+import { kares_payment } from './kares_ptb.ts'
 import { resolve_kiosk_cap, retry_stale_kiosk_ref, type KioskCapLoader } from './kiosk_runner.ts'
 import { resolve_marketplace_transfer } from './marketplace.ts'
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
@@ -67,28 +68,35 @@ const own_side = (trade: Readonly<TradeRow>, address: string): Side => {
 const other_side = (side: Side): Side => (side === 'a' ? 'b' : 'a')
 const caps_for = (trade: Readonly<TradeRow>, side: Side): readonly TradeCapRow[] => trade[`caps_${side}`]
 const sui_for = (trade: Readonly<TradeRow>, side: Side): bigint => BigInt(trade[`sui_${side}`])
+const kares_for = (trade: Readonly<TradeRow>, side: Side): bigint => BigInt(trade[`kares_${side}`])
 
 export const trade_is_drained = (trade: Readonly<TradeRow>): boolean =>
   caps_for(trade, 'a').length === 0 &&
   caps_for(trade, 'b').length === 0 &&
   sui_for(trade, 'a') === 0n &&
-  sui_for(trade, 'b') === 0n
+  sui_for(trade, 'b') === 0n &&
+  kares_for(trade, 'a') === 0n &&
+  kares_for(trade, 'b') === 0n
 
 export const trade_incoming = (
   trade: Readonly<TradeRow>,
   address: string
-): Readonly<{ side: Side; caps: readonly TradeCapRow[]; sui: bigint }> => {
+): Readonly<{ side: Side; caps: readonly TradeCapRow[]; sui: bigint; kares: bigint }> => {
   const side = other_side(own_side(trade, address))
-  return Object.freeze({ side, caps: caps_for(trade, side), sui: sui_for(trade, side) })
+  return Object.freeze({ side, caps: caps_for(trade, side), sui: sui_for(trade, side), kares: kares_for(trade, side) })
 }
 
 export const trade_own_offer = (
   trade: Readonly<TradeRow>,
   address: string
-): Readonly<{ side: Side; caps: readonly TradeCapRow[]; sui: bigint }> => {
+): Readonly<{ side: Side; caps: readonly TradeCapRow[]; sui: bigint; kares: bigint }> => {
   const side = own_side(trade, address)
-  return Object.freeze({ side, caps: caps_for(trade, side), sui: sui_for(trade, side) })
+  return Object.freeze({ side, caps: caps_for(trade, side), sui: sui_for(trade, side), kares: kares_for(trade, side) })
 }
+
+export const trade_offer_has_value = (
+  offer: Readonly<{ caps: readonly TradeCapRow[]; sui: bigint; kares: bigint }>
+): boolean => offer.caps.length > 0 || [offer.sui, offer.kares].some((amount) => amount > 0n)
 
 const assert_phase = (trade: Readonly<TradeRow>, phase: TradePhase): void => {
   if (trade.phase !== phase) throw new Error(`Trade action requires phase ${phase}; rendered phase is ${trade.phase}.`)
@@ -136,6 +144,8 @@ export const trade_create = async (
       accept_b: false,
       sui_a: '0',
       sui_b: '0',
+      kares_a: '0',
+      kares_b: '0',
       caps_a: Object.freeze([]),
       caps_b: Object.freeze([]),
     }),
@@ -236,29 +246,59 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
     return revision
   }
 
-  const append_sui_offer = (tx: Transaction, sui: bigint, initial_revision: number): number => {
-    if (sui > own.sui) {
-      sdk.doors.trade_put_sui(tx, { trade: trade.id, coin: sdk.coin_of(tx, sui - own.sui), seen: initial_revision })
-      return initial_revision + 1
+  const currency_doors = {
+    sui: {
+      put: sdk.doors.trade_put_sui,
+      take: sdk.doors.trade_take_sui,
+      claim: sdk.doors.trade_claim_sui,
+      recover: sdk.doors.trade_recover_sui,
+    },
+    kares: {
+      put: sdk.doors.trade_put_kares,
+      take: sdk.doors.trade_take_kares,
+      claim: sdk.doors.trade_claim_kares,
+      recover: sdk.doors.trade_recover_kares,
+    },
+  }
+  const append_currency_offer = (tx: Transaction, asset: 'sui' | 'kares', amount: bigint, seen: number): number => {
+    if (amount < 0n || amount > 18_446_744_073_709_551_615n) throw new Error('The offered amount must fit a u64.')
+    const current = own[asset]
+    if (amount === current) return seen
+    const doors = currency_doors[asset]
+    if (amount > current) {
+      const coin = asset === 'sui' ? sdk.coin_of(tx, amount - current) : kares_payment(sdk, tx, amount - current)
+      doors.put(tx, { trade: trade.id, coin, seen })
+    } else
+      tx.transferObjects(
+        [doors.take(tx, { trade: trade.id, amount: current - amount, seen })],
+        tx.pure.address(address)
+      )
+    return seen + 1
+  }
+  const transfer_balances = (tx: Transaction, offer: typeof own, operation: 'claim' | 'recover'): void => {
+    for (const asset of ['sui', 'kares'] as const) {
+      if (offer[asset] === 0n) continue
+      const coin = currency_doors[asset][operation](tx, { trade: trade.id })
+      tx.transferObjects([coin], tx.pure.address(address))
     }
-    if (sui === own.sui) return initial_revision
-    const coin = sdk.doors.trade_take_sui(tx, { trade: trade.id, amount: own.sui - sui, seen: initial_revision })
-    tx.transferObjects([coin], tx.pure.address(address))
-    return initial_revision + 1
   }
 
   const commit_offer = async ({
     additions,
     removals,
     sui,
+    kares,
   }: Readonly<{
     additions: readonly TradeOfferAddition[]
     removals: readonly TradeOfferRemoval[]
     sui: bigint
+    kares: bigint
   }>): Promise<TradeOfferCommitReceipt> => {
     assert_phase(trade, 'negotiating')
+    if (![additions.length > 0, removals.length > 0, sui !== own.sui, kares !== own.kares].some(Boolean))
+      throw new Error('The trade offer is unchanged.')
     return retry_stale_kiosk_ref(async (fresh) => {
-      const kiosks = trade_offer_kiosks(additions, removals, own.caps, sui, own.sui)
+      const kiosks = trade_offer_kiosks(additions, removals, own.caps)
       const post_removal_amounts = trade_offer_post_removal_amounts(removals)
       const owners = new Map(
         await Promise.all(kiosks.map(async (kiosk) => [kiosk, await cap_for(kiosk, fresh)] as const))
@@ -275,7 +315,8 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
           post_removal_amounts,
           seen
         )
-      seen = append_sui_offer(tx, sui, seen)
+      seen = append_currency_offer(tx, 'sui', sui, seen)
+      seen = append_currency_offer(tx, 'kares', kares, seen)
       const receipt = await sdk.execute(tx)
       return Object.freeze({ digest: receipt_digest(receipt), offer_revision: seen })
     })
@@ -350,7 +391,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
       item: cap.object,
       source: cap.kiosk,
     }) as unknown as [TransactionObjectArgument, TransactionObjectArgument]
-    resolve_marketplace_transfer(sdk, tx, 'item', cap.object, 0n, buyer_kiosk, buyer_cap, purchased, request)
+    resolve_marketplace_transfer(sdk, tx, 'item', cap.object, 0n, buyer_kiosk, buyer_cap, purchased, request, cap.kiosk)
   }
 
   const merge_claimed = (
@@ -366,7 +407,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
   const terminal_delta = (
     phase: TradeTerminalDelta['phase'],
     remove_caps: readonly string[],
-    clear_sui: Side | null,
+    clear_balances: Side | null,
     closed: boolean,
     offer_revision = trade.offer_revision
   ): TradeTerminalDelta =>
@@ -375,7 +416,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
       phase,
       offer_revision,
       remove_caps: Object.freeze(remove_caps),
-      clear_sui,
+      clear_balances,
       closed,
     })
 
@@ -458,20 +499,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
       if (amount === own.sui) throw new Error('The offered SUI amount is unchanged.')
       return offer_receipt(
         (tx) => {
-          if (amount > own.sui)
-            sdk.doors.trade_put_sui(tx, {
-              trade: trade.id,
-              coin: sdk.coin_of(tx, amount - own.sui),
-              seen: trade.offer_revision,
-            })
-          else {
-            const coin = sdk.doors.trade_take_sui(tx, {
-              trade: trade.id,
-              amount: own.sui - amount,
-              seen: trade.offer_revision,
-            })
-            tx.transferObjects([coin], tx.pure.address(address))
-          }
+          append_currency_offer(tx, 'sui', amount, trade.offer_revision)
         },
         touched_offer(trade, projected_sui(side, amount))
       )
@@ -490,7 +518,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
       return retry_stale_kiosk_ref(async (fresh) => {
         await sdk.hydrate_unknown(own.caps.map(({ kiosk }) => kiosk))
         const groups = await recovery_groups(own.caps, fresh)
-        const closed = incoming.caps.length === 0 && incoming.sui === 0n
+        const closed = !trade_offer_has_value(incoming)
         return terminal_receipt(
           (tx) => {
             sdk.doors.trade_cancel(tx, { trade: trade.id, seen: trade.offer_revision })
@@ -498,16 +526,13 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
               sdk.with_owner_kiosk(tx, group.owner, (kiosk) => {
                 for (const { cap } of group.rows) recover_cap_ptb(tx, cap, kiosk)
               })
-            if (own.sui > 0n) {
-              const coin = sdk.doors.trade_recover_sui(tx, { trade: trade.id })
-              tx.transferObjects([coin], tx.pure.address(address))
-            }
+            transfer_balances(tx, own, 'recover')
             if (closed) sdk.doors.trade_close(tx, { trade: trade.id })
           },
           terminal_delta(
             'cancelled',
             own.caps.map(({ object }) => object),
-            own.sui > 0n ? side : null,
+            side,
             closed,
             trade.offer_revision + 1
           )
@@ -517,12 +542,11 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
 
     settle_all: async (targets: TradeStackTargets): Promise<TradeTerminalReceipt> => {
       assert_phase(trade, 'settling')
-      if (incoming.caps.length === 0 && incoming.sui === 0n)
-        throw new Error('This trade has no remaining consideration to receive.')
+      if (!trade_offer_has_value(incoming)) throw new Error('This trade has no remaining consideration to receive.')
       return retry_stale_kiosk_ref(async (fresh) => {
         await sdk.hydrate_unknown(incoming.caps.map(({ kiosk }) => kiosk))
         const groups = await settlement_groups(incoming.caps, targets, fresh)
-        const closed = own.caps.length === 0 && own.sui === 0n
+        const closed = !trade_offer_has_value(own)
         return terminal_receipt(
           (tx) => {
             for (const group of groups)
@@ -532,16 +556,13 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
                   merge_claimed(tx, row, kiosk, kiosk_owner_cap)
                 }
               })
-            if (incoming.sui > 0n) {
-              const coin = sdk.doors.trade_claim_sui(tx, { trade: trade.id })
-              tx.transferObjects([coin], tx.pure.address(address))
-            }
+            transfer_balances(tx, incoming, 'claim')
             if (closed) sdk.doors.trade_close(tx, { trade: trade.id })
           },
           terminal_delta(
             'settling',
             incoming.caps.map(({ object }) => object),
-            incoming.sui > 0n ? incoming.side : null,
+            incoming.side,
             closed
           )
         )
@@ -550,27 +571,24 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
 
     recover_all: async (): Promise<TradeTerminalReceipt> => {
       assert_phase(trade, 'cancelled')
-      if (own.caps.length === 0 && own.sui === 0n) throw new Error('This trade has no remaining offer to recover.')
+      if (!trade_offer_has_value(own)) throw new Error('This trade has no remaining offer to recover.')
       return retry_stale_kiosk_ref(async (fresh) => {
         await sdk.hydrate_unknown(own.caps.map(({ kiosk }) => kiosk))
         const groups = await recovery_groups(own.caps, fresh)
-        const closed = incoming.caps.length === 0 && incoming.sui === 0n
+        const closed = !trade_offer_has_value(incoming)
         return terminal_receipt(
           (tx) => {
             for (const group of groups)
               sdk.with_owner_kiosk(tx, group.owner, (kiosk) => {
                 for (const { cap } of group.rows) recover_cap_ptb(tx, cap, kiosk)
               })
-            if (own.sui > 0n) {
-              const coin = sdk.doors.trade_recover_sui(tx, { trade: trade.id })
-              tx.transferObjects([coin], tx.pure.address(address))
-            }
+            transfer_balances(tx, own, 'recover')
             if (closed) sdk.doors.trade_close(tx, { trade: trade.id })
           },
           terminal_delta(
             'cancelled',
             own.caps.map(({ object }) => object),
-            own.sui > 0n ? side : null,
+            side,
             closed
           )
         )

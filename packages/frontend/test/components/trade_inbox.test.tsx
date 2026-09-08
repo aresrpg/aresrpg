@@ -47,6 +47,8 @@ const trade = (phase: TradeRow['phase']): TradeRow => ({
   accept_b: false,
   sui_a: '0',
   sui_b: '0',
+  kares_a: '0',
+  kares_b: '0',
   caps_a: [cap],
   caps_b: [cap],
 })
@@ -176,4 +178,13 @@ test('counterparty confirmation and offer changes never reset my local offer dra
 test('acceptance cost detail stays available without occupying the action bar', () => {
   expect(source).not.toContain("<p>{text('accept_notice'")
   expect(source).toContain('title={notice}')
+})
+
+test('KARES alone keeps a completed exchange visible and changes its local draft identity', () => {
+  const empty = { ...trade('settling'), caps_a: [], caps_b: [] }
+  expect(trade_modal_visible(empty)).toBeFalse()
+  const funded = { ...empty, kares_a: '1' }
+  expect(trade_modal_visible(funded)).toBeTrue()
+  expect(trade_offer_draft_key(funded, 'a')).not.toBe(trade_offer_draft_key(empty, 'a'))
+  expect(trade_offer_draft_key(funded, 'b')).toBe(trade_offer_draft_key(empty, 'b'))
 })

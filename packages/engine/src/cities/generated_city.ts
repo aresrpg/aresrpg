@@ -80,11 +80,16 @@ const load_generated_city_artifact = (id: string): Promise<void> => {
   if (pending) return pending
   const definition = city_definition(id)
   if (!definition) return Promise.resolve()
-  const next = load_json<GeneratedCityArtifact>(definition.artifact_url).then((artifact) => {
-    if (artifact.id !== id || definition.map.source_hash !== artifact.source_hash)
-      throw new TypeError(`Generated ${id} voxel and map artifacts do not share provenance`)
-    generated_cities.set(id, Object.freeze(artifact))
-  })
+  const next = load_json<GeneratedCityArtifact>(definition.artifact_url)
+    .then((artifact) => {
+      if (artifact.id !== id || definition.map.source_hash !== artifact.source_hash)
+        throw new TypeError(`Generated ${id} voxel and map artifacts do not share provenance`)
+      generated_cities.set(id, Object.freeze(artifact))
+    })
+    .catch((error: unknown) => {
+      if (loading.get(id) === next) loading.delete(id)
+      throw error
+    })
   loading.set(id, next)
   return next
 }

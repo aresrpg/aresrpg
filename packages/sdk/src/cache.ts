@@ -10,7 +10,10 @@
 // `effects.changedObjects` carry the fresh state of everything it touched — after one bootstrap
 // hydrate, the loop sustains itself with zero reads.
 
+import type { ItemAmountChange } from '@aresrpg/protocol'
 import { normalizeSuiObjectId } from '@mysten/sui/utils'
+
+import { event_integer, event_string } from './receipt_decode.ts'
 
 export type OwnedRef = { objectId: string; version: string; digest: string }
 export type SharedEntry = { initialSharedVersion: string; version?: string; digest?: string }
@@ -41,6 +44,7 @@ type ChangedObject = {
 
 /** A TransactionResult / SimulateTransactionResult, whatever branch carries the effects. */
 type Effects = {
+  lamportVersion?: string | null
   gasObject?: ChangedObject | null
   changedObjects?: ChangedObject[]
   gasUsed?: {
@@ -234,4 +238,30 @@ export const object_revision = (cache: ResolutionCache, object_id: string): stri
   const id = normalizeSuiObjectId(object_id)
   const ref = cache.owned.get(id) ?? cache.shared.get(id)
   return ref?.version && ref.digest ? `${ref.version}:${ref.digest}` : null
+}
+
+/** The certified transaction revision, shared by every output and deletion in one PTB. */
+export const receipt_version = (receipt: Receipt): string | null => {
+  const native = effects_of(receipt)?.lamportVersion
+  if (native) return native
+  const version = changed_rows(receipt).reduce((latest, { outputVersion }) => {
+    const candidate = BigInt(outputVersion ?? 0)
+    return candidate > latest ? candidate : latest
+  }, 0n)
+  return version > 0n ? String(version) : null
+}
+
+/** Exact final quantities from this successful PTB, including destroyed merge sources. */
+export const spending_receipt = (
+  receipt: Receipt
+): Readonly<{ digest: string; inventory_changes: readonly ItemAmountChange[] }> => {
+  const rows = receipt_events(receipt, '::item::AmountChanged')
+  const version = receipt_version(receipt)
+  if (rows.length && version === null) throw new Error('Item receipt has no certified output version')
+  const amounts = new Map<string, ItemAmountChange>()
+  for (const row of rows) {
+    const id = event_string(row, 'item')
+    amounts.set(id, Object.freeze({ id, amount: event_integer(row, 'amount'), version: String(version) }))
+  }
+  return Object.freeze({ digest: receipt_digest(receipt), inventory_changes: Object.freeze([...amounts.values()]) })
 }

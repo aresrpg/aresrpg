@@ -11,7 +11,7 @@
 import { DAY_FRAC } from '@aresrpg/engine'
 import { client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
 import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
-import { Building2 } from 'lucide-react'
+import { Building2, Skull } from 'lucide-react'
 import type { CSSProperties } from 'react'
 
 import './compass_strip.css'
@@ -73,13 +73,12 @@ const CityCompassMarkerView = ({ marker, city_label }: Readonly<{ marker: CityCo
   return (
     <span
       aria-label={`${city_label} · ${distance}m`}
-      className="gw-compass__city"
+      className={`gw-compass__city${marker.dungeon ? ' gw-compass__city--dungeon' : ''}`}
       style={{ left: `${marker.x * 100}%` }}
       title={city_label}
     >
       <span aria-hidden="true" className="gw-compass__city-icons">
-        <Building2 size={13} strokeWidth={1.8} />
-        {marker.dungeon && <span className="gw-compass__city-dungeon">☠</span>}
+        {marker.dungeon ? <Skull size={16} strokeWidth={2.8} /> : <Building2 size={13} strokeWidth={1.8} />}
       </span>
       {marker.show_label && (
         <span className="gw-compass__city-label">

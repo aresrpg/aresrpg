@@ -136,7 +136,7 @@ export const create_scatter_layer = ({
 }: Readonly<{ scene: Scene; board_occlusion: BoardOcclusion }>): ScatterLayer => {
   const group = new Group()
   scene.add(group)
-  const meshes = new Map<string, Mesh>()
+  const meshes = new Map<string, Mesh<BufferGeometry, MeshStandardNodeMaterial>>()
   let visible = true
   let flatten_active = false
   const sync_visibility = (): void => {
@@ -169,6 +169,7 @@ export const create_scatter_layer = ({
     meshes.delete(key)
     group.remove(mesh)
     mesh.geometry.dispose()
+    mesh.material.dispose()
   }
   return Object.freeze({
     set_visible: (next: boolean) => {
@@ -184,7 +185,9 @@ export const create_scatter_layer = ({
       if (meshes.has(chunk.key)) return
       const geometry = build_geometry(chunk, instances)
       if (!geometry) return
-      const mesh = new Mesh(geometry, material)
+      // Chunk-owned material lifetime releases Three's per-object render bindings on eviction.
+      // The cloned node material still shares its shader graph and world uniforms.
+      const mesh = new Mesh(geometry, material.clone())
       mesh.position.set(chunk.origin[0], chunk.origin[1], chunk.origin[2])
       mesh.castShadow = false
       mesh.receiveShadow = true
@@ -197,8 +200,7 @@ export const create_scatter_layer = ({
       sync_visibility()
     },
     dispose: () => {
-      meshes.forEach((mesh) => mesh.geometry.dispose())
-      meshes.clear()
+      meshes.forEach((_, key) => remove(key))
       material.dispose()
       scene.remove(group)
     },

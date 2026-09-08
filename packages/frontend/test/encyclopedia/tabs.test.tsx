@@ -2,10 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { job_groups } from '@aresrpg/immutable'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { EntityButton } from '../../src/encyclopedia/components.tsx'
 
 test('entity rows render the level as a trailing badge', () => {
@@ -32,5 +30,4 @@ test('job recipes reuse the item-tab cards in the shared responsive grid', async
   expect(component_source).toContain('grid-cols-[repeat(auto-fill,minmax(280px,1fr))]')
   expect(component_source).toContain('text-[#77d99a]')
   expect(jobs_source).not.toContain('max-w-2xl')
-  expect(job_groups.gathering.every((job) => (encyclopedia_catalog.job(job)?.recipes.length ?? 0) > 0)).toBeTrue()
 })

@@ -36,6 +36,12 @@ const NODES_RAMP_AT = 20_000n
 const HOMOGENEOUS_BP = 5_000n
 const ARCHIMOB_BP = BigInt(archimob_appearance_bp)
 
+const zone_axis = (index: number): readonly [bigint, bigint] => {
+  const origin = index * ZONE_BLOCKS
+  if (!Number.isInteger(index) || origin < 0 || origin >= WORLD_SIZE) throw new RangeError('Invalid world zone')
+  return [BigInt(origin), BigInt(Math.min(ZONE_BLOCKS, WORLD_SIZE - origin))]
+}
+
 type MobRow = Readonly<{ mob_type: string; weight_bp: bigint; biomes: readonly number[]; cities: readonly number[] }>
 type ResourceRow = Readonly<{ item_type: string; biomes: readonly number[]; cities: readonly number[] }>
 type CityRow = Readonly<{ city: string; dungeon: string; x: number; z: number }>
@@ -188,6 +194,8 @@ export const mob_groups = (
   zz: number,
   seed: bigint
 ): readonly MobGroupRow[] => {
+  const [origin_x, span_x] = zone_axis(zx)
+  const [origin_z, span_z] = zone_axis(zz)
   const rows = population_rows(population, population.mobs, zx, zz)
   if (rows.length === 0) return []
   const total = rows.reduce((sum, row) => sum + row.weight_bp, 0n)
@@ -199,8 +207,8 @@ export const mob_groups = (
   const [level_lo, level_hi] = mob_level_scalar_bounds(distance)
   const groups: MobGroupRow[] = []
   for (let index = 0n; index < count; index += 1n) {
-    const x = BigInt(zx) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
-    const z = BigInt(zz) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
+    const x = origin_x + (draw(cursor) % span_x)
+    const z = origin_z + (draw(cursor) % span_z)
     const size = size_lo + (draw(cursor) % (size_hi - size_lo + 1n))
     const homogeneous = draw(cursor) % 10_000n < HOMOGENEOUS_BP
     const family = weighted_family(rows, total, cursor)
@@ -225,6 +233,8 @@ export const resource_packs = (
   zz: number,
   seed: bigint
 ): readonly ResourcePackRow[] => {
+  const [origin_x, span_x] = zone_axis(zx)
+  const [origin_z, span_z] = zone_axis(zz)
   const rows = population_rows(population, population.resources, zx, zz)
   if (rows.length === 0) return []
   const city = city_index_at(population, zx, zz) >= 0
@@ -235,8 +245,8 @@ export const resource_packs = (
   const count = RES_PACKS_MIN + (draw(cursor) % (RES_PACKS_MAX - RES_PACKS_MIN + 1n))
   const packs: ResourcePackRow[] = []
   for (let index = 0n; index < count; index += 1n) {
-    const x = BigInt(zx) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
-    const z = BigInt(zz) * ZONE_SIZE + (draw(cursor) % ZONE_SIZE)
+    const x = origin_x + (draw(cursor) % span_x)
+    const z = origin_z + (draw(cursor) % span_z)
     const row = rows[Number(draw(cursor) % BigInt(rows.length))]!
     const ordinary_nodes = nodes_lo + (draw(cursor) % (nodes_hi - nodes_lo + 1n))
     const nodes = city

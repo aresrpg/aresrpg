@@ -90,16 +90,11 @@ const assert_offer_removals = (
 export const trade_offer_kiosks = (
   additions: readonly TradeOfferAddition[],
   removals: readonly TradeOfferRemoval[],
-  own_caps: readonly TradeCapRow[],
-  sui: bigint,
-  own_sui: bigint
+  own_caps: readonly TradeCapRow[]
 ): readonly string[] => {
-  if (sui < 0n) throw new Error('The offered SUI amount cannot be negative.')
   assert_offer_removals(removals, own_caps, additions)
   const post_removal_amounts = trade_offer_post_removal_amounts(removals)
   assert_offer_additions(additions, post_removal_amounts)
-  if (additions.length + removals.length + (sui === own_sui ? 0 : 1) === 0)
-    throw new Error('The trade offer is unchanged.')
   return Object.freeze([
     ...new Set([...additions.map(({ item }) => item.kiosk), ...removals.map(({ cap }) => cap.kiosk)]),
   ])

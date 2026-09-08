@@ -4,6 +4,112 @@
 module aresrpg_math::fight_math_tests;
 
 use aresrpg_math::fight_math;
+use aresrpg_math::{prng, spell_effect};
+
+#[test]
+fun damage_healing_and_signed_resistance_boundaries() {
+  assert!(fight_math::sat_sub(5, 2) == 3 && fight_math::sat_sub(2, 5) == 0, 0);
+  assert!(fight_math::max_1(0) == 1 && fight_math::max_1(7) == 7, 1);
+  let elements = vector[b"earth", b"fire", b"water", b"air", b"unknown"];
+  let expected = vector<u64>[10, 20, 30, 40, 0];
+  let mut i = 0;
+  while (i < elements.length()) {
+    assert!(fight_math::primary_stat(&elements[i].to_string(), 10, 20, 30, 40) == expected[i], 2);
+    i = i + 1;
+  };
+  assert!(fight_math::amplify_damage(13, 50, 4) == 23, 3);
+  assert!(fight_math::heal_amount(13, 50) == 19, 4);
+  assert!(fight_math::apply_resistance(100, 90) == 50, 5);
+  assert!(fight_math::resolved_damage(10, 100, 5, 32_778, 32_768) == 22, 6);
+  assert!(fight_math::resist(100, 32_748, 32_768) == 120, 7);
+  assert!(fight_math::resist(100, 32_768, 32_768) == 100, 8);
+  assert!(fight_math::punishment_base(100, 150, 100) == 100, 9);
+  assert!(fight_math::punishment_base(100, 25, 100) == 175, 10);
+  assert!(fight_math::punishment_base(100, 0, 0) == 100, 11);
+  assert!(fight_math::apply_centered_shift(10, 90, 100) == 0, 12);
+  assert!(fight_math::apply_centered_shift(10, 95, 100) == 5, 13);
+}
+
+#[test]
+fun ranged_effects_consume_exactly_one_draw_and_fixed_effects_consume_none() {
+  let ranged = spell_effect::new_effect(0, b"earth".to_string(), 2, 7, 0, 0, 0, 10_000, 0, 0);
+  let fixed = spell_effect::new_effect(0, b"earth".to_string(), 4, 4, 0, 0, 0, 10_000, 0, 0);
+  let mut state = 7;
+  assert!(fight_math::roll_effect_value(&fixed, &mut state) == 4 && state == 7, 0);
+  let (next, raw) = prng::rng_next(7);
+  let value = fight_math::roll_effect_value(&ranged, &mut state);
+  assert!(state == next && value == 2 + (raw % 10_000) * 6 / 10_000, 1);
+  assert!(fight_math::roll_in_range(2, 7, 0) == 2, 2);
+  assert!(fight_math::roll_in_range(2, 7, 9_999) == 7, 3);
+  assert!(fight_math::roll_in_range(7, 2, 9_999) == 7, 4);
+  assert!(fight_math::effect_seed(5, 0) != fight_math::effect_seed(5, 1), 5);
+  assert!(fight_math::tackle_seed(5, 3) != fight_math::tackle_seed(5, 2), 6);
+  assert!(!fight_math::crit_at(0, 0, 0, 0), 7);
+  assert!(fight_math::crit_at(2, 2, 0, 0) && !fight_math::crit_at(3, 2, 0, 0), 8);
+  assert!(fight_math::crit_denominator(30, 100, 0) == 2, 9);
+  assert!(fight_math::crit_denominator(3, 0, 1000) == 2, 10);
+}
+
+#[test]
+fun initiative_weaves_unequal_sides_without_losing_seats() {
+  assert!(fight_math::weave_teams(vector[]) == vector[], 0);
+  assert!(fight_math::weave_teams(vector[0, 0, 0]) == vector[0, 1, 2], 1);
+  assert!(fight_math::weave_teams(vector[1, 1]) == vector[0, 1], 2);
+  assert!(fight_math::weave_teams(vector[0, 0, 0, 1, 1]) == vector[0, 3, 1, 4, 2], 3);
+  assert!(fight_math::weave_teams(vector[0, 1, 1, 1]) == vector[0, 1, 2, 3], 4);
+}
+
+#[test]
+fun tackle_combines_lockers_and_rounds_each_pool_loss_up() {
+  let (num, den) = fight_math::tackle_contest(0, &vector[]);
+  assert!(num == 1 && den == 1, 0);
+  let (num, den) = fight_math::tackle_contest(0, &vector[0, 10]);
+  assert!(num == 4 && den == 24, 1);
+  let (ap, mp) = fight_math::tackle_losses(6, 3, num, den);
+  assert!(ap == 5 && mp == 3, 2);
+  let (num, den) = fight_math::tackle_contest(1000, &vector[0]);
+  assert!(num == den, 3);
+  let (ap, mp) = fight_math::tackle_losses(6, 3, num, den);
+  assert!(ap == 0 && mp == 0, 4);
+}
+
+#[test]
+fun point_removal_guarantees_preserve_rng_and_dodge_stays_bounded() {
+  let (state, removed) = fight_math::remove_points(7, 5, false, 0, 0, 3, 3);
+  assert!(state == 7 && removed == 3, 0);
+  let (state, removed) = fight_math::remove_points(7, 2, false, 0, 0, 3, 3);
+  assert!(state == 7 && removed == 2, 1);
+  let (state, removed) = fight_math::remove_points(7, 2, true, 0, 0, 0, 0);
+  assert!(state == 7 && removed == 0, 2);
+  let mut successes = 0u64;
+  let mut refusals = 0u64;
+  let mut seed = 0;
+  while (seed < 100) {
+    let (_, strong) = fight_math::remove_points(seed, 8, true, 1000, 0, 3, 3);
+    let (_, weak) = fight_math::remove_points(seed, 8, true, 0, 1000, 3, 3);
+    let (_, equal) = fight_math::remove_points(seed, 1, true, 10, 10, 3, 3);
+    assert!(strong <= 3 && weak <= 3 && equal <= 1, 3);
+    if (strong == 3) successes = successes + 1;
+    if (weak == 0) refusals = refusals + 1;
+    seed = seed + 1;
+  };
+  assert!(successes > 0 && refusals > 0, 4);
+}
+
+#[test]
+fun zero_xp_inputs_and_flat_bands_preserve_boundaries() {
+  assert!(fight_math::retro_group_coefficient_tenths(0) == 0, 0);
+  assert!(fight_math::retro_group_coefficient_tenths(99) == 36, 1);
+  assert!(fight_math::xp_for_player(0, 0, 1, 1, 1, 1, 1) == 0, 2);
+  assert!(fight_math::xp_for_player(100, 0, 0, 1, 1, 1, 1) == 0, 3);
+  assert!(fight_math::xp_for_player(100, 0, 1, 0, 1, 1, 1) == 0, 4);
+  assert!(fight_math::xp_for_player(100, 0, 1, 1, 0, 1, 1) == 0, 5);
+  assert!(fight_math::xp_for_player(100, 0, 1, 1, 1, 0, 1) == 0, 6);
+  assert!(fight_math::xp_for_player(100, 0, 1, 1, 1, 1, 0) == 0, 7);
+  assert!(fight_math::mob_loot_chance_scaled(2345, 10, 10, 10) == 2345, 8);
+  assert!(fight_math::centered_band_scaled(90, 100, 10, 10, 10) == 90, 9);
+  assert!(fight_math::centered_band_scaled(0, 100, 10, 20, 10) == 0, 10);
+}
 
 #[test]
 fun mob_bands_scale_from_sixty_to_one_sixty_percent() {

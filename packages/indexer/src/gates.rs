@@ -14,6 +14,9 @@
 //!   `cargo test` the minute it compiles. Updating the snapshot is the
 //!   deliberate, reviewed act that says "the twins were resynced too"
 //!   (`UPDATE_LAYOUTS=1 cargo test` regenerates it).
+//! * **Random boundaries** — the package-size gate's isolated production build must keep
+//!   Random doors private, entry-only and non-returning. This checks ABI containment, not
+//!   transaction-level gas equivalence; unit-test bytecode promotes entry visibility.
 //! * **Existence** — a datatype missing from the bytecode (renamed module,
 //!   deleted struct) is a hard error, so no projection arm can go orphan.
 //! * **Event census** — every `event::emit` in the Move sources must be routed
@@ -47,7 +50,6 @@ mod tests {
         ("mastery", "Mastery"),
         ("mastery", "MasteryOffer"),
         ("kolizeum", "Kolizeum"),
-        ("distribution", "Airdrop"),
         ("distribution", "Giftcard"),
         ("loot_box", "BoxClaim"),
         ("forgemagie", "CrushClaim"),
@@ -60,7 +62,7 @@ mod tests {
         ("dungeon", "DungeonRun"),
         ("gathering", "PendingAmbush"),
         ("progression", "Hp"),
-        ("forgemagie", "ForgeState"),
+        ("item", "RolledStats"),
         ("pet", "FeedState"),
         ("fight", "FighterAuthority"),
         ("fight", "DungeonTag"),
@@ -77,7 +79,6 @@ mod tests {
         ("gathering", "AmbushKey"),
         ("item", "StatsKey"),
         ("item", "DamagesKey"),
-        ("forgemagie", "ForgeKey"),
         ("pet", "FeedKey"),
         // events (the routed table's layouts)
         ("character", "CharacterCreated"),
@@ -102,12 +103,12 @@ mod tests {
         ("gathering", "RareGathered"),
         ("kolizeum", "KolizeumCreated"),
         ("kolizeum", "KolizeumPaid"),
-        ("distribution", "AirdropCreated"),
-        ("distribution", "AirdropClaimed"),
+        ("item", "AmountChanged"),
         ("distribution", "GiftcardMinted"),
         ("distribution", "GiftcardRedeemed"),
         ("crafting", "Crafted"),
         ("forgemagie", "RuneScribed"),
+        ("listing_rule", "SellerProved"),
         ("forgemagie", "GearCrushed"),
         ("pet", "PetFed"),
         ("loot_box", "LootTableSet"),
@@ -158,6 +159,8 @@ mod tests {
     /// any player can be watching, and the World object's own projection carries
     /// everything the event would have said.
     const DEFERRED_EVENTS: &[(&str, &str)] = &[
+        // SDK receipts use exact amounts; the live wire already projects Item object writes.
+        ("item", "AmountChanged"),
         ("world", "WorldCreated"),
         // Registry::ContentWritten is the canonical content invalidation. This birth receipt
         // carries no additional runtime projection fact.
@@ -168,6 +171,12 @@ mod tests {
         // The SDK consumes the deterministic vector from its own receipt to avoid composing
         // zero-owed rune calls. The CrushClaim object remains reconnect authority.
         ("forgemagie", "CrushRevealed"),
+        // Independent wallet finance is read through the SDK. This receipt certifies the
+        // royalty split but has no game-state projection or realtime consumer.
+        ("staking", "RoyaltyFunded"),
+        // Treasury vesting is independent wallet finance. Its certified receipt and the
+        // canonical offering balance own this claim; it has no game projection consumer.
+        ("offering", "CommunityClaimed"),
     ];
 
     fn repo_root() -> PathBuf {
@@ -210,7 +219,7 @@ mod tests {
     }
 
     #[test]
-    fn every_package_respects_the_shared_publish_limit() {
+    fn production_packages_keep_size_and_random_boundaries() {
         // The 2026-08-30 transaction rejected 97,048 raw bytes as a 102,559-byte package
         // object. The shared 96,000-byte ceiling preserves roughly 1 KB below Sui's 102,400-byte
         // object limit after the observed linkage/type-origin metadata.
@@ -266,6 +275,9 @@ mod tests {
                         .len()
                 })
                 .sum::<u64>();
+            if slot == "game" {
+                super::random_doors::assert_production_random_boundaries(&load_modules(&build_dir));
+            }
             std::fs::remove_dir_all(&install_dir).expect("removing package-size build");
             assert!(
                 bytes <= max_bytecode_bytes,
@@ -515,6 +527,7 @@ mod tests {
             repo_root().join("packages/move-combat/sources"),
             repo_root().join("packages/move/sources"),
             repo_root().join("packages/seed/sources"),
+            repo_root().join("packages/kares/sources"),
         ] {
             for entry in std::fs::read_dir(&sources).expect("listing move sources") {
                 let path = entry.expect("dir entry").path();
@@ -530,6 +543,7 @@ mod tests {
                             .or_else(|| line.trim().strip_prefix("module aresrpg_combat::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
+                            .or_else(|| line.trim().strip_prefix("module aresrpg_kares::"))
                             .map(|rest| rest.trim_end_matches(';').to_string())
                     })
                     .unwrap_or_else(|| panic!("no module decl in {}", path.display()));
@@ -732,3 +746,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "../test/random_doors.rs"]
+mod random_doors;

@@ -508,7 +508,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             days={overview.ranges.online}
             loading={!!overview.pending.online}
             series={online_series(copy, online)}
-            subtitle={text(copy, 'online_players_body', 'Peak authenticated connections per bucket')}
+            subtitle={text(copy, 'online_players_body', 'Peak unique authenticated players per bucket')}
             timestamps={online.online.map(({ at_ms }) => at_ms)}
             title={text(copy, 'online_players', 'Online players')}
             tone="activity"

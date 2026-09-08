@@ -3,12 +3,18 @@
 
 import { describe, expect, test } from 'bun:test'
 import { class_names, class_spell_unlocks } from '@aresrpg/immutable'
-import type { TransactionPlugin } from '@mysten/sui/transactions'
+import { Transaction, type TransactionPlugin } from '@mysten/sui/transactions'
 
 import type { Receipt } from '../src/cache.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
 import type { SeedContent } from '../src/seed.ts'
-import { board_catalog_id, item_template_id, spell_template_id } from '../src/seed_ids.ts'
+import {
+  board_catalog_id,
+  giftcard_id,
+  giftcard_claim_id,
+  item_template_id,
+  spell_template_id,
+} from '../src/seed_ids.ts'
 import {
   apply_seed_update_batches,
   create_seed_admin,
@@ -21,6 +27,8 @@ import {
 } from '../src/seed_admin.ts'
 import { seed_sync_rows } from '../src/seed_sync.ts'
 import type { SeedUpdateBatch } from '../src/seed_updates.ts'
+
+import { execution_receipt } from './helpers/execution_receipt.ts'
 
 const object_id = (value: number): string => `0x${value.toString(16).padStart(2, '0').repeat(32)}`
 const package_id = object_id(1)
@@ -47,7 +55,7 @@ const content: SeedContent = {
   dungeons: [],
   worlds: [],
   mastery: { offers: [] },
-  airdrop: { drops: [], giftcards: [] },
+  airdrop: { giftcards: [] },
   biome_maps: [],
   boards: [],
 }
@@ -67,13 +75,16 @@ const sdk_with = (
   json_by_id: Readonly<Record<string, unknown>> = {},
   behavior: Readonly<{
     before_objects?: (ids: readonly string[]) => void
-    execute?: () => unknown
+    execute?: (transaction: Uint8Array) => unknown
   }> = {}
 ) =>
   SDK({
     address: object_id(9),
     pins,
-    sign_transaction: async () => ({ bytes: '', signature: '' }),
+    sign_transaction: async (transaction) => ({
+      bytes: Buffer.from(await transaction.build()).toString('base64'),
+      signature: '',
+    }),
     client: {
       core: {
         resolveTransactionPlugin: () => resolve_transaction,
@@ -94,7 +105,8 @@ const sdk_with = (
             })),
         }),
         simulateTransaction: async () => ({}),
-        executeTransaction: async () => behavior.execute?.() ?? {},
+        executeTransaction: async ({ transaction }: { transaction: Uint8Array }) =>
+          execution_receipt(transaction, (await behavior.execute?.(transaction)) ?? {}),
         waitForTransaction: async () => ({}),
       },
     } as SuiTransport,
@@ -274,9 +286,7 @@ describe('seed admin progress', () => {
       config: { admin_cap: admin_cap_id, content_root: content_root_id },
     })
 
-    await expect(session.execute('boards:catalog', {})).rejects.toThrow(
-      /published · CATALOG_CREATED.*Do not republish it/u
-    )
+    await expect(session.execute('boards:catalog', {})).rejects.toThrow(/published · \S+.*Do not republish it/u)
 
     expect(executions).toBe(1)
     expect(post_publish_reads).toBe(1)
@@ -426,4 +436,131 @@ describe('seed admin progress', () => {
 
     expect(removal.board_removals).toEqual([{ key: 'board:2', label: 'board #2' }])
   })
+})
+
+describe('scoped gift issuance', () => {
+  const cards: SeedContent = {
+    ...content,
+    airdrop: {
+      giftcards: [
+        { id: 'one', item_type: 'ore', amount: 5, custody: object_id(8), network: 'testnet' },
+        { id: 'other', item_type: 'other_pet', amount: 1, custody: object_id(7), network: 'testnet' },
+        { id: 'main', item_type: 'ore', amount: 1, custody: object_id(6), network: 'mainnet' },
+      ],
+    },
+  }
+  const config = { admin_cap: admin_cap_id, content_root: pinned_content_root_id }
+  const ore = item_template_id(pinned_content_root_id, seed_package_id, 'ore')
+  const card = giftcard_id(pinned_content_root_id, package_id, 'one')
+  const claim = giftcard_claim_id(pinned_content_root_id, card)
+
+  test('only selected network and gift targets enter the plan; unrelated ledger stays out of validation', async () => {
+    const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore]))
+    const session = await create_seed_admin({ sdk, content: cards, config, gift_item_type: 'ore' })
+    expect((await session.refresh()).batches.map(({ phase, targets, state }) => ({ phase, targets, state }))).toEqual([
+      { phase: 'supply', targets: 1, state: 'ready' },
+    ])
+    const view = await session.check_changes({
+      retired: { hash: 'old', label: 'spell retired', domain: 'spell', spell: { classe: 'iop' } },
+    })
+    expect(view.errors).toEqual([])
+    expect(view.removed).toEqual([])
+    expect(view.new_rows.map(({ key }) => key)).toEqual([card])
+    await expect(
+      session.apply_changes({}, { before_execute: async () => {}, checkpoint: async () => {} })
+    ).rejects.toThrow('cannot update')
+    await expect(session.freeze_forever()).rejects.toThrow('cannot freeze')
+  })
+
+  test('a redeemed voucher remains complete through its permanent claim marker', async () => {
+    const session = await create_seed_admin({
+      sdk: sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore, claim])),
+      content: cards,
+      config,
+      gift_item_type: 'ore',
+    })
+    expect(next_seed_batch(await session.refresh())).toBeNull()
+    expect((await session.check_changes({})).new_rows).toEqual([])
+    await expect(session.execute('giftcards:0', {})).rejects.toThrow('not the next ready')
+  })
+
+  test('missing templates block issuance and unknown gift types refuse', async () => {
+    const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id]))
+    const session = await create_seed_admin({ sdk, content: cards, config, gift_item_type: 'ore' })
+    expect(next_seed_batch(await session.refresh())?.state).toBe('blocked')
+    await expect(create_seed_admin({ sdk, content: cards, config, gift_item_type: 'absent' })).rejects.toThrow(
+      'No configured'
+    )
+  })
+
+  test('a changed issued allocation refuses before any new voucher can be sent', async () => {
+    const session = await create_seed_admin({
+      sdk: sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore, claim])),
+      content: cards,
+      config,
+      gift_item_type: 'ore',
+    })
+    expect((await session.check_changes({ [card]: { hash: 'old', label: 'old allocation' } })).errors).toEqual([
+      'gift card one was already issued with another allocation',
+    ])
+  })
+
+  test('certified receipts checkpoint before a failed visibility read', async () => {
+    const checkpoints: string[] = []
+    const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore]))
+    const session = await create_seed_admin({ sdk, content: cards, config, gift_item_type: 'ore' })
+    await expect(
+      session.execute('giftcards:0', {}, async (digest) => {
+        checkpoints.push(digest)
+      })
+    ).rejects.toThrow('Do not republish')
+    expect(checkpoints).toHaveLength(1)
+  })
+})
+
+test('a full holder batch fits protocol limits and only transfers its selected vouchers', async () => {
+  const root = pinned_content_root_id
+  const existing = new Set([admin_cap_id, root, item_template_id(root, seed_package_id, 'ore')])
+  const cards = Array.from({ length: 499 }, (_, index) => ({
+    id: `bullshark_holders_20260908_${index.toString(16).padStart(64, '0')}`,
+    item_type: 'ore',
+    amount: 1,
+    custody: `0x${(index + 8).toString(16).padStart(64, '0')}`,
+  }))
+  const scoped: SeedContent = {
+    ...content,
+    airdrop: { giftcards: [...cards, { id: 'other', item_type: 'unselected', amount: 1, custody: object_id(7) }] },
+  }
+  let sent = 0
+  const sdk = sdk_with(
+    existing,
+    {},
+    {
+      execute: (bytes) => {
+        const data = Transaction.from(bytes).getData()
+        expect(data.commands.length).toBeLessThan(1024)
+        const recipients = data.commands.flatMap((command) =>
+          command.TransferObjects ? [command.TransferObjects.address] : []
+        )
+        expect(recipients).toHaveLength(499)
+        for (const [index, recipient] of recipients.entries()) {
+          if (recipient.$kind !== 'Input') throw new Error('Gift recipient must be a pure address input')
+          expect(data.inputs[recipient.Input!]?.Pure?.bytes).toBe(
+            Buffer.from(cards[index]!.custody.slice(2), 'hex').toString('base64')
+          )
+        }
+        for (const card of cards) existing.add(giftcard_claim_id(root, giftcard_id(root, package_id, card.id)))
+        sent++
+      },
+    }
+  )
+  const session = await create_seed_admin({
+    sdk,
+    content: scoped,
+    config: { admin_cap: admin_cap_id, content_root: root },
+    gift_item_type: 'ore',
+  })
+  const result = await session.execute('giftcards:0', {})
+  expect(next_seed_batch(result.snapshot)).toBeNull()
+  expect(sent).toBe(1)
 })

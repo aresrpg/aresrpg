@@ -14,6 +14,7 @@ import {
   type FightSetup,
   type HydratedFightCheckpoint,
 } from '@aresrpg/fight'
+import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 
 export type ActiveFightSession = Readonly<{
   mode: FightMode
@@ -79,6 +80,20 @@ export const create_fight_session = ({
     apply: (input: Readonly<FightInput>): boolean => {
       if (!runtime) return false
       publish(runtime.apply(stamp_boundary(input, now)))
+      return true
+    },
+    simulate_turn: (): boolean => {
+      if (!runtime || mode !== 'local') return false
+      const { contract } = runtime.state()
+      const minimum = contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms
+      const observed_ms = now()
+      const boundary = { observed_ms: observed_ms < minimum ? minimum : observed_ms }
+      const actor = contract.queue[Number(contract.turn_ptr)]
+      publish(
+        contract.fighters[Number(actor)]?.settled
+          ? runtime.apply({ type: 'crank', ...boundary })
+          : runtime.simulate_turn(boundary)
+      )
       return true
     },
     cancel_pending_turn: (): boolean => {

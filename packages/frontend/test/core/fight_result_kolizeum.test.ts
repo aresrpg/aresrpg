@@ -9,6 +9,7 @@ import { initial_app_state } from '../../src/store.ts'
 const pending_result = (): FightResult =>
   Object.freeze({
     fight: '0xf1',
+    boss_weight: 0,
     dungeon: null,
     kolizeum: '0xk1',
     kolizeum_wager: Object.freeze({ stake_mist: 200_000_000n, payout_mist: null }),

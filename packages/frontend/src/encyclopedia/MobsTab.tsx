@@ -265,25 +265,28 @@ export const MobsTab = ({
             </div>
           )}
         </Section>
-        {detail.worlds.length > 0 && (
+        {detail.locations.length > 0 && (
           <Section title={text('found_in')}>
             <div className="flex flex-col gap-1" data-mob-found-in="">
-              {detail.worlds.map((world) => {
-                const biomes = world.mobs.find(({ mob_type }) => mob_type === detail.mob.mob_type)?.biomes ?? []
+              {detail.locations.map((location) => {
+                const places = [...location.biomes, ...location.cities]
                 return (
                   <button
                     className="flex cursor-pointer items-center gap-2 bg-white/2 px-2 py-1.5 text-left hover:bg-[#c8963c]/8"
-                    key={world.world}
-                    onClick={() => select_world(world.world)}
+                    key={location.world}
+                    onClick={() => select_world(location.world)}
                     type="button"
                   >
                     <MapPin className="shrink-0 text-[#c8963c]/60" size={11} />
                     <span className="min-w-0 flex-1 text-[10px] tracking-[0.1em] text-[#c8963c] uppercase">
-                      {titleize(world.world)}
+                      {titleize(location.world)}
                     </span>
-                    {biomes.length > 0 && (
-                      <span className="text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">
-                        {biomes.map(titleize).join(', ')}
+                    {places.length > 0 && (
+                      <span
+                        className="text-[8px] tracking-[0.12em] text-[#6b7280] uppercase"
+                        data-mob-location-places={location.world}
+                      >
+                        {places.map(titleize).join(' · ')}
                       </span>
                     )}
                   </button>

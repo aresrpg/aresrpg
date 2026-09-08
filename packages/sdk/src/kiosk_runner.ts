@@ -14,10 +14,11 @@
 // another tab may have advanced it without this session receiving its receipt.
 
 import type { KioskOwnerCap } from '@mysten/kiosk'
+import type { TransactionObjectArgument } from '@mysten/sui/transactions'
 
 import type { SDK } from './client.ts'
 import type { Receipt } from './cache.ts'
-import { pre_submission_stale_owned_ref } from './transaction_error.ts'
+import { pre_submission_failure, pre_submission_stale_owned_ref } from './transaction_error.ts'
 
 type GameSdk = ReturnType<typeof SDK>
 type KioskObjectRef = Pick<KioskOwnerCap, 'objectId' | 'version' | 'digest'>
@@ -31,6 +32,7 @@ export type KioskCustody = Readonly<{ kiosk: string; kiosk_cap?: string }>
 export type KioskCapLoader = (kiosk_id?: string, fresh?: boolean) => Promise<KioskOwnerCap | null>
 
 type RunOptions = Readonly<{
+  merges?: readonly Readonly<{ target_id: string; source_ids: readonly string[] }>[]
   include?: object
   custody?: KioskCustody
   gas_scope?: string
@@ -93,7 +95,28 @@ export const create_personal_kiosk_runner = (load: KioskCapLoader) => {
 const object_ref = ({ objectId, version, digest }: KioskOwnerCap): KioskObjectRef =>
   Object.freeze({ objectId, version, digest })
 
+const with_optional_merges = async (
+  groups: RunOptions['merges'],
+  action: (merge: boolean) => Promise<Receipt>
+): Promise<Receipt> => {
+  try {
+    return await action(true)
+  } catch (error) {
+    if (!pre_submission_failure(error) || !groups?.some(({ source_ids }) => source_ids.length > 0)) throw error
+    return action(false)
+  }
+}
+
 export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => {
+  const append_merges = (
+    tx: ReturnType<GameSdk['tx']>,
+    kiosk: TransactionObjectArgument,
+    cap: TransactionObjectArgument,
+    groups: RunOptions['merges']
+  ): void => {
+    for (const { target_id, source_ids } of groups ?? [])
+      for (const source_id of source_ids) sdk.doors.merge_stacks(tx, { kiosk, cap, target_id, source_id })
+  }
   return {
     with_kiosk: async (
       compose: (
@@ -105,13 +128,17 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
     ): Promise<Receipt> =>
       retry_stale_kiosk_ref(async (fresh) => {
         const cap = await resolve_kiosk_cap(kiosk_cap, options.custody, fresh)
-        const tx = sdk.tx()
-        sdk.with_owner_kiosk(tx, cap, (kiosk, owner_cap) => compose(tx, kiosk, owner_cap))
-        return sdk.execute(tx, options)
+        return with_optional_merges(options.merges, async (merge) => {
+          const tx = sdk.tx()
+          sdk.with_owner_kiosk(tx, cap, (kiosk, owner_cap) => {
+            if (merge) append_merges(tx, kiosk, owner_cap, options.merges)
+            compose(tx, kiosk, owner_cap)
+          })
+          return sdk.execute(tx, options)
+        })
       }),
 
-    /** &Random doors take the PACKED PersonalKioskCap — Move unpacks inside (api.move law,
-     *  2026-08-21): no bracket, no borrow commands, the Random door stays the last command. */
+    /** Optional preparation returns its borrowed cap before the final Random command. */
     with_terminal_kiosk: async (
       compose: (tx: ReturnType<GameSdk['tx']>, kiosk: string, personal: KioskObjectRef) => void,
       options: RunOptions = {}
@@ -120,9 +147,13 @@ export const create_kiosk_runner = (sdk: GameSdk, kiosk_cap: KioskCapLoader) => 
         const personal = await resolve_kiosk_cap(kiosk_cap, options.custody, fresh)
         if (!personal) throw new Error('No personal kiosk exists for this session yet')
         await sdk.hydrate_unknown([personal.kioskId, ...(options.inputs ?? [])])
-        const tx = sdk.tx()
-        compose(tx, personal.kioskId, object_ref(personal))
-        return sdk.execute(tx, options)
+        return with_optional_merges(options.merges, async (merge) => {
+          const tx = sdk.tx()
+          if (merge && options.merges?.some(({ source_ids }) => source_ids.length > 0))
+            sdk.with_owner_kiosk(tx, personal, (kiosk, cap) => append_merges(tx, kiosk, cap, options.merges))
+          compose(tx, personal.kioskId, object_ref(personal))
+          return sdk.execute(tx, options)
+        })
       }),
   }
 }

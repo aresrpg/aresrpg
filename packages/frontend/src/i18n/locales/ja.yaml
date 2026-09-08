@@ -1,6 +1,8 @@
 title: WebGPU を利用できません
 body: 完全なワールドには WebGPU が必要です。代わりに軽量グリッドを表示しています。
 fatal: このブラウザは WebGPU または WebGL のグラフィックコンテキストを作成できません。
+engine_recovery: ワールドの読み込みまたは描画が停止しました。再読み込みしてもう一度お試しください。
+engine_reload: 再読み込み
 world_unavailable_title: ワールドを利用できません
 world_unavailable: このワールドにはまだ地形レシピがありません。
 mobile_unavailable_label: モバイルアクセス
@@ -38,6 +40,7 @@ admin: 管理
 online: オンライン
 account: アカウント
 join_discord: Discord に参加
+join_telegram: Telegram に参加
 sui_universe: Suiユニバース
 server_disconnected: 切断
 server_connecting: 接続中
@@ -181,6 +184,7 @@ party_panel:
   run_to_wrong_world: そのパーティーメンバーは現在のワールドにいません。
   run_to_unavailable: そのパーティーメンバーのオンチェーン位置を取得できません。
 trade_panel:
+  kares: Stacking
   close: 閉じる
   title: プレイヤー取引
   invite_sent: 取引招待を送信しました
@@ -217,6 +221,8 @@ trade_panel:
   recover_notice: 提示全体を1回の取引で回収します。
   waiting_counterparty: あなた側は完了しました。相手を待っています。
   finalizing: 完了中…
+transaction_unknown_toast: 前の操作を確認しています。結果が判明するまで、新しい取引は実行できません。
+transaction_recovered_toast: 前の取引が見つかりました。ページを更新して結果を確認してから、次の操作を選んでください。
 world_hud:
   compass_label: コンパス
   zone: ゾーン
@@ -450,7 +456,7 @@ marketplace_page:
 mastery_page:
   subtitle: デイリーチャレンジ
   title: マスタリー
-  lead: 毎日ダンジョンをクリアして、特別な報酬を手に入れよう。
+  lead: デイリーダンジョンクエストを達成して特別な報酬を獲得しましょう。休んだ日があっても、貯めたマスタリーポイントは失われません。
   balance: マスタリーポイント
   daily_ready: デイリークエストに挑戦できます
   daily_syncing: デイリークエストを更新中…
@@ -479,16 +485,13 @@ mastery_page:
   offer_purchased: マスタリー報酬を購入しました。
 
 airdrop_page:
-  title: 'エアドロップ'
-  subtitle: '対象ホルダー向けの限定アイテムを受け取る'
-  minted: '{{count}} 個ミント済み'
-  eligible_count: '{{count}} 件が対象'
-  eligible: '対象'
-  not_eligible: '対象外'
-  claimed: '受取済み'
-  claim: '受け取る'
-  holder_title: '保有者ウォレット'
-  holder_connect_hint: '対象NFTを保有するウォレットを接続してください'
+  destination: 'ゲームウォレット：'
+  refresh: '更新'
+  title: 'ギフト'
+  subtitle: 'ギフトカードをゲームウォレットに移す'
+  claim: '移す'
+  holder_title: '外部ウォレット'
+  holder_connect_hint: 'ギフトカードを持つウォレットを接続してください'
   holder_connect: 'ウォレットを接続'
   holder_connecting: '接続中…'
   holder_connected: '接続済み'
@@ -501,10 +504,7 @@ airdrop_page:
   gift_claiming: '印刷されたギフトカードを受け取り中…'
   gift_retry: 'ギフトカードを受け取る'
   redeem: '交換'
-  empty: '有効なエアドロップはありません'
-  empty_hint: '提携コレクションのホルダー向けエアドロップは、開始時にここに表示されます。'
-  pending_claim: 'エアドロップを受取中…'
-  toast_claimed: 'エアドロップを受け取りました'
+  empty: 'このウォレットにギフトカードはありません'
   set:
     title: 'セット'
     subtitle: '予約アイテム — 展示のみ'
@@ -634,7 +634,7 @@ admin_page:
   player_activity_body: 日次活動と移動30日リーチ
   stickiness: DAU / 30日
   online_players: オンラインプレイヤー
-  online_players_body: バケットごとの認証済み接続数のピーク
+  online_players_body: バケットごとの認証済みユニークプレイヤー数のピーク
   online_now: オンラインプレイヤー
   peak: ピーク
   revenue: 収益
@@ -778,6 +778,7 @@ simulator_page:
   blob_single: 単一形状
   blob_click: セルクリックで配置
 fight_hud:
+  stop_spectating: 観戦を終了
   board_label: 戦闘ボード
   turn_order: ターン順
   turn_order_collapse: ターン順を折りたたむ
@@ -1223,8 +1224,6 @@ encyclopedia_page:
     over_maging_desc: ステータスを自然な最大値以上に押し上げます。各ステータス行は101の追加ウェイトが上限です。オーバーメイジの最大値はステータスの単位ウェイトに依存します——体力（ウェイト0.25）のような軽いステータスは約404ポイント超過できますが、知恵（ウェイト3）のような重いステータスは約33ポイントしか超過できません。
     forgemagie_tips: ヒント
     forgemagie_tips_desc: エキゾチック/オーバーメイジの場合：まず安いステータスを外してシンクを貯め、バッファがある状態で難しいステータスを通し、その後失ったステータスを戻す（最大値から遠いので簡単）。オーバーメイジとエキゾチックのステータスは失敗時に最初に失われます。
-    forgemagie_xp: 経験値
-    forgemagie_xp_desc: 経験値は成功時のみ付与されます（クリティカルまたはニュートラル）。高レベルアイテムや重いルーンほど多くの経験値を獲得できます。Raルーンは BaやPaルーンの2倍の経験値を付与します。計算式：max(1, ルーンウェイト × (1 + アイテムレベル / 50) × ティア倍率)、Raの倍率は2、それ以外は1。
     action_points: アクションポイント（AP）
     movement_points: 移動ポイント（MP）
     critical_stat: クリティカル
@@ -1519,6 +1518,21 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: トランザクション手数料を支払うSUIがなくなりました。プレイを続けるにはウォレットにチャージしてください。
 characters_page:
+  delete_character: 'キャラクターを削除'
+  delete_warning: '削除は取り消せません。キャラクターの進行状況はすべて失われ、名前は予約されたままになります。'
+  delete_no_refund: '作成費用の{{amount}} SUIは返金されません。'
+  delete_equipment: 'ペット、道具、装飾品を含むすべての装備を外してください。'
+  delete_fight: '先に戦闘を終了するか離脱してください。'
+  delete_party: '先にパーティーを離脱してください。'
+  delete_dungeon: '先にダンジョンを完了するか中断してください。'
+  delete_ambush: '先に資源の守護者との戦闘を解決してください。'
+  delete_listing: '先にキャラクターの出品を取り消してください。'
+  delete_unavailable: 'キャラクターと接続が利用可能になるまでお待ちください。'
+  delete_pending: '削除中…'
+  claims_title: 未受取の報酬
+  claim_collect: 報酬を受け取る
+  claim_box: ボックスの報酬
+  claim_crush: 粉砕の成果
   tab_equipment: 装備
   tab_stats: ステータス
   tab_spells: 呪文
@@ -1620,6 +1634,12 @@ characters_page:
   feed_full: 満腹です
   feed_pending: 給餌中…
   feed_success: 餌をあげました
+  feed_confirm: '食事を確定'
+  feed_consumes: '{{name}}を1個消費'
+  feed_daily_note: '1日1個のごはんで、少しずつ強くなります。'
+  feed_happy: '{{name}}は大喜び！'
+  feed_gain: 'パワー +1'
+  feed_unavailable: 'このペットは利用できなくなりました。'
   claim_success: 報酬を受け取りました
   crush_title: 装備を粉砕
   crush_confirm_body: '{{name}}を粉砕しますか？アイテムは永久に失われ、ルーンになります。'
@@ -1639,7 +1659,7 @@ characters_page:
   revealing: 公開中…
   collecting: 受け取り中…
   continue_cta: 続ける
-  stat_maxed: このアイテムではこのステータスのルーン上限に達しています
+  stat_maxed: このルーンはステータスまたは追加能力の重量上限を超えます
   stat:
     movement: 'MP'
     action: 'AP'
@@ -2050,3 +2070,237 @@ spell_names:
   'Word of Youth': '若さの言葉'
   'Wounding Word': '負傷の言葉'
   'Zatoishwan Stance': 'Zatoishwan Stance'
+
+item_categories:
+  cosmetic_hat: 外見用の帽子
+  cosmetic_cloak: 外見用のマント
+
+kares: Stacking
+kares_page:
+  stake_more: '追加ステーク'
+  additional_daily: '追加 / 日'
+  max: '最大'
+  external_wallet_hint: '外部ウォレットのKARESを個別にステーク・管理します。'
+  select_wallet: 選択
+  staking_revenue: 'ステーカーは、AresRPGマーケットで回収されたロイヤリティの20%をSUIで分配され、資金提供済みのKARES報酬も受け取ります。'
+  game_account: 'AresRPGアカウント'
+  external_wallet: '外部ウォレット'
+  daily_kares: 'KARES / 日・推定'
+  daily_sui: 'SUI / 日・推定'
+  daily_estimate_note: '現在のステーク比率と資金提供済み報酬に基づく、今後24時間の推定です。変動する場合があります。'
+  position_rewards: 'ポジションの報酬'
+  manage_stake: 'ステーク管理'
+  same_account: 'このウォレットはAresRPGアカウントと同じです。アカウント欄でステークを管理してください。'
+  claim_kares: 'KARESを受け取る'
+  close: '閉じる'
+  sale_card_soon_title: 'まもなく開始。'
+  sale_card_soon_note: 'パブリックセールがまもなく始まります。'
+  sale_card_soon_action: 'セールを見る'
+  sale_card_live_label: 'セール開催中'
+  sale_card_live_title: '今すぐ参加しよう'
+  sale_card_target_reached: '目標達成'
+  sale_card_done_title: 'セール終了'
+  sale_card_done_note: 'KARESと、対象となるSUIの返金を受け取りましょう。'
+  sale_card_refund_note: '最低目標額に達しませんでした。SUIの全額返金を受け取れます。'
+  community_release_note: 'セールの正常な決済後、1,825日間でロック解除されるコミュニティKARESは、トレジャリーのみが受け取れます。受け取ったトークンは配布またはバーンできます。'
+  sale_unlock_note: '販売が成功して終了すると、販売トークンはすべてロック解除されます。'
+  unlocked_immediately: '即時ロック解除'
+  vested_five_years: '5年間で権利確定'
+  eyebrow: '共に築く世界'
+  launch_title: '次の章を、共に。'
+  launch_lead: 'KARESの初回公開販売に参加して、AresRPGの世界を育てましょう。'
+  offering: '初回公開販売'
+  fixed_supply: '固定供給'
+  fair_share: '同じ価格。拠出額に応じた配分。'
+  fair_detail: '最終配分は拠出額に応じて決定。上限超過分は比例して返金されます。'
+  connect: 'ウォレットを接続'
+  disconnect: '切断'
+  choose_account: 'アカウントを選択'
+  no_wallet: '参加にはSuiウォレットが必要です。'
+  refresh: '更新'
+  loading: 'オンチェーン情報を読み込み中…'
+  unavailable: 'このネットワークでは募集はまだ公開されていません。'
+  pending: '取引を確認中…'
+  confirmed: '取引が確定しました'
+  contribute: 'SUIを拠出'
+  amount: '数量'
+  balance: '利用可能残高'
+  amount_invalid: '小数点以下9桁までの正の数量を入力してください。'
+  insufficient: '利用可能残高を超えています。'
+  gas_note: '取引手数料用のSUIを残してください。'
+  raised: '拠出総額'
+  minimum: '最低募集額'
+  maximum: '受入上限'
+  opens: '開始'
+  closes: '終了'
+  estimate: '推定最終価格'
+  price_note: '最終配分は募集終了時に確定します。'
+  your_contribution: 'あなたの拠出'
+  claim: 'KARESと超過SUIを受け取る'
+  refund: '返金を受け取る'
+  upcoming: '未開始'
+  open: '募集中'
+  successful: '販売成功'
+  refundable: '返金受付中'
+  testnet: 'テストネット・テスト資産のみ'
+  back_game: 'AresRPGを探索'
+  funding_title: 'コミュニティが支える世界'
+  liquidity: '初期流動性'
+  development: '開発資金'
+  liquidity_note: '初期KARES/SUI市場用の資金です。プールはプロジェクトが作成します。'
+  development_note: 'ゲーム、インフラ、そして次の章のための資金。'
+  staking_title: あなたのステーク、あなたの取り分。
+  staking_lead: 'KARESを預けてKARESとSUIの報酬を獲得。発生済み報酬はいつでも受け取れます。'
+  pool_stake: '総ステーキング量'
+  your_stake: 'あなたのステーキング'
+  claimable: '発生済み報酬'
+  stake: 'KARESをステーク'
+  withdraw: 'ステークを引き出す'
+  claim_rewards: '報酬を受け取る'
+  fund_title: '報酬を寄付'
+  fund_note: '寄付は稼働報酬日30日間で分配されます。寄付の取り消しはできません。'
+  donate: '寄付する'
+  no_positions: 'ステーキング状況はここに表示されます。'
+  inactive: '募集の精算完了後にステーキングが開始します。'
+  account_label: 'アカウント'
+  position: 'ポジション'
+  tokenomics: 'KARESトークン設計'
+  community: 'コミュニティ報酬'
+  team: 'チーム配分'
+  five_years: 'コミュニティのステーキング報酬'
+  mastery_title: 'プレイで獲得。またはKARESをバーン。'
+  mastery_note: '各報酬は同数の獲得ポイントまたはKARESで購入可能。支払ったKARESは永久にバーンされます。'
+  rewards_note: '200,000 KARESを稼働報酬日1,825日間で放出。追加寄付は30稼働日で放出。ステーカー不在時は停止します。'
+  revenue_note: '回収したマーケットロイヤリティの20%をSUIステーキング報酬へ。報酬は収益と参加ステーク量に応じて変動します。'
+  payment: '支払い方法'
+  points: 'マスタリーポイント'
+  burn_buy: '{{cost}} KARESをバーン'
+  kares_missing: 'KARESが不足しています'
+  language: '言語'
+  refund_note: '販売終了時に最低額に達していなければ、拠出したSUIの全額を返金請求できます。'
+  offering_contract: '募集コントラクト'
+  min_marker: '最低'
+  max_marker: '上限'
+  min_reached: '最低額達成'
+  min_pending: '最低額に向けて'
+  oversubscribed: '上限超過'
+  subscribed: '拠出'
+  oversub_note: '引き続き参加可能。同じ価格で配分され、超過SUIは比例して返金されます。'
+  opens_in: '開始まで'
+  closes_in: '終了まで'
+  days_short: '日'
+  your_investment: 'あなたの拠出'
+  your_allocation: 'あなたのKARES配分'
+  current_price: '現在の募集価格'
+  estimated_until_close: '募集終了までの推定値'
+  accepted_contribution: '受入拠出額'
+  excess_refund: '返金されるSUI'
+  unclaimed_note: '未受取の拠出と配分'
+  connect_preview: 'ウォレットを接続して配分を確認'
+  no_pending_allocation: '未受取の拠出はありません'
+  play_testnet: 'テストネットで今すぐプレイ'
+  play_testnet_note: 'あなたが支える世界を探索しましょう。'
+  join_title: '次の章に、あなたも。'
+  join_note: '400,000 KARES。ひとつの募集期間。すべての参加者に配分。'
+  step_connect: 'ウォレットを接続'
+  step_contribute: 'SUIの拠出額を選択'
+  step_claim: 'KARESと超過SUIを受け取る'
+  allocation_lead: '100万トークン。すべての配分を公開。'
+  community_detail: '11%はエアドロップ、宣伝、シーズンランキング、大会、PvP賞品、テストネット参加者、有益な貢献者向けに保管。配分はプロジェクトが管理します。'
+  supply_detail: '1,000,000 KARESは一度だけ発行され、追加発行はできません。マスタリー報酬の購入でKARESは永久にバーンされます。'
+  emissions_detail: 'ステーキング報酬200,000 KARESは既存の供給から分配。報酬の放出で新たなトークンは発行されません。'
+  price_cap_note: '受入額は上限まで。追加拠出は配分比率を変えますが、上限到達後の募集価格は変わりません。'
+  awaiting_minimum: '最低額達成後に配分と価格が表示されます。'
+  claimable_tokens: '受取可能なKARES'
+  refundable_sui: 'あなたへのSUI返金'
+  final_price: '最終募集価格'
+  full_refund: 'SUIの全額返金'
+  nav_funding: '募集'
+  nav_benefits: 'メリット'
+  nav_tokenomics: 'トークン設計'
+  nav_incentives: '公開インセンティブ'
+  nav_play: 'プレイ'
+  benefits_title: '世界に参加。遊び方が広がる。'
+  benefits_lead: 'KARESはゲーム報酬、コミュニティのインセンティブ、マーケットのロイヤリティ分配をつなぎます。'
+  revenue_title: 'ゲームの成功を分かち合う。'
+  revenue_metric: 'AresRPGの収益'
+  revenue_detail: 'KARESステーカーに分配。'
+  baseline_title: '既存の供給からコミュニティへ。'
+  baseline_detail: '既存の200,000 KARESで1,825稼働報酬日を支援。ステークして分配に参加し、発生済み報酬はいつでも受取可能。追加発行はありません。'
+  crates_title: 'あなたのKARESで、次のクレートへ。'
+  crates_detail: 'ゲーム内のマスタリー報酬には食料、資源、ペット、コスメのクレートがあります。同数のKARESで支払うか、プレイでポイントを獲得。使用したKARESは永久にバーンされます。'
+  incentives_title: '誰でも報酬を増やせます。'
+  incentives_detail: '誰でもSUIまたはKARESを寄付可能。翌稼働報酬日から30稼働日にわたり、全ステーカーへ比例配分されます。寄付は取り消せません。'
+  incentives_clock: 'ステーカー不在時は報酬の時計が停止。追加資金で既存の配分期間が延長されることはありません。'
+  incentives_examples: 'イベントの支援、節目のお祝い、コミュニティへの報酬に。'
+  play_title: '世界が待っています。探索に出かけましょう。'
+  play_detail: '初回公開販売中にテストネットでAresRPGを体験。コミュニティと出会い、KARESのゲームを探索しましょう。'
+  confirmed_refresh: '取引が確定しました。更新して最新の残高を読み込んでください。'
+  stage_minimum: '最低募集額'
+  stage_maximum: '上限までの募集'
+  minimum_refund: '最低額に達しない場合は全額返金。'
+  full_refund_available: '拠出額の全額を返金できます。'
+  refund_claim_note: '販売終了時に最低額に達していなければ、ここで返金を請求してください。返金は自動送金されません。'
+  staking_unavailable: 'このネットワークではステーキングはまだ利用できません。'
+  basecamp_announcement: '10月7〜9日、シンガポールのSui BasecampでAresRPGに会おう。ぜひ遊びに来て、ルートボックスを受け取ってください。'
+  funding_unknown: '募集データを取得できません。'
+  success_threshold: '成立に必要な額'
+  sale_cap: '受入上限'
+  cap_overflow: '上限超過分'
+  overflow_refunds: '比例返金用に確保'
+
+  combat_rewards: 'ボス報酬'
+
+  combat_detail: '公開の戦闘報酬プールに100,000 KARESを確保します。誰でも追加できます。ボスのレベルで決まる一つの報酬を、勝利したキャラクターに均等配分します。1日約54.79 KARESの上限により、初期資金は少なくとも5年間持続します。活動の少ない日や寄付は期間を延ばします。各エポックの活動量に応じて報酬額を調整し、未配分分は後日の債務になりません。'
+
+  allocation_rationale: '開始時に590,000 KARES（59%）を販売・流動性・チーム向けに解放します。初年度の追加解放は最大約82,000で、バーン前の開始時数量に対し13.90%です。参加者がいなければステーキング報酬の解放は停止します。コミュニティ枠は暦に従います。戦闘報酬は上限を下回る場合があります。新規発行はゼロです。寄付は既存トークンの再配分です。価格は保証されません。'
+  launch_market_cap: '開始時の流通時価総額'
+  launch_market_cap_note: '今販売を終了した場合：上限適用後の販売価格 × 開始時に流通可能な590,000 KARES。最低調達額未達では開始しません。'
+
+leaderboard_page:
+  xp: '戦闘経験値'
+  kills: 'モンスター討伐'
+  dungeons: 'ダンジョン'
+  jobs: '職業経験値'
+  marketplace: 'マーケット'
+  kolizeum: 'コロシアム'
+  zones: '発見'
+  feeding: 'ペットの餌やり'
+  gathering: '採集'
+  category: 'カテゴリー'
+  previous: '前へ'
+  next: '次へ'
+  current: '現在のシーズン'
+  season: 'シーズン {{season}}'
+  epochs: 'エポック {{start}}–{{end}}'
+  remaining: '残り {{epochs}} エポック'
+  loading: '読み込み中…'
+  user: 'ユーザー'
+  score: 'スコア'
+  you: 'あなた'
+  current_characters: '現在のキャラクター'
+  current_jobs: '現在の職業'
+  unavailable: 'ランキングは一時的に利用できません。'
+  retry: '再試行'
+  empty: '今シーズンの活動はまだありません。'
+  suins_hint: 'AresRPGアドレスを指すSuiNS名またはサブネームをデフォルト名に設定すると、ここに表示されます。'
+  xp_description: '全キャラクターの勝利で獲得した経験値。キャラクターを譲渡しても獲得済みスコアは移りません。'
+  kills_description: '勝利した戦闘の敵モンスター数。勝利した各アドレスにつき、1戦闘を1回だけ集計します。'
+  dungeons_description: '最終部屋のクリア数。クリアした各アドレスにつき、1戦闘を1回だけ集計します。'
+  jobs_description: '全キャラクターが採集と製作で獲得した経験値。ルーン鍛造では経験値を獲得しません。'
+  marketplace_description: 'キャラクターを含むマーケットでの購入・売却の総額（SUI）。'
+  kolizeum_description: '返還された賭け金を含む、コロシアム勝利のSUI支払額。'
+  zones_description: '共有ゾーンの初回発見数。ゾーンの更新は含みません。'
+  feeding_description: '成功したペットの餌やり回数。餌の量でスコアは増えません。'
+  gathering_description: 'レア採集ボーナスを含む、採集した資源の個数。'
+  job_FARMER: '農夫'
+  job_HERBALIST: '薬草師'
+  job_MINER: '鉱夫'
+  job_FORGER: '鍛冶師'
+  job_CARVER: '彫刻師'
+  job_TAILOR: '仕立屋'
+  job_JEWELER: '宝石職人'
+  job_TANNER: '皮革職人'
+  job_HANDYMAN: '細工師'
+  job_ALCHEMIST: '錬金術師'
+  job_BAKER: 'パン職人'

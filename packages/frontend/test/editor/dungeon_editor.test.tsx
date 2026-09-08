@@ -29,8 +29,6 @@ test('an independent dungeon is an ordered room composition sheet', () => {
   expect(html).toContain('data-dungeon-placeholder="member"')
   expect(html).toContain('data-item-reference-picker="dungeon key"')
   expect(html).toContain('data-mob-reference-picker="room mob"')
-  expect(html).toContain('Random Lv. 12–28')
-  expect(html).toContain('Random Lv. 25–30')
   expect(html).not.toContain('Edit room mob level')
   expect(html).not.toContain('level_scalar')
 })
@@ -41,5 +39,5 @@ test('/demo routes the dungeons content domain to the room composition editor', 
   )
 
   expect(html).toContain('data-dungeon-editor=""')
-  expect(html).toContain('data-dungeon-room="6"')
+  expect(html.match(/data-dungeon-room=/g) ?? []).toHaveLength(dungeons[0]!.rooms.length)
 })

@@ -12,10 +12,10 @@ import { craft_job_of, craft_max_ingredients, item_stat_center, stat_names, type
 import { bind_doors, type BoundDoors, type Resolvable, type Sdk } from './client.ts'
 import * as seed_projection from './seed_doors.gen.ts'
 import {
-  airdrop_id,
   board_catalog_id,
   dungeon_content_id,
   giftcard_id,
+  giftcard_recipient_key,
   item_template_id,
   mastery_offer_id,
   mob_template_id,
@@ -42,7 +42,6 @@ import type {
 } from './seed_types.ts'
 
 export {
-  airdrop_id,
   dungeon_content_id,
   giftcard_id,
   item_template_id,
@@ -245,6 +244,7 @@ export const mob_data_value = (sdk: SeedSdk, tx: Transaction, mob: SeedMob): Tra
     spells,
     loot,
     xp: mob.xp,
+    is_boss: mob.role === 'boss',
   })
 }
 
@@ -493,32 +493,7 @@ const mob_batches = (sdk: SeedSdk, mobs: readonly SeedMob[]): readonly SeedBatch
       target: (mob) => mob_template_id(content_root, seed_original, mob.mob_type),
       dependencies: (mob) => mob.loot.map(({ item_type }) => item_template_id(content_root, seed_original, item_type)),
       compose: (game_sdk, tx, cap, root, mob) => {
-        const spells = mob.spells.map((spell) =>
-          game_sdk.seed_doors.new_mob_spell(tx, {
-            name: spell.name,
-            level: level_value(game_sdk, tx, spell.levels[0]!),
-          })
-        )
-        const loot = mob.loot.map((row) => game_sdk.seed_doors.new_mob_loot_entry(tx, { ...row }))
-        const data = game_sdk.seed_doors.new_mob_data(tx, {
-          name: mob.name,
-          mob_type: mob.mob_type,
-          element: mob.element,
-          level_min: mob.level_min,
-          level_max: mob.level_max,
-          hp: mob.hp,
-          ap: mob.ap,
-          mp: mob.mp,
-          agility: mob.agility,
-          wisdom: mob.wisdom,
-          earth_resistance: mob.resistances.earth,
-          fire_resistance: mob.resistances.fire,
-          water_resistance: mob.resistances.water,
-          air_resistance: mob.resistances.air,
-          spells,
-          loot,
-          xp: mob.xp,
-        })
+        const data = mob_data_value(game_sdk, tx, mob)
         game_sdk.seed_doors.add_mob(tx, { cap, root, data })
       },
     })
@@ -675,29 +650,23 @@ const dungeon_batches = (sdk: SeedSdk, dungeons: readonly SeedDungeon[]): readon
   )
 }
 
+export const giftcards_for_network = (
+  network: Sdk['network'],
+  content: Pick<SeedContent, 'airdrop'>
+): SeedContent['airdrop']['giftcards'] =>
+  [...content.airdrop.giftcards, ...(content.airdrop.giftcard_batches ?? [])]
+    .filter((card) => card.network === undefined || card.network === network)
+    .flatMap((card) => {
+      if (!('recipients' in card)) return [card]
+      const { recipients, ...batch } = card
+      return recipients.map((custody) => ({ ...batch, id: giftcard_recipient_key(batch.id, custody), custody }))
+    })
+
 const supply_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[] => {
   const content_root = content_root_id_of(sdk)
   const seed_original = package_id_of(sdk, 'seed_package_original')
   const game_type = game_type_of(sdk)
-  const drop_batches = content.airdrop.drops.map((drop, index) =>
-    living_batch(sdk, {
-      id: `airdrops:${index}:${drop.id}`,
-      phase: 'supply',
-      rows: [drop],
-      target: (row) => airdrop_id(content_root, game_type, row.id),
-      dependencies: (row) => [item_template_id(content_root, seed_original, row.item_type)],
-      compose: (game_sdk, tx, cap, root, row) =>
-        game_sdk.seed_doors.new_airdrop(tx, {
-          cap,
-          root,
-          drop_id: row.id,
-          template: item_template_id(content_root, seed_original, row.item_type),
-          amount_each: row.amount_each,
-          whitelist: row.whitelist,
-        }),
-    })
-  )
-  const giftcard_batches = pack(content.airdrop.giftcards, () => 2).map((rows, index) =>
+  const giftcard_batches = pack(giftcards_for_network(sdk.network, content), () => 2).map((rows, index) =>
     living_batch(sdk, {
       id: `giftcards:${index}`,
       phase: 'supply',
@@ -716,7 +685,7 @@ const supply_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[
       },
     })
   )
-  return Object.freeze([...drop_batches, ...giftcard_batches])
+  return Object.freeze(giftcard_batches)
 }
 
 const world_batches = (sdk: SeedSdk, content: SeedContent): readonly SeedBatch[] => {

@@ -16,76 +16,95 @@ const kiosk_cap = {
   digest,
 }
 
-test('same-kiosk fighter rewards settle through one bounded Random transaction', async () => {
-  const calls: { door: string; args: Record<string, unknown> }[] = []
-  const execution_options: unknown[] = []
-  const sdk = {
-    pins: { content_root: { id: id(61), shared_version: '1' }, seed_package_original: id(60) },
-    game_type_package: id(1),
-    tx: () => ({}),
-    hydrate_unknown: async () => undefined,
-    execute: async (_tx: unknown, options: unknown) => {
-      execution_options.push(options)
-      return {
-        $kind: 'Transaction',
-        Transaction: {
-          digest,
-          events: [
-            { type: `${id(1)}::fight::FightClosable`, json: { fight: id(40) } },
-            { type: `${id(1)}::fight::FightClosed`, json: { fight: id(40) } },
+test.each([false, true])(
+  'same-kiosk settlement prepares boss currency before terminal Random: %s',
+  async (boss_rewards) => {
+    const calls: { door: string; args: Record<string, unknown> }[] = []
+    const execution_options: unknown[] = []
+    const sdk = {
+      pins: { content_root: { id: id(61), shared_version: '1' }, seed_package_original: id(60) },
+      game_type_package: id(1),
+      tx: () => ({}),
+      hydrate_unknown: async () => undefined,
+      execute: async (_tx: unknown, options: unknown) => {
+        execution_options.push(options)
+        return {
+          $kind: 'Transaction',
+          Transaction: {
+            digest,
+            events: [
+              {
+                type: `${id(1)}::fight::DropsRolled`,
+                json: { fight: id(40), fighter: '0', kares: boss_rewards ? '7' : '0', drops: [] },
+              },
+              { type: `${id(1)}::fight::FightClosable`, json: { fight: id(40) } },
+              { type: `${id(1)}::fight::FightClosed`, json: { fight: id(40) } },
+            ],
+          },
+        } as unknown as Receipt
+      },
+      doors: {
+        prepare_boss_rewards: (_tx: unknown, input: Record<string, unknown>) =>
+          void calls.push({ door: 'boss', args: input }),
+        prepare_fight_loot: (_tx: unknown, input: Record<string, unknown>) => {
+          calls.push({ door: 'prepare', args: input })
+          return `prepared-${calls.length}`
+        },
+        settle_fight: (_tx: unknown, input: Record<string, unknown>) =>
+          void calls.push({ door: 'settle_many', args: input }),
+        settle_last_fight: (_tx: unknown, input: Record<string, unknown>) =>
+          void calls.push({ door: 'settle_many_last', args: input }),
+      },
+    }
+
+    const result = await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
+      fight: id(40),
+      boss_rewards,
+      custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
+      settlements: [
+        {
+          fighter_idx: 0n,
+          loot: [
+            { item_type: 'silk', existing: id(41) },
+            { item_type: 'silk', existing: id(41) },
           ],
         },
-      } as unknown as Receipt
-    },
-    doors: {
-      prepare_fight_loot: (_tx: unknown, input: Record<string, unknown>) => {
-        calls.push({ door: 'prepare', args: input })
-        return `prepared-${calls.length}`
+        {
+          fighter_idx: 2n,
+          loot: [
+            { item_type: 'fang', existing: null },
+            { item_type: 'silk', existing: id(41) },
+          ],
+        },
+      ],
+      last: true,
+    })
+
+    expect(execution_options).toEqual([
+      {
+        custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
+        inputs: expect.arrayContaining([id(40)]),
+        gas_scope: `fight:${id(40)}`,
+        budget: 1_000_000_000n,
       },
-      settle_fight: (_tx: unknown, input: Record<string, unknown>) =>
-        void calls.push({ door: 'settle_many', args: input }),
-      settle_last_fight: (_tx: unknown, input: Record<string, unknown>) =>
-        void calls.push({ door: 'settle_many_last', args: input }),
-    },
+    ])
+    expect(calls.map(({ door }) => door)).toEqual([
+      ...(boss_rewards ? ['boss'] : []),
+      'prepare',
+      'prepare',
+      'prepare',
+      'settle_many_last',
+    ])
+    expect(calls.at(-1)?.args).toMatchObject({
+      fight_object: id(40),
+      fighter_indices: [0n, 2n],
+      plan_lengths: [1, 2],
+      plan: boss_rewards ? ['prepared-2', 'prepared-3', 'prepared-4'] : ['prepared-1', 'prepared-2', 'prepared-3'],
+      kiosk: kiosk_cap.kioskId,
+      personal: { objectId: kiosk_cap.objectId, version: kiosk_cap.version, digest: kiosk_cap.digest },
+    })
+    expect(result).toMatchObject({ digest, closable: true, closed: true })
+    expect(result.kares_rewards).toEqual([{ fighter: 0n, amount: boss_rewards ? 7n : 0n }])
+    if (boss_rewards) expect(calls[0]?.args).toEqual({ fight_object: id(40), fighter_idx: 0n })
   }
-
-  const result = await fight_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).settle({
-    fight: id(40),
-    custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
-    settlements: [
-      {
-        fighter_idx: 0n,
-        loot: [
-          { item_type: 'silk', existing: id(41) },
-          { item_type: 'silk', existing: id(41) },
-        ],
-      },
-      {
-        fighter_idx: 2n,
-        loot: [
-          { item_type: 'fang', existing: null },
-          { item_type: 'silk', existing: id(41) },
-        ],
-      },
-    ],
-    last: true,
-  })
-
-  expect(execution_options).toEqual([
-    {
-      custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
-      gas_scope: `fight:${id(40)}`,
-      budget: 1_000_000_000n,
-    },
-  ])
-  expect(calls.map(({ door }) => door)).toEqual(['prepare', 'prepare', 'prepare', 'settle_many_last'])
-  expect(calls.at(-1)?.args).toMatchObject({
-    fight_object: id(40),
-    fighter_indices: [0n, 2n],
-    plan_lengths: [1, 2],
-    plan: ['prepared-1', 'prepared-2', 'prepared-3'],
-    kiosk: kiosk_cap.kioskId,
-    personal: { objectId: kiosk_cap.objectId, version: kiosk_cap.version, digest: kiosk_cap.digest },
-  })
-  expect(result).toMatchObject({ digest, closable: true, closed: true })
-})
+)

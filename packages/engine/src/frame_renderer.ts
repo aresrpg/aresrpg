@@ -10,7 +10,7 @@ import {
   type PerspectiveCamera,
   type Scene,
 } from 'three'
-import { RenderPipeline, type WebGPURenderer } from 'three/webgpu'
+import { RenderPipeline, type Renderer } from 'three/webgpu'
 import type { Node } from 'three/webgpu'
 import { float, luminance, pass, renderOutput, rtt, screenUV, uniform, vec2, vec4 } from 'three/tsl'
 import { bloom } from 'three/addons/tsl/display/BloomNode.js'
@@ -66,7 +66,7 @@ const create_scene_view = (camera: PerspectiveCamera) => {
 }
 
 const create_pipeline = (
-  renderer: WebGPURenderer,
+  renderer: Renderer,
   scene: Scene,
   camera: PerspectiveCamera,
   quality: EngineQuality,
@@ -137,7 +137,10 @@ const create_pipeline = (
   const graded = vec4(grade(display.rgb, luminance(low_frequency.rgb)), 1)
   const reconstructed =
     profile.render.sharpness === null ? graded : (sharpen(graded, profile.render.sharpness) as unknown as Node<'vec4'>)
-  const final_frame = fxaa(reconstructed) as unknown as Node<'vec4'>
+  // Own FXAA's input target explicitly; implicit convertToTexture() otherwise hides its lifetime.
+  const reconstructed_texture = rtt(reconstructed)
+  reconstructed_texture.autoUpdate = false
+  const final_frame = fxaa(reconstructed_texture) as unknown as Node<'vec4'>
   const lens_dry = lens.apply(final_frame, false)
   const lens_wet = lens.apply(final_frame, true)
   pipeline.outputNode = lens_dry
@@ -146,6 +149,7 @@ const create_pipeline = (
   return Object.freeze({
     render: () => {
       view.sync()
+      reconstructed_texture.textureNeedsUpdate = true
       const shafts_visible = shafts?.update(submerged) ?? false
       if (shaft_texture !== null && shafts_visible) shaft_texture.textureNeedsUpdate = true
       if (hdr_texture !== null) hdr_texture.textureNeedsUpdate = true
@@ -164,6 +168,8 @@ const create_pipeline = (
     },
     dispose: () => {
       lens.dispose()
+      hdr_bloom?.dispose()
+      reconstructed_texture.renderTarget?.dispose()
       low_frequency.renderTarget?.dispose()
       shaft_texture?.renderTarget?.dispose()
       hdr_texture?.renderTarget?.dispose()
@@ -174,7 +180,7 @@ const create_pipeline = (
 }
 
 export const create_frame_renderer = (
-  renderer: WebGPURenderer,
+  renderer: Renderer,
   scene: Scene,
   camera: PerspectiveCamera,
   initial_quality: EngineQuality,

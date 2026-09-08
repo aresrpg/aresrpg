@@ -46,9 +46,6 @@ const EClaimMismatch: u64 = 2907; // claim_loot: the passed template is not the 
 const EZeroAmount: u64 = 2908; // every rolled row must mint at least one item
 const EUnstackableAmount: u64 = 2909; // quantities above one require a stackable reward template
 
-#[test_only]
-const ELengthMismatch: u64 = 2910;
-
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
 /// The loot-table registry: box template id → its weighted item pool. Shared at init, seeded EMPTY.
@@ -201,19 +198,4 @@ fun is_gacha_box(template: &ItemTemplate): bool {
 }
 
 #[test_only]
-public fun test_pick(
-  item_templates: vector<ID>,
-  weights: vector<u64>,
-  amounts: vector<u32>,
-  draw: u64,
-): (ID, u32) {
-  assert!(item_templates.length() == weights.length() && weights.length() == amounts.length(), ELengthMismatch);
-  let mut entries = vector[];
-  let mut i = 0;
-  while (i < item_templates.length()) {
-    entries.push_back(loot_table::new_entry(item_templates[i], weights[i], amounts[i]));
-    i = i + 1;
-  };
-  let picked = loot_table::pick(&entries, draw);
-  (loot_table::template(&picked), loot_table::amount(&picked))
-}
+public fun test_init(ctx: &mut TxContext) { init(ctx) }

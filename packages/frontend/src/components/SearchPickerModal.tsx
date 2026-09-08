@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Extracted shared picker used by simulator characters, mobs, equipment, and relics.
-/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- React refs and DOM events are mutable lifecycle boundaries. */
+/* eslint-disable functional/immutable-data -- React refs and DOM events are mutable lifecycle boundaries. */
 
 import { Package, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
+
+import { NativeModal } from './ModalFrame.tsx'
 
 export type PickerItem = Readonly<{
   id: string
@@ -122,6 +125,7 @@ export const SearchPickerModal = ({
   const press_read = useRef(false)
   const [hovered_id, set_hovered_id] = useState<string | null>(null)
   const [tooltip_position, set_tooltip_position] = useState<Readonly<{ x: number; y: number }>>({ x: 0, y: 0 })
+  const category_name = useItemCategoryName()
   const categories = useMemo<readonly Readonly<PickerFacet & { count: number }>[]>(() => {
     if (facets.length > 0)
       return Object.freeze(
@@ -136,9 +140,9 @@ export const SearchPickerModal = ({
           if (!item.category) return counts
           return { ...counts, [item.category]: (counts[item.category] ?? 0) + 1 }
         }, {})
-      ).map(([id, count]) => Object.freeze({ id, label: id, count }))
+      ).map(([id, count]) => Object.freeze({ id, label: category_name(id), count }))
     )
-  }, [facets, items])
+  }, [facets, items, category_name])
   const filtered = useMemo(
     () => filter_picker_items({ items, search, category, pills: active_pills }),
     [items, search, category, active_pills]
@@ -146,18 +150,10 @@ export const SearchPickerModal = ({
   const selected_label = value ? items.find(({ id }) => id === value)?.label : undefined
 
   useEffect(() => {
-    const previous = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    const keydown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') on_close()
-    }
-    globalThis.addEventListener('keydown', keydown)
     search_ref.current?.focus()
     const timer = setTimeout(() => selected_ref.current?.scrollIntoView({ block: 'center' }), 50)
     return () => {
       clearTimeout(timer)
-      globalThis.removeEventListener('keydown', keydown)
-      document.body.style.overflow = previous
     }
   }, [on_close])
 
@@ -181,13 +177,11 @@ export const SearchPickerModal = ({
       return next
     })
 
-  return createPortal(
-    <div
+  return (
+    <NativeModal
+      close={on_close}
+      label={title}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) on_close()
-      }}
-      role="presentation"
     >
       <section className="flex h-[70vh] max-h-[700px] w-[70vw] max-w-[1000px] flex-col border border-border bg-surface">
         <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
@@ -328,7 +322,9 @@ export const SearchPickerModal = ({
                         <span className="text-[7px] tracking-wider text-[#5ee38d] uppercase">{copy.new_label}</span>
                       )}
                       {item.category && (
-                        <span className="text-[8px] tracking-wide text-[#6b7280] uppercase">{item.category}</span>
+                        <span className="text-[8px] tracking-wide text-[#6b7280] uppercase">
+                          {category_name(item.category)}
+                        </span>
                       )}
                     </span>
                     {item.sublabel && <span className="mt-0.5 block text-[9px] text-[#6b7280]">{item.sublabel}</span>}
@@ -352,7 +348,6 @@ export const SearchPickerModal = ({
           {render_tooltip(hovered_id)}
         </div>
       )}
-    </div>,
-    document.body
+    </NativeModal>
   )
 }

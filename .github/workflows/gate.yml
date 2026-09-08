@@ -13,7 +13,7 @@ on:
 permissions:
   contents: read
 jobs:
-  gate:
+  source:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -47,9 +47,13 @@ jobs:
         id: setup_bun
         continue-on-error: true
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
       - name: setup Bun (retry)
         if: steps.setup_bun.outcome == 'failure'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
       - name: cache bun downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -79,27 +83,36 @@ jobs:
             packages/move-math
             packages/control
             packages/seed
+            packages/kares
             scripts/coverage_move.sh
+            move-packages.json
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
         # Move toolchain — a floating version would shift the compiler under the bytecode gates.
-        run: echo "version=testnet-v1.78.1" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(jq -er '.sui_cli.release' move-packages.json)" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(jq -er '.sui_cli.linux_archive_sha256' move-packages.json)" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/sui-bin
-          key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}
+          key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}-${{ steps.sui_version.outputs.sha256 }}
       - name: ensure sui — cached binary if it runs, release download otherwise
         run: |
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
-          if ! "$HOME/sui-bin/sui" --version 2>/dev/null; then
-            # the release tarball prefixes members with ./ — extract the one cli binary only
-            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${{ steps.sui_version.outputs.version }}/sui-${{ steps.sui_version.outputs.version }}-ubuntu-x86_64.tgz" \
-              | tar -xz -C "$HOME/sui-bin" ./sui
-            "$HOME/sui-bin/sui" --version
+          release='${{ steps.sui_version.outputs.version }}'
+          expected="sui ${release##*-v}-"
+          actual=$("$HOME/sui-bin/sui" --version 2>/dev/null || true)
+          if [[ "$actual" != "$expected"* ]]; then
+            archive="$RUNNER_TEMP/sui.tgz"
+            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/$release/sui-$release-ubuntu-x86_64.tgz" -o "$archive"
+            echo "${{ steps.sui_version.outputs.sha256 }}  $archive" | sha256sum --check --strict
+            tar -xz -f "$archive" -C "$HOME/sui-bin" ./sui
           fi
+          actual=$("$HOME/sui-bin/sui" --version)
+          [[ "$actual" == "$expected"* ]] || { echo "::error::unexpected Sui compiler: $actual"; exit 1; }
       - name: move-math — build
         run: sui move build --path packages/move-math
       - name: control + combat + seed — build
@@ -115,10 +128,12 @@ jobs:
         # Runtime-shaped combat probes live with the production machine. White Ant covers two
         # full-map colony rows over nine fighters; Cro Wani reproduces testnet FUAVPN…WJe's
         # ten-fighter circle buff + attack (68.2M computation before fighter-first targeting).
+        # JCeiXxJ5 captures a six-mob dungeon wave and asserts its complete resulting BCS state.
         # Executed receipts separately own transaction floors, storage, and rebates. Ceilings only
         # ratchet DOWN.
         run: |
-          sui move test --path packages/move-combat one_three_mob_wave --gas-limit 45000000 --statistics
+          sui move test --path packages/move-combat one_three_mob_wave --gas-limit 350000 --statistics
+          sui move test --path packages/move-combat captured_six_mob --gas-limit 32000000 --statistics
           sui move test --path packages/move-combat one_white_ant_turn --gas-limit 300000 --statistics
           sui move test --path packages/move-combat one_crowani_turn --gas-limit 400000 --statistics
           sui move test --path packages/move single_stackable_craft --gas-limit 1100000 --statistics
@@ -141,28 +156,38 @@ jobs:
             packages/move-math
             packages/control
             packages/seed
+            packages/kares
             packages/indexer
+            packages/protocol
             scripts/coverage_indexer.sh
+            move-packages.json
       - name: sui version pin
         id: sui_version
         # Pinned release (brew left the runner image, 2026-08-19). Bump deliberately with the
         # Move toolchain — a floating version would shift the compiler under the bytecode gates.
-        run: echo "version=testnet-v1.78.1" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(jq -er '.sui_cli.release' move-packages.json)" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(jq -er '.sui_cli.linux_archive_sha256' move-packages.json)" >> "$GITHUB_OUTPUT"
       - name: cache sui
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/sui-bin
-          key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}
+          key: sui-${{ runner.os }}-${{ steps.sui_version.outputs.version }}-${{ steps.sui_version.outputs.sha256 }}
       - name: ensure sui — cached binary if it runs, release download otherwise
         run: |
           mkdir -p "$HOME/sui-bin"
           echo "$HOME/sui-bin" >> "$GITHUB_PATH"
-          if ! "$HOME/sui-bin/sui" --version 2>/dev/null; then
-            # the release tarball prefixes members with ./ — extract the one cli binary only
-            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/${{ steps.sui_version.outputs.version }}/sui-${{ steps.sui_version.outputs.version }}-ubuntu-x86_64.tgz" \
-              | tar -xz -C "$HOME/sui-bin" ./sui
-            "$HOME/sui-bin/sui" --version
+          release='${{ steps.sui_version.outputs.version }}'
+          expected="sui ${release##*-v}-"
+          actual=$("$HOME/sui-bin/sui" --version 2>/dev/null || true)
+          if [[ "$actual" != "$expected"* ]]; then
+            archive="$RUNNER_TEMP/sui.tgz"
+            curl -fsSL "https://github.com/MystenLabs/sui/releases/download/$release/sui-$release-ubuntu-x86_64.tgz" -o "$archive"
+            echo "${{ steps.sui_version.outputs.sha256 }}  $archive" | sha256sum --check --strict
+            tar -xz -f "$archive" -C "$HOME/sui-bin" ./sui
           fi
+          actual=$("$HOME/sui-bin/sui" --version)
+          [[ "$actual" == "$expected"* ]] || { echo "::error::unexpected Sui compiler: $actual"; exit 1; }
       - name: compile the Move packages (the parity gates' ground truth)
         run: |
           sui move build --path packages/move-math
@@ -180,12 +205,14 @@ jobs:
             packages/indexer/target
           key: cargo-${{ runner.os }}-${{ hashFiles('packages/indexer/Cargo.lock') }}-llvm-cov-0.9.0
           restore-keys: cargo-${{ runner.os }}-
+      - name: install Redis for projection recovery tests
+        run: sudo apt-get update && sudo apt-get install -y redis-server
       - name: cargo fmt --check
         working-directory: packages/indexer
         run: cargo fmt --check
       - name: cargo clippy
         working-directory: packages/indexer
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
       - name: install pinned cargo-llvm-cov
         run: |
           rustup component add llvm-tools-preview
@@ -230,9 +257,13 @@ jobs:
         id: setup_bun
         continue-on-error: true
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
       - name: setup Bun (retry)
         if: steps.setup_bun.outcome == 'failure'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
       - name: cache bun downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -241,10 +272,55 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - name: install
         run: bun install --frozen-lockfile
-      - name: bundle-cleanliness gate — no source maps, retired endpoints, or key material in dist
-        working-directory: packages/frontend
+      - name: bundle-cleanliness gate — game and independent launchpad
         run: |
-          bunx vite build
-          if find dist -name "*.map" | grep .; then exit 1; fi
-          if grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
-            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" dist; then exit 1; fi
+          for application in frontend launchpad; do
+            bun run --cwd "packages/$application" build
+            if find "packages/$application/dist" -name "*.map" | grep .; then exit 1; fi
+            if grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
+              "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" "packages/$application/dist"; then exit 1; fi
+          done
+  browsers:
+    name: browser (${{ matrix.os }}, ${{ matrix.browser }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, browser: chrome }
+          - { os: ubuntu-latest, browser: firefox }
+          - { os: macos-latest, browser: chrome }
+          - { os: macos-latest, browser: webkit }
+    env:
+      BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bunx playwright install --with-deps ${{ matrix.browser }}
+      - run: bun run test:browser
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: browser-${{ matrix.os }}-${{ matrix.browser }}
+          path: |
+            test-results/browser
+            test-results/browser-results.json
+          retention-days: 7
+  gate:
+    name: gate
+    needs: [source, tests_move, tests_indexer, bundle-gate, browsers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: every required verification completed
+        run: |
+          test "${{ needs.source.result }}" = success
+          test "${{ needs.tests_move.result }}" = success
+          test "${{ needs.tests_indexer.result }}" = success
+          test "${{ needs.browsers.result }}" = success
+          test "${{ github.event_name == 'push' || needs.bundle-gate.result == 'success' }}" = true

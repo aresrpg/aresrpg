@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const manifest = JSON.parse(readFileSync(join(root, 'move-packages.json'), 'utf8'))
-const expected_slots = ['math', 'control', 'combat', 'seed', 'game']
+const expected_slots = ['math', 'control', 'combat', 'seed', 'kares', 'game']
 
 if (manifest.schema !== 1 || !Array.isArray(manifest.packages)) throw new Error('move-packages.json schema is invalid')
 if (manifest.packages.map(({ slot }) => slot).join(',') !== expected_slots.join(','))
@@ -44,6 +44,20 @@ for (const row of manifest.packages) {
       `${row.slot} dependency keys differ from policy; unexpected [${unexpected_names.join(', ')}], missing [${missing_names.join(', ')}]`
     )
 }
+
+const covered_paths = [
+  ...readFileSync(join(root, 'scripts/coverage_move.sh'), 'utf8').matchAll(/^cover_package (\S+) /gm),
+]
+  .map(([, path]) => path)
+  .sort()
+if (
+  covered_paths.join(',') !==
+  manifest.packages
+    .map(({ path }) => path)
+    .sort()
+    .join(',')
+)
+  throw new Error('Every manifest Move package must have exactly one native coverage gate')
 
 const combat_source_dir = join(root, manifest.packages.find(({ slot }) => slot === 'combat').path, 'sources')
 const combat_source = readdirSync(combat_source_dir)

@@ -11,11 +11,8 @@ import { env } from '../env.ts'
 export const mastery_reward = (entry_level: number): number =>
   entry_level >= 200 ? 5 : 1 + Math.floor((entry_level - 1) / 50)
 
-export const effective_mastery_points = (mastery: MasteryRow | null, current_epoch: string | null): bigint => {
-  if (!mastery) return 0n
-  if (!current_epoch || mastery.last_completed_epoch === null) return BigInt(mastery.points)
-  return BigInt(current_epoch) > BigInt(mastery.last_completed_epoch) + 1n ? 0n : BigInt(mastery.points)
-}
+export const effective_mastery_points = (mastery: MasteryRow | null, _current_epoch: string | null): bigint =>
+  mastery ? BigInt(mastery.points) : 0n
 
 export const mastery_world_witness = (
   characters: readonly CharacterRow[],

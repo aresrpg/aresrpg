@@ -13,7 +13,7 @@ import { toast } from '../toast.ts'
 
 import { fight_environment } from './fight.ts'
 import { owned_placement_readiness } from './fight_identity.ts'
-import { END_TURN_SUBMIT_GUARD_MS, fight_turn_identity } from './fight_lifecycle.ts'
+import { END_TURN_SUBMIT_GUARD_MS, fight_turn_identity, fight_turn_action } from './fight_lifecycle.ts'
 
 type TurnAction = Parameters<FightActions['commit_turn']>[0]['actions'][number]
 type BufferedTurn = Readonly<{ fight: string; turn: string; actions: readonly TurnAction[] }>
@@ -88,20 +88,6 @@ export const turn_too_soon_refusal = (error: unknown): boolean => {
 export const end_turn_retry_delay_ms = (chain_delay_ms: number, retry_not_before_ms: number, now_ms: number): number =>
   Math.max(chain_delay_ms, Math.max(0, retry_not_before_ms - now_ms))
 
-const turn_action = (input: Readonly<FightInput>): TurnAction | null => {
-  if (input.type === 'move_to') return Object.freeze({ type: 'move', path: Object.freeze([...input.path]) })
-  if (input.type === 'cast_spell')
-    return Object.freeze({
-      type: 'cast',
-      fighter_idx: input.fighter,
-      spell: input.spell,
-      target_cell: input.target_cell,
-    })
-  if (input.type === 'weapon_strike')
-    return Object.freeze({ type: 'strike', fighter_idx: input.fighter, target_cell: input.target_cell })
-  return null
-}
-
 const immediate_transaction = (
   fight: string,
   input: Readonly<FightInput>,
@@ -169,8 +155,7 @@ const remote_transaction = ({
   turn_actions: readonly TurnAction[]
   kolizeum: string | null
 }>): Promise<FightTransactionReceipt> | null => {
-  if (input.type === 'end_turn')
-    return wallet.fight.commit_turn({ fight, actions: turn_actions, ended: checkpoint.contract.ended })
+  if (input.type === 'end_turn') return wallet.fight.commit_turn({ fight, actions: turn_actions })
   if (kolizeum) return kolizeum_transaction(kolizeum, fight, input, wallet.kolizeum, wallet.fight, checkpoint, custody)
   if (input.type === 'forfeit' && checkpoint.contract.dungeon !== null)
     return wallet.dungeon.give_up_fight({ fight, fighter_idx: input.fighter, custody })
@@ -319,7 +304,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     if (!context) return
     const { fight: fight_id, wallet, checkpoint } = context
     if (fight_environment(state.fight, fight_id).transaction_pending || in_flight.has(fight_id)) return
-    const action = turn_action(input)
+    const action = fight_turn_action(input)
     if (action) {
       const draft = buffered.get(fight_id)
       const turn = fight_turn_identity(checkpoint.contract)

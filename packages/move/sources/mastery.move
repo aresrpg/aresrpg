@@ -13,6 +13,7 @@ use aresrpg::{
   item::{Self, Item},
 };
 use aresrpg_control::admin::AdminCap;
+use aresrpg_kares::kares::{Self, KARES};
 use aresrpg_math::{city_map, dungeon_data, world_map};
 use aresrpg_seed::{
   dungeon_content::{Self, DungeonContent},
@@ -23,6 +24,8 @@ use aresrpg_seed::{
 use std::string::String;
 use sui::{
   clock::Clock,
+  coin::Coin,
+  coin_registry::{Self, Currency},
   derived_object,
   event,
   kiosk::{Kiosk, KioskOwnerCap},
@@ -40,6 +43,8 @@ const EOfferDisabled: u64 = 3107;
 const EInsufficientPoints: u64 = 3108;
 const EInvalidCost: u64 = 3109;
 const EOfferNeedsPlainTemplate: u64 = 3110;
+const EImmutableCost: u64 = 3111;
+const EIncorrectPayment: u64 = 3112;
 
 const MAX_LEVEL: u16 = 200;
 
@@ -92,7 +97,7 @@ public fun new_offer(
   enabled: bool,
   ctx: &TxContext,
 ) {
-  assert!(cost > 0, EInvalidCost);
+  assert!(cost > 0 && cost <= std::u64::max_value!() / kares::unit(), EInvalidCost);
   assert!(!item_rows::has_stats(template), EOfferNeedsPlainTemplate);
   let item_type = item_rows::template_type(template);
   transfer::share_object(MasteryOffer {
@@ -109,12 +114,22 @@ public fun set_offer(
   cap: &AdminCap,
   root: &mut Registry,
   offer: &mut MasteryOffer,
-  cost: u64,
+  expected_cost: u64,
   enabled: bool,
   ctx: &TxContext,
 ) {
-  assert!(cost > 0, EInvalidCost);
-  offer.cost = cost;
+  assert!(offer.cost == expected_cost, EImmutableCost);
+  set_enabled(cap, root, offer, enabled, ctx);
+}
+
+/// Retirement changes availability, never the immutable redemption price.
+public fun set_enabled(
+  cap: &AdminCap,
+  root: &mut Registry,
+  offer: &mut MasteryOffer,
+  enabled: bool,
+  ctx: &TxContext,
+) {
   offer.enabled = enabled;
   registry::bump(cap, root, b"mastery_offers".to_string(), offer.item_type, ctx);
 }
@@ -171,7 +186,6 @@ fun assign(
   assert!(character.level() >= entry_level, ELevelTooLow);
   let cities = world_map::cities(world_content::data(world));
   assert!(!cities.is_empty(), ENoDungeon);
-  normalize_points(mastery, epoch);
   let city = &cities[generator.generate_u64_in_range(0, cities.length() - 1)];
   mastery.quest_epoch = epoch;
   mastery.quest_started_ms = clock.timestamp_ms();
@@ -215,9 +229,7 @@ public(package) fun complete_if_eligible(
     fight::dungeon_room(tag) != dungeon_data::room_count(dungeon_content::data(dungeon))
   ) return false;
   let epoch = ctx.epoch();
-  let consecutive = mastery.last_completed_epoch.is_some() && *mastery.last_completed_epoch.borrow() + 1 == epoch;
-  mastery.points = if (consecutive) mastery.points + (mastery.quest_reward as u64)
-    else mastery.quest_reward as u64;
+  mastery.points = accumulated_points(mastery.points, mastery.quest_reward);
   mastery.last_completed_epoch = option::some(epoch);
   mastery.quest_completed = true;
   emit_update(mastery);
@@ -235,19 +247,37 @@ public(package) fun redeem(
   ctx: &mut TxContext,
 ) {
   assert_owner(mastery, ctx);
-  assert!(offer.enabled, EOfferDisabled);
-  assert!(object::id(template) == offer.template, EWrongTemplate);
-  normalize_points(mastery, ctx.epoch());
+  assert_offer(offer, template);
   assert!(mastery.points >= offer.cost, EInsufficientPoints);
   mastery.points = mastery.points - offer.cost;
   item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, 1, ctx));
   emit_update(mastery);
 }
 
-fun normalize_points(mastery: &mut Mastery, epoch: u64) {
-  if (mastery.last_completed_epoch.is_some() && epoch > *mastery.last_completed_epoch.borrow() + 1)
-    mastery.points = 0;
+/// The same authored offer can burn whole KARES without creating or changing a Mastery score.
+public(package) fun redeem_kares(
+  currency: &mut Currency<KARES>,
+  payment: Coin<KARES>,
+  offer: &MasteryOffer,
+  template: &ItemTemplate,
+  existing: Option<ID>,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Item>,
+  ctx: &mut TxContext,
+) {
+  assert_offer(offer, template);
+  assert!(payment.value() == offer.cost * kares::unit(), EIncorrectPayment);
+  coin_registry::burn(currency, payment);
+  item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, 1, ctx));
 }
+
+fun assert_offer(offer: &MasteryOffer, template: &ItemTemplate) {
+  assert!(offer.enabled, EOfferDisabled);
+  assert!(object::id(template) == offer.template, EWrongTemplate);
+}
+
+fun accumulated_points(points: u64, quest_reward: u8): u64 { points + (quest_reward as u64) }
 
 fun reward(entry_level: u16): u8 {
   if (entry_level >= MAX_LEVEL) 5 else (1 + ((entry_level - 1) / 50)) as u8
@@ -285,6 +315,11 @@ fun emit_update(mastery: &Mastery) {
 public fun reward_for_testing(entry_level: u16): u8 { reward(entry_level) }
 
 #[test_only]
+public fun accumulated_points_for_testing(points: u64, quest_reward: u8): u64 {
+  accumulated_points(points, quest_reward)
+}
+
+#[test_only]
 public fun completion_scope_for_testing(
   quest_started_ms: u64,
   quest_world: String,
@@ -292,4 +327,23 @@ public fun completion_scope_for_testing(
   fight_world: String,
 ): bool {
   completion_started_after_assignment(quest_started_ms, &quest_world, fight_started_ms, &fight_world)
+}
+
+#[test_only]
+public fun mastery_for_testing(points: u64, ctx: &mut TxContext): Mastery {
+  Mastery {
+    id: object::new(ctx), owner: ctx.sender(), points,
+    last_completed_epoch: option::none(), quest_epoch: 0, quest_started_ms: 0,
+    quest_world: b"".to_string(), quest_dungeon: @0x0.to_id(), quest_reward: 0,
+    quest_completed: false,
+  }
+}
+
+#[test_only]
+public fun points_for_testing(mastery: &Mastery): u64 { mastery.points }
+
+#[test_only]
+public fun destroy_for_testing(mastery: Mastery) {
+  let Mastery { id, .. } = mastery;
+  id.delete();
 }

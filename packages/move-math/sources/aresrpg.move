@@ -4,3 +4,6 @@
 module aresrpg_math::aresrpg;
 
 entry fun aresrpg() {}
+
+#[test_only]
+public fun prelude_for_testing() { aresrpg(); }

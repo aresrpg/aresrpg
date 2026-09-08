@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Character equipment vocabulary shared by every client surface.
 
-import { is_tool_category, is_weapon_category } from './item.ts'
+import { cosmetic_categories, is_tool_category, is_weapon_category } from './item.ts'
 
 export const relic_slots = Object.freeze(['relic_1', 'relic_2', 'relic_3', 'relic_4', 'relic_5', 'relic_6'] as const)
 export const rig_slots = Object.freeze([
@@ -19,7 +19,8 @@ export const rig_slots = Object.freeze([
   'boots',
 ] as const)
 export const combat_equipment_slots = Object.freeze([...relic_slots, ...rig_slots] as const)
-export const character_equipment_slots = combat_equipment_slots
+export const cosmetic_slots = cosmetic_categories
+export const character_equipment_slots = Object.freeze([...combat_equipment_slots, ...cosmetic_slots] as const)
 export type CharacterEquipmentSlot = (typeof character_equipment_slots)[number]
 
 export const equipment_slot_accepts = (slot: CharacterEquipmentSlot, category: string): boolean => {
@@ -29,3 +30,12 @@ export const equipment_slot_accepts = (slot: CharacterEquipmentSlot, category: s
   if (slot.startsWith('relic_')) return category === 'relic'
   return slot === category
 }
+
+/** Presentation only: equipment retains both items; the cosmetic wins at its attachment. */
+export const worn_appearance = (
+  equipment: Readonly<Partial<Record<'hat' | 'cloak' | (typeof cosmetic_slots)[number], string | null>>>
+) =>
+  Object.freeze({
+    hat: equipment.cosmetic_hat ?? equipment.hat ?? null,
+    cloak: equipment.cosmetic_cloak ?? equipment.cloak ?? null,
+  })

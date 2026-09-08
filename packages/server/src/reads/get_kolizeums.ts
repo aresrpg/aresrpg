@@ -60,7 +60,7 @@ export async function get_kolizeums(graph: Graph, { address }: Readonly<{ addres
   const names = new Map(characters.map((row) => [String(row.id), row]))
   return decoded.map(({ kolizeum, fight, fighters }): KolizeumLobbyRow => {
     const player_fighters = fighters.flatMap((fighter, seat): KolizeumFighterRow[] => {
-      if (!fighter.kind.player || (fight.phase === 'placement' && fighter.settled)) return []
+      if (!fighter.kind.player) return []
       const character = names.get(fighter.kind.player.character)
       return [
         Object.freeze({

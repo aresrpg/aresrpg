@@ -4,7 +4,7 @@
 import { expect, test } from 'bun:test'
 import type { TradeCapRow, TradeRow } from '@aresrpg/protocol'
 
-import { trade_offer_additions_available } from '../../src/modules/trade.ts'
+import { reconcile_trade_row, trade_offer_additions_available } from '../../src/modules/trade.ts'
 import { create_app } from '../../src/store.ts'
 
 const settings = Object.freeze({
@@ -32,6 +32,8 @@ test('the app creates at most one outgoing invitation at a time', async () => {
     accept_b: false,
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   }
@@ -71,6 +73,8 @@ test('one staged offer commit stays pending until its projected revision arrives
     accept_b: false,
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   }
@@ -89,7 +93,7 @@ test('one staged offer commit stays pending until its projected revision arrives
   app.dispatch({ type: 'auth/connecting' })
   app.dispatch({ type: 'auth/connected', session: wallet as never })
   app.dispatch({ type: 'server/packet', packet: trade_packet([row]) })
-  app.dispatch({ type: 'trade/commit_offer', trade: row.id, additions: [], removals: [], sui: 1n })
+  app.dispatch({ type: 'trade/commit_offer', trade: row.id, additions: [], removals: [], sui: 1n, kares: 0n })
   await tick()
   expect(calls).toBe(1)
   expect(app.store.getState().trade.pending).toBe(`offer:${row.id}:3`)
@@ -110,6 +114,8 @@ test('a stale staged stack is refused before transaction construction', async ()
     accept_b: false,
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   }
@@ -145,6 +151,7 @@ test('a stale staged stack is refused before transaction construction', async ()
     additions: [{ item: { ...item, amount: 9 } as never, amount: 4 }],
     removals: [],
     sui: 0n,
+    kares: 0n,
   })
   await tick()
 
@@ -175,6 +182,8 @@ test('a later removal keeps an earlier staged target amount valid without listin
     accept_b: false,
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [first, second],
     caps_b: [],
   }
@@ -229,7 +238,7 @@ test('acceptance arms exactly one settlement and replayed settling rows cannot l
             phase: 'settling' as const,
             offer_revision: 3,
             remove_caps: [],
-            clear_sui: 'b' as const,
+            clear_balances: 'b' as const,
             closed: false,
           },
         }
@@ -246,6 +255,8 @@ test('acceptance arms exactly one settlement and replayed settling rows cannot l
     accept_b: true,
     sui_a: '0',
     sui_b: '1',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   }
@@ -304,6 +315,8 @@ test('disconnect clears the old session latch without letting its promise write 
     accept_b: false,
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   }
@@ -355,6 +368,8 @@ test('an old promise cannot delete the matching operation token of a new session
     accept_b: false,
     sui_a: '0',
     sui_b: '0',
+    kares_a: '0',
+    kares_b: '0',
     caps_a: [],
     caps_b: [],
   }
@@ -384,4 +399,28 @@ test('an old promise cannot delete the matching operation token of a new session
   finish_new()
   await tick()
   stop()
+})
+
+test('late packets cannot resurrect either currency after terminal settlement', () => {
+  const old: TradeRow = {
+    id: 't',
+    a: 'a',
+    b: 'b',
+    phase: 'settling',
+    offer_revision: 4,
+    accept_a: true,
+    accept_b: true,
+    caps_a: [],
+    caps_b: [],
+    sui_a: '5',
+    sui_b: '0',
+    kares_a: '7',
+    kares_b: '9',
+  }
+  const claimed = { ...old, sui_a: '0', kares_a: '0' }
+  const folded = reconcile_trade_row(claimed, old)
+  expect(folded.sui_a).toBe('0')
+  expect(folded.kares_a).toBe('0')
+  expect(folded.kares_b).toBe('9')
+  expect(reconcile_trade_row(old, claimed)).toEqual(folded)
 })

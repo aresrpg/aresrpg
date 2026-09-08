@@ -112,7 +112,7 @@ const content: SeedContent = {
   dungeons: [],
   worlds: [],
   mastery: { offers: [] },
-  airdrop: { drops: [], giftcards: [] },
+  airdrop: { giftcards: [] },
   biome_maps: [],
   boards: [
     {
@@ -256,7 +256,7 @@ describe('check changes', () => {
     expect(view.unchanged).toBe(0)
   })
 
-  test('omitting an existing mastery offer disables its point-mint door', () => {
+  test('omitting an existing mastery offer disables redemption without rewriting its price', () => {
     const sdk = armed()
     const with_offer = { ...content, mastery: { offers: [{ item_type: 'box', cost: 5 }] } }
     const offer = seed_sync_rows(sdk, with_offer).find(({ domain }) => domain === 'mastery_offer')!
@@ -270,7 +270,8 @@ describe('check changes', () => {
     const [retirement] = view.changed.filter(({ domain }) => domain === 'mastery_offer')
     expect(retirement?.label).toBe('retire mastery offer box')
     const [batch] = seed_update_batches(sdk, [retirement!], { admin_cap: ADMIN_CAP, content_root: REGISTRY })
-    expect(move_call_targets(batch!.transaction)).toContain(`${PACKAGE}::mastery::set_offer`)
+    expect(move_call_targets(batch!.transaction)).toContain(`${PACKAGE}::mastery::set_enabled`)
+    expect(move_call_targets(batch!.transaction)).not.toContain(`${PACKAGE}::mastery::set_offer`)
   })
 
   test('omitting an existing recipe retires its direct craft door', () => {

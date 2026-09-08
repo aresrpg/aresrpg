@@ -119,3 +119,8 @@
   background: rgba(200, 150, 60, 0.08);
   box-shadow: 0 0 20px rgba(200, 150, 60, 0.1);
 }
+
+/* Native modal ownership also owns scrolling, including terminal and nested dialogs. */
+body:has(dialog[open]) {
+  overflow: hidden;
+}

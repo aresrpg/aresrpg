@@ -68,6 +68,8 @@ describe('shared character rendering', () => {
           color_3: 0x778899,
           hat: 'straw_hat',
           cloak: null,
+          cosmetic_hat: null,
+          cosmetic_cloak: null,
           title: null,
           pet: 'tofu',
           riding: false,

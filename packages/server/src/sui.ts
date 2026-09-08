@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The server's one Sui read client. Player state still arrives through the indexer stream;
-// direct reads are limited to transport admission and the shared indexer-health heartbeat.
+// direct reads cover transport admission, the indexer-health heartbeat, and cached SuiNS display names.
 
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The cluster heartbeat, player-facing half (legacy server_info): every 5s, whoever is
-// connected hears the network-wide online count — a flat cadence, deliberately decorrelated
-// from user activity (owner 2026-08-12). The pod-side half (the `server:<id>` key and the
-// player_connect eviction beacon) lives in index.ts — it is per-POD, not per-connection.
+// connected hears the network-wide unique-player count — a flat cadence, deliberately decorrelated
+// from user activity. Pod address snapshots and the player_connect eviction beacon live in index.ts.
 
 import logger from '../logger.ts'
 import type { PlayerAction, PlayerModule } from '../player.ts'

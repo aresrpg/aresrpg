@@ -108,7 +108,7 @@ const SideRoster = ({
   <div className={`kz-roster ${side === 0 ? 'is-a' : 'is-b'}`}>
     <label>{t(side === 0 ? 'side_a' : 'side_b')}</label>
     {lobby.fighters
-      .filter((fighter) => fighter.team === side)
+      .filter((fighter) => fighter.team === side && (lobby.status !== 'open' || !fighter.settled))
       .map((fighter) => (
         <FighterRow fighter={fighter} key={fighter.seat} />
       ))}
@@ -212,7 +212,7 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
     !lobby.can_join ||
     selected_character.level < lobby.level_min ||
     selected_character.level > lobby.level_max ||
-    lobby.fighters.some(({ character_id, settled }) => character_id === selected_character.id && !settled)
+    lobby.fighters.some(({ character_id }) => character_id === selected_character.id)
   const request_join = (lobby: Readonly<KolizeumLobbyRow>, side: 0 | 1): void => {
     set_join_intent(join_review(lobby, selected_character, join_disabled(lobby), side))
   }

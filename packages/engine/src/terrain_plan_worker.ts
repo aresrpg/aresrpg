@@ -34,10 +34,10 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
         z,
         layers: surface_chunk_layers(compiled, x, z, structures),
       }))
-      self.postMessage({ id: data.id, plans })
+      self.postMessage({ id: data.id, result: plans })
     })
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- the failure is returned through its exact worker request ID.
     .catch((error: unknown) => {
-      console.error('Terrain planner city initialization failed.', error)
-      throw error
+      self.postMessage({ id: data.id, error: error instanceof Error ? error.message : String(error) })
     })
 })

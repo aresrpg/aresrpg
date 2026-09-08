@@ -67,8 +67,10 @@ export {
 export { pet_max_feeds } from './pet.ts'
 export {
   rune_effect,
-  rune_max_apps,
   rune_unit_weight,
+  rune_can_apply,
+  rune_max_weight,
+  format_rune_weight,
   rune_unit_weights,
   rune_weight_scale,
   type RuneEffect,
@@ -119,6 +121,8 @@ export {
   consumable_types,
   element_names,
   equipment_categories,
+  cosmetic_categories,
+  is_cosmetic_category,
   item_categories,
   item_is_stackable,
   craft_batch_limit,
@@ -143,6 +147,8 @@ export { chain_to_client_coordinate, client_to_chain_coordinate, world_center, w
 export { basis_points, marketplace_lot_sizes, marketplace_royalty_bps } from './marketplace.ts'
 export {
   character_equipment_slots,
+  cosmetic_slots,
+  worn_appearance,
   combat_equipment_slots,
   equipment_slot_accepts,
   relic_slots,

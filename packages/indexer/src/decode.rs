@@ -291,7 +291,7 @@ pub struct PendingAmbush {
 
 // ╔════════════════ [ aresrpg::item — the object + its DFs ] ═════════════════ ]
 
-/// `item::Item` — a minted item (stats/damages/forge/feed ride as DFs).
+/// `item::Item` — a minted item (rolled stats/damages/feed ride as DFs).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Item {
     pub id: Id,
@@ -303,11 +303,12 @@ pub struct Item {
     pub amount: u32,
 }
 
-/// `forgemagie::ForgeState` — value of `Field<ForgeKey, ForgeState>` on gear.
+/// `item::RolledStats` — one value of `Field<StatsKey, RolledStats>` on a rolled item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ForgeState {
+pub struct RolledStats {
+    pub statistics: ItemStatistics,
     pub puits: u64,
-    pub apps: Vec<u8>,
+    pub revision: u64,
 }
 
 /// `pet::FeedState` — value of `Field<FeedKey, FeedState>` on a pet item.
@@ -339,6 +340,13 @@ pub struct Fight {
     pub drops_rolled: bool,
     pub next_turn_entropy: u64,
     pub loot_entropy_ready: bool,
+    pub rewards: FightRewards,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FightRewards {
+    pub weight: u64,
+    pub paid: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -549,16 +557,6 @@ pub struct Kolizeum {
     pub allowed: Option<VecSet<Addr>>,
 }
 
-/// `distribution::Airdrop` — the whitelist IS the claim state (shrinks per claim).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Airdrop {
-    pub id: Id,
-    pub drop_id: String,
-    pub template: Id,
-    pub amount_each: u32,
-    pub whitelist: VecSet<Addr>,
-}
-
 /// `distribution::Giftcard` — the zksend-portable voucher.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Giftcard {
@@ -598,8 +596,7 @@ pub struct Version {
 
 // ╔════════════════ [ 0x2 natives — kiosk / purchase caps ] ══════════════════ ]
 
-/// `sui::kiosk::Kiosk` — custody root; `owner` sources the `OWNS` edge (the
-/// KioskOwnerCap is wrapped inside the PersonalKioskCap, never visible).
+/// `sui::kiosk::Kiosk` — `owner` is cosmetic. Personal caps and markers own custody.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Kiosk {
     pub id: Id,
@@ -666,6 +663,8 @@ pub struct Trade {
     pub state: TradeState,
     pub sui_a: Balance,
     pub sui_b: Balance,
+    pub kares_a: Balance,
+    pub kares_b: Balance,
     pub caps_a: Vec<Id>,
     pub caps_b: Vec<Id>,
 }
@@ -675,6 +674,20 @@ pub struct Trade {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn captured_rolled_state_decodes_stats_sink_and_write_revision_together() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/rolled_stats.localnet.json")).unwrap();
+        let bytes = hex::decode(fixture["bcs_hex"].as_str().unwrap()).unwrap();
+        let field = from_bytes::<Field<MarkerKey, RolledStats>>(&bytes).unwrap();
+        assert_eq!(field.id.hex(), fixture["provenance"]["object_id"]);
+        assert_eq!(field.value.statistics.strength, 32772);
+        assert_eq!(field.value.statistics.wisdom, 32779);
+        assert_eq!(field.value.puits, 60);
+        assert_eq!(field.value.revision, 5);
+        assert!(from_bytes::<Field<MarkerKey, RolledStats>>(&bytes[..bytes.len() - 1]).is_err());
+    }
 
     fn roundtrip<T: Serialize + for<'a> Deserialize<'a> + std::fmt::Debug>(value: &T) -> T {
         let bytes = bcs::to_bytes(value).expect("encode");
@@ -998,6 +1011,10 @@ mod tests {
             drops_rolled: false,
             next_turn_entropy: 42,
             loot_entropy_ready: true,
+            rewards: FightRewards {
+                weight: 200,
+                paid: Some(17),
+            },
         };
         let back = roundtrip(&fight);
         let FighterAuthority::Player { .. } = &back.authorities[0] else {

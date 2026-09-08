@@ -103,6 +103,54 @@ describe('app navigation routes', () => {
     }
   })
 
+  test('opening staking and returning uses browser history without reloading the shell', () => {
+    const location_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
+    const history_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'history')
+    const assigned: string[] = []
+    const pushed: unknown[] = []
+    Object.defineProperty(globalThis, 'location', {
+      configurable: true,
+      value: { pathname: '/', assign: (path: string) => assigned.push(path) },
+    })
+    Object.defineProperty(globalThis, 'history', {
+      configurable: true,
+      value: { pushState: (_data: unknown, _title: string, path: unknown) => pushed.push(path) },
+    })
+    const controller = new AbortController()
+    let state_listener: ((state: AppState, previous: AppState) => void) | undefined
+    const base = initial_app_state(
+      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    )
+    try {
+      navigation.observe?.({
+        dispatch: () => undefined,
+        events: {
+          on: (name, listener) => {
+            if (name === 'STATE_UPDATED')
+              state_listener = listener as unknown as (state: AppState, previous: AppState) => void
+          },
+        },
+        get_state: () => base,
+        signal: controller.signal,
+      })
+      const staking = reduce_app_state(base, { type: 'page/open', page: 'kares' })
+      state_listener?.(staking, base)
+      const characters = reduce_app_state(staking, { type: 'page/open', page: 'characters' })
+      state_listener?.(characters, staking)
+      expect(assigned).toEqual([])
+      expect(pushed).toEqual(['/kares', '/characters'])
+      expect(staking.session).toBe(base.session)
+      expect(characters.session).toBe(base.session)
+      expect(page_from_pathname('/kares')).toBe('kares')
+    } finally {
+      controller.abort()
+      if (location_descriptor) Object.defineProperty(globalThis, 'location', location_descriptor)
+      else Reflect.deleteProperty(globalThis, 'location')
+      if (history_descriptor) Object.defineProperty(globalThis, 'history', history_descriptor)
+      else Reflect.deleteProperty(globalThis, 'history')
+    }
+  })
+
   test('waits for remembered authentication before consuming the initial admin route', async () => {
     const location_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
     const history_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'history')

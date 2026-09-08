@@ -153,9 +153,6 @@ public(package) fun craft(
 }
 
 #[test_only]
-public fun test_craft_xp_for(n: u64): u64 { job_xp::craft_xp(n) }
-
-#[test_only]
 public fun event_for_testing(
   crafted: &Crafted,
   recipe: ID,

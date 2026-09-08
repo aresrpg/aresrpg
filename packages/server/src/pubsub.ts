@@ -12,6 +12,7 @@ import { Redis } from 'ioredis'
 import { GRAPH_URL, MESH_REDIS_URL } from './env.ts'
 import { create_graph_bus, create_mesh_bus, type Pubsub } from './pubsub_bus.ts'
 import logger from './logger.ts'
+import { graph } from './graph.ts'
 
 const log = logger(import.meta)
 
@@ -19,6 +20,7 @@ const terminal_redis = (url: string): Redis => new Redis(url, { retryStrategy: (
 
 export const pubsub: Pubsub = {
   graph: create_graph_bus({
+    item_graph: graph,
     subscriber: terminal_redis(GRAPH_URL),
     publisher: terminal_redis(GRAPH_URL),
     on_lost: (reason) => {

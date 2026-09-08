@@ -69,7 +69,7 @@ fun searched_group_fight_returns_both_characters_and_closes() {
     mob_data::new_mob_data(
       b"Training Mob".to_string(), b"training_mob".to_string(), b"earth".to_string(),
       1, 1, 1, 6, 0, 0, 0, shift, shift, shift, shift, vector[], vector[], 10_000,
-    ),
+     false),
     scenario.ctx(),
   );
   world::create(&cap, &mut root, &content, scenario.ctx());
@@ -196,7 +196,7 @@ fun searched_group_fight_returns_both_characters_and_closes() {
   fight::start(&mut fight, &mut turn_entropy, &clock);
   api::weapon_strike(&mut fight, 0, 106, &version, scenario.ctx());
   let mut loot_commit = random::new_generator_from_seed_for_testing(b"loot-commit");
-  fight::seal_end(&mut fight, &mut loot_commit);
+  fight::end_turn(&mut fight, &mut loot_commit, &clock, scenario.ctx());
   let mut loot_entropy = random::new_generator_from_seed_for_testing(b"fight-loot");
   let fighters = vector[0, 2];
   fight::assert_last_settlers(&fight, &fighters, scenario.ctx());

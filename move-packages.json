@@ -1,6 +1,10 @@
 {
   "schema": 1,
   "max_bytecode_bytes": 96000,
+  "sui_cli": {
+    "release": "testnet-v1.78.1",
+    "linux_archive_sha256": "87ac74d50009d69419e617a017f1e46eb9c11e409238830d8b66e7f17456805e"
+  },
   "packages": [
     {
       "slot": "math",
@@ -27,10 +31,16 @@
       "dependencies": ["math", "control"]
     },
     {
+      "slot": "kares",
+      "path": "packages/kares",
+      "package_name": "aresrpg_kares",
+      "dependencies": []
+    },
+    {
       "slot": "game",
       "path": "packages/move",
       "package_name": "aresrpg",
-      "dependencies": ["math", "control", "combat", "seed"]
+      "dependencies": ["math", "control", "combat", "seed", "kares"]
     }
   ]
 }

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { KolizeumLobbyRow } from '@aresrpg/protocol'
+import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -37,6 +38,7 @@ export const selected_kolizeum_pending = (state: Readonly<AppState>): string | n
 
 export const kolizeum_side_open = (lobby: Readonly<KolizeumLobbyRow>, side: 0 | 1): boolean =>
   lobby.status === 'open' &&
+  lobby.fighters.filter((fighter) => fighter.team === side).length < Number(CONTRACT_CONSTANTS.start_cells) &&
   lobby.fighters.filter((fighter) => fighter.team === side && !fighter.settled).length < lobby.format
 
 /** Pledges deliberately allow zero; the wallet transfer parser rejects it because transfers do not. */

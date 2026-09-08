@@ -128,5 +128,5 @@ test('a same-turn spectator refresh discards paths drafted from the replaced che
     input: { type: 'end_turn', fighter: 0n, observed_ms: 99_000n },
   })
 
-  expect(turns).toEqual([{ fight: '0xf1', ended: false, actions: [{ type: 'move', path: [2n] }] }])
+  expect(turns).toEqual([{ fight: '0xf1', actions: [{ type: 'move', path: [2n] }] }])
 })

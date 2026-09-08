@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { EngineBackend } from './backend.ts'
+import { WebGPUUnavailableError, type EngineBackend } from './backend.ts'
 import { create_grid_fallback } from './grid_fallback.ts'
 import type {
   CameraProjection,
@@ -100,6 +100,34 @@ export const create_engine = ({
   let update: (frame: EngineFrame) => void = () => {}
   let disposed = false
 
+  const release = (outcome: ChunkRenderOutcome): void => {
+    started = false
+    if (animation_frame !== null) cancelAnimationFrame(animation_frame)
+    animation_frame = null
+    pending_chunks.clear()
+    fight_blobs.clear()
+    entities = Object.freeze([])
+    resource_nodes = Object.freeze([])
+    dungeon_portals = Object.freeze([])
+    dungeon_stage = null
+    fight_swords = null
+    entity_labels.clear()
+    world_labels.clear()
+    resource_labels.clear()
+    fight_sword_labels.clear()
+    portal_labels.clear()
+    pending_fight_cues.splice(0).forEach(({ resolve }) => resolve(false))
+    chunk_waiters.forEach(({ resolve }) => resolve(outcome))
+    chunk_waiters.clear()
+    const previous_backend = backend
+    backend = null
+    try {
+      previous_backend?.dispose()
+    } catch (error) {
+      console.error('Engine resource cleanup failed.', error)
+    }
+  }
+
   const draw = (now: number): void => {
     const delta_seconds = Math.min(0.1, Math.max(0, now - previous_frame) / 1000)
     previous_frame = now
@@ -116,6 +144,13 @@ export const create_engine = ({
   const publish_status = (next: EngineStatus): void => {
     status = Object.freeze(next)
     status_listeners.forEach((listener) => listener(status))
+  }
+
+  const report_failure = (issue: EngineIssue): void => {
+    if (disposed || status.state === 'failed') return
+    const kind = backend?.kind ?? status.backend
+    release('failed')
+    publish_status({ state: 'failed', backend: kind, issue })
   }
 
   const submit_chunk = (chunk: RenderChunkRequest): void => {
@@ -137,7 +172,7 @@ export const create_engine = ({
   }
 
   const attach = (next: EngineBackend, issue?: EngineIssue): void => {
-    if (disposed) {
+    if (disposed || status.state === 'failed') {
       next.dispose()
       return
     }
@@ -172,37 +207,39 @@ export const create_engine = ({
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       console.error('No supported graphics context is available.', error)
-      publish_status({ state: 'failed', backend: 'none', issue: { code: 'graphics_unavailable', detail } })
+      report_failure({ code: 'graphics_unavailable', detail })
     }
   }
 
   const boot = async (): Promise<void> => {
-    if (supports_webgpu()) {
-      try {
-        const { create_webgpu_backend } = await import('./webgpu_backend.ts')
-        let sky_issue: EngineIssue | undefined
-        const report_issue = (issue?: EngineIssue): void => {
-          sky_issue = issue
-          if (backend?.kind === 'webgpu')
-            publish_status(
-              issue ? { state: 'degraded', backend: 'webgpu', issue } : { state: 'ready', backend: 'webgpu' }
-            )
-        }
-        attach(
-          await create_webgpu_backend(canvas, quality, world, report_issue, presentation, initial_focus),
-          sky_issue
-        )
-        return
-      } catch (error) {
-        console.error('WebGPU initialization failed; using the grid fallback.', error)
-        attach_grid({
-          code: 'webgpu_initialization_failed',
-          detail: error instanceof Error ? error.message : String(error),
-        })
-        return
-      }
+    if (disposed) return
+    if (!supports_webgpu()) {
+      attach_grid({ code: 'webgpu_unavailable' })
+      return
     }
-    attach_grid({ code: 'webgpu_unavailable' })
+    try {
+      const { create_webgpu_backend } = await import('./webgpu_backend.ts')
+      let sky_issue: EngineIssue | undefined
+      const report_issue = (issue?: EngineIssue): void => {
+        if (disposed || status.state === 'failed') return
+        if (issue?.code === 'webgpu_device_lost') return report_failure(issue)
+        sky_issue = issue
+        if (backend?.kind === 'webgpu')
+          publish_status(
+            issue ? { state: 'degraded', backend: 'webgpu', issue } : { state: 'ready', backend: 'webgpu' }
+          )
+      }
+      attach(await create_webgpu_backend(canvas, quality, world, report_issue, presentation, initial_focus), sky_issue)
+      return
+    } catch (error) {
+      const issue = {
+        code: 'webgpu_initialization_failed' as const,
+        detail: error instanceof Error ? error.message : String(error),
+      }
+      if (error instanceof WebGPUUnavailableError && !previous_boot) attach_grid(issue)
+      else report_failure(issue)
+      return
+    }
   }
   const previous_boot = Reflect.get(canvas, ENGINE_BOOT) as Promise<void> | undefined
   const boot_task = (previous_boot ?? Promise.resolve())
@@ -213,6 +250,7 @@ export const create_engine = ({
 
   return Object.freeze({
     start: (next_update = () => {}) => {
+      if (disposed || status.state === 'failed') return
       update = next_update
       if (started) return
       started = true
@@ -292,9 +330,11 @@ export const create_engine = ({
     },
     animate_entity: (motion) => backend?.animate_entity(motion) ?? Promise.resolve(false),
     play_fight_cue: (cue) =>
-      backend
-        ? backend.play_fight_cue(cue)
-        : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
+      disposed || status.state === 'failed'
+        ? Promise.resolve(false)
+        : backend
+          ? backend.play_fight_cue(cue)
+          : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
     play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
     set_entity_label: (id, element) => {
@@ -329,6 +369,8 @@ export const create_engine = ({
     },
     pick_fight_cell: (client_x: number, client_y: number) => backend?.pick_fight_cell(client_x, client_y) ?? null,
     render_chunk: (chunk: RenderChunkRequest) => {
+      if (disposed) return Promise.resolve<ChunkRenderOutcome>('removed')
+      if (status.state === 'failed') return Promise.resolve<ChunkRenderOutcome>('failed')
       pending_chunks.set(chunk.key, chunk)
       const previous = chunk_waiters.get(chunk.key)
       previous?.resolve('removed')
@@ -362,6 +404,7 @@ export const create_engine = ({
     quality: () => quality,
     flattened: () => flat_amount >= 1,
     backend: () => backend?.kind ?? 'initializing',
+    fail: report_failure,
     status: () => status,
     subscribe_status: (listener: (next: EngineStatus) => void) => {
       status_listeners.add(listener)
@@ -370,26 +413,7 @@ export const create_engine = ({
     },
     dispose: () => {
       disposed = true
-      started = false
-      if (animation_frame !== null) cancelAnimationFrame(animation_frame)
-      animation_frame = null
-      pending_chunks.clear()
-      fight_blobs.clear()
-      entities = Object.freeze([])
-      resource_nodes = Object.freeze([])
-      dungeon_portals = Object.freeze([])
-      dungeon_stage = null
-      fight_swords = null
-      entity_labels.clear()
-      world_labels.clear()
-      resource_labels.clear()
-      fight_sword_labels.clear()
-      portal_labels.clear()
-      pending_fight_cues.splice(0).forEach(({ resolve }) => resolve(false))
-      chunk_waiters.forEach(({ resolve }) => resolve('removed'))
-      chunk_waiters.clear()
-      backend?.dispose()
-      backend = null
+      release('removed')
       status_listeners.clear()
     },
   })

@@ -3,6 +3,8 @@
 
 import { expect, test } from 'bun:test'
 import {
+  AnimationClip,
+  VectorKeyframeTrack,
   Bone,
   BoxGeometry,
   Group,
@@ -55,6 +57,7 @@ const attached_model = () => {
   body_detail.name = 'body_detail'
   root.add(body, body_detail)
   const head = new Bone()
+  head.name = 'head'
   head.position.y = 1
   const hair = new Mesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial())
   hair.name = 'hair'
@@ -89,6 +92,8 @@ test('compatible world characters become one skinned instance batch with retaine
       character('0xb', 4, ['#ffffff', '#888888', '#111111']),
     ]) as never
   )
+  expect(crowd.entity_height('0xa')).toBeNull()
+  expect(crowd.world_anchor('0xa')).toBeNull()
   await Promise.resolve()
   await Promise.resolve()
 
@@ -107,6 +112,7 @@ test('compatible world characters become one skinned instance batch with retaine
   expect(color_2.data).toBe(color_1.data)
   expect(color_3.data).toBe(color_1.data)
   expect(crowd.world_anchor('0xb')).toMatchObject({ x: 4, y: 4, z: 3 })
+  expect(crowd.entity_height('0xb')).toBe(2)
 
   crowd.dispose()
   expect(scene.children).toHaveLength(0)
@@ -230,5 +236,46 @@ test('two hundred compatible characters retain one skeleton batch', async () => 
 
   expect(crowd.stats()).toEqual({ batches: 1, instances: 200 })
   expect(loads).toBe(1)
+  crowd.dispose()
+})
+
+test('a removed pending batch cannot publish a late model anchor', async () => {
+  const scene = new Scene()
+  const loading = Promise.withResolvers<ReturnType<typeof model>>()
+  const crowd = create_character_crowd_layer({ scene, load_model: () => loading.promise })
+  crowd.set([character('0xa', 0, ['#fff', '#fff', '#fff'])] as never)
+  crowd.set([])
+  loading.resolve(model())
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(scene.children).toHaveLength(0)
+  expect(crowd.entity_height('0xa')).toBeNull()
+  expect(crowd.world_anchor('0xa')).toBeNull()
+  crowd.dispose()
+})
+
+test('animated accessories update once after movement and animation advance', async () => {
+  const scene = new Scene()
+  const crowd = create_character_crowd_layer({
+    scene,
+    load_model: async () => ({
+      ...attached_model(),
+      clips: [new AnimationClip('IDLE', 1, [new VectorKeyframeTrack('head.position', [0, 1], [0, 1, 0, 0, 2, 0])])],
+    }),
+  })
+  const spec = character('0xa', 4, ['#fff', '#888', '#111'])
+  crowd.set([spec] as never)
+  await Promise.resolve()
+  await Promise.resolve()
+  const now = performance.now()
+  crowd.tick(now)
+  const hair = scene.getObjectByName('hair')! as InstancedMesh
+  const before = hair.instanceMatrix.version
+  crowd.set([{ ...spec, anchor: { kind: 'world', position: [5, 2, 3] } }] as never)
+  crowd.tick(now + 50)
+  expect(hair.instanceMatrix.version).toBe(before + 1)
+  expect(hair.instanceMatrix.array[12]).toBe(5)
+  expect(hair.instanceMatrix.array[13]).toBeGreaterThan(3)
+  expect(hair.instanceMatrix.array[14]).toBe(3)
   crowd.dispose()
 })

@@ -197,6 +197,8 @@ const nullable_string = (value: unknown): string | null =>
 const nullable_bigint = (value: unknown, label: string): bigint | null =>
   value === null || value === undefined ? null : as_bigint(value, label)
 
+const as_bigint_or_zero = (value: unknown, label: string): bigint => as_bigint(value ?? 0, label)
+
 export const normalize_contract = (input: unknown): FightContract | null => {
   const contract = input === null ? null : raw_record(input)
   if (contract === null) return null
@@ -214,8 +216,8 @@ export const normalize_contract = (input: unknown): FightContract | null => {
     fighters: raw_list(contract.fighters).map(normalize_fighter),
     zones: raw_list(contract.zones ?? []).map(normalize_zone),
     queue: raw_list(contract.queue ?? []).map((seat) => as_bigint(seat, 'fight.queue')),
-    turn_ptr: as_bigint(contract.turn_ptr ?? 0, 'fight.turn_ptr'),
-    round: as_bigint(contract.round ?? 0, 'fight.round'),
+    turn_ptr: as_bigint_or_zero(contract.turn_ptr, 'fight.turn_ptr'),
+    round: as_bigint_or_zero(contract.round, 'fight.round'),
     ended: Boolean(contract.ended),
     winner: nullable_bigint(contract.winner, 'fight.winner'),
     dungeon: nullable_string(contract.dungeon),
@@ -223,13 +225,15 @@ export const normalize_contract = (input: unknown): FightContract | null => {
     managed: Boolean(contract.managed),
     wagered: Boolean(contract.wagered),
     drops_rolled: Boolean(contract.drops_rolled),
-    turn_seed: as_bigint(contract.turn_seed ?? 0, 'fight.turn_seed'),
-    turn_slot: as_bigint(contract.turn_slot ?? 0, 'fight.turn_slot'),
+    boss_weight: as_bigint_or_zero(contract.boss_weight, 'fight.boss_weight'),
+    kares_reward: as_bigint_or_zero(contract.kares_reward, 'fight.kares_reward'),
+    turn_seed: as_bigint_or_zero(contract.turn_seed, 'fight.turn_seed'),
+    turn_slot: as_bigint_or_zero(contract.turn_slot, 'fight.turn_slot'),
     turn_casts: raw_list(contract.turn_casts ?? []).map((input_row) => {
       const row = raw_record(input_row)
       return { spell: String(row.spell), target: as_bigint(row.target, 'turn_cast.target') }
     }),
-    placement_ms: as_bigint(contract.placement_ms ?? 0, 'fight.placement_ms'),
+    placement_ms: as_bigint_or_zero(contract.placement_ms, 'fight.placement_ms'),
     started_ms:
       contract.started_ms === null || contract.started_ms === undefined
         ? null
@@ -238,7 +242,7 @@ export const normalize_contract = (input: unknown): FightContract | null => {
       contract.ended_ms === null || contract.ended_ms === undefined
         ? null
         : as_bigint(contract.ended_ms, 'fight.ended_ms'),
-    turn_started_ms: as_bigint(contract.turn_started_ms ?? 0, 'fight.turn_started_ms'),
+    turn_started_ms: as_bigint_or_zero(contract.turn_started_ms, 'fight.turn_started_ms'),
   }
 }
 

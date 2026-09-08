@@ -16,6 +16,8 @@ import {
   project_math_deployment,
   project_control_deployment,
   project_seed_deployment,
+  project_kares_setup,
+  project_kares_deployment,
   DISPLAY_REGISTRY_ID,
 } from '../src/deployment_admin.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
@@ -24,6 +26,61 @@ const id = (digit: string): string => `0x${digit.repeat(64)}`
 const resolve_transaction: TransactionPlugin = async (_data, _options, next) => next()
 
 describe('deployment admin', () => {
+  test('KARES publication ignores the core package sentinel in its object-type map', () => {
+    // The literal package sentinel was observed in testnet receipt
+    // BEnojWNcqiW4ri57r9J2qwgo7RtBGvUxcERhzdtWLndh on 2026-09-06.
+    const original = id('1')
+    const deployment = project_kares_deployment({
+      Transaction: {
+        objectTypes: {
+          [original]: 'package',
+          [id('2')]: '0x2::package::UpgradeCap',
+          [id('3')]: `${original}::kares::Genesis`,
+          [id('4')]: `0x2::coin_registry::Currency<${original}::kares::KARES>`,
+        },
+        effects: {
+          changedObjects: [
+            { objectId: original, idOperation: 'Created', outputState: 'PackageWrite', outputOwner: null },
+          ],
+        },
+      },
+    })
+    expect(deployment).toEqual({ package: original, upgrade_cap: id('2'), genesis: id('3'), currency: id('4') })
+  })
+
+  test('KARES registration projects the new shared currency, not the consumed receiving object', () => {
+    const original = id('1')
+    const currency_type = `0x2::coin_registry::Currency<${original}::kares::KARES>`
+    const receipt = {
+      Transaction: {
+        objectTypes: {
+          [id('2')]: currency_type,
+          [id('3')]: currency_type,
+          [id('4')]: `${original}::staking::StakingPool`,
+          [id('5')]: `${original}::offering::Offering`,
+          [id('6')]: `${original}::combat_rewards::CombatPot`,
+        },
+        effects: {
+          changedObjects: [
+            { objectId: id('2'), idOperation: 'Deleted', outputState: 'NotExist', outputOwner: null },
+            ...['3', '4', '5', '6'].map((value) => ({
+              objectId: id(value),
+              idOperation: 'Created',
+              outputState: 'ObjectWrite',
+              outputOwner: { Shared: { initialSharedVersion: '42' } },
+            })),
+          ],
+        },
+      },
+    }
+    expect(project_kares_setup(receipt as never, original)).toEqual({
+      currency: { id: id('3'), shared_version: '42' },
+      pool: { id: id('4'), shared_version: '42' },
+      offering: { id: id('5'), shared_version: '42' },
+      combat_pot: { id: id('6'), shared_version: '42' },
+    })
+  })
+
   test('publishing transfers the new upgrade capability to the connected wallet', () => {
     const transaction = create_package_publish_transaction({
       artifact: { package_name: 'aresrpg_math', digest: [1, 2, 3], modules: ['AA=='], dependencies: [id('1')] },
@@ -163,18 +220,19 @@ describe('deployment admin', () => {
       recipient: id('9'),
     })
     expect(transaction.getData().commands[0]?.MoveCall).toMatchObject({
-      package: id('1'),
-      module: 'admin',
-      function: 'create_item_display',
+      package: '0x' + '2'.padStart(64, '0'),
+      module: 'display_registry',
+      function: 'new_with_publisher',
     })
     const calls = transaction.getData().commands.flatMap((command) => (command.MoveCall ? [command.MoveCall] : []))
     const local_calls = calls
       .filter(({ package: called_package }) => called_package === id('1'))
       .map(({ module, function: called_function }) => `${module}::${called_function}`)
 
+    expect(calls.filter(({ module, function: name }) => module === 'display_registry' && name === 'set')).toHaveLength(
+      12
+    )
     expect(local_calls).toEqual([
-      'admin::create_item_display',
-      'admin::create_character_display',
       'protected_policy::mint_and_share',
       'protected_policy::mint_and_share',
       'listing_rule::add',

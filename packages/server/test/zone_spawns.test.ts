@@ -32,6 +32,47 @@ const world_with_mobs = {
 const CENTER_ZONE = { zx: 97, zz: 97 } // center starter zone, authored plains — level floor 0 territory
 const OCEAN_ZONE = { zx: 88, zz: 85 }
 
+test.each([
+  [195, 0],
+  [0, 195],
+  [195, 195],
+])('border population at (%i,%i) stays reachable', (zx, zz) => {
+  const population = {
+    ...world,
+    mobs: [{ mob_type: 'fuwa', weight_bp: 10_000n, biomes: [...Array(9).keys()], cities: [] }],
+    resources: [{ item_type: 'wheat', biomes: [...Array(9).keys()], cities: [] }],
+  }
+  const groups = mob_groups(population, zx, zz, 1n)
+  const packs = resource_packs(population, zx, zz, 1n)
+  expect(groups.length).toBeGreaterThan(0)
+  expect(packs.length).toBeGreaterThan(0)
+  for (const { x, z } of [...groups, ...packs]) {
+    expect(x).toBeGreaterThanOrEqual(0)
+    expect(z).toBeGreaterThanOrEqual(0)
+    expect(x).toBeLessThan(100_000)
+    expect(z).toBeLessThan(100_000)
+  }
+})
+
+test('border anchors retain the native seed and population-index fixture', () => {
+  const population = {
+    ...world,
+    mobs: [{ mob_type: 'fuwa', weight_bp: 10_000n, biomes: [...Array(9).keys()], cities: [] }],
+    resources: [{ item_type: 'wheat', biomes: [...Array(9).keys()], cities: [] }],
+  }
+  const groups = mob_groups(population, 195, 0, 1n)
+  const packs = resource_packs(population, 195, 0, 1n)
+  expect(groups).toHaveLength(54)
+  expect(groups[0]).toMatchObject({ index: 0, x: 99_927, z: 378 })
+  expect(packs).toHaveLength(35)
+  expect(packs[0]).toMatchObject({ index: 0, x: 99_947, z: 139 })
+})
+
+test.each([-1, 1.5, 196, Number.POSITIVE_INFINITY])('invalid zone %s cannot enter population math', (index) => {
+  expect(() => mob_groups(world, index, 0, 1n)).toThrow('Invalid world zone')
+  expect(() => resource_packs(world, 0, index, 1n)).toThrow('Invalid world zone')
+})
+
 test('every hand-mirrored zone constant matches Move', () => {
   const move_source = readFileSync(new URL('../../move-math/sources/zone_math.move', import.meta.url), 'utf8')
   const twin_source = readFileSync(new URL('../src/zone_spawns.ts', import.meta.url), 'utf8')

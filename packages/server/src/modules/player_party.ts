@@ -33,7 +33,7 @@ export default {
   },
 
   observe: ({ pubsub, graph, events, send, address, signal, get_state }) => {
-    const { watch, unwatch, watched } = create_watcher(pubsub)
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
 
     const forward_party_chat = (party: string) => (fact: ChatFact) => {
       if (fact.address === address) return

@@ -11,19 +11,25 @@
 
 import { EventEmitter } from 'node:events'
 
+import type { LeaderboardObservation, LeaderboardSnapshot } from '@aresrpg/protocol'
+
+import { get_leaderboard } from './reads/get_leaderboard.ts'
 import {
   INDEXED_CHECKPOINT_KEY,
   parse_indexed_checkpoint,
   parse_indexed_state,
   type IndexedState,
 } from './indexing_health.ts'
-import { is_indexer_channel } from './protocol.ts'
+import { channels, is_indexer_channel, type EventEnvelope } from './protocol.ts'
+import type { Graph } from './graph.ts'
+import { item_updates } from './item_updates.ts'
 import logger from './logger.ts'
 
 const log = logger(import.meta)
 
 /** The slice of an ioredis connection the buses consume — injected, so tests never connect. */
 export type BusRedis = {
+  call?: (command: string, ...args: readonly (string | number)[]) => Promise<unknown>
   on: (event: 'message' | 'end', listener: (...args: readonly string[]) => void) => void
   subscribe: (channel: string) => Promise<unknown>
   unsubscribe: (channel: string) => Promise<unknown>
@@ -64,6 +70,7 @@ export type Bus = {
 /** The graph bus carries no `publish`: this server never publishes a chain event — evt:* is
  *  the indexer's voice alone (read-only law, now mechanical). */
 export type GraphBus = Omit<Bus, 'publish'> & {
+  leaderboard?: (observation: LeaderboardObservation, address: string) => Promise<LeaderboardSnapshot>
   /** Latest checkpoint the bound indexer committed to both graph and its redis. */
   indexed_checkpoint: () => Promise<number | null>
   indexed_state?: () => Promise<IndexedState | null>
@@ -77,11 +84,9 @@ export type GraphBus = Omit<Bus, 'publish'> & {
 }
 
 export type MeshBus = Bus & {
-  /** This pod's cluster-presence key: `server:<id>` = online, 20s TTL refreshed every 5s —
-   *  a dead pod expires out of the sum, no membership protocol (legacy law; the ONE sanctioned
-   *  ephemeral write, owner 2026-08-12). */
-  heartbeat: (server_id: string, online: number) => Promise<void>
-  /** Cluster-wide online count — the sum of every live `server:*` key (cached 4s). */
+  /** This pod's cluster-presence key holds its authenticated addresses for 20 seconds. */
+  heartbeat: (server_id: string, addresses: readonly string[]) => Promise<void>
+  /** Cluster-wide unique authenticated addresses across every live pod snapshot (cached 4s). */
   cluster_online: () => Promise<number>
   record_online?: (online: number, at_ms: number) => Promise<void>
   online_samples?: (keys: readonly string[]) => Promise<readonly (readonly number[])[]>
@@ -110,11 +115,45 @@ const online_sample_values = (values: readonly string[]): readonly number[] => {
   return samples
 }
 
+const parse_online_heartbeat = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw) as unknown
+  } catch {
+    throw new Error('online heartbeat has an invalid shape')
+  }
+}
+
+/** Rolling compatibility: once any address snapshot exists, old numeric pod counts can only
+ * raise the temporary floor. Summing both schemas would preserve the rollout inflation bug. */
+export const cluster_online_count = (values: readonly (string | null)[]): number => {
+  const addresses = new Set<string>()
+  const legacy: number[] = []
+  let has_snapshots = false
+  values.forEach((raw) => {
+    if (raw === null) return
+    const value = parse_online_heartbeat(raw)
+    if (Array.isArray(value) && value.every((address) => typeof address === 'string')) {
+      has_snapshots = true
+      value.forEach((address) => addresses.add(address))
+      return
+    }
+    if (!Number.isSafeInteger(value) || Number(value) < 0) throw new Error('online heartbeat has an invalid shape')
+    legacy.push(Number(value))
+  })
+  if (has_snapshots) return Math.max(addresses.size, 0, ...legacy)
+  return legacy.reduce((total, count) => {
+    const next = total + count
+    if (!Number.isSafeInteger(next)) throw new Error('online heartbeat count exceeds the safe integer range')
+    return next
+  }, 0)
+}
+
 const create_bus = ({
   subscriber,
   publisher,
   unsubscribe_grace_ms = UNSUBSCRIBE_GRACE_MS,
-}: BusWires): Bus & { closed: () => boolean } => {
+  item_graph,
+}: BusWires & { item_graph?: Graph }): Bus & { closed: () => boolean } => {
   const emitter = new EventEmitter()
   emitter.setMaxListeners(0)
   const refs = new Map<string, number>()
@@ -124,7 +163,18 @@ const create_bus = ({
 
   subscriber.on('message', (channel: string, raw: string) => {
     try {
-      emitter.emit(channel, JSON.parse(raw))
+      const payload = JSON.parse(raw) as EventEnvelope
+      if (item_graph && channel === channels.economy && ['ItemWritten', 'ItemRemoved'].includes(payload.type)) {
+        void item_updates(item_graph, payload)
+          .then((updates) => {
+            if (closed) return
+            for (const { address, packet } of updates)
+              emitter.emit(channels.social(address), { ...payload, type: 'ItemProjected', data: { packet } })
+          })
+          .catch((error: Error) => log.error({ error: error.message }, 'item custody routing failed'))
+        return
+      }
+      emitter.emit(channel, payload)
     } catch (error) {
       log.error({ channel, error: (error as Error).message }, 'unparseable event payload dropped')
     }
@@ -135,6 +185,7 @@ const create_bus = ({
     closed: () => closed,
     /** Refcounted: the first watcher SUBSCRIBEs, the rest ride the same wire. */
     subscribe: async (channel) => {
+      if (closed) throw new Error('pubsub bus is closed')
       const pending_unsubscribe = pending_unsubscriptions.get(channel)
       if (pending_unsubscribe) {
         clearTimeout(pending_unsubscribe)
@@ -171,7 +222,10 @@ const create_bus = ({
           channel,
           setTimeout(() => {
             pending_unsubscriptions.delete(channel)
-            if (!refs.has(channel)) void subscriber.unsubscribe(channel)
+            if (!refs.has(channel) && !closed)
+              void subscriber
+                .unsubscribe(channel)
+                .catch((error: Error) => log.error({ channel, error: error.message }, 'deferred unsubscribe failed'))
           }, unsubscribe_grace_ms)
         )
       } else refs.set(channel, count - 1)
@@ -194,8 +248,9 @@ export const create_graph_bus = ({
   publisher,
   unsubscribe_grace_ms,
   on_lost,
-}: BusWires & Readonly<{ on_lost: (reason: string) => void }>): GraphBus => {
-  const bus = create_bus({ subscriber, publisher, unsubscribe_grace_ms })
+  item_graph,
+}: BusWires & Readonly<{ item_graph?: Graph; on_lost: (reason: string) => void }>): GraphBus => {
+  const bus = create_bus({ subscriber, publisher, unsubscribe_grace_ms, item_graph })
   const lost = (reason: string) => (): void => {
     if (!bus.closed()) on_lost(reason)
   }
@@ -211,6 +266,7 @@ export const create_graph_bus = ({
     analytics_sums: (keys) => Promise.all(keys.map(async (key) => sum_checkpoint_counts(await publisher.hvals(key)))),
     analytics_cumulative_counts: (key, maxes) =>
       Promise.all([...maxes.map((max) => publisher.zcount(key, 0, max)), publisher.zcard(key)]),
+    leaderboard: (observation, address) => get_leaderboard(publisher, observation, address),
     indexed_checkpoint: async () => {
       try {
         return parse_indexed_checkpoint(await publisher.get(INDEXED_CHECKPOINT_KEY))
@@ -236,8 +292,8 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
   const online_cache = { value: 0, at_ms: 0 }
   return {
     ...doors,
-    heartbeat: async (server_id, online) => {
-      await publisher.setex(`server:${server_id}`, 20, String(online))
+    heartbeat: async (server_id, addresses) => {
+      await publisher.setex(`server:${server_id}`, 20, JSON.stringify(addresses))
     },
     cluster_online: async () => {
       if (Date.now() - online_cache.at_ms < 4_000) return online_cache.value
@@ -248,8 +304,8 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
         if (next === '0') break
         cursor = next
       }
-      const counts = keys.length ? await publisher.mget(keys) : []
-      online_cache.value = counts.reduce((sum, count) => sum + (Number(count) || 0), 0)
+      const snapshots = keys.length ? await publisher.mget(keys) : []
+      online_cache.value = cluster_online_count(snapshots)
       online_cache.at_ms = Date.now()
       return online_cache.value
     },
@@ -291,38 +347,51 @@ export type Watcher = {
 
 /** The one routed subscription helper every player module uses: the channel NAME picks the bus
  *  (protocol.ts law), the map keeps one forward per channel, teardown walks `watched()`. */
-export const create_watcher = ({ graph, mesh }: Pubsub): Watcher => {
-  const forwards = new Map<string, (payload: never) => void>()
-  const readiness = new Map<string, Promise<void>>()
+export const create_watcher = ({ graph, mesh }: Pubsub, signal?: AbortSignal): Watcher => {
+  const watches = new Map<string, { forward: (payload: never) => void; ready: Promise<void> }>()
   const bus_of = (channel: string): Omit<Bus, 'publish'> => (is_indexer_channel(channel) ? graph : mesh)
+  const unwatch = (channel: string): void => {
+    const entry = watches.get(channel)
+    if (!entry) return
+    watches.delete(channel)
+    bus_of(channel).emitter.off(channel, entry.forward as (payload: unknown) => void)
+    // Failed acquisition owns no reference. Release only after this acquisition succeeds.
+    void entry.ready
+      .then(
+        () => bus_of(channel).unsubscribe(channel),
+        () => undefined
+      )
+      .catch((error: Error) => log.error({ channel, error: error.message }, 'unsubscribe failed'))
+  }
+  signal?.addEventListener(
+    'abort',
+    () => {
+      for (const channel of watches.keys()) unwatch(channel)
+    },
+    { once: true }
+  )
   return {
     watch: async (channel, forward) => {
-      const existing = readiness.get(channel)
-      if (existing) return existing
-      forwards.set(channel, forward)
-      bus_of(channel).emitter.on(channel, forward as (payload: unknown) => void)
-      const ready = bus_of(channel)
+      if (signal?.aborted) return
+      const existing = watches.get(channel)
+      if (existing) return existing.ready
+      const owned_forward = (payload: never) => {
+        if (!signal?.aborted) forward(payload)
+      }
+      const entry = { forward: owned_forward, ready: Promise.resolve() }
+      bus_of(channel).emitter.on(channel, owned_forward as (payload: unknown) => void)
+      entry.ready = bus_of(channel)
         .subscribe(channel)
         .catch((error) => {
-          readiness.delete(channel)
-          forwards.delete(channel)
-          bus_of(channel).emitter.off(channel, forward as (payload: unknown) => void)
+          if (watches.get(channel) === entry) watches.delete(channel)
+          bus_of(channel).emitter.off(channel, owned_forward as (payload: unknown) => void)
           throw error
         })
-      readiness.set(channel, ready)
-      return ready
+      watches.set(channel, entry)
+      return entry.ready
     },
-    unwatch: (channel) => {
-      const forward = forwards.get(channel)
-      if (!forward) return
-      readiness.delete(channel)
-      forwards.delete(channel)
-      bus_of(channel).emitter.off(channel, forward as (payload: unknown) => void)
-      void bus_of(channel)
-        .unsubscribe(channel)
-        .catch((error: Error) => log.error({ channel, error: error.message }, 'unsubscribe failed'))
-    },
-    has: (channel) => forwards.has(channel),
-    watched: () => [...forwards.keys()],
+    unwatch,
+    has: (channel) => watches.has(channel),
+    watched: () => [...watches.keys()],
   }
 }

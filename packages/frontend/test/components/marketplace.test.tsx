@@ -7,6 +7,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { MarketplaceDisclaimer } from '../../src/marketplace/MarketplaceDisclaimer.tsx'
+import { SuiLogo } from '../../src/components/SuiLogo.tsx'
 
 const source = readFileSync(new URL('../../src/marketplace/MarketplacePage.tsx', import.meta.url), 'utf8')
 const browse = readFileSync(new URL('../../src/marketplace/BrowsePanel.tsx', import.meta.url), 'utf8')
@@ -77,7 +78,8 @@ test('fixed lots stay centered, spacious, and internally bounded', () => {
 })
 
 test('every marketplace SUI unit carries the shared Sui logo', () => {
-  expect(model).toContain('data-sui-logo')
+  expect(renderToStaticMarkup(<SuiLogo />)).toContain('data-sui-logo')
+  expect(model).toContain('<SuiLogo')
   expect(model).toContain('text-[#4a9eff]')
   expect(browse).toContain('<SuiUnit')
   expect(sell).toContain('<SuiUnit')

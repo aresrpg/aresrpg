@@ -24,12 +24,14 @@ const participant = (seat: number, character_id: string): ResultParticipant =>
     forfeited: false,
     settled: false,
     xp_awarded: 0,
+    kares: 0n,
     loot: [],
   })
 
 const fight_result = (own_seat: number, participants: readonly ResultParticipant[]): FightResult =>
   Object.freeze({
     fight: '0xf1',
+    boss_weight: 0,
     dungeon: null,
     kolizeum: null,
     kolizeum_wager: null,
@@ -55,7 +57,7 @@ test('a solo PvM settlement is final while another unsettled player is not', () 
   expect(settlement_is_final(fight_result(0, [own, participant(1, '0xc2')]), new Set([0]))).toBeFalse()
 })
 
-test('owned fighters sharing one kiosk merge duplicate stacks after settlement projection', async () => {
+test('settlement leaves fragments for later spend-time merges', async () => {
   const listeners = new Map<string, ((...args: never[]) => void)[]>()
   const settlement_batches: unknown[] = []
   const merge_calls: unknown[] = []
@@ -133,5 +135,24 @@ test('owned fighters sharing one kiosk merge duplicate stacks after settlement p
   emit_state(previous)
   await new Promise((resolve) => setTimeout(resolve, 0))
 
-  expect(merge_calls).toEqual([[{ kiosk: '0xk', target_id: '0xamber-b', source_ids: ['0xamber-a'] }]])
+  expect(merge_calls).toEqual([])
+})
+
+test('certified KARES rewards survive late packets and use the chain seat on nonzero-seat recovery', () => {
+  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const result = fight_result(0, [participant(2, '0xc1')])
+  const state = { ...base, fight_result: { ...base.fight_result, current_by_character: { '0xc1': result } } }
+  const paid = fight_result_module.reduce!(state, {
+    type: 'fight_result/settled',
+    character_id: '0xc1',
+    fight: '0xf1',
+    paid_mist: null,
+    kares_rewards: [{ fighter: 2n, amount: 17n }],
+  })
+  expect(paid.fight_result.current_by_character['0xc1']?.participants[0]?.kares).toBe(17n)
+  const late = fight_result_module.reduce!(paid, {
+    type: 'server/packet',
+    packet: { type: 'packet/fight_drops', fight: '0xf1', fighter: '2', drops: [], kares: '0' },
+  })
+  expect(late.fight_result.current_by_character['0xc1']?.participants[0]?.kares).toBe(17n)
 })

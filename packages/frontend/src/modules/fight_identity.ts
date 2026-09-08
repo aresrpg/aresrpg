@@ -3,6 +3,20 @@
 
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 
+/** The retained per-character identities own both subscription and unsubscription. */
+export const spectator_changes = (
+  current: Readonly<Record<string, string>>,
+  previous: Readonly<Record<string, string>>,
+  reconnect: boolean
+): readonly Readonly<{ character_id: string; fight: string | null }>[] => {
+  const before = reconnect ? {} : previous
+  return Object.keys({ ...before, ...current }).flatMap((character_id) =>
+    current[character_id] === before[character_id]
+      ? []
+      : [Object.freeze({ character_id, fight: current[character_id] ?? null })]
+  )
+}
+
 export const holds_character_seat = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   character_id: string | null,

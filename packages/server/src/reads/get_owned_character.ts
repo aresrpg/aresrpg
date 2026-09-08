@@ -4,10 +4,10 @@
 //   held   — the caller's own kiosk HOLDS the character (the normal chain),
 //   seated — the character sits a live Fight (HOLDS is severed by law); the Fight node's
 //            MACHINE document names each seat's OWNER — the address must appear there.
-// The read also carries everything embodiment needs in ONE roundtrip: the four VISIBLE
+// The read also carries everything embodiment needs in ONE roundtrip: the visible
 // equipment slots (presence visuals), the party, and the live fight + seat.
 
-import { VISIBLE_SLOTS, type VisibleSlot } from '@aresrpg/protocol'
+import { visible_equipment, type VisibleSlot } from '@aresrpg/protocol'
 
 import { type Graph, type Node } from '../graph.ts'
 
@@ -56,9 +56,7 @@ export async function get_owned_character(
   if (!row.held_kiosk && seat === -1) return null
 
   const worn = row.worn as { slot: string | null; item_type: string | null }[]
-  const visuals = Object.fromEntries(
-    VISIBLE_SLOTS.map((slot) => [slot, worn.find((entry) => entry.slot === slot)?.item_type ?? null])
-  ) as Record<VisibleSlot, string | null>
+  const visuals = visible_equipment(worn)
 
   return {
     character: shape_character((row.character as Exclude<Node, null | undefined>).properties),

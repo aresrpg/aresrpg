@@ -17,6 +17,7 @@ const output_path = join(package_root, 'src/move_contract.gen.ts')
 
 const source_paths = [
   'packages/move/sources/fight.move',
+  'packages/move/sources/fight_rewards.move',
   'packages/move-combat/sources/combat.move',
   'packages/move/sources/api.move',
   'packages/move/sources/character.move',
@@ -255,6 +256,7 @@ const selected_structs = {
   SpellLevel: struct_schema(spell_effect, 'SpellLevel'),
   GridSpec: struct_schema(combat_grid, 'GridSpec'),
   Fight: struct_schema(fight, 'Fight'),
+  FightRewards: struct_schema(sources['packages/move/sources/fight_rewards.move'], 'FightRewards'),
   Fighter: struct_schema(combat, 'Fighter'),
   MobSnapshot: struct_schema(combat, 'MobSnapshot'),
   KitSpell: struct_schema(combat, 'KitSpell'),
@@ -291,6 +293,7 @@ const contract_constants = {
     'PLACEMENT_FORCE_MS',
     'TURN_MIN_MS',
     'TURN_MAX_MS',
+    'MAX_MOB_ROW_CASTS_PER_TURN',
     'NO_TARGET',
   ]),
   ...selected_constants(spell_effect, ['CHATIMENT_TURNS']),

@@ -43,7 +43,11 @@ public fun is_category(category: &String): bool {
     *category == b"title".to_string() ||
     is_weapon(category) ||
     is_tool(category) ||
-    is_stackable(category)
+    is_stackable(category) || is_cosmetic(category)
+}
+
+public fun is_cosmetic(category: &String): bool {
+  *category == b"cosmetic_hat".to_string() || *category == b"cosmetic_cloak".to_string()
 }
 
 public fun craft_job_of(category: &String): Option<String> {
@@ -93,7 +97,7 @@ public fun is_slot(slot: &String): bool {
     *slot == b"right_ring".to_string() ||
     *slot == b"pet".to_string() ||
     is_relic_slot(slot) ||
-    *slot == b"title".to_string()
+    *slot == b"title".to_string() || is_cosmetic(slot)
 }
 
 public fun is_classe(classe: &String): bool {

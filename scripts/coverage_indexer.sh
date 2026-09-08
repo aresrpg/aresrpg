@@ -15,7 +15,7 @@ if [ "$installed" != "cargo-llvm-cov $tool_version" ]; then
 fi
 
 run_coverage() {
-  cargo llvm-cov \
+  cargo llvm-cov --locked \
     --manifest-path "$repo_root/packages/indexer/Cargo.toml" \
     --summary-only \
     --fail-under-lines "$line_floor"

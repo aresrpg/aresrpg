@@ -11,6 +11,7 @@ import type {
   WornModelRender,
 } from '@aresrpg/engine'
 import type { CharacterRow, EquippedItem, PresenceRow } from '@aresrpg/protocol'
+import { worn_appearance } from '@aresrpg/immutable'
 
 type CharacterRenderRow = Readonly<
   Omit<CharacterRow, 'equipment'> & {
@@ -60,6 +61,8 @@ export const presence_render_source = (row: Readonly<PresenceRow>): CharacterRen
     loadout: Object.freeze({
       ...(row.hat ? { hat: row.hat } : {}),
       ...(row.cloak ? { cloak: row.cloak } : {}),
+      ...(row.cosmetic_hat ? { cosmetic_hat: row.cosmetic_hat } : {}),
+      ...(row.cosmetic_cloak ? { cosmetic_cloak: row.cosmetic_cloak } : {}),
     }),
   })
 
@@ -70,19 +73,17 @@ export const load_character_appearance = async (
     import('../content/character_models.ts'),
     import('../content/worn_equipment.ts'),
   ])
-  const worn_model = async (
-    item_type: string | undefined,
-    category: 'hat' | 'cloak'
-  ): Promise<WornModelRender | null> => {
+  const worn_model = async (item_type: string | null, category: 'hat' | 'cloak'): Promise<WornModelRender | null> => {
     if (!item_type) return null
     const options = category === 'hat' ? worn_equipment_options.hats : worn_equipment_options.cloaks
     const item = options.find((candidate) => candidate.item_type === item_type)
     return item ? load_worn_equipment_model_url(item) : null
   }
+  const appearance = worn_appearance(source.loadout)
   const [{ body_url, hair_url }, head, back] = await Promise.all([
     load_character_model_urls(source.classe, source.male),
-    worn_model(source.loadout.hat, 'hat'),
-    worn_model(source.loadout.cloak, 'cloak'),
+    worn_model(appearance.hat, 'hat'),
+    worn_model(appearance.cloak, 'cloak'),
   ])
   return Object.freeze({
     body_url,

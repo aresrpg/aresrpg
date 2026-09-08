@@ -1,12 +1,13 @@
 # AresRPG indexer
 
 The indexer is the chain's one projectionist and the only writer of its FalkorDB Redis. It streams
-Sui checkpoints through one sequential Rust pipeline and produces four rebuildable surfaces:
+Sui checkpoints through one sequential Rust pipeline and produces five rebuildable surfaces:
 
 1. The graph: current live state and relationships.
 2. Per-address sales ZSETs: bounded player marketplace history.
 3. Analytics: exact activity membership and decimal money buckets.
-4. `evt:*` pub/sub: post-projection change notifications.
+4. Monthly address leaderboards.
+5. `evt:*` pub/sub: post-projection change notifications.
 
 One server stack consumes its own indexer. Any number of indexers may run independently around the
 world, each with a private disposable FalkorDB. The indexer never owns gameplay authority or
@@ -33,6 +34,14 @@ resumes without a network-dependent boot query.
 
 The store binds itself to the original package and chain. Starting it against another game or
 network refuses instead of mixing projections.
+
+This leaderboard release requires a full game-package republish: sale-proof signatures now carry
+the source kiosk and emit `listing_rule::SellerProved`, and the unused public math XP helper was
+removed. A compatible upgrade is not supported for this change.
+
+Leaderboards require replay from the original publication checkpoint. An older store without
+leaderboard metadata refuses startup rather than presenting partial seasons. Rebuild that private
+store before running this version; do not initialize scores from current Character balances.
 
 Analytics has no migration or schema-version state. When its projection changes, destroy the local
 store and replay from the original publication checkpoint. Ordinary resumes remain network-free
@@ -70,10 +79,13 @@ covered by server/indexer gates. Do not maintain another schema table here.
 src/
 ├── main.rs       boot and sequential pipeline assembly
 ├── analytics.rs  exact activity and money buckets
+├── leaderboards.rs       transaction contributions
+├── leaderboard_store.rs exact rankings and replay-safe commit
 ├── boot.rs       indexes, package binding, lineage, start checkpoint
 ├── pipeline.rs   checkpoint filtering and write-batch composition
 ├── decode.rs     BCS layout twins
 ├── ownership.rs  custody resolution
+├── personal_kiosk.rs immutable kiosk ownership proofs
 ├── graph.rs      decoded objects and deletes to Cypher
 ├── events.rs     Move event BCS twins and evt:* routing
 ├── publish.rs    projection notifications and market history
@@ -91,7 +103,8 @@ Run from this package:
 cargo test
 ```
 
-The suite requires compiled Move output and fails when:
+The suite requires compiled Move output and `redis-server` on PATH. Storage tests start isolated
+Unix-socket Redis processes and remove them afterward. It fails when:
 
 - A projected Move layout differs from `tests/layout_snapshot.txt`.
 - A routed event's fields differ from compiled bytecode.

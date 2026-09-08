@@ -181,9 +181,9 @@ fun settlement_uses_committed_loot_entropy_not_its_fresh_generator() {
     vector[api::prepare_fight_loot(&template, option::none())], &mut item_entropy_a,
     &clock, scenario.ctx(),
   );
-  fight::settle(
-    &mut retry, 0, &mut kiosk, kiosk_cap, &character_policy, &item_policy,
-    vector[api::prepare_fight_loot(&template, option::none())], &mut item_entropy_b,
+  fight::settle_many(
+    &mut retry, vector[0], vector[1], vector[api::prepare_fight_loot(&template, option::none())],
+    &mut kiosk, kiosk_cap, &character_policy, &item_policy, &mut item_entropy_b,
     &clock, scenario.ctx(),
   );
 

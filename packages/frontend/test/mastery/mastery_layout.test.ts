@@ -6,7 +6,9 @@ import { readFileSync } from 'node:fs'
 import { expect, test } from 'bun:test'
 
 test('mastery offers use an equal-height shop grid without timeline dressing', () => {
-  const source = readFileSync(new URL('../../src/mastery/MasteryPage.tsx', import.meta.url), 'utf8')
+  const source = ['MasteryPage', 'MasteryShop']
+    .map((name) => readFileSync(new URL(`../../src/mastery/${name}.tsx`, import.meta.url), 'utf8'))
+    .join('\n')
 
   expect(source).toContain('data-mastery-shop=""')
   expect(source).toContain('sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4')

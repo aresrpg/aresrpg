@@ -50,7 +50,7 @@ test('a group-gated fight join presents the selected Party to the grouped chain 
     party: id(3),
     custody: { kiosk: id(4), kiosk_cap: id(5) },
   })
-  expect(hydrated).toEqual([[id(1)], [id(3)]])
+  expect(hydrated).toEqual([[id(1), id(3)]])
   expect(calls[0]).toMatchObject({ character_id: id(2), shared_party: id(3), team: 0 })
 })
 
@@ -192,7 +192,6 @@ test('a drafted turn executes in order inside one transaction', async () => {
       cast_spell: () => calls.push('cast'),
       weapon_strike: () => calls.push('strike'),
       end_fight_turn: () => calls.push('end'),
-      seal_fight_loot: () => calls.push('seal'),
     },
   }
   const actions = fight_actions(sdk as never, { kiosk_cap: async () => null })
@@ -221,9 +220,8 @@ test('a drafted turn executes in order inside one transaction', async () => {
   await actions.commit_turn({
     fight: id(3),
     actions: [{ type: 'cast', fighter_idx: 0n, spell: 'slash', target_cell: 5n }],
-    ended: true,
   })
-  expect(calls).toEqual(['cast', 'seal'])
+  expect(calls).toEqual(['cast', 'end'])
 })
 
 test('Ready plus Start projects its receipt phase and turn witnesses immediately', async () => {

@@ -147,6 +147,16 @@ export type SeedBiomeMap = Readonly<{
   cells: readonly number[]
 }>
 
+export type SeedGiftcard = Readonly<{
+  id: string
+  item_type: string
+  amount: number
+  custody: string
+  network?: 'testnet' | 'mainnet'
+}>
+
+export type SeedGiftcardBatch = Readonly<Omit<SeedGiftcard, 'custody'> & { recipients: readonly string[] }>
+
 export type SeedContent = Readonly<{
   items: readonly SeedItem[]
   spells: readonly SeedSpell[]
@@ -158,8 +168,8 @@ export type SeedContent = Readonly<{
     offers: readonly Readonly<{ item_type: string; cost: number; enabled?: boolean }>[]
   }>
   airdrop: Readonly<{
-    drops: readonly Readonly<{ id: string; item_type: string; amount_each: number; whitelist: readonly string[] }>[]
-    giftcards: readonly Readonly<{ id: string; item_type: string; amount: number; custody: string }>[]
+    giftcards: readonly SeedGiftcard[]
+    giftcard_batches?: readonly SeedGiftcardBatch[]
   }>
   biome_maps: readonly SeedBiomeMap[]
   boards: readonly SeedBoard[]

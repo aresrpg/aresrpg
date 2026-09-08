@@ -88,7 +88,7 @@ export default [
     },
   },
   {
-    // THE ONE-REDUCER TRIPWIRE (CLAUDE.md CLIENT-INDEPENDENCE/ONE-PIPELINE + the v1.12.28 crash class): no async
+    // THE ONE-REDUCER TRIPWIRE (AGENTS.md L-P4 + the v1.12.28 crash class): no async
     // callback (timer / promise chain / listener / await continuation) writes a zustand store directly, and store
     // modules keep no second clock — async results and time re-enter as INPUTS through the reducer door. Warn
     // across frontend logic modules (existing hits are findings being burned down), ERROR on the fight core where
@@ -127,7 +127,7 @@ export default [
     },
   },
   {
-    // THE SILENT-FAILURE TRIPWIRE (.claude/rules/code-law.md L-D1; Agent Standard #3 "no silent failure, ever").
+    // THE SILENT-FAILURE TRIPWIRE (AGENTS.md L-D1; Agent Standard #3 "no silent failure, ever").
     // The house law — instruments THROW, never coerce — pointed at PRODUCT code for the first time. A failure
     // handler that erases its failure (`.catch(() => null)`, `catch { return DEFAULT }`) leaves the break
     // recorded nowhere, and every caller downstream reads a coerced success. The board class census
@@ -185,10 +185,10 @@ export default [
       'no-silent-failures/no-unchanged-input-guard': ['error', { baseline: unchanged_input_guard_baseline }],
     },
   },
-  // THE FP-LAW LAYER (.claude/rules/code-law.md) — naming/purity/immutability/composition tripwires.
+  // THE FP-LAW LAYER (AGENTS.md) — naming/purity/immutability/composition tripwires.
   // Tiering + severity rationale live in the layer file; rules in scripts/eslint-rules/fp_law.mjs.
   ...fp_law_layer,
-  // THE TYPED-FP TIER (.claude/rules/code-law.md, 2026-07-17) — type-aware strict-FP enforcement over every
+  // THE TYPED-FP TIER (AGENTS.md, 2026-07-17) — type-aware strict-FP enforcement over every
   // surface a ts.Program covers: alias-blind mutation (functional/immutable-data), fire-and-forget
   // promises (L-P5), union exhaustiveness (L-D3), boundary immutability (L-I6). Surfaces, tiers and
   // the not-wired verdicts live in the layer file.
@@ -267,6 +267,8 @@ export default [
   {
     // Move and the Rust indexer keep their own language-specific gates.
     ignores: [
+      '**/test-results/**',
+      'packages/*/traces/**', // Sui creates and removes coverage traces while native tests run.
       '**/dist/*',
       'node_modules/*',
       // `vercel build` output — gitignored, so CI never sees it, but a local build left the

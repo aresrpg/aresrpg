@@ -6,6 +6,7 @@ import { useState } from 'react'
 
 import { titleize } from '../content/catalog.ts'
 import type { ItemFilterGroup, ItemFilterRow } from '../content/item_filters.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 import type { EncyclopediaText } from './copy.ts'
 
@@ -45,6 +46,7 @@ const FilterSection = ({
   text: EncyclopediaText
 }>) => {
   const [expanded, set_expanded] = useState(true)
+  const category_name = useItemCategoryName()
   return (
     <section className="border-t border-white/7" data-item-filter-section={group}>
       <button
@@ -69,7 +71,7 @@ const FilterSection = ({
                 type="button"
               >
                 <span className="min-w-0 truncate">
-                  {option_label(row, text)}
+                  {row.group === 'category' ? category_name(row.id) : option_label(row, text)}
                   {row.kind === 'biome' || row.kind === 'city' ? (
                     <span className="ml-1.5 text-[6px] tracking-[0.12em] text-[#4f8099]">
                       {text(row.kind === 'biome' ? 'filter_biome' : 'filter_city')}

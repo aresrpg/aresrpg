@@ -7,8 +7,7 @@
 /// unreachable in-transaction; legacy's server read off-chain, our chain cannot). The record
 /// cannot drift: the item is immobile while equipped and its stats immutable.
 ///
-/// 17 equipment slots: weapon · tool · hat · cloak · belt · boots · amulet · left_ring ·
-/// right_ring · pet · title · relic_1..6.
+/// 17 stat slots plus cosmetic_hat and cosmetic_cloak. Cosmetics carry no stats or damages.
 module aresrpg::equipment;
 
 use aresrpg::{character::{Self, Character}, item::{Self, Item}};
@@ -18,7 +17,7 @@ use sui::{dynamic_field as dfield, event, transfer::Receiving, vec_map::{Self, V
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
-const EInvalidSlot: u64 = 1001; // equip/unequip: not one of the 21 slots
+const EInvalidSlot: u64 = 1001; // equip/unequip: not a named equipment slot
 const EWrongCategory: u64 = 1002; // equip: the item's category does not fit the slot
 const ELevelTooLow: u64 = 1003; // equip: character level below the item's level
 const ESlotTaken: u64 = 1004; // equip: the slot already holds an item

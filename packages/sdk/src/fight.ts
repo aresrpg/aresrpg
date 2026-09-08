@@ -26,6 +26,7 @@ export const SETTLEMENT_BATCH_GAS_BUDGET_MIST = 1_000_000_000n
 export type FightReceipt = {
   digest: string
   turn_witnesses?: readonly FightTurnWitness[]
+  kares_rewards?: readonly Readonly<{ fighter: bigint; amount: bigint }>[]
   started?: boolean
   closable?: boolean
   closed?: boolean
@@ -58,6 +59,15 @@ export const project_fight_boundary_receipt = (receipt: Receipt): FightReceipt =
     turn_witnesses: turn_witnesses(receipt),
     started: receipt_event(receipt, '::fight::FightStarted') !== null,
   })
+
+export const fight_kares_rewards = (receipt: Receipt) =>
+  Object.freeze(
+    receipt_events(receipt, '::fight::DropsRolled').map((event) => {
+      if (typeof event.fighter !== 'string' || typeof event.kares !== 'string')
+        throw new Error('The fight receipt carried a malformed KARES reward.')
+      return Object.freeze({ fighter: BigInt(event.fighter), amount: BigInt(event.kares) })
+    })
+  )
 
 export const last_settler_refusal = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error)
@@ -210,8 +220,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       access?: number
       party?: string
     }): Promise<FightReceipt> => {
-      await hydrate_fight(fight)
-      if (party) await sdk.hydrate_unknown([party])
+      await sdk.hydrate_unknown([fight, ...(party ? [party] : [])])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
           if (party)
@@ -246,8 +255,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       party?: string
     }): Promise<FightReceipt> => {
       if (character_ids.length === 0) throw new Error('A grouped fight join needs at least one character')
-      await hydrate_fight(fight)
-      if (party) await sdk.hydrate_unknown([party])
+      await sdk.hydrate_unknown([fight, ...(party ? [party] : [])])
       const receipt = await with_kiosk(
         (tx, kiosk, cap) => {
           character_ids.forEach((character_id) => {
@@ -313,16 +321,8 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       return project_fight_boundary_receipt(receipt)
     },
 
-    /** One staged turn becomes one PTB. A lethal action seals team-loot entropy terminally. */
-    commit_turn: async ({
-      fight,
-      actions,
-      ended = false,
-    }: {
-      fight: string
-      actions: readonly FightTurnAction[]
-      ended?: boolean
-    }) => {
+    /** One staged turn becomes one PTB. Its terminal boundary advances or seals from chain state. */
+    commit_turn: async ({ fight, actions }: { fight: string; actions: readonly FightTurnAction[] }) => {
       const { content_root, seed_package_original } = living_content(sdk, 'Fight transaction')
       const spell_templates = new Map(
         actions.flatMap((action) =>
@@ -331,8 +331,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
             : []
         )
       )
-      await hydrate_fight(fight)
-      await sdk.hydrate_unknown([...spell_templates.values()])
+      await sdk.hydrate_unknown([fight, ...spell_templates.values()])
       const tx = sdk.tx()
       actions.forEach((action) => {
         if (action.type === 'move') sdk.doors.move_fighter(tx, { fight_object: fight, path: action.path })
@@ -350,8 +349,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
             target_cell: action.target_cell,
           })
       })
-      if (ended) sdk.doors.seal_fight_loot(tx, { fight_object: fight })
-      else sdk.doors.end_fight_turn(tx, { fight_object: fight })
+      sdk.doors.end_fight_turn(tx, { fight_object: fight })
       const receipt = await sdk.execute(tx, { gas_scope: scope_of(fight) })
       return Object.freeze({
         digest: receipt_digest(receipt),
@@ -386,6 +384,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       settlements,
       custody,
       last,
+      boss_rewards = false,
     }: {
       fight: string
       settlements: readonly Readonly<{
@@ -394,6 +393,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       }>[]
       custody?: KioskCustody
       last?: boolean
+      boss_rewards?: boolean
     }): Promise<FightReceipt> => {
       if (settlements.length === 0) throw new Error('Fight settlement batch is empty')
       const { content_root, seed_package_original } = living_content(sdk, 'Fight settlement')
@@ -410,10 +410,14 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
           )
         ),
       ]
-      await sdk.hydrate_unknown([fight, ...templates])
       const execute_settlement = (final: boolean) =>
         with_terminal_kiosk(
           (tx, kiosk, personal) => {
+            if (boss_rewards)
+              sdk.doors.prepare_boss_rewards(tx, {
+                fight_object: fight,
+                fighter_idx: normalized[0]!.fighter_idx,
+              })
             const plan = normalized.flatMap(({ loot }) =>
               loot.map(({ item_type, existing }) =>
                 sdk.doors.prepare_fight_loot(tx, {
@@ -433,11 +437,17 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
             if (final) sdk.doors.settle_last_fight(tx, args)
             else sdk.doors.settle_fight(tx, args)
           },
-          { custody, gas_scope: scope_of(fight), budget: SETTLEMENT_BATCH_GAS_BUDGET_MIST }
+          {
+            custody,
+            inputs: [fight, ...templates],
+            gas_scope: scope_of(fight),
+            budget: SETTLEMENT_BATCH_GAS_BUDGET_MIST,
+          }
         )
       const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
         ...project_receipt(receipt),
+        kares_rewards: fight_kares_rewards(receipt),
         closable: receipt_event(receipt, '::fight::FightClosable') !== null,
         closed: receipt_event(receipt, '::fight::FightClosed') !== null,
       })

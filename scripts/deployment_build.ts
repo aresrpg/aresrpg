@@ -126,6 +126,7 @@ export const create_contract_build_service = ({
   const control_dir = join(repo_dir, 'packages', 'control')
   const combat_dir = join(repo_dir, 'packages', 'move-combat')
   const seed_dir = join(repo_dir, 'packages', 'seed')
+  const kares_dir = join(repo_dir, 'packages', 'kares')
   const game_dir = join(repo_dir, 'packages', 'move')
   const version_path = join(game_dir, 'sources', 'version.move')
   const chain_identifier = async (network: Network): Promise<string> => {
@@ -169,6 +170,10 @@ export const create_contract_build_service = ({
     package_name: ContractArtifact['package_name'],
     publications: readonly Readonly<{ path: string; publication: PackagePublication; version?: number }>[]
   ): Promise<ContractArtifact> => {
+    const [, expected_version] = move_packages.sui_cli.release.split('-v')
+    const { stdout: compiler_version } = await run('sui', ['--version'], repo_dir)
+    if (!compiler_version.trim().startsWith(`sui ${expected_version}-`))
+      throw new Error(`Sui compiler must match ${move_packages.sui_cli.release}; found ${compiler_version.trim()}`)
     if (!publications.length) {
       const { stdout } = await run('sui', dump_args(path, network), repo_dir)
       return parse_contract_artifact(package_name, stdout)
@@ -225,12 +230,21 @@ export const create_contract_build_service = ({
       { path: control_dir, publication: control },
       ...(seed ? [{ path: seed_dir, publication: seed }] : []),
     ])
+  const compile_kares = async (network: Network, kares?: PackagePublication): Promise<ContractArtifact> =>
+    compile_with_publications(
+      network,
+      kares_dir,
+      'aresrpg_kares',
+      kares ? [{ path: kares_dir, publication: kares }] : []
+    )
+
   const compile_game = async (
     network: Network,
     math: PackagePublication,
     control: PackagePublication,
     combat: PackagePublication,
     seed: PackagePublication,
+    kares: PackagePublication,
     game?: PackagePublication
   ): Promise<ContractArtifact> => {
     const chain_id = await chain_identifier(network)
@@ -263,6 +277,7 @@ export const create_contract_build_service = ({
       { path: control_dir, publication: control },
       { path: combat_dir, publication: combat },
       { path: seed_dir, publication: seed },
+      { path: kares_dir, publication: kares },
       { path: kiosk_path, publication: kiosk, version: kiosk_version },
       ...(game ? [{ path: game_dir, publication: game }] : []),
     ])
@@ -289,6 +304,7 @@ export const create_contract_build_service = ({
     compile_control,
     compile_combat,
     compile_seed,
+    compile_kares,
     compile_game,
     prepare_upgrade,
     game_version,

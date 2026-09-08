@@ -1,0 +1,17 @@
+{
+  "network": "testnet",
+  "captured_at": "2026-09-06T10:30:05.362Z",
+  "objects": [
+    {
+      "object_id": "0xee9ef60ba90bcbeac3cd3b9f0ce7231779de67c82e5aba9033cd2a33375c2713",
+      "version": "4",
+      "type": "0x0000000000000000000000000000000000000000000000000000000000000002::coin_registry::Currency<0x13cc3a99ccf244c8a25af30c7bd490d623b1684cab27e801f456666afe85875e::kares::KARES>",
+      "owner": {
+        "AddressOwner": "0x000000000000000000000000000000000000000000000000000000000000000c",
+        "$kind": "AddressOwner"
+      },
+      "transaction_digest": "BEnojWNcqiW4ri57r9J2qwgo7RtBGvUxcERhzdtWLndh",
+      "bcs": "7p72C6kLy+rDzTufDOcjF3neZ8guWrqQM80qMzdcJxMJB0FyZXNSUEcFS0FSRVMzQXJlc1JQRyBjb21tdW5pdHkgdG9rZW4gYW5kIE1hc3RlcnkgcmV3YXJkIGN1cnJlbmN5AAEBAIDGpH6NAwABAdKOkjq4JiFzINc7bLuHG7gIW2y6QijLcP4wXAdfVIreAgEPaXNfbmV3X2N1cnJlbmN5BGJvb2wPaXNfbmV3X2N1cnJlbmN5"
+    }
+  ]
+}

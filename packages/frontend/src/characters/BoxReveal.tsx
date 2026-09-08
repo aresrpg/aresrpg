@@ -8,18 +8,20 @@
 // claimer's job (modules/claims.ts): the open fold lands the soulbound claim, the claimer
 // settles it during the animation, and this card flips to collected when the claim leaves
 // the session. Failures are ONE loud toast each; the claim survives on-chain and retries
-// by itself. prefers-reduced-motion collapses the celebration.
+// explicitly from inventory after an unsuccessful automatic attempt. prefers-reduced-motion collapses the celebration.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
 
+import { NativeModal } from '../components/ModalFrame.tsx'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { play_fight_audio } from '../game/audio/fight_audio_registry.ts'
 import { rolled_item_types } from '../modules/claims.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { encumbered_asset_ids, stack_merge_sources } from '../inventory_stacks.ts'
 import { toast } from '../toast.ts'
 
 import './box_reveal.css'
@@ -38,6 +40,9 @@ export const BoxReveal = ({
 }: Readonly<{ box: Readonly<ItemRow>; copy: AppCopy; close: () => void }>) => {
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
+  const inventory = useAppStore(({ session }) => session.inventory)
+  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
+  const trades = useAppStore(({ trade }) => trade.rows)
   const claims = useAppStore(({ session }) => session.claims)
   const [phase, set_phase] = useState<Phase>('pending')
   const [rolled, set_rolled] = useState<Rolled | null>(null)
@@ -76,11 +81,13 @@ export const BoxReveal = ({
     runtime.opened = true
     void (async () => {
       try {
-        const { claim_id, rolled_template, amount } = await wallet.character.open_loot_box({
+        const { claim_id, rolled_template, amount, inventory_changes } = await wallet.character.open_loot_box({
+          merge_sources: stack_merge_sources(inventory, encumbered_asset_ids(listings, trades), box),
           box_item_id: box.id,
           box_item_type: box.item_type,
           custody: { kiosk: box.kiosk },
         })
+        dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         // the fold lands the claim — the SILENT claimer settles it during the celebration
         dispatch_app({ type: 'inventory/box_opened', box_item_id: box.id, claim_id })
         // receipt proven — celebrate NOW; the resolve + auto-claim run inside the animation
@@ -141,21 +148,13 @@ export const BoxReveal = ({
     if (phase === 'reveal' || phase === 'resolving' || (phase === 'pending' && escape_ready)) close()
   }, [phase, escape_ready, close])
 
-  useEffect(() => {
-    const on_key = (event: Readonly<KeyboardEvent>): void => {
-      if (event.key === 'Escape') dismiss()
-    }
-    globalThis.addEventListener('keydown', on_key)
-    return () => globalThis.removeEventListener('keydown', on_key)
-  }, [dismiss])
-
   return (
-    <div
-      aria-modal="true"
+    <NativeModal
+      close={dismiss}
+      label={t('reveal_eyebrow')}
       className="boxreveal"
       data-phase={phase}
       onClick={() => (animating ? skip() : dismiss())}
-      role="dialog"
     >
       {phase !== 'reveal' && phase !== 'resolving' && (
         <div className="boxreveal__stage">
@@ -214,6 +213,6 @@ export const BoxReveal = ({
           )}
         </div>
       )}
-    </div>
+    </NativeModal>
   )
 }

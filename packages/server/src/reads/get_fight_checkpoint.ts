@@ -8,6 +8,7 @@
 // weapon's damage lines. Spell templates are seed content the client already holds.
 
 import type { FightPlayerSourceRow, FightStateRow } from '@aresrpg/protocol'
+import { worn_appearance } from '@aresrpg/immutable'
 
 import { type Graph, type Node } from '../graph.ts'
 
@@ -36,8 +37,6 @@ const weapon_of = (item: Record<string, unknown> | null): FightPlayerSourceRow['
   }
 }
 
-const item_type_of = (item: Record<string, unknown> | null): string | null =>
-  typeof item?.item_type === 'string' ? item.item_type : null
 const nullable = <Value>(value: Value | null | undefined): Value | null => value ?? null
 
 const kolizeum_of = (node: Node): FightStateRow['kolizeum'] => {
@@ -48,8 +47,7 @@ const kolizeum_of = (node: Node): FightStateRow['kolizeum'] => {
 const player_source_of = (
   character: Record<string, unknown>,
   weapon: Record<string, unknown> | null,
-  hat: Record<string, unknown> | null,
-  cloak: Record<string, unknown> | null
+  worn: readonly Readonly<{ slot: string; item_type: string }>[]
 ) =>
   ({
     name: String(character.name),
@@ -58,8 +56,7 @@ const player_source_of = (
     color_1: Number(character.color_1),
     color_2: Number(character.color_2),
     color_3: Number(character.color_3),
-    hat: item_type_of(hat),
-    cloak: item_type_of(cloak),
+    ...worn_appearance(Object.fromEntries(worn.map(({ slot, item_type }) => [slot, item_type]))),
     level: Number(character.level),
     experience: String(character.experience ?? 0),
     vitality: Number(character.vitality),
@@ -98,9 +95,8 @@ export async function get_fight_checkpoint(
     ? await graph.read(
         `MATCH (c:Character) WHERE c.id IN ${JSON.stringify(character_ids)}
          OPTIONAL MATCH (c)-[:EQUIPS {slot: 'weapon'}]->(w:Item)
-         OPTIONAL MATCH (c)-[:EQUIPS {slot: 'hat'}]->(h:Item)
-         OPTIONAL MATCH (c)-[:EQUIPS {slot: 'cloak'}]->(cl:Item)
-         RETURN c AS character, w AS weapon, h AS hat, cl AS cloak`
+         OPTIONAL MATCH (c)-[e:EQUIPS]->(i:Item)
+         RETURN c AS character, w AS weapon, collect({slot: e.slot, item_type: i.item_type}) AS worn`
       )
     : []
   const contract = {
@@ -119,6 +115,8 @@ export async function get_fight_checkpoint(
     managed: Boolean(fight.managed),
     wagered: Boolean(fight.wagered),
     drops_rolled: Boolean(fight.drops_rolled),
+    boss_weight: Number(fight.boss_weight),
+    kares_reward: String(fight.kares_reward),
     turn_ptr: fight.turn_ptr,
     round: fight.round,
     turn_seed: fight.turn_seed,
@@ -128,16 +126,11 @@ export async function get_fight_checkpoint(
     turn_started_ms: fight.turn_started_ms,
   }
   const players = Object.fromEntries(
-    (seats as { character: Node; weapon: Node; hat: Node; cloak: Node }[])
+    (seats as { character: Node; weapon: Node; worn: { slot: string; item_type: string }[] }[])
       .filter((seat) => seat.character)
       .map((seat) => [
         seat.character!.properties.id as string,
-        player_source_of(
-          seat.character!.properties,
-          seat.weapon?.properties ?? null,
-          seat.hat?.properties ?? null,
-          seat.cloak?.properties ?? null
-        ),
+        player_source_of(seat.character!.properties, seat.weapon?.properties ?? null, seat.worn),
       ])
   )
   return {

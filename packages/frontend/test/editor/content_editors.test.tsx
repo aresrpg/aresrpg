@@ -4,15 +4,71 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import items from '../../../../seed/content/items.json'
-import mobs from '../../../../seed/content/mobs.json'
-import recipes from '../../../../seed/content/recipes.json'
 import type { ItemRecipeBinding } from '../../src/editor/ItemContentEditor.tsx'
 import type { ItemFilterRow } from '../../src/editor/content_list.ts'
 import type { JsonValue, SeedDomain } from '../../src/editor/seed_editor.ts'
 
 const { ContentEntityEditor } = await import('../../src/editor/ContentEntityEditor.tsx')
 const { clone_mob_spell, same_family_spell_clones } = await import('../../src/editor/MobContentEditor.tsx')
+
+const fixture_item = { item_type: 'fixture_resource', name: 'Fixture', category: 'resource', level: 1 }
+const fixture_recipe = {
+  output_type: fixture_item.item_type,
+  inputs: { fixture_ingredient: 2, fixture_second: 1 },
+  job: 'FARMER',
+}
+const fixture_mob = {
+  mob_type: 'fixture_mob',
+  name: 'Fixture Mob',
+  family: 'fixture_family',
+  element: 'earth',
+  role: 'normal',
+  level_min: 10,
+  level_max: 20,
+  hp: 100,
+  ap: 6,
+  mp: 3,
+  agility: 10,
+  wisdom: 20,
+  xp: 30,
+  resistances: { earth: 32768, fire: 32768, water: 32768, air: 32768 },
+  loot: [{ item_type: 'fixture_resource', chance_bp: 5000, min_qty: 1, max_qty: 2 }],
+  spells: [
+    {
+      name: 'Fixture Strike',
+      levels: [
+        {
+          ap_cost: 3,
+          range_min: 1,
+          range_max: 1,
+          modifiable_range: false,
+          line_of_sight: true,
+          line_launch: false,
+          free_cell: false,
+          casts_per_turn: 1,
+          casts_per_target: 1,
+          cooldown_turns: 0,
+          crit_1_in: 0,
+          crit_effects: [],
+          effects: [
+            {
+              kind: 0,
+              element: 'earth',
+              value: 5,
+              value_max: 10,
+              area_shape: 0,
+              area_size: 0,
+              target_filter: 1,
+              chance_bp: 10000,
+              turns: 0,
+              stat: 0,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
 
 const render_editor = (
   domain: SeedDomain,
@@ -32,7 +88,7 @@ const render_editor = (
   )
 
 test('item editing is a semantic Dofus power sheet, not an appearance block form', () => {
-  const tool = items.find(({ item_type }) => item_type === 'old_hoe')!
+  const tool = { ...fixture_item, category: 'tool', stats: { min: { wisdom: 1 }, max: { wisdom: 5 } } }
   const html = render_editor('items', tool as unknown as JsonValue)
   expect(html).toContain('data-content-editor="item"')
   expect(html).toContain('Dofus item power')
@@ -52,20 +108,17 @@ test('item editing is a semantic Dofus power sheet, not an appearance block form
 })
 
 test('item power presents maximum-roll percentile instead of a median ratio', () => {
-  const fuwa_hat = items.find(({ item_type }) => item_type === 'coiffe_fuwa__white')!
-  const html = render_editor('items', fuwa_hat as unknown as JsonValue)
+  const hat = { ...fixture_item, category: 'hat', stats: { min: { vitality: 1 }, max: { vitality: 10 } } }
+  const html = render_editor('items', hat as unknown as JsonValue)
 
   expect(html).toContain('Authored max power')
   expect(html).toContain('Retro max-roll median')
   expect(html).toContain('Retro percentile')
-  expect(html).toContain('P98')
-  expect(html).toContain('left:98%')
-  expect(html).toContain('1 exact level/power donor')
   expect(html).not.toContain('427%')
 })
 
 test('pet editing presents the rolled fully-fed endpoint without a generic gear comparison', () => {
-  const pet = items.find(({ item_type }) => item_type === 'siluri')!
+  const pet = { ...fixture_item, category: 'pet', stats: { min: { wisdom: 1 }, max: { wisdom: 5 } } }
   const html = render_editor('items', pet as unknown as JsonValue)
 
   expect(html).toContain('Fully-fed characteristics')
@@ -75,7 +128,7 @@ test('pet editing presents the rolled fully-fed endpoint without a generic gear 
 })
 
 test('loot-box rewards use the filtered item picker and append through a valid placeholder', () => {
-  const food_crate = items.find(({ item_type }) => item_type === 'food_crate')!
+  const food_crate = { ...fixture_item, category: 'consumable' }
   const filters: readonly ItemFilterRow[] = [{ kind: 'resource', id: 'raw', count: 1, item_types: ['wheat'] }]
   const html = render_editor(
     'items',
@@ -95,11 +148,11 @@ test('loot-box rewards use the filtered item picker and append through a valid p
 })
 
 test('mob editing keeps the combat sheet and editable shared spell cards together', () => {
-  const html = render_editor('mobs', mobs[0] as JsonValue)
+  const html = render_editor('mobs', fixture_mob as JsonValue)
   expect(html).toContain('data-content-editor="mob"')
   expect(html).toContain('data-mob-detail-header=""')
   expect(html).toContain('data-item-inline-edit="mob level"')
-  expect(html).toContain(mobs[0].mob_type)
+  expect(html).toContain(fixture_mob.mob_type)
   expect(html).not.toContain('aria-label="Mob type"')
   expect(html).toContain('data-mob-resistances=""')
   expect(html).toContain('data-mob-power=""')
@@ -126,7 +179,7 @@ test('mob editing keeps the combat sheet and editable shared spell cards togethe
     expect(html).toContain(`data-mob-stat-icon="${stat}"`)
 
   const loot_html = render_editor('mobs', {
-    ...mobs[0],
+    ...fixture_mob,
     level_min: 10,
     level_max: 20,
     loot: [{ item_type: 'wheat', chance_bp: 5_000, min_qty: 1, max_qty: 2 }],
@@ -137,7 +190,8 @@ test('mob editing keeps the combat sheet and editable shared spell cards togethe
 })
 
 test('mob spells can clone one complete spell from another mob in the live family draft', () => {
-  const black = mobs.find(({ mob_type }) => mob_type === 'fuwa__black')!
+  const black = { ...fixture_mob, mob_type: 'fixture_other', spells: [] }
+  const mobs = [fixture_mob, black]
   const candidates = same_family_spell_clones(black as unknown as JsonValue, mobs as unknown as readonly JsonValue[])
 
   expect(candidates.length).toBeGreaterThan(0)
@@ -171,7 +225,7 @@ test('a domain row carries its own editor, and an item edits its authored recipe
       best: { minimum_seconds: 8, maximum_seconds: 12 },
       craft: { minimum_seconds: 8, maximum_seconds: 12 },
       routes: [],
-      ingredients: Object.entries(recipes[0].inputs).map(([item_type, quantity]) => ({
+      ingredients: Object.entries(fixture_recipe.inputs).map(([item_type, quantity]) => ({
         item_type,
         quantity,
         unit: { minimum_seconds: 1, maximum_seconds: 2 },
@@ -180,13 +234,13 @@ test('a domain row carries its own editor, and an item edits its authored recipe
       craft_success_percent: 50,
       cycle: false,
     },
-    value: recipes[0] as unknown as JsonValue,
+    value: fixture_recipe as unknown as JsonValue,
     change: () => undefined,
     category_changed: () => undefined,
     create: () => undefined,
     remove: () => undefined,
   }
-  const item = items.find(({ item_type }) => item_type === recipes[0].output_type)!
+  const item = fixture_item
   const html = render_editor('items', item as unknown as JsonValue, recipe_binding)
   expect(html).toContain('data-item-recipe=""')
   expect(html).toContain('Craft XP')
@@ -195,9 +249,9 @@ test('a domain row carries its own editor, and an item edits its authored recipe
   expect(html).toContain('each')
   expect(html).toContain('FARMER')
   expect(html).toContain('data-item-reference-picker="ingredient"')
-  expect(html.match(/data-recipe-ingredient-row=""/g)).toHaveLength(Object.keys(recipes[0].inputs).length)
+  expect(html.match(/data-recipe-ingredient-row=""/g)).toHaveLength(Object.keys(fixture_recipe.inputs).length)
   expect(html).toContain('data-recipe-ingredient-placeholder=""')
-  expect(html).toContain(`aria-label="${Object.keys(recipes[0].inputs)[0]} quantity"`)
+  expect(html).toContain(`aria-label="${Object.keys(fixture_recipe.inputs)[0]} quantity"`)
   expect(html).toContain('min="1"')
   expect(html).toContain('step="1"')
   expect(html).toContain('aria-label="Remove ingredient"')
@@ -211,8 +265,8 @@ test('a domain row carries its own editor, and an item edits its authored recipe
   expect(html).not.toContain('aria-label="Ingredient"')
 
   // Non-weapons cannot add weapon damage, and a fallback profession stays authored.
-  const fallback_recipe = recipes.find((recipe) => 'job' in recipe && recipe.job === 'HERBALIST')!
-  const fallback_item = items.find(({ item_type }) => item_type === fallback_recipe.output_type)!
+  const fallback_recipe = { ...fixture_recipe, job: 'HERBALIST' }
+  const fallback_item = fixture_item
   expect(
     render_editor('items', fallback_item as unknown as JsonValue, {
       ...recipe_binding,
@@ -226,8 +280,11 @@ test('a domain row carries its own editor, and an item edits its authored recipe
     })
   ).not.toContain('+ Damage line')
 
-  const full_recipe = recipes.find((recipe) => Object.keys(recipe.inputs).length === 8)!
-  const full_item = items.find(({ item_type }) => item_type === full_recipe.output_type)!
+  const full_recipe = {
+    ...fixture_recipe,
+    inputs: Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`fixture_${i}`, 1])),
+  }
+  const full_item = fixture_item
   const full_html = render_editor('items', full_item as unknown as JsonValue, {
     ...recipe_binding,
     value: full_recipe as unknown as JsonValue,

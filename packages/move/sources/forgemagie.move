@@ -8,8 +8,7 @@
 ///     item whose `item_type` maps to its catalog coords (`rune_of`); exactly 1 unit burns
 ///     BEFORE the roll (identical write-set every outcome). Gate: the gear's CATEGORY names its
 ///     forgery job (owner: "its category defines the job to scribe"); level 1 grants immediate access. The
-///     3-outcome puits gamble runs off `apply_rune`; the new rolled block + the per-item
-///     `ForgeState` DF (puits + application counts) are written; job xp banks on the forgery job.
+///     3-outcome puits gamble runs off `apply_rune`; one revisioned rolled-stat record holds both stats and puits; scribing grants no job XP.
 ///
 ///   • CRUSH (`crush` → `redeem_rune` → `discard_claim`) — destroy gear, yield runes. STATELESS +
 ///     LINEAR + LOSSY (`crush_lines`), no coefficient, no bracket. Two-phase and GAS-UNIFORM: phase 1
@@ -31,7 +30,6 @@ use aresrpg::{
 use aresrpg_math::{content_rules, forge, item_stats, prng, rune_catalog as cat};
 use std::string::String;
 use sui::{
-  dynamic_field as df,
   event,
   kiosk::{Kiosk, KioskOwnerCap},
   random::RandomGenerator,
@@ -41,17 +39,8 @@ use sui::{
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
 const RUNE_UNLOCK_LEVEL: u64 = 1;
-/// Forgemagie has NO odds progression (owner 2026-08-11): the craft job names the XP bank and its
-/// level-1 baseline grants access immediately; it never
-/// improves the odds. The ported `apply_rune` takes a runic level (Dofus fed the forgemage's own
-/// level), so we PIN it at the production mastery level — everyone scribes at qualified-master competence,
-/// a FLAT gamble driven by proximity to the template max + the item's puits. Dofus-faithful rates.
-const FORGE_LEVEL: u64 = 70;
-/// One application counter per stat id (`rune_catalog::stat_count`).
-const APPS_LEN: u64 = 15;
-
 const EScribeLocked: u64 = 2701; // scribe: the gear's forgery job is below the current unlock
-const EMaxApps: u64 = 2703; // scribe: this rune's per-item application cap is reached
+const EStatLimit: u64 = 2703; // the attempted stat or combined over/exo weight exceeds its limit
 const EWrongItem: u64 = 2704; // scribe: gear/template mismatch, or the gear carries no rolled block
 const ENotForgeable: u64 = 2705; // the item's category has no forgery job (not gear)
 const EMissingTemplate: u64 = 2709; // close_crush: a yielded rune's template was not snapshotted
@@ -60,21 +49,12 @@ const EWrongRune: u64 = 2711; // caller coordinates do not match the owned rune/
 
 // ╔════════════════ [ Types ] ════════════════════════════════════════════════ ]
 
-/// The item's forgemagie state — ONE typed DF on the gear (`ForgeKey`): the puits sink balance
-/// + per-stat successful-application counts (the hard caps: range/movement/action 1, Cri 10).
-public struct ForgeState has copy, drop, store {
-  puits: u64,
-  apps: vector<u8>, // length 15, indexed by catalog stat id
-}
-
-public struct ForgeKey() has copy, drop, store;
-
 /// The SOULBOUND crush claim (`key` only → non-transferable): carries the committed `&Random`
 /// `seed` and the burned gear's `raws` (concatenated `stat_count`-stride blocks) — the crush
 /// INPUTS, not yet rolled. The seed lands here from a TERMINAL `&Random` in an object the minting
 /// tx cannot read back, so the roll can't be observed-then-aborted for a free re-roll, AND phase 1
 /// runs the SAME fixed compute for every future outcome (no gas-based tier filtering). The owed
-/// runes (51-vector, `stat×3+tier`) reveal DETERMINISTICALLY off the seed on the first redeem/discard.
+/// runes (`stat_count × 3`, `stat×3+tier`) reveal DETERMINISTICALLY off the seed on the first redeem/discard.
 public struct CrushClaim has key {
   id: UID,
   seed: u64,
@@ -86,17 +66,15 @@ public struct CrushClaim has key {
 // ╔════════════════ [ Events ] ═══════════════════════════════════════════════ ]
 
 /// ONE shape for every scribe outcome (write-set parity): the outcome is DATA, never a shape.
-/// `applied_value` is the actual capped gain, so the receipt fully explains the item write.
+/// `applied_value` is the actual net gain, so the receipt fully explains the item write.
 public struct RuneScribed has copy, drop {
   item: ID,
   stat: u8,
   tier: u8,
   outcome: u8,
   applied_value: u64,
-  lost_stat: u8,
-  lost_amount: u64,
+  lost_amounts: vector<u64>,
   new_puits: u64,
-  xp: u64,
 }
 
 public struct GearCrushed has copy, drop { crusher: address, items: u64 }
@@ -108,7 +86,7 @@ public struct CrushRevealed has copy, drop { claim: ID, owed: vector<u64> }
 // ╔════════════════ [ SCRIBE ] ═══════════════════════════════════════════════ ]
 
 /// Apply one rune to `gear_id`. Consumes 1 unit of the rune stack, resolves the gear's forgery
-/// job (available from level 1), rolls the 3-outcome gamble, writes ForgeState, and banks XP.
+/// job (available from level 1), rolls the 3-outcome gamble, writes the item's rolled state without granting XP.
 public(package) fun scribe(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -127,56 +105,31 @@ public(package) fun scribe(
   assert_rune_identity(rune_type, rune_stat, rune_tier);
 
   // the forgery job from the gear's category — level 1 grants access; no odds scaling
-  let job = {
+  {
     let character: &Character = kiosk.borrow(cap, character_id);
-    forgery_job(character, item_rows::template_category(gear_template))
+    let _ = forgery_job(character, item_rows::template_category(gear_template));
   };
 
   // consume exactly one rune unit BEFORE the roll — identical write whatever the outcome
   item::burn(kiosk, cap, protected_item, rune_item_id, 1, ctx);
 
-  let rune_value = cat::rune_amount(rune_stat, rune_tier);
-  let rune_weight = cat::rune_weight(rune_stat, rune_tier);
   let seed = generator.generate_u64();
-
-  let (outcome, applied_value, lost_stat, lost_amount, new_puits, xp) = {
+  let (outcome, applied_value, lost_amounts, new_puits) = {
     let gear: &mut Item = kiosk.borrow_mut(cap, gear_id);
     assert!(item::template(gear) == item_rows::template_id(gear_template), EWrongItem);
     assert!(item::has_stats(gear), EWrongItem);
     let stats = item::stats(gear);
-    ensure_forge_state(gear);
-    let state = *df::borrow<ForgeKey, ForgeState>(item::uid(gear), ForgeKey());
-    let cap_apps = cat::rune_max_apps(rune_stat);
-    assert!(cap_apps == 0 || (state.apps[rune_stat as u64] as u64) < cap_apps, EMaxApps);
-
+    let minimum = item_rows::stats_min(gear_template);
+    let maximum = item_rows::stats_max(gear_template);
+    assert!(forge::can_apply_rune(&stats, &maximum, rune_stat, rune_tier), EStatLimit);
+    let current_puits = item::puits(gear);
     let mut rng = prng::rng_seed(seed);
-    let res = forge::apply_rune(
-      stats.to_raw(),
-      item_rows::stats_max(gear_template).to_raw(),
-      rune_stat, rune_value, rune_weight, FORGE_LEVEL, state.puits, &mut rng,
-    );
-
-    item::set_stats(gear, stats.apply_raw(&forge::new_stats(&res)));
-
-    let succeeded = forge::outcome(&res) != forge::outcome_cf();
-    let mut apps = state.apps;
-    if (succeeded) *&mut apps[rune_stat as u64] = apps[rune_stat as u64] + 1;
-    *df::borrow_mut<ForgeKey, ForgeState>(item::uid_mut(gear), ForgeKey()) =
-      ForgeState { puits: forge::new_puits(&res), apps };
-
-    let gear_level = item::level(gear) as u64;
-    let xp = if (succeeded) forge::compute_xp(rune_tier, rune_weight, gear_level) else 0;
-    (forge::outcome(&res), forge::applied_value(&res), forge::lost_stat(&res), forge::lost_amount(&res), forge::new_puits(&res), xp)
+    let res = forge::apply_rune(stats, minimum, maximum, rune_stat, rune_tier, current_puits, &mut rng);
+    item::set_stats(gear, forge::new_stats(&res), forge::new_puits(&res));
+    (forge::outcome(&res), forge::applied_value(&res), forge::lost_amounts(&res), forge::new_puits(&res))
   };
+  event::emit(RuneScribed { item: gear_id, stat: rune_stat, tier: rune_tier, outcome, applied_value, lost_amounts, new_puits });
 
-  {
-    let character: &mut Character = kiosk.borrow_mut(cap, character_id);
-    progression::bank_job_xp(character, job, xp);
-  };
-
-  event::emit(RuneScribed {
-    item: gear_id, stat: rune_stat, tier: rune_tier, outcome, applied_value, lost_stat, lost_amount, new_puits, xp,
-  });
 }
 
 // ╔════════════════ [ CRUSH — phase 1: the terminal roll → soulbound claim ] ═ ]
@@ -323,19 +276,9 @@ fun ensure_revealed(claim: &mut CrushClaim) {
   claim.revealed = true;
 }
 
-// ensure_forge_state
-fun ensure_forge_state(gear: &mut Item) {
-  if (!df::exists(item::uid(gear), ForgeKey())) {
-    let mut apps = vector<u8>[];
-    let mut i = 0;
-    while (i < APPS_LEN) { apps.push_back(0); i = i + 1; };
-    df::add(item::uid_mut(gear), ForgeKey(), ForgeState { puits: 0, apps });
-  };
-}
-
 // assert_owed_empty
 /// Every owed row zero after the mint walk — a leftover means a yielded rune's template was not
-/// committed: abort so the WHOLE crush reverts (burns included) and the gear survives.
+/// redeemed: abort so this redemption reverts and the claim survives. Earlier gear burns stay final.
 fun assert_owed_empty(owed: &vector<u64>) {
   let mut i = 0;
   while (i < owed.length()) {

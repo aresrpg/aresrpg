@@ -6,7 +6,7 @@ import { marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { Transaction, TransactionArgument, TransactionObjectArgument } from '@mysten/sui/transactions'
 
 import type { Sdk } from './client.ts'
-import { created_object_id, receipt_digest } from './cache.ts'
+import { created_object_id, receipt_digest, receipt_version, type Receipt } from './cache.ts'
 import { create_kiosk_runner, resolve_kiosk_cap, retry_stale_kiosk_ref, type KioskCapLoader } from './kiosk_runner.ts'
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
 
@@ -25,9 +25,9 @@ export type MarketplaceAsset = Readonly<{
 }>
 
 export type MarketplaceActions = Readonly<{
-  list: (asset: MarketplaceAsset) => Promise<Readonly<{ digest: string; listed_id: string }>>
-  delist: (asset: Omit<MarketplaceAsset, 'price_mist'>) => Promise<Readonly<{ digest: string }>>
-  buy: (asset: MarketplaceAsset) => Promise<Readonly<{ digest: string }>>
+  list: (asset: MarketplaceAsset) => Promise<Readonly<{ digest: string; listed_id: string; version: string }>>
+  delist: (asset: Omit<MarketplaceAsset, 'price_mist'>) => Promise<Readonly<{ digest: string; version: string }>>
+  buy: (asset: MarketplaceAsset) => Promise<Readonly<{ digest: string; version: string }>>
   collect: (kiosks: readonly string[]) => Promise<Readonly<{ digest: string }>>
 }>
 
@@ -35,6 +35,12 @@ type MarketplaceContext = Readonly<{
   address: string
   kiosk_cap: KioskCapLoader
 }>
+
+const market_receipt = (receipt: Receipt): Readonly<{ digest: string; version: string }> => {
+  const version = receipt_version(receipt)
+  if (!version) throw new Error('Marketplace receipt has no certified transaction version.')
+  return Object.freeze({ digest: receipt_digest(receipt), version })
+}
 
 const required = (value: unknown, name: string): string => {
   if (typeof value !== 'string' || !value) throw new Error(`Marketplace ${name} is not published on this network.`)
@@ -61,7 +67,8 @@ export const resolve_marketplace_transfer = (
   buyer_kiosk: TransactionObjectArgument,
   buyer_cap: TransactionObjectArgument,
   purchased: TransactionObjectArgument,
-  request: TransactionObjectArgument
+  request: TransactionObjectArgument,
+  seller_kiosk: string
 ): void => {
   const type = asset_type(sdk, kind)
   const policy = policy_id(sdk, kind)
@@ -86,6 +93,7 @@ export const resolve_marketplace_transfer = (
           purchased,
           request,
           tx.object(required((sdk.pins.version as { id?: string } | undefined)?.id, 'version')),
+          ...(rule === 'listing_rule' ? [tx.object(seller_kiosk)] : []),
         ],
       })
   }
@@ -116,6 +124,7 @@ export const resolve_marketplace_transfer = (
         character,
         request,
         tx.object(required((sdk.pins.version as { id?: string } | undefined)?.id, 'version')),
+        tx.object(seller_kiosk),
       ],
     })
     tx.moveCall({
@@ -175,7 +184,7 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
           ? created_object_id(receipt, '::item::Item')
           : id
       if (!listed_id) throw new Error('The split listing receipt carried no created item id.')
-      return Object.freeze({ digest: receipt_digest(receipt), listed_id })
+      return Object.freeze({ ...market_receipt(receipt), listed_id })
     },
     delist: async ({ kind, id, kiosk, existing }) => {
       const receipt = await runner.with_kiosk(
@@ -190,7 +199,7 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
         },
         { custody: { kiosk } }
       )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      return market_receipt(receipt)
     },
     buy: async ({ kind, id, kiosk: seller_kiosk, price_mist, existing, destination_kiosk }) => {
       if (price_mist <= 0n) throw new Error('A marketplace price must be positive.')
@@ -203,13 +212,24 @@ export const marketplace_actions = (sdk: Sdk, { address, kiosk_cap }: Marketplac
             typeArguments: [asset_type(sdk, kind)],
             arguments: [tx.object(seller_kiosk), tx.pure.id(id), payment],
           }) as unknown as [TransactionObjectArgument, TransactionObjectArgument]
-          resolve_marketplace_transfer(sdk, tx, kind, id, price_mist, buyer_kiosk, buyer_cap, purchased, request)
+          resolve_marketplace_transfer(
+            sdk,
+            tx,
+            kind,
+            id,
+            price_mist,
+            buyer_kiosk,
+            buyer_cap,
+            purchased,
+            request,
+            seller_kiosk
+          )
           if (kind === 'item' && existing)
             merge_stacks_ptb(sdk, tx, { kiosk: buyer_kiosk, cap: buyer_cap }, { target_id: existing, source_id: id })
         },
         { custody: destination_kiosk ? { kiosk: destination_kiosk } : undefined }
       )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      return market_receipt(receipt)
     },
     collect: async (kiosks) => {
       if (kiosks.length === 0) throw new Error('No marketplace proceeds are available.')

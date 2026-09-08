@@ -76,6 +76,12 @@ const seeded_state = (rows: readonly CharacterRow[], items: readonly ItemRow[]):
   })
 }
 
+const item_amounts = (state: ReturnType<typeof seeded_state>, ...rows: readonly (readonly [string, number])[]) =>
+  reduce_app_state(state, {
+    type: 'inventory/amounts_changed',
+    changes: rows.map(([id, amount]) => ({ id, amount, version: '1' })),
+  })
+
 describe('equipment staging', () => {
   test('natural slot picks the first free multi-slot, then falls back to a replace', () => {
     const ring = item({ id: '0xring', category: 'ring', item_type: 'gold_ring' })
@@ -119,29 +125,24 @@ describe('character receipt folds', () => {
     const state = seeded_state([character()], [item({ id: '0xgone' }), item({ id: '0xkept' })])
     const next = reduce_app_state(state, {
       type: 'server/packet',
-      packet: { type: 'packet/item_removed', item: '0xgone' },
+      packet: { type: 'packet/item_removed', item: '0xgone', version: '1' },
     })
     expect(next.session.inventory.map(({ id }) => id)).toEqual(['0xkept'])
   })
 
-  test('stack preparation folds sources into the target before the craft burn', () => {
+  test('one quantity receipt folds merge sources and the final crafted balance', () => {
     const target = item({ id: '0xtarget', category: 'resource', item_type: 'wool', amount: 5 })
     const source = item({ id: '0xsource', category: 'resource', item_type: 'wool', amount: 3 })
     const state = seeded_state([character({ jobs: { TAILOR: '0' } })], [target, source])
-    const merged = reduce_app_state(state, {
-      type: 'inventory/stacks_merged',
-      groups: [{ target_id: target.id, source_ids: [source.id] }],
-    })
-    expect(merged.session.inventory).toEqual([{ ...target, amount: 8 }])
-
-    const crafted = reduce_app_state(merged, {
+    const amounts = item_amounts(state, [target.id, 2], [source.id, 0])
+    const crafted = reduce_app_state(amounts, {
       type: 'character/crafted',
       character_id: '0xchar',
       job: 'TAILOR',
       xp: 20,
-      inputs: [{ item_id: target.id, amount: 6 }],
+      inputs: [],
     })
-    expect(crafted.session.inventory).toEqual([{ ...target, amount: 2 }])
+    expect(crafted.session.inventory).toEqual([{ ...target, amount: 2, version: '1' }])
     expect(crafted.session.characters[0]!.jobs.TAILOR).toBe('20')
   })
 
@@ -211,7 +212,7 @@ describe('character receipt folds', () => {
     const potion = item({ id: '0xpotion', category: 'consumable', item_type: 'small_potion', amount: 2 })
     const hurt = character({ hp: '10', hp_ms: Date.now() })
     const state = seeded_state([hurt], [potion])
-    const next = reduce_app_state(state, {
+    const next = reduce_app_state(item_amounts(state, ['0xpotion', 1]), {
       type: 'character/consumed',
       character_id: '0xchar',
       item_id: '0xpotion',
@@ -222,7 +223,7 @@ describe('character receipt folds', () => {
     expect(Number(row.hp)).toBeGreaterThanOrEqual(35)
     expect(Number(row.hp)).toBeLessThanOrEqual(character_max_hp(row))
     expect(next.session.inventory[0]!.amount).toBe(1)
-    const drained = reduce_app_state(next, {
+    const drained = reduce_app_state(item_amounts(next, ['0xpotion', 0]), {
       type: 'character/consumed',
       character_id: '0xchar',
       item_id: '0xpotion',
@@ -256,16 +257,15 @@ describe('character receipt folds', () => {
     expect(after_spells.available_spell_points).toBe(9)
   })
 
-  test('a certified scribe folds its exact stat, puits, app-count, and rune deltas immediately', () => {
+  test('a certified scribe folds its exact stat, puits, and rune deltas immediately', () => {
     const gear = item({
       id: '0xgear',
       stats: { vitality: SHIFT + 10, chance: SHIFT + 5 },
       puits: '4',
-      apps: Array.from({ length: 15 }, () => 0),
     })
     const rune = item({ id: '0xrune', category: 'rune', item_type: 'rune_vitality_ba', amount: 2 })
     const state = seeded_state([character()], [gear, rune])
-    const next = reduce_app_state(state, {
+    const next = reduce_app_state(item_amounts(state, ['0xrune', 1]), {
       type: 'runeforge/scribed',
       gear_before: gear,
       rune_before: rune,
@@ -274,15 +274,13 @@ describe('character receipt folds', () => {
         stat: 0,
         outcome: 1,
         applied_value: 3,
-        lost_stat: 4,
-        lost_amount: 2,
-        new_puits: 7,
+        lost_amounts: Array.from({ length: 15 }, (_, index) => (index === 4 ? 2 : 0)),
+        new_puits: '7',
       },
     })
     const folded = next.session.inventory.find(({ id }) => id === '0xgear')!
     expect(folded.stats).toMatchObject({ vitality: SHIFT + 13, chance: SHIFT + 3 })
     expect(folded.puits).toBe('7')
-    expect(folded.apps?.[0]).toBe(1)
     expect(next.session.inventory.find(({ id }) => id === '0xrune')!.amount).toBe(1)
     // The server stream remains the authoritative reconciliation and replaces the complete row.
     const streamed = reduce_app_state(next, {
@@ -296,13 +294,10 @@ describe('character receipt folds', () => {
   })
 
   test('a projection that wins the scribe race cannot receive the certified deltas twice', () => {
-    const apps_before = Array.from({ length: 15 }, () => 0)
-    const apps_after = apps_before.map((value, index) => value + (index === 0 ? 1 : 0))
     const gear = item({
       id: '0xgear',
       stats: { vitality: SHIFT + 10, chance: SHIFT + 5 },
       puits: '4',
-      apps: apps_before,
     })
     const rune = item({ id: '0xrune', category: 'rune', item_type: 'rune_vitality_ba', amount: 2 })
     const state = seeded_state([character()], [gear, rune])
@@ -310,7 +305,6 @@ describe('character receipt folds', () => {
       ...gear,
       stats: { vitality: SHIFT + 13, chance: SHIFT + 3 },
       puits: '7',
-      apps: apps_after,
     })
     const gear_first = reduce_app_state(state, {
       type: 'server/packet',
@@ -329,14 +323,40 @@ describe('character receipt folds', () => {
         stat: 0,
         outcome: 1,
         applied_value: 3,
-        lost_stat: 4,
-        lost_amount: 2,
-        new_puits: 7,
+        lost_amounts: Array.from({ length: 15 }, (_, index) => (index === 4 ? 2 : 0)),
+        new_puits: '7',
       },
     })
 
     expect(receipt_after.session.inventory.find(({ id }) => id === '0xgear')).toEqual(projected_gear)
     expect(receipt_after.session.inventory.find(({ id }) => id === '0xrune')!.amount).toBe(1)
+  })
+
+  test('a scribe receipt folds several losses and repairs a signed malus', () => {
+    const gear = item({
+      id: '0xgear',
+      stats: { strength: SHIFT - 5, wisdom: SHIFT + 3, chance: SHIFT + 4 },
+      puits: '20',
+    })
+    const rune = item({ id: '0xrune', category: 'rune', item_type: 'rune_strength_ba', amount: 2 })
+    const next = reduce_app_state(seeded_state([character()], [gear, rune]), {
+      type: 'runeforge/scribed',
+      gear_before: gear,
+      rune_before: rune,
+      outcome: {
+        digest: 'multi-loss',
+        stat: 2,
+        outcome: 1,
+        applied_value: 1,
+        lost_amounts: Array.from({ length: 15 }, (_, index) => (index === 1 ? 1 : index === 4 ? 2 : 0)),
+        new_puits: '0',
+      },
+    })
+    expect(next.session.inventory.find(({ id }) => id === gear.id)?.stats).toMatchObject({
+      strength: SHIFT - 4,
+      wisdom: SHIFT + 2,
+      chance: SHIFT + 2,
+    })
   })
 
   test('a replace change-set folds through: same slot unequipped and equipped in one receipt', () => {
@@ -361,7 +381,11 @@ describe('inventory receipt folds', () => {
   test('box open spends one unit and lands a pending box claim', () => {
     const box = item({ id: '0xbox', category: 'consumable', item_type: 'mystery_box', amount: 2 })
     const state = seeded_state([character()], [box])
-    const next = reduce_app_state(state, { type: 'inventory/box_opened', box_item_id: '0xbox', claim_id: '0xclaim' })
+    const next = reduce_app_state(item_amounts(state, ['0xbox', 1]), {
+      type: 'inventory/box_opened',
+      box_item_id: '0xbox',
+      claim_id: '0xclaim',
+    })
     expect(next.session.inventory[0]!.amount).toBe(1)
     expect(next.session.claims).toEqual([{ id: '0xclaim', kind: 'box' }])
   })
@@ -401,7 +425,11 @@ describe('inventory receipt folds', () => {
     const pet = item({ id: '0xpet', category: 'pet', item_type: 'tofu', pet_power: 4 })
     const food = item({ id: '0xfood', category: 'resource', item_type: 'wheat', amount: 2 })
     const state = seeded_state([character()], [pet, food])
-    const next = reduce_app_state(state, { type: 'inventory/pet_fed', pet_id: '0xpet', food_id: '0xfood' })
+    const next = reduce_app_state(item_amounts(state, ['0xfood', 1]), {
+      type: 'inventory/pet_fed',
+      pet_id: '0xpet',
+      food_id: '0xfood',
+    })
     const fed = next.session.inventory.find(({ id }) => id === '0xpet')!
     expect(fed.pet_power).toBe(5)
     expect(fed.pet_last_day).toBe(Math.floor(Date.now() / 86_400_000))
@@ -411,9 +439,9 @@ describe('inventory receipt folds', () => {
   test('destroy removes exactly the burned amount', () => {
     const stack = item({ id: '0xjunk', category: 'resource', item_type: 'pebble', amount: 5 })
     const state = seeded_state([character()], [stack])
-    const partial = reduce_app_state(state, { type: 'inventory/destroyed', item_id: '0xjunk', amount: 2 })
+    const partial = item_amounts(state, ['0xjunk', 3])
     expect(partial.session.inventory[0]!.amount).toBe(3)
-    const gone = reduce_app_state(partial, { type: 'inventory/destroyed', item_id: '0xjunk', amount: 3 })
+    const gone = item_amounts(partial, ['0xjunk', 0])
     expect(gone.session.inventory).toHaveLength(0)
   })
 })

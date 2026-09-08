@@ -1,0 +1,100 @@
+{
+  "network": "testnet",
+  "captured_at": "2026-09-06T10:30:53.921721+00:00",
+  "transaction_digest": "BEnojWNcqiW4ri57r9J2qwgo7RtBGvUxcERhzdtWLndh",
+  "receipt": {
+    "Transaction": {
+      "digest": "BEnojWNcqiW4ri57r9J2qwgo7RtBGvUxcERhzdtWLndh",
+      "objectTypes": {
+        "0x13cc3a99ccf244c8a25af30c7bd490d623b1684cab27e801f456666afe85875e": "package",
+        "0x67be0d1e1cd9980c40bb93c7e5db54ae95b1c98f8b7d82ddf6a16340a83d59ac": "0x0000000000000000000000000000000000000000000000000000000000000002::package::UpgradeCap",
+        "0x9fbd35fc89ea27e513150ccca65293411d726b07612329079116cdcde5e5fdd7": "0x0000000000000000000000000000000000000000000000000000000000000002::coin::Coin<0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+        "0xbeb90dc8b93cf0069361104da3cc1eeaf41fce8bfa40b74bed7d44da0563c5e2": "0x13cc3a99ccf244c8a25af30c7bd490d623b1684cab27e801f456666afe85875e::kares::Genesis",
+        "0xee9ef60ba90bcbeac3cd3b9f0ce7231779de67c82e5aba9033cd2a33375c2713": "0x0000000000000000000000000000000000000000000000000000000000000002::coin_registry::Currency<0x13cc3a99ccf244c8a25af30c7bd490d623b1684cab27e801f456666afe85875e::kares::KARES>"
+      },
+      "effects": {
+        "status": {
+          "success": true,
+          "error": null
+        },
+        "changedObjects": [
+          {
+            "objectId": "0x13cc3a99ccf244c8a25af30c7bd490d623b1684cab27e801f456666afe85875e",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "PackageWrite",
+            "outputVersion": "1",
+            "outputDigest": "9YPoMjAJRrsuUz8eMbPdCYRhqaTqJriSVMeDo2KNci3y",
+            "outputOwner": null,
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x67be0d1e1cd9980c40bb93c7e5db54ae95b1c98f8b7d82ddf6a16340a83d59ac",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "4",
+            "outputDigest": "DSyyasqeQBos4vtvv5p1YhijX2EAzjtmNEVS25T6Mfxb",
+            "outputOwner": {
+              "AddressOwner": "0x179424c0e21849ad6e2b0e3956eb59b63d386a152e4379e1101549d9e7316403",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0x9fbd35fc89ea27e513150ccca65293411d726b07612329079116cdcde5e5fdd7",
+            "inputState": "Exists",
+            "inputVersion": "3",
+            "inputDigest": "4MTX3bRmAV94vRHBciEJPeMGyYRxMQnFAFCx63uzqp5W",
+            "inputOwner": {
+              "AddressOwner": "0x179424c0e21849ad6e2b0e3956eb59b63d386a152e4379e1101549d9e7316403",
+              "$kind": "AddressOwner"
+            },
+            "outputState": "ObjectWrite",
+            "outputVersion": "4",
+            "outputDigest": "8MQ4GEYna6Msc5P5wuesQc1ZAF2a97wkPBrAGPwmb8zF",
+            "outputOwner": {
+              "AddressOwner": "0x179424c0e21849ad6e2b0e3956eb59b63d386a152e4379e1101549d9e7316403",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "None"
+          },
+          {
+            "objectId": "0xbeb90dc8b93cf0069361104da3cc1eeaf41fce8bfa40b74bed7d44da0563c5e2",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "4",
+            "outputDigest": "DRsDG8bSjoGDbzUk9GqPiY1FQ9Nyvn3CaLMAY4KMSvB",
+            "outputOwner": {
+              "AddressOwner": "0x179424c0e21849ad6e2b0e3956eb59b63d386a152e4379e1101549d9e7316403",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          },
+          {
+            "objectId": "0xee9ef60ba90bcbeac3cd3b9f0ce7231779de67c82e5aba9033cd2a33375c2713",
+            "inputState": "DoesNotExist",
+            "inputVersion": null,
+            "inputDigest": null,
+            "inputOwner": null,
+            "outputState": "ObjectWrite",
+            "outputVersion": "4",
+            "outputDigest": "8UCZzV9YRntf6QyejsEvjvfmBXyGYD8tG6kaKEtNyuvM",
+            "outputOwner": {
+              "AddressOwner": "0x000000000000000000000000000000000000000000000000000000000000000c",
+              "$kind": "AddressOwner"
+            },
+            "idOperation": "Created"
+          }
+        ]
+      }
+    }
+  }
+}

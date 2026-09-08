@@ -27,6 +27,8 @@ const tracked_state = (): PlayerState =>
           color_2: 0,
           color_3: 0,
           hat: null,
+          cosmetic_hat: null,
+          cosmetic_cloak: null,
           cloak: null,
           title: null,
           pet: null,
@@ -51,6 +53,7 @@ const tracked_state = (): PlayerState =>
     spectating: {},
     fight_previews: {},
     market_observation: null,
+    leaderboard_observation: null,
   }) as PlayerState
 
 const empty_state = (): PlayerState =>

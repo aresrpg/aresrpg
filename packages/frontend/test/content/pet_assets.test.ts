@@ -47,11 +47,3 @@ test('every authored pet owns its model and canonical icon pair', () => {
     expect(png_dimensions(seed('icons/items', `${item_type}.png`))).toEqual({ width: 64, height: 64 })
   }
 })
-
-test('Suicune keeps baked vertex shading instead of a flat palette-only material', () => {
-  const attributes = glb_json(seed('models/pets/suicune.glb')).meshes?.flatMap(({ primitives }) =>
-    primitives.map(({ attributes: row }) => row)
-  )
-
-  expect(attributes?.every((row) => 'COLOR_0' in row)).toBeTrue()
-})

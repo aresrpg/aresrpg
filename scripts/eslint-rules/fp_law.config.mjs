@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// scripts/eslint-rules/fp_law.config.mjs — THE FP-LAW LAYER (.claude/rules/code-law.md).
+// scripts/eslint-rules/fp_law.config.mjs — THE FP-LAW LAYER (AGENTS.md).
 //
 // Importable flat-config layer, spread into eslint.config.js after the base blocks. Severity design
 // (census 2026-07-17, 7559 findings measured before wiring): ERROR where the repo is already clean
 // (a free ratchet), WARN where violations are mass (a burn-down, not an unrunnable red gate).
-// Every rule id maps to a row in .claude/rules/code-law.md; the census + ranked worklist live in the
+// Every rule id maps to a row in AGENTS.md; the census + ranked worklist live in the
 // FP_LAW lane report.
 //
 // Tiers:
@@ -78,7 +78,7 @@ export default [
       'complexity-gate/cognitive': ['error', 10], // preferred ≤10, hard ≤15; exact inherited scores never rise
       'complexity-gate/cyclomatic': 'error', // preferred ≤8, hard ≤12; exact inherited scores never rise
       'max-depth': ['error', 4], // L-C3 hard ceiling; ordinary code stays at ≤3
-      'max-lines': ['warn', { max: 600 }], // house law: files ≤600 LoC (CLAUDE.md Agent Standard #7)
+      'max-lines': ['warn', { max: 600 }], // house law: files ≤600 LoC (AGENTS.md L-C3)
     },
   },
   {

@@ -12,7 +12,7 @@ const AdminPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }
           {copy.overview_title || 'Overview'}
         </span>
         <div className="ml-auto flex shrink-0 items-center pl-4">
-          <AdminWalletControl copy={copy} />
+          <AdminWalletControl />
         </div>
       </nav>
       <OverviewPage copy={copy} />

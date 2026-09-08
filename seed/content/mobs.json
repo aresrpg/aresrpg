@@ -5213,6 +5213,12 @@
         "chance_bp": 4630,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "water",
+        "chance_bp": 6500,
+        "min_qty": 1,
+        "max_qty": 20
       }
     ],
     "xp": 2200
@@ -6181,6 +6187,12 @@
         "chance_bp": 29,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "water",
+        "chance_bp": 7000,
+        "min_qty": 7,
+        "max_qty": 18
       }
     ],
     "xp": 700
@@ -8333,6 +8345,12 @@
         "chance_bp": 10000,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "water",
+        "chance_bp": 7000,
+        "min_qty": 5,
+        "max_qty": 25
       }
     ],
     "xp": 10033
@@ -8936,6 +8954,12 @@
         "chance_bp": 300,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "water",
+        "chance_bp": 7000,
+        "min_qty": 1,
+        "max_qty": 10
       }
     ],
     "xp": 600

@@ -75,29 +75,45 @@ export const create_chunk_manager = ({
   initial_render_distance = null,
   plan_layers,
   now = () => performance.now(),
+  on_failure = (error) => console.error('[game] terrain streaming failed.', error),
 }: Readonly<{
   engine: Engine
   initial_quality?: EngineQuality
   initial_render_distance?: number | null
   plan_layers?: (columns: readonly TerrainColumnCoordinate[]) => Promise<readonly TerrainColumnPlan[]>
   now?: () => number
+  on_failure?: (error: Readonly<Error>) => void
 }>) => {
   // Residency remembers the LOD each chunk was rendered at — approaching a mid chunk must
   // re-render it as near (detail layers like ground scatter exist only at near).
   const resident = new Map<string, ChunkLod>()
-  const in_flight = new Set<string>()
+  const in_flight = new Map<string, ChunkRequest>()
   const wanted = new Map<string, ChunkRequest>()
   const retry_at = new Map<string, number>()
   const failures = new Map<string, number>()
   const layer_cache = new Map<string, readonly number[]>()
-  let completed: readonly Readonly<{ key: string; outcome: ChunkRenderOutcome; lod: ChunkLod }>[] = []
+  let completed: readonly Readonly<{ request: ChunkRequest; outcome: ChunkRenderOutcome }>[] = []
   let queued: readonly ChunkRequest[] = []
   let evicting: readonly string[] = []
   let focus: ChunkCoordinate | null = null
   let quality = initial_quality
-  // the player's chosen render distance — overrides the tier's far_radius (one fact, one door)
+  // Effective residency starts at the requested distance and contracts under GPU pressure.
+  // An explicit quality/distance change starts a new request; focus movement retains the bound.
   let render_distance = initial_render_distance
   let plan_revision = 0
+  let disposed = false
+
+  const report_work_failure = (key: string, error: Readonly<Error>): boolean => {
+    const count = (failures.get(key) ?? 0) + 1
+    failures.set(key, count)
+    if (count >= 3) {
+      dispose()
+      on_failure(error)
+      return false
+    }
+    retry_at.set(key, now() + 250 * 2 ** (count - 1))
+    return true
+  }
 
   const apply_schedule = (): void => {
     if (!focus) return
@@ -110,12 +126,16 @@ export const create_chunk_manager = ({
     wanted.clear()
     desired.forEach((request) => wanted.set(chunk_key(request.coordinate), request))
     const wanted_keys = new Set(wanted.keys())
+    for (const metadata of [retry_at, failures])
+      metadata.forEach((_, key) => {
+        if (key !== 'terrain-plan' && !wanted_keys.has(key)) metadata.delete(key)
+      })
     queued = desired.filter((request) => {
       const key = chunk_key(request.coordinate)
       return resident.get(key) !== request.lod && !in_flight.has(key)
     })
     evicting = [...resident.keys()].filter((key) => !wanted_keys.has(key))
-    in_flight.forEach((key) => {
+    in_flight.forEach((_, key) => {
       if (wanted_keys.has(key)) return
       engine.remove_chunk(key)
       in_flight.delete(key)
@@ -138,16 +158,16 @@ export const create_chunk_manager = ({
         failures.delete('terrain-plan')
         apply_schedule()
       } catch (error) {
-        if (revision === plan_revision) {
-          failures.set('terrain-plan', 1)
-          console.error('[game] terrain residency planning failed.', error)
-        }
+        if (revision !== plan_revision) return
+        report_work_failure('terrain-plan', new Error(String(error), { cause: error }))
         return
       }
     }
   }
 
   const schedule = (): void => {
+    if (disposed) return
+    plan_revision += 1
     if (!focus || !plan_layers) {
       apply_schedule()
       return
@@ -162,43 +182,80 @@ export const create_chunk_manager = ({
       apply_schedule()
       return
     }
-    plan_revision += 1
     const revision = plan_revision
     void plan_missing(revision, focus, missing)
   }
 
+  const set_quality = (next: EngineQuality, next_render_distance: number | null): void => {
+    if (disposed) return
+    if (quality === next && render_distance === next_render_distance) return
+    quality = next
+    render_distance = next_render_distance
+    engine.set_quality(quality, render_distance)
+    schedule()
+  }
+
+  const dispose = (): void => {
+    disposed = true
+    resident.forEach((_, key) => engine.remove_chunk(key))
+    in_flight.forEach((_, key) => engine.remove_chunk(key))
+    resident.clear()
+    in_flight.clear()
+    wanted.clear()
+    retry_at.clear()
+    failures.clear()
+    layer_cache.clear()
+    focus = null
+    plan_revision += 1
+    completed = []
+    queued = []
+    evicting = []
+  }
+
   return Object.freeze({
     set_focus: (world_x: number, world_z: number) => {
+      if (disposed) return
+      if (engine.backend() === 'grid') {
+        if (focus) dispose()
+        return
+      }
       const next = { x: chunk_at(world_x), y: 0, z: chunk_at(world_z) }
       if (focus && chunk_key(next) === chunk_key(focus)) return
       focus = next
+      failures.delete('terrain-plan')
+      retry_at.delete('terrain-plan')
       schedule()
     },
-    set_quality: (next: EngineQuality, next_render_distance: number | null) => {
-      if (quality === next && render_distance === next_render_distance) return
-      quality = next
-      render_distance = next_render_distance
-      schedule()
-    },
+    set_quality,
     tick: () => {
+      if (disposed) return
+      const planning_retry = retry_at.get('terrain-plan')
+      if (planning_retry !== undefined && planning_retry <= now()) {
+        retry_at.delete('terrain-plan')
+        schedule()
+      }
       const profile = get_quality_profile(quality).chunks
+      const radius = effective_render_distance(profile.far_radius, render_distance)
+      if (radius > 0 && evicting.length === 0 && engine.render_state().uploads_blocked > 0)
+        set_quality(quality, radius - 1)
       const settled = completed
       completed = []
-      settled.forEach(({ key, outcome, lod }) => {
-        if (!in_flight.delete(key)) return
+      settled.forEach(({ request, outcome }) => {
+        const key = chunk_key(request.coordinate)
+        if (in_flight.get(key) !== request) return
+        in_flight.delete(key)
         if (outcome === 'rendered' && wanted.has(key)) {
-          resident.set(key, lod)
+          resident.set(key, request.lod)
           retry_at.delete(key)
           failures.delete(key)
           return
         }
         if (outcome !== 'failed' || !wanted.has(key)) return
-        const failure_count = (failures.get(key) ?? 0) + 1
-        failures.set(key, failure_count)
-        retry_at.set(key, now() + Math.min(5_000, 100 * 2 ** (failure_count - 1)))
-        const request = wanted.get(key)
-        if (request) queued = [...queued, request]
+        if (!report_work_failure(key, new Error(`Terrain chunk ${key} could not be displayed`))) return
+        const retry = wanted.get(key)
+        if (retry) queued = [...queued, retry]
       })
+      if (disposed) return
       const remove_now = evicting.slice(0, profile.evict_per_frame)
       evicting = evicting.slice(remove_now.length)
       remove_now.forEach((key) => {
@@ -231,39 +288,32 @@ export const create_chunk_manager = ({
       requested.forEach((request) => {
         const { coordinate, lod } = request
         const key = chunk_key(coordinate)
-        in_flight.add(key)
+        in_flight.set(key, request)
         void engine.render_chunk({ key, coordinate, lod }).then(
           (outcome) => {
-            completed = [...completed, Object.freeze({ key, outcome, lod })]
+            if (in_flight.get(key) !== request) return
+            completed = [...completed, Object.freeze({ request, outcome })]
           },
           () => {
-            completed = [...completed, Object.freeze({ key, outcome: 'failed' as const, lod })]
+            if (in_flight.get(key) !== request) return
+            completed = [...completed, Object.freeze({ request, outcome: 'failed' as const })]
           }
         )
       })
     },
-    stats: () =>
-      Object.freeze({
+    stats: () => {
+      const radius = effective_render_distance(get_quality_profile(quality).chunks.far_radius, render_distance)
+      return Object.freeze({
         resident: resident.size,
         queued: queued.length,
         in_flight: in_flight.size,
         evicting: evicting.length,
         failed: failures.size,
         quality,
-      }),
-    dispose: () => {
-      resident.forEach((_, key) => engine.remove_chunk(key))
-      in_flight.forEach(engine.remove_chunk)
-      resident.clear()
-      in_flight.clear()
-      wanted.clear()
-      retry_at.clear()
-      failures.clear()
-      layer_cache.clear()
-      plan_revision += 1
-      completed = []
-      queued = []
-      evicting = []
+        render_distance: radius,
+        planning: plan_layers && focus ? (radius * 2 + 1) ** 2 - layer_cache.size : 0,
+      })
     },
+    dispose,
   })
 }

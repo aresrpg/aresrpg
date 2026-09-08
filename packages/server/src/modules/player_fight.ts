@@ -9,7 +9,6 @@ import { zone_of } from '@aresrpg/protocol'
 import { channels, mesh, type EventEnvelope, type FightActionFact } from '../protocol.ts'
 import { get_fight } from '../reads/get_fight.ts'
 import { get_fight_checkpoint } from '../reads/get_fight_checkpoint.ts'
-import { get_closable_fights } from '../reads/get_closable_fights.ts'
 import { latest_keyed_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerAction, PlayerState } from '../player.ts'
@@ -76,11 +75,13 @@ export default {
 
   observe: (context) => {
     const { pubsub, graph, events, send, address, dispatch, get_state, signal } = context
-    const { watch, unwatch, watched } = create_watcher(pubsub)
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
     const fight_tails = new Map<string, Promise<void>>()
     const observation_versions = new Map<string, number>()
     const enqueue_fight = (fight: string, work: () => Promise<void>): void => {
-      const next = (fight_tails.get(fight) ?? Promise.resolve()).then(work)
+      const next = (fight_tails.get(fight) ?? Promise.resolve()).then(() => {
+        if (!signal.aborted) return work()
+      })
       fight_tails.set(
         fight,
         next.catch((error: Error) => log.warn({ fight, error: error.message }, 'ordered fight stream failed'))
@@ -162,12 +163,13 @@ export default {
         })
       }
       if (payload.type === 'DropsRolled') {
-        const { fight, fighter, drops } = payload.data as {
+        const { fight, fighter, drops, kares } = payload.data as {
           fight: string
           fighter: string
           drops: { item_type: string; qty: number }[]
+          kares: string
         }
-        send({ type: 'packet/fight_drops', fight, fighter, drops })
+        send({ type: 'packet/fight_drops', fight, fighter, drops, kares: String(kares) })
       }
       if (payload.type === 'FightProjected') {
         const { fight } = payload.data as { fight: string }
@@ -177,12 +179,7 @@ export default {
         const { fight, winner } = payload.data as { fight: string; winner: number | null }
         send({ type: 'packet/fight_ended', fight, winner })
       }
-      if (payload.type === 'FightClosed')
-        void get_closable_fights(graph, { address })
-          .then((fights) => {
-            send({ type: 'packet/closable_fights', fights })
-          })
-          .catch((error: Error) => log.warn({ error: error.message }, 'closed fight recovery refresh failed'))
+      if (payload.type === 'FightClosed') dispatch({ type: 'action/refresh_account', domain: 'closable_fights' })
     }
 
     const forward_fight_action = (fight: string) => (fact: FightActionFact) => {

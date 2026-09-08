@@ -12,6 +12,7 @@ import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import type { SimulatorCharacter } from '../modules/simulator.ts'
 import { dispatch_app } from '../store.ts'
 
@@ -28,6 +29,7 @@ export const LoadoutSection = ({
   character: SimulatorCharacter
 }>) => {
   const [picking, set_picking] = useState<CharacterEquipmentSlot | null>(null)
+  const category_name = useItemCategoryName()
   const text = copy.simulator_page
   const { loadout } = character
   const encyclopedia = encyclopedia_text(copy)
@@ -103,7 +105,7 @@ export const LoadoutSection = ({
               </div>
             ) : null
           }}
-          title={picking.replaceAll('_', ' ')}
+          title={category_name(picking)}
           value={loadout[picking]}
         />
       )}

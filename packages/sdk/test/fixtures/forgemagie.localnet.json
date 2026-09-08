@@ -1,0 +1,24 @@
+{
+  "provenance": {
+    "network": "isolated localnet",
+    "chain_identifier": "58345bf8",
+    "captured_at": "2026-09-08T15:56:17.155000+00:00",
+    "transaction_digest": "AHd6aEK7RFjCWiERcZiyNcpP5pZndvHTJvfYKRCrAYyd",
+    "package_id": "0x88d6cf97493e8674b23199a005b12a6208a95c57964821b2c736deb56689629b",
+    "item_id": "0x4fe461e8d5eb23dbfe527046ac5f1f39e5a44d86c5a51864a6c45599a5246e7d",
+    "forge_state_object_id": "0xc8b1fdc65515c6284bf643abd1bff2362bb968f2f8fc8dac6914a45b71129797",
+    "stats_object_id": "0xddcd1b25be5bb4d3bd3e10edcf115414134a7a0427a400b28166b0f257dcf63a",
+    "object_version": "7033"
+  },
+  "event_type": "0x88d6cf97493e8674b23199a005b12a6208a95c57964821b2c736deb56689629b::forgemagie::RuneScribed",
+  "bcs_hex": "4fe461e8d5eb23dbfe527046ac5f1f39e5a44d86c5a51864a6c45599a5246e7d02010101000000000000000f0000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002800000000000000",
+  "parsed_json": {
+    "applied_value": "1",
+    "item": "0x4fe461e8d5eb23dbfe527046ac5f1f39e5a44d86c5a51864a6c45599a5246e7d",
+    "lost_amounts": ["0", "1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0"],
+    "new_puits": "40",
+    "outcome": 1,
+    "stat": 2,
+    "tier": 1
+  }
+}

@@ -18,6 +18,7 @@ import {
   type PresenceRow,
   type VisibleSlot,
   type MarketObservation,
+  type LeaderboardObservation,
   type CharacterRow,
 } from '@aresrpg/protocol'
 
@@ -27,7 +28,7 @@ import type { Graph } from './graph.ts'
 import type { GameState } from './game_state.ts'
 import type { IndexingHealth } from './indexing_health.ts'
 import type { Pubsub } from './pubsub_bus.ts'
-import player_load from './modules/player_load.ts'
+import player_load, { type AccountDomain } from './modules/player_load.ts'
 import player_info from './modules/player_info.ts'
 import player_events from './modules/player_events.ts'
 import player_world from './modules/player_world.ts'
@@ -37,7 +38,8 @@ import player_fight from './modules/player_fight.ts'
 import player_party from './modules/player_party.ts'
 import player_items from './modules/player_items.ts'
 import player_market from './modules/player_market.ts'
-import player_airdrop from './modules/player_airdrop.ts'
+import player_leaderboards from './modules/player_leaderboards.ts'
+import type { ResolveName } from './suins.ts'
 import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
 import player_friends from './modules/player_friends.ts'
@@ -72,6 +74,7 @@ export type PlayerAction =
       dungeon_run: CharacterRow['dungeon_run'] | null
       at_ms: number
     }
+  | { type: 'action/refresh_account'; domain: AccountDomain }
   | { type: 'action/character_roster'; characters: readonly CharacterRow[] }
   | {
       type: 'action/move'
@@ -114,10 +117,12 @@ export type PlayerState = {
   fight_previews: Readonly<Record<string, string>>
   /** the marketplace category window under observation */
   market_observation: MarketObservation | null
+  leaderboard_observation: LeaderboardObservation | null
 }
 
 export type PlayerContext = {
   address: string
+  resolve_name?: ResolveName
   admin: boolean
   graph: Graph
   /** the two pub/sub doors — `graph` (the bound indexer set's evt:* truth) and `mesh` (the
@@ -164,8 +169,8 @@ const MODULES: PlayerModule[] = [
   player_fight,
   player_party,
   player_market,
+  player_leaderboards,
   player_items,
-  player_airdrop,
   player_trade,
   player_kolizeum,
   player_requests,
@@ -180,6 +185,7 @@ const READ_PACKETS = new Set<string>([
   'packet/fight_preview',
   'packet/fight_resync',
   'packet/market_observe',
+  'packet/leaderboard_observe',
   'packet/character_owner_request',
   'packet/admin_request',
 ])
@@ -193,9 +199,10 @@ const INITIAL_STATE = (): PlayerState => ({
   spectating: {},
   fight_previews: {},
   market_observation: null,
+  leaderboard_observation: null,
 })
 
-type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub'> & {
+type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name'> & {
   game_state?: GameState
   indexing_health?: () => Promise<IndexingHealth>
   request_limiter?: RequestLimiter
@@ -213,6 +220,7 @@ const UNKNOWN_GAME_STATE: GameState = Object.freeze({
 export function create_player({
   ws,
   address,
+  resolve_name,
   admin,
   graph,
   pubsub,
@@ -222,7 +230,10 @@ export function create_player({
   realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
 }: PlayerWires): Player {
   let state = INITIAL_STATE()
-  const send = (packet: ServerPacket) => void ws.send(JSON.stringify(packet))
+  let closed = false
+  const send = (packet: ServerPacket) => {
+    if (!closed) void ws.send(JSON.stringify(packet))
+  }
   const drop = (reason: string) => void ws.close(1008, reason)
 
   const events = new EventEmitter()
@@ -231,6 +242,7 @@ export function create_player({
 
   const context: PlayerContext = {
     address,
+    resolve_name,
     admin,
     graph,
     pubsub,
@@ -243,6 +255,7 @@ export function create_player({
     get_state: () => state,
     signal: controller.signal,
     dispatch: (action) => {
+      if (closed) return
       const previous = state
       const next = MODULES.reduce(
         (folded, module) => (module.reduce ? module.reduce(folded, action) : folded),
@@ -261,6 +274,7 @@ export function create_player({
   return {
     dispatch: (action) => context.dispatch(action),
     on_message: (raw) => {
+      if (closed) return
       if (!realtime_limiter.take(address)) return drop('RATE_LIMIT')
       try {
         const packet = parse_client_packet(raw)
@@ -276,8 +290,11 @@ export function create_player({
       }
     },
     on_close: () => {
+      if (closed) return
       context.dispatch({ type: 'close' })
+      closed = true
       controller.abort()
+      events.removeAllListeners()
     },
   }
 }

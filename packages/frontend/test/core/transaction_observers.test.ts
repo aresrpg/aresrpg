@@ -25,6 +25,7 @@ test('rapid marketplace intents execute one wallet transaction', async () => {
     release = resolve
   })
   const listing: ListingRow = {
+    version: '1',
     kind: 'item',
     id: '0xi',
     name: 'Wool',
@@ -43,7 +44,7 @@ test('rapid marketplace intents execute one wallet transaction', async () => {
       buy: async () => {
         calls += 1
         await pending
-        return { digest: 'bought' }
+        return { digest: 'bought', version: '2' }
       },
     },
   }
@@ -92,3 +93,67 @@ test('rapid duel challenges create one fight transaction', async () => {
   await tick()
   stop()
 })
+
+for (const rejected of [false, true]) {
+  test(`market collection stays with its wallet when an old ${rejected ? 'failure' : 'success'} arrives`, async () => {
+    const app = create_app()
+    app.initialize(settings)
+    const stop = app.observe(['marketplace'])
+    let finish_old!: () => void
+    let finish_new!: () => void
+    let new_calls = 0
+    const login = (wallet: unknown) => {
+      app.dispatch({ type: 'auth/connecting' })
+      app.dispatch({ type: 'auth/connected', session: wallet as never })
+    }
+    const history = (kiosk: string) =>
+      app.dispatch({
+        type: 'server/packet',
+        packet: {
+          type: 'packet/market_history',
+          sales: [],
+          total: 0,
+          revenue_30d_mist: '0',
+          profits: [{ kiosk, amount_mist: '100' }],
+        },
+      })
+    try {
+      login({
+        address: '0xold',
+        marketplace: {
+          collect: () =>
+            new Promise<void>((resolve, reject) => {
+              finish_old = () => (rejected ? reject(new Error('old collection refused')) : resolve())
+            }),
+        },
+      })
+      history('old-kiosk')
+      app.dispatch({ type: 'market/collect_requested' })
+      app.dispatch({ type: 'auth/disconnected' })
+      login({
+        address: '0xnew',
+        marketplace: {
+          collect: () => {
+            new_calls++
+            return new Promise<void>((resolve) => {
+              finish_new = resolve
+            })
+          },
+        },
+      })
+      history('new-kiosk')
+      app.dispatch({ type: 'market/collect_requested' })
+      expect(new_calls).toBe(1)
+      finish_old()
+      await tick()
+      expect(app.store.getState().marketplace.profits).toEqual([{ kiosk: 'new-kiosk', amount_mist: '100' }])
+      expect(app.store.getState().marketplace.pending).toBe('collect')
+      finish_new()
+      await tick()
+      expect(app.store.getState().marketplace.profits).toEqual([])
+      expect(app.store.getState().marketplace.pending).toBeNull()
+    } finally {
+      stop()
+    }
+  })
+}

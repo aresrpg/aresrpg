@@ -21,7 +21,7 @@ const worlds = Object.freeze([
       Object.freeze({ mob_type: 'fuwa', biomes: Object.freeze(['plains']) }),
     ]),
     protectors: Object.freeze([]),
-    cities: Object.freeze([Object.freeze({ city: 'thebes' })]),
+    cities: Object.freeze([Object.freeze({ city: 'thebes', mob_types: Object.freeze(['city_boss']) })]),
   }),
 ])
 
@@ -39,13 +39,14 @@ test('mob taxonomy derives archimob and city placement and composes place, famil
     kind: 'city',
     id: 'nauvis:thebes',
     parent: 'nauvis',
-    count: 2,
-    mob_types: ['ant', 'ant__samurai'],
+    count: 3,
+    mob_types: ['ant', 'ant__samurai', 'city_boss'],
   })
   expect(rows.find((row) => row.kind === 'world' && row.id === 'nauvis')?.mob_types).toEqual([
     'ant',
     'fuwa',
     'ant__samurai',
+    'city_boss',
   ])
   expect(
     filter_mob_types(

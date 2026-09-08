@@ -5,6 +5,10 @@
 /// canonical events, and value settlement.
 module aresrpg::fight;
 
+use aresrpg::fight_rewards::{Self, FightRewards};
+use aresrpg_kares::{combat_rewards::CombatPot, offering::Offering};
+
+
 use aresrpg::{
   character::{Self, Character},
   equipment,
@@ -89,6 +93,7 @@ public struct Fight has key {
   next_turn_entropy: u64,
   /// True once an ended fight has fresh retry-stable entropy reserved for team loot.
   loot_entropy_ready: bool,
+  rewards: FightRewards,
 }
 
 public enum FighterAuthority has copy, drop, store {
@@ -112,6 +117,7 @@ public struct FightBuild {
   pending: vector<MobMember>,
   dungeon: Option<DungeonTag>,
   door_policy: u64,
+  rewards: FightRewards,
 }
 
 public struct FightCreated has copy, drop {
@@ -128,6 +134,7 @@ public struct DropsRolled has copy, drop {
   fight: ID,
   fighter: u64,
   drops: vector<aresrpg_combat::combat::RolledDrop>,
+  kares: u64,
 }
 
 public(package) fun engage(
@@ -168,14 +175,13 @@ public(package) fun engage(
     catalog, prng::mix(zone::seed_of(zone_object), group_index),
   );
   zone::consume_mob_group(zone_object, group_index);
-  assert!(pending.length() <= board.start_cells_b().length(), EBoardTooSmall);
-  assert!(!board.start_cells_a().is_empty(), EBoardTooSmall);
+  // GridSpec validates the start cells, and zone generation bounds each group to their capacity.
   let (authority, fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
   );
   FightBuild {
     world: current_world, x, z, board, access, authorities: vector[authority],
-    fighters: vector[fighter], character, pending, dungeon: option::none(), door_policy: 0,
+    fighters: vector[fighter], character, pending, dungeon: option::none(), door_policy: 0, rewards: fight_rewards::new(),
   }
 }
 
@@ -208,7 +214,6 @@ public(package) fun dungeon_build(
   let mut character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
   let board = board_catalog::pick(catalog, board_seed);
   assert!(pending.length() <= board.start_cells_b().length(), EBoardTooSmall);
-  assert!(!board.start_cells_a().is_empty(), EBoardTooSmall);
   let (authority, fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
   );
@@ -216,7 +221,7 @@ public(package) fun dungeon_build(
     world: world_object.name(), x, z, board, access, authorities: vector[authority],
     fighters: vector[fighter], character, pending,
     dungeon: option::some(DungeonTag { dungeon: dungeon_content::name(dungeon), room }),
-    door_policy: DUNGEON_DOOR_POLICY,
+    door_policy: DUNGEON_DOOR_POLICY, rewards: fight_rewards::new(),
   }
 }
 
@@ -226,7 +231,9 @@ public(package) fun add_mob(mut build: FightBuild, template: &MobTemplate): Figh
   assert!(member.member_type() == mob_data::mob_type(template.data()), EWrongMob);
   let cell = build.board.start_cells_b()[build.fighters.length() - 1];
   build.authorities.push_back(FighterAuthority::Mob);
-  build.fighters.push_back(mob_fighter(template, member.member_level_scalar() as u64, cell));
+  let fighter = mob_fighter(template, member.member_level_scalar() as u64, cell);
+  fight_rewards::add_mob(&mut build.rewards, template, &fighter);
+  build.fighters.push_back(fighter);
   build
 }
 
@@ -237,13 +244,13 @@ public(package) fun launch(
   ctx: &mut TxContext,
 ) {
   let FightBuild {
-    world, x, z, board, access, authorities, fighters, character, pending, dungeon, door_policy,
+    world, x, z, board, access, authorities, fighters, character, pending, dungeon, door_policy, rewards,
   } = build;
   assert!(pending.is_empty(), EPendingMobs);
   let _ = share_new_fight(
     world, x, z, board, access, ACCESS_UNSET,
     option::some(character::id(&character)), option::none(), authorities, fighters,
-    character, dungeon, door_policy, entropy.generate_u64(), clock, ctx,
+    character, dungeon, door_policy, entropy.generate_u64(), rewards, clock, ctx,
   );
 }
 
@@ -262,6 +269,7 @@ fun share_new_fight(
   dungeon: Option<DungeonTag>,
   door_policy: u64,
   next_turn_entropy: u64,
+  rewards: FightRewards,
   clock: &Clock,
   ctx: &mut TxContext,
 ): ID {
@@ -269,7 +277,7 @@ fun share_new_fight(
   let mut fight = Fight {
     id: object::new(ctx), world, x, z, access_a, access_b, opener_a, opener_b, authorities,
     combat: combat::new_state(board, fighters, placement_ms), dungeon, door_policy,
-    drops_rolled: false, next_turn_entropy, loot_entropy_ready: false,
+    drops_rolled: false, next_turn_entropy, loot_entropy_ready: false, rewards,
   };
   let id = fight.id.to_inner();
   dynamic_object::add(&mut fight.id, FighterKey(0), first_character);
@@ -299,14 +307,13 @@ public(package) fun challenge(
   // accepting, so deterministic match identity is fairer than filterable same-tx randomness.
   let board_seed = duel_board_seed(character_id, target, x, z);
   let board = board_catalog::pick(catalog, board_seed);
-  assert!(!board.start_cells_a().is_empty() && !board.start_cells_b().is_empty(), EBoardTooSmall);
   let (authority, fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
   );
   let _ = share_new_fight(
     world, x, z, board, access, ACCESS_INVITED,
     option::some(character_id), option::some(target), vector[authority], vector[fighter],
-    character, option::none(), 0, entropy.generate_u64(), clock, ctx,
+    character, option::none(), 0, entropy.generate_u64(), fight_rewards::new(), clock, ctx,
   );
 }
 
@@ -325,14 +332,13 @@ public(package) fun kolizeum_birth(
   let mut character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
   let board_seed = arena_board_seed(character_id, ctx.epoch());
   let board = board_catalog::pick(catalog, board_seed);
-  assert!(!board.start_cells_a().is_empty() && !board.start_cells_b().is_empty(), EBoardTooSmall);
   let (authority, fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
   );
   share_new_fight(
     b"kolizeum".to_string(), 0, 0, board, access, ACCESS_UNSET,
     option::some(character_id), option::none(), vector[authority], vector[fighter], character,
-    option::none(), KOLIZEUM_DOOR_POLICY, next_turn_entropy, clock, ctx,
+    option::none(), KOLIZEUM_DOOR_POLICY, next_turn_entropy, fight_rewards::new(), clock, ctx,
   )
 }
 
@@ -354,16 +360,17 @@ public(package) fun ambush(
   let mut character = protected.extract_from_kiosk(kiosk, cap, character_id, ctx);
   let world = world::prove_move(&mut character, x, z, clock);
   let board = board_catalog::pick(catalog, board_seed);
-  assert!(!board.start_cells_a().is_empty() && !board.start_cells_b().is_empty(), EBoardTooSmall);
   let (authority, mut fighter) = player_fighter(
     &mut character, ctx.sender(), 0, board.start_cells_a()[0], clock,
   );
   fighter = combat::cap_fighter_hp(fighter, hp_cap);
   let mob = mob_fighter(template, level_scalar, board.start_cells_b()[0]);
+  let mut rewards = fight_rewards::new();
+  fight_rewards::add_mob(&mut rewards, template, &mob);
   let _ = share_new_fight(
     world, x, z, board, ACCESS_UNSET, ACCESS_UNSET, option::none(), option::none(),
     vector[authority, FighterAuthority::Mob], vector[fighter, mob], character,
-    option::none(), 0, prng::mix(board_seed, 0xA8B057), clock, ctx,
+    option::none(), 0, prng::mix(board_seed, 0xA8B057), rewards, clock, ctx,
   );
 }
 
@@ -600,8 +607,14 @@ public(package) fun end_turn(
   clock: &Clock,
   ctx: &TxContext,
 ) {
+  // The ordered player commands may already have ended combat. The chain state chooses
+  // whether this one terminal boundary advances the turn or only seals loot entropy.
+  if (combat::ended(&fight.combat)) {
+    seal_end(fight, entropy);
+    return
+  };
   let fighter = combat::active_fighter(&fight.combat);
-  assert_active_owner(fight, fighter, ctx);
+  let _ = assert_fighter_owner(fight, fighter, ctx);
   let ended_before = combat::ended(&fight.combat);
   let turn_seeds = committed_turn_seeds(fight);
   let used = combat::end_turn(&mut fight.combat, turn_seeds, clock.timestamp_ms());
@@ -644,9 +657,8 @@ fun commit_next_entropy(fight: &mut Fight, entropy: &mut RandomGenerator) {
   if (combat::ended(&fight.combat)) fight.loot_entropy_ready = true;
 }
 
-/// A player action can end combat before the normal boundary door. The SDK appends this terminal
-/// seal in the same PTB; raw callers that omit it cannot roll shared team loot until it is sealed.
-public(package) fun seal_end(fight: &mut Fight, entropy: &mut RandomGenerator) {
+/// The one end-turn boundary routes an already-ended post-command state here before settlement.
+fun seal_end(fight: &mut Fight, entropy: &mut RandomGenerator) {
   assert!(combat::ended(&fight.combat) && !fight.loot_entropy_ready, EWrongDoor);
   commit_next_entropy(fight, entropy);
 }
@@ -747,6 +759,28 @@ public(package) fun forfeit(
   kiosk.lock(cap, policy, character);
 }
 
+/// The SDK composes this before the existing terminal settlement door for boss fights.
+public(package) fun prepare_boss_rewards(
+  fight: &mut Fight, fighter: u64, offering: &Offering, pot: &mut CombatPot,
+  clock: &Clock, ctx: &mut TxContext,
+) {
+  let _ = assert_fighter_owner(fight, fighter, ctx);
+  if (!combat::fighter_won(&fight.combat, fighter)) return;
+  assert!(fight.loot_entropy_ready, EWrongDoor);
+  let mut recipients = vector[];
+  let mut seat = 0;
+  while (seat < fight.authorities.length()) {
+    if (combat::fighter_won(&fight.combat, seat) && !combat::fighter_settled(&fight.combat, seat)) {
+      match (&fight.authorities[seat]) {
+        FighterAuthority::Player { owner, .. } => recipients.push_back(*owner),
+        FighterAuthority::Mob => (),
+      };
+    };
+    seat = seat + 1;
+  };
+  fight_rewards::allocate(&mut fight.rewards, offering, pot, recipients, clock, ctx);
+}
+
 public(package) fun settle(
   fight: &mut Fight,
   fighter: u64,
@@ -761,7 +795,7 @@ public(package) fun settle(
 ) {
   let _ = assert_fighter_owner(fight, fighter, ctx);
   if (combat::fighter_won(&fight.combat, fighter) && !fight.drops_rolled) {
-    assert!(fight.loot_entropy_ready, EWrongDoor);
+    assert!(fight.loot_entropy_ready && fight_rewards::ready(&fight.rewards), EWrongDoor);
     let winning_team = combat::fighter_team(&fight.combat, fighter);
     let random_draws = turn_seeds_from(
       fight.next_turn_entropy,
@@ -777,6 +811,7 @@ public(package) fun settle(
       event::emit(DropsRolled {
         fight: fight.id.to_inner(), fighter: winner,
         drops: combat::fighter_drops(&fight.combat, winner),
+        kares: fight_rewards::amount(&fight.rewards),
       });
       index = index + 1;
     };
@@ -884,11 +919,6 @@ public(package) fun assert_last_settlers(fight: &Fight, fighters: &vector<u64>, 
   combat::assert_last_settlers(&fight.combat, fighters);
 }
 
-public(package) fun assert_last_live_player(fight: &Fight, fighter: u64, ctx: &TxContext) {
-  let _ = assert_fighter_owner(fight, fighter, ctx);
-  combat::assert_last_live_player(&fight.combat, fighter);
-}
-
 fun emit_closable(fight: &Fight) {
   if (combat::is_closable(&fight.combat))
     event::emit(FightClosable { fight: fight.id.to_inner() });
@@ -910,7 +940,7 @@ public(package) fun close(fight: Fight, ctx: &TxContext) {
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
@@ -1039,7 +1069,7 @@ public(package) fun retry_boundary_fight_for_testing(committed: u64, ctx: &mut T
       0,
     ),
     dungeon: option::none(), door_policy: 0, drops_rolled: false,
-    next_turn_entropy: committed, loot_entropy_ready: false,
+    next_turn_entropy: committed, loot_entropy_ready: false, rewards: fight_rewards::new(),
   }
 }
 
@@ -1056,7 +1086,7 @@ public(package) fun destroy_retry_boundary_for_testing(fight: Fight) {
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
@@ -1094,7 +1124,7 @@ public(package) fun retry_loot_fight_for_testing(
       FighterAuthority::Mob,
     ],
     combat: state, dungeon: option::none(), door_policy: 0, drops_rolled: false,
-    next_turn_entropy: committed, loot_entropy_ready: true,
+    next_turn_entropy: committed, loot_entropy_ready: true, rewards: fight_rewards::new(),
   };
   dynamic_object::add(&mut fight.id, FighterKey(0), character);
   fight
@@ -1127,13 +1157,13 @@ public(package) fun side_admission_for_testing(
     access_a: ACCESS_UNSET, access_b: side_access,
     opener_a: option::none(), opener_b: opener, authorities,
     combat: combat::new_state(board, fighters, 0), dungeon: option::none(),
-    door_policy: 0, drops_rolled: false, next_turn_entropy: 1, loot_entropy_ready: false,
+    door_policy: 0, drops_rolled: false, next_turn_entropy: 1, loot_entropy_ready: false, rewards: fight_rewards::new(),
   };
   let claims = claims_side(&fight, 1, joiner);
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
@@ -1174,7 +1204,7 @@ fun authority_lifecycle_fight_for_testing(
     access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
     opener_a: option::none(), opener_b: option::none(), authorities, combat: state,
     dungeon: option::none(), door_policy, drops_rolled: ended, next_turn_entropy: 1,
-    loot_entropy_ready: ended,
+    loot_entropy_ready: ended, rewards: fight_rewards::new(),
   }
 }
 
@@ -1198,7 +1228,7 @@ public(package) fun assert_last_settler_for_testing(
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
@@ -1209,25 +1239,6 @@ public(package) fun assert_duplicate_last_settlers_for_testing(owner: address, c
   let fight = authority_lifecycle_fight_for_testing(owner, true, false, true, true, 0, ctx);
   assert_last_settlers(&fight, &vector[0, 0], ctx);
   abort 999
-}
-
-#[test_only]
-public(package) fun assert_last_live_player_for_testing(
-  owner: address,
-  other_settled: bool,
-  ctx: &mut TxContext,
-) {
-  let fight = authority_lifecycle_fight_for_testing(
-    owner, true, false, other_settled, false, KOLIZEUM_DOOR_POLICY, ctx,
-  );
-  assert_last_live_player(&fight, 0, ctx);
-  let Fight {
-    id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
-    authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
-  } = fight;
-  combat::destroy(state);
-  id.delete();
 }
 
 #[test_only]
@@ -1250,7 +1261,7 @@ public(package) fun party_authority_fight_for_testing(
     opener_a: option::none(), opener_b: option::none(),
     authorities: vector[FighterAuthority::Player { character: character_id, owner }],
     combat: state, dungeon: option::none(), door_policy: 0, drops_rolled: false,
-    next_turn_entropy: 1, loot_entropy_ready: false,
+    next_turn_entropy: 1, loot_entropy_ready: false, rewards: fight_rewards::new(),
   };
   dynamic_object::add(&mut fight.id, FighterKey(0), character);
   fight
@@ -1270,7 +1281,7 @@ public(package) fun mob_party_authority_fight_for_testing(ctx: &mut TxContext): 
     access_a: ACCESS_UNSET, access_b: ACCESS_UNSET,
     opener_a: option::none(), opener_b: option::none(), authorities: vector[FighterAuthority::Mob],
     combat: combat::new_state(board, vector[fighter], 0), dungeon: option::none(),
-    door_policy: 0, drops_rolled: false, next_turn_entropy: 1, loot_entropy_ready: false,
+    door_policy: 0, drops_rolled: false, next_turn_entropy: 1, loot_entropy_ready: false, rewards: fight_rewards::new(),
   }
 }
 
@@ -1280,7 +1291,7 @@ public(package) fun take_party_authority_character_for_testing(mut fight: Fight)
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
@@ -1292,7 +1303,7 @@ public(package) fun destroy_party_authority_mob_fight_for_testing(fight: Fight) 
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
@@ -1320,7 +1331,7 @@ public(package) fun wrapper_lifecycle_for_testing(
     ],
     combat: combat::new_state(board, vector[player, mob], clock.timestamp_ms()),
     dungeon: option::none(), door_policy: 0, drops_rolled: false, next_turn_entropy: 1,
-    loot_entropy_ready: false,
+    loot_entropy_ready: false, rewards: fight_rewards::new(),
   };
   dynamic_object::add(&mut fight.id, FighterKey(0), character);
   let final_ready = ready(&mut fight, 0, ctx);
@@ -1334,9 +1345,54 @@ public(package) fun wrapper_lifecycle_for_testing(
   let Fight {
     id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
     authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
-    next_turn_entropy: _, loot_entropy_ready: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _,
   } = fight;
   combat::destroy(state);
   id.delete();
   vector[if (final_ready) 1 else 0, if (ended) 1 else 0, winner as u64]
+}
+
+#[test_only]
+public(package) fun combat_for_testing(fight: &Fight): &State { &fight.combat }
+
+#[test_only]
+public(package) fun dead_active_boundary_for_testing(owner: address, action: u8, clock: &Clock, ctx: &mut TxContext): vector<u64> {
+  let mut fight = Fight {
+    id: object::new(ctx), world: b"dead_active_test".to_string(), x: 0, z: 0,
+    access_a: ACCESS_UNSET, access_b: ACCESS_UNSET, opener_a: option::none(), opener_b: option::none(),
+    authorities: vector::tabulate!(3, |seat| FighterAuthority::Player {
+      character: object::id_from_address(if (seat == 0) @0xA else if (seat == 1) @0xB else @0xC), owner,
+    }),
+    combat: combat::self_lethal_state_for_testing(), dungeon: option::none(), door_policy: 0,
+    drops_rolled: false, next_turn_entropy: 77, loot_entropy_ready: false, rewards: fight_rewards::new(),
+  };
+  if (action == 1) move_fighter(&mut fight, &vector[], ctx);
+  if (action == 2) combat::set_fighter_settled_for_testing(&mut fight.combat, 0, true);
+  let mut entropy = sui::random::new_generator_from_seed_for_testing(b"dead_active_boundary");
+  end_turn(&mut fight, &mut entropy, clock, ctx);
+  let answer = vector[combat::active_fighter(&fight.combat), fight.next_turn_entropy,
+    if (fight.loot_entropy_ready) 1 else 0];
+  let Fight { id, world: _, x: _, z: _, access_a: _, access_b: _, opener_a: _, opener_b: _,
+    authorities: _, combat: state, dungeon: _, door_policy: _, drops_rolled: _,
+    next_turn_entropy: _, loot_entropy_ready: _, rewards: _, } = fight;
+  combat::destroy(state);
+  id.delete();
+  answer
+}
+
+#[test_only]
+public(package) fun retained_history_for_testing(character: Character, history: u64, ctx: &mut TxContext): Fight {
+  let character_id = character::id(&character);
+  let mut authorities = vector[FighterAuthority::Player { character: character_id, owner: ctx.sender() }];
+  authorities.append(vector::tabulate!(history + 1, |index| FighterAuthority::Player {
+    character: object::id_from_bytes(std::bcs::to_bytes(&((index + 1) as u256))), owner: ctx.sender(),
+  }));
+  let mut fight = Fight {
+    id: object::new(ctx), world: b"history_test".to_string(), x: 0, z: 0,
+    access_a: ACCESS_PUBLIC, access_b: ACCESS_PUBLIC, opener_a: option::none(), opener_b: option::none(),
+    authorities, combat: combat::retained_history_for_testing(history), dungeon: option::none(), door_policy: 0,
+    drops_rolled: false, next_turn_entropy: 1, loot_entropy_ready: false, rewards: fight_rewards::new(),
+  };
+  dynamic_object::add(&mut fight.id, FighterKey(0), character);
+  fight
 }

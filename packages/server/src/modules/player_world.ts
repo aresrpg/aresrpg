@@ -9,7 +9,6 @@ import {
   PET_SPEED_MULTIPLIER,
   VISIBLE_SLOTS,
   type CharacterRow,
-  type VisibleSlot,
 } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
@@ -18,8 +17,7 @@ import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_zones } from '../reads/get_zones.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_fight } from '../reads/get_fight.ts'
-import { get_item } from '../reads/get_item.ts'
-import { get_characters } from '../reads/get_characters.ts'
+import { equipment_updates } from '../equipment_updates.ts'
 import { refreshed_world_anchor } from '../world_anchor.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
@@ -52,8 +50,6 @@ const spiral = (zx: number, zz: number) =>
 /** The same mount, still standing? — a move/refit; anything else remounts whole. */
 const same_mount = (before: Embodied, current: Embodied) =>
   before.character_id === current.character_id && before.world === current.world
-
-const is_visible_slot = (slot: string): slot is VisibleSlot => (VISIBLE_SLOTS as readonly string[]).includes(slot)
 
 export default {
   name: 'player_world',
@@ -142,7 +138,7 @@ export default {
     const tracking_generations = new Map<string, number>()
 
     /** channel → forwarder — the subscription machinery, rebuilt by mount/unmount */
-    const { watch, unwatch, has, watched } = create_watcher(pubsub)
+    const { watch, unwatch, has, watched } = create_watcher(pubsub, signal)
     /** Rendered players with their latest chain-space zone, so a subscription-window shift can
      *  retire them without waiting for a packet from a channel we just left. */
     const visible = new Map<string, Readonly<{ address: string; world: string; zx: number; zz: number }>>()
@@ -172,21 +168,15 @@ export default {
       })
     })
 
-    /** A VISIBLE player's own chain stream — their visible-slot equips forward as packets. */
-    const forward_visible_equipment = (payload: EventEnvelope) => {
-      if (payload.type !== 'ItemEquipped' && payload.type !== 'ItemUnequipped') return
-      const { character, slot, item } = payload.data as { character: string; slot: string; item: string }
-      if (!is_visible_slot(slot)) return
-      if (payload.type === 'ItemUnequipped') {
-        send({ type: 'packet/player_equipment', character_id: character, slot, item_type: null })
-        return
-      }
-      get_item(graph, { id: item })
-        .then((row) => {
-          if (row) send({ type: 'packet/player_equipment', character_id: character, slot, item_type: row.item_type })
-        })
-        .catch((error: Error) => log.warn({ item, error: error.message }, 'equipment enrichment failed'))
-    }
+    const refresh_equipment = equipment_updates(graph, (character_id, equipment) => {
+      if (signal.aborted || !visible.has(character_id)) return
+      VISIBLE_SLOTS.forEach((slot) =>
+        send({ type: 'packet/player_equipment', character_id, slot, item_type: equipment[slot] })
+      )
+    })
+    const equipment_failed = (error: Error) => log.warn({ error: error.message }, 'visible equipment refresh failed')
+    const forward_visible_equipment = (payload: EventEnvelope) =>
+      void refresh_equipment.on_event(payload).catch(equipment_failed)
 
     const drop_visible = (character_id: string): void => {
       if (!visible.delete(character_id)) return
@@ -205,9 +195,16 @@ export default {
         const at = zone_of(fact.player.x, fact.player.z)
         visible.set(fact.player.character_id, Object.freeze({ address: fact.address, world: scope.world, ...at }))
         riding_seen.set(fact.player.character_id, fact.player.riding)
-        if (!known)
-          watch(channels.character(fact.player.character_id), forward_visible_equipment as (payload: never) => void)
+        const watching = known
+          ? Promise.resolve()
+          : watch(channels.character(fact.player.character_id), forward_visible_equipment as (payload: never) => void)
         send({ type: 'packet/player_appeared', player: fact.player })
+        // Mesh appearance may predate an indexed equip. Re-read after subscribing to close both gaps.
+        void watching
+          .then(() => {
+            if (!signal.aborted) return refresh_equipment.refresh(fact.player.character_id)
+          })
+          .catch(equipment_failed)
       }
       if (fact.kind === 'move') {
         const known = visible.get(fact.character_id)
@@ -321,13 +318,7 @@ export default {
       }
       if (payload.type === 'ResourceGathered') {
         const { world: w, gatherer } = payload.data as { world: string; gatherer: string }
-        if (gatherer === address)
-          void get_characters(graph, { address })
-            .then((characters) => {
-              dispatch({ type: 'action/character_roster', characters })
-              send({ type: 'packet/characters', characters })
-            })
-            .catch((error: Error) => log.error({ address, error: error.message }, 'post-gather roster refresh failed'))
+        if (gatherer === address) dispatch({ type: 'action/refresh_account', domain: 'characters' })
         // one node left the pack — the zone's res_taken says which pack and how many
         const { x, z } = payload.data as { x: number; z: number }
         const at = zone_of(x, z)
@@ -340,28 +331,27 @@ export default {
 
     /** Push one character's window while sharing every overlapping Redis subscription. */
     const track = async (character_id: string, world: string, next: readonly { zx: number; zz: number }[]) => {
+      if (signal.aborted) return
       windows.set(character_id, Object.freeze({ world, zones: Object.freeze([...next]) }))
       send({ type: 'packet/tracked_zones', character_id, world, zones: [...next] })
       const wanted_keys = wanted_zone_keys()
-      const wanted_presence = new Set([...wanted_keys].map((key) => `pos:${key}`))
-      const wanted_events = new Set(
-        [...wanted_keys].map((key) => {
+      const wanted_channels = new Set([
+        ...[...visible.keys()].map(channels.character),
+        ...[...wanted_keys].flatMap((key) => {
           const [w = '', zx = '0', zz = '0'] = key.split(':')
-          return channels.zone(w, Number(zx), Number(zz))
-        })
-      )
+          return [mesh.pos(w, Number(zx), Number(zz)), channels.zone(w, Number(zx), Number(zz))]
+        }),
+      ])
       for (const [visible_id, row] of visible)
         if (!wanted_keys.has(`${row.world}:${row.zx}:${row.zz}`)) drop_visible(visible_id)
       for (const key of [...seeds.keys()]) if (!wanted_keys.has(key)) seeds.delete(key)
-      for (const channel of watched()) {
-        if (channel.startsWith('pos:') && !wanted_presence.has(channel)) unwatch(channel)
-        if (channel.startsWith('evt:zone:') && !wanted_events.has(channel)) unwatch(channel)
-      }
+      for (const channel of watched()) if (!wanted_channels.has(channel)) unwatch(channel)
       const fresh = next.filter(({ zx, zz }) => !has(mesh.pos(world, zx, zz)))
       await Promise.all(fresh.map(({ zx, zz }) => watch(mesh.pos(world, zx, zz), forward_presence({ world, zx, zz }))))
       await Promise.all(
         fresh.map(({ zx, zz }) => watch(channels.zone(world, zx, zz), forward_zone_event as (payload: never) => void))
       )
+      if (signal.aborted) return
       for (const { zx, zz } of fresh)
         void pubsub.mesh.publish(mesh.pos(world, zx, zz), { kind: 'who', address, world, zx, zz })
       if (fresh.length === 0) return
@@ -369,6 +359,7 @@ export default {
         get_zones(graph, { world, zones: fresh }),
         get_world_fights(graph, { world, zones: fresh }),
       ])
+      if (signal.aborted) return
       if (zones.length) send({ type: 'packet/zones', zones })
       if (fights.length) send({ type: 'packet/fights', fights })
       for (const zone of zones) {
@@ -394,7 +385,7 @@ export default {
     const mount = async (character: Embodied, present: boolean) => {
       const { zx, zz } = zone_of(character.x, character.z)
       await track(character.character_id, character.world, spiral(zx, zz))
-      if (present) appear(character)
+      if (!signal.aborted && present) appear(character)
     }
 
     const unmount = (character: Embodied) => {
@@ -460,17 +451,20 @@ export default {
       tracking_generations.set(character_id, generation)
       void (async () => {
         const owned = await get_owned_character(graph, { address, character_id })
-        if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id))
+        if (
+          signal.aborted ||
+          generation !== tracking_generations.get(character_id) ||
+          !get_state().allowed_characters.has(character_id)
+        )
           return
         if (!owned) {
           send({ type: 'packet/error', reason: 'not your character' })
           return
         }
         const { character, visuals, party, fight } = owned
-        const world = (character.world ?? character.checkpoint_world ?? null) as string | null
+        const world = (character.world ?? character.checkpoint_world) as string | undefined
         if (!world) return // never joined a world yet — nothing to mount
-        if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id))
-          return
+        const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null }
         dispatch({
           type: 'action/track_character',
           character: {
@@ -491,8 +485,8 @@ export default {
             world,
           },
           party,
-          fight: fight?.id ?? null,
-          fight_seat: fight?.seat ?? null,
+          fight: fight_id,
+          fight_seat,
           dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null,
           // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok
           // semantics): the travel budget accrues from the last PROVEN position — a player

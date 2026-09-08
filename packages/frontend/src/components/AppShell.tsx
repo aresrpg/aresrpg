@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { lazy, memo, Suspense, useSyncExternalStore } from 'react'
+import { lazy, memo, Suspense, useSyncExternalStore, type ReactNode } from 'react'
 
+import { PublicSaleCard } from '../kares/PublicSaleCard.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
 import type { Network } from '../env.ts'
@@ -18,18 +19,20 @@ import { fight_surface_visible } from './app_layout.ts'
 import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
 import { SessionReplacedModal } from './SessionReplacedModal.tsx'
 import { Sidebar } from './Sidebar.tsx'
-import { ConnectionCard, DiscordCard, LanguageCard } from './SidebarCards.tsx'
+import { ConnectionCard, DiscordCard, LanguageCard, TelegramCard } from './SidebarCards.tsx'
 import { MaintenanceModal } from './MaintenanceModal.tsx'
 import { WalletCard } from './WalletCard.tsx'
 import { TradeInbox } from './TradeInbox.tsx'
 
 const EncyclopediaPage = lazy(() => import('../encyclopedia/EncyclopediaPage.tsx'))
 const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
+const KaresPage = lazy(() => import('../kares/KaresPage.tsx'))
 const MasteryPage = lazy(() => import('../mastery/MasteryPage.tsx'))
 const AirdropPage = lazy(() => import('../airdrop/AirdropPage.tsx'))
 const SettingsPage = lazy(() => import('../settings/SettingsPage.tsx'))
 const CharactersPage = lazy(() => import('../characters/CharactersPage.tsx'))
 const MarketplacePage = lazy(() => import('../marketplace/MarketplacePage.tsx'))
+const LeaderboardPage = lazy(() => import('../leaderboards/LeaderboardPage.tsx'))
 const KolizeumPage = lazy(() => import('../kolizeum/KolizeumPage.tsx'))
 
 const PageFallback = ({ label }: Readonly<{ label: string }>) => (
@@ -37,18 +40,6 @@ const PageFallback = ({ label }: Readonly<{ label: string }>) => (
     {label}
   </section>
 )
-
-const ROUTED_PAGES: readonly Page[] = [
-  'world',
-  'encyclopedia',
-  'admin',
-  'mastery',
-  'airdrop',
-  'settings',
-  'characters',
-  'marketplace',
-  'kolizeum',
-]
 
 const RoutedPage = memo(
   ({
@@ -69,59 +60,34 @@ const RoutedPage = memo(
     settings: GameSettings
     fight_mounted: boolean
     open_path: (pathname: string) => void
-  }>) => (
-    <>
-      {page === 'encyclopedia' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <EncyclopediaPage copy={copy} navigate={open_path} pathname={pathname} />
-        </Suspense>
-      )}
-      {page === 'admin' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <AdminPage copy={copy.admin_page} />
-        </Suspense>
-      )}
-      {page === 'mastery' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <MasteryPage copy={copy} />
-        </Suspense>
-      )}
-      {page === 'airdrop' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <AirdropPage copy={copy} session={session} />
-        </Suspense>
-      )}
-      {page === 'settings' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <SettingsPage copy={copy} settings={settings} />
-        </Suspense>
-      )}
-      {page === 'characters' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <CharactersPage copy={copy} />
-        </Suspense>
-      )}
-      {page === 'marketplace' && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <MarketplacePage copy={copy} locale={locale} />
-        </Suspense>
-      )}
-      {page === 'kolizeum' && !fight_mounted && (
-        <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
-          <KolizeumPage copy={copy} />
-        </Suspense>
-      )}
-      {!ROUTED_PAGES.includes(page) && (
-        <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-surface-low/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-          <div>
-            <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
-            <h2 className="mt-3 text-base font-semibold">{copy.page_pending_title}</h2>
-            <p className="mt-2 text-[10px] text-[#777b86]">{copy.page_pending_body}</p>
-          </div>
-        </section>
-      )}
-    </>
-  )
+  }>) => {
+    const views: Partial<Record<Page, ReactNode>> = {
+      world: <></>,
+      leaderboard: <LeaderboardPage />,
+      encyclopedia: <EncyclopediaPage copy={copy} navigate={open_path} pathname={pathname} />,
+      admin: <AdminPage copy={copy.admin_page} />,
+      mastery: <MasteryPage copy={copy} />,
+      kares: <KaresPage copy={copy} initial_session={session.wallet} />,
+      airdrop: <AirdropPage copy={copy} session={session} />,
+      settings: <SettingsPage copy={copy} settings={settings} />,
+      characters: <CharactersPage copy={copy} />,
+      marketplace: <MarketplacePage copy={copy} locale={locale} />,
+      kolizeum: fight_mounted ? <></> : <KolizeumPage copy={copy} />,
+    }
+    return (
+      <Suspense fallback={<PageFallback label={copy.loading_universe} />}>
+        {views[page] ?? (
+          <section className="pointer-events-auto z-[12] grid min-h-full min-w-0 flex-1 place-items-center border border-white/8 bg-surface-low/96 text-center shadow-[0_18px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+            <div>
+              <p className="text-[8px] tracking-[0.26em] text-[#c8963c] uppercase">{copy[page]}</p>
+              <h2 className="mt-3 text-base font-semibold">{copy.page_pending_title}</h2>
+              <p className="mt-2 text-[10px] text-[#777b86]">{copy.page_pending_body}</p>
+            </div>
+          </section>
+        )}
+      </Suspense>
+    )
+  }
 )
 
 /** The GAME's fight surface, mounted in the world the engine module owns. This is the ONE place
@@ -173,7 +139,7 @@ export const AppShell = ({
   return (
     <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
-      {session.game_frozen === true && page !== 'admin' && <MaintenanceModal copy={copy} />}
+      {session.game_frozen === true && !['admin', 'kares'].includes(page) && <MaintenanceModal copy={copy} />}
       <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
         <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
@@ -188,7 +154,9 @@ export const AppShell = ({
             <WalletCard copy={copy} disconnect={disconnect} session={session} />
             <LanguageCard change_locale={change_locale} locale={locale} />
             <DiscordCard copy={copy} />
+            <TelegramCard copy={copy} />
           </div>
+          <PublicSaleCard copy={copy} />
           <ConnectionCard
             copy={copy}
             error={session.link_error}

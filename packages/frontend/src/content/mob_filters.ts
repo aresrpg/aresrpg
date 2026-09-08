@@ -32,32 +32,64 @@ export type MobFilterWorldSource = Readonly<{
   biome_names: readonly string[]
   mobs: readonly MobFilterMembership[]
   protectors: readonly MobFilterMembership[]
-  cities: readonly Readonly<{ city: string }>[]
+  cities: readonly Readonly<{ city: string; mob_types?: readonly string[] }>[]
+}>
+
+export type MobLocation = Readonly<{
+  world: string
+  mob_type: string
+  biomes: readonly string[]
+  cities: readonly string[]
 }>
 
 export type MobFilterSelection = Readonly<{ kind: MobFilterKind; ids: readonly string[] }>
 
 const unique = (values: readonly string[]): readonly string[] => Object.freeze([...new Set(values)])
 
+export const derive_mob_locations = (
+  mobs: readonly MobFilterSource[],
+  world_sources: readonly MobFilterWorldSource[]
+): readonly MobLocation[] => {
+  const mobs_by_type = new Map(mobs.map((mob) => [mob.mob_type, mob] as const))
+  return Object.freeze(
+    world_sources.flatMap((world) => {
+      const inherited_archis = world.mobs.flatMap(({ mob_type, biomes, cities }) => {
+        const family = mobs_by_type.get(mob_type)?.family
+        return family
+          ? mobs
+              .filter((mob) => mob.role === 'archi' && mob.family === family)
+              .map((mob) => Object.freeze({ mob_type: mob.mob_type, biomes, cities }))
+          : []
+      })
+      const dungeon_mobs = world.cities.flatMap(({ city, mob_types }) =>
+        (mob_types ?? []).map((mob_type) =>
+          Object.freeze({ mob_type, biomes: Object.freeze([]), cities: Object.freeze([city]) })
+        )
+      )
+      const sources = [...world.mobs, ...inherited_archis, ...world.protectors, ...dungeon_mobs].filter(
+        ({ mob_type }) => mobs_by_type.has(mob_type)
+      )
+      return unique(sources.map(({ mob_type }) => mob_type)).map((mob_type) => {
+        const placements = sources.filter((source) => source.mob_type === mob_type)
+        return Object.freeze({
+          world: world.world,
+          mob_type,
+          biomes: unique(placements.flatMap(({ biomes }) => biomes)),
+          cities: unique(placements.flatMap(({ cities }) => cities ?? [])),
+        })
+      })
+    })
+  )
+}
+
 export const derive_mob_filter_rows = (
   mobs: readonly MobFilterSource[],
   world_sources: readonly MobFilterWorldSource[]
 ): readonly MobFilterRow[] => {
-  const mobs_by_type = new Map(mobs.map((mob) => [mob.mob_type, mob] as const))
-  const mob_ids = new Set(mobs_by_type.keys())
+  const locations = derive_mob_locations(mobs, world_sources)
   const places = world_sources.flatMap((world): readonly MobFilterRow[] => {
-    const inherited_archis = world.mobs.flatMap(({ mob_type, biomes, cities }) => {
-      const family = mobs_by_type.get(mob_type)?.family
-      return family
-        ? mobs
-            .filter((mob) => mob.role === 'archi' && mob.family === family)
-            .map((mob) => Object.freeze({ mob_type: mob.mob_type, biomes, cities }))
-        : []
-    })
-    const memberships = [...world.mobs, ...inherited_archis, ...world.protectors].filter(({ mob_type }) =>
-      mob_ids.has(mob_type)
-    )
-    const world_mobs = unique(memberships.map(({ mob_type }) => mob_type))
+    const memberships = locations.filter((location) => location.world === world.world)
+    const world_mobs = memberships.map(({ mob_type }) => mob_type)
     const biomes = world.biome_names.flatMap((biome): readonly MobFilterRow[] => {
       const biome_mobs = unique(
         memberships.filter(({ biomes: names }) => names.includes(biome)).map(({ mob_type }) => mob_type)

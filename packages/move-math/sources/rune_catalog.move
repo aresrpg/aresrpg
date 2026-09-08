@@ -19,23 +19,23 @@
 /// (e.g. `rune_strength_ra`). Runtime callers provide coordinates and Move verifies this canonical
 /// slug in constant time. The seed authors matching templates. Single-tier majors carry `_ba` only.
 ///
-/// | id | field            | Ba amt | Pa amt | Ra amt | unit wt ×20 | max apps |
-/// |----|------------------|--------|--------|--------|------------|----------|
-/// |  0 | vitality         |   3    |  10    |  30    |      5      |    ∞     |
-/// |  1 | wisdom           |   1    |   3    |  10    |     60      |    ∞     |
-/// |  2 | strength         |   1    |   3    |  10    |     20      |    ∞     |
-/// |  3 | intelligence     |   1    |   3    |  10    |     20      |    ∞     |
-/// |  4 | chance           |   1    |   3    |  10    |     20      |    ∞     |
-/// |  5 | agility          |   1    |   3    |  10    |     20      |    ∞     |
-/// |  6 | range            |   1    |   —    |   —    |  1_020      |    1     |
-/// |  7 | movement (+1 PM) |   1    |   —    |   —    |  1_800      |    1     |
-/// |  8 | action   (+1 PA) |   1    |   —    |   —    |  2_000      |    1     |
-/// |  9 | critical (+1 Cri)|   1    |   —    |   —    |    600      |   10     |
-/// | 10 | raw_damage (Do)  |   1    |   —    |   —    |    400      |    ∞     |
-/// | 11 | earth_resistance |   1    |   3    |  10    |     80      |    ∞     |
-/// | 12 | fire_resistance  |   1    |   3    |  10    |     80      |    ∞     |
-/// | 13 | water_resistance |   1    |   3    |  10    |     80      |    ∞     |
-/// | 14 | air_resistance   |   1    |   3    |  10    |     80      |    ∞     |
+/// | id | field            | Ba amt | Pa amt | Ra amt | unit wt ×20 |
+/// |----|------------------|--------|--------|--------|------------|
+/// |  0 | vitality         |   3    |  10    |  30    |      5      |
+/// |  1 | wisdom           |   1    |   3    |  10    |     60      |
+/// |  2 | strength         |   1    |   3    |  10    |     20      |
+/// |  3 | intelligence     |   1    |   3    |  10    |     20      |
+/// |  4 | chance           |   1    |   3    |  10    |     20      |
+/// |  5 | agility          |   1    |   3    |  10    |     20      |
+/// |  6 | range            |   1    |   —    |   —    |  1_020      |
+/// |  7 | movement (+1 PM) |   1    |   —    |   —    |  1_800      |
+/// |  8 | action   (+1 PA) |   1    |   —    |   —    |  2_000      |
+/// |  9 | critical (+1 Cri)|   1    |   —    |   —    |    600      |
+/// | 10 | raw_damage (Do)  |   1    |   —    |   —    |    400      |
+/// | 11 | earth_resistance |   1    |   3    |  10    |     80      |
+/// | 12 | fire_resistance  |   1    |   3    |  10    |     80      |
+/// | 13 | water_resistance |   1    |   3    |  10    |     80      |
+/// | 14 | air_resistance   |   1    |   3    |  10    |     80      |
 /// (crit-rate/damage are weapon settings, not stats — they left the block, owner 2026-08-11)
 ///
 /// Rune WEIGHT is DERIVED from `amount × unit_weight`, rounded up to the next whole weight as
@@ -64,13 +64,6 @@ const ENotRuneable: u64 = 2; // (stat, tier) has no rune in the catalog
 /// therefore they use Retro's `% Res` weight 4 rather than fixed-resistance weight 5.
 const UNIT_WEIGHTS: vector<u64> = vector[5, 60, 20, 20, 20, 20, 1020, 1800, 2000, 600, 400, 80, 80, 80, 80];
 
-/// 1 = a rune can target this field. All 15 are runeable now (the crit-rate settings that were
-/// the only non-runeable fields have left the stat block — owner 2026-08-11).
-const RUNEABLE: vector<u8> = vector[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
-
-/// Hard per-item application cap (0 = uncapped): range/movement/action 1, Cri 10.
-const MAX_APPS: vector<u64> = vector[0, 0, 0, 0, 0, 0, 1, 1, 1, 10, 0, 0, 0, 0, 0];
-
 /// Stat points added per rune, per tier (0 = that tier has no rune). Single-tier majors: Ba only.
 const BA_AMOUNT: vector<u64> = vector[3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 const PA_AMOUNT: vector<u64> = vector[10, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 3, 3, 3, 3];
@@ -90,39 +83,25 @@ public fun tier_ra(): u8 { TIER_RA }
 
 // ╔════════════════ [ Per-stat accessors ] ═══════════════════════════════════ ]
 
-/// Forgemagie unit weight (per point, ×20) of `stat` — the gain-cap divisor, the
-/// `select_stat_to_reduce` price, and the crush base. Defined for all 15 fields.
+/// Forgemagie unit weight (per point, ×20) of `stat` — the overmage-limit divisor,
+/// loss price, and crush base. Defined for all 15 fields.
 public fun stat_unit_weight(stat: u8): u64 {
   assert!((stat as u64) < STAT_COUNT, EBadStat);
   let t = UNIT_WEIGHTS;
   t[stat as u64]
 }
 
-/// True iff a rune can be SCRIBED onto `stat` — every one of the 15 stats is runeable.
-public fun is_runeable(stat: u8): bool {
-  assert!((stat as u64) < STAT_COUNT, EBadStat);
-  let t = RUNEABLE;
-  t[stat as u64] == 1
-}
-
-/// Hard cap on how many of this rune may sit on one item (0 = uncapped).
-public fun rune_max_apps(stat: u8): u64 {
-  assert!((stat as u64) < STAT_COUNT, EBadStat);
-  let t = MAX_APPS;
-  t[stat as u64]
-}
-
 /// The highest tier that exists for `stat`: 3 for multi-tier stats, 1 for single-tier majors,
-/// 0 for a non-runeable stat.
+/// with every stat in the block runeable.
 public fun max_tier(stat: u8): u8 {
-  if (!is_runeable(stat)) return 0;
+  assert!((stat as u64) < STAT_COUNT, EBadStat);
   let t = RA_AMOUNT;
   if (t[stat as u64] > 0) TIER_RA else TIER_BA
 }
 
 /// True iff `(stat, tier)` names a real rune (runeable stat, populated tier).
 public fun has_rune(stat: u8, tier: u8): bool {
-  if (!is_runeable(stat)) return false;
+  assert!((stat as u64) < STAT_COUNT, EBadStat);
   if (tier < TIER_BA || tier > TIER_RA) return false;
   tier_amount_vec(tier)[stat as u64] != 0
 }

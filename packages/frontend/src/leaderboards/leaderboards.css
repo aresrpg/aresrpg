@@ -1,0 +1,96 @@
+/* Retained hytale-dapp leaderboard geometry and surface treatment. */
+.leaderboard-category,
+.leaderboard-time {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 4px 12px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+}
+.leaderboard-time {
+  padding: 3px 10px;
+  letter-spacing: 0.12em;
+  border-bottom-width: 1px;
+}
+.leaderboard-category:hover,
+.leaderboard-time:hover {
+  color: var(--color-gold);
+}
+.leaderboard-category.active,
+.leaderboard-time.active {
+  color: var(--color-gold);
+  border-bottom-color: var(--color-gold);
+}
+.leaderboard-time:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(0, auto) 64px;
+  align-items: center;
+  padding: 8px 12px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+.leaderboard-row:hover {
+  background: rgba(200, 150, 60, 0.04);
+  border-left-color: rgba(200, 150, 60, 0.3);
+}
+.leaderboard-row-self {
+  border-left-color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.05);
+}
+.leaderboard-podium {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 12px;
+  border: 1px solid var(--color-border);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.03) 0%, transparent 60%);
+  transition: all 0.25s ease;
+  animation: leaderboard-rise 0.4s ease-out both;
+}
+.leaderboard-podium:hover {
+  border-color: rgba(200, 150, 60, 0.25);
+  background: linear-gradient(180deg, rgba(200, 150, 60, 0.06) 0%, transparent 60%);
+  box-shadow: 0 0 24px rgba(200, 150, 60, 0.07);
+}
+.leaderboard-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(24px);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+@keyframes leaderboard-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 1023px) {
+  .leaderboard-row {
+    grid-template-columns: 32px minmax(0, 1fr) minmax(0, auto);
+    padding: 6px 8px;
+  }
+  .leaderboard-row > :nth-child(4) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard-podium {
+    animation: none;
+  }
+}

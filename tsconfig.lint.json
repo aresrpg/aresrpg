@@ -1,5 +1,5 @@
 {
-  "//": "LINT-ONLY project (.claude/rules/code-law.md typed tier) — never a build/typecheck input. Gives the eslint typed-FP rules a ts.Program for frontend e2e/dev surfaces no package tsconfig covers. Scope changes here must mirror the typed-tier `files` globs in scripts/eslint-rules/typed_fp.config.mjs.",
+  "//": "LINT-ONLY project (AGENTS.md typed tier) — never a build/typecheck input. Gives the eslint typed-FP rules a ts.Program for frontend e2e/dev surfaces no package tsconfig covers. Scope changes here must mirror the typed-tier `files` globs in scripts/eslint-rules/typed_fp.config.mjs.",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",

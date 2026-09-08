@@ -28,9 +28,9 @@ services:
       PACKAGE_LATEST: ${PACKAGE_LATEST:?PACKAGE_LATEST is required}
       SEED_PACKAGE_ORIGINAL: ${SEED_PACKAGE_ORIGINAL:?SEED_PACKAGE_ORIGINAL is required}
       REDIS_URL: redis://aresrpg-falkordb:6379
-      REMOTE_STORE_URL: https://checkpoints.testnet.sui.io
-      STREAMING_URL: https://fullnode.testnet.sui.io:443
-      GRAPHQL_URL: https://graphql.testnet.sui.io/graphql
+      REMOTE_STORE_URL: https://checkpoints.${SUI_NETWORK:?SUI_NETWORK is required}.sui.io
+      STREAMING_URL: https://fullnode.${SUI_NETWORK:?SUI_NETWORK is required}.sui.io:443
+      GRAPHQL_URL: https://graphql.${SUI_NETWORK:?SUI_NETWORK is required}.sui.io/graphql
       INGEST_MAX_CONCURRENCY: '16'
       RUST_LOG: info
     depends_on:
@@ -48,8 +48,8 @@ services:
       GRAPH_URL: redis://aresrpg-falkordb:6379
       MESH_REDIS_URL: redis://aresrpg-falkordb:6379
       GRAPH_NAME: aresrpg
-      SUI_NETWORK: ${SUI_NETWORK:-testnet}
-      SUI_RPC_URL: https://fullnode.testnet.sui.io:443
+      SUI_NETWORK: ${SUI_NETWORK:?SUI_NETWORK is required}
+      SUI_RPC_URL: https://fullnode.${SUI_NETWORK:?SUI_NETWORK is required}.sui.io:443
       PORT: '9800'
       ALLOWED_ORIGINS: http://localhost:5173,https://aresrpg.world
     depends_on:

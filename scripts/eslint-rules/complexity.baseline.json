@@ -6,20 +6,6 @@
       "check_loot_rewards": [14],
       "fight_boards.forEach[0](board,i)": [41]
     },
-    "scripts/extract_dofus_retro_mob_corpus.mjs": {
-      "interpret_data_actions": [20],
-      "pushed_values": [12]
-    },
-    "scripts/check_world_specs.ts": {
-      "lines.forEach[0](line,index)": [16]
-    },
-    "scripts/import_schematics.ts": {
-      "parse_nbt > payload": [14],
-      "structure_material": [24]
-    },
-    "scripts/generate_fight_boards.mjs": {
-      "fully_connected": [12]
-    },
     "scripts/eslint-rules/no_silent_failures.mjs": {
       "is_failure_value": [12],
       "walk": [17]
@@ -74,19 +60,12 @@
     "packages/frontend/seed_dev_server.ts": {
       "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [12]
     },
-    "packages/frontend/src/app.tsx": {
-      "App": [15]
-    },
-    "packages/frontend/src/mastery/MasteryPage.tsx": {
-      "MasteryPage": [11]
+    "packages/frontend/e2e/fixtures/workload.ts": {
+      "run": [11]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
       "BrowsePanel": [12],
       "CheapestLotMarket > sizes.map[0](size,index)": [12]
-    },
-    "packages/frontend/src/admin/admin_wallet.ts": {
-      "observe_admin_wallet > events.on[1](state,previous)": [14],
-      "reduce_admin_wallet": [19]
     },
     "packages/frontend/src/admin/AdminWalletPanel.tsx": {
       "AdminWalletPanel": [15]
@@ -136,7 +115,7 @@
       "step_controller": [56]
     },
     "packages/frontend/src/game/core/world.ts": {
-      "create_world > on_key": [16],
+      "create_world > on_key": [14],
       "create_world > render_pet": [21],
       "create_world > sync_dungeon_portal_labels": [13]
     },
@@ -201,9 +180,6 @@
     "packages/frontend/src/characters/RuneforgeTab.tsx": {
       "RuneforgeTab": [17]
     },
-    "packages/frontend/src/modules/world_gather.ts": {
-      "observe_world_gather > events.on[1](state,previous)": [17]
-    },
     "packages/frontend/src/modules/editor.ts": {
       "reduce": [34]
     },
@@ -213,18 +189,17 @@
     "packages/frontend/src/modules/fight_observer.ts": {
       "observe_fights > events.on[1]({ fight: fight_id, input, origin })": [14],
       "observe_fights > events.on[1]({ packet })": [27],
-      "observe_fights > events.on[1](state,previous)": [13]
+      "observe_fights > events.on[1](state,previous)": [11]
     },
     "packages/frontend/src/modules/marketplace.ts": {
       "market_observation": [15],
-      "reduce": [24]
+      "reduce": [13]
     },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [11]
     },
     "packages/frontend/src/modules/session.ts": {
-      "fold_packet": [14],
-      "observe > events.on[1](state,previous)": [22],
+      "observe > events.on[1](state,previous)": [21],
       "reduce": [26]
     },
     "packages/frontend/src/modules/fight.ts": {
@@ -270,15 +245,12 @@
       "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [24],
       "observe > forward_presence > anonymous(fact: MeshFact)": [15],
       "observe > forward_zone_event": [14],
-      "observe > track": [18],
+      "observe > track": [17],
       "observe > unmount": [17],
       "reduce": [13]
     },
     "packages/server/src/modules/player_fight.ts": {
       "reduce": [19]
-    },
-    "packages/server/src/modules/player_events.ts": {
-      "observe > forward_self > anonymous(payload: EventEnvelope)": [12]
     },
     "packages/server/src/request_limiter.ts": {
       "create_request_limiter > take": [18]
@@ -352,6 +324,9 @@
     },
     "packages/engine/src/greedy_mesher.ts": {
       "emit_direction": [62]
+    },
+    "packages/frontend/src/characters/pet_feeding.ts": {
+      "reduce_feeding": [11]
     }
   },
   "cyclomatic": {
@@ -361,24 +336,8 @@
       "check_loot_rewards": [12],
       "fight_boards.forEach[0](board,i)": [36]
     },
-    "scripts/extract_dofus_retro_mob_corpus.mjs": {
-      "interpret_data_actions": [19],
-      "pushed_values": [10]
-    },
-    "scripts/check_world_specs.ts": {
-      "lines.forEach[0](line,index)": [12]
-    },
-    "scripts/import_schematics.ts": {
-      "encode_runs": [9],
-      "generated_ruins > generated_type[1](x,y,z)": [16, 14],
-      "parse_nbt > payload": [14],
-      "structure_material": [23]
-    },
     "scripts/deployment_build.ts": {
       "parse_contract_artifact": [9]
-    },
-    "scripts/generate_fight_boards.mjs": {
-      "fully_connected": [10]
     },
     "scripts/eslint-rules/no_silent_failures.mjs": {
       "guard_branch_of": [9],
@@ -399,6 +358,9 @@
       "async_context_of": [19],
       "collect_await_ends": [15],
       "writer_of": [16]
+    },
+    "scripts/snapshot_sui_holders.mjs": {
+      "parse_snapshot_args": [10]
     },
     "packages/fight/test/spell_turn_projection.test.ts": {
       "describe[1]() > test[1]()": [12]
@@ -442,7 +404,7 @@
     },
     "packages/fight/src/normalize.ts": {
       "as_bigint": [9],
-      "normalize_contract": [18],
+      "normalize_contract": [12],
       "normalize_effect": [9],
       "normalize_player": [13]
     },
@@ -470,9 +432,6 @@
       "describe[1]() > test[1]() > documents.flatMap[0]({ file, parsed }) > visit": [10],
       "describe[1]() > test[1]() > documents.forEach[0]({ file, parsed }) > parsed.forEachChild[0](node)": [9]
     },
-    "packages/frontend/test/encyclopedia/catalog.test.ts": {
-      "describe[1]() > test[1]()": [9]
-    },
     "packages/frontend/seed_dev_server.ts": {
       "seed_dev_plugin > configureServer > server.middlewares.use[0](request,response,next)": [15]
     },
@@ -482,6 +441,12 @@
     "packages/frontend/scripts/render_character_portraits.ts": {
       "configureServer > server.middlewares.use[0](request,response,next)": [12]
     },
+    "packages/frontend/e2e/fixtures/workload.ts": {
+      "run": [10]
+    },
+    "packages/frontend/e2e/tests/workloads.pw.ts": {
+      "test[1]({ page, browser },info)": [9]
+    },
     "packages/frontend/src/demo/DemoPage.tsx": {
       "WorldLab": [10]
     },
@@ -489,14 +454,14 @@
       "BoardGallery": [18]
     },
     "packages/frontend/src/app.tsx": {
-      "App": [51],
+      "App": [44],
       "App > useCallback[0](character: CharacterCreateInput)": [10]
     },
     "packages/frontend/src/kolizeum/KolizeumPage.tsx": {
       "KolizeumPage": [17]
     },
     "packages/frontend/src/mastery/MasteryPage.tsx": {
-      "MasteryPage": [10],
+      "MasteryPage": [9],
       "MasteryPage > world_cards.map[0](card)": [10]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
@@ -511,15 +476,11 @@
     "packages/frontend/src/server_link.ts": {
       "connect_server > open > next.addEventListener[1]({ data })": [10]
     },
-    "packages/frontend/src/admin/AdminWalletControl.tsx": {
-      "AdminWalletControl": [13]
-    },
-    "packages/frontend/src/admin/admin_wallet.ts": {
-      "observe_admin_wallet > events.on[1](state,previous)": [24],
-      "reduce_admin_wallet": [21]
-    },
     "packages/frontend/src/admin/AdminWalletPanel.tsx": {
       "AdminWalletPanel": [18]
+    },
+    "packages/frontend/src/kares/PublicSaleCard.tsx": {
+      "PublicSaleCardView": [12]
     },
     "packages/frontend/src/game/fight/FightEffectLines.tsx": {
       "chatiment_stat": [10],
@@ -594,7 +555,7 @@
     },
     "packages/frontend/src/game/core/world.ts": {
       "create_world": [12],
-      "create_world > on_key": [20],
+      "create_world > on_key": [17],
       "create_world > render_character": [16],
       "create_world > render_pet": [17],
       "create_world > set_action_lock": [9],
@@ -672,11 +633,8 @@
         11
       ]
     },
-    "packages/frontend/src/components/SendModalShell.tsx": {
-      "SendModalShell": [9]
-    },
     "packages/frontend/src/components/TradeDialog.tsx": {
-      "TradeDialog": [11]
+      "TradeDialog": [10]
     },
     "packages/frontend/src/components/DungeonLobby.tsx": {
       "DungeonLobby": [17],
@@ -686,11 +644,6 @@
       "RecipientHint": [11],
       "SendForm": [22],
       "SendSuiModal": [12]
-    },
-    "packages/frontend/src/components/AppShell.tsx": {
-      "memo[0]({ copy, locale, page, pathname, session, settings, fight_mounted, open_path, }: Readonly<{ copy: AppCopy locale: Locale page: Page pathname: string session: SessionState settings: GameSettings fight_mounted: boolean open_path: (pathname: string) => void }>)": [
-        11
-      ]
     },
     "packages/frontend/src/components/DungeonPortalPrompt.tsx": {
       "DungeonPortalPrompt": [10]
@@ -708,7 +661,7 @@
       "StatLine": [10]
     },
     "packages/frontend/src/components/EquipmentDoll.tsx": {
-      "EquipmentSlot": [14]
+      "EquipmentSlot": [11]
     },
     "packages/frontend/src/components/SidebarCards.tsx": {
       "ConnectionCard": [25]
@@ -737,16 +690,27 @@
     "packages/frontend/src/simulator/BoardPane.tsx": {
       "SimulatorBoardPane > anonymous(cell,pointer)": [10]
     },
+    "packages/frontend/src/wallet/selection.ts": {
+      "wallet_selection > read": [10]
+    },
+    "packages/frontend/src/wallet/model.ts": {
+      "choose_wallet": [9]
+    },
+    "packages/frontend/src/wallet/observer.ts": {
+      "observe_wallet > context.subscribe[0](state,previous)": [12],
+      "observe_wallet > run": [11]
+    },
     "packages/frontend/src/env.ts": {
       "resolve_env": [14]
     },
     "packages/frontend/src/characters/InventoryOverlays.tsx": {
-      "FeedPetModal": [11],
       "InventoryActionOverlays": [11]
     },
     "packages/frontend/src/characters/EquipmentTab.tsx": {
-      "EquipmentTab": [9],
-      "EquipmentTab > useMemo[0]()": [10]
+      "EquipmentTab": [9]
+    },
+    "packages/frontend/src/characters/InventoryItemCell.tsx": {
+      "InventoryItemCell": [9]
     },
     "packages/frontend/src/characters/StatsTab.tsx": {
       "StatsTab": [13],
@@ -774,8 +738,7 @@
     },
     "packages/frontend/src/modules/world_gather.ts": {
       "observe_world_gather > complete_gather": [13],
-      "observe_world_gather > events.on[1]({ node })": [21],
-      "observe_world_gather > events.on[1](state,previous)": [10]
+      "observe_world_gather > events.on[1]({ node })": [20]
     },
     "packages/frontend/src/modules/kolizeum.ts": {
       "observe: NonNullable<AppModule['observe']> > events.on[1]({ kolizeum, side, character_id })": [10]
@@ -798,26 +761,33 @@
       "observe_fights > events.on[1]({ fight, input })": [11],
       "observe_fights > events.on[1]({ fight: fight_id, input, origin })": [21],
       "observe_fights > events.on[1]({ packet })": [26],
-      "observe_fights > events.on[1](state,previous)": [14],
+      "observe_fights > events.on[1](state,previous)": [12],
       "observe_fights > selected_fight_id": [10]
     },
     "packages/frontend/src/modules/marketplace.ts": {
       "observe > execute": [12],
-      "reduce": [25]
+      "reduce": [18]
     },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [27],
       "observe > hover_under_cursor": [9],
       "observe > mount": [13]
     },
+    "packages/frontend/src/modules/distribution.ts": {
+      "observe: NonNullable<AppModule['observe']>": [9],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ giftcard })": [9],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]({ giftcard, automatic })": [9],
+      "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous) > queueMicrotask[0]()": [11],
+      "reduce": [12]
+    },
     "packages/frontend/src/modules/session.ts": {
-      "fold_packet": [15],
-      "observe > events.on[1](state,previous)": [18],
+      "fold_packet": [10],
+      "observe > events.on[1](state,previous)": [17],
       "reduce": [27]
     },
     "packages/frontend/src/modules/fight.ts": {
       "close_fight_preview": [10],
-      "reconcile_fight": [22],
+      "reconcile_fight": [21],
       "reduce": [25],
       "select_character_fight": [16]
     },
@@ -859,6 +829,9 @@
       "observe: NonNullable<AppModule['observe']> > submit_engage": [9],
       "reduce": [28],
       "searchable_zone": [21]
+    },
+    "packages/frontend/src/airdrop/AirdropPage.tsx": {
+      "GiftcardCard": [9]
     },
     "packages/frontend/src/editor/ItemReferencePicker.tsx": {
       "ItemReferencePicker": [13]
@@ -917,7 +890,7 @@
       "wire > read": [25]
     },
     "packages/server/test/player.test.ts": {
-      "wire > read": [11]
+      "wire > read": [10]
     },
     "packages/server/test/helpers/stream_wire.ts": {
       "wire > read": [21]
@@ -932,8 +905,7 @@
       "get_fight_checkpoint": [9]
     },
     "packages/server/src/reads/get_kolizeums.ts": {
-      "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters })": [11],
-      "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters }) > fighters.flatMap[0](fighter,seat)": [10]
+      "get_kolizeums > decoded.map[0]({ kolizeum, fight, fighters })": [11]
     },
     "packages/server/src/reads/get_fight_resolutions.ts": {
       "get_fight_resolutions > rows.map[0](row)": [10]
@@ -945,15 +917,15 @@
       "parse_sale": [10]
     },
     "packages/server/src/index.ts": {
-      "fetch": [14]
+      "fetch": [13]
     },
     "packages/server/src/modules/player_world.ts": {
       "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [22],
       "observe > forward_presence > anonymous(fact: MeshFact)": [15],
       "observe > forward_zone_event": [11],
       "observe > track": [15],
-      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id)) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world ?? null) as string | null if (!world) return // never joined a world yet — nothing to mount if (generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id)) return dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, world, }, party, fight: fight?.id ?? null, fight_seat: fight?.seat ?? null, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position — a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
-        17
+      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
+        12
       ],
       "observe > unmount": [10],
       "reduce": [10]
@@ -965,7 +937,7 @@
       "reduce": [11]
     },
     "packages/server/src/modules/player_events.ts": {
-      "observe > forward_self > anonymous(payload: EventEnvelope)": [13]
+      "observe > forward_self > anonymous(payload: EventEnvelope)": [9]
     },
     "packages/server/src/request_limiter.ts": {
       "create_request_limiter > take": [9]
@@ -974,8 +946,15 @@
       "assert_bounded_json": [9],
       "parse_client_packet": [34]
     },
+    "packages/launchpad/src/ContributionPanel.tsx": {
+      "ContributionPanel": [9]
+    },
     "packages/sdk/scripts/generate_doors.mjs": {
       "arg_expr": [11]
+    },
+    "packages/sdk/src/transaction_execution.ts": {
+      "decode_pending": [10],
+      "verify_receipt": [12]
     },
     "packages/sdk/src/seed_admin.ts": {
       "assert_config": [11],
@@ -985,6 +964,9 @@
     },
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [22]
+    },
+    "packages/sdk/src/kares_actions.ts": {
+      "create_kares_transaction": [9]
     },
     "packages/sdk/src/seed_session.ts": {
       "browser_seed_session_store > read": [9],
@@ -1100,6 +1082,12 @@
     },
     "packages/engine/src/character_model.ts": {
       "compose_pixels": [10]
+    },
+    "packages/frontend/src/characters/FeedPetModal.tsx": {
+      "FeedingControls": [12]
+    },
+    "packages/frontend/src/characters/pet_feeding.ts": {
+      "reduce_feeding": [9]
     }
   }
 }

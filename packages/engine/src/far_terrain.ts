@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { BufferAttribute, BufferGeometry, DoubleSide, Mesh, Vector2, type Material, type Scene } from 'three'
+import {
+  BufferAttribute,
+  BufferGeometry,
+  DoubleSide,
+  DynamicDrawUsage,
+  Mesh,
+  Vector2,
+  type Material,
+  type Scene,
+} from 'three'
 import {
   MeshBasicNodeMaterial,
   MeshStandardNodeMaterial,
@@ -56,7 +65,7 @@ export type FarTerrain = Readonly<{
 export const seam_radius = (far_radius: number): number => far_radius * CHUNK_EDGE - CHUNK_EDGE
 
 /** The hole is carried by the INDEX buffer alone — vertices and attributes never move, so a
- *  render-distance change swaps indices without touching the worker-sampled heights. */
+ *  render-distance change rewrites one retained index buffer without touching the worker-sampled heights. */
 export const ring_indices = (quality: EngineQuality, far_radius: number): number[] => {
   const { horizon_radius, horizon_step } = get_quality_profile(quality).chunks
   const side = Math.floor((horizon_radius * 2) / horizon_step) + 1
@@ -75,6 +84,16 @@ export const ring_indices = (quality: EngineQuality, far_radius: number): number
   return indices
 }
 
+const update_ring_indices = (geometry: BufferGeometry, quality: EngineQuality, far_radius: number): void => {
+  const indices = ring_indices(quality, far_radius)
+  const attribute = geometry.getIndex()!
+  attribute.array.set(indices)
+  attribute.clearUpdateRanges()
+  attribute.addUpdateRange(0, indices.length)
+  attribute.needsUpdate = true
+  geometry.setDrawRange(0, indices.length)
+}
+
 const create_ring_geometry = (quality: EngineQuality, far_radius: number): BufferGeometry => {
   const { horizon_radius, horizon_step } = get_quality_profile(quality).chunks
   const side = Math.floor((horizon_radius * 2) / horizon_step) + 1
@@ -86,14 +105,14 @@ const create_ring_geometry = (quality: EngineQuality, far_radius: number): Buffe
       positions[vertex + 2] = -horizon_radius + z * horizon_step
     }
   }
-  const indices = ring_indices(quality, far_radius)
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
   geometry.setAttribute('base_color', new BufferAttribute(new Float32Array(positions.length), 3))
   geometry.setAttribute('paired_color', new BufferAttribute(new Float32Array(positions.length), 3))
   geometry.setAttribute('roughness', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setAttribute('climate_tint', new BufferAttribute(new Float32Array(side * side), 1))
-  geometry.setIndex(indices)
+  geometry.setIndex(new BufferAttribute(new Uint32Array((side - 1) ** 2 * 6), 1).setUsage(DynamicDrawUsage))
+  update_ring_indices(geometry, quality, far_radius)
   return geometry
 }
 
@@ -120,12 +139,11 @@ const build_material = (
   const tint = macro_surface_tint_nodes({ paired_color, roughness, climate_tint, position_world })
   const color = tint.tint_albedo(base_color).mul(environment_light)
   const flat = create_flat_nodes(position_world.x, position_world.z, flatten.amount, color)
-  // The shell remains half a block below direct terrain throughout flattening. Sharing y=0
-  // made the overlap band z-fight precisely when flat mode needed the clearest grid read.
+  // The seam sinks below voxels during projection; the flat endpoint has no voxel draws.
   const { horizon_step } = get_quality_profile(quality).chunks
   const seam_band = smoothstep(seam, seam.add(float(horizon_step * 2)), max(abs(local.x), abs(local.z)))
   const terrain_y = local.y.sub(float(1).sub(seam_band).mul(8))
-  material.positionNode = vec3(local.x, mix(terrain_y, float(-0.5), flatten.amount), local.z)
+  material.positionNode = vec3(local.x, mix(terrain_y, float(0), flatten.amount), local.z)
   const face_normal = positionWorld.dFdx().cross(positionWorld.dFdy()).normalize()
   const upward_normal = face_normal.mul(face_normal.y.greaterThanEqual(0).select(float(1), float(-1)))
   material.normalNode = transformNormalToView(mix(upward_normal, vec3(0, 1, 0), flatten.amount).normalize())
@@ -162,7 +180,7 @@ export const create_far_terrain = ({
     high: uniform(new Vector2()),
   })
   const tier_radius = (tier: EngineQuality): number =>
-    effective_render_distance(get_quality_profile(tier).chunks.far_radius, render_distance)
+    flatten.flattened() ? 0 : effective_render_distance(get_quality_profile(tier).chunks.far_radius, render_distance)
   let render_distance: number | null = null
   const applied_radii = new Map<EngineQuality, number>()
   const seams = Object.freeze({
@@ -187,13 +205,13 @@ export const create_far_terrain = ({
       })
     ) as Record<EngineQuality, Mesh>
   )
-  /** the hole tracks the effective radius: swap indices + seam uniform, never the vertices */
+  /** the hole tracks the effective radius: update indices + seam uniform, never the vertices */
   const apply_render_distance = (): void => {
     for (const tier of ['low', 'medium', 'high'] as const) {
       const radius = tier_radius(tier)
       if (applied_radii.get(tier) === radius) continue
       applied_radii.set(tier, radius)
-      meshes[tier].geometry.setIndex(ring_indices(tier, radius))
+      update_ring_indices(meshes[tier].geometry, tier, radius)
       seams[tier].value = seam_radius(radius)
     }
   }
@@ -274,7 +292,6 @@ export const create_far_terrain = ({
       request()
     },
     set_quality: (next: EngineQuality, next_render_distance: number | null) => {
-      if (next === active_quality && next_render_distance === render_distance) return
       render_distance = next_render_distance
       apply_render_distance()
       if (next === active_quality) return

@@ -40,7 +40,7 @@ export type AdminRevenue = Readonly<{
 }>
 
 export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRevenue => {
-  const wallet = useAppStore((state) => state.admin.wallet)
+  const wallet = useAppStore((state) => state.external_wallet)
   const { session } = wallet
   const [royalties, set_royalties] = useState<readonly MarketplaceRoyalty[]>([])
   const [treasury_mist, set_treasury] = useState<bigint | null>(null)

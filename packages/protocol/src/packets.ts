@@ -10,13 +10,17 @@
 // snapshot, then streams every fact the player's own transactions did not cause. Correlated,
 // rate-limited requests exist only for facts that cannot be derived, such as current custody.
 
-import { is_item_category, type ItemCategory } from '@aresrpg/immutable'
+import { cosmetic_slots, is_item_category, type ItemCategory } from '@aresrpg/immutable'
 import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
+
+import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
+export * from './leaderboards.ts'
 
 export type { FightWireAction } from '@aresrpg/fight'
 
 export const MAX_TRACKED_CHARACTERS = 6
+export const MARKET_WINDOW_SIZE = 200
 
 /** Mirror of Move's `naked_rule::MIN_SALE_LEVEL` — a character below this cannot change owners. */
 export const MIN_CHARACTER_SALE_LEVEL = 30
@@ -29,8 +33,12 @@ export type EquippedItem = { slot: string } & Omit<ItemRow, 'kiosk'>
 
 /** An item as the indexer projects it (packages/indexer graph.rs Item node). `kiosk` is the
  *  custody id — a TRANSACTION-BUILDING convenience only, never a player-facing grouping. */
+export type ItemAmountChange = Readonly<{ id: string; amount: number; version: string }>
+
 export type ItemRow = {
   id: string
+  /** Certified Sui object version; local trade previews have no chain revision. */
+  version?: string
   name: string
   item_type: string
   category: string
@@ -45,10 +53,8 @@ export type ItemRow = {
   /** pet FeedKey DF — feeds so far (0..60, the pet's power) + last-feed UTC day index */
   pet_power?: number
   pet_last_day?: number
-  /** forgemagie ForgeKey DF — the puits sink + per-stat successful-application counts
-   *  (stat_names order; the caps are rune_catalog law, mirrored in immutable) */
+  /** Forgemagie sink in rune_catalog's integer weight units. */
   puits?: string
-  apps?: number[]
 }
 
 /** A character as the indexer projects it (graph.rs Character node, ALL sources: the base
@@ -241,12 +247,19 @@ export type FightStateRow = {
 
 /** The equipment slots OTHER players can see (owner 2026-08-12) — everything else is
  *  fight-internal (HP math) and never rides presence. */
-export const VISIBLE_SLOTS = ['hat', 'cloak', 'pet', 'title'] as const
+export const VISIBLE_SLOTS = ['hat', 'cloak', 'pet', 'title', ...cosmetic_slots] as const
 export type VisibleSlot = (typeof VISIBLE_SLOTS)[number]
 
+export const visible_equipment = (
+  worn: readonly Readonly<{ slot: string | null; item_type: string | null }>[]
+): Record<VisibleSlot, string | null> =>
+  Object.fromEntries(
+    VISIBLE_SLOTS.map((slot) => [slot, worn.find((entry) => entry.slot === slot)?.item_type ?? null])
+  ) as Record<VisibleSlot, string | null>
+
 /** What a nearby player looks like — the display payload published once on appearance.
- *  The four visible slots carry the equipped item's TYPE (null when bare). */
-export type PresenceRow = {
+ *  Visible slots retain raw equipment identities; presentation resolves cosmetic overrides. */
+export type PresenceRow = Record<VisibleSlot, string | null> & {
   character_id: string
   world: string
   /** the character's current custody wallet (public chain fact) — client-signed social
@@ -259,11 +272,6 @@ export type PresenceRow = {
   color_1: number
   color_2: number
   color_3: number
-  hat: string | null
-  cloak: string | null
-  title: string | null
-  /** equipped protector pet's item type — it follows on foot unless `riding` says otherwise */
-  pet: string | null
   /** actually mounted right now — rides the position stream (one flag, no extra packets);
    *  only meaningful while `pet` is non-null (the server clamps a petless claim) */
   riding: boolean
@@ -274,6 +282,8 @@ export type PresenceRow = {
 
 /** A market listing — the projected item + its LISTED_IN price edge. */
 export type ListingRow = {
+  /** Native version of the public Listing dynamic field, scoped by item + kiosk. */
+  version: string
   kind: 'item' | 'character'
   id: string
   name: string
@@ -286,6 +296,12 @@ export type ListingRow = {
   kiosk: string
   seller: string
   at_ms: number
+}
+
+/** One coherent graph read: catalogue revisions also cover empty kiosks. */
+export type MarketSnapshot = {
+  listings: ListingRow[]
+  kiosk_versions: Record<string, string>
 }
 
 /** One immutable realised marketplace sale from the player's retained history. */
@@ -445,6 +461,8 @@ export type TradeRow = {
   accept_b: boolean
   sui_a: string
   sui_b: string
+  kares_a: string
+  kares_b: string
   caps_a: readonly TradeCapRow[]
   caps_b: readonly TradeCapRow[]
 }
@@ -492,6 +510,8 @@ export type FightResolutionRow = {
   dead: boolean
   settled: boolean
   /** Every immutable template the terminal settlement may need after rolling enemy tables. */
+  boss_weight: number
+  kares: string
   loot_types: string[]
   drops: { item_type: string; qty: number }[]
 }
@@ -522,12 +542,6 @@ export type KolizeumLobbyRow = Readonly<{
 }>
 
 export type ClosableFightRow = Readonly<{ fight: string; kolizeum: string | null }>
-
-export type AirdropState = Readonly<{
-  drop_id: string
-  eligible: boolean
-  eligible_count: number
-}>
 
 /** Zones are 512-block squares (zone.move ZONE_SIZE) — the tracking unit for everything. */
 export const ZONE_SIZE = 512
@@ -714,6 +728,7 @@ export type ClientPackets = {
   'packet/fight_resync': { fight: string }
   /** Browse intent — folds the observed category into state; the server pushes the slice and
    *  streams its deltas while observed. Null stops observing. Not a query: state, then push. */
+  'packet/leaderboard_observe': { observation: LeaderboardObservation | null }
   'packet/market_observe': { observation: MarketObservation | null }
   /** Commit this character as a spectator of one nearby fight. */
   'packet/spectate': { character_id: string; fight: string | null }
@@ -722,8 +737,6 @@ export type ClientPackets = {
   /** Registry + name derived the character ID client-side. Current wallet custody is mutable,
    *  so this narrowly asks the indexed owner of that exact object. */
   'packet/character_owner_request': { id: number; character_id: string }
-  /** Public airdrop claim state for a separately connected holder wallet. */
-  'packet/airdrop_eligibility_request': { address: string }
   /** Privileged dashboard request — whitelisted addresses only; everyone else gets a refusal. */
   'packet/admin_request':
     | {
@@ -764,20 +777,17 @@ export type ServerPackets = {
   /** Held giftcard vouchers. */
   'packet/giftcards': { giftcards: GiftcardRow[] }
   /** The player's own ACTIVE market listings. */
-  'packet/listings': { listings: ListingRow[] }
+  'packet/listings': MarketSnapshot
   'packet/mastery': { mastery: MasteryRow | null; offers: MasteryOfferRow[] }
   /** The player's OPEN trades (either side) — the escrow replaces transferred caps. */
   'packet/trades': { trades: TradeRow[] }
   'packet/trade_destroyed': { trade: string }
-  /** Current airdrop eligibility and remaining recipient counts. */
-  'packet/airdrop_state': { airdrops: AirdropState[] }
 
   // ── cluster + indexer heartbeat (5s cadence, decorrelated from user activity) ──
   'packet/server_info': { online: number; indexing_lag: number | null; current_epoch: string | null }
   /** Version 0 is the global emergency brake; null means the projection is not available yet. */
   'packet/game_state': { frozen: boolean | null }
   'packet/character_owner_response': { id: number; character_id: string; name: string; owner: string }
-  'packet/airdrop_eligibility': { address: string; airdrops: AirdropState[] }
 
   // ── the world (pushed on embody + as the tracked spiral moves; owner: chunk-spiral law) ──
   /** The complete zone subscription window for this connection. Rows outside it are obsolete;
@@ -810,7 +820,7 @@ export type ServerPackets = {
    *  roll, pet feed scaling, a fresh mint's rolled stats) — the projected row, whole. */
   'packet/item_updated': { item: ItemRow }
   /** One formerly held item left this wallet's kiosks or was destroyed. */
-  'packet/item_removed': { item: string }
+  'packet/item_removed': { item: string; version: string }
 
   // ── live world stream (indexer facts other players caused) ──
   /** A fight was born in a tracked zone. It ships the PROJECTED row, never an id plus a few
@@ -848,7 +858,7 @@ export type ServerPackets = {
    *  peer who reconnects or missed the relay still replays the walk-out on its own screen. */
   'packet/fighter_forfeited': { fight: string; fighter: string }
   'packet/fight_ended': { fight: string; winner: number | null }
-  'packet/fight_drops': { fight: string; fighter: string; drops: { item_type: string; qty: number }[] }
+  'packet/fight_drops': { fight: string; fighter: string; kares: string; drops: { item_type: string; qty: number }[] }
   /** Another fighter's live turn intent, relayed (see the client packet's TODO(sim)). */
   'packet/fight_action': { fight: string; from: string; action: FightWireAction }
 
@@ -857,7 +867,9 @@ export type ServerPackets = {
   'packet/party_invites': { character_id: string; parties: PartyRow[] }
 
   // ── market stream (only while observing a category — plus your own sales, always) ──
-  'packet/market_slice': { observation: MarketObservation; listings: ListingRow[] }
+  'packet/leaderboard': { snapshot: LeaderboardSnapshot }
+  'packet/leaderboard_error': { observation: LeaderboardObservation; reason: 'unavailable' }
+  'packet/market_slice': MarketSnapshot & { observation: MarketObservation }
   'packet/market_counts': { counts: MarketCounts }
   'packet/market_history': {
     sales: MarketSaleRow[]
@@ -865,12 +877,8 @@ export type ServerPackets = {
     total: number
     profits: { kiosk: string; amount_mist: string }[]
   }
-  'packet/market_listed': { listing: ListingRow }
-  'packet/market_delisted': { object: string }
   /** One of YOUR listings sold (the buyer's transaction — money arrived in your kiosk). */
   'packet/listing_sold': { sale: MarketSaleRow }
-
-  'packet/airdrop_remaining': { drop_id: string; eligible_count: number }
 
   // ── kolizeum live directory ──
   'packet/kolizeums': { lobbies: KolizeumLobbyRow[] }
@@ -903,14 +911,10 @@ export const SESSION_PACKETS = [
   'packet/giftcards',
   'packet/item_updated',
   'packet/item_removed',
-  'packet/airdrop_state',
   'packet/server_info',
   'packet/game_state',
   'packet/character_owner_response',
-  'packet/airdrop_eligibility',
-  'packet/market_delisted',
   'packet/listing_sold',
-  'packet/airdrop_remaining',
   'packet/error',
 ] as const
 
@@ -948,10 +952,10 @@ export const MARKET_PACKETS = [
   'packet/market_slice',
   'packet/market_counts',
   'packet/market_history',
-  'packet/market_listed',
-  'packet/market_delisted',
   'packet/listing_sold',
 ] as const
+
+export const LEADERBOARD_PACKETS = ['packet/leaderboard', 'packet/leaderboard_error'] as const
 
 export const KOLIZEUM_PACKETS = ['packet/kolizeums'] as const
 export const FRIEND_PACKETS = ['packet/friends'] as const
@@ -969,6 +973,7 @@ export const SERVER_PACKET_TYPES = [
   ...WORLD_PACKETS,
   ...FIGHT_PACKETS,
   ...MARKET_PACKETS,
+  ...LEADERBOARD_PACKETS,
   ...KOLIZEUM_PACKETS,
   ...FRIEND_PACKETS,
   ...PARTY_PACKETS,
@@ -996,6 +1001,7 @@ type RoutedPacketType =
   | (typeof WORLD_PACKETS)[number]
   | (typeof FIGHT_PACKETS)[number]
   | (typeof MARKET_PACKETS)[number]
+  | (typeof LEADERBOARD_PACKETS)[number]
   | (typeof KOLIZEUM_PACKETS)[number]
   | (typeof FRIEND_PACKETS)[number]
   | (typeof PARTY_PACKETS)[number]
@@ -1018,10 +1024,10 @@ export const CLIENT_PACKET_TYPES = [
   'packet/fight_action',
   'packet/fight_resync',
   'packet/market_observe',
+  'packet/leaderboard_observe',
   'packet/spectate',
   'packet/fight_preview',
   'packet/character_owner_request',
-  'packet/airdrop_eligibility_request',
   'packet/admin_request',
   'packet/ping',
 ] as const satisfies readonly (keyof ClientPackets)[]
@@ -1029,18 +1035,9 @@ export const CLIENT_PACKET_TYPES = [
 const is_finite_number = (value: unknown): value is number => Number.isFinite(value)
 
 const is_id = (value: unknown): value is string => typeof value === 'string' && value.startsWith('0x')
-const CORRELATED_READ_PACKETS: ReadonlySet<unknown> = new Set([
-  'packet/character_owner_request',
-  'packet/airdrop_eligibility_request',
-])
-
-const parse_correlated_read_packet = (type: string, packet: Record<string, unknown>): ClientPacket => {
-  if (type === 'packet/character_owner_request') {
-    if (!Number.isInteger(packet.id)) throw new Error('packet/character_owner_request needs an integer id')
-    if (!is_id(packet.character_id)) throw new Error('packet/character_owner_request needs a character id')
-    return packet as ClientPacket
-  }
-  if (!is_id(packet.address)) throw new Error('packet/airdrop_eligibility_request needs an address')
+const parse_character_owner_request = (packet: Record<string, unknown>): ClientPacket => {
+  if (!Number.isInteger(packet.id)) throw new Error('packet/character_owner_request needs an integer id')
+  if (!is_id(packet.character_id)) throw new Error('packet/character_owner_request needs a character id')
   return packet as ClientPacket
 }
 
@@ -1213,6 +1210,18 @@ const parse_admin_request_packet = (
   return parser(packet, id)
 }
 
+type ObservationParser = (packet: Readonly<Record<string, unknown>>) => ClientPacket
+const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<string, ObservationParser>([
+  ['packet/market_observe', parse_market_observe_packet],
+  [
+    'packet/leaderboard_observe',
+    (packet) => ({
+      type: 'packet/leaderboard_observe' as const,
+      observation: parse_leaderboard_observation(packet.observation),
+    }),
+  ],
+])
+
 /** Parse one raw client message into a declared packet, or throw — never coerce. The server
  *  calls this at its door; an undeclared or malformed packet is refused before any module. */
 export function parse_client_packet(raw: string | Buffer): ClientPacket {
@@ -1258,13 +1267,14 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
     if (!is_id(packet.fight)) throw new Error('packet/fight_resync needs a fight id')
     return { type, fight: packet.fight }
   }
-  if (type === 'packet/market_observe') return parse_market_observe_packet(packet)
+  const observation_parser = OBSERVATION_PARSERS.get(type as string)
+  if (observation_parser) return observation_parser(packet)
   if (type === 'packet/spectate' || type === 'packet/fight_preview') {
     if (!is_id(packet.character_id)) throw new Error('packet/spectate needs a character_id')
     if (packet.fight !== null && !is_id(packet.fight)) throw new Error('packet/spectate needs a fight id or null')
     return packet as ClientPacket
   }
-  if (CORRELATED_READ_PACKETS.has(type)) return parse_correlated_read_packet(type as string, packet)
+  if (type === 'packet/character_owner_request') return parse_character_owner_request(packet)
   if (type === 'packet/admin_request') return parse_admin_request_packet(packet)
   if (type === 'packet/ping') {
     if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')

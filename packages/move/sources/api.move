@@ -6,12 +6,14 @@
 /// the personal kiosk, while explicit Fight variants prove the controlled custody seat.
 module aresrpg::api;
 
+use aresrpg_kares::kares::KARES;
+use sui::coin_registry::Currency;
 use aresrpg_seed::{item_rows::{Self, ItemTemplate}, recipe_rows::Recipe};
 use aresrpg::{
   character::{Self, Character, NameRegistry},
   consumable,
   crafting,
-  distribution::{Self, Airdrop, Giftcard},
+  distribution::{Self, Giftcard},
   dungeon,
   equipment,
   fight::{Self, Fight, FightBuild},
@@ -159,7 +161,7 @@ entry fun create_zone(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   let character: &mut Character = kiosk.borrow_mut(cap, character_id);
@@ -353,7 +355,7 @@ entry fun challenge_duel(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   fight::challenge(
@@ -491,19 +493,8 @@ public fun move_fighter(fight_object: &mut Fight, path: vector<u64>, version: &V
   fight::move_fighter(fight_object, &path, ctx);
 }
 
-/// Seal retry-stable team-loot entropy after a player action ended combat. The normal
-/// start/end/crank boundaries seal automatically. ENTRY: `&Random` law.
-entry fun seal_fight_loot(
-  fight_object: &mut Fight,
-  randomness: &Random,
-  version: &Version,
-  ctx: &mut TxContext,
-) {
-  version.assert_latest();
-  let mut generator = randomness.new_generator(ctx);
-  fight::seal_end(fight_object, &mut generator);
-}
-
+/// One terminal boundary: advance a live turn, or seal loot entropy when the preceding
+/// player commands ended combat. The chain state chooses; clients never predict the door.
 entry fun end_fight_turn(
   fight_object: &mut Fight,
   randomness: &Random,
@@ -619,6 +610,23 @@ public fun redeem_mastery_offer(
 ) {
   version.assert_latest();
   mastery::redeem(mastery_object, offer, template, existing, kiosk, cap, item_policy, ctx);
+}
+
+/// Burn KARES for the same statless offer without debiting earned Mastery points.
+public fun redeem_mastery_offer_kares(
+  currency: &mut Currency<KARES>,
+  payment: Coin<KARES>,
+  offer: &MasteryOffer,
+  template: &ItemTemplate,
+  existing: Option<ID>,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  item_policy: &TransferPolicy<Item>,
+  version: &Version,
+  ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  mastery::redeem_kares(currency, payment, offer, template, existing, kiosk, cap, item_policy, ctx);
 }
 
 fun settle_fight_batch(
@@ -833,7 +841,7 @@ entry fun gather(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   gathering::gather(
@@ -900,7 +908,7 @@ entry fun craft(
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   crafting::craft(
@@ -922,7 +930,7 @@ entry fun craft(
 // ╔════════════════ [ Forgemagie — scribe + staged crush ] ═══════════════════ ]
 
 /// Apply one rune to a kiosk-held gear item (consumes 1 rune unit; the gear's category names
-/// the forgery job that must be ≥ 70). Terminal `&Random`.
+/// the craft profession, available from level 1). Terminal `&Random`.
 entry fun scribe_rune(
   kiosk: &mut Kiosk,
   personal: &PersonalKioskCap,
@@ -937,7 +945,7 @@ entry fun scribe_rune(
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   forgemagie::scribe(
@@ -966,7 +974,7 @@ entry fun crush_gear(
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   forgemagie::crush(kiosk, cap, gear_ids, protected_item, &mut generator, ctx);
@@ -1015,7 +1023,7 @@ entry fun open_loot_box(
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   loot_box::open_box(
@@ -1036,7 +1044,7 @@ entry fun claim_loot(
   version: &Version,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   loot_box::claim_loot(
@@ -1060,18 +1068,6 @@ public fun burn_item(
 }
 
 // ╔════════════════ [ Airdrops / giftcards (portable distribution) ] ════════ ]
-
-/// Claim your airdrop share as a voucher sent to the chosen game-wallet address.
-public fun claim_airdrop(
-  drop: &mut Airdrop,
-  template: &ItemTemplate,
-  recipient: address,
-  version: &Version,
-  ctx: &mut TxContext,
-) {
-  version.assert_latest();
-  distribution::claim_airdrop(drop, template, recipient, ctx);
-}
 
 /// Redeem a giftcard voucher (zksend-portable): it burns, the item is born in YOUR kiosk.
 public fun redeem_giftcard(
@@ -1105,7 +1101,7 @@ entry fun enter_dungeon(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   // the run's board seed is drawn HERE from Sui randomness (terminal) — the room boards derive
   // from it, so no caller can enumerate a favorable dungeon layout.
@@ -1288,7 +1284,7 @@ entry fun create_kolizeum(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   kolizeum::create(
@@ -1315,7 +1311,7 @@ entry fun create_kolizeum_friends(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  // the packed cap unpacks HERE — a &Random door admits no PTB-side borrow (Sui law)
+  // Any client-side preparation must return its borrowed cap before this terminal call.
   let cap = personal_cap(personal, version);
   let mut generator = randomness.new_generator(ctx);
   let allowed = option::some(friends::snapshot(list));
@@ -1393,23 +1389,6 @@ public fun settle_kolizeum(
   kolizeum::settle(lobby, fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
-/// Final participant settlement — payout and both managed objects close atomically.
-public fun settle_last_kolizeum(
-  lobby: Kolizeum,
-  fight_object: Fight,
-  fighter_idx: u64,
-  kiosk: &mut Kiosk,
-  personal: &PersonalKioskCap,
-  policy: &TransferPolicy<Character>,
-  version: &Version,
-  clock: &Clock,
-  ctx: &mut TxContext,
-) {
-  let cap = personal_cap(personal, version);
-  // last-settler control is asserted inside kolizeum::settle_last
-  kolizeum::settle_last(lobby, fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
-}
-
 /// Leave before the fight starts — full pledge refund.
 public fun exit_kolizeum(
   lobby: &mut Kolizeum,
@@ -1424,23 +1403,6 @@ public fun exit_kolizeum(
 ) {
   version.assert_latest();
   kolizeum::exit(lobby, fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
-}
-
-/// Final placement exit — refund and both managed objects close atomically.
-public fun exit_last_kolizeum(
-  lobby: Kolizeum,
-  fight_object: Fight,
-  fighter_idx: u64,
-  kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
-  policy: &TransferPolicy<Character>,
-  version: &Version,
-  clock: &Clock,
-  ctx: &mut TxContext,
-) {
-  version.assert_latest();
-  // last-live-player control is asserted inside kolizeum::exit_last
-  kolizeum::exit_last(lobby, fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
 }
 
 /// Forfeit a STARTED kolizeum fight — leave, abandoning the pot claim (the stalemate escape;
@@ -1529,4 +1491,16 @@ public fun trade_recover_item(
 ): PurchaseCap<Item> {
   version.assert_latest();
   trade::recover_item(trade_object, item, ctx)
+}
+
+
+/// Currency rewards settle once, before the Random-bound item settlement in the same PTB.
+public fun prepare_boss_rewards(
+  fight_object: &mut Fight, fighter_idx: u64,
+  offering: &aresrpg_kares::offering::Offering,
+  pot: &mut aresrpg_kares::combat_rewards::CombatPot,
+  version: &Version, clock: &Clock, ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  fight::prepare_boss_rewards(fight_object, fighter_idx, offering, pot, clock, ctx);
 }

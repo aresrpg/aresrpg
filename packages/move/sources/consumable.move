@@ -46,8 +46,10 @@ public(package) fun consume(
   if (heal.is_some()) progression::heal(character, heal.destroy_some() as u64, clock)
   else if (consumable_effect::is_reset_stats(&effect)) character::reset_stats(character)
   else if (consumable_effect::is_reset_spells(&effect)) progression::reset_spells(character)
-  else if (consumable_effect::is_recall(&effect)) world::teleport_center(character, clock)
-  else abort ELootBox
+  else {
+    // Recall remains after excluding the other five variants of the closed Effect type.
+    world::teleport_center(character, clock)
+  }
 }
 
 public(package) fun consume_city(

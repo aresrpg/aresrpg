@@ -5,15 +5,9 @@
 //! Per transaction: route every game event to its channel (`events.rs` owns the
 //! table), then run the SALE ANALYSIS the graph never sees:
 //!
-//! * **The royalty discriminator (README law 7).** The ceremony installs the
-//!   royalty rule (10% + 0.01 SUI floor) on BOTH real policies, so every
-//!   genuine kiosk sale calls `royalty_rule::pay`; the game's internal extract
-//!   (equip / burn / fight custody) buys through the RULELESS protected policy
-//!   and never does. No `pay` call in the tx = plumbing: no row, no stamp, no
-//!   forwarded market event.
-//! * **Ours-only.** A purchased object always changes hands, so it is an
-//!   output of the same tx — a purchase whose id is no game Character/Item
-//!   output is another collection's trade: ignored entirely.
+//! * **Public sales use certified framework receipts.** Positive ItemPurchased events of our
+//!   Item/Character types are exact, including calls through arbitrary Move wrappers. Protected
+//!   custody extraction always pays zero. Item pre/post state enriches history, never eligibility.
 //! * **Per-unit price (law 9).** The event price is the LOT price; the stamp
 //!   divides by the purchased stack's `amount`. Characters have no amount and
 //!   never stamp the market (kind-tagged in history instead).
@@ -81,6 +75,7 @@ pub struct TxView<'a> {
 pub struct Wire {
     pub publications: Vec<Publication>,
     pub sales: Vec<SalesRow>,
+    pub leaderboard: Vec<crate::leaderboards::Contribution>,
     pub money: Vec<MoneyFact>,
     pub market: Vec<MarketStamp>,
     pub fight_lifecycle: Vec<FightLifecycleStamp>,
@@ -116,6 +111,7 @@ pub fn analyze_with_digests(
         route_kolizeum_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_fight_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_item_writes(&mut wire, ckpt, ts_ms, tx, game)?;
+        route_giftcard_writes(&mut wire, ckpt, ts_ms, tx, game);
         analyze_game_revenue(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kolizeum_revenue(&mut wire, ckpt, ts_ms, tx, game)?;
         analyze_kiosk_market(&mut wire, ckpt, ts_ms, tx, game)?;
@@ -700,6 +696,7 @@ fn route_item_writes(
                 "ItemWritten",
                 json!({
                     "item": output.id.hex(),
+                    "version": output.version.to_string(),
                     "holder": holder.map(|id| id.hex()),
                     "previous_holder": previous_holder.map(|id| id.hex()),
                 }),
@@ -721,7 +718,7 @@ fn route_item_writes(
                 (tx.outputs.len() + index) as u64,
                 ts_ms,
                 "ItemRemoved",
-                json!({ "item": input.id.hex(), "holder": holder.hex() }),
+                json!({ "item": input.id.hex(), "holder": holder.hex(), "version": input.version.to_string() }),
             ),
         });
     }
@@ -798,7 +795,7 @@ pub fn route_character_custody(wire: &mut Wire, ckpt: u64, ts_ms: u64, custody: 
     }
 }
 
-fn envelope(
+pub(crate) fn envelope(
     ckpt: u64,
     tx: u64,
     evt: u64,
@@ -1032,6 +1029,36 @@ fn push_sale(
     }
 }
 
+fn proved_seller(tx: &TxView<'_>, game: &str, kiosk: Id) -> anyhow::Result<Addr> {
+    let mut owner = None;
+    for event in tx.events.iter().filter(|event| {
+        event.package == game && event.module == "listing_rule" && event.name == "SellerProved"
+    }) {
+        let proof: events::SellerProved = decode::from_bytes(event.bytes)?;
+        if proof.kiosk != kiosk {
+            continue;
+        }
+        anyhow::ensure!(
+            owner.is_none_or(|previous| previous == proof.owner),
+            "seller proofs disagree"
+        );
+        owner = Some(proof.owner);
+    }
+    let owner = owner.ok_or_else(|| {
+        anyhow::anyhow!(
+            "public sale lacks a verified seller witness: {}",
+            kiosk.hex()
+        )
+    })?;
+    if let Some(observed) = crate::personal_kiosk::owner(tx.inputs, tx.outputs, kiosk)? {
+        anyhow::ensure!(
+            observed == owner,
+            "seller witness disagrees with personal custody"
+        );
+    }
+    Ok(owner)
+}
+
 fn analyze_kiosk_market(
     wire: &mut Wire,
     ckpt: u64,
@@ -1052,16 +1079,24 @@ fn analyze_kiosk_market(
                 }
                 let e = decode::from_bytes::<events::KioskItemPurchased>(event.bytes)
                     .map_err(|err| anyhow::anyhow!("layout drift: kiosk::ItemPurchased: {err}"))?;
-                // THREE independent gates, all required (defense in depth):
-                //   price > 0 — the 0.01 SUI royalty floor makes a genuine
-                //     0-price sale impossible, and every protected-policy
-                //     extract is 0-price, so a spoofed `royalty_rule::pay` in
-                //     the same PTB can no longer launder plumbing into sales;
-                //   royalty present — our real policies always collect;
-                //   ours-output — the object changed hands in THIS tx.
-                if e.price == 0 || !royalty {
+                // The sealed framework event is the receipt, even when a Move wrapper
+                // pays royalties internally. Every protected-policy extract has price zero.
+                if e.price == 0 {
                     continue;
                 }
+                let seller_address = proved_seller(tx, game, e.kiosk)?;
+                wire.leaderboard.extend([
+                    crate::leaderboards::Contribution::new(
+                        crate::leaderboards::Metric::Marketplace,
+                        tx.sender,
+                        e.price,
+                    ),
+                    crate::leaderboards::Contribution::new(
+                        crate::leaderboards::Metric::Marketplace,
+                        seller_address,
+                        e.price,
+                    ),
+                ]);
                 // A purchase may merge the bought stack into an existing destination stack in
                 // the SAME PTB. The bought object is then deleted, so its authoritative sale
                 // shape survives only in pre-state.
@@ -1070,10 +1105,7 @@ fn analyze_kiosk_market(
                 else {
                     continue;
                 };
-                let seller = match kiosk_view(tx.outputs, e.kiosk)? {
-                    Some(k) => Some(k.owner),
-                    None => kiosk_view(tx.inputs, e.kiosk)?.map(|k| k.owner),
-                };
+                let seller = Some(seller_address);
                 let shape = sale_shape(sold)?;
                 push_sale(
                     wire,
@@ -1155,6 +1187,7 @@ fn analyze_kiosk_market(
                         json!({
                             "kiosk": kiosk.hex(),
                             "object": id.hex(),
+                            "seller": crate::personal_kiosk::owner(tx.inputs, tx.outputs, kiosk)?.map(|owner| owner.hex()),
                             "price_mist": price.map(|p| p.to_string()),
                         }),
                     ),
@@ -1247,12 +1280,39 @@ fn analyze_exclusive_market(
             sold.id,
             &shape,
             price,
-            Some(after.owner),
+            crate::personal_kiosk::owner(tx.inputs, tx.outputs, kiosk_id)?,
             tx.sender,
             true,
         );
     }
     Ok(())
+}
+
+/// Plain transfers emit no game event. Invalidate both custodians from object pre/post-state.
+fn route_giftcard_writes(wire: &mut Wire, ckpt: u64, ts_ms: u64, tx: &TxView<'_>, game: &str) {
+    let holders = tx
+        .inputs
+        .iter()
+        .chain(tx.outputs.iter())
+        .filter(|object| is_core(object, game, "distribution", "Giftcard"))
+        .filter_map(|object| match object.owner {
+            OwnerKind::Address(owner) => Some(owner.hex()),
+            _ => None,
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    for (index, holder) in holders.iter().enumerate() {
+        wire.publications.push(Publication {
+            channel: format!("evt:social:{holder}"),
+            payload: envelope(
+                ckpt,
+                tx.tx_index,
+                index as u64,
+                ts_ms,
+                "GiftcardsChanged",
+                json!({ "holder": holder }),
+            ),
+        });
+    }
 }
 
 // ╔════════════════ [ Tests ] ════════════════════════════════════════════════ ]
@@ -1291,6 +1351,45 @@ mod tests {
             move_calls: std::slice::from_ref(&unrelated),
             ..base
         }));
+    }
+
+    #[test]
+    fn giftcard_transfers_and_burns_invalidate_both_custodians_without_events() {
+        let gift_type = ty(GAME, "distribution", "Giftcard");
+        // Routing uses certified ownership metadata only; it does not decode a payload.
+        let before = ObjView {
+            version: 1,
+            id: Id([9; 32]),
+            owner: OwnerKind::Address(Addr([1; 32])),
+            type_key: &gift_type,
+            bytes: &[],
+        };
+        let after = ObjView {
+            owner: OwnerKind::Address(Addr([2; 32])),
+            ..before.clone()
+        };
+        let tx = TxView {
+            tx_index: 0,
+            sender: Addr([1; 32]),
+            move_calls: &[],
+            events: &[],
+            inputs: std::slice::from_ref(&before),
+            outputs: std::slice::from_ref(&after),
+        };
+        let mut wire = Wire::default();
+        route_giftcard_writes(&mut wire, 1, 2, &tx, GAME);
+        assert_eq!(wire.publications.len(), 2);
+        assert_eq!(
+            wire.publications[0].channel,
+            format!("evt:social:{}", Addr([1; 32]).hex())
+        );
+        assert_eq!(
+            wire.publications[1].channel,
+            format!("evt:social:{}", Addr([2; 32]).hex())
+        );
+        let mut burned = Wire::default();
+        route_giftcard_writes(&mut burned, 1, 2, &TxView { outputs: &[], ..tx }, GAME);
+        assert_eq!(burned.publications.len(), 1);
     }
 
     fn ty(package: &str, module: &str, name: &str) -> TypeKey {
@@ -1384,6 +1483,7 @@ mod tests {
         })
         .unwrap();
         let lobby = ObjView {
+            version: 1,
             id: Id([31; 32]),
             owner: OwnerKind::Shared,
             type_key: &lobby_type,
@@ -1476,12 +1576,14 @@ mod tests {
         })
         .unwrap();
         let input = ObjView {
+            version: 1,
             id: Id([42; 32]),
             owner: OwnerKind::Shared,
             type_key: &lobby_type,
             bytes: &before,
         };
         let output = ObjView {
+            version: 1,
             id: Id([42; 32]),
             owner: OwnerKind::Shared,
             type_key: &lobby_type,
@@ -1514,6 +1616,7 @@ mod tests {
         let run_type = dungeon_run_type();
         let bytes = dungeon_run_bytes(44);
         let run = ObjView {
+            version: 1,
             id: Id([44; 32]),
             owner: OwnerKind::Object(Id([5; 32])),
             type_key: &run_type,
@@ -1554,6 +1657,7 @@ mod tests {
         let item_type = ty(GAME, "item", "Item");
         let bytes = item_bytes(3, "wool", 1);
         let outputs = [ObjView {
+            version: 1,
             id: Id([3; 32]),
             owner: OwnerKind::Object(Id([77; 32])),
             type_key: &item_type,
@@ -1575,6 +1679,7 @@ mod tests {
         let payload: serde_json::Value =
             serde_json::from_str(&wire.publications[0].payload).unwrap();
         assert_eq!(payload["type"], "ItemWritten");
+        assert_eq!(payload["data"]["version"], "1");
         assert_eq!(payload["data"]["item"], Id([3; 32]).hex());
         assert_eq!(payload["data"]["holder"], Id([77; 32]).hex());
     }
@@ -1590,12 +1695,14 @@ mod tests {
         let wrapper_bytes = kiosk_item_wrapper_bytes(wrapper, item);
         let inputs = [
             ObjView {
+                version: 1,
                 id: item,
                 owner: OwnerKind::Object(wrapper),
                 type_key: &item_type,
                 bytes: &item_bytes,
             },
             ObjView {
+                version: 1,
                 id: wrapper,
                 owner: OwnerKind::Object(kiosk),
                 type_key: &wrapper_type,
@@ -1615,6 +1722,7 @@ mod tests {
         let payload: serde_json::Value =
             serde_json::from_str(&wire.publications[0].payload).unwrap();
         assert_eq!(payload["type"], "ItemRemoved");
+        assert_eq!(payload["data"]["version"], "1");
         assert_eq!(payload["data"]["item"], item.hex());
         assert_eq!(payload["data"]["holder"], kiosk.hex());
     }
@@ -1626,6 +1734,7 @@ mod tests {
         let item_type = ty(GAME, "item", "Item");
         let bytes = item_bytes(4, "wool", 1);
         let outputs = [ObjView {
+            version: 1,
             id: Id([4; 32]),
             owner: OwnerKind::Address(Addr([8; 32])),
             type_key: &item_type,
@@ -1654,6 +1763,7 @@ mod tests {
         })
         .unwrap();
         let outputs = [ObjView {
+            version: 1,
             id: Id([9; 32]),
             owner: OwnerKind::Shared,
             type_key: &version_type,
@@ -1678,6 +1788,27 @@ mod tests {
         assert_eq!(payload["type"], "GameStateChanged");
         assert_eq!(payload["data"]["frozen"], true);
         assert_eq!(payload["ckpt"], 55);
+    }
+
+    pub(super) fn personal_marker_type() -> TypeKey {
+        let mut key = ty(SUI_FRAMEWORK, "dynamic_field", "Field");
+        key.type_params = vec![
+            format!(
+                "{}::personal_kiosk::OwnerMarker",
+                crate::personal_kiosk::PACKAGES[0]
+            ),
+            "address".into(),
+        ];
+        key
+    }
+
+    pub(super) fn personal_marker_bytes(owner: u8) -> Vec<u8> {
+        bcs::to_bytes(&decode::Field {
+            id: Id([61; 32]),
+            name: false,
+            value: Addr([owner; 32]),
+        })
+        .unwrap()
     }
 
     fn kiosk_bytes(id: u8, owner: u8, profits: u64) -> Vec<u8> {
@@ -1798,19 +1929,30 @@ mod tests {
     }
 
     #[test]
-    fn genuine_purchase_needs_royalty_and_our_output() {
+    fn genuine_purchase_uses_its_receipt_even_inside_a_wrapper() {
         let item_type = ty(GAME, "item", "Item");
         let kiosk_type = ty(SUI_FRAMEWORK, "kiosk", "Kiosk");
+        let marker_type = personal_marker_type();
+        let marker_bytes = personal_marker_bytes(9);
+        let marker = ObjView {
+            id: Id([61; 32]),
+            version: 1,
+            owner: OwnerKind::Object(Id([2; 32])),
+            type_key: &marker_type,
+            bytes: &marker_bytes,
+        };
         let sold = item_bytes(5, "wooling_wool", 10);
-        let kiosk = kiosk_bytes(2, 9, 0);
+        let kiosk = kiosk_bytes(2, 88, 0);
         let outputs = [
             ObjView {
+                version: 1,
                 id: Id([5; 32]),
                 owner: OwnerKind::Object(Id([50; 32])),
                 type_key: &item_type,
                 bytes: &sold,
             },
             ObjView {
+                version: 1,
                 id: Id([2; 32]),
                 owner: OwnerKind::Shared,
                 type_key: &kiosk_type,
@@ -1819,14 +1961,25 @@ mod tests {
         ];
         let purchase = purchased_bytes(2, 5, 1_000);
         let phantom = game_item_param();
-        let events = [EventView {
-            package: SUI_FRAMEWORK,
-            module: "kiosk",
-            name: "ItemPurchased",
-            type_params: &phantom,
-            bytes: &purchase,
-            index: 0,
-        }];
+        let proof_bytes = bcs::to_bytes(&(Id([2; 32]), Addr([9; 32]))).unwrap();
+        let events = [
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemPurchased",
+                type_params: &phantom,
+                bytes: &purchase,
+                index: 0,
+            },
+            EventView {
+                package: GAME,
+                module: "listing_rule",
+                name: "SellerProved",
+                type_params: &[],
+                bytes: &proof_bytes,
+                index: 1,
+            },
+        ];
         let pay_call = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
 
         // WITH the royalty proof → two rows + a per-unit stamp (1000 / 10)
@@ -1835,7 +1988,7 @@ mod tests {
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&pay_call),
             events: &events,
-            inputs: &[],
+            inputs: &[marker],
             outputs: &outputs,
         };
         let wire = analyze(100, 1_000, std::slice::from_ref(&tx), GAME, SEED).unwrap();
@@ -1868,29 +2021,45 @@ mod tests {
             }]
         );
 
-        // WITHOUT it → plumbing: nothing at all
-        let plumbing = TxView {
+        // A wrapper may pay royalties internally; the certified purchase still counts.
+        let wrapper = TxView {
             move_calls: &[],
             ..tx.clone()
         };
-        let wire = analyze(100, 1_000, &[plumbing], GAME, SEED).unwrap();
-        assert!(wire.sales.is_empty() && wire.market.is_empty() && wire.money.is_empty());
+        let wire = analyze(100, 1_000, &[wrapper], GAME, SEED).unwrap();
+        assert_eq!(wire.sales.len(), 2);
+        assert_eq!(
+            wire.leaderboard.iter().map(|fact| fact.amount).sum::<u64>(),
+            2_000
+        );
     }
 
     #[test]
     fn purchased_stack_merged_away_still_writes_seller_history() {
         let item_type = ty(GAME, "item", "Item");
         let kiosk_type = ty(SUI_FRAMEWORK, "kiosk", "Kiosk");
+        let marker_type = personal_marker_type();
+        let marker_bytes = personal_marker_bytes(9);
+        let marker = ObjView {
+            id: Id([61; 32]),
+            version: 1,
+            owner: OwnerKind::Object(Id([2; 32])),
+            type_key: &marker_type,
+            bytes: &marker_bytes,
+        };
         let sold = item_bytes(5, "wooling_wool", 10);
-        let kiosk = kiosk_bytes(2, 9, 1_000);
+        let kiosk = kiosk_bytes(2, 88, 1_000);
         let inputs = [
+            marker,
             ObjView {
+                version: 1,
                 id: Id([5; 32]),
                 owner: OwnerKind::Object(Id([2; 32])),
                 type_key: &item_type,
                 bytes: &sold,
             },
             ObjView {
+                version: 1,
                 id: Id([2; 32]),
                 owner: OwnerKind::Shared,
                 type_key: &kiosk_type,
@@ -1898,6 +2067,7 @@ mod tests {
             },
         ];
         let outputs = [ObjView {
+            version: 1,
             id: Id([2; 32]),
             owner: OwnerKind::Shared,
             type_key: &kiosk_type,
@@ -1905,14 +2075,25 @@ mod tests {
         }];
         let purchase = purchased_bytes(2, 5, 1_000);
         let phantom = game_item_param();
-        let events = [EventView {
-            package: SUI_FRAMEWORK,
-            module: "kiosk",
-            name: "ItemPurchased",
-            type_params: &phantom,
-            bytes: &purchase,
-            index: 0,
-        }];
+        let proof_bytes = bcs::to_bytes(&(Id([2; 32]), Addr([9; 32]))).unwrap();
+        let events = [
+            EventView {
+                package: SUI_FRAMEWORK,
+                module: "kiosk",
+                name: "ItemPurchased",
+                type_params: &phantom,
+                bytes: &purchase,
+                index: 0,
+            },
+            EventView {
+                package: GAME,
+                module: "listing_rule",
+                name: "SellerProved",
+                type_params: &[],
+                bytes: &proof_bytes,
+                index: 1,
+            },
+        ];
         let pay_call = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
         let tx = TxView {
             tx_index: 1,
@@ -1952,14 +2133,26 @@ mod tests {
             value: 500_u64,
         })
         .unwrap();
+        let marker_type = personal_marker_type();
+        let marker_bytes = personal_marker_bytes(9);
+        let marker = ObjView {
+            id: Id([61; 32]),
+            version: 1,
+            owner: OwnerKind::Object(Id([2; 32])),
+            type_key: &marker_type,
+            bytes: &marker_bytes,
+        };
         let inputs = [
+            marker,
             ObjView {
+                version: 1,
                 id: Id([2; 32]),
                 owner: OwnerKind::Shared,
                 type_key: &kiosk_type,
                 bytes: &before,
             },
             ObjView {
+                version: 1,
                 id: Id([70; 32]),
                 owner: OwnerKind::Object(Id([2; 32])),
                 type_key: &listing_type,
@@ -1968,12 +2161,14 @@ mod tests {
         ];
         let outputs = [
             ObjView {
+                version: 1,
                 id: Id([2; 32]),
                 owner: OwnerKind::Shared,
                 type_key: &kiosk_type,
                 bytes: &after,
             },
             ObjView {
+                version: 1,
                 id: Id([5; 32]),
                 owner: OwnerKind::Object(Id([50; 32])),
                 type_key: &item_type,
@@ -1999,7 +2194,7 @@ mod tests {
     #[test]
     fn foreign_collection_purchase_is_ignored() {
         let purchase = purchased_bytes(2, 5, 1_000);
-        let phantom = game_item_param();
+        let phantom = vec!["0xforeign::item::Item".to_string()];
         let events = [EventView {
             package: SUI_FRAMEWORK,
             module: "kiosk",
@@ -2029,6 +2224,7 @@ mod tests {
         let item_type = ty(GAME, "item", "Item");
         let sold = item_bytes(5, "wooling_wool", 1);
         let outputs = [ObjView {
+            version: 1,
             id: Id([5; 32]),
             owner: OwnerKind::Object(Id([50; 32])),
             type_key: &item_type,
@@ -2139,12 +2335,15 @@ mod tests {
             },
             sui_a: crate::decode::Balance { value: 0 },
             sui_b: crate::decode::Balance { value: 0 },
+            kares_a: crate::decode::Balance { value: 0 },
+            kares_b: crate::decode::Balance { value: 0 },
             caps_a: vec![],
             caps_b: vec![],
         })
         .unwrap();
         let trade_type = ty(GAME, "trade", "Trade");
         let outputs = [ObjView {
+            version: 1,
             id: Id([1; 32]),
             owner: OwnerKind::Shared,
             type_key: &trade_type,
@@ -2185,6 +2384,7 @@ mod tests {
         })
         .unwrap();
         let friend = ObjView {
+            version: 1,
             id: Id([2; 32]),
             owner: OwnerKind::Address(Addr([7; 32])),
             type_key: &friend_type,
@@ -2198,6 +2398,7 @@ mod tests {
         })
         .unwrap();
         let party = ObjView {
+            version: 1,
             id: Id([3; 32]),
             owner: OwnerKind::Shared,
             type_key: &party_type,
@@ -2404,3 +2605,7 @@ mod tests {
         assert!(wire.publications.is_empty());
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/leaderboards/market.rs"]
+mod leaderboard_tests;

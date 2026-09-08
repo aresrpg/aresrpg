@@ -1,0 +1,31 @@
+{
+  "network": "mainnet",
+  "endpoint": "https://graphql.mainnet.sui.io/graphql",
+  "checkpoint": {
+    "sequenceNumber": 320087217,
+    "timestamp": "2026-09-08T05:43:56.182Z"
+  },
+  "object": {
+    "address": "0x168552a2e0165bc8c248e124dfb67a257036317ce9ea7dc3331f41421f0ece8b",
+    "version": 70797246,
+    "owner": {
+      "__typename": "ObjectOwner",
+      "address": {
+        "address": "0x41c0fc1e9ab7619e0dc2d384c740c6c259f62ed2fc2153394f184c05547bd4ed"
+      }
+    },
+    "asMoveObject": {
+      "contents": {
+        "type": {
+          "repr": "0x193a33b36a30444128353f8cefe2fab8fefac3f918f4c267c763f6adb44ead35::avatar::AvatarItem"
+        },
+        "json": {
+          "id": "0x168552a2e0165bc8c248e124dfb67a257036317ce9ea7dc3331f41421f0ece8b",
+          "nft_id": "0x66497f83228be9e78327f3efb7c8f61daec740d6b667350b2b2526a330205ac3",
+          "owner": "0x08dbf7c099e5789eee8c2d6c5d40a900b8d025ca1c04fd345a40c3e5d88043fa",
+          "start_time": "1708597417902"
+        }
+      }
+    }
+  }
+}

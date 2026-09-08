@@ -6,7 +6,7 @@ import type { CharacterRow, DungeonLobbyRow, ItemRow } from '@aresrpg/protocol'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { encumbered_asset_ids } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_sources } from '../inventory_stacks.ts'
 import { toast } from '../toast.ts'
 
 import { character_custody, selected_character } from './session.ts'
@@ -164,13 +164,23 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     run(
       character.id,
       'enter',
-      wallet.dungeon.enter({
-        character_id: character.id,
-        custody: character_custody(character),
-        world: portal.world,
-        dungeon: portal.dungeon,
-        key_id: key.id,
-      }),
+      wallet.dungeon
+        .enter({
+          character_id: character.id,
+          custody: character_custody(character),
+          world: portal.world,
+          dungeon: portal.dungeon,
+          key_id: key.id,
+          merge_sources: stack_merge_sources(
+            state.session.inventory,
+            encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows),
+            key
+          ),
+        })
+        .then((receipt) => {
+          dispatch({ type: 'inventory/amounts_changed', changes: receipt.inventory_changes })
+          return receipt
+        }),
       undefined,
       () => dispatch({ type: 'dungeon/optimistic_run', character_id: character.id, run: null })
     )

@@ -28,6 +28,7 @@ use crate::graph::{self, CheckpointView};
 use crate::ownership::{self, ObjView, OwnerKind, TypeKey};
 use crate::publish::{self, EventView, TxView};
 use crate::store::FalkorStore;
+use crate::{leaderboard_store, leaderboards};
 
 /// Key holding the latest ingested checkpoint (plain JSON string — no RedisJSON
 /// in the FalkorDB image).
@@ -42,6 +43,12 @@ const SALES_TTL_SECS: i64 = 90 * 24 * 60 * 60;
 pub enum Write {
     /// A Cypher statement against the one graph (`GRAPH.QUERY aresrpg`).
     Graph(String),
+    Leaderboard {
+        checkpoint: u64,
+        epoch: u64,
+        ts_ms: u64,
+        facts: Vec<leaderboards::Contribution>,
+    },
     /// A sales-history row (executor applies the cap + idle TTL with it).
     Sale {
         key: String,
@@ -125,6 +132,7 @@ pub fn canonical(id: &str) -> Result<String> {
 /// An owned object view — the borrow-free stage every `ObjView` points into.
 struct OwnedObj {
     id: Id,
+    version: u64,
     owner: OwnerKind,
     type_key: TypeKey,
     bytes: Vec<u8>,
@@ -142,6 +150,7 @@ struct OwnedEvent {
 
 /// One transaction, lifted whole.
 struct OwnedTx {
+    lamport_version: u64,
     sender: Addr,
     digest: String,
     successful: bool,
@@ -180,6 +189,7 @@ fn owned(obj: &Object) -> Option<OwnedObj> {
     };
     Some(OwnedObj {
         id: Id(addr32(obj.id().as_ref())),
+        version: obj.version().value(),
         owner,
         type_key: TypeKey {
             package: tag.address.to_canonical_string(true),
@@ -198,6 +208,7 @@ fn owned(obj: &Object) -> Option<OwnedObj> {
 fn clone_obj(o: &OwnedObj) -> OwnedObj {
     OwnedObj {
         id: o.id,
+        version: o.version,
         owner: o.owner,
         type_key: o.type_key.clone(),
         bytes: o.bytes.clone(),
@@ -250,19 +261,17 @@ pub(crate) fn is_deployment_only_target(target: &str) -> bool {
         target,
         "version::admin_update"
             | "version::admin_freeze"
-            | "admin::create_item_display"
-            | "admin::create_character_display"
             | "protected_policy::mint_and_share"
             | "listing_rule::add"
             | "lot_rule::add"
             | "naked_rule::add"
             | "world::create"
-            | "distribution::new_airdrop"
             | "distribution::new_giftcard"
             | "loot_box::add_loot_reward"
             | "loot_box::clear_loot_table"
             | "mastery::new_offer"
             | "mastery::set_offer"
+            | "mastery::set_enabled"
     )
 }
 
@@ -369,6 +378,7 @@ fn lift(checkpoint: &Checkpoint) -> Vec<OwnedTx> {
                 })
                 .collect();
             OwnedTx {
+                lamport_version: tx.effects.lamport_version().value(),
                 sender: Addr(addr32(tx.transaction.as_v1().sender.as_ref())),
                 digest: tx.transaction.digest().to_string(),
                 successful: matches!(tx.effects.status(), ExecutionStatus::Success),
@@ -387,6 +397,7 @@ fn views<'a>(objs: &'a [OwnedObj]) -> Vec<ObjView<'a>> {
     objs.iter()
         .map(|o| ObjView {
             id: o.id,
+            version: o.version,
             owner: o.owner,
             type_key: &o.type_key,
             bytes: &o.bytes,
@@ -409,15 +420,6 @@ impl Processor for AresHandler {
         let game = self.package_original.as_str();
 
         let txs = lift(checkpoint);
-
-        // custody: one checkpoint-wide view, inputs FIRST, outputs LAST
-        // (newest wins in the resolver's by-id map)
-        let custody_views: Vec<ObjView<'_>> = txs
-            .iter()
-            .flat_map(|tx| views(&tx.inputs))
-            .chain(txs.iter().flat_map(|tx| views(&tx.outputs)))
-            .collect();
-        let custody = ownership::resolve(&custody_views, game)?;
 
         // the wire: per-tx event views borrowing the owned stage
         let event_views: Vec<Vec<EventView<'_>>> = txs
@@ -461,23 +463,55 @@ impl Processor for AresHandler {
             game,
             self.seed_original.as_str(),
         )?;
-        publish::route_character_custody(&mut wire, ckpt, ts_ms, &custody);
-
-        // the graph: flat outputs + deletes, tx order
-        let flat_outputs: Vec<ObjView<'_>> = output_views.iter().flatten().cloned().collect();
-        let flat_deleted: Vec<ObjView<'_>> = deleted_views.iter().flatten().cloned().collect();
-        let cypher = graph::project(
+        // A transaction's outputs are its final state, while inputs only resolve unchanged
+        // parents. Retired wrappers must never reassert pre-transaction custody.
+        let mut cypher = vec![];
+        for (i, tx) in tx_views.iter().enumerate() {
+            let final_views: Vec<_> = tx
+                .inputs
+                .iter()
+                .chain(tx.outputs)
+                .filter(|object| {
+                    !deleted_views[i].iter().any(|gone| gone.id == object.id)
+                        || tx.outputs.iter().any(|output| output.id == object.id)
+                })
+                .cloned()
+                .collect();
+            crate::character_deletions::route(&mut wire, ckpt, ts_ms, tx, &deleted_views[i], game);
+            let custody = ownership::resolve(&final_views, game)?;
+            publish::route_character_custody(&mut wire, ckpt, ts_ms, &custody);
+            cypher.extend(graph::project(
+                &CheckpointView {
+                    lamport_version: txs[i].lamport_version,
+                    ckpt,
+                    ts_ms,
+                    outputs: tx.outputs,
+                    deleted: &deleted_views[i],
+                    custody: &custody,
+                    market: &[],
+                    fight_lifecycle: &[],
+                },
+                game,
+            )?);
+        }
+        cypher.extend(graph::project(
             &CheckpointView {
+                lamport_version: 0,
                 ckpt,
                 ts_ms,
-                outputs: &flat_outputs,
-                deleted: &flat_deleted,
-                custody: &custody,
+                outputs: &[],
+                deleted: &[],
+                custody: &[],
                 market: &wire.market,
                 fight_lifecycle: &wire.fight_lifecycle,
             },
             game,
-        )?;
+        )?);
+
+        let mut leaderboard_facts = wire.leaderboard;
+        for tx in &tx_views {
+            leaderboard_facts.extend(leaderboards::extract(tx, game)?);
+        }
 
         // assemble — execution order: graph → sales → publish → heartbeat
         let mut writes: Vec<Write> = cypher.into_iter().map(Write::Graph).collect();
@@ -516,6 +550,12 @@ impl Processor for AresHandler {
                 .into_iter()
                 .map(Write::Character),
         );
+        writes.push(Write::Leaderboard {
+            checkpoint: ckpt,
+            epoch: summary.epoch,
+            ts_ms,
+            facts: leaderboard_facts,
+        });
         for publication in wire.publications {
             writes.push(Write::Publish {
                 channel: publication.channel,
@@ -557,6 +597,21 @@ impl Handler for AresHandler {
         for checkpoint in batch {
             for write in &checkpoint.writes {
                 match write {
+                    Write::Leaderboard {
+                        checkpoint,
+                        epoch,
+                        ts_ms,
+                        facts,
+                    } => {
+                        leaderboard_store::commit(
+                            conn.connection(),
+                            *checkpoint,
+                            *epoch,
+                            *ts_ms,
+                            facts,
+                        )
+                        .await?;
+                    }
                     Write::Graph(cypher) => {
                         let _: redis::Value = redis::cmd("GRAPH.QUERY")
                             .arg("aresrpg")
@@ -739,31 +794,28 @@ mod tests {
         let game = canonical("0xaa").unwrap();
         let old_upgrade = canonical("0xbb").unwrap();
         let packages = std::collections::HashSet::from([game.clone(), old_upgrade.clone()]);
-        let game_call = vec![format!("{game}::api::claim_airdrop")];
+        let game_call = vec![format!("{game}::api::redeem_giftcard")];
         let multi_call = vec![
             format!("{game}::kiosk::borrow"),
-            format!("{game}::api::claim_airdrop"),
+            format!("{game}::api::redeem_giftcard"),
         ];
         let old_call = vec![format!("{old_upgrade}::world::join")];
         let foreign_call = vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())];
         let deployment_calls = vec![
             format!("{game}::version::admin_update"),
             format!("{game}::version::admin_freeze"),
-            format!("{game}::admin::create_item_display"),
-            format!("{game}::admin::create_character_display"),
             format!("{game}::protected_policy::mint_and_share"),
             format!("{game}::listing_rule::add"),
             format!("{game}::lot_rule::add"),
             format!("{game}::naked_rule::add"),
             format!("{game}::world::create"),
-            format!("{game}::distribution::new_airdrop"),
             format!("{game}::distribution::new_giftcard"),
             format!("{game}::loot_box::add_loot_reward"),
             format!("{game}::loot_box::clear_loot_table"),
         ];
         let mixed_calls = vec![
             format!("{game}::version::admin_update"),
-            format!("{game}::api::claim_airdrop"),
+            format!("{game}::api::redeem_giftcard"),
         ];
         assert!(is_game_activity(true, &game_call, &packages));
         assert!(is_game_activity(true, &multi_call, &packages));
@@ -800,6 +852,7 @@ mod tests {
         let game = canonical("0xaa").unwrap();
         let packages = std::collections::HashSet::from([game.clone()]);
         let tx = |successful: bool, move_calls: Vec<String>| OwnedTx {
+            lamport_version: 1,
             sender: Addr([0; 32]),
             digest: String::new(),
             successful,
@@ -815,10 +868,10 @@ mod tests {
                 true,
                 vec![
                     format!("{game}::kiosk::borrow"),
-                    format!("{game}::api::claim_airdrop"),
+                    format!("{game}::api::redeem_giftcard"),
                 ],
             ),
-            tx(false, vec![format!("{game}::api::claim_airdrop")]),
+            tx(false, vec![format!("{game}::api::redeem_giftcard")]),
             tx(
                 true,
                 vec![format!("{}::kiosk::purchase", canonical("0x2").unwrap())],
@@ -840,6 +893,7 @@ mod tests {
     fn character_totals_count_birth_and_deletion_but_not_custody_moves() {
         let game = canonical("0xaa").unwrap();
         let character = |byte: u8| OwnedObj {
+            version: 1,
             id: Id([byte; 32]),
             owner: OwnerKind::Shared,
             type_key: TypeKey {
@@ -851,6 +905,7 @@ mod tests {
             bytes: vec![],
         };
         let tx = |inputs: Vec<OwnedObj>, outputs: Vec<OwnedObj>, deleted: Vec<OwnedObj>| OwnedTx {
+            lamport_version: 1,
             sender: Addr([0; 32]),
             digest: String::new(),
             successful: true,

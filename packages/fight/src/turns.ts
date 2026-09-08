@@ -2,15 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable no-param-reassign -- The Move twin updates only its reducer-owned structuredClone draft; caller snapshots stay immutable. */
 
-import {
-  GRID_CELLS,
-  approach_field,
-  bfs_cast_cell,
-  in_zone,
-  line_of_sight,
-  manhattan,
-  same_line,
-} from './combat_grid.ts'
+import { GRID_CELLS, approach_field, bfs_cast_cell, cell_can_cast, in_zone, manhattan } from './combat_grid.ts'
 import { KINDS, STATS, base_ap_of, base_mp_of, is_mob, max_hp_of, mob_snapshot, set_pools } from './fighters.ts'
 import { casts_this_turn, placement_rows_castable, resolve_rows, resolve_spell, sight_blockers } from './effects.ts'
 import { walk_down, walk_toward, wall_mask } from './movement.ts'
@@ -114,12 +106,8 @@ const placement_level_castable = (runtime: FightRuntime, level: SpellLevel, anch
   placement_rows_castable(runtime, level.effects, anchor) &&
   (level.crit_effects.length === 0 || placement_rows_castable(runtime, level.crit_effects, anchor))
 
-const mob_castable = (runtime: FightRuntime, mob: bigint, level: SpellLevel, from: bigint, anchor: bigint): boolean => {
-  const distance = manhattan(from, anchor)
-  if (distance < level.range_min || distance > level.range_max) return false
-  if (level.line_launch && !same_line(from, anchor)) return false
-  return !level.line_of_sight || line_of_sight(from, anchor, sight_blockers(runtime, mob, anchor))
-}
+const mob_castable = (level: SpellLevel, from: bigint, anchor: bigint, blockers: readonly bigint[]): boolean =>
+  cell_can_cast(from, anchor, level.range_min, level.range_max, level.line_of_sight, level.line_launch, blockers)
 
 const cooldown_left = (runtime: FightRuntime, mob: bigint, spell: string): bigint =>
   runtime.contract.fighters[Number(mob)].cooldowns.find((row) => row.spell === spell)?.left ?? 0n
@@ -177,7 +165,7 @@ const can_cast_after_walk = (runtime: FightRuntime, mob: bigint, spell: KitSpell
   const fighter = runtime.contract.fighters[Number(mob)]
   return (
     placement_level_castable(runtime, spell.level, aim) &&
-    mob_castable(runtime, mob, spell.level, fighter.cell, aim) &&
+    mob_castable(spell.level, fighter.cell, aim, sight_blockers(runtime, mob, aim)) &&
     fighter.ap >= spell.level.ap_cost
   )
 }
@@ -189,8 +177,8 @@ const approach_and_cast = (
   anchor_seat: bigint,
   anchor: bigint
 ): MobStep => {
-  const fighter = runtime.contract.fighters[Number(mob)]
   if (!can_approach_for_spell(runtime, mob, spell, anchor)) return 'none'
+  const fighter = runtime.contract.fighters[Number(mob)]
   const cast_cell = bfs_cast_cell({
     start: fighter.cell,
     target: anchor,
@@ -199,6 +187,7 @@ const approach_and_cast = (
     range_min: spell.level.range_min,
     range_max: spell.level.range_max,
     needs_los: spell.level.line_of_sight,
+    line_launch: spell.level.line_launch,
     obstacles: sight_blockers(runtime, mob, anchor),
   })
   if (cast_cell === null) return 'none'
@@ -222,7 +211,7 @@ const try_mob_spell = (runtime: FightRuntime, mob: bigint, enemy: bigint, spell:
     return 'none'
   const anchor = runtime.contract.fighters[Number(anchor_seat)].cell
   if (!placement_level_castable(runtime, spell.level, anchor)) return 'none'
-  if (mob_castable(runtime, mob, spell.level, fighter.cell, anchor)) {
+  if (mob_castable(spell.level, fighter.cell, anchor, sight_blockers(runtime, mob, anchor))) {
     cast_mob_spell(runtime, mob, spell, anchor)
     return 'cast'
   }
@@ -246,7 +235,13 @@ const search_start = (runtime: FightRuntime, mob: bigint): FightRuntime => {
 }
 
 export const mob_turn = (runtime: FightRuntime, mob: bigint): FightRuntime => {
-  while (mob_active(runtime, mob)) {
+  const { kit } = mob_snapshot(runtime.contract.fighters[Number(mob)] as MobFighter)
+  const rows_per_cast = Math.max(
+    1,
+    ...kit.map(({ level }) => Math.max(level.effects.length, level.crit_effects.length))
+  )
+  const cast_limit = CONTRACT_CONSTANTS.max_mob_row_casts_per_turn / BigInt(rows_per_cast)
+  while (mob_active(runtime, mob) && BigInt(runtime.contract.turn_casts.length) < cast_limit) {
     const enemy = nearest_enemy(runtime, mob)
     if (enemy === null) return search_start(runtime, mob)
     const step = mob_step(runtime, mob, enemy)

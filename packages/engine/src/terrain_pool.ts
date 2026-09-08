@@ -59,7 +59,7 @@ export const TERRAIN_POOL_LAYOUT = Object.freeze({ slot_quads: 1024, max_slots: 
 const SLOT_QUADS = TERRAIN_POOL_LAYOUT.slot_quads
 const MAX_SLOTS = TERRAIN_POOL_LAYOUT.max_slots
 const SLOT_SHIFT = Math.log2(SLOT_QUADS)
-const INDIRECT_WORDS = 4
+const INDIRECT_WORDS = 5
 const MATERIAL_TEXTURE_BLOCK_SPAN = 4
 
 export type TerrainPool = Readonly<{
@@ -67,7 +67,7 @@ export type TerrainPool = Readonly<{
   upload: (chunk: RenderedChunk, data: GreedyMeshData) => 'uploaded' | 'full' | 'too_large'
   remove: (key: string) => boolean
   set_quality: (quality: EngineQuality) => void
-  set_flatten_active: (active: boolean) => void
+  sync_flatten: () => void
   /** swap the see-through variant in while a fight board is mounted */
   set_occlusion_active: (active: boolean) => void
   set_view: (camera: Camera, shadow_camera: Camera | null) => void
@@ -77,8 +77,9 @@ export type TerrainPool = Readonly<{
 
 const create_geometry = (capacity: number): InstancedBufferGeometry => {
   const geometry = new InstancedBufferGeometry()
-  geometry.setAttribute('corner', new BufferAttribute(new Float32Array([0, 1, 2, 2, 1, 3]), 1))
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(18), 3))
+  geometry.setAttribute('corner', new BufferAttribute(new Float32Array([0, 1, 2, 3]), 1))
+  geometry.setIndex([0, 1, 2, 2, 1, 3])
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(12), 3))
   geometry.instanceCount = capacity
   return geometry
 }
@@ -189,7 +190,7 @@ const build_material = (
   const texture_color = texture_sample.rgb
   const micro_roughness = texture_sample.a.sub(0.5)
   const environment_light =
-    quality === 'low' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
+    terrain_kind === 'flat' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
   // The legacy NG-TINT macro field (moisture, climate, underlayer patches, and macro gradient)
   // layers OVER the grain — world-space continuous, so the greedy quads dissolve.
   const tint = macro_tint_nodes({
@@ -307,9 +308,10 @@ export const create_terrain_pool = ({
       occlusion
     )
   const create_quality_resources = (tier: EngineQuality, retained_texture?: DataArrayTexture) => {
-    const { texture_size } = get_quality_profile(tier).terrain
+    const { kind, texture_size } = get_quality_profile(tier).terrain
     const material_texture = retained_texture ?? create_material_texture(compiled_materials, texture_size)
     return Object.freeze({
+      kind,
       texture_size,
       material_texture,
       material: build(tier, material_texture, false),
@@ -329,26 +331,21 @@ export const create_terrain_pool = ({
     resources.occlusion_material.dispose()
     if (dispose_texture) resources.material_texture.dispose()
   }
-  let flatten_active = false
   let occlusion_active = false
-  // flat mode wins: it already erases every occluder, so it keeps its own variant
-  const pick_material = () =>
-    flatten_active
-      ? quality_resources.flatten_material
-      : occlusion_active
-        ? quality_resources.occlusion_material
-        : quality_resources.material
-  let current_quality = quality
+  const pick_material = () => {
+    if (flatten.amount.value > 0) return quality_resources.flatten_material
+    return occlusion_active ? quality_resources.occlusion_material : quality_resources.material
+  }
   let quality_resources = create_quality_resources(quality)
   const mesh = new Mesh(geometry, quality_resources.material)
   mesh.frustumCulled = false
   mesh.matrixAutoUpdate = false
   mesh.castShadow = false
-  mesh.receiveShadow = quality !== 'low'
+  mesh.receiveShadow = quality_resources.kind !== 'flat'
   const shadow_mesh = new Mesh(shadow_geometry, quality_resources.material)
   shadow_mesh.frustumCulled = false
   shadow_mesh.matrixAutoUpdate = false
-  shadow_mesh.castShadow = quality !== 'low'
+  shadow_mesh.castShadow = quality_resources.kind !== 'flat'
   shadow_mesh.receiveShadow = false
   shadow_mesh.layers.set(1)
   scene.add(mesh, shadow_mesh)
@@ -358,7 +355,8 @@ export const create_terrain_pool = ({
     indirect_array[offset] = 6
     indirect_array[offset + 1] = 0
     indirect_array[offset + 2] = 0
-    indirect_array[offset + 3] = slot * SLOT_QUADS
+    indirect_array[offset + 3] = 0 // baseVertex
+    indirect_array[offset + 4] = slot * SLOT_QUADS
   }
 
   const view_projection = new Matrix4()
@@ -389,10 +387,14 @@ export const create_terrain_pool = ({
   const rebuild_draws = (): void => {
     visible_scratch.length = 0
     shadow_scratch.length = 0
+    // Cull the same projected bounds the shader draws, including during the transition.
+    const height_scale = 1 - flatten.amount.value
     chunk_slots.forEach(({ origin, slots }) => {
-      if (!view_active || flatten_active || chunk_in_frustum(origin, CHUNK_EDGE, view_frustum.planes))
+      // The ground-only far surface owns the complete flat view.
+      if (height_scale === 0) return
+      if (!view_active || chunk_in_frustum(origin, CHUNK_EDGE, view_frustum.planes, height_scale))
         visible_scratch.push(...slots)
-      if (shadow_view_active && (flatten_active || chunk_in_frustum(origin, CHUNK_EDGE, shadow_frustum.planes)))
+      if (shadow_view_active && chunk_in_frustum(origin, CHUNK_EDGE, shadow_frustum.planes, height_scale))
         shadow_scratch.push(...slots)
     })
     visible_draw_slots = write_draws(geometry, visible_scratch, visible_draw_slots)
@@ -458,32 +460,32 @@ export const create_terrain_pool = ({
     },
     remove,
     set_quality: (next: EngineQuality) => {
-      if (next === current_quality) return
+      const { kind, texture_size: next_texture_size } = get_quality_profile(next).terrain
       const previous_resources = quality_resources
-      const { texture_size: next_texture_size } = get_quality_profile(next).terrain
+      // Tier changes do not replace identical terrain materials.
+      if (kind === previous_resources.kind && next_texture_size === previous_resources.texture_size) return
       const reuse_texture = next_texture_size === previous_resources.texture_size
       quality_resources = create_quality_resources(
         next,
         reuse_texture ? previous_resources.material_texture : undefined
       )
-      current_quality = next
       mesh.material = pick_material()
       shadow_mesh.material = pick_material()
-      shadow_mesh.castShadow = next !== 'low'
-      mesh.receiveShadow = next !== 'low'
+      shadow_mesh.castShadow = kind !== 'flat'
+      mesh.receiveShadow = kind !== 'flat'
       rebuild_draws()
       dispose_quality_resources(previous_resources, !reuse_texture)
     },
-    /// The transparent side-fade variant rides ONLY while the flat projection is live.
-    set_flatten_active: (active: boolean) => {
-      if (active === flatten_active) return
-      flatten_active = active
-      mesh.material = pick_material()
-      shadow_mesh.material = pick_material()
+    /// Only the transition needs the side-fade shader. The uniform owns projection state.
+    sync_flatten: () => {
+      const material = pick_material()
+      if (mesh.material === material) return
+      mesh.material = material
+      shadow_mesh.material = material
       rebuild_draws()
     },
     /// The see-through variant rides ONLY while a fight board is mounted (flat mode already
-    /// flattens every occluder away, so it keeps its own variant).
+    /// flattens every occluder away, so the peephole is unnecessary).
     set_occlusion_active: (active: boolean) => {
       if (active === occlusion_active) return
       occlusion_active = active

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// scripts/eslint-rules/one_pipeline.mjs — THE ONE-REDUCER TRIPWIRE (CLAUDE.md CLIENT-INDEPENDENCE/ONE-PIPELINE).
+// scripts/eslint-rules/one_pipeline.mjs — THE ONE-REDUCER TRIPWIRE (AGENTS.md L-P4).
 //
 // The class it catches: an async callback (timer / promise chain / event listener / await continuation) writing a
 // zustand store directly — `set(...)` / `X.setState(...)` off a stale closure. That exact shape shipped the
@@ -174,7 +174,7 @@ const no_async_store_write = {
       asyncWrite:
         '`{{writer}}` fires inside {{context}} — the v1.12.28 crash class (a stale-closure store write). ' +
         'Async results enter through the reducer door: dispatch `input(msg, now)` (or the store action that wraps it) ' +
-        'and let the ONE reducer fold it — never `set()` from a callback. See CLAUDE.md ONE-PIPELINE.',
+        'and let the ONE reducer fold it — never `set()` from a callback. See AGENTS.md L-P4.',
     },
   },
   create(context) {
@@ -204,7 +204,7 @@ const no_settimeout_in_stores = {
       timerInStore:
         'a `{{name}}` inside a store module is a second clock racing the reducer. Time enters as an INPUT: an ' +
         "app-edge ticker dispatches `input({ type: 'tick' }, now)` and the reducer folds deadlines/failsafes from " +
-        'live state — see CLAUDE.md ONE-PIPELINE and fight/store.js `tick`.',
+        'live state — see AGENTS.md L-P4 and fight/store.js `tick`.',
     },
   },
   create(context) {

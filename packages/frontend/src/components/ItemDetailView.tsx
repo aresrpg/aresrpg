@@ -5,6 +5,7 @@ import { element_names, item_categories, rune_effect, stat_names } from '@aresrp
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import { item_detail_icon } from '../content/item_detail_assets.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { element_colors, item_category_colors, stat_colors, stat_identities } from '../visual_identity.ts'
 
 export type ItemDetailPath = readonly (string | number)[]
@@ -350,6 +351,7 @@ export const ItemDetailView = ({
   stat_budget,
   stats,
 }: ItemDetailProps) => {
+  const category_name = useItemCategoryName()
   const icon = item_detail_icon(item_type)
   const stat_rows = stats ? item_stat_rows(stats, Boolean(edit)) : []
   const defined_stats = stat_rows.filter(stat_is_defined)
@@ -424,7 +426,7 @@ export const ItemDetailView = ({
                 className="block text-[10px] tracking-[0.15em] uppercase"
                 style={{ color: item_category_colors[category] ?? '#6b7280' }}
               >
-                {titleize(category)}
+                {category_name(category)}
               </span>
             }
             edit={edit}
@@ -438,7 +440,7 @@ export const ItemDetailView = ({
               >
                 {item_categories.map((item_category) => (
                   <option key={item_category} value={item_category}>
-                    {titleize(item_category)}
+                    {category_name(item_category)}
                   </option>
                 ))}
               </select>

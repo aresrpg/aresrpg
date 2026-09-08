@@ -7,6 +7,8 @@
   "exports": {
     ".": "./src/client.ts",
     "./auth": "./src/auth.ts",
+    "./kares": "./src/kares.ts",
+    "./kares-economics": "./src/kares_economics.ts",
     "./operator-auth": "./src/operator_auth.ts",
     "./doors": "./src/doors.gen.ts",
     "./seed": "./src/seed.ts",

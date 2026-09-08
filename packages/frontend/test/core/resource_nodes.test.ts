@@ -91,6 +91,7 @@ describe('gather affordance', () => {
 
   test('projects the centered gathering bar from the current root deadline', () => {
     const gathering = {
+      attempt_id: 'first',
       character_id: '0xc',
       item_type: 'ivory_shrooms',
       protector: 'protector_ivory_gaia',

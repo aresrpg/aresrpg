@@ -672,16 +672,6 @@ export const move_fighter = (
   })
 
 /**
- * `api::seal_fight_loot` — TERMINAL (&Random): last command of its transaction.
- * @arg fight_object — &mut Fight
- */
-export const seal_fight_loot = (tx: Transaction, ctx: DoorCtx, args: { fight_object: Resolvable }) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::seal_fight_loot`,
-    arguments: [ctx.obj(tx, args.fight_object, true), tx.object.random(), ctx.pin(tx, 'version', false)],
-  })
-
-/**
  * `api::end_fight_turn` — TERMINAL (&Random): last command of its transaction.
  * @arg fight_object — &mut Fight
  */
@@ -863,6 +853,42 @@ export const redeem_mastery_offer = (
     target: `${ctx.pins.package}::api::redeem_mastery_offer`,
     arguments: [
       ctx.obj(tx, args.mastery_object, true),
+      ctx.obj(tx, args.offer, false),
+      ctx.obj(tx, args.template, false),
+      ctx.pure.option(tx, 'id', args.existing ?? null),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.cap, false),
+      ctx.pin(tx, 'item_policy', false),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
+ * `api::redeem_mastery_offer_kares`
+ * @arg payment — Coin<KARES>
+ * @arg offer — &MasteryOffer
+ * @arg template — &ItemTemplate
+ * @arg existing — Option<ID>
+ * @arg kiosk — &mut Kiosk
+ * @arg cap — &KioskOwnerCap
+ */
+export const redeem_mastery_offer_kares = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    payment: Resolvable
+    offer: Resolvable
+    template: Resolvable
+    existing: string | null | undefined
+    kiosk: Resolvable
+    cap: Resolvable
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::redeem_mastery_offer_kares`,
+    arguments: [
+      ctx.pin(tx, 'kares_currency', true),
+      ctx.obj(tx, args.payment, true),
       ctx.obj(tx, args.offer, false),
       ctx.obj(tx, args.template, false),
       ctx.pure.option(tx, 'id', args.existing ?? null),
@@ -1543,27 +1569,6 @@ export const burn_item = (
   })
 
 /**
- * `api::claim_airdrop`
- * @arg drop — &mut Airdrop
- * @arg template — &ItemTemplate
- * @arg recipient — address
- */
-export const claim_airdrop = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: { drop: Resolvable; template: Resolvable; recipient: string }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::claim_airdrop`,
-    arguments: [
-      ctx.obj(tx, args.drop, true),
-      ctx.obj(tx, args.template, false),
-      ctx.pure.address(tx, args.recipient),
-      ctx.pin(tx, 'version', false),
-    ],
-  })
-
-/**
  * `api::redeem_giftcard`
  * @arg card — Giftcard
  * @arg template — &ItemTemplate
@@ -2066,39 +2071,6 @@ export const settle_kolizeum = (
   })
 
 /**
- * `api::settle_last_kolizeum`
- * @arg lobby — Kolizeum
- * @arg fight_object — Fight
- * @arg fighter_idx — u64
- * @arg kiosk — &mut Kiosk
- * @arg personal — &PersonalKioskCap
- */
-export const settle_last_kolizeum = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: {
-    lobby: Resolvable
-    fight_object: Resolvable
-    fighter_idx: bigint | number | string
-    kiosk: Resolvable
-    personal: Resolvable
-  }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::settle_last_kolizeum`,
-    arguments: [
-      ctx.obj(tx, args.lobby, true),
-      ctx.obj(tx, args.fight_object, true),
-      ctx.pure.u64(tx, args.fighter_idx),
-      ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.personal, false),
-      ctx.pin(tx, 'character_policy', false),
-      ctx.pin(tx, 'version', false),
-      tx.object.clock(),
-    ],
-  })
-
-/**
  * `api::exit_kolizeum`
  * @arg lobby — &mut Kolizeum
  * @arg fight_object — &mut Fight
@@ -2119,39 +2091,6 @@ export const exit_kolizeum = (
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::api::exit_kolizeum`,
-    arguments: [
-      ctx.obj(tx, args.lobby, true),
-      ctx.obj(tx, args.fight_object, true),
-      ctx.pure.u64(tx, args.fighter_idx),
-      ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
-      ctx.pin(tx, 'character_policy', false),
-      ctx.pin(tx, 'version', false),
-      tx.object.clock(),
-    ],
-  })
-
-/**
- * `api::exit_last_kolizeum`
- * @arg lobby — Kolizeum
- * @arg fight_object — Fight
- * @arg fighter_idx — u64
- * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
- */
-export const exit_last_kolizeum = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: {
-    lobby: Resolvable
-    fight_object: Resolvable
-    fighter_idx: bigint | number | string
-    kiosk: Resolvable
-    cap: Resolvable
-  }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::exit_last_kolizeum`,
     arguments: [
       ctx.obj(tx, args.lobby, true),
       ctx.obj(tx, args.fight_object, true),
@@ -2302,6 +2241,28 @@ export const trade_recover_item = (tx: Transaction, ctx: DoorCtx, args: { trade_
   })
 
 /**
+ * `api::prepare_boss_rewards`
+ * @arg fight_object — &mut Fight
+ * @arg fighter_idx — u64
+ */
+export const prepare_boss_rewards = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { fight_object: Resolvable; fighter_idx: bigint | number | string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::prepare_boss_rewards`,
+    arguments: [
+      ctx.obj(tx, args.fight_object, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.pin(tx, 'kares_offering', false),
+      ctx.pin(tx, 'kares_combat_pot', true),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `trade::create`
  * @arg counterparty — address
  */
@@ -2393,6 +2354,27 @@ export const trade_put_sui = (
   })
 
 /**
+ * `trade::put_kares`
+ * @arg trade — &mut Trade
+ * @arg coin — Coin<KARES>
+ * @arg seen — u64
+ */
+export const trade_put_kares = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { trade: Resolvable; coin: Resolvable; seen: bigint | number | string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::put_kares`,
+    arguments: [
+      ctx.obj(tx, args.trade, true),
+      ctx.obj(tx, args.coin, true),
+      ctx.pure.u64(tx, args.seen),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
  * `trade::take_sui`
  * @arg trade — &mut Trade
  * @arg amount — u64
@@ -2405,6 +2387,27 @@ export const trade_take_sui = (
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::trade::take_sui`,
+    arguments: [
+      ctx.obj(tx, args.trade, true),
+      ctx.pure.u64(tx, args.amount),
+      ctx.pure.u64(tx, args.seen),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
+ * `trade::take_kares`
+ * @arg trade — &mut Trade
+ * @arg amount — u64
+ * @arg seen — u64
+ */
+export const trade_take_kares = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { trade: Resolvable; amount: bigint | number | string; seen: bigint | number | string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::take_kares`,
     arguments: [
       ctx.obj(tx, args.trade, true),
       ctx.pure.u64(tx, args.amount),
@@ -2439,12 +2442,32 @@ export const trade_claim_sui = (tx: Transaction, ctx: DoorCtx, args: { trade: Re
   })
 
 /**
+ * `trade::claim_kares`
+ * @arg trade — &mut Trade
+ */
+export const trade_claim_kares = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::claim_kares`,
+    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
+  })
+
+/**
  * `trade::recover_sui`
  * @arg trade — &mut Trade
  */
 export const trade_recover_sui = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable }) =>
   tx.moveCall({
     target: `${ctx.pins.package}::trade::recover_sui`,
+    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
+  })
+
+/**
+ * `trade::recover_kares`
+ * @arg trade — &mut Trade
+ */
+export const trade_recover_kares = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::recover_kares`,
     arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
   })
 
@@ -2497,7 +2520,6 @@ export const DOORS = {
   cast_spell: { params: ['fight_object', 'fighter_idx', 'spell', 'target_cell'], terminal: false },
   weapon_strike: { params: ['fight_object', 'fighter_idx', 'target_cell'], terminal: false },
   move_fighter: { params: ['fight_object', 'path'], terminal: false },
-  seal_fight_loot: { params: ['fight_object'], terminal: true },
   end_fight_turn: { params: ['fight_object'], terminal: true },
   crank_fight: { params: ['fight_object'], terminal: true },
   forfeit_fight: { params: ['fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
@@ -2515,6 +2537,7 @@ export const DOORS = {
     params: ['mastery_object', 'offer', 'template', 'existing', 'kiosk', 'cap'],
     terminal: false,
   },
+  redeem_mastery_offer_kares: { params: ['payment', 'offer', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
   settle_fight: {
     params: ['fight_object', 'fighter_indices', 'plan_lengths', 'plan', 'kiosk', 'personal'],
     terminal: true,
@@ -2582,7 +2605,6 @@ export const DOORS = {
   open_loot_box: { params: ['kiosk', 'personal', 'box_item_id', 'box_template'], terminal: true },
   claim_loot: { params: ['claim', 'rolled_template', 'existing', 'kiosk', 'personal'], terminal: true },
   burn_item: { params: ['kiosk', 'cap', 'item_id', 'amount'], terminal: false },
-  claim_airdrop: { params: ['drop', 'template', 'recipient'], terminal: false },
   redeem_giftcard: { params: ['card', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
   enter_dungeon: {
     params: ['world_object', 'kiosk', 'personal', 'character_id', 'world_content', 'dungeon_content', 'key_id'],
@@ -2642,9 +2664,7 @@ export const DOORS = {
   ready_and_start_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx'], terminal: true },
   start_kolizeum: { params: ['lobby', 'fight_object'], terminal: true },
   settle_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx', 'kiosk', 'personal'], terminal: false },
-  settle_last_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx', 'kiosk', 'personal'], terminal: false },
   exit_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
-  exit_last_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   forfeit_kolizeum: { params: ['fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   close_kolizeum: { params: ['lobby', 'fight_object'], terminal: false },
   create_friend_list: { params: ['first'], terminal: false },
@@ -2653,15 +2673,20 @@ export const DOORS = {
   trade_take_item: { params: ['trade_object', 'item', 'seen_offer_revision'], terminal: false },
   trade_claim_item: { params: ['trade_object', 'item', 'source'], terminal: false },
   trade_recover_item: { params: ['trade_object', 'item'], terminal: false },
+  prepare_boss_rewards: { params: ['fight_object', 'fighter_idx'], terminal: false },
   trade_create: { params: ['counterparty'], terminal: false },
   trade_join: { params: ['trade', 'seen'], terminal: false },
   trade_cancel_request: { params: ['trade', 'seen'], terminal: false },
   trade_decline_request: { params: ['trade', 'seen'], terminal: false },
   trade_cancel: { params: ['trade', 'seen'], terminal: false },
   trade_put_sui: { params: ['trade', 'coin', 'seen'], terminal: false },
+  trade_put_kares: { params: ['trade', 'coin', 'seen'], terminal: false },
   trade_take_sui: { params: ['trade', 'amount', 'seen'], terminal: false },
+  trade_take_kares: { params: ['trade', 'amount', 'seen'], terminal: false },
   trade_accept: { params: ['trade', 'seen'], terminal: false },
   trade_claim_sui: { params: ['trade'], terminal: false },
+  trade_claim_kares: { params: ['trade'], terminal: false },
   trade_recover_sui: { params: ['trade'], terminal: false },
+  trade_recover_kares: { params: ['trade'], terminal: false },
   trade_close: { params: ['trade'], terminal: false },
 }

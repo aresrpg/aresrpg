@@ -3,7 +3,7 @@
 // CHECK-CHANGES compares authored JSON with the last chain write and composes rebalance doors.
 // pins.json owns derived addresses, fingerprints, and immutable identity facts by Registry root.
 // New rows publish, changed rows rewrite, and omitted recipes retire. Other removals stay
-// visible because their chain objects persist. One-shot airdrops and giftcards cannot be rewritten.
+// visible because their chain objects persist. One-shot giftcards cannot be rewritten.
 
 import type { Transaction } from '@mysten/sui/transactions'
 
@@ -15,6 +15,7 @@ import {
   content_root_id_of,
   dungeon_data_value,
   game_type_of,
+  giftcards_for_network,
   item_cost,
   replace_item_facts,
   level_value,
@@ -31,7 +32,6 @@ import {
   type SeedSdk,
 } from './seed.ts'
 import {
-  airdrop_id,
   board_catalog_id,
   dungeon_content_id,
   giftcard_id,
@@ -71,7 +71,7 @@ export type SeedSyncRow = Readonly<{
   label: string
   hash: string
   kind: 'template' | 'board' | 'supply'
-  domain: 'item' | 'spell' | 'mob' | 'recipe' | 'dungeon' | 'world' | 'board' | 'mastery_offer' | 'airdrop' | 'giftcard'
+  domain: 'item' | 'spell' | 'mob' | 'recipe' | 'dungeon' | 'world' | 'board' | 'mastery_offer' | 'giftcard'
   item?: Readonly<{ category: string }>
   /** spell rows carry their immutable class so the ledger can refuse illegal rewrites */
   spell?: Readonly<{ classe: string; unlock_level: number }>
@@ -408,25 +408,12 @@ export const seed_sync_rows = (
             cap,
             root,
             offer: id,
-            cost: offer.cost,
+            expected_cost: offer.cost,
             enabled: offer.enabled ?? true,
           }),
       })
     }),
-    ...content.airdrop.drops.map((drop) =>
-      Object.freeze({
-        key: airdrop_id(content_root, game_type, drop.id),
-        label: `airdrop ${drop.id}`,
-        hash: fingerprint(drop),
-        kind: 'supply' as const,
-        domain: 'airdrop' as const,
-        chain_id: airdrop_id(content_root, game_type, drop.id),
-        addresses: Object.freeze([airdrop_id(content_root, game_type, drop.id)]),
-        hydrate: [],
-        cost: 1,
-      })
-    ),
-    ...content.airdrop.giftcards.map((card) =>
+    ...giftcards_for_network(sdk.network, content).map((card) =>
       Object.freeze({
         key: giftcard_id(content_root, game_type, card.id),
         label: `gift card ${card.id}`,

@@ -12,6 +12,7 @@ import { useNametags } from '../game/core/nametag_feed.ts'
 import { useAppStore } from '../store.ts'
 
 import { NametagCard, type NametagLine } from './NametagCard.tsx'
+import { SpeechBubble } from './SpeechBubble.tsx'
 
 /** An equipped title item is the ONLY subtitle source — no invented fallbacks (SSOT). */
 const title_line = (title: string | null): readonly NametagLine[] => {
@@ -22,6 +23,17 @@ const title_line = (title: string | null): readonly NametagLine[] => {
 export const PlayerNametag = () => {
   const { others, self } = useNametags()
   const players = useAppStore((state) => state.world.players)
+  const speech = useAppStore((state) => state.chat.speech)
+  const characters = useAppStore((state) => state.session.characters)
+  const owned_tags = Object.fromEntries(
+    characters.map(({ id, name, equipment }) => [
+      id,
+      {
+        name,
+        title: equipment.find(({ slot }) => slot === 'title')?.item_type ?? null,
+      },
+    ])
+  )
   const selected = useAppStore(
     (state) => state.session.characters.find(({ id }) => id === state.session.selected_character_id) ?? null
   )
@@ -29,16 +41,21 @@ export const PlayerNametag = () => {
   return (
     <>
       {Object.entries(others).map(([character_id, element]) => {
-        const row = players[character_id]
+        const row = owned_tags[character_id] ?? players[character_id]
         if (!row) return null
-        return createPortal(<NametagCard lines={title_line(row.title)} name={row.name} />, element, character_id)
+        return createPortal(
+          <NametagCard lines={title_line(row.title)} name={row.name}>
+            <SpeechBubble speech={speech[character_id]} />
+          </NametagCard>,
+          element,
+          character_id
+        )
       })}
       {self !== null && selected !== null
         ? createPortal(
-            <NametagCard
-              lines={title_line(selected.equipment.find(({ slot }) => slot === 'title')?.name ?? null)}
-              name={selected.name}
-            />,
+            <NametagCard lines={title_line(owned_tags[selected.id]!.title)} name={selected.name}>
+              <SpeechBubble speech={speech[selected.id]} />
+            </NametagCard>,
             self,
             'self'
           )

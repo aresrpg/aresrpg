@@ -44,7 +44,9 @@ import {
   rune_effect,
   rune_unit_weight,
   rune_weight_scale,
-  rune_max_apps,
+  rune_can_apply,
+  rune_max_weight,
+  format_rune_weight,
   stat_names,
   weapon_categories,
   xp_for_level,
@@ -384,12 +386,20 @@ describe('Move rune catalog mirror', () => {
     expect(rune_effect('rune_range_pa')).toBeNull()
   })
 
-  test('mirrors the Move per-item application caps exactly', () => {
-    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/rune_catalog.move'), 'utf8')
-    const body = /const MAX_APPS: vector<u64> = vector\[([^\]]+)\]/.exec(source)?.[1]
-    expect(body).toBeDefined()
-    const move_caps = body!.split(',').map((value) => Number(value.trim()))
-    expect(stat_names.map((stat) => rune_max_apps(stat))).toEqual(move_caps)
+  test('current-stat limits match Move and allow restoration without application counters', () => {
+    const source = readFileSync(resolve(import.meta.dir, '../../move-math/sources/forge.move'), 'utf8')
+    expect(Number(/const MAX_OVER_WEIGHT: u64 = (\d+)/.exec(source)?.[1])).toBe(rune_max_weight)
+    const ap = rune_effect('rune_action_ba')!
+    expect(rune_can_apply({ action: 1 }, { action: 1 }, ap)).toBeFalse()
+    expect(rune_can_apply({ action: 0 }, { action: 1 }, ap)).toBeTrue()
+    expect(rune_can_apply({}, {}, ap)).toBeTrue()
+    expect(rune_can_apply({ movement: 1 }, {}, ap)).toBeFalse()
+    const vitality = rune_effect('rune_vitality_ba')!
+    expect(rune_can_apply({ vitality: 401 }, { vitality: 100 }, vitality)).toBeTrue()
+    expect(rune_can_apply({ vitality: 402 }, { vitality: 100 }, vitality)).toBeFalse()
+    expect(format_rune_weight('1980')).toBe('99')
+    expect(format_rune_weight('7')).toBe('0.35')
+    expect(format_rune_weight('18446744073709551600')).toBe('922337203685477580')
   })
 })
 

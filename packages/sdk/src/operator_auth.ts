@@ -6,6 +6,7 @@
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress, normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 import { ZkSendClient } from '@mysten/zksend'
 
@@ -13,6 +14,17 @@ import { operator_wallet_context, type AuthSession } from './auth.ts'
 import { receipt_digest, type Receipt } from './cache.ts'
 import { SDK, sui_transport } from './client.ts'
 import { delegate } from './delegated_admin.ts'
+import {
+  create_kares_setup_transaction,
+  create_kares_settlement_transaction,
+  create_kares_start_transaction,
+  create_kares_community_claim_transaction,
+  create_kares_combat_seed_transaction,
+  create_kares_combat_authorization_transaction,
+  kares_pins,
+  type OfferingSetup,
+} from './kares_ptb.ts'
+import { read_kares_metadata, update_kares_metadata_into, type KaresMetadataUpdate } from './kares_metadata.ts'
 import {
   create_deployment_bootstrap_transaction,
   create_package_publish_transaction,
@@ -33,6 +45,13 @@ export type OperatorAuthSession = AuthSession &
       upgrade_cap: string
     ) => Promise<Readonly<{ package: string; version: number; policy: number }>>
     bootstrap_deployment: (deployment: GameDeployment) => Promise<Receipt>
+    setup_kares: (terms: OfferingSetup) => Promise<Receipt>
+    start_kares: () => Promise<Receipt>
+    settle_kares: () => Promise<Receipt>
+    seed_combat_kares: () => Promise<Receipt>
+    authorize_combat_kares: () => Promise<Receipt>
+    claim_community_kares: () => Promise<Receipt>
+    update_kares_metadata: (update: KaresMetadataUpdate) => Promise<Receipt>
     create_giftcard_links: (
       cards: readonly Readonly<{ id: string; key: string }>[]
     ) => Promise<Readonly<{ digest: string; urls: readonly string[] }>>
@@ -172,6 +191,51 @@ export const as_operator_session = (session: AuthSession): OperatorAuthSession =
       return Object.freeze({ receipt })
     },
     read_package_upgrade,
+    setup_kares: async (terms) => {
+      const upgrade = await read_package_upgrade(terms.upgrade_cap)
+      if (normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(terms.package) || upgrade.version !== 1)
+        throw new Error('KARES setup requires its original, never-upgraded publication capability')
+      await context.sdk.hydrate([terms.genesis, terms.upgrade_cap, terms.currency, normalizeSuiObjectId('0xc')])
+      return context.sdk.execute(create_kares_setup_transaction(context.sdk, terms), {
+        budget: 'estimate',
+        include: { objectTypes: true },
+      })
+    },
+    start_kares: () =>
+      context.sdk.execute(create_kares_start_transaction(kares_pins(context.sdk.pins)), {
+        budget: 'estimate',
+        include: { objectTypes: true },
+      }),
+    settle_kares: () =>
+      context.sdk.execute(create_kares_settlement_transaction(kares_pins(context.sdk.pins)), {
+        budget: 'estimate',
+        include: { objectTypes: true },
+      }),
+    claim_community_kares: () =>
+      context.sdk.execute(
+        create_kares_community_claim_transaction(kares_pins(context.sdk.pins), context.account.address),
+        { budget: 'estimate', include: { objectTypes: true } }
+      ),
+    seed_combat_kares: () =>
+      context.sdk.execute(create_kares_combat_seed_transaction(kares_pins(context.sdk.pins)), {
+        budget: 'estimate',
+        include: { objectTypes: true },
+      }),
+    authorize_combat_kares: () =>
+      context.sdk.execute(
+        create_kares_combat_authorization_transaction(kares_pins(context.sdk.pins), context.sdk.game_type_package),
+        { budget: 'estimate', include: { objectTypes: true } }
+      ),
+    update_kares_metadata: async (update) => {
+      const pins = kares_pins(context.sdk.pins)
+      const metadata = await read_kares_metadata(context.resolution_client, pins.currency, pins.original)
+      if (!metadata.metadata_cap || metadata.owner !== normalizeSuiObjectId(context.account.address))
+        throw new Error('Connect the cold wallet that owns the KARES metadata capability')
+      await context.sdk.hydrate([metadata.metadata_cap])
+      const transaction = new Transaction()
+      update_kares_metadata_into(transaction, context.sdk, pins, metadata.metadata_cap, update)
+      return context.sdk.execute(transaction, { budget: 'estimate', include: { objectTypes: true } })
+    },
     bootstrap_deployment: async (deployment) => {
       const sdk = SDK({
         client: sui_transport(context.resolution_client),

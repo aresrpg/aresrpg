@@ -8,6 +8,62 @@ use aresrpg_math::{craft_batch, recipe_data};
 const OUTPUT: address = @0xA;
 const INPUT: address = @0xB;
 
+fun recipe(): recipe_data::RecipeData {
+  recipe_data::new(object::id_from_address(OUTPUT), vector[object::id_from_address(INPUT)], vector[3], b"BAKER".to_string())
+}
+
+#[test]
+fun shape_uses_category_job_and_recipe_fallback_before_rolling() {
+  let data = recipe();
+  let output = object::id_from_address(OUTPUT);
+  let (job, stackable, count) = craft_batch::shape(&data, output, &b"hat".to_string(), 1, 1);
+  assert!(job == b"TAILOR".to_string() && !stackable && count == 1, 1);
+  let (job, stackable, count) = craft_batch::shape(&data, output, &b"consumable".to_string(), 1000, 1);
+  assert!(job == b"BAKER".to_string() && stackable && count == 1, 2);
+  craft_batch::assert_level(&data, 0);
+}
+
+#[test, expected_failure(abort_code = 2323, location = aresrpg_math::craft_batch)]
+fun output_substitution_is_refused() { craft_batch::assert_output(&recipe(), object::id_from_address(INPUT)); }
+
+#[test, expected_failure(abort_code = 2320, location = aresrpg_math::craft_batch)]
+fun empty_batch_is_refused() { craft_batch::assert_attempts(true, 0); }
+
+#[test, expected_failure(abort_code = 2320, location = aresrpg_math::craft_batch)]
+fun stackable_batch_cannot_exceed_one_thousand() { craft_batch::assert_attempts(true, 1001); }
+
+#[test, expected_failure(abort_code = 2320, location = aresrpg_math::craft_batch)]
+fun unique_gear_cannot_be_aggregated() { craft_batch::assert_attempts(false, 2); }
+
+#[test, expected_failure(abort_code = 2321, location = aresrpg_math::craft_batch)]
+fun missing_input_is_refused_before_randomness() { craft_batch::input_count(&recipe(), 0); }
+
+#[test, expected_failure(abort_code = 2321, location = aresrpg_math::craft_batch)]
+fun foreign_input_template_is_refused() {
+  craft_batch::input_quantity(&recipe(), 0, object::id_from_address(@0xC), 1, 3);
+}
+
+#[test, expected_failure(abort_code = 2321, location = aresrpg_math::craft_batch)]
+fun input_cannot_reuse_a_different_slot() {
+  craft_batch::input_quantity(&recipe(), 1, object::id_from_address(INPUT), 1, 3);
+}
+
+#[test, expected_failure(abort_code = 2322, location = aresrpg_math::craft_batch)]
+fun inventory_must_cover_the_entire_batch() {
+  craft_batch::input_quantity(&recipe(), 0, object::id_from_address(INPUT), 1000, 2999);
+}
+
+#[test, expected_failure(abort_code = 2323, location = aresrpg_math::craft_batch)]
+fun unique_output_cannot_merge_into_existing_item() {
+  let output = object::id_from_address(OUTPUT);
+  craft_batch::assert_output_target(false, 1, output, option::some(output), 1, false, false);
+}
+
+#[test, expected_failure(abort_code = 2323, location = aresrpg_math::craft_batch)]
+fun stackable_output_cannot_merge_into_another_template() {
+  craft_batch::assert_output_target(true, 1, object::id_from_address(OUTPUT), option::some(object::id_from_address(INPUT)), 1, false, false);
+}
+
 #[test]
 fun one_attempt_is_the_original_bernoulli_roll() {
   assert!(craft_batch::max_attempts(true) == 1_000);

@@ -4,13 +4,13 @@
 module aresrpg_seed::recipe_rows_tests;
 
 use aresrpg_control::admin;
+use aresrpg_math::recipe_data;
 use aresrpg_seed::{recipe_rows::{Self, Recipe}, registry};
 use sui::test_scenario;
 
 const OWNER: address = @0xA11CE;
 
-#[test]
-fun an_omitted_recipe_retires_and_the_same_identity_can_be_reactivated() {
+fun lifecycle(read_retired: bool) {
   let mut scenario = test_scenario::begin(OWNER);
   let cap = admin::cap_for_testing(scenario.ctx());
   let mut root = registry::registry_for_testing(scenario.ctx());
@@ -28,9 +28,13 @@ fun an_omitted_recipe_retires_and_the_same_identity_can_be_reactivated() {
 
   scenario.next_tx(OWNER);
   let mut recipe = scenario.take_shared<Recipe>();
+  let id = object::id(&recipe);
+  let before = *recipe_rows::data(&recipe);
+  assert!(before == recipe_data::new(template, vector[template], vector[2], b"BAKER".to_string()), 0);
   assert!(recipe_rows::is_active(&recipe), 0);
   recipe_rows::retire_recipe(&cap, &mut root, &mut recipe, scenario.ctx());
-  assert!(!recipe_rows::is_active(&recipe), 1);
+  assert!(!recipe_rows::is_active(&recipe) && *recipe_rows::data(&recipe) == before, 1);
+  if (read_retired) { let _ = recipe_rows::active_data(&recipe); };
   recipe_rows::overwrite_recipe(
     &cap,
     &mut root,
@@ -40,10 +44,17 @@ fun an_omitted_recipe_retires_and_the_same_identity_can_be_reactivated() {
     b"BAKER".to_string(),
     scenario.ctx(),
   );
-  assert!(recipe_rows::is_active(&recipe), 2);
+  assert!(recipe_rows::is_active(&recipe) && object::id(&recipe) == id, 2);
+  assert!(*recipe_rows::active_data(&recipe) == recipe_data::new(template, vector[template], vector[1], b"BAKER".to_string()), 3);
 
   test_scenario::return_shared(recipe);
   registry::destroy_for_testing(root);
   admin::destroy_for_testing(cap);
   scenario.end();
 }
+
+#[test]
+fun an_omitted_recipe_retires_and_the_same_identity_can_be_reactivated() { lifecycle(false); }
+
+#[test, expected_failure(abort_code = 2306, location = aresrpg_seed::recipe_rows)]
+fun retired_recipes_cannot_supply_craft_inputs() { lifecycle(true); }

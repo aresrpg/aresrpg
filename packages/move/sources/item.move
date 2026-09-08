@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/// Items ride IMMUTABLE templates: minted at addresses DERIVED from `item_type` (client
-/// computes them offline — no indexer) and FROZEN forever by the one-time seeding that lives
-/// in seed.move. This module is the RUNTIME: what an item IS, the rolling mint, the stack law,
-/// and the package-private template internals only the defining module can own.
+/// Item identity, quantity, and rolled stats. Templates and their authoring live in seed.
 module aresrpg::item;
 
 use aresrpg_seed::item_rows::{Self, ItemTemplate};
@@ -11,11 +8,10 @@ use aresrpg_math::{content_rules, item_damages::ItemDamages, item_stats::{Self, 
 use std::string::String;
 use sui::{
   derived_object,
-  display_registry::{Self, DisplayRegistry},
   dynamic_field as dfield,
   event,
   kiosk::{Kiosk, KioskOwnerCap},
-  package::{Self, Publisher},
+  package,
   random::RandomGenerator,
   transfer_policy::TransferPolicy,
 };
@@ -43,6 +39,8 @@ public struct Item has key, store {
   amount: u32,
 }
 
+public struct AmountChanged has copy, drop { item: ID, amount: u32 }
+
 /// An authenticated PTB-local mint value prepared from one immutable template before the
 /// terminal Random call. Private fields prevent a caller from forging item facts.
 public struct PM has drop {
@@ -57,9 +55,15 @@ public struct PM has drop {
   existing: Option<ID>,
 }
 
-/// One-time seal marker on the registry — its presence closes the seeding forever.
-
 /// DF keys: authored stat RANGES on the template; the ROLLED block + damage snapshot on the item.
+/// One persisted write unit for rolled stats and their sink. Revision forces a write even
+/// when a rune leaves both values unchanged; it never participates in rune eligibility.
+public struct RolledStats has copy, drop, store {
+  statistics: ItemStatistics,
+  puits: u64,
+  revision: u64,
+}
+
 public struct StatsKey() has copy, drop, store;
 public struct DamagesKey() has copy, drop, store;
 
@@ -70,28 +74,6 @@ public struct ITEM has drop {}
 
 fun init(otw: ITEM, ctx: &mut TxContext) {
   transfer::public_transfer(package::claim(otw, ctx), ctx.sender());
-}
-
-/// Display V2, once post-publish through `admin::create_item_display`. Returns the cap.
-public(package) fun create_display(
-  registry: &mut DisplayRegistry,
-  publisher: &mut Publisher,
-  ctx: &mut TxContext,
-): display_registry::DisplayCap<Item> {
-  let (mut d, cap) = display_registry::new_with_publisher<Item>(registry, publisher, ctx);
-  display_registry::set(&mut d, &cap, b"name".to_string(), b"{name}".to_string());
-  display_registry::set(&mut d, &cap, b"link".to_string(), b"https://aresrpg.world".to_string());
-  display_registry::set(
-    &mut d,
-    &cap,
-    b"image_url".to_string(),
-    b"https://aresrpg.world/item/{item_type}_hd.png".to_string(),
-  );
-  display_registry::set(&mut d, &cap, b"description".to_string(), b"Item from the AresRPG universe.".to_string());
-  display_registry::set(&mut d, &cap, b"project_url".to_string(), b"https://aresrpg.world".to_string());
-  display_registry::set(&mut d, &cap, b"creator".to_string(), b"AresRPG".to_string());
-  display_registry::share(d);
-  cap
 }
 
 // ╔════════════════ [ Seed internals (the seeding lives in seed.move) ] ══════ ]
@@ -187,7 +169,7 @@ fun mint_resolved_from_plan(
     level: row.level,
     amount,
   };
-  if (stats.is_some()) dfield::add(&mut item.id, StatsKey(), stats.destroy_some());
+  if (stats.is_some()) dfield::add(&mut item.id, StatsKey(), RolledStats { statistics: stats.destroy_some(), puits: 0, revision: 0 });
   if (!row.damages.is_empty()) dfield::add(&mut item.id, DamagesKey(), row.damages);
   item
 }
@@ -224,10 +206,16 @@ public(package) fun mint_distribution(template: &ItemTemplate, amount: u32, ctx:
   mint_resolved_from_plan(&row, amount, stats, ctx)
 }
 
-/// Land a minted stack in the owner's kiosk: MERGE into the presented existing stack
-/// (owner 2026-08-10: a player who already holds the resource GROWS it — every mint door
-/// obeys, no dust objects), or lock as a new object when none is presented. A wrong
-/// `existing` id aborts on the borrow or the template check — it can never mis-merge.
+/// An optional target is a hint. Stale, full, listed, or incompatible stacks stay untouched.
+public(package) fun can_merge(kiosk: &Kiosk, cap: &KioskOwnerCap, target_id: ID, source: &Item): bool {
+  if (!content_rules::is_stackable(&source.category)
+      || !kiosk.has_item_with_type<Item>(target_id) || kiosk.is_listed(target_id)) return false;
+  let target = kiosk.borrow<Item>(cap, target_id);
+  target.template == source.template
+    && (target.amount as u64) + (source.amount as u64) <= 0xffff_ffff
+}
+
+/// Deposit always delivers the minted item. Merge when the hint still fits; otherwise lock a new stack.
 public(package) fun deposit(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
@@ -235,7 +223,7 @@ public(package) fun deposit(
   existing: Option<ID>,
   minted: Item,
 ) {
-  if (existing.is_some()) {
+  if (existing.is_some() && can_merge(kiosk, cap, *existing.borrow(), &minted)) {
     let target: &mut Item = kiosk.borrow_mut(cap, *existing.borrow());
     target.merge(minted);
   } else {
@@ -248,6 +236,7 @@ public(package) fun merge(self: &mut Item, item: Item) {
   assert!(content_rules::is_stackable(&self.category), ENotStackable);
   assert!(self.template == item.template, EWrongTemplate);
   self.amount = self.amount + item.amount;
+  event::emit(AmountChanged { item: object::id(self), amount: self.amount });
   item.destroy();
 }
 
@@ -256,6 +245,7 @@ public(package) fun split(self: &mut Item, amount: u32, ctx: &mut TxContext): It
   assert!(amount >= 1, EWrongAmount);
   assert!(self.amount > amount, EWrongAmount);
   self.amount = self.amount - amount;
+  event::emit(AmountChanged { item: object::id(self), amount: self.amount });
   Item {
     id: object::new(ctx),
     template: self.template,
@@ -268,6 +258,7 @@ public(package) fun split(self: &mut Item, amount: u32, ctx: &mut TxContext): It
 }
 
 public(package) fun destroy(self: Item) {
+  event::emit(AmountChanged { item: object::id(&self), amount: 0 });
   let Item { id, .. } = self;
   id.delete();
 }
@@ -290,6 +281,7 @@ public(package) fun burn(
   if (amount < held) {
     let stack: &mut Item = kiosk.borrow_mut(cap, id);
     stack.amount = stack.amount - amount;
+    event::emit(AmountChanged { item: id, amount: stack.amount });
     stack.category
   } else {
     let stack: Item = protected.extract_from_kiosk(kiosk, cap, id, ctx);
@@ -321,12 +313,15 @@ public fun amount(self: &Item): u32 { self.amount }
 
 public fun has_stats(self: &Item): bool { dfield::exists(&self.id, StatsKey()) }
 
-public fun stats(self: &Item): ItemStatistics { *dfield::borrow(&self.id, StatsKey()) }
+public fun stats(self: &Item): ItemStatistics { dfield::borrow<StatsKey, RolledStats>(&self.id, StatsKey()).statistics }
+
+public fun puits(self: &Item): u64 { dfield::borrow<StatsKey, RolledStats>(&self.id, StatsKey()).puits }
 
 /// Overwrite the rolled block — the forgemagie scribe's one writer (the item already carries a
 /// rolled block from mint; scribing replaces it). Aborts if the item was never rolled.
-public(package) fun set_stats(self: &mut Item, stats: ItemStatistics) {
-  *dfield::borrow_mut(&mut self.id, StatsKey()) = stats;
+public(package) fun set_stats(self: &mut Item, stats: ItemStatistics, puits: u64) {
+  let state: &mut RolledStats = dfield::borrow_mut(&mut self.id, StatsKey());
+  *state = RolledStats { statistics: stats, puits, revision: state.revision + 1 };
 }
 
 public fun has_damages(self: &Item): bool { dfield::exists(&self.id, DamagesKey()) }
@@ -336,6 +331,11 @@ public fun damages(self: &Item): vector<ItemDamages> { *dfield::borrow(&self.id,
 // ╔════════════════ [ Private ] ══════════════════════════════════════════════ ]
 
 // ╔════════════════ [ Testing ] ══════════════════════════════════════════════ ]
+
+#[test_only]
+public fun rolled_state_bytes_for_testing(self: &Item): vector<u8> {
+  std::bcs::to_bytes(dfield::borrow<StatsKey, RolledStats>(&self.id, StatsKey()))
+}
 
 #[test_only]
 public fun test_init(ctx: &mut TxContext) { init(ITEM {}, ctx) }
@@ -363,3 +363,11 @@ public fun split_preserves_template_for_testing(ctx: &mut TxContext): bool {
 
 #[test_only]
 public fun destroy_for_testing(item: Item) { item.destroy(); }
+
+/// Malformed fixture for the marketplace's independent nonzero-stack safeguard.
+#[test_only]
+public fun empty_stack_for_testing(template: &ItemTemplate, ctx: &mut TxContext): Item {
+  let mut stack = mint_plain(template, 1, ctx);
+  stack.amount = 0;
+  stack
+}

@@ -7,7 +7,7 @@
 
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import { item_stat_center, pet_max_feeds, stat_names, type StatName } from '@aresrpg/immutable'
-import type { CharacterRow, EquippedItem } from '@aresrpg/protocol'
+import type { CharacterRow, EquippedItem, ItemRow } from '@aresrpg/protocol'
 
 const SHIFT = item_stat_center
 const BASE_HP = Number(CONTRACT_CONSTANTS.base_hp)
@@ -18,10 +18,13 @@ const BASE_MP = Number(CONTRACT_CONSTANTS.base_mp)
 const HP_REGEN_MS_PER_HP = 1_000
 const RAW_MAX = 65_535
 
-/** One equipped item's SIGNED contribution to one stat. A PET contributes its POWER-scaled
+/** One owned item's SIGNED contribution to one stat. A PET contributes its POWER-scaled
  *  block (api.move equip_item → pet::scaled_stats: each side's magnitude floors by
  *  power/60 away from the center), everything else its raw roll. */
-export const equipped_stat_offset = (item: Readonly<EquippedItem>, stat: StatName): number => {
+export const item_stat_offset = (
+  item: Readonly<Pick<ItemRow, 'category' | 'stats' | 'pet_power'>>,
+  stat: StatName
+): number => {
   const offset = (item.stats?.[stat] ?? SHIFT) - SHIFT
   if (item.category !== 'pet') return offset
   const power = Math.min(pet_max_feeds, Math.max(0, item.pet_power ?? 0))
@@ -33,7 +36,7 @@ export const equipped_stat_offset = (item: Readonly<EquippedItem>, stat: StatNam
 export const fold_equipment_stats = (equipment: readonly Readonly<EquippedItem>[]): Record<StatName, number> =>
   Object.fromEntries(
     stat_names.map((stat) => {
-      const offset = equipment.reduce((total, item) => total + equipped_stat_offset(item, stat), 0)
+      const offset = equipment.reduce((total, item) => total + item_stat_offset(item, stat), 0)
       return [stat, Math.max(0, Math.min(RAW_MAX, SHIFT + offset))]
     })
   ) as Record<StatName, number>

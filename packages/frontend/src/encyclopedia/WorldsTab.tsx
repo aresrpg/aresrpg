@@ -10,17 +10,20 @@ import { category_pill, Empty, encyclopedia_layout, EntityGrid, LinkChip, Search
 import type { EncyclopediaText } from './copy.ts'
 
 export type WorldMobGroup = Readonly<{ id: string; mob_types: readonly string[] }>
+type WorldMobLocation = (typeof encyclopedia_catalog.mob_locations)[number]
 
 export const world_mob_groups = (
-  world: Readonly<SeedWorld>
-): Readonly<{ biomes: readonly WorldMobGroup[]; cities: readonly WorldMobGroup[] }> =>
-  Object.freeze({
+  world: Readonly<SeedWorld>,
+  locations: readonly WorldMobLocation[]
+): Readonly<{ biomes: readonly WorldMobGroup[]; cities: readonly WorldMobGroup[] }> => {
+  const world_locations = locations.filter((location) => location.world === world.world)
+  return Object.freeze({
     biomes: Object.freeze(
       (world.terrain?.biomes ?? []).map(({ name }) =>
         Object.freeze({
           id: name,
           mob_types: Object.freeze(
-            world.mobs.filter(({ biomes }) => biomes.includes(name)).map(({ mob_type }) => mob_type)
+            world_locations.filter(({ biomes }) => biomes.includes(name)).map(({ mob_type }) => mob_type)
           ),
         })
       )
@@ -30,12 +33,13 @@ export const world_mob_groups = (
         Object.freeze({
           id: city,
           mob_types: Object.freeze(
-            world.mobs.filter(({ cities }) => cities.includes(city)).map(({ mob_type }) => mob_type)
+            world_locations.filter(({ cities }) => cities.includes(city)).map(({ mob_type }) => mob_type)
           ),
         })
       )
     ),
   })
+}
 
 const WorldMobPanels = ({
   groups,
@@ -65,11 +69,12 @@ const WorldMobPanels = ({
 )
 
 const world_band = (world_id: string): readonly [number, number] | null => {
-  const world = encyclopedia_catalog.world(world_id)
-  const mobs = (world?.mobs ?? []).flatMap(({ mob_type }) => {
-    const row = encyclopedia_catalog.mob(mob_type)?.mob
-    return row ? [row] : []
-  })
+  const mobs = encyclopedia_catalog.mob_locations
+    .filter(({ world }) => world === world_id)
+    .flatMap(({ mob_type }) => {
+      const row = encyclopedia_catalog.mob(mob_type)?.mob
+      return row ? [row] : []
+    })
   return mobs.length === 0
     ? null
     : Object.freeze([
@@ -116,7 +121,7 @@ export const WorldsTab = ({
       })
   }, [biome, search, sort])
   const detail = selected_id ? encyclopedia_catalog.world(selected_id) : null
-  const groups = detail ? world_mob_groups(detail) : null
+  const groups = detail ? world_mob_groups(detail, encyclopedia_catalog.mob_locations) : null
 
   const list = (
     <div className={encyclopedia_layout.list}>

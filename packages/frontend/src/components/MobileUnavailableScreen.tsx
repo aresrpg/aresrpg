@@ -9,9 +9,9 @@ import './mobile_unavailable.css'
 
 export const MOBILE_VIEWPORT_QUERY = '(max-width: 1023px)'
 
-export const mobile_app_unavailable = (pathname: string, mobile: boolean, pending_gift = false): boolean => {
+export const mobile_app_unavailable = (pathname: string, mobile: boolean): boolean => {
   const route = pathname.replace(/\/+$/, '')
-  return mobile && route !== '/gift' && !(route === '/enoki' && pending_gift)
+  return mobile && route !== '/gift' && route !== '/claim'
 }
 
 export const MobileUnavailableScreen = ({ copy }: Readonly<{ copy: AppCopy }>) => (

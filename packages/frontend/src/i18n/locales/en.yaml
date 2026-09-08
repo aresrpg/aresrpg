@@ -1,6 +1,8 @@
 title: WebGPU is unavailable
 body: The full world needs WebGPU. A lightweight grid is running instead.
 fatal: This browser cannot create either a WebGPU or WebGL graphics context.
+engine_recovery: The world stopped loading or rendering. Reload to try again.
+engine_reload: Reload
 world_unavailable_title: World unavailable
 world_unavailable: This world does not have an authored terrain recipe yet.
 mobile_unavailable_label: Mobile access
@@ -38,6 +40,7 @@ admin: Admin
 online: Online
 account: Account
 join_discord: Join Discord
+join_telegram: Join Telegram
 sui_universe: Sui Universe
 server_disconnected: Disconnected
 server_connecting: Connecting
@@ -181,6 +184,7 @@ party_panel:
   run_to_wrong_world: That party member is not in your current world.
   run_to_unavailable: That party member's on-chain position is unavailable.
 trade_panel:
+  kares: Stacking
   close: Close
   title: Player trade
   invite_sent: Trade invitation sent
@@ -217,6 +221,8 @@ trade_panel:
   recover_notice: Recover your complete offer in one wallet transaction.
   waiting_counterparty: Your side is complete. Waiting for the counterparty.
   finalizing: Finalizing…
+transaction_unknown_toast: Your last action is still being checked. Further transactions are blocked until its outcome is known.
+transaction_recovered_toast: Your previous transaction was found. Refresh to see its result before choosing your next action.
 world_hud:
   compass_label: Compass
   zone: ZONE
@@ -450,7 +456,7 @@ marketplace_page:
 mastery_page:
   subtitle: Daily challenges
   title: Mastery
-  lead: Complete dungeons every day to get unique rewards.
+  lead: Complete daily dungeon quests to earn unique rewards. Skipping a day never costs saved Mastery points.
   balance: Mastery points
   daily_ready: Daily quest available
   daily_syncing: Updating daily quest…
@@ -479,16 +485,13 @@ mastery_page:
   offer_purchased: Mastery reward purchased.
 
 airdrop_page:
-  title: 'Airdrops'
-  subtitle: 'Claim reserved items for eligible holders'
-  minted: '{{count}} minted'
-  eligible_count: '{{count}} eligible'
-  eligible: 'Eligible'
-  not_eligible: 'Not eligible'
-  claimed: 'Claimed'
-  claim: 'Claim'
-  holder_title: 'Holder wallet'
-  holder_connect_hint: 'Connect the wallet holding the eligible NFT'
+  destination: 'Game wallet:'
+  refresh: 'Refresh'
+  title: 'Gifts'
+  subtitle: 'Import giftcards into your game wallet'
+  claim: 'Import'
+  holder_title: 'External wallet'
+  holder_connect_hint: 'Connect the wallet holding your giftcards'
   holder_connect: 'Connect wallet'
   holder_connecting: 'Connecting…'
   holder_connected: 'Connected'
@@ -501,10 +504,7 @@ airdrop_page:
   gift_claiming: 'Claiming your printed giftcard…'
   gift_retry: 'Claim giftcard'
   redeem: 'Redeem'
-  empty: 'No active airdrops'
-  empty_hint: 'Airdrops for holders of partner collections will appear here when they go live.'
-  pending_claim: 'Claiming airdrop…'
-  toast_claimed: 'Airdrop claimed'
+  empty: 'No giftcards in this wallet'
   set:
     title: 'The set'
     subtitle: 'Reserved items — showcase only'
@@ -634,7 +634,7 @@ admin_page:
   player_activity_body: Daily activity and rolling 30-day reach
   stickiness: DAU / 30D
   online_players: Online players
-  online_players_body: Peak authenticated connections per bucket
+  online_players_body: Peak unique authenticated players per bucket
   online_now: Players online
   peak: Peak
   revenue: Revenue
@@ -778,6 +778,7 @@ simulator_page:
   blob_single: Single shape
   blob_click: Place on cell click
 fight_hud:
+  stop_spectating: Stop spectating
   board_label: Fight board
   turn_order: Turn order
   turn_order_collapse: Collapse turn order
@@ -1282,8 +1283,6 @@ encyclopedia_page:
     over_maging_desc: Push stats above their natural maximum. Each stat line is capped at 101 extra weight. Max over-mage depends on the stat's unit weight — a light stat like Vitality (weight 0.25) can be pushed ~404 points over, a heavy one like Wisdom (weight 3) only ~33.
     forgemagie_tips: TIPS
     forgemagie_tips_desc: "For exotic/over-mage: strip cheap stats first to build a large sink, then pass the hard stat while buffered, then re-add lost stats (easy since they're far below max). Over-maged and exotic stats are lost first on failure."
-    forgemagie_xp: EXPERIENCE
-    forgemagie_xp_desc: 'XP is awarded only on success (Critical or Neutral). Higher level items and heavier runes give significantly more XP. Ra runes grant double XP compared to Ba and Pa runes. Formula: max(1, runeWeight × (1 + itemLevel / 50) × tierMultiplier) where tierMultiplier is 2 for Ra, 1 otherwise.'
     action_points: ACTION POINTS (AP)
     movement_points: MOVEMENT POINTS (MP)
     critical_stat: CRITICAL
@@ -1541,6 +1540,21 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: You ran out of SUI to pay for transaction fees. Please top up your wallet to continue playing.
 characters_page:
+  delete_character: 'Delete character'
+  delete_warning: 'Deletion is permanent. All character progress is lost and the name stays reserved.'
+  delete_no_refund: 'The {{amount}} SUI creation fee will not be refunded.'
+  delete_equipment: 'Unequip every item, including pets, tools and cosmetics.'
+  delete_fight: 'Leave or finish the fight first.'
+  delete_party: 'Leave the Party first.'
+  delete_dungeon: 'Finish or abandon the dungeon run first.'
+  delete_ambush: 'Resolve the gathering protector encounter first.'
+  delete_listing: 'Remove the character from the marketplace first.'
+  delete_unavailable: 'Wait for the character and connection to be available.'
+  delete_pending: 'Deleting…'
+  claims_title: Uncollected rewards
+  claim_collect: Collect reward
+  claim_box: Box reward
+  claim_crush: Crush yield
   tab_equipment: Equipment
   tab_stats: Stats
   tab_spells: Spells
@@ -1647,6 +1661,12 @@ characters_page:
   feed_full: Fully fed
   feed_pending: Feeding…
   feed_success: Pet fed
+  feed_confirm: 'Confirm feeding'
+  feed_consumes: 'Consumes 1 {{name}}'
+  feed_daily_note: 'One food per day. A little stronger each time.'
+  feed_happy: '{{name}} loved that!'
+  feed_gain: '+1 power'
+  feed_unavailable: 'This pet is no longer available.'
   claim_success: Reward claimed
   crush_title: Crush gear
   crush_confirm_body: 'Crush {{name}}? The item is destroyed forever and yields runes.'
@@ -1666,7 +1686,7 @@ characters_page:
   revealing: Revealing…
   collecting: Collecting…
   continue_cta: Continue
-  stat_maxed: This stat has reached its rune cap on this item
+  stat_maxed: This rune exceeds the stat or over/exo weight limit
   stat:
     movement: 'MP'
     action: 'AP'
@@ -2077,3 +2097,237 @@ spell_names:
   'Word of Youth': 'Word of Youth'
   'Wounding Word': 'Wounding Word'
   'Zatoishwan Stance': 'Zatoishwan Stance'
+
+item_categories:
+  cosmetic_hat: Cosmetic hat
+  cosmetic_cloak: Cosmetic cloak
+
+kares: Stacking
+kares_page:
+  stake_more: 'Stake more'
+  additional_daily: 'Additional / day'
+  max: 'Max'
+  external_wallet_hint: 'Stake and manage KARES from an external wallet separately.'
+  select_wallet: Select
+  staking_revenue: 'Stakers share 20% of collected AresRPG marketplace royalties in SUI, plus funded KARES rewards.'
+  game_account: 'AresRPG account'
+  external_wallet: 'External wallet'
+  daily_kares: 'KARES / day · est.'
+  daily_sui: 'SUI / day · est.'
+  daily_estimate_note: 'Daily estimates cover the next 24 hours at your current stake share and funded reward schedule. They can change.'
+  position_rewards: 'Position rewards'
+  manage_stake: 'Manage stake'
+  same_account: 'This wallet is already your AresRPG account. Manage its stake in the account section.'
+  claim_kares: 'Claim KARES'
+  close: 'Close'
+  sale_card_soon_title: 'Get ready.'
+  sale_card_soon_note: 'The public sale will launch soon.'
+  sale_card_soon_action: 'Explore the sale'
+  sale_card_live_label: 'Sale is live'
+  sale_card_live_title: 'GET YOUR SPOT NOW'
+  sale_card_target_reached: 'Target reached'
+  sale_card_done_title: 'Sale completed'
+  sale_card_done_note: 'Claim your KARES tokens and any SUI refunds.'
+  sale_card_refund_note: 'Minimum not reached. Claim your full SUI refund.'
+  community_release_note: 'Only the treasury can claim community KARES as they unlock over 1,825 days after successful sale settlement. Claimed tokens may be distributed or burned.'
+  sale_unlock_note: 'Sale tokens are fully unlocked when the sale closes successfully.'
+  unlocked_immediately: 'unlocked right away'
+  vested_five_years: 'vested 5 years'
+  eyebrow: 'A world worth building'
+  launch_title: 'Build the next chapter.'
+  launch_lead: 'Join the KARES initial public sale. Fund AresRPG and help a living world grow.'
+  offering: 'Initial public sale'
+  fixed_supply: 'Fixed supply'
+  fair_share: 'One price. Proportional allocation.'
+  fair_detail: 'Your final share follows your contribution. Excess contributions are refunded proportionally.'
+  connect: 'Connect wallet'
+  disconnect: 'Disconnect'
+  choose_account: 'Choose an account'
+  no_wallet: 'Install a Sui wallet to participate.'
+  refresh: 'Refresh'
+  loading: 'Reading on-chain state…'
+  unavailable: 'The offering is not available on this network yet.'
+  pending: 'Confirming transaction…'
+  confirmed: 'Transaction confirmed'
+  contribute: 'Contribute SUI'
+  amount: 'Amount'
+  balance: 'Available balance'
+  amount_invalid: 'Enter a positive amount with up to 9 decimal places.'
+  insufficient: 'Amount exceeds your available balance.'
+  gas_note: 'Keep some SUI available for transaction fees.'
+  raised: 'Contributed'
+  minimum: 'Minimum raise'
+  maximum: 'Maximum accepted'
+  opens: 'Opens'
+  closes: 'Closes'
+  estimate: 'Estimated final price'
+  price_note: 'Final allocation is fixed when the offering closes.'
+  your_contribution: 'Your contribution'
+  claim: 'Claim KARES & excess SUI'
+  refund: 'Claim refund'
+  upcoming: 'Not started'
+  open: 'Offering open'
+  successful: 'Sale successful'
+  refundable: 'Refunds available'
+  testnet: 'Testnet · test assets only'
+  back_game: 'Explore AresRPG'
+  funding_title: 'A world funded by its community'
+  liquidity: 'Initial liquidity'
+  development: 'Development treasury'
+  liquidity_note: 'Reserved for the initial KARES/SUI market. Pool creation is managed by the project.'
+  development_note: 'Funding for the game, its infrastructure and the next chapter.'
+  staking_title: Your stake. Your share.
+  staking_lead: 'Stake KARES to share released KARES and SUI rewards. Claim accrued rewards anytime.'
+  pool_stake: 'Total staked'
+  your_stake: 'Your stake'
+  claimable: 'Accrued rewards'
+  stake: 'Stake KARES'
+  withdraw: 'Withdraw stake'
+  claim_rewards: 'Claim rewards'
+  fund_title: 'Fund community rewards'
+  fund_note: 'Donations are shared by all stakers over 30 active reward days. They cannot be withdrawn.'
+  donate: 'Donate'
+  no_positions: 'Your staking positions will appear here.'
+  inactive: 'Staking opens after successful offering settlement.'
+  account_label: 'Account'
+  position: 'Position'
+  tokenomics: 'KARES tokenomics'
+  community: 'Community rewards'
+  team: 'Team allocation'
+  five_years: 'Community staking rewards'
+  mastery_title: 'Play for rewards. Or burn KARES.'
+  mastery_note: 'Each Mastery offer costs the same number of earned points or KARES. Spent KARES are burned permanently.'
+  rewards_note: '200,000 KARES release over 1,825 active reward days. Additional donations release over 30 active days. Emission pauses when nobody stakes.'
+  revenue_note: '20% of collected marketplace royalties goes to SUI staking rewards. Rewards vary with revenue and participating stake.'
+  payment: 'Pay with'
+  points: 'Mastery points'
+  burn_buy: 'Burn {{cost}} KARES'
+  kares_missing: 'Not enough KARES'
+  language: 'Language'
+  refund_note: 'If the sale closes below the minimum, your full contribution is refundable.'
+  offering_contract: 'Offering contract'
+  min_marker: 'MIN'
+  max_marker: 'MAX'
+  min_reached: 'Minimum reached'
+  min_pending: 'Building toward the minimum'
+  oversubscribed: 'Oversubscribed'
+  subscribed: 'subscribed'
+  oversub_note: 'Still open. Everyone shares the same price; excess SUI is refunded proportionally.'
+  opens_in: 'Opens in'
+  closes_in: 'Closes in'
+  days_short: 'd'
+  your_investment: 'Your contribution'
+  your_allocation: 'Your KARES allocation'
+  current_price: 'Current offering price'
+  estimated_until_close: 'Estimated until the offering closes'
+  accepted_contribution: 'Accepted contribution'
+  excess_refund: 'SUI returned to you'
+  unclaimed_note: 'Your unclaimed contribution and allocation'
+  connect_preview: 'Connect your wallet to see your share'
+  no_pending_allocation: 'No unclaimed contribution'
+  play_testnet: 'Play testnet now'
+  play_testnet_note: 'Explore the world you are helping build.'
+  join_title: 'Take your place in the next chapter.'
+  join_note: '400,000 KARES. One offering window. A share for every contributor.'
+  step_connect: 'Connect your wallet'
+  step_contribute: 'Choose your SUI contribution'
+  step_claim: 'Claim KARES and any excess SUI'
+  allocation_lead: 'One million tokens. Every allocation disclosed.'
+  community_detail: '11% stays in community reserves for airdrops, marketing, seasonal leaderboards, competitions, PvP arena prizes, testnet participants and useful contributors. Allocations are managed by the project.'
+  supply_detail: 'All 1,000,000 KARES are minted once. No more can be minted. Mastery purchases burn KARES permanently.'
+  emissions_detail: 'The 200,000 staking rewards come from this existing supply. Reward releases do not mint new tokens.'
+  price_cap_note: 'The accepted raise stops at the maximum. More contributions change allocation shares, not the capped offering price.'
+  awaiting_minimum: 'Allocation and price appear once the minimum is reached.'
+  claimable_tokens: 'KARES ready to claim'
+  refundable_sui: 'Your SUI refund'
+  final_price: 'Final offering price'
+  full_refund: 'Your full SUI refund'
+  nav_funding: 'Funding'
+  nav_benefits: 'Benefits'
+  nav_tokenomics: 'Tokenomics'
+  nav_incentives: 'Public incentives'
+  nav_play: 'Play'
+  benefits_title: 'A stake in the world. More ways to play.'
+  benefits_lead: 'KARES connects game rewards, community incentives and a share of marketplace royalties.'
+  revenue_title: 'Share in the game’s success.'
+  revenue_metric: 'of AresRPG revenues'
+  revenue_detail: 'Shared with KARES stakers.'
+  baseline_title: 'Community rewards. Already in the supply.'
+  baseline_detail: '200,000 existing KARES fund 1,825 active reward days. Stake to share the release and claim accrued rewards anytime. No additional tokens are minted.'
+  crates_title: 'Your KARES. Your next crate.'
+  crates_detail: 'In-game Mastery offers include food, resource, pet and cosmetic crates. Pay the same cost in KARES or earn Mastery points through play. Spent KARES are burned permanently.'
+  incentives_title: 'Anyone can boost the rewards.'
+  incentives_detail: 'Anyone can donate SUI or KARES to the shared staking rewards. Each deposit starts releasing on the next active reward day and spreads over 30 active days. Donations reward all stakers proportionally and cannot be withdrawn.'
+  incentives_clock: 'The reward clock pauses while nobody is staking. New funding never extends older deposits’ schedules.'
+  incentives_examples: 'Fund an event. Celebrate a milestone. Reward the community.'
+  play_title: 'The world is waiting. Go explore it.'
+  play_detail: 'Try AresRPG on testnet while the initial public sale runs. Meet the community and discover the game behind KARES.'
+  confirmed_refresh: 'Transaction confirmed. Refresh to load your updated balances.'
+  stage_minimum: 'Minimum funding'
+  stage_maximum: 'Raising to maximum'
+  minimum_refund: 'Full refund if the minimum is not reached.'
+  full_refund_available: 'Your full contribution is available to refund.'
+  refund_claim_note: 'Claim your refund here if the sale closes below minimum. Refunds are not sent automatically.'
+  staking_unavailable: 'Staking is not available on this network yet.'
+  basecamp_announcement: 'Meet AresRPG at Sui Basecamp in Singapore, October 7–9. Come say hello and grab lootboxes.'
+  funding_unknown: 'Funding data unavailable.'
+  success_threshold: 'Success threshold'
+  sale_cap: 'Maximum accepted'
+  cap_overflow: 'Above the cap'
+  overflow_refunds: 'reserved for proportional refunds'
+
+  combat_rewards: 'Boss rewards'
+
+  combat_detail: '100,000 KARES fund a public combat pot. Anyone can add tokens. Boss levels determine one bounty, split equally among winning characters. A daily ceiling of about 54.79 KARES gives the initial pot at least five years of rewards. Quiet days and donations extend its lifetime. Epoch activity adjusts reward size; missed rewards never become debt.'
+
+  allocation_rationale: '590,000 KARES (59%) are available at launch: sale, liquidity and team. Scheduled releases add at most about 82,000 in year one, or 13.90% of that opening amount, before burns. Staking pauses when nobody stakes. Community vesting follows calendar time. Combat may release less. These releases use existing tokens; mint inflation is zero. Donations redistribute existing tokens. No price outcome is guaranteed.'
+  launch_market_cap: 'Launch circulating market cap'
+  launch_market_cap_note: 'If the sale closed now: capped sale price × 590,000 KARES available at launch. No launch below minimum funding.'
+
+leaderboard_page:
+  xp: 'Combat XP'
+  kills: 'Mob kills'
+  dungeons: 'Dungeons'
+  jobs: 'Job XP'
+  marketplace: 'Marketplace'
+  kolizeum: 'Kolizeum'
+  zones: 'Discoveries'
+  feeding: 'Pet feeding'
+  gathering: 'Gathering'
+  category: 'Category'
+  previous: 'Previous'
+  next: 'Next'
+  current: 'Current season'
+  season: 'Season {{season}}'
+  epochs: 'Epochs {{start}}–{{end}}'
+  remaining: '{{epochs}} epochs remaining'
+  loading: 'Loading…'
+  user: 'User'
+  score: 'Score'
+  you: 'You'
+  current_characters: 'Current characters'
+  current_jobs: 'Current jobs'
+  unavailable: 'Rankings are temporarily unavailable.'
+  retry: 'Retry'
+  empty: 'No activity this season.'
+  suins_hint: 'Set a SuiNS name or subname targeting your AresRPG address as its default name to display it here.'
+  xp_description: 'XP earned from winning fights by all your characters. Transfers never move earned credit.'
+  kills_description: 'Enemy mobs defeated in won fights, counted once per fight for each winning address.'
+  dungeons_description: 'Successful final rooms, counted once per fight for each completing address.'
+  jobs_description: 'Gathering and crafting XP earned by all your characters. Forgemagie grants no XP.'
+  marketplace_description: 'Gross SUI value of marketplace purchases and sales, including characters.'
+  kolizeum_description: 'SUI paid out for Kolizeum victories, including returned stakes.'
+  zones_description: 'First discoveries of shared zones. Refreshing a zone does not count.'
+  feeding_description: 'Successful pet feeding actions. Food quantity does not multiply the score.'
+  gathering_description: 'Resource units harvested, including rare gathering bonuses.'
+  job_FARMER: 'Farmer'
+  job_HERBALIST: 'Herbalist'
+  job_MINER: 'Miner'
+  job_FORGER: 'Forger'
+  job_CARVER: 'Carver'
+  job_TAILOR: 'Tailor'
+  job_JEWELER: 'Jeweler'
+  job_TANNER: 'Tanner'
+  job_HANDYMAN: 'Handyman'
+  job_ALCHEMIST: 'Alchemist'
+  job_BAKER: 'Baker'

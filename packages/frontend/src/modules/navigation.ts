@@ -11,6 +11,7 @@ export const pages = [
   'characters',
   'leaderboard',
   'mastery',
+  'kares',
   'encyclopedia',
   'marketplace',
   'airdrop',
@@ -49,12 +50,12 @@ export const normalize_pathname = (pathname: string): string => {
 
 export const page_from_pathname = (pathname: string): Page => {
   const [segment = ''] = normalize_pathname(pathname).split('/').filter(Boolean)
-  if (segment === 'gift') return 'airdrop'
+  if (segment === 'gift' || segment === 'claim') return 'airdrop'
   return pages.find((page) => page === segment) ?? 'world'
 }
 
 export const pathname_for_page = (page: Page): string =>
-  page === 'world' ? '/' : page === 'encyclopedia' ? '/encyclopedia/items' : `/${page}`
+  page === 'airdrop' ? '/claim' : page === 'world' ? '/' : page === 'encyclopedia' ? '/encyclopedia/items' : `/${page}`
 
 export const is_world_page = (page: Page): boolean => page === 'world'
 

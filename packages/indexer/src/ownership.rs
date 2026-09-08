@@ -58,6 +58,7 @@ pub struct TypeKey {
 #[derive(Debug, Clone)]
 pub struct ObjView<'a> {
     pub id: Id,
+    pub version: u64,
     pub owner: OwnerKind,
     pub type_key: &'a TypeKey,
     pub bytes: &'a [u8],
@@ -73,6 +74,12 @@ pub struct ObjView<'a> {
 /// a wallet fact for it (asserted in tests).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Custody {
+    /// Immutable personal custody, witnessed by a cap or owner marker (including read inputs).
+    KioskOwned {
+        kiosk: Id,
+        owner: Addr,
+        personal_cap: Option<Id>,
+    },
     /// `(Kiosk)-[:HOLDS]->(object)` — kiosk custody (placed or locked).
     /// `label` is the child's node label ("Character" | "Item") — the resolver
     /// knows the type, so the Cypher lookup stays index-backed (never a
@@ -81,8 +88,7 @@ pub enum Custody {
         kiosk: Id,
         object: Id,
         label: &'static str,
-        /// The kiosk's owner when the kiosk is co-present (it is at every
-        /// lock/place/purchase) — keeps `Character.owner` fresh through custody.
+        /// The immutable owner witnessed by a personal cap or marker in this transaction.
         owner: Option<Addr>,
     },
     /// `(Fight)-[:FIGHTER {seat}]->(Character)` — fight custody.
@@ -139,7 +145,15 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
         by_id.insert(view.id, view);
     }
 
-    let mut facts = vec![];
+    let owners = crate::personal_kiosk::owners(objects)?;
+    let mut facts: Vec<_> = owners
+        .iter()
+        .map(|(kiosk, owner)| Custody::KioskOwned {
+            kiosk: *kiosk,
+            owner: owner.address,
+            personal_cap: owner.cap,
+        })
+        .collect();
     for view in by_id.values() {
         let t = view.type_key;
 
@@ -163,16 +177,7 @@ pub fn resolve(objects: &[ObjView<'_>], game_package: &str) -> anyhow::Result<Ve
                     .map_err(|e| drift("kiosk::Item wrapper", wrapper.id, e))?;
                     // wrapper key pins the child id — assert, never assume
                     if field.name.name.id == view.id {
-                        // the kiosk's owner rides along when co-present (it is
-                        // at every lock/place/purchase) → Character.owner freshness
-                        let owner = match by_id.get(&parent) {
-                            Some(k) if is_native(k.type_key, "kiosk", "Kiosk") => Some(
-                                decode::from_bytes::<decode::Kiosk>(k.bytes)
-                                    .map_err(|e| drift("kiosk::Kiosk", k.id, e))?
-                                    .owner,
-                            ),
-                            _ => None,
-                        };
+                        let owner = owners.get(&parent).map(|owner| owner.address);
                         facts.push(Custody::KioskHolds {
                             kiosk: parent,
                             object: view.id,
@@ -297,12 +302,14 @@ mod tests {
 
         let objects = [
             ObjView {
+                version: 1,
                 id: child,
                 owner: OwnerKind::Object(wrapper_id),
                 type_key: &character_type,
                 bytes: &[],
             },
             ObjView {
+                version: 1,
                 id: wrapper_id,
                 owner: OwnerKind::Object(kiosk),
                 type_key: &wrapper_type,
@@ -346,12 +353,14 @@ mod tests {
 
         let objects = [
             ObjView {
+                version: 1,
                 id: character,
                 owner: OwnerKind::Object(wrapper_id),
                 type_key: &character_type,
                 bytes: &[],
             },
             ObjView {
+                version: 1,
                 id: wrapper_id,
                 owner: OwnerKind::Object(fight),
                 type_key: &wrapper_type,
@@ -376,6 +385,7 @@ mod tests {
         let item_type = t(GAME, "item", "Item", &[]);
         let character_as_addr = Addr([7; 32]);
         let objects = [ObjView {
+            version: 1,
             id: Id([1; 32]),
             owner: OwnerKind::Address(character_as_addr),
             type_key: &item_type,
@@ -393,6 +403,7 @@ mod tests {
             &[],
         );
         let objects = [ObjView {
+            version: 1,
             id: Id([1; 32]),
             owner: OwnerKind::Address(Addr([7; 32])),
             type_key: &foreign,
@@ -407,6 +418,7 @@ mod tests {
         // the standing edge is left alone.
         let character_type = t(GAME, "character", "Character", &[]);
         let objects = [ObjView {
+            version: 1,
             id: Id([1; 32]),
             owner: OwnerKind::Object(Id([3; 32])),
             type_key: &character_type,

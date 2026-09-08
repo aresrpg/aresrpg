@@ -10,10 +10,15 @@ import engine, { initial_engine_state, type EngineInput, type EngineState } from
 import fight, { initial_fight_session_state, type FightSessionInput, type FightSessionState } from './modules/fight.ts'
 import type { Locale } from './i18n/locale.ts'
 import type { AppCopy } from './i18n/copy.ts'
+import leaderboards, {
+  initial_leaderboards_state,
+  type LeaderboardsState,
+  type LeaderboardsInput,
+} from './modules/leaderboards.ts'
 import admin, { initial_admin_state, type AdminInput, type AdminState } from './modules/admin.ts'
 import editor, { initial_editor_state, type EditorInput, type SeedEditorState } from './modules/editor.ts'
 import chat, { initial_chat_state, type ChatInput, type ChatState } from './modules/chat.ts'
-import claims from './modules/claims.ts'
+import claims, { type ClaimsInput } from './modules/claims.ts'
 import duel, { type DuelInput } from './modules/duel.ts'
 import fight_chain from './modules/fight_chain.ts'
 import fight_result, {
@@ -55,9 +60,15 @@ import job_level_up, {
   type JobLevelUpInput,
   type JobLevelUpState,
 } from './modules/job_level_up.ts'
+import external_wallet, {
+  initial_external_wallet_state,
+  type ExternalWalletState,
+  type ExternalWalletInput,
+} from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
   session: SessionState
+  external_wallet: ExternalWalletState
   navigation: NavigationState
   settings: GameSettings
   locale: Locale
@@ -71,6 +82,7 @@ export type AppState = Readonly<{
   chat: ChatState
   world: WorldState
   marketplace: MarketplaceState
+  leaderboards: LeaderboardsState
   dungeon: DungeonState
   kolizeum: KolizeumState
   friends: FriendsState
@@ -85,6 +97,7 @@ export type AppState = Readonly<{
 
 export type AppInput =
   | SessionInput
+  | ExternalWalletInput
   | NavigationInput
   | SettingsInput
   | LocaleInput
@@ -98,6 +111,7 @@ export type AppInput =
   | WorldInput
   | DuelInput
   | MarketplaceInput
+  | LeaderboardsInput
   | DungeonInput
   | KolizeumInput
   | FriendsInput
@@ -107,6 +121,7 @@ export type AppInput =
   | RuneforgeInput
   | MasteryInput
   | DistributionInput
+  | ClaimsInput
   | JobLevelUpInput
 
 type EventArguments = {
@@ -132,6 +147,7 @@ export type AppModule = Readonly<{
 
 const MODULES = Object.freeze([
   session,
+  external_wallet,
   navigation,
   settings,
   locale,
@@ -147,6 +163,7 @@ const MODULES = Object.freeze([
   fight_chain,
   claims,
   marketplace,
+  leaderboards,
   dungeon,
   kolizeum,
   friends,
@@ -168,6 +185,7 @@ export const MODULE_NAMES = Object.freeze(MODULES.map(({ name }) => name)) as re
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
     session: initial_session_state(),
+    external_wallet: initial_external_wallet_state(),
     navigation: initial_navigation_state(),
     settings: settings_state,
     locale: 'en',
@@ -181,6 +199,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     chat: initial_chat_state(),
     world: initial_world_state(),
     marketplace: initial_marketplace_state(),
+    leaderboards: initial_leaderboards_state(),
     dungeon: initial_dungeon_state(),
     kolizeum: initial_kolizeum_state(),
     friends: initial_friends_state(),
@@ -287,7 +306,14 @@ export const create_app = () => {
 export const reduce_app_state = (state: AppState, input: AppInput): AppState =>
   MODULES.reduce((folded, module) => (module.reduce ? module.reduce(folded, input) : folded), state)
 
-const app = create_app()
+// Lazy routes and already-mounted consumers must retain the same owner during live reload.
+const app = (import.meta.hot?.data.app as ReturnType<typeof create_app> | undefined) ?? create_app()
+if (import.meta.hot) {
+  // eslint-disable-next-line functional/immutable-data -- Vite's mutable hot-data slot retains the single app owner across module replacement.
+  import.meta.hot.data.app = app
+  // Stateful core edits need a clean observer lifecycle, rather than old reducer/effect closures.
+  import.meta.hot.accept(() => globalThis.location.reload())
+}
 
 export const useAppStore = <T>(selector: (state: AppState) => T): T => useStore(app.store, selector)
 export const dispatch_app = app.dispatch

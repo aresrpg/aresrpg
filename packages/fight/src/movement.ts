@@ -16,7 +16,7 @@ import {
 } from './combat_grid.ts'
 import { draw } from './prng.ts'
 import { push_collision_damage, tackle_contest, tackle_losses, tackle_seed } from './fight_math.ts'
-import { STATS, effective_stat, hit, spend_ap, spend_mp } from './fighters.ts'
+import { STATS, contest_stat, hit, spend_ap, spend_mp } from './fighters.ts'
 import { emit, fail } from './runtime.ts'
 import type { FightRuntime, FightSheet, HydratedFightCheckpoint, PrngCursor } from './types.ts'
 
@@ -85,7 +85,7 @@ const fresh_lockers = (runtime: FightRuntime, runner: bigint, cell: bigint, beat
         !beaten.includes(seat) &&
         manhattan(fighter.cell, cell) === 1n
     )
-    .map(({ seat }) => ({ seat, agility: effective_stat(runtime, seat, STATS.agility) }))
+    .map(({ seat }) => ({ seat, agility: contest_stat(runtime, seat, STATS.agility) }))
 }
 
 const best_step = (current: bigint, field: bigint[]): bigint | null => {
@@ -110,7 +110,7 @@ const tackle_departure = (runtime: FightRuntime, runner: bigint, cell: bigint, b
   const next_beaten = [...beaten, ...lockers.map(({ seat }) => seat)]
   const fighter = runtime.contract.fighters[Number(runner)]
   const contest = tackle_contest(
-    effective_stat(runtime, runner, STATS.agility),
+    contest_stat(runtime, runner, STATS.agility),
     lockers.map(({ agility }) => agility)
   )
   let escaped = true

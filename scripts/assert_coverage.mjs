@@ -4,8 +4,43 @@
 // the repository-wide LCOV distribution instead of manufacturing a giant low-coverage ignore list.
 
 import fs from 'node:fs'
+import path from 'node:path'
+
+import ts from 'typescript'
 
 export const COVERAGE_FLOOR = Object.freeze({ lines: 60, functions: 75 })
+
+// Native LCOV only describes loaded modules. Census executable sources without importing
+// workers, servers, or browser entries just to manufacture coverage.
+export const has_runtime = (source, file_name) => {
+  if (file_name.endsWith('.d.ts')) return false
+  const { outputText } = ts.transpileModule(source, {
+    fileName: file_name,
+    compilerOptions: { target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext },
+  })
+  return ts
+    .createSourceFile('output.js', outputText, ts.ScriptTarget.Latest)
+    .statements.some((statement) =>
+      ts.isImportDeclaration(statement)
+        ? !statement.importClause
+        : !ts.isExportDeclaration(statement) && !ts.isEmptyStatement(statement)
+    )
+}
+
+export const coverage_census = (lcov, sources) => {
+  const loaded = new Set(
+    lcov
+      .split('\n')
+      .filter((line) => line.startsWith('SF:'))
+      .map((line) => path.resolve(line.slice(3)))
+  )
+  const missing = sources.filter((source) => !loaded.has(path.resolve(source)))
+  return Object.freeze({
+    files: sources.length,
+    missing,
+    loaded: percentage(sources.length - missing.length, sources.length),
+  })
+}
 
 const total_field = (lcov, prefix) =>
   lcov
@@ -40,6 +75,19 @@ if (import.meta.main) {
   const totals = coverage_totals(fs.readFileSync(path, 'utf8'))
   const verdict = coverage_verdict(totals)
   process.stdout.write(`coverage: ${totals.lines.toFixed(2)}% lines, ${totals.functions.toFixed(2)}% functions\n`)
+  const sources = ['packages/*/src/**/*.{ts,tsx,js,mjs}', 'scripts/**/*.{ts,tsx,js,mjs}']
+    .flatMap((pattern) => [...new Bun.Glob(pattern).scanSync('.')])
+    .filter((file) => !/\.(?:test|spec|gen)\.[^.]+$/.test(file))
+    .filter((file) => has_runtime(fs.readFileSync(file, 'utf8'), file))
+  const census = coverage_census(fs.readFileSync(path, 'utf8'), sources)
+  process.stdout.write(
+    `coverage census: ${census.files - census.missing.length}/${census.files} executable files loaded (${census.loaded.toFixed(2)}%)\n`
+  )
+  process.stdout.write(census.missing.map((file) => `unloaded: ${file}\n`).join(''))
+  if (census.loaded < 86) {
+    process.stderr.write('coverage gate: fewer than 86% of executable files appear in native coverage\n')
+    process.exitCode = 1
+  }
   if (!verdict.ok) {
     verdict.failures.forEach((failure) => process.stderr.write(`coverage gate: ${failure}\n`))
     process.exitCode = 1

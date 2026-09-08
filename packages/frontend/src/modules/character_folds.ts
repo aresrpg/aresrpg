@@ -33,59 +33,39 @@ const with_character = (
   })
 }
 
-/** One consumed unit off a stack — the last unit removes the row. */
-const with_item_spent = (items: readonly ItemRow[], item_id: string): readonly ItemRow[] => {
-  const item = items.find(({ id }) => id === item_id)
-  if (!item) return items
-  if (item.amount <= 1) return items.filter(({ id }) => id !== item_id)
-  return items.map((row) => (row.id === item_id ? { ...row, amount: row.amount - 1 } : row))
-}
-
-const with_checkpoint_item_spent = (items: readonly ItemRow[], before: Readonly<ItemRow>): readonly ItemRow[] => {
-  const current = items.find(({ id }) => id === before.id)
-  return current?.amount === before.amount ? with_item_spent(items, before.id) : items
-}
-
 const scribe_checkpoint_matches = (current: Readonly<ItemRow>, before: Readonly<ItemRow>): boolean =>
-  Number(current.puits ?? 0) === Number(before.puits ?? 0) &&
-  stat_names.every((stat) => current.stats?.[stat] === before.stats?.[stat]) &&
-  stat_names.every((_, index) => (current.apps?.[index] ?? 0) === (before.apps?.[index] ?? 0))
+  String(current.puits ?? '0') === String(before.puits ?? '0') &&
+  stat_names.every((stat) => current.stats?.[stat] === before.stats?.[stat])
 
 const stat_value_after_scribe = (
   current: number,
-  stat: string,
+  stat: (typeof stat_names)[number],
   input: Extract<AppInput, { type: 'runeforge/scribed' }>
 ): number => {
   const applied_stat = stat_names[input.outcome.stat]
-  const lost_stat = stat_names[input.outcome.lost_stat]
   const added = stat === applied_stat ? input.outcome.applied_value : 0
-  const removed = stat === lost_stat ? input.outcome.lost_amount : 0
+  const removed = input.outcome.lost_amounts[stat_names.indexOf(stat)] ?? 0
   return Math.max(0, Math.min(65_535, current + added - removed))
 }
 
 /** The RuneScribed event certifies every delta needed for immediate interaction. The later
- * ItemWritten packet remains the complete authoritative replacement. */
+ * packet/item_updated remains the complete authoritative replacement. */
 const with_scribe_folded = (
   items: readonly ItemRow[],
   input: Extract<AppInput, { type: 'runeforge/scribed' }>
 ): readonly ItemRow[] => {
   const applied_stat = stat_names[input.outcome.stat]
   const gear = items.find(({ id }) => id === input.gear_before.id)
-  const spend_rune = (rows: readonly ItemRow[]): readonly ItemRow[] =>
-    with_checkpoint_item_spent(rows, input.rune_before)
-  if (!gear?.stats || !applied_stat || !scribe_checkpoint_matches(gear, input.gear_before)) return spend_rune(items)
+  if (!gear?.stats || !applied_stat || !scribe_checkpoint_matches(gear, input.gear_before)) return items
   const stats = Object.freeze(
     Object.fromEntries(
       stat_names.map((stat) => [stat, stat_value_after_scribe(gear.stats?.[stat] ?? item_stat_center, stat, input)])
     )
   )
-  const apps = stat_names.map(
-    (_, index) => (gear.apps?.[index] ?? 0) + (index === input.outcome.stat && input.outcome.outcome !== 2 ? 1 : 0)
-  )
   const folded = items.map((item) =>
-    item.id === input.gear_before.id ? { ...item, stats, apps, puits: String(input.outcome.new_puits) } : item
+    item.id === input.gear_before.id ? { ...item, stats, puits: input.outcome.new_puits } : item
   )
-  return spend_rune(folded)
+  return folded
 }
 
 /** Fold a PROVEN character receipt — the exact state transition the transaction executed,
@@ -170,7 +150,7 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
     })
     return Object.freeze({
       ...consumed,
-      inventory: Object.freeze(with_item_spent(consumed.inventory, input.item_id)),
+      inventory: consumed.inventory,
     })
   }
   if (input.type === 'runeforge/scribed')
@@ -201,11 +181,7 @@ const without_claim = (claims: readonly ClaimRow[], claim_id: string | null): re
 
 /** Inventory-shaped own-transaction receipts: boxes, claims, crushes, feeding, burning. */
 const fold_inventory_receipt = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type === 'inventory/box_opened')
-    return with_claim_added(
-      Object.freeze({ ...session, inventory: Object.freeze(with_item_spent(session.inventory, input.box_item_id)) }),
-      { id: input.claim_id, kind: 'box' }
-    )
+  if (input.type === 'inventory/box_opened') return with_claim_added(session, { id: input.claim_id, kind: 'box' })
   if (input.type === 'inventory/claim_settled')
     return Object.freeze({ ...session, claims: Object.freeze(without_claim(session.claims, input.claim_id)) })
   if (input.type === 'inventory/gear_crushed') {
@@ -220,43 +196,15 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
     return Object.freeze({
       ...session,
       inventory: Object.freeze(
-        with_item_spent(session.inventory, input.food_id).map((row) =>
+        session.inventory.map((row) =>
           row.id === input.pet_id ? { ...row, pet_power: (row.pet_power ?? 0) + 1, pet_last_day: today } : row
         )
-      ),
-    })
-  }
-  if (input.type === 'inventory/stacks_merged') {
-    const source_ids = new Set(input.groups.flatMap(({ source_ids }) => source_ids))
-    const totals = new Map(
-      input.groups.map(({ target_id, source_ids }) => [
-        target_id,
-        session.inventory
-          .filter(({ id }) => id === target_id || source_ids.includes(id))
-          .reduce((total, { amount }) => total + amount, 0),
-      ])
-    )
-    return Object.freeze({
-      ...session,
-      inventory: Object.freeze(
-        session.inventory.flatMap((row) => {
-          if (source_ids.has(row.id)) return []
-          const amount = totals.get(row.id)
-          return amount === undefined ? [row] : [{ ...row, amount }]
-        })
       ),
     })
   }
   if (input.type === 'character/crafted') {
     // Burn the receipt-proven aggregate plan and bank its total XP; stackable output arrives as
     // one item write, while unique successes arrive independently through the item stream.
-    const spent = new Map(input.inputs.map(({ item_id, amount }) => [item_id, amount]))
-    const inventory = session.inventory.flatMap((row) => {
-      const amount = spent.get(row.id)
-      if (amount === undefined) return [row]
-      if (row.amount <= amount) return []
-      return [{ ...row, amount: row.amount - amount }]
-    })
     const characters = session.characters.map((character) =>
       character.id === input.character_id
         ? Object.freeze({
@@ -268,18 +216,8 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
           })
         : character
     )
-    return Object.freeze({ ...session, inventory: Object.freeze(inventory), characters: Object.freeze(characters) })
+    return Object.freeze({ ...session, inventory: session.inventory, characters: Object.freeze(characters) })
   }
-  if (input.type === 'inventory/destroyed')
-    return Object.freeze({
-      ...session,
-      inventory: Object.freeze(
-        session.inventory.flatMap((row) => {
-          if (row.id !== input.item_id) return [row]
-          if (row.amount <= input.amount) return []
-          return [{ ...row, amount: row.amount - input.amount }]
-        })
-      ),
-    })
+
   return session
 }

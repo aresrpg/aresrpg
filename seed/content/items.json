@@ -626,6 +626,15 @@
     "level": 1
   },
   {
+    "item_type": "recall_potion",
+    "name": "Recall Potion",
+    "category": "consumable",
+    "level": 1,
+    "consumable": {
+      "type": "recall"
+    }
+  },
+  {
     "item_type": "red_orchid",
     "name": "Sanguine Orchid",
     "category": "resource",
@@ -7604,37 +7613,37 @@
   {
     "item_type": "coiffe_pepe",
     "name": "Coiffe Pepe",
-    "category": "hat",
+    "category": "cosmetic_hat",
     "level": 1
   },
   {
     "item_type": "coiffe_pepe_royal",
     "name": "Coiffe Pepe Royal",
-    "category": "hat",
+    "category": "cosmetic_hat",
     "level": 1
   },
   {
     "item_type": "fud",
     "name": "Fud",
-    "category": "hat",
+    "category": "cosmetic_hat",
     "level": 1
   },
   {
     "item_type": "sam",
     "name": "Sam",
-    "category": "hat",
+    "category": "cosmetic_hat",
     "level": 1
   },
   {
     "item_type": "suicunio",
     "name": "Suicunio",
-    "category": "hat",
+    "category": "cosmetic_hat",
     "level": 1
   },
   {
     "item_type": "sui_helmet",
     "name": "Sui Helmet",
-    "category": "hat",
+    "category": "cosmetic_hat",
     "level": 1
   },
   {

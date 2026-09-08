@@ -196,7 +196,7 @@ events! {
         => |e: &FightClosable| format!("evt:fight:{}", e.fight.hex()),
     fight::FightClosed { fight: Id }
         => |e: &FightClosed| format!("evt:fight:{}", e.fight.hex()),
-    fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop> }
+    fight::DropsRolled { fight: Id, fighter: u64, drops: Vec<RolledDrop>, kares: u64 }
         => |e: &DropsRolled| format!("evt:fight:{}", e.fight.hex()),
 
     // ── world surface (zone-local presence — NOTHING rides a world-global channel) ──
@@ -216,18 +216,10 @@ events! {
     kolizeum::KolizeumPaid { kolizeum: Id, winner: Addr, amount: u64 }
         => |_: &KolizeumPaid| "evt:kolizeum".to_string(),
 
+    listing_rule::SellerProved { kiosk: Id, owner: Addr }
+        => |_: &SellerProved| "evt:economy".to_string(),
+
     // ── economy ──
-    distribution::AirdropCreated { airdrop: Id, template: Id, addresses: u64 }
-        => |_: &AirdropCreated| "evt:economy".to_string(),
-    distribution::AirdropClaimed {
-        airdrop: Id,
-        drop_id: String,
-        claimer: Addr,
-        recipient: Addr,
-        giftcard: Id,
-        remaining: u64,
-    }
-        => |_: &AirdropClaimed| "evt:economy".to_string(),
     distribution::GiftcardMinted { giftcard: Id, template: Id, amount: u32 }
         => |_: &GiftcardMinted| "evt:economy".to_string(),
     distribution::GiftcardRedeemed { giftcard: Id, redeemer: Addr }
@@ -242,7 +234,7 @@ events! {
         job_xp_gained: u64,
     }
         => |_: &Crafted| "evt:economy".to_string(),
-    forgemagie::RuneScribed { item: Id, stat: u8, tier: u8, outcome: u8, applied_value: u64, lost_stat: u8, lost_amount: u64, new_puits: u64, xp: u64 }
+    forgemagie::RuneScribed { item: Id, stat: u8, tier: u8, outcome: u8, applied_value: u64, lost_amounts: Vec<u64>, new_puits: u64 }
         => |_: &RuneScribed| "evt:economy".to_string(),
     forgemagie::GearCrushed { crusher: Addr, items: u64 }
         => |_: &GearCrushed| "evt:economy".to_string(),
@@ -294,6 +286,20 @@ pub struct KioskItemDelisted {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn captured_signed_forging_event_routes_its_full_loss_ledger() {
+        // Real local-chain transaction and object/version/date provenance live with the bytes.
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../sdk/test/fixtures/forgemagie.localnet.json"
+        ))
+        .unwrap();
+        let bytes = hex::decode(fixture["bcs_hex"].as_str().unwrap()).unwrap();
+        let routed = route("forgemagie", "RuneScribed", &bytes).unwrap().unwrap();
+        assert_eq!(routed.topic, "evt:economy");
+        assert_eq!(routed.data, fixture["parsed_json"]);
+        assert!(route("forgemagie", "RuneScribed", &bytes[..bytes.len() - 1]).is_err());
+    }
 
     #[test]
     fn routes_a_character_event_with_hex_ids() {

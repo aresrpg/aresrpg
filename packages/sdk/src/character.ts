@@ -12,6 +12,7 @@ import { living_content } from './client.ts'
 import { receipt_digest, receipt_event } from './cache.ts'
 import { normalize_character_name } from './character_name.ts'
 import { CHARACTER_PRICE_MIST } from './character_price.ts'
+import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { world_content_id } from './seed_ids.ts'
 
 export type { KioskOwnerCap } from '@mysten/kiosk'
@@ -85,4 +86,19 @@ export const character_create = async (
   const character_id = receipt_event(receipt, '::character::CharacterCreated')?.character
   if (typeof character_id !== 'string') throw new Error('The create receipt did not expose its CharacterCreated id.')
   return { digest: receipt_digest(receipt), character_id, kiosk_cap: settled_kiosk_cap }
+}
+
+export type CharacterDeleteInput = Readonly<{ character_id: string; custody: KioskCustody }>
+
+/** The protected Move door refuses equipment, Party membership, dungeon runs and fired protectors. */
+export const character_delete = async (
+  sdk: GameSdk,
+  kiosk_cap: KioskCapLoader,
+  { character_id, custody }: CharacterDeleteInput
+): Promise<{ digest: string }> => {
+  const { with_kiosk } = create_kiosk_runner(sdk, kiosk_cap)
+  const receipt = await with_kiosk((tx, kiosk, cap) => sdk.doors.delete_character(tx, { kiosk, cap, character_id }), {
+    custody,
+  })
+  return { digest: receipt_digest(receipt) }
 }

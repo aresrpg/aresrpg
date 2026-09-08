@@ -33,6 +33,7 @@ test('the directory preserves explicit sides and permits several characters from
                     { team: 0, settled: false, kind: { player: { character: '0xc1', owner: '0xme', level: 20 } } },
                     { team: 1, settled: false, kind: { player: { character: '0xc2', owner: '0xme', level: 21 } } },
                     { team: 0, settled: false, kind: { player: { character: '0xc3', owner: '0xother', level: 19 } } },
+                    { team: 0, settled: true, kind: { player: { character: '0xc4', owner: '0xother', level: 19 } } },
                   ],
                 }),
               },
@@ -43,6 +44,7 @@ test('the directory preserves explicit sides and permits several characters from
         { id: '0xc1', name: 'Ari', classe: 'senshi', level: 20 },
         { id: '0xc2', name: 'Bex', classe: 'yogan', level: 21 },
         { id: '0xc3', name: 'Cyr', classe: 'mori', level: 19 },
+        { id: '0xc4', name: 'Former', classe: 'mori', level: 19 },
       ]
     },
   }
@@ -64,6 +66,7 @@ test('the directory preserves explicit sides and permits several characters from
         { seat: 0, team: 0, character_id: '0xc1', name: 'Ari', classe: 'senshi', level: 20, settled: false },
         { seat: 1, team: 1, character_id: '0xc2', name: 'Bex', classe: 'yogan', level: 21, settled: false },
         { seat: 2, team: 0, character_id: '0xc3', name: 'Cyr', classe: 'mori', level: 19, settled: false },
+        { seat: 3, team: 0, character_id: '0xc4', name: 'Former', classe: 'mori', level: 19, settled: true },
       ],
     },
   ])

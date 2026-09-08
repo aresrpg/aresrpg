@@ -15,7 +15,7 @@ const log = logger(import.meta)
 export default {
   name: 'player_trade',
   observe: ({ pubsub, graph, send, address, signal }) => {
-    const { watch, unwatch, watched } = create_watcher(pubsub)
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
 
     const refresh = latest_reader(
       () => get_trades(graph, { address }),
@@ -30,7 +30,9 @@ export default {
       if (payload.type === 'TradeChanged' || payload.type === 'TradeDestroyed') reread()
     }
     void watch(channels.social(address), forward as (payload: never) => void)
-      .then(refresh)
+      .then(() => {
+        if (!signal.aborted) return refresh()
+      })
       .catch((error: Error) => log.error({ address, error: error.message }, 'trade snapshot failed'))
 
     signal.addEventListener('abort', () => {

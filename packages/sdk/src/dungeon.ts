@@ -3,9 +3,14 @@
 // Dungeon writes are a thin coordinator over kiosk custody, living content, and normal fights.
 
 import { SDK, living_content } from './client.ts'
-import { receipt_digest, receipt_event } from './cache.ts'
+import { receipt_digest, receipt_event, spending_receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
-import { created_fight_id, execute_settlement_mode, SETTLEMENT_BATCH_GAS_BUDGET_MIST } from './fight.ts'
+import {
+  fight_kares_rewards,
+  created_fight_id,
+  execute_settlement_mode,
+  SETTLEMENT_BATCH_GAS_BUDGET_MIST,
+} from './fight.ts'
 import { mastery_receipt_row } from './mastery.ts'
 import {
   board_catalog_id,
@@ -46,12 +51,14 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       world,
       dungeon,
       key_id,
+      merge_sources = [],
     }: {
       character_id: string
       custody?: KioskCustody
       world: string
       dungeon: string
       key_id: string
+      merge_sources?: readonly string[]
     }) => {
       const { world_object, world_content } = world_refs(world, 'Dungeon entry')
       const dungeon_content = dungeon_ref(dungeon, 'Dungeon entry')
@@ -68,11 +75,12 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
           }),
         {
           custody,
+          merges: [{ target_id: key_id, source_ids: merge_sources }],
           gas_scope: `dungeon-entry:${dungeon}`,
           inputs: [world_object, world_content, dungeon_content, key_id],
         }
       )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      return spending_receipt(receipt)
     },
 
     start_fight: async ({
@@ -159,6 +167,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       custody,
       mastery,
       last,
+      boss_rewards = false,
     }: {
       fight: string
       dungeon: string
@@ -169,6 +178,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       custody?: KioskCustody
       mastery?: Readonly<{ id: string; fighter_idx: bigint }> | null
       last?: boolean
+      boss_rewards?: boolean
     }) => {
       if (settlements.length === 0) throw new Error('Dungeon settlement batch is empty')
       const { content_root, seed_package_original } = content('Dungeon settlement')
@@ -196,6 +206,11 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
                 fight_object: fight,
                 fighter_idx: mastery.fighter_idx,
                 dungeon_content,
+              })
+            if (boss_rewards)
+              sdk.doors.prepare_boss_rewards(tx, {
+                fight_object: fight,
+                fighter_idx: normalized[0]!.fighter_idx,
               })
             const plan = normalized.flatMap(({ loot }) =>
               loot.map(({ item_type, existing }) =>
@@ -225,6 +240,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
         closable: receipt_event(receipt, '::fight::FightClosable') !== null,
         closed: receipt_event(receipt, '::fight::FightClosed') !== null,
         mastery: mastery_receipt_row(receipt),
+        kares_rewards: fight_kares_rewards(receipt),
       })
     },
 

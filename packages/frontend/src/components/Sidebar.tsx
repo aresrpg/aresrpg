@@ -7,6 +7,7 @@ import {
   Gamepad2,
   Gift,
   Gem,
+  Coins,
   Settings,
   ShieldCheck,
   Store,
@@ -27,8 +28,9 @@ const NAVIGATION: readonly Readonly<{ page: Page; label: CopyStringKey; Icon: Lu
   Object.freeze([
     { page: 'world', label: 'world', Icon: Gamepad2, disabled: false },
     { page: 'characters', label: 'characters', Icon: Swords, disabled: false },
-    { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: true },
+    { page: 'leaderboard', label: 'leaderboard', Icon: Trophy, disabled: false },
     { page: 'mastery', label: 'mastery', Icon: Gem, disabled: false },
+    { page: 'kares', label: 'kares', Icon: Coins, disabled: false },
     { page: 'encyclopedia', label: 'encyclopedia', Icon: BookOpen, disabled: false },
     { page: 'marketplace', label: 'marketplace', Icon: Store, disabled: false },
     { page: 'airdrop', label: 'airdrop', Icon: Gift, disabled: false },

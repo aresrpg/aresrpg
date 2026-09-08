@@ -149,6 +149,18 @@ test('formats cap each side independently and zero-stake lobbies remain valid', 
   expect(parse_kolizeum_pledge('-1')).toBeNull()
 })
 
+test('forfeited seats still consume lifetime admission while the other side remains independent', () => {
+  const fighters = Array.from({ length: 6 }, (_, seat) => ({
+    ...lobby.fighters[0]!,
+    seat,
+    character_id: `0xc${seat}`,
+    settled: seat !== 0,
+  }))
+  expect(kolizeum_side_open({ ...lobby, fighters }, 0)).toBeFalse()
+  expect(kolizeum_side_open({ ...lobby, fighters }, 1)).toBeTrue()
+  expect(kolizeum_side_open({ ...lobby, fighters: fighters.slice(0, 5) }, 0)).toBeTrue()
+})
+
 test('a delayed join remains owned by its character and preserves the selected side', async () => {
   let resolve_join!: (receipt: { digest: string; fight: string }) => void
   const calls: unknown[] = []

@@ -2,9 +2,7 @@
 /* eslint-disable complexity, max-depth, max-lines -- the validator keeps cross-row diagnostics in one deterministic command boundary. */
 //
 // Run: `bun scripts/validate_seed.mjs`. Exit 0 means the content files could be walked into the seeding
-// without a single abort; any RED is a row the chain would refuse, or a fact nobody has authored
-// yet. Each RED maps to a row in PENDING_SEED_DECISIONS.md — a red here is the red-first check for a
-// decision the owner has not made, not a bug to paper over. WARNs never fail the gate.
+// without a single abort. Every RED fails the gate; WARNs remain diagnostic.
 //
 // Every rule cites the Move line it mirrors. The chain validates almost nothing about slugs:
 // referential closure exists ONLY here (review M1), and a typo freezes forever.
@@ -14,6 +12,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { validate_world_recipe } from '../packages/engine/src/index.ts'
+import { giftcards_for_network } from '../packages/sdk/src/seed.ts'
 import {
   acquisition_catalog,
   acquisition_average_seconds,
@@ -29,6 +28,7 @@ import {
   gatherable_of,
   item_categories,
   item_is_stackable,
+  is_cosmetic_category,
   item_stat_center,
   job_slugs,
   model_variant_identity,
@@ -417,8 +417,10 @@ for (const item of items) {
     red('I-CATEGORY', `${where}: category "${item.category}" would abort verify_category`)
   check_number(where, 'level', item.level, 8)
   const stackable = item_is_stackable(item.category)
+  if (is_cosmetic_category(item.category) && (item.stats || item.damages))
+    red('I-COSMETIC', `${where}: cosmetics carry neither stats nor damage lines`)
   if (item.stats) {
-    if (stackable) red('I-STACK', `${where}: a stackable carries no stats (item.move:159 EStackableStats)`)
+    if (stackable) red('I-STACK', `${where}: a stackable carries no stats (item_rows.move EStatlessCategory)`)
     for (const side of ['min', 'max']) check_item_stat_block(`${where}.stats.${side}`, item.stats[side])
     for (const field of stat_names)
       if (item.stats.min?.[field] > item.stats.max?.[field])
@@ -428,7 +430,7 @@ for (const item of items) {
         )
   }
   if (item.damages) {
-    if (stackable) red('I-STACK', `${where}: a stackable carries no damage lines (item.move:172 EStackableStats)`)
+    if (stackable) red('I-STACK', `${where}: a stackable carries no damage lines (item_rows.move EStatlessCategory)`)
     for (const [i, line] of item.damages.entries()) {
       check_number(`${where}.damages[${i}]`, 'from', line.from, 16)
       check_number(`${where}.damages[${i}]`, 'to', line.to, 16)
@@ -731,7 +733,7 @@ for (const world of worlds) {
   const ocean_biome = world.terrain?.ocean?.biome
   if (world.terrain) {
     // The recipe must COMPILE, not just parse — a schema-broken terrain block otherwise
-    // survives this gate and only explodes inside derive_biome_map at ceremony time.
+    // survives this gate and only fails when canonical content derives the biome grid.
     const recipe = validate_world_recipe(world.terrain)
     if (!recipe.ok) for (const error of recipe.errors) red('M2-RECIPE', `${where}: ${error}`)
     if (biomes.length > 255) red('M2-BIOMES', `${where}: ${biomes.length} biomes overflow the u8 biome id`)
@@ -881,8 +883,8 @@ for (const offer of mastery.offers ?? []) {
 }
 if (new Set((mastery.offers ?? []).map(({ item_type }) => item_type)).size !== (mastery.offers ?? []).length)
   red('M-DUP', 'mastery.json holds two offers for one item_type — MasteryOfferKey derivation aborts')
-// airdrop.json — presentation plus the free airdrop/giftcard distribution rows.
-// `showcase` rows are the airdrop page's display data; `drops`/`giftcards` are the chain rows.
+// airdrop.json — presentation plus the portable giftcard distribution rows.
+// `showcase` rows are the airdrop page's display data; `giftcards` are the chain rows.
 const airdrop = load('airdrop.json')
 for (const row of airdrop.showcase) {
   if (typeof row.id !== 'string' || row.id === '') red('A-SHOWCASE', `showcase row without an id`)
@@ -905,51 +907,75 @@ for (const row of airdrop.showcase) {
 }
 if (new Set(airdrop.showcase.map(({ id }) => id)).size !== airdrop.showcase.length)
   red('L-DUP', 'airdrop.json holds two showcase rows with one id')
-for (const drop of airdrop.drops) {
-  check_exact_keys(`airdrop.drops[${drop.id ?? '?'}]`, drop, ['id', 'item_type', 'amount_each', 'whitelist'])
-  if (typeof drop.id !== 'string' || drop.id === '') red('L-SLUG', 'airdrop row needs a non-empty derived id')
-  if (!item_types.has(drop.item_type)) red('X-AIRDROP', `airdrop references the unknown item "${drop.item_type}"`)
-  const distributed = items_by_type.get(drop.item_type)
-  if (
-    distributed?.stats &&
-    (distributed.category !== 'pet' || JSON.stringify(distributed.stats.min) !== JSON.stringify(distributed.stats.max))
+const check_giftcard_values = (card) => {
+  check_rule(
+    card.network === undefined || ['testnet', 'mainnet'].includes(card.network),
+    'L4-NETWORK',
+    `giftcard ${card.id}: network must be testnet or mainnet`
   )
-    red('L4-AIRDROP', `airdrop ${drop.item_type}: only statless items and fixed-endpoint pets can be distributed`)
-  if (!(drop.amount_each >= 1) || !drop.whitelist.length)
-    red(
-      'L4-AIRDROP',
-      `airdrop ${drop.item_type}: amount_each ${drop.amount_each}, ${drop.whitelist.length} addresses (distribution.move EZeroQuantity)`
-    )
-  if (new Set(drop.whitelist).size !== drop.whitelist.length)
-    red(
-      'L4-DUPADDR',
-      `airdrop ${drop.item_type} lists a duplicate address — the VecSet insert aborts the seeding (distribution.move)`
-    )
-}
-if (new Set(airdrop.drops.map(({ id }) => id)).size !== airdrop.drops.length)
-  red('L-DUP', 'airdrop.json holds two drops with one derived id')
-for (const card of airdrop.giftcards) {
-  check_exact_keys(`airdrop.giftcards[${card.id ?? '?'}]`, card, ['id', 'item_type', 'amount', 'custody'])
-  if (typeof card.id !== 'string' || card.id === '') red('L-SLUG', 'giftcard row needs a non-empty derived id')
-  if (!item_types.has(card.item_type)) red('X-GIFTCARD', `giftcard references the unknown item "${card.item_type}"`)
+  check_rule(typeof card.id === 'string' && card.id !== '', 'L-SLUG', 'giftcard row needs a non-empty derived id')
+  check_rule(item_types.has(card.item_type), 'X-GIFTCARD', `giftcard references the unknown item "${card.item_type}"`)
   const distributed = items_by_type.get(card.item_type)
-  if (
-    distributed?.stats &&
-    (distributed.category !== 'pet' || JSON.stringify(distributed.stats.min) !== JSON.stringify(distributed.stats.max))
+  check_rule(
+    !distributed?.stats ||
+      (distributed.category === 'pet' &&
+        JSON.stringify(distributed.stats.min) === JSON.stringify(distributed.stats.max)),
+    'L4-GIFTCARD',
+    `giftcard ${card.item_type}: only statless items and fixed-endpoint pets can be distributed`
   )
-    red('L4-GIFTCARD', `giftcard ${card.item_type}: only statless items and fixed-endpoint pets can be distributed`)
-  if (!(card.amount >= 1))
-    red('L4-GIFTCARD', `giftcard ${card.item_type}: amount ${card.amount} (distribution.move EZeroQuantity)`)
-  if (typeof card.custody !== 'string' || !/^0x[\da-f]{64}$/iu.test(card.custody))
-    red('L4-CUSTODY', `giftcard ${card.item_type}: custody must be a 32-byte Sui address`)
-  else if (deployment_object_ids.has(card.custody))
+  check_rule(
+    card.amount >= 1,
+    'L4-GIFTCARD',
+    `giftcard ${card.item_type}: amount ${card.amount} (distribution.move EZeroQuantity)`
+  )
+}
+const is_giftcard_address = (custody) => typeof custody === 'string' && /^0x[\da-f]{64}$/iu.test(custody)
+const check_giftcard_custody = (item_type, custody) => {
+  if (!is_giftcard_address(custody)) red('L4-CUSTODY', `giftcard ${item_type}: custody must be a 32-byte Sui address`)
+  else if (deployment_object_ids.has(custody))
     red(
       'L4-CUSTODY-OBJECT',
-      `giftcard ${card.item_type}: custody is a pinned package/capability object ID, not a signer address`
+      `giftcard ${item_type}: custody is a pinned package/capability object ID, not a signer address`
     )
 }
-if (new Set(airdrop.giftcards.map(({ id }) => id)).size !== airdrop.giftcards.length)
-  red('L-DUP', 'airdrop.json holds two giftcards with one derived id')
+for (const card of airdrop.giftcards) {
+  check_exact_keys(`airdrop.giftcards[${card.id ?? '?'}]`, card, [
+    'id',
+    'item_type',
+    'amount',
+    'custody',
+    ...('network' in card ? ['network'] : []),
+  ])
+  check_giftcard_values(card)
+  check_giftcard_custody(card.item_type, card.custody)
+}
+const giftcard_batches = airdrop.giftcard_batches ?? []
+for (const batch of giftcard_batches) {
+  check_exact_keys(`airdrop.giftcard_batches[${batch.id ?? '?'}]`, batch, [
+    'id',
+    'item_type',
+    'amount',
+    'recipients',
+    ...('network' in batch ? ['network'] : []),
+  ])
+  check_giftcard_values(batch)
+  if (!Array.isArray(batch.recipients)) {
+    red('L4-RECIPIENTS', `giftcard batch ${batch.id}: recipients must be an array`)
+    continue
+  }
+  check_rule(batch.recipients.length > 0, 'L4-RECIPIENTS', `giftcard batch ${batch.id}: recipients must not be empty`)
+  for (const custody of batch.recipients) check_giftcard_custody(batch.item_type, custody)
+}
+if (new Set(giftcard_batches.map(({ id }) => id)).size !== giftcard_batches.length)
+  red('L-DUP', 'airdrop.json holds two giftcard batches with one identity')
+const valid_batches = giftcard_batches.filter(
+  (batch) => Array.isArray(batch.recipients) && batch.recipients.every(is_giftcard_address)
+)
+for (const network of ['mainnet', 'testnet']) {
+  const cards = giftcards_for_network(network, { airdrop: { ...airdrop, giftcard_batches: valid_batches } })
+  if (new Set(cards.map(({ id }) => id)).size !== cards.length)
+    red('L-DUP', `airdrop.json holds two ${network} giftcards with one derived id`)
+}
 
 // ── icons (M6) ───────────────────────────────────────────────────────────────────────────
 // Canonical small icons are required for lists; optional `_hd` renders never substitute for a missing thumbnail.
@@ -1066,7 +1092,5 @@ else {
   if (warns.length) process.stdout.write('\n')
   for (const line of reds) process.stdout.write(`${line}\n`)
   process.stdout.write(`\n${reds.length} red · ${warns.length} warn\n`)
-  if (reds.length)
-    process.stdout.write('Every RED maps to a row in PENDING_SEED_DECISIONS.md — they are owner decisions, not bugs.\n')
 }
 if (reds.length) process.exit(1)

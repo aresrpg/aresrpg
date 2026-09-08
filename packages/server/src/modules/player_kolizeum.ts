@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { create_watcher } from '../pubsub_bus.ts'
 import { latest_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import { channels } from '../protocol.ts'
@@ -20,14 +21,11 @@ export default {
       void push().catch((error: Error) => log.error({ address, error: error.message }, 'kolizeum board read failed'))
     }
     const forward = (): void => refresh()
-    pubsub.graph.emitter.on(channels.kolizeum, forward)
-    void pubsub.graph
-      .subscribe(channels.kolizeum)
-      .then(refresh)
+    const { watch } = create_watcher(pubsub, signal)
+    void watch(channels.kolizeum, forward)
+      .then(() => {
+        if (!signal.aborted) refresh()
+      })
       .catch((error: Error) => log.error({ address, error: error.message }, 'kolizeum watch failed'))
-    signal.addEventListener('abort', () => {
-      pubsub.graph.emitter.off(channels.kolizeum, forward)
-      void pubsub.graph.unsubscribe(channels.kolizeum)
-    })
   },
 } satisfies PlayerModule

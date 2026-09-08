@@ -31,7 +31,7 @@ const row = (
 export const retired_seed_row = (key: string, entry: LedgerEntry): SeedSyncRow | null => {
   if (entry.domain === 'mastery_offer' || entry.label.startsWith('mastery offer '))
     return row(key, entry.label, 'mastery_offer', (sdk, tx, cap, root) =>
-      sdk.seed_doors.set_mastery_offer(tx, { cap, root, offer: key, cost: 1, enabled: false })
+      sdk.seed_doors.set_mastery_offer_enabled(tx, { cap, root, offer: key, enabled: false })
     )
   if (entry.domain === 'recipe' || entry.label.startsWith('recipe '))
     return row(key, entry.label, 'recipe', (sdk, tx, cap, root) =>

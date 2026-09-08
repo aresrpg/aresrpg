@@ -1,0 +1,8 @@
+[package]
+name = "aresrpg_kares"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+authors = ["Sceat"]
+
+[addresses]
+aresrpg_kares = "0x0"

@@ -23,7 +23,7 @@ const shell_source = readFileSync(new URL('../../src/components/AppShell.tsx', i
 
 test('the routed shell lazy-loads the dedicated Mastery page', () => {
   expect(shell_source).toContain("import('../mastery/MasteryPage.tsx')")
-  expect(shell_source).toContain("page === 'mastery'")
+  expect(shell_source).toContain('mastery: <MasteryPage')
 })
 
 test('the sidebar marks an unstarted daily quest without storing notification state', async () => {
@@ -58,6 +58,7 @@ test('the account card sits below navigation and above language with row actions
     identity: 'zklogin' as const,
     sign_personal_message: async () => ({ bytes: '', signature: '' }),
     read_sui_balance: async () => 0n,
+    read_kares_balance: async () => 0n,
     gas_spent_24h: () => 0n,
     derive_character_id: () => '',
     is_character_name_claimed: async () => false,
@@ -69,6 +70,7 @@ test('the account card sits below navigation and above language with row actions
     friends: {} as never,
     party: {} as never,
     mastery: {} as never,
+    kares: {} as never,
     character: {} as never,
     read_character_checkpoint: async () => null,
     read_item: async () => ({}) as never,
@@ -79,15 +81,13 @@ test('the account card sits below navigation and above language with row actions
     resolve_suins_address: async () => null,
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: 'digest' }),
-    claim_airdrop: async () => ({
-      digest: '',
-      giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
-    }),
+    read_giftcards: async () => [],
+    transfer_giftcards: async () => ({ digest: '', giftcards: [] }),
     claim_giftcard_link: async () => ({
       digest: '',
       giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
     }),
-    redeem_giftcard: async () => ({ digest: '' }),
+    redeem_giftcard: async () => ({ digest: '', item_id: '0xitem', item_version: '10' }),
     create_seed_admin: async () => {
       throw new Error('not used while rendering')
     },
@@ -99,7 +99,13 @@ test('the account card sits below navigation and above language with row actions
     read_game_paused: async () => false,
     set_game_paused: async () => ({ digest: '' }),
     read_marketplace_royalties: async () => [],
-    claim_marketplace_royalties: async () => ({ digest: '', amount_mist: 0n, policies: [] }),
+    claim_marketplace_royalties: async () => ({
+      digest: '',
+      amount_mist: 0n,
+      staking_mist: 0n,
+      treasury_mist: 0n,
+      policies: [],
+    }),
     disconnect: async () => undefined,
   }) satisfies AuthSession
   const html = renderToStaticMarkup(
@@ -120,6 +126,7 @@ test('the account card sits below navigation and above language with row actions
         link_status: 'connecting',
         wallet,
         sui_balance_mist: 1_250_000_000n,
+        kares_balance: 12_345_600_000n,
         gas_spent_mist: 20_000_000n,
       })}
       settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })}
@@ -131,6 +138,10 @@ test('the account card sits below navigation and above language with row actions
   expect(html.indexOf('data-language-card')).toBeLessThan(html.indexOf('data-discord-card'))
   expect(html.indexOf('data-discord-card')).toBeLessThan(html.indexOf('data-connection-card'))
   expect(html).toContain('data-wallet-actions=""')
+  expect(html).toContain('data-kares-balance=""')
+  expect(html).toContain('data-kares-logo')
+  expect(html).not.toContain('https://launchpad.aresrpg.world/kares.png')
+  expect(html).toContain('12.3456')
   expect(html).toContain('Sui Universe')
   expect(html).toContain('Connecting')
   expect(html).toContain('TESTNET')
@@ -210,7 +221,7 @@ test('the sidebar connection card renders reducer-owned link phases', async () =
 
 test('the shell blocks a paused game with the maintenance modal', async () => {
   const copy = await load_app_copy('en')
-  const render_paused = (page: 'world' | 'admin') =>
+  const render_paused = (page: 'world' | 'admin' | 'kares') =>
     renderToStaticMarkup(
       <AppShell
         change_locale={() => undefined}
@@ -239,6 +250,7 @@ test('the shell blocks a paused game with the maintenance modal', async () => {
   expect(html).not.toContain('data-game-frozen')
   expect(html).not.toContain('bg-[#8f1028]')
   expect(admin_html).not.toContain('data-game-maintenance')
+  expect(render_paused('kares')).not.toContain('data-game-maintenance')
 })
 
 test('the character tab strip lives on character-scoped pages and selects through its tabs', async () => {

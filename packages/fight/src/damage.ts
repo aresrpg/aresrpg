@@ -10,7 +10,7 @@ import {
   action_points_of,
   base_ap_of,
   base_mp_of,
-  effective_stat,
+  contest_stat,
   heal_seat,
   hit,
   movement_points_of,
@@ -106,6 +106,9 @@ export const deal = ({ runtime, caster, sheet, target, element, base, cast_level
   return final_target === target ? (damage > hp_before ? hp_before : landed) : 0n
 }
 
+export const rolls_magnitude = (row: Readonly<SpellEffect>): boolean =>
+  row.kind <= KINDS.pull || [KINDS.reduce, KINDS.reflect, KINDS.fixed_remove].includes(row.kind)
+
 export const roll_value = (row: SpellEffect, cursor: PrngCursor): bigint => {
   if (row.value_max <= row.value) return row.value
   return roll_in_range(row.value, row.value_max, draw(cursor) % 10_000n)
@@ -126,7 +129,7 @@ export const contest_points = (
     value: row.value,
     dodge: true,
     caster_wisdom: sheet.wisdom,
-    target_wisdom: effective_stat(runtime, target, STATS.wisdom),
+    target_wisdom: contest_stat(runtime, target, STATS.wisdom),
     current: active
       ? is_ap
         ? fighter.ap

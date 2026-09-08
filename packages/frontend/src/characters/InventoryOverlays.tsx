@@ -7,7 +7,6 @@
 // crush-result modal.
 
 import { useEffect, useMemo, useState } from 'react'
-import { pet_max_feeds } from '@aresrpg/immutable'
 import type { ItemRow } from '@aresrpg/protocol'
 import { BookOpen, Cat, ExternalLink, Gift, Hammer, Loader2, MessageSquarePlus, Trash2 } from 'lucide-react'
 
@@ -16,9 +15,8 @@ import { env } from '../env.ts'
 import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
 import { explorer_object_url } from '../explorer.ts'
 import { encyclopedia_catalog } from '../content/catalog.ts'
-import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
+import { encumbered_asset_ids, stack_merge_sources } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { crush_results } from '../crush_result.ts'
@@ -26,99 +24,15 @@ import { run_direct_transaction } from '../transaction_guard.ts'
 
 import { BoxReveal } from './BoxReveal.tsx'
 import { is_forge_gear } from './forge_eligibility.ts'
-import { InventoryItemCell } from './InventoryItemCell.tsx'
+import { FeedPetModal } from './FeedPetModal.tsx'
 
 export type ItemMenuState = Readonly<{ x: number; y: number; item: ItemRow }> | null
-
-const utc_day = (): number => Math.floor(Date.now() / 86_400_000)
 
 export const is_loot_box = (item: Readonly<ItemRow>): boolean =>
   encyclopedia_catalog.item(item.item_type)?.item.consumable?.type === 'loot_box'
 
 const is_feedable_pet = (item: Readonly<ItemRow>): boolean =>
   item.category === 'pet' && (encyclopedia_catalog.item(item.item_type)?.item.pet_foods?.length ?? 0) > 0
-
-const FeedPetModal = ({ pet, copy, close }: Readonly<{ pet: Readonly<ItemRow>; copy: AppCopy; close: () => void }>) => {
-  const t = copy_text(copy.characters_page)
-  const wallet = useAppStore(({ session }) => session.wallet)
-  const inventory = useAppStore(({ session }) => session.inventory)
-  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
-  const trades = useAppStore(({ trade }) => trade.rows)
-  // the live pet row — folds repaint power/day through the store
-  const live = inventory.find(({ id }) => id === pet.id) ?? pet
-  const [feeding, set_feeding] = useState(false)
-  const diet = encyclopedia_catalog.item(pet.item_type)?.item.pet_foods ?? []
-  const encumbered = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
-  const foods = available_inventory_items(inventory, encumbered, pet.kiosk).filter((row) =>
-    diet.includes(row.item_type)
-  )
-  const power = live.pet_power ?? 0
-  const fed_today = (live.pet_last_day ?? 0) >= utc_day()
-  const full = power >= pet_max_feeds
-  const gate = full ? t('feed_full') : fed_today ? t('feed_already_today') : null
-
-  const feed = (food: Readonly<ItemRow>): void => {
-    if (!wallet || feeding || gate) return
-    const transaction = run_direct_transaction(() =>
-      wallet.character.feed_pet({
-        pet_id: pet.id,
-        pet_item_type: pet.item_type,
-        food_id: food.id,
-        custody: { kiosk: pet.kiosk },
-      })
-    )
-    if (!transaction) return
-    set_feeding(true)
-    const pending = toast.loading(t('feed_pending'))
-    void transaction
-      .then(() => {
-        dispatch_app({ type: 'inventory/pet_fed', pet_id: pet.id, food_id: food.id })
-        pending.success(t('feed_success'))
-      })
-      .catch(pending.error)
-      .finally(() => set_feeding(false))
-  }
-
-  return (
-    <ModalFrame close={close} close_label={copy.wallet_close} label={t('feed_title')}>
-      <div className="flex flex-col gap-4 p-6">
-        <div className="flex items-center gap-3">
-          {item_detail_icon(pet.item_type) && (
-            <img alt="" className="size-12 object-contain" src={item_detail_icon(pet.item_type)!} />
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[11px] font-semibold tracking-[0.12em] text-text uppercase">{pet.name}</div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-[8px] tracking-[0.2em] text-muted uppercase">{t('feed_power_label')}</span>
-              <span className="text-[10px] text-gold tabular-nums">
-                {t('feed_power', { count: power, max: pet_max_feeds })}
-              </span>
-            </div>
-            <div className="chr-bar mt-1">
-              <div className="chr-bar__fill chr-bar__fill--xp" style={{ width: `${(power / pet_max_feeds) * 100}%` }} />
-            </div>
-          </div>
-        </div>
-        {gate ? (
-          <p className="text-center text-[9px] tracking-[0.16em] text-muted uppercase">{gate}</p>
-        ) : (
-          <>
-            <p className="text-[8px] tracking-[0.2em] text-muted uppercase">{t('feed_pick_food')}</p>
-            {foods.length === 0 ? (
-              <p className="text-center text-[9px] tracking-[0.14em] text-muted uppercase">{t('feed_no_food')}</p>
-            ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(52px,1fr))] gap-2">
-                {foods.map((food) => (
-                  <InventoryItemCell disabled={feeding} item={food} key={food.id} onClick={() => feed(food)} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </ModalFrame>
-  )
-}
 
 const ConfirmModal = ({
   title,
@@ -287,14 +201,19 @@ export const InventoryActionOverlays = ({
   const destroy = (item: Readonly<ItemRow>): void => {
     if (!wallet || busy) return
     const transaction = run_direct_transaction(() =>
-      wallet.character.destroy_item({ item_id: item.id, amount: item.amount, custody: { kiosk: item.kiosk } })
+      wallet.character.destroy_item({
+        item_id: item.id,
+        amount: item.amount,
+        merge_sources: stack_merge_sources(inventory, listed, item),
+        custody: { kiosk: item.kiosk },
+      })
     )
     if (!transaction) return
     set_busy(true)
     const pending = toast.loading(t('destroy_pending'))
     void transaction
-      .then(() => {
-        dispatch_app({ type: 'inventory/destroyed', item_id: item.id, amount: item.amount })
+      .then(({ inventory_changes }) => {
+        dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         set_destroy_target(null)
         pending.success(t('destroy_success'))
       })

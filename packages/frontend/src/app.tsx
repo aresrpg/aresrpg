@@ -10,7 +10,9 @@ import { Check, Copy } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
+import { EngineNotice } from './components/EngineNotice.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
+import { WalletChoices, WalletConnectButton, WalletPickerModal } from './components/WalletPickerModal.tsx'
 import { AppShell } from './components/AppShell.tsx'
 import {
   CANVAS_OVERLAY_CLASS,
@@ -131,7 +133,7 @@ const Login = ({
           <h1 className="mb-2 pl-[0.35em] text-sm font-semibold tracking-[0.35em] uppercase">AresRPG</h1>
           <p className="text-[10px] tracking-[0.3em] text-gray-500">{login_lead(copy, gift)}</p>
         </div>
-        <div className="flex w-full flex-col gap-3 [&_button]:h-[46px] [&_button]:w-full [&_button]:cursor-pointer [&_button]:rounded-[5px] [&_button]:transition-all [&_button]:duration-150 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-45">
+        <div className="flex w-full flex-col gap-3 [&_button:not([data-wallet-connect])]:h-[46px] [&_button:not([data-wallet-connect])]:w-full [&_button:not([data-wallet-connect])]:cursor-pointer [&_button:not([data-wallet-connect])]:rounded-[5px] [&_button:not([data-wallet-connect])]:transition-all [&_button:not([data-wallet-connect])]:duration-150 [&_button:disabled]:cursor-not-allowed [&_button:disabled]:opacity-45">
           <button
             className="flex items-center justify-center gap-3 border-0 bg-white/96 text-xs font-semibold text-[#282b31] hover:not-disabled:bg-white"
             disabled={!auth_ready || loading}
@@ -144,27 +146,24 @@ const Login = ({
             {import.meta.env.DEV && auth_ready && (
               <>
                 <Divider />
-                <button
-                  className="border border-[#c8963c]/35 bg-transparent text-[11px] font-semibold tracking-[0.16em] text-[#c8963c] uppercase hover:border-[#c8963c]/70 hover:bg-[#c8963c]/8"
-                  onClick={() => set_show_wallets(!show_wallets)}
-                >
-                  {copy.connect_wallet}
-                </button>
+                <WalletConnectButton label={copy.connect_wallet} open={() => set_show_wallets(true)} />
                 {show_wallets && (
-                  <div className="flex flex-col gap-1.5 border border-white/8 bg-black/18 p-2">
-                    {wallets.map((wallet) => (
-                      <button
-                        className="!h-9 border border-white/8 bg-white/4 text-[11px] text-[#e8e4dc]"
-                        key={wallet}
-                        onClick={() => login_wallet(wallet)}
-                      >
-                        {wallet}
-                      </button>
-                    ))}
-                    {wallets.length === 0 && (
-                      <span className="p-[7px] text-center text-[10px] text-gray-500">{copy.no_wallet}</span>
-                    )}
-                  </div>
+                  <WalletPickerModal
+                    title={copy.connect_wallet}
+                    close_label={copy.kares_page.close}
+                    close={() => set_show_wallets(false)}
+                  >
+                    <WalletChoices
+                      choices={wallets}
+                      busy={loading}
+                      select={(name) => {
+                        set_show_wallets(false)
+                        login_wallet(name)
+                      }}
+                      empty_label={copy.no_wallet}
+                      select_label={copy.kares_page.select_wallet}
+                    />
+                  </WalletPickerModal>
                 )}
               </>
             )}
@@ -247,7 +246,6 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
-  const gift_link_ready = useAppStore((state) => state.distribution.gift_link_ready)
   const fight_active = useAppStore((state) => {
     const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     return (
@@ -324,7 +322,7 @@ export function App() {
   const sui_insufficient = character_creation_insufficient(session.sui_balance_mist)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
   const show_graphics_notice = graphics_notice_visible(
-    gift_link_ready,
+    navigation.page === 'airdrop',
     engine_status.state === 'failed',
     world_unavailable,
     graphics_notice_dismissed,
@@ -453,29 +451,12 @@ export function App() {
       <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />
 
       {show_graphics_notice && (
-        <section className="fixed inset-0 z-[200] grid place-items-center bg-bg/88 p-5 backdrop-blur-lg">
-          <div className="w-full max-w-lg border border-[#ff5a8b]/35 bg-bg p-7 shadow-[0_0_80px_rgba(255,27,141,0.12)]">
-            <h2 className="mb-4 text-base font-semibold text-[#e8e4dc]">
-              {world_unavailable ? copy.world_unavailable_title : copy.title}
-            </h2>
-            <p className="mb-5 text-xs leading-6 text-[#a3a5ad]">
-              {world_unavailable ? copy.world_unavailable : engine_status.state === 'failed' ? copy.fatal : copy.body}
-            </p>
-            {!world_unavailable && (
-              <p className="mb-2 text-[11px] leading-5 text-[#d0ccd0]">
-                {/Chrome|Chromium|Edg/.test(navigator.userAgent) ? copy.chrome : copy.other}
-              </p>
-            )}
-            {(world_unavailable || engine_status.state === 'degraded') && (
-              <button
-                className="mt-5 h-10 w-full cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 text-[10px] tracking-[0.18em] text-[#67adff] uppercase"
-                onClick={() => set_graphics_notice_dismissed(true)}
-              >
-                {copy.continue}
-              </button>
-            )}
-          </div>
-        </section>
+        <EngineNotice
+          copy={copy}
+          status={engine_status}
+          dismiss={() => set_graphics_notice_dismissed(true)}
+          reload={() => globalThis.location.reload()}
+        />
       )}
 
       {!session.wallet && session.auth_status !== 'connecting' && !navigation.guest_spectating && (
@@ -483,7 +464,7 @@ export function App() {
           auth_ready={session.auth_ready}
           wallets={session.wallets}
           copy={copy}
-          gift={gift_link_ready}
+          gift={navigation.page === 'airdrop'}
           login_google={() => dispatch_app({ type: 'auth/login_google' })}
           login_wallet={(name) => dispatch_app({ type: 'auth/login_wallet', name })}
           set_show_wallets={set_show_wallets}

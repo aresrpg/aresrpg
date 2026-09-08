@@ -272,43 +272,15 @@ const instance_matrix = (spec: CrowdSpec, scale: number, target: Matrix4): Matri
     .setPosition(x / scale, y / scale, z / scale)
 }
 
-const apply_specs = (batch: LoadedBatch, specs: readonly CrowdSpec[], update_colors = true): void => {
-  const base = new Matrix4()
-  const matrix = new Matrix4()
-  const attachments = attachment_matrices(batch)
-  specs.forEach((spec, index) => {
-    instance_matrix(spec, batch.scale, base)
-    base.toArray(batch.base_matrices.array, index * 16)
-    batch.meshes.forEach(({ mesh }, mesh_index) => {
-      const attachment = attachments[mesh_index]
-      if (attachment)
-        matrix
-          .copy(base)
-          .multiply(attachment)
-          .toArray(mesh.instanceMatrix.array, index * 16)
-    })
-    if (update_colors)
-      spec.appearance.colors.forEach((color, color_index) => write_color(batch.colors[color_index]!, index, color))
-  })
-  upload_instances(batch.base_matrices, specs.length)
-  batch.meshes.forEach(({ mesh, attachment }) => {
-    mesh.count = specs.length
-    if (attachment) upload_instances(mesh.instanceMatrix, specs.length)
-  })
-  if (update_colors) upload_colors(batch, specs.length)
-}
-
 const apply_attachment_specs = (batch: LoadedBatch, specs: readonly CrowdSpec[]): void => {
-  const base = new Matrix4()
   const matrix = new Matrix4()
   const attachments = attachment_matrices(batch)
   batch.meshes.forEach(({ mesh }, mesh_index) => {
     const attachment = attachments[mesh_index]
     if (!attachment) return
-    specs.forEach((spec, index) => {
-      instance_matrix(spec, batch.scale, base)
+    specs.forEach((_, index) => {
       matrix
-        .copy(base)
+        .fromArray(batch.base_matrices.array, index * 16)
         .multiply(attachment)
         .toArray(mesh.instanceMatrix.array, index * 16)
     })
@@ -352,9 +324,29 @@ export const create_character_crowd_layer = ({
   load_model?: (appearance: CharacterAppearanceRender) => Promise<CharacterModel>
 }>) => {
   const batches = new Map<string, BatchSlot>()
-  const anchors = new Map<string, Readonly<{ position: Vector3; height: number }>>()
+  const anchors = new Map<string, Vector3>()
   let submitted_specs: readonly CrowdSpec[] = Object.freeze([])
   let previous_tick = performance.now()
+
+  // Anchors become live with a loaded model and its instance data.
+  const apply_specs = (batch: LoadedBatch, specs: readonly CrowdSpec[], update_colors = true): void => {
+    const base = new Matrix4()
+    specs.forEach((spec, index) => {
+      const [x, y, z] = spec.anchor.position
+      anchors.set(spec.id, new Vector3(x, y + CHARACTER_HEIGHT, z))
+      instance_matrix(spec, batch.scale, base)
+      base.toArray(batch.base_matrices.array, index * 16)
+      if (update_colors)
+        spec.appearance.colors.forEach((color, color_index) => write_color(batch.colors[color_index]!, index, color))
+    })
+    upload_instances(batch.base_matrices, specs.length)
+    batch.meshes.forEach(({ mesh }) => {
+      mesh.count = specs.length
+    })
+    // Animated attachments consume the final pose in tick, immediately before rendering.
+    if (!batch.mixer) apply_attachment_specs(batch, specs)
+    if (update_colors) upload_colors(batch, specs.length)
+  }
 
   const remove = (key: string): void => {
     const batch = batches.get(key)
@@ -370,13 +362,6 @@ export const create_character_crowd_layer = ({
     if (same_specs(submitted_specs, specs)) return
     submitted_specs = specs
     anchors.clear()
-    specs.forEach((spec) => {
-      const [x, y, z] = spec.anchor.position
-      anchors.set(
-        spec.id,
-        Object.freeze({ position: new Vector3(x, y + CHARACTER_HEIGHT, z), height: CHARACTER_HEIGHT })
-      )
-    })
     const groups = grouped_specs(specs)
     const stale_keys = new Set([...batches.keys()].filter((key) => !groups.has(key)))
     groups.forEach((rows, key) => {
@@ -439,9 +424,9 @@ export const create_character_crowd_layer = ({
         if (loaded?.mixer && loaded.meshes.some(({ attachment }) => attachment)) apply_attachment_specs(loaded, specs)
       })
     },
-    live_crown: (id: string): Vector3 | null => anchors.get(id)?.position.clone() ?? null,
-    world_anchor: (id: string): Vector3 | null => anchors.get(id)?.position.clone() ?? null,
-    entity_height: (id: string): number | null => anchors.get(id)?.height ?? null,
+    live_crown: (id: string): Vector3 | null => anchors.get(id)?.clone() ?? null,
+    world_anchor: (id: string): Vector3 | null => anchors.get(id)?.clone() ?? null,
+    entity_height: (id: string): number | null => (anchors.has(id) ? CHARACTER_HEIGHT : null),
     stats: () =>
       Object.freeze({
         batches: batches.size,

@@ -1,0 +1,386 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.staking-page {
+  pointer-events: auto;
+  flex: 1;
+  min-height: 100%;
+  background: radial-gradient(ellipse at 60% 0, #33213d38, transparent 60%), #0e0b14;
+  border: 1px solid #272031;
+}
+.staking-page-header {
+  padding: 16px 26px 14px;
+  border-bottom: 1px solid #2b2233;
+  background: linear-gradient(110deg, #251a2b70, #17111e20);
+}
+.staking-eyebrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #ba945b;
+  text-transform: uppercase;
+}
+.staking-page-header h1 {
+  margin: 7px 0 8px;
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -1px;
+  color: #f2d5b5;
+}
+.staking-page-header p {
+  max-width: 760px;
+  margin: 0;
+  color: #aaa0b2;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.staking-account-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 20px;
+  padding: 12px 24px 8px;
+}
+.staking-account {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #75603969;
+  background:
+    radial-gradient(ellipse at 0 0, #73522f1f, transparent 58%), linear-gradient(145deg, #211828, #15111e 65%);
+  box-shadow:
+    inset 0 1px #e5c18b0b,
+    0 7px 22px #00000020;
+}
+.staking-external {
+  border-color: #42637b66;
+  background:
+    radial-gradient(ellipse at 100% 0, #3b659d1a, transparent 65%), linear-gradient(145deg, #1b1727, #13111c 65%);
+}
+.staking-account::before {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  top: -1px;
+  left: 20px;
+  background: #b58b4d;
+}
+.staking-external::before {
+  background: #4a87b2;
+}
+.staking-account-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 54px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #64507226;
+}
+.staking-account-header > svg {
+  flex-shrink: 0;
+  color: #af905e;
+}
+.staking-external .staking-account-header > svg {
+  color: #689cbc;
+}
+.staking-account-header h2 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: #e5d7e4;
+}
+.staking-account-header [data-wallet-menu] {
+  margin-left: auto;
+}
+.staking-account-content {
+  padding: 12px 20px 14px;
+}
+.staking-principal {
+  display: grid;
+  grid-template-columns: 55px 1fr;
+  align-items: center;
+  gap: 3px 13px;
+  padding-bottom: 14px;
+}
+.staking-principal img {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+.staking-micro {
+  color: #9b8ea7;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.staking-principal-value {
+  grid-column: 2;
+  color: #eee2ee;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  overflow-wrap: anywhere;
+}
+.staking-principal-value small {
+  font-size: 10px;
+  font-weight: 400;
+  color: #af95b9;
+  letter-spacing: 0;
+}
+.staking-yields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-block: 1px solid #59436655;
+  padding: 10px 0;
+  gap: 16px;
+}
+.staking-yields > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.staking-yields > div + div {
+  border-left: 1px solid #59436655;
+  padding-left: 16px;
+}
+.staking-yields span {
+  font-size: 9px;
+  color: #a49aac;
+}
+.staking-yields strong {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.staking-rewards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #42765766;
+  background: linear-gradient(120deg, #19372966, #10251b44);
+}
+.staking-rewards h3 {
+  margin: 0 0 7px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #a4c5b2;
+  text-transform: uppercase;
+}
+.staking-accrued {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.staking-claim {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 18px;
+  border: 1px solid #62b983;
+  background: linear-gradient(135deg, #267b4b, #1b5839);
+  color: #e2ffec;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px #b6ffcf20,
+    0 0 16px #38a16a12;
+}
+.staking-claim:hover:not(:disabled) {
+  border-color: #91e5ad;
+  background: #2c8954;
+}
+.staking-action-box {
+  margin-top: 12px;
+  padding: 13px;
+  background: linear-gradient(140deg, #382c413b, #100d1633);
+  border: 1px solid #614c6d45;
+}
+.staking-action-switch {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.staking-action-switch button {
+  border-bottom: 1px solid transparent;
+  color: #978b9f;
+  padding: 4px 0 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.staking-action-switch button[aria-pressed='true'] {
+  color: #f0c37e;
+  border-bottom-color: #c99e59;
+}
+.staking-amount-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 9px;
+  color: #a08eab;
+  margin-bottom: 8px;
+}
+.staking-amount-field {
+  display: flex;
+  align-items: center;
+  border: 1px solid #5a456969;
+  background: #0b08134f;
+  padding: 10px 12px;
+}
+.staking-amount-field:focus-within {
+  border-color: #8cb9dd;
+}
+.staking-amount-field input {
+  border: 0;
+  outline: none;
+  color: #eddfed;
+  background: transparent;
+  min-width: 0;
+  width: 100%;
+  font-size: 19px;
+}
+.staking-amount-field > span {
+  font-size: 10px;
+  color: #bda87e;
+}
+.staking-estimate {
+  min-height: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+  font-size: 9px;
+  padding-top: 6px;
+  color: #9687a2;
+  font-variant-numeric: tabular-nums;
+}
+.staking-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+.staking-presets {
+  display: flex;
+  gap: 5px;
+}
+.staking-presets button {
+  border: 1px solid #59446780;
+  background: #35283d38;
+  color: #c4b2cb;
+  padding: 6px 7px;
+  font-size: 9px;
+  cursor: pointer;
+}
+.staking-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 14px;
+  background: linear-gradient(130deg, #6d512b6b, #4430189c);
+  color: #eed2a1;
+  border: 1px solid #a07a408c;
+  letter-spacing: 0.4px;
+  font-size: 10px;
+  cursor: pointer;
+  box-shadow: inset 0 1px #edce9012;
+}
+.staking-submit:hover:not(:disabled) {
+  background: #755732a3;
+  border-color: #c19c62;
+}
+.staking-page button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.staking-page :is(button, select):focus-visible {
+  outline: 2px solid #72c6ee;
+  outline-offset: 3px;
+}
+.staking-wallet-placeholder {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 370px;
+  padding: 25px;
+  text-align: center;
+  background: radial-gradient(ellipse at center, #2c38541a, transparent 65%);
+}
+.staking-wallet-placeholder > svg {
+  padding: 13px;
+  box-sizing: content-box;
+  border: 1px solid #41708c42;
+  background: #304b681a;
+  color: #6599bd;
+}
+.staking-wallet-placeholder h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #d8c8df;
+}
+.staking-wallet-placeholder p {
+  margin: 0;
+  max-width: 230px;
+  color: #9687a2;
+  font-size: 10px;
+  line-height: 1.9;
+}
+.staking-daily-note {
+  padding: 0 24px 14px;
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.8;
+  color: #8e8298;
+}
+.staking-notice,
+.staking-empty-message {
+  color: #c7ab82;
+  font-size: 10px;
+  padding-top: 10px;
+}
+.staking-empty-message {
+  padding: 25px;
+}
+.staking-status {
+  padding: 0 16px 16px;
+}
+@media (max-width: 1200px) {
+  .staking-account-pair {
+    padding: 16px 14px 12px;
+    gap: 12px;
+  }
+  .staking-account-content {
+    padding: 14px 12px;
+  }
+  .staking-account-header {
+    padding: 14px 12px;
+    flex-wrap: wrap;
+  }
+  .staking-action-box {
+    padding: 10px;
+  }
+  .staking-submit {
+    padding: 9px;
+    font-size: 9px;
+  }
+}

@@ -57,8 +57,8 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
 
 ## The quality bar
 
-- `ARCHITECTURE.md` owns the system model; `AGENTS.md` owns the working agreement;
-  `.claude/rules/code-law.md` explains the executable TypeScript law.
+- `ARCHITECTURE.md` owns the system model; `AGENTS.md` owns the working agreement and explains
+  the executable TypeScript law.
 - **RED-FIRST**: a bug fix's first artifact is a failing test reproducing it; the PR carries
   both runs.
 - Every player-facing string ships in all six locales in the same commit.
@@ -83,4 +83,4 @@ affect live objects and fights; follow `CONTENT_UPGRADES.md` before implementati
 ## License
 
 Contributions require the CLA (`CLA.md`) — the bot asks on your first PR. Every source file
-carries the SPDX header; `scripts/stamp_copyright.mjs` stamps new files.
+carries the SPDX header. Add the header when creating a source file.

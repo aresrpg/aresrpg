@@ -13,7 +13,7 @@ import { available_inventory_items, coalesced_stack_groups, encumbered_asset_ids
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
-import { category_name, ListingIcon, listing_name, SuiUnit } from './marketplace_model.tsx'
+import { CategoryName, ListingIcon, listing_name, SuiUnit } from './marketplace_model.tsx'
 
 type ItemSelection = Readonly<{
   kind: 'item'
@@ -23,7 +23,7 @@ type ItemSelection = Readonly<{
 }>
 type Selection = ItemSelection | Readonly<{ kind: 'character'; row: CharacterRow }>
 
-const item_listing = (row: Readonly<ItemRow>, address: string, price_mist: bigint): ListingRow => ({
+const item_listing = (row: Readonly<ItemRow>, address: string, price_mist: bigint): Omit<ListingRow, 'version'> => ({
   kind: 'item',
   id: row.id,
   name: row.name,
@@ -37,7 +37,11 @@ const item_listing = (row: Readonly<ItemRow>, address: string, price_mist: bigin
   at_ms: Date.now(),
 })
 
-const character_listing = (row: Readonly<CharacterRow>, address: string, price_mist: bigint): ListingRow => ({
+const character_listing = (
+  row: Readonly<CharacterRow>,
+  address: string,
+  price_mist: bigint
+): Omit<ListingRow, 'version'> => ({
   kind: 'character',
   id: row.id,
   name: row.name,
@@ -127,7 +131,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[10px] text-[#e8e4dc] uppercase">{listing_name(listing)}</p>
                   <p className="text-[8px] text-[#6b7280] uppercase">
-                    {category_name(listing.category)} · LV. {listing.level}
+                    <CategoryName category={listing.category} /> · LV. {listing.level}
                     {listing.amount > 1 ? ` · ×${listing.amount}` : ''}
                   </p>
                 </div>
@@ -297,7 +301,7 @@ const SelectedCard = ({ selected }: Readonly<{ selected: Selection }>) => {
           {listing_name(listing)}
         </p>
         <p className="mt-1 text-[8px] tracking-[0.1em] text-[#6b7280] uppercase">
-          {category_name(listing.category)} · LV. {listing.level}
+          <CategoryName category={listing.category} /> · LV. {listing.level}
           {listing.amount > 1 ? ` · ×${listing.amount}` : ''}
         </p>
       </div>

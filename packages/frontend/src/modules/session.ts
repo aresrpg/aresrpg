@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { AirdropState, CharacterRow, ClaimRow, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
+import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
 import { client_to_chain_coordinate, type CharacteristicName } from '@aresrpg/immutable'
 
@@ -23,9 +23,12 @@ import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
+import { leaderboard_subscription } from './leaderboards.ts'
+import { fold_character_deletion, with_character_roster } from './character_roster.ts'
 import { fold_character_receipt } from './character_folds.ts'
 import { reduce_craft_character_selection, with_craft_character_session } from './craft_character_lock.ts'
 import { fight_environment } from './fight.ts'
+import { spectator_changes } from './fight_identity.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
 import { fold_link_input } from './session_link.ts'
 
@@ -45,9 +48,12 @@ export type SessionState = Readonly<{
   current_epoch: string | null
   game_frozen: boolean | null
   roster_loaded: boolean
+  deleted_character_ids: readonly string[]
   characters: readonly CharacterRow[]
   inventory: readonly ItemRow[]
+  removed_item_versions: Readonly<Record<string, string>>
   claims: readonly ClaimRow[]
+  redeemed_giftcards: readonly string[]
   giftcards: readonly GiftcardRow[]
   selected_character_id: string | null
   online: number | null
@@ -55,11 +61,12 @@ export type SessionState = Readonly<{
   wallets: readonly string[]
   wallet: AuthSession | null
   sui_balance_mist: bigint | null
+  kares_balance: bigint | null
   gas_spent_mist: bigint
-  airdrops: readonly AirdropState[] | null
 }>
 
 export type SessionInput =
+  | Readonly<{ type: 'inventory/amounts_changed'; changes: readonly ItemAmountChange[] }>
   | Readonly<{ type: 'auth/connecting' }>
   | Readonly<{ type: 'auth/ready'; wallets: readonly string[] }>
   | Readonly<{ type: 'auth/login_google' }>
@@ -75,10 +82,10 @@ export type SessionInput =
   | Readonly<{ type: 'link/violation'; reason: string }>
   | Readonly<{ type: 'link/latency'; latency_ms: number }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
+  | Readonly<{ type: 'character/deleted'; character_id: string; wallet: AuthSession }>
   | Readonly<{ type: 'character/select'; character_id: string }>
   | Readonly<{ type: 'wallet/refresh' }>
-  | Readonly<{ type: 'wallet/refreshed'; balance_mist: bigint; gas_spent_mist: bigint }>
-  | Readonly<{ type: 'airdrop/claimed'; drop_id: string }>
+  | Readonly<{ type: 'wallet/refreshed'; balance_mist: bigint; kares_balance: bigint | null; gas_spent_mist: bigint }>
   | Readonly<{ type: 'giftcard/received'; giftcard: GiftcardRow }>
   | Readonly<{ type: 'giftcard/redeemed'; giftcard: string }>
   | Readonly<{
@@ -110,10 +117,8 @@ export type SessionInput =
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
   | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
   // prettier-ignore
-  | Readonly<{ type: 'inventory/stacks_merged'; groups: readonly Readonly<{ target_id: string; source_ids: readonly string[] }>[] }>
   // prettier-ignore
   | Readonly<{ type: 'character/crafted'; character_id: string; job: string; xp: number; inputs: readonly Readonly<{ item_id: string; amount: number }>[] }>
-  | Readonly<{ type: 'inventory/destroyed'; item_id: string; amount: number }>
   | Readonly<{
       type: 'wallet/resolve_character'
       name: string
@@ -141,71 +146,95 @@ export const initial_session_state = (): SessionState =>
     game_frozen: null,
     roster_loaded: false,
     characters: [],
+    deleted_character_ids: [],
     inventory: [],
+    removed_item_versions: {},
     claims: [],
     giftcards: [],
+    redeemed_giftcards: [],
     selected_character_id: read_selected_character(),
     online: null,
     auth_ready: false,
     wallets: [],
     wallet: null,
     sui_balance_mist: null,
+    kares_balance: null,
     gas_spent_mist: 0n,
-    airdrops: null,
   })
 
 const with_session = (state: AppState, session: SessionState): AppState => Object.freeze({ ...state, session })
 
-const with_airdrop = (
-  session: SessionState,
-  drop_id: string,
-  update: (airdrop: AirdropState) => AirdropState
-): SessionState => {
-  if (!session.airdrops) return session
-  const airdrops = session.airdrops.map((airdrop) => (airdrop.drop_id === drop_id ? update(airdrop) : airdrop))
-  return Object.freeze({ ...session, airdrops: Object.freeze(airdrops) })
-}
-
-const fold_airdrop_receipt = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type !== 'airdrop/claimed') return session
-  return with_airdrop(session, input.drop_id, (airdrop) => ({
-    ...airdrop,
-    eligible: false,
-    eligible_count: Math.max(0, airdrop.eligible_count - 1),
-  }))
-}
-
-const fold_giftcard_input = (session: SessionState, input: AppInput): SessionState => {
+const fold_inventory_input = (session: SessionState, input: AppInput): SessionState => {
+  if (input.type === 'inventory/amounts_changed')
+    return input.changes.reduce((session, change) => {
+      if (change.amount === 0)
+        return {
+          ...session,
+          ...fold_item_packet(session, { type: 'packet/item_removed', item: change.id, version: change.version }),
+        }
+      const item = session.inventory.find(({ id }) => id === change.id)
+      return item
+        ? {
+            ...session,
+            ...fold_item_packet(session, {
+              type: 'packet/item_updated',
+              item: { ...item, amount: change.amount, version: change.version },
+            }),
+          }
+        : session
+    }, session)
   if (input.type === 'giftcard/received')
-    return session.giftcards.some(({ id }) => id === input.giftcard.id)
+    return session.redeemed_giftcards.includes(input.giftcard.id) ||
+      session.giftcards.some(({ id }) => id === input.giftcard.id)
       ? session
       : Object.freeze({ ...session, giftcards: Object.freeze([...session.giftcards, input.giftcard]) })
   if (input.type === 'giftcard/redeemed')
-    return Object.freeze({ ...session, giftcards: session.giftcards.filter(({ id }) => id !== input.giftcard) })
+    return Object.freeze({
+      ...session,
+      redeemed_giftcards: [...session.redeemed_giftcards, input.giftcard],
+      giftcards: session.giftcards.filter(({ id }) => id !== input.giftcard),
+    })
   return session
 }
 
 type ItemPacket = Extract<ServerPacket, { type: 'packet/item_updated' | 'packet/item_removed' }>
 const ITEM_PACKETS = new Set<ServerPacket['type']>(['packet/item_updated', 'packet/item_removed'])
 const is_item_packet = (packet: Readonly<ServerPacket>): packet is ItemPacket => ITEM_PACKETS.has(packet.type)
-const fold_item_packet = (inventory: readonly ItemRow[], packet: Readonly<ItemPacket>): readonly ItemRow[] =>
-  packet.type === 'packet/item_removed'
-    ? Object.freeze(inventory.filter(({ id }) => id !== packet.item))
-    : Object.freeze(
-        inventory.some(({ id }) => id === packet.item.id)
-          ? inventory.map((row) => (row.id === packet.item.id ? packet.item : row))
-          : [...inventory, packet.item]
-      )
+const latest_item = (incoming: Readonly<ItemRow>, current: Readonly<ItemRow> | undefined): Readonly<ItemRow> =>
+  BigInt(incoming.version ?? '0') < BigInt(current?.version ?? '0') ? current! : incoming
+
+type InventoryProjection = Pick<SessionState, 'inventory' | 'removed_item_versions'>
+const newer_than_departure = (item: Readonly<ItemRow>, removed: Readonly<Record<string, string>>): boolean =>
+  removed[item.id] === undefined || BigInt(item.version ?? '0') > BigInt(removed[item.id]!)
+
+const fold_inventory = (current: InventoryProjection, incoming: readonly ItemRow[]): readonly ItemRow[] => {
+  const by_id = new Map(current.inventory.map((item) => [item.id, item]))
+  return incoming
+    .map((item) => latest_item(item, by_id.get(item.id)))
+    .filter((item) => newer_than_departure(item, current.removed_item_versions))
+}
+
+const fold_item_packet = (current: InventoryProjection, packet: Readonly<ItemPacket>): InventoryProjection => {
+  if (packet.type === 'packet/item_removed') {
+    const previous = current.inventory.find(({ id }) => id === packet.item)
+    const observed = previous?.version ?? current.removed_item_versions[packet.item] ?? '0'
+    if (BigInt(packet.version) < BigInt(observed)) return current
+    return Object.freeze({
+      inventory: current.inventory.filter(({ id }) => id !== packet.item),
+      removed_item_versions: { ...current.removed_item_versions, [packet.item]: packet.version },
+    })
+  }
+  if (!newer_than_departure(packet.item, current.removed_item_versions)) return current
+  const inventory = current.inventory.some(({ id }) => id === packet.item.id)
+    ? current.inventory.map((row) => (row.id === packet.item.id ? latest_item(packet.item, row) : row))
+    : [...current.inventory, packet.item]
+  return Object.freeze({ ...current, inventory })
+}
 
 const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): SessionState => {
   if (packet.type === 'packet/characters') {
-    const selected_character_id = packet.characters.some(({ id }) => id === session.selected_character_id)
-      ? session.selected_character_id
-      : (packet.characters[0]?.id ?? null)
     return Object.freeze({
-      ...session,
-      characters: packet.characters,
-      selected_character_id,
+      ...with_character_roster(session, packet.characters),
       roster_loaded: true,
       link_status: 'ready',
       link_error: null,
@@ -219,15 +248,15 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
       current_epoch: packet.current_epoch,
     })
   if (packet.type === 'packet/game_state') return Object.freeze({ ...session, game_frozen: packet.frozen })
-  if (packet.type === 'packet/inventory') return Object.freeze({ ...session, inventory: packet.items })
-  if (is_item_packet(packet))
-    return Object.freeze({ ...session, inventory: fold_item_packet(session.inventory, packet) })
+  if (packet.type === 'packet/inventory')
+    return Object.freeze({ ...session, inventory: fold_inventory(session, packet.items) })
+  if (is_item_packet(packet)) return Object.freeze({ ...session, ...fold_item_packet(session, packet) })
   if (packet.type === 'packet/claims') return Object.freeze({ ...session, claims: packet.claims })
-  if (packet.type === 'packet/giftcards') return Object.freeze({ ...session, giftcards: packet.giftcards })
-  if (packet.type === 'packet/airdrop_state')
-    return Object.freeze({ ...session, airdrops: Object.freeze(packet.airdrops) })
-  if (packet.type === 'packet/airdrop_remaining')
-    return with_airdrop(session, packet.drop_id, (airdrop) => ({ ...airdrop, eligible_count: packet.eligible_count }))
+  if (packet.type === 'packet/giftcards')
+    return Object.freeze({
+      ...session,
+      giftcards: packet.giftcards.filter(({ id }) => !session.redeemed_giftcards.includes(id)),
+    })
   if (packet.type === 'packet/error')
     return packet.id === undefined ? Object.freeze({ ...session, link_error: packet.reason }) : session
   return session
@@ -236,7 +265,7 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
 const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
-  const receipt = fold_giftcard_input(fold_character_receipt(fold_airdrop_receipt(current, input), input), input)
+  const receipt = fold_inventory_input(fold_character_receipt(fold_character_deletion(current, input), input), input)
   if (receipt !== current) return with_session(state, receipt)
   const link_state = fold_link_input(current, input)
   if (link_state !== current) return with_session(state, link_state)
@@ -300,7 +329,12 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'wallet/refreshed')
     return with_session(
       state,
-      Object.freeze({ ...current, sui_balance_mist: input.balance_mist, gas_spent_mist: input.gas_spent_mist })
+      Object.freeze({
+        ...current,
+        sui_balance_mist: input.balance_mist,
+        kares_balance: input.kares_balance,
+        gas_spent_mist: input.gas_spent_mist,
+      })
     )
   if (
     input.type === 'link/latency' &&
@@ -377,19 +411,14 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     if (!connected) return
     balance_request_id += 1
     const request_id = balance_request_id
-    void connected
-      .read_sui_balance()
-      .then((balance_mist) => {
+    void Promise.all([connected.read_sui_balance(), connected.read_kares_balance()])
+      .then(([balance_mist, kares_balance]) => {
         if (request_id !== balance_request_id || connected !== get_state().session.wallet) return
-        dispatch({ type: 'wallet/refreshed', balance_mist, gas_spent_mist: connected.gas_spent_24h() })
+        dispatch({ type: 'wallet/refreshed', balance_mist, kares_balance, gas_spent_mist: connected.gas_spent_24h() })
       })
       .catch((error) => console.warn('Wallet balance could not be refreshed.', error))
   }
   events.on('wallet/refresh', refresh_wallet)
-  events.on('distribution/holder_connected', ({ session: holder }) => {
-    if (!link?.send({ type: 'packet/airdrop_eligibility_request', address: holder.address }))
-      dispatch({ type: 'distribution/failed', error: 'The game server is unavailable' })
-  })
   const balance_timer = setInterval(refresh_wallet, BALANCE_POLL_MS)
   events.on('wallet/resolve_character', ({ name, resolve, reject }) => {
     const connected = get_state().session.wallet
@@ -466,9 +495,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     link?.send({ type: 'packet/fight_preview', character_id, fight })
   })
   events.on('fight/resync', ({ fight }) => link?.send({ type: 'packet/fight_resync', fight }))
-  events.on('fight/spectating', ({ character_id, fight }) => {
-    link?.send({ type: 'packet/spectate', character_id, fight })
-  })
   observe_failure_toasts({ events, dispatch, get_state, signal })
   const sync_market_subscription = (state: AppState, previous: AppState): void => {
     const market_open = state.navigation.page === 'marketplace'
@@ -489,14 +515,11 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   events.on('STATE_UPDATED', (state, previous) => {
     sync_market_subscription(state, previous)
     remember_selected_character_change(state.session.selected_character_id, previous.session.selected_character_id)
-    if (state.session.link_status === 'ready' && previous.session.link_status !== 'ready')
-      Object.entries(state.fight.spectating_by_character).forEach(([character_id, fight]) =>
-        link?.send({ type: 'packet/spectate', character_id, fight })
-      )
-    Object.entries(previous.fight.spectating_by_character).forEach(([character_id, fight]) => {
-      if (state.fight.spectating_by_character[character_id] === fight) return
-      link?.send({ type: 'packet/spectate', character_id, fight: null })
-    })
+    spectator_changes(
+      state.fight.spectating_by_character,
+      previous.fight.spectating_by_character,
+      state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
+    ).forEach((change) => link?.send({ type: 'packet/spectate', ...change }))
     if (state.session.auth_request !== previous.session.auth_request) {
       const request = state.session.auth_request
       if (request === 'restore' && auth) {
@@ -558,6 +581,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     const action = fight_action_to_wire(input)
     if (origin !== 'local' || !fight || fight_environment(state.fight, fight).transaction_pending || !action) return
     link?.send({ type: 'packet/fight_action', fight, action })
+  })
+  events.on('STATE_UPDATED', (next, prior) => {
+    const packet = leaderboard_subscription(next, prior)
+    if (packet) link?.send(packet)
   })
   signal.addEventListener('abort', () => {
     unsubscribe_pose()

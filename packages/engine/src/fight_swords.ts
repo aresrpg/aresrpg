@@ -97,6 +97,7 @@ export const create_fight_sword_layer = ({
   impact_sound_url: string
   impact?: (position: readonly [number, number, number]) => void
 }>) => {
+  let disposed = false
   const listener = new AudioListener()
   camera.add(listener)
   const sounds = new Set<PositionalAudio>()
@@ -104,6 +105,7 @@ export const create_fight_sword_layer = ({
   new AudioLoader().load(
     impact_sound_url,
     (buffer) => {
+      if (disposed) return
       impact_buffer = buffer
     },
     undefined,
@@ -113,6 +115,7 @@ export const create_fight_sword_layer = ({
   let plant_height = HANDLE_HEIGHT
   void load_gltf_source(url)
     .then((gltf) => {
+      if (disposed) return
       template = gltf.scene
       const measuring_root = new Object3D()
       const measuring_inner = template.clone(true)
@@ -131,6 +134,14 @@ export const create_fight_sword_layer = ({
   let visible = true
   let flatten_amount = 0
 
+  const release_sound = (sound: PositionalAudio): void => {
+    if (sound.isPlaying) sound.stop()
+    sound.disconnect()
+    sound.gain.disconnect()
+    sound.removeFromParent()
+    sounds.delete(sound)
+  }
+
   const play_impact = (root: Object3D): void => {
     if (!impact_buffer) return
     const sound = new PositionalAudio(listener)
@@ -140,9 +151,10 @@ export const create_fight_sword_layer = ({
     sound.setMaxDistance(FIGHT_SWORD_AUDIO.max_distance)
     sound.setRolloffFactor(FIGHT_SWORD_AUDIO.rolloff_factor)
     sound.setVolume(FIGHT_SWORD_AUDIO.volume)
+    const on_ended = sound.onEnded.bind(sound)
     sound.onEnded = () => {
-      sounds.delete(sound)
-      root.remove(sound)
+      on_ended()
+      release_sound(sound)
     }
     sounds.add(sound)
     root.add(sound)
@@ -158,9 +170,13 @@ export const create_fight_sword_layer = ({
   }
 
   const set_markers = (markers: readonly FightSwordMarker[]): void => {
+    if (disposed) return
     const wanted = new Set(markers.map(({ id }) => id))
     for (const [id, entry] of planted)
       if (!wanted.has(id)) {
+        sounds.forEach((sound) => {
+          if (sound.parent === entry.root) release_sound(sound)
+        })
         scene.remove(entry.root)
         planted.delete(id)
       }
@@ -183,6 +199,7 @@ export const create_fight_sword_layer = ({
 
   /** attach (or detach) the DOM tag floating above a sword */
   const set_label = (id: string, element: HTMLElement | null): void => {
+    if (disposed) return
     const entry = planted.get(id)
     if (!entry) return
     if (entry.label) {
@@ -229,11 +246,11 @@ export const create_fight_sword_layer = ({
   }
 
   const dispose = (): void => {
-    sounds.forEach((sound) => {
-      if (sound.isPlaying) sound.stop()
-      sound.removeFromParent()
-    })
-    sounds.clear()
+    if (disposed) return
+    disposed = true
+    sounds.forEach(release_sound)
+    impact_buffer = null
+    listener.gain.disconnect()
     camera.remove(listener)
     planted.forEach(({ root }) => scene.remove(root))
     planted.clear()
@@ -243,11 +260,15 @@ export const create_fight_sword_layer = ({
   return Object.freeze({
     set_markers,
     set_label,
-    set_volume: (volume: number) => listener.setMasterVolume(volume),
+    set_volume: (volume: number) => {
+      if (!disposed) listener.setMasterVolume(volume)
+    },
     set_flatten: (amount: number) => {
+      if (disposed) return
       flatten_amount = amount
     },
     set_visible: (next: boolean) => {
+      if (disposed) return
       visible = next
       planted.forEach((entry, id) => {
         entry.root.visible = next

@@ -286,6 +286,32 @@
   gap: 7px;
 }
 
+.inv__cosmetics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.inv__cosmetics .inv__slot {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.inv__cosmetics--compact {
+  grid-template-columns: repeat(2, 44px);
+}
+
+.inv__cosmetics .inv__slot-glyph {
+  margin-bottom: 14px;
+}
+
+.inv__cosmetics .inv__slot-label {
+  padding: 0 2px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
 .inv__relics .inv__slot {
   width: 52px;
   height: 52px;
@@ -342,7 +368,8 @@
 }
 
 .inv__doll--compact .inv__relics .inv__slot,
-.inv__doll--compact .inv__rig .inv__slot {
+.inv__doll--compact .inv__rig .inv__slot,
+.inv__cosmetics--compact .inv__slot {
   width: 44px;
   height: 44px;
 }
@@ -391,13 +418,15 @@
   text-transform: uppercase;
 }
 
-.inv__doll--compact .inv__slot-glyph {
+.inv__doll--compact .inv__slot-glyph,
+.inv__cosmetics--compact .inv__slot-glyph {
   width: 36%;
   height: 36%;
   margin-bottom: 7px;
 }
 
-.inv__doll--compact .inv__slot-label {
+.inv__doll--compact .inv__slot-label,
+.inv__cosmetics--compact .inv__slot-label {
   right: 0;
   bottom: 3px;
   left: 0;
@@ -437,6 +466,10 @@
 [data-fight-lab-equipment] .inv__rig {
   flex: none;
   grid-template-columns: repeat(3, 64px);
+}
+
+[data-fight-lab-equipment] .inv__cosmetics {
+  grid-template-columns: repeat(2, 64px);
 }
 
 [data-fight-lab-equipment] .inv__slot {

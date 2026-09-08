@@ -1,0 +1,326 @@
+.public-sale-card {
+  --sale-accent: #d6aa68;
+  --sale-line: #d6aa683d;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 200px;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid var(--sale-line);
+  background: linear-gradient(155deg, #302137, #17111f 65%);
+  padding: 15px 14px 14px;
+  text-align: center;
+  color: #f4ddbb;
+  transition: border-color 180ms;
+}
+
+.public-sale-card:hover {
+  border-color: var(--sale-accent);
+}
+.public-sale-card:focus-visible {
+  outline: 2px solid var(--sale-accent);
+  outline-offset: 3px;
+}
+.public-sale-card > :not(.sale-card-atmosphere) {
+  position: relative;
+}
+
+.sale-card-atmosphere {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 23px, #d6aa6806 23px 24px);
+}
+
+.sale-card-atmosphere::before {
+  content: '';
+  position: absolute;
+  inset: -25% -50% 5%;
+  background: radial-gradient(ellipse at 50% 35%, #c8873526, transparent 55%);
+}
+
+.sale-card-eyebrow,
+.sale-card-micro {
+  font-size: 8px;
+  line-height: 1.5;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sale-card-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--sale-accent);
+}
+
+.sale-card-emblem {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  margin: 12px 0 10px;
+  border: 1px solid var(--sale-line);
+  border-radius: 50%;
+  background: radial-gradient(circle, #c8873520, transparent 70%);
+  box-shadow: 0 0 0 5px #d6aa6805;
+}
+
+.sale-card-title {
+  max-width: 100%;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  text-transform: uppercase;
+}
+
+.sale-card-note {
+  margin-top: 9px;
+  font-size: 9px;
+  line-height: 1.8;
+  color: #b3a9bb;
+  text-wrap: pretty;
+}
+
+.sale-card-action {
+  display: flex;
+  width: 100%;
+  min-height: 33px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 12px;
+  border: 1px solid var(--sale-line);
+  background: #d6aa6808;
+  padding: 8px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--sale-accent);
+}
+
+.sale-card-action svg {
+  flex-shrink: 0;
+  transition: transform 180ms;
+}
+.public-sale-card:hover .sale-card-action svg {
+  transform: translate(2px, -2px);
+}
+
+/* Bright motion stays inside this small surface. Only transform and opacity animate. */
+.public-sale-card[data-phase='open'] {
+  --sale-accent: #ffce68;
+  --sale-line: #ffc75f80;
+  background: linear-gradient(160deg, #402139, #251623 65%, #372111);
+  box-shadow:
+    inset 0 0 25px #f6b34a12,
+    0 0 18px #f6b34a18;
+}
+
+.public-sale-card[data-phase='open'] .sale-card-atmosphere::before {
+  background: radial-gradient(ellipse at 50% 35%, #ffc95688, #df713132 35%, transparent 65%);
+  animation: sale-card-radiance 3.2s ease-in-out infinite alternate;
+}
+
+.public-sale-card[data-phase='open'] .sale-card-atmosphere::after {
+  content: '';
+  position: absolute;
+  inset: -30% -60%;
+  background: linear-gradient(115deg, transparent 36%, #ffdf8c25 48%, #ffe6ad4d 50%, transparent 64%);
+  transform: translateX(-70%);
+  animation: sale-card-sweep 5s ease-in-out infinite;
+}
+
+.public-sale-card[data-phase='open'] .sale-card-emblem {
+  width: 56px;
+  height: 56px;
+  margin: 8px 0;
+  border-color: #ffe0a05c;
+  box-shadow:
+    0 0 0 5px #ffd17b0a,
+    0 0 30px #ffc65c35;
+}
+
+.public-sale-card[data-phase='open'] .sale-card-emblem img {
+  width: 46px;
+  height: 46px;
+}
+
+.public-sale-card[data-phase='open'] .sale-card-title {
+  font-size: 20px;
+  color: #fff0ca;
+  text-shadow: 0 0 20px #ffcb6066;
+}
+.public-sale-card[data-phase='open'] .sale-card-action {
+  background: #f5c367;
+  border-color: #ffe2a3;
+  color: #281724;
+}
+
+.sale-card-funding {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 8px;
+  margin-top: 12px;
+  text-align: left;
+}
+
+.sale-card-funding > .sale-card-micro {
+  overflow-wrap: anywhere;
+}
+
+.sale-card-micro {
+  color: #bb9c81;
+}
+.sale-card-raised {
+  max-width: 115px;
+  text-align: right;
+  font-size: 13px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.sale-card-raised small {
+  font-size: 9px;
+  color: var(--sale-accent);
+}
+.sale-card-track {
+  grid-column: 1 / -1;
+  display: block;
+  height: 3px;
+  margin: 9px 0 7px;
+  background: #ffe3a91a;
+}
+.sale-card-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #d8873d, #ffe4a4);
+  box-shadow: 0 0 8px #ffcc6780;
+  transition: width 500ms ease;
+}
+.sale-card-target {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  line-height: 1.6;
+  color: #bdab9b;
+}
+.sale-card-target[data-reached='true'] {
+  color: #80e9d5;
+}
+.sale-card-overflow {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  border-left: 2px solid #f5c367;
+  padding-left: 8px;
+  font-size: 8px;
+  line-height: 1.5;
+  color: #e7c69c;
+}
+.sale-card-overflow strong {
+  color: #ffdc8e;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.sale-card-countdown {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 12px;
+  border-top: 1px solid #ffd48222;
+  padding-top: 10px;
+}
+.sale-card-countdown time {
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffe6b1;
+}
+
+.public-sale-card:is([data-phase='successful'], [data-phase='refundable']) {
+  --sale-accent: #81dcd2;
+  --sale-line: #81dcd23d;
+  background: linear-gradient(155deg, #20303a, #161521 70%);
+  color: #daf8f0;
+}
+
+.public-sale-card:is([data-phase='successful'], [data-phase='refundable']) .sale-card-atmosphere::before {
+  background: radial-gradient(ellipse at 50% 35%, #4bd1b62b, transparent 55%);
+}
+.public-sale-card:is([data-phase='successful'], [data-phase='refundable']) .sale-card-action {
+  background: #81dcd20b;
+}
+.sale-card-seal {
+  position: absolute;
+  right: -1px;
+  bottom: 1px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 2px solid #1a242d;
+  border-radius: 50%;
+  background: #81dcd2;
+  color: #142725;
+}
+.public-sale-card[data-phase='unknown'] {
+  opacity: 0.7;
+}
+
+@keyframes sale-card-radiance {
+  from {
+    opacity: 0.55;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes sale-card-sweep {
+  0%,
+  15% {
+    transform: translateX(-70%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  65%,
+  100% {
+    transform: translateX(70%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-sale-card[data-phase] .sale-card-atmosphere::before,
+  .public-sale-card[data-phase] .sale-card-atmosphere::after {
+    animation: none;
+  }
+  .public-sale-card,
+  .sale-card-action svg,
+  .sale-card-track > span {
+    transition: none;
+  }
+}

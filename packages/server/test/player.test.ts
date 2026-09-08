@@ -10,6 +10,8 @@ import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'bun:test'
 import type { ServerPacket } from '@aresrpg/protocol'
 
+import { item_updates } from '../src/item_updates.ts'
+import type { EventEnvelope } from '../src/protocol.ts'
 import { create_player } from '../src/player.ts'
 import { create_request_limiter } from '../src/request_limiter.ts'
 
@@ -26,14 +28,6 @@ const wire = () => {
       if (cypher.includes('HOLDS_CLAIM')) return []
       if (cypher.includes('HOLDS_VOUCHER'))
         return [{ giftcard: { properties: { id: '0xgift', template: '0xtemplate', amount: 1 } } }]
-      if (cypher.includes('MATCH (a:Airdrop)'))
-        return [
-          {
-            airdrop: {
-              properties: { drop_id: 'founders', whitelist: ['0xme', '0xpal'] },
-            },
-          },
-        ]
       if (cypher.includes(':Trade')) return []
       if (cypher.includes('LISTED_IN')) return []
       // the roster's two custody shapes: kiosk-held and fight-seated
@@ -89,6 +83,16 @@ const wire = () => {
   return { sent, ws, graph, pubsub, queries, published }
 }
 
+const emit_item = async (
+  graph: Parameters<typeof item_updates>[0],
+  emitter: EventEmitter,
+  payload: Pick<EventEnvelope, 'type' | 'data'>
+): Promise<void> => {
+  const envelope = { ckpt: 1, tx: 0, evt: 0, ts_ms: 1, ...payload }
+  for (const { address, packet } of await item_updates(graph, envelope))
+    emitter.emit(`evt:social:${address}`, { ...envelope, type: 'ItemProjected', data: { packet } })
+}
+
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 describe('the player harness (push model)', () => {
@@ -105,11 +109,7 @@ describe('the player harness (push model)', () => {
     const { sent, ws, graph, pubsub, queries } = wire()
     create_player({ ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
-    expect(
-      queries
-        .filter(({ cypher }) => !cypher.includes('MATCH (a:Airdrop)'))
-        .every(({ params }) => params?.address === '0xme')
-    ).toBe(true)
+    expect(queries.every(({ params }) => params?.address === '0xme')).toBe(true)
     const types = sent.map((packet) => packet.type)
     for (const expected of [
       'packet/characters',
@@ -119,18 +119,23 @@ describe('the player harness (push model)', () => {
       'packet/giftcards',
       'packet/listings',
       'packet/trades',
-      'packet/airdrop_state',
     ] as const)
       expect(types).toContain(expected)
     expect(types.indexOf('packet/listings')).toBeLessThan(types.indexOf('packet/characters'))
-    expect(sent.find((packet) => packet.type === 'packet/airdrop_state')).toEqual({
-      type: 'packet/airdrop_state',
-      airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
-    })
     expect(sent.find((packet) => packet.type === 'packet/giftcards')).toEqual({
       type: 'packet/giftcards',
       giftcards: [{ id: '0xgift', template: '0xtemplate', amount: 1 }],
     })
+  })
+
+  test('a plain incoming gift transfer refreshes the connected wallet without reconnecting', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+    await flush()
+    const before = sent.filter(({ type }) => type === 'packet/giftcards').length
+    pubsub.emitter.emit('evt:social:0xme', { type: 'GiftcardsChanged', data: { holder: '0xme' } })
+    await flush()
+    expect(sent.filter(({ type }) => type === 'packet/giftcards').length).toBe(before + 1)
   })
 
   test('his social channel streams without being asked — the server decides the watch', async () => {
@@ -250,19 +255,6 @@ describe('the player harness (push model)', () => {
     })
   })
 
-  test('a game session can inspect a separately connected holder wallet', async () => {
-    const { sent, ws, graph, pubsub } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/airdrop_eligibility_request', address: '0xpal' }))
-    await flush()
-    expect(sent).toContainEqual({
-      type: 'packet/airdrop_eligibility',
-      address: '0xpal',
-      airdrops: [{ drop_id: 'founders', eligible: true, eligible_count: 2 }],
-    })
-  })
-
   test('all correlated requests share the injected global limiter', async () => {
     const { sent, ws, graph, pubsub } = wire()
     const request_limiter = create_request_limiter({ capacity: 1 })
@@ -330,8 +322,15 @@ describe('the player harness (push model)', () => {
       read: async (cypher: string, params?: Record<string, unknown>) => {
         if (cypher.includes('HOLDS]->(i:Item {id:'))
           return params?.id === '0xcape'
-            ? [{ item: { properties: { id: '0xcape', name: 'Lorito Cloak', item_type: 'cape_lorito' } }, kiosk: '0xk' }]
-            : [{ item: { properties: { id: params?.id } }, kiosk: '0xtheirs' }]
+            ? [
+                {
+                  item: { properties: { id: '0xcape', name: 'Lorito Cloak', item_type: 'cape_lorito' } },
+                  kiosk: '0xk',
+                  address: '0xme',
+                },
+              ]
+            : [{ item: { properties: { id: params?.id } }, kiosk: '0xtheirs', address: '0xtheirs' }]
+        if (cypher.includes('WHERE k.id IN $holders')) return [{ address: '0xme' }]
         if (cypher.includes('OWNS]->(k:Kiosk) RETURN k.id')) return [{ kiosk: '0xk' }]
         return []
       },
@@ -341,21 +340,29 @@ describe('the player harness (push model)', () => {
     const player = create_player({ ws: own_ws, address: '0xme', admin: false, graph, pubsub })
     await flush()
 
-    pubsub.emitter.emit('evt:economy', { type: 'ItemWritten', data: { item: '0xcape', holder: '0xk' } })
-    pubsub.emitter.emit('evt:economy', {
+    await emit_item(graph, pubsub.emitter, {
       type: 'ItemWritten',
-      data: { item: '0xforeign', holder: '0xtheirs', previous_holder: '0xk' },
+      data: { item: '0xcape', holder: '0xk', version: '11' },
     })
-    pubsub.emitter.emit('evt:economy', { type: 'ItemRemoved', data: { item: '0xburned', holder: '0xk' } })
+    await emit_item(graph, pubsub.emitter, {
+      type: 'ItemWritten',
+      data: { item: '0xforeign', holder: '0xtheirs', previous_holder: '0xk', version: '12' },
+    })
+    await emit_item(graph, pubsub.emitter, {
+      type: 'ItemRemoved',
+      data: { item: '0xburned', holder: '0xk', version: '13' },
+    })
     await flush()
 
     const updates = sent.filter((packet) => packet.type === 'packet/item_updated')
     expect(updates).toHaveLength(1)
     expect(updates[0]).toMatchObject({ type: 'packet/item_updated', item: { id: '0xcape', kiosk: '0xk' } })
-    expect(sent.filter((packet) => packet.type === 'packet/item_removed')).toEqual([
-      { type: 'packet/item_removed', item: '0xburned' },
-      { type: 'packet/item_removed', item: '0xforeign' },
-    ])
+    expect(sent.filter((packet) => packet.type === 'packet/item_removed')).toEqual(
+      expect.arrayContaining([
+        { type: 'packet/item_removed', item: '0xburned', version: '13' },
+        { type: 'packet/item_removed', item: '0xforeign', version: '12' },
+      ])
+    )
     player.on_close()
   })
 
@@ -372,6 +379,7 @@ describe('the player harness (push model)', () => {
             {
               item: { properties: { id: params?.id, name: 'Fuwa Horn', item_type: 'fuwa_horn' } },
               kiosk: '0xnew-kiosk',
+              address: '0xme',
             },
           ]
         return []
@@ -382,7 +390,7 @@ describe('the player harness (push model)', () => {
     await flush()
     purchased = true
 
-    pubsub.emitter.emit('evt:economy', {
+    await emit_item(graph, pubsub.emitter, {
       type: 'ItemWritten',
       data: { item: '0xhorn', holder: '0xnew-kiosk' },
     })
@@ -395,4 +403,132 @@ describe('the player harness (push model)', () => {
     })
     player.on_close()
   })
+})
+
+test('closed player refuses late baseline reads, packets and tracking inputs', async () => {
+  const wires = wire()
+  let release!: () => void
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const graph = {
+    ...wires.graph,
+    read: async (...args: Parameters<typeof wires.graph.read>) => {
+      await waiting
+      return wires.graph.read(...args)
+    },
+  }
+  const player = create_player({ ...wires, graph, address: '0xme', admin: false })
+  player.on_close()
+  const packets = wires.sent.length
+  const publications = wires.published.length
+  release()
+  await flush()
+  player.on_message(JSON.stringify({ type: 'packet/ping', id: 99 }))
+  player.on_close()
+  expect(wires.sent).toHaveLength(packets)
+  expect(wires.published).toHaveLength(publications)
+  expect(wires.pubsub.emitter.eventNames()).toEqual([])
+})
+
+test('live roster supersedes deferred baseline without crossing the incomplete READY barrier', async () => {
+  const wires = wire()
+  let release_roster!: () => void
+  let release_inventory!: () => void
+  const old_roster = new Promise<void>((resolve) => {
+    release_roster = resolve
+  })
+  const old_inventory = new Promise<void>((resolve) => {
+    release_inventory = resolve
+  })
+  let roster_reads = 0
+  const graph = {
+    ...wires.graph,
+    read: async (cypher: string, params?: Record<string, unknown>) => {
+      if (cypher.includes('[:HOLDS]->(c:Character)')) {
+        roster_reads += 1
+        if (roster_reads === 1) {
+          await old_roster
+          return []
+        }
+        return [
+          {
+            character: { properties: { id: '0xnew', name: 'new' } },
+            kiosk_node: { properties: { id: '0xk' } },
+            equipment: [],
+          },
+        ]
+      }
+      if (cypher.includes('[:HOLDS]->(i:Item)')) {
+        await old_inventory
+        return []
+      }
+      return wires.graph.read(cypher, params)
+    },
+  }
+  const player = create_player({ ...wires, graph, address: '0xme', admin: false })
+  await flush()
+  wires.pubsub.emitter.emit('evt:social:0xme', { type: 'CharacterCreated', data: {} })
+  await flush()
+  expect(wires.sent.filter(({ type }) => type === 'packet/characters')).toEqual([])
+  release_inventory()
+  await flush()
+  release_roster()
+  await flush()
+  const rosters = wires.sent.filter((packet) => packet.type === 'packet/characters')
+  expect(rosters.length).toBeGreaterThan(0)
+  expect(rosters.every((packet) => packet.characters[0]?.id === '0xnew')).toBe(true)
+  player.on_close()
+})
+
+test('purchase invalidation refreshes the current market slice and rejects old enrichment', async () => {
+  const wires = wire()
+  let release!: () => void
+  const old_slice = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  let reads = 0
+  const graph = {
+    ...wires.graph,
+    read: async (cypher: string, params?: Record<string, unknown>) => {
+      if (cypher.includes('ORDER BY l.at_ms DESC')) {
+        reads += 1
+        if (reads === 1) {
+          await old_slice
+          return [
+            {
+              listings: [
+                {
+                  asset: { properties: { id: 'sold', name: 'old', category: 'hat' } },
+                  kinds: ['Item'],
+                  price_mist: '1',
+                  at_ms: 1,
+                  kiosk: '0xk',
+                  seller: '0xother',
+                  version: '1',
+                  market_version: '1',
+                },
+              ],
+              kiosks: [],
+            },
+          ]
+        }
+        return [{ listings: [], kiosks: [] }]
+      }
+      return wires.graph.read(cypher, params)
+    },
+  }
+  const player = create_player({ ...wires, graph, address: '0xme', admin: false })
+  player.on_message(
+    JSON.stringify({ type: 'packet/market_observe', observation: { categories: ['hat'], characters: false } })
+  )
+  await flush()
+  wires.pubsub.emitter.emit('evt:economy', { type: 'MarketPurchased', data: { seller: '0xother', object: 'sold' } })
+  await flush()
+  release()
+  await flush()
+  const slices = wires.sent.filter((packet) => packet.type === 'packet/market_slice')
+  expect(slices).toHaveLength(1)
+  expect(slices[0]?.listings).toEqual([])
+  player.on_close()
 })

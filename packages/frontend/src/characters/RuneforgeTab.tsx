@@ -8,7 +8,14 @@
 // forgery job comes from the shared category map and is available from level 1, matching Move.
 
 import { useMemo, useState } from 'react'
-import { craft_job_of, item_stat_center, rune_effect, rune_max_apps, stat_names } from '@aresrpg/immutable'
+import {
+  craft_job_of,
+  format_rune_weight,
+  item_stat_center,
+  rune_can_apply,
+  rune_effect,
+  stat_names,
+} from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { Gem, Plus, Sparkles, Swords, X } from 'lucide-react'
 
@@ -17,7 +24,12 @@ import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
-import { available_inventory_items, encumbered_asset_ids } from '../inventory_stacks.ts'
+import {
+  available_inventory_items,
+  encumbered_asset_ids,
+  inventory_groups,
+  stack_merge_sources,
+} from '../inventory_stacks.ts'
 import { scribe_outcome_kind, type ScribeHistoryEntry, type ScribeOutcomeKind } from '../modules/runeforge.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -42,7 +54,7 @@ const ScribeHistory = ({
   copy,
   current_puits,
   entries,
-}: Readonly<{ copy: AppCopy; current_puits: number; entries: readonly ScribeHistoryEntry[] }>) => {
+}: Readonly<{ copy: AppCopy; current_puits: string; entries: readonly ScribeHistoryEntry[] }>) => {
   const t = copy_text(copy.characters_page)
   return (
     <section className="flex min-h-56 flex-col border border-border bg-black/15" data-runeforge-history="">
@@ -51,7 +63,7 @@ const ScribeHistory = ({
           {t('runeforge_history')}
         </span>
         <span className="text-[9px] tracking-[0.12em] text-muted uppercase">
-          {t('runeforge_puits')} <b className="text-gold tabular-nums">{current_puits}</b>
+          {t('runeforge_puits')} <b className="text-gold tabular-nums">{format_rune_weight(current_puits)}</b>
         </span>
       </header>
       <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-2.5">
@@ -61,7 +73,7 @@ const ScribeHistory = ({
           </div>
         ) : (
           entries.map((entry) => {
-            const no_stat_change = entry.applied_value === 0 && entry.lost_amount === 0
+            const no_stat_change = entry.applied_value === 0 && entry.losses.length === 0
             const rune_name = encyclopedia_catalog.item(entry.rune_item_type)?.item.name ?? entry.rune_item_type
             return (
               <article className="border border-white/8 bg-white/[0.018] p-3" key={entry.digest}>
@@ -79,17 +91,18 @@ const ScribeHistory = ({
                       +{entry.applied_value} {stat_name(copy, entry.applied_stat)}
                     </span>
                   )}
-                  {entry.lost_stat && entry.lost_amount > 0 && (
-                    <span className="text-[#ff7d94]">
-                      −{entry.lost_amount} {stat_name(copy, entry.lost_stat)}
+                  {entry.losses.map(({ stat, amount }) => (
+                    <span className="text-[#ff7d94]" key={stat}>
+                      −{amount} {stat_name(copy, stat)}
                     </span>
-                  )}
+                  ))}
                   {no_stat_change && <span className="text-muted">{t('runeforge_no_stat_change')}</span>}
                 </div>
                 <div className="mt-2 border-t border-white/6 pt-2 text-[8px] tracking-[0.12em] text-muted uppercase">
-                  {t('runeforge_puits')} <span className="text-text tabular-nums">{entry.puits_before}</span>
+                  {t('runeforge_puits')}{' '}
+                  <span className="text-text tabular-nums">{format_rune_weight(entry.puits_before)}</span>
                   <span className="px-1.5 text-muted/60">→</span>
-                  <span className="text-gold tabular-nums">{entry.puits_after}</span>
+                  <span className="text-gold tabular-nums">{format_rune_weight(entry.puits_after)}</span>
                 </div>
               </article>
             )
@@ -107,9 +120,9 @@ const selected_runeforge_view = (
   gear: Readonly<ItemRow> | null,
   gear_id: string | null,
   history_by_gear: Readonly<Record<string, readonly ScribeHistoryEntry[]>>
-): Readonly<{ current_puits: number; history: readonly ScribeHistoryEntry[] }> =>
+): Readonly<{ current_puits: string; history: readonly ScribeHistoryEntry[] }> =>
   Object.freeze({
-    current_puits: Number(gear?.puits ?? 0),
+    current_puits: gear?.puits ?? '0',
     history: history_by_gear[gear_id ?? ''] ?? EMPTY_HISTORY,
   })
 
@@ -167,13 +180,15 @@ const WorkSlot = ({
   )
 }
 
-/** rune_catalog MAX_APPS predicted off the projected ForgeKey counters — a capped stat
- *  never fires a doomed transaction. */
+/** Predict the same current-stat limits as Move from the canonical authored template. */
 const rune_stat_maxed = (gear: Readonly<ItemRow> | null, rune: Readonly<ItemRow> | null): boolean => {
-  const stat = rune ? rune_effect(rune.item_type)?.stat : undefined
-  if (!stat || !gear) return false
-  const cap = rune_max_apps(stat)
-  return cap > 0 && (gear.apps?.[stat_names.indexOf(stat)] ?? 0) >= cap
+  if (!gear?.stats || !rune) return false
+  const effect = rune_effect(rune.item_type)
+  const maximum = encyclopedia_catalog.item(gear.item_type)?.item.stats?.max
+  if (!effect || !maximum) return false
+  const { stats } = gear
+  const current = Object.fromEntries(stat_names.map((stat) => [stat, stats[stat] - item_stat_center]))
+  return !rune_can_apply(current, maximum, effect)
 }
 
 export default function RuneforgeTab({
@@ -212,6 +227,7 @@ export default function RuneforgeTab({
     if (!can_apply || !wallet || !sel_gear || !sel_rune) return
     const transaction = run_direct_transaction(() =>
       wallet.character.scribe_rune({
+        merge_sources: stack_merge_sources(all_inventory, encumbered, sel_rune),
         character_id: character.id,
         gear_id: sel_gear.id,
         gear_item_type: sel_gear.item_type,
@@ -225,6 +241,7 @@ export default function RuneforgeTab({
     const pending = toast.loading(t('scribing'))
     void transaction
       .then((outcome) => {
+        dispatch_app({ type: 'inventory/amounts_changed', changes: outcome.inventory_changes ?? [] })
         dispatch_app({
           type: 'runeforge/scribed',
           gear_before: sel_gear,
@@ -378,7 +395,7 @@ export default function RuneforgeTab({
               >
                 {key === 'gear' ? t('tab_gear') : t('tab_runes')}
                 <span className="text-[9px] opacity-70 tabular-nums">
-                  {key === 'gear' ? gear.length : runes.length}
+                  {key === 'gear' ? gear.length : inventory_groups(runes).length}
                 </span>
               </button>
             ))}
@@ -388,10 +405,11 @@ export default function RuneforgeTab({
               empty(pool_tab === 'gear' ? t('no_forge_gear') : t('no_runes'))
             ) : (
               <div className="chr-forge__pool">
-                {pool.map((item) => {
+                {inventory_groups(pool).map(({ item, amount }) => {
                   const selected = (pool_tab === 'gear' ? gear_id : rune_id) === item.id
                   return (
                     <InventoryItemCell
+                      amount={amount}
                       class_name={selected ? 'is-selected' : ''}
                       draggable
                       item={item}

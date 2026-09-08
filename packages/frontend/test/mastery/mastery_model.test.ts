@@ -32,9 +32,10 @@ describe('mastery model', () => {
     expect([1, 50, 51, 100, 101, 150, 151, 199, 200].map(mastery_reward)).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5])
   })
 
-  test('points remain spendable for the current grace epoch and expire after one miss', () => {
+  test('points remain spendable after skipped epochs', () => {
     expect(effective_mastery_points(mastery('7', '10'), '11')).toBe(7n)
-    expect(effective_mastery_points(mastery('7', '10'), '12')).toBe(0n)
+    expect(effective_mastery_points(mastery('7', '10'), '12')).toBe(7n)
+    expect(effective_mastery_points(mastery('7', '10'), '100')).toBe(7n)
   })
 
   test('the strongest free eligible character becomes the invisible access witness', () => {

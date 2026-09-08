@@ -7,19 +7,11 @@ import { item_is_stackable } from '@aresrpg/immutable'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import type { GiftcardRow } from '@aresrpg/protocol'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
-import { normalizeStructTag } from '@mysten/sui/utils'
+import { isValidSuiAddress, normalizeSuiAddress, normalizeStructTag } from '@mysten/sui/utils'
 import { ZkSendClient } from '@mysten/zksend'
 
 import type { Sdk } from './client.ts'
-import { receipt_digest, receipt_event } from './cache.ts'
-import { event_integer, event_string } from './receipt_decode.ts'
-import { airdrop_id, item_template_id } from './seed_ids.ts'
-
-export type AirdropClaim = Readonly<{
-  drop_id: string
-  item_type: string
-  recipient: string
-}>
+import { receipt_digest } from './cache.ts'
 
 export type GiftcardRedeem = Readonly<{
   card: GiftcardRow
@@ -41,11 +33,11 @@ const giftcard_type = (sdk: Sdk): string => {
 
 const canonical_giftcard = (object: GiftcardObject, expected_type: string): GiftcardRow => {
   if (!object.type || normalizeStructTag(object.type) !== normalizeStructTag(expected_type))
-    throw new Error('The zkSend link does not contain an AresRPG giftcard')
+    throw new Error('The object is not an AresRPG giftcard')
   const template = object.json?.template
   const amount = Number(object.json?.amount)
   if (typeof template !== 'string' || !Number.isSafeInteger(amount) || amount < 1)
-    throw new Error('The zkSend giftcard has invalid chain data')
+    throw new Error('The giftcard has invalid chain data')
   return Object.freeze({ id: object.objectId, template, amount })
 }
 
@@ -57,7 +49,7 @@ const gift_link_network = (url: URL): 'testnet' | 'mainnet' => {
 
 export const canonical_zksend_gift_url = (url: string, network: 'testnet' | 'mainnet'): string => {
   const scanned = new URL(url)
-  if (scanned.pathname !== '/gift' || !scanned.hash.startsWith('#$') || scanned.hash.length <= 2)
+  if (!['/gift', '/claim'].includes(scanned.pathname) || !scanned.hash.startsWith('#$') || scanned.hash.length <= 2)
     throw new Error('The printed giftcard link is invalid')
   const link_network = gift_link_network(scanned)
   if (link_network !== network) throw new Error(`The giftcard belongs to ${link_network}, not ${network}`)
@@ -89,41 +81,6 @@ export const claim_giftcard_link = async (
   return Object.freeze({ digest: claimed.Transaction.digest, giftcard })
 }
 
-const published_ids = (sdk: Sdk) => {
-  const package_id = sdk.game_type_package
-  if (typeof package_id !== 'string' || !package_id) throw new Error('The game package is not published.')
-  const root = sdk.pins.content_root
-  const content_root = typeof root === 'object' && root !== null ? Reflect.get(root, 'id') : null
-  const seed_original = sdk.pins.seed_package_original
-  if (typeof content_root !== 'string' || typeof seed_original !== 'string')
-    throw new Error('The living-content registry is not published.')
-  return Object.freeze({ package_id, content_root, seed_package_original: seed_original })
-}
-
-export const claim_airdrop = async (
-  sdk: Sdk,
-  claim: AirdropClaim
-): Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>> => {
-  const { package_id, content_root, seed_package_original } = published_ids(sdk)
-  const drop = airdrop_id(content_root, package_id, claim.drop_id)
-  const template = item_template_id(content_root, seed_package_original, claim.item_type)
-  await sdk.hydrate_unknown([drop, template])
-  const tx = sdk.tx()
-  sdk.doors.claim_airdrop(tx, { drop, template, recipient: claim.recipient })
-  const receipt = await sdk.execute(tx, { include: { objectTypes: true } })
-  const claimed = receipt_event(receipt, '::distribution::AirdropClaimed')
-  const minted = receipt_event(receipt, '::distribution::GiftcardMinted')
-  if (!claimed || !minted) throw new Error('The airdrop receipt carried no voucher')
-  return Object.freeze({
-    digest: receipt_digest(receipt),
-    giftcard: Object.freeze({
-      id: event_string(claimed, 'giftcard'),
-      template: event_string(minted, 'template'),
-      amount: event_integer(minted, 'amount'),
-    }),
-  })
-}
-
 export const redeem_giftcard = async (
   sdk: Sdk,
   kiosk_cap: KioskOwnerCap | null,
@@ -142,4 +99,54 @@ export const redeem_giftcard = async (
   })
   const { receipt, kiosk_cap: settled_kiosk_cap } = await sdk.execute_personal_kiosk(tx, kiosk_cap)
   return Object.freeze({ digest: receipt_digest(receipt), kiosk_cap: settled_kiosk_cap })
+}
+
+/** Explicit import inspection for the separately connected external wallet. */
+export const read_giftcards = async (
+  client: SuiGrpcClient,
+  sdk: Sdk,
+  owner: string
+): Promise<readonly GiftcardRow[]> => {
+  const type = giftcard_type(sdk)
+  const cards: GiftcardRow[] = []
+  let cursor: string | null | undefined
+  do {
+    const page = await client.core.listOwnedObjects({ owner, type, cursor, include: { json: true } })
+    cards.push(...page.objects.map((object) => canonical_giftcard(object, type)))
+    cursor = page.hasNextPage ? page.cursor : null
+  } while (cursor)
+  return Object.freeze(cards)
+}
+
+export type GiftcardTransfer = Readonly<{ id: string; recipient: string }>
+
+/** One fixed transport door for wallet imports and operator batches. No mint authority. */
+export const transfer_giftcards = async (
+  client: SuiGrpcClient,
+  sdk: Sdk,
+  sender: string,
+  transfers: readonly GiftcardTransfer[]
+): Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>> => {
+  if (transfers.length < 1 || transfers.length > 100) throw new Error('Transfer 1..100 giftcards at a time')
+  const ids = transfers.map(({ id }) => normalizeSuiAddress(id))
+  if (new Set(ids).size !== ids.length) throw new Error('A giftcard cannot appear twice in a batch')
+  if (transfers.some(({ recipient }) => !isValidSuiAddress(recipient))) throw new Error('Invalid giftcard recipient')
+  const { objects } = await client.core.getObjects({ objectIds: ids, include: { json: true } })
+  const type = giftcard_type(sdk)
+  const cards = objects.map((object, index) => {
+    if (object instanceof Error) throw object
+    if (
+      object.objectId !== ids[index] ||
+      object.owner.$kind !== 'AddressOwner' ||
+      normalizeSuiAddress(object.owner.AddressOwner) !== normalizeSuiAddress(sender)
+    )
+      throw new Error('Every giftcard must be held by the signing wallet')
+    return canonical_giftcard(object, type)
+  })
+  if (cards.length !== ids.length) throw new Error('Giftcard lookup returned incomplete results')
+  await sdk.hydrate(ids)
+  const tx = sdk.tx()
+  transfers.forEach(({ id, recipient }) => tx.transferObjects([sdk.door_context.obj(tx, id, true)], recipient))
+  const receipt = await sdk.execute(tx)
+  return Object.freeze({ digest: receipt_digest(receipt), giftcards: Object.freeze(cards) })
 }

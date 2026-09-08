@@ -17,6 +17,12 @@ export const rune_coordinates = (item_type: string): Readonly<{ stat: number; ti
   return Object.freeze({ stat, tier, index: stat * RUNE_TIERS.length + tier - 1 })
 }
 
+export const scribe_losses = (event: Readonly<Record<string, unknown>>): readonly number[] => {
+  if (!Array.isArray(event.lost_amounts) || event.lost_amounts.length !== stat_names.length)
+    throw new Error('The scribe receipt carried an invalid stat-loss vector')
+  return Object.freeze(event.lost_amounts.map((value) => event_integer({ value }, 'value')))
+}
+
 export const crush_owed_from_receipt = (receipt: Receipt, claim_id: string): readonly number[] => {
   const event = receipt_event(receipt, '::forgemagie::CrushRevealed')
   if (!event || event_string(event, 'claim') !== claim_id)

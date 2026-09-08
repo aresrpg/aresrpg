@@ -1,70 +1,25 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { inject } from '@vercel/analytics'
+import { injectSpeedInsights as inject_speed_insights } from '@vercel/speed-insights'
 
-import { dispatch_app, initialize_app_store, observe_app } from './store.ts'
-import { DEMO_APP_MODULES, PLAYER_APP_MODULES } from './app_modules.ts'
-import { env } from './env.ts'
-import { load_game_settings } from './game/core/settings.ts'
-import { load_locale } from './i18n/locale.ts'
-import { load_app_copy } from './i18n/copy.ts'
-import { register_service_worker } from './pwa.ts'
-import { has_stored_gift_link } from './modules/distribution.ts'
-import {
-  MOBILE_VIEWPORT_QUERY,
-  mobile_app_unavailable,
-  MobileUnavailableScreen,
-} from './components/MobileUnavailableScreen.tsx'
 import './tailwind.css'
 
-const requested_quality = import.meta.env.DEV ? new URLSearchParams(globalThis.location.search).get('quality') : null
-initialize_app_store(load_game_settings(env.engine_quality, requested_quality))
-const locale = load_locale()
-dispatch_app({ type: 'locale/changed', locale })
-const root = createRoot(document.getElementById('root')!)
-const demo_route = globalThis.location.pathname.replace(/\/+$/, '') === '/demo'
-
 const boot = async (): Promise<void> => {
-  if (
-    mobile_app_unavailable(
-      globalThis.location.pathname,
-      globalThis.matchMedia?.(MOBILE_VIEWPORT_QUERY).matches === true,
-      has_stored_gift_link()
-    )
-  ) {
-    const copy = await load_app_copy(locale)
-    root.render(
-      <StrictMode>
-        <MobileUnavailableScreen copy={copy} />
-      </StrictMode>
-    )
-    return
+  // Enoki's opener reads this popup's OAuth result. App routing would erase it.
+  if (globalThis.location.pathname.replace(/\/+$/, '') === '/enoki') return
+  if (import.meta.env.MODE === 'production') {
+    // Claim fragments carry bearer keys; telemetry only needs the page path.
+    const before_send = <T extends { readonly url: string }>(event: T): T => ({
+      ...event,
+      url: event.url.split(/[?#]/, 1)[0]!,
+    })
+    inject({ mode: 'production', beforeSend: before_send })
+    inject_speed_insights({ beforeSend: before_send })
   }
-  if (demo_route) {
-    const [{ DemoPage }, copy] = await Promise.all([import('./demo/DemoPage.tsx'), load_app_copy(locale)])
-    dispatch_app({ type: 'locale/loaded', locale, copy })
-    observe_app(DEMO_APP_MODULES)
-    root.render(
-      <StrictMode>
-        <DemoPage copy={copy} />
-      </StrictMode>
-    )
-    return
-  }
-  const { App } = await import('./app.tsx')
-  observe_app(PLAYER_APP_MODULES)
-  root.render(
-    <StrictMode>
-      <App />
-    </StrictMode>
-  )
+  const { boot_game } = await import('./game_entry.tsx')
+  boot_game()
 }
 
-void register_service_worker()
-  .then(boot)
-  .catch((error: unknown) => {
-    console.error('The application failed to boot.', error)
-    root.render(<main className="fixed inset-0 bg-bg" />)
-  })
+void boot().catch((error: unknown) => console.error('Application entry failed.', error))

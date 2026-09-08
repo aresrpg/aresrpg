@@ -8,7 +8,6 @@ use std::string::String;
 use sui::{
   coin::Coin,
   derived_object,
-  display_registry::{Self, DisplayRegistry},
   event,
   kiosk::Kiosk,
   package::Publisher,
@@ -82,34 +81,6 @@ public struct CharacterCreated has copy, drop { character: ID, owner: address, n
 
 fun init(_otw: CHARACTER, ctx: &mut TxContext) {
   transfer::share_object(NameRegistry { id: object::new(ctx) });
-}
-
-/// Display V2 needs the shared `DisplayRegistry` (0xd), which init cannot take — runs once
-/// post-publish through `admin::create_character_display`. Returns the cap.
-public(package) fun create_display(
-  registry: &mut DisplayRegistry,
-  publisher: &mut Publisher,
-  ctx: &mut TxContext,
-): display_registry::DisplayCap<Character> {
-  let (mut d, cap) = display_registry::new_with_publisher<Character>(registry, publisher, ctx);
-  display_registry::set(&mut d, &cap, b"name".to_string(), b"{name}".to_string());
-  display_registry::set(&mut d, &cap, b"link".to_string(), b"https://app.aresrpg.world".to_string());
-  display_registry::set(
-    &mut d,
-    &cap,
-    b"image_url".to_string(),
-    b"https://aresrpg.world/classe/{classe}_{sex}.jpg".to_string(),
-  );
-  display_registry::set(
-    &mut d,
-    &cap,
-    b"description".to_string(),
-    b"Level {level} {classe} of the AresRPG universe.".to_string(),
-  );
-  display_registry::set(&mut d, &cap, b"project_url".to_string(), b"https://aresrpg.world".to_string());
-  display_registry::set(&mut d, &cap, b"creator".to_string(), b"AresRPG".to_string());
-  display_registry::share(d);
-  cap
 }
 
 // ╔════════════════ [ Creation ] ═════════════════════════════════════════════ ]

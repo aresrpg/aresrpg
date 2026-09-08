@@ -95,7 +95,7 @@ export const crowd_benchmark_result = (
   })
 }
 
-const load_crowd = async (
+export const load_crowd = async (
   amount: number,
   ground_height: (x: number, z: number) => number
 ): Promise<readonly CrowdActor[]> => {

@@ -19,6 +19,9 @@ packages/fight/*
 !packages/frontend
 packages/frontend/*
 !packages/frontend/package.json
+!packages/launchpad
+packages/launchpad/*
+!packages/launchpad/package.json
 !packages/immutable
 packages/immutable/*
 !packages/immutable/package.json

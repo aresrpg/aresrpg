@@ -4,8 +4,10 @@
 
 import type { TransferPolicyCap } from '@mysten/kiosk'
 
-import { receipt_digest } from './cache.ts'
+import { receipt_digest, receipt_events } from './cache.ts'
 import type { Sdk } from './client.ts'
+import { kares_clock, kares_pins, kares_shared } from './kares.ts'
+import { event_u64 } from './receipt_decode.ts'
 
 export type MarketplaceRoyalty = Readonly<{
   kind: 'item' | 'character'
@@ -22,7 +24,8 @@ type MarketplaceAdminSdk = Pick<
   | 'get_owned_transfer_policies'
   | 'get_transfer_policies'
   | 'tx'
-  | 'withdraw_transfer_policy'
+  | 'hydrate_unknown'
+  | 'door_context'
   | 'execute'
 >
 
@@ -69,18 +72,44 @@ export const claim_marketplace_royalties = async (sdk: MarketplaceAdminSdk, addr
   const missing_caps = royalties.filter(({ cap }) => !cap).map(({ kind }) => kind)
   if (missing_caps.length > 0)
     throw new Error(`The connected wallet does not own the ${missing_caps.join(' and ')} TransferPolicyCap`)
-  const claimable = royalties.filter(({ cap, balance_mist }) => cap && balance_mist > 0n)
-  if (claimable.length === 0) throw new Error('No marketplace royalties are currently collectable')
+  if (royalties.every(({ balance_mist }) => balance_mist === 0n))
+    throw new Error('No marketplace royalties are currently collectable')
+  const pins = kares_pins(sdk.pins)
+  await sdk.hydrate_unknown(royalties.flatMap(({ policy_id, cap }) => (cap ? [policy_id, cap.policyCapId] : [])))
   const transaction = sdk.tx()
-  claimable.forEach(({ cap }) => {
-    if (cap) sdk.withdraw_transfer_policy(transaction, cap, address)
+  const withdrawn = royalties.flatMap(({ type, policy_id, cap }) =>
+    cap
+      ? [
+          transaction.moveCall({
+            target: '0x2::transfer_policy::withdraw',
+            typeArguments: [type],
+            arguments: [
+              sdk.door_context.obj(transaction, policy_id, true),
+              sdk.door_context.obj(transaction, cap.policyCapId, false),
+              transaction.pure.option('u64', null),
+            ],
+          }),
+        ]
+      : []
+  )
+  const [proceeds, ...other_proceeds] = withdrawn
+  if (!proceeds) throw new Error('No marketplace royalty capability is available')
+  if (other_proceeds.length) transaction.mergeCoins(proceeds, other_proceeds)
+  const remainder = transaction.moveCall({
+    target: `${pins.package}::staking::fund_royalties`,
+    arguments: [kares_shared(transaction, pins.pool), proceeds, kares_clock(transaction)],
   })
+  transaction.transferObjects([remainder], address)
   const receipt = await sdk.execute(transaction)
+  const funded = receipt_events(receipt, `${pins.original}::staking::RoyaltyFunded`)
+  if (funded.length !== 1) throw new Error('The royalty receipt did not certify its staking allocation')
+  const amount_mist = BigInt(event_u64(funded[0]!, 'amount'))
+  const staking_mist = BigInt(event_u64(funded[0]!, 'staking'))
   return Object.freeze({
     digest: receipt_digest(receipt),
-    // the balances as READ when the claim was composed — royalties accruing between the read
-    // and the execution land on-chain but are not counted here (display only, never settlement)
-    amount_mist: claimable.reduce((sum, { balance_mist }) => sum + balance_mist, 0n),
-    policies: Object.freeze(claimable.map(({ kind }) => kind)),
+    amount_mist,
+    staking_mist,
+    treasury_mist: amount_mist - staking_mist,
+    policies: Object.freeze(royalties.map(({ kind }) => kind)),
   })
 }

@@ -1,65 +1,50 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // THE SELF STREAM (push model): the SERVER decides what a connection watches — never the client.
-// Two standing watches, both "facts targeting ME that my own transactions did not cause":
+// Two standing watches carry the account's indexed changes:
 //   evt:social:<address>   — friend facts (trade births ride the same channel, in player_trade),
 //   evt:character:<id>     — the EMBODIED character's own chain channel (mounted on the state
 //                            delta): party invites, the party-membership mirror, fight seats,
 //                            and own visible-slot equips folding back into presence truth.
 // Envelopes forward as shaped packets or re-enter as internal actions, never raw.
 
-import { VISIBLE_SLOTS, type VisibleSlot } from '@aresrpg/protocol'
+import { VISIBLE_SLOTS } from '@aresrpg/protocol'
 
 import type { EventEnvelope } from '../protocol.ts'
-import { get_characters } from '../reads/get_characters.ts'
-import { get_item } from '../reads/get_item.ts'
-import { get_fight_resolutions } from '../reads/get_fight_resolutions.ts'
-import { latest_keyed_reader } from '../latest_read.ts'
+import { equipment_updates } from '../equipment_updates.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 
 const log = logger(import.meta)
 
-const is_visible_slot = (slot: string): slot is VisibleSlot => (VISIBLE_SLOTS as readonly string[]).includes(slot)
 const refreshes_roster = (type: string): boolean =>
-  ['DungeonEntered', 'DungeonRoomCleared', 'DungeonEnded', 'CharacterTeleported'].includes(type)
+  ['DungeonEntered', 'DungeonRoomCleared', 'DungeonEnded', 'CharacterTeleported', 'CharacterDeleted'].includes(type)
 
 export default {
   name: 'player_events',
   observe: (context) => {
-    const { pubsub, graph, send, channels, address, events, signal, dispatch } = context
-    const { watch, unwatch, watched } = create_watcher(pubsub)
-    const read_latest_roster = latest_keyed_reader(
-      (owner) => get_characters(graph, { address: owner }),
-      (_owner, characters) => {
-        dispatch({ type: 'action/character_roster', characters })
-        send({ type: 'packet/characters', characters })
-      }
-    )
-    const read_latest_resolutions = latest_keyed_reader(
-      (owner) => get_fight_resolutions(graph, { address: owner }),
-      (_owner, resolutions) => send({ type: 'packet/fight_resolutions', resolutions })
-    )
-    const refresh_roster = (): void => {
-      void read_latest_roster(address).catch((error) =>
-        log.error({ address, error: (error as Error).message }, 'roster refresh failed')
-      )
-    }
-    const refresh_resolutions = (): void => {
-      void read_latest_resolutions(address).catch((error) =>
-        log.error({ address, error: (error as Error).message }, 'fight resolution refresh failed')
-      )
-    }
+    const { pubsub, graph, channels, address, events, signal, dispatch, get_state } = context
+    const { watch, unwatch, watched } = create_watcher(pubsub, signal)
+    const refresh_roster = (): void => dispatch({ type: 'action/refresh_account', domain: 'characters' })
+    const refresh_resolutions = (): void => dispatch({ type: 'action/refresh_account', domain: 'resolutions' })
 
     // the player's own social channel — friend facts + exclusive offers, as REAL packets
     void watch(channels.social(address), (payload: EventEnvelope) => {
       // a created character is chain-initialized state the receipt cannot carry — the
       // server streams the fresh roster the moment the indexer projects it
+      if (payload.type === 'GiftcardsChanged') dispatch({ type: 'action/refresh_account', domain: 'giftcards' })
       if (payload.type === 'CharacterCreated' || payload.type === 'CharacterHeld') {
         refresh_roster()
       }
     }).catch((error: Error) => log.error({ address, error: error.message }, 'social watch failed'))
+
+    const refresh_equipment = equipment_updates(graph, (character_id, equipment) => {
+      if (signal.aborted || !get_state().characters[character_id]) return
+      VISIBLE_SLOTS.forEach((slot) =>
+        dispatch({ type: 'action/equip', character_id, slot, item_type: equipment[slot] })
+      )
+    })
 
     /** Every owned character's chain channel stays armed; selection is client presentation. */
     const forward_self = (tracked_character_id: string) => (payload: EventEnvelope) => {
@@ -94,20 +79,11 @@ export default {
       }
       if (refreshes_roster(payload.type)) refresh_roster()
       if (payload.type === 'FightResolutionChanged' || payload.type === 'CharacterHeld') refresh_resolutions()
-      if (payload.type === 'ItemEquipped' || payload.type === 'ItemUnequipped') {
-        const { slot, item } = payload.data as { slot: string; item: string }
-        if (!is_visible_slot(slot)) return
-        if (payload.type === 'ItemUnequipped') {
-          dispatch({ type: 'action/equip', character_id: tracked_character_id, slot, item_type: null })
-          return
-        }
-        get_item(graph, { id: item })
-          .then((row) => {
-            if (row)
-              dispatch({ type: 'action/equip', character_id: tracked_character_id, slot, item_type: row.item_type })
-          })
-          .catch((error: Error) => log.warn({ item, error: error.message }, 'own equip enrichment failed'))
-      }
+      void refresh_equipment
+        .on_event(payload)
+        .catch((error: Error) =>
+          log.warn({ character: tracked_character_id, error: error.message }, 'own equipment refresh failed')
+        )
     }
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
@@ -120,6 +96,7 @@ export default {
         if (!before.has(character_id))
           void watch(channels.character(character_id), forward_self(character_id) as (payload: never) => void)
             .then(() => {
+              if (signal.aborted) return
               refresh_roster()
               refresh_resolutions()
               dispatch({ type: 'action/character_watch_ready', character_id })

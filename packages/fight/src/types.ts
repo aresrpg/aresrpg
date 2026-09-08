@@ -168,6 +168,8 @@ export type FightContract = {
   managed: boolean
   wagered: boolean
   drops_rolled: boolean
+  boss_weight: MoveInteger
+  kares_reward: MoveInteger
   turn_seed: MoveInteger
   turn_slot: MoveInteger
   turn_casts: TurnCast[]

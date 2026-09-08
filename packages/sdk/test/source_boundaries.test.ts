@@ -27,3 +27,11 @@ test('the player wallet session does not carry deployment or seed administration
   expect(source).not.toContain('publish_contract')
   expect(source).not.toContain('upgrade_contract')
 })
+
+test('all SDK submissions pass through the single recovery owner', () => {
+  const source_dir = resolve(import.meta.dir, '../src')
+  const owners = [...new Bun.Glob('**/*.ts').scanSync(source_dir)].filter((file) =>
+    /\.executeTransaction\s*\(/u.test(readFileSync(resolve(source_dir, file), 'utf8'))
+  )
+  expect(owners).toEqual(['transaction_execution.ts'])
+})

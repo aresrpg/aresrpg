@@ -47,6 +47,7 @@ import {
 } from './cameras.ts'
 import { create_character_controller, type CharacterTransform } from './character.ts'
 import { create_chunk_manager } from './chunks.ts'
+import { world_keyboard_eligible } from './world_input.ts'
 import { CHARACTER_HEIGHT, following_pet_ground_height, walkable_spawn_height } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
@@ -152,6 +153,7 @@ export const create_world = ({
     engine,
     initial_quality: quality,
     plan_layers: terrain_planner.plan,
+    on_failure: (error) => engine.fail({ code: 'terrain_failed', detail: error.message }),
   })
 
   // World oracles for the ported physics/camera: columns are analytic (the compiled recipe), so
@@ -268,7 +270,7 @@ export const create_world = ({
   const spectate_addon = create_spectate_addon({
     focus: () => [spectate.x, spectate.z] as const,
     zoom: () => spectate_zoom,
-    ground_y: () => spectate_y,
+    ground_y: () => project_height(spectate_y, flat_projection.amount),
     yaw: () => spectate_yaw,
     pitch: () => spectate_pitch,
   })
@@ -334,7 +336,9 @@ export const create_world = ({
       const { position } = character.get_transform()
       spectate.x = position[0]
       spectate.z = position[2]
-      spectate_y = position[1]
+      // Retain source elevation when leaving an already projected character view.
+      const ground = surface_y(position[0], position[2])
+      spectate_y = ground + position[1] - project_height(ground, flat_projection.amount)
     }
     clear_movement()
     footsteps.reset()
@@ -405,8 +409,6 @@ export const create_world = ({
     character.set_input({ forward: held.forward, strafe: held.strafe })
   }
   const on_key = (event: KeyboardEvent, down: boolean): void => {
-    if (!enabled || mode !== 'follow') return
-    if (action_lock) return
     const move = MOVE_KEYS[event.code]
     stop_run_for_manual_input(event, down)
     if (move !== undefined) {
@@ -531,11 +533,15 @@ export const create_world = ({
     publish_dungeon_portal_prompt({ roots: Object.freeze({}), portals: Object.freeze({}), focused_id: null })
   }
   const on_key_down = (event: KeyboardEvent): void => {
+    if (!enabled || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
     if (mode === 'follow' && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
     on_key(event, true)
   }
   const on_key_up = (event: KeyboardEvent): void => on_key(event, false)
   const on_blur = (): void => clear_movement()
+  const on_focus_in = (event: FocusEvent): void => {
+    if (!world_keyboard_eligible(event)) clear_movement()
+  }
 
   const render_character = (transform = character.get_transform()): boolean => {
     if (!character_render) return false
@@ -661,7 +667,7 @@ export const create_world = ({
     if (mode === 'spectate') {
       anchor = {
         x: spectate.x,
-        y: spectate_y,
+        y: project_height(spectate_y, flat_projection.amount),
         z: spectate.z,
         eye_height: 0,
         speed: 0,
@@ -746,6 +752,7 @@ export const create_world = ({
   globalThis.addEventListener('keydown', on_key_down)
   globalThis.addEventListener('keyup', on_key_up)
   globalThis.addEventListener('blur', on_blur)
+  globalThis.addEventListener('focusin', on_focus_in)
   const set_riding = (next: boolean): void => {
     riding = Boolean(next && pet && character_render)
     character.set_input({ speed_scale: riding ? 1.5 : 1, glide: false })
@@ -758,7 +765,6 @@ export const create_world = ({
   return Object.freeze({
     set_quality: (quality: 'low' | 'medium' | 'high', render_distance: number | null) => {
       // one radius for both terrains: voxel chunks AND the far shell's hole track the override
-      engine.set_quality(quality, render_distance)
       chunks.set_quality(quality, render_distance)
     },
     set_audio_volume: engine.set_audio_volume,
@@ -770,7 +776,7 @@ export const create_world = ({
       if (time !== null) engine.set_time_of_day(time)
     },
     set_clouds_visible: engine.set_clouds_visible,
-    set_view: ({ focus }: WorldView) => {
+    set_view: ({ focus }: Pick<WorldView, 'focus'>) => {
       spectate.x = focus[0]
       spectate.z = focus[1]
     },
@@ -961,6 +967,7 @@ export const create_world = ({
       globalThis.removeEventListener('keydown', on_key_down)
       globalThis.removeEventListener('keyup', on_key_up)
       globalThis.removeEventListener('blur', on_blur)
+      globalThis.removeEventListener('focusin', on_focus_in)
       director.set_enabled(false)
       character.dispose()
       footsteps.dispose()

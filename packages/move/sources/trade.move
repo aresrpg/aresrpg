@@ -12,6 +12,7 @@ use sui::coin::{Self, Coin};
 use sui::dynamic_object_field as dof;
 use sui::kiosk::{Self, Kiosk, PurchaseCap};
 use sui::sui::SUI;
+use aresrpg_kares::kares::KARES;
 use sui::transfer_policy::TransferRequest;
 
 public struct Trade has key {
@@ -19,6 +20,8 @@ public struct Trade has key {
   state: TradeState,
   sui_a: Balance<SUI>,
   sui_b: Balance<SUI>,
+  kares_a: Balance<KARES>,
+  kares_b: Balance<KARES>,
   caps_a: vector<ID>,
   caps_b: vector<ID>,
 }
@@ -26,7 +29,7 @@ public struct Trade has key {
 public fun create(counterparty: address, version: &Version, ctx: &mut TxContext) {
   version.assert_latest();
   transfer::share_object(Trade { id: object::new(ctx), state: trade_state::new(ctx.sender(), counterparty),
-    sui_a: balance::zero(), sui_b: balance::zero(), caps_a: vector[], caps_b: vector[] });
+    sui_a: balance::zero(), sui_b: balance::zero(), kares_a: balance::zero(), kares_b: balance::zero(), caps_a: vector[], caps_b: vector[] });
 }
 public fun join(trade: &mut Trade, seen: u64, version: &Version, ctx: &TxContext) {
   version.assert_latest();
@@ -64,7 +67,14 @@ public fun put_sui(trade: &mut Trade, coin: Coin<SUI>, seen: u64, version: &Vers
   version.assert_latest();
   trade_state::assert_editable(&trade.state, seen, ctx.sender());
   trade_state::assert_positive(coin.value());
-  my_balance(trade, ctx.sender()).join(coin.into_balance());
+  my_sui_balance(trade, ctx.sender()).join(coin.into_balance());
+  trade_state::touch(&mut trade.state);
+}
+public fun put_kares(trade: &mut Trade, coin: Coin<KARES>, seen: u64, version: &Version, ctx: &TxContext) {
+  version.assert_latest();
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_positive(coin.value());
+  my_kares_balance(trade, ctx.sender()).join(coin.into_balance());
   trade_state::touch(&mut trade.state);
 }
 public fun take_sui(
@@ -77,7 +87,21 @@ public fun take_sui(
   version.assert_latest();
   trade_state::assert_editable(&trade.state, seen, ctx.sender());
   trade_state::assert_positive(amount);
-  let coin = coin::from_balance(my_balance(trade, ctx.sender()).split(amount), ctx);
+  let coin = coin::from_balance(my_sui_balance(trade, ctx.sender()).split(amount), ctx);
+  trade_state::touch(&mut trade.state);
+  coin
+}
+public fun take_kares(
+  trade: &mut Trade,
+  amount: u64,
+  seen: u64,
+  version: &Version,
+  ctx: &mut TxContext,
+): Coin<KARES> {
+  version.assert_latest();
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_positive(amount);
+  let coin = coin::from_balance(my_kares_balance(trade, ctx.sender()).split(amount), ctx);
   trade_state::touch(&mut trade.state);
   coin
 }
@@ -92,12 +116,20 @@ public fun claim_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext):
   version.assert_latest();
   take_terminal_sui(trade, false, ctx)
 }
+public fun claim_kares(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<KARES> {
+  version.assert_latest();
+  take_terminal_kares(trade, false, ctx)
+}
 public(package) fun recover_item(trade: &mut Trade, item: ID, ctx: &TxContext): PurchaseCap<Item> {
   take_terminal_cap(trade, item, true, ctx.sender())
 }
 public fun recover_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<SUI> {
   version.assert_latest();
   take_terminal_sui(trade, true, ctx)
+}
+public fun recover_kares(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<KARES> {
+  version.assert_latest();
+  take_terminal_kares(trade, true, ctx)
 }
 fun take_terminal_cap(trade: &mut Trade, item: ID, own: bool, sender: address): PurchaseCap<Item> {
   trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
@@ -114,6 +146,14 @@ fun take_terminal_sui(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<S
   trade_state::assert_positive(balance.value());
   coin::from_balance(balance.withdraw_all(), ctx)
 }
+fun take_terminal_kares(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<KARES> {
+  trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
+  let sender = ctx.sender();
+  trade_state::assert_party(&trade.state, sender);
+  let balance = if (trade_state::is_initiator(&trade.state, sender) == own) &mut trade.kares_a else &mut trade.kares_b;
+  trade_state::assert_positive(balance.value());
+  coin::from_balance(balance.withdraw_all(), ctx)
+}
 public fun close(trade: Trade, version: &Version, ctx: &TxContext) {
   version.assert_latest();
   trade_state::assert_terminal(&trade.state);
@@ -123,8 +163,11 @@ public fun close(trade: Trade, version: &Version, ctx: &TxContext) {
 fun my_manifest(trade: &mut Trade, sender: address): &mut vector<ID> {
   if (trade_state::is_initiator(&trade.state, sender)) &mut trade.caps_a else &mut trade.caps_b
 }
-fun my_balance(trade: &mut Trade, sender: address): &mut Balance<SUI> {
+fun my_sui_balance(trade: &mut Trade, sender: address): &mut Balance<SUI> {
   if (trade_state::is_initiator(&trade.state, sender)) &mut trade.sui_a else &mut trade.sui_b
+}
+fun my_kares_balance(trade: &mut Trade, sender: address): &mut Balance<KARES> {
+  if (trade_state::is_initiator(&trade.state, sender)) &mut trade.kares_a else &mut trade.kares_b
 }
 fun remove_from(manifest: &mut vector<ID>, item: ID) {
   let index = trade_state::item_index(manifest, item);
@@ -132,15 +175,16 @@ fun remove_from(manifest: &mut vector<ID>, item: ID) {
 }
 fun destroy_drained(trade: Trade, ctx: &TxContext) {
   trade_state::assert_party(&trade.state, ctx.sender());
-  let Trade { id, sui_a, sui_b, caps_a, caps_b, .. } = trade;
+  let Trade { id, sui_a, sui_b, kares_a, kares_b, caps_a, caps_b, .. } = trade;
   trade_state::assert_drained(caps_a.length(), caps_b.length());
-  sui_a.destroy_zero(); sui_b.destroy_zero(); id.delete();
+  sui_a.destroy_zero(); sui_b.destroy_zero();
+  kares_a.destroy_zero(); kares_b.destroy_zero(); id.delete();
 }
 
 #[test_only]
 public(package) fun trade_for_testing(a: address, b: address, phase: u8, revision: u64, sui_a: u64, sui_b: u64, ctx: &mut TxContext): Trade {
   Trade { id: object::new(ctx), state: trade_state::state_for_testing(a, b, phase, revision),
-    sui_a: balance::create_for_testing(sui_a), sui_b: balance::create_for_testing(sui_b), caps_a: vector[], caps_b: vector[] }
+    sui_a: balance::create_for_testing(sui_a), sui_b: balance::create_for_testing(sui_b), kares_a: balance::zero(), kares_b: balance::zero(), caps_a: vector[], caps_b: vector[] }
 }
 #[test_only]
 public(package) fun join_for_testing(trade: &mut Trade, seen: u64, sender: address) {

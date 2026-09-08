@@ -8,6 +8,8 @@ import { on_error_translate, on_gas_empty, toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
 
 export type FailureCopyKey =
+  | 'transaction_unknown_toast'
+  | 'transaction_recovered_toast'
   | 'game_paused_toast'
   | 'gas_budget_toast'
   | 'movement_sync_toast'
@@ -26,6 +28,8 @@ const ABORT_FAILURES = Object.freeze([
 ] satisfies readonly Readonly<{ code: number; owner: string; key: FailureCopyKey }>[])
 
 export const failure_copy_key = (message: string): FailureCopyKey | null => {
+  if (message.startsWith('[sdk] transaction outcome unknown:')) return 'transaction_unknown_toast'
+  if (message.startsWith('[sdk] previous transaction recovered')) return 'transaction_recovered_toast'
   if (message.includes('::version::assert_latest')) return 'game_paused_toast'
   if (message.includes('gas budget exceeded')) return 'gas_budget_toast'
   return ABORT_FAILURES.find(({ code, owner }) => matches_abort(message, code, owner))?.key ?? null

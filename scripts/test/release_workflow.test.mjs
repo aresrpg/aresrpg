@@ -1,0 +1,194 @@
+// SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+// © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { expect, test } from 'bun:test'
+
+const source = readFileSync(new URL('../../.github/workflows/release.yml', import.meta.url), 'utf8')
+const backend_plan = source.slice(source.indexOf('  backend-plan:'), source.indexOf('  build-server:'))
+const workflow = Bun.YAML.parse(source)
+const activation = Bun.YAML.parse(
+  readFileSync(new URL('../../.github/workflows/activate-production.yml', import.meta.url), 'utf8')
+)
+
+const certified_digest = `sha256:${'b'.repeat(64)}`
+const moved_tag_digest = `sha256:${'a'.repeat(64)}`
+
+const run_image_step = (component, step_id, current_digest) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ares-image-identity-'))
+  const output = join(directory, 'output')
+  const calls = join(directory, 'calls')
+  const digest_file = join(directory, 'digest')
+  const values = {
+    'github.repository_owner': 'aresrpg',
+    [`needs.backend-plan.outputs.${component}`]: 'false',
+    [`needs.backend-plan.outputs.${component}_version`]: '2.0.0',
+    [`needs.backend-plan.outputs.${component}_digest`]: certified_digest,
+    'needs.backend-plan.outputs.previous_tag': 'v1.0.0',
+  }
+  const step = workflow.jobs[`build-${component}`].steps.find(({ id }) => id === step_id)
+  const script = step.run.replace(/\$\{\{\s*([^}]+?)\s*\}\}/g, (_, expression) => {
+    const value = values[expression.trim()]
+    if (value === undefined) throw new Error(`Unexpected workflow input ${expression}`)
+    return value
+  })
+  try {
+    writeFileSync(digest_file, current_digest)
+    writeFileSync(output, '')
+    writeFileSync(
+      join(directory, 'docker'),
+      `#!/bin/bash
+set -eu
+printf '%s\\n' "$*" >> "$CALLS_PATH"
+if [ "$1" = manifest ]; then exit 0; fi
+if [ "$3" = create ]; then
+  source_ref="\${!#}"
+  if [ "$source_ref" = "$IMAGE_REPOSITORY@$EXPECTED_DIGEST" ]; then
+    printf '%s' "$EXPECTED_DIGEST" > "$DIGEST_FILE"
+  else
+    printf '%s' "$MOVED_TAG_DIGEST" > "$DIGEST_FILE"
+  fi
+  exit 0
+fi
+case "$4" in
+  *@*) digest="\${4##*@}" ;;
+  *:1.0.0) digest="$MOVED_TAG_DIGEST" ;;
+  *) digest="$(cat "$DIGEST_FILE")" ;;
+esac
+printf '"%s"\\n' "$digest"
+`,
+      { mode: 0o700 }
+    )
+    execFileSync('/bin/bash', ['-e', '-c', script], {
+      env: {
+        PATH: `${directory}:/usr/bin:/bin`,
+        GITHUB_OUTPUT: output,
+        GITHUB_SHA: '1'.repeat(40),
+        IMAGE_REPOSITORY: `ghcr.io/aresrpg/${component}`,
+        EXPECTED_DIGEST: certified_digest,
+        MOVED_TAG_DIGEST: moved_tag_digest,
+        CALLS_PATH: calls,
+        DIGEST_FILE: digest_file,
+      },
+      stdio: 'pipe',
+    })
+    return { output: readFileSync(output, 'utf8'), calls: readFileSync(calls, 'utf8') }
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
+for (const component of ['server', 'indexer']) {
+  test(`${component}: alias copies the certified digest even when the previous tag has moved`, () => {
+    const result = run_image_step(component, 'alias', moved_tag_digest)
+    expect(result.output).toContain(`digest=${certified_digest}`)
+    expect(result.calls).toContain(`ghcr.io/aresrpg/${component}@${certified_digest}`)
+    expect(result.calls).toContain('--prefer-index=false')
+  })
+
+  test(`${component}: a rerun refuses an existing semver that differs from the certified digest`, () => {
+    expect(() => run_image_step(component, 'image', moved_tag_digest)).toThrow()
+    expect(run_image_step(component, 'image', certified_digest).output).toContain(`digest=${certified_digest}`)
+  })
+}
+
+test('the previous preparation must bind both image digests to the expected release source', () => {
+  const plan = workflow.jobs['backend-plan'].steps.find(({ id }) => id === 'plan').run
+  const filter = plan.match(/--arg repository [^\n]*'([\s\S]*?)'\s+"\$previous_manifest"/)?.[1]
+  expect(filter).toBeDefined()
+  const manifest = {
+    schema: 1,
+    status: 'prepared',
+    source_sha: '1'.repeat(40),
+    version: '1.0.0',
+    network: 'mainnet',
+    images: {
+      server: { repository: 'ghcr.io/aresrpg/server', digest: certified_digest },
+      indexer: { repository: 'ghcr.io/aresrpg/indexer', digest: certified_digest },
+    },
+  }
+  const validate = (value) =>
+    execFileSync(
+      'jq',
+      [
+        '-e',
+        '--arg',
+        'sha',
+        '1'.repeat(40),
+        '--arg',
+        'version',
+        '1.0.0',
+        '--arg',
+        'repository',
+        'ghcr.io/aresrpg',
+        filter,
+      ],
+      { input: JSON.stringify(value), stdio: 'pipe' }
+    )
+  validate(manifest)
+  for (const invalid of [
+    { ...manifest, schema: 2 },
+    { ...manifest, source_sha: '2'.repeat(40) },
+    { ...manifest, version: '2.0.0' },
+    {
+      ...manifest,
+      images: { ...manifest.images, server: { repository: 'ghcr.io/foreign/server', digest: certified_digest } },
+    },
+    { ...manifest, images: { ...manifest.images, indexer: { ...manifest.images.indexer, digest: 'latest' } } },
+    { ...manifest, images: { ...manifest.images, indexer: { repository: 'ghcr.io/aresrpg/indexer' } } },
+  ])
+    expect(() => validate(invalid)).toThrow()
+})
+
+test('CI consumes the same runtime input classifier as the operator', () => {
+  expect(backend_plan).toContain("import { runtime_fingerprints } from './scripts/release_inputs.mjs'")
+  expect(backend_plan).toContain('before[key] !== after[key]')
+})
+
+test('release preparation requires an explicit network and conditionally stages frontend', () => {
+  expect(workflow.on.push).toBeUndefined()
+  expect(workflow.on.workflow_dispatch.inputs.network.options).toEqual(['testnet', 'mainnet'])
+  expect(workflow.jobs['prepare-production'].if).toBe("needs.backend-plan.outputs.frontend == 'true'")
+  expect(workflow.jobs['prepare-production'].env.VITE_NETWORK).toBe('${{ inputs.network }}')
+})
+
+test('activation uses one exact preparation receipt and skips unchanged frontend promotion', () => {
+  expect(activation.on.workflow_dispatch.inputs.preparation_run.required).toBe(true)
+  expect(activation['run-name']).toBe(
+    'activate v${{ inputs.version }} ${{ inputs.network }} ${{ inputs.request_id }} ${{ inputs.preparation_run }}'
+  )
+  const promotion = activation.jobs.activate.steps.find(
+    ({ name }) => name === 'promote the prepared deployment without rebuilding'
+  )
+  expect(promotion.if).toBe("steps.manifest.outputs.frontend == 'true'")
+})
+
+test('every CI Bun installation reads the repository version and Vercel runs from a frozen install', () => {
+  const { devDependencies } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  expect(devDependencies.vercel).toMatch(/^\d+\.\d+\.\d+$/)
+  const jobs = ['gate', 'deploy', 'release', 'activate-production'].flatMap((name) =>
+    Object.values(
+      Bun.YAML.parse(readFileSync(new URL(`../../.github/workflows/${name}.yml`, import.meta.url), 'utf8')).jobs
+    )
+  )
+  const bun_steps = jobs.flatMap(({ steps }) => steps).filter(({ uses }) => uses?.startsWith('oven-sh/setup-bun@'))
+  for (const step of bun_steps) {
+    expect(step.with['bun-version-file']).toBe('package.json')
+    expect(step.with['bun-version']).toBeUndefined()
+  }
+  for (const job of jobs) {
+    for (const [index, step] of job.steps.entries()) {
+      if (!step.run?.includes('vercel ')) continue
+      expect(step.run).not.toMatch(/bunx vercel/)
+      expect(step.run).toContain('bun run vercel ')
+      expect(job.steps.slice(0, index).some(({ run }) => /bun install.*--frozen-lockfile/.test(run ?? ''))).toBe(true)
+    }
+  }
+  const checkout = activation.jobs.activate.steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+  expect(checkout.with['sparse-checkout']).toContain('/bun.lock')
+  expect(checkout.with['sparse-checkout']).toContain('/packages/*/package.json')
+})

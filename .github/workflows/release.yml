@@ -7,9 +7,21 @@
 # The tag commit is already an edge commit produced by `bun pm version`; Actions never creates or
 # moves release tags.
 name: release
+run-name: prepare ${{ github.ref_name }} ${{ inputs.network }} ${{ inputs.request_id }}
 on:
-  push:
-    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      network:
+        description: Sui network selected by the operator
+        required: true
+        type: choice
+        options: [testnet, mainnet]
+      request_id:
+        description: Operator recovery identity
+        required: true
+        type: string
+env:
+  SUI_NETWORK: ${{ inputs.network }}
 permissions:
   contents: write
   actions: read # the prod-deploy job polls the gate run's conclusion
@@ -23,6 +35,13 @@ jobs:
       prepare: 'true'
       version: ${{ steps.v.outputs.version }}
     steps:
+      - name: authorize the release owner and network
+        env:
+          ACTOR_ID: ${{ github.event.sender.id }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          test "$ACTOR_ID" = "11330271" && test "$ACTOR" = "Sceat"
+          case "$SUI_NETWORK" in mainnet|testnet) ;; *) exit 1 ;; esac
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # tags visible for the idempotence check
@@ -37,8 +56,6 @@ jobs:
         run: |
           version=$(node -p "require('./package.json').version")
           test "$GITHUB_REF_NAME" = "v${version}" || { echo "::error::tag $GITHUB_REF_NAME does not match package version $version"; exit 1; }
-          git fetch origin edge --quiet
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/edge || { echo "::error::release tag is not an edge commit"; exit 1; }
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: create draft release if absent
         id: release
@@ -60,8 +77,8 @@ jobs:
   # The manual activate-production workflow promotes this exact staged deployment after the
   # owner has paused gameplay, published content, and rolled the prepared Helm release.
   prepare-production:
-    needs: tag-and-release
-    if: needs.tag-and-release.outputs.prepare == 'true'
+    needs: [tag-and-release, backend-plan]
+    if: needs.backend-plan.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -71,6 +88,9 @@ jobs:
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       GH_TOKEN: ${{ github.token }}
+      VITE_NETWORK: ${{ inputs.network }}
+      VITE_GRAPHQL_URL: https://graphql.${{ inputs.network }}.sui.io/graphql
+      VITE_SUI_RPC_URL: https://fullnode.${{ inputs.network }}.sui.io:443
     steps:
       - name: wait for the gate to conclude GREEN on this sha (red cannot deploy)
         run: |
@@ -109,6 +129,8 @@ jobs:
           git checkout HEAD -- seed/icons seed/models
       - name: setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
       - name: cache bun downloads
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -118,12 +140,12 @@ jobs:
       - name: install
         run: bun install --frozen-lockfile
       - name: pull the Vercel environment
-        run: bunx vercel pull --yes --environment=production --scope aresrpg --token="$VERCEL_TOKEN"
+        run: bun run vercel pull --yes --environment=production --scope aresrpg --token="$VERCEL_TOKEN"
       - name: build
-        run: bunx vercel build --prod --scope aresrpg --token="$VERCEL_TOKEN"
+        run: bun run vercel build --prod --scope aresrpg --token="$VERCEL_TOKEN"
       - name: stage v${{ needs.tag-and-release.outputs.version }} without moving production domains
         id: deploy
-        run: echo "url=$(bunx vercel deploy --prebuilt --prod --skip-domain --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
+        run: echo "url=$(bun run vercel deploy --prebuilt --prod --skip-domain --scope aresrpg --token="$VERCEL_TOKEN")" >> "$GITHUB_OUTPUT"
 
   backend-plan:
     needs: tag-and-release
@@ -137,8 +159,11 @@ jobs:
       previous_tag: ${{ steps.plan.outputs.previous_tag }}
       server: ${{ steps.plan.outputs.server }}
       server_version: ${{ steps.plan.outputs.server_version }}
+      server_digest: ${{ steps.plan.outputs.server_digest }}
       indexer: ${{ steps.plan.outputs.indexer }}
       indexer_version: ${{ steps.plan.outputs.indexer_version }}
+      indexer_digest: ${{ steps.plan.outputs.indexer_digest }}
+      frontend: ${{ steps.plan.outputs.frontend }}
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -164,28 +189,56 @@ jobs:
             packages/server
             seed/content
             seed/structures
+            scripts/release_inputs.mjs
+            package.json
       - name: derive changed backend images from release-tag inputs
         id: plan
         run: |
-          current_tag="v${{ needs.tag-and-release.outputs.version }}"
-          previous_tag=$(git tag --list 'v[0-9]*' --sort=-version:refname | grep -Fxv "$current_tag" | head -1 || true)
+          previous_tag=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName // ""')
           server_version="${{ needs.tag-and-release.outputs.version }}"
           indexer_version="${{ needs.tag-and-release.outputs.version }}"
           server=true
           indexer=true
+          frontend=true
+          server_digest=""
+          indexer_digest=""
 
           if [ -n "$previous_tag" ]; then
-            server=false
-            indexer=false
-            if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- \
-              packages/fight/package.json packages/fight/src \
-              packages/immutable/package.json packages/immutable/src \
-              packages/protocol/package.json packages/protocol/src \
-              packages/server seed/content seed/structures; then
+            export PREVIOUS_TAG="$previous_tag"
+            node --input-type=module <<'NODE' > "$RUNNER_TEMP/runtime-plan.json"
+          import { runtime_fingerprints } from './scripts/release_inputs.mjs'
+          const before = await runtime_fingerprints(process.cwd(), process.env.PREVIOUS_TAG)
+          const after = await runtime_fingerprints(process.cwd(), process.env.GITHUB_SHA)
+          console.log(JSON.stringify(Object.fromEntries(Object.keys(after).map(key => [key, before[key] !== after[key]]))))
+          NODE
+            server=$(jq -r .server "$RUNNER_TEMP/runtime-plan.json")
+            indexer=$(jq -r .indexer "$RUNNER_TEMP/runtime-plan.json")
+            frontend=$(jq -r .frontend "$RUNNER_TEMP/runtime-plan.json")
+            # Build pins are runtime inputs; ledgers are not. A network switch also needs a new frontend.
+            git show "$previous_tag:pins.json" | jq --arg n "$SUI_NETWORK" '.[$n] | del(.seed_ledgers, .seed_addresses)' > "$RUNNER_TEMP/before-pins.json"
+            git show "$GITHUB_SHA:pins.json" | jq --arg n "$SUI_NETWORK" '.[$n] | del(.seed_ledgers, .seed_addresses)' > "$RUNNER_TEMP/after-pins.json"
+            if ! cmp -s "$RUNNER_TEMP/before-pins.json" "$RUNNER_TEMP/after-pins.json"; then frontend=true; fi
+            previous_run=$(gh run list --workflow release.yml --commit "$(git rev-list -n 1 "$previous_tag")" --status success --limit 1 --json databaseId --jq '.[0].databaseId // ""')
+            if [ -n "$previous_run" ] && gh run download "$previous_run" --name "production-release-$previous_tag" --dir "$RUNNER_TEMP/previous-release"; then
+              previous_manifest="$RUNNER_TEMP/previous-release/release-manifest.json"
+              jq -e --arg sha "$(git rev-list -n 1 "$previous_tag")" --arg version "${previous_tag#v}" \
+                --arg repository "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" '
+                .schema == 1 and .status == "prepared" and .source_sha == $sha and .version == $version and
+                (.network == "testnet" or .network == "mainnet") and
+                .images.server.repository == ($repository + "/server") and
+                .images.indexer.repository == ($repository + "/indexer") and
+                ([.images.server.digest, .images.indexer.digest] |
+                  all(type == "string" and test("^sha256:[0-9a-f]{64}$")))
+              ' "$previous_manifest" >/dev/null
+              server_digest=$(jq -r .images.server.digest "$previous_manifest")
+              indexer_digest=$(jq -r .images.indexer.digest "$previous_manifest")
+              previous_network=$(jq -r .network "$previous_manifest")
+              if [ "$previous_network" != "$SUI_NETWORK" ]; then frontend=true; fi
+            else
+              echo "Previous preparation manifest unavailable; rebuilding artifacts instead of trusting mutable tags"
               server=true
-            fi
-            if ! git diff --quiet "$previous_tag" "$GITHUB_SHA" -- packages/indexer; then
               indexer=true
+              frontend=true
             fi
           fi
 
@@ -193,8 +246,11 @@ jobs:
             echo "previous_tag=$previous_tag"
             echo "server=$server"
             echo "server_version=$server_version"
+            echo "server_digest=$server_digest"
             echo "indexer=$indexer"
             echo "indexer_version=$indexer_version"
+            echo "indexer_digest=$indexer_digest"
+            echo "frontend=$frontend"
           } >> "$GITHUB_OUTPUT"
 
   build-server:
@@ -240,10 +296,8 @@ jobs:
                 exit 1
               }
             else
-              previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
-              previous_release="${previous_release#v}"
-              source="ghcr.io/${{ github.repository_owner }}/server:$previous_release"
-              expected=$(docker buildx imagetools inspect "$source" --format '{{json .Manifest.Digest}}' | tr -d '"')
+              expected="${{ needs.backend-plan.outputs.server_digest }}"
+              [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::certified server digest is missing"; exit 1; }
               actual=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
               [ "$actual" = "$expected" ] || {
                 echo "::error::$image does not alias the expected unchanged server digest"
@@ -280,13 +334,14 @@ jobs:
         if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.server != 'true'
         run: |
           repository="ghcr.io/${{ github.repository_owner }}/server"
-          previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
-          previous_release="${previous_release#v}"
-          source="$repository:$previous_release"
+          expected="${{ needs.backend-plan.outputs.server_digest }}"
+          [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::certified server digest is missing"; exit 1; }
+          source="$repository@$expected"
           docker manifest inspect "$source" >/dev/null || { echo "::error::no previous server image exists"; exit 1; }
-          docker buildx imagetools create --tag "$repository:${{ needs.backend-plan.outputs.server_version }}" "$source"
+          docker buildx imagetools create --prefer-index=false --tag "$repository:${{ needs.backend-plan.outputs.server_version }}" "$source"
           digest=$(docker buildx imagetools inspect "$repository:${{ needs.backend-plan.outputs.server_version }}" \
             --format '{{json .Manifest.Digest}}' | tr -d '"')
+          [ "$digest" = "$expected" ] || { echo "::error::server alias changed the certified manifest digest"; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - name: attest server provenance
         if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.server == 'true'
@@ -334,10 +389,8 @@ jobs:
                 exit 1
               }
             else
-              previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
-              previous_release="${previous_release#v}"
-              source="ghcr.io/${{ github.repository_owner }}/indexer:$previous_release"
-              expected=$(docker buildx imagetools inspect "$source" --format '{{json .Manifest.Digest}}' | tr -d '"')
+              expected="${{ needs.backend-plan.outputs.indexer_digest }}"
+              [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::certified indexer digest is missing"; exit 1; }
               actual=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
               [ "$actual" = "$expected" ] || {
                 echo "::error::$image does not alias the expected unchanged indexer digest"
@@ -374,13 +427,14 @@ jobs:
         if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.indexer != 'true'
         run: |
           repository="ghcr.io/${{ github.repository_owner }}/indexer"
-          previous_release="${{ needs.backend-plan.outputs.previous_tag }}"
-          previous_release="${previous_release#v}"
-          source="$repository:$previous_release"
+          expected="${{ needs.backend-plan.outputs.indexer_digest }}"
+          [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::certified indexer digest is missing"; exit 1; }
+          source="$repository@$expected"
           docker manifest inspect "$source" >/dev/null || { echo "::error::no previous indexer image exists"; exit 1; }
-          docker buildx imagetools create --tag "$repository:${{ needs.backend-plan.outputs.indexer_version }}" "$source"
+          docker buildx imagetools create --prefer-index=false --tag "$repository:${{ needs.backend-plan.outputs.indexer_version }}" "$source"
           digest=$(docker buildx imagetools inspect "$repository:${{ needs.backend-plan.outputs.indexer_version }}" \
             --format '{{json .Manifest.Digest}}' | tr -d '"')
+          [ "$digest" = "$expected" ] || { echo "::error::indexer alias changed the certified manifest digest"; exit 1; }
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - name: attest indexer provenance
         if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.indexer == 'true'
@@ -396,7 +450,7 @@ jobs:
       always() &&
       needs.tag-and-release.outputs.prepare == 'true' &&
       needs.backend-plan.result == 'success' &&
-      needs.prepare-production.result == 'success' &&
+      (needs.prepare-production.result == 'success' || needs.prepare-production.result == 'skipped') &&
       (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') &&
       (needs.build-indexer.result == 'success' || needs.build-indexer.result == 'skipped')
     runs-on: ubuntu-latest
@@ -419,10 +473,11 @@ jobs:
           INDEXER_VERSION: ${{ needs.backend-plan.outputs.indexer_version }}
           INDEXER_DIGEST: ${{ needs.build-indexer.outputs.digest }}
           VERCEL_URL: ${{ needs.prepare-production.outputs.url }}
+          FRONTEND_BUILT: ${{ needs.backend-plan.outputs.frontend }}
         run: |
           mkdir -p "$RUNNER_TEMP/production-release"
-          jq -e '
-            .testnet as $pins |
+          jq -e --arg network "$SUI_NETWORK" '
+            .[$network] as $pins |
             [
               $pins.math_package_original, $pins.math_package,
               $pins.control_package_original, $pins.control_package,
@@ -430,9 +485,11 @@ jobs:
               $pins.seed_package_original, $pins.seed_package,
               $pins.package_original, $pins.package
             ] | all(type == "string" and test("^0x[0-9a-fA-F]+$"))
-          ' pins.json >/dev/null || { echo "::error::release requires complete five-package testnet pins"; exit 1; }
+          ' pins.json >/dev/null || { echo "::error::release requires complete five-package pins"; exit 1; }
+          jq --arg network "$SUI_NETWORK" '.[$network]' pins.json > "$RUNNER_TEMP/network-pins.json"
           jq -n \
             --arg version "$VERSION" \
+            --arg network "$SUI_NETWORK" \
             --arg source_sha "$GITHUB_SHA" \
             --arg previous_tag "$PREVIOUS_TAG" \
             --arg vercel_url "$VERCEL_URL" \
@@ -440,17 +497,18 @@ jobs:
             --arg server_digest "$SERVER_DIGEST" \
             --arg indexer_version "$INDEXER_VERSION" \
             --arg indexer_digest "$INDEXER_DIGEST" \
-            --arg game_original "$(jq -r .testnet.package_original pins.json)" \
-            --arg game_latest "$(jq -r .testnet.package pins.json)" \
-            --arg math_original "$(jq -r .testnet.math_package_original pins.json)" \
-            --arg math_latest "$(jq -r .testnet.math_package pins.json)" \
-            --arg control_original "$(jq -r .testnet.control_package_original pins.json)" \
-            --arg control_latest "$(jq -r .testnet.control_package pins.json)" \
-            --arg combat_original "$(jq -r .testnet.combat_package_original pins.json)" \
-            --arg combat_latest "$(jq -r .testnet.combat_package pins.json)" \
-            --arg seed_original "$(jq -r .testnet.seed_package_original pins.json)" \
-            --arg seed_latest "$(jq -r .testnet.seed_package pins.json)" \
+            --arg game_original "$(jq -r .package_original "$RUNNER_TEMP/network-pins.json")" \
+            --arg game_latest "$(jq -r .package "$RUNNER_TEMP/network-pins.json")" \
+            --arg math_original "$(jq -r .math_package_original "$RUNNER_TEMP/network-pins.json")" \
+            --arg math_latest "$(jq -r .math_package "$RUNNER_TEMP/network-pins.json")" \
+            --arg control_original "$(jq -r .control_package_original "$RUNNER_TEMP/network-pins.json")" \
+            --arg control_latest "$(jq -r .control_package "$RUNNER_TEMP/network-pins.json")" \
+            --arg combat_original "$(jq -r .combat_package_original "$RUNNER_TEMP/network-pins.json")" \
+            --arg combat_latest "$(jq -r .combat_package "$RUNNER_TEMP/network-pins.json")" \
+            --arg seed_original "$(jq -r .seed_package_original "$RUNNER_TEMP/network-pins.json")" \
+            --arg seed_latest "$(jq -r .seed_package "$RUNNER_TEMP/network-pins.json")" \
             --argjson server_built "$SERVER_BUILT" \
+            --argjson frontend_built "$FRONTEND_BUILT" \
             --argjson indexer_built "$INDEXER_BUILT" \
             '{
               schema: 1,
@@ -458,8 +516,8 @@ jobs:
               version: $version,
               source_sha: $source_sha,
               previous_tag: $previous_tag,
-              network: "testnet",
-              vercel: {staged_url: $vercel_url},
+              network: $network,
+              vercel: {staged_url: $vercel_url, built: $frontend_built},
               packages: {
                 math: {original: $math_original, latest: $math_latest},
                 control: {original: $control_original, latest: $control_latest},

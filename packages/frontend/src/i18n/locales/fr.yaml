@@ -1,6 +1,8 @@
 title: WebGPU n'est pas disponible
 body: Le monde complet nécessite WebGPU. Une grille légère s'affiche à la place.
 fatal: Ce navigateur ne peut créer aucun contexte graphique WebGPU ou WebGL.
+engine_recovery: Le chargement ou le rendu du monde a échoué. Rechargez pour réessayer.
+engine_reload: Recharger
 world_unavailable_title: Monde indisponible
 world_unavailable: Ce monde ne possède pas encore de recette de terrain.
 mobile_unavailable_label: Accès mobile
@@ -38,6 +40,7 @@ admin: Admin
 online: En ligne
 account: Compte
 join_discord: Rejoindre Discord
+join_telegram: Rejoindre Telegram
 sui_universe: Univers Sui
 server_disconnected: Déconnecté
 server_connecting: Connexion
@@ -198,7 +201,8 @@ trade_panel:
   drop_items: Déposez les objets ici
   empty_offer: Aucun objet proposé
   offer_item_unavailable: Un objet préparé n’est plus disponible. Vérifiez votre offre et réessayez.
-  sui: SUI proposés
+  sui: SUI
+  kares: KARES proposés
   inventory: Votre inventaire
   drag_hint: Glissez ou double-cliquez pour ajouter
   amount_title: Choisir la quantité
@@ -217,6 +221,8 @@ trade_panel:
   recover_notice: Récupérez toute votre offre en une transaction.
   waiting_counterparty: Votre côté est terminé. En attente de l'autre joueur.
   finalizing: Finalisation…
+transaction_unknown_toast: Votre dernière action est encore en cours de vérification. Les transactions suivantes sont bloquées tant que son résultat reste inconnu.
+transaction_recovered_toast: Votre transaction précédente a été retrouvée. Actualisez pour voir son résultat avant de choisir votre prochaine action.
 world_hud:
   compass_label: Boussole
   zone: ZONE
@@ -450,7 +456,7 @@ marketplace_page:
 mastery_page:
   subtitle: Défis quotidiens
   title: Maîtrise
-  lead: Terminez des donjons chaque jour pour obtenir des récompenses uniques.
+  lead: Terminez des quêtes quotidiennes de donjon pour obtenir des récompenses uniques. Sauter un jour ne retire aucun point de Maîtrise accumulé.
   balance: Points de maîtrise
   daily_ready: Quête quotidienne disponible
   daily_syncing: Mise à jour de la quête quotidienne…
@@ -479,16 +485,13 @@ mastery_page:
   offer_purchased: Récompense de maîtrise achetée.
 
 airdrop_page:
-  title: 'Airdrops'
-  subtitle: 'Réclamez des objets réservés aux détenteurs éligibles'
-  minted: '{{count}} émis'
-  eligible_count: '{{count}} éligibles'
-  eligible: 'Éligible'
-  not_eligible: 'Non éligible'
-  claimed: 'Réclamé'
-  claim: 'Réclamer'
-  holder_title: 'Portefeuille détenteur'
-  holder_connect_hint: 'Connectez le portefeuille qui détient le NFT éligible'
+  destination: 'Portefeuille de jeu :'
+  refresh: 'Actualiser'
+  title: 'Cadeaux'
+  subtitle: 'Importez vos cartes cadeaux dans votre portefeuille de jeu'
+  claim: 'Importer'
+  holder_title: 'Portefeuille externe'
+  holder_connect_hint: 'Connectez le portefeuille contenant vos cartes cadeaux'
   holder_connect: 'Connecter le portefeuille'
   holder_connecting: 'Connexion…'
   holder_connected: 'Connecté'
@@ -501,10 +504,7 @@ airdrop_page:
   gift_claiming: 'Récupération de votre carte cadeau imprimée…'
   gift_retry: 'Récupérer la carte'
   redeem: 'Utiliser'
-  empty: 'Aucun airdrop actif'
-  empty_hint: 'Les airdrops pour les détenteurs de collections partenaires apparaîtront ici à leur lancement.'
-  pending_claim: "Réclamation de l'airdrop…"
-  toast_claimed: 'Airdrop réclamé'
+  empty: 'Aucune carte cadeau dans ce portefeuille'
   set:
     title: 'La collection'
     subtitle: 'Objets réservés — vitrine uniquement'
@@ -634,7 +634,7 @@ admin_page:
   player_activity_body: Activité quotidienne et portée glissante sur 30 jours
   stickiness: JAU / 30J
   online_players: Joueurs en ligne
-  online_players_body: Pic de connexions authentifiées par intervalle
+  online_players_body: Pic de joueurs authentifiés uniques par intervalle
   online_now: Joueurs en ligne
   peak: Pic
   revenue: Revenus
@@ -778,6 +778,7 @@ simulator_page:
   blob_single: Forme unique
   blob_click: Placer au clic
 fight_hud:
+  stop_spectating: Quitter le mode spectateur
   board_label: Plateau de combat
   turn_order: Ordre des tours
   turn_order_collapse: Réduire l’ordre des tours
@@ -1252,8 +1253,6 @@ encyclopedia_page:
     over_maging_desc: Poussez les stats au-delà de leur maximum naturel. Chaque ligne de stat est plafonnée à 101 de poids supplémentaire. Le max de sur-forge dépend du poids unitaire de la stat — une stat légère comme la Vitalité (poids 0,25) peut être poussée d'environ 404 points, une lourde comme la Sagesse (poids 3) seulement d'environ 33.
     forgemagie_tips: CONSEILS
     forgemagie_tips_desc: "Pour les exo/over : retirez d'abord les stats peu coûteuses pour accumuler un gros puits, puis passez la stat difficile avec le tampon, puis rajoutez les stats perdues (facile car loin du max). Les stats exotiques et over-magées sautent en premier en cas d'échec."
-    forgemagie_xp: EXPÉRIENCE
-    forgemagie_xp_desc: "L'XP n'est accordée que sur succès (Critique ou Neutre). Les objets de plus haut niveau et les runes plus lourdes donnent beaucoup plus d'XP. Les runes Ra octroient le double d'XP par rapport aux runes Ba et Pa. Formule : max(1, poidsRune × (1 + niveauObjet / 50) × multiplicateurTier) où le multiplicateur est 2 pour Ra, 1 sinon."
     action_points: POINTS D'ACTION (PA)
     movement_points: POINTS DE MOUVEMENT (PM)
     critical_stat: CRITIQUE
@@ -1548,6 +1547,21 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: Vous n'avez plus de SUI pour payer les frais de transaction. Rechargez votre portefeuille pour continuer à jouer.
 characters_page:
+  delete_character: 'Supprimer le personnage'
+  delete_warning: 'La suppression est définitive. Toute la progression du personnage est perdue et son nom reste réservé.'
+  delete_no_refund: 'Les frais de création de {{amount}} SUI ne seront pas remboursés.'
+  delete_equipment: 'Retirez tous les objets équipés, y compris familiers, outils et cosmétiques.'
+  delete_fight: 'Quittez ou terminez le combat.'
+  delete_party: 'Quittez le groupe.'
+  delete_dungeon: 'Terminez ou abandonnez le donjon.'
+  delete_ambush: 'Affrontez le protecteur de ressources.'
+  delete_listing: 'Retirez le personnage du marché.'
+  delete_unavailable: 'Attendez que le personnage et la connexion soient disponibles.'
+  delete_pending: 'Suppression…'
+  claims_title: Récompenses non récupérées
+  claim_collect: Récupérer
+  claim_box: Récompense de boîte
+  claim_crush: Résultat du concassage
   tab_equipment: Équipement
   tab_stats: Caractéristiques
   tab_spells: Sorts
@@ -1649,6 +1663,12 @@ characters_page:
   feed_full: Rassasié au maximum
   feed_pending: Nourrissage…
   feed_success: Familier nourri
+  feed_confirm: 'Confirmer le repas'
+  feed_consumes: 'Consomme 1 {{name}}'
+  feed_daily_note: 'Un aliment par jour. Un peu plus fort à chaque repas.'
+  feed_happy: '{{name}} a adoré !'
+  feed_gain: '+1 puissance'
+  feed_unavailable: 'Ce familier n’est plus disponible.'
   claim_success: Récompense récupérée
   crush_title: Briser l'équipement
   crush_confirm_body: "Briser {{name}} ? L'objet est détruit à jamais et produit des runes."
@@ -1668,7 +1688,7 @@ characters_page:
   revealing: Révélation…
   collecting: Récupération…
   continue_cta: Continuer
-  stat_maxed: Cette caractéristique a atteint sa limite de runes sur cet objet
+  stat_maxed: Cette rune dépasse la limite de caractéristique ou de poids over/exo
   stat:
     movement: 'PM'
     action: 'PA'
@@ -2079,3 +2099,237 @@ spell_names:
   'Word of Youth': 'Mot de Jouvence'
   'Wounding Word': 'Mot Blessant'
   'Zatoishwan Stance': 'Zatoishwan Stance'
+
+item_categories:
+  cosmetic_hat: Coiffe cosmétique
+  cosmetic_cloak: Cape cosmétique
+
+kares: Stacking
+kares_page:
+  stake_more: 'Staker plus'
+  additional_daily: 'En plus / jour'
+  max: 'Max'
+  external_wallet_hint: 'Stakez et gérez vos KARES séparément depuis un portefeuille externe.'
+  select_wallet: Sélectionner
+  staking_revenue: Les stakers partagent 20 % des redevances collectées du marché AresRPG en SUI, plus des récompenses KARES.
+  game_account: 'Compte AresRPG'
+  external_wallet: 'Portefeuille externe'
+  daily_kares: 'KARES / jour · est.'
+  daily_sui: 'SUI / jour · est.'
+  daily_estimate_note: 'Les estimations couvrent les prochaines 24 heures selon votre part actuelle et les récompenses financées. Elles peuvent varier.'
+  position_rewards: 'Récompenses de la position'
+  manage_stake: 'Gérer le stake'
+  same_account: 'Ce portefeuille est déjà votre compte AresRPG. Gérez son stake dans la section du compte.'
+  claim_kares: 'Récupérer les KARES'
+  close: 'Fermer'
+  sale_card_soon_title: 'Préparez-vous.'
+  sale_card_soon_note: 'La vente publique arrive bientôt.'
+  sale_card_soon_action: 'Découvrir la vente'
+  sale_card_live_label: 'Vente en cours'
+  sale_card_live_title: 'PRENEZ VOTRE PLACE'
+  sale_card_target_reached: 'Objectif atteint'
+  sale_card_done_title: 'Vente terminée'
+  sale_card_done_note: 'Réclamez vos KARES et tout remboursement en SUI.'
+  sale_card_refund_note: 'Minimum non atteint. Récupérez tous vos SUI.'
+  community_release_note: 'Seule la trésorerie peut réclamer les KARES communautaires, débloqués sur 1 825 jours après le règlement réussi de la vente. Ils peuvent ensuite être distribués ou brûlés.'
+  sale_unlock_note: 'Les jetons de la vente sont entièrement débloqués dès sa clôture réussie.'
+  unlocked_immediately: 'débloqués immédiatement'
+  vested_five_years: 'acquisition sur 5 ans'
+  eyebrow: 'Un monde à construire'
+  launch_title: 'Bâtissons la suite.'
+  launch_lead: 'Participez à la vente publique initiale de KARES. Financez AresRPG et contribuez à faire grandir son univers.'
+  offering: 'Vente publique initiale'
+  fixed_supply: 'Offre fixe'
+  fair_share: 'Un prix. Une allocation proportionnelle.'
+  fair_detail: 'Votre part finale dépend de votre contribution. Les excédents sont remboursés proportionnellement.'
+  connect: 'Connecter un portefeuille'
+  disconnect: 'Déconnecter'
+  choose_account: 'Choisir un compte'
+  no_wallet: 'Installez un portefeuille Sui pour participer.'
+  refresh: 'Actualiser'
+  loading: 'Lecture de la chaîne…'
+  unavailable: 'L’offre n’est pas encore disponible sur ce réseau.'
+  pending: 'Confirmation de la transaction…'
+  confirmed: 'Transaction confirmée'
+  contribute: 'Contribuer en SUI'
+  amount: 'Montant'
+  balance: 'Solde disponible'
+  amount_invalid: 'Saisissez un montant positif avec 9 décimales maximum.'
+  insufficient: 'Le montant dépasse votre solde disponible.'
+  gas_note: 'Gardez des SUI pour les frais de transaction.'
+  raised: 'Contributions'
+  minimum: 'Seuil minimum'
+  maximum: 'Maximum accepté'
+  opens: 'Ouverture'
+  closes: 'Clôture'
+  estimate: 'Prix final estimé'
+  price_note: 'L’allocation finale est fixée à la clôture.'
+  your_contribution: 'Votre contribution'
+  claim: 'Retirer KARES et SUI excédentaires'
+  refund: 'Demander le remboursement'
+  upcoming: 'Non démarrée'
+  open: 'Offre ouverte'
+  successful: 'Vente réussie'
+  refundable: 'Remboursements disponibles'
+  testnet: 'Testnet · actifs de test'
+  back_game: 'Découvrir AresRPG'
+  funding_title: 'Un monde financé par sa communauté'
+  liquidity: 'Liquidité initiale'
+  development: 'Trésorerie de développement'
+  liquidity_note: 'Réservé au marché initial KARES/SUI. Le projet gère la création du pool.'
+  development_note: 'Pour le jeu, son infrastructure et les prochaines étapes.'
+  staking_title: Votre stake. Votre part.
+  staking_lead: 'Stakez vos KARES pour partager les récompenses KARES et SUI. Retirez vos gains à tout moment.'
+  pool_stake: 'Total staké'
+  your_stake: 'Votre stake'
+  claimable: 'Récompenses accumulées'
+  stake: 'Staker des KARES'
+  withdraw: 'Retirer le stake'
+  claim_rewards: 'Retirer les récompenses'
+  fund_title: 'Financer les récompenses'
+  fund_note: 'Les dons sont partagés sur 30 jours actifs de récompense. Ils ne sont pas remboursables.'
+  donate: 'Faire un don'
+  no_positions: 'Vos positions apparaîtront ici.'
+  inactive: 'Le staking ouvre après le règlement réussi de l’offre.'
+  account_label: 'Compte'
+  position: 'Position'
+  tokenomics: 'Économie KARES'
+  community: 'Récompenses communautaires'
+  team: 'Allocation de l’équipe'
+  five_years: 'Récompenses de staking communautaires'
+  mastery_title: 'Jouez pour gagner. Ou brûlez des KARES.'
+  mastery_note: 'Chaque offre coûte le même nombre de points gagnés ou de KARES. Les KARES dépensés sont brûlés définitivement.'
+  rewards_note: '200 000 KARES sont libérés sur 1 825 jours actifs. Les dons sur 30 jours actifs. L’émission s’arrête sans staker.'
+  revenue_note: '20 % des royalties du marché collectées vont aux récompenses de staking en SUI. Les gains dépendent des revenus et du stake participant.'
+  payment: 'Payer avec'
+  points: 'Points de maîtrise'
+  burn_buy: 'Brûler {{cost}} KARES'
+  kares_missing: 'KARES insuffisants'
+  language: 'Langue'
+  refund_note: 'Si la vente clôture sous le minimum, votre contribution est intégralement remboursable.'
+  offering_contract: 'Contrat de l’offre'
+  min_marker: 'MIN'
+  max_marker: 'MAX'
+  min_reached: 'Minimum atteint'
+  min_pending: 'En route vers le minimum'
+  oversubscribed: 'Sursouscrite'
+  subscribed: 'souscrits'
+  oversub_note: 'Toujours ouverte. Même prix pour tous ; les SUI excédentaires sont remboursés proportionnellement.'
+  opens_in: 'Ouvre dans'
+  closes_in: 'Ferme dans'
+  days_short: 'j'
+  your_investment: 'Votre contribution'
+  your_allocation: 'Votre allocation KARES'
+  current_price: 'Prix actuel de l’offre'
+  estimated_until_close: 'Estimation jusqu’à la clôture'
+  accepted_contribution: 'Contribution acceptée'
+  excess_refund: 'SUI qui vous reviennent'
+  unclaimed_note: 'Votre contribution et allocation non réclamées'
+  connect_preview: 'Connectez votre portefeuille pour voir votre part'
+  no_pending_allocation: 'Aucune contribution à réclamer'
+  play_testnet: 'Jouer au testnet'
+  play_testnet_note: 'Explorez le monde que vous contribuez à bâtir.'
+  join_title: 'Prenez votre place dans la suite.'
+  join_note: '400 000 KARES. Une fenêtre de participation. Une part pour chaque contributeur.'
+  step_connect: 'Connectez votre portefeuille'
+  step_contribute: 'Choisissez votre contribution en SUI'
+  step_claim: 'Réclamez vos KARES et SUI excédentaires'
+  allocation_lead: 'Un million de tokens. Chaque allocation est publique.'
+  community_detail: '11 % restent en réserve communautaire pour les airdrops, le marketing, les classements saisonniers, compétitions, prix PvP, participants testnet et contributeurs utiles. Le projet gère ces allocations.'
+  supply_detail: 'Les 1 000 000 KARES sont émis une seule fois. Aucune nouvelle émission n’est possible. Les achats de maîtrise brûlent les KARES définitivement.'
+  emissions_detail: 'Les 200 000 KARES de staking proviennent de cette réserve existante. Leur distribution ne crée aucun nouveau token.'
+  price_cap_note: 'Le montant accepté s’arrête au maximum. Les contributions supplémentaires changent les parts, pas le prix plafonné.'
+  awaiting_minimum: 'L’allocation et le prix apparaissent une fois le minimum atteint.'
+  claimable_tokens: 'KARES à réclamer'
+  refundable_sui: 'Votre remboursement SUI'
+  final_price: 'Prix final de l’offre'
+  full_refund: 'Votre remboursement intégral en SUI'
+  nav_funding: 'Financement'
+  nav_benefits: 'Avantages'
+  nav_tokenomics: 'Tokenomics'
+  nav_incentives: 'Incitations publiques'
+  nav_play: 'Jouer'
+  benefits_title: 'Une part de cet univers. Plus de façons de jouer.'
+  benefits_lead: 'KARES relie récompenses de jeu, incitations communautaires et partage des royalties du marché.'
+  revenue_title: 'Partagez la réussite du jeu.'
+  revenue_metric: 'des revenus d’AresRPG'
+  revenue_detail: 'Partagées avec les stakers de KARES.'
+  baseline_title: 'Des récompenses déjà dans l’offre.'
+  baseline_detail: '200 000 KARES existants financent 1 825 jours actifs de récompense. Stakez pour en partager la distribution et retirez vos gains à tout moment. Aucun nouveau token n’est créé.'
+  crates_title: 'Vos KARES. Votre prochaine caisse.'
+  crates_detail: 'Les offres de maîtrise incluent des caisses de nourriture, ressources, familiers et cosmétiques. Payez le même coût en KARES ou gagnez des points en jouant. Les KARES dépensés sont brûlés définitivement.'
+  incentives_title: 'Chacun peut renforcer les récompenses.'
+  incentives_detail: 'Chacun peut donner des SUI ou KARES aux récompenses de staking. Chaque dépôt commence au prochain jour actif et s’étale sur 30 jours actifs. Les dons sont partagés proportionnellement et ne sont pas remboursables.'
+  incentives_clock: 'L’horloge s’arrête lorsqu’il n’y a aucun staker. Les nouveaux dons ne prolongent jamais les dépôts antérieurs.'
+  incentives_examples: 'Financez un événement. Célébrez une étape. Récompensez la communauté.'
+  play_title: 'L’univers vous attend. Explorez-le.'
+  play_detail: 'Essayez AresRPG sur testnet pendant la vente publique initiale. Rencontrez la communauté et découvrez le jeu derrière KARES.'
+  confirmed_refresh: 'Transaction confirmée. Actualisez pour charger vos nouveaux soldes.'
+  stage_minimum: 'Financement minimum'
+  stage_maximum: 'Vers le maximum'
+  minimum_refund: 'Remboursement intégral si le minimum n’est pas atteint.'
+  full_refund_available: 'Votre contribution intégrale est disponible au remboursement.'
+  refund_claim_note: 'Réclamez votre remboursement ici si la vente clôture sous le minimum. Les remboursements ne sont pas automatiques.'
+  staking_unavailable: 'Le staking n’est pas encore disponible sur ce réseau.'
+  basecamp_announcement: 'Retrouvez AresRPG au Sui Basecamp à Singapour, du 7 au 9 octobre. Venez nous rencontrer et récupérer des lootboxes.'
+  funding_unknown: 'Données de financement indisponibles.'
+  success_threshold: 'Seuil de réussite'
+  sale_cap: 'Maximum accepté'
+  cap_overflow: 'Au-delà du plafond'
+  overflow_refunds: 'réservés aux remboursements proportionnels'
+
+  combat_rewards: 'Récompenses de boss'
+
+  combat_detail: '100 000 KARES financent un pot de combat public. Chacun peut ajouter des tokens. Les niveaux des boss déterminent une prime unique, partagée également entre les personnages vainqueurs. Le plafond quotidien d’environ 54,79 KARES assure au pot initial au moins cinq ans de récompenses. Les jours calmes et les dons prolongent sa durée. L’activité par époque ajuste les primes ; les récompenses manquées ne créent aucune dette.'
+
+  allocation_rationale: '590 000 KARES (59 %) sont disponibles au lancement : vente, liquidité et équipe. Les déblocages ajoutent au maximum environ 82 000 la première année, soit 13,90 % du montant initial, avant destruction. Le staking fait une pause sans participants. La réserve communautaire suit le calendrier. Le combat peut distribuer moins. Aucun nouveau token n’est créé. Les dons redistribuent des tokens existants. Aucun prix n’est garanti.'
+  launch_market_cap: 'Capitalisation en circulation au lancement'
+  launch_market_cap_note: 'Si la vente se terminait maintenant : prix plafonné × 590 000 KARES disponibles au lancement. Aucun lancement sous le financement minimum.'
+
+leaderboard_page:
+  xp: 'XP de combat'
+  kills: 'Monstres vaincus'
+  dungeons: 'Donjons'
+  jobs: 'XP métiers'
+  marketplace: 'Marché'
+  kolizeum: 'Kolizéum'
+  zones: 'Découvertes'
+  feeding: 'Repas des familiers'
+  gathering: 'Récolte'
+  category: 'Catégorie'
+  previous: 'Précédente'
+  next: 'Suivante'
+  current: 'Saison actuelle'
+  season: 'Saison {{season}}'
+  epochs: 'Époques {{start}}–{{end}}'
+  remaining: '{{epochs}} époques restantes'
+  loading: 'Chargement…'
+  user: 'Utilisateur'
+  score: 'Score'
+  you: 'Vous'
+  current_characters: 'Personnages actuels'
+  current_jobs: 'Métiers actuels'
+  unavailable: 'Classements temporairement indisponibles.'
+  retry: 'Réessayer'
+  empty: 'Aucune activité cette saison.'
+  suins_hint: 'Définissez comme nom par défaut un nom ou sous-nom SuiNS ciblant votre adresse AresRPG pour l’afficher ici.'
+  xp_description: 'XP gagnée lors des victoires par tous vos personnages. Les transferts ne déplacent jamais les points acquis.'
+  kills_description: 'Monstres vaincus lors des victoires, comptés une seule fois par combat pour chaque adresse gagnante.'
+  dungeons_description: 'Dernières salles terminées avec succès, comptées une seule fois par combat pour chaque adresse.'
+  jobs_description: 'XP de récolte et d’artisanat gagnée par tous vos personnages. La forgemagie ne donne pas d’XP.'
+  marketplace_description: 'Valeur brute en SUI des achats et ventes sur le marché, personnages inclus.'
+  kolizeum_description: 'SUI versés pour les victoires au Kolizéum, mises rendues incluses.'
+  zones_description: 'Premières découvertes de zones partagées. Les rafraîchissements ne comptent pas.'
+  feeding_description: 'Actions réussies de nourrissage de familiers. La quantité de nourriture ne multiplie pas le score.'
+  gathering_description: 'Unités de ressources récoltées, bonus rares inclus.'
+  job_FARMER: 'Paysan'
+  job_HERBALIST: 'Herboriste'
+  job_MINER: 'Mineur'
+  job_FORGER: 'Forgeron'
+  job_CARVER: 'Sculpteur'
+  job_TAILOR: 'Tailleur'
+  job_JEWELER: 'Bijoutier'
+  job_TANNER: 'Tanneur'
+  job_HANDYMAN: 'Bricoleur'
+  job_ALCHEMIST: 'Alchimiste'
+  job_BAKER: 'Boulanger'

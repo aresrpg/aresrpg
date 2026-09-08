@@ -303,6 +303,8 @@ export const create_fight_state = ({
       managed: false,
       wagered: false,
       drops_rolled: false,
+      boss_weight: 0,
+      kares_reward: 0,
       turn_seed: 0n,
       turn_slot: 0n,
       turn_casts: [],

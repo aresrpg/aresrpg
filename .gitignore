@@ -7,6 +7,9 @@ bun.lockb
 deprecated/
 
 dist/
+# Independent offering deployment output and local Vercel linkage.
+packages/launchpad/dist/
+packages/launchpad/.vercel/
 build/
 
 .env
@@ -63,3 +66,23 @@ packages/move/node_modules
 vfx/**.zip
 BETA_ANNOUNCEMENT.md
 packages/move-combat/traces/
+packages/kares/traces/
+packages/frontend/dist-launch/apple-touch-icon.png
+packages/frontend/dist-launch/favicon.ico
+packages/frontend/dist-launch/index.html
+packages/frontend/dist-launch/logo-192.png
+packages/frontend/dist-launch/logo-512.png
+packages/frontend/dist-launch/logo.png
+packages/frontend/dist-launch/og-image.png
+packages/frontend/dist-launch/robots.txt
+packages/frontend/dist-launch/assets/de-KSoEN3XE.js
+packages/frontend/dist-launch/assets/en-CYyPEc8K.js
+packages/frontend/dist-launch/assets/es-8zNEeUSZ.js
+packages/frontend/dist-launch/assets/fr-DW94z1Ug.js
+packages/frontend/dist-launch/assets/index-CKpFh_Jr.js
+packages/frontend/dist-launch/assets/index-D_AAKOiM.css
+packages/frontend/dist-launch/assets/ja-DkvN0or2.js
+packages/frontend/dist-launch/assets/kiosk-Dh6FtdLx.js
+packages/frontend/dist-launch/assets/nauvis-CZ5oR02i.webp
+packages/frontend/dist-launch/assets/OfferingCard-BE6AtRsP.js
+packages/frontend/dist-launch/assets/uk-SEYesYHJ.js

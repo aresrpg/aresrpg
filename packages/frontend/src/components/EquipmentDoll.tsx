@@ -3,9 +3,9 @@
 // The established paper-doll layout, extracted from the inventory for reuse by local character
 // authoring AND the live characters page (drag-drop staging rides the optional slot_state).
 
-import { Award, Cat, CircleDot, Crown, Footprints, Gem, Minus, Shirt, Sparkles, Star, Swords } from 'lucide-react'
+import { Award, Cat, CircleDot, Crown, Footprints, Gem, Minus, Shirt, Sparkles, Swords } from 'lucide-react'
 import type { DragEvent, ReactNode } from 'react'
-import { relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
+import { cosmetic_slots, relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 
 /** The anatomical body order — DOM reading order IS the layout (the .inv__rig auto-flow
  *  grid), so the slot ORDER belongs to this component, never its callers (the canon doll's
@@ -25,6 +25,7 @@ const RIG_ORDER = Object.freeze([
 ] as const satisfies readonly (typeof rig_slots)[number][])
 
 import { item_icon } from '../content/assets.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 /** What a slot needs to paint — the seed catalog rows and the projected chain rows both fit. */
 export type DollItem = Readonly<{ name: string; item_type: string; level: number }>
@@ -33,13 +34,16 @@ export type DollItem = Readonly<{ name: string; item_type: string; level: number
 export type DollSlotState = Readonly<{
   valid?: boolean
   staged?: boolean
+  on_double_click?: () => void
   on_drop?: (event: Readonly<DragEvent<HTMLButtonElement>>) => void
 }>
 
 const SLOT_ICON: Readonly<Record<string, typeof Sparkles>> = Object.freeze({
   relic: Sparkles,
   hat: Crown,
+  cosmetic_hat: Crown,
   cloak: Shirt,
+  cosmetic_cloak: Shirt,
   amulet: Gem,
   title: Award,
   weapon: Swords,
@@ -57,22 +61,24 @@ const EquipmentSlot = ({
   item,
   open,
   slot,
-  state,
+  state = {},
 }: Readonly<{
   item: DollItem | null
   open: (slot: CharacterEquipmentSlot) => void
   slot: CharacterEquipmentSlot
   state?: DollSlotState
 }>) => {
-  const label = label_of(slot)
-  const Glyph = SLOT_ICON[label] ?? Sparkles
+  const category_name = useItemCategoryName()
+  const label = category_name(label_of(slot))
+  const Glyph = SLOT_ICON[label_of(slot)] ?? Sparkles
   return (
     <button
-      className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state?.valid ? ' is-valid' : ''}${state?.staged ? ' is-staged' : ''}`}
+      className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}${state.staged ? ' is-staged' : ''}`}
       data-equipment-slot={slot}
       onClick={() => open(slot)}
-      onDragOver={state?.on_drop ? (event) => event.preventDefault() : undefined}
-      onDrop={state?.on_drop}
+      onDoubleClick={state.on_double_click}
+      onDragOver={state.on_drop ? (event) => event.preventDefault() : undefined}
+      onDrop={state.on_drop}
       title={item?.name ?? label}
       type="button"
     >
@@ -126,6 +132,11 @@ export const EquipmentDoll = ({
           ))}
         </div>
       </div>
+    </div>
+    <div className={`inv__cosmetics${compact ? ' inv__cosmetics--compact' : ''}`}>
+      {cosmetic_slots.map((slot) => (
+        <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
+      ))}
     </div>
     {footer}
   </div>

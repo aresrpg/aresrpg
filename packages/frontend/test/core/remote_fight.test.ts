@@ -584,7 +584,6 @@ describe('the remote fight fold', () => {
     expect(turn_calls).toEqual([
       {
         fight: '0xf1',
-        ended: false,
         actions: [
           { type: 'move', path: [2n] },
           { type: 'move', path: [3n] },

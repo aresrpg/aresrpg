@@ -14,6 +14,7 @@ type ConnectionOptions = Readonly<{
   send: (packet: ServerPacket) => void
   close: (code: number, reason: string) => unknown
   verify: (proof: LoginProof) => Promise<boolean>
+  release_pending?: () => void
   promote: () => Player | null
 }>
 
@@ -30,6 +31,7 @@ export const create_authenticated_connection = ({
   close,
   verify,
   promote,
+  release_pending = () => {},
 }: ConnectionOptions): AuthenticatedConnection => {
   let player: Player | null = null
   let verifying = false
@@ -41,6 +43,7 @@ export const create_authenticated_connection = ({
     if (closed) return
     closed = true
     clearTimeout(timer)
+    if (!verifying) release_pending()
     close(1008, reason)
   }
 
@@ -69,9 +72,14 @@ export const create_authenticated_connection = ({
       } catch (error) {
         console.error('Login verification failed.', error)
       }
-      if (closed) return
+      verifying = false
+      if (closed) {
+        release_pending()
+        return
+      }
       if (!verified) return reject('INVALID_SIGNATURE')
       clearTimeout(timer)
+      release_pending()
       player = promote()
       if (!player) return reject('SERVER_FULL')
       send({ type: 'packet/connection_accepted', address })
@@ -80,6 +88,7 @@ export const create_authenticated_connection = ({
       if (closed && !player) return
       closed = true
       clearTimeout(timer)
+      if (!verifying) release_pending()
       player?.on_close()
       player = null
     },

@@ -35,10 +35,10 @@ import {
 import { fold_cached_world, project_world_window, retain_world_characters } from './world_cache.ts'
 import {
   gather_state_input,
-  gathering_from_characters,
+  gatherings_from_characters,
   observe_world_gather,
-  reduce_gathering,
-  type PendingGather,
+  reduce_gatherings,
+  type Gatherings,
   type WorldGatherInput,
 } from './world_gather.ts'
 import {
@@ -81,7 +81,7 @@ export type WorldState = Readonly<{
   pending_zone_searches: Readonly<Record<string, true>>
   player_menu: PlayerMenu | null
   /** Optimistic immediately, then corrected to the chain checkpoint's future timestamp. */
-  gathering: PendingGather | null
+  gathering: Gatherings
   zone_reveal: ZoneReveal | null
 }>
 
@@ -157,7 +157,7 @@ export const initial_world_state = (): WorldState =>
     pending_engages: {},
     pending_zone_searches: {},
     player_menu: null,
-    gathering: null,
+    gathering: {},
     zone_reveal: null,
   })
 
@@ -327,7 +327,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return next === state.world ? state : with_world(state, next)
   }
   if (gather_state_input(input)) {
-    const gathering = reduce_gathering(state.world.gathering, input)
+    const gathering = reduce_gatherings(state.world.gathering, input)
     return gathering === state.world.gathering ? state : with_world(state, Object.freeze({ ...state.world, gathering }))
   }
   // these are EFFECTS, not state changes: what they produce comes back as chain truth
@@ -339,7 +339,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       new Set(input.packet.characters.map(({ id }) => id)),
       state.session.selected_character_id
     )
-    const reconciled = gathering_from_characters(retained.gathering, input.packet.characters)
+    const reconciled = gatherings_from_characters(retained.gathering, input.packet.characters)
     return with_world(state, Object.freeze({ ...retained, gathering: reconciled }))
   }
   const next = fold_cached_world(state.world, input.packet, state.session.selected_character_id, fold_union)

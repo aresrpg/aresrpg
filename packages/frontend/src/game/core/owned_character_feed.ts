@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable functional/immutable-data -- this external presentation feed owns its private live-position cache. */
 
-import type { CharacterRow, PresenceRow } from '@aresrpg/protocol'
+import { visible_equipment, type CharacterRow, type PresenceRow } from '@aresrpg/protocol'
 
 export type OwnedCharacterPosition = Readonly<{ character_id: string; world: string; x: number; y: number; z: number }>
 
@@ -11,9 +11,6 @@ const feed: {
   snapshot: Readonly<Record<string, OwnedCharacterPosition>>
   listeners: Set<() => void>
 } = { positions: new Map(), snapshot: Object.freeze({}), listeners: new Set() }
-
-const equipment_type = (character: Readonly<CharacterRow>, slot: string): string | null =>
-  character.equipment.find((item) => item.slot === slot)?.item_type ?? null
 
 const fallback_position = (
   character: Readonly<CharacterRow>,
@@ -65,10 +62,7 @@ export const owned_character_presence_rows = (
                   color_1: character.color_1,
                   color_2: character.color_2,
                   color_3: character.color_3,
-                  hat: equipment_type(character, 'hat'),
-                  cloak: equipment_type(character, 'cloak'),
-                  title: equipment_type(character, 'title'),
-                  pet: equipment_type(character, 'pet'),
+                  ...visible_equipment(character.equipment),
                   riding: false,
                   x: position.x,
                   y: position.y,

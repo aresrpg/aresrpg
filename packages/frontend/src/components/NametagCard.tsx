@@ -20,11 +20,13 @@ export const NametagCard = ({
   name,
   lines = [],
   tone = 'gold',
-}: Readonly<{ name?: ReactNode; lines?: readonly NametagLine[]; tone?: 'gold' | 'muted' }>) => {
+  children,
+}: Readonly<{ name?: ReactNode; lines?: readonly NametagLine[]; tone?: 'gold' | 'muted'; children?: ReactNode }>) => {
   const edge = tone === 'gold' ? 'rgba(200,150,60,0.70)' : 'rgba(120,124,134,0.55)'
   const glow = tone === 'gold' ? '0 0 14px rgba(200,150,60,0.10)' : '0 0 14px rgba(0,0,0,0.10)'
   return (
-    <div className="pointer-events-none -translate-y-full">
+    <div className="pointer-events-none flex -translate-y-full flex-col items-center gap-2">
+      {children}
       <div
         className="relative flex flex-col items-center gap-0.5 rounded-lg border bg-bg/85 px-3 py-1.5 text-center backdrop-blur-md"
         style={{
