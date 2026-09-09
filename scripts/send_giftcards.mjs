@@ -107,8 +107,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const options = parse_send_args(process.argv.slice(2))
   if (options.help) console.log(usage)
   else {
-    const pins = JSON.parse(await readFile(new URL('../pins.json', import.meta.url), 'utf8'))
-    const package_id = pins[options.network]?.package_original
+    const pins = JSON.parse(
+      await readFile(process.env.ARES_PINS_FILE ?? new URL('../pins.json', import.meta.url), 'utf8')
+    )
+    if (pins.network !== options.network) throw new Error('Giftcard target does not match the deployment pins')
+    const package_id = pins.package_original
     if (!package_id) throw new Error(`No published ${options.network} Giftcard package`)
     const batches = giftcard_batches(JSON.parse(await readFile(options.manifest, 'utf8')))
     if (options.execute) await writeFile(options.receipts, '', { flag: 'wx', mode: 0o600 })

@@ -3,8 +3,8 @@
 
 import type { CharacterRow, MasteryRow } from '@aresrpg/protocol'
 import { dungeon_content_id } from '@aresrpg/sdk/seed-ids'
+import { resolve_pins } from '@aresrpg/sdk/pins'
 
-import PINS from '../../../../pins.json' with { type: 'json' }
 import { content_catalog, type SeedWorld } from '../content/catalog.ts'
 import { env } from '../env.ts'
 
@@ -26,9 +26,7 @@ const dungeon_ids = (() => {
   let value: ReadonlyMap<string, string> | null = null
   return (): ReadonlyMap<string, string> => {
     if (value) return value
-    const pins = (
-      PINS as unknown as Record<string, { content_root?: { id?: string }; seed_package_original?: string }>
-    )[env.network]
+    const pins = resolve_pins(env.network) as { content_root?: { id?: string }; seed_package_original?: string }
     const content_root = pins?.content_root?.id
     const seed_original = pins?.seed_package_original
     value = new Map(

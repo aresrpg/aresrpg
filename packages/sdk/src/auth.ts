@@ -8,8 +8,6 @@ import { isValidSuiAddress } from '@mysten/sui/utils'
 import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 
-import PINS from '../../../pins.json' with { type: 'json' }
-
 import { canonical_suins_name } from './suins.ts'
 import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
 import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
@@ -165,9 +163,7 @@ const create_wallet_session = (
     pins,
   })
   const read_item = create_item_snapshot_reader(client, sdk.game_type_package)
-  const registry_pin = (
-    (pins ?? (PINS as Record<string, Pins>)[network]).name_registry as { id?: string | null } | undefined
-  )?.id
+  const registry_pin = (sdk.pins.name_registry as { id?: string | null } | undefined)?.id
   let kiosk_caps: ReturnType<typeof sdk.get_owned_kiosks> | null = null
   const kiosk_cap = async (kiosk_id?: string, fresh = false) => {
     const request = fresh || !kiosk_caps ? sdk.get_owned_kiosks(account.address) : kiosk_caps

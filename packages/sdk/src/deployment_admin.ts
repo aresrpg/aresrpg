@@ -28,8 +28,6 @@ export type GameDeployment = Readonly<{
   package: string
   kiosk_package: string
   publisher: string
-  item_publisher: string
-  character_publisher: string
   version: SharedDeploymentPin
   loot_registry?: SharedDeploymentPin
   name_registry?: SharedDeploymentPin
@@ -338,8 +336,6 @@ export const project_game_deployment = ({
     package: package_id,
     kiosk_package,
     publisher,
-    item_publisher: publisher,
-    character_publisher: publisher,
     version: shared_pin(receipt, version_id),
     loot_registry: optional_shared('::loot_box::LootRegistry'),
     name_registry: optional_shared('::character::NameRegistry'),

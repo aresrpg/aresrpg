@@ -175,7 +175,7 @@ test('launch publication is offering-only with disclosed manual liquidity custod
 })
 
 test('the independent launch environment binds only to an explicit supported network and HTTPS endpoint', () => {
-  expect(resolve_launch_env({}).network).toBe('testnet')
+  expect(resolve_launch_env({}).network).toBe('mainnet')
   expect(resolve_launch_env({ VITE_NETWORK: 'mainnet' }).sui_rpc_url).toBe('https://fullnode.mainnet.sui.io:443')
   expect(() => resolve_launch_env({ VITE_NETWORK: 'localnet' })).toThrow('Unsupported launch network')
   expect(() => resolve_launch_env({ VITE_SUI_RPC_URL: 'http://example.test' })).toThrow('HTTPS')

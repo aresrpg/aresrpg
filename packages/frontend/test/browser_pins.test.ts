@@ -10,26 +10,17 @@ import { build } from 'vite'
 
 import { browser_pins_plugin } from '../../../scripts/browser_pins.ts'
 
-test('browser pin imports exclude publication history without changing runtime pins or the source file', async () => {
+test('browser pin imports exclude reconciliation metadata without changing runtime pins or the source file', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'ares-browser-pins-'))
   const pins_path = join(directory, 'pins.json')
   const entry = join(directory, 'entry.js')
   const runtime = {
-    testnet: {
-      package: 'testnet-package',
-      content_root: { id: 'live-registry', shared_version: '42' },
-      future_pin: 'retained',
-    },
-    mainnet: { package: 'mainnet-package', kares_offering: { id: 'live-offering', shared_version: '7' } },
+    network: 'testnet',
+    package: 'testnet-package',
+    content_root: { id: 'live-registry', shared_version: '42' },
+    kares_offering: { id: 'live-offering', shared_version: '7' },
   }
-  const source = JSON.stringify({
-    testnet: {
-      ...runtime.testnet,
-      seed_ledgers: { retired: 'publication-ledger-must-not-ship' },
-      seed_addresses: { retired: 'address-history-must-not-ship' },
-    },
-    mainnet: { ...runtime.mainnet, seed_ledgers: {}, seed_addresses: {} },
-  })
+  const source = JSON.stringify({ ...runtime, seed_ledger: { current: 'reconciliation-must-not-ship' } })
   try {
     await writeFile(pins_path, source)
     await writeFile(entry, 'import pins from "./pins.json"; export default pins;')
@@ -54,11 +45,10 @@ test('browser pin imports exclude publication history without changing runtime p
       .join('\n')
     expect(code).toContain('live-registry')
     expect(code).toContain('live-offering')
-    expect(code).not.toContain('publication-ledger-must-not-ship')
-    expect(code).not.toContain('address-history-must-not-ship')
+    expect(code).not.toContain('reconciliation-must-not-ship')
     expect(await readFile(pins_path, 'utf8')).toBe(source)
-    await writeFile(pins_path, JSON.stringify({ testnet: { ...runtime.testnet, package: 'new-publication' } }))
-    expect(JSON.parse((await plugin.load(canonical_path))!).testnet.package).toBe('new-publication')
+    await writeFile(pins_path, JSON.stringify({ ...runtime, package: 'new-publication' }))
+    expect(JSON.parse((await plugin.load(canonical_path))!).package).toBe('new-publication')
   } finally {
     await rm(directory, { recursive: true, force: true })
   }

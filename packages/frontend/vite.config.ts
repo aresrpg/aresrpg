@@ -56,11 +56,11 @@ const yaml_plugin = (): Plugin => ({
 
 export default defineConfig(({ mode }) => {
   // Env is PER-DEPLOYABLE (owner 2026-08-16): this package's own .env, never a repo-root file.
-  const loaded_env = loadEnv(mode, '.', '')
+  const loaded_env = loadEnv(mode, frontend_dir, '')
   const env = resolve_env(loaded_env)
   return {
     plugins: [
-      browser_pins_plugin(),
+      browser_pins_plugin(undefined, env.network),
       html_env_plugin(env),
       yaml_plugin(),
       ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),

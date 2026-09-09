@@ -79,6 +79,7 @@ const sdk_with = (
   }> = {}
 ) =>
   SDK({
+    network: 'testnet',
     address: object_id(9),
     pins,
     sign_transaction: async (transaction) => ({
@@ -356,7 +357,6 @@ describe('seed admin progress', () => {
     const snapshot = await session.refresh()
     expect(next_seed_batch(snapshot)).toBeNull()
     expect(snapshot.batches.every(({ state }) => state === 'complete')).toBeTrue()
-    expect(await session.address_book()).toEqual({ [template_id]: 'item ore' })
   })
 
   test('reports every inspected batch while deterministic addresses are checked', async () => {

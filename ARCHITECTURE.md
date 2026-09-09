@@ -65,11 +65,15 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | `packages/launchpad`   | Independently deployed offering UI at `launchpad.aresrpg.world`, using the SDK and neutral frontend finance exports                                                                | Staking UI, game startup, a second finance state authority                          |
 | `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                 |
 | `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                   |
-| `pins.json`            | Deployment lineage, shared object addresses, and published content fingerprints                                                                                                    | Authored gameplay values                                                            |
+| `pins.json`            | Current mainnet lineage, shared object addresses, and active content reconciliation metadata                                                                                       | Authored gameplay values                                                            |
 
-Frontend and launchpad builds project root pins through `scripts/browser_pins.ts`, excluding
-`seed_ledgers` and `seed_addresses`. Deployment tooling retains the complete canonical file;
-the browser projection is generated at import time and has no independent source of truth.
+Root `pins.json` describes one current mainnet deployment. It contains no previous deployments,
+address-book copies, or retired Registry maps. The optional flat `seed_ledger` contains only the
+current Registry's reconciliation metadata and is cleared on game republishing.
+Local testnet builds explicitly select an ignored `.dev/pins.json` with `ARES_PINS_FILE`; they never
+rewrite the committed file or fall back to mainnet. Both files declare their network. Frontend,
+launchpad, and SDK imports resolve the same selected file through `scripts/browser_pins.ts`, which
+excludes `seed_ledger` from browser output. Production workflows accept mainnet only.
 
 Dependencies point toward smaller owners: frontend composes engine/fight/immutable/protocol/SDK;
 server composes engine/fight/protocol; protocol composes fight/immutable. Engine, fight, and

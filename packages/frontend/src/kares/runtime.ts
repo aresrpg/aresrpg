@@ -52,7 +52,7 @@ export type FinanceOptions = Readonly<{
 
 const read_finance_snapshot = async (
   session: FinanceSession | null,
-  reader: ReturnType<typeof create_kares_reader>,
+  reader: Pick<ReturnType<typeof create_kares_reader>, 'snapshot'>,
   managed: boolean
 ) => {
   if (managed)
@@ -68,7 +68,8 @@ export const create_finance_runtime = (options: FinanceOptions, session: Finance
   const dispatch = (input: FinanceInput): void => store.setState((state) => reduce_finance(state, input), true)
   const start = (): (() => void) => {
     let stopped = false
-    const reader = create_kares_reader(options)
+    let public_reader: ReturnType<typeof create_kares_reader> | null = null
+    const reader = { snapshot: () => (public_reader ??= create_kares_reader(options)).snapshot() }
     const send = (input: FinanceInput): void => {
       if (!stopped) dispatch(input)
     }

@@ -84,3 +84,6 @@ affect live objects and fights; follow `CONTENT_UPGRADES.md` before implementati
 
 Contributions require the CLA (`CLA.md`) — the bot asks on your first PR. Every source file
 carries the SPDX header. Add the header when creating a source file.
+
+Local testnet deployment data stays in ignored `.dev/pins.json`. Committed `pins.json` always
+describes the current mainnet deployment; testnet deployments are never pushed or released.

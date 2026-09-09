@@ -435,7 +435,7 @@ describe('check changes', () => {
 
     expect(next[ore_id]?.hash).toBe(ore.hash) // untouched row carried over
     expect(next[spark_id]?.hash).toBe(spark.hash) // freshly written row recorded
-    expect(next[spark_id]?.addresses).toEqual([spark_id])
+    expect(next[spark_id]).not.toHaveProperty('addresses')
     expect(next['0xdead']).toBeUndefined() // dropped rows leave with the files
     expect(next[box_id]).toBeUndefined() // never-created rows stay out
   })

@@ -16,8 +16,7 @@ import {
 import { fromBase64, normalizeSuiObjectId } from '@mysten/sui/utils'
 import type { Signer } from '@mysten/sui/cryptography'
 
-import PINS from '../../../pins.json' with { type: 'json' }
-
+import { DEFAULT_NETWORK, resolve_pins, type Pins } from './pins.ts'
 import * as doors from './doors.gen.ts'
 import {
   create_cache,
@@ -37,6 +36,7 @@ import { GAS_BUDGET_MIST } from './gas_budget.ts'
 import { create_transaction_execution, type ExecutionCore, type TransactionStorage } from './transaction_execution.ts'
 
 export { doors }
+export type { Pins } from './pins.ts'
 export { DOORS } from './doors.gen.ts'
 export * from './ptb.ts'
 export * from './cache.ts'
@@ -44,13 +44,6 @@ export * from './gas.ts'
 export * from './gas_budget.ts'
 
 export type SharedPin = { id: string | null; shared_version: string | null }
-export type Pins = Readonly<Record<string, unknown>> & {
-  package?: string | null
-  math_package?: string | null
-  combat_package?: string | null
-  seed_package?: string | null
-}
-
 /** The living-content derivation pair: the registry ROOT object id + the seed package's
  * ORIGINAL id — every content address (mob/spell templates, world content, the board
  * catalog) derives from these two. The ORIGINAL, never `pins.seed_package`: a derived object
@@ -132,7 +125,7 @@ export type SdkOptions = {
   graphql_url?: string
   /** Sui gRPC endpoint for resolution, submission, and complete receipt recovery */
   rpc_url?: string
-  /** override for tests/local publishes; defaults to pins.json[network] */
+  /** override for tests/local publishes; defaults to the current deployment */
   pins?: Pins
   /** optional explicit budget in MIST; `'estimate'` lets the Sui resolver price the
    *  transaction itself (deployment-sized surfaces); otherwise the game-door law applies */
@@ -225,13 +218,14 @@ export function SDK({
   signer,
   address,
   sign_transaction,
-  network = 'testnet',
+  network = DEFAULT_NETWORK,
   graphql_url,
   rpc_url,
-  pins = (PINS as Record<string, Pins>)[network],
+  pins: supplied_pins,
   gas_budget,
   transaction_storage,
 }: SdkOptions = {}) {
+  const pins = resolve_pins(network, supplied_pins)
   const sui_client =
     client ??
     (rpc_url
@@ -241,7 +235,6 @@ export function SDK({
         : null)
   if (!sui_client)
     throw new Error('[sdk] SDK({ client }), SDK({ rpc_url }), or SDK({ graphql_url }) needs a chain transport')
-  if (!pins) throw new Error(`[sdk] unknown network "${network}" — pins.json carries no entry for it`)
 
   // On-chain type arguments name types by their FIRST-publish package address forever;
   // pins.package / pins.math_package follow the latest upgrade's package object and are

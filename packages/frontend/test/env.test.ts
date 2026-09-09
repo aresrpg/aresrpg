@@ -10,10 +10,10 @@ describe('frontend environment', () => {
     const env = resolve_env({})
 
     expect(env.app_url).toBe('https://aresrpg.world/')
-    expect(env.network).toBe('testnet')
+    expect(env.network).toBe('mainnet')
     expect(env.engine_quality).toBe('medium')
-    expect(env.graphql_url).toBe('https://graphql.testnet.sui.io/graphql')
-    expect(env.sui_rpc_url).toBe('https://fullnode.testnet.sui.io:443')
+    expect(env.graphql_url).toBe('https://graphql.mainnet.sui.io/graphql')
+    expect(env.sui_rpc_url).toBe('https://fullnode.mainnet.sui.io:443')
     expect(env.server_ws_url).toBe('ws://localhost:9800/')
     expect(env.social_image_url).toBe('https://aresrpg.world/og-image.png')
   })

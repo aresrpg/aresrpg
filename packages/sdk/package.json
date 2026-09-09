@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./src/client.ts",
+    "./pins": "./src/pins.ts",
     "./auth": "./src/auth.ts",
     "./kares": "./src/kares.ts",
     "./kares-economics": "./src/kares_economics.ts",

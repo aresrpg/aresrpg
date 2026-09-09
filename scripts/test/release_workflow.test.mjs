@@ -149,17 +149,18 @@ test('CI consumes the canonical runtime input classifier', () => {
   expect(backend_plan).toContain('before[key] !== after[key]')
 })
 
-test('release preparation requires an explicit network and conditionally stages frontend', () => {
+test('release preparation is mainnet-only and conditionally stages frontend', () => {
   expect(workflow.on.push).toBeUndefined()
-  expect(workflow.on.workflow_dispatch.inputs.network.options).toEqual(['testnet', 'mainnet'])
+  expect(workflow.on.workflow_dispatch.inputs.network).toBeUndefined()
+  expect(workflow.env.SUI_NETWORK).toBe('mainnet')
   expect(workflow.jobs['prepare-production'].if).toBe("needs.backend-plan.outputs.frontend == 'true'")
-  expect(workflow.jobs['prepare-production'].env.VITE_NETWORK).toBe('${{ inputs.network }}')
+  expect(workflow.jobs['prepare-production'].env.VITE_NETWORK).toBe('mainnet')
 })
 
 test('activation uses one exact preparation receipt and skips unchanged frontend promotion', () => {
   expect(activation.on.workflow_dispatch.inputs.preparation_run.required).toBe(true)
   expect(activation['run-name']).toBe(
-    'activate v${{ inputs.version }} ${{ inputs.network }} ${{ inputs.request_id }} ${{ inputs.preparation_run }}'
+    'activate v${{ inputs.version }} mainnet ${{ inputs.request_id }} ${{ inputs.preparation_run }}'
   )
   const promotion = activation.jobs.activate.steps.find(
     ({ name }) => name === 'promote the prepared deployment without rebuilding'

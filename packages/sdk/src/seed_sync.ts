@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // CHECK-CHANGES compares authored JSON with the last chain write and composes rebalance doors.
-// pins.json owns derived addresses, fingerprints, and immutable identity facts by Registry root.
+// The current deployment ledger owns only reconciliation fingerprints and immutable identity facts.
 // New rows publish, changed rows rewrite, and omitted recipes retire. Other removals stay
 // visible because their chain objects persist. One-shot giftcards cannot be rewritten.
 
@@ -53,8 +53,6 @@ export type SeedLedger = Readonly<
     Readonly<{
       hash: string
       label: string
-      /** Every chain object address this authored identity owns. */
-      addresses?: readonly string[]
       /** Chain revisions observed after the authored value was written. */
       revisions?: Readonly<Record<string, string>>
       domain?: string
@@ -78,7 +76,7 @@ export type SeedSyncRow = Readonly<{
   world?: Readonly<{ cities: readonly string[] }>
   /** the chain object whose existence says "already created" (the shared catalog for boards) */
   chain_id: string
-  /** Durable address book persisted in pins.json. */
+  /** Derived addresses used for existence and revision checks. */
   addresses: readonly string[]
   /** shared objects the rewrite needs resolved before composing */
   hydrate: readonly string[]

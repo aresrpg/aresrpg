@@ -47,8 +47,8 @@ const seed_dir = argument('--seed-dir') ?? join(repo_dir, 'seed')
 const content_dir = argument('--content-dir') ?? join(seed_dir, 'content')
 const load = (name) => JSON.parse(readFileSync(join(content_dir, name), 'utf8'))
 const deployment_object_ids = new Set(
-  Object.values(JSON.parse(readFileSync(join(repo_dir, 'pins.json'), 'utf8'))).flatMap((deployment) =>
-    Object.values(deployment ?? {}).filter((value) => typeof value === 'string' && /^0x[\da-f]{64}$/iu.test(value))
+  Object.values(JSON.parse(readFileSync(process.env.ARES_PINS_FILE ?? join(repo_dir, 'pins.json'), 'utf8'))).filter(
+    (value) => typeof value === 'string' && /^0x[\da-f]{64}$/iu.test(value)
   )
 )
 

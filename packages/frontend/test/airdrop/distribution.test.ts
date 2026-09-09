@@ -3,9 +3,12 @@
 
 import { afterEach, beforeEach, expect, test } from 'bun:test'
 
-import { rolled_item_types } from '../../src/modules/claims.ts'
 import { gift_link_from_url } from '../../src/modules/distribution.ts'
 import { create_app } from '../../src/store.ts'
+
+import { TEMPLATE_ID, use_template_fixture } from './fixture.ts'
+
+use_template_fixture()
 
 const location_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
 const history_descriptor = Object.getOwnPropertyDescriptor(globalThis, 'history')
@@ -48,8 +51,10 @@ test('only a /gift bearer fragment becomes a printable gift claim', () => {
   expect(gift_link_from_url('https://aresrpg.world/airdrop?network=testnet#$secret')).toBeNull()
 })
 
-test('the bearer secret survives login, claims to B, then a failed B redemption remains retryable', async () => {
-  const href = 'https://aresrpg.world/gift?network=testnet#$secret'
+test.each([
+  ['https://aresrpg.world/gift?network=testnet#$secret', '/gift'],
+  ['http://localhost:5173/claim?network=testnet#$secret', '/claim'],
+])('the bearer secret survives login at %s and a failed redemption remains retryable', async (href, pathname) => {
   const values = new Map<string, string>()
   const replaced: string[] = []
   const storage = {
@@ -59,7 +64,7 @@ test('the bearer secret survives login, claims to B, then a failed B redemption 
   } as Storage
   Object.defineProperty(globalThis, 'location', {
     configurable: true,
-    value: { href, pathname: '/gift', search: '?network=testnet' },
+    value: { href, pathname, search: '?network=testnet' },
   })
   Object.defineProperty(globalThis, 'history', {
     configurable: true,
@@ -67,8 +72,7 @@ test('the bearer secret survives login, claims to B, then a failed B redemption 
   })
   Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: storage })
 
-  const template = [...rolled_item_types()].find(([, item_type]) => item_type === 'sui_crate')?.[0]
-  if (!template) throw new Error('the Sui Crate template is not published')
+  const template = TEMPLATE_ID
   const card = Object.freeze({ id: '0xgift', template, amount: 1 })
   const claimed: string[] = []
   const redeemed: string[] = []
@@ -92,8 +96,8 @@ test('the bearer secret survives login, claims to B, then a failed B redemption 
   await new Promise((resolve) => setTimeout(resolve, 0))
   await new Promise((resolve) => setTimeout(resolve, 0))
 
-  expect(replaced).toEqual(['/gift?network=testnet'])
-  expect(app.store.getState().navigation).toMatchObject({ page: 'airdrop', pathname: '/gift' })
+  expect(replaced).toEqual([`${pathname}?network=testnet`])
+  expect(app.store.getState().navigation).toMatchObject({ page: 'airdrop', pathname })
   expect(claimed).toEqual([href])
   expect(redeemed).toEqual(['0xgift'])
   expect(values.size).toBe(0)
@@ -143,7 +147,7 @@ const flush = async () => {
 }
 
 test('plain wallet transfer automatically redeems once and stale snapshots cannot resurrect the voucher', async () => {
-  const [template] = [...rolled_item_types()].find(([, item_type]) => item_type === 'sui_crate')!
+  const template = TEMPLATE_ID
   const card = { id: '0xgift', template, amount: 1 }
   const transfers: unknown[] = []
   const redemptions: string[] = []
@@ -184,7 +188,7 @@ test('plain wallet transfer automatically redeems once and stale snapshots canno
 })
 
 test('a failed redemption remains held and does not automatically retry on repeated snapshots', async () => {
-  const [template] = [...rolled_item_types()].find(([, item_type]) => item_type === 'sui_crate')!
+  const template = TEMPLATE_ID
   const card = { id: '0xgift', template, amount: 1 }
   let attempts = 0
   const wallet = {
@@ -211,7 +215,7 @@ test('a failed redemption remains held and does not automatically retry on repea
 })
 
 test('received vouchers redeem without waiting for inventory projection', async () => {
-  const [template] = [...rolled_item_types()].find(([, item_type]) => item_type === 'sui_crate')!
+  const template = TEMPLATE_ID
   const calls: string[] = []
   const app = create_app()
   const stop = app.observe(['distribution'])

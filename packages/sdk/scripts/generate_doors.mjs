@@ -68,8 +68,6 @@ const TYPE_MAP = {
   '&mut NameRegistry': { kind: 'pin', pin: 'name_registry', mutable: true },
   '&LootRegistry': { kind: 'pin', pin: 'loot_registry' },
   '&mut LootRegistry': { kind: 'pin', pin: 'loot_registry', mutable: true },
-  '&TemplateRegistry': { kind: 'pin', pin: 'template_registry' },
-  '&mut TemplateRegistry': { kind: 'pin', pin: 'template_registry', mutable: true },
   '&mut FriendRegistry': { kind: 'pin', pin: 'friend_registry', mutable: true },
   '&FriendRegistry': { kind: 'pin', pin: 'friend_registry', mutable: false },
   ID: { kind: 'pure', helper: 'id' },

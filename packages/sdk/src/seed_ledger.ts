@@ -13,8 +13,9 @@ const ledger_entry = (row: SeedSyncRow, revision: (id: string) => string | null 
   return Object.freeze({
     hash: row.hash,
     label: row.label,
-    addresses: row.addresses,
-    ...(Object.keys(revisions).length === row.addresses.length ? { revisions: Object.freeze(revisions) } : {}),
+    ...(row.kind === 'template' && Object.keys(revisions).length === row.addresses.length
+      ? { revisions: Object.freeze(revisions) }
+      : {}),
     domain: row.domain,
     ...(row.item ? { item: row.item } : {}),
     ...(row.spell ? { spell: row.spell } : {}),

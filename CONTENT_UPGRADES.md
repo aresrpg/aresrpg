@@ -75,7 +75,7 @@ snapshots.
     A certified app-only release skips Kubernetes; an unknown baseline requires review. The composite
     game+seed projection identity decides whether the store is retained or replaced for a repin.
 16. Manually run the production-activation workflow with the reviewed tag, version,
-    network, preparation run, and request ID. It promotes the staged Vercel deployment without rebuilding,
+    preparation run and request ID. The network is always mainnet. It promotes the staged Vercel deployment without rebuilding,
     verifies production, and publishes the draft release. Verify that exact successful
     activation before continuing.
 17. Exercise one affected action against chain truth.
@@ -90,7 +90,7 @@ receipt and current chain objects, then compose only work still missing.
 
 Board synchronization reads the chain catalog length. It replaces shared indexes, appends missing
 indexes, and removes the tail. `pins.json` records every derived address and authored fingerprint
-under its Registry root; the chain catalog length still decides board shape.
+in the current deployment; the chain catalog length still decides board shape.
 
 ## Direct giftcard distribution
 
@@ -168,9 +168,8 @@ Package deployment follows the dependency graph:
 Upgrade only a package whose desired artifact changed. Reuse unchanged published dependencies.
 
 Republish abandons every active package lineage, publishes fresh math, control, combat, seed, and
-core packages in dependency order, and creates a fresh empty Registry. Historical content ledgers remain
-namespaced by their old Registry roots for audit and recovery, but no active package or content
-object is reused. Compatibility belongs only to Upgrade; Republish never attempts selective reuse.
+core packages in dependency order, and creates a fresh empty Registry. The previous game pins and
+content ledger are discarded; no active package or content object is reused. Compatibility belongs only to Upgrade; Republish never attempts selective reuse.
 
 KARES is outside that five-package game lifecycle. A game republish must retain its currency,
 offering, combat pot and staking originals, objects and balances. Publish KARES independently before preparing a game package that imports it.
@@ -180,7 +179,9 @@ offering, combat pot and staking originals, objects and balances. Publish KARES 
 The SDK exposes explicit administrative transactions for publication, atomic offering setup,
 one-time start, settlement, treasury vesting, combat funding, authorization, and metadata updates.
 Each transaction requires its native authority and retains its certified receipt for recovery.
-No mainnet operation follows automatically from testnet rehearsal or from this runbook.
+Mainnet publication requires explicit owner approval. Local testnet uses an ignored deployment file
+and never enters production release workflows. KARES is published only once on each network;
+game republishing reuses that monetary identity.
 
 1. Publish the KARES package. Record its receipt-derived lineage and Genesis.
 2. Review the intended name, description and icon asset before a public offering.

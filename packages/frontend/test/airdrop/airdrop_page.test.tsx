@@ -8,8 +8,11 @@ import { wallet_view } from '../kares/fixture.ts'
 import AirdropPage, { HolderWalletConnect } from '../../src/airdrop/AirdropPage.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
-import { rolled_item_types } from '../../src/modules/claims.ts'
 import { initial_session_state } from '../../src/modules/session.ts'
+
+import { TEMPLATE_ID, use_template_fixture } from './fixture.ts'
+
+use_template_fixture()
 
 test('the airdrop page shows curated pets while holder drops stay claimable data', async () => {
   const copy = await load_app_copy('en')
@@ -23,8 +26,7 @@ test('the airdrop page shows curated pets while holder drops stay claimable data
 
 test('a held voucher resolves its authored item from the template and stays redeemable', async () => {
   const copy = await load_app_copy('en')
-  const template = [...rolled_item_types()].find(([, item_type]) => item_type === 'sui_crate')?.[0]
-  if (!template) throw new Error('the Sui Crate template is not published')
+  const template = TEMPLATE_ID
   const session = {
     ...initial_session_state(),
     wallet: { address: '0xgame' } as never,

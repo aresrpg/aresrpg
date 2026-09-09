@@ -3,7 +3,7 @@
 # Manual final door: every artifact was already built from the owner-pushed release tag.
 # This workflow only verifies that immutable preparation record and moves Vercel's domains.
 name: activate production
-run-name: activate v${{ inputs.version }} ${{ inputs.network }} ${{ inputs.request_id }} ${{ inputs.preparation_run }}
+run-name: activate v${{ inputs.version }} mainnet ${{ inputs.request_id }} ${{ inputs.preparation_run }}
 on:
   workflow_dispatch:
     inputs:
@@ -11,11 +11,6 @@ on:
         description: 'Prepared release version without the v prefix, for example 2.3.0'
         required: true
         type: string
-      network:
-        description: Selected Sui network
-        required: true
-        type: choice
-        options: [testnet, mainnet]
       request_id:
         description: Release recovery identity
         required: true
@@ -42,7 +37,7 @@ jobs:
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      SUI_NETWORK: ${{ inputs.network }}
+      SUI_NETWORK: mainnet
       PREPARATION_RUN: ${{ inputs.preparation_run }}
       REQUEST_VERSION: ${{ inputs.version }}
     steps:

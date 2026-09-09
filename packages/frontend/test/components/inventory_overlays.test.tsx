@@ -28,7 +28,7 @@ test('the inventory menu links its exact item object ID', async () => {
     <InventoryMenu close_menu={() => undefined} copy={copy} entries={[]} menu={{ x: 10, y: 20, item }} />
   )
 
-  expect(markup).toContain('href="https://testnet.suivision.xyz/object/0xitem"')
+  expect(markup).toContain('href="https://suivision.xyz/object/0xitem"')
   expect(markup).toContain('href="/encyclopedia/items/0x2%3A%3Aitem%3A%3ARelic"')
   expect(markup).toContain('View recipes')
   expect(markup).toContain('See on explorer')

@@ -5,8 +5,8 @@
 
 import type { ClaimRow } from '@aresrpg/protocol'
 import { item_template_id } from '@aresrpg/sdk/seed-ids'
+import { resolve_pins } from '@aresrpg/sdk/pins'
 
-import PINS from '../../../../pins.json' with { type: 'json' }
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { env } from '../env.ts'
 import { crush_results, projected_crush_items, type PendingCrushResult } from '../crush_result.ts'
@@ -25,9 +25,7 @@ export const rolled_item_types = (() => {
   let map: Map<string, string> | null = null
   return (): Map<string, string> => {
     if (map) return map
-    const pins = (
-      PINS as unknown as Record<string, { content_root?: { id?: string }; seed_package_original?: string }>
-    )[env.network]
+    const pins = resolve_pins(env.network) as { content_root?: { id?: string }; seed_package_original?: string }
     const content_root = pins?.content_root?.id
     const seed_original = pins?.seed_package_original
     map = new Map(

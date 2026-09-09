@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { DEFAULT_NETWORK } from '@aresrpg/sdk/pins'
+
 export type Network = 'mainnet' | 'testnet'
 export type EngineQuality = 'low' | 'medium' | 'high'
 
@@ -40,7 +42,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     VITE_ENOKI_API_KEY = 'enoki_public_ff89078fe8efa82d3f14732264813b91',
     VITE_ENGINE_QUALITY = 'medium',
     VITE_GOOGLE_CLIENT_ID = '263863163058-qn6qhkjmdvmlj8f1n4r0kdi4e608usbo.apps.googleusercontent.com',
-    VITE_NETWORK = 'testnet',
+    VITE_NETWORK = DEFAULT_NETWORK,
     VITE_GRAPHQL_URL = `https://graphql.${VITE_NETWORK}.sui.io/graphql`,
     VITE_SUI_RPC_URL = `https://fullnode.${VITE_NETWORK}.sui.io:443`,
     VITE_SERVER_WS_URL = 'ws://localhost:9800/',

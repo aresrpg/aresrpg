@@ -3,8 +3,7 @@
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
-import PINS from '../../../pins.json' with { type: 'json' }
-
+import { resolve_pins } from './pins.ts'
 import type { Pins, SdkNetwork } from './client.ts'
 import { absorb_object, absorb_receipt, type Receipt, type ResolutionCache } from './cache.ts'
 import { kares_coin_type, kares_pins, type KaresPins } from './kares_ptb.ts'
@@ -403,6 +402,6 @@ export const create_kares_reader = (options: Readonly<{ network: SdkNetwork; rpc
       network: options.network,
       baseUrl: options.rpc_url ?? `https://fullnode.${options.network}.sui.io:443`,
     }),
-    options.pins ?? (PINS as Record<string, Pins>)[options.network],
+    resolve_pins(options.network, options.pins),
     options.network
   )

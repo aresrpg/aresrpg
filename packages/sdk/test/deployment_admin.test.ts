@@ -343,8 +343,7 @@ describe('deployment admin', () => {
 
     expect(deployment.package).toBe(package_id)
     expect(deployment.kiosk_package).toBe(id('8'))
-    expect(deployment.item_publisher).toBe(id('5'))
-    expect(deployment.character_publisher).toBe(id('5'))
+    expect(deployment.publisher).toBe(id('5'))
     expect(deployment.version).toEqual({ id: id('4'), shared_version: '8' })
   })
 

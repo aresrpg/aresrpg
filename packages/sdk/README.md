@@ -8,7 +8,7 @@ the same commit, and the test suite is red otherwise (the regen-clean tooth).
 
 Gameplay writes are the primary surface. Narrow wallet, object-reference, and explicit tooltip reads
 remain here when no projection can own them. Content lives in `seed/`; deployment ids live in the
-repo-root `pins.json`. A missing pin throws at the door — never a guess.
+repo-root mainnet `pins.json`. Local builds select their ignored testnet pins explicitly. A missing pin throws at the door — never a guess.
 
 ## The pre-resolved game-object law
 

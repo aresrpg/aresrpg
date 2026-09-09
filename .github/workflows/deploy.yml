@@ -24,6 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
+      VITE_NETWORK: mainnet
+      VITE_GRAPHQL_URL: https://graphql.mainnet.sui.io/graphql
+      VITE_SUI_RPC_URL: https://fullnode.mainnet.sui.io:443
       VERCEL_ORG_ID: team_ir5eY7QCUS7qgcTBq81H89FM
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

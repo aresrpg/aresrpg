@@ -103,7 +103,7 @@ const kiosk_cap = { objectId: id(3), kioskId: id(4), isPersonal: true } as Kiosk
 const game = () => {
   const client = fake_client()
   const signer = new Ed25519Keypair()
-  const sdk = SDK({ client: client as unknown as SuiTransport, signer, pins })
+  const sdk = SDK({ network: 'testnet', client: client as unknown as SuiTransport, signer, pins })
   // the kiosk + its cap are known refs (receipt-fed in production)
   const built: Transaction[] = []
   const execute = sdk.execute.bind(sdk)
@@ -191,6 +191,12 @@ describe('distribution SDK actions', () => {
   })
 
   test('giftcard URLs preserve only the bearer secret and matching network on the official claim host', () => {
+    expect(canonical_zksend_gift_url('http://localhost:5173/claim?network=testnet#$secret', 'testnet')).toBe(
+      'https://my.slush.app/claim?network=testnet#$secret'
+    )
+    expect(() => canonical_zksend_gift_url('http://localhost:5173/claim?network=testnet#$secret', 'mainnet')).toThrow(
+      'belongs to testnet'
+    )
     expect(canonical_zksend_gift_url('https://aresrpg.world/gift?network=testnet#$secret', 'testnet')).toBe(
       'https://my.slush.app/claim?network=testnet#$secret'
     )

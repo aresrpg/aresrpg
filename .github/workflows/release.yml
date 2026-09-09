@@ -7,21 +7,16 @@
 # The tag commit is already an edge commit produced by `bun pm version`; Actions never creates or
 # moves release tags.
 name: release
-run-name: prepare ${{ github.ref_name }} ${{ inputs.network }} ${{ inputs.request_id }}
+run-name: prepare ${{ github.ref_name }} mainnet ${{ inputs.request_id }}
 on:
   workflow_dispatch:
     inputs:
-      network:
-        description: Sui network for this release
-        required: true
-        type: choice
-        options: [testnet, mainnet]
       request_id:
         description: Release recovery identity
         required: true
         type: string
 env:
-  SUI_NETWORK: ${{ inputs.network }}
+  SUI_NETWORK: mainnet
 permissions:
   contents: write
   actions: read # the prod-deploy job polls the gate run's conclusion
@@ -41,7 +36,7 @@ jobs:
           ACTOR: ${{ github.actor }}
         run: |
           test "$ACTOR_ID" = "11330271" && test "$ACTOR" = "Sceat"
-          case "$SUI_NETWORK" in mainnet|testnet) ;; *) exit 1 ;; esac
+          test "$SUI_NETWORK" = mainnet
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # tags visible for the idempotence check
@@ -88,9 +83,9 @@ jobs:
       VERCEL_PROJECT_ID: prj_sBuXZOg6DJTciA0SYyTQZhESAekP
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       GH_TOKEN: ${{ github.token }}
-      VITE_NETWORK: ${{ inputs.network }}
-      VITE_GRAPHQL_URL: https://graphql.${{ inputs.network }}.sui.io/graphql
-      VITE_SUI_RPC_URL: https://fullnode.${{ inputs.network }}.sui.io:443
+      VITE_NETWORK: mainnet
+      VITE_GRAPHQL_URL: https://graphql.mainnet.sui.io/graphql
+      VITE_SUI_RPC_URL: https://fullnode.mainnet.sui.io:443
     steps:
       - name: wait for the gate to conclude GREEN on this sha (red cannot deploy)
         run: |
@@ -215,8 +210,8 @@ jobs:
             indexer=$(jq -r .indexer "$RUNNER_TEMP/runtime-plan.json")
             frontend=$(jq -r .frontend "$RUNNER_TEMP/runtime-plan.json")
             # Build pins are runtime inputs; ledgers are not. A network switch also needs a new frontend.
-            git show "$previous_tag:pins.json" | jq --arg n "$SUI_NETWORK" '.[$n] | del(.seed_ledgers, .seed_addresses)' > "$RUNNER_TEMP/before-pins.json"
-            git show "$GITHUB_SHA:pins.json" | jq --arg n "$SUI_NETWORK" '.[$n] | del(.seed_ledgers, .seed_addresses)' > "$RUNNER_TEMP/after-pins.json"
+            git show "$previous_tag:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/before-pins.json"
+            git show "$GITHUB_SHA:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/after-pins.json"
             if ! cmp -s "$RUNNER_TEMP/before-pins.json" "$RUNNER_TEMP/after-pins.json"; then frontend=true; fi
             previous_run=$(gh run list --workflow release.yml --commit "$(git rev-list -n 1 "$previous_tag")" --status success --limit 1 --json databaseId --jq '.[0].databaseId // ""')
             if [ -n "$previous_run" ] && gh run download "$previous_run" --name "production-release-$previous_tag" --dir "$RUNNER_TEMP/previous-release"; then
@@ -224,7 +219,7 @@ jobs:
               jq -e --arg sha "$(git rev-list -n 1 "$previous_tag")" --arg version "${previous_tag#v}" \
                 --arg repository "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" '
                 .schema == 1 and .status == "prepared" and .source_sha == $sha and .version == $version and
-                (.network == "testnet" or .network == "mainnet") and
+                (.network == "mainnet") and
                 .images.server.repository == ($repository + "/server") and
                 .images.indexer.repository == ($repository + "/indexer") and
                 ([.images.server.digest, .images.indexer.digest] |
@@ -477,7 +472,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/production-release"
           jq -e --arg network "$SUI_NETWORK" '
-            .[$network] as $pins |
+            select(.network == $network) as $pins |
             [
               $pins.math_package_original, $pins.math_package,
               $pins.control_package_original, $pins.control_package,
@@ -486,7 +481,7 @@ jobs:
               $pins.package_original, $pins.package
             ] | all(type == "string" and test("^0x[0-9a-fA-F]+$"))
           ' pins.json >/dev/null || { echo "::error::release requires complete five-package pins"; exit 1; }
-          jq --arg network "$SUI_NETWORK" '.[$network]' pins.json > "$RUNNER_TEMP/network-pins.json"
+          jq --arg network "$SUI_NETWORK" 'select(.network == $network)' pins.json > "$RUNNER_TEMP/network-pins.json"
           jq -n \
             --arg version "$VERSION" \
             --arg network "$SUI_NETWORK" \

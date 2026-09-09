@@ -5,7 +5,10 @@ import { afterEach, beforeEach, expect, test } from 'bun:test'
 
 import { create_giftcard_attempts } from '../../src/modules/giftcard_attempts.ts'
 import { create_app } from '../../src/store.ts'
-import { rolled_item_types } from '../../src/modules/claims.ts'
+
+import { TEMPLATE_ID, use_template_fixture } from './fixture.ts'
+
+use_template_fixture()
 
 const browser_keys = ['location', 'history', 'sessionStorage', 'localStorage'] as const
 const descriptors = browser_keys.map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const)
@@ -33,7 +36,7 @@ afterEach(() => {
 const flush = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 }
-const [template] = [...rolled_item_types()].find(([, item_type]) => item_type === 'sui_crate')!
+const template = TEMPLATE_ID
 const card = { id: '0xcard', template, amount: 1 }
 const boot = (wallet: unknown, cards = [card]) => {
   const app = create_app()

@@ -98,8 +98,6 @@ export type SeedAdminSession = Readonly<{
   apply_changes: (ledger: SeedLedger, hooks: SeedApplyHooks) => Promise<SeedApplyResult>
   /** the ledger entries covering rows the publish lane just created — persisted by the caller */
   created_ledger: (ledger: SeedLedger, batch: string) => Promise<SeedLedger>
-  /** Every currently discoverable derived address; pins.json retains historical entries. */
-  address_book: () => Promise<Readonly<Record<string, string>>>
   /** the endgame: permanently freezes EVERY content door — cold-key-only on chain, irreversible */
   freeze_forever: () => Promise<Readonly<{ digest: string; snapshot: SeedAdminSnapshot }>>
   release?: () => Promise<void>
@@ -384,20 +382,10 @@ export const create_seed_admin = async ({
     ]
     return Object.freeze({ ...view, errors: Object.freeze(errors) })
   }
-  const address_book = async (): Promise<Readonly<Record<string, string>>> => {
-    await hydrate_ids(sync_addresses)
-    const entries = sync_rows.flatMap((row) =>
-      row.addresses
-        .filter(exists)
-        .map((address) => [address, row.domain === 'board' ? 'fight board catalog' : row.label] as const)
-    )
-    return Object.freeze(Object.fromEntries(entries))
-  }
 
   return Object.freeze({
     refresh,
     check_changes,
-    address_book,
     read_frozen,
     apply_changes: async (ledger, hooks) => {
       if (gift_item_type !== undefined) throw new Error('Gift issuance cannot update content')

@@ -981,7 +981,7 @@
       "receipt_events > visit": [10]
     },
     "packages/sdk/src/client.ts": {
-      "SDK": [14],
+      "SDK": [12],
       "SDK > failure_of": [18]
     },
     "packages/sdk/src/ptb.ts": {

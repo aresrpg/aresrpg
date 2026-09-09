@@ -60,6 +60,7 @@ describe('admin wallet selection', () => {
     const auth = create_wallet_auth({
       graphql_url: 'https://example.invalid/graphql',
       network: 'testnet',
+      pins: {},
     })
     const selectable = auth.wallets().find(({ name }) => name === wallet.name)
     if (!selectable) throw new Error('The test wallet was not discovered')
@@ -109,7 +110,7 @@ describe('admin wallet selection', () => {
       },
     } as unknown as Wallet
     unregister = getWallets().register(wallet)
-    const auth = create_wallet_auth({ graphql_url: 'https://example.invalid/graphql', network: 'testnet' })
+    const auth = create_wallet_auth({ graphql_url: 'https://example.invalid/graphql', network: 'testnet', pins: {} })
     const selectable = auth.wallets().find(({ name }) => name === wallet.name)
     if (!selectable) throw new Error('The silent test wallet was not discovered')
 
