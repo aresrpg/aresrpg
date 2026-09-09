@@ -64,7 +64,13 @@ const Fixture = () => {
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/game_state', frozen: false } })
     dispatch_app({
       type: 'server/packet',
-      packet: { type: 'packet/server_info', online: 1, indexing_lag: 0, current_epoch: '3' },
+      packet: {
+        type: 'packet/server_info',
+        online: 1,
+        indexing_lag: 0,
+        current_epoch: '3',
+        chain_timestamp_ms: 1_000_000,
+      },
     })
     void load_app_copy('en').then(set_copy).catch(console.error)
   }, [wallet])

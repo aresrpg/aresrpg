@@ -22,11 +22,17 @@ export default {
         pubsub.mesh.cluster_online(),
         indexing_health().catch((error: Error) => {
           log.warn({ error: error.message }, 'indexing health failed')
-          return Object.freeze({ lag: null, epoch: null })
+          return Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null })
         }),
       ])
         .then(([online, health]) =>
-          send({ type: 'packet/server_info', online, indexing_lag: health.lag, current_epoch: health.epoch })
+          send({
+            type: 'packet/server_info',
+            online,
+            indexing_lag: health.lag,
+            current_epoch: health.epoch,
+            chain_timestamp_ms: health.chain_timestamp_ms,
+          })
         )
         .catch((error: Error) => log.warn({ error: error.message }, 'cluster count failed'))
     const timer = setInterval(() => void push(), INFO_INTERVAL_MS)

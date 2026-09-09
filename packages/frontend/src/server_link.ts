@@ -147,9 +147,11 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
           if (packet.type === 'packet/connection_accepted') {
             accepted = true
             retry_ms = BACKOFF_START_MS
+            start_latency()
           }
+          if (packet.type === 'packet/server_info')
+            dispatch({ type: 'clock/observed', chain_ms: packet.chain_timestamp_ms, received_ms: clock_ms() })
           dispatch({ type: 'server/packet', packet })
-          if (packet.type === 'packet/connection_accepted') start_latency()
         } catch (error) {
           console.warn('Malformed server frame ignored.', error)
         }

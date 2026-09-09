@@ -33,6 +33,7 @@ import navigation, {
   type NavigationState,
 } from './modules/navigation.ts'
 import session, { initial_session_state, type SessionInput, type SessionState } from './modules/session.ts'
+import chain_clock, { type ChainClock, type ChainClockInput } from './modules/chain_clock.ts'
 import simulator, { initial_simulator_state, type SimulatorInput, type SimulatorState } from './modules/simulator.ts'
 import settings, { type SettingsInput } from './modules/settings.ts'
 import world, { initial_world_state, type WorldInput, type WorldState } from './modules/world.ts'
@@ -67,6 +68,7 @@ import external_wallet, {
 } from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
+  chain_clock: ChainClock
   session: SessionState
   external_wallet: ExternalWalletState
   navigation: NavigationState
@@ -96,6 +98,7 @@ export type AppState = Readonly<{
 }>
 
 export type AppInput =
+  | ChainClockInput
   | SessionInput
   | ExternalWalletInput
   | NavigationInput
@@ -148,6 +151,7 @@ export type AppModule = Readonly<{
 // Registration owns observer availability. Keep reducer order explicit: session folds first.
 const MODULE_REGISTRY = [
   [session, 'player'],
+  [chain_clock, 'player'],
   [external_wallet, 'player'],
   [navigation, 'player'],
   [settings, 'shared'],
@@ -190,6 +194,7 @@ export const DEMO_APP_MODULES = Object.freeze(
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
+    chain_clock: null,
     session: initial_session_state(),
     external_wallet: initial_external_wallet_state(),
     navigation: initial_navigation_state(),

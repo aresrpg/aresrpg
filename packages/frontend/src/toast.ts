@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { report_error, type ReportContext } from './reporting.ts'
+
 export const TOAST_CONTAINER_CLASS =
   'fixed top-[max(1rem,var(--safe-top))] right-[max(1rem,var(--safe-right))] z-[300] flex max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))] max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))] flex-col items-end gap-2 overflow-hidden'
 
@@ -68,7 +70,8 @@ export const toast = Object.freeze({
     return () => void listeners.delete(listener)
   },
   remove,
-  add: (message: unknown, type: Exclude<ToastType, 'pending'> = 'error'): void => {
+  add: (message: unknown, type: Exclude<ToastType, 'pending'> = 'error', context?: ReportContext): void => {
+    if (type === 'error') report_error(message, context)
     const text = message_of(message)
     if (notice_gas_empty(type, text)) return
     const id = crypto.randomUUID()
@@ -76,6 +79,7 @@ export const toast = Object.freeze({
     setTimeout(() => remove(id), 5_000)
   },
   rich: (message: string, parts: readonly ToastPart[], type: Exclude<ToastType, 'pending'> = 'info'): void => {
+    if (type === 'error') report_error(message)
     const id = crypto.randomUUID()
     show(Object.freeze({ id, message, parts: Object.freeze(parts), type }))
     setTimeout(() => remove(id), 5_000)
@@ -85,6 +89,7 @@ export const toast = Object.freeze({
     type: Exclude<ToastType, 'success'>,
     ...actions: readonly ToastAction[]
   ): (() => void) => {
+    if (type === 'error') report_error(message)
     const id = crypto.randomUUID()
     show(Object.freeze({ id, message, type, actions: Object.freeze(actions), persistent: true }))
     return () => remove(id)
@@ -93,6 +98,7 @@ export const toast = Object.freeze({
     const id = crypto.randomUUID()
     show(Object.freeze({ id, message, type: 'pending', persistent: true }))
     const finish = (next: unknown, type: 'error' | 'success', icon?: string): void => {
+      if (type === 'error') report_error(next)
       const text = message_of(next)
       if (notice_gas_empty(type, text)) {
         remove(id)

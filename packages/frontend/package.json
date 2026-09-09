@@ -20,6 +20,7 @@
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
     "@aresrpg/sdk": "workspace:*",
+    "@sentry/react": "^10.65.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^1.40.0",
@@ -41,6 +42,7 @@
     "yaml": "^2.9.0"
   },
   "exports": {
+    "./reporting": "./src/reporting.ts",
     "./finance": "./src/kares/index.ts",
     "./finance/runtime": "./src/kares/useFinance.ts",
     "./wallet/runtime": "./src/wallet/runtime.ts",

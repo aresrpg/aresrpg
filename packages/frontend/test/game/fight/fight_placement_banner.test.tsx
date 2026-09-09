@@ -1,10 +1,38 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, test } from 'bun:test'
+import { expect, spyOn, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { FightPlacementBanner } from '../../../src/game/fight/FightPlacementBanner.tsx'
+
+test('an ahead-of-time device cannot expose Force start before a chain clock sample arrives', () => {
+  const wall_clock = spyOn(Date, 'now').mockReturnValue(3_661_000)
+  try {
+    const html = renderToStaticMarkup(
+      <FightPlacementBanner
+        can_forfeit={false}
+        deadline={61_000n}
+        locked={false}
+        on_force_start={() => undefined}
+        on_forfeit={() => undefined}
+        on_ready={() => undefined}
+        on_ready_all={() => undefined}
+        ready={false}
+        ready_all={false}
+        ready_all_disabled={false}
+        ready_all_progress={null}
+        sides_manned
+        starting={false}
+        text={{ placement_ready: 'Ready', placement_force_button: 'Force start' }}
+      />
+    )
+    expect(html).not.toContain('Force start')
+    expect(html).toContain('Ready')
+  } finally {
+    wall_clock.mockRestore()
+  }
+})
 
 test('ready all exposes confirmed transaction progress in its button and progressbar', () => {
   const html = renderToStaticMarkup(

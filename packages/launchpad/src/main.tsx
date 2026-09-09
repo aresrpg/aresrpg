@@ -3,12 +3,15 @@
 
 import { createRoot } from 'react-dom/client'
 import { FinanceLocale } from '@aresrpg/frontend/finance'
+import { init_reporting, react_error_handlers } from '@aresrpg/frontend/reporting'
 import { inject } from '@vercel/analytics'
 
 import favicon from '../../frontend/public/logo.png'
 
 import { LaunchPage } from './LaunchPage.tsx'
 import './launch.css'
+
+init_reporting()
 
 if (import.meta.env.MODE === 'production') {
   inject({
@@ -19,7 +22,7 @@ if (import.meta.env.MODE === 'production') {
 
 document.querySelector('link[rel="icon"]')!.setAttribute('href', favicon)
 
-const root = createRoot(document.getElementById('root')!)
+const root = createRoot(document.getElementById('root')!, react_error_handlers)
 root.render(
   <FinanceLocale
     render={(copy, locale, change_locale) => (

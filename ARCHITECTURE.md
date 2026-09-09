@@ -124,6 +124,11 @@ The frontend production entry initializes Vercel Web Analytics and Speed Insight
 game and wallet-finance routes. The independent launchpad entry initializes Vercel Web Analytics.
 Telemetry strips URL queries and fragments before sending, so
 claim bearer keys never become analytics data. Development and browser-test builds omit the trackers.
+Both entries initialize the shared errors-only Sentry reporter. Caught toast failures retain their raw
+exception before translation; React root failures and boot failures use the same reporter. The outbound
+filter removes credentials and bearer URL data, and Move aborts group by package, module, function and
+code. Deployed builds require a public Sentry DSN and label events with their network, deployment target
+and available commit SHA. Development and browser-test builds do not initialize remote reporting.
 
 ## Chain write law
 
@@ -243,6 +248,10 @@ completes. Connection closure terminates its reducer and subscription lifetime, 
 acquisitions. Unverified transports and verifiers share one finite admission budget; a claimed
 address grants no capacity exemption. After readiness, graph events and narrow reads push deltas. The server validates identity, locality, rate,
 and relay voice, but it never becomes game authority.
+The existing server-info heartbeat also carries the fullnode's latest checkpoint timestamp. The
+frontend clock reducer retains that chain sample with its monotonic receipt time. Placement countdowns
+interpolate between fresh samples; Force start requires an observed chain timestamp past the deadline.
+Device wall-clock changes cannot unlock placement, and stale or disconnected samples cannot authorize it.
 
 Reader processes boot independently of projection freshness. The server pushes its cached
 checkpoint lag every five seconds; a connected client blocks interaction while freshness is

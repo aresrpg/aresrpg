@@ -6,7 +6,8 @@
 export const INDEXED_CHECKPOINT_KEY = 'idx:checkpoint:latest'
 
 export type IndexedState = Readonly<{ sequence_number: number; epoch: string }>
-export type IndexingHealth = Readonly<{ lag: number | null; epoch: string | null }>
+export type ChainCheckpoint = Readonly<{ sequence_number: number; timestamp_ms: number }>
+export type IndexingHealth = Readonly<{ lag: number | null; epoch: string | null; chain_timestamp_ms: number | null }>
 
 export const parse_indexed_state = (raw: string | null): IndexedState | null => {
   if (raw === null) return null
@@ -37,7 +38,7 @@ export const checkpoint_lag = (chain_checkpoint: number, indexed_checkpoint: num
   Math.max(0, chain_checkpoint - indexed_checkpoint)
 
 type IndexingHealthOptions = Readonly<{
-  chain_checkpoint: () => Promise<number>
+  chain_checkpoint: () => Promise<ChainCheckpoint>
   indexed_state: () => Promise<IndexedState | null>
   now?: () => number
   cache_ms?: number
@@ -59,8 +60,9 @@ export const create_indexing_health = ({
 
     const request = Promise.all([chain_checkpoint(), indexed_state()]).then(([chain, indexed]) =>
       Object.freeze({
-        lag: indexed === null ? null : checkpoint_lag(chain, indexed.sequence_number),
+        lag: indexed === null ? null : checkpoint_lag(chain.sequence_number, indexed.sequence_number),
         epoch: indexed?.epoch ?? null,
+        chain_timestamp_ms: chain.timestamp_ms,
       })
     )
     pending = request

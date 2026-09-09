@@ -1,20 +1,29 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 
 import type { ReadyAllProgress } from '../../modules/fight.ts'
+import { chain_deadline_reached, chain_now } from '../../modules/chain_clock.ts'
+import { useAppStore } from '../../store.ts'
 
 const BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
 
-const usePlacementSeconds = (deadline: bigint | null): number | null => {
-  const [now, set_now] = useState(() => Date.now())
+const usePlacementClock = (deadline: bigint | null) => {
+  const clock = useAppStore((state) => state.chain_clock)
+  const [, refresh] = useReducer((tick: number) => tick + 1, 0)
   useEffect(() => {
     if (deadline === null) return undefined
-    const timer = setInterval(() => set_now(Date.now()), 1_000)
+    const timer = setInterval(refresh, 1_000)
     return () => clearInterval(timer)
   }, [deadline])
-  return deadline === null ? null : Math.max(0, Math.ceil((Number(deadline) - now) / 1_000))
+  const monotonic_ms = performance.now()
+  const now = chain_now(clock, monotonic_ms)
+  return {
+    seconds: deadline === null || now === null ? null : Math.max(0, Math.ceil((Number(deadline) - now) / 1_000)),
+    force_ready: chain_deadline_reached(clock, deadline, monotonic_ms),
+    observed_ms: BigInt(clock?.chain_ms ?? 0),
+  }
 }
 
 const placement_prompt = (text: Readonly<Record<string, string>>, sides_manned: boolean, stalled: boolean): string =>
@@ -113,11 +122,11 @@ export const FightPlacementBanner = ({
   can_forfeit: boolean
   on_ready: () => void
   on_ready_all: () => void
-  on_force_start: () => void
+  on_force_start: (observed_ms: bigint) => void
   on_forfeit: () => void
 }>) => {
-  const seconds = usePlacementSeconds(deadline)
-  const stalled = sides_manned && ready !== null && seconds === 0
+  const { seconds, force_ready, observed_ms } = usePlacementClock(deadline)
+  const stalled = sides_manned && ready !== null && force_ready
   return (
     <div className="fight-hud__placement" role="status">
       <span>{text.placement_title}</span>
@@ -139,7 +148,12 @@ export const FightPlacementBanner = ({
         />
       )}
       {stalled && (
-        <button className={`btn-gold ${BUTTON}`} disabled={locked} onClick={on_force_start} type="button">
+        <button
+          className={`btn-gold ${BUTTON}`}
+          disabled={locked}
+          onClick={() => on_force_start(observed_ms)}
+          type="button"
+        >
           {text.placement_force_button}
         </button>
       )}

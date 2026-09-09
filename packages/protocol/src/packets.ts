@@ -784,7 +784,12 @@ export type ServerPackets = {
   'packet/trade_destroyed': { trade: string }
 
   // ── cluster + indexer heartbeat (5s cadence, decorrelated from user activity) ──
-  'packet/server_info': { online: number; indexing_lag: number | null; current_epoch: string | null }
+  'packet/server_info': {
+    online: number
+    indexing_lag: number | null
+    current_epoch: string | null
+    chain_timestamp_ms: number | null
+  }
   /** Version 0 is the global emergency brake; null means the projection is not available yet. */
   'packet/game_state': { frozen: boolean | null }
   'packet/character_owner_response': { id: number; character_id: string; name: string; owner: string }

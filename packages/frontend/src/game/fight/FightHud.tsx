@@ -364,12 +364,12 @@ export const FightHud = ({
         <FightPlacementBanner
           can_forfeit={view.can_forfeit}
           deadline={view.placement_deadline_ms}
-          on_force_start={() =>
+          on_force_start={(observed_ms) =>
             dispatch_app({
               type: 'fight/input',
               fight: command_fight,
               origin: 'local',
-              input: { type: 'start', observed_ms: BigInt(Date.now()) },
+              input: { type: 'start', observed_ms },
             })
           }
           on_forfeit={() =>

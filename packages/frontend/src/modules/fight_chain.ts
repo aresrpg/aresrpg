@@ -227,7 +227,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         const rollback = confirmed.get(fight)
         if (rollback) dispatch({ type: 'fight/restored', checkpoint: rollback })
         on_failure?.()
-        toast.add(error)
+        toast.add(error, 'error', { area: 'fight', action: 'ready', fight })
       })
       .finally(() => {
         in_flight.delete(fight)
@@ -369,7 +369,14 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         const rollback = confirmed.get(fight_id)
         if (rollback) dispatch({ type: 'fight/restored', checkpoint: rollback })
         if (submitted_buffer?.actions.length) dispatch({ type: 'fight/resync', fight: fight_id })
-        toast.add(error)
+        toast.add(error, 'error', {
+          area: 'fight',
+          action: input.type,
+          fight: fight_id,
+          chain_ms: get_state().chain_clock?.chain_ms,
+          device_ms: Date.now(),
+          placement_ms: String(checkpoint.contract.placement_ms),
+        })
       })
       .finally(() => {
         in_flight.delete(fight_id)

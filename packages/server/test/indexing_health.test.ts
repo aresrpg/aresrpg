@@ -31,7 +31,7 @@ describe('indexing health', () => {
       chain_checkpoint: async () => {
         chain_reads += 1
         await Promise.resolve()
-        return 120
+        return { sequence_number: 120, timestamp_ms: 1_000_000 }
       },
       indexed_state: async () => {
         indexed_reads += 1
@@ -42,23 +42,23 @@ describe('indexing health', () => {
     })
 
     expect(await Promise.all([health(), health()])).toEqual([
-      { lag: 20, epoch: '7' },
-      { lag: 20, epoch: '7' },
+      { lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 },
+      { lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 },
     ])
-    expect(await health()).toEqual({ lag: 20, epoch: '7' })
+    expect(await health()).toEqual({ lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 })
     expect({ chain_reads, indexed_reads }).toEqual({ chain_reads: 1, indexed_reads: 1 })
 
     now_ms += 4_001
-    expect(await health()).toEqual({ lag: 20, epoch: '7' })
+    expect(await health()).toEqual({ lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 })
     expect({ chain_reads, indexed_reads }).toEqual({ chain_reads: 2, indexed_reads: 2 })
   })
 
   test('has no health claim before the indexer has committed a checkpoint', async () => {
     const health = create_indexing_health({
-      chain_checkpoint: async () => 120,
+      chain_checkpoint: async () => ({ sequence_number: 120, timestamp_ms: 1_000_000 }),
       indexed_state: async () => null,
     })
 
-    expect(await health()).toEqual({ lag: null, epoch: null })
+    expect(await health()).toEqual({ lag: null, epoch: null, chain_timestamp_ms: 1_000_000 })
   })
 })

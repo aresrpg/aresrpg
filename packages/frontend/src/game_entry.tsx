@@ -10,6 +10,7 @@ import { load_game_settings } from './game/core/settings.ts'
 import { load_locale } from './i18n/locale.ts'
 import { load_app_copy } from './i18n/copy.ts'
 import { register_service_worker } from './pwa.ts'
+import { react_error_handlers, report_error } from './reporting.ts'
 import {
   MOBILE_VIEWPORT_QUERY,
   mobile_app_unavailable,
@@ -21,7 +22,7 @@ export const boot_game = (): void => {
   initialize_app_store(load_game_settings(env.engine_quality, requested_quality))
   const locale = load_locale()
   dispatch_app({ type: 'locale/changed', locale })
-  const root = createRoot(document.getElementById('root')!)
+  const root = createRoot(document.getElementById('root')!, react_error_handlers)
   const demo_route = globalThis.location.pathname.replace(/\/+$/, '') === '/demo'
 
   const boot = async (): Promise<void> => {
@@ -62,7 +63,7 @@ export const boot_game = (): void => {
   void register_service_worker()
     .then(boot)
     .catch((error: unknown) => {
-      console.error('The application failed to boot.', error)
+      report_error(error, { area: 'boot' })
       root.render(<main className="fixed inset-0 bg-bg" />)
     })
 }

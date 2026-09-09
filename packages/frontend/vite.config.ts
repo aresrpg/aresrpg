@@ -13,6 +13,7 @@ import { parse } from 'yaml'
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
 import { resolve_env, type PublicEnv } from './src/env.ts'
+import { require_reporting_dsn } from './src/reporting_config.ts'
 import { display_assets_plugin } from './display_assets.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
@@ -57,8 +58,13 @@ const yaml_plugin = (): Plugin => ({
 export default defineConfig(({ mode }) => {
   // Env is PER-DEPLOYABLE (owner 2026-08-16): this package's own .env, never a repo-root file.
   const loaded_env = loadEnv(mode, frontend_dir, '')
+  if (mode === 'production') require_reporting_dsn(loaded_env)
   const env = resolve_env(loaded_env)
   return {
+    define: {
+      'import.meta.env.VITE_DEPLOY_ENV': JSON.stringify(loaded_env.VERCEL_ENV ?? 'local'),
+      'import.meta.env.VITE_RELEASE': JSON.stringify(loaded_env.VERCEL_GIT_COMMIT_SHA || loaded_env.GITHUB_SHA || ''),
+    },
     plugins: [
       browser_pins_plugin(undefined, env.network),
       html_env_plugin(env),

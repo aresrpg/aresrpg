@@ -3,10 +3,11 @@
 
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import { parse } from 'yaml'
 
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
+import { require_reporting_dsn } from '../frontend/src/reporting_config.ts'
 
 const yaml_plugin = (): Plugin => ({
   name: 'aresrpg-launch-yaml',
@@ -14,8 +15,16 @@ const yaml_plugin = (): Plugin => ({
     id.endsWith('.yaml') ? { code: `export default ${JSON.stringify(parse(source))}` } : null,
 })
 
-export default defineConfig({
-  plugins: [browser_pins_plugin(), yaml_plugin(), react(), tailwindcss()],
-  optimizeDeps: { exclude: ['@aresrpg/sdk', '@aresrpg/frontend'] },
-  build: { outDir: 'dist', emptyOutDir: true },
+export default defineConfig(({ mode }) => {
+  const source = loadEnv(mode, import.meta.dirname, '')
+  if (mode === 'production') require_reporting_dsn(source)
+  return {
+    define: {
+      'import.meta.env.VITE_DEPLOY_ENV': JSON.stringify(source.VERCEL_ENV ?? 'local'),
+      'import.meta.env.VITE_RELEASE': JSON.stringify(source.VERCEL_GIT_COMMIT_SHA || source.GITHUB_SHA || ''),
+    },
+    plugins: [browser_pins_plugin(), yaml_plugin(), react(), tailwindcss()],
+    optimizeDeps: { exclude: ['@aresrpg/sdk', '@aresrpg/frontend'] },
+    build: { outDir: 'dist', emptyOutDir: true },
+  }
 })

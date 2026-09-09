@@ -4,11 +4,14 @@
 import { inject } from '@vercel/analytics'
 import { injectSpeedInsights as inject_speed_insights } from '@vercel/speed-insights'
 
+import { init_reporting, report_error } from './reporting.ts'
+
 import './tailwind.css'
 
 const boot = async (): Promise<void> => {
   // Enoki's opener reads this popup's OAuth result. App routing would erase it.
   if (globalThis.location.pathname.replace(/\/+$/, '') === '/enoki') return
+  init_reporting()
   if (import.meta.env.MODE === 'production') {
     // Claim fragments carry bearer keys; telemetry only needs the page path.
     const before_send = <T extends { readonly url: string }>(event: T): T => ({
@@ -22,4 +25,4 @@ const boot = async (): Promise<void> => {
   boot_game()
 }
 
-void boot().catch((error: unknown) => console.error('Application entry failed.', error))
+void boot().catch((error: unknown) => report_error(error, { area: 'entry' }))

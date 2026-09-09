@@ -17,7 +17,7 @@ type Network = 'testnet' | 'mainnet'
 type PackagePublication = Readonly<{
   package: string
   original_package?: string
-  upgrade_cap: string
+  upgrade_cap?: string
 }>
 type CommandResult = Readonly<{ stdout: string; stderr: string }>
 type Execute = (command: string, args: readonly string[], cwd: string) => Promise<CommandResult>

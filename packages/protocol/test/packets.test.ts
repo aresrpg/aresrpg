@@ -276,13 +276,20 @@ describe('the wire contract', () => {
   test('the trusted server stream needs JSON syntax, not duplicate runtime schemas', () => {
     expect(
       parse_server_packet(
-        JSON.stringify({ type: 'packet/server_info', online: 12, indexing_lag: 4, current_epoch: '9' })
+        JSON.stringify({
+          type: 'packet/server_info',
+          online: 12,
+          indexing_lag: 4,
+          current_epoch: '9',
+          chain_timestamp_ms: 1_000_000,
+        })
       )
     ).toEqual({
       type: 'packet/server_info',
       online: 12,
       indexing_lag: 4,
       current_epoch: '9',
+      chain_timestamp_ms: 1_000_000,
     })
     expect(parse_server_packet(JSON.stringify({ type: 'packet/anything', value: true })) as unknown).toEqual({
       type: 'packet/anything',

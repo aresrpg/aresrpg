@@ -199,7 +199,13 @@ describe('app state', () => {
   test('server facts and display settings fold through the same reducer', () => {
     const online = reduce_app_state(create_state(), {
       type: 'server/packet',
-      packet: { type: 'packet/server_info', online: 42, indexing_lag: 7, current_epoch: '9' },
+      packet: {
+        type: 'packet/server_info',
+        online: 42,
+        indexing_lag: 7,
+        current_epoch: '9',
+        chain_timestamp_ms: 1_000_000,
+      },
     })
     expect(online.session.online).toBe(42)
     expect(online.session.indexing_lag).toBe(7)
@@ -218,7 +224,13 @@ describe('app state', () => {
     const measured = reduce_app_state(admitted, { type: 'link/latency', latency_ms: 42 })
     const indexed = reduce_app_state(measured, {
       type: 'server/packet',
-      packet: { type: 'packet/server_info', online: 42, indexing_lag: 12, current_epoch: '9' },
+      packet: {
+        type: 'packet/server_info',
+        online: 42,
+        indexing_lag: 12,
+        current_epoch: '9',
+        chain_timestamp_ms: 1_000_000,
+      },
     })
     const reconnecting = reduce_app_state(indexed, { type: 'link/failed', error: 'Connection lost' })
 

@@ -486,7 +486,7 @@ describe('market + self stream + heartbeat', () => {
       admin: false,
       graph,
       pubsub,
-      indexing_health: async () => ({ lag: 42, epoch: '9' }),
+      indexing_health: async () => ({ lag: 42, epoch: '9', chain_timestamp_ms: 1_000_000 }),
     })
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/server_info')).toEqual({
@@ -494,6 +494,7 @@ describe('market + self stream + heartbeat', () => {
       online: 7,
       indexing_lag: 42,
       current_epoch: '9',
+      chain_timestamp_ms: 1_000_000,
     })
   })
 
