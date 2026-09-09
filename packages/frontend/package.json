@@ -22,7 +22,7 @@
     "@aresrpg/sdk": "workspace:*",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "lucide-react": "^1.40.0",
+    "lucide-react": "^1.41.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "thinking-orbs": "^0.3.1",
@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
