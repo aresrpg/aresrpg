@@ -4,8 +4,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { dispatch_app, initialize_app_store, observe_app } from './store.ts'
-import { DEMO_APP_MODULES, PLAYER_APP_MODULES } from './app_modules.ts'
+import { dispatch_app, initialize_app_store, observe_app, DEMO_APP_MODULES, PLAYER_APP_MODULES } from './store.ts'
 import { env } from './env.ts'
 import { load_game_settings } from './game/core/settings.ts'
 import { load_locale } from './i18n/locale.ts'

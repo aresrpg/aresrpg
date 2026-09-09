@@ -145,42 +145,48 @@ export type AppModule = Readonly<{
   observe?: (context: AppContext) => void
 }>
 
-const MODULES = Object.freeze([
-  session,
-  external_wallet,
-  navigation,
-  settings,
-  locale,
-  engine,
-  simulator,
-  fight,
-  fight_result,
-  admin,
-  editor,
-  chat,
-  world,
-  duel,
-  fight_chain,
-  claims,
-  marketplace,
-  leaderboards,
-  dungeon,
-  kolizeum,
-  friends,
-  party,
-  run_to,
-  party_follow,
-  trade,
-  runeforge,
-  mastery,
-  distribution,
-  job_level_up,
-]) satisfies readonly AppModule[]
+// Registration owns observer availability. Keep reducer order explicit: session folds first.
+const MODULE_REGISTRY = [
+  [session, 'player'],
+  [external_wallet, 'player'],
+  [navigation, 'player'],
+  [settings, 'shared'],
+  [locale, 'player'],
+  [engine, 'player'],
+  [simulator, 'demo'],
+  [fight, 'shared'],
+  [fight_result, 'player'],
+  [admin, 'player'],
+  [editor, 'demo'],
+  [chat, 'player'],
+  [world, 'player'],
+  [duel, 'player'],
+  [fight_chain, 'player'],
+  [claims, 'player'],
+  [marketplace, 'player'],
+  [leaderboards, 'player'],
+  [dungeon, 'player'],
+  [kolizeum, 'player'],
+  [friends, 'player'],
+  [party, 'player'],
+  [run_to, 'player'],
+  [party_follow, 'player'],
+  [trade, 'player'],
+  [runeforge, 'player'],
+  [mastery, 'player'],
+  [distribution, 'player'],
+  [job_level_up, 'player'],
+] as const satisfies readonly (readonly [AppModule, 'player' | 'demo' | 'shared'])[]
 
+const MODULES = MODULE_REGISTRY.map(([module]) => module)
 export type AppModuleName = (typeof MODULES)[number]['name']
 
-/** Every registered module name — the arming-census seal reads it (app_modules.test.ts). */
-export const MODULE_NAMES = Object.freeze(MODULES.map(({ name }) => name)) as readonly AppModuleName[]
+export const PLAYER_APP_MODULES = Object.freeze(
+  MODULE_REGISTRY.filter(([, runtime]) => runtime !== 'demo').map(([module]) => module.name)
+)
+export const DEMO_APP_MODULES = Object.freeze(
+  MODULE_REGISTRY.filter(([, runtime]) => runtime !== 'player').map(([module]) => module.name)
+)
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({

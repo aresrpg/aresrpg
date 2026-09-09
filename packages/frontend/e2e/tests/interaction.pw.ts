@@ -5,7 +5,9 @@ import { expect, test } from '@playwright/test'
 
 test('native dialogs own focus, unwind nesting and prevent terminal dismissal', async ({ page }) => {
   await page.goto('/e2e/fixtures/interaction.html')
-  await page.getByRole('button', { name: 'Open wallet', exact: true }).click()
+  // Native dialogs restore prior focus; pointer focus differs between browsers.
+  await page.getByRole('button', { name: 'Open wallet', exact: true }).focus()
+  await page.getByRole('button', { name: 'Open wallet', exact: true }).press('Enter')
   const wallet = page.getByRole('dialog', { name: 'Wallet', exact: true })
   for (let index = 0; index < 8; index++) {
     await page.keyboard.press(index % 2 ? 'Shift+Tab' : 'Tab')
@@ -18,13 +20,14 @@ test('native dialogs own focus, unwind nesting and prevent terminal dismissal', 
   }
   await page.evaluate(() => document.querySelector<HTMLInputElement>('input[aria-label=Friends]')!.focus())
   await expect(page.getByRole('textbox', { name: 'Friends', exact: true })).not.toBeFocused()
-  await page.getByRole('button', { name: 'Fund account', exact: true }).click()
+  await page.getByRole('button', { name: 'Fund account', exact: true }).focus()
+  await page.getByRole('button', { name: 'Fund account', exact: true }).press('Enter')
   await expect(page.getByRole('dialog', { name: 'Testnet SUI', exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: 'Testnet SUI', exact: true })).toHaveCount(0)
   await expect(wallet).toBeVisible()
   await expect(page.getByRole('button', { name: 'Fund account', exact: true })).toBeFocused()
-  await page.getByRole('button', { name: 'Fund account', exact: true }).click()
+  await page.getByRole('button', { name: 'Fund account', exact: true }).press('Enter')
   const funding = page.getByRole('dialog', { name: 'Testnet SUI', exact: true })
   await funding.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(funding).toHaveCount(0)

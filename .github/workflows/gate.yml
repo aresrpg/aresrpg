@@ -14,6 +14,7 @@ permissions:
   contents: read
 jobs:
   source:
+    name: TypeScript (lint, types, tests)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -66,7 +67,7 @@ jobs:
         run: bun run lint
       - name: typecheck
         run: bun run typecheck
-      - name: test + native coverage
+      - name: TypeScript tests + coverage
         run: bun run test
   tests_move:
     # The on-chain game's own suite: every Move package must build, test, and retain coverage.
@@ -301,7 +302,14 @@ jobs:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile --ignore-scripts
       - run: bunx playwright install --with-deps ${{ matrix.browser }}
-      - run: bun run test:browser
+      - name: browser compatibility tests
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ] && [ "$BROWSER" = firefox ]; then
+            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed
+          else
+            bun run test:browser
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

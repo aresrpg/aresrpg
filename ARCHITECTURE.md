@@ -96,8 +96,9 @@ Development module reloads retain the same app-store instance for mounted and la
 Stateful core edits restart the app to rebuild reducer and observer lifecycles together.
 
 The player app and `/demo` arm different observers. The player app owns wallet/server effects;
-the demo owns content editing and local simulation. Their arming sets live in
-`packages/frontend/src/app_modules.ts` and are census-tested.
+the demo owns content editing and local simulation. One ordered registry in
+`packages/frontend/src/store.ts` declares each module’s player, demo, or shared observer lifetime.
+Both activation lists derive from that registry; reducers retain the same shared order.
 
 The `/kares` staking route uses the same app entry, navigation reducer and persistent sidebar as
 other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,

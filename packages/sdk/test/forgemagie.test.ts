@@ -4,8 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import { scribe_losses } from '../src/forgemagie.ts'
-
-import fixture from './fixtures/forgemagie.localnet.json'
+import fixture from '../../indexer/tests/forgemagie.localnet.json'
 
 test('captured forging losses retain the fixed stat order and exact amounts', () => {
   const losses = scribe_losses(fixture.parsed_json)

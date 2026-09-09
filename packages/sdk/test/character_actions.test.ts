@@ -12,9 +12,9 @@ import { character_create } from '../src/character.ts'
 import { character_actions as gate_actions } from '../src/character_actions.ts'
 import { fight_actions } from '../src/fight.ts'
 import { item_template_id, recipe_id, world_content_id, world_id, zone_id } from '../src/seed_ids.ts'
+import scribe_fixture from '../../indexer/tests/forgemagie.localnet.json'
 
 import { execution_receipt } from './helpers/execution_receipt.ts'
-import scribe_fixture from './fixtures/forgemagie.localnet.json'
 
 const id = (n: number) => `0x${String(n).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'

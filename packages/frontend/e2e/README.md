@@ -12,6 +12,8 @@ Use installed stable Chrome locally. Install the other pinned browsers with `bun
 CI installs stable Chrome with `bunx playwright install --with-deps chrome`.
 Run `bun run test:browser` from the repository root.
 Set `BROWSER=firefox` or `BROWSER=webkit` to select another browser engine.
+Linux CI runs Firefox headed under Xvfb with software OpenGL because headless Firefox cannot
+create the WebGL2 context needed by the fallback renderer. This is a compatibility check.
 
 The test build includes an isolated canvas entry. It imports the production world controller,
 world-content projection, fight-board projection, and demo crowd loader. It contains no wallet

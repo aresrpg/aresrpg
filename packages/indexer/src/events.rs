@@ -290,10 +290,8 @@ mod tests {
     #[test]
     fn captured_signed_forging_event_routes_its_full_loss_ledger() {
         // Real local-chain transaction and object/version/date provenance live with the bytes.
-        let fixture: serde_json::Value = serde_json::from_str(include_str!(
-            "../../sdk/test/fixtures/forgemagie.localnet.json"
-        ))
-        .unwrap();
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/forgemagie.localnet.json")).unwrap();
         let bytes = hex::decode(fixture["bcs_hex"].as_str().unwrap()).unwrap();
         let routed = route("forgemagie", "RuneScribed", &bytes).unwrap().unwrap();
         assert_eq!(routed.topic, "evt:economy");
