@@ -130,7 +130,7 @@ export type BrowserAuthOptions = Readonly<{
 }>
 export type WalletAuthOptions = Pick<BrowserAuthOptions, 'graphql_url' | 'network' | 'rpc_url' | 'pins'>
 
-export type OperatorWalletContext = Readonly<{
+export type AdminWalletContext = Readonly<{
   account: WalletAccount
   network: BrowserAuthOptions['network']
   read_client: SuiGraphQLClient
@@ -139,11 +139,11 @@ export type OperatorWalletContext = Readonly<{
   sign_transaction: TransactionSigner
 }>
 
-const operator_wallet_contexts = new WeakMap<AuthSession, OperatorWalletContext>()
+const admin_wallet_contexts = new WeakMap<AuthSession, AdminWalletContext>()
 
-export const operator_wallet_context = (session: AuthSession): OperatorWalletContext => {
-  const context = operator_wallet_contexts.get(session)
-  if (!context) throw new Error('The wallet session has no operator context')
+export const admin_wallet_context = (session: AuthSession): AdminWalletContext => {
+  const context = admin_wallet_contexts.get(session)
+  if (!context) throw new Error('The wallet session has no administration context')
   return context
 }
 
@@ -302,7 +302,7 @@ const create_wallet_session = (
     on_invalidated: binding.on_invalidated,
     disconnect: binding.disconnect,
   })
-  operator_wallet_contexts.set(
+  admin_wallet_contexts.set(
     session,
     Object.freeze({ account, network, read_client: client, resolution_client, sdk, sign_transaction })
   )

@@ -5,8 +5,8 @@ import { getWallets, type Wallet } from '@mysten/wallet-standard'
 import type { Transaction } from '@mysten/sui/transactions'
 import { normalizeSuiObjectId } from '@mysten/sui/utils'
 
-import { create_wallet_auth, operator_wallet_context } from '../src/auth.ts'
-import { as_operator_session } from '../src/operator_auth.ts'
+import { create_wallet_auth, admin_wallet_context } from '../src/auth.ts'
+import { as_admin_session } from '../src/admin_auth.ts'
 
 import { digest, id } from './helpers/transport.ts'
 
@@ -40,7 +40,7 @@ test('setup seals its original capability atomically and rejects a foreign or up
     const selected = auth.wallets().find(({ name }) => name === wallet.name)!
     await selected.authorize()
     const session = await selected.connect(account.address)
-    const context = operator_wallet_context(session)
+    const context = admin_wallet_context(session)
     const read = spyOn(context.read_client.core, 'getObjects').mockResolvedValue({
       objects: [{ objectId: id(101), json: { package: id(100), version: '1', policy: 0 } }],
     } as never)
@@ -56,7 +56,7 @@ test('setup seals its original capability atomically and rejects a foreign or up
       return { Transaction: { digest: 'immutable' } }
     })
     try {
-      const operator = as_operator_session(session)
+      const admin = as_admin_session(session)
       const terms = {
         package: id(100),
         upgrade_cap: id(101),
@@ -70,7 +70,7 @@ test('setup seals its original capability atomically and rejects a foreign or up
         team: id(202),
         community: id(203),
       }
-      await operator.setup_kares(terms)
+      await admin.setup_kares(terms)
       const data = (submitted as Transaction | null)!.getData()
       expect(data.commands).toHaveLength(2)
       expect(data.commands[1].MoveCall).toMatchObject({
@@ -84,11 +84,11 @@ test('setup seals its original capability atomically and rejects a foreign or up
       read.mockResolvedValue({
         objects: [{ objectId: id(101), json: { package: id(999), version: '1', policy: 0 } }],
       } as never)
-      await expect(operator.setup_kares(terms)).rejects.toThrow('original, never-upgraded')
+      await expect(admin.setup_kares(terms)).rejects.toThrow('original, never-upgraded')
       read.mockResolvedValue({
         objects: [{ objectId: id(101), json: { package: id(100), version: '2', policy: 0 } }],
       } as never)
-      await expect(operator.setup_kares(terms)).rejects.toThrow('original, never-upgraded')
+      await expect(admin.setup_kares(terms)).rejects.toThrow('original, never-upgraded')
       expect(execute).toHaveBeenCalledTimes(1)
     } finally {
       read.mockRestore()

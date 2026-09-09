@@ -59,7 +59,7 @@ test('local recovery still guards backend, SDK, engine, content, and dependency 
   for (const path of [
     'packages/server/src/index.ts',
     'packages/indexer/src/main.rs',
-    'packages/sdk/src/operator_auth.ts',
+    'packages/sdk/src/admin_auth.ts',
     'packages/engine/src/worldgen.ts',
     'seed/content/items.json',
     'bun.lock',

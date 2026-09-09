@@ -384,10 +384,10 @@ object with a template and amount; possession authorizes its one burn-on-redempt
 personal kiosk. Statless items and fixed-endpoint pets need no entropy; pet feed scaling keeps the
 stored endpoint neutral until feeding. Issuance is AdminCap-gated and stops at permanent freeze.
 Ordinary transfers distribute existing vouchers without mint authority, whitelists, or claim counters.
-The operator prepares holder allocations from saved, checkpoint-scoped mainnet collection snapshots.
-Content sync mints each configured voucher directly to its custody address. The operator also exposes
-one reviewed send row per gift type on the selected network. It reuses the seed administrator scoped
-to that gift, without changing content or gameplay pause state. Permanent derived claim markers
+Holder allocations derive from saved, checkpoint-scoped mainnet collection snapshots.
+Content sync mints each configured voucher directly to its custody address. The SDK also supports
+issuance scoped to one reviewed gift type on the selected network through the same seed administrator,
+without changing content or gameplay pause state. Permanent derived claim markers
 keep redeemed vouchers complete during issuance recovery. Compact recipient batches
 expand in the SDK into ordinary per-recipient vouchers. Giftcard rows may select
 one network; creation and reconciliation use the same network filter. Prime Machin allocations target
@@ -405,8 +405,8 @@ Voucher pre/post ownership invalidates both custodians through the indexer, incl
 without game events. Certified redemption tombstones prevent stale snapshots resurrecting spent cards.
 Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
 which survives Google login without reaching the server. zkSend transports the voucher, then ordinary
-redemption runs. The private operator prepares printable bearer files before its named web-signer
-action; the local batch sender uses the owner's configured Sui CLI signer and journals each submission.
+redemption runs. The SDK administrative adapter creates links from previously retained bearer keys.
+The local batch sender uses the owner's configured Sui CLI signer and journals each submission.
 
 ### Forging
 
@@ -437,19 +437,19 @@ reconciles packets and its own certified receipts in one marketplace reducer.
 KARES is an independent package lineage published before the game. Its native Sui Currency is
 burn-only: initialization mints the complete supply once and consumes mint authority. Metadata authority
 is separate; setup delivers the native MetadataCap to the community cold wallet. Only name,
-description and icon URL are exposed by the operator's metadata action.
+description and icon URL are accepted by the metadata transaction.
 
 Setup consumes Genesis and the genuine first-publication UpgradeCap, permanently sealing the monetary
 package in the same transaction. Its cap package ID must match KARES's original type address and
 its version must be one; a foreign cap or previously upgraded lineage cannot initialize the sale.
 One setup creates the canonical inactive offering, empty combat pot and inactive funded staking pool.
 Durations and recipients become immutable before contribution. Only the configured treasury can start
-the sale once; its native-clock timestamp owns the derived closing time. The
-operator configures a 15-minute testnet sale and a seven-day mainnet sale. There is no restart, extension,
+the sale once; its native-clock timestamp owns the derived closing time.
+The reviewed sale lasts 15 minutes on testnet and seven days on mainnet. There is no restart, extension,
 or pause after activation. Settlement allocates accepted SUI between the
 treasury and liquidity wallet, transfers the liquidity KARES allocation, retains excess refunds,
 and activates staking and participant claims atomically. A participant claim finalizes a successful
-sale when needed, so claim availability does not depend on the operator. Repeated finalization is
+sale when needed, so claim availability does not depend on the treasury. Repeated finalization is
 idempotent and cannot transfer the allocations twice. The owner creates any market pool manually;
 the offering guarantees allocation, not external liquidity creation or locking. Offerings below the minimum at closing refund contributions. Successful offerings remain claimable
 indefinitely; no later deadline can change their outcome. Claim rounding is conservative and independent of order.

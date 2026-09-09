@@ -88,7 +88,7 @@ export type OfferingSetup = Readonly<{
   community: string
 }>
 
-/** Unsigned fixed-target setup for the operator; terms are also validated on-chain. */
+/** Unsigned fixed-target setup for the publisher; terms are also validated on-chain. */
 export const create_kares_setup_transaction = (sdk: Sdk, terms: OfferingSetup): Transaction => {
   const tx = new Transaction()
   tx.moveCall({

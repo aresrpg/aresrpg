@@ -6,7 +6,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import type { Transaction } from '@mysten/sui/transactions'
 
-import { create_operator_giftcard_links } from '../src/operator_auth.ts'
+import { create_admin_giftcard_links } from '../src/admin_auth.ts'
 
 const id = (value: number): string => `0x${value.toString(16).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
@@ -56,10 +56,10 @@ const cards = (count = 2) =>
     )
   )
 
-describe('operator giftcard signing', () => {
-  test('builds one fixed zkSend link per canonical operator-owned voucher', async () => {
+describe('administrative giftcard signing', () => {
+  test('builds one fixed zkSend link per canonical signer-owned voucher', async () => {
     const harness = context()
-    const result = await create_operator_giftcard_links(harness.value, cards(100))
+    const result = await create_admin_giftcard_links(harness.value, cards(100))
 
     expect(result.digest).toBe(digest)
     expect(result.urls).toHaveLength(100)
@@ -71,7 +71,7 @@ describe('operator giftcard signing', () => {
   test('refuses foreign custody before constructing a wallet transaction', async () => {
     const harness = context(id(9))
 
-    expect(create_operator_giftcard_links(harness.value, cards())).rejects.toThrow('owned by the connected operator')
+    expect(create_admin_giftcard_links(harness.value, cards())).rejects.toThrow('owned by the connected signer')
     expect(harness.submitted).toBeNull()
   })
 
@@ -80,13 +80,13 @@ describe('operator giftcard signing', () => {
     const key = Ed25519Keypair.generate().getSecretKey()
 
     expect(
-      create_operator_giftcard_links(harness.value, [
+      create_admin_giftcard_links(harness.value, [
         { id: id(3), key },
         { id: id(3), key: Ed25519Keypair.generate().getSecretKey() },
       ])
     ).rejects.toThrow('reuse an object')
     expect(
-      create_operator_giftcard_links(harness.value, [
+      create_admin_giftcard_links(harness.value, [
         { id: id(3), key },
         { id: id(4), key },
       ])

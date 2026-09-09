@@ -17,7 +17,7 @@ on:
         type: choice
         options: [testnet, mainnet]
       request_id:
-        description: Operator recovery identity
+        description: Release recovery identity
         required: true
         type: string
       preparation_run:

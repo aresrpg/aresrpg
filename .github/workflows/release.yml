@@ -12,12 +12,12 @@ on:
   workflow_dispatch:
     inputs:
       network:
-        description: Sui network selected by the operator
+        description: Sui network for this release
         required: true
         type: choice
         options: [testnet, mainnet]
       request_id:
-        description: Operator recovery identity
+        description: Release recovery identity
         required: true
         type: string
 env:

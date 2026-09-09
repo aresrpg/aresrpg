@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Local preparation only. The existing operator content sync owns minting and delivery.
+// Local preparation only. Content synchronization owns minting and delivery.
 
 import { createHash, randomUUID } from 'node:crypto'
 import assert from 'node:assert/strict'

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Trusted wallet operations used by the standalone operator signer. Gameplay sessions never
+// Explicit wallet administration operations. Gameplay sessions never
 // receive these methods.
 
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography'
@@ -10,7 +10,7 @@ import { Transaction } from '@mysten/sui/transactions'
 import { isValidSuiAddress, normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 import { ZkSendClient } from '@mysten/zksend'
 
-import { operator_wallet_context, type AuthSession } from './auth.ts'
+import { admin_wallet_context, type AuthSession } from './auth.ts'
 import { receipt_digest, type Receipt } from './cache.ts'
 import { SDK, sui_transport } from './client.ts'
 import { delegate } from './delegated_admin.ts'
@@ -34,7 +34,7 @@ import {
   type GameDeployment,
 } from './deployment_admin.ts'
 
-export type OperatorAuthSession = AuthSession &
+export type AdminAuthSession = AuthSession &
   Readonly<{
     authorize_temp_admin: (to: string, mist: bigint) => Promise<Receipt>
     publish_contract: (artifact: ContractArtifact) => Promise<Readonly<{ receipt: Receipt }>>
@@ -110,11 +110,11 @@ const assert_giftcard_custody = async (
         address_owner(object.owner) !== normalizeSuiObjectId(context.address)
     )
   )
-    throw new Error('Every exported Giftcard must be canonical and owned by the connected operator')
+    throw new Error('Every exported Giftcard must be canonical and owned by the connected signer')
   return Object.freeze(normalized)
 }
 
-export const create_operator_giftcard_links = async (
+export const create_admin_giftcard_links = async (
   context: GiftcardLinkContext,
   cards: readonly Readonly<{ id: string; key: string }>[]
 ): Promise<Readonly<{ digest: string; urls: readonly string[] }>> => {
@@ -161,8 +161,8 @@ const package_upgrade = (
   })
 }
 
-export const as_operator_session = (session: AuthSession): OperatorAuthSession => {
-  const context = operator_wallet_context(session)
+export const as_admin_session = (session: AuthSession): AdminAuthSession => {
+  const context = admin_wallet_context(session)
   const read_package_upgrade = async (
     upgrade_cap: string
   ): Promise<Readonly<{ package: string; version: number; policy: number }>> => {
@@ -270,7 +270,7 @@ export const as_operator_session = (session: AuthSession): OperatorAuthSession =
     create_giftcard_links: (cards) => {
       const { game_type_package } = context.sdk
       if (!game_type_package) throw new Error('Giftcard export requires a published game package')
-      return create_operator_giftcard_links(
+      return create_admin_giftcard_links(
         Object.freeze({
           address: context.account.address,
           client: context.resolution_client,

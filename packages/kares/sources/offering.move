@@ -162,7 +162,7 @@ fun deposit(offering: &mut Offering, payment: Coin<SUI>, clock: &Clock): u64 {
     amount
 }
 
-/// Permissionless and atomic. No caller-supplied recipient or post-sale operator gate.
+/// Permissionless and atomic. No caller-supplied recipient or post-sale treasury gate.
 public fun settle(offering: &mut Offering, pool: &mut StakingPool, clock: &Clock, ctx: &mut TxContext) {
     assert!(offering.pool == object::id(pool), EWrongPool);
     if (offering.settled) return;

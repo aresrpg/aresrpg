@@ -259,7 +259,7 @@ fun reversed_raise_limits_are_rejected() {
 }
 
 #[test]
-fun successful_claim_finalizes_without_the_operator() {
+fun successful_claim_finalizes_without_the_treasury() {
     let (mut scenario, mut offering, mut pool, mut clock) = fixture(50, 200);
     let position = offering::contribution_for_testing(&mut offering, 50, &clock, scenario.ctx());
     clock.increment_for_testing(100);

@@ -9,7 +9,7 @@
     "./auth": "./src/auth.ts",
     "./kares": "./src/kares.ts",
     "./kares-economics": "./src/kares_economics.ts",
-    "./operator-auth": "./src/operator_auth.ts",
+    "./admin-auth": "./src/admin_auth.ts",
     "./doors": "./src/doors.gen.ts",
     "./seed": "./src/seed.ts",
     "./seed-admin": "./src/seed_admin.ts",

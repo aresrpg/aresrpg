@@ -144,7 +144,7 @@ test('the previous preparation must bind both image digests to the expected rele
     expect(() => validate(invalid)).toThrow()
 })
 
-test('CI consumes the same runtime input classifier as the operator', () => {
+test('CI consumes the canonical runtime input classifier', () => {
   expect(backend_plan).toContain("import { runtime_fingerprints } from './scripts/release_inputs.mjs'")
   expect(backend_plan).toContain('before[key] !== after[key]')
 })

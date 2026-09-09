@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 
-// Runtime input ownership shared by CI and the operator. Version-only metadata is not a build input.
+// Canonical runtime input ownership for release builds. Version-only metadata is not a build input.
 export const RELEASE_INPUTS = Object.freeze({
   frontend: Object.freeze([
     'packages/frontend/',

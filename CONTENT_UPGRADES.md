@@ -55,28 +55,28 @@ snapshots.
 6. Confirm no wagered fight would be unfairly changed by the planned spell or mob update.
 7. Before starting source-bound publication, build every package for the selected network with
    the pinned Sui compiler and review its `Move.lock` resolution. First-mainnet builds add mainnet
-   lock entries; those changes must be settled before the operator captures its source identity.
+   lock entries; those changes must be settled before capturing the publication source identity.
    If Move changed, prepare its compatible upgrades or fresh publication and push the resulting
    hardcoded pins to `edge` before versioning.
-8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level). Resume the
-   operator to dispatch preparation CI on that exact tag. Wait for changed backend images and the
-   staged production Vercel build.
+8. From clean, current `edge`, run `bun pm version patch` (or the intended semver level).
+   Dispatch preparation CI on that exact tag. Wait for changed backend images and the staged
+   production Vercel build.
 9. Confirm the retained preparation manifest names that exact SHA, package lineages, image
    versions/digests, and staged Vercel URL. Unchanged images retain the previous certified digest;
-   the operator and Helm consume those digests, never mutable semver aliases.
+   deployment configuration consumes those digests, never mutable semver aliases.
 10. Pause gameplay when content or package work requires it.
 11. Apply content batches in deterministic order.
 12. Record every successful transaction digest.
 13. Never retry a transaction that executed and returned a digest.
 14. If a batch stops, inspect chain state and resume only the missing rows.
-15. At the operator's APPLY boundary, review the retained Helm diff and generated Kubernetes values.
-    Publish those exact values before continuing. The operator checks the published inputs against
-    its retained archive and applies from a private snapshot. Changed inputs or diffs stop recovery.
+15. Before cluster changes, review the retained Helm diff and generated Kubernetes values.
+    Publish those exact values before applying them. Verify the published inputs match the reviewed
+    archive. Changed inputs or diffs stop recovery.
     A certified app-only release skips Kubernetes; an unknown baseline requires review. The composite
     game+seed projection identity decides whether the store is retained or replaced for a repin.
-16. At ACTIVATE, manually run the production-activation workflow with the displayed tag, version,
+16. Manually run the production-activation workflow with the reviewed tag, version,
     network, preparation run, and request ID. It promotes the staged Vercel deployment without rebuilding,
-    verifies production, and publishes the draft release. The operator observes that exact successful
+    verifies production, and publishes the draft release. Verify that exact successful
     activation before continuing.
 17. Exercise one affected action against chain truth.
 18. Resume gameplay.
@@ -96,12 +96,12 @@ under its Registry root; the chain catalog length still decides board shape.
 
 Author each entitlement once in `seed/content/airdrop.json` under `giftcards`.
 Use `giftcard_batches` for one item/amount sent to a recipient list; the SDK derives one voucher identity per address.
-Use `custody` for the initial recipient or operator wallet. Publication already batches creation and transfer.
+Use `custody` for the initial recipient or distribution wallet. Publication already batches creation and transfer.
 Set `network` to `mainnet` or `testnet` when an allocation belongs to only one network; omitted means both.
-In the operator, **Prepare holder gifts** reads `seed/content/snapshots/collections.json`, saves each
+`scripts/prepare_holder_gifts.mjs` reads `seed/content/snapshots/collections.json`, saves each
 collection at one mainnet checkpoint, and appends its recipient batches to `airdrop.json`. It performs no
 chain writes. Existing snapshot files are reused, and an existing gift identity cannot change its
-recipient. Review the prepared rows, then use normal operator content sync to mint and send them.
+recipient. Review the prepared rows, then use content synchronization to mint and send them.
 An optional collection `limit` selects that many verified holders by SHA-256 of `batch_id:address`,
 independently of input order. Both Suifren collections are capped at 500. Unresolved custody is recorded
 in the snapshot; it blocks uncapped distributions and is excluded from capped selection.
@@ -129,19 +129,17 @@ the original manifest blindly or automatically retry an executed failure.
 
 Giftcard QR images are bearer secrets. Generate them only after the authored vouchers are published
 and owned by the signer address authored as their `custody`. A `pins.publisher` value is a Sui
-Publisher capability object ID, never a wallet address. Run `aresrpg-operator`, choose
-**Print Sui Crate giftcards**, review the action, press Enter, and confirm the single Slush
-transaction in the web signer.
+Publisher capability object ID, never a wallet address. The SDK administrative signing adapter
+creates links only for canonical vouchers held directly by the connected signer.
 
-The operator prepares a private recovery manifest and one printable PNG per voucher before
-touching chain state, then marks the manifest live with the certified digest. It resumes the same
-prepared links when every voucher remains in custody, recovers a completed common transaction, and
-refuses mixed or unknown custody instead of generating replacement secrets.
+Prepare and retain bearer keys before submitting the link transaction. Record the certified digest
+alongside those keys. Recovery must reuse prepared links, verify completed transactions, and reject
+mixed or unknown custody instead of generating replacement secrets.
 Each QR opens AresRPG `/gift`; the zkSend key stays in the URL fragment, survives Google login in
 session storage, and is never sent to the application server.
-The output lives under the operator's ignored, owner-only `.operator/branches/<branch>/giftcards/`
-directory. Never upload it before the cards are intentionally distributed. If execution returns a
-digest and fails, inspect that digest and current object custody; never retry automatically.
+Keep bearer files outside the repository with owner-only access. Never upload them before
+the cards are intentionally distributed. If execution returns a digest and fails, inspect that digest
+and current object custody; never retry automatically.
 
 ## Adding and editing worlds
 
@@ -175,42 +173,41 @@ namespaced by their old Registry roots for audit and recovery, but no active pac
 object is reused. Compatibility belongs only to Upgrade; Republish never attempts selective reuse.
 
 KARES is outside that five-package game lifecycle. A game republish must retain its currency,
-offering, combat pot and staking originals, objects and balances. Publish KARES independently through the
-operator before preparing a game package that imports it.
+offering, combat pot and staking originals, objects and balances. Publish KARES independently before preparing a game package that imports it.
 
 ## KARES offering operations
 
-The operator owns publication, atomic offering configuration and sealing, one-time start, settlement, treasury vesting
-claims, combat funding and authorization, and metadata updates. Open **KARES launch** in the operator
-for its live process memo. Its named signer actions use the same receipt recovery as game operations.
+The SDK exposes explicit administrative transactions for publication, atomic offering setup,
+one-time start, settlement, treasury vesting, combat funding, authorization, and metadata updates.
+Each transaction requires its native authority and retains its certified receipt for recovery.
 No mainnet operation follows automatically from testnet rehearsal or from this runbook.
 
-1. Publish KARES through the named operator action. Record its receipt-derived lineage and Genesis.
+1. Publish the KARES package. Record its receipt-derived lineage and Genesis.
 2. Review the intended name, description and icon asset before a public offering.
 3. Keep the original, never-upgraded UpgradeCap with the publisher until setup. Never freeze it
    separately: setup must consume that exact capability, and premature destruction strands Genesis.
-4. Use **Review sale terms** to save the immutable sale duration and recipient addresses. The sale lasts
+4. Review and save the immutable sale duration and recipient addresses. The sale lasts
    15 minutes on testnet and seven days on mainnet, measured from its separate native start.
    Mainnet accepts 50,000–200,000 SUI. The testnet rehearsal requires 5–20 SUI.
-5. Use **Configure and seal the offering** once. It registers native Currency, destroys its genuine UpgradeCap,
+5. Configure and seal the offering once. Setup registers native Currency, destroys its genuine UpgradeCap,
    allocates Genesis and fixes the offering terms. Recovery must prove the canonical cap's deletion
    in that same successful setup receipt; an absent-cap read alone is insufficient. The offering stays
-   inactive until its configured treasury runs **Start the offering once**.
+   inactive until its configured treasury starts it once.
 6. Record the canonical combat-pot ID and initial shared version from the setup receipt. Before
-   enabling combat on mainnet, the immutable treasury runs **Move the combat reserve** once to move
-   the reserved 100,000 KARES directly into that pot. Confirm its balance from certified effects.
-7. After publishing the game, the treasury runs **Authorize game victories**. Its witness is
+   enabling combat on mainnet, the immutable treasury moves the reserved 100,000 KARES directly
+   into that pot. Confirm its balance from certified effects.
+7. After publishing the game, the treasury authorizes game victories. The witness is
    `<original_game_package>::fight_rewards::BossVictory`, using the original type ID, not an upgrade target.
    Read the pot back and verify that exact type before enabling gameplay. Repeat authorization after
    a game republish; preserve the existing pot and counters. Zero payouts before activation are final.
-8. When ready, the treasury runs **Start the offering once**. Use **Open the launch page** to contribute
-   manually. Closing below the minimum permits full refunds; otherwise claims return tokens plus
+8. When ready, the treasury starts the offering once. Contributors use the public launch page.
+   Closing below the minimum permits full refunds; otherwise claims return tokens plus
    excess SUI and distribute proceeds once when needed. Claims never expire. No early close, restart,
    or extension exists.
 
-After a successful sale, **Distribute sale proceeds (optional)** can move proceeds before the first
+After a successful sale, an optional settlement transaction can distribute proceeds before the first
 participant claim. Use the delivered liquidity allocation to create the market manually.
-**Claim vested community tokens** remains available as tokens unlock to the treasury over 1,825
+Community vesting claims remain available as tokens unlock to the treasury over 1,825
 wall-clock days from successful settlement. Claim frequency does not change total entitlement.
 Unlocked tokens may be distributed or burned; failed offerings never start this release.
 
@@ -220,7 +217,7 @@ Keep the treasury signer trusted and verify the game witness type. There is no a
 or funding action merely because these SDK methods exist.
 
 The community cold wallet receives native metadata authority independently of mint authority and
-the package UpgradeCap. The operator's metadata action verifies its actual holder and accepts only
+the package UpgradeCap. The metadata transaction verifies its actual holder and accepts only
 name, description and HTTPS image URL. It cannot change ticker, decimals or supply.
 The image is served by the independent launchpad deployment; publishing contracts does not publish that site.
 

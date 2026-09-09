@@ -120,7 +120,7 @@ export const read_giftcards = async (
 
 export type GiftcardTransfer = Readonly<{ id: string; recipient: string }>
 
-/** One fixed transport door for wallet imports and operator batches. No mint authority. */
+/** One fixed transport door for wallet imports and distribution batches. No mint authority. */
 export const transfer_giftcards = async (
   client: SuiGrpcClient,
   sdk: Sdk,

@@ -102,7 +102,7 @@ struct Args {
 }
 
 /// A connection string with its userinfo stripped — `redis://user:pw@host:6379`
-/// becomes `redis://***@host:6379`. Boot logs name the endpoint the operator
+/// becomes `redis://***@host:6379`. Boot logs name the endpoint the administrator
 /// needs to recognise; the credential in it is not part of that fact, and logs
 /// outlive the process in places the secret store does not reach.
 fn redacted_url(url: &str) -> String {
