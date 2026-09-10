@@ -214,8 +214,8 @@ jobs:
             git show "$GITHUB_SHA:pins.json" | jq --arg n "$SUI_NETWORK" 'select(.network == $n) | del(.seed_ledger)' > "$RUNNER_TEMP/after-pins.json"
             if ! cmp -s "$RUNNER_TEMP/before-pins.json" "$RUNNER_TEMP/after-pins.json"; then frontend=true; fi
             previous_run=$(gh run list --workflow release.yml --commit "$(git rev-list -n 1 "$previous_tag")" --status success --limit 1 --json databaseId --jq '.[0].databaseId // ""')
-            if [ -n "$previous_run" ] && gh run download "$previous_run" --name "production-release-$previous_tag" --dir "$RUNNER_TEMP/previous-release"; then
-              previous_manifest="$RUNNER_TEMP/previous-release/release-manifest.json"
+            previous_manifest="$RUNNER_TEMP/previous-release/release-manifest.json"
+            if [ -n "$previous_run" ] && gh run download "$previous_run" --name "production-release-$previous_tag" --dir "$RUNNER_TEMP/previous-release" &&
               jq -e --arg sha "$(git rev-list -n 1 "$previous_tag")" --arg version "${previous_tag#v}" \
                 --arg repository "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" '
                 .schema == 1 and .status == "prepared" and .source_sha == $sha and .version == $version and
@@ -224,13 +224,11 @@ jobs:
                 .images.indexer.repository == ($repository + "/indexer") and
                 ([.images.server.digest, .images.indexer.digest] |
                   all(type == "string" and test("^sha256:[0-9a-f]{64}$")))
-              ' "$previous_manifest" >/dev/null
+              ' "$previous_manifest" >/dev/null; then
               server_digest=$(jq -r .images.server.digest "$previous_manifest")
               indexer_digest=$(jq -r .images.indexer.digest "$previous_manifest")
-              previous_network=$(jq -r .network "$previous_manifest")
-              if [ "$previous_network" != "$SUI_NETWORK" ]; then frontend=true; fi
             else
-              echo "Previous preparation manifest unavailable; rebuilding artifacts instead of trusting mutable tags"
+              echo "No reusable mainnet preparation manifest; rebuilding all artifacts"
               server=true
               indexer=true
               frontend=true

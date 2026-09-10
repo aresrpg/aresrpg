@@ -18,6 +18,74 @@ const activation = Bun.YAML.parse(
 const certified_digest = `sha256:${'b'.repeat(64)}`
 const moved_tag_digest = `sha256:${'a'.repeat(64)}`
 
+const run_baseline_plan = (network) => {
+  const directory = mkdtempSync(join(tmpdir(), 'ares-release-baseline-'))
+  const output = join(directory, 'output')
+  const plan = workflow.jobs['backend-plan'].steps.find(({ id }) => id === 'plan').run
+  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false
+server_version=2.0.0; indexer_version=2.0.0; server_digest=''; indexer_digest=''
+if true; then
+${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER,,}', 'aresrpg')}`
+  try {
+    writeFileSync(
+      join(directory, 'manifest.json'),
+      JSON.stringify({
+        schema: 1,
+        status: 'prepared',
+        source_sha: '1'.repeat(40),
+        version: '1.0.0',
+        network,
+        images: Object.fromEntries(
+          ['server', 'indexer'].map((name) => [
+            name,
+            {
+              repository: `ghcr.io/aresrpg/${name}`,
+              digest: certified_digest,
+            },
+          ])
+        ),
+      })
+    )
+    writeFileSync(join(directory, 'git'), `#!/bin/sh\nprintf '${'1'.repeat(40)}\\n'\n`, { mode: 0o700 })
+    writeFileSync(
+      join(directory, 'gh'),
+      `#!/bin/bash
+if [ "$2" = list ]; then echo 123; exit 0; fi
+mkdir -p "$RUNNER_TEMP/previous-release"
+cp "$RUNNER_TEMP/manifest.json" "$RUNNER_TEMP/previous-release/release-manifest.json"
+`,
+      { mode: 0o700 }
+    )
+    execFileSync('/bin/bash', ['-e', '-c', script], {
+      env: {
+        PATH: `${directory}:${process.env.PATH}`,
+        RUNNER_TEMP: directory,
+        GITHUB_OUTPUT: output,
+        GITHUB_REPOSITORY_OWNER: 'aresrpg',
+        SUI_NETWORK: 'mainnet',
+      },
+      stdio: 'pipe',
+    })
+    return readFileSync(output, 'utf8')
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
+test('a previous testnet release triggers a full mainnet build instead of aborting preparation', () => {
+  const output = run_baseline_plan('testnet')
+  for (const component of ['server', 'indexer', 'frontend']) expect(output).toContain(`${component}=true`)
+  expect(output).toContain('server_digest=\n')
+  expect(output).toContain('indexer_digest=\n')
+})
+
+test('a certified mainnet baseline retains the fast path for unchanged runtime inputs', () => {
+  const output = run_baseline_plan('mainnet')
+  for (const component of ['server', 'indexer', 'frontend']) expect(output).toContain(`${component}=false`)
+  expect(output).toContain(`server_digest=${certified_digest}`)
+  expect(output).toContain(`indexer_digest=${certified_digest}`)
+})
+
 const run_image_step = (component, step_id, current_digest) => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-image-identity-'))
   const output = join(directory, 'output')
