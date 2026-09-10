@@ -267,6 +267,7 @@ export default [
   {
     // Move and the Rust indexer keep their own language-specific gates.
     ignores: [
+      '.dev/**', // Gitignored local deployment artifacts and scratch backups are not release source.
       '**/test-results/**',
       'packages/*/traces/**', // Sui creates and removes coverage traces while native tests run.
       '**/dist/*',
