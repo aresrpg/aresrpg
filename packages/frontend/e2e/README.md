@@ -13,7 +13,8 @@ CI installs stable Chrome with `bunx playwright install --with-deps chrome`.
 Run `bun run test:browser` from the repository root.
 Set `BROWSER=firefox` to select Firefox. `BROWSER=webkit` is available for manual diagnostics only.
 Linux CI runs Firefox headed under Xvfb with software OpenGL because headless Firefox cannot
-create the WebGL2 context needed by the fallback renderer. This is a compatibility check.
+create the WebGL2 context needed by the fallback renderer. The Linux compatibility profile enables
+`webgl.force-enabled` so Firefox permits that software context. Hardware-budget runs do not use this preference.
 
 The test build includes an isolated canvas entry. It imports the production world controller,
 world-content projection, fight-board projection, and demo crowd loader. It contains no wallet
@@ -45,8 +46,10 @@ Other budgets are 250 ms maximum steady-frame stall,
 between laps. Collected JS heap growth is bounded to 32 MiB. Missing/software GPU adapters fail
 hardware runs explicitly. Performance is deliberately measured outside concurrent native suites.
 
-The required `gate` workflow runs Chrome/Firefox on Linux and Chrome on macOS on every
-pull request and edge push. These jobs check compatibility and resource bounds. Removing the Windows
+The required `gate` workflow runs Chrome/Firefox on Linux and Chrome on macOS when browser runtime
+inputs change. Content JSON, Move-only, pin-only, and version-only updates skip these jobs; their other
+verification gates remain required. Pushes compare with the last successful edge gate; PRs compare
+with their base. Missing history requires browser verification. These jobs check compatibility and resource bounds. Removing the Windows
 GPU jobs leaves no automatic hardware FPS gate; the full hardware workload remains available through
 the command above. The hosted compatibility matrix is not an FPS certificate. Fixed budgets detect
 breaches, not every small slowdown. Playwright WebKit does not certify shipping Safari.

@@ -26,9 +26,10 @@ window.start_world_input = async () => {
   world.point_at({ x: 0, z: 0 })
   world.set_interactive(true)
   world.set_active(true)
-  await new Promise<void>((resolve) => {
+  await new Promise<void>((resolve, reject) => {
     world.subscribe_status((status) => {
-      if (status.state !== 'initializing') resolve()
+      if (status.state === 'failed') reject(new Error(JSON.stringify(status)))
+      else if (status.state !== 'initializing') resolve()
     })
   })
 }

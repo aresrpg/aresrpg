@@ -31,6 +31,9 @@ export default defineConfig({
       use: {
         browserName: browser_name === 'chrome' ? 'chromium' : browser_name,
         ...(browser_name === 'chrome' ? { channel: 'chrome' } : {}),
+        ...(browser_name === 'firefox' && process.platform === 'linux' && !hardware
+          ? { launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } }
+          : {}),
         ...(browser_name === 'chrome' && hardware
           ? { launchOptions: { args: ['--disable-frame-rate-limit', '--disable-gpu-vsync'] } }
           : {}),

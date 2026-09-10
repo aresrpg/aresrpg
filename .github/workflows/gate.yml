@@ -13,6 +13,32 @@ on:
 permissions:
   contents: read
 jobs:
+  changes:
+    name: browser input changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      browsers: ${{ steps.inputs.outputs.browsers }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: scripts/browser_inputs.mjs
+          sparse-checkout-cone-mode: false
+      - id: inputs
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$BASE_SHA" ]; then
+            BASE_SHA=$(gh run list --workflow gate.yml --branch edge --event push --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
+            export BASE_SHA
+          fi
+          node scripts/browser_inputs.mjs
   source:
     name: TypeScript (lint, types, tests)
     runs-on: ubuntu-latest
@@ -282,6 +308,8 @@ jobs:
               "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" "packages/$application/dist"; then exit 1; fi
           done
   browsers:
+    needs: changes
+    if: needs.changes.outputs.browsers == 'true'
     name: browser (${{ matrix.os }}, ${{ matrix.browser }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -319,15 +347,16 @@ jobs:
           retention-days: 7
   gate:
     name: gate
-    needs: [source, tests_move, tests_indexer, bundle-gate, browsers]
+    needs: [changes, source, tests_move, tests_indexer, bundle-gate, browsers]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: every required verification completed
         run: |
+          test "${{ needs.changes.result }}" = success
           test "${{ needs.source.result }}" = success
           test "${{ needs.tests_move.result }}" = success
           test "${{ needs.tests_indexer.result }}" = success
-          test "${{ needs.browsers.result }}" = success
+          test "${{ needs.browsers.result == 'success' || (needs.changes.outputs.browsers == 'false' && needs.browsers.result == 'skipped') }}" = true
           test "${{ github.event_name == 'push' || needs.bundle-gate.result == 'success' }}" = true

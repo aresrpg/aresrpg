@@ -3,6 +3,19 @@
 
 import { expect, test } from '@playwright/test'
 
+test('unavailable graphics reports initialization failure without waiting for a world pose', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'gpu', { value: undefined })
+    const get_context = HTMLCanvasElement.prototype.getContext
+    HTMLCanvasElement.prototype.getContext = new Proxy(get_context, {
+      apply: (target, receiver, args) => (args[0] === 'webgl2' ? null : Reflect.apply(target, receiver, args)),
+    })
+  })
+  await page.goto('/e2e/fixtures/engine_lifecycle.html')
+  await page.waitForFunction(() => typeof window.start_world_input === 'function')
+  await expect(page.evaluate(() => window.start_world_input())).rejects.toThrow('graphics_unavailable')
+})
+
 test('actual backend bounds request metadata and preserves device-loss bookkeeping', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   await page.waitForFunction(() => typeof window.probe_engine_lifetime === 'function')
