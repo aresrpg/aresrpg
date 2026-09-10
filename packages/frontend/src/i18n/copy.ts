@@ -32,6 +32,7 @@ export type AppCopy = Readonly<{
   sign_in_to_play: string
   loading_universe: string
   continue_google: string
+  wallet_session_ended: string
   connect_wallet: string
   no_wallet: string
   watch_world: string

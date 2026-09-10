@@ -21,6 +21,7 @@ identity_connected: Identity connected
 sign_in_to_play: Sign in to play
 loading_universe: Loading the universe
 continue_google: Continue with Google
+wallet_session_ended: Your wallet session ended. Sign in again.
 connect_wallet: Connect wallet
 no_wallet: No compatible wallet installed
 watch_world: Watch the live world

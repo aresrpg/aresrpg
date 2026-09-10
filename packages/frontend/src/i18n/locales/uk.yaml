@@ -21,6 +21,7 @@ identity_connected: Особу підключено
 sign_in_to_play: Увійдіть, щоб грати
 loading_universe: Завантаження всесвіту
 continue_google: Продовжити з Google
+wallet_session_ended: Сеанс вашого гаманця завершено. Увійдіть знову.
 connect_wallet: Підключити гаманець
 no_wallet: Сумісний гаманець не встановлено
 watch_world: Дивитися на живий світ

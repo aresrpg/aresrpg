@@ -58,6 +58,17 @@ export const observe_failure_toasts = ({
     on_gas_empty(null)
     on_error_translate(null)
   })
+  events.on('STATE_UPDATED', (state, previous) => {
+    const connected = state.session.wallet
+    if (!connected || connected === previous.session.wallet) return
+    connected.on_invalidated?.(() => {
+      if (signal.aborted || get_state().session.wallet !== connected) return
+      dispatch({
+        type: 'auth/rejected',
+        error: get_state().copy?.wallet_session_ended ?? 'Your wallet session ended. Sign in again.',
+      })
+    })
+  })
   events.on('link/rejected', ({ reason }) => {
     const { copy } = get_state()
     toast.persistent(

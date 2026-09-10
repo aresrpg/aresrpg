@@ -6,7 +6,9 @@ import { DEFAULT_NETWORK } from '@aresrpg/sdk/pins'
 export const resolve_launch_env = (source: Readonly<Record<string, string | undefined>>) => {
   const network = source.VITE_NETWORK ?? DEFAULT_NETWORK
   if (network !== 'testnet' && network !== 'mainnet') throw new Error(`Unsupported launch network: ${network}`)
-  const sui_rpc_url = source.VITE_SUI_RPC_URL ?? `https://fullnode.${network}.sui.io:443`
+  const sui_rpc_url =
+    source.VITE_SUI_RPC_URL ??
+    (network === 'mainnet' ? 'https://sui-grpc-web.publicnode.com:443' : 'https://fullnode.testnet.sui.io:443')
   const url = new URL(sui_rpc_url)
   if (url.protocol !== 'https:') throw new Error('The launchpad requires an HTTPS Sui endpoint')
   return Object.freeze({

@@ -21,6 +21,7 @@ identity_connected: Identité connectée
 sign_in_to_play: Se connecter pour jouer
 loading_universe: Chargement de l’univers
 continue_google: Continuer avec Google
+wallet_session_ended: Votre session de portefeuille a expiré. Reconnectez-vous.
 connect_wallet: Connecter un portefeuille
 no_wallet: Aucun portefeuille compatible installé
 watch_world: Observer le monde en direct

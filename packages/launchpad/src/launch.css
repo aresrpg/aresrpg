@@ -2,6 +2,8 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 @import '@aresrpg/frontend/tokens.css';
 @source '../../frontend/src/kares';
+@source '../../frontend/src/wallet';
+@source '../../frontend/src/components';
 @source './';
 
 .kares-launch {

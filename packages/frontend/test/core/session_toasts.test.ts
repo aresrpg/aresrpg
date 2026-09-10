@@ -3,7 +3,67 @@
 
 import { expect, test } from 'bun:test'
 
-import { failure_copy_key } from '../../src/modules/session_toasts.ts'
+import { failure_copy_key, observe_failure_toasts } from '../../src/modules/session_toasts.ts'
+import { create_app, type AppState } from '../../src/store.ts'
+
+const session_observer = () => {
+  const app = create_app()
+  const controller = new AbortController()
+  observe_failure_toasts({
+    signal: controller.signal,
+    get_state: app.store.getState,
+    dispatch: app.dispatch,
+    events: {
+      on: (name, listener) => {
+        if (name !== 'STATE_UPDATED') return
+        const stop = app.store.subscribe(listener as (state: AppState, previous: AppState) => void)
+        controller.signal.addEventListener('abort', stop)
+      },
+    },
+  })
+  const connect = () => {
+    let invalidate = () => {}
+    const session = {
+      on_invalidated: (listener: () => void) => {
+        invalidate = listener
+        return () => {}
+      },
+    }
+    app.dispatch({ type: 'auth/connecting' })
+    app.dispatch({ type: 'auth/connected', session: session as never })
+    return () => invalidate()
+  }
+  return { app, connect, stop: () => controller.abort() }
+}
+
+test('wallet invalidation returns to sign-in and cannot invalidate a later session', () => {
+  const { app, connect, stop } = session_observer()
+  try {
+    const invalidate_old = connect()
+    invalidate_old()
+    expect(app.store.getState().session).toMatchObject({
+      auth_status: 'idle',
+      wallet: null,
+      link_status: 'idle',
+      auth_error: 'Your wallet session ended. Sign in again.',
+    })
+    const invalidate_new = connect()
+    invalidate_old()
+    expect(app.store.getState().session.auth_status).toBe('authenticated')
+    invalidate_new()
+    expect(app.store.getState().session.auth_status).toBe('idle')
+  } finally {
+    stop()
+  }
+})
+
+test('a stopped session observer cannot invalidate a retained wallet', () => {
+  const { app, connect, stop } = session_observer()
+  const invalidate = connect()
+  stop()
+  invalidate()
+  expect(app.store.getState().session.auth_status).toBe('authenticated')
+})
 
 test('a placement race explains that the cell is unavailable without masking other combat errors', () => {
   // Player-captured resolution error, 2026-09-10.

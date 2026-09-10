@@ -21,6 +21,7 @@ identity_connected: アイデンティティ接続済み
 sign_in_to_play: サインインしてプレイ
 loading_universe: 宇宙を読み込み中
 continue_google: Google で続行
+wallet_session_ended: ウォレットのセッションが終了しました。もう一度ログインしてください。
 connect_wallet: ウォレットを接続
 no_wallet: 対応ウォレットがインストールされていません
 watch_world: ライブワールドを見る

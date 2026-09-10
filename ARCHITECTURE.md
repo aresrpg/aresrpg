@@ -121,6 +121,12 @@ The separate launchpad package contains only the offering surface and boots inde
 It reuses the neutral wallet reducer, observer, picker, and finance exports; the launchpad never
 imports the player entry or its environment.
 
+The SDK checks Enoki's network-scoped session before signing. Missing or expired authorization
+invalidates the wallet session and returns the player to sign-in; background server challenges
+never renew authorization by opening a popup. Temporary read failures remain reconnectable.
+The launchpad defaults to PublicNode gRPC-Web on mainnet and Mysten's public node on testnet;
+its deployment CSP permits those same providers.
+
 The frontend production entry initializes Vercel Web Analytics and Speed Insights once for both
 game and wallet-finance routes. The independent launchpad entry initializes Vercel Web Analytics.
 Telemetry strips URL queries and fragments before sending, so

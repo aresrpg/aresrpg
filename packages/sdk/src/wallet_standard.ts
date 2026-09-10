@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { EnokiWallet } from '@mysten/enoki'
 import type { Transaction } from '@mysten/sui/transactions'
 import {
   getWallets,
@@ -68,23 +69,37 @@ export const create_wallet_binding = (wallet: Wallet, account: WalletAccount, ne
   const require_active = (): void => {
     if (disposed) throw new Error('This wallet session is disconnected')
   }
+  const session_feature = wallet.features['enoki:getSession'] as EnokiWallet['features']['enoki:getSession'] | undefined
+  const with_active_session = <T>(operation: () => Promise<T>): Promise<T> => {
+    require_active()
+    if (!session_feature) return operation()
+    return session_feature.getSession({ network }).then((session) => {
+      require_active()
+      // Enoki otherwise renews silently restored accounts by opening a popup while signing.
+      if (!session?.jwt || Date.now() >= session.expiresAt) {
+        invalidated_listener?.()
+        throw new Error('Wallet session expired')
+      }
+      return operation()
+    })
+  }
   return Object.freeze({
-    sign_transaction: (transaction: Transaction) => {
-      require_active()
-      return signing.signTransaction({
-        transaction,
-        account: account as Parameters<typeof signing.signTransaction>[0]['account'],
-        chain: `sui:${network}`,
-      })
-    },
-    sign_personal_message: (message: Uint8Array) => {
-      require_active()
-      return personal.signPersonalMessage({
-        message,
-        account: account as Parameters<typeof personal.signPersonalMessage>[0]['account'],
-        chain: `sui:${network}`,
-      })
-    },
+    sign_transaction: (transaction: Transaction) =>
+      with_active_session(() =>
+        signing.signTransaction({
+          transaction,
+          account: account as Parameters<typeof signing.signTransaction>[0]['account'],
+          chain: `sui:${network}`,
+        })
+      ),
+    sign_personal_message: (message: Uint8Array) =>
+      with_active_session(() =>
+        personal.signPersonalMessage({
+          message,
+          account: account as Parameters<typeof personal.signPersonalMessage>[0]['account'],
+          chain: `sui:${network}`,
+        })
+      ),
     on_invalidated: (listener: () => void) => {
       invalidated_listener = listener
       return () => {

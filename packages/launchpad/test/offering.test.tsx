@@ -176,9 +176,26 @@ test('launch publication is offering-only with disclosed manual liquidity custod
 
 test('the independent launch environment binds only to an explicit supported network and HTTPS endpoint', () => {
   expect(resolve_launch_env({}).network).toBe('mainnet')
-  expect(resolve_launch_env({ VITE_NETWORK: 'mainnet' }).sui_rpc_url).toBe('https://fullnode.mainnet.sui.io:443')
+  expect(resolve_launch_env({ VITE_NETWORK: 'mainnet' }).sui_rpc_url).toBe('https://sui-grpc-web.publicnode.com:443')
+  expect(resolve_launch_env({ VITE_NETWORK: 'testnet' }).sui_rpc_url).toBe('https://fullnode.testnet.sui.io:443')
+  expect(resolve_launch_env({ VITE_SUI_RPC_URL: 'https://rpc.example.test' }).sui_rpc_url).toBe(
+    'https://rpc.example.test'
+  )
   expect(() => resolve_launch_env({ VITE_NETWORK: 'localnet' })).toThrow('Unsupported launch network')
   expect(() => resolve_launch_env({ VITE_SUI_RPC_URL: 'http://example.test' })).toThrow('HTTPS')
+})
+
+test('the deployed CSP allows the default RPC for each supported network', async () => {
+  const configuration = await Bun.file(new URL('../vercel.json', import.meta.url)).json()
+  const policy = configuration.headers[0].headers.find(({ key }: { key: string }) => key === 'Content-Security-Policy')
+    .value as string
+  const allowed = policy
+    .split(';')
+    .find((directive) => directive.trim().startsWith('connect-src '))!
+    .trim()
+    .split(/\s+/)
+  for (const network of ['mainnet', 'testnet'])
+    expect(allowed).toContain(new URL(resolve_launch_env({ VITE_NETWORK: network }).sui_rpc_url).origin)
 })
 
 test('the wallet menu precedes first-content funding and shares the same connected account', async () => {

@@ -21,6 +21,7 @@ identity_connected: Identidad conectada
 sign_in_to_play: Inicia sesión para jugar
 loading_universe: Cargando el universo
 continue_google: Continuar con Google
+wallet_session_ended: Tu sesión de billetera ha finalizado. Vuelve a iniciar sesión.
 connect_wallet: Conectar cartera
 no_wallet: No hay una cartera compatible instalada
 watch_world: Ver el mundo en directo
