@@ -1,3 +1,9 @@
 {
-  "network": "mainnet"
+  "network": "mainnet",
+  "kares_package": "0x09ec62f9d6a4b3ac73931f06392765e8e351b0ff299bfb4d7387a7869114a436",
+  "kares_package_original": "0x09ec62f9d6a4b3ac73931f06392765e8e351b0ff299bfb4d7387a7869114a436",
+  "kares_upgrade_cap": "0x55d95e4c7bebeda4678840ce42e517d5e2300ea73a84ef8a43ae63ca55335ff0",
+  "kares_artifact_digest": "cd59c77549062f4c2ae6446951f12af87034cdd90ce359820a8897c5186ce0b1",
+  "kares_genesis": "0x7ce7e6a16efff19dbbcacd332e87f0fa14038831bfee0de8520f8134ee65ee52",
+  "kares_currency_pending": "0x5df3817e16679f0216e2eb83d5b683a7eb19b5d9eed7dae5a3d5ac08b9fe4f6c"
 }
