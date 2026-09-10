@@ -84,9 +84,9 @@ export const LaunchView = ({ copy, locale, change_locale, state, dispatch, walle
           </h2>
           <p className="mt-5 max-w-md text-xs leading-7 text-muted">{copy.join_note}</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <a className={`${finance_button} bg-gold/20`} href={env.testnet_game_url} rel="noreferrer" target="_blank">
+            <a className={`${finance_button} bg-gold/20`} href={env.game_url} rel="noreferrer" target="_blank">
               <Gamepad2 size={16} />
-              {copy.play_testnet}
+              {copy.play_game}
               <ArrowUpRight size={13} />
             </a>
             <a
@@ -97,7 +97,7 @@ export const LaunchView = ({ copy, locale, change_locale, state, dispatch, walle
               <ArrowDown size={13} />
             </a>
           </div>
-          <p className="mt-3 text-[10px] text-muted">{copy.play_testnet_note}</p>
+          <p className="mt-3 text-[10px] text-muted">{copy.play_game_note}</p>
           <ol className="my-7 space-y-3 border-y border-white/8 py-5">
             {[copy.step_connect, copy.step_contribute, copy.step_claim].map((step, index) => (
               <li className="flex items-center gap-3 text-[11px] text-text" key={step}>
@@ -147,14 +147,9 @@ export const LaunchView = ({ copy, locale, change_locale, state, dispatch, walle
           <p className={finance_label}>{copy.nav_play}</p>
           <h2 className="mt-4 text-3xl font-medium tracking-tight text-gold-light sm:text-4xl">{copy.play_title}</h2>
           <p className="mt-4 text-xs leading-7 text-text/75">{copy.play_detail}</p>
-          <a
-            className={`${finance_button} mt-6 bg-gold/20`}
-            href={env.testnet_game_url}
-            rel="noreferrer"
-            target="_blank"
-          >
+          <a className={`${finance_button} mt-6 bg-gold/20`} href={env.game_url} rel="noreferrer" target="_blank">
             <Gamepad2 size={17} />
-            {copy.play_testnet}
+            {copy.play_game}
             <ArrowUpRight size={13} />
           </a>
         </div>

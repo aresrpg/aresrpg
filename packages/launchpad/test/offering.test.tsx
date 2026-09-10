@@ -213,7 +213,7 @@ test('the wallet menu precedes first-content funding and shares the same connect
   expect(html.indexOf('data-wallet-menu')).toBeLessThan(html.indexOf('data-funding-progress'))
   expect(html.indexOf('data-funding-progress')).toBeLessThan(html.indexOf('data-investment-cards'))
   expect(html).toContain('0xpart…pant')
-  expect(html).toContain(copy.play_testnet)
+  expect(html).toContain(copy.play_game)
   expect(html).toContain('https://aresrpg.world/')
   expect(html).toContain(copy.community_detail)
   expect(html).toContain(copy.emissions_detail)

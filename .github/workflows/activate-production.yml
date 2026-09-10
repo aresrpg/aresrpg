@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# Manual final door: every artifact was already built from the owner-pushed release tag.
+# Final promotion door: every artifact was already built from the owner-pushed release tag.
 # This workflow only verifies that immutable preparation record and moves Vercel's domains.
 name: activate production
 run-name: activate v${{ inputs.version }} mainnet ${{ inputs.request_id }} ${{ inputs.preparation_run }}

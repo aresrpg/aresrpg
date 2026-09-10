@@ -64,7 +64,7 @@ export const Benefits = ({ copy }: Readonly<{ copy: KaresCopy }>) => (
             <h3 className="mt-5 text-3xl font-medium tracking-tight text-gold-light">{copy.crates_title}</h3>
             <p className="mt-4 max-w-xl text-[11px] leading-7 text-text/80">{copy.crates_detail}</p>
             <a className="mt-5 inline-flex items-center gap-2 text-[10px] text-gold" href="#play">
-              {copy.play_testnet}
+              {copy.play_game}
               <ArrowUpRight size={13} />
             </a>
           </div>

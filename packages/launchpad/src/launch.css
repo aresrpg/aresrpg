@@ -18,7 +18,7 @@
   outline: 2px solid var(--color-cyan);
   outline-offset: 4px;
 }
-.kares-launch :is(button, .finance-button):not([data-wallet-connect]) {
+.kares-launch :is(button, .finance-button) {
   --button-face: #30243d;
   --button-ink: #e4bd77;
   --button-edge: #917346;
@@ -51,10 +51,10 @@
   --button-ink: #d4d7df;
   --button-edge: #61536f;
 }
-.kares-launch :is(button, .finance-button):not([data-wallet-connect]) svg {
+.kares-launch :is(button, .finance-button) svg {
   color: currentColor;
 }
-.kares-launch :is(button, .finance-button):not([data-wallet-connect]):hover:not(:disabled) {
+.kares-launch :is(button, .finance-button):hover:not(:disabled) {
   filter: brightness(1.04);
   transform: translate(-1px, -1px);
   box-shadow:
@@ -62,7 +62,7 @@
     0 0 0 1px var(--button-edge),
     5px 5px 0 var(--button-shadow);
 }
-.kares-launch :is(button, .finance-button):not([data-wallet-connect]):active:not(:disabled) {
+.kares-launch :is(button, .finance-button):active:not(:disabled) {
   transform: translate(3px, 3px);
   box-shadow:
     inset 0 1px 0 #ffffff10,

@@ -94,8 +94,8 @@ export type KaresCopy = Readonly<{
   unclaimed_note: string
   connect_preview: string
   no_pending_allocation: string
-  play_testnet: string
-  play_testnet_note: string
+  play_game: string
+  play_game_note: string
   join_title: string
   join_note: string
   step_connect: string

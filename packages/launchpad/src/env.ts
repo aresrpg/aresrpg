@@ -14,7 +14,7 @@ export const resolve_launch_env = (source: Readonly<Record<string, string | unde
   return Object.freeze({
     network,
     sui_rpc_url,
-    testnet_game_url: 'https://aresrpg.world/',
+    game_url: 'https://aresrpg.world/',
     discord_url: 'https://discord.gg/aresrpg',
   })
 }

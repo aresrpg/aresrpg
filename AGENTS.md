@@ -139,7 +139,7 @@ surface changes.
   freeze, and deployment actions require explicit owner approval.
 - For a production release, use `CONTENT_UPGRADES.md` as the sole runbook. The fixed order is:
   prepare hardcoded chain pins, create the root semver tag with `bun pm version`, wait for its CI
-  manifest, reconcile content and Kubernetes, manually activate that Vercel version, verify
+  manifest, reconcile content and Kubernetes, activate that Vercel version, verify
   production, then resume gameplay. Never infer a later step completed from an earlier one.
 - Preserve linear history and follow `CONTRIBUTING.md` for contribution and release mechanics.
 

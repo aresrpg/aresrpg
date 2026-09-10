@@ -74,10 +74,11 @@ snapshots.
     archive. Changed inputs or diffs stop recovery.
     A certified app-only release skips Kubernetes; an unknown baseline requires review. The composite
     game+seed projection identity decides whether the store is retained or replaced for a repin.
-16. Manually run the production-activation workflow with the reviewed tag, version,
-    preparation run and request ID. The network is always mainnet. It promotes the staged Vercel deployment without rebuilding,
-    verifies production, and publishes the draft release. Verify that exact successful
-    activation before continuing.
+16. Release tooling automatically dispatches the production-activation workflow with the retained
+    tag, version, preparation run and request ID. The network is always mainnet. It promotes the
+    staged Vercel deployment without rebuilding, verifies production, and publishes the draft release.
+    Wait for that exact successful activation and published release before continuing. Persist
+    dispatch intent first; a lost response must never cause an automatic duplicate dispatch.
 17. Exercise one affected action against chain truth.
 18. Resume gameplay.
 
