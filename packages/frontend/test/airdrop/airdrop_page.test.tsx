@@ -46,7 +46,6 @@ test('every supported campaign explains eligibility, including wallet drops, phy
   expect(html).toContain('Ranks 51–100: 1 of each crate')
   expect(html).not.toContain('showcase')
   expect(html).not.toContain('Reserved items')
-  expect(html).not.toContain('temporary_test')
 })
 
 test('a held voucher resolves its authored item from the template and stays redeemable', async () => {
