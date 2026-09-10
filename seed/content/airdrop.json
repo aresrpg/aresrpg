@@ -1,69 +1,117 @@
 {
-  "showcase": [
+  "campaigns": [
     {
       "id": "oeuftermath",
-      "kind": "pet_glb",
-      "name": "Oeuftermath",
-      "art": {
-        "glb": "models/pets/oeuftermath.glb",
-        "icon": "items/oeuftermath_hd.png"
-      },
-      "art_status": {
-        "glb": "ready",
-        "icon": "ready"
-      }
+      "items": ["oeuftermath"],
+      "delivery": "wallet",
+      "name": "Eggs",
+      "visibility": "public"
     },
     {
       "id": "suicune",
-      "kind": "pet_glb",
+      "items": ["suicune"],
+      "delivery": "wallet",
       "name": "Suicune",
-      "art": {
-        "glb": "models/pets/suicune.glb",
-        "icon": "items/suicune_hd.png"
-      },
-      "art_status": {
-        "glb": "ready",
-        "icon": "ready"
-      }
+      "visibility": "public"
     },
     {
       "id": "suifren_bullshark",
-      "kind": "pet_glb",
-      "name": "Suifren Bullshark",
-      "art": {
-        "glb": "models/pets/suifren_bullshark.glb",
-        "icon": "items/suifren_bullshark_hd.png"
-      },
-      "art_status": {
-        "glb": "ready",
-        "icon": "ready"
-      }
+      "items": ["suifren_bullshark"],
+      "delivery": "wallet",
+      "name": "Suifren Bullsharks",
+      "visibility": "public"
     },
     {
       "id": "suifren_capy",
-      "kind": "pet_glb",
-      "name": "Suifren Capy",
-      "art": {
-        "glb": "models/pets/suifren_capy.glb",
-        "icon": "items/suifren_capy_hd.png"
-      },
-      "art_status": {
-        "glb": "ready",
-        "icon": "ready"
-      }
+      "items": ["suifren_capy"],
+      "delivery": "wallet",
+      "name": "Suifren Capys",
+      "visibility": "public"
     },
     {
       "id": "primemachin",
-      "kind": "pet_glb",
-      "name": "Primemachin",
-      "art": {
-        "glb": "models/pets/primemachin.glb",
-        "icon": "items/primemachin_hd.png"
-      },
-      "art_status": {
-        "glb": "ready",
-        "icon": "ready"
-      }
+      "items": ["primemachin"],
+      "delivery": "nft",
+      "name": "Prime Machin",
+      "visibility": "public"
+    },
+    {
+      "id": "vaporeon",
+      "items": ["vaporeon"],
+      "delivery": "wallet",
+      "name": "Vaporeon",
+      "visibility": "public"
+    },
+    {
+      "id": "sui_basecamp_singapore",
+      "items": ["sui_crate"],
+      "delivery": "physical",
+      "name": "Sui Basecamp Singapore",
+      "visibility": "public"
+    },
+    {
+      "id": "hytale_veterans",
+      "items": ["sui_crate", "pet_crate", "food_crate", "resource_crate"],
+      "delivery": "game_wallet",
+      "tiers": [
+        {
+          "from": 1,
+          "to": 10,
+          "amount": 3
+        },
+        {
+          "from": 11,
+          "to": 50,
+          "amount": 2
+        },
+        {
+          "from": 51,
+          "to": 100,
+          "amount": 1
+        }
+      ],
+      "name": "Hytale veterans",
+      "visibility": "public"
+    },
+    {
+      "id": "hytale_supporters",
+      "items": ["title_veteran"],
+      "delivery": "game_wallet",
+      "spending_threshold_sui": 100,
+      "name": "Hytale supporters",
+      "visibility": "public"
+    },
+    {
+      "id": "temporary_test",
+      "name": "Temporary test airdrop",
+      "visibility": "operator",
+      "items": [
+        "key_of_gilded_lorito",
+        "siluri",
+        "primemachin",
+        "recall_potion",
+        "beak_shard",
+        "gnawed_branch",
+        "rabbit_sinew",
+        "salvaged_scrap"
+      ],
+      "delivery": "wallet"
+    },
+    {
+      "id": "temporary_test_20260910",
+      "name": "Test airdrop — 2026-09-10",
+      "visibility": "operator",
+      "items": [
+        "key_of_gilded_lorito",
+        "croissant",
+        "recall_potion",
+        "potion_of_fuwage",
+        "ember_lorito_plume",
+        "mushroom_tanned_leather",
+        "heart_lorito_plume",
+        "mushroom_lacquer"
+      ],
+      "delivery": "wallet"
     }
   ],
   "giftcards": [
@@ -71,765 +119,985 @@
       "id": "vaporeon_holders_318251937_001",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x0486308296cdb2a63f703b8e1e7806fbbe5ce6e46e877496e91b4e859b10f102"
+      "custody": "0x0486308296cdb2a63f703b8e1e7806fbbe5ce6e46e877496e91b4e859b10f102",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_002",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x1c670d157685fe2990e4f60d0396ecfde5af8597e5c90e876e724b5e0c0dfcb8"
+      "custody": "0x1c670d157685fe2990e4f60d0396ecfde5af8597e5c90e876e724b5e0c0dfcb8",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_003",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x264c330d822b6347fd045eb9d31e8e374532fc09b49a0c632b1e41bcd74890cb"
+      "custody": "0x264c330d822b6347fd045eb9d31e8e374532fc09b49a0c632b1e41bcd74890cb",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_004",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x306e427a52f9bebf4533343f9af02f81bb2e41001f984bed4a2e58ddb254cab3"
+      "custody": "0x306e427a52f9bebf4533343f9af02f81bb2e41001f984bed4a2e58ddb254cab3",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_005",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x40a698e1fab411a3aedcf88b4d9c88568f76ea6695b3e54738a5728ffdd53939"
+      "custody": "0x40a698e1fab411a3aedcf88b4d9c88568f76ea6695b3e54738a5728ffdd53939",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_006",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x52b754f03a251a31420ec3878298e36c47493d56e7da7d8d19eaaa36eaa0b200"
+      "custody": "0x52b754f03a251a31420ec3878298e36c47493d56e7da7d8d19eaaa36eaa0b200",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_007",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x627be710e74172788d5111a757d78b315ff9bfbfea173bd827ed55df04aaa7a9"
+      "custody": "0x627be710e74172788d5111a757d78b315ff9bfbfea173bd827ed55df04aaa7a9",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_008",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x663d023eb7a68b625ab13abeee6d2e5d73ac3e2b0e0cd1a16a37086aa23777a6"
+      "custody": "0x663d023eb7a68b625ab13abeee6d2e5d73ac3e2b0e0cd1a16a37086aa23777a6",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_009",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x6767502cecb54c3aee471a11806d44a14d51c496cfa0ad729269a1d745eb396d"
+      "custody": "0x6767502cecb54c3aee471a11806d44a14d51c496cfa0ad729269a1d745eb396d",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_010",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x813db0bae9aa83f5519155a0ef7225dce4198a55a626a1b56bac941d4c85182c"
+      "custody": "0x813db0bae9aa83f5519155a0ef7225dce4198a55a626a1b56bac941d4c85182c",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_011",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x8a6c8b22d46c113e2bc2f9d425ea68a281f9d9c43692da2f3c15c64e4ae3d6d6"
+      "custody": "0x8a6c8b22d46c113e2bc2f9d425ea68a281f9d9c43692da2f3c15c64e4ae3d6d6",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_012",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x92b28a0a5e5e4a842862db1989ed04f7a3776954b3cd8c097a8bbb36c9127a71"
+      "custody": "0x92b28a0a5e5e4a842862db1989ed04f7a3776954b3cd8c097a8bbb36c9127a71",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_013",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0x9ebd53a7e3b70f80d51e6e1b21764b7b26240d58c9b490ee28e45a0b10061d51"
+      "custody": "0x9ebd53a7e3b70f80d51e6e1b21764b7b26240d58c9b490ee28e45a0b10061d51",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_014",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xaf829a07eb6dcfa5f23a2f4f21a8260d8a18ffebf6755d807cf3a7561a445fc0"
+      "custody": "0xaf829a07eb6dcfa5f23a2f4f21a8260d8a18ffebf6755d807cf3a7561a445fc0",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_015",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xb1329007ab91c20209db03bf4126bb7b002b7de4fca20b576ac3ad48b5e88224"
+      "custody": "0xb1329007ab91c20209db03bf4126bb7b002b7de4fca20b576ac3ad48b5e88224",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_016",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xb3c6a58f622591df75308ad950179049000f1b9163cea77bb90d901833308d68"
+      "custody": "0xb3c6a58f622591df75308ad950179049000f1b9163cea77bb90d901833308d68",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_017",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xb53a1af6c90f0f023bf93308ea87a934267933ff9cf94c50076000c250f41361"
+      "custody": "0xb53a1af6c90f0f023bf93308ea87a934267933ff9cf94c50076000c250f41361",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_018",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xbfb0e273fe92666d88db731b4c4a11dad55e48275acad6b57ea50c861dbc7ca6"
+      "custody": "0xbfb0e273fe92666d88db731b4c4a11dad55e48275acad6b57ea50c861dbc7ca6",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_019",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xc6ef9023e63633995a6f4be4bba10e024c9cba45582889d7fa3715ecea822eed"
+      "custody": "0xc6ef9023e63633995a6f4be4bba10e024c9cba45582889d7fa3715ecea822eed",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_020",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xe8b72a3e4474335190f47606469d9cbe4d51cc43f70d093cc35c951178cfb415"
+      "custody": "0xe8b72a3e4474335190f47606469d9cbe4d51cc43f70d093cc35c951178cfb415",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_021",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xecc17c2179bc5aabc0405e5b3fa5d467923a36718ee0bd44020e0b119618be23"
+      "custody": "0xecc17c2179bc5aabc0405e5b3fa5d467923a36718ee0bd44020e0b119618be23",
+      "campaign": "vaporeon"
     },
     {
       "id": "vaporeon_holders_318251937_022",
       "item_type": "vaporeon",
       "amount": 1,
-      "custody": "0xecc4245d33633300a33d594ea16323524460aad214667bb5f7b620abcb7b7d63"
+      "custody": "0xecc4245d33633300a33d594ea16323524460aad214667bb5f7b620abcb7b7d63",
+      "campaign": "vaporeon"
     },
     {
       "id": "sui_crate_giftcard_001",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_002",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_003",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_004",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_005",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_006",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_007",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_008",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_009",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_010",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_011",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_012",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_013",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_014",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_015",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_016",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_017",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_018",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_019",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_020",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_021",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_022",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_023",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_024",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_025",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_026",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_027",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_028",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_029",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_030",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_031",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_032",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_033",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_034",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_035",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_036",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_037",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_038",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_039",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_040",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_041",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_042",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_043",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_044",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_045",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_046",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_047",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_048",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_049",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_050",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_051",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_052",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_053",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_054",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_055",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_056",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_057",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_058",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_059",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_060",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_061",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_062",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_063",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_064",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_065",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_066",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_067",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_068",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_069",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_070",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_071",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_072",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_073",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_074",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_075",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_076",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_077",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_078",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_079",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_080",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_081",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_082",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_083",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_084",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_085",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_086",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_087",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_088",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_089",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_090",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_091",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_092",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_093",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_094",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_095",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_096",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_097",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_098",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_099",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "sui_crate_giftcard_100",
       "item_type": "sui_crate",
       "amount": 1,
-      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
+      "custody": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8",
+      "campaign": "sui_basecamp_singapore"
     },
     {
       "id": "test_20260908_key_of_gilded_lorito",
       "item_type": "key_of_gilded_lorito",
       "amount": 5,
       "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
-      "network": "testnet"
+      "network": "testnet",
+      "campaign": "temporary_test"
     },
     {
       "id": "test_20260908_siluri",
       "item_type": "siluri",
       "amount": 1,
       "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
-      "network": "testnet"
+      "network": "testnet",
+      "campaign": "temporary_test"
     },
     {
       "id": "test_20260908_primemachin",
       "item_type": "primemachin",
       "amount": 1,
       "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
-      "network": "testnet"
+      "network": "testnet",
+      "campaign": "temporary_test"
     },
     {
       "id": "test_20260908_recall_potion",
       "item_type": "recall_potion",
       "amount": 3,
       "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
-      "network": "testnet"
+      "network": "testnet",
+      "campaign": "temporary_test"
+    },
+    {
+      "id": "test_20260909_tools_5_beak_shard",
+      "item_type": "beak_shard",
+      "amount": 25,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test"
+    },
+    {
+      "id": "test_20260909_tools_5_gnawed_branch",
+      "item_type": "gnawed_branch",
+      "amount": 75,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test"
+    },
+    {
+      "id": "test_20260909_tools_5_rabbit_sinew",
+      "item_type": "rabbit_sinew",
+      "amount": 25,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test"
+    },
+    {
+      "id": "test_20260909_tools_5_salvaged_scrap",
+      "item_type": "salvaged_scrap",
+      "amount": 25,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test"
+    },
+    {
+      "id": "test_20260910_key_of_gilded_lorito",
+      "item_type": "key_of_gilded_lorito",
+      "amount": 10,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_croissant",
+      "item_type": "croissant",
+      "amount": 10,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_recall_potion",
+      "item_type": "recall_potion",
+      "amount": 10,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_potion_of_fuwage",
+      "item_type": "potion_of_fuwage",
+      "amount": 10,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_ember_lorito_plume",
+      "item_type": "ember_lorito_plume",
+      "amount": 40,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_mushroom_tanned_leather",
+      "item_type": "mushroom_tanned_leather",
+      "amount": 40,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_heart_lorito_plume",
+      "item_type": "heart_lorito_plume",
+      "amount": 30,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
+    },
+    {
+      "id": "test_20260910_mushroom_lacquer",
+      "item_type": "mushroom_lacquer",
+      "amount": 30,
+      "custody": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+      "network": "testnet",
+      "campaign": "temporary_test_20260910"
     }
   ],
-  "legacy_pool": [],
-  "pending": [],
   "giftcard_batches": [
     {
       "id": "oeuftermath_holders_20260908",
@@ -2905,7 +3173,8 @@
         "0xff9ae36e70df50518269391009dbe48df714f84708c4349de0c3be400af84b74",
         "0xffb5ff178827c2178338f0b1387b58e7ff2d2ced3554a479a71d8f2768e4bb22",
         "0xfffd70e70c8a43ec8447333fdca7b7c418deaf89bbcac1208a20438b2953975f"
-      ]
+      ],
+      "campaign": "oeuftermath"
     },
     {
       "id": "suicune_holders_20260908",
@@ -3835,7 +4104,8 @@
         "0xffb1bcc04b21bb546c29c12ba6054e875df5023cc20f9ba86dbbeee287476529",
         "0xffd6b2059fb216274054a8fca7550c5f3170caa6f236ae6e72de6eb3c4bac0af",
         "0xfff22b21143dbb16763e989837e138df10afd73831c6f3aaddff84983fcf22fd"
-      ]
+      ],
+      "campaign": "suicune"
     },
     {
       "id": "suifren_bullshark_holders_20260908",
@@ -4343,7 +4613,8 @@
         "0xfe6bab8ffd884a1c4801ec1133b35a85a97dd21f10c8a52a4af7e963cf0cf462",
         "0xfef9c4f709592679fada48a7c087881daf897833c4a8a56742144fe87593327d",
         "0xff91d0ab13987fe572b2278949e7ceeea6febb50bcc09c1aba59efa06fbfffc7"
-      ]
+      ],
+      "campaign": "suifren_bullshark"
     },
     {
       "id": "suifren_capy_holders_20260908",
@@ -4851,7 +5122,8 @@
         "0xfee5677a765c619933f8a3f2312a237d256e56905218581b2b5d90dcad1495e7",
         "0xff9e18a5bab86f5509fbe1f7c09588a428025116bee7727ec0b6111e27c440ac",
         "0xfffa15096266329d69d5b9dc2572d93101cce4cfb745d3bac2ef707a87a32112"
-      ]
+      ],
+      "campaign": "suifren_capy"
     },
     {
       "id": "primemachin_holders_20260908",
@@ -8192,7 +8464,529 @@
         "0xfff055b19ed19d2108c7ef03d4506e3a6936f18014f3e29a2fc0bb8956bd6f41",
         "0xfff4b83646a37e9689c192ebce47a499dfee33ad4df26b75f7e736441016734d",
         "0xfffcbda3f184bdd5d5abfedfed5bf3127c3dfaad5ea994a1d954ac23190e1fe0"
-      ]
+      ],
+      "campaign": "primemachin"
+    },
+    {
+      "id": "hytale_veterans_1_10_sui_crate",
+      "item_type": "sui_crate",
+      "amount": 3,
+      "network": "mainnet",
+      "recipients": [
+        "0x13bd9e100e10d563cf3446b7d138ada5efe16db4812a67576533421054c4207d",
+        "0x1ad1db1f1d34130ded30857b9c8f354e03ffc87601a99c4d71da02392cfa0bd8",
+        "0x1e7eacd871320a9a99e8c27ab5d3b83b65d5baa92300b512ea297ab497e7a443",
+        "0x280dac24438eae5f0f30bb066facd2b8f4a56f0cf860e256a7861d00c5ac40b9",
+        "0x33b9977ddbfdaa8e1c1c6a3336c099ec141f692f1560fbad9cd1253136b136cb",
+        "0x4031e32c4367312464ed4da2ec17e29557a3a62dc7f38e00f1a8db202d967a11",
+        "0x5ba2b6ea4b37cbfcc5527cef17e0b62eaf62e6e726c41f528171822ed15afacd",
+        "0xc08c4b52b77303d6cb5822b21ac25a05e27ebbdfee320a34122cc1b581505668",
+        "0xf575fcbbba10f4891d41ee9c0b3dcef01f3f1ca2f99548cddef141a516ad8372",
+        "0xfde684c28b967eb700f5472f7b2ed7117ca856c8d06e695497de569238ca8a47"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_1_10_pet_crate",
+      "item_type": "pet_crate",
+      "amount": 3,
+      "network": "mainnet",
+      "recipients": [
+        "0x13bd9e100e10d563cf3446b7d138ada5efe16db4812a67576533421054c4207d",
+        "0x1ad1db1f1d34130ded30857b9c8f354e03ffc87601a99c4d71da02392cfa0bd8",
+        "0x1e7eacd871320a9a99e8c27ab5d3b83b65d5baa92300b512ea297ab497e7a443",
+        "0x280dac24438eae5f0f30bb066facd2b8f4a56f0cf860e256a7861d00c5ac40b9",
+        "0x33b9977ddbfdaa8e1c1c6a3336c099ec141f692f1560fbad9cd1253136b136cb",
+        "0x4031e32c4367312464ed4da2ec17e29557a3a62dc7f38e00f1a8db202d967a11",
+        "0x5ba2b6ea4b37cbfcc5527cef17e0b62eaf62e6e726c41f528171822ed15afacd",
+        "0xc08c4b52b77303d6cb5822b21ac25a05e27ebbdfee320a34122cc1b581505668",
+        "0xf575fcbbba10f4891d41ee9c0b3dcef01f3f1ca2f99548cddef141a516ad8372",
+        "0xfde684c28b967eb700f5472f7b2ed7117ca856c8d06e695497de569238ca8a47"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_1_10_food_crate",
+      "item_type": "food_crate",
+      "amount": 3,
+      "network": "mainnet",
+      "recipients": [
+        "0x13bd9e100e10d563cf3446b7d138ada5efe16db4812a67576533421054c4207d",
+        "0x1ad1db1f1d34130ded30857b9c8f354e03ffc87601a99c4d71da02392cfa0bd8",
+        "0x1e7eacd871320a9a99e8c27ab5d3b83b65d5baa92300b512ea297ab497e7a443",
+        "0x280dac24438eae5f0f30bb066facd2b8f4a56f0cf860e256a7861d00c5ac40b9",
+        "0x33b9977ddbfdaa8e1c1c6a3336c099ec141f692f1560fbad9cd1253136b136cb",
+        "0x4031e32c4367312464ed4da2ec17e29557a3a62dc7f38e00f1a8db202d967a11",
+        "0x5ba2b6ea4b37cbfcc5527cef17e0b62eaf62e6e726c41f528171822ed15afacd",
+        "0xc08c4b52b77303d6cb5822b21ac25a05e27ebbdfee320a34122cc1b581505668",
+        "0xf575fcbbba10f4891d41ee9c0b3dcef01f3f1ca2f99548cddef141a516ad8372",
+        "0xfde684c28b967eb700f5472f7b2ed7117ca856c8d06e695497de569238ca8a47"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_1_10_resource_crate",
+      "item_type": "resource_crate",
+      "amount": 3,
+      "network": "mainnet",
+      "recipients": [
+        "0x13bd9e100e10d563cf3446b7d138ada5efe16db4812a67576533421054c4207d",
+        "0x1ad1db1f1d34130ded30857b9c8f354e03ffc87601a99c4d71da02392cfa0bd8",
+        "0x1e7eacd871320a9a99e8c27ab5d3b83b65d5baa92300b512ea297ab497e7a443",
+        "0x280dac24438eae5f0f30bb066facd2b8f4a56f0cf860e256a7861d00c5ac40b9",
+        "0x33b9977ddbfdaa8e1c1c6a3336c099ec141f692f1560fbad9cd1253136b136cb",
+        "0x4031e32c4367312464ed4da2ec17e29557a3a62dc7f38e00f1a8db202d967a11",
+        "0x5ba2b6ea4b37cbfcc5527cef17e0b62eaf62e6e726c41f528171822ed15afacd",
+        "0xc08c4b52b77303d6cb5822b21ac25a05e27ebbdfee320a34122cc1b581505668",
+        "0xf575fcbbba10f4891d41ee9c0b3dcef01f3f1ca2f99548cddef141a516ad8372",
+        "0xfde684c28b967eb700f5472f7b2ed7117ca856c8d06e695497de569238ca8a47"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_11_50_sui_crate",
+      "item_type": "sui_crate",
+      "amount": 2,
+      "network": "mainnet",
+      "recipients": [
+        "0x295f32e415cd407ac8d62895b867d28b8766572149b175c58076c991d412b6e7",
+        "0x2ea3f93cec1a3c8008ff9170a810a1cc1ef035fd05c38f6c3ca5d0bfdc574537",
+        "0x34896d3d3cc6992e1003881ff4c645ac9c3013cfdccb04d0596f3645811a48d7",
+        "0x3500333e6764483e43d40c470938e1d7217f4d128471cee2e4ad96a223385c73",
+        "0x36c5627ca8c4c099dd246d8dc5508c566d42c36731f2514062d4bab2e3a715b4",
+        "0x3db550e987506ebc130a78e3d0babd030aa98533117a813e141bb359dd4192a7",
+        "0x3f2b3e68cd9072ae5817e0cd79a4658a306e2366e72f109d477a761f8b317269",
+        "0x412ba6c4f76048ba2778bfe50cc33a8192bb762f25501d899e9dd9248788f791",
+        "0x42b270839976120420383df0f134e3609d225a06ad073c7fba24d613d51bdcca",
+        "0x4419cb68175e10b7daac1ea1777589c99323dcf555645f0cd7eb40863c1ac074",
+        "0x4fe1e68e3b174552c75d8a9db3578522c4f43ecbf8dc574109e694cc1375c1c0",
+        "0x520e07b0aa68f7e74b52517399317dce24847a79f85792632d2850d5086b533d",
+        "0x588abd2ae04e13cf2835e649c69a0d1c6db662139cea07abaf4e4e1a6f242b40",
+        "0x58c0e21bddded2decc8080e66fc11d7abdb9389df153b25987d061c6de82f347",
+        "0x5ed655f068f090a10b650ae393a58e4014be537ea3078ce02117088d6c74f4e0",
+        "0x5f50e8a867eb4d4a868581f575c24ba504b06827824a6ffd5e9acf8391ccbcaf",
+        "0x676c26d378b4586d5c7b3effb60a1a818d80d0b8eac42b870c07f9ebb8d45741",
+        "0x76fe32e5b84ebd27525df6ca6990e63e849637cca62a608aa22eb89c115f66dc",
+        "0x798d5a590c4ea42148c5adb9c5368d5460e1ea1a0ad18c9a556397d809244e9a",
+        "0x81ef592a7db2d543fa48b265053e2541d01fd267492d3576dd53471cd801650f",
+        "0x831437aad617eee349d0bcf1dee2018019666015171dd2d06014ed9be7bc43dc",
+        "0x870db77f811fdda854876c2e0715cd7e0942f2d450f9bee2240433125910a54e",
+        "0x9da376239ec4e5972b926b12a71d3fc768e459d44dad513ffe7960df47b0954c",
+        "0xa32c0cf062d27c1c37b3aea1e13663fff4796e4fb3647aed8650346320f4b115",
+        "0xac0860500d4e6bf125be0545b7f047d5e9955ee599114eba189fbc5ae22723af",
+        "0xaffba6115fd8187fdc7cfe7cc56df86d426cc9b37f6a3110ad334e5923a49cc2",
+        "0xb3a775f0a4f7e19c096c6352f24756da89fb874d2c3f44cfdaeecc6b247108ca",
+        "0xb5615f2a7c065ff9c55fab040132e4b703941a6510650779ea496678cd7221c4",
+        "0xb73054c47a6ffb1f22e7e0d72c0b008bc0f4ccc236e5ed116f437f284bdeba7a",
+        "0xb89ec1738dd48c8d2ceaaa20483847834d3a695d684b17bc773efbe7033e7b1c",
+        "0xbc16829c5be2eed1a6ee239a5335e71e8e16d2f3cb1b416b560fa14fa8dd4a98",
+        "0xbe7803a47b94d746e55ab54a21ae65b45dfe473aa7b712a707e5e6a875b9c76a",
+        "0xc1c25bf894e78d554c3e719d26b43a71a83c4bd2821382c52caa563d3336b526",
+        "0xc66b0052ee20ad09cd38f925e588142ec874bf6c7586ca301b4dc2c2b647992e",
+        "0xc7fa75073c496b813f1a0226fc0edc0b5894f51f778d8c809c2abb4902ed5810",
+        "0xc814eba68d09cd36d6d0d7c1ca09c302e46ce548e7c91188a6b3f121e7d716e4",
+        "0xd2651d42e704b9e4d2e373b268ce74373abd6d4c0f871b9ea0fa9af29705d699",
+        "0xeba5671aa308d790754e786338b307e1a8279f7a2a5f457fd422eb3616f3dcc9",
+        "0xef7b29d5b00c0f9470db44a26f37eccb600f9093366e5ff93188fbdb0872a54b",
+        "0xf5d7b6422188657f8601da39bd56a8d99c901824809a0740d5d350ce69bb6d65"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_11_50_pet_crate",
+      "item_type": "pet_crate",
+      "amount": 2,
+      "network": "mainnet",
+      "recipients": [
+        "0x295f32e415cd407ac8d62895b867d28b8766572149b175c58076c991d412b6e7",
+        "0x2ea3f93cec1a3c8008ff9170a810a1cc1ef035fd05c38f6c3ca5d0bfdc574537",
+        "0x34896d3d3cc6992e1003881ff4c645ac9c3013cfdccb04d0596f3645811a48d7",
+        "0x3500333e6764483e43d40c470938e1d7217f4d128471cee2e4ad96a223385c73",
+        "0x36c5627ca8c4c099dd246d8dc5508c566d42c36731f2514062d4bab2e3a715b4",
+        "0x3db550e987506ebc130a78e3d0babd030aa98533117a813e141bb359dd4192a7",
+        "0x3f2b3e68cd9072ae5817e0cd79a4658a306e2366e72f109d477a761f8b317269",
+        "0x412ba6c4f76048ba2778bfe50cc33a8192bb762f25501d899e9dd9248788f791",
+        "0x42b270839976120420383df0f134e3609d225a06ad073c7fba24d613d51bdcca",
+        "0x4419cb68175e10b7daac1ea1777589c99323dcf555645f0cd7eb40863c1ac074",
+        "0x4fe1e68e3b174552c75d8a9db3578522c4f43ecbf8dc574109e694cc1375c1c0",
+        "0x520e07b0aa68f7e74b52517399317dce24847a79f85792632d2850d5086b533d",
+        "0x588abd2ae04e13cf2835e649c69a0d1c6db662139cea07abaf4e4e1a6f242b40",
+        "0x58c0e21bddded2decc8080e66fc11d7abdb9389df153b25987d061c6de82f347",
+        "0x5ed655f068f090a10b650ae393a58e4014be537ea3078ce02117088d6c74f4e0",
+        "0x5f50e8a867eb4d4a868581f575c24ba504b06827824a6ffd5e9acf8391ccbcaf",
+        "0x676c26d378b4586d5c7b3effb60a1a818d80d0b8eac42b870c07f9ebb8d45741",
+        "0x76fe32e5b84ebd27525df6ca6990e63e849637cca62a608aa22eb89c115f66dc",
+        "0x798d5a590c4ea42148c5adb9c5368d5460e1ea1a0ad18c9a556397d809244e9a",
+        "0x81ef592a7db2d543fa48b265053e2541d01fd267492d3576dd53471cd801650f",
+        "0x831437aad617eee349d0bcf1dee2018019666015171dd2d06014ed9be7bc43dc",
+        "0x870db77f811fdda854876c2e0715cd7e0942f2d450f9bee2240433125910a54e",
+        "0x9da376239ec4e5972b926b12a71d3fc768e459d44dad513ffe7960df47b0954c",
+        "0xa32c0cf062d27c1c37b3aea1e13663fff4796e4fb3647aed8650346320f4b115",
+        "0xac0860500d4e6bf125be0545b7f047d5e9955ee599114eba189fbc5ae22723af",
+        "0xaffba6115fd8187fdc7cfe7cc56df86d426cc9b37f6a3110ad334e5923a49cc2",
+        "0xb3a775f0a4f7e19c096c6352f24756da89fb874d2c3f44cfdaeecc6b247108ca",
+        "0xb5615f2a7c065ff9c55fab040132e4b703941a6510650779ea496678cd7221c4",
+        "0xb73054c47a6ffb1f22e7e0d72c0b008bc0f4ccc236e5ed116f437f284bdeba7a",
+        "0xb89ec1738dd48c8d2ceaaa20483847834d3a695d684b17bc773efbe7033e7b1c",
+        "0xbc16829c5be2eed1a6ee239a5335e71e8e16d2f3cb1b416b560fa14fa8dd4a98",
+        "0xbe7803a47b94d746e55ab54a21ae65b45dfe473aa7b712a707e5e6a875b9c76a",
+        "0xc1c25bf894e78d554c3e719d26b43a71a83c4bd2821382c52caa563d3336b526",
+        "0xc66b0052ee20ad09cd38f925e588142ec874bf6c7586ca301b4dc2c2b647992e",
+        "0xc7fa75073c496b813f1a0226fc0edc0b5894f51f778d8c809c2abb4902ed5810",
+        "0xc814eba68d09cd36d6d0d7c1ca09c302e46ce548e7c91188a6b3f121e7d716e4",
+        "0xd2651d42e704b9e4d2e373b268ce74373abd6d4c0f871b9ea0fa9af29705d699",
+        "0xeba5671aa308d790754e786338b307e1a8279f7a2a5f457fd422eb3616f3dcc9",
+        "0xef7b29d5b00c0f9470db44a26f37eccb600f9093366e5ff93188fbdb0872a54b",
+        "0xf5d7b6422188657f8601da39bd56a8d99c901824809a0740d5d350ce69bb6d65"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_11_50_food_crate",
+      "item_type": "food_crate",
+      "amount": 2,
+      "network": "mainnet",
+      "recipients": [
+        "0x295f32e415cd407ac8d62895b867d28b8766572149b175c58076c991d412b6e7",
+        "0x2ea3f93cec1a3c8008ff9170a810a1cc1ef035fd05c38f6c3ca5d0bfdc574537",
+        "0x34896d3d3cc6992e1003881ff4c645ac9c3013cfdccb04d0596f3645811a48d7",
+        "0x3500333e6764483e43d40c470938e1d7217f4d128471cee2e4ad96a223385c73",
+        "0x36c5627ca8c4c099dd246d8dc5508c566d42c36731f2514062d4bab2e3a715b4",
+        "0x3db550e987506ebc130a78e3d0babd030aa98533117a813e141bb359dd4192a7",
+        "0x3f2b3e68cd9072ae5817e0cd79a4658a306e2366e72f109d477a761f8b317269",
+        "0x412ba6c4f76048ba2778bfe50cc33a8192bb762f25501d899e9dd9248788f791",
+        "0x42b270839976120420383df0f134e3609d225a06ad073c7fba24d613d51bdcca",
+        "0x4419cb68175e10b7daac1ea1777589c99323dcf555645f0cd7eb40863c1ac074",
+        "0x4fe1e68e3b174552c75d8a9db3578522c4f43ecbf8dc574109e694cc1375c1c0",
+        "0x520e07b0aa68f7e74b52517399317dce24847a79f85792632d2850d5086b533d",
+        "0x588abd2ae04e13cf2835e649c69a0d1c6db662139cea07abaf4e4e1a6f242b40",
+        "0x58c0e21bddded2decc8080e66fc11d7abdb9389df153b25987d061c6de82f347",
+        "0x5ed655f068f090a10b650ae393a58e4014be537ea3078ce02117088d6c74f4e0",
+        "0x5f50e8a867eb4d4a868581f575c24ba504b06827824a6ffd5e9acf8391ccbcaf",
+        "0x676c26d378b4586d5c7b3effb60a1a818d80d0b8eac42b870c07f9ebb8d45741",
+        "0x76fe32e5b84ebd27525df6ca6990e63e849637cca62a608aa22eb89c115f66dc",
+        "0x798d5a590c4ea42148c5adb9c5368d5460e1ea1a0ad18c9a556397d809244e9a",
+        "0x81ef592a7db2d543fa48b265053e2541d01fd267492d3576dd53471cd801650f",
+        "0x831437aad617eee349d0bcf1dee2018019666015171dd2d06014ed9be7bc43dc",
+        "0x870db77f811fdda854876c2e0715cd7e0942f2d450f9bee2240433125910a54e",
+        "0x9da376239ec4e5972b926b12a71d3fc768e459d44dad513ffe7960df47b0954c",
+        "0xa32c0cf062d27c1c37b3aea1e13663fff4796e4fb3647aed8650346320f4b115",
+        "0xac0860500d4e6bf125be0545b7f047d5e9955ee599114eba189fbc5ae22723af",
+        "0xaffba6115fd8187fdc7cfe7cc56df86d426cc9b37f6a3110ad334e5923a49cc2",
+        "0xb3a775f0a4f7e19c096c6352f24756da89fb874d2c3f44cfdaeecc6b247108ca",
+        "0xb5615f2a7c065ff9c55fab040132e4b703941a6510650779ea496678cd7221c4",
+        "0xb73054c47a6ffb1f22e7e0d72c0b008bc0f4ccc236e5ed116f437f284bdeba7a",
+        "0xb89ec1738dd48c8d2ceaaa20483847834d3a695d684b17bc773efbe7033e7b1c",
+        "0xbc16829c5be2eed1a6ee239a5335e71e8e16d2f3cb1b416b560fa14fa8dd4a98",
+        "0xbe7803a47b94d746e55ab54a21ae65b45dfe473aa7b712a707e5e6a875b9c76a",
+        "0xc1c25bf894e78d554c3e719d26b43a71a83c4bd2821382c52caa563d3336b526",
+        "0xc66b0052ee20ad09cd38f925e588142ec874bf6c7586ca301b4dc2c2b647992e",
+        "0xc7fa75073c496b813f1a0226fc0edc0b5894f51f778d8c809c2abb4902ed5810",
+        "0xc814eba68d09cd36d6d0d7c1ca09c302e46ce548e7c91188a6b3f121e7d716e4",
+        "0xd2651d42e704b9e4d2e373b268ce74373abd6d4c0f871b9ea0fa9af29705d699",
+        "0xeba5671aa308d790754e786338b307e1a8279f7a2a5f457fd422eb3616f3dcc9",
+        "0xef7b29d5b00c0f9470db44a26f37eccb600f9093366e5ff93188fbdb0872a54b",
+        "0xf5d7b6422188657f8601da39bd56a8d99c901824809a0740d5d350ce69bb6d65"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_11_50_resource_crate",
+      "item_type": "resource_crate",
+      "amount": 2,
+      "network": "mainnet",
+      "recipients": [
+        "0x295f32e415cd407ac8d62895b867d28b8766572149b175c58076c991d412b6e7",
+        "0x2ea3f93cec1a3c8008ff9170a810a1cc1ef035fd05c38f6c3ca5d0bfdc574537",
+        "0x34896d3d3cc6992e1003881ff4c645ac9c3013cfdccb04d0596f3645811a48d7",
+        "0x3500333e6764483e43d40c470938e1d7217f4d128471cee2e4ad96a223385c73",
+        "0x36c5627ca8c4c099dd246d8dc5508c566d42c36731f2514062d4bab2e3a715b4",
+        "0x3db550e987506ebc130a78e3d0babd030aa98533117a813e141bb359dd4192a7",
+        "0x3f2b3e68cd9072ae5817e0cd79a4658a306e2366e72f109d477a761f8b317269",
+        "0x412ba6c4f76048ba2778bfe50cc33a8192bb762f25501d899e9dd9248788f791",
+        "0x42b270839976120420383df0f134e3609d225a06ad073c7fba24d613d51bdcca",
+        "0x4419cb68175e10b7daac1ea1777589c99323dcf555645f0cd7eb40863c1ac074",
+        "0x4fe1e68e3b174552c75d8a9db3578522c4f43ecbf8dc574109e694cc1375c1c0",
+        "0x520e07b0aa68f7e74b52517399317dce24847a79f85792632d2850d5086b533d",
+        "0x588abd2ae04e13cf2835e649c69a0d1c6db662139cea07abaf4e4e1a6f242b40",
+        "0x58c0e21bddded2decc8080e66fc11d7abdb9389df153b25987d061c6de82f347",
+        "0x5ed655f068f090a10b650ae393a58e4014be537ea3078ce02117088d6c74f4e0",
+        "0x5f50e8a867eb4d4a868581f575c24ba504b06827824a6ffd5e9acf8391ccbcaf",
+        "0x676c26d378b4586d5c7b3effb60a1a818d80d0b8eac42b870c07f9ebb8d45741",
+        "0x76fe32e5b84ebd27525df6ca6990e63e849637cca62a608aa22eb89c115f66dc",
+        "0x798d5a590c4ea42148c5adb9c5368d5460e1ea1a0ad18c9a556397d809244e9a",
+        "0x81ef592a7db2d543fa48b265053e2541d01fd267492d3576dd53471cd801650f",
+        "0x831437aad617eee349d0bcf1dee2018019666015171dd2d06014ed9be7bc43dc",
+        "0x870db77f811fdda854876c2e0715cd7e0942f2d450f9bee2240433125910a54e",
+        "0x9da376239ec4e5972b926b12a71d3fc768e459d44dad513ffe7960df47b0954c",
+        "0xa32c0cf062d27c1c37b3aea1e13663fff4796e4fb3647aed8650346320f4b115",
+        "0xac0860500d4e6bf125be0545b7f047d5e9955ee599114eba189fbc5ae22723af",
+        "0xaffba6115fd8187fdc7cfe7cc56df86d426cc9b37f6a3110ad334e5923a49cc2",
+        "0xb3a775f0a4f7e19c096c6352f24756da89fb874d2c3f44cfdaeecc6b247108ca",
+        "0xb5615f2a7c065ff9c55fab040132e4b703941a6510650779ea496678cd7221c4",
+        "0xb73054c47a6ffb1f22e7e0d72c0b008bc0f4ccc236e5ed116f437f284bdeba7a",
+        "0xb89ec1738dd48c8d2ceaaa20483847834d3a695d684b17bc773efbe7033e7b1c",
+        "0xbc16829c5be2eed1a6ee239a5335e71e8e16d2f3cb1b416b560fa14fa8dd4a98",
+        "0xbe7803a47b94d746e55ab54a21ae65b45dfe473aa7b712a707e5e6a875b9c76a",
+        "0xc1c25bf894e78d554c3e719d26b43a71a83c4bd2821382c52caa563d3336b526",
+        "0xc66b0052ee20ad09cd38f925e588142ec874bf6c7586ca301b4dc2c2b647992e",
+        "0xc7fa75073c496b813f1a0226fc0edc0b5894f51f778d8c809c2abb4902ed5810",
+        "0xc814eba68d09cd36d6d0d7c1ca09c302e46ce548e7c91188a6b3f121e7d716e4",
+        "0xd2651d42e704b9e4d2e373b268ce74373abd6d4c0f871b9ea0fa9af29705d699",
+        "0xeba5671aa308d790754e786338b307e1a8279f7a2a5f457fd422eb3616f3dcc9",
+        "0xef7b29d5b00c0f9470db44a26f37eccb600f9093366e5ff93188fbdb0872a54b",
+        "0xf5d7b6422188657f8601da39bd56a8d99c901824809a0740d5d350ce69bb6d65"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_51_100_sui_crate",
+      "item_type": "sui_crate",
+      "amount": 1,
+      "network": "mainnet",
+      "recipients": [
+        "0x00d9bc933d1ae9023baf40c53c8340e606033769dcb2a0bef9ffe61661d4531b",
+        "0x0649ecdc2b856f898f5310a932d9f58d6543f86df6c7ef36338e7926398f50da",
+        "0x067e152c47316f9e05f8821a5637b50010572cd334da2ed832517f2533638242",
+        "0x07ddc70ebefa7df14ffd4c80d0e6f66d4679e2111ab4641dc9e7008f4f2270fb",
+        "0x07f6108e272b616e55e634dbbe86c49bb43182ccd6ca535c00dda037c00331b4",
+        "0x0ce94184c69cd43d4f446b22dc67c8cf00801c71db1a004433d27dfbe449455a",
+        "0x0dd3518dba35507355f3f413f43442b893d91a42cf204b280c003c01e40c4b92",
+        "0x0de0aa52fffecc2c2e9dc7c68742c72fe3ec9d6f5186dbfb29a943df342069f2",
+        "0x14d81db033641fa4b4793aa3a51e050834a616e386ae42db746008150608dfd1",
+        "0x1b0637d97b061d06efcb38c3c89b65f9a00a91123f1db9b7a47e0ceae4e0dea6",
+        "0x1ca560e7f64325dcf982887ff82e107dea98e27c0480d6d1ad7a4599661a3a80",
+        "0x29e3d4c484e44ea16dfa87b340058e904695e748df2036efff8f66d6d89fe2de",
+        "0x2b81f2244e4887a48c6e19ab5daf1092d7a78749169d8309585bd828e3497b0f",
+        "0x2e404dda989b476dfece265159edb42fbae8a0d69b240a8d70d42979c22dc1eb",
+        "0x4eccb8a6ca6102aa290ca34ce8c91313f2e7e12e84e4aa7e71a43f9a827bc09c",
+        "0x510ab4734bdc8c9eca5915a35d7543470c5006cfeeb47645c0b61d9d4b5adb32",
+        "0x5271275332ea2264967cbe570a6a3ed8a97662e7ba1b95320a98586f7459db63",
+        "0x62b3edf2f9903be0e226b945405a80a33f8850ee5580912bc01bb78f7b70c0a9",
+        "0x66fa6c3652a4bd9ea9a05eb1add7b9aa33ad72a2ac16e01dea8e23680f3ed820",
+        "0x6d90f8073909439cbcb4990f914533bef1391f8c5c95df0a217f202164d6aacb",
+        "0x6eacd6b4c9d4b289122b1c2e4e794e1a48bcf68eff7694d97ce2bd1df960b391",
+        "0x7e2a23a695935f344574758085a743c502afc5a74c6b67c9ad8dd9fbe9469f04",
+        "0x7e50a3d4a0011a1c54ee95ab3d93b42154014f92346b500c5bbe7e614e040353",
+        "0x81625e35b5bed6c2534eaf221cbe6a7da9d014a69ebafce9ca4f03da9fe85e73",
+        "0x86557bf4960343c46aa98b1a9fb7b6e99c3820ea874bf706d752e8b3bf508e48",
+        "0x869e6d54b3dee2c4af2e50943742c94d0ce54743a40d239a003117f65e9b56a2",
+        "0x8b69c3bded90ab6697a3039ccbc04aef8ba2627aa4e630e8d0554bdef9a8e270",
+        "0x8fb8f291d5993038be054b8fe2037c55c504018448fced08a12cc04ec162c9c4",
+        "0x9140641ff31ddb4dbd1eff018fb4e60b523f42077069faafd7d999a18cf2439a",
+        "0x91b6ad388aedbd3062bdbc2b8f48f6b2be646ca56d5175049270cb45ea9759d9",
+        "0x957f80659d9c92f8f7d8b5e6dc27e7154c0e28231acd55865afec1a3aac5e5c7",
+        "0x961a80f62058b7008c8c2fda8d0180719388b25bd633c93e7aae440d7c65b8f2",
+        "0x990aaeafd6d01f51bfca712969ad3e4680eb609ab621c06bf26b8d2e6d76f1d0",
+        "0x9d07f38de8f8f9ebf6a713fda17038d567260b92df449db70bd4a494748354ff",
+        "0x9ebec35229e15f8d9ea8cb47cbaa04bbe2ebe135432f7099ab1605be6de90905",
+        "0xa28a5b693de508fe041ac0ef6c8c95856f7c3af3bd8f1f02d3fc15cd0b4b1460",
+        "0xaeb6cad780d482a056a00a98bd7d6737505d17d53788aec9ff12c81a1ee7933f",
+        "0xb04b433c2acb10a2737effe4c07cc57dab4327b0433f5616775f8b11808e94bc",
+        "0xb6064c61c4618125385b62aac9de669ebd10d1afc7243281cd5f6841968543b5",
+        "0xb8d5eac154b955faac171d83c1c7307d0b6344af7bf08f66bbb8f0848810f34d",
+        "0xbac43d7421a6ac27c4bff4cd7a00c8936b134e812dab44f50f8ecb00ebb20fd3",
+        "0xc7d272518d8655b67b85fc4b67295a35ee7f44c3a7d38211303ab574a20a9029",
+        "0xcb1f3798d83ebdcfa75446bb9eb75af617e1f0ea6656ff739b2e7bdbdb42b71a",
+        "0xd97340df6b3499b14b333d75d1bcf9797a654d78a3ed33100f7d8333b5b1fa70",
+        "0xdabe835b9c5961222df080291439b8f63bbee804d9cb534caac3aa2cee23d097",
+        "0xe24a263e44bbf7e5bca920d10e1e1d079b16c6932f9d2edaa5db64a77122cfa3",
+        "0xe2ee762b12cb04215b444ebea9c87c540306a2a805d9f7f81b76cbe38456d6b9",
+        "0xe8ed9beb8c6bb8732bbc9fa4b927e22eb6695787c32483f8a9a66adc535ee0ef",
+        "0xf54c082306bd98c570041f941a8bbc4ae04e107d8b6885c1c997383beba6b292",
+        "0xf934e406fc925a6a5de66fa1fbd9c0ec56ec61388d399eabfc8dd744c8553efe"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_51_100_pet_crate",
+      "item_type": "pet_crate",
+      "amount": 1,
+      "network": "mainnet",
+      "recipients": [
+        "0x00d9bc933d1ae9023baf40c53c8340e606033769dcb2a0bef9ffe61661d4531b",
+        "0x0649ecdc2b856f898f5310a932d9f58d6543f86df6c7ef36338e7926398f50da",
+        "0x067e152c47316f9e05f8821a5637b50010572cd334da2ed832517f2533638242",
+        "0x07ddc70ebefa7df14ffd4c80d0e6f66d4679e2111ab4641dc9e7008f4f2270fb",
+        "0x07f6108e272b616e55e634dbbe86c49bb43182ccd6ca535c00dda037c00331b4",
+        "0x0ce94184c69cd43d4f446b22dc67c8cf00801c71db1a004433d27dfbe449455a",
+        "0x0dd3518dba35507355f3f413f43442b893d91a42cf204b280c003c01e40c4b92",
+        "0x0de0aa52fffecc2c2e9dc7c68742c72fe3ec9d6f5186dbfb29a943df342069f2",
+        "0x14d81db033641fa4b4793aa3a51e050834a616e386ae42db746008150608dfd1",
+        "0x1b0637d97b061d06efcb38c3c89b65f9a00a91123f1db9b7a47e0ceae4e0dea6",
+        "0x1ca560e7f64325dcf982887ff82e107dea98e27c0480d6d1ad7a4599661a3a80",
+        "0x29e3d4c484e44ea16dfa87b340058e904695e748df2036efff8f66d6d89fe2de",
+        "0x2b81f2244e4887a48c6e19ab5daf1092d7a78749169d8309585bd828e3497b0f",
+        "0x2e404dda989b476dfece265159edb42fbae8a0d69b240a8d70d42979c22dc1eb",
+        "0x4eccb8a6ca6102aa290ca34ce8c91313f2e7e12e84e4aa7e71a43f9a827bc09c",
+        "0x510ab4734bdc8c9eca5915a35d7543470c5006cfeeb47645c0b61d9d4b5adb32",
+        "0x5271275332ea2264967cbe570a6a3ed8a97662e7ba1b95320a98586f7459db63",
+        "0x62b3edf2f9903be0e226b945405a80a33f8850ee5580912bc01bb78f7b70c0a9",
+        "0x66fa6c3652a4bd9ea9a05eb1add7b9aa33ad72a2ac16e01dea8e23680f3ed820",
+        "0x6d90f8073909439cbcb4990f914533bef1391f8c5c95df0a217f202164d6aacb",
+        "0x6eacd6b4c9d4b289122b1c2e4e794e1a48bcf68eff7694d97ce2bd1df960b391",
+        "0x7e2a23a695935f344574758085a743c502afc5a74c6b67c9ad8dd9fbe9469f04",
+        "0x7e50a3d4a0011a1c54ee95ab3d93b42154014f92346b500c5bbe7e614e040353",
+        "0x81625e35b5bed6c2534eaf221cbe6a7da9d014a69ebafce9ca4f03da9fe85e73",
+        "0x86557bf4960343c46aa98b1a9fb7b6e99c3820ea874bf706d752e8b3bf508e48",
+        "0x869e6d54b3dee2c4af2e50943742c94d0ce54743a40d239a003117f65e9b56a2",
+        "0x8b69c3bded90ab6697a3039ccbc04aef8ba2627aa4e630e8d0554bdef9a8e270",
+        "0x8fb8f291d5993038be054b8fe2037c55c504018448fced08a12cc04ec162c9c4",
+        "0x9140641ff31ddb4dbd1eff018fb4e60b523f42077069faafd7d999a18cf2439a",
+        "0x91b6ad388aedbd3062bdbc2b8f48f6b2be646ca56d5175049270cb45ea9759d9",
+        "0x957f80659d9c92f8f7d8b5e6dc27e7154c0e28231acd55865afec1a3aac5e5c7",
+        "0x961a80f62058b7008c8c2fda8d0180719388b25bd633c93e7aae440d7c65b8f2",
+        "0x990aaeafd6d01f51bfca712969ad3e4680eb609ab621c06bf26b8d2e6d76f1d0",
+        "0x9d07f38de8f8f9ebf6a713fda17038d567260b92df449db70bd4a494748354ff",
+        "0x9ebec35229e15f8d9ea8cb47cbaa04bbe2ebe135432f7099ab1605be6de90905",
+        "0xa28a5b693de508fe041ac0ef6c8c95856f7c3af3bd8f1f02d3fc15cd0b4b1460",
+        "0xaeb6cad780d482a056a00a98bd7d6737505d17d53788aec9ff12c81a1ee7933f",
+        "0xb04b433c2acb10a2737effe4c07cc57dab4327b0433f5616775f8b11808e94bc",
+        "0xb6064c61c4618125385b62aac9de669ebd10d1afc7243281cd5f6841968543b5",
+        "0xb8d5eac154b955faac171d83c1c7307d0b6344af7bf08f66bbb8f0848810f34d",
+        "0xbac43d7421a6ac27c4bff4cd7a00c8936b134e812dab44f50f8ecb00ebb20fd3",
+        "0xc7d272518d8655b67b85fc4b67295a35ee7f44c3a7d38211303ab574a20a9029",
+        "0xcb1f3798d83ebdcfa75446bb9eb75af617e1f0ea6656ff739b2e7bdbdb42b71a",
+        "0xd97340df6b3499b14b333d75d1bcf9797a654d78a3ed33100f7d8333b5b1fa70",
+        "0xdabe835b9c5961222df080291439b8f63bbee804d9cb534caac3aa2cee23d097",
+        "0xe24a263e44bbf7e5bca920d10e1e1d079b16c6932f9d2edaa5db64a77122cfa3",
+        "0xe2ee762b12cb04215b444ebea9c87c540306a2a805d9f7f81b76cbe38456d6b9",
+        "0xe8ed9beb8c6bb8732bbc9fa4b927e22eb6695787c32483f8a9a66adc535ee0ef",
+        "0xf54c082306bd98c570041f941a8bbc4ae04e107d8b6885c1c997383beba6b292",
+        "0xf934e406fc925a6a5de66fa1fbd9c0ec56ec61388d399eabfc8dd744c8553efe"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_51_100_food_crate",
+      "item_type": "food_crate",
+      "amount": 1,
+      "network": "mainnet",
+      "recipients": [
+        "0x00d9bc933d1ae9023baf40c53c8340e606033769dcb2a0bef9ffe61661d4531b",
+        "0x0649ecdc2b856f898f5310a932d9f58d6543f86df6c7ef36338e7926398f50da",
+        "0x067e152c47316f9e05f8821a5637b50010572cd334da2ed832517f2533638242",
+        "0x07ddc70ebefa7df14ffd4c80d0e6f66d4679e2111ab4641dc9e7008f4f2270fb",
+        "0x07f6108e272b616e55e634dbbe86c49bb43182ccd6ca535c00dda037c00331b4",
+        "0x0ce94184c69cd43d4f446b22dc67c8cf00801c71db1a004433d27dfbe449455a",
+        "0x0dd3518dba35507355f3f413f43442b893d91a42cf204b280c003c01e40c4b92",
+        "0x0de0aa52fffecc2c2e9dc7c68742c72fe3ec9d6f5186dbfb29a943df342069f2",
+        "0x14d81db033641fa4b4793aa3a51e050834a616e386ae42db746008150608dfd1",
+        "0x1b0637d97b061d06efcb38c3c89b65f9a00a91123f1db9b7a47e0ceae4e0dea6",
+        "0x1ca560e7f64325dcf982887ff82e107dea98e27c0480d6d1ad7a4599661a3a80",
+        "0x29e3d4c484e44ea16dfa87b340058e904695e748df2036efff8f66d6d89fe2de",
+        "0x2b81f2244e4887a48c6e19ab5daf1092d7a78749169d8309585bd828e3497b0f",
+        "0x2e404dda989b476dfece265159edb42fbae8a0d69b240a8d70d42979c22dc1eb",
+        "0x4eccb8a6ca6102aa290ca34ce8c91313f2e7e12e84e4aa7e71a43f9a827bc09c",
+        "0x510ab4734bdc8c9eca5915a35d7543470c5006cfeeb47645c0b61d9d4b5adb32",
+        "0x5271275332ea2264967cbe570a6a3ed8a97662e7ba1b95320a98586f7459db63",
+        "0x62b3edf2f9903be0e226b945405a80a33f8850ee5580912bc01bb78f7b70c0a9",
+        "0x66fa6c3652a4bd9ea9a05eb1add7b9aa33ad72a2ac16e01dea8e23680f3ed820",
+        "0x6d90f8073909439cbcb4990f914533bef1391f8c5c95df0a217f202164d6aacb",
+        "0x6eacd6b4c9d4b289122b1c2e4e794e1a48bcf68eff7694d97ce2bd1df960b391",
+        "0x7e2a23a695935f344574758085a743c502afc5a74c6b67c9ad8dd9fbe9469f04",
+        "0x7e50a3d4a0011a1c54ee95ab3d93b42154014f92346b500c5bbe7e614e040353",
+        "0x81625e35b5bed6c2534eaf221cbe6a7da9d014a69ebafce9ca4f03da9fe85e73",
+        "0x86557bf4960343c46aa98b1a9fb7b6e99c3820ea874bf706d752e8b3bf508e48",
+        "0x869e6d54b3dee2c4af2e50943742c94d0ce54743a40d239a003117f65e9b56a2",
+        "0x8b69c3bded90ab6697a3039ccbc04aef8ba2627aa4e630e8d0554bdef9a8e270",
+        "0x8fb8f291d5993038be054b8fe2037c55c504018448fced08a12cc04ec162c9c4",
+        "0x9140641ff31ddb4dbd1eff018fb4e60b523f42077069faafd7d999a18cf2439a",
+        "0x91b6ad388aedbd3062bdbc2b8f48f6b2be646ca56d5175049270cb45ea9759d9",
+        "0x957f80659d9c92f8f7d8b5e6dc27e7154c0e28231acd55865afec1a3aac5e5c7",
+        "0x961a80f62058b7008c8c2fda8d0180719388b25bd633c93e7aae440d7c65b8f2",
+        "0x990aaeafd6d01f51bfca712969ad3e4680eb609ab621c06bf26b8d2e6d76f1d0",
+        "0x9d07f38de8f8f9ebf6a713fda17038d567260b92df449db70bd4a494748354ff",
+        "0x9ebec35229e15f8d9ea8cb47cbaa04bbe2ebe135432f7099ab1605be6de90905",
+        "0xa28a5b693de508fe041ac0ef6c8c95856f7c3af3bd8f1f02d3fc15cd0b4b1460",
+        "0xaeb6cad780d482a056a00a98bd7d6737505d17d53788aec9ff12c81a1ee7933f",
+        "0xb04b433c2acb10a2737effe4c07cc57dab4327b0433f5616775f8b11808e94bc",
+        "0xb6064c61c4618125385b62aac9de669ebd10d1afc7243281cd5f6841968543b5",
+        "0xb8d5eac154b955faac171d83c1c7307d0b6344af7bf08f66bbb8f0848810f34d",
+        "0xbac43d7421a6ac27c4bff4cd7a00c8936b134e812dab44f50f8ecb00ebb20fd3",
+        "0xc7d272518d8655b67b85fc4b67295a35ee7f44c3a7d38211303ab574a20a9029",
+        "0xcb1f3798d83ebdcfa75446bb9eb75af617e1f0ea6656ff739b2e7bdbdb42b71a",
+        "0xd97340df6b3499b14b333d75d1bcf9797a654d78a3ed33100f7d8333b5b1fa70",
+        "0xdabe835b9c5961222df080291439b8f63bbee804d9cb534caac3aa2cee23d097",
+        "0xe24a263e44bbf7e5bca920d10e1e1d079b16c6932f9d2edaa5db64a77122cfa3",
+        "0xe2ee762b12cb04215b444ebea9c87c540306a2a805d9f7f81b76cbe38456d6b9",
+        "0xe8ed9beb8c6bb8732bbc9fa4b927e22eb6695787c32483f8a9a66adc535ee0ef",
+        "0xf54c082306bd98c570041f941a8bbc4ae04e107d8b6885c1c997383beba6b292",
+        "0xf934e406fc925a6a5de66fa1fbd9c0ec56ec61388d399eabfc8dd744c8553efe"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_veterans_51_100_resource_crate",
+      "item_type": "resource_crate",
+      "amount": 1,
+      "network": "mainnet",
+      "recipients": [
+        "0x00d9bc933d1ae9023baf40c53c8340e606033769dcb2a0bef9ffe61661d4531b",
+        "0x0649ecdc2b856f898f5310a932d9f58d6543f86df6c7ef36338e7926398f50da",
+        "0x067e152c47316f9e05f8821a5637b50010572cd334da2ed832517f2533638242",
+        "0x07ddc70ebefa7df14ffd4c80d0e6f66d4679e2111ab4641dc9e7008f4f2270fb",
+        "0x07f6108e272b616e55e634dbbe86c49bb43182ccd6ca535c00dda037c00331b4",
+        "0x0ce94184c69cd43d4f446b22dc67c8cf00801c71db1a004433d27dfbe449455a",
+        "0x0dd3518dba35507355f3f413f43442b893d91a42cf204b280c003c01e40c4b92",
+        "0x0de0aa52fffecc2c2e9dc7c68742c72fe3ec9d6f5186dbfb29a943df342069f2",
+        "0x14d81db033641fa4b4793aa3a51e050834a616e386ae42db746008150608dfd1",
+        "0x1b0637d97b061d06efcb38c3c89b65f9a00a91123f1db9b7a47e0ceae4e0dea6",
+        "0x1ca560e7f64325dcf982887ff82e107dea98e27c0480d6d1ad7a4599661a3a80",
+        "0x29e3d4c484e44ea16dfa87b340058e904695e748df2036efff8f66d6d89fe2de",
+        "0x2b81f2244e4887a48c6e19ab5daf1092d7a78749169d8309585bd828e3497b0f",
+        "0x2e404dda989b476dfece265159edb42fbae8a0d69b240a8d70d42979c22dc1eb",
+        "0x4eccb8a6ca6102aa290ca34ce8c91313f2e7e12e84e4aa7e71a43f9a827bc09c",
+        "0x510ab4734bdc8c9eca5915a35d7543470c5006cfeeb47645c0b61d9d4b5adb32",
+        "0x5271275332ea2264967cbe570a6a3ed8a97662e7ba1b95320a98586f7459db63",
+        "0x62b3edf2f9903be0e226b945405a80a33f8850ee5580912bc01bb78f7b70c0a9",
+        "0x66fa6c3652a4bd9ea9a05eb1add7b9aa33ad72a2ac16e01dea8e23680f3ed820",
+        "0x6d90f8073909439cbcb4990f914533bef1391f8c5c95df0a217f202164d6aacb",
+        "0x6eacd6b4c9d4b289122b1c2e4e794e1a48bcf68eff7694d97ce2bd1df960b391",
+        "0x7e2a23a695935f344574758085a743c502afc5a74c6b67c9ad8dd9fbe9469f04",
+        "0x7e50a3d4a0011a1c54ee95ab3d93b42154014f92346b500c5bbe7e614e040353",
+        "0x81625e35b5bed6c2534eaf221cbe6a7da9d014a69ebafce9ca4f03da9fe85e73",
+        "0x86557bf4960343c46aa98b1a9fb7b6e99c3820ea874bf706d752e8b3bf508e48",
+        "0x869e6d54b3dee2c4af2e50943742c94d0ce54743a40d239a003117f65e9b56a2",
+        "0x8b69c3bded90ab6697a3039ccbc04aef8ba2627aa4e630e8d0554bdef9a8e270",
+        "0x8fb8f291d5993038be054b8fe2037c55c504018448fced08a12cc04ec162c9c4",
+        "0x9140641ff31ddb4dbd1eff018fb4e60b523f42077069faafd7d999a18cf2439a",
+        "0x91b6ad388aedbd3062bdbc2b8f48f6b2be646ca56d5175049270cb45ea9759d9",
+        "0x957f80659d9c92f8f7d8b5e6dc27e7154c0e28231acd55865afec1a3aac5e5c7",
+        "0x961a80f62058b7008c8c2fda8d0180719388b25bd633c93e7aae440d7c65b8f2",
+        "0x990aaeafd6d01f51bfca712969ad3e4680eb609ab621c06bf26b8d2e6d76f1d0",
+        "0x9d07f38de8f8f9ebf6a713fda17038d567260b92df449db70bd4a494748354ff",
+        "0x9ebec35229e15f8d9ea8cb47cbaa04bbe2ebe135432f7099ab1605be6de90905",
+        "0xa28a5b693de508fe041ac0ef6c8c95856f7c3af3bd8f1f02d3fc15cd0b4b1460",
+        "0xaeb6cad780d482a056a00a98bd7d6737505d17d53788aec9ff12c81a1ee7933f",
+        "0xb04b433c2acb10a2737effe4c07cc57dab4327b0433f5616775f8b11808e94bc",
+        "0xb6064c61c4618125385b62aac9de669ebd10d1afc7243281cd5f6841968543b5",
+        "0xb8d5eac154b955faac171d83c1c7307d0b6344af7bf08f66bbb8f0848810f34d",
+        "0xbac43d7421a6ac27c4bff4cd7a00c8936b134e812dab44f50f8ecb00ebb20fd3",
+        "0xc7d272518d8655b67b85fc4b67295a35ee7f44c3a7d38211303ab574a20a9029",
+        "0xcb1f3798d83ebdcfa75446bb9eb75af617e1f0ea6656ff739b2e7bdbdb42b71a",
+        "0xd97340df6b3499b14b333d75d1bcf9797a654d78a3ed33100f7d8333b5b1fa70",
+        "0xdabe835b9c5961222df080291439b8f63bbee804d9cb534caac3aa2cee23d097",
+        "0xe24a263e44bbf7e5bca920d10e1e1d079b16c6932f9d2edaa5db64a77122cfa3",
+        "0xe2ee762b12cb04215b444ebea9c87c540306a2a805d9f7f81b76cbe38456d6b9",
+        "0xe8ed9beb8c6bb8732bbc9fa4b927e22eb6695787c32483f8a9a66adc535ee0ef",
+        "0xf54c082306bd98c570041f941a8bbc4ae04e107d8b6885c1c997383beba6b292",
+        "0xf934e406fc925a6a5de66fa1fbd9c0ec56ec61388d399eabfc8dd744c8553efe"
+      ],
+      "campaign": "hytale_veterans"
+    },
+    {
+      "id": "hytale_supporters_title_veteran",
+      "item_type": "title_veteran",
+      "amount": 1,
+      "network": "mainnet",
+      "recipients": [
+        "0x33b9977ddbfdaa8e1c1c6a3336c099ec141f692f1560fbad9cd1253136b136cb",
+        "0x5ba2b6ea4b37cbfcc5527cef17e0b62eaf62e6e726c41f528171822ed15afacd",
+        "0x62b5fe4e351b01ec7d37689a4fec8db11ae512dda82b0e55a46aa928240d9e19",
+        "0xfde684c28b967eb700f5472f7b2ed7117ca856c8d06e695497de569238ca8a47"
+      ],
+      "campaign": "hytale_supporters"
     }
   ]
 }

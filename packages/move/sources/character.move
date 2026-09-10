@@ -180,7 +180,8 @@ public(package) fun uid_mut(self: &mut Character): &mut UID { &mut self.id }
 public(package) fun level(self: &Character): u16 { self.level }
 
 /// Add-only — experience can never decrease. The level syncs silently off the curve; each
-/// level gained grants 5 stat points and 1 spell point (legacy law).
+/// level gained grants 5 stat points and 1 spell point. Gameplay uses progression::award_experience
+/// to include the level-up heal; this primitive only updates character progression fields.
 public(package) fun add_experience(self: &mut Character, experience: u64) {
   self.experience = self.experience + experience;
   let new_level = aresrpg_math::experience::level_from_xp(self.experience);

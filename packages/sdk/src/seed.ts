@@ -68,7 +68,7 @@ const recipe_inputs = (recipe: SeedRecipe): readonly (readonly [string, number])
 const MAX_BIOME_CELLS_PER_ARGUMENT = 16_381
 // Protocol v132 configures 1,024 commands, while validation requires len < limit.
 // Keep headroom for the batch cap lifecycle and future transaction-level commands.
-const MAX_SEED_COMMANDS = 1_000
+export const MAX_SEED_COMMANDS = 1_000
 
 export const bounded_transaction = (tx: Transaction, batch: string): Transaction => {
   const commands = tx.getData().commands.length

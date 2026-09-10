@@ -27,8 +27,10 @@ export type ActiveFightSession = Readonly<{
 }>
 
 const stamp_boundary = (input: Readonly<FightInput>, now: () => bigint): FightInput => {
-  if (input.type !== 'start' && input.type !== 'end_turn' && input.type !== 'crank') return input
-  return input.observed_ms === undefined ? Object.freeze({ ...input, observed_ms: now() }) : input
+  if (!['start', 'end_turn', 'crank', 'forfeit'].includes(input.type)) return input
+  return 'observed_ms' in input && input.observed_ms !== undefined
+    ? input
+    : Object.freeze({ ...input, observed_ms: now() })
 }
 
 /** Owns the one stateful @aresrpg/fight instance mounted by every fight surface. */

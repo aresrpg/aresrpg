@@ -4,7 +4,7 @@
 // identity snapshot; source gates only proximity-bound actions, never whether the menu renders.
 
 import type { PartyRow, TradePhase } from '@aresrpg/protocol'
-import { CHAT_MAX_LENGTH, expand_chat_message, type ChatMessage } from '@aresrpg/protocol'
+import { character_checkpoint, CHAT_MAX_LENGTH, expand_chat_message, type ChatMessage } from '@aresrpg/protocol'
 import { useEffect, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
@@ -80,7 +80,9 @@ const WhisperModal = ({
     const text = message.trim()
     if (!text || !speaker) return
     const outgoing: ChatMessage = Object.freeze({ text, items: Object.freeze([]) })
-    const position = speaker.world ? owned_character_position(speaker.id, speaker.world) : null
+    const position = speaker.world
+      ? owned_character_position(speaker.id, speaker.world, character_checkpoint(speaker))
+      : null
     const parts = expand_chat_message(outgoing, character_chat_context(speaker, position))
     dispatch_app({ type: 'chat/whisper', to: recipient.address, parts })
     dispatch_app({

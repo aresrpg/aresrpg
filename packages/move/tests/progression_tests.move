@@ -165,3 +165,30 @@ fun job_xp_is_additive_independent_and_capped_by_the_native_level_curve() {
   assert!(progression::job_xp_of(&character, baker) == 0);
   character::destroy(character);
 }
+
+#[test]
+fun character_level_ups_restore_new_maximum_hp_but_other_xp_does_not() {
+  let mut ctx = tx_context::dummy();
+  let mut clock = clock::create_for_testing(&mut ctx);
+  let mut character = character::test_character(b"senshi".to_string(), 1, 10, &mut ctx);
+  character::raise_stat(&mut character, b"vitality".to_string(), 7);
+  progression::set_hp(&mut character, 3, &clock);
+  progression::award_experience(&mut character, 109, &clock);
+  assert!(character.level() == 1 && progression::touch(&mut character, &clock) == 3);
+  clock::set_for_testing(&mut clock, 250);
+  progression::award_experience(&mut character, 1, &clock);
+  assert!(character.level() == 2 && progression::touch(&mut character, &clock) == 67);
+  progression::set_hp(&mut character, 1, &clock);
+  progression::award_experience(&mut character, 75_000, &clock);
+  assert!(character.level() > 3);
+  let full_hp = progression::max_hp(&character);
+  assert!(progression::touch(&mut character, &clock) == full_hp);
+  progression::set_hp(&mut character, 3, &clock);
+  progression::award_experience(&mut character, 0, &clock);
+  assert!(progression::touch(&mut character, &clock) == 3);
+  progression::bank_job_xp(&mut character, b"FARMER".to_string(), 1_000);
+  assert!(progression::job_level_of(&character, b"FARMER".to_string()) > 1);
+  assert!(progression::touch(&mut character, &clock) == 3);
+  character::destroy(character);
+  clock::destroy_for_testing(clock);
+}

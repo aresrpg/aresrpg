@@ -38,6 +38,7 @@ const tracked_state = (): PlayerState =>
           y: 64,
           z: 50_000,
         },
+        checkpoint: 'nauvis:50000:50000:0',
         move_anchor: { x: 50_000, z: 50_000, at_ms: 0, blocks: 0 },
         party: null,
         fight: null,

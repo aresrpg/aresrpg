@@ -83,6 +83,7 @@ export type AppCopy = Readonly<{
   game_paused_toast: string
   movement_sync_toast: string
   fight_path_changed_toast: string
+  fight_placement_unavailable_toast: string
   party_member_unavailable_toast: string
   fight_turn_already_forced_toast: string
   network_testnet: string

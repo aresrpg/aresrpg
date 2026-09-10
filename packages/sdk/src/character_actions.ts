@@ -6,6 +6,7 @@ import type { KioskOwnerCap } from '@mysten/kiosk'
 import { craft_stackable_batch_limit, type CharacteristicName } from '@aresrpg/immutable'
 import { zone_of } from '@aresrpg/protocol'
 
+import { consumable_action } from './consumables.ts'
 import type { SDK } from './client.ts'
 import { changed_object_ids, created_object_id, spending_receipt, receipt_digest, receipt_event } from './cache.ts'
 import { character_delete, type CharacterDeleteInput } from './character.ts'
@@ -147,36 +148,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return { digest: receipt_digest(receipt) }
     },
 
-    /** Drink/use one consumable unit through its template's current live effect. */
-    use_consumable: async ({
-      character_id,
-      item_id,
-      item_type,
-      world,
-      custody,
-      merge_sources = [],
-    }: {
-      character_id: string
-      item_id: string
-      item_type: string
-      world?: string
-      merge_sources?: readonly string[]
-      custody?: KioskCustody
-    }): Promise<ReturnType<typeof spending_receipt>> => {
-      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
-      const template = item_template_id(content_root, seed_package_original, item_type)
-      const world_content = world ? world_content_id(content_root, seed_package_original, world) : null
-      await sdk.hydrate_unknown([template, ...(world_content ? [world_content] : [])])
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => {
-          if (world_content)
-            sdk.doors.use_city_consumable(tx, { kiosk, cap, character_id, item_id, template, world_content })
-          else sdk.doors.use_consumable(tx, { kiosk, cap, character_id, item_id, template })
-        },
-        { custody, merges: [{ target_id: item_id, source_ids: merge_sources }] }
-      )
-      return spending_receipt(receipt)
-    },
+    use_consumable: consumable_action(sdk, with_kiosk),
 
     /** Scribe one rune and return its certified stat and quantity changes. */
     scribe_rune: async ({

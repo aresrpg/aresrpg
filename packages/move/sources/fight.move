@@ -738,7 +738,38 @@ fun strike_level(fight: &Fight, fighter: u64): aresrpg_math::spell_effect::Spell
   )
 }
 
+/// Remove the actor before running the existing turn boundary; other seats do not advance it.
 public(package) fun forfeit(
+  fight: &mut Fight,
+  fighter: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  entropy: &mut RandomGenerator,
+  clock: &Clock,
+  ctx: &TxContext,
+) {
+  let active = !combat::in_placement(&fight.combat) && !combat::ended(&fight.combat)
+    && combat::active_fighter(&fight.combat) == fighter;
+  release_forfeit(fight, fighter, kiosk, cap, policy, clock, ctx);
+  if (active && !combat::ended(&fight.combat)) crank(fight, entropy, clock);
+}
+
+/// A placement refund never executes a turn or consumes randomness.
+public(package) fun forfeit_placement(
+  fight: &mut Fight,
+  fighter: u64,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Character>,
+  clock: &Clock,
+  ctx: &TxContext,
+) {
+  assert!(combat::in_placement(&fight.combat), EWrongDoor);
+  release_forfeit(fight, fighter, kiosk, cap, policy, clock, ctx);
+}
+
+fun release_forfeit(
   fight: &mut Fight,
   fighter: u64,
   kiosk: &mut Kiosk,
@@ -878,8 +909,8 @@ fun settle_seat(
   let (won, _, hp, experience) = combat::settlement_values(&fight.combat, fighter);
   let pvm = combat::has_mobs(&fight.combat);
   let mut character: Character = dynamic_object::remove(&mut fight.id, FighterKey(fighter));
-  if (won) character::add_experience(&mut character, experience);
   if (pvm) progression::set_hp(&mut character, hp, clock);
+  if (won) progression::award_experience(&mut character, experience, clock);
   character::assert_personal_custody(kiosk);
   kiosk.lock(cap, character_policy, character);
   combat::mark_settled(&mut fight.combat, fighter);

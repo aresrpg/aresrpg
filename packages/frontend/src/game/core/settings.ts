@@ -26,6 +26,8 @@ export { effective_render_distance } from '@aresrpg/engine'
 export type GameSettings = Readonly<{
   quality: EngineQuality
   flat_mode: boolean
+  /** Absent preserves the live cycle for older saved preferences. */
+  day_night_cycle_enabled?: boolean
   music_enabled: boolean
   /** Absent means full volume for settings saved before the master slider existed. */
   master_volume?: number
@@ -74,6 +76,7 @@ export const load_game_settings = (
     quality: default_quality,
     flat_mode: false,
     music_enabled: true,
+    day_night_cycle_enabled: true,
     master_volume: DEFAULT_MASTER_VOLUME,
     footsteps_enabled: true,
     completed_tutorials: Object.freeze([]) as readonly TutorialId[],
@@ -122,6 +125,7 @@ export const load_game_settings = (
       quality,
       flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode,
       music_enabled: typeof music_enabled === 'boolean' ? music_enabled : defaults.music_enabled,
+      day_night_cycle_enabled: Reflect.get(record, 'day_night_cycle_enabled') !== false,
       master_volume,
       footsteps_enabled: footsteps_enabled !== false,
       completed_tutorials,

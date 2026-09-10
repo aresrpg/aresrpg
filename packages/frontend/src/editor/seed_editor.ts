@@ -136,7 +136,7 @@ export const entity_rows = (domain: SeedDomain, value: unknown): readonly SeedEn
   const section = array_sections[domain]
   if (section) return array_rows(domain, Array.isArray(object[section]) ? object[section] : [], [section])
   if (domain === 'airdrop')
-    return ['giftcards', 'legacy_pool', 'pending', 'showcase'].flatMap((section) => {
+    return ['campaigns', 'giftcards', 'giftcard_batches'].flatMap((section) => {
       const rows = object[section]
       if (!Array.isArray(rows)) return []
       return array_rows(domain, rows, [section]).map((row) =>

@@ -11,11 +11,10 @@ export type LeaderboardsState = Readonly<{
   error: boolean
 }>
 export type LeaderboardsInput =
-  | Readonly<{ type: 'leaderboards/select'; metric: LeaderboardMetric; season: number | null }>
-  | Readonly<{ type: 'leaderboards/refresh' }>
+  Readonly<{ type: 'leaderboards/select'; metric: LeaderboardMetric }> | Readonly<{ type: 'leaderboards/refresh' }>
 
 export const initial_leaderboards_state = (): LeaderboardsState => ({
-  observation: { metric: 'xp', season: null, id: 0 },
+  observation: { metric: 'xp', id: 0 },
   snapshot: null,
   error: false,
 })
@@ -37,7 +36,7 @@ export const reduce_leaderboards = (state: LeaderboardsState, input: AppInput): 
   if (input.type === 'leaderboards/select' || input.type === 'leaderboards/refresh') {
     const selected = input.type === 'leaderboards/select' ? input : state.observation
     return {
-      observation: { metric: selected.metric, season: selected.season, id: state.observation.id + 1 },
+      observation: { metric: selected.metric, id: state.observation.id + 1 },
       snapshot: null,
       error: false,
     }

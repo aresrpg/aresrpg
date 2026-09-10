@@ -5,6 +5,15 @@ import { expect, test } from 'bun:test'
 
 import { failure_copy_key } from '../../src/modules/session_toasts.ts'
 
+test('a placement race explains that the cell is unavailable without masking other combat errors', () => {
+  // Player-captured resolution error, 2026-09-10.
+  const message =
+    "[sdk] transaction resolution failed — NOT submitted: Transaction resolution failed: MoveAbort in 2nd command, abort code: 1709, in '0xaf290bf4776c635a444a16006cd60b1160a22c4b249151f61a3efd04a6856a53::combat::place' (instruction 76)"
+  expect(failure_copy_key(message)).toBe('fight_placement_unavailable_toast')
+  expect(failure_copy_key(message.replace('::combat::place', '::combat::ready'))).toBeNull()
+  expect(failure_copy_key(message.replace('1709', '1708'))).toBeNull()
+})
+
 test('an unprovable world move has one human-readable failure key', () => {
   expect(
     failure_copy_key(

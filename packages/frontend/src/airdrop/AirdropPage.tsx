@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Cat, Gift, Loader2, Shirt, Sparkles, Star, WalletCards, type LucideIcon } from 'lucide-react'
+import { Gift, Loader2, Sparkles, WalletCards } from 'lucide-react'
 
 import { WalletControl } from '../wallet/WalletControl.tsx'
 import type { WalletView } from '../wallet/model.ts'
@@ -13,47 +13,35 @@ import { rolled_item_types } from '../modules/claims.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
-const glyphs: Readonly<Record<string, LucideIcon>> = Object.freeze({
-  pet_glb: Cat,
-  title_relic: Star,
-  outfit: Shirt,
-})
+type CampaignRow = (typeof content_catalog.airdrop.campaigns)[number]
+type GiftcardGroup = Readonly<{ template: string; amount: number }>
 
-type ShowcaseRow = (typeof content_catalog.airdrop.showcase)[number]
-const giftcard_item = (giftcard: SessionState['giftcards'][number]) => {
+export const group_giftcards = (cards: SessionState['giftcards']): readonly GiftcardGroup[] =>
+  Object.values(
+    [...new Map(cards.map((card) => [card.id, card])).values()].reduce<Record<string, GiftcardGroup>>(
+      (groups, card) => ({
+        ...groups,
+        [card.template]: { template: card.template, amount: (groups[card.template]?.amount ?? 0) + card.amount },
+      }),
+      {}
+    )
+  )
+
+const giftcard_item = (giftcard: GiftcardGroup) => {
   const item_type = rolled_item_types().get(giftcard.template)
   return item_type ? content_catalog.item(item_type)?.item : null
 }
 
-const GiftcardCard = ({
-  busy,
-  giftcard,
-  external = false,
-  t,
-}: Readonly<{ busy: string | null; giftcard: SessionState['giftcards'][number]; external?: boolean; t: CopyText }>) => {
+const GiftcardCard = ({ giftcard }: Readonly<{ giftcard: GiftcardGroup }>) => {
   const item = giftcard_item(giftcard)
   const icon = item ? item_detail_icon(item.item_type) : null
   return (
-    <article className="flex items-center gap-3 border border-border bg-surface/80 p-3">
-      {icon && <img alt="" className="size-12 object-contain" src={icon} />}
+    <article className="flex items-center gap-3 border border-border bg-surface/80 p-4">
+      {icon && <img alt="" className="size-14 object-contain" src={icon} />}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[10px] tracking-[0.12em] text-text uppercase">
-          {item?.name ?? giftcard.template}
-        </div>
-        <div className="mt-1 text-[8px] text-muted">×{giftcard.amount}</div>
+        <div className="truncate text-xs tracking-[0.12em] text-text uppercase">{item?.name ?? giftcard.template}</div>
+        <div className="mt-2 text-sm text-gold">×{giftcard.amount}</div>
       </div>
-      <button
-        className="btn-gold px-3 py-2 text-[8px] tracking-[0.14em] uppercase disabled:opacity-40"
-        disabled={busy !== null || !item}
-        onClick={() => dispatch_app({ type: external ? 'distribution/import' : 'distribution/redeem', giftcard })}
-        type="button"
-      >
-        {busy === `redeem:${giftcard.id}` ? (
-          <Loader2 className="animate-spin" size={11} />
-        ) : (
-          t(external ? 'claim' : 'redeem')
-        )}
-      </button>
     </article>
   )
 }
@@ -83,7 +71,7 @@ export const HolderWalletConnect = ({
   copy,
   t,
 }: Readonly<{ wallet: WalletView; copy: AppCopy; t: CopyText }>) => (
-  <section className="flex flex-col items-center gap-3 border border-cyan/20 bg-[radial-gradient(circle_at_50%_0%,rgba(72,207,207,0.08),transparent_70%)] px-5 py-5 text-center">
+  <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 border border-cyan/20 bg-[radial-gradient(circle_at_50%_0%,rgba(72,207,207,0.08),transparent_70%)] px-5 py-5 text-center">
     <WalletCards className="text-cyan" size={18} />
     <div>
       <div className="text-[9px] tracking-[0.2em] text-cyan uppercase">{t('holder_title')}</div>
@@ -95,43 +83,50 @@ export const HolderWalletConnect = ({
   </section>
 )
 
-const ShowcaseTile = ({ row, t }: Readonly<{ row: ShowcaseRow; t: CopyText }>) => {
-  const Glyph = glyphs[row.kind] ?? Sparkles
-  const icon = item_detail_icon(row.id)
-  return (
-    <article className="flex flex-col border border-border bg-black/40">
-      <div className="flex aspect-[5/4] flex-col items-center justify-center gap-2 border-b border-border/60 bg-[radial-gradient(circle_at_50%_35%,rgba(200,150,60,0.07),transparent_70%)]">
-        {icon ? (
-          <img alt="" className="size-[78%] object-contain" src={icon} />
-        ) : (
-          <>
-            <Glyph className="text-gold/25" size={34} />
-            <span className="text-[8px] tracking-[0.18em] text-muted/60 uppercase">{t('set.no_preview')}</span>
-          </>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-col gap-1 p-2.5">
-        <span className="truncate text-[11px] font-semibold tracking-[0.12em] text-text uppercase">{row.name}</span>
-        <span className="text-[8px] tracking-[0.18em] text-muted/60 uppercase">{t(`set.kind.${row.kind}`)}</span>
-        {'aura' in row && row.aura && (
-          <span className="inline-flex items-center gap-1.5 text-[8px] tracking-[0.16em] text-cyan-300/80 uppercase">
-            <i className="size-1 bg-cyan-300 shadow-[0_0_5px_rgba(103,232,249,0.7)]" />
-            {t('set.aura')} · {row.aura.color}
-          </span>
-        )}
-        {'aura_pending' in row && row.aura_pending && (
-          <span className="text-[8px] tracking-[0.18em] text-muted/60 uppercase">{t('set.aura_pending')}</span>
-        )}
-      </div>
-    </article>
-  )
-}
+const CampaignCard = ({ row, t }: Readonly<{ row: CampaignRow; t: CopyText }>) => (
+  <article className="flex flex-col border border-border bg-surface-low" data-airdrop={row.id}>
+    <div className="flex min-h-44 flex-wrap items-center justify-center gap-2 border-b border-border/60 p-4">
+      {row.items.map((item_type) => (
+        <figure className="flex flex-col items-center gap-1" key={item_type}>
+          <img
+            alt=""
+            className={row.items.length === 1 ? 'size-36 object-contain' : 'size-20 object-contain'}
+            src={item_detail_icon(item_type) ?? undefined}
+          />
+          {row.items.length > 1 && (
+            <figcaption className="text-[9px] text-muted">{content_catalog.item(item_type)?.item.name}</figcaption>
+          )}
+        </figure>
+      ))}
+    </div>
+    <div className="flex flex-1 flex-col gap-3 p-4">
+      <span className="text-[9px] tracking-[0.16em] text-cyan uppercase">{t(`delivery.${row.delivery}`)}</span>
+      <h2 className="text-sm font-semibold tracking-[0.1em] text-text uppercase">{t(`campaigns.${row.id}.title`)}</h2>
+      <p className="text-xs leading-5 text-muted">
+        {t(`campaigns.${row.id}.description`).replace('{threshold}', String(row.spending_threshold_sui ?? ''))}
+      </p>
+      {row.tiers && (
+        <ul className="space-y-1 border-t border-border pt-3 text-xs text-gold">
+          {row.tiers.map((tier) => (
+            <li key={tier.from}>
+              {t('rank_reward')
+                .replace('{from}', String(tier.from))
+                .replace('{to}', String(tier.to))
+                .replace('{amount}', String(tier.amount))}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  </article>
+)
 
 export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy; session: SessionState }>) {
   const t = copy_text(copy.airdrop_page)
   const distribution = useAppStore((state) => state.distribution)
   const external_wallet = useAppStore((state) => state.external_wallet)
   const busy = distribution.pending
+  const cards = [...(distribution.holder_giftcards ?? []), ...session.giftcards]
 
   return (
     <section className="pointer-events-auto flex min-h-full flex-1 flex-col overflow-hidden border border-border bg-bg/97">
@@ -149,6 +144,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-5">
+        <p className="mx-auto w-full max-w-3xl text-sm leading-6 text-muted">{t('check_wallet')}</p>
         <GiftLinkClaim busy={busy} ready={distribution.gift_link_ready} t={t} />
         <HolderWalletConnect wallet={{ state: external_wallet, dispatch: dispatch_app }} copy={copy} t={t} />
 
@@ -157,62 +153,52 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
             {distribution.error}
           </p>
         )}
-        {external_wallet.session && (
-          <section className="flex flex-col gap-3">
+        <section className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-xs tracking-[0.16em] text-cyan uppercase">{t('giftcards_title')}</h2>
             <button
-              className="btn-gold self-start px-3 py-2 text-xs"
-              disabled={busy !== null}
+              className="btn-outline px-3 py-2 text-xs disabled:opacity-40"
+              disabled={busy !== null || !external_wallet.session}
               onClick={() => dispatch_app({ type: 'distribution/refresh_holder' })}
               type="button"
             >
               {t('refresh')}
             </button>
-            <div className="break-all text-xs text-muted">
-              {t('destination')} {session.wallet?.address}
-            </div>
-            {distribution.holder_giftcards?.length === 0 && <p className="text-xs text-muted">{t('empty')}</p>}
-            {distribution.holder_giftcards?.map((giftcard) => (
-              <GiftcardCard busy={busy} external giftcard={giftcard} key={giftcard.id} t={t} />
-            ))}
-          </section>
-        )}
-
-        {session.giftcards.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <div className="border-b border-border/60 pb-2 text-[10px] font-semibold tracking-[0.24em] text-cyan uppercase">
-              {t('giftcards_title')}
-            </div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
-              {session.giftcards.map((giftcard) => (
-                <GiftcardCard busy={busy} giftcard={giftcard} key={giftcard.id} t={t} />
-              ))}
-            </div>
-          </section>
-        )}
+          </div>
+          <p className="break-all text-xs text-muted">
+            {t('destination')} {session.wallet?.address}
+          </p>
+          {cards.length ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {group_giftcards(cards).map((giftcard) => (
+                  <GiftcardCard giftcard={giftcard} key={giftcard.template} />
+                ))}
+              </div>
+              <button
+                className="btn-gold inline-flex items-center gap-2 self-end px-5 py-3 text-xs tracking-[0.12em] uppercase disabled:opacity-40"
+                disabled={busy !== null || !session.roster_loaded}
+                onClick={() => dispatch_app({ type: 'distribution/claim_all' })}
+                type="button"
+              >
+                {busy ? <Loader2 className="animate-spin" size={14} /> : <Gift size={14} />}
+                {t('claim_all')}
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-muted">{t('empty')}</p>
+          )}
+        </section>
 
         <section className="flex flex-col gap-3">
           <div className="flex items-baseline gap-3 border-b border-border/60 pb-2">
             <span className="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.28em] text-gold uppercase">
-              <Sparkles className="opacity-70" size={12} /> {t('set.title')}
+              <Sparkles className="opacity-70" size={12} /> {t('catalogue_title')}
             </span>
-            <span className="truncate text-[9px] tracking-[0.14em] text-muted/70 uppercase">{t('set.subtitle')}</span>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3">
-            {content_catalog.airdrop.showcase.map((row) => (
-              <ShowcaseTile key={row.id} row={row} t={t} />
-            ))}
-            {content_catalog.airdrop.pending.map((row) => (
-              <article className="flex flex-col border border-dashed border-border bg-black/20 opacity-70" key={row.id}>
-                <div className="grid aspect-[5/4] place-items-center border-b border-border/60">
-                  <Sparkles className="text-muted/20" size={22} />
-                </div>
-                <div className="p-2.5">
-                  <div className="truncate text-[11px] tracking-[0.12em] text-muted uppercase">{row.name}</div>
-                  <div className="mt-1 text-[8px] tracking-[0.18em] text-muted/60 uppercase">
-                    {t('set.awaiting_ruling')}
-                  </div>
-                </div>
-              </article>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] gap-4">
+            {content_catalog.airdrop.campaigns.map((row) => (
+              <CampaignCard key={row.id} row={row} t={t} />
             ))}
           </div>
         </section>

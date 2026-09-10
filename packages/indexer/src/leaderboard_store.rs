@@ -8,15 +8,18 @@ use anyhow::{Context, Result};
 use redis::aio::MultiplexedConnection;
 use serde::{Deserialize, Serialize};
 
-use crate::leaderboards::{Contribution, Metric, CHANNEL, META_KEY, SEASON_EPOCHS};
+use crate::analytics::{bucket_month, DAY_MS};
+use crate::leaderboards::{Contribution, Metric, CHANNEL, META_KEY};
 
 const PENDING_KEY: &str = "leaderboards:pending";
 const DUNGEONS_KEY: &str = "leaderboards:dungeons";
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Meta {
-    pub origin_epoch: u64,
-    pub epoch: u64,
+    #[serde(default)]
+    pub reset_at_ms: u64,
+    #[serde(default)]
+    pub timestamp_ms: u64,
     pub checkpoint: u64,
 }
 
@@ -34,6 +37,8 @@ struct Update {
 struct Prepared {
     meta: Meta,
     updates: Vec<Update>,
+    #[serde(default)]
+    removals: Vec<String>,
     dungeons: Vec<String>,
     changed: bool,
 }
@@ -43,11 +48,36 @@ pub fn rank_member(total: u128, address: &str) -> String {
     format!("{:039}:{address}", u128::MAX - total)
 }
 
-pub fn season(epoch: u64, origin: u64) -> Result<u64> {
-    Ok(epoch
-        .checked_sub(origin)
-        .context("checkpoint before season origin")?
-        / SEASON_EPOCHS)
+pub fn next_reset(ts_ms: u64) -> Result<u64> {
+    // The 32nd day after a month's start is always in the following calendar month.
+    let next_month = bucket_month(ts_ms)
+        .checked_add(32 * DAY_MS)
+        .context("leaderboard month overflow")?;
+    Ok(bucket_month(next_month))
+}
+
+async fn ranking_keys(conn: &mut MultiplexedConnection) -> Result<Vec<String>> {
+    let mut cursor = 0u64;
+    let mut keys = BTreeSet::new();
+    loop {
+        let (next, page): (u64, Vec<String>) = redis::cmd("SCAN")
+            .arg(cursor)
+            .arg("MATCH")
+            .arg("leaderboards:*")
+            .arg("COUNT")
+            .arg(1000)
+            .query_async(conn)
+            .await?;
+        keys.extend(
+            page.into_iter()
+                .filter(|key| key.ends_with(":rank") || key.ends_with(":totals")),
+        );
+        cursor = next;
+        if cursor == 0 {
+            break;
+        }
+    }
+    Ok(keys.into_iter().collect())
 }
 
 type Totals = BTreeMap<(Metric, String), u128>;
@@ -109,18 +139,22 @@ async fn prepare(
         );
     }
     let (totals, dungeons) = aggregate(facts, &credited)?;
-    let season = season(meta.epoch, meta.origin_epoch)?;
+    let removals = if rolled {
+        ranking_keys(conn).await?
+    } else {
+        vec![]
+    };
     let mut reads = redis::pipe();
     let keys: Vec<_> = totals
         .into_iter()
         .map(|((metric, address), amount)| {
-            let key = format!("leaderboards:{season}:{}", metric.key());
+            let key = format!("leaderboards:{}", metric.key());
             reads.cmd("HGET").arg(format!("{key}:totals")).arg(&address);
             (key, address, amount)
         })
         .collect();
-    let previous: Vec<Option<String>> = if keys.is_empty() {
-        vec![]
+    let previous: Vec<Option<String>> = if rolled || keys.is_empty() {
+        vec![None; keys.len()]
     } else {
         reads.query_async(conn).await?
     };
@@ -142,6 +176,7 @@ async fn prepare(
     Ok(Prepared {
         meta,
         updates,
+        removals,
         dungeons,
         changed,
     })
@@ -150,6 +185,9 @@ async fn prepare(
 async fn apply(conn: &mut MultiplexedConnection, prepared: &Prepared) -> Result<()> {
     let mut writes = redis::pipe();
     writes.atomic();
+    if !prepared.removals.is_empty() {
+        writes.cmd("UNLINK").arg(&prepared.removals).ignore();
+    }
     for update in &prepared.updates {
         let rank_key = format!("{}:rank", update.key);
         writes
@@ -177,7 +215,10 @@ async fn apply(conn: &mut MultiplexedConnection, prepared: &Prepared) -> Result<
             .arg(&prepared.dungeons)
             .ignore();
     }
-    if !prepared.updates.is_empty() || !prepared.dungeons.is_empty() {
+    if !prepared.removals.is_empty()
+        || !prepared.updates.is_empty()
+        || !prepared.dungeons.is_empty()
+    {
         let _: () = writes.query_async(conn).await?;
     }
     // Only acknowledged data may advance the marker. A lost response leaves the absolute
@@ -194,7 +235,6 @@ async fn apply(conn: &mut MultiplexedConnection, prepared: &Prepared) -> Result<
 pub async fn commit(
     conn: &mut MultiplexedConnection,
     checkpoint: u64,
-    epoch: u64,
     ts_ms: u64,
     facts: &[Contribution],
 ) -> Result<()> {
@@ -208,13 +248,15 @@ pub async fn commit(
         .as_ref()
         .is_none_or(|meta| checkpoint > meta.checkpoint)
     {
-        let origin_epoch = previous.as_ref().map_or(epoch, |meta| meta.origin_epoch);
-        let rolled = previous.as_ref().is_none_or(|meta| meta.epoch != epoch);
+        let reset_at_ms = next_reset(ts_ms)?;
+        let rolled = previous
+            .as_ref()
+            .is_none_or(|meta| meta.reset_at_ms != reset_at_ms);
         let prepared = prepare(
             conn,
             Meta {
-                origin_epoch,
-                epoch,
+                reset_at_ms,
+                timestamp_ms: ts_ms,
                 checkpoint,
             },
             facts,

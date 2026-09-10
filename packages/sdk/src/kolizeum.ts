@@ -175,11 +175,12 @@ export const kolizeum_actions = (sdk: GameSdk, { kiosk_cap, address }: KolizeumA
       custody?: KioskCustody
     }) => {
       await sdk.hydrate_unknown([fight])
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.forfeit_kolizeum(tx, { fight_object: fight, fighter_idx, kiosk, cap }),
+      const receipt = await with_terminal_kiosk(
+        (tx, kiosk, personal) =>
+          sdk.doors.forfeit_kolizeum_terminal(tx, { fight_object: fight, fighter_idx, kiosk, personal }),
         { custody, gas_scope: `fight:${fight}` }
       )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      return project_fight_boundary_receipt(receipt)
     },
 
     settle: async ({

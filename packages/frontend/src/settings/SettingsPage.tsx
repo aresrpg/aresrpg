@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Settings as SettingsIcon,
   Swords,
+  Sun,
   Volume2,
 } from 'lucide-react'
 
@@ -50,6 +51,8 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
   const craft_character_id = characters.find(({ id }) => id === settings.always_craft_from_character_id)?.id ?? null
   const default_craft_character_id =
     characters.find(({ id }) => id === selected_character_id)?.id ?? characters[0]?.id ?? null
+  const change_day_night_cycle = (day_night_cycle_enabled: boolean): void =>
+    dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, day_night_cycle_enabled }) })
   const change_music = (music_enabled: boolean): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, music_enabled }) })
   const change_master_volume = (master_volume: number): void =>
@@ -177,6 +180,21 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
             label={t('always_craft_from_label')}
           />
         </div>
+      </div>
+
+      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <Sun className="shrink-0 text-gold opacity-70" size={15} />
+          <div className="min-w-0">
+            <div className="text-[11px] tracking-wide text-text">{t('day_night_cycle_label')}</div>
+            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('day_night_cycle_hint')}</div>
+          </div>
+        </div>
+        <Toggle
+          change={change_day_night_cycle}
+          checked={settings.day_night_cycle_enabled !== false}
+          label={t('day_night_cycle_label')}
+        />
       </div>
 
       <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">

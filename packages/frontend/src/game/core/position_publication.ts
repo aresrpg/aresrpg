@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-export type PublishedPosition = Readonly<{ x: number; y: number; z: number; riding: boolean }>
+import type { ClientPacket } from '@aresrpg/protocol'
+
+export type PublishedPosition = Readonly<
+  Omit<Extract<ClientPacket, { type: 'packet/position' }>, 'type' | 'character_id'>
+>
 
 const position_changed = (before: PublishedPosition | null, current: PublishedPosition): boolean =>
   !before ||
+  before.checkpoint !== current.checkpoint ||
   before.riding !== current.riding ||
   Math.hypot(before.x - current.x, before.y - current.y, before.z - current.z) >= 0.25
 

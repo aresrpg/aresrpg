@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_DEPLOY_ENV': JSON.stringify(source.VERCEL_ENV ?? 'local'),
       'import.meta.env.VITE_RELEASE': JSON.stringify(source.VERCEL_GIT_COMMIT_SHA || source.GITHUB_SHA || ''),
     },
-    plugins: [browser_pins_plugin(), yaml_plugin(), react(), tailwindcss()],
+    plugins: [browser_pins_plugin(source.ARES_PINS_FILE, source.VITE_NETWORK), yaml_plugin(), react(), tailwindcss()],
     optimizeDeps: { exclude: ['@aresrpg/sdk', '@aresrpg/frontend'] },
     build: { outDir: 'dist', emptyOutDir: true },
   }

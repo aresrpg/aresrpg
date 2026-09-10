@@ -6,12 +6,9 @@ import type { LeaderboardSnapshot } from '@aresrpg/protocol'
 import { enrich_leaderboard } from '../../src/reads/enrich_leaderboard.ts'
 
 const snapshot: LeaderboardSnapshot = {
-  observation: { metric: 'xp', season: null, id: 1 },
-  season: 0,
-  current_season: 0,
-  start_epoch: 0,
-  end_epoch: 30,
-  epoch: 1,
+  observation: { metric: 'xp', id: 1 },
+  reset_at_ms: Date.UTC(2026, 9, 1),
+  timestamp_ms: Date.UTC(2026, 8, 9),
   checkpoint: 10,
   entries: [0, 1].map((index) => ({
     address: `0x${index}`,

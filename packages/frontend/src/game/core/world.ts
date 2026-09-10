@@ -4,7 +4,6 @@
 
 import {
   CHUNK_EDGE,
-  CELESTIAL_CYCLE_MS,
   DUNGEON_PORTAL_LABEL_HEIGHT,
   apply_voxel_operation,
   compile_runtime_world_recipe,
@@ -32,6 +31,7 @@ import {
   type Vec3,
 } from '@aresrpg/engine'
 
+import { world_daylight } from './daylight.ts'
 import { world_character_entity, type LoadedCharacterRender } from '../character_entities.ts'
 import { create_footsteps, footstep_preset } from '../audio/footsteps.ts'
 import {
@@ -265,6 +265,7 @@ export const create_world = ({
   // Dev affordance: `?time=0.3` pins the day cycle (verification needs deterministic light).
   const time_param = new URLSearchParams(globalThis.location?.search ?? '').get('time')
   const parsed_time = time_param === null ? null : Number(time_param)
+  let day_night_cycle_enabled = true
   let pinned_time: number | null = parsed_time !== null && Number.isFinite(parsed_time) ? parsed_time : null
 
   const spectate_addon = create_spectate_addon({
@@ -662,7 +663,7 @@ export const create_world = ({
     const previous_flat = flat_projection
     flat_projection = step_flat_projection(flat_projection, delta_seconds)
     engine.set_flatten_amount(flat_projection.amount)
-    const world_time_of_day = pinned_time ?? (now / CELESTIAL_CYCLE_MS + 0.31) % 1
+    const world_time_of_day = world_daylight(now, pinned_time, day_night_cycle_enabled)
     let anchor: CameraAnchor
     if (mode === 'spectate') {
       anchor = {
@@ -769,6 +770,9 @@ export const create_world = ({
     },
     set_audio_volume: engine.set_audio_volume,
     set_footsteps_enabled: footsteps.set_enabled,
+    set_day_night_cycle_enabled: (enabled: boolean) => {
+      day_night_cycle_enabled = enabled
+    },
     backend: engine.backend,
     subscribe_status: engine.subscribe_status,
     set_time_of_day: (time: number | null) => {

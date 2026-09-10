@@ -31,8 +31,8 @@ const character = (id: string, world: string, extra: Readonly<Record<string, unk
 
 test('owned presence uses live positions, falls back to chain anchors, and stays world scoped', () => {
   reset_owned_character_positions_for_testing()
-  record_owned_character_position('0xb', 'nauvis', { x: 5, y: 2, z: 6 })
-  expect(owned_character_position('0xb', 'nauvis')).toMatchObject({ x: 5, y: 2, z: 6 })
+  record_owned_character_position('0xb', 'nauvis', { checkpoint: 'nauvis:10:12:0', x: 5, y: 2, z: 6 })
+  expect(owned_character_position('0xb', 'nauvis', 'nauvis:10:12:0')).toMatchObject({ x: 5, y: 2, z: 6 })
 
   const rows = owned_character_presence_rows(
     [
@@ -51,5 +51,24 @@ test('owned presence uses live positions, falls back to chain anchors, and stays
   expect(rows['0xc']).toMatchObject({ x: 10, y: 42, z: 12 })
 
   clear_owned_character_positions()
-  expect(owned_character_position('0xb', 'nauvis')).toBeNull()
+  expect(owned_character_position('0xb', 'nauvis', 'nauvis:10:12:0')).toBeNull()
+})
+
+test('recall makes a stale live pose ineligible for selection and other owned-character rendering', async () => {
+  const { selected_position } = await import('../../../src/modules/engine_selection.ts')
+  reset_owned_character_positions_for_testing()
+  const before = character('0xb', 'nauvis', { x: 53_196, z: 50_000, at_ms: 1 })
+  record_owned_character_position('0xb', 'nauvis', { checkpoint: 'nauvis:53196:50000:1', x: 53_197, y: 4, z: 50_000 })
+  const recalled = { ...before, x: 50_000, z: 50_000, at_ms: 2 }
+  const state = (row: unknown) => ({ session: { characters: [row], selected_character_id: '0xb' } }) as never
+  expect(selected_position(state(before))).toEqual({ x: 3197, z: 0 })
+  expect(selected_position(state(recalled))).toEqual({ x: 0, z: 0 })
+  expect(owned_character_presence_rows([recalled] as never, '0xowner', 'nauvis', () => 7)['0xb']).toMatchObject({
+    x: 50_000,
+    y: 7,
+    z: 50_000,
+  })
+  // The same checkpoint may arrive redundantly without erasing later local walking.
+  record_owned_character_position('0xb', 'nauvis', { checkpoint: 'nauvis:50000:50000:2', x: 50_002, y: 7, z: 50_000 })
+  expect(selected_position(state({ ...recalled }))).toEqual({ x: 2, z: 0 })
 })

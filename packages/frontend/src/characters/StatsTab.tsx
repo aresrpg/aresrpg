@@ -33,9 +33,11 @@ import {
   projected_hp,
 } from '../game/character_stats.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
+
+import { editable_character } from './character_activity.ts'
 
 import './stats.css'
 import './stats_panels.css'
@@ -62,8 +64,10 @@ const bar_pct = (value: number): number => Math.max(0, Math.min(100, value))
 export default function StatsTab({ character, copy }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
+  const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
   const [alloc, set_alloc] = useState(empty_allocation)
   const [pending_tx, set_pending_tx] = useState(false)
+  const locked = [!available, pending_tx].some(Boolean)
 
   const classe = is_class_name(character.classe) ? character.classe : null
   const current = Object.fromEntries(
@@ -73,7 +77,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   const staged_clicks = characteristic_names.reduce((total, stat) => total + alloc[stat], 0)
   const remaining = Math.max(0, character.available_points - (quote?.cost ?? 0))
   const has_pending = staged_clicks > 0
-  const can_confirm = !!wallet && has_pending && !!quote && quote.cost <= character.available_points && !pending_tx
+  const can_confirm = !!wallet && has_pending && !!quote && quote.cost <= character.available_points && !locked
 
   const experience = Number(character.experience)
   const { level, into, span, percent } = experience_progress(experience)
@@ -84,13 +88,15 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
   const confirm = (): void => {
     if (!can_confirm || !wallet) return
     const spending = { ...quote!.costs }
-    const transaction = run_direct_transaction(() =>
-      wallet.character.raise_stats({
+    const transaction = run_direct_transaction(() => {
+      const current_character = editable_character(read_app_state(), character.id, Date.now())
+      if (!current_character) throw new Error(t('progression_busy'))
+      return wallet.character.raise_stats({
         character_id: character.id,
         spending,
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+        custody: { kiosk: current_character.kiosk, kiosk_cap: current_character.kiosk_cap },
       })
-    )
+    })
     if (!transaction) return
     set_pending_tx(true)
     const pending = toast.loading(t('stats.tx_pending'))
@@ -136,7 +142,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
         <div className="stats__assign-actions flex gap-2">
           <button
             className="stats__assign-btn btn-outline px-3 py-1.5"
-            disabled={!has_pending || pending_tx}
+            disabled={!has_pending || locked}
             onClick={() => set_alloc(empty_allocation())}
             type="button"
           >
@@ -154,6 +160,9 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
         </div>
       </div>
 
+      <p hidden={!!available} role="status" className="px-3 text-xs text-muted">
+        {t('progression_busy')}
+      </p>
       {/* scrolling remainder — hero + capital stay pinned */}
       <div className="stats__scroll">
         {/* vitals: health / AP / MP */}
@@ -191,7 +200,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
             const next_quote = classe
               ? characteristic_allocation_quote(classe, current, { ...alloc, [stat]: pending_clicks + 1 })
               : null
-            const can_add = !!next_quote && next_quote.cost <= character.available_points && !pending_tx
+            const can_add = !!next_quote && next_quote.cost <= character.available_points && !locked
             return (
               <div className="stats__prow" key={stat}>
                 <StatIdentity description={t(`stats.description.${stat}`)} label={label} stat={stat} />
@@ -210,7 +219,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
                 <button
                   aria-label={t('stats.remove_point', { stat: label })}
                   className="stats__step btn-outline"
-                  disabled={pending_clicks <= 0 || pending_tx}
+                  disabled={pending_clicks <= 0 || locked}
                   onClick={() => set_alloc({ ...alloc, [stat]: Math.max(0, pending_clicks - 1) })}
                   type="button"
                 >

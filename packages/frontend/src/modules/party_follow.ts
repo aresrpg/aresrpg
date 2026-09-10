@@ -5,7 +5,7 @@
 
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
-import type { CharacterRow, FightRow, PartyRow } from '@aresrpg/protocol'
+import { character_checkpoint, type CharacterRow, type FightRow, type PartyRow } from '@aresrpg/protocol'
 
 import {
   PARTY_FOLLOW_JOIN_DISTANCE,
@@ -171,7 +171,7 @@ export const party_follow_leader_target = (
       z: client_to_chain_coordinate(pose.z),
     })
   if (!leader.world) return null
-  const live = owned_character_position(leader.id, leader.world)
+  const live = owned_character_position(leader.id, leader.world, character_checkpoint(leader))
   if (live) return Object.freeze({ x: live.x, y: live.y, z: live.z })
   return finite_fight_point(fight, leader.world) ?? finite_character_point(leader)
 }
@@ -185,11 +185,12 @@ const follow_feed_input = (state: Readonly<AppState>) => {
   const fight_id = follow.leader.active_fight?.id
   const fight = fight_id ? (state.world.all_fights[fight_id] ?? state.world.fights[fight_id] ?? null) : null
   const target = party_follow_leader_target(follow.leader, read_pose(), fight)
-  const followers = follow.followers.flatMap((character) =>
-    Number.isFinite(character.x) && Number.isFinite(character.z)
-      ? [Object.freeze({ character_id: character.id, x: character.x!, y: target?.y ?? 0, z: character.z! })]
+  const followers = follow.followers.flatMap((character) => {
+    const checkpoint = character_checkpoint(character)
+    return checkpoint
+      ? [Object.freeze({ character_id: character.id, checkpoint, x: character.x!, y: target?.y ?? 0, z: character.z! })]
       : []
-  )
+  })
   return Object.freeze({
     party_id: follow.party.id,
     leader_id: follow.leader.id,
@@ -269,6 +270,7 @@ export const observe_party_follow: NonNullable<AppModule['observe']> = ({ events
       dispatch({
         type: 'party/follower_moved',
         character_id: follower.character_id,
+        checkpoint: follower.checkpoint,
         x: follower.x,
         y: follower.y,
         z: follower.z,

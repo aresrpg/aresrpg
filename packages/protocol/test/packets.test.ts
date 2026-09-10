@@ -11,11 +11,29 @@ describe('the wire contract', () => {
   test('declared intents parse with their exact shape', () => {
     expect(
       parse_client_packet(
-        JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 1, y: 2, z: 3, riding: false })
+        JSON.stringify({
+          type: 'packet/position',
+          character_id: '0xabc',
+          checkpoint: 'nauvis:0:0:1',
+          x: 1,
+          y: 2,
+          z: 3,
+          riding: false,
+        })
       )
-    ).toEqual({ type: 'packet/position', character_id: '0xabc', x: 1, y: 2, z: 3, riding: false })
+    ).toEqual({
+      type: 'packet/position',
+      character_id: '0xabc',
+      checkpoint: 'nauvis:0:0:1',
+      x: 1,
+      y: 2,
+      z: 3,
+      riding: false,
+    })
     expect(() =>
-      parse_client_packet(JSON.stringify({ type: 'packet/position', character_id: '0xabc', x: 1, y: 2, z: 3 }))
+      parse_client_packet(
+        JSON.stringify({ type: 'packet/position', character_id: '0xabc', checkpoint: 'nauvis:0:0:1', x: 1, y: 2, z: 3 })
+      )
     ).toThrow(/riding/)
     expect(
       parse_client_packet(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
@@ -296,5 +314,28 @@ describe('the wire contract', () => {
       value: true,
     })
     expect(() => parse_server_packet('not json')).toThrow()
+  })
+})
+
+test('movement needs bounded checkpoint provenance', () => {
+  const position = { type: 'packet/position', character_id: '0xabc', x: 50_000, y: 0, z: 50_000, riding: false }
+  for (const checkpoint of [undefined, null, '', 'x'.repeat(257), 20])
+    expect(() => parse_client_packet(JSON.stringify({ ...position, checkpoint }))).toThrow(/checkpoint/)
+})
+
+test('captured browser movement retains its recalled checkpoint identity', async () => {
+  // Captured from the real browser position publisher over a local WebSocket on 2026-09-09.
+  // Synthetic origin pose using the confirmed testnet recall projection for Character
+  // 0x79ebc67c18575a6b20f7d69faecfd318c6136a23e687aae6cb92caa89db32e2c,
+  // object version 1009255742; checkpoint (50000, 50000) at 1788970808124 ms.
+  const raw = await Bun.file(new URL('./fixtures/recall-position.json', import.meta.url)).text()
+  expect(parse_client_packet(raw)).toEqual({
+    type: 'packet/position',
+    character_id: '0x79ebc67c18575a6b20f7d69faecfd318c6136a23e687aae6cb92caa89db32e2c',
+    checkpoint: 'nauvis:50000:50000:1788970808124',
+    x: 50000,
+    y: 0,
+    z: 50000,
+    riding: false,
   })
 })

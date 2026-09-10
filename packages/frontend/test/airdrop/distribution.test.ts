@@ -83,7 +83,7 @@ test.each([
       claimed.push(url)
       return { digest: 'claim', giftcard: card }
     },
-    redeem_giftcard: async ({ card: voucher }: { card: { id: string } }) => {
+    redeem_giftcards: async ([voucher]: readonly { id: string }[]) => {
       redeemed.push(voucher.id)
       throw new Error('no valid gas coin')
     },
@@ -163,7 +163,7 @@ test('plain wallet transfer automatically redeems once and stale snapshots canno
   const wallet = {
     address: '0xgame',
     identity: 'zklogin',
-    redeem_giftcard: async () => {
+    redeem_giftcards: async () => {
       redemptions.push(card.id)
       return { digest: 'redeemed', item_id: '0xitem', item_version: '10' }
     },
@@ -176,7 +176,7 @@ test('plain wallet transfer automatically redeems once and stale snapshots canno
   app.dispatch({ type: 'path/open', pathname: '/claim' })
   app.dispatch({ type: 'external_wallet/connected', sequence: 0, session: holder as never })
   await flush()
-  app.dispatch({ type: 'distribution/import', giftcard: card })
+  app.dispatch({ type: 'distribution/import' })
   await flush()
   expect(transfers).toEqual([[{ id: card.id, recipient: '0xgame' }]])
   expect(redemptions).toEqual([card.id])
@@ -187,6 +187,46 @@ test('plain wallet transfer automatically redeems once and stale snapshots canno
   stop()
 })
 
+test('one claim action transfers every holder voucher in one batch and redeems the receipt in one batch', async () => {
+  const cards = [
+    { id: '0xa', template: TEMPLATE_ID, amount: 2 },
+    { id: '0xb', template: TEMPLATE_ID, amount: 3 },
+  ]
+  const transfers: unknown[] = []
+  const redemptions: unknown[] = []
+  const holder = {
+    address: '0xexternal',
+    read_giftcards: async () => cards,
+    transfer_giftcards: async (rows: unknown) => {
+      transfers.push(rows)
+      return { digest: 'transfer-batch', giftcards: cards }
+    },
+  }
+  const wallet = {
+    address: '0xgame',
+    identity: 'zklogin',
+    redeem_giftcards: async (rows: unknown) => {
+      redemptions.push(rows)
+      return { digest: 'redeem-batch' }
+    },
+  }
+  const app = create_app()
+  const stop = app.observe(['distribution'])
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: wallet as never })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
+  app.dispatch({ type: 'path/open', pathname: '/claim' })
+  app.dispatch({ type: 'external_wallet/connected', sequence: 0, session: holder as never })
+  await flush()
+  app.dispatch({ type: 'distribution/claim_all' })
+  await flush()
+  expect(transfers).toEqual([cards.map(({ id }) => ({ id, recipient: '0xgame' }))])
+  expect(redemptions).toEqual([cards])
+  expect(app.store.getState().session.giftcards).toEqual([])
+  expect(app.store.getState().distribution.holder_giftcards).toEqual([])
+  stop()
+})
+
 test('a failed redemption remains held and does not automatically retry on repeated snapshots', async () => {
   const template = TEMPLATE_ID
   const card = { id: '0xgift', template, amount: 1 }
@@ -194,7 +234,7 @@ test('a failed redemption remains held and does not automatically retry on repea
   const wallet = {
     address: '0xgame',
     identity: 'zklogin',
-    redeem_giftcard: async () => {
+    redeem_giftcards: async () => {
       attempts++
       throw new Error('transaction outcome uncertain')
     },
@@ -217,6 +257,7 @@ test('a failed redemption remains held and does not automatically retry on repea
 test('received vouchers redeem without waiting for inventory projection', async () => {
   const template = TEMPLATE_ID
   const calls: string[] = []
+  let transactions = 0
   const app = create_app()
   const stop = app.observe(['distribution'])
   app.dispatch({ type: 'auth/connecting' })
@@ -225,9 +266,10 @@ test('received vouchers redeem without waiting for inventory projection', async 
     session: {
       address: '0xgame',
       identity: 'zklogin',
-      redeem_giftcard: async ({ card }: { card: { id: string } }) => {
-        calls.push(card.id)
-        return { digest: card.id }
+      redeem_giftcards: async (cards: readonly { id: string }[]) => {
+        transactions++
+        calls.push(...cards.map(({ id }) => id))
+        return { digest: 'batch' }
       },
     } as never,
   })
@@ -245,6 +287,7 @@ test('received vouchers redeem without waiting for inventory projection', async 
   })
   await flush()
   expect(calls).toEqual(['0xa', '0xb'])
+  expect(transactions).toBe(1)
   expect(app.store.getState().session.giftcards).toEqual([])
   stop()
 })
@@ -308,8 +351,8 @@ test('a late holder transfer failure cannot replace the next recipient session s
   app.dispatch({ type: 'path/open', pathname: '/claim' })
   app.dispatch({ type: 'external_wallet/connected', sequence: 0, session: holder as never })
   await flush()
-  app.dispatch({ type: 'distribution/import', giftcard: card })
-  expect(app.store.getState().distribution.pending).toBe(`import:${card.id}`)
+  app.dispatch({ type: 'distribution/import' })
+  expect(app.store.getState().distribution.pending).toBe('import')
   app.dispatch({ type: 'auth/disconnected' })
   login('0xsecond')
   reject_transfer(new Error('old holder failure'))

@@ -79,20 +79,23 @@ test('the external feed retains live positions and projects only into its select
     leader_id: '0xa',
     world: 'nauvis',
     target: { x: 20, y: 7, z: 0 },
-    followers: [{ character_id: '0xb', x: 0, y: 0, z: 0 }],
+    followers: [{ character_id: '0xb', checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0 }],
   }
   update_party_follow(input, 1_000)
   update_party_follow(input, 1_100)
   expect(read_party_follow().followers[0]).toMatchObject({ character_id: '0xb', x: 1.05, y: 7 })
-  expect(owned_character_position('0xb', 'nauvis')).toMatchObject({ x: 1.05, y: 7 })
+  expect(owned_character_position('0xb', 'nauvis', 'nauvis:0:0:0')).toMatchObject({ x: 1.05, y: 7 })
 })
 
 test('a fighting leader retains an overworld target and an absent target never means arrived', () => {
   reset_party_follow_for_testing()
   reset_owned_character_positions_for_testing()
-  record_owned_character_position('0xa', 'nauvis', { x: 40, y: 7, z: 50 })
+  record_owned_character_position('0xa', 'nauvis', { checkpoint: 'nauvis:0:0:0', x: 40, y: 7, z: 50 })
   expect(
-    party_follow_leader_target({ id: '0xa', world: 'nauvis', active_fight: { id: '0xf' } } as never, null)
+    party_follow_leader_target(
+      { id: '0xa', world: 'nauvis', checkpoint_world: 'nauvis', x: 0, z: 0, active_fight: { id: '0xf' } } as never,
+      null
+    )
   ).toEqual({
     x: 40,
     y: 7,
@@ -100,19 +103,23 @@ test('a fighting leader retains an overworld target and an absent target never m
   })
   reset_owned_character_positions_for_testing()
   expect(
-    party_follow_leader_target({ id: '0xa', world: 'nauvis', active_fight: { id: '0xf' }, x: 0, z: 0 } as never, null, {
-      id: '0xf',
-      world: 'nauvis',
-      x: 60,
-      z: 70,
-    } as never)
+    party_follow_leader_target(
+      { id: '0xa', world: 'nauvis', checkpoint_world: 'nauvis', x: 0, z: 0, active_fight: { id: '0xf' } } as never,
+      null,
+      {
+        id: '0xf',
+        world: 'nauvis',
+        x: 60,
+        z: 70,
+      } as never
+    )
   ).toEqual({ x: 60, y: 0, z: 70 })
 
   const snapshot = update_party_follow({
     party_id: '0xp',
     leader_id: '0xunknown',
     world: 'nauvis',
-    followers: [{ character_id: '0xb', x: 0, y: 0, z: 0 }],
+    followers: [{ character_id: '0xb', checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0 }],
   })
   expect(snapshot.followers[0]?.distance).toBe(Infinity)
 })
@@ -127,7 +134,7 @@ test('position publication throttles and suppresses stationary follower packets'
       return true
     },
   })
-  const position = { x: 0, y: 0, z: 0, riding: false }
+  const position = { checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0, riding: false }
   expect(publisher.publish('0xb', position, 100)).toBeTrue()
   now = 100
   expect(publisher.publish('0xb', position, 100)).toBeFalse()
@@ -183,8 +190,8 @@ test('nearby followers join incrementally while distant followers keep approachi
     party_id: '0xp',
     leader_id: '0xa',
     followers: [
-      { character_id: '0xb', world: 'nauvis', x: 0, y: 0, z: 0, distance: 0 },
-      { character_id: '0xc', world: 'nauvis', x: 0, y: 0, z: 0, distance: 9 },
+      { character_id: '0xb', world: 'nauvis', checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0, distance: 0 },
+      { character_id: '0xc', world: 'nauvis', checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0, distance: 9 },
     ],
   }
 
@@ -274,9 +281,26 @@ test('an engage confirmed after switching tabs still joins that follower when co
     leader_id: '0xa',
     world: 'nauvis',
     target: { x: 0, y: 0, z: 0 },
-    followers: [{ character_id: '0xb', x: 2, y: 0, z: 0 }],
+    followers: [{ character_id: '0xb', checkpoint: 'nauvis:0:0:0', x: 2, y: 0, z: 0 }],
   })
 
   expect(joins).toEqual([['0xb']])
   controller.abort()
+})
+
+test('a recalled follower restarts from its new checkpoint instead of its previous follow snapshot', () => {
+  reset_party_follow_for_testing()
+  reset_owned_character_positions_for_testing()
+  const input = {
+    party_id: '0xp',
+    leader_id: '0xa',
+    world: 'nauvis',
+    followers: [{ character_id: '0xb', checkpoint: 'nauvis:53196:50000:1', x: 53_196, y: 4, z: 50_000 }],
+  }
+  update_party_follow(input, 1_000)
+  const recalled = update_party_follow(
+    { ...input, followers: [{ ...input.followers[0]!, checkpoint: 'nauvis:50000:50000:2', x: 50_000 }] },
+    1_100
+  )
+  expect(recalled.followers[0]).toMatchObject({ x: 50_000, checkpoint: 'nauvis:50000:50000:2' })
 })

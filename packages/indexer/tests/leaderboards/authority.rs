@@ -53,9 +53,17 @@ fn positive_character_xp_is_only_a_sender_authorized_victory_award() {
         .collect();
     assert_eq!(
         declarations_and_calls,
-        BTreeMap::from([("character", 1), ("fight", 1)]),
+        BTreeMap::from([("character", 1), ("progression", 1)]),
         "a new XP source requires updating leaderboard attribution"
     );
+    for (module, source) in &sources {
+        let calls = compact(source).matches("award_experience(").count();
+        assert_eq!(
+            calls,
+            usize::from(module == "fight" || module == "progression"),
+            "a new character XP award caller requires reviewing leaderboard attribution"
+        );
+    }
     let character = &sources["character"];
     let fight = &sources["fight"];
     assert!(
@@ -63,7 +71,7 @@ fn positive_character_xp_is_only_a_sender_authorized_victory_award() {
         "birth must not grant leaderboard XP"
     );
     assert!(compact(body(fight, "settle_seat"))
-        .contains("if(won)character::add_experience(&mutcharacter,experience);"));
+        .contains("if(won)progression::award_experience(&mutcharacter,experience,clock);"));
     assert_eq!(
         compact(fight).matches("settle_seat(").count(),
         3,

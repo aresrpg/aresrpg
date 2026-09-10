@@ -3,7 +3,6 @@
 
 import {
   LEADERBOARD_LIMIT,
-  LEADERBOARD_SEASON_EPOCHS,
   type LeaderboardEntry,
   type LeaderboardObservation,
   type LeaderboardSnapshot,
@@ -14,7 +13,7 @@ const PENDING_KEY = 'leaderboards:pending'
 const MAX_TOTAL = (1n << 128n) - 1n
 
 type RedisRead = Readonly<{ call?: (command: string, ...args: readonly (string | number)[]) => Promise<unknown> }>
-type Meta = Readonly<{ checkpoint: number; origin_epoch: number; epoch: number }>
+type Meta = Readonly<{ checkpoint: number; timestamp_ms: number; reset_at_ms: number }>
 
 export const rank_member = (score: string, address: string): string =>
   `${(MAX_TOTAL - BigInt(score)).toString().padStart(39, '0')}:${address}`
@@ -38,8 +37,10 @@ const read_meta = (value: string | null): Meta => {
   if (!value) throw new Error('leaderboard projection is not initialized')
   const meta = JSON.parse(value) as Meta
   if (
-    ![meta.checkpoint, meta.origin_epoch, meta.epoch].every((value) => Number.isSafeInteger(value) && value >= 0) ||
-    meta.epoch < meta.origin_epoch
+    ![meta.checkpoint, meta.timestamp_ms, meta.reset_at_ms].every(
+      (value) => Number.isSafeInteger(value) && value >= 0
+    ) ||
+    meta.timestamp_ms >= meta.reset_at_ms
   )
     throw new Error('invalid leaderboard metadata')
   return meta
@@ -54,20 +55,14 @@ const attempt_snapshot = async (
   const before = (await redis.call('MGET', META_KEY, PENDING_KEY)) as [string | null, string | null]
   if (before[1]) return null
   const meta = read_meta(before[0])
-  const current_season = Math.floor((meta.epoch - meta.origin_epoch) / LEADERBOARD_SEASON_EPOCHS)
-  const season = observation.season ?? current_season
-  if (season > current_season) throw new Error('future leaderboard season')
-  const key = `leaderboards:${season}:${observation.metric}`
+  const key = `leaderboards:${observation.metric}`
   const ranking = await read_ranking(redis, key, address)
   const after = (await redis.call('MGET', META_KEY, PENDING_KEY)) as [string | null, string | null]
   if (before[0] !== after[0] || after[1] || !ranking) return null
   return {
     observation,
-    season,
-    current_season,
-    start_epoch: meta.origin_epoch + season * LEADERBOARD_SEASON_EPOCHS,
-    end_epoch: meta.origin_epoch + (season + 1) * LEADERBOARD_SEASON_EPOCHS,
-    epoch: meta.epoch,
+    reset_at_ms: meta.reset_at_ms,
+    timestamp_ms: meta.timestamp_ms,
     checkpoint: meta.checkpoint,
     ...ranking,
   }

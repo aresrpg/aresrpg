@@ -5068,6 +5068,12 @@
         "chance_bp": 113,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "key_of_tangled_aftermath",
+        "chance_bp": 200,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 591
@@ -5219,6 +5225,12 @@
         "chance_bp": 6500,
         "min_qty": 1,
         "max_qty": 20
+      },
+      {
+        "item_type": "key_of_tangled_aftermath",
+        "chance_bp": 200,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 2200
@@ -5358,6 +5370,12 @@
         "chance_bp": 67,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "key_of_tangled_aftermath",
+        "chance_bp": 200,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 1075
@@ -5491,6 +5509,12 @@
         "chance_bp": 7010,
         "min_qty": 1,
         "max_qty": 2
+      },
+      {
+        "item_type": "key_of_tangled_aftermath",
+        "chance_bp": 200,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 975
@@ -5673,6 +5697,12 @@
       {
         "item_type": "silkblade_spinneret",
         "chance_bp": 10000,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_tangled_aftermath",
+        "chance_bp": 3000,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -6001,6 +6031,12 @@
       {
         "item_type": "broodstep_boots",
         "chance_bp": 50,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_tangled_aftermath",
+        "chance_bp": 500,
         "min_qty": 1,
         "max_qty": 1
       }
@@ -6638,6 +6674,12 @@
         "chance_bp": 107,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 850
@@ -6796,6 +6838,12 @@
         "chance_bp": 37,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 100,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 1600
@@ -6949,6 +6997,12 @@
         "chance_bp": 10000,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 2000,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 9000
@@ -7058,6 +7112,12 @@
         "chance_bp": 6500,
         "min_qty": 1,
         "max_qty": 2
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 2600
@@ -7179,6 +7239,12 @@
         "chance_bp": 6500,
         "min_qty": 1,
         "max_qty": 2
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 300,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 5200
@@ -7300,6 +7366,12 @@
         "chance_bp": 6500,
         "min_qty": 1,
         "max_qty": 2
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 200,
+        "min_qty": 1,
+        "max_qty": 1
       }
     ],
     "xp": 9500
@@ -7539,6 +7611,12 @@
       {
         "item_type": "cloudstep_greaves",
         "chance_bp": 40,
+        "min_qty": 1,
+        "max_qty": 1
+      },
+      {
+        "item_type": "key_of_ivory_rampart",
+        "chance_bp": 1000,
         "min_qty": 1,
         "max_qty": 1
       }

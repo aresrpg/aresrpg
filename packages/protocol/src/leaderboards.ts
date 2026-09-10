@@ -12,10 +12,9 @@ export const LEADERBOARD_METRICS = [
   'feeding',
   'gathering',
 ] as const
-export const LEADERBOARD_SEASON_EPOCHS = 30
 export const LEADERBOARD_LIMIT = 100
 export type LeaderboardMetric = (typeof LEADERBOARD_METRICS)[number]
-export type LeaderboardObservation = Readonly<{ metric: LeaderboardMetric; season: number | null; id: number }>
+export type LeaderboardObservation = Readonly<{ metric: LeaderboardMetric; id: number }>
 export type LeaderboardEntry = Readonly<{
   address: string
   name: string | null
@@ -27,11 +26,8 @@ export type LeaderboardEntry = Readonly<{
 }>
 export type LeaderboardSnapshot = Readonly<{
   observation: LeaderboardObservation
-  season: number
-  current_season: number
-  start_epoch: number
-  end_epoch: number
-  epoch: number
+  reset_at_ms: number
+  timestamp_ms: number
   checkpoint: number
   entries: readonly LeaderboardEntry[]
   self: LeaderboardEntry | null
@@ -42,9 +38,10 @@ const nonnegative_integer = (value: unknown): value is number => Number.isSafeIn
 export const parse_leaderboard_observation = (value: unknown): LeaderboardObservation | null => {
   if (value === null) return null
   if (!value || typeof value !== 'object') throw new Error('invalid leaderboard observation')
-  const { metric, season, id } = value as Record<string, unknown>
+  if (Object.keys(value).some((key) => !['metric', 'id'].includes(key)))
+    throw new Error('invalid leaderboard observation')
+  const { metric, id } = value as Record<string, unknown>
   if (!LEADERBOARD_METRICS.includes(metric as LeaderboardMetric)) throw new Error('invalid leaderboard metric')
-  if (season !== null && !nonnegative_integer(season)) throw new Error('invalid leaderboard season')
   if (!nonnegative_integer(id)) throw new Error('invalid leaderboard request id')
-  return { metric: metric as LeaderboardMetric, season: season as number | null, id: id as number }
+  return { metric: metric as LeaderboardMetric, id: id as number }
 }

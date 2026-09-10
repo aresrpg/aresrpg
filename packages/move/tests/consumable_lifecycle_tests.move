@@ -3,16 +3,16 @@
 #[test_only]
 module aresrpg::consumable_lifecycle_tests;
 
-use aresrpg::{api, character::{Self, Character}, item::{Self, Item}, progression, protected_policy, version, world};
+use aresrpg::{api, character::{Self, Character}, dungeon, item::{Self, Item}, progression, protected_policy, version, world};
 use aresrpg_control::admin;
-use aresrpg_math::{city_map, consumable_effect, spell_effect};
-use aresrpg_seed::{item_rows, registry, spell_rows, world_content};
+use aresrpg_math::{city_map, consumable_effect, dungeon_data, spell_effect};
+use aresrpg_seed::{dungeon_content, item_rows, registry, spell_rows, world_content};
 use sui::{clock, kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA11CE;
 public enum Case has copy, drop { Heal, Stats, Spells, Recall, City, Rooted, WrongTemplate, MissingEffect, LootBox, CityPlain, PlainCity }
 
-fun run(case: Case) {
+fun run(case: Case, between_rooms: bool) {
   let mut scenario = test_scenario::begin(OWNER);
   item::test_init(scenario.ctx());
   version::test_init(scenario.ctx());
@@ -21,16 +21,28 @@ fun run(case: Case) {
   let level = spell_effect::new_spell_level(1, 0, 1, false, false, false, false, 0, 0, 0, 0, vector[], vector[]);
   spell_rows::add_spell(&admin, &mut root, b"reset_subject".to_string(), b"senshi".to_string(), 1,
     vector::tabulate!(6, |_| level), scenario.ctx());
+  if (between_rooms) dungeon_content::add(&admin, &mut root, b"nest".to_string(),
+    dungeon_data::new_dungeon(b"key".to_string(), vector[
+      dungeon_data::new_room(vector[dungeon_data::new_room_mob(b"guard".to_string())]),
+    ]), scenario.ctx());
   scenario.next_tx(OWNER);
+  let dungeon_id = if (between_rooms) {
+    let content = scenario.take_shared<dungeon_content::DungeonContent>();
+    let id = object::id(&content);
+    test_scenario::return_shared(content);
+    id
+  } else object::id_from_address(@0xD);
   let publisher = scenario.take_from_sender<Publisher>();
   let (policy, policy_cap) = transfer_policy::new<Item>(&publisher, scenario.ctx());
   let protected = protected_policy::for_testing<Item>(&publisher, scenario.ctx());
   publisher.burn();
   let mut content = world_content::create(&admin, &mut root, b"nauvis".to_string(), 1, scenario.ctx());
   world_content::set_cities(&admin, &mut root, &mut content,
-    vector[city_map::new_city(b"thebes".to_string(), 50_512, 50_000, object::id_from_address(@0xD))], scenario.ctx());
+    vector[city_map::new_city(b"thebes".to_string(), 50_512, 50_000, dungeon_id)], scenario.ctx());
+  if (between_rooms) world::create(&admin, &mut root, &content, scenario.ctx());
   let mut template = item_rows::template_for_testing(b"potion".to_string(), b"consumable".to_string(), scenario.ctx());
   let wrong = item_rows::template_for_testing(b"other".to_string(), b"consumable".to_string(), scenario.ctx());
+  let key_template = item_rows::template_for_testing(b"key".to_string(), b"resource".to_string(), scenario.ctx());
   let effect = match (case) {
     Case::Stats => consumable_effect::reset_stats(),
     Case::Spells => consumable_effect::reset_spells(),
@@ -65,6 +77,18 @@ fun run(case: Case) {
   let version = scenario.take_shared<version::Version>();
   let spell = scenario.take_shared<spell_rows::SpellTemplate>();
   let content = scenario.take_shared<world_content::WorldContent>();
+  if (between_rooms) {
+    let world = scenario.take_shared<world::World>();
+    let dungeon = scenario.take_shared<dungeon_content::DungeonContent>();
+    let key = item::mint(&key_template, 1, &mut generator, scenario.ctx());
+    let key_id = object::id(&key);
+    kiosk.place(&cap, key);
+    clock::increment_for_testing(&mut clock, 100_000);
+    dungeon::enter(&world, &content, &dungeon, &protected, &mut kiosk, &cap, character_id, key_id, 77, &clock, scenario.ctx());
+    progression::set_hp(kiosk.borrow_mut(&cap, character_id), 10, &clock);
+    test_scenario::return_shared(world);
+    test_scenario::return_shared(dungeon);
+  };
   assert!(kiosk.is_locked(potion_id));
   if (case == Case::Stats) api::raise_stat(&mut kiosk, &cap, character_id, b"strength".to_string(), 10, &version);
   if (case == Case::Spells) {
@@ -112,10 +136,18 @@ fun run(case: Case) {
     assert!(remaining.amount() == 1);
     item::destroy_for_testing(remaining);
   };
+  if (between_rooms) {
+    let character: &Character = kiosk.borrow(&cap, character_id);
+    assert!(dungeon::has_run(character));
+    assert!(world::is_rooted(character, &clock));
+    let (_, x, z) = world::current_checkpoint_for_testing(character);
+    assert!(x == 50_512 && z == 50_000);
+  };
   character::destroy(kiosk.take(&cap, character_id));
   kiosk::close_and_withdraw(kiosk, cap, scenario.ctx()).into_balance().destroy_zero();
   item_rows::destroy_for_testing(template);
   item_rows::destroy_for_testing(wrong);
+  item_rows::destroy_for_testing(key_template);
   protected_policy::destroy_for_testing(protected, scenario.ctx());
   transfer_policy::destroy_and_withdraw(policy, policy_cap, scenario.ctx()).into_balance().destroy_zero();
   clock::destroy_for_testing(clock);
@@ -124,20 +156,28 @@ fun run(case: Case) {
   scenario.end();
 }
 
-#[test] fun healing_burns_exact_supply_and_reads_the_live_effect() { run(Case::Heal); }
-#[test] fun stat_reset_restores_only_level_capital() { run(Case::Stats); }
-#[test] fun spell_reset_clears_allocations_and_refunds_the_pool() { run(Case::Spells); }
-#[test] fun recall_returns_to_the_current_world_center() { run(Case::Recall); }
-#[test] fun city_potion_uses_its_authored_same_world_destination() { run(Case::City); }
+#[test] fun healing_burns_exact_supply_and_reads_the_live_effect() { run(Case::Heal, false); }
+#[test] fun stat_reset_restores_only_level_capital() { run(Case::Stats, false); }
+#[test] fun spell_reset_clears_allocations_and_refunds_the_pool() { run(Case::Spells, false); }
+#[test] fun recall_returns_to_the_current_world_center() { run(Case::Recall, false); }
+#[test] fun city_potion_uses_its_authored_same_world_destination() { run(Case::City, false); }
 #[test, expected_failure(abort_code = 2603, location = aresrpg::consumable)]
-fun rooted_consumption_is_refused_before_burning() { run(Case::Rooted); }
+fun rooted_consumption_is_refused_before_burning() { run(Case::Rooted, false); }
 #[test, expected_failure(abort_code = 2601, location = aresrpg::consumable)]
-fun a_foreign_template_cannot_substitute_an_effect() { run(Case::WrongTemplate); }
+fun a_foreign_template_cannot_substitute_an_effect() { run(Case::WrongTemplate, false); }
 #[test, expected_failure(abort_code = 2601, location = aresrpg::consumable)]
-fun missing_live_effect_is_refused() { run(Case::MissingEffect); }
+fun missing_live_effect_is_refused() { run(Case::MissingEffect, false); }
 #[test, expected_failure(abort_code = 2604, location = aresrpg::consumable)]
-fun plain_consume_cannot_open_a_random_box() { run(Case::LootBox); }
+fun plain_consume_cannot_open_a_random_box() { run(Case::LootBox, false); }
 #[test, expected_failure(abort_code = 2605, location = aresrpg::consumable)]
-fun plain_consume_cannot_skip_city_content() { run(Case::CityPlain); }
+fun plain_consume_cannot_skip_city_content() { run(Case::CityPlain, false); }
 #[test, expected_failure(abort_code = 2605, location = aresrpg::consumable)]
-fun city_consume_rejects_an_ordinary_effect() { run(Case::PlainCity); }
+fun city_consume_rejects_an_ordinary_effect() { run(Case::PlainCity, false); }
+
+#[test] fun dungeon_staging_allows_healing_without_releasing_the_run() { run(Case::Heal, true); }
+#[test] fun dungeon_staging_allows_stat_allocation_and_reset() { run(Case::Stats, true); }
+#[test] fun dungeon_staging_allows_spell_upgrades_and_reset() { run(Case::Spells, true); }
+#[test, expected_failure(abort_code = 2603, location = aresrpg::consumable)]
+fun dungeon_staging_refuses_recall() { run(Case::Recall, true); }
+#[test, expected_failure(abort_code = 2603, location = aresrpg::consumable)]
+fun dungeon_staging_refuses_city_teleport() { run(Case::City, true); }

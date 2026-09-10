@@ -59,6 +59,7 @@ export const holder_giftcard_batch = (date, collection, snapshot) => {
   return {
     id,
     item_type: collection.item_type,
+    campaign: collection.item_type,
     amount: 1,
     network: 'mainnet',
     recipients: ranked

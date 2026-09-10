@@ -26,8 +26,8 @@ fun recover(history: u64, start_fight: bool) {
   let mut clock = clock::create_for_testing(scenario.ctx());
   clock::set_for_testing(&mut clock, 1);
   assert!(bytes <= 256000, 4);
+  let mut entropy = random::new_generator_from_seed_for_testing(b"retained_history");
   if (start_fight) {
-    let mut entropy = random::new_generator_from_seed_for_testing(b"retained_history");
     fight::start(&mut fight, &mut entropy, &clock);
     assert!(std::bcs::to_bytes(&fight).length() <= 256000, 5);
     clock::set_for_testing(&mut clock, 3001);
@@ -37,7 +37,7 @@ fun recover(history: u64, start_fight: bool) {
     fight::crank(&mut fight, &mut entropy, &clock);
     assert!(combat::active_fighter(fight::combat_for_testing(&fight)) == 0, 1);
   };
-  fight::forfeit(&mut fight, 0, &mut kiosk, cap, &policy, &clock, scenario.ctx());
+  fight::forfeit(&mut fight, 0, &mut kiosk, cap, &policy, &mut entropy, &clock, scenario.ctx());
   assert!(kiosk.has_item(character_id), 2);
   assert!(combat::ended(fight::combat_for_testing(&fight)), 3);
   assert!(std::bcs::to_bytes(&fight).length() <= 256000, 6);

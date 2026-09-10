@@ -9,6 +9,7 @@ import { mob_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
+import { fight_access_from } from '../game/core/settings.ts'
 import { dungeon_lobby_key, selected_dungeon_pending, selected_dungeon_run } from '../modules/dungeon.ts'
 import { selected_party } from '../modules/party.ts'
 import { selected_character } from '../modules/session.ts'
@@ -24,7 +25,8 @@ export const dungeon_fight_joinable = (
   fight: Readonly<{ phase: string; access: number; opener: string | null }>,
   party_members: readonly string[]
 ): boolean =>
-  fight.phase === 'placement' && (fight.access === 0 || (fight.opener !== null && party_members.includes(fight.opener)))
+  fight.phase === 'placement' &&
+  (fight.access === 0 || (fight.access === 1 && fight.opener !== null && party_members.includes(fight.opener)))
 
 export const current_dungeon_room_players = (
   players: readonly DungeonLobbyPlayerRow[],
@@ -40,7 +42,6 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const lobby = run ? state.dungeon.lobbies[dungeon_lobby_key(run)] : null
   const party = selected_party(state)
   const party_members = party?.members.map(({ character_id }) => character_id) ?? []
-  const [access, set_access] = useState<0 | 1>(0)
   const [abandon_armed_for, set_abandon_armed_for] = useState<string | null>(null)
   const text = copy_text(copy.world_hud)
   if (!character || !run || !authored) return null
@@ -189,10 +190,13 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                     key={fight.id}
                   >
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-[8px] tracking-[0.14em] text-[#c4c6ca] uppercase">
+                      <div className="flex flex-wrap items-center gap-2 text-[8px] tracking-[0.14em] text-[#c4c6ca] uppercase">
                         <Swords size={13} className="text-[#c8963c]" />
                         {fight.phase === 'placement' ? text('dungeon_forming_party') : text('dungeon_in_progress')}
-                        {fight.access === 1 && <LockKeyhole className="text-[#b58a45]" size={11} />}
+                        <span className="inline-flex items-center gap-1 text-[#b58a45]">
+                          {fight.access === 1 && <LockKeyhole size={11} />}
+                          {text(fight.access === 1 ? 'dungeon_group' : 'dungeon_public')}
+                        </span>
                       </div>
                       <p className="mt-2 truncate text-[8px] text-[#717983]">
                         {fight.players.length > 0
@@ -224,28 +228,16 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           </div>
 
           <footer className="shrink-0 border-t border-white/8 p-4">
-            <div className="grid grid-cols-[1fr_auto] gap-3">
-              <div className="grid grid-cols-2 border border-white/8 bg-black/20 p-1">
-                <button
-                  className={`h-9 cursor-pointer text-[8px] tracking-[0.14em] uppercase ${access === 0 ? 'bg-[#67b8dc]/12 text-[#80cdf0]' : 'text-[#616a73]'}`}
-                  onClick={() => set_access(0)}
-                  type="button"
-                >
-                  {text('dungeon_public')}
-                </button>
-                <button
-                  className={`h-9 cursor-pointer text-[8px] tracking-[0.14em] uppercase disabled:cursor-not-allowed disabled:opacity-30 ${access === 1 ? 'bg-[#c8963c]/12 text-[#d4aa5b]' : 'text-[#616a73]'}`}
-                  disabled={!party}
-                  onClick={() => set_access(1)}
-                  type="button"
-                >
-                  {text('dungeon_group')}
-                </button>
-              </div>
+            <div className="flex justify-end">
               <button
                 className="h-11 cursor-pointer border border-[#c8963c]/45 bg-[#c8963c]/9 px-6 text-[8px] tracking-[0.17em] text-[#d6ac5e] uppercase disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={pending !== null}
-                onClick={() => dispatch_app({ type: 'dungeon/start_fight', access })}
+                onClick={() =>
+                  dispatch_app({
+                    type: 'dungeon/start_fight',
+                    access: party ? fight_access_from(state.settings.fight_access) : 0,
+                  })
+                }
                 type="button"
               >
                 {pending === 'start' ? text('dungeon_starting') : text('dungeon_start_fight')}

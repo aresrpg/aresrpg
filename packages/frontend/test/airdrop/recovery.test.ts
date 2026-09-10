@@ -71,7 +71,7 @@ test('certified failed redemption is not automatically repeated after reload, bu
   const wallet = {
     address: '0xgame',
     identity: 'zklogin',
-    redeem_giftcard: async () => {
+    redeem_giftcards: async () => {
       executions++
       throw Object.assign(new Error('executed failure'), { digest: 'certified-failed-digest' })
     },
@@ -84,7 +84,7 @@ test('certified failed redemption is not automatically repeated after reload, bu
   const second = boot(wallet)
   await flush()
   expect(executions).toBe(1)
-  second.app.dispatch({ type: 'distribution/redeem', giftcard: card })
+  second.app.dispatch({ type: 'distribution/redeem', giftcards: [card] })
   await flush()
   expect(executions).toBe(2)
   second.stop()
@@ -101,7 +101,7 @@ test('unavailable attempt persistence disables automatic submission while manual
   const wallet = {
     address: '0xgame',
     identity: 'zklogin',
-    redeem_giftcard: async () => {
+    redeem_giftcards: async () => {
       executions++
       return { digest: 'done', item_id: '0xitem', item_version: '10' }
     },
@@ -109,7 +109,7 @@ test('unavailable attempt persistence disables automatic submission while manual
   const { app, stop } = boot(wallet)
   await flush()
   expect(executions).toBe(0)
-  app.dispatch({ type: 'distribution/redeem', giftcard: card })
+  app.dispatch({ type: 'distribution/redeem', giftcards: [card] })
   await flush()
   expect(executions).toBe(1)
   stop()
@@ -123,7 +123,7 @@ test('automatic-attempt markers are written before execution and scoped to the g
     const wallet = {
       address,
       identity: 'zklogin',
-      redeem_giftcard: async () => {
+      redeem_giftcards: async () => {
         expect([...storage.values.keys()].some((key) => key.endsWith(`:${address}:${card.id}`))).toBeTrue()
         accounts.push(address)
         throw new Error('executed failure')
@@ -164,7 +164,7 @@ test('unreadable attempt storage cannot trigger an automatic transaction', async
   const { stop } = boot({
     address: '0xgame',
     identity: 'zklogin',
-    redeem_giftcard: async () => {
+    redeem_giftcards: async () => {
       executions++
     },
   })

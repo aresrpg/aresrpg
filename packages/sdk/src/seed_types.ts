@@ -149,6 +149,7 @@ export type SeedBiomeMap = Readonly<{
 
 export type SeedGiftcard = Readonly<{
   id: string
+  campaign?: string
   item_type: string
   amount: number
   custody: string

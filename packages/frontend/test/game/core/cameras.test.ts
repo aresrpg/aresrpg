@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { MIDDAY_TIME_OF_DAY } from '@aresrpg/engine'
 import { expect, test } from 'bun:test'
 
-import { camera_mode_after, FIGHT_TIME_OF_DAY, time_of_day_for_camera_mode } from '../../../src/game/core/cameras.ts'
+import { camera_mode_after, time_of_day_for_camera_mode } from '../../../src/game/core/cameras.ts'
 
 // REPORTED 2026-08-21: refresh into a live fight and the board is drawn, the player walks
 // around freely, and their overworld avatar stands on the board beside their own fighter. One
@@ -23,8 +24,8 @@ test('the board hands its own camera back, and outside a fight nothing is held',
 })
 
 test('fight presentation pins noon without changing the live world clock outside combat', () => {
-  expect(FIGHT_TIME_OF_DAY).toBe(3 / 8)
-  expect(time_of_day_for_camera_mode('fight', 0.9)).toBe(FIGHT_TIME_OF_DAY)
+  expect(MIDDAY_TIME_OF_DAY).toBe(3 / 8)
+  expect(time_of_day_for_camera_mode('fight', 0.9)).toBe(MIDDAY_TIME_OF_DAY)
   expect(time_of_day_for_camera_mode('follow', 0.9)).toBe(0.9)
   expect(time_of_day_for_camera_mode('spectate', 0.9)).toBe(0.9)
 })

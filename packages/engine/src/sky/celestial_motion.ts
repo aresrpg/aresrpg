@@ -10,6 +10,8 @@ import { Vector3 } from 'three'
 export const CELESTIAL_CYCLE_MS = 20 * 60 * 1000
 /** Fraction of one orbit for which the sun is above the horizon. */
 export const DAY_FRAC = 0.75
+/** Midpoint of the daylight arc, with the sun at its highest elevation. */
+export const MIDDAY_TIME_OF_DAY = DAY_FRAC / 2
 
 const TAU = Math.PI * 2
 const ORBIT_PHASE = -Math.PI / 4

@@ -50,3 +50,38 @@ test('only a participant may request one canonical fight resync', async () => {
   expect(fact).toBeDefined()
   expect(sent.filter((packet) => packet.type === 'packet/fight_state')).toHaveLength(before + 1)
 })
+
+test('a forfeit stays behind earlier turn witnesses in the fight stream', async () => {
+  const pending = Promise.withResolvers<{ fight: typeof fight_node }[]>()
+  let stalled = false
+  const { sent, ws, graph, pubsub } = wire({
+    fight_read: () => (stalled ? pending.promise : Promise.resolve([{ fight: fight_node }])),
+  })
+  const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
+  try {
+    await flush()
+    await embody(player)
+    pubsub.emitter.emit('evt:character:0xabc', {
+      type: 'CharacterSeated',
+      data: { fight: '0xf1', character: '0xabc', seat: 0 },
+    })
+    await flush()
+    await flush()
+    sent.length = 0
+    stalled = true
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'TurnSeedUsed', data: { fight: '0xf1', seat: '1', seed: '42' } })
+    await flush()
+    pubsub.emitter.emit('evt:fight:0xf1', { type: 'FighterForfeited', data: { fight: '0xf1', fighter: '0' } })
+    await flush()
+    expect(sent.some(({ type }) => type === 'packet/fighter_forfeited')).toBe(false)
+    pending.resolve([{ fight: fight_node }])
+    await flush()
+    await flush()
+    expect(
+      sent.filter(({ type }) => ['packet/turn_seed', 'packet/fighter_forfeited'].includes(type)).map(({ type }) => type)
+    ).toEqual(['packet/turn_seed', 'packet/fighter_forfeited'])
+  } finally {
+    pending.resolve([{ fight: fight_node }])
+    player.on_close()
+  }
+})

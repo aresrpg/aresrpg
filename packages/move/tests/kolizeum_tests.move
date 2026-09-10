@@ -86,11 +86,9 @@ fun ready_api_group(
 // stake two units each: the one-unit fee leaves eleven, paid exactly as 3 + 4 + 4.
 fun arena(variant: Variant) {
   let api_run = variant == Variant::ApiPublic || variant == Variant::ApiFriends;
-  let mut scenario = test_scenario::begin(if (api_run) @0x0 else A);
-  if (api_run) {
-    random::create_for_testing(scenario.ctx());
-    scenario.next_tx(A);
-  };
+  let mut scenario = test_scenario::begin(@0x0);
+  random::create_for_testing(scenario.ctx());
+  scenario.next_tx(A);
   item::test_init(scenario.ctx());
   version::test_init(scenario.ctx());
   scenario.next_tx(A);
@@ -155,7 +153,9 @@ fun arena(variant: Variant) {
   };
   if (variant == Variant::NotDungeonFight) {
     let version = scenario.take_shared<version::Version>();
-    api::give_up_dungeon_room(&mut fight, 0, &mut kiosk_a, cap_a, &policy, &version, &clock, scenario.ctx());
+    let randomness = scenario.take_shared<random::Random>();
+    api::give_up_dungeon_room_terminal(&mut fight, 0, &mut kiosk_a, &personal_a, &policy, &randomness, &version, &clock, scenario.ctx());
+    test_scenario::return_shared(randomness);
     abort 999
   };
   if (variant == Variant::WrongFight || variant == Variant::WrongStartFight || variant == Variant::WrongSettleFight
@@ -203,7 +203,7 @@ fun arena(variant: Variant) {
   assert!(fight::side_players(&fight, 0) == 3 && fight::side_players(&fight, 1) == 3, 5);
   let mut entropy = random::new_generator_from_seed_for_testing(b"arena");
   if (variant == Variant::PlacementForfeit)
-    kolizeum::forfeit(&mut fight, 3, &mut kiosk_b, cap_b, &policy, &clock, scenario.ctx());
+    kolizeum::forfeit(&mut fight, 3, &mut kiosk_b, cap_b, &policy, &mut entropy, &clock, scenario.ctx());
   if (variant == Variant::EarlyStart)
     kolizeum::start(&mut lobby, &mut fight, &mut entropy, &clock, scenario.ctx());
 
@@ -254,11 +254,13 @@ fun arena(variant: Variant) {
     (lobby, fight) = next(&mut scenario, lobby, fight, B);
     payment(&scenario, @treasury, if (pledge == 0) 0 else if (variant == Variant::LargePledge) 6_000_000_000_000_000 else 1);
     let version = scenario.take_shared<version::Version>();
+    let randomness = scenario.take_shared<random::Random>();
     index = 3;
     while (index < 6) {
-      api::forfeit_kolizeum(&mut fight, index, &mut kiosk_b, cap_b, &policy, &version, &clock, scenario.ctx());
+      api::forfeit_kolizeum_terminal(&mut fight, index, &mut kiosk_b, &personal_b, &policy, &randomness, &version, &clock, scenario.ctx());
       index = index + 1;
     };
+    test_scenario::return_shared(randomness);
     if (variant == Variant::ForfeitedSettle) {
       api::settle_kolizeum(&mut lobby, &mut fight, 3, &mut kiosk_b, &personal_b, &policy, &version, &clock, scenario.ctx());
       abort 999

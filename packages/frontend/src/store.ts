@@ -327,6 +327,7 @@ if (import.meta.hot) {
 }
 
 export const useAppStore = <T>(selector: (state: AppState) => T): T => useStore(app.store, selector)
+export const read_app_state = app.store.getState
 export const dispatch_app = app.dispatch
 export const initialize_app_store = app.initialize
 export const observe_app = app.observe

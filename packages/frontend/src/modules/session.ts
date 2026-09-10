@@ -3,6 +3,7 @@
 
 import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
+import { character_checkpoint } from '@aresrpg/protocol'
 import { client_to_chain_coordinate, type CharacteristicName } from '@aresrpg/immutable'
 
 import type { Auth, AuthSession } from '../auth.ts'
@@ -555,25 +556,26 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   })
   const unsubscribe_pose = subscribe_pose(() => {
     const pose = read_pose()
-    if (!pose || !link) return
     const state = get_state()
     if (state.session.link_status !== 'ready' || !pose_matches_character(pose, state.session.selected_character_id))
       return
-    const { character_id } = pose
+    const character = state.session.characters.find(({ id }) => id === pose.character_id)
+    const checkpoint = character ? character_checkpoint(character) : null
+    if (!checkpoint) return
     const next = {
+      checkpoint,
       x: client_to_chain_coordinate(pose.x),
       y: pose.y,
       z: client_to_chain_coordinate(pose.z),
       riding: pose.riding,
     }
-    const character = state.session.characters.find(({ id }) => id === character_id)
-    if (character?.world) record_owned_character_position(character_id, character.world, next)
-    positions.publish(character_id, next, POSITION_SEND_MS)
+    record_owned_character_position(pose.character_id, character!.world!, next)
+    positions.publish(pose.character_id, next, POSITION_SEND_MS)
   })
   const PARTY_FOLLOW_SEND_MS = 100
-  events.on('party/follower_moved', ({ character_id, x, y, z }) => {
+  events.on('party/follower_moved', ({ character_id, checkpoint, x, y, z }) => {
     if (get_state().session.link_status !== 'ready') return
-    positions.publish(character_id, Object.freeze({ x, y, z, riding: false }), PARTY_FOLLOW_SEND_MS)
+    positions.publish(character_id, Object.freeze({ checkpoint, x, y, z, riding: false }), PARTY_FOLLOW_SEND_MS)
   })
   events.on('fight/input', ({ fight, input, origin }) => {
     const state = get_state()

@@ -34,7 +34,11 @@ export type Fight = {
 }
 
 const seed_at = (seed: bigint, index: bigint): bigint => (mix(seed, index * 2n) << 32n) | mix(seed, index * 2n + 1n)
-const AWAITING_WITNESS = new Set(['missing_turn_seed_witness', 'missing_player_turn_seed', 'missing_mob_turn_witness'])
+const AWAITING_WITNESS: ReadonlySet<string | undefined> = new Set([
+  'missing_turn_seed_witness',
+  'missing_player_turn_seed',
+  'missing_mob_turn_witness',
+])
 
 export const create_fight = ({
   state: initial_state,
@@ -128,7 +132,16 @@ export const create_fight = ({
     return { state: snapshot(), events: structuredClone(events), error: waiting ? null : result.error }
   }
 
+  const repeated_forfeit = (input: FightInput): boolean => {
+    if (input.type !== 'forfeit') return false
+    return Boolean(
+      state.contract.fighters[Number(input.fighter)]?.forfeited ||
+      (pending_turn?.input.type === 'forfeit' && pending_turn.input.fighter === input.fighter)
+    )
+  }
+
   const apply = (input: FightInput): FightResult => {
+    if (repeated_forfeit(input)) return { state: snapshot(), events: [], error: null }
     if (input.type === 'turn_seed') {
       if (!pending_turn)
         return { state: snapshot(), events: [], error: { code: 'unexpected_turn_seed', detail: input } }
@@ -140,23 +153,18 @@ export const create_fight = ({
     }
     if (pending_turn) return { state: snapshot(), events: [], error: { code: 'turn_witnesses_pending', detail: null } }
     const result = run(input)
-    if (mode === 'remote' && (input.type === 'start' || input.type === 'end_turn' || input.type === 'crank')) {
-      if (result.error && !AWAITING_WITNESS.has(result.error.code))
-        return { state: snapshot(), events: [], error: result.error }
+    const waiting = AWAITING_WITNESS.has(result.error?.code)
+    if (result.error && !waiting) return { state: snapshot(), events: [], error: result.error }
+    if (mode === 'remote' && (['start', 'end_turn', 'crank'].includes(input.type) || waiting)) {
       pending_turn = Object.freeze({ input, witnesses: Object.freeze([]), emitted: 0 })
       return { state: snapshot(), events: [], error: null }
     }
-    if (!result.error) {
-      state = { contract: structuredClone(result.contract), sources: result.sources }
-      render_ids = structuredClone(result.render_ids)
-      if (result.render_actions.some(({ type }) => type === 'fight_started' || type === 'turn_switched'))
-        capture_turn_boundary()
-    }
-    return {
-      state: snapshot(),
-      events: result.error ? [] : structuredClone(result.render_actions),
-      error: result.error,
-    }
+    if (result.error) return { state: snapshot(), events: [], error: result.error }
+    state = { contract: structuredClone(result.contract), sources: result.sources }
+    render_ids = structuredClone(result.render_ids)
+    if (result.render_actions.some(({ type }) => type === 'fight_started' || type === 'turn_switched'))
+      capture_turn_boundary()
+    return { state: snapshot(), events: structuredClone(result.render_actions), error: null }
   }
 
   return Object.freeze({

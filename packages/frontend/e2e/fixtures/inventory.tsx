@@ -6,6 +6,9 @@ import { item_stat_center } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
 import EquipmentTab from '../../src/characters/EquipmentTab.tsx'
+import RuneforgeTab from '../../src/characters/RuneforgeTab.tsx'
+import { CrushResultDialog } from '../../src/characters/CrushResultModal.tsx'
+import { Toasts } from '../../src/components/Toasts.tsx'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
@@ -17,6 +20,7 @@ import '../../src/characters/characters.css'
 
 declare global {
   interface Window {
+    consume_requests: readonly string[]
     feed_requests: readonly Readonly<{ pet_id: string; food_id: string }>[]
     resolve_feed: () => void
     reject_feed: () => void
@@ -46,23 +50,36 @@ const character: CharacterRow = {
   spells: {},
   jobs: {},
   kiosk: '0xkiosk',
+  custody: 'kiosk',
+  world: 'nauvis',
+  checkpoint_world: 'nauvis',
+  at_ms: 0,
+  hp: '1',
+  hp_ms: Date.now(),
   equipment: [],
 }
-const items: ItemRow[] = ['scroll_of_oblivion', 'scroll_of_rebirth', 'croissant', 'siluri', 'gilded_pet_food'].map(
-  (item_type, index) => {
-    const seed = encyclopedia_catalog.item(item_type)!.item
-    return {
-      id: `0xitem${index}`,
-      item_type,
-      name: seed.name,
-      category: seed.category,
-      level: seed.level,
-      amount: 2,
-      ...(seed.category === 'pet' ? { pet_power: 30, pet_last_day: 0, stats: { wisdom: item_stat_center + 80 } } : {}),
-      kiosk: character.kiosk,
-    }
+const items: ItemRow[] = [
+  'scroll_of_oblivion',
+  'scroll_of_rebirth',
+  'croissant',
+  'siluri',
+  'gilded_pet_food',
+  'recall_potion',
+  'potion_of_thebes',
+  'rune_vitality_ba',
+].map((item_type, index) => {
+  const seed = encyclopedia_catalog.item(item_type)!.item
+  return {
+    id: `0xitem${index}`,
+    item_type,
+    name: seed.name,
+    category: seed.category,
+    level: seed.level,
+    amount: 2,
+    ...(seed.category === 'pet' ? { pet_power: 30, pet_last_day: 0, stats: { wisdom: item_stat_center + 80 } } : {}),
+    kiosk: character.kiosk,
   }
-)
+})
 const equipped_character = new URLSearchParams(location.search).has('equipped')
   ? { ...character, equipment: [{ ...items.find(({ item_type }) => item_type === 'siluri')!, slot: 'pet' as const }] }
   : character
@@ -73,12 +90,17 @@ void load_app_copy(locale)
     dispatch_app({ type: 'locale/changed', locale })
     dispatch_app({ type: 'locale/loaded', locale, copy })
     window.feed_requests = []
+    window.consume_requests = []
     dispatch_app({ type: 'auth/connecting' })
     dispatch_app({
       type: 'auth/connected',
       session: {
         address: '0xowner',
         character: {
+          use_consumable: async ({ item_type }: { item_type: string }) => {
+            window.consume_requests = [...window.consume_requests, item_type]
+            return { inventory_changes: [] }
+          },
           feed_pet: async (request: Readonly<{ pet_id: string; food_id: string }>) => {
             const pending = Promise.withResolvers<void>()
             window.feed_requests = [...window.feed_requests, request]
@@ -94,10 +116,78 @@ void load_app_copy(locale)
         },
       } as unknown as AuthSession,
     })
+    dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [equipped_character] } })
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items } })
     createRoot(document.getElementById('root')!).render(
       <main className="h-dvh overflow-y-auto bg-bg p-6 font-mono text-text">
-        <EquipmentTab character={equipped_character} copy={copy} />
+        <button
+          onClick={() =>
+            dispatch_app({
+              type: 'server/packet',
+              packet: {
+                type: 'packet/characters',
+                characters: [
+                  {
+                    ...equipped_character,
+                    dungeon_run: { dungeon: 'temple', room: 2 },
+                    at_ms: Date.now() + 3_153_600_000_000,
+                  },
+                ],
+              },
+            })
+          }
+        >
+          Enter dungeon
+        </button>
+        <button
+          onClick={() =>
+            dispatch_app({
+              type: 'server/packet',
+              packet: { type: 'packet/characters', characters: [equipped_character] },
+            })
+          }
+        >
+          Leave dungeon
+        </button>
+        <button
+          onClick={() =>
+            document.addEventListener(
+              'dblclick',
+              () =>
+                queueMicrotask(() =>
+                  dispatch_app({
+                    type: 'server/packet',
+                    packet: {
+                      type: 'packet/characters',
+                      characters: [
+                        {
+                          ...equipped_character,
+                          dungeon_run: { dungeon: 'temple', room: 2 },
+                          at_ms: Date.now() + 3_153_600_000_000,
+                        },
+                      ],
+                    },
+                  })
+                ),
+              { once: true, capture: true }
+            )
+          }
+        >
+          Dungeon on next use
+        </button>
+        {new URLSearchParams(location.search).get('view') === 'forge' ? (
+          <RuneforgeTab character={equipped_character} copy={copy} />
+        ) : (
+          <EquipmentTab character={equipped_character} copy={copy} />
+        )}
+        {new URLSearchParams(location.search).get('view') === 'crush' && (
+          <CrushResultDialog
+            close={() => undefined}
+            copy={copy}
+            result={{ digest: 'fixture', items: items.filter(({ category }) => category === 'rune') }}
+          />
+        )}
+        <Toasts />
       </main>
     )
   })

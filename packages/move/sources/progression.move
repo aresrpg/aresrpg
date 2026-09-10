@@ -5,7 +5,7 @@
 /// fight, consumable) calls `touch` on its way through. Fixed game-wide rate: it feels fast at
 /// low level and slow at high level — consumables are the high-level answer. Max hp = class
 /// base + per-level + the folded gear vitality. A fight loss or forfeit leaves 1 hp; zero
-/// never exists outside a fight.
+/// never exists outside a fight. A character level-up restores its new maximum HP.
 module aresrpg::progression;
 
 use aresrpg::{character::{Self, Character}, equipment};
@@ -33,6 +33,17 @@ const ENoSpellPoints: u64 = 1603; // raise_spell: raising from n to n+1 costs n 
 public struct Hp has copy, drop, store {
   current: u64,
   last_ms: u64,
+}
+
+/// Award character XP and restore the new maximum HP only when its level increases.
+/// Gameplay awards use this door so the level and its heal commit together.
+public(package) fun award_experience(character: &mut Character, gained: u64, clock: &Clock) {
+  let previous_level = character.level();
+  character::add_experience(character, gained);
+  if (character.level() > previous_level) {
+    let full_hp = max_hp(character);
+    set_hp(character, full_hp, clock);
+  };
 }
 
 // ╔════════════════ [ Job xp — one home, two writers' doors (gather, craft) ] ═ ]

@@ -10,6 +10,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 
+import { SuiGrpcClient } from '@mysten/sui/grpc'
+
 import move_packages from '../move-packages.json' with { type: 'json' }
 import type { ContractArtifact } from '../packages/sdk/src/deployment_admin.ts'
 
@@ -20,6 +22,7 @@ type PackagePublication = Readonly<{
   upgrade_cap?: string
 }>
 type CommandResult = Readonly<{ stdout: string; stderr: string }>
+type ReadVersion = (network: Network, package_id: string) => Promise<string>
 type Execute = (command: string, args: readonly string[], cwd: string) => Promise<CommandResult>
 
 const exec_file = promisify(execFile)
@@ -46,6 +49,16 @@ export const run_build_command: Execute = async (command, args, cwd) => {
     throw new Error(`${command} failed: ${command_failure_message(error)}`, { cause: error })
   }
 }
+/** Package headers do not need the CLI's full-object JSON rendering or local client config. */
+const read_publication_version: ReadVersion = async (network, package_id) => {
+  const client = new SuiGrpcClient({ network, baseUrl: `https://fullnode.${network}.sui.io:443` })
+  const { objects } = await client.core.getObjects({ objectIds: [package_id] })
+  const [object] = objects
+  if (!object) throw new Error('Package object was not returned')
+  if (object instanceof Error) throw object
+  return object.version
+}
+
 const revision_of = (source: string): string => createHash('sha256').update(source).digest('hex')
 
 const PACKAGE_VERSION_PATTERN = /(const\s+PACKAGE_VERSION\s*:\s*u64\s*=\s*)(\d+)(\s*;)/
@@ -121,7 +134,8 @@ const dump_args = (path: string, network: Network, pubfile?: string): readonly s
 export const create_contract_build_service = ({
   repo_dir,
   run = run_build_command,
-}: Readonly<{ repo_dir: string; run?: Execute }>) => {
+  read_version = read_publication_version,
+}: Readonly<{ repo_dir: string; run?: Execute; read_version?: ReadVersion }>) => {
   const math_dir = join(repo_dir, 'packages', 'move-math')
   const control_dir = join(repo_dir, 'packages', 'control')
   const combat_dir = join(repo_dir, 'packages', 'move-combat')
@@ -140,13 +154,16 @@ export const create_contract_build_service = ({
     return chain_id
   }
   const package_version = async (network: Network, package_id: string): Promise<number> => {
-    const { stdout } = await run('sui', ['client', '--client.env', network, 'object', package_id, '--json'], repo_dir)
-    const start = stdout.indexOf('{')
-    const object = JSON.parse(stdout.slice(start)) as Readonly<Record<string, unknown>>
-    if (!Number.isInteger(object.version) || Number(object.version) < 1)
-      throw new Error(`Sui returned an invalid package version for ${package_id}`)
-    return Number(object.version)
+    try {
+      const version = Number(await read_version(network, package_id))
+      if (!Number.isSafeInteger(version) || version < 1) throw new Error('Invalid package version')
+      return version
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Cannot read ${network} package ${package_id} version: ${message}`, { cause: error })
+    }
   }
+
   const publication_rows = async (
     network: Network,
     rows: readonly Readonly<{ path: string; publication: PackagePublication; version?: number }>[]
@@ -180,14 +197,14 @@ export const create_contract_build_service = ({
     }
     const directory = await mkdtemp(join(tmpdir(), 'aresrpg-publish-'))
     const pubfile = join(directory, `Pub.${network}.toml`)
-    const source = [
-      '# generated local publication context; never committed',
-      `build-env = "${network}"`,
-      `chain-id = "${await chain_identifier(network)}"`,
-      '',
-      ...(await publication_rows(network, publications)),
-    ].join('\n')
     try {
+      const source = [
+        '# generated local publication context; never committed',
+        `build-env = "${network}"`,
+        `chain-id = "${await chain_identifier(network)}"`,
+        '',
+        ...(await publication_rows(network, publications)),
+      ].join('\n')
       await writeFile(pubfile, source, { flag: 'wx' })
       const { stdout } = await run('sui', dump_args(path, network, pubfile), repo_dir)
       return parse_contract_artifact(package_name, stdout)

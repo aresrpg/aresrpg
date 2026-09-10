@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+export { MAX_GIFTCARDS_PER_TRANSACTION } from './giftcard_batch.ts'
 import { registerEnokiWallets } from '@mysten/enoki'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import { SuiGraphQLClient } from '@mysten/sui/graphql'
@@ -19,7 +20,7 @@ import type { MarketplaceRoyalty, claim_marketplace_royalties as claim_royalties
 import { marketplace_actions, type MarketplaceActions } from './marketplace.ts'
 import { stack_actions, type StackActions } from './stacks.ts'
 import { trade_actions, trade_create, type TradeActions } from './trade.ts'
-import type { GiftcardTransfer, GiftcardRedeem } from './distribution.ts'
+import type { GiftcardTransfer } from './distribution.ts'
 import { character_actions, type CharacterActions } from './character_actions.ts'
 import { fight_actions, type FightActions } from './fight.ts'
 import { dungeon_actions, type DungeonActions } from './dungeon.ts'
@@ -36,7 +37,7 @@ import {
   selectable_wallet,
 } from './wallet_standard.ts'
 import { receipt_digest } from './cache.ts'
-import { create_personal_kiosk_runner, retry_stale_kiosk_ref } from './kiosk_runner.ts'
+import { create_personal_kiosk_runner } from './kiosk_runner.ts'
 
 export type { CharacterActions, ScribeOutcome } from './character_actions.ts'
 export type { FightActions } from './fight.ts'
@@ -97,7 +98,10 @@ export type AuthSession = Readonly<{
     transfers: readonly GiftcardTransfer[]
   ) => Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>>
   claim_giftcard_link: (url: string) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>>
-  redeem_giftcard: (redemption: GiftcardRedeem) => Promise<Readonly<{ digest: string }>>
+  redeem_giftcards: (
+    cards: readonly GiftcardRow[],
+    received_transaction?: string
+  ) => Promise<Readonly<{ digest: string }>>
   read_marketplace_royalties: () => Promise<readonly MarketplaceRoyalty[]>
   claim_marketplace_royalties: () => ReturnType<typeof claim_royalties>
   dispose?: () => void
@@ -268,18 +272,10 @@ const create_wallet_session = (
       const { claim_giftcard_link } = await import('./distribution.ts')
       return claim_giftcard_link(resolution_client, sdk, url, account.address)
     },
-    redeem_giftcard: async (redemption) => {
-      const { redeem_giftcard } = await import('./distribution.ts')
-      if (redemption.existing_kiosk_id) {
-        return retry_stale_kiosk_ref(async (fresh) => {
-          const cap = await kiosk_cap(redemption.existing_kiosk_id ?? undefined, fresh)
-          if (!cap) throw new Error('The merge-target kiosk is unavailable.')
-          const result = await redeem_giftcard(sdk, cap, redemption)
-          return Object.freeze({ digest: result.digest })
-        })
-      }
+    redeem_giftcards: async (cards, received_transaction) => {
+      const { redeem_giftcards } = await import('./distribution.ts')
       return personal_kiosk_action(async (kiosk_cap) => {
-        const result = await redeem_giftcard(sdk, kiosk_cap, redemption)
+        const result = await redeem_giftcards(sdk, kiosk_cap, cards, received_transaction)
         return Object.freeze({
           value: Object.freeze({ digest: result.digest }),
           kiosk_cap: result.kiosk_cap,

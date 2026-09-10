@@ -245,14 +245,6 @@
   color: var(--fg);
 }
 
-.jobs__detail-lvl {
-  flex: none;
-  align-self: flex-start;
-  font-size: 0.78rem;
-  color: var(--fg-muted);
-  white-space: nowrap;
-}
-
 /* xp bar */
 .jobs__xp {
   position: relative;

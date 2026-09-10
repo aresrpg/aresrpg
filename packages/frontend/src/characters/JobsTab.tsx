@@ -37,6 +37,7 @@ import { toast } from '../toast.ts'
 import { retry_after_version_race, run_direct_transaction } from '../transaction_guard.ts'
 
 import { ingredient_destination, job_from_path, job_path } from './job_navigation.ts'
+import { GatheringTime } from './GatheringTime.tsx'
 
 import './jobs.css'
 import './jobs_adviser.css'
@@ -450,7 +451,10 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
               {t('jobs.detail.crafts_label', { covers: covers_label(selected_job) })}
             </span>
           </div>
-          <span className="jobs__detail-lvl hud-num">{t('jobs.lv_badge', { level })}</span>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <span className="hud-num text-sm text-text">{t('jobs.lv_badge', { level })}</span>
+            <GatheringTime gathering={is_gathering} level={level} t={t} />
+          </div>
         </div>
 
         <div

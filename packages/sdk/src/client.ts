@@ -512,9 +512,13 @@ export function SDK({
     return submitted
   }
 
-  const execute_personal_kiosk = async (tx: Transaction, cap: KioskOwnerCap | null) => {
+  const execute_personal_kiosk = async (
+    tx: Transaction,
+    cap: KioskOwnerCap | null,
+    options: { budget?: bigint | 'estimate' } = {}
+  ) => {
     // objectTypes always rides: callers fold their own minted/touched items from it
-    const receipt = await execute(tx, { include: { objectTypes: true } })
+    const receipt = await execute(tx, { ...options, include: { objectTypes: true } })
     const kiosk_cap = cap ?? receipt_personal_kiosk_cap(receipt)
     if (!kiosk_cap)
       throw new Error(

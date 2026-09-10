@@ -1,0 +1,9 @@
+{
+  "type": "packet/position",
+  "character_id": "0x79ebc67c18575a6b20f7d69faecfd318c6136a23e687aae6cb92caa89db32e2c",
+  "checkpoint": "nauvis:50000:50000:1788970808124",
+  "x": 50000,
+  "y": 0,
+  "z": 50000,
+  "riding": false
+}

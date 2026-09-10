@@ -70,7 +70,8 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 Root `pins.json` describes one current mainnet deployment. It contains no previous deployments,
 address-book copies, or retired Registry maps. The optional flat `seed_ledger` contains only the
 current Registry's reconciliation metadata and is cleared on game republishing.
-Local testnet builds explicitly select an ignored `.dev/pins.json` with `ARES_PINS_FILE`; they never
+Browser builds configured for testnet select ignored `.dev/pins.json`; `ARES_PINS_FILE` can explicitly
+override the file in the environment or deployable configuration. They never
 rewrite the committed file or fall back to mainnet. Both files declare their network. Frontend,
 launchpad, and SDK imports resolve the same selected file through `scripts/browser_pins.ts`, which
 excludes `seed_ledger` from browser output. Production workflows accept mainnet only.
@@ -193,17 +194,18 @@ submitted gameplay attempt, including executed failures, while deployment-only c
 publish, upgrade, and seed transactions contribute neither gas nor player/address activity.
 Rebuilding analytics means replaying that indexer from the original publication checkpoint.
 
-Leaderboards are another projection of that same checkpoint pass. Seasons span 30 Sui epochs
-from original game publication; each transaction contributes in its checkpoint epoch. Earned combat
+Leaderboards are another projection of that same checkpoint pass. Rankings reset at each UTC
+calendar month boundary, using checkpoint timestamps. Only the current standings are retained. Earned combat
 and job XP stay with the earning address across character transfers. Fight victories count mobs once
 per winning address, while successful dungeon completion counts once per fight and address even
-when settlement crosses seasons. Public marketplace purchase receipts own gross buying and selling
+when settlement crosses months. Public marketplace purchase receipts own gross buying and selling
 volume; mandatory game policy proofs emit the immutable seller address so historical checkpoints
 need not retain read-only owner-marker objects. Exclusive listings and private trades do not contribute.
 Kolizeum payouts, first Zone creation, pet-feeding actions, and harvested resource quantities supply the other rankings. No
 connection, roster cap, or name registration gates participation. Exact integer totals and ordered
 ranks commit through replayable absolute replacements; a bounded pending batch prevents partial
-Redis failures from double-counting. Previous seasons remain readable after rollover.
+Redis failures from double-counting. Rollover removes every ranking table before applying the new
+month's absolute totals. Dungeon completion markers remain solely to prevent duplicate credit.
 
 Item rows and departures carry certified versions; inventory rejects stale rows and retains deletion
 tombstones. Quantity receipts fold exact final balances without waiting for the indexer.
@@ -253,17 +255,24 @@ frontend clock reducer retains that chain sample with its monotonic receipt time
 interpolate between fresh samples; Force start requires an observed chain timestamp past the deadline.
 Device wall-clock changes cannot unlock placement, and stale or disconnected samples cannot authorize it.
 
+Overworld movement packets name their character and exact chain checkpoint (world, x, z, timestamp).
+A roster checkpoint change synchronously resets the server's presence and movement allowance before
+that roster is sent. Packets captured under another checkpoint are ignored; matching packets still
+obey the speed budget. Client live poses, follower poses, and resume writes retain that same checkpoint
+provenance. A new checkpoint invalidates old poses; a duplicate roster preserves ordinary walking.
+
 Reader processes boot independently of projection freshness. The server pushes its cached
 checkpoint lag every five seconds; a connected client blocks interaction while freshness is
 unknown or more than 300 checkpoints behind, shows rolling progress and ETA, and unlocks
 automatically inside that safe window.
 
-The leaderboard server observes one category and season per connection and pushes its top 100
+The leaderboard server observes one category per connection and pushes the current month's top 100
 addresses plus that address's personal rank. SuiNS default-name lookup is an explicit direct-read
 exception for optional display enrichment. One expiring 2,000-entry LRU per server process caches
 verified names and misses, with a short failure cache. Optional names and badges share a 250 ms
 deadline, so each refresh publishes one coherent window without waiting on stalled enrichment.
-Lookup failure leaves the address visible and never changes a score.
+Lookup failure leaves the address visible and never changes a score. The page always renders ranks
+1–100, including empty slots, and shows a day-based countdown to the next monthly reset.
 
 ## Critical workflows
 
@@ -313,6 +322,10 @@ client runs toward that immutable snapshot. It never polls or claims to know the
 
 ### Fights
 
+An active forfeit removes the fighter before advancing through mobs to the next living player in
+one terminal transaction. Placement and out-of-turn forfeits leave turn order unchanged; a side
+wipe ends combat without another turn. All three fight modes share that lifecycle.
+
 Core Move owns Fight identity, player authority, character custody, entropy, events, and settlement.
 `packages/move-combat` owns the deterministic authority-free state machine embedded in that object.
 Core authenticates an action and supplies bounded plain entropy and time values; combat returns one
@@ -339,8 +352,9 @@ The terminal checkpoint supplies the settlement plan after presentation drains. 
 returning to one personal kiosk settle and collect through one Random-bound PTB; different kiosks
 form separate batches. Team drop selection uses entropy sealed when combat ended, while settlement
 Random rolls only fixed-shape item statistics. The certified settlement receipt enables Continue immediately. `RESULT_FOR`
-exists only for interrupted-client recovery. Character level and experience come from the projected
-Character row. Result presents before level-up.
+exists only for interrupted-client recovery. Character XP awards restore maximum HP when the character level increases. Settlement writes
+combat damage before awarding XP; the existing HP projection carries the healed value and clock.
+Character level and experience come from the projected Character row. Result presents before level-up.
 
 ### Terrain presentation
 
@@ -379,6 +393,9 @@ chunks. The ordinary collision and WebGPU voxel-mesh paths remain the consumers.
 ### Dungeons and progression
 
 Dungeon runs are Character dynamic-field state coordinated by `packages/move/sources/dungeon.move`.
+Between rooms, kiosk custody permits healing, stat/spell resets, allocation, and inventory preparation.
+The existing dungeon checkpoint root confines travel; Recall and City consumables remain refused for
+the entire run. Gathering and ambush roots still block ordinary consumables.
 Entering proves travel to the authored city anchor and burns the dungeon's key. Rooms compose
 ordinary fights; the fight machine has no parallel dungeon path. A run stores only dungeon slug,
 room, and committed seed. The server/UI scope its lobby by dungeon slug, while Move remains the
@@ -398,8 +415,11 @@ personal kiosk. Statless items and fixed-endpoint pets need no entropy; pet feed
 stored endpoint neutral until feeding. Issuance is AdminCap-gated and stops at permanent freeze.
 Ordinary transfers distribute existing vouchers without mint authority, whitelists, or claim counters.
 Holder allocations derive from saved, checkpoint-scoped mainnet collection snapshots.
+The airdrop catalogue describes seed-authored campaigns, eligibility, and delivery routes; it is not
+a separate entitlement store. Historical-player awards become frozen recipient batches through offline
+ranking of a saved database export. The runtime never queries the retired game database.
 Content sync mints each configured voucher directly to its custody address. The SDK also supports
-issuance scoped to one reviewed gift type on the selected network through the same seed administrator,
+issuance scoped to one reviewed airdrop campaign on the selected network through the same seed administrator,
 without changing content or gameplay pause state. Permanent derived claim markers
 keep redeemed vouchers complete during issuance recovery. Compact recipient batches
 expand in the SDK into ordinary per-recipient vouchers. Giftcard rows may select
@@ -407,7 +427,12 @@ one network; creation and reconciliation use the same network filter. Prime Mach
 mainnet NFT object IDs. The local Sui CLI batch sender transfers already-issued vouchers; collection
 snapshots and partner-specific receiving remain outside the runtime projection.
 `/claim` imports wallet-held vouchers into the authenticated zkLogin account and automatically
-redeems them. The external wallet pays transport; the game wallet pays redemption. A failed
+redeems them. The external wallet pays transport; the game wallet pays redemption.
+Imports and redemptions each use one atomic PTB for up to 100 vouchers. Redemption
+constructs ordinary stack fragments in one personal kiosk and uses the Sui resolver's gas estimate.
+The claim view groups rewards by template without replacing voucher identities. Cross-wallet claims fold
+the confirmed transfer receipt into the recipient SDK before redemption; owned voucher refs refresh
+on each attempt, while shared template refs remain cached. A failed
 redemption leaves the voucher recoverable. Browser-local attempt markers, scoped by network and
 account, are retained before the SDK call and prevent automatic retries across reloads, including
 certified failures. Missing or unavailable persistence disables automation; manual redemption remains explicit.

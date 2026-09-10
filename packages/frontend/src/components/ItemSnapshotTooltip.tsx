@@ -15,6 +15,7 @@ import { ItemDetailView } from './ItemDetailView.tsx'
 import './item_snapshot_tooltip.css'
 
 export type ItemSnapshotHover = Readonly<{
+  anchor: Readonly<HTMLElement>
   style: CSSProperties
   status: 'loading' | 'ready' | 'error'
   item: ItemSnapshot | null
@@ -74,14 +75,16 @@ export const useItemSnapshotHover = (item_id: string) => {
     generation_ref.current = generation
     const bounds = element.getBoundingClientRect()
     const style = Object.freeze({ left: bounds.left + bounds.width / 2, top: bounds.top - 8 })
-    set_hover(Object.freeze({ style, status: 'loading', item: null }))
-    if (!wallet) return set_hover(Object.freeze({ style, status: 'error', item: null }))
+    set_hover(Object.freeze({ anchor: element, style, status: 'loading', item: null }))
+    if (!wallet) return set_hover(Object.freeze({ anchor: element, style, status: 'error', item: null }))
     void wallet.read_item(item_id).then(
       (item) => {
-        if (generation_ref.current === generation) set_hover(Object.freeze({ style, status: 'ready', item }))
+        if (generation_ref.current === generation)
+          set_hover(Object.freeze({ anchor: element, style, status: 'ready', item }))
       },
       () => {
-        if (generation_ref.current === generation) set_hover(Object.freeze({ style, status: 'error', item: null }))
+        if (generation_ref.current === generation)
+          set_hover(Object.freeze({ anchor: element, style, status: 'error', item: null }))
       }
     )
   }
@@ -93,12 +96,13 @@ export const useItemSnapshotHover = (item_id: string) => {
   return Object.freeze({ close, hover, open })
 }
 
+// Native dialogs own the top layer; a body portal cannot rise above them with z-index.
 export const ItemSnapshotTooltip = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: ItemSnapshotHover | null }>) =>
   hover && typeof document !== 'undefined'
     ? createPortal(
-        <div className="item-snapshot-tooltip" style={hover.style}>
+        <div className="item-snapshot-tooltip" role="tooltip" style={hover.style}>
           <ItemSnapshotContent copy={copy} hover={hover} />
         </div>,
-        document.body
+        hover.anchor.closest('dialog') ?? document.body
       )
     : null

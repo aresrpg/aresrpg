@@ -127,7 +127,7 @@ fun lifecycle(case: Case) {
   if (case == Case::DungeonForfeitDoor) fight::assert_forfeit_door_open(&fight);
   if (case == Case::JoinMobSide) fight::join(&mut fight, &protected, &mut kiosk, kiosk_cap,
     creator_id, 1, 0, true, &clock, scenario.ctx());
-  fight::forfeit(&mut fight, 0, &mut kiosk, kiosk_cap, &policy, &clock, scenario.ctx());
+  fight::forfeit(&mut fight, 0, &mut kiosk, kiosk_cap, &policy, &mut entropy, &clock, scenario.ctx());
   assert!(kiosk.has_item(attacker_id) && combat::fighter_forfeited(fight::combat_for_testing(&fight), 0), 4);
   fight::close(fight, scenario.ctx());
   transfer::public_transfer(kiosk, OWNER);

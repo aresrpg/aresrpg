@@ -74,8 +74,8 @@ fun dungeon_city(world: &World, content: &WorldContent, dungeon: &DungeonContent
 // ╔════════════════ [ Enter (burn the key at the portal) ] ═══════════════════ ]
 
 /// Consume the world's dungeon key at a live portal: prove the walk there, burn ONE key unit,
-/// write the run at room 1, and ROOT the character — from here the only acts are engage-next
-/// or give-up. Does NOT start a fight (the client shows a staging room with the mob group).
+/// write the run at room 1, and ROOT travel. Staging permits character preparation; dungeon
+/// progression still uses engage-next or give-up. Does NOT start a fight.
 public(package) fun enter(
   world_object: &World,
   world_content: &WorldContent,
@@ -264,6 +264,7 @@ public(package) fun give_up_room(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   policy: &TransferPolicy<Character>,
+  entropy: &mut sui::random::RandomGenerator,
   clock: &Clock,
   ctx: &TxContext,
 ) {
@@ -274,7 +275,7 @@ public(package) fun give_up_room(
   let (run_dungeon, run_room, _) = read_run(fight::fighter_character_ref(fight, fighter_idx));
   assert!(run_dungeon == tag_dungeon && run_room == tag_room, EWrongRoom);
   let fight_world = fight::fight_world(fight);
-  fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
+  fight::forfeit(fight, fighter_idx, kiosk, cap, policy, entropy, clock, ctx);
   let character: &mut Character = kiosk.borrow_mut(cap, character_id);
   end_run(character, clock);
   event::emit(DungeonEnded { character: character_id, world: fight_world, room: run_room, won: false });

@@ -17,15 +17,10 @@ import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
-import { character_max_hp, fold_equipment_stats, item_stat_offset, projected_hp } from '../game/character_stats.ts'
+import { fold_equipment_stats, item_stat_offset } from '../game/character_stats.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
-import {
-  available_inventory_items,
-  encumbered_asset_ids,
-  inventory_groups,
-  stack_merge_sources,
-} from '../inventory_stacks.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { available_inventory_items, encumbered_asset_ids, inventory_groups } from '../inventory_stacks.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 
@@ -42,6 +37,9 @@ import { PendingClaims } from './PendingClaims.tsx'
 import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { PetPower } from './PetPower.tsx'
+import { editable_character } from './character_activity.ts'
+import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
+import { consumable_plan } from './consumable_plan.ts'
 
 const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
 type BagCategory = (typeof BAG_CATEGORIES)[number]
@@ -52,12 +50,11 @@ const bag_category_of = (item: Readonly<ItemRow>): BagCategory => {
   return 'equipment'
 }
 
-const consumable_action = (item: Readonly<ItemRow>, character: Readonly<CharacterRow>) => {
+const consumable_action = (item: Readonly<ItemRow>) => {
   const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
   if (!effect || effect.type === 'loot_box') return null
   return Object.freeze({
     effect,
-    already_full: effect.type === 'heal' && projected_hp(character, Date.now()) >= character_max_hp(character),
     heal: effect.type === 'heal' ? effect.amount : 0,
   })
 }
@@ -71,6 +68,7 @@ export default function EquipmentTab({
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
   const wallet = useAppStore(({ session }) => session.wallet)
+  const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
   const all_inventory = useAppStore(({ session }) => session.inventory)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
   const trades = useAppStore(({ trade }) => trade.rows)
@@ -87,6 +85,7 @@ export default function EquipmentTab({
   const [committing, set_committing] = useState(false)
   const [menu, set_menu] = useState<ItemMenuState>(null)
   const [reveal_box, set_reveal_box] = useState<ItemRow | null>(null)
+  const [healing_item, set_healing_item] = useState<Readonly<ItemRow> | null>(null)
 
   const equipment = staged ?? real
   const changes = useMemo(() => equipment_change_set(equipment, real), [equipment, real])
@@ -152,33 +151,46 @@ export default function EquipmentTab({
     set_staged(stage_equip(equipment, item, target))
   }
 
-  const drink = (item: Readonly<ItemRow>): void => {
-    const action = consumable_action(item, character)
+  const drink = (item: Readonly<ItemRow>, mode: 'one' | 'full' = 'one'): void => {
+    const action = consumable_action(item)
     if (!action || !wallet) return
+    if (!available) return void toast.add(t('consume_busy'), 'info')
     if (action.effect.type === 'city' && !character.world) return
-    if (action.already_full) return void toast.add(t('already_full_hp'), 'info')
-    const transaction = run_direct_transaction(() =>
-      wallet.character.use_consumable({
+    const transaction = run_direct_transaction(async () => {
+      const state = read_app_state()
+      const current_character = editable_character(state, character.id, Date.now())
+      if (!current_character) throw new Error(t('consume_busy'))
+      if (current_character.dungeon_run && ['recall', 'city'].includes(action.effect.type))
+        throw new Error(t('teleport_dungeon_blocked'))
+      const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
+      const plan = consumable_plan(current_character, item, state.session.inventory, encumbered, Date.now())
+      const amount = mode === 'full' ? plan.needed : 1
+      if (plan.needed === 0) throw new Error(t('already_full_hp'))
+      if (amount > plan.available) throw new Error(t('consume_healing_insufficient', { count: amount }))
+      const result = await wallet.character.use_consumable({
         character_id: character.id,
         item_id: item.id,
         item_type: item.item_type,
-        merge_sources: stack_merge_sources(all_inventory, encumbered_ids, item),
-        ...(action.effect.type === 'city' ? { world: character.world } : {}),
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+        amount,
+        merge_sources: plan.merge_sources,
+        ...(action.effect.type === 'city' ? { world: current_character.world } : {}),
+        custody: { kiosk: current_character.kiosk, kiosk_cap: current_character.kiosk_cap },
       })
-    )
+      return { ...result, amount }
+    })
     if (!transaction) return
+    set_healing_item(null)
     set_committing(true)
     const pending = toast.loading(t('consume_pending'))
     void transaction
-      .then(({ inventory_changes }) => {
+      .then(({ inventory_changes, amount }) => {
         dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         dispatch_app({
           type: 'character/consumed',
           character_id: character.id,
           item_id: item.id,
           effect: action.effect.type,
-          heal: action.heal,
+          heal: action.heal * amount,
         })
         pending.success(t('consume_success'))
       })
@@ -189,8 +201,8 @@ export default function EquipmentTab({
   const activate = (item: Readonly<ItemRow>): void => {
     if (encumbered_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
     if (is_loot_box(item)) return set_reveal_box(item)
-    const seed = encyclopedia_catalog.item(item.item_type)?.item
-    if (seed?.consumable) return drink(item)
+    const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
+    if (effect) return effect.type === 'heal' ? set_healing_item(item) : drink(item)
     try_stage(item, null)
   }
 
@@ -408,6 +420,13 @@ export default function EquipmentTab({
           ))}
         </div>
       </div>
+      <ConsumeHealingModal
+        character={character}
+        close={() => set_healing_item(null)}
+        confirm={drink}
+        copy={copy}
+        item={healing_item}
+      />
       <InventoryActionOverlays
         close_menu={() => set_menu(null)}
         copy={copy}

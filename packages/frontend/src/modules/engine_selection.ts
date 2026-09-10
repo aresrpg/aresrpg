@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pure selected-character projections plus the one dungeon scene submission.
 
+import { character_checkpoint } from '@aresrpg/protocol'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import { content_catalog } from '../content/catalog.ts'
@@ -26,7 +27,7 @@ export const selected_checkpoint_position = (state: AppState): Readonly<{ x: num
 export const selected_live_position = (state: AppState): Readonly<{ x: number; z: number }> | null => {
   const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
   if (!selected?.world || selected.world !== selected.checkpoint_world) return null
-  const live = owned_character_position(selected.id, selected.world)
+  const live = owned_character_position(selected.id, selected.world, character_checkpoint(selected))
   return live ? Object.freeze({ x: chain_to_client_coordinate(live.x), z: chain_to_client_coordinate(live.z) }) : null
 }
 

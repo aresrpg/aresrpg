@@ -63,6 +63,8 @@ test('each standalone screen exposes only its own surface', async () => {
   expect(settings).toContain('type="range"')
   expect(settings).toContain('100%')
   expect(settings).toContain('Footsteps')
+  expect(settings).toContain('Day/night cycle')
+  expect(settings).toContain('Disable to keep the world at midday.')
   expect(settings).toContain('Tutorials')
   expect(settings).toContain('Always craft from')
   expect(settings).toContain('Crafting character')

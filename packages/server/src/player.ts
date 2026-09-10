@@ -55,6 +55,7 @@ export type MoveAnchor = Readonly<{ x: number; z: number; at_ms: number; blocks:
 export type TrackedCharacter = Readonly<{
   presence: Embodied
   move_anchor: MoveAnchor
+  checkpoint: string
   party: string | null
   fight: string | null
   fight_seat: number | null

@@ -55,6 +55,7 @@ use sui::{
 
 const EDeleteWhileEquipped: u64 = 1101; // delete_character: unequip everything first
 const EDeleteWhileAmbushed: u64 = 1102; // delete_character: face the protector first
+const ETerminalForfeitRequired: u64 = 1105; // old public ABI: use the terminal forfeit door
 const EDeleteWhileInDungeon: u64 = 1104; // delete_character: finish or abandon the run first
 
 fun personal_cap(personal: &PersonalKioskCap, version: &Version): &KioskOwnerCap {
@@ -524,6 +525,7 @@ entry fun crank_fight(
 }
 
 /// Leave as a loss — legal from placement on; the fighter reads as killed, hp lands at 1.
+/// Retired public signature retained for Move upgrade compatibility; never performs a partial forfeit.
 public fun forfeit_fight(
   fight_object: &mut Fight,
   fighter_idx: u64,
@@ -534,9 +536,25 @@ public fun forfeit_fight(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  version.assert_latest();
+  let (_, _, _, _, _, _, _, _) = (fight_object, fighter_idx, kiosk, cap, policy, version, clock, ctx);
+  abort ETerminalForfeitRequired
+}
+
+entry fun forfeit_fight_terminal(
+  fight_object: &mut Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>,
+  randomness: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
   fight::assert_forfeit_door_open(fight_object);
-  fight::forfeit(fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
+  fight::forfeit(fight_object, fighter_idx, kiosk, cap, policy, &mut generator, clock, ctx);
 }
 
 /// Prepare one possible loot type for settlement. Team drops use entropy sealed when combat
@@ -1239,6 +1257,7 @@ entry fun settle_last_dungeon_room(
 }
 
 /// Give up the current room mid-fight — forfeit and end the run (the key is already gone).
+/// Retired public signature retained for Move upgrade compatibility; never performs a partial forfeit.
 public fun give_up_dungeon_room(
   fight_object: &mut Fight,
   fighter_idx: u64,
@@ -1249,8 +1268,24 @@ public fun give_up_dungeon_room(
   clock: &Clock,
   ctx: &TxContext,
 ) {
-  version.assert_latest();
-  dungeon::give_up_room(fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
+  let (_, _, _, _, _, _, _, _) = (fight_object, fighter_idx, kiosk, cap, policy, version, clock, ctx);
+  abort ETerminalForfeitRequired
+}
+
+entry fun give_up_dungeon_room_terminal(
+  fight_object: &mut Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>,
+  randomness: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
+  dungeon::give_up_room(fight_object, fighter_idx, kiosk, cap, policy, &mut generator, clock, ctx);
 }
 
 /// Abandon a run while staging (entered, no live room fight).
@@ -1407,6 +1442,7 @@ public fun exit_kolizeum(
 
 /// Forfeit a STARTED kolizeum fight — leave, abandoning the pot claim (the stalemate escape;
 /// nobody is ever stuck). Wagered fights only.
+/// Retired public signature retained for Move upgrade compatibility; never performs a partial forfeit.
 public fun forfeit_kolizeum(
   fight_object: &mut Fight,
   fighter_idx: u64,
@@ -1417,8 +1453,24 @@ public fun forfeit_kolizeum(
   clock: &Clock,
   ctx: &mut TxContext,
 ) {
-  version.assert_latest();
-  kolizeum::forfeit(fight_object, fighter_idx, kiosk, cap, policy, clock, ctx);
+  let (_, _, _, _, _, _, _, _) = (fight_object, fighter_idx, kiosk, cap, policy, version, clock, ctx);
+  abort ETerminalForfeitRequired
+}
+
+entry fun forfeit_kolizeum_terminal(
+  fight_object: &mut Fight,
+  fighter_idx: u64,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  policy: &TransferPolicy<Character>,
+  randomness: &Random,
+  version: &Version,
+  clock: &Clock,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
+  kolizeum::forfeit(fight_object, fighter_idx, kiosk, cap, policy, &mut generator, clock, ctx);
 }
 
 /// Explicit recovery for legacy fully-settled managed pairs.

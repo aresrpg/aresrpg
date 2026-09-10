@@ -4,10 +4,10 @@
 // wallet; the game wallet pays to redeem it. A failed second leg stays recoverable as a held card.
 
 import type { GiftcardRow } from '@aresrpg/protocol'
+import { MAX_GIFTCARDS_PER_TRANSACTION } from '@aresrpg/sdk/auth'
 
 import type { AuthSession } from '../auth.ts'
 import { content_catalog } from '../content/catalog.ts'
-import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { env } from '../env.ts'
@@ -27,13 +27,19 @@ export type DistributionState = Readonly<{
 export type DistributionInput =
   | Readonly<{ type: 'distribution/refresh_holder' }>
   | Readonly<{ type: 'distribution/holder_loaded'; holder: AuthSession; giftcards: readonly GiftcardRow[] }>
-  | Readonly<{ type: 'distribution/import'; giftcard: GiftcardRow }>
-  | Readonly<{ type: 'distribution/imported'; giftcard: string }>
+  | Readonly<{ type: 'distribution/claim_all' }>
+  | Readonly<{ type: 'distribution/import' }>
+  | Readonly<{ type: 'distribution/imported'; giftcards: readonly string[] }>
   | Readonly<{ type: 'distribution/claim_gift_link' }>
   | Readonly<{ type: 'distribution/gift_link_ready' }>
   | Readonly<{ type: 'distribution/gift_link_claimed' }>
-  | Readonly<{ type: 'distribution/redeem'; giftcard: GiftcardRow; automatic?: boolean }>
-  | Readonly<{ type: 'distribution/redeemed'; giftcard: string }>
+  | Readonly<{
+      type: 'distribution/redeem'
+      giftcards: readonly GiftcardRow[]
+      automatic?: boolean
+      received_transaction?: string
+    }>
+  | Readonly<{ type: 'distribution/redeemed' }>
   | Readonly<{ type: 'distribution/pending'; operation: string }>
   | Readonly<{ type: 'distribution/failed'; error: string }>
 
@@ -118,7 +124,7 @@ const reduce_distribution_input = (current: DistributionState, input: AppInput):
   if (input.type === 'distribution/imported')
     return Object.freeze({
       ...current,
-      holder_giftcards: current.holder_giftcards?.filter(({ id }) => id !== input.giftcard) ?? null,
+      holder_giftcards: current.holder_giftcards?.filter(({ id }) => !input.giftcards.includes(id)) ?? null,
       pending: null,
     })
   if (input.type === 'distribution/pending') return Object.freeze({ ...current, pending: input.operation, error: null })
@@ -132,8 +138,7 @@ const reduce_distribution_input = (current: DistributionState, input: AppInput):
   return null
 }
 
-const holder_operation = (operation: string | null): boolean =>
-  operation === 'load' || (operation !== null && operation.startsWith('import:'))
+const holder_operation = (operation: string | null): boolean => operation === 'load' || operation === 'import'
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'distribution/holder_loaded')
@@ -165,19 +170,9 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-const redemption_plan = (state: AppState, giftcard: GiftcardRow) => {
-  const { wallet, inventory } = state.session
-  const item_type = rolled_item_types().get(giftcard.template)
-  const item = item_type ? content_catalog.item(item_type)?.item : null
-  if (!wallet || !item || !state.session.roster_loaded) return null
-  const existing = stack_merge_target_row(
-    inventory,
-    encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows),
-    item.item_type,
-    undefined,
-    giftcard.amount
-  )
-  return Object.freeze({ wallet, item, existing })
+const redeemable = (state: AppState, card: GiftcardRow): boolean => {
+  const item_type = rolled_item_types().get(card.template)
+  return Boolean(state.session.wallet && state.session.roster_loaded && item_type && content_catalog.item(item_type))
 }
 
 const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
@@ -232,12 +227,13 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     dispatch({ type: 'distribution/pending', operation: 'gift-link' })
     void wallet
       .claim_giftcard_link(gift_link)
-      .then(({ giftcard }) => {
+      .then(({ digest, giftcard }) => {
         if (!current()) return
         gift_link = null
         remember_gift_intent(storage, null)
         dispatch({ type: 'distribution/gift_link_claimed' })
         if (!signal.aborted && get_state().session.wallet === wallet) dispatch({ type: 'giftcard/received', giftcard })
+        dispatch({ type: 'distribution/redeem', giftcards: [giftcard], automatic: true, received_transaction: digest })
       })
       .catch((error) => {
         if (current()) fail_holder(error)
@@ -261,48 +257,60 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       })
   }
   events.on('distribution/refresh_holder', refresh_holder)
-  events.on('distribution/import', ({ giftcard }) => {
-    const { distribution, session } = get_state()
-    const { pending } = distribution
-    const holder = get_state().external_wallet.session
+  events.on('distribution/claim_all', () => {
+    const state = get_state()
+    if (state.distribution.pending) return
+    const external = state.distribution.holder_giftcards ?? []
+    if (external.length) dispatch({ type: 'distribution/import' })
+    else
+      dispatch({
+        type: 'distribution/redeem',
+        giftcards: state.session.giftcards.slice(0, MAX_GIFTCARDS_PER_TRANSACTION),
+      })
+  })
+  events.on('distribution/import', () => {
+    const { distribution, session, external_wallet } = get_state()
+    const holder = external_wallet.session
     const recipient = session.wallet
-    if (!holder || !recipient || pending || !distribution.holder_giftcards?.some(({ id }) => id === giftcard.id)) return
+    const giftcards = (distribution.holder_giftcards ?? []).slice(0, MAX_GIFTCARDS_PER_TRANSACTION)
+    if (!holder || !recipient || distribution.pending || !giftcards.length) return
     if (recipient.identity !== 'zklogin')
       return fail_holder(new Error(copy_text(get_state().copy?.airdrop_page ?? {})('gift_login')))
     const current = current_operation(true)
-    dispatch({ type: 'distribution/pending', operation: `import:${giftcard.id}` })
+    dispatch({ type: 'distribution/pending', operation: 'import' })
     void holder
-      .transfer_giftcards([{ id: giftcard.id, recipient: recipient.address }])
-      .then(({ giftcards }) => {
+      .transfer_giftcards(giftcards.map(({ id }) => ({ id, recipient: recipient.address })))
+      .then(({ digest, giftcards: transferred }) => {
         if (!current()) return
-        dispatch({ type: 'distribution/imported', giftcard: giftcard.id })
-        for (const card of giftcards) dispatch({ type: 'giftcard/received', giftcard: card })
+        dispatch({ type: 'distribution/imported', giftcards: transferred.map(({ id }) => id) })
+        for (const card of transferred) dispatch({ type: 'giftcard/received', giftcard: card })
+        dispatch({ type: 'distribution/redeem', giftcards: transferred, automatic: true, received_transaction: digest })
       })
       .catch((error) => {
         if (current()) fail_holder(error)
         else console.error('Giftcard transfer failed after the account changed.', error)
       })
   })
-  events.on('distribution/redeem', ({ giftcard, automatic }) => {
+  events.on('distribution/redeem', ({ giftcards, automatic, received_transaction }) => {
     const state = get_state()
-    const plan = redemption_plan(state, giftcard)
-    if (!plan || state.distribution.pending) return
-    const { wallet, item, existing } = plan
+    const { wallet } = state.session
+    if (
+      !wallet ||
+      state.distribution.pending ||
+      !giftcards.length ||
+      !giftcards.every((card) => redeemable(state, card))
+    )
+      return
     const current = current_operation()
-    const retained = attempts.remember(wallet.address, giftcard.id)
-    if (automatic && !retained) return
-    dispatch({ type: 'distribution/pending', operation: `redeem:${giftcard.id}` })
+    const retained = giftcards.map(({ id }) => attempts.remember(wallet.address, id))
+    if (automatic && retained.includes(false)) return
+    dispatch({ type: 'distribution/pending', operation: 'redeem' })
     void wallet
-      .redeem_giftcard({
-        card: giftcard,
-        category: item.category,
-        existing_item_id: existing?.id ?? null,
-        existing_kiosk_id: existing?.kiosk ?? null,
-      })
+      .redeem_giftcards(giftcards, received_transaction)
       .then(() => {
         if (!current()) return
-        dispatch({ type: 'giftcard/redeemed', giftcard: giftcard.id })
-        dispatch({ type: 'distribution/redeemed', giftcard: giftcard.id })
+        for (const card of giftcards) dispatch({ type: 'giftcard/redeemed', giftcard: card.id })
+        dispatch({ type: 'distribution/redeemed' })
         dispatch({ type: 'wallet/refresh' })
       })
       .catch((error) => {
@@ -338,9 +346,11 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       )
         return
       if (gift_link) return dispatch({ type: 'distribution/claim_gift_link' })
-      const card = state.session.giftcards.find(({ id }) => !attempts.has(state.session.wallet!.address, id))
-      if (card && redemption_plan(state, card))
-        dispatch({ type: 'distribution/redeem', giftcard: card, automatic: true })
+      const cards = state.session.giftcards
+        .filter(({ id }) => !attempts.has(state.session.wallet!.address, id))
+        .slice(0, MAX_GIFTCARDS_PER_TRANSACTION)
+      if (cards.length && cards.every((card) => redeemable(state, card)))
+        dispatch({ type: 'distribution/redeem', giftcards: cards, automatic: true })
     })
   })
   if (gift_link && get_state().session.wallet?.identity === 'zklogin')

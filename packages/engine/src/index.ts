@@ -17,7 +17,7 @@ export {
 } from './quality.ts'
 export { CHUNK_EDGE } from './voxel_data.ts'
 export { apply_voxel_operation } from './voxel_operation.ts'
-export { CELESTIAL_CYCLE_MS, DAY_FRAC } from './sky/celestial_motion.ts'
+export { CELESTIAL_CYCLE_MS, DAY_FRAC, MIDDAY_TIME_OF_DAY } from './sky/celestial_motion.ts'
 export { MATERIAL_PRESETS, material_pattern } from './material_presets.ts'
 export { create_world_preview } from './world_preview.ts'
 export {

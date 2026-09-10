@@ -70,6 +70,7 @@ movement_sync_toast: Your position is still syncing. Keep moving normally, then 
 fight_path_changed_toast: The board changed before your move was submitted. Your turn was restored — try again.
 party_member_unavailable_toast: That character is already in a party.
 fight_turn_already_forced_toast: Someone already forced this turn to end.
+fight_placement_unavailable_toast: That starting cell is unavailable. Choose another free cell.
 network_testnet: TESTNET
 page_pending_title: This page is being rebuilt
 page_pending_body: Its place remains visible while we restore it cleanly.
@@ -487,8 +488,8 @@ mastery_page:
 airdrop_page:
   destination: 'Game wallet:'
   refresh: 'Refresh'
-  title: 'Gifts'
-  subtitle: 'Import giftcards into your game wallet'
+  title: 'Airdrops'
+  subtitle: 'Community rewards and how to claim them'
   claim: 'Import'
   holder_title: 'External wallet'
   holder_connect_hint: 'Connect the wallet holding your giftcards'
@@ -505,21 +506,47 @@ airdrop_page:
   gift_retry: 'Claim giftcard'
   redeem: 'Redeem'
   empty: 'No giftcards in this wallet'
-  set:
-    title: 'The set'
-    subtitle: 'Reserved items — showcase only'
-    error: 'The airdrop set could not be loaded'
-    retry: 'Retry'
-    empty: 'The airdrop set is not published yet'
-    no_preview: 'Preview pending'
-    aura: 'Aura'
-    aura_pending: 'Aura pending'
-    awaiting_ruling: 'Awaiting ruling'
-    kind:
-      pet_glb: 'Pet'
-      title_relic: 'Title relic'
-      outfit: 'Outfit'
+  claim_all: 'Claim rewards'
+  catalogue_title: 'Supported airdrops'
+  check_wallet: 'Eligible for one of these drops? Check the wallet used for the snapshot. Connect an external wallet below to import its giftcards. For rewards sent to your game wallet, sign in with the same Google account. Physical cards are claimed through their QR code.'
+  rank_reward: 'Ranks {from}–{to}: {amount} of each crate'
+  delivery:
+    wallet: 'Wallet drop'
+    nft: 'Gift attached to your NFT'
+    physical: 'Physical gift card'
+    game_wallet: 'Hytale veteran rewards'
+  campaigns:
+    oeuftermath:
+      title: 'Aftermath Eggs · Oeuftermath'
+      description: 'Aftermath Egg holders during the snapshot receive an Oeuftermath pet giftcard. Check the wallet that held your Egg at the snapshot; buying an Egg later does not add eligibility.'
+    suicune:
+      title: 'SWEEBS · Suicune'
+      description: 'SWEEBS holders during the snapshot receive a Suicune pet giftcard. Connect the eligible snapshot wallet to import it into your game account.'
+    suifren_bullshark:
+      title: 'Suifren Bullsharks'
+      description: '500 eligible Bullshark holder wallets were selected from the snapshot. Check your snapshot wallet for the pet giftcard; holding a Bullshark alone does not guarantee selection.'
+    suifren_capy:
+      title: 'Suifren Capys'
+      description: '500 eligible Capy holder wallets were selected from the snapshot. Check your snapshot wallet for the pet giftcard; holding a Capy alone does not guarantee selection.'
+    primemachin:
+      title: 'Prime Machin'
+      description: 'Pet giftcards are addressed to the Prime Machin NFTs in the snapshot. Retrieve the gift attached to your NFT through Studio Mirai first, then connect the receiving wallet here to import it.'
+    vaporeon:
+      title: 'Vaporeon holders'
+      description: 'Selected wallets from the Vaporeon holder snapshot receive a Vaporeon pet giftcard. Check the wallet used at the snapshot, then import the giftcard here.'
+    sui_basecamp_singapore:
+      title: 'Sui Basecamp · Singapore'
+      description: 'Sui Crates are distributed as physical gift cards at Sui Basecamp in Singapore. Scan the QR code on your card and sign in to claim your crate. Keep the code private until you claim it.'
+    hytale_veterans:
+      title: 'Hytale veterans · Top 100'
+      description: 'A special thank-you for the top 100 eligible Hytale players, ranked across item collections, playtime, character XP and professions. Rewards go to the Sui address recorded in the Hytale backup. Use the original Google account to access that wallet.'
+    hytale_supporters:
+      title: 'Hytale supporters · Mark of the Unbroken'
+      description: 'For every linked Hytale wallet with more than {threshold} SUI in recorded shop purchases, regardless of top-100 placement. The title goes to the Sui address recorded in the backup. Sign in with the original Google account to find your giftcard.'
+
 settings_page:
+  day_night_cycle_label: Day/night cycle
+  day_night_cycle_hint: Disable to keep the world at midday.
   title: 'Settings'
   subtitle: 'Your AresRPG preferences'
   master_volume_label: General volume
@@ -1540,6 +1567,9 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: You ran out of SUI to pay for transaction fees. Please top up your wallet to continue playing.
 characters_page:
+  teleport_dungeon_blocked: 'Finish or abandon the dungeon before teleporting.'
+  consume_busy: 'This character must be idle to use consumables.'
+  progression_busy: 'Stats and spells can only be changed while this character is idle.'
   delete_character: 'Delete character'
   delete_warning: 'Deletion is permanent. All character progress is lost and the name stays reserved.'
   delete_no_refund: 'The {{amount}} SUI creation fee will not be refunded.'
@@ -1574,6 +1604,10 @@ characters_page:
   cancel: Cancel
   equip_pending: Updating equipment…
   equip_success: Equipment updated
+  consume_one: 'Consume 1'
+  consume_until_full: 'Consume until full HP'
+  consume_healing_insufficient: 'Not enough items available ({{count}} needed).'
+  consume_healing_stock: 'Restores {{heal}} HP each · {{available}} available'
   consume_pending: Using item…
   consume_success: Item used
   already_full_hp: Health is already full
@@ -1837,6 +1871,8 @@ characters_page:
       tool_label: 'Tool'
       crafts_label: 'Crafts {{covers}}'
       xp_progress: '{{current}} / {{needed}} XP'
+      gather_time: 'Gather time: {{seconds}}s'
+      next_gather_time: 'Next · Lv {{level}}: {{seconds}}s'
     recipes:
       empty_seed: 'Recipes for this profession arrive with the crafting content seed.'
       unlocked: 'Unlocked'
@@ -2285,6 +2321,8 @@ kares_page:
   launch_market_cap_note: 'If the sale closed now: capped sale price × 590,000 KARES available at launch. No launch below minimum funding.'
 
 leaderboard_page:
+  unclaimed: 'Unclaimed'
+  reset_in: 'Reset {{time}}'
   xp: 'Combat XP'
   kills: 'Mob kills'
   dungeons: 'Dungeons'
@@ -2295,12 +2333,6 @@ leaderboard_page:
   feeding: 'Pet feeding'
   gathering: 'Gathering'
   category: 'Category'
-  previous: 'Previous'
-  next: 'Next'
-  current: 'Current season'
-  season: 'Season {{season}}'
-  epochs: 'Epochs {{start}}–{{end}}'
-  remaining: '{{epochs}} epochs remaining'
   loading: 'Loading…'
   user: 'User'
   score: 'Score'
@@ -2309,7 +2341,6 @@ leaderboard_page:
   current_jobs: 'Current jobs'
   unavailable: 'Rankings are temporarily unavailable.'
   retry: 'Retry'
-  empty: 'No activity this season.'
   suins_hint: 'Set a SuiNS name or subname targeting your AresRPG address as its default name to display it here.'
   xp_description: 'XP earned from winning fights by all your characters. Transfers never move earned credit.'
   kills_description: 'Enemy mobs defeated in won fights, counted once per fight for each winning address.'

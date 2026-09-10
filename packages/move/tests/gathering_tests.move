@@ -114,7 +114,7 @@ fun harvest(seed: u64, quantity: u32, rare: bool, ambush: bool, variant: Variant
     assert!(fight::fighter_character(&fight, 0) == id && fight::side_players(&fight, 0) == 1, 11);
     assert!(combat::fighter_hp(fight::combat_for_testing(&fight), 0) == 5, 12);
     assert!(!gathering::has_fired_verdict(fight::fighter_character_ref(&fight, 0)), 13);
-    fight::forfeit(&mut fight, 0, &mut kiosk, cap, &character_policy, &clock, scenario.ctx());
+    fight::forfeit(&mut fight, 0, &mut kiosk, cap, &character_policy, &mut entropy, &clock, scenario.ctx());
     fight::close(fight, scenario.ctx());
     assert!(kiosk.has_item(id), 14);
   };

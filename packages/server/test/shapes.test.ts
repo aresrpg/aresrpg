@@ -12,6 +12,15 @@ import { shape_item, stats_record_of } from '../src/reads/stat_block.ts'
 import { get_fight_resolutions } from '../src/reads/get_fight_resolutions.ts'
 
 describe('shape_character', () => {
+  test('a level-up carries the restored HP and checkpoint time without recomputing health', () => {
+    expect(shape_character({ id: '0xchar', level: 2, experience: '110', hp: '87', hp_ms: 1250 })).toMatchObject({
+      level: 2,
+      experience: '110',
+      hp: '87',
+      hp_ms: 1250,
+    })
+  })
+
   test('job keys are restored to the shared UPPERCASE vocabulary', () => {
     const shaped = shape_character({ id: '0xchar', job_forger: '1200', job_farmer: '80' })
     expect(shaped.jobs).toEqual({ FORGER: '1200', FARMER: '80' })

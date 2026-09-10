@@ -50,7 +50,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
       digest: '',
       giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
     }),
-    redeem_giftcard: async () => ({ digest: '', item_id: '0xitem', item_version: '10' }),
+    redeem_giftcards: async () => ({ digest: '', item_id: '0xitem', item_version: '10' }),
     create_seed_admin: async () => {
       throw new Error('unused in reducer tests')
     },

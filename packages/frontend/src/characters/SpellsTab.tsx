@@ -16,9 +16,11 @@ import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { effect_color } from '../encyclopedia/SpellCardEffects.tsx'
 import { copy_text, spell_name, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
+
+import { editable_character } from './character_activity.ts'
 
 import './spellbook.css'
 
@@ -32,8 +34,10 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
   const encyclopedia = encyclopedia_text(copy)
   const display_name = (identity: string): string => spell_name(copy, identity)
   const wallet = useAppStore(({ session }) => session.wallet)
+  const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
   const [selected_name, set_selected_name] = useState<string | null>(null)
   const [raising, set_raising] = useState(false)
+  const locked = [!available, raising].some(Boolean)
 
   const spells = useMemo(
     () =>
@@ -55,9 +59,9 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
   const max_level = selected?.levels.length ?? 0
   const mastered = current >= max_level && current > 0
   const cost = current
-  const can_raise = !!wallet && !!selected && current >= 1 && !mastered && points >= cost && !raising
+  const can_raise = !!wallet && !!selected && current >= 1 && !mastered && points >= cost && !locked
   const raise_hint =
-    !selected || raising || can_raise || mastered
+    !selected || locked || can_raise || mastered
       ? undefined
       : current < 1
         ? t('spells.requires_lv', { level: selected.unlock_level })
@@ -65,13 +69,15 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
 
   const raise = (): void => {
     if (!can_raise || !wallet || !selected) return
-    const transaction = run_direct_transaction(() =>
-      wallet.character.raise_spell({
+    const transaction = run_direct_transaction(() => {
+      const current_character = editable_character(read_app_state(), character.id, Date.now())
+      if (!current_character) throw new Error(t('progression_busy'))
+      return wallet.character.raise_spell({
         character_id: character.id,
         spell: selected.name,
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+        custody: { kiosk: current_character.kiosk, kiosk_cap: current_character.kiosk_cap },
       })
-    )
+    })
     if (!transaction) return
     set_raising(true)
     const pending = toast.loading(t('spells.upgrading'))
@@ -106,6 +112,9 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
         </div>
       </div>
 
+      <p hidden={!!available} role="status" className="px-3 text-xs text-muted">
+        {t('progression_busy')}
+      </p>
       <div className="sb__main">
         {/* LIST — unlocked first, locked after, both browsable */}
         <div className="sb__list">

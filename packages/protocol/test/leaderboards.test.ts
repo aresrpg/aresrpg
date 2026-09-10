@@ -5,9 +5,9 @@ import { expect, test } from 'bun:test'
 
 import { LEADERBOARD_METRICS, parse_client_packet } from '../src/packets.ts'
 
-test('every leaderboard category has an explicit observed season and request identity', () => {
+test('every leaderboard category has one current observation and request identity', () => {
   for (const metric of LEADERBOARD_METRICS) {
-    const packet = { type: 'packet/leaderboard_observe' as const, observation: { metric, season: null, id: 1 } }
+    const packet = { type: 'packet/leaderboard_observe' as const, observation: { metric, id: 1 } }
     expect(parse_client_packet(JSON.stringify(packet))).toEqual(packet)
   }
   expect(parse_client_packet('{"type":"packet/leaderboard_observe","observation":null}')).toEqual({
@@ -17,12 +17,14 @@ test('every leaderboard category has an explicit observed season and request ide
 })
 
 test('unbounded, negative, fractional and malformed leaderboard selections never reach a read', () => {
-  const valid = { metric: 'xp', season: null, id: 1 }
+  const valid = { metric: 'xp', id: 1 }
   for (const observation of [
     undefined,
     [],
     {},
     { ...valid, metric: 'unknown' },
+    { ...valid, season: null },
+    { ...valid, season: 0 },
     { ...valid, season: -1 },
     { ...valid, season: '1' },
     { ...valid, season: 1.5 },

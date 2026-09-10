@@ -118,8 +118,8 @@ describe('seed admin progress', () => {
     const sdk = sdk_with(new Set())
     const [row] = seed_sync_rows(sdk, content)
     const batches: readonly SeedUpdateBatch[] = [
-      Object.freeze({ transaction: sdk.tx(), written: Object.freeze([row!.key]) }),
-      Object.freeze({ transaction: sdk.tx(), written: Object.freeze(['retired']) }),
+      Object.freeze({ build: () => sdk.tx(), written: Object.freeze([row!.key]) }),
+      Object.freeze({ build: () => sdk.tx(), written: Object.freeze(['retired']) }),
     ]
     const checkpoints: SeedApplyProgress[] = []
     const pending: (readonly string[])[] = []
@@ -443,9 +443,16 @@ describe('scoped gift issuance', () => {
     ...content,
     airdrop: {
       giftcards: [
-        { id: 'one', item_type: 'ore', amount: 5, custody: object_id(8), network: 'testnet' },
-        { id: 'other', item_type: 'other_pet', amount: 1, custody: object_id(7), network: 'testnet' },
-        { id: 'main', item_type: 'ore', amount: 1, custody: object_id(6), network: 'mainnet' },
+        { id: 'one', campaign: 'ore', item_type: 'ore', amount: 5, custody: object_id(8), network: 'testnet' },
+        {
+          id: 'other',
+          campaign: 'other_pet',
+          item_type: 'other_pet',
+          amount: 1,
+          custody: object_id(7),
+          network: 'testnet',
+        },
+        { id: 'main', campaign: 'ore', item_type: 'ore', amount: 1, custody: object_id(6), network: 'mainnet' },
       ],
     },
   }
@@ -454,9 +461,29 @@ describe('scoped gift issuance', () => {
   const card = giftcard_id(pinned_content_root_id, package_id, 'one')
   const claim = giftcard_claim_id(pinned_content_root_id, card)
 
+  test('one campaign includes different rewards but excludes another campaign sharing an item type', async () => {
+    const grouped: SeedContent = {
+      ...cards,
+      airdrop: {
+        giftcards: [
+          { ...cards.airdrop.giftcards[0]!, campaign: 'bundle' },
+          { ...cards.airdrop.giftcards[1]!, campaign: 'bundle' },
+          { ...cards.airdrop.giftcards[0]!, id: 'unrelated', campaign: 'different' },
+        ],
+      },
+    }
+    const pet = item_template_id(pinned_content_root_id, seed_package_id, 'other_pet')
+    const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore, pet]))
+    const session = await create_seed_admin({ sdk, content: grouped, config, gift_campaign: 'bundle' })
+    const view = await session.check_changes({})
+    expect(view.new_rows.map(({ key }) => key).sort()).toEqual(
+      [card, giftcard_id(pinned_content_root_id, package_id, 'other')].sort()
+    )
+  })
+
   test('only selected network and gift targets enter the plan; unrelated ledger stays out of validation', async () => {
     const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore]))
-    const session = await create_seed_admin({ sdk, content: cards, config, gift_item_type: 'ore' })
+    const session = await create_seed_admin({ sdk, content: cards, config, gift_campaign: 'ore' })
     expect((await session.refresh()).batches.map(({ phase, targets, state }) => ({ phase, targets, state }))).toEqual([
       { phase: 'supply', targets: 1, state: 'ready' },
     ])
@@ -477,7 +504,7 @@ describe('scoped gift issuance', () => {
       sdk: sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore, claim])),
       content: cards,
       config,
-      gift_item_type: 'ore',
+      gift_campaign: 'ore',
     })
     expect(next_seed_batch(await session.refresh())).toBeNull()
     expect((await session.check_changes({})).new_rows).toEqual([])
@@ -486,9 +513,9 @@ describe('scoped gift issuance', () => {
 
   test('missing templates block issuance and unknown gift types refuse', async () => {
     const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id]))
-    const session = await create_seed_admin({ sdk, content: cards, config, gift_item_type: 'ore' })
+    const session = await create_seed_admin({ sdk, content: cards, config, gift_campaign: 'ore' })
     expect(next_seed_batch(await session.refresh())?.state).toBe('blocked')
-    await expect(create_seed_admin({ sdk, content: cards, config, gift_item_type: 'absent' })).rejects.toThrow(
+    await expect(create_seed_admin({ sdk, content: cards, config, gift_campaign: 'absent' })).rejects.toThrow(
       'No configured'
     )
   })
@@ -498,7 +525,7 @@ describe('scoped gift issuance', () => {
       sdk: sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore, claim])),
       content: cards,
       config,
-      gift_item_type: 'ore',
+      gift_campaign: 'ore',
     })
     expect((await session.check_changes({ [card]: { hash: 'old', label: 'old allocation' } })).errors).toEqual([
       'gift card one was already issued with another allocation',
@@ -508,7 +535,7 @@ describe('scoped gift issuance', () => {
   test('certified receipts checkpoint before a failed visibility read', async () => {
     const checkpoints: string[] = []
     const sdk = sdk_with(new Set([admin_cap_id, pinned_content_root_id, ore]))
-    const session = await create_seed_admin({ sdk, content: cards, config, gift_item_type: 'ore' })
+    const session = await create_seed_admin({ sdk, content: cards, config, gift_campaign: 'ore' })
     await expect(
       session.execute('giftcards:0', {}, async (digest) => {
         checkpoints.push(digest)
@@ -523,6 +550,7 @@ test('a full holder batch fits protocol limits and only transfers its selected v
   const existing = new Set([admin_cap_id, root, item_template_id(root, seed_package_id, 'ore')])
   const cards = Array.from({ length: 499 }, (_, index) => ({
     id: `bullshark_holders_20260908_${index.toString(16).padStart(64, '0')}`,
+    campaign: 'ore',
     item_type: 'ore',
     amount: 1,
     custody: `0x${(index + 8).toString(16).padStart(64, '0')}`,
@@ -558,7 +586,7 @@ test('a full holder batch fits protocol limits and only transfers its selected v
     sdk,
     content: scoped,
     config: { admin_cap: admin_cap_id, content_root: root },
-    gift_item_type: 'ore',
+    gift_campaign: 'ore',
   })
   const result = await session.execute('giftcards:0', {})
   expect(next_seed_batch(result.snapshot)).toBeNull()

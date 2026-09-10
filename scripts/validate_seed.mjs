@@ -883,31 +883,70 @@ for (const offer of mastery.offers ?? []) {
 }
 if (new Set((mastery.offers ?? []).map(({ item_type }) => item_type)).size !== (mastery.offers ?? []).length)
   red('M-DUP', 'mastery.json holds two offers for one item_type — MasteryOfferKey derivation aborts')
-// airdrop.json — presentation plus the portable giftcard distribution rows.
-// `showcase` rows are the airdrop page's display data; `giftcards` are the chain rows.
+// Airdrop campaigns describe eligibility; giftcards remain the issuance authority.
 const airdrop = load('airdrop.json')
-for (const row of airdrop.showcase) {
-  if (typeof row.id !== 'string' || row.id === '') red('A-SHOWCASE', `showcase row without an id`)
-  if (typeof row.name !== 'string' || row.name === '') red('A-SHOWCASE', `showcase ${row.id}: empty name`)
-  const item = items_by_type.get(row.id)
-  if (!item) red('A-SHOWCASE', `showcase ${row.id}: no item uses this identity`)
-  if (row.kind === 'pet_glb') {
-    if (item?.category !== 'pet') red('A-SHOWCASE', `showcase ${row.id}: pet_glb must reference a pet item`)
-    if (row.art?.glb !== `models/pets/${row.id}.glb` || row.art?.icon !== `items/${row.id}_hd.png`)
-      red('A-SHOWCASE', `showcase ${row.id}: pet art must use its exact canonical GLB and HD icon paths`)
-  }
-  for (const asset of Object.values(row.art ?? {})) {
-    const authored_path =
-      typeof asset === 'string' && asset.startsWith('models/')
-        ? join(seed_dir, asset)
-        : join(seed_dir, 'icons', String(asset))
-    if (typeof asset === 'string' && !existsSync(authored_path))
-      red('A-ASSET', `showcase ${row.id}: missing seed/${asset}`)
+for (const campaign of airdrop.campaigns ?? []) {
+  check_rule(typeof campaign.name === 'string' && campaign.name.length > 0, 'A-NAME', 'Airdrop campaigns need names')
+  check_rule(
+    ['public', 'operator'].includes(campaign.visibility),
+    'A-VISIBILITY',
+    `Invalid visibility for ${campaign.id}`
+  )
+  check_exact_keys(`airdrop.campaigns[${campaign.id ?? '?'}]`, campaign, [
+    'id',
+    'name',
+    'visibility',
+    'items',
+    'delivery',
+    ...('tiers' in campaign ? ['tiers'] : []),
+    ...('spending_threshold_sui' in campaign ? ['spending_threshold_sui'] : []),
+  ])
+  check_rule(
+    typeof campaign.id === 'string' && /^[a-z][a-z0-9_]*$/u.test(campaign.id),
+    'A-CAMPAIGN',
+    'Campaign needs a stable id'
+  )
+  check_rule(
+    ['wallet', 'nft', 'physical', 'game_wallet'].includes(campaign.delivery),
+    'A-DELIVERY',
+    `Invalid delivery for ${campaign.id}`
+  )
+  check_rule(
+    Array.isArray(campaign.items) && campaign.items.length > 0,
+    'A-ITEMS',
+    `Campaign ${campaign.id} needs rewards`
+  )
+  for (const item_type of campaign.items ?? [])
+    check_rule(item_types.has(item_type), 'A-ITEM', `Campaign ${campaign.id}: unknown reward ${item_type}`)
+  if (campaign.tiers) {
+    let next_rank = 1
+    for (const tier of campaign.tiers) {
+      check_rule(
+        tier.from === next_rank && Number.isSafeInteger(tier.to) && tier.to >= tier.from,
+        'A-RANK',
+        `Campaign ${campaign.id}: rank tiers must be contiguous`
+      )
+      check_rule(
+        Number.isSafeInteger(tier.amount) && tier.amount > 0,
+        'A-AMOUNT',
+        `Campaign ${campaign.id}: invalid reward amount`
+      )
+      next_rank = tier.to + 1
+    }
   }
 }
-if (new Set(airdrop.showcase.map(({ id }) => id)).size !== airdrop.showcase.length)
-  red('L-DUP', 'airdrop.json holds two showcase rows with one id')
+check_rule(
+  new Set((airdrop.campaigns ?? []).map(({ id }) => id)).size === airdrop.campaigns?.length,
+  'A-DUP',
+  'Airdrop campaign ids must be unique'
+)
+const campaigns_by_id = new Map(airdrop.campaigns.map((campaign) => [campaign.id, campaign]))
 const check_giftcard_values = (card) => {
+  check_rule(
+    campaigns_by_id.get(card.campaign)?.items.includes(card.item_type) === true,
+    'A-GIFT-CAMPAIGN',
+    `Giftcard ${card.id} must belong to a campaign containing its item type`
+  )
   check_rule(
     card.network === undefined || ['testnet', 'mainnet'].includes(card.network),
     'L4-NETWORK',
@@ -941,6 +980,7 @@ const check_giftcard_custody = (item_type, custody) => {
 for (const card of airdrop.giftcards) {
   check_exact_keys(`airdrop.giftcards[${card.id ?? '?'}]`, card, [
     'id',
+    'campaign',
     'item_type',
     'amount',
     'custody',
@@ -953,6 +993,7 @@ const giftcard_batches = airdrop.giftcard_batches ?? []
 for (const batch of giftcard_batches) {
   check_exact_keys(`airdrop.giftcard_batches[${batch.id ?? '?'}]`, batch, [
     'id',
+    'campaign',
     'item_type',
     'amount',
     'recipients',

@@ -16,6 +16,7 @@ import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
 export * from './leaderboards.ts'
+export * from './position.ts'
 
 export type { FightWireAction } from '@aresrpg/fight'
 
@@ -715,7 +716,7 @@ export type ClientPackets = {
   /** Deprecated rolling-compatibility no-op. The server tracks its capped roster itself. */
   'packet/track_character': { character_id: string; tracked: boolean }
   /** The player's live position — drives zone tracking, visibility, and the presence mesh. */
-  'packet/position': { character_id: string; x: number; y: number; z: number; riding: boolean }
+  'packet/position': { character_id: string; checkpoint: string; x: number; y: number; z: number; riding: boolean }
   /** World chat — heard by everyone standing in the same world, never stored. */
   'packet/chat': { character_id: string; parts: readonly ChatMessagePart[] }
   /** Party chat — rides the party's channel; refused when partyless. */
@@ -1247,15 +1248,15 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
     return packet as ClientPacket
   }
   if (type === 'packet/position') {
-    const { character_id, x, y, z, riding } = packet
+    const { character_id, checkpoint, x, y, z, riding } = packet
     if (
       !is_id(character_id) ||
-      !is_finite_number(x) ||
-      !is_finite_number(y) ||
-      !is_finite_number(z) ||
+      typeof checkpoint !== 'string' ||
+      !/^.{1,256}$/.test(checkpoint) ||
+      ![x, y, z].every(is_finite_number) ||
       typeof riding !== 'boolean'
     )
-      throw new Error('packet/position needs { character_id, x, y, z, riding }')
+      throw new Error('packet/position needs { character_id, checkpoint, x, y, z, riding }')
     return packet as ClientPacket
   }
   if (type === 'packet/chat' || type === 'packet/chat_party') {

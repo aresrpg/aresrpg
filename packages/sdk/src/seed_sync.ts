@@ -16,10 +16,8 @@ import {
   dungeon_data_value,
   game_type_of,
   giftcards_for_network,
-  item_cost,
   replace_item_facts,
   level_value,
-  mob_cost,
   mob_data_value,
   package_id_of,
   recipe_door_args,
@@ -27,7 +25,6 @@ import {
   recipe_job,
   seed_sdk,
   slice_chunks,
-  spell_cost,
   world_content_values,
   type SeedSdk,
 } from './seed.ts'
@@ -80,8 +77,6 @@ export type SeedSyncRow = Readonly<{
   addresses: readonly string[]
   /** shared objects the rewrite needs resolved before composing */
   hydrate: readonly string[]
-  /** commands this row's rewrite roughly costs (transaction packing) */
-  cost: number
   /** composes the rewrite doors — absent on supply rows (no rewrite exists) */
   update?: (sdk: SeedSdk, tx: Transaction, cap: Resolvable, root: Resolvable) => void
   /** the authored board itself — only on board rows (the append path rebuilds the value) */
@@ -217,7 +212,6 @@ export const seed_sync_rows = (
               : []),
           ]
         : [id],
-      cost: item_cost(item),
       update: (game_sdk, tx, cap, root) => {
         game_sdk.seed_doors.overwrite_item(tx, {
           cap,
@@ -248,7 +242,6 @@ export const seed_sync_rows = (
       chain_id: id,
       addresses: Object.freeze([id]),
       hydrate: [id],
-      cost: spell_cost(spell),
       update: (game_sdk, tx, cap, root) => {
         game_sdk.seed_doors.overwrite_spell(tx, {
           cap,
@@ -271,7 +264,6 @@ export const seed_sync_rows = (
       chain_id: id,
       addresses: Object.freeze([id]),
       hydrate: [id],
-      cost: mob_cost(mob),
       update: (game_sdk, tx, cap, root) => {
         game_sdk.seed_doors.overwrite_mob(tx, { cap, root, template: id, data: mob_data_value(game_sdk, tx, mob) })
       },
@@ -291,7 +283,6 @@ export const seed_sync_rows = (
       chain_id: id,
       addresses: Object.freeze([id]),
       hydrate: [id],
-      cost: 4,
       update: (game_sdk, tx, cap, root) => {
         game_sdk.seed_doors.overwrite_recipe(tx, {
           cap,
@@ -314,7 +305,6 @@ export const seed_sync_rows = (
       chain_id: id,
       addresses: Object.freeze([id]),
       hydrate: [id],
-      cost: 3 + dungeon.rooms.reduce((total, room) => total + room.length + 1, 0),
       update: (game_sdk, tx, cap, root) => {
         const data = dungeon_data_value(game_sdk, tx, dungeon)
         game_sdk.seed_doors.overwrite_dungeon(tx, { cap, root, dungeon: id, name: dungeon.dungeon, data })
@@ -336,7 +326,6 @@ export const seed_sync_rows = (
       chain_id: id,
       addresses: Object.freeze([id, gameplay_id]),
       hydrate: [id, gameplay_id],
-      cost: 9 + world.archis.length + (map ? 1 + Math.ceil(map.cells.length / 16_381) : 0),
       update: (game_sdk, tx, cap, root) => {
         game_sdk.seed_doors.set_entry_level(tx, { cap, root, world_content: id, entry_level: world.entry_level })
         const { cities, mob_rows, archi_rows, resource_rows } = world_content_values(
@@ -379,7 +368,6 @@ export const seed_sync_rows = (
       chain_id: catalog,
       addresses: Object.freeze([catalog]),
       hydrate: [catalog],
-      cost: 2,
       board_source: board,
       update: (game_sdk, tx, cap, root) => {
         const value = board_value(game_sdk, tx, board)
@@ -400,7 +388,6 @@ export const seed_sync_rows = (
         chain_id: id,
         addresses: Object.freeze([id]),
         hydrate: Object.freeze([id]),
-        cost: 1,
         update: (game_sdk: SeedSdk, tx: Transaction, cap: Resolvable, root: Resolvable) =>
           game_sdk.seed_doors.set_mastery_offer(tx, {
             cap,
@@ -411,7 +398,7 @@ export const seed_sync_rows = (
           }),
       })
     }),
-    ...giftcards_for_network(sdk.network, content).map((card) =>
+    ...giftcards_for_network(sdk.network, content).map(({ campaign: _campaign, ...card }) =>
       Object.freeze({
         key: giftcard_id(content_root, game_type, card.id),
         label: `gift card ${card.id}`,
@@ -421,7 +408,6 @@ export const seed_sync_rows = (
         chain_id: giftcard_id(content_root, game_type, card.id),
         addresses: Object.freeze([giftcard_id(content_root, game_type, card.id)]),
         hydrate: [],
-        cost: 1,
       })
     ),
   ]

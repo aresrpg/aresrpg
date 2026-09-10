@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_RELEASE': JSON.stringify(loaded_env.VERCEL_GIT_COMMIT_SHA || loaded_env.GITHUB_SHA || ''),
     },
     plugins: [
-      browser_pins_plugin(undefined, env.network),
+      browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),
       html_env_plugin(env),
       yaml_plugin(),
       ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
@@ -138,6 +138,8 @@ export default defineConfig(({ mode }) => {
                 public_sale_card: resolve(frontend_dir, 'e2e/fixtures/public_sale_card.html'),
                 leaderboard: resolve(frontend_dir, 'e2e/fixtures/leaderboard.html'),
                 character_delete: resolve(frontend_dir, 'e2e/fixtures/character_delete.html'),
+                character_progression: resolve(frontend_dir, 'e2e/fixtures/character_progression.html'),
+                dungeon_lobby: resolve(frontend_dir, 'e2e/fixtures/dungeon_lobby.html'),
                 interaction: resolve(frontend_dir, 'e2e/fixtures/interaction.html'),
                 engine_lifecycle: resolve(frontend_dir, 'e2e/fixtures/engine_lifecycle.html'),
               },

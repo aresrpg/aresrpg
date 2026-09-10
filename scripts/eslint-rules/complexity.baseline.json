@@ -44,7 +44,7 @@
       "walk_down": [11]
     },
     "packages/fight/src/fight.ts": {
-      "create_fight > apply": [13]
+      "create_fight > apply": [11]
     },
     "packages/fight/src/board.ts": {
       "project_board_cells > Array.from[1](_,index)": [11]
@@ -235,9 +235,6 @@
         12
       ]
     },
-    "packages/server/test/world.test.ts": {
-      "wire > read": [27]
-    },
     "packages/server/test/helpers/stream_wire.ts": {
       "wire > read": [20]
     },
@@ -327,6 +324,9 @@
     },
     "packages/frontend/src/characters/pet_feeding.ts": {
       "reduce_feeding": [11]
+    },
+    "packages/server/test/helpers/world_wire.ts": {
+      "wire > read": [24]
     }
   },
   "cyclomatic": {
@@ -560,7 +560,7 @@
       "create_world > render_pet": [17],
       "create_world > set_action_lock": [9],
       "create_world > sync_dungeon_portal_labels": [10],
-      "create_world > tick": [12]
+      "create_world > tick": [11]
     },
     "packages/frontend/src/game/presence_entities.ts": {
       "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [16],
@@ -637,7 +637,7 @@
       "TradeDialog": [10]
     },
     "packages/frontend/src/components/DungeonLobby.tsx": {
-      "DungeonLobby": [17],
+      "DungeonLobby": [15],
       "DungeonLobby > authored.rooms.map[0](mobs,index)": [10]
     },
     "packages/frontend/src/components/SendSuiModal.tsx": {
@@ -775,8 +775,7 @@
     },
     "packages/frontend/src/modules/distribution.ts": {
       "observe: NonNullable<AppModule['observe']>": [9],
-      "observe: NonNullable<AppModule['observe']> > events.on[1]({ giftcard })": [9],
-      "observe: NonNullable<AppModule['observe']> > events.on[1]({ giftcard, automatic })": [9],
+      "observe: NonNullable<AppModule['observe']> > events.on[1]()": [9],
       "observe: NonNullable<AppModule['observe']> > events.on[1](state,previous) > queueMicrotask[0]()": [11],
       "reduce": [12]
     },
@@ -830,9 +829,6 @@
       "reduce": [28],
       "searchable_zone": [21]
     },
-    "packages/frontend/src/airdrop/AirdropPage.tsx": {
-      "GiftcardCard": [9]
-    },
     "packages/frontend/src/editor/ItemReferencePicker.tsx": {
       "ItemReferencePicker": [13]
     },
@@ -884,10 +880,6 @@
     },
     "packages/frontend/src/editor/board_editor.ts": {
       "board_catalog_errors > boards.flatMap[0](board,index)": [17]
-    },
-    "packages/server/test/world.test.ts": {
-      "wire": [9],
-      "wire > read": [25]
     },
     "packages/server/test/player.test.ts": {
       "wire > read": [10]
@@ -1088,6 +1080,10 @@
     },
     "packages/frontend/src/characters/pet_feeding.ts": {
       "reduce_feeding": [9]
+    },
+    "packages/server/test/helpers/world_wire.ts": {
+      "wire": [9],
+      "wire > read": [24]
     }
   }
 }

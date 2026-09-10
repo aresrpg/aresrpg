@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Gem, Hammer, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
@@ -13,17 +13,23 @@ import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
 
 const CrushRuneCell = ({ copy, item }: Readonly<{ copy: AppCopy; item: Readonly<ItemRow> }>) => {
-  const [style, set_style] = useState<CSSProperties | null>(null)
-  const hover: ItemSnapshotHover | null = style ? Object.freeze({ style, status: 'ready', item }) : null
+  const [hover, set_hover] = useState<ItemSnapshotHover | null>(null)
   return (
     <>
       <InventoryItemCell
         item={item}
         onPointerEnter={(event) => {
           const bounds = event.currentTarget.getBoundingClientRect()
-          set_style(Object.freeze({ left: bounds.left + bounds.width / 2, top: bounds.top - 8 }))
+          set_hover(
+            Object.freeze({
+              anchor: event.currentTarget,
+              style: Object.freeze({ left: bounds.left + bounds.width / 2, top: bounds.top - 8 }),
+              status: 'ready',
+              item,
+            })
+          )
         }}
-        onPointerLeave={() => set_style(null)}
+        onPointerLeave={() => set_hover(null)}
       />
       <ItemSnapshotTooltip copy={copy} hover={hover} />
     </>

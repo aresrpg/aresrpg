@@ -157,6 +157,7 @@ fun finish(f: Fixture, atomic: bool) {
     api::settle_last_fight(fight, vector[0, 1], vector[0, 0], vector[], &mut kiosk, &personal,
       &character_policy, &item_policy, &randomness, &version, &clock, scenario.ctx());
   } else {
+    let mut entropy = random::new_generator_from_seed_for_testing(b"forfeit-cleanup");
     let count = combat::fighter_count(fight::combat_for_testing(&fight));
     let cap = personal_kiosk::borrow(&personal);
     let mut seat = 0;
@@ -165,9 +166,9 @@ fun finish(f: Fixture, atomic: bool) {
         if (combat::ended(fight::combat_for_testing(&fight))) {
           fight::settle_pvp(&mut fight, seat, &mut kiosk, cap, &character_policy, &clock, scenario.ctx());
         } else if (fight::fight_world(&fight) == b"kolizeum".to_string()) {
-          fight::forfeit(&mut fight, seat, &mut kiosk, cap, &character_policy, &clock, scenario.ctx());
+          fight::forfeit(&mut fight, seat, &mut kiosk, cap, &character_policy, &mut entropy, &clock, scenario.ctx());
         } else {
-          api::forfeit_fight(&mut fight, seat, &mut kiosk, cap, &character_policy, &version, &clock, scenario.ctx());
+          api::forfeit_fight_terminal(&mut fight, seat, &mut kiosk, &personal, &character_policy, &randomness, &version, &clock, scenario.ctx());
         };
       };
       seat = seat + 1;
@@ -223,7 +224,7 @@ fun repeat_join(f: &mut Fixture) {
   join(f, 2, 0, 0);
   {
     let Fixture { fight, kiosk, personal, character_policy, clock, scenario, .. } = f;
-    fight::forfeit(fight, 0, kiosk, personal_kiosk::borrow(personal), character_policy, clock, scenario.ctx());
+    fight::forfeit_placement(fight, 0, kiosk, personal_kiosk::borrow(personal), character_policy, clock, scenario.ctx());
   };
   join(f, 0, 0, 0);
 }
@@ -281,8 +282,8 @@ fun run(case: Case) {
   if (case == Case::JoinHistoryFull) {
     let mut index = 2;
     while (index < 7) { join(&mut f, index, 0, 0); index = index + 1; };
-    let Fixture { fight, kiosk, personal, character_policy, version, clock, scenario, ids, .. } = &mut f;
-    api::forfeit_fight(fight, 2, kiosk, personal_kiosk::borrow(personal), character_policy, version, clock, scenario.ctx());
+    let Fixture { fight, kiosk, personal, character_policy, randomness, version, clock, scenario, ids, .. } = &mut f;
+    api::forfeit_fight_terminal(fight, 2, kiosk, personal, character_policy, randomness, version, clock, scenario.ctx());
     assert!(kiosk.has_item(ids[2]), 40);
     join(&mut f, 7, 0, 0);
     abort 999
@@ -462,3 +463,72 @@ fun a_victory_must_seal_its_terminal_entropy_before_reward_preparation() {
 
 #[test, expected_failure(abort_code = 1707, location = aresrpg::fight)]
 fun forfeiting_does_not_reopen_a_six_admission_side() { run(Case::JoinHistoryFull); }
+
+fun forfeit_turn_case(leaving: u64, expected_actor: u64) {
+  let mut f = fixture(Case::Cast);
+  join(&mut f, 1, 1, 0);
+  join(&mut f, 2, 0, 0);
+  start(&mut f);
+  {
+    let Fixture { fight, kiosk, personal, character_policy, randomness, version, clock, scenario, ids, .. } = &mut f;
+    assert!(combat::active_fighter(fight::combat_for_testing(fight)) == 0, 70);
+    // No clock advance: forfeiting must not wait for either the minimum or timeout boundary.
+    api::forfeit_fight_terminal(fight, leaving, kiosk, personal, character_policy, randomness, version, clock, scenario.ctx());
+    assert!(!combat::ended(fight::combat_for_testing(fight)), 71);
+    assert!(combat::active_fighter(fight::combat_for_testing(fight)) == expected_actor, 72);
+    assert!(combat::fighter_forfeited(fight::combat_for_testing(fight), leaving), 73);
+    assert!(kiosk.has_item(ids[leaving]), 74);
+  };
+  finish(f, false);
+}
+
+#[test]
+fun active_forfeit_returns_custody_and_advances_immediately() { forfeit_turn_case(0, 1); }
+
+#[test]
+fun inactive_forfeit_preserves_the_current_turn() { forfeit_turn_case(2, 0); }
+
+#[test, expected_failure(abort_code = 1105, location = aresrpg::api)]
+fun retired_forfeit_signature_cannot_leave_an_active_turn_stalled() {
+  let mut f = fixture(Case::Cast);
+  let Fixture { fight, kiosk, personal, character_policy, version, clock, scenario, .. } = &mut f;
+  api::forfeit_fight(fight, 0, kiosk, personal_kiosk::borrow(personal), character_policy, version, clock, scenario.ctx());
+  abort 999
+}
+
+#[test, expected_failure(abort_code = 1105, location = aresrpg::api)]
+fun retired_dungeon_forfeit_signature_is_refused() {
+  let mut f = fixture(Case::Cast);
+  let Fixture { fight, kiosk, personal, character_policy, version, clock, scenario, .. } = &mut f;
+  api::give_up_dungeon_room(fight, 0, kiosk, personal_kiosk::borrow(personal), character_policy, version, clock, scenario.ctx());
+  abort 999
+}
+
+#[test, expected_failure(abort_code = 1105, location = aresrpg::api)]
+fun retired_kolizeum_forfeit_signature_is_refused() {
+  let mut f = fixture(Case::Cast);
+  let Fixture { fight, kiosk, personal, character_policy, version, clock, scenario, .. } = &mut f;
+  api::forfeit_kolizeum(fight, 0, kiosk, personal_kiosk::borrow(personal), character_policy, version, clock, scenario.ctx());
+  abort 999
+}
+
+#[test, expected_failure(abort_code = 1730, location = aresrpg::fight)]
+fun placement_refund_path_cannot_skip_an_active_forfeit_boundary() {
+  let mut f = fixture(Case::Cast);
+  join(&mut f, 1, 1, 0);
+  start(&mut f);
+  let Fixture { fight, kiosk, personal, character_policy, clock, scenario, .. } = &mut f;
+  fight::forfeit_placement(fight, 0, kiosk, personal_kiosk::borrow(personal), character_policy, clock, scenario.ctx());
+  abort 999
+}
+
+#[test, expected_failure(abort_code = 1708, location = aresrpg::fight)]
+fun an_ended_forfeit_cannot_advance_or_return_custody_again() {
+  let mut f = fixture(Case::Cast);
+  join(&mut f, 1, 1, 0);
+  start(&mut f);
+  let Fixture { fight, kiosk, personal, character_policy, randomness, version, clock, scenario, .. } = &mut f;
+  api::forfeit_fight_terminal(fight, 0, kiosk, personal, character_policy, randomness, version, clock, scenario.ctx());
+  api::forfeit_fight_terminal(fight, 0, kiosk, personal, character_policy, randomness, version, clock, scenario.ctx());
+  abort 999
+}

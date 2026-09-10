@@ -113,8 +113,18 @@ const ScribeHistory = ({
   )
 }
 
-const PlacedStackAmount = ({ amount, kind }: Readonly<{ amount: number; kind: 'gear' | 'rune' }>) =>
-  kind === 'rune' ? <span className="text-[9px] text-gold tabular-nums">×{amount}</span> : null
+const PlacedRuneDetails = ({ item, copy }: Readonly<{ item: Readonly<ItemRow>; copy: AppCopy }>) => {
+  const rune = rune_effect(item.item_type)
+  if (!rune) return null
+  return (
+    <div className="text-[9px] text-gold tabular-nums">
+      <div data-rune-effect="">
+        +{rune.amount} {stat_name(copy, rune.stat)}
+      </div>
+      <div>×{item.amount}</div>
+    </div>
+  )
+}
 
 const selected_runeforge_view = (
   gear: Readonly<ItemRow> | null,
@@ -166,7 +176,7 @@ const WorkSlot = ({
           <span className="line-clamp-2 text-[9px] leading-tight tracking-[0.05em] text-text uppercase">
             {selected.name}
           </span>
-          <PlacedStackAmount amount={selected.amount} kind={kind} />
+          <PlacedRuneDetails item={selected} copy={copy} />
         </>
       ) : (
         <>

@@ -4,18 +4,24 @@ use crate::decode::{Addr, Id};
 async fn commit(
     conn: &mut MultiplexedConnection,
     checkpoint: u64,
-    epoch: u64,
+    ts_ms: u64,
     facts: &[Contribution],
 ) -> Result<()> {
-    super::commit(conn, checkpoint, epoch, epoch * 1000, facts).await
+    super::commit(conn, checkpoint, ts_ms, facts).await
 }
 
+const SEPTEMBER: u64 = 1_788_220_800_000;
+const SEPTEMBER_LAST: u64 = 1_790_812_799_999;
+const OCTOBER: u64 = 1_790_812_800_000;
+const NOVEMBER: u64 = 1_793_491_200_000;
+
 #[test]
-fn exact_order_and_epoch_boundaries() {
-    assert_eq!(season(100, 100).unwrap(), 0);
-    assert_eq!(season(129, 100).unwrap(), 0);
-    assert_eq!(season(130, 100).unwrap(), 1);
-    assert!(season(99, 100).is_err());
+fn exact_order_and_calendar_boundaries() {
+    assert_eq!(next_reset(SEPTEMBER).unwrap(), OCTOBER);
+    assert_eq!(next_reset(SEPTEMBER_LAST).unwrap(), OCTOBER);
+    assert_eq!(next_reset(OCTOBER).unwrap(), NOVEMBER);
+    assert_eq!(next_reset(1_706_745_600_000).unwrap(), 1_709_251_200_000); // leap February
+    assert_eq!(next_reset(1_796_083_200_000).unwrap(), 1_798_761_600_000); // December → January
     let large = 9_007_199_254_740_992u128;
     assert!(rank_member(large + 1, "0xb") < rank_member(large, "0xa"));
     assert!(rank_member(42, "0xa") < rank_member(42, "0xb"));
@@ -23,7 +29,7 @@ fn exact_order_and_epoch_boundaries() {
 }
 
 #[test]
-fn dungeon_dedup_is_per_fight_and_address_even_after_season_rollover() {
+fn dungeon_dedup_is_per_fight_and_address_even_after_monthly_reset() {
     let completion = |fight, address| Contribution {
         metric: Metric::Dungeons,
         address: Addr([address; 32]),
@@ -39,8 +45,8 @@ fn dungeon_dedup_is_per_fight_and_address_even_after_season_rollover() {
     let (totals, markers) = aggregate(&facts, &BTreeSet::new()).unwrap();
     assert_eq!(totals[&(Metric::Dungeons, Addr([2; 32]).hex())], 2);
     assert_eq!(totals[&(Metric::Dungeons, Addr([3; 32]).hex())], 1);
-    let (next_season, _) = aggregate(&facts, &markers.into_iter().collect()).unwrap();
-    assert!(next_season.is_empty());
+    let (after_reset, _) = aggregate(&facts, &markers.into_iter().collect()).unwrap();
+    assert!(after_reset.is_empty());
 }
 
 #[test]
@@ -99,14 +105,9 @@ async fn redis_process() -> (RedisProcess, MultiplexedConnection) {
     panic!("isolated Redis did not start");
 }
 
-async fn total(
-    conn: &mut MultiplexedConnection,
-    season: u64,
-    metric: &str,
-    address: u8,
-) -> Option<String> {
+async fn total(conn: &mut MultiplexedConnection, metric: &str, address: u8) -> Option<String> {
     redis::cmd("HGET")
-        .arg(format!("leaderboards:{season}:{metric}:totals"))
+        .arg(format!("leaderboards:{metric}:totals"))
         .arg(Addr([address; 32]).hex())
         .query_async(conn)
         .await
@@ -117,18 +118,18 @@ async fn total(
 async fn redis_partial_exec_and_lost_ack_recover_without_duplicate_scores() {
     let (_process, mut conn) = redis_process().await;
     let xp = Contribution::new(Metric::Xp, Addr([2; 32]), 10);
-    commit(&mut conn, 1, 100, &[]).await.unwrap();
-    commit(&mut conn, 2, 129, std::slice::from_ref(&xp))
+    commit(&mut conn, 1, SEPTEMBER, &[]).await.unwrap();
+    commit(&mut conn, 2, SEPTEMBER_LAST, std::slice::from_ref(&xp))
         .await
         .unwrap();
-    commit(&mut conn, 2, 129, std::slice::from_ref(&xp))
+    commit(&mut conn, 2, SEPTEMBER_LAST, std::slice::from_ref(&xp))
         .await
         .unwrap();
-    assert_eq!(total(&mut conn, 0, "xp", 2).await.as_deref(), Some("10"));
+    assert_eq!(total(&mut conn, "xp", 2).await.as_deref(), Some("10"));
 
     // Redis executes HSET even when a later ZADD fails. This is real EXEC partial success,
     // not a mock pretending Redis rolls back runtime errors.
-    let rank_key = "leaderboards:0:xp:rank";
+    let rank_key = "leaderboards:xp:rank";
     let _: () = redis::cmd("DEL")
         .arg(rank_key)
         .query_async(&mut conn)
@@ -140,10 +141,12 @@ async fn redis_partial_exec_and_lost_ack_recover_without_duplicate_scores() {
         .query_async(&mut conn)
         .await
         .unwrap();
-    assert!(commit(&mut conn, 3, 129, std::slice::from_ref(&xp))
-        .await
-        .is_err());
-    assert_eq!(total(&mut conn, 0, "xp", 2).await.as_deref(), Some("20"));
+    assert!(
+        commit(&mut conn, 3, SEPTEMBER_LAST, std::slice::from_ref(&xp))
+            .await
+            .is_err()
+    );
+    assert_eq!(total(&mut conn, "xp", 2).await.as_deref(), Some("20"));
     assert_eq!(
         read_json::<Meta>(&mut conn, META_KEY)
             .await
@@ -163,13 +166,13 @@ async fn redis_partial_exec_and_lost_ack_recover_without_duplicate_scores() {
         .unwrap();
 
     // A framework batch replay starts BEFORE the pending checkpoint.
-    commit(&mut conn, 2, 129, std::slice::from_ref(&xp))
+    commit(&mut conn, 2, SEPTEMBER_LAST, std::slice::from_ref(&xp))
         .await
         .unwrap();
-    commit(&mut conn, 3, 129, std::slice::from_ref(&xp))
+    commit(&mut conn, 3, SEPTEMBER_LAST, std::slice::from_ref(&xp))
         .await
         .unwrap();
-    assert_eq!(total(&mut conn, 0, "xp", 2).await.as_deref(), Some("20"));
+    assert_eq!(total(&mut conn, "xp", 2).await.as_deref(), Some("20"));
     let members: Vec<String> = redis::cmd("ZRANGE")
         .arg(rank_key)
         .arg(0)
@@ -183,8 +186,8 @@ async fn redis_partial_exec_and_lost_ack_recover_without_duplicate_scores() {
         &mut conn,
         Meta {
             checkpoint: 4,
-            epoch: 129,
-            origin_epoch: 100,
+            timestamp_ms: SEPTEMBER_LAST,
+            reset_at_ms: OCTOBER,
         },
         &[xp],
         false,
@@ -199,12 +202,12 @@ async fn redis_partial_exec_and_lost_ack_recover_without_duplicate_scores() {
         .query_async(&mut conn)
         .await
         .unwrap();
-    commit(&mut conn, 4, 129, &[]).await.unwrap();
-    assert_eq!(total(&mut conn, 0, "xp", 2).await.as_deref(), Some("30"));
+    commit(&mut conn, 4, SEPTEMBER_LAST, &[]).await.unwrap();
+    assert_eq!(total(&mut conn, "xp", 2).await.as_deref(), Some("30"));
 }
 
 #[tokio::test]
-async fn redis_epoch_rollover_and_full_rebuild_produce_identical_rankings() {
+async fn redis_monthly_reset_and_full_rebuild_produce_identical_current_rankings() {
     let (_first, mut a) = redis_process().await;
     let (_second, mut b) = redis_process().await;
     let dungeon = |fight| Contribution {
@@ -214,11 +217,11 @@ async fn redis_epoch_rollover_and_full_rebuild_produce_identical_rankings() {
         dungeon_fight: Some(Id([fight; 32])),
     };
     for conn in [&mut a, &mut b] {
-        commit(conn, 1, 100, &[]).await.unwrap();
+        commit(conn, 1, SEPTEMBER, &[]).await.unwrap();
         commit(
             conn,
             2,
-            129,
+            SEPTEMBER_LAST,
             &[
                 dungeon(3),
                 dungeon(3),
@@ -227,52 +230,97 @@ async fn redis_epoch_rollover_and_full_rebuild_produce_identical_rankings() {
         )
         .await
         .unwrap();
-        commit(
+        assert_eq!(total(conn, "dungeons", 2).await.as_deref(), Some("1"));
+        let prepared = prepare(
             conn,
-            3,
-            130,
+            Meta {
+                checkpoint: 3,
+                timestamp_ms: OCTOBER,
+                reset_at_ms: NOVEMBER,
+            },
             &[
                 dungeon(3),
                 dungeon(4),
                 Contribution::new(Metric::Marketplace, Addr([2; 32]), 1),
             ],
+            true,
         )
         .await
         .unwrap();
-        assert_eq!(total(conn, 0, "dungeons", 2).await.as_deref(), Some("1"));
-        assert_eq!(total(conn, 1, "dungeons", 2).await.as_deref(), Some("1"));
-        assert_eq!(
-            total(conn, 0, "marketplace", 2).await,
-            Some(u64::MAX.to_string())
-        );
-        assert_eq!(total(conn, 1, "marketplace", 2).await.as_deref(), Some("1"));
+        apply(conn, &prepared).await.unwrap();
+        // Lost acknowledgement during reset must replay the same clear + absolute replacements.
+        let _: () = redis::cmd("SET")
+            .arg(PENDING_KEY)
+            .arg(serde_json::to_string(&prepared).unwrap())
+            .query_async(conn)
+            .await
+            .unwrap();
+        commit(conn, 2, SEPTEMBER_LAST, &[dungeon(3)])
+            .await
+            .unwrap();
+        commit(conn, 3, OCTOBER, &[dungeon(4)]).await.unwrap();
+        assert_eq!(total(conn, "dungeons", 2).await.as_deref(), Some("1"));
+        assert_eq!(total(conn, "marketplace", 2).await.as_deref(), Some("1"));
+        let keys = ranking_keys(conn).await.unwrap();
+        assert_eq!(keys.len(), 4);
+        assert!(keys.iter().all(|key| key.split(':').count() == 3));
     }
-    for season in 0..2 {
-        for metric in ["dungeons", "marketplace"] {
-            let key = format!("leaderboards:{season}:{metric}:rank");
-            let left: Vec<String> = redis::cmd("ZRANGE")
-                .arg(&key)
-                .arg(0)
-                .arg(-1)
-                .query_async(&mut a)
-                .await
-                .unwrap();
-            let right: Vec<String> = redis::cmd("ZRANGE")
-                .arg(&key)
-                .arg(0)
-                .arg(-1)
-                .query_async(&mut b)
-                .await
-                .unwrap();
-            assert_eq!(left, right);
-        }
+    for metric in ["dungeons", "marketplace"] {
+        let key = format!("leaderboards:{metric}:rank");
+        let left: Vec<String> = redis::cmd("ZRANGE")
+            .arg(&key)
+            .arg(0)
+            .arg(-1)
+            .query_async(&mut a)
+            .await
+            .unwrap();
+        let right: Vec<String> = redis::cmd("ZRANGE")
+            .arg(&key)
+            .arg(0)
+            .arg(-1)
+            .query_async(&mut b)
+            .await
+            .unwrap();
+        assert_eq!(left, right);
     }
+    commit(&mut a, 4, NOVEMBER, &[]).await.unwrap();
+    assert!(ranking_keys(&mut a).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn obsolete_ranking_tables_are_removed_when_the_current_month_initializes() {
+    let (_process, mut conn) = redis_process().await;
+    let _: () = redis::cmd("SET")
+        .arg(META_KEY)
+        .arg(r#"{"origin_epoch":100,"epoch":129,"checkpoint":1}"#)
+        .query_async(&mut conn)
+        .await
+        .unwrap();
+    for key in [
+        "leaderboards:0:xp:totals",
+        "leaderboards:12:xp:rank",
+        "leaderboards:xp:totals",
+    ] {
+        let _: () = redis::cmd("SET")
+            .arg(key)
+            .arg("obsolete")
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+    }
+    commit(&mut conn, 2, SEPTEMBER, &[]).await.unwrap();
+    assert!(ranking_keys(&mut conn).await.unwrap().is_empty());
+    let meta = read_json::<Meta>(&mut conn, META_KEY)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(meta.reset_at_ms, OCTOBER);
+    assert_eq!(meta.timestamp_ms, SEPTEMBER);
 }
 
 #[test]
-fn wire_season_and_metric_vocabulary_match_the_indexer() {
+fn wire_metric_vocabulary_matches_the_indexer() {
     let protocol = include_str!("../../../protocol/src/leaderboards.ts");
-    assert!(protocol.contains(&format!("LEADERBOARD_SEASON_EPOCHS = {SEASON_EPOCHS}")));
     for metric in [
         Metric::Xp,
         Metric::Kills,

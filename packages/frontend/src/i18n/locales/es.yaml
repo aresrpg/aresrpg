@@ -70,6 +70,7 @@ movement_sync_toast: Tu posición aún se está sincronizando. Sigue moviéndote
 fight_path_changed_toast: El tablero cambió antes de enviar tu movimiento. Tu turno se restauró — inténtalo de nuevo.
 party_member_unavailable_toast: Ese personaje ya pertenece a un grupo.
 fight_turn_already_forced_toast: Alguien ya forzó el final de este turno.
+fight_placement_unavailable_toast: Esa casilla inicial no está disponible. Elige otra casilla libre.
 network_testnet: TESTNET
 page_pending_title: Esta página se está reconstruyendo
 page_pending_body: Su lugar sigue visible mientras la restauramos de forma limpia.
@@ -487,8 +488,8 @@ mastery_page:
 airdrop_page:
   destination: 'Cartera del juego:'
   refresh: 'Actualizar'
-  title: 'Regalos'
-  subtitle: 'Importa tarjetas regalo a tu cartera del juego'
+  title: 'Airdrops'
+  subtitle: 'Recompensas de la comunidad y cómo reclamarlas'
   claim: 'Importar'
   holder_title: 'Cartera externa'
   holder_connect_hint: 'Conecta la cartera que contiene tus tarjetas regalo'
@@ -505,21 +506,47 @@ airdrop_page:
   gift_retry: 'Reclamar tarjeta'
   redeem: 'Canjear'
   empty: 'No hay tarjetas regalo en esta cartera'
-  set:
-    title: 'La colección'
-    subtitle: 'Objetos reservados — solo muestra'
-    error: 'No se pudo cargar la colección del airdrop'
-    retry: 'Reintentar'
-    empty: 'La colección del airdrop aún no está publicada'
-    no_preview: 'Vista previa pendiente'
-    aura: 'Aura'
-    aura_pending: 'Aura pendiente'
-    awaiting_ruling: 'Pendiente de decisión'
-    kind:
-      pet_glb: 'Mascota'
-      title_relic: 'Reliquia de título'
-      outfit: 'Atuendo'
+  claim_all: 'Reclamar recompensas'
+  catalogue_title: 'Airdrops disponibles'
+  check_wallet: '¿Cumples los requisitos de alguno de estos airdrops? Revisa la cartera utilizada en la instantánea. Conecta una cartera externa abajo para importar sus vales. Para recompensas enviadas a tu cartera de juego, inicia sesión con la misma cuenta de Google. Las tarjetas físicas se canjean con su código QR.'
+  rank_reward: 'Puestos {from}–{to}: {amount} de cada caja'
+  delivery:
+    wallet: 'Envío a la cartera'
+    nft: 'Regalo adjunto a tu NFT'
+    physical: 'Tarjeta regalo física'
+    game_wallet: 'Recompensas de veteranos de Hytale'
+  campaigns:
+    oeuftermath:
+      title: 'Aftermath Eggs · Oeuftermath'
+      description: 'Los titulares de Aftermath Egg en la instantánea reciben un vale para la mascota Oeuftermath. Revisa la cartera que tenía tu Egg entonces; comprarlo después no concede elegibilidad.'
+    suicune:
+      title: 'SWEEBS · Suicune'
+      description: 'Los titulares de SWEEBS en la instantánea reciben un vale para la mascota Suicune. Conecta la cartera elegible para importarlo a tu cuenta de juego.'
+    suifren_bullshark:
+      title: 'Suifren Bullsharks'
+      description: 'Se seleccionaron 500 carteras elegibles con Bullsharks de la instantánea. Revisa tu cartera de entonces para encontrar el vale. Tener un Bullshark no garantiza la selección.'
+    suifren_capy:
+      title: 'Suifren Capys'
+      description: 'Se seleccionaron 500 carteras elegibles con Capys de la instantánea. Revisa tu cartera de entonces para encontrar el vale. Tener un Capy no garantiza la selección.'
+    primemachin:
+      title: 'Prime Machin'
+      description: 'Los vales de mascotas se envían a los NFT Prime Machin de la instantánea. Recoge primero el regalo adjunto a tu NFT mediante Studio Mirai y conecta aquí la cartera receptora para importarlo.'
+    vaporeon:
+      title: 'Titulares de Vaporeon'
+      description: 'Las carteras seleccionadas de la instantánea de titulares de Vaporeon reciben un vale para la mascota Vaporeon. Revisa la cartera utilizada entonces e importa el vale aquí.'
+    sui_basecamp_singapore:
+      title: 'Sui Basecamp · Singapur'
+      description: 'Las Sui Crates se distribuyen como tarjetas regalo físicas en Sui Basecamp, Singapur. Escanea el código QR de tu tarjeta e inicia sesión para reclamar tu caja. Mantén el código privado hasta canjearlo.'
+    hytale_veterans:
+      title: 'Veteranos de Hytale · Top 100'
+      description: 'Un agradecimiento para los 100 mejores jugadores elegibles de Hytale, clasificados por colección, tiempo de juego, XP de personajes y profesiones. Las recompensas van a la dirección Sui registrada en la copia de Hytale. Usa la cuenta de Google original para acceder a esa cartera.'
+    hytale_supporters:
+      title: 'Seguidores de Hytale · Mark of the Unbroken'
+      description: 'Para cada cartera vinculada de Hytale con más de {threshold} SUI en compras registradas en la tienda, sin depender del top 100. El título se envía a la dirección Sui de la copia. Inicia sesión con la cuenta de Google original para encontrar tu vale.'
+
 settings_page:
+  day_night_cycle_label: Ciclo de día y noche
+  day_night_cycle_hint: Desactívalo para mantener el mundo a mediodía.
   title: 'Ajustes'
   subtitle: 'Tus preferencias de AresRPG'
   master_volume_label: Volumen general
@@ -1541,6 +1568,9 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: Te has quedado sin SUI para pagar las comisiones de transacción. Recarga tu cartera para seguir jugando.
 characters_page:
+  teleport_dungeon_blocked: 'Termina o abandona la mazmorra antes de teletransportarte.'
+  consume_busy: 'Este personaje debe estar inactivo para usar consumibles.'
+  progression_busy: 'Solo puedes modificar las características y los hechizos cuando este personaje esté inactivo.'
   delete_character: 'Eliminar personaje'
   delete_warning: 'La eliminación es permanente. Se pierde todo el progreso del personaje y su nombre permanece reservado.'
   delete_no_refund: 'No se reembolsará el coste de creación de {{amount}} SUI.'
@@ -1574,6 +1604,10 @@ characters_page:
   cancel: Cancelar
   equip_pending: Actualizando el equipo…
   equip_success: Equipo actualizado
+  consume_one: 'Consumir 1'
+  consume_until_full: 'Consumir hasta tener todos los PV'
+  consume_healing_insufficient: 'No hay suficientes objetos disponibles (se necesitan {{count}}).'
+  consume_healing_stock: 'Restaura {{heal}} PV por objeto · {{available}} disponibles'
   consume_pending: Usando el objeto…
   consume_success: Objeto usado
   already_full_hp: La vida ya está al máximo
@@ -1833,6 +1867,8 @@ characters_page:
       tool_label: 'Herramienta'
       crafts_label: 'Fabrica {{covers}}'
       xp_progress: '{{current}} / {{needed}} XP'
+      gather_time: 'Tiempo de recolección: {{seconds}} s'
+      next_gather_time: 'Siguiente · Nv. {{level}}: {{seconds}} s'
     recipes:
       empty_seed: 'Las recetas de este oficio llegan con el contenido de fabricación.'
       unlocked: 'Desbloqueadas'
@@ -2281,6 +2317,8 @@ kares_page:
   launch_market_cap_note: 'Si la venta cerrara ahora: precio limitado × 590.000 KARES disponibles al lanzamiento. Sin lanzamiento por debajo de la financiación mínima.'
 
 leaderboard_page:
+  unclaimed: 'Sin ocupar'
+  reset_in: 'Reinicio {{time}}'
   xp: 'XP de combate'
   kills: 'Monstruos derrotados'
   dungeons: 'Mazmorras'
@@ -2291,12 +2329,6 @@ leaderboard_page:
   feeding: 'Alimentación de mascotas'
   gathering: 'Recolección'
   category: 'Categoría'
-  previous: 'Anterior'
-  next: 'Siguiente'
-  current: 'Temporada actual'
-  season: 'Temporada {{season}}'
-  epochs: 'Épocas {{start}}–{{end}}'
-  remaining: 'Quedan {{epochs}} épocas'
   loading: 'Cargando…'
   user: 'Usuario'
   score: 'Puntuación'
@@ -2305,7 +2337,6 @@ leaderboard_page:
   current_jobs: 'Oficios actuales'
   unavailable: 'Las clasificaciones no están disponibles temporalmente.'
   retry: 'Reintentar'
-  empty: 'Sin actividad esta temporada.'
   suins_hint: 'Establece como nombre predeterminado un nombre o subnombre SuiNS que apunte a tu dirección AresRPG para mostrarlo aquí.'
   xp_description: 'XP obtenida en victorias por todos tus personajes. Las transferencias nunca mueven los puntos ganados.'
   kills_description: 'Monstruos derrotados en combates ganados, contados una vez por combate y dirección ganadora.'

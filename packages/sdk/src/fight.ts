@@ -372,11 +372,12 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
       custody?: KioskCustody
     }): Promise<FightReceipt> => {
       await hydrate_fight(fight)
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.forfeit_fight(tx, { fight_object: fight, fighter_idx, kiosk, cap }),
+      const receipt = await with_terminal_kiosk(
+        (tx, kiosk, personal) =>
+          sdk.doors.forfeit_fight_terminal(tx, { fight_object: fight, fighter_idx, kiosk, personal }),
         { custody, gas_scope: scope_of(fight) }
       )
-      return project_receipt(receipt)
+      return project_fight_boundary_receipt(receipt)
     },
 
     settle: async ({

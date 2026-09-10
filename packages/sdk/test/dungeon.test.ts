@@ -77,7 +77,7 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
       prepare_fight_loot: record('prepare_loot'),
       settle_dungeon_room: record('settle'),
       settle_last_dungeon_room: record('settle_last'),
-      give_up_dungeon_room: record('give_up'),
+      give_up_dungeon_room_terminal: record('give_up'),
       abandon_dungeon_run: record('abandon'),
     },
   }

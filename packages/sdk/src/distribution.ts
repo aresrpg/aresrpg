@@ -3,7 +3,6 @@
 // Free distribution actions through the SDK's cached transaction lifecycle. Auth owns the
 // kiosk lookup; this module owns only deterministic ids, PTB composition, and receipt projection.
 
-import { item_is_stackable } from '@aresrpg/immutable'
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import type { GiftcardRow } from '@aresrpg/protocol'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
@@ -11,14 +10,8 @@ import { isValidSuiAddress, normalizeSuiAddress, normalizeStructTag } from '@mys
 import { ZkSendClient } from '@mysten/zksend'
 
 import type { Sdk } from './client.ts'
-import { receipt_digest } from './cache.ts'
-
-export type GiftcardRedeem = Readonly<{
-  card: GiftcardRow
-  category: string
-  existing_item_id?: string | null
-  existing_kiosk_id?: string | null
-}>
+import { absorb_receipt, receipt_digest } from './cache.ts'
+import { MAX_GIFTCARDS_PER_TRANSACTION } from './giftcard_batch.ts'
 
 type GiftcardObject = Readonly<{
   objectId: string
@@ -81,23 +74,45 @@ export const claim_giftcard_link = async (
   return Object.freeze({ digest: claimed.Transaction.digest, giftcard })
 }
 
-export const redeem_giftcard = async (
+export const redeem_giftcards = async (
   sdk: Sdk,
   kiosk_cap: KioskOwnerCap | null,
-  redemption: GiftcardRedeem
+  cards: readonly GiftcardRow[],
+  received_transaction?: string
 ): Promise<Readonly<{ digest: string; kiosk_cap: KioskOwnerCap }>> => {
-  await sdk.hydrate_unknown([redemption.card.id, redemption.card.template])
+  if (cards.length < 1 || cards.length > MAX_GIFTCARDS_PER_TRANSACTION)
+    throw new Error('Redeem 1..100 giftcards at a time')
+  const ids = cards.map(({ id }) => normalizeSuiAddress(id))
+  if (new Set(ids).size !== ids.length) throw new Error('A giftcard cannot appear twice in a batch')
+  if (received_transaction) {
+    const receipt = await sdk.sui_client.core.waitForTransaction({
+      digest: received_transaction,
+      include: { effects: true, objectTypes: true },
+      timeout: 20_000,
+    })
+    if (receipt_digest(receipt) !== received_transaction) throw new Error('Giftcard transfer receipt does not match')
+    absorb_receipt(sdk.cache, receipt)
+  }
+  // Vouchers can enter this wallet through a different SDK session. Their owned refs are not stable.
+  await sdk.hydrate(ids)
+  await sdk.hydrate_unknown(cards.map(({ template }) => template))
   const tx = sdk.tx()
   sdk.with_personal_kiosk(tx, kiosk_cap, (kiosk, cap) => {
-    sdk.doors.redeem_giftcard(tx, {
-      card: redemption.card.id,
-      template: redemption.card.template,
-      existing: item_is_stackable(redemption.category) ? (redemption.existing_item_id ?? null) : null,
-      kiosk,
-      cap,
-    })
+    cards.forEach((card) =>
+      sdk.doors.redeem_giftcard(tx, {
+        card: card.id,
+        template: card.template,
+        // Each voucher constructs its own stack; inventory already groups fragments by item type.
+        existing: null,
+        kiosk,
+        cap,
+      })
+    )
   })
-  const { receipt, kiosk_cap: settled_kiosk_cap } = await sdk.execute_personal_kiosk(tx, kiosk_cap)
+  // A claim may construct 100 items, so its cost is not the fixed single-action game budget.
+  const { receipt, kiosk_cap: settled_kiosk_cap } = await sdk.execute_personal_kiosk(tx, kiosk_cap, {
+    budget: 'estimate',
+  })
   return Object.freeze({ digest: receipt_digest(receipt), kiosk_cap: settled_kiosk_cap })
 }
 
@@ -127,7 +142,8 @@ export const transfer_giftcards = async (
   sender: string,
   transfers: readonly GiftcardTransfer[]
 ): Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>> => {
-  if (transfers.length < 1 || transfers.length > 100) throw new Error('Transfer 1..100 giftcards at a time')
+  if (transfers.length < 1 || transfers.length > MAX_GIFTCARDS_PER_TRANSACTION)
+    throw new Error('Transfer 1..100 giftcards at a time')
   const ids = transfers.map(({ id }) => normalizeSuiAddress(id))
   if (new Set(ids).size !== ids.length) throw new Error('A giftcard cannot appear twice in a batch')
   if (transfers.some(({ recipient }) => !isValidSuiAddress(recipient))) throw new Error('Invalid giftcard recipient')

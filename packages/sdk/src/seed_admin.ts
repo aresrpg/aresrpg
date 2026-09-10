@@ -219,30 +219,30 @@ export const create_seed_admin = async ({
   sdk,
   content: authored_content,
   config,
-  gift_item_type,
+  gift_campaign,
 }: Readonly<{
   sdk: Sdk
   content: SeedContent
   config: SeedAdminConfig
-  gift_item_type?: string
+  gift_campaign?: string
 }>): Promise<SeedAdminSession> => {
   const content =
-    gift_item_type === undefined
+    gift_campaign === undefined
       ? authored_content
       : {
           ...authored_content,
           airdrop: {
             giftcards: giftcards_for_network(sdk.network, authored_content).filter(
-              (card) => card.item_type === gift_item_type
+              (card) => card.campaign === gift_campaign
             ),
           },
         }
-  if (gift_item_type !== undefined && !content.airdrop.giftcards.length)
-    throw new Error(`No configured ${gift_item_type} gifts on ${sdk.network}`)
+  if (gift_campaign !== undefined && !content.airdrop.giftcards.length)
+    throw new Error(`No configured ${gift_campaign} gifts on ${sdk.network}`)
   assert_config(sdk, content, config)
   const full_plan = create_seed_plan(sdk, content)
   const plan = {
-    batches: full_plan.batches.filter((batch) => gift_item_type === undefined || batch.phase === 'supply'),
+    batches: full_plan.batches.filter((batch) => gift_campaign === undefined || batch.phase === 'supply'),
   }
   const claims = new Map(
     giftcards_for_network(sdk.network, content).map((card) => {
@@ -336,7 +336,7 @@ export const create_seed_admin = async ({
   }
 
   const sync_rows = seed_sync_rows(sdk, content).filter(
-    (row) => gift_item_type === undefined || row.domain === 'giftcard'
+    (row) => gift_campaign === undefined || row.domain === 'giftcard'
   )
   const revision = (id: string): string | null => object_revision(sdk.cache, id)
   const board_catalog = sync_rows.find(({ domain }) => domain === 'board')?.chain_id ?? null
@@ -364,12 +364,12 @@ export const create_seed_admin = async ({
   // THE CLASS SPELL LAW: exactly twenty spells per class on the Dofus unlock ladder. The
   // validator enforces it in CI; this second gate stops a locally edited file from ever
   // being written (chain objects are forever). Reads still work so the page can SHOW it.
-  const law_errors = gift_item_type === undefined ? class_spell_shape_errors(content.spells) : []
+  const law_errors = gift_campaign === undefined ? class_spell_shape_errors(content.spells) : []
   const sync_addresses = Object.freeze([...new Set(sync_rows.flatMap(({ addresses }) => addresses))])
   const check_changes = async (ledger: SeedLedger): Promise<SeedSyncView> => {
     await hydrate_ids(sync_addresses)
     const scoped_ledger =
-      gift_item_type === undefined
+      gift_campaign === undefined
         ? ledger
         : Object.fromEntries(sync_rows.flatMap(({ key }) => (ledger[key] ? [[key, ledger[key]]] : [])))
     const view = seed_sync_view(sync_rows, scoped_ledger, exists, await read_board_len(), revision)
@@ -388,7 +388,7 @@ export const create_seed_admin = async ({
     check_changes,
     read_frozen,
     apply_changes: async (ledger, hooks) => {
-      if (gift_item_type !== undefined) throw new Error('Gift issuance cannot update content')
+      if (gift_campaign !== undefined) throw new Error('Gift issuance cannot update content')
       const view = await check_changes(ledger)
       if (view.errors.length) throw new Error(`Nothing was written — fix the files first: ${view.errors.join(' · ')}`)
       const board_len = await read_board_len()
@@ -401,7 +401,7 @@ export const create_seed_admin = async ({
         batches,
         sync_rows,
         ledger,
-        async ({ transaction }) => receipt_digest(await sdk.execute(transaction)),
+        async ({ build }) => receipt_digest(await sdk.execute(build())),
         hooks,
         revision
       )
@@ -457,7 +457,7 @@ export const create_seed_admin = async ({
       return Object.freeze({ batch: batch_id, digest, snapshot: await refresh_after_write(batch_id, digest) })
     },
     freeze_forever: async () => {
-      if (gift_item_type !== undefined) throw new Error('Gift issuance cannot freeze content')
+      if (gift_campaign !== undefined) throw new Error('Gift issuance cannot freeze content')
       const snapshot = await refresh()
       if (snapshot.batches.some(({ state }) => state !== 'complete'))
         throw new Error('Every seed batch must complete before freezing the game forever')

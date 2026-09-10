@@ -24,7 +24,7 @@ const RIG_ORDER = Object.freeze([
   'boots',
 ] as const satisfies readonly (typeof rig_slots)[number][])
 
-import { item_icon } from '../content/assets.ts'
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 /** What a slot needs to paint — the seed catalog rows and the projected chain rows both fit. */
@@ -84,8 +84,8 @@ const EquipmentSlot = ({
     >
       {item ? (
         <>
-          {item_icon(item.item_type) ? (
-            <img alt="" className="inv__slot-art" src={item_icon(item.item_type)!} />
+          {item_detail_icon(item.item_type) ? (
+            <img alt="" className="inv__slot-art" src={item_detail_icon(item.item_type)!} />
           ) : (
             <Glyph className="inv__slot-glyph" />
           )}

@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { LEADERBOARD_METRICS, type LeaderboardEntry } from '@aresrpg/protocol'
+import { LEADERBOARD_LIMIT, LEADERBOARD_METRICS, type LeaderboardEntry } from '@aresrpg/protocol'
 
+import podium_first from '../assets/leaderboards/podium-1.png'
+import podium_second from '../assets/leaderboards/podium-2.png'
+import podium_third from '../assets/leaderboards/podium-3.png'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
@@ -74,14 +77,17 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   const text = copy_text(copy.leaderboard_page)
   const self = entry.address === address
   return (
-    <div role="row" className={`leaderboard-row text-[11px] ${self ? 'leaderboard-row-self' : ''}`}>
+    <div role="row" className={`leaderboard-row leaderboard-row-filled text-xs ${self ? 'leaderboard-row-self' : ''}`}>
       <span role="cell" className="text-[10px] text-muted">
         {entry.rank}
       </span>
       <div role="cell" className="flex min-w-0 flex-col gap-1">
-        <span title={entry.address} className="truncate text-text">
-          {entry.name ?? display_address(entry.address)}
-        </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span title={entry.address} className="truncate text-text">
+            {entry.name ?? display_address(entry.address)}
+          </span>
+          {self && <span className="shrink-0 text-[10px] text-cyan uppercase">{text('you')}</span>}
+        </div>
         {['xp', 'jobs'].includes(observation.metric) && <EntryBadges entry={entry} />}
       </div>
       <span
@@ -91,9 +97,6 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
       >
         {compact_leaderboard_score(entry.score, observation.metric, locale)}
       </span>
-      <span role="cell" className="text-right text-[9px] text-muted">
-        {self ? text('you') : '—'}
-      </span>
     </div>
   )
 }
@@ -101,43 +104,37 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
 const Podium = () => {
   const { snapshot, observation } = useAppStore(({ leaderboards }) => leaderboards)
   const locale = useAppStore(({ locale }) => locale)
-  if (!snapshot?.entries.length) return null
-  const positions = [1, 0, 2]
-  const heights = [80, 100, 70]
-  const colors = ['#9ca3af', '#c8963c', '#cd7f32']
+  const copy = useAppStore(({ copy }) => copy)
+  if (!copy) return null
+  const text = copy_text(copy.leaderboard_page)
   return (
-    <div className="flex w-full items-end justify-center gap-2 px-2">
-      {positions.map((position, index) => {
-        const entry = snapshot.entries[position]
-        return entry ? (
-          <div
-            key={entry.address}
-            className="leaderboard-podium min-w-0 flex-1 max-w-[120px] lg:max-w-[140px]"
-            style={{
-              minHeight: heights[index],
-              borderTopColor: colors[index],
-              borderTopWidth: 3,
-              animationDelay: `${index * 60}ms`,
-            }}
-          >
-            <div className="text-[9px] tracking-[0.2em]" style={{ color: colors[index] }}>
-              #{entry.rank}
-            </div>
-            <span
-              title={entry.address}
-              className="mt-1 max-w-full truncate text-center text-[11px] font-semibold text-text"
-            >
-              {entry.name ?? display_address(entry.address)}
+    <div className="leaderboard-standings">
+      {[1, 0, 2].map((position) => {
+        const entry = snapshot?.entries[position]
+        return (
+          <div key={position} className="leaderboard-podium" data-rank={position + 1}>
+            <img
+              className="leaderboard-medal"
+              src={[podium_first, podium_second, podium_third][position]}
+              alt=""
+              width={128}
+              height={128}
+              draggable={false}
+            />
+            <span title={entry?.address} className="w-full truncate text-center text-xs text-text">
+              {entry ? (entry.name ?? display_address(entry.address)) : text('unclaimed')}
             </span>
             <div
-              className="mt-1 max-w-full text-center text-[12px] font-bold break-all"
-              style={{ color: colors[index] }}
+              className="mt-2 max-w-full text-center text-lg font-semibold break-all"
+              title={entry ? leaderboard_score(entry.score, observation.metric, locale) : undefined}
             >
-              {compact_leaderboard_score(entry.score, observation.metric, locale)}
+              {entry ? compact_leaderboard_score(entry.score, observation.metric, locale) : '—'}
             </div>
+            <span className="mt-1 text-center text-[10px] tracking-wide text-muted uppercase">
+              {text(observation.metric)}
+            </span>
+            <div className="leaderboard-step">#{position + 1}</div>
           </div>
-        ) : (
-          <div key={position} className="min-w-0 max-w-[120px] flex-1 lg:max-w-[140px]" />
         )
       })}
     </div>
@@ -162,7 +159,7 @@ const CategoryTabs = () => {
           role="tab"
           aria-selected={metric === observation.metric}
           className={`leaderboard-category ${metric === observation.metric ? 'active' : ''}`}
-          onClick={() => dispatch_app({ type: 'leaderboards/select', metric, season: observation.season })}
+          onClick={() => dispatch_app({ type: 'leaderboards/select', metric })}
         >
           {text(metric)}
         </button>
@@ -171,45 +168,17 @@ const CategoryTabs = () => {
   )
 }
 
-const SeasonControls = () => {
+const ResetCountdown = () => {
   const copy = useAppStore(({ copy }) => copy)
-  const { observation, snapshot } = useAppStore(({ leaderboards }) => leaderboards)
+  const snapshot = useAppStore(({ leaderboards }) => leaderboards.snapshot)
+  const locale = useAppStore(({ locale }) => locale)
   if (!copy || !snapshot) return null
-  const text = copy_text(copy.leaderboard_page)
-  const select = (season: number | null): void =>
-    dispatch_app({ type: 'leaderboards/select', metric: observation.metric, season })
-  const next = snapshot.season + 1 === snapshot.current_season ? null : snapshot.season + 1
+  const days = Math.max(0, Math.ceil((snapshot.reset_at_ms - snapshot.timestamp_ms) / 86_400_000))
+  const time = new Intl.RelativeTimeFormat(locale, { numeric: 'always' }).format(days, 'day')
   return (
-    <div className="flex flex-wrap items-center gap-3 text-[9px] tracking-[0.12em] text-muted uppercase">
-      <button
-        type="button"
-        className="leaderboard-time"
-        disabled={snapshot.season === 0}
-        onClick={() => select(snapshot.season - 1)}
-      >
-        {text('previous')}
-      </button>
-      <span className="text-gold">{text('season', { season: snapshot.season + 1 })}</span>
-      <button
-        type="button"
-        className="leaderboard-time"
-        disabled={snapshot.season === snapshot.current_season}
-        onClick={() => select(next)}
-      >
-        {text('next')}
-      </button>
-      <button
-        type="button"
-        className={`leaderboard-time ${observation.season === null ? 'active' : ''}`}
-        onClick={() => select(null)}
-      >
-        {text('current')}
-      </button>
-      <span>{text('epochs', { start: snapshot.start_epoch, end: snapshot.end_epoch - 1 })}</span>
-      {snapshot.season === snapshot.current_season && (
-        <span>{text('remaining', { epochs: snapshot.end_epoch - snapshot.epoch })}</span>
-      )}
-    </div>
+    <p className="text-[10px] tracking-[0.12em] text-gold uppercase">
+      {copy_text(copy.leaderboard_page)('reset_in', { time })}
+    </p>
   )
 }
 
@@ -221,7 +190,11 @@ const ErrorNotice = () => {
   return (
     <div role="alert" className="flex items-center gap-3 text-[10px] text-muted">
       {text('unavailable')}
-      <button type="button" className="leaderboard-time" onClick={() => dispatch_app({ type: 'leaderboards/refresh' })}>
+      <button
+        type="button"
+        className="leaderboard-action"
+        onClick={() => dispatch_app({ type: 'leaderboards/refresh' })}
+      >
         {text('retry')}
       </button>
     </div>
@@ -233,38 +206,47 @@ const Rankings = () => {
   const { snapshot, observation, error } = useAppStore(({ leaderboards }) => leaderboards)
   if (!copy) return null
   const text = copy_text(copy.leaderboard_page)
-  if (!snapshot)
-    return error ? null : (
-      <p role="status" className="animate-pulse text-[10px] tracking-[0.2em] text-muted uppercase">
-        {text('loading')}
-      </p>
-    )
-  if (!snapshot.entries.length)
-    return <div className="py-16 text-center text-[10px] tracking-[0.2em] text-muted uppercase">{text('empty')}</div>
-  const { self } = snapshot
+  const self = snapshot?.self
   const outside = self && !snapshot.entries.some(({ address }) => address === self.address)
   return (
     <>
+      {!snapshot && !error && (
+        <p role="status" className="animate-pulse text-[10px] tracking-[0.2em] text-muted uppercase">
+          {text('loading')}
+        </p>
+      )}
       <Podium />
       <div
         role="table"
         aria-label={text(observation.metric)}
-        className="leaderboard-glass flex flex-col divide-y divide-border/50"
+        className="flex flex-col divide-y divide-border/50 border border-border bg-surface-low"
       >
         <div
           role="row"
-          className="leaderboard-row border-b border-border text-[9px] tracking-[0.1em] text-muted uppercase"
+          className="leaderboard-row sticky top-0 z-1 border-b border-border bg-surface text-[10px] tracking-[0.1em] text-muted uppercase"
         >
           <span role="columnheader">#</span>
           <span role="columnheader">{text('user')}</span>
           <span role="columnheader" className="text-right">
             {text('score')}
           </span>
-          <span />
         </div>
-        {snapshot.entries.map((entry) => (
-          <EntryRow key={entry.address} entry={entry} />
-        ))}
+        {Array.from({ length: LEADERBOARD_LIMIT }, (_, index) => {
+          const entry = snapshot?.entries[index]
+          return entry ? (
+            <EntryRow key={index} entry={entry} />
+          ) : (
+            <div key={index} role="row" className="leaderboard-row text-[11px] text-muted">
+              <span role="cell" className="text-[10px]">
+                {index + 1}
+              </span>
+              <span role="cell">—</span>
+              <span role="cell" className="text-right">
+                —
+              </span>
+            </div>
+          )
+        })}
       </div>
       {outside && (
         <div role="table" aria-label={text('you')}>
@@ -285,8 +267,11 @@ export default function LeaderboardPage() {
       className="pointer-events-auto z-12 flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-3 lg:p-6"
       aria-label={copy.leaderboard}
     >
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-2xl font-medium text-text">{copy.leaderboard}</h1>
+        <ResetCountdown />
+      </header>
       <CategoryTabs />
-      <SeasonControls />
       <p className="text-[10px] leading-5 text-muted">{text(`${metric}_description`)}</p>
       <ErrorNotice />
       <Rankings />

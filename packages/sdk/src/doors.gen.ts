@@ -727,6 +727,32 @@ export const forfeit_fight = (
   })
 
 /**
+ * `api::forfeit_fight_terminal` — TERMINAL (&Random): last command of its transaction.
+ * @arg fight_object — &mut Fight
+ * @arg fighter_idx — u64
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const forfeit_fight_terminal = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { fight_object: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; personal: Resolvable }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::forfeit_fight_terminal`,
+    arguments: [
+      ctx.obj(tx, args.fight_object, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'character_policy', false),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `api::prepare_fight_loot`
  * @arg template — &ItemTemplate
  * @arg existing — Option<ID>
@@ -1842,6 +1868,32 @@ export const give_up_dungeon_room = (
   })
 
 /**
+ * `api::give_up_dungeon_room_terminal` — TERMINAL (&Random): last command of its transaction.
+ * @arg fight_object — &mut Fight
+ * @arg fighter_idx — u64
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const give_up_dungeon_room_terminal = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { fight_object: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; personal: Resolvable }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::give_up_dungeon_room_terminal`,
+    arguments: [
+      ctx.obj(tx, args.fight_object, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'character_policy', false),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
  * `api::abandon_dungeon_run`
  * @arg kiosk — &mut Kiosk
  * @arg cap — &KioskOwnerCap
@@ -2123,6 +2175,32 @@ export const forfeit_kolizeum = (
       ctx.obj(tx, args.kiosk, true),
       ctx.obj(tx, args.cap, false),
       ctx.pin(tx, 'character_policy', false),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
+ * `api::forfeit_kolizeum_terminal` — TERMINAL (&Random): last command of its transaction.
+ * @arg fight_object — &mut Fight
+ * @arg fighter_idx — u64
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const forfeit_kolizeum_terminal = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { fight_object: Resolvable; fighter_idx: bigint | number | string; kiosk: Resolvable; personal: Resolvable }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::forfeit_kolizeum_terminal`,
+    arguments: [
+      ctx.obj(tx, args.fight_object, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'character_policy', false),
+      tx.object.random(),
       ctx.pin(tx, 'version', false),
       tx.object.clock(),
     ],
@@ -2523,6 +2601,7 @@ export const DOORS = {
   end_fight_turn: { params: ['fight_object'], terminal: true },
   crank_fight: { params: ['fight_object'], terminal: true },
   forfeit_fight: { params: ['fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
+  forfeit_fight_terminal: { params: ['fight_object', 'fighter_idx', 'kiosk', 'personal'], terminal: true },
   prepare_fight_loot: { params: ['template', 'existing'], terminal: false },
   start_first_daily_quest: { params: ['world_content', 'kiosk', 'personal', 'character_id'], terminal: true },
   start_daily_quest: {
@@ -2637,6 +2716,7 @@ export const DOORS = {
     terminal: true,
   },
   give_up_dungeon_room: { params: ['fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
+  give_up_dungeon_room_terminal: { params: ['fight_object', 'fighter_idx', 'kiosk', 'personal'], terminal: true },
   abandon_dungeon_run: { params: ['kiosk', 'cap', 'character_id'], terminal: false },
   create_kolizeum: {
     params: ['pledge', 'format', 'level_min', 'level_max', 'access', 'kiosk', 'personal', 'character_id', 'catalog'],
@@ -2666,6 +2746,7 @@ export const DOORS = {
   settle_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx', 'kiosk', 'personal'], terminal: false },
   exit_kolizeum: { params: ['lobby', 'fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
   forfeit_kolizeum: { params: ['fight_object', 'fighter_idx', 'kiosk', 'cap'], terminal: false },
+  forfeit_kolizeum_terminal: { params: ['fight_object', 'fighter_idx', 'kiosk', 'personal'], terminal: true },
   close_kolizeum: { params: ['lobby', 'fight_object'], terminal: false },
   create_friend_list: { params: ['first'], terminal: false },
   set_friend: { params: ['list', 'addr', 'present'], terminal: false },

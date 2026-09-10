@@ -12,7 +12,6 @@ use crate::events;
 use crate::ownership::ObjView;
 use crate::publish::TxView;
 
-pub const SEASON_EPOCHS: u64 = 30;
 pub const META_KEY: &str = "leaderboards:meta";
 pub const CHANNEL: &str = "evt:leaderboards";
 
@@ -51,7 +50,7 @@ pub struct Contribution {
     pub metric: Metric,
     pub address: Addr,
     pub amount: u64,
-    /// Only dungeon completions need a marker across transactions AND seasons.
+    /// Only dungeon completions need a marker across transactions and monthly resets.
     pub dungeon_fight: Option<Id>,
 }
 

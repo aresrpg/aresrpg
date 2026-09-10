@@ -109,6 +109,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     world.set_audio_volume(master_volume_from(state.settings.master_volume))
     world.set_flattened(state.settings.flat_mode)
     world.set_footsteps_enabled(state.settings.footsteps_enabled !== false)
+    world.set_day_night_cycle_enabled(state.settings.day_night_cycle_enabled !== false)
   }
   const sync_target = (state: AppState, checkpoint_only = false): void => {
     if (!world) return
@@ -401,8 +402,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     set_self_tag(hover_under_cursor(event)?.self ?? false)
   }
 
-  // right-click on a nearby BODY opens the player context menu; anywhere else keeps the
-  // camera's right-drag untouched
+  // Right-click player bodies for their menu; elsewhere keep the camera's right-drag.
   const on_context_menu = (event: MouseEvent): void => {
     event.preventDefault()
     const hover = hover_under_cursor(event)
@@ -424,7 +424,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     next_canvas.addEventListener('contextmenu', on_context_menu)
     next_canvas.addEventListener('mousemove', on_mouse_move)
     mounted_world_name = world_name
-    const boot_character_id = get_state().session.selected_character_id
+    const boot_anchor = JSON.stringify(selected_anchor(get_state()))
     const boot_position = resolve_selected_position(get_state())
     const terrain = world_terrain(world_name)
     if (!terrain) {
@@ -450,7 +450,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     void Promise.all([import('../game/core/world.ts'), boot_position])
       .then(([{ create_world: create }, initial_position]) => {
         if (signal.aborted || canvas !== next_canvas || generation !== own_generation) return
-        if (get_state().session.selected_character_id !== boot_character_id) {
+        if (JSON.stringify(selected_anchor(get_state())) !== boot_anchor) {
           mount(next_canvas)
           return
         }

@@ -11,7 +11,8 @@ const FOLLOW_SPACING = 2
 export const PARTY_FOLLOW_JOIN_DISTANCE = 3
 
 export type PartyFollowPoint = Readonly<{ x: number; y: number; z: number }>
-export type PartyFollowerView = PartyFollowPoint & Readonly<{ character_id: string; world: string; distance: number }>
+export type PartyFollowerView = PartyFollowPoint &
+  Readonly<{ character_id: string; world: string; checkpoint: string; distance: number }>
 export type PartyFollowSnapshot = Readonly<{
   party_id: string | null
   leader_id: string | null
@@ -23,7 +24,7 @@ type PartyFollowInput = Readonly<{
   leader_id: string
   world: string
   target?: PartyFollowPoint
-  followers: readonly Readonly<{ character_id: string; x: number; y: number; z: number }>[]
+  followers: readonly Readonly<{ character_id: string; checkpoint: string; x: number; y: number; z: number }>[]
 }>
 
 const EMPTY: PartyFollowSnapshot = Object.freeze({ party_id: null, leader_id: null, followers: Object.freeze([]) })
@@ -78,13 +79,14 @@ const step_follower = (
   world: string,
   index: number
 ): PartyFollowerView => {
-  const current = previous.get(source.character_id) ?? owned_character_position(source.character_id, world) ?? source
+  const current = owned_character_position(source.character_id, world, source.checkpoint) ?? source
   const point = { x: current.x, y: current.y, z: current.z }
-  const distance = 'distance' in current && typeof current.distance === 'number' ? current.distance : Infinity
+  const last = previous.get(source.character_id)
+  const distance = last?.checkpoint === source.checkpoint ? last.distance : Infinity
   const stepped = target
     ? advance_party_follower(point, party_follower_target(target, index), elapsed_ms)
     : { ...point, distance }
-  const row = Object.freeze({ character_id: source.character_id, world, ...stepped })
+  const row = Object.freeze({ character_id: source.character_id, world, checkpoint: source.checkpoint, ...stepped })
   record_owned_character_position(source.character_id, world, row)
   return row
 }

@@ -18,7 +18,7 @@ import { get_zones } from '../reads/get_zones.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_fight } from '../reads/get_fight.ts'
 import { equipment_updates } from '../equipment_updates.ts'
-import { refreshed_world_anchor } from '../world_anchor.ts'
+import { refreshed_roster_anchors, refreshed_world_anchor } from '../world_anchor.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
@@ -95,9 +95,7 @@ export default {
             )
           )
         ),
-        characters: Object.fromEntries(
-          Object.entries(state.characters).filter(([character_id]) => character_ids.has(character_id))
-        ),
+        characters: refreshed_roster_anchors(state.characters, action.characters),
       }
     }
     if (action.type === 'action/move') {
@@ -506,7 +504,7 @@ export default {
     })
     events.on('packet/position', (action: Extract<PlayerAction, { type: 'packet/position' }>) => {
       const tracked = get_state().characters[action.character_id]
-      if (!tracked || tracked.fight || tracked.dungeon_run) return
+      if (!tracked || tracked.fight || tracked.dungeon_run || action.checkpoint !== tracked.checkpoint) return
       const { presence: character, move_anchor } = tracked
       const now = Date.now()
       // THE AUTHORED SPEED LAW as a token bucket: time banks travel allowance (uncapped

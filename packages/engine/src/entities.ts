@@ -20,6 +20,7 @@ import {
   type SkinnedMesh,
 } from 'three'
 
+import { update_skinned_bounds } from './skinned_bounds.ts'
 import { create_entity_model, type EntityModel } from './entity_model.ts'
 import { BOARD_FLOOR_THICKNESS } from './fight_board_surface.ts'
 import { attach_invisibility, type InvisibilityEffect } from './invisibility.ts'
@@ -551,10 +552,8 @@ export const create_entity_layer = ({
       }
       return true
     },
-    // The LIVE crown: bounds recomputed from the current bone pose (SkinnedMesh.computeBoundingBox
-    // skins the vertices), so a label riding this point tracks the animated body every frame —
-    // the load-pose anchor_offset drifts as soon as a clip moves the mesh. Per-frame cost is one
-    // vertex sweep; callers use it for the FEW labeled entities, never in bulk.
+    // The live crown follows the current bone pose. Cached skin-group hulls preserve the
+    // animated bounds while avoiding a full vertex sweep for every visible label.
     live_crown: (id: string): Vector3 | null => {
       const root = entities.get(id)?.object
       if (!root?.visible) return null
@@ -563,8 +562,7 @@ export const create_entity_layer = ({
       root.traverse((node) => {
         const skinned = node as SkinnedMesh
         if (skinned.isSkinnedMesh) {
-          skinned.computeBoundingBox()
-          bounds.union(skinned.boundingBox.clone().applyMatrix4(skinned.matrixWorld))
+          bounds.union(update_skinned_bounds(skinned).clone().applyMatrix4(skinned.matrixWorld))
           return
         }
         const mesh = node as Mesh

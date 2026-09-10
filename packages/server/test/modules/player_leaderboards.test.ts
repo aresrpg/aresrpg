@@ -12,11 +12,8 @@ import type { PlayerContext, PlayerState } from '../../src/player.ts'
 const address = `0x${'01'.repeat(32)}`
 const snapshot = (observation: LeaderboardObservation): LeaderboardSnapshot => ({
   observation,
-  season: 0,
-  current_season: 0,
-  start_epoch: 100,
-  end_epoch: 130,
-  epoch: 100,
+  reset_at_ms: Date.UTC(2026, 9, 1),
+  timestamp_ms: Date.UTC(2026, 8, 9),
   checkpoint: 50,
   entries: [{ address, name: null, score: '10', rank: 1, characters: [], character_count: 0, jobs: [] }],
   self: null,
@@ -65,8 +62,8 @@ test('only the selected window responds, enrichment is bounded, and closing rele
   const h = harness()
   try {
     expect(h.reads).toHaveLength(0)
-    const first = { id: 1, metric: 'xp' as const, season: null }
-    const second = { id: 2, metric: 'kills' as const, season: null }
+    const first = { id: 1, metric: 'xp' as const }
+    const second = { id: 2, metric: 'kills' as const }
     h.observe(first)
     h.observe(second)
     h.reads[1]!.resolve(snapshot(second))

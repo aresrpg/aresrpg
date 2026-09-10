@@ -70,6 +70,7 @@ movement_sync_toast: Votre position est encore en cours de synchronisation. Cont
 fight_path_changed_toast: Le plateau a changé avant l’envoi de votre déplacement. Votre tour a été restauré — réessayez.
 party_member_unavailable_toast: Ce personnage appartient déjà à un groupe.
 fight_turn_already_forced_toast: Quelqu’un a déjà forcé la fin de ce tour.
+fight_placement_unavailable_toast: Cette case de départ est indisponible. Choisissez une autre case libre.
 network_testnet: TESTNET
 page_pending_title: Cette page est en reconstruction
 page_pending_body: Sa place reste visible pendant que nous la restaurons proprement.
@@ -487,8 +488,8 @@ mastery_page:
 airdrop_page:
   destination: 'Portefeuille de jeu :'
   refresh: 'Actualiser'
-  title: 'Cadeaux'
-  subtitle: 'Importez vos cartes cadeaux dans votre portefeuille de jeu'
+  title: 'Airdrops'
+  subtitle: 'Récompenses communautaires et récupération'
   claim: 'Importer'
   holder_title: 'Portefeuille externe'
   holder_connect_hint: 'Connectez le portefeuille contenant vos cartes cadeaux'
@@ -505,21 +506,47 @@ airdrop_page:
   gift_retry: 'Récupérer la carte'
   redeem: 'Utiliser'
   empty: 'Aucune carte cadeau dans ce portefeuille'
-  set:
-    title: 'La collection'
-    subtitle: 'Objets réservés — vitrine uniquement'
-    error: 'Impossible de charger la collection airdrop'
-    retry: 'Réessayer'
-    empty: "La collection airdrop n'est pas encore publiée"
-    no_preview: 'Aperçu à venir'
-    aura: 'Aura'
-    aura_pending: 'Aura à venir'
-    awaiting_ruling: 'En attente de décision'
-    kind:
-      pet_glb: 'Familier'
-      title_relic: 'Relique de titre'
-      outfit: 'Tenue'
+  claim_all: 'Récupérer les récompenses'
+  catalogue_title: 'Airdrops pris en charge'
+  check_wallet: 'Éligible à un de ces airdrops ? Vérifiez le portefeuille utilisé lors du snapshot. Connectez un portefeuille externe ci-dessous pour importer ses bons. Pour les récompenses envoyées au portefeuille de jeu, connectez-vous avec le même compte Google. Les cartes physiques se récupèrent via leur QR code.'
+  rank_reward: 'Rangs {from}–{to} : {amount} exemplaire(s) de chaque caisse'
+  delivery:
+    wallet: 'Envoi au portefeuille'
+    nft: 'Cadeau attaché au NFT'
+    physical: 'Carte cadeau physique'
+    game_wallet: 'Récompenses des vétérans Hytale'
+  campaigns:
+    oeuftermath:
+      title: 'Aftermath Eggs · Oeuftermath'
+      description: 'Les détenteurs d’un Aftermath Egg lors du snapshot reçoivent un bon pour le familier Oeuftermath. Vérifiez le portefeuille qui détenait l’œuf à cette date ; un achat ultérieur ne donne pas droit au cadeau.'
+    suicune:
+      title: 'SWEEBS · Suicune'
+      description: 'Les détenteurs de SWEEBS lors du snapshot reçoivent un bon pour le familier Suicune. Connectez le portefeuille éligible pour l’importer dans votre compte de jeu.'
+    suifren_bullshark:
+      title: 'Suifren Bullsharks'
+      description: '500 portefeuilles éligibles détenant des Bullsharks ont été sélectionnés dans le snapshot. Vérifiez votre portefeuille pour le bon du familier ; détenir un Bullshark ne garantit pas la sélection.'
+    suifren_capy:
+      title: 'Suifren Capys'
+      description: '500 portefeuilles éligibles détenant des Capys ont été sélectionnés dans le snapshot. Vérifiez votre portefeuille pour le bon du familier ; détenir un Capy ne garantit pas la sélection.'
+    primemachin:
+      title: 'Prime Machin'
+      description: 'Les bons de familiers sont envoyés aux NFT Prime Machin du snapshot. Récupérez d’abord le cadeau attaché à votre NFT via Studio Mirai, puis connectez ici le portefeuille destinataire pour l’importer.'
+    vaporeon:
+      title: 'Détenteurs de Vaporeon'
+      description: 'Les portefeuilles sélectionnés dans le snapshot des détenteurs de Vaporeon reçoivent un bon pour le familier Vaporeon. Vérifiez le portefeuille utilisé à cette date, puis importez le bon ici.'
+    sui_basecamp_singapore:
+      title: 'Sui Basecamp · Singapour'
+      description: 'Des Sui Crates sont distribuées sous forme de cartes cadeaux physiques au Sui Basecamp de Singapour. Scannez le QR code de votre carte et connectez-vous pour récupérer votre caisse. Gardez le code privé jusqu’à sa récupération.'
+    hytale_veterans:
+      title: 'Vétérans Hytale · Top 100'
+      description: 'Un cadeau pour les 100 meilleurs joueurs Hytale éligibles, classés selon leurs collections, leur temps de jeu, l’XP de leurs personnages et leurs métiers. Les récompenses vont à l’adresse Sui enregistrée dans la sauvegarde Hytale. Utilisez le compte Google d’origine pour accéder à ce portefeuille.'
+    hytale_supporters:
+      title: 'Soutiens Hytale · Mark of the Unbroken'
+      description: 'Pour chaque portefeuille Hytale lié ayant dépensé plus de {threshold} SUI en achats enregistrés dans la boutique, indépendamment du top 100. Le titre est envoyé à l’adresse Sui de la sauvegarde. Connectez-vous avec le compte Google d’origine pour retrouver votre bon.'
+
 settings_page:
+  day_night_cycle_label: Cycle jour/nuit
+  day_night_cycle_hint: Désactivez pour garder le monde à midi.
   title: 'Paramètres'
   subtitle: 'Tes préférences AresRPG'
   master_volume_label: Volume général
@@ -1547,6 +1574,9 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: Vous n'avez plus de SUI pour payer les frais de transaction. Rechargez votre portefeuille pour continuer à jouer.
 characters_page:
+  teleport_dungeon_blocked: 'Terminez ou abandonnez le donjon avant de vous téléporter.'
+  consume_busy: 'Ce personnage doit être inactif pour utiliser des consommables.'
+  progression_busy: 'Les caractéristiques et les sorts ne peuvent être modifiés que lorsque ce personnage est inactif.'
   delete_character: 'Supprimer le personnage'
   delete_warning: 'La suppression est définitive. Toute la progression du personnage est perdue et son nom reste réservé.'
   delete_no_refund: 'Les frais de création de {{amount}} SUI ne seront pas remboursés.'
@@ -1580,6 +1610,10 @@ characters_page:
   cancel: Annuler
   equip_pending: Mise à jour de l'équipement…
   equip_success: Équipement mis à jour
+  consume_one: 'Consommer 1'
+  consume_until_full: 'Consommer jusqu’aux PV max'
+  consume_healing_insufficient: 'Pas assez d’objets disponibles ({{count}} nécessaires).'
+  consume_healing_stock: 'Restaure {{heal}} PV par objet · {{available}} disponibles'
   consume_pending: Utilisation…
   consume_success: Objet utilisé
   already_full_hp: La vie est déjà au maximum
@@ -1839,6 +1873,8 @@ characters_page:
       tool_label: 'Outil'
       crafts_label: 'Fabrique {{covers}}'
       xp_progress: '{{current}} / {{needed}} XP'
+      gather_time: 'Temps de récolte : {{seconds}} s'
+      next_gather_time: 'Suivant · Niv. {{level}} : {{seconds}} s'
     recipes:
       empty_seed: "Les recettes de ce métier arrivent avec le contenu d'artisanat."
       unlocked: 'Débloquées'
@@ -2287,6 +2323,8 @@ kares_page:
   launch_market_cap_note: 'Si la vente se terminait maintenant : prix plafonné × 590 000 KARES disponibles au lancement. Aucun lancement sous le financement minimum.'
 
 leaderboard_page:
+  unclaimed: 'Place libre'
+  reset_in: 'Réinitialisation {{time}}'
   xp: 'XP de combat'
   kills: 'Monstres vaincus'
   dungeons: 'Donjons'
@@ -2297,12 +2335,6 @@ leaderboard_page:
   feeding: 'Repas des familiers'
   gathering: 'Récolte'
   category: 'Catégorie'
-  previous: 'Précédente'
-  next: 'Suivante'
-  current: 'Saison actuelle'
-  season: 'Saison {{season}}'
-  epochs: 'Époques {{start}}–{{end}}'
-  remaining: '{{epochs}} époques restantes'
   loading: 'Chargement…'
   user: 'Utilisateur'
   score: 'Score'
@@ -2311,7 +2343,6 @@ leaderboard_page:
   current_jobs: 'Métiers actuels'
   unavailable: 'Classements temporairement indisponibles.'
   retry: 'Réessayer'
-  empty: 'Aucune activité cette saison.'
   suins_hint: 'Définissez comme nom par défaut un nom ou sous-nom SuiNS ciblant votre adresse AresRPG pour l’afficher ici.'
   xp_description: 'XP gagnée lors des victoires par tous vos personnages. Les transferts ne déplacent jamais les points acquis.'
   kills_description: 'Monstres vaincus lors des victoires, comptés une seule fois par combat pour chaque adresse gagnante.'

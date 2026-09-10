@@ -70,6 +70,7 @@ movement_sync_toast: 位置情報を同期しています。通常どおり移�
 fight_path_changed_toast: 移動を送信する前に盤面が変わりました。ターンを復元しました — もう一度お試しください。
 party_member_unavailable_toast: そのキャラクターはすでにパーティーに参加しています。
 fight_turn_already_forced_toast: すでに別の誰かがこのターンを強制終了しました。
+fight_placement_unavailable_toast: その開始マスは使用できません。別の空きマスを選んでください。
 network_testnet: TESTNET
 page_pending_title: このページは再構築中です
 page_pending_body: 正しく復元する間も、この場所は表示し続けます。
@@ -487,8 +488,8 @@ mastery_page:
 airdrop_page:
   destination: 'ゲームウォレット：'
   refresh: '更新'
-  title: 'ギフト'
-  subtitle: 'ギフトカードをゲームウォレットに移す'
+  title: 'エアドロップ'
+  subtitle: 'コミュニティ報酬と受け取り方法'
   claim: '移す'
   holder_title: '外部ウォレット'
   holder_connect_hint: 'ギフトカードを持つウォレットを接続してください'
@@ -505,21 +506,47 @@ airdrop_page:
   gift_retry: 'ギフトカードを受け取る'
   redeem: '交換'
   empty: 'このウォレットにギフトカードはありません'
-  set:
-    title: 'セット'
-    subtitle: '予約アイテム — 展示のみ'
-    error: 'エアドロップセットを読み込めませんでした'
-    retry: '再試行'
-    empty: 'エアドロップセットはまだ公開されていません'
-    no_preview: 'プレビュー準備中'
-    aura: 'オーラ'
-    aura_pending: 'オーラ準備中'
-    awaiting_ruling: '判断待ち'
-    kind:
-      pet_glb: 'ペット'
-      title_relic: '称号レリック'
-      outfit: '衣装'
+  claim_all: '報酬を受け取る'
+  catalogue_title: '対応エアドロップ'
+  check_wallet: '対象のエアドロップがあれば、スナップショット時のウォレットを確認してください。下で外部ウォレットを接続するとギフト券を取り込めます。ゲーム内ウォレット宛ての報酬は、同じGoogleアカウントでログインしてください。紙のギフトカードはQRコードから受け取れます。'
+  rank_reward: '{from}〜{to}位：各クレート{amount}個'
+  delivery:
+    wallet: 'ウォレット宛て'
+    nft: 'NFTに付属するギフト'
+    physical: '紙のギフトカード'
+    game_wallet: 'Hytaleベテラン報酬'
+  campaigns:
+    oeuftermath:
+      title: 'Aftermath Eggs · Oeuftermath'
+      description: 'スナップショットでAftermath Eggを保有していたウォレットが、Oeuftermathのペットギフト券の対象です。当時のウォレットを確認してください。後からEggを購入しても対象にはなりません。'
+    suicune:
+      title: 'SWEEBS · Suicune'
+      description: 'スナップショットでSWEEBSを保有していたウォレットが、Suicuneのペットギフト券の対象です。対象ウォレットを接続し、ゲームアカウントへ取り込んでください。'
+    suifren_bullshark:
+      title: 'Suifren Bullsharks'
+      description: 'スナップショットから、対象となるBullshark保有ウォレット500件が選ばれました。当時のウォレットでペットギフト券を確認してください。Bullsharkの保有だけでは選出は保証されません。'
+    suifren_capy:
+      title: 'Suifren Capys'
+      description: 'スナップショットから、対象となるCapy保有ウォレット500件が選ばれました。当時のウォレットでペットギフト券を確認してください。Capyの保有だけでは選出は保証されません。'
+    primemachin:
+      title: 'Prime Machin'
+      description: 'ペットギフト券はスナップショット内のPrime Machin NFT宛てです。まずStudio MiraiでNFTに付属するギフトを受け取り、その受取先ウォレットをここで接続して取り込んでください。'
+    vaporeon:
+      title: 'Vaporeon保有者'
+      description: 'Vaporeon保有者スナップショットで選ばれたウォレットが、Vaporeonのペットギフト券の対象です。当時のウォレットを確認し、ここでギフト券を取り込んでください。'
+    sui_basecamp_singapore:
+      title: 'Sui Basecamp · シンガポール'
+      description: 'シンガポールのSui Basecampで、Sui Crateを紙のギフトカードとして配布します。カードのQRコードを読み取り、ログインしてクレートを受け取ってください。受け取るまでコードを他人に見せないでください。'
+    hytale_veterans:
+      title: 'Hytaleベテラン · 上位100人'
+      description: 'コレクション、プレイ時間、キャラクターXP、職業の進行度から選ばれた、対象Hytaleプレイヤー上位100人への特別な贈り物です。報酬はHytaleバックアップに記録されたSuiアドレスに送られます。元のGoogleアカウントでそのウォレットにアクセスしてください。'
+    hytale_supporters:
+      title: 'Hytale支援者 · Mark of the Unbroken'
+      description: '記録されたショップ購入額が{threshold} SUIを超える、連携済みの全Hytaleウォレットが対象です。上位100人への選出は問いません。称号はバックアップ内のSuiアドレスに送られます。元のGoogleアカウントでログインし、ギフト券を確認してください。'
+
 settings_page:
+  day_night_cycle_label: 昼夜サイクル
+  day_night_cycle_hint: 無効にすると、世界は常に正午になります。
   title: '設定'
   subtitle: 'AresRPGの設定'
   master_volume_label: 全体音量
@@ -1518,6 +1545,9 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: トランザクション手数料を支払うSUIがなくなりました。プレイを続けるにはウォレットにチャージしてください。
 characters_page:
+  teleport_dungeon_blocked: 'テレポートする前に、ダンジョンをクリアするか中断してください。'
+  consume_busy: '消耗品は、このキャラクターが何もしていない間のみ使用できます。'
+  progression_busy: 'このキャラクターが何もしていない間のみ、能力値と呪文を変更できます。'
   delete_character: 'キャラクターを削除'
   delete_warning: '削除は取り消せません。キャラクターの進行状況はすべて失われ、名前は予約されたままになります。'
   delete_no_refund: '作成費用の{{amount}} SUIは返金されません。'
@@ -1551,6 +1581,10 @@ characters_page:
   cancel: キャンセル
   equip_pending: 装備を更新中…
   equip_success: 装備を更新しました
+  consume_one: '1個使う'
+  consume_until_full: 'HPが全回復するまで使う'
+  consume_healing_insufficient: 'アイテムが足りません（{{count}}個必要）。'
+  consume_healing_stock: '1個につきHPを{{heal}}回復 · 所持数{{available}}'
   consume_pending: アイテムを使用中…
   consume_success: アイテムを使用しました
   already_full_hp: HPはすでに満タンです
@@ -1810,6 +1844,8 @@ characters_page:
       tool_label: '道具'
       crafts_label: '{{covers}}を製作'
       xp_progress: '{{current}} / {{needed}} XP'
+      gather_time: '採集時間：{{seconds}}秒'
+      next_gather_time: '次のレベル · Lv {{level}}：{{seconds}}秒'
     recipes:
       empty_seed: 'この職業のレシピはクラフトコンテンツと共に追加されます。'
       unlocked: '解放済み'
@@ -2258,6 +2294,8 @@ kares_page:
   launch_market_cap_note: '今販売を終了した場合：上限適用後の販売価格 × 開始時に流通可能な590,000 KARES。最低調達額未達では開始しません。'
 
 leaderboard_page:
+  unclaimed: '空席'
+  reset_in: 'リセット: {{time}}'
   xp: '戦闘経験値'
   kills: 'モンスター討伐'
   dungeons: 'ダンジョン'
@@ -2268,12 +2306,6 @@ leaderboard_page:
   feeding: 'ペットの餌やり'
   gathering: '採集'
   category: 'カテゴリー'
-  previous: '前へ'
-  next: '次へ'
-  current: '現在のシーズン'
-  season: 'シーズン {{season}}'
-  epochs: 'エポック {{start}}–{{end}}'
-  remaining: '残り {{epochs}} エポック'
   loading: '読み込み中…'
   user: 'ユーザー'
   score: 'スコア'
@@ -2282,7 +2314,6 @@ leaderboard_page:
   current_jobs: '現在の職業'
   unavailable: 'ランキングは一時的に利用できません。'
   retry: '再試行'
-  empty: '今シーズンの活動はまだありません。'
   suins_hint: 'AresRPGアドレスを指すSuiNS名またはサブネームをデフォルト名に設定すると、ここに表示されます。'
   xp_description: '全キャラクターの勝利で獲得した経験値。キャラクターを譲渡しても獲得済みスコアは移りません。'
   kills_description: '勝利した戦闘の敵モンスター数。勝利した各アドレスにつき、1戦闘を1回だけ集計します。'

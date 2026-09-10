@@ -57,7 +57,7 @@ test('capped Suifren selection is reproducible, unique, and limited to 500 verif
 
 test('rerunning preparation preserves exact supply and refuses changed allocations', () => {
   const batch = holder_giftcard_batch('2026-09-08', collection, snapshot)
-  const before = { showcase: [], giftcards: [], giftcard_batches: [batch] }
+  const before = { campaigns: [], giftcards: [], giftcard_batches: [batch] }
   expect(append_holder_gifts(before, [batch])).toBe(before)
   expect(() => append_holder_gifts(before, [{ ...batch, recipients: [address('9')] }])).toThrow(
     'refusing to rewrite supply'
@@ -74,7 +74,7 @@ test('preparation saves snapshots once and appends only missing seed giftcards',
       JSON.stringify({ date: '2026-09-08', collections: [collection] })
     )
     const old = { id: 'old', item_type: 'sui_crate', amount: 1, custody: address('9') }
-    await writeFile(join(root, 'seed/content/airdrop.json'), JSON.stringify({ showcase: [], giftcards: [old] }))
+    await writeFile(join(root, 'seed/content/airdrop.json'), JSON.stringify({ campaigns: [], giftcards: [old] }))
     await prepare_holder_gifts({ root, snapshot_fn: async () => snapshot, progress: () => undefined })
     const first = await readFile(join(root, 'seed/content/airdrop.json'), 'utf8')
     expect(JSON.parse(first).giftcards).toHaveLength(1)
@@ -103,7 +103,7 @@ test('a failed collection read never partially changes the airdrop supply', asyn
       JSON.stringify({ date: '2026-09-08', collections: [collection] })
     )
     const path = join(root, 'seed/content/airdrop.json')
-    const source = '{"showcase":[],"giftcards":[]}\n'
+    const source = '{"campaigns":[],"giftcards":[]}\n'
     await writeFile(path, source)
     await expect(
       prepare_holder_gifts({

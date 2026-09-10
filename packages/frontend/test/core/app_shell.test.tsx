@@ -87,7 +87,7 @@ test('the account card sits below navigation and above language with row actions
       digest: '',
       giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
     }),
-    redeem_giftcard: async () => ({ digest: '', item_id: '0xitem', item_version: '10' }),
+    redeem_giftcards: async () => ({ digest: '', item_id: '0xitem', item_version: '10' }),
     create_seed_admin: async () => {
       throw new Error('not used while rendering')
     },

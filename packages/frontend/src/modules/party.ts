@@ -23,7 +23,14 @@ export type PartyInput =
   | Readonly<{ type: 'party/rescind'; character_id: string }>
   | Readonly<{ type: 'party/leave' }>
   | Readonly<{ type: 'party/kick'; character_id: string }>
-  | Readonly<{ type: 'party/follower_moved'; character_id: string; x: number; y: number; z: number }>
+  | Readonly<{
+      type: 'party/follower_moved'
+      character_id: string
+      checkpoint: string
+      x: number
+      y: number
+      z: number
+    }>
   | Readonly<{ type: 'party/pending'; character_id: string; operation: string | null }>
 
 export const initial_party_state = (): PartyState =>

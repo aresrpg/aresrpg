@@ -17,7 +17,8 @@ const parameters = new URLSearchParams(location.search)
 const address = (id: number): string => `0x${id.toString(16).padStart(64, '0')}`
 const entry = (rank: number): LeaderboardEntry => ({
   address: address(rank),
-  name: rank < 4 ? ['ares.sui', 'farmer.ares.sui', 'miner.sui'][rank - 1]! : null,
+  name:
+    parameters.get('state') !== 'single' && rank < 4 ? ['ares.sui', 'farmer.ares.sui', 'miner.sui'][rank - 1]! : null,
   rank,
   score: String(9_007_199_254_740_993n - BigInt(rank)),
   characters: Array.from({ length: 6 }, (_, index) => ({
@@ -33,13 +34,13 @@ const entry = (rank: number): LeaderboardEntry => ({
 })
 const snapshot = (observation: LeaderboardObservation): LeaderboardSnapshot => ({
   observation,
-  season: observation.season ?? 7,
-  current_season: 7,
-  start_epoch: 100 + (observation.season ?? 7) * 30,
-  end_epoch: 130 + (observation.season ?? 7) * 30,
-  epoch: 319,
+  reset_at_ms: Date.UTC(2026, 9, 1),
+  timestamp_ms: Date.UTC(2026, 8, 9),
   checkpoint: observation.id + 100,
-  entries: parameters.get('state') === 'empty' ? [] : Array.from({ length: 100 }, (_, index) => entry(index + 1)),
+  entries:
+    parameters.get('state') === 'empty'
+      ? []
+      : Array.from({ length: parameters.get('state') === 'single' ? 1 : 100 }, (_, index) => entry(index + 1)),
   self: parameters.get('state') === 'empty' ? null : entry(501),
 })
 const Probe = () => {

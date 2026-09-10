@@ -28,6 +28,7 @@ type FightLifecycle = Readonly<{
   mode: FightMode | null
   checkpoint: HydratedFightCheckpoint | null
   mounted?: boolean
+  spectating_by_character?: Readonly<Record<string, string>>
   presentations: readonly unknown[]
   canonical_ended?: boolean
 }>
@@ -38,11 +39,13 @@ export const fight_should_close = (fight: FightLifecycle, character_id: string |
   if (fight.mode !== 'remote') return false
   if (fight.canonical_ended) return true
   if (fight.mounted === false) return false
-  return (
-    !!character_id &&
-    fight.checkpoint.contract.fighters.some(
-      (fighter) => fighter.kind.type === 'player' && fighter.kind.character === character_id && fighter.settled
-    )
+  const { contract } = fight.checkpoint
+  return contract.fighters.some(
+    (fighter) =>
+      fighter.kind.type === 'player' &&
+      fighter.kind.character === character_id &&
+      fighter.settled &&
+      fight.spectating_by_character?.[fighter.kind.character] !== contract.id
   )
 }
 

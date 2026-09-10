@@ -24,7 +24,6 @@ const row = (
     chain_id: key,
     addresses: Object.freeze([key]),
     hydrate: Object.freeze([key]),
-    cost: 1,
     update,
   })
 

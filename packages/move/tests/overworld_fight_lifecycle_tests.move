@@ -78,6 +78,8 @@ fun searched_group_fight_returns_both_characters_and_closes() {
   let mut second = character::test_character(b"shugo".to_string(), 1, 0, scenario.ctx());
   world::join_world(&mut first, &content, &clock);
   world::join_world(&mut second, &content, &clock);
+  progression::set_hp(&mut first, 7, &clock);
+  progression::set_hp(&mut second, 3, &clock);
   let first_id = object::id(&first);
   let second_id = object::id(&second);
   let kiosk_cap = personal_kiosk::borrow(&personal);
@@ -221,9 +223,9 @@ fun searched_group_fight_returns_both_characters_and_closes() {
   assert!(event::events_by_type<fight::FightClosed>().length() == 1, 9);
 
   let first: &mut character::Character = kiosk.borrow_mut(kiosk_cap, first_id);
-  assert!(first.level() > 1 && progression::touch(first, &clock) > 0, 10);
+  assert!(first.level() > 1 && progression::touch(first, &clock) == progression::max_hp(first), 10);
   let second: &mut character::Character = kiosk.borrow_mut(kiosk_cap, second_id);
-  assert!(second.level() > 1 && progression::touch(second, &clock) > 0, 11);
+  assert!(second.level() > 1 && progression::touch(second, &clock) == progression::max_hp(second), 11);
 
   character::destroy(protected.extract_from_kiosk(&mut kiosk, kiosk_cap, first_id, scenario.ctx()));
   character::destroy(protected.extract_from_kiosk(&mut kiosk, kiosk_cap, second_id, scenario.ctx()));

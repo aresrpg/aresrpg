@@ -13,7 +13,7 @@ use kiosk::personal_kiosk;
 use sui::{clock, event, kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA;
-public enum Variant has copy, drop { Win, Abandon, GiveUp, WrongKey, Reenter, NoRun, WrongRoom, RawForfeit, BadBatch, WrongDungeon, MissingPortal, WrongWorld, Shrink, Rescue, Grouped, PendingParty, EmptyBatch, OversizedPlan, ForeignSettler, MobSeat, SkipBossRewards, WrongEngageContent, WrongSettleContent, MismatchedRunSettle, MismatchedRunGiveUp, ForeignCharacterWorld, SuppliedBlueprints, TrailingBlueprint, Api }
+public enum Variant has copy, drop { Win, Abandon, GiveUp, GiveUpActive, WrongKey, Reenter, NoRun, WrongRoom, RawForfeit, BadBatch, WrongDungeon, MissingPortal, WrongWorld, Shrink, Rescue, Grouped, PendingParty, EmptyBatch, OversizedPlan, ForeignSettler, MobSeat, SkipBossRewards, WrongEngageContent, WrongSettleContent, MismatchedRunSettle, MismatchedRunGiveUp, ForeignCharacterWorld, SuppliedBlueprints, TrailingBlueprint, Api }
 
 fun mob(slug: vector<u8>): mob_data::MobData {
   let shift = item_stats::shift();
@@ -66,14 +66,13 @@ fun prepare_rewards(scenario: &mut test_scenario::Scenario, fight: &mut fight::F
 
 fun run(variant: Variant) {
   let api_run = variant == Variant::Api;
+  let giving_up = variant == Variant::GiveUp || variant == Variant::GiveUpActive;
   let mismatched_run = variant == Variant::MismatchedRunSettle || variant == Variant::MismatchedRunGiveUp;
   let needs_other = variant == Variant::WrongDungeon || variant == Variant::WrongEngageContent
     || variant == Variant::WrongSettleContent || mismatched_run;
-  let mut scenario = test_scenario::begin(if (api_run) @0x0 else OWNER);
-  if (api_run) {
-    random::create_for_testing(scenario.ctx());
-    scenario.next_tx(OWNER);
-  };
+  let mut scenario = test_scenario::begin(@0x0);
+  random::create_for_testing(scenario.ctx());
+  scenario.next_tx(OWNER);
   item::test_init(scenario.ctx());
   version::test_init(scenario.ctx());
   let mut clock = clock::create_for_testing(scenario.ctx());
@@ -244,7 +243,9 @@ fun run(variant: Variant) {
     else assert!(first_cell == if (prng::mix(77, room) % 2 == 0) 100 else 101, 15);
     let version = scenario.take_shared<version::Version>();
     if (variant == Variant::RawForfeit) {
-      api::forfeit_fight(&mut fight, 0, &mut kiosk, cap, &character_policy, &version, &clock, scenario.ctx());
+      let randomness = scenario.take_shared<random::Random>();
+      api::forfeit_fight_terminal(&mut fight, 0, &mut kiosk, &personal, &character_policy, &randomness, &version, &clock, scenario.ctx());
+      test_scenario::return_shared(randomness);
     };
     if ((variant == Variant::WrongRoom && room == 1) || mismatched_run) {
       // Leave the second paid entrant staged while inspecting the first seat's run boundary.
@@ -252,12 +253,25 @@ fun run(variant: Variant) {
       &shared_party, &protected_character, &version, &clock, scenario.ctx())
     else api::join_dungeon_room(&mut fight, &mut kiosk, cap, ids[1], &protected_character, &version, &clock, scenario.ctx());
     if (variant == Variant::MismatchedRunGiveUp) {
-      api::give_up_dungeon_room(&mut fight, 0, &mut kiosk, cap, &character_policy, &version, &clock, scenario.ctx());
+      let randomness = scenario.take_shared<random::Random>();
+      api::give_up_dungeon_room_terminal(&mut fight, 0, &mut kiosk, &personal, &character_policy, &randomness, &version, &clock, scenario.ctx());
+      test_scenario::return_shared(randomness);
       abort 999
     };
-    if (variant == Variant::GiveUp) {
-      api::give_up_dungeon_room(&mut fight, 0, &mut kiosk, cap, &character_policy, &version, &clock, scenario.ctx());
-      api::give_up_dungeon_room(&mut fight, 2, &mut kiosk, cap, &character_policy, &version, &clock, scenario.ctx());
+    if (giving_up) {
+      if (variant == Variant::GiveUpActive) {
+        assert!(!fight::ready(&mut fight, 0, scenario.ctx()), 30);
+        assert!(fight::ready(&mut fight, 2, scenario.ctx()), 31);
+        fight::start(&mut fight, &mut entropy, &clock);
+      };
+      let randomness = scenario.take_shared<random::Random>();
+      api::give_up_dungeon_room_terminal(&mut fight, 0, &mut kiosk, &personal, &character_policy, &randomness, &version, &clock, scenario.ctx());
+      if (variant == Variant::GiveUpActive) {
+        assert!(combat::active_fighter(fight::combat_for_testing(&fight)) == 2, 32);
+        assert!(event::events_by_type<fight::TurnSeedUsed>().length() > 0, 33);
+      };
+      api::give_up_dungeon_room_terminal(&mut fight, 2, &mut kiosk, &personal, &character_policy, &randomness, &version, &clock, scenario.ctx());
+      test_scenario::return_shared(randomness);
       test_scenario::return_shared(version);
     } else {
       fight::place(&mut fight, 0, 105, scenario.ctx());
@@ -316,10 +330,10 @@ fun run(variant: Variant) {
     fight::close(fight, scenario.ctx());
     test_scenario::return_shared(content);
     assert!(kiosk.has_item(ids[0]) && kiosk.has_item(ids[1]), 7);
-    let continuing = room == 1 && variant != Variant::GiveUp;
+    let continuing = room == 1 && !giving_up;
     assert!(dungeon::has_run(kiosk.borrow<character::Character>(cap, ids[0])) == continuing, 8);
     assert!(world::is_rooted(kiosk.borrow<character::Character>(cap, ids[0]), &clock) == continuing, 9);
-    if (variant == Variant::GiveUp) break;
+    if (giving_up) break;
     room = room + 1;
   };
   ids.do_ref!(|id| {
@@ -414,3 +428,6 @@ fun a_batch_rejects_blueprints_not_assigned_to_any_seat() { run(Variant::Trailin
 
 #[test]
 fun terminal_dungeon_apis_use_native_entropy_advance_and_delete_the_last_fight() { run(Variant::Api); }
+
+#[test]
+fun active_room_forfeit_runs_the_mob_and_hands_the_turn_to_the_remaining_player() { run(Variant::GiveUpActive); }

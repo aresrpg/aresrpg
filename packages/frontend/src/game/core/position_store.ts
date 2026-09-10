@@ -2,9 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable functional/prefer-immutable-types -- this browser storage boundary accepts the platform's mutable position shape. */
 import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg/immutable'
-import type { CharacterRow } from '@aresrpg/protocol'
+import { character_checkpoint, type ChainAnchor, type CharacterRow } from '@aresrpg/protocol'
+export type { ChainAnchor } from '@aresrpg/protocol'
 
-import { record_owned_character_position } from './owned_character_feed.ts'
+import { record_owned_character_position, type OwnedCharacterPosition } from './owned_character_feed.ts'
 // Local resume position — the finer-grained "exactly where you stood" cache over the chain
 // checkpoint (the only authoritative anchor). A saved pose is honored ONLY while it can
 // explain itself against the chain: same character/world, captured under the SAME chain
@@ -17,8 +18,8 @@ const STORE = 'positions'
 /** a row older than this resumes at the chain checkpoint instead */
 const MAX_AGE_MS = 30 * 60 * 1000
 
-export type ChainAnchor = Readonly<{ x: number; z: number; at_ms: number }>
 export type SavedPosition = Readonly<{
+  schema: 1
   x: number
   y: number
   z: number
@@ -93,6 +94,7 @@ const is_saved_position = (value: unknown): value is SavedPosition => {
   const row = value as Record<string, unknown>
   const anchor = row.anchor as Record<string, unknown> | undefined
   return (
+    row.schema === 1 &&
     [row.x, row.y, row.z, row.saved_at].every((field) => typeof field === 'number' && Number.isFinite(field)) &&
     typeof anchor === 'object' &&
     anchor !== null &&
@@ -112,12 +114,19 @@ export const resume_position = (
   chain_anchor: ChainAnchor | null,
   now: number = Date.now()
 ): Readonly<{ x: number; y: number; z: number }> | null => {
-  if (!saved || !chain_anchor) return null
+  if (!saved || saved.schema !== 1 || !chain_anchor) return null
   if (!same_anchor(saved.anchor, chain_anchor)) return null
   if (now - saved.saved_at > MAX_AGE_MS) return null
   // A future checkpoint is a chain root (gathering/ambush): its movement budget is exactly
   // zero, so an offset cached pose cannot possibly explain itself even under the same anchor id.
-  if (chain_anchor.at_ms > now && (saved.x !== chain_anchor.x || saved.z !== chain_anchor.z)) return null
+  if (
+    chain_anchor.at_ms > now &&
+    Math.hypot(
+      saved.x - chain_to_client_coordinate(chain_anchor.x),
+      saved.z - chain_to_client_coordinate(chain_anchor.z)
+    ) > 0
+  )
+    return null
   return Object.freeze({ x: saved.x, y: saved.y, z: saved.z })
 }
 
@@ -169,7 +178,7 @@ export const create_position_writer = ({
     note: (pose, anchor, identity) => {
       pending = Object.freeze({
         identity,
-        row: Object.freeze({ x: pose.x, y: pose.y, z: pose.z, saved_at: now(), anchor }),
+        row: Object.freeze({ schema: 1, x: pose.x, y: pose.y, z: pose.z, saved_at: now(), anchor }),
       })
       if (settle_timer) clearTimeout(settle_timer)
       settle_timer = setTimeout(write, settle_ms)
@@ -187,8 +196,6 @@ export const create_position_writer = ({
   })
 }
 
-type ChainPosition = Readonly<{ character_id: string; world: string; x: number; y: number; z: number }>
-
 const cache_anchor = (character: Readonly<CharacterRow> | undefined, world: string): ChainAnchor | null => {
   if (!character) return null
   if (character.world !== world || character.world !== character.checkpoint_world) return null
@@ -197,9 +204,10 @@ const cache_anchor = (character: Readonly<CharacterRow> | undefined, world: stri
   return Object.freeze({ x: character.x!, z: character.z!, at_ms: character.at_ms ?? 0 })
 }
 
-const same_chain_position = (before: ChainPosition | undefined, current: ChainPosition): boolean =>
+const same_chain_position = (before: OwnedCharacterPosition | undefined, current: OwnedCharacterPosition): boolean =>
   before?.character_id === current.character_id &&
   before.world === current.world &&
+  before.checkpoint === current.checkpoint &&
   before.x === current.x &&
   before.y === current.y &&
   before.z === current.z
@@ -213,14 +221,14 @@ export const create_owned_position_cache = ({
   storage: PositionStorage
   on_error: (message: string, error: unknown) => void
 }>): Readonly<{
-  note: (character: Readonly<CharacterRow> | undefined, position: ChainPosition) => void
-  note_all: (characters: readonly Readonly<CharacterRow>[], positions: readonly ChainPosition[]) => void
+  note: (character: Readonly<CharacterRow> | undefined, position: OwnedCharacterPosition) => void
+  note_all: (characters: readonly Readonly<CharacterRow>[], positions: readonly OwnedCharacterPosition[]) => void
   restore: (characters: readonly Readonly<CharacterRow>[]) => Promise<void>
   invalidate: (characters: readonly Readonly<CharacterRow>[]) => void
   flush: () => void
 }> => {
   const writers = new Map<string, ReturnType<typeof create_position_writer>>()
-  const noted = new Map<string, ChainPosition>()
+  const noted = new Map<string, OwnedCharacterPosition>()
   let generation = 0
   let io: Promise<void> = Promise.resolve()
   const enqueue = (operation: () => Promise<void>, failure: string): void => {
@@ -247,6 +255,7 @@ export const create_owned_position_cache = ({
       const position = Object.freeze({
         character_id: character.id,
         world,
+        checkpoint: character_checkpoint(character)!,
         x: client_to_chain_coordinate(resumed.x),
         y: resumed.y,
         z: client_to_chain_coordinate(resumed.z),
@@ -257,7 +266,8 @@ export const create_owned_position_cache = ({
       on_error('The saved position could not be read.', error)
     }
   }
-  const note = (character: Readonly<CharacterRow> | undefined, position: ChainPosition): void => {
+  const note = (character: Readonly<CharacterRow> | undefined, position: OwnedCharacterPosition): void => {
+    if (!character || position.checkpoint !== character_checkpoint(character)) return
     if (same_chain_position(noted.get(position.character_id), position)) return
     const anchor = cache_anchor(character, position.world)
     if (!character?.world || !anchor) return

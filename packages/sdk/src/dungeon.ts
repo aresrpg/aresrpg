@@ -7,6 +7,7 @@ import { receipt_digest, receipt_event, spending_receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import {
   fight_kares_rewards,
+  project_fight_boundary_receipt,
   created_fight_id,
   execute_settlement_mode,
   SETTLEMENT_BATCH_GAS_BUDGET_MIST,
@@ -254,11 +255,12 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
       custody?: KioskCustody
     }) => {
       await sdk.hydrate_unknown([fight])
-      const receipt = await with_kiosk(
-        (tx, kiosk, cap) => sdk.doors.give_up_dungeon_room(tx, { fight_object: fight, fighter_idx, kiosk, cap }),
+      const receipt = await with_terminal_kiosk(
+        (tx, kiosk, personal) =>
+          sdk.doors.give_up_dungeon_room_terminal(tx, { fight_object: fight, fighter_idx, kiosk, personal }),
         { custody, gas_scope: `fight:${fight}` }
       )
-      return Object.freeze({ digest: receipt_digest(receipt) })
+      return project_fight_boundary_receipt(receipt)
     },
 
     abandon: async ({ character_id, custody }: { character_id: string; custody?: KioskCustody }) => {

@@ -150,7 +150,7 @@ export default {
       }
       if (payload.type === 'FighterForfeited') {
         const { fight, fighter } = payload.data as { fight: string; fighter: number | string }
-        send({ type: 'packet/fighter_forfeited', fight, fighter: String(fighter) })
+        enqueue_fight(fight, async () => send({ type: 'packet/fighter_forfeited', fight, fighter: String(fighter) }))
       }
       if (payload.type === 'TurnSeedUsed') {
         const { fight, seat, seed } = payload.data as { fight: string; seat: string; seed: string }

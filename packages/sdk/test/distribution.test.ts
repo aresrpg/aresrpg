@@ -8,13 +8,13 @@ import { PERSONAL_KIOSK_RULE_ADDRESS, type KioskOwnerCap } from '@mysten/kiosk'
 import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 import { ZkSendClient } from '@mysten/zksend'
 
-import { SDK, type Receipt, type SuiTransport } from '../src/client.ts'
+import { SDK, absorb_object, type Receipt, type SuiTransport } from '../src/client.ts'
 import {
   canonical_zksend_gift_url,
   read_giftcards,
   transfer_giftcards,
   claim_giftcard_link,
-  redeem_giftcard,
+  redeem_giftcards,
 } from '../src/distribution.ts'
 
 import { execution_receipt } from './helpers/execution_receipt.ts'
@@ -120,6 +120,78 @@ const move_call_targets = (tx: Transaction): readonly string[] =>
     })
 
 describe('distribution SDK actions', () => {
+  test('a confirmed transfer receipt prevents a lagging read from restoring the pre-transfer version', async () => {
+    const { client, sdk } = game()
+    const card = { id: id(78), template: id(79), amount: 1 }
+    const old = { objectId: card.id, version: '1', digest, owner: { $kind: 'AddressOwner', AddressOwner: id(91) } }
+    absorb_object(sdk.cache, old)
+    const get_objects = client.core.getObjects
+    const proof = {
+      Transaction: {
+        digest: 'confirmed-transfer',
+        effects: {
+          changedObjects: [{ objectId: card.id, outputVersion: '2', outputDigest: digest, outputState: 'ObjectWrite' }],
+        },
+      },
+    }
+    const received: string[] = []
+    const capture = {
+      ...sdk,
+      sui_client: {
+        core: {
+          ...client.core,
+          waitForTransaction: async ({ digest }: { digest: string }) => {
+            received.push(digest)
+            return proof
+          },
+        },
+      },
+      execute_personal_kiosk: async (tx: Transaction) => {
+        const references = tx
+          .getData()
+          .inputs.flatMap((input) => (input.Object?.ImmOrOwnedObject ? [input.Object.ImmOrOwnedObject] : []))
+        expect(references.find((ref) => ref.objectId === card.id)?.version).toBe('2')
+        return { receipt: { digest }, kiosk_cap }
+      },
+    }
+    client.core.getObjects = async (input) => ({
+      objects: (await get_objects(input)).objects.map((row) => (row.objectId === card.id ? (old as never) : row)),
+    })
+    await redeem_giftcards(capture as never, kiosk_cap, [card], 'confirmed-transfer')
+    expect(received).toEqual(['confirmed-transfer'])
+  })
+
+  test('redemption refreshes a cached owned voucher after another wallet transferred it', async () => {
+    const { client, sdk } = game()
+    const card = { id: id(78), template: id(79), amount: 5 }
+    const object = {
+      objectId: card.id,
+      version: '1009109874',
+      digest,
+      owner: { $kind: 'AddressOwner', AddressOwner: id(91) },
+    }
+    absorb_object(sdk.cache, object)
+    const original_get = client.core.getObjects
+    client.core.getObjects = async (input) => ({
+      objects: (await original_get(input)).objects.map((row) =>
+        row.objectId === card.id ? ({ ...object, version: '1009109875' } as never) : row
+      ),
+    })
+    let provided: string | number | undefined
+    const capture = {
+      ...sdk,
+      execute_personal_kiosk: async (tx: Transaction) => {
+        provided = tx
+          .getData()
+          .inputs.flatMap((input) => (input.Object?.ImmOrOwnedObject ? [input.Object.ImmOrOwnedObject] : []))
+          .find((ref) => ref.objectId === card.id)?.version
+        return { receipt: { digest }, kiosk_cap }
+      },
+    }
+    await redeem_giftcards(capture as never, kiosk_cap, [card])
+    expect(provided).toBe('1009109875')
+  })
+
   test('reusable personal kiosks are queried from the OFFICIAL personal-kiosk package (never the game rules pin)', async () => {
     // 2026-08-21: querying by the game pin was blind to every real cap — wrappers are minted
     // by Mysten's network-default personal_kiosk package, the one the SDK ships
@@ -135,17 +207,23 @@ describe('distribution SDK actions', () => {
     const original_execute = sdk.execute_personal_kiosk
     const capturing_sdk = {
       ...sdk,
-      execute_personal_kiosk: async (tx: Transaction, cap: KioskOwnerCap | null) => {
+      execute_personal_kiosk: async (
+        tx: Transaction,
+        cap: KioskOwnerCap | null,
+        options: { budget?: bigint | 'estimate' }
+      ) => {
         composed = tx
-        return original_execute(tx, cap)
+        expect(options.budget).toBe('estimate')
+        return original_execute(tx, cap, options)
       },
     }
     const card = { id: id(78), template: id(79), amount: 1 }
 
-    const result = await redeem_giftcard(capturing_sdk as never, kiosk_cap, { card, category: 'consumable' })
+    const result = await redeem_giftcards(capturing_sdk as never, kiosk_cap, [card, { ...card, id: id(80) }])
 
     expect(result).toEqual({ digest: await composed!.getDigest(), kiosk_cap })
     expect(move_call_targets(composed!)).toContain(`${package_id}::api::redeem_giftcard`)
+    expect(move_call_targets(composed!).filter((target) => target.endsWith('::api::redeem_giftcard'))).toHaveLength(2)
   })
 
   test('a hosted zkSend claim accepts exactly one canonical Giftcard and sends it to B', async () => {

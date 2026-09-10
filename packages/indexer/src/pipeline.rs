@@ -45,7 +45,6 @@ pub enum Write {
     Graph(String),
     Leaderboard {
         checkpoint: u64,
-        epoch: u64,
         ts_ms: u64,
         facts: Vec<leaderboards::Contribution>,
     },
@@ -552,7 +551,6 @@ impl Processor for AresHandler {
         );
         writes.push(Write::Leaderboard {
             checkpoint: ckpt,
-            epoch: summary.epoch,
             ts_ms,
             facts: leaderboard_facts,
         });
@@ -599,18 +597,11 @@ impl Handler for AresHandler {
                 match write {
                     Write::Leaderboard {
                         checkpoint,
-                        epoch,
                         ts_ms,
                         facts,
                     } => {
-                        leaderboard_store::commit(
-                            conn.connection(),
-                            *checkpoint,
-                            *epoch,
-                            *ts_ms,
-                            facts,
-                        )
-                        .await?;
+                        leaderboard_store::commit(conn.connection(), *checkpoint, *ts_ms, facts)
+                            .await?;
                     }
                     Write::Graph(cypher) => {
                         let _: redis::Value = redis::cmd("GRAPH.QUERY")

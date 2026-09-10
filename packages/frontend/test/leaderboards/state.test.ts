@@ -14,12 +14,9 @@ import { initial_app_state } from '../../src/store.ts'
 import { load_game_settings } from '../../src/game/core/settings.ts'
 
 const snapshot = (id: number, checkpoint = 10): LeaderboardSnapshot => ({
-  observation: { id, metric: 'xp', season: null },
-  season: 0,
-  current_season: 0,
-  start_epoch: 100,
-  end_epoch: 130,
-  epoch: 100,
+  observation: { id, metric: 'xp' },
+  reset_at_ms: Date.UTC(2026, 9, 1),
+  timestamp_ms: Date.UTC(2026, 8, 9),
   checkpoint,
   entries: [],
   self: null,
@@ -27,7 +24,7 @@ const snapshot = (id: number, checkpoint = 10): LeaderboardSnapshot => ({
 
 test('late responses cannot replace a newly selected category or newer checkpoint', () => {
   const initial = initial_leaderboards_state()
-  const selected = reduce_leaderboards(initial, { type: 'leaderboards/select', metric: 'kills', season: null })
+  const selected = reduce_leaderboards(initial, { type: 'leaderboards/select', metric: 'kills' })
   expect(
     reduce_leaderboards(selected, {
       type: 'server/packet',

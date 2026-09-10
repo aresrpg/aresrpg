@@ -19,7 +19,7 @@ import {
 import { reset_party_follow_for_testing, update_party_follow } from '../../../src/game/core/party_follow_feed.ts'
 
 const anchor = Object.freeze({ x: 100, z: 200, at_ms: 1_000 })
-const saved: SavedPosition = Object.freeze({ x: 12, y: 64, z: 34, saved_at: 50_000, anchor })
+const saved: SavedPosition = Object.freeze({ schema: 1, x: 12, y: 64, z: 34, saved_at: 50_000, anchor })
 
 test('the saved pose resumes only while it explains itself against the chain anchor', () => {
   expect(resume_position(saved, anchor, 60_000)).toEqual({ x: 12, y: 64, z: 34 })
@@ -33,10 +33,16 @@ test('the saved pose resumes only while it explains itself against the chain anc
 
   const rooted_anchor = Object.freeze({ x: 100, z: 200, at_ms: 70_000 })
   expect(resume_position({ ...saved, x: 103.68, z: 200, anchor: rooted_anchor }, rooted_anchor, 60_000)).toBeNull()
-  expect(resume_position({ ...saved, x: 100, z: 200, anchor: rooted_anchor }, rooted_anchor, 60_000)).toEqual({
-    x: 100,
+  expect(
+    resume_position(
+      { ...saved, x: chain_to_client_coordinate(100), z: chain_to_client_coordinate(200), anchor: rooted_anchor },
+      rooted_anchor,
+      60_000
+    )
+  ).toEqual({
+    x: chain_to_client_coordinate(100),
     y: 64,
-    z: 200,
+    z: chain_to_client_coordinate(200),
   })
 })
 
@@ -147,6 +153,7 @@ test('the owned cache persists each follower and invalidates its resume on disco
   cache.note(character('0xa'), {
     character_id: '0xa',
     world: 'nauvis',
+    checkpoint: 'nauvis:50000:50000:1',
     x: world_center + 7,
     y: 3,
     z: world_center + 9,
@@ -154,6 +161,7 @@ test('the owned cache persists each follower and invalidates its resume on disco
   cache.note(character('0xb'), {
     character_id: '0xb',
     world: 'nauvis',
+    checkpoint: 'nauvis:50000:50000:1',
     x: world_center + 11,
     y: 4,
     z: world_center + 13,
@@ -185,6 +193,7 @@ test('follow resumes a saved follower instead of its older chain checkpoint', as
   } as never
   const storage = {
     load: async () => ({
+      schema: 1 as const,
       x: chain_to_client_coordinate(world_center + 23),
       y: 4,
       z: chain_to_client_coordinate(world_center + 29),
@@ -206,7 +215,7 @@ test('follow resumes a saved follower instead of its older chain checkpoint', as
       leader_id: '0xa',
       world: 'nauvis',
       target: { x: world_center + 50, y: 4, z: world_center + 50 },
-      followers: [{ character_id: '0xb', x: world_center, y: 0, z: world_center }],
+      followers: [{ character_id: '0xb', checkpoint: 'nauvis:50000:50000:1', x: world_center, y: 0, z: world_center }],
     },
     1_000
   )
@@ -214,6 +223,7 @@ test('follow resumes a saved follower instead of its older chain checkpoint', as
   expect(followed.followers[0]).toMatchObject({
     character_id: '0xb',
     world: 'nauvis',
+    checkpoint: 'nauvis:50000:50000:1',
     x: world_center + 23,
     y: 4,
     z: world_center + 29,
@@ -236,6 +246,7 @@ test('a reconnect restore waits for disconnect invalidation', async () => {
       removed
         ? null
         : {
+            schema: 1 as const,
             x: 23,
             y: 4,
             z: 29,
@@ -253,5 +264,36 @@ test('a reconnect restore waits for disconnect invalidation', async () => {
   await cache.restore([follower])
 
   expect(removed).toBeTrue()
-  expect(owned_character_position('0xb', 'nauvis')).toBeNull()
+  expect(owned_character_position('0xb', 'nauvis', 'nauvis:50000:50000:1')).toBeNull()
+})
+
+test('a pre-recall pose cannot be saved under the recalled checkpoint', async () => {
+  const writes: SavedPosition[] = []
+  const cache = create_owned_position_cache({
+    storage: {
+      load: async () => null,
+      remove: async () => {},
+      save: async (_id, _world, row) => {
+        writes.push(row)
+      },
+    },
+    on_error: (message, error) => {
+      throw new Error(message, { cause: error })
+    },
+  })
+  const before = { id: '0xc', world: 'nauvis', checkpoint_world: 'nauvis', x: 53_196, z: 50_000, at_ms: 1 }
+  const recalled = { ...before, x: 50_000, at_ms: 2 }
+  const pose = { character_id: '0xc', world: 'nauvis', checkpoint: 'nauvis:53196:50000:1', x: 53_196, y: 4, z: 50_000 }
+  cache.note(before as never, pose)
+  cache.flush()
+  cache.note(recalled as never, { ...pose, x: 53_197 })
+  cache.flush()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(writes).toHaveLength(1)
+  expect(resume_position(writes[0]!, { x: 50_000, z: 50_000, at_ms: 2 })).toBeNull()
+})
+
+test('legacy resume rows with no checkpoint provenance cannot survive refresh', () => {
+  const { schema: _schema, ...legacy } = saved
+  expect(resume_position(legacy as never, anchor, 60_000)).toBeNull()
 })

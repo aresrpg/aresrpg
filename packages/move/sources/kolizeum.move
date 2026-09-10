@@ -202,7 +202,7 @@ public(package) fun exit(
   assert!(object::id(fight) == lobby.fight, EWrongFight);
   assert!(fight::in_placement(fight), EWrongFight); // started fights settle, never exit
   transfer::public_transfer(coin::take(&mut lobby.pot, lobby.pledge, ctx), ctx.sender());
-  fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
+  fight::forfeit_placement(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
   fight::set_placement_clock(fight, 0);
 }
 
@@ -216,12 +216,13 @@ public(package) fun forfeit(
   kiosk: &mut Kiosk,
   cap: &KioskOwnerCap,
   policy: &TransferPolicy<Character>,
+  entropy: &mut sui::random::RandomGenerator,
   clock: &Clock,
   ctx: &TxContext,
 ) {
   fight::assert_kolizeum_controlled(fight);
   assert!(!fight::in_placement(fight), EWrongFight);
-  fight::forfeit(fight, fighter_idx, kiosk, cap, policy, clock, ctx);
+  fight::forfeit(fight, fighter_idx, kiosk, cap, policy, entropy, clock, ctx);
 }
 
 /// Recovery for an already-settled managed fight. Both linked objects are consumed together;

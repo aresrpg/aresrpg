@@ -148,7 +148,7 @@ fun completion(case: Case) {
   let mut fight = scenario.take_shared<fight::Fight>();
   if (case == Case::NonDungeon) {
     fight::join(&mut fight, &protected, &mut kiosk, kiosk_cap, assignment_actor_id, 1, 0, true, &clock, scenario.ctx());
-    fight::forfeit(&mut fight, 1, &mut kiosk, kiosk_cap, &policy, &clock, scenario.ctx());
+    fight::forfeit(&mut fight, 1, &mut kiosk, kiosk_cap, &policy, &mut entropy, &clock, scenario.ctx());
   } else if (case != Case::NonWinner) {
     let _ = fight::ready(&mut fight, 0, scenario.ctx());
     fight::start(&mut fight, &mut entropy, &clock);
@@ -178,7 +178,7 @@ fun completion(case: Case) {
   assert!(event::events_by_type<mastery::MasteryUpdated>().length() == before + if (case == Case::Valid) 1 else 0, 7);
   if (combat::ended(fight::combat_for_testing(&fight))) {
     fight::settle_pvp(&mut fight, 0, &mut kiosk, kiosk_cap, &policy, &clock, scenario.ctx());
-  } else fight::forfeit(&mut fight, 0, &mut kiosk, kiosk_cap, &policy, &clock, scenario.ctx());
+  } else fight::forfeit(&mut fight, 0, &mut kiosk, kiosk_cap, &policy, &mut entropy, &clock, scenario.ctx());
   fight::close(fight, scenario.ctx());
   assert!(kiosk.has_item(actor_id) && kiosk.has_item(assignment_actor_id), 5);
   mastery::destroy_for_testing(daily);

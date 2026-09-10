@@ -95,6 +95,10 @@ in the current deployment; the chain catalog length still decides board shape.
 ## Direct giftcard distribution
 
 Author each entitlement once in `seed/content/airdrop.json` under `giftcards`.
+Every giftcard and recipient batch names its `campaign`. Campaigns own their display name, visibility,
+reward types, and eligibility copy identity. Scoped issuance sends the complete reviewed campaign;
+campaign metadata is excluded from immutable voucher fingerprints. Operator-only test campaigns
+never enter the public catalogue.
 Use `giftcard_batches` for one item/amount sent to a recipient list; the SDK derives one voucher identity per address.
 Use `custody` for the initial recipient or distribution wallet. Publication already batches creation and transfer.
 Set `network` to `mainnet` or `testnet` when an allocation belongs to only one network; omitted means both.
@@ -124,6 +128,25 @@ explicit owner approval. Execution creates a new private journal and records int
 submission, then the returned receipt. A lost response leaves `submitting`; inspect chain custody and
 transaction history before preparing a manifest containing only verified unsent objects. Never reuse
 the original manifest blindly or automatically retry an executed failure.
+
+## Historical player rewards
+
+Historical Hytale awards use an isolated restored database, never the active game projection.
+Export only the ranking inputs and the recorded shop-spending counter:
+
+```bash
+bun scripts/export_hytale_players.mjs <isolated-container> ares <backup.rdb> <backup-timestamp-ms> <private-export.json>
+bun scripts/prepare_hytale_gifts.mjs <private-export.json> <private-ranking-report.json>
+```
+
+The catalogue's Hytale tiers own the reward quantities. Ranking aggregates each wallet's characters,
+bank and inventory. Equal-weight percentile scores measure unique item types, playtime, character XP,
+and earned profession levels; admin/builder accounts and snapshot-active bans are excluded. Quantity
+duplicates do not create additional collection variety. Ties resolve by character XP, then address.
+The separate supporter award uses recorded shop spending strictly greater than 100 SUI, independent
+of ranking. The historical counter is in hundredths of SUI, not USD or MIST. Generated allocations
+are mainnet-only and reject changes to already-prepared batch identities. Preparation sends nothing.
+Keep the export and named ranking report private; only the necessary recipient allocations enter seed.
 
 ## Printing giftcards
 

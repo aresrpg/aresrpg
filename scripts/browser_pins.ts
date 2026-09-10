@@ -6,11 +6,14 @@ import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_PINS = fileURLToPath(new URL('../pins.json', import.meta.url))
+const LOCAL_PINS = fileURLToPath(new URL('../.dev/pins.json', import.meta.url))
 
 /** Both direct and SDK-relative imports resolve to the same explicit deployment. */
-export const browser_pins_plugin = (pins_path = process.env.ARES_PINS_FILE ?? ROOT_PINS, expected_network?: string) => {
+export const browser_pins_plugin = (pins_path?: string, expected_network?: string) => {
   const canonical_path = realpathSync(ROOT_PINS)
-  const selected_path = realpathSync(pins_path)
+  const selected_path = realpathSync(
+    pins_path ?? process.env.ARES_PINS_FILE ?? (expected_network === 'testnet' ? LOCAL_PINS : ROOT_PINS)
+  )
   return {
     name: 'aresrpg-browser-pins',
     enforce: 'pre' as const,

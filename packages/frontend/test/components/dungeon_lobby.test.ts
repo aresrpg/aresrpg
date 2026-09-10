@@ -36,6 +36,9 @@ test('a group fight accepts only a member of the opener party during placement',
   const fight = { phase: 'placement', access: 1, opener: '0xopener' }
   expect(dungeon_fight_joinable(fight, ['0xself', '0xopener'])).toBeTrue()
   expect(dungeon_fight_joinable(fight, ['0xself'])).toBeFalse()
+  expect(dungeon_fight_joinable(fight, [])).toBeFalse()
+  expect(dungeon_fight_joinable({ ...fight, opener: null }, ['0xself'])).toBeFalse()
+  expect(dungeon_fight_joinable({ ...fight, access: 2 }, ['0xopener'])).toBeFalse()
   expect(dungeon_fight_joinable({ ...fight, access: 0 }, [])).toBeTrue()
   expect(dungeon_fight_joinable({ ...fight, phase: 'active', access: 0 }, [])).toBeFalse()
 })

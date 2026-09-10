@@ -6,7 +6,7 @@
 // VIEW-ONLY channel fed by the fight module. Lines are semantic (template key + tokenized
 // values); this component localizes live and paints tokens from the chat palette.
 
-import { expand_chat_message, type ChatMessagePart } from '@aresrpg/protocol'
+import { character_checkpoint, expand_chat_message, type ChatMessagePart } from '@aresrpg/protocol'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -242,7 +242,9 @@ export const Chat = ({
   const speak = (): void => {
     const message = chat_message_from_draft(draft)
     if (!message.text || !speaker) return
-    const position = speaker.world ? owned_character_position(speaker.id, speaker.world) : null
+    const position = speaker.world
+      ? owned_character_position(speaker.id, speaker.world, character_checkpoint(speaker))
+      : null
     const parts = expand_chat_message(message, character_chat_context(speaker, position))
     // the wire send (session forwards to packet/chat when the link is up) + the local echo
     dispatch_app({ type: 'chat/speak', channel: speak_channel, parts })

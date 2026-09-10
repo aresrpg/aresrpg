@@ -35,11 +35,7 @@ import items_source from '../../../../seed/content/items.json'
 import mastery_source from '../../../../seed/content/mastery.json'
 import mobs_source from '../../../../seed/content/mobs.json'
 import recipes_source from '../../../../seed/content/recipes.json'
-import {
-  showcase as airdrop_showcase,
-  legacy_pool as airdrop_legacy_pool,
-  pending as airdrop_pending,
-} from '../../../../seed/content/airdrop.json'
+import { campaigns as airdrop_campaigns } from '../../../../seed/content/airdrop.json'
 import spells_source from '../../../../seed/content/spells.json'
 import dungeons_source from '../../../../seed/content/dungeons.json'
 
@@ -47,28 +43,10 @@ import { worlds_source } from './worlds.ts'
 import { derive_item_filter_rows } from './item_filters.ts'
 import { derive_mob_filter_rows, derive_mob_locations } from './mob_filters.ts'
 
-type AirdropSource = Readonly<{
-  showcase: readonly Readonly<{
-    id: string
-    kind: string
-    name: string
-    art: Readonly<{ glb?: string; icon?: string }>
-    art_status: Readonly<{ glb?: string; icon?: string }>
-    aura?: Readonly<{ color: string; status: string }>
-    aura_pending?: boolean
-  }>[]
-  legacy_pool: readonly Readonly<Record<string, unknown>>[]
-  pending: readonly Readonly<{ id: string; name: string }>[]
-}>
 type MasterySource = Readonly<{
   offers: readonly Readonly<{ item_type: string; cost: number; enabled?: boolean }>[]
 }>
 
-const authored_airdrop = {
-  showcase: airdrop_showcase,
-  legacy_pool: airdrop_legacy_pool,
-  pending: airdrop_pending,
-} as unknown as AirdropSource
 const authored_mastery = mastery_source as unknown as MasterySource
 
 export type StatBlock = Readonly<Record<StatName, number>>
@@ -365,9 +343,7 @@ export const content_catalog = Object.freeze({
   jobs,
   mastery: Object.freeze({ offers: mastery_offers }),
   airdrop: Object.freeze({
-    showcase: Object.freeze(authored_airdrop.showcase),
-    legacy_pool: Object.freeze(authored_airdrop.legacy_pool),
-    pending: Object.freeze(authored_airdrop.pending),
+    campaigns: Object.freeze(airdrop_campaigns.filter(({ visibility }) => visibility === 'public')),
   }),
   item,
   mob,

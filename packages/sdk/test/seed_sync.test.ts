@@ -47,7 +47,6 @@ test('a newer chain revision invalidates a matching mutable ledger fingerprint',
     chain_id: '0xrow',
     addresses: ['0xrow'],
     hydrate: [],
-    cost: 1,
   } as SeedSyncRow
   const ledger = {
     '0xrow': { hash: row.hash, label: row.label, addresses: row.addresses, revisions: { '0xrow': '7:old' } },
@@ -216,7 +215,6 @@ describe('check changes', () => {
       chain_id: '0xworld',
       addresses: Object.freeze(['0xworld']),
       hydrate: Object.freeze([]),
-      cost: 1,
     }) satisfies SeedSyncRow
     const view = seed_sync_view(
       [row],
@@ -270,8 +268,8 @@ describe('check changes', () => {
     const [retirement] = view.changed.filter(({ domain }) => domain === 'mastery_offer')
     expect(retirement?.label).toBe('retire mastery offer box')
     const [batch] = seed_update_batches(sdk, [retirement!], { admin_cap: ADMIN_CAP, content_root: REGISTRY })
-    expect(move_call_targets(batch!.transaction)).toContain(`${PACKAGE}::mastery::set_enabled`)
-    expect(move_call_targets(batch!.transaction)).not.toContain(`${PACKAGE}::mastery::set_offer`)
+    expect(move_call_targets(batch!.build())).toContain(`${PACKAGE}::mastery::set_enabled`)
+    expect(move_call_targets(batch!.build())).not.toContain(`${PACKAGE}::mastery::set_offer`)
   })
 
   test('omitting an existing recipe retires its direct craft door', () => {
@@ -291,7 +289,7 @@ describe('check changes', () => {
       admin_cap: ADMIN_CAP,
       content_root: REGISTRY,
     })
-    expect(move_call_targets(batch!.transaction)).toContain(`${SEED_PACKAGE}::recipe_rows::retire_recipe`)
+    expect(move_call_targets(batch!.build())).toContain(`${SEED_PACKAGE}::recipe_rows::retire_recipe`)
   })
 
   test('a changed row composes its real rewrite doors', () => {
@@ -305,7 +303,7 @@ describe('check changes', () => {
     const [batch, ...rest] = seed_update_batches(sdk, changed, { admin_cap: ADMIN_CAP, content_root: REGISTRY })
 
     expect(rest).toEqual([])
-    const targets = move_call_targets(batch!.transaction)
+    const targets = move_call_targets(batch!.build())
     expect(batch!.written).toEqual(changed.map(({ key }) => key))
     expect(targets).toContain(`${SEED_PACKAGE}::item_rows::overwrite_item`)
     expect(targets).toContain(`${PACKAGE}::loot_box::clear_loot_table`)
@@ -337,7 +335,7 @@ describe('check changes', () => {
       admin_cap: ADMIN_CAP,
       content_root: REGISTRY,
     })
-    const targets = move_call_targets(batch!.transaction)
+    const targets = move_call_targets(batch!.build())
     expect(targets).toContain(`${SEED_PACKAGE}::dungeon_content::overwrite`)
     expect(targets).toContain(`${MATH_PACKAGE}::dungeon_data::new_room`)
     expect(targets).toContain(`${MATH_PACKAGE}::dungeon_data::new_room_mob`)
@@ -357,7 +355,7 @@ describe('check changes', () => {
       { chain_len: 1, authored_len: 2 }
     )
 
-    const targets = move_call_targets(batch!.transaction)
+    const targets = move_call_targets(batch!.build())
     expect(targets.filter((target) => target.endsWith('::board_catalog::replace_board'))).toHaveLength(1)
     expect(targets.filter((target) => target.endsWith('::board_catalog::add_board'))).toHaveLength(1)
   })
@@ -372,11 +370,11 @@ describe('check changes', () => {
       { admin_cap: ADMIN_CAP, content_root: REGISTRY },
       { chain_len: 3, authored_len: 1 }
     )
-    const calls = batches.flatMap(({ transaction }) => move_call_targets(transaction))
+    const calls = batches.flatMap(({ build }) => move_call_targets(build()))
     const view = seed_sync_view(seed_sync_rows(sdk, content), {}, () => true, 3)
 
     expect(calls.filter((target) => target.endsWith('::board_catalog::remove_last_board'))).toHaveLength(2)
-    expect(batches.at(-1)?.written).toEqual(['board:1', 'board:2'])
+    expect(batches.at(-1)?.written).toEqual(['board:2', 'board:1'])
     expect(view.board_removals).toEqual([{ key: 'board:2', label: 'board #2' }])
     expect(view.removed).toEqual([])
   })
@@ -458,4 +456,108 @@ describe('check changes', () => {
     expect(after_ore[spark.key]?.hash).toBe('old')
     expect(after_retirement.retired).toBeUndefined()
   })
+})
+
+test('campaign grouping preserves the original immutable voucher fingerprint', () => {
+  const sdk = game()
+  const original: SeedContent = {
+    ...content,
+    airdrop: { giftcards: [{ id: 'existing_gift', item_type: 'ore', amount: 1, custody: `0x${'99'.repeat(32)}` }] },
+  }
+  const grouped: SeedContent = {
+    ...original,
+    airdrop: { giftcards: original.airdrop.giftcards.map((card) => ({ ...card, campaign: 'bundle' })) },
+  }
+  const fingerprints = (source: SeedContent) =>
+    seed_sync_rows(sdk, source)
+      .filter(({ domain }) => domain === 'giftcard')
+      .map(({ key, hash }) => ({ key, hash }))
+  expect(fingerprints(grouped)).toEqual(fingerprints(original))
+})
+
+test('311 resource rewrites split their 1244 real commands into bounded receipt batches', () => {
+  const sdk = armed()
+  const rows = seed_sync_rows(sdk, {
+    ...content,
+    items: Array.from({ length: 311 }, (_, index) => ({
+      item_type: `resource_${index}`,
+      name: `Resource ${index}`,
+      category: 'resource',
+      level: 1,
+    })),
+  }).filter(({ domain }) => domain === 'item')
+  rows.forEach(({ chain_id }) => sdk.cache.shared.set(chain_id, { initialSharedVersion: '1' }))
+  const batches = seed_update_batches(sdk, rows, { admin_cap: ADMIN_CAP, content_root: REGISTRY })
+  expect(batches.length).toBeGreaterThan(1)
+  expect(batches.every(({ build }) => build().getData().commands.length <= 1000)).toBe(true)
+  expect(batches.reduce((count, { build }) => count + build().getData().commands.length, 0)).toBe(1244 + batches.length)
+  expect(batches.flatMap(({ written }) => written)).toEqual(rows.map(({ key }) => key))
+})
+
+test('all current authored rewrites fit bounded transactions without dropping or repeating a row', async () => {
+  const { seed_content } = await import('../../frontend/src/content/canonical_seed.ts')
+  const sdk = armed()
+  const rows = seed_sync_rows(sdk, seed_content).filter(({ update }) => update)
+  rows.flatMap(({ hydrate }) => hydrate).forEach((id) => sdk.cache.shared.set(id, { initialSharedVersion: '1' }))
+  const batches = seed_update_batches(
+    sdk,
+    rows,
+    { admin_cap: ADMIN_CAP, content_root: REGISTRY },
+    { chain_len: seed_content.boards.length, authored_len: seed_content.boards.length }
+  )
+  expect(batches.every(({ build }) => build().getData().commands.length <= 1000)).toBe(true)
+  expect(batches.flatMap(({ written }) => written)).toEqual(rows.map(({ key }) => key))
+})
+
+test('a single oversized rewrite names its row instead of emitting an unusable batch', () => {
+  const sdk = armed()
+  const row = {
+    ...seed_sync_rows(sdk, content)[0]!,
+    label: 'oversized rewrite',
+    update: (_sdk: unknown, tx: Transaction) => {
+      for (let index = 0; index < 1001; index++) tx.moveCall({ target: '0x2::test::noop' })
+    },
+  }
+  expect(() => seed_update_batches(sdk, [row], { admin_cap: ADMIN_CAP, content_root: REGISTRY })).toThrow(
+    /Seed row oversized rewrite alone needs 1001 commands/
+  )
+})
+
+test('large board removals split from the actual chain tail for safe partial recovery', () => {
+  const sdk = armed()
+  sdk.cache.shared.set(catalog_id, { initialSharedVersion: '1' })
+  const batches = seed_update_batches(
+    sdk,
+    [],
+    { admin_cap: ADMIN_CAP, content_root: REGISTRY },
+    { chain_len: 2001, authored_len: 1 }
+  )
+  expect(batches).toHaveLength(3)
+  expect(batches.every(({ build }) => build().getData().commands.length <= 1000)).toBe(true)
+  expect(batches.flatMap(({ written }) => written)).toEqual(
+    Array.from({ length: 2000 }, (_, index) => `board:${2000 - index}`)
+  )
+})
+
+test('update batches use the AdminCap version from the preceding receipt', () => {
+  const sdk = armed()
+  const rows = seed_sync_rows(sdk, {
+    ...content,
+    items: Array.from({ length: 311 }, (_, index) => ({
+      item_type: `resource_${index}`,
+      name: `Resource ${index}`,
+      category: 'resource',
+      level: 1,
+    })),
+  }).filter(({ domain }) => domain === 'item')
+  rows.flatMap(({ hydrate }) => hydrate).forEach((id) => sdk.cache.shared.set(id, { initialSharedVersion: '1' }))
+  const batches = seed_update_batches(sdk, rows, { admin_cap: ADMIN_CAP, content_root: REGISTRY })
+  const cap_version = (transaction: Transaction) =>
+    transaction.getData().inputs.find((input) => input.Object?.ImmOrOwnedObject?.objectId === ADMIN_CAP)?.Object
+      ?.ImmOrOwnedObject?.version
+  const first = batches[0]!.build()
+  expect(cap_version(first)).toBe('1')
+  sdk.cache.owned.set(ADMIN_CAP, { objectId: ADMIN_CAP, version: '2', digest: 'receipt-updated-cap' })
+  expect(cap_version(batches[1]!.build())).toBe('2')
+  expect(cap_version(first)).toBe('1')
 })

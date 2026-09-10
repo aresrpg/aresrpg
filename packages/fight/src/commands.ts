@@ -226,7 +226,7 @@ const boundary = (runtime: FightRuntime, action: BoundaryAction, options: Comman
   })
 }
 
-const forfeit = (runtime: FightRuntime, action: ForfeitAction): FightRuntime => {
+const forfeit = (runtime: FightRuntime, action: ForfeitAction, options: CommandOptions): FightRuntime => {
   if (runtime.contract.ended) return fail(runtime, 'already_ended')
   const fighter = runtime.contract.fighters[Number(action.fighter)]
   if (!is_player(fighter) || fighter.settled) return fail(runtime, 'already_settled')
@@ -242,6 +242,19 @@ const forfeit = (runtime: FightRuntime, action: ForfeitAction): FightRuntime => 
     xp: 0n,
     persistent_hp,
   })
+  if (
+    runtime.contract.round > 0n &&
+    !runtime.contract.ended &&
+    runtime.contract.queue[Number(runtime.contract.turn_ptr)] === action.fighter
+  )
+    return run_until_player({
+      runtime,
+      seed_for: options.seed_for!,
+      on_mob_turn: options.on_mob_turn,
+      now: options.observed_ms!,
+      opening: false,
+      reason: 'forfeit',
+    })
   return runtime
 }
 
@@ -258,6 +271,6 @@ export const apply_command = (
   if (action.type === 'cast_spell') return cast(runtime, action)
   if (action.type === 'weapon_strike') return strike(runtime, action)
   if (action.type === 'end_turn' || action.type === 'crank') return boundary(runtime, action, options)
-  if (action.type === 'forfeit') return forfeit(runtime, action)
+  if (action.type === 'forfeit') return forfeit(runtime, action, options)
   return fail(runtime, 'unknown_command', { type: (action as { type: string }).type })
 }

@@ -14,6 +14,7 @@ export type FailureCopyKey =
   | 'gas_budget_toast'
   | 'movement_sync_toast'
   | 'fight_path_changed_toast'
+  | 'fight_placement_unavailable_toast'
   | 'party_member_unavailable_toast'
   | 'fight_turn_already_forced_toast'
 
@@ -21,6 +22,7 @@ const matches_abort = (message: string, code: number, owner: string): boolean =>
   new RegExp(`abort code:\\s*${code}\\b`, 'i').test(message) && message.includes(owner)
 
 const ABORT_FAILURES = Object.freeze([
+  Object.freeze({ code: 1709, owner: '::combat::place', key: 'fight_placement_unavailable_toast' }),
   Object.freeze({ code: 1725, owner: '::fight::walk_path', key: 'fight_path_changed_toast' }),
   Object.freeze({ code: 2002, owner: '::party::af', key: 'party_member_unavailable_toast' }),
   Object.freeze({ code: 1724, owner: '::fight::crank', key: 'fight_turn_already_forced_toast' }),

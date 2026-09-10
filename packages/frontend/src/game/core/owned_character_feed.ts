@@ -2,9 +2,16 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable functional/immutable-data -- this external presentation feed owns its private live-position cache. */
 
-import { visible_equipment, type CharacterRow, type PresenceRow } from '@aresrpg/protocol'
+import { character_checkpoint, visible_equipment, type CharacterRow, type PresenceRow } from '@aresrpg/protocol'
 
-export type OwnedCharacterPosition = Readonly<{ character_id: string; world: string; x: number; y: number; z: number }>
+export type OwnedCharacterPosition = Readonly<{
+  character_id: string
+  world: string
+  checkpoint: string
+  x: number
+  y: number
+  z: number
+}>
 
 const feed: {
   positions: Map<string, OwnedCharacterPosition>
@@ -15,16 +22,19 @@ const feed: {
 const fallback_position = (
   character: Readonly<CharacterRow>,
   ground_height: (x: number, z: number) => number
-): OwnedCharacterPosition | null =>
-  character.world === character.checkpoint_world && Number.isFinite(character.x) && Number.isFinite(character.z)
+): OwnedCharacterPosition | null => {
+  const checkpoint = character_checkpoint(character)
+  return checkpoint
     ? Object.freeze({
         character_id: character.id,
         world: character.world!,
+        checkpoint,
         x: character.x!,
         y: ground_height(character.x!, character.z!),
         z: character.z!,
       })
     : null
+}
 
 const presence_position = (
   character: Readonly<CharacterRow>,
@@ -33,7 +43,10 @@ const presence_position = (
 ): OwnedCharacterPosition | null => {
   if (character.world !== world || character.custody === 'fight' || character.active_fight || character.dungeon_run)
     return null
-  return feed.positions.get(character.id) ?? fallback_position(character, ground_height)
+  return (
+    owned_character_position(character.id, world, character_checkpoint(character)) ??
+    fallback_position(character, ground_height)
+  )
 }
 
 export const owned_character_presence_rows = (
@@ -78,10 +91,16 @@ export const owned_character_presence_rows = (
 export const record_owned_character_position = (
   character_id: string,
   world: string,
-  position: Readonly<{ x: number; y: number; z: number }>
+  position: Readonly<{ checkpoint: string; x: number; y: number; z: number }>
 ): void => {
   const previous = feed.positions.get(character_id)
-  if (previous?.world === world && previous.x === position.x && previous.y === position.y && previous.z === position.z)
+  if (
+    previous?.world === world &&
+    previous.checkpoint === position.checkpoint &&
+    previous.x === position.x &&
+    previous.y === position.y &&
+    previous.z === position.z
+  )
     return
   const row = Object.freeze({ character_id, world, ...position })
   feed.positions.set(character_id, row)
@@ -89,9 +108,13 @@ export const record_owned_character_position = (
   feed.listeners.forEach((listener) => listener())
 }
 
-export const owned_character_position = (character_id: string, world: string): OwnedCharacterPosition | null => {
+export const owned_character_position = (
+  character_id: string,
+  world: string,
+  checkpoint: string | null
+): OwnedCharacterPosition | null => {
   const row = feed.positions.get(character_id)
-  return row?.world === world ? row : null
+  return checkpoint && row?.world === world && row.checkpoint === checkpoint ? row : null
 }
 
 export const read_owned_character_positions = (): Readonly<Record<string, OwnedCharacterPosition>> => feed.snapshot
