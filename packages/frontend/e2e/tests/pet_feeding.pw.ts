@@ -34,8 +34,9 @@ test('food selection waits for confirm and rejection preserves the choice withou
   await modal.locator('[data-feed-foods] button').click()
   expect(await page.evaluate(() => window.feed_requests.length)).toBe(0)
   await expect(confirm).toBeEnabled()
-  const food_cell = await modal.locator('[data-feed-foods] button').boundingBox()
-  expect(food_cell!.width).toBe(56)
+  const food_cell = modal.locator('[data-feed-foods] button')
+  // The modal enters at scale(0.95); measure its final footprint after that transition.
+  await expect.poll(async () => (await food_cell.boundingBox())?.width).toBe(56)
   await page.screenshot({ path: 'test-results/pet-feeding-selection.png' })
   await confirm.click()
   await expect(modal.getByRole('button', { name: 'Feeding…', exact: true })).toBeDisabled()
