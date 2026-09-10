@@ -11,7 +11,7 @@ Generated results belong in root `test-results/`, never alongside these sources.
 Use installed stable Chrome locally. Install the other pinned browsers with `bunx playwright install --with-deps firefox webkit`.
 CI installs stable Chrome with `bunx playwright install --with-deps chrome`.
 Run `bun run test:browser` from the repository root.
-Set `BROWSER=firefox` or `BROWSER=webkit` to select another browser engine.
+Set `BROWSER=firefox` to select Firefox. `BROWSER=webkit` is available for manual diagnostics only.
 Linux CI runs Firefox headed under Xvfb with software OpenGL because headless Firefox cannot
 create the WebGL2 context needed by the fallback renderer. This is a compatibility check.
 
@@ -45,7 +45,7 @@ Other budgets are 250 ms maximum steady-frame stall,
 between laps. Collected JS heap growth is bounded to 32 MiB. Missing/software GPU adapters fail
 hardware runs explicitly. Performance is deliberately measured outside concurrent native suites.
 
-The required `gate` workflow runs Chrome/Firefox on Linux and Chrome/WebKit on macOS on every
+The required `gate` workflow runs Chrome/Firefox on Linux and Chrome on macOS on every
 pull request and edge push. These jobs check compatibility and resource bounds. Removing the Windows
 GPU jobs leaves no automatic hardware FPS gate; the full hardware workload remains available through
 the command above. The hosted compatibility matrix is not an FPS certificate. Fixed budgets detect

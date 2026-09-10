@@ -21,8 +21,6 @@ twin, SDK, indexer, server, protocol, immutable rules, and the authored seed cor
 ```bash
 bun install
 bun run dev            # frontend at localhost:5173
-bun run dev:launchpad  # independent public-sale page at localhost:4174
-bun run build:launchpad # independent deployment artifact
 bun run lint           # eslint + prettier
 bun run test           # every package's unit tests — same command CI runs
 ```

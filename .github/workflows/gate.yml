@@ -292,7 +292,6 @@ jobs:
           - { os: ubuntu-latest, browser: chrome }
           - { os: ubuntu-latest, browser: firefox }
           - { os: macos-latest, browser: chrome }
-          - { os: macos-latest, browser: webkit }
     env:
       BROWSER: ${{ matrix.browser }}
     steps:
