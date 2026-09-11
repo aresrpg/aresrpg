@@ -50,7 +50,7 @@ export type SeedLedger = Readonly<
     Readonly<{
       hash: string
       label: string
-      /** Chain revisions observed after the authored value was written. */
+      /** Authored content object revision observed after its write. */
       revisions?: Readonly<Record<string, string>>
       domain?: string
       item?: Readonly<{ category: string }>
@@ -71,9 +71,9 @@ export type SeedSyncRow = Readonly<{
   /** spell rows carry their immutable class so the ledger can refuse illegal rewrites */
   spell?: Readonly<{ classe: string; unlock_level: number }>
   world?: Readonly<{ cities: readonly string[] }>
-  /** the chain object whose existence says "already created" (the shared catalog for boards) */
+  /** Authored content owner; its existence and revision drive reconciliation (catalog for boards). */
   chain_id: string
-  /** Derived addresses used for existence and revision checks. */
+  /** All derived addresses required to certify creation, including gameplay companions. */
   addresses: readonly string[]
   /** shared objects the rewrite needs resolved before composing */
   hydrate: readonly string[]
@@ -325,7 +325,7 @@ export const seed_sync_rows = (
       world: Object.freeze({ cities: Object.freeze(world.cities.map(({ city }) => city)) }),
       chain_id: id,
       addresses: Object.freeze([id, gameplay_id]),
-      hydrate: [id, gameplay_id],
+      hydrate: [id],
       update: (game_sdk, tx, cap, root) => {
         game_sdk.seed_doors.set_entry_level(tx, { cap, root, world_content: id, entry_level: world.entry_level })
         const { cities, mob_rows, archi_rows, resource_rows } = world_content_values(
@@ -435,8 +435,7 @@ const revisions_match = (
   revision: (id: string) => string | null
 ): boolean =>
   row.kind === 'supply' ||
-  (recorded?.revisions !== undefined &&
-    row.addresses.every((address) => recorded.revisions?.[address] === revision(address)))
+  (recorded?.revisions !== undefined && recorded.revisions[row.chain_id] === revision(row.chain_id))
 
 const content_state = (
   row: SeedSyncRow,

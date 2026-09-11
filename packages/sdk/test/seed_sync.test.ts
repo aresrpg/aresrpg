@@ -137,8 +137,12 @@ const content: SeedContent = {
 
 test('creation planning and reconciliation own the same derived address set', () => {
   const sdk = game()
-  const planned = new Set(create_seed_plan(sdk, content).batches.flatMap(({ target_ids }) => target_ids))
-  const reconciled = new Set(seed_sync_rows(sdk, content).flatMap(({ addresses }) => addresses))
+  const authored: SeedContent = {
+    ...content,
+    worlds: [{ world: 'nauvis', entry_level: 1, archis: [], cities: [], mobs: [], resources: [] }],
+  }
+  const planned = new Set(create_seed_plan(sdk, authored).batches.flatMap(({ target_ids }) => target_ids))
+  const reconciled = new Set(seed_sync_rows(sdk, authored).flatMap(({ addresses }) => addresses))
   expect([...planned].toSorted()).toEqual([...reconciled].toSorted())
 })
 

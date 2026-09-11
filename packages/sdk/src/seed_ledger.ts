@@ -4,17 +4,12 @@
 import type { SeedLedger, SeedSyncRow } from './seed_sync.ts'
 
 const ledger_entry = (row: SeedSyncRow, revision: (id: string) => string | null = () => null): SeedLedger[string] => {
-  const revisions = Object.fromEntries(
-    row.addresses.flatMap((address) => {
-      const value = revision(address)
-      return value ? [[address, value] as const] : []
-    })
-  )
+  const content_revision = revision(row.chain_id)
   return Object.freeze({
     hash: row.hash,
     label: row.label,
-    ...(row.kind === 'template' && Object.keys(revisions).length === row.addresses.length
-      ? { revisions: Object.freeze(revisions) }
+    ...(row.kind === 'template' && content_revision
+      ? { revisions: Object.freeze({ [row.chain_id]: content_revision }) }
       : {}),
     domain: row.domain,
     ...(row.item ? { item: row.item } : {}),
