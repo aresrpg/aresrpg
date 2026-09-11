@@ -3,9 +3,11 @@
 // The single door: a genuine personal-message signature over `aresrpg::<uuid>` admits its own
 // address and nothing else. Plain ed25519 verifies offline — no network in this test.
 
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { toBase64 } from '@mysten/sui/utils'
+import { toZkLoginPublicIdentifier } from '@mysten/sui/zklogin'
+import * as signature_verification from '@mysten/sui/verify'
 
 import { verify_login } from '../src/auth.ts'
 
@@ -15,6 +17,26 @@ const uuid = 'f00d-1234'
 const message = new TextEncoder().encode(`aresrpg::${uuid}`)
 
 describe('the login door', () => {
+  test('an already verified zkLogin identity admits both supported address derivations, never a foreign address', async () => {
+    // A short synthetic seed exposes the legacy unpadded/current padded derivation difference.
+    // Stub only cryptographic verification; exercise the real SDK identity and admission check.
+    const identity = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: false })
+    const legacy = toZkLoginPublicIdentifier(1n, 'https://accounts.google.com', { legacyAddress: true })
+    expect(identity.toSuiAddress()).not.toBe(legacy.toSuiAddress())
+    const verifier = spyOn(signature_verification, 'verifyPersonalMessageSignature').mockResolvedValue(identity)
+    const proof = { bytes: toBase64(message), signature: 'verified-by-test-boundary', uuid }
+    try {
+      expect(await verify_login({ ...proof, address: identity.toSuiAddress() })).toBe(true)
+      expect(await verify_login({ ...proof, address: legacy.toSuiAddress() })).toBe(true)
+      expect(await verify_login({ ...proof, address: keypair.toSuiAddress() })).toBe(false)
+      expect(verifier).toHaveBeenCalledTimes(3)
+      verifier.mockRejectedValueOnce(new Error('Invalid zkLogin proof'))
+      expect(await verify_login({ ...proof, address: legacy.toSuiAddress() })).toBe(false)
+    } finally {
+      verifier.mockRestore()
+    }
+  })
+
   test('a genuine signature admits its own address', async () => {
     const { signature } = await keypair.signPersonalMessage(message)
     expect(await verify_login({ bytes: toBase64(message), signature, address, uuid })).toBe(true)

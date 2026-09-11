@@ -9,7 +9,13 @@ import podium_third from '../assets/leaderboards/podium-3.png'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
-import { BADGE_COLORS, display_address, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
+import {
+  BADGE_COLORS,
+  display_address,
+  display_suins_name,
+  leaderboard_score,
+  compact_leaderboard_score,
+} from './presentation.ts'
 import './leaderboards.css'
 
 const Badge = ({
@@ -83,8 +89,8 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
       </span>
       <div role="cell" className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span title={entry.address} className="truncate text-text">
-            {entry.name ?? display_address(entry.address)}
+          <span title={[entry.name, entry.address].filter(Boolean).join(' · ')} className="truncate text-text">
+            {entry.name ? display_suins_name(entry.name) : display_address(entry.address)}
           </span>
           {self && <span className="shrink-0 text-[10px] text-cyan uppercase">{text('you')}</span>}
         </div>
@@ -121,8 +127,15 @@ const Podium = () => {
               height={128}
               draggable={false}
             />
-            <span title={entry?.address} className="w-full truncate text-center text-xs text-text">
-              {entry ? (entry.name ?? display_address(entry.address)) : text('unclaimed')}
+            <span
+              title={[entry?.name, entry?.address].filter(Boolean).join(' · ')}
+              className="w-full truncate text-center text-xs text-text"
+            >
+              {entry
+                ? entry.name
+                  ? display_suins_name(entry.name)
+                  : display_address(entry.address)
+                : text('unclaimed')}
             </span>
             <div
               className="mt-2 max-w-full text-center text-lg font-semibold break-all"

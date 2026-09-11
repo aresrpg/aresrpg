@@ -155,8 +155,8 @@ export const AppShell = ({
             <LanguageCard change_locale={change_locale} locale={locale} />
             <DiscordCard copy={copy} />
             <TelegramCard copy={copy} />
+            <PublicSaleCard copy={copy} />
           </div>
-          <PublicSaleCard copy={copy} />
           <ConnectionCard
             copy={copy}
             error={session.link_error}

@@ -24,6 +24,8 @@ import { master_volume_from } from '../game/core/audio_volume.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { SuinsSettings } from './SuinsSettings.tsx'
+
 const Toggle = ({
   checked,
   label,
@@ -90,6 +92,8 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
           <p className="mt-1 text-[10px] tracking-wide text-muted">{t('subtitle')}</p>
         </div>
       </header>
+
+      <SuinsSettings copy={copy} />
 
       <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:mt-8 lg:p-5">
         <div className="flex min-w-0 items-center gap-3">

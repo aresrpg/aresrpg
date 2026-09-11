@@ -1,0 +1,17 @@
+{
+  "objectId": "0xaa51f76346f51fb79295454d9f6f47b394bb7f288cd70c0ae6b98fd5e517c1da",
+  "version": "996277083",
+  "digest": "F1bpZrH69Vp1UUWJJgvxMxq1AYoXi7cb4FXZB2v8JULC",
+  "owner": {
+    "AddressOwner": "0x9036f4be5ca0d0c2b890f12b398c032a00952aa41c2776507db0d018002373a7",
+    "$kind": "AddressOwner"
+  },
+  "type": "0xd22b24490e0bae52676651b4f56660a5ff8022a2576e0089f79b3c88d44e08f0::suins_registration::SuinsRegistration",
+  "json": {
+    "domain": { "labels": ["sui", "sceat"] },
+    "domain_name": "sceat.sui",
+    "expiration_timestamp_ms": "1799620310642",
+    "id": "0xaa51f76346f51fb79295454d9f6f47b394bb7f288cd70c0ae6b98fd5e517c1da",
+    "image_url": "QmaLFg4tQYansFpyRqmDfABdkUVy66dHtpnkH15v1LPzcY"
+  }
+}

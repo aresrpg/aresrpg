@@ -10,6 +10,7 @@ import type { GiftcardRow, TradeRow } from '@aresrpg/protocol'
 import { getWallets, type Wallet, type WalletAccount } from '@mysten/wallet-standard'
 
 import { canonical_suins_name } from './suins.ts'
+import { suins_actions, type SuinsActions } from './suins_actions.ts'
 import { character_claim_id, character_create, character_id, type CharacterCreateInput } from './character.ts'
 import { read_character_checkpoint as read_checkpoint, type CharacterCheckpoint } from './character_checkpoint.ts'
 import { create_item_snapshot_reader, type ItemSnapshot } from './item_snapshot.ts'
@@ -47,6 +48,7 @@ export type { FriendsActions } from './friends.ts'
 export type { PartyActions } from './party.ts'
 export type { MasteryActions } from './mastery.ts'
 export type { ItemSnapshot } from './item_snapshot.ts'
+export type { SuinsActions, SuinsSnapshot, SuinsSelection } from './suins_actions.ts'
 
 const select_personal_kiosk = (caps: readonly KioskOwnerCap[], kiosk_id?: string): KioskOwnerCap | null =>
   (kiosk_id ? caps.find(({ kioskId }) => kioskId === kiosk_id) : caps[0]) ?? null
@@ -79,6 +81,7 @@ export type AuthSession = Readonly<{
   party: PartyActions
   mastery: MasteryActions
   kares: KaresActions
+  suins: SuinsActions
   /** the character-upkeep chain hand — equipment, stats, spells, consumables, runes */
   character: CharacterActions
   read_character_checkpoint: (character_id: string, expected_world: string) => Promise<CharacterCheckpoint | null>
@@ -197,6 +200,7 @@ const create_wallet_session = (
     address: account.address,
     wallet_name: wallet.name,
     identity: 'enoki:getSession' in wallet.features ? 'zklogin' : 'wallet',
+    suins: suins_actions({ client: resolution_client, sdk, address: account.address }),
     sign_personal_message: binding.sign_personal_message,
     read_sui_balance: sdk.read_sui_balance,
     read_kares_balance: sdk.read_kares_balance,

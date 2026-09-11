@@ -54,6 +54,12 @@ test('the account card sits below navigation and above language with row actions
   const copy = await load_app_copy('en')
   const wallet = Object.freeze({
     address: '0x123456789',
+    suins: {
+      snapshot: async () => ({ default_name: null, names: [] }),
+      set_default: async () => {
+        throw new Error('unused name selection')
+      },
+    },
     wallet_name: 'Google',
     identity: 'zklogin' as const,
     sign_personal_message: async () => ({ bytes: '', signature: '' }),

@@ -134,6 +134,7 @@ export default defineConfig(({ mode }) => {
                 app: resolve(frontend_dir, 'index.html'),
                 workload: resolve(frontend_dir, 'e2e/fixtures/workload.html'),
                 staking: resolve(frontend_dir, 'e2e/fixtures/staking.html'),
+                suins_settings: resolve(frontend_dir, 'e2e/fixtures/suins_settings.html'),
                 inventory: resolve(frontend_dir, 'e2e/fixtures/inventory.html'),
                 public_sale_card: resolve(frontend_dir, 'e2e/fixtures/public_sale_card.html'),
                 leaderboard: resolve(frontend_dir, 'e2e/fixtures/leaderboard.html'),

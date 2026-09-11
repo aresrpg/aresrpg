@@ -33,6 +33,7 @@ import navigation, {
   type NavigationState,
 } from './modules/navigation.ts'
 import session, { initial_session_state, type SessionInput, type SessionState } from './modules/session.ts'
+import suins, { initial_suins_state, type SuinsInput, type SuinsState } from './modules/suins.ts'
 import chain_clock, { type ChainClock, type ChainClockInput } from './modules/chain_clock.ts'
 import simulator, { initial_simulator_state, type SimulatorInput, type SimulatorState } from './modules/simulator.ts'
 import settings, { type SettingsInput } from './modules/settings.ts'
@@ -95,6 +96,7 @@ export type AppState = Readonly<{
   mastery: MasteryState
   distribution: DistributionState
   job_level_up: JobLevelUpState
+  suins: SuinsState
 }>
 
 export type AppInput =
@@ -126,6 +128,7 @@ export type AppInput =
   | DistributionInput
   | ClaimsInput
   | JobLevelUpInput
+  | SuinsInput
 
 type EventArguments = {
   [K in AppInput['type']]: [Extract<AppInput, { type: K }>]
@@ -151,6 +154,7 @@ export type AppModule = Readonly<{
 // Registration owns observer availability. Keep reducer order explicit: session folds first.
 const MODULE_REGISTRY = [
   [session, 'player'],
+  [suins, 'player'],
   [chain_clock, 'player'],
   [external_wallet, 'player'],
   [navigation, 'player'],
@@ -196,6 +200,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
     chain_clock: null,
     session: initial_session_state(),
+    suins: initial_suins_state(),
     external_wallet: initial_external_wallet_state(),
     navigation: initial_navigation_state(),
     settings: settings_state,

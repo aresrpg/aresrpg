@@ -1084,6 +1084,9 @@
     "packages/server/test/helpers/world_wire.ts": {
       "wire": [9],
       "wire > read": [24]
+    },
+    "packages/sdk/src/suins_actions.ts": {
+      "registration_name": [10]
     }
   }
 }

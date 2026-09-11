@@ -280,6 +280,13 @@ deadline, so each refresh publishes one coherent window without waiting on stall
 Lookup failure leaves the address visible and never changes a score. The page always renders ranks
 1–100, including empty slots, and shows a day-based countdown to the next monthly reset.
 
+Settings exposes the game wallet's default SuiNS name through a dedicated reducer, separate from
+device preferences. The SDK reads owned registrations and resolves names already targeting that
+wallet. One explicit action sets the default; an owned name can update its target in the same
+transaction. A target-only subname requires no NFT transfer. Certified results update the Settings
+view; the leaderboard's verified-name cache refreshes independently. Full names remain the identity
+used for resolution even when a repeated self-subname is displayed as a shorter handle.
+
 ## Critical workflows
 
 ### Authentication

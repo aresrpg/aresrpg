@@ -45,11 +45,12 @@
   "dependencies": {
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/protocol": "workspace:*",
-    "@mysten/enoki": "^1.2.20",
-    "@mysten/kiosk": "1.4.8",
-    "@mysten/sui": "2.29.0",
-    "@mysten/wallet-standard": "^0.21.22",
-    "@mysten/zksend": "1.2.23"
+    "@mysten/enoki": "^1.2.21",
+    "@mysten/kiosk": "1.4.9",
+    "@mysten/sui": "2.30.0",
+    "@mysten/suins": "2.0.5",
+    "@mysten/wallet-standard": "^0.21.23",
+    "@mysten/zksend": "1.2.25"
   },
   "devDependencies": {
     "typescript": "~6.0.3",

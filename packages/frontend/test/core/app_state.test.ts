@@ -17,6 +17,12 @@ const create_state = () => initial_app_state(settings)
 const auth_session = (address = '0xowner'): AuthSession =>
   Object.freeze({
     address,
+    suins: {
+      snapshot: async () => ({ default_name: null, names: [] }),
+      set_default: async () => {
+        throw new Error('unused name selection')
+      },
+    },
     wallet_name: 'Google',
     identity: 'zklogin',
     sign_personal_message: async () => ({ bytes: '', signature: '' }),

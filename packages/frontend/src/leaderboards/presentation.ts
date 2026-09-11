@@ -32,6 +32,9 @@ export const BADGE_COLORS: Readonly<Record<string, readonly [string, string]>> =
 
 export const display_address = (address: string): string => `${address.slice(0, 6)}…${address.slice(-4)}`
 
+/** A self-subname keeps its full identity in state; only the visible label is shortened. */
+export const display_suins_name = (name: string): string => name.replace(/^([a-z0-9-]+)(?:\.\1\.sui|@\1)$/i, '@$1')
+
 export const leaderboard_score = (score: string, metric: LeaderboardMetric, locale: string): string => {
   const amount = BigInt(score)
   if (metric !== 'marketplace' && metric !== 'kolizeum') return amount.toLocaleString(locale)

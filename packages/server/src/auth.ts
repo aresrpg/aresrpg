@@ -25,7 +25,7 @@ export async function verify_login({ bytes, signature, address, uuid }: LoginPro
     const [prefix, id] = Buffer.from(bytes, 'base64').toString().split('::')
     if (prefix !== 'aresrpg' || id !== uuid) return false
     const public_key = await verifyPersonalMessageSignature(fromBase64(bytes), signature, { client: sui_client })
-    return public_key.toSuiAddress() === address
+    return public_key.verifyAddress(address)
   } catch (error) {
     log.warn({ address, error: (error as Error).message }, 'login verification refused')
     return false
