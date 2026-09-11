@@ -24,7 +24,7 @@ import type { ChatChannel } from '../game/core/chat_preferences.ts'
 
 export type { ChatChannel } from '../game/core/chat_preferences.ts'
 
-const MAX_LINES = 100
+const MAX_LINES_PER_CHANNEL = 100
 export const SPEECH_DURATION_MS = 6_000
 
 // One colored token. `cls` picks the palette class (chat.css); `seat` marks a fighter
@@ -160,6 +160,13 @@ const fold_draft = (state: AppState, input: AppInput): AppState | null => {
   return null
 }
 
+const append_line = (lines: readonly ChatLine[], line: ChatLine): readonly ChatLine[] => {
+  const channel_count = lines.filter((existing) => existing.channel === line.channel).length
+  const oldest =
+    channel_count >= MAX_LINES_PER_CHANNEL ? lines.findIndex((existing) => existing.channel === line.channel) : -1
+  return Object.freeze([...lines.filter((_, index) => index !== oldest), line])
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'chat/speech_expired') {
     const speech = Object.freeze(
@@ -176,7 +183,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       ...state,
       chat: Object.freeze({
         ...state.chat,
-        lines: Object.freeze([...state.chat.lines, line].slice(-MAX_LINES)),
+        lines: append_line(state.chat.lines, line),
         speech: speech_for_line(state.chat.speech, input),
       }),
     })

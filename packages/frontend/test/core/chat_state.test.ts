@@ -132,6 +132,49 @@ test('the chat appends capped history and corrects only through the replaces doo
   expect(flooded.chat.lines[0]!.id).toBe('n30')
 })
 
+test('hidden combat floods cannot evict general chat and channel toggles keep the retained history', () => {
+  const base = initial_app_state({ ...settings, chat_visible_channels: ['general'] })
+  const general: ChatLine = { id: 'hello', channel: 'general', key: 'chat_line', values: {} }
+  const with_general = reduce_app_state(base, { type: 'chat/line', line: general })
+  const flooded = Array.from({ length: 150 }, (_, index) => index).reduce(
+    (state, index) => reduce_app_state(state, { type: 'chat/line', line: line(`combat-${index}`) }),
+    with_general
+  )
+  expect(flooded.chat.lines.filter(({ channel }) => channel === 'general')).toEqual([general])
+  expect(flooded.chat.lines.filter(({ channel }) => channel === 'combat')).toHaveLength(100)
+  const shown = reduce_app_state(flooded, {
+    type: 'settings/changed',
+    settings: { ...flooded.settings, chat_visible_channels: ['general', 'combat'] },
+  })
+  expect(shown.chat.lines).toBe(flooded.chat.lines)
+})
+
+test('each channel evicts only its own oldest messages while preserving chronological order', () => {
+  const channels = ['general', 'party', 'whisper', 'combat'] as const
+  const scoped_line = (channel: ChatLine['channel'], id: string): ChatLine => {
+    const content = { id, key: 'chat_line', values: {} }
+    if (channel === 'combat') return { ...content, channel, fight: '0xf' }
+    if (channel === 'party') return { ...content, channel, party: '0xp' }
+    return { ...content, channel }
+  }
+  const history = Array.from({ length: 105 }, (_, index) => index).reduce(
+    (state, index) =>
+      channels.reduce(
+        (current, channel) =>
+          reduce_app_state(current, {
+            type: 'chat/line',
+            line: scoped_line(channel, `${channel}-${index}`),
+          }),
+        state
+      ),
+    initial_app_state(settings)
+  )
+  expect(history.chat.lines).toHaveLength(400)
+  expect(history.chat.lines.map(({ id }) => id)).toEqual(
+    Array.from({ length: 100 }, (_, index) => channels.map((channel) => `${channel}-${index + 5}`)).flat()
+  )
+})
+
 test('combat lines render only inside their own fight', () => {
   expect(chat_line_in_fight(line('a', '0xfa'), '0xfa')).toBeTrue()
   expect(chat_line_in_fight(line('a', '0xfa'), '0xfb')).toBeFalse()
