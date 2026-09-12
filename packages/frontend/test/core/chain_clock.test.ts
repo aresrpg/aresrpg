@@ -41,3 +41,27 @@ test('disconnects and invalid heartbeat timestamps clear the clock', () => {
   for (const chain_ms of [null, 0, -1, NaN, Infinity])
     expect(reduce_app_state(state, { type: 'clock/observed', chain_ms, received_ms: 100 }).chain_clock).toBeNull()
 })
+
+test('cache age advances the action clock without making interpolation a placement witness', () => {
+  const state = reduce_app_state(initial(), {
+    type: 'clock/observed',
+    chain_ms: 60_000,
+    received_ms: 1_000,
+    sample_age_ms: 4_000,
+  })
+  expect(chain_now(state.chain_clock, 1_100)).toBe(64_100)
+  expect(chain_deadline_reached(state.chain_clock, 63_000n, 1_100)).toBeFalse()
+  expect(chain_now(state.chain_clock, 12_100)).toBeNull()
+})
+
+test('invalid cache ages cannot manufacture a future action clock', () => {
+  for (const sample_age_ms of [-1, NaN, Infinity]) {
+    const state = reduce_app_state(initial(), {
+      type: 'clock/observed',
+      chain_ms: 60_000,
+      received_ms: 1_000,
+      sample_age_ms,
+    })
+    expect(state.chain_clock).toBeNull()
+  }
+})

@@ -41,6 +41,7 @@ describe('marketplace projection', () => {
       indexing_lag: 0,
       current_epoch: '100',
       chain_timestamp_ms: 1000,
+      chain_sample_age_ms: 0,
       market_volume: { epoch: '100', mist: '123000000000' },
     }
     const ready = reduce_app_state(initial, { type: 'server/packet', packet: heartbeat })

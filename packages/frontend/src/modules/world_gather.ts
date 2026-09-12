@@ -19,6 +19,7 @@ import { toast } from '../toast.ts'
 
 import { character_custody, selected_character } from './session.ts'
 import { live_spawns, parse_resource_pack_id } from './world_spawns.ts'
+import { world_action_failure } from './world_action_failure.ts'
 
 export type PendingGather = Readonly<{
   attempt_id: string
@@ -45,9 +46,11 @@ export type WorldGatherInput =
       ambushed: boolean
       quantity: number
     }>
-  | Readonly<{ type: 'world/gather_failed'; character_id: string; attempt_id: string }>
+  | Readonly<{ type: 'world/gather_failed'; character_id: string; attempt_id: string; retry_at_ms?: number }>
   | Readonly<{ type: 'world/gather_finished'; character_id: string; attempt_id: string; ends_at_ms: number }>
   | Readonly<{ type: 'world/resolve_ambush'; character_id: string }>
+  | Readonly<{ type: 'world/ambush_resolved'; character_id: string; attempt_id: string | null; fight: string }>
+  | Readonly<{ type: 'world/ambush_failed'; character_id: string; attempt_id: string | null }>
 
 export type Gatherings = Readonly<Record<string, PendingGather>>
 export const selected_gathering = (state: Readonly<Pick<AppState, 'world' | 'session'>>): PendingGather | null =>
@@ -285,6 +288,8 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
         custody: character_custody(character),
       })
       .then(({ ambushed, quantity }) => {
+        // Release before publishing completion: an elapsed root can permit the next harvest now.
+        in_flight.delete(node_id!.pack_id)
         if (!is_current()) return
         dispatch({
           type: 'world/gather_confirmed',
@@ -296,13 +301,18 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
         })
       })
       .catch((error: unknown) => {
+        in_flight.delete(node_id!.pack_id)
         if (!is_current()) return
-        dispatch({ type: 'world/gather_failed', character_id: selected_character_id, attempt_id })
+        dispatch({
+          type: 'world/gather_failed',
+          character_id: selected_character_id,
+          attempt_id,
+          ...world_action_failure(error, performance.now()),
+        })
         notices.delete(attempt_id)
         console.error('Resource gathering failed.', error)
         notice.error(error)
       })
-      .finally(() => in_flight.delete(node_id!.pack_id))
   })
 
   events.on('STATE_UPDATED', (state, previous) => {
@@ -335,6 +345,7 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       .then(({ fight }) => {
         if (get_state().session.wallet !== wallet) return
         notice.dismiss()
+        dispatch({ type: 'world/ambush_resolved', character_id, attempt_id: gathering?.attempt_id ?? null, fight })
         dispatch({ type: 'fight/watch', character_id: character.id, fight })
         const current = get_state().world.gathering[character.id]
         if (current && current.attempt_id === gathering?.attempt_id)
@@ -347,6 +358,8 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
       })
       .catch((error: unknown) => {
         console.error('Resource ambush resolution failed.', error)
+        if (get_state().session.wallet === wallet)
+          dispatch({ type: 'world/ambush_failed', character_id, attempt_id: gathering?.attempt_id ?? null })
         notice.error(error)
       })
       .finally(() => in_flight.delete(key))

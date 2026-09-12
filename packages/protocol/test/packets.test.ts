@@ -300,6 +300,7 @@ describe('the wire contract', () => {
           indexing_lag: 4,
           current_epoch: '9',
           chain_timestamp_ms: 1_000_000,
+          chain_sample_age_ms: 0,
         })
       )
     ).toEqual({
@@ -308,6 +309,7 @@ describe('the wire contract', () => {
       indexing_lag: 4,
       current_epoch: '9',
       chain_timestamp_ms: 1_000_000,
+      chain_sample_age_ms: 0,
     })
     expect(parse_server_packet(JSON.stringify({ type: 'packet/anything', value: true })) as unknown).toEqual({
       type: 'packet/anything',

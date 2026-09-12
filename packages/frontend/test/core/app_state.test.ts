@@ -211,6 +211,7 @@ describe('app state', () => {
         indexing_lag: 7,
         current_epoch: '9',
         chain_timestamp_ms: 1_000_000,
+        chain_sample_age_ms: 0,
       },
     })
     expect(online.session.online).toBe(42)
@@ -236,6 +237,7 @@ describe('app state', () => {
         indexing_lag: 12,
         current_epoch: '9',
         chain_timestamp_ms: 1_000_000,
+        chain_sample_age_ms: 0,
       },
     })
     const reconnecting = reduce_app_state(indexed, { type: 'link/failed', error: 'Connection lost' })

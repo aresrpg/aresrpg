@@ -3,7 +3,13 @@
 
 import { expect, test } from 'bun:test'
 
-for (const name of ['renderer_failure', 'fight_swords_lifecycle', 'webgpu_cleanup', 'generated_city_recovery']) {
+for (const name of [
+  'renderer_background',
+  'renderer_failure',
+  'fight_swords_lifecycle',
+  'webgpu_cleanup',
+  'generated_city_recovery',
+]) {
   test(`${name} exercises production lifecycle owners with isolated hardware boundaries`, async () => {
     const child = Bun.spawn([process.execPath, `${import.meta.dir}/${name}_probe.ts`], {
       stdout: 'pipe',

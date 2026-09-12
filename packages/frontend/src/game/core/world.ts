@@ -47,7 +47,7 @@ import {
 } from './cameras.ts'
 import { create_character_controller, type CharacterTransform } from './character.ts'
 import { create_chunk_manager } from './chunks.ts'
-import { world_keyboard_eligible } from './world_input.ts'
+import { world_keyboard_eligible, WORLD_MOVE_KEYS } from './world_input.ts'
 import { CHARACTER_HEIGHT, following_pet_ground_height, walkable_spawn_height } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
@@ -56,7 +56,8 @@ import { fight_prompt_targets, publish_fight_prompt } from './fight_prompt_feed.
 import { dungeon_portal_targets, publish_dungeon_portal_prompt } from './dungeon_portal_feed.ts'
 import { publish_pose } from './pose_feed.ts'
 import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
-import { run_to_input } from './run_to.ts'
+import { run_to_input, run_to_mount, type RunTarget } from './run_to.ts'
+import { create_world_ticker } from './world_ticker.ts'
 import type { DungeonPortalMarker } from '../../modules/world.ts'
 
 export type WorldView = Readonly<{
@@ -120,16 +121,6 @@ const MOUNT_RANGE = 4
 const PORTAL_RANGE = 10
 /** the gate stands at the world origin — eligibility is just the body's horizontal offset */
 export const portal_near = (x: number, z: number): boolean => Math.hypot(x, z) <= PORTAL_RANGE
-const MOVE_KEYS: Readonly<Record<string, Readonly<{ axis: 'forward' | 'strafe'; sign: 1 | -1 }>>> = Object.freeze({
-  KeyW: { axis: 'forward', sign: 1 },
-  ArrowUp: { axis: 'forward', sign: 1 },
-  KeyS: { axis: 'forward', sign: -1 },
-  ArrowDown: { axis: 'forward', sign: -1 },
-  KeyD: { axis: 'strafe', sign: 1 },
-  ArrowRight: { axis: 'strafe', sign: 1 },
-  KeyA: { axis: 'strafe', sign: -1 },
-  ArrowLeft: { axis: 'strafe', sign: -1 },
-})
 export const create_world = ({
   canvas,
   world,
@@ -258,7 +249,7 @@ export const create_world = ({
   let active = false
   let enabled = false
   let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
-  let run_target: Readonly<{ x: number; z: number }> | null = null
+  let run_target: RunTarget | null = null
   let action_animation_timer: ReturnType<typeof setInterval> | null = null
   let dragging: 'pan' | 'orbit' | null = null
   let pointer = [0, 0] as [number, number]
@@ -301,7 +292,7 @@ export const create_world = ({
     if (notify) on_run_stopped?.(reason)
   }
   const stop_run_for_manual_input = (event: KeyboardEvent, down: boolean): void => {
-    if (down && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) stop_run()
+    if (down && (WORLD_MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) stop_run()
   }
   const stop_run_for_action_lock = (next: typeof action_lock): void => {
     if (next) stop_run('blocked')
@@ -311,7 +302,14 @@ export const create_world = ({
     if (run?.arrived) stop_run('arrived')
     else if (run) {
       footsteps.unlock()
-      character.set_input({ yaw: run.yaw, forward: 1, strafe: 0 })
+      const mounting = run_to_mount({
+        requested: run_target?.ride_pet === true,
+        available: pet !== null,
+        riding,
+        nearby: pet_mountable(),
+      })
+      if (mounting === 'mount') set_riding(true)
+      character.set_input({ yaw: run.yaw, forward: mounting === 'wait' ? 0 : 1, strafe: 0 })
     } else character.set_input({ yaw: director.active().get_yaw() })
   }
 
@@ -410,7 +408,7 @@ export const create_world = ({
     character.set_input({ forward: held.forward, strafe: held.strafe })
   }
   const on_key = (event: KeyboardEvent, down: boolean): void => {
-    const move = MOVE_KEYS[event.code]
+    const move = WORLD_MOVE_KEYS[event.code]
     stop_run_for_manual_input(event, down)
     if (move !== undefined) {
       const bucket = pressed[move.axis]
@@ -535,7 +533,7 @@ export const create_world = ({
   }
   const on_key_down = (event: KeyboardEvent): void => {
     if (!enabled || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
-    if (mode === 'follow' && (MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
+    if (mode === 'follow' && (WORLD_MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
     on_key(event, true)
   }
   const on_key_up = (event: KeyboardEvent): void => on_key(event, false)
@@ -763,6 +761,8 @@ export const create_world = ({
     submit_entities()
   }
 
+  const ticker = create_world_ticker({ tick })
+
   return Object.freeze({
     set_quality: (quality: 'low' | 'medium' | 'high', render_distance: number | null) => {
       // one radius for both terrains: voxel chunks AND the far shell's hole track the override
@@ -898,18 +898,19 @@ export const create_world = ({
       requested_flattened = next
       sync_flat_projection()
     },
-    set_run_target: (next: Readonly<{ x: number; z: number }> | null) => {
+    set_run_target: (next: RunTarget | null) => {
       stop_run('manual', false)
       if (!next) return
       clear_movement()
       run_target = Object.freeze(next)
     },
-    set_active: (next: boolean) => {
+    set_active: (next: boolean, background = false) => {
+      ticker.set_active(next, background)
+      if (next) engine.start(({ now }) => ticker.advance(now), background)
       if (next === active) return
       active = next
       director.set_enabled(next)
-      if (next) engine.start(({ now, delta_seconds }) => tick(now, delta_seconds))
-      else {
+      if (!next) {
         stop_run('inactive')
         clear_movement()
         footsteps.reset()
@@ -919,9 +920,9 @@ export const create_world = ({
       }
     },
     set_interactive: (next: boolean) => {
+      if (enabled === next) return
       enabled = next
       if (!next) {
-        stop_run('inactive')
         clear_movement()
       }
       canvas.style.cursor = next ? 'grab' : 'default'
@@ -960,6 +961,7 @@ export const create_world = ({
       action_animation_timer = setInterval(play, 2_200)
     },
     dispose: () => {
+      ticker.dispose()
       if (action_animation_timer) clearInterval(action_animation_timer)
       publish_pose(null)
       clear_fight_labels()

@@ -28,7 +28,7 @@ const manager_id = (manager: Readonly<{ id: string }> | undefined): string | nul
 const checkpoint_for = (state: Readonly<AppState>, fight: string): HydratedFightCheckpoint | null =>
   state.fight.cached[fight] ?? (state.fight.checkpoint?.contract.id === fight ? state.fight.checkpoint : null)
 
-const remote_input_context = (state: Readonly<AppState>, fight: string | null, origin: 'local' | 'streamed') => {
+export const remote_input_context = (state: Readonly<AppState>, fight: string | null, origin: 'local' | 'streamed') => {
   const { wallet } = state.session
   if (origin !== 'local' || !fight || state.fight.mode !== 'remote' || !wallet) return null
   const checkpoint = checkpoint_for(state, fight)
@@ -172,6 +172,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     if (fight) buffered.delete(fight)
     else buffered.clear()
   }
+  const complete_forfeit = (fight: string, input: Readonly<FightInput>, ok: boolean): void => {
+    if (input.type === 'forfeit') dispatch({ type: 'fight/forfeit_completed', fight, fighter: input.fighter, ok })
+  }
   const clear_queued_timer = (fight: string): void => {
     const timer = queued_timers.get(fight)
     if (timer) clearTimeout(timer)
@@ -235,15 +238,15 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       })
   }
 
-  events.on('server/packet', ({ packet }) => {
-    if (packet.type !== 'packet/fight_state') return
-    const current = get_state().fight.cached[packet.fight]
-    if (!current) return
-    confirmed.set(packet.fight, current)
+  events.on('fight/checkpoint_confirmed', ({ checkpoint }) => {
+    const fight = checkpoint.contract.id
+    // Nested dispatches are queued. The raw packet handler still sees the previous app
+    // checkpoint; only the normalization owner can supply this authoritative baseline.
+    confirmed.set(fight, checkpoint)
     // Any full checkpoint replaces the runtime that authored this local draft. Keeping its
     // paths would compose the next action from a different starting cell (spectator refresh →
     // command two abort 1725), so authoritative replacement always invalidates the draft.
-    if (buffered.has(packet.fight)) clear_buffer(packet.fight)
+    clear_buffer(fight)
   })
   events.on('fight/reset_turn', ({ fight }) => {
     if (fight) clear_buffer(fight)
@@ -251,6 +254,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   events.on('fight/restored', ({ checkpoint }) => clear_buffer(checkpoint.contract.id))
   events.on('fight/closed', ({ fight }) => {
     if (fight) {
+      confirmed.delete(fight)
       clear_buffer(fight)
       clear_queued_timer(fight)
       retry_not_before.delete(fight)
@@ -347,6 +351,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     let queue_after_refusal = false
     void transaction
       .then(({ turn_witnesses = [] }) => {
+        complete_forfeit(fight_id, input, true)
         retry_not_before.delete(fight_id)
         if (input.type === 'end_turn') clear_buffer(fight_id)
         turn_witnesses.forEach(({ fighter, seed }) =>
@@ -356,6 +361,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         if (current) confirmed.set(fight_id, current)
       })
       .catch((error: unknown) => {
+        complete_forfeit(fight_id, input, false)
         if (input.type === 'end_turn' && turn_too_soon_refusal(error)) {
           // Nothing executed: cancel only the pending boundary, retaining movement/casts so
           // the same draft can retry after a bounded backoff despite client clock skew.

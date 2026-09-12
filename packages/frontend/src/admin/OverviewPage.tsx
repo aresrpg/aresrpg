@@ -18,8 +18,8 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 
 import { admin_range_label, AdminRangeSelector } from './AdminRangeSelector.tsx'
-import { useAdminRevenue } from './AdminWalletPanel.tsx'
-import type { AdminRevenue } from './AdminWalletPanel.tsx'
+import { useAdminRevenue } from './useAdminRevenue.ts'
+import type { AdminRevenue } from './useAdminRevenue.ts'
 import type { AdminOverviewState } from './admin_state.ts'
 import { MetricChart, type MetricSeries, type MetricValueKind } from './MetricChart.tsx'
 

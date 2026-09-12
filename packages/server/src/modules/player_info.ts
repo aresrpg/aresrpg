@@ -22,7 +22,7 @@ export default {
         pubsub.mesh.cluster_online(),
         indexing_health().catch((error: Error) => {
           log.warn({ error: error.message }, 'indexing health failed')
-          return Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null })
+          return Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null })
         }),
       ])
         .then(async ([online, health]) => {
@@ -40,6 +40,10 @@ export default {
             indexing_lag: health.lag,
             current_epoch: health.epoch,
             chain_timestamp_ms: health.chain_timestamp_ms,
+            chain_sample_age_ms:
+              health.chain_observed_at_ms === null
+                ? null
+                : Math.max(0, performance.now() - health.chain_observed_at_ms),
             ...(observed
               ? {
                   market_volume:

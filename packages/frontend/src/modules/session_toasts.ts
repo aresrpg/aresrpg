@@ -3,6 +3,8 @@
 // Failure presentation for the session: raw chain/link failures become honest player toasts.
 // Split from session.ts (the file-size law); the session observer arms this once.
 
+import { world_travel_refusal } from '@aresrpg/sdk/transaction-error'
+
 import { env } from '../env.ts'
 import { on_error_translate, on_gas_empty, toast } from '../toast.ts'
 import type { AppModule } from '../store.ts'
@@ -26,7 +28,6 @@ const ABORT_FAILURES = Object.freeze([
   Object.freeze({ code: 1725, owner: '::fight::walk_path', key: 'fight_path_changed_toast' }),
   Object.freeze({ code: 2002, owner: '::party::af', key: 'party_member_unavailable_toast' }),
   Object.freeze({ code: 1724, owner: '::fight::crank', key: 'fight_turn_already_forced_toast' }),
-  Object.freeze({ code: 305, owner: '::world::prove_move', key: 'movement_sync_toast' }),
 ] satisfies readonly Readonly<{ code: number; owner: string; key: FailureCopyKey }>[])
 
 export const failure_copy_key = (message: string): FailureCopyKey | null => {
@@ -34,6 +35,7 @@ export const failure_copy_key = (message: string): FailureCopyKey | null => {
   if (message.startsWith('[sdk] previous transaction recovered')) return 'transaction_recovered_toast'
   if (message.includes('::version::assert_latest')) return 'game_paused_toast'
   if (message.includes('gas budget exceeded')) return 'gas_budget_toast'
+  if (world_travel_refusal(message)) return 'movement_sync_toast'
   return ABORT_FAILURES.find(({ code, owner }) => matches_abort(message, code, owner))?.key ?? null
 }
 

@@ -42,23 +42,51 @@ describe('indexing health', () => {
     })
 
     expect(await Promise.all([health(), health()])).toEqual([
-      { lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 },
-      { lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 },
+      { lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000, chain_observed_at_ms: now_ms },
+      { lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000, chain_observed_at_ms: now_ms },
     ])
-    expect(await health()).toEqual({ lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 })
+    expect(await health()).toEqual({ lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000, chain_observed_at_ms: now_ms })
     expect({ chain_reads, indexed_reads }).toEqual({ chain_reads: 1, indexed_reads: 1 })
 
     now_ms += 4_001
-    expect(await health()).toEqual({ lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000 })
+    expect(await health()).toEqual({ lag: 20, epoch: '7', chain_timestamp_ms: 1_000_000, chain_observed_at_ms: now_ms })
     expect({ chain_reads, indexed_reads }).toEqual({ chain_reads: 2, indexed_reads: 2 })
   })
 
   test('has no health claim before the indexer has committed a checkpoint', async () => {
+    const now_ms = 1_000
     const health = create_indexing_health({
+      now: () => now_ms,
       chain_checkpoint: async () => ({ sequence_number: 120, timestamp_ms: 1_000_000 }),
       indexed_state: async () => null,
     })
 
-    expect(await health()).toEqual({ lag: null, epoch: null, chain_timestamp_ms: 1_000_000 })
+    expect(await health()).toEqual({
+      lag: null,
+      epoch: null,
+      chain_timestamp_ms: 1_000_000,
+      chain_observed_at_ms: now_ms,
+    })
   })
+})
+
+test('cached health retains the actual chain read time, including a slow indexer read', async () => {
+  let now_ms = 1_000
+  let finish_indexed!: (value: { sequence_number: number; epoch: string }) => void
+  const health = create_indexing_health({
+    chain_checkpoint: async () => ({ sequence_number: 120, timestamp_ms: 60_000 }),
+    indexed_state: () =>
+      new Promise((resolve) => {
+        finish_indexed = resolve
+      }),
+    now: () => now_ms,
+  })
+  const pending = health()
+  await Promise.resolve()
+  now_ms = 2_000
+  finish_indexed({ sequence_number: 100, epoch: '7' })
+  const result = await pending
+  expect(result).toMatchObject({ chain_timestamp_ms: 60_000, chain_observed_at_ms: 1_000 })
+  now_ms = 3_500
+  expect(await health()).toBe(result)
 })

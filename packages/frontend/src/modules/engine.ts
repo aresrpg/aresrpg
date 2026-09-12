@@ -98,9 +98,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const sync_activity = (state: AppState): void => {
     if (!world) return
     const world_page = is_world_page(state.navigation.page)
-    world.set_active(world_scene_active(state.navigation.page, state.fight.mounted))
+    const background = state.automation.run !== null
+    world.set_active(world_scene_active(state.navigation.page, state.fight.mounted, background), background)
     world.set_interactive(world_page && (!!state.session.wallet || state.navigation.guest_spectating))
-    world.set_action_lock(world_page ? selected_world_action_lock(state) : null)
+    world.set_action_lock(selected_world_action_lock(state))
   }
 
   const sync_settings = (state: AppState): void => {
@@ -161,7 +162,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     )
   }
 
-  // Players and zone mobs keep separate source lists; only their composition reaches the scene.
   let presence_entities: readonly EntityRender[] = Object.freeze([])
   let spawn_entities: readonly EntityRender[] = Object.freeze([])
   const submit_world_entities = (): void =>

@@ -49,6 +49,11 @@ import friends, { initial_friends_state, type FriendsInput, type FriendsState } 
 import party, { initial_party_state, type PartyInput, type PartyState } from './modules/party.ts'
 import party_follow from './modules/party_follow.ts'
 import run_to, { initial_run_to_state, type RunToInput, type RunToState } from './modules/run_to.ts'
+import automation, {
+  initial_automation_state,
+  type AutomationInput,
+  type AutomationState,
+} from './modules/automation.ts'
 import trade, { initial_trade_state, type TradeInput, type TradeState } from './modules/trade.ts'
 import runeforge, { initial_runeforge_state, type RuneforgeInput, type RuneforgeState } from './modules/runeforge.ts'
 import mastery, { initial_mastery_state, type MasteryInput, type MasteryState } from './modules/mastery.ts'
@@ -91,6 +96,7 @@ export type AppState = Readonly<{
   friends: FriendsState
   party: PartyState
   run_to: RunToState
+  automation: AutomationState
   trade: TradeState
   runeforge: RuneforgeState
   mastery: MasteryState
@@ -122,6 +128,7 @@ export type AppInput =
   | FriendsInput
   | PartyInput
   | RunToInput
+  | AutomationInput
   | TradeInput
   | RuneforgeInput
   | MasteryInput
@@ -178,6 +185,7 @@ const MODULE_REGISTRY = [
   [friends, 'player'],
   [party, 'player'],
   [run_to, 'player'],
+  [automation, 'player'],
   [party_follow, 'player'],
   [trade, 'player'],
   [runeforge, 'player'],
@@ -221,6 +229,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     friends: initial_friends_state(),
     party: initial_party_state(),
     run_to: initial_run_to_state(),
+    automation: initial_automation_state(),
     trade: initial_trade_state(),
     runeforge: initial_runeforge_state(),
     mastery: initial_mastery_state(),

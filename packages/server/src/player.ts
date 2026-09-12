@@ -226,7 +226,8 @@ export function create_player({
   graph,
   pubsub,
   game_state = UNKNOWN_GAME_STATE,
-  indexing_health = async () => Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null }),
+  indexing_health = async () =>
+    Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null }),
   request_limiter = create_request_limiter(),
   realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
 }: PlayerWires): Player {

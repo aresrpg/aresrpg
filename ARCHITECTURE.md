@@ -261,9 +261,11 @@ completes. Connection closure terminates its reducer and subscription lifetime, 
 acquisitions. Unverified transports and verifiers share one finite admission budget; a claimed
 address grants no capacity exemption. After readiness, graph events and narrow reads push deltas. The server validates identity, locality, rate,
 and relay voice, but it never becomes game authority.
-The existing server-info heartbeat also carries the fullnode's latest checkpoint timestamp. The
-frontend clock reducer retains that chain sample with its monotonic receipt time. Placement countdowns
-interpolate between fresh samples; Force start requires an observed chain timestamp past the deadline.
+The existing server-info heartbeat carries the fullnode's latest checkpoint timestamp and the
+elapsed server time since that read. The frontend clock reducer reconstructs the sample's monotonic
+observation time, so cache reuse does not make time run several seconds behind. Automated world
+actions and placement countdowns interpolate fresh samples; Force start requires an observed chain
+timestamp past the deadline.
 Device wall-clock changes cannot unlock placement, and stale or disconnected samples cannot authorize it.
 
 Overworld movement packets name their character and exact chain checkpoint (world, x, z, timestamp).
@@ -334,6 +336,25 @@ Character projections own its root deadline and protector obligation. Observers 
 from retained state and recheck deadlines on wake. Toast and audio lifetimes cannot gate gameplay
 completion, and authoritative protectors can resolve independently of a delayed gather receipt.
 
+A session-only Konami unlock reveals the world automation HUD. One frontend automation reducer
+owns a selected character's gathering run and emits existing run-to, zone-search, gather, and
+fight inputs. Automated run-to mounts an available equipped companion through the ordinary
+proximity rule, retains riding between harvests, and remounts on later legs after a fight.
+Biome/city eligibility guides nearby zone exploration; only server populations and zone consumption
+establish available resources. Expiring depleted-zone visits survive window
+eviction without copying populations. Each harvest waits for its confirmed consumption and root.
+Automation uses the manual interaction radius and the age-corrected chain clock for travel
+readiness. Device wall time cannot release an automated action early. Pose and state changes
+advance ready actions immediately.
+Only the exact gather-correlated protector is automatically forfeited, once; confirmed return and
+fight presentation gate resumption. Browser visibility and app navigation never own the run's
+lifetime. Active automation keeps the same world simulation and renderer alive behind other pages;
+hidden browsers use timer frames, with bounded physics substeps and no suspended-time teleport.
+Temporary connection or clock gaps retain the run and suppress writes until readiness returns.
+Unsigned movement/cooldown refusals wait 500 ms before re-entering inspection; the target and
+travel proof are checked again. Stop, manual control, identity changes, and all other failed or
+uncertain actions stop further automated writes. Executed transactions never retry. Its controls remain available on other pages. Reload never resumes a run.
+
 Party run-to is the sole direct player checkpoint read. The authenticated SDK reads another
 member's current-world and checkpoint dynamic fields once, refuses a different world, then the
 client runs toward that immutable snapshot. It never polls or claims to know the member's live pose.
@@ -365,6 +386,12 @@ from the committed stream; fixed-valued/control rows add no magnitude draw, and 
 Each side's six start cells also bound its lifetime admissions. Forfeits return character custody
 but do not restore admission capacity; leaving and settlement remain available. Placement occupancy
 still follows living fighters, so a departed fighter's cell can be used by a remaining teammate.
+
+Accepted server fight snapshots carry their normalized checkpoint directly to the rollback owner.
+Raw packet handlers never read the app cache as a substitute: nested reducer inputs may still be
+queued. A rejected placement restores the latest confirmed roster and positions, including joins
+that arrived during submission. Hover retains one fight-scoped cell or fighter intent; every range
+and preview derives its current cell and valid seat from the same checkpoint.
 
 The terminal checkpoint supplies the settlement plan after presentation drains. Owned participants
 returning to one personal kiosk settle and collect through one Random-bound PTB; different kiosks

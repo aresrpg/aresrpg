@@ -318,6 +318,10 @@ const contract_constants = {
   ]),
   item_stat_shift: integer(required_match(item_stats, /const SHIFT: u16 = ([^;]+);/, 'item stat shift')[1], item_stats),
   base_hp: integer(required_match(progression, /const BASE_HP: u64 = ([^;]+);/, 'BASE_HP')[1], progression),
+  regen_ms_per_hp: integer(
+    required_match(progression, /const REGEN_MS_PER_HP: u64 = ([^;]+);/, 'REGEN_MS_PER_HP')[1],
+    progression
+  ),
   hp_per_level: integer(
     required_match(progression, /const HP_PER_LEVEL: u64 = ([^;]+);/, 'HP_PER_LEVEL')[1],
     progression

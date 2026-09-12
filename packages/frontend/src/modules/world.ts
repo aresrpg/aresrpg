@@ -6,7 +6,6 @@ import { chain_to_client_coordinate, client_to_chain_coordinate, world_size } fr
 import {
   live_mob_groups,
   live_resource_packs,
-  travel_proof_ready,
   ZONE_RESEARCH_TTL_MS,
   zone_of,
   type FightRow,
@@ -22,9 +21,11 @@ import { world_biome_at_zone } from '../content/worlds.ts'
 import { read_pose } from '../game/core/pose_feed.ts'
 import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
 import { toast } from '../toast.ts'
+import { character_travel_ready } from '../game/travel_gate.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { character_custody, selected_character } from './session.ts'
+import { world_action_failure } from './world_action_failure.ts'
 import {
   begin_pending_engage,
   engage_conflict_refusal,
@@ -129,7 +130,7 @@ export type WorldInput =
   | Readonly<{ type: 'world/player_menu'; menu: PlayerMenu | null }>
   /** search the zone the character is standing in; the chain proves the walk */
   | Readonly<{ type: 'world/search_zone'; target: ZoneSearchTarget }>
-  | Readonly<{ type: 'world/search_zone_failed'; key: string }>
+  | Readonly<{ type: 'world/search_zone_failed'; key: string; retry_at_ms?: number }>
   | Readonly<{ type: 'world/search_zone_confirmed'; key: string }>
   | Readonly<{ type: 'world/zone_revealed'; reveal: ZoneReveal }>
   | Readonly<{ type: 'world/zone_reveal_cleared'; id: string }>
@@ -358,29 +359,17 @@ export type ZoneSearchTarget = Readonly<{
   previous_searched_at_ms: number | null
 }>
 
-export const searchable_zone = (state: AppState, observed_at_ms = Date.now()): ZoneSearchTarget | null => {
+export const searchable_zone = (
+  state: AppState,
+  observed_at_ms = Date.now(),
+  pose = read_pose()
+): ZoneSearchTarget | null => {
   const character = selected_character(state.session)
-  const pose = read_pose()
   if (!character?.world || !pose) return null
   const x = Math.round(client_to_chain_coordinate(pose.x))
   const z = Math.round(client_to_chain_coordinate(pose.z))
   if (x < 0 || z < 0 || x >= world_size || z >= world_size) return null
-  const { checkpoint_world, x: from_x, z: from_z, at_ms: from_ms } = character
-  if (checkpoint_world !== character.world || from_x === undefined || from_z === undefined || from_ms === undefined)
-    return null
-  if (
-    !travel_proof_ready({
-      from_x,
-      from_z,
-      from_ms,
-      pet_at_start: character.pet === true,
-      to_x: x,
-      to_z: z,
-      now_ms: observed_at_ms,
-      pet_now: character.equipment.some(({ slot }) => slot === 'pet'),
-    })
-  )
-    return null
+  if (!character_travel_ready(character, { x, z }, observed_at_ms)) return null
   const { zx, zz } = zone_of(x, z)
   const key = zone_key(character.world, zx, zz)
   if (state.world.pending_zone_searches[key]) return null
@@ -430,7 +419,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
    *  instant, and the chain refuses neither for a repeat — a second search re-reads the same
    *  seed, a second engage aborts on a group already taken — so an unguarded double press
    *  only burns gas. Zone keys and group ids never collide (a group id ends in `:mN`). */
-  const in_flight = new Set<string>()
+  const in_flight = new Map<string, ReturnType<typeof toast.loading>>()
   observe_world_gather(context)
   let reveal_timer: ReturnType<typeof setTimeout> | null = null
   /** transactions whose projected result is not visible yet — zone rows and fight boards use
@@ -467,9 +456,9 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       dispatch({ type: 'world/search_zone_failed', key })
       return
     }
-    in_flight.add(key)
     const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
     const notice = toast.loading(text('zone_searching'))
+    in_flight.set(key, notice)
     void wallet.character
       .search_zone({
         character_id: selected_character_id,
@@ -482,6 +471,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       // The receipt proves submission, not the projected zone. Keep the notice pending until
       // the streamed row becomes visible; the stream may arrive before or after the receipt.
       .then(() => {
+        if (context.signal.aborted) return
         awaiting.set(key, {
           lock_key: key,
           notice,
@@ -496,9 +486,10 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         settle_arrivals(get_state())
       })
       .catch((error: unknown) => {
-        in_flight.delete(key)
-        dispatch({ type: 'world/search_zone_failed', key })
         console.error('Zone search failed.', error)
+        if (context.signal.aborted) return
+        in_flight.delete(key)
+        dispatch({ type: 'world/search_zone_failed', key, ...world_action_failure(error, performance.now()) })
         notice.error(error)
       })
   })
@@ -545,9 +536,9 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
     }
     if (in_flight.has(group)) return
     const [, zx = '0', zz = '0'] = pending_engage.key.split(':')
-    in_flight.add(group)
     const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
     const notice = toast.loading(text('spawn_engaging'))
+    in_flight.set(group, notice)
     void wallet.fight
       .engage({
         character_id: selected_character_id,
@@ -561,6 +552,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         mob_types: pending_engage.members.map(({ mob_type }) => mob_type),
       })
       .then(({ fight }) => {
+        if (context.signal.aborted) return
         dispatch({ type: 'world/engage_submitted', group, fight, character_id: selected_character_id })
         awaiting.set(fight, {
           lock_key: group,
@@ -574,9 +566,10 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         settle_arrivals(get_state())
       })
       .catch((error: unknown) => {
+        console.error('Mob engagement failed.', error)
+        if (context.signal.aborted) return
         in_flight.delete(group)
         dispatch({ type: 'world/engage_failed', group })
-        console.error('Mob engagement failed.', error)
         notice.error(engage_conflict_refusal(error) ? new Error(text('spawn_engage_conflict')) : error)
       })
   }
@@ -593,6 +586,10 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
   context.signal.addEventListener('abort', () => {
     if (reveal_timer) clearTimeout(reveal_timer)
     reveal_timer = null
+    awaiting.forEach(({ timer }) => clearTimeout(timer))
+    awaiting.clear()
+    in_flight.forEach((notice) => notice.dismiss())
+    in_flight.clear()
   })
 }
 

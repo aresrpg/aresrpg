@@ -96,14 +96,31 @@ export const create_engine = ({
   let fight_blob_serial = 0
   let started = false
   let animation_frame: number | null = null
+  let background_timer: ReturnType<typeof setTimeout> | null = null
+  let background = false
   let previous_frame = performance.now()
   let update: (frame: EngineFrame) => void = () => {}
   let disposed = false
 
+  const cancel_frame = (): void => {
+    if (animation_frame !== null) cancelAnimationFrame(animation_frame)
+    if (background_timer !== null) clearTimeout(background_timer)
+    animation_frame = null
+    background_timer = null
+  }
+  const schedule_frame = (): void => {
+    cancel_frame()
+    if (!started) return
+    if (background && globalThis.document?.visibilityState === 'hidden')
+      background_timer = setTimeout(() => draw(performance.now()), 100)
+    else animation_frame = requestAnimationFrame(draw)
+  }
+  globalThis.document?.addEventListener('visibilitychange', schedule_frame)
+
   const release = (outcome: ChunkRenderOutcome): void => {
     started = false
-    if (animation_frame !== null) cancelAnimationFrame(animation_frame)
-    animation_frame = null
+    cancel_frame()
+    globalThis.document?.removeEventListener('visibilitychange', schedule_frame)
     pending_chunks.clear()
     fight_blobs.clear()
     entities = Object.freeze([])
@@ -138,7 +155,7 @@ export const create_engine = ({
     })
     update(Object.freeze({ now, delta_seconds }))
     backend?.render(now)
-    if (started) animation_frame = requestAnimationFrame(draw)
+    schedule_frame()
   }
 
   const publish_status = (next: EngineStatus): void => {
@@ -249,18 +266,20 @@ export const create_engine = ({
   void boot_task
 
   return Object.freeze({
-    start: (next_update = () => {}) => {
+    start: (next_update = () => {}, run_in_background = false) => {
       if (disposed || status.state === 'failed') return
       update = next_update
+      const changed = background !== run_in_background
+      background = run_in_background
+      if (started && changed) schedule_frame()
       if (started) return
       started = true
       previous_frame = performance.now()
-      animation_frame = requestAnimationFrame(draw)
+      schedule_frame()
     },
     stop: () => {
       started = false
-      if (animation_frame !== null) cancelAnimationFrame(animation_frame)
-      animation_frame = null
+      cancel_frame()
     },
     set_camera: (position: Vec3, target: Vec3, projection: CameraProjection = {}) => {
       camera = { position, target, projection }

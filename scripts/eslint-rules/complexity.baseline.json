@@ -1,6 +1,7 @@
 {
   "version": 1,
   "cognitive": {
+    "packages/frontend/src/modules/automation.ts": { "movement_outcome": [11] },
     "scripts/validate_seed.mjs": {
       "check_effect": [37],
       "check_loot_rewards": [14],
@@ -66,9 +67,6 @@
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
       "BrowsePanel": [12],
       "CheapestLotMarket > sizes.map[0](size,index)": [12]
-    },
-    "packages/frontend/src/admin/AdminWalletPanel.tsx": {
-      "AdminWalletPanel": [15]
     },
     "packages/frontend/src/game/fight/FightEffectLines.tsx": {
       "compact_effect_line": [20]
@@ -476,9 +474,6 @@
     "packages/frontend/src/server_link.ts": {
       "connect_server > open > next.addEventListener[1]({ data })": [10]
     },
-    "packages/frontend/src/admin/AdminWalletPanel.tsx": {
-      "AdminWalletPanel": [18]
-    },
     "packages/frontend/src/kares/PublicSaleCard.tsx": {
       "PublicSaleCardView": [12]
     },
@@ -825,7 +820,7 @@
       "observe: NonNullable<AppModule['observe']> > settle_arrivals": [9],
       "observe: NonNullable<AppModule['observe']> > submit_engage": [9],
       "reduce": [28],
-      "searchable_zone": [21]
+      "searchable_zone": [18]
     },
     "packages/frontend/src/editor/ItemReferencePicker.tsx": {
       "ItemReferencePicker": [13]
@@ -1085,6 +1080,31 @@
     },
     "packages/sdk/src/suins_actions.ts": {
       "registration_name": [10]
+    },
+    "packages/frontend/src/components/HackZoneUnlock.tsx": {
+      "HackZoneUnlock > useEffect[0]() > on_key": [9]
+    },
+    "packages/frontend/src/modules/run_to.ts": {
+      "observe: NonNullable<AppModule['observe']> > events.on[1](input)": [10]
+    },
+    "packages/frontend/src/modules/automation.ts": {
+      "movement_outcome": [9],
+      "gather_outcome": [11],
+      "protector_outcome": [9]
+    },
+    "packages/frontend/src/modules/automation_step.ts": {
+      "advance_world_step": [9],
+      "gather_step": [10],
+      "inspect_target": [11],
+      "protector_step": [11]
+    },
+    "packages/frontend/src/modules/automation_route.ts": {
+      "candidate_zone": [9]
+    },
+    "packages/server/src/modules/player_info.ts": {
+      "observe > push > Promise.all([ pubsub.mesh.cluster_online(), indexing_health().catch((error: Error) => { log.warn({ error: error.message }, 'indexing health failed') return Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null }) }), ]) .then[0]([online, health])": [
+        9
+      ]
     }
   }
 }

@@ -60,6 +60,8 @@ import { TutorialHost } from './tutorial/TutorialHost.tsx'
 import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
 import { JobLevelUpCard } from './game/jobs/JobLevelUpCard.tsx'
+import { AutomationPanel } from './components/AutomationPanel.tsx'
+import { HackZoneUnlock } from './components/HackZoneUnlock.tsx'
 import { FriendsPanel } from './components/FriendsPanel.tsx'
 import { PartyFrame } from './components/PartyFrame.tsx'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
@@ -336,6 +338,7 @@ export function App() {
         }`}
       >
         <BiomeMusic />
+        <HackZoneUnlock copy={copy} enabled={in_app} />
         <CityArrivalBanner
           active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
           copy={copy}
@@ -386,6 +389,7 @@ export function App() {
               toggle_flattened={toggle_flattened}
             />
             {in_app && social_hud_open && <FriendsPanel copy={copy} />}
+            <AutomationPanel copy={copy} enabled={in_app} />
           </div>
           {in_app && social_hud_open && <PartyFrame copy={copy} />}
         </div>

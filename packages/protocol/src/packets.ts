@@ -790,6 +790,8 @@ export type ServerPackets = {
     indexing_lag: number | null
     current_epoch: string | null
     chain_timestamp_ms: number | null
+    /** Elapsed server time since reading this checkpoint; cache reuse must not rewind interpolation. */
+    chain_sample_age_ms: number | null
     /** Current epoch public sale prices before fees; only sent while browsing the market. */
     market_volume?: Readonly<{ epoch: string; mist: string }> | null
   }

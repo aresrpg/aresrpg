@@ -139,6 +139,7 @@ export type AppCopy = Readonly<{
   leaderboard_page: Readonly<Record<string, string>>
   marketplace_page: Readonly<Record<string, unknown>>
   kolizeum_page: Readonly<Record<string, string>>
+  automation_panel: Readonly<Record<string, string>>
   friends_panel: Readonly<Record<string, string>>
   party_panel: Readonly<Record<string, string>>
   trade_panel: Readonly<Record<string, string>>

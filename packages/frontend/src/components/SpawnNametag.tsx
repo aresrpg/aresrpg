@@ -29,11 +29,10 @@ import { gather_gate } from '../game/gather_gate.ts'
 import { parse_resource_node_id, resource_seats } from '../game/resource_nodes.ts'
 import { selected_character } from '../modules/session.ts'
 import { read_dungeon_portal_prompt } from '../game/core/dungeon_portal_feed.ts'
+import { SPAWN_INTERACTION_RANGE_BLOCKS } from '../game/core/world_input.ts'
 
 import { NametagCard, type NametagLine } from './NametagCard.tsx'
 import { PromptKey, split_key_template } from './PromptChip.tsx'
-
-const SPAWN_INTERACTION_RANGE_BLOCKS = 15
 
 type InteractionCandidate = Readonly<{ id: string; x: number; z: number }>
 type InteractionPose = Readonly<Pick<WorldPose, 'x' | 'z'>>

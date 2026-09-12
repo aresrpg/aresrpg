@@ -3,6 +3,24 @@
 
 export const RUN_TO_ARRIVAL_DISTANCE = 2
 
+export type RunTarget = Readonly<{ x: number; z: number; ride_pet?: boolean }>
+
+/** Automation waits for a following companion to reach the ordinary mount radius. */
+export const run_to_mount = ({
+  requested,
+  available,
+  riding,
+  nearby,
+}: Readonly<{
+  requested: boolean
+  available: boolean
+  riding: boolean
+  nearby: boolean
+}>): 'run' | 'mount' | 'wait' => {
+  if (!requested || !available || riding) return 'run'
+  return nearby ? 'mount' : 'wait'
+}
+
 export const run_to_input = (
   current: Readonly<{ x: number; z: number }>,
   target: Readonly<{ x: number; z: number }>

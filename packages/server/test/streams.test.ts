@@ -486,7 +486,12 @@ describe('market + self stream + heartbeat', () => {
       admin: false,
       graph,
       pubsub,
-      indexing_health: async () => ({ lag: 42, epoch: '9', chain_timestamp_ms: 1_000_000 }),
+      indexing_health: async () => ({
+        lag: 42,
+        epoch: '9',
+        chain_timestamp_ms: 1_000_000,
+        chain_observed_at_ms: performance.now(),
+      }),
     })
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/server_info')).toEqual({
@@ -495,6 +500,7 @@ describe('market + self stream + heartbeat', () => {
       indexing_lag: 42,
       current_epoch: '9',
       chain_timestamp_ms: 1_000_000,
+      chain_sample_age_ms: expect.any(Number),
     })
   })
 

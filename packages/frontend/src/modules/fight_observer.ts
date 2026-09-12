@@ -293,6 +293,7 @@ export const observe_fights = ({
       const normalized = session.state()
       if (!normalized) return
       const { checkpoint } = normalized
+      dispatch({ type: 'fight/checkpoint_confirmed', checkpoint })
       if (phase_syncing.delete(packet.fight))
         dispatch({ type: 'fight/transaction_pending', fight: packet.fight, pending: false })
       const { ended } = checkpoint.contract

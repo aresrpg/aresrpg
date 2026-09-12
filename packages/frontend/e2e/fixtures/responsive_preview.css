@@ -1,0 +1,322 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* Neutral backdrop makes HUD geometry visible without starting a game renderer. */
+[data-world-frame] {
+  background: radial-gradient(ellipse at 60% 35%, #283d38, #121b24 65%, #0b1019);
+}
+[data-world-frame]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(25deg, transparent 49%, #9fbda00b 50%, transparent 51%),
+    linear-gradient(155deg, transparent 49%, #9fbda00b 50%, transparent 51%);
+  background-size: 64px 64px;
+}
+.preview-fight {
+  position: fixed;
+  inset: 46px 12px 12px 224px;
+  z-index: 20;
+  pointer-events: none;
+}
+.preview-fight button {
+  pointer-events: auto;
+}
+/* Proposed density rules, scoped to this fixture. No transform/zoom or reduced small text. */
+@media (max-width: 1500px), (max-height: 850px) {
+  :root[data-preview-density='compact'] {
+    --preview-sidebar: 164px;
+    --s-2: 6px;
+    --s-3: 10px;
+    --s-4: 14px;
+    --s-5: 18px;
+  }
+  :root[data-preview-density='compact'] [data-preview-shell] {
+    padding: 8px;
+    gap: 8px;
+  }
+  :root[data-preview-density='compact'] [data-preview-shell] > div {
+    gap: 8px;
+  }
+  :root[data-preview-density='compact'] [data-preview-sidebar-column] {
+    width: var(--preview-sidebar);
+    gap: 8px;
+  }
+  :root[data-preview-density='compact'] [data-preview-sidebar-column] > *,
+  :root[data-preview-density='compact'] [data-preview-sidebar-column] > div > * {
+    width: 100%;
+    min-width: 0;
+  }
+  :root[data-preview-density='compact'] [data-app-sidebar] > div:first-child {
+    padding: 10px 4px;
+  }
+  :root[data-preview-density='compact'] [data-app-sidebar] nav {
+    padding: 6px 0;
+  }
+  :root[data-preview-density='compact'] [data-app-sidebar] button {
+    padding: 7px 10px;
+    gap: 8px;
+  }
+  :root[data-preview-density='compact'] [data-world-frame],
+  :root[data-preview-density='compact'] .preview-fight {
+    left: calc(var(--preview-sidebar) + 16px);
+    right: 8px;
+    bottom: 8px;
+    top: 40px;
+  }
+  :root[data-preview-density='compact'] :is(.p-8, .p-6, [class~='lg:p-8']) {
+    padding: 16px;
+  }
+  :root[data-preview-density='compact'] :is(.p-5, [class~='lg:p-5']) {
+    padding: 12px;
+  }
+  :root[data-preview-density='compact'] :is(.gap-5, .gap-6) {
+    gap: 12px;
+  }
+  :root[data-preview-density='compact'] .text-3xl {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+  :root[data-preview-density='compact'] .gw-tab > nav {
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  :root[data-preview-density='compact'] .gw-tab > nav > button {
+    padding: 9px 12px;
+  }
+  :root[data-preview-density='compact'] .jobs {
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+    gap: 12px;
+  }
+  :root[data-preview-density='compact'] .jobs__browse-area.has-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+  }
+  :root[data-preview-density='compact'] .chr-forge__panels {
+    grid-template-columns: minmax(170px, 1fr) minmax(220px, 1.15fr) minmax(170px, 1fr);
+    gap: 8px;
+  }
+  :root[data-preview-density='compact'] [data-marketplace-item-types] {
+    width: 110px;
+  }
+  :root[data-preview-density='compact'] [data-marketplace-item-type-column] {
+    width: 170px;
+  }
+  :root[data-preview-density='compact'] div:has(> [data-marketplace-general-categories]) {
+    width: 105px;
+  }
+  :root[data-preview-density='compact'] .gw-minimap__frame {
+    width: 176px;
+    height: 176px;
+  }
+  :root[data-preview-density='compact'] .gw-worldchat {
+    width: 300px;
+  }
+  :root[data-preview-density='compact'] .gw-worldchat .chat {
+    height: 190px;
+  }
+  :root[data-preview-density='compact'] .fight-hud__spells {
+    grid-template-columns: repeat(5, 40px) !important;
+  }
+  :root[data-preview-density='compact'] .fight-hud__spell {
+    width: 40px;
+    height: 40px;
+  }
+}
+@media (max-width: 1100px) {
+  :root[data-preview-density='compact'] {
+    --preview-sidebar: 56px;
+  }
+  :root[data-preview-density='compact'] [data-app-sidebar] nav > div,
+  :root[data-preview-density='compact'] [data-app-sidebar] > div:first-child > span,
+  :root[data-preview-density='compact'] [data-app-sidebar] button > span {
+    position: absolute;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+  :root[data-preview-density='compact'] [data-app-sidebar] button {
+    justify-content: center;
+    padding: 13px 0;
+  }
+  :root[data-preview-density='compact'] [data-preview-sidebar-column] > div > [data-app-sidebar] ~ *,
+  :root[data-preview-density='compact'] [data-preview-sidebar-column] > div:last-child:not(:first-child) {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .gw-minimap__frame {
+    width: 140px;
+    height: 140px;
+  }
+}
+@media (max-width: 650px) {
+  :root[data-preview-density='compact'] {
+    --preview-sidebar: 44px;
+  }
+  :root[data-preview-density='compact'] [data-preview-shell] {
+    padding: 4px;
+  }
+  :root[data-preview-density='compact'] [data-world-frame],
+  :root[data-preview-density='compact'] .preview-fight {
+    left: 56px;
+    right: 4px;
+    bottom: 4px;
+  }
+  :root[data-preview-density='compact'] :is(.p-8, .p-6, .p-5, [class~='lg:p-8'], [class~='lg:p-5']) {
+    padding: 10px;
+  }
+  :root[data-preview-density='compact'] .jobs {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+  :root[data-preview-density='compact'] .jobs__list {
+    max-height: 170px;
+    overflow-y: auto;
+  }
+  :root[data-preview-density='compact'] .jobs__browse-area.has-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :root[data-preview-density='compact'] .jobs__browse-area.has-detail > .jobs__browse {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .chr-forge__panels {
+    grid-template-columns: minmax(0, 1fr);
+    overflow-y: auto;
+  }
+  :root[data-preview-density='compact'] div:has(> aside > [data-marketplace-general-categories]) {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  :root[data-preview-density='compact'] aside:has(> [data-marketplace-general-categories]) {
+    width: 100%;
+    max-height: 65px;
+  }
+  :root[data-preview-density='compact'] aside:has(> [data-marketplace-general-categories]) > h3 {
+    display: none;
+  }
+  :root[data-preview-density='compact'] [data-marketplace-general-categories],
+  :root[data-preview-density='compact'] [data-marketplace-item-types],
+  :root[data-preview-density='compact'] [data-marketplace-template-options] {
+    display: flex;
+    flex-shrink: 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+  :root[data-preview-density='compact'] [data-marketplace-item-types] {
+    max-height: 40px;
+  }
+  :root[data-preview-density='compact'] [data-marketplace-item-types] > button {
+    width: auto;
+    min-width: 90px;
+  }
+  :root[data-preview-density='compact'] [data-marketplace-item-type-column] {
+    width: 100%;
+    max-height: 110px;
+  }
+  :root[data-preview-density='compact'] .gw-minimap__frame {
+    width: 100px;
+    height: 100px;
+  }
+  :root[data-preview-density='compact'] .gw-minimap__coords {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .gw-worldchat {
+    width: 100%;
+    bottom: 0;
+    left: 0;
+  }
+  :root[data-preview-density='compact'] .gw-worldchat .chat {
+    height: 52px;
+  }
+  :root[data-preview-density='compact'] .chat__lines {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .chat__filters {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .fight-hud__bottom {
+    bottom: 62px;
+    left: 0;
+    right: 0;
+  }
+  :root[data-preview-density='compact'] .fight-hud__bar {
+    padding: 8px;
+    max-width: 100%;
+  }
+  :root[data-preview-density='compact'] .fight-hud__spells {
+    grid-template-columns: repeat(5, 30px) !important;
+  }
+  :root[data-preview-density='compact'] .fight-hud__spell {
+    width: 30px;
+    height: 30px;
+  }
+}
+@media (max-width: 1500px) {
+  :root[data-preview-density='compact'] .jobs__list-entry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :root[data-preview-density='compact'] .jobs__alternate-slot {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .jobs__list-head {
+    margin-left: 0;
+  }
+}
+@media (max-width: 650px) {
+  :root[data-preview-density='compact'] .gw-tab .jobs {
+    padding: 8px;
+  }
+  :root[data-preview-density='compact'] .jobs__detail {
+    padding: 0 6px;
+  }
+  :root[data-preview-density='compact'] .jobs__item-detail {
+    padding: 0 8px 12px;
+  }
+  :root[data-preview-density='compact'] .jobs__item-detail [data-item-detail-view] > header {
+    gap: 8px;
+  }
+  :root[data-preview-density='compact'] .jobs__item-detail [data-item-detail-view] > header > img {
+    width: 52px;
+    height: 52px;
+  }
+  :root[data-preview-density='compact'] .jobs__item-detail [data-item-detail-view] > header > div > div:first-child {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  :root[data-preview-density='compact'] .jobs__item-detail [data-item-detail-name] {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+  }
+}
+@media (max-width: 650px) {
+  :root[data-preview-density='compact'] .gw-worldchat {
+    height: 58px;
+    bottom: 0;
+  }
+  :root[data-preview-density='compact'] .gw-worldchat .chat {
+    height: 58px;
+  }
+  :root[data-preview-density='compact'] .fight-hud__bottom,
+  :root[data-preview-density='compact'] .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
+    left: 0;
+    right: 0;
+    bottom: 68px;
+    transform: none;
+    justify-content: center;
+  }
+  :root[data-preview-density='compact'] .fight-hud__bar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  :root[data-preview-density='compact'] [data-tutorial-target='fps'] select,
+  :root[data-preview-density='compact'] [data-tutorial-target='fps'] button:last-child {
+    display: none;
+  }
+  :root[data-preview-density='compact'] .gw-compass-wrap {
+    top: 136px;
+    width: calc(100% - 16px);
+    min-width: 0;
+  }
+  :root[data-preview-density='compact'] [data-world-frame] [class~='top-[68px]'] {
+    top: 190px;
+  }
+}

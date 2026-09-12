@@ -67,8 +67,8 @@ export const is_jobs_pathname = (pathname: string): boolean => normalize_pathnam
 /** The persistent world renderer runs for ordinary world play and while the Kolizeum route
  *  presents its mounted board. Other routes keep the renderer paused even if a fight continues
  *  in the background. */
-export const world_scene_active = (page: Page, fight_mounted: boolean): boolean =>
-  is_world_page(page) || (is_fight_board_page(page) && fight_mounted)
+export const world_scene_active = (page: Page, fight_mounted: boolean, background = false): boolean =>
+  is_world_page(page) || (is_fight_board_page(page) && fight_mounted) || background
 
 const open_page = (state: AppState, page: Page): AppState => {
   if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state

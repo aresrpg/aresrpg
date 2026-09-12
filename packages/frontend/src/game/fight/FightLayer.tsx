@@ -47,6 +47,7 @@ import {
   type FightZoneVisualState,
 } from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
+import { resolve_fight_hover, type FightHover } from './fight_hover.ts'
 import { FightViewport } from './FightViewport.tsx'
 import { FightHud } from './FightHud.tsx'
 import { FightSpectatorExit, selected_spectator } from './FightSpectatorExit.tsx'
@@ -73,15 +74,6 @@ const timeline_targetable_cells = (
   targetable_cells: readonly bigint[] | undefined
 ): readonly bigint[] => (selected_spell === null ? EMPTY_CELLS : (targetable_cells ?? EMPTY_CELLS))
 
-const focus_timeline_fighter = (
-  fighter: Readonly<{ cell: bigint; seat: bigint }> | null,
-  focus_seat: (seat: bigint | null) => void,
-  focus_cell: (cell: bigint | null) => void
-): void => {
-  focus_seat(fighter?.seat ?? null)
-  focus_cell(fighter?.cell ?? null)
-}
-
 export const FightSimulatorExit = ({ copy, visible }: Readonly<{ copy: AppCopy; visible: boolean }>) => {
   if (!visible) return null
   return (
@@ -105,8 +97,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
     Readonly<{ fight: string | null; entities: readonly CharacterEntityRender[] }>
   >(Object.freeze({ fight: null, entities: Object.freeze([]) }))
   const fight_audio = useMemo(create_fight_audio_observer, [])
-  const [hovered_seat, set_hovered_seat] = useState<bigint | null>(null)
-  const [hovered_cell, set_hovered_cell] = useState<bigint | null>(null)
+  const [hover, set_hover] = useState<FightHover>(null)
   const [selected_action, set_selected_action] = useState<FightActionSelection>(null)
   const [presentation_active, set_presentation_active] = useState(false)
   // A profile card is born only from a played turn cue. Its structural key deduplicates the
@@ -119,6 +110,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
     Object.freeze({})
   )
   const checkpoint = fight.checkpoint
+  const { cell: hovered_cell, seat: hovered_seat } = resolve_fight_hover(checkpoint, hover)
   const command_fight = fight.mode === 'remote' ? (checkpoint?.contract.id ?? null) : null
   const presentation = fight.presentations[0] ?? null
   const [presented_checkpoint, set_presented_checkpoint] = useState<HydratedFightCheckpoint | null>(checkpoint)
@@ -552,13 +544,9 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
             : null
         }
         on_cell_click={select_cell}
-        on_cell_hover={(cell) => {
-          set_hovered_cell(cell)
-          const seat = checkpoint.contract.fighters.findIndex(
-            (fighter) => cell !== null && !fighter.dead && fighter.cell === cell
-          )
-          set_hovered_seat(seat < 0 ? null : BigInt(seat))
-        }}
+        on_cell_hover={(cell) =>
+          set_hover(cell === null ? null : { fight: checkpoint.contract.id, type: 'cell', cell })
+        }
         on_entity_anchors={set_entity_anchors}
         quality={quality}
         show_start_cells={checkpoint.contract.round === 0n}
@@ -575,7 +563,7 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         copy={copy}
         display_fighters={display_fighters}
         focus_fighter={(fighter) => {
-          focus_timeline_fighter(fighter, set_hovered_seat, set_hovered_cell)
+          set_hover(fighter ? { fight: checkpoint.contract.id, type: 'fighter', seat: fighter.seat } : null)
         }}
         mob_icon_for={mob_icon}
         presentation_queued={presentation_queued}

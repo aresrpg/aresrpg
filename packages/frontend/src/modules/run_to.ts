@@ -5,6 +5,7 @@
 
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import type { RunTarget } from '../game/core/run_to.ts'
 import { copy_text } from '../i18n/copy.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -26,7 +27,7 @@ export type RunTo =
   | Readonly<Omit<RunToRequest, 'status'> & { status: 'running'; x: number; z: number }>
   | Readonly<{
       status: 'running'
-      source: 'position'
+      source: 'position' | 'automation'
       controlled_character_id: string
       name: string
       world: string
@@ -38,7 +39,7 @@ export type RunToState = Readonly<{ run: RunTo | null; restore_flat: boolean }>
 
 export type RunToInput =
   | Readonly<{ type: 'run_to/character'; character_id: string }>
-  | Readonly<{ type: 'run_to/position'; world: string; x: number; z: number }>
+  | Readonly<{ type: 'run_to/position'; world: string; x: number; z: number; source?: 'automation' }>
   | Readonly<{
       type: 'run_to/resolved'
       request: RunToRequest
@@ -55,10 +56,14 @@ export const initial_run_to_state = (): RunToState => Object.freeze({ run: null,
 export const run_to_progress_percent = (initial: number, remaining: number): number =>
   initial <= 0 ? 100 : Math.max(0, Math.min(100, Math.round((1 - remaining / initial) * 100)))
 
-export const run_to_target = (state: Readonly<AppState>): Readonly<{ x: number; z: number }> | null => {
+export const run_to_target = (state: Readonly<AppState>): RunTarget | null => {
   const { run } = state.run_to
   return run?.status === 'running' && run.controlled_character_id === state.session.selected_character_id
-    ? Object.freeze({ x: chain_to_client_coordinate(run.x), z: chain_to_client_coordinate(run.z) })
+    ? Object.freeze({
+        x: chain_to_client_coordinate(run.x),
+        z: chain_to_client_coordinate(run.z),
+        ...(run.source === 'automation' ? { ride_pet: true } : {}),
+      })
     : null
 }
 
@@ -104,7 +109,7 @@ const position_run = (
   return controlled?.world === input.world
     ? Object.freeze({
         status: 'running',
-        source: 'position',
+        source: input.source ?? 'position',
         controlled_character_id: controlled.id,
         name: input.world,
         world: input.world,
@@ -138,13 +143,15 @@ const fold_command = (state: AppState, input: AppInput): AppState | null => {
   return null
 }
 
-const cancels_run = (input: Readonly<AppInput>): boolean =>
-  ['run_to/stopped', 'character/select', 'auth/disconnected', 'auth/rejected', 'auth/connected'].includes(input.type)
+const cancels_run = (state: AppState, input: Readonly<AppInput>): boolean =>
+  ['run_to/stopped', 'auth/disconnected', 'auth/rejected', 'auth/connected'].includes(input.type) ||
+  (input.type === 'character/select' &&
+    state.session.selected_character_id !== state.run_to.run?.controlled_character_id)
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   const command = fold_command(state, input)
   if (command) return command
-  if (cancels_run(input)) return state.run_to.run ? with_run(state, null, false) : state
+  if (cancels_run(state, input)) return state.run_to.run ? with_run(state, null, false) : state
   if (input.type === 'server/packet' && input.packet.type === 'packet/party') {
     const { run: next } = state.run_to
     return next && !run_member_exists(state, next) ? with_run(state, null) : state
@@ -187,12 +194,17 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   events.on('run_to/position', (input) => {
     const state = get_state()
     const { run } = state.run_to
-    if (run?.source !== 'position' || run.world !== input.world || run.x !== input.x || run.z !== input.z) {
+    if (
+      run?.source !== (input.source ?? 'position') ||
+      run.world !== input.world ||
+      run.x !== input.x ||
+      run.z !== input.z
+    ) {
       if (selected_character(state.session)?.world !== input.world) toast.add(text('run_to_position_wrong_world'))
       return
     }
     enable_flat_mode()
-    toast.add(text('run_to_started_position'), 'info')
+    if (!input.source) toast.add(text('run_to_started_position'), 'info')
   })
   events.on('run_to/stopped', ({ reason, restore_flat }) => {
     if (reason !== 'arrived' || !restore_flat) return

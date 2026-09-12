@@ -70,6 +70,7 @@ const Fixture = () => {
         indexing_lag: 0,
         current_epoch: '3',
         chain_timestamp_ms: 1_000_000,
+        chain_sample_age_ms: 0,
       },
     })
     void load_app_copy('en').then(set_copy).catch(console.error)

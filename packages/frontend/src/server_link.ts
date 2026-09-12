@@ -150,7 +150,12 @@ export const connect_server = ({ session, dispatch }: ServerLinkOptions): Server
             start_latency()
           }
           if (packet.type === 'packet/server_info')
-            dispatch({ type: 'clock/observed', chain_ms: packet.chain_timestamp_ms, received_ms: clock_ms() })
+            dispatch({
+              type: 'clock/observed',
+              chain_ms: packet.chain_timestamp_ms,
+              received_ms: clock_ms(),
+              sample_age_ms: packet.chain_sample_age_ms,
+            })
           dispatch({ type: 'server/packet', packet })
         } catch (error) {
           console.warn('Malformed server frame ignored.', error)

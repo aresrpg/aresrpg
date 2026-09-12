@@ -14,8 +14,7 @@ const BASE_HP = Number(CONTRACT_CONSTANTS.base_hp)
 const HP_PER_LEVEL = Number(CONTRACT_CONSTANTS.hp_per_level)
 const BASE_AP = Number(CONTRACT_CONSTANTS.base_ap)
 const BASE_MP = Number(CONTRACT_CONSTANTS.base_mp)
-/** progression.move:19 — one hp per second, game-wide. */
-const HP_REGEN_MS_PER_HP = 1_000
+const HP_REGEN_MS_PER_HP = Number(CONTRACT_CONSTANTS.regen_ms_per_hp)
 const RAW_MAX = 65_535
 
 /** One owned item's SIGNED contribution to one stat. A PET contributes its POWER-scaled

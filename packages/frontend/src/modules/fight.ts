@@ -97,6 +97,7 @@ export type FightSessionInput =
   | Readonly<{ type: 'fight/reset_turn'; fight: string | null }>
   | Readonly<{ type: 'fight/replaced'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/cached'; checkpoint: HydratedFightCheckpoint }>
+  | Readonly<{ type: 'fight/checkpoint_confirmed'; checkpoint: HydratedFightCheckpoint }>
   | Readonly<{ type: 'fight/uncached'; fight: string }>
   | Readonly<{ type: 'fight/kolizeum'; fight: string; kolizeum: FightKolizeumManager | null }>
   /** authoritative rollback after a refused remote transaction; pending witnesses are discarded */
@@ -123,6 +124,7 @@ export type FightSessionInput =
   | Readonly<{ type: 'fight/preview_closed'; character_id: string; fight: string }>
   | Readonly<{ type: 'fight/started_at'; fight: string; at_ms: number }>
   | Readonly<{ type: 'fight/transaction_pending'; fight: string; pending: boolean }>
+  | Readonly<{ type: 'fight/forfeit_completed'; fight: string; fighter: bigint; ok: boolean }>
   | Readonly<{ type: 'fight/end_turn_queued'; fight: string; queued: boolean }>
   | Readonly<{ type: 'fight/canonical_ended'; fight: string; ended: boolean }>
   /** arm/disarm the server-side watch for a fight — folded by NO state; session.ts sends it */

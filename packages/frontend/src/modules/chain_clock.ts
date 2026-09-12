@@ -8,6 +8,7 @@ export type ChainClockInput = Readonly<{
   type: 'clock/observed'
   chain_ms: number | null
   received_ms: number
+  sample_age_ms?: number | null
 }>
 
 const MAX_SAMPLE_AGE_MS = 15_000
@@ -29,9 +30,15 @@ const chain_clock: AppModule = {
     if (input.type === 'clock/observed') {
       const chain_ms = Number(input.chain_ms)
       const { received_ms } = input
-      if (!Number.isSafeInteger(chain_ms) || chain_ms <= 0) return { ...state, chain_clock: null }
+      const sample_age_ms = input.sample_age_ms ?? 0
+      if (
+        ![Number.isFinite(sample_age_ms), sample_age_ms >= 0, Number.isSafeInteger(chain_ms), chain_ms > 0].every(
+          Boolean
+        )
+      )
+        return { ...state, chain_clock: null }
       if (state.chain_clock && chain_ms <= state.chain_clock.chain_ms) return state
-      return { ...state, chain_clock: Object.freeze({ chain_ms, received_ms }) }
+      return { ...state, chain_clock: Object.freeze({ chain_ms, received_ms: received_ms - sample_age_ms }) }
     }
     return state.chain_clock && !['ready', 'connected'].includes(state.session.link_status)
       ? { ...state, chain_clock: null }

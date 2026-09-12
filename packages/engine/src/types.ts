@@ -350,7 +350,7 @@ export type FightPresentationCue =
     }>
 
 export type Engine = Readonly<{
-  start: (update?: (frame: EngineFrame) => void) => void
+  start: (update?: (frame: EngineFrame) => void, background?: boolean) => void
   stop: () => void
   // projection.fov drives the perspective lens; projection.ortho_blend (0 = perspective,
   // 1 = orthographic) lets game-side camera addons travel between views seamlessly.

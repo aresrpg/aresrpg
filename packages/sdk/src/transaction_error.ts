@@ -14,6 +14,12 @@ export const readable_transaction_error = (error: unknown): string => {
 export const executed_transaction_digest = (error: unknown): string | null =>
   readable_transaction_error(error).match(/^\[sdk\] transaction (\S+) failed on-chain:/)?.[1] ?? null
 
+/** Travel/cooldown rejection from the world's movement-proof owner. This alone does not permit retry. */
+export const world_travel_refusal = (error: unknown): boolean => {
+  const message = readable_transaction_error(error)
+  return /abort code:\s*305\b/i.test(message) && message.includes('::world::prove_move')
+}
+
 /** A receipt-fresh owned ref may reach one resolver before another. Only pre-submission failures
  * are retry candidates; a digest-bearing execution is terminal. Timing belongs to the caller. */
 export const pre_submission_version_race = (error: unknown): boolean => {

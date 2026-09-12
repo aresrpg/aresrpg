@@ -89,6 +89,7 @@ export const CONTRACT_CONSTANTS = Object.freeze({
   variant_mix: 2654435761n,
   item_stat_shift: 32768n,
   base_hp: 50n,
+  regen_ms_per_hp: 1000n,
   hp_per_level: 5n,
 })
 

@@ -12,3 +12,17 @@ export const world_keyboard_eligible = (event: Readonly<Event>): boolean =>
         target instanceof HTMLElement &&
         (target.isContentEditable || target.matches('input, textarea, select, button, a[href], [role="textbox"]'))
     )
+
+export const WORLD_MOVE_KEYS: Readonly<Record<string, Readonly<{ axis: 'forward' | 'strafe'; sign: 1 | -1 }>>> =
+  Object.freeze({
+    KeyW: { axis: 'forward', sign: 1 },
+    ArrowUp: { axis: 'forward', sign: 1 },
+    KeyS: { axis: 'forward', sign: -1 },
+    ArrowDown: { axis: 'forward', sign: -1 },
+    KeyD: { axis: 'strafe', sign: 1 },
+    ArrowRight: { axis: 'strafe', sign: 1 },
+    KeyA: { axis: 'strafe', sign: -1 },
+    ArrowLeft: { axis: 'strafe', sign: -1 },
+  })
+
+export const SPAWN_INTERACTION_RANGE_BLOCKS = 15
