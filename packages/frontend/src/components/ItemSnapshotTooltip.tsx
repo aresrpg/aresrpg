@@ -74,7 +74,12 @@ export const useItemDetailHover = (item: Readonly<ItemTooltipDetails>) => {
   const bounds = anchor?.getBoundingClientRect()
   const hover: ItemSnapshotHover | null =
     anchor && bounds
-      ? { anchor, style: { left: bounds.left + bounds.width / 2, top: bounds.top - 8 }, status: 'ready', item }
+      ? {
+          anchor,
+          style: { left: bounds.left + bounds.width / 2, top: bounds.top - 8, pointerEvents: 'none' },
+          status: 'ready',
+          item,
+        }
       : null
   return { open: set_anchor, close: () => set_anchor(null), hover }
 }

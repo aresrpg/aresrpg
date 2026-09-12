@@ -15,6 +15,7 @@ test('unique listings retain every item, its exact tooltip, and its own buy acti
   await expect(page.locator('[data-marketplace-listings]')).not.toContainText('×1')
   await rows.nth(2).locator('[data-marketplace-item]').hover()
   await expect(page.getByRole('tooltip')).toBeVisible()
+  await expect(page.getByRole('tooltip')).toHaveCSS('pointer-events', 'none')
   await expect(page.getByRole('tooltip')).not.toContainText('unavailable')
   await rows.nth(0).locator('[data-marketplace-item]').hover()
   await expect(page.getByRole('tooltip')).toContainText('+11')
