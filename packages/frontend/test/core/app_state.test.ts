@@ -284,7 +284,11 @@ describe('app state', () => {
       sequence: authorizing.external_wallet.sequence,
       accounts: ['0xfirst', '0xadmin'],
     })
-    const connecting = reduce_app_state(choosing, { type: 'external_wallet/select', address: '0xadmin' })
+    const connecting = reduce_app_state(choosing, {
+      type: 'external_wallet/select',
+      wallet_name: wallet.name,
+      address: '0xadmin',
+    })
     const connected = reduce_app_state(connecting, {
       type: 'external_wallet/connected',
       sequence: connecting.external_wallet.sequence,
@@ -292,9 +296,13 @@ describe('app state', () => {
     })
     expect(connected.external_wallet.session).toBe(session)
     expect(connected.session.wallet).toBeNull()
-    expect(choosing.external_wallet.accounts).toEqual(['0xfirst', '0xadmin'])
+    expect(choosing.external_wallet.accounts).toEqual(
+      ['0xfirst', '0xadmin'].map((address) => ({ wallet_name: wallet.name, address }))
+    )
     expect(connecting.external_wallet.request).toMatchObject({ kind: 'connect', address: '0xadmin' })
-    expect(reduce_app_state(choosing, { type: 'external_wallet/select', address: '0xother' })).toBe(choosing)
+    expect(
+      reduce_app_state(choosing, { type: 'external_wallet/select', wallet_name: wallet.name, address: '0xother' })
+    ).toBe(choosing)
     expect(reduce_app_state(connected, { type: 'external_wallet/disconnect' }).external_wallet.session).toBeNull()
   })
 

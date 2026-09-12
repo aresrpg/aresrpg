@@ -21,7 +21,6 @@ import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { ArrowRightLeft, X } from 'lucide-react'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
 import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
@@ -38,6 +37,7 @@ import { retry_after_version_race, run_direct_transaction } from '../transaction
 
 import { ingredient_destination, job_from_path, job_path } from './job_navigation.ts'
 import { GatheringTime } from './GatheringTime.tsx'
+import { JobItemIcon } from './JobItemIcon.tsx'
 
 import './jobs.css'
 import './jobs_adviser.css'
@@ -71,19 +71,6 @@ const JobGlyph = ({ kind }: Readonly<{ kind: JobKind }>) => (
     {CATEGORY_GLYPH[kind]}
   </svg>
 )
-
-const JobItemIcon = ({ icon, size = 28 }: Readonly<{ icon: string; size?: number }>) => {
-  const url = item_icon(icon)
-  if (!url)
-    return (
-      <span aria-hidden="true" className="jobs__item-glyph" style={{ width: size, height: size }}>
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M12 3 21 12 12 21 3 12Z" strokeLinejoin="round" strokeWidth="1.6" />
-        </svg>
-      </span>
-    )
-  return <img alt="" className="jobs__item-img" height={size} loading="lazy" src={url} width={size} />
-}
 
 const covers_label = (job: JobSlug): string => {
   const detail = encyclopedia_catalog.job(job)
@@ -180,6 +167,10 @@ const CraftControls = ({
     }
   })
   const required = recipe_required_level(recipe)
+  const maximum_attempts = Math.min(
+    batch_limit,
+    ...rows.map(({ item_type, have }) => Math.floor(have / recipe.inputs[item_type]!))
+  )
   const level_ok = level >= required
   const affordable = stack_plan !== null
   const can_craft = !!wallet && level_ok && affordable && !pending
@@ -263,12 +254,11 @@ const CraftControls = ({
       </div>
 
       <div className="jobs__craft-bar" data-stackable-output={String(stackable_output)}>
-        <label className="jobs__craft-amount" hidden={!stackable_output}>
+        <fieldset className="jobs__craft-amount" disabled={pending} hidden={!stackable_output}>
           <span className="jobs__craft-amount-label">{t('jobs.craft.amount')}</span>
           <input
             aria-label={t('jobs.craft.amount')}
             className="jobs__craft-input hud-num"
-            disabled={pending}
             max={batch_limit}
             min={1}
             onChange={({ currentTarget }) =>
@@ -277,7 +267,15 @@ const CraftControls = ({
             type="number"
             value={attempts}
           />
-        </label>
+          <button
+            className="btn-outline px-2 py-1.5 text-[9px] uppercase disabled:opacity-40"
+            disabled={maximum_attempts < 1}
+            onClick={() => set_attempts(maximum_attempts)}
+            type="button"
+          >
+            {t('jobs.craft.max')}
+          </button>
+        </fieldset>
         <button
           className="btn-gold jobs__craft-btn"
           disabled={!can_craft}

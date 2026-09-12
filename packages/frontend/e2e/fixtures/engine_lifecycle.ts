@@ -2,11 +2,13 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { LIFECYCLE_WORLD, probe_backend_lifetime } from '../../../engine/test/browser_lifecycle.ts'
+import { probe_label_scene } from '../../../engine/test/browser_labels.ts'
 import { create_world } from '../../src/game/core/world.ts'
 import { read_pose } from '../../src/game/core/pose_feed.ts'
 
 declare global {
   interface Window {
+    probe_label_scene: () => ReturnType<typeof probe_label_scene>
     probe_engine_lifetime: () => ReturnType<typeof probe_backend_lifetime>
     start_world_input: () => Promise<void>
     read_world_pose: typeof read_pose
@@ -14,6 +16,7 @@ declare global {
   }
 }
 window.probe_engine_lifetime = () => probe_backend_lifetime(document.getElementById('canvas') as HTMLCanvasElement)
+window.probe_label_scene = () => probe_label_scene(document.getElementById('canvas') as HTMLCanvasElement)
 
 window.start_world_input = async () => {
   const world = create_world({

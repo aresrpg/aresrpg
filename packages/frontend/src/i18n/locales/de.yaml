@@ -388,6 +388,8 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
+  epoch_volume: '24h-Volumen'
+  volume_epoch: 'Öffentliche Marktplatzverkäufe ohne Gebühren.'
   title: Marktplatz
   subtitle: Spielerangebote auf Sui
   disclaimer_kicker: Vor dem Handeln
@@ -547,7 +549,7 @@ airdrop_page:
 
 settings_page:
   suins_title: 'SuiNS-Name'
-  suins_hint: 'Wähle einen eigenen Namen oder gib einen Namen ein, der bereits auf deine Spiel-Wallet verweist.'
+  suins_hint: 'Dein SuiNS-Name muss nur auf deine Spiel-Wallet verweisen. Gib name@name ein, um @name anzuzeigen.'
   suins_current: 'Aktueller Standardname'
   suins_none: 'Keiner'
   suins_owned: 'Eigene Namen'
@@ -565,7 +567,7 @@ settings_page:
   suins_invalid_name: 'Gib einen gültigen SuiNS-Namen ein.'
   suins_not_targeted: 'Wähle einen aktiven Namen, der deiner Spiel-Wallet gehört oder bereits auf sie verweist.'
   suins_wallet_required: 'Melde dich an, um einen Namen zu wählen.'
-  suins_target_hint: 'Ein eigener Name wird dabei auch auf deine Spiel-Wallet ausgerichtet.'
+  suins_target_hint: 'Für Namen in dieser Wallet legt dieser Button auch das Ziel fest. Andernfalls richte den Namen zuerst in SuiNS auf deine Spiel-Wallet aus.'
   day_night_cycle_label: Tag-Nacht-Zyklus
   day_night_cycle_hint: Deaktivieren, um die Welt dauerhaft auf Mittag zu stellen.
   title: 'Einstellungen'
@@ -617,7 +619,7 @@ tutorial:
   jobs_title: Berufe
   jobs_body: Verfolge Sammel- und Handwerksfortschritt, prüfe Rezepte und stelle verfügbare Gegenstände her. Bei mehreren Charakteren kannst du diese Seite in den Einstellungen auf einen festen Handwerker sperren.
   runeforge_title: Runenschmiede
-  runeforge_body: Ab Berufsstufe 70 kann der passende Handwerksberuf Ausrüstung mit Runen verbessern. Runen erhältst du durch das Zerstören von Gegenständen und kannst sie hier anwenden.
+  runeforge_body: Ab Berufsstufe {{level}} kann der passende Handwerksberuf Ausrüstung mit Runen verbessern. Runen erhältst du durch das Zerstören von Gegenständen und kannst sie hier anwenden.
 admin_page:
   kicker: Herausgeber
   title: Spielinhalte veröffentlichen
@@ -1877,6 +1879,7 @@ characters_page:
       not_enough: 'Nicht genug Zutaten'
       starting_chance: 'Anfangschance'
       amount: 'Versuche'
+      max: 'Max'
       prepare_tooltip: '{{count}} × {{name}} vorbereiten'
       craft_tooltip: '{{count}} × {{name}} herstellen'
       craft_button: 'Herstellen ×{{count}}'

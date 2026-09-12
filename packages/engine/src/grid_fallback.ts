@@ -69,7 +69,7 @@ export const create_grid_fallback = (
   const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
-  const entity_labels = create_entity_label_layer({ canvas, scene, camera, entities })
+  const entity_labels = create_entity_label_layer({ canvas, camera, entities })
   const resource_nodes = create_resource_node_layer({ scene })
   const effects = create_transient_effects({ scene, entities })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects })
@@ -134,10 +134,10 @@ export const create_grid_fallback = (
     set_time_of_day: () => {},
     set_clouds_visible: () => {},
     set_flatten_amount: () =>
-      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active })),
+      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, board_active })),
     set_fight_board: (board) => {
       board_active = board !== null
-      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active }))
+      resource_nodes.set_visible(resource_nodes_visible({ terrain_presented: true, board_active }))
       fight_swords?.set_visible(fight_swords_visible(board_active))
       const flat_board = board ? Object.freeze({ ...board, origin: Object.freeze({ ...board.origin, y: 0 }) }) : null
       fight_board.set(flat_board)

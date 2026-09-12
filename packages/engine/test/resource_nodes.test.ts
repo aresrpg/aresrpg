@@ -2,17 +2,93 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
-import { InstancedMesh, Scene } from 'three'
+import { InstancedMesh, Matrix4, Scene } from 'three'
 
 import { grain_stalk } from '../src/nature/grain_stalk.ts'
 import { create_resource_node_layer, resource_nodes_visible, resource_visual } from '../src/resource_nodes.ts'
 
 describe('resource node visuals', () => {
-  test('world resources disappear for flattening and the entire fight-board lifetime', () => {
-    expect(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active: false })).toBeTrue()
-    expect(resource_nodes_visible({ terrain_presented: true, flattened: true, board_active: false })).toBeFalse()
-    expect(resource_nodes_visible({ terrain_presented: true, flattened: false, board_active: true })).toBeFalse()
-    expect(resource_nodes_visible({ terrain_presented: false, flattened: false, board_active: false })).toBeFalse()
+  test('gathering reuses GPU meshes and materials; capacity growth releases only the old instance buffer', () => {
+    const scene = new Scene()
+    const layer = create_resource_node_layer({ scene, wind: true })
+    const marker = { id: 'wheat', x: 4, y: 80, z: 9, item_type: 'wheat', job: 'FARMER', tier: 1 }
+    const rows = Array.from({ length: 8 }, (_, index) => ({ ...marker, id: String(index), x: index }))
+    layer.set_flatten(1)
+    layer.set_markers(rows)
+    const mesh = scene.children.find((child): child is InstancedMesh => child instanceof InstancedMesh)!
+    expect(scene.children).toHaveLength(1)
+    const { geometry, material } = mesh
+    let disposed = 0
+    mesh.addEventListener('dispose', () => {
+      disposed += 1
+    })
+    layer.set_markers(rows.slice(1))
+    expect(scene.children).toContain(mesh)
+    expect(mesh.count).toBe(7)
+    expect(mesh.geometry).toBe(geometry)
+    expect(mesh.material).toBe(material)
+    expect(disposed).toBe(0)
+    const larger = Array.from({ length: 40 }, (_, index) => ({ ...marker, id: String(index), x: index }))
+    layer.set_markers(larger)
+    const grown = scene.children.find((child): child is InstancedMesh => child instanceof InstancedMesh)!
+    expect(grown.count).toBe(40)
+    expect(grown.geometry).toBe(geometry)
+    expect(grown.material).toBe(material)
+    expect(disposed).toBe(1)
+    let released = 0
+    grown.addEventListener('dispose', () => {
+      released += 1
+    })
+    layer.set_markers([])
+    expect(released).toBe(1)
+    expect(scene.children).toHaveLength(0)
+    layer.dispose()
+  })
+
+  test('world resources stay visible when flat and disappear for the entire fight-board lifetime', () => {
+    expect(resource_nodes_visible({ terrain_presented: true, board_active: false })).toBeTrue()
+    expect(resource_nodes_visible({ terrain_presented: true, board_active: true })).toBeFalse()
+    expect(resource_nodes_visible({ terrain_presented: false, board_active: false })).toBeFalse()
+  })
+
+  test('resource geometry and labels follow flattening, arrivals, and restoration without rebuilding', () => {
+    const scene = new Scene()
+    const layer = create_resource_node_layer({ scene })
+    const marker = { id: 'wheat', x: 4, y: 80, z: 9, item_type: 'wheat', job: 'FARMER', tier: 1 }
+    layer.set_markers([marker])
+    layer.set_visible(true)
+    const mesh = scene.children.find((child): child is InstancedMesh => child instanceof InstancedMesh)!
+    const { geometry } = mesh
+    const matrix = new Matrix4()
+
+    layer.set_flatten(0.6)
+    mesh.getMatrixAt(0, matrix)
+    expect(matrix.elements[13]).toBeCloseTo(40)
+    expect(layer.label_anchor('wheat')?.y).toBeCloseTo(42.1)
+    layer.set_flatten(1)
+    mesh.getMatrixAt(0, matrix)
+    expect(matrix.elements[13]).toBe(0)
+    expect(mesh.visible).toBeTrue()
+    expect(mesh.geometry).toBe(geometry)
+    expect(mesh.boundingSphere!.center.y).toBeLessThan(5)
+    expect(layer.label_anchor('wheat')?.y).toBeCloseTo(2.1)
+    layer.set_flatten(0)
+    mesh.getMatrixAt(0, matrix)
+    expect(matrix.elements[13]).toBe(80)
+    expect(layer.label_anchor('wheat')?.y).toBeCloseTo(82.1)
+
+    layer.set_flatten(1)
+    layer.set_markers([{ ...marker, id: 'new', y: 120 }])
+    const arriving = scene.children.find((child): child is InstancedMesh => child instanceof InstancedMesh)!
+    arriving.getMatrixAt(0, matrix)
+    expect(matrix.elements[13]).toBe(0)
+    expect(layer.label_anchor('wheat')).toBeNull()
+    expect(layer.label_anchor('new')?.y).toBeCloseTo(2.1)
+    layer.set_flatten(0)
+    arriving.getMatrixAt(0, matrix)
+    expect(matrix.elements[13]).toBe(120)
+    layer.dispose()
+    expect(scene.children).toHaveLength(0)
   })
 
   test('the three gathering jobs select distinct silhouettes', () => {

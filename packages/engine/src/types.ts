@@ -35,6 +35,7 @@ export type FightSwordMarker = Readonly<{
 export type ResourceNodeMarker = Readonly<{
   id: string
   x: number
+  /** Source terrain height; the resource layer applies the current flat projection. */
   y: number
   z: number
   item_type: string

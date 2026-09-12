@@ -183,7 +183,7 @@ export const create_webgpu_backend = async (
       world_anchor: (id: string) => entities.world_anchor(id) ?? character_crowd.world_anchor(id),
       entity_height: (id: string) => entities.entity_height(id) ?? character_crowd.entity_height(id),
     })
-    const entity_labels = own(create_entity_label_layer({ canvas, scene, camera, entities: entity_anchors }))
+    const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
     const effects = own(create_transient_effects({ scene, entities }))
     const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })
     const sun = new DirectionalLight(0xfff2dd, 3)
@@ -613,7 +613,6 @@ export const create_webgpu_backend = async (
         !dungeon_stage_active &&
         should_show_resource_nodes({
           terrain_presented,
-          flattened: flatten.flattened(),
           board_active: board_footprint !== null,
         })
       if (show_resource_nodes !== resource_nodes_visible) {
@@ -762,14 +761,7 @@ export const create_webgpu_backend = async (
         }
         terrain.sync_flatten()
         scatter.set_flatten_active(flat_terrain_amount(amount) > 0)
-        resource_nodes_visible =
-          !dungeon_stage_active &&
-          should_show_resource_nodes({
-            terrain_presented,
-            flattened: flat_terrain_amount(amount) > 0,
-            board_active: board_footprint !== null,
-          })
-        resource_nodes.set_visible(resource_nodes_visible)
+        resource_nodes.set_flatten(amount)
         portal?.set_flatten(amount)
         dungeon_portals.set_flatten(amount)
         fight_swords?.set_flatten(amount)
@@ -799,7 +791,6 @@ export const create_webgpu_backend = async (
           !dungeon_stage_active &&
           should_show_resource_nodes({
             terrain_presented,
-            flattened: flatten.flattened(),
             board_active: board_footprint !== null,
           })
         resource_nodes.set_visible(resource_nodes_visible)
@@ -852,7 +843,6 @@ export const create_webgpu_backend = async (
           !dungeon_stage_active &&
           should_show_resource_nodes({
             terrain_presented,
-            flattened: flatten.flattened(),
             board_active: board_footprint !== null,
           })
         resource_nodes.set_visible(resource_nodes_visible)

@@ -82,7 +82,7 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
   const master_volume_percent = Math.round(master_volume_from(settings.master_volume) * 100)
 
   return (
-    <section className="pointer-events-auto min-h-full flex-1 overflow-y-auto border border-border bg-bg/97 p-3 lg:p-8">
+    <section className="pointer-events-auto @container min-h-full min-w-0 flex-1 overflow-y-auto border border-border bg-bg/97 p-3 lg:p-8">
       <header className="mb-4 flex items-center gap-2.5 lg:mb-8">
         <SettingsIcon className="text-gold opacity-60" size={14} />
         <div>
@@ -93,148 +93,164 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
         </div>
       </header>
 
-      <SuinsSettings copy={copy} />
+      <div className="grid items-start gap-4 @[40rem]:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:gap-6">
+        <SuinsSettings copy={copy} />
 
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:mt-8 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Volume2 className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('master_volume_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('master_volume_hint')}</div>
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-4">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Volume2 className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('master_volume_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('master_volume_hint')}</div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <input
+                aria-label={t('master_volume_label')}
+                className="w-32 cursor-pointer accent-gold"
+                max={100}
+                min={0}
+                onChange={(event) => change_master_volume(Number(event.target.value) / 100)}
+                step={5}
+                type="range"
+                value={master_volume_percent}
+              />
+              <output className="min-w-8 text-right text-[11px] text-gold tabular-nums">
+                {master_volume_percent}%
+              </output>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Music2 className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('music_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('music_hint')}</div>
+              </div>
+            </div>
+            <Toggle change={change_music} checked={settings.music_enabled} label={t('music_label')} />
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Footprints className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('footsteps_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('footsteps_hint')}</div>
+              </div>
+            </div>
+            <Toggle
+              change={change_footsteps}
+              checked={settings.footsteps_enabled !== false}
+              label={t('footsteps_label')}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Swords className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('auto_switch_fighter_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">
+                  {t('auto_switch_fighter_hint')}
+                </div>
+              </div>
+            </div>
+            <Toggle
+              change={change_auto_switch}
+              checked={settings.auto_switch_fighter !== false}
+              label={t('auto_switch_fighter_label')}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Hammer className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('always_craft_from_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('always_craft_from_hint')}</div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <select
+                aria-label={t('always_craft_from_picker')}
+                className="w-40 min-w-0 border border-border bg-bg px-2 py-1.5 text-[9px] text-text disabled:opacity-40"
+                disabled={craft_character_id === null}
+                onChange={(event) => change_craft_character(event.target.value || null)}
+                value={craft_character_id ?? ''}
+              >
+                <option value="">{t('always_craft_from_none')}</option>
+                {characters.map((character) => (
+                  <option key={character.id} value={character.id}>
+                    {character.name} · LV.{character.level}
+                  </option>
+                ))}
+              </select>
+              <Toggle
+                change={(checked) => change_craft_character(checked ? default_craft_character_id : null)}
+                checked={craft_character_id !== null}
+                label={t('always_craft_from_label')}
+              />
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Sun className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('day_night_cycle_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('day_night_cycle_hint')}</div>
+              </div>
+            </div>
+            <Toggle
+              change={change_day_night_cycle}
+              checked={settings.day_night_cycle_enabled !== false}
+              label={t('day_night_cycle_label')}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <Mountain className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{t('render_distance_label')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('render_distance_hint')}</div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+              <input
+                aria-label={t('render_distance_label')}
+                className="w-32 cursor-pointer accent-gold"
+                max={RENDER_DISTANCE_MAX}
+                min={RENDER_DISTANCE_MIN}
+                onChange={(event) => change_render_distance(Number(event.target.value))}
+                step={1}
+                type="range"
+                value={render_distance}
+              />
+              <output className="min-w-4 text-right text-[11px] text-gold tabular-nums">{render_distance}</output>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 border border-border bg-surface/80 p-4 lg:p-5">
+            <div className="flex min-w-0 flex-1 basis-40 items-center gap-3">
+              <RotateCcw className="shrink-0 text-gold opacity-70" size={15} />
+              <div className="min-w-0">
+                <div className="text-[11px] tracking-wide text-text">{tutorial('reset_title')}</div>
+                <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{tutorial('reset_hint')}</div>
+              </div>
+            </div>
+            <button
+              className="btn-outline shrink-0 px-3 py-2 text-[9px] uppercase"
+              onClick={reset_tutorials}
+              type="button"
+            >
+              {tutorial('reset_action')}
+            </button>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <input
-            aria-label={t('master_volume_label')}
-            className="w-32 cursor-pointer accent-gold"
-            max={100}
-            min={0}
-            onChange={(event) => change_master_volume(Number(event.target.value) / 100)}
-            step={5}
-            type="range"
-            value={master_volume_percent}
-          />
-          <output className="min-w-8 text-right text-[11px] text-gold tabular-nums">{master_volume_percent}%</output>
-        </div>
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Music2 className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('music_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('music_hint')}</div>
-          </div>
-        </div>
-        <Toggle change={change_music} checked={settings.music_enabled} label={t('music_label')} />
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Footprints className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('footsteps_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('footsteps_hint')}</div>
-          </div>
-        </div>
-        <Toggle change={change_footsteps} checked={settings.footsteps_enabled !== false} label={t('footsteps_label')} />
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Swords className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('auto_switch_fighter_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('auto_switch_fighter_hint')}</div>
-          </div>
-        </div>
-        <Toggle
-          change={change_auto_switch}
-          checked={settings.auto_switch_fighter !== false}
-          label={t('auto_switch_fighter_label')}
-        />
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Hammer className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('always_craft_from_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('always_craft_from_hint')}</div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <select
-            aria-label={t('always_craft_from_picker')}
-            className="min-w-40 border border-border bg-bg px-2 py-1.5 text-[9px] text-text disabled:opacity-40"
-            disabled={craft_character_id === null}
-            onChange={(event) => change_craft_character(event.target.value || null)}
-            value={craft_character_id ?? ''}
-          >
-            <option value="">{t('always_craft_from_none')}</option>
-            {characters.map((character) => (
-              <option key={character.id} value={character.id}>
-                {character.name} · LV.{character.level}
-              </option>
-            ))}
-          </select>
-          <Toggle
-            change={(checked) => change_craft_character(checked ? default_craft_character_id : null)}
-            checked={craft_character_id !== null}
-            label={t('always_craft_from_label')}
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Sun className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('day_night_cycle_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('day_night_cycle_hint')}</div>
-          </div>
-        </div>
-        <Toggle
-          change={change_day_night_cycle}
-          checked={settings.day_night_cycle_enabled !== false}
-          label={t('day_night_cycle_label')}
-        />
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Mountain className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{t('render_distance_label')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{t('render_distance_hint')}</div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <input
-            aria-label={t('render_distance_label')}
-            className="w-32 cursor-pointer accent-gold"
-            max={RENDER_DISTANCE_MAX}
-            min={RENDER_DISTANCE_MIN}
-            onChange={(event) => change_render_distance(Number(event.target.value))}
-            step={1}
-            type="range"
-            value={render_distance}
-          />
-          <output className="min-w-4 text-right text-[11px] text-gold tabular-nums">{render_distance}</output>
-        </div>
-      </div>
-
-      <div className="mt-4 flex max-w-lg items-center justify-between gap-5 border border-border bg-surface/80 p-4 lg:p-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <RotateCcw className="shrink-0 text-gold opacity-70" size={15} />
-          <div className="min-w-0">
-            <div className="text-[11px] tracking-wide text-text">{tutorial('reset_title')}</div>
-            <div className="mt-1 text-[9px] leading-5 tracking-wide text-muted">{tutorial('reset_hint')}</div>
-          </div>
-        </div>
-        <button className="btn-outline shrink-0 px-3 py-2 text-[9px] uppercase" onClick={reset_tutorials} type="button">
-          {tutorial('reset_action')}
-        </button>
       </div>
     </section>
   )

@@ -388,6 +388,8 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  epoch_volume: '24h volume'
+  volume_epoch: 'Public marketplace sales before fees.'
   title: Marketplace
   subtitle: Player listings on Sui
   disclaimer_kicker: Before you trade
@@ -547,7 +549,7 @@ airdrop_page:
 
 settings_page:
   suins_title: 'SuiNS name'
-  suins_hint: 'Choose a name you own, or enter one already pointing to your game wallet.'
+  suins_hint: 'Your SuiNS name just needs to point to your game wallet. Enter name@name to display @name.'
   suins_current: 'Current default'
   suins_none: 'None'
   suins_owned: 'Owned names'
@@ -565,7 +567,7 @@ settings_page:
   suins_invalid_name: 'Enter a valid SuiNS name.'
   suins_not_targeted: 'Choose an active name owned by your game wallet, or one already pointing to it.'
   suins_wallet_required: 'Sign in to choose a name.'
-  suins_target_hint: 'Using a name you own also points it to your game wallet.'
+  suins_target_hint: 'For names owned by this wallet, this button also sets the target. Otherwise, point the name to your game wallet in SuiNS first.'
   day_night_cycle_label: Day/night cycle
   day_night_cycle_hint: Disable to keep the world at midday.
   title: 'Settings'
@@ -617,7 +619,7 @@ tutorial:
   jobs_title: Jobs
   jobs_body: Track gathering and crafting progression, inspect recipes, and craft available items here. With several characters, Settings can lock this page to one dedicated crafter.
   runeforge_title: Runeforge
-  runeforge_body: At job level 70, the matching crafting profession can improve equipment with runes. Obtain runes by crushing items, then apply them here.
+  runeforge_body: At job level {{level}}, the matching crafting profession can improve equipment with runes. Obtain runes by crushing items, then apply them here.
 admin_page:
   kicker: Publisher
   title: Publish game content
@@ -1880,6 +1882,7 @@ characters_page:
       not_enough: 'Not enough ingredients'
       starting_chance: 'Starting chance'
       amount: 'Attempts'
+      max: 'Max'
       prepare_tooltip: 'Prepare {{count}} × {{name}}'
       craft_tooltip: 'Craft {{count}} × {{name}}'
       craft_button: 'Craft ×{{count}}'

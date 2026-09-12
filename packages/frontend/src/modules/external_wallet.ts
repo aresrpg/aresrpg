@@ -14,6 +14,12 @@ export const initial_external_wallet_state = initial_wallet_state<AuthSession>
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (!input.type.startsWith('external_wallet/')) return state
+  if (
+    state.distribution.pending &&
+    state.distribution.pending !== 'load' &&
+    ['external_wallet/select', 'external_wallet/authorize', 'external_wallet/disconnect'].includes(input.type)
+  )
+    return state
   const external_wallet = reduce_wallet(state.external_wallet, input as ExternalWalletInput)
   return external_wallet === state.external_wallet ? state : { ...state, external_wallet }
 }

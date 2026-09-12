@@ -56,6 +56,12 @@ pub enum Write {
     },
     /// One replay-deduplicated exact-money contribution to both chart tiers.
     Money(MoneyFact),
+    /// Absolute checkpoint subtotal: replay overwrites instead of incrementing volume twice.
+    MarketVolume {
+        epoch: u64,
+        checkpoint: u64,
+        mist: u128,
+    },
     /// One successful game-package sender projected into every dashboard activity tier.
     Activity(ActivityFact),
     /// One checkpoint's successful game count plus net gas for every non-deployment game attempt.
@@ -522,6 +528,11 @@ impl Processor for AresHandler {
             });
         }
         writes.extend(wire.money.into_iter().map(Write::Money));
+        writes.push(Write::MarketVolume {
+            epoch: summary.epoch,
+            checkpoint: ckpt,
+            mist: wire.market_volume_mist,
+        });
         let mut transaction_count = 0u64;
         for tx in game_activity_txs(&txs, &self.game_packages) {
             transaction_count += 1;
@@ -638,6 +649,32 @@ impl Handler for AresHandler {
                             .arg(fact.value())
                             .query_async(conn.connection())
                             .await?;
+                    }
+                    Write::MarketVolume {
+                        epoch,
+                        checkpoint,
+                        mist,
+                    } => {
+                        // A rollout partway through an epoch must not advertise a partial day as complete.
+                        let _: bool = redis::cmd("SETNX")
+                            .arg("market:volume:first_epoch")
+                            .arg(epoch)
+                            .query_async(conn.connection())
+                            .await?;
+                        if *mist > 0 {
+                            let key = format!("market:volume:epoch:{epoch}");
+                            let _: () = redis::cmd("HSET")
+                                .arg(&key)
+                                .arg(checkpoint)
+                                .arg(mist.to_string())
+                                .query_async(conn.connection())
+                                .await?;
+                            let _: () = redis::cmd("EXPIRE")
+                                .arg(key)
+                                .arg(3 * 24 * 60 * 60)
+                                .query_async(conn.connection())
+                                .await?;
+                        }
                     }
                     Write::Activity(fact) => {
                         let address = fact.address.hex();

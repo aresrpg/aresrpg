@@ -4,6 +4,7 @@
 // (indexer stats_array). This is the ONE array → named-record seam every read shares.
 
 import { ITEM_STAT_FIELDS } from '@aresrpg/fight/move_contract'
+import type { ItemRow } from '@aresrpg/protocol'
 
 export const stats_record_of = (stats: unknown): Record<string, number> => {
   if (Array.isArray(stats) && stats.length === ITEM_STAT_FIELDS.length)
@@ -21,6 +22,6 @@ export const shape_item = <T extends Record<string, unknown>>(props: T) => {
   return {
     ...rest,
     ...(Array.isArray(stats) ? { stats: stats_record_of(stats) } : {}),
-    ...(typeof damages === 'string' ? { damages: JSON.parse(damages) as unknown[] } : {}),
+    ...(typeof damages === 'string' ? { damages: JSON.parse(damages) as ItemRow['damages'] } : {}),
   }
 }

@@ -85,7 +85,7 @@ test.each([false, true])(
         custody: { kiosk: kiosk_cap.kioskId, kiosk_cap: kiosk_cap.objectId },
         inputs: expect.arrayContaining([id(40)]),
         gas_scope: `fight:${id(40)}`,
-        budget: 1_000_000_000n,
+        budget: 'estimate',
       },
     ])
     expect(calls.map(({ door }) => door)).toEqual([

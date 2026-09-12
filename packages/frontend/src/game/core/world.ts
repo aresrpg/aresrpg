@@ -808,7 +808,9 @@ export const create_world = ({
       engine.set_fight_swords(url, impact_sound_url, markers)
       sync_fight_labels()
     },
-    set_resource_nodes: (markers: readonly ResourceNodeMarker[]) => engine.set_resource_nodes(markers),
+    // Keep source terrain heights so nodes arriving while flat can rise again on restoration.
+    set_resource_nodes: (markers: readonly ResourceNodeMarker[]) =>
+      engine.set_resource_nodes(markers.map((marker) => ({ ...marker, y: surface_y(marker.x, marker.z) }))),
     set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => {
       dungeon_portal_markers = Object.freeze([...markers])
       engine.set_dungeon_portals(markers)

@@ -31,7 +31,9 @@ export const KaresPageView = ({
 }>) => {
   const same_account = wallet.state.session?.address === account.state.address
   const connected = !!wallet.state.session && !same_account
-  const wallet_control = <WalletControl copy={copy.kares_page} wallet={wallet} />
+  const wallet_control = (
+    <WalletControl copy={copy.kares_page} wallet={wallet} locked={external.state.request?.kind === 'execute'} />
+  )
   return (
     <section className="staking-page">
       <header className="staking-page-header">

@@ -107,7 +107,9 @@ Both activation lists derive from that registry; reducers retain the same shared
 
 The `/kares` staking route uses the same app entry, navigation reducer and persistent sidebar as
 other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,
-staking, and gift import. It stores only the selected provider name and exact public address per
+staking, and gift import. It retains authorized accounts grouped by provider for live switching, with one active signing session.
+Switching disposes the previous SDK session without disconnecting its provider, and claim transfers or
+redemptions block user-requested wallet changes. It persists only the selected provider name and exact public address per
 network and origin, restores through silent authorization, and forgets the selection on disconnect
 or provider invalidation. Connecting it never replaces the game account. Finance runtimes bind a
 session for their lifetime and own only disposable read projections and pending actions. The SDK projects the pool’s next-24-hour funded emissions across schedule boundaries. Staking
@@ -163,8 +165,8 @@ before signing. It does not add a second transaction executor or a gameplay-obje
 The SDK logs every certified transaction once with digest and net gas. Its receipt-fed cache owns
 fresh object references; explicit hydration is the only bootstrap read for unknown transaction
 inputs, while the lazy previous-digest barrier synchronizes consecutive writes. Narrow presentation reads are explicit exceptions: Party may snapshot one external
-character checkpoint for run-to, and a chat item hover may read that exact Item plus its rolled
-stat field through a session-bounded LRU. The external-wallet giftcard import explicitly inspects only that
+character checkpoint for run-to, and an item hover in chat or trades may read that exact Item plus its
+rolled-stat field through a session-bounded LRU. The external-wallet giftcard import explicitly inspects only that
 wallet's canonical vouchers through the SDK, on connection or manual refresh. Game-wallet holdings
 remain indexed and pushed. Package type identity uses original package IDs;
 Move-call targets use latest package IDs.
@@ -222,6 +224,9 @@ after an executed transaction.
 Item deltas are bidirectional: current kiosk custody streams the complete row, while pre-state
 custody streams removal when an item moves away or is destroyed. Clients never retain absent graph rows.
 The graph bus resolves each item invalidation once and delivers only to its pre/post custodians.
+
+The indexer retains replay-safe public sale subtotals per checkpoint, grouped by Sui epoch.
+The existing server heartbeat carries the current epoch volume to marketplace observers.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
 query, including empty owned catalogues. Catalogue markers follow their relation writes. The client
@@ -363,11 +368,14 @@ still follows living fighters, so a departed fighter's cell can be used by a rem
 
 The terminal checkpoint supplies the settlement plan after presentation drains. Owned participants
 returning to one personal kiosk settle and collect through one Random-bound PTB; different kiosks
-form separate batches. Team drop selection uses entropy sealed when combat ended, while settlement
+form separate batches. Their gas budget comes from the existing checked resolver simulation, so a
+fixed reserve cannot block an affordable settlement. Team drop selection uses entropy sealed when combat ended, while settlement
 Random rolls only fixed-shape item statistics. The certified settlement receipt enables Continue immediately. `RESULT_FOR`
 exists only for interrupted-client recovery. Character XP awards restore maximum HP when the character level increases. Settlement writes
 combat damage before awarding XP; the existing HP projection carries the healed value and clock.
 Character level and experience come from the projected Character row. Result presents before level-up.
+The mounted fight board owns HUD visibility; pending settlement custody does not hide the overworld HUD.
+Settlement status and explicit Retry remain visible for solo fights as well as groups.
 
 ### Terrain presentation
 
@@ -385,7 +393,10 @@ That manager also owns bounded planning and meshing retries, including stationar
 replies settle their exact request, and cancelled or superseded requests settle explicitly. Backend
 request serials remain monotonic while per-key metadata follows only live work. Exhaustion or device
 loss terminates the world lifetime and exposes Reload; late sky success cannot revive a failed engine.
-Each resource owner releases its workers, GPU objects, audio nodes, and callbacks on teardown.
+Each resource owner releases its workers, GPU objects, audio nodes, and callbacks on teardown. DOM labels use a separate label-only scene
+with the same world camera and world-space anchors; CSS2D never traverses game meshes or skeletons.
+Resource label anchors are plain world-space vectors, not invisible game-scene objects.
+Nametag cards use opaque surfaces rather than per-card backdrop filtering of the live canvas.
 
 World content owns cities: fixed 3x3 regions, stable slugs, anchors, structure packs, and one dungeon slug each.
 Dungeon content independently owns each stable dungeon slug, key, and ordered room composition.
@@ -481,7 +492,8 @@ diffs authored content against published content and writes only the required ba
 
 Sui Kiosk objects own listings and custody. The indexer projects the current market and sales
 history. The server pushes one observed category window plus aggregate counts. The frontend
-reconciles packets and its own certified receipts in one marketplace reducer.
+reconciles packets and its own certified receipts in one marketplace reducer. Listing rows carry indexed
+rolled stats and weapon damage; marketplace hovers render those rows without a client-side chain read.
 
 ### KARES and the offering
 

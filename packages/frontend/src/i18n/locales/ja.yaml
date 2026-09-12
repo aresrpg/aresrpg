@@ -388,6 +388,8 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  epoch_volume: '24時間取引量'
+  volume_epoch: 'マーケットプレイスの公開取引額（手数料を除く）。'
   title: マーケット
   subtitle: Sui上のプレイヤー出品
   disclaimer_kicker: 取引を始める前に
@@ -547,7 +549,7 @@ airdrop_page:
 
 settings_page:
   suins_title: 'SuiNS名'
-  suins_hint: '所有する名前を選ぶか、ゲームウォレットを指す名前を入力してください。'
+  suins_hint: 'SuiNS名の宛先をゲームウォレットに設定するだけで使えます。name@nameと入力すると、@nameと表示されます。'
   suins_current: '現在のデフォルト名'
   suins_none: 'なし'
   suins_owned: '所有する名前'
@@ -565,7 +567,7 @@ settings_page:
   suins_invalid_name: '有効なSuiNS名を入力してください。'
   suins_not_targeted: 'ゲームウォレットが所有するか、すでにそのアドレスを指す有効な名前を選んでください。'
   suins_wallet_required: '名前を選ぶにはログインしてください。'
-  suins_target_hint: '所有する名前を使用すると、その名前の宛先もゲームウォレットに変更されます。'
+  suins_target_hint: 'このウォレットで所有する名前は、このボタンで宛先も設定します。それ以外の名前は、先にSuiNSで宛先をゲームウォレットに設定してください。'
   day_night_cycle_label: 昼夜サイクル
   day_night_cycle_hint: 無効にすると、世界は常に正午になります。
   title: '設定'
@@ -617,7 +619,7 @@ tutorial:
   jobs_title: ジョブ
   jobs_body: 採集と製作の進行、レシピ、製作可能なアイテムを確認できます。複数キャラクターがいる場合、設定でこのページを専任の職人1体に固定できます。
   runeforge_title: ルーンフォージ
-  runeforge_body: ジョブレベル70になると、対応する製作職がルーンで装備を強化できます。アイテムを粉砕してルーンを入手し、ここで適用します。
+  runeforge_body: ジョブレベル{{level}}になると、対応する製作職がルーンで装備を強化できます。アイテムを粉砕してルーンを入手し、ここで適用します。
 admin_page:
   kicker: パブリッシャー
   title: ゲームコンテンツを公開
@@ -1853,6 +1855,7 @@ characters_page:
       not_enough: '材料が不足しています'
       starting_chance: '開始時の成功率'
       amount: '試行回数'
+      max: '最大'
       prepare_tooltip: '{{name}}を{{count}}回分準備'
       craft_tooltip: '{{name}}を{{count}}回製作'
       craft_button: '{{count}}回製作'

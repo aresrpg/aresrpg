@@ -13,7 +13,7 @@ const INFO_INTERVAL_MS = 5_000
 
 export default {
   name: 'player_info',
-  observe: ({ events, game_state, indexing_health, pubsub, send, signal }) => {
+  observe: ({ events, game_state, indexing_health, pubsub, send, signal, get_state }) => {
     events.on('packet/ping', ({ id }: Extract<PlayerAction, { type: 'packet/ping' }>) =>
       send({ type: 'packet/pong', id })
     )
@@ -25,15 +25,29 @@ export default {
           return Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null })
         }),
       ])
-        .then(([online, health]) =>
+        .then(async ([online, health]) => {
+          const observed = get_state().market_observation !== null
+          const volume =
+            observed && health.epoch !== null
+              ? ((await pubsub.graph.market_volume?.(health.epoch).catch((error: Error) => {
+                  log.warn({ error: error.message }, 'market volume read failed')
+                  return null
+                })) ?? null)
+              : null
           send({
             type: 'packet/server_info',
             online,
             indexing_lag: health.lag,
             current_epoch: health.epoch,
             chain_timestamp_ms: health.chain_timestamp_ms,
+            ...(observed
+              ? {
+                  market_volume:
+                    volume !== null && health.epoch !== null ? { epoch: health.epoch, mist: volume } : null,
+                }
+              : {}),
           })
-        )
+        })
         .catch((error: Error) => log.warn({ error: error.message }, 'cluster count failed'))
     const timer = setInterval(() => void push(), INFO_INTERVAL_MS)
     const push_game_state = (frozen: boolean | null) => send({ type: 'packet/game_state', frozen })

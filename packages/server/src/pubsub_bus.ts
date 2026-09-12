@@ -14,6 +14,7 @@ import { EventEmitter } from 'node:events'
 import type { LeaderboardObservation, LeaderboardSnapshot } from '@aresrpg/protocol'
 
 import { get_leaderboard } from './reads/get_leaderboard.ts'
+import { get_market_volume } from './reads/get_market_volume.ts'
 import {
   INDEXED_CHECKPOINT_KEY,
   parse_indexed_checkpoint,
@@ -76,6 +77,7 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   indexed_state?: () => Promise<IndexedState | null>
   /** Immutable retained sale rows for one player, newest first. */
   sales_history: (address: string) => Promise<readonly string[]>
+  market_volume?: (epoch: string) => Promise<string | null>
   analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
   analytics_sets?: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
   analytics_counts?: (keys: readonly string[]) => Promise<readonly number[]>
@@ -260,6 +262,7 @@ export const create_graph_bus = ({
   return {
     ...doors,
     sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
+    market_volume: (epoch) => get_market_volume(publisher, epoch),
     analytics_hashes: (keys) => Promise.all(keys.map((key) => publisher.hgetall(key))),
     analytics_sets: (keys) => Promise.all(keys.map((key) => publisher.smembers(key))),
     analytics_counts: (keys) => Promise.all(keys.map((key) => publisher.scard(key))),

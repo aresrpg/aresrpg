@@ -23,7 +23,7 @@ export type WalletState<S extends WalletSession = WalletSession> = Readonly<{
   loaded: boolean
   wallets: readonly WalletChoice<S>[]
   selected_wallet: WalletChoice<S> | null
-  accounts: readonly string[]
+  accounts: readonly WalletSelection[]
   remembered: WalletSelection | null
   session: S | null
   request: WalletRequest<S> | null
@@ -32,7 +32,7 @@ export type WalletState<S extends WalletSession = WalletSession> = Readonly<{
 }>
 export type WalletUiInput =
   | Readonly<{ type: 'external_wallet/authorize'; wallet_name: string }>
-  | Readonly<{ type: 'external_wallet/select'; address: string }>
+  | Readonly<{ type: 'external_wallet/select'; wallet_name: string; address: string }>
   | Readonly<{ type: 'external_wallet/disconnect' }>
   | Readonly<{ type: 'external_wallet/cancel' }>
 export type WalletInput<S extends WalletSession> =
@@ -79,7 +79,13 @@ const restore_when_available = <S extends WalletSession>(state: WalletState<S>):
 const choose_wallet = <S extends WalletSession>(state: WalletState<S>, input: WalletUiInput): WalletState<S> => {
   if (input.type === 'external_wallet/disconnect')
     return request_wallet(
-      { ...state, session: null, remembered: null, accounts: [], selected_wallet: null },
+      {
+        ...state,
+        session: null,
+        remembered: null,
+        accounts: state.accounts.filter(({ wallet_name }) => wallet_name !== state.session?.wallet_name),
+        selected_wallet: null,
+      },
       { kind: 'disconnect', session: state.session, wallet: state.selected_wallet }
     )
   if (input.type === 'external_wallet/cancel')
@@ -88,21 +94,21 @@ const choose_wallet = <S extends WalletSession>(state: WalletState<S>, input: Wa
       request: null,
       selected_wallet: null,
       remembered: null,
-      accounts: [],
       sequence: state.sequence + 1,
     }
-  if (state.request || state.session) return state
+  if (state.request) return state
   if (input.type === 'external_wallet/authorize') {
     const wallet = state.wallets.find(({ name }) => name === input.wallet_name)
     return wallet
-      ? request_wallet(
-          { ...state, selected_wallet: wallet, accounts: [], remembered: null },
-          { kind: 'authorize', wallet }
-        )
+      ? request_wallet({ ...state, selected_wallet: wallet, remembered: null }, { kind: 'authorize', wallet })
       : state
   }
-  return state.selected_wallet && state.accounts.includes(input.address)
-    ? request_wallet(state, { kind: 'connect', wallet: state.selected_wallet, address: input.address })
+  const wallet = state.wallets.find(({ name }) => name === input.wallet_name)
+  const authorized = state.accounts.some(
+    ({ wallet_name, address }) => wallet_name === input.wallet_name && address === input.address
+  )
+  return wallet && authorized
+    ? request_wallet({ ...state, session: null }, { kind: 'connect', wallet, address: input.address })
     : state
 }
 
@@ -113,9 +119,14 @@ const finish_wallet = <S extends WalletSession>(
   if (input.sequence !== state.sequence) return state
   switch (input.type) {
     case 'external_wallet/accounts': {
-      const ready = { ...state, accounts: input.accounts, request: null }
-      return input.accounts.length === 1
-        ? choose_wallet(ready, { type: 'external_wallet/select', address: input.accounts[0] })
+      const wallet_name = state.selected_wallet!.name
+      const accounts = [
+        ...state.accounts.filter((account) => account.wallet_name !== wallet_name),
+        ...[...new Set(input.accounts)].map((address) => ({ wallet_name, address })),
+      ]
+      const ready = { ...state, accounts, request: null }
+      return input.accounts.length === 1 && !state.session
+        ? choose_wallet(ready, { type: 'external_wallet/select', wallet_name, address: input.accounts[0] })
         : ready
     }
     case 'external_wallet/connected':
@@ -124,7 +135,12 @@ const finish_wallet = <S extends WalletSession>(
         session: input.session,
         remembered: null,
         selected_wallet: null,
-        accounts: [],
+        accounts: [
+          ...state.accounts.filter(
+            ({ wallet_name, address }) => wallet_name !== input.session.wallet_name || address !== input.session.address
+          ),
+          { wallet_name: input.session.wallet_name, address: input.session.address },
+        ],
         request: null,
         error: null,
       }
@@ -152,7 +168,14 @@ export const reduce_wallet = <S extends WalletSession>(
   if (input.type === 'external_wallet/discovered') return restore_when_available({ ...state, wallets: input.wallets })
   if (input.type === 'external_wallet/invalidated')
     return state.session === input.session
-      ? { ...state, session: null, request: null, remembered: null, sequence: state.sequence + 1 }
+      ? {
+          ...state,
+          session: null,
+          request: null,
+          remembered: null,
+          sequence: state.sequence + 1,
+          accounts: state.accounts.filter(({ wallet_name }) => wallet_name !== input.session.wallet_name),
+        }
       : state
   return choose_wallet(state, input)
 }

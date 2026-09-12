@@ -7,6 +7,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { MarketplaceDisclaimer } from '../../src/marketplace/MarketplaceDisclaimer.tsx'
+import { EpochVolumeBadge } from '../../src/marketplace/marketplace_model.tsx'
 import { SuiLogo } from '../../src/components/SuiLogo.tsx'
 
 const source = readFileSync(new URL('../../src/marketplace/MarketplacePage.tsx', import.meta.url), 'utf8')
@@ -16,6 +17,17 @@ const history = readFileSync(new URL('../../src/marketplace/HistoryPanel.tsx', i
 const content = readFileSync(new URL('../../src/editor/ContentPage.tsx', import.meta.url), 'utf8')
 const theme = readFileSync(new URL('../../src/tailwind.css', import.meta.url), 'utf8')
 const model = readFileSync(new URL('../../src/marketplace/marketplace_model.tsx', import.meta.url), 'utf8')
+
+test('epoch volume distinguishes an unavailable total from a confirmed zero', () => {
+  const text = (key: string) => key
+  const unknown = renderToStaticMarkup(<EpochVolumeBadge epoch="100" mist={null} text={text} />)
+  const zero = renderToStaticMarkup(<EpochVolumeBadge epoch="101" mist="0" text={text} />)
+  const traded = renderToStaticMarkup(<EpochVolumeBadge epoch="101" mist="123450000000" text={text} />)
+  expect(unknown).toContain('—')
+  expect(zero).toContain('0.00')
+  expect(traded).toContain('123.45')
+  expect(traded).toContain('data-sui-logo')
+})
 
 test('the restored marketplace keeps BUY, SELL, and HISTORY without the retired send inbox', () => {
   expect(source).toContain("const tabs: readonly Tab[] = ['BUY', 'SELL', 'HISTORY']")

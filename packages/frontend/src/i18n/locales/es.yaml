@@ -388,6 +388,8 @@ demo_page:
   control_hint: Haz clic en el canvas · WASD para moverte · Espacio para saltar · Ratón para mirar
   back: Volver a la aplicación
 marketplace_page:
+  epoch_volume: 'Volumen de 24 h'
+  volume_epoch: 'Ventas públicas del mercado, sin comisiones.'
   title: Mercado
   subtitle: Anuncios de jugadores en Sui
   disclaimer_kicker: Antes de comerciar
@@ -547,7 +549,7 @@ airdrop_page:
 
 settings_page:
   suins_title: 'Nombre SuiNS'
-  suins_hint: 'Elige un nombre que poseas o introduce uno que ya apunte a tu cartera del juego.'
+  suins_hint: 'Tu nombre SuiNS solo necesita apuntar a tu cartera del juego. Introduce name@name para mostrar @name.'
   suins_current: 'Nombre predeterminado'
   suins_none: 'Ninguno'
   suins_owned: 'Nombres en propiedad'
@@ -565,7 +567,7 @@ settings_page:
   suins_invalid_name: 'Introduce un nombre SuiNS válido.'
   suins_not_targeted: 'Elige un nombre activo que pertenezca a tu cartera del juego o que ya apunte a ella.'
   suins_wallet_required: 'Inicia sesión para elegir un nombre.'
-  suins_target_hint: 'Al usar un nombre que posees, también apuntará a tu cartera del juego.'
+  suins_target_hint: 'Para los nombres de esta cartera, este botón también establece el destino. Si no, apunta primero el nombre a tu cartera del juego en SuiNS.'
   day_night_cycle_label: Ciclo de día y noche
   day_night_cycle_hint: Desactívalo para mantener el mundo a mediodía.
   title: 'Ajustes'
@@ -617,7 +619,7 @@ tutorial:
   jobs_title: Oficios
   jobs_body: Consulta tu progreso de recolección y artesanía, revisa recetas y fabrica objetos disponibles. Si tienes varios personajes, Ajustes puede bloquear esta página a un artesano concreto.
   runeforge_title: Forjamagia
-  runeforge_body: Al alcanzar el nivel 70 de un oficio, la profesión de artesanía correspondiente puede mejorar equipo con runas. Consigue runas triturando objetos y aplícalas aquí.
+  runeforge_body: Al alcanzar el nivel {{level}} de un oficio, la profesión de artesanía correspondiente puede mejorar equipo con runas. Consigue runas triturando objetos y aplícalas aquí.
 admin_page:
   kicker: Editor
   title: Publicar contenido del juego
@@ -1876,6 +1878,7 @@ characters_page:
       not_enough: 'Ingredientes insuficientes'
       starting_chance: 'Probabilidad inicial'
       amount: 'Intentos'
+      max: 'Máx'
       prepare_tooltip: 'Preparar {{count}} × {{name}}'
       craft_tooltip: 'Fabricar {{count}} × {{name}}'
       craft_button: 'Fabricar ×{{count}}'

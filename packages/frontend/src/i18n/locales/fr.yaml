@@ -388,6 +388,8 @@ demo_page:
   control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
   back: Retour à l’application
 marketplace_page:
+  epoch_volume: 'Volume sur 24 h'
+  volume_epoch: 'Ventes publiques du marché, hors frais.'
   title: Marché
   subtitle: Annonces des joueurs sur Sui
   disclaimer_kicker: Avant d’échanger
@@ -547,7 +549,7 @@ airdrop_page:
 
 settings_page:
   suins_title: 'Nom SuiNS'
-  suins_hint: 'Choisissez un nom que vous possédez ou saisissez-en un qui pointe déjà vers votre portefeuille de jeu.'
+  suins_hint: 'Votre nom SuiNS doit simplement pointer vers votre portefeuille de jeu. Saisissez name@name pour afficher @name.'
   suins_current: 'Nom par défaut'
   suins_none: 'Aucun'
   suins_owned: 'Noms possédés'
@@ -565,7 +567,7 @@ settings_page:
   suins_invalid_name: 'Saisissez un nom SuiNS valide.'
   suins_not_targeted: 'Choisissez un nom actif appartenant à votre portefeuille de jeu ou pointant déjà vers lui.'
   suins_wallet_required: 'Connectez-vous pour choisir un nom.'
-  suins_target_hint: 'Utiliser un nom que vous possédez le fait aussi pointer vers votre portefeuille de jeu.'
+  suins_target_hint: 'Pour les noms détenus par ce portefeuille, ce bouton définit aussi la destination. Sinon, faites d’abord pointer le nom vers votre portefeuille de jeu dans SuiNS.'
   day_night_cycle_label: Cycle jour/nuit
   day_night_cycle_hint: Désactivez pour garder le monde à midi.
   title: 'Paramètres'
@@ -617,7 +619,7 @@ tutorial:
   jobs_title: Métiers
   jobs_body: Suivez votre progression de récolte et d’artisanat, consultez les recettes et fabriquez les objets disponibles. Avec plusieurs personnages, les paramètres peuvent verrouiller cette page sur un artisan dédié.
   runeforge_title: Forgemagie
-  runeforge_body: Au niveau 70 d’un métier, la profession d’artisanat correspondante peut améliorer l’équipement avec des runes. Obtenez des runes en brisant des objets, puis appliquez-les ici.
+  runeforge_body: Au niveau {{level}} d’un métier, la profession d’artisanat correspondante peut améliorer l’équipement avec des runes. Obtenez des runes en brisant des objets, puis appliquez-les ici.
 admin_page:
   kicker: Éditeur
   title: Publier le contenu du jeu
@@ -1882,6 +1884,7 @@ characters_page:
       not_enough: 'Ingrédients insuffisants'
       starting_chance: 'Chance initiale'
       amount: 'Tentatives'
+      max: 'Max'
       prepare_tooltip: 'Préparer {{count}} × {{name}}'
       craft_tooltip: 'Fabriquer {{count}} × {{name}}'
       craft_button: 'Fabriquer ×{{count}}'

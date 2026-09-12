@@ -78,6 +78,7 @@ pub struct Wire {
     pub leaderboard: Vec<crate::leaderboards::Contribution>,
     pub money: Vec<MoneyFact>,
     pub market: Vec<MarketStamp>,
+    pub market_volume_mist: u128,
     pub fight_lifecycle: Vec<FightLifecycleStamp>,
 }
 
@@ -1019,6 +1020,7 @@ fn push_sale(
     }
     // the market stamp: PUBLIC ITEM sales only, per-unit, never zero.
     if !exclusive && price > 0 {
+        wire.market_volume_mist += u128::from(price);
         if let Some(item_type) = &shape.item_type {
             wire.market.push(MarketStamp {
                 item_type: item_type.clone(),
@@ -2009,6 +2011,7 @@ mod tests {
         assert_eq!(purchased["data"]["name"], "n");
         assert_eq!(purchased["data"]["item_type"], "wooling_wool");
         assert_eq!(purchased["data"]["amount"], 10);
+        assert_eq!(wire.market_volume_mist, 1_000);
         assert_eq!(wire.money.len(), 1);
         assert_eq!(wire.money[0].delta.item_royalty_mist, 10_000_000);
         assert_eq!(wire.money[0].delta.character_royalty_mist, 0);
@@ -2187,6 +2190,7 @@ mod tests {
         let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert_eq!(wire.sales.len(), 2);
         assert!(wire.sales[0].member.contains("\"exclusive\":true"));
+        assert_eq!(wire.market_volume_mist, 0);
         assert_eq!(wire.money[0].delta.item_royalty_mist, 10_000_000);
         assert!(wire.market.is_empty());
     }

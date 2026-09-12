@@ -68,7 +68,7 @@ export const LaunchView = ({ copy, locale, change_locale, state, dispatch, walle
               </option>
             ))}
           </select>
-          <WalletControl copy={copy} wallet={wallet} />
+          <WalletControl copy={copy} wallet={wallet} locked={state.request?.kind === 'execute'} />
         </div>
       </header>
       <AnchorNav copy={copy} />

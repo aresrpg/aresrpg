@@ -22,7 +22,6 @@ import {
 type GameSdk = ReturnType<typeof SDK>
 
 export type FightTurnWitness = Readonly<{ fighter: bigint; seed: bigint }>
-export const SETTLEMENT_BATCH_GAS_BUDGET_MIST = 1_000_000_000n
 export type FightReceipt = {
   digest: string
   turn_witnesses?: readonly FightTurnWitness[]
@@ -442,7 +441,7 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
             custody,
             inputs: [fight, ...templates],
             gas_scope: scope_of(fight),
-            budget: SETTLEMENT_BATCH_GAS_BUDGET_MIST,
+            budget: 'estimate',
           }
         )
       const receipt = await execute_settlement_mode(last, execute_settlement)

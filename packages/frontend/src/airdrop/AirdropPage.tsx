@@ -70,18 +70,21 @@ export const HolderWalletConnect = ({
   wallet,
   copy,
   t,
-}: Readonly<{ wallet: WalletView; copy: AppCopy; t: CopyText }>) => (
-  <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 border border-cyan/20 bg-[radial-gradient(circle_at_50%_0%,rgba(72,207,207,0.08),transparent_70%)] px-5 py-5 text-center">
-    <WalletCards className="text-cyan" size={18} />
-    <div>
-      <div className="text-[9px] tracking-[0.2em] text-cyan uppercase">{t('holder_title')}</div>
-      <div className="mt-1 max-w-md font-mono text-[8px] leading-4 text-muted">
-        {wallet.state.session?.address ?? t('holder_connect_hint')}
+}: Readonly<{ wallet: WalletView; copy: AppCopy; t: CopyText }>) => {
+  const locked = useAppStore((state) => state.distribution.pending !== null && state.distribution.pending !== 'load')
+  return (
+    <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 border border-cyan/20 bg-[radial-gradient(circle_at_50%_0%,rgba(72,207,207,0.08),transparent_70%)] px-5 py-5 text-center">
+      <WalletCards className="text-cyan" size={18} />
+      <div>
+        <div className="text-[9px] tracking-[0.2em] text-cyan uppercase">{t('holder_title')}</div>
+        <div className="mt-1 max-w-md font-mono text-[8px] leading-4 text-muted">
+          {wallet.state.session?.address ?? t('holder_connect_hint')}
+        </div>
       </div>
-    </div>
-    <WalletControl wallet={wallet} copy={copy.kares_page} subtitle={t('holder_connect_hint')} />
-  </section>
-)
+      <WalletControl wallet={wallet} copy={copy.kares_page} subtitle={t('holder_connect_hint')} locked={locked} />
+    </section>
+  )
+}
 
 const CampaignCard = ({ row, t }: Readonly<{ row: CampaignRow; t: CopyText }>) => (
   <article className="flex flex-col border border-border bg-surface-low" data-airdrop={row.id}>

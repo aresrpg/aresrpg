@@ -2,6 +2,7 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
 .item-snapshot-tooltip {
+  pointer-events: none;
   position: fixed;
   z-index: 220;
   width: min(420px, calc(100vw - 24px));

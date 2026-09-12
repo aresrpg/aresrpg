@@ -10,7 +10,6 @@ import {
   project_fight_boundary_receipt,
   created_fight_id,
   execute_settlement_mode,
-  SETTLEMENT_BATCH_GAS_BUDGET_MIST,
 } from './fight.ts'
 import { mastery_receipt_row } from './mastery.ts'
 import {
@@ -233,7 +232,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
             if (final) sdk.doors.settle_last_dungeon_room(tx, args)
             else sdk.doors.settle_dungeon_room(tx, args)
           },
-          { custody, gas_scope: `fight:${fight}`, budget: SETTLEMENT_BATCH_GAS_BUDGET_MIST }
+          { custody, gas_scope: `fight:${fight}`, budget: 'estimate' }
         )
       const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({

@@ -28,7 +28,7 @@ export const NametagCard = ({
     <div className="pointer-events-none flex -translate-y-full flex-col items-center gap-2">
       {children}
       <div
-        className="relative flex flex-col items-center gap-0.5 rounded-lg border bg-bg/85 px-3 py-1.5 text-center backdrop-blur-md"
+        className="relative flex flex-col items-center gap-0.5 rounded-lg border bg-bg px-3 py-1.5 text-center"
         style={{
           borderColor: tone === 'gold' ? 'rgba(200,150,60,0.25)' : 'rgba(120,124,134,0.22)',
           boxShadow: `${glow}, 0 4px 18px rgba(0,0,0,0.5)`,

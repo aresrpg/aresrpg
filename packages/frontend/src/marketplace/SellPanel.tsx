@@ -31,6 +31,8 @@ const item_listing = (row: Readonly<ItemRow>, address: string, price_mist: bigin
   category: row.category,
   level: row.level,
   amount: row.amount,
+  stats: row.stats,
+  damages: row.damages,
   price_mist: String(price_mist),
   kiosk: row.kiosk,
   seller: address,

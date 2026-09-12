@@ -8,6 +8,8 @@ import type { ListingRow, MarketCounts, MarketObservation, MarketSnapshot } from
 
 import { type Graph, type Node, type GraphRow } from '../graph.ts'
 
+import { shape_item } from './stat_block.ts'
+
 export const shape_market_snapshot = (rows: readonly GraphRow[]): MarketSnapshot => ({
   kiosk_versions: Object.fromEntries(
     rows
@@ -19,6 +21,7 @@ export const shape_market_snapshot = (rows: readonly GraphRow[]): MarketSnapshot
     .map(({ asset, kinds, price_mist, at_ms, kiosk, seller, version }) => {
       const row = (asset as Node)!.properties
       const kind = (kinds as string[]).includes('Character') ? 'character' : 'item'
+      const details = shape_item(row)
       return {
         kind,
         version: String(version ?? '0'),
@@ -28,6 +31,7 @@ export const shape_market_snapshot = (rows: readonly GraphRow[]): MarketSnapshot
         category: kind === 'item' ? String(row.category) : null,
         level: Number(row.level),
         amount: kind === 'item' ? Number(row.amount) : 1,
+        ...(kind === 'item' ? { stats: details.stats, damages: details.damages } : {}),
         ...(kind === 'character' ? { classe: String(row.classe) } : {}),
         price_mist: String(price_mist),
         kiosk: String(kiosk),

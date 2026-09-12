@@ -61,6 +61,18 @@ export default defineConfig(({ mode }) => {
   if (mode === 'production') require_reporting_dsn(loaded_env)
   const env = resolve_env(loaded_env)
   return {
+    // Local clients opt in through VITE_SERVER_WS_URL; production still verifies every login.
+    server: {
+      proxy: {
+        '/__game_server': {
+          target: 'wss://server.aresrpg.world',
+          ws: true,
+          changeOrigin: true,
+          headers: { Origin: 'https://aresrpg.world' },
+          rewrite: (path) => path.replace(/^\/__game_server/, ''),
+        },
+      },
+    },
     define: {
       'import.meta.env.VITE_DEPLOY_ENV': JSON.stringify(loaded_env.VERCEL_ENV ?? 'local'),
       'import.meta.env.VITE_RELEASE': JSON.stringify(loaded_env.VERCEL_GIT_COMMIT_SHA || loaded_env.GITHUB_SHA || ''),
@@ -135,6 +147,8 @@ export default defineConfig(({ mode }) => {
                 workload: resolve(frontend_dir, 'e2e/fixtures/workload.html'),
                 staking: resolve(frontend_dir, 'e2e/fixtures/staking.html'),
                 suins_settings: resolve(frontend_dir, 'e2e/fixtures/suins_settings.html'),
+                marketplace: resolve(frontend_dir, 'e2e/fixtures/marketplace.html'),
+                wallet_switcher: resolve(frontend_dir, 'e2e/fixtures/wallet_switcher.html'),
                 inventory: resolve(frontend_dir, 'e2e/fixtures/inventory.html'),
                 public_sale_card: resolve(frontend_dir, 'e2e/fixtures/public_sale_card.html'),
                 leaderboard: resolve(frontend_dir, 'e2e/fixtures/leaderboard.html'),

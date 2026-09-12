@@ -282,7 +282,7 @@ export type PresenceRow = Record<VisibleSlot, string | null> & {
 }
 
 /** A market listing — the projected item + its LISTED_IN price edge. */
-export type ListingRow = {
+export type ListingRow = Pick<ItemRow, 'stats' | 'damages'> & {
   /** Native version of the public Listing dynamic field, scoped by item + kiosk. */
   version: string
   kind: 'item' | 'character'
@@ -790,6 +790,8 @@ export type ServerPackets = {
     indexing_lag: number | null
     current_epoch: string | null
     chain_timestamp_ms: number | null
+    /** Current epoch public sale prices before fees; only sent while browsing the market. */
+    market_volume?: Readonly<{ epoch: string; mist: string }> | null
   }
   /** Version 0 is the global emergency brake; null means the projection is not available yet. */
   'packet/game_state': { frozen: boolean | null }

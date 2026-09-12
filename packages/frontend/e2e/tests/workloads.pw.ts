@@ -7,10 +7,18 @@ import type { EngineQuality } from '@aresrpg/engine'
 
 import type {} from '../fixtures/workload.ts'
 import { install_probe } from '../support/browser_probe.ts'
+import { capture_flat_cpu_profile } from '../support/flat_cpu_profile.ts'
 
 const mode = process.env.BROWSER_WORKLOAD === 'full' ? 'full' : 'smoke'
 const full = mode === 'full'
 const hardware = process.env.REQUIRE_HARDWARE === '1'
+const populations: Readonly<
+  Record<string, { characters: number; mobs: number; pets: number; frames: number; packs: number; nodes: number }>
+> = {
+  smaller: { characters: 32, mobs: 100, pets: 32, frames: 180, packs: 48, nodes: 20 },
+  stress: { characters: 200, mobs: 100, pets: 100, frames: 180, packs: 48, nodes: 20 },
+}
+const population = populations[process.env.BROWSER_POPULATION ?? '']
 
 const scenes = full
   ? [
@@ -26,10 +34,12 @@ for (const quality of ['low', 'medium', 'high'] as const)
     const { location } = scene
     const target_fps = process.platform === 'darwin' ? 120 : 30
     test(`${scene.name} / ${quality}`, async ({ page, browser }, info) => {
+      const finish_profile = await capture_flat_cpu_profile(page, info, process.env.PERF_PROFILE === '1')
       const errors = new Set<string>()
       page.on('pageerror', (error) => errors.add(error.message))
       page.on('console', (message) => {
         if (message.type() === 'error') errors.add(message.text())
+        if (message.text().startsWith('[workload]')) console.log(`${scene.name}/${quality}`, message.text())
       })
       await page.addInitScript(install_probe)
       if (browser.browserType().name() === 'chromium') {
@@ -47,9 +57,11 @@ for (const quality of ['low', 'medium', 'high'] as const)
         quality,
         mode,
         location,
+        population,
         ...('focus' in scene ? { focus: scene.focus } : {}),
       } as const)
       const adapter = await page.evaluate(() => window.workload_adapter)
+      await finish_profile()
       await info.attach('workload', {
         body: JSON.stringify(
           {

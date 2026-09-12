@@ -9,6 +9,8 @@ import { SuiLogo } from '../components/SuiLogo.tsx'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
+import type { CopyText } from '../i18n/copy.ts'
+import { format_sui } from '../wallet_amount.ts'
 
 export const listing_item = (listing: Readonly<Pick<ListingRow, 'item_type'>>) =>
   listing.item_type ? (content_catalog.items.find(({ item_type }) => item_type === listing.item_type) ?? null) : null
@@ -51,6 +53,27 @@ export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => (
     <SuiLogo size={size} />
     <span>SUI</span>
   </span>
+)
+
+export const EpochVolumeBadge = ({
+  epoch,
+  mist,
+  text,
+}: Readonly<{
+  epoch: string | null
+  mist: string | null
+  text: CopyText
+}>) => (
+  <div
+    className="flex shrink-0 items-center gap-3 rounded-sm border border-[#4a9eff]/25 bg-[linear-gradient(110deg,rgba(74,158,255,.08),rgba(200,150,60,.06))] px-3 py-2"
+    data-marketplace-epoch-volume=""
+    title={epoch === null ? undefined : text('volume_epoch', { epoch })}
+  >
+    <span className="text-[8px] tracking-[0.16em] text-muted uppercase">{text('epoch_volume')}</span>
+    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gold tabular-nums">
+      {mist === null ? '—' : format_sui(BigInt(mist), 2)} <SuiUnit size={12} />
+    </span>
+  </div>
 )
 
 export const buyer_total = (ask: bigint): bigint => {

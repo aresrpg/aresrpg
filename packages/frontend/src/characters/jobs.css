@@ -766,6 +766,7 @@
 /* craft action bar — amount picker + the CRAFT button (enabled only at job level >= recipe level). */
 .jobs__craft-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);

@@ -3,6 +3,18 @@
 
 import { expect, test } from '@playwright/test'
 
+test('labels do not update or traverse the game scene', async ({ page }) => {
+  await page.goto('/e2e/fixtures/engine_lifecycle.html')
+  await page.waitForFunction(() => typeof window.probe_label_scene === 'function')
+  expect(await page.evaluate(() => window.probe_label_scene())).toEqual({
+    world_updates: 0,
+    attached: true,
+    moved: true,
+    detached: true,
+    world_children: 0,
+  })
+})
+
 test('unavailable graphics reports initialization failure without waiting for a world pose', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'gpu', { value: undefined })

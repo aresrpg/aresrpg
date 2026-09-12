@@ -465,7 +465,7 @@
       "MasteryPage > world_cards.map[0](card)": [10]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "AskRow": [11],
+      "AskRow": [10],
       "BrowsePanel": [29],
       "CheapestLotMarket > sizes.map[0](size,index)": [15]
     },
@@ -693,9 +693,6 @@
     "packages/frontend/src/wallet/selection.ts": {
       "wallet_selection > read": [10]
     },
-    "packages/frontend/src/wallet/model.ts": {
-      "choose_wallet": [9]
-    },
     "packages/frontend/src/wallet/observer.ts": {
       "observe_wallet > context.subscribe[0](state,previous)": [12],
       "observe_wallet > run": [11]
@@ -765,6 +762,7 @@
       "observe_fights > selected_fight_id": [10]
     },
     "packages/frontend/src/modules/marketplace.ts": {
+      "fold_packet": [9],
       "observe > execute": [12],
       "reduce": [18]
     },

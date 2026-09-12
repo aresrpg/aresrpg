@@ -246,14 +246,7 @@ export function App() {
   const locale = useAppStore((state) => state.locale)
   const copy = useAppStore((state) => state.copy)
   const engine_status = useAppStore((state) => state.engine)
-  const fight_active = useAppStore((state) => {
-    const character = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
-    return (
-      state.fight.mounted ||
-      !!character?.active_fight ||
-      !!state.fight.spectating_by_character[state.session.selected_character_id ?? '']
-    )
-  })
+  const fight_active = useAppStore(({ fight }) => fight.mounted)
   const dungeon_active = useAppStore((state) => selected_dungeon_run(state) !== null)
   const dungeon_lobby_open = dungeon_lobby_visible(navigation.page, fight_active, dungeon_active)
   const social_hud_open = social_hud_visible(navigation.page, fight_active, dungeon_active)

@@ -78,6 +78,7 @@ export const finance_state = (snapshot = finance_snapshot()): FinanceState => ({
 export const wallet_view = (address: string | null = null) => ({
   state: {
     ...initial_wallet_state(),
+    accounts: address ? [{ address, wallet_name: 'Test wallet' }] : [],
     session: address ? { address, wallet_name: 'Test wallet', disconnect: async () => undefined } : null,
   },
   dispatch: () => undefined,

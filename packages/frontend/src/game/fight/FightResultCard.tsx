@@ -82,9 +82,12 @@ const settlement_text = (copy: AppCopy, settlement: SettlementView): string => {
   return label.replace('{completed}', String(progress.completed)).replace('{total}', String(progress.total))
 }
 
-const FightSettlementStatus = ({ copy, settlement }: Readonly<{ copy: AppCopy; settlement: SettlementView }>) => {
+export const FightSettlementStatus = ({
+  copy,
+  settlement,
+}: Readonly<{ copy: AppCopy; settlement: SettlementView }>) => {
   const { progress, failed_result } = settlement
-  if (progress.total <= 1) return null
+  if (progress.total === 0) return null
   const label = settlement_text(copy, settlement)
   const retry = (): void => {
     if (progress.failed_character) dispatch_app({ type: 'fight_result/retry', character_id: progress.failed_character })

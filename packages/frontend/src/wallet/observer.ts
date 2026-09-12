@@ -54,14 +54,13 @@ export const observe_wallet = <S extends WalletSession>(
         send({ type: 'external_wallet/accounts', sequence, accounts })
         return
       }
-      case 'restore': {
+      case 'restore':
+      case 'connect': {
         const accounts = await request.wallet.authorize(true)
         if (!accounts.includes(request.address))
           throw new Error('The saved account is no longer authorized in this wallet')
         break
       }
-      case 'connect':
-        break
     }
     if (!current(sequence)) return
     const session = await request.wallet.connect(request.address)

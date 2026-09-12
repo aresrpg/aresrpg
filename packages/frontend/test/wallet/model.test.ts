@@ -46,5 +46,8 @@ test('authorizing multiple accounts never chooses one silently', () => {
     accounts: ['0xone', '0xtwo'],
   })
   expect(authorized.request).toBeNull()
-  expect(authorized.accounts).toEqual(['0xone', '0xtwo'])
+  expect(authorized.accounts).toEqual([
+    { wallet_name: wallet.name, address: '0xone' },
+    { wallet_name: wallet.name, address: '0xtwo' },
+  ])
 })

@@ -57,6 +57,7 @@ test('a dungeon room fight composes its authored mobs in order and tags the crea
 })
 
 test('every dungeon lifecycle action uses its dungeon-specific custody door', async () => {
+  const budgets: unknown[] = []
   const calls: { door: string; args: Record<string, unknown> }[] = []
   const record = (door: string) => (_tx: unknown, args: Record<string, unknown>) => {
     calls.push({ door, args })
@@ -69,7 +70,10 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
     hydrate_unknown: async () => {},
     with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: string, cap: string) => void) =>
       compose(kiosk_cap.kioskId, kiosk_cap.objectId),
-    execute: async () => ({ $kind: 'Transaction', Transaction: { digest } }),
+    execute: async (_tx: unknown, options: { budget?: unknown }) => {
+      budgets.push(options.budget)
+      return { $kind: 'Transaction', Transaction: { digest } }
+    },
     doors: {
       enter_dungeon: record('enter'),
       join_dungeon_room: record('join_public'),
@@ -117,6 +121,7 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
       { fighter_idx: 3n, loot: [{ item_type: 'fang', existing: null }] },
     ],
   })
+  expect(budgets.slice(3, 5)).toEqual(['estimate', 'estimate'])
   await actions.give_up_fight({ fight, fighter_idx: 2n, custody })
   await actions.abandon({ character_id: id(20), custody })
 

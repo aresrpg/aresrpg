@@ -5,17 +5,19 @@
 // the way an out-of-band overlay does. The element anchors at the entity's rendered crown
 // (live_crown = animated bounds top), so off-pivot or mid-animation models still tag the head.
 
-import type { Camera, Scene, Vector3 } from 'three'
+import { Scene, type Camera, type Vector3 } from 'three'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
 
 type LabelAnchors = Readonly<{ live_crown: (id: string) => Vector3 | null }>
 
 export const create_entity_label_layer = ({
   canvas,
-  scene,
   camera,
   entities,
-}: Readonly<{ canvas: HTMLCanvasElement; scene: Scene; camera: Camera; entities: LabelAnchors }>) => {
+}: Readonly<{ canvas: HTMLCanvasElement; camera: Camera; entities: LabelAnchors }>) => {
+  // CSS2D updates and traverses its input tree. World-space anchors need only a label root,
+  // never a second matrix update and traversal of the game's animated meshes and skeletons.
+  const scene = new Scene()
   const renderer = new CSS2DRenderer()
   const surface = renderer.domElement
   surface.style.position = 'absolute'

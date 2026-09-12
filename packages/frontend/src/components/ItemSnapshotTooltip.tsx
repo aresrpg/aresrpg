@@ -3,6 +3,7 @@
 
 import { item_stat_center } from '@aresrpg/immutable'
 import type { ItemSnapshot } from '@aresrpg/sdk/auth'
+import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
 import { useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
@@ -14,14 +15,16 @@ import { useAppStore } from '../store.ts'
 import { ItemDetailView } from './ItemDetailView.tsx'
 import './item_snapshot_tooltip.css'
 
+type ItemTooltipDetails = ItemSnapshot & Pick<ItemRow, 'damages'>
+
 export type ItemSnapshotHover = Readonly<{
   anchor: Readonly<HTMLElement>
   style: CSSProperties
   status: 'loading' | 'ready' | 'error'
-  item: ItemSnapshot | null
+  item: ItemTooltipDetails | null
 }>
 
-const item_snapshot_detail = (item: Readonly<ItemSnapshot>) => {
+const item_snapshot_detail = (item: Readonly<ItemTooltipDetails>) => {
   const rolled = item.stats
     ? Object.fromEntries(
         Object.entries(item.stats)
@@ -50,7 +53,7 @@ const ItemSnapshotContent = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: I
   return (
     <ItemDetailView
       category={detail.category}
-      damages={Object.freeze([])}
+      damages={detail.damages ?? []}
       item_type={detail.item_type}
       labels={{
         characteristics: encyclopedia('characteristics'),
@@ -63,6 +66,17 @@ const ItemSnapshotContent = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: I
       stats={detail.stats}
     />
   )
+}
+
+/** Indexed rows stay live while hovered; only the DOM anchor is retained locally. */
+export const useItemDetailHover = (item: Readonly<ItemTooltipDetails>) => {
+  const [anchor, set_anchor] = useState<Readonly<HTMLElement> | null>(null)
+  const bounds = anchor?.getBoundingClientRect()
+  const hover: ItemSnapshotHover | null =
+    anchor && bounds
+      ? { anchor, style: { left: bounds.left + bounds.width / 2, top: bounds.top - 8 }, status: 'ready', item }
+      : null
+  return { open: set_anchor, close: () => set_anchor(null), hover }
 }
 
 export const useItemSnapshotHover = (item_id: string) => {

@@ -12,13 +12,13 @@ import {
   InstancedMesh,
   Matrix4,
   MeshStandardMaterial,
-  Object3D,
   Quaternion,
   Vector3,
   type Scene,
 } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 
+import { project_height } from './flatten.ts'
 import { flora_cluster } from './nature/flora_cluster.ts'
 import { grain_stalk } from './nature/grain_stalk.ts'
 import { mushroom_cluster } from './nature/mushroom_cluster.ts'
@@ -32,10 +32,8 @@ export type ResourceSilhouette = 'grain' | 'flora' | 'mushroom' | 'ore'
 
 export const resource_nodes_visible = ({
   terrain_presented,
-  flattened,
   board_active,
-}: Readonly<{ terrain_presented: boolean; flattened: boolean; board_active: boolean }>): boolean =>
-  terrain_presented && !flattened && !board_active
+}: Readonly<{ terrain_presented: boolean; board_active: boolean }>): boolean => terrain_presented && !board_active
 
 const BUILDERS: Readonly<Record<ResourceSilhouette, SpriteBuilder>> = Object.freeze({
   grain: grain_stalk,
@@ -177,30 +175,62 @@ const material_for = (
 }
 
 export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ scene: Scene; wind?: boolean }>) => {
-  const meshes = new Map<string, InstancedMesh>()
-  const anchors = new Map<string, Object3D>()
-  let markers = new Map<string, ResourceNodeMarker>()
+  const meshes = new Map<string, Readonly<{ mesh: InstancedMesh; rows: readonly ResourceNodeMarker[] }>>()
+  const anchors = new Map<string, Vector3>()
+  let flatten = 0
   // The backend reveals resource dressing only after its first terrain frame has presented.
   let visible = false
 
+  const release_mesh = (mesh: InstancedMesh): void => {
+    scene.remove(mesh)
+    mesh.dispose()
+    mesh.geometry.dispose()
+    ;(mesh.material as MeshStandardMaterial).dispose()
+  }
+
   const clear_meshes = (): void => {
-    meshes.forEach((mesh) => {
-      scene.remove(mesh)
-      mesh.geometry.dispose()
-      ;(mesh.material as MeshStandardMaterial).dispose()
-    })
+    meshes.forEach(({ mesh }) => release_mesh(mesh))
     meshes.clear()
   }
 
+  const mesh_for = (key: string, rows: readonly ResourceNodeMarker[]): InstancedMesh => {
+    const known = meshes.get(key)?.mesh
+    if (known && known.instanceMatrix.count >= rows.length) return known
+    const first = rows[0]!
+    const { geometry, material } = known ?? {
+      geometry: geometry_for(first.item_type, first.job, first.tier),
+      material: material_for(resource_visual(first.item_type, first.job, first.tier), wind),
+    }
+    const mesh = new InstancedMesh(geometry, material, 2 ** Math.ceil(Math.log2(rows.length)))
+    mesh.name = `resource:${first.item_type}`
+    mesh.castShadow = false
+    mesh.receiveShadow = true
+    if (known) {
+      scene.remove(known)
+      known.dispose()
+    }
+    scene.add(mesh)
+    return mesh
+  }
+
+  const project_markers = (): void => {
+    const matrix = new Matrix4()
+    meshes.forEach(({ mesh, rows }) => {
+      rows.forEach((row, index) => {
+        const height = project_height(row.y, flatten)
+        mesh.getMatrixAt(index, matrix)
+        matrix.elements[13] = height
+        mesh.setMatrixAt(index, matrix)
+        anchors.get(row.id)!.y = height + (row.job === 'FARMER' ? 2.1 : 1.35)
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      mesh.computeBoundingSphere()
+    })
+  }
+
   const set_markers = (next: readonly ResourceNodeMarker[]): void => {
-    clear_meshes()
     const wanted = new Set(next.map(({ id }) => id))
-    for (const [id, anchor] of anchors)
-      if (!wanted.has(id)) {
-        scene.remove(anchor)
-        anchors.delete(id)
-      }
-    markers = new Map(next.map((marker) => [marker.id, marker]))
+    for (const id of anchors.keys()) if (!wanted.has(id)) anchors.delete(id)
     const buckets = new Map<string, ResourceNodeMarker[]>()
     next.forEach((row) => {
       const key = `${row.item_type}:${row.job}:${clamp_tier(row.tier)}`
@@ -208,15 +238,16 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
       rows.push(row)
       buckets.set(key, rows)
     })
+    for (const [key, { mesh }] of meshes)
+      if (!buckets.has(key)) {
+        release_mesh(mesh)
+        meshes.delete(key)
+      }
     buckets.forEach((rows, key) => {
       const first = rows[0]!
       const visual = resource_visual(first.item_type, first.job, first.tier)
-      const mesh = new InstancedMesh(
-        geometry_for(first.item_type, first.job, first.tier),
-        material_for(visual, wind),
-        rows.length
-      )
-      mesh.name = `resource:${first.item_type}`
+      const mesh = mesh_for(key, rows)
+      mesh.count = rows.length
       rows.forEach((row, index) => {
         const yaw =
           mulberry(
@@ -228,38 +259,33 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
           new Vector3(visual.scale, visual.scale, visual.scale)
         )
         mesh.setMatrixAt(index, matrix)
-        const anchor = anchors.get(row.id) ?? new Object3D()
-        anchor.position.set(row.x, row.y + (visual.family === 'FARMER' ? 2.1 : 1.35), row.z)
-        anchor.visible = visible
-        if (!anchors.has(row.id)) {
-          anchors.set(row.id, anchor)
-          scene.add(anchor)
-        }
+        const anchor = anchors.get(row.id) ?? new Vector3()
+        anchor.set(row.x, row.y, row.z)
+        anchors.set(row.id, anchor)
       })
       mesh.visible = visible
       mesh.instanceMatrix.needsUpdate = true
-      mesh.castShadow = false
-      mesh.receiveShadow = true
-      meshes.set(key, mesh)
-      scene.add(mesh)
+      meshes.set(key, { mesh, rows })
     })
+    project_markers()
   }
 
   return Object.freeze({
     set_markers,
+    set_flatten: (amount: number): void => {
+      if (flatten === amount) return
+      flatten = amount
+      project_markers()
+    },
     /** The shared CSS2D layer reads this invisible world point every render. */
-    label_anchor: (id: string): Vector3 | null =>
-      visible && markers.has(id) ? (anchors.get(id)?.position ?? null) : null,
+    label_anchor: (id: string): Vector3 | null => (visible ? (anchors.get(id) ?? null) : null),
     set_visible: (next: boolean) => {
       visible = next
-      meshes.forEach((mesh) => (mesh.visible = next))
-      anchors.forEach((anchor) => (anchor.visible = next))
+      meshes.forEach(({ mesh }) => (mesh.visible = next))
     },
     dispose: () => {
       clear_meshes()
-      anchors.forEach((anchor) => scene.remove(anchor))
       anchors.clear()
-      markers.clear()
     },
   })
 }

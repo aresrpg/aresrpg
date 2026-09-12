@@ -10,10 +10,10 @@ import { digest, id, pins, signer } from './helpers/transport.ts'
 
 // Synthetic fullnode replies exercise the installed client's resolver and HTTP transport.
 // Existing receipt tests own submission/recovery; this test stops at the signing boundary.
-for (const payment of ['coin', 'fragmented', 'balance', 'refused'] as const)
+for (const payment of ['coin', 'fragmented', 'balance', 'estimated', 'refused'] as const)
   test(`real gRPC resolver: ${payment} uses one checked simulation before signing`, async () => {
     const gas_coins =
-      payment === 'balance'
+      payment === 'balance' || payment === 'estimated'
         ? []
         : (payment === 'fragmented' ? [50, 51] : [50]).map((coin) => ({ objectId: id(coin), version: '3', digest }))
     const requests: string[] = []
@@ -34,7 +34,8 @@ for (const payment of ['coin', 'fragmented', 'balance', 'refused'] as const)
         }
         expect(request.doGasSelection).toBe(true)
         expect(request.checks).toBe('ENABLED')
-        expect(request.transaction.gasPayment).toMatchObject({ budget: String(GAS_BUDGET_MIST) })
+        const gas_payment = request.transaction.gasPayment as { budget?: string } | undefined
+        expect(gas_payment?.budget).toBe(payment === 'estimated' ? undefined : String(GAS_BUDGET_MIST))
         const payload = method.O.toBinary(
           method.O.fromJson({
             transaction: {
@@ -44,9 +45,9 @@ for (const payment of ['coin', 'fragmented', 'balance', 'refused'] as const)
                   objects: gas_coins,
                   owner: signer.toSuiAddress(),
                   price: '1000',
-                  budget: String(GAS_BUDGET_MIST),
+                  budget: payment === 'estimated' ? '331000' : String(GAS_BUDGET_MIST),
                 },
-                ...(payment === 'balance'
+                ...(payment === 'balance' || payment === 'estimated'
                   ? { expiration: { kind: 'VALID_DURING', minEpoch: '1', epoch: '2', chain: digest, nonce: 1 } }
                   : {}),
               },
@@ -70,6 +71,7 @@ for (const payment of ['coin', 'fragmented', 'balance', 'refused'] as const)
       pins,
       sign_transaction: async (tx) => {
         expect(tx.getData().gasData.payment).toEqual(gas_coins)
+        expect(tx.getData().gasData.budget).toBe(payment === 'estimated' ? '331000' : String(GAS_BUDGET_MIST))
         signed.push(await tx.build())
         throw signing_boundary
       },
@@ -83,7 +85,7 @@ for (const payment of ['coin', 'fragmented', 'balance', 'refused'] as const)
       fight_object: { objectId: id(70), initialSharedVersion: '1' },
       fighter_idx: 0n,
     })
-    await expect(sdk.execute(tx)).rejects.toThrow(
+    await expect(sdk.execute(tx, payment === 'estimated' ? { budget: 'estimate' } : {})).rejects.toThrow(
       payment === 'refused' ? 'Transaction failed' : signing_boundary.message
     )
     expect(signed).toHaveLength(payment === 'refused' ? 0 : 1)

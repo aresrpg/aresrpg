@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, X } from 'lucide-react'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from 'react'
 
+import { RUNE_UNLOCK_LEVEL } from '../characters/forge_eligibility.ts'
 import { read_scene, subscribe_scene } from '../game/core/scene_feed.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { indexing_blocked } from '../components/IndexingCatchupModal.tsx'
@@ -189,7 +190,9 @@ const TutorialSequence = ({
         <h2 className="mt-3 text-lg font-semibold tracking-[0.04em] text-[#e8e4dc]" id={`tutorial-title-${step.key}`}>
           {text(`${step.key}_title`)}
         </h2>
-        <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">{text(`${step.key}_body`)}</p>
+        <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">
+          {text(`${step.key}_body`, { level: RUNE_UNLOCK_LEVEL })}
+        </p>
         <div className="mt-6 flex items-center justify-between gap-3">
           <button
             className="flex h-9 cursor-pointer items-center gap-2 border border-white/10 px-4 text-[9px] tracking-[0.16em] text-[#8d9099] uppercase hover:border-white/25 hover:text-[#d6d1c8] disabled:cursor-default disabled:opacity-0"

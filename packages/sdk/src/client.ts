@@ -128,7 +128,7 @@ export type SdkOptions = {
   /** override for tests/local publishes; defaults to the current deployment */
   pins?: Pins
   /** optional explicit budget in MIST; `'estimate'` lets the Sui resolver price the
-   *  transaction itself (deployment-sized surfaces); otherwise the game-door law applies */
+   *  transaction itself (variable-cost batches); otherwise the game-door default applies */
   gas_budget?: bigint | 'estimate'
   transaction_storage?: TransactionStorage | null
 }
@@ -427,8 +427,8 @@ export function SDK({
   // receipt's gas coin onto the next transaction, with no fallback when that single ref stopped
   // covering the budget. Which coin — or whether a coin is involved at all — depends on how the
   // address holds its SUI (Coin objects vs an address balance), and only the resolver knows.
-  // The BUDGET is ours and constant for GAME doors; `'estimate'` hands pricing to the resolver
-  // for surfaces whose cost is not constant (deployments, seed ceremonies).
+  // The default BUDGET is fixed; `'estimate'` hands pricing to the resolver for variable-cost
+  // surfaces such as settlements, deployments, and seed ceremonies.
   const prepare_transaction = async (
     tx: Transaction,
     sender_address: string,

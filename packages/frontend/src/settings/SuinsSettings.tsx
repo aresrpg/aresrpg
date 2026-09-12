@@ -37,7 +37,7 @@ export const SuinsSettings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const name = snapshot.default_name
   const choice = snapshot.names.some((row) => row.name === state.draft) ? state.draft : ''
   return (
-    <section className="mt-4 max-w-lg border border-border bg-surface/80 p-4 lg:p-5" data-suins-settings="">
+    <section className="min-w-0 border border-border bg-surface/80 p-4 lg:p-5" data-suins-settings="">
       <header className="flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-3 text-[11px] tracking-wide text-text">
           <AtSign className="text-gold opacity-70" size={15} />

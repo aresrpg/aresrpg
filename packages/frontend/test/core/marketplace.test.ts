@@ -33,6 +33,30 @@ const listing = Object.freeze({
 })
 
 describe('marketplace projection', () => {
+  test('market volume follows the heartbeat epoch and clears unavailable totals', () => {
+    const initial = initial_app_state(settings)
+    const heartbeat = {
+      type: 'packet/server_info' as const,
+      online: 1,
+      indexing_lag: 0,
+      current_epoch: '100',
+      chain_timestamp_ms: 1000,
+      market_volume: { epoch: '100', mist: '123000000000' },
+    }
+    const ready = reduce_app_state(initial, { type: 'server/packet', packet: heartbeat })
+    expect(ready.marketplace.epoch_volume).toEqual({ epoch: '100', mist: '123000000000' })
+    const next = reduce_app_state(ready, {
+      type: 'server/packet',
+      packet: { ...heartbeat, current_epoch: '101', market_volume: { epoch: '101', mist: '0' } },
+    })
+    expect(next.marketplace.epoch_volume).toEqual({ epoch: '101', mist: '0' })
+    const unavailable = reduce_app_state(next, {
+      type: 'server/packet',
+      packet: { ...heartbeat, market_volume: null },
+    })
+    expect(unavailable.marketplace.epoch_volume).toBeNull()
+  })
+
   test('browse groups compile to exact chain-category windows', () => {
     expect(market_observation('PETS')).toEqual({ categories: ['pet'], characters: false })
     expect(market_observation('CHARACTERS')).toEqual({ categories: [], characters: true })

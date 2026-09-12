@@ -7,6 +7,7 @@ import { class_names, item_is_stackable, marketplace_lot_sizes } from '@aresrpg/
 import type { ListingRow } from '@aresrpg/protocol'
 
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
+import { ItemSnapshotTooltip, useItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, market_group_count, market_observation, type MarketGroup } from '../modules/marketplace.ts'
@@ -270,19 +271,29 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                         />
                       </div>
                     )}
-                    <div data-marketplace-listings>
-                      <CheapestLotMarket
-                        address={address}
-                        asks={asks}
-                        balance={balance}
-                        pending={market.pending}
-                        sizes={
-                          item_is_stackable(item?.category ?? selected[1][0]!.category ?? '')
-                            ? marketplace_lot_sizes
-                            : [1]
-                        }
-                        text={text}
-                      />
+                    <div className="mx-auto w-full max-w-[560px]" data-marketplace-listings>
+                      {item_is_stackable(item?.category ?? selected[1][0]!.category ?? '') ? (
+                        <CheapestLotMarket
+                          address={address}
+                          asks={asks}
+                          balance={balance}
+                          pending={market.pending}
+                          sizes={marketplace_lot_sizes}
+                          text={text}
+                        />
+                      ) : (
+                        asks.map((listing, index) => (
+                          <AskRow
+                            address={address}
+                            balance={balance}
+                            index={index}
+                            key={listing.id}
+                            listing={listing}
+                            pending={market.pending}
+                            text={text}
+                          />
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>
@@ -398,33 +409,27 @@ const AskRow = ({
   const purchasable = !own && !insufficient && !pending
   return (
     <div
-      className={`flex min-w-0 items-center gap-2 border-b border-white/7 px-3 py-2 transition-colors ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+      className={`flex min-w-0 items-center justify-center gap-4 border-b border-white/7 px-3 py-2 transition-colors ${index % 2 ? 'bg-white/[0.018]' : ''}`}
       data-marketplace-listing-row
     >
-      <ListingIcon listing={listing} size={34} />
-      <div className="flex min-w-0 flex-[1_1_130px] flex-col">
-        <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('seller')}</span>
-        <span className="truncate text-[9px] tracking-[0.08em] text-[#a2a6ae]">
-          {listing.kind === 'character' ? listing.name : short_address(listing.seller)}
-        </span>
-        {listing.kind === 'character' && (
+      {listing.kind === 'item' ? <ItemAskIcon listing={listing} /> : <ListingIcon listing={listing} size={34} />}
+      {listing.kind === 'character' && (
+        <div className="flex min-w-0 flex-[1_1_130px] flex-col">
+          <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('seller')}</span>
+          <span className="truncate text-[9px] tracking-[0.08em] text-[#a2a6ae]">{listing.name}</span>
           <span className="truncate text-[7px] text-[#646a75]">
             LV. {listing.level} · {listing.classe ?? '—'} · {short_address(listing.seller)}
           </span>
-        )}
-      </div>
-      {listing.amount > 1 && (
-        <span className="shrink-0 text-[9px] tracking-[0.15em] text-[#777b86]">×{listing.amount}</span>
+        </div>
       )}
-      <span className="min-w-2 flex-1" />
-      <div className="flex min-w-0 max-w-28 shrink flex-col items-end overflow-hidden">
+      <div className="flex w-28 min-w-0 shrink flex-col items-end overflow-hidden">
         <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('price')}</span>
         <span className="max-w-full truncate whitespace-nowrap text-[10px] tabular-nums text-[#c8963c]">
           {format_sui(total, 2)} <SuiUnit />
         </span>
       </div>
       <button
-        className="h-8 min-w-0 max-w-24 shrink cursor-pointer overflow-hidden border border-[#c8963c]/35 px-2 text-ellipsis whitespace-nowrap text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:cursor-not-allowed disabled:opacity-35"
+        className="h-8 w-24 min-w-0 shrink cursor-pointer overflow-hidden border border-[#c8963c]/35 px-2 text-ellipsis whitespace-nowrap text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:cursor-not-allowed disabled:opacity-35"
         disabled={!purchasable}
         onClick={(event) => {
           event.stopPropagation()
@@ -435,5 +440,31 @@ const AskRow = ({
         {own ? text('yours') : insufficient ? text('insufficient') : text('buy')}
       </button>
     </div>
+  )
+}
+
+const ItemAskIcon = ({ listing }: Readonly<{ listing: ListingRow }>) => {
+  const copy = useAppStore((state) => state.copy)
+  const item_hover = useItemDetailHover({
+    ...listing,
+    item_type: listing.item_type ?? '',
+    category: listing.category ?? '',
+  })
+  return (
+    <>
+      <button
+        aria-label={listing_name(listing)}
+        className="shrink-0 cursor-help focus-visible:outline focus-visible:outline-gold"
+        data-marketplace-item={listing.id}
+        onBlur={item_hover.close}
+        onFocus={(event) => item_hover.open(event.currentTarget)}
+        onMouseEnter={(event) => item_hover.open(event.currentTarget)}
+        onMouseLeave={item_hover.close}
+        type="button"
+      >
+        <ListingIcon listing={listing} size={42} />
+      </button>
+      {copy && <ItemSnapshotTooltip copy={copy} hover={item_hover.hover} />}
+    </>
   )
 }

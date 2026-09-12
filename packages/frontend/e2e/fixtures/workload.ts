@@ -19,11 +19,21 @@ import { create_world } from '../../src/game/core/world.ts'
 import { mob_entities } from '../../src/game/mob_entities.ts'
 import { load_character_appearance } from '../../src/game/character_entities.ts'
 
+import { workload_pets, workload_resources, workload_labels } from './workload_population.tsx'
+
 type Config = Readonly<{
   quality: EngineQuality
   mode: 'full' | 'smoke'
   location: 'city' | 'forest'
   focus?: readonly [number, number]
+  population?: Readonly<{
+    characters: number
+    mobs: number
+    pets: number
+    frames: number
+    packs: number
+    nodes: number
+  }>
 }>
 type Sample = Readonly<{
   stage: string
@@ -97,6 +107,7 @@ const measure = async (
   const heap_bytes = stage.startsWith('returned-') && window.collect_heap ? await window.collect_heap() : null
   const state = world.state()
   world.set_active(true)
+  console.info('[workload]', stage, JSON.stringify({ completed_fps, p95_ms: percentile(ordered, 0.95) }))
   return {
     stage,
     frames: elapsed.length,
@@ -169,12 +180,34 @@ const scene_input = (location: Config['location'], requested?: readonly [number,
 }
 
 const PROFILES = {
-  full: { frames: 180, characters: 200, mobs: 100, steps: 64, laps: 3 },
-  smoke: { frames: 30, characters: 24, mobs: 12, steps: 4, laps: 1 },
+  full: {
+    frames: 180,
+    characters: 200,
+    mobs: 100,
+    pets: 100,
+    packs: 48,
+    nodes: 20,
+    steps: 64,
+    laps: 3,
+    ablations: 6,
+    quality_cycles: 3,
+  },
+  smoke: {
+    frames: 30,
+    characters: 24,
+    mobs: 12,
+    pets: 12,
+    packs: 12,
+    nodes: 8,
+    steps: 4,
+    laps: 1,
+    ablations: 0,
+    quality_cycles: 0,
+  },
 } as const
 
-const run = async ({ quality, mode, location, focus: requested }: Config) => {
-  const profile = PROFILES[mode]
+const run = async ({ quality, mode, location, focus: requested, population }: Config) => {
+  const profile = { ...PROFILES[mode], ...population }
   const { source, recipe, focus } = scene_input(location, requested)
   const canvas = document.querySelector('canvas')!
   const started = performance.now()
@@ -186,6 +219,8 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
   world.set_audio_volume(0)
   world.set_active(true)
   let result
+  const resources = workload_resources(profile.packs, profile.nodes, focus, world.ground_height)
+  const labels = workload_labels(resources, world.set_resource_node_label)
   try {
     samples.push(await measure(world, 'startup', () => settle(world), started))
     const ready_ms = performance.now() - started
@@ -213,6 +248,7 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
     world.set_time_of_day(0.31)
     let actors: Awaited<ReturnType<typeof load_crowd>> = []
     let mobs: ReturnType<typeof mob_entities> = []
+    let pets: Awaited<ReturnType<typeof workload_pets>> = []
     samples.push(
       await measure(world, 'population', async () => {
         actors = (await load_crowd(profile.characters, (x, z) => world.ground_height(x + focus[0], z + focus[1]))).map(
@@ -232,11 +268,14 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
           })
         )
         if (mobs.length !== profile.mobs) throw new Error('Workload omitted authored mob models')
-        world.set_entities([...actors.map((actor) => crowd_benchmark_entity(actor, 'idle', 0)), ...mobs])
+        pets = await workload_pets(profile.pets, focus, world.ground_height)
+        world.set_resource_nodes(resources)
+        labels.show(true)
+        world.set_entities([...actors.map((actor) => crowd_benchmark_entity(actor, 'idle', 0)), ...mobs, ...pets])
         const asset_deadline = performance.now() + 60_000
         while (
           actors.some(({ id }) => world.entity_height(id) === null) ||
-          mobs.some(({ id }) => world.entity_height(id) === null)
+          [...mobs, ...pets].some(({ id }) => world.entity_height(id) === null)
         ) {
           if (performance.now() > asset_deadline) throw new Error('Crowd models did not load')
           await next_frame()
@@ -254,7 +293,7 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
             performance.now() - animation_started
           )
         ),
-        ...mobs.map((mob) => {
+        ...[...mobs, ...pets].map((mob) => {
           const { anchor } = mob
           if (anchor.kind !== 'world') return mob
           const [x, , z] = anchor.position
@@ -278,6 +317,43 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
     )
     samples.push(await measure(world, 'flat', () => wait_frames(frames, animate_crowd)))
     const frame = canvas.toDataURL('image/png')
+    labels.show(false)
+    await wait_frames(30, animate_crowd)
+    samples.push(await measure(world, 'flat-all-no-labels', () => wait_frames(frames, animate_crowd)))
+    world.set_resource_nodes([])
+    await wait_frames(30, animate_crowd)
+    samples.push(await measure(world, 'flat-all-no-resources', () => wait_frames(frames, animate_crowd)))
+    world.set_resource_nodes(resources)
+    labels.show(true)
+    await wait_frames(30, animate_crowd)
+    samples.push(await measure(world, 'flat-all-restored', () => wait_frames(frames, animate_crowd)))
+    const populations = [
+      { stage: 'flat-empty', entities: [], resources: [], labels: false },
+      {
+        stage: 'flat-characters',
+        entities: actors.map((actor) => crowd_benchmark_entity(actor, 'run', 0)),
+        resources: [],
+        labels: false,
+      },
+      { stage: 'flat-mobs', entities: mobs, resources: [], labels: false },
+      { stage: 'flat-pets', entities: pets, resources: [], labels: false },
+      { stage: 'flat-resources', entities: [], resources, labels: false },
+      { stage: 'flat-resource-labels', entities: [], resources, labels: true },
+    ]
+    for (const population of populations.slice(0, profile.ablations)) {
+      labels.show(population.labels)
+      world.set_resource_nodes(population.resources)
+      world.set_entities(population.entities)
+      await wait_frames(30)
+      samples.push(await measure(world, population.stage, () => wait_frames(frames)))
+    }
+    world.set_resource_nodes(resources)
+    labels.show(true)
+    animate_crowd()
+    await wait_frames(30, animate_crowd)
+    samples.push(await measure(world, 'flat-all-orbit', () => orbit_frames(world, frames)))
+    labels.show(false)
+    world.set_resource_nodes([])
     world.set_entities([])
     samples.push(
       await measure(world, 'restore-transition', async () => {
@@ -328,7 +404,7 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
         })
       )
     }
-    for (let cycle = 0; cycle < (mode === 'full' ? 3 : 0); cycle += 1) {
+    for (let cycle = 0; cycle < profile.quality_cycles; cycle += 1) {
       for (const tier of ['low', 'high'] as const) {
         samples.push(
           await measure(world, `quality-cycle-${tier}`, async () => {
@@ -360,9 +436,13 @@ const run = async ({ quality, mode, location, focus: requested }: Config) => {
       asset_requests,
       mobs: mobs.length,
       characters: actors.length,
+      pets: pets.length,
+      resource_nodes: resources.length,
+      resource_labels: labels.count,
       state: world.state(),
     }
   } finally {
+    labels.dispose()
     world.dispose()
   }
   if (world.state().chunks.resident !== 0) throw new Error('Disposed world retained resident chunks')
