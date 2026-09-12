@@ -56,6 +56,7 @@ for (const quality of ['low', 'medium', 'high'] as const)
       const { captures, ...result } = await page.evaluate((config) => window.run_workload(config), {
         quality,
         mode,
+        benchmark: hardware,
         location,
         population,
         ...('focus' in scene ? { focus: scene.focus } : {}),

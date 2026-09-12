@@ -23,13 +23,24 @@ test('Konami reveals gathering below Friends, shakes the world, and fades HACK Z
   await page.goto('/e2e/fixtures/automation.html')
   await expect(page.locator('[data-friends-card]')).toBeVisible()
   await expect(page.locator('[data-automation-panel]')).toHaveCount(0)
+  const shakes = await page.locator('[data-world-frame]').evaluateHandle((frame) => {
+    const animations: Animation[] = []
+    frame.animate = new Proxy(frame.animate, {
+      apply: (animate, element, args) => {
+        const animation = Reflect.apply(animate, element, args) as Animation
+        animations.push(animation)
+        return animation
+      },
+    })
+    return animations
+  })
   await unlock(page)
   const panel = page.locator('[data-automation-panel]')
   await expect(panel).toBeVisible()
   await expect(page.getByText('HACK ZONE', { exact: true })).toBeVisible()
-  expect(
-    await page.locator('[data-world-frame]').evaluate((element) => element.getAnimations().length)
-  ).toBeGreaterThan(0)
+  await expect.poll(() => shakes.evaluate((animations) => animations.length)).toBe(1)
+  await shakes.evaluate((animations) => Promise.all(animations.map((animation) => animation.finished)))
+  expect(await page.locator('[data-world-frame]').evaluate((element) => element.getAnimations().length)).toBe(0)
   const friends = await page.locator('[data-friends-card]').boundingBox()
   const automation = await panel.boundingBox()
   expect(automation!.y).toBeGreaterThan(friends!.y + friends!.height)

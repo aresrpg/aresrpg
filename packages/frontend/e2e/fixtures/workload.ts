@@ -18,12 +18,14 @@ import { fight_board_render } from '../../src/game/fight/FightViewport.tsx'
 import { create_world } from '../../src/game/core/world.ts'
 import { mob_entities } from '../../src/game/mob_entities.ts'
 import { load_character_appearance } from '../../src/game/character_entities.ts'
+import { create_frame_waiter } from '../support/frame_waiter.ts'
 
 import { workload_pets, workload_resources, workload_labels } from './workload_population.tsx'
 
 type Config = Readonly<{
   quality: EngineQuality
   mode: 'full' | 'smoke'
+  benchmark?: boolean
   location: 'city' | 'forest'
   focus?: readonly [number, number]
   population?: Readonly<{
@@ -55,16 +57,11 @@ const next_frame = (): Promise<number> => new Promise(requestAnimationFrame)
 const percentile = (values: readonly number[], fraction: number): number =>
   values[Math.ceil(values.length * fraction) - 1]!
 
-const wait_frames = async (frames: number, update: (frame: number) => void = () => undefined): Promise<void> => {
-  // Keep the workload duration stable when hardware runs disable Chromium's frame cap.
-  const end_at = performance.now() + frames * (1000 / 60)
-  for (let frame = 0; frame < frames || performance.now() < end_at; frame += 1) {
-    update(frame)
-    await next_frame()
-  }
-}
-
-const orbit_frames = async (world: ReturnType<typeof create_world>, frames: number): Promise<void> => {
+const orbit_frames = async (
+  world: ReturnType<typeof create_world>,
+  frames: number,
+  wait_frames: ReturnType<typeof create_frame_waiter>
+): Promise<void> => {
   let previous = performance.now()
   let total_delta = 0
   await wait_frames(frames, () => {
@@ -206,8 +203,9 @@ const PROFILES = {
   },
 } as const
 
-const run = async ({ quality, mode, location, focus: requested, population }: Config) => {
+const run = async ({ quality, mode, location, focus: requested, population, benchmark }: Config) => {
   const profile = { ...PROFILES[mode], ...population }
+  const wait_frames = create_frame_waiter({ benchmark, mode })
   const { source, recipe, focus } = scene_input(location, requested)
   const canvas = document.querySelector('canvas')!
   const started = performance.now()
@@ -244,7 +242,7 @@ const run = async ({ quality, mode, location, focus: requested, population }: Co
     samples.push(await measure(world, location, () => wait_frames(frames)))
     world.set_time_of_day(null)
     samples.push(await measure(world, `${location}-live`, () => wait_frames(frames)))
-    samples.push(await measure(world, `${location}-orbit`, () => orbit_frames(world, frames)))
+    samples.push(await measure(world, `${location}-orbit`, () => orbit_frames(world, frames, wait_frames)))
     world.set_time_of_day(0.31)
     let actors: Awaited<ReturnType<typeof load_crowd>> = []
     let mobs: ReturnType<typeof mob_entities> = []
@@ -302,7 +300,7 @@ const run = async ({ quality, mode, location, focus: requested, population }: Co
       ])
     samples.push(await measure(world, 'crowd-entry', () => wait_frames(2, animate_crowd)))
     samples.push(await measure(world, 'crowd', () => wait_frames(frames, animate_crowd)))
-    samples.push(await measure(world, 'crowd-orbit', () => orbit_frames(world, frames)))
+    samples.push(await measure(world, 'crowd-orbit', () => orbit_frames(world, frames, wait_frames)))
     const crowd_frame = canvas.toDataURL('image/png')
     samples.push(
       await measure(world, 'flatten-transition', async () => {
@@ -351,7 +349,7 @@ const run = async ({ quality, mode, location, focus: requested, population }: Co
     labels.show(true)
     animate_crowd()
     await wait_frames(30, animate_crowd)
-    samples.push(await measure(world, 'flat-all-orbit', () => orbit_frames(world, frames)))
+    samples.push(await measure(world, 'flat-all-orbit', () => orbit_frames(world, frames, wait_frames)))
     labels.show(false)
     world.set_resource_nodes([])
     world.set_entities([])
