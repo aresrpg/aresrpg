@@ -24,20 +24,24 @@ export default defineConfig({
     deviceScaleFactor: hardware ? 2 : 1,
     screenshot: 'only-on-failure',
     trace: hardware ? 'off' : 'retain-on-failure',
+    browserName: browser_name === 'chrome' ? 'chromium' : browser_name,
+    ...(browser_name === 'chrome' ? { channel: 'chrome' } : {}),
+    ...(browser_name === 'firefox' && process.platform === 'linux' && !hardware
+      ? { launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } }
+      : {}),
+    ...(browser_name === 'chrome' && hardware
+      ? { launchOptions: { args: ['--disable-frame-rate-limit', '--disable-gpu-vsync'] } }
+      : {}),
   },
   projects: [
     {
-      name: browser_name,
-      use: {
-        browserName: browser_name === 'chrome' ? 'chromium' : browser_name,
-        ...(browser_name === 'chrome' ? { channel: 'chrome' } : {}),
-        ...(browser_name === 'firefox' && process.platform === 'linux' && !hardware
-          ? { launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } }
-          : {}),
-        ...(browser_name === 'chrome' && hardware
-          ? { launchOptions: { args: ['--disable-frame-rate-limit', '--disable-gpu-vsync'] } }
-          : {}),
-      },
+      name: 'ui',
+      testIgnore: '**/workloads.pw.ts',
+    },
+    {
+      name: 'workloads',
+      testMatch: '**/workloads.pw.ts',
+      fullyParallel: true,
     },
   ],
   webServer: {

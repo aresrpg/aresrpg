@@ -9322,13 +9322,13 @@
         "item_type": "gnawed_branch",
         "chance_bp": 5820,
         "min_qty": 1,
-        "max_qty": 1
+        "max_qty": 2
       },
       {
         "item_type": "tree_resin",
         "chance_bp": 4615,
         "min_qty": 1,
-        "max_qty": 1
+        "max_qty": 2
       },
       {
         "item_type": "refuse_recurve",
@@ -9619,6 +9619,18 @@
         "chance_bp": 31,
         "min_qty": 1,
         "max_qty": 1
+      },
+      {
+        "item_type": "gnawed_branch",
+        "chance_bp": 7000,
+        "min_qty": 1,
+        "max_qty": 2
+      },
+      {
+        "item_type": "tree_resin",
+        "chance_bp": 7000,
+        "min_qty": 1,
+        "max_qty": 2
       }
     ],
     "xp": 5500

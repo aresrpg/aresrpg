@@ -19,7 +19,7 @@ env:
   SUI_NETWORK: mainnet
 permissions:
   contents: write
-  actions: read # the prod-deploy job polls the gate run's conclusion
+  actions: read # release certification waits for this source's successful gate
 jobs:
   tag-and-release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -68,6 +68,27 @@ jobs:
           gh release create "$TAG" --draft --title "$TAG" --generate-notes --target "$GITHUB_SHA"
           echo "created=true" >> "$GITHUB_OUTPUT"
 
+  # Preparation can build ahead; only a green verification can certify its manifest.
+  verify-gate:
+    needs: tag-and-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: require successful verification of the exact release source
+        run: |
+          for i in $(seq 1 135); do
+            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?event=push&branch=edge&head_sha=${GITHUB_SHA}&per_page=1" \
+              --jq '.workflow_runs[0] | select(.status == "completed") | .conclusion' 2>/dev/null || true)
+            if [ "$conclusion" = "success" ]; then echo "gate green"; exit 0; fi
+            if [ -n "$conclusion" ]; then echo "::error::gate concluded '$conclusion' — refusing release certification"; exit 1; fi
+            echo "gate still running ($i/135)…"; sleep 20
+          done
+          echo "::error::gate never concluded within 45 minutes"; exit 1
+
   # PRODUCTION PREPARE: the release tag builds with production variables but never moves aresrpg.world.
   # The manual activate-production workflow promotes this exact staged deployment after the
   # owner has paused gameplay, published content, and rolled the prepared Helm release.
@@ -87,16 +108,6 @@ jobs:
       VITE_GRAPHQL_URL: https://graphql.mainnet.sui.io/graphql
       VITE_SUI_RPC_URL: https://fullnode.mainnet.sui.io:443
     steps:
-      - name: wait for the gate to conclude GREEN on this sha (red cannot deploy)
-        run: |
-          for i in $(seq 1 60); do
-            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?head_sha=${GITHUB_SHA}&per_page=1" \
-              --jq '.workflow_runs[0] | select(.status == "completed") | .conclusion' 2>/dev/null || true)
-            if [ "$conclusion" = "success" ]; then echo "gate green"; exit 0; fi
-            if [ -n "$conclusion" ]; then echo "::error::gate concluded '$conclusion' — refusing to deploy"; exit 1; fi
-            echo "gate still running ($i/60)…"; sleep 20
-          done
-          echo "::error::gate never concluded within 20 minutes"; exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Same art-cache scheme as the gate — the 1.8GB tree restores from cache, not git.
@@ -162,16 +173,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: wait for the gate to conclude GREEN on this sha
-        run: |
-          for i in $(seq 1 60); do
-            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/gate.yml/runs?head_sha=${GITHUB_SHA}&per_page=1" \
-              --jq '.workflow_runs[0] | select(.status == "completed") | .conclusion' 2>/dev/null || true)
-            if [ "$conclusion" = "success" ]; then echo "gate green"; exit 0; fi
-            if [ -n "$conclusion" ]; then echo "::error::gate concluded '$conclusion' — refusing image publication"; exit 1; fi
-            echo "gate still running ($i/60)…"; sleep 20
-          done
-          echo "::error::gate never concluded within 20 minutes"; exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -438,10 +439,11 @@ jobs:
           push-to-registry: true
 
   release-manifest:
-    needs: [tag-and-release, backend-plan, build-server, build-indexer, prepare-production]
+    needs: [tag-and-release, verify-gate, backend-plan, build-server, build-indexer, prepare-production]
     if: >-
       always() &&
       needs.tag-and-release.outputs.prepare == 'true' &&
+      needs.verify-gate.result == 'success' &&
       needs.backend-plan.result == 'success' &&
       (needs.prepare-production.result == 'success' || needs.prepare-production.result == 'skipped') &&
       (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') &&

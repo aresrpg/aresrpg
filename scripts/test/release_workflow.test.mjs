@@ -261,3 +261,43 @@ test('every CI Bun installation reads the repository version and Vercel runs fro
   expect(checkout.with['sparse-checkout']).toContain('/bun.lock')
   expect(checkout.with['sparse-checkout']).toContain('/packages/*/package.json')
 })
+
+test('release builds overlap verification but certification requires the green gate', () => {
+  const verification = workflow.jobs['verify-gate']
+  expect(verification).toBeDefined()
+  expect(verification.needs).toBe('tag-and-release')
+  const manifest = workflow.jobs['release-manifest']
+  expect(manifest.needs).toContain('verify-gate')
+  expect(manifest.if).toContain("needs.verify-gate.result == 'success'")
+  for (const name of ['backend-plan', 'prepare-production', 'build-server', 'build-indexer']) {
+    expect(workflow.jobs[name].steps.some(({ run }) => run?.includes('actions/workflows/gate.yml'))).toBe(false)
+    expect(workflow.jobs[name].needs).not.toContain('verify-gate')
+  }
+  const wait = verification.steps[0].run
+  expect(wait).toContain('event=push&branch=edge&head_sha=${GITHUB_SHA}')
+  expect(wait).toContain('if [ "$conclusion" = "success" ]')
+  expect(wait).toContain('if [ -n "$conclusion" ]')
+})
+
+for (const conclusion of ['success', 'failure', 'cancelled', ''])
+  test(`release certification handles gate conclusion ${conclusion || 'unknown'} without activation`, () => {
+    const directory = mkdtempSync(join(tmpdir(), 'ares-gate-certification-'))
+    try {
+      writeFileSync(join(directory, 'gh'), '#!/bin/sh\nprintf "%s\\n" "$GATE_CONCLUSION"\n', { mode: 0o700 })
+      writeFileSync(join(directory, 'sleep'), '#!/bin/sh\nexit 0\n', { mode: 0o700 })
+      const run = () =>
+        execFileSync('/bin/bash', ['-e', '-c', workflow.jobs['verify-gate'].steps[0].run], {
+          env: {
+            PATH: `${directory}:/usr/bin:/bin`,
+            GATE_CONCLUSION: conclusion,
+            GITHUB_SHA: '1'.repeat(40),
+            GITHUB_REPOSITORY: 'owner/game',
+          },
+          stdio: 'pipe',
+        })
+      if (conclusion === 'success') expect(run().toString()).toContain('gate green')
+      else expect(run).toThrow()
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })

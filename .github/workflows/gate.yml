@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   changes:
-    name: browser input changes
+    name: verification input changes
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
@@ -22,23 +22,25 @@ jobs:
       actions: read
     outputs:
       browsers: ${{ steps.inputs.outputs.browsers }}
+      move: ${{ steps.inputs.outputs.move }}
+      indexer: ${{ steps.inputs.outputs.indexer }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           filter: blob:none
-          sparse-checkout: scripts/browser_inputs.mjs
+          sparse-checkout: |
+            scripts/ci_inputs.mjs
+            move-packages.json
           sparse-checkout-cone-mode: false
       - id: inputs
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -z "$BASE_SHA" ]; then
-            BASE_SHA=$(gh run list --workflow gate.yml --branch edge --event push --status success --limit 1 --json headSha --jq '.[0].headSha // ""')
-            export BASE_SHA
-          fi
-          node scripts/browser_inputs.mjs
+          # A PR base or the previous commit need not have passed verification.
+          BASE_SHA=$(gh run list --workflow gate.yml --branch edge --event push --status success --limit 1 --json headSha --jq '.[0].headSha // ""' || true)
+          export BASE_SHA
+          node scripts/ci_inputs.mjs
   source:
     name: TypeScript (lint, types, tests)
     runs-on: ubuntu-latest
@@ -96,6 +98,8 @@ jobs:
       - name: TypeScript tests + coverage
         run: bun run test
   tests_move:
+    needs: changes
+    if: needs.changes.outputs.move == 'true'
     # The on-chain game's own suite: every Move package must build, test, and retain coverage.
     name: tests (move)
     runs-on: ubuntu-latest
@@ -166,6 +170,8 @@ jobs:
           sui move test --path packages/move single_stackable_craft --gas-limit 1100000 --statistics
           sui move test --path packages/move maximum_stackable_craft --gas-limit 1100000 --statistics
   tests_indexer:
+    needs: changes
+    if: needs.changes.outputs.indexer == 'true'
     # The chain projectionist's suite + the Move↔indexer parity gates (packages/indexer/
     # src/gates.rs): the layout snapshot and the event census read the COMPILED Move build,
     # so both packages build first — a Move struct or event change reds HERE in the same
@@ -310,37 +316,42 @@ jobs:
   browsers:
     needs: changes
     if: needs.changes.outputs.browsers == 'true'
-    name: browser (${{ matrix.os }}, ${{ matrix.browser }})
-    runs-on: ${{ matrix.os }}
+    name: browser (${{ matrix.target.os }}, ${{ matrix.target.browser }}, ${{ matrix.suite.project }}, ${{ matrix.suite.shard }})
+    runs-on: ${{ matrix.target.os }}
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
-        include:
+        suite:
+          - { project: ui, shard: '1/1' }
+          - { project: workloads, shard: '1/3' }
+          - { project: workloads, shard: '2/3' }
+          - { project: workloads, shard: '3/3' }
+        target:
           - { os: ubuntu-latest, browser: chrome }
           - { os: ubuntu-latest, browser: firefox }
           - { os: macos-latest, browser: chrome }
     env:
-      BROWSER: ${{ matrix.browser }}
+      BROWSER: ${{ matrix.target.browser }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile --ignore-scripts
-      - run: bunx playwright install --with-deps ${{ matrix.browser }}
+      - run: bunx playwright install --with-deps ${{ matrix.target.browser }}
       - name: browser compatibility tests
         shell: bash
         run: |
           if [ "$RUNNER_OS" = Linux ] && [ "$BROWSER" = firefox ]; then
-            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed
+            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed --project=${{ matrix.suite.project }} --shard=${{ matrix.suite.shard }}
           else
-            bun run test:browser
+            bun run test:browser --project=${{ matrix.suite.project }} --shard=${{ matrix.suite.shard }}
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: browser-${{ matrix.os }}-${{ matrix.browser }}
+          name: browser-${{ matrix.target.os }}-${{ matrix.target.browser }}-${{ matrix.suite.project }}-${{ strategy.job-index }}
           path: |
             test-results/browser
             test-results/browser-results.json
@@ -356,7 +367,10 @@ jobs:
         run: |
           test "${{ needs.changes.result }}" = success
           test "${{ needs.source.result }}" = success
-          test "${{ needs.tests_move.result }}" = success
-          test "${{ needs.tests_indexer.result }}" = success
-          test "${{ needs.browsers.result == 'success' || (needs.changes.outputs.browsers == 'false' && needs.browsers.result == 'skipped') }}" = true
+          check_lane() {
+            [ "$1" = success ] || { [ "$2" = false ] && [ "$1" = skipped ]; }
+          }
+          check_lane "${{ needs.tests_move.result }}" "${{ needs.changes.outputs.move }}"
+          check_lane "${{ needs.tests_indexer.result }}" "${{ needs.changes.outputs.indexer }}"
+          check_lane "${{ needs.browsers.result }}" "${{ needs.changes.outputs.browsers }}"
           test "${{ github.event_name == 'push' || needs.bundle-gate.result == 'success' }}" = true

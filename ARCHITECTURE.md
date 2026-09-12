@@ -576,6 +576,23 @@ the KARES funding door, and delivers the remainder to the selected treasury wall
 RoyaltyFunded event owns displayed claim amounts. Policy-cap custody remains with the owner;
 the PTB split is not a claim that every possible cap withdrawal is mechanically constrained.
 
+## Verification and release preparation
+
+The gate always runs source lint, types, tests, and seed validation. One input classifier selects
+Move, indexer parity, and browser lanes against the last successful `edge` push, including for PRs.
+Missing baseline evidence runs every lane; a failed or cancelled change remains in the comparison.
+Move package inputs come from `move-packages.json`. An unchanged lane may skip only when the
+classifier explicitly says so; every required lane and browser shard must succeed.
+Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with one UI lane and three
+world workload shards per platform. Separate Playwright projects keep short UI checks apart from
+individually sharded world workloads. Each runner uses one worker; sharding does not change test
+selection or GPU concurrency per runner.
+
+Owner-authorized release preparation builds immutable images and stages Vercel output concurrently
+with verification of that exact source SHA. Only a successful `edge` push gate permits the prepared
+release manifest. Activation requires that exact successful preparation and promotes its existing
+artifacts without rebuilding. Failed verification cannot produce a certified manifest or activate production.
+
 ## Extending the system
 
 Before adding anything, locate the existing owner and compose it. A new fact requires an explicit
