@@ -22,3 +22,16 @@ export const create_frame_waiter =
       await next_frame()
     }
   }
+
+/** State transitions finish on their observed result, independently of sampling duration. */
+export const wait_for_frame_condition = async (
+  ready: () => boolean,
+  next_frame = () => new Promise<number>(requestAnimationFrame),
+  now = () => performance.now()
+): Promise<void> => {
+  const deadline = now() + 30_000
+  while (!ready()) {
+    if (now() >= deadline) throw new Error('World transition did not reach its expected state')
+    await next_frame()
+  }
+}

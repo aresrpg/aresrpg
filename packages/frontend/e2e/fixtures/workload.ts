@@ -18,7 +18,7 @@ import { fight_board_render } from '../../src/game/fight/FightViewport.tsx'
 import { create_world } from '../../src/game/core/world.ts'
 import { mob_entities } from '../../src/game/mob_entities.ts'
 import { load_character_appearance } from '../../src/game/character_entities.ts'
-import { create_frame_waiter } from '../support/frame_waiter.ts'
+import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_waiter.ts'
 
 import { workload_pets, workload_resources, workload_labels } from './workload_population.tsx'
 
@@ -302,14 +302,17 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
     samples.push(await measure(world, 'crowd', () => wait_frames(frames, animate_crowd)))
     samples.push(await measure(world, 'crowd-orbit', () => orbit_frames(world, frames, wait_frames)))
     const crowd_frame = canvas.toDataURL('image/png')
+    const source_height = world.ground_height(...focus)
     samples.push(
       await measure(world, 'flatten-transition', async () => {
         world.set_flattened(true)
         await wait_frames(60, animate_crowd)
+        await wait_for_frame_condition(() => world.ground_height(...focus) === 0)
         // Start the overview round-trip on the plane, even if a forest spawn stood on a tree.
         world.point_at({ x: focus[0], z: focus[1] })
         world.release()
         await wait_frames(60, animate_crowd)
+        await wait_for_frame_condition(() => world.camera_frame()?.target[1] === 0)
         if (world.camera_frame()!.target[1] !== 0) throw new Error('Flat overview camera retained source elevation')
       })
     )
@@ -357,6 +360,12 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
       await measure(world, 'restore-transition', async () => {
         world.set_flattened(false)
         await wait_frames(60)
+        await wait_for_frame_condition(() =>
+          [
+            Math.abs(world.ground_height(...focus) - source_height) <= 0.01,
+            Math.abs(world.camera_frame()!.target[1] - source_height) <= 0.01,
+          ].every(Boolean)
+        )
         if (Math.abs(world.camera_frame()!.target[1] - world.ground_height(...focus)) > 0.01)
           throw new Error(
             `Overview elevation: ${JSON.stringify({ target: world.camera_frame()!.target, focus, actual_focus: world.camera_focus(), ground: world.ground_height(...focus) })}`
