@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'bun:test'
 
+import browser_config from '../../packages/frontend/e2e/playwright.config.ts'
+
 const workflow = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
 const { jobs } = workflow
 
@@ -26,16 +28,19 @@ test('all selective lanes use a successful edge push baseline, including PRs', (
 
 test('browser matrix shards every existing platform and retains independent reports', () => {
   const job = jobs.browsers
+  expect(job['timeout-minutes']).toBe(4)
   expect(job.strategy.matrix.target).toEqual([
     { os: 'ubuntu-latest', browser: 'chrome' },
     { os: 'ubuntu-latest', browser: 'firefox' },
     { os: 'macos-latest', browser: 'chrome' },
   ])
   expect(job.strategy.matrix.suite).toEqual([
-    { project: 'ui', shard: '1/1' },
-    { project: 'workloads', shard: '1/3' },
-    { project: 'workloads', shard: '2/3' },
-    { project: 'workloads', shard: '3/3' },
+    { project: 'ui', shard: '1/3' },
+    { project: 'ui', shard: '2/3' },
+    { project: 'ui', shard: '3/3' },
+    { project: 'workloads-low', shard: '1/1' },
+    { project: 'workloads-medium', shard: '1/1' },
+    { project: 'workloads-high', shard: '1/1' },
   ])
   expect(job.strategy['fail-fast']).toBe(false)
   const { run } = job.steps.find(({ name }) => name === 'browser compatibility tests')
@@ -43,6 +48,17 @@ test('browser matrix shards every existing platform and retains independent repo
     2
   )
   expect(job.steps.at(-1).with.name).toContain('${{ strategy.job-index }}')
+})
+
+test('UI waits have short independent budgets without adding browser concurrency', () => {
+  const ui = browser_config.projects.find(({ name }) => name === 'ui')
+  expect(browser_config.workers).toBe(1)
+  expect(browser_config.retries).toBe(0)
+  expect(browser_config.expect.toPass.timeout).toBe(3_000)
+  expect(ui.fullyParallel).toBe(true)
+  expect(ui.timeout).toBe(60_000)
+  expect(ui.use.actionTimeout).toBe(10_000)
+  expect(ui.use.navigationTimeout).toBe(20_000)
 })
 
 const check_gate = (lane, result, required) => {
@@ -107,9 +123,11 @@ for (const browser of ['chrome', 'firefox'])
     const ids = lanes.flat().map(({ id }) => id)
     expect(ids.toSorted()).toEqual(all)
     expect(new Set(ids).size).toBe(ids.length)
-    const workloads = lanes.slice(1)
+    const ui = lanes.slice(0, 3)
+    const workloads = lanes.slice(3)
     expect(workloads.every((lane) => lane.length > 0)).toBe(true)
-    expect(
-      Math.max(...workloads.map((lane) => lane.length)) - Math.min(...workloads.map((lane) => lane.length))
-    ).toBeLessThanOrEqual(1)
+    expect(workloads.map((lane) => lane.filter(({ title }) => title.startsWith('city /')).length)).toEqual([1, 1, 1])
+    expect(Math.max(...ui.map((lane) => lane.length)) - Math.min(...ui.map((lane) => lane.length))).toBeLessThanOrEqual(
+      1
+    )
   }, 15_000)

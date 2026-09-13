@@ -11,6 +11,7 @@ export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.pw.ts',
   timeout: process.env.BROWSER_WORKLOAD === 'full' ? 600_000 : 180_000,
+  expect: { toPass: { timeout: 3_000 } },
   workers: 1,
   retries: 0,
   outputDir: '../../../test-results/browser',
@@ -37,12 +38,15 @@ export default defineConfig({
     {
       name: 'ui',
       testIgnore: '**/workloads.pw.ts',
-    },
-    {
-      name: 'workloads',
-      testMatch: '**/workloads.pw.ts',
       fullyParallel: true,
+      timeout: 60_000,
+      use: { actionTimeout: 10_000, navigationTimeout: 20_000 },
     },
+    ...(['low', 'medium', 'high'] as const).map((quality) => ({
+      name: `workloads-${quality}`,
+      testMatch: '**/workloads.pw.ts',
+      grep: new RegExp(`@${quality}\\b`),
+    })),
   ],
   webServer: {
     command:

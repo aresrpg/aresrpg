@@ -318,15 +318,17 @@ jobs:
     if: needs.changes.outputs.browsers == 'true'
     name: browser (${{ matrix.target.os }}, ${{ matrix.target.browser }}, ${{ matrix.suite.project }}, ${{ matrix.suite.shard }})
     runs-on: ${{ matrix.target.os }}
-    timeout-minutes: 15
+    timeout-minutes: 4
     strategy:
       fail-fast: false
       matrix:
         suite:
-          - { project: ui, shard: '1/1' }
-          - { project: workloads, shard: '1/3' }
-          - { project: workloads, shard: '2/3' }
-          - { project: workloads, shard: '3/3' }
+          - { project: ui, shard: '1/3' }
+          - { project: ui, shard: '2/3' }
+          - { project: ui, shard: '3/3' }
+          - { project: workloads-low, shard: '1/1' }
+          - { project: workloads-medium, shard: '1/1' }
+          - { project: workloads-high, shard: '1/1' }
         target:
           - { os: ubuntu-latest, browser: chrome }
           - { os: ubuntu-latest, browser: firefox }

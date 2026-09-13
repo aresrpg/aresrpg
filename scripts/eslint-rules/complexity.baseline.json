@@ -444,7 +444,7 @@
       "run": [10]
     },
     "packages/frontend/e2e/tests/workloads.pw.ts": {
-      "test[1]({ page, browser },info)": [9]
+      "test[2]({ page, browser },info)": [9]
     },
     "packages/frontend/src/demo/DemoPage.tsx": {
       "WorldLab": [10]

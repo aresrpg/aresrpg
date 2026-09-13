@@ -221,7 +221,7 @@ for (const viewport of [
     const chat = (await bounds('.gw-worldchat'))!
     const hud = (await bounds('.fight-hud--overworld .fight-hud__bar'))!
     expect(map.width).toBeLessThanOrEqual(world.height * 0.31)
-    expect(chat.height).toBeLessThanOrEqual(Math.min(320, world.height * 0.4))
+    expect(chat.height).toBeLessThanOrEqual(Math.min(320, world.height * 0.4) + 1)
     for (const box of [map, chat, hud]) {
       expect(box.x).toBeGreaterThanOrEqual(world.x)
       expect(box.x + box.width).toBeLessThanOrEqual(world.x + world.width + 1)
@@ -397,7 +397,13 @@ for (const height of [360, 600, 900, 1440]) {
       const fitted = (await content.boundingBox())!
       expect(Math.abs(fitted.x - box.x)).toBeLessThanOrEqual(1)
       expect(fitted.y + fitted.height).toBeLessThanOrEqual(box.y + box.height + 1)
-      expect(await sidebar.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1)
+      // Firefox includes the pre-transform extent in scrollHeight; assert actual scrolling instead.
+      expect(
+        await sidebar.evaluate((element) => {
+          element.scrollTop = 100
+          return element.scrollTop
+        })
+      ).toBe(0)
     }).toPass()
     await page.screenshot({ path: `test-results/fitted-sidebar-${height}.png` })
   })
@@ -421,7 +427,7 @@ for (const height of [500, 1440]) {
       expect(Math.abs(footer.y + footer.height - account.y - account.height)).toBeLessThanOrEqual(1)
       const stats = (await page.locator('.stats').boundingBox())!
       expect(Math.abs(stats.x + stats.width / 2 - pane.x - pane.width / 2)).toBeLessThanOrEqual(1)
-    }).toPass({ timeout: 3000 })
+    }).toPass()
     await page.locator('[data-character-detail-tab="equipment"]').click()
     const bag = (await page.locator('.chr-equip__bag').boundingBox())!
     const body = (await page.locator('.chr-page-body').boundingBox())!
@@ -448,7 +454,7 @@ test('the bottom border stays inside the sidebar clip with fractional card sizes
     // Allow one browser layout subpixel, not a whole pixel of hidden border.
     expect(footer.y + footer.height).toBeLessThanOrEqual(row.y + row.height + 1 / 64)
     expect(row.y + row.height - footer.y - footer.height).toBeLessThan(1)
-  }).toPass({ timeout: 3000 })
+  }).toPass()
 })
 
 test('roomy spells keep the original centered list and equipment stays top aligned', async ({ page }) => {

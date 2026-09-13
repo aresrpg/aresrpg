@@ -598,9 +598,11 @@ Move, indexer parity, and browser lanes against the last successful `edge` push,
 Missing baseline evidence runs every lane; a failed or cancelled change remains in the comparison.
 Move package inputs come from `move-packages.json`. An unchanged lane may skip only when the
 classifier explicitly says so; every required lane and browser shard must succeed.
-Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with one UI lane and three
-world workload shards per platform. Separate Playwright projects keep short UI checks apart from
-individually sharded world workloads. Each runner uses one worker; sharding does not change test
+Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three UI shards and three
+quality-specific world workload lanes per platform. Each workload lane runs one heavy smoke scenario;
+the low and medium lanes each verify one missing-WebGPU fallback. Browser jobs have a four-minute
+execution limit. UI layout retries have a three-second
+budget, separate from the longer world-rendering checks. Each runner uses one worker; sharding does not change test
 selection or GPU concurrency per runner.
 
 Owner-authorized release preparation builds immutable images and stages Vercel output concurrently

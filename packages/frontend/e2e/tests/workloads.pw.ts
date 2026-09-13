@@ -33,7 +33,7 @@ for (const quality of ['low', 'medium', 'high'] as const)
   for (const scene of scenes) {
     const { location } = scene
     const target_fps = process.platform === 'darwin' ? 120 : 30
-    test(`${scene.name} / ${quality}`, async ({ page, browser }, info) => {
+    test(`${scene.name} / ${quality}`, { tag: `@${quality}` }, async ({ page, browser }, info) => {
       const finish_profile = await capture_flat_cpu_profile(page, info, process.env.PERF_PROFILE === '1')
       const errors = new Set<string>()
       page.on('pageerror', (error) => errors.add(error.message))
@@ -145,8 +145,11 @@ for (const quality of ['low', 'medium', 'high'] as const)
     })
   }
 
-for (const missing of ['api', 'adapter'])
-  test(`missing WebGPU ${missing} uses the playable flat fallback`, async ({ page }, info) => {
+for (const [missing, tag] of [
+  ['api', '@low'],
+  ['adapter', '@medium'],
+] as const)
+  test(`missing WebGPU ${missing} uses the playable flat fallback`, { tag }, async ({ page }, info) => {
     await page.addInitScript(install_probe)
     await page.addInitScript(
       (kind) =>
