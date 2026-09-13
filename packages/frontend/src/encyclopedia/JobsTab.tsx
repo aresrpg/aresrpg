@@ -2,14 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { job_groups, job_kind_of, type JobKind } from '@aresrpg/immutable'
-import { ArrowLeft, Hammer, Shield, Sparkles, Swords, Wheat } from 'lucide-react'
+import { Hammer, Shield, Sparkles, Swords, Wheat } from 'lucide-react'
 import { useMemo, useState, type ComponentType } from 'react'
 
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 
 import type { EncyclopediaText } from './copy.ts'
-import { Empty, SearchField } from './components.tsx'
+import { EncyclopediaBrowser, SearchField } from './components.tsx'
 import { JobRecipesSection } from './JobRecipesSection.tsx'
 
 const JOB_CATEGORIES = Object.freeze(Object.keys(job_groups) as JobKind[])
@@ -64,7 +64,7 @@ export const JobsTab = ({
   const CategoryIcon = category ? JOB_ICONS[category] : Hammer
 
   const job_list = (
-    <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-border max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-r-0">
+    <aside className="enc-browser__list flex w-[300px] shrink-0 flex-col border-r border-border">
       <div className="p-2">
         <SearchField change={set_search} placeholder={text('search_jobs')} value={search} />
       </div>
@@ -108,128 +108,100 @@ export const JobsTab = ({
     </aside>
   )
 
-  const job_detail = (
-    <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-6 max-[760px]:p-3">
-      {!detail || !category ? (
-        <Empty>
-          <Hammer className="opacity-20" size={24} />
-          {text('select_job')}
-        </Empty>
-      ) : (
-        <div className="flex w-full flex-col gap-6">
-          <header className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <CategoryIcon className="text-[#c8963c]" size={18} />
-              <h2 className="text-[16px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
-                {titleize(detail.id)}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="border border-[#c8963c]/30 px-2 py-0.5 text-[8px] tracking-[0.15em] text-[#c8963c]/70 uppercase">
-                {text(`job_category.${category}`)}
-              </span>
-              <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-                {text('crafts')}: {job_crafts(detail) || '—'}
-              </span>
-            </div>
-            <p className="mt-1 text-[10px] leading-relaxed text-[#e8e4dc]/80">{text(`job_desc.${detail.id}`)}</p>
-          </header>
+  const job_detail = detail && category && (
+    <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-6">
+      <div className="flex w-full flex-col gap-6">
+        <header className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <CategoryIcon className="text-[#c8963c]" size={18} />
+            <h2 className="text-[16px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
+              {titleize(detail.id)}
+            </h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="border border-[#c8963c]/30 px-2 py-0.5 text-[8px] tracking-[0.15em] text-[#c8963c]/70 uppercase">
+              {text(`job_category.${category}`)}
+            </span>
+            <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+              {text('crafts')}: {job_crafts(detail) || '—'}
+            </span>
+          </div>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#e8e4dc]/80">{text(`job_desc.${detail.id}`)}</p>
+        </header>
 
-          {detail.resources.length > 0 && (
-            <section className="flex flex-col gap-2">
-              <Divider />
-              <SectionTitle>{text('gathering_tiers')}</SectionTitle>
-              <div className="flex flex-col">
-                <div className="flex items-center border-b border-border bg-white/3 px-2 py-1.5">
-                  <span className="w-12 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">{text('tier')}</span>
-                  <span className="w-16 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-                    {text('required_level')}
-                  </span>
-                  <span className="flex-1 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-                    {text('resource')}
-                  </span>
-                  <span className="flex-1 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-                    {text('rare_variant')}
-                  </span>
-                  <span className="w-16 text-right text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-                    {text('xp_per_harvest')}
-                  </span>
-                </div>
-                {detail.resources
-                  .toSorted((left, right) => left.row.tier - right.row.tier)
-                  .map(({ row, required_level }) => {
-                    const resource = encyclopedia_catalog.item(row.item_type)?.item
-                    const rare = row.rare_item_type ? encyclopedia_catalog.item(row.rare_item_type)?.item : null
-                    return (
+        {detail.resources.length > 0 && (
+          <section className="flex flex-col gap-2">
+            <Divider />
+            <SectionTitle>{text('gathering_tiers')}</SectionTitle>
+            <div className="flex flex-col">
+              <div className="enc-gather-row enc-gather-heading border-b border-border bg-white/3 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+                <span>{text('tier')}</span>
+                <span>{text('required_level')}</span>
+                <span>{text('resource')}</span>
+                <span>{text('rare_variant')}</span>
+                <span>{text('xp_per_harvest')}</span>
+              </div>
+              {detail.resources
+                .toSorted((left, right) => left.row.tier - right.row.tier)
+                .map(({ row, required_level }) => {
+                  const resource = encyclopedia_catalog.item(row.item_type)?.item
+                  const rare = row.rare_item_type ? encyclopedia_catalog.item(row.rare_item_type)?.item : null
+                  return (
+                    <div className="enc-gather-row border-b border-border/30 text-[11px]" key={row.item_type}>
+                      <span className="text-gold">
+                        <span className="enc-gather-label">{text('tier')}</span>T{row.tier}
+                      </span>
+                      <span className="text-muted">
+                        <span className="enc-gather-label">{text('required_level')}</span>
+                        {required_level}
+                      </span>
                       <button
-                        className="flex cursor-pointer items-center border-b border-border/30 px-2 py-1.5 text-left hover:bg-white/2"
-                        key={row.item_type}
+                        className="enc-gather-resource text-text"
                         onClick={() => select_item(row.item_type)}
                         type="button"
                       >
-                        <span className="w-12 text-[9px] text-[#c8963c]/70">T{row.tier}</span>
-                        <span className="w-16 text-[9px] text-[#6b7280]">
-                          {text('level')} {required_level}
-                        </span>
-                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="enc-gather-label">{text('resource')}</span>
+                        <span>
                           {item_icon(row.item_type) && (
-                            <img alt="" className="size-4 object-contain" src={item_icon(row.item_type)!} />
+                            <img alt="" className="size-5 shrink-0 object-contain" src={item_icon(row.item_type)!} />
                           )}
-                          <span className="truncate text-[9px] text-[#e8e4dc]">
-                            {resource?.name ?? titleize(row.item_type)}
-                          </span>
-                        </span>
-                        {rare ? (
-                          <span
-                            className="flex min-w-0 flex-1 items-center gap-2"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              select_item(rare.item_type)
-                            }}
-                          >
-                            {item_icon(rare.item_type) && (
-                              <img alt="" className="size-4 object-contain" src={item_icon(rare.item_type)!} />
-                            )}
-                            <span className="truncate text-[9px] text-[#c8963c]">{rare.name}</span>
-                          </span>
-                        ) : (
-                          <span className="flex-1 text-[9px] text-[#6b7280]/50">—</span>
-                        )}
-                        <span className="w-16 text-right text-[9px] text-[#4a9eff]">
-                          {10 + Math.floor(required_level / 2)} XP
+                          {resource?.name ?? titleize(row.item_type)}
                         </span>
                       </button>
-                    )
-                  })}
-              </div>
-            </section>
-          )}
+                      {rare ? (
+                        <button
+                          className="enc-gather-resource text-gold"
+                          onClick={() => select_item(rare.item_type)}
+                          type="button"
+                        >
+                          <span className="enc-gather-label">{text('rare_variant')}</span>
+                          <span>
+                            {item_icon(rare.item_type) && (
+                              <img alt="" className="size-5 shrink-0 object-contain" src={item_icon(rare.item_type)!} />
+                            )}
+                            {rare.name}
+                          </span>
+                        </button>
+                      ) : (
+                        <span className="text-muted">
+                          <span className="enc-gather-label">{text('rare_variant')}</span>—
+                        </span>
+                      )}
+                      <span className="text-cyan">
+                        <span className="enc-gather-label">{text('xp_per_harvest')}</span>
+                        {10 + Math.floor(required_level / 2)} XP
+                      </span>
+                    </div>
+                  )
+                })}
+            </div>
+          </section>
+        )}
 
-          <JobRecipesSection recipes={detail.recipes} select_item={select_item} text={text} />
-        </div>
-      )}
-    </div>
-  )
-
-  if (selected_id)
-    return (
-      <div className="flex min-h-0 flex-1 max-[760px]:flex-col">
-        <button
-          className="hidden items-center gap-2 border-b border-border px-3 py-2 text-[10px] tracking-[0.15em] text-[#6b7280] uppercase max-[760px]:flex"
-          onClick={() => select_job('')}
-          type="button"
-        >
-          <ArrowLeft size={12} /> {text('back_to_list')}
-        </button>
-        <div className="max-[760px]:hidden">{job_list}</div>
-        {job_detail}
+        <JobRecipesSection recipes={detail.recipes} select_item={select_item} text={text} />
       </div>
-    )
-
-  return (
-    <div className="flex min-h-0 flex-1">
-      {job_list}
-      <div className="max-[760px]:hidden">{job_detail}</div>
     </div>
   )
+
+  return <EncyclopediaBrowser back={() => select_job('')} text={text} list={job_list} detail={job_detail} />
 }

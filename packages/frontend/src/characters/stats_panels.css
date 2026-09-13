@@ -44,6 +44,11 @@
   padding-right: 2px;
 }
 
+/* The scroll owner may shrink; its sections must retain their full intrinsic height. */
+.stats__scroll > * {
+  flex-shrink: 0;
+}
+
 /* hero header — portrait + identity + class + experience, on a faint tinted card */
 .stats__hero {
   display: flex;

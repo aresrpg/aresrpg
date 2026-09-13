@@ -54,12 +54,7 @@ const with_current_summary = (
       section: cached.section,
       data: Object.freeze({ ...cached.data, dau: current.players.dau, rolling_30d: current.players.rolling_30d }),
     })
-  if (cached.section === 'transactions') return cached
-  if (cached.section === 'online')
-    return Object.freeze({
-      section: cached.section,
-      data: Object.freeze({ ...cached.data, online_now: current.online.online_now }),
-    })
+  if (cached.section === 'transactions' || cached.section === 'online') return cached
   if (cached.section === 'addresses')
     return Object.freeze({
       section: cached.section,

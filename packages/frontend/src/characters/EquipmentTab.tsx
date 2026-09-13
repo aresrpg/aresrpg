@@ -33,6 +33,14 @@ import {
   stage_unequip,
   type EquipmentMap,
 } from './equipment_stage.ts'
+import {
+  BAG_CATEGORIES,
+  bag_category_of,
+  bag_item_matches,
+  InventoryResourceFilters,
+  type BagCategory,
+  type ResourceFilter,
+} from './InventoryResourceFilters.tsx'
 import { PendingClaims } from './PendingClaims.tsx'
 import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
@@ -40,15 +48,6 @@ import { PetPower } from './PetPower.tsx'
 import { editable_character } from './character_activity.ts'
 import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
 import { consumable_plan } from './consumable_plan.ts'
-
-const BAG_CATEGORIES = ['equipment', 'consumables', 'resources'] as const
-type BagCategory = (typeof BAG_CATEGORIES)[number]
-
-const bag_category_of = (item: Readonly<ItemRow>): BagCategory => {
-  if (item.category === 'consumable') return 'consumables'
-  if (item.category === 'resource' || item.category === 'rune' || item.category === 'key') return 'resources'
-  return 'equipment'
-}
 
 const consumable_action = (item: Readonly<ItemRow>) => {
   const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
@@ -80,6 +79,7 @@ export default function EquipmentTab({
   const real = useMemo(() => equipment_map_of(character), [character])
   const [staged, set_staged] = useState<EquipmentMap | null>(null)
   const [category, set_category] = useState<BagCategory>('equipment')
+  const [resource_filter, set_resource_filter] = useState<ResourceFilter>('all')
   const [selected_id, set_selected_id] = useState<string | null>(null)
   const [dragging_id, set_dragging_id] = useState<string | null>(null)
   const [committing, set_committing] = useState(false)
@@ -122,8 +122,8 @@ export default function EquipmentTab({
     [display_bag]
   )
   const grid_items = useMemo(
-    () => display_bag.filter(({ item }) => bag_category_of(item) === category),
-    [display_bag, category]
+    () => display_bag.filter(({ item }) => bag_item_matches(item, category, resource_filter)),
+    [display_bag, category, resource_filter]
   )
 
   const selected =
@@ -392,6 +392,13 @@ export default function EquipmentTab({
             </button>
           ))}
         </div>
+        <InventoryResourceFilters
+          category={category}
+          filter={resource_filter}
+          select={set_resource_filter}
+          items={display_bag}
+          copy={copy}
+        />
         <div className="chr-equip__grid">
           {grid_items.map(({ item, amount }) => (
             <InventoryItemCell

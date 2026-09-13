@@ -1845,6 +1845,18 @@
     "level": 8
   },
   {
+    "item_type": "wheat_stitched_leather",
+    "name": "Wheat-Stitched Leather",
+    "category": "resource",
+    "level": 10
+  },
+  {
+    "item_type": "resin_cured_leather",
+    "name": "Resin-Cured Leather",
+    "category": "resource",
+    "level": 20
+  },
+  {
     "item_type": "wheatspun_sinew",
     "name": "Wheatspun Sinew",
     "category": "resource",

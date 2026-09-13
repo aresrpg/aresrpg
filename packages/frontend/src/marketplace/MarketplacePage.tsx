@@ -14,6 +14,8 @@ import { MarketplaceDisclaimer } from './MarketplaceDisclaimer.tsx'
 import { SellPanel } from './SellPanel.tsx'
 import { EpochVolumeBadge } from './marketplace_model.tsx'
 
+import './marketplace.css'
+
 type Tab = 'BUY' | 'SELL' | 'HISTORY'
 const tabs: readonly Tab[] = ['BUY', 'SELL', 'HISTORY']
 const colors: Readonly<Record<Tab, string>> = Object.freeze({ BUY: '#c8963c', SELL: '#4a9eff', HISTORY: '#34d399' })
@@ -41,7 +43,7 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
       />
     )
   return (
-    <section className="pointer-events-auto relative flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98 shadow-[0_18px_50px_rgba(0,0,0,0.24)]">
+    <section className="market-page pointer-events-auto relative flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-border bg-surface/98 shadow-[0_18px_50px_rgba(0,0,0,0.24)]">
       <i className="pointer-events-none absolute top-1 left-1 size-3 border-t border-l border-[#c8963c]/45" />
       <i className="pointer-events-none absolute top-1 right-1 size-3 border-t border-r border-[#c8963c]/45" />
       <i className="pointer-events-none absolute bottom-1 left-1 size-3 border-b border-l border-[#c8963c]/45" />
@@ -49,7 +51,7 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
       <header className="shrink-0 border-b border-border bg-surface-high px-5 pt-4 pb-2 text-center">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="flex items-baseline justify-center gap-4">
+            <div className="flex flex-wrap items-baseline justify-center gap-2">
               <h2 className="text-[12px] font-semibold tracking-[0.4em] text-[#c8963c] uppercase">{text('title')}</h2>
               <span className="text-[9px] tracking-[0.14em] text-[#777b86] uppercase">{text('subtitle')}</span>
             </div>
@@ -63,7 +65,7 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
           {tabs.map((name) => (
             <button
               aria-selected={tab === name}
-              className="relative h-9 cursor-pointer text-[9px] font-semibold tracking-[0.2em] uppercase"
+              className="relative min-h-11 cursor-pointer text-[9px] font-semibold tracking-[0.2em] uppercase"
               key={name}
               onClick={() => set_tab(name)}
               role="tab"

@@ -67,6 +67,11 @@ const items: ItemRow[] = [
   'recall_potion',
   'potion_of_thebes',
   'rune_vitality_ba',
+  'gnawed_branch',
+  'wheat',
+  'wheat',
+  'wheat_flour',
+  'key_of_tangled_aftermath',
 ].map((item_type, index) => {
   const seed = encyclopedia_catalog.item(item_type)!.item
   return {

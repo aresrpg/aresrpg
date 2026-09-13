@@ -10,6 +10,7 @@ import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { App } from '../../src/app.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
+import { LOCALES } from '../../src/i18n/locale.ts'
 import { dispatch_app, read_app_state } from '../../src/store.ts'
 import { market_observation } from '../../src/modules/marketplace.ts'
 import { TUTORIAL_IDS } from '../../src/tutorial/tutorial.ts'
@@ -21,7 +22,8 @@ import './responsive_preview.css'
 const params = new URLSearchParams(location.search)
 const page = params.get('page') ?? 'settings'
 document.documentElement.dataset.previewDensity = params.get('density') ?? 'current'
-const copy = await load_app_copy('en')
+const locale = LOCALES.find(({ code }) => code === params.get('locale'))?.code ?? 'en'
+const copy = await load_app_copy(locale)
 const address = '0x' + 'aa'.repeat(32)
 const character: CharacterRow = {
   id: '0xpreview',
@@ -86,7 +88,7 @@ const items: ItemRow[] = selected_types.flatMap((type, index) => {
           item_type: type,
           category: seed.category,
           level: seed.level,
-          amount: ['resource', 'consumable', 'rune'].includes(seed.category) ? 48 : 1,
+          amount: ['resource', 'consumable', 'rune'].includes(seed.category) ? 1048 : 1,
           kiosk: character.kiosk,
           ...(seed.stats ? { stats: { strength: item_stat_center + 24, vitality: item_stat_center + 38 } } : {}),
         },
@@ -101,7 +103,8 @@ const settings = {
   marketplace_disclaimer_acknowledged: true,
 }
 dispatch_app({ type: 'settings/changed', settings })
-dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
+dispatch_app({ type: 'locale/changed', locale })
+dispatch_app({ type: 'locale/loaded', locale, copy })
 dispatch_app({ type: 'auth/connecting' })
 dispatch_app({
   type: 'auth/connected',
@@ -128,13 +131,15 @@ dispatch_app({
   packet: {
     type: 'packet/server_info',
     online: 42,
-    indexing_lag: 0,
+    indexing_lag: params.get('connection') === 'lagging' ? 900 : 0,
     current_epoch: '1250',
     chain_timestamp_ms: Date.now(),
     chain_sample_age_ms: 0,
     market_volume: { epoch: '1250', mist: '1284500000000' },
   },
 })
+if (params.get('connection') === 'offline')
+  dispatch_app({ type: 'link/failed', error: 'Preview connection unavailable' })
 dispatch_app({ type: 'engine/status', status: { state: 'ready', backend: 'webgpu' } })
 const routes: Record<string, string> = {
   equipment: '/characters/equipment',
@@ -149,14 +154,66 @@ const routes: Record<string, string> = {
   encyclopedia: '/encyclopedia/items',
   leaderboard: '/leaderboard',
   kolizeum: '/kolizeum',
+  kares: '/kares',
   world: '/world',
   fight: '/world',
   dungeon: '/world',
 }
 dispatch_app({ type: 'path/open', pathname: routes[page] ?? '/settings' })
 dispatch_app({ type: 'dialog/open', dialog: null })
+if (page === 'kolizeum')
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/kolizeums',
+      lobbies: [1, 3, 6].map((format) => ({
+        id: `lobby-${format}`,
+        fight: `fight-${format}`,
+        creator: '0xother',
+        format: format as 1 | 3 | 6,
+        pledge_mist: '1250000000',
+        pot_mist: '1250000000',
+        level_min: 1,
+        level_max: 200,
+        public: true,
+        can_join: true,
+        status: 'open' as const,
+        fighters: [
+          {
+            seat: 0,
+            team: 0 as const,
+            character_id: '0xother',
+            name: 'LongCharacterName',
+            classe: 'senshi',
+            level: 20,
+            settled: false,
+          },
+        ],
+      })),
+    },
+  })
 if (page === 'marketplace') {
   const hat = content_catalog.items.find(({ category }) => category === 'hat')!
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_history',
+      sales: Array.from({ length: 35 }, (_, index) => ({
+        id: `sale-${index}`,
+        object: `sold-${index}`,
+        kind: 'item' as const,
+        name: hat.name,
+        item_type: hat.item_type,
+        amount: 1,
+        price_mist: '1250000000',
+        counterparty: '0xother',
+        ts_ms: Date.now() - index * 3600000,
+      })),
+      revenue_30d_mist: '43750000000',
+      total: 35,
+      profits: [{ kiosk: character.kiosk, amount_mist: '1250000000' }],
+    },
+  })
   dispatch_app({ type: 'market/group_selected', group: 'EQUIPMENT' })
   dispatch_app({
     type: 'server/packet',

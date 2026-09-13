@@ -79,22 +79,22 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden max-[760px]:flex-col">
-      <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-border max-[760px]:w-full max-[760px]:min-w-0 max-[760px]:border-r-0 max-[760px]:border-b">
-        <div className="border-b border-border px-3 py-3 max-[760px]:hidden">
+    <div className="enc-gameplay flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <aside className="flex w-[300px] min-w-[300px] flex-col border-r border-border">
+        <div className="border-b border-border px-3 py-3">
           <span className="text-[9px] tracking-[0.25em] text-[#6b7280] uppercase">
             {text('gameplay.game_mechanics')}
           </span>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto max-[760px]:flex max-[760px]:overflow-x-auto max-[760px]:p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           {SECTIONS.map(({ id, icon: Icon }) => {
             const active = active_section === id
             return (
               <button
-                className={`flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2.5 text-left transition-colors max-[760px]:w-auto max-[760px]:shrink-0 max-[760px]:border ${
+                className={`flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2.5 text-left transition-colors ${
                   active
-                    ? 'border-l-[#c8963c] bg-[#c8963c]/8 text-[#c8963c] max-[760px]:border-[#c8963c]/30'
-                    : 'border-l-transparent text-[#6b7280] hover:bg-white/4 hover:text-[#e8e4dc] max-[760px]:border-border'
+                    ? 'border-l-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]'
+                    : 'border-l-transparent text-[#6b7280] hover:bg-white/4 hover:text-[#e8e4dc]'
                 }`}
                 key={id}
                 onClick={() => go(id)}
@@ -107,7 +107,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
           })}
         </div>
       </aside>
-      <div className="min-h-0 flex-1 overflow-y-auto p-6 max-[760px]:p-3" ref={content_ref}>
+      <div className="min-h-0 flex-1 overflow-y-auto p-6" ref={content_ref}>
         <div className="mx-auto max-w-3xl space-y-10">
           <WikiSection id="combat" title={text('gameplay.section_combat')}>
             <Text>{text('gameplay.combat_desc')}</Text>

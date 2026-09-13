@@ -6,7 +6,16 @@ import { useMemo, useState } from 'react'
 
 import { encyclopedia_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
 
-import { category_pill, Empty, encyclopedia_layout, EntityGrid, LinkChip, SearchField, Section } from './components.tsx'
+import {
+  category_pill,
+  Empty,
+  EncyclopediaBrowser,
+  encyclopedia_layout,
+  EntityGrid,
+  LinkChip,
+  SearchField,
+  Section,
+} from './components.tsx'
 import type { EncyclopediaText } from './copy.ts'
 
 export type WorldMobGroup = Readonly<{ id: string; mob_types: readonly string[] }>
@@ -189,46 +198,50 @@ export const WorldsTab = ({
   )
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className={`flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
-        <div className={encyclopedia_layout.filters}>
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <SearchField change={set_search} placeholder={text('search_worlds')} value={search} />
+    <EncyclopediaBrowser
+      back={() => select_world('')}
+      text={text}
+      detail={detail_panel}
+      list={
+        <div className={`enc-browser__list flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
+          <div className={encyclopedia_layout.filters}>
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <SearchField change={set_search} placeholder={text('search_worlds')} value={search} />
+              </div>
+              <span className="shrink-0 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+                {text('showing_count', { count: worlds.length, total: encyclopedia_catalog.worlds.length })}
+              </span>
+              <select
+                className="h-9 min-w-[110px] border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
+                onChange={(event) => set_sort(event.target.value as 'band_asc' | 'name_asc')}
+                value={sort}
+              >
+                <option value="band_asc">{text('sort_level_asc')}</option>
+                <option value="name_asc">{text('sort_name')}</option>
+              </select>
             </div>
-            <span className="shrink-0 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-              {text('showing_count', { count: worlds.length, total: encyclopedia_catalog.worlds.length })}
-            </span>
-            <select
-              className="h-9 min-w-[110px] border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
-              onChange={(event) => set_sort(event.target.value as 'band_asc' | 'name_asc')}
-              value={sort}
-            >
-              <option value="band_asc">{text('sort_level_asc')}</option>
-              <option value="name_asc">{text('sort_name')}</option>
-            </select>
-          </div>
-          {biomes.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              <button className={category_pill(biome === '')} onClick={() => set_biome('')} type="button">
-                {text('view_all')}
-              </button>
-              {biomes.map((name) => (
-                <button
-                  className={category_pill(biome === name)}
-                  key={name}
-                  onClick={() => set_biome(biome === name ? '' : name)}
-                  type="button"
-                >
-                  {titleize(name)}
+            {biomes.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                <button className={category_pill(biome === '')} onClick={() => set_biome('')} type="button">
+                  {text('view_all')}
                 </button>
-              ))}
-            </div>
-          )}
+                {biomes.map((name) => (
+                  <button
+                    className={category_pill(biome === name)}
+                    key={name}
+                    onClick={() => set_biome(biome === name ? '' : name)}
+                    type="button"
+                  >
+                    {titleize(name)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {list}
         </div>
-        {list}
-      </div>
-      {detail && <aside className={encyclopedia_layout.detail}>{detail_panel}</aside>}
-    </div>
+      }
+    />
   )
 }

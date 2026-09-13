@@ -8,6 +8,7 @@ import type { KaresCopy } from '../kares/copy.ts'
 import type { Locale } from './locale.ts'
 
 export type AppCopy = Readonly<{
+  item_drop_sources: Readonly<Record<string, string>>
   item_categories: Readonly<Record<string, string>>
   title: string
   body: string
@@ -129,6 +130,7 @@ export type AppCopy = Readonly<{
   wallet_close: string
   wallet_legacy: Readonly<Record<string, unknown>>
   tutorial: Readonly<Record<string, string>>
+  journey: Readonly<Record<string, string>>
   wallet_send_shared: Readonly<Record<string, string>>
   encyclopedia_page: Readonly<Record<string, unknown>>
   simulator_page: Readonly<Record<string, string>>

@@ -13,7 +13,7 @@ export const ActionSlots = ({
 }: Readonly<{ capacity?: number; children?: ReactNode; columns?: number }>) => {
   const actions = Children.toArray(children)
   return (
-    <div className="fight-hud__spells" style={{ gridTemplateColumns: `repeat(${columns}, 50px)` }}>
+    <div className="fight-hud__spells" style={{ gridTemplateColumns: `repeat(${columns}, var(--fh-slot-size, 50px))` }}>
       {actions}
       {Array.from({ length: empty_action_slot_count(capacity, actions.length) }, (_, index) => (
         <div aria-hidden="true" className="fight-hud__spell disabled" data-empty-action-cell="" key={index} />

@@ -17,6 +17,7 @@ test('overview derives exact active and money totals from the selected tier', as
       kolizeum_mist: '0',
       ...values,
     })
+  let live_reads = 0
   const graph = { read: async () => [{ total: 4 }] }
   const bus = {
     analytics_hashes: async (keys: readonly string[]) =>
@@ -50,7 +51,10 @@ test('overview derives exact active and money totals from the selected tier', as
   }
   const mesh = {
     online_samples: async (keys: readonly string[]) => keys.map(() => [8, 12]),
-    cluster_online: async () => 11,
+    cluster_online: async () => {
+      live_reads += 1
+      return 11
+    },
   }
   const result = await get_admin_overview(graph as never, bus as never, mesh as never, {
     revenue_days: 30,
@@ -76,7 +80,8 @@ test('overview derives exact active and money totals from the selected tier', as
   expect(result.revenue.kolizeum_mist).toBe('20')
   expect(result.revenue.last_30d_revenue_mist).toBe('1058')
   expect(result.revenue.month_to_date_revenue_mist).toBe('1058')
-  expect(result.online.online_now).toBe(11)
+  expect(result.online).not.toHaveProperty('online_now')
+  expect(live_reads).toBe(0)
   expect(result.online.online_peak).toBe(12)
   expect(result.online.online.at(-1)).toEqual({ at_ms: now_ms, peak: 12 })
   expect(result.addresses.total).toBe(3)

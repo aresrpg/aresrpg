@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+[data-world-frame] {
+  container: world-viewport / size;
+  --world-map-size: clamp(96px, min(23cqw, 30cqh), 288px);
+  --world-chat-width: clamp(
+    min(180px, var(--world-chat-max-width, 50cqw)),
+    var(--world-chat-requested-width, min(38cqw, 440px)),
+    var(--world-chat-max-width, 50cqw)
+  );
+  --world-chat-height: clamp(
+    min(100px, var(--world-chat-max-height, 70cqh)),
+    var(--world-chat-requested-height, min(320px, 40cqh)),
+    var(--world-chat-max-height, 70cqh)
+  );
+  --world-slot-size: clamp(24px, min(5cqw, 8cqh), 50px);
+}
+[data-world-frame] .gw-minimap {
+  top: 10px;
+  right: 10px;
+  width: var(--world-map-size);
+}
+[data-world-frame] .gw-minimap__frame {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+[data-world-frame] .gw-minimap__readout,
+[data-world-frame] .gw-minimap__coords {
+  flex-wrap: wrap;
+}
+[data-world-frame] .gw-minimap__biome,
+[data-world-frame] .gw-minimap__coords {
+  font-size: clamp(8px, 1cqw, 10px);
+  letter-spacing: 0.04em;
+}
+[data-world-frame] .gw-worldchat {
+  width: var(--world-chat-width);
+  height: var(--world-chat-height);
+}
+[data-world-frame] .gw-compass-wrap {
+  top: 10px;
+  width: min(720px, calc(100cqw - 2 * var(--world-map-size) - 32px));
+  min-width: 0;
+}
+[data-world-frame] .party-frame {
+  top: calc(var(--world-map-size) + 66px);
+  right: 10px;
+  min-width: 0;
+  width: clamp(160px, 23cqw, 220px);
+  max-height: calc(100cqh - var(--world-map-size) - 190px);
+  overflow-y: auto;
+}
+[data-world-frame] .fight-hud--overworld {
+  --fh-slot-size: var(--world-slot-size);
+}
+[data-world-frame] .fight-hud--overworld .fight-hud__bottom {
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  display: grid;
+  grid-template-columns: minmax(calc(var(--world-chat-width) + 20px), 1fr) max-content minmax(10px, 1fr);
+  transform: none;
+}
+[data-world-frame] .fight-hud--overworld .fight-hud__bar {
+  grid-column: 2;
+  padding: 6px;
+  gap: 5px;
+}
+[data-world-frame] .fight-hud--overworld .fight-hud__overworld-row {
+  gap: 6px;
+}
+[data-world-frame] .fight-hud--overworld .fight-hud__spells {
+  grid-template-columns: repeat(5, var(--world-slot-size));
+  grid-template-rows: repeat(2, var(--world-slot-size));
+  gap: 3px;
+}
+[data-world-frame] .fight-hud--overworld :is(.fight-hud__spell, .fight-hud__spell-shell) {
+  width: var(--world-slot-size);
+  height: var(--world-slot-size);
+}
+[data-world-frame] .fight-hud--overworld .fight-hud__hp-gem {
+  width: clamp(44px, 8cqw, 80px);
+  height: clamp(44px, 8cqw, 80px);
+}
+[data-world-frame] .fight-hud--overworld .fight-hud__gem {
+  width: clamp(24px, 4cqw, 36px);
+  height: clamp(24px, 4cqw, 36px);
+}
+@container world-viewport (max-width: 850px) {
+  .gw-compass-wrap {
+    margin-top: 100px;
+  }
+  .gw-worldchat .chat > header {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+}
+@container world-viewport (max-width: 400px) {
+  [data-world-frame] .gw-worldchat {
+    width: var(--world-chat-width);
+  }
+  [data-world-frame] .fight-hud--overworld .fight-hud__bottom {
+    left: 10px;
+    right: 10px;
+    grid-template-columns: 1fr max-content 1fr;
+    bottom: calc(var(--world-chat-height) + 20px);
+  }
+  [data-world-frame] .gw-compass-wrap {
+    width: calc(100% - var(--world-map-size) - 24px);
+    left: 10px;
+    transform: none;
+  }
+}
+
+[data-world-frame] .gw-worldchat .chat__filters {
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+[data-world-frame] .gw-worldchat .chat > footer {
+  padding: 5px;
+}
+[data-world-frame] .gw-worldchat .chat__input {
+  padding: 6px;
+}
+[data-world-frame] .gw-worldchat .chat__scope {
+  padding-inline: 4px;
+  font-size: 9px;
+}
+
+[data-world-frame] .gw-minimap__coords {
+  min-width: 0;
+  flex-shrink: 1;
+  max-width: 100%;
+}
+@container world-viewport (max-height: 400px) {
+  [data-world-frame] .gw-compass__band {
+    height: 30px;
+  }
+  [data-world-frame] :is(.gw-compass__city, .gw-compass__pip, .gw-compass__edge) {
+    display: none;
+  }
+  [data-world-frame] .gw-compass__stem {
+    height: 25px;
+  }
+}

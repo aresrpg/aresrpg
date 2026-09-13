@@ -1,0 +1,160 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.market-history-label {
+  display: none;
+}
+
+@container app-content (max-width: 1100px) {
+  .market-page,
+  .market-browse,
+  .market-sell,
+  .market-detail-body {
+    overflow: visible;
+  }
+  .market-browse {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    align-content: start;
+  }
+  .market-groups,
+  .market-subcategories,
+  .market-characters {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .market-groups {
+    flex-direction: row;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .market-groups > h3 {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+  }
+  .market-groups > nav,
+  .market-subcategories {
+    display: flex;
+    overflow-x: auto;
+  }
+  .market-groups button,
+  .market-subcategories button {
+    width: auto;
+    flex: none;
+    gap: 12px;
+  }
+  .market-templates {
+    width: 100%;
+    max-height: 420px;
+  }
+  .market-sell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-content: start;
+  }
+  .market-sell > section {
+    width: 100%;
+    min-width: 0;
+  }
+  .market-inventory {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    max-height: 240px;
+  }
+  .market-sale-form {
+    grid-column: 1;
+    grid-row: 2;
+    padding-bottom: 16px;
+  }
+  .market-own-listings {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .market-page :is(button, input) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .market-page button {
+    font-size: 11px;
+  }
+  .market-page input {
+    font-size: 16px;
+  }
+  .market-lot-row {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(90px, 112px);
+    gap: 8px;
+    padding-inline: 8px;
+  }
+  .market-lot-row button,
+  .market-ask > button:last-child {
+    white-space: normal;
+    overflow: visible;
+    padding-inline: 6px;
+  }
+}
+
+@container app-content (max-width: 700px) {
+  .market-page > header {
+    padding: 12px;
+  }
+  .market-browse,
+  .market-sell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .market-groups {
+    flex-direction: column;
+  }
+  .market-groups > h3 {
+    padding-block: 4px;
+  }
+  .market-templates {
+    max-height: 164px;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .market-detail-body {
+    padding: 12px;
+  }
+  .market-detail-body > div > div:first-child {
+    padding: 12px;
+  }
+  .market-ask {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-inline: 8px;
+  }
+  .market-own-listings {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .market-own-listings > div > div {
+    flex-wrap: wrap;
+  }
+  .market-history-heading {
+    display: none;
+  }
+  .market-history-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px;
+  }
+  .market-history-row > :first-child,
+  .market-history-row > :last-child {
+    grid-column: 1 / -1;
+  }
+  .market-history-row > :first-child > span {
+    white-space: normal;
+  }
+  .market-history-label {
+    display: inline;
+    color: var(--color-muted);
+  }
+  .market-history > div:first-child > div {
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+  }
+  .market-disclaimer,
+  .market-disclaimer > div {
+    padding: 16px;
+  }
+}

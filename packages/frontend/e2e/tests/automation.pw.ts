@@ -110,3 +110,26 @@ test('reselecting a character preserves automation; switching characters stops i
   await page.getByRole('button', { name: 'Bob', exact: true }).click()
   await expect(panel.getByText('Stopped', { exact: true })).toBeVisible()
 })
+
+for (const code of ['KeyA', 'KeyQ']) {
+  test(`Konami accepts B A when A uses physical ${code}`, async ({ page }) => {
+    await page.goto('/e2e/fixtures/automation.html')
+    await expect(page.locator('[data-friends-card]')).toBeVisible()
+    for (const key of [
+      'ArrowUp',
+      'ArrowUp',
+      'ArrowDown',
+      'ArrowDown',
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowLeft',
+      'ArrowRight',
+    ])
+      await page.keyboard.press(key)
+    await page.evaluate((physical_code) => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', bubbles: true }))
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', code: physical_code, bubbles: true }))
+    }, code)
+    await expect(page.locator('[data-automation-panel]')).toBeVisible()
+  })
+}

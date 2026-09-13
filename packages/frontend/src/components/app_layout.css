@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+:root {
+  --app-sidebar-width: 200px;
+  --app-tabs-height: 22px;
+}
+
+.app-ui {
+  --app-inset: 12px;
+  --app-gap: 12px;
+  --app-top: max(var(--app-inset), env(safe-area-inset-top));
+  --app-bottom: max(var(--app-inset), env(safe-area-inset-bottom));
+  --app-left: max(var(--app-inset), env(safe-area-inset-left));
+  --app-right: max(var(--app-inset), env(safe-area-inset-right));
+}
+
+.app-shell {
+  padding: var(--app-top) var(--app-right) var(--app-bottom) var(--app-left);
+}
+
+.app-content {
+  container: app-content / inline-size;
+}
+
+.app-shell,
+.app-shell-row,
+.app-shell-column {
+  gap: var(--app-gap);
+}
+
+.app-world-frame {
+  inset: calc(var(--app-top) + var(--app-tabs-height) + var(--app-gap)) var(--app-right) var(--app-bottom)
+    calc(var(--app-left) + var(--app-sidebar-space, var(--app-sidebar-width)) + var(--app-gap));
+}
+
+@media (max-width: 1280px), (max-height: 800px) {
+  .app-ui {
+    --app-inset: 8px;
+    --app-gap: 8px;
+    --app-sidebar-width: 176px;
+  }
+}
+
+.sidebar-viewport {
+  position: relative;
+  flex-shrink: 0;
+  min-height: 0;
+  width: var(--app-sidebar-space, var(--app-sidebar-width));
+}
+.sidebar-viewport__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--app-gap);
+  width: var(--app-sidebar-width);
+  transform-origin: top left;
+}
+.sidebar-viewport__content > * {
+  flex-shrink: 0;
+}

@@ -885,6 +885,7 @@ fight_hud:
   confirm_forfeit: Confirm forfeit
   unit_turns: turns
   chat_title: Chat
+  chat_resize: Resize chat
   chat_tab_general: General
   chat_tab_party: Party
   chat_tab_private: Private
@@ -1623,6 +1624,12 @@ characters_page:
   bag_equipment: Equipment
   bag_consumables: Consumables
   bag_resources: Resources
+  bag_filter_all: All
+  bag_filter_raw: Raw resources
+  bag_filter_gatherable: Gatherable resources
+  bag_filter_intermediary: Intermediary resources
+  bag_filter_keys: Keys
+  bag_filter_runes: Runes
   accept: Accept
   cancel: Cancel
   equip_pending: Updating equipment…
@@ -2411,3 +2418,78 @@ automation_panel:
   unlocked: 'Access unlocked'
   badge: 'HACK ZONE'
   available: 'Gathering automation available'
+
+item_drop_sources:
+  title: 'Mob drops'
+  note: 'Authored base rates. Actual rates vary with mob level and team Chance.'
+  empty: 'No mob drops this item.'
+  loading: 'Loading mob drops…'
+  mob: 'Mob'
+  rate: 'Base rate'
+  quantity: 'Quantity'
+  levels: 'Level {{min}}–{{max}}'
+
+journey:
+  title: 'Surviving Nauvis'
+  eyebrow: 'Your adventure starts here'
+  progress: 'Journey progress'
+  count: '{{count}} / {{total}}'
+  complete: 'Quest complete!'
+  continue: 'Continue'
+  start: 'Start my first quest'
+  journal: 'Quest journal'
+  close: 'Close journal'
+  collapse: 'Collapse quests'
+  recipe: 'View recipe'
+  jobs: 'Jobs'
+  resource_details: 'Resource details'
+  key_details: 'Find a dungeon key'
+  next: 'Up next'
+  chapter_finished: 'Journey complete'
+  finished_title: 'You’re on your own now.'
+  finished_body: 'Tools, supplies, a dungeon victory, and even Suize. Keep exploring. Your next story is yours to write.'
+  reset_title: 'Beginner quests'
+  reset_hint: 'Reset this account’s quests on this browser. Owned items count again after you restart the journey.'
+  reset_action: 'Reset quests'
+  storage_failed: 'Quest progress could not be saved on this browser. It may be lost when you reload.'
+  chapter_welcome: 'Welcome'
+  chapter_tools: 'First tools'
+  chapter_gear: 'Gear up'
+  chapter_supplies: 'Supplies'
+  chapter_dungeon: 'Dungeon'
+  chapter_secret: 'One last secret'
+  welcome_title: 'Welcome to Nauvis.'
+  welcome_body: 'AresRPG rewards players who learn, prepare, and work smart. Learn to optimize and automate your gameplay while spending as little SUI as possible. Follow this journey to get your footing.'
+  hoe_title: 'We all need a hoe.'
+  hoe_body: 'Nauvis is your first world. Stronger equipment will help you reach more dangerous worlds. Buy a {{item}} from another player, or craft one through Characters → Jobs → Handyman. Compare the ingredients before spending.'
+  hoe_objective: 'Own {{item}}'
+  wheat_title: 'Let’s get our hands dirty.'
+  wheat_body: 'Good work. Find a wheat node on Nauvis and gather your first crop. Buying wheat won’t teach you how to harvest it.'
+  wheat_objective: 'Harvest wheat'
+  pickaxe_title: 'Your next rock star.'
+  pickaxe_body: 'Find a {{item}} on the market or make one yourself. Your mining career has to start somewhere.'
+  pickaxe_objective: 'Own {{item}}'
+  quartz_title: 'Leave no stone unturned.'
+  quartz_body: 'Use your pickaxe to gather quartz. Your profession level determines which resource tiers you can harvest.'
+  quartz_objective: 'Harvest quartz'
+  sickle_title: 'A cut above.'
+  sickle_body: 'A {{item}} opens the herbalist profession. Buy one from another player or craft your own.'
+  sickle_objective: 'Own {{item}}'
+  mushroom_title: 'Room for one more.'
+  mushroom_body: 'Gather a green mushroom. You can now work in all three gathering professions. Keep leveling them to reach higher resource tiers.'
+  mushroom_objective: 'Harvest a green mushroom'
+  token_title: 'Make your own luck.'
+  token_body: 'Find a {{item}}. Equip it when you meet its level requirement to gain Chance. Your team’s average Chance improves combat drop probabilities; it does not guarantee extra loot.'
+  token_objective: 'Own {{item}}'
+  croissant_title: 'Bread before battle.'
+  croissant_body: 'Hungry? A {{item}} restores 10 HP. Buy one or follow its recipe to bake your own through Characters → Jobs → Baker.'
+  croissant_objective: 'Own {{item}}'
+  lorito_title: 'Time to ruffle some feathers.'
+  lorito_body: 'Prepare your gear and healing supplies, then bring a key to the Gilded Lorito dungeon in Thebes. Defeat its final room. Stronger enemies await, with loot and XP to earn.'
+  lorito_objective: 'Complete the Gilded Lorito dungeon'
+  suize_title: 'One last secret.'
+  suize_body: 'Well done, adventurer. I have one final challenge: harvest Suize yourself. Where can you find it? Consider that your first unsupervised problem.'
+  suize_objective: 'Harvest Suize'
+  welcome_objective: ''
+  finished_objective: ''
+  saving: Saving…

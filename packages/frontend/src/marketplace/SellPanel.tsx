@@ -115,8 +115,8 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden bg-bg">
-      <section className="flex w-[360px] shrink-0 flex-col border-r border-border bg-surface">
+    <div className="market-sell flex min-h-0 flex-1 overflow-hidden bg-bg">
+      <section className="market-own-listings flex w-[360px] shrink-0 flex-col border-r border-border bg-surface">
         <PanelTitle>
           {text('your_listings')} {market.own_listings.length ? `(${market.own_listings.length})` : ''}
         </PanelTitle>
@@ -154,7 +154,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
         </div>
       </section>
 
-      <section className="flex w-[340px] shrink-0 flex-col border-r border-border bg-surface">
+      <section className="market-sale-form flex w-[340px] shrink-0 flex-col border-r border-border bg-surface">
         <PanelTitle>{text('list_for_sale')}</PanelTitle>
         {!selected ? (
           <PanelEmpty icon="tag" text={text('select_to_list')} />
@@ -217,7 +217,7 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
         )}
       </section>
 
-      <section className="flex min-w-0 flex-1 flex-col bg-surface-high">
+      <section className="market-inventory flex min-w-0 flex-1 flex-col bg-surface-high">
         <PanelTitle>{text('inventory')}</PanelTitle>
         <div className="min-h-0 overflow-y-auto p-4">
           {characters.length > 0 && (

@@ -273,10 +273,11 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
                 <div className="kz-empty">{t('empty')}</div>
               ) : (
                 rows.map((lobby, index) => (
-                  <div
+                  <button
                     className={`kz-row kz-lobby${selected_id === lobby.id ? ' is-selected' : ''}`}
                     key={lobby.id}
                     onClick={() => set_selected_id(lobby.id)}
+                    type="button"
                     style={{ background: index % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}
                   >
                     <strong>{format_of(lobby.format)}</strong>
@@ -284,9 +285,18 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
                       {t(lobby.public ? 'access_public' : 'access_friends')}
                     </small>
                     <small style={{ color: STATUS_COLOR[lobby.status] }}>● {t(`status_${lobby.status}`)}</small>
-                    <span>{pot_label(BigInt(lobby.pledge_mist), t('free'))}</span>
-                    <span className="kz-gold">{pot_label(full_pot(lobby), t('free'))}</span>
-                    <small>{short_address(lobby.creator)}</small>
+                    <span>
+                      <span className="kz-field-label">{t('col_pledge')}</span>
+                      {pot_label(BigInt(lobby.pledge_mist), t('free'))}
+                    </span>
+                    <span className="kz-gold">
+                      <span className="kz-field-label">{t('col_full_pot')}</span>
+                      {pot_label(full_pot(lobby), t('free'))}
+                    </span>
+                    <small>
+                      <span className="kz-field-label">{t('col_creator')}</span>
+                      {short_address(lobby.creator)}
+                    </small>
                     {lobby.status === 'open' ? (
                       <span aria-hidden="true" className="kz-row-open">
                         ›
@@ -294,7 +304,7 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
                     ) : (
                       <em>● {t(`status_${lobby.status}`)}</em>
                     )}
-                  </div>
+                  </button>
                 ))
               )}
             </div>

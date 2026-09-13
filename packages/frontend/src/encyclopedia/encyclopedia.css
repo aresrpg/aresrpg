@@ -1,0 +1,164 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.enc-browser__detail {
+  min-width: 380px;
+}
+.enc-browser__back {
+  display: none;
+}
+.enc-browser__detail > div {
+  min-height: 0;
+}
+
+.enc-gather-row {
+  display: grid;
+  grid-template-columns: 48px 64px minmax(0, 1fr) minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+}
+.enc-gather-label {
+  display: none;
+}
+.enc-gather-resource {
+  min-height: 44px;
+  text-align: left;
+}
+.enc-gather-resource > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@container app-content (max-width: 1000px) {
+  .enc-browser[data-detail='true'] > :is(.enc-browser__rail, .enc-browser__list) {
+    display: none;
+  }
+  .enc-browser__list,
+  .enc-browser__detail {
+    min-width: 0;
+  }
+  .enc-browser__list:last-child {
+    flex: 1;
+  }
+  .enc-browser__detail {
+    border-left: 0;
+  }
+  .enc-browser__back {
+    display: flex;
+    min-height: 44px;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--color-border);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--color-muted);
+  }
+  .enc-browser__detail > div {
+    padding: 16px;
+  }
+  .enc-filters > div {
+    flex-wrap: wrap;
+  }
+  .enc-filters > div > div:has(input) {
+    flex-basis: 100%;
+  }
+  .enc-page :is(button, input, select) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .enc-page :is(button, select) {
+    font-size: 12px;
+  }
+  .enc-page input {
+    font-size: 16px;
+  }
+  .enc-page button > span {
+    font-size: inherit;
+  }
+  .enc-gameplay {
+    flex-direction: column;
+  }
+  .enc-gameplay > aside {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .enc-gameplay > aside > div:last-child {
+    display: flex;
+    overflow-x: auto;
+  }
+  .enc-gameplay > aside button {
+    width: auto;
+    flex: none;
+  }
+  .enc-gameplay > div {
+    padding: 16px;
+  }
+}
+
+@container app-content (max-width: 700px) {
+  .enc-browser {
+    flex-direction: column;
+  }
+  .enc-browser__rail {
+    width: 100%;
+    max-height: 180px;
+    flex: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .enc-browser__list {
+    width: 100%;
+    min-height: 0;
+    flex: 1;
+  }
+  .enc-browser__detail > div {
+    padding: 12px;
+  }
+  .enc-class-spells {
+    flex-direction: column;
+  }
+  .enc-class-spells > div:first-child {
+    width: 100%;
+    max-height: 160px;
+    overflow-y: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .enc-class-spells > div:last-child {
+    padding: 12px;
+  }
+  .enc-page [data-characteristic] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .enc-gameplay > div {
+    padding: 12px;
+  }
+}
+
+@container app-content (max-width: 700px) {
+  .enc-gather-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+  }
+  .enc-gather-heading {
+    display: none;
+  }
+  .enc-gather-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: var(--color-muted);
+  }
+  .enc-gather-row > :last-child {
+    grid-column: 1 / -1;
+  }
+}

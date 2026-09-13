@@ -188,7 +188,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
 
         {/* PRIMARY (allocatable) characteristics */}
         <div className="stats__section">{t('stats.characteristics')}</div>
-        <div className="stats__card">
+        <div className="stats__card stats__card--primary">
           {characteristic_names.map((stat) => {
             const label = t(`stat.${stat}`)
             const base = character[stat]

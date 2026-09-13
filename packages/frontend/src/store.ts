@@ -6,6 +6,8 @@ import { createStore } from 'zustand/vanilla'
 
 import type { GameSettings } from './game/core/settings.ts'
 import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
+import journey, { type JourneyInput } from './modules/journey.ts'
+import { initial_journey_state, type JourneyState } from './journey/model.ts'
 import engine, { initial_engine_state, type EngineInput, type EngineState } from './modules/engine.ts'
 import fight, { initial_fight_session_state, type FightSessionInput, type FightSessionState } from './modules/fight.ts'
 import type { Locale } from './i18n/locale.ts'
@@ -74,6 +76,7 @@ import external_wallet, {
 } from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
+  journey: JourneyState
   chain_clock: ChainClock
   session: SessionState
   external_wallet: ExternalWalletState
@@ -106,6 +109,7 @@ export type AppState = Readonly<{
 }>
 
 export type AppInput =
+  | JourneyInput
   | ChainClockInput
   | SessionInput
   | ExternalWalletInput
@@ -192,6 +196,7 @@ const MODULE_REGISTRY = [
   [mastery, 'player'],
   [distribution, 'player'],
   [job_level_up, 'player'],
+  [journey, 'player'],
 ] as const satisfies readonly (readonly [AppModule, 'player' | 'demo' | 'shared'])[]
 
 const MODULES = MODULE_REGISTRY.map(([module]) => module)
@@ -207,6 +212,7 @@ export const DEMO_APP_MODULES = Object.freeze(
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
     chain_clock: null,
+    journey: initial_journey_state(),
     session: initial_session_state(),
     suins: initial_suins_state(),
     external_wallet: initial_external_wallet_state(),

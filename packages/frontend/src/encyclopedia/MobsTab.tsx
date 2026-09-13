@@ -13,6 +13,7 @@ import { element_colors, item_category_colors, stat_identities } from '../visual
 import {
   category_pill,
   Empty,
+  EncyclopediaBrowser,
   encyclopedia_layout,
   EntityButton,
   EntityGrid,
@@ -335,46 +336,52 @@ export const MobsTab = ({
   )
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <FacetRail
-        all_label={text('view_all')}
-        class_name="w-40 shrink-0"
-        on_select={set_mob_filter}
-        options={facet_options}
-        selected={mob_filter}
-        total={encyclopedia_catalog.mobs.length}
-      />
-      <div className={`flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
-        <div className={encyclopedia_layout.filters}>
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <SearchField change={set_search} placeholder={text('search_mobs')} value={search} />
+    <EncyclopediaBrowser
+      back={() => select_mob('')}
+      text={text}
+      detail={detail_panel}
+      rail={
+        <FacetRail
+          all_label={text('view_all')}
+          class_name="enc-browser__rail w-40 shrink-0"
+          on_select={set_mob_filter}
+          options={facet_options}
+          selected={mob_filter}
+          total={encyclopedia_catalog.mobs.length}
+        />
+      }
+      list={
+        <div className={`enc-browser__list flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
+          <div className={encyclopedia_layout.filters}>
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <SearchField change={set_search} placeholder={text('search_mobs')} value={search} />
+              </div>
+              <span className="shrink-0 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+                {text('showing_mobs', { count: filtered.length, total: encyclopedia_catalog.mobs.length })}
+              </span>
+              <select
+                className="h-9 min-w-[110px] border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
+                onChange={(event) => set_sort(event.target.value)}
+                value={sort}
+              >
+                <option value="level_asc">{text('sort_level_asc')}</option>
+                <option value="level_desc">{text('sort_level_desc')}</option>
+                <option value="name_asc">{text('sort_name_asc')}</option>
+              </select>
             </div>
-            <span className="shrink-0 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-              {text('showing_mobs', { count: filtered.length, total: encyclopedia_catalog.mobs.length })}
-            </span>
-            <select
-              className="h-9 min-w-[110px] border border-border bg-bg/55 px-2 text-[9px] text-[#9da0a9] uppercase"
-              onChange={(event) => set_sort(event.target.value)}
-              value={sort}
-            >
-              <option value="level_asc">{text('sort_level_asc')}</option>
-              <option value="level_desc">{text('sort_level_desc')}</option>
-              <option value="name_asc">{text('sort_name_asc')}</option>
-            </select>
+            <div className="flex flex-wrap gap-1">
+              <button className={category_pill(view === 'all')} onClick={() => set_view('all')} type="button">
+                {text('view_all')}
+              </button>
+              <button className={category_pill(view === 'by_level')} onClick={() => set_view('by_level')} type="button">
+                {text('view_by_level')}
+              </button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1">
-            <button className={category_pill(view === 'all')} onClick={() => set_view('all')} type="button">
-              {text('view_all')}
-            </button>
-            <button className={category_pill(view === 'by_level')} onClick={() => set_view('by_level')} type="button">
-              {text('view_by_level')}
-            </button>
-          </div>
+          {list}
         </div>
-        {list}
-      </div>
-      {detail && <aside className={encyclopedia_layout.detail}>{detail_panel}</aside>}
-    </div>
+      }
+    />
   )
 }

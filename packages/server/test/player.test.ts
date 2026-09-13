@@ -236,7 +236,7 @@ describe('the player harness (push model)', () => {
       type: 'packet/admin_response',
       id: 3,
       kind: 'overview',
-      result: { as_of_checkpoint: 1, online: { online_now: 7 } },
+      result: { as_of_checkpoint: 1, online: { online_peak: 0 } },
     })
   })
 

@@ -46,7 +46,6 @@ const overview: AdminOverviewResult = Object.freeze({
   online: Object.freeze({
     days: 1,
     bucket: '15m',
-    online_now: 4,
     online_peak: 5,
     online: Object.freeze([]),
   }),
@@ -161,4 +160,32 @@ test('a full refresh cannot overwrite a newer section range or discard its cache
     },
   })
   expect(section_last.admin.overview.result?.revenue).toEqual(seven_days)
+})
+
+test('heartbeats update the sole current online count while cached analytics retain historical peaks', () => {
+  const requested = reduce_app_state(reduce_app_state(state(), { type: 'admin/overview_refresh' }), {
+    type: 'admin/overview_requested',
+    request_id: 1,
+  })
+  const loaded = reduce_app_state(requested, {
+    type: 'server/packet',
+    packet: { type: 'packet/admin_response', id: 1, kind: 'overview', result: overview },
+  })
+  const heartbeat = reduce_app_state(loaded, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/server_info',
+      online: 7,
+      indexing_lag: 0,
+      current_epoch: '1',
+      chain_timestamp_ms: 1000,
+      chain_sample_age_ms: 0,
+    },
+  })
+  expect(heartbeat.session.online).toBe(7)
+  expect(heartbeat.admin.overview.result).toBe(loaded.admin.overview.result)
+  const cached = reduce_app_state(heartbeat, { type: 'admin/overview_range_changed', section: 'online', days: 30 })
+  expect(cached.session.online).toBe(7)
+  expect(cached.admin.overview.result?.online).toEqual(overview.online)
+  expect(cached.admin.overview.result?.online).not.toHaveProperty('online_now')
 })

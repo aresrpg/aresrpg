@@ -51,7 +51,7 @@ type SidebarProps = Readonly<{
 export const Sidebar = ({ copy, page, open_page, address, network, mastery_notification = false }: SidebarProps) => (
   <aside
     data-app-sidebar=""
-    className="pointer-events-auto flex w-[200px] shrink-0 flex-col border border-border bg-surface/80"
+    className="pointer-events-auto flex w-[var(--app-sidebar-width)] shrink-0 flex-col border border-border bg-surface/80"
   >
     <div className="flex items-center justify-center gap-2.5 border-b border-border py-5">
       <img className="size-7 drop-shadow-[0_0_12px_rgba(200,150,60,0.3)]" src="/logo.png" alt="AresRPG" />

@@ -87,7 +87,7 @@ export const CharacterTabs = ({
     <>
       <nav
         aria-label={copy.characters}
-        className="pointer-events-auto flex h-[22px] shrink-0 items-stretch overflow-x-auto border border-border bg-surface/95"
+        className="pointer-events-auto flex h-[var(--app-tabs-height)] shrink-0 items-stretch overflow-x-auto border border-border bg-surface/95"
         data-character-tabs=""
         data-tutorial-target="character_tabs"
       >

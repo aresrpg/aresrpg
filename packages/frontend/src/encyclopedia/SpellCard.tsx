@@ -330,11 +330,14 @@ export const SpellCard = ({
       </header>
 
       <section className="border border-white/9 bg-black/10">
-        <nav className="flex h-11 items-end gap-1 border-b border-white/9 px-3" data-spell-level-tabs="">
+        <nav
+          className="flex min-h-11 items-end gap-1 overflow-x-auto border-b border-white/9 px-3"
+          data-spell-level-tabs=""
+        >
           {spell.levels.map((_, index) => (
             <button
               aria-label={`Spell level ${index + 1}`}
-              className={`relative -mb-px h-9 min-w-12 border px-4 text-[9px] font-semibold ${index === safe_index ? 'z-[1] border-[#c8963c]/55 border-b-surface-low bg-surface-low text-[#e0b86b]' : 'border-transparent text-[#626670] hover:border-white/8 hover:text-[#aaa6a0]'}`}
+              className={`relative -mb-px min-h-11 min-w-11 shrink-0 border px-3 text-[9px] font-semibold ${index === safe_index ? 'z-[1] border-[#c8963c]/55 border-b-surface-low bg-surface-low text-[#e0b86b]' : 'border-transparent text-[#626670] hover:border-white/8 hover:text-[#aaa6a0]'}`}
               key={index}
               onClick={() => set_level_index(index)}
               type="button"

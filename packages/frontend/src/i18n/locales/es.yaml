@@ -885,6 +885,7 @@ fight_hud:
   confirm_forfeit: Confirmar rendición
   unit_turns: turnos
   chat_title: Chat
+  chat_resize: Cambiar tamaño del chat
   chat_tab_general: General
   chat_tab_party: Grupo
   chat_tab_private: Privado
@@ -1623,6 +1624,12 @@ characters_page:
   bag_equipment: Equipo
   bag_consumables: Consumibles
   bag_resources: Recursos
+  bag_filter_all: Todo
+  bag_filter_raw: Recursos brutos
+  bag_filter_gatherable: Recursos recolectables
+  bag_filter_intermediary: Recursos intermedios
+  bag_filter_keys: Llaves
+  bag_filter_runes: Runas
   accept: Aceptar
   cancel: Cancelar
   equip_pending: Actualizando el equipo…
@@ -2407,3 +2414,78 @@ automation_panel:
   unlocked: 'Acceso desbloqueado'
   badge: 'HACK ZONE'
   available: 'Recolección automática disponible'
+
+item_drop_sources:
+  title: 'Botín de monstruos'
+  note: 'Probabilidades base definidas. Las reales varían según el nivel del monstruo y la Suerte del grupo.'
+  empty: 'Ningún monstruo suelta este objeto.'
+  loading: 'Cargando botín…'
+  mob: 'Monstruo'
+  rate: 'Probabilidad base'
+  quantity: 'Cantidad'
+  levels: 'Nivel {{min}}–{{max}}'
+
+journey:
+  title: 'Sobrevivir en Nauvis'
+  eyebrow: 'Tu aventura empieza aquí'
+  progress: 'Progreso del viaje'
+  count: '{{count}} / {{total}}'
+  complete: '¡Misión completada!'
+  continue: 'Continuar'
+  start: 'Empezar mi primera misión'
+  journal: 'Diario de misiones'
+  close: 'Cerrar diario'
+  collapse: 'Contraer misiones'
+  recipe: 'Ver receta'
+  jobs: 'Oficios'
+  resource_details: 'Detalles del recurso'
+  key_details: 'Buscar una llave de mazmorra'
+  next: 'A continuación'
+  chapter_finished: 'Viaje completado'
+  finished_title: 'Ahora te toca a ti.'
+  finished_body: 'Herramientas, provisiones, una victoria en mazmorra y hasta Suize. Sigue explorando. La próxima historia la escribes tú.'
+  reset_title: 'Misiones iniciales'
+  reset_hint: 'Reinicia las misiones de esta cuenta en este navegador. Los objetos que posees vuelven a contar al reiniciar el viaje.'
+  reset_action: 'Reiniciar misiones'
+  storage_failed: 'No se pudo guardar el progreso en este navegador. Podría perderse al recargar.'
+  chapter_welcome: 'Bienvenida'
+  chapter_tools: 'Primeras herramientas'
+  chapter_gear: 'Equipo'
+  chapter_supplies: 'Provisiones'
+  chapter_dungeon: 'Mazmorra'
+  chapter_secret: 'Último secreto'
+  welcome_title: 'Bienvenido a Nauvis.'
+  welcome_body: 'AresRPG recompensa a quienes aprenden, se preparan y juegan con inteligencia. Aprende a optimizar y automatizar tu juego gastando el mínimo SUI posible. Sigue este viaje para orientarte.'
+  hoe_title: 'Todos necesitamos una azada.'
+  hoe_body: 'Nauvis es tu primer mundo. Un equipo mejor te ayudará a llegar a mundos más peligrosos. Compra {{item}} a otro jugador o fabrica la herramienta en Personajes → Oficios → Manitas. Compara los ingredientes antes de gastar.'
+  hoe_objective: 'Poseer {{item}}'
+  wheat_title: 'Manos a la tierra.'
+  wheat_body: 'Bien hecho. Encuentra trigo en Nauvis y recoge tu primera cosecha. Comprar trigo no te enseñará a cosecharlo.'
+  wheat_objective: 'Cosechar trigo'
+  pickaxe_title: 'Una carrera entre rocas.'
+  pickaxe_body: 'Busca {{item}} en el mercado o fabrica la herramienta. Tu carrera minera tiene que empezar por alguna parte.'
+  pickaxe_objective: 'Poseer {{item}}'
+  quartz_title: 'Bajo cada piedra.'
+  quartz_body: 'Usa tu pico para extraer cuarzo. Tu nivel de oficio determina qué niveles de recursos puedes recolectar.'
+  quartz_objective: 'Extraer cuarzo'
+  sickle_title: 'Un corte por encima.'
+  sickle_body: 'Con {{item}} puedes empezar como herbolario. Compra la herramienta a otro jugador o fabrica la tuya.'
+  sickle_objective: 'Poseer {{item}}'
+  mushroom_title: 'Sitio para una seta.'
+  mushroom_body: 'Recoge una seta verde. Ya puedes practicar los tres oficios de recolección. Súbelos de nivel para acceder a recursos superiores.'
+  mushroom_objective: 'Recoger una seta verde'
+  token_title: 'Crea tu propia suerte.'
+  token_body: 'Encuentra {{item}}. Equípalo al alcanzar su nivel requerido para ganar Suerte. La Suerte media del equipo mejora las probabilidades de botín en combate, pero no garantiza botín adicional.'
+  token_objective: 'Poseer {{item}}'
+  croissant_title: 'Pan antes de la batalla.'
+  croissant_body: '¿Hambre? {{item}} restaura 10 PV. Compra uno o sigue su receta en Personajes → Oficios → Panadero.'
+  croissant_objective: 'Poseer {{item}}'
+  lorito_title: 'Hora de revolver las plumas.'
+  lorito_body: 'Prepara tu equipo y tus curas. Lleva una llave a la mazmorra del Lorito Dorado en Tebas y vence en su última sala. Te esperan enemigos más fuertes, botín y experiencia.'
+  lorito_objective: 'Completar la mazmorra del Lorito Dorado'
+  suize_title: 'Un último secreto.'
+  suize_body: 'Bien hecho, aventurero. Un último reto: cosecha Suize por tu cuenta. ¿Dónde? Ese será tu primer problema sin mi ayuda.'
+  suize_objective: 'Cosechar Suize'
+  welcome_objective: ''
+  finished_objective: ''
+  saving: Guardando…

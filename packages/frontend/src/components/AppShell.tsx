@@ -15,6 +15,7 @@ import { read_scene, subscribe_scene } from '../game/core/scene_feed.ts'
 import { useAppStore } from '../store.ts'
 import { mastery_reminder_visible } from '../mastery/model.ts'
 
+import { SidebarViewport } from './SidebarViewport.tsx'
 import { fight_surface_visible } from './app_layout.ts'
 import { CharacterTabs, character_tabs_visible } from './CharacterTabs.tsx'
 import { SessionReplacedModal } from './SessionReplacedModal.tsx'
@@ -137,37 +138,38 @@ export const AppShell = ({
     mastery_reminder_visible(state.session.characters.length, state.mastery.row, state.session.current_epoch)
   )
   return (
-    <div className="pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col gap-3 overflow-hidden p-3">
+    <div className="app-shell pointer-events-none fixed inset-0 z-[10] flex h-dvh flex-col overflow-hidden">
       {session.link_status === 'replaced' && <SessionReplacedModal copy={copy} />}
       {session.game_frozen === true && !['admin', 'kares'].includes(page) && <MaintenanceModal copy={copy} />}
-      <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
-        <div className="pointer-events-auto flex min-h-0 shrink-0 flex-col gap-3 overflow-hidden">
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-            <Sidebar
-              address={session.wallet?.address ?? null}
+      <div className="app-shell-row flex min-h-0 flex-1 overflow-hidden">
+        <SidebarViewport
+          footer={
+            <ConnectionCard
               copy={copy}
-              open_page={open_page}
-              page={page}
-              network={network}
-              mastery_notification={mastery_notification}
+              error={session.link_error}
+              indexing_lag={session.indexing_lag}
+              violation={session.link_violation}
+              latency_ms={session.latency_ms}
+              online={session.online}
+              status={session.link_status}
             />
-            <WalletCard copy={copy} disconnect={disconnect} session={session} />
-            <LanguageCard change_locale={change_locale} locale={locale} />
-            <DiscordCard copy={copy} />
-            <TelegramCard copy={copy} />
-            <PublicSaleCard copy={copy} />
-          </div>
-          <ConnectionCard
+          }
+        >
+          <Sidebar
+            address={session.wallet?.address ?? null}
             copy={copy}
-            error={session.link_error}
-            indexing_lag={session.indexing_lag}
-            violation={session.link_violation}
-            latency_ms={session.latency_ms}
-            online={session.online}
-            status={session.link_status}
+            open_page={open_page}
+            page={page}
+            network={network}
+            mastery_notification={mastery_notification}
           />
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+          <WalletCard copy={copy} disconnect={disconnect} session={session} />
+          <LanguageCard change_locale={change_locale} locale={locale} />
+          <DiscordCard copy={copy} />
+          <TelegramCard copy={copy} />
+          <PublicSaleCard copy={copy} />
+        </SidebarViewport>
+        <div className="app-shell-column flex min-h-0 min-w-0 flex-1 flex-col" data-app-content="">
           {character_tabs_visible(page) && (
             <CharacterTabs
               characters={session.characters}
@@ -177,7 +179,7 @@ export const AppShell = ({
               selected_character_id={session.selected_character_id}
             />
           )}
-          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+          <div className="app-content relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
             <TradeInbox copy={copy} />
             <RoutedPage
               copy={copy}

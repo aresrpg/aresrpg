@@ -27,7 +27,7 @@ test('job recipes reuse the item-tab cards in the shared responsive grid', async
   expect(source).toContain("text('level_short'")
   expect(source).not.toContain("text('required_level'")
   expect(source).not.toContain("text('xp_suffix'")
-  expect(component_source).toContain('grid-cols-[repeat(auto-fill,minmax(280px,1fr))]')
+  expect(component_source).toContain('grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]')
   expect(component_source).toContain('text-[#77d99a]')
   expect(jobs_source).not.toContain('max-w-2xl')
 })

@@ -107,7 +107,10 @@ export const ItemFilterRail = ({
     select(selected[group] === id ? remaining : { ...remaining, [group]: id })
   }
   return (
-    <aside className="w-52 shrink-0 overflow-y-auto border-r border-white/10 bg-surface" data-item-filter-rail="">
+    <aside
+      className="enc-browser__rail w-52 shrink-0 overflow-y-auto border-r border-white/10 bg-surface"
+      data-item-filter-rail=""
+    >
       <button
         className={`flex w-full items-center justify-between border-l-2 px-4 py-3 text-left text-[8px] uppercase ${active_count === 0 ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#efbd45]' : 'border-transparent text-[#858b98] hover:bg-white/[0.045] hover:text-[#e6e2da]'}`}
         onClick={() => select({})}

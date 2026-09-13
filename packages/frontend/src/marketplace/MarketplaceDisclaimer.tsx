@@ -14,7 +14,7 @@ export const MarketplaceDisclaimer = ({
   acknowledge,
 }: Readonly<{ text: (key: string) => string; acknowledge: () => void }>) => (
   <section
-    className="pointer-events-auto relative grid min-h-full min-w-0 flex-1 place-items-center overflow-y-auto border border-border bg-surface/98 p-6"
+    className="market-disclaimer pointer-events-auto relative grid min-h-full min-w-0 flex-1 place-items-center overflow-y-auto border border-border bg-surface/98 p-6"
     data-marketplace-disclaimer=""
   >
     <div className="w-full max-w-2xl border border-white/10 border-t-[#c8963c] bg-bg/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">

@@ -15,7 +15,7 @@ test('the HUD reserves its configured fixed action grid', () => {
     </ActionSlots>
   )
 
-  expect(html).toContain('grid-template-columns:repeat(10, 50px)')
+  expect(html).toContain('grid-template-columns:repeat(10, var(--fh-slot-size, 50px))')
   expect(empty_action_slot_count(20, 3)).toBe(17)
   expect(html.match(/data-empty-action-cell=/g)).toHaveLength(17)
 })

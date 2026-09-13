@@ -328,6 +328,7 @@
     }
   },
   "cyclomatic": {
+    "packages/frontend/src/modules/journey.ts": { "reduce_journey": [10] },
     "scripts/validate_seed.mjs": {
       "check_effect": [34],
       "check_level": [9],
@@ -587,10 +588,10 @@
       "ClassesTab": [12]
     },
     "packages/frontend/src/encyclopedia/WorldsTab.tsx": {
-      "WorldsTab": [12]
+      "WorldsTab": [11]
     },
     "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
-      "ItemsTab": [27],
+      "ItemsTab": [26],
       "ItemsTab > detail.item.consumable.rewards.map[0](reward,index,rewards)": [9]
     },
     "packages/frontend/src/encyclopedia/SpellCard.tsx": {
@@ -598,7 +599,7 @@
     },
     "packages/frontend/src/encyclopedia/MobsTab.tsx": {
       "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [14],
-      "MobsTab": [12]
+      "MobsTab": [11]
     },
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
       "critical_delta": [15],
@@ -607,7 +608,6 @@
       "SpellEffectLine": [44]
     },
     "packages/frontend/src/encyclopedia/JobsTab.tsx": {
-      "JobsTab": [9],
       "JobsTab > detail.resources .toSorted((left, right) => left.row.tier - right.row.tier) .map[0]({ row, required_level })": [
         9
       ]

@@ -11,7 +11,15 @@ import { encyclopedia_catalog, titleize, type ItemDetail } from '../content/cata
 import { filter_item_types } from '../content/item_filters.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
-import { Empty, encyclopedia_layout, EntityButton, EntityGrid, EntityIcon, SearchField } from './components.tsx'
+import {
+  Empty,
+  EncyclopediaBrowser,
+  encyclopedia_layout,
+  EntityButton,
+  EntityGrid,
+  EntityIcon,
+  SearchField,
+} from './components.tsx'
 import { ConsumableEffectSection } from './ConsumableEffectSection.tsx'
 import type { EncyclopediaText } from './copy.ts'
 import { EncyclopediaItemIcon } from './EncyclopediaItemIcon.tsx'
@@ -436,19 +444,25 @@ export const ItemsTab = ({
   )
 
   return (
-    <div className="flex min-h-0 flex-1">
-      <ItemFilterRail
-        rows={encyclopedia_catalog.item_filters}
-        select={set_facet_selection}
-        selected={facet_selection}
-        text={text}
-        total={encyclopedia_catalog.items.length}
-      />
-      <div className={`flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
-        {filters}
-        {list}
-      </div>
-      {detail && <aside className={encyclopedia_layout.detail}>{detail_panel}</aside>}
-    </div>
+    <EncyclopediaBrowser
+      back={() => select_item('')}
+      text={text}
+      detail={detail_panel}
+      rail={
+        <ItemFilterRail
+          rows={encyclopedia_catalog.item_filters}
+          select={set_facet_selection}
+          selected={facet_selection}
+          text={text}
+          total={encyclopedia_catalog.items.length}
+        />
+      }
+      list={
+        <div className={`enc-browser__list flex min-h-0 min-w-0 flex-col ${detail ? 'flex-[7]' : 'flex-1'}`}>
+          {filters}
+          {list}
+        </div>
+      }
+    />
   )
 }

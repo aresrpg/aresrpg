@@ -8,16 +8,21 @@ import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
 import { SendModalShell } from '../../src/components/SendModalShell.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { ModalFrame } from '../../src/components/ModalFrame.tsx'
+import { SearchPickerModal } from '../../src/components/SearchPickerModal.tsx'
 import { world_keyboard_eligible } from '../../src/game/core/world_input.ts'
+import { dispatch_app } from '../../src/store.ts'
 import '../../src/tailwind.css'
 
 const copy = await load_app_copy('en')
+dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 
 const Probe = () => {
   const [open, set_open] = useState(false)
   const [nested, set_nested] = useState(false)
   const [terminal, set_terminal] = useState(false)
   const [keys, set_keys] = useState('')
+  const [picking, set_picking] = useState(false)
+  const [selected, set_selected] = useState('')
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (world_keyboard_eligible(event)) set_keys((previous) => previous + event.code + ',')
@@ -27,6 +32,33 @@ const Probe = () => {
   }, [])
   return (
     <main className="min-h-screen bg-bg p-8 text-text">
+      <button onClick={() => set_picking(true)} type="button">
+        Open picker
+      </button>
+      <output aria-label="Selected item">{selected}</output>
+      {picking && (
+        <SearchPickerModal
+          title="Items"
+          copy={{
+            search: () => 'Search items',
+            all: 'All',
+            no_results: 'No results',
+            results: (count) => `${count} items`,
+            selected: (label) => label,
+            new_label: 'New',
+          }}
+          items={Array.from({ length: 40 }, (_, index) => ({
+            id: String(index),
+            label: `Item ${index}`,
+            category: index % 2 ? 'hat' : 'cloak',
+          }))}
+          on_close={() => set_picking(false)}
+          on_select={(id) => {
+            set_selected(id)
+            set_picking(false)
+          }}
+        />
+      )}
       <button onClick={() => set_open(true)} type="button">
         Open wallet
       </button>

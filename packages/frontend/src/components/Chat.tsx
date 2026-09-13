@@ -37,6 +37,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
 import { HUD_PANEL_CLASS } from './ui/HudPanel.tsx'
 import { RunToRow } from './PlayerContextMenu.tsx'
+import { ChatResizeHandle } from './ChatResizeHandle.tsx'
 import './chat.css'
 
 type ChatText = Readonly<Record<string, string>>
@@ -375,5 +376,6 @@ export const Chat = ({
 export const WorldChat = (properties: Parameters<typeof Chat>[0]) => (
   <div className="gw-worldchat">
     <Chat {...properties} />
+    {!properties.fight && <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />}
   </div>
 )

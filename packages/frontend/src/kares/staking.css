@@ -4,6 +4,7 @@
   pointer-events: auto;
   flex: 1;
   min-height: 100%;
+  min-width: 0;
   background: radial-gradient(ellipse at 60% 0, #33213d38, transparent 60%), #0e0b14;
   border: 1px solid #272031;
 }
@@ -34,7 +35,7 @@
 }
 .staking-account-pair {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
   align-items: stretch;
   gap: 20px;
   padding: 12px 24px 8px;
@@ -363,7 +364,7 @@
 .staking-status {
   padding: 0 16px 16px;
 }
-@media (max-width: 1200px) {
+@container app-content (max-width: 1100px) {
   .staking-account-pair {
     padding: 16px 14px 12px;
     gap: 12px;
@@ -381,5 +382,30 @@
   .staking-submit {
     padding: 9px;
     font-size: 9px;
+  }
+}
+
+@container app-content (max-width: 700px) {
+  .staking-page-header {
+    padding: 16px;
+  }
+  .staking-page :is(button, input) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .staking-page button {
+    font-size: 11px;
+  }
+  .staking-amount-field {
+    padding-block: 0;
+  }
+  .staking-wallet-placeholder {
+    min-height: 220px;
+    padding: 20px;
+  }
+  .staking-accrued > span,
+  .staking-amount-caption > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 }

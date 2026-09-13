@@ -885,6 +885,7 @@ fight_hud:
   confirm_forfeit: Aufgabe bestätigen
   unit_turns: Züge
   chat_title: Chat
+  chat_resize: Chatgröße ändern
   chat_tab_general: Allgemein
   chat_tab_party: Gruppe
   chat_tab_private: Privat
@@ -1624,6 +1625,12 @@ characters_page:
   bag_equipment: Ausrüstung
   bag_consumables: Verbrauchsgüter
   bag_resources: Ressourcen
+  bag_filter_all: Alle
+  bag_filter_raw: Rohstoffe
+  bag_filter_gatherable: Sammelressourcen
+  bag_filter_intermediary: Zwischenprodukte
+  bag_filter_keys: Schlüssel
+  bag_filter_runes: Runen
   accept: Bestätigen
   cancel: Abbrechen
   equip_pending: Ausrüstung wird aktualisiert…
@@ -2408,3 +2415,78 @@ automation_panel:
   unlocked: 'Zugang freigeschaltet'
   badge: 'HACK ZONE'
   available: 'Automatisches Sammeln verfügbar'
+
+item_drop_sources:
+  title: 'Monsterbeute'
+  note: 'Festgelegte Grundchancen. Tatsächliche Chancen hängen von Monsterstufe und Gruppen-Glück ab.'
+  empty: 'Kein Monster lässt diesen Gegenstand fallen.'
+  loading: 'Monsterbeute wird geladen…'
+  mob: 'Monster'
+  rate: 'Grundchance'
+  quantity: 'Menge'
+  levels: 'Stufe {{min}}–{{max}}'
+
+journey:
+  title: 'Nauvis überleben'
+  eyebrow: 'Dein Abenteuer beginnt hier'
+  progress: 'Reisefortschritt'
+  count: '{{count}} / {{total}}'
+  complete: 'Quest abgeschlossen!'
+  continue: 'Weiter'
+  start: 'Meine erste Quest starten'
+  journal: 'Questtagebuch'
+  close: 'Tagebuch schließen'
+  collapse: 'Quests einklappen'
+  recipe: 'Rezept ansehen'
+  jobs: 'Berufe'
+  resource_details: 'Ressourcendetails'
+  key_details: 'Dungeonschlüssel finden'
+  next: 'Als Nächstes'
+  chapter_finished: 'Reise abgeschlossen'
+  finished_title: 'Jetzt bist du dran.'
+  finished_body: 'Werkzeuge, Vorräte, ein Dungeonsieg und sogar Suize. Erkunde weiter. Die nächste Geschichte schreibst du selbst.'
+  reset_title: 'Einsteigerquests'
+  reset_hint: 'Setzt die Quests dieses Kontos in diesem Browser zurück. Vorhandene Gegenstände zählen nach dem Neustart der Reise erneut.'
+  reset_action: 'Quests zurücksetzen'
+  storage_failed: 'Der Questfortschritt konnte in diesem Browser nicht gespeichert werden. Beim Neuladen kann er verloren gehen.'
+  chapter_welcome: 'Willkommen'
+  chapter_tools: 'Erste Werkzeuge'
+  chapter_gear: 'Ausrüstung'
+  chapter_supplies: 'Vorräte'
+  chapter_dungeon: 'Dungeon'
+  chapter_secret: 'Letztes Geheimnis'
+  welcome_title: 'Willkommen auf Nauvis.'
+  welcome_body: 'AresRPG belohnt Spieler, die lernen, sich vorbereiten und klug handeln. Optimiere und automatisiere dein Spiel und gib dabei möglichst wenig SUI aus. Diese Reise hilft dir beim Einstieg.'
+  hoe_title: 'Jeder braucht eine Hacke.'
+  hoe_body: 'Nauvis ist deine erste Welt. Bessere Ausrüstung hilft dir, gefährlichere Welten zu erreichen. Kaufe {{item}} von einem Spieler oder stelle das Werkzeug unter Charaktere → Berufe → Handwerker her. Vergleiche zuerst die Zutaten.'
+  hoe_objective: 'Besitze {{item}}'
+  wheat_title: 'Mach dir die Hände schmutzig.'
+  wheat_body: 'Gut gemacht. Finde Weizen auf Nauvis und ernte deine erste Pflanze. Weizen zu kaufen bringt dir das Ernten nicht bei.'
+  wheat_objective: 'Ernte Weizen'
+  pickaxe_title: 'Deine erste Bergbaukarriere.'
+  pickaxe_body: 'Finde {{item}} auf dem Markt oder stelle das Werkzeug selbst her. Irgendwo muss deine Bergbaukarriere anfangen.'
+  pickaxe_objective: 'Besitze {{item}}'
+  quartz_title: 'Unter jedem Stein.'
+  quartz_body: 'Baue mit deiner Spitzhacke Quarz ab. Deine Berufsstufe bestimmt, welche Ressourcenstufen du ernten kannst.'
+  quartz_objective: 'Baue Quarz ab'
+  sickle_title: 'Ein guter Schnitt.'
+  sickle_body: 'Mit {{item}} beginnst du als Kräuterkundiger. Kaufe das Werkzeug von einem Spieler oder stelle es selbst her.'
+  sickle_objective: 'Besitze {{item}}'
+  mushroom_title: 'Noch ein Pilz.'
+  mushroom_body: 'Sammle einen grünen Pilz. Du kannst nun alle drei Sammelberufe ausüben. Steigere ihre Stufen, um weitere Ressourcen zu erreichen.'
+  mushroom_objective: 'Sammle einen grünen Pilz'
+  token_title: 'Schmiede dein Glück.'
+  token_body: 'Finde {{item}}. Lege den Talisman auf der erforderlichen Stufe an, um Glück zu erhalten. Das durchschnittliche Glück deines Teams erhöht Beutewahrscheinlichkeiten im Kampf, garantiert aber keine zusätzliche Beute.'
+  token_objective: 'Besitze {{item}}'
+  croissant_title: 'Brot vor dem Kampf.'
+  croissant_body: 'Hungrig? {{item}} stellt 10 LP wieder her. Kaufe eines oder folge dem Rezept unter Charaktere → Berufe → Bäcker.'
+  croissant_objective: 'Besitze {{item}}'
+  lorito_title: 'Zeit, Federn zu lassen.'
+  lorito_body: 'Bereite Ausrüstung und Heilmittel vor. Bringe dann einen Schlüssel zum Dungeon des Goldenen Lorito in Theben und besiege den letzten Raum. Stärkere Gegner bieten Beute und EP.'
+  lorito_objective: 'Schließe den Dungeon des Goldenen Lorito ab'
+  suize_title: 'Ein letztes Geheimnis.'
+  suize_body: 'Gut gemacht, Abenteurer. Eine letzte Herausforderung: Ernte selbst Suize. Wo? Das ist dein erstes Problem, das du ohne mich lösen darfst.'
+  suize_objective: 'Ernte Suize'
+  welcome_objective: ''
+  finished_objective: ''
+  saving: Wird gespeichert…

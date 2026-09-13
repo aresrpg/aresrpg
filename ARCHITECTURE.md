@@ -497,6 +497,21 @@ which survives Google login without reaching the server. zkSend transports the v
 redemption runs. The SDK administrative adapter creates links from previously retained bearer keys.
 The local batch sender uses the owner's configured Sui CLI signer and journals each submission.
 
+### Beginner journey
+
+The frontend owns a browser-local beginner journey, separate from first-open tutorial tooltips and
+on-chain Mastery. `seed/content/journey.json` authors its ordered objectives for browser bundling;
+it is not published on-chain. One journey reducer retains completion and transient presentation,
+deriving its storage scope directly from the session in the same reducer pass. Observers never
+initialize a second account state.
+Inventory and equipped-item projections prove ownership; confirmed gathering deltas and settled
+final-room fight wins prove actions. These observations never submit transactions or award assets.
+IndexedDB stores only completed quest IDs per network, original game package, and account. The next
+quest and progress derive from those IDs; journal visibility and celebration queues remain in memory.
+Settings can reset the local completion set. Completion celebrations wait for the local write;
+loading saved completion never replays them. Storage failures remain visible and never overwrite an
+unknown saved set after a failed read.
+
 ### Forging
 
 Pure forging math owns signed-stat eligibility, outcome probabilities, and the loss ledger.

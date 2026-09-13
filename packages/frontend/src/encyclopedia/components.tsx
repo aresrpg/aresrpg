@@ -1,21 +1,50 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import type { ReactNode } from 'react'
+
+import type { EncyclopediaText } from './copy.ts'
 
 export const PANEL = 'border border-border bg-surface/96 shadow-[0_18px_50px_rgba(0,0,0,0.24)]'
 
 export const encyclopedia_layout = Object.freeze({
   body: 'flex min-h-0 flex-1 flex-col',
-  detail: 'flex-[3] min-w-[380px] overflow-y-auto border-l border-border',
-  filters: 'flex shrink-0 flex-col gap-2 border-b border-border p-3',
+  filters: 'enc-filters flex shrink-0 flex-col gap-2 border-b border-border p-3',
   list: 'min-h-0 flex-1 overflow-y-auto',
   empty: 'flex h-full flex-col items-center justify-center gap-3 py-16 text-[#6b7280]',
 })
 
+/** One mounted list preserves filters while narrow layouts show its routed detail. */
+export const EncyclopediaBrowser = ({
+  list,
+  detail,
+  rail,
+  back,
+  text,
+}: Readonly<{
+  list: ReactNode
+  detail: ReactNode
+  rail?: ReactNode
+  back: () => void
+  text: EncyclopediaText
+}>) => (
+  <div className="enc-browser flex min-h-0 min-w-0 flex-1" data-detail={Boolean(detail)}>
+    {rail}
+    {list}
+    {detail && (
+      <aside className="enc-browser__detail flex min-h-0 min-w-0 flex-[3] flex-col border-l border-border">
+        <button className="enc-browser__back" onClick={back} type="button">
+          <ArrowLeft aria-hidden="true" size={16} /> {text('back_to_list')}
+        </button>
+        {detail}
+      </aside>
+    )}
+  </div>
+)
+
 export const category_pill = (active: boolean): string =>
-  `shrink-0 cursor-pointer border-b-2 bg-transparent px-3 py-1 text-[9px] tracking-[0.15em] uppercase transition-colors ${
+  `min-h-11 shrink-0 cursor-pointer border-b-2 bg-transparent px-3 py-1 text-[9px] tracking-[0.15em] uppercase transition-colors ${
     active ? 'border-[#c8963c] text-[#c8963c]' : 'border-transparent text-[#6b7280] hover:text-[#c8963c]'
   }`
 
@@ -24,7 +53,7 @@ export const SearchField = ({
   placeholder,
   change,
 }: Readonly<{ value: string; placeholder: string; change: (value: string) => void }>) => (
-  <label className="relative flex h-9 items-center border border-border bg-bg/55 text-[#6b7280] focus-within:border-[#c8963c]/45">
+  <label className="relative flex min-h-11 items-center border border-border bg-bg/55 text-[#6b7280] focus-within:border-[#c8963c]/45">
     <Search aria-hidden="true" className="pointer-events-none absolute left-3 opacity-30" size={14} />
     <input
       className="size-full min-w-0 bg-transparent pr-3 pl-9 text-[9px] tracking-[0.15em] text-[#e8e4dc] uppercase outline-none placeholder:text-[#6b7280]/60"
@@ -92,7 +121,7 @@ export const EntityButton = ({
 )
 
 export const EntityGrid = ({ children }: Readonly<{ children: ReactNode }>) => (
-  <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-0">{children}</div>
+  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-0">{children}</div>
 )
 
 export const Section = ({ title, children }: Readonly<{ title: string; children: ReactNode }>) => (

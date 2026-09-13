@@ -17,7 +17,7 @@ export const LanguageCard = ({
 
   return (
     <div
-      className="relative flex w-[200px] flex-col items-center border border-[#4a9eff]/15 bg-[linear-gradient(135deg,rgba(74,158,255,0.04)_0%,rgba(18,18,26,0.95)_50%,rgba(200,150,60,0.03)_100%)] p-3"
+      className="relative flex w-[var(--app-sidebar-width)] flex-col items-center border border-[#4a9eff]/15 bg-[linear-gradient(135deg,rgba(74,158,255,0.04)_0%,rgba(18,18,26,0.95)_50%,rgba(200,150,60,0.03)_100%)] p-3"
       data-language-card=""
     >
       <button
@@ -55,7 +55,7 @@ export const LanguageCard = ({
 
 export const DiscordCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <a
-    className="group relative flex w-[200px] items-center justify-center gap-2 overflow-hidden border border-[#5865f2]/30 bg-[linear-gradient(135deg,rgba(88,101,242,0.18)_0%,rgba(114,137,218,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(88,101,242,0.08)] transition-all hover:border-[#5865f2]/70"
+    className="group relative flex w-[var(--app-sidebar-width)] items-center justify-center gap-2 overflow-hidden border border-[#5865f2]/30 bg-[linear-gradient(135deg,rgba(88,101,242,0.18)_0%,rgba(114,137,218,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(88,101,242,0.08)] transition-all hover:border-[#5865f2]/70"
     href="https://discord.gg/aresrpg"
     data-discord-card=""
     rel="noopener noreferrer"
@@ -76,7 +76,7 @@ export const DiscordCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
 
 export const TelegramCard = ({ copy }: Readonly<{ copy: AppCopy }>) => (
   <a
-    className="group relative flex w-[200px] items-center justify-center gap-2 overflow-hidden border border-[#229ed9]/30 bg-[linear-gradient(135deg,rgba(34,158,217,0.18)_0%,rgba(42,171,238,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(34,158,217,0.08)] transition-all hover:border-[#229ed9]/70"
+    className="group relative flex w-[var(--app-sidebar-width)] items-center justify-center gap-2 overflow-hidden border border-[#229ed9]/30 bg-[linear-gradient(135deg,rgba(34,158,217,0.18)_0%,rgba(42,171,238,0.12)_45%,rgba(18,18,26,0.95)_100%)] p-3 text-white shadow-[0_0_20px_rgba(34,158,217,0.08)] transition-all hover:border-[#229ed9]/70"
     href="https://t.me/aresrpg"
     data-telegram-card=""
     rel="noopener noreferrer"
@@ -134,7 +134,7 @@ export const ConnectionCard = ({
   return (
     <div
       aria-label={`${copy.sui_universe}: ${label}`}
-      className={`w-[200px] border p-3 ${
+      className={`w-[var(--app-sidebar-width)] border p-3 ${
         connected
           ? 'border-[#5ee38d]/25 bg-[#5ee38d]/6 text-[#77d99a]'
           : disconnected

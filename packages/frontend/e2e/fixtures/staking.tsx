@@ -66,7 +66,7 @@ const StakingProbe = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           page="kares"
         />
       </div>
-      <div className="min-w-0 flex-1 overflow-y-auto" data-page-slot="">
+      <div className="app-content min-w-0 flex-1 overflow-y-auto" data-page-slot="">
         <KaresPageView
           wallet={{ state: state.wallet, dispatch: (input) => dispatch({ owner: 'wallet', input }) }}
           account_balance={7_000_000_000n}

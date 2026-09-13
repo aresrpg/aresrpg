@@ -32,7 +32,7 @@ export const HackZoneUnlock = ({ copy, enabled }: Readonly<{ copy: AppCopy; enab
         prefix = []
         return
       }
-      prefix = advance_konami(prefix, event.code)
+      prefix = advance_konami(prefix, event.key)
       if (prefix.length !== KONAMI_CODE.length) return
       event.preventDefault()
       dispatch_app({ type: 'automation/unlocked' })

@@ -399,13 +399,14 @@
   margin-top: 20px;
 }
 .kz-join-confirm button {
+  min-height: 44px;
   flex: 1;
   padding: 9px;
   font-size: 8px;
   letter-spacing: 0.1em;
 }
 
-@media (max-width: 900px) {
+@container app-content (max-width: 1000px) {
   .kz-body {
     flex-direction: column;
     overflow-y: auto;
@@ -426,10 +427,90 @@
   .kz-tabs .kz-chips {
     margin: 0 0 5px auto;
   }
+}
+
+.kz-field-label {
+  display: none;
+}
+
+@container app-content (max-width: 700px) {
+  .kz-page {
+    margin: 12px;
+  }
+  .kz-header,
+  .kz-selected > header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .kz-page :is(button, input) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .kz-page button {
+    font-size: 11px;
+  }
+  .kz-page input {
+    font-size: 16px;
+  }
+  .kz-tabs > button {
+    height: auto;
+    padding-block: 8px;
+  }
+  .kz-main {
+    min-height: 0;
+    flex: none;
+  }
+  .kz-table {
+    max-height: 300px;
+    flex: none;
+  }
+  .kz-columns,
+  .kz-lobby > .kz-row-open,
+  .kz-lobby > em {
+    display: none;
+  }
+  .kz-lobby {
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 8px;
+    padding: 12px;
+  }
+  .kz-lobby > :is(span, small) {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+    font-size: 11px;
+  }
+  .kz-field-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: var(--color-muted);
+  }
   .kz-selected {
-    overflow-x: auto;
+    padding: 12px;
   }
   .kz-rosters {
-    min-width: 520px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .kz-pot {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-items: flex-start;
+    padding-block: 8px;
+  }
+  .kz-roster {
+    grid-row: 2;
+  }
+  .kz-fighter {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px;
+  }
+  .kz-fighter b {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }

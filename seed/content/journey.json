@@ -1,0 +1,19 @@
+[
+  { "id": "welcome", "chapter": "welcome", "item": "old_hoe", "kind": "start" },
+  { "id": "hoe", "chapter": "tools", "item": "old_hoe", "kind": "own" },
+  { "id": "wheat", "chapter": "tools", "item": "wheat", "kind": "harvest" },
+  { "id": "pickaxe", "chapter": "tools", "item": "basic_pickaxe", "kind": "own" },
+  { "id": "quartz", "chapter": "tools", "item": "quartz", "kind": "harvest" },
+  { "id": "sickle", "chapter": "tools", "item": "tool_herbalist", "kind": "own" },
+  { "id": "mushroom", "chapter": "tools", "item": "green_mushroom", "kind": "harvest" },
+  { "id": "token", "chapter": "gear", "item": "rootglass_token", "kind": "own" },
+  { "id": "croissant", "chapter": "supplies", "item": "croissant", "kind": "own" },
+  {
+    "id": "lorito",
+    "chapter": "dungeon",
+    "item": "key_of_gilded_lorito",
+    "kind": "dungeon",
+    "dungeon": "gilded_lorito"
+  },
+  { "id": "suize", "chapter": "secret", "item": "wheat_suize", "kind": "harvest" }
+]

@@ -7,6 +7,7 @@ import { Package, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
+import { useAppStore } from '../store.ts'
 
 import { NativeModal } from './ModalFrame.tsx'
 
@@ -126,6 +127,7 @@ export const SearchPickerModal = ({
   const [hovered_id, set_hovered_id] = useState<string | null>(null)
   const [tooltip_position, set_tooltip_position] = useState<Readonly<{ x: number; y: number }>>({ x: 0, y: 0 })
   const category_name = useItemCategoryName()
+  const close_label = useAppStore((state) => state.copy?.wallet_close)
   const categories = useMemo<readonly Readonly<PickerFacet & { count: number }>[]>(() => {
     if (facets.length > 0)
       return Object.freeze(
@@ -181,19 +183,24 @@ export const SearchPickerModal = ({
     <NativeModal
       close={on_close}
       label={title}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="modal-padded fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
     >
-      <section className="flex h-[70vh] max-h-[700px] w-[70vw] max-w-[1000px] flex-col border border-border bg-surface">
+      <section className="flex h-[90dvh] max-h-[min(700px,100%)] w-full max-w-[1000px] flex-col border border-border bg-surface text-text sm:h-[70dvh] sm:w-[70vw]">
         <header className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
           <Search className="shrink-0 text-[#6b7280]" size={14} />
           <input
-            className="flex-1 bg-transparent font-mono text-[11px] tracking-[0.15em] text-[#e8e4dc] uppercase outline-none"
+            className="min-h-11 min-w-0 flex-1 bg-transparent font-mono text-base tracking-[0.15em] text-[#e8e4dc] uppercase outline-none sm:text-[11px]"
             onChange={(event) => set_search(event.target.value)}
             placeholder={copy.search(title.toUpperCase())}
             ref={search_ref}
             value={search}
           />
-          <button className="cursor-pointer text-[#6b7280] hover:text-red-400" onClick={on_close} type="button">
+          <button
+            aria-label={close_label}
+            className="grid size-11 shrink-0 cursor-pointer place-items-center text-[#6b7280] hover:text-red-400"
+            onClick={on_close}
+            type="button"
+          >
             <X size={14} />
           </button>
         </header>
@@ -201,7 +208,7 @@ export const SearchPickerModal = ({
           <div className="flex shrink-0 flex-wrap gap-1 border-b border-border px-4 py-2">
             {pills.map((pill) => (
               <button
-                className={`cursor-pointer border px-1.5 py-0.5 text-[8px] uppercase ${active_pills.has(pill) ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : 'border-white/8 text-[#6b7280]'}`}
+                className={`min-h-11 cursor-pointer border px-1.5 py-0.5 text-[8px] uppercase ${active_pills.has(pill) ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : 'border-white/8 text-[#6b7280]'}`}
                 key={pill}
                 onClick={() => toggle_pill(pill)}
                 type="button"
@@ -211,11 +218,11 @@ export const SearchPickerModal = ({
             ))}
           </div>
         )}
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
           {categories.length > 0 && (
-            <nav className="w-48 shrink-0 overflow-y-auto border-r border-border">
+            <nav className="flex max-h-32 shrink-0 overflow-auto border-b border-border sm:block sm:max-h-none sm:w-48 sm:border-r sm:border-b-0 [&>div]:shrink-0">
               <button
-                className={`block w-full cursor-pointer border-l-2 px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase ${category === null ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                className={`block min-h-11 shrink-0 cursor-pointer border-l-2 px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase sm:w-full ${category === null ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
                 onClick={() => set_category(null)}
                 type="button"
               >
@@ -229,7 +236,7 @@ export const SearchPickerModal = ({
                     </p>
                   )}
                   <button
-                    className={`block w-full cursor-pointer border-l-2 py-2 pr-3 text-left text-[10px] tracking-[0.15em] uppercase ${parent ? 'pl-6' : 'pl-3'} ${category === id ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                    className={`block min-h-11 w-full cursor-pointer border-l-2 py-2 pr-3 text-left text-[10px] tracking-[0.15em] uppercase ${parent ? 'pl-6' : 'pl-3'} ${category === id ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
                     onClick={() => set_category(id)}
                     type="button"
                   >
@@ -239,7 +246,7 @@ export const SearchPickerModal = ({
               ))}
             </nav>
           )}
-          <div className="flex-1 overflow-y-auto">
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
             {filtered.length === 0 && (
               <div className="px-4 py-8 text-center text-[10px] tracking-[0.2em] text-[#6b7280] uppercase">
                 {empty_label ?? copy.no_results}
@@ -250,7 +257,7 @@ export const SearchPickerModal = ({
               const locked = locked_ids?.has(item.id) ?? false
               return (
                 <button
-                  className={`flex w-full items-start gap-3 border-l-2 px-4 py-2 text-left ${selected ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : locked ? 'border-transparent text-[#555b66] opacity-45' : 'cursor-pointer border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
+                  className={`flex min-h-11 w-full items-start gap-3 border-l-2 px-4 py-2 text-left ${selected ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : locked ? 'border-transparent text-[#555b66] opacity-45' : 'cursor-pointer border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
                   key={item.id}
                   onClick={() => {
                     if (locked || press_read.current) {
@@ -314,7 +321,7 @@ export const SearchPickerModal = ({
                 >
                   {item.icon && <PickerIcon src={item.icon} />}
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
+                    <span className="flex flex-wrap items-center gap-2">
                       <span className="text-[10px] font-semibold tracking-wide" style={{ color: item.color }}>
                         {item.label}
                       </span>
@@ -334,7 +341,7 @@ export const SearchPickerModal = ({
             })}
           </div>
         </div>
-        <footer className="flex shrink-0 items-center justify-between border-t border-border px-4 py-2 text-[9px] tracking-wide uppercase">
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-2 text-[9px] tracking-wide uppercase">
           <span className="text-[#6b7280]">{copy.results(filtered.length, items.length)}</span>
           {selected_label && <span className="text-[#c8963c]">{copy.selected(selected_label)}</span>}
         </footer>

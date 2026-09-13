@@ -12,6 +12,8 @@ import { lazy, Suspense } from 'react'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { CharacterWorkspace } from './CharacterWorkspace.tsx'
+
 // the doll/rows/stat-row primitives every character surface shares (one home)
 import '../components/character_surfaces.css'
 import './characters.css'
@@ -42,13 +44,13 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
   const tab = character_detail_tab(pathname)
 
   return (
-    <section className="gw-tab pointer-events-auto flex min-h-full min-w-0 flex-1 flex-col border border-border bg-bg/97">
-      <nav aria-label={copy.characters} className="flex shrink-0 items-stretch border-b border-border">
+    <section className="gw-tab pointer-events-auto flex h-full min-h-0 min-w-0 flex-1 flex-col border border-border bg-bg/97">
+      <nav aria-label={copy.characters} className="chr-tabs flex shrink-0 items-stretch border-b border-border">
         {DETAIL_TABS.map((key) => {
           const active = key === tab
           return (
             <button
-              className={`cursor-pointer border-b-2 px-5 py-2.5 text-[9px] font-semibold tracking-[0.24em] uppercase transition-colors ${
+              className={`shrink-0 cursor-pointer border-b-2 px-5 py-2.5 text-[9px] font-semibold tracking-[0.24em] uppercase transition-colors ${
                 active ? 'border-gold text-gold' : 'border-transparent text-muted hover:text-text'
               }`}
               data-character-detail-tab={key}
@@ -75,12 +77,28 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
             </div>
           }
         >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto" key={character.id}>
+          <div className="chr-page-body flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto" key={character.id}>
             {tab === 'equipment' && <EquipmentTab character={character} copy={copy} />}
-            {tab === 'stats' && <StatsTab character={character} copy={copy} key={character.id} />}
-            {tab === 'spells' && <SpellsTab character={character} copy={copy} />}
-            {tab === 'jobs' && <JobsTab character={character} copy={copy} />}
-            {tab === 'runeforge' && <RuneforgeTab character={character} copy={copy} />}
+            {tab === 'stats' && (
+              <CharacterWorkspace kind="stats">
+                <StatsTab character={character} copy={copy} key={character.id} />
+              </CharacterWorkspace>
+            )}
+            {tab === 'spells' && (
+              <CharacterWorkspace kind="spells">
+                <SpellsTab character={character} copy={copy} />
+              </CharacterWorkspace>
+            )}
+            {tab === 'jobs' && (
+              <CharacterWorkspace kind="jobs">
+                <JobsTab character={character} copy={copy} />
+              </CharacterWorkspace>
+            )}
+            {tab === 'runeforge' && (
+              <CharacterWorkspace kind="runeforge">
+                <RuneforgeTab character={character} copy={copy} />
+              </CharacterWorkspace>
+            )}
           </div>
         </Suspense>
       )}

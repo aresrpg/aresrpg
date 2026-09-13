@@ -414,8 +414,8 @@
   {
     "output_type": "old_hoe",
     "inputs": {
-      "gnawed_branch": 5,
-      "salvaged_scrap": 5
+      "gnawed_branch": 3,
+      "salvaged_scrap": 2
     },
     "job": "HANDYMAN"
   },
@@ -439,8 +439,8 @@
     "output_type": "quartzbound_scrap",
     "inputs": {
       "salvaged_scrap": 1,
-      "quartz": 3,
-      "wheat_flour": 1
+      "quartz": 9,
+      "wheat_flour": 2
     },
     "job": "FORGER"
   },
@@ -457,7 +457,7 @@
     "output_type": "mushroom_dyed_plume",
     "inputs": {
       "lorito_feather": 1,
-      "green_mushroom": 1
+      "green_mushroom": 10
     },
     "job": "TAILOR"
   },
@@ -465,16 +465,35 @@
     "output_type": "quartz_honed_beak",
     "inputs": {
       "beak_shard": 1,
-      "quartz": 3,
-      "wheat_flour": 1
+      "quartz": 6,
+      "wheat_flour": 2
     },
     "job": "CARVER"
   },
   {
     "output_type": "mushroom_tanned_leather",
     "inputs": {
-      "rabbit_pelt": 2,
-      "green_mushroom_powder": 1
+      "rabbit_pelt": 1,
+      "green_mushroom_powder": 3
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "wheat_stitched_leather",
+    "inputs": {
+      "rabbit_pelt": 1,
+      "green_mushroom_powder": 3,
+      "wheat": 1
+    },
+    "job": "TANNER"
+  },
+  {
+    "output_type": "resin_cured_leather",
+    "inputs": {
+      "rabbit_pelt": 1,
+      "green_mushroom_powder": 3,
+      "tree_resin": 1,
+      "wheat_flour": 1
     },
     "job": "TANNER"
   },
@@ -489,15 +508,15 @@
   {
     "output_type": "wheatbound_branch",
     "inputs": {
-      "gnawed_branch": 4,
-      "wheat_flour": 1
+      "gnawed_branch": 1,
+      "wheat": 5
     },
     "job": "CARVER"
   },
   {
     "output_type": "mushroom_lacquer",
     "inputs": {
-      "tree_resin": 2,
+      "tree_resin": 1,
       "green_mushroom_powder": 1
     },
     "job": "ALCHEMIST"
@@ -505,16 +524,16 @@
   {
     "output_type": "basic_pickaxe",
     "inputs": {
-      "gnawed_branch": 5,
-      "beak_shard": 5
+      "gnawed_branch": 3,
+      "beak_shard": 2
     },
     "job": "HANDYMAN"
   },
   {
     "output_type": "tool_herbalist",
     "inputs": {
-      "gnawed_branch": 5,
-      "rabbit_sinew": 5
+      "gnawed_branch": 3,
+      "rabbit_sinew": 2
     },
     "job": "HANDYMAN"
   },
@@ -774,7 +793,7 @@
     "output_type": "gale_lorito_plume",
     "inputs": {
       "lorito_feather": 1,
-      "green_mushroom_powder": 1
+      "green_mushroom_powder": 5
     },
     "job": "TAILOR"
   },
@@ -782,8 +801,8 @@
     "output_type": "tide_lorito_plume",
     "inputs": {
       "lorito_feather": 1,
-      "water": 10,
-      "quartz_powder": 1
+      "water": 30,
+      "quartz_powder": 3
     },
     "job": "TAILOR"
   },
@@ -791,8 +810,8 @@
     "output_type": "ember_lorito_plume",
     "inputs": {
       "lorito_feather": 1,
-      "orchid_spore_blend": 1,
-      "barley_flour": 1
+      "orchid_spore_blend": 3,
+      "barley_flour": 3
     },
     "job": "TAILOR"
   },
@@ -800,8 +819,8 @@
     "output_type": "stone_lorito_plume",
     "inputs": {
       "lorito_feather": 1,
-      "amber_powder": 1,
-      "wheat_flour": 1
+      "amber_powder": 3,
+      "wheat_flour": 3
     },
     "job": "TAILOR"
   },
@@ -809,8 +828,8 @@
     "output_type": "heart_lorito_plume",
     "inputs": {
       "lorito_down": 1,
-      "orchid_spore_blend": 1,
-      "green_mushroom_powder": 1
+      "orchid_spore_blend": 3,
+      "green_mushroom_powder": 3
     },
     "job": "TAILOR"
   },
@@ -818,8 +837,8 @@
     "output_type": "sage_lorito_plume",
     "inputs": {
       "lorito_down": 1,
-      "quartz_powder": 1,
-      "wheat_flour": 1
+      "quartz_powder": 3,
+      "wheat_flour": 3
     },
     "job": "TAILOR"
   },
@@ -853,18 +872,18 @@
   {
     "output_type": "key_of_tangled_aftermath",
     "inputs": {
-      "aragne_fang": 5,
-      "aragne_carapace": 5,
-      "stone_aragne_silk": 5
+      "aragne_fang": 3,
+      "aragne_carapace": 2,
+      "stone_aragne_silk": 2
     }
   },
   {
     "output_type": "key_of_ivory_rampart",
     "inputs": {
-      "fuwa_wool": 3,
-      "fuwa_horn": 3,
-      "fuwa_eye": 3,
-      "fuwa_hide": 3
+      "fuwa_wool": 2,
+      "fuwa_hide": 2,
+      "fuwa_horn": 1,
+      "fuwa_eye": 1
     }
   },
   {
@@ -894,10 +913,9 @@
   {
     "output_type": "recall_potion",
     "inputs": {
-      "water": 2,
-      "fuwa_eye": 2,
-      "barley_flour": 2,
-      "aloe_crystal_salve": 2
+      "tree_resin": 1,
+      "green_mushroom": 5,
+      "water": 1
     },
     "job": "ALCHEMIST"
   },
@@ -1068,9 +1086,10 @@
   {
     "output_type": "moka_arms_binding",
     "inputs": {
-      "rusted_blade_fragment": 2,
-      "frayed_bowstring": 2,
-      "weathered_bone": 2
+      "rusted_blade_fragment": 1,
+      "frayed_bowstring": 1,
+      "quartz": 12,
+      "wheat_flour": 5
     },
     "job": "CARVER"
   },
@@ -1140,7 +1159,7 @@
   {
     "output_type": "rootglass_token",
     "inputs": {
-      "mushroom_lacquer": 2,
+      "mushroom_lacquer": 1,
       "quartz_powder": 10
     }
   },
@@ -1397,7 +1416,7 @@
     "output_type": "pincersteps",
     "inputs": {
       "shellbound_plate": 10,
-      "mushroom_tanned_leather": 3,
+      "wheat_stitched_leather": 3,
       "wheatspun_sinew": 2
     }
   },
@@ -1439,7 +1458,7 @@
       "colony_laminate": 10,
       "shellbound_plate": 10,
       "jade_powder": 60,
-      "mushroom_tanned_leather": 10
+      "resin_cured_leather": 10
     }
   },
   {
@@ -1503,7 +1522,7 @@
     "output_type": "rootshivs",
     "inputs": {
       "wheatbound_branch": 3,
-      "quartz_powder": 2
+      "quartz_powder": 6
     }
   },
   {

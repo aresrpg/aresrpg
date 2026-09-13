@@ -295,7 +295,6 @@ const load_online = async (mesh: MeshBus, days: AdminRangeDays, now_ms: number):
   return Object.freeze({
     days,
     bucket: buckets.tier,
-    online_now: await mesh.cluster_online(),
     online_peak: online.reduce((peak, point) => Math.max(peak, point.peak), 0),
     online,
   })

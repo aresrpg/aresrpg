@@ -363,6 +363,7 @@ const LoadingOverview = ({
 
 export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, string>> }>) => {
   const overview = useAppStore((state) => state.admin.overview)
+  const online_count = useAppStore((state) => state.session.online)
   const revenue_wallet = useAdminRevenue(copy)
   const { result } = overview
   if (!result) return <LoadingOverview copy={copy} overview={overview} />
@@ -414,7 +415,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
             detail={`${text(copy, 'peak', 'Peak')} ${display_count(online.online_peak)}`}
             label={text(copy, 'online_now', 'Players online')}
             tone="green"
-            value={display_count(online.online_now)}
+            value={display_count(online_count)}
           />
         </KpiGroup>
         <KpiGroup label={text(copy, 'population', 'Population')} tone="population">

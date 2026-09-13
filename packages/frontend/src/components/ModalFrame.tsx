@@ -7,6 +7,8 @@ import { X } from 'lucide-react'
 import { useLayoutEffect, useRef, type MouseEvent as ReactMouseEvent, type ReactNode, type ComponentProps } from 'react'
 import { createPortal } from 'react-dom'
 
+import './modal.css'
+
 type CloseDoor = (() => void) | null
 
 const useModalDialog = () => {
@@ -43,7 +45,7 @@ export const NativeModal = ({
     <dialog
       {...attributes}
       aria-label={label}
-      className={`fixed inset-0 m-0 h-full max-h-none w-full max-w-none border-0 p-0 text-inherit ${className}`}
+      className={`fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none border-0 p-0 text-inherit ${className}`}
       onCancel={(event) => {
         // React propagates cancel through portal parents; only the top dialog owns it.
         event.stopPropagation()
@@ -63,7 +65,7 @@ const CloseButton = ({ close, label }: Readonly<{ close: CloseDoor; label: strin
   close ? (
     <button
       aria-label={label}
-      className="absolute top-4 right-4 z-10 cursor-pointer opacity-40 transition-opacity hover:opacity-80"
+      className="absolute top-1 right-1 z-10 grid size-11 cursor-pointer place-items-center opacity-40 transition-opacity hover:opacity-80"
       onClick={close}
       type="button"
     >
@@ -90,11 +92,11 @@ export const ModalFrame = ({
     <NativeModal
       close={close}
       label={label}
-      className="open:flex open:items-center open:justify-center"
+      className="modal-padded open:flex open:items-center open:justify-center"
       style={{ backgroundColor: soft ? 'rgba(0,0,0,0.68)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
     >
       <div
-        className={`relative mx-4 max-h-[90vh] w-full ${max_width} overflow-y-auto ${soft ? 'rounded-xl bg-surface/97' : 'bg-surface'}`}
+        className={`relative min-h-14 max-h-[min(90dvh,100%)] w-full ${max_width} overflow-y-auto text-text ${soft ? 'rounded-xl bg-surface/97' : 'bg-surface'}`}
         style={{
           animation: 'modal-enter 0.3s ease-out',
           border: soft ? '1px solid rgba(200,150,60,0.28)' : '1px solid var(--color-border)',

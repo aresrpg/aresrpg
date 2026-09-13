@@ -16,6 +16,8 @@ import { JobsTab } from './JobsTab.tsx'
 import { MobsTab } from './MobsTab.tsx'
 import { WorldsTab } from './WorldsTab.tsx'
 
+import './encyclopedia.css'
+
 type Tab = 'items' | 'bestiary' | 'classes' | 'jobs' | 'worlds' | 'gameplay' | 'kares'
 
 const TABS: readonly Readonly<{ id: Tab; label: string }>[] = Object.freeze([
@@ -50,7 +52,7 @@ export const EncyclopediaPage = ({
   const text = useMemo(() => encyclopedia_text(copy), [copy])
   const view = route_view(pathname)
   return (
-    <section className="pointer-events-auto z-[12] flex h-full min-h-0 flex-1 flex-col bg-surface/50 [&_button:not(:disabled)]:cursor-pointer">
+    <section className="enc-page pointer-events-auto z-[12] flex h-full min-h-0 min-w-0 flex-1 flex-col bg-surface/50 [&_button:not(:disabled)]:cursor-pointer">
       <nav className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-4 py-3 [&>*]:shrink-0">
         {TABS.map((tab) => (
           <button

@@ -14,6 +14,7 @@ import {
   string_value,
   TextField,
 } from './ContentFields.tsx'
+import { ItemDropSources } from './ItemDropSources.tsx'
 import { ItemPowerPanel } from './ItemPowerPanel.tsx'
 import { ItemRecipeEditor, type ItemRecipeBinding } from './ItemRecipeEditor.tsx'
 import { ItemReferencePicker } from './ItemReferencePicker.tsx'
@@ -311,6 +312,7 @@ export const ItemContentEditor = ({ value, on_change, is_readonly, item_recipe, 
       {item_recipe && (
         <ItemRecipeEditor category={category} filter_rows={item_filters} level={level} recipe={item_recipe} />
       )}
+      <ItemDropSources item_type={string_value(item.item_type)} />
       {Object.keys(unknown).length > 0 && (
         <SheetSection title="Additional authored fields">
           <JsonEditor is_readonly={is_readonly} on_change={on_change} value={unknown} />

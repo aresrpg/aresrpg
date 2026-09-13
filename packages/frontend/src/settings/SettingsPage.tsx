@@ -23,6 +23,7 @@ import {
 import { master_volume_from } from '../game/core/audio_volume.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { JourneySettings } from '../journey/JourneySettings.tsx'
 
 import { SuinsSettings } from './SuinsSettings.tsx'
 
@@ -250,6 +251,7 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
               {tutorial('reset_action')}
             </button>
           </div>
+          <JourneySettings copy={copy} />
         </div>
       </div>
     </section>

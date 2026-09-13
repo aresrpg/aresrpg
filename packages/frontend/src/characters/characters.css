@@ -46,13 +46,14 @@
 /* ── EQUIPMENT ─────────────────────────────────────────────────────────────── */
 
 .chr-equip {
+  flex: 1 0 auto;
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
 }
 
-@media (max-width: 860px) {
+@container app-content (max-width: 700px) {
   .chr-equip {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -63,7 +64,7 @@
   min-width: 0;
   flex-direction: column;
   gap: 8px;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .chr-equip__chip {
@@ -236,10 +237,22 @@
   gap: 14px;
 }
 
-@media (max-width: 1000px) {
+@container app-content (max-width: 1100px) {
   .chr-forge__panels {
-    grid-template-columns: minmax(0, 1fr);
-    overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    flex: none;
+  }
+  .chr-forge__inventory {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    max-height: 240px;
+  }
+  .chr-forge__workspace,
+  .chr-forge__workspace > div {
+    overflow: visible;
+  }
+  .chr-forge__workspace [data-runeforge-history] {
+    max-height: 280px;
   }
 }
 
@@ -381,4 +394,282 @@
 .jobs__craft-btn:disabled {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+/* Routed content width, rather than device width, owns each character layout. */
+.chr-tabs {
+  overflow-x: auto;
+}
+.chr-tabs > button {
+  min-height: 44px;
+}
+.jobs__list-entries {
+  display: contents;
+}
+
+@container app-content (max-width: 1100px) {
+  .gw-tab .jobs {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  }
+  .gw-tab .jobs__list-entry {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .gw-tab .jobs__alternate-slot {
+    order: 1;
+  }
+  .gw-tab .jobs__alternate-slot:empty {
+    display: none;
+  }
+  .gw-tab .jobs__list-head {
+    margin-left: 0;
+  }
+  .gw-tab .jobs__alternate {
+    flex-direction: row;
+    align-items: center;
+  }
+  .gw-tab .jobs__alternate > span {
+    flex: 1;
+    font-size: 11px;
+  }
+  .gw-tab .jobs__alternate > button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 11px;
+  }
+  .gw-tab .jobs__browse-area.has-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gw-tab .jobs__browse-area.has-detail .jobs__browse {
+    display: none;
+  }
+  .gw-tab .jobs__item-detail {
+    border-left: 0;
+    padding: 48px 0 16px;
+  }
+  .gw-tab .jobs__detail-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@container app-content (max-width: 700px) {
+  .gw-tab .sb,
+  .gw-tab .jobs,
+  .gw-tab .chr-forge {
+    height: auto;
+    padding: 12px;
+  }
+  .gw-tab .chr-tabs > button {
+    padding-inline: 14px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .gw-tab :is(.chr-btn, .chr-bagtab, .sb__btn-compact, .jobs__craft-btn),
+  .gw-tab .chr-forge button,
+  .gw-tab .jobs__craft-amount :is(input, button) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .gw-tab .chr-forge__clear {
+    display: grid;
+    place-items: center;
+    top: 0;
+    right: 0;
+  }
+  .gw-tab .sb__top,
+  .gw-tab .chr-forge__head {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gw-tab .sb__main,
+  .gw-tab .jobs,
+  .gw-tab .chr-forge__panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gw-tab .sb__main {
+    grid-template-rows: 180px auto;
+  }
+  .gw-tab .sb__detail {
+    overflow: visible;
+  }
+  .gw-tab .sb__sub,
+  .gw-tab .sb__points-lab,
+  .gw-tab .sb__points-sub {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .gw-tab .jobs__list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0 0 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .gw-tab .jobs__list-group {
+    flex: none;
+  }
+  .gw-tab .jobs__list-entries {
+    display: flex;
+    gap: 8px;
+  }
+  .gw-tab .jobs__list-entry {
+    width: 240px;
+    align-content: start;
+  }
+  .gw-tab .jobs__list-row {
+    min-height: 56px;
+  }
+  .gw-tab .jobs__detail,
+  .gw-tab .jobs__browse {
+    overflow: visible;
+    max-height: none;
+    padding: 0;
+  }
+  .gw-tab .jobs__table-head,
+  .gw-tab .jobs__table-row {
+    grid-template-columns: 32px 40px minmax(0, 1fr) 38px 32px;
+    gap: 4px;
+    padding: 8px 0;
+  }
+  .gw-tab .jobs__col-name {
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+  .gw-tab .jobs__recipe-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gw-tab .jobs__recipe-name,
+  .gw-tab .jobs__ingredient-name {
+    white-space: normal;
+  }
+  .gw-tab .chr-forge__workspace {
+    padding: 12px;
+  }
+  .gw-tab .chr-forge__slot {
+    width: clamp(96px, 28cqi, 124px);
+    height: 148px;
+  }
+  .gw-tab .chr-forge__inspection {
+    grid-row: 2;
+  }
+  .gw-tab .chr-forge__work {
+    grid-row: 3;
+  }
+}
+
+/* Reflow at a readable design width, then fit both axes into the actual character slot. */
+.character-workspace__content {
+  container: app-content / inline-size;
+}
+.gw-tab .character-workspace__content .stats {
+  height: auto;
+  max-width: none;
+  margin: 0;
+  padding: 12px;
+  overflow: visible;
+}
+.gw-tab
+  .character-workspace__content
+  :is(
+    .stats__scroll,
+    .stats__card,
+    .sb__rows,
+    .sb__detail,
+    .jobs__list,
+    .jobs__detail,
+    .jobs__browse,
+    .chr-forge__panels
+  ) {
+  flex: none;
+  max-height: none;
+  overflow: visible;
+}
+.character-workspace__content .stats__scroll > * {
+  flex: none;
+}
+.character-workspace__content[data-dense='true'] .stats__card--primary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.character-workspace__content[data-dense='true'] :is(.stats__hero, .stats__assign, .stats__prow, .stats__srow) {
+  padding: 8px 12px;
+  gap: 8px;
+}
+.character-workspace__content[data-dense='true'] .stats__assign-actions {
+  width: auto;
+  margin-left: auto;
+}
+.character-workspace__content[data-dense='true'] .stats__resists {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.gw-tab .character-workspace__content[data-dense='true'] .sb__main {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  grid-template-rows: auto;
+  align-items: start;
+}
+.character-workspace__content[data-dense='true'] .sb__rows > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.character-workspace__content[data-dense='true'] .sb__group-head {
+  grid-column: 1 / -1;
+}
+.character-workspace__content[data-dense='true'] .sb__rowbtn {
+  min-width: 0;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs {
+  grid-template-columns: 260px minmax(0, 1fr);
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__list {
+  display: flex;
+  flex-direction: column;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__list-entries {
+  display: contents;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: start;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels > div {
+  grid-row: auto;
+  grid-column: auto;
+  max-height: none;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels > div > div {
+  overflow: visible;
+}
+
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__table {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__table-head {
+  grid-column: 1 / -1;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__table-row {
+  grid-template-columns: 26px 36px minmax(0, 1fr) 36px 30px;
+  padding: 6px;
+  gap: 4px;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe-tier {
+  min-width: 0;
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe {
+  padding: 6px;
+}
+
+.gw-tab .character-workspace__content :is(.sb, .jobs, .chr-forge) {
+  height: auto;
+  overflow: visible;
 }

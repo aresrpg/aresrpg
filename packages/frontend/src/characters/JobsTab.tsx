@@ -385,51 +385,53 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
               </span>
               {t(CATEGORY_LABEL_KEY[kind])}
             </div>
-            {job_groups[kind].map((job) => {
-              const better = crafting_locked ? null : better_job_character(characters, character.id, job)
-              return (
-                <div className="jobs__list-entry" key={job}>
-                  <div className="jobs__alternate-slot">
-                    {better && (
-                      <aside className="jobs__alternate" data-better-job-character={better.id}>
-                        <span>
-                          {t('jobs.better_character', {
-                            name: better.name,
-                            job: titleize(job),
-                            level: better.level,
-                          })}
-                        </span>
-                        <button
-                          aria-label={t('jobs.switch_to_character', { name: better.name })}
-                          onClick={() => dispatch_app({ type: 'character/select', character_id: better.id })}
-                          title={t('jobs.switch_to_character', { name: better.name })}
-                          type="button"
-                        >
-                          <ArrowRightLeft aria-hidden="true" size={10} />
-                          {t('jobs.switch')}
-                        </button>
-                      </aside>
-                    )}
+            <div className="jobs__list-entries">
+              {job_groups[kind].map((job) => {
+                const better = crafting_locked ? null : better_job_character(characters, character.id, job)
+                return (
+                  <div className="jobs__list-entry" key={job}>
+                    <div className="jobs__alternate-slot">
+                      {better && (
+                        <aside className="jobs__alternate" data-better-job-character={better.id}>
+                          <span>
+                            {t('jobs.better_character', {
+                              name: better.name,
+                              job: titleize(job),
+                              level: better.level,
+                            })}
+                          </span>
+                          <button
+                            aria-label={t('jobs.switch_to_character', { name: better.name })}
+                            onClick={() => dispatch_app({ type: 'character/select', character_id: better.id })}
+                            title={t('jobs.switch_to_character', { name: better.name })}
+                            type="button"
+                          >
+                            <ArrowRightLeft aria-hidden="true" size={10} />
+                            {t('jobs.switch')}
+                          </button>
+                        </aside>
+                      )}
+                    </div>
+                    <button
+                      className={`jobs__list-row${selected_job === job ? ' is-selected' : ''}`}
+                      onClick={() => {
+                        set_selected_job(job)
+                        set_selected(null)
+                        dispatch_app({ type: 'path/open', pathname: job_path(job) })
+                      }}
+                      type="button"
+                    >
+                      <span className="jobs__list-id">
+                        <span className="jobs__list-name">{titleize(job)}</span>
+                        <span className="jobs__list-sub">{covers_label(job) || t('jobs.recipes_fallback')}</span>
+                      </span>
+                      {active_job_id === job && <span className="jobs__list-tag">{t('jobs.equipped')}</span>}
+                      <span className="jobs__list-lvl hud-num">{level_of(job)}</span>
+                    </button>
                   </div>
-                  <button
-                    className={`jobs__list-row${selected_job === job ? ' is-selected' : ''}`}
-                    onClick={() => {
-                      set_selected_job(job)
-                      set_selected(null)
-                      dispatch_app({ type: 'path/open', pathname: job_path(job) })
-                    }}
-                    type="button"
-                  >
-                    <span className="jobs__list-id">
-                      <span className="jobs__list-name">{titleize(job)}</span>
-                      <span className="jobs__list-sub">{covers_label(job) || t('jobs.recipes_fallback')}</span>
-                    </span>
-                    {active_job_id === job && <span className="jobs__list-tag">{t('jobs.equipped')}</span>}
-                    <span className="jobs__list-lvl hud-num">{level_of(job)}</span>
-                  </button>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         ))}
       </div>
@@ -551,7 +553,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
             <div className="jobs__item-detail">
               <button
                 aria-label={t('jobs.detail.close_aria')}
-                className="jobs__item-close"
+                className="jobs__detail-close"
                 onClick={() => set_selected(null)}
                 type="button"
               >

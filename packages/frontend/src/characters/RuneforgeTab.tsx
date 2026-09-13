@@ -310,7 +310,7 @@ export default function RuneforgeTab({
       </div>
       <div className="chr-forge__panels">
         {/* LEFT — the gear sheet */}
-        <div className="chr-forge__panel">
+        <div className="chr-forge__panel chr-forge__inspection">
           <div className="chr-forge__ptitle">{t('detail_title')}</div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {gear_detail ? (
@@ -335,9 +335,9 @@ export default function RuneforgeTab({
         </div>
 
         {/* CENTER — the work surface */}
-        <div className="chr-forge__panel">
+        <div className="chr-forge__panel chr-forge__work">
           <div className="chr-forge__ptitle">{t('forge_title')}</div>
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-y-auto p-5 2xl:grid-cols-[minmax(300px,420px)_minmax(260px,1fr)] 2xl:overflow-hidden">
+          <div className="chr-forge__workspace grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-y-auto p-5">
             <div className="flex min-h-0 flex-col items-center justify-center gap-6 overflow-y-auto">
               <div className="flex items-center justify-center gap-3 pt-2">
                 <WorkSlot
@@ -391,7 +391,7 @@ export default function RuneforgeTab({
         </div>
 
         {/* RIGHT — the pool */}
-        <div className="chr-forge__panel">
+        <div className="chr-forge__panel chr-forge__inventory">
           <div className="chr-forge__ptitle">{t('inventory_title')}</div>
           <div className="flex shrink-0 gap-1 border-b border-border px-3 py-2">
             {(['gear', 'runes'] as const).map((key) => (

@@ -55,7 +55,7 @@ const GiftLinkClaim = ({ ready, busy, t }: Readonly<{ ready: boolean; busy: stri
         {t(busy === 'gift-link' ? 'gift_claiming' : 'gift_ready')}
       </div>
       <button
-        className="btn-gold px-3 py-2 text-[8px] tracking-[0.14em] uppercase disabled:opacity-40"
+        className="btn-gold min-h-11 px-3 py-2 text-[8px] tracking-[0.14em] uppercase disabled:opacity-40"
         disabled={busy !== null}
         onClick={() => dispatch_app({ type: 'distribution/claim_gift_link' })}
         type="button"
@@ -77,7 +77,7 @@ export const HolderWalletConnect = ({
       <WalletCards className="text-cyan" size={18} />
       <div>
         <div className="text-[9px] tracking-[0.2em] text-cyan uppercase">{t('holder_title')}</div>
-        <div className="mt-1 max-w-md font-mono text-[8px] leading-4 text-muted">
+        <div className="mt-1 max-w-md break-all font-mono text-[8px] leading-4 text-muted">
           {wallet.state.session?.address ?? t('holder_connect_hint')}
         </div>
       </div>
@@ -132,13 +132,13 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
   const cards = [...(distribution.holder_giftcards ?? []), ...session.giftcards]
 
   return (
-    <section className="pointer-events-auto flex min-h-full flex-1 flex-col overflow-hidden border border-border bg-bg/97">
-      <header className="flex shrink-0 items-end justify-between gap-4 border-b border-border px-6 pt-4 pb-3">
-        <div className="flex min-w-0 items-baseline gap-3.5">
+    <section className="pointer-events-auto flex min-h-full min-w-0 flex-1 flex-col overflow-hidden border border-border bg-bg/97">
+      <header className="flex shrink-0 flex-wrap items-end justify-between gap-3 border-b border-border px-6 pt-4 pb-3">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-2">
           <h1 className="inline-flex items-center gap-2 bg-[linear-gradient(135deg,#f5d0a9,#c8963c,#f0c474)] bg-clip-text text-[12px] font-semibold tracking-[0.3em] text-transparent uppercase">
             <Sparkles className="text-gold opacity-70" size={14} /> {t('title')}
           </h1>
-          <span className="truncate text-[9px] tracking-[0.14em] text-muted/85 uppercase">{t('subtitle')}</span>
+          <span className="text-[9px] tracking-[0.14em] text-muted/85 uppercase">{t('subtitle')}</span>
         </div>
         <span className="flex shrink-0 items-center gap-2 text-[8px] tracking-[0.18em] text-muted uppercase">
           <i className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.55)]" />
@@ -160,7 +160,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xs tracking-[0.16em] text-cyan uppercase">{t('giftcards_title')}</h2>
             <button
-              className="btn-outline px-3 py-2 text-xs disabled:opacity-40"
+              className="btn-outline min-h-11 px-3 py-2 text-xs disabled:opacity-40"
               disabled={busy !== null || !external_wallet.session}
               onClick={() => dispatch_app({ type: 'distribution/refresh_holder' })}
               type="button"
@@ -173,7 +173,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
           </p>
           {cards.length ? (
             <>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-3">
                 {group_giftcards(cards).map((giftcard) => (
                   <GiftcardCard giftcard={giftcard} key={giftcard.template} />
                 ))}

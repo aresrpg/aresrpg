@@ -59019,8 +59019,8 @@
             "element": "air",
             "value": 2,
             "value_max": 2,
-            "area_shape": 0,
-            "area_size": 0,
+            "area_shape": 2,
+            "area_size": 1,
             "target_filter": 1,
             "chance_bp": 10000,
             "turns": 0,
@@ -59053,6 +59053,18 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
+          },
+          {
+            "kind": 6,
+            "element": "air",
+            "value": 2,
+            "value_max": 3,
+            "area_shape": 2,
+            "area_size": 1,
+            "target_filter": 1,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
           }
         ],
         "crit_effects": []
@@ -59081,6 +59093,18 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
+          },
+          {
+            "kind": 6,
+            "element": "air",
+            "value": 3,
+            "value_max": 5,
+            "area_shape": 2,
+            "area_size": 1,
+            "target_filter": 1,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
           }
         ],
         "crit_effects": []
@@ -59109,6 +59133,18 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
+          },
+          {
+            "kind": 6,
+            "element": "air",
+            "value": 5,
+            "value_max": 7,
+            "area_shape": 2,
+            "area_size": 1,
+            "target_filter": 1,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
           }
         ],
         "crit_effects": []
@@ -59116,14 +59152,14 @@
       {
         "ap_cost": 3,
         "range_min": 1,
-        "range_max": 5,
+        "range_max": 6,
         "modifiable_range": false,
         "line_of_sight": false,
         "line_launch": false,
         "free_cell": true,
         "casts_per_turn": 0,
         "casts_per_target": 0,
-        "cooldown_turns": 4,
+        "cooldown_turns": 3,
         "crit_1_in": 0,
         "effects": [
           {
@@ -59137,6 +59173,18 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
+          },
+          {
+            "kind": 6,
+            "element": "air",
+            "value": 8,
+            "value_max": 10,
+            "area_shape": 2,
+            "area_size": 1,
+            "target_filter": 1,
+            "chance_bp": 10000,
+            "turns": 0,
+            "stat": 12
           }
         ],
         "crit_effects": []

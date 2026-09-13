@@ -885,6 +885,7 @@ fight_hud:
   confirm_forfeit: 降参を確定
   unit_turns: ターン
   chat_title: チャット
+  chat_resize: チャットのサイズを変更
   chat_tab_general: 一般
   chat_tab_party: パーティー
   chat_tab_private: 個人
@@ -1600,6 +1601,12 @@ characters_page:
   bag_equipment: 装備
   bag_consumables: 消耗品
   bag_resources: 素材
+  bag_filter_all: すべて
+  bag_filter_raw: 原材料
+  bag_filter_gatherable: 採集資源
+  bag_filter_intermediary: 中間素材
+  bag_filter_keys: 鍵
+  bag_filter_runes: ルーン
   accept: 確定
   cancel: キャンセル
   equip_pending: 装備を更新中…
@@ -2384,3 +2391,78 @@ automation_panel:
   unlocked: 'アクセス解除'
   badge: 'HACK ZONE'
   available: '自動採集が利用可能になりました'
+
+item_drop_sources:
+  title: 'モンスターのドロップ'
+  note: '設定された基本確率です。実際の確率はモンスターのレベルとチームの運により変わります。'
+  empty: 'このアイテムを落とすモンスターはいません。'
+  loading: 'ドロップを読み込み中…'
+  mob: 'モンスター'
+  rate: '基本確率'
+  quantity: '数量'
+  levels: 'レベル{{min}}–{{max}}'
+
+journey:
+  title: 'ナウヴィスを生き抜こう'
+  eyebrow: 'ここから冒険が始まる'
+  progress: '旅の進み具合'
+  count: '{{count}} / {{total}}'
+  complete: 'クエスト達成！'
+  continue: '次へ'
+  start: '最初のクエストを始める'
+  journal: 'クエスト日誌'
+  close: '日誌を閉じる'
+  collapse: 'クエストを折りたたむ'
+  recipe: 'レシピを見る'
+  jobs: '職業'
+  resource_details: '資源の詳細'
+  key_details: 'ダンジョンの鍵を探す'
+  next: '次の目標'
+  chapter_finished: '旅の課題を達成'
+  finished_title: 'ここからは君の冒険だ。'
+  finished_body: '道具、食料、ダンジョンでの勝利、そしてSuizeまで。探索を続けよう。次の物語を作るのは君だ。'
+  reset_title: '初心者クエスト'
+  reset_hint: 'このブラウザーで、このアカウントのクエストをリセットします。旅を再開すると、所持品は再び達成条件に数えられます。'
+  reset_action: 'クエストをリセット'
+  storage_failed: 'このブラウザーに進行状況を保存できませんでした。再読み込みすると失われる可能性があります。'
+  chapter_welcome: 'ようこそ'
+  chapter_tools: '最初の道具'
+  chapter_gear: '装備'
+  chapter_supplies: '食料'
+  chapter_dungeon: 'ダンジョン'
+  chapter_secret: '最後の秘密'
+  welcome_title: 'ナウヴィスへようこそ。'
+  welcome_body: 'AresRPGでは、学び、準備し、賢く行動するプレイヤーが成長する。SUIの支出を抑えながら、プレイの最適化や自動化を学ぼう。この旅をたどれば、最初の一歩が見えてくる。'
+  hoe_title: '誰にだってクワは必要だ。'
+  hoe_body: 'ナウヴィスは最初の世界。危険な世界へ進むには、より良い装備が必要になる。{{item}}を他のプレイヤーから買うか、キャラクター → 職業 → 細工師で作ろう。支払う前に材料を比べよう。'
+  hoe_objective: '{{item}}を所持する'
+  wheat_title: '土に触れてみよう。'
+  wheat_body: 'いい調子だ。ナウヴィスで小麦を見つけて、初めての収穫をしよう。小麦を買うだけでは収穫の仕方は身につかない。'
+  wheat_objective: '小麦を収穫する'
+  pickaxe_title: '岩から始まる未来。'
+  pickaxe_body: '市場で{{item}}を探すか、自分で作ろう。採掘の第一歩だ。'
+  pickaxe_objective: '{{item}}を所持する'
+  quartz_title: '石の下には何がある？'
+  quartz_body: 'ツルハシで石英を採掘しよう。採集できる資源の段階は、職業レベルで決まる。'
+  quartz_objective: '石英を採掘する'
+  sickle_title: '切れ味のよい第一歩。'
+  sickle_body: '{{item}}があれば薬草採集を始められる。他のプレイヤーから買うか、自分で作ろう。'
+  sickle_objective: '{{item}}を所持する'
+  mushroom_title: 'もう一つ、キノコを。'
+  mushroom_body: '緑のキノコを採集しよう。これで三つの採集職業を始められる。レベルを上げて、上位の資源を目指そう。'
+  mushroom_objective: '緑のキノコを採集する'
+  token_title: '幸運は自分でつかもう。'
+  token_body: '{{item}}を探そう。必要レベルに達したら装備して運を上げよう。チームの平均運は戦闘のドロップ確率を高めるが、追加の戦利品が必ず手に入るわけではない。'
+  token_objective: '{{item}}を所持する'
+  croissant_title: '戦いの前にパンを。'
+  croissant_body: 'お腹が空いた？{{item}}はHPを10回復する。購入するか、キャラクター → 職業 → パン職人でレシピを見て焼こう。'
+  croissant_objective: '{{item}}を所持する'
+  lorito_title: '羽を散らす時間だ。'
+  lorito_body: '装備と回復用の食料を準備しよう。鍵を持ってテーベの黄金ロリトのダンジョンに入り、最後の部屋で勝利しよう。強敵、戦利品、経験値が待っている。'
+  lorito_objective: '黄金ロリトのダンジョンをクリアする'
+  suize_title: '最後の秘密。'
+  suize_body: 'よくやった、冒険者。最後の挑戦だ。自分でSuizeを収穫しよう。どこにあるかって？それは一人で解く最初の問題だ。'
+  suize_objective: 'Suizeを収穫する'
+  welcome_objective: ''
+  finished_objective: ''
+  saving: 保存中…

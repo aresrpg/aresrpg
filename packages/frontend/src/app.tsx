@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable complexity -- the app root explicitly composes mutually exclusive route surfaces. */
 
+import './game/hud/world_responsive.css'
+
 import { effective_flattened, type EngineQuality } from '@aresrpg/engine'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
@@ -56,6 +58,8 @@ import type { Page } from './modules/navigation.ts'
 import { selected_dungeon_run } from './modules/dungeon.ts'
 import { selected_party } from './modules/party.ts'
 import { toast } from './toast.ts'
+import { JourneyTracker } from './journey/JourneyPanel.tsx'
+import { JourneyHost } from './journey/JourneyHost.tsx'
 import { TutorialHost } from './tutorial/TutorialHost.tsx'
 import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
@@ -327,13 +331,13 @@ export function App() {
   if (!copy) return <main className="fixed inset-0 bg-bg" />
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
+    <main className="app-ui fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
       <div
         aria-hidden={navigation.page !== 'world' && !(navigation.page === 'kolizeum' && fight_active)}
         data-world-frame=""
         className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page, fight_active)} ${
           in_app
-            ? 'top-[46px] right-3 bottom-3 left-[224px] rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+            ? 'app-world-frame rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
             : 'inset-0'
         }`}
       >
@@ -390,6 +394,7 @@ export function App() {
             />
             {in_app && social_hud_open && <FriendsPanel copy={copy} />}
             <AutomationPanel copy={copy} enabled={in_app} />
+            <JourneyTracker copy={copy} />
           </div>
           {in_app && social_hud_open && <PartyFrame copy={copy} />}
         </div>
@@ -418,6 +423,7 @@ export function App() {
       </div>
       <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
       <PlayerContextMenu copy={copy} />
+      <JourneyHost copy={copy} />
       {in_app && wallet && navigation.dialog === 'top_up' && (
         <AddFundsModal
           address={wallet.address}

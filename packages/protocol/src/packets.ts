@@ -376,7 +376,6 @@ export type AdminTransactionsOverview = Readonly<{
 export type AdminOnlineOverview = Readonly<{
   days: AdminRangeDays
   bucket: AdminBucket
-  online_now: number
   online_peak: number
   online: readonly AdminOnlinePoint[]
 }>

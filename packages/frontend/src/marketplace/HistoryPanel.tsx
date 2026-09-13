@@ -36,7 +36,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
   )
   const rows = market.history.slice(0, limit)
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[1200px] flex-1 flex-col overflow-y-auto bg-surface-high">
+    <div className="market-history mx-auto flex min-h-0 w-full max-w-[1200px] flex-1 flex-col overflow-y-auto bg-surface-high">
       <div className="flex flex-wrap items-center gap-4 px-4 py-4">
         <div className="min-w-[260px] rounded-[5px] border border-border bg-surface px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
           <p className="text-[8px] tracking-[0.22em] text-[#777b86] uppercase">{text('revenue_30d')}</p>
@@ -78,7 +78,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
         </div>
       ) : (
         <div className="border-t border-border bg-surface">
-          <div className="grid grid-cols-[minmax(140px,1.6fr)_80px_minmax(90px,120px)_minmax(100px,1fr)] gap-3 px-3 py-2 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
+          <div className="market-history-heading grid grid-cols-[minmax(140px,1.6fr)_80px_minmax(90px,120px)_minmax(100px,1fr)] gap-3 px-3 py-2 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
             <span>{text('item')}</span>
             <span>{text('date')}</span>
             <span className="text-right">{text('price')}</span>
@@ -89,7 +89,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
             const icon = row.item_type ? item_icon(row.item_type) : null
             return (
               <div
-                className={`grid grid-cols-[minmax(140px,1.6fr)_80px_minmax(90px,120px)_minmax(100px,1fr)] items-center gap-3 border-b border-white/7 px-3 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+                className={`market-history-row grid grid-cols-[minmax(140px,1.6fr)_80px_minmax(90px,120px)_minmax(100px,1fr)] items-center gap-3 border-b border-white/7 px-3 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
                 key={`${row.object}:${row.ts_ms}`}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -103,11 +103,15 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
                     {row.amount > 1 ? ` ×${row.amount}` : ''}
                   </span>
                 </div>
-                <span className="text-[9px] text-[#777b86] uppercase">{relative_time(row.ts_ms, locale)}</span>
+                <span className="text-[9px] text-[#777b86] uppercase">
+                  <span className="market-history-label">{text('date')} · </span>
+                  {relative_time(row.ts_ms, locale)}
+                </span>
                 <span className="inline-flex max-w-full items-center justify-end gap-1 truncate whitespace-nowrap text-right text-[11px] tabular-nums">
                   {format_sui(BigInt(row.price_mist), 2)} <SuiUnit />
                 </span>
                 <span className="truncate text-[10px] tracking-[0.06em] text-[#67adff]">
+                  <span className="market-history-label">{text('buyer')} · </span>
                   {short_address(row.counterparty)}
                 </span>
               </div>

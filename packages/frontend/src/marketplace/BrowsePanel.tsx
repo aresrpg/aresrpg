@@ -86,8 +86,8 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden bg-bg">
-      <aside className="flex w-36 shrink-0 flex-col border-r border-border bg-surface-low">
+    <div className="market-browse flex min-h-0 flex-1 overflow-hidden bg-bg">
+      <aside className="market-groups flex w-36 shrink-0 flex-col border-r border-border bg-surface-low">
         <h3 className="border-b border-white/10 px-4 py-3 text-[10px] font-semibold tracking-[0.25em] text-[#c8963c] uppercase">
           {text('browse')}
         </h3>
@@ -109,7 +109,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
       </aside>
 
       {market.group === 'CHARACTERS' ? (
-        <section className="flex min-h-0 flex-1 flex-col">
+        <section className="market-characters flex min-h-0 flex-1 flex-col">
           <div className="flex shrink-0 flex-wrap items-end gap-5 border-b border-border bg-surface-high px-4 py-3">
             <label className="flex flex-col gap-1 text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
               {text('level')}
@@ -169,7 +169,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
         <>
           {subcategories.length > 1 && (
             <nav
-              className="w-40 shrink-0 overflow-y-auto border-r border-border bg-surface py-1"
+              className="market-subcategories w-40 shrink-0 overflow-y-auto border-r border-border bg-surface py-1"
               data-marketplace-item-types
             >
               {subcategories.map((category) => (
@@ -200,7 +200,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
             </nav>
           )}
           <section
-            className="flex w-56 shrink-0 flex-col border-r border-border bg-surface"
+            className="market-templates flex w-56 shrink-0 flex-col border-r border-border bg-surface"
             data-marketplace-item-type-column
           >
             <label className="flex items-center gap-2 border-b border-border bg-surface-high p-2">
@@ -230,7 +230,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
               ))}
             </div>
           </section>
-          <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <section className="market-detail flex min-h-0 min-w-0 flex-1 flex-col">
             {!selected ? (
               <Empty text={text('select_item')} />
             ) : (
@@ -251,7 +251,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                     </span>
                   )}
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto bg-surface-high p-4">
+                <div className="market-detail-body min-h-0 flex-1 overflow-y-auto bg-surface-high p-4">
                   <div className="flex min-h-full flex-col gap-4">
                     {item && (
                       <div className="rounded-[5px] border border-border bg-surface p-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
@@ -335,7 +335,7 @@ const CheapestLotMarket = ({
       className="mx-auto w-full max-w-[560px] overflow-hidden rounded-[5px] border border-border bg-surface shadow-[0_10px_28px_rgba(0,0,0,0.16)]"
       data-marketplace-lot-market
     >
-      <div className="grid grid-cols-[72px_minmax(100px,180px)_minmax(80px,110px)] items-center justify-center gap-4 border-b border-border bg-surface-high px-4 py-2 text-[8px] tracking-[0.16em] text-[#6d7382] uppercase">
+      <div className="market-lot-row grid grid-cols-[72px_minmax(100px,180px)_minmax(80px,110px)] items-center justify-center gap-4 border-b border-border bg-surface-high px-4 py-2 text-[8px] tracking-[0.16em] text-[#6d7382] uppercase">
         <span>{text('lot_size')}</span>
         <span>{text('price')}</span>
         <span className="text-center">{text('buy')}</span>
@@ -349,7 +349,7 @@ const CheapestLotMarket = ({
           const purchasable = !!ask && !own && !insufficient && !pending
           return (
             <div
-              className={`grid min-h-18 min-w-0 grid-cols-[72px_minmax(100px,180px)_minmax(80px,110px)] items-center justify-center gap-4 px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+              className={`market-lot-row grid min-h-18 min-w-0 grid-cols-[72px_minmax(100px,180px)_minmax(80px,110px)] items-center justify-center gap-4 px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
               data-marketplace-cheapest-lot={size}
               data-marketplace-listing-row
               key={size}
@@ -409,7 +409,7 @@ const AskRow = ({
   const purchasable = !own && !insufficient && !pending
   return (
     <div
-      className={`flex min-w-0 items-center justify-center gap-4 border-b border-white/7 px-3 py-2 transition-colors ${index % 2 ? 'bg-white/[0.018]' : ''}`}
+      className={`market-ask flex min-w-0 items-center justify-center gap-4 border-b border-white/7 px-3 py-2 transition-colors ${index % 2 ? 'bg-white/[0.018]' : ''}`}
       data-marketplace-listing-row
     >
       {listing.kind === 'item' ? <ItemAskIcon listing={listing} /> : <ListingIcon listing={listing} size={34} />}

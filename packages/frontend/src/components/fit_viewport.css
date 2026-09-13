@@ -1,0 +1,20 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.fit-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.fit-viewport__content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+}
+
+.character-workspace .fit-viewport__content {
+  left: 50%;
+  translate: -50% 0;
+  transform-origin: top center;
+}

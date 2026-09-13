@@ -111,3 +111,33 @@ for (const [name, item_type] of [
     await expect.poll(() => page.evaluate(() => window.consume_requests)).toEqual([item_type])
   })
 }
+
+test('resource subfilters partition grouped stacks and preserve the selection across categories', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory.html')
+  const categories = page.locator('.chr-equip__bagtabs')
+  await categories.getByRole('button', { name: /Resources/ }).click()
+  const filters = page.getByRole('group', { name: 'Resources', exact: true })
+  const cells = page.locator('.chr-equip__grid button[title]')
+  await expect(cells).toHaveCount(6)
+  for (const [label, count, title] of [
+    ['Raw resources', 1, 'Gnawed Branch'],
+    ['Gatherable resources', 1, 'Wheat'],
+    ['Intermediary resources', 2, 'Wheat Flour'],
+    ['Keys', 1, 'Key of the Tangled Aftermath'],
+    ['Runes', 1, 'Rune Ba Vi'],
+  ] as const) {
+    const button = filters.getByRole('button', { name: new RegExp(`^${label}`) })
+    await button.click()
+    await expect(button).toHaveAttribute('aria-pressed', 'true')
+    await expect(cells).toHaveCount(count)
+    await expect(page.locator('.chr-equip__grid').getByTitle(title, { exact: true })).toBeVisible()
+  }
+  await categories.getByRole('button', { name: /Equipment/ }).click()
+  await expect(filters).toHaveCount(0)
+  await categories.getByRole('button', { name: /Resources/ }).click()
+  await expect(cells).toHaveCount(1)
+  await filters.getByRole('button', { name: /^All/ }).click()
+  await expect(cells).toHaveCount(6)
+  await expect(page.locator('.chr-equip__grid').getByTitle('Wheat', { exact: true })).toContainText('×4')
+  await page.screenshot({ path: 'test-results/inventory-resource-filters.png' })
+})
