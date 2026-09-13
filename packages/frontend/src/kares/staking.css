@@ -366,14 +366,14 @@
 }
 @container app-content (max-width: 1100px) {
   .staking-account-pair {
-    padding: 16px 14px 12px;
+    padding-inline: 14px;
     gap: 12px;
   }
   .staking-account-content {
-    padding: 14px 12px;
+    padding-inline: 12px;
   }
   .staking-account-header {
-    padding: 14px 12px;
+    padding-inline: 12px;
     flex-wrap: wrap;
   }
   .staking-action-box {
