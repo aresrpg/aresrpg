@@ -135,7 +135,7 @@ dispatch_app({
     current_epoch: '1250',
     chain_timestamp_ms: Date.now(),
     chain_sample_age_ms: 0,
-    market_volume: { epoch: '1250', mist: '1284500000000' },
+    market_volume: { day_mist: '1284500000000', month_mist: '5678900000000' },
   },
 })
 if (params.get('connection') === 'offline')

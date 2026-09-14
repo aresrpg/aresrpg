@@ -12,7 +12,7 @@ import { BrowsePanel } from './BrowsePanel.tsx'
 import { HistoryPanel } from './HistoryPanel.tsx'
 import { MarketplaceDisclaimer } from './MarketplaceDisclaimer.tsx'
 import { SellPanel } from './SellPanel.tsx'
-import { EpochVolumeBadge } from './marketplace_model.tsx'
+import { MarketVolumeBadge } from './marketplace_model.tsx'
 
 import './marketplace.css'
 
@@ -24,8 +24,7 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
   const text = copy_text(copy.marketplace_page)
   const group = useAppStore(({ marketplace }) => marketplace.group)
   const settings = useAppStore((state) => state.settings)
-  const epoch = useAppStore(({ session }) => session.current_epoch)
-  const volume = useAppStore(({ marketplace }) => marketplace.epoch_volume)
+  const volume = useAppStore(({ marketplace }) => marketplace.volume)
   const [tab, set_tab] = useState<Tab>('BUY')
   useEffect(() => {
     dispatch_app({ type: 'market/group_selected', group })
@@ -57,7 +56,10 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
             </div>
             <div className="mx-auto mt-2 h-px w-52 bg-[linear-gradient(90deg,transparent,rgba(200,150,60,.5),transparent)]" />
           </div>
-          <EpochVolumeBadge epoch={epoch} mist={volume?.epoch === epoch ? (volume?.mist ?? null) : null} text={text} />
+          <div className="flex flex-wrap gap-2">
+            <MarketVolumeBadge window="24h" mist={volume?.day_mist ?? null} text={text} />
+            <MarketVolumeBadge window="30d" mist={volume?.month_mist ?? null} text={text} />
+          </div>
         </div>
       </header>
       <div className="shrink-0 overflow-x-auto border-b border-border bg-surface px-6 py-3">

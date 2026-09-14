@@ -19,6 +19,7 @@ mod gates;
 mod graph;
 mod leaderboard_store;
 mod leaderboards;
+mod market_volume;
 mod ownership;
 mod personal_kiosk;
 mod pipeline;

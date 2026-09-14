@@ -388,8 +388,10 @@ demo_page:
   control_hint: Haz clic en el canvas · WASD para moverte · Espacio para saltar · Ratón para mirar
   back: Volver a la aplicación
 marketplace_page:
-  epoch_volume: 'Volumen de 24 h'
-  volume_epoch: 'Ventas públicas del mercado, sin comisiones.'
+  volume_24h: 'Volumen de 24 h'
+  volume_30d: Volumen de 30 días
+  volume_window: Ventas públicas del mercado en las últimas {{window}}, sin comisiones.
+  volume_unavailable: Todavía no hay un historial completo para este período.
   title: Mercado
   subtitle: Anuncios de jugadores en Sui
   disclaimer_kicker: Antes de comerciar

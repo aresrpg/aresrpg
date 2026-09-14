@@ -316,44 +316,52 @@ jobs:
   browsers:
     needs: changes
     if: needs.changes.outputs.browsers == 'true'
-    name: browser (${{ matrix.target.os }}, ${{ matrix.target.browser }}, ${{ matrix.suite.project }}, ${{ matrix.suite.shard }})
-    runs-on: ${{ matrix.target.os }}
+    name: browser (${{ matrix.os }}, ${{ matrix.browser }}, ${{ matrix.project }}, ${{ matrix.shard }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 4
     strategy:
       fail-fast: false
       matrix:
-        suite:
-          - { project: ui, shard: '1/3' }
-          - { project: ui, shard: '2/3' }
-          - { project: ui, shard: '3/3' }
-          - { project: workloads-low, shard: '1/1' }
-          - { project: workloads-medium, shard: '1/1' }
-          - { project: workloads-high, shard: '1/1' }
-        target:
-          - { os: ubuntu-latest, browser: chrome }
-          - { os: ubuntu-latest, browser: firefox }
-          - { os: macos-latest, browser: chrome }
+        include:
+          - { os: ubuntu-latest, browser: chrome, project: ui, shard: '1/3' }
+          - { os: ubuntu-latest, browser: chrome, project: ui, shard: '2/3' }
+          - { os: ubuntu-latest, browser: chrome, project: ui, shard: '3/3' }
+          - { os: ubuntu-latest, browser: chrome, project: workloads-low, shard: '1/1' }
+          - { os: ubuntu-latest, browser: chrome, project: workloads-medium, shard: '1/1' }
+          - { os: ubuntu-latest, browser: chrome, project: workloads-high, shard: '1/1' }
+          - { os: ubuntu-latest, browser: firefox, project: ui, shard: '1/3' }
+          - { os: ubuntu-latest, browser: firefox, project: ui, shard: '2/3' }
+          - { os: ubuntu-latest, browser: firefox, project: ui, shard: '3/3' }
+          - { os: ubuntu-latest, browser: firefox, project: workloads-low, shard: '1/1' }
+          - { os: ubuntu-latest, browser: firefox, project: workloads-medium, shard: '1/1' }
+          - { os: ubuntu-latest, browser: firefox, project: workloads-high, shard: '1/1' }
+          - { os: macos-latest, browser: chrome, project: ui, shard: '1/2' }
+          - { os: macos-latest, browser: chrome, project: ui, shard: '2/2' }
+          - { os: macos-latest, browser: chrome, project: workloads-low, shard: '1/1' }
+          - { os: macos-latest, browser: chrome, project: workloads-medium, shard: '1/1' }
+          - { os: macos-latest, browser: chrome, project: workloads-high, shard: '1/1' }
     env:
-      BROWSER: ${{ matrix.target.browser }}
+      BROWSER: ${{ matrix.browser }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version-file: package.json
       - run: bun install --frozen-lockfile --ignore-scripts
-      - run: bunx playwright install --with-deps ${{ matrix.target.browser }}
+      - name: prepare browser
+        run: bun scripts/prepare_browser.mjs
       - name: browser compatibility tests
         shell: bash
         run: |
           if [ "$RUNNER_OS" = Linux ] && [ "$BROWSER" = firefox ]; then
-            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed --project=${{ matrix.suite.project }} --shard=${{ matrix.suite.shard }}
+            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed --project=${{ matrix.project }} --shard=${{ matrix.shard }}
           else
-            bun run test:browser --project=${{ matrix.suite.project }} --shard=${{ matrix.suite.shard }}
+            bun run test:browser --project=${{ matrix.project }} --shard=${{ matrix.shard }}
           fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: browser-${{ matrix.target.os }}-${{ matrix.target.browser }}-${{ matrix.suite.project }}-${{ strategy.job-index }}
+          name: browser-${{ matrix.os }}-${{ matrix.browser }}-${{ matrix.project }}-${{ strategy.job-index }}
           path: |
             test-results/browser
             test-results/browser-results.json

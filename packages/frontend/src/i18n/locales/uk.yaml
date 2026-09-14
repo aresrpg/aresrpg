@@ -388,8 +388,10 @@ demo_page:
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
 marketplace_page:
-  epoch_volume: 'Обсяг за 24 год'
-  volume_epoch: 'Публічні продажі на ринку без комісій.'
+  volume_24h: 'Обсяг за 24 год'
+  volume_30d: Обсяг за 30 днів
+  volume_window: Публічні продажі на ринку за останні {{window}}, без комісій.
+  volume_unavailable: Повна історія за цей період ще недоступна.
   title: Ринок
   subtitle: Оголошення гравців у Sui
   disclaimer_kicker: Перед торгівлею

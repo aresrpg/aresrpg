@@ -388,8 +388,10 @@ demo_page:
   control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
   back: Retour à l’application
 marketplace_page:
-  epoch_volume: 'Volume sur 24 h'
-  volume_epoch: 'Ventes publiques du marché, hors frais.'
+  volume_24h: 'Volume sur 24 h'
+  volume_30d: Volume sur 30 j
+  volume_window: Ventes publiques du marché sur les dernières {{window}}, hors frais.
+  volume_unavailable: L’historique complet de cette période n’est pas encore disponible.
   title: Marché
   subtitle: Annonces des joueurs sur Sui
   disclaimer_kicker: Avant d’échanger

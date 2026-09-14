@@ -557,3 +557,23 @@ test('chat drag resize stays anchored and bounded beside the HUD', async ({ page
     }).toPass()
   }
 })
+
+for (const width of [590, 1920]) {
+  test(`marketplace shows both rolling volume windows at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.route('**/*', (route) =>
+      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
+    )
+    await page.goto('/e2e/fixtures/responsive_preview.html?page=marketplace')
+    await expect(page.locator('[data-marketplace-volume="24h"]')).toContainText('1284.50')
+    await expect(page.locator('[data-marketplace-volume="30d"]')).toContainText('5678.90')
+    await expect(page.locator('[data-marketplace-volume="24h"]')).toBeInViewport()
+    await expect(page.locator('[data-marketplace-volume="30d"]')).toBeInViewport()
+    await expect(page.locator('[data-marketplace-volume="30d"]')).toHaveAttribute(
+      'title',
+      'Public marketplace sales in the last 30d, before fees.'
+    )
+    expect(await page.locator('.app-content').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: `test-results/market-volumes-${width}.png` })
+  })
+}

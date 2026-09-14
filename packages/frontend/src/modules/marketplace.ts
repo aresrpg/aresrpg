@@ -8,6 +8,7 @@ import {
   MARKET_WINDOW_SIZE,
   type ListingRow,
   type MarketCounts,
+  type MarketVolume,
   type MarketObservation,
   type MarketSaleRow,
   type MarketSnapshot,
@@ -63,7 +64,7 @@ export type MarketplaceState = Readonly<{
   departures: Readonly<Record<string, Readonly<Record<string, string>>>>
   history: readonly MarketSaleRow[]
   revenue_30d_mist: string
-  epoch_volume: Readonly<{ epoch: string; mist: string }> | null
+  volume: MarketVolume | null
   history_total: number
   profits: readonly Readonly<{ kiosk: string; amount_mist: string }>[]
   pending: string | null
@@ -100,7 +101,7 @@ export const initial_marketplace_state = (): MarketplaceState =>
     departures: {},
     history: [],
     revenue_30d_mist: '0',
-    epoch_volume: null,
+    volume: null,
     history_total: 0,
     profits: [],
     pending: null,
@@ -273,7 +274,7 @@ const fold_packet = (
   address: string | null
 ): MarketplaceState => {
   if (packet.type === 'packet/server_info' && packet.market_volume !== undefined)
-    return Object.freeze({ ...market, epoch_volume: packet.market_volume })
+    return Object.freeze({ ...market, volume: packet.market_volume })
   if (packet.type === 'packet/listings') return fold_catalogue(market, packet, true, address)
   if (packet.type === 'packet/market_slice')
     return same_observation(market.observation, packet.observation)

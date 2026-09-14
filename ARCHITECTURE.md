@@ -225,8 +225,9 @@ Item deltas are bidirectional: current kiosk custody streams the complete row, w
 custody streams removal when an item moves away or is destroyed. Clients never retain absent graph rows.
 The graph bus resolves each item invalidation once and delivers only to its pre/post custodians.
 
-The indexer retains replay-safe public sale subtotals per checkpoint, grouped by Sui epoch.
-The existing server heartbeat carries the current epoch volume to marketplace observers.
+The indexer retains timestamped public-sale subtotals per checkpoint in daily buckets for 32 days.
+The server sums exact rolling 24-hour and 30-day windows; the existing heartbeat carries both totals
+to marketplace observers. Each window remains unavailable until its full history has been indexed.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
 query, including empty owned catalogues. Catalogue markers follow their relation writes. The client
@@ -598,11 +599,14 @@ Move, indexer parity, and browser lanes against the last successful `edge` push,
 Missing baseline evidence runs every lane; a failed or cancelled change remains in the comparison.
 Move package inputs come from `move-packages.json`. An unchanged lane may skip only when the
 classifier explicitly says so; every required lane and browser shard must succeed.
-Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three UI shards and three
-quality-specific world workload lanes per platform. Each workload lane runs one heavy smoke scenario;
+Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three UI shards on Linux, two
+on macOS, and three quality-specific world workload lanes per platform. Five macOS jobs avoid queuing
+a sixth browser behind the hosted macOS concurrency limit. Runner-provided Chrome is reused and its
+version is logged; absent Chrome and Playwright’s patched Firefox are installed through one setup entry. Each workload lane runs one heavy smoke scenario;
 the low and medium lanes each verify one missing-WebGPU fallback. Browser jobs have a four-minute
 execution limit. UI layout retries have a three-second
-budget, separate from the longer world-rendering checks. Each runner uses one worker; sharding does not change test
+budget, separate from the longer world-rendering checks. Settings persistence exercises its actual
+controls, reducer, and storage observer across reloads without initializing a renderer. Each runner uses one worker; sharding does not change test
 selection or GPU concurrency per runner.
 
 Owner-authorized release preparation builds immutable images and stages Vercel output concurrently

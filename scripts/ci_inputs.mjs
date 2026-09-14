@@ -13,6 +13,7 @@ const BROWSER_FILES = [
   '.github/workflows/gate.yml',
   'scripts/ci_inputs.mjs',
   'scripts/browser_pins.ts',
+  'scripts/prepare_browser.mjs',
 ]
 const runtime_manifest = (source) => {
   if (source === null) return null

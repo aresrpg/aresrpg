@@ -55,21 +55,21 @@ export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => (
   </span>
 )
 
-export const EpochVolumeBadge = ({
-  epoch,
+export const MarketVolumeBadge = ({
+  window,
   mist,
   text,
 }: Readonly<{
-  epoch: string | null
+  window: '24h' | '30d'
   mist: string | null
   text: CopyText
 }>) => (
   <div
     className="flex shrink-0 items-center gap-3 rounded-sm border border-[#4a9eff]/25 bg-[linear-gradient(110deg,rgba(74,158,255,.08),rgba(200,150,60,.06))] px-3 py-2"
-    data-marketplace-epoch-volume=""
-    title={epoch === null ? undefined : text('volume_epoch', { epoch })}
+    data-marketplace-volume={window}
+    title={text(mist === null ? 'volume_unavailable' : 'volume_window', { window })}
   >
-    <span className="text-[8px] tracking-[0.16em] text-muted uppercase">{text('epoch_volume')}</span>
+    <span className="text-[8px] tracking-[0.16em] text-muted uppercase">{text(`volume_${window}`)}</span>
     <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gold tabular-nums">
       {mist === null ? '—' : format_sui(BigInt(mist), 2)} <SuiUnit size={12} />
     </span>

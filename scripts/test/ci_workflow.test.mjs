@@ -29,24 +29,15 @@ test('all selective lanes use a successful edge push baseline, including PRs', (
 test('browser matrix shards every existing platform and retains independent reports', () => {
   const job = jobs.browsers
   expect(job['timeout-minutes']).toBe(4)
-  expect(job.strategy.matrix.target).toEqual([
-    { os: 'ubuntu-latest', browser: 'chrome' },
-    { os: 'ubuntu-latest', browser: 'firefox' },
-    { os: 'macos-latest', browser: 'chrome' },
-  ])
-  expect(job.strategy.matrix.suite).toEqual([
-    { project: 'ui', shard: '1/3' },
-    { project: 'ui', shard: '2/3' },
-    { project: 'ui', shard: '3/3' },
-    { project: 'workloads-low', shard: '1/1' },
-    { project: 'workloads-medium', shard: '1/1' },
-    { project: 'workloads-high', shard: '1/1' },
-  ])
+  const targets = new Set(job.strategy.matrix.include.map(({ os, browser }) => `${os}/${browser}`))
+  expect([...targets]).toEqual(['ubuntu-latest/chrome', 'ubuntu-latest/firefox', 'macos-latest/chrome'])
+  const mac = job.strategy.matrix.include.filter(({ os }) => os === 'macos-latest')
+  expect(mac).toHaveLength(5)
+  expect(mac.filter(({ project }) => project === 'ui').map(({ shard }) => shard)).toEqual(['1/2', '2/2'])
   expect(job.strategy['fail-fast']).toBe(false)
+  expect(job.steps.find(({ name }) => name === 'prepare browser').run).toBe('bun scripts/prepare_browser.mjs')
   const { run } = job.steps.find(({ name }) => name === 'browser compatibility tests')
-  expect(run.match(/--project=\$\{\{ matrix.suite.project \}\} --shard=\$\{\{ matrix.suite.shard \}\}/g)).toHaveLength(
-    2
-  )
+  expect(run.match(/--project=\$\{\{ matrix.project \}\} --shard=\$\{\{ matrix.shard \}\}/g)).toHaveLength(2)
   expect(job.steps.at(-1).with.name).toContain('${{ strategy.job-index }}')
 })
 
@@ -94,8 +85,12 @@ for (const lane of ['tests_move', 'tests_indexer', 'browsers'])
 const listed_specs = (suites) =>
   suites.flatMap((suite) => [...(suite.specs ?? []), ...listed_specs(suite.suites ?? [])])
 
-for (const browser of ['chrome', 'firefox'])
-  test(`${browser} CI lanes cover every test once and distribute world workloads`, () => {
+for (const [os, browser] of [
+  ['ubuntu-latest', 'chrome'],
+  ['ubuntu-latest', 'firefox'],
+  ['macos-latest', 'chrome'],
+])
+  test(`${os}/${browser} CI lanes cover every test once and distribute world workloads`, () => {
     const list = (args) =>
       listed_specs(
         JSON.parse(
@@ -117,14 +112,13 @@ for (const browser of ['chrome', 'firefox'])
     const all = list([])
       .map(({ id }) => id)
       .toSorted()
-    const lanes = jobs.browsers.strategy.matrix.suite.map(({ project, shard }) =>
-      list([`--project=${project}`, `--shard=${shard}`])
-    )
+    const plans = jobs.browsers.strategy.matrix.include.filter((row) => row.os === os && row.browser === browser)
+    const lanes = plans.map(({ project, shard }) => list([`--project=${project}`, `--shard=${shard}`]))
     const ids = lanes.flat().map(({ id }) => id)
     expect(ids.toSorted()).toEqual(all)
     expect(new Set(ids).size).toBe(ids.length)
-    const ui = lanes.slice(0, 3)
-    const workloads = lanes.slice(3)
+    const ui = lanes.filter((_, index) => plans[index].project === 'ui')
+    const workloads = lanes.filter((_, index) => plans[index].project.startsWith('workloads-'))
     expect(workloads.every((lane) => lane.length > 0)).toBe(true)
     expect(workloads.map((lane) => lane.filter(({ title }) => title.startsWith('city /')).length)).toEqual([1, 1, 1])
     expect(Math.max(...ui.map((lane) => lane.length)) - Math.min(...ui.map((lane) => lane.length))).toBeLessThanOrEqual(

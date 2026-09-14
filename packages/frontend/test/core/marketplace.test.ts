@@ -42,20 +42,24 @@ describe('marketplace projection', () => {
       current_epoch: '100',
       chain_timestamp_ms: 1000,
       chain_sample_age_ms: 0,
-      market_volume: { epoch: '100', mist: '123000000000' },
+      market_volume: { day_mist: '123000000000', month_mist: '456000000000' },
     }
     const ready = reduce_app_state(initial, { type: 'server/packet', packet: heartbeat })
-    expect(ready.marketplace.epoch_volume).toEqual({ epoch: '100', mist: '123000000000' })
+    expect(ready.marketplace.volume).toEqual({ day_mist: '123000000000', month_mist: '456000000000' })
     const next = reduce_app_state(ready, {
       type: 'server/packet',
-      packet: { ...heartbeat, current_epoch: '101', market_volume: { epoch: '101', mist: '0' } },
+      packet: {
+        ...heartbeat,
+        current_epoch: '101',
+        market_volume: { day_mist: '123000000000', month_mist: '456000000000' },
+      },
     })
-    expect(next.marketplace.epoch_volume).toEqual({ epoch: '101', mist: '0' })
+    expect(next.marketplace.volume).toEqual({ day_mist: '123000000000', month_mist: '456000000000' })
     const unavailable = reduce_app_state(next, {
       type: 'server/packet',
       packet: { ...heartbeat, market_volume: null },
     })
-    expect(unavailable.marketplace.epoch_volume).toBeNull()
+    expect(unavailable.marketplace.volume).toBeNull()
   })
 
   test('browse groups compile to exact chain-category windows', () => {

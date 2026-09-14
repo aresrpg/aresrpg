@@ -27,13 +27,12 @@ export default {
       ])
         .then(async ([online, health]) => {
           const observed = get_state().market_observation !== null
-          const volume =
-            observed && health.epoch !== null
-              ? ((await pubsub.graph.market_volume?.(health.epoch).catch((error: Error) => {
-                  log.warn({ error: error.message }, 'market volume read failed')
-                  return null
-                })) ?? null)
-              : null
+          const volume = observed
+            ? ((await pubsub.graph.market_volume?.(Date.now()).catch((error: Error) => {
+                log.warn({ error: error.message }, 'market volume read failed')
+                return null
+              })) ?? null)
+            : null
           send({
             type: 'packet/server_info',
             online,
@@ -46,8 +45,7 @@ export default {
                 : Math.max(0, performance.now() - health.chain_observed_at_ms),
             ...(observed
               ? {
-                  market_volume:
-                    volume !== null && health.epoch !== null ? { epoch: health.epoch, mist: volume } : null,
+                  market_volume: volume,
                 }
               : {}),
           })

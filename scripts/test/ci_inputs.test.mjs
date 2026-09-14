@@ -26,6 +26,7 @@ for (const path of [
   'packages/frontend/e2e/playwright.config.ts',
   'seed/models/body.glb',
   'bun.lock',
+  'scripts/prepare_browser.mjs',
   '.github/workflows/gate.yml',
   'scripts/ci_inputs.mjs',
 ])

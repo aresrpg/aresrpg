@@ -388,8 +388,10 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
-  epoch_volume: '24h-Volumen'
-  volume_epoch: 'Öffentliche Marktplatzverkäufe ohne Gebühren.'
+  volume_24h: '24h-Volumen'
+  volume_30d: 30T-Volumen
+  volume_window: Öffentliche Marktplatzverkäufe der letzten {{window}}, ohne Gebühren.
+  volume_unavailable: Für diesen Zeitraum ist noch kein vollständiger Verlauf verfügbar.
   title: Marktplatz
   subtitle: Spielerangebote auf Sui
   disclaimer_kicker: Vor dem Handeln

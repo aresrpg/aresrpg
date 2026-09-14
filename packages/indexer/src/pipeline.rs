@@ -58,7 +58,7 @@ pub enum Write {
     Money(MoneyFact),
     /// Absolute checkpoint subtotal: replay overwrites instead of incrementing volume twice.
     MarketVolume {
-        epoch: u64,
+        ts_ms: u64,
         checkpoint: u64,
         mist: u128,
     },
@@ -529,7 +529,7 @@ impl Processor for AresHandler {
         }
         writes.extend(wire.money.into_iter().map(Write::Money));
         writes.push(Write::MarketVolume {
-            epoch: summary.epoch,
+            ts_ms,
             checkpoint: ckpt,
             mist: wire.market_volume_mist,
         });
@@ -651,30 +651,13 @@ impl Handler for AresHandler {
                             .await?;
                     }
                     Write::MarketVolume {
-                        epoch,
+                        ts_ms,
                         checkpoint,
                         mist,
                     } => {
-                        // A rollout partway through an epoch must not advertise a partial day as complete.
-                        let _: bool = redis::cmd("SETNX")
-                            .arg("market:volume:first_epoch")
-                            .arg(epoch)
-                            .query_async(conn.connection())
+                        crate::market_volume::commands(*checkpoint, *ts_ms, *mist)
+                            .query_async::<()>(conn.connection())
                             .await?;
-                        if *mist > 0 {
-                            let key = format!("market:volume:epoch:{epoch}");
-                            let _: () = redis::cmd("HSET")
-                                .arg(&key)
-                                .arg(checkpoint)
-                                .arg(mist.to_string())
-                                .query_async(conn.connection())
-                                .await?;
-                            let _: () = redis::cmd("EXPIRE")
-                                .arg(key)
-                                .arg(3 * 24 * 60 * 60)
-                                .query_async(conn.connection())
-                                .await?;
-                        }
                     }
                     Write::Activity(fact) => {
                         let address = fact.address.hex();

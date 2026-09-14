@@ -791,8 +791,8 @@ export type ServerPackets = {
     chain_timestamp_ms: number | null
     /** Elapsed server time since reading this checkpoint; cache reuse must not rewind interpolation. */
     chain_sample_age_ms: number | null
-    /** Current epoch public sale prices before fees; only sent while browsing the market. */
-    market_volume?: Readonly<{ epoch: string; mist: string }> | null
+    /** Rolling public sale prices before fees; a null window has incomplete history. */
+    market_volume?: MarketVolume | null
   }
   /** Version 0 is the global emergency brake; null means the projection is not available yet. */
   'packet/game_state': { frozen: boolean | null }
@@ -1291,3 +1291,5 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
   }
   throw new Error(`unknown packet type "${String(type)}"`)
 }
+
+export type MarketVolume = Readonly<{ day_mist: string | null; month_mist: string | null }>
