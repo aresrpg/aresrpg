@@ -5,6 +5,8 @@ import { QUALITY_OPTIONS, type EngineQuality } from '@aresrpg/engine'
 
 import {
   CHAT_CHANNELS,
+  chat_size_from,
+  type ChatSize,
   chat_speak_channel_from,
   chat_visible_channels_from,
   type ChatChannel,
@@ -36,6 +38,7 @@ export type GameSettings = Readonly<{
   completed_tutorials?: readonly TutorialId[]
   follow_leader?: boolean
   chat_visible_channels?: readonly ChatChannel[]
+  chat_size?: ChatSize | null
   chat_speak_channel?: ChatSpeakChannel
   auto_switch_fighter?: boolean
   /** Null/absent disables the Jobs-tab character lock. */
@@ -83,6 +86,7 @@ export const load_game_settings = (
     follow_leader: false,
     chat_visible_channels: CHAT_CHANNELS,
     chat_speak_channel: 'general' as const,
+    chat_size: null,
     auto_switch_fighter: true,
     always_craft_from_character_id: null,
     placement_gas_warning_disabled: false,
@@ -132,6 +136,7 @@ export const load_game_settings = (
       follow_leader,
       chat_visible_channels,
       chat_speak_channel,
+      chat_size: chat_size_from(Reflect.get(record, 'chat_size')),
       auto_switch_fighter,
       always_craft_from_character_id,
       placement_gas_warning_disabled,

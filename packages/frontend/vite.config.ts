@@ -155,6 +155,7 @@ export default defineConfig(({ mode }) => {
                 public_sale_card: resolve(frontend_dir, 'e2e/fixtures/public_sale_card.html'),
                 leaderboard: resolve(frontend_dir, 'e2e/fixtures/leaderboard.html'),
                 fight_placement_race: resolve(frontend_dir, 'e2e/fixtures/fight_placement_race.html'),
+                fight_clock: resolve(frontend_dir, 'e2e/fixtures/fight_clock.html'),
                 automation: resolve(frontend_dir, 'e2e/fixtures/automation.html'),
                 character_delete: resolve(frontend_dir, 'e2e/fixtures/character_delete.html'),
                 character_progression: resolve(frontend_dir, 'e2e/fixtures/character_progression.html'),

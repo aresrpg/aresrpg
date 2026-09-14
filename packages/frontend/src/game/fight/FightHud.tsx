@@ -13,6 +13,7 @@ import { content_catalog } from '../../content/catalog.ts'
 import { spell_name, type AppCopy } from '../../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 import { owned_placement_readiness } from '../../modules/fight_identity.ts'
+import { chain_deadline_reached, chain_now } from '../../modules/chain_clock.ts'
 import { END_TURN_SUBMIT_GUARD_MS } from '../../modules/fight_lifecycle.ts'
 import { ActionSlots } from '../hud/ActionSlots.tsx'
 import { VitalsDisplay } from '../hud/VitalsDisplay.tsx'
@@ -44,7 +45,7 @@ const submit_end_turn = (fight: string | null, fighter: bigint): void =>
     type: 'fight/input',
     fight,
     origin: 'local',
-    input: { type: 'end_turn', fighter, observed_ms: BigInt(Date.now()) },
+    input: { type: 'end_turn', fighter },
   })
 
 const FightVitals = ({
@@ -145,9 +146,9 @@ const fight_turn_clock = (
   visible: boolean | undefined,
   presented_turn_seat: bigint | null,
   turn_started_ms: bigint | undefined,
-  now: number
+  now: number | null
 ): Readonly<{ progress: number | null; seconds: number | null }> => {
-  if (mode !== 'remote' || !visible || presented_turn_seat !== null || turn_started_ms === undefined)
+  if (mode !== 'remote' || !visible || presented_turn_seat !== null || turn_started_ms === undefined || now === null)
     return inactive_turn_clock
   return Object.freeze({
     progress: turn_elapsed_percent(turn_started_ms, now),
@@ -186,18 +187,15 @@ export const crank_prompt_hidden = (
 
 /** The stall clearance — any non-acting participant may force a 45s-dead turn to pass. */
 const CrankBanner = ({
-  turn_started_ms,
-  now,
+  ready,
   on_crank,
   text,
 }: Readonly<{
-  turn_started_ms: bigint
-  now: number
+  ready: boolean
   on_crank: () => void
   text: Readonly<Record<string, string>>
 }>) => {
-  const crank_at = turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms
-  if (BigInt(now) < crank_at) return null
+  if (!ready) return null
   return (
     <div className="fight-hud__crank" role="status">
       <span>{text.crank_prompt}</span>
@@ -242,7 +240,9 @@ export const FightHud = ({
   const simulator = useAppStore((state) => state.simulator)
   const [forfeit_open, set_forfeit_open] = useState(false)
   const [crank_attempt, set_crank_attempt] = useState<CrankAttempt | null>(null)
-  const [now, set_now] = useState(() => Date.now())
+  const clock = useAppStore((state) => state.chain_clock)
+  const [monotonic_ms, set_monotonic_ms] = useState(() => performance.now())
+  const now = chain_now(clock, monotonic_ms)
   const names = useMemo(
     () =>
       Object.freeze(
@@ -295,17 +295,16 @@ export const FightHud = ({
 
   useEffect(() => {
     if (!view?.can_end_turn || min_turn_ready) return undefined
-    const timer = setInterval(() => set_now(Date.now()), 100)
+    const timer = setInterval(() => set_monotonic_ms(performance.now()), 100)
     return () => clearInterval(timer)
   }, [min_turn_ready, view?.can_end_turn])
 
-  // the stall watch: while SOMEONE ELSE holds the turn in a remote fight, a slow clock keeps
-  // `now` honest so the crank banner appears the second the chain would accept the clearance
+  // Countdown interpolation follows the sampled chain clock; only a confirmed sample unlocks crank.
   const watching_turn_clock = fight.mode === 'remote' && view?.phase === 'active' && view.show_turn_timer
   const watching_stall = watching_turn_clock && !view?.can_end_turn
   useEffect(() => {
     if (!watching_turn_clock) return undefined
-    const timer = setInterval(() => set_now(Date.now()), 1_000)
+    const timer = setInterval(() => set_monotonic_ms(performance.now()), 1_000)
     return () => clearInterval(timer)
   }, [watching_turn_clock])
 
@@ -448,8 +447,11 @@ export const FightHud = ({
       )}
       {watching_stall && !crank_hidden && (
         <CrankBanner
-          turn_started_ms={fight.checkpoint.contract.turn_started_ms}
-          now={now}
+          ready={chain_deadline_reached(
+            clock,
+            fight.checkpoint.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms,
+            monotonic_ms
+          )}
           on_crank={() => {
             if (!turn_key || actions_locked) return
             set_crank_attempt(Object.freeze({ turn_key, restore_serial: fight.restore_serial }))
@@ -457,7 +459,7 @@ export const FightHud = ({
               type: 'fight/input',
               fight: command_fight,
               origin: 'local',
-              input: { type: 'crank', observed_ms: BigInt(Date.now()) },
+              input: { type: 'crank' },
             })
           }}
           text={copy.fight_hud}

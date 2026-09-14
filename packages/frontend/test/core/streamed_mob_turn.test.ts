@@ -47,11 +47,11 @@ test('an independent client reconstructs player → mob before applying the stre
   session.open({ mode: 'remote', state: checkpoint })
   const witness = { type: 'turn_seed' as const, fighter: 3n, seed: 42n }
 
-  expect(streamed_witness_boundary(session.state()!.checkpoint, 99_000n)).toMatchObject({
+  expect(streamed_witness_boundary(session.state()!.checkpoint)).toMatchObject({
     type: 'end_turn',
     fighter: 0n,
   })
-  apply_streamed_witness(session, witness, 99_000n)
+  apply_streamed_witness(session, witness)
 
   expect(session.state()?.events.some((event) => event.type === 'turn_switched' && event.payload.to === 3n)).toBeTrue()
   expect(session.state()?.error).toBeNull()
@@ -64,5 +64,5 @@ test('an opening mob witness reconstructs Start rather than End Turn', () => {
     mobs: [{ team: 1n, scalar: 50n, template: mob }],
   })
 
-  expect(streamed_witness_boundary(checkpoint, 5n)).toEqual({ type: 'start', observed_ms: 5n })
+  expect(streamed_witness_boundary(checkpoint)).toEqual({ type: 'start' })
 })

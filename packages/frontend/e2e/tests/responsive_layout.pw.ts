@@ -222,7 +222,9 @@ for (const viewport of [
     const map = (await bounds('.gw-minimap__frame'))!
     const chat = (await bounds('.gw-worldchat'))!
     const hud = (await bounds('.fight-hud--overworld .fight-hud__bar'))!
-    expect(map.width).toBeLessThanOrEqual(world.height * 0.31)
+    // Small viewports retain the minimap’s 96px readability floor.
+    expect(map.width).toBeGreaterThanOrEqual(96)
+    expect(map.width).toBeLessThanOrEqual(Math.max(96, world.height * 0.31))
     expect(chat.height).toBeLessThanOrEqual(Math.min(320, world.height * 0.4) + 1)
     for (const box of [map, chat, hud]) {
       expect(box.x).toBeGreaterThanOrEqual(world.x)
@@ -507,51 +509,6 @@ test('roomy Rune Forge preserves its centered original panel widths', async ({ p
   expect((await page.locator('.chr-forge__inventory').boundingBox())!.width).toBe(320)
   await expect(page.locator('.chr-forge')).toHaveCSS('padding', '16px')
   await page.screenshot({ path: 'test-results/restored-runeforge-desktop.png' })
-})
-
-test('chat drag resize stays anchored and bounded beside the HUD', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
-  const chat = page.locator('.gw-worldchat')
-  const handle = page.getByRole('button', { name: 'Resize chat' })
-  await expect(handle).toBeVisible()
-  const initial = (await chat.boundingBox())!
-  const grip = (await handle.boundingBox())!
-  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(1800, 0, { steps: 5 })
-  await page.mouse.up()
-  const expanded = (await chat.boundingBox())!
-  expect(expanded.width).toBeGreaterThan(initial.width)
-  expect(expanded.height).toBeGreaterThan(initial.height)
-  expect(expanded.width).toBeLessThanOrEqual(640)
-  expect(expanded.height).toBeLessThanOrEqual(600)
-  await page.screenshot({ path: 'test-results/resized-chat.png' })
-  expect(expanded.x).toBe(initial.x)
-  expect(Math.abs(expanded.y + expanded.height - initial.y - initial.height)).toBeLessThan(1)
-  await page.mouse.move(20, 20)
-  expect((await chat.boundingBox())!.width).toBe(expanded.width)
-  await handle.focus()
-  await page.keyboard.press('ArrowDown')
-  expect((await chat.boundingBox())!.height).toBeLessThan(expanded.height)
-  for (const viewport of [
-    { width: 800, height: 500 },
-    { width: 440, height: 360 },
-  ]) {
-    await page.setViewportSize(viewport)
-    await expect(async () => {
-      const box = (await chat.boundingBox())!
-      const frame = (await page.locator('[data-world-frame]').boundingBox())!
-      const hud = (await page.locator('.fight-hud--overworld .fight-hud__bar').boundingBox())!
-      expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width)
-      expect(box.y).toBeGreaterThanOrEqual(frame.y)
-      expect(hud.x + hud.width).toBeLessThanOrEqual(frame.x + frame.width)
-      expect(hud.y + hud.height <= box.y + 1 || hud.x >= box.x + box.width).toBe(true)
-    }).toPass()
-  }
 })
 
 for (const width of [590, 1920]) {

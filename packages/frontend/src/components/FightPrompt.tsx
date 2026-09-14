@@ -6,6 +6,7 @@
 // then only a frontend commit over a stream that is already flowing.
 
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- React refs and lifecycle events are mutable platform boundaries. */
+import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
 import { Lock, Swords, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
@@ -19,6 +20,8 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 import { selected_character } from '../modules/session.ts'
 import type { FightSessionState } from '../modules/fight.ts'
+import { chain_now } from '../modules/chain_clock.ts'
+import { fight_checkpoint_phase_rank } from '../modules/fight_observer.ts'
 import { selected_party } from '../modules/party.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
@@ -28,7 +31,7 @@ import { PromptKey, split_key_template } from './PromptChip.tsx'
 const ACCESS_GROUP = 1
 const ACCESS_INVITED = 2
 const ACCESS_UNSET = 255
-const PLACEMENT_WINDOW_MS = 60_000
+const PLACEMENT_WINDOW_MS = Number(CONTRACT_CONSTANTS.placement_force_ms)
 
 const join_can_submit = (wallet: unknown, character: string | null, checkpoint: unknown, pending: boolean): boolean =>
   Boolean(wallet && character && checkpoint && !pending)
@@ -73,8 +76,9 @@ export const fight_joinable_teams = (
   )
 }
 
-const elapsed_label = (from_ms: number): string => {
-  const seconds = Math.max(0, Math.floor((Date.now() - from_ms) / 1000))
+const elapsed_label = (from_ms: number, now: number | null): string => {
+  if (now === null) return '—'
+  const seconds = Math.max(0, Math.floor((now - from_ms) / 1000))
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
@@ -281,6 +285,8 @@ const JoinButton = ({
 /** The join/spectate modal — renders the LIVE roster off the armed watch's hydration. */
 const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; copy: AppCopy; fight_id: string }>) => {
   const session = useAppStore((state) => state.fight)
+  const clock = useAppStore((state) => state.chain_clock)
+  const now = chain_now(clock, performance.now())
   const row = useAppStore((state) => state.world.fights[fight_id])
   const wallet = useAppStore((state) => state.session.wallet)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
@@ -315,11 +321,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   if (!row) return null
   const checkpoint = fight_prompt_checkpoint(session, fight_id)
   const phase = checkpoint
-    ? checkpoint.contract.ended
-      ? 'ended'
-      : checkpoint.contract.round === 0n
-        ? 'placement'
-        : 'active'
+    ? (['placement', 'active', 'ended'] as const)[fight_checkpoint_phase_rank(checkpoint.contract)]
     : row.phase
   const fighters = (checkpoint?.contract.fighters ?? []) as unknown as readonly FightRosterFighter[]
   const players = (checkpoint?.sources.players ?? {}) as FightPlayers
@@ -404,8 +406,8 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
             </h2>
             <p className="mt-1 font-mono text-[9px] tracking-[0.14em] text-[#777b86] uppercase">
               {phase === 'active'
-                ? `${text.fight_started_ago} ${elapsed_label(started_ms)}`
-                : `${text.fight_placement} · ${Math.max(0, Math.ceil((Number(row.placement_ms) + PLACEMENT_WINDOW_MS - Date.now()) / 1000))}s`}
+                ? `${text.fight_started_ago} ${elapsed_label(started_ms, now)}`
+                : `${text.fight_placement} · ${now === null ? '—' : Math.max(0, Math.ceil((Number(row.placement_ms) + PLACEMENT_WINDOW_MS - now) / 1000))}s`}
             </p>
           </div>
         </header>

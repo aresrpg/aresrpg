@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Local presentation fixture. No game observers, signer, or transaction executor are started.
+// Local presentation fixture. Only settings persistence runs; no game observers, signer, or transaction executor.
 import { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { create_character_source, create_fight } from '@aresrpg/fight'
@@ -11,7 +11,8 @@ import { App } from '../../src/app.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
-import { dispatch_app, read_app_state } from '../../src/store.ts'
+import { dispatch_app, read_app_state, observe_app } from '../../src/store.ts'
+import { load_game_settings } from '../../src/game/core/settings.ts'
 import { market_observation } from '../../src/modules/marketplace.ts'
 import { TUTORIAL_IDS } from '../../src/tutorial/tutorial.ts'
 import { publish_pose } from '../../src/game/core/pose_feed.ts'
@@ -96,12 +97,13 @@ const items: ItemRow[] = selected_types.flatMap((type, index) => {
     : []
 })
 const settings = {
-  ...read_app_state().settings,
+  ...load_game_settings('medium'),
   music_enabled: false,
   footsteps_enabled: false,
   completed_tutorials: TUTORIAL_IDS,
   marketplace_disclaimer_acknowledged: true,
 }
+observe_app(['settings'])
 dispatch_app({ type: 'settings/changed', settings })
 dispatch_app({ type: 'locale/changed', locale })
 dispatch_app({ type: 'locale/loaded', locale, copy })

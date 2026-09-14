@@ -9,6 +9,7 @@ import { fight_chat_lines_at_event, project_fight_chat_lines } from '../game/fig
 import { auto_switch_fighter_from } from '../game/core/settings.ts'
 import type { AppModule, AppState } from '../store.ts'
 
+import { chain_now } from './chain_clock.ts'
 import { active_owned_character, holds_character_seat } from './fight_identity.ts'
 import type { FightKolizeumManager, FightPresentationBatch } from './fight.ts'
 import { active_seat_is_dead, fight_should_close, local_draft_finished_turn } from './fight_lifecycle.ts'
@@ -27,24 +28,20 @@ export const fight_state_regresses = (floor: FightPhaseRank, contract: unknown) 
 const kolizeum_manager = (row: FightStateRow['kolizeum']): FightKolizeumManager | null =>
   row ? Object.freeze({ id: row.id, pledge_mist: BigInt(row.pledge_mist) }) : null
 
-export const streamed_witness_boundary = (
-  checkpoint: Readonly<HydratedFightCheckpoint>,
-  observed_ms: bigint
-): FightInput | null => {
-  if (checkpoint.contract.round === 0n) return Object.freeze({ type: 'start', observed_ms })
+export const streamed_witness_boundary = (checkpoint: Readonly<HydratedFightCheckpoint>): FightInput | null => {
+  if (checkpoint.contract.round === 0n) return Object.freeze({ type: 'start' })
   const fighter = checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]
-  return fighter === undefined ? null : Object.freeze({ type: 'end_turn', fighter, observed_ms })
+  return fighter === undefined ? null : Object.freeze({ type: 'end_turn', fighter })
 }
 
 export const apply_streamed_witness = (
   session: Pick<ReturnType<typeof create_fight_session>, 'apply' | 'state'>,
-  witness: Readonly<Extract<FightInput, { type: 'turn_seed' }>>,
-  observed_ms: bigint
+  witness: Readonly<Extract<FightInput, { type: 'turn_seed' }>>
 ): void => {
   session.apply(witness)
   if (session.state()?.error?.code !== 'unexpected_turn_seed') return
   const checkpoint = session.state()?.checkpoint
-  const boundary = checkpoint ? streamed_witness_boundary(checkpoint, observed_ms) : null
+  const boundary = checkpoint ? streamed_witness_boundary(checkpoint) : null
   if (boundary) session.apply(boundary)
   session.apply(witness)
 }
@@ -137,7 +134,11 @@ export const observe_fights = ({
       })
     }
   const create_session = (fight_id: string | null): Runtime =>
-    create_fight_session({ now: () => BigInt(Date.now()), reconcile: reconcile(fight_id) })
+    create_fight_session({
+      now: () =>
+        BigInt(Math.floor(fight_id ? (chain_now(get_state().chain_clock, performance.now()) ?? 0) : performance.now())),
+      reconcile: reconcile(fight_id),
+    })
   const apply_input = (
     session: Runtime,
     input: Readonly<FightInput>,
@@ -352,7 +353,7 @@ export const observe_fights = ({
       const witness_key = `${witness.fighter}:${witness.seed}`
       const applied = witnesses.get(packet.fight)
       if (applied?.has(witness_key)) return
-      apply_streamed_witness(session, witness, BigInt(Date.now()))
+      apply_streamed_witness(session, witness)
       if (session.state()?.error?.code !== 'unexpected_turn_seed') applied?.add(witness_key)
     }
   })

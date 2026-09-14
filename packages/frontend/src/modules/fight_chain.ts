@@ -11,6 +11,7 @@ import type { AuthSession, FightActions, KolizeumActions } from '@aresrpg/sdk/au
 import type { AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 
+import { chain_now } from './chain_clock.ts'
 import { fight_environment } from './fight.ts'
 import { owned_placement_readiness } from './fight_identity.ts'
 import { END_TURN_SUBMIT_GUARD_MS, fight_turn_identity, fight_turn_action } from './fight_lifecycle.ts'
@@ -52,7 +53,7 @@ const ready_all_context = (state: Readonly<AppState>, fight: string) => {
 export const queued_end_turn = (
   state: Parameters<NonNullable<AppModule['reduce']>>[0],
   fight: string,
-  now_ms: number
+  monotonic_ms: number
 ): Readonly<{ fighter: bigint; delay_ms: number }> | null => {
   const environment = state.fight.environments[fight]
   const checkpoint = state.fight.cached[fight]
@@ -65,14 +66,17 @@ export const queued_end_turn = (
     checkpoint.contract.round === 0n
   )
     return null
-  const fighter = checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]
-  const row = fighter === undefined ? null : checkpoint.contract.fighters[Number(fighter)]
-  const character = row?.kind.type === 'player' ? row.kind : null
-  const owned =
-    character !== null &&
-    character.owner === state.session.wallet?.address &&
-    state.session.characters.some(({ id }) => id === character.character)
-  if (!owned || fighter === undefined) return null
+  const fighter = checkpoint.contract.queue[Number(checkpoint.contract.turn_ptr)]!
+  const kind = checkpoint.contract.fighters[Number(fighter)]?.kind
+  if (
+    kind?.type !== 'player' ||
+    kind.owner !== state.session.wallet?.address ||
+    !state.session.characters.some(({ id }) => id === kind.character)
+  )
+    return null
+  if (checkpoint.contract.ended) return Object.freeze({ fighter, delay_ms: 0 })
+  const now_ms = chain_now(state.chain_clock, monotonic_ms)
+  if (now_ms === null) return null
   const ready_at =
     Number(checkpoint.contract.turn_started_ms) + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS
   return Object.freeze({ fighter, delay_ms: Math.max(0, ready_at - now_ms) })
@@ -182,7 +186,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   }
   const schedule_queued_turn = (fight: string): void => {
     clear_queued_timer(fight)
-    const now = Date.now()
+    const now = performance.now()
     const queued = queued_end_turn(get_state(), fight, now)
     if (!queued) return
     const delay_ms = end_turn_retry_delay_ms(queued.delay_ms, retry_not_before.get(fight) ?? 0, now)
@@ -198,7 +202,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       type: 'fight/input',
       fight,
       origin: 'local',
-      input: { type: 'end_turn', fighter: queued.fighter, observed_ms: BigInt(Date.now()) },
+      input: { type: 'end_turn', fighter: queued.fighter },
     })
     dispatch({ type: 'fight/end_turn_queued', fight, queued: false })
   }
@@ -218,7 +222,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
           dispatch({
             type: 'fight/runtime_input',
             fight,
-            input: { type: 'start', observed_ms: BigInt(Date.now()) },
+            input: { type: 'start' },
           })
         turn_witnesses.forEach(({ fighter, seed }) =>
           dispatch({ type: 'fight/runtime_input', fight, input: { type: 'turn_seed', fighter, seed } })
@@ -262,7 +266,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
 
   events.on('STATE_UPDATED', (state, previous) => {
-    if (state.fight.environments === previous.fight.environments) return
+    if (state.fight.environments === previous.fight.environments && state.chain_clock === previous.chain_clock) return
     new Set([...Object.keys(previous.fight.environments), ...Object.keys(state.fight.environments)]).forEach(
       schedule_queued_turn
     )
@@ -366,7 +370,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
           // Nothing executed: cancel only the pending boundary, retaining movement/casts so
           // the same draft can retry after a bounded backoff despite client clock skew.
           dispatch({ type: 'fight/cancel_pending_turn', fight: fight_id })
-          retry_not_before.set(fight_id, Date.now() + END_TURN_SUBMIT_GUARD_MS)
+          retry_not_before.set(fight_id, performance.now() + END_TURN_SUBMIT_GUARD_MS)
           queue_after_refusal = true
           return
         }

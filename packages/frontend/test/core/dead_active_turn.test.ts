@@ -78,7 +78,7 @@ for (const action of ['cast_spell', 'forfeit'] as const) {
 }
 
 for (const origin of ['streamed', 'local'] as const) {
-  test(`${origin} death commits only the originating tab's complete local draft`, () => {
+  test(`${origin} death waits for chain time and commits only the originating tab's draft`, () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
     const ally = structuredClone(checkpoint.contract.fighters[0]!) as PlayerFighter
     ally.kind.character = '0xc2'
@@ -97,6 +97,7 @@ for (const origin of ['streamed', 'local'] as const) {
       ...base,
       session: {
         ...base.session,
+        link_status: 'ready',
         selected_character_id: '0xc1',
         characters: [{ id: '0xc1', active_fight: { id: '0xf1' } }] as never,
         wallet: {
@@ -150,6 +151,10 @@ for (const origin of ['streamed', 'local'] as const) {
         packet: { type: 'packet/fight_action', fight: '0xf1', action: encode_fight_action(input) } as never,
       })
     expect(state.fight.checkpoint!.contract.fighters[0]!.dead).toBeTrue()
+    expect(state.fight.checkpoint!.contract.ended).toBeFalse()
+    expect(commits).toEqual([])
+    dispatch({ type: 'clock/observed', chain_ms: 10_000, received_ms: performance.now() })
+    dispatch({ type: 'clock/observed', chain_ms: 10_001, received_ms: performance.now() })
     expect(commits).toEqual(
       origin === 'local'
         ? [

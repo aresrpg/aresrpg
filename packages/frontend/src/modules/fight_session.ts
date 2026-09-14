@@ -6,6 +6,7 @@
 
 import {
   create_fight,
+  players_ready_after,
   type Fight,
   type FightEvent,
   type FightInput,
@@ -26,11 +27,46 @@ export type ActiveFightSession = Readonly<{
   awaiting_turn_witness: boolean
 }>
 
-const stamp_boundary = (input: Readonly<FightInput>, now: () => bigint): FightInput => {
-  if (!['start', 'end_turn', 'crank', 'forfeit'].includes(input.type)) return input
-  return 'observed_ms' in input && input.observed_ms !== undefined
-    ? input
-    : Object.freeze({ ...input, observed_ms: now() })
+type BoundaryInput = Extract<FightInput, { type: 'start' | 'end_turn' | 'crank' | 'forfeit' }>
+
+/** Remote replay proves ordering, not wall time. Move still validates every submitted boundary. */
+const replay_boundary_ms = (
+  input: Readonly<BoundaryInput>,
+  { contract }: Readonly<HydratedFightCheckpoint>
+): bigint => {
+  switch (input.type) {
+    case 'start':
+      return (
+        contract.placement_ms +
+        (players_ready_after(contract.fighters, null) ? 0n : CONTRACT_CONSTANTS.placement_force_ms)
+      )
+    case 'end_turn':
+      return contract.turn_started_ms + CONTRACT_CONSTANTS.turn_min_ms
+    case 'crank':
+      return (
+        contract.turn_started_ms +
+        (contract.fighters[Number(contract.queue[Number(contract.turn_ptr)])]?.dead
+          ? 0n
+          : CONTRACT_CONSTANTS.turn_max_ms)
+      )
+    case 'forfeit':
+      return contract.turn_started_ms
+  }
+}
+
+const stamp_boundary = (
+  input: Readonly<FightInput>,
+  now: () => bigint,
+  remote: Readonly<HydratedFightCheckpoint> | null
+): FightInput => {
+  if (input.type !== 'start' && input.type !== 'end_turn' && input.type !== 'crank' && input.type !== 'forfeit')
+    return input
+  if (remote) {
+    const minimum = replay_boundary_ms(input, remote)
+    const observed = now()
+    return Object.freeze({ ...input, observed_ms: observed < minimum ? minimum : observed })
+  }
+  return input.observed_ms !== undefined ? input : Object.freeze({ ...input, observed_ms: now() })
 }
 
 /** Owns the one stateful @aresrpg/fight instance mounted by every fight surface. */
@@ -81,7 +117,7 @@ export const create_fight_session = ({
     },
     apply: (input: Readonly<FightInput>): boolean => {
       if (!runtime) return false
-      publish(runtime.apply(stamp_boundary(input, now)))
+      publish(runtime.apply(stamp_boundary(input, now, mode === 'remote' ? runtime.state() : null)))
       return true
     },
     simulate_turn: (): boolean => {

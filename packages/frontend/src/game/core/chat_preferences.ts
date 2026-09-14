@@ -33,3 +33,16 @@ export const toggle_chat_channel = (visible: readonly ChatChannel[], toggled: Ch
   Object.freeze(
     CHAT_CHANNELS.filter((channel) => (channel === toggled ? !visible.includes(channel) : visible.includes(channel)))
   )
+
+export type ChatSize = Readonly<{ width: number; height: number }>
+
+export const chat_size_from = (value: unknown): ChatSize | null => {
+  if (!value || typeof value !== 'object') return null
+  const width: unknown = Reflect.get(value, 'width')
+  const height: unknown = Reflect.get(value, 'height')
+  return [width, height].every(
+    (dimension) => typeof dimension === 'number' && Number.isFinite(dimension) && dimension > 0
+  )
+    ? Object.freeze({ width: width as number, height: height as number })
+    : null
+}

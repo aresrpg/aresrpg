@@ -28,6 +28,7 @@ describe('game settings', () => {
       follow_leader: false,
       chat_visible_channels: ['general', 'party', 'whisper', 'combat'],
       chat_speak_channel: 'general',
+      chat_size: null,
       auto_switch_fighter: true,
       always_craft_from_character_id: null,
       placement_gas_warning_disabled: false,
@@ -51,6 +52,7 @@ describe('game settings', () => {
         follow_leader: true,
         chat_visible_channels: ['general', 'party'],
         chat_speak_channel: 'party',
+        chat_size: null,
         auto_switch_fighter: false,
         always_craft_from_character_id: '0xcrafter',
         placement_gas_warning_disabled: true,
@@ -71,6 +73,7 @@ describe('game settings', () => {
       follow_leader: true,
       chat_visible_channels: ['general', 'party'],
       chat_speak_channel: 'party',
+      chat_size: null,
       auto_switch_fighter: false,
       always_craft_from_character_id: '0xcrafter',
       placement_gas_warning_disabled: true,
@@ -94,6 +97,7 @@ describe('game settings', () => {
       follow_leader: false,
       chat_visible_channels: ['general', 'party', 'whisper', 'combat'],
       chat_speak_channel: 'general',
+      chat_size: null,
       auto_switch_fighter: true,
       always_craft_from_character_id: null,
       placement_gas_warning_disabled: false,
@@ -150,10 +154,28 @@ describe('game settings', () => {
     expect(load_game_settings('medium', null, malformed)).toMatchObject({
       chat_visible_channels: ['general', 'party', 'whisper', 'combat'],
       chat_speak_channel: 'general',
+      chat_size: null,
     })
     expect(load_game_settings('medium', null, hidden)).toMatchObject({
       chat_visible_channels: [],
       chat_speak_channel: 'party',
+      chat_size: null,
     })
   })
+})
+
+test('chat dimensions survive settings storage and reject invalid values', () => {
+  const storage = memory_storage(JSON.stringify({ chat_size: { width: 520, height: 410 } }))
+  const loaded = load_game_settings('medium', null, storage)
+  expect(loaded.chat_size).toEqual({ width: 520, height: 410 })
+  save_game_settings(loaded, storage)
+  expect(load_game_settings('medium', null, storage).chat_size).toEqual(loaded.chat_size)
+  for (const chat_size of [
+    null,
+    {},
+    { width: -1, height: 100 },
+    { width: '520', height: 100 },
+    { width: 200, height: 0 },
+  ])
+    expect(load_game_settings('medium', null, memory_storage(JSON.stringify({ chat_size }))).chat_size).toBeNull()
 })

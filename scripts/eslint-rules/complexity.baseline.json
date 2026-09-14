@@ -157,7 +157,7 @@
       "Toasts > toasts.map[0](toast)": [12]
     },
     "packages/frontend/src/components/FightPrompt.tsx": {
-      "FightModal": [16]
+      "FightModal": [13]
     },
     "packages/frontend/src/components/SendSuiModal.tsx": {
       "RecipientHint": [11],
@@ -620,7 +620,7 @@
     },
     "packages/frontend/src/components/FightPrompt.tsx": {
       "fight_joinable_teams > eligible": [9],
-      "FightModal": [26],
+      "FightModal": [25],
       "TeamColumn > fighters.map[0](fighter,index)": [17]
     },
     "packages/frontend/src/components/MobCoreStats.tsx": {
