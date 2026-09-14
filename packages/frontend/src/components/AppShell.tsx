@@ -22,6 +22,7 @@ import { SessionReplacedModal } from './SessionReplacedModal.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { ConnectionCard, DiscordCard, LanguageCard, TelegramCard } from './SidebarCards.tsx'
 import { MaintenanceModal } from './MaintenanceModal.tsx'
+import { FullscreenButton } from './FullscreenButton.tsx'
 import { WalletCard } from './WalletCard.tsx'
 import { TradeInbox } from './TradeInbox.tsx'
 
@@ -163,22 +164,29 @@ export const AppShell = ({
             network={network}
             mastery_notification={mastery_notification}
           />
-          <WalletCard copy={copy} disconnect={disconnect} session={session} />
           <LanguageCard change_locale={change_locale} locale={locale} />
           <DiscordCard copy={copy} />
           <TelegramCard copy={copy} />
           <PublicSaleCard copy={copy} />
         </SidebarViewport>
         <div className="app-shell-column flex min-h-0 min-w-0 flex-1 flex-col" data-app-content="">
-          {character_tabs_visible(page) && (
-            <CharacterTabs
-              characters={session.characters}
-              copy={copy}
-              create_character={create_character}
-              select_character={select_character}
-              selected_character_id={session.selected_character_id}
-            />
-          )}
+          <header className="app-header pointer-events-auto" data-app-header="">
+            {character_tabs_visible(page) ? (
+              <CharacterTabs
+                characters={session.characters}
+                copy={copy}
+                create_character={create_character}
+                select_character={select_character}
+                selected_character_id={session.selected_character_id}
+              />
+            ) : (
+              <div className="min-w-0 flex-1 self-center px-3 text-[10px] tracking-widest text-muted uppercase">
+                {copy[page]}
+              </div>
+            )}
+            <FullscreenButton copy={copy} />
+            <WalletCard key={session.wallet?.address} copy={copy} disconnect={disconnect} session={session} />
+          </header>
           <div className="app-content relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
             <TradeInbox copy={copy} />
             <RoutedPage

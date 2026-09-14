@@ -77,8 +77,8 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const { wallet } = state.session
     if (!wallet) return
     const opened =
-      state.navigation.page === 'settings' &&
-      (previous.navigation.page !== 'settings' || wallet !== previous.session.wallet)
+      wallet !== previous.session.wallet ||
+      (state.navigation.page === 'settings' && previous.navigation.page !== 'settings')
     if (opened) dispatch({ type: 'suins/refresh' })
     const { request } = state.suins
     if (!request || request === previous.suins.request) return
@@ -99,7 +99,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       })
   })
   const state = get_state()
-  if (state.session.wallet && state.navigation.page === 'settings') dispatch({ type: 'suins/refresh' })
+  if (state.session.wallet) dispatch({ type: 'suins/refresh' })
 }
 
 export default { name: 'suins', reduce, observe } satisfies AppModule

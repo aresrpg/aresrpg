@@ -47,25 +47,42 @@ test('actual backend bounds request metadata and preserves device-loss bookkeepi
   })
 })
 
-test('real world clears held movement immediately when editing takes focus', async ({ page }) => {
-  await page.goto('/e2e/fixtures/engine_lifecycle.html')
-  await page.waitForFunction(() => typeof window.start_world_input === 'function')
-  await page.evaluate(() => window.start_world_input())
-  await page.locator('canvas').focus()
-  await page.waitForFunction(() => window.read_world_pose() !== null)
-  const initial = await page.evaluate(() => window.read_world_pose()!)
-  await page.keyboard.down('KeyW')
-  await page.waitForFunction((start) => {
-    const pose = window.read_world_pose()
-    return pose !== null && Math.hypot(pose.x - start.x, pose.z - start.z) > 1
-  }, initial)
-  await page.getByRole('textbox', { name: 'Friends' }).focus()
-  // Allow existing physical deceleration and the throttled pose feed to settle, while W stays held.
-  await page.waitForTimeout(400)
-  const stopped = await page.evaluate(() => window.read_world_pose()!)
-  await page.waitForTimeout(300)
-  const later = await page.evaluate(() => window.read_world_pose()!)
-  expect(Math.hypot(later.x - stopped.x, later.z - stopped.z)).toBeLessThan(0.01)
-  await page.keyboard.up('KeyW')
-  await page.evaluate(() => window.stop_world_input())
-})
+for (const frame_interval of [0, 500])
+  test(`real world clears held movement when editing takes focus (${frame_interval ? 'slow frames' : 'normal frames'})`, async ({
+    page,
+  }) => {
+    if (frame_interval)
+      await page.addInitScript((interval) => {
+        window.requestAnimationFrame = (callback) => window.setTimeout(() => callback(performance.now()), interval)
+        window.cancelAnimationFrame = (handle) => window.clearTimeout(handle)
+      }, frame_interval)
+    await page.goto('/e2e/fixtures/engine_lifecycle.html')
+    await page.waitForFunction(() => typeof window.start_world_input === 'function')
+    await page.evaluate(() => window.start_world_input())
+    try {
+      await page.locator('canvas').focus()
+      await page.waitForFunction(() => window.read_world_pose() !== null)
+      const initial = await page.evaluate(() => window.read_world_pose()!)
+      await page.keyboard.down('KeyW')
+      await page.waitForFunction((start) => {
+        const pose = window.read_world_pose()
+        return pose !== null && Math.hypot(pose.x - start.x, pose.z - start.z) > 1
+      }, initial)
+      await page.getByRole('textbox', { name: 'Friends' }).focus()
+      // Observe controller settling through fresh publications, never a wall-clock sleep or cached pose.
+      await page.waitForFunction(() => window.read_world_motion().stable_samples >= 4, undefined, { timeout: 5_000 })
+      const stopped = await page.evaluate(() => ({
+        pose: window.read_world_pose()!,
+        samples: window.read_world_motion().samples,
+      }))
+      await page.waitForFunction((since) => window.read_world_motion().samples >= since + 4, stopped.samples, {
+        timeout: 5_000,
+      })
+      const later = await page.evaluate(() => ({ pose: window.read_world_pose()!, motion: window.read_world_motion() }))
+      expect(later.motion.samples).toBeGreaterThan(stopped.samples)
+      expect(Math.hypot(later.pose.x - stopped.pose.x, later.pose.z - stopped.pose.z)).toBeLessThan(0.01)
+    } finally {
+      await page.keyboard.up('KeyW')
+      await page.evaluate(() => window.stop_world_input())
+    }
+  })

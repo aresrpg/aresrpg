@@ -14,7 +14,6 @@ import { board_catalog_id, item_template_id, recipe_id, spell_template_id } from
 import {
   canonical_json,
   created_seed_row_keys,
-  seed_ledger_after,
   seed_ledger_after_batch,
   seed_sync_rows,
   seed_sync_view,
@@ -423,25 +422,6 @@ describe('check changes', () => {
     expect(spark.hash).not.toBe('stale')
   })
 
-  test('the record after an apply covers exactly the rows that now match their files', () => {
-    const sdk = game()
-    const rows = seed_sync_rows(sdk, content)
-    const ore = rows.find(({ key }) => key === ore_id)!
-    const spark = rows.find(({ key }) => key === spark_id)!
-    const ledger = {
-      [ore_id]: { hash: ore.hash, label: 'item ore' },
-      '0xdead': { hash: 'x', label: 'item old_relic' },
-    }
-
-    const next = seed_ledger_after(rows, ledger, new Set([spark.key]), (id) => id === ore_id || id === spark_id)
-
-    expect(next[ore_id]?.hash).toBe(ore.hash) // untouched row carried over
-    expect(next[spark_id]?.hash).toBe(spark.hash) // freshly written row recorded
-    expect(next[spark_id]).not.toHaveProperty('addresses')
-    expect(next['0xdead']).toBeUndefined() // dropped rows leave with the files
-    expect(next[box_id]).toBeUndefined() // never-created rows stay out
-  })
-
   test('one certified update advances only its own ledger rows', () => {
     const sdk = game()
     const rows = seed_sync_rows(sdk, content)
@@ -564,4 +544,39 @@ test('update batches use the AdminCap version from the preceding receipt', () =>
   sdk.cache.owned.set(ADMIN_CAP, { objectId: ADMIN_CAP, version: '2', digest: 'receipt-updated-cap' })
   expect(cap_version(batches[1]!.build())).toBe('2')
   expect(cap_version(first)).toBe('1')
+})
+
+test('creating new content preserves pending recipe rewrites for the later recipe batch', () => {
+  const recipe = {
+    key: 'recipe',
+    chain_id: 'recipe',
+    addresses: ['recipe'],
+    kind: 'template',
+    domain: 'recipe',
+    label: 'recipe mushroom_lacquer',
+    hash: 'one-resin',
+    hydrate: ['recipe'],
+  } as SeedSyncRow
+  const item = {
+    ...recipe,
+    key: 'new-item',
+    chain_id: 'new-item',
+    addresses: ['new-item'],
+    domain: 'item',
+  } as SeedSyncRow
+  const rows = [recipe, item]
+  const ledger = { recipe: { hash: 'two-resin', label: recipe.label, revisions: { recipe: '855012001:original' } } }
+  const after_creation = seed_ledger_after_batch(rows, ledger, ['new-item'], () => '855012001:original')
+  expect(after_creation.recipe).toEqual(ledger.recipe)
+  const next_created = created_seed_row_keys(rows, after_creation, new Set(['recipe']), () => true)
+  expect(next_created.size).toBe(0)
+  expect(
+    seed_sync_view(
+      rows,
+      after_creation,
+      () => true,
+      0,
+      () => '855012001:original'
+    ).changed
+  ).toContain(recipe)
 })

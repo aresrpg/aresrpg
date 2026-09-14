@@ -1,0 +1,36 @@
+{
+  "captured_at": "2026-09-14",
+  "source": "https://sui-grpc-web.publicnode.com:443",
+  "object": {
+    "objectId": "0xa5c95e4e11c8946f4b6a8839b84bdbf8f63bd6e2c0368570b73a0a7aa9f7bbb9",
+    "version": "855012001",
+    "digest": "4sk1wks3gJHm9TMK6VfV6SisBkVWMvyBKDzfHAQpNtAv",
+    "owner": {
+      "$kind": "Shared",
+      "Shared": {
+        "initialSharedVersion": "855012001"
+      }
+    },
+    "type": "0xaaa207456758bfc1c608e7e3032ab367235aadec966511784c340b1962bdfd53::recipe_rows::Recipe",
+    "json": {
+      "active": true,
+      "data": {
+        "inputs": [
+          {
+            "quantity": "2",
+            "template": "0xd71f7eb24ca98bbdbda8223c97739b1e053c3eaf3050e474338af2c24ba947d4"
+          },
+          {
+            "quantity": "1",
+            "template": "0xf4a1e40bfb21e8d3e9011d947c06bc17902229d62f045bcab1568cfb24f27bf3"
+          }
+        ],
+        "job": "ALCHEMIST",
+        "output_template": "0x206cd5c108e13b6129c6795e1b1b19026f917b382ecf09ff4f6e24c0a2b7cc56",
+        "required_level": "1"
+      },
+      "id": "0xa5c95e4e11c8946f4b6a8839b84bdbf8f63bd6e2c0368570b73a0a7aa9f7bbb9",
+      "output_type": "mushroom_lacquer"
+    }
+  }
+}

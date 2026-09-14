@@ -4,7 +4,7 @@
 import { LIFECYCLE_WORLD, probe_backend_lifetime } from '../../../engine/test/browser_lifecycle.ts'
 import { probe_label_scene } from '../../../engine/test/browser_labels.ts'
 import { create_world } from '../../src/game/core/world.ts'
-import { read_pose } from '../../src/game/core/pose_feed.ts'
+import { read_pose, subscribe_pose } from '../../src/game/core/pose_feed.ts'
 
 declare global {
   interface Window {
@@ -12,6 +12,7 @@ declare global {
     probe_engine_lifetime: () => ReturnType<typeof probe_backend_lifetime>
     start_world_input: () => Promise<void>
     read_world_pose: typeof read_pose
+    read_world_motion: () => Readonly<{ samples: number; stable_samples: number }>
     stop_world_input: () => void
   }
 }
@@ -24,7 +25,21 @@ window.start_world_input = async () => {
     world: LIFECYCLE_WORLD,
     quality: 'low',
   })
-  window.stop_world_input = world.dispose
+  let previous = read_pose()
+  let samples = 0
+  let stable_samples = 0
+  const unsubscribe = subscribe_pose(() => {
+    const pose = read_pose()
+    if (!pose) return
+    samples += 1
+    stable_samples = previous && pose.x === previous.x && pose.z === previous.z ? stable_samples + 1 : 0
+    previous = pose
+  })
+  window.read_world_motion = () => ({ samples, stable_samples })
+  window.stop_world_input = () => {
+    unsubscribe()
+    world.dispose()
+  }
   world.set_footsteps_enabled(false)
   world.point_at({ x: 0, z: 0 })
   world.set_interactive(true)

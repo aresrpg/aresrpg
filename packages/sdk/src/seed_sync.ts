@@ -68,6 +68,8 @@ export type SeedSyncRow = Readonly<{
   kind: 'template' | 'board' | 'supply'
   domain: 'item' | 'spell' | 'mob' | 'recipe' | 'dungeon' | 'world' | 'board' | 'mastery_offer' | 'giftcard'
   item?: Readonly<{ category: string }>
+  /** Expected recipe values, composed by the same owner as publication arguments. */
+  recipe?: ReturnType<typeof recipe_door_args>
   /** spell rows carry their immutable class so the ledger can refuse illegal rewrites */
   spell?: Readonly<{ classe: string; unlock_level: number }>
   world?: Readonly<{ cities: readonly string[] }>
@@ -276,6 +278,7 @@ export const seed_sync_rows = (
     return Object.freeze({
       key: id,
       label: `recipe ${recipe.output_type}`,
+      recipe: recipe_door_args(content_root, seed_original, recipe, job),
       // the job derives from the output item's category — a category change retunes the recipe
       hash: fingerprint({ recipe, job }),
       kind: 'template' as const,
@@ -506,4 +509,4 @@ export const seed_sync_view = (
   })
 }
 
-export { seed_ledger_after, seed_ledger_after_batch } from './seed_ledger.ts'
+export { seed_ledger_after_batch } from './seed_ledger.ts'

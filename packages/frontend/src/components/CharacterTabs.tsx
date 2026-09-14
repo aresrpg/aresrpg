@@ -115,8 +115,8 @@ export const CharacterTabs = ({
               title={locked ? copy.settings_page.always_craft_from_hint : undefined}
               type="button"
             >
-              <span className="truncate text-[10px] tracking-[0.18em] uppercase">{character.name}</span>
-              <span className={`text-[8px] tracking-[0.12em] ${active ? 'text-[#c8963c]' : 'text-[#4b5058]'}`}>
+              <span className="truncate text-[12px] tracking-[0.12em] uppercase">{character.name}</span>
+              <span className={`text-[10px] tracking-[0.12em] ${active ? 'text-[#c8963c]' : 'text-[#4b5058]'}`}>
                 {character.level}
               </span>
             </button>
@@ -125,7 +125,7 @@ export const CharacterTabs = ({
         {characters.length < MAX_TRACKED_CHARACTERS && (
           <button
             aria-label={copy.create_character}
-            className="grid w-[26px] shrink-0 cursor-pointer place-items-center border-r border-border text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
+            className="grid w-[34px] shrink-0 cursor-pointer place-items-center border-r border-border text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
             data-character-tab-create=""
             onClick={create_character}
             title={copy.create_character}

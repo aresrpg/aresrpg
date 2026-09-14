@@ -11,13 +11,13 @@ for (const width of [1920, 1366, 1024]) {
     )
     await page.goto('/e2e/fixtures/responsive_preview.html?page=world&locale=fr')
     const sidebar = page.locator('[data-app-sidebar]')
-    const tabs = page.locator('[data-character-tabs]')
+    const header = page.locator('[data-app-header]')
     const frame = page.locator('[data-world-frame]')
     await expect(sidebar).toBeVisible()
-    const side = (await sidebar.boundingBox())!
+    const side = (await page.locator('[data-app-account-panel]').boundingBox())!
     expect(side.width).toBeGreaterThan(0)
     expect(side.width).toBeLessThanOrEqual(200)
-    const tab = (await tabs.boundingBox())!
+    const tab = (await header.boundingBox())!
     const world = (await frame.boundingBox())!
     expect(Math.abs(tab.x - world.x)).toBeLessThan(1)
     expect(world.y).toBeGreaterThan(tab.y + tab.height)
@@ -25,10 +25,12 @@ for (const width of [1920, 1366, 1024]) {
     const connection = (await page.locator('[data-connection-card]').boundingBox())!
     expect(connection.y + connection.height).toBeLessThanOrEqual(768)
     expect(connection.width).toBe(side.width)
+    await page.locator('[data-wallet-trigger]').click()
     for (const button of await page.locator('[data-wallet-card] button').all()) {
       await button.scrollIntoViewIfNeeded()
       await expect(button).toBeInViewport()
     }
+    await page.keyboard.press('Escape')
     const chat = (await page.locator('.gw-worldchat').boundingBox())!
     const map = (await page.locator('[data-minimap]').boundingBox())!
     expect(world.y + world.height - chat.y - chat.height).toBeLessThanOrEqual(20)
@@ -372,45 +374,39 @@ for (const viewport of [
 }
 
 for (const height of [360, 600, 900, 1440]) {
-  test(`the complete sidebar fits its height without scrolling at ${height}px`, async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height })
+  test(`sidebar preserves desktop text and cards remain reachable at ${height}px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height })
     await page.route('**/*', (route) =>
       new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
     )
     await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
     const sidebar = page.locator('[data-app-account-panel]')
+    const scroll = sidebar.locator('.sidebar-viewport__content')
     await expect(sidebar).toBeVisible()
+    await expect(sidebar).toHaveCSS('width', '200px')
+    await expect(scroll).toHaveCSS('transform', 'none')
+    await expect(page.locator('[data-page="world"] span').first()).toHaveCSS('font-size', '11px')
+    const footer = page.locator('[data-connection-card]')
+    const before = (await footer.boundingBox())!
     for (const selector of [
-      '[data-app-sidebar]',
-      '[data-wallet-card]',
-      '[data-language-card]',
-      '[data-discord-card]',
-      '[data-telegram-card]',
+      '[data-app-sidebar] button[data-page="settings"]',
+      '[data-language-card] button',
       '[data-public-sale-card]',
-      '[data-connection-card]',
     ]) {
-      await expect(sidebar.locator(selector)).toBeInViewport({ ratio: 0.999 })
+      const control = sidebar.locator(selector).first()
+      await control.scrollIntoViewIfNeeded()
+      await expect(control).toBeInViewport()
+      await expect(footer).toBeInViewport({ ratio: 0.999 })
     }
-    const content = sidebar.locator('.sidebar-viewport__content')
-    await expect(async () => {
-      const box = (await sidebar.boundingBox())!
-      const fitted = (await content.boundingBox())!
-      expect(Math.abs(fitted.x - box.x)).toBeLessThanOrEqual(1)
-      expect(fitted.y + fitted.height).toBeLessThanOrEqual(box.y + box.height + 1)
-      // Firefox includes the pre-transform extent in scrollHeight; assert actual scrolling instead.
-      expect(
-        await sidebar.evaluate((element) => {
-          element.scrollTop = 100
-          return element.scrollTop
-        })
-      ).toBe(0)
-    }).toPass()
-    await page.screenshot({ path: `test-results/fitted-sidebar-${height}.png` })
+    expect((await footer.boundingBox())!.y).toBeCloseTo(before.y, 1)
+    expect(await scroll.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    if (height <= 900) expect(await scroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+    await page.screenshot({ path: `test-results/readable-sidebar-${height}.png` })
   })
 }
 
 for (const height of [500, 1440]) {
-  test(`layout anchors survive sidebar fitting at ${height}px`, async ({ page }) => {
+  test(`layout anchors survive sidebar scrolling at ${height}px`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height })
     await page.route('**/*', (route) =>
       new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
@@ -418,7 +414,7 @@ for (const height of [500, 1440]) {
     await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
     await expect(page.locator('.stats')).toBeVisible()
     await expect(async () => {
-      const sidebar = (await page.locator('[data-app-sidebar]').boundingBox())!
+      const sidebar = (await page.locator('[data-app-account-panel]').boundingBox())!
       const account = (await page.locator('[data-app-account-panel]').boundingBox())!
       const footer = (await page.locator('[data-connection-card]').boundingBox())!
       const pane = (await page.locator('[data-app-content]').boundingBox())!
@@ -446,7 +442,7 @@ test('the bottom border stays inside the sidebar clip with fractional card sizes
   // Font metrics and zoom produce fractional heights; integer DOM measurements must not clip the border.
   await page.addStyleTag({
     content:
-      '.sidebar-viewport__content > div:first-child { height: 2000.49px; } [data-connection-card] { height: 200.49px; }',
+      '.sidebar-viewport__content > :first-child { height: 2000.49px; } [data-connection-card] { height: 200.49px; }',
   })
   await expect(async () => {
     const row = (await page.locator('.app-shell-row').boundingBox())!
@@ -575,5 +571,21 @@ for (const width of [590, 1920]) {
     )
     expect(await page.locator('.app-content').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: `test-results/market-volumes-${width}.png` })
+  })
+}
+
+for (const height of [500, 900]) {
+  test(`opening a recipe keeps every job name readable at height ${height}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height })
+    await page.route('**/*', (route) =>
+      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
+    )
+    await page.goto('/e2e/fixtures/responsive_preview.html?page=jobs')
+    await page.locator('.jobs__recipe').first().click()
+    await expect(page.locator('.jobs__item-detail')).toBeVisible()
+    for (const name of await page.locator('.jobs__list-name').all()) {
+      expect(await name.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+    }
+    await page.screenshot({ path: `test-results/job-names-${height}.png` })
   })
 }

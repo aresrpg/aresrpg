@@ -3,12 +3,12 @@
 
 :root {
   --app-sidebar-width: 200px;
-  --app-tabs-height: 22px;
+  --app-tabs-height: 36px;
 }
 
 .app-ui {
-  --app-inset: 12px;
-  --app-gap: 12px;
+  --app-inset: 6px;
+  --app-gap: var(--app-inset);
   --app-top: max(var(--app-inset), env(safe-area-inset-top));
   --app-bottom: max(var(--app-inset), env(safe-area-inset-bottom));
   --app-left: max(var(--app-inset), env(safe-area-inset-left));
@@ -31,31 +31,143 @@
 
 .app-world-frame {
   inset: calc(var(--app-top) + var(--app-tabs-height) + var(--app-gap)) var(--app-right) var(--app-bottom)
-    calc(var(--app-left) + var(--app-sidebar-space, var(--app-sidebar-width)) + var(--app-gap));
-}
-
-@media (max-width: 1280px), (max-height: 800px) {
-  .app-ui {
-    --app-inset: 8px;
-    --app-gap: 8px;
-    --app-sidebar-width: 176px;
-  }
+    calc(var(--app-left) + var(--app-sidebar-width) + var(--app-gap));
 }
 
 .sidebar-viewport {
-  position: relative;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
+  gap: var(--app-gap);
   min-height: 0;
-  width: var(--app-sidebar-space, var(--app-sidebar-width));
+  width: var(--app-sidebar-width);
 }
 .sidebar-viewport__content {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  justify-content: space-between;
   gap: var(--app-gap);
-  width: var(--app-sidebar-width);
-  transform-origin: top left;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
-.sidebar-viewport__content > * {
+.sidebar-viewport__content > *,
+.sidebar-viewport__footer > * {
   flex-shrink: 0;
+  min-width: 0;
+  width: 100%;
+}
+.sidebar-viewport__footer {
+  flex-shrink: 0;
+}
+
+.app-header {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  min-width: 0;
+  height: var(--app-tabs-height);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.app-header [data-character-tabs] {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+.wallet-trigger {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 12px;
+  width: 360px;
+  max-width: 75%;
+  padding: 0 12px;
+  border-left: 1px solid var(--color-gold);
+  color: var(--color-gold-light);
+  font-size: 13px;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-gold) 13%, var(--color-surface));
+}
+.wallet-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wallet-trigger__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  line-height: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.wallet-trigger__identity > span {
+  max-width: 100%;
+}
+.wallet-trigger__label {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-gold-light);
+}
+.wallet-trigger__balance {
+  flex-shrink: 0;
+  border-left: 1px solid var(--color-border);
+  padding-left: 12px;
+  color: var(--color-cyan);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.wallet-trigger__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
+  background: color-mix(in srgb, var(--color-gold) 15%, transparent);
+}
+.wallet-trigger__chevron {
+  color: var(--color-gold-light);
+}
+.wallet-trigger svg {
+  flex-shrink: 0;
+}
+.wallet-trigger:hover,
+.app-header:has(.wallet-popover:popover-open) .wallet-trigger {
+  background: color-mix(in srgb, var(--color-gold) 22%, var(--color-surface));
+}
+.wallet-popover {
+  position: fixed;
+  inset: calc(var(--app-top, 12px) + var(--app-tabs-height) + 6px) var(--app-right, 12px) auto auto;
+  margin: 0;
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - var(--app-top, 12px) - var(--app-tabs-height) - 24px);
+  overflow-y: auto;
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--color-bg) 75%, transparent);
+}
+.wallet-popover:not(:popover-open) {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .wallet-trigger {
+    gap: 7px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+  .wallet-trigger__icon {
+    display: none;
+  }
+  .wallet-trigger__balance {
+    padding-left: 7px;
+  }
 }

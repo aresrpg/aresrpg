@@ -65,10 +65,13 @@
 }
 [data-world-frame] .fight-hud--overworld .fight-hud__bar {
   grid-column: 2;
+  max-width: calc(100cqw - 20px);
   padding: 6px;
   gap: 5px;
 }
 [data-world-frame] .fight-hud--overworld .fight-hud__overworld-row {
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 6px;
 }
 [data-world-frame] .fight-hud--overworld .fight-hud__spells {

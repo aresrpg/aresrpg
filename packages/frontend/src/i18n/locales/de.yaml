@@ -2492,3 +2492,7 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Wird gespeichert…
+
+fullscreen_enter: Vollbild aktivieren
+fullscreen_exit: Vollbild verlassen
+fullscreen_failed: Der Vollbildmodus konnte nicht geändert werden.

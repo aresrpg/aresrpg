@@ -8,7 +8,7 @@ import { create_app } from '../../src/store.ts'
 const tick = () => Bun.sleep(0)
 const snapshot = { default_name: null, names: [] }
 
-test('Settings loads names once and duplicate clicks submit only one selection', async () => {
+test('Account loads names once and duplicate clicks submit only one selection', async () => {
   const app = create_app()
   let reads = 0
   let writes = 0
@@ -71,13 +71,14 @@ test('a completed selection from an old wallet cannot overwrite a new wallet', a
   connect('0x1')
   const stop = app.observe(['suins'])
   try {
+    await tick()
     app.dispatch({ type: 'suins/name_changed', name: 'old.sui' })
     app.dispatch({ type: 'suins/use' })
     app.dispatch({ type: 'auth/disconnected' })
     connect('0x2')
     completed.resolve({ ok: true, name: 'old.sui', digest: 'confirmed' })
     await tick()
-    expect(app.store.getState().suins).toMatchObject({ snapshot: null, draft: '', request: null, confirmed: false })
+    expect(app.store.getState().suins).toMatchObject({ snapshot, draft: '', request: null, confirmed: false })
   } finally {
     stop()
   }
@@ -101,6 +102,7 @@ test('a failed selection is reported and never automatically retried', async () 
   })
   const stop = app.observe(['suins'])
   try {
+    await tick()
     app.dispatch({ type: 'suins/name_changed', name: 'mine.sui' })
     app.dispatch({ type: 'suins/use' })
     await tick()
@@ -109,6 +111,34 @@ test('a failed selection is reported and never automatically retried', async () 
     await tick()
     expect(writes).toBe(1)
     expect(app.store.getState().suins.confirmed).toBe(false)
+  } finally {
+    stop()
+  }
+})
+
+test('the header resolves the linked name before visiting settings', async () => {
+  const app = create_app()
+  let reads = 0
+  const stop = app.observe(['suins'])
+  try {
+    app.dispatch({ type: 'auth/connecting' })
+    app.dispatch({
+      type: 'auth/connected',
+      session: {
+        address: '0x1',
+        suins: {
+          snapshot: async () => {
+            reads += 1
+            return { default_name: 'sceat.sceat.sui', names: [] }
+          },
+        },
+      } as never,
+    })
+    await tick()
+    expect(app.store.getState().suins.snapshot?.default_name).toBe('sceat.sceat.sui')
+    app.dispatch({ type: 'page/open', page: 'world' })
+    await tick()
+    expect(reads).toBe(1)
   } finally {
     stop()
   }

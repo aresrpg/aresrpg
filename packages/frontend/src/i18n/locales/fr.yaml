@@ -2497,3 +2497,7 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Sauvegarde…
+
+fullscreen_enter: Passer en plein écran
+fullscreen_exit: Quitter le plein écran
+fullscreen_failed: Impossible de changer le mode plein écran.

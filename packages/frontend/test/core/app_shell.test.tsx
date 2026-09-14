@@ -50,7 +50,7 @@ test('switching tabs inside one fight does not remount its presentation layer', 
   expect(key_selector).not.toContain('selected_character_id')
 })
 
-test('the account card sits below navigation and above language with row actions', async () => {
+test('the account menu lives in the header with wallet actions', async () => {
   const copy = await load_app_copy('en')
   const wallet = Object.freeze({
     address: '0x123456789',
@@ -139,8 +139,10 @@ test('the account card sits below navigation and above language with row actions
     />
   )
 
-  expect(html.indexOf('data-app-sidebar')).toBeLessThan(html.indexOf('data-wallet-card'))
-  expect(html.indexOf('data-wallet-card')).toBeLessThan(html.indexOf('data-language-card'))
+  const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+  expect(header).toContain('data-wallet-trigger')
+  expect(header).toContain('data-wallet-card')
+  expect(header).toContain('popover="auto"')
   expect(html.indexOf('data-language-card')).toBeLessThan(html.indexOf('data-discord-card'))
   expect(html.indexOf('data-discord-card')).toBeLessThan(html.indexOf('data-connection-card'))
   expect(html).toContain('data-wallet-actions=""')
@@ -151,7 +153,7 @@ test('the account card sits below navigation and above language with row actions
   expect(html).toContain('Sui Universe')
   expect(html).toContain('Connecting')
   expect(html).toContain('TESTNET')
-  expect(html).toContain('class="flex flex-col gap-1"')
+  expect(header).toContain('class="grid grid-cols-2 gap-2"')
   expect(html).not.toContain('data-page="simulator"')
   for (const page of ['airdrop', 'kolizeum', 'settings']) {
     const button = html.match(new RegExp(`<button[^>]*data-page="${page}"[^>]*>`))?.[0]

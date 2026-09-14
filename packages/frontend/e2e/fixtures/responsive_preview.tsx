@@ -161,6 +161,20 @@ const routes: Record<string, string> = {
 }
 dispatch_app({ type: 'path/open', pathname: routes[page] ?? '/settings' })
 dispatch_app({ type: 'dialog/open', dialog: null })
+if (params.has('suins')) {
+  dispatch_app({ type: 'suins/refresh' })
+  const { request } = read_app_state().suins
+  if (request)
+    dispatch_app({
+      type: 'suins/loaded',
+      request,
+      snapshot: {
+        default_name: params.get('suins'),
+        names: [],
+      },
+    })
+}
+
 if (page === 'kolizeum')
   dispatch_app({
     type: 'server/packet',

@@ -18,7 +18,7 @@ const ledger_entry = (row: SeedSyncRow, revision: (id: string) => string | null 
   })
 }
 
-/** Persistable progress after exactly one certified mutable-content transaction. */
+/** Persistable progress after exactly one certified content transaction. */
 export const seed_ledger_after_batch = (
   rows: readonly SeedSyncRow[],
   ledger: SeedLedger,
@@ -34,19 +34,3 @@ export const seed_ledger_after_batch = (
   }
   return Object.freeze(next)
 }
-
-/** The ledger as it stands after a successful apply. */
-export const seed_ledger_after = (
-  rows: readonly SeedSyncRow[],
-  ledger: SeedLedger,
-  written: ReadonlySet<string>,
-  exists: (id: string) => boolean,
-  revision: (id: string) => string | null = () => null
-): SeedLedger =>
-  Object.freeze(
-    Object.fromEntries(
-      rows
-        .filter((row) => written.has(row.key) || (exists(row.chain_id) && ledger[row.key]?.hash === row.hash))
-        .map((row) => [row.key, ledger_entry(row, revision)])
-    )
-  )

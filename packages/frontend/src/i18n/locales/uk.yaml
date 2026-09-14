@@ -2489,3 +2489,7 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Збереження…
+
+fullscreen_enter: Увімкнути повноекранний режим
+fullscreen_exit: Вийти з повноекранного режиму
+fullscreen_failed: Не вдалося змінити повноекранний режим.

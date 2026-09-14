@@ -528,7 +528,11 @@ Crushing retains its separate committed seed, deterministic reveal, and explicit
 
 JSON under `seed/content/` is the authoring truth. The `/demo` editors change those files without
 arming a wallet session. Validation rejects invalid structure before publication. The admin SDK
-diffs authored content against published content and writes only the required batches. See
+diffs authored content against published content and writes only the required batches. Creation
+checkpoints record only targets absent before that certified batch. Untouched ledger entries retain
+their previous fingerprints and revisions so pending mutable rewrites cannot disappear. Recipe
+reconciliation compares live inputs, quantities, job, level, and active state even when ledger hashes
+and revisions match. Older-than-certified reads fail instead of authorizing repeat writes. See
 `CONTENT_UPGRADES.md` for the operational ceremony.
 
 ### Marketplace

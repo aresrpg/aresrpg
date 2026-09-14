@@ -618,9 +618,6 @@
 .character-workspace__content[data-dense='true'] .sb__rowbtn {
   min-width: 0;
 }
-.gw-tab .character-workspace__content[data-dense='true'] .jobs {
-  grid-template-columns: 260px minmax(0, 1fr);
-}
 .gw-tab .character-workspace__content[data-dense='true'] .jobs__list {
   display: flex;
   flex-direction: column;

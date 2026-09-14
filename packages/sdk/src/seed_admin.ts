@@ -15,11 +15,11 @@ import {
   create_seed_plan,
   giftcards_for_network,
   game_type_of,
+  slice_chunks,
   type SeedContent,
 } from './seed.ts'
 import { giftcard_claim_id, giftcard_id } from './seed_ids.ts'
 import {
-  seed_ledger_after,
   seed_ledger_after_batch,
   created_seed_row_keys,
   seed_sync_rows,
@@ -28,6 +28,7 @@ import {
   type SeedSyncRow,
   type SeedSyncView,
 } from './seed_sync.ts'
+import { verified_recipe_ledger } from './seed_recipe_audit.ts'
 import { seed_update_batches, type SeedUpdateBatch } from './seed_updates.ts'
 
 export type { SeedLedger, SeedSyncView } from './seed_sync.ts'
@@ -244,6 +245,7 @@ export const create_seed_admin = async ({
   const plan = {
     batches: full_plan.batches.filter((batch) => gift_campaign === undefined || batch.phase === 'supply'),
   }
+  const created_by_batch = new Map<string, ReadonlySet<string>>()
   const claims = new Map(
     giftcards_for_network(sdk.network, content).map((card) => {
       const id = giftcard_id(config.content_root, game_type_of(sdk), card.id)
@@ -372,7 +374,20 @@ export const create_seed_admin = async ({
       gift_campaign === undefined
         ? ledger
         : Object.fromEntries(sync_rows.flatMap(({ key }) => (ledger[key] ? [[key, ledger[key]]] : [])))
-    const view = seed_sync_view(sync_rows, scoped_ledger, exists, await read_board_len(), revision)
+    const recipes = sync_rows.filter((row) => row.recipe && exists(row.chain_id))
+    const reads = await Promise.all(
+      slice_chunks(recipes, 50).map(
+        async (group) =>
+          (
+            await sdk.sui_client.core.getObjects({
+              objectIds: group.map((row) => row.chain_id),
+              include: { json: true },
+            })
+          ).objects
+      )
+    )
+    const verified = verified_recipe_ledger(recipes, scoped_ledger, reads.flat())
+    const view = seed_sync_view(sync_rows, verified, exists, await read_board_len(), revision)
     const errors = [
       ...law_errors,
       ...view.errors,
@@ -415,10 +430,11 @@ export const create_seed_admin = async ({
       await hydrate_ids(sync_addresses)
       const batch = plan.batches.find(({ id }) => id === batch_id)
       if (!batch) throw new Error(`Unknown seed batch ${batch_id}`)
-      // Only this certified batch can advance creation fingerprints. Deterministic objects from
-      // an older partial run may already exist without having received today's authored value.
-      const created = created_seed_row_keys(sync_rows, ledger, new Set(batch.target_ids), exists)
-      return seed_ledger_after(sync_rows, ledger, created, exists, revision)
+      const targets = created_by_batch.get(batch_id)
+      if (!targets) throw new Error(`No certified creation result for seed batch ${batch_id}`)
+      const created = created_seed_row_keys(sync_rows, ledger, targets, exists)
+      // Untouched rows keep their old fingerprints so the mutable lane still rewrites them.
+      return seed_ledger_after_batch(sync_rows, ledger, [...created], revision)
     },
     execute: async (batch_id, ledger, checkpoint = async () => {}) => {
       const changes = await check_changes(ledger)
@@ -453,6 +469,7 @@ export const create_seed_admin = async ({
       // refuses before submission (and the wallet path preflights before the wallet opens).
       const receipt = await sdk.execute(transaction)
       const digest = receipt_digest(receipt)
+      created_by_batch.set(batch_id, new Set(batch.target_ids.filter((id) => !existing.has(id))))
       await checkpoint(digest)
       return Object.freeze({ batch: batch_id, digest, snapshot: await refresh_after_write(batch_id, digest) })
     },

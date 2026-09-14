@@ -2495,3 +2495,7 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Saving…
+
+fullscreen_enter: Enter fullscreen
+fullscreen_exit: Exit fullscreen
+fullscreen_failed: Could not change fullscreen mode.

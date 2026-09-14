@@ -53,6 +53,9 @@ export type AppCopy = Readonly<{
   settings: string
   admin: string
   online: string
+  fullscreen_enter: string
+  fullscreen_exit: string
+  fullscreen_failed: string
   account: string
   join_discord: string
   join_telegram: string

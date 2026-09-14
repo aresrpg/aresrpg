@@ -22,6 +22,7 @@ export const LanguageCard = ({
     >
       <button
         className="flex w-full cursor-pointer items-center justify-center gap-1.5 text-[9px] tracking-[0.15em] text-[#6b7280] uppercase transition-colors hover:text-[#4a9eff]"
+        aria-expanded={open}
         onClick={() => set_open(!open)}
         type="button"
       >
@@ -29,7 +30,7 @@ export const LanguageCard = ({
         {current}
       </button>
       {open && (
-        <div className="absolute right-0 bottom-full left-0 z-10 mb-1 flex flex-col border border-border bg-surface">
+        <div className="mt-3 flex w-full flex-col border border-border bg-surface">
           {LOCALES.map(({ code, native }) => (
             <button
               className={`cursor-pointer px-3 py-1.5 text-left text-[9px] tracking-[0.15em] uppercase transition-colors ${

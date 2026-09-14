@@ -545,7 +545,7 @@ describe('scoped gift issuance', () => {
   })
 })
 
-test('a full holder batch fits protocol limits and only transfers its selected vouchers', async () => {
+test('a holder batch fits protocol limits and records only newly issued vouchers', async () => {
   const root = pinned_content_root_id
   const existing = new Set([admin_cap_id, root, item_template_id(root, seed_package_id, 'ore')])
   const cards = Array.from({ length: 499 }, (_, index) => ({
@@ -555,6 +555,8 @@ test('a full holder batch fits protocol limits and only transfers its selected v
     amount: 1,
     custody: `0x${(index + 8).toString(16).padStart(64, '0')}`,
   }))
+  const prior = giftcard_id(root, package_id, cards[0]!.id)
+  existing.add(giftcard_claim_id(root, prior))
   const scoped: SeedContent = {
     ...content,
     airdrop: { giftcards: [...cards, { id: 'other', item_type: 'unselected', amount: 1, custody: object_id(7) }] },
@@ -570,11 +572,11 @@ test('a full holder batch fits protocol limits and only transfers its selected v
         const recipients = data.commands.flatMap((command) =>
           command.TransferObjects ? [command.TransferObjects.address] : []
         )
-        expect(recipients).toHaveLength(499)
+        expect(recipients).toHaveLength(498)
         for (const [index, recipient] of recipients.entries()) {
           if (recipient.$kind !== 'Input') throw new Error('Gift recipient must be a pure address input')
           expect(data.inputs[recipient.Input!]?.Pure?.bytes).toBe(
-            Buffer.from(cards[index]!.custody.slice(2), 'hex').toString('base64')
+            Buffer.from(cards[index + 1]!.custody.slice(2), 'hex').toString('base64')
           )
         }
         for (const card of cards) existing.add(giftcard_claim_id(root, giftcard_id(root, package_id, card.id)))
@@ -591,4 +593,7 @@ test('a full holder batch fits protocol limits and only transfers its selected v
   const result = await session.execute('giftcards:0', {})
   expect(next_seed_batch(result.snapshot)).toBeNull()
   expect(sent).toBe(1)
+  const ledger = await session.created_ledger({}, result.batch)
+  expect(ledger[prior]).toBeUndefined()
+  expect(Object.keys(ledger)).toHaveLength(498)
 })
