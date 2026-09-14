@@ -8973,18 +8973,18 @@
       "domain": "recipe"
     },
     "0x10895d8cbc80742352054da15ca05e61334ef03deb41902156f7330e136a3a7d": {
-      "hash": "cea1c6b849ba9974",
+      "hash": "4bcdec33a6c43f01",
       "label": "recipe key_of_tangled_aftermath",
       "revisions": {
-        "0x10895d8cbc80742352054da15ca05e61334ef03deb41902156f7330e136a3a7d": "855012001:8u6NbLhFhpsaR9bU5CkJFc4oyfyr5GdS7uZjuU8UjYfH"
+        "0x10895d8cbc80742352054da15ca05e61334ef03deb41902156f7330e136a3a7d": "998913993:8QZnn4GQXdswH8CntSTgs5o1NmiG6do9pPihEAYc2Qv9"
       },
       "domain": "recipe"
     },
     "0xf8b460a2ee46094639b1fa0a3b264aa8705a61484eef7c6e62ffef5ed0960244": {
-      "hash": "629c33c151ea2783",
+      "hash": "d37521d5df305209",
       "label": "recipe key_of_ivory_rampart",
       "revisions": {
-        "0xf8b460a2ee46094639b1fa0a3b264aa8705a61484eef7c6e62ffef5ed0960244": "855012001:FGZe3AXbLhpC3sFWhqbG6GGYACYvxcDVXmcsgJcFi2Kr"
+        "0xf8b460a2ee46094639b1fa0a3b264aa8705a61484eef7c6e62ffef5ed0960244": "998913993:GVwE6u33UMJhnPbRz22KsUAJEiPuZ8x5eeQp6BxHv9jt"
       },
       "domain": "recipe"
     },
@@ -9948,7 +9948,11 @@
       },
       "domain": "world",
       "world": {
-        "cities": ["thebes", "the_ruins", "fuwage"]
+        "cities": [
+          "thebes",
+          "the_ruins",
+          "fuwage"
+        ]
       }
     },
     "0x8ef4d0bce2f5a667f73168dd2c2ad3a5ca91510dc793911f340041c9c7c54e24": {

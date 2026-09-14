@@ -1,3 +1,5 @@
+# JSON data is validated by its consumers, not reformatted by Prettier.
+**/*.json
 # Binary assets, generated output, Move, and Rust stay outside the formatter.
 packages/frontend/public/sprites/
 packages/frontend/public/vfx/

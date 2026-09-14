@@ -1,1 +1,3 @@
+# JSON data is validated by its consumers, not reformatted by Prettier.
+**/*.json
 dist/
