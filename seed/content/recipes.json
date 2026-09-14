@@ -874,16 +874,16 @@
     "inputs": {
       "aragne_fang": 3,
       "aragne_carapace": 2,
-      "stone_aragne_silk": 2
+      "embertide_webbing": 1
     }
   },
   {
     "output_type": "key_of_ivory_rampart",
     "inputs": {
-      "fuwa_wool": 2,
-      "fuwa_hide": 2,
       "fuwa_horn": 1,
-      "fuwa_eye": 1
+      "fuwa_eye": 1,
+      "fuwa_fleece": 1,
+      "nifuwa_fleece": 1
     }
   },
   {

@@ -2334,6 +2334,28 @@
         "category": "resource"
       }
     },
+    "0x1c3059f0cc3f455ad88bdb35ae51d55b1a659ca7f13f4bb9c0588d9083de679f": {
+      "hash": "15a30327f374e63c",
+      "label": "item wheat_stitched_leather",
+      "revisions": {
+        "0x1c3059f0cc3f455ad88bdb35ae51d55b1a659ca7f13f4bb9c0588d9083de679f": "998913988:EXmyefJzpvUPa2ZgiHqm23ZsqnhWUJUjcCBDULNQ5fjv"
+      },
+      "domain": "item",
+      "item": {
+        "category": "resource"
+      }
+    },
+    "0x8e8243f2772e350fe2dd4635c6ff0d69c6414a0e92538bef142dd2af82ddf25f": {
+      "hash": "65d55ba1faf32ccf",
+      "label": "item resin_cured_leather",
+      "revisions": {
+        "0x8e8243f2772e350fe2dd4635c6ff0d69c6414a0e92538bef142dd2af82ddf25f": "998913988:4hQ78hALfjEfi4k6hYoMgq5cyf1Di5hjVs5GnQpCzjjT"
+      },
+      "domain": "item",
+      "item": {
+        "category": "resource"
+      }
+    },
     "0xf94d6ea756d735a57dd604140f055c30348484a129b2931544e48fa15eb60031": {
       "hash": "9ddb4aba6bb1c9c3",
       "label": "item wheatspun_sinew",
@@ -7086,18 +7108,6 @@
         "unlock_level": 36
       }
     },
-    "0xf01c3aa99c232ce929597e17427eed610adf95251070a616d82b1e70266dc656": {
-      "hash": "709578dddf66e718",
-      "label": "spell Shadowstep",
-      "revisions": {
-        "0xf01c3aa99c232ce929597e17427eed610adf95251070a616d82b1e70266dc656": "998334488:E6J87wRkBj9fTGJV672XNzKbdVfTnd9F2YobJ3edBXZQ"
-      },
-      "domain": "spell",
-      "spell": {
-        "classe": "yajin",
-        "unlock_level": 13
-      }
-    },
     "0x786d88964d7a89f1e30d933c76ef9eb25e92a9b669d7bb916481c717cf5bfe36": {
       "hash": "e1ad43ac1f9ae980",
       "label": "spell Word of Altruism",
@@ -8010,14 +8020,6 @@
       },
       "domain": "mob"
     },
-    "0x91ab22fc6ec6b182a6e6d3528002bab26387b446fac33dcd7cf6950114f4a1f6": {
-      "hash": "5d1377dd2e4aab93",
-      "label": "mob aragne__water",
-      "revisions": {
-        "0x91ab22fc6ec6b182a6e6d3528002bab26387b446fac33dcd7cf6950114f4a1f6": "855011999:AbKx5dghxevEykSJTa9j6NSvrvUxnWTJJ8URfjYjGZp1"
-      },
-      "domain": "mob"
-    },
     "0x38b58d8817ea05ecd881e55c623aa10a8f874468e619ad9976c7aefbb126679f": {
       "hash": "2b24f487a33cbaa4",
       "label": "mob aragne__air",
@@ -8074,27 +8076,11 @@
       },
       "domain": "mob"
     },
-    "0xeadb0314214aefda94802e6e1c46178645686cf0977bd4bdfa7a91421f8004e4": {
-      "hash": "5f31a3cba5d57607",
-      "label": "mob fuwa__white",
-      "revisions": {
-        "0xeadb0314214aefda94802e6e1c46178645686cf0977bd4bdfa7a91421f8004e4": "855012000:Dpgd22xnsXydQdKwhLwNbShXkjYM386WBBtnDT6nW4He"
-      },
-      "domain": "mob"
-    },
     "0x90bf4f947e7508e16e9f2ef61564ea1d6e74dd68e15a3a4e542c10ef7cc1db52": {
       "hash": "76096aa8e2abde71",
       "label": "mob fuwa__black",
       "revisions": {
         "0x90bf4f947e7508e16e9f2ef61564ea1d6e74dd68e15a3a4e542c10ef7cc1db52": "855012000:HFsjdJLXXoMjNjUiwQfdHFeHxFfcNp6GdPgLuPgjBGGj"
-      },
-      "domain": "mob"
-    },
-    "0x53aa455240ae17de32cded19090f2e74657622283b01179bbd4f3940d4ee213f": {
-      "hash": "239b0b01ae197232",
-      "label": "mob fuwa__fukuo",
-      "revisions": {
-        "0x53aa455240ae17de32cded19090f2e74657622283b01179bbd4f3940d4ee213f": "855012000:2VdoG8TEEwS4eraYAuxU12dt6cQ2Zvs5vCZj6BBtx8JP"
       },
       "domain": "mob"
     },
@@ -8154,30 +8140,6 @@
       },
       "domain": "mob"
     },
-    "0xab621a3073df1590def11df9f707d22da7ec17401d206277baa49b2ed07ce42f": {
-      "hash": "a332d7217e320ac9",
-      "label": "mob misui__water",
-      "revisions": {
-        "0xab621a3073df1590def11df9f707d22da7ec17401d206277baa49b2ed07ce42f": "855012000:D5cqiFhioSHZ3b9CghJDiy2xHFpBLJFVWawzywBxYHKx"
-      },
-      "domain": "mob"
-    },
-    "0x8d0691d77e54a4f7e0f6c56c744216431d6c3ddbdde25f84cb63ef13318f20db": {
-      "hash": "ab9a65b3996b0e0a",
-      "label": "mob misui__vitality",
-      "revisions": {
-        "0x8d0691d77e54a4f7e0f6c56c744216431d6c3ddbdde25f84cb63ef13318f20db": "855012000:F1YiV52npfBeYPBvDAGfhhAyjBc7LaaodPSUnpYvympn"
-      },
-      "domain": "mob"
-    },
-    "0xb11683df35e902ea7ded821a5ced8d95f3d70520eeec429296c750c3c92316ed": {
-      "hash": "2f8f8d408970f9bc",
-      "label": "mob misui__misunami",
-      "revisions": {
-        "0xb11683df35e902ea7ded821a5ced8d95f3d70520eeec429296c750c3c92316ed": "855012000:A2PkYGVx5dkPsxgzu83MNEKa42uqUf7VT1cmVppmibJQ"
-      },
-      "domain": "mob"
-    },
     "0xabac8b8d29993bece6fc27916660d2f5c4792f17dbc54efc9c5c34a11bcaad46": {
       "hash": "57addadc2c61bf12",
       "label": "mob moka",
@@ -8191,14 +8153,6 @@
       "label": "mob moyumi",
       "revisions": {
         "0x9e2f19d3b1099b6e919d65b826edaefcb631a0d68b52acb3067587444a57e866": "855012000:F83xAWqxcazaBve2Wue1vU7yG5inn5ZuviXpkCK8MYAX"
-      },
-      "domain": "mob"
-    },
-    "0xfc58fb1cfb425bd336fe0aa2132b3a2f6ee1e7cbb3e4c5648184c9386de66d20": {
-      "hash": "1dd505354a02a1dc",
-      "label": "mob nook",
-      "revisions": {
-        "0xfc58fb1cfb425bd336fe0aa2132b3a2f6ee1e7cbb3e4c5648184c9386de66d20": "855012000:58Rg4TMRMrCGZvf44CFy2JkMApsWMNqgKryBdb1SM5EN"
       },
       "domain": "mob"
     },
@@ -8218,27 +8172,11 @@
       },
       "domain": "mob"
     },
-    "0xd4464435c2b8b8c4643bd57dbba198c459a264d3e9ef0325d98d924e2d7e7b19": {
-      "hash": "d168b0ba1fe88253",
-      "label": "mob lorito__water",
-      "revisions": {
-        "0xd4464435c2b8b8c4643bd57dbba198c459a264d3e9ef0325d98d924e2d7e7b19": "855012000:GRdbWgUJjujyeFjsBGVoDjcsATH6ZbzqivRTf1FTrZUv"
-      },
-      "domain": "mob"
-    },
     "0x1afad039895d975de0c7ad10910ede0429fd40c1488d5d95b351658848f23aa1": {
       "hash": "d814738a2c029a86",
       "label": "mob lorito__air",
       "revisions": {
         "0x1afad039895d975de0c7ad10910ede0429fd40c1488d5d95b351658848f23aa1": "855012000:8U2Cs1GrVk363W8oVGwYRkpX22vDPYnaVofkp2vWwPEm"
-      },
-      "domain": "mob"
-    },
-    "0xb1d902db0e9b8dce9b1214904b40edd91971b4d91ebe51d7e36c7fd8405465dc": {
-      "hash": "38414ab7578931ab",
-      "label": "mob bramble",
-      "revisions": {
-        "0xb1d902db0e9b8dce9b1214904b40edd91971b4d91ebe51d7e36c7fd8405465dc": "855012000:9TFL9TseN85XDgK6GSQaVeHj81yBT2bwwjoQjViEEhPq"
       },
       "domain": "mob"
     },
@@ -8255,14 +8193,6 @@
       "label": "mob golden_lorito",
       "revisions": {
         "0x1003c474a739e820342aa136a20a389a47ce4a5ad2a07ed8bfe21a5e18e6de18": "855012000:3RzgYp2K67GMGFByXXbXwUNXL7rxBP1zsHzoEA6r7ZXp"
-      },
-      "domain": "mob"
-    },
-    "0x0892ae0654a7f753c67f0258798d76573f64939073753aa09e5cb43725ba10e0": {
-      "hash": "7d86bc3bd2a62881",
-      "label": "mob wild_boar",
-      "revisions": {
-        "0x0892ae0654a7f753c67f0258798d76573f64939073753aa09e5cb43725ba10e0": "998334488:5YRvKg6aGzDxu3KZyzvuK18eviQVogKKvCTeVaAshSLw"
       },
       "domain": "mob"
     },
@@ -8571,7 +8501,7 @@
       "domain": "recipe"
     },
     "0xfd7fdecd7fffc19b48bc58b183246d152cfec936baa5fc9382ebfab4db071b71": {
-      "hash": "c40b420146614558",
+      "hash": "6c47324f78956f67",
       "label": "recipe old_hoe",
       "revisions": {
         "0xfd7fdecd7fffc19b48bc58b183246d152cfec936baa5fc9382ebfab4db071b71": "855012001:5Ban9vEwCEcKoAuyrQVdJmLcKDD5GZNVasbacwzawXmg"
@@ -8595,7 +8525,7 @@
       "domain": "recipe"
     },
     "0x83d3ad45399d1b4453e024588752fb4a7f06ba3f4b81248de1edc5f3efb61514": {
-      "hash": "01d334f890259de2",
+      "hash": "2cef5d5f1ef30c01",
       "label": "recipe quartzbound_scrap",
       "revisions": {
         "0x83d3ad45399d1b4453e024588752fb4a7f06ba3f4b81248de1edc5f3efb61514": "855012001:5t6tTqhimmjned9ANejvsVEVJWtgsQNCecSMAV3YZL7q"
@@ -8611,7 +8541,7 @@
       "domain": "recipe"
     },
     "0x64be2318f6570e8bd77aa2dcc8b2979a347be6c9ff3b77c8f9289a5380b0b84b": {
-      "hash": "dde34e5cc6f74ff8",
+      "hash": "e959b932f7fcb000",
       "label": "recipe mushroom_dyed_plume",
       "revisions": {
         "0x64be2318f6570e8bd77aa2dcc8b2979a347be6c9ff3b77c8f9289a5380b0b84b": "855012001:Cw13DBqaD1TkVkid3TVYviJkKS5pWXBEzb38jiAHGKFu"
@@ -8619,7 +8549,7 @@
       "domain": "recipe"
     },
     "0x8ace2e980c26761d3af869f9da2e9b57706b68c543488ff7be4c6a1368a1a005": {
-      "hash": "38fbcd4288f7ad60",
+      "hash": "3762832822f331c6",
       "label": "recipe quartz_honed_beak",
       "revisions": {
         "0x8ace2e980c26761d3af869f9da2e9b57706b68c543488ff7be4c6a1368a1a005": "855012001:B1UQRyeXewj4XkMVok363mpxk1vqqwbfM4oZ8VFFB3Lr"
@@ -8627,10 +8557,26 @@
       "domain": "recipe"
     },
     "0xdd21704604ecd2030a2d74e17f5f47663d9e11daa6abd287b05069c6e52a9f1f": {
-      "hash": "9bc6b13aa9298626",
+      "hash": "a770c46d0f00cc75",
       "label": "recipe mushroom_tanned_leather",
       "revisions": {
         "0xdd21704604ecd2030a2d74e17f5f47663d9e11daa6abd287b05069c6e52a9f1f": "855012001:8tmXtQodtBfmS1zrvajz4ToPdUj32CKryoUHmDKjymTS"
+      },
+      "domain": "recipe"
+    },
+    "0x5b395b7c42d59697cf7931fcdade9a47bb1f98244ae021656317181313304af0": {
+      "hash": "1f89899235a1cb22",
+      "label": "recipe wheat_stitched_leather",
+      "revisions": {
+        "0x5b395b7c42d59697cf7931fcdade9a47bb1f98244ae021656317181313304af0": "998913989:8UjN3k75EfT2uWxUQ19FyJhJAwpMAdxQD9ihizuaEWXD"
+      },
+      "domain": "recipe"
+    },
+    "0x20d1be785aaa185803ae58e6f37e801e62750e32f9a6921ccae98a39882c0249": {
+      "hash": "020bc9ecf6b165bb",
+      "label": "recipe resin_cured_leather",
+      "revisions": {
+        "0x20d1be785aaa185803ae58e6f37e801e62750e32f9a6921ccae98a39882c0249": "998913989:Af27jbzq6QmXDDUmSpdwDJ7rGtHpoP85Cth9va8TLxaE"
       },
       "domain": "recipe"
     },
@@ -8643,7 +8589,7 @@
       "domain": "recipe"
     },
     "0x3c5d5f7065b56a3894fe110bb3d8808c23525b5fe76ddae133950d56a4b9e35f": {
-      "hash": "75686cf97f0be488",
+      "hash": "9ca0b85125fa8222",
       "label": "recipe wheatbound_branch",
       "revisions": {
         "0x3c5d5f7065b56a3894fe110bb3d8808c23525b5fe76ddae133950d56a4b9e35f": "855012001:EUSYamhnieQrZNB9xyPAR3gx3ZhETSdSzNe3NXANBZBj"
@@ -8651,7 +8597,7 @@
       "domain": "recipe"
     },
     "0xa5c95e4e11c8946f4b6a8839b84bdbf8f63bd6e2c0368570b73a0a7aa9f7bbb9": {
-      "hash": "519a3a69c6f2922b",
+      "hash": "7ec06c3d0b0a37ae",
       "label": "recipe mushroom_lacquer",
       "revisions": {
         "0xa5c95e4e11c8946f4b6a8839b84bdbf8f63bd6e2c0368570b73a0a7aa9f7bbb9": "855012001:4sk1wks3gJHm9TMK6VfV6SisBkVWMvyBKDzfHAQpNtAv"
@@ -8659,7 +8605,7 @@
       "domain": "recipe"
     },
     "0x877f1fdd5445446bbb12416386192df43094e8ee8f965399cd8aece5ff81199c": {
-      "hash": "55d5859b2c8506a1",
+      "hash": "c3c656e5a3a6be46",
       "label": "recipe basic_pickaxe",
       "revisions": {
         "0x877f1fdd5445446bbb12416386192df43094e8ee8f965399cd8aece5ff81199c": "855012001:JKgmFeFMNBywAHcx8i9qpJYLk9zh92VvefA6epxiYXR"
@@ -8667,7 +8613,7 @@
       "domain": "recipe"
     },
     "0x39672a2e53dfc3924ebe4eec43434286d30f18780f1d8d55132df01e08f94006": {
-      "hash": "043b455909ca3fdf",
+      "hash": "b149005683895de2",
       "label": "recipe tool_herbalist",
       "revisions": {
         "0x39672a2e53dfc3924ebe4eec43434286d30f18780f1d8d55132df01e08f94006": "855012001:GKFVbdg9jUTSBtjVPdjpQiCC9yN95AULLtuE9ZQ3XGEB"
@@ -8955,7 +8901,7 @@
       "domain": "recipe"
     },
     "0xe7211a354e156e44b2e51b45cc7515008da75165a4b52c934f389f7841b1f85d": {
-      "hash": "edf41a9d51a82316",
+      "hash": "cfec244a8389a1fa",
       "label": "recipe gale_lorito_plume",
       "revisions": {
         "0xe7211a354e156e44b2e51b45cc7515008da75165a4b52c934f389f7841b1f85d": "855012001:D5StzB7Y4h7WBKFFEhNMx4Es7qt8DPs9US6kwmfE8gtb"
@@ -8963,7 +8909,7 @@
       "domain": "recipe"
     },
     "0x30c9dbe97091b3a51f8d4a4ca9bad0272fb3c67806648688532ed4caa1330ce5": {
-      "hash": "acee3947ed556500",
+      "hash": "f2c6724cf6ec66c4",
       "label": "recipe tide_lorito_plume",
       "revisions": {
         "0x30c9dbe97091b3a51f8d4a4ca9bad0272fb3c67806648688532ed4caa1330ce5": "855012001:CHoMeUfG1ekVV5e6Fnue9x7mMPxCDET9zXxd8nz7HwPP"
@@ -8971,7 +8917,7 @@
       "domain": "recipe"
     },
     "0x3bc2564ad1ac0b7ae9d5e91bff0adf4cf26c01ef44aa87ae49a77b7bcf7925d7": {
-      "hash": "f26d42d8073cbc5c",
+      "hash": "c12d668c1388569c",
       "label": "recipe ember_lorito_plume",
       "revisions": {
         "0x3bc2564ad1ac0b7ae9d5e91bff0adf4cf26c01ef44aa87ae49a77b7bcf7925d7": "855012001:G2Bgv9DUwLkZDyMHnBWcG5ZZLZnR3qWwrVwUE48pyDjH"
@@ -8979,7 +8925,7 @@
       "domain": "recipe"
     },
     "0xcd3c069fa5091e2f987d75a5ddd190b7f64bb325cf08fff67acc75fc2e57826b": {
-      "hash": "e8f6ef1c9976a012",
+      "hash": "b146218e91a601a6",
       "label": "recipe stone_lorito_plume",
       "revisions": {
         "0xcd3c069fa5091e2f987d75a5ddd190b7f64bb325cf08fff67acc75fc2e57826b": "855012001:J67bP1ZBGTMCuYpPv1n9e7JrsvgjvbT3kP7UbcjKuJgg"
@@ -8987,7 +8933,7 @@
       "domain": "recipe"
     },
     "0x82f2238709c0be2b090538e112a94ce28366c6c645afe95ff984dbbf21abc1c0": {
-      "hash": "06ff94084977b2fc",
+      "hash": "1e9e40dca25d98c4",
       "label": "recipe heart_lorito_plume",
       "revisions": {
         "0x82f2238709c0be2b090538e112a94ce28366c6c645afe95ff984dbbf21abc1c0": "855012001:Hst5rLJPwqQDVw25vTXiarJ1fpbcubm9m8bQ7nRCdZQZ"
@@ -8995,7 +8941,7 @@
       "domain": "recipe"
     },
     "0xd7a6cae37f2b7f769e52c5d857d98242afc13f37c61d211fd132ceab806b3af3": {
-      "hash": "0f882e9165791c04",
+      "hash": "8146a3c3230f6ca8",
       "label": "recipe sage_lorito_plume",
       "revisions": {
         "0xd7a6cae37f2b7f769e52c5d857d98242afc13f37c61d211fd132ceab806b3af3": "855012001:BKBRa1uQKNvMRMUxUdXCDFeYk72aS5CEAmtupMZPuWRb"
@@ -9027,7 +8973,7 @@
       "domain": "recipe"
     },
     "0x10895d8cbc80742352054da15ca05e61334ef03deb41902156f7330e136a3a7d": {
-      "hash": "e5fe6d08bdb1c71a",
+      "hash": "cea1c6b849ba9974",
       "label": "recipe key_of_tangled_aftermath",
       "revisions": {
         "0x10895d8cbc80742352054da15ca05e61334ef03deb41902156f7330e136a3a7d": "855012001:8u6NbLhFhpsaR9bU5CkJFc4oyfyr5GdS7uZjuU8UjYfH"
@@ -9035,7 +8981,7 @@
       "domain": "recipe"
     },
     "0xf8b460a2ee46094639b1fa0a3b264aa8705a61484eef7c6e62ffef5ed0960244": {
-      "hash": "6171623530b7ccdb",
+      "hash": "629c33c151ea2783",
       "label": "recipe key_of_ivory_rampart",
       "revisions": {
         "0xf8b460a2ee46094639b1fa0a3b264aa8705a61484eef7c6e62ffef5ed0960244": "855012001:FGZe3AXbLhpC3sFWhqbG6GGYACYvxcDVXmcsgJcFi2Kr"
@@ -9067,7 +9013,7 @@
       "domain": "recipe"
     },
     "0x1164633228bac24bd2e53aaa5f5e3c19f351ec1248c11b78240ec76301106ba8": {
-      "hash": "f1faf06e69e9cfa7",
+      "hash": "3925261cef30cbbd",
       "label": "recipe recall_potion",
       "revisions": {
         "0x1164633228bac24bd2e53aaa5f5e3c19f351ec1248c11b78240ec76301106ba8": "855012001:8bUxqKYmeUKMCZnhx7mJ7sv1yYvBQU6KKM99S9tgvGd8"
@@ -9219,7 +9165,7 @@
       "domain": "recipe"
     },
     "0x0ec377e817072c3f88efba63237e56daa63f6122f668824b6805cabf9651a739": {
-      "hash": "28c10fe4e84b8638",
+      "hash": "61ed3c30d6dd3eb5",
       "label": "recipe moka_arms_binding",
       "revisions": {
         "0x0ec377e817072c3f88efba63237e56daa63f6122f668824b6805cabf9651a739": "855012001:FKz45WfkbrKfDHMUTCsptNimJ57ZzYQVFG8NwUwNAspQ"
@@ -9283,7 +9229,7 @@
       "domain": "recipe"
     },
     "0x6dde29bd74711bb54dcc9fc3b10a870c28213a2be4bfa8c8dee49646c58bc989": {
-      "hash": "658a791af27c5b53",
+      "hash": "4c98e6bdf2a4962a",
       "label": "recipe rootglass_token",
       "revisions": {
         "0x6dde29bd74711bb54dcc9fc3b10a870c28213a2be4bfa8c8dee49646c58bc989": "855012001:4H894R1ouV3uD8pBzJqZxnG1D7T8pwc2ua5XazACRwWz"
@@ -9539,7 +9485,7 @@
       "domain": "recipe"
     },
     "0x347a9eb65a5965010ea0f5ff2b3febcfee35462dfd58919fe374a65251ca88b7": {
-      "hash": "224477aafe9cda25",
+      "hash": "9ae345bbdf660950",
       "label": "recipe pincersteps",
       "revisions": {
         "0x347a9eb65a5965010ea0f5ff2b3febcfee35462dfd58919fe374a65251ca88b7": "855012001:CT7aJnJBG7iWSizVHPZDWMJ1pG97tZ3Tufeagm3hG9au"
@@ -9579,7 +9525,7 @@
       "domain": "recipe"
     },
     "0x3a306760e0421bb7bab56c8aba2f05cce47f769c5e9e224007048b2c1c1272bf": {
-      "hash": "87f030b2aa68b692",
+      "hash": "b072f4d131a833d6",
       "label": "recipe colony_marchers",
       "revisions": {
         "0x3a306760e0421bb7bab56c8aba2f05cce47f769c5e9e224007048b2c1c1272bf": "855012001:9JyCLx4CQQKkPBjRp9s1VaHybFnHcmNErWYVbiUUsECJ"
@@ -9643,7 +9589,7 @@
       "domain": "recipe"
     },
     "0x593eb202e56bf5171d37046969c7e19de9c6a9d2da6a632d9919a486dafcf671": {
-      "hash": "ee8732ef1e7a870f",
+      "hash": "6dd058f8c4bb1a4b",
       "label": "recipe rootshivs",
       "revisions": {
         "0x593eb202e56bf5171d37046969c7e19de9c6a9d2da6a632d9919a486dafcf671": "855012001:2wmDfAZLJAswi7jnrfya2Qa9nL5g7TdXBvZgbUPY2Sm4"
@@ -9998,8 +9944,7 @@
       "hash": "d87398dc91eae7a7",
       "label": "world nauvis",
       "revisions": {
-        "0x985d4453aff2f0097ee52c4278751d6e87c6488c12a926fbb14bd1a6b5c464c1": "855012005:2LmdKTeqgwjJMG1HaX1HugSccUzzDDF8ffLTPcLFTsPj",
-        "0xf5ca91ff0ec5cacd089106d93c05cc926a3fbdd8937cd5dcbab0ae2fd5356ca0": "855012005:BB9oXEV97d3HpRyHzHvp7oxuXqCzWYfpqyJmrsiqaKbP"
+        "0x985d4453aff2f0097ee52c4278751d6e87c6488c12a926fbb14bd1a6b5c464c1": "855012005:2LmdKTeqgwjJMG1HaX1HugSccUzzDDF8ffLTPcLFTsPj"
       },
       "domain": "world",
       "world": {
@@ -10010,13 +9955,242 @@
       "hash": "efb5ebcbc7e35770",
       "label": "world yakutia",
       "revisions": {
-        "0x8ef4d0bce2f5a667f73168dd2c2ad3a5ca91510dc793911f340041c9c7c54e24": "855012006:7AzWVyKq6hsHtnSvUx3DF9oc9ouW8vWxim1PAtudZw7Z",
-        "0xcad1144bf6f1356cb728cb0ec1461f9fc5ee7244bbcc88c9bc4e89dd8e90986a": "855012006:BzUPoHkcHC1D1DtoA4VLS3QqMhF1DFKa6LqGPK5smkq2"
+        "0x8ef4d0bce2f5a667f73168dd2c2ad3a5ca91510dc793911f340041c9c7c54e24": "855012006:7AzWVyKq6hsHtnSvUx3DF9oc9ouW8vWxim1PAtudZw7Z"
       },
       "domain": "world",
       "world": {
         "cities": []
       }
+    },
+    "board:0": {
+      "hash": "042d152f5304f406",
+      "label": "board #0",
+      "domain": "board"
+    },
+    "board:1": {
+      "hash": "26d4958a8e175050",
+      "label": "board #1",
+      "domain": "board"
+    },
+    "board:2": {
+      "hash": "118254afa7c30f6e",
+      "label": "board #2",
+      "domain": "board"
+    },
+    "board:3": {
+      "hash": "82c9b795399b4279",
+      "label": "board #3",
+      "domain": "board"
+    },
+    "board:4": {
+      "hash": "9ebda5ac8f737b9c",
+      "label": "board #4",
+      "domain": "board"
+    },
+    "board:5": {
+      "hash": "755f00ae364b2076",
+      "label": "board #5",
+      "domain": "board"
+    },
+    "board:6": {
+      "hash": "ba4d65b90883c640",
+      "label": "board #6",
+      "domain": "board"
+    },
+    "board:7": {
+      "hash": "a0857ad088d57172",
+      "label": "board #7",
+      "domain": "board"
+    },
+    "board:8": {
+      "hash": "b08c1f8de2554d2b",
+      "label": "board #8",
+      "domain": "board"
+    },
+    "board:9": {
+      "hash": "436a241995dfbe18",
+      "label": "board #9",
+      "domain": "board"
+    },
+    "board:10": {
+      "hash": "c648b864da77d567",
+      "label": "board #10",
+      "domain": "board"
+    },
+    "board:11": {
+      "hash": "af3549b3187cb997",
+      "label": "board #11",
+      "domain": "board"
+    },
+    "board:12": {
+      "hash": "7f0858b96f2a87de",
+      "label": "board #12",
+      "domain": "board"
+    },
+    "board:13": {
+      "hash": "8d6c2c96ff79c973",
+      "label": "board #13",
+      "domain": "board"
+    },
+    "board:14": {
+      "hash": "7f2f923b09eb579f",
+      "label": "board #14",
+      "domain": "board"
+    },
+    "board:15": {
+      "hash": "aecae4099d56eaf3",
+      "label": "board #15",
+      "domain": "board"
+    },
+    "board:16": {
+      "hash": "3e4c3fe17c8f6cb1",
+      "label": "board #16",
+      "domain": "board"
+    },
+    "board:17": {
+      "hash": "7d5d8a3a13d9226a",
+      "label": "board #17",
+      "domain": "board"
+    },
+    "board:18": {
+      "hash": "2925e7ac7d17a720",
+      "label": "board #18",
+      "domain": "board"
+    },
+    "board:19": {
+      "hash": "244038524a467432",
+      "label": "board #19",
+      "domain": "board"
+    },
+    "board:20": {
+      "hash": "9707cc777e348dc1",
+      "label": "board #20",
+      "domain": "board"
+    },
+    "board:21": {
+      "hash": "28bbf008736bf201",
+      "label": "board #21",
+      "domain": "board"
+    },
+    "board:22": {
+      "hash": "ea22c4d872971a23",
+      "label": "board #22",
+      "domain": "board"
+    },
+    "board:23": {
+      "hash": "2f6225e932f63493",
+      "label": "board #23",
+      "domain": "board"
+    },
+    "board:24": {
+      "hash": "b83b85d42a38f9a9",
+      "label": "board #24",
+      "domain": "board"
+    },
+    "board:25": {
+      "hash": "1a38effbb44f05d3",
+      "label": "board #25",
+      "domain": "board"
+    },
+    "board:26": {
+      "hash": "f98ea175224415f2",
+      "label": "board #26",
+      "domain": "board"
+    },
+    "board:27": {
+      "hash": "8ec0724c410af2aa",
+      "label": "board #27",
+      "domain": "board"
+    },
+    "board:28": {
+      "hash": "314b533ef731c64f",
+      "label": "board #28",
+      "domain": "board"
+    },
+    "board:29": {
+      "hash": "fc98aebe5125f8c5",
+      "label": "board #29",
+      "domain": "board"
+    },
+    "board:30": {
+      "hash": "f66b829f404a15b5",
+      "label": "board #30",
+      "domain": "board"
+    },
+    "board:31": {
+      "hash": "44a309ffc07476d9",
+      "label": "board #31",
+      "domain": "board"
+    },
+    "board:32": {
+      "hash": "47eb63b2e173136c",
+      "label": "board #32",
+      "domain": "board"
+    },
+    "board:33": {
+      "hash": "134c69ee3da82178",
+      "label": "board #33",
+      "domain": "board"
+    },
+    "board:34": {
+      "hash": "18be1c648800b264",
+      "label": "board #34",
+      "domain": "board"
+    },
+    "board:35": {
+      "hash": "9b84fffda5c49f56",
+      "label": "board #35",
+      "domain": "board"
+    },
+    "board:36": {
+      "hash": "b1d612f8e27b1c48",
+      "label": "board #36",
+      "domain": "board"
+    },
+    "board:37": {
+      "hash": "ec92f348f56e38ad",
+      "label": "board #37",
+      "domain": "board"
+    },
+    "board:38": {
+      "hash": "53d001b5131d934a",
+      "label": "board #38",
+      "domain": "board"
+    },
+    "board:39": {
+      "hash": "54b68b3d0252576f",
+      "label": "board #39",
+      "domain": "board"
+    },
+    "board:40": {
+      "hash": "ec0555f9d2ab5c59",
+      "label": "board #40",
+      "domain": "board"
+    },
+    "board:41": {
+      "hash": "5f723d5c12b3a379",
+      "label": "board #41",
+      "domain": "board"
+    },
+    "board:42": {
+      "hash": "fea321393b61d171",
+      "label": "board #42",
+      "domain": "board"
+    },
+    "board:43": {
+      "hash": "5d1b7a0fb7fb5a48",
+      "label": "board #43",
+      "domain": "board"
+    },
+    "board:44": {
+      "hash": "8157e746af8ba368",
+      "label": "board #44",
+      "domain": "board"
+    },
+    "board:45": {
+      "hash": "07c93f86b822b999",
+      "label": "board #45",
+      "domain": "board"
     },
     "0xce7e8381e98b61292cca1a785a7f7ec8e47311daee07d53fa426e006d38315ba": {
       "hash": "f848410394d71adc",
@@ -49311,235 +49485,97 @@
       "label": "gift card hytale_supporters_title_veteran_fde684c28b967eb700f5472f7b2ed7117ca856c8d06e695497de569238ca8a47",
       "domain": "giftcard"
     },
-    "board:0": {
-      "hash": "042d152f5304f406",
-      "label": "board #0",
-      "domain": "board"
+    "0xf01c3aa99c232ce929597e17427eed610adf95251070a616d82b1e70266dc656": {
+      "hash": "37d8765247e6be95",
+      "label": "spell Shadowstep",
+      "revisions": {
+        "0xf01c3aa99c232ce929597e17427eed610adf95251070a616d82b1e70266dc656": "998913990:3qp13ekUPuPr7FWzyWd5C6x64fLx1qz55DaSpvMUGTeX"
+      },
+      "domain": "spell",
+      "spell": {
+        "classe": "yajin",
+        "unlock_level": 13
+      }
     },
-    "board:1": {
-      "hash": "26d4958a8e175050",
-      "label": "board #1",
-      "domain": "board"
+    "0x91ab22fc6ec6b182a6e6d3528002bab26387b446fac33dcd7cf6950114f4a1f6": {
+      "hash": "3ea033051cc48894",
+      "label": "mob aragne__water",
+      "revisions": {
+        "0x91ab22fc6ec6b182a6e6d3528002bab26387b446fac33dcd7cf6950114f4a1f6": "998913990:FkkvtUB5RRHUY2iAFfap6V6N3aR8CYkhjN8utDLsSSha"
+      },
+      "domain": "mob"
     },
-    "board:2": {
-      "hash": "118254afa7c30f6e",
-      "label": "board #2",
-      "domain": "board"
+    "0xeadb0314214aefda94802e6e1c46178645686cf0977bd4bdfa7a91421f8004e4": {
+      "hash": "72241087ed50bf76",
+      "label": "mob fuwa__white",
+      "revisions": {
+        "0xeadb0314214aefda94802e6e1c46178645686cf0977bd4bdfa7a91421f8004e4": "998913990:C5PtuMU2NQfCDkU6sge9ePozDZdNkibsfpJCFaQfZNTu"
+      },
+      "domain": "mob"
     },
-    "board:3": {
-      "hash": "82c9b795399b4279",
-      "label": "board #3",
-      "domain": "board"
+    "0x53aa455240ae17de32cded19090f2e74657622283b01179bbd4f3940d4ee213f": {
+      "hash": "7f02d935ad32c1b7",
+      "label": "mob fuwa__fukuo",
+      "revisions": {
+        "0x53aa455240ae17de32cded19090f2e74657622283b01179bbd4f3940d4ee213f": "998913990:FyzEs3QRw3XfHSWa5xv4wwEDn8QEMr1cyUdo6eSmi7ig"
+      },
+      "domain": "mob"
     },
-    "board:4": {
-      "hash": "9ebda5ac8f737b9c",
-      "label": "board #4",
-      "domain": "board"
+    "0xab621a3073df1590def11df9f707d22da7ec17401d206277baa49b2ed07ce42f": {
+      "hash": "eb82c66be101c74f",
+      "label": "mob misui__water",
+      "revisions": {
+        "0xab621a3073df1590def11df9f707d22da7ec17401d206277baa49b2ed07ce42f": "998913990:Hsehd6TdXHxtmSvbHhPS8BanZN7hLKbU5SbeJms2mVNR"
+      },
+      "domain": "mob"
     },
-    "board:5": {
-      "hash": "755f00ae364b2076",
-      "label": "board #5",
-      "domain": "board"
+    "0x8d0691d77e54a4f7e0f6c56c744216431d6c3ddbdde25f84cb63ef13318f20db": {
+      "hash": "98dec88dc0efaa3c",
+      "label": "mob misui__vitality",
+      "revisions": {
+        "0x8d0691d77e54a4f7e0f6c56c744216431d6c3ddbdde25f84cb63ef13318f20db": "998913990:FCZcXAEK2rJURhXPcfijaoRpBK8TcpHPw6jUp6xHwUX3"
+      },
+      "domain": "mob"
     },
-    "board:6": {
-      "hash": "ba4d65b90883c640",
-      "label": "board #6",
-      "domain": "board"
+    "0xb11683df35e902ea7ded821a5ced8d95f3d70520eeec429296c750c3c92316ed": {
+      "hash": "c5d8f6f391e00e9e",
+      "label": "mob misui__misunami",
+      "revisions": {
+        "0xb11683df35e902ea7ded821a5ced8d95f3d70520eeec429296c750c3c92316ed": "998913990:2pjdQo4bz7kP3VEZ2PsrSygpfhmcjma57nAZuAbreDsv"
+      },
+      "domain": "mob"
     },
-    "board:7": {
-      "hash": "a0857ad088d57172",
-      "label": "board #7",
-      "domain": "board"
+    "0xfc58fb1cfb425bd336fe0aa2132b3a2f6ee1e7cbb3e4c5648184c9386de66d20": {
+      "hash": "6275d4673ea56d35",
+      "label": "mob nook",
+      "revisions": {
+        "0xfc58fb1cfb425bd336fe0aa2132b3a2f6ee1e7cbb3e4c5648184c9386de66d20": "998913990:ixFevpR3X3phopZ9yb6dR7rrAuDtTweoe8B7i26BfvG"
+      },
+      "domain": "mob"
     },
-    "board:8": {
-      "hash": "b08c1f8de2554d2b",
-      "label": "board #8",
-      "domain": "board"
+    "0xd4464435c2b8b8c4643bd57dbba198c459a264d3e9ef0325d98d924e2d7e7b19": {
+      "hash": "34a245697c3ddb16",
+      "label": "mob lorito__water",
+      "revisions": {
+        "0xd4464435c2b8b8c4643bd57dbba198c459a264d3e9ef0325d98d924e2d7e7b19": "998913990:92YryUGnPo9X9LF2FSFXoxvvbfzm6RtStvtoMBkbFPQM"
+      },
+      "domain": "mob"
     },
-    "board:9": {
-      "hash": "436a241995dfbe18",
-      "label": "board #9",
-      "domain": "board"
+    "0xb1d902db0e9b8dce9b1214904b40edd91971b4d91ebe51d7e36c7fd8405465dc": {
+      "hash": "5986f76066a9f59a",
+      "label": "mob bramble",
+      "revisions": {
+        "0xb1d902db0e9b8dce9b1214904b40edd91971b4d91ebe51d7e36c7fd8405465dc": "998913990:2BS5KaY4i29sGScDr438EYptgaYLzVPxnHyr47YkQsF7"
+      },
+      "domain": "mob"
     },
-    "board:10": {
-      "hash": "c648b864da77d567",
-      "label": "board #10",
-      "domain": "board"
-    },
-    "board:11": {
-      "hash": "af3549b3187cb997",
-      "label": "board #11",
-      "domain": "board"
-    },
-    "board:12": {
-      "hash": "7f0858b96f2a87de",
-      "label": "board #12",
-      "domain": "board"
-    },
-    "board:13": {
-      "hash": "8d6c2c96ff79c973",
-      "label": "board #13",
-      "domain": "board"
-    },
-    "board:14": {
-      "hash": "7f2f923b09eb579f",
-      "label": "board #14",
-      "domain": "board"
-    },
-    "board:15": {
-      "hash": "aecae4099d56eaf3",
-      "label": "board #15",
-      "domain": "board"
-    },
-    "board:16": {
-      "hash": "3e4c3fe17c8f6cb1",
-      "label": "board #16",
-      "domain": "board"
-    },
-    "board:17": {
-      "hash": "7d5d8a3a13d9226a",
-      "label": "board #17",
-      "domain": "board"
-    },
-    "board:18": {
-      "hash": "2925e7ac7d17a720",
-      "label": "board #18",
-      "domain": "board"
-    },
-    "board:19": {
-      "hash": "244038524a467432",
-      "label": "board #19",
-      "domain": "board"
-    },
-    "board:20": {
-      "hash": "9707cc777e348dc1",
-      "label": "board #20",
-      "domain": "board"
-    },
-    "board:21": {
-      "hash": "28bbf008736bf201",
-      "label": "board #21",
-      "domain": "board"
-    },
-    "board:22": {
-      "hash": "ea22c4d872971a23",
-      "label": "board #22",
-      "domain": "board"
-    },
-    "board:23": {
-      "hash": "2f6225e932f63493",
-      "label": "board #23",
-      "domain": "board"
-    },
-    "board:24": {
-      "hash": "b83b85d42a38f9a9",
-      "label": "board #24",
-      "domain": "board"
-    },
-    "board:25": {
-      "hash": "1a38effbb44f05d3",
-      "label": "board #25",
-      "domain": "board"
-    },
-    "board:26": {
-      "hash": "f98ea175224415f2",
-      "label": "board #26",
-      "domain": "board"
-    },
-    "board:27": {
-      "hash": "8ec0724c410af2aa",
-      "label": "board #27",
-      "domain": "board"
-    },
-    "board:28": {
-      "hash": "314b533ef731c64f",
-      "label": "board #28",
-      "domain": "board"
-    },
-    "board:29": {
-      "hash": "fc98aebe5125f8c5",
-      "label": "board #29",
-      "domain": "board"
-    },
-    "board:30": {
-      "hash": "f66b829f404a15b5",
-      "label": "board #30",
-      "domain": "board"
-    },
-    "board:31": {
-      "hash": "44a309ffc07476d9",
-      "label": "board #31",
-      "domain": "board"
-    },
-    "board:32": {
-      "hash": "47eb63b2e173136c",
-      "label": "board #32",
-      "domain": "board"
-    },
-    "board:33": {
-      "hash": "134c69ee3da82178",
-      "label": "board #33",
-      "domain": "board"
-    },
-    "board:34": {
-      "hash": "18be1c648800b264",
-      "label": "board #34",
-      "domain": "board"
-    },
-    "board:35": {
-      "hash": "9b84fffda5c49f56",
-      "label": "board #35",
-      "domain": "board"
-    },
-    "board:36": {
-      "hash": "b1d612f8e27b1c48",
-      "label": "board #36",
-      "domain": "board"
-    },
-    "board:37": {
-      "hash": "ec92f348f56e38ad",
-      "label": "board #37",
-      "domain": "board"
-    },
-    "board:38": {
-      "hash": "53d001b5131d934a",
-      "label": "board #38",
-      "domain": "board"
-    },
-    "board:39": {
-      "hash": "54b68b3d0252576f",
-      "label": "board #39",
-      "domain": "board"
-    },
-    "board:40": {
-      "hash": "ec0555f9d2ab5c59",
-      "label": "board #40",
-      "domain": "board"
-    },
-    "board:41": {
-      "hash": "5f723d5c12b3a379",
-      "label": "board #41",
-      "domain": "board"
-    },
-    "board:42": {
-      "hash": "fea321393b61d171",
-      "label": "board #42",
-      "domain": "board"
-    },
-    "board:43": {
-      "hash": "5d1b7a0fb7fb5a48",
-      "label": "board #43",
-      "domain": "board"
-    },
-    "board:44": {
-      "hash": "8157e746af8ba368",
-      "label": "board #44",
-      "domain": "board"
-    },
-    "board:45": {
-      "hash": "07c93f86b822b999",
-      "label": "board #45",
-      "domain": "board"
+    "0x0892ae0654a7f753c67f0258798d76573f64939073753aa09e5cb43725ba10e0": {
+      "hash": "c1d1c93c5ea63c24",
+      "label": "mob wild_boar",
+      "revisions": {
+        "0x0892ae0654a7f753c67f0258798d76573f64939073753aa09e5cb43725ba10e0": "998913990:AmVQpEPXJTc3UtHkimf41V6oJE1d2SfsGAQsGz1bvSBZ"
+      },
+      "domain": "mob"
     }
   }
 }
