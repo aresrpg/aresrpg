@@ -33,21 +33,54 @@ export const browser_checks_required = (paths, manifest_changed) =>
     )
   })
 
-const VERIFICATION_FILES = ['.github/workflows/gate.yml', 'scripts/ci_inputs.mjs', 'move-packages.json']
+const ALL_CHECKS = { browsers: true, move: true, indexer: true }
 const MOVE_PATHS = move_packages.packages.map(({ path }) => `${path}/`)
 
-export const ci_checks_required = (paths, manifest_changed) => {
-  const shared = paths.some(
-    (path) => VERIFICATION_FILES.includes(path) || (path === 'package.json' && manifest_changed(path))
-  )
-  const move =
-    shared ||
-    paths.some((path) => MOVE_PATHS.some((prefix) => path.startsWith(prefix)) || path === 'scripts/coverage_move.sh')
+// Workflow job boundaries are explicit in this repository. Unrecognized structure fails open to all checks.
+const workflow_sections = (source) => {
+  if (!source || /[&*][a-zA-Z_]/.test(source)) return null
+  const boundary = source.indexOf('\njobs:\n')
+  if (boundary < 0) return null
+  const body = source.slice(boundary + 7)
+  if (/^[^\s#]/m.test(body)) return null
+  const sections = body.split(/(?=^ {2}[\w-]+:\s*$)/m)
+  const jobs = Object.fromEntries(sections.map((section) => [section.match(/^ {2}([\w-]+):/)?.[1], section]))
+  if (['changes', 'tests_move', 'tests_indexer', 'browsers'].some((job) => !jobs[job])) return null
+  return { header: source.slice(0, boundary), ...jobs }
+}
+
+const workflow_checks = (before, after) => {
+  const previous = workflow_sections(before)
+  const current = workflow_sections(after)
+  if (!previous || !current || previous.header !== current.header || previous.changes !== current.changes)
+    return ALL_CHECKS
   return {
-    browsers: shared || browser_checks_required(paths, manifest_changed),
+    browsers: previous.browsers !== current.browsers,
+    move: previous.tests_move !== current.tests_move,
+    indexer: previous.tests_indexer !== current.tests_indexer,
+  }
+}
+
+export const ci_checks_required = (paths, manifest_changed, workflow = ALL_CHECKS) => {
+  const changed_workflow = paths.includes('.github/workflows/gate.yml') ? workflow : {}
+  const move =
+    changed_workflow.move ||
+    paths.some(
+      (path) =>
+        MOVE_PATHS.some((prefix) => path.startsWith(prefix)) ||
+        ['scripts/coverage_move.sh', 'move-packages.json'].includes(path)
+    )
+  return {
+    browsers:
+      changed_workflow.browsers ||
+      browser_checks_required(
+        paths.filter((path) => path !== '.github/workflows/gate.yml'),
+        manifest_changed
+      ),
     move,
     indexer:
       move ||
+      changed_workflow.indexer ||
       paths.some(
         (path) =>
           ['packages/indexer/', 'packages/protocol/', '.cargo/'].some((prefix) => path.startsWith(prefix)) ||
@@ -61,7 +94,10 @@ export const ci_checks_for_diff = (base, head, git) => {
   const paths = git(['diff', '--name-only', '--no-renames', '-z', base, head]).split('\0').filter(Boolean)
   const exists = (ref, path) => git(['ls-tree', '--name-only', ref, '--', path]).trim() !== ''
   const manifest = (ref, path) => (exists(ref, path) ? runtime_manifest(git(['show', `${ref}:${path}`])) : null)
-  return ci_checks_required(paths, (path) => manifest(base, path) !== manifest(head, path))
+  const workflow_path = '.github/workflows/gate.yml'
+  const source = (ref) => (exists(ref, workflow_path) ? git(['show', `${ref}:${workflow_path}`]) : null)
+  const workflow = paths.includes(workflow_path) ? workflow_checks(source(base), source(head)) : ALL_CHECKS
+  return ci_checks_required(paths, (path) => manifest(base, path) !== manifest(head, path), workflow)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

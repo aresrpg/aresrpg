@@ -42,9 +42,17 @@ jobs:
           export BASE_SHA
           node scripts/ci_inputs.mjs
   source:
-    name: TypeScript (lint, types, tests)
+    name: source (${{ matrix.check.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - { name: lint, command: 'bunx eslint . --max-warnings 0' }
+          - { name: format, command: 'bunx prettier . --check' }
+          - { name: types, command: 'bun run typecheck' }
+          - { name: tests, command: 'bun run test' }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -91,12 +99,10 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - name: install
         run: bun install --frozen-lockfile
-      - name: lint
-        run: bun run lint
-      - name: typecheck
-        run: bun run typecheck
-      - name: TypeScript tests + coverage
-        run: bun run test
+      - name: ${{ matrix.check.name }}
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: ${{ matrix.check.command }}
   tests_move:
     needs: changes
     if: needs.changes.outputs.move == 'true'

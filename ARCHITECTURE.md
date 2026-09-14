@@ -594,11 +594,17 @@ the PTB split is not a claim that every possible cap withdrawal is mechanically 
 
 ## Verification and release preparation
 
-The gate always runs source lint, types, tests, and seed validation. One input classifier selects
+The gate runs lint, formatting, typechecking, and tests as four independent source matrix jobs.
+The tests job retains coverage, generated-data checks, and seed validation; the final gate requires
+every source job. One input classifier selects
 Move, indexer parity, and browser lanes against the last successful `edge` push, including for PRs.
 Missing baseline evidence runs every lane; a failed or cancelled change remains in the comparison.
 Move package inputs come from `move-packages.json`. An unchanged lane may skip only when the
-classifier explicitly says so; every required lane and browser shard must succeed.
+classifier explicitly says so; every required lane and browser shard must succeed. Workflow edits
+compare each lane’s job and shared header/setup. Unknown workflow structure runs all lanes.
+Classifier source changes are checked by the source suite, rather than invalidating unchanged
+compiled-language inputs. Browser-matrix tests discover the catalogue once per browser, then verify
+complete project/shard partitions without repeatedly launching discovery for each shard.
 Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three UI shards on Linux, two
 on macOS, and three quality-specific world workload lanes per platform. Five macOS jobs avoid queuing
 a sixth browser behind the hosted macOS concurrency limit. Runner-provided Chrome is reused and its

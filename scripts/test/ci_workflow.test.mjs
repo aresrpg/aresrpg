@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 
-import { expect, test } from 'bun:test'
+import { beforeAll, expect, test } from 'bun:test'
 
 import browser_config from '../../packages/frontend/e2e/playwright.config.ts'
 
@@ -85,43 +85,59 @@ for (const lane of ['tests_move', 'tests_indexer', 'browsers'])
 const listed_specs = (suites) =>
   suites.flatMap((suite) => [...(suite.specs ?? []), ...listed_specs(suite.suites ?? [])])
 
+const catalogs = new Map()
+beforeAll(() => {
+  for (const browser of ['chrome', 'firefox']) {
+    const report = execFileSync(
+      process.execPath,
+      [
+        'node_modules/@playwright/test/cli.js',
+        'test',
+        '--config',
+        'packages/frontend/e2e/playwright.config.ts',
+        '--list',
+        '--reporter=json',
+      ],
+      { encoding: 'utf8', env: { ...process.env, BROWSER: browser } }
+    )
+    catalogs.set(browser, listed_specs(JSON.parse(report).suites))
+  }
+})
+
 for (const [os, browser] of [
   ['ubuntu-latest', 'chrome'],
   ['ubuntu-latest', 'firefox'],
   ['macos-latest', 'chrome'],
 ])
-  test(`${os}/${browser} CI lanes cover every test once and distribute world workloads`, () => {
-    const list = (args) =>
-      listed_specs(
-        JSON.parse(
-          execFileSync(
-            process.execPath,
-            [
-              'node_modules/@playwright/test/cli.js',
-              'test',
-              '--config',
-              'packages/frontend/e2e/playwright.config.ts',
-              '--list',
-              '--reporter=json',
-              ...args,
-            ],
-            { encoding: 'utf8', env: { ...process.env, BROWSER: browser } }
-          )
-        ).suites
-      )
-    const all = list([])
-      .map(({ id }) => id)
-      .toSorted()
+  test(`${os}/${browser} has a complete shard partition for every discovered project`, () => {
+    const specs = catalogs.get(browser)
+    const projects = [...new Set(specs.flatMap((spec) => spec.tests.map((test) => test.projectName)))]
     const plans = jobs.browsers.strategy.matrix.include.filter((row) => row.os === os && row.browser === browser)
-    const lanes = plans.map(({ project, shard }) => list([`--project=${project}`, `--shard=${shard}`]))
-    const ids = lanes.flat().map(({ id }) => id)
-    expect(ids.toSorted()).toEqual(all)
-    expect(new Set(ids).size).toBe(ids.length)
-    const ui = lanes.filter((_, index) => plans[index].project === 'ui')
-    const workloads = lanes.filter((_, index) => plans[index].project.startsWith('workloads-'))
-    expect(workloads.every((lane) => lane.length > 0)).toBe(true)
-    expect(workloads.map((lane) => lane.filter(({ title }) => title.startsWith('city /')).length)).toEqual([1, 1, 1])
-    expect(Math.max(...ui.map((lane) => lane.length)) - Math.min(...ui.map((lane) => lane.length))).toBeLessThanOrEqual(
-      1
-    )
-  }, 15_000)
+    expect([...new Set(plans.map(({ project }) => project))].toSorted()).toEqual(projects.toSorted())
+    for (const project of projects) {
+      const shards = plans.filter((row) => row.project === project).map(({ shard }) => shard.split('/').map(Number))
+      const count = shards.length
+      expect(shards.map(([, total]) => total)).toEqual(Array(count).fill(count))
+      expect(shards.map(([index]) => index).toSorted((a, b) => a - b)).toEqual(
+        Array.from({ length: count }, (_, i) => i + 1)
+      )
+      const selected = specs.filter((spec) => spec.tests.some((test) => test.projectName === project))
+      expect(selected.length).toBeGreaterThanOrEqual(count)
+      if (project.startsWith('workloads-'))
+        expect(selected.filter(({ title }) => title.startsWith('city /'))).toHaveLength(1)
+    }
+  })
+
+test('source checks run independently and the final gate requires the whole matrix', () => {
+  expect(jobs.source.strategy['fail-fast']).toBe(false)
+  expect(jobs.source.strategy.matrix.check).toEqual([
+    { name: 'lint', command: 'bunx eslint . --max-warnings 0' },
+    { name: 'format', command: 'bunx prettier . --check' },
+    { name: 'types', command: 'bun run typecheck' },
+    { name: 'tests', command: 'bun run test' },
+  ])
+  expect(jobs.source.steps.at(-1).run).toBe('${{ matrix.check.command }}')
+  expect(jobs.gate.needs).toContain('source')
+  check_gate('source', 'success', 'true')()
+  for (const result of ['failure', 'cancelled', 'skipped']) expect(check_gate('source', result, 'true')).toThrow()
+})

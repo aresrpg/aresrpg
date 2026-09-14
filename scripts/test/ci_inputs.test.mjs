@@ -78,7 +78,6 @@ for (const path of [
   'scripts/coverage_move.sh',
   'move-packages.json',
   '.github/workflows/gate.yml',
-  'scripts/ci_inputs.mjs',
 ])
   test(`${path} requires Move and its indexer parity checks`, () => {
     const checks = ci_checks_for_diff('verified', 'head', () => `${path}\0`)
@@ -104,4 +103,70 @@ test('a failed Move edit still runs when followed by a content-only update', () 
     return 'packages/move/sources/world.move\0seed/content/mobs.json\0'
   }
   expect(ci_checks_for_diff('last-success', 'head', git)).toEqual({ browsers: false, move: true, indexer: true })
+})
+
+const gate_source = (browser = 'browser', move = 'move', header = 'name: gate') =>
+  `${header}\njobs:\n  changes:\n    run: classify\n  source:\n    run: source\n  tests_move:\n    run: ${move}\n  tests_indexer:\n    run: indexer\n  browsers:\n    run: ${browser}\n`
+const workflow_git = (before, after) => (args) => {
+  if (args[0] === 'diff') return '.github/workflows/gate.yml\0'
+  if (args[0] === 'ls-tree') return '.github/workflows/gate.yml'
+  return args[1].startsWith('base:') ? before : after
+}
+
+test('browser-only workflow edits do not invalidate compiled-language lanes', () => {
+  expect(ci_checks_for_diff('base', 'head', workflow_git(gate_source(), gate_source('new browser')))).toEqual({
+    browsers: true,
+    move: false,
+    indexer: false,
+  })
+})
+
+test('Move workflow and shared workflow edits retain required verification', () => {
+  expect(ci_checks_for_diff('base', 'head', workflow_git(gate_source(), gate_source('browser', 'new move')))).toEqual({
+    browsers: false,
+    move: true,
+    indexer: true,
+  })
+  expect(
+    ci_checks_for_diff('base', 'head', workflow_git(gate_source(), gate_source('browser', 'move', 'name: new')))
+  ).toEqual({ browsers: true, move: true, indexer: true })
+})
+
+test('classifier source edits run source/browser verification without rerunning unchanged Rust or Move', () => {
+  expect(ci_checks_for_diff('verified', 'head', () => 'scripts/ci_inputs.mjs\0')).toEqual({
+    browsers: true,
+    move: false,
+    indexer: false,
+  })
+})
+
+test('source-only and indexer-only workflow edits select only their owners', () => {
+  const original = gate_source()
+  expect(
+    ci_checks_for_diff('base', 'head', workflow_git(original, original.replace('run: source', 'run: parallel source')))
+  ).toEqual({ browsers: false, move: false, indexer: false })
+  expect(
+    ci_checks_for_diff('base', 'head', workflow_git(original, original.replace('run: indexer', 'run: updated indexer')))
+  ).toEqual({ browsers: false, move: false, indexer: true })
+})
+
+for (const changed of [
+  null,
+  'jobs: {}',
+  gate_source() + 'env:\n  TOOLCHAIN: new\n',
+  gate_source().replace('run: browser', 'run: *shared'),
+])
+  test('unknown workflow structure cannot silently skip verification', () => {
+    expect(ci_checks_for_diff('base', 'head', workflow_git(gate_source(), changed))).toEqual({
+      browsers: true,
+      move: true,
+      indexer: true,
+    })
+  })
+
+test('changes to shared lane-selection setup run all verification', () => {
+  const original = gate_source()
+  expect(
+    ci_checks_for_diff('base', 'head', workflow_git(original, original.replace('run: classify', 'run: new classifier')))
+  ).toEqual({ browsers: true, move: true, indexer: true })
 })
