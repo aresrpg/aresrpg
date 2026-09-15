@@ -544,8 +544,8 @@ export const create_world = ({
 
   const render_character = (transform = character.get_transform()): boolean => {
     if (!character_render) return false
-    const [x, , z] = transform.position
-    const y = transform.visual_y + (riding && pet ? pet_seat_height(engine.entity_height(pet.id)) : 0)
+    const [x, visual_y, z] = transform.visual_position
+    const y = visual_y + (riding && pet ? pet_seat_height(engine.entity_height(pet.id)) : 0)
     const animation = riding ? ('SIT' as const) : transform.anim
     const visible = mode !== 'follow' || !follow_addon.is_first_person()
     if (
@@ -620,13 +620,13 @@ export const create_world = ({
       label_pet(null)
       return changed
     }
-    const [owner_x, owner_y, owner_z] = transform.position
+    const [owner_x, owner_y, owner_z] = transform.visual_position
     pet_elapsed_seconds += delta_seconds
     if (!riding) pet_motion = step_pet_follow(pet_motion, { x: owner_x, z: owner_z }, delta_seconds)
     const x = riding ? owner_x : pet_motion.x
     const z = riding ? owner_z : pet_motion.z
     const y = riding
-      ? transform.visual_y
+      ? transform.visual_position[1]
       : pet_ground_height(x, z, owner_y) + pet_vertical_offset(pet.locomotion, pet_elapsed_seconds)
     // a FOLLOWING pet animates from ITS OWN motion — the owner's pose drives it only when ridden
     // (a follower jumping in sync with the player was the bug, owner 2026-08-21)
@@ -697,18 +697,18 @@ export const create_world = ({
       if (transform.air_jumped)
         engine.play_jump_puff([transform.position[0], transform.visual_y, transform.position[2]])
       anchor = {
-        x: transform.position[0],
-        y: transform.visual_y,
-        z: transform.position[2],
+        x: transform.visual_position[0],
+        y: transform.visual_position[1],
+        z: transform.visual_position[2],
         eye_height: CHARACTER_HEIGHT * 0.9,
         speed: transform.speed,
         on_ground: transform.on_ground,
       }
       publish_pose({
         character_id: character_render?.id ?? '',
-        x: anchor.x,
-        y: anchor.y,
-        z: anchor.z,
+        x: transform.position[0],
+        y: transform.visual_y,
+        z: transform.position[2],
         yaw: director.active().get_yaw(),
         riding,
         time_of_day: world_time_of_day,
@@ -842,9 +842,11 @@ export const create_world = ({
     camera_focus: () => Object.freeze({ x: spectate.x, z: spectate.z }),
     /// Point the system at a character: the camera and terrain travel to its position.
     /// Cross-world pointing waits on more worlds having terrain recipes.
-    point_at: (position: Readonly<{ x: number; z: number }>) => {
+    point_at: (position: Readonly<{ x: number; z: number }>, reconcile = false) => {
       footsteps.reset()
-      character.teleport([position.x, projected_surface_y(position.x, position.z), position.z])
+      character.teleport([position.x, projected_surface_y(position.x, position.z), position.z], {
+        smooth: reconcile && mode === 'follow',
+      })
       set_mode(camera_mode_after(mode, { mode: 'follow', from: 'character' }))
     },
     release: () => set_mode(camera_mode_after(mode, { mode: 'spectate', from: 'character' })),

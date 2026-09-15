@@ -30,6 +30,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { engage_sword_markers, live_spawns, mob_group_id, resource_pack_id } from './world.ts'
 import {
+  can_reconcile_target,
   selected_anchor,
   selected_character_in_dungeon,
   selected_checkpoint_position,
@@ -112,7 +113,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     world.set_footsteps_enabled(state.settings.footsteps_enabled !== false)
     world.set_day_night_cycle_enabled(state.settings.day_night_cycle_enabled !== false)
   }
-  const sync_target = (state: AppState, checkpoint_only = false): void => {
+  const sync_target = (state: AppState, checkpoint_only = false, previous?: AppState): void => {
     if (!world) return
     const position = checkpoint_only ? selected_checkpoint_position(state) : selected_position(state)
     if (!position) {
@@ -120,16 +121,15 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       sync_activity(get_state())
       return
     }
-    const identity = selected_anchor(state)
+    const own_generation = ++target_generation
+    if (can_reconcile_target(state, previous)) return world.point_at(position, true)
     world.release()
-    target_generation += 1
-    const own_generation = target_generation
     const point = (resumed: Readonly<{ x: number; z: number }> | null): void => {
       if (signal.aborted || own_generation !== target_generation || !world) return
       world.point_at(resumed ?? position)
       sync_activity(get_state())
     }
-    if (!identity || checkpoint_only) {
+    if (checkpoint_only) {
       point(null)
       return
     }
@@ -564,7 +564,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     )
     const world_changed = selected_world(state) !== selected_world(previous)
     if (world_changed && canvas) mount(canvas)
-    else if (selection_changed || target_became_available || target_anchor_changed) sync_target(state)
+    else if (selection_changed || target_became_available || target_anchor_changed) sync_target(state, false, previous)
     if (selection_changed || state.session.characters !== previous.session.characters) {
       sync_character(state)
       sync_pet(state)

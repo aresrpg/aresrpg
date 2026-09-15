@@ -72,3 +72,20 @@ test('recall makes a stale live pose ineligible for selection and other owned-ch
   record_owned_character_position('0xb', 'nauvis', { checkpoint: 'nauvis:50000:50000:2', x: 50_002, y: 7, z: 50_000 })
   expect(selected_position(state({ ...recalled }))).toEqual({ x: 2, z: 0 })
 })
+
+test('anchor corrections stay continuous only for the same available character and world', async () => {
+  const { can_reconcile_target } = await import('../../../src/modules/engine_selection.ts')
+  const state = (id: string, world: string, available = true) =>
+    ({
+      session: {
+        selected_character_id: id,
+        characters: available ? [character(id, world)] : [],
+      },
+    }) as never
+  const previous = state('hero', 'nauvis')
+  expect(can_reconcile_target(state('hero', 'nauvis'), previous)).toBe(true)
+  expect(can_reconcile_target(state('other', 'nauvis'), previous)).toBe(false)
+  expect(can_reconcile_target(state('hero', 'yakutia'), previous)).toBe(false)
+  expect(can_reconcile_target(previous, state('hero', 'nauvis', false))).toBe(false)
+  expect(can_reconcile_target(previous)).toBe(false)
+})

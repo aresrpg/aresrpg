@@ -34,6 +34,13 @@ export const selected_live_position = (state: AppState): Readonly<{ x: number; z
 export const selected_position = (state: AppState): Readonly<{ x: number; z: number }> | null =>
   selected_live_position(state) ?? selected_checkpoint_position(state)
 
+/** Only an already-controlled same-world character can receive a continuous anchor correction. */
+export const can_reconcile_target = (state: AppState, previous?: AppState): boolean =>
+  previous !== undefined &&
+  previous.session.selected_character_id === state.session.selected_character_id &&
+  selected_world(previous) === selected_world(state) &&
+  selected_position(previous) !== null
+
 export const selected_anchor = (
   state: AppState
 ): Readonly<{ character_id: string; world: string; anchor: ChainAnchor }> | null => {

@@ -18,6 +18,8 @@ import {
 
 /** Physics fixed step (s); tick(dt) accumulates toward this — any caller cadence is stable. */
 const FIXED_STEP = 1 / 60
+const ANCHOR_BLEND_SECONDS = 0.18
+const ANCHOR_BLEND_DISTANCE = 1
 /** Max accumulated steps per tick — a background tab returning after seconds must not explode. */
 const MAX_STEPS_PER_TICK = 8
 
@@ -25,6 +27,8 @@ export type CharacterInput = Readonly<Partial<ControllerInput>>
 export type CharacterTransform = Readonly<{
   position: Readonly<Vec3Mut>
   visual_y: number
+  /** Presentation only; movement, persistence, and networking use position. */
+  visual_position: Readonly<Vec3Mut>
   facing_yaw: number
   on_ground: boolean
   in_water: boolean
@@ -39,7 +43,7 @@ export type CharacterController = Readonly<{
   set_input: (input: CharacterInput) => void
   tick: (dt: number) => void
   get_transform: () => CharacterTransform
-  teleport: (position: Readonly<Vec3Mut>, opts?: Readonly<{ eject?: boolean }>) => void
+  teleport: (position: Readonly<Vec3Mut>, opts?: Readonly<{ eject?: boolean; smooth?: boolean }>) => void
   reconcile_ground: (previous_ground: number, next_ground: number) => void
   dispose: () => void
 }>
@@ -100,6 +104,40 @@ export const create_character_controller = ({
   let acc = 0
   let air_jump_event = false
   let disposed = false
+  let correction: Vec3Mut = [0, 0, 0]
+  let correction_seconds = 0
+
+  const get_transform = (): CharacterTransform => {
+    const a = Math.min(1, acc / FIXED_STEP)
+    const lerp = (p: number, c: number): number => p + (c - p) * a
+    const blend = correction_seconds / ANCHOR_BLEND_SECONDS
+    const underwater_moving = state.in_water && state.speed > 0.5
+    // wrap-aware yaw lerp (shortest arc) so a heading flip never spins the long way for a frame.
+    let dyaw = state.facing_yaw - prev.facing_yaw
+    if (dyaw > Math.PI) dyaw -= Math.PI * 2
+    if (dyaw < -Math.PI) dyaw += Math.PI * 2
+    return Object.freeze({
+      position: [
+        lerp(prev.position[0], state.position[0]),
+        lerp(prev.position[1], state.position[1]),
+        lerp(prev.position[2], state.position[2]),
+      ] as Vec3Mut,
+      visual_y: lerp(prev.visual_y, state.visual_y),
+      visual_position: [
+        lerp(prev.position[0], state.position[0]) + correction[0] * blend,
+        lerp(prev.visual_y, state.visual_y) + correction[1] * blend,
+        lerp(prev.position[2], state.position[2]) + correction[2] * blend,
+      ] as const,
+      facing_yaw: prev.facing_yaw + dyaw * a,
+      on_ground: state.on_ground,
+      in_water: state.in_water,
+      air_jumped: air_jump_event,
+      speed: state.speed,
+      anim: state.in_water ? (underwater_moving ? 'SWIM' : 'IDLE') : state.anim,
+      gait_scale: state.gait_scale,
+      velocity: [...state.velocity] as Vec3Mut,
+    })
+  }
 
   return Object.freeze({
     set_input: (next: CharacterInput) => {
@@ -115,6 +153,7 @@ export const create_character_controller = ({
 
     tick: (dt: number) => {
       if (disposed) return
+      correction_seconds = Math.max(0, correction_seconds - Math.max(0, dt))
       acc = Math.min(acc + Math.max(0, dt), FIXED_STEP * MAX_STEPS_PER_TICK)
       let air_jumped = false
       while (acc >= FIXED_STEP) {
@@ -128,37 +167,17 @@ export const create_character_controller = ({
       air_jump_event = air_jumped
     },
 
-    get_transform: () => {
-      const a = Math.min(1, acc / FIXED_STEP)
-      const lerp = (p: number, c: number): number => p + (c - p) * a
-      const underwater_moving = state.in_water && state.speed > 0.5
-      // wrap-aware yaw lerp (shortest arc) so a heading flip never spins the long way for a frame.
-      let dyaw = state.facing_yaw - prev.facing_yaw
-      if (dyaw > Math.PI) dyaw -= Math.PI * 2
-      if (dyaw < -Math.PI) dyaw += Math.PI * 2
-      return Object.freeze({
-        position: [
-          lerp(prev.position[0], state.position[0]),
-          lerp(prev.position[1], state.position[1]),
-          lerp(prev.position[2], state.position[2]),
-        ] as Vec3Mut,
-        visual_y: lerp(prev.visual_y, state.visual_y),
-        facing_yaw: prev.facing_yaw + dyaw * a,
-        on_ground: state.on_ground,
-        in_water: state.in_water,
-        air_jumped: air_jump_event,
-        speed: state.speed,
-        anim: state.in_water ? (underwater_moving ? 'SWIM' : 'IDLE') : state.anim,
-        gait_scale: state.gait_scale,
-        velocity: [...state.velocity] as Vec3Mut,
-      })
-    },
+    get_transform,
 
     teleport: (p, opts = {}) => {
       if (disposed) return
       // Every adopted position is ejected to the nearest air; `{ eject: false }` is creative-fly's
       // deliberate move-through-solids.
       const target = opts.eject === false ? p : eject_from_solid(env.solid_at, [p[0], p[1], p[2]])
+      const previous_visual = get_transform().visual_position
+      const distance = Math.hypot(...target.map((value, index) => value - state.position[index]!))
+      correction_seconds = opts.smooth && distance <= ANCHOR_BLEND_DISTANCE ? ANCHOR_BLEND_SECONDS : 0
+      correction = previous_visual.map((value, index) => value - target[index]!) as Vec3Mut
       state.position = [target[0], target[1], target[2]]
       ;[, state.visual_y] = target
       ;[prev.position[0], prev.position[1], prev.position[2]] = state.position
