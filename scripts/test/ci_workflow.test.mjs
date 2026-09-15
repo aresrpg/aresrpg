@@ -36,12 +36,14 @@ test('browser matrix shards every existing platform and retains independent repo
   expect(mac.filter(({ project }) => project === 'ui').map(({ shard }) => shard)).toEqual(['1/2', '2/2'])
   expect(job.strategy['fail-fast']).toBe(false)
   expect(job.steps.find(({ name }) => name === 'prepare browser').run).toBe('bun scripts/prepare_browser.mjs')
-  const { run } = job.steps.find(({ name }) => name === 'browser compatibility tests')
+  const { run, env } = job.steps.find(({ name }) => name === 'browser compatibility tests')
+  expect(env?.BROWSER_WORKERS).toBe("${{ matrix.project == 'ui' && 2 || 1 }}")
+  expect(run.match(/--workers="\$BROWSER_WORKERS"/g)).toHaveLength(2)
   expect(run.match(/--project=\$\{\{ matrix.project \}\} --shard=\$\{\{ matrix.shard \}\}/g)).toHaveLength(2)
   expect(job.steps.at(-1).with.name).toContain('${{ strategy.job-index }}')
 })
 
-test('UI waits have short independent budgets without adding browser concurrency', () => {
+test('UI waits retain short budgets and local runs default to one worker', () => {
   const ui = browser_config.projects.find(({ name }) => name === 'ui')
   expect(browser_config.workers).toBe(1)
   expect(browser_config.retries).toBe(0)
