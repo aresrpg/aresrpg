@@ -48,7 +48,7 @@ export const enrich_leaderboard = async (
               `MATCH (c:Character) WHERE c.owner IN $addresses
        WITH c ORDER BY c.level DESC, size(c.experience) DESC, c.experience DESC, c.id
        RETURN c.owner AS address, count(c) AS total,
-              collect({name: c.name, classe: c.classe, level: c.level})[0..6] AS characters`,
+              collect({name: c.name, classe: c.classe, level: c.level})[0..20] AS characters`,
               { addresses }
             ),
           []

@@ -1,0 +1,304 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.world-atlas {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+.world-atlas__worlds {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+.world-atlas__worlds > button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 180px;
+  padding: 12px 18px;
+  text-align: left;
+  color: var(--color-muted);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.world-atlas__worlds strong {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.world-atlas__worlds small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.world-atlas__worlds > button[aria-pressed='true'] {
+  border-color: var(--color-gold);
+  color: var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 8%, var(--color-surface));
+}
+.world-atlas__search {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.world-atlas__body {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+.world-atlas__places {
+  padding: 16px 12px;
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-low);
+}
+.world-atlas__places h3 {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px;
+  margin: 0 0 10px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.world-atlas__places h3 span {
+  margin-left: auto;
+}
+.world-atlas__places section + section {
+  margin-top: 24px;
+}
+.world-atlas__places button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px;
+  margin-top: 4px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--color-muted);
+  border: 1px solid transparent;
+}
+.world-atlas__places button svg {
+  flex-shrink: 0;
+}
+.world-atlas__places button[aria-pressed='true'] {
+  color: var(--color-gold);
+  background: color-mix(in srgb, var(--color-gold) 8%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-gold) 30%, transparent);
+}
+.world-atlas__detail {
+  container: world-detail / inline-size;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px;
+}
+.world-atlas__place-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.world-atlas__place-heading p {
+  color: var(--color-muted);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.world-atlas__place-heading h2 {
+  margin-top: 4px;
+  font-size: 20px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+}
+.world-atlas__place-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  color: var(--color-gold);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+.world-atlas__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+}
+.world-atlas__section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.world-atlas__section-title > span {
+  margin-left: auto;
+  color: var(--color-gold);
+}
+.world-atlas__mob-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 6px;
+}
+.world-atlas__entity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 62px;
+  padding: 10px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.world-atlas__entity:hover,
+.world-atlas__related:hover,
+.world-atlas__key:hover {
+  background: var(--color-surface-raised);
+  border-color: color-mix(in srgb, var(--color-gold) 40%, var(--color-border));
+}
+.world-atlas__entity-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: var(--color-text);
+}
+.world-atlas__entity-name small {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.world-atlas__level {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.world-atlas__resource {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-low);
+}
+.world-atlas__resource > .world-atlas__entity {
+  border: 0;
+}
+.world-atlas__related {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  width: 100%;
+  padding: 6px 10px;
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+}
+.world-atlas__related > span:first-child {
+  width: 70px;
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: 10px;
+}
+.world-atlas__related strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.world-atlas__related > svg {
+  color: var(--color-cyan);
+  flex-shrink: 0;
+}
+.world-atlas__key {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-gold);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  text-align: left;
+  font-size: 12px;
+}
+.world-atlas__empty {
+  padding: 20px;
+  border: 1px dashed var(--color-border);
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.world-atlas__place-select {
+  display: none;
+}
+.world-atlas__entity-name > .text-gold {
+  color: var(--color-gold);
+}
+@container world-detail (min-width: 880px) {
+  .world-atlas__columns {
+    grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr);
+  }
+}
+@container app-content (max-width: 800px) {
+  .world-atlas__body {
+    display: flex;
+    flex-direction: column;
+  }
+  .world-atlas__places {
+    flex-shrink: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding: 10px 12px;
+  }
+  .world-atlas__places > section {
+    display: none;
+  }
+  .world-atlas__place-select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+  .world-atlas__detail {
+    padding: 16px;
+    flex: 1;
+  }
+  .world-atlas__worlds {
+    padding: 12px;
+    gap: 8px;
+  }
+  .world-atlas__worlds > button {
+    min-width: 0;
+    flex: 1;
+    padding: 10px;
+  }
+  .world-atlas__search {
+    padding: 10px 12px;
+  }
+}

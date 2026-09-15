@@ -1091,6 +1091,16 @@ wallet_send_shared:
   transaction: Transaktion
 
 encyclopedia_page:
+  world_locations: 'Orte'
+  world_search_places: 'Biom, Stadt, Monster oder Ressource suchen…'
+  world_entry: 'Zugang St. {{level}}'
+  world_city: 'Stadt'
+  world_biome: 'Biom'
+  world_roaming: 'Umherstreifende Monster'
+  world_no_roaming: 'Für diesen Ort sind keine umherstreifenden Monster verzeichnet.'
+  world_gatherables: 'Sammelressourcen'
+  world_gather_level: '{{job}} · Beruf St. {{level}}'
+  world_protector: 'Beschützer'
   minimum: MIN
   maximum: MAX
   terrain_seed: Geländeschlüssel

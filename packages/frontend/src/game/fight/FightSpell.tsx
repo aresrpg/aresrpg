@@ -33,7 +33,6 @@ const number_effect = (effect: Readonly<FightSpellView['details']['effects'][num
 const number_level = (
   level: Readonly<FightSpellView['details']>,
   effects: Readonly<FightSpellView['details']['effects']> = level.effects,
-  crit_effects: Readonly<FightSpellView['details']['effects']> = level.crit_effects,
   crit_1_in: bigint = level.crit_1_in
 ) =>
   Object.freeze({
@@ -49,13 +48,11 @@ const number_level = (
     cooldown_turns: Number(level.cooldown_turns),
     crit_1_in: Number(crit_1_in),
     effects: Object.freeze(effects.map(number_effect)),
-    crit_effects: Object.freeze(crit_effects.map(number_effect)),
+    crit_effects: Object.freeze([]),
   })
 
 export const fight_spell_detail = (spell: Readonly<FightSpellView>) => {
   const invested_index = Number(spell.level - 1n)
-  const resolved_effects = spell.turn?.effects.filter(({ critical_only }) => !critical_only)
-  const resolved_critical_effects = spell.turn?.critical ? spell.turn.effects : Object.freeze([])
   return Object.freeze({
     name: spell.name,
     classe: spell.source.classe,
@@ -63,8 +60,8 @@ export const fight_spell_detail = (spell: Readonly<FightSpellView>) => {
     levels: Object.freeze(
       spell.source.levels.map((level, index) =>
         index === invested_index && spell.turn
-          ? number_level(level, resolved_effects, resolved_critical_effects, spell.turn.crit_1_in)
-          : number_level(level, level.effects, Object.freeze([]))
+          ? number_level(level, spell.turn.effects, spell.turn.crit_1_in)
+          : number_level(level)
       )
     ),
   })

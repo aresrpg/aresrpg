@@ -1067,6 +1067,16 @@ wallet_send_shared:
   transaction: トランザクション
 
 encyclopedia_page:
+  world_locations: '場所'
+  world_search_places: 'バイオーム・都市・モンスター・資源を検索…'
+  world_entry: '入場Lv. {{level}}'
+  world_city: '都市'
+  world_biome: 'バイオーム'
+  world_roaming: '野生モンスター'
+  world_no_roaming: 'この場所に野生モンスターは登録されていません。'
+  world_gatherables: '採集資源'
+  world_gather_level: '{{job}} · 職業Lv. {{level}}'
+  world_protector: '守護者'
   minimum: 最小
   maximum: 最大
   terrain_seed: 地形シード

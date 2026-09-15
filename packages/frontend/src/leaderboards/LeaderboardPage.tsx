@@ -9,38 +9,9 @@ import podium_third from '../assets/leaderboards/podium-3.png'
 import { copy_text } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
-import {
-  BADGE_COLORS,
-  display_address,
-  display_suins_name,
-  leaderboard_score,
-  compact_leaderboard_score,
-} from './presentation.ts'
+import { display_address, display_suins_name, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
+import { BadgeRow } from './BadgeRow.tsx'
 import './leaderboards.css'
-
-const Badge = ({
-  identity,
-  label,
-  level,
-  title,
-}: Readonly<{ identity: string; label: string; level: number; title: string }>) => {
-  const [dark, light] = BADGE_COLORS[identity] ?? ['#7F8C8D', '#95A5A6']
-  return (
-    <span
-      className="inline-flex items-center px-1.5 py-0.5 text-[9px] tracking-wide uppercase"
-      style={{
-        background: `linear-gradient(135deg, ${dark}30, ${light}18)`,
-        border: `1px solid ${light}40`,
-        color: light,
-      }}
-      title={title}
-    >
-      <span className="opacity-70">{label}</span>
-      <span className="mx-0.5 opacity-30">·</span>
-      <b>{level}</b>
-    </span>
-  )
-}
 
 const EntryBadges = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   const copy = useAppStore(({ copy }) => copy)
@@ -64,14 +35,7 @@ const EntryBadges = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
         title: text(`job_${job}`),
       }))
   const total = characters ? entry.character_count : entry.jobs.length
-  return (
-    <div className="flex flex-wrap items-center gap-1" title={text(characters ? 'current_characters' : 'current_jobs')}>
-      {badges.slice(0, 6).map(({ key, ...badge }) => (
-        <Badge key={key} {...badge} />
-      ))}
-      {total > 6 && <span className="text-[9px] text-muted">+{total - 6}</span>}
-    </div>
-  )
+  return <BadgeRow badges={badges} total={total} title={text(characters ? 'current_characters' : 'current_jobs')} />
 }
 
 const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {

@@ -1066,6 +1066,16 @@ wallet_send_shared:
   total: Итого
   transaction: Транзакция
 encyclopedia_page:
+  world_locations: 'Места'
+  world_search_places: 'Найти биом, город, монстра или ресурс…'
+  world_entry: 'Вход: ур. {{level}}'
+  world_city: 'Город'
+  world_biome: 'Биом'
+  world_roaming: 'Дикие монстры'
+  world_no_roaming: 'Для этого места не указаны дикие монстры.'
+  world_gatherables: 'Ресурсы для сбора'
+  world_gather_level: '{{job}} · Профессия: ур. {{level}}'
+  world_protector: 'Защитник'
   minimum: МИН.
   maximum: МАКС.
   terrain_seed: Сид рельефа

@@ -1088,6 +1088,16 @@ wallet_send_shared:
   transaction: Транзакція
 
 encyclopedia_page:
+  world_locations: 'Місця'
+  world_search_places: 'Знайти біом, місто, монстра або ресурс…'
+  world_entry: 'Вхід: рів. {{level}}'
+  world_city: 'Місто'
+  world_biome: 'Біом'
+  world_roaming: 'Дикі монстри'
+  world_no_roaming: 'Для цього місця не вказано диких монстрів.'
+  world_gatherables: 'Ресурси для збору'
+  world_gather_level: '{{job}} · Професія: рів. {{level}}'
+  world_protector: 'Захисник'
   minimum: МІН
   maximum: МАКС
   terrain_seed: Ключ генерації

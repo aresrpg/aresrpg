@@ -39,3 +39,16 @@ test('one stalled name does not block healthy names, badges or scores', async ()
     stalled.resolve(null)
   }
 }, 1000)
+
+test('character enrichment caps badges at twenty while retaining the full character count', async () => {
+  const characters = Array.from({ length: 32 }, (_, index) => ({ name: `Hero ${index}`, classe: 'senshi', level: 2 }))
+  const graph = {
+    read: async (query: string) => {
+      expect(query).toContain('collect({name: c.name, classe: c.classe, level: c.level})[0..20] AS characters')
+      return [{ address: '0x0', total: characters.length, characters: characters.slice(0, 20) }]
+    },
+  }
+  const result = await enrich_leaderboard(graph as never, async () => null, snapshot)
+  expect(result.entries[0]!.characters).toEqual(characters.slice(0, 20))
+  expect(result.entries[0]!.character_count).toBe(32)
+})

@@ -1090,6 +1090,16 @@ wallet_send_shared:
   transaction: Transaccion
 
 encyclopedia_page:
+  world_locations: 'Lugares'
+  world_search_places: 'Buscar bioma, ciudad, monstruo o recurso…'
+  world_entry: 'Acceso niv. {{level}}'
+  world_city: 'Ciudad'
+  world_biome: 'Bioma'
+  world_roaming: 'Monstruos salvajes'
+  world_no_roaming: 'No hay monstruos salvajes registrados en este lugar.'
+  world_gatherables: 'Recursos recolectables'
+  world_gather_level: '{{job}} · Oficio niv. {{level}}'
+  world_protector: 'Protector'
   minimum: MÍN
   maximum: MÁX
   terrain_seed: Semilla del terreno

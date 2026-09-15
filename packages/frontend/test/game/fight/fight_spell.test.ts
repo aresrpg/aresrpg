@@ -167,3 +167,45 @@ test('an affordable turn-critical spell marks its socket shell for shared hover-
   expect(html).toContain('fight-hud__spell-shell critical')
   expect(html).toContain('data-turn-critical="true"')
 })
+
+for (const critical of [false, true]) {
+  test(`the fight card renders only the resolved ${critical ? 'critical' : 'normal'} effects once`, async () => {
+    const { fight_spell_detail } = await import('../../../src/game/fight/FightSpell.tsx')
+    const { SpellCard } = await import('../../../src/encyclopedia/SpellCard.tsx')
+    const { render_english } = await import('../../i18n/render.ts')
+    const details: SpellLevel = {
+      ap_cost: 3n,
+      range_min: 1n,
+      range_max: 4n,
+      modifiable_range: false,
+      line_of_sight: true,
+      line_launch: false,
+      free_cell: false,
+      casts_per_turn: 0n,
+      casts_per_target: 0n,
+      cooldown_turns: 0n,
+      crit_1_in: 38n,
+      effects: [{ ...effect, value: 10n, value_max: 20n }],
+      crit_effects: [effect, { ...effect, value: 7n, value_max: 7n }],
+    }
+    const resolved = [
+      { ...effect, value: 14n, value_max: 14n, critical_only: false },
+      ...(critical ? [{ ...effect, value: 7n, value_max: 7n, critical_only: true }] : []),
+    ]
+    const spell: FightSpellView = {
+      name: 'Atonement Arrow',
+      level: 1n,
+      details,
+      cooldown: 0n,
+      source: { classe: 'yogan', unlock_level: 1n, levels: [details] },
+      turn: { critical, crit_1_in: 38n, effects: resolved },
+    }
+    const detail = fight_spell_detail(spell)
+    expect(detail.levels[0]!.effects.map(({ value }) => value)).toEqual(critical ? [14, 7] : [14])
+    expect(detail.levels[0]!.crit_effects).toEqual([])
+    const html = render_english(createElement(SpellCard, { spell: detail, small: true }))
+    expect(html.match(/>14</g)).toHaveLength(1)
+    expect(html.match(/CRIT CHANCE/g)).toHaveLength(1)
+    expect(html.match(/>7</g)?.length ?? 0).toBe(critical ? 1 : 0)
+  })
+}

@@ -1066,6 +1066,16 @@ wallet_send_shared:
   total: 합계
   transaction: 거래
 encyclopedia_page:
+  world_locations: '장소'
+  world_search_places: '생물군계, 도시, 몬스터 또는 자원 검색…'
+  world_entry: '입장 레벨 {{level}}'
+  world_city: '도시'
+  world_biome: '생물군계'
+  world_roaming: '야생 몬스터'
+  world_no_roaming: '이 장소에 등록된 야생 몬스터가 없습니다.'
+  world_gatherables: '채집 자원'
+  world_gather_level: '{{job}} · 직업 레벨 {{level}}'
+  world_protector: '수호자'
   minimum: 최소
   maximum: 최대
   terrain_seed: 지형 시드

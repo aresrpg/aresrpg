@@ -30,15 +30,19 @@ const TABS: readonly Readonly<{ id: Tab; label: string }>[] = Object.freeze([
   { id: 'kares', label: 'kares' },
 ])
 
-const route_view = (pathname: string): Readonly<{ tab: Tab; id: string | null }> => {
-  const [, segment = 'items', encoded_id] = pathname.split('/').filter(Boolean)
+const route_view = (pathname: string): Readonly<{ tab: Tab; id: string | null; place: string | null }> => {
+  const [, segment = 'items', encoded_id, kind, encoded_place] = pathname.split('/').filter(Boolean)
   const tab = TABS.some(({ id }) => id === segment) ? (segment as Tab) : 'items'
-  if (!encoded_id) return Object.freeze({ tab, id: null })
+  if (!encoded_id) return Object.freeze({ tab, id: null, place: null })
   try {
-    return Object.freeze({ tab, id: decodeURIComponent(encoded_id) })
+    return Object.freeze({
+      tab,
+      id: decodeURIComponent(encoded_id),
+      place: encoded_place ? `${kind}:${decodeURIComponent(encoded_place)}` : null,
+    })
   } catch (error) {
     console.warn('Ignoring malformed encyclopedia route.', error)
-    return Object.freeze({ tab, id: null })
+    return Object.freeze({ tab, id: null, place: null })
   }
 }
 
@@ -103,6 +107,11 @@ export const EncyclopediaPage = ({
         )}
         {view.tab === 'worlds' && (
           <WorldsTab
+            selected_place={view.place}
+            select_place={(world, place) =>
+              navigate(`${route('worlds', world)}/${place.split(':').map(encodeURIComponent).join('/')}`)
+            }
+            select_item={(id) => navigate(route('items', id))}
             select_mob={(id) => navigate(route('bestiary', id))}
             select_world={(id) => navigate(route('worlds', id))}
             selected_id={view.id}

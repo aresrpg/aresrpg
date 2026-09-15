@@ -1066,6 +1066,16 @@ wallet_send_shared:
   total: Tổng
   transaction: Giao dịch
 encyclopedia_page:
+  world_locations: 'Địa điểm'
+  world_search_places: 'Tìm quần xã, thành phố, quái vật hoặc tài nguyên…'
+  world_entry: 'Cấp vào cửa {{level}}'
+  world_city: 'Thành phố'
+  world_biome: 'Quần xã'
+  world_roaming: 'Quái vật hoang dã'
+  world_no_roaming: 'Chưa có quái vật hoang dã được ghi nhận tại đây.'
+  world_gatherables: 'Tài nguyên thu thập'
+  world_gather_level: '{{job}} · Cấp nghề {{level}}'
+  world_protector: 'Hộ vệ'
   minimum: TỐI THIỂU
   maximum: TỐI ĐA
   terrain_seed: Hạt giống địa hình

@@ -1066,6 +1066,16 @@ wallet_send_shared:
   total: 总计
   transaction: 交易
 encyclopedia_page:
+  world_locations: '地点'
+  world_search_places: '搜索生态区、城市、怪物或资源…'
+  world_entry: '进入等级 {{level}}'
+  world_city: '城市'
+  world_biome: '生态区'
+  world_roaming: '野外怪物'
+  world_no_roaming: '此地点未列出野外怪物。'
+  world_gatherables: '可采集资源'
+  world_gather_level: '{{job}} · 职业等级 {{level}}'
+  world_protector: '守护者'
   minimum: 最低
   maximum: 最大
   terrain_seed: 地形种子

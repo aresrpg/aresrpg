@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { job_slugs } from '@aresrpg/immutable'
 import { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { LeaderboardEntry, LeaderboardObservation, LeaderboardSnapshot } from '@aresrpg/protocol'
@@ -21,16 +22,13 @@ const entry = (rank: number): LeaderboardEntry => ({
     parameters.get('state') !== 'single' && rank < 4 ? ['ares.sui', 'farmer.ares.sui', 'miner.sui'][rank - 1]! : null,
   rank,
   score: String(9_007_199_254_740_993n - BigInt(rank)),
-  characters: Array.from({ length: 6 }, (_, index) => ({
+  characters: Array.from({ length: 12 }, (_, index) => ({
     name: `Hero ${rank}-${index}`,
     classe: 'senshi',
     level: 200,
   })),
   character_count: 500,
-  jobs: [
-    { job: 'FARMER', level: 100 },
-    { job: 'MINER', level: 89 },
-  ],
+  jobs: job_slugs.map((job, index) => ({ job, level: 100 - index })),
 })
 const snapshot = (observation: LeaderboardObservation): LeaderboardSnapshot => ({
   observation,

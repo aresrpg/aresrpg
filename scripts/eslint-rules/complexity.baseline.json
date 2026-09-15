@@ -576,9 +576,6 @@
     "packages/frontend/src/encyclopedia/ClassesTab.tsx": {
       "ClassesTab": [12]
     },
-    "packages/frontend/src/encyclopedia/WorldsTab.tsx": {
-      "WorldsTab": [11]
-    },
     "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
       "ItemsTab": [26],
       "ItemsTab > detail.item.consumable.rewards.map[0](reward,index,rewards)": [9]

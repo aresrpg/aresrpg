@@ -1089,6 +1089,16 @@ wallet_send_shared:
   transaction: Transaction
 
 encyclopedia_page:
+  world_locations: 'Locations'
+  world_search_places: 'Find a biome, city, mob or resource…'
+  world_entry: 'Entry Lv. {{level}}'
+  world_city: 'City'
+  world_biome: 'Biome'
+  world_roaming: 'Roaming mobs'
+  world_no_roaming: 'No roaming mobs listed for this location.'
+  world_gatherables: 'Gatherables'
+  world_gather_level: '{{job}} · Job Lv. {{level}}'
+  world_protector: 'Protector'
   minimum: MIN
   maximum: MAX
   terrain_seed: Terrain seed

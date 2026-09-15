@@ -1096,6 +1096,16 @@ wallet_send_shared:
   transaction: Transaction
 
 encyclopedia_page:
+  world_locations: 'Lieux'
+  world_search_places: 'Rechercher un biome, une ville, un monstre ou une ressource…'
+  world_entry: 'Accès niv. {{level}}'
+  world_city: 'Ville'
+  world_biome: 'Biome'
+  world_roaming: 'Monstres sauvages'
+  world_no_roaming: 'Aucun monstre sauvage répertorié dans ce lieu.'
+  world_gatherables: 'Ressources récoltables'
+  world_gather_level: '{{job}} · Métier niv. {{level}}'
+  world_protector: 'Protecteur'
   minimum: MIN
   maximum: MAX
   terrain_seed: Graine du terrain
