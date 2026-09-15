@@ -676,9 +676,9 @@ admin_page:
   reading_royalties: Читання політик…
   reading: Читання…
   refresh_revenue: Оновити дохід
-  arm_claim: Підготувати виведення
+  claim_after_settlement: 'Отримання роялті відкриється після завершення розрахунків за продажем та активації стейкінгу.'
+  claim_status_unavailable: 'Не вдалося перевірити доступність отримання роялті.'
   claiming: Виведення…
-  confirm_claim: Підтвердити виведення
   disconnect_admin_wallet: Відключити
   claim_digest: Транзакція виведення
   range_24h: 24 години

@@ -676,9 +676,9 @@ admin_page:
   reading_royalties: ポリシーを読み込み中…
   reading: 読み込み中…
   refresh_revenue: 収益を更新
-  arm_claim: 引き出しを準備
+  claim_after_settlement: 'ロイヤリティは販売の精算とステーキングの有効化後に受け取れます。'
+  claim_status_unavailable: 'ロイヤリティを受け取れるか確認できませんでした。'
   claiming: 引き出し中…
-  confirm_claim: 引き出しを確定
   disconnect_admin_wallet: 切断
   claim_digest: 引き出しトランザクション
   range_24h: 24時間

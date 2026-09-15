@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { env } from '../env.ts'
 import { useAppStore } from '../store.ts'
 import { toast } from '../toast.ts'
+import { useFinance } from '../kares/useFinance.ts'
 import { format_sui } from '../wallet_amount.ts'
 
 // The read-only chain reader (no wallet, the one sanctioned direct-GraphQL path — owner
@@ -31,21 +32,27 @@ export type AdminRevenue = Readonly<{
   claimable: bigint
   reading: boolean
   claiming: boolean
-  claim_armed: boolean
+  claim_blocked: string | null
   connected: boolean
   error: string | null
   refresh: () => void
-  arm_claim: () => void
   claim: () => void
 }>
 
 export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRevenue => {
+  const { state: finance } = useFinance({ network: env.network, rpc_url: env.sui_rpc_url })
+  const claim_blocked = finance.snapshot?.pool.active
+    ? null
+    : translated(
+        copy,
+        finance.snapshot ? 'claim_after_settlement' : finance.error ? 'claim_status_unavailable' : 'reading',
+        'Royalty claims are unavailable.'
+      )
   const wallet = useAppStore((state) => state.external_wallet)
   const { session } = wallet
   const [royalties, set_royalties] = useState<readonly MarketplaceRoyalty[]>([])
   const [treasury_mist, set_treasury] = useState<bigint | null>(null)
   const [reading, set_reading] = useState(false)
-  const [claim_armed, set_claim_armed] = useState(false)
   const [error, set_error] = useState<string | null>(null)
   const [claiming, set_claiming] = useState(false)
   const request_generation = useRef(0)
@@ -95,7 +102,6 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
     set_reading(false)
     set_claiming(false)
     set_royalties([])
-    set_claim_armed(false)
     set_error(null)
     refresh()
     // The session identity is the boundary; request state must not restart this effect.
@@ -104,11 +110,10 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
 
   const claimable = royalties.reduce((sum, royalty) => sum + (royalty.cap ? royalty.balance_mist : 0n), 0n)
   const claim = (): void => {
-    if (!session || claiming_now.current || claimable <= 0n) return
+    if (!session || claim_blocked || claiming_now.current || claimable <= 0n) return
     const generation = request_generation.current
     claiming_now.current = true
     set_claiming(true)
-    set_claim_armed(false)
     const pending = toast.loading(translated(copy, 'claiming', 'Claiming…'))
     active_claim.current = pending
     void session
@@ -137,11 +142,10 @@ export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRe
     claimable,
     reading,
     claiming,
-    claim_armed,
+    claim_blocked,
     connected: !!session,
     error: wallet.error ?? error,
     refresh,
-    arm_claim: () => set_claim_armed(true),
     claim,
   })
 }

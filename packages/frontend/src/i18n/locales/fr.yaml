@@ -676,9 +676,9 @@ admin_page:
   reading_royalties: Lecture des politiques…
   reading: Lecture…
   refresh_revenue: Actualiser les revenus
-  arm_claim: Préparer le retrait
+  claim_after_settlement: 'Les redevances pourront être retirées après le règlement de la vente et l’activation du staking.'
+  claim_status_unavailable: 'Impossible de vérifier la disponibilité du retrait des redevances.'
   claiming: Retrait…
-  confirm_claim: Confirmer le retrait
   disconnect_admin_wallet: Déconnecter
   claim_digest: Transaction de retrait
   range_24h: 24 heures

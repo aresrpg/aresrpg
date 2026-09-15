@@ -676,9 +676,9 @@ admin_page:
   reading_royalties: Leyendo políticas…
   reading: Leyendo…
   refresh_revenue: Actualizar ingresos
-  arm_claim: Preparar retiro
+  claim_after_settlement: 'Las regalías se podrán reclamar tras liquidar la venta y activar el staking.'
+  claim_status_unavailable: 'No se pudo comprobar la disponibilidad del cobro de regalías.'
   claiming: Retirando…
-  confirm_claim: Confirmar retiro
   disconnect_admin_wallet: Desconectar
   claim_digest: Transacción de retiro
   range_24h: 24 horas

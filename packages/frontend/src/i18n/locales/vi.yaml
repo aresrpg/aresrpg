@@ -677,9 +677,9 @@ admin_page:
   reading_royalties: Đang đọc chính sách…
   reading: Đang đọc…
   refresh_revenue: Làm mới doanh thu
-  arm_claim: Chuẩn bị nhận
+  claim_after_settlement: 'Có thể nhận tiền bản quyền sau khi đợt bán được quyết toán và staking được kích hoạt.'
+  claim_status_unavailable: 'Không thể kiểm tra khả năng nhận tiền bản quyền.'
   claiming: Đang nhận…
-  confirm_claim: Xác nhận nhận
   disconnect_admin_wallet: Ngắt kết nối
   claim_digest: Giao dịch nhận
   range_24h: 24 giờ

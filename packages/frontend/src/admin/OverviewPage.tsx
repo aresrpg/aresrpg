@@ -296,15 +296,14 @@ const character_series = (
 
 const claim_label = (copy: Readonly<Record<string, string>>, revenue: AdminRevenue, claimable: bigint): string => {
   if (revenue.claiming) return text(copy, 'claiming', 'Claiming…')
-  if (revenue.claim_armed) return text(copy, 'confirm_claim', 'Confirm claim')
   return `${text(copy, 'claim', 'Claim')} ${claimable > 0n ? `${format_sui(claimable, 2)} SUI` : ''}`
 }
 const treasury_value = (revenue: AdminRevenue): string =>
   revenue.treasury_mist === null ? '—' : `${format_sui(revenue.treasury_mist, 2)} SUI`
 const claim_disabled = (revenue: AdminRevenue): boolean =>
-  !revenue.connected || revenue.claimable <= 0n || revenue.claiming
+  !revenue.connected || revenue.claimable <= 0n || revenue.claiming || !!revenue.claim_blocked
 
-const TreasuryStrip = ({
+export const TreasuryStrip = ({
   copy,
   revenue,
 }: Readonly<{ copy: Readonly<Record<string, string>>; revenue: AdminRevenue }>) => {
@@ -327,11 +326,16 @@ const TreasuryStrip = ({
       <button
         className="h-8 shrink-0 border border-[#c8963c]/40 bg-[#c8963c]/8 px-4 text-[8px] tracking-[0.12em] text-[#c8963c] uppercase disabled:opacity-30"
         disabled={claim_disabled(revenue)}
-        onClick={revenue.claim_armed ? revenue.claim : revenue.arm_claim}
+        onClick={revenue.claim}
         type="button"
       >
         {claim_label(copy, revenue, claimable)}
       </button>
+      {revenue.claim_blocked && (
+        <p className="w-full text-[10px] text-muted" role="status">
+          {revenue.claim_blocked}
+        </p>
+      )}
     </section>
   )
 }

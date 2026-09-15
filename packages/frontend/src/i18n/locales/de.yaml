@@ -676,9 +676,9 @@ admin_page:
   reading_royalties: Richtlinien werden gelesen…
   reading: Lesen…
   refresh_revenue: Einnahmen aktualisieren
-  arm_claim: Abhebung vorbereiten
+  claim_after_settlement: 'Lizenzgebühren können nach Abwicklung des Verkaufs und Aktivierung des Stakings abgeholt werden.'
+  claim_status_unavailable: 'Die Verfügbarkeit der Gebührenabholung konnte nicht geprüft werden.'
   claiming: Abhebung…
-  confirm_claim: Abhebung bestätigen
   disconnect_admin_wallet: Trennen
   claim_digest: Abhebungstransaktion
   range_24h: 24 Stunden

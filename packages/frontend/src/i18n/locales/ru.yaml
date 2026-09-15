@@ -677,9 +677,9 @@ admin_page:
   reading_royalties: Чтение политик…
   reading: Чтение…
   refresh_revenue: Обновить выручку
-  arm_claim: Подготовить получение
+  claim_after_settlement: 'Получение роялти откроется после завершения расчётов по продаже и активации стейкинга.'
+  claim_status_unavailable: 'Не удалось проверить доступность получения роялти.'
   claiming: Получение…
-  confirm_claim: Подтвердить получение
   disconnect_admin_wallet: Отключить
   claim_digest: Транзакция получения
   range_24h: 24 часа

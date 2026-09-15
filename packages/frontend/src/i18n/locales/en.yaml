@@ -676,9 +676,9 @@ admin_page:
   reading_royalties: Reading policies…
   reading: Reading…
   refresh_revenue: Refresh revenue
-  arm_claim: Arm claim
+  claim_after_settlement: 'Royalty claims unlock after the sale settles and staking activates.'
+  claim_status_unavailable: 'Unable to check royalty claim availability.'
   claiming: Claiming…
-  confirm_claim: Confirm claim
   disconnect_admin_wallet: Disconnect
   claim_digest: Claim transaction
   range_24h: 24 hours
