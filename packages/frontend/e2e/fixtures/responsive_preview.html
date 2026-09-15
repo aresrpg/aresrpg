@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <!-- Browser-enforced isolation avoids intercepting every local script and asset in Playwright. -->
+    <meta http-equiv="Content-Security-Policy" content="connect-src 'self'" />
     <title>AresRPG responsive preview</title>
   </head>
   <body>

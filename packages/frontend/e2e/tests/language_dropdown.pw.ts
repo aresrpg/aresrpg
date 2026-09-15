@@ -3,13 +3,12 @@
 
 import { expect, test } from '@playwright/test'
 
+import { open_responsive_preview } from '../support/responsive_preview.ts'
+
 for (const height of [360, 900]) {
   test(`language dropdown overlays the sidebar without expanding it at ${height}px`, async ({ page }) => {
     await page.setViewportSize({ width: 1366, height })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
     const card = page.locator('[data-language-card]')
     const trigger = card.locator('.language-trigger')
     const dropdown = page.locator('.language-dropdown')

@@ -3,6 +3,8 @@
 
 import { expect, test } from '@playwright/test'
 
+import { open_responsive_preview } from '../support/responsive_preview.ts'
+
 for (const viewport of [
   { width: 1920, height: 900 },
   { width: 1669, height: 500 },
@@ -11,10 +13,7 @@ for (const viewport of [
 ]) {
   test(`jobs keep full recipe names at native size at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=jobs')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=jobs')
     await page.locator('.jobs__list-name').getByText('Tailor', { exact: true }).click()
     const recipes = page.locator('.jobs__recipe')
     await expect(recipes.first()).toBeVisible()

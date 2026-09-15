@@ -3,12 +3,11 @@
 
 import { expect, test } from '@playwright/test'
 
+import { open_responsive_preview } from '../support/responsive_preview.ts'
+
 test('chat resizing persists across reloads while staying bounded beside the HUD', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   const chat = page.locator('.gw-worldchat')
   const handle = page.getByRole('button', { name: 'Resize chat' })
   await expect(handle).toBeVisible()
@@ -78,10 +77,7 @@ test('chat remains resizable when browser storage is unavailable', async ({ page
       },
     })
   })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   const chat = page.locator('.gw-worldchat')
   const handle = page.getByRole('button', { name: 'Resize chat' })
   await expect(handle).toBeVisible()
@@ -94,10 +90,7 @@ test('chat remains resizable when browser storage is unavailable', async ({ page
 
 test('fight chat uses the same resize handle and saved size as overworld chat', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=fight')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=fight')
   const chat = page.locator('.preview-fight .gw-worldchat')
   const handle = chat.getByRole('button', { name: 'Resize chat' })
   await expect(handle).toBeVisible()
@@ -120,7 +113,7 @@ test('fight chat uses the same resize handle and saved size as overworld chat', 
   const saved = await page.evaluate(
     () => JSON.parse(localStorage.getItem('aresrpg.settings')!).chat_size as { width: number; height: number }
   )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   await expect(async () => {
     const box = (await page.locator('.gw-worldchat').boundingBox())!
     expect(box.width).toBe(saved.width)

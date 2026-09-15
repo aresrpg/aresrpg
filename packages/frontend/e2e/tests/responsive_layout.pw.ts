@@ -3,13 +3,12 @@
 
 import { expect, test } from '@playwright/test'
 
+import { open_responsive_preview } from '../support/responsive_preview.ts'
+
 for (const width of [1920, 1366, 1024]) {
   test(`shell and world share geometry at ${width}px without losing account controls`, async ({ page }) => {
     await page.setViewportSize({ width, height: 768 })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=world&locale=fr')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world&locale=fr')
     const sidebar = page.locator('[data-app-sidebar]')
     const header = page.locator('[data-app-header]')
     const frame = page.locator('[data-world-frame]')
@@ -41,10 +40,7 @@ for (const width of [1920, 1366, 1024]) {
 
 test('narrow marketplace preserves buying, sale controls, and complete history', async ({ page }) => {
   await page.setViewportSize({ width: 590, height: 850 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=marketplace&locale=de')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=marketplace&locale=de')
   await page
     .locator('[data-marketplace-item-types]')
     .getByRole('button', { name: /^Hut\b/i })
@@ -97,10 +93,7 @@ test('phone picker search, selection, and close remain reachable in a short view
 
 test('narrow encyclopedia keeps filters on back and exposes ordinary and rare resource links', async ({ page }) => {
   await page.setViewportSize({ width: 590, height: 850 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=encyclopedia')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=encyclopedia')
   const search = page.locator('.enc-browser__list input').first()
   await search.fill('Fuwa Hat')
   await page
@@ -134,10 +127,7 @@ test('narrow encyclopedia keeps filters on back and exposes ordinary and rare re
 
 test('narrow Kolizeum keeps the wager review and cancellation reachable', async ({ page }) => {
   await page.setViewportSize({ width: 590, height: 850 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=kolizeum')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=kolizeum')
   await page.locator('.kz-lobby').last().click()
   await page.locator('.kz-join-side.is-b').click()
   const review = page.locator('.kz-join-confirm')
@@ -174,10 +164,7 @@ test('narrow staking preserves both accounts and withdrawal limits', async ({ pa
 for (const width of [590, 920, 1920]) {
   test(`character controls remain reachable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=equipment')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=equipment')
     for (const tab of ['equipment', 'stats', 'spells', 'jobs', 'runeforge']) {
       await page.locator(`[data-character-detail-tab="${tab}"]`).click()
       const body = page.locator(
@@ -212,10 +199,7 @@ for (const viewport of [
 ]) {
   test(`zoom-sized world overlays fit at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
     const bounds = (selector: string) => page.locator(selector).boundingBox()
     await expect(page.locator('.gw-minimap__frame')).toBeVisible()
     const world = (await bounds('[data-world-frame]'))!
@@ -237,10 +221,7 @@ for (const viewport of [
 
   test(`all six stat controls remain reachable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
     const rows = page.locator('.stats__card--primary .stats__prow')
     await expect(rows).toHaveCount(6)
     for (const row of await rows.all()) {
@@ -259,10 +240,7 @@ for (const viewport of [
 
 test('zoom-sized spells, jobs and forge expose complete inner panels', async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 500 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=spells')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=spells')
   for (const [tab, panel, inner] of [
     ['spells', '.sb', '.sb__rows'],
     ['jobs', '.jobs', '.jobs__browse'],
@@ -287,10 +265,7 @@ test('zoom-sized spells, jobs and forge expose complete inner panels', async ({ 
 for (const width of [1920, 1366, 1024, 800]) {
   test(`overworld HUD stays as close to world center as chat allows at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 600 })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
     const hud = page.locator('.fight-hud--overworld .fight-hud__bar')
     await expect(hud).toBeVisible()
     const frame = (await page.locator('[data-world-frame]').boundingBox())!
@@ -304,10 +279,7 @@ for (const width of [1920, 1366, 1024, 800]) {
 
 test('roomy desktop preserves the original single-column 600px stat sheet', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1440 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
   const sheet = page.locator('.stats')
   await expect(sheet).toBeVisible()
   expect((await sheet.boundingBox())!.width).toBeLessThanOrEqual(600)
@@ -320,10 +292,7 @@ test('roomy desktop preserves the original single-column 600px stat sheet', asyn
 for (const height of [801, 900, 1100]) {
   test(`stats never clip allocation rows above the compact breakpoint at height ${height}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
     const card = page.locator('.stats__card--primary')
     await expect(card).toBeVisible()
     // Visibility alone misses children painted outside their parent's overflow clip.
@@ -346,10 +315,7 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport)
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
     for (const tab of ['stats', 'spells', 'runeforge']) {
       await page.locator(`[data-character-detail-tab="${tab}"]`).click()
       const workspace = page.locator(`[data-workspace="${tab}"]`)
@@ -378,10 +344,7 @@ for (const viewport of [
 for (const height of [360, 600, 900, 1440]) {
   test(`sidebar preserves desktop text and cards remain reachable at ${height}px`, async ({ page }) => {
     await page.setViewportSize({ width: 1366, height })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
     const sidebar = page.locator('[data-app-account-panel]')
     const scroll = sidebar.locator('.sidebar-viewport__content')
     await expect(sidebar).toBeVisible()
@@ -410,10 +373,7 @@ for (const height of [360, 600, 900, 1440]) {
 for (const height of [500, 1440]) {
   test(`layout anchors survive sidebar scrolling at ${height}px`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
     await expect(page.locator('.stats')).toBeVisible()
     await expect(async () => {
       const sidebar = (await page.locator('[data-app-account-panel]').boundingBox())!
@@ -436,10 +396,7 @@ for (const height of [500, 1440]) {
 
 test('the bottom border stays inside the sidebar clip with fractional card sizes', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 601 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   await expect(page.locator('[data-connection-card]')).toBeVisible()
   // Font metrics and zoom produce fractional heights; integer DOM measurements must not clip the border.
   await page.addStyleTag({
@@ -457,10 +414,7 @@ test('the bottom border stays inside the sidebar clip with fractional card sizes
 
 test('roomy spells keep the original centered list and equipment stays top aligned', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1600 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=spells')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=spells')
   await expect(page.locator('.sb')).toBeVisible()
   const pane = (await page.locator('.chr-page-body').boundingBox())!
   const spellbook = (await page.locator('.sb').boundingBox())!
@@ -480,10 +434,7 @@ test('roomy spells keep the original centered list and equipment stays top align
 
 test('roomy jobs retain the centered original sidebar and single resource table', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1600 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=jobs')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=jobs')
   await expect(page.locator('.jobs')).toBeVisible()
   const pane = (await page.locator('.chr-page-body').boundingBox())!
   const jobs = (await page.locator('.jobs').boundingBox())!
@@ -496,10 +447,7 @@ test('roomy jobs retain the centered original sidebar and single resource table'
 
 test('roomy Rune Forge preserves its centered original panel widths', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1600 })
-  await page.route('**/*', (route) =>
-    new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-  )
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=runeforge')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=runeforge')
   await expect(page.locator('.chr-forge')).toBeVisible()
   const pane = (await page.locator('.chr-page-body').boundingBox())!
   const forge = (await page.locator('.chr-forge').boundingBox())!
@@ -514,10 +462,7 @@ test('roomy Rune Forge preserves its centered original panel widths', async ({ p
 for (const width of [590, 1920]) {
   test(`marketplace shows both rolling volume windows at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=marketplace')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=marketplace')
     await expect(page.locator('[data-marketplace-volume="24h"]')).toContainText('1,284.50')
     await expect(page.locator('[data-marketplace-volume="30d"]')).toContainText('5,678.90')
     await expect(page.locator('[data-marketplace-volume="24h"]')).toBeInViewport()
@@ -534,10 +479,7 @@ for (const width of [590, 1920]) {
 for (const height of [500, 900]) {
   test(`opening a recipe keeps every job name readable at height ${height}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height })
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=jobs')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=jobs')
     await page.locator('.jobs__recipe').first().click()
     await expect(page.locator('.jobs__item-detail')).toBeVisible()
     for (const name of await page.locator('.jobs__list-name').all()) {

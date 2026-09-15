@@ -2,6 +2,31 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
+import { open_responsive_preview } from '../support/responsive_preview.ts'
+
+test('wallet geometry waits for asynchronous locale initialization', async ({ page }) => {
+  await page.route('**/assets/en-*.js', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 6_000))
+    await route.continue()
+  })
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
+  await expect(page.locator('[data-app-header] [data-wallet-trigger]')).toBeInViewport()
+})
+
+test('preview blocks external API calls while local assets load normally', async ({ page }) => {
+  await page.route('https://fixture.invalid/**', (route) =>
+    route.fulfill({ body: 'unexpected external response', headers: { 'access-control-allow-origin': '*' } })
+  )
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
+  const external_allowed = await page.evaluate(() =>
+    fetch('https://fixture.invalid/api').then(
+      () => true,
+      () => false
+    )
+  )
+  expect(external_allowed).toBe(false)
+})
+
 for (const viewport of [
   { width: 1366, height: 768 },
   { width: 1024, height: 600 },
@@ -9,10 +34,7 @@ for (const viewport of [
 ]) {
   test(`wallet dropdown shares the header and stays inside ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
-    await page.route('**/*', (route) =>
-      new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
-    )
-    await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
     const header = page.locator('[data-app-header]')
     const trigger = header.locator('[data-wallet-trigger]')
     const wallet = page.locator('[data-wallet-card]')
@@ -45,7 +67,7 @@ for (const viewport of [
 
 test('the account dropdown remains available on pages without character tabs', async ({ page }) => {
   for (const route of ['settings', 'marketplace']) {
-    await page.goto(`/e2e/fixtures/responsive_preview.html?page=${route}`)
+    await open_responsive_preview(page, `/e2e/fixtures/responsive_preview.html?page=${route}`)
     await expect(page.locator('[data-character-tabs]')).toHaveCount(0)
     await page.locator('[data-wallet-trigger]').click()
     await expect(page.locator('[data-wallet-card]')).toBeVisible()
@@ -57,7 +79,7 @@ test('the account dropdown remains available on pages without character tabs', a
 test('wallet actions and localized details remain reachable in the dropdown', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 600 })
   for (const locale of ['en', 'fr', 'de', 'es', 'uk', 'ja']) {
-    await page.goto(`/e2e/fixtures/responsive_preview.html?page=world&locale=${locale}`)
+    await open_responsive_preview(page, `/e2e/fixtures/responsive_preview.html?page=world&locale=${locale}`)
     await page.locator('[data-wallet-trigger]').click()
     const wallet = page.locator('[data-wallet-card]')
     await expect(wallet).toBeVisible()
@@ -65,7 +87,7 @@ test('wallet actions and localized details remain reachable in the dropdown', as
     for (const button of await wallet.locator('button').all()) await expect(button).toBeInViewport()
     await page.keyboard.press('Escape')
   }
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   await page.locator('[data-wallet-trigger]').click()
   await page.locator('[data-wallet-card]').getByRole('button', { name: 'Send', exact: true }).click()
   await expect(page.locator('[data-wallet-card]')).toBeHidden()
@@ -76,7 +98,7 @@ test('wallet actions and localized details remain reachable in the dropdown', as
 
 test('language choices can be reached inside a short scrolling sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 360 })
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   const language = page.locator('[data-language-card]')
   await language.getByRole('button', { name: 'English', exact: true }).click()
   const japanese = language.getByRole('button', { name: '日本語', exact: true })
@@ -86,7 +108,7 @@ test('language choices can be reached inside a short scrolling sidebar', async (
 })
 
 test('the account header formats linked names like the leaderboard', async ({ page }) => {
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world&suins=sceat.sceat.sui')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world&suins=sceat.sceat.sui')
   const trigger = page.locator('[data-wallet-trigger]')
   await expect(trigger).toContainText('@sceat')
   await expect(trigger).toContainText('Account')
@@ -95,7 +117,7 @@ test('the account header formats linked names like the leaderboard', async ({ pa
 })
 
 test('navbar fullscreen toggle follows browser state and keeps account controls available', async ({ page }) => {
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   const toggle = page.locator('[data-fullscreen-toggle]')
   await toggle.click()
   await expect.poll(() => page.evaluate(() => document.fullscreenElement === document.documentElement)).toBe(true)
@@ -110,7 +132,7 @@ test('navbar fullscreen toggle follows browser state and keeps account controls 
 })
 
 test('fullscreen rejection remains visible without changing the toggle state', async ({ page }) => {
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   await page.evaluate(() => {
     document.documentElement.requestFullscreen = async () => {
       throw new Error('Permission denied')
@@ -124,7 +146,7 @@ test('fullscreen rejection remains visible without changing the toggle state', a
 
 test('unsupported fullscreen leaves no unusable navbar button', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(document, 'fullscreenEnabled', { get: () => false }))
-  await page.goto('/e2e/fixtures/responsive_preview.html?page=world')
+  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   await expect(page.locator('[data-wallet-trigger]')).toBeVisible()
   await expect(page.locator('[data-fullscreen-toggle]')).toHaveCount(0)
 })
