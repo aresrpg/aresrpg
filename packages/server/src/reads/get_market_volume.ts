@@ -29,12 +29,14 @@ export const get_market_volume = async (
     .flat()
     .map(subtotal)
     .filter(({ timestamp }) => timestamp <= now_ms)
-  const total = (window: number): string | null =>
-    Number(first) > now_ms - window
-      ? null
-      : rows
-          .filter(({ timestamp }) => timestamp > now_ms - window)
-          .reduce((sum, { mist }) => sum + mist, 0n)
-          .toString()
-  return { day_mist: total(DAY_MS), month_mist: total(30 * DAY_MS) }
+  const total = (window: number): string =>
+    rows
+      .filter(({ timestamp }) => timestamp > now_ms - window)
+      .reduce((sum, { mist }) => sum + mist, 0n)
+      .toString()
+  return {
+    day_mist: total(DAY_MS),
+    month_mist: total(30 * DAY_MS),
+    history_days: Math.max(0, Math.floor((now_ms - Number(first)) / DAY_MS)),
+  }
 }

@@ -4,6 +4,7 @@
 import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { mastery_dungeon_slug } from '../mastery/model.ts'
+import { localized_error } from '../i18n/error_text.ts'
 import { toast } from '../toast.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { retry_after_version_race, retry_close_after_projection_lag } from '../transaction_guard.ts'
@@ -240,8 +241,10 @@ const observe_with_wait = (
             error: raw_error,
           })
         })
-        const copy = get_state().copy?.fight_hud
-        toast.add(copy ? new Error(fight_result_error_text(copy, raw_error)) : error)
+        const { copy } = get_state()
+        toast.add(
+          copy ? localized_error(fight_result_error_text(copy.fight_hud, raw_error, copy.kares_page), error) : error
+        )
         return false
       })
       .then((settled) => {

@@ -12,17 +12,18 @@ import { cosmetic_slots, relic_slots, rig_slots, type CharacterEquipmentSlot } f
  *  law). Hat, cloak, and title are ordinary equipment in this same grid. */
 const RIG_ORDER = Object.freeze([
   'tool',
-  'hat',
   'amulet',
-  'cloak',
+  'hat',
   'weapon',
+  null,
+  'cloak',
   'left_ring',
   'belt',
   'right_ring',
-  'pet',
   'title',
   'boots',
-] as const satisfies readonly (typeof rig_slots)[number][])
+  'pet',
+] as const satisfies readonly ((typeof rig_slots)[number] | null)[])
 
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
@@ -49,13 +50,17 @@ const SLOT_ICON: Readonly<Record<string, typeof Sparkles>> = Object.freeze({
   weapon: Swords,
   tool: Swords,
   ring: CircleDot,
+  left_ring: CircleDot,
+  right_ring: CircleDot,
   belt: Minus,
   boots: Footprints,
   pet: Cat,
 })
 
-const label_of = (slot: CharacterEquipmentSlot): string =>
-  slot.startsWith('relic_') ? slot.replace('_', ' ') : slot === 'left_ring' || slot === 'right_ring' ? 'ring' : slot
+const slot_label = (slot: CharacterEquipmentSlot, category_name: (category: string) => string): string =>
+  slot.startsWith('relic_')
+    ? category_name('relic_slot').replace('{{number}}', slot.slice(6))
+    : category_name(slot === 'left_ring' || slot === 'right_ring' ? 'ring' : slot)
 
 const EquipmentSlot = ({
   item,
@@ -69,8 +74,8 @@ const EquipmentSlot = ({
   state?: DollSlotState
 }>) => {
   const category_name = useItemCategoryName()
-  const label = category_name(label_of(slot))
-  const Glyph = SLOT_ICON[label_of(slot)] ?? Sparkles
+  const label = slot_label(slot, category_name)
+  const Glyph = SLOT_ICON[slot] ?? Sparkles
   return (
     <button
       className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}${state.staged ? ' is-staged' : ''}`}
@@ -127,9 +132,13 @@ export const EquipmentDoll = ({
           ))}
         </div>
         <div className="inv__rig">
-          {RIG_ORDER.map((slot) => (
-            <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
-          ))}
+          {RIG_ORDER.map((slot) =>
+            slot === null ? (
+              <span aria-hidden="true" className="inv__slot-gap" key="gap" />
+            ) : (
+              <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
+            )
+          )}
         </div>
       </div>
     </div>

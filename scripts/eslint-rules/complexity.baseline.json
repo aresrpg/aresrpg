@@ -68,9 +68,6 @@
       "BrowsePanel": [12],
       "CheapestLotMarket > sizes.map[0](size,index)": [12]
     },
-    "packages/frontend/src/game/fight/FightEffectLines.tsx": {
-      "compact_effect_line": [20]
-    },
     "packages/frontend/src/game/fight/fight_cues.ts": {
       "cast_style": [15],
       "pool_cue": [15],
@@ -145,12 +142,8 @@
     "packages/frontend/src/encyclopedia/ItemsTab.tsx": {
       "ItemsTab": [16]
     },
-    "packages/frontend/src/encyclopedia/MobsTab.tsx": {
-      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [11]
-    },
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
       "effect_words": [23],
-      "spell_effect_line_view": [15],
       "SpellEffectLine": [22]
     },
     "packages/frontend/src/components/Toasts.tsx": {
@@ -478,10 +471,6 @@
     "packages/frontend/src/kares/PublicSaleCard.tsx": {
       "PublicSaleCardView": [12]
     },
-    "packages/frontend/src/game/fight/FightEffectLines.tsx": {
-      "chatiment_stat": [10],
-      "compact_effect_line": [15]
-    },
     "packages/frontend/src/game/fight/fight_cues.ts": {
       "cast_rows": [13],
       "cast_style": [16],
@@ -569,7 +558,7 @@
       ]
     },
     "packages/frontend/src/game/audio/BiomeMusic.tsx": {
-      "BiomeMusic": [11]
+      "BiomeMusic": [10]
     },
     "packages/frontend/src/game/resource_nodes.ts": {
       "create_resource_renderer > update": [10]
@@ -598,13 +587,13 @@
       "SpellCard": [13]
     },
     "packages/frontend/src/encyclopedia/MobsTab.tsx": {
-      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [14],
+      "mob_facet_options > encyclopedia_catalog.mob_filters.map[0](row,index)": [10],
       "MobsTab": [11]
     },
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
       "critical_delta": [15],
       "effect_words": [25],
-      "spell_effect_line_view": [20],
+      "spell_effect_line_view": [10],
       "SpellEffectLine": [44]
     },
     "packages/frontend/src/encyclopedia/JobsTab.tsx": {
@@ -625,7 +614,7 @@
     },
     "packages/frontend/src/components/MobCoreStats.tsx": {
       "MobCoreStats > mob_stat_identities .filter(({ key, derived }) => !derived || typeof values[key] === 'number') .map[0]({ key, label: fallback_label, color, icon: Icon, image, derived, suffix = '', hint })": [
-        11
+        10
       ]
     },
     "packages/frontend/src/components/TradeDialog.tsx": {
@@ -659,7 +648,7 @@
       "EquipmentSlot": [11]
     },
     "packages/frontend/src/components/SidebarCards.tsx": {
-      "ConnectionCard": [25]
+      "ConnectionCard": [24]
     },
     "packages/frontend/src/components/SearchPickerModal.tsx": {
       "filter_picker_items > items.filter[0](item)": [12],
@@ -679,7 +668,7 @@
       "MobModal": [10]
     },
     "packages/frontend/src/simulator/CharacterModal.tsx": {
-      "spell_row_view": [13],
+      "spell_row_view": [12],
       "StatEditor > CHARACTER_STATS.map[0](stat)": [10]
     },
     "packages/frontend/src/simulator/BoardPane.tsx": {
@@ -694,9 +683,6 @@
     },
     "packages/frontend/src/env.ts": {
       "resolve_env": [14]
-    },
-    "packages/frontend/src/characters/InventoryOverlays.tsx": {
-      "InventoryActionOverlays": [11]
     },
     "packages/frontend/src/characters/EquipmentTab.tsx": {
       "EquipmentTab": [9]

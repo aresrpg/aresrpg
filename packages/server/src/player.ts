@@ -18,6 +18,7 @@ import {
   type PresenceRow,
   type VisibleSlot,
   type MarketObservation,
+  type MarketPriceObservation,
   type LeaderboardObservation,
   type CharacterRow,
 } from '@aresrpg/protocol'
@@ -118,6 +119,7 @@ export type PlayerState = {
   fight_previews: Readonly<Record<string, string>>
   /** the marketplace category window under observation */
   market_observation: MarketObservation | null
+  market_price_observation: MarketPriceObservation | null
   leaderboard_observation: LeaderboardObservation | null
 }
 
@@ -186,6 +188,7 @@ const READ_PACKETS = new Set<string>([
   'packet/fight_preview',
   'packet/fight_resync',
   'packet/market_observe',
+  'packet/market_prices_observe',
   'packet/leaderboard_observe',
   'packet/character_owner_request',
   'packet/admin_request',
@@ -200,6 +203,7 @@ const INITIAL_STATE = (): PlayerState => ({
   spectating: {},
   fight_previews: {},
   market_observation: null,
+  market_price_observation: null,
   leaderboard_observation: null,
 })
 

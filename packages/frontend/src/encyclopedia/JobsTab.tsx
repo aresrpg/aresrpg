@@ -5,6 +5,9 @@ import { job_groups, job_kind_of, type JobKind } from '@aresrpg/immutable'
 import { Hammer, Shield, Sparkles, Swords, Wheat } from 'lucide-react'
 import { useMemo, useState, type ComponentType } from 'react'
 
+import { Text } from '../i18n/Text.tsx'
+import { useVocabulary } from '../i18n/useVocabulary.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 
@@ -23,13 +26,13 @@ type Job = (typeof encyclopedia_catalog.jobs)[number]
 
 const job_category = (job: Job): JobKind => job_kind_of(job.id)
 
-const job_crafts = (job: Job): string => {
+const job_crafts = (category_name: (category: string) => string, job: Job): string => {
   const item_types =
     job.resources.length > 0 ? job.resources.map(({ row }) => row.item_type) : job.recipes.map((row) => row.output_type)
   const categories = [
     ...new Set(item_types.map((item_type) => encyclopedia_catalog.item(item_type)?.item.category).filter(Boolean)),
   ]
-  return categories.map((category) => titleize(category!)).join(', ')
+  return categories.map((category) => category_name(category!)).join(', ')
 }
 
 const Divider = () => <div className="h-px w-full bg-white/6" />
@@ -48,17 +51,19 @@ export const JobsTab = ({
   select_job: (id: string) => void
   text: EncyclopediaText
 }>) => {
+  const vocabulary = useVocabulary()
+  const category_name = useItemCategoryName()
   const [search, set_search] = useState('')
   const jobs = useMemo(() => {
     const query = search.trim().toLowerCase()
     return encyclopedia_catalog.jobs.filter(
       (job) =>
         !query ||
-        job.id.toLowerCase().includes(query) ||
+        vocabulary.job(job.id).toLowerCase().includes(query) ||
         job_category(job).includes(query) ||
-        job_crafts(job).toLowerCase().includes(query)
+        job_crafts(category_name, job).toLowerCase().includes(query)
     )
-  }, [search])
+  }, [search, vocabulary, category_name])
   const detail = selected_id ? encyclopedia_catalog.job(selected_id) : null
   const category = detail ? job_category(detail) : null
   const CategoryIcon = category ? JOB_ICONS[category] : Hammer
@@ -95,9 +100,9 @@ export const JobsTab = ({
                     <span
                       className={`truncate text-[10px] tracking-[0.1em] uppercase ${active ? 'text-[#c8963c]' : 'text-[#e8e4dc]'}`}
                     >
-                      {titleize(job.id)}
+                      {vocabulary.job(job.id)}
                     </span>
-                    <span className="mt-0.5 truncate text-[8px] text-[#6b7280]">{job_crafts(job)}</span>
+                    <span className="mt-0.5 truncate text-[8px] text-[#6b7280]">{job_crafts(category_name, job)}</span>
                   </button>
                 )
               })}
@@ -115,7 +120,7 @@ export const JobsTab = ({
           <div className="flex items-center gap-3">
             <CategoryIcon className="text-[#c8963c]" size={18} />
             <h2 className="text-[16px] font-semibold tracking-[0.15em] text-[#c8963c] uppercase">
-              {titleize(detail.id)}
+              {vocabulary.job(detail.id)}
             </h2>
           </div>
           <div className="flex items-center gap-2">
@@ -123,7 +128,7 @@ export const JobsTab = ({
               {text(`job_category.${category}`)}
             </span>
             <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
-              {text('crafts')}: {job_crafts(detail) || '—'}
+              {text('crafts')}: {job_crafts(category_name, detail) || '—'}
             </span>
           </div>
           <p className="mt-1 text-[10px] leading-relaxed text-[#e8e4dc]/80">{text(`job_desc.${detail.id}`)}</p>
@@ -149,7 +154,8 @@ export const JobsTab = ({
                   return (
                     <div className="enc-gather-row border-b border-border/30 text-[11px]" key={row.item_type}>
                       <span className="text-gold">
-                        <span className="enc-gather-label">{text('tier')}</span>T{row.tier}
+                        <span className="enc-gather-label">{text('tier')}</span>
+                        <Text path="encyclopedia_page.world_resource_tier" values={{ tier: row.tier }} />
                       </span>
                       <span className="text-muted">
                         <span className="enc-gather-label">{text('required_level')}</span>
@@ -189,7 +195,7 @@ export const JobsTab = ({
                       )}
                       <span className="text-cyan">
                         <span className="enc-gather-label">{text('xp_per_harvest')}</span>
-                        {10 + Math.floor(required_level / 2)} XP
+                        {10 + Math.floor(required_level / 2)} <Text path="ui.xp" />
                       </span>
                     </div>
                   )

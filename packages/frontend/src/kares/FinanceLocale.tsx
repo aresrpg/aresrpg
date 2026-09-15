@@ -5,7 +5,10 @@ import { useEffect, useReducer, type ReactNode } from 'react'
 
 import logo from '../../public/logo.png'
 import { load_app_copy, type AppCopy } from '../i18n/copy.ts'
-import { load_locale, save_locale, type Locale } from '../i18n/locale.ts'
+import { LocaleScope } from '../i18n/LocaleScope.tsx'
+import { apply_document_locale } from '../i18n/document.ts'
+import { error_text } from '../i18n/error_text.ts'
+import { load_locale, save_locale, LOCALES, type Locale } from '../i18n/locale.ts'
 
 type LocaleState = Readonly<{ locale: Locale; copy: AppCopy | null; error: string | null }>
 type LocaleInput =
@@ -28,10 +31,11 @@ export const FinanceLocale = ({
   useEffect(() => {
     let cancelled = false
     save_locale(state.locale)
-    document.documentElement.lang = state.locale
     void load_app_copy(state.locale)
       .then((copy) => {
-        if (!cancelled) dispatch({ type: 'loaded', locale: state.locale, copy })
+        if (cancelled) return
+        apply_document_locale(copy, state.locale, true)
+        dispatch({ type: 'loaded', locale: state.locale, copy })
       })
       .catch((error: unknown) => {
         console.error('Launch language could not load.', error)
@@ -49,11 +53,26 @@ export const FinanceLocale = ({
   if (state.error)
     return (
       <main className="grid min-h-dvh place-items-center bg-bg p-8 text-text" role="alert">
-        {state.error}
+        <div className="flex flex-col items-center gap-4">
+          <img alt="AresRPG" className="size-12" src={logo} />
+          {state.copy && <p>{error_text(state.copy.kares_page, state.error)}</p>}
+          <select
+            value={state.locale}
+            onChange={(event) => dispatch({ type: 'select', locale: event.target.value as Locale })}
+          >
+            {LOCALES.map(({ code, native }) => (
+              <option value={code} key={code}>
+                {native}
+              </option>
+            ))}
+          </select>
+        </div>
       </main>
     )
   return state.copy ? (
-    render(state.copy, state.locale, (locale) => dispatch({ type: 'select', locale }))
+    <LocaleScope locale={state.locale}>
+      {render(state.copy, state.locale, (locale) => dispatch({ type: 'select', locale }))}
+    </LocaleScope>
   ) : (
     <main aria-busy="true" className="grid min-h-dvh place-items-center bg-bg">
       <img alt="AresRPG" className="size-12 animate-pulse" src={logo} />

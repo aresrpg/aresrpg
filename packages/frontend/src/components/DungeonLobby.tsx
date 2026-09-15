@@ -5,6 +5,8 @@ import { Check, DoorOpen, LockKeyhole, Swords, UsersRound } from 'lucide-react'
 import type { DungeonLobbyPlayerRow } from '@aresrpg/protocol'
 import { useState } from 'react'
 
+import { Text } from '../i18n/Text.tsx'
+import { useText } from '../i18n/useText.ts'
 import { mob_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -43,6 +45,7 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const party = selected_party(state)
   const party_members = party?.members.map(({ character_id }) => character_id) ?? []
   const [abandon_armed_for, set_abandon_armed_for] = useState<string | null>(null)
+  const ui = useText()
   const text = copy_text(copy.world_hud)
   if (!character || !run || !authored) return null
   const room_fights = lobby?.fights.filter(({ room }) => room === run.room) ?? []
@@ -136,7 +139,8 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                             className="border border-white/8 bg-black/25 px-2 py-1 text-[7px] text-[#9ca4ab]"
                             key={player.character_id}
                           >
-                            {player.name} · LV {player.level}
+                            {player.name} ·{' '}
+                            <Text path="encyclopedia_page.level_short" values={{ level: player.level }} />
                           </span>
                         ))}
                       </div>
@@ -200,7 +204,9 @@ export const DungeonLobby = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       </div>
                       <p className="mt-2 truncate text-[8px] text-[#717983]">
                         {fight.players.length > 0
-                          ? fight.players.map(({ name, level }) => `${name} · LV ${level}`).join('  /  ')
+                          ? fight.players
+                              .map(({ name, level }) => `${name} · ${ui('encyclopedia_page.level_short', { level })}`)
+                              .join('  /  ')
                           : text('dungeon_waiting_players')}
                       </p>
                     </div>

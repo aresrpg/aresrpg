@@ -50,9 +50,11 @@ export const compact_leaderboard_score = (score: string, metric: LeaderboardMetr
   const amount = BigInt(score)
   const money = metric === 'marketplace' || metric === 'kolizeum'
   const scale = money ? 1_000_000_000n : 1n
-  const unit = amount >= scale * 1_000_000n ? scale * 1_000_000n : scale * 1_000n
-  if (amount < unit) return leaderboard_score(score, metric, locale)
-  const tenths = (amount * 10n + unit / 2n) / unit
-  const suffix = unit === scale * 1_000_000n ? 'M' : 'K'
-  return `${(tenths / 10n).toLocaleString(locale)}.${tenths % 10n}${suffix}${money ? ' SUI' : ''}`
+  if (amount < scale * 1_000n) return leaderboard_score(score, metric, locale)
+  const formatted = new Intl.NumberFormat(locale, {
+    notation: 'compact',
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(Number(amount) / Number(scale))
+  return `${formatted}${money ? ' SUI' : ''}`
 }

@@ -12,8 +12,10 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { Text } from '../i18n/Text.tsx'
 import { content_catalog } from '../content/catalog.ts'
 import { mob_icon } from '../content/assets.ts'
+import { copy_text } from '../i18n/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useFightPrompt } from '../game/core/fight_prompt_feed.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
@@ -199,7 +201,7 @@ const TeamColumn = ({
           </span>
           <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-[#d8d3ca]">{name}</span>
           <span className="shrink-0 font-mono text-[8px] tracking-[0.1em] text-[#777b86] uppercase">
-            LV {String(level)}
+            <Text path="encyclopedia_page.level_short" values={{ level: String(level) }} />
           </span>
         </div>
       )
@@ -241,7 +243,9 @@ export const FightTeams = ({
       players={players}
       unknown_name={unknown_name}
     />
-    <div className="grid place-items-center font-mono text-xs tracking-[0.2em] text-[#c8963c]/70">VS</div>
+    <div className="grid place-items-center font-mono text-xs tracking-[0.2em] text-[#c8963c]/70">
+      <Text path="ui.versus" />
+    </div>
     <TeamColumn
       action={action_b}
       empty_label={empty_label}
@@ -327,6 +331,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const players = (checkpoint?.sources.players ?? {}) as FightPlayers
   // exact when this socket witnessed the start; otherwise the window's expiry is the estimate
   const started_ms = session.started_at_ms ?? Number(row.placement_ms) + PLACEMENT_WINDOW_MS
+  const ui = copy_text(copy.ui)
   const text = copy.world_hud
 
   const team_a = fighters.filter((fighter) => Number(fighter.team) === 0)
@@ -407,7 +412,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
             <p className="mt-1 font-mono text-[9px] tracking-[0.14em] text-[#777b86] uppercase">
               {phase === 'active'
                 ? `${text.fight_started_ago} ${elapsed_label(started_ms, now)}`
-                : `${text.fight_placement} · ${now === null ? '—' : Math.max(0, Math.ceil((Number(row.placement_ms) + PLACEMENT_WINDOW_MS - now) / 1000))}s`}
+                : `${text.fight_placement} · ${now === null ? '—' : ui('seconds', { count: Math.max(0, Math.ceil((Number(row.placement_ms) + PLACEMENT_WINDOW_MS - now) / 1000)) })}`}
             </p>
           </div>
         </header>

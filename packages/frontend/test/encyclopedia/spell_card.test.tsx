@@ -3,10 +3,17 @@
 
 import { readFileSync } from 'node:fs'
 
-import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
+import { beforeEach, expect, test } from 'bun:test'
 
+import { render_current_state as renderToStaticMarkup } from '../i18n/render.ts'
+import { dispatch_app } from '../../src/store.ts'
+import { load_app_copy } from '../../src/i18n/copy.ts'
 import type { SeedSpell } from '../../src/content/catalog.ts'
+
+beforeEach(async () => {
+  dispatch_app({ type: 'locale/changed', locale: 'en' })
+  dispatch_app({ type: 'locale/loaded', locale: 'en', copy: await load_app_copy('en') })
+})
 
 test('the editor authors Châtiment duration from the generated Move constant', () => {
   const source = readFileSync(new URL('../../src/encyclopedia/SpellCardEffects.tsx', import.meta.url), 'utf8')
@@ -75,7 +82,7 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(html).toContain('data-spell-ap-cost="5"')
   expect(html).toContain('data-spell-level-tabs=""')
   expect(html).toContain('data-spell-effects=""')
-  expect(html).toContain('Casts / turn')
+  expect(html).toContain('CASTS / TURN')
   expect(html).not.toContain('Unlocks at')
   expect(html).toContain('Point')
   expect(html).not.toContain('<input')
@@ -99,7 +106,7 @@ test('the shared spell card keeps its read layout at every size and opens on the
 
   expect(small_html).toContain('data-spell-small=""')
   expect(small_html).toContain('Destructive Sword')
-  expect(small_html).toContain('Critical')
+  expect(small_html).toContain('CRIT CHANCE')
   expect(small_html).toContain('1 / 3')
   expect(small_html).toContain('data-spell-effects=""')
   expect(small_html).toContain('data-spell-effects-compact=""')
@@ -110,8 +117,8 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(small_html).not.toContain('/spell.webp')
   expect(small_html).not.toContain('data-spell-level-tabs=""')
   expect(small_html).not.toContain('data-spell-ap-cost=')
-  expect(small_html).not.toContain('Casts / turn')
-  expect(small_html).not.toContain('Cooldown')
+  expect(small_html).not.toContain('CASTS / TURN')
+  expect(small_html).not.toContain('COOLDOWN')
 })
 
 test('an aligned critical effect stays editable even while it matches its normal row', async () => {
@@ -212,7 +219,7 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
     {
       why: 'chatiment names its damage-fed turn cap instead of pretending to add a flat stat',
       effects: [{ ...base_effect, kind: 7, value: 140, value_max: 140, stat: 0, turns: 5, target_filter: 4 }],
-      reads: ['Gains up to', '140', 'Strength', 'from damage received each turn', 'for 5 turns'],
+      reads: ['Gains up to', '140', 'Strength', 'from damage received each turn', 'Turns: 5'],
       never: ['Chatiment 140', 'Adds 140'],
     },
     {
@@ -249,7 +256,7 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
       why: 'a target restriction stays visibly separated and dimmer than the effect prose',
       effects: [{ ...base_effect, target_filter: 3, turns: 2 }],
       small: true,
-      reads: ['text-[8px] text-[#858994]', '(allies only)', 'for 2 turns'],
+      reads: ['fxl__meta', 'Allies only', 'Turns: 2'],
       never: ['(allies only)for'],
     },
     {
@@ -278,7 +285,7 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
   })
 })
 
-test('read-only effect fields remain separate flex items so chatiment prose keeps its gap', async () => {
+test('read-only effect prose keeps spacing around the highlighted value', async () => {
   const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
   const fixture = {
     ...spell,
@@ -292,5 +299,5 @@ test('read-only effect fields remain separate flex items so chatiment prose keep
 
   const html = renderToStaticMarkup(<SpellCard spell={fixture} text={() => ''} />)
 
-  expect(html).toContain('>Strength</span><span>from damage received each turn</span>')
+  expect(html.replace(/<[^>]*>/g, '')).toContain('Gains up to 140 Strength from damage received each turn')
 })

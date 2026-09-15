@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 
+import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
 import { FightTargetPreviews } from '../../../src/game/fight/FightTargetPreviews.tsx'
 import { active_effect_lines, FightEffectLines } from '../../../src/game/fight/FightEffectLines.tsx'
 
@@ -42,7 +42,7 @@ test('spell aiming keeps the fighter nametag to identity and resolved life only'
   const compact_text = text.replaceAll(/\s+/g, ' ').trim()
 
   expect(html).toContain('Bannerwatch')
-  expect(html).toContain('LV 42')
+  expect(html).toContain('Lv. 42')
   expect(html).toContain('200')
   expect(html).toContain('−40')
   expect(html).toContain('ent-tt__delta--dmg')
@@ -54,7 +54,7 @@ test('spell aiming keeps the fighter nametag to identity and resolved life only'
   expect(html).not.toContain('cast_cost')
   expect(html).toContain('ent-tt__delta--crit')
   expect(html).not.toContain('data-fight-resistances')
-  expect(compact_text).toBe('BannerwatchLV 42(200 −40)')
+  expect(compact_text).toBe('BannerwatchLv. 42(200 −40)')
 })
 
 test('the compact turn status names a state and keeps the legacy damage-over-time wording', () => {
@@ -80,7 +80,7 @@ test('the compact turn status names a state and keeps the legacy damage-over-tim
     .replaceAll(/\s+/g, ' ')
     .trim()
 
-  expect(poison).toBe('6 damages (2 turns)')
+  expect(poison).toBe('6 damages (2T)')
   expect(poison).not.toContain('Deals')
 })
 

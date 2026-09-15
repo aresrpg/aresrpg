@@ -27,6 +27,6 @@ test('a split-coin resolution failure is recognized only at the character creati
       new Error('Transaction resolution failed: InsufficientCoinBalance in command 1'),
       { insufficient_sui: 'Keep {{fee}} SUI for fees.' }
     )
-  ).toBe('Keep 0.2 SUI for fees.')
+  ).toMatchObject({ name: 'LocalizedError', message: 'Keep 0.2 SUI for fees.' })
   expect(character_creation_failure_message(other_error, null)).toBe(other_error)
 })

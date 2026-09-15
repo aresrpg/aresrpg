@@ -4,6 +4,8 @@
 import { AtSign, Check, Copy, Hash, Loader2, Send } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { Text } from '../i18n/Text.tsx'
 import type { AuthSession } from '../auth.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
@@ -43,9 +45,7 @@ type WalletView = Readonly<{
   wallet_drain: boolean
   wallet_transfer: WalletTransferState | null
 }>
-
 const exact_sui = (mist: bigint): string => format_sui(mist, 9).replace(/(?:\.0+|(?<=\.[0-9]*?)0+)$/, '')
-
 const PropRow = ({ label, value }: Readonly<{ label: string; value: ReactNode }>) => (
   <div className="flex items-center justify-between gap-3 text-[10px] tracking-wide">
     <span className="text-[9px] tracking-[0.2em] text-muted uppercase">{label}</span>
@@ -107,6 +107,7 @@ const SendForm = ({
   recipient_changed: (value: string) => void
   session: WalletView
 }>) => {
+  const localized_numbers = useNumbers()
   const recipient = session.wallet_recipient
   const address_mode = /^0x/i.test(recipient.input)
   const resolved = recipient.status === 'resolved'
@@ -167,7 +168,7 @@ const SendForm = ({
           <span className="text-[9px] tracking-[0.25em] text-muted uppercase">{send_text(copy, 'amount_label')}</span>
           <div className="flex items-center gap-2">
             <span className="text-[9px] tracking-[0.15em] text-muted uppercase">
-              {session.sui_balance_mist === null ? '-' : `${format_sui(session.sui_balance_mist, 2)} SUI`}
+              {session.sui_balance_mist === null ? '-' : `${localized_numbers.sui(session.sui_balance_mist, 2)} SUI`}
             </span>
             <button
               className="cursor-pointer px-2 py-0.5 text-[9px] tracking-[0.2em] text-gold uppercase disabled:cursor-not-allowed disabled:opacity-30"
@@ -176,7 +177,7 @@ const SendForm = ({
               style={{ border: '1px solid rgba(200,150,60,0.4)' }}
               type="button"
             >
-              MAX
+              <Text path="characters_page.common.max" />
             </button>
           </div>
         </div>
@@ -236,6 +237,7 @@ const Review = ({
   copy,
   transfer,
 }: Readonly<{ cancel: () => void; confirm: () => void; copy: AppCopy; transfer: WalletTransferState }>) => {
+  const localized_numbers = useNumbers()
   const [copied, set_copied] = useState(false)
   const gas = transfer.gas_estimate_mist ?? 2_000_000n
   const copy_address = (): void => {
@@ -279,13 +281,15 @@ const Review = ({
           </div>
           <PropRow
             label={send_text(copy, 'drain_sending')}
-            value={<span className="font-semibold text-gold">{exact_sui(transfer.amount_mist)} SUI</span>}
+            value={
+              <span className="font-semibold text-gold">{localized_numbers.amount(transfer.amount_mist, 9)} SUI</span>
+            }
           />
           <PropRow
             label={copy.wallet_send_shared.gas_estimated}
             value={
               <span className="text-[10px] text-text/60">
-                ~{exact_sui(gas)} SUI · {send_text(copy, 'drain_fee_note')}
+                ~{localized_numbers.amount(gas, 9)} SUI · {send_text(copy, 'drain_fee_note')}
               </span>
             }
           />
@@ -299,16 +303,22 @@ const Review = ({
         <>
           <PropRow
             label={send_text(copy, 'amount_label')}
-            value={<span className="font-semibold text-gold">{format_sui(transfer.amount_mist, 2)} SUI</span>}
+            value={
+              <span className="font-semibold text-gold">{localized_numbers.sui(transfer.amount_mist, 2)} SUI</span>
+            }
           />
           <PropRow
             label={copy.wallet_send_shared.gas_estimated}
-            value={<span className="text-[10px] text-text/60">~{exact_sui(gas)} SUI</span>}
+            value={<span className="text-[10px] text-text/60">~{localized_numbers.amount(gas, 9)} SUI</span>}
           />
           <div className="h-px w-full bg-border" />
           <PropRow
             label={copy.wallet_send_shared.total}
-            value={<span className="font-semibold text-gold">~{format_sui(transfer.amount_mist + gas, 2)} SUI</span>}
+            value={
+              <span className="font-semibold text-gold">
+                ~{localized_numbers.sui(transfer.amount_mist + gas, 2)} SUI
+              </span>
+            }
           />
         </>
       )}

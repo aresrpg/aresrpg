@@ -14,6 +14,7 @@ import {
   Volume2,
 } from 'lucide-react'
 
+import { Text } from '../i18n/Text.tsx'
 import {
   effective_render_distance,
   RENDER_DISTANCE_MAX,
@@ -185,7 +186,7 @@ export default function SettingsPage({ copy, settings }: Readonly<{ copy: AppCop
                 <option value="">{t('always_craft_from_none')}</option>
                 {characters.map((character) => (
                   <option key={character.id} value={character.id}>
-                    {character.name} · LV.{character.level}
+                    {character.name} · <Text path="encyclopedia_page.level_short" values={{ level: character.level }} />
                   </option>
                 ))}
               </select>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
 
@@ -12,6 +13,7 @@ export const JobRecipesSection = ({
   select_item,
   text,
 }: Readonly<{ recipes: readonly SeedRecipe[]; select_item: (id: string) => void; text: EncyclopediaText }>) => {
+  const category_name = useItemCategoryName()
   if (recipes.length === 0) return null
   const rows = recipes.toSorted(
     (left, right) =>
@@ -34,7 +36,7 @@ export const JobRecipesSection = ({
               icon={item_icon(recipe.output_type)}
               index={index}
               key={recipe.output_type}
-              meta={titleize(output?.category ?? '')}
+              meta={category_name(output?.category ?? '')}
               name={output?.name ?? titleize(recipe.output_type)}
               select={() => select_item(recipe.output_type)}
             />

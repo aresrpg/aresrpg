@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { useNumbers } from '../../i18n/useNumbers.ts'
+
+import { useText } from '../../i18n/useText.ts'
+
+import { Text } from '../../i18n/Text.tsx'
 // Direct port of deprecated/FightReport + LevelUp. Data adapters live here; the locked visual
 // structure and CSS remain recognizable instead of being reinterpreted in utility classes.
 
 import { useEffect, type CSSProperties } from 'react'
 import { KaresLogo } from '../../components/KaresLogo.tsx'
-import { format_amount } from '../../kares/model.ts'
 
 import { item_icon, spell_icon } from '../../content/assets.ts'
 import { content_catalog, titleize } from '../../content/catalog.ts'
 import { spell_name, type AppCopy } from '../../i18n/copy.ts'
 import {
-  compact_xp,
   fight_result_available,
   fight_result_complete,
   fight_result_surface,
@@ -25,7 +29,6 @@ import {
 import { fight_result_error_text } from '../../modules/fight_result_error.ts'
 import { fight_settlement_progress, type FightSettlementProgress } from '../../modules/fight_result_view.ts'
 import { dispatch_app, useAppStore, type AppState } from '../../store.ts'
-import { format_sui } from '../../wallet_amount.ts'
 import { play_procedural_cue } from '../audio/procedural_cues.ts'
 
 import './fight_result.css'
@@ -114,7 +117,7 @@ export const FightSettlementStatus = ({
       </div>
       {failed_result?.error && (
         <div className="fe-error">
-          <span>{fight_result_error_text(copy.fight_hud, failed_result.error)}</span>
+          <span>{fight_result_error_text(copy.fight_hud, failed_result.error, copy.kares_page)}</span>
           <button onClick={retry} type="button">
             {text_of(copy, 'result_retry')}
           </button>
@@ -125,6 +128,7 @@ export const FightSettlementStatus = ({
 }
 
 const WagerFact = ({ copy, wager }: Readonly<{ copy: AppCopy; wager: FightResult['kolizeum_wager'] }>) => {
+  const localized_numbers = useNumbers()
   const outcome = kolizeum_wager_outcome(wager)
   if (!outcome) return null
   return (
@@ -132,7 +136,7 @@ const WagerFact = ({ copy, wager }: Readonly<{ copy: AppCopy; wager: FightResult
       <span>{text_of(copy, `result_wager_${outcome.kind}`)}</span>
       <b>
         {WAGER_PREFIX[outcome.kind]}
-        {format_sui(outcome.mist, 3)} SUI
+        {localized_numbers.sui(outcome.mist, 3)} SUI
       </b>
     </div>
   )
@@ -147,6 +151,8 @@ const ResultRow = ({
   enemy: boolean
   defeated: boolean
 }>) => {
+  const numbers = useNumbers()
+  const ui = useText()
   const alive = !participant.dead && !defeated
   const state = alive ? 'alive' : enemy ? 'defeated' : 'dead'
   const shows_progress = result_participant_shows_progress(participant)
@@ -158,23 +164,34 @@ const ResultRow = ({
     <div className={`fe-row fe-row--${state}${shows_progress ? '' : ' fe-row--no-progress'}`}>
       <div className="fe-row__name">
         <span className="fe-row__nametext">{participant.name}</span>
-        <span className="fe-row__meta">LV {participant.level_after}</span>
+        <span className="fe-row__meta">
+          <Text path="encyclopedia_page.level_short" values={{ level: participant.level_after }} />
+        </span>
       </div>
       {shows_progress && (
         <>
-          <div className="fe-xp" aria-label={`${participant.experience_before} + ${participant.xp_awarded} XP`}>
+          <div
+            className="fe-xp"
+            aria-label={`${participant.experience_before} ${ui('ui.experience_gain', { amount: participant.xp_awarded, unit: ui('ui.xp') })}`}
+          >
             <span className="fe-xp__base" style={{ width: `${base_percent}%` }} />
             <span className="fe-xp__gain" style={{ left: `${base_percent}%`, width: `${gained_percent}%` }} />
           </div>
-          <span className="fe-xp-next">{span === 0 ? 'MAX' : `${compact_xp(into)} / ${compact_xp(span)} XP`}</span>
-          <span className="fe-gain">+{compact_xp(participant.xp_awarded)} XP</span>
+          <span className="fe-xp-next">
+            {span === 0
+              ? ui('ui.experience_max')
+              : ui('ui.vitals', { current: numbers.compact(into), maximum: numbers.compact(span), unit: ui('ui.xp') })}
+          </span>
+          <span className="fe-gain">
+            +{numbers.compact(participant.xp_awarded)} <Text path="ui.xp" />
+          </span>
         </>
       )}
       <div className="fe-tiles">
         {participant.kares > 0n && (
           <div aria-label="KARES" className="fe-tile">
             <KaresLogo size={32} />
-            <span className="fe-tile__qty">×{format_amount(participant.kares)}</span>
+            <span className="fe-tile__qty">×{numbers.amount(participant.kares)}</span>
             <span className="fe-tile__tooltip" role="tooltip">
               KARES
             </span>
@@ -202,6 +219,7 @@ const ResultRow = ({
 }
 
 export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const localized_numbers = useNumbers()
   const result = useAppStore(selected_result)
   const fight = useAppStore((state) => state.fight)
   const results = useAppStore((state) => state.fight_result.current_by_character)
@@ -249,7 +267,11 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <span>{text_of(copy, 'result_gas_spent')}</span>
             <b>
               {result.gas_spent_mist < 0n ? '-' : ''}
-              {format_sui(result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist, 3)} SUI
+              {localized_numbers.sui(
+                result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist,
+                3
+              )}{' '}
+              SUI
             </b>
           </div>
           <WagerFact copy={copy} wager={result.kolizeum_wager} />
@@ -410,7 +432,9 @@ export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               <strong>{spell_name(copy, unlocked_spell.name)}</strong>
               <span className="lvl-unlock__meta">{titleize(unlocked_spell.classe)}</span>
             </div>
-            <b>{unlocked_spell.levels[0]?.ap_cost ?? 0} AP</b>
+            <b>
+              {unlocked_spell.levels[0]?.ap_cost ?? 0} <Text path="fight_hud.unit_ap" />
+            </b>
           </div>
         )}
         {unlocked_worlds.length > 0 && (

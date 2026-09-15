@@ -5,12 +5,12 @@ import { ArrowUpRight, Gem, Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { KARES_UNIT } from '@aresrpg/sdk/kares-economics'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import { item_icon } from '../content/assets.ts'
 import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { format_amount } from '../kares/model.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { effective_mastery_points } from './model.ts'
@@ -23,6 +23,7 @@ const offer_redeem_disabled = (
 ): boolean => !affordable || pending !== null || !connected || !ready
 
 export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const numbers = useNumbers()
   const text = copy_text(copy.mastery_page)
   const balance = useAppStore((state) => state.session.kares_balance)
   const kares_balance = balance ?? 0n
@@ -69,7 +70,7 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <span>
             {copy.kares_page.points}: {points.toString()}
           </span>
-          <span>KARES: {balance !== null ? format_amount(kares_balance, 9) : '—'}</span>
+          <span>KARES: {balance !== null ? numbers.amount(kares_balance, 9) : '—'}</span>
         </div>
       </div>
 

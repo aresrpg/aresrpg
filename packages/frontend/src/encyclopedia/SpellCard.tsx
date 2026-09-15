@@ -7,6 +7,7 @@ import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import { spell_icon } from '../content/assets.ts'
 import type { SpellLevel } from '../content/catalog.ts'
+import { useText } from '../i18n/useText.ts'
 import { titleize } from '../content/catalog.ts'
 
 import { EntityIcon } from './components.tsx'
@@ -27,26 +28,6 @@ const displayed_name = (spell: SpellCardSpell, display_name: string | undefined)
 
 const field_class =
   'h-8 border border-white/12 bg-bg px-2 text-[10px] text-[#e8e4dc] outline-none focus:border-[#c8963c]/60'
-
-const english: EncyclopediaText = (key, values) => {
-  const labels: Readonly<Record<string, string>> = Object.freeze({
-    ap_cost: 'AP cost',
-    range: 'Range',
-    range_modifiability: 'Modifiable range',
-    casts_per_turn: 'Casts / turn',
-    casts_per_target: 'Casts / target',
-    cooldown: 'Cooldown',
-    cooldown_none: 'None',
-    crit_chance: 'Critical',
-    line_of_sight: 'Line of sight',
-    cast_line: 'Straight-line cast',
-    target_cell_empty: 'Empty target cell',
-    effects: 'Effects',
-    unlimited: 'Unlimited',
-  })
-  if (key === 'turns_value') return `${values?.n ?? 0} turns`
-  return labels[key] ?? key
-}
 
 const NumberField = ({
   value,
@@ -234,7 +215,7 @@ const SpellArt = ({
 
 export const SpellCard = ({
   spell,
-  text = english,
+  text: provided_text,
   edit,
   initial_level = 1,
   small = false,
@@ -251,6 +232,8 @@ export const SpellCard = ({
   display_name?: string
   show_icon?: boolean
 }>) => {
+  const app_text = useText()
+  const text: EncyclopediaText = provided_text ?? ((key, values) => app_text(`encyclopedia_page.${key}`, values))
   const [level_index, set_level_index] = useState(Math.max(0, initial_level - 1))
   const safe_index = Math.min(level_index, spell.levels.length - 1)
   const level = spell.levels[safe_index]
@@ -336,7 +319,7 @@ export const SpellCard = ({
         >
           {spell.levels.map((_, index) => (
             <button
-              aria-label={`Spell level ${index + 1}`}
+              aria-label={app_text('ui.spell_level', { level: index + 1 })}
               className={`relative -mb-px min-h-11 min-w-11 shrink-0 border px-3 text-[9px] font-semibold ${index === safe_index ? 'z-[1] border-[#c8963c]/55 border-b-surface-low bg-surface-low text-[#e0b86b]' : 'border-transparent text-[#626670] hover:border-white/8 hover:text-[#aaa6a0]'}`}
               key={index}
               onClick={() => set_level_index(index)}

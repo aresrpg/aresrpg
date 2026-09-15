@@ -4,9 +4,9 @@
 import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
 import { character_max_hp, projected_hp } from '../../../src/game/character_stats.ts'
 import { EmptyActionCells, ExperienceBar } from '../../../src/game/hud/OverworldVitals.tsx'
 import { vital_percent, VitalsDisplay } from '../../../src/game/hud/VitalsDisplay.tsx'

@@ -36,7 +36,7 @@ test('the rounded crush result is an inventory subset rendered with normal item 
 
 test('crushing keeps one non-dismissible animated item modal mounted', async () => {
   const copy = await load_app_copy('en')
-  const markup = renderToStaticMarkup(<CrushProgressDialog copy={copy} item={{ ...rune, amount: 1, level: 20 }} />)
+  const markup = renderToStaticMarkup(<CrushProgressDialog copy={copy} items={[{ ...rune, amount: 1, level: 20 }]} />)
 
   expect(markup).toContain('data-crush-progress=""')
   expect(markup).toContain('animate-pulse')

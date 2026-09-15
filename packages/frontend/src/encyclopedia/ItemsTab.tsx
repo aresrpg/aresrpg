@@ -5,10 +5,13 @@ import { pet_max_feeds, type RuneEffect, type StatName } from '@aresrpg/immutabl
 import { MapPin, Search, Skull, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { Text } from '../i18n/Text.tsx'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { item_icon, mob_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type ItemDetail } from '../content/catalog.ts'
 import { filter_item_types } from '../content/item_filters.ts'
+import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 import {
@@ -151,7 +154,9 @@ export const ItemsTab = ({
   stat_name: (stat: StatName) => string
   text: EncyclopediaText
 }>) => {
+  const numbers = useNumbers()
   const [search, set_search] = useState('')
+  const vocabulary = useVocabulary()
   const category_name = useItemCategoryName()
   const [facet_selection, set_facet_selection] = useState<ItemFilterSelection>({})
   const [minimum_level, set_minimum_level] = useState('')
@@ -214,12 +219,14 @@ export const ItemsTab = ({
         </select>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">LVL</span>
+        <span className="text-[8px] tracking-[0.15em] text-[#6b7280] uppercase">
+          <Text path="encyclopedia_page.level" />
+        </span>
         <input
           className="h-8 w-13 border border-border bg-bg/55 px-2 text-center text-[9px] outline-none"
           min="0"
           onChange={(event) => set_minimum_level(event.target.value)}
-          placeholder="MIN"
+          placeholder={text('minimum')}
           type="number"
           value={minimum_level}
         />
@@ -228,7 +235,7 @@ export const ItemsTab = ({
           className="h-8 w-13 border border-border bg-bg/55 px-2 text-center text-[9px] outline-none"
           min="0"
           onChange={(event) => set_maximum_level(event.target.value)}
-          placeholder="MAX"
+          placeholder={text('maximum')}
           type="number"
           value={maximum_level}
         />
@@ -310,7 +317,7 @@ export const ItemsTab = ({
                         name={
                           random_loot_box
                             ? text('consumable_reward', {
-                                chance: Number.isInteger(chance) ? chance : chance.toFixed(2),
+                                chance: Number.isInteger(chance) ? chance : numbers.decimal(chance),
                                 item: reward_item?.name ?? reward.item_type,
                               })
                             : (reward_item?.name ?? reward.item_type)
@@ -333,11 +340,11 @@ export const ItemsTab = ({
             {detail.recipe && (
               <>
                 <span className="border border-[#c8963c]/30 bg-[#c8963c]/8 px-1.5 py-px text-[7px] tracking-[0.15em] text-[#c8963c] uppercase">
-                  {titleize(detail.recipe.job)}
+                  {vocabulary.job(detail.recipe.job)}
                 </span>
                 {detail.recipe.craft_xp > 0 && (
                   <span className="border border-[#4a9eff]/30 bg-[#4a9eff]/6 px-1.5 py-px text-[7px] tracking-[0.15em] text-[#4a9eff] uppercase">
-                    {detail.recipe.craft_xp} XP
+                    {detail.recipe.craft_xp} <Text path="ui.xp" />
                   </span>
                 )}
               </>
@@ -403,7 +410,7 @@ export const ItemsTab = ({
                   </span>
                   <span className="flex shrink-0 items-center gap-3">
                     <span className="text-[10px] font-semibold text-[#c8963c] tabular-nums">
-                      {(drop.chance_bp / 100).toFixed(2)}%
+                      {numbers.decimal(drop.chance_bp / 100)}%
                     </span>
                     <span className="text-[9px] tracking-[0.1em] text-[#6b7280] uppercase">
                       {text('level_range', { min: mob.level_min, max: mob.level_max })}

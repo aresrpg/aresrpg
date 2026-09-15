@@ -59,6 +59,7 @@ test.each([1, 2])('a failed settlement exposes its error and Retry for %s partic
       }}
     />
   )
-  expect(html).toContain(result.error!)
+  expect(html).toContain(copy.kares_page.error_funds)
+  expect(html).not.toContain(result.error!)
   expect(html).toContain(copy.fight_hud.result_retry!)
 })

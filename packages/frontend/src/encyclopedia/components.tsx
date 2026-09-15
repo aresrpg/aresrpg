@@ -174,6 +174,3 @@ export const Empty = ({ children }: Readonly<{ children: ReactNode }>) => (
     {children}
   </div>
 )
-
-export const format_number = (value: number): string => value.toLocaleString('en-US')
-export const percent = (basis_points: number): string => `${(basis_points / 100).toLocaleString('en-US')}%`

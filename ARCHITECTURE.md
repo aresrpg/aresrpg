@@ -227,7 +227,19 @@ The graph bus resolves each item invalidation once and delivers only to its pre/
 
 The indexer retains timestamped public-sale subtotals per checkpoint in daily buckets for 32 days.
 The server sums exact rolling 24-hour and 30-day windows; the existing heartbeat carries both totals
-to marketplace observers. Each window remains unavailable until its full history has been indexed.
+to marketplace observers. Once tracking starts, both windows report recorded volume immediately. The sample carries complete
+history days; the UI marks a total as a lower bound until its full window is covered.
+
+Stackable price history folds completed public item sales into daily hashes in the same private Redis.
+Each item/day value retains exact decimal MIST, units and sale counts with its checkpoint in one
+atomic replacement; interrupted batches skip already-applied contributions. Absolute expiry retains
+365 days plus boundary-day padding. Existing indexers begin at their next processed checkpoint,
+recording their collection start without moving ingestion cursors or requesting a backfill. The server
+reads at most 366 fields in one pipeline for the selected item, pushes refreshed snapshots and marks
+uninitialized history unavailable. The marketplace reducer owns selection and response identity;
+TradingView Lightweight Charts presents unit-weighted daily prices excluding fees in the existing
+purple palette. Listings and history occupy two columns when the detail pane fits, stacking below
+that width. Empty trading dates remain gaps, and accessible daily rows expose the same values.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
 query, including empty owned catalogues. Catalogue markers follow their relation writes. The client
@@ -337,7 +349,9 @@ Character projections own its root deadline and protector obligation. Observers 
 from retained state and recheck deadlines on wake. Toast and audio lifetimes cannot gate gameplay
 completion, and authoritative protectors can resolve independently of a delayed gather receipt.
 
-A session-only Konami unlock reveals the world automation HUD. One frontend automation reducer
+Completing every beginner journey quest unlocks the collapsible gathering automation HUD.
+Access derives from the current account’s loaded completion record, after pending persistence finishes;
+resetting the journey or changing accounts revokes access and stops any run. One frontend automation reducer
 owns a selected character's gathering run and emits existing run-to, zone-search, gather, and
 fight inputs. Automated run-to mounts an available equipped companion through the ordinary
 proximity rule, retains riding between harvests, and remounts on later legs after a fight.
@@ -506,7 +520,9 @@ it is not published on-chain. One journey reducer retains completion and transie
 deriving its storage scope directly from the session in the same reducer pass. Observers never
 initialize a second account state.
 Inventory and equipped-item projections prove ownership; confirmed gathering deltas and settled
-final-room fight wins prove actions. These observations never submit transactions or award assets.
+final-room fight wins prove actions. These observations never submit transactions or award on-chain assets. Completing the journey
+reveals an automation reward card and unlocks gathering controls without starting a run.
+The controls collapse to a compact status and Stop action; collapsing never stops automation.
 IndexedDB stores only completed quest IDs per network, original game package, and account. The next
 quest and progress derive from those IDs; journal visibility and celebration queues remain in memory.
 Settings can reset the local completion set. Completion celebrations wait for the local write;

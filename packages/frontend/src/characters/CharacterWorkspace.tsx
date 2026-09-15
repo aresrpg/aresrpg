@@ -7,7 +7,6 @@ import { FitViewport } from '../components/FitViewport.tsx'
 const WORKSPACE_WIDTHS = {
   stats: { width: 600, dense_width: 1000 },
   spells: { width: 1280, dense_width: 1280 },
-  jobs: { width: 1440, dense_width: 1440 },
   runeforge: { width: 1440, dense_width: 1100 },
 } as const
 

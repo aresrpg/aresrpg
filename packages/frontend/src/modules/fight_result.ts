@@ -16,7 +16,6 @@ import {
 } from './fight_result_view.ts'
 
 export {
-  compact_xp,
   fight_duration,
   fight_resolution_dungeon,
   fight_result_available,

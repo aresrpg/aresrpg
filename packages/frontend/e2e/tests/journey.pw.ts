@@ -59,9 +59,9 @@ test('real IndexedDB completion survives reload, ignores purchases for harvestin
   await expect(page.getByRole('button', { name: 'Start my first quest' })).toBeVisible()
 })
 
-test('HD journal and compact tracker fit narrow screens in all six locales', async ({ page }) => {
+test('HD journal and compact tracker fit narrow screens in all ten locales', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  for (const locale of ['en', 'fr', 'de', 'es', 'uk', 'ja']) {
+  for (const locale of ['en', 'fr', 'de', 'es', 'uk', 'ja', 'zh', 'ru', 'vi', 'ko']) {
     await page.goto(`/e2e/fixtures/journey.html?locale=${locale}`)
     await page.locator('.journey-tracker .journey-button').click()
     const journal = page.getByRole('dialog')

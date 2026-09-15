@@ -1,0 +1,2606 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+
+title: WebGPU不可用
+body: 完整世界需要WebGPU。当前已改用轻量网格。
+fatal: 此浏览器无法创建WebGPU或WebGL图形上下文。
+engine_recovery: 世界已停止加载或渲染。请重新加载后再试。
+engine_reload: 重新加载
+world_unavailable_title: 世界不可用
+world_unavailable: 此世界尚未配置地形生成方案。
+mobile_unavailable_label: 移动端访问
+mobile_unavailable_title: AresRPG尚不支持移动设备
+mobile_unavailable_body: 我们正在打造专属移动端体验。目前请使用桌面浏览器进入世界。
+mobile_unavailable_status: 桌面版已上线
+chrome: Chrome或Edge：更新浏览器，在“设置→系统”中启用“使用图形加速（如果可用）”，然后重新启动。
+other: 启用硬件加速，更新浏览器和显卡驱动，然后重启浏览器。
+continue: 使用网格继续
+quality: 画质
+low: 低
+medium: 中
+high: 高
+flat_mode: 平面模式
+identity_connected: 身份已连接
+sign_in_to_play: 登录开始游戏
+loading_universe: 正在加载宇宙
+continue_google: 使用Google继续
+wallet_session_ended: 钱包会话已结束。请重新登录。
+connect_wallet: 连接钱包
+no_wallet: 未安装兼容钱包
+watch_world: 观看实时世界
+sign_in: 登录开始游戏
+drag_hint: 拖动平移 · 滚动缩放
+navigation: 导航
+world: 世界
+characters: 角色
+leaderboard: 排行榜
+mastery: 精通
+encyclopedia: 百科
+marketplace: 市场
+airdrop: 空投
+kolizeum: 竞技场
+settings: 设置
+admin: 管理
+online: 在线
+account: 账户
+join_discord: 加入Discord
+join_telegram: 加入Telegram
+sui_universe: Sui宇宙
+server_disconnected: 已断开
+server_connecting: 正在连接
+server_reconnecting: 正在重新连接
+server_syncing: 正在同步
+server_connected: 已连接
+server_violation: 已断开：违反规则。即将重试。
+server_replaced: 已在其他位置连接
+session_replaced_title: 账户已在其他位置登录
+session_replaced_body: 你的账户已在其他位置打开游戏，因此此窗口已断开。关闭其他会话，或在此重新连接以继续游戏。
+session_replaced_reconnect: 在此重新连接
+latency_unit: 毫秒
+indexing_health: 索引状态
+online_players: 在线玩家
+indexing_lag_warning: 游戏操作可能出现延迟
+indexing_block_title: 正在同步世界
+indexing_block_body: 区块链历史仍在建立索引。当服务器进入安全的实时范围后，游戏会自动解锁。
+indexing_block_progress: 进度
+indexing_block_remaining: 剩余检查点
+indexing_block_eta: 预计时间
+indexing_block_estimating: 正在计算…
+game_maintenance_title: 正在维护
+game_maintenance_body: AresRPG智能合约因维护暂时暂停。请查看Discord了解最新消息。
+gas_budget_toast: 此操作超出了预留网络费用。操作未执行，也未产生费用，请向我们报告。
+game_paused_toast: 游戏因更新暂停。操作未执行，请几分钟后再试。
+movement_sync_toast: 你的位置仍在同步。请正常移动，稍后再试。
+fight_path_changed_toast: 移动提交前棋盘已发生变化。回合已恢复，请重试。
+party_member_unavailable_toast: 该角色已加入队伍。
+fight_turn_already_forced_toast: 已有其他人强制结束此回合。
+fight_placement_unavailable_toast: 该起始格不可用。请选择其他空格。
+network_testnet: 测试网
+page_pending_title: 此页面正在重建
+page_pending_body: 恢复期间，入口仍会保留。
+welcome_title: 欢迎来到AresRPG
+welcome_body: AresRPG是一款完全链上的MMORPG，经济由玩家驱动。创建首个角色，进入世界并挑战怪物。
+welcome_need_sui: 游戏需要少量SUI：首个角色价格为{{price}} SUI，余额中还需保留至少{{fee}} SUI支付费用。向下方地址存入SUI即可开始。
+insufficient_sui: 余额中需保留至少{{fee}} SUI支付费用。
+create_character: 创建角色
+create_title: 创建你的角色
+create_lead: 选择职业、颜色，并为角色命名。你身后的世界已经开始运转。
+class_label: 职业
+view_class_spells: 查看该职业的技能
+sex_label: 性别
+appearance_label: 外观 · 3种颜色
+name_label: 名字
+name_placeholder: 输入名字…
+name_invalid: 使用4至19个可打印ASCII字符，不能包含空格。
+male: 男
+female: 女
+cancel: 返回
+create_and_play: 创建并开始
+character_price: 价格
+creating_character: 正在创建角色…
+character_created: 角色已创建
+address_verification_failed: 无法验证此钱包地址。请重新登录或通过Discord联系我们。
+dismiss: 关闭
+wallet_copy_address: 复制地址
+wallet_send: 发送
+wallet_add_funds: 充值
+wallet_gas_spent: 已用Gas（24小时）
+wallet_disconnect: 断开连接
+wallet_fund_body: 向此钱包地址发送SUI。返回应用时余额会刷新。
+wallet_send_title: 发送SUI
+wallet_recipient: 收款地址
+wallet_amount: 数量（SUI）
+wallet_send_pending: 正在发送SUI…
+wallet_send_success: SUI已发送
+wallet_send_failed: SUI转账失败
+wallet_close: 关闭
+kolizeum_page:
+  title: 竞技场 — 战争桌
+  tagline: 胜者分享奖池的90% · 平台抽取10%
+  tab_open: 开放房间
+  tab_mine: 我的房间
+  col_format: 赛制
+  col_access: 权限
+  col_status: 状态
+  col_pledge: 下注
+  col_full_pot: 满额奖池
+  col_creator: 创建者
+  access_public: 公开
+  access_friends: 好友
+  status_open: 开放
+  status_started: 已开始
+  status_settling: 战斗结束
+  empty: 暂无房间
+  selected: 选中的房间
+  side_a: A方
+  side_b: B方
+  total_pot: 当前奖池
+  settlement_remaining: 剩余托管金额
+  paid_out: 已发放
+  free: 免费
+  join_a: 加入A方
+  join_b: 加入B方
+  join_confirm_title: 确认竞技场下注
+  join_confirm_body: '{{character}}将下注{{amount}} SUI并加入{{side}}。此交易会提交下注。'
+  join_confirm_cta: 下注{{amount}} SUI · 加入{{side}}
+  create_title: 创建房间
+  form_format: 赛制
+  form_access: 权限
+  form_pledge: 每位玩家下注（SUI）
+  form_max_diff: 最大等级差
+  form_character: 使用角色
+  no_character: 没有空闲角色
+  full_pot_summary: 满额{{format}}奖池 = {{pot}} SUI · 胜者获得90%
+  create_cta: 创建房间
+friends_panel:
+  title: 好友
+  observed: 附近可见
+  unseen: 当前不可见
+  none_observed: 附近没有可见好友
+  empty: 暂无好友
+  placeholder: 名字、SuiNS或0x地址
+  add: 添加好友
+  remove: 移除
+  remove_title: 移除好友
+  remove_body: 将{{name}}从好友列表中移除？
+  error_no_suins: 没有与{{name}}匹配的SuiNS地址。
+  error_target: 请输入角色名、SuiNS名称或完整Sui地址。
+  error_self: 不能添加自己。
+  error_duplicate: 该玩家已在好友列表中。
+  cancel: 取消
+party_panel:
+  title: 队伍
+  adventurer: 冒险者
+  invited_by: '{{name}}邀请你加入队伍'
+  accept: 接受
+  decline: 拒绝
+  leader: 队长
+  leave: 离开
+  disband: 解散
+  kick: 移出
+  rescind: 取消邀请
+  invite_owned: 邀请自己的角色
+  follow_leader: 跟随队长
+  run_to_position: 跑向位置
+  run_to_started: 你正在跑向{{name}}最后的链上位置，该位置可能并非其实时位置。
+  run_to_started_position: 你正在跑向链接中的位置。
+  run_to_progress: 正在跑向位置
+  run_to_position_wrong_world: 链接中的位置不在当前世界。
+  run_to_wrong_world: 该队员不在当前世界。
+  run_to_unavailable: 无法获取该队员的链上位置。
+trade_panel:
+  kares: 提供的KARES
+  close: 关闭
+  title: 玩家交易
+  invite_sent: 交易邀请已发送
+  invited_by: '{{name}}邀请你交易'
+  request_waiting: 等待{{name}}接受交易
+  accept_request: 接受
+  decline: 拒绝
+  cancel_request: 取消请求
+  trades: 交易
+  your_offer: 你的出价
+  their_offer: 对方出价
+  accepted: 已接受
+  reviewing: 确认中
+  remove_item: 从出价中移除
+  drop_items: 将物品拖到这里
+  empty_offer: 未提供物品
+  offer_item_unavailable: 一件待交易物品已不可用。请检查出价后重试。
+  sui: 提供的SUI
+  inventory: 你的背包
+  drag_hint: 拖动或双击添加
+  amount_title: 选择数量
+  amount_for: '{{name}}的数量'
+  amount_add: 加入出价
+  amount_cancel: 取消
+  confirm_changes: 确认更改
+  discard_changes: 放弃更改
+  empty_inventory: 没有可交易资产
+  accept: 接受出价
+  cancel: 取消交易
+  accept_notice: 接受即授权一笔结算交易。收到{{count}}件资产需支付{{amount}} SUI版税，另加Gas费用。
+  settle: 完成交换
+  recover: 取回出价
+  settle_notice: 通过一笔钱包交易接收所有剩余资产和SUI。
+  recover_notice: 通过一笔钱包交易取回全部出价。
+  waiting_counterparty: 你的一方已完成。正在等待对方。
+  finalizing: 正在完成…
+transaction_unknown_toast: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
+transaction_recovered_toast: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
+world_hud:
+  compass_label: 指南针
+  zone: 区域
+  unsearched: 未探索
+  searched: 已探索
+  out_of_bounds: 超出边界
+  mob_group: 怪物群（{{size}}）
+  resource: 资源
+  cluster_count: 另有{{extra}}个
+  zone_edge: 区域边缘 {{dist}}
+  coordinates: 坐标
+  biome: 生物群系
+  world_map: 世界地图
+  world_map_zoom_in: 放大
+  world_map_zoom_out: 缩小
+  world_map_extent: '{{blocks}}格'
+  menu_group: 邀请入队
+  menu_friend: 添加好友
+  menu_trade: 交易
+  menu_message: 发送消息
+  message_title: 给{{name}}发消息
+  message_placeholder: 输入私信…
+  message_send: 发送
+  message_cancel: 取消
+  mount_prompt: 按{{key}}骑乘
+  portal_prompt: 按{{key}}前往其他世界
+  dungeon_portal: 地下城传送门
+  dungeon_city: '{{city}}城'
+  dungeon_press_enter: 进入
+  dungeon_entry_body: 使用地下城钥匙进入此传送门的私人准备大厅。
+  dungeon_required_key: 所需钥匙
+  dungeon_enter: 进入地下城
+  dungeon_entering: 正在开启传送门…
+  dungeon_instance: 地下城远征
+  dungeon_room: 房间{{room}}
+  dungeon_explorers: 探索者
+  dungeon_abandon: 放弃远征
+  dungeon_confirm_abandon: 确认放弃
+  dungeon_route: 远征路线
+  dungeon_mysterious_room: 神秘房间
+  dungeon_undiscovered: 未发现
+  dungeon_creatures: '{{count}}个生物'
+  dungeon_current_room: 当前房间的敌人
+  dungeon_open_fights: 可加入的战斗
+  dungeon_forming_party: 正在组队
+  dungeon_in_progress: 战斗进行中
+  dungeon_waiting_players: 等待战斗者
+  dungeon_join: 加入战斗
+  dungeon_joining: 正在加入…
+  dungeon_locked: 已锁定
+  dungeon_no_fights: 此房间尚未开始战斗
+  dungeon_public: 公开
+  dungeon_group: 仅限队伍
+  dungeon_start_fight: 开始新战斗
+  dungeon_starting: 正在开始…
+  dungeon_key_required: 进入此地下城需要{{key}}。
+  dungeon_group_refusal: 此战斗仅限发起者的队伍。
+  travel_title: 星门
+  travel_search: 搜索{{title}}…
+  travel_entry_level: 进入等级{{level}}
+  travel_pending: 正在开启星门…
+  travel_success: 欢迎来到{{world}}
+  travel_empty: 没有世界
+  travel_showing: '{{filtered}} / {{total}}项结果'
+  travel_selected: 已选择 · {{label}}
+  fight_press_join: 按{{key}}加入
+  fight_press_spectate: 按{{key}}观战
+  fight_locked: 私人战斗
+  fight_join_title: 加入战斗
+  fight_spectate_title: 观看战斗
+  fight_side_a: A方
+  fight_side_b: B方
+  fight_empty_side: 暂无战斗者
+  fight_unknown: 未知战斗者
+  fight_join_button: 加入
+  fight_spectate_button: 观战
+  fight_started_ago: 已开始
+  fight_placement: 站位阶段
+  fight_wallet_hint: 连接钱包以加入
+  fight_close: 关闭
+  menu_duel: 发起决斗
+  duel_invite: '{{name}}向你发起决斗'
+  duel_challenging: 正在向{{name}}发起挑战…
+  duel_canceled_afraid: '{{name}}取消了战斗——看来是害怕了。'
+  duel_no_position: 没有位置信息，决斗未创建。
+  duel_unknown_challenger: 挑战者
+  duel_accept: 接受
+  duel_decline: 拒绝
+  zone_unsearched_title: 未探索区域
+  zone_press_search: 按{{key}}探索区域
+  zone_reroll_title: 区域可以刷新
+  zone_press_reroll: 按{{key}}刷新区域
+  zone_searching: 正在侦察区域…
+  zone_revealed: 区域已发现
+  zone_coordinates: 区块{{zx}} · {{zz}}
+  zone_mobs_found: 发现{{count}}只怪物
+  zone_resources_found: 发现{{count}}处资源
+  spawn_group: '{{size}}只一群'
+  spawn_unknown_mob: 未知生物
+  spawn_press_attack: 按{{key}}攻击
+  spawn_engaging: 正在攻击怪物群…
+  spawn_engage_conflict: 攻击前怪物群已发生变化，可能已被其他玩家挑战。
+  spawn_never_arrived: 战斗已执行，但棋盘未加载
+  resource_press_collect: 按{{key}}采集{{name}}
+  resource_need_level: 采集需要{{job}}达到{{level}}级
+  resource_need_tool: 采集需要{{job}}工具
+  resource_gathering: 正在采集…
+  resource_gathered: 资源已采集
+  resource_gathered_amount: 已采集{{quantity}} × {{name}}
+  resource_gathered_amount_ambushed: 已采集{{quantity}} × {{name}} · 守护者伏击了你
+  resource_ambushed: 守护者伏击了你
+  resource_resolving_ambush: 守护者挡住了去路…
+  resource_ambush_title: 守护者伏击
+  resource_face_protector: 按{{key}}迎战
+  zone_never_arrived: 探索已执行，但世界未显示结果，读取层可能仍有延迟
+demo_page:
+  title: 渲染实验室
+  world_lab: 世界实验室
+  fight_lab: 战斗实验室
+  fight_board: 战斗棋盘
+  board_new: 新棋盘
+  board_delete: 删除棋盘
+  board_back: 所有棋盘
+  board_canvas: 画布
+  board_output: 最终棋盘
+  board_draw_hint: 选择格子类型，再点击或拖动绘制
+  board_cell_type: 格子类型
+  board_cell_void: 虚空
+  board_cell_floor: 地面
+  board_cell_obstacle: 障碍
+  board_cell_hole: 洞
+  board_cell_start_a: A方起点
+  board_cell_start_b: B方起点
+  board_loading: 正在加载棋盘编辑器…
+  board_saving: 正在保存…
+  board_unsaved: 未保存更改
+  board_saved: 已保存 · 自动保存开启
+  board_read_only: 只读 · 请使用本地开发服务器编辑
+  no_terrain: 没有地形配置
+  time: 时间
+  live: 实时
+  remove_character: 移除模型
+  control_character: 控制模型
+  hat: 帽子
+  cloak: 披风
+  pet: 宠物
+  none: 无
+  ride_pet: 骑乘宠物
+  dismount_pet: 下坐骑
+  mob_group: 怪物群
+  crowd_load: 角色群体负载测试
+  crowd_benchmark: 性能测试
+  crowd_loading: 正在加载角色模型…
+  crowd_result: 阶段
+  mob: 怪物
+  amount: 数量
+  spawn_group: 生成群体
+  clear: 清空
+  resources: 资源
+  resources_missing: 资源渲染尚未恢复，已编写的资源列表仍保留在种子数据中。
+  control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
+  back: 返回应用
+marketplace_page:
+  prices_title: 价格历史
+  prices_period: 周期
+  prices_range_7: 7天
+  prices_range_30: 30天
+  prices_range_90: 90天
+  prices_range_365: 1年
+  prices_subtitle: SUI/单位 · 已完成交易 · 不含费用
+  prices_loading: 正在加载价格历史…
+  prices_unavailable: 价格历史不可用，正在自动重试。
+  prices_empty: 此期间没有已完成的交易。
+  prices_empty_day: 没有已完成的交易
+  prices_weighted: 按售出数量加权 · 每日均价
+  prices_units: 已售{{units}}单位
+  prices_since: 自{{date}}开始记录 · UTC
+  prices_inspect: 每日单价，指向或轻触即可查看。
+  prices_table: 显示每日价格
+  prices_date: 日期
+  prices_quantity: 数量
+  volume_24h: 24小时交易量
+  volume_30d: 30天交易量
+  volume_window: 过去{{window}}的公开市场交易额，不含费用。
+  volume_unavailable: 交易量暂时不可用。
+  title: 市场
+  subtitle: Sui上的玩家挂单
+  disclaimer_kicker: 交易之前
+  disclaimer_title: 为成长而交易，而非获利
+  disclaimer_body: 玩家之间直接使用SUI交易物品。
+  disclaimer_supply: 物品不是长期投资。随着更多玩家收集物品，供应增加，价格可能下降。
+  disclaimer_fun: 根据成长需求买卖，追求乐趣和实用性，不要期待利润。
+  disclaimer_wallet: 仅在AresRPG中保留计划使用的SUI。重要储蓄应放在独立的自托管钱包中，恢复密钥由你掌控。
+  disclaimer_acknowledge: 我明白了
+  tab_buy: 购买
+  tab_sell: 出售
+  tab_history: 历史
+  browse: 浏览
+  group_equipment: 装备
+  group_pets: 宠物
+  group_runes: 符文
+  group_consumable: 消耗品
+  group_resources: 资源
+  group_characters: 角色
+  level: 等级
+  class: 职业
+  search: 搜索物品…
+  no_results: 这里暂无挂单
+  select_item: 选择物品查看挂单
+  listing_count: '{{count}}个挂单'
+  rolled_stats: 随机属性
+  characteristics: 属性
+  damages: 伤害
+  range_to: 至
+  seller: 卖家
+  buy: 购买
+  pay: 支付
+  yours: 你的
+  insufficient: SUI不足
+  cancel: 取消
+  your_listings: 你的挂单
+  no_listings: 你没有有效挂单
+  withdraw: 下架
+  list_for_sale: 上架出售
+  select_to_list: 从背包选择物品
+  price: 价格
+  lot_size: 每组数量
+  paid_automatically: 销售收入会自动进入你的售货亭。
+  lot_required: 此堆叠数量为×{{amount}}。可堆叠物品的挂单数量必须为×1、×10、×100或×1000。
+  inventory: 背包
+  characters: 角色
+  items: 物品
+  empty_inventory: 没有可上架物品
+  revenue_30d: 过去30天
+  sales_count: '{{count}}次销售'
+  unclaimed: 未领取收入
+  collect: 领取
+  no_history: 暂无销售记录
+  item: 物品
+  date: 日期
+  buyer: 买家
+  load_more: 加载更多
+  list_pending: 正在创建挂单…
+  list_success: 挂单已创建
+  delist_pending: 正在移除挂单…
+  delist_success: 挂单已移除
+  buy_pending: 正在购买…
+  buy_success: 购买完成
+  sold_toast: 已售出{{amount}}个{{name}}，获得{{price}}
+  character_roster_full: 无法加入第7个角色，最多只能拥有6个
+  collect_pending: 正在领取市场收入…
+  collect_success: 市场收入已领取
+  volume_partial: 已记录的{{window}}交易量。记录尚未覆盖完整周期，因此这是最低值。
+mastery_page:
+  subtitle: 每日挑战
+  title: 精通
+  lead: 完成每日地下城任务，获得独特奖励。错过一天不会扣除已保存的精通点。
+  balance: 精通点
+  daily_ready: 每日任务可领取
+  daily_syncing: 正在更新每日任务…
+  daily_title: 选择今日地下城任务
+  daily_lead: 选择世界后，你将获得一个需要寻找并完成的地下城任务。
+  unknown_dungeon: 未知地下城
+  quest_reward: 获得{{points}}精通点
+  quest_objective_before: 找到并完成地下城
+  quest_objective_after: 以领取精通点。
+  completed: 已完成验证
+  in_progress: 进行中
+  required_level: 需要{{level}}级
+  dungeon_count: '{{count}}个地下城'
+  starting: 正在分配地下城…
+  start: 开始每日任务
+  locked: 已锁定
+  world_reward: +{{points}}点
+  shop_title: 精通商店
+  shop_lead: 使用精通点购买独特战利品箱。
+  shop_empty: 暂无精通商品出售
+  ready_to_buy: 可以购买
+  points_missing: 还差{{points}}点
+  buying: 正在购买…
+  buy: 购买 · {{cost}}点
+  quest_started: 每日任务已分配。
+  offer_purchased: 已购买精通奖励。
+airdrop_page:
+  destination: 游戏钱包：
+  refresh: 刷新
+  title: 空投
+  subtitle: 社区奖励及领取方法
+  claim: 导入
+  holder_title: 外部钱包
+  holder_connect_hint: 连接持有礼品卡的钱包
+  holder_connect: 连接钱包
+  holder_connecting: 正在连接…
+  holder_connected: 已连接
+  holder_select: 选择
+  holder_close: 关闭钱包选择
+  holder_wallet_missing: 未安装兼容的Sui钱包
+  giftcards_title: 待兑换礼品卡
+  gift_login: 使用Google继续，将此礼物领取到游戏钱包
+  gift_ready: 纸质礼品卡已可领取
+  gift_claiming: 正在领取纸质礼品卡…
+  gift_retry: 领取礼品卡
+  redeem: 兑换
+  empty: 此钱包中没有礼品卡
+  claim_all: 领取奖励
+  catalogue_title: 支持的空投
+  check_wallet: 符合以下空投条件？请检查快照时使用的钱包。在下方连接外部钱包可导入礼品卡。如果奖励发往游戏钱包，请使用相同的Google账户登录。实体卡请扫描二维码领取。
+  rank_reward: 第{from}–{to}名：每种箱子{amount}个
+  delivery:
+    wallet: 钱包空投
+    nft: 附在NFT上的礼物
+    physical: 实体礼品卡
+    game_wallet: Hytale老玩家奖励
+  campaigns:
+    oeuftermath:
+      title: Aftermath Eggs · Oeuftermath
+      description: 快照时持有Aftermath Egg的玩家可获得Oeuftermath宠物礼品卡。请检查当时持有Egg的钱包；之后购买Egg不会获得资格。
+    suicune:
+      title: SWEEBS · Suicune
+      description: 快照时持有SWEEBS的玩家可获得Suicune宠物礼品卡。连接符合条件的快照钱包，将其导入游戏账户。
+    suifren_bullshark:
+      title: Suifren Bullsharks
+      description: 已从快照中选出500个符合条件的Bullshark持有钱包。请检查快照钱包中的宠物礼品卡；仅持有Bullshark并不保证入选。
+    suifren_capy:
+      title: Suifren Capys
+      description: 已从快照中选出500个符合条件的Capy持有钱包。请检查快照钱包中的宠物礼品卡；仅持有Capy并不保证入选。
+    primemachin:
+      title: Prime Machin
+      description: 宠物礼品卡发往快照中的Prime Machin NFT。请先通过Studio Mirai取回附在NFT上的礼物，再在这里连接接收钱包进行导入。
+    vaporeon:
+      title: Vaporeon持有者
+      description: Vaporeon持有者快照中被选中的钱包可获得Vaporeon宠物礼品卡。请检查快照时的钱包，再在这里导入礼品卡。
+    sui_basecamp_singapore:
+      title: Sui Basecamp · 新加坡
+      description: 新加坡Sui Basecamp将以实体礼品卡形式发放Sui箱子。扫描卡上的二维码，登录领取。在领取前请勿泄露二维码。
+    hytale_veterans:
+      title: Hytale老玩家 · 前100名
+      description: 特别感谢根据物品收藏、游玩时间、角色经验和专业排名选出的前100名符合条件的Hytale玩家。奖励发往Hytale备份中记录的Sui地址。请使用原来的Google账户访问该钱包。
+    hytale_supporters:
+      title: Hytale支持者 · Mark of the Unbroken
+      description: 所有已关联且商店购买记录超过{threshold} SUI的Hytale钱包均可获得，不受前100名排名限制。称号发往备份中的Sui地址。请使用原Google账户登录查收礼品卡。
+settings_page:
+  suins_title: SuiNS名称
+  suins_hint: 只需让SuiNS名称指向游戏钱包。输入name@name即可显示为@name。
+  suins_current: 当前默认名称
+  suins_none: 无
+  suins_owned: 拥有的名称
+  suins_empty: 未找到有效名称
+  suins_choose: 选择名称
+  suins_name: 名称或子名称
+  suins_placeholder: name@name
+  suins_refresh: 刷新名称
+  suins_use: 使用此名称
+  suins_loading: 正在加载名称…
+  suins_saving: 正在设置默认名称…
+  suins_saved: 默认名称已更新。排行榜可能需要几分钟才能刷新。
+  suins_read_failed: 无法加载名称。请刷新重试。
+  suins_write_failed: 无法确认名称变更。请刷新后再试。
+  suins_invalid_name: 请输入有效的SuiNS名称。
+  suins_not_targeted: 请选择游戏钱包拥有的有效名称，或已指向该钱包的名称。
+  suins_wallet_required: 请登录以选择名称。
+  suins_target_hint: 如果此钱包拥有该名称，此按钮也会设置其指向。否则，请先在SuiNS中将名称指向游戏钱包。
+  day_night_cycle_label: 昼夜循环
+  day_night_cycle_hint: 关闭后，世界将保持正午。
+  title: 设置
+  subtitle: 你的AresRPG偏好设置
+  master_volume_label: 总音量
+  master_volume_hint: 调节所有音乐和音效。
+  music_label: 音乐
+  music_hint: 播放世界和战斗音乐。
+  footsteps_label: 脚步声
+  footsteps_hint: 播放移动时的脚步声。
+  auto_switch_fighter_label: 自动切换战斗角色
+  auto_switch_fighter_hint: 己方角色回合开始时自动选择该角色。
+  always_craft_from_label: 固定制作角色
+  always_craft_from_hint: 将专业页面和所有制作操作锁定到一个己方角色。
+  always_craft_from_picker: 制作角色
+  always_craft_from_none: 关闭
+  render_distance_label: 渲染距离
+  render_distance_hint: 周围世界的加载范围。更高的距离会降低性能。
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: 跳过教程
+  back: 上一步
+  next: 下一步
+  finish: 完成
+  fight_enter: 进入战斗
+  reset_title: 教程
+  reset_hint: 下次访问各页面时重新显示介绍。
+  reset_action: 重置
+  world_compass_title: 世界与共享区域
+  world_compass_body: AresRPG有多个世界，随成长逐步解锁。每个世界分为包含怪物、资源和地下城的区域。任何人都能探索区域，发现结果会与所有玩家共享。
+  world_hud_title: 生命与快捷栏
+  world_hud_body: 此界面显示生命值和快捷物品栏。战斗开始后，同一区域会变为技能栏。
+  world_fps_title: 世界控制选项
+  world_fps_body: 地形由已发布数据确定性生成。Sui保存世界及权威X/Z坐标，高度在本地由地形计算，因此平面模式只改变同一空间的显示方式。你也可以调整画质，并将世界战斗限制为队伍成员。
+  world_character_title: 世界中的玩家
+  world_character_body: 这是你当前使用的角色。右键点击附近其他角色，即可查看可用的玩家互动。
+  world_character_tabs_title: 操控多个角色
+  world_character_tabs_body: 你最多可以拥有六个角色。邀请自己的其他角色入队并开启队伍跟随，他们便会随你移动，并在抵达后自动加入符合条件的世界战斗。
+  fight_title: 你的首场链上战斗
+  fight_body: 战斗采用回合制。选择移动和技能，所有操作会一起准备。结束回合会将整个回合作为一笔Sui交易提交，并计算后续怪物回合，直到下一位玩家能够行动。所有权威战斗状态均在Sui上结算。获胜后，最后一笔Sui交易使用链上随机数抽取共享战利品，将每份奖励放入对应玩家的背包。
+  equipment_gear_title: 装备
+  equipment_gear_body: 装备中的物品属于当前角色。将装备拖到人偶上，检查加成，然后一并确认更改。
+  equipment_inventory_title: 共享背包
+  equipment_inventory_body: 此账户的所有角色共享背包。选择上方另一个角色，即可让其装备相同的可用物品。
+  stats_title: 属性
+  stats_body: 分配属性点让角色更强。体力增加生命，智慧提高经验收益及AP/MP损失抗性，幸运增强水系伤害和掉落概率，敏捷增强风系伤害、暴击、牵制与脱离牵制能力。
+  spells_title: 技能
+  spells_body: 角色成长会解锁新技能。升级获得的技能点可以在这里用于强化已解锁技能。
+  jobs_title: 专业
+  jobs_body: 在这里查看采集和制作进度、查阅配方并制作物品。如果有多个角色，可以在设置中将此页面锁定到专属工匠。
+  runeforge_title: 符文锻造
+  runeforge_body: 对应制作专业达到{{level}}级后，可用符文强化装备。分解物品获得符文，然后在这里使用。
+admin_page:
+  kicker: 发布者
+  title: 发布游戏内容
+  body: 检查确定性种子地址，每次提交一批已模拟交易，最后永久封存内容。
+  objects: 已发布对象
+  publisher: 发布者对象ID
+  inspect: 检查种子计划
+  inspecting: 正在检查…
+  plan: 种子计划
+  targets: 确定性目标
+  not_inspected: 添加已发布对象ID，然后检查计划。
+  execute: 执行
+  executing: 正在执行…
+  seal_title: 永久封存
+  seal_body: 封存后将移除所有未来内容写入入口，升级或管理权限也无法撤销。
+  arm_seal: 准备永久封存
+  seal_forever: 永久封存内容
+  sealed: 内容已封存
+  admin_wallet: 管理钱包
+  admin_wallet_body: 用于发布和市场提现的独立签名者。
+  connect_admin_wallet: 连接
+  choose_admin_wallet: 选择钱包
+  choose_admin_address: 选择地址
+  cancel_wallet_selection: 取消
+  wallet_account: 账户
+  select_wallet: 选择
+  connecting: 正在连接…
+  loading_wallets: 正在加载钱包…
+  no_admin_wallet: 未安装兼容的浏览器钱包。
+  royalties: 版税
+  cap_owned: 持有权限凭证
+  cap_missing: 缺少权限凭证
+  reading_royalties: 正在读取策略…
+  reading: 正在读取…
+  refresh_revenue: 刷新收入
+  arm_claim: 准备领取
+  claiming: 正在领取…
+  confirm_claim: 确认领取
+  disconnect_admin_wallet: 断开连接
+  claim_digest: 领取交易
+  range_24h: 24小时
+  range_7d: 7天
+  range_30d: 30天
+  range_90d: 90天
+  range_1y: 1年
+  overview_title: 概览
+  overview_body: 专注玩家活跃度和收入，排除多余控制信息。
+  overview_unavailable: 概览不可用
+  loading_overview: 正在加载概览…
+  all_systems_current: 所有系统已同步
+  checkpoint: 检查点
+  refresh: 刷新
+  retry: 重试
+  active_players: 活跃玩家
+  active_players_bucket: 每个区间的活跃玩家
+  daily_active: 日活玩家
+  active_interval: 每个区间的活跃数
+  active_30d: 30天活跃玩家
+  active_last_30d: 过去30天内活跃
+  player_activity: 玩家活跃度
+  population: 玩家规模
+  player_activity_body: 每日活跃与滚动30天覆盖人数
+  stickiness: 日活/30天活跃
+  online_players: 在线玩家
+  online_players_body: 每个区间中已验证唯一玩家的峰值
+  online_now: 在线玩家
+  peak: 峰值
+  revenue: 收入
+  revenue_over_time: 收入走势
+  revenue_over_time_body: 按来源划分的协议总收入
+  item_royalties: 物品版税
+  character_royalties: 角色版税
+  character_creation_revenue: 角色创建
+  kolizeum_revenue: 竞技场费用
+  game_transactions: 游戏交易
+  game_gas_fees: 游戏Gas费用
+  all_time: 全部时间
+  game_transactions_over_time: 交易走势
+  game_transactions_body: 成功的AresRPG交易，每个PTB只计一次
+  today: 今天
+  selected_period: 选定周期
+  lifetime: 累计
+  average_order: 平均订单
+  chart_revenue: 收入
+  chart_players: 玩家
+  chart_online: 在线
+  bucket_15m: 15分钟区间
+  bucket_hour: 小时区间
+  bucket_day: 每日区间
+  bucket_week: 每周区间
+  bucket_month: 每月区间
+  unique_addresses: 唯一地址
+  unique_addresses_body: 成功调用AresRPG模块的地址
+  unique_addresses_over_time: 唯一地址走势
+  successful_game_calls: 成功调用游戏模块的用户
+  total_characters: 角色总数
+  current_characters: 当前链上角色
+  total_characters_body: 当前链上Character对象
+  characters_over_time: 角色数量走势
+  revenue_30d: 30天收入
+  revenue_mtd: 本月至今收入
+  last_30_days: 过去30天
+  calendar_month_to_date: 本自然月至今
+  buyer: 买家
+  item: 物品
+  quantity: 数量
+  unit_price: 单价
+  total: 总计
+  when: 时间
+  transaction: 交易
+  treasury: 金库
+  treasury_body: 当前余额，与已赚取收入分开
+  available_balance: 可用余额
+  claim: 领取
+  close: 关闭
+  loading: 正在加载…
+  load_more: 加载更多
+  transactions: 交易
+simulator_page:
+  title: 战斗模拟器
+  local_only: 本地确定性配置
+  board_seed: 种子{seed}
+  reroll: 重新生成棋盘
+  back_to_setup: 返回配置
+  characters: 角色
+  create_character: 创建
+  no_characters: 创建角色，然后放到蓝色格子上
+  edit_character: 编辑角色
+  new_character: 新角色
+  appearance: 外观
+  create: 创建
+  delete: 删除
+  level_label: 等级
+  stats: 属性
+  spells: 技能
+  points_left: '{left} / {total}点'
+  equipment_short: 装备
+  spell_level: '{name}的等级'
+  spell_level_option: 等级{level} · {cost}点
+  class_shugo_title: 守护者
+  class_tomoda_title: 驯兽师
+  class_rojin_title: 寻宝者
+  class_yajin_title: 刺客
+  class_tokei_title: 时空法师
+  class_asobi_title: 赌徒
+  class_iyashi_title: 治疗者
+  class_senshi_title: 战士
+  class_yogan_title: 弓箭手
+  class_mori_title: 德鲁伊
+  class_ikari_title: 狂战士
+  class_shusen_title: 斗士
+  delete_character: 删除角色
+  assigned_cell: 已分配 · 格子{cell}
+  pick_character: 选择角色
+  pick_mob: 选择怪物
+  character_editor: 本地角色
+  character_editor_hint: 身份、外观、等级、属性与已解锁技能
+  character_level: 角色等级
+  character_stats: 已分配属性
+  character_spells: 技能等级
+  stat_points: 剩余{points}属性点
+  spell_points: 剩余{points}技能点
+  spell_unlock: '{level}级解锁'
+  reset: 重置
+  delete_confirm: 确认删除
+  class_change_hint: 更换职业会重置基础属性和已投入的技能等级
+  spells_unavailable: 当前等级尚未解锁技能
+  save_character: 保存角色
+  equipment: 装备与遗物
+  max_roll: 最大数值
+  remove_mob: 移除怪物
+  stat_vitality: 体力
+  stat_wisdom: 智慧
+  stat_strength: 力量
+  stat_intelligence: 智力
+  stat_chance: 幸运
+  stat_agility: 敏捷
+  stat_range: 射程
+  stat_movement: 移动
+  stat_action: 行动
+  stat_critical: 暴击概率
+  stat_raw_damage: 固定伤害
+  stat_resistance: 抗性
+  stat_power: 威力
+  stat_earth_resistance: 地系抗性
+  stat_fire_resistance: 火系抗性
+  stat_water_resistance: 水系抗性
+  stat_air_resistance: 风系抗性
+  level: 等级{level}
+  level_range: 等级{min}–{max}
+  place: 放置战斗者
+  start_fight: 开始战斗
+  fight_board: 战斗棋盘
+  board_hint: 左键点击起始格 · 右键拖动平移 · 滚轮缩放
+  fight_active: 战斗已开始 · {events}个规范事件
+  picker_search: 搜索{title}…
+  picker_all: 全部
+  picker_no_results: 没有结果
+  picker_results: '{filtered} / {total}项结果'
+  picker_selected: 已选择 · {label}
+  picker_new: 新建
+  blob_debug: 棋盘区域形状
+  blob_color: 颜色
+  blob_range: 范围
+  blob_per_cell: 按格子
+  blob_single: 单一形状
+  blob_click: 点击格子放置
+fight_hud:
+  stop_spectating: 停止观战
+  board_label: 战斗棋盘
+  turn_order: 行动顺序
+  turn_order_collapse: 收起行动顺序
+  turn_order_expand: 展开行动顺序
+  placement_title: 准备战斗
+  placement_hint: 安排战斗者站位并准备就绪
+  placement_gas_title: 再次移动战斗者？
+  placement_gas_body: 每次切换格子都会执行交易并收取Gas费用。请避免频繁调整站位。
+  placement_gas_hide: 不再显示
+  placement_gas_confirm: 仍然移动
+  placement_ready: 准备就绪
+  placement_ready_all: 全部准备
+  placement_ready_all_progress: 全部准备 · {completed}/{total}
+  placement_ready_all_complete: 全部已准备 · {completed}/{total}
+  placement_ready_all_failed: 准备中断 · {completed}/{total}
+  placement_waiting: 等待其他人…
+  placement_starting: 正在开始战斗…
+  placement_force_prompt: 有玩家离开了，要强制开始战斗吗？
+  placement_force_button: 强制开始
+  placement_no_opponent: 无人接受挑战
+  crank_prompt: 当前玩家尚未结束回合。
+  crank_button: 强制结束回合
+  end_turn: 结束回合
+  end_turn_queued: 结束回合已排队
+  reset_turn: 重置
+  weapon_attack: 武器攻击
+  bare_hands: 徒手
+  log_fight_started: 战斗开始
+  log_cast: '{caster}施放{spell}'
+  log_critical_cast: 暴击！{caster}施放{spell}
+  log_heal: '{source}为{target}恢复{amount}生命'
+  log_ap_change: '{target}：{delta}行动值'
+  log_mp_change: '{target}：{delta}移动值'
+  log_lost: '{target}损失{amount}生命'
+  log_lost_reduced: '{target}损失{amount}生命（减免{reduced}）'
+  log_absorbed: '{target}吸收{reduced}伤害'
+  log_returned: '{target}反弹了技能'
+  log_stat_change: '{target}：{delta} {stat}（{turns}{turns_word}）'
+  unit_ap: 行动值
+  unit_mp: 移动值
+  log_points_loss: '{target}失去{amount}{unit}'
+  log_points_steal: '{source}从{target}偷取{amount}{unit}'
+  log_points_partial: '{target}躲过{dodged}{unit}损失，失去{amount}'
+  log_points_dodge: '{target}躲过了{attempted}{unit}损失'
+  log_trap_placed: '{owner}设置了陷阱'
+  log_glyph_placed: '{owner}设置了符印'
+  log_death: '{target}倒下了'
+  log_forfeit: '{target}放弃了战斗'
+  log_draw: 战斗以平局结束
+  log_team_wins: '{team}队获胜'
+  forfeit: 认输
+  forfeit_title: 让{name}认输？
+  forfeit_body: '{name}将失去所有剩余生命并退出此战斗。'
+  confirm_forfeit: 确认认输
+  unit_turns: 回合
+  chat_title: 聊天
+  chat_resize: 调整聊天窗口大小
+  chat_tab_general: 综合
+  chat_tab_party: 队伍
+  chat_tab_private: 私聊
+  chat_tab_combat: 战斗
+  chat_placeholder: 说点什么…
+  chat_fetching_item: 正在链上获取属性…
+  chat_item_unavailable: 链上无法找到此物品。
+  chat_you: 你
+  chat_line: '{name}：{message}'
+  chat_party_line: （队伍）{name}：{message}
+  chat_whisper_to: （发给{name}）{message}
+  result_title: 战斗结果
+  result_duration: 时长
+  result_gas_spent: 已用Gas
+  result_wager_won: 赢得SUI
+  result_wager_lost: 损失SUI
+  result_wager_even: 下注结果
+  result_party: 你的队伍
+  result_enemies: 敌人
+  result_victory: 胜利
+  result_defeat: 失败
+  result_you: 你
+  result_fallen: 阵亡
+  result_survived: 存活
+  result_collecting: 正在领取战利品…
+  result_collecting_progress: 正在领取角色战利品 · {completed}/{total}
+  result_collecting_complete: 所有角色战利品已领取 · {completed}/{total}
+  result_collecting_failed: 战利品领取中断 · {completed}/{total}
+  result_continue: 继续
+  result_close: 关闭
+  fight_finalize_pending: 战斗清理已就绪。
+  fight_finalize_button: 完成结算
+  result_retry: 重试
+  result_version_changed: 领取战斗奖励时，部分游戏对象已发生变化。没有物品丢失。请重试以刷新对象并领取奖励。
+  level_up_title: 升级
+  level_up_reached: 达到等级
+  level_up_stat_points: 属性点
+  level_up_spell_points: 技能点
+  level_up_new_spell: 解锁新技能
+  level_up_new_worlds: 解锁新世界
+  level_up_worlds_note: 新的目的地现已开放
+  level_up_allocate: 分配点数
+  level_up_later: 稍后
+wallet_legacy:
+  sui: SUI
+  how_to_get: 如何获取SUI
+  your_address: 你的钱包地址
+  send_sui: 向此地址发送SUI。点击复制。
+  buy_directly: 直接购买
+  buy_with_card: 用信用卡购买SUI，直接发送到钱包。
+  buy_on_exchange: 在交易所购买
+  withdraw_to_wallet: 在交易所购买SUI，然后提取到上方钱包地址。
+  faq: 常见问题
+  wallet_description: 你的个人钱包，只有你能访问。存入SUI，用于网络费用和玩家市场交易。
+  moonpay_desc: 信用卡、Apple Pay、银行转账
+  transak_desc: 信用卡、银行转账，覆盖100多个国家
+  faq_what_is_sui: 什么是SUI？
+  faq_what_is_sui_answer: SUI是一种数字货币，类似数字现金。它运行于名为Sui区块链的快速安全网络。你使用少量SUI支付网络费用，也可在市场与其他玩家直接交易。
+  faq_why_sui: AresRPG为什么使用SUI？
+  faq_why_sui_answer: SUI是我们首选的支付方式。交易即时完成（不到1秒），费用不足一美分，无中间商费用。未来可能支持美元、欧元等传统货币，但这需要大量法律工作，并涉及我们尚未准备承担的高额费用和税务。
+  faq_legal: 这合法吗？
+  faq_legal_answer: 是的。在大多数国家，购买和持有加密货币是合法的。SUI是全球主要受监管交易所交易的合法数字资产。AresRPG将其用于网络费用和玩家市场交易。
+  faq_eula: 游戏条款允许吗？
+  faq_eula_answer: 是的。只要加密货币仅作为支付方式，不涉及NFT或投机性加密方案，就符合规定。许多大型游戏商店也支持加密货币支付。
+  faq_access: 谁能访问我的钱包？
+  faq_access_answer: 只有你。钱包通过Google登录和Sui的zkLogin技术创建。任何人，包括AresRPG团队，都不能访问或转移你的资金。此钱包仅用于AresRPG活动，请勿存入大额资金，只存入计划使用的金额。
+  faq_balance: 发送SUI后余额没有更新？
+  faq_balance_answer: 别担心，刷新可能暂时延迟。请确认发送到正确地址（可从上方复制）。若仍未显示，请在Discord联系团队并提供交易ID。
+  add_funds: 充值
+  testnet_faucet_title: 测试网SUI
+  testnet_faucet_body: AresRPG正在Sui测试网上运行。测试网SUI免费且没有货币价值。请从官方Sui水龙头申请代币。
+  testnet_faucet_action: 打开Sui水龙头
+  how_to_pay: 你想如何支付？
+  add_funds_desc: 选择支付方式，SUI将直接发送到钱包。
+  method_paypal: PayPal
+  method_paypal_desc: 使用PayPal账户支付
+  method_card: 信用卡/借记卡
+  method_card_desc: Visa、Mastercard
+  method_apple_pay: Apple Pay
+  method_apple_pay_desc: 使用Face ID/Touch ID支付
+  method_google_pay: Google Pay
+  method_google_pay_desc: 使用Google账户支付
+  method_bank: 银行转账
+  method_bank_desc: SEPA（欧盟）或ACH（美国）
+  method_have_sui: 我已有SUI
+  method_have_sui_desc: 从其他钱包或交易所发送
+  paypal_note: 通过MoonPay支持美国、英国和欧洲大部分地区
+  card_note: 选择下方提供商，均支持Visa和Mastercard
+  bank_note: 费用最低（约1%）。欧洲使用SEPA，美国使用ACH。
+  steps_paypal: 1. 点击下方链接  2. 选择PayPal支付  3. 输入金额，SUI将进入钱包
+  steps_card: 选择提供商，输入卡片信息，SUI即可进入钱包。
+  method_swap: 从Solana、ETH等转入…
+  method_swap_desc: 通过Portal Bridge将资产跨链到Sui
+  swap_note: 跨链转账由Portal Bridge提供。
+  steps_swap: 打开Portal Bridge，连接两个钱包，选择Sui并完成转账。
+  steps_wallet: 向下方钱包地址发送SUI，几秒后即可到账。
+  advanced_exchange: 高级：在交易所购买
+  age_notice: 所有支付提供商均要求年满18岁。
+  send:
+    button: 发送
+    title: 发送SUI
+    building_title: 准备转账
+    building_body: 正在构建交易…
+    confirm_title: 确认转账
+    executing_title: 正在发送
+    executing_body: 正在向Sui网络广播转账。
+    success_title: 转账完成
+    success_body: 已向{{recipient}}发送{{amount}}。
+    failed_title: 转账失败
+    recipient_label: 收款人
+    recipient_placeholder: 玩家名或0x…地址
+    address_valid: 有效的Sui地址
+    address_invalid: 无效的Sui地址
+    hint: 输入玩家名（至少4个字符）或0x Sui地址
+    player_resolved: 找到玩家：{{name}}
+    player_resolved_address: '{{name}} → {{address}}'
+    player_not_found: 没有此名字的玩家
+    player_lookup_failed: 无法查找该玩家名。请重试。
+    no_results: 未找到玩家
+    amount_label: 数量
+    submit: 继续
+    send_confirm: 发送
+    sending_to: 收款方
+    sent: 已发送
+    send_more: 继续发送
+    suins_resolving: 正在解析名称…
+    suins_resolved: 名称已解析：{{name}}
+    err:
+      recipient_not_found: 未找到名为{{name}}的玩家。
+      recipient_no_wallet: '{{name}}尚未在网页应用中关联钱包。请让其先在aresrpg.world连接。'
+      self_send: 不能向自己的钱包发送SUI。
+      invalid_address: 输入的地址不是有效Sui地址。
+      insufficient_balance: 钱包中的SUI不足以完成此转账。
+      rate_limited: 转账过于频繁。请等一分钟后重试。
+      tx_failed: 链上交易失败，没有转移资金。
+      user_rejected: 钱包中的签名被拒绝。
+      recipient_required: 发送前请输入收款人。
+      suins_not_found: 未找到SuiNS名称“{{name}}”。
+      amount_positive: 请输入大于0的数量。
+      amount_invalid: 数量无效。
+    drain_hint: 最大值会清空钱包，网络费用从转账金额中扣除。
+    drain_warning: 此操作会清空钱包。网络费用从转账金额中支付，之后余额将恰好为0 SUI。
+    drain_sending: 全部余额
+    drain_fee_note: 从转账金额扣除
+    drain_remaining: 钱包剩余
+    success_drain_body: 钱包现已清空，全部金额已发往{{recipient}}。
+wallet_send_shared:
+  cancel: 取消
+  close: 关闭
+  retry: 重试
+  copied: 已复制
+  gas_estimated: 预计Gas
+  signing: 正在签名…
+  dont_close: 请勿关闭此窗口
+  add_funds: 充值
+  total: 总计
+  transaction: 交易
+encyclopedia_page:
+  minimum: 最低
+  maximum: 最大
+  terrain_seed: 地形种子
+  sea_level: 海平面
+  world_role:
+    trash: 普通
+    archi: 精英变种
+    elite: 精英
+    boss: 首领
+    dungeon_boss: 地下城首领
+  gather_job:
+    farmer: 农夫
+    herbalist: 采药师
+    miner: 矿工
+  world_resource_tier: '{{tier}}阶'
+  world_address_copied: 已复制！
+  search_items: 搜索物品…
+  search_mobs: 搜索怪物…
+  all_families: 所有家族
+  elements_filter: 元素
+  advanced_filters: 高级筛选
+  no_entries: 未找到条目
+  select_item: 选择物品查看详情
+  select_mob: 选择怪物查看详情
+  select_class: 选择职业查看详情
+  loading_details: 正在加载详情…
+  loading_encyclopedia: 正在加载百科…
+  items: 物品
+  mobs: 怪物
+  pets: 宠物
+  classes: 职业
+  gameplay_tab: 玩法
+  jobs_tab: 专业
+  search_jobs: 搜索专业…
+  select_job: 选择专业
+  crafts: 制作
+  gathering_tiers: 采集进阶
+  craftable_items: 可制作物品
+  tier: 阶级
+  required_level: 所需等级
+  resource: 资源
+  rare_variant: 稀有变种
+  xp_per_harvest: 每次采集经验
+  job_desc:
+    FARMER: 农夫从各地田野收获谷物。更高阶级解锁用于高级配方的稀有作物。
+    HERBALIST: 采药师收集用于炼金的植物和花朵。每个阶级都需要更高的专业等级。
+    MINER: 矿工从矿脉提取矿石和矿物。随着采矿等级提升，可获得稀有金属。
+    FORGER: 锻造师制作剑、匕首和斧。
+    CARVER: 雕刻师制作弓和长矛。
+    TAILOR: 裁缝制作帽子和披风。
+    JEWELER: 珠宝匠制作戒指和护符。
+    TANNER: 制革师制作靴子和腰带。
+    HANDYMAN: 杂工制作工具、钥匙和中间材料。
+    ALCHEMIST: 炼金术士制作药水和中间材料。
+    BAKER: 面包师制作面包和中间材料。
+  dungeons_tab: 地下城
+  search_dungeons: 搜索地下城…
+  select_dungeon: 选择地下城
+  dropped_by: 掉落来源
+  recipe: 配方
+  price_history: 价格历史
+  no_price_data: 暂无价格历史
+  no_recipe: 暂无配方数据
+  ingredient_of: 用于制作
+  no_ingredient_of: 不用于任何配方
+  no_drops: 没有已知掉落来源
+  pet_stats: 宠物属性
+  pet_diet: 宠物食谱
+  food_sources: 食物来源
+  stat_bonuses_max: 属性加成（最大威力）
+  characteristics: 属性
+  damages: 伤害
+  range_to: 至
+  level_short: 等级{{level}}
+  no_diet: 没有食谱信息
+  newborn: 初生
+  max_power: 最大威力
+  back_to_list: 返回列表
+  showing_mobs: 显示{{count}} / {{total}}只怪物
+  no_mobs_match: 没有符合筛选条件的怪物
+  clear_all: 全部清除
+  all_jobs: 所有专业
+  sort_name_asc: 名称A-Z
+  level_bracket: 等级{{range}}
+  unknown_zone: 未知
+  showing_count: 显示{{count}} / {{total}}
+  sort_level_asc: 等级↑
+  sort_level_desc: 等级↓
+  sort_name: 名称A-Z
+  sort_newest: 最新
+  clear_filters: 全部清除
+  no_results: 没有符合筛选条件的物品
+  filter_by_category: 按类别
+  filter_by_resource: 按资源类型
+  filter_by_job: 按制作专业
+  filter_by_world: 按世界
+  filter_by_mob_family: 按怪物家族
+  filter_biome: 生物群系
+  filter_city: 城市
+  group_armor: 护甲
+  group_weapons: 武器
+  group_accessories: 饰品
+  group_pets: 宠物
+  group_runes: 符文
+  group_relics: 遗物
+  group_tools: 工具
+  group_consumables: 消耗品
+  group_raw_resources: 原始资源
+  group_gatherable_resources: 可采集资源
+  group_intermediary_resources: 中间材料
+  group_pet_food_resources: 宠物食物
+  item_category_pet_food: 宠物食物
+  boss_only: 仅首领
+  view_all: 全部
+  item_type: 类型
+  view_by_zone: 按区域
+  view_by_level: 按等级
+  view_by_family: 按家族
+  unknown_family: 未知家族
+  stats_filter: 属性
+  filter_life_steal: 吸血
+  gameplay:
+    game_mechanics: 游戏机制
+    section_combat: 战斗
+    section_leveling: 升级
+    section_stats: 属性
+    section_loot: 战利品与掉落
+    section_groups: 队伍
+    section_dungeons: 地下城
+    section_classes: 职业
+    section_economy: 经济
+    combat_desc: 战斗在网格上按回合进行。每回合使用行动值（AP）施放技能，移动值（MP）进行移动。技能各自决定是否需要视线，多数需要，部分不需要。你可以在世界中挑战怪物群，也可在竞技场与玩家战斗。伤害受对应元素属性和固定伤害加成影响。
+    elements: 元素
+    element_earth: 地
+    element_fire: 火
+    element_water: 水
+    element_air: 风
+    stat_strength: 力量
+    stat_intelligence: 智力
+    stat_chance: 幸运
+    stat_agility: 敏捷
+    critical_hits: 暴击
+    crit_desc: 每个技能或武器都有基础暴击率，以N分之一表示。暴击属性会减少N，但最终概率不会超过二分之一（50%）。
+    crit_bonus_desc: 暴击时，技能会用专属暴击效果替换普通效果，例如更强伤害或额外效果。
+    blocking: 护盾
+    blocking_desc: 部分技能提供护盾，吸收对应元素伤害直至耗尽。没有耐力或防御姿态，护盾是唯一的伤害吸收机制。
+    resistance: 抗性
+    resistance_desc: 元素抗性按百分比降低最终伤害，每种元素上限为50%。负抗性则会放大受到的伤害。
+    mob_level_bands: 怪物等级段
+    mob_level_bands_desc: 在设定等级范围内，怪物生命、经验、敏捷、智慧、正抗性及可缩放技能数值从60%增长到160%，AP和MP从100%增长到130%。负抗性反向变化，弱点幅度由最低等级的160%减至最高等级的60%。
+    life_steal: 吸血
+    life_steal_desc: 吸血效果造成伤害，并按目标实际损失生命的一半治疗施法者。只有玩家施放时会治疗，怪物使用相同技能只造成伤害。
+    life_steal_note: 先按标准公式结算伤害，再按原目标实际损失生命的一半治疗。伤害转移给其他战斗者或被目标转化为治疗时，不会吸取生命。
+    chatiment: 惩戒
+    chatiment_desc: 惩戒将实际受到的非致命生命损失转化为对应属性。每个当前战斗者回合有独立上限，后续回合以独立的五回合加成叠加。怪物伤害全额计入，玩家伤害及其上限减半。Ares不使用侵蚀机制。
+    healing: 治疗
+    healing_desc: 治疗以技能基础值为起点，受智力百分比加成，再加装备和增益提供的固定治疗加成，最多恢复到目标最大生命。
+    healing_intel_value: 每点智力增加1%治疗量
+    heal_bonus: 治疗加成
+    heal_bonus_value: 装备/增益的固定加成，在智力缩放后计算
+    mobs: 怪物
+    healing_mobs_value: 仅受智力影响，无固定治疗加成
+    leveling_desc: 最高等级为200级。挑战与你等级接近的怪物可获得最佳经验。
+    points_per_level: 每级点数
+    stat_points: 属性点
+    stat_points_value: 每级{{n}}点
+    stat_costs_desc: 属性消耗取决于职业与当前基础属性。完整成长阶梯见各职业页面。
+    spell_points: 技能点
+    spell_points_value: 每级{{n}}点
+    xp_milestones: 经验里程碑
+    level_10: 10级
+    level_50: 50级
+    level_100: 100级
+    base_stats: 基础属性
+    stat_vitality: 体力
+    stat_vitality_desc: 每点增加1最大生命
+    stat_wisdom: 智慧
+    stat_wisdom_desc: 经验收益加成
+    stat_strength_desc: 地系伤害加成
+    stat_intelligence_desc: 火系伤害与治疗加成
+    stat_chance_desc: 水系伤害与更多掉落
+    stat_agility_desc: 风系伤害加成
+    derived_formulas: 派生公式
+    max_health: 最大生命
+    loot_desc: 每只被击败的怪物都会对掉落表中的每个条目抽取一次。成功条目会在设定范围内随机生成数量。
+    stat_rolling: 属性随机生成
+    stat_rolling_desc: 每项属性在模板范围内均匀随机生成，每个数值机会相同。
+    archimobs: 精英变种
+    archimobs_desc: 每只符合条件的怪物都有1%概率被有独立名字且永久更强的变种替代，每个成员独立抽取。
+    max_members: 最大成员数
+    groups_desc: 队伍是最多{{max}}位玩家的共享名单，可选举队长。组队本身不会自动加入战斗，所有人都必须发送自己的加入交易，不存在被动或靠近即加入。
+    groups_xp: 经验分配
+    groups_xp_desc: 击败的怪物形成基础经验池。符合条件的战斗者提供Retro队伍系数，玩家与怪物总等级不匹配会降低经验，再按个人等级占队伍总等级比例分配。低于最高等级玩家三分之一的玩家不会提高系数。智慧最后计算，个人伤害不影响分配。
+    groups_loot: 战利品分配
+    groups_loot_desc: 每只被击败的怪物进行一次共享掉落抽取。成功掉落轮流分给获胜玩家，增加玩家不会增加抽取次数。
+    dungeons_desc: 前往城市内的地下城入口，消耗钥匙后依次攻克房间。每个地下城都有一个实时准备大厅。
+    dungeon_entry: 进入
+    dungeon_entry_value: 在城市入口使用对应钥匙
+    dungeon_instance: 副本
+    dungeon_instance_value: 支持公开或队伍战斗的地下城大厅
+    dungeon_completion: 完成
+    dungeon_completion_value: 通关所有房间
+    dungeon_reward: 奖励
+    dungeon_reward_value: 标准战利品分配
+    classes_desc: 共有12种职业。任何职业都能使用所有武器，但使用对应职业的亲和武器可获得10%伤害和暴击伤害加成。各职业随等级在固定节点解锁技能。
+    table_class: 职业
+    table_weapon: 亲和武器
+    table_hp: 生命
+    role_warrior: 战士
+    role_assassin: 刺客
+    role_berserker: 狂战士
+    role_druid: 德鲁伊
+    role_chronomancer: 时空法师
+    role_guardian: 守护者
+    role_archer: 弓箭手
+    role_prospector: 寻宝者
+    role_brawler: 斗士
+    role_tomoda: 驯兽师
+    role_gambler: 赌徒
+    role_healer: 治疗者
+    weapon_daggers: 匕首
+    weapon_spear: 长矛
+    weapon_bow: 弓
+    weapon_axe: 斧
+    weapon_sword: 剑
+    marketplace: 市场
+    marketplace_desc: 装备和角色可在售货亭自由定价上架，买家即时付款。资源则在交换池中与SUI兑换，无需挂单。每笔销售支付10%版税，市场是唯一的销售途径。
+    section_forgemagie: 符文锻造
+    forgemagie_desc: 符文锻造可将装备分解成符文，再将符文应用于其他装备以修改属性。这是一套高风险高回报的终局装备完善系统。
+    crushing: 分解
+    crushing_desc: 被分解物品的每项属性独立抽取，数值越高、权重越大，符文产量越多。产量无需服务器决定：除数由固定物品等级曲线与模板自身的链上通胀系数（1%至4000%）共同决定。分解会降低本模板系数，并提高邻近模板的系数。
+    crushing_tiers_desc: 符文阶级（Ba/Pa/Ra）随机选择。属性越高，越倾向于获得Ra符文。
+    rune_tiers: 符文阶级
+    rune_ba: 1阶：每枚符文权重最低
+    rune_pa: 2阶：每枚符文权重中等
+    rune_ra: 3阶：每枚符文权重最高，双倍经验
+    rune_weight_desc: 符文权重等于数值乘以单位权重，Retro会向上取整。权重自动计算。
+    rune_table_stat: 属性
+    rune_table_note: 射程、移动和行动符文各应用一次，暴击概率最多10次。Critical和Critical Outcomes没有对应符文。
+    rune_stat_range: 射程
+    rune_stat_movement: 移动
+    rune_stat_action: 行动
+    rune_stat_raw_damage: 固定伤害
+    rune_stat_critical_chance: 暴击概率
+    rune_stat_earth_resist: 地系抗性
+    rune_stat_fire_resist: 火系抗性
+    rune_stat_water_resist: 水系抗性
+    rune_stat_air_resist: 风系抗性
+    stat_unit_weights: 属性单位权重
+    stat_unit_weights_desc: 每项属性的单位权重反映其战斗强度。高权重属性使物品分解产出更多符文，消耗更多装备预算，也更难超限强化。
+    rune_application: 应用符文
+    rune_application_desc: 为测试暂时在对应制作专业1级开放。每次对装备应用一个符文以修改属性，可能出现三种结果：
+    outcome_critical_success: 完美成功
+    outcome_critical_success_desc: 符文生效，不损失属性
+    outcome_neutral: 普通成功
+    outcome_neutral_desc: 符文生效，其他属性可能下降
+    outcome_critical_failure: 严重失败
+    outcome_critical_failure_desc: 符文失败，损失与符文权重相等的属性
+    success_rate: 成功率
+    success_rate_desc: 成功率取决于属性距上限的程度：接近0%时约99%，接近上限时约50%，异属性约1%，与等级无关。完美成功（无损失）与普通成功（支付权重）的比例同样变化，并在专业每超过1级时增加0.2%。专业可加工的物品等级没有上限。
+    puits: 余量（PUITS）
+    puits_desc: 界面显示的权重计数器。当属性损失超过符文权重时会累积余量，之后优先吸收损失。余量保存在物品上，随物品在工作台和所有者之间流转。
+    over_maging: 超限强化
+    over_maging_desc: 可将属性提升至自然上限之上，每项最多增加101权重。轻量属性如体力（权重0.25）可额外提升约404点，智慧（权重3）则只能约33点。
+    forgemagie_tips: 技巧
+    forgemagie_tips_desc: 异属性或超限强化时，可先移除低成本属性积累余量，再利用缓冲强化困难属性，最后补回损失属性（远低于上限时较容易）。失败时优先损失超限和异属性。
+    action_points: 行动值（AP）
+    movement_points: 移动值（MP）
+    critical_stat: 暴击
+    wisdom_xp: 智慧经验加成
+    wisdom_xp_desc: 每点有效智慧（包括主动效果）增加1%经验收益，有效智慧达到100时经验翻倍。
+    chance_loot: 幸运与掉落
+    chance_loot_desc: 获胜队伍的平均有效幸运（包括主动效果）会提高每项掉率。队伍平均幸运为600时，掉率翻倍，但不会超过100%。
+    mob_loot_band: 怪物等级与掉率
+    mob_loot_band_desc: 设定概率是中间值，在怪物等级段内从80%缩放至120%，最高100%。固定等级怪物使用原概率，掉落数量不随怪物等级变化。
+  unlocks_at_level: '{{level}}级解锁'
+  level: 等级
+  aoe_radius: 作用半径
+  effects: 效果
+  life_cost: 生命消耗
+  duration_short: 持续：{{duration}}秒
+  coming_soon: 即将推出
+  health: 生命
+  spells_count: 技能（{{count}}）
+  mob_spells: 技能
+  pet_food: 食物
+  pet_full_fed_note: 这是完全喂养后的属性。每天喂养一次，共{{count}}次，宠物会从0成长至该上限。
+  pet_diet_note: 每天可吃一次以下{{count}}种食物中的任意一种，每次一份。
+  consumable_heal: 恢复{{amount}}生命
+  consumable_reset_stats: 重置属性点
+  consumable_reset_spells: 重置技能点
+  consumable_recall: 返回世界传送门
+  consumable_city: 前往{{city}}城
+  consumable_loot_box: 打开随机奖励
+  consumable_reward_heading: 奖励
+  consumable_rewards: 可能获得的奖励
+  consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: 为物品增加{{amount}}{{stat}}
+  rune_obtained_by_crushing: 通过分解物品获得
+  spell_n: 技能{{n}}
+  range: 射程
+  range_modifiability: 射程可变性
+  no_spells_minted: 链上尚未铸造技能
+  xp_suffix: +{{xp}}经验
+  boss_badge: 首领
+  archi_badge: 精英变种
+  recommended_short: 推荐{{level}}级
+  level_range: 等级{{min}}–{{max}}
+  up_to_plus: 最多+{{val}}
+  element:
+    fire: 火
+    water: 水
+    earth: 地
+    air: 风
+    neutral: 中性
+  job_category:
+    gathering: 采集
+    weapon_craft: 武器制作
+    equipment_craft: 装备制作
+    consumable_craft: 消耗品制作
+  ap_cost: 行动值消耗
+  casts_per_turn: 每回合施放次数
+  casts_per_target: 每目标施放次数
+  unlimited: 不限
+  cooldown: 冷却
+  cooldown_none: 无
+  characteristic_costs: 属性点消耗
+  characteristic_costs_desc: 基础点数遵循此职业的成长阶梯，装备不改变消耗。
+  characteristic_cost_band: '{{cost}}点 → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}}点 → +{{gain}} · 无上限'
+  turns_value: '{{n}}回合'
+  targeting: 目标选择
+  effect_zone: 作用范围
+  line_of_sight: 视线
+  los_required: 需要
+  los_not_required: 不需要
+  target_cell: 目标格子
+  target_cell_empty: 必须为空
+  target_cell_any: 任意（空或占用）
+  cast_line: 施放方向
+  cast_line_straight: 仅直线
+  cast_line_free: 自由瞄准
+  critical: 暴击
+  crit_chance: 暴击概率
+  crit_chance_value: '{{n}}分之一'
+  on_crit: 暴击时
+  proc_chance: '{{n}}%概率'
+  aoe_shape:
+    point: 单体目标
+    circle: 圆形{{size}}
+    cross: 十字{{size}}
+    line: 直线{{size}}
+    tbar: T形{{size}}
+    ring: 圆环{{size}}
+    allmap: 整张棋盘
+    cone: 锥形{{size}}
+  no_items_onchain: 链上没有物品模板
+  no_mobs_onchain: 链上没有生物
+  obtention_crafted: 可制作
+  obtention_dropped_by: 由{{count}}种怪物掉落
+  obtention_unknown: 获取方式未知
+  total_supply: 总供应量
+  marketcap: 市值
+  marketcap_unknown: 未知
+  worlds_tab: 世界
+  search_worlds: 搜索世界名称…
+  no_worlds: 链上没有世界
+  select_world: 选择世界
+  world_level_unknown: 等级范围尚不可用
+  world_biomes: 生物群系
+  world_no_mobs: 没有已知怪物
+  world_cities: 城市
+  world_no_resources: 没有已知资源
+  world_gap_note: RPC尚未提供
+  world_dungeon: 地下城
+  world_dungeon_room: 房间{{n}}
+  world_stat_lean: 属性倾向
+  world_appears_in: 出现于：
+  found_in: 发现于
+  item_descriptions:
+    abyssal_blood_wheat: ''
+    aloe_crystal_salve: ''
+    aloe_vera: ''
+    amber: ''
+    amber_powder: ''
+    arcane_reagent: ''
+    arcane_spore: ''
+    arcaneshroom: ''
+    arcanite: ''
+    arcanite_powder: ''
+    arcanize_flour: ''
+    barley_flour: ''
+    basic_pickaxe: ''
+    blood_wheat: ''
+    blood_wheat_flour: ''
+    bloodstone: ''
+    bloodstone_powder: ''
+    bloodveil_orchid: ''
+    burnt_wheat_flour: ''
+    crimson_truffle: ''
+    crimson_truffle_heart: ''
+    crystallized_tanjirize: ''
+    cursed_amalgam: ''
+    cursed_fungus: ''
+    cursed_gem: ''
+    cursed_gem_powder: ''
+    cursed_root: ''
+    cursed_wheat: ''
+    diamond: ''
+    diamond_powder: ''
+    draconite: ''
+    draconite_powder: ''
+    draconize_flour: ''
+    dragon_petal_extract: ''
+    dragon_pollen: ''
+    dragonlily: ''
+    duskite: ''
+    duskite_powder: ''
+    ethereal_ukranize: ''
+    genesis_suize: ''
+    ghost_cap: ''
+    golden_mushroom: ''
+    golden_nightcap: ''
+    golden_wheat: ''
+    green_mushroom: ''
+    green_mushroom_powder: ''
+    himalayan_flour: ''
+    infinity_amber: ''
+    infinity_arcanite: ''
+    infinity_bloodstone: ''
+    infinity_cursed_gem: ''
+    infinity_diamond: ''
+    infinity_draconite: ''
+    infinity_duskite: ''
+    infinity_jade: ''
+    infinity_moonstone: ''
+    infinity_obsidianite: ''
+    infinity_quartz: ''
+    ivory_orchid_paste: ''
+    ivory_shrooms: ''
+    jade: ''
+    jade_powder: ''
+    malt_flour: ''
+    moonstone: ''
+    moonstone_powder: ''
+    nightcap: ''
+    nightcap_elixir_base: ''
+    obsidianite: ''
+    obsidianite_powder: ''
+    old_hoe: ''
+    orchid_spore_blend: ''
+    phantom_distillate: ''
+    phantom_essence: ''
+    phantom_spore: ''
+    primordial_draconize: ''
+    pristine_malt: ''
+    quartz: ''
+    quartz_powder: ''
+    red_orchid: ''
+    rune_action_ba: ''
+    rune_agility_ba: ''
+    rune_agility_pa: ''
+    rune_agility_ra: ''
+    rune_air_resistance_ba: ''
+    rune_air_resistance_pa: ''
+    rune_air_resistance_ra: ''
+    rune_chance_ba: ''
+    rune_chance_pa: ''
+    rune_chance_ra: ''
+    rune_critical_ba: ''
+    rune_earth_resistance_ba: ''
+    rune_earth_resistance_pa: ''
+    rune_earth_resistance_ra: ''
+    rune_fire_resistance_ba: ''
+    rune_fire_resistance_pa: ''
+    rune_fire_resistance_ra: ''
+    rune_intelligence_ba: ''
+    rune_intelligence_pa: ''
+    rune_intelligence_ra: ''
+    rune_movement_ba: ''
+    rune_range_ba: ''
+    rune_raw_damage_ba: ''
+    rune_strength_ba: ''
+    rune_strength_pa: ''
+    rune_strength_ra: ''
+    rune_vitality_ba: ''
+    rune_vitality_pa: ''
+    rune_vitality_ra: ''
+    rune_water_resistance_ba: ''
+    rune_water_resistance_pa: ''
+    rune_water_resistance_ra: ''
+    rune_wisdom_ba: ''
+    rune_wisdom_pa: ''
+    rune_wisdom_ra: ''
+    scroll_of_oblivion: 返还所有已投入技能点，并将升级过的技能重置为1级。
+    scroll_of_rebirth: 返还所有已投入属性点，以便重新分配。
+    shiny_barley: ''
+    smoldering_wheat: ''
+    spectral_arcanize: ''
+    suize_flour: ''
+    tanjirize_flour: ''
+    title_veteran: ''
+    tool_herbalist: ''
+    truffle_essence_compound: ''
+    ukranize_flour: ''
+    verdant_aloe: ''
+    water: ''
+    wheat: ''
+    wheat_barley: ''
+    wheat_burnt: ''
+    wheat_draconize: ''
+    wheat_flour: ''
+    wheat_malt: ''
+    wheat_purple: ''
+    wheat_suize: ''
+    wheat_tanjirize: ''
+    wheat_ukraine: ''
+    wheat_white: ''
+    wither_concentrate: ''
+    wither_petal: ''
+    witherbloom: ''
+out_of_sui_body: 你的SUI已不足以支付交易费用。请给钱包充值后继续游戏。
+characters_page:
+  inventory_selection: 已选{{count}}件 · Shift点击装备切换选择
+  crush_cta_count: 分解（{{count}}）
+  crush_pending_count: 正在分解{{count}}件…
+  crush_confirm_selection: 分解选中的{{count}}件装备？每件装备都会永久销毁。
+  crush_selection_changed: 请选择同一售货亭内可用且未装备的物品。确认的选择必须仍然可用。
+  teleport_dungeon_blocked: 传送前请完成或放弃地下城。
+  consume_busy: 角色空闲时才能使用消耗品。
+  progression_busy: 角色空闲时才能更改属性和技能。
+  delete_character: 删除角色
+  delete_warning: 删除不可撤销。所有角色进度都会丢失，名字仍将保留。
+  delete_no_refund: 创建时支付的{{amount}} SUI不会退还。
+  delete_equipment: 卸下所有物品，包括宠物、工具和外观装备。
+  delete_fight: 先离开或结束战斗。
+  delete_party: 先离开队伍。
+  delete_dungeon: 先完成或放弃地下城远征。
+  delete_ambush: 先处理采集守护者遭遇。
+  delete_listing: 先将角色从市场下架。
+  delete_unavailable: 等待角色和连接恢复可用。
+  delete_pending: 正在删除…
+  claims_title: 未领取奖励
+  claim_collect: 领取奖励
+  claim_box: 箱子奖励
+  claim_crush: 分解产物
+  tab_equipment: 装备
+  tab_stats: 属性
+  tab_spells: 技能
+  tab_jobs: 专业
+  tab_runeforge: 符文锻造
+  no_character: 未选择角色，请在上方标签栏选择
+  level: 等级{{level}}
+  experience: 经验
+  equipment_head: 装备
+  equipped_totals: 装备总加成
+  no_gear_equipped: 未装备物品
+  bag_equipment: 装备
+  bag_consumables: 消耗品
+  bag_resources: 资源
+  bag_filter_all: 全部
+  bag_filter_raw: 原始资源
+  bag_filter_gatherable: 可采集资源
+  bag_filter_intermediary: 中间材料
+  bag_filter_keys: 钥匙
+  bag_filter_runes: 符文
+  accept: 接受
+  cancel: 取消
+  equip_pending: 正在更新装备…
+  equip_success: 装备已更新
+  consume_one: 使用1个
+  consume_until_full: 使用至生命回满
+  consume_healing_insufficient: 可用物品不足，需要{{count}}个。
+  consume_healing_stock: 每个恢复{{heal}}生命 · 可用{{available}}个
+  consume_pending: 正在使用物品…
+  consume_success: 物品已使用
+  already_full_hp: 生命已经回满
+  refusal_wrong_slot: 此物品不适合该栏位
+  refusal_level_too_low: 等级不足，无法使用此物品
+  refusal_relic_duplicate: 已佩戴同类遗物
+  refusal_item_listed: 此物品正在出售
+  points_to_assign: 待分配点数
+  spend_hint: 为六项属性分配点数，然后确认
+  reset: 重置
+  confirm: 确认
+  tx_pending: 正在确认…
+  stats_pending: 正在分配点数…
+  stats_success: 点数已分配
+  health: 生命
+  action: 行动
+  movement: 移动
+  characteristics: 属性
+  resistances: 抗性
+  secondary: 次要属性
+  element_fire: 火
+  element_water: 水
+  element_earth: 地
+  element_air: 风
+  add_point: 为{{stat}}增加一点
+  remove_point: 从{{stat}}移除一点
+  grimoire: 技能书
+  spell_points: 技能点
+  unlocked: 已解锁{{unlocked}} / {{total}}
+  unlocks_at: '{{level}}级解锁'
+  unlock_line: 等级{{level}}
+  lv_of: '{{current}} / {{max}}'
+  locked: 已锁定
+  mastered: 已精通
+  no_points: 技能点不足
+  upgrading: 正在升级…
+  upgrade_success: '{{spell}}已升级'
+  level_up: 升级 · {{cost}}点
+  lv: 等级{{level}}
+  xp_progress: '{{current}} / {{needed}}经验'
+  max: 最大
+  resources: 资源
+  back: 返回
+  gate_note: 制作专业达到{{level}}级后可用
+  detail_title: 物品
+  forge_title: 锻造
+  inventory_title: 背包
+  tab_gear: 装备
+  tab_runes: 符文
+  place_gear: 放入装备
+  place_rune: 放入符文
+  random_notice: 结果由链上随机数决定。符文可能生效、失败或损失其他属性，没有保证。
+  one_rune_note: 每次尝试消耗一个符文
+  apply: 应用符文
+  scribing: 正在铭刻…
+  outcome_critical_success: 完美成功
+  outcome_neutral_success: 普通成功
+  outcome_critical_failure: 严重失败
+  runeforge_history: 历史
+  runeforge_history_empty: 应用符文以开始此物品的记录
+  runeforge_puits: 余量
+  runeforge_no_stat_change: 属性未改变
+  requires_job: 需要{{job}}达到{{level}}级
+  clear: 清空
+  inspect_empty: 选择一件装备查看
+  no_forge_gear: 背包中没有可锻造装备
+  no_runes: 背包中没有符文
+  menu_feed: 喂养
+  menu_consume: 使用
+  menu_crush: 分解
+  menu_destroy: 销毁
+  menu_view_recipes: 查看配方
+  menu_explorer: 在浏览器中查看
+  menu_link_chat: 发送到聊天
+  feed_title: 喂养宠物
+  feed_power_label: 威力
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: 选择食物
+  feed_no_food: 背包中没有合适食物
+  feed_already_today: 今天已经喂过，请明天再来
+  feed_full: 已完全喂养
+  feed_pending: 正在喂养…
+  feed_success: 宠物已喂养
+  feed_confirm: 确认喂养
+  feed_consumes: 消耗1个{{name}}
+  feed_daily_note: 每天一份食物，每次变强一点。
+  feed_happy: '{{name}}很喜欢！'
+  feed_gain: +1威力
+  feed_unavailable: 此宠物已不可用。
+  claim_success: 奖励已领取
+  crush_title: 分解装备
+  crush_success: 装备已分解
+  crush_result_title: 分解结果
+  crush_result_empty: 下次好运。
+  destroy_title: 销毁物品
+  destroy_confirm_body: 销毁{{name}} ×{{amount}}？此操作无法撤销。
+  destroy_cta: 销毁
+  destroy_pending: 正在销毁…
+  destroy_success: 物品已销毁
+  unsealing: 正在开封…
+  skip_hint: 点击跳过
+  reveal_eyebrow: 你获得了
+  revealing: 正在揭晓…
+  collecting: 正在领取…
+  continue_cta: 继续
+  stat_maxed: 此符文超出了属性或超限/异属性重量上限
+  stat:
+    movement: 移动值
+    action: 行动值
+    range: 射程
+    critical_chance: 暴击概率
+    critical_outcomes: 暴击概率
+    vitality: 体力
+    wisdom: 智慧
+    strength: 力量
+    intelligence: 智力
+    chance: 幸运
+    agility: 敏捷
+    heal: 治疗
+    critical_hit: 暴击
+    percent_damage: 伤害
+    raw_damage: 固定伤害
+    fire_resistance: 火系抗性
+    water_resistance: 水系抗性
+    earth_resistance: 地系抗性
+    air_resistance: 风系抗性
+  stats:
+    no_character: 未选择角色
+    unavailable: 属性不可用
+    level: 等级{{level}}
+    adventurer: 冒险者
+    points_to_assign: 待分配点数
+    spend_hint: 将点数分配到属性上
+    reset: 重置
+    health: 生命
+    action: 行动
+    move: 移动
+    characteristics: 属性
+    resistances: 抗性
+    secondary: 次要属性
+    element:
+      fire: 火
+      water: 水
+      earth: 地
+      air: 风
+    description:
+      vitality: 增加最大生命
+      wisdom: 增加经验收益与AP/MP损失抗性
+      strength: 增加地系伤害
+      intelligence: 增加火系伤害与治疗量
+      chance: 增加水系伤害与掉落概率
+      agility: 增加风系伤害、暴击、牵制与脱离牵制能力
+      critical_hit: 提高暴击概率
+      raw_damage: 为伤害和吸血效果增加固定数值
+    add_point: 为{{stat}}增加一点
+    remove_point: 从{{stat}}移除一点
+    tx_pending: 正在分配…
+    point_cost: '{{cost}}点 → +{{gain}}'
+    tx_success: 属性点已分配
+  spells:
+    range_modifiable: 可调整射程
+    no_character: 未选择角色
+    select_prompt: 选择技能
+    level: 等级{{level}}
+    spell_points: 技能点
+    available: 可用
+    grimoire: 技能书
+    unlocked: 已解锁{{unlocked}} / {{total}}
+    locked: 已锁定
+    lv: 等级{{level}}
+    lv_of: 等级{{cur}}/{{max}}
+    unlocks_at: '{{level}}级解锁'
+    current_level: 当前等级
+    ap_cost: 行动值消耗
+    range: 射程
+    cooldown: 冷却
+    crit_chance: 暴击概率
+    casts_per_turn: 每回合施放次数
+    unlimited: 不限
+    description: 描述
+    effects: 效果
+    levels_head: 等级
+    mastered: 已精通
+    upgrade_success: '{{spell}}升级了！'
+    upgrading: 正在升级…
+    level_up_spell: 升级技能
+    pts: '{{count}}点'
+    pts_one: '{{count}}点'
+    pts_other: '{{count}}点'
+    requires_lv: 需要{{level}}级
+    no_points: 没有点数
+    tag_self: 自身
+    tag_melee: 近战
+    tag_ranged: 远程
+    tag_zone: 范围
+    tag_line_of_sight: 视线
+    el_fire: 火
+    el_water: 水
+    el_earth: 地
+    el_air: 风
+    buff: 增益
+    utility: 辅助
+    heal: 治疗
+    neutral: 中性
+    element: 元素
+    damage: 伤害
+    turns: 回合
+    crit_val: 暴击{{value}}
+    range_fixed: 固定射程，不受射程加成影响
+  jobs:
+    level_up_title: 专业升级
+    level_up_reached: 达到等级
+    level_up_character: '{{name}}进步了'
+    level_up_progress: 等级{{before}} → {{after}}
+    level_up_continue: 继续
+    category:
+      gathering: 采集
+      weapon: 武器制作
+      equipment: 装备制作
+      consumable: 消耗品制作
+    recipes_fallback: 配方
+    equipped: 已装备
+    better_character: '{{name}}的{{job}}等级为{{level}}'
+    switch: 切换
+    switch_to_character: 切换到{{name}}
+    table:
+      tier: 阶级
+      req_lvl: 所需等级
+      resource: 资源
+      yield: 产量
+      xp: 经验
+      unlocks_at: '{{name}}（{{level}}级解锁）'
+      gather_detail: '{{name}} · 采集{{gather}}秒 · 刷新{{respawn}}秒'
+      locked: 未解锁
+    lv_badge: 等级{{level}}
+    tier_badge: '{{tier}}阶'
+    craft:
+      recipe_head: 配方
+      recipe_not_seeded: 此配方尚不可用。
+      ingredients_head: 材料
+      requires_level: 需要{{job}}达到{{required}}级（当前{{level}}级）
+      not_enough: 材料不足
+      starting_chance: 初始成功率
+      amount: 尝试次数
+      max: 最大
+      prepare_tooltip: 准备{{count}} × {{name}}
+      craft_tooltip: 制作{{count}} × {{name}}
+      craft_button: 制作×{{count}}
+      crafting: 正在制作…
+      craft_result: 成功制作{{successes}} / {{attempts}}个{{name}}
+      locked_level: 未解锁 · {{level}}级
+    detail:
+      close_aria: 关闭物品详情
+      item_not_seeded: 此物品尚不可用。
+      tool_label: 工具
+      crafts_label: 可制作{{covers}}
+      xp_progress: '{{current}} / {{needed}}经验'
+      gather_time: 采集时间：{{seconds}}秒
+      next_gather_time: 下一级 · {{level}}级：{{seconds}}秒
+    recipes:
+      empty_seed: 此专业的配方将在制作内容更新后开放。
+      unlocked: 已解锁
+      locked: 已锁定
+      ingredients: '{{count}}种材料'
+      required_level: 需要专业达到{{level}}级
+      best_progress: 最佳
+    gather:
+      in_progress: 正在采集{{name}}…
+      button: 采集{{name}}
+      hint: 点击世界中的{{job}}资源点进行采集。
+    tabs:
+      resources: 资源
+      recipes: 配方
+    no_character: 未选择角色
+  common:
+    experience: 经验
+    confirm: 确认
+    max: 最大
+spell_names:
+  Absorption: 吸收
+  Absorptive Arrow: 吸收箭
+  Acceleration: 加速
+  Aggressive Brambles: 狂暴荆棘
+  Aggressive Glyph: 侵攻符印
+  Alcoholic Breath: 酒气吐息
+  All or Nothing: 孤注一掷
+  Chimeric Venom: 奇美拉毒液
+  Animal Healing: 野兽治疗
+  Aqueous Armour: 水之护甲
+  Aqueous Vulnerability: 水系弱化
+  Art of Staff: 法杖技艺
+  Asobi's Fate: Asobi的命运
+  Asobi's Luck: Asobi的幸运
+  Assault: 突袭
+  Atonement Arrow: 赎罪箭
+  Attraction: 牵引
+  Backlash: 反噬
+  Bamboo Milk: 竹乳
+  Bat's Eye: 蝙蝠之眼
+  Bear Cry: 熊吼
+  Blazing Fist: 烈焰拳
+  Blazing Vulnerability: 火系弱化
+  Blinding Protection: 致盲防护
+  Blindness: 致盲
+  Bloodthirsty Madness: 嗜血疯狂
+  Blow: 击退
+  Bluff: 虚张声势
+  Bold Punishment: 大胆惩戒
+  Boozer: 酩酊
+  Bow Skill: 弓术精通
+  Bramble: 荆棘
+  Bravery Guide: 勇气指引
+  Bribery: 贿赂
+  Bubble: 气泡
+  Burning Arrow: 燃烧箭
+  Burning Glyph: 燃烧符印
+  Bush Fire: 丛林之火
+  Celestial Sword: 天界之剑
+  Chakra Concentration: 查克拉凝聚
+  Chakra Impulse: 查克拉脉冲
+  Hurl: 投掷
+  Claw of Ceangal: Ceangal之爪
+  Clock: 时钟
+  Cloudy Attack: 云雾攻击
+  Clover: 三叶草
+  Clumsiness: 笨拙
+  Coins Throwing: 投掷硬币
+  Compulsion: 强迫
+  Con: 诡计
+  Concentration: 专注
+  Cooperation: 协作
+  Counter: 反击
+  Critical Shooting: 精准射击
+  Crow: 乌鸦
+  Curative Word: 疗愈之言
+  Cut: 切割
+  Dark Ray: 暗黑射线
+  Destructive Arrow: 毁灭箭
+  Destructive Sword: 毁灭之剑
+  Deviousness: 狡诈
+  Devotion: 献身
+  Dissolution: 溶解
+  Distant Shooting: 远距射击
+  Divine Sword: 神圣之剑
+  Dolly Sacrifice: 人偶献祭
+  Shadowstep: 暗影步
+  Draining Word: 汲取之言
+  Earth Armour: 大地护甲
+  Earth Vulnerability: 地系弱化
+  Earthquake: 地震
+  Bloodstep: 血步
+  Explosive Arrow: 爆炸箭
+  Explosive Flask: 爆裂酒瓶
+  Fangs of Boowolf: Boowolf之牙
+  Fear: 恐惧
+  Feline Leap: 猫跃
+  Feline Movement: 猫步
+  Feline Spirit: 猫灵
+  Flight: 飞离
+  Blood Blade: 血刃
+  Forbidden Word: 禁忌之言
+  Forced Punishment: 强制惩戒
+  Fortune: 财运
+  Bonding Word: 羁绊之言
+  Frightening Word: 惊惧之言
+  Frostbite: 冻伤
+  Frozen Arrow: 冰冻箭
+  Fury: 狂怒
+  Ghostly Claw: 幽灵之爪
+  Ghostly Shovel: 幽灵之铲
+  Glowing Armour: 辉光护甲
+  Glyph of Blindness: 致盲符印
+  Glyph of Silence: 沉默符印
+  Greed: 贪婪
+  Hand: 时针
+  Hangover: 宿醉
+  Haziness: 朦胧
+  Heads or Tails: 正面或反面
+  Healing Word: 治愈之言
+  High-Energy Shot: 高能射击
+  Clockwork Pursuit: 机械追击
+  Ikari's Foot: Ikari之足
+  Immunity: 免疫
+  Increase: 增幅
+  Insidious Poison: 阴险之毒
+  Insolent Bramble: 无礼荆棘
+  Intimidation: 威吓
+  Invisibility: 隐形
+  Invisibility of Others: 他者隐形
+  Jump: 跳跃
+  Undertow: 暗流
+  Toxic Knowledge: 毒性学识
+  Lashing Arrow: 鞭笞箭
+  Lashing Claw: 鞭笞之爪
+  Lethal Attack: 致命攻击
+  Lethal Trap: 致命陷阱
+  Life Transfer: 生命转移
+  Lifting Word: 升腾之言
+  Dead Weight: 沉重负担
+  Golden Fever: 黄金狂热
+  Shovel Uprising: 铲之崛起
+  Silent Mark: 无声印记
+  Loss of Motivation: 意志消沉
+  Magic Arrow: 魔法箭
+  Manifold Bramble: 繁茂荆棘
+  Mass Clumsiness: 群体笨拙
+  Mass Trap: 群体陷阱
+  Melancholy: 忧郁
+  Mistake: 失误
+  Mound: 土丘
+  Mummification: 木乃伊化
+  Mutilation: 自残
+  Natural Attack: 自然攻击
+  Blood Scent: 血之气息
+  Nimble Punishment: 灵巧惩戒
+  Pandatak: 熊猫突击
+  Pandiniuras: 潘迪尼乌拉斯
+  Pandora's Box: 潘多拉之盒
+  Paralyzing Arrow: 麻痹箭
+  Paralyzing Glyph: 麻痹符印
+  Paralyzing Poison: 麻痹毒素
+  Paralyzing Trap: 麻痹陷阱
+  Paralyzing Word: 麻痹之言
+  Read the Table: 洞察牌局
+  Plaguing Arrow: 瘟疫箭
+  Playful Claw: 嬉戏之爪
+  Poisoned Arrow: 毒箭
+  Poisoned Trap: 毒陷阱
+  Poisoned Wind: 毒风
+  Power: 威力
+  Powerful Shooting: 强力射击
+  Pressure: 压迫
+  Preventing Word: 防护之言
+  Prime of Life: 盛年
+  Mountain Punch: 山岳拳
+  Punishment: 惩罚
+  Punitive Arrow: 惩罚箭
+  Reducing Key: 缩减之钥
+  Reflex: 反射
+  Regenerating Word: 再生之言
+  Rekop: 雷科普
+  Repelling Trap: 排斥陷阱
+  Repercussion: 反作用
+  Retreat Arrow: 后撤箭
+  Revitalising Word: 焕生之言
+  Rough Tongue: 粗糙舌头
+  Roulette: 轮盘
+  Sacrifice: 牺牲
+  Senshi's Sword: Senshi之剑
+  Senshi's Wrath: Senshi之怒
+  Shovel Kiss: 铲之吻
+  Shovel of Judgement: 审判之铲
+  Shovel Throwing: 投掷铁铲
+  Shriveling: 萎缩
+  Shugo's Shield: Shugo之盾
+  Shugo's Teleportation: Shugo的传送
+  Slaughtering Shovel: 屠戮之铲
+  Slow Down: 减速
+  Slow Down Arrow: 减速箭
+  Smell: 嗅觉
+  Soothing Bramble: 安抚荆棘
+  Spell Rebound: 技能反弹
+  Spirit Rift: 灵魂裂隙
+  Spiritual Punishment: 精神惩戒
+  Rooted Guard: 扎根守护
+  Stain: 污渍
+  Stimulating Word: 激励之言
+  Strengthstorm: 力量风暴
+  Lucky Pounce: 幸运飞扑
+  Stampede: 兽群奔踏
+  Suppressing Roar: 压制咆哮
+  Seismic Command: 震地号令
+  Rending Pounce: 撕裂飞扑
+  Binding Howl: 束缚嚎叫
+  Primal Cataclysm: 原始灾变
+  Pack Totem: 兽群图腾
+  Swap: 换位
+  Sword of Fate: 命运之剑
+  Sword of Judgement: 审判之剑
+  Sylvan Power: 森林之力
+  Tear: 泪水
+  Temporal Dust: 时光尘埃
+  Terror: 恐怖
+  Root Snare: 根须陷阱
+  Reviving Spores: 复苏孢子
+  Maddening Spores: 疯狂孢子
+  Sacrificial Bloom: 献祭之花
+  Overgrowth: 过度生长
+  Time Theft: 窃取时间
+  Toad: 蟾蜍
+  Temporal Dial: 时光表盘
+  Tokei's Punch: Tokei之拳
+  Tokei's Sandglass: Tokei的沙漏
+  Tokei's Teleportation: Tokei的传送
+  Topkaj: 托普卡伊
+  Tormenting Arrow: 折磨箭
+  Transposition: 移形换位
+  Trap of Silence: 沉默陷阱
+  Tree: 树木
+  Tricky Blow: 诡诈一击
+  Tricky Trap: 诡诈陷阱
+  Truce: 休战
+  Unsummoning: 驱散召唤
+  Vampiric Word: 吸血之言
+  Vital Exchange: 生命交换
+  Second Wind: 重振旗鼓
+  Wheel of Fortune: 命运之轮
+  Whip: 鞭挞
+  Wild Grass: 野草
+  Wind Armour: 风之护甲
+  Wind Vulnerability: 风系弱化
+  Word of Altruism: 无私之言
+  Word of Recovery: 康复之言
+  Word of Sacrifice: 牺牲之言
+  Word of Silence: 沉默之言
+  Word of Thorn: 荆刺之言
+  Word of Youth: 青春之言
+  Wounding Word: 创伤之言
+  Zatoishwan Stance: Zatoishwan架势
+item_categories:
+  cosmetic_hat: 外观帽子
+  cosmetic_cloak: 外观披风
+  hat: 帽子
+  cloak: 披风
+  belt: 腰带
+  boots: 靴子
+  amulet: 护符
+  ring: 戒指
+  title: 称号
+  pet: 宠物
+  relic: 遗物
+  daggers: 匕首
+  spear: 长矛
+  bow: 弓
+  axe: 斧
+  sword: 剑
+  tool_farmer: 农具
+  tool_herbalist: 采药工具
+  tool_miner: 采矿工具
+  consumable: 消耗品
+  resource: 资源
+  rune: 符文
+  key: 钥匙
+  weapon: 武器
+  tool: 工具
+  relic_slot: 遗物{{number}}
+kares: 质押
+kares_page:
+  stake_more: 增加质押
+  additional_daily: 每日新增
+  max: 最大
+  external_wallet_hint: 使用外部钱包单独质押和管理KARES。
+  select_wallet: 选择
+  staking_revenue: 质押者分享AresRPG市场已收取版税的20%（以SUI支付），以及已注资的KARES奖励。
+  game_account: AresRPG账户
+  external_wallet: 外部钱包
+  daily_kares: KARES/天 · 预计
+  daily_sui: SUI/天 · 预计
+  daily_estimate_note: 每日估算基于当前质押占比和已注资奖励计划，覆盖未来24小时，数值可能变化。
+  position_rewards: 仓位奖励
+  manage_stake: 管理质押
+  same_account: 此钱包已是你的AresRPG账户。请在账户区域管理质押。
+  claim_kares: 领取KARES
+  close: 关闭
+  sale_card_soon_title: 准备出发。
+  sale_card_soon_note: 公开发售即将开始。
+  sale_card_soon_action: 了解发售
+  sale_card_live_label: 发售进行中
+  sale_card_live_title: 立即参与
+  sale_card_target_reached: 目标已达成
+  sale_card_done_title: 发售已结束
+  sale_card_done_note: 领取KARES代币及可退还的SUI。
+  sale_card_refund_note: 未达到最低目标，请领取全部SUI退款。
+  community_release_note: 成功结算后，社区KARES将在1825天内解锁，只有金库可以领取。已领取代币可分发或销毁。
+  sale_unlock_note: 发售成功结束后，销售代币将完全解锁。
+  unlocked_immediately: 立即解锁
+  vested_five_years: 5年逐步解锁
+  eyebrow: 值得共同打造的世界
+  launch_title: 打造下一个篇章。
+  launch_lead: 参与KARES首次公开发售，为AresRPG注资，帮助鲜活的世界成长。
+  offering: 首次公开发售
+  fixed_supply: 固定供应量
+  fair_share: 统一价格，按比例分配。
+  fair_detail: 最终份额取决于你的出资，超额出资按比例退还。
+  connect: 连接钱包
+  disconnect: 断开连接
+  choose_account: 选择账户
+  no_wallet: 安装Sui钱包即可参与。
+  refresh: 刷新
+  loading: 正在读取链上状态…
+  unavailable: 此网络尚未开放发售。
+  pending: 正在确认交易…
+  confirmed: 交易已确认
+  contribute: 投入SUI
+  amount: 数量
+  balance: 可用余额
+  amount_invalid: 请输入正数，最多9位小数。
+  insufficient: 金额超过可用余额。
+  gas_note: 请保留少量SUI支付交易费用。
+  raised: 已投入
+  minimum: 最低筹资额
+  maximum: 最高接收额
+  opens: 开始
+  closes: 结束
+  estimate: 预计最终价格
+  price_note: 发售结束时确定最终分配。
+  your_contribution: 你的出资
+  claim: 领取KARES与超额SUI
+  refund: 领取退款
+  upcoming: 尚未开始
+  open: 发售开放
+  successful: 发售成功
+  refundable: 可以退款
+  testnet: 测试网 · 仅测试资产
+  back_game: 探索AresRPG
+  funding_title: 由社区资助的世界
+  liquidity: 初始流动性
+  development: 开发金库
+  liquidity_note: 为初始KARES/SUI市场预留，流动池由项目方创建。
+  development_note: 用于游戏、基础设施和下一个篇章的资金。
+  staking_title: 你的质押，你的份额。
+  staking_lead: 质押KARES，分享释放的KARES和SUI奖励。可随时领取已累积奖励。
+  pool_stake: 总质押量
+  your_stake: 你的质押
+  claimable: 已累积奖励
+  stake: 质押KARES
+  withdraw: 提取质押
+  claim_rewards: 领取奖励
+  fund_title: 为社区奖励注资
+  fund_note: 捐赠会在30个有效奖励日内分配给所有质押者，且不可撤回。
+  donate: 捐赠
+  no_positions: 你的质押仓位将在这里显示。
+  inactive: 发售成功结算后开放质押。
+  account_label: 账户
+  position: 仓位
+  tokenomics: KARES代币经济
+  community: 社区奖励
+  team: 团队分配
+  five_years: 社区质押奖励
+  mastery_title: 通过游戏获奖，或销毁KARES。
+  mastery_note: 每件精通商品都可用相同数量的精通点或KARES购买。花费的KARES会永久销毁。
+  rewards_note: 200000 KARES将在1825个有效奖励日内释放，额外捐赠在30个有效日内释放。无人质押时停止释放。
+  revenue_note: 市场已收取版税的20%用于SUI质押奖励。奖励随收入和参与质押量变化。
+  payment: 支付方式
+  points: 精通点
+  burn_buy: 销毁{{cost}} KARES
+  kares_missing: KARES不足
+  language: 语言
+  refund_note: 若发售结束时未达到最低目标，全部出资均可退还。
+  offering_contract: 发售合约
+  min_marker: 最低
+  max_marker: 最大
+  min_reached: 已达最低目标
+  min_pending: 正在迈向最低目标
+  oversubscribed: 超额认购
+  subscribed: 已认购
+  oversub_note: 仍可参与。所有人享有相同价格，超额SUI按比例退还。
+  opens_in: 距开始还有
+  closes_in: 距结束还有
+  days_short: 天
+  your_investment: 你的出资
+  your_allocation: 你的KARES份额
+  current_price: 当前发售价格
+  estimated_until_close: 发售结束前均为估算
+  accepted_contribution: 已接受的出资
+  excess_refund: 退还给你的SUI
+  unclaimed_note: 尚未领取的出资与份额
+  connect_preview: 连接钱包查看你的份额
+  no_pending_allocation: 没有未领取的出资
+  play_game: 开始游戏
+  play_game_note: 探索你正在帮助打造的世界。
+  join_title: 在下一个篇章中留下你的位置。
+  join_note: 400000 KARES，一个发售窗口，每位出资者都有份额。
+  step_connect: 连接钱包
+  step_contribute: 选择投入的SUI数量
+  step_claim: 领取KARES及超额SUI
+  allocation_lead: 一百万枚代币，所有分配公开。
+  community_detail: 11%保留为社区储备，用于空投、营销、赛季排行榜、比赛、PvP竞技奖励、测试网参与者和有价值的贡献者，由项目方管理分配。
+  supply_detail: 全部1000000 KARES一次性铸造，不会再增发。精通商店消费会永久销毁KARES。
+  emissions_detail: 200000枚质押奖励来自已有供应。奖励释放不会铸造新代币。
+  price_cap_note: 接受的筹资额以最高额度为限。更多出资会改变份额，不会改变已封顶的发售价格。
+  awaiting_minimum: 达到最低目标后显示价格和分配。
+  claimable_tokens: 可领取的KARES
+  refundable_sui: 你的SUI退款
+  final_price: 最终发售价格
+  full_refund: 全额SUI退款
+  nav_funding: 筹资
+  nav_benefits: 权益
+  nav_tokenomics: 代币经济
+  nav_incentives: 公共激励
+  nav_play: 游戏
+  benefits_title: 参与这个世界，体验更多玩法。
+  benefits_lead: KARES连接游戏奖励、社区激励与市场版税分成。
+  revenue_title: 分享游戏的成功。
+  revenue_metric: AresRPG收入
+  revenue_detail: 与KARES质押者共享。
+  baseline_title: 社区奖励，已在供应中。
+  baseline_detail: 已有的200000 KARES支持1825个有效奖励日。质押即可分享释放，并随时领取累积奖励，不会增发代币。
+  crates_title: 你的KARES，你的下一个箱子。
+  crates_detail: 游戏内精通商品包括食物、资源、宠物和外观箱。可支付同等数量的KARES，或通过游戏赚取精通点。花费的KARES会永久销毁。
+  incentives_title: 任何人都能增加奖励。
+  incentives_detail: 任何人都能向共享质押奖励捐赠SUI或KARES。每笔捐赠从下一个有效奖励日起，在30个有效日内释放，按比例奖励所有质押者，且不可撤回。
+  incentives_clock: 无人质押时，奖励时钟暂停。新增资金不会延长旧捐赠的释放周期。
+  incentives_examples: 资助活动，庆祝里程碑，回馈社区。
+  play_title: 世界正在等待，出发探索吧。
+  play_detail: 在首次公开发售期间游玩AresRPG，认识社区，了解KARES背后的游戏。
+  confirmed_refresh: 交易已确认。请刷新以加载最新余额。
+  stage_minimum: 最低筹资目标
+  stage_maximum: 向最高额度筹资
+  minimum_refund: 未达到最低目标时全额退款。
+  full_refund_available: 全部出资均可申请退款。
+  refund_claim_note: 若发售结束时低于最低目标，请在这里领取退款。退款不会自动发送。
+  staking_unavailable: 此网络尚未开放质押。
+  basecamp_announcement: 10月7日至9日，在新加坡Sui Basecamp与AresRPG见面。来打个招呼，领取战利品箱吧。
+  funding_unknown: 筹资数据不可用。
+  success_threshold: 成功门槛
+  sale_cap: 最高接收额
+  cap_overflow: 超出上限
+  overflow_refunds: 预留用于按比例退款
+  combat_rewards: 首领奖励
+  combat_detail: 100000 KARES为公共战斗奖池注资，任何人都可追加代币。首领等级决定一份赏金，由获胜角色平分。每日上限约54.79 KARES，使初始奖池至少可提供五年奖励。平静的日子和捐赠会延长其寿命。每个纪元的活跃度调整奖励大小，未发出的奖励不会成为债务。
+  allocation_rationale: 启动时有590000 KARES（59%）可用：销售、流动性和团队份额。按计划，第一年最多释放约82000枚，相当于初始流通量的13.90%，未计销毁。无人质押时质押奖励暂停，社区解锁按日历时间进行，战斗奖励可能更少。这些释放使用已有代币，新增铸币通胀为零。捐赠只重新分配已有代币，不保证任何价格结果。
+  launch_market_cap: 启动流通市值
+  launch_market_cap_note: 若现在结束发售：封顶发售价 × 启动时可用的590000 KARES。未达到最低筹资额则不会启动。
+  error_generic: 无法完成此操作。
+  error_rejected: 请求已取消。
+  error_funds: 资金不足以支付此操作及其费用。
+  error_connection: 连接失败。请检查网络后重试。
+  error_session: 钱包会话不可用。请重新连接。
+  error_unknown: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
+  error_recovered: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
+leaderboard_page:
+  unclaimed: 未领取
+  reset_in: '{{time}}重置'
+  xp: 战斗经验
+  kills: 击杀怪物
+  dungeons: 地下城
+  jobs: 专业经验
+  marketplace: 市场
+  kolizeum: 竞技场
+  zones: 发现区域
+  feeding: 宠物喂养
+  gathering: 采集
+  category: 类别
+  loading: 正在加载…
+  user: 用户
+  score: 分数
+  you: 你
+  current_characters: 当前角色
+  current_jobs: 当前专业
+  unavailable: 排行榜暂时不可用。
+  retry: 重试
+  suins_hint: 在设置中选择SuiNS名称或子名称，即可在这里显示。
+  xp_description: 所有角色通过获胜获得的经验。转移角色不会转移已获得的积分。
+  kills_description: 胜利战斗中击败的敌方怪物，每场战斗对每个获胜地址只计一次。
+  dungeons_description: 成功通关的最终房间，每场战斗对每个完成地址只计一次。
+  jobs_description: 所有角色通过采集和制作获得的经验。符文锻造不提供经验。
+  marketplace_description: 市场买卖的SUI总额，包括角色交易。
+  kolizeum_description: 竞技场获胜发放的SUI，包括退回的下注。
+  zones_description: 首次发现共享区域。刷新区域不计入。
+  feeding_description: 成功喂养宠物的次数。食物数量不会增加分数。
+  gathering_description: 采集的资源数量，包括稀有采集加成。
+  job_FARMER: 农夫
+  job_HERBALIST: 采药师
+  job_MINER: 矿工
+  job_FORGER: 锻造师
+  job_CARVER: 雕刻师
+  job_TAILOR: 裁缝
+  job_JEWELER: 珠宝匠
+  job_TANNER: 制革师
+  job_HANDYMAN: 杂工
+  job_ALCHEMIST: 炼金术士
+  job_BAKER: 面包师
+automation_panel:
+  retrying: 等待位置同步，准备重试
+  title: 自动化
+  gathering: 采集
+  select_resource: 选择资源
+  level: 需要{{level}}级
+  tool: 需要对应工具
+  start: 开始
+  stop: 停止
+  idle: 准备就绪
+  planning: 正在选择下一个目标
+  moving: 正在前往资源
+  inspecting: 等待移动和区域数据
+  searching: 正在搜索区域
+  waiting: 等待区域刷新
+  protector: 正在退出守护者战斗
+  stopped: 已停止
+  unavailable: 已暂停：角色或连接不可用
+  blocked: 已暂停：移动受阻
+  failed: 已暂停：操作失败。请查看错误信息。
+  quantity: 已采集：{{quantity}}
+  expand: 展开自动采集
+  collapse: 收起自动采集
+item_drop_sources:
+  title: 怪物掉落
+  note: 基础掉率。实际概率随怪物等级和队伍幸运值变化。
+  empty: 没有怪物掉落此物品。
+  loading: 正在加载掉落信息…
+  mob: 怪物
+  rate: 基础掉率
+  quantity: 数量
+  levels: 等级{{min}}–{{max}}
+journey:
+  title: 在Nauvis生存
+  eyebrow: 你的冒险从这里开始
+  progress: 旅程进度
+  count: '{{count}} / {{total}}'
+  complete: 任务完成！
+  continue: 继续
+  start: 开始我的首个任务
+  journal: 任务日志
+  close: 关闭日志
+  collapse: 收起任务
+  recipe: 查看配方
+  jobs: 专业
+  resource_details: 资源详情
+  key_details: 寻找地下城钥匙
+  next: 接下来
+  chapter_finished: 旅程完成
+  finished_title: 自动化已解锁
+  finished_body: AresRPG也是一款关于自动化的游戏，未来许多功能都会围绕自动化展开。你已完成全部新手任务，获得了自动采集作为奖励！选择资源，点击“开始”，让角色自行采集。运行时也可以收起控制面板。
+  reset_title: 新手任务
+  reset_hint: 重置此账户在本浏览器中的任务。重新开始旅程后，已有物品会再次计入。
+  reset_action: 重置任务
+  storage_failed: 无法在此浏览器中保存任务进度。重新加载后可能丢失。
+  chapter_welcome: 欢迎
+  chapter_tools: 初始工具
+  chapter_gear: 整装出发
+  chapter_supplies: 补给
+  chapter_dungeon: 地下城
+  chapter_secret: 最后一个秘密
+  welcome_title: 欢迎来到Nauvis。
+  welcome_body: AresRPG奖励善于学习、准备和巧干的玩家。学习优化并自动化游戏过程，尽可能节省SUI。沿着这段旅程找到自己的节奏吧。
+  hoe_title: 人人都需要一把锄头。
+  hoe_body: Nauvis是你的第一个世界。更强的装备能助你探索危险世界，采集工具则让你收集制作材料。从其他玩家处购买{{item}}，或前往“角色→专业→杂工”自行制作。
+  hoe_objective: 拥有{{item}}
+  wheat_title: 动手干起来。
+  wheat_body: 自制装备从收集材料开始。小麦可用于食物和装备材料，是不错的起点。在Nauvis找到小麦，完成第一次收获！
+  wheat_objective: 收获小麦
+  pickaxe_title: 下一位矿石明星。
+  pickaxe_body: 下一步升级不仅需要农作物。{{item}}能让你挖掘制作装备所需的矿物。去市场寻找，或亲手制作。你的采矿生涯总得有个起点。
+  pickaxe_objective: 拥有{{item}}
+  quartz_title: 不放过任何石头。
+  quartz_body: 仅靠小麦无法武装自己。武器和首饰还需要石英等矿物。用镐子采集一些，为接下来的制作做准备。
+  quartz_objective: 采集石英
+  sickle_title: 更上一层“割”。
+  sickle_body: 植物和蘑菇是药水与制作材料的来源。{{item}}为你开启采药专业。向其他玩家购买，或自行制作。
+  sickle_objective: 拥有{{item}}
+  mushroom_title: 再添一朵。
+  mushroom_body: 持续制作不仅需要农作物和矿物。绿蘑菇可用于药水、皮革和其他材料。采集第一朵后，继续提升采集专业，解锁更多原料。
+  mushroom_objective: 采集一朵绿蘑菇
+  token_title: 创造自己的幸运。
+  token_body: 接下来的制作需要大量物品。提高幸运属性能增加战斗掉落概率。找一个{{item}}护符并装备上吧！
+  token_objective: 拥有{{item}}
+  croissant_title: 战前先吃饱。
+  croissant_body: 战败后生命值会降为零。你可以等待恢复，也可以吃东西更快重返战场。准备一个{{item}}，或通过“角色→专业→面包师”烘焙。
+  croissant_objective: 拥有{{item}}
+  lorito_title: 该去拔几根羽毛了。
+  lorito_body: 更强的装备需要麦田里找不到的材料。地下城带来新战利品和经验，但你必须战斗才能获得。带上治疗食物和钥匙，前往Thebes的Gilded Lorito，攻克最后一个房间。
+  lorito_objective: 完成Gilded Lorito地下城
+  suize_title: 最后一个秘密。
+  suize_body: 干得好，冒险者。更好的收获会带来新配方，所以还有最后一个挑战：亲手收获Suize。去哪里找？就当作你第一次独立解决的问题吧。
+  suize_objective: 收获Suize
+  welcome_objective: ''
+  finished_objective: ''
+  saving: 正在保存…
+  automation_reward_action: 打开自动采集
+fullscreen_enter: 进入全屏
+fullscreen_exit: 退出全屏
+fullscreen_failed: 无法切换全屏模式。
+spell_effects:
+  range: '{{minimum}}至{{maximum}}'
+  damage: 造成{{value}}伤害
+  pct_life: 造成相当于目标最大生命{{value}}%的伤害
+  caster_damage: 对自身造成{{value}}伤害
+  punishment: 造成{{value}}伤害，随已损失生命增加
+  heal: 恢复{{value}}生命
+  add: 增加{{value}}{{stat}}
+  remove: 减少{{value}}{{stat}}
+  fixed_remove: 减少{{value}}{{stat}}（无法躲避）
+  steal: 偷取{{value}}{{stat}}
+  chatiment: 每回合根据受到的伤害，获得最多{{value}}{{stat}}
+  reduce: 减少{{value}}伤害
+  reflect: 反弹{{value}}伤害
+  push: 推开{{value}}格
+  pull: 拉近{{value}}格
+  teleport: 传送{{value}}格
+  swap: 交换位置
+  trap: 设置陷阱
+  glyph: 设置符印
+  dispel: 驱散效果
+  invis: 使目标隐形
+  return: 反弹等级不超过此技能的技能
+  redirect: 转移{{value}}伤害
+  unknown: 未知效果
+  any_stat: 任意属性
+  target_not_team: 仅限敌人
+  target_not_enemy: 仅限友方
+  target_not_self: 仅限其他目标
+  target_only_caster: 仅限施法者
+  turns: 持续回合：{{count}}
+  turn_range: 持续回合：{{minimum}}–{{maximum}}
+  critical_only: 仅暴击时
+  turn_cap: 每回合上限 · {{stat}}
+  shape_point: 单格
+  shape_circle: 圆形 · {{size}}
+  shape_cross: 十字 · {{size}}
+  shape_line: 直线 · {{size}}
+  shape_tbar: T形 · {{size}}
+  shape_ring: 圆环 · {{size}}
+  shape_allmap: 整张地图
+  shape_cone: 锥形 · {{size}}
+  shape_podium: 台形 · {{size}}
+  shape_blob: 圆角区域 · {{size}}
+  active_add: '{{stat}} +{{value}}'
+  active_remove: '{{stat}} −{{value}}'
+  active_damage: '{{value}}伤害'
+  active_invis: '隐形'
+  active_chatiment: '惩戒 · 每回合{{value}}{{stat}} · {{turns}}回合'
+  active_turns: '{{count}}回合'
+  active_turn_range: '{{minimum}}–{{maximum}}回合'
+  short_strength: '力量'
+  short_intelligence: '智力'
+  short_chance: '幸运'
+  short_agility: '敏捷'
+  short_wisdom: '智慧'
+  short_range: '射程'
+  short_power: '威力'
+  short_raw_damage: '伤害'
+  short_critical: '暴击'
+  short_stat: '属性'
+ui:
+  character: 角色
+  spell_action: '{{name}}，等级{{level}}，消耗{{cost}}{{unit}}'
+  spell_level: 技能等级{{level}}
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: 经验已满
+  experience_gain: +{{amount}} {{unit}}
+  xp: 经验
+  hp: 生命
+  seconds: '{{count}}秒'
+  meters: '{{count}}米'
+  versus: 对战
+  team_format: '{{size}}对{{size}}'
+  flat: 平面
+  fps: 帧率
+  north: 北
+  northeast: 东北
+  east: 东
+  southeast: 东南
+  south: 南
+  southwest: 西南
+  west: 西
+  northwest: 西北
+  game_description: AresRPG是一款基于Sui的浏览器体素MMORPG，角色、物品和成长都存于链上。
+  game_title: AresRPG · 链上体素MMORPG
+  world_image: AresRPG体素世界
+  sale_description: KARES首次公开发售。一起打造AresRPG的新篇章。
+  formula_chastisement: G = min(Δ生命 × S, 上限 × S − 本回合G) · 怪物S = 1，玩家S = ½
+  formula_drop: 掉率 = min(100%, 基础值 × 怪物等级段系数 × (600 + 队伍平均幸运) / 600)
+  formula_xp: 经验 = 基础经验池 × 队伍系数 × 等级平衡 × 玩家等级 / 队伍总等级 × (100 + 智慧) / 100

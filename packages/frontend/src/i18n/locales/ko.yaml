@@ -1,0 +1,2606 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+
+title: WebGPU를 사용할 수 없습니다
+body: 전체 월드에는 WebGPU가 필요합니다. 현재 경량 격자를 대신 표시합니다.
+fatal: 이 브라우저는 WebGPU 또는 WebGL 그래픽 컨텍스트를 생성할 수 없습니다.
+engine_recovery: 월드 로딩 또는 렌더링이 중단되었습니다. 새로고침해 다시 시도하세요.
+engine_reload: 새로고침
+world_unavailable_title: 월드를 이용할 수 없습니다
+world_unavailable: 이 월드에는 아직 지형 생성 설정이 없습니다.
+mobile_unavailable_label: 모바일 접속
+mobile_unavailable_title: AresRPG는 아직 모바일 기기를 지원하지 않습니다
+mobile_unavailable_body: 전용 모바일 환경을 준비하고 있습니다. 지금은 데스크톱 브라우저로 월드에 접속해 주세요.
+mobile_unavailable_status: 데스크톱 버전 이용 가능
+chrome: Chrome 또는 Edge를 업데이트한 뒤 설정 → 시스템에서 그래픽 가속을 켜고 다시 실행하세요.
+other: 하드웨어 가속을 켜고 브라우저와 그래픽 드라이버를 업데이트한 뒤 브라우저를 다시 실행하세요.
+continue: 격자로 계속하기
+quality: 그래픽 품질
+low: 낮음
+medium: 보통
+high: 높음
+flat_mode: 평면 모드
+identity_connected: 신원 연결됨
+sign_in_to_play: 로그인하고 플레이
+loading_universe: 세계 불러오는 중
+continue_google: Google로 계속하기
+wallet_session_ended: 지갑 세션이 종료되었습니다. 다시 로그인하세요.
+connect_wallet: 지갑 연결
+no_wallet: 호환되는 지갑이 설치되어 있지 않습니다
+watch_world: 실시간 월드 관전
+sign_in: 로그인하고 플레이
+drag_hint: 드래그로 이동 · 스크롤로 확대/축소
+navigation: 탐색
+world: 월드
+characters: 캐릭터
+leaderboard: 순위표
+mastery: 숙련
+encyclopedia: 백과사전
+marketplace: 거래소
+airdrop: 에어드롭
+kolizeum: 콜리제움
+settings: 설정
+admin: 관리
+online: 접속 중
+account: 계정
+join_discord: Discord 참여
+join_telegram: Telegram 참여
+sui_universe: Sui 세계
+server_disconnected: 연결 끊김
+server_connecting: 연결 중
+server_reconnecting: 다시 연결 중
+server_syncing: 동기화 중
+server_connected: 연결됨
+server_violation: 규칙 위반으로 연결이 끊겼습니다. 곧 다시 시도합니다.
+server_replaced: 다른 곳에서 접속 중
+session_replaced_title: 다른 곳에서 로그인했습니다
+session_replaced_body: 계정이 다른 곳에서 게임을 열어 이 창의 연결이 끊겼습니다. 다른 세션을 닫거나 여기서 다시 연결하세요.
+session_replaced_reconnect: 여기서 다시 연결
+latency_unit: ms
+indexing_health: 색인 상태
+online_players: 접속 중인 플레이어
+indexing_lag_warning: 게임 동작이 지연될 수 있습니다
+indexing_block_title: 월드 동기화 중
+indexing_block_body: 블록체인 기록을 색인하는 중입니다. 서버가 안전한 최신 범위에 도달하면 게임이 자동으로 열립니다.
+indexing_block_progress: 진행도
+indexing_block_remaining: 남은 체크포인트
+indexing_block_eta: 예상 시간
+indexing_block_estimating: 계산 중…
+game_maintenance_title: 점검 중
+game_maintenance_body: AresRPG 스마트 계약이 점검으로 일시 중지되었습니다. Discord에서 소식을 확인하세요.
+gas_budget_toast: 이 작업이 예약된 네트워크 수수료를 초과했습니다. 실행되지 않았고 비용도 들지 않았습니다. 제보해 주세요.
+game_paused_toast: 업데이트를 위해 게임이 일시 중지되었습니다. 작업은 실행되지 않았습니다. 몇 분 뒤 다시 시도하세요.
+movement_sync_toast: 위치를 동기화하는 중입니다. 평소처럼 이동한 뒤 잠시 후 다시 시도하세요.
+fight_path_changed_toast: 이동을 제출하기 전에 전장이 바뀌었습니다. 턴이 복원되었으니 다시 시도하세요.
+party_member_unavailable_toast: 그 캐릭터는 이미 파티에 속해 있습니다.
+fight_turn_already_forced_toast: 누군가 이미 이 턴을 강제로 종료했습니다.
+fight_placement_unavailable_toast: 해당 시작 칸을 사용할 수 없습니다. 다른 빈 칸을 선택하세요.
+network_testnet: 테스트넷
+page_pending_title: 페이지를 재구성하고 있습니다
+page_pending_body: 복구 작업 중에도 페이지 위치는 유지됩니다.
+welcome_title: AresRPG에 오신 것을 환영합니다
+welcome_body: AresRPG는 플레이어가 경제를 이끄는 완전한 온체인 MMORPG입니다. 첫 캐릭터를 만들고 월드에 들어가 몬스터와 싸우세요.
+welcome_need_sui: 플레이하려면 소량의 SUI가 필요합니다. 첫 캐릭터는 {{price}} SUI이며 수수료용으로 최소 {{fee}} SUI를 남겨야 합니다. 아래 주소로 SUI를 입금해 시작하세요.
+insufficient_sui: 수수료용으로 잔액에 최소 {{fee}} SUI를 남겨야 합니다.
+create_character: 캐릭터 생성
+create_title: 캐릭터를 만드세요
+create_lead: 직업과 색상을 고르고 캐릭터의 이름을 정하세요. 뒤편의 월드는 이미 살아 움직이고 있습니다.
+class_label: 직업
+view_class_spells: 이 직업의 주문 보기
+sex_label: 성별
+appearance_label: 외형 · 색상 3개
+name_label: 이름
+name_placeholder: 이름 입력…
+name_invalid: 공백 없이 인쇄 가능한 ASCII 문자 4~19자를 사용하세요.
+male: 남성
+female: 여성
+cancel: 뒤로
+create_and_play: 생성하고 플레이
+character_price: 가격
+creating_character: 캐릭터 생성 중…
+character_created: 캐릭터 생성 완료
+address_verification_failed: 지갑 주소를 확인할 수 없습니다. 다시 로그인하거나 Discord로 문의하세요.
+dismiss: 닫기
+wallet_copy_address: 주소 복사
+wallet_send: 보내기
+wallet_add_funds: 충전
+wallet_gas_spent: 사용한 가스비(24시간)
+wallet_disconnect: 연결 해제
+wallet_fund_body: 이 지갑 주소로 SUI를 보내세요. 앱으로 돌아오면 잔액이 갱신됩니다.
+wallet_send_title: SUI 보내기
+wallet_recipient: 받는 주소
+wallet_amount: 금액(SUI)
+wallet_send_pending: SUI 전송 중…
+wallet_send_success: SUI 전송 완료
+wallet_send_failed: SUI 전송 실패
+wallet_close: 닫기
+kolizeum_page:
+  title: 콜리제움 — 전쟁 탁자
+  tagline: 승자에게 상금의 90% · 플랫폼 수수료 10%
+  tab_open: 열린 대기실
+  tab_mine: 내 대기실
+  col_format: 경기 방식
+  col_access: 참가 범위
+  col_status: 상태
+  col_pledge: 참가금
+  col_full_pot: 최대 상금
+  col_creator: 생성자
+  access_public: 공개
+  access_friends: 친구
+  status_open: 모집 중
+  status_started: 시작됨
+  status_settling: 전투 종료
+  empty: 대기실이 없습니다
+  selected: 선택한 대기실
+  side_a: A팀
+  side_b: B팀
+  total_pot: 현재 상금
+  settlement_remaining: 남은 예치금
+  paid_out: 지급 완료
+  free: 무료
+  join_a: A팀 참가
+  join_b: B팀 참가
+  join_confirm_title: 콜리제움 참가금 확인
+  join_confirm_body: '{{character}}이(가) {{amount}} SUI를 걸고 {{side}}에 참가합니다. 이 거래로 참가금이 확정됩니다.'
+  join_confirm_cta: '{{amount}} SUI 걸기 · {{side}} 참가'
+  create_title: 대기실 만들기
+  form_format: 경기 방식
+  form_access: 참가 범위
+  form_pledge: 플레이어당 참가금(SUI)
+  form_max_diff: 최대 레벨 차이
+  form_character: 참가 캐릭터
+  no_character: 참가 가능한 캐릭터가 없습니다
+  full_pot_summary: '{{format}} 최대 상금 = {{pot}} SUI · 승자에게 90%'
+  create_cta: 대기실 생성
+friends_panel:
+  title: 친구
+  observed: 근처에서 확인됨
+  unseen: 현재 확인되지 않음
+  none_observed: 근처에 확인된 친구가 없습니다
+  empty: 아직 친구가 없습니다
+  placeholder: 이름, SuiNS 또는 0x 주소
+  add: 친구 추가
+  remove: 삭제
+  remove_title: 친구 삭제
+  remove_body: 친구 목록에서 {{name}}을(를) 삭제할까요?
+  error_no_suins: '{{name}}과(와) 일치하는 SuiNS 주소가 없습니다.'
+  error_target: 캐릭터 이름, SuiNS 이름 또는 전체 Sui 주소를 입력하세요.
+  error_self: 자신을 추가할 수 없습니다.
+  error_duplicate: 이미 친구 목록에 있는 플레이어입니다.
+  cancel: 취소
+party_panel:
+  title: 파티
+  adventurer: 모험가
+  invited_by: '{{name}}이(가) 파티에 초대했습니다'
+  accept: 수락
+  decline: 거절
+  leader: 파티장
+  leave: 탈퇴
+  disband: 해산
+  kick: 내보내기
+  rescind: 초대 취소
+  invite_owned: 내 캐릭터 초대
+  follow_leader: 파티장 따라가기
+  run_to_position: 위치로 이동
+  run_to_started: '{{name}}의 마지막 온체인 위치로 이동 중입니다. 현재 실제 위치와 다를 수 있습니다.'
+  run_to_started_position: 링크된 위치로 이동 중입니다.
+  run_to_progress: 위치로 이동 중
+  run_to_position_wrong_world: 링크된 위치가 현재 월드에 없습니다.
+  run_to_wrong_world: 해당 파티원이 현재 월드에 없습니다.
+  run_to_unavailable: 해당 파티원의 온체인 위치를 확인할 수 없습니다.
+trade_panel:
+  kares: 제시한 KARES
+  close: 닫기
+  title: 플레이어 거래
+  invite_sent: 거래 초대를 보냈습니다
+  invited_by: '{{name}}이(가) 거래에 초대했습니다'
+  request_waiting: '{{name}}의 거래 수락을 기다리는 중'
+  accept_request: 수락
+  decline: 거절
+  cancel_request: 요청 취소
+  trades: 거래
+  your_offer: 내 제안
+  their_offer: 상대 제안
+  accepted: 수락됨
+  reviewing: 검토 중
+  remove_item: 제안에서 제거
+  drop_items: 아이템을 여기에 놓으세요
+  empty_offer: 제시한 아이템이 없습니다
+  offer_item_unavailable: 선택한 아이템 중 하나를 더 이상 사용할 수 없습니다. 제안을 확인한 뒤 다시 시도하세요.
+  sui: 제시한 SUI
+  inventory: 내 가방
+  drag_hint: 드래그하거나 두 번 클릭해 추가
+  amount_title: 수량 선택
+  amount_for: '{{name}} 수량'
+  amount_add: 제안에 추가
+  amount_cancel: 취소
+  confirm_changes: 변경 확인
+  discard_changes: 변경 취소
+  empty_inventory: 거래할 수 있는 자산이 없습니다
+  accept: 제안 수락
+  cancel: 거래 취소
+  accept_notice: 수락하면 정산 거래 한 건을 승인합니다. 받는 자산 {{count}}개의 로열티는 {{amount}} SUI이며 가스비가 추가됩니다.
+  settle: 교환 완료
+  recover: 제안 회수
+  settle_notice: 지갑 거래 한 번으로 남은 자산과 SUI를 모두 받습니다.
+  recover_notice: 지갑 거래 한 번으로 제안을 모두 회수합니다.
+  waiting_counterparty: 내 쪽은 완료되었습니다. 상대방을 기다리는 중입니다.
+  finalizing: 마무리 중…
+transaction_unknown_toast: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
+transaction_recovered_toast: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
+world_hud:
+  compass_label: 나침반
+  zone: 구역
+  unsearched: 미탐색
+  searched: 탐색 완료
+  out_of_bounds: 범위 밖
+  mob_group: 몬스터 무리({{size}})
+  resource: 자원
+  cluster_count: 외 {{extra}}개
+  zone_edge: 구역 경계 {{dist}}
+  coordinates: 좌표
+  biome: 생물군계
+  world_map: 월드 지도
+  world_map_zoom_in: 확대
+  world_map_zoom_out: 축소
+  world_map_extent: '{{blocks}}블록'
+  menu_group: 파티에 초대
+  menu_friend: 친구 추가
+  menu_trade: 거래
+  menu_message: 메시지 보내기
+  message_title: '{{name}}에게 메시지'
+  message_placeholder: 귓속말 입력…
+  message_send: 보내기
+  message_cancel: 취소
+  mount_prompt: '{{key}}을(를) 눌러 탑승'
+  portal_prompt: '{{key}}을(를) 눌러 다른 월드로 이동'
+  dungeon_portal: 던전 포털
+  dungeon_city: '{{city}} 도시'
+  dungeon_press_enter: 입장
+  dungeon_entry_body: 던전 열쇠를 사용해 이 포털의 전용 준비 대기실로 입장하세요.
+  dungeon_required_key: 필요한 열쇠
+  dungeon_enter: 던전 입장
+  dungeon_entering: 포털 여는 중…
+  dungeon_instance: 던전 탐험
+  dungeon_room: '{{room}}번 방'
+  dungeon_explorers: 탐험가
+  dungeon_abandon: 탐험 포기
+  dungeon_confirm_abandon: 포기 확인
+  dungeon_route: 탐험 경로
+  dungeon_mysterious_room: 수수께끼의 방
+  dungeon_undiscovered: 미발견
+  dungeon_creatures: 생물 {{count}}마리
+  dungeon_current_room: 현재 방의 적
+  dungeon_open_fights: 참가 가능한 전투
+  dungeon_forming_party: 파티 구성 중
+  dungeon_in_progress: 전투 진행 중
+  dungeon_waiting_players: 전투원 기다리는 중
+  dungeon_join: 전투 참가
+  dungeon_joining: 참가 중…
+  dungeon_locked: 잠김
+  dungeon_no_fights: 이 방에서 시작된 전투가 없습니다
+  dungeon_public: 공개
+  dungeon_group: 파티 전용
+  dungeon_start_fight: 새 전투 시작
+  dungeon_starting: 시작 중…
+  dungeon_key_required: 이 던전에 입장하려면 {{key}}이(가) 필요합니다.
+  dungeon_group_refusal: 이 전투는 개설자의 파티만 참가할 수 있습니다.
+  travel_title: 별의 문
+  travel_search: '{{title}} 검색…'
+  travel_entry_level: 입장 레벨 {{level}}
+  travel_pending: 문 여는 중…
+  travel_success: '{{world}}에 오신 것을 환영합니다'
+  travel_empty: 월드가 없습니다
+  travel_showing: 결과 {{filtered}} / {{total}}
+  travel_selected: 선택됨 · {{label}}
+  fight_press_join: '{{key}}을(를) 눌러 참가'
+  fight_press_spectate: '{{key}}을(를) 눌러 관전'
+  fight_locked: 비공개 전투
+  fight_join_title: 전투 참가
+  fight_spectate_title: 전투 관전
+  fight_side_a: A팀
+  fight_side_b: B팀
+  fight_empty_side: 아직 전투원이 없습니다
+  fight_unknown: 알 수 없는 전투원
+  fight_join_button: 참가
+  fight_spectate_button: 관전
+  fight_started_ago: 시작됨
+  fight_placement: 배치
+  fight_wallet_hint: 참가하려면 지갑을 연결하세요
+  fight_close: 닫기
+  menu_duel: 결투 신청
+  duel_invite: '{{name}}이(가) 결투를 신청했습니다'
+  duel_challenging: '{{name}}에게 도전 중…'
+  duel_canceled_afraid: '{{name}}이(가) 겁을 먹고 전투를 취소했습니다.'
+  duel_no_position: 위치 정보가 없어 결투가 생성되지 않았습니다.
+  duel_unknown_challenger: 도전자
+  duel_accept: 수락
+  duel_decline: 거절
+  zone_unsearched_title: 미탐색 구역
+  zone_press_search: '{{key}}을(를) 눌러 구역 탐색'
+  zone_reroll_title: 새로 고칠 수 있는 구역
+  zone_press_reroll: '{{key}}을(를) 눌러 구역 새로 고침'
+  zone_searching: 구역 정찰 중…
+  zone_revealed: 구역 발견
+  zone_coordinates: 구역 {{zx}} · {{zz}}
+  zone_mobs_found: 몬스터 {{count}}마리 발견
+  zone_resources_found: 자원 {{count}}개 발견
+  spawn_group: '{{size}}마리 무리'
+  spawn_unknown_mob: 알 수 없는 생물
+  spawn_press_attack: '{{key}}을(를) 눌러 공격'
+  spawn_engaging: 무리와 교전 중…
+  spawn_engage_conflict: 공격하기 전에 무리가 바뀌었습니다. 다른 플레이어가 먼저 교전했을 수 있습니다.
+  spawn_never_arrived: 전투가 실행되었지만 전장이 도착하지 않았습니다
+  resource_press_collect: '{{key}}을(를) 눌러 {{name}} 채집'
+  resource_need_level: 채집하려면 {{job}} 레벨 {{level}}이(가) 필요합니다
+  resource_need_tool: 채집하려면 {{job}} 도구가 필요합니다
+  resource_gathering: 채집 중…
+  resource_gathered: 자원 채집 완료
+  resource_gathered_amount: '{{name}} × {{quantity}} 채집 완료'
+  resource_gathered_amount_ambushed: '{{name}} × {{quantity}} 채집 완료 · 수호자가 습격합니다'
+  resource_ambushed: 수호자가 습격합니다
+  resource_resolving_ambush: 수호자가 길을 막고 있습니다…
+  resource_ambush_title: 수호자 습격
+  resource_face_protector: '{{key}}을(를) 눌러 맞서기'
+  zone_never_arrived: 탐색은 실행되었지만 월드에 반영되지 않았습니다. 데이터 갱신이 지연될 수 있습니다
+demo_page:
+  title: 렌더 실험실
+  world_lab: 월드 실험실
+  fight_lab: 전투 실험실
+  fight_board: 전장 목록
+  board_new: 새 전장
+  board_delete: 전장 삭제
+  board_back: 모든 전장
+  board_canvas: 캔버스
+  board_output: 최종 전장
+  board_draw_hint: 칸 유형을 선택한 뒤 클릭하거나 드래그해 그리세요
+  board_cell_type: 칸 유형
+  board_cell_void: 공허
+  board_cell_floor: 바닥
+  board_cell_obstacle: 장애물
+  board_cell_hole: 구멍
+  board_cell_start_a: A 시작점
+  board_cell_start_b: B 시작점
+  board_loading: 전장 편집기 불러오는 중…
+  board_saving: 저장 중…
+  board_unsaved: 저장하지 않은 변경 사항
+  board_saved: 저장됨 · 자동 저장 켜짐
+  board_read_only: 읽기 전용 · 로컬 개발 서버에서 편집하세요
+  no_terrain: 지형 설정 없음
+  time: 시간대
+  live: 실시간
+  remove_character: 모델 제거
+  control_character: 모델 조종
+  hat: 모자
+  cloak: 망토
+  pet: 펫
+  none: 없음
+  ride_pet: 펫 탑승
+  dismount_pet: 내리기
+  mob_group: 몬스터 무리
+  crowd_load: 캐릭터 군중 부하 테스트
+  crowd_benchmark: 벤치마크
+  crowd_loading: 캐릭터 모델 불러오는 중…
+  crowd_result: 단계
+  mob: 몬스터
+  amount: 금액
+  spawn_group: 무리 생성
+  clear: 비우기
+  resources: 자원
+  resources_missing: 자원 렌더링은 아직 복구되지 않았습니다. 정의된 목록은 시드 데이터에 남아 있습니다.
+  control_hint: 캔버스 클릭 · WASD 이동 · Space 점프 · 마우스로 둘러보기
+  back: 앱으로 돌아가기
+marketplace_page:
+  prices_title: 가격 기록
+  prices_period: 기간
+  prices_range_7: 7일
+  prices_range_30: 30일
+  prices_range_90: 90일
+  prices_range_365: 1년
+  prices_subtitle: 단위당 SUI · 완료된 판매 · 수수료 제외
+  prices_loading: 가격 기록 불러오는 중…
+  prices_unavailable: 가격 기록을 이용할 수 없습니다. 자동으로 재시도합니다.
+  prices_empty: 이 기간에 완료된 판매가 없습니다.
+  prices_empty_day: 완료된 판매 없음
+  prices_weighted: 판매 수량 가중 · 일별 평균
+  prices_units: '{{units}}개 판매'
+  prices_since: '{{date}}부터 집계 · UTC'
+  prices_inspect: 일별 단가입니다. 가리키거나 터치해 확인하세요.
+  prices_table: 일별 가격 보기
+  prices_date: 날짜
+  prices_quantity: 수량
+  volume_24h: 24시간 거래량
+  volume_30d: 30일 거래량
+  volume_window: 최근 {{window}} 동안의 공개 거래소 판매액입니다. 수수료 전 금액입니다.
+  volume_unavailable: 거래량을 일시적으로 이용할 수 없습니다.
+  title: 거래소
+  subtitle: Sui의 플레이어 판매 목록
+  disclaimer_kicker: 거래하기 전에
+  disclaimer_title: 수익보다 성장을 위한 거래
+  disclaimer_body: 플레이어끼리 SUI로 아이템을 직접 거래합니다.
+  disclaimer_supply: 아이템은 장기 투자 대상이 아닙니다. 더 많은 플레이어가 획득할수록 공급이 늘고 가격이 낮아질 수 있습니다.
+  disclaimer_fun: 성장에 맞춰 재미와 실용성을 위해 사고파세요. 수익을 기대하지 마세요.
+  disclaimer_wallet: AresRPG에는 사용할 SUI만 보관하세요. 중요한 자산은 복구 키를 직접 관리하는 별도의 개인 지갑에 보관하세요.
+  disclaimer_acknowledge: 이해했습니다
+  tab_buy: 구매
+  tab_sell: 판매
+  tab_history: 기록
+  browse: 둘러보기
+  group_equipment: 장비
+  group_pets: 펫
+  group_runes: 룬
+  group_consumable: 소모품
+  group_resources: 자원
+  group_characters: 캐릭터
+  level: 레벨
+  class: 직업
+  search: 아이템 검색…
+  no_results: 아직 판매 목록이 없습니다
+  select_item: 아이템을 선택해 판매 목록을 확인하세요
+  listing_count: 판매 목록 {{count}}개
+  rolled_stats: 굴려진 능력치
+  characteristics: 능력치
+  damages: 피해
+  range_to: '~'
+  seller: 판매자
+  buy: 구매
+  pay: 지불
+  yours: 내 상품
+  insufficient: SUI 부족
+  cancel: 취소
+  your_listings: 내 판매 목록
+  no_listings: 판매 중인 상품이 없습니다
+  withdraw: 판매 취소
+  list_for_sale: 판매 등록
+  select_to_list: 가방에서 아이템을 선택하세요
+  price: 가격
+  lot_size: 묶음 수량
+  paid_automatically: 판매 대금은 자동으로 내 키오스크에 들어옵니다.
+  lot_required: 이 묶음은 ×{{amount}}개입니다. 겹칠 수 있는 아이템은 ×1, ×10, ×100 또는 ×1000개로 등록해야 합니다.
+  inventory: 가방
+  characters: 캐릭터
+  items: 아이템
+  empty_inventory: 등록할 수 있는 아이템이 없습니다
+  revenue_30d: 최근 30일
+  sales_count: 판매 {{count}}건
+  unclaimed: 미수령 판매 대금
+  collect: 수령
+  no_history: 판매 기록이 없습니다
+  item: 아이템
+  date: 날짜
+  buyer: 구매자
+  load_more: 더 불러오기
+  list_pending: 판매 등록 중…
+  list_success: 판매 등록 완료
+  delist_pending: 판매 취소 중…
+  delist_success: 판매 취소 완료
+  buy_pending: 구매 중…
+  buy_success: 구매 완료
+  sold_toast: '{{name}} {{amount}}개를 {{price}}에 판매했습니다'
+  character_roster_full: 일곱 번째 캐릭터를 추가할 수 없습니다. 최대 여섯 명입니다
+  collect_pending: 거래소 대금 수령 중…
+  collect_success: 거래소 대금 수령 완료
+  volume_partial: 기록된 {{window}} 거래량입니다. 아직 전체 기간을 집계하지 못했으므로 최소값입니다.
+mastery_page:
+  subtitle: 일일 도전
+  title: 숙련
+  lead: 일일 던전 퀘스트로 특별한 보상을 얻으세요. 하루를 건너뛰어도 모은 숙련 포인트는 사라지지 않습니다.
+  balance: 숙련 포인트
+  daily_ready: 일일 퀘스트 가능
+  daily_syncing: 일일 퀘스트 갱신 중…
+  daily_title: 오늘의 던전 퀘스트 선택
+  daily_lead: 월드를 선택하면 찾아서 완료할 던전이 배정됩니다.
+  unknown_dungeon: 알 수 없는 던전
+  quest_reward: 숙련 포인트 {{points}} 획득
+  quest_objective_before: '던전을 찾아 완료하세요:'
+  quest_objective_after: 완료하면 숙련 포인트를 받습니다.
+  completed: 확인 완료
+  in_progress: 진행 중
+  required_level: 레벨 {{level}} 필요
+  dungeon_count: 던전 {{count}}개
+  starting: 던전 배정 중…
+  start: 일일 퀘스트 시작
+  locked: 잠김
+  world_reward: +{{points}}포인트
+  shop_title: 숙련 상점
+  shop_lead: 숙련 포인트로 특별한 전리품 상자를 구매하세요.
+  shop_empty: 판매 중인 숙련 상품이 없습니다
+  ready_to_buy: 구매 가능
+  points_missing: '{{points}}포인트 부족'
+  buying: 구매 중…
+  buy: 구매 · {{cost}}포인트
+  quest_started: 일일 퀘스트가 배정되었습니다.
+  offer_purchased: 숙련 보상을 구매했습니다.
+airdrop_page:
+  destination: '게임 지갑:'
+  refresh: 새로고침
+  title: 에어드롭
+  subtitle: 커뮤니티 보상 및 수령 방법
+  claim: 가져오기
+  holder_title: 외부 지갑
+  holder_connect_hint: 기프트카드를 보유한 지갑을 연결하세요
+  holder_connect: 지갑 연결
+  holder_connecting: 연결 중…
+  holder_connected: 연결됨
+  holder_select: 선택
+  holder_close: 지갑 선택 닫기
+  holder_wallet_missing: 호환되는 Sui 지갑이 설치되어 있지 않습니다
+  giftcards_title: 교환 대기 중인 기프트카드
+  gift_login: Google로 계속해 게임 지갑에서 선물을 받으세요
+  gift_ready: 실물 기프트카드를 수령할 수 있습니다
+  gift_claiming: 실물 기프트카드 수령 중…
+  gift_retry: 기프트카드 수령
+  redeem: 교환
+  empty: 이 지갑에는 기프트카드가 없습니다
+  claim_all: 보상 수령
+  catalogue_title: 지원하는 에어드롭
+  check_wallet: 해당 에어드롭 대상이라면 스냅샷 당시의 지갑을 확인하세요. 아래에서 외부 지갑을 연결해 기프트카드를 가져올 수 있습니다. 게임 지갑에 보낸 보상은 같은 Google 계정으로 로그인하세요. 실물 카드는 QR 코드로 수령합니다.
+  rank_reward: '{from}~{to}위: 상자 종류별 {amount}개'
+  delivery:
+    wallet: 지갑 에어드롭
+    nft: NFT에 첨부된 선물
+    physical: 실물 기프트카드
+    game_wallet: Hytale 베테랑 보상
+  campaigns:
+    oeuftermath:
+      title: Aftermath Eggs · Oeuftermath
+      description: 스냅샷 당시 Aftermath Egg 보유자는 Oeuftermath 펫 기프트카드 대상입니다. 당시 Egg를 보유한 지갑을 확인하세요. 나중에 Egg를 사도 자격이 생기지 않습니다.
+    suicune:
+      title: SWEEBS · Suicune
+      description: 스냅샷 당시 SWEEBS 보유자는 Suicune 펫 기프트카드 대상입니다. 대상 지갑을 연결해 게임 계정으로 가져오세요.
+    suifren_bullshark:
+      title: Suifren Bullsharks
+      description: 스냅샷에서 대상 Bullshark 보유 지갑 500개를 선정했습니다. 당시 지갑에서 펫 기프트카드를 확인하세요. Bullshark 보유만으로 선정이 보장되지는 않습니다.
+    suifren_capy:
+      title: Suifren Capys
+      description: 스냅샷에서 대상 Capy 보유 지갑 500개를 선정했습니다. 당시 지갑에서 펫 기프트카드를 확인하세요. Capy 보유만으로 선정이 보장되지는 않습니다.
+    primemachin:
+      title: Prime Machin
+      description: 펫 기프트카드는 스냅샷의 Prime Machin NFT로 보내집니다. Studio Mirai에서 NFT에 첨부된 선물을 먼저 받은 뒤 수령 지갑을 여기 연결해 가져오세요.
+    vaporeon:
+      title: Vaporeon 보유자
+      description: Vaporeon 보유자 스냅샷에서 선정된 지갑은 Vaporeon 펫 기프트카드를 받습니다. 당시 지갑을 확인한 뒤 여기서 카드를 가져오세요.
+    sui_basecamp_singapore:
+      title: Sui Basecamp · 싱가포르
+      description: 싱가포르 Sui Basecamp에서 Sui 상자를 실물 기프트카드로 나눠 드립니다. 카드의 QR 코드를 스캔하고 로그인해 받으세요. 수령 전까지 코드를 공개하지 마세요.
+    hytale_veterans:
+      title: Hytale 베테랑 · 상위 100명
+      description: 아이템 수집, 플레이 시간, 캐릭터 경험치 및 생산 직업을 기준으로 선정한 Hytale 플레이어 상위 100명에게 감사의 선물을 드립니다. 보상은 Hytale 백업에 기록된 Sui 주소로 보냅니다. 기존 Google 계정으로 해당 지갑에 접속하세요.
+    hytale_supporters:
+      title: Hytale 후원자 · Mark of the Unbroken
+      description: 상위 100명 여부와 관계없이 상점 구매 기록이 {threshold} SUI를 초과한 모든 연결된 Hytale 지갑이 대상입니다. 칭호는 백업의 Sui 주소로 보냅니다. 기존 Google 계정으로 로그인해 기프트카드를 확인하세요.
+settings_page:
+  suins_title: SuiNS 이름
+  suins_hint: SuiNS 이름이 게임 지갑을 가리키면 됩니다. name@name을 입력하면 @name으로 표시됩니다.
+  suins_current: 현재 기본 이름
+  suins_none: 없음
+  suins_owned: 소유한 이름
+  suins_empty: 활성 이름이 없습니다
+  suins_choose: 이름 선택
+  suins_name: 이름 또는 하위 이름
+  suins_placeholder: name@name
+  suins_refresh: 이름 새로고침
+  suins_use: 이 이름 사용
+  suins_loading: 이름 불러오는 중…
+  suins_saving: 기본 이름 설정 중…
+  suins_saved: 기본 이름이 갱신되었습니다. 순위표에 반영되기까지 몇 분 걸릴 수 있습니다.
+  suins_read_failed: 이름을 불러올 수 없습니다. 새로고침해 보세요.
+  suins_write_failed: 이름 변경을 확인할 수 없습니다. 다시 시도하기 전에 새로고침하세요.
+  suins_invalid_name: 올바른 SuiNS 이름을 입력하세요.
+  suins_not_targeted: 게임 지갑이 소유한 활성 이름 또는 이미 이 지갑을 가리키는 이름을 선택하세요.
+  suins_wallet_required: 이름을 선택하려면 로그인하세요.
+  suins_target_hint: 이 지갑이 소유한 이름은 이 버튼으로 대상 주소도 설정합니다. 그 외에는 SuiNS에서 먼저 게임 지갑을 가리키도록 설정하세요.
+  day_night_cycle_label: 낮/밤 주기
+  day_night_cycle_hint: 끄면 월드가 항상 정오로 유지됩니다.
+  title: 설정
+  subtitle: 나의 AresRPG 환경설정
+  master_volume_label: 전체 음량
+  master_volume_hint: 모든 음악과 효과음의 음량을 조절합니다.
+  music_label: 음악
+  music_hint: 월드 및 전투 음악을 재생합니다.
+  footsteps_label: 발소리
+  footsteps_hint: 이동할 때 발소리를 재생합니다.
+  auto_switch_fighter_label: 전투 캐릭터 자동 전환
+  auto_switch_fighter_hint: 내 캐릭터의 전투 턴이 시작되면 자동으로 선택합니다.
+  always_craft_from_label: 항상 제작할 캐릭터
+  always_craft_from_hint: 직업 탭과 모든 제작을 내 캐릭터 하나로 고정합니다.
+  always_craft_from_picker: 제작 캐릭터
+  always_craft_from_none: 사용 안 함
+  render_distance_label: 표시 거리
+  render_distance_hint: 주변 월드를 불러오는 거리입니다. 높을수록 성능 부담이 커집니다.
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: 튜토리얼 건너뛰기
+  back: 뒤로
+  next: 다음
+  finish: 완료
+  fight_enter: 전투 입장
+  reset_title: 튜토리얼
+  reset_hint: 다음에 각 페이지를 방문할 때 소개를 다시 표시합니다.
+  reset_action: 초기화
+  world_compass_title: 월드와 공유 구역
+  world_compass_body: AresRPG에는 성장에 따라 열리는 여러 월드가 있습니다. 각 월드는 몬스터, 자원, 던전이 있는 구역으로 나뉩니다. 누구나 구역을 발견할 수 있으며 발견 내용은 모든 플레이어에게 공유됩니다.
+  world_hud_title: 체력과 빠른 슬롯
+  world_hud_body: 이 HUD에는 체력과 빠른 아이템 슬롯이 표시됩니다. 전투가 시작되면 같은 자리가 주문 바로 바뀝니다.
+  world_fps_title: 월드 설정
+  world_fps_body: 지형은 공개된 데이터에서 결정론적으로 생성됩니다. Sui는 월드와 기준 X/Z 위치를 저장하고 높이는 로컬 지형에서 계산합니다. 따라서 평면 모드는 같은 공간의 표현만 바꿉니다. 그래픽 품질을 바꾸거나 월드 전투를 파티원 전용으로 제한할 수도 있습니다.
+  world_character_title: 월드의 플레이어
+  world_character_body: 현재 조종 중인 캐릭터입니다. 근처의 다른 캐릭터를 마우스 오른쪽 버튼으로 클릭하면 상호작용 메뉴가 열립니다.
+  world_character_tabs_title: 여러 캐릭터로 플레이
+  world_character_tabs_body: 최대 여섯 캐릭터를 소유할 수 있습니다. 다른 내 캐릭터를 파티에 초대하고 파티장 따라가기를 켜면 함께 이동하며 도착 후 참가 가능한 월드 전투에 자동으로 합류합니다.
+  fight_title: 첫 온체인 전투
+  fight_body: 전투는 턴제로 진행됩니다. 이동과 주문을 선택하면 행동이 함께 준비됩니다. 턴 종료는 전체 턴을 Sui 거래 한 건으로 제출하고 다음 플레이어가 행동할 때까지 이어지는 몬스터 턴을 계산합니다. 전투의 기준 상태는 모두 Sui에서 확정됩니다. 승리 후 마지막 Sui 거래가 온체인 난수로 공동 전리품을 추첨하고 각 보상을 지정된 플레이어의 가방에 넣습니다.
+  equipment_gear_title: 장비
+  equipment_gear_body: 장착한 아이템은 선택한 캐릭터의 소유입니다. 장비를 인형에 드래그하고 보너스를 확인한 뒤 변경 사항을 함께 확정하세요.
+  equipment_inventory_title: 공유 가방
+  equipment_inventory_body: 이 계정의 모든 캐릭터가 가방을 공유합니다. 위에서 다른 캐릭터를 선택해 같은 사용 가능한 아이템을 장착할 수 있습니다.
+  stats_title: 능력치
+  stats_body: 능력치 포인트로 강해지세요. 활력은 체력을, 지혜는 경험치와 AP/MP 감소 저항을 높입니다. 행운은 물 피해와 드롭 확률을, 민첩은 바람 피해와 치명타, 태클 및 태클 탈출 능력을 높입니다.
+  spells_title: 주문
+  spells_body: 캐릭터가 성장하면 새 주문이 열립니다. 레벨업으로 얻은 주문 포인트를 여기서 사용해 열린 주문을 강화할 수 있습니다.
+  jobs_title: 생산 직업
+  jobs_body: 채집과 제작 진행도를 확인하고 제작법을 살펴보며 아이템을 만드세요. 캐릭터가 여러 명이면 설정에서 전용 제작 캐릭터로 이 페이지를 고정할 수 있습니다.
+  runeforge_title: 룬 대장간
+  runeforge_body: 해당 제작 직업이 {{level}}레벨에 도달하면 룬으로 장비를 강화할 수 있습니다. 아이템을 분쇄해 룬을 얻고 여기서 사용하세요.
+admin_page:
+  kicker: 게시자
+  title: 게임 콘텐츠 게시
+  body: 결정론적 시드 주소를 확인하고 시뮬레이션한 배치를 하나씩 제출한 뒤 콘텐츠를 영구 봉인하세요.
+  objects: 게시된 객체
+  publisher: 게시자 객체 ID
+  inspect: 시드 계획 검사
+  inspecting: 검사 중…
+  plan: 시드 계획
+  targets: 결정론적 대상
+  not_inspected: 게시된 객체 ID를 추가한 뒤 계획을 검사하세요.
+  execute: 실행
+  executing: 실행 중…
+  seal_title: 영구 봉인
+  seal_body: 봉인하면 이후 콘텐츠를 쓰는 모든 경로가 제거됩니다. 업그레이드나 관리자 권한으로도 되돌릴 수 없습니다.
+  arm_seal: 영구 봉인 준비
+  seal_forever: 콘텐츠 영구 봉인
+  sealed: 콘텐츠 봉인됨
+  admin_wallet: 관리자 지갑
+  admin_wallet_body: 게시 및 거래소 출금을 위한 별도 서명자입니다.
+  connect_admin_wallet: 연결
+  choose_admin_wallet: 지갑 선택
+  choose_admin_address: 주소 선택
+  cancel_wallet_selection: 취소
+  wallet_account: 계정
+  select_wallet: 선택
+  connecting: 연결 중…
+  loading_wallets: 지갑 불러오는 중…
+  no_admin_wallet: 호환되는 브라우저 지갑이 설치되어 있지 않습니다.
+  royalties: 로열티
+  cap_owned: 권한 보유
+  cap_missing: 권한 없음
+  reading_royalties: 정책 읽는 중…
+  reading: 읽는 중…
+  refresh_revenue: 수익 새로고침
+  arm_claim: 수령 준비
+  claiming: 수령 중…
+  confirm_claim: 수령 확인
+  disconnect_admin_wallet: 연결 해제
+  claim_digest: 수령 거래
+  range_24h: 24시간
+  range_7d: 7일
+  range_30d: 30일
+  range_90d: 90일
+  range_1y: 1년
+  overview_title: 개요
+  overview_body: 복잡한 제어 정보 없이 플레이어 활동과 수익을 확인합니다.
+  overview_unavailable: 개요를 이용할 수 없습니다
+  loading_overview: 개요 불러오는 중…
+  all_systems_current: 모든 시스템 최신 상태
+  checkpoint: 체크포인트
+  refresh: 새로고침
+  retry: 재시도
+  active_players: 활성 플레이어
+  active_players_bucket: 구간별 활성 플레이어
+  daily_active: 일간 활성 플레이어
+  active_interval: 구간별 활성 수
+  active_30d: 30일 활성 플레이어
+  active_last_30d: 최근 30일 동안 활동
+  player_activity: 플레이어 활동
+  population: 인구
+  player_activity_body: 일별 활동 및 최근 30일 도달 수
+  stickiness: 일간 / 30일
+  online_players: 접속 중인 플레이어
+  online_players_body: 구간별 고유 인증 플레이어 최고 수
+  online_now: 접속 중인 플레이어
+  peak: 최고치
+  revenue: 수익
+  revenue_over_time: 시간별 수익
+  revenue_over_time_body: 출처별 전체 프로토콜 수익
+  item_royalties: 아이템 로열티
+  character_royalties: 캐릭터 로열티
+  character_creation_revenue: 캐릭터 생성
+  kolizeum_revenue: 콜리제움 수수료
+  game_transactions: 게임 거래
+  game_gas_fees: 게임 가스비
+  all_time: 전체 기간
+  game_transactions_over_time: 시간별 거래
+  game_transactions_body: 성공한 AresRPG 거래를 PTB당 한 번 집계합니다
+  today: 오늘
+  selected_period: 선택한 기간
+  lifetime: 누적
+  average_order: 평균 주문
+  chart_revenue: 수익
+  chart_players: 플레이어
+  chart_online: 접속 중
+  bucket_15m: 15분 구간
+  bucket_hour: 시간 구간
+  bucket_day: 일 구간
+  bucket_week: 주 구간
+  bucket_month: 월 구간
+  unique_addresses: 고유 주소
+  unique_addresses_body: AresRPG 모듈 호출에 성공한 주소
+  unique_addresses_over_time: 시간별 고유 주소
+  successful_game_calls: 게임 모듈 호출 성공 사용자
+  total_characters: 전체 캐릭터 수
+  current_characters: 현재 온체인 캐릭터
+  total_characters_body: 현재 온체인 Character 객체
+  characters_over_time: 시간별 캐릭터 수
+  revenue_30d: 30일 수익
+  revenue_mtd: 이번 달 누적 수익
+  last_30_days: 최근 30일
+  calendar_month_to_date: 이번 달 시작부터 현재까지
+  buyer: 구매자
+  item: 아이템
+  quantity: 수량
+  unit_price: 단가
+  total: 합계
+  when: 시점
+  transaction: 거래
+  treasury: 금고
+  treasury_body: 현재 잔액이며 획득 수익과는 별도입니다
+  available_balance: 사용 가능한 잔액
+  claim: 수령
+  close: 닫기
+  loading: 불러오는 중…
+  load_more: 더 불러오기
+  transactions: 거래
+simulator_page:
+  title: 전투 시뮬레이터
+  local_only: 로컬 결정론적 설정
+  board_seed: 시드 {seed}
+  reroll: 전장 다시 생성
+  back_to_setup: 설정으로 돌아가기
+  characters: 캐릭터
+  create_character: 생성
+  no_characters: 캐릭터를 만든 뒤 파란 칸에 배치하세요
+  edit_character: 캐릭터 편집
+  new_character: 새 캐릭터
+  appearance: 외형
+  create: 생성
+  delete: 삭제
+  level_label: 레벨
+  stats: 능력치
+  spells: 주문
+  points_left: '{left} / {total} 포인트'
+  equipment_short: 장비
+  spell_level: '{name} 레벨'
+  spell_level_option: 레벨 {level} · {cost} 포인트
+  class_shugo_title: 수호자
+  class_tomoda_title: 야수 조련사
+  class_rojin_title: 탐광자
+  class_yajin_title: 암살자
+  class_tokei_title: 시간술사
+  class_asobi_title: 도박사
+  class_iyashi_title: 치유사
+  class_senshi_title: 전사
+  class_yogan_title: 궁수
+  class_mori_title: 드루이드
+  class_ikari_title: 광전사
+  class_shusen_title: 싸움꾼
+  delete_character: 캐릭터 삭제
+  assigned_cell: 배치됨 · {cell}번 칸
+  pick_character: 캐릭터 선택
+  pick_mob: 몬스터 선택
+  character_editor: 로컬 캐릭터
+  character_editor_hint: 신원, 외형, 레벨, 능력치 및 해금한 주문
+  character_level: 캐릭터 레벨
+  character_stats: 배분한 능력치
+  character_spells: 주문 레벨
+  stat_points: 남은 능력치 포인트 {points}
+  spell_points: 남은 주문 포인트 {points}
+  spell_unlock: '{level}레벨에 해금'
+  reset: 초기화
+  delete_confirm: 삭제 확인
+  class_change_hint: 직업을 변경하면 기본 능력치와 투자한 주문 레벨이 초기화됩니다
+  spells_unavailable: 이 레벨에서 해금된 주문이 없습니다
+  save_character: 캐릭터 저장
+  equipment: 장비 및 유물
+  max_roll: 최대 수치
+  remove_mob: 몬스터 제거
+  stat_vitality: 활력
+  stat_wisdom: 지혜
+  stat_strength: 힘
+  stat_intelligence: 지능
+  stat_chance: 행운
+  stat_agility: 민첩
+  stat_range: 사거리
+  stat_movement: 이동
+  stat_action: 행동
+  stat_critical: 치명타 확률
+  stat_raw_damage: 고정 피해
+  stat_resistance: 저항
+  stat_power: 위력
+  stat_earth_resistance: 땅 저항
+  stat_fire_resistance: 불 저항
+  stat_water_resistance: 물 저항
+  stat_air_resistance: 바람 저항
+  level: 레벨 {level}
+  level_range: 레벨 {min}~{max}
+  place: 전투원 배치
+  start_fight: 전투 시작
+  fight_board: 전장
+  board_hint: 시작 칸 왼쪽 클릭 · 오른쪽 드래그로 이동 · 휠로 확대/축소
+  fight_active: 전투 시작됨 · 기준 이벤트 {events}개
+  picker_search: '{title} 검색…'
+  picker_all: 전체
+  picker_no_results: 결과 없음
+  picker_results: 결과 {filtered} / {total}
+  picker_selected: 선택됨 · {label}
+  picker_new: 새로 만들기
+  blob_debug: 전장 영역 형태
+  blob_color: 색상
+  blob_range: 범위
+  blob_per_cell: 칸별
+  blob_single: 단일 형태
+  blob_click: 칸을 클릭해 배치
+fight_hud:
+  stop_spectating: 관전 중지
+  board_label: 전장
+  turn_order: 턴 순서
+  turn_order_collapse: 턴 순서 접기
+  turn_order_expand: 턴 순서 펼치기
+  placement_title: 전투 준비
+  placement_hint: 전투원을 배치하고 준비 완료를 누르세요
+  placement_gas_title: 전투원을 다시 이동할까요?
+  placement_gas_body: 칸을 바꿀 때마다 거래가 실행되고 가스비가 발생합니다. 배치를 불필요하게 반복하지 마세요.
+  placement_gas_hide: 다시 표시하지 않기
+  placement_gas_confirm: 그래도 이동
+  placement_ready: 준비 완료
+  placement_ready_all: 모두 준비
+  placement_ready_all_progress: 모두 준비 중 · {completed}/{total}
+  placement_ready_all_complete: 모두 준비 완료 · {completed}/{total}
+  placement_ready_all_failed: 준비 중단 · {completed}/{total}
+  placement_waiting: 다른 플레이어 기다리는 중…
+  placement_starting: 전투 시작 중…
+  placement_force_prompt: 자리를 비운 플레이어가 있습니다. 강제로 시작할까요?
+  placement_force_button: 강제 시작
+  placement_no_opponent: 아무도 도전을 수락하지 않았습니다
+  crank_prompt: 현재 플레이어가 턴을 끝내지 않고 있습니다.
+  crank_button: 턴 강제 종료
+  end_turn: 턴 종료
+  end_turn_queued: 턴 종료 예약됨
+  reset_turn: 초기화
+  weapon_attack: 무기 공격
+  bare_hands: 맨손
+  log_fight_started: 전투 시작
+  log_cast: '{caster}이(가) {spell} 사용'
+  log_critical_cast: 치명타! {caster}이(가) {spell} 사용
+  log_heal: '{source}이(가) {target}의 체력을 {amount} 회복'
+  log_ap_change: '{target}: {delta} AP'
+  log_mp_change: '{target}: {delta} MP'
+  log_lost: '{target}의 체력 {amount} 감소'
+  log_lost_reduced: '{target}의 체력 {amount} 감소({reduced} 경감)'
+  log_absorbed: '{target}이(가) 피해 {reduced} 흡수'
+  log_returned: '{target}이(가) 주문 반사'
+  log_stat_change: '{target}: {delta} {stat}({turns}{turns_word})'
+  unit_ap: AP
+  unit_mp: MP
+  log_points_loss: '{target}의 {unit} {amount} 감소'
+  log_points_steal: '{source}이(가) {target}에게서 {amount} {unit} 흡수'
+  log_points_partial: '{target}이(가) {unit} 감소 {dodged}을(를) 회피하고 {amount} 잃음'
+  log_points_dodge: '{target}이(가) {attempted} {unit} 감소 회피'
+  log_trap_placed: '{owner}이(가) 함정 설치'
+  log_glyph_placed: '{owner}이(가) 글리프 설치'
+  log_death: '{target} 사망'
+  log_forfeit: '{target}이(가) 포기'
+  log_draw: 무승부로 전투 종료
+  log_team_wins: '{team}팀 승리'
+  forfeit: 포기
+  forfeit_title: '{name}의 전투를 포기할까요?'
+  forfeit_body: '{name}은(는) 남은 체력을 모두 잃고 전투를 떠납니다.'
+  confirm_forfeit: 포기 확인
+  unit_turns: 턴
+  chat_title: 채팅
+  chat_resize: 채팅 크기 조절
+  chat_tab_general: 일반
+  chat_tab_party: 파티
+  chat_tab_private: 귓속말
+  chat_tab_combat: 전투
+  chat_placeholder: 메시지 입력…
+  chat_fetching_item: 온체인 능력치 불러오는 중…
+  chat_item_unavailable: 이 아이템을 온체인에서 확인할 수 없습니다.
+  chat_you: 나
+  chat_line: '{name}: {message}'
+  chat_party_line: '(파티) {name}: {message}'
+  chat_whisper_to: ({name}에게) {message}
+  result_title: 전투 결과
+  result_duration: 소요 시간
+  result_gas_spent: 사용한 가스비
+  result_wager_won: 획득 SUI
+  result_wager_lost: 잃은 SUI
+  result_wager_even: 참가금 결과
+  result_party: 내 파티
+  result_enemies: 적
+  result_victory: 승리
+  result_defeat: 패배
+  result_you: 나
+  result_fallen: 쓰러짐
+  result_survived: 생존
+  result_collecting: 전리품 수령 중…
+  result_collecting_progress: 캐릭터 전리품 수령 중 · {completed}/{total}
+  result_collecting_complete: 모든 캐릭터 전리품 수령 완료 · {completed}/{total}
+  result_collecting_failed: 전리품 수령 중단 · {completed}/{total}
+  result_continue: 계속
+  result_close: 닫기
+  fight_finalize_pending: 전투 정리를 완료할 수 있습니다.
+  fight_finalize_button: 마무리
+  result_retry: 재시도
+  result_version_changed: 전투 보상을 받는 동안 일부 게임 객체가 변경되었습니다. 잃은 것은 없습니다. 다시 시도해 갱신하고 보상을 받으세요.
+  level_up_title: 레벨 업
+  level_up_reached: 달성 레벨
+  level_up_stat_points: 능력치 포인트
+  level_up_spell_points: 주문 포인트
+  level_up_new_spell: 새 주문 해금
+  level_up_new_worlds: 새 월드 해금
+  level_up_worlds_note: 새로운 목적지에 갈 수 있습니다
+  level_up_allocate: 포인트 배분
+  level_up_later: 나중에
+wallet_legacy:
+  sui: SUI
+  how_to_get: SUI를 얻는 방법
+  your_address: 내 지갑 주소
+  send_sui: 이 주소로 SUI를 보내세요. 클릭하면 복사됩니다.
+  buy_directly: 직접 구매
+  buy_with_card: 신용카드로 SUI를 구매하면 지갑으로 바로 받습니다.
+  buy_on_exchange: 거래소에서 구매
+  withdraw_to_wallet: 거래소에서 SUI를 구매한 뒤 위 지갑 주소로 출금하세요.
+  faq: 자주 묻는 질문
+  wallet_description: 본인만 접근할 수 있는 개인 지갑입니다. 네트워크 수수료와 플레이어 거래에 쓸 SUI를 입금하세요.
+  moonpay_desc: 신용카드, Apple Pay, 계좌 이체
+  transak_desc: 신용카드, 계좌 이체, 100개 이상의 국가
+  faq_what_is_sui: SUI란 무엇인가요?
+  faq_what_is_sui_answer: SUI는 디지털 현금과 같은 디지털 화폐입니다. Sui 블록체인이라는 빠르고 안전한 네트워크에서 작동합니다. 소량의 SUI로 네트워크 수수료를 내고 거래소에서 다른 플레이어와 직접 거래할 수 있습니다.
+  faq_why_sui: AresRPG는 왜 SUI를 사용하나요?
+  faq_why_sui_answer: SUI는 주 결제 수단입니다. 거래는 1초 이내에 처리되고 수수료는 1센트의 일부에 불과하며 중개 수수료가 없습니다. 향후 USD, EUR 등 일반 화폐를 지원할 수 있지만, 아직 감당하기 어려운 법적 절차와 높은 수수료 및 세금이 필요합니다.
+  faq_legal: 합법인가요?
+  faq_legal_answer: 네. 대부분의 국가에서 암호화폐 구매와 보유는 합법입니다. SUI는 전 세계 주요 규제 거래소에서 거래되는 디지털 자산입니다. AresRPG에서는 네트워크 수수료와 플레이어 간 거래에 사용합니다.
+  faq_eula: 게임 약관에서 허용하나요?
+  faq_eula_answer: 네. 암호화폐가 NFT나 투기성 구조 없이 결제 수단으로만 쓰이면 약관에 부합합니다. 많은 대형 게임 상점도 암호화폐 결제를 지원합니다.
+  faq_access: 누가 내 지갑에 접근할 수 있나요?
+  faq_access_answer: 본인만 가능합니다. 지갑은 Google 로그인과 Sui의 zkLogin 기술로 만들어집니다. AresRPG 팀을 포함해 누구도 자금에 접근하거나 이동할 수 없습니다. 이 지갑은 AresRPG 활동용이므로 큰 금액을 보관하지 말고 사용할 만큼만 입금하세요.
+  faq_balance: SUI를 보냈는데 잔액이 갱신되지 않나요?
+  faq_balance_answer: 갱신이 잠시 지연될 수 있습니다. 위에서 주소를 복사해 올바른 주소로 보냈는지 확인하세요. 계속 표시되지 않으면 거래 ID와 함께 Discord로 문의하세요.
+  add_funds: 충전
+  testnet_faucet_title: 테스트넷 SUI
+  testnet_faucet_body: AresRPG가 Sui 테스트넷에서 실행 중입니다. 테스트넷 SUI는 무료이며 금전적 가치가 없습니다. 공식 Sui 파우셋에서 토큰을 받으세요.
+  testnet_faucet_action: Sui 파우셋 열기
+  how_to_pay: 어떻게 결제하시겠어요?
+  add_funds_desc: 결제 방법을 선택하세요. SUI가 지갑으로 바로 전송됩니다.
+  method_paypal: PayPal
+  method_paypal_desc: PayPal 계정으로 결제
+  method_card: 신용/체크카드
+  method_card_desc: Visa, Mastercard
+  method_apple_pay: Apple Pay
+  method_apple_pay_desc: Face ID / Touch ID로 결제
+  method_google_pay: Google Pay
+  method_google_pay_desc: Google 계정으로 결제
+  method_bank: 계좌 이체
+  method_bank_desc: SEPA(EU) 또는 ACH(미국)
+  method_have_sui: 이미 SUI가 있습니다
+  method_have_sui_desc: 다른 지갑이나 거래소에서 전송
+  paypal_note: MoonPay를 통해 미국, 영국 및 대부분의 유럽에서 이용 가능
+  card_note: 아래 제공업체를 선택하세요. 모두 Visa와 Mastercard를 지원합니다
+  bank_note: 수수료가 가장 낮습니다(약 1%). 유럽은 SEPA, 미국은 ACH를 사용합니다.
+  steps_paypal: 1. 아래 링크 클릭  2. PayPal 선택  3. 금액 입력. SUI가 지갑에 도착합니다
+  steps_card: 제공업체를 선택하고 카드 정보를 입력하면 SUI가 지갑에 도착합니다.
+  method_swap: Solana, ETH 등에서 전송…
+  method_swap_desc: Portal Bridge로 자산을 Sui에 전송
+  swap_note: 체인 간 전송은 Portal Bridge를 이용합니다.
+  steps_swap: Portal Bridge를 열고 두 지갑을 연결한 뒤 Sui를 선택해 전송을 완료하세요.
+  steps_wallet: 아래 지갑 주소로 SUI를 보내세요. 몇 초 안에 도착합니다.
+  advanced_exchange: '고급: 거래소에서 구매'
+  age_notice: 모든 결제 제공업체는 만 18세 이상만 이용할 수 있습니다.
+  send:
+    button: 보내기
+    title: SUI 보내기
+    building_title: 전송 준비
+    building_body: 거래 구성 중…
+    confirm_title: 전송 확인
+    executing_title: 전송 중
+    executing_body: Sui 네트워크에 전송 거래를 제출하고 있습니다.
+    success_title: 전송 완료
+    success_body: '{{recipient}}에게 {{amount}}을(를) 보냈습니다.'
+    failed_title: 전송 실패
+    recipient_label: 받는 사람
+    recipient_placeholder: 플레이어 이름 또는 0x… 주소
+    address_valid: 올바른 Sui 주소
+    address_invalid: 잘못된 Sui 주소
+    hint: 플레이어 이름(4자 이상) 또는 0x Sui 주소를 입력하세요
+    player_resolved: '플레이어 찾음: {{name}}'
+    player_resolved_address: '{{name}} → {{address}}'
+    player_not_found: 해당 이름의 플레이어가 없습니다
+    player_lookup_failed: 플레이어 이름을 조회할 수 없습니다. 다시 시도하세요.
+    no_results: 플레이어를 찾지 못했습니다
+    amount_label: 금액
+    submit: 계속
+    send_confirm: 보내기
+    sending_to: 받는 사람
+    sent: 전송됨
+    send_more: 더 보내기
+    suins_resolving: 이름 확인 중…
+    suins_resolved: '이름 확인됨: {{name}}'
+    err:
+      recipient_not_found: '{{name}}이라는 플레이어를 찾지 못했습니다.'
+      recipient_no_wallet: '{{name}}은(는) 아직 웹 앱에 지갑을 연결하지 않았습니다. 먼저 aresrpg.world에서 연결하도록 알려 주세요.'
+      self_send: 자신의 지갑으로 SUI를 보낼 수 없습니다.
+      invalid_address: 입력한 주소는 올바른 Sui 주소가 아닙니다.
+      insufficient_balance: 이 전송에 필요한 SUI가 부족합니다.
+      rate_limited: 전송 횟수가 너무 많습니다. 1분 뒤 다시 시도하세요.
+      tx_failed: 온체인 거래가 실패했습니다. 자금은 이동하지 않았습니다.
+      user_rejected: 지갑에서 서명이 거절되었습니다.
+      recipient_required: 보내기 전에 받는 사람을 입력하세요.
+      suins_not_found: SuiNS 이름 “{{name}}”을(를) 찾지 못했습니다.
+      amount_positive: 0보다 큰 금액을 입력하세요.
+      amount_invalid: 올바른 금액이 아닙니다.
+    drain_hint: 최대 금액은 지갑을 비웁니다. 네트워크 수수료는 전송액에서 차감됩니다.
+    drain_warning: 지갑을 비웁니다. 네트워크 수수료를 전송액에서 지불하므로 이후 잔액은 정확히 0 SUI가 됩니다.
+    drain_sending: 전체 잔액
+    drain_fee_note: 전송액에서 차감
+    drain_remaining: 지갑에 남는 금액
+    success_drain_body: 지갑을 비웠습니다. 모두 {{recipient}}에게 보냈습니다.
+wallet_send_shared:
+  cancel: 취소
+  close: 닫기
+  retry: 재시도
+  copied: 복사됨
+  gas_estimated: 예상 가스비
+  signing: 서명 중…
+  dont_close: 이 창을 닫지 마세요
+  add_funds: 충전
+  total: 합계
+  transaction: 거래
+encyclopedia_page:
+  minimum: 최소
+  maximum: 최대
+  terrain_seed: 지형 시드
+  sea_level: 해수면
+  world_role:
+    trash: 일반
+    archi: 희귀 변종
+    elite: 정예
+    boss: 보스
+    dungeon_boss: 던전 보스
+  gather_job:
+    farmer: 농부
+    herbalist: 약초 채집가
+    miner: 광부
+  world_resource_tier: '{{tier}}등급'
+  world_address_copied: 복사 완료!
+  search_items: 아이템 검색…
+  search_mobs: 몬스터 검색…
+  all_families: 모든 계열
+  elements_filter: 원소
+  advanced_filters: 상세 필터
+  no_entries: 항목을 찾지 못했습니다
+  select_item: 아이템을 선택해 상세 정보를 보세요
+  select_mob: 몬스터를 선택해 상세 정보를 보세요
+  select_class: 직업을 선택해 상세 정보를 보세요
+  loading_details: 상세 정보 불러오는 중…
+  loading_encyclopedia: 백과사전 불러오는 중…
+  items: 아이템
+  mobs: 몬스터
+  pets: 펫
+  classes: 직업
+  gameplay_tab: 게임 방식
+  jobs_tab: 생산 직업
+  search_jobs: 생산 직업 검색…
+  select_job: 생산 직업 선택
+  crafts: 제작
+  gathering_tiers: 채집 성장
+  craftable_items: 제작 가능한 아이템
+  tier: 등급
+  required_level: 필요 레벨
+  resource: 자원
+  rare_variant: 희귀 변종
+  xp_per_harvest: 채집당 경험치
+  job_desc:
+    FARMER: 농부는 세계 곳곳의 곡물을 수확합니다. 등급이 오르면 고급 제작법에 쓰는 희귀 작물을 얻을 수 있습니다.
+    HERBALIST: 약초 채집가는 연금술에 쓰는 식물과 꽃을 모읍니다. 다음 등급을 채집하려면 더 높은 직업 레벨이 필요합니다.
+    MINER: 광부는 광맥에서 광석과 광물을 캡니다. 채광 레벨이 오르면 희귀 금속을 얻을 수 있습니다.
+    FORGER: 대장장이는 검, 단검과 도끼를 만듭니다.
+    CARVER: 조각가는 활과 창을 만듭니다.
+    TAILOR: 재단사는 모자와 망토를 만듭니다.
+    JEWELER: 보석 세공사는 반지와 목걸이를 만듭니다.
+    TANNER: 무두장이는 장화와 허리띠를 만듭니다.
+    HANDYMAN: 만능공은 도구, 열쇠와 중간 재료를 만듭니다.
+    ALCHEMIST: 연금술사는 물약과 중간 재료를 만듭니다.
+    BAKER: 제빵사는 빵과 중간 재료를 만듭니다.
+  dungeons_tab: 던전
+  search_dungeons: 던전 검색…
+  select_dungeon: 던전 선택
+  dropped_by: 드롭 출처
+  recipe: 제작법
+  price_history: 가격 기록
+  no_price_data: 가격 기록이 없습니다
+  no_recipe: 제작법 데이터가 없습니다
+  ingredient_of: 사용되는 제작법
+  no_ingredient_of: 어떤 제작법에도 쓰이지 않습니다
+  no_drops: 알려진 드롭 출처가 없습니다
+  pet_stats: 펫 능력치
+  pet_diet: 펫 먹이
+  food_sources: 먹이 출처
+  stat_bonuses_max: 최대 성장 능력치 보너스
+  characteristics: 능력치
+  damages: 피해
+  range_to: '~'
+  level_short: 레벨 {{level}}
+  no_diet: 먹이 정보가 없습니다
+  newborn: 갓 태어남
+  max_power: 최대 위력
+  back_to_list: 목록으로 돌아가기
+  showing_mobs: 몬스터 {{count}} / {{total}} 표시
+  no_mobs_match: 필터에 맞는 몬스터가 없습니다
+  clear_all: 모두 지우기
+  all_jobs: 모든 생산 직업
+  sort_name_asc: 이름순
+  level_bracket: 레벨 {{range}}
+  unknown_zone: 알 수 없음
+  showing_count: '{{count}} / {{total}} 표시'
+  sort_level_asc: 레벨 ↑
+  sort_level_desc: 레벨 ↓
+  sort_name: 이름순
+  sort_newest: 최신순
+  clear_filters: 모두 지우기
+  no_results: 필터에 맞는 아이템이 없습니다
+  filter_by_category: 분류별
+  filter_by_resource: 자원 유형별
+  filter_by_job: 제작 직업별
+  filter_by_world: 월드별
+  filter_by_mob_family: 몬스터 계열별
+  filter_biome: 생물군계
+  filter_city: 도시
+  group_armor: 방어구
+  group_weapons: 무기
+  group_accessories: 장신구
+  group_pets: 펫
+  group_runes: 룬
+  group_relics: 유물
+  group_tools: 도구
+  group_consumables: 소모품
+  group_raw_resources: 원재료
+  group_gatherable_resources: 채집 자원
+  group_intermediary_resources: 중간 재료
+  group_pet_food_resources: 펫 먹이
+  item_category_pet_food: 펫 먹이
+  boss_only: 보스만
+  view_all: 전체
+  item_type: 유형
+  view_by_zone: 구역별
+  view_by_level: 레벨별
+  view_by_family: 계열별
+  unknown_family: 알 수 없는 계열
+  stats_filter: 능력치
+  filter_life_steal: 생명력 흡수
+  gameplay:
+    game_mechanics: 게임 시스템
+    section_combat: 전투
+    section_leveling: 레벨 성장
+    section_stats: 능력치
+    section_loot: 전리품과 드롭
+    section_groups: 파티
+    section_dungeons: 던전
+    section_classes: 직업
+    section_economy: 경제
+    combat_desc: 전투는 격자 위에서 턴제로 진행됩니다. 내 턴에 AP로 주문을 쓰고 MP로 이동합니다. 시야 필요 여부는 주문마다 다르며 대부분은 필요합니다. 월드에서는 몬스터 무리와, 콜리제움에서는 플레이어와 싸웁니다. 피해는 해당 원소 능력치와 고정 피해 보너스에 따라 증가합니다.
+    elements: 원소
+    element_earth: 땅
+    element_fire: 불
+    element_water: 물
+    element_air: 바람
+    stat_strength: 힘
+    stat_intelligence: 지능
+    stat_chance: 행운
+    stat_agility: 민첩
+    critical_hits: 치명타
+    crit_desc: 주문과 무기는 각각 N분의 1로 표시되는 기본 치명타 확률이 있습니다. 치명타 능력치는 N을 낮추지만 최종 확률은 2분의 1(50%)을 넘지 않습니다.
+    crit_bonus_desc: 치명타가 나면 일반 효과 대신 더 강한 피해나 추가 효과 등 전용 치명타 효과가 적용됩니다.
+    blocking: 보호막
+    blocking_desc: 일부 주문은 해당 원소의 피해를 소진될 때까지 흡수하는 보호막을 줍니다. 지구력이나 방어 자세는 없으며 피해 흡수는 보호막으로만 가능합니다.
+    resistance: 저항
+    resistance_desc: 원소 저항은 최종 피해를 비율로 줄이며 원소마다 최대 50%입니다. 음수 저항은 약점으로 작용해 피해를 늘립니다.
+    mob_level_bands: 몬스터 레벨 구간
+    mob_level_bands_desc: 정해진 레벨 구간에서 몬스터의 체력, 경험치, 민첩, 지혜, 양수 저항 및 조정 가능한 주문 수치는 60%에서 160%로 증가합니다. AP와 MP는 100%에서 130%로 증가합니다. 음수 저항은 반대로 최소 레벨의 160%에서 최대 레벨의 60%로 약점 크기가 줄어듭니다.
+    life_steal: 생명력 흡수
+    life_steal_desc: 흡혈 효과는 피해를 주고 대상이 실제로 잃은 체력의 절반만큼 시전자를 회복합니다. 플레이어만 회복하며 몬스터가 같은 주문을 쓰면 피해만 줍니다.
+    life_steal_note: 먼저 일반 피해 공식을 적용한 뒤 원래 대상이 실제로 잃은 체력의 절반을 회복합니다. 다른 전투원에게 전환되거나 대상이 치유로 바꾼 피해는 흡수하지 못합니다.
+    chatiment: 응징
+    chatiment_desc: 응징은 실제로 잃은 비치명적 체력을 해당 능력치로 바꿉니다. 행동 중인 전투원의 매 턴마다 별도 상한이 있으며 이후 턴의 보너스는 각각 5턴 동안 중첩됩니다. 몬스터 피해는 전부 반영하고 플레이어 피해와 상한은 절반입니다. Ares에는 침식이 없습니다.
+    healing: 치유
+    healing_desc: 치유는 주문 기본값에 지능 비율을 적용하고 장비와 강화 효과의 고정 치유 보너스를 더합니다. 대상의 최대 체력을 넘을 수 없습니다.
+    healing_intel_value: 지능 1당 치유량 +1%
+    heal_bonus: 치유 보너스
+    heal_bonus_value: 지능 계산 후 장비와 강화 효과의 고정 보너스 추가
+    mobs: 몬스터
+    healing_mobs_value: 지능만 적용, 치유 보너스 없음
+    leveling_desc: 최대 레벨은 200입니다. 자신의 레벨대 몬스터와 싸우면 효율적으로 경험치를 얻습니다.
+    points_per_level: 레벨당 포인트
+    stat_points: 능력치 포인트
+    stat_points_value: 레벨당 {{n}}
+    stat_costs_desc: 능력치 비용은 직업과 현재 기본 수치에 따라 달라집니다. 직업별 페이지에서 전체 성장표를 확인하세요.
+    spell_points: 주문 포인트
+    spell_points_value: 레벨당 {{n}}
+    xp_milestones: 경험치 이정표
+    level_10: 레벨 10
+    level_50: 레벨 50
+    level_100: 레벨 100
+    base_stats: 기본 능력치
+    stat_vitality: 활력
+    stat_vitality_desc: 1포인트당 최대 체력 +1
+    stat_wisdom: 지혜
+    stat_wisdom_desc: 경험치 획득 보너스
+    stat_strength_desc: 땅 피해 증가
+    stat_intelligence_desc: 불 피해 및 치유량 증가
+    stat_chance_desc: 물 피해와 추가 전리품
+    stat_agility_desc: 바람 피해 증가
+    derived_formulas: 파생 공식
+    max_health: 최대 체력
+    loot_desc: 처치한 몬스터마다 드롭 목록의 각 항목을 한 번 추첨합니다. 성공한 항목은 정해진 범위 안에서 무작위 수량을 줍니다.
+    stat_rolling: 능력치 추첨
+    stat_rolling_desc: 각 능력치는 템플릿 범위에서 균등하게 추첨되며 모든 값의 확률이 같습니다.
+    archimobs: 희귀 변종 몬스터
+    archimobs_desc: 해당 몬스터마다 1% 확률로 이름이 있고 항상 더 강한 희귀 변종으로 바뀝니다. 각 개체는 독립적으로 추첨됩니다.
+    max_members: 최대 인원
+    groups_desc: 파티는 파티장을 정할 수 있는 최대 {{max}}명의 명단입니다. 파티 소속만으로 전투에 들어가지는 않으며 모두 자신의 참가 거래를 보내야 합니다. 가까이 있다는 이유만으로 자동 참가하지 않습니다.
+    groups_xp: 경험치 분배
+    groups_xp_desc: 처치한 몬스터가 기본 경험치 총량을 만듭니다. 자격을 갖춘 전투원이 Retro 파티 계수를 제공하고 양측 총레벨 차이로 경험치가 줄어든 뒤 개인 레벨 비중으로 배분됩니다. 최고 레벨의 3분의 1 미만인 플레이어는 계수를 높이지 않습니다. 지혜는 마지막에 적용하며 개인 피해량은 무관합니다.
+    groups_loot: 전리품 분배
+    groups_loot_desc: 처치한 몬스터마다 공동 드롭을 한 번 추첨합니다. 나온 아이템은 승리 플레이어에게 순서대로 배분하며 인원이 늘어도 추첨 횟수는 늘지 않습니다.
+    dungeons_desc: 해당 도시의 던전 입구로 가서 열쇠를 사용하고 방을 순서대로 돌파하세요. 던전마다 하나의 준비 대기실이 있습니다.
+    dungeon_entry: 입장
+    dungeon_entry_value: 도시 입구에서 알맞은 열쇠 사용
+    dungeon_instance: 인스턴스
+    dungeon_instance_value: 공개 또는 파티 전투가 있는 던전 대기실
+    dungeon_completion: 완료
+    dungeon_completion_value: 모든 방 돌파
+    dungeon_reward: 보상
+    dungeon_reward_value: 일반 전리품 배분
+    classes_desc: 직업은 12개입니다. 모든 직업이 모든 무기를 쓸 수 있지만 직업에 맞는 무기는 일반 및 치명타 피해가 10% 증가합니다. 각 직업의 주문은 정해진 레벨에 열립니다.
+    table_class: 직업
+    table_weapon: 친화 무기
+    table_hp: HP
+    role_warrior: 전사
+    role_assassin: 암살자
+    role_berserker: 광전사
+    role_druid: 드루이드
+    role_chronomancer: 시간술사
+    role_guardian: 수호자
+    role_archer: 궁수
+    role_prospector: 탐광자
+    role_brawler: 싸움꾼
+    role_tomoda: 야수 조련사
+    role_gambler: 도박사
+    role_healer: 치유사
+    weapon_daggers: 단검
+    weapon_spear: 창
+    weapon_bow: 활
+    weapon_axe: 도끼
+    weapon_sword: 검
+    marketplace: 거래소
+    marketplace_desc: 장비와 캐릭터는 원하는 가격으로 키오스크에 등록하고 구매자가 즉시 결제합니다. 자원은 판매 등록 없이 교환 풀에서 SUI와 교환됩니다. 모든 판매에 10% 로열티가 적용되며 거래소가 유일한 판매 경로입니다.
+    section_forgemagie: 룬 강화
+    forgemagie_desc: 룬 강화는 장비를 분쇄해 룬을 얻고 다른 장비에 적용해 능력치를 바꾸는 시스템입니다. 장비를 완성하기 위한 고위험·고보상 후반 콘텐츠입니다.
+    crushing: 분쇄
+    crushing_desc: 분쇄한 아이템의 능력치 줄마다 독립적으로 추첨하며 높은 수치와 무거운 능력치일수록 더 많은 룬을 줍니다. 서버가 결과를 결정하지 않습니다. 생산량 제수는 아이템 레벨 곡선과 템플릿의 온체인 계수(1%~4000%)를 결합합니다. 분쇄하면 해당 템플릿 계수는 내려가고 이웃 템플릿은 올라갑니다.
+    crushing_tiers_desc: 룬 등급(Ba/Pa/Ra)은 확률로 정해집니다. 능력치가 높을수록 Ra 룬이 나올 가능성이 커집니다.
+    rune_tiers: 룬 등급
+    rune_ba: '1등급: 룬당 무게 최소'
+    rune_pa: '2등급: 룬당 무게 중간'
+    rune_ra: '3등급: 룬당 무게 최대, 경험치 두 배'
+    rune_weight_desc: 룬 무게는 수치에 단위 무게를 곱한 뒤 Retro 방식으로 올림합니다. 자동으로 계산됩니다.
+    rune_table_stat: 능력치
+    rune_table_note: 사거리, 이동, 행동 룬은 각각 한 번, 치명타 확률 룬은 최대 10번 적용됩니다. Critical과 Critical Outcomes에는 룬이 없습니다.
+    rune_stat_range: 사거리
+    rune_stat_movement: 이동
+    rune_stat_action: 행동
+    rune_stat_raw_damage: 고정 피해
+    rune_stat_critical_chance: 치명타 확률
+    rune_stat_earth_resist: 땅 저항
+    rune_stat_fire_resist: 불 저항
+    rune_stat_water_resist: 물 저항
+    rune_stat_air_resist: 바람 저항
+    stat_unit_weights: 능력치 단위 무게
+    stat_unit_weights_desc: 각 능력치의 단위 무게는 전투력을 반영합니다. 무거운 능력치는 분쇄 시 더 많은 룬을 주지만 아이템 예산을 더 쓰고 한도 이상 강화하기 어렵습니다.
+    rune_application: 룬 적용
+    rune_application_desc: 테스트를 위해 해당 제작 직업 1레벨부터 임시 개방되어 있습니다. 장비에 룬을 하나씩 적용해 능력치를 바꿀 수 있으며 결과는 세 가지입니다.
+    outcome_critical_success: 대성공
+    outcome_critical_success_desc: 룬 성공, 능력치 손실 없음
+    outcome_neutral: 일반 성공
+    outcome_neutral_desc: 룬 성공, 다른 능력치가 감소할 수 있음
+    outcome_critical_failure: 대실패
+    outcome_critical_failure_desc: 룬 실패, 룬 무게만큼 능력치 손실
+    success_rate: 성공 확률
+    success_rate_desc: 성공률은 최대치에 얼마나 가까운지에 따라 달라집니다. 0% 근처는 약 99%, 최대치 근처는 약 50%, 특수 능력치는 레벨과 무관하게 약 1%입니다. 무손실 대성공과 무게를 지불하는 일반 성공의 비율도 비슷하게 변하며 직업 1레벨 초과분마다 0.2%가 추가됩니다. 작업 가능한 아이템 레벨에는 제한이 없습니다.
+    puits: 잔여 무게(PUITS)
+    puits_desc: 능력치 손실이 룬 무게를 넘으면 UI에 표시되는 잔여 무게가 쌓입니다. 이후 다른 능력치보다 먼저 손실을 흡수하며 작업대나 소유자가 바뀌어도 아이템에 남습니다.
+    over_maging: 한도 초과 강화
+    over_maging_desc: 능력치를 자연 최대치 이상으로 올릴 수 있으며 각 줄의 추가 무게는 101까지입니다. 가벼운 활력(무게 0.25)은 약 404포인트를, 무거운 지혜(무게 3)는 약 33포인트를 더 올릴 수 있습니다.
+    forgemagie_tips: 도움말
+    forgemagie_tips_desc: 특수 능력치나 초과 강화를 할 때는 저렴한 능력치를 먼저 줄여 잔여 무게를 쌓고 어려운 능력치를 적용한 뒤 손실을 복구하세요. 최대치보다 한참 낮으면 복구가 쉽습니다. 실패하면 초과 및 특수 능력치를 먼저 잃습니다.
+    action_points: 행동 포인트(AP)
+    movement_points: 이동 포인트(MP)
+    critical_stat: 치명타
+    wisdom_xp: 지혜 경험치 보너스
+    wisdom_xp_desc: 활성 효과를 포함한 유효 지혜 1당 경험치가 1% 증가합니다. 유효 지혜 100이면 경험치가 두 배입니다.
+    chance_loot: 행운과 전리품
+    chance_loot_desc: 활성 효과를 포함한 승리 팀의 평균 유효 행운이 각 드롭률을 높입니다. 평균 행운 600이면 두 배가 되지만 100%를 넘지는 않습니다.
+    mob_loot_band: 몬스터 레벨과 드롭률
+    mob_loot_band_desc: 기본 확률은 구간 중간값입니다. 몬스터 레벨에 따라 80%~120%로 조정되지만 최대 100%입니다. 고정 레벨 몬스터는 기본 확률을 그대로 쓰며 드롭 수량은 레벨에 따라 변하지 않습니다.
+  unlocks_at_level: '{{level}}레벨에 해금'
+  level: 레벨
+  aoe_radius: 효과 반경
+  effects: 효과
+  life_cost: 체력 소모
+  duration_short: '지속: {{duration}}초'
+  coming_soon: 출시 예정
+  health: 체력
+  spells_count: 주문({{count}})
+  mob_spells: 주문
+  pet_food: 먹이
+  pet_full_fed_note: 완전히 성장한 능력치입니다. 하루 한 번씩 총 {{count}}회 먹이면 0에서 이 최대치까지 성장합니다.
+  pet_diet_note: 하루 한 번, 아래 {{count}}종 중 하나를 1개 먹습니다.
+  consumable_heal: 체력 {{amount}} 회복
+  consumable_reset_stats: 능력치 포인트 초기화
+  consumable_reset_spells: 주문 포인트 초기화
+  consumable_recall: 월드 포털로 귀환
+  consumable_city: '{{city}} 도시로 이동'
+  consumable_loot_box: 무작위 보상 열기
+  consumable_reward_heading: 보상
+  consumable_rewards: 획득 가능한 보상
+  consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: 아이템에 {{stat}} {{amount}} 추가
+  rune_obtained_by_crushing: 아이템 분쇄로 획득
+  spell_n: 주문 {{n}}
+  range: 사거리
+  range_modifiability: 사거리 변경 여부
+  no_spells_minted: 온체인에 생성된 주문이 없습니다
+  xp_suffix: 경험치 +{{xp}}
+  boss_badge: 보스
+  archi_badge: 희귀 변종
+  recommended_short: 권장 {{level}}
+  level_range: 레벨 {{min}}~{{max}}
+  up_to_plus: 최대 +{{val}}
+  element:
+    fire: 불
+    water: 물
+    earth: 땅
+    air: 바람
+    neutral: 중립
+  job_category:
+    gathering: 채집
+    weapon_craft: 무기 제작
+    equipment_craft: 장비 제작
+    consumable_craft: 소모품 제작
+  ap_cost: AP 소모
+  casts_per_turn: 턴당 사용 횟수
+  casts_per_target: 대상당 사용 횟수
+  unlimited: 무제한
+  cooldown: 재사용 대기
+  cooldown_none: 없음
+  characteristic_costs: 능력치 비용
+  characteristic_costs_desc: 기본 포인트는 이 직업의 성장표를 따릅니다. 장비는 비용에 영향을 주지 않습니다.
+  characteristic_cost_band: '{{cost}}포인트 → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}}포인트 → +{{gain}} · 제한 없음'
+  turns_value: '{{n}}턴'
+  targeting: 대상 지정
+  effect_zone: 효과 범위
+  line_of_sight: 시야
+  los_required: 필요
+  los_not_required: 불필요
+  target_cell: 대상 칸
+  target_cell_empty: 빈 칸이어야 함
+  target_cell_any: 모든 칸(비어 있거나 점유됨)
+  cast_line: 시전 방향
+  cast_line_straight: 직선만
+  cast_line_free: 자유 조준
+  critical: 치명타
+  crit_chance: 치명타 확률
+  crit_chance_value: '{{n}}분의 1'
+  on_crit: 치명타 시
+  proc_chance: 확률 {{n}}%
+  aoe_shape:
+    point: 단일 대상
+    circle: 원 {{size}}
+    cross: 십자 {{size}}
+    line: 직선 {{size}}
+    tbar: T자 {{size}}
+    ring: 고리 {{size}}
+    allmap: 전장 전체
+    cone: 원뿔 {{size}}
+  no_items_onchain: 온체인 아이템 템플릿이 없습니다
+  no_mobs_onchain: 온체인 생물이 없습니다
+  obtention_crafted: 제작 가능
+  obtention_dropped_by: 몬스터 {{count}}종이 드롭
+  obtention_unknown: 획득 방법 알 수 없음
+  total_supply: 총 공급량
+  marketcap: 시가총액
+  marketcap_unknown: 알 수 없음
+  worlds_tab: 월드
+  search_worlds: 월드 이름 검색…
+  no_worlds: 온체인 월드가 없습니다
+  select_world: 월드 선택
+  world_level_unknown: 레벨 범위를 아직 알 수 없습니다
+  world_biomes: 생물군계
+  world_no_mobs: 알려진 몬스터가 없습니다
+  world_cities: 도시
+  world_no_resources: 알려진 자원이 없습니다
+  world_gap_note: RPC에서 아직 제공하지 않음
+  world_dungeon: 던전
+  world_dungeon_room: '{{n}}번 방'
+  world_stat_lean: 능력치 성향
+  world_appears_in: '등장 위치:'
+  found_in: 발견 위치
+  item_descriptions:
+    abyssal_blood_wheat: ''
+    aloe_crystal_salve: ''
+    aloe_vera: ''
+    amber: ''
+    amber_powder: ''
+    arcane_reagent: ''
+    arcane_spore: ''
+    arcaneshroom: ''
+    arcanite: ''
+    arcanite_powder: ''
+    arcanize_flour: ''
+    barley_flour: ''
+    basic_pickaxe: ''
+    blood_wheat: ''
+    blood_wheat_flour: ''
+    bloodstone: ''
+    bloodstone_powder: ''
+    bloodveil_orchid: ''
+    burnt_wheat_flour: ''
+    crimson_truffle: ''
+    crimson_truffle_heart: ''
+    crystallized_tanjirize: ''
+    cursed_amalgam: ''
+    cursed_fungus: ''
+    cursed_gem: ''
+    cursed_gem_powder: ''
+    cursed_root: ''
+    cursed_wheat: ''
+    diamond: ''
+    diamond_powder: ''
+    draconite: ''
+    draconite_powder: ''
+    draconize_flour: ''
+    dragon_petal_extract: ''
+    dragon_pollen: ''
+    dragonlily: ''
+    duskite: ''
+    duskite_powder: ''
+    ethereal_ukranize: ''
+    genesis_suize: ''
+    ghost_cap: ''
+    golden_mushroom: ''
+    golden_nightcap: ''
+    golden_wheat: ''
+    green_mushroom: ''
+    green_mushroom_powder: ''
+    himalayan_flour: ''
+    infinity_amber: ''
+    infinity_arcanite: ''
+    infinity_bloodstone: ''
+    infinity_cursed_gem: ''
+    infinity_diamond: ''
+    infinity_draconite: ''
+    infinity_duskite: ''
+    infinity_jade: ''
+    infinity_moonstone: ''
+    infinity_obsidianite: ''
+    infinity_quartz: ''
+    ivory_orchid_paste: ''
+    ivory_shrooms: ''
+    jade: ''
+    jade_powder: ''
+    malt_flour: ''
+    moonstone: ''
+    moonstone_powder: ''
+    nightcap: ''
+    nightcap_elixir_base: ''
+    obsidianite: ''
+    obsidianite_powder: ''
+    old_hoe: ''
+    orchid_spore_blend: ''
+    phantom_distillate: ''
+    phantom_essence: ''
+    phantom_spore: ''
+    primordial_draconize: ''
+    pristine_malt: ''
+    quartz: ''
+    quartz_powder: ''
+    red_orchid: ''
+    rune_action_ba: ''
+    rune_agility_ba: ''
+    rune_agility_pa: ''
+    rune_agility_ra: ''
+    rune_air_resistance_ba: ''
+    rune_air_resistance_pa: ''
+    rune_air_resistance_ra: ''
+    rune_chance_ba: ''
+    rune_chance_pa: ''
+    rune_chance_ra: ''
+    rune_critical_ba: ''
+    rune_earth_resistance_ba: ''
+    rune_earth_resistance_pa: ''
+    rune_earth_resistance_ra: ''
+    rune_fire_resistance_ba: ''
+    rune_fire_resistance_pa: ''
+    rune_fire_resistance_ra: ''
+    rune_intelligence_ba: ''
+    rune_intelligence_pa: ''
+    rune_intelligence_ra: ''
+    rune_movement_ba: ''
+    rune_range_ba: ''
+    rune_raw_damage_ba: ''
+    rune_strength_ba: ''
+    rune_strength_pa: ''
+    rune_strength_ra: ''
+    rune_vitality_ba: ''
+    rune_vitality_pa: ''
+    rune_vitality_ra: ''
+    rune_water_resistance_ba: ''
+    rune_water_resistance_pa: ''
+    rune_water_resistance_ra: ''
+    rune_wisdom_ba: ''
+    rune_wisdom_pa: ''
+    rune_wisdom_ra: ''
+    scroll_of_oblivion: 투자한 주문 포인트를 돌려주고 강화한 주문을 1레벨로 초기화합니다.
+    scroll_of_rebirth: 투자한 능력치 포인트를 모두 돌려주어 다시 배분할 수 있습니다.
+    shiny_barley: ''
+    smoldering_wheat: ''
+    spectral_arcanize: ''
+    suize_flour: ''
+    tanjirize_flour: ''
+    title_veteran: ''
+    tool_herbalist: ''
+    truffle_essence_compound: ''
+    ukranize_flour: ''
+    verdant_aloe: ''
+    water: ''
+    wheat: ''
+    wheat_barley: ''
+    wheat_burnt: ''
+    wheat_draconize: ''
+    wheat_flour: ''
+    wheat_malt: ''
+    wheat_purple: ''
+    wheat_suize: ''
+    wheat_tanjirize: ''
+    wheat_ukraine: ''
+    wheat_white: ''
+    wither_concentrate: ''
+    wither_petal: ''
+    witherbloom: ''
+out_of_sui_body: 거래 수수료를 낼 SUI가 부족합니다. 지갑을 충전해 계속 플레이하세요.
+characters_page:
+  inventory_selection: '{{count}}개 선택 · Shift 클릭으로 장비 선택 전환'
+  crush_cta_count: 분쇄({{count}})
+  crush_pending_count: '{{count}}개 분쇄 중…'
+  crush_confirm_selection: 선택한 장비 {{count}}개를 분쇄할까요? 모든 선택 아이템이 영구 파괴됩니다.
+  crush_selection_changed: 같은 키오스크의 사용 가능하고 미착용인 장비를 선택하세요. 확인한 아이템을 여전히 사용할 수 있어야 합니다.
+  teleport_dungeon_blocked: 순간이동 전에 던전을 완료하거나 포기하세요.
+  consume_busy: 캐릭터가 대기 중일 때만 소모품을 사용할 수 있습니다.
+  progression_busy: 캐릭터가 대기 중일 때만 능력치와 주문을 변경할 수 있습니다.
+  delete_character: 캐릭터 삭제
+  delete_warning: 삭제는 되돌릴 수 없습니다. 모든 캐릭터 진행도가 사라지며 이름은 계속 예약된 상태로 남습니다.
+  delete_no_refund: 생성 비용 {{amount}} SUI는 환불되지 않습니다.
+  delete_equipment: 펫, 도구, 외형 장비를 포함한 모든 아이템을 해제하세요.
+  delete_fight: 먼저 전투를 떠나거나 끝내세요.
+  delete_party: 먼저 파티에서 나가세요.
+  delete_dungeon: 먼저 던전 탐험을 완료하거나 포기하세요.
+  delete_ambush: 먼저 채집 수호자와의 조우를 해결하세요.
+  delete_listing: 먼저 거래소에서 캐릭터 판매를 취소하세요.
+  delete_unavailable: 캐릭터와 연결을 사용할 수 있을 때까지 기다리세요.
+  delete_pending: 삭제 중…
+  claims_title: 미수령 보상
+  claim_collect: 보상 수령
+  claim_box: 상자 보상
+  claim_crush: 분쇄 결과
+  tab_equipment: 장비
+  tab_stats: 능력치
+  tab_spells: 주문
+  tab_jobs: 생산 직업
+  tab_runeforge: 룬 대장간
+  no_character: 선택한 캐릭터가 없습니다. 위 탭에서 선택하세요
+  level: 레벨 {{level}}
+  experience: 경험치
+  equipment_head: 장비
+  equipped_totals: 장비 보너스 합계
+  no_gear_equipped: 장착한 장비가 없습니다
+  bag_equipment: 장비
+  bag_consumables: 소모품
+  bag_resources: 자원
+  bag_filter_all: 전체
+  bag_filter_raw: 원재료
+  bag_filter_gatherable: 채집 자원
+  bag_filter_intermediary: 중간 재료
+  bag_filter_keys: 열쇠
+  bag_filter_runes: 룬
+  accept: 수락
+  cancel: 취소
+  equip_pending: 장비 갱신 중…
+  equip_success: 장비 갱신 완료
+  consume_one: 1개 사용
+  consume_until_full: 체력이 찰 때까지 사용
+  consume_healing_insufficient: 사용 가능한 아이템이 부족합니다({{count}}개 필요).
+  consume_healing_stock: 개당 체력 {{heal}} 회복 · {{available}}개 보유
+  consume_pending: 아이템 사용 중…
+  consume_success: 아이템 사용 완료
+  already_full_hp: 체력이 이미 가득 찼습니다
+  refusal_wrong_slot: 이 슬롯에 맞지 않는 아이템입니다
+  refusal_level_too_low: 이 아이템을 사용하기에는 레벨이 낮습니다
+  refusal_relic_duplicate: 같은 종류의 유물을 이미 장착했습니다
+  refusal_item_listed: 판매 등록된 아이템입니다
+  points_to_assign: 배분할 포인트
+  spend_hint: 여섯 능력치에 포인트를 배분한 뒤 확정하세요
+  reset: 초기화
+  confirm: 확인
+  tx_pending: 확인 중…
+  stats_pending: 포인트 배분 중…
+  stats_success: 포인트 배분 완료
+  health: 체력
+  action: 행동
+  movement: 이동
+  characteristics: 능력치
+  resistances: 저항
+  secondary: 보조
+  element_fire: 불
+  element_water: 물
+  element_earth: 땅
+  element_air: 바람
+  add_point: '{{stat}}에 1포인트 추가'
+  remove_point: '{{stat}}에서 1포인트 제거'
+  grimoire: 마도서
+  spell_points: 주문 포인트
+  unlocked: '{{unlocked}} / {{total}} 해금'
+  unlocks_at: '{{level}}레벨에 해금'
+  unlock_line: 레벨 {{level}}
+  lv_of: '{{current}} / {{max}}'
+  locked: 잠김
+  mastered: 숙련 완료
+  no_points: 주문 포인트 부족
+  upgrading: 레벨 올리는 중…
+  upgrade_success: '{{spell}} 레벨 상승'
+  level_up: 레벨 업 · {{cost}}포인트
+  lv: 레벨 {{level}}
+  xp_progress: '{{current}} / {{needed}} 경험치'
+  max: 최대
+  resources: 자원
+  back: 뒤로
+  gate_note: 제작 직업 {{level}}레벨부터 이용 가능
+  detail_title: 아이템
+  forge_title: 대장간
+  inventory_title: 가방
+  tab_gear: 장비
+  tab_runes: 룬
+  place_gear: 장비 넣기
+  place_rune: 룬 넣기
+  random_notice: 결과는 온체인 난수로 정해집니다. 룬이 적용되거나 실패하거나 다른 능력치를 잃을 수 있으며 보장은 없습니다.
+  one_rune_note: 시도마다 룬 1개 소모
+  apply: 룬 적용
+  scribing: 각인 중…
+  outcome_critical_success: 대성공
+  outcome_neutral_success: 일반 성공
+  outcome_critical_failure: 대실패
+  runeforge_history: 기록
+  runeforge_history_empty: 룬을 적용하면 이 아이템의 기록이 시작됩니다
+  runeforge_puits: 잔여 무게
+  runeforge_no_stat_change: 능력치 변화 없음
+  requires_job: '{{job}} {{level}}레벨 필요'
+  clear: 비우기
+  inspect_empty: 확인할 장비를 선택하세요
+  no_forge_gear: 가방에 강화할 수 있는 장비가 없습니다
+  no_runes: 가방에 룬이 없습니다
+  menu_feed: 먹이 주기
+  menu_consume: 사용
+  menu_crush: 분쇄
+  menu_destroy: 파괴
+  menu_view_recipes: 제작법 보기
+  menu_explorer: 탐색기에서 보기
+  menu_link_chat: 채팅에 링크
+  feed_title: 펫 먹이 주기
+  feed_power_label: 위력
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: 먹이 선택
+  feed_no_food: 가방에 알맞은 먹이가 없습니다
+  feed_already_today: 오늘은 이미 먹였습니다. 내일 다시 오세요
+  feed_full: 성장 완료
+  feed_pending: 먹이는 중…
+  feed_success: 먹이 주기 완료
+  feed_confirm: 먹이 주기 확인
+  feed_consumes: '{{name}} 1개 소모'
+  feed_daily_note: 하루에 먹이 하나. 먹일 때마다 조금씩 강해집니다.
+  feed_happy: '{{name}}이(가) 좋아합니다!'
+  feed_gain: 위력 +1
+  feed_unavailable: 이 펫을 더 이상 사용할 수 없습니다.
+  claim_success: 보상 수령 완료
+  crush_title: 장비 분쇄
+  crush_success: 장비 분쇄 완료
+  crush_result_title: 분쇄 결과
+  crush_result_empty: 다음에는 행운이 있기를.
+  destroy_title: 아이템 파괴
+  destroy_confirm_body: '{{name}} ×{{amount}}개를 파괴할까요? 되돌릴 수 없습니다.'
+  destroy_cta: 파괴
+  destroy_pending: 파괴 중…
+  destroy_success: 아이템 파괴 완료
+  unsealing: 봉인 해제 중…
+  skip_hint: 클릭해 건너뛰기
+  reveal_eyebrow: 획득한 보상
+  revealing: 공개 중…
+  collecting: 수령 중…
+  continue_cta: 계속
+  stat_maxed: 이 룬은 능력치 또는 오버/엑소 무게 한도를 초과합니다
+  stat:
+    movement: MP
+    action: AP
+    range: 사거리
+    critical_chance: 치명타 확률
+    critical_outcomes: 치명타 확률
+    vitality: 활력
+    wisdom: 지혜
+    strength: 힘
+    intelligence: 지능
+    chance: 행운
+    agility: 민첩
+    heal: 치유
+    critical_hit: 치명타
+    percent_damage: 피해
+    raw_damage: 고정 피해
+    fire_resistance: 불 저항
+    water_resistance: 물 저항
+    earth_resistance: 땅 저항
+    air_resistance: 바람 저항
+  stats:
+    no_character: 선택한 캐릭터가 없습니다
+    unavailable: 능력치를 확인할 수 없습니다
+    level: 레벨 {{level}}
+    adventurer: 모험가
+    points_to_assign: 배분할 포인트
+    spend_hint: 능력치에 포인트를 사용하세요
+    reset: 초기화
+    health: 체력
+    action: 행동
+    move: 이동
+    characteristics: 능력치
+    resistances: 저항
+    secondary: 보조
+    element:
+      fire: 불
+      water: 물
+      earth: 땅
+      air: 바람
+    description:
+      vitality: 최대 체력 증가
+      wisdom: 경험치 획득량 및 AP/MP 감소 저항 증가
+      strength: 땅 피해 증가
+      intelligence: 불 피해 및 치유량 증가
+      chance: 물 피해 및 드롭 확률 증가
+      agility: 바람 피해, 치명타, 태클 및 태클 탈출 능력 증가
+      critical_hit: 치명타 확률 증가
+      raw_damage: 피해 및 생명력 흡수 효과에 고정 수치 추가
+    add_point: '{{stat}}에 1포인트 추가'
+    remove_point: '{{stat}}에서 1포인트 제거'
+    tx_pending: 배분 중…
+    point_cost: '{{cost}}포인트 → +{{gain}}'
+    tx_success: 능력치 포인트 배분 완료
+  spells:
+    range_modifiable: 사거리 변경 가능
+    no_character: 선택한 캐릭터가 없습니다
+    select_prompt: 주문 선택
+    level: 레벨 {{level}}
+    spell_points: 주문 포인트
+    available: 사용 가능
+    grimoire: 마도서
+    unlocked: '{{unlocked}} / {{total}} 해금'
+    locked: 잠김
+    lv: 레벨 {{level}}
+    lv_of: 레벨 {{cur}}/{{max}}
+    unlocks_at: '{{level}}레벨에 해금'
+    current_level: 현재 레벨
+    ap_cost: AP 소모
+    range: 사거리
+    cooldown: 재사용 대기
+    crit_chance: 치명타 확률
+    casts_per_turn: 턴당 사용 횟수
+    unlimited: 무제한
+    description: 설명
+    effects: 효과
+    levels_head: 레벨
+    mastered: 숙련 완료
+    upgrade_success: '{{spell}} 레벨이 올랐습니다!'
+    upgrading: 레벨 올리는 중…
+    level_up_spell: 주문 레벨 올리기
+    pts: '{{count}}포인트'
+    pts_one: '{{count}}포인트'
+    pts_other: '{{count}}포인트'
+    requires_lv: '{{level}}레벨 필요'
+    no_points: 포인트 없음
+    tag_self: 자신
+    tag_melee: 근접
+    tag_ranged: 원거리
+    tag_zone: 범위
+    tag_line_of_sight: 시야
+    el_fire: 불
+    el_water: 물
+    el_earth: 땅
+    el_air: 바람
+    buff: 강화
+    utility: 보조
+    heal: 치유
+    neutral: 중립
+    element: 원소
+    damage: 피해
+    turns: 턴
+    crit_val: 치명타 {{value}}
+    range_fixed: 고정 사거리 — 사거리 보너스 적용 안 됨
+  jobs:
+    level_up_title: 생산 직업 레벨 업
+    level_up_reached: 달성 레벨
+    level_up_character: '{{name}}이(가) 성장했습니다'
+    level_up_progress: 레벨 {{before}} → {{after}}
+    level_up_continue: 계속
+    category:
+      gathering: 채집
+      weapon: 무기 제작
+      equipment: 장비 제작
+      consumable: 소모품 제작
+    recipes_fallback: 제작법
+    equipped: 장착 중
+    better_character: '{{name}}의 {{job}} 레벨은 {{level}}입니다'
+    switch: 전환
+    switch_to_character: '{{name}}으로 전환'
+    table:
+      tier: 등급
+      req_lvl: 필요 레벨
+      resource: 자원
+      yield: 생산량
+      xp: 경험치
+      unlocks_at: '{{name}}({{level}}레벨에 해금)'
+      gather_detail: '{{name}} · 채집 {{gather}}초 · 재생성 {{respawn}}초'
+      locked: 잠김
+    lv_badge: 레벨 {{level}}
+    tier_badge: '{{tier}}등급'
+    craft:
+      recipe_head: 제작법
+      recipe_not_seeded: 이 제작법은 아직 제공되지 않습니다.
+      ingredients_head: 재료
+      requires_level: '{{job}} {{required}}레벨 필요(현재 {{level}}레벨)'
+      not_enough: 재료 부족
+      starting_chance: 초기 성공 확률
+      amount: 시도 횟수
+      max: 최대
+      prepare_tooltip: '{{name}} × {{count}} 준비'
+      craft_tooltip: '{{name}} × {{count}} 제작'
+      craft_button: ×{{count}} 제작
+      crafting: 제작 중…
+      craft_result: '{{name}} {{successes}} / {{attempts}}개 제작'
+      locked_level: 잠김 · {{level}}레벨
+    detail:
+      close_aria: 아이템 상세 정보 닫기
+      item_not_seeded: 이 아이템은 아직 제공되지 않습니다.
+      tool_label: 도구
+      crafts_label: '제작 가능: {{covers}}'
+      xp_progress: '{{current}} / {{needed}} 경험치'
+      gather_time: '채집 시간: {{seconds}}초'
+      next_gather_time: '다음 · {{level}}레벨: {{seconds}}초'
+    recipes:
+      empty_seed: 이 직업의 제작법은 제작 콘텐츠와 함께 추가됩니다.
+      unlocked: 해금됨
+      locked: 잠김
+      ingredients: 재료 {{count}}종
+      required_level: 생산 직업 {{level}}레벨 필요
+      best_progress: 최적
+    gather:
+      in_progress: '{{name}} 채집 중…'
+      button: '{{name}} 채집'
+      hint: 월드에서 {{job}} 자원을 클릭해 채집하세요.
+    tabs:
+      resources: 자원
+      recipes: 제작법
+    no_character: 선택한 캐릭터가 없습니다
+  common:
+    experience: 경험치
+    confirm: 확인
+    max: 최대
+spell_names:
+  Absorption: 흡수
+  Absorptive Arrow: 흡수 화살
+  Acceleration: 가속
+  Aggressive Brambles: 맹렬한 가시덤불
+  Aggressive Glyph: 공격의 글리프
+  Alcoholic Breath: 술기운 숨결
+  All or Nothing: 전부 아니면 전무
+  Chimeric Venom: 키메라의 맹독
+  Animal Healing: 야수 치유
+  Aqueous Armour: 물의 갑옷
+  Aqueous Vulnerability: 물 취약
+  Art of Staff: 지팡이의 기술
+  Asobi's Fate: 아소비의 운명
+  Asobi's Luck: 아소비의 행운
+  Assault: 습격
+  Atonement Arrow: 속죄의 화살
+  Attraction: 끌어당김
+  Backlash: 반격
+  Bamboo Milk: 대나무 우유
+  Bat's Eye: 박쥐의 눈
+  Bear Cry: 곰의 포효
+  Blazing Fist: 불타는 주먹
+  Blazing Vulnerability: 불 취약
+  Blinding Protection: 눈부신 보호
+  Blindness: 실명
+  Bloodthirsty Madness: 피에 굶주린 광기
+  Blow: 일격
+  Bluff: 허세
+  Bold Punishment: 대담한 응징
+  Boozer: 술주정
+  Bow Skill: 궁술 숙련
+  Bramble: 가시덤불
+  Bravery Guide: 용기의 길잡이
+  Bribery: 뇌물
+  Bubble: 물방울
+  Burning Arrow: 불타는 화살
+  Burning Glyph: 불타는 글리프
+  Bush Fire: 덤불 불길
+  Celestial Sword: 천상의 검
+  Chakra Concentration: 차크라 집중
+  Chakra Impulse: 차크라 충동
+  Hurl: 내던지기
+  Claw of Ceangal: 세앙갈의 발톱
+  Clock: 시계
+  Cloudy Attack: 구름 공격
+  Clover: 클로버
+  Clumsiness: 둔화
+  Coins Throwing: 동전 던지기
+  Compulsion: 강요
+  Con: 속임수
+  Concentration: 집중
+  Cooperation: 협력
+  Counter: 반격 태세
+  Critical Shooting: 치명적 사격
+  Crow: 까마귀
+  Curative Word: 치유의 말
+  Cut: 베기
+  Dark Ray: 어둠의 광선
+  Destructive Arrow: 파괴의 화살
+  Destructive Sword: 파괴의 검
+  Deviousness: 간교함
+  Devotion: 헌신
+  Dissolution: 용해
+  Distant Shooting: 장거리 사격
+  Divine Sword: 신성한 검
+  Dolly Sacrifice: 인형 희생
+  Shadowstep: 그림자 걸음
+  Draining Word: 흡수의 말
+  Earth Armour: 땅의 갑옷
+  Earth Vulnerability: 땅 취약
+  Earthquake: 지진
+  Bloodstep: 피의 걸음
+  Explosive Arrow: 폭발 화살
+  Explosive Flask: 폭발 병
+  Fangs of Boowolf: 부울프의 송곳니
+  Fear: 공포
+  Feline Leap: 고양이 도약
+  Feline Movement: 고양이 움직임
+  Feline Spirit: 고양이의 영혼
+  Flight: 비행
+  Blood Blade: 피의 칼날
+  Forbidden Word: 금기의 말
+  Forced Punishment: 강제 응징
+  Fortune: 재운
+  Bonding Word: 유대의 말
+  Frightening Word: 두려움의 말
+  Frostbite: 동상
+  Frozen Arrow: 얼어붙은 화살
+  Fury: 분노
+  Ghostly Claw: 유령 발톱
+  Ghostly Shovel: 유령 삽
+  Glowing Armour: 빛나는 갑옷
+  Glyph of Blindness: 실명의 글리프
+  Glyph of Silence: 침묵의 글리프
+  Greed: 탐욕
+  Hand: 시곗바늘
+  Hangover: 숙취
+  Haziness: 흐릿함
+  Heads or Tails: 앞면 또는 뒷면
+  Healing Word: 회복의 말
+  High-Energy Shot: 고에너지 사격
+  Clockwork Pursuit: 태엽 추격
+  Ikari's Foot: 이카리의 발
+  Immunity: 면역
+  Increase: 증폭
+  Insidious Poison: 음흉한 독
+  Insolent Bramble: 불손한 가시덤불
+  Intimidation: 위협
+  Invisibility: 투명화
+  Invisibility of Others: 타인 투명화
+  Jump: 도약
+  Undertow: 저류
+  Toxic Knowledge: 독의 지식
+  Lashing Arrow: 채찍 화살
+  Lashing Claw: 후려치는 발톱
+  Lethal Attack: 치명적 공격
+  Lethal Trap: 치명적 함정
+  Life Transfer: 생명 이전
+  Lifting Word: 상승의 말
+  Dead Weight: 무거운 짐
+  Golden Fever: 황금 열병
+  Shovel Uprising: 삽의 봉기
+  Silent Mark: 침묵의 표식
+  Loss of Motivation: 의욕 상실
+  Magic Arrow: 마법 화살
+  Manifold Bramble: 무성한 가시덤불
+  Mass Clumsiness: 집단 둔화
+  Mass Trap: 광역 함정
+  Melancholy: 우울
+  Mistake: 실수
+  Mound: 흙더미
+  Mummification: 미라화
+  Mutilation: 자해
+  Natural Attack: 자연 공격
+  Blood Scent: 피 냄새
+  Nimble Punishment: 민첩한 응징
+  Pandatak: 판다타크
+  Pandiniuras: 판디니우라스
+  Pandora's Box: 판도라의 상자
+  Paralyzing Arrow: 마비 화살
+  Paralyzing Glyph: 마비의 글리프
+  Paralyzing Poison: 마비 독
+  Paralyzing Trap: 마비 함정
+  Paralyzing Word: 마비의 말
+  Read the Table: 판 읽기
+  Plaguing Arrow: 역병 화살
+  Playful Claw: 장난스러운 발톱
+  Poisoned Arrow: 독 화살
+  Poisoned Trap: 독 함정
+  Poisoned Wind: 독 바람
+  Power: 위력
+  Powerful Shooting: 강력한 사격
+  Pressure: 압박
+  Preventing Word: 예방의 말
+  Prime of Life: 전성기
+  Mountain Punch: 산의 주먹
+  Punishment: 징벌
+  Punitive Arrow: 징벌의 화살
+  Reducing Key: 축소의 열쇠
+  Reflex: 반사신경
+  Regenerating Word: 재생의 말
+  Rekop: 레코프
+  Repelling Trap: 밀어내는 함정
+  Repercussion: 반동
+  Retreat Arrow: 후퇴 화살
+  Revitalising Word: 활력의 말
+  Rough Tongue: 거친 혀
+  Roulette: 룰렛
+  Sacrifice: 희생
+  Senshi's Sword: 센시의 검
+  Senshi's Wrath: 센시의 분노
+  Shovel Kiss: 삽의 입맞춤
+  Shovel of Judgement: 심판의 삽
+  Shovel Throwing: 삽 던지기
+  Shriveling: 시들기
+  Shugo's Shield: 슈고의 방패
+  Shugo's Teleportation: 슈고의 순간이동
+  Slaughtering Shovel: 학살의 삽
+  Slow Down: 감속
+  Slow Down Arrow: 감속 화살
+  Smell: 후각
+  Soothing Bramble: 진정의 가시덤불
+  Spell Rebound: 주문 반사
+  Spirit Rift: 영혼의 균열
+  Spiritual Punishment: 정신의 응징
+  Rooted Guard: 뿌리 수호
+  Stain: 얼룩
+  Stimulating Word: 격려의 말
+  Strengthstorm: 힘의 폭풍
+  Lucky Pounce: 행운의 덮치기
+  Stampede: 쇄도
+  Suppressing Roar: 억압의 포효
+  Seismic Command: 지진의 명령
+  Rending Pounce: 찢어발기는 도약
+  Binding Howl: 구속의 울부짖음
+  Primal Cataclysm: 태초의 대재앙
+  Pack Totem: 무리의 토템
+  Swap: 자리 교환
+  Sword of Fate: 운명의 검
+  Sword of Judgement: 심판의 검
+  Sylvan Power: 숲의 힘
+  Tear: 눈물
+  Temporal Dust: 시간의 먼지
+  Terror: 전율
+  Root Snare: 뿌리 올가미
+  Reviving Spores: 소생 포자
+  Maddening Spores: 광기의 포자
+  Sacrificial Bloom: 희생의 꽃
+  Overgrowth: 과성장
+  Time Theft: 시간 훔치기
+  Toad: 두꺼비
+  Temporal Dial: 시간의 문자판
+  Tokei's Punch: 토케이의 주먹
+  Tokei's Sandglass: 토케이의 모래시계
+  Tokei's Teleportation: 토케이의 순간이동
+  Topkaj: 토프카이
+  Tormenting Arrow: 고통의 화살
+  Transposition: 위치 전환
+  Trap of Silence: 침묵의 함정
+  Tree: 나무
+  Tricky Blow: 교묘한 일격
+  Tricky Trap: 교묘한 함정
+  Truce: 휴전
+  Unsummoning: 소환 해제
+  Vampiric Word: 흡혈의 말
+  Vital Exchange: 생명 교환
+  Second Wind: 재기
+  Wheel of Fortune: 운명의 수레바퀴
+  Whip: 채찍
+  Wild Grass: 들풀
+  Wind Armour: 바람의 갑옷
+  Wind Vulnerability: 바람 취약
+  Word of Altruism: 이타심의 말
+  Word of Recovery: 회복력의 말
+  Word of Sacrifice: 희생의 말
+  Word of Silence: 침묵의 말
+  Word of Thorn: 가시의 말
+  Word of Youth: 젊음의 말
+  Wounding Word: 상처의 말
+  Zatoishwan Stance: 자토이시완 자세
+item_categories:
+  cosmetic_hat: 외형 모자
+  cosmetic_cloak: 외형 망토
+  hat: 모자
+  cloak: 망토
+  belt: 허리띠
+  boots: 장화
+  amulet: 목걸이
+  ring: 반지
+  title: 칭호
+  pet: 펫
+  relic: 유물
+  daggers: 단검
+  spear: 창
+  bow: 활
+  axe: 도끼
+  sword: 검
+  tool_farmer: 농사 도구
+  tool_herbalist: 약초 채집 도구
+  tool_miner: 채광 도구
+  consumable: 소모품
+  resource: 자원
+  rune: 룬
+  key: 열쇠
+  weapon: 무기
+  tool: 도구
+  relic_slot: 유물 {{number}}
+kares: 스테이킹
+kares_page:
+  stake_more: 추가 스테이킹
+  additional_daily: 하루 추가 보상
+  max: 최대
+  external_wallet_hint: 외부 지갑에서 KARES를 별도로 스테이킹하고 관리하세요.
+  select_wallet: 선택
+  staking_revenue: 스테이커는 AresRPG 거래소에서 거둔 로열티의 20%를 SUI로 나누고, 마련된 KARES 보상도 받습니다.
+  game_account: AresRPG 계정
+  external_wallet: 외부 지갑
+  daily_kares: KARES/일 · 예상
+  daily_sui: SUI/일 · 예상
+  daily_estimate_note: 현재 스테이킹 비중과 마련된 보상 일정으로 향후 24시간을 추정합니다. 수치는 달라질 수 있습니다.
+  position_rewards: 포지션 보상
+  manage_stake: 스테이킹 관리
+  same_account: 이 지갑은 이미 AresRPG 계정입니다. 계정 영역에서 스테이킹을 관리하세요.
+  claim_kares: KARES 수령
+  close: 닫기
+  sale_card_soon_title: 준비하세요.
+  sale_card_soon_note: 공개 판매가 곧 시작됩니다.
+  sale_card_soon_action: 판매 알아보기
+  sale_card_live_label: 판매 진행 중
+  sale_card_live_title: 지금 참여하세요
+  sale_card_target_reached: 목표 달성
+  sale_card_done_title: 판매 완료
+  sale_card_done_note: KARES 토큰과 환급받을 SUI를 수령하세요.
+  sale_card_refund_note: 최소 목표에 도달하지 못했습니다. SUI 전액을 환급받으세요.
+  community_release_note: 판매가 성공적으로 정산된 뒤 커뮤니티 KARES가 1,825일에 걸쳐 해제되며 금고만 수령할 수 있습니다. 수령한 토큰은 배포하거나 소각할 수 있습니다.
+  sale_unlock_note: 판매가 성공적으로 종료되면 판매 토큰이 모두 해제됩니다.
+  unlocked_immediately: 즉시 해제
+  vested_five_years: 5년에 걸쳐 해제
+  eyebrow: 함께 만들 가치가 있는 세계
+  launch_title: 다음 장을 만들어 갑니다.
+  launch_lead: KARES 첫 공개 판매에 참여하세요. AresRPG를 지원하고 살아 있는 세계의 성장을 함께하세요.
+  offering: 첫 공개 판매
+  fixed_supply: 고정 공급량
+  fair_share: 하나의 가격, 비례 배분.
+  fair_detail: 최종 지분은 기여금에 비례합니다. 초과 기여금은 비례하여 환급합니다.
+  connect: 지갑 연결
+  disconnect: 연결 해제
+  choose_account: 계정 선택
+  no_wallet: 참여하려면 Sui 지갑을 설치하세요.
+  refresh: 새로고침
+  loading: 온체인 상태 읽는 중…
+  unavailable: 이 네트워크에서는 아직 판매를 이용할 수 없습니다.
+  pending: 거래 확인 중…
+  confirmed: 거래 확인 완료
+  contribute: SUI 기여
+  amount: 금액
+  balance: 사용 가능한 잔액
+  amount_invalid: 소수점 이하 최대 9자리의 양수를 입력하세요.
+  insufficient: 금액이 사용 가능한 잔액을 초과합니다.
+  gas_note: 거래 수수료용으로 SUI를 조금 남겨 두세요.
+  raised: 기여금
+  minimum: 최소 모금액
+  maximum: 최대 수락액
+  opens: 시작
+  closes: 종료
+  estimate: 예상 최종 가격
+  price_note: 판매 종료 시 최종 배분이 확정됩니다.
+  your_contribution: 내 기여금
+  claim: KARES 및 초과 SUI 수령
+  refund: 환급 수령
+  upcoming: 시작 전
+  open: 판매 중
+  successful: 판매 성공
+  refundable: 환급 가능
+  testnet: 테스트넷 · 테스트 자산 전용
+  back_game: AresRPG 탐험
+  funding_title: 커뮤니티가 지원하는 세계
+  liquidity: 초기 유동성
+  development: 개발 금고
+  liquidity_note: 초기 KARES/SUI 시장을 위한 물량입니다. 풀 생성은 프로젝트가 관리합니다.
+  development_note: 게임, 인프라 및 다음 장을 위한 자금입니다.
+  staking_title: 내 스테이킹, 내 몫.
+  staking_lead: KARES를 스테이킹해 지급되는 KARES와 SUI 보상을 나누세요. 쌓인 보상은 언제든 받을 수 있습니다.
+  pool_stake: 총 스테이킹
+  your_stake: 내 스테이킹
+  claimable: 누적 보상
+  stake: KARES 스테이킹
+  withdraw: 스테이킹 출금
+  claim_rewards: 보상 수령
+  fund_title: 커뮤니티 보상 지원
+  fund_note: 기부금은 활성 보상일 30일 동안 모든 스테이커에게 배분되며 회수할 수 없습니다.
+  donate: 기부
+  no_positions: 스테이킹 포지션이 여기에 표시됩니다.
+  inactive: 판매가 성공적으로 정산된 후 스테이킹이 열립니다.
+  account_label: 계정
+  position: 포지션
+  tokenomics: KARES 토큰 경제
+  community: 커뮤니티 보상
+  team: 팀 배분
+  five_years: 커뮤니티 스테이킹 보상
+  mastery_title: 플레이로 보상을 얻거나 KARES를 소각하세요.
+  mastery_note: 숙련 상품은 획득 포인트나 KARES로 같은 수량을 지불합니다. 사용한 KARES는 영구 소각됩니다.
+  rewards_note: 200,000 KARES는 활성 보상일 1,825일 동안, 추가 기부금은 30일 동안 지급됩니다. 스테이커가 없으면 지급이 멈춥니다.
+  revenue_note: 수령한 거래소 로열티의 20%가 SUI 스테이킹 보상으로 배분됩니다. 보상은 수익과 참여 스테이킹에 따라 달라집니다.
+  payment: 결제 수단
+  points: 숙련 포인트
+  burn_buy: '{{cost}} KARES 소각'
+  kares_missing: KARES 부족
+  language: 언어
+  refund_note: 판매가 최소 목표에 미달한 채 끝나면 기여금 전액을 환급받을 수 있습니다.
+  offering_contract: 판매 계약
+  min_marker: 최소
+  max_marker: 최대
+  min_reached: 최소 목표 달성
+  min_pending: 최소 목표를 향해 모금 중
+  oversubscribed: 초과 청약
+  subscribed: 청약됨
+  oversub_note: 계속 참여할 수 있습니다. 모두 같은 가격이며 초과 SUI는 비례 환급됩니다.
+  opens_in: 시작까지
+  closes_in: 종료까지
+  days_short: 일
+  your_investment: 내 기여금
+  your_allocation: 내 KARES 배분량
+  current_price: 현재 판매 가격
+  estimated_until_close: 판매 종료 전까지 예상치
+  accepted_contribution: 수락된 기여금
+  excess_refund: 환급받을 SUI
+  unclaimed_note: 미수령 기여금 및 배분량
+  connect_preview: 지갑을 연결해 내 몫을 확인하세요
+  no_pending_allocation: 미수령 기여금 없음
+  play_game: 게임 플레이
+  play_game_note: 함께 만들어 가는 세계를 탐험하세요.
+  join_title: 다음 장에 함께하세요.
+  join_note: 400,000 KARES, 한 번의 판매 기간, 모든 기여자에게 배분.
+  step_connect: 지갑 연결
+  step_contribute: SUI 기여금 선택
+  step_claim: KARES 및 초과 SUI 수령
+  allocation_lead: 백만 개의 토큰, 모든 배분 공개.
+  community_detail: 11%는 에어드롭, 마케팅, 시즌 순위표, 대회, PvP 보상, 테스트넷 참여자와 기여자를 위한 커뮤니티 물량으로 남습니다. 배분은 프로젝트가 관리합니다.
+  supply_detail: 1,000,000 KARES 전량을 한 번만 발행하며 추가 발행은 불가능합니다. 숙련 구매에 쓴 KARES는 영구 소각됩니다.
+  emissions_detail: 스테이킹 보상 200,000개는 기존 공급량에서 나옵니다. 보상 지급으로 새 토큰을 발행하지 않습니다.
+  price_cap_note: 수락되는 모금액에는 상한이 있습니다. 추가 기여는 배분 비율을 바꾸지만 상한에 도달한 판매 가격은 바꾸지 않습니다.
+  awaiting_minimum: 최소 목표에 도달하면 가격과 배분이 표시됩니다.
+  claimable_tokens: 수령 가능한 KARES
+  refundable_sui: 내 SUI 환급금
+  final_price: 최종 판매 가격
+  full_refund: SUI 전액 환급
+  nav_funding: 모금
+  nav_benefits: 혜택
+  nav_tokenomics: 토큰 경제
+  nav_incentives: 공개 인센티브
+  nav_play: 플레이
+  benefits_title: 세계에 참여하고 더 다양하게 플레이하세요.
+  benefits_lead: KARES는 게임 보상, 커뮤니티 인센티브와 거래소 로열티 배분을 연결합니다.
+  revenue_title: 게임의 성공을 함께 나눕니다.
+  revenue_metric: AresRPG 수익
+  revenue_detail: KARES 스테이커와 나눕니다.
+  baseline_title: 커뮤니티 보상은 이미 공급량에 포함되어 있습니다.
+  baseline_detail: 기존 200,000 KARES로 활성 보상일 1,825일을 지원합니다. 스테이킹으로 배분에 참여하고 누적 보상을 언제든 받으세요. 추가 토큰 발행은 없습니다.
+  crates_title: 내 KARES로 다음 상자를.
+  crates_detail: 게임 내 숙련 상품에는 음식, 자원, 펫과 외형 상자가 있습니다. 같은 수량의 KARES를 쓰거나 플레이로 숙련 포인트를 모으세요. 사용한 KARES는 영구 소각됩니다.
+  incentives_title: 누구나 보상을 늘릴 수 있습니다.
+  incentives_detail: 누구나 공동 스테이킹 보상에 SUI나 KARES를 기부할 수 있습니다. 각 기부금은 다음 활성 보상일부터 30일에 걸쳐 지급됩니다. 모든 스테이커에게 비례 배분되며 회수할 수 없습니다.
+  incentives_clock: 스테이커가 없으면 보상 시계가 멈춥니다. 새 기부금은 기존 기부금의 지급 기간을 늘리지 않습니다.
+  incentives_examples: 이벤트를 지원하고 성과를 기념하며 커뮤니티에 보답하세요.
+  play_title: 세계가 기다립니다. 탐험을 시작하세요.
+  play_detail: 첫 공개 판매 기간에도 AresRPG를 즐기세요. 커뮤니티를 만나고 KARES 뒤에 있는 게임을 알아보세요.
+  confirmed_refresh: 거래가 확인되었습니다. 새로고침해 갱신된 잔액을 불러오세요.
+  stage_minimum: 최소 모금
+  stage_maximum: 최대 목표까지 모금
+  minimum_refund: 최소 목표 미달 시 전액 환급합니다.
+  full_refund_available: 기여금 전액을 환급받을 수 있습니다.
+  refund_claim_note: 판매가 최소 목표 미달로 끝나면 여기서 환급을 받으세요. 자동으로 전송되지 않습니다.
+  staking_unavailable: 이 네트워크에서는 아직 스테이킹을 이용할 수 없습니다.
+  basecamp_announcement: 10월 7~9일 싱가포르 Sui Basecamp에서 AresRPG를 만나세요. 인사도 나누고 전리품 상자도 받아 가세요.
+  funding_unknown: 모금 데이터를 이용할 수 없습니다.
+  success_threshold: 성공 기준
+  sale_cap: 최대 수락액
+  cap_overflow: 상한 초과
+  overflow_refunds: 비례 환급을 위해 보관
+  combat_rewards: 보스 보상
+  combat_detail: 100,000 KARES가 공개 전투 보상금을 마련하며 누구나 토큰을 추가할 수 있습니다. 보스 레벨에 따라 정한 보상금을 승리 캐릭터가 균등하게 나눕니다. 하루 약 54.79 KARES의 상한으로 초기 보상금은 최소 5년간 지속됩니다. 조용한 날과 기부는 기간을 늘립니다. 에포크 활동에 따라 보상 크기가 조정되며 지급하지 않은 보상이 부채가 되지는 않습니다.
+  allocation_rationale: 출시 시 590,000 KARES(59%)가 판매, 유동성, 팀 물량으로 유통됩니다. 예정된 첫해 추가 해제는 소각 전 기준 최대 약 82,000개로 초기 물량의 13.90%입니다. 스테이커가 없으면 스테이킹 지급은 멈추며 커뮤니티 물량은 달력 시간에 따라 해제됩니다. 전투 지급은 더 적을 수 있습니다. 모두 기존 토큰을 사용해 추가 발행 인플레이션은 0입니다. 기부는 기존 토큰을 재분배하며 가격 결과를 보장하지 않습니다.
+  launch_market_cap: 출시 유통 시가총액
+  launch_market_cap_note: '지금 판매가 끝난다면: 상한 적용 판매 가격 × 출시 시 유통되는 590,000 KARES입니다. 최소 모금 미달이면 출시되지 않습니다.'
+  error_generic: 작업을 완료할 수 없습니다.
+  error_rejected: 요청이 취소되었습니다.
+  error_funds: 이 작업과 수수료를 지불할 자금이 부족합니다.
+  error_connection: 연결에 실패했습니다. 연결 상태를 확인하고 다시 시도하세요.
+  error_session: 지갑 세션을 이용할 수 없습니다. 다시 연결하세요.
+  error_unknown: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
+  error_recovered: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
+leaderboard_page:
+  unclaimed: 미수령
+  reset_in: '{{time}} 초기화'
+  xp: 전투 경험치
+  kills: 몬스터 처치
+  dungeons: 던전
+  jobs: 생산 직업 경험치
+  marketplace: 거래소
+  kolizeum: 콜리제움
+  zones: 발견
+  feeding: 펫 먹이 주기
+  gathering: 채집
+  category: 분류
+  loading: 불러오는 중…
+  user: 사용자
+  score: 점수
+  you: 나
+  current_characters: 현재 캐릭터
+  current_jobs: 현재 생산 직업
+  unavailable: 순위표를 일시적으로 이용할 수 없습니다.
+  retry: 재시도
+  suins_hint: 설정에서 SuiNS 이름이나 하위 이름을 선택하면 여기에 표시됩니다.
+  xp_description: 모든 캐릭터가 전투 승리로 얻은 경험치입니다. 캐릭터를 양도해도 획득 기록은 이동하지 않습니다.
+  kills_description: 승리한 전투에서 처치한 적 몬스터입니다. 승리 주소마다 전투당 한 번씩 집계합니다.
+  dungeons_description: 성공적으로 완료한 마지막 방입니다. 완료 주소마다 전투당 한 번씩 집계합니다.
+  jobs_description: 모든 캐릭터가 채집과 제작으로 얻은 경험치입니다. 룬 강화는 경험치를 주지 않습니다.
+  marketplace_description: 캐릭터를 포함한 거래소 구매 및 판매의 총 SUI 금액입니다.
+  kolizeum_description: 반환된 참가금을 포함해 콜리제움 승리로 지급받은 SUI입니다.
+  zones_description: 공유 구역의 최초 발견입니다. 구역 새로고침은 집계하지 않습니다.
+  feeding_description: 펫에게 성공적으로 먹이를 준 횟수입니다. 먹이 수량은 점수를 늘리지 않습니다.
+  gathering_description: 희귀 채집 보너스를 포함한 자원 채집 수량입니다.
+  job_FARMER: 농부
+  job_HERBALIST: 약초 채집가
+  job_MINER: 광부
+  job_FORGER: 대장장이
+  job_CARVER: 조각가
+  job_TAILOR: 재단사
+  job_JEWELER: 보석 세공사
+  job_TANNER: 무두장이
+  job_HANDYMAN: 만능공
+  job_ALCHEMIST: 연금술사
+  job_BAKER: 제빵사
+automation_panel:
+  retrying: 이동 동기화를 기다린 뒤 재시도
+  title: 자동화
+  gathering: 채집
+  select_resource: 자원 선택
+  level: 레벨 {{level}} 필요
+  tool: 알맞은 도구 필요
+  start: 시작
+  stop: 중지
+  idle: 준비 완료
+  planning: 다음 대상 선택 중
+  moving: 자원으로 이동 중
+  inspecting: 이동 및 구역 데이터 기다리는 중
+  searching: 구역 탐색 중
+  waiting: 구역 새로고침 기다리는 중
+  protector: 수호자 전투 포기 중
+  stopped: 중지됨
+  unavailable: '일시 중지: 캐릭터 또는 연결을 사용할 수 없음'
+  blocked: '일시 중지: 이동 경로가 막힘'
+  failed: '일시 중지: 작업 실패. 오류를 확인하세요.'
+  quantity: '채집량: {{quantity}}'
+  expand: 자동 채집 펼치기
+  collapse: 자동 채집 접기
+item_drop_sources:
+  title: 몬스터 드롭
+  note: 기본 드롭률입니다. 실제 확률은 몬스터 레벨과 팀의 행운에 따라 달라집니다.
+  empty: 이 아이템을 드롭하는 몬스터가 없습니다.
+  loading: 드롭 정보 불러오는 중…
+  mob: 몬스터
+  rate: 기본 확률
+  quantity: 수량
+  levels: 레벨 {{min}}~{{max}}
+journey:
+  title: 나우비스에서 살아남기
+  eyebrow: 모험은 여기서 시작됩니다
+  progress: 여정 진행도
+  count: '{{count}} / {{total}}'
+  complete: 퀘스트 완료!
+  continue: 계속
+  start: 첫 퀘스트 시작
+  journal: 퀘스트 일지
+  close: 일지 닫기
+  collapse: 퀘스트 접기
+  recipe: 제작법 보기
+  jobs: 생산 직업
+  resource_details: 자원 상세 정보
+  key_details: 던전 열쇠 찾기
+  next: 다음 단계
+  chapter_finished: 여정 완료
+  finished_title: 자동화 해금
+  finished_body: AresRPG는 자동화를 즐기는 게임이기도 합니다. 앞으로 많은 기능이 자동화를 중심으로 만들어질 예정입니다. 모든 초보자 퀘스트를 완료한 보상으로 자동 채집을 얻었습니다! 자원을 선택하고 시작을 누르면 캐릭터가 채집합니다. 실행 중에도 조작 패널을 접을 수 있습니다.
+  reset_title: 초보자 퀘스트
+  reset_hint: 이 브라우저에서 계정의 퀘스트를 초기화합니다. 여정을 다시 시작하면 소유 아이템이 다시 인정됩니다.
+  reset_action: 퀘스트 초기화
+  storage_failed: 이 브라우저에 퀘스트 진행도를 저장할 수 없습니다. 새로고침하면 사라질 수 있습니다.
+  chapter_welcome: 환영합니다
+  chapter_tools: 첫 도구
+  chapter_gear: 장비 갖추기
+  chapter_supplies: 보급품
+  chapter_dungeon: 던전
+  chapter_secret: 마지막 비밀
+  welcome_title: 나우비스에 오신 것을 환영합니다.
+  welcome_body: AresRPG는 배우고 준비하며 영리하게 플레이하는 사람에게 보답합니다. SUI를 최대한 아끼며 플레이를 최적화하고 자동화하는 법을 익히세요. 이 여정으로 첫걸음을 시작해 보세요.
+  hoe_title: 누구에게나 괭이는 필요하죠.
+  hoe_body: 나우비스는 첫 번째 월드입니다. 더 강한 장비로 위험한 월드에 도전하고, 채집 도구로 제작 재료를 모으세요. 다른 플레이어에게 {{item}}을(를) 사거나 캐릭터 → 생산 직업 → 만능공에서 직접 만드세요.
+  hoe_objective: '{{item}} 소유'
+  wheat_title: 이제 손에 흙을 묻혀 볼까요.
+  wheat_body: 직접 장비를 만들려면 재료부터 모아야 합니다. 밀은 음식과 장비 재료에 쓰이니 시작하기 좋습니다. 나우비스에서 밀을 찾아 첫 수확을 해 보세요!
+  wheat_objective: 밀 수확
+  pickaxe_title: 다음은 채광 스타입니다.
+  pickaxe_body: 다음 업그레이드에는 농작물만으로 부족합니다. {{item}}이(가) 있으면 장비 제작용 광물을 캘 수 있습니다. 거래소에서 구하거나 직접 만드세요. 채광 경력도 첫걸음부터 시작이니까요.
+  pickaxe_objective: '{{item}} 소유'
+  quartz_title: 돌 하나도 놓치지 마세요.
+  quartz_body: 밀만으로는 장비를 갖출 수 없습니다. 무기와 장신구에는 석영 같은 광물도 필요합니다. 곡괭이로 다음 제작에 쓸 재료를 모으세요.
+  quartz_objective: 석영 채집
+  sickle_title: 한 수 위의 날카로움.
+  sickle_body: 식물과 버섯은 물약과 제작 재료를 제공합니다. {{item}}으로 약초 채집을 시작할 수 있습니다. 다른 플레이어에게 사거나 직접 만드세요.
+  sickle_objective: '{{item}} 소유'
+  mushroom_title: 버섯 하나 더.
+  mushroom_body: 제작을 계속하려면 농작물과 광물 외에도 재료가 필요합니다. 초록 버섯은 물약, 가죽 등 여러 재료에 쓰입니다. 첫 버섯을 채집하고 채집 직업을 키워 더 많은 재료를 해금하세요.
+  mushroom_objective: 초록 버섯 채집
+  token_title: 행운은 직접 만드는 것.
+  token_body: 다음 제작에는 많은 아이템이 필요합니다. 행운을 높이면 전투에서 전리품을 얻을 확률이 오릅니다. {{item}} 부적을 찾아 장착해 보세요!
+  token_objective: '{{item}} 소유'
+  croissant_title: 전투 전에 빵부터.
+  croissant_body: 전투에서 패배하면 체력이 0이 됩니다. 회복을 기다리거나 음식을 먹고 빨리 복귀할 수 있습니다. {{item}}을(를) 구하거나 캐릭터 → 생산 직업 → 제빵사에서 구워 보세요.
+  croissant_objective: '{{item}} 소유'
+  lorito_title: 깃털을 좀 날려 볼 시간.
+  lorito_body: 더 강한 장비에는 밀밭에서 구할 수 없는 재료가 필요합니다. 던전에는 새로운 전리품과 경험치가 있지만 싸워서 얻어야 합니다. 회복 음식과 열쇠를 챙겨 테베의 Gilded Lorito로 가서 마지막 방을 돌파하세요.
+  lorito_objective: Gilded Lorito 던전 완료
+  suize_title: 마지막 비밀.
+  suize_body: 잘했어요, 모험가. 더 좋은 수확은 새 제작법으로 이어집니다. 마지막 과제는 직접 Suize를 채집하는 것입니다. 어디서 찾느냐고요? 처음으로 스스로 풀어 볼 문제라고 생각하세요.
+  suize_objective: Suize 수확
+  welcome_objective: ''
+  finished_objective: ''
+  saving: 저장 중…
+  automation_reward_action: 자동 채집 열기
+fullscreen_enter: 전체 화면으로 전환
+fullscreen_exit: 전체 화면 종료
+fullscreen_failed: 전체 화면 모드를 변경할 수 없습니다.
+spell_effects:
+  range: '{{minimum}}~{{maximum}}'
+  damage: '{{value}} 피해를 줍니다'
+  pct_life: 대상 최대 체력의 {{value}}%만큼 피해를 줍니다
+  caster_damage: 자신에게 {{value}} 피해를 줍니다
+  punishment: 잃은 체력에 따라 증가하는 {{value}} 피해를 줍니다
+  heal: 체력을 {{value}} 회복합니다
+  add: '{{stat}}을(를) {{value}} 높입니다'
+  remove: '{{stat}}을(를) {{value}} 낮춥니다'
+  fixed_remove: '{{stat}}을(를) {{value}} 낮춥니다(회피 불가)'
+  steal: '{{stat}} {{value}}을(를) 빼앗습니다'
+  chatiment: 매 턴 받은 피해에 따라 {{stat}}이(가) 최대 {{value}} 증가합니다
+  reduce: 피해를 {{value}} 줄입니다
+  reflect: '{{value}} 피해를 반사합니다'
+  push: '{{value}}칸 밀어냅니다'
+  pull: '{{value}}칸 끌어당깁니다'
+  teleport: '{{value}}칸 순간이동합니다'
+  swap: 위치를 교환합니다
+  trap: 함정을 설치합니다
+  glyph: 글리프를 설치합니다
+  dispel: 효과를 해제합니다
+  invis: 대상을 투명하게 만듭니다
+  return: 이 주문 레벨 이하의 주문을 되돌립니다
+  redirect: '{{value}} 피해를 전환합니다'
+  unknown: 알 수 없는 효과
+  any_stat: 임의의 능력치
+  target_not_team: 적만
+  target_not_enemy: 아군만
+  target_not_self: 자신 이외만
+  target_only_caster: 시전자만
+  turns: '지속 턴: {{count}}'
+  turn_range: '지속 턴: {{minimum}}~{{maximum}}'
+  critical_only: 치명타 시에만
+  turn_cap: 턴당 상한 · {{stat}}
+  shape_point: 단일 칸
+  shape_circle: 원 · {{size}}
+  shape_cross: 십자 · {{size}}
+  shape_line: 직선 · {{size}}
+  shape_tbar: T자 · {{size}}
+  shape_ring: 고리 · {{size}}
+  shape_allmap: 전체 지도
+  shape_cone: 원뿔 · {{size}}
+  shape_podium: 단상 · {{size}}
+  shape_blob: 둥근 영역 · {{size}}
+  active_add: '{{stat}} +{{value}}'
+  active_remove: '{{stat}} −{{value}}'
+  active_damage: '피해 {{value}}'
+  active_invis: '투명'
+  active_chatiment: '응징 · {{value}} {{stat}}/턴 · {{turns}}턴'
+  active_turns: '{{count}}턴'
+  active_turn_range: '{{minimum}}~{{maximum}}턴'
+  short_strength: '힘'
+  short_intelligence: '지능'
+  short_chance: '행운'
+  short_agility: '민첩'
+  short_wisdom: '지혜'
+  short_range: '사거리'
+  short_power: '위력'
+  short_raw_damage: '피해'
+  short_critical: '치명'
+  short_stat: '능력'
+ui:
+  character: 캐릭터
+  spell_action: '{{name}}, 레벨 {{level}}, {{cost}} {{unit}}'
+  spell_level: 주문 레벨 {{level}}
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: 경험치 최대
+  experience_gain: +{{amount}} {{unit}}
+  xp: 경험치
+  hp: HP
+  seconds: '{{count}}초'
+  meters: '{{count}}m'
+  versus: 대
+  team_format: '{{size}}대{{size}}'
+  flat: 평면
+  fps: FPS
+  north: 북
+  northeast: 북동
+  east: 동
+  southeast: 남동
+  south: 남
+  southwest: 남서
+  west: 서
+  northwest: 북서
+  game_description: AresRPG는 Sui 기반 브라우저 복셀 MMORPG입니다. 캐릭터, 아이템과 성장 기록이 온체인에 존재합니다.
+  game_title: AresRPG · 온체인 복셀 MMORPG
+  world_image: AresRPG 복셀 월드
+  sale_description: KARES 첫 공개 판매입니다. AresRPG의 다음 장을 함께 만들어 주세요.
+  formula_chastisement: G = min(ΔHP × S, 상한 × S − 현재 턴 G) · S = 몬스터 1, 플레이어 ½
+  formula_drop: 드롭률 = min(100%, 기본값 × 몬스터 구간 × (600 + 팀 평균 행운) / 600)
+  formula_xp: 경험치 = 기본 경험치 총량 × 파티 계수 × 레벨 균형 × 플레이어 레벨 / 파티 레벨 × (100 + 지혜) / 100

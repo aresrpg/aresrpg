@@ -11,9 +11,10 @@
 
 import { EventEmitter } from 'node:events'
 
-import type { LeaderboardObservation, LeaderboardSnapshot, MarketVolume } from '@aresrpg/protocol'
+import type { LeaderboardObservation, LeaderboardSnapshot, MarketVolume, MarketPriceHistory } from '@aresrpg/protocol'
 
 import { get_leaderboard } from './reads/get_leaderboard.ts'
+import { get_market_prices } from './reads/get_market_prices.ts'
 import { get_market_volume } from './reads/get_market_volume.ts'
 import {
   INDEXED_CHECKPOINT_KEY,
@@ -30,6 +31,10 @@ const log = logger(import.meta)
 
 /** The slice of an ioredis connection the buses consume — injected, so tests never connect. */
 export type BusRedis = {
+  pipeline?: () => {
+    hget: (key: string, field: string) => unknown
+    exec: () => Promise<[Error | null, unknown][] | null>
+  }
   call?: (command: string, ...args: readonly (string | number)[]) => Promise<unknown>
   on: (event: 'message' | 'end', listener: (...args: readonly string[]) => void) => void
   subscribe: (channel: string) => Promise<unknown>
@@ -77,6 +82,7 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   indexed_state?: () => Promise<IndexedState | null>
   /** Immutable retained sale rows for one player, newest first. */
   sales_history: (address: string) => Promise<readonly string[]>
+  market_prices?: (item_type: string, now_ms: number) => Promise<MarketPriceHistory | null>
   market_volume?: (now_ms: number) => Promise<MarketVolume | null>
   analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
   analytics_sets?: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
@@ -262,6 +268,7 @@ export const create_graph_bus = ({
   return {
     ...doors,
     sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
+    market_prices: (item_type, now_ms) => get_market_prices(publisher, item_type, now_ms),
     market_volume: (now_ms) => get_market_volume(publisher, now_ms),
     analytics_hashes: (keys) => Promise.all(keys.map((key) => publisher.hgetall(key))),
     analytics_sets: (keys) => Promise.all(keys.map((key) => publisher.smembers(key))),

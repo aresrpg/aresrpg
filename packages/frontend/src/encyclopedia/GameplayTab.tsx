@@ -7,6 +7,9 @@ import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import { Activity, Coins, Crown, DoorOpen, Sparkles, Swords, TrendingUp, Users, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { useText } from '../i18n/useText.ts'
+import { Text as LocalizedText } from '../i18n/Text.tsx'
 import { element_colors } from '../visual_identity.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 
@@ -56,6 +59,8 @@ const Formula = ({ children }: Readonly<{ children: React.ReactNode }>) => (
 
 export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
   const [active_section, set_active_section] = useState('combat')
+  const numbers = useNumbers()
+  const ui = useText()
   const content_ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -145,7 +150,9 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Text>{text('gameplay.life_steal_note')}</Text>
             <Subheading>{text('gameplay.chatiment')}</Subheading>
             <Text>{text('gameplay.chatiment_desc')}</Text>
-            <Formula>G = min(ΔHP × S, CAP × S − Gturn) · S = 1 mob, ½ player</Formula>
+            <Formula>
+              <LocalizedText path="ui.formula_chastisement" />
+            </Formula>
             <Subheading>{text('gameplay.healing')}</Subheading>
             <Text>{text('gameplay.healing_desc')}</Text>
             <Formula>H = B × (100 + INT) / 100 + H₊</Formula>
@@ -164,7 +171,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
                 <Fact
                   key={level}
                   label={text(`gameplay.level_${level}`)}
-                  value={`${xp_for_level(level)?.toLocaleString('en-US')} XP`}
+                  value={`${numbers.number(xp_for_level(level)!)} ${ui('ui.xp')}`}
                 />
               ))}
             </div>
@@ -196,7 +203,9 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Text>{text('gameplay.archimobs_desc')}</Text>
             <Subheading>{text('gameplay.chance_loot')}</Subheading>
             <Text>{text('gameplay.chance_loot_desc')}</Text>
-            <Formula>drop = min(100%, authored × mob band × (600 + average team Chance) / 600)</Formula>
+            <Formula>
+              <LocalizedText path="ui.formula_drop" />
+            </Formula>
             <Subheading>{text('gameplay.mob_loot_band')}</Subheading>
             <Text>{text('gameplay.mob_loot_band_desc')}</Text>
           </WikiSection>
@@ -207,7 +216,7 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
             <Subheading>{text('gameplay.groups_xp')}</Subheading>
             <Text>{text('gameplay.groups_xp_desc')}</Text>
             <Formula>
-              XP = base-XP pool × party coefficient × level balance × player level / party level × (100 + WIS) / 100
+              <LocalizedText path="ui.formula_xp" />
             </Formula>
             <div className="grid grid-cols-3 gap-1 sm:grid-cols-6">
               {RETRO_GROUP_XP_TENTHS.map((coefficient, index) => (

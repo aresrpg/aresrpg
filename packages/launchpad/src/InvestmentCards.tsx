@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useNumbers } from '@aresrpg/frontend/finance'
 import { Coins, Ticket, Wallet } from 'lucide-react'
 import {
   Metric,
@@ -17,9 +18,9 @@ import { open_wallet_dialog } from '@aresrpg/frontend/finance'
 import { offering_preview } from './offering_model.ts'
 
 type Preview = ReturnType<typeof offering_preview>
-const price_value = (preview: Preview | null) => {
+const price_value = (preview: Preview | null, amount_text: typeof format_amount) => {
   if (!preview || preview.price === null) return '—'
-  const amount = preview.price === 0n ? '<0.000000001' : format_amount(preview.price, 9)
+  const amount = preview.price === 0n ? '<0.000000001' : amount_text(preview.price, 9)
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-2" data-price-quote="">
       <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-gold-light">
@@ -34,7 +35,12 @@ const price_value = (preview: Preview | null) => {
     </span>
   )
 }
-const participant_metrics = (preview: Preview | null, copy: KaresCopy, pending_note: string) => {
+const participant_metrics = (
+  preview: Preview | null,
+  copy: KaresCopy,
+  pending_note: string,
+  amount_text: typeof format_amount
+) => {
   if (!preview)
     return [
       { label: copy.your_investment, value: '—', note: pending_note },
@@ -42,27 +48,30 @@ const participant_metrics = (preview: Preview | null, copy: KaresCopy, pending_n
     ]
   if (preview.phase === 'successful')
     return [
-      { label: copy.claimable_tokens, value: `${format_amount(preview.tokens, 2)} KARES`, note: copy.unclaimed_note },
-      { label: copy.refundable_sui, value: `${format_amount(preview.refund, 9)} SUI`, note: copy.unclaimed_note },
+      { label: copy.claimable_tokens, value: `${amount_text(preview.tokens, 2)} KARES`, note: copy.unclaimed_note },
+      { label: copy.refundable_sui, value: `${amount_text(preview.refund, 9)} SUI`, note: copy.unclaimed_note },
     ]
   if (preview.phase === 'refundable')
     return [
-      { label: copy.full_refund, value: `${format_amount(preview.refund, 9)} SUI`, note: copy.refundable },
+      { label: copy.full_refund, value: `${amount_text(preview.refund, 9)} SUI`, note: copy.refundable },
       { label: copy.your_allocation, value: '0 KARES', note: copy.refundable },
     ]
   return [
-    { label: copy.your_investment, value: `${format_amount(preview.contribution, 9)} SUI`, note: copy.unclaimed_note },
+    { label: copy.your_investment, value: `${amount_text(preview.contribution, 9)} SUI`, note: copy.unclaimed_note },
     {
       label: copy.your_allocation,
-      value: preview.allocation_ready ? `${format_amount(preview.tokens, 2)} KARES` : '—',
+      value: preview.allocation_ready ? `${amount_text(preview.tokens, 2)} KARES` : '—',
       note: preview.allocation_ready ? copy.estimated_until_close : copy.awaiting_minimum,
     },
   ]
 }
 
 export const InvestmentCards = ({ state, copy }: Readonly<{ state: FinanceState; copy: KaresCopy }>) => {
+  const { amount: format_amount } = useNumbers()
   const preview = state.snapshot ? offering_preview(state.snapshot) : null
-  const participant = state.address ? participant_metrics(preview, copy, finance_empty_message(state, copy)) : []
+  const participant = state.address
+    ? participant_metrics(preview, copy, finance_empty_message(state, copy), format_amount)
+    : []
   const price_status = preview?.price_status ?? 'unavailable'
   const price_labels = {
     unavailable: copy.current_price,
@@ -78,7 +87,7 @@ export const InvestmentCards = ({ state, copy }: Readonly<{ state: FinanceState;
   }
   const rows = [
     ...participant,
-    { label: price_labels[price_status], value: price_value(preview), note: price_notes[price_status] },
+    { label: price_labels[price_status], value: price_value(preview, format_amount), note: price_notes[price_status] },
   ]
   const icons = [Wallet, Ticket, Coins]
   return (

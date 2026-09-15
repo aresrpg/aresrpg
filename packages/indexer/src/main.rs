@@ -19,6 +19,7 @@ mod gates;
 mod graph;
 mod leaderboard_store;
 mod leaderboards;
+mod market_prices;
 mod market_volume;
 mod ownership;
 mod personal_kiosk;
@@ -273,3 +274,7 @@ mod tests {
         assert_eq!(redacted_url("not-a-url"), "not-a-url");
     }
 }
+
+#[cfg(test)]
+#[path = "../tests/support/redis.rs"]
+mod test_redis;

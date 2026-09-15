@@ -17,6 +17,7 @@ import {
 } from '../../src/journey/model.ts'
 import { action_quest_ids, owned_quest_ids, won_dungeon } from '../../src/journey/facts.ts'
 import { content_catalog } from '../../src/content/catalog.ts'
+import { LOCALES } from '../../src/i18n/locale.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import type { FightResult } from '../../src/modules/fight_result.ts'
 
@@ -168,13 +169,13 @@ test('dungeon completion requires a settled final-room win by an owned, non-forf
   expect(action_quest_ids(won, won)).toEqual([])
 })
 
-test('authored quest IDs, referenced items, HD art, and all six translations are complete', async () => {
+test('authored quest IDs, referenced items, HD art, and all supported translations are complete', async () => {
   expect(new Set(JOURNEY_QUESTS.map(({ id }) => id)).size).toBe(JOURNEY_QUESTS.length)
   for (const quest of JOURNEY_QUESTS) {
     expect(content_catalog.item(quest.item)).not.toBeNull()
     expect(existsSync(`${import.meta.dir}/../../../../seed/icons/items/${quest.item}_hd.png`)).toBe(true)
   }
-  const copies = await Promise.all((['en', 'fr', 'de', 'es', 'uk', 'ja'] as const).map(load_app_copy))
+  const copies = await Promise.all(LOCALES.map(({ code }) => load_app_copy(code)))
   for (const copy of copies) {
     const text = copy_text(copy.journey)
     expect(text('count', { count: 1, total: 10 })).toBe('1 / 10')
@@ -187,4 +188,29 @@ test('authored quest IDs, referenced items, HD art, and all six translations are
       if (kind !== 'start') expect(copy.journey[`${id}_objective`]).toBeTruthy()
     }
   }
+})
+
+test('resetting completed quests stops automation in the same app fold', () => {
+  const state = loaded()
+  const completed = reduce_app_state(state, {
+    type: 'journey/loaded',
+    identity: state.journey.identity!,
+    generation: state.journey.generation,
+    completed: JOURNEY_QUESTS.map(({ id }) => id),
+  })
+  const running = {
+    ...completed,
+    automation: {
+      ...completed.automation,
+      run: {
+        id: 'run',
+        character_id: 'hero',
+        world: 'nauvis',
+        item_type: 'wheat',
+        visited: {},
+        step: { type: 'planning' },
+      },
+    },
+  } as AppState
+  expect(reduce_app_state(running, { type: 'journey/reset' }).automation.run).toBeNull()
 })

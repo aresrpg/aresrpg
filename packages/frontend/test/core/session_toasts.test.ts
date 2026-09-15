@@ -3,7 +3,8 @@
 
 import { expect, test } from 'bun:test'
 
-import { failure_copy_key, observe_failure_toasts } from '../../src/modules/session_toasts.ts'
+import { failure_copy_key } from '../../src/i18n/player_error.ts'
+import { observe_failure_toasts } from '../../src/modules/session_toasts.ts'
 import { create_app, type AppState } from '../../src/store.ts'
 
 const session_observer = () => {

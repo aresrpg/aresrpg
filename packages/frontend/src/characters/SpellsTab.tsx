@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 // SPELLS — the grimoire: identity + spell-points header, the spell LIST on the left split
 // UNLOCKED / LOCKED (locked rows stay browsable), and on the right the ONE shared spell
 // detail component (encyclopedia SpellCard — never a duplicate) plus a LEVEL-UP button
@@ -9,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import { localized_error } from '../i18n/error_text.ts'
 import { SpellRow } from '../components/SpellRow.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell, type SpellLevel } from '../content/catalog.ts'
@@ -71,7 +73,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
     if (!can_raise || !wallet || !selected) return
     const transaction = run_direct_transaction(() => {
       const current_character = editable_character(read_app_state(), character.id, Date.now())
-      if (!current_character) throw new Error(t('progression_busy'))
+      if (!current_character) throw localized_error(t('progression_busy'))
       return wallet.character.raise_spell({
         character_id: character.id,
         spell: selected.name,

@@ -15,6 +15,7 @@
 import type { FightRow } from '@aresrpg/protocol'
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 
+import { localized_error } from '../i18n/error_text.ts'
 import type { AppModule, AppState } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { read_pose } from '../game/core/pose_feed.ts'
@@ -74,7 +75,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       return
     const pose = read_pose()
     if (!pose) {
-      toast.add(text('duel_no_position'))
+      toast.add(localized_error(text('duel_no_position')))
       return
     }
     challenging.add(selected_character_id)

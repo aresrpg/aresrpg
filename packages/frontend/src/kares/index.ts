@@ -22,3 +22,6 @@ export { countdown_parts, useCountdown } from './countdown.ts'
 export { WalletControl, open_wallet_dialog } from '../wallet/WalletControl.tsx'
 export { initial_wallet_state } from '../wallet/model.ts'
 export type { WalletView } from '../wallet/model.ts'
+
+export { useNumbers } from '../i18n/useNumbers.ts'
+export { useLocale } from '../i18n/LocaleScope.tsx'

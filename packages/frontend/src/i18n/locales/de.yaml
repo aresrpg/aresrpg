@@ -186,7 +186,7 @@ party_panel:
   run_to_wrong_world: Dieses Gruppenmitglied befindet sich nicht in deiner aktuellen Welt.
   run_to_unavailable: Die On-Chain-Position dieses Gruppenmitglieds ist nicht verfügbar.
 trade_panel:
-  kares: Stacking
+  kares: 'Angebotene KARES'
   close: Schließen
   title: Spielerhandel
   invite_sent: Handelseinladung gesendet
@@ -388,10 +388,28 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
+  prices_title: 'Preisverlauf'
+  prices_period: 'Zeitraum'
+  prices_range_7: '7T'
+  prices_range_30: '30T'
+  prices_range_90: '90T'
+  prices_range_365: '1J'
+  prices_subtitle: 'SUI / EINHEIT · ABGESCHLOSSENE VERKÄUFE · OHNE GEBÜHREN'
+  prices_loading: 'Preisverlauf wird geladen…'
+  prices_unavailable: 'Preisverlauf nicht verfügbar. Automatischer Neuversuch.'
+  prices_empty: 'Keine abgeschlossenen Verkäufe in diesem Zeitraum.'
+  prices_empty_day: 'Keine abgeschlossenen Verkäufe'
+  prices_weighted: 'Nach verkauften Mengen gewichtet · Tagesdurchschnitt'
+  prices_units: '{{units}} Einheiten verkauft'
+  prices_since: 'Aufzeichnung seit {{date}} · UTC'
+  prices_inspect: 'Tägliche Stückpreise. Zum Prüfen zeigen oder berühren.'
+  prices_table: 'Tagespreise anzeigen'
+  prices_date: 'Datum'
+  prices_quantity: 'Einheiten'
   volume_24h: '24h-Volumen'
   volume_30d: 30T-Volumen
   volume_window: Öffentliche Marktplatzverkäufe der letzten {{window}}, ohne Gebühren.
-  volume_unavailable: Für diesen Zeitraum ist noch kein vollständiger Verlauf verfügbar.
+  volume_unavailable: 'Das Volumen ist vorübergehend nicht verfügbar.'
   title: Marktplatz
   subtitle: Spielerangebote auf Sui
   disclaimer_kicker: Vor dem Handeln
@@ -459,6 +477,7 @@ marketplace_page:
   character_roster_full: Ein 7. Charakter passt nicht in deine Liste — 6 ist das Maximum
   collect_pending: Erlöse werden abgeholt…
   collect_success: Erlöse abgeholt
+  volume_partial: 'Erfasstes Volumen für {{window}}. Die Erfassung deckt den Zeitraum noch nicht vollständig ab; dies ist ein Mindestwert.'
 mastery_page:
   subtitle: Tägliche Herausforderungen
   title: Meisterschaft
@@ -897,7 +916,7 @@ fight_hud:
   chat_item_unavailable: Dieser Gegenstand ist On-Chain nicht verfügbar.
   chat_you: Du
   chat_line: '{name}: {message}'
-  chat_party_line: '(party) {name}: {message}'
+  chat_party_line: '(Gruppe) {name}: {message}'
   chat_whisper_to: '(an {name}) {message}'
   result_title: Kampfergebnis
   result_duration: Dauer
@@ -1341,11 +1360,11 @@ encyclopedia_page:
   boss_only: NUR BOSSE
   clear_all: ALLE LOSCHEN
   all_jobs: ALLE BERUFE
-  sort_level_asc: LEVEL ↑
-  sort_level_desc: LEVEL ↓
+  sort_level_asc: 'STUFE ↑'
+  sort_level_desc: 'STUFE ↓'
   sort_name_asc: NAME A-Z
   sort_newest: NEUESTE
-  level_bracket: LEVEL {{range}}
+  level_bracket: 'STUFE {{range}}'
   unknown_zone: UNBEKANNT
   unlocks_at_level: FREISCHALTEN BEI LV. {{level}}
   level: STUFE
@@ -1595,6 +1614,11 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: Dir ist das SUI für Transaktionsgebühren ausgegangen. Bitte lade dein Wallet auf, um weiterzuspielen.
 characters_page:
+  inventory_selection: '{{count}} ausgewählt · Umschalt-Klick zum Auswählen von Ausrüstung'
+  crush_cta_count: 'Zerschlagen ({{count}})'
+  crush_pending_count: '{{count}} werden zerschlagen…'
+  crush_confirm_selection: 'Ausgewählte Ausrüstung zerschlagen ({{count}})? Jeder ausgewählte Gegenstand wird endgültig zerstört.'
+  crush_selection_changed: 'Wähle verfügbare, nicht angelegte Ausrüstung aus einem Kiosk. Die bestätigte Auswahl muss weiterhin verfügbar sein.'
   teleport_dungeon_blocked: 'Beende oder verlasse den Dungeon, bevor du dich teleportierst.'
   consume_busy: 'Dieser Charakter muss untätig sein, um Verbrauchsgegenstände zu benutzen.'
   progression_busy: 'Werte und Zauber können nur geändert werden, wenn dieser Charakter untätig ist.'
@@ -1701,7 +1725,7 @@ characters_page:
   outcome_critical_failure: Kritischer Fehlschlag
   runeforge_history: Verlauf
   runeforge_history_empty: Wende eine Rune an, um den Verlauf dieses Gegenstands zu beginnen
-  runeforge_puits: Puits
+  runeforge_puits: 'Restenergie'
   runeforge_no_stat_change: Kein Attribut geändert
   requires_job: 'Erfordert {{job}} Stufe {{level}}'
   clear: Entfernen
@@ -1732,9 +1756,6 @@ characters_page:
   feed_unavailable: 'Dieses Haustier ist nicht mehr verfügbar.'
   claim_success: Belohnung abgeholt
   crush_title: Ausrüstung zerschlagen
-  crush_confirm_body: '{{name}} zerschlagen? Der Gegenstand wird für immer zerstört und ergibt Runen.'
-  crush_cta: Zerschlagen
-  crush_pending: Wird zerschlagen…
   crush_success: Ausrüstung zerschlagen
   crush_result_title: Ergebnis des Zerschlagens
   crush_result_empty: Mehr Glück beim nächsten Mal.
@@ -2167,8 +2188,32 @@ spell_names:
 item_categories:
   cosmetic_hat: Kosmetischer Hut
   cosmetic_cloak: Kosmetischer Umhang
+  hat: 'Hut'
+  cloak: 'Umhang'
+  belt: 'Gürtel'
+  boots: 'Stiefel'
+  amulet: 'Amulett'
+  ring: 'Ring'
+  title: 'Titel'
+  pet: 'Begleiter'
+  relic: 'Relikt'
+  daggers: 'Dolche'
+  spear: 'Speer'
+  bow: 'Bogen'
+  axe: 'Axt'
+  sword: 'Schwert'
+  tool_farmer: 'Bauernwerkzeug'
+  tool_herbalist: 'Kräuterkundlerwerkzeug'
+  tool_miner: 'Bergbauwerkzeug'
+  consumable: 'Verbrauchsgegenstand'
+  resource: 'Ressource'
+  rune: 'Rune'
+  key: 'Schlüssel'
+  weapon: 'Waffe'
+  tool: 'Werkzeug'
+  relic_slot: 'Relikt {{number}}'
 
-kares: Stacking
+kares: 'Staking'
 kares_page:
   stake_more: 'Mehr staken'
   additional_daily: 'Zusätzlich / Tag'
@@ -2349,6 +2394,13 @@ kares_page:
   allocation_rationale: '590.000 KARES (59 %) sind zum Start verfügbar: Verkauf, Liquidität und Team. Im ersten Jahr werden höchstens etwa 82.000 weitere freigegeben: 13,90 % des Anfangsbetrags vor Verbrennungen. Ohne Staker pausiert die Staking-Freigabe. Die Community-Freigabe folgt dem Kalender. Kampfbelohnungen können geringer ausfallen. Es werden keine neuen Token erzeugt. Spenden verteilen vorhandene Token um. Es gibt keine Preisgarantie.'
   launch_market_cap: 'Umlauf-Marktkapitalisierung zum Start'
   launch_market_cap_note: 'Bei jetzigem Verkaufsende: gedeckelter Verkaufspreis × 590.000 zum Start verfügbare KARES. Kein Start unter der Mindestfinanzierung.'
+  error_generic: 'Die Aktion konnte nicht abgeschlossen werden.'
+  error_rejected: 'Die Anfrage wurde abgebrochen.'
+  error_funds: 'Das Guthaben reicht für diese Aktion und ihre Gebühren nicht aus.'
+  error_connection: 'Die Verbindung ist fehlgeschlagen. Prüfe deine Verbindung und versuche es erneut.'
+  error_session: 'Die Wallet-Sitzung ist nicht verfügbar. Verbinde dich erneut.'
+  error_unknown: 'Deine letzte Aktion wird noch geprüft. Weitere Transaktionen bleiben gesperrt, bis ihr Ergebnis bekannt ist.'
+  error_recovered: 'Deine vorherige Transaktion wurde gefunden. Lade die Seite neu, um ihr Ergebnis vor der nächsten Aktion zu sehen.'
 
 leaderboard_page:
   unclaimed: 'Unbesetzt'
@@ -2414,9 +2466,8 @@ automation_panel:
   blocked: 'Pausiert: Bewegung blockiert'
   failed: 'Pausiert: Aktion fehlgeschlagen. Fehler prüfen.'
   quantity: 'Gesammelt: {{quantity}}'
-  unlocked: 'Zugang freigeschaltet'
-  badge: 'HACK ZONE'
-  available: 'Automatisches Sammeln verfügbar'
+  expand: 'Automatische Ernte ausklappen'
+  collapse: 'Automatische Ernte einklappen'
 
 item_drop_sources:
   title: 'Monsterbeute'
@@ -2445,8 +2496,8 @@ journey:
   key_details: 'Dungeonschlüssel finden'
   next: 'Als Nächstes'
   chapter_finished: 'Reise abgeschlossen'
-  finished_title: 'Jetzt bist du dran.'
-  finished_body: 'Werkzeuge, Vorräte, ein Dungeonsieg und sogar Suize. Erkunde weiter. Die nächste Geschichte schreibst du selbst.'
+  finished_title: 'Automatisierung freigeschaltet'
+  finished_body: 'AresRPG ist auch ein Spiel über Automatisierung. Viele zukünftige Funktionen werden darauf aufbauen. Du hast alle Anfängerquests abgeschlossen und die automatische Ernte verdient! Wähle eine Ressource, drücke Start und lass deinen Charakter sammeln. Du kannst die Steuerung währenddessen einklappen.'
   reset_title: 'Einsteigerquests'
   reset_hint: 'Setzt die Quests dieses Kontos in diesem Browser zurück. Vorhandene Gegenstände zählen nach dem Neustart der Reise erneut.'
   reset_action: 'Quests zurücksetzen'
@@ -2492,7 +2543,101 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Wird gespeichert…
+  automation_reward_action: 'Automatische Ernte öffnen'
 
 fullscreen_enter: Vollbild aktivieren
 fullscreen_exit: Vollbild verlassen
 fullscreen_failed: Der Vollbildmodus konnte nicht geändert werden.
+
+spell_effects:
+  range: '{{minimum}} bis {{maximum}}'
+  damage: 'Verursacht {{value}} Schaden'
+  pct_life: 'Verursacht {{value}} % der maximalen LP des Ziels als Schaden'
+  caster_damage: 'Fügt dir {{value}} Schaden zu'
+  punishment: 'Verursacht {{value}} Schaden, erhöht durch fehlende LP'
+  heal: 'Heilt {{value}} LP'
+  add: 'Erhöht {{stat}} um {{value}}'
+  remove: 'Verringert {{stat}} um {{value}}'
+  fixed_remove: 'Verringert {{stat}} um {{value}} (unausweichlich)'
+  steal: 'Stiehlt {{value}} {{stat}}'
+  chatiment: 'Gewinnt durch erlittenen Schaden bis zu {{value}} {{stat}} pro Zug'
+  reduce: 'Verringert Schaden um {{value}}'
+  reflect: 'Reflektiert {{value}} Schaden'
+  push: 'Schiebt um {{value}} Felder'
+  pull: 'Zieht um {{value}} Felder'
+  teleport: 'Teleportiert um {{value}} Felder'
+  swap: 'Tauscht Positionen'
+  trap: 'Platziert eine Falle'
+  glyph: 'Platziert eine Glyphe'
+  dispel: 'Entfernt Effekte'
+  invis: 'Macht das Ziel unsichtbar'
+  return: 'Wirft Zauber bis zur Stufe dieses Zaubers zurück'
+  redirect: 'Leitet {{value}} Schaden um'
+  unknown: 'Unbekannter Effekt'
+  any_stat: 'Beliebiger Wert'
+  target_not_team: 'Nur Gegner'
+  target_not_enemy: 'Nur Verbündete'
+  target_not_self: 'Nur andere'
+  target_only_caster: 'Nur Zaubernder'
+  turns: 'Züge: {{count}}'
+  turn_range: 'Züge: {{minimum}}–{{maximum}}'
+  critical_only: 'Nur kritisch'
+  turn_cap: 'Zuglimit · {{stat}}'
+  shape_point: 'Punkt'
+  shape_circle: 'Kreis · {{size}}'
+  shape_cross: 'Kreuz · {{size}}'
+  shape_line: 'Linie · {{size}}'
+  shape_tbar: 'T-Form · {{size}}'
+  shape_ring: 'Ring · {{size}}'
+  shape_allmap: 'Ganze Karte'
+  shape_cone: 'Kegel · {{size}}'
+  shape_podium: 'Podium · {{size}}'
+  shape_blob: 'Rundfläche · {{size}}'
+  active_add: '+{{value}} {{stat}}'
+  active_remove: '−{{value}} {{stat}}'
+  active_damage: '{{value}} Schaden'
+  active_invis: 'Unsichtbar'
+  active_chatiment: 'STRAFE · {{value}} {{stat}}/ZUG · {{turns}}Z'
+  active_turns: '{{count}}Z'
+  active_turn_range: '{{minimum}}–{{maximum}}Z'
+  short_strength: 'STÄ'
+  short_intelligence: 'INT'
+  short_chance: 'GLÜ'
+  short_agility: 'BEW'
+  short_wisdom: 'WEI'
+  short_range: 'RW'
+  short_power: 'KRA'
+  short_raw_damage: 'SCH'
+  short_critical: 'KRIT'
+  short_stat: 'WERT'
+
+ui:
+  character: 'Charakter'
+  spell_action: '{{name}}, Stufe {{level}}, {{cost}} {{unit}}'
+  spell_level: 'Zauberstufe {{level}}'
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: 'Maximale EP'
+  experience_gain: '+{{amount}} {{unit}}'
+  xp: 'EP'
+  hp: 'LP'
+  seconds: '{{count}}s'
+  meters: '{{count}}m'
+  versus: 'GEGEN'
+  team_format: '{{size}} gegen {{size}}'
+  flat: 'Flach'
+  fps: 'FPS'
+  north: 'N'
+  northeast: 'NO'
+  east: 'O'
+  southeast: 'SO'
+  south: 'S'
+  southwest: 'SW'
+  west: 'W'
+  northwest: 'NW'
+  game_description: 'AresRPG ist ein browserbasiertes Voxel-MMORPG auf Sui. Deine Charaktere, Gegenstände und Fortschritte leben auf der Blockchain.'
+  game_title: 'AresRPG · Voxel-MMORPG auf der Blockchain'
+  world_image: 'AresRPG-Voxelwelt'
+  sale_description: 'Der erste öffentliche KARES-Verkauf. Hilf, das nächste Kapitel von AresRPG aufzubauen.'
+  formula_chastisement: 'G = min(ΔLP × S, GRENZE × S − Gzug) · S = 1 für Monster, ½ für Spieler'
+  formula_drop: 'Beute = min(100 %, Basiswert × Monsterband × (600 + durchschnittliches Teamglück) / 600)'
+  formula_xp: 'EP = Basis-EP-Pool × Gruppenkoeffizient × Stufenausgleich × Spielerstufe / Gruppenstufe × (100 + WEI) / 100'

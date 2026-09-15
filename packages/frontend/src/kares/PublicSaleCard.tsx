@@ -3,18 +3,20 @@
 
 import { ArrowUpRight, Check, Radio } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 
 import { countdown_parts, useCountdown } from './countdown.ts'
 import type { KaresCopy } from './copy.ts'
-import { format_amount, offering_phase, type FinanceSnapshot } from './model.ts'
+import { offering_phase, type FinanceSnapshot } from './model.ts'
 import { useFinance } from './useFinance.ts'
 
 import './public_sale_card.css'
 
 const SaleFunding = ({ offering, copy }: Readonly<{ offering: FinanceSnapshot['offering']; copy: KaresCopy }>) => {
+  const { amount: format_amount } = useNumbers()
   const reached = offering.total_contributed >= offering.min_raise
   const excess = offering.total_contributed - offering.max_raise
   const funded_target = reached ? offering.min_raise : offering.total_contributed

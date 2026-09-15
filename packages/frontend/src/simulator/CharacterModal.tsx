@@ -19,7 +19,7 @@ import { SpellRow } from '../components/SpellRow.tsx'
 import { StatIdentity } from '../components/StatIdentity.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize, type SeedSpell } from '../content/catalog.ts'
-import { copy_text, spell_name, stat_name, type AppCopy } from '../i18n/copy.ts'
+import { copy_text, spell_name, stat_name, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { element_colors } from '../visual_identity.ts'
 import {
   CHARACTER_STATS,
@@ -230,12 +230,18 @@ function StatEditor({ character, copy }: Readonly<{ character: SimulatorCharacte
   )
 }
 
-const spell_row_view = (spell: Readonly<SeedSpell>, level: number): Readonly<{ color: string; subline: string }> => {
+const spell_row_view = (
+  spell: Readonly<SeedSpell>,
+  level: number,
+  text: CopyText
+): Readonly<{ color: string; subline: string }> => {
   const selected = spell.levels[level - 1]
   const damage = selected?.effects.find((effect) => damaging_effects.has(effect.kind))
-  const kind = damage?.element ? titleize(damage.element) : 'Utility'
+  const kind = damage?.element
+    ? text(`encyclopedia_page.element.${damage.element}`)
+    : text('characters_page.spells.utility')
   const range = selected?.range_max ?? 0
-  const descriptor = range === 0 ? 'Self' : range <= 1 && damage ? 'Melee' : range <= 1 ? 'Self' : 'Ranged'
+  const descriptor = text(`characters_page.spells.tag_${range > 1 ? 'ranged' : range > 0 && damage ? 'melee' : 'self'}`)
   return Object.freeze({
     color: element_colors[damage?.element ?? ''] ?? GOLD,
     subline: `${kind} · ${descriptor}`,
@@ -270,7 +276,7 @@ function SpellEditor({ character, copy }: Readonly<{ character: SimulatorCharact
           {rows.map((spell) => {
             const level = character.spell_levels[spell.name] ?? 1
             const available = budget - spent + spell_point_cost(level)
-            const view = spell_row_view(spell, level)
+            const view = spell_row_view(spell, level, copy_text(copy))
             return (
               <SpellRow
                 color={view.color}
@@ -302,7 +308,7 @@ function SpellEditor({ character, copy }: Readonly<{ character: SimulatorCharact
                     })}
                   </select>
                 }
-                subline={`Lv. ${spell.unlock_level} · ${view.subline}`}
+                subline={`${copy_text(copy.encyclopedia_page)('level_short', { level: spell.unlock_level })} · ${view.subline}`}
               />
             )
           })}

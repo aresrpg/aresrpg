@@ -5,6 +5,7 @@ import { element_names, item_categories, rune_effect, stat_names } from '@aresrp
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import { item_detail_icon } from '../content/item_detail_assets.ts'
+import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { element_colors, item_category_colors, stat_colors, stat_identities } from '../visual_identity.ts'
 
@@ -112,6 +113,7 @@ const StatIdentity = ({ stat }: Readonly<{ stat: string }>) => {
 }
 
 const RuneEffectLine = ({ item_type }: Readonly<{ item_type: string }>) => {
+  const vocabulary = useVocabulary()
   const rune = rune_effect(item_type)
   if (!rune) return null
   return (
@@ -121,7 +123,7 @@ const RuneEffectLine = ({ item_type }: Readonly<{ item_type: string }>) => {
         +{rune.amount}
       </span>
       <span className="min-w-0 flex-1 truncate" style={{ color: stat_colors[rune.stat] }}>
-        {titleize(rune.stat)}
+        {vocabulary.stat(rune.stat)}
       </span>
     </div>
   )
@@ -141,6 +143,7 @@ const StatLine = ({
   labels,
   row,
 }: Readonly<{ edit?: ItemDetailEdit; labels: ItemDetailProps['labels']; row: ItemStatRow }>) => {
+  const vocabulary = useVocabulary()
   const color = stat_colors[row.key] ?? '#e8e4dc'
   const signed = (value: number): string => `${value < 0 ? '' : '+'}${value}`
   const defined = stat_is_defined(row)
@@ -189,9 +192,9 @@ const StatLine = ({
       <StatIdentity stat={row.key} />
       {defined ? (
         <>
-          <InlineField display={values} edit={edit} editor={value_editor} label={titleize(row.key)} />
+          <InlineField display={values} edit={edit} editor={value_editor} label={vocabulary.stat(row.key)} />
           <span className="min-w-0 flex-1 truncate" style={{ color }}>
-            {titleize(row.key)}
+            {vocabulary.stat(row.key)}
           </span>
         </>
       ) : (
@@ -200,14 +203,14 @@ const StatLine = ({
           display={
             <>
               <span className="min-w-0 flex-1 truncate" style={{ color }}>
-                {titleize(row.key)}
+                {vocabulary.stat(row.key)}
               </span>
               <span className="text-[#65c993]">+</span>
             </>
           }
           edit={edit}
           editor={value_editor}
-          label={titleize(row.key)}
+          label={vocabulary.stat(row.key)}
         />
       )}
       {edit && defined && (
@@ -240,6 +243,7 @@ const DamageLine = ({
   labels: ItemDetailProps['labels']
   damages: readonly ItemDamage[]
 }>) => {
+  const vocabulary = useVocabulary()
   const color = element_colors[damage.element] ?? '#ffffff'
   const display = (
     <span className="block px-2 py-2 text-[10px] tracking-wide">
@@ -247,7 +251,7 @@ const DamageLine = ({
       <span className="text-[#aaa]"> - </span>
       <span style={{ color }}>{damage.to}</span>
       <span className="text-[#aaa]"> {labels.damages} </span>
-      <span style={{ color }}>{titleize(damage.element)}</span>
+      <span style={{ color }}>{vocabulary.element(damage.element)}</span>
     </span>
   )
   return (

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { journey_complete } from '../journey/model.ts'
+import { world_keyboard_eligible, WORLD_MOVE_KEYS } from '../game/core/world_input.ts'
 import { read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
 import { character_travel_ready } from '../game/travel_gate.ts'
-import type { AppInput, AppModule, AppState } from '../store.ts'
+import type { AppContext, AppInput, AppModule, AppState } from '../store.ts'
 
 import { chain_now } from './chain_clock.ts'
 import { selected_character } from './session.ts'
@@ -28,7 +30,7 @@ export type { AutomationInput, AutomationState } from './automation_state.ts'
 
 const start = (state: AppState, id: string): AppState => {
   const character = selected_character(state.session)
-  if (state.automation.run || !state.automation.unlocked) return state
+  if (state.automation.run || !journey_complete(state.journey)) return state
   if (
     !character ||
     !automation_available(state) ||
@@ -54,8 +56,8 @@ const start = (state: AppState, id: string): AppState => {
 
 const fold_command = (state: AppState, input: AppInput): AppState | null => {
   switch (input.type) {
-    case 'automation/unlocked':
-      return state.automation.unlocked ? state : with_automation(state, { ...state.automation, unlocked: true })
+    case 'automation/collapse':
+      return with_automation(state, { ...state.automation, collapsed: input.collapsed })
     case 'automation/resource':
       return state.automation.run
         ? state
@@ -145,6 +147,7 @@ const movement_outcome = (state: AppState, run: AutomationRun, input: AppInput):
 }
 
 export const reduce_automation = (state: AppState, input: AppInput): AppState => {
+  if (state.automation.run && !journey_complete(state.journey)) return stop_automation(state, 'stopped')
   const command = fold_command(state, input)
   if (command) return command
   const { run } = state.automation
@@ -221,7 +224,24 @@ export const automation_wake_delay = (state: AppState, now: number | null): numb
   return upper
 }
 
-export const observe_automation: NonNullable<AppModule['observe']> = ({ events, get_state, dispatch, signal }) => {
+export const observe_automation_controls = ({
+  get_state,
+  dispatch,
+  signal,
+}: Pick<AppContext, 'get_state' | 'dispatch' | 'signal'>): void => {
+  const on_key = (event: Readonly<KeyboardEvent>): void => {
+    const state = get_state()
+    if (!state.automation.run || state.navigation.page !== 'world' || !world_keyboard_eligible(event)) return
+    if (WORLD_MOVE_KEYS[event.code] || ['Space', 'Escape'].includes(event.code))
+      dispatch({ type: 'automation/stop', reason: 'stopped' })
+  }
+  globalThis.addEventListener?.('keydown', on_key, { capture: true })
+  signal.addEventListener('abort', () => globalThis.removeEventListener?.('keydown', on_key, { capture: true }))
+}
+
+export const observe_automation: NonNullable<AppModule['observe']> = (context) => {
+  const { events, get_state, dispatch, signal } = context
+  observe_automation_controls(context)
   let timer: ReturnType<typeof setTimeout> | null = null
   const schedule = (): void => {
     if (timer !== null) clearTimeout(timer)

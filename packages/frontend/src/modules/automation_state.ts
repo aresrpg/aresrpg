@@ -36,21 +36,21 @@ export type AutomationRun = Readonly<{
 }>
 export type AutomationReason = 'stopped' | 'unavailable' | 'blocked' | 'failed'
 export type AutomationState = Readonly<{
-  unlocked: boolean
+  collapsed: boolean
   item_type: string
   quantity: number
   reason: AutomationReason | null
   run: AutomationRun | null
 }>
 export type AutomationInput =
-  | Readonly<{ type: 'automation/unlocked' }>
+  | Readonly<{ type: 'automation/collapse'; collapsed: boolean }>
   | Readonly<{ type: 'automation/resource'; item_type: string }>
   | Readonly<{ type: 'automation/start'; id: string }>
   | Readonly<{ type: 'automation/stop'; reason: AutomationReason }>
   | Readonly<{ type: 'automation/tick'; world_ms: number | null; monotonic_ms: number; pose: WorldPose | null }>
 
 export const initial_automation_state = (): AutomationState => ({
-  unlocked: false,
+  collapsed: false,
   item_type: '',
   quantity: 0,
   reason: null,

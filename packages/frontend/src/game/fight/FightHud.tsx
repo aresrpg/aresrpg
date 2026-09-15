@@ -359,7 +359,7 @@ export const FightHud = ({
     // the `--fh-*` palette, the mono face and the card's own chrome are all declared on
     // `.fight-hud`; a banner rendered outside it inherits nothing and reads as bare text
     return (
-      <div className="fight-hud">
+      <div className="fight-hud" data-chat-viewport="">
         <FightPlacementBanner
           can_forfeit={view.can_forfeit}
           deadline={view.placement_deadline_ms}
@@ -436,7 +436,7 @@ export const FightHud = ({
     dispatch_app({ type: 'fight/reset_turn', fight: command_fight })
   }
   return (
-    <div className="fight-hud">
+    <div className="fight-hud" data-chat-viewport="">
       {displayed_turn_card && (
         <FightTurnCard
           fighter={displayed_turn_card.fighter}

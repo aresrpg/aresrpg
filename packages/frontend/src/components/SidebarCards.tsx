@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Check, Globe, Send, Wifi, WifiOff } from 'lucide-react'
-import { useState } from 'react'
+import { Check, ChevronDown, Globe, Send, Wifi, WifiOff } from 'lucide-react'
+import { useEffect, useId, useRef } from 'react'
 
+import './language_dropdown.css'
+
+import { player_error_hint } from '../i18n/player_error.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { LOCALES, type Locale } from '../i18n/locale.ts'
 import type { LinkStatus } from '../modules/session.ts'
@@ -12,44 +15,66 @@ export const LanguageCard = ({
   locale,
   change_locale,
 }: Readonly<{ locale: Locale; change_locale: (locale: Locale) => void }>) => {
-  const [open, set_open] = useState(false)
-  const current = LOCALES.find(({ code }) => code === locale)?.native ?? 'English'
-
+  const menu_id = useId()
+  const trigger = useRef<HTMLButtonElement>(null)
+  const menu = useRef<HTMLDivElement>(null)
+  const current = LOCALES.find(({ code }) => code === locale)!.native
+  useEffect(() => {
+    const close = () => menu.current?.hidePopover()
+    window.addEventListener('resize', close)
+    return () => window.removeEventListener('resize', close)
+  }, [])
   return (
-    <div
-      className="relative flex w-[var(--app-sidebar-width)] flex-col items-center border border-[#4a9eff]/15 bg-[linear-gradient(135deg,rgba(74,158,255,0.04)_0%,rgba(18,18,26,0.95)_50%,rgba(200,150,60,0.03)_100%)] p-3"
-      data-language-card=""
-    >
+    <div className="language-card" data-language-card="">
       <button
-        className="flex w-full cursor-pointer items-center justify-center gap-1.5 text-[9px] tracking-[0.15em] text-[#6b7280] uppercase transition-colors hover:text-[#4a9eff]"
-        aria-expanded={open}
-        onClick={() => set_open(!open)}
+        className="language-trigger"
+        id={`${menu_id}-trigger`}
+        ref={trigger}
+        aria-haspopup="dialog"
+        popoverTarget={menu_id}
         type="button"
       >
-        <Globe aria-hidden="true" className="opacity-40" size={10} />
-        {current}
+        <Globe aria-hidden="true" size={12} />
+        <span>{current}</span>
+        <ChevronDown aria-hidden="true" className="language-chevron" size={12} />
       </button>
-      {open && (
-        <div className="mt-3 flex w-full flex-col border border-border bg-surface">
-          {LOCALES.map(({ code, native }) => (
-            <button
-              className={`cursor-pointer px-3 py-1.5 text-left text-[9px] tracking-[0.15em] uppercase transition-colors ${
-                locale === code
-                  ? 'bg-[#4a9eff]/5 text-[#4a9eff]'
-                  : 'text-[#6b7280] hover:bg-white/2 hover:text-[#e8e4dc]'
-              }`}
-              key={code}
-              onClick={() => {
-                change_locale(code)
-                set_open(false)
-              }}
-              type="button"
-            >
-              {native}
-            </button>
-          ))}
-        </div>
-      )}
+      <div
+        className="language-dropdown"
+        id={menu_id}
+        ref={menu}
+        popover="auto"
+        role="dialog"
+        aria-labelledby={`${menu_id}-trigger`}
+        onBeforeToggle={(event) => {
+          if (event.newState !== 'open') return
+          const box = trigger.current!.getBoundingClientRect()
+          const below = window.innerHeight - box.bottom - 12
+          const above = box.top - 12
+          const height = Math.min(360, Math.max(below, above))
+          const panel = event.currentTarget
+          panel.style.setProperty('left', `${Math.max(8, Math.min(box.left, window.innerWidth - 216))}px`)
+          panel.style.setProperty('top', `${below >= height ? box.bottom + 6 : box.top - height - 6}px`)
+          panel.style.setProperty('max-height', `${height}px`)
+        }}
+      >
+        {LOCALES.map(({ code, native }) => (
+          <button
+            className="language-option"
+            aria-pressed={locale === code}
+            autoFocus={locale === code}
+            key={code}
+            lang={code}
+            onClick={() => {
+              change_locale(code)
+              menu.current?.hidePopover()
+            }}
+            type="button"
+          >
+            <span>{native}</span>
+            {locale === code && <Check aria-hidden="true" size={12} />}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -145,7 +170,7 @@ export const ConnectionCard = ({
       data-connection-card=""
       data-connection-violation={violation ?? undefined}
       role="status"
-      title={error ?? undefined}
+      title={player_error_hint(copy, error)}
     >
       <div className="flex items-center gap-2.5">
         <Icon aria-hidden="true" className="shrink-0 opacity-70" size={13} />

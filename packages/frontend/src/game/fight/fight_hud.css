@@ -5,7 +5,6 @@
   --fh-ink: #e8e4dc;
   --fh-muted: #6b7280;
   --fh-edge: var(--color-border);
-  --fh-chat-width: min(38%, 440px);
   --fh-lane-gap: 12px;
   position: absolute;
   inset: 0;
@@ -241,7 +240,7 @@
   bottom: 150px;
   z-index: 7;
   display: grid;
-  max-width: calc(100vw - var(--fh-chat-width) - 44px);
+  max-width: calc(100vw - var(--world-chat-width) - 44px);
   grid-template-columns: minmax(0, auto) 26px;
   grid-template-rows: auto;
   align-items: flex-end;
@@ -253,7 +252,7 @@
   grid-column: 1;
   grid-row: 1;
   display: flex;
-  max-width: calc(100vw - var(--fh-chat-width) - 82px);
+  max-width: calc(100vw - var(--world-chat-width) - 82px);
   flex-direction: row;
   justify-content: flex-end;
   gap: 5px;
@@ -519,13 +518,9 @@
   align-items: flex-end;
 }
 
-.fight-hud > .gw-worldchat {
-  width: var(--fh-chat-width);
-}
-
 .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
   right: 10px;
-  left: calc(10px + var(--fh-chat-width) + var(--fh-lane-gap));
+  left: calc(10px + var(--world-chat-width) + var(--fh-lane-gap));
   justify-content: center;
   transform: none;
 }
@@ -990,10 +985,10 @@
   .fight-hud__turns {
     right: 8px;
     bottom: 104px;
-    max-width: calc(100vw - var(--fh-chat-width) - 24px);
+    max-width: calc(100vw - var(--world-chat-width) - 24px);
   }
   .fight-hud__turn-list {
-    max-width: calc(100vw - var(--fh-chat-width) - 60px);
+    max-width: calc(100vw - var(--world-chat-width) - 60px);
   }
   .fight-hud__turns:not([open]) {
     bottom: 104px;
@@ -1002,18 +997,12 @@
     transform: translateX(-50%) scale(0.8);
     transform-origin: bottom center;
   }
-  .fight-hud:not(.fight-hud--overworld) {
-    --fh-chat-width: clamp(220px, 30%, 280px);
-  }
   .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
     transform: scale(0.62);
   }
 }
 
 @media (min-width: 901px) and (max-width: 1200px) {
-  .fight-hud:not(.fight-hud--overworld) {
-    --fh-chat-width: clamp(260px, 30%, 340px);
-  }
   .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
     transform: scale(0.78);
     transform-origin: bottom center;

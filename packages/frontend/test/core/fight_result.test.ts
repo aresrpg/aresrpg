@@ -19,6 +19,7 @@ import {
 } from '../../src/modules/fight_result.ts'
 import fight_result_module from '../../src/modules/fight_result.ts'
 import { create_fight_result_observer, settlement_needs_close } from '../../src/modules/fight_result_observer.ts'
+import en from '../../src/i18n/locales/en.yaml'
 import { fight_result_error_text } from '../../src/modules/fight_result_error.ts'
 import { initial_app_state, type AppState } from '../../src/store.ts'
 import { toast, type Toast } from '../../src/toast.ts'
@@ -46,8 +47,8 @@ test('settlement retries one zero-gas object-version race without delaying the n
 test('a residual settlement version race is explained beside Retry without Sui internals', () => {
   const raw = "[sdk] NOT submitted: provided version doesn't match"
   const copy = { result_version_changed: 'Fight rewards changed. Retry safely.' }
-  expect(fight_result_error_text(copy, raw)).toBe('Fight rewards changed. Retry safely.')
-  expect(fight_result_error_text(copy, 'wallet cancelled')).toBe('wallet cancelled')
+  expect(fight_result_error_text(copy, raw, en.kares_page)).toBe('Fight rewards changed. Retry safely.')
+  expect(fight_result_error_text(copy, 'wallet cancelled', en.kares_page)).toBe(en.kares_page.error_rejected)
 })
 test('an ended fight keeps its result and settlement behind the terminal presentation', () => {
   expect(fight_result_available({ checkpoint: { contract: { id: '0xf1' } } } as never, '0xf1')).toBeFalse()

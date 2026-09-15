@@ -7,7 +7,7 @@ import type { ItemRow } from '@aresrpg/protocol'
 
 export type CrushResult = Readonly<{ digest: string; items: readonly Readonly<ItemRow>[] }>
 export type CrushPresentation =
-  | Readonly<{ type: 'crushing'; item: Readonly<ItemRow> }>
+  | Readonly<{ type: 'crushing'; items: readonly Readonly<ItemRow>[] }>
   | Readonly<{ type: 'result'; result: Readonly<CrushResult> }>
   | Readonly<{ type: 'failed'; error: string }>
 export type PendingCrushResult = Readonly<{
@@ -36,7 +36,7 @@ const publish = (presentation: Readonly<CrushPresentation>): void =>
   listeners.forEach((listener) => listener(presentation))
 
 export const crush_results = Object.freeze({
-  start: (item: Readonly<ItemRow>): void => publish(Object.freeze({ type: 'crushing', item })),
+  start: (items: readonly Readonly<ItemRow>[]): void => publish(Object.freeze({ type: 'crushing', items })),
   publish: (result: Readonly<CrushResult>): void => publish(Object.freeze({ type: 'result', result })),
   fail: (error: unknown): void =>
     publish(Object.freeze({ type: 'failed', error: error instanceof Error ? error.message : String(error) })),

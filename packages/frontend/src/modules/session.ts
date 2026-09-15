@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
 import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
 import { character_checkpoint } from '@aresrpg/protocol'
@@ -23,6 +22,7 @@ import { create_position_publisher } from '../game/core/position_publication.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
+import { market_price_subscription } from '../marketplace/price_history_state.ts'
 
 import { leaderboard_subscription } from './leaderboards.ts'
 import { fold_character_deletion, with_character_roster } from './character_roster.ts'
@@ -32,7 +32,6 @@ import { fight_environment } from './fight.ts'
 import { spectator_changes } from './fight_identity.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
 import { fold_link_input } from './session_link.ts'
-
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
@@ -585,8 +584,9 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     link?.send({ type: 'packet/fight_action', fight, action })
   })
   events.on('STATE_UPDATED', (next, prior) => {
-    const packet = leaderboard_subscription(next, prior)
-    if (packet) link?.send(packet)
+    ;[leaderboard_subscription(next, prior), market_price_subscription(next, prior)].forEach((packet) => {
+      if (packet) link?.send(packet)
+    })
   })
   signal.addEventListener('abort', () => {
     unsubscribe_pose()

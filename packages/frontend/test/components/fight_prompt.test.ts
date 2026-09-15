@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 
+import { render_english as renderToStaticMarkup } from '../i18n/render.ts'
 import {
   FightTeams,
   fight_joinable_teams,
@@ -85,8 +85,8 @@ test('the active fight roster names player and mob seats with their levels', () 
   expect(html).toContain('data-fight-roster=""')
   expect(html).toContain('data-fight-fighter="player"')
   expect(html).toContain('Ryk-abdou')
-  expect(html).toContain('LV 45')
+  expect(html).toContain('Lv. 45')
   expect(html).toContain('data-fight-fighter="mob"')
   expect(html).toContain('Misui Feu')
-  expect(html).toContain('LV 12')
+  expect(html).toContain('Lv. 12')
 })

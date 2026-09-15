@@ -3,8 +3,8 @@
 
 import { CheckCircle2, XCircle } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
-import { format_sui } from '../wallet_amount.ts'
 
 import { DigestLink } from './SendModalShell.tsx'
 
@@ -49,45 +49,51 @@ export const SuiTransferSuccess = ({
   copy,
   reset,
   transfer,
-}: Readonly<{ close: () => void; copy: AppCopy; reset: () => void; transfer: WalletTransferState }>) => (
-  <div className="flex flex-col items-center gap-5">
-    <CheckCircle2
-      className="text-emerald-400"
-      size={36}
-      style={{ filter: 'drop-shadow(0 0 12px rgba(52,211,153,0.5))', animation: 'glow-pulse 3s ease-in-out infinite' }}
-    />
-    <div className="text-center text-[13px] font-semibold tracking-[0.3em] text-emerald-400 uppercase">
-      {send_text(copy, 'sent')}
+}: Readonly<{ close: () => void; copy: AppCopy; reset: () => void; transfer: WalletTransferState }>) => {
+  const localized_numbers = useNumbers()
+  return (
+    <div className="flex flex-col items-center gap-5">
+      <CheckCircle2
+        className="text-emerald-400"
+        size={36}
+        style={{
+          filter: 'drop-shadow(0 0 12px rgba(52,211,153,0.5))',
+          animation: 'glow-pulse 3s ease-in-out infinite',
+        }}
+      />
+      <div className="text-center text-[13px] font-semibold tracking-[0.3em] text-emerald-400 uppercase">
+        {send_text(copy, 'sent')}
+      </div>
+      <div className="text-center text-[10px] leading-relaxed tracking-wide text-muted">
+        {transfer.drain
+          ? send_text(copy, 'success_drain_body', {
+              recipient: transfer.recipient_name ?? truncate_address(transfer.recipient_address),
+            })
+          : send_text(copy, 'success_body', {
+              amount: `${localized_numbers.sui(transfer.amount_mist, 2)} SUI`,
+              recipient: transfer.recipient_name ?? truncate_address(transfer.recipient_address),
+            })}
+      </div>
+      {transfer.digest && <DigestLink copy={copy} digest={transfer.digest} />}
+      <div className="mt-2 flex w-full gap-3">
+        <button
+          className="btn-gold flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+          onClick={reset}
+          type="button"
+        >
+          {send_text(copy, 'send_more')}
+        </button>
+        <button
+          className="btn-outline flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+          onClick={close}
+          type="button"
+        >
+          {copy.wallet_send_shared.close}
+        </button>
+      </div>
     </div>
-    <div className="text-center text-[10px] leading-relaxed tracking-wide text-muted">
-      {transfer.drain
-        ? send_text(copy, 'success_drain_body', {
-            recipient: transfer.recipient_name ?? truncate_address(transfer.recipient_address),
-          })
-        : send_text(copy, 'success_body', {
-            amount: `${format_sui(transfer.amount_mist, 2)} SUI`,
-            recipient: transfer.recipient_name ?? truncate_address(transfer.recipient_address),
-          })}
-    </div>
-    {transfer.digest && <DigestLink copy={copy} digest={transfer.digest} />}
-    <div className="mt-2 flex w-full gap-3">
-      <button
-        className="btn-gold flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-        onClick={reset}
-        type="button"
-      >
-        {send_text(copy, 'send_more')}
-      </button>
-      <button
-        className="btn-outline flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
-        onClick={close}
-        type="button"
-      >
-        {copy.wallet_send_shared.close}
-      </button>
-    </div>
-  </div>
-)
+  )
+}
 
 const failure_key = (error: string | undefined): string => {
   const message = error?.toLowerCase() ?? ''

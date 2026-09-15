@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { useText } from '../../i18n/useText.ts'
+
+import { Text } from '../../i18n/Text.tsx'
 // COMPASS STRIP — the pre-rewrite top-strip compass, carried over intact minus the coordinate
 // chips (owner 2026-08-19: coordinates live on the minimap now). Cardinal ruler + fixed center
 // forward caret, spawn pips (mob red / resource cyan) by bearing relative to the camera heading
@@ -69,10 +73,11 @@ export const city_compass_markers = (
 }
 
 const CityCompassMarkerView = ({ marker, city_label }: Readonly<{ marker: CityCompassMarker; city_label: string }>) => {
+  const ui = useText()
   const distance = Math.round(marker.distance)
   return (
     <span
-      aria-label={`${city_label} · ${distance}m`}
+      aria-label={`${city_label} · ${ui('ui.meters', { count: distance })}`}
       className={`gw-compass__city${marker.dungeon ? ' gw-compass__city--dungeon' : ''}`}
       style={{ left: `${marker.x * 100}%` }}
       title={city_label}
@@ -82,7 +87,7 @@ const CityCompassMarkerView = ({ marker, city_label }: Readonly<{ marker: CityCo
       </span>
       {marker.show_label && (
         <span className="gw-compass__city-label">
-          {marker.label} · {distance}m
+          {marker.label} · <Text path="ui.meters" values={{ count: distance }} />
         </span>
       )}
     </span>
@@ -96,6 +101,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const world_name = useAppStore(
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
   )
+  const ui = useText()
   const text = copy_text(copy.world_hud)
   if (!pose) return null
 
@@ -169,7 +175,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               key={mark.label}
               style={{ left: `${mark.x! * 100}%` }}
             >
-              {mark.label}
+              <Text path={`ui.${mark.label}`} />
             </span>
           ))}
           <div className="gw-compass__fwd">
@@ -187,7 +193,11 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 <span className="gw-compass__pip-dot" />
                 {pip.count > 1 && <span className="gw-compass__pip-count">×{pip.count}</span>}
               </span>
-              {pip.show_label && <span className="gw-compass__pip-dist">{pip.dist}m</span>}
+              {pip.show_label && (
+                <span className="gw-compass__pip-dist">
+                  <Text path="ui.meters" values={{ count: pip.dist }} />
+                </span>
+              )}
             </span>
           ))}
           {city_markers.map((marker) => (
@@ -202,10 +212,12 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               className={`gw-compass__edge gw-compass__edge--${marker.discovered ? 'discovered' : 'undiscovered'}`}
               key={marker.id}
               style={{ left: `${marker.x * 100}%` }}
-              title={text('zone_edge', { dist: `${marker.dist}m` })}
+              title={text('zone_edge', { dist: ui('ui.meters', { count: marker.dist }) })}
             >
               <span className="gw-compass__edge-tick" />
-              <span className="gw-compass__edge-label">{text('zone_edge', { dist: `${marker.dist}m` })}</span>
+              <span className="gw-compass__edge-label">
+                {text('zone_edge', { dist: ui('ui.meters', { count: marker.dist }) })}
+              </span>
             </span>
           ))}
         </div>

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 // EQUIPMENT — the loadout surface: the paper-doll + equipped totals on the left, the bag on
 // the right (category tabs, grid, drag-drop). Changes STAGE locally; Accept composes ONE
 // SDK transaction and the proven receipt folds through the session reducer (the server
@@ -12,12 +13,11 @@ import type { CharacterEquipmentSlot } from '@aresrpg/immutable'
 import { item_stat_center, stat_names } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
+import { localized_error } from '../i18n/error_text.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
-import { ItemDetailView } from '../components/ItemDetailView.tsx'
+import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
-import { encyclopedia_text } from '../encyclopedia/copy.ts'
-import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
-import { fold_equipment_stats, item_stat_offset } from '../game/character_stats.ts'
+import { fold_equipment_stats } from '../game/character_stats.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
 import { available_inventory_items, encumbered_asset_ids, inventory_groups } from '../inventory_stacks.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
@@ -42,9 +42,10 @@ import {
   type ResourceFilter,
 } from './InventoryResourceFilters.tsx'
 import { PendingClaims } from './PendingClaims.tsx'
+import { select_inventory_item } from './inventory_selection.ts'
+import { is_forge_gear } from './forge_eligibility.ts'
 import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
-import { PetPower } from './PetPower.tsx'
 import { editable_character } from './character_activity.ts'
 import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
 import { consumable_plan } from './consumable_plan.ts'
@@ -65,7 +66,6 @@ export default function EquipmentTab({
   copy,
 }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
-  const encyclopedia = encyclopedia_text(copy)
   const wallet = useAppStore(({ session }) => session.wallet)
   const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
   const all_inventory = useAppStore(({ session }) => session.inventory)
@@ -80,7 +80,8 @@ export default function EquipmentTab({
   const [staged, set_staged] = useState<EquipmentMap | null>(null)
   const [category, set_category] = useState<BagCategory>('equipment')
   const [resource_filter, set_resource_filter] = useState<ResourceFilter>('all')
-  const [selected_id, set_selected_id] = useState<string | null>(null)
+  const [inspected_id, set_inspected_id] = useState<string | null>(null)
+  const [selected_ids, set_selected_ids] = useState<readonly string[]>([])
   const [dragging_id, set_dragging_id] = useState<string | null>(null)
   const [committing, set_committing] = useState(false)
   const [menu, set_menu] = useState<ItemMenuState>(null)
@@ -126,9 +127,21 @@ export default function EquipmentTab({
     [display_bag, category, resource_filter]
   )
 
-  const selected =
-    bag.find(({ id }) => id === selected_id) ??
-    Object.values(equipment).find((item) => item?.id === selected_id) ??
+  const selected_items = grid_items.map(({ item }) => item).filter(({ id }) => selected_ids.includes(id))
+  const select_item = (item: Readonly<ItemRow>, toggle: boolean): void => {
+    set_inspected_id(item.id)
+    set_selected_ids(
+      select_inventory_item(
+        selected_items.filter(is_forge_gear).map(({ id }) => id),
+        item.id,
+        toggle && is_forge_gear(item)
+      )
+    )
+  }
+
+  const inspected =
+    bag.find(({ id }) => id === inspected_id) ??
+    Object.values(equipment).find((item) => item?.id === inspected_id) ??
     null
 
   const refuse = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot): boolean => {
@@ -159,14 +172,14 @@ export default function EquipmentTab({
     const transaction = run_direct_transaction(async () => {
       const state = read_app_state()
       const current_character = editable_character(state, character.id, Date.now())
-      if (!current_character) throw new Error(t('consume_busy'))
+      if (!current_character) throw localized_error(t('consume_busy'))
       if (current_character.dungeon_run && ['recall', 'city'].includes(action.effect.type))
-        throw new Error(t('teleport_dungeon_blocked'))
+        throw localized_error(t('teleport_dungeon_blocked'))
       const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
       const plan = consumable_plan(current_character, item, state.session.inventory, encumbered, Date.now())
       const amount = mode === 'full' ? plan.needed : 1
-      if (plan.needed === 0) throw new Error(t('already_full_hp'))
-      if (amount > plan.available) throw new Error(t('consume_healing_insufficient', { count: amount }))
+      if (plan.needed === 0) throw localized_error(t('already_full_hp'))
+      if (amount > plan.available) throw localized_error(t('consume_healing_insufficient', { count: amount }))
       const result = await wallet.character.use_consumable({
         character_id: character.id,
         item_id: item.id,
@@ -242,29 +255,6 @@ export default function EquipmentTab({
       .filter(({ value }) => value !== 0)
   }, [equipment])
 
-  const detail = useMemo(() => {
-    if (!selected) return null
-    const seed = encyclopedia_catalog.item(selected.item_type)?.item ?? null
-    const rolled = Object.fromEntries(
-      stat_names.map((stat) => [stat, item_stat_offset(selected, stat)]).filter(([, value]) => value !== 0)
-    )
-    return {
-      name: selected.name,
-      category: selected.category,
-      level: selected.level,
-      item_type: selected.item_type,
-      stats: { min: rolled, max: rolled },
-      pet_power: selected.pet_power,
-      consumable: seed?.consumable,
-      damages: (selected.damages ?? seed?.damages ?? []).map((line) => ({
-        element: line.element,
-        from: Number(line.from),
-        to: Number(line.to),
-        damage_type: 'damage_type' in line ? String(line.damage_type ?? 'damage') : 'damage',
-      })),
-    }
-  }, [selected])
-
   const empty_cells = Math.max(0, MIN_GRID_CELLS - grid_items.length)
 
   return (
@@ -290,7 +280,8 @@ export default function EquipmentTab({
             if (committing) return
             const worn = equipment[slot]
             if (!worn) return
-            set_selected_id(worn.id)
+            set_inspected_id(worn.id)
+            set_selected_ids([])
           }}
           slot_state={(slot) => {
             const dragged = dragging_id ? bag.find(({ id }) => id === dragging_id) : null
@@ -353,25 +344,9 @@ export default function EquipmentTab({
           )}
         </div>
 
-        {detail && (
+        {inspected && (
           <div className="chr-equip__detail">
-            <ItemDetailView
-              category={detail.category}
-              damages={detail.damages}
-              item_type={detail.item_type}
-              labels={{
-                characteristics: encyclopedia('characteristics'),
-                damages: encyclopedia('damages'),
-                level_short: encyclopedia('level_short', { level: detail.level }),
-                range_to: encyclopedia('range_to'),
-              }}
-              level={detail.level}
-              name={detail.name}
-              stats={detail.stats}
-            >
-              <ConsumableEffectSection consumable={detail.consumable} text={encyclopedia} />
-              <PetPower item={detail} text={t} />
-            </ItemDetailView>
+            <OwnedItemDetail item={inspected} copy={copy} />
           </div>
         )}
       </div>
@@ -384,7 +359,10 @@ export default function EquipmentTab({
             <button
               className={`chr-bagtab ${category === key ? 'is-active' : ''}`}
               key={key}
-              onClick={() => set_category(key)}
+              onClick={() => {
+                set_category(key)
+                set_selected_ids([])
+              }}
               type="button"
             >
               {t(`bag_${key}`)}
@@ -399,16 +377,22 @@ export default function EquipmentTab({
           items={display_bag}
           copy={copy}
         />
+        <p className="px-3 py-2 text-[10px] text-muted" data-inventory-selection>
+          {t('inventory_selection', { count: selected_items.length })}
+        </p>
         <div className="chr-equip__grid">
           {grid_items.map(({ item, amount }) => (
             <InventoryItemCell
               amount={amount}
-              class_name={selected_id === item.id ? 'is-selected' : ''}
+              class_name={selected_ids.includes(item.id) ? 'is-selected' : ''}
+              aria-pressed={selected_ids.includes(item.id)}
               draggable
               item={item}
               key={item.id}
-              onClick={() => set_selected_id(item.id)}
-              onDoubleClick={() => activate(item)}
+              onClick={(event) => select_item(item, event.shiftKey)}
+              onDoubleClick={(event) => {
+                if (!event.shiftKey) activate(item)
+              }}
               onDragEnd={() => set_dragging_id(null)}
               onDragStart={(event) => {
                 event.dataTransfer.setData('text/plain', item.id)
@@ -416,8 +400,9 @@ export default function EquipmentTab({
               }}
               onContextMenu={(event) => {
                 event.preventDefault()
-                set_selected_id(item.id)
-                set_menu({ x: event.clientX, y: event.clientY, item })
+                const items = selected_ids.includes(item.id) ? selected_items : [item]
+                if (!selected_ids.includes(item.id)) select_item(item, false)
+                set_menu({ x: event.clientX, y: event.clientY, item, items })
               }}
               show_level
             />

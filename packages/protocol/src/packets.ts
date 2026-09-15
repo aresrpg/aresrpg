@@ -15,6 +15,12 @@ import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
 import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
+import {
+  parse_market_price_observation,
+  type MarketPriceObservation,
+  type MarketPriceHistory,
+} from './market_prices.ts'
+export * from './market_prices.ts'
 export * from './leaderboards.ts'
 export * from './position.ts'
 
@@ -729,6 +735,7 @@ export type ClientPackets = {
   /** Browse intent — folds the observed category into state; the server pushes the slice and
    *  streams its deltas while observed. Null stops observing. Not a query: state, then push. */
   'packet/leaderboard_observe': { observation: LeaderboardObservation | null }
+  'packet/market_prices_observe': { observation: MarketPriceObservation | null }
   'packet/market_observe': { observation: MarketObservation | null }
   /** Commit this character as a spectator of one nearby fight. */
   'packet/spectate': { character_id: string; fight: string | null }
@@ -880,6 +887,7 @@ export type ServerPackets = {
   'packet/leaderboard_error': { observation: LeaderboardObservation; reason: 'unavailable' }
   'packet/market_slice': MarketSnapshot & { observation: MarketObservation }
   'packet/market_counts': { counts: MarketCounts }
+  'packet/market_prices': { observation: MarketPriceObservation; history: MarketPriceHistory | null }
   'packet/market_history': {
     sales: MarketSaleRow[]
     revenue_30d_mist: string
@@ -960,6 +968,7 @@ export const MARKET_PACKETS = [
   'packet/listings',
   'packet/market_slice',
   'packet/market_counts',
+  'packet/market_prices',
   'packet/market_history',
   'packet/listing_sold',
 ] as const
@@ -1032,6 +1041,7 @@ export const CLIENT_PACKET_TYPES = [
   'packet/chat_whisper',
   'packet/fight_action',
   'packet/fight_resync',
+  'packet/market_prices_observe',
   'packet/market_observe',
   'packet/leaderboard_observe',
   'packet/spectate',
@@ -1223,6 +1233,13 @@ type ObservationParser = (packet: Readonly<Record<string, unknown>>) => ClientPa
 const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<string, ObservationParser>([
   ['packet/market_observe', parse_market_observe_packet],
   [
+    'packet/market_prices_observe',
+    (packet) => ({
+      type: 'packet/market_prices_observe',
+      observation: parse_market_price_observation(packet.observation),
+    }),
+  ],
+  [
     'packet/leaderboard_observe',
     (packet) => ({
       type: 'packet/leaderboard_observe' as const,
@@ -1292,4 +1309,4 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
   throw new Error(`unknown packet type "${String(type)}"`)
 }
 
-export type MarketVolume = Readonly<{ day_mist: string | null; month_mist: string | null }>
+export type MarketVolume = Readonly<{ day_mist: string; month_mist: string; history_days: number }>

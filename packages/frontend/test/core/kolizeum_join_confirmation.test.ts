@@ -15,6 +15,5 @@ test('a join review pins the exact character, side, and wager shown at confirmat
     character_name: 'Sceat',
     side: 1,
     stake_mist: 200_000_001n,
-    stake_sui: '0.200000001',
   })
 })

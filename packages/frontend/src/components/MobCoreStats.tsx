@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The established mob combat-stat cards, shared by authored editing and player-facing details.
 
 import { ShieldCheck, Swords, TrendingUp, type LucideIcon } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { useText } from '../i18n/useText.ts'
 import { stat_identities } from '../visual_identity.ts'
 
 export type MobCoreStat = 'hp' | 'ap' | 'mp' | 'agility' | 'tackle' | 'dodge' | 'wisdom' | 'xp'
@@ -56,57 +57,75 @@ export const MobCoreStats = ({
   labels?: Readonly<Partial<Record<MobCoreStat, string>>>
   ranges?: Readonly<Partial<Record<MobCoreStat, Readonly<{ minimum: number; maximum: number }>>>>
   change?: (stat: MobCoreStat, value: number) => void
-}>) => (
-  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-    {mob_stat_identities
-      .filter(({ key, derived }) => !derived || typeof values[key] === 'number')
-      .map(({ key, label: fallback_label, color, icon: Icon, image, derived, suffix = '', hint }) => {
-        const label = labels?.[key] ?? fallback_label
-        const value = typeof values[key] === 'number' ? values[key] : 0
-        const range = ranges?.[key]
-        return (
-          <div
-            className="flex min-h-14 items-center gap-3 border border-white/8 bg-white/[0.018] px-3 py-2"
-            data-mob-stat-icon={key}
-            key={key}
-          >
-            <span
-              className="grid size-8 shrink-0 place-items-center border"
-              style={{ borderColor: `${color}55`, backgroundColor: `${color}12`, color }}
+}>) => {
+  const numbers = useNumbers()
+  const text = useText()
+  const units: Readonly<Record<string, string>> = {
+    hp: text('ui.hp'),
+    ap: text('fight_hud.unit_ap'),
+    mp: text('fight_hud.unit_mp'),
+    xp: text('ui.xp'),
+  }
+  const display_labels = { ...units, ...labels }
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {mob_stat_identities
+        .filter(({ key, derived }) => !derived || typeof values[key] === 'number')
+        .map(({ key, label: fallback_label, color, icon: Icon, image, derived, suffix = '', hint }) => {
+          const label = display_labels[key] ?? fallback_label
+          const value = typeof values[key] === 'number' ? values[key] : 0
+          const range = ranges?.[key]
+          return (
+            <div
+              className="flex min-h-14 items-center gap-3 border border-white/8 bg-white/[0.018] px-3 py-2"
+              data-mob-stat-icon={key}
+              key={key}
             >
-              {image ? <img alt="" className="size-6 object-contain" src={image} /> : Icon ? <Icon size={16} /> : null}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[7px] tracking-[0.13em] text-[#737883] uppercase" title={hint}>
-                {label}
+              <span
+                className="grid size-8 shrink-0 place-items-center border"
+                style={{ borderColor: `${color}55`, backgroundColor: `${color}12`, color }}
+              >
+                {image ? (
+                  <img alt="" className="size-6 object-contain" src={image} />
+                ) : Icon ? (
+                  <Icon size={16} />
+                ) : null}
               </span>
-              <span className="mt-1 flex items-center gap-2">
-                {change && !derived ? (
-                  <input
-                    aria-label={label}
-                    className="h-7 w-full max-w-24 border border-white/10 bg-bg px-2 text-right text-[11px] font-semibold tabular-nums outline-none focus:border-[#4a9eff]/60"
-                    onChange={(event) => change(key, Number(event.target.value))}
-                    style={{ color }}
-                    type="number"
-                    value={value}
-                  />
-                ) : (
-                  <span className="text-[12px] font-semibold tabular-nums" style={{ color }}>
-                    {value.toLocaleString('en-US')}
-                    {suffix}
-                  </span>
-                )}
-                {range && (
-                  <span className="whitespace-nowrap text-[7px] tabular-nums text-[#666b75]" data-mob-stat-range={key}>
-                    min {range.minimum.toLocaleString('en-US')}
-                    {suffix} · max {range.maximum.toLocaleString('en-US')}
-                    {suffix}
-                  </span>
-                )}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[7px] tracking-[0.13em] text-[#737883] uppercase" title={hint}>
+                  {label}
+                </span>
+                <span className="mt-1 flex items-center gap-2">
+                  {change && !derived ? (
+                    <input
+                      aria-label={label}
+                      className="h-7 w-full max-w-24 border border-white/10 bg-bg px-2 text-right text-[11px] font-semibold tabular-nums outline-none focus:border-[#4a9eff]/60"
+                      onChange={(event) => change(key, Number(event.target.value))}
+                      style={{ color }}
+                      type="number"
+                      value={value}
+                    />
+                  ) : (
+                    <span className="text-[12px] font-semibold tabular-nums" style={{ color }}>
+                      {numbers.number(value)}
+                      {suffix}
+                    </span>
+                  )}
+                  {range && (
+                    <span
+                      className="whitespace-nowrap text-[7px] tabular-nums text-[#666b75]"
+                      data-mob-stat-range={key}
+                    >
+                      min {numbers.number(range.minimum)}
+                      {suffix} · max {numbers.number(range.maximum)}
+                      {suffix}
+                    </span>
+                  )}
+                </span>
               </span>
-            </span>
-          </div>
-        )
-      })}
-  </div>
-)
+            </div>
+          )
+        })}
+    </div>
+  )
+}

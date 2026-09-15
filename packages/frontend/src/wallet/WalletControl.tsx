@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { ChevronDown, WalletCards } from 'lucide-react'
 
 import { WalletChoices, WalletConnectButton, WalletPickerModal } from '../components/WalletPickerModal.tsx'
+import { error_text } from '../i18n/error_text.ts'
 import type { KaresCopy } from '../kares/copy.ts'
 
 import type { WalletSelection, WalletView } from './model.ts'
@@ -87,7 +88,7 @@ export const WalletControl = ({
   const busy = locked || state.request !== null
   const error = state.error && (
     <p className="text-[10px] text-rose-300" role="alert">
-      {state.error}
+      {error_text(copy, state.error)}
     </p>
   )
   return (

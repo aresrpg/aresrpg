@@ -4,6 +4,7 @@
 import { Maximize, Minimize } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 
+import { localized_error } from '../i18n/error_text.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { toast } from '../toast.ts'
 
@@ -25,7 +26,7 @@ export const FullscreenButton = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       if (document.fullscreenElement) await document.exitFullscreen()
       else await document.documentElement.requestFullscreen()
     } catch (cause) {
-      toast.add(new Error(copy.fullscreen_failed, { cause }))
+      toast.add(localized_error(copy.fullscreen_failed, cause))
     }
   }
   return (

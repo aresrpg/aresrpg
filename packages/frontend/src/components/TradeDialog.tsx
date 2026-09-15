@@ -8,6 +8,7 @@ import { trade_incoming, trade_own_offer, trade_offer_has_value } from '@aresrpg
 import { Check, Handshake, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { item_icon } from '../content/assets.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -16,7 +17,6 @@ import { SuiUnit } from '../marketplace/marketplace_model.tsx'
 import { selected_character } from '../modules/session.ts'
 import { visible_trade_rows } from '../modules/trade.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { format_sui } from '../wallet_amount.ts'
 import { parse_amount } from '../kares/model.ts'
 
 import { KaresLogo } from './KaresLogo.tsx'
@@ -208,6 +208,7 @@ const TradeInventory = ({
   category_text: CopyText
   text: CopyText
 }>) => {
+  const localized_numbers = useNumbers()
   const [category, set_category] = useState<TradeInventoryCategory>('equipment')
   const count = (key: TradeInventoryCategory): number =>
     items.filter((item) => trade_inventory_category(item) === key).length
@@ -224,7 +225,7 @@ const TradeInventory = ({
           <span>{text('drag_hint')}</span>
           <output aria-label={text('sui')} className="trade-wallet-balance">
             <SuiUnit size={10} />
-            <strong>{balance === null ? '—' : format_sui(balance, 2)}</strong>
+            <strong>{balance === null ? '—' : localized_numbers.sui(balance, 2)}</strong>
           </output>
         </div>
       </header>

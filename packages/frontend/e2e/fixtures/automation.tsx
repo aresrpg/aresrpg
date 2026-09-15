@@ -6,9 +6,10 @@ import { createRoot } from 'react-dom/client'
 import type { AuthSession } from '../../src/auth.ts'
 import { AutomationPanel } from '../../src/components/AutomationPanel.tsx'
 import { FriendsPanel } from '../../src/components/FriendsPanel.tsx'
-import { HackZoneUnlock } from '../../src/components/HackZoneUnlock.tsx'
+import { observe_automation_controls } from '../../src/modules/automation.ts'
+import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
-import { dispatch_app } from '../../src/store.ts'
+import { dispatch_app, read_app_state } from '../../src/store.ts'
 import { character } from '../../test/modules/automation_fixture.ts'
 import '../../src/tailwind.css'
 
@@ -34,9 +35,28 @@ const boot = async (): Promise<void> => {
       chain_sample_age_ms: 0,
     },
   })
+  const identity = read_app_state().journey.identity!
+  const { generation } = read_app_state().journey
+  dispatch_app({
+    type: 'journey/loaded',
+    identity,
+    generation,
+    completed: JOURNEY_QUESTS.slice(0, -1).map(({ id }) => id),
+  })
+  observe_automation_controls({
+    get_state: read_app_state,
+    dispatch: dispatch_app,
+    signal: new AbortController().signal,
+  })
+  const finish_journey = (): void => {
+    dispatch_app({ type: 'journey/completed', ids: JOURNEY_QUESTS.map(({ id }) => id) })
+    dispatch_app({ type: 'journey/persisted', identity, generation })
+  }
   createRoot(document.getElementById('root')!).render(
     <main className="fixed inset-0 bg-bg p-6 font-mono text-white">
       <nav className="absolute top-8 right-8 z-10 flex gap-4">
+        <button onClick={finish_journey}>Finish quests</button>
+        <button onClick={() => dispatch_app({ type: 'journey/reset' })}>Reset quests</button>
         <button onClick={() => dispatch_app({ type: 'page/open', page: 'leaderboard' })}>Leaderboard</button>
         <button onClick={() => dispatch_app({ type: 'page/open', page: 'world' })}>World</button>
         <button onClick={() => dispatch_app({ type: 'character/select', character_id: 'alice' })}>Alice</button>
@@ -46,7 +66,6 @@ const boot = async (): Promise<void> => {
         data-world-frame=""
         className="relative h-full overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(ellipse_at_70%_60%,#20493a,#141122_70%)] p-6"
       >
-        <HackZoneUnlock copy={copy} enabled />
         <div className="flex w-fit flex-col items-start gap-2">
           <FriendsPanel copy={copy} />
           <AutomationPanel copy={copy} enabled />

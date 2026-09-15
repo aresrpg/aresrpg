@@ -16,6 +16,7 @@ import {
   stack_merge_sources,
 } from '../inventory_stacks.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { PlayerError } from '../i18n/PlayerError.tsx'
 import { toast } from '../toast.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 
@@ -99,7 +100,7 @@ const FeedingControls = ({
       </div>
       {state.error && (
         <p className="text-center text-[10px] text-rose-300" role="alert">
-          {state.error}
+          <PlayerError error={state.error} />
         </p>
       )}
       <button

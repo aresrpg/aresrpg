@@ -4,10 +4,10 @@
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 import { useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { character_deletion_blockers } from '../characters/character_deletion.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { format_sui } from '../wallet_amount.ts'
 import { readable_transaction_error, run_direct_transaction } from '../transaction_guard.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
@@ -21,6 +21,7 @@ const DeletionConfirmation = ({
   copy: AppCopy
   close: () => void
 }>) => {
+  const localized_numbers = useNumbers()
   const state = useAppStore((state) => state)
   const [origin_wallet] = useState(state.session.wallet)
   const [busy, set_busy] = useState(false)
@@ -58,7 +59,7 @@ const DeletionConfirmation = ({
         <p className="text-sm break-words text-text">{character.name}</p>
         <p className="text-xs leading-6 text-text">{t('delete_warning')}</p>
         <p className="text-xs leading-6 text-[#ff7d94]">
-          {t('delete_no_refund', { amount: format_sui(CHARACTER_PRICE_MIST, 0) })}
+          {t('delete_no_refund', { amount: localized_numbers.sui(CHARACTER_PRICE_MIST, 0) })}
         </p>
         {blockers.length > 0 && (
           <ul className="list-inside list-disc text-xs leading-6 text-[#ff7d94]">

@@ -4,6 +4,7 @@
 import type { FriendRow } from '@aresrpg/protocol'
 import type { AuthSession } from '@aresrpg/sdk/auth'
 
+import { localized_error } from '../i18n/error_text.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { toast } from '../toast.ts'
@@ -66,10 +67,10 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     if (recipient.kind === 'suins') {
       const address = await wallet.resolve_suins_address(recipient.value)
       if (address) return address.toLowerCase()
-      throw new Error(text('error_no_suins', { name: recipient.value }))
+      throw localized_error(text('error_no_suins', { name: recipient.value }))
     }
     if (recipient.kind === 'character') return (await character_owner(recipient.value, dispatch)).toLowerCase()
-    throw new Error(text('error_target'))
+    throw localized_error(text('error_target'))
   }
   const run = (
     operation: string,
@@ -100,9 +101,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         const address = await resolve_target(wallet, target)
         if (get_state().session.wallet !== wallet) throw new Error('stale friend session')
         const state = get_state()
-        if (address === wallet.address.toLowerCase()) throw new Error(text('error_self'))
+        if (address === wallet.address.toLowerCase()) throw localized_error(text('error_self'))
         if (state.friends.rows.some((row) => row.address.toLowerCase() === address))
-          throw new Error(text('error_duplicate'))
+          throw localized_error(text('error_duplicate'))
         await wallet.friends.add(address)
         return address
       },

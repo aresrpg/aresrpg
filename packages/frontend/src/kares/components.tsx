@@ -4,8 +4,11 @@
 import { useState, type ReactNode } from 'react'
 import { ArrowUpRight, Loader2 } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { error_text } from '../i18n/error_text.ts'
+
 import type { KaresCopy } from './copy.ts'
-import { format_amount, validate_amount, type FinanceState } from './model.ts'
+import { validate_amount, type FinanceState } from './model.ts'
 
 export const finance_button =
   'finance-button inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 border border-gold/40 bg-gold/12 px-5 py-3 text-[10px] font-semibold tracking-[0.12em] text-gold uppercase transition hover:border-gold hover:bg-gold/20 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan disabled:cursor-not-allowed disabled:opacity-35'
@@ -28,6 +31,7 @@ export const AmountForm = ({
   disabled?: boolean
   submit: (amount: bigint) => void
 }>) => {
+  const { amount: format_amount } = useNumbers()
   const [value, set_value] = useState('')
   const validation = validate_amount(value, balance)
   const { amount } = validation
@@ -96,7 +100,7 @@ const FinanceError = ({ state, copy }: Readonly<{ state: FinanceState; copy: Kar
         className="break-words border border-rose-400/25 bg-rose-400/5 p-3 text-[10px] leading-5 text-rose-200"
         role="alert"
       >
-        {state.error === 'same_account' ? copy.same_account : state.error}
+        {state.error === 'same_account' ? copy.same_account : error_text(copy, state.error)}
       </p>
     )}
   </>

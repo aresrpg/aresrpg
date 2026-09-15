@@ -3,8 +3,11 @@
 // One adapter from live fight effects to the shared spell-effect line used by every fight surface.
 
 import type { ActiveEffect } from '@aresrpg/fight'
-import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
+import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
+import { useText } from '../../i18n/useText.ts'
+import type { CopyText } from '../../i18n/copy.ts'
+import { active_effect_text, effect_stat_text } from '../../encyclopedia/spell_effect_text.ts'
 import { EffectLine } from '../../components/EffectLine.tsx'
 import type { SpellEffect } from '../../content/catalog.ts'
 import { spell_effect_line_view } from '../../encyclopedia/SpellCardEffects.tsx'
@@ -60,7 +63,10 @@ const stackable_kind = (kind: bigint): boolean =>
 const signed_value = (kind: bigint, value: bigint): string =>
   `${kind === EFFECT_KINDS.remove || kind === EFFECT_KINDS.steal ? '−' : '+'}${value}`
 
-const grouped_effect_lines = (effects: readonly FightEffectLineView[]): readonly FightEffectLineView[] => {
+const grouped_effect_lines = (
+  effects: readonly FightEffectLineView[],
+  text: CopyText
+): readonly FightEffectLineView[] => {
   const groups = effects.reduce<readonly (readonly FightEffectLineView[])[]>((result, effect) => {
     if (!stackable_kind(effect.kind)) return [...result, [effect]]
     const existing = result.findIndex(
@@ -90,69 +96,52 @@ const grouped_effect_lines = (effects: readonly FightEffectLineView[]): readonly
       turns_max: duration_totals.at(-1)?.turns ?? duration_totals[0].turns,
       key: rows.map(({ key }) => key).join('|'),
       breakdown: duration_totals
-        .map(({ turns, value }) => `${signed_value(first.kind, value)} / ${turns}T`)
+        .map(
+          ({ turns, value }) =>
+            `${signed_value(first.kind, value)} / ${text('spell_effects.active_turns', { count: Number(turns) })}`
+        )
         .join(' · '),
     })
   })
 }
 
-const chatiment_stat = (stat: bigint): string => {
-  if (stat === CHANNELS.strength) return 'STR'
-  if (stat === CHANNELS.intelligence) return 'INT'
-  if (stat === CHANNELS.chance) return 'CHA'
-  if (stat === CHANNELS.agility) return 'AGI'
-  if (stat === CHANNELS.wisdom) return 'WIS'
-  if (stat === CHANNELS.range) return 'RNG'
-  if (stat === CHANNELS.power) return 'POW'
-  if (stat === CHANNELS.raw_damage) return 'DMG'
-  if (stat === CHANNELS.critical) return 'CRIT'
-  return 'STAT'
-}
-
-const compact_effect_line = (effect: Readonly<FightEffectLineView>): ReturnType<typeof spell_effect_line_view> => {
-  const view = spell_effect_line_view(spell_effect(effect))
-  if (effect.kind === EFFECT_KINDS.chatiment)
-    return Object.freeze({
-      ...view,
-      pre: 'CHÂTIMENT · ',
-      value: effect.value.toString(),
-      post: ` ${chatiment_stat(effect.stat)}/TURN · ${effect.turns}T`,
-      meta: null,
-      title: `Turn cap${effect.breakdown ? ` · ${effect.breakdown}` : ''}`,
-    })
-  const action = view.pre.trim()
-  const label = view.post.trim()
-  const compact_label = ['ap', 'mp', 'hp'].includes(label.toLowerCase()) ? label.toUpperCase() : label
-  const damage_over_time = effect.stat === CHANNELS.hp && effect.kind !== EFFECT_KINDS.add
-  return Object.freeze({
+const compact_effect_line = (
+  effect: Readonly<FightEffectLineView>,
+  text: CopyText
+): ReturnType<typeof spell_effect_line_view> => {
+  const view = spell_effect_line_view(spell_effect(effect), text)
+  return {
     ...view,
-    pre: damage_over_time
-      ? ''
-      : effect.kind === EFFECT_KINDS.invis
-        ? 'Invisible'
-        : action === 'Adds'
-          ? '+'
-          : action === 'Removes' || action === 'Steals'
-            ? '−'
-            : view.pre,
-    value: effect.kind === EFFECT_KINDS.invis ? null : view.value,
-    post: ` ${damage_over_time || compact_label.toLowerCase() === 'raw damage' ? 'damages' : compact_label}`,
-    meta: effect.breakdown
-      ? effect.turns === effect.turns_max
-        ? `${effect.turns}T`
-        : `${effect.turns}–${effect.turns_max}T`
-      : view.meta,
-    title: effect.breakdown,
-  })
+    ...active_effect_text(spell_effect(effect), text),
+    meta:
+      effect.kind === EFFECT_KINDS.chatiment
+        ? null
+        : effect.turns_max && effect.turns_max !== effect.turns
+          ? text('spell_effects.active_turn_range', {
+              minimum: Number(effect.turns),
+              maximum: Number(effect.turns_max),
+            })
+          : text('spell_effects.active_turns', { count: Number(effect.turns) }),
+    title:
+      [
+        effect.kind === EFFECT_KINDS.chatiment
+          ? text('spell_effects.turn_cap', { stat: effect_stat_text(Number(effect.stat), text) })
+          : '',
+        effect.breakdown,
+      ]
+        .filter(Boolean)
+        .join(' · ') || undefined,
+  }
 }
 
 export const FightEffectLines = ({ effects }: Readonly<{ effects: readonly FightEffectLineView[] }>) => {
+  const text = useText()
   if (effects.length === 0) return null
-  const grouped = grouped_effect_lines(effects)
+  const grouped = grouped_effect_lines(effects, text)
   return (
     <div className="fight-effect-lines">
       {grouped.map((effect) => (
-        <EffectLine compact key={effect.key} view={compact_effect_line(effect)} />
+        <EffectLine compact key={effect.key} view={compact_effect_line(effect, text)} />
       ))}
     </div>
   )

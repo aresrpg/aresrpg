@@ -6,14 +6,17 @@ import { useMemo, useState } from 'react'
 import { class_names, item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { Text } from '../i18n/Text.tsx'
+import { useText } from '../i18n/useText.ts'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { ItemSnapshotTooltip, useItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, market_group_count, market_observation, type MarketGroup } from '../modules/marketplace.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { format_sui } from '../wallet_amount.ts'
 
+import { PriceHistoryChart } from './PriceHistoryChart.tsx'
 import {
   buyer_total,
   CategoryName,
@@ -27,6 +30,8 @@ import {
 const group_key = (group: MarketGroup): string => `group_${group.toLowerCase()}`
 
 export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
+  const localized_numbers = useNumbers()
+  const ui = useText()
   const market = useAppStore(({ marketplace }) => marketplace)
   const address = useAppStore(({ session }) => session.wallet?.address ?? null)
   const balance = useAppStore(({ session }) => session.sui_balance_mist)
@@ -118,7 +123,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   className="h-8 w-16 border border-white/10 bg-bg px-2 text-center text-[9px] outline-none"
                   inputMode="numeric"
                   onChange={(event) => set_minimum_level(event.target.value.replace(/\D/g, ''))}
-                  placeholder="MIN"
+                  placeholder={ui('encyclopedia_page.minimum')}
                   value={minimum_level}
                 />
                 <span>–</span>
@@ -126,7 +131,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   className="h-8 w-16 border border-white/10 bg-bg px-2 text-center text-[9px] outline-none"
                   inputMode="numeric"
                   onChange={(event) => set_maximum_level(event.target.value.replace(/\D/g, ''))}
-                  placeholder="MAX"
+                  placeholder={ui('encyclopedia_page.maximum')}
                   value={maximum_level}
                 />
               </span>
@@ -243,11 +248,16 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                     </h3>
                   </div>
                   {(item?.level ?? selected[1][0]!.level) > 0 && (
-                    <span className="text-[8px] text-[#6b7280]">LV. {item?.level ?? selected[1][0]!.level}</span>
+                    <span className="text-[8px] text-[#6b7280]">
+                      <Text
+                        path="encyclopedia_page.level_short"
+                        values={{ level: item?.level ?? selected[1][0]!.level }}
+                      />
+                    </span>
                   )}
                   {asks[0] && (
                     <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold tabular-nums text-[#f0c66c]">
-                      {format_sui(buyer_total(BigInt(asks[0].price_mist)), 2)} <SuiUnit />
+                      {localized_numbers.sui(buyer_total(BigInt(asks[0].price_mist)), 2)} <SuiUnit />
                     </span>
                   )}
                 </div>
@@ -262,7 +272,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                           labels={{
                             characteristics: text('characteristics'),
                             damages: text('damages'),
-                            level_short: `LV. ${item.level}`,
+                            level_short: ui('encyclopedia_page.level_short', { level: item.level }),
                             range_to: text('range_to'),
                           }}
                           level={item.level}
@@ -271,18 +281,23 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                         />
                       </div>
                     )}
-                    <div className="mx-auto w-full max-w-[560px]" data-marketplace-listings>
-                      {item_is_stackable(item?.category ?? selected[1][0]!.category ?? '') ? (
-                        <CheapestLotMarket
-                          address={address}
-                          asks={asks}
-                          balance={balance}
-                          pending={market.pending}
-                          sizes={marketplace_lot_sizes}
-                          text={text}
-                        />
-                      ) : (
-                        asks.map((listing, index) => (
+                    {item_is_stackable(item?.category ?? selected[1][0]!.category ?? '') ? (
+                      <div className="market-item-columns">
+                        <div className="min-w-0" data-marketplace-listings>
+                          <CheapestLotMarket
+                            address={address}
+                            asks={asks}
+                            balance={balance}
+                            pending={market.pending}
+                            sizes={marketplace_lot_sizes}
+                            text={text}
+                          />
+                        </div>
+                        <PriceHistoryChart item_type={active_type!} key={active_type} text={text} />
+                      </div>
+                    ) : (
+                      <div className="mx-auto w-full max-w-[560px]" data-marketplace-listings>
+                        {asks.map((listing, index) => (
                           <AskRow
                             address={address}
                             balance={balance}
@@ -292,9 +307,9 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                             pending={market.pending}
                             text={text}
                           />
-                        ))
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -330,6 +345,7 @@ const CheapestLotMarket = ({
   sizes: readonly number[]
   text: CopyText
 }>) => {
+  const localized_numbers = useNumbers()
   return (
     <div
       className="mx-auto w-full max-w-[560px] overflow-hidden rounded-[5px] border border-border bg-surface shadow-[0_10px_28px_rgba(0,0,0,0.16)]"
@@ -365,7 +381,7 @@ const CheapestLotMarket = ({
                     '—'
                   ) : (
                     <span className="inline-flex items-center gap-1.5">
-                      {format_sui(total, 2)} <SuiUnit size={12} />
+                      {localized_numbers.sui(total, 2)} <SuiUnit size={12} />
                     </span>
                   )}
                 </span>
@@ -403,6 +419,7 @@ const AskRow = ({
   pending: string | null
   text: CopyText
 }>) => {
+  const localized_numbers = useNumbers()
   const total = buyer_total(BigInt(listing.price_mist))
   const own = listing.seller === address
   const insufficient = balance !== null && balance < total
@@ -418,14 +435,15 @@ const AskRow = ({
           <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('seller')}</span>
           <span className="truncate text-[9px] tracking-[0.08em] text-[#a2a6ae]">{listing.name}</span>
           <span className="truncate text-[7px] text-[#646a75]">
-            LV. {listing.level} · {listing.classe ?? '—'} · {short_address(listing.seller)}
+            <Text path="encyclopedia_page.level_short" values={{ level: listing.level }} /> · {listing.classe ?? '—'} ·{' '}
+            {short_address(listing.seller)}
           </span>
         </div>
       )}
       <div className="flex w-28 min-w-0 shrink flex-col items-end overflow-hidden">
         <span className="text-[7px] tracking-[0.16em] text-[#555b66] uppercase">{text('price')}</span>
         <span className="max-w-full truncate whitespace-nowrap text-[10px] tabular-nums text-[#c8963c]">
-          {format_sui(total, 2)} <SuiUnit />
+          {localized_numbers.sui(total, 2)} <SuiUnit />
         </span>
       </div>
       <button

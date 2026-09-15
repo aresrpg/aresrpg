@@ -6,7 +6,6 @@ import { readFileSync } from 'node:fs'
 import { expect, test } from 'bun:test'
 
 import {
-  compact_xp,
   result_participant_shows_progress,
   result_xp_progress,
   type FightResult,
@@ -42,12 +41,6 @@ test('a level-crossing gain reports progress inside the new level instead of zer
 test('only character rows own progression chrome', () => {
   expect(result_participant_shows_progress({ character_id: '0xcharacter' })).toBeTrue()
   expect(result_participant_shows_progress({ character_id: null })).toBeFalse()
-})
-
-test('large XP values stay compact enough for max-content columns', () => {
-  expect(compact_xp(20_500)).toBe('20.5k')
-  expect(compact_xp(20_000)).toBe('20k')
-  expect(compact_xp(1_250_000)).toBe('1.3m')
 })
 
 test('multi-character settlement progress counts confirmations and identifies the failed character', () => {
@@ -88,7 +81,7 @@ test('the result card keeps every participant on one compact roster line', () =>
   expect(component).toContain("'result_close'")
   expect(component).toContain('role="progressbar"')
   expect(component).toContain('result_collecting_progress')
-  expect(component).toContain('result.gas_spent_mist, 3)')
+  expect(component).toMatch(/result.gas_spent_mist,\s*3/)
   expect(css).toContain('.result.result--fe > :not(.rad-crn)')
   expect(css).toContain('62% {\n    opacity: 1;\n    transform: scale(1.06);')
   expect(css).toContain('transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(45deg) scale(1);')

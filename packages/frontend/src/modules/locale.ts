@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { apply_document_locale } from '../i18n/document.ts'
 import { save_locale, type Locale } from '../i18n/locale.ts'
 import { load_app_copy, type AppCopy } from '../i18n/copy.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -29,6 +30,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   }
   load(get_state().locale)
   events.on('STATE_UPDATED', (state, previous) => {
+    if (state.copy && state.copy !== previous.copy) apply_document_locale(state.copy, state.locale)
     if (state.locale !== previous.locale) {
       save_locale(state.locale)
       load(state.locale)

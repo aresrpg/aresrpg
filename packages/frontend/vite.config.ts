@@ -7,11 +7,12 @@ import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
-import { VitePWA } from 'vite-plugin-pwa'
+import { VitePWA, type ManifestOptions } from 'vite-plugin-pwa'
 import { parse } from 'yaml'
 
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
+import { locale_manifest_plugin } from './locale_assets.ts'
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { require_reporting_dsn } from './src/reporting_config.ts'
 import { display_assets_plugin } from './display_assets.ts'
@@ -60,6 +61,26 @@ export default defineConfig(({ mode }) => {
   const loaded_env = loadEnv(mode, frontend_dir, '')
   if (mode === 'production') require_reporting_dsn(loaded_env)
   const env = resolve_env(loaded_env)
+  const manifest: Partial<ManifestOptions> = {
+    id: '/',
+    name: env.app_name,
+    short_name: env.app_name,
+    description: env.meta_description,
+    start_url: '/',
+    scope: '/',
+    lang: 'en',
+    dir: 'ltr',
+    display: 'standalone',
+    orientation: 'landscape',
+    categories: ['games', 'entertainment'],
+    theme_color: env.theme_color,
+    background_color: env.theme_color,
+    icons: [
+      { src: '/logo-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+  }
   return {
     // Local clients opt in through VITE_SERVER_WS_URL; production still verifies every login.
     server: {
@@ -81,6 +102,7 @@ export default defineConfig(({ mode }) => {
       browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),
       html_env_plugin(env),
       yaml_plugin(),
+      locale_manifest_plugin(manifest),
       ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),
       ...music_assets_plugin(resolve(repo_dir, 'music')),
       ...display_assets_plugin({
@@ -95,33 +117,14 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: false,
-        manifest: {
-          id: '/',
-          name: env.app_name,
-          short_name: env.app_name,
-          description: env.meta_description,
-          start_url: '/',
-          scope: '/',
-          lang: 'en',
-          dir: 'ltr',
-          display: 'standalone',
-          orientation: 'landscape',
-          categories: ['games', 'entertainment'],
-          theme_color: env.theme_color,
-          background_color: env.theme_color,
-          icons: [
-            { src: '/logo-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-            { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-            { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-          ],
-        },
+        manifest,
         workbox: {
           clientsClaim: true,
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           // Content art loads on demand and is never precached. Chain, auth, and world requests stay network-owned.
           // Manifest icons are added by VitePWA independently of this versioned app-file glob.
-          globPatterns: ['**/*.{js,css,html,ico}'],
+          globPatterns: ['**/*.{js,css,html,ico,webmanifest}'],
           globIgnores: ['logo-192.png', 'logo-512.png'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           navigateFallback: '/index.html',
@@ -157,6 +160,7 @@ export default defineConfig(({ mode }) => {
                 fight_placement_race: resolve(frontend_dir, 'e2e/fixtures/fight_placement_race.html'),
                 fight_clock: resolve(frontend_dir, 'e2e/fixtures/fight_clock.html'),
                 automation: resolve(frontend_dir, 'e2e/fixtures/automation.html'),
+                music: resolve(frontend_dir, 'e2e/fixtures/music.html'),
                 character_delete: resolve(frontend_dir, 'e2e/fixtures/character_delete.html'),
                 character_progression: resolve(frontend_dir, 'e2e/fixtures/character_progression.html'),
                 dungeon_lobby: resolve(frontend_dir, 'e2e/fixtures/dungeon_lobby.html'),

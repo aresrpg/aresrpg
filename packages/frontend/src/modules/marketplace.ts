@@ -15,6 +15,13 @@ import {
   type ServerPacket,
 } from '@aresrpg/protocol'
 
+import { localized_error } from '../i18n/error_text.ts'
+import {
+  initial_price_history,
+  reduce_market_prices,
+  type PriceHistoryState,
+  type PriceHistoryInput,
+} from '../marketplace/price_history_state.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast, type ToastPart } from '../toast.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -55,6 +62,7 @@ export const market_group_count = (group: MarketGroup, counts: Readonly<MarketCo
 }
 
 export type MarketplaceState = Readonly<{
+  prices: PriceHistoryState
   group: MarketGroup
   counts: MarketCounts
   observation: MarketObservation | null
@@ -71,6 +79,7 @@ export type MarketplaceState = Readonly<{
 }>
 
 export type MarketplaceInput =
+  | PriceHistoryInput
   | Readonly<{ type: 'market/group_selected'; group: MarketGroup }>
   | Readonly<{
       type: 'market/list_requested'
@@ -92,6 +101,7 @@ export type MarketplaceInput =
 
 export const initial_marketplace_state = (): MarketplaceState =>
   Object.freeze({
+    prices: initial_price_history(),
     group: 'EQUIPMENT',
     counts: Object.freeze({ categories: Object.freeze({}), characters: 0 }),
     observation: null,
@@ -139,14 +149,15 @@ const fold_sale = (market: MarketplaceState, sale: Readonly<MarketSaleRow>, now_
 
 export const market_sale_notice = (
   sale: Readonly<MarketSaleRow>,
-  template = 'Sold {{amount}} {{name}} for {{price}}'
+  template = 'Sold {{amount}} {{name}} for {{price}}',
+  locale = 'en'
 ): Readonly<{ message: string; parts: readonly ToastPart[] }> => {
   const catalog_name = sale.item_type ? content_catalog.item(sale.item_type)?.item.name : null
   const name = sale.name ?? catalog_name ?? (sale.item_type ? titleize(sale.item_type) : sale.object)
   const values: Readonly<Record<string, ToastPart>> = Object.freeze({
     amount: Object.freeze({ text: `×${sale.amount}`, tone: 'gold' }),
     name: Object.freeze({ text: name, tone: 'primary' }),
-    price: Object.freeze({ text: `${format_sui(BigInt(sale.price_mist), 2)} SUI`, tone: 'sui' }),
+    price: Object.freeze({ text: `${format_sui(BigInt(sale.price_mist), 2, locale)} SUI`, tone: 'sui' }),
   })
   const parts = Object.freeze(
     template
@@ -352,7 +363,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       if (oldest) notified_sales.delete(oldest)
     }
     const copy = get_state().copy?.marketplace_page.sold_toast
-    const notice = market_sale_notice(packet.sale, typeof copy === 'string' ? copy : undefined)
+    const notice = market_sale_notice(packet.sale, typeof copy === 'string' ? copy : undefined, get_state().locale)
     toast.rich(notice.message, notice.parts, 'success')
     play_procedural_cue('sale')
   })
@@ -424,7 +435,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     // the roster caps at 6 playable characters — a 7th would land in the kiosk unseen
     if (listing.kind === 'character' && state.session.characters.length >= MAX_TRACKED_CHARACTERS) {
       const reason = copy_text(state.copy?.marketplace_page ?? {})('character_roster_full')
-      toast.add(reason, 'error')
+      toast.add(localized_error(reason), 'error')
       return dispatch({ type: 'market/write_failed', error: reason })
     }
     const action = state.session.wallet?.marketplace.buy
@@ -464,4 +475,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   )
 }
 
-export default Object.freeze({ name: 'marketplace', reduce, observe }) satisfies AppModule
+export default Object.freeze({
+  name: 'marketplace',
+  reduce: (state, input) => reduce_market_prices(reduce(state, input), input),
+  observe,
+}) satisfies AppModule

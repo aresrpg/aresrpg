@@ -4,6 +4,9 @@
 import { MapPin, Search, Shield } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { useText } from '../i18n/useText.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { FacetRail, type FacetOption } from '../components/FacetRail.tsx'
 import { MobCoreStats } from '../components/MobCoreStats.tsx'
 import { mob_icon } from '../content/assets.ts'
@@ -45,17 +48,19 @@ const mob_loot_view = ({ drop, item }: MobLootRow) =>
 const mob_facet_options = (text: EncyclopediaText): readonly FacetOption[] =>
   encyclopedia_catalog.mob_filters.map((row, index) => {
     const previous = encyclopedia_catalog.mob_filters[index - 1]
+    const section_key = (
+      { world: 'worlds_tab', family: 'all_families', element: 'elements_filter' } as Readonly<Record<string, string>>
+    )[row.kind]
     const section =
-      row.kind === 'world' && previous?.kind !== 'world' && !previous?.parent
-        ? text('worlds_tab')
-        : row.kind === 'family' && previous?.kind !== 'family'
-          ? text('all_families')
-          : row.kind === 'element' && previous?.kind !== 'element'
-            ? text('elements_filter')
-            : undefined
+      section_key && previous?.kind !== row.kind && (row.kind !== 'world' || !previous?.parent)
+        ? text(section_key)
+        : undefined
     return Object.freeze({
       value: `${row.kind}:${row.id}`,
-      label: titleize(row.parent ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
+      label:
+        row.kind === 'element'
+          ? text(`element.${row.id}`)
+          : titleize(row.parent ? row.id.slice(row.id.indexOf(':') + 1) : row.id),
       count: row.count,
       color: row.kind === 'element' ? element_colors[row.id] : undefined,
       section,
@@ -76,6 +81,9 @@ export const MobsTab = ({
   select_world: (id: string) => void
   text: EncyclopediaText
 }>) => {
+  const ui = useText()
+  const category_name = useItemCategoryName()
+  const numbers = useNumbers()
   const [search, set_search] = useState('')
   const [mob_filter, set_mob_filter] = useState<string | null>(null)
   const [sort, set_sort] = useState('level_asc')
@@ -133,7 +141,7 @@ export const MobsTab = ({
       icon={mob_icon(mob.mob_type)}
       index={index}
       key={mob.mob_type}
-      meta={`${titleize(mob.element)} · ${text('level_range', { min: mob.level_min, max: mob.level_max })}`}
+      meta={`${text(`element.${mob.element}`)} · ${text('level_range', { min: mob.level_min, max: mob.level_max })}`}
       name={mob.name}
       select={() => choose_mob(mob.mob_type)}
     />
@@ -173,7 +181,7 @@ export const MobsTab = ({
               {detail.mob.name}
             </h2>
             <p className="mt-1 text-[9px] tracking-[0.12em] text-[#6b7280] uppercase">
-              {titleize(detail.mob.role)} ·{' '}
+              {text(`world_role.${detail.mob.role}`)} ·{' '}
               {text('level_range', { min: detail.mob.level_min, max: detail.mob.level_max })}
             </p>
           </div>
@@ -182,7 +190,7 @@ export const MobsTab = ({
           labels={{
             agility: text('gameplay.stat_agility'),
             wisdom: text('gameplay.stat_wisdom'),
-            xp: 'XP',
+            xp: ui('ui.xp'),
           }}
           values={detail.mob}
         />
@@ -209,7 +217,7 @@ export const MobsTab = ({
                 >
                   {identity && <img alt="" className="size-6 object-contain" src={identity.icon} />}
                   <span className="min-w-0 flex-1 text-[8px] tracking-[0.12em] uppercase" style={{ color }}>
-                    {titleize(name)}
+                    {text(`element.${name}`)}
                   </span>
                   <span className="text-[11px] font-semibold tabular-nums" style={{ color }}>
                     {resistance > 0 ? '+' : ''}
@@ -243,13 +251,13 @@ export const MobsTab = ({
                             className="shrink-0 text-[8px] tracking-wide uppercase"
                             style={{ color: item_category_colors[category] ?? '#6b728080' }}
                           >
-                            {titleize(category)}
+                            {category_name(category)}
                           </span>
                         )}
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         <span className="text-[10px] font-semibold tabular-nums text-[#c8963c]">
-                          {chance.toFixed(2)}%
+                          {numbers.decimal(chance)}%
                         </span>
                         <span className="text-[9px] text-[#6b7280]">{quantity}</span>
                       </span>

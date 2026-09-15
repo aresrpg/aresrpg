@@ -10,6 +10,7 @@ import type { AuthSession } from '../../src/auth.ts'
 import { publish_pose } from '../../src/game/core/pose_feed.ts'
 import { create_app, type AppInput, type AppState, type AppContext } from '../../src/store.ts'
 import { observe_automation, reduce_automation } from '../../src/modules/automation.ts'
+import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 
 import { automation_fixture, character, key, resource, tick } from './automation_fixture.ts'
 
@@ -117,7 +118,12 @@ test('the world observer confirms sequential harvests and reports the exact prot
   publish_pose({ ...tick().pose!, x: -100 })
   const close = app.observe(['world', 'automation', 'fight_chain'])
   try {
-    app.dispatch({ type: 'automation/unlocked' })
+    app.dispatch({
+      type: 'journey/loaded',
+      identity: app.store.getState().journey.identity!,
+      generation: app.store.getState().journey.generation,
+      completed: JOURNEY_QUESTS.map(({ id }) => id),
+    })
     app.dispatch({ type: 'automation/resource', item_type: resource.item_type })
     app.dispatch({ type: 'automation/start', id: 'integration' })
     expect(gathers).toBe(0)
@@ -282,7 +288,12 @@ test('gathering exhausts a zone, discovers the next eligible zone, and continues
   })
   const close = app.observe(['world', 'automation'])
   try {
-    app.dispatch({ type: 'automation/unlocked' })
+    app.dispatch({
+      type: 'journey/loaded',
+      identity: app.store.getState().journey.identity!,
+      generation: app.store.getState().journey.generation,
+      completed: JOURNEY_QUESTS.map(({ id }) => id),
+    })
     app.dispatch({ type: 'automation/resource', item_type: resource.item_type })
     app.dispatch({ type: 'automation/start', id: 'exploration' })
     app.dispatch({ type: 'page/open', page: 'leaderboard' })
@@ -339,7 +350,12 @@ test('a preflight movement refusal retries once the delay expires without anothe
   publish_pose(tick().pose)
   const close = app.observe(['world', 'automation'])
   try {
-    app.dispatch({ type: 'automation/unlocked' })
+    app.dispatch({
+      type: 'journey/loaded',
+      identity: app.store.getState().journey.identity!,
+      generation: app.store.getState().journey.generation,
+      completed: JOURNEY_QUESTS.map(({ id }) => id),
+    })
     app.dispatch({ type: 'automation/resource', item_type: resource.item_type })
     app.dispatch({ type: 'automation/start', id: 'retry' })
     await Bun.sleep(20)

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Text } from '../../i18n/Text.tsx'
+
 import { useEffect, useState } from 'react'
 
 import { content_catalog } from '../../content/catalog.ts'
@@ -47,7 +49,9 @@ export const GatherProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <p className="mb-1 text-[7px] tracking-[0.2em] text-[#7d828b] uppercase">{text('resource_gathering')}</p>
           <div className="flex items-center justify-between gap-4 text-[9px] tracking-[0.16em] uppercase">
             <span className="truncate text-[#e8e4dc]">{name}</span>
-            <span className="shrink-0 text-[#c8963c]">{progress.remaining_seconds}s</span>
+            <span className="shrink-0 text-[#c8963c]">
+              <Text path="ui.seconds" values={{ count: progress.remaining_seconds }} />
+            </span>
           </div>
           <div
             aria-label={`${text('resource_gathering')} ${name}`}

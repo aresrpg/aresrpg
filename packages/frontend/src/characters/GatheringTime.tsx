@@ -4,6 +4,8 @@
 import { gather_time_ms, job_max_level } from '@aresrpg/immutable'
 import { Timer } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { Text } from '../i18n/Text.tsx'
 import type { CopyText } from '../i18n/copy.ts'
 
 export const GatheringTime = ({
@@ -11,9 +13,10 @@ export const GatheringTime = ({
   gathering,
   t,
 }: Readonly<{ level: number; gathering: boolean; t: CopyText }>) => {
+  const numbers = useNumbers()
   if (!gathering) return null
-  const seconds = (gather_time_ms(level) / 1_000).toFixed(2)
-  const next_seconds = (gather_time_ms(level + 1) / 1_000).toFixed(2)
+  const seconds = numbers.decimal(gather_time_ms(level) / 1_000, 2, 2)
+  const next_seconds = numbers.decimal(gather_time_ms(level + 1) / 1_000, 2, 2)
   return (
     <div className="hud-num flex items-center gap-2 whitespace-nowrap text-sm">
       <span
@@ -22,7 +25,9 @@ export const GatheringTime = ({
         title={t('jobs.detail.gather_time', { seconds })}
       >
         <Timer aria-hidden="true" className="text-gold" size={14} />
-        <strong>{seconds}s</strong>
+        <strong>
+          <Text path="ui.seconds" values={{ count: seconds }} />
+        </strong>
       </span>
       {level < job_max_level && (
         <span
@@ -33,7 +38,9 @@ export const GatheringTime = ({
           <span aria-hidden="true" className="text-muted">
             →
           </span>
-          <strong className="text-cyan">{next_seconds}s</strong>
+          <strong className="text-cyan">
+            <Text path="ui.seconds" values={{ count: next_seconds }} />
+          </strong>
           <span className="text-xs text-muted">{t('jobs.lv_badge', { level: level + 1 })}</span>
         </span>
       )}

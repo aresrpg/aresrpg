@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useNumbers } from '@aresrpg/frontend/finance'
 import { ArrowUpRight } from 'lucide-react'
 import type { Locale } from '@aresrpg/frontend/locale'
 import {
   AmountForm,
   Metric,
   finance_button,
-  format_amount,
   type FinanceInput,
   type FinanceState,
   type FinanceSnapshot,
@@ -42,6 +42,7 @@ export const ContributionPanel = ({
   copy: KaresCopy
   locale: Locale
 }>) => {
+  const { amount: format_amount } = useNumbers()
   const preview = offering_preview(snapshot)
   const { phase } = preview
   const { offering } = snapshot

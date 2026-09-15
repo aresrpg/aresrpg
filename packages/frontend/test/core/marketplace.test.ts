@@ -42,19 +42,19 @@ describe('marketplace projection', () => {
       current_epoch: '100',
       chain_timestamp_ms: 1000,
       chain_sample_age_ms: 0,
-      market_volume: { day_mist: '123000000000', month_mist: '456000000000' },
+      market_volume: { day_mist: '123000000000', month_mist: '456000000000', history_days: 30 },
     }
     const ready = reduce_app_state(initial, { type: 'server/packet', packet: heartbeat })
-    expect(ready.marketplace.volume).toEqual({ day_mist: '123000000000', month_mist: '456000000000' })
+    expect(ready.marketplace.volume).toEqual({ day_mist: '123000000000', month_mist: '456000000000', history_days: 30 })
     const next = reduce_app_state(ready, {
       type: 'server/packet',
       packet: {
         ...heartbeat,
         current_epoch: '101',
-        market_volume: { day_mist: '123000000000', month_mist: '456000000000' },
+        market_volume: { day_mist: '123000000000', month_mist: '456000000000', history_days: 30 },
       },
     })
-    expect(next.marketplace.volume).toEqual({ day_mist: '123000000000', month_mist: '456000000000' })
+    expect(next.marketplace.volume).toEqual({ day_mist: '123000000000', month_mist: '456000000000', history_days: 30 })
     const unavailable = reduce_app_state(next, {
       type: 'server/packet',
       packet: { ...heartbeat, market_volume: null },

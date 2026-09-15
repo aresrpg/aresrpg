@@ -186,7 +186,7 @@ party_panel:
   run_to_wrong_world: そのパーティーメンバーは現在のワールドにいません。
   run_to_unavailable: そのパーティーメンバーのオンチェーン位置を取得できません。
 trade_panel:
-  kares: Stacking
+  kares: '提示KARES'
   close: 閉じる
   title: プレイヤー取引
   invite_sent: 取引招待を送信しました
@@ -388,10 +388,28 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  prices_title: '価格履歴'
+  prices_period: '期間'
+  prices_range_7: '7日'
+  prices_range_30: '30日'
+  prices_range_90: '90日'
+  prices_range_365: '1年'
+  prices_subtitle: 'SUI / 個 · 成約済み取引 · 手数料別'
+  prices_loading: '価格履歴を読み込み中…'
+  prices_unavailable: '価格履歴を取得できません。自動的に再試行します。'
+  prices_empty: 'この期間に成約済みの取引はありません。'
+  prices_empty_day: '成約済み取引なし'
+  prices_weighted: '販売数量による加重平均 · 日次平均'
+  prices_units: '販売数量：{{units}}個'
+  prices_since: '記録開始：{{date}} · UTC'
+  prices_inspect: '日次単価。ポイントまたはタッチして詳細を確認できます。'
+  prices_table: '日次価格を表示'
+  prices_date: '日付'
+  prices_quantity: '数量'
   volume_24h: '24時間取引量'
   volume_30d: 30日間取引量
   volume_window: 直近{{window}}のマーケットプレイス公開取引額（手数料を除く）。
-  volume_unavailable: この期間の完全な履歴はまだありません。
+  volume_unavailable: '取引量は一時的に利用できません。'
   title: マーケット
   subtitle: Sui上のプレイヤー出品
   disclaimer_kicker: 取引を始める前に
@@ -459,6 +477,7 @@ marketplace_page:
   character_roster_full: 7人目のキャラクターは追加できません — 上限は6人です
   collect_pending: 売上を回収中…
   collect_success: 売上を回収しました
+  volume_partial: '記録済みの{{window}}取引量です。集計期間全体の履歴がまだないため、最低値として表示しています。'
 mastery_page:
   subtitle: デイリーチャレンジ
   title: マスタリー
@@ -897,7 +916,7 @@ fight_hud:
   chat_item_unavailable: このアイテムはオンチェーンで取得できません。
   chat_you: あなた
   chat_line: '{name}：{message}'
-  chat_party_line: '(party) {name}：{message}'
+  chat_party_line: '(パーティ) {name}：{message}'
   chat_whisper_to: '({name} へ) {message}'
   result_title: 戦闘結果
   result_duration: 戦闘時間
@@ -1571,6 +1590,11 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: トランザクション手数料を支払うSUIがなくなりました。プレイを続けるにはウォレットにチャージしてください。
 characters_page:
+  inventory_selection: '{{count}}個選択中 · Shiftキーを押しながらクリックして装備の選択を切り替え'
+  crush_cta_count: '粉砕（{{count}}）'
+  crush_pending_count: '{{count}}個を粉砕中…'
+  crush_confirm_selection: '選択した装備（{{count}}個）を粉砕しますか？選択したアイテムはすべて完全に失われます。'
+  crush_selection_changed: '同じキオスクの利用可能な未装備品を選択してください。確認した装備が引き続き利用可能である必要があります。'
   teleport_dungeon_blocked: 'テレポートする前に、ダンジョンをクリアするか中断してください。'
   consume_busy: '消耗品は、このキャラクターが何もしていない間のみ使用できます。'
   progression_busy: 'このキャラクターが何もしていない間のみ、能力値と呪文を変更できます。'
@@ -1708,9 +1732,6 @@ characters_page:
   feed_unavailable: 'このペットは利用できなくなりました。'
   claim_success: 報酬を受け取りました
   crush_title: 装備を粉砕
-  crush_confirm_body: '{{name}}を粉砕しますか？アイテムは永久に失われ、ルーンになります。'
-  crush_cta: 粉砕
-  crush_pending: 粉砕中…
   crush_success: 装備を粉砕しました
   crush_result_title: 粉砕結果
   crush_result_empty: 次回に期待しましょう。
@@ -2143,8 +2164,32 @@ spell_names:
 item_categories:
   cosmetic_hat: 外見用の帽子
   cosmetic_cloak: 外見用のマント
+  hat: '帽子'
+  cloak: 'マント'
+  belt: 'ベルト'
+  boots: 'ブーツ'
+  amulet: 'アミュレット'
+  ring: '指輪'
+  title: '称号'
+  pet: 'ペット'
+  relic: '遺物'
+  daggers: '短剣'
+  spear: '槍'
+  bow: '弓'
+  axe: '斧'
+  sword: '剣'
+  tool_farmer: '農具'
+  tool_herbalist: '薬草採集道具'
+  tool_miner: '採掘道具'
+  consumable: '消耗品'
+  resource: '資源'
+  rune: 'ルーン'
+  key: '鍵'
+  weapon: '武器'
+  tool: '道具'
+  relic_slot: '遺物 {{number}}'
 
-kares: Stacking
+kares: 'ステーキング'
 kares_page:
   stake_more: '追加ステーク'
   additional_daily: '追加 / 日'
@@ -2325,6 +2370,13 @@ kares_page:
   allocation_rationale: '開始時に590,000 KARES（59%）を販売・流動性・チーム向けに解放します。初年度の追加解放は最大約82,000で、バーン前の開始時数量に対し13.90%です。参加者がいなければステーキング報酬の解放は停止します。コミュニティ枠は暦に従います。戦闘報酬は上限を下回る場合があります。新規発行はゼロです。寄付は既存トークンの再配分です。価格は保証されません。'
   launch_market_cap: '開始時の流通時価総額'
   launch_market_cap_note: '今販売を終了した場合：上限適用後の販売価格 × 開始時に流通可能な590,000 KARES。最低調達額未達では開始しません。'
+  error_generic: '操作を完了できませんでした。'
+  error_rejected: 'リクエストがキャンセルされました。'
+  error_funds: 'この操作と手数料を支払う残高が不足しています。'
+  error_connection: '接続に失敗しました。接続を確認して再度お試しください。'
+  error_session: 'ウォレットのセッションが利用できません。再接続してください。'
+  error_unknown: '前の操作を確認しています。結果が判明するまで、新しい取引は実行できません。'
+  error_recovered: '前の取引が見つかりました。ページを更新して結果を確認してから、次の操作を選んでください。'
 
 leaderboard_page:
   unclaimed: '空席'
@@ -2390,9 +2442,8 @@ automation_panel:
   blocked: '一時停止：移動が阻まれています'
   failed: '一時停止：操作に失敗しました。エラーを確認してください。'
   quantity: '採集数：{{quantity}}'
-  unlocked: 'アクセス解除'
-  badge: 'HACK ZONE'
-  available: '自動採集が利用可能になりました'
+  expand: '自動採集を展開'
+  collapse: '自動採集を折りたたむ'
 
 item_drop_sources:
   title: 'モンスターのドロップ'
@@ -2421,8 +2472,8 @@ journey:
   key_details: 'ダンジョンの鍵を探す'
   next: '次の目標'
   chapter_finished: '旅の課題を達成'
-  finished_title: 'ここからは君の冒険だ。'
-  finished_body: '道具、食料、ダンジョンでの勝利、そしてSuizeまで。探索を続けよう。次の物語を作るのは君だ。'
+  finished_title: '自動化が解放されました'
+  finished_body: 'AresRPGは自動化を楽しむゲームでもあります。今後、多くの機能が自動化を中心に作られていきます。初心者クエストをすべて達成した報酬として、自動採集が解放されました！資源を選び、「開始」を押すとキャラクターが採集します。実行中も操作パネルを折りたためます。'
   reset_title: '初心者クエスト'
   reset_hint: 'このブラウザーで、このアカウントのクエストをリセットします。旅を再開すると、所持品は再び達成条件に数えられます。'
   reset_action: 'クエストをリセット'
@@ -2468,7 +2519,101 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: 保存中…
+  automation_reward_action: '自動採集を開く'
 
 fullscreen_enter: 全画面表示にする
 fullscreen_exit: 全画面表示を終了
 fullscreen_failed: 全画面表示を切り替えられませんでした。
+
+spell_effects:
+  range: '{{minimum}}～{{maximum}}'
+  damage: '{{value}}ダメージを与える'
+  pct_life: '対象の最大HPの{{value}}%に相当するダメージを与える'
+  caster_damage: '自分に{{value}}ダメージを与える'
+  punishment: '失ったHPに応じて増加する{{value}}ダメージを与える'
+  heal: 'HPを{{value}}回復する'
+  add: '{{stat}}を{{value}}増加させる'
+  remove: '{{stat}}を{{value}}減少させる'
+  fixed_remove: '{{stat}}を{{value}}減少させる（回避不可）'
+  steal: '{{stat}}を{{value}}奪う'
+  chatiment: '各ターンに受けたダメージに応じて{{stat}}が最大{{value}}増加する'
+  reduce: 'ダメージを{{value}}軽減する'
+  reflect: '{{value}}ダメージを反射する'
+  push: '{{value}}マス押し出す'
+  pull: '{{value}}マス引き寄せる'
+  teleport: '{{value}}マス転移する'
+  swap: '位置を入れ替える'
+  trap: '罠を設置する'
+  glyph: 'グリフを設置する'
+  dispel: '効果を解除する'
+  invis: '対象を透明にする'
+  return: 'このスペルのレベル以下のスペルを跳ね返す'
+  redirect: '{{value}}ダメージを転送する'
+  unknown: '不明な効果'
+  any_stat: '任意の能力値'
+  target_not_team: '敵のみ'
+  target_not_enemy: '味方のみ'
+  target_not_self: '自分以外のみ'
+  target_only_caster: '使用者のみ'
+  turns: '持続ターン：{{count}}'
+  turn_range: '持続ターン：{{minimum}}～{{maximum}}'
+  critical_only: 'クリティカル時のみ'
+  turn_cap: 'ターン上限 · {{stat}}'
+  shape_point: '単体'
+  shape_circle: '円 · {{size}}'
+  shape_cross: '十字 · {{size}}'
+  shape_line: '直線 · {{size}}'
+  shape_tbar: 'T字 · {{size}}'
+  shape_ring: '輪 · {{size}}'
+  shape_allmap: 'マップ全体'
+  shape_cone: '扇形 · {{size}}'
+  shape_podium: '台形 · {{size}}'
+  shape_blob: '丸い範囲 · {{size}}'
+  active_add: '{{stat}} +{{value}}'
+  active_remove: '{{stat}} −{{value}}'
+  active_damage: '{{value}}ダメージ'
+  active_invis: '透明'
+  active_chatiment: 'チャティマン · {{stat}} {{value}}/ターン · {{turns}}T'
+  active_turns: '{{count}}T'
+  active_turn_range: '{{minimum}}～{{maximum}}T'
+  short_strength: '力'
+  short_intelligence: '知能'
+  short_chance: '運'
+  short_agility: '敏捷'
+  short_wisdom: '知恵'
+  short_range: '射程'
+  short_power: '威力'
+  short_raw_damage: '被害'
+  short_critical: '会心'
+  short_stat: '能力'
+
+ui:
+  character: 'キャラクター'
+  spell_action: '{{name}}、レベル{{level}}、{{cost}}{{unit}}'
+  spell_level: 'スペルレベル{{level}}'
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: '経験値最大'
+  experience_gain: '+{{amount}} {{unit}}'
+  xp: '経験値'
+  hp: 'HP'
+  seconds: '{{count}}秒'
+  meters: '{{count}}m'
+  versus: '対'
+  team_format: '{{size}}対{{size}}'
+  flat: '平面'
+  fps: 'FPS'
+  north: '北'
+  northeast: '北東'
+  east: '東'
+  southeast: '南東'
+  south: '南'
+  southwest: '南西'
+  west: '西'
+  northwest: '北西'
+  game_description: 'AresRPGはSui上で動くブラウザ向けボクセルMMORPGです。キャラクター、アイテム、進行状況はブロックチェーン上に存在します。'
+  game_title: 'AresRPG · オンチェーン・ボクセルMMORPG'
+  world_image: 'AresRPGのボクセルワールド'
+  sale_description: 'KARESの初回公開販売。AresRPGの次の章を一緒に作りましょう。'
+  formula_chastisement: 'G = min(ΔHP × S, 上限 × S − 当ターンのG) · S = モンスターは1、プレイヤーは½'
+  formula_drop: 'ドロップ率 = min(100%, 基礎値 × モンスター帯補正 × (600 + チーム平均運) / 600)'
+  formula_xp: '経験値 = 基礎経験値プール × パーティ係数 × レベル補正 × プレイヤーレベル / パーティ合計レベル × (100 + 知恵) / 100'

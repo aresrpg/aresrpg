@@ -4,13 +4,14 @@
 import { type ReactNode } from 'react'
 import { Gamepad2, WalletCards } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 
 import { FinanceStatus, finance_empty_message } from './components.tsx'
-import { format_amount, type FinanceInput, type FinanceSnapshot, type FinanceState } from './model.ts'
-import { daily_amount, staking_gains } from './staking_model.ts'
+import { type FinanceInput, type FinanceSnapshot, type FinanceState } from './model.ts'
+import { staking_gains } from './staking_model.ts'
 import { StakingForm } from './StakingForm.tsx'
 
 export const StakingContent = ({
@@ -26,6 +27,7 @@ export const StakingContent = ({
   snapshot: FinanceSnapshot
   balance: bigint | null
 }>) => {
+  const { amount: format_amount, daily: daily_amount } = useNumbers()
   const copy = app_copy.kares_page
   const stats = staking_gains(snapshot)
   const locked = !!state.request || !state.address

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useNumbers } from '@aresrpg/frontend/finance'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Sparkles } from 'lucide-react'
 import {
@@ -9,7 +10,6 @@ import {
   finance_empty_message,
   finance_label,
   offering_phase,
-  format_amount,
   type FinanceInput,
   type FinanceState,
   type FinanceSnapshot,
@@ -75,6 +75,7 @@ const SaleContent = ({
   dispatch,
   locale,
 }: Readonly<{ state: FinanceState; copy: KaresCopy; locale: Locale; dispatch: (input: FinanceInput) => void }>) => {
+  const { amount: format_amount } = useNumbers()
   const { snapshot } = state
   if (!snapshot)
     return (

@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useNumbers } from '../../i18n/useNumbers.ts'
+
+import { useText } from '../../i18n/useText.ts'
+
 import { useEffect, useState } from 'react'
 import { experience_progress } from '@aresrpg/immutable'
 
@@ -13,8 +17,13 @@ import '../fight/fight_hud.css'
 export const EmptyActionCells = () => <ActionSlots />
 
 export const ExperienceBar = ({ experience }: Readonly<{ experience: string }>) => {
+  const numbers = useNumbers()
+  const ui = useText()
   const { into, span, percent } = experience_progress(Number(experience))
-  const label = span === 0 ? 'MAX XP' : `${into.toLocaleString()} / ${span.toLocaleString()} XP`
+  const label =
+    span === 0
+      ? ui('ui.experience_max')
+      : ui('ui.vitals', { current: numbers.number(into), maximum: numbers.number(span), unit: ui('ui.xp') })
   return (
     <div
       aria-label={label}

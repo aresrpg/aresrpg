@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useText } from '../../i18n/useText.ts'
+
 import { useState, type CSSProperties } from 'react'
 
 export const vital_percent = (value: bigint, maximum: bigint): number =>
   maximum <= 0n ? 0 : Math.max(0, Math.min(100, Number((value * 10_000n) / maximum) / 100))
 
-const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>) => (
-  <div aria-label={`${kind.toUpperCase()} ${value}`} className={`fight-hud__gem fight-hud__gem--${kind}`}>
-    <i />
-    <span>{value.toString()}</span>
-  </div>
-)
+const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>) => {
+  const ui = useText()
+  return (
+    <div aria-label={`${ui(`fight_hud.unit_${kind}`)} ${value}`} className={`fight-hud__gem fight-hud__gem--${kind}`}>
+      <i />
+      <span>{value.toString()}</span>
+    </div>
+  )
+}
 
 export const VitalsDisplay = ({
   hp,
@@ -19,13 +24,14 @@ export const VitalsDisplay = ({
   ap,
   mp,
 }: Readonly<{ hp: bigint; max_hp: bigint; ap: bigint; mp: bigint }>) => {
+  const ui = useText()
   const [percent_visible, set_percent_visible] = useState(false)
   return (
     <div className="fight-hud__vitals">
       <button
         className="fight-hud__hp-gem"
         onClick={() => set_percent_visible((visible) => !visible)}
-        title={`${hp} / ${max_hp} HP`}
+        title={ui('ui.vitals', { current: String(hp), maximum: String(max_hp), unit: ui('ui.hp') })}
         type="button"
       >
         <i aria-hidden="true" style={{ '--hp-percent': `${vital_percent(hp, max_hp)}%` } as CSSProperties} />

@@ -56,6 +56,12 @@ pub enum Write {
     },
     /// One replay-deduplicated exact-money contribution to both chart tiers.
     Money(MoneyFact),
+    /// Exact per-item daily totals, with replay identity stored in each bucket value.
+    MarketPrices {
+        ts_ms: u64,
+        checkpoint: u64,
+        sales: Vec<crate::market_prices::Sale>,
+    },
     /// Absolute checkpoint subtotal: replay overwrites instead of incrementing volume twice.
     MarketVolume {
         ts_ms: u64,
@@ -528,6 +534,11 @@ impl Processor for AresHandler {
             });
         }
         writes.extend(wire.money.into_iter().map(Write::Money));
+        writes.push(Write::MarketPrices {
+            ts_ms,
+            checkpoint: ckpt,
+            sales: wire.market_prices,
+        });
         writes.push(Write::MarketVolume {
             ts_ms,
             checkpoint: ckpt,
@@ -648,6 +659,14 @@ impl Handler for AresHandler {
                             .arg(&fact.coordinate)
                             .arg(fact.value())
                             .query_async(conn.connection())
+                            .await?;
+                    }
+                    Write::MarketPrices {
+                        ts_ms,
+                        checkpoint,
+                        sales,
+                    } => {
+                        crate::market_prices::commit(conn.connection(), *checkpoint, *ts_ms, sales)
                             .await?;
                     }
                     Write::MarketVolume {

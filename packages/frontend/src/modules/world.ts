@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 // The world's server-streamed surroundings; one reducer feeds the compass and minimap.
 
 import { chain_to_client_coordinate, client_to_chain_coordinate, world_size } from '@aresrpg/immutable'
@@ -16,6 +17,7 @@ import {
   type ZoneRow,
 } from '@aresrpg/protocol'
 
+import { localized_error } from '../i18n/error_text.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { world_biome_at_zone } from '../content/worlds.ts'
 import { read_pose } from '../game/core/pose_feed.ts'
@@ -477,7 +479,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
           notice,
           previous_searched_at_ms: target.previous_searched_at_ms,
           timer: setTimeout(() => {
-            settle(key, (pending) => pending.error(new Error(text('zone_never_arrived'))))
+            settle(key, (pending) => pending.error(localized_error(text('zone_never_arrived'))))
             dispatch({ type: 'world/search_zone_failed', key })
           }, ZONE_ARRIVAL_TIMEOUT_MS) as unknown as number,
         })
@@ -559,7 +561,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
           notice,
           previous_searched_at_ms: null,
           timer: setTimeout(
-            () => settle(fight, (pending) => pending.error(new Error(text('spawn_never_arrived')))),
+            () => settle(fight, (pending) => pending.error(localized_error(text('spawn_never_arrived')))),
             ZONE_ARRIVAL_TIMEOUT_MS
           ) as unknown as number,
         })
@@ -570,7 +572,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         if (context.signal.aborted) return
         in_flight.delete(group)
         dispatch({ type: 'world/engage_failed', group })
-        notice.error(engage_conflict_refusal(error) ? new Error(text('spawn_engage_conflict')) : error)
+        notice.error(engage_conflict_refusal(error) ? localized_error(text('spawn_engage_conflict')) : error)
       })
   }
 

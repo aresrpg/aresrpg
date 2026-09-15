@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { useText } from '../../i18n/useText.ts'
 // Browser-only spell presentation. Keeping seed assets behind this lazy boundary preserves the pure app shell.
 
 import { spell_icon } from '../../content/assets.ts'
@@ -83,6 +85,7 @@ export const FightSpell = ({
   fallback_icon?: ReactNode
   display_name?: string
 }>) => {
+  const ui = useText()
   const [detail_open, set_detail_open] = useState(false)
   const icon = spell_icon(spell.source.classe, spell.name)
   const name = displayed_name(spell.name, display_name)
@@ -101,7 +104,12 @@ export const FightSpell = ({
       onMouseLeave={() => set_detail_open(false)}
     >
       <button
-        aria-label={`${name}, level ${spell.level}, ${spell.details.ap_cost} AP`}
+        aria-label={ui('ui.spell_action', {
+          name,
+          level: String(spell.level),
+          cost: String(spell.details.ap_cost),
+          unit: ui('fight_hud.unit_ap'),
+        })}
         aria-pressed={selected}
         className={`fight-hud__spell${disabled ? ' disabled' : ''}${selected ? ' selected' : ''}${critical ? ' critical' : ''}`}
         data-turn-critical={critical || undefined}

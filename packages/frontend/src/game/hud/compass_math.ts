@@ -48,14 +48,14 @@ export const compass_target = (
 
 /** The 8 compass points the strip labels, by bearing. Majors (N/E/S/W) render bigger. */
 export const CARDINALS = Object.freeze([
-  { label: 'N', bearing: 0, major: true },
-  { label: 'NE', bearing: Math.PI / 4, major: false },
-  { label: 'E', bearing: Math.PI / 2, major: true },
-  { label: 'SE', bearing: (3 * Math.PI) / 4, major: false },
-  { label: 'S', bearing: Math.PI, major: true },
-  { label: 'SW', bearing: (-3 * Math.PI) / 4, major: false },
-  { label: 'W', bearing: -Math.PI / 2, major: true },
-  { label: 'NW', bearing: -Math.PI / 4, major: false },
+  { label: 'north', bearing: 0, major: true },
+  { label: 'northeast', bearing: Math.PI / 4, major: false },
+  { label: 'east', bearing: Math.PI / 2, major: true },
+  { label: 'southeast', bearing: (3 * Math.PI) / 4, major: false },
+  { label: 'south', bearing: Math.PI, major: true },
+  { label: 'southwest', bearing: (-3 * Math.PI) / 4, major: false },
+  { label: 'west', bearing: -Math.PI / 2, major: true },
+  { label: 'northwest', bearing: -Math.PI / 4, major: false },
 ] as const)
 
 /** Distance tier for the pip fade: near = full, mid/far shrink + dim. */

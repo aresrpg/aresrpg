@@ -37,6 +37,7 @@ import { dispatch_app, useAppStore } from '../store.ts'
 import { ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
 import { HUD_PANEL_CLASS } from './ui/HudPanel.tsx'
 import { RunToRow } from './PlayerContextMenu.tsx'
+import '../game/hud/world_responsive.css'
 import { ChatResizeHandle } from './ChatResizeHandle.tsx'
 import './chat.css'
 
@@ -86,6 +87,7 @@ const CHANNEL_FILTERS = Object.freeze(
 const value_text = (value: Readonly<ChatLineValue>, text: ChatText, names: LiveNames): string => {
   if (value.seat !== undefined && names[value.seat]) return names[value.seat]
   if (value.copy_key && text[value.copy_key]) return text[value.copy_key]
+  if (value.cls === 'spell') return text[value.text] ?? value.text
   return value.text
 }
 
@@ -169,11 +171,14 @@ export const Chat = ({
   names = Object.freeze({}),
   fight,
 }: Readonly<{ copy: AppCopy; names?: LiveNames; fight?: string }>) => {
-  const text = useMemo(() => ({ ...copy.party_panel, ...copy.simulator_page, ...copy.fight_hud }), [copy])
+  const text = useMemo(
+    () => ({ ...copy.party_panel, ...copy.simulator_page, ...copy.fight_hud, ...copy.spell_names }),
+    [copy]
+  )
   const lines = useAppStore((state) => state.chat.lines)
   const draft = useAppStore((state) => state.chat.draft)
   const settings = useAppStore((state) => state.settings)
-  const self_name = useAppStore((state) => selected_chat_name(state.session, text.chat_you ?? 'me'))
+  const self_name = useAppStore((state) => selected_chat_name(state.session, copy.fight_hud.chat_you!))
   const speaker = useAppStore((state) => selected_character(state.session))
   const party = useAppStore(selected_party)
   const log = useRef<HTMLDivElement>(null)
@@ -376,6 +381,6 @@ export const Chat = ({
 export const WorldChat = (properties: Parameters<typeof Chat>[0]) => (
   <div className="gw-worldchat">
     <Chat {...properties} />
-    {!properties.fight && <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />}
+    <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />
   </div>
 )

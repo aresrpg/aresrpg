@@ -186,7 +186,7 @@ party_panel:
   run_to_wrong_world: That party member is not in your current world.
   run_to_unavailable: That party member's on-chain position is unavailable.
 trade_panel:
-  kares: Stacking
+  kares: 'KARES offered'
   close: Close
   title: Player trade
   invite_sent: Trade invitation sent
@@ -388,10 +388,28 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  prices_title: 'Price history'
+  prices_period: 'Period'
+  prices_range_7: '7D'
+  prices_range_30: '30D'
+  prices_range_90: '90D'
+  prices_range_365: '1Y'
+  prices_subtitle: 'SUI / UNIT · COMPLETED SALES · EXCLUDES FEES'
+  prices_loading: 'Loading price history…'
+  prices_unavailable: 'Price history unavailable. Retrying automatically.'
+  prices_empty: 'No completed sales in this period.'
+  prices_empty_day: 'No completed sales'
+  prices_weighted: 'Weighted by units sold · Daily averages'
+  prices_units: '{{units}} units sold'
+  prices_since: 'Tracking since {{date}} · UTC'
+  prices_inspect: 'Daily unit prices. Point or touch to inspect.'
+  prices_table: 'Show daily prices'
+  prices_date: 'Date'
+  prices_quantity: 'Units'
   volume_24h: '24h volume'
   volume_30d: 30d volume
   volume_window: Public marketplace sales in the last {{window}}, before fees.
-  volume_unavailable: Complete history is not available for this window yet.
+  volume_unavailable: 'Volume is temporarily unavailable.'
   title: Marketplace
   subtitle: Player listings on Sui
   disclaimer_kicker: Before you trade
@@ -459,6 +477,7 @@ marketplace_page:
   character_roster_full: A 7th character cannot join your roster — 6 is the cap
   collect_pending: Collecting marketplace proceeds…
   collect_success: Marketplace proceeds collected
+  volume_partial: 'Recorded {{window}} volume. Tracking has not yet covered this full period, so this is a minimum.'
 mastery_page:
   subtitle: Daily challenges
   title: Mastery
@@ -1593,6 +1612,11 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: You ran out of SUI to pay for transaction fees. Please top up your wallet to continue playing.
 characters_page:
+  inventory_selection: '{{count}} selected · Shift-click equipment to toggle selection'
+  crush_cta_count: 'Crush ({{count}})'
+  crush_pending_count: 'Crushing {{count}}…'
+  crush_confirm_selection: 'Crush the selected equipment ({{count}})? Every selected item will be permanently destroyed.'
+  crush_selection_changed: 'Select available, unequipped gear from one kiosk. The reviewed selection must still be available.'
   teleport_dungeon_blocked: 'Finish or abandon the dungeon before teleporting.'
   consume_busy: 'This character must be idle to use consumables.'
   progression_busy: 'Stats and spells can only be changed while this character is idle.'
@@ -1735,9 +1759,6 @@ characters_page:
   feed_unavailable: 'This pet is no longer available.'
   claim_success: Reward claimed
   crush_title: Crush gear
-  crush_confirm_body: 'Crush {{name}}? The item is destroyed forever and yields runes.'
-  crush_cta: Crush
-  crush_pending: Crushing…
   crush_success: Gear crushed
   crush_result_title: Crush result
   crush_result_empty: Better luck next time.
@@ -2170,8 +2191,32 @@ spell_names:
 item_categories:
   cosmetic_hat: Cosmetic hat
   cosmetic_cloak: Cosmetic cloak
+  hat: 'Hat'
+  cloak: 'Cloak'
+  belt: 'Belt'
+  boots: 'Boots'
+  amulet: 'Amulet'
+  ring: 'Ring'
+  title: 'Title'
+  pet: 'Pet'
+  relic: 'Relic'
+  daggers: 'Daggers'
+  spear: 'Spear'
+  bow: 'Bow'
+  axe: 'Axe'
+  sword: 'Sword'
+  tool_farmer: 'Farming tool'
+  tool_herbalist: 'Herbalist tool'
+  tool_miner: 'Mining tool'
+  consumable: 'Consumable'
+  resource: 'Resource'
+  rune: 'Rune'
+  key: 'Key'
+  weapon: 'Weapon'
+  tool: 'Tool'
+  relic_slot: 'Relic {{number}}'
 
-kares: Stacking
+kares: 'Staking'
 kares_page:
   stake_more: 'Stake more'
   additional_daily: 'Additional / day'
@@ -2352,6 +2397,13 @@ kares_page:
   allocation_rationale: '590,000 KARES (59%) are available at launch: sale, liquidity and team. Scheduled releases add at most about 82,000 in year one, or 13.90% of that opening amount, before burns. Staking pauses when nobody stakes. Community vesting follows calendar time. Combat may release less. These releases use existing tokens; mint inflation is zero. Donations redistribute existing tokens. No price outcome is guaranteed.'
   launch_market_cap: 'Launch circulating market cap'
   launch_market_cap_note: 'If the sale closed now: capped sale price × 590,000 KARES available at launch. No launch below minimum funding.'
+  error_generic: 'The action could not be completed.'
+  error_rejected: 'The request was cancelled.'
+  error_funds: 'There are not enough funds for this action and its fees.'
+  error_connection: 'The connection failed. Please check your connection and try again.'
+  error_session: 'The wallet session is unavailable. Please connect again.'
+  error_unknown: 'Your last action is still being checked. Further transactions are blocked until its outcome is known.'
+  error_recovered: 'Your previous transaction was found. Refresh to see its result before choosing your next action.'
 
 leaderboard_page:
   unclaimed: 'Unclaimed'
@@ -2417,9 +2469,8 @@ automation_panel:
   blocked: 'Paused: movement blocked'
   failed: 'Paused: action failed. Check the error.'
   quantity: 'Gathered: {{quantity}}'
-  unlocked: 'Access unlocked'
-  badge: 'HACK ZONE'
-  available: 'Gathering automation available'
+  expand: 'Expand gathering automation'
+  collapse: 'Collapse gathering automation'
 
 item_drop_sources:
   title: 'Mob drops'
@@ -2448,8 +2499,8 @@ journey:
   key_details: 'Find a dungeon key'
   next: 'Up next'
   chapter_finished: 'Journey complete'
-  finished_title: 'You’re on your own now.'
-  finished_body: 'Tools, supplies, a dungeon victory, and even Suize. Keep exploring. Your next story is yours to write.'
+  finished_title: 'Automation unlocked'
+  finished_body: 'AresRPG is also a game about automation. Many future features will build on it. You have completed every beginner quest and earned gathering automation! Choose a resource, press Start, and let your character gather. You can collapse the controls while it runs.'
   reset_title: 'Beginner quests'
   reset_hint: 'Reset this account’s quests on this browser. Owned items count again after you restart the journey.'
   reset_action: 'Reset quests'
@@ -2495,7 +2546,101 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Saving…
+  automation_reward_action: 'Open gathering automation'
 
 fullscreen_enter: Enter fullscreen
 fullscreen_exit: Exit fullscreen
 fullscreen_failed: Could not change fullscreen mode.
+
+spell_effects:
+  range: '{{minimum}} to {{maximum}}'
+  damage: 'Deals {{value}} damage'
+  pct_life: 'Deals {{value}}% of the target’s maximum HP as damage'
+  caster_damage: 'Inflicts {{value}} damage on yourself'
+  punishment: 'Deals {{value}} damage, increased by missing HP'
+  heal: 'Heals {{value}} HP'
+  add: 'Adds {{value}} {{stat}}'
+  remove: 'Removes {{value}} {{stat}}'
+  fixed_remove: 'Removes {{value}} {{stat}} (undodgeable)'
+  steal: 'Steals {{value}} {{stat}}'
+  chatiment: 'Gains up to {{value}} {{stat}} from damage received each turn'
+  reduce: 'Reduces damage by {{value}}'
+  reflect: 'Reflects {{value}} damage'
+  push: 'Pushes {{value}} cells'
+  pull: 'Pulls {{value}} cells'
+  teleport: 'Teleports {{value}} cells'
+  swap: 'Swaps positions'
+  trap: 'Places a trap'
+  glyph: 'Places a glyph'
+  dispel: 'Dispels effects'
+  invis: 'Makes the target invisible'
+  return: 'Returns spells up to this spell’s level'
+  redirect: 'Redirects {{value}} damage'
+  unknown: 'Unknown effect'
+  any_stat: 'Any stat'
+  target_not_team: 'Enemies only'
+  target_not_enemy: 'Allies only'
+  target_not_self: 'Others only'
+  target_only_caster: 'Caster only'
+  turns: 'Turns: {{count}}'
+  turn_range: 'Turns: {{minimum}}–{{maximum}}'
+  critical_only: 'Critical only'
+  turn_cap: 'Turn cap · {{stat}}'
+  shape_point: 'Point'
+  shape_circle: 'Circle · {{size}}'
+  shape_cross: 'Cross · {{size}}'
+  shape_line: 'Line · {{size}}'
+  shape_tbar: 'T shape · {{size}}'
+  shape_ring: 'Ring · {{size}}'
+  shape_allmap: 'Whole map'
+  shape_cone: 'Cone · {{size}}'
+  shape_podium: 'Podium · {{size}}'
+  shape_blob: 'Blob · {{size}}'
+  active_add: '+{{value}} {{stat}}'
+  active_remove: '−{{value}} {{stat}}'
+  active_damage: '{{value}} damages'
+  active_invis: 'Invisible'
+  active_chatiment: 'CHÂTIMENT · {{value}} {{stat}}/TURN · {{turns}}T'
+  active_turns: '{{count}}T'
+  active_turn_range: '{{minimum}}–{{maximum}}T'
+  short_strength: 'STR'
+  short_intelligence: 'INT'
+  short_chance: 'CHA'
+  short_agility: 'AGI'
+  short_wisdom: 'WIS'
+  short_range: 'RNG'
+  short_power: 'POW'
+  short_raw_damage: 'DMG'
+  short_critical: 'CRIT'
+  short_stat: 'STAT'
+
+ui:
+  character: 'Character'
+  spell_action: '{{name}}, level {{level}}, {{cost}} {{unit}}'
+  spell_level: 'Spell level {{level}}'
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: 'Maximum XP'
+  experience_gain: '+{{amount}} {{unit}}'
+  xp: 'XP'
+  hp: 'HP'
+  seconds: '{{count}}s'
+  meters: '{{count}}m'
+  versus: 'VS'
+  team_format: '{{size}} vs {{size}}'
+  flat: 'Flat'
+  fps: 'FPS'
+  north: 'N'
+  northeast: 'NE'
+  east: 'E'
+  southeast: 'SE'
+  south: 'S'
+  southwest: 'SW'
+  west: 'W'
+  northwest: 'NW'
+  game_description: 'AresRPG is a browser-based voxel MMORPG on Sui where your characters, items, and progression live on-chain.'
+  game_title: 'AresRPG · On-chain voxel MMORPG'
+  world_image: 'AresRPG voxel world'
+  sale_description: 'The KARES initial public sale. Help build the next chapter of AresRPG.'
+  formula_chastisement: 'G = min(ΔHP × S, CAP × S − Gturn) · S = 1 for mobs, ½ for players'
+  formula_drop: 'drop = min(100%, authored × mob band × (600 + average team Chance) / 600)'
+  formula_xp: 'XP = base-XP pool × party coefficient × level balance × player level / party level × (100 + WIS) / 100'

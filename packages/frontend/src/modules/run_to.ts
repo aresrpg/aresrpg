@@ -5,6 +5,7 @@
 
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import { localized_error } from '../i18n/error_text.ts'
 import type { RunTarget } from '../game/core/run_to.ts'
 import { copy_text } from '../i18n/copy.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -180,7 +181,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         const current = get_state()
         if (current.run_to.run !== request || current.session.wallet !== wallet) return
         dispatch({ type: 'run_to/resolved', request, checkpoint })
-        if (!checkpoint) return void toast.add(text('run_to_wrong_world'))
+        if (!checkpoint) return void toast.add(localized_error(text('run_to_wrong_world')))
         enable_flat_mode()
         toast.add(text('run_to_started', { name: request.name }), 'info')
       })
@@ -188,7 +189,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         if (get_state().run_to.run !== request || get_state().session.wallet !== wallet) return
         dispatch({ type: 'run_to/resolved', request, checkpoint: null })
         console.warn('The run-to checkpoint lookup failed.', error)
-        toast.add(text('run_to_unavailable'))
+        toast.add(localized_error(text('run_to_unavailable')))
       })
   })
   events.on('run_to/position', (input) => {
@@ -200,7 +201,8 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
       run.x !== input.x ||
       run.z !== input.z
     ) {
-      if (selected_character(state.session)?.world !== input.world) toast.add(text('run_to_position_wrong_world'))
+      if (selected_character(state.session)?.world !== input.world)
+        toast.add(localized_error(text('run_to_position_wrong_world')))
       return
     }
     enable_flat_mode()

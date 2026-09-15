@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Text } from '../../i18n/Text.tsx'
+
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { useRef } from 'react'
 
@@ -35,7 +37,9 @@ export const RunToProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <div className="pointer-events-none absolute top-[148px] left-1/2 z-[6] w-[min(360px,calc(100vw-32px))] -translate-x-1/2 rounded-[9px] border border-gold/25 bg-surface/85 px-3 py-2 font-mono shadow-[0_10px_30px_rgba(0,0,0,0.45)] backdrop-blur-sm">
       <div className="mb-1.5 flex items-center justify-between gap-3 text-[8px] tracking-[0.16em] uppercase">
         <span className="text-gold">{text('run_to_progress')}</span>
-        <span className="text-[#8d929d] tabular-nums">{Math.ceil(remaining)}m</span>
+        <span className="text-[#8d929d] tabular-nums">
+          <Text path="ui.meters" values={{ count: Math.ceil(remaining) }} />
+        </span>
       </div>
       <div className="h-1 overflow-hidden bg-white/8">
         <div className="h-full bg-gold transition-[width] duration-150" style={{ width: `${percent}%` }} />

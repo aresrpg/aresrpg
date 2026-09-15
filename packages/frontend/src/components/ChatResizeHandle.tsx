@@ -5,19 +5,21 @@ import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { chat_size_from } from '../game/core/chat_preferences.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 
-/** Chat owns its requested size; CSS bounds it and shares its visible width with the world HUD. */
+const CHAT_VIEWPORT = '[data-world-frame], [data-chat-viewport]'
+
+/** One requested size and one bounds observer serve overworld and fight chat. */
 export const ChatResizeHandle = ({ label }: Readonly<{ label: string }>) => {
   const handle = useRef<HTMLButtonElement>(null)
   const saved_size = useAppStore((state) => state.settings.chat_size)
   const [drag, set_drag] = useState<Readonly<{ x: number; y: number; width: number; height: number }> | null>(null)
   useLayoutEffect(() => {
-    const frame = handle.current!.closest<HTMLElement>('[data-world-frame]')
+    const frame = handle.current!.closest<HTMLElement>(CHAT_VIEWPORT)
     if (!frame) return
     if (saved_size) {
       frame.style.setProperty('--world-chat-requested-width', `${saved_size.width}px`)
       frame.style.setProperty('--world-chat-requested-height', `${saved_size.height}px`)
     }
-    const hud = frame.querySelector<HTMLElement>('.fight-hud--overworld .fight-hud__bar')
+    let hud = frame.querySelector<HTMLElement>('.fight-hud__bar')
     const measure = () => {
       const { width, height } = frame.getBoundingClientRect()
       const hud_box = hud?.getBoundingClientRect()
@@ -30,15 +32,25 @@ export const ChatResizeHandle = ({ label }: Readonly<{ label: string }>) => {
     const observer = new ResizeObserver(measure)
     observer.observe(frame)
     if (hud) observer.observe(hud)
+    const content = new MutationObserver(() => {
+      const next = frame.querySelector<HTMLElement>('.fight-hud__bar')
+      if (next === hud) return
+      if (hud) observer.unobserve(hud)
+      hud = next
+      if (hud) observer.observe(hud)
+      measure()
+    })
+    content.observe(frame, { childList: true, subtree: true })
     measure()
     return () => {
+      content.disconnect()
       observer.disconnect()
       for (const property of ['max-width', 'max-height', 'requested-width', 'requested-height'])
         frame.style.removeProperty(`--world-chat-${property}`)
     }
   }, [saved_size])
   const resize = (width: number, height: number) => {
-    const frame = handle.current!.closest<HTMLElement>('[data-world-frame]')
+    const frame = handle.current!.closest<HTMLElement>(CHAT_VIEWPORT)
     if (!frame) return
     const styles = getComputedStyle(frame)
     const max_width = parseFloat(styles.getPropertyValue('--world-chat-max-width'))
@@ -47,7 +59,7 @@ export const ChatResizeHandle = ({ label }: Readonly<{ label: string }>) => {
     frame.style.setProperty('--world-chat-requested-height', `${Math.min(max_height, Math.max(100, height))}px`)
   }
   const remember_size = () => {
-    const frame = handle.current!.closest<HTMLElement>('[data-world-frame]')
+    const frame = handle.current!.closest<HTMLElement>(CHAT_VIEWPORT)
     if (!frame) return
     const chat_size = chat_size_from({
       width: parseFloat(frame.style.getPropertyValue('--world-chat-requested-width')),

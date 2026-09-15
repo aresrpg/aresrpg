@@ -4,73 +4,40 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const unlock = async (page: Page): Promise<void> => {
-  for (const key of [
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowDown',
-    'ArrowDown',
-    'ArrowLeft',
-    'ArrowRight',
-    'ArrowLeft',
-    'ArrowRight',
-    'b',
-    'a',
-  ])
-    await page.keyboard.press(key)
+  await page.getByRole('button', { name: 'Finish quests', exact: true }).click()
 }
 
-test('Konami reveals gathering below Friends, shakes the world, and fades HACK ZONE', async ({ page }) => {
+test('completing the journey reveals collapsible gathering controls; reset revokes access', async ({ page }) => {
   await page.goto('/e2e/fixtures/automation.html')
-  await expect(page.locator('[data-friends-card]')).toBeVisible()
   await expect(page.locator('[data-automation-panel]')).toHaveCount(0)
-  const shakes = await page.locator('[data-world-frame]').evaluateHandle((frame) => {
-    const animations: Animation[] = []
-    frame.animate = new Proxy(frame.animate, {
-      apply: (animate, element, args) => {
-        const animation = Reflect.apply(animate, element, args) as Animation
-        animations.push(animation)
-        return animation
-      },
-    })
-    return animations
-  })
   await unlock(page)
   const panel = page.locator('[data-automation-panel]')
   await expect(panel).toBeVisible()
-  await expect(page.getByText('HACK ZONE', { exact: true })).toBeVisible()
-  await expect.poll(() => shakes.evaluate((animations) => animations.length)).toBe(1)
-  await shakes.evaluate((animations) => Promise.all(animations.map((animation) => animation.finished)))
-  expect(await page.locator('[data-world-frame]').evaluate((element) => element.getAnimations().length)).toBe(0)
-  const friends = await page.locator('[data-friends-card]').boundingBox()
-  const automation = await panel.boundingBox()
-  expect(automation!.y).toBeGreaterThan(friends!.y + friends!.height)
-  await page.screenshot({ path: 'test-results/hack-zone-unlock.png' })
-  await expect(page.locator('[data-hack-zone]')).toHaveCount(0, { timeout: 5_000 })
-  await expect(panel).toBeVisible()
-  await unlock(page)
-  await expect(page.locator('[data-hack-zone]')).toHaveCount(0)
-  await page.screenshot({ path: 'test-results/automation-hud.png' })
+  await panel.getByRole('button', { name: 'Collapse gathering automation' }).click()
+  await expect(panel.getByRole('combobox')).toBeHidden()
+  await panel.getByRole('button', { name: 'Expand gathering automation' }).click()
+  await expect(panel.getByRole('combobox')).toBeVisible()
+  await page.getByRole('button', { name: 'Reset quests', exact: true }).click()
+  await expect(panel).toHaveCount(0)
 })
 
-test('typing does not unlock; reduced motion removes shake; manual movement stops a run', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
+test('collapse preserves a run and its Stop control; manual movement stops it', async ({ page }) => {
   await page.goto('/e2e/fixtures/automation.html')
-  const chat = page.getByRole('textbox', { name: 'Chat' })
-  await chat.focus()
-  await unlock(page)
-  await expect(page.locator('[data-automation-panel]')).toHaveCount(0)
-  await chat.blur()
   await unlock(page)
   const panel = page.locator('[data-automation-panel]')
-  await expect(panel).toBeVisible()
-  expect(await page.locator('[data-world-frame]').evaluate((element) => element.getAnimations().length)).toBe(0)
   await expect(panel.getByRole('button', { name: 'Start', exact: true })).toBeDisabled()
   const option = panel.locator('option:not([disabled])').nth(1)
   await panel.getByRole('combobox').selectOption((await option.getAttribute('value'))!)
   await panel.getByRole('button', { name: 'Start', exact: true }).click()
+  await panel.getByRole('button', { name: 'Collapse gathering automation' }).click()
   await expect(panel.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
-  await panel.getByRole('button', { name: 'Stop', exact: true }).blur()
+  const chat = page.getByRole('textbox', { name: 'Chat' })
+  await chat.fill('w')
+  await expect(panel.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
+  await chat.blur()
   await page.keyboard.press('w')
+  await expect(panel.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0)
+  await panel.getByRole('button', { name: 'Expand gathering automation' }).click()
   await expect(panel.getByText('Stopped', { exact: true })).toBeVisible()
 })
 
@@ -110,26 +77,3 @@ test('reselecting a character preserves automation; switching characters stops i
   await page.getByRole('button', { name: 'Bob', exact: true }).click()
   await expect(panel.getByText('Stopped', { exact: true })).toBeVisible()
 })
-
-for (const code of ['KeyA', 'KeyQ']) {
-  test(`Konami accepts B A when A uses physical ${code}`, async ({ page }) => {
-    await page.goto('/e2e/fixtures/automation.html')
-    await expect(page.locator('[data-friends-card]')).toBeVisible()
-    for (const key of [
-      'ArrowUp',
-      'ArrowUp',
-      'ArrowDown',
-      'ArrowDown',
-      'ArrowLeft',
-      'ArrowRight',
-      'ArrowLeft',
-      'ArrowRight',
-    ])
-      await page.keyboard.press(key)
-    await page.evaluate((physical_code) => {
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', bubbles: true }))
-      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', code: physical_code, bubbles: true }))
-    }, code)
-    await expect(page.locator('[data-automation-panel]')).toBeVisible()
-  })
-}

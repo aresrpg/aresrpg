@@ -539,10 +539,6 @@
   .gw-tab .jobs__recipe-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .gw-tab .jobs__recipe-name,
-  .gw-tab .jobs__ingredient-name {
-    white-space: normal;
-  }
   .gw-tab .chr-forge__workspace {
     padding: 12px;
   }
@@ -569,18 +565,7 @@
   padding: 12px;
   overflow: visible;
 }
-.gw-tab
-  .character-workspace__content
-  :is(
-    .stats__scroll,
-    .stats__card,
-    .sb__rows,
-    .sb__detail,
-    .jobs__list,
-    .jobs__detail,
-    .jobs__browse,
-    .chr-forge__panels
-  ) {
+.gw-tab .character-workspace__content :is(.stats__scroll, .stats__card, .sb__rows, .sb__detail, .chr-forge__panels) {
   flex: none;
   max-height: none;
   overflow: visible;
@@ -618,13 +603,6 @@
 .character-workspace__content[data-dense='true'] .sb__rowbtn {
   min-width: 0;
 }
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__list {
-  display: flex;
-  flex-direction: column;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__list-entries {
-  display: contents;
-}
 .gw-tab .character-workspace__content[data-dense='true'] .chr-forge__panels {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
@@ -639,34 +617,7 @@
   overflow: visible;
 }
 
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__table {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__table-head {
-  grid-column: 1 / -1;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__table-row {
-  grid-template-columns: 26px 36px minmax(0, 1fr) 36px 30px;
-  padding: 6px;
-  gap: 4px;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe-tiers {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe-tier {
-  min-width: 0;
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.gw-tab .character-workspace__content[data-dense='true'] .jobs__recipe {
-  padding: 6px;
-}
-
-.gw-tab .character-workspace__content :is(.sb, .jobs, .chr-forge) {
+.gw-tab .character-workspace__content :is(.sb, .chr-forge) {
   height: auto;
   overflow: visible;
 }

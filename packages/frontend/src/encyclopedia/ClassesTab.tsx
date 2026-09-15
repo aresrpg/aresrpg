@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { characteristic_ladders, characteristic_names, is_class_name } from '@aresrpg/immutable'
 
+import { Text } from '../i18n/Text.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 
@@ -139,7 +140,7 @@ export const ClassesTab = ({
                           {display_spell_name(row.name)}
                         </span>
                         <span className="shrink-0 text-[7px] tracking-[0.08em] text-[#777b86] uppercase">
-                          Lv. {row.unlock_level}
+                          <Text path="encyclopedia_page.level_short" values={{ level: row.unlock_level }} />
                         </span>
                       </button>
                     )

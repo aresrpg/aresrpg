@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Pickaxe } from 'lucide-react'
+import { ChevronDown, Pickaxe, Square } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import type { CharacterRow } from '@aresrpg/protocol'
 
@@ -10,6 +10,7 @@ import { gather_gate } from '../game/gather_gate.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import { gathering_resources } from '../modules/automation_route.ts'
 import { automation_available, automation_resource_gate } from '../modules/automation_step.ts'
+import { journey_complete } from '../journey/model.ts'
 import { selected_character } from '../modules/session.ts'
 import { dispatch_app, useAppStore, type AppState } from '../store.ts'
 
@@ -46,7 +47,7 @@ const GatheringControls = ({
   character,
   copy,
 }: Readonly<{ state: AppState; character: CharacterRow; copy: AppCopy }>) => {
-  const { item_type, quantity, run } = state.automation
+  const { collapsed, item_type, quantity, run } = state.automation
   const text = copy_text(copy.automation_panel)
   const resources = gathering_resources(character.world ?? null)
   const running = run !== null
@@ -55,9 +56,35 @@ const GatheringControls = ({
     <HudPanel className="pointer-events-auto w-56 overflow-hidden !rounded-[9px]" data-automation-panel="">
       <div className="flex items-center gap-2 border-b border-white/8 px-3 py-2 text-[9px] tracking-[0.18em] text-cyan-200 uppercase">
         <Pickaxe size={13} aria-hidden="true" />
-        {text('title')}
+        <button
+          aria-expanded={!collapsed}
+          aria-controls="automation-controls"
+          aria-label={text(collapsed ? 'expand' : 'collapse')}
+          className="group flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 text-left"
+          onClick={() => dispatch_app({ type: 'automation/collapse', collapsed: !collapsed })}
+          type="button"
+        >
+          <span>{text('title')}</span>
+          <ChevronDown className="group-aria-expanded:rotate-180" size={13} />
+        </button>
+        {running && (
+          <button
+            hidden={!collapsed}
+            aria-label={text('stop')}
+            className="cursor-pointer text-rose-300"
+            onClick={stop_gathering}
+            type="button"
+          >
+            <Square size={13} />
+          </button>
+        )}
       </div>
-      <div className="space-y-2 p-3">
+      {running && (
+        <div hidden={!collapsed} className="px-3 py-1 text-[9px] text-cyan-200" role="status">
+          {text(activity_text(state))} · {text('quantity', { quantity })}
+        </div>
+      )}
+      <div className="space-y-2 p-3" hidden={collapsed} id="automation-controls">
         <label className="block text-[8px] tracking-widest text-white/55 uppercase" htmlFor="automation-resource">
           {text('gathering')}
         </label>
@@ -93,7 +120,7 @@ const GatheringControls = ({
 export const AutomationPanel = ({ copy, enabled }: Readonly<{ copy: AppCopy; enabled: boolean }>) => {
   const state = useAppStore((value) => value)
   const character = selected_character(state.session)
-  if (!enabled || !state.automation.unlocked || !character) return null
+  if (!enabled || !journey_complete(state.journey) || !character) return null
   const panel = <GatheringControls state={state} character={character} copy={copy} />
   if (state.navigation.page === 'world') return panel
   return state.automation.run

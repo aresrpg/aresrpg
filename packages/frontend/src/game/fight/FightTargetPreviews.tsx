@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { Text } from '../../i18n/Text.tsx'
 // The legacy fight nametag, fed by exact disposable runs through the current fight resolver.
 
 import type { EntityScreenAnchor } from '@aresrpg/engine'
@@ -44,7 +46,9 @@ export const FightTargetPreviews = ({
           <div className="ent-tt__head">
             <span aria-hidden="true" className="ent-tt__dot" />
             <span className="ent-tt__name">{target.name}</span>
-            <span className="ent-tt__level">LV {target.level.toString()}</span>
+            <span className="ent-tt__level">
+              <Text path="encyclopedia_page.level_short" values={{ level: target.level.toString() }} />
+            </span>
             <span className="ent-tt__hp-paren">
               ({target.hp_before}
               {hp_delta && (

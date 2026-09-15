@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useNumbers } from '@aresrpg/frontend/finance'
 import type { CSSProperties } from 'react'
 import { Check, ChevronsRight } from 'lucide-react'
 import { format_amount, type FinanceSnapshot, type KaresCopy } from '@aresrpg/frontend/finance'
@@ -8,7 +9,7 @@ import { format_amount, type FinanceSnapshot, type KaresCopy } from '@aresrpg/fr
 import { offering_preview } from './offering_model.ts'
 import { FundingTexture } from './FundingTexture.tsx'
 
-export const funding_track_view = (snapshot: FinanceSnapshot | null) => {
+export const funding_track_view = (snapshot: FinanceSnapshot | null, amount_text = format_amount) => {
   if (!snapshot)
     return {
       known: false,
@@ -32,15 +33,16 @@ export const funding_track_view = (snapshot: FinanceSnapshot | null) => {
     minimum_line: true,
     minimum_met: preview.minimum_met,
     oversubscribed: preview.oversubscribed,
-    minimum: `${format_amount(snapshot.offering.min_raise)} SUI`,
-    cap: `${format_amount(snapshot.offering.max_raise)} SUI`,
+    minimum: `${amount_text(snapshot.offering.min_raise)} SUI`,
+    cap: `${amount_text(snapshot.offering.max_raise)} SUI`,
     percent: `${preview.subscription_hundredths}%`,
-    excess: preview.oversubscribed ? `${format_amount(preview.deposited - preview.accepted, 9)} SUI` : null,
+    excess: preview.oversubscribed ? `${amount_text(preview.deposited - preview.accepted, 9)} SUI` : null,
   }
 }
 
 export const FundingTrack = ({ snapshot, copy }: Readonly<{ snapshot: FinanceSnapshot | null; copy: KaresCopy }>) => {
-  const track = funding_track_view(snapshot)
+  const { amount: format_amount } = useNumbers()
+  const track = funding_track_view(snapshot, format_amount)
   const unknown = track.known ? undefined : copy.funding_unknown
   return (
     <div

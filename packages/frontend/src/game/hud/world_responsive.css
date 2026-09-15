@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
-[data-world-frame] {
+:is([data-world-frame], [data-chat-viewport]) {
   container: world-viewport / size;
   --world-map-size: clamp(96px, min(23cqw, 30cqh), 288px);
   --world-chat-width: clamp(
@@ -35,7 +35,7 @@
   font-size: clamp(8px, 1cqw, 10px);
   letter-spacing: 0.04em;
 }
-[data-world-frame] .gw-worldchat {
+:is([data-world-frame], [data-chat-viewport]) .gw-worldchat {
   width: var(--world-chat-width);
   height: var(--world-chat-height);
 }
@@ -102,7 +102,7 @@
   }
 }
 @container world-viewport (max-width: 400px) {
-  [data-world-frame] .gw-worldchat {
+  :is([data-world-frame], [data-chat-viewport]) .gw-worldchat {
     width: var(--world-chat-width);
   }
   [data-world-frame] .fight-hud--overworld .fight-hud__bottom {
@@ -118,17 +118,17 @@
   }
 }
 
-[data-world-frame] .gw-worldchat .chat__filters {
+:is([data-world-frame], [data-chat-viewport]) .gw-worldchat .chat__filters {
   flex-wrap: wrap;
   gap: 4px 6px;
 }
-[data-world-frame] .gw-worldchat .chat > footer {
+:is([data-world-frame], [data-chat-viewport]) .gw-worldchat .chat > footer {
   padding: 5px;
 }
-[data-world-frame] .gw-worldchat .chat__input {
+:is([data-world-frame], [data-chat-viewport]) .gw-worldchat .chat__input {
   padding: 6px;
 }
-[data-world-frame] .gw-worldchat .chat__scope {
+:is([data-world-frame], [data-chat-viewport]) .gw-worldchat .chat__scope {
   padding-inline: 4px;
   font-size: 9px;
 }

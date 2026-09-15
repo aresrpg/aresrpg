@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 /* eslint-disable complexity -- the app root explicitly composes mutually exclusive route surfaces. */
 
 import './game/hud/world_responsive.css'
@@ -12,6 +13,9 @@ import { Check, Copy } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
+import { useNumbers } from './i18n/useNumbers.ts'
+import { LocaleScope } from './i18n/LocaleScope.tsx'
+import { player_error_text } from './i18n/player_error.ts'
 import { EngineNotice } from './components/EngineNotice.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { WalletChoices, WalletConnectButton, WalletPickerModal } from './components/WalletPickerModal.tsx'
@@ -61,11 +65,9 @@ import { toast } from './toast.ts'
 import { JourneyTracker } from './journey/JourneyPanel.tsx'
 import { JourneyHost } from './journey/JourneyHost.tsx'
 import { TutorialHost } from './tutorial/TutorialHost.tsx'
-import { format_sui } from './wallet_amount.ts'
 import { FightLevelUpCard, FightResultCard } from './game/fight/FightResultCard.tsx'
 import { JobLevelUpCard } from './game/jobs/JobLevelUpCard.tsx'
 import { AutomationPanel } from './components/AutomationPanel.tsx'
-import { HackZoneUnlock } from './components/HackZoneUnlock.tsx'
 import { FriendsPanel } from './components/FriendsPanel.tsx'
 import { PartyFrame } from './components/PartyFrame.tsx'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
@@ -183,7 +185,9 @@ const Login = ({
               </button>
             </>
           </div>
-          {error && <div className="text-center text-[10px] leading-6 text-[#ff7d7d]">{error}</div>}
+          {error && (
+            <div className="text-center text-[10px] leading-6 text-[#ff7d7d]">{player_error_text(copy, error)}</div>
+          )}
         </div>
       </section>
     </>
@@ -195,6 +199,7 @@ const Welcome = ({
   create,
   funding_address,
 }: Readonly<{ copy: AppCopy; create: () => void; funding_address: string | null }>) => {
+  const localized_numbers = useNumbers()
   const [copied, set_copied] = useState(false)
   const copy_address = (): void => {
     if (!funding_address) return
@@ -212,9 +217,9 @@ const Welcome = ({
         {funding_address && (
           <div className="mt-5 border border-[#c8963c]/35 bg-[#c8963c]/6 p-4">
             <p className="text-[11px] leading-6 text-[#d9af57]">
-              {character_creation_funding_text(copy.welcome_need_sui).replaceAll(
+              {character_creation_funding_text(copy.welcome_need_sui, localized_numbers.sui).replaceAll(
                 '{{price}}',
-                format_sui(CHARACTER_PRICE_MIST, 0)
+                localized_numbers.sui(CHARACTER_PRICE_MIST, 0)
               )}
             </p>
             <div className="mt-3 flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-2">
@@ -311,12 +316,12 @@ export function App() {
         dispatch_app({ type: 'dialog/open', dialog: null })
         dispatch_app({ type: 'wallet/refresh' })
       } catch (error) {
-        pending.error(character_creation_failure_message(error, copy))
+        pending.error(character_creation_failure_message(error, copy, locale))
         dispatch_app({ type: 'wallet/refresh' })
         throw error
       }
     },
-    [copy, session.characters.length, wallet]
+    [copy, locale, session.characters.length, wallet]
   )
   const sui_insufficient = character_creation_insufficient(session.sui_balance_mist)
   const world_unavailable = engine_status.issue?.code === 'world_unavailable'
@@ -331,185 +336,186 @@ export function App() {
   if (!copy) return <main className="fixed inset-0 bg-bg" />
 
   return (
-    <main className="app-ui fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
-      <div
-        aria-hidden={navigation.page !== 'world' && !(navigation.page === 'kolizeum' && fight_active)}
-        data-world-frame=""
-        className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page, fight_active)} ${
-          in_app
-            ? 'app-world-frame rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
-            : 'inset-0'
-        }`}
-      >
-        <BiomeMusic />
-        <HackZoneUnlock copy={copy} enabled={in_app} />
-        <CityArrivalBanner
-          active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
-          copy={copy}
-        />
-        <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
-
-        {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (
-          <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
-            <MountPrompt copy={copy} />
-            <FightPrompt copy={copy} />
-            <DungeonPortalPrompt copy={copy} />
-            <PortalPrompt copy={copy} />
-            <PlayerNametag />
-            <SpawnNametag copy={copy} />
-            <AmbushPrompt copy={copy} />
-            <CompassStrip copy={copy} />
-            <RunToProgress copy={copy} />
-            <ZonePrompt copy={copy} />
-            <ZoneRevealBanner copy={copy} />
-            <Minimap copy={copy} />
-            <OverworldVitals />
-            <GatherProgress copy={copy} />
-            <WorldChat copy={copy} />
-          </div>
-        )}
-        {in_app && dungeon_lobby_open && (
-          <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
-            <DungeonLobby key={session.selected_character_id} copy={copy} />
-          </div>
-        )}
-        <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
-          <div className="flex w-fit flex-col items-start gap-2">
-            <FpsPanel
-              active={navigation.page === 'world'}
-              change_quality={change_quality}
-              copy={copy}
-              fight_access={party_available ? fight_access : 0}
-              flatten_locked={flatten_locked}
-              flattened={effective_flattened(settings.flat_mode, engine_status.backend)}
-              party_available={party_available}
-              quality={settings.quality}
-              toggle_fight_access={() =>
-                dispatch_app({
-                  type: 'settings/changed',
-                  settings: Object.freeze({ ...settings, fight_access: fight_access === 0 ? 1 : 0 }),
-                })
-              }
-              toggle_flattened={toggle_flattened}
-            />
-            {in_app && social_hud_open && <FriendsPanel copy={copy} />}
-            <AutomationPanel copy={copy} enabled={in_app} />
-            <JourneyTracker copy={copy} />
-          </div>
-          {in_app && social_hud_open && <PartyFrame copy={copy} />}
-        </div>
-
-        {loading_universe && (
-          <div className={`${CANVAS_OVERLAY_CLASS} z-[130] bg-bg/35 backdrop-blur-[9px]`}>
-            <div className="absolute inset-0 grid place-items-center">
-              <ThinkingOrb aria-label={copy.loading_universe} size={64} state="connecting" theme="dark" />
-            </div>
-          </div>
-        )}
-        {in_app && navigation.page === 'world' && navigation.dialog === 'welcome' && (
-          <Welcome
+    <LocaleScope locale={locale}>
+      <main className="app-ui fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
+        <div
+          aria-hidden={navigation.page !== 'world' && !(navigation.page === 'kolizeum' && fight_active)}
+          data-world-frame=""
+          className={`fixed overflow-hidden transition-opacity duration-150 ${WORLD_FRAME_LAYER} ${world_frame_visibility(navigation.page, fight_active)} ${
+            in_app
+              ? 'app-world-frame rounded-[14px] shadow-[0_18px_50px_rgba(0,0,0,0.55),0_0_0_1px_rgba(255,255,255,0.06),inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+              : 'inset-0'
+          }`}
+        >
+          <BiomeMusic />
+          <CityArrivalBanner
+            active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
             copy={copy}
-            create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
-            funding_address={sui_insufficient && wallet ? wallet.address : null}
+          />
+          <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
+
+          {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (
+            <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+              <MountPrompt copy={copy} />
+              <FightPrompt copy={copy} />
+              <DungeonPortalPrompt copy={copy} />
+              <PortalPrompt copy={copy} />
+              <PlayerNametag />
+              <SpawnNametag copy={copy} />
+              <AmbushPrompt copy={copy} />
+              <CompassStrip copy={copy} />
+              <RunToProgress copy={copy} />
+              <ZonePrompt copy={copy} />
+              <ZoneRevealBanner copy={copy} />
+              <Minimap copy={copy} />
+              <OverworldVitals />
+              <GatherProgress copy={copy} />
+              <WorldChat copy={copy} />
+            </div>
+          )}
+          {in_app && dungeon_lobby_open && (
+            <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
+              <DungeonLobby key={session.selected_character_id} copy={copy} />
+            </div>
+          )}
+          <div className={`${CANVAS_OVERLAY_CLASS} z-[110]`}>
+            <div className="flex w-fit flex-col items-start gap-2">
+              <FpsPanel
+                active={navigation.page === 'world'}
+                change_quality={change_quality}
+                copy={copy}
+                fight_access={party_available ? fight_access : 0}
+                flatten_locked={flatten_locked}
+                flattened={effective_flattened(settings.flat_mode, engine_status.backend)}
+                party_available={party_available}
+                quality={settings.quality}
+                toggle_fight_access={() =>
+                  dispatch_app({
+                    type: 'settings/changed',
+                    settings: Object.freeze({ ...settings, fight_access: fight_access === 0 ? 1 : 0 }),
+                  })
+                }
+                toggle_flattened={toggle_flattened}
+              />
+              {in_app && social_hud_open && <FriendsPanel copy={copy} />}
+              <AutomationPanel copy={copy} enabled={in_app} />
+              <JourneyTracker copy={copy} />
+            </div>
+            {in_app && social_hud_open && <PartyFrame copy={copy} />}
+          </div>
+
+          {loading_universe && (
+            <div className={`${CANVAS_OVERLAY_CLASS} z-[130] bg-bg/35 backdrop-blur-[9px]`}>
+              <div className="absolute inset-0 grid place-items-center">
+                <ThinkingOrb aria-label={copy.loading_universe} size={64} state="connecting" theme="dark" />
+              </div>
+            </div>
+          )}
+          {in_app && navigation.page === 'world' && navigation.dialog === 'welcome' && (
+            <Welcome
+              copy={copy}
+              create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
+              funding_address={sui_insufficient && wallet ? wallet.address : null}
+            />
+          )}
+          {in_app && (navigation.page === 'world' || navigation.page === 'kolizeum') && (
+            <>
+              <FightResultCard copy={copy} />
+              <FightLevelUpCard copy={copy} />
+            </>
+          )}
+          <JobLevelUpCard copy={copy} />
+        </div>
+        <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
+        <PlayerContextMenu copy={copy} />
+        <JourneyHost copy={copy} />
+        {in_app && wallet && navigation.dialog === 'top_up' && (
+          <AddFundsModal
+            address={wallet.address}
+            copy={copy}
+            on_close={() => dispatch_app({ type: 'dialog/open', dialog: null })}
+            warning={copy.out_of_sui_body}
           />
         )}
-        {in_app && (navigation.page === 'world' || navigation.page === 'kolizeum') && (
+        {in_app &&
+          navigation.page === 'world' &&
+          navigation.dialog === 'character_create' &&
+          session.characters.length < MAX_TRACKED_CHARACTERS && (
+            <CharacterCreateModal
+              cancel={() =>
+                dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
+              }
+              copy={copy}
+              create={create_character}
+              insufficient={sui_insufficient}
+              view_spells={(classe) => {
+                open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
+              }}
+            />
+          )}
+        {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
+        <Toasts />
+        <CrushResultModal copy={copy} />
+        <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />
+
+        {show_graphics_notice && (
+          <EngineNotice
+            copy={copy}
+            status={engine_status}
+            dismiss={() => set_graphics_notice_dismissed(true)}
+            reload={() => globalThis.location.reload()}
+          />
+        )}
+
+        {!session.wallet && session.auth_status !== 'connecting' && !navigation.guest_spectating && (
+          <Login
+            auth_ready={session.auth_ready}
+            wallets={session.wallets}
+            copy={copy}
+            gift={navigation.page === 'airdrop'}
+            login_google={() => dispatch_app({ type: 'auth/login_google' })}
+            login_wallet={(name) => dispatch_app({ type: 'auth/login_wallet', name })}
+            set_show_wallets={set_show_wallets}
+            show_wallets={show_wallets}
+            spectate={() => dispatch_app({ type: 'spectate/changed', enabled: true })}
+          />
+        )}
+
+        {!session.wallet && navigation.guest_spectating && (
           <>
-            <FightResultCard copy={copy} />
-            <FightLevelUpCard copy={copy} />
+            <button
+              className={`${HUD_PANEL_CLASS} fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 cursor-pointer !border-[#4a9eff]/25 px-[22px] py-3 text-[10px] tracking-[0.2em] text-[#67adff]`}
+              onClick={() => dispatch_app({ type: 'spectate/changed', enabled: false })}
+            >
+              {copy.sign_in}
+            </button>
+            <HudPanel className="fixed right-5 bottom-5 z-[120] px-3 py-2 text-[8px] tracking-[0.2em] text-[#a3a5ad] max-[600px]:hidden">
+              {copy.drag_hint}
+            </HudPanel>
           </>
         )}
-        <JobLevelUpCard copy={copy} />
-      </div>
-      <div className="pointer-events-none fixed inset-0 z-[100] bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
-      <PlayerContextMenu copy={copy} />
-      <JourneyHost copy={copy} />
-      {in_app && wallet && navigation.dialog === 'top_up' && (
-        <AddFundsModal
-          address={wallet.address}
-          copy={copy}
-          on_close={() => dispatch_app({ type: 'dialog/open', dialog: null })}
-          warning={copy.out_of_sui_body}
-        />
-      )}
-      {in_app &&
-        navigation.page === 'world' &&
-        navigation.dialog === 'character_create' &&
-        session.characters.length < MAX_TRACKED_CHARACTERS && (
-          <CharacterCreateModal
-            cancel={() =>
-              dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
-            }
-            copy={copy}
-            create={create_character}
-            insufficient={sui_insufficient}
-            view_spells={(classe) => {
-              open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
-            }}
-          />
+
+        {session.wallet && (
+          <>
+            <AppShell
+              change_locale={change_locale}
+              copy={copy}
+              create_character={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
+              disconnect={disconnect}
+              locale={locale}
+              network={env.network}
+              open_page={open_page}
+              open_path={open_path}
+              page={navigation.page}
+              pathname={navigation.pathname}
+              select_character={select_character}
+              session={session}
+              settings={settings}
+            />
+            <TutorialHost blocked={show_graphics_notice} copy={copy} />
+          </>
         )}
-      {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
-      <Toasts />
-      <CrushResultModal copy={copy} />
-      <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />
-
-      {show_graphics_notice && (
-        <EngineNotice
-          copy={copy}
-          status={engine_status}
-          dismiss={() => set_graphics_notice_dismissed(true)}
-          reload={() => globalThis.location.reload()}
-        />
-      )}
-
-      {!session.wallet && session.auth_status !== 'connecting' && !navigation.guest_spectating && (
-        <Login
-          auth_ready={session.auth_ready}
-          wallets={session.wallets}
-          copy={copy}
-          gift={navigation.page === 'airdrop'}
-          login_google={() => dispatch_app({ type: 'auth/login_google' })}
-          login_wallet={(name) => dispatch_app({ type: 'auth/login_wallet', name })}
-          set_show_wallets={set_show_wallets}
-          show_wallets={show_wallets}
-          spectate={() => dispatch_app({ type: 'spectate/changed', enabled: true })}
-        />
-      )}
-
-      {!session.wallet && navigation.guest_spectating && (
-        <>
-          <button
-            className={`${HUD_PANEL_CLASS} fixed bottom-6 left-1/2 z-[120] -translate-x-1/2 cursor-pointer !border-[#4a9eff]/25 px-[22px] py-3 text-[10px] tracking-[0.2em] text-[#67adff]`}
-            onClick={() => dispatch_app({ type: 'spectate/changed', enabled: false })}
-          >
-            {copy.sign_in}
-          </button>
-          <HudPanel className="fixed right-5 bottom-5 z-[120] px-3 py-2 text-[8px] tracking-[0.2em] text-[#a3a5ad] max-[600px]:hidden">
-            {copy.drag_hint}
-          </HudPanel>
-        </>
-      )}
-
-      {session.wallet && (
-        <>
-          <AppShell
-            change_locale={change_locale}
-            copy={copy}
-            create_character={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
-            disconnect={disconnect}
-            locale={locale}
-            network={env.network}
-            open_page={open_page}
-            open_path={open_path}
-            page={navigation.page}
-            pathname={navigation.pathname}
-            select_character={select_character}
-            session={session}
-            settings={settings}
-          />
-          <TutorialHost blocked={show_graphics_notice} copy={copy} />
-        </>
-      )}
-    </main>
+      </main>
+    </LocaleScope>
   )
 }

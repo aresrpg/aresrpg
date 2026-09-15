@@ -189,6 +189,7 @@ const MODULE_REGISTRY = [
   [friends, 'player'],
   [party, 'player'],
   [run_to, 'player'],
+  [journey, 'player'],
   [automation, 'player'],
   [party_follow, 'player'],
   [trade, 'player'],
@@ -196,7 +197,6 @@ const MODULE_REGISTRY = [
   [mastery, 'player'],
   [distribution, 'player'],
   [job_level_up, 'player'],
-  [journey, 'player'],
 ] as const satisfies readonly (readonly [AppModule, 'player' | 'demo' | 'shared'])[]
 
 const MODULES = MODULE_REGISTRY.map(([module]) => module)

@@ -6,11 +6,13 @@ import type { ListingRow } from '@aresrpg/protocol'
 import { ROYALTY_FLOOR_MIST } from '@aresrpg/sdk/marketplace'
 
 import { SuiLogo } from '../components/SuiLogo.tsx'
+import { useLocale } from '../i18n/LocaleScope.tsx'
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { useText } from '../i18n/useText.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { format_sui } from '../wallet_amount.ts'
 
 export const listing_item = (listing: Readonly<Pick<ListingRow, 'item_type'>>) =>
   listing.item_type ? (content_catalog.items.find(({ item_type }) => item_type === listing.item_type) ?? null) : null
@@ -40,8 +42,9 @@ export const ListingIcon = ({
 }
 
 export const CategoryName = ({ category }: Readonly<{ category: string | null }>) => {
+  const text = useText()
   const category_name = useItemCategoryName()
-  return category ? category_name(category) : 'Character'
+  return category ? category_name(category) : text('ui.character')
 }
 
 export const short_address = (address: string | null): string =>
@@ -58,23 +61,36 @@ export const SuiUnit = ({ size = 10 }: Readonly<{ size?: number }>) => (
 export const MarketVolumeBadge = ({
   window,
   mist,
+  partial = false,
   text,
 }: Readonly<{
   window: '24h' | '30d'
   mist: string | null
+  partial?: boolean
   text: CopyText
-}>) => (
-  <div
-    className="flex shrink-0 items-center gap-3 rounded-sm border border-[#4a9eff]/25 bg-[linear-gradient(110deg,rgba(74,158,255,.08),rgba(200,150,60,.06))] px-3 py-2"
-    data-marketplace-volume={window}
-    title={text(mist === null ? 'volume_unavailable' : 'volume_window', { window })}
-  >
-    <span className="text-[8px] tracking-[0.16em] text-muted uppercase">{text(`volume_${window}`)}</span>
-    <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gold tabular-nums">
-      {mist === null ? '—' : format_sui(BigInt(mist), 2)} <SuiUnit size={12} />
-    </span>
-  </div>
-)
+}>) => {
+  const locale = useLocale()
+  const numbers = useNumbers()
+  const period = { '24h': { value: 24, unit: 'hour' }, '30d': { value: 30, unit: 'day' } }[window]
+  const duration = new Intl.NumberFormat(locale, { style: 'unit', unit: period.unit, unitDisplay: 'short' }).format(
+    period.value
+  )
+  return (
+    <div
+      className="flex shrink-0 items-center gap-3 rounded-sm border border-[#4a9eff]/25 bg-[linear-gradient(110deg,rgba(74,158,255,.08),rgba(200,150,60,.06))] px-3 py-2"
+      data-marketplace-volume={window}
+      title={text(mist === null ? 'volume_unavailable' : partial ? 'volume_partial' : 'volume_window', {
+        window: duration,
+      })}
+      data-volume-partial={(mist !== null && partial) || undefined}
+    >
+      <span className="text-[8px] tracking-[0.16em] text-muted uppercase">{text(`volume_${window}`)}</span>
+      <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gold tabular-nums">
+        {mist === null ? '—' : `${partial ? '≥ ' : ''}${numbers.sui(BigInt(mist), 2)}`} <SuiUnit size={12} />
+      </span>
+    </div>
+  )
+}
 
 export const buyer_total = (ask: bigint): bigint => {
   const royalty = (ask * BigInt(marketplace_royalty_bps)) / BigInt(basis_points)

@@ -5,6 +5,7 @@ import { Gem, Hammer, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 
+import { player_error_text } from '../i18n/player_error.ts'
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { ItemSnapshotTooltip, type ItemSnapshotHover } from '../components/ItemSnapshotTooltip.tsx'
 import { crush_results, type CrushPresentation, type CrushResult } from '../crush_result.ts'
@@ -36,19 +37,28 @@ const CrushRuneCell = ({ copy, item }: Readonly<{ copy: AppCopy; item: Readonly<
   )
 }
 
-export const CrushProgressDialog = ({ copy, item }: Readonly<{ copy: AppCopy; item: Readonly<ItemRow> }>) => {
+export const CrushProgressDialog = ({
+  copy,
+  items,
+}: Readonly<{ copy: AppCopy; items: readonly Readonly<ItemRow>[] }>) => {
   const t = copy_text(copy.characters_page)
   return (
     <ModalFrame close={null} close_label={copy.wallet_close} label={t('crush_title')} max_width="max-w-lg" soft>
       <div className="grid min-h-72 place-items-center p-8" data-crush-progress="">
         <div className="flex flex-col items-center gap-5 text-center">
           <div className="relative grid size-24 place-items-center border border-gold/30 bg-black/20 shadow-[0_0_45px_rgba(200,150,60,0.12)]">
-            <InventoryItemCell class_name="!size-20 animate-pulse [animation-duration:650ms]" disabled item={item} />
+            <InventoryItemCell
+              class_name="!size-20 animate-pulse [animation-duration:650ms]"
+              disabled
+              item={items[0]!}
+            />
             <Hammer className="absolute -top-2 -right-2 animate-bounce text-gold" size={24} />
           </div>
           <div>
             <Loader2 className="mx-auto mb-3 animate-spin text-gold" size={18} />
-            <p className="text-[10px] tracking-[0.18em] text-gold uppercase">{t('crush_pending')}</p>
+            <p className="text-[10px] tracking-[0.18em] text-gold uppercase">
+              {t('crush_pending_count', { count: items.length })}
+            </p>
           </div>
         </div>
       </div>
@@ -62,7 +72,7 @@ const CrushFailureDialog = ({ close, copy, error }: Readonly<{ close: () => void
     <ModalFrame close={close} close_label={copy.wallet_close} label={t('crush_title')} max_width="max-w-lg" soft>
       <div className="p-6 sm:p-8">
         <p className="text-[10px] tracking-[0.18em] text-[#ff7d94] uppercase">{t('crush_title')}</p>
-        <p className="mt-4 text-[10px] leading-6 text-text">{error}</p>
+        <p className="mt-4 text-[10px] leading-6 text-text">{player_error_text(copy, error)}</p>
         <button className="btn-outline chr-btn mt-6 w-full" onClick={close} type="button">
           {copy.wallet_close}
         </button>
@@ -125,7 +135,7 @@ export const CrushResultModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   useEffect(() => crush_results.subscribe(set_presentation), [])
 
   if (!presentation) return null
-  if (presentation.type === 'crushing') return <CrushProgressDialog copy={copy} item={presentation.item} />
+  if (presentation.type === 'crushing') return <CrushProgressDialog copy={copy} items={presentation.items} />
   if (presentation.type === 'failed') return <CrushFailureDialog close={close} copy={copy} error={presentation.error} />
   return <CrushResultDialog close={close} copy={copy} result={presentation.result} />
 }

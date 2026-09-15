@@ -4,12 +4,11 @@
 import { Check, ChevronDown, Copy, LogOut, Plus, Send, Wallet } from 'lucide-react'
 import { useCallback, useId, useRef, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { display_suins_name } from '../leaderboards/presentation.ts'
-import { format_sui } from '../wallet_amount.ts'
-import { format_amount } from '../kares/model.ts'
 
 import { AddFundsModal } from './AddFundsModal.tsx'
 import { SendSuiModal } from './SendSuiModal.tsx'
@@ -22,6 +21,7 @@ export const WalletCard = ({
   disconnect,
   session,
 }: Readonly<{ copy: AppCopy; disconnect: () => void; session: SessionState }>) => {
+  const localized_numbers = useNumbers()
   const default_name = useAppStore((state) => state.suins.snapshot?.default_name ?? null)
   const menu_id = useId()
   const menu = useRef<HTMLElement>(null)
@@ -35,7 +35,7 @@ export const WalletCard = ({
   )
   if (!wallet) return null
   const { address } = wallet
-  const sui_balance = session.sui_balance_mist === null ? '—' : format_sui(session.sui_balance_mist, 2)
+  const sui_balance = session.sui_balance_mist === null ? '—' : localized_numbers.sui(session.sui_balance_mist, 2)
   const open_modal = (next: 'funds' | 'send'): void => {
     menu.current?.hidePopover()
     set_modal(next)
@@ -98,7 +98,7 @@ export const WalletCard = ({
         <div className="flex items-center gap-1.5 text-[13px] text-gold" data-kares-balance="">
           <KaresLogo size={16} />
           <span className="tabular-nums">
-            {session.kares_balance === null ? '—' : format_amount(session.kares_balance)}
+            {session.kares_balance === null ? '—' : localized_numbers.amount(session.kares_balance)}
           </span>
           <span className="text-[11px] text-muted">KARES</span>
         </div>
@@ -121,7 +121,7 @@ export const WalletCard = ({
         <div className="flex items-center justify-between gap-2 border-t border-white/8 pt-2 text-[11px]">
           <span className="tracking-[0.08em] text-[#777b86]">{copy.wallet_gas_spent}</span>
           <span className="shrink-0 whitespace-nowrap font-mono text-[#d6d1c8] tabular-nums">
-            {format_sui(session.gas_spent_mist, 4)} SUI
+            {localized_numbers.sui(session.gas_spent_mist, 4)} SUI
           </span>
         </div>
         <button

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { useEffect, useReducer } from 'react'
-import { finance_label, parse_amount, type KaresCopy } from '@aresrpg/frontend/finance'
+import { finance_label, parse_amount, useLocale, type KaresCopy } from '@aresrpg/frontend/finance'
 
 export const read_usd_quote = (value: unknown): bigint => {
   const data = (value as { data?: { base?: unknown; currency?: unknown; amount?: unknown } } | null)?.data
@@ -12,13 +12,18 @@ export const read_usd_quote = (value: unknown): bigint => {
   return amount
 }
 
-export const usd_market_cap = (mist: bigint, quote: bigint): string => {
+export const usd_market_cap = (mist: bigint, quote: bigint, locale = 'en'): string => {
   // Both inputs have nine decimal places; round the display to cents using integers.
   const cents = (mist * quote + 5_000_000_000_000_000n) / 10_000_000_000_000_000n
-  return `$${(cents / 100n).toLocaleString('en-US')}.${(cents % 100n).toString().padStart(2, '0')}`
+  const fraction = (cents % 100n).toString().padStart(2, '0')
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' })
+    .formatToParts(cents / 100n)
+    .map((part) => (part.type === 'fraction' ? fraction : part.value))
+    .join('')
 }
 
 export const LaunchMarketCap = ({ amount, copy }: Readonly<{ amount: bigint | null; copy: KaresCopy }>) => {
+  const locale = useLocale()
   const [quote, receive_quote] = useReducer((_: bigint | null, value: bigint | null) => value, null)
   useEffect(() => {
     const controller = new AbortController()
@@ -47,7 +52,7 @@ export const LaunchMarketCap = ({ amount, copy }: Readonly<{ amount: bigint | nu
     <div data-launch-market-cap="" title={`${copy.launch_market_cap_note} · Coinbase SUI/USD`}>
       <p className={finance_label}>{copy.launch_market_cap} · USD</p>
       <p className="mt-2 text-xl font-medium text-gold-light tabular-nums">
-        {amount === null || quote === null ? '—' : usd_market_cap(amount, quote)}
+        {amount === null || quote === null ? '—' : usd_market_cap(amount, quote, locale)}
       </p>
     </div>
   )

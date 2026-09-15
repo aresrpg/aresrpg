@@ -112,11 +112,12 @@ test('offering deadlines do not expose early claims or refunds', () => {
   expect(offering_phase({ ...funded, offering: { ...funded.offering, settled: true } })).toBe('successful')
 })
 
-test('every KARES string exists in all six locales', async () => {
+test('every KARES string exists in all supported locales', async () => {
   const english = (await load_app_copy('en')).kares_page
   for (const { code } of LOCALES) {
     const copy = await load_app_copy(code)
-    expect(copy.kares).toBe('Stacking')
+    expect(copy.kares).not.toBe('Stacking')
+    expect(copy.kares.trim()).not.toBe('')
     expect(Object.keys(copy.kares_page).sort()).toEqual(Object.keys(english).sort())
     expect(Object.values(copy.kares_page).every((value) => typeof value === 'string' && value.length > 0)).toBe(true)
   }

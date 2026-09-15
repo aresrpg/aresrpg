@@ -10,6 +10,7 @@ import { channels, type EventEnvelope } from '../protocol.ts'
 import { get_market_history } from '../reads/get_market_history.ts'
 import { get_market_counts, get_market_slice } from '../reads/get_market_slice.ts'
 import { create_watcher } from '../pubsub_bus.ts'
+import { observe_market_prices } from '../market_prices_observer.ts'
 import { latest_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
@@ -20,12 +21,16 @@ export default {
   name: 'player_market',
 
   reduce: (state, action) => {
+    if (action.type === 'packet/market_prices_observe')
+      return { ...state, market_price_observation: action.observation }
     if (action.type === 'packet/market_observe') return { ...state, market_observation: action.observation }
-    if (action.type === 'close') return state.market_observation ? { ...state, market_observation: null } : state
+    if (action.type === 'close') return { ...state, market_observation: null, market_price_observation: null }
     return state
   },
 
-  observe: ({ pubsub, graph, events, send, address, get_state, signal, dispatch }) => {
+  observe: (context) => {
+    const { pubsub, graph, events, send, address, get_state, signal, dispatch } = context
+    const price_event = observe_market_prices(context)
     const read_latest_counts = latest_reader(
       () => get_market_counts(graph),
       (counts) => send({ type: 'packet/market_counts', counts })
@@ -66,6 +71,7 @@ export default {
     const { watch } = create_watcher(pubsub, signal)
 
     const forward_economy = (payload: EventEnvelope) => {
+      price_event(payload)
       const observed = get_state().market_observation
       if (payload.data.seller === address && ['MarketListed', 'MarketDelisted'].includes(payload.type))
         dispatch({ type: 'action/refresh_account', domain: 'listings' })

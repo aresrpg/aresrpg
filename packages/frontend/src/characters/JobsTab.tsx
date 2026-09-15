@@ -20,6 +20,9 @@ import {
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { ArrowRightLeft, X } from 'lucide-react'
 
+import { localized_error } from '../i18n/error_text.ts'
+import { useVocabulary } from '../i18n/useVocabulary.ts'
+import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { encyclopedia_catalog, titleize, type SeedRecipe } from '../content/catalog.ts'
 import { ConsumableEffectSection } from '../encyclopedia/ConsumableEffectSection.tsx'
@@ -41,7 +44,6 @@ import { JobItemIcon } from './JobItemIcon.tsx'
 
 import './jobs.css'
 import './jobs_adviser.css'
-
 const CATEGORY_ORDER = Object.freeze(Object.keys(job_groups) as JobKind[])
 const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
   gathering: 'jobs.category.gathering',
@@ -49,14 +51,12 @@ const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
   equipment_craft: 'jobs.category.equipment',
   consumable_craft: 'jobs.category.consumable',
 })
-
 const CATEGORY_GLYPH: Readonly<Record<JobKind, ReactNode>> = Object.freeze({
   gathering: <path d="M2 22 16 8M17 7l5-5M14 4l6 6M9 9l4 4" />,
   weapon_craft: <path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4" />,
   equipment_craft: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
   consumable_craft: <path d="M5 3h14l-1 7a6 6 0 0 1-12 0zM12 17v4M8 21h8" />,
 })
-
 const JobGlyph = ({ kind }: Readonly<{ kind: JobKind }>) => (
   <svg
     aria-hidden="true"
@@ -71,8 +71,7 @@ const JobGlyph = ({ kind }: Readonly<{ kind: JobKind }>) => (
     {CATEGORY_GLYPH[kind]}
   </svg>
 )
-
-const covers_label = (job: JobSlug): string => {
+const covers_label = (category_name: (category: string) => string, job: JobSlug): string => {
   const detail = encyclopedia_catalog.job(job)
   const item_types =
     detail && detail.resources.length > 0
@@ -81,11 +80,8 @@ const covers_label = (job: JobSlug): string => {
   const categories = [
     ...new Set(item_types.map((item_type) => encyclopedia_catalog.item(item_type)?.item.category).filter(Boolean)),
   ]
-  return categories.map((category) => titleize(category!)).join(', ')
+  return categories.map((category) => category_name(category!)).join(', ')
 }
-
-const recipe_required_level = (recipe: Readonly<SeedRecipe>): number =>
-  craft_required_level(Object.keys(recipe.inputs).length)
 const recipe_card_class = (locked: boolean, selected: boolean, best: boolean): string =>
   `jobs__recipe${locked ? ' is-locked' : ''}${selected ? ' is-selected' : ''}${best ? ' is-best-progress' : ''}`
 const BestProgressBadge = ({ visible, label }: Readonly<{ visible: boolean; label: string }>) =>
@@ -105,7 +101,6 @@ export const recipe_tiers = (recipes: readonly Readonly<SeedRecipe>[]) => {
       )
   )
 }
-
 const kind_of = (job: JobSlug): JobKind =>
   (Object.entries(job_groups) as readonly (readonly [JobKind, readonly JobSlug[]])[]).find(([, jobs]) =>
     jobs.includes(job)
@@ -144,6 +139,7 @@ const CraftControls = ({
   t: CopyText
   open_ingredient: (item_type: string) => void
 }>) => {
+  const vocabulary = useVocabulary()
   const wallet = useAppStore(({ session }) => session.wallet)
   const inventory = useAppStore(({ session }) => session.inventory)
   const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
@@ -166,7 +162,7 @@ const CraftControls = ({
       enough: stacks.reduce((total, stack) => total + stack.amount, 0) >= need,
     }
   })
-  const required = recipe_required_level(recipe)
+  const required = craft_required_level(Object.keys(recipe.inputs).length)
   const maximum_attempts = Math.min(
     batch_limit,
     ...rows.map(({ item_type, have }) => Math.floor(have / recipe.inputs[item_type]!))
@@ -215,7 +211,7 @@ const CraftControls = ({
           inputs: stack_plan.map(({ target_id, amount }) => ({ item_id: target_id, amount })),
         })
         const message = t('jobs.craft.craft_result', { attempts: completed_attempts, successes, name })
-        if (craft_result_tone(successes) === 'error') pending_toast.error(message)
+        if (craft_result_tone(successes) === 'error') pending_toast.error(localized_error(message))
         else pending_toast.success(message)
       })
       .catch(pending_toast.error)
@@ -282,7 +278,7 @@ const CraftControls = ({
           onClick={on_craft}
           title={
             !level_ok
-              ? t('jobs.craft.requires_level', { job: titleize(job), required, level })
+              ? t('jobs.craft.requires_level', { job: vocabulary.job(job), required, level })
               : !affordable
                 ? t('jobs.craft.not_enough')
                 : t('jobs.craft.craft_tooltip', {
@@ -304,6 +300,8 @@ const CraftControls = ({
 }
 
 export default function JobsTab({ character, copy }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
+  const vocabulary = useVocabulary()
+  const category_name = useItemCategoryName()
   const t = copy_text(copy.characters_page)
   const encyclopedia = encyclopedia_text(copy)
   const characters = useAppStore(({ session }) => session.characters)
@@ -340,8 +338,8 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
   const { unlocked, locked } = useMemo(() => {
     const rows = detail?.recipes ?? []
     return {
-      unlocked: rows.filter((recipe) => level >= recipe_required_level(recipe)),
-      locked: rows.filter((recipe) => level < recipe_required_level(recipe)),
+      unlocked: rows.filter((recipe) => level >= craft_required_level(Object.keys(recipe.inputs).length)),
+      locked: rows.filter((recipe) => level < craft_required_level(Object.keys(recipe.inputs).length)),
     }
   }, [detail, level])
   const best_progress = useMemo(() => encyclopedia_catalog.progress_recipe(selected_job, level), [level, selected_job])
@@ -365,7 +363,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
         <span className="jobs__recipe-id">
           <span className="jobs__recipe-name">{output?.name ?? titleize(recipe.output_type)}</span>
           <span className="jobs__recipe-meta-row">
-            <span className="jobs__recipe-meta">{titleize(output?.category ?? '')}</span>
+            <span className="jobs__recipe-meta">{category_name(output?.category ?? '')}</span>
             <BestProgressBadge label={t('jobs.recipes.best_progress')} visible={is_best_progress} />
           </span>
         </span>
@@ -396,7 +394,7 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
                           <span>
                             {t('jobs.better_character', {
                               name: better.name,
-                              job: titleize(job),
+                              job: vocabulary.job(job),
                               level: better.level,
                             })}
                           </span>
@@ -422,8 +420,10 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
                       type="button"
                     >
                       <span className="jobs__list-id">
-                        <span className="jobs__list-name">{titleize(job)}</span>
-                        <span className="jobs__list-sub">{covers_label(job) || t('jobs.recipes_fallback')}</span>
+                        <span className="jobs__list-name">{vocabulary.job(job)}</span>
+                        <span className="jobs__list-sub">
+                          {covers_label(category_name, job) || t('jobs.recipes_fallback')}
+                        </span>
                       </span>
                       {active_job_id === job && <span className="jobs__list-tag">{t('jobs.equipped')}</span>}
                       <span className="jobs__list-lvl hud-num">{level_of(job)}</span>
@@ -444,11 +444,11 @@ export default function JobsTab({ character, copy }: Readonly<{ character: Reado
           </div>
           <div className="jobs__detail-id">
             <div className="jobs__detail-title-row">
-              <span className="jobs__detail-name">{titleize(selected_job)}</span>
+              <span className="jobs__detail-name">{vocabulary.job(selected_job)}</span>
               {active_job_id === selected_job && <span className="jobs__list-tag">{t('jobs.equipped')}</span>}
             </div>
             <span className="jobs__detail-sub">
-              {t('jobs.detail.crafts_label', { covers: covers_label(selected_job) })}
+              {t('jobs.detail.crafts_label', { covers: covers_label(category_name, selected_job) })}
             </span>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">

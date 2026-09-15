@@ -4,6 +4,7 @@
 import { QUALITY_OPTIONS, type EngineQuality } from '@aresrpg/engine'
 import { useEffect, useState } from 'react'
 
+import { Text } from '../i18n/Text.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
 
 import { HudPanel } from './ui/HudPanel.tsx'
@@ -61,7 +62,9 @@ export const FpsPanel = ({
       data-tutorial-target="fps"
     >
       <div className="flex items-center gap-1.5 px-2 py-1.5">
-        <span className="text-[#8d9099]">FPS</span>
+        <span className="text-[#8d9099]">
+          <Text path="ui.fps" />
+        </span>
         <output className="w-6 text-right text-[#67adff] tabular-nums">{fps ?? '—'}</output>
       </div>
       <select
@@ -85,7 +88,7 @@ export const FpsPanel = ({
         onClick={toggle_flattened}
         type="button"
       >
-        FLAT
+        <Text path="ui.flat" />
         <span
           aria-hidden="true"
           className={`relative h-3 w-6 rounded-full border transition-colors duration-200 ${

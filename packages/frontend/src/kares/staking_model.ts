@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { format_amount, type FinanceSnapshot } from './model.ts'
+import type { FinanceSnapshot } from './model.ts'
 
 const UNIT = 1_000_000_000n
 
@@ -9,11 +9,6 @@ const UNIT = 1_000_000_000n
 export const staking_preset = (balance: bigint, percent: 25 | 50 | 100): string => {
   const amount = (balance * BigInt(percent)) / 100n
   return `${amount / UNIT}.${(amount % UNIT).toString().padStart(9, '0')}`
-}
-
-export const daily_amount = (amount: bigint): string => {
-  const [integer, decimal = ''] = format_amount(amount, 3).split('.')
-  return `${integer}.${decimal.padEnd(3, '0')}`
 }
 
 /** Instant funded-emission estimate: adding principal also dilutes the existing stake share. */

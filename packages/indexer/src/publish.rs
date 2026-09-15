@@ -79,6 +79,7 @@ pub struct Wire {
     pub money: Vec<MoneyFact>,
     pub market: Vec<MarketStamp>,
     pub market_volume_mist: u128,
+    pub market_prices: Vec<crate::market_prices::Sale>,
     pub fight_lifecycle: Vec<FightLifecycleStamp>,
 }
 
@@ -925,6 +926,7 @@ fn kiosk_view<'a>(views: &'a [ObjView<'a>], kiosk: Id) -> anyhow::Result<Option<
 }
 
 struct SaleShape {
+    stackable: bool,
     kind: &'static str,
     item_type: Option<String>,
     name: String,
@@ -940,6 +942,10 @@ fn sale_shape(sold: &ObjView<'_>) -> anyhow::Result<SaleShape> {
             )
         })?;
         return Ok(SaleShape {
+            stackable: matches!(
+                item.category.as_str(),
+                "resource" | "consumable" | "rune" | "key"
+            ),
             kind: "item",
             item_type: Some(item.item_type),
             name: item.name,
@@ -953,6 +959,7 @@ fn sale_shape(sold: &ObjView<'_>) -> anyhow::Result<SaleShape> {
         )
     })?;
     Ok(SaleShape {
+        stackable: false,
         kind: "character",
         item_type: None,
         name: character.name,
@@ -1022,6 +1029,13 @@ fn push_sale(
     if !exclusive && price > 0 {
         wire.market_volume_mist += u128::from(price);
         if let Some(item_type) = &shape.item_type {
+            if shape.stackable {
+                wire.market_prices.push(crate::market_prices::Sale {
+                    item_type: item_type.clone(),
+                    mist: price,
+                    units: shape.amount,
+                });
+            }
             wire.market.push(MarketStamp {
                 item_type: item_type.clone(),
                 price_per_unit_mist: price / shape.amount.max(1),
@@ -2012,6 +2026,14 @@ mod tests {
         assert_eq!(purchased["data"]["item_type"], "wooling_wool");
         assert_eq!(purchased["data"]["amount"], 10);
         assert_eq!(wire.market_volume_mist, 1_000);
+        assert_eq!(
+            wire.market_prices,
+            vec![crate::market_prices::Sale {
+                item_type: "wooling_wool".into(),
+                mist: 1_000,
+                units: 10
+            }]
+        );
         assert_eq!(wire.money.len(), 1);
         assert_eq!(wire.money[0].delta.item_royalty_mist, 10_000_000);
         assert_eq!(wire.money[0].delta.character_royalty_mist, 0);
@@ -2191,6 +2213,7 @@ mod tests {
         assert_eq!(wire.sales.len(), 2);
         assert!(wire.sales[0].member.contains("\"exclusive\":true"));
         assert_eq!(wire.market_volume_mist, 0);
+        assert!(wire.market_prices.is_empty());
         assert_eq!(wire.money[0].delta.item_royalty_mist, 10_000_000);
         assert!(wire.market.is_empty());
     }

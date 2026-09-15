@@ -3,15 +3,17 @@
 
 import { item_stat_center } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
+import { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { BrowsePanel } from '../../src/marketplace/BrowsePanel.tsx'
 import { market_observation } from '../../src/modules/marketplace.ts'
-import { dispatch_app, useAppStore } from '../../src/store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
 
 import '../../src/tailwind.css'
+import '../../src/marketplace/marketplace.css'
 
 const copy = await load_app_copy('en')
 const stackable = new URLSearchParams(location.search).has('stackable')
@@ -54,10 +56,63 @@ dispatch_app({
     kiosk_versions: { '0xkiosk': '1' },
   },
 })
+// A certified projection refresh, injected only by this browser fixture.
+window.addEventListener('market-price-fixture-update', () => {
+  const { observation, history } = read_app_state().marketplace.prices
+  if (!observation || !history) return
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_prices',
+      observation,
+      history: {
+        ...history,
+        sampled_at_ms: history.sampled_at_ms + 1,
+        buckets: history.buckets.map((bucket, index) =>
+          index === history.buckets.length - 1
+            ? { ...bucket, total_mist: String(BigInt(bucket.total_mist) + 1n), checkpoint: bucket.checkpoint + 1 }
+            : bucket
+        ),
+      },
+    },
+  })
+})
+
 const Fixture = () => {
   const pending = useAppStore(({ marketplace }) => marketplace.pending)
+  const observation = useAppStore(({ marketplace }) => marketplace.prices.observation)
+  useEffect(() => {
+    if (!observation) return
+    const query = new URLSearchParams(location.search)
+    const end = Date.UTC(2026, 8, 14)
+    const buckets = query.has('empty')
+      ? []
+      : Array.from({ length: 30 }, (_, index) => ({
+          at_ms: end - (29 - index) * 86_400_000,
+          total_mist: query.has('tiny') ? '1' : String(8_000_000 + index * 100_000),
+          units: '1000',
+          sales: '1',
+          checkpoint: index + 1,
+        })).filter((_, index) => index !== 10 && index !== 11)
+    dispatch_app({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/market_prices',
+        observation,
+        history: {
+          first_timestamp_ms: end - 29 * 86_400_000,
+          sampled_at_ms: end,
+          buckets,
+        },
+      },
+    })
+  }, [observation])
   return (
-    <main className="flex min-h-0 flex-1" data-pending-listing={pending ?? ''}>
+    <main
+      className="market-page flex min-h-0 min-w-0 flex-1"
+      style={{ containerType: 'inline-size', containerName: 'app-content' }}
+      data-pending-listing={pending ?? ''}
+    >
       <BrowsePanel text={copy_text(copy.marketplace_page)} />
     </main>
   )

@@ -10,6 +10,7 @@ import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { App } from '../../src/app.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
+import { apply_document_locale } from '../../src/i18n/document.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import { dispatch_app, read_app_state, observe_app } from '../../src/store.ts'
 import { load_game_settings } from '../../src/game/core/settings.ts'
@@ -25,6 +26,7 @@ const page = params.get('page') ?? 'settings'
 document.documentElement.dataset.previewDensity = params.get('density') ?? 'current'
 const locale = LOCALES.find(({ code }) => code === params.get('locale'))?.code ?? 'en'
 const copy = await load_app_copy(locale)
+apply_document_locale(copy, locale)
 const address = '0x' + 'aa'.repeat(32)
 const character: CharacterRow = {
   id: '0xpreview',
@@ -137,7 +139,7 @@ dispatch_app({
     current_epoch: '1250',
     chain_timestamp_ms: Date.now(),
     chain_sample_age_ms: 0,
-    market_volume: { day_mist: '1284500000000', month_mist: '5678900000000' },
+    market_volume: { day_mist: '1284500000000', month_mist: '5678900000000', history_days: 30 },
   },
 })
 if (params.get('connection') === 'offline')

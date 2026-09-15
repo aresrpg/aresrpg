@@ -3,6 +3,7 @@
 
 import type { CharacterRow, DungeonLobbyRow, ItemRow } from '@aresrpg/protocol'
 
+import { localized_error } from '../i18n/error_text.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -153,7 +154,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
     if (!key) {
       const text = state.copy ? copy_text(state.copy.world_hud) : (key: string) => key
       const name = content_catalog.item(dungeon.key)?.item.name ?? dungeon.key
-      toast.add(new Error(text('dungeon_key_required', { key: name })))
+      toast.add(localized_error(text('dungeon_key_required', { key: name })))
       return
     }
     dispatch({
@@ -229,7 +230,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         : null
     if (row.access === 1 && !party) {
       const text = state.copy ? copy_text(state.copy.world_hud) : (key: string) => key
-      toast.add(new Error(text('dungeon_group_refusal')))
+      toast.add(localized_error(text('dungeon_group_refusal')))
       return
     }
     run(

@@ -91,11 +91,12 @@ export const parse_amount = (value: string): bigint | null => {
   return amount !== null && amount <= 18_446_744_073_709_551_615n ? amount : null
 }
 
-export const format_amount = (value: bigint, decimals = 4): string => {
+export const format_amount = (value: bigint, decimals = 4, locale = 'en'): string => {
   const [integer, decimal = ''] = format_sui(value, decimals).split('.')
-  const whole = BigInt(integer).toLocaleString('en-US')
+  const whole = BigInt(integer).toLocaleString(locale)
   const fraction = decimal.replace(/0+$/, '')
-  return fraction ? `${whole}.${fraction}` : whole
+  const separator = new Intl.NumberFormat(locale).formatToParts(1.1).find(({ type }) => type === 'decimal')!.value
+  return fraction ? `${whole}${separator}${fraction}` : whole
 }
 
 export const offering_phase = (snapshot: FinanceSnapshot): 'upcoming' | 'open' | 'successful' | 'refundable' => {

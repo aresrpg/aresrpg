@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 // STATS — the canon character sheet, markup and classes ported from the proven Stats panel
 // (stats.css + the .stats__ half of hud-panels.css, verbatim): hero header with the xp bar,
 // the points capital with Reset/Confirm, the health/AP/MP vitals, the six characteristic
@@ -19,6 +20,8 @@ import {
 } from '@aresrpg/immutable'
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import { localized_error } from '../i18n/error_text.ts'
+import { useNumbers } from '../i18n/useNumbers.ts'
 import action_icon from '../assets/statistics/action.png'
 import health_icon from '../assets/statistics/health.png'
 import movement_icon from '../assets/statistics/movement.png'
@@ -62,6 +65,7 @@ const empty_allocation = (): Record<CharacteristicName, number> =>
 const bar_pct = (value: number): number => Math.max(0, Math.min(100, value))
 
 export default function StatsTab({ character, copy }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
+  const numbers = useNumbers()
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
   const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
@@ -90,7 +94,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
     const spending = { ...quote!.costs }
     const transaction = run_direct_transaction(() => {
       const current_character = editable_character(read_app_state(), character.id, Date.now())
-      if (!current_character) throw new Error(t('progression_busy'))
+      if (!current_character) throw localized_error(t('progression_busy'))
       return wallet.character.raise_stats({
         character_id: character.id,
         spending,
@@ -123,7 +127,7 @@ export default function StatsTab({ character, copy }: Readonly<{ character: Read
           <div className="stats__hero-xp-head">
             <span className="stats__hero-xp-label">{t('common.experience')}</span>
             <span className="stats__hero-xp-value hud-num">
-              {into.toLocaleString()} / {span.toLocaleString()}
+              {numbers.number(into)} / {numbers.number(span)}
             </span>
           </div>
           <div className="stats__bar">

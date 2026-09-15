@@ -14,6 +14,7 @@ import {
   type TradeTerminalDelta,
 } from '@aresrpg/sdk/trade'
 
+import { localized_error } from '../i18n/error_text.ts'
 import { encumbered_asset_ids, trade_stack_targets } from '../inventory_stacks.ts'
 import { copy_text } from '../i18n/copy.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -511,7 +512,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   events.on('trade/commit_offer', ({ trade, additions, removals, sui, kares }) => {
     const state = get_state()
     if (!trade_offer_additions_available(state, additions, removals)) {
-      toast.add(copy_text(state.copy?.trade_panel ?? {})('offer_item_unavailable'))
+      toast.add(localized_error(copy_text(state.copy?.trade_panel ?? {})('offer_item_unavailable')))
       return
     }
     row_action(

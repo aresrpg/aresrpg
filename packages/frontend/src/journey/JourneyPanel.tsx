@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Sparkles } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Pickaxe, Sparkles } from 'lucide-react'
 
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { content_catalog } from '../content/catalog.ts'
@@ -146,7 +146,21 @@ const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: b
         {text(quest?.kind === 'start' ? 'start' : 'journal')}
       </button>
     )
-  return quest ? <QuestActions copy={copy} quest={quest} /> : null
+  return quest ? (
+    <QuestActions copy={copy} quest={quest} />
+  ) : (
+    <button
+      className="journey-button"
+      onClick={() => {
+        dispatch_app({ type: 'automation/collapse', collapsed: false })
+        dispatch_app({ type: 'journey/collapse', collapsed: true })
+        open_path('/')
+      }}
+      type="button"
+    >
+      <Pickaxe size={15} /> {text('automation_reward_action')}
+    </button>
+  )
 }
 
 const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean }>) => {
@@ -158,7 +172,11 @@ const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean
   return (
     <div className="journey-quest" data-quest-kind={kind}>
       <div className="journey-art">
-        <ItemArt item={item_type} />
+        {id === 'finished' ? (
+          <Pickaxe aria-hidden="true" className="size-20 text-cyan" />
+        ) : (
+          <ItemArt item={item_type} />
+        )}
       </div>
       <div className="journey-copy">
         <span className="journey-eyebrow">{text(`chapter_${chapter}`)}</span>

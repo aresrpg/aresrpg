@@ -47,7 +47,7 @@ test('narrow marketplace preserves buying, sale controls, and complete history',
   await page.goto('/e2e/fixtures/responsive_preview.html?page=marketplace&locale=de')
   await page
     .locator('[data-marketplace-item-types]')
-    .getByRole('button', { name: /^hat\b/i })
+    .getByRole('button', { name: /^Hut\b/i })
     .click()
   await page.locator('[data-marketplace-template-options] button').first().click()
   const buy = page.locator('[data-marketplace-listing-row] button').last()
@@ -64,7 +64,7 @@ test('narrow marketplace preserves buying, sale controls, and complete history',
   await page.locator('.market-history > div:last-child > button').click()
   await expect(page.locator('.market-history-row')).toHaveCount(35)
   const last = page.locator('.market-history-row').last()
-  await expect(last).toContainText('1.25')
+  await expect(last).toContainText('1,25')
   await expect(last).toContainText('Käufer')
   const overflow = await page.locator('.app-content').evaluate((element) => element.scrollWidth - element.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
@@ -141,7 +141,7 @@ test('narrow Kolizeum keeps the wager review and cancellation reachable', async 
   await page.locator('.kz-lobby').last().click()
   await page.locator('.kz-join-side.is-b').click()
   const review = page.locator('.kz-join-confirm')
-  await expect(review).toContainText('1.25')
+  await expect(review).toContainText('1,25')
   for (const button of await review.getByRole('button').all()) {
     await expect(button).toBeInViewport()
     await expect.poll(async () => (await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
@@ -350,7 +350,7 @@ for (const viewport of [
       new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
     )
     await page.goto('/e2e/fixtures/responsive_preview.html?page=stats')
-    for (const tab of ['stats', 'spells', 'jobs', 'runeforge']) {
+    for (const tab of ['stats', 'spells', 'runeforge']) {
       await page.locator(`[data-character-detail-tab="${tab}"]`).click()
       const workspace = page.locator(`[data-workspace="${tab}"]`)
       const sheet = workspace.locator('.character-workspace__content')
@@ -518,13 +518,13 @@ for (const width of [590, 1920]) {
       new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()
     )
     await page.goto('/e2e/fixtures/responsive_preview.html?page=marketplace')
-    await expect(page.locator('[data-marketplace-volume="24h"]')).toContainText('1284.50')
-    await expect(page.locator('[data-marketplace-volume="30d"]')).toContainText('5678.90')
+    await expect(page.locator('[data-marketplace-volume="24h"]')).toContainText('1,284.50')
+    await expect(page.locator('[data-marketplace-volume="30d"]')).toContainText('5,678.90')
     await expect(page.locator('[data-marketplace-volume="24h"]')).toBeInViewport()
     await expect(page.locator('[data-marketplace-volume="30d"]')).toBeInViewport()
     await expect(page.locator('[data-marketplace-volume="30d"]')).toHaveAttribute(
       'title',
-      'Public marketplace sales in the last 30d, before fees.'
+      'Public marketplace sales in the last 30 days, before fees.'
     )
     expect(await page.locator('.app-content').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: `test-results/market-volumes-${width}.png` })

@@ -54,6 +54,7 @@ const tracked_state = (): PlayerState =>
     spectating: {},
     fight_previews: {},
     market_observation: null,
+    market_price_observation: null,
     leaderboard_observation: null,
   }) as PlayerState
 

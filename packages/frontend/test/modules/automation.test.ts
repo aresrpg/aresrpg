@@ -429,3 +429,22 @@ test('zone-search timing retries re-enter inspection instead of replaying the st
   expect(inspecting.automation.run?.step.type).toBe('inspecting')
   expect(automation_command(inspecting, retrying)).toBeNull()
 })
+
+test('journey completion gates Start, waits for persistence, and collapse never changes a run', () => {
+  const earned = automation_fixture()
+  const stopped = reduce_automation(earned, { type: 'automation/stop', reason: 'stopped' })
+  for (const journey of [
+    { ...earned.journey, completed: earned.journey.completed.slice(0, -1) },
+    { ...earned.journey, saving: true },
+    { ...earned.journey, ready: false },
+    { ...earned.journey, identity: null },
+  ]) {
+    const locked = { ...stopped, journey }
+    expect(reduce_automation(locked, { type: 'automation/start', id: 'blocked' }).automation.run).toBeNull()
+  }
+  const running = reduce_automation(stopped, { type: 'automation/start', id: 'earned' })
+  expect(running.automation.run?.id).toBe('earned')
+  const collapsed = reduce_automation(running, { type: 'automation/collapse', collapsed: true })
+  expect(collapsed.automation.collapsed).toBeTrue()
+  expect(collapsed.automation.run).toBe(running.automation.run)
+})

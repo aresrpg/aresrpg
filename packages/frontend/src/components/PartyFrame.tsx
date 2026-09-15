@@ -6,6 +6,7 @@ import type { PartyRow } from '@aresrpg/protocol'
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 import { useRef, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { useText } from '../i18n/useText.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { selected_party, selected_party_invitation } from '../modules/party.ts'
@@ -33,13 +34,14 @@ export const party_run_distance = (run: RunTo | null, pose: WorldPose | null, ch
 
 const PartyDistanceProgress = ({ distance, running = false }: Readonly<{ distance: number; running?: boolean }>) => {
   const initial = useRef(distance)
+  const ui = useText()
   const known = Number.isFinite(distance)
   const distance_percent = running
     ? run_to_progress_percent(initial.current, distance)
     : known
       ? Math.max(0, 100 - (Math.min(distance, 64) / 64) * 100)
       : 0
-  const label = known ? `${Math.ceil(distance)}m` : '—'
+  const label = known ? ui('ui.meters', { count: Math.ceil(distance) }) : '—'
   return (
     <span className={`party-distance-progress${running ? ' is-running' : ''}`} title={label}>
       <i>

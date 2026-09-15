@@ -13,7 +13,6 @@ import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { city_at_position, world_city_areas, world_terrain } from '../../content/worlds.ts'
-import { world_scene_active } from '../../modules/navigation.ts'
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 import { master_volume_from, scale_audio_volume } from '../core/audio_volume.ts'
@@ -49,7 +48,6 @@ const play = (player: HTMLAudioElement): void => {
 
 export const BiomeMusic = () => {
   const pose = useWorldPose()
-  const page = useAppStore(({ navigation }) => navigation.page)
   const enabled = useAppStore(({ settings }) => settings.music_enabled)
   const master_volume = useAppStore(({ settings }) => master_volume_from(settings.master_volume))
   const fight_active = useAppStore(({ fight }) => fight.mode !== null && fight.mounted)
@@ -96,10 +94,7 @@ export const BiomeMusic = () => {
       ]),
     [compiled, world_name]
   )
-  const source =
-    enabled && world_scene_active(page, fight_active) && biome_key
-      ? biome_music_pair(biome_key, biome_keys)[fight_active ? 'battle' : 'roam']
-      : null
+  const source = enabled && biome_key ? biome_music_pair(biome_key, biome_keys)[fight_active ? 'battle' : 'roam'] : null
 
   useEffect(() => {
     const player = player_ref.current

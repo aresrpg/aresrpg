@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { useNumbers } from '../../i18n/useNumbers.ts'
 // WORLD MAP — the full map the minimap opens onto. Discrete relief LOD keeps one bounded sample
 // budget while zooming from the player's 3×3-zone lens to the complete procedural world. Search
 // delimitation and labels disappear as their projected cells become unreadable; stable markers and
@@ -84,6 +86,7 @@ export const WorldMap = ({
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
   const panel_ref = useRef<HTMLDivElement | null>(null)
   const wheel_at = useRef(-Infinity)
+  const numbers = useNumbers()
   const text = copy_text(copy.world_hud)
   // The lens frames the zone the player stood in when it opened — a static snapshot.
   const opened_at = useRef(opened_zone_center(pose?.x ?? 0, pose?.z ?? 0))
@@ -204,7 +207,7 @@ export const WorldMap = ({
             >
               −
             </button>
-            <span>{text('world_map_extent', { blocks: Math.round(radius * 2).toLocaleString() })}</span>
+            <span>{text('world_map_extent', { blocks: numbers.number(Math.round(radius * 2)) })}</span>
             <button
               aria-label={text('world_map_zoom_in')}
               disabled={lod_level === 0}

@@ -8504,7 +8504,7 @@
       "hash": "6c47324f78956f67",
       "label": "recipe old_hoe",
       "revisions": {
-        "0xfd7fdecd7fffc19b48bc58b183246d152cfec936baa5fc9382ebfab4db071b71": "855012001:5Ban9vEwCEcKoAuyrQVdJmLcKDD5GZNVasbacwzawXmg"
+        "0xfd7fdecd7fffc19b48bc58b183246d152cfec936baa5fc9382ebfab4db071b71": "998913996:GRAZJGacaHmiLTa2SDi2aVB9c76ReRAeXaG6yGvFKXLU"
       },
       "domain": "recipe"
     },
@@ -8528,7 +8528,7 @@
       "hash": "2cef5d5f1ef30c01",
       "label": "recipe quartzbound_scrap",
       "revisions": {
-        "0x83d3ad45399d1b4453e024588752fb4a7f06ba3f4b81248de1edc5f3efb61514": "855012001:5t6tTqhimmjned9ANejvsVEVJWtgsQNCecSMAV3YZL7q"
+        "0x83d3ad45399d1b4453e024588752fb4a7f06ba3f4b81248de1edc5f3efb61514": "998913996:9v4KrkB7WyJHnhkDRyXPqhcPmgoc1CjxNa3QFd79ckFd"
       },
       "domain": "recipe"
     },
@@ -8544,7 +8544,7 @@
       "hash": "e959b932f7fcb000",
       "label": "recipe mushroom_dyed_plume",
       "revisions": {
-        "0x64be2318f6570e8bd77aa2dcc8b2979a347be6c9ff3b77c8f9289a5380b0b84b": "855012001:Cw13DBqaD1TkVkid3TVYviJkKS5pWXBEzb38jiAHGKFu"
+        "0x64be2318f6570e8bd77aa2dcc8b2979a347be6c9ff3b77c8f9289a5380b0b84b": "998913996:Ao4meTJtVxvhm1tfZ7aMTCjYCDRrSEhiSJjdeA2ex5ir"
       },
       "domain": "recipe"
     },
@@ -8552,7 +8552,7 @@
       "hash": "3762832822f331c6",
       "label": "recipe quartz_honed_beak",
       "revisions": {
-        "0x8ace2e980c26761d3af869f9da2e9b57706b68c543488ff7be4c6a1368a1a005": "855012001:B1UQRyeXewj4XkMVok363mpxk1vqqwbfM4oZ8VFFB3Lr"
+        "0x8ace2e980c26761d3af869f9da2e9b57706b68c543488ff7be4c6a1368a1a005": "998913996:FZkQfAazxYaXTMCBSbj8XEjEinJLGrmF1SjGaJmyUP6"
       },
       "domain": "recipe"
     },
@@ -8560,7 +8560,7 @@
       "hash": "a770c46d0f00cc75",
       "label": "recipe mushroom_tanned_leather",
       "revisions": {
-        "0xdd21704604ecd2030a2d74e17f5f47663d9e11daa6abd287b05069c6e52a9f1f": "855012001:8tmXtQodtBfmS1zrvajz4ToPdUj32CKryoUHmDKjymTS"
+        "0xdd21704604ecd2030a2d74e17f5f47663d9e11daa6abd287b05069c6e52a9f1f": "998913996:E7YHgSXpygiPZZKy96F4DAboXegEexRVGLfw6FSYjgAE"
       },
       "domain": "recipe"
     },
@@ -8592,7 +8592,7 @@
       "hash": "9ca0b85125fa8222",
       "label": "recipe wheatbound_branch",
       "revisions": {
-        "0x3c5d5f7065b56a3894fe110bb3d8808c23525b5fe76ddae133950d56a4b9e35f": "855012001:EUSYamhnieQrZNB9xyPAR3gx3ZhETSdSzNe3NXANBZBj"
+        "0x3c5d5f7065b56a3894fe110bb3d8808c23525b5fe76ddae133950d56a4b9e35f": "998913996:AXDx9Xve6fQWZ4AXzU2hQKHfWwbQH4NV7eqwCCgnvT67"
       },
       "domain": "recipe"
     },
@@ -8600,7 +8600,7 @@
       "hash": "7ec06c3d0b0a37ae",
       "label": "recipe mushroom_lacquer",
       "revisions": {
-        "0xa5c95e4e11c8946f4b6a8839b84bdbf8f63bd6e2c0368570b73a0a7aa9f7bbb9": "855012001:4sk1wks3gJHm9TMK6VfV6SisBkVWMvyBKDzfHAQpNtAv"
+        "0xa5c95e4e11c8946f4b6a8839b84bdbf8f63bd6e2c0368570b73a0a7aa9f7bbb9": "998913996:8wF8KkM1x3eBh1ywXzFj11AYvZyYPHQra58tS3An6zjs"
       },
       "domain": "recipe"
     },
@@ -8608,7 +8608,7 @@
       "hash": "c3c656e5a3a6be46",
       "label": "recipe basic_pickaxe",
       "revisions": {
-        "0x877f1fdd5445446bbb12416386192df43094e8ee8f965399cd8aece5ff81199c": "855012001:JKgmFeFMNBywAHcx8i9qpJYLk9zh92VvefA6epxiYXR"
+        "0x877f1fdd5445446bbb12416386192df43094e8ee8f965399cd8aece5ff81199c": "998913996:B6FUbV9qsPMyciEYJqEM6yKSLTtp2TuzcqKsWzEmqmpm"
       },
       "domain": "recipe"
     },
@@ -8616,7 +8616,7 @@
       "hash": "b149005683895de2",
       "label": "recipe tool_herbalist",
       "revisions": {
-        "0x39672a2e53dfc3924ebe4eec43434286d30f18780f1d8d55132df01e08f94006": "855012001:GKFVbdg9jUTSBtjVPdjpQiCC9yN95AULLtuE9ZQ3XGEB"
+        "0x39672a2e53dfc3924ebe4eec43434286d30f18780f1d8d55132df01e08f94006": "998913996:6GPnBodEmVx8PqFpazpFa68vqK6mi74gY1ydo6cyUgwk"
       },
       "domain": "recipe"
     },
@@ -8904,7 +8904,7 @@
       "hash": "cfec244a8389a1fa",
       "label": "recipe gale_lorito_plume",
       "revisions": {
-        "0xe7211a354e156e44b2e51b45cc7515008da75165a4b52c934f389f7841b1f85d": "855012001:D5StzB7Y4h7WBKFFEhNMx4Es7qt8DPs9US6kwmfE8gtb"
+        "0xe7211a354e156e44b2e51b45cc7515008da75165a4b52c934f389f7841b1f85d": "998913996:5mhtopJm2yGF39NbGbqYUCNxjehtdwDWH4vME6498g4p"
       },
       "domain": "recipe"
     },
@@ -8912,7 +8912,7 @@
       "hash": "f2c6724cf6ec66c4",
       "label": "recipe tide_lorito_plume",
       "revisions": {
-        "0x30c9dbe97091b3a51f8d4a4ca9bad0272fb3c67806648688532ed4caa1330ce5": "855012001:CHoMeUfG1ekVV5e6Fnue9x7mMPxCDET9zXxd8nz7HwPP"
+        "0x30c9dbe97091b3a51f8d4a4ca9bad0272fb3c67806648688532ed4caa1330ce5": "998913996:EKyBtVnPUpRRm9hgWEktgYsSL9jxYYGnerUCgYVjSBw9"
       },
       "domain": "recipe"
     },
@@ -8920,7 +8920,7 @@
       "hash": "c12d668c1388569c",
       "label": "recipe ember_lorito_plume",
       "revisions": {
-        "0x3bc2564ad1ac0b7ae9d5e91bff0adf4cf26c01ef44aa87ae49a77b7bcf7925d7": "855012001:G2Bgv9DUwLkZDyMHnBWcG5ZZLZnR3qWwrVwUE48pyDjH"
+        "0x3bc2564ad1ac0b7ae9d5e91bff0adf4cf26c01ef44aa87ae49a77b7bcf7925d7": "998913996:G5ubYTUGAVVmEMAe6iwGR6RMBEtLoXrcLDxpMnLiFrSb"
       },
       "domain": "recipe"
     },
@@ -8928,7 +8928,7 @@
       "hash": "b146218e91a601a6",
       "label": "recipe stone_lorito_plume",
       "revisions": {
-        "0xcd3c069fa5091e2f987d75a5ddd190b7f64bb325cf08fff67acc75fc2e57826b": "855012001:J67bP1ZBGTMCuYpPv1n9e7JrsvgjvbT3kP7UbcjKuJgg"
+        "0xcd3c069fa5091e2f987d75a5ddd190b7f64bb325cf08fff67acc75fc2e57826b": "998913996:6DXZvTgHnpjjHWufTgw3UoX99NMrqXEkPvsEvyK11zQd"
       },
       "domain": "recipe"
     },
@@ -8936,7 +8936,7 @@
       "hash": "1e9e40dca25d98c4",
       "label": "recipe heart_lorito_plume",
       "revisions": {
-        "0x82f2238709c0be2b090538e112a94ce28366c6c645afe95ff984dbbf21abc1c0": "855012001:Hst5rLJPwqQDVw25vTXiarJ1fpbcubm9m8bQ7nRCdZQZ"
+        "0x82f2238709c0be2b090538e112a94ce28366c6c645afe95ff984dbbf21abc1c0": "998913996:6jp8rg2gryscCpBDUSBwBmnyviE4VNE7yFjS4PHceFhi"
       },
       "domain": "recipe"
     },
@@ -8944,7 +8944,7 @@
       "hash": "8146a3c3230f6ca8",
       "label": "recipe sage_lorito_plume",
       "revisions": {
-        "0xd7a6cae37f2b7f769e52c5d857d98242afc13f37c61d211fd132ceab806b3af3": "855012001:BKBRa1uQKNvMRMUxUdXCDFeYk72aS5CEAmtupMZPuWRb"
+        "0xd7a6cae37f2b7f769e52c5d857d98242afc13f37c61d211fd132ceab806b3af3": "998913996:Dn287QgxfiioYwhux2Kk8xYYtdT29xE6gVUhQdQooEaN"
       },
       "domain": "recipe"
     },
@@ -9016,7 +9016,7 @@
       "hash": "3925261cef30cbbd",
       "label": "recipe recall_potion",
       "revisions": {
-        "0x1164633228bac24bd2e53aaa5f5e3c19f351ec1248c11b78240ec76301106ba8": "855012001:8bUxqKYmeUKMCZnhx7mJ7sv1yYvBQU6KKM99S9tgvGd8"
+        "0x1164633228bac24bd2e53aaa5f5e3c19f351ec1248c11b78240ec76301106ba8": "998913996:2c3XZRLbt3jbpuv67SVijs1DqBYh77bDifrR9VVP3JeN"
       },
       "domain": "recipe"
     },
@@ -9168,7 +9168,7 @@
       "hash": "61ed3c30d6dd3eb5",
       "label": "recipe moka_arms_binding",
       "revisions": {
-        "0x0ec377e817072c3f88efba63237e56daa63f6122f668824b6805cabf9651a739": "855012001:FKz45WfkbrKfDHMUTCsptNimJ57ZzYQVFG8NwUwNAspQ"
+        "0x0ec377e817072c3f88efba63237e56daa63f6122f668824b6805cabf9651a739": "998913996:8mEGr2VNwtTywGpP7jYuUxf3GDMaBydBdtgRCfccT8yd"
       },
       "domain": "recipe"
     },
@@ -9232,7 +9232,7 @@
       "hash": "4c98e6bdf2a4962a",
       "label": "recipe rootglass_token",
       "revisions": {
-        "0x6dde29bd74711bb54dcc9fc3b10a870c28213a2be4bfa8c8dee49646c58bc989": "855012001:4H894R1ouV3uD8pBzJqZxnG1D7T8pwc2ua5XazACRwWz"
+        "0x6dde29bd74711bb54dcc9fc3b10a870c28213a2be4bfa8c8dee49646c58bc989": "998913996:8yg7YbekZgz2iRcfzoJhM8yQVMqbTZSArxtH1oDeDio6"
       },
       "domain": "recipe"
     },
@@ -9488,7 +9488,7 @@
       "hash": "9ae345bbdf660950",
       "label": "recipe pincersteps",
       "revisions": {
-        "0x347a9eb65a5965010ea0f5ff2b3febcfee35462dfd58919fe374a65251ca88b7": "855012001:CT7aJnJBG7iWSizVHPZDWMJ1pG97tZ3Tufeagm3hG9au"
+        "0x347a9eb65a5965010ea0f5ff2b3febcfee35462dfd58919fe374a65251ca88b7": "998913996:4i7RYFnrndpikiRoVKkmTRDe6V6XYWAtXZz3wp2b56iS"
       },
       "domain": "recipe"
     },
@@ -9528,7 +9528,7 @@
       "hash": "b072f4d131a833d6",
       "label": "recipe colony_marchers",
       "revisions": {
-        "0x3a306760e0421bb7bab56c8aba2f05cce47f769c5e9e224007048b2c1c1272bf": "855012001:9JyCLx4CQQKkPBjRp9s1VaHybFnHcmNErWYVbiUUsECJ"
+        "0x3a306760e0421bb7bab56c8aba2f05cce47f769c5e9e224007048b2c1c1272bf": "998913996:CWfeQ97VPLaKj7kpg8QXPv6VPNF7QJ64NpKQs3kuX1GW"
       },
       "domain": "recipe"
     },
@@ -9592,7 +9592,7 @@
       "hash": "6dd058f8c4bb1a4b",
       "label": "recipe rootshivs",
       "revisions": {
-        "0x593eb202e56bf5171d37046969c7e19de9c6a9d2da6a632d9919a486dafcf671": "855012001:2wmDfAZLJAswi7jnrfya2Qa9nL5g7TdXBvZgbUPY2Sm4"
+        "0x593eb202e56bf5171d37046969c7e19de9c6a9d2da6a632d9919a486dafcf671": "998913996:9DiNihPFpoth4CBLSfZVTgSpvn8ZcgKbJojjppKHW7UQ"
       },
       "domain": "recipe"
     },

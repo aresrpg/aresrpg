@@ -3,6 +3,7 @@
 
 import { Gift, Loader2, Sparkles, WalletCards } from 'lucide-react'
 
+import { player_error_text } from '../i18n/player_error.ts'
 import { WalletControl } from '../wallet/WalletControl.tsx'
 import type { WalletView } from '../wallet/model.ts'
 import { content_catalog } from '../content/catalog.ts'
@@ -153,7 +154,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
 
         {distribution.error && (
           <p role="alert" className="text-sm text-red-400">
-            {distribution.error}
+            {player_error_text(copy, distribution.error)}
           </p>
         )}
         <section className="mx-auto flex w-full max-w-3xl flex-col gap-3">

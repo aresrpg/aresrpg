@@ -23,25 +23,47 @@ const redis_for = (first: string | null) => ({
 
 test('both rolling windows use exact timestamps and integer money, not day boundaries', async () => {
   expect(await get_market_volume(redis_for('0'), now)).toEqual({
+    history_days: 40,
     day_mist: '9007199254740995',
     month_mist: '9007199254741025',
   })
   expect(await get_market_volume(redis_for('0'), now + DAY)).toEqual({
+    history_days: 41,
     day_mist: '500',
     month_mist: '9007199254741512',
   })
 })
 
-test('each window becomes available only once its complete history exists', async () => {
+test('new tracking reports observed totals immediately and identifies incomplete history', async () => {
   expect(await get_market_volume(redis_for(null), now)).toBeNull()
-  expect(await get_market_volume(redis_for(String(now - DAY + 1)), now)).toEqual({ day_mist: null, month_mist: null })
-  expect(await get_market_volume(redis_for(String(now - DAY)), now)).toEqual({
+  expect(await get_market_volume(redis_for(String(now - DAY + 1)), now)).toEqual({
+    history_days: 0,
     day_mist: '9007199254740995',
-    month_mist: null,
+    month_mist: '9007199254741012',
+  })
+  expect(await get_market_volume(redis_for(String(now - DAY)), now)).toEqual({
+    history_days: 1,
+    day_mist: '9007199254740995',
+    month_mist: '9007199254741012',
   })
   expect(await get_market_volume({ get: async () => '0', hvals: async () => [] }, now)).toEqual({
+    history_days: 40,
     day_mist: '0',
     month_mist: '0',
+  })
+})
+
+test('two indexed purchases update both windows during the first day of tracking', async () => {
+  const sales: string[] = []
+  const redis = { get: async () => String(now), hvals: async () => sales }
+  expect((await get_market_volume(redis, now))?.day_mist).toBe('0')
+  sales.push(`${now}:1000000000`)
+  expect((await get_market_volume(redis, now + 1))?.day_mist).toBe('1000000000')
+  sales.push(`${now + 2}:2000000000`)
+  expect(await get_market_volume(redis, now + 3)).toEqual({
+    history_days: 0,
+    day_mist: '3000000000',
+    month_mist: '3000000000',
   })
 })
 

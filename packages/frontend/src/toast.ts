@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { error_message } from './i18n/error_text.ts'
 import { report_error, type ReportContext } from './reporting.ts'
 
 export const TOAST_CONTAINER_CLASS =
@@ -31,8 +32,7 @@ type Listener = (event: ToastEvent) => void
 
 const listeners = new Set<Listener>()
 const emit = (event: ToastEvent): void => listeners.forEach((listener) => listener(event))
-const message_of = (message: unknown): string =>
-  typeof message === 'string' ? message : message instanceof Error ? message.message : 'Something went wrong'
+const message_of = error_message
 
 /** The Sui SDK's gas-refusal vocabulary — a failed ATTEMPT is the only trigger for the
  *  top-up prompt (never a balance poll: first logins stay unbothered). */
@@ -50,16 +50,18 @@ const notice_gas_empty = (type: ToastType, message: string): boolean => {
   return true
 }
 
-const translate_cell: { translate: ((message: string) => string | null) | null } = { translate: null }
+const translate_cell: { translate: ((message: string, raw: boolean) => string | null) | null } = { translate: null }
 /** Registered by the session observer (it holds the localized copy): raw chain failures a
  *  player could never read — the version-gate abort, etc. — become honest player sentences.
  *  A translator returns null to leave a message untouched. Errors only. */
-export const on_error_translate = (translate: ((message: string) => string | null) | null): void => {
+export const on_error_translate = (translate: ((message: string, raw: boolean) => string | null) | null): void => {
   // eslint-disable-next-line functional/immutable-data -- the one injection cell of this module
   translate_cell.translate = translate
 }
-const translated = (type: ToastType, message: string): string =>
-  (type === 'error' ? translate_cell.translate?.(message) : null) ?? message
+const translated = (type: ToastType, message: string, original: unknown): string =>
+  (type === 'error'
+    ? translate_cell.translate?.(message, !(original instanceof Error && original.name === 'LocalizedError'))
+    : null) ?? message
 
 const show = (toast: Toast): void => emit(Object.freeze({ type: 'show', toast }))
 const remove = (id: string): void => emit(Object.freeze({ type: 'remove', id }))
@@ -75,13 +77,20 @@ export const toast = Object.freeze({
     const text = message_of(message)
     if (notice_gas_empty(type, text)) return
     const id = crypto.randomUUID()
-    show(Object.freeze({ id, message: translated(type, text), type }))
+    show(Object.freeze({ id, message: translated(type, text, message), type }))
     setTimeout(() => remove(id), 5_000)
   },
   rich: (message: string, parts: readonly ToastPart[], type: Exclude<ToastType, 'pending'> = 'info'): void => {
     if (type === 'error') report_error(message)
     const id = crypto.randomUUID()
-    show(Object.freeze({ id, message, parts: Object.freeze(parts), type }))
+    show(
+      Object.freeze({
+        id,
+        message: translated(type, message, type === 'error' ? new Error(message) : message),
+        ...(parts.length ? { parts: Object.freeze(parts) } : {}),
+        type,
+      })
+    )
     setTimeout(() => remove(id), 5_000)
   },
   persistent: (
@@ -104,7 +113,7 @@ export const toast = Object.freeze({
         remove(id)
         return
       }
-      show(Object.freeze({ id, message: translated(type, text), type, ...(icon ? { icon } : {}) }))
+      show(Object.freeze({ id, message: translated(type, text, next), type, ...(icon ? { icon } : {}) }))
       setTimeout(() => remove(id), type === 'success' ? (icon ? 3_000 : 1_400) : 5_000)
     }
     return Object.freeze({

@@ -8,6 +8,8 @@ import type { KaresCopy } from '../kares/copy.ts'
 import type { Locale } from './locale.ts'
 
 export type AppCopy = Readonly<{
+  ui: Readonly<Record<string, string>>
+  spell_effects: Readonly<Record<string, string>>
   item_drop_sources: Readonly<Record<string, string>>
   item_categories: Readonly<Record<string, string>>
   title: string
@@ -184,6 +186,10 @@ const loaders: Readonly<Record<Locale, () => Promise<{ default: unknown }>>> = O
   fr: () => import('./locales/fr.yaml'),
   ja: () => import('./locales/ja.yaml'),
   uk: () => import('./locales/uk.yaml'),
+  zh: () => import('./locales/zh.yaml'),
+  ru: () => import('./locales/ru.yaml'),
+  vi: () => import('./locales/vi.yaml'),
+  ko: () => import('./locales/ko.yaml'),
 })
 
 export const load_app_copy = async (locale: Locale): Promise<AppCopy> => (await loaders[locale]()).default as AppCopy

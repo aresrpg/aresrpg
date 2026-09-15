@@ -5,6 +5,8 @@ import type { KolizeumFighterRow, KolizeumLobbyRow } from '@aresrpg/protocol'
 import { Loader2, Plus, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+import { Text } from '../i18n/Text.tsx'
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -36,10 +38,10 @@ const CLASS_COLORS: Readonly<Record<string, string>> = Object.freeze({
   iyashi: '#6fc6e0',
 })
 
-const format_of = (format: Format): string => `${format}V${format}`
 const short_address = (address: string): string => `${address.slice(0, 6)}…${address.slice(-4)}`
 const full_pot = (lobby: Readonly<KolizeumLobbyRow>): bigint => BigInt(lobby.pledge_mist) * BigInt(lobby.format) * 2n
-const pot_label = (mist: bigint, free: string): string => (mist === 0n ? free : `${format_sui(mist, 2)} SUI`)
+const pot_label = (mist: bigint, free: string, format: typeof format_sui): string =>
+  mist === 0n ? free : `${format(mist, 2)} SUI`
 
 const lobby_visible = (
   lobby: Readonly<KolizeumLobbyRow>,
@@ -54,12 +56,13 @@ const lobby_visible = (
 }
 
 const SelectedPot = ({ lobby, t }: Readonly<{ lobby: KolizeumLobbyRow; t: CopyText }>) => {
+  const localized_numbers = useNumbers()
   const settling = lobby.status === 'settling'
   const remaining = BigInt(lobby.pot_mist)
   return (
     <div className="kz-pot">
       <small>{t(settling ? 'settlement_remaining' : 'total_pot')}</small>
-      <b>{settling && remaining === 0n ? t('paid_out') : pot_label(remaining, t('free'))}</b>
+      <b>{settling && remaining === 0n ? t('paid_out') : pot_label(remaining, t('free'), localized_numbers.sui)}</b>
     </div>
   )
 }
@@ -73,7 +76,7 @@ const FormatChips = ({ active, pick }: Readonly<{ active: Format | null; pick: (
         onClick={() => pick(active === format ? null : format)}
         type="button"
       >
-        {format_of(format)}
+        <Text path="ui.team_format" values={{ size: format }} />
       </button>
     ))}
   </span>
@@ -87,7 +90,9 @@ const FighterRow = ({ fighter }: Readonly<{ fighter: KolizeumFighterRow }>) => {
         {(fighter.classe || '?').slice(0, 2)}
       </span>
       <b>{fighter.name}</b>
-      <small>LV.{fighter.level}</small>
+      <small>
+        <Text path="encyclopedia_page.level_short" values={{ level: fighter.level }} />
+      </small>
     </div>
   )
 }
@@ -148,6 +153,7 @@ const JoinConfirmation = ({
   confirm: (intent: KolizeumJoinReview) => void
   t: CopyText
 }>) => {
+  const numbers = useNumbers()
   if (!intent) return null
   const side = t(intent.side === 0 ? 'side_a' : 'side_b')
   return (
@@ -157,7 +163,7 @@ const JoinConfirmation = ({
         <p>
           {t('join_confirm_body', {
             character: intent.character_name,
-            amount: intent.stake_sui,
+            amount: numbers.amount(intent.stake_mist, 9),
             side,
           })}
         </p>
@@ -166,7 +172,7 @@ const JoinConfirmation = ({
             {copy.cancel}
           </button>
           <button className="btn-gold" disabled={pending} onClick={() => confirm(intent)} type="button">
-            {t('join_confirm_cta', { amount: intent.stake_sui, side })}
+            {t('join_confirm_cta', { amount: numbers.amount(intent.stake_mist, 9), side })}
           </button>
         </div>
       </div>
@@ -175,6 +181,7 @@ const JoinConfirmation = ({
 }
 
 export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
+  const localized_numbers = useNumbers()
   const t = copy_text(copy.kolizeum_page)
   const lobbies = useAppStore((state) => state.kolizeum.lobbies)
   const address = useAppStore((state) => state.session.wallet?.address ?? null)
@@ -280,18 +287,20 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
                     type="button"
                     style={{ background: index % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}
                   >
-                    <strong>{format_of(lobby.format)}</strong>
+                    <strong>
+                      <Text path="ui.team_format" values={{ size: lobby.format }} />
+                    </strong>
                     <small className={lobby.public ? '' : 'is-private'}>
                       {t(lobby.public ? 'access_public' : 'access_friends')}
                     </small>
                     <small style={{ color: STATUS_COLOR[lobby.status] }}>● {t(`status_${lobby.status}`)}</small>
                     <span>
                       <span className="kz-field-label">{t('col_pledge')}</span>
-                      {pot_label(BigInt(lobby.pledge_mist), t('free'))}
+                      {pot_label(BigInt(lobby.pledge_mist), t('free'), localized_numbers.sui)}
                     </span>
                     <span className="kz-gold">
                       <span className="kz-field-label">{t('col_full_pot')}</span>
-                      {pot_label(full_pot(lobby), t('free'))}
+                      {pot_label(full_pot(lobby), t('free'), localized_numbers.sui)}
                     </span>
                     <small>
                       <span className="kz-field-label">{t('col_creator')}</span>
@@ -313,7 +322,8 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
                 <header>
                   <b>{t('selected')}</b>
                   <span>
-                    {format_of(selected.format)} · {t(selected.public ? 'access_public' : 'access_friends')}
+                    <Text path="ui.team_format" values={{ size: selected.format }} /> ·{' '}
+                    {t(selected.public ? 'access_public' : 'access_friends')}
                   </span>
                 </header>
                 <div className="kz-rosters">
@@ -379,15 +389,17 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
               <div className="kz-character">
                 <b>{selected_character.name}</b>
                 <span>{selected_character.classe}</span>
-                <small>LV.{selected_character.level}</small>
+                <small>
+                  <Text path="encyclopedia_page.level_short" values={{ level: selected_character.level }} />
+                </small>
               </div>
             ) : (
               <p>{t('no_character')}</p>
             )}
             <p>
               {t('full_pot_summary', {
-                pot: format_sui((pledge_mist ?? 0n) * BigInt(form_format) * 2n, 2),
-                format: format_of(form_format),
+                pot: localized_numbers.sui((pledge_mist ?? 0n) * BigInt(form_format) * 2n, 2),
+                format: copy_text(copy.ui)('team_format', { size: form_format }),
               })}
             </p>
             <button className="btn-gold kz-create-button" disabled={!can_create} onClick={create} type="button">

@@ -55,3 +55,6 @@ export const complete_quests = (state: JourneyState, ids: readonly string[], cel
     celebrations: celebrate ? [...state.celebrations, ...added.filter((id) => id !== 'welcome')] : state.celebrations,
   })
 }
+
+export const journey_complete = (journey: JourneyState): boolean =>
+  journey.identity !== null && journey.ready && !journey.saving && next_quest(journey.completed) === null

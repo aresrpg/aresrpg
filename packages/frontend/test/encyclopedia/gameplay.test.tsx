@@ -2,8 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 
+import { render_english as renderToStaticMarkup } from '../i18n/render.ts'
 import { GameplayTab } from '../../src/encyclopedia/GameplayTab.tsx'
 import { encyclopedia_text } from '../../src/encyclopedia/copy.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'

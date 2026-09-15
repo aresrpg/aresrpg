@@ -24,7 +24,11 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
   const text = copy_text(copy.marketplace_page)
   const group = useAppStore(({ marketplace }) => marketplace.group)
   const settings = useAppStore((state) => state.settings)
-  const volume = useAppStore(({ marketplace }) => marketplace.volume)
+  const volume = useAppStore(({ marketplace }) => marketplace.volume) ?? {
+    day_mist: null,
+    month_mist: null,
+    history_days: 0,
+  }
   const [tab, set_tab] = useState<Tab>('BUY')
   useEffect(() => {
     dispatch_app({ type: 'market/group_selected', group })
@@ -57,8 +61,8 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
             <div className="mx-auto mt-2 h-px w-52 bg-[linear-gradient(90deg,transparent,rgba(200,150,60,.5),transparent)]" />
           </div>
           <div className="flex flex-wrap gap-2">
-            <MarketVolumeBadge window="24h" mist={volume?.day_mist ?? null} text={text} />
-            <MarketVolumeBadge window="30d" mist={volume?.month_mist ?? null} text={text} />
+            <MarketVolumeBadge window="24h" partial={volume.history_days < 1} mist={volume.day_mist} text={text} />
+            <MarketVolumeBadge window="30d" partial={volume.history_days < 30} mist={volume.month_mist} text={text} />
           </div>
         </div>
       </header>

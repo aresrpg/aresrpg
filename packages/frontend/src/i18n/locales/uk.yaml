@@ -186,7 +186,7 @@ party_panel:
   run_to_wrong_world: Цей учасник групи перебуває не у вашому поточному світі.
   run_to_unavailable: Ончейн-позиція цього учасника групи недоступна.
 trade_panel:
-  kares: Stacking
+  kares: 'Запропоновані KARES'
   close: Закрити
   title: Обмін між гравцями
   invite_sent: Запрошення на обмін надіслано
@@ -388,10 +388,28 @@ demo_page:
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
 marketplace_page:
+  prices_title: 'Історія цін'
+  prices_period: 'Період'
+  prices_range_7: '7Д'
+  prices_range_30: '30Д'
+  prices_range_90: '90Д'
+  prices_range_365: '1Р'
+  prices_subtitle: 'SUI / ОДИНИЦЮ · ЗАВЕРШЕНІ ПРОДАЖІ · БЕЗ КОМІСІЙ'
+  prices_loading: 'Завантаження історії цін…'
+  prices_unavailable: 'Історія цін недоступна. Автоматична повторна спроба.'
+  prices_empty: 'У цей період немає завершених продажів.'
+  prices_empty_day: 'Немає завершених продажів'
+  prices_weighted: 'Зважено за проданою кількістю · Середні за день'
+  prices_units: 'Продано {{units}} одиниць'
+  prices_since: 'Облік із {{date}} · UTC'
+  prices_inspect: 'Щоденні ціни за одиницю. Наведіть або торкніться для перегляду.'
+  prices_table: 'Показати щоденні ціни'
+  prices_date: 'Дата'
+  prices_quantity: 'Кількість'
   volume_24h: 'Обсяг за 24 год'
   volume_30d: Обсяг за 30 днів
   volume_window: Публічні продажі на ринку за останні {{window}}, без комісій.
-  volume_unavailable: Повна історія за цей період ще недоступна.
+  volume_unavailable: 'Обсяг тимчасово недоступний.'
   title: Ринок
   subtitle: Оголошення гравців у Sui
   disclaimer_kicker: Перед торгівлею
@@ -459,6 +477,7 @@ marketplace_page:
   character_roster_full: Сьомий персонаж не поміститься у ваш список — межа 6
   collect_pending: Отримання виручки…
   collect_success: Виручку отримано
+  volume_partial: 'Зафіксований обсяг за {{window}}. Відстеження ще не охоплює весь період, тому це мінімальне значення.'
 mastery_page:
   subtitle: Щоденні випробування
   title: Майстерність
@@ -897,7 +916,7 @@ fight_hud:
   chat_item_unavailable: Цей предмет недоступний у блокчейні.
   chat_you: Ви
   chat_line: '{name}: {message}'
-  chat_party_line: '(party) {name}: {message}'
+  chat_party_line: '(група) {name}: {message}'
   chat_whisper_to: '(для {name}) {message}'
   result_title: Результат бою
   result_duration: Тривалість
@@ -1592,6 +1611,11 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: У вас закінчилися SUI для оплати комісій за транзакції. Поповніть гаманець, щоб продовжити гру.
 characters_page:
+  inventory_selection: 'Вибрано: {{count}} · Shift-клік перемикає вибір спорядження'
+  crush_cta_count: 'Розтрощити ({{count}})'
+  crush_pending_count: 'Розтрощення: {{count}}…'
+  crush_confirm_selection: 'Розтрощити вибране спорядження ({{count}})? Кожен вибраний предмет буде знищено назавжди.'
+  crush_selection_changed: 'Виберіть доступне ненадіте спорядження з одного кіоску. Підтверджений набір має залишатися доступним.'
   teleport_dungeon_blocked: 'Завершіть або покиньте підземелля перед телепортацією.'
   consume_busy: 'Щоб використовувати витратні предмети, цей персонаж має бути вільним.'
   progression_busy: 'Характеристики та закляття можна змінювати лише тоді, коли цей персонаж не зайнятий.'
@@ -1729,9 +1753,6 @@ characters_page:
   feed_unavailable: 'Цей улюбленець більше недоступний.'
   claim_success: Нагороду отримано
   crush_title: Розтрощити спорядження
-  crush_confirm_body: 'Розтрощити {{name}}? Предмет буде знищено назавжди, а ви отримаєте руни.'
-  crush_cta: Розтрощити
-  crush_pending: Трощення…
   crush_success: Спорядження розтрощено
   crush_result_title: Результат розтрощення
   crush_result_empty: Нехай наступного разу пощастить.
@@ -2164,8 +2185,32 @@ spell_names:
 item_categories:
   cosmetic_hat: Косметичний капелюх
   cosmetic_cloak: Косметичний плащ
+  hat: 'Капелюх'
+  cloak: 'Плащ'
+  belt: 'Пояс'
+  boots: 'Чоботи'
+  amulet: 'Амулет'
+  ring: 'Перстень'
+  title: 'Титул'
+  pet: 'Улюбленець'
+  relic: 'Реліквія'
+  daggers: 'Кинджали'
+  spear: 'Спис'
+  bow: 'Лук'
+  axe: 'Сокира'
+  sword: 'Меч'
+  tool_farmer: 'Інструмент фермера'
+  tool_herbalist: 'Інструмент травника'
+  tool_miner: 'Інструмент шахтаря'
+  consumable: 'Витратний предмет'
+  resource: 'Ресурс'
+  rune: 'Руна'
+  key: 'Ключ'
+  weapon: 'Зброя'
+  tool: 'Інструмент'
+  relic_slot: 'Реліквія {{number}}'
 
-kares: Stacking
+kares: 'Стейкінг'
 kares_page:
   stake_more: 'Додати до стейку'
   additional_daily: 'Додатково / день'
@@ -2346,6 +2391,13 @@ kares_page:
   allocation_rationale: 'На запуску доступні 590 000 KARES (59 %): продаж, ліквідність і команда. За перший рік розблокується щонайбільше близько 82 000: 13,90 % від початкової суми до спалювання. Без учасників стейкінг призупиняє випуск нагород. Резерв спільноти дотримується календаря. Бойові виплати можуть бути меншими. Нові токени не створюються. Внески перерозподіляють наявні токени. Жодної гарантії ціни немає.'
   launch_market_cap: 'Капіталізація обігу на запуску'
   launch_market_cap_note: 'Якби продаж завершився зараз: обмежена ціна продажу × 590 000 KARES, доступних на запуску. Без мінімального фінансування запуску немає.'
+  error_generic: 'Не вдалося завершити дію.'
+  error_rejected: 'Запит скасовано.'
+  error_funds: 'Недостатньо коштів для цієї дії та комісій.'
+  error_connection: 'З’єднання не вдалося. Перевірте підключення та спробуйте знову.'
+  error_session: 'Сеанс гаманця недоступний. Підключіться знову.'
+  error_unknown: 'Вашу останню дію ще перевіряють. Наступні транзакції заблоковано, доки її результат не стане відомим.'
+  error_recovered: 'Вашу попередню транзакцію знайдено. Оновіть сторінку, щоб побачити результат, перш ніж обирати наступну дію.'
 
 leaderboard_page:
   unclaimed: 'Вільне місце'
@@ -2411,9 +2463,8 @@ automation_panel:
   blocked: 'Пауза: рух заблоковано'
   failed: 'Пауза: дія не вдалася. Перевірте помилку.'
   quantity: 'Зібрано: {{quantity}}'
-  unlocked: 'Доступ відкрито'
-  badge: 'HACK ZONE'
-  available: 'Автоматичне збирання доступне'
+  expand: 'Розгорнути автоматичний збір'
+  collapse: 'Згорнути автоматичний збір'
 
 item_drop_sources:
   title: 'Здобич монстрів'
@@ -2442,8 +2493,8 @@ journey:
   key_details: 'Знайти ключ від підземелля'
   next: 'Далі на тебе чекає'
   chapter_finished: 'Подорож завершено'
-  finished_title: 'Тепер твоя черга.'
-  finished_body: 'Інструменти, припаси, перемога в підземеллі й навіть Suize. Продовжуй досліджувати. Наступну історію напишеш сам.'
+  finished_title: 'Автоматизацію відкрито'
+  finished_body: 'AresRPG — це також гра про автоматизацію. Багато майбутніх можливостей спиратимуться на неї. Ви виконали всі завдання для початківців і отримали автоматичний збір ресурсів! Виберіть ресурс, натисніть «Почати» й дозвольте персонажу збирати його. Панель керування можна згорнути під час роботи.'
   reset_title: 'Завдання для початківців'
   reset_hint: 'Скидає завдання цього облікового запису в цьому браузері. Наявні предмети знову зарахуються після початку подорожі.'
   reset_action: 'Скинути завдання'
@@ -2489,7 +2540,101 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Збереження…
+  automation_reward_action: 'Відкрити автоматичний збір'
 
 fullscreen_enter: Увімкнути повноекранний режим
 fullscreen_exit: Вийти з повноекранного режиму
 fullscreen_failed: Не вдалося змінити повноекранний режим.
+
+spell_effects:
+  range: '{{minimum}}–{{maximum}}'
+  damage: 'Завдає {{value}} шкоди'
+  pct_life: 'Завдає шкоди в розмірі {{value}}% максимальних ОЗ цілі'
+  caster_damage: 'Завдає вам {{value}} шкоди'
+  punishment: 'Завдає {{value}} шкоди, збільшеної через втрачені ОЗ'
+  heal: 'Відновлює {{value}} ОЗ'
+  add: 'Додає {{value}} до {{stat}}'
+  remove: 'Зменшує {{stat}} на {{value}}'
+  fixed_remove: 'Зменшує {{stat}} на {{value}} (неможливо ухилитися)'
+  steal: 'Краде {{value}} {{stat}}'
+  chatiment: 'За отриману шкоду дає до {{value}} {{stat}} кожного ходу'
+  reduce: 'Зменшує шкоду на {{value}}'
+  reflect: 'Відбиває {{value}} шкоди'
+  push: 'Відштовхує на {{value}} клітинок'
+  pull: 'Притягує на {{value}} клітинок'
+  teleport: 'Телепортує на {{value}} клітинок'
+  swap: 'Міняє позиції місцями'
+  trap: 'Ставить пастку'
+  glyph: 'Ставить гліф'
+  dispel: 'Розсіює ефекти'
+  invis: 'Робить ціль невидимою'
+  return: 'Повертає закляття до рівня цього закляття'
+  redirect: 'Перенаправляє {{value}} шкоди'
+  unknown: 'Невідомий ефект'
+  any_stat: 'Будь-яка характеристика'
+  target_not_team: 'Лише вороги'
+  target_not_enemy: 'Лише союзники'
+  target_not_self: 'Лише інші'
+  target_only_caster: 'Лише заклинач'
+  turns: 'Ходів: {{count}}'
+  turn_range: 'Ходів: {{minimum}}–{{maximum}}'
+  critical_only: 'Лише критичний ефект'
+  turn_cap: 'Межа за хід · {{stat}}'
+  shape_point: 'Точка'
+  shape_circle: 'Коло · {{size}}'
+  shape_cross: 'Хрест · {{size}}'
+  shape_line: 'Лінія · {{size}}'
+  shape_tbar: 'Т-подібна зона · {{size}}'
+  shape_ring: 'Кільце · {{size}}'
+  shape_allmap: 'Уся мапа'
+  shape_cone: 'Конус · {{size}}'
+  shape_podium: 'Подіум · {{size}}'
+  shape_blob: 'Округла зона · {{size}}'
+  active_add: '+{{value}} {{stat}}'
+  active_remove: '−{{value}} {{stat}}'
+  active_damage: '{{value}} шкоди'
+  active_invis: 'Невидимість'
+  active_chatiment: 'ПОКАРАННЯ · {{value}} {{stat}}/ХІД · {{turns}}х'
+  active_turns: '{{count}}х'
+  active_turn_range: '{{minimum}}–{{maximum}}х'
+  short_strength: 'СИЛ'
+  short_intelligence: 'ІНТ'
+  short_chance: 'УДА'
+  short_agility: 'СПР'
+  short_wisdom: 'МУД'
+  short_range: 'ДАЛ'
+  short_power: 'ПОТ'
+  short_raw_damage: 'ШКД'
+  short_critical: 'КРИТ'
+  short_stat: 'ХАР'
+
+ui:
+  character: 'Персонаж'
+  spell_action: '{{name}}, рівень {{level}}, {{cost}} {{unit}}'
+  spell_level: 'Рівень закляття {{level}}'
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: 'Максимум досвіду'
+  experience_gain: '+{{amount}} {{unit}}'
+  xp: 'ДОСВ'
+  hp: 'ОЗ'
+  seconds: '{{count}}с'
+  meters: '{{count}}м'
+  versus: 'ПРОТИ'
+  team_format: '{{size}} проти {{size}}'
+  flat: 'Плаский'
+  fps: 'К/С'
+  north: 'Пн'
+  northeast: 'ПнСх'
+  east: 'Сх'
+  southeast: 'ПдСх'
+  south: 'Пд'
+  southwest: 'ПдЗх'
+  west: 'Зх'
+  northwest: 'ПнЗх'
+  game_description: 'AresRPG — браузерна воксельна MMORPG на Sui. Ваші персонажі, предмети та прогрес живуть у блокчейні.'
+  game_title: 'AresRPG · Воксельна MMORPG у блокчейні'
+  world_image: 'Воксельний світ AresRPG'
+  sale_description: 'Перший публічний продаж KARES. Допоможіть створити наступну главу AresRPG.'
+  formula_chastisement: 'G = min(ΔОЗ × S, МЕЖА × S − Gхід) · S = 1 для монстрів, ½ для гравців'
+  formula_drop: 'здобич = min(100%, базове значення × діапазон монстра × (600 + середня удача команди) / 600)'
+  formula_xp: 'ДОСВ = базовий запас × коефіцієнт групи × баланс рівнів × рівень гравця / рівень групи × (100 + МУД) / 100'

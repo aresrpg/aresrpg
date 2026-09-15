@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useText } from '../../i18n/useText.ts'
+
+import { Text } from '../../i18n/Text.tsx'
+
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import type { AppCopy } from '../../i18n/copy.ts'
@@ -36,8 +40,11 @@ const can_target_fighter = (
   fighter: FightFighterView
 ): boolean => targeting && targetable_cells.has(fighter.cell) && !fighter.dead
 
-const turn_time_label = (fighter: FightFighterView, turn_seconds: number | null): string =>
-  fighter.active && turn_seconds !== null ? ` · ${turn_seconds}s` : ''
+const turn_time_label = (
+  fighter: FightFighterView,
+  turn_seconds: number | null,
+  seconds: (value: number) => string
+): string => (fighter.active && turn_seconds !== null ? ` · ${seconds(turn_seconds)}` : '')
 
 export const FightTimeline = ({
   collapse_label,
@@ -66,6 +73,7 @@ export const FightTimeline = ({
   turn_progress: number | null
   turn_seconds: number | null
 }>) => {
+  const ui = useText()
   const targetable = new Set(targetable_cells)
   return (
     <details aria-label={label} className="fight-hud__turns" open>
@@ -83,7 +91,7 @@ export const FightTimeline = ({
           return (
             <button
               aria-disabled={targeting && !can_target}
-              aria-label={`${fighter.name}, ${fighter.hp} / ${fighter.max_hp} HP`}
+              aria-label={`${fighter.name}, ${ui('ui.vitals', { current: String(fighter.hp), maximum: String(fighter.max_hp), unit: ui('ui.hp') })}`}
               className={timeline_card_class(fighter, can_target)}
               key={fighter.seat.toString()}
               onBlur={() => focus(null)}
@@ -108,8 +116,9 @@ export const FightTimeline = ({
                 <span className="fight-hud__turn-tooltip-title">
                   <strong>{fighter.name}</strong>
                   <small>
-                    LV {fighter.level.toString()} · {fighter.hp.toString()} / {fighter.max_hp.toString()} HP
-                    {turn_time_label(fighter, turn_seconds)}
+                    <Text path="encyclopedia_page.level_short" values={{ level: fighter.level.toString() }} /> ·{' '}
+                    {fighter.hp.toString()} / {fighter.max_hp.toString()} <Text path="ui.hp" />
+                    {turn_time_label(fighter, turn_seconds, (count) => ui('ui.seconds', { count }))}
                   </small>
                 </span>
                 <FightResistanceRow copy={copy} values={fighter.resistances} />

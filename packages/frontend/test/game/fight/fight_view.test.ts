@@ -5,9 +5,10 @@ import { readFileSync } from 'node:fs'
 
 import { create_character_source, create_fight, reachable_fight_cells } from '@aresrpg/fight'
 import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
+import { createElement } from 'react'
 import { describe, expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 
+import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
 import {
   fight_fighter_name,
   fight_turn_key,
@@ -199,7 +200,7 @@ describe('generic fight view', () => {
     expect(fight_portrait_source(mob, icon_for)).toBe('/mob/aragne__fire.png')
     expect(fight_portrait_source(view.timeline[0]!, icon_for)).toBeNull()
     const html = renderToStaticMarkup(
-      FightTimeline({
+      createElement(FightTimeline, {
         collapse_label: 'Collapse turn order',
         copy,
         expand_label: 'Expand turn order',
@@ -261,7 +262,7 @@ describe('generic fight view', () => {
     ]
     const view = select_fight_view({ checkpoint, mode: 'local', owner: 'mine', names: {} })
     const html = renderToStaticMarkup(
-      FightTimeline({
+      createElement(FightTimeline, {
         collapse_label: 'Collapse turn order',
         copy,
         expand_label: 'Expand turn order',
@@ -280,7 +281,7 @@ describe('generic fight view', () => {
     expect(html).toContain('>2</b> AP')
     expect(html).toContain('>50</b>')
     expect(html.toLowerCase()).toContain('power')
-    expect(html).toContain('(1 turn)')
+    expect(html).toContain('(1T)')
   })
 
   test('the turn-start card follows only the played turn announcement', () => {
@@ -415,14 +416,6 @@ describe('generic fight view', () => {
     expect(hud).toContain('const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />')
     expect(placement).toContain('{chat}')
     expect(css).not.toContain('.fight-hud .chat')
-  })
-
-  test('active chat and commands share the viewport width instead of overlapping', () => {
-    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
-    expect(css).toContain('--fh-chat-width: min(38%, 440px)')
-    expect(css).toContain('.fight-hud > .gw-worldchat')
-    expect(css).toContain('left: calc(10px + var(--fh-chat-width) + var(--fh-lane-gap))')
-    expect(css).toContain('.fight-hud:not(.fight-hud--overworld) .fight-hud__bottom')
   })
 
   test('turn cards keep their collapse arrow in-row and expose elapsed time as a strong curtain', () => {

@@ -4,11 +4,14 @@
 import { KARES_ALLOCATION, KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
 import { Flame, Gem, Waves } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+
 import type { KaresCopy } from './copy.ts'
 import { format_amount } from './model.ts'
 import { finance_label } from './components.tsx'
 
 export const TokenomicsTab = ({ copy }: Readonly<{ copy: KaresCopy }>) => {
+  const { amount: format_amount } = useNumbers()
   const allocations = [
     { label: `${copy.community} (${copy.vested_five_years})`, amount: KARES_ALLOCATION.community, color: '#b395dd' },
     { label: `${copy.offering} (${copy.unlocked_immediately})`, amount: KARES_ALLOCATION.offering, color: '#c8963c' },

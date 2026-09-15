@@ -79,17 +79,6 @@ export const result_participant_shows_progress = (
   participant: Readonly<Pick<ResultParticipant, 'character_id'>>
 ): boolean => participant.character_id !== null
 
-export const compact_xp = (value: number): string => {
-  const compact = (divisor: number, suffix: string): string => {
-    const amount = Math.round((value / divisor) * 10) / 10
-    return `${Number.isInteger(amount) ? amount.toFixed(0) : amount.toFixed(1)}${suffix}`
-  }
-  if (Math.abs(value) >= 1_000_000_000) return compact(1_000_000_000, 'b')
-  if (Math.abs(value) >= 1_000_000) return compact(1_000_000, 'm')
-  if (Math.abs(value) >= 1_000) return compact(1_000, 'k')
-  return value.toLocaleString()
-}
-
 export const format_fight_duration = (duration_ms: number): string => {
   const seconds = Math.max(0, Math.floor(duration_ms / 1000))
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`

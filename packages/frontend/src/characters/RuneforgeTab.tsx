@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
 // RUNEFORGE — the three-panel workbench: LEFT the selected gear's sheet (the shared
 // ItemDetailView, rolled stats), CENTER the work surface (place gear + rune, apply), RIGHT
 // the bag pool (gear / runes tabs). The outcome is the chain's random roll — no success
@@ -19,9 +20,11 @@ import {
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { Gem, Plus, Sparkles, Swords, X } from 'lucide-react'
 
+import { localized_error } from '../i18n/error_text.ts'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
+import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
 import {
@@ -206,6 +209,7 @@ export default function RuneforgeTab({
   copy,
 }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
+  const vocabulary = useVocabulary()
   const encyclopedia = encyclopedia_text(copy)
   const wallet = useAppStore(({ session }) => session.wallet)
   const all_inventory = useAppStore(({ session }) => session.inventory)
@@ -260,7 +264,7 @@ export default function RuneforgeTab({
         })
         const key = scribe_outcome_kind(outcome.outcome)
         const message = t(OUTCOME_COPY_KEY[key])
-        if (key === 'critical_failure') pending.error(new Error(message))
+        if (key === 'critical_failure') pending.error(localized_error(message))
         else pending.success(message)
       })
       .catch(pending.error)
@@ -368,7 +372,7 @@ export default function RuneforgeTab({
                   onClick={apply}
                   title={
                     job_short && forge_job
-                      ? t('requires_job', { job: titleize(forge_job), level: RUNE_UNLOCK_LEVEL })
+                      ? t('requires_job', { job: vocabulary.job(forge_job), level: RUNE_UNLOCK_LEVEL })
                       : stat_maxed
                         ? t('stat_maxed')
                         : undefined
@@ -379,7 +383,7 @@ export default function RuneforgeTab({
                 </button>
                 <div className="mt-2 text-center text-[9px] tracking-[0.1em] text-muted uppercase">
                   {job_short && forge_job
-                    ? t('requires_job', { job: titleize(forge_job), level: RUNE_UNLOCK_LEVEL })
+                    ? t('requires_job', { job: vocabulary.job(forge_job), level: RUNE_UNLOCK_LEVEL })
                     : stat_maxed
                       ? t('stat_maxed')
                       : t('one_rune_note')}

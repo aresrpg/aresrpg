@@ -6,10 +6,14 @@ import { element_names } from '@aresrpg/immutable'
 import { Crosshair, Footprints, Shield, Sparkles, Zap, type LucideIcon } from 'lucide-react'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
-import type { EffectLineView } from '../components/EffectLine.tsx'
+import { useText } from '../i18n/useText.ts'
+import type { CopyText } from '../i18n/copy.ts'
+import { EffectLine, type EffectLineView } from '../components/EffectLine.tsx'
 import type { SpellEffect, SpellLevel } from '../content/catalog.ts'
 import { titleize } from '../content/catalog.ts'
 import { element_colors, stat_colors, stat_identities } from '../visual_identity.ts'
+
+import { spell_effect_text } from './spell_effect_text.ts'
 export type SpellCardPath = readonly (string | number)[]
 export type SpellCardValue =
   string | number | boolean | null | readonly SpellCardValue[] | Readonly<{ [key: string]: SpellCardValue }>
@@ -381,34 +385,48 @@ type SpellEffectLineProps = Readonly<{
   remove?: () => void
   add_critical?: () => void
 }>
-export const spell_effect_line_view = (effect: SpellEffect, critical_only = false): EffectLineView => {
+export const spell_effect_line_view = (effect: SpellEffect, text: CopyText, critical_only = false): EffectLineView => {
   const identity = effect_identity(effect)
   const channel = effect_channel(effect)
   const ChannelIcon = effect_icon(effect, channel)
   const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
-  const words = effect_words(effect)
-  const kind = effect_kinds[effect.kind]
-  const target = kind === 'caster_damage' ? null : target_note(effect.target_filter)
-  const meta = [
-    effect.turns > 0 ? `${effect.turns} turn${effect.turns === 1 ? '' : 's'}` : null,
-    effect.chance_bp < 10000 ? `${effect.chance_bp / 100}%` : null,
-    critical_only ? 'critical only' : null,
-  ].filter(Boolean)
   return Object.freeze({
     ...(effect.element ? { dot: color } : identity ? { icon: identity.icon } : {}),
     ...(effect.element || identity || !ChannelIcon ? {} : { glyph: <ChannelIcon size={15} strokeWidth={1.6} /> }),
-    pre: `${words.action}${words.amount ? ' ' : ''}`,
-    value: words.amount ? `${effect_range(effect)}${effect_value_suffix(effect)}` : null,
     tone: color,
-    post: [words.stat ? titleize(channel) : '', words.suffix, target ? `(${target})` : '']
-      .filter(Boolean)
-      .map((part) => ` ${part}`)
-      .join(''),
-    meta: meta.length > 0 ? meta.join(' · ') : null,
+    ...spell_effect_text(effect, text, critical_only),
   })
 }
 
-export const SpellEffectLine = ({
+const ReadEffect = ({
+  effect,
+  critical,
+  critical_only,
+}: Readonly<{ effect: SpellEffect; critical?: SpellEffect; critical_only: boolean }>) => {
+  const text = useText()
+  const shape = area_shapes[effect.area_shape]
+  return (
+    <div className="space-y-1">
+      <EffectLine view={spell_effect_line_view(effect, text, critical_only)} />
+      {(effect.area_size > 0 || shape === 'allmap') && (
+        <span className="text-[9px] text-muted">
+          {text(`spell_effects.shape_${shape}`, { size: effect.area_size })}
+        </span>
+      )}
+      {critical && (
+        <div className="border-l border-gold/35 pl-2">
+          <span className="text-[8px] text-gold">{text('encyclopedia_page.crit_chance')}</span>
+          <EffectLine
+            compact
+            view={spell_effect_line_view({ ...critical, target_filter: effect.target_filter }, text)}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+const SpellEffectLine = ({
   effect,
   critical,
   critical_only = false,
@@ -619,6 +637,13 @@ export const SpellEffectLine = ({
   )
 }
 
+const EffectRow = (props: SpellEffectLineProps) =>
+  props.edit ? (
+    <SpellEffectLine {...props} />
+  ) : (
+    <ReadEffect effect={props.effect} critical={props.critical} critical_only={props.critical_only ?? false} />
+  )
+
 export const EffectLines = ({
   effects,
   critical_effects,
@@ -650,7 +675,7 @@ export const EffectLines = ({
       {...(compact ? { 'data-spell-effects-compact': '' } : {})}
     >
       {effects.map((effect, index) => (
-        <SpellEffectLine
+        <EffectRow
           critical={critical_effects[index]}
           add_critical={
             edit && !critical_effects[index]
@@ -691,7 +716,7 @@ export const EffectLines = ({
       {critical_effects.slice(effects.length).map((effect, offset) => {
         const index = effects.length + offset
         return (
-          <SpellEffectLine
+          <EffectRow
             critical_only
             edit={edit}
             effect={effect}

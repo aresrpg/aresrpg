@@ -3,6 +3,7 @@
 
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 import { gathering_resources } from '../../src/modules/automation_route.ts'
 import { reduce_automation } from '../../src/modules/automation.ts'
 import type { AutomationInput } from '../../src/modules/automation_state.ts'
@@ -52,7 +53,8 @@ export const automation_fixture = (): AppState => {
       game_frozen: false,
       wallet: { address: 'owner' } as AppState['session']['wallet'],
     },
-    automation: { ...base.automation, unlocked: true, item_type: resource.item_type },
+    journey: { ...base.journey, identity: 'owner', ready: true, completed: JOURNEY_QUESTS.map(({ id }) => id) },
+    automation: { ...base.automation, item_type: resource.item_type },
     world: {
       ...base.world,
       tracked_world: 'nauvis',

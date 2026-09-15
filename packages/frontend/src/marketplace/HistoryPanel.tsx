@@ -4,11 +4,11 @@
 import { Coins, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog, titleize } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { format_sui } from '../wallet_amount.ts'
 
 import { short_address, SuiUnit } from './marketplace_model.tsx'
 
@@ -28,6 +28,7 @@ const relative_time = (at_ms: number, locale: string): string => {
 }
 
 export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: CopyText }>) => {
+  const localized_numbers = useNumbers()
   const market = useAppStore(({ marketplace }) => marketplace)
   const [limit, set_limit] = useState(PAGE)
   const profits = useMemo(
@@ -41,7 +42,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
         <div className="min-w-[260px] rounded-[5px] border border-border bg-surface px-5 py-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
           <p className="text-[8px] tracking-[0.22em] text-[#777b86] uppercase">{text('revenue_30d')}</p>
           <p className="mt-2 inline-flex items-center gap-2 text-[30px] font-semibold leading-none text-[#c8963c] tabular-nums">
-            {format_sui(BigInt(market.revenue_30d_mist), 2)} <SuiUnit size={17} />
+            {localized_numbers.sui(BigInt(market.revenue_30d_mist), 2)} <SuiUnit size={17} />
           </p>
           <p className="mt-2 text-[9px] tracking-[0.12em] text-[#777b86] uppercase">
             {text('sales_count', { count: market.history_total })}
@@ -55,7 +56,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
             </p>
             <div className="mt-2 flex items-center justify-between gap-4">
               <strong className="inline-flex items-center gap-1.5 text-[22px] text-[#c8963c] tabular-nums">
-                {format_sui(profits, 2)} <SuiUnit size={14} />
+                {localized_numbers.sui(profits, 2)} <SuiUnit size={14} />
               </strong>
               <button
                 className="h-9 cursor-pointer border border-[#c8963c]/50 bg-[#c8963c]/10 px-4 text-[9px] tracking-[0.15em] text-[#c8963c] uppercase disabled:opacity-40"
@@ -108,7 +109,7 @@ export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: 
                   {relative_time(row.ts_ms, locale)}
                 </span>
                 <span className="inline-flex max-w-full items-center justify-end gap-1 truncate whitespace-nowrap text-right text-[11px] tabular-nums">
-                  {format_sui(BigInt(row.price_mist), 2)} <SuiUnit />
+                  {localized_numbers.sui(BigInt(row.price_mist), 2)} <SuiUnit />
                 </span>
                 <span className="truncate text-[10px] tracking-[0.06em] text-[#67adff]">
                   <span className="market-history-label">{text('buyer')} · </span>

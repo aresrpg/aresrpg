@@ -89,11 +89,7 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
                 <SpellsTab character={character} copy={copy} />
               </CharacterWorkspace>
             )}
-            {tab === 'jobs' && (
-              <CharacterWorkspace kind="jobs">
-                <JobsTab character={character} copy={copy} />
-              </CharacterWorkspace>
-            )}
+            {tab === 'jobs' && <JobsTab character={character} copy={copy} />}
             {tab === 'runeforge' && (
               <CharacterWorkspace kind="runeforge">
                 <RuneforgeTab character={character} copy={copy} />

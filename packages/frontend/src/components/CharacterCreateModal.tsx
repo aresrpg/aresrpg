@@ -8,9 +8,9 @@ import { CHARACTER_NAME_MAX_LENGTH, is_valid_character_name } from '@aresrpg/sdk
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { character_creation_funding_text } from '../character_creation_funding.ts'
-import { format_sui } from '../wallet_amount.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 
 type CharacterIdentity = Readonly<{
@@ -96,6 +96,7 @@ export const CharacterCreateModal = ({
   insufficient: boolean
   view_spells: (classe: string) => void
 }>) => {
+  const localized_numbers = useNumbers()
   const [identity, set_identity] = useState<CharacterIdentity>(DEFAULT_IDENTITY)
   const [submitting, set_submitting] = useState(false)
   const name_error = character_name_error_text(copy, identity.name)
@@ -253,11 +254,11 @@ export const CharacterCreateModal = ({
           <div className="mr-auto border-l border-[#c8963c]/45 pl-3">
             <div className="text-[8px] tracking-[0.18em] text-[#777b86] uppercase">{copy.character_price}</div>
             <div className="mt-1 text-[12px] font-semibold tracking-[0.12em] text-[#d9af57]">
-              {format_sui(CHARACTER_PRICE_MIST, 0)} SUI
+              {localized_numbers.sui(CHARACTER_PRICE_MIST, 0)} SUI
             </div>
             {insufficient && (
               <div className="mt-1 text-[9px] tracking-[0.08em] text-[#ff667c]" role="alert">
-                {character_creation_funding_text(copy.insufficient_sui)}
+                {character_creation_funding_text(copy.insufficient_sui, localized_numbers.sui)}
               </div>
             )}
           </div>

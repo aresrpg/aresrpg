@@ -204,7 +204,7 @@ trade_panel:
   empty_offer: No hay objetos ofrecidos
   offer_item_unavailable: Uno de los objetos preparados ya no está disponible. Revisa tu oferta e inténtalo de nuevo.
   sui: SUI
-  kares: KARES ofrecido
+  kares: 'KARES ofrecidos'
   inventory: Tu inventario
   drag_hint: Arrastra o haz doble clic para añadir
   amount_title: Elegir cantidad
@@ -388,10 +388,28 @@ demo_page:
   control_hint: Haz clic en el canvas · WASD para moverte · Espacio para saltar · Ratón para mirar
   back: Volver a la aplicación
 marketplace_page:
+  prices_title: 'Historial de precios'
+  prices_period: 'Periodo'
+  prices_range_7: '7D'
+  prices_range_30: '30D'
+  prices_range_90: '90D'
+  prices_range_365: '1A'
+  prices_subtitle: 'SUI / UNIDAD · VENTAS COMPLETADAS · SIN COMISIONES'
+  prices_loading: 'Cargando historial de precios…'
+  prices_unavailable: 'Historial no disponible. Reintento automático.'
+  prices_empty: 'No hay ventas completadas en este periodo.'
+  prices_empty_day: 'Sin ventas completadas'
+  prices_weighted: 'Ponderado por unidades vendidas · Promedios diarios'
+  prices_units: '{{units}} unidades vendidas'
+  prices_since: 'Registro desde {{date}} · UTC'
+  prices_inspect: 'Precios unitarios diarios. Señala o toca para consultar.'
+  prices_table: 'Mostrar precios diarios'
+  prices_date: 'Fecha'
+  prices_quantity: 'Unidades'
   volume_24h: 'Volumen de 24 h'
   volume_30d: Volumen de 30 días
   volume_window: Ventas públicas del mercado en las últimas {{window}}, sin comisiones.
-  volume_unavailable: Todavía no hay un historial completo para este período.
+  volume_unavailable: 'El volumen no está disponible temporalmente.'
   title: Mercado
   subtitle: Anuncios de jugadores en Sui
   disclaimer_kicker: Antes de comerciar
@@ -459,6 +477,7 @@ marketplace_page:
   character_roster_full: Un 7.º personaje no cabe en tu plantilla — el límite es 6
   collect_pending: Recogiendo ingresos…
   collect_success: Ingresos recogidos
+  volume_partial: 'Volumen registrado de {{window}}. El seguimiento aún no cubre todo este periodo, por lo que es un mínimo.'
 mastery_page:
   subtitle: Desafíos diarios
   title: Maestría
@@ -897,7 +916,7 @@ fight_hud:
   chat_item_unavailable: Este objeto no está disponible on-chain.
   chat_you: Tú
   chat_line: '{name}: {message}'
-  chat_party_line: '(party) {name}: {message}'
+  chat_party_line: '(grupo) {name}: {message}'
   chat_whisper_to: '(a {name}) {message}'
   result_title: Resultado del combate
   result_duration: Duración
@@ -1594,6 +1613,11 @@ encyclopedia_page:
     witherbloom: ''
 out_of_sui_body: Te has quedado sin SUI para pagar las comisiones de transacción. Recarga tu cartera para seguir jugando.
 characters_page:
+  inventory_selection: '{{count}} seleccionados · Mayús-clic para seleccionar equipo'
+  crush_cta_count: 'Triturar ({{count}})'
+  crush_pending_count: 'Triturando {{count}}…'
+  crush_confirm_selection: '¿Triturar el equipo seleccionado ({{count}})? Cada objeto seleccionado se destruirá permanentemente.'
+  crush_selection_changed: 'Selecciona equipo disponible y no equipado de un mismo quiosco. La selección revisada debe seguir disponible.'
   teleport_dungeon_blocked: 'Termina o abandona la mazmorra antes de teletransportarte.'
   consume_busy: 'Este personaje debe estar inactivo para usar consumibles.'
   progression_busy: 'Solo puedes modificar las características y los hechizos cuando este personaje esté inactivo.'
@@ -1731,9 +1755,6 @@ characters_page:
   feed_unavailable: 'Esta mascota ya no está disponible.'
   claim_success: Recompensa reclamada
   crush_title: Triturar equipo
-  crush_confirm_body: '¿Triturar {{name}}? El objeto se destruye para siempre y produce runas.'
-  crush_cta: Triturar
-  crush_pending: Triturando…
   crush_success: Equipo triturado
   crush_result_title: Resultado del triturado
   crush_result_empty: Más suerte la próxima vez.
@@ -2166,8 +2187,32 @@ spell_names:
 item_categories:
   cosmetic_hat: Sombrero cosmético
   cosmetic_cloak: Capa cosmética
+  hat: 'Sombrero'
+  cloak: 'Capa'
+  belt: 'Cinturón'
+  boots: 'Botas'
+  amulet: 'Amuleto'
+  ring: 'Anillo'
+  title: 'Título'
+  pet: 'Mascota'
+  relic: 'Reliquia'
+  daggers: 'Dagas'
+  spear: 'Lanza'
+  bow: 'Arco'
+  axe: 'Hacha'
+  sword: 'Espada'
+  tool_farmer: 'Herramienta de granjero'
+  tool_herbalist: 'Herramienta de herborista'
+  tool_miner: 'Herramienta de minero'
+  consumable: 'Consumible'
+  resource: 'Recurso'
+  rune: 'Runa'
+  key: 'Llave'
+  weapon: 'Arma'
+  tool: 'Herramienta'
+  relic_slot: 'Reliquia {{number}}'
 
-kares: Stacking
+kares: 'Staking'
 kares_page:
   stake_more: 'Añadir stake'
   additional_daily: 'Adicional / día'
@@ -2348,6 +2393,13 @@ kares_page:
   allocation_rationale: '590.000 KARES (59 %) están disponibles al lanzamiento: venta, liquidez y equipo. El primer año se liberan como máximo unos 82.000 más: el 13,90 % del importe inicial, antes de las quemas. El staking se pausa sin participantes. La reserva comunitaria sigue el calendario. El combate puede repartir menos. No se crean nuevos tokens. Las donaciones redistribuyen tokens existentes. No se garantiza ningún precio.'
   launch_market_cap: 'Capitalización circulante al lanzamiento'
   launch_market_cap_note: 'Si la venta cerrara ahora: precio limitado × 590.000 KARES disponibles al lanzamiento. Sin lanzamiento por debajo de la financiación mínima.'
+  error_generic: 'No se pudo completar la acción.'
+  error_rejected: 'La solicitud se canceló.'
+  error_funds: 'No hay fondos suficientes para esta acción y sus comisiones.'
+  error_connection: 'La conexión falló. Comprueba tu conexión e inténtalo de nuevo.'
+  error_session: 'La sesión de la cartera no está disponible. Vuelve a conectarte.'
+  error_unknown: 'Tu última acción sigue en comprobación. Las siguientes transacciones están bloqueadas hasta conocer su resultado.'
+  error_recovered: 'Se encontró tu transacción anterior. Actualiza para ver su resultado antes de elegir tu próxima acción.'
 
 leaderboard_page:
   unclaimed: 'Sin ocupar'
@@ -2413,9 +2465,8 @@ automation_panel:
   blocked: 'En pausa: movimiento bloqueado'
   failed: 'En pausa: la acción falló. Revisa el error.'
   quantity: 'Recolectado: {{quantity}}'
-  unlocked: 'Acceso desbloqueado'
-  badge: 'HACK ZONE'
-  available: 'Recolección automática disponible'
+  expand: 'Expandir recolección automática'
+  collapse: 'Contraer recolección automática'
 
 item_drop_sources:
   title: 'Botín de monstruos'
@@ -2444,8 +2495,8 @@ journey:
   key_details: 'Buscar una llave de mazmorra'
   next: 'A continuación'
   chapter_finished: 'Viaje completado'
-  finished_title: 'Ahora te toca a ti.'
-  finished_body: 'Herramientas, provisiones, una victoria en mazmorra y hasta Suize. Sigue explorando. La próxima historia la escribes tú.'
+  finished_title: 'Automatización desbloqueada'
+  finished_body: 'AresRPG también es un juego de automatización. Muchas funciones futuras se basarán en ella. ¡Has completado todas las misiones de principiante y ganado la recolección automática! Elige un recurso, pulsa Iniciar y deja que tu personaje recolecte. Puedes contraer los controles mientras trabaja.'
   reset_title: 'Misiones iniciales'
   reset_hint: 'Reinicia las misiones de esta cuenta en este navegador. Los objetos que posees vuelven a contar al reiniciar el viaje.'
   reset_action: 'Reiniciar misiones'
@@ -2491,7 +2542,101 @@ journey:
   welcome_objective: ''
   finished_objective: ''
   saving: Guardando…
+  automation_reward_action: 'Abrir recolección automática'
 
 fullscreen_enter: Activar pantalla completa
 fullscreen_exit: Salir de pantalla completa
 fullscreen_failed: No se pudo cambiar el modo de pantalla completa.
+
+spell_effects:
+  range: '{{minimum}} a {{maximum}}'
+  damage: 'Inflige {{value}} de daño'
+  pct_life: 'Inflige un {{value}}% de los PV máximos del objetivo como daño'
+  caster_damage: 'Te inflige {{value}} de daño'
+  punishment: 'Inflige {{value}} de daño, aumentado por los PV que faltan'
+  heal: 'Cura {{value}} PV'
+  add: 'Añade {{value}} {{stat}}'
+  remove: 'Retira {{value}} {{stat}}'
+  fixed_remove: 'Retira {{value}} {{stat}} (inevitable)'
+  steal: 'Roba {{value}} {{stat}}'
+  chatiment: 'Gana hasta {{value}} {{stat}} por el daño recibido cada turno'
+  reduce: 'Reduce el daño en {{value}}'
+  reflect: 'Refleja {{value}} de daño'
+  push: 'Empuja {{value}} casillas'
+  pull: 'Atrae {{value}} casillas'
+  teleport: 'Teletransporta {{value}} casillas'
+  swap: 'Intercambia posiciones'
+  trap: 'Coloca una trampa'
+  glyph: 'Coloca un glifo'
+  dispel: 'Disipa los efectos'
+  invis: 'Vuelve invisible al objetivo'
+  return: 'Devuelve hechizos hasta el nivel de este hechizo'
+  redirect: 'Redirige {{value}} de daño'
+  unknown: 'Efecto desconocido'
+  any_stat: 'Cualquier característica'
+  target_not_team: 'Solo enemigos'
+  target_not_enemy: 'Solo aliados'
+  target_not_self: 'Solo otros'
+  target_only_caster: 'Solo el lanzador'
+  turns: 'Turnos: {{count}}'
+  turn_range: 'Turnos: {{minimum}}–{{maximum}}'
+  critical_only: 'Solo crítico'
+  turn_cap: 'Límite por turno · {{stat}}'
+  shape_point: 'Punto'
+  shape_circle: 'Círculo · {{size}}'
+  shape_cross: 'Cruz · {{size}}'
+  shape_line: 'Línea · {{size}}'
+  shape_tbar: 'Forma de T · {{size}}'
+  shape_ring: 'Anillo · {{size}}'
+  shape_allmap: 'Todo el mapa'
+  shape_cone: 'Cono · {{size}}'
+  shape_podium: 'Podio · {{size}}'
+  shape_blob: 'Zona redondeada · {{size}}'
+  active_add: '+{{value}} {{stat}}'
+  active_remove: '−{{value}} {{stat}}'
+  active_damage: '{{value}} daños'
+  active_invis: 'Invisible'
+  active_chatiment: 'CASTIGO · {{value}} {{stat}}/TURNO · {{turns}}T'
+  active_turns: '{{count}}T'
+  active_turn_range: '{{minimum}}–{{maximum}}T'
+  short_strength: 'FUE'
+  short_intelligence: 'INT'
+  short_chance: 'SUE'
+  short_agility: 'AGI'
+  short_wisdom: 'SAB'
+  short_range: 'ALC'
+  short_power: 'POT'
+  short_raw_damage: 'DAÑO'
+  short_critical: 'CRÍT'
+  short_stat: 'EST'
+
+ui:
+  character: 'Personaje'
+  spell_action: '{{name}}, nivel {{level}}, {{cost}} {{unit}}'
+  spell_level: 'Nivel del hechizo {{level}}'
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: 'XP máxima'
+  experience_gain: '+{{amount}} {{unit}}'
+  xp: 'XP'
+  hp: 'PV'
+  seconds: '{{count}}s'
+  meters: '{{count}}m'
+  versus: 'CONTRA'
+  team_format: '{{size}} contra {{size}}'
+  flat: 'Plano'
+  fps: 'FPS'
+  north: 'N'
+  northeast: 'NE'
+  east: 'E'
+  southeast: 'SE'
+  south: 'S'
+  southwest: 'SO'
+  west: 'O'
+  northwest: 'NO'
+  game_description: 'AresRPG es un MMORPG de vóxeles para navegador en Sui. Tus personajes, objetos y progreso viven en la cadena.'
+  game_title: 'AresRPG · MMORPG de vóxeles en cadena'
+  world_image: 'Mundo de vóxeles de AresRPG'
+  sale_description: 'La venta pública inicial de KARES. Ayuda a construir el próximo capítulo de AresRPG.'
+  formula_chastisement: 'G = min(ΔPV × S, LÍMITE × S − Gturno) · S = 1 para monstruos, ½ para jugadores'
+  formula_drop: 'botín = min(100%, valor base × franja del monstruo × (600 + Suerte media del equipo) / 600)'
+  formula_xp: 'XP = reserva base × coeficiente de grupo × equilibrio de niveles × nivel del jugador / nivel del grupo × (100 + SAB) / 100'

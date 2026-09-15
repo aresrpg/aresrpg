@@ -16,6 +16,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { mob_level_from_scalar } from '../content/mob_levels.ts'
 import { useNametags } from '../game/core/nametag_feed.ts'
@@ -134,18 +135,21 @@ const useInteractionTarget = (ids: readonly string[], state: AppState): string |
   )
 
 /** One member row: its species and the exact level it will bring to the board. */
-const member_line = (mob_type: string, scalar: number, index: number, unknown: string): NametagLine => {
+const member_line = (mob_type: string, scalar: number, index: number, copy: AppCopy): NametagLine => {
   const detail = content_catalog.mob(mob_type)?.mob
-  const name = detail?.name ?? unknown
+  const name = detail?.name ?? copy.world_hud.spawn_unknown_mob
   return {
     key: `${mob_type}:${index}`,
     // the pack has no header, so every member reads as a title of its own
     title: true,
-    text: detail ? `${name} · LV ${member_level(detail.level_min, detail.level_max, scalar)}` : name,
+    text: detail
+      ? `${name} · ${copy_text(copy.encyclopedia_page)('level_short', { level: member_level(detail.level_min, detail.level_max, scalar) })}`
+      : name,
   }
 }
 
 export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const vocabulary = useVocabulary()
   const { spawns } = useNametags()
   const state = useAppStore((value) => value)
   const { world } = state
@@ -194,8 +198,8 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           const requirement = gate.ok
             ? text('resource_press_collect', { name: item_name })
             : gate.reason === 'level'
-              ? text('resource_need_level', { job: gate.job, level: gate.level })
-              : text('resource_need_tool', { job: gate.job })
+              ? text('resource_need_level', { job: vocabulary.job(gate.job), level: gate.level })
+              : text('resource_need_tool', { job: vocabulary.job(gate.job) })
           const [before, after] = split_key_template(requirement)
           return createPortal(
             <NametagCard
@@ -234,7 +238,7 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           <NametagCard
             lines={[
               ...group.members.map(({ mob_type, level_scalar }, index) =>
-                member_line(mob_type, level_scalar, index, text('spawn_unknown_mob'))
+                member_line(mob_type, level_scalar, index, copy)
               ),
               ...(target === spawn_id
                 ? [

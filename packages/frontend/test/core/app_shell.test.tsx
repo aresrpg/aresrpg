@@ -187,7 +187,8 @@ test('the sidebar connection card renders reducer-owned link phases', async () =
   )
 
   expect(reconnecting).toContain('Reconnecting')
-  expect(reconnecting).toContain('title="Connection lost"')
+  expect(reconnecting).toContain(copy.kares_page.error_connection)
+  expect(reconnecting).not.toContain('title="Connection lost"')
   expect(connected).toContain('Connected')
   expect(connected).toContain('42 ms')
   expect(connected).toContain('bg-[#5ee38d]')

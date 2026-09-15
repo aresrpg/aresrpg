@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { daily_amount, staking_gains, staking_preset } from '../../src/kares/staking_model.ts'
+import { staking_gains, staking_preset } from '../../src/kares/staking_model.ts'
 
 import { finance_snapshot } from './fixture.ts'
 
@@ -28,11 +28,8 @@ test('additional daily gains account for dilution instead of multiplying the old
   expect(staking_gains(empty)).toMatchObject({ additional_kares: 0n, additional_sui: 0n })
 })
 
-test('percentage shortcuts preserve exact base units and daily displays have exactly three decimals', () => {
+test('percentage shortcuts preserve exact base units', () => {
   expect(staking_preset(9_007_199_254_740_993n, 100)).toBe('9007199.254740993')
   expect(staking_preset(9_007_199_254_740_993n, 25)).toBe('2251799.813685248')
   expect(staking_preset(1_000_000_001n, 50)).toBe('0.500000000')
-  expect(daily_amount(0n)).toBe('0.000')
-  expect(daily_amount(1_500_000_000n)).toBe('1.500')
-  expect(daily_amount(1_234_567_890n)).toBe('1.234')
 })

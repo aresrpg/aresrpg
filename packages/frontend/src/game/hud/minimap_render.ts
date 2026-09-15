@@ -36,14 +36,17 @@ export const resample_key = (x: number, z: number): string =>
 export const fill_relief_rows = (world: CompiledWorld, grid: ReliefGrid, from_row: number, to_row: number): void => {
   const { samples, radius, center_x, center_z, heights, colors } = grid
   const step = (radius * 2) / samples
+  const liquid_id = world.recipe.liquid ? world.materials.id_for(world.recipe.liquid) : null
+  const liquid_y = liquid_id === null ? Number.NEGATIVE_INFINITY : world.recipe.sea_level
   for (let row = from_row; row < to_row; row += 1) {
     for (let col = 0; col < samples; col += 1) {
       const wx = center_x + (col - samples / 2) * step
       const wz = center_z + (row - samples / 2) * step
       const column = sample_world_column(world, Math.floor(wx), Math.floor(wz))
       const index = row * samples + col
-      heights[index] = column.surface_y
-      const [r, g, b] = world.materials.colors[column.surface_id] ?? [0.2, 0.2, 0.2]
+      heights[index] = Math.max(liquid_y, column.surface_y)
+      const material_id = column.surface_y < liquid_y ? liquid_id! : column.surface_id
+      const [r, g, b] = world.materials.colors[material_id]!
       colors[index * 3] = srgb(r!)
       colors[index * 3 + 1] = srgb(g!)
       colors[index * 3 + 2] = srgb(b!)

@@ -4,9 +4,11 @@
 import { useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 
+import { useNumbers } from '../i18n/useNumbers.ts'
+
 import type { KaresCopy } from './copy.ts'
-import { format_amount, validate_amount, type FinanceInput, type FinanceSnapshot } from './model.ts'
-import { daily_amount, staking_gains, staking_preset } from './staking_model.ts'
+import { validate_amount, type FinanceInput, type FinanceSnapshot } from './model.ts'
+import { staking_gains, staking_preset } from './staking_model.ts'
 
 type Target =
   | Readonly<{ kind: 'stake' }>
@@ -30,6 +32,7 @@ const StakingAmount = ({
   dispatch: (input: FinanceInput) => void
   mode: 'stake' | 'withdraw'
 }>) => {
+  const { amount: format_amount, daily: daily_amount } = useNumbers()
   const [value, set_value] = useState('')
   const validation = validate_amount(value, balance ?? 0n)
   const can_submit = !locked && validation.amount !== null

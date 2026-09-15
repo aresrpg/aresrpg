@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+
+import { Text } from '../../i18n/Text.tsx'
 // MINIMAP — the top-right 2D map. North-up (the real-map convention); only the centered player
 // arrow rotates with the camera. Terrain is the analytic relief from minimap_render; the overlay
 // marks (zone delimitation, spawns, players, arrow) are the shared map_layers painters. Labeled
@@ -160,7 +162,7 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         <span aria-hidden="true" className="gw-minimap__corner gw-minimap__corner--bl" />
         <span aria-hidden="true" className="gw-minimap__corner gw-minimap__corner--br" />
         <span aria-hidden="true" className="gw-minimap__north">
-          N
+          <Text path="ui.north" />
         </span>
       </div>
       <MinimapReadout

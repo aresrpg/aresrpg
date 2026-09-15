@@ -1,6 +1,27 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
+.market-detail-body {
+  container-type: inline-size;
+  container-name: market-detail;
+}
+
+.market-item-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+@container market-detail (min-width: 800px) {
+  .market-item-columns {
+    grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  }
+}
+
 .market-history-label {
   display: none;
 }
@@ -157,4 +178,22 @@
   .market-disclaimer > div {
     padding: 16px;
   }
+}
+
+/* Keep the shared owned-item view readable inside the compact sale form. */
+.market-sale-form [data-item-detail-view] > header {
+  gap: 12px;
+}
+.market-sale-form [data-item-detail-view] > header > img {
+  width: 48px;
+  height: 48px;
+}
+.market-sale-form [data-item-detail-view] > header > div > div:first-child {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.market-sale-form [data-item-detail-name] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 11px;
 }

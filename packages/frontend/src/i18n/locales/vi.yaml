@@ -1,0 +1,2606 @@
+# SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
+# © 2026 Sceat — All rights reserved. See LICENSE.
+
+title: WebGPU không khả dụng
+body: Thế giới đầy đủ cần WebGPU. Hiện đang dùng lưới nhẹ thay thế.
+fatal: Trình duyệt này không thể tạo ngữ cảnh đồ họa WebGPU hoặc WebGL.
+engine_recovery: Thế giới đã ngừng tải hoặc hiển thị. Hãy tải lại để thử tiếp.
+engine_reload: Tải lại
+world_unavailable_title: Thế giới không khả dụng
+world_unavailable: Thế giới này chưa có cấu hình địa hình.
+mobile_unavailable_label: Truy cập trên di động
+mobile_unavailable_title: AresRPG chưa hỗ trợ thiết bị di động
+mobile_unavailable_body: Chúng tôi đang xây dựng trải nghiệm riêng cho di động. Hiện tại, hãy vào thế giới bằng trình duyệt máy tính.
+mobile_unavailable_status: Bản máy tính đang hoạt động
+chrome: 'Chrome hoặc Edge: cập nhật trình duyệt, bật tăng tốc đồ họa trong Cài đặt → Hệ thống, rồi khởi động lại.'
+other: Bật tăng tốc phần cứng, cập nhật trình duyệt và trình điều khiển đồ họa, rồi khởi động lại trình duyệt.
+continue: Tiếp tục với lưới
+quality: Chất lượng
+low: Thấp
+medium: Trung bình
+high: Cao
+flat_mode: Chế độ phẳng
+identity_connected: Đã kết nối danh tính
+sign_in_to_play: Đăng nhập để chơi
+loading_universe: Đang tải vũ trụ
+continue_google: Tiếp tục với Google
+wallet_session_ended: Phiên ví đã kết thúc. Hãy đăng nhập lại.
+connect_wallet: Kết nối ví
+no_wallet: Chưa cài ví tương thích
+watch_world: Xem thế giới trực tiếp
+sign_in: Đăng nhập để chơi
+drag_hint: Kéo để di chuyển · Cuộn để thu phóng
+navigation: Điều hướng
+world: Thế giới
+characters: Nhân vật
+leaderboard: Bảng xếp hạng
+mastery: Tinh thông
+encyclopedia: Bách khoa
+marketplace: Chợ
+airdrop: Airdrop
+kolizeum: Đấu trường
+settings: Cài đặt
+admin: Quản trị
+online: Trực tuyến
+account: Tài khoản
+join_discord: Tham gia Discord
+join_telegram: Tham gia Telegram
+sui_universe: Vũ trụ Sui
+server_disconnected: Đã ngắt kết nối
+server_connecting: Đang kết nối
+server_reconnecting: Đang kết nối lại
+server_syncing: Đang đồng bộ
+server_connected: Đã kết nối
+server_violation: Đã ngắt kết nối do vi phạm quy tắc. Sẽ thử lại sớm.
+server_replaced: Đã kết nối ở nơi khác
+session_replaced_title: Đã đăng nhập từ nơi khác
+session_replaced_body: Tài khoản đã mở trò chơi ở nơi khác nên cửa sổ này bị ngắt kết nối. Đóng phiên kia hoặc kết nối lại tại đây để chơi trong cửa sổ này.
+session_replaced_reconnect: Kết nối lại tại đây
+latency_unit: ms
+indexing_health: Trạng thái lập chỉ mục
+online_players: Người chơi trực tuyến
+indexing_lag_warning: Thao tác trong game có thể bị trễ
+indexing_block_title: Đang đồng bộ thế giới
+indexing_block_body: Lịch sử chuỗi vẫn đang được lập chỉ mục. Trò chơi sẽ tự mở khi máy chủ bắt kịp vùng dữ liệu trực tiếp an toàn.
+indexing_block_progress: Tiến độ
+indexing_block_remaining: Điểm kiểm tra còn lại
+indexing_block_eta: Thời gian dự kiến
+indexing_block_estimating: Đang tính…
+game_maintenance_title: Đang bảo trì
+game_maintenance_body: Hợp đồng thông minh AresRPG đang tạm dừng để bảo trì. Hãy xem Discord để cập nhật.
+gas_budget_toast: Thao tác vượt mức phí mạng dự trữ. Nó chưa được thực hiện và không tốn phí — hãy báo cho chúng tôi.
+game_paused_toast: Trò chơi tạm dừng để cập nhật. Thao tác chưa được thực hiện — hãy thử lại sau vài phút.
+movement_sync_toast: Vị trí vẫn đang đồng bộ. Hãy tiếp tục di chuyển bình thường rồi thử lại sau một lát.
+fight_path_changed_toast: Bàn đấu đã thay đổi trước khi gửi bước đi. Lượt của bạn đã được khôi phục — hãy thử lại.
+party_member_unavailable_toast: Nhân vật đó đã ở trong một nhóm.
+fight_turn_already_forced_toast: Đã có người buộc kết thúc lượt này.
+fight_placement_unavailable_toast: Ô xuất phát đó không khả dụng. Hãy chọn ô trống khác.
+network_testnet: MẠNG THỬ NGHIỆM
+page_pending_title: Trang này đang được xây dựng lại
+page_pending_body: Lối vào vẫn hiển thị trong lúc chúng tôi khôi phục trang.
+welcome_title: Chào mừng đến AresRPG
+welcome_body: AresRPG là MMORPG hoàn toàn trên chuỗi với nền kinh tế do người chơi vận hành. Tạo nhân vật đầu tiên, vào thế giới và chiến đấu với quái vật.
+welcome_need_sui: 'Bạn cần một ít SUI để chơi: nhân vật đầu tiên giá {{price}} SUI và cần giữ ít nhất {{fee}} SUI để trả phí. Nạp SUI vào địa chỉ bên dưới để bắt đầu.'
+insufficient_sui: Cần giữ ít nhất {{fee}} SUI trong số dư để trả phí.
+create_character: Tạo nhân vật
+create_title: Tạo nhân vật của bạn
+create_lead: Chọn lớp, màu sắc và đặt tên nhân vật. Thế giới phía sau bạn đã hoạt động.
+class_label: Lớp
+view_class_spells: Xem phép của lớp này
+sex_label: Giới tính
+appearance_label: Ngoại hình · 3 màu
+name_label: Tên
+name_placeholder: Nhập tên…
+name_invalid: Dùng 4–19 ký tự ASCII hiển thị được, không có khoảng trắng.
+male: Nam
+female: Nữ
+cancel: Quay lại
+create_and_play: Tạo và chơi
+character_price: Giá
+creating_character: Đang tạo nhân vật…
+character_created: Đã tạo nhân vật
+address_verification_failed: Không thể xác minh địa chỉ ví. Hãy đăng nhập lại hoặc liên hệ qua Discord.
+dismiss: Đóng
+wallet_copy_address: Sao chép địa chỉ
+wallet_send: Gửi
+wallet_add_funds: Nạp tiền
+wallet_gas_spent: Gas đã dùng (24 giờ)
+wallet_disconnect: Ngắt kết nối
+wallet_fund_body: Gửi SUI tới địa chỉ ví này. Số dư sẽ cập nhật khi bạn quay lại ứng dụng.
+wallet_send_title: Gửi SUI
+wallet_recipient: Địa chỉ người nhận
+wallet_amount: Số lượng (SUI)
+wallet_send_pending: Đang gửi SUI…
+wallet_send_success: Đã gửi SUI
+wallet_send_failed: Chuyển SUI thất bại
+wallet_close: Đóng
+kolizeum_page:
+  title: Đấu trường — Bàn chiến sự
+  tagline: người thắng chia 90% quỹ · nền tảng nhận 10%
+  tab_open: Phòng đang mở
+  tab_mine: Phòng của tôi
+  col_format: Thể thức
+  col_access: Quyền vào
+  col_status: Trạng thái
+  col_pledge: Tiền cược
+  col_full_pot: Tổng quỹ tối đa
+  col_creator: Người tạo
+  access_public: Công khai
+  access_friends: Bạn bè
+  status_open: Đang mở
+  status_started: Đã bắt đầu
+  status_settling: Trận đấu kết thúc
+  empty: Chưa có phòng
+  selected: Phòng đã chọn
+  side_a: Đội A
+  side_b: Đội B
+  total_pot: Quỹ hiện tại
+  settlement_remaining: Ký quỹ còn lại
+  paid_out: Đã chi trả
+  free: Miễn phí
+  join_a: Vào đội A
+  join_b: Vào đội B
+  join_confirm_title: Xác nhận cược đấu trường
+  join_confirm_body: '{{character}} sẽ cược {{amount}} SUI và vào {{side}}. Giao dịch này xác nhận khoản cược.'
+  join_confirm_cta: Cược {{amount}} SUI · Vào {{side}}
+  create_title: Tạo phòng
+  form_format: Thể thức
+  form_access: Quyền vào
+  form_pledge: Cược mỗi người (SUI)
+  form_max_diff: Chênh lệch cấp tối đa
+  form_character: Dùng nhân vật
+  no_character: Không có nhân vật rảnh
+  full_pot_summary: Quỹ tối đa {{format}} = {{pot}} SUI · người thắng nhận 90%
+  create_cta: Tạo phòng
+friends_panel:
+  title: Bạn bè
+  observed: Đã thấy ở gần
+  unseen: Hiện chưa thấy
+  none_observed: Không thấy bạn bè ở gần
+  empty: Chưa có bạn bè
+  placeholder: Tên, SuiNS hoặc địa chỉ 0x
+  add: Thêm bạn
+  remove: Xóa
+  remove_title: Xóa bạn
+  remove_body: Xóa {{name}} khỏi danh sách bạn bè?
+  error_no_suins: Không có địa chỉ SuiNS khớp với {{name}}.
+  error_target: Nhập tên nhân vật, tên SuiNS hoặc địa chỉ Sui đầy đủ.
+  error_self: Không thể thêm chính mình.
+  error_duplicate: Người chơi này đã có trong danh sách bạn bè.
+  cancel: Hủy
+party_panel:
+  title: Nhóm
+  adventurer: Nhà thám hiểm
+  invited_by: '{{name}} mời bạn vào nhóm'
+  accept: Chấp nhận
+  decline: Từ chối
+  leader: Trưởng nhóm
+  leave: Rời nhóm
+  disband: Giải tán
+  kick: Mời ra
+  rescind: Hủy lời mời
+  invite_owned: Mời nhân vật của mình
+  follow_leader: Theo trưởng nhóm
+  run_to_position: Chạy đến vị trí
+  run_to_started: Bạn đang chạy đến vị trí trên chuỗi gần nhất của {{name}}. Đây có thể không phải vị trí hiện tại của họ.
+  run_to_started_position: Bạn đang chạy đến vị trí được liên kết.
+  run_to_progress: Đang chạy đến vị trí
+  run_to_position_wrong_world: Vị trí được liên kết không ở thế giới hiện tại.
+  run_to_wrong_world: Thành viên đó không ở thế giới hiện tại.
+  run_to_unavailable: Vị trí trên chuỗi của thành viên đó không khả dụng.
+trade_panel:
+  kares: KARES đề nghị
+  close: Đóng
+  title: Trao đổi người chơi
+  invite_sent: Đã gửi lời mời trao đổi
+  invited_by: '{{name}} mời bạn trao đổi'
+  request_waiting: Đang chờ {{name}} chấp nhận trao đổi
+  accept_request: Chấp nhận
+  decline: Từ chối
+  cancel_request: Hủy yêu cầu
+  trades: Trao đổi
+  your_offer: Đề nghị của bạn
+  their_offer: Đề nghị của họ
+  accepted: Đã chấp nhận
+  reviewing: Đang xem xét
+  remove_item: Bỏ khỏi đề nghị
+  drop_items: Thả vật phẩm vào đây
+  empty_offer: Chưa đề nghị vật phẩm
+  offer_item_unavailable: Một vật phẩm đã chọn không còn khả dụng. Kiểm tra đề nghị rồi thử lại.
+  sui: SUI đề nghị
+  inventory: Túi đồ của bạn
+  drag_hint: Kéo hoặc nhấp đúp để thêm
+  amount_title: Chọn số lượng
+  amount_for: Số lượng {{name}}
+  amount_add: Thêm vào đề nghị
+  amount_cancel: Hủy
+  confirm_changes: Xác nhận thay đổi
+  discard_changes: Bỏ thay đổi
+  empty_inventory: Không có tài sản trao đổi được
+  accept: Chấp nhận đề nghị
+  cancel: Hủy trao đổi
+  accept_notice: Chấp nhận sẽ cho phép một giao dịch thanh toán. {{count}} tài sản nhận vào chịu {{amount}} SUI tiền bản quyền, cộng gas.
+  settle: Hoàn tất trao đổi
+  recover: Thu hồi đề nghị
+  settle_notice: Nhận toàn bộ tài sản và SUI còn lại trong một giao dịch ví.
+  recover_notice: Thu hồi toàn bộ đề nghị trong một giao dịch ví.
+  waiting_counterparty: Phía bạn đã hoàn tất. Đang chờ đối tác.
+  finalizing: Đang hoàn tất…
+transaction_unknown_toast: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
+transaction_recovered_toast: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
+world_hud:
+  compass_label: La bàn
+  zone: KHU VỰC
+  unsearched: CHƯA KHÁM PHÁ
+  searched: ĐÃ KHÁM PHÁ
+  out_of_bounds: NGOÀI RANH GIỚI
+  mob_group: Nhóm quái ({{size}})
+  resource: Tài nguyên
+  cluster_count: thêm {{extra}}
+  zone_edge: Rìa khu vực {{dist}}
+  coordinates: Tọa độ
+  biome: Quần xã
+  world_map: Bản đồ thế giới
+  world_map_zoom_in: Phóng to
+  world_map_zoom_out: Thu nhỏ
+  world_map_extent: '{{blocks}} khối'
+  menu_group: Mời vào nhóm
+  menu_friend: Thêm bạn
+  menu_trade: Trao đổi
+  menu_message: Gửi tin nhắn
+  message_title: Nhắn cho {{name}}
+  message_placeholder: Viết tin nhắn riêng…
+  message_send: Gửi
+  message_cancel: Hủy
+  mount_prompt: Nhấn {{key}} để cưỡi
+  portal_prompt: Nhấn {{key}} để đến thế giới khác
+  dungeon_portal: Cổng ngục tối
+  dungeon_city: Thành phố {{city}}
+  dungeon_press_enter: Vào
+  dungeon_entry_body: Dùng chìa khóa ngục tối để vào sảnh chuẩn bị riêng của cổng này.
+  dungeon_required_key: Chìa khóa cần có
+  dungeon_enter: Vào ngục tối
+  dungeon_entering: Đang mở cổng…
+  dungeon_instance: Thám hiểm ngục tối
+  dungeon_room: Phòng {{room}}
+  dungeon_explorers: nhà thám hiểm
+  dungeon_abandon: Bỏ cuộc thám hiểm
+  dungeon_confirm_abandon: Xác nhận bỏ cuộc
+  dungeon_route: Lộ trình thám hiểm
+  dungeon_mysterious_room: Phòng bí ẩn
+  dungeon_undiscovered: Chưa phát hiện
+  dungeon_creatures: '{{count}} sinh vật'
+  dungeon_current_room: Kẻ địch trong phòng hiện tại
+  dungeon_open_fights: Trận đấu có thể tham gia
+  dungeon_forming_party: Đang lập nhóm
+  dungeon_in_progress: Đang chiến đấu
+  dungeon_waiting_players: Đang chờ người chiến đấu
+  dungeon_join: Vào trận
+  dungeon_joining: Đang tham gia…
+  dungeon_locked: Đã khóa
+  dungeon_no_fights: Chưa có trận đấu nào bắt đầu trong phòng này
+  dungeon_public: Công khai
+  dungeon_group: Chỉ trong nhóm
+  dungeon_start_fight: Bắt đầu trận mới
+  dungeon_starting: Đang bắt đầu…
+  dungeon_key_required: Cần {{key}} để vào ngục tối này.
+  dungeon_group_refusal: Trận này chỉ dành cho nhóm của người mở.
+  travel_title: Cổng sao
+  travel_search: Tìm {{title}}…
+  travel_entry_level: 'Cấp vào: {{level}}'
+  travel_pending: Đang mở cổng…
+  travel_success: Chào mừng đến {{world}}
+  travel_empty: Không có thế giới
+  travel_showing: '{{filtered}} / {{total}} kết quả'
+  travel_selected: Đã chọn · {{label}}
+  fight_press_join: Nhấn {{key}} để tham gia
+  fight_press_spectate: Nhấn {{key}} để theo dõi
+  fight_locked: Trận riêng tư
+  fight_join_title: Tham gia trận đấu
+  fight_spectate_title: Theo dõi trận đấu
+  fight_side_a: Đội A
+  fight_side_b: Đội B
+  fight_empty_side: Chưa có người chiến đấu
+  fight_unknown: Người chiến đấu không rõ
+  fight_join_button: Tham gia
+  fight_spectate_button: Theo dõi
+  fight_started_ago: Đã bắt đầu
+  fight_placement: Bố trí
+  fight_wallet_hint: Kết nối ví để tham gia
+  fight_close: Đóng
+  menu_duel: Thách đấu
+  duel_invite: '{{name}} thách đấu bạn'
+  duel_challenging: Đang thách đấu {{name}}…
+  duel_canceled_afraid: '{{name}} đã hủy trận — có vẻ sợ rồi.'
+  duel_no_position: Không có vị trí — chưa tạo trận đấu.
+  duel_unknown_challenger: người thách đấu
+  duel_accept: Chấp nhận
+  duel_decline: Từ chối
+  zone_unsearched_title: Khu vực chưa khám phá
+  zone_press_search: Nhấn {{key}} để khám phá khu vực
+  zone_reroll_title: Khu vực sẵn sàng làm mới
+  zone_press_reroll: Nhấn {{key}} để làm mới khu vực
+  zone_searching: Đang trinh sát khu vực…
+  zone_revealed: Đã khám phá khu vực
+  zone_coordinates: Khu {{zx}} · {{zz}}
+  zone_mobs_found: Tìm thấy {{count}} quái
+  zone_resources_found: Tìm thấy {{count}} tài nguyên
+  spawn_group: Bầy {{size}} con
+  spawn_unknown_mob: Sinh vật không rõ
+  spawn_press_attack: Nhấn {{key}} để tấn công
+  spawn_engaging: Đang giao chiến với bầy…
+  spawn_engage_conflict: Bầy quái đã thay đổi trước khi bạn tấn công. Có thể người khác đã giao chiến.
+  spawn_never_arrived: Trận đấu đã thực hiện nhưng bàn đấu chưa xuất hiện
+  resource_press_collect: Nhấn {{key}} để thu thập {{name}}
+  resource_need_level: Cần {{job}} cấp {{level}} để thu thập
+  resource_need_tool: Cần công cụ {{job}} để thu thập
+  resource_gathering: Đang thu thập…
+  resource_gathered: Đã thu thập tài nguyên
+  resource_gathered_amount: Đã thu thập {{quantity}} × {{name}}
+  resource_gathered_amount_ambushed: Đã thu thập {{quantity}} × {{name}} · Hộ vệ phục kích bạn
+  resource_ambushed: Hộ vệ phục kích bạn
+  resource_resolving_ambush: Hộ vệ chặn đường bạn…
+  resource_ambush_title: Hộ vệ phục kích
+  resource_face_protector: Nhấn {{key}} để đối mặt
+  zone_never_arrived: Đã khám phá nhưng thế giới chưa hiển thị kết quả — dữ liệu đọc có thể đang chậm
+demo_page:
+  title: Phòng thử hiển thị
+  world_lab: Phòng thử thế giới
+  fight_lab: Phòng thử chiến đấu
+  fight_board: Các bàn đấu
+  board_new: Bàn mới
+  board_delete: Xóa bàn
+  board_back: Mọi bàn đấu
+  board_canvas: Vùng vẽ
+  board_output: Bàn hoàn chỉnh
+  board_draw_hint: Chọn loại ô rồi nhấp hoặc kéo để vẽ
+  board_cell_type: Loại ô
+  board_cell_void: Trống
+  board_cell_floor: Sàn
+  board_cell_obstacle: Chướng ngại
+  board_cell_hole: Hố
+  board_cell_start_a: Xuất phát A
+  board_cell_start_b: Xuất phát B
+  board_loading: Đang tải trình sửa bàn…
+  board_saving: Đang lưu…
+  board_unsaved: Thay đổi chưa lưu
+  board_saved: Đã lưu · tự lưu bật
+  board_read_only: Chỉ đọc · dùng máy chủ phát triển cục bộ để sửa
+  no_terrain: Chưa có cấu hình địa hình
+  time: Thời gian trong ngày
+  live: Trực tiếp
+  remove_character: Xóa mô hình
+  control_character: Điều khiển mô hình
+  hat: Mũ
+  cloak: Áo choàng
+  pet: Thú cưng
+  none: Không có
+  ride_pet: Cưỡi thú
+  dismount_pet: Xuống thú
+  mob_group: Nhóm quái
+  crowd_load: Thử tải đám đông nhân vật
+  crowd_benchmark: Đo hiệu năng
+  crowd_loading: Đang tải mô hình nhân vật…
+  crowd_result: Giai đoạn
+  mob: Quái
+  amount: Số lượng
+  spawn_group: Tạo nhóm
+  clear: Xóa chọn
+  resources: Tài nguyên
+  resources_missing: Hiển thị tài nguyên chưa được khôi phục. Danh sách vẫn có trong dữ liệu nội dung.
+  control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
+  back: Quay lại ứng dụng
+marketplace_page:
+  prices_title: Lịch sử giá
+  prices_period: Khoảng thời gian
+  prices_range_7: 7 ngày
+  prices_range_30: 30 ngày
+  prices_range_90: 90 ngày
+  prices_range_365: 1 năm
+  prices_subtitle: SUI / ĐƠN VỊ · GIAO DỊCH ĐÃ HOÀN TẤT · CHƯA GỒM PHÍ
+  prices_loading: Đang tải lịch sử giá…
+  prices_unavailable: Lịch sử giá không khả dụng. Đang tự thử lại.
+  prices_empty: Chưa có giao dịch hoàn tất trong khoảng này.
+  prices_empty_day: Chưa có giao dịch hoàn tất
+  prices_weighted: Tính trọng số theo số lượng bán · Giá trung bình ngày
+  prices_units: Đã bán {{units}} đơn vị
+  prices_since: Theo dõi từ {{date}} · UTC
+  prices_inspect: Đơn giá hằng ngày. Trỏ chuột hoặc chạm để xem.
+  prices_table: Hiện giá hằng ngày
+  prices_date: Ngày
+  prices_quantity: Đơn vị
+  volume_24h: Khối lượng 24 giờ
+  volume_30d: Khối lượng 30 ngày
+  volume_window: Giao dịch công khai trên chợ trong {{window}} qua, trước phí.
+  volume_unavailable: Khối lượng tạm thời không khả dụng.
+  title: Chợ
+  subtitle: Gian hàng người chơi trên Sui
+  disclaimer_kicker: Trước khi giao dịch
+  disclaimer_title: Giao dịch để tiến bộ, không phải kiếm lời
+  disclaimer_body: Người chơi giao dịch vật phẩm trực tiếp bằng SUI.
+  disclaimer_supply: Vật phẩm không phải khoản đầu tư dài hạn. Khi nhiều người chơi thu thập, nguồn cung tăng và giá có thể giảm.
+  disclaimer_fun: Mua bán theo tiến trình để vui và hữu ích, đừng kỳ vọng lợi nhuận.
+  disclaimer_wallet: Chỉ giữ lượng SUI dự định dùng trong AresRPG. Cất khoản tiết kiệm quan trọng trong ví tự quản riêng mà bạn giữ khóa khôi phục.
+  disclaimer_acknowledge: Tôi hiểu
+  tab_buy: Mua
+  tab_sell: Bán
+  tab_history: Lịch sử
+  browse: Duyệt
+  group_equipment: Trang bị
+  group_pets: Thú cưng
+  group_runes: Ngọc khắc
+  group_consumable: Vật phẩm tiêu hao
+  group_resources: Tài nguyên
+  group_characters: Nhân vật
+  level: Cấp
+  class: Lớp
+  search: Tìm vật phẩm…
+  no_results: Chưa có gian hàng ở đây
+  select_item: Chọn vật phẩm để xem gian hàng
+  listing_count: '{{count}} gian hàng'
+  rolled_stats: Thuộc tính đã gieo
+  characteristics: Thuộc tính
+  damages: sát thương
+  range_to: đến
+  seller: Người bán
+  buy: Mua
+  pay: Thanh toán
+  yours: Của bạn
+  insufficient: Không đủ SUI
+  cancel: Hủy
+  your_listings: Gian hàng của bạn
+  no_listings: Bạn chưa có gian hàng hoạt động
+  withdraw: Gỡ bán
+  list_for_sale: Đăng bán
+  select_to_list: Chọn vật phẩm trong túi
+  price: Giá
+  lot_size: Số lượng mỗi lô
+  paid_automatically: Tiền bán tự động vào quầy của bạn.
+  lot_required: Chồng này có ×{{amount}}. Lô vật phẩm xếp chồng phải là ×1, ×10, ×100 hoặc ×1000.
+  inventory: Túi đồ
+  characters: Nhân vật
+  items: Vật phẩm
+  empty_inventory: Không có gì để đăng bán
+  revenue_30d: 30 ngày qua
+  sales_count: '{{count}} lần bán'
+  unclaimed: Tiền bán chưa nhận
+  collect: Nhận
+  no_history: Chưa có lịch sử bán
+  item: Vật phẩm
+  date: Ngày
+  buyer: Người mua
+  load_more: Tải thêm
+  list_pending: Đang đăng bán…
+  list_success: Đã đăng bán
+  delist_pending: Đang gỡ bán…
+  delist_success: Đã gỡ bán
+  buy_pending: Đang mua…
+  buy_success: Mua thành công
+  sold_toast: Đã bán {{amount}} {{name}} với giá {{price}}
+  character_roster_full: Không thể thêm nhân vật thứ 7 — giới hạn là 6
+  collect_pending: Đang nhận tiền bán trên chợ…
+  collect_success: Đã nhận tiền bán trên chợ
+  volume_partial: Khối lượng {{window}} đã ghi nhận. Dữ liệu chưa bao phủ cả kỳ nên đây là mức tối thiểu.
+mastery_page:
+  subtitle: Thử thách hằng ngày
+  title: Tinh thông
+  lead: Hoàn thành nhiệm vụ ngục tối hằng ngày để nhận thưởng độc đáo. Bỏ lỡ một ngày không làm mất điểm Tinh thông đã tích lũy.
+  balance: Điểm Tinh thông
+  daily_ready: Có nhiệm vụ hằng ngày
+  daily_syncing: Đang cập nhật nhiệm vụ ngày…
+  daily_title: Chọn nhiệm vụ ngục tối hôm nay
+  daily_lead: Chọn thế giới. Bạn sẽ được giao một ngục tối để tìm và hoàn thành.
+  unknown_dungeon: Ngục tối không rõ
+  quest_reward: Nhận {{points}} điểm Tinh thông
+  quest_objective_before: Tìm và hoàn thành ngục tối
+  quest_objective_after: để nhận điểm Tinh thông.
+  completed: Đã xác nhận
+  in_progress: Đang thực hiện
+  required_level: Cần cấp {{level}}
+  dungeon_count: '{{count}} ngục tối'
+  starting: Đang giao ngục tối…
+  start: Bắt đầu nhiệm vụ ngày
+  locked: Đã khóa
+  world_reward: +{{points}} điểm
+  shop_title: Cửa hàng Tinh thông
+  shop_lead: Dùng điểm Tinh thông mua rương thưởng độc đáo.
+  shop_empty: Chưa có vật phẩm Tinh thông để bán
+  ready_to_buy: Có thể mua
+  points_missing: Thiếu {{points}} điểm
+  buying: Đang mua…
+  buy: Mua · {{cost}} điểm
+  quest_started: Đã giao nhiệm vụ hằng ngày.
+  offer_purchased: Đã mua phần thưởng Tinh thông.
+airdrop_page:
+  destination: 'Ví trò chơi:'
+  refresh: Làm mới
+  title: Airdrop
+  subtitle: Phần thưởng cộng đồng và cách nhận
+  claim: Nhập
+  holder_title: Ví bên ngoài
+  holder_connect_hint: Kết nối ví chứa thẻ quà tặng
+  holder_connect: Kết nối ví
+  holder_connecting: Đang kết nối…
+  holder_connected: Đã kết nối
+  holder_select: Chọn
+  holder_close: Đóng chọn ví
+  holder_wallet_missing: Chưa cài ví Sui tương thích
+  giftcards_title: Thẻ quà tặng chờ đổi
+  gift_login: Tiếp tục với Google để nhận quà vào ví trò chơi
+  gift_ready: Thẻ quà tặng giấy đã sẵn sàng nhận
+  gift_claiming: Đang nhận thẻ quà tặng giấy…
+  gift_retry: Nhận thẻ quà tặng
+  redeem: Đổi
+  empty: Ví này không có thẻ quà tặng
+  claim_all: Nhận thưởng
+  catalogue_title: Airdrop được hỗ trợ
+  check_wallet: Đủ điều kiện cho một đợt tặng này? Kiểm tra ví dùng lúc chụp dữ liệu. Kết nối ví bên ngoài phía dưới để nhập thẻ quà. Với thưởng gửi vào ví trò chơi, đăng nhập cùng tài khoản Google. Thẻ giấy được nhận qua mã QR.
+  rank_reward: 'Hạng {from}–{to}: {amount} mỗi loại rương'
+  delivery:
+    wallet: Tặng vào ví
+    nft: Quà gắn với NFT
+    physical: Thẻ quà tặng giấy
+    game_wallet: Thưởng kỳ cựu Hytale
+  campaigns:
+    oeuftermath:
+      title: Aftermath Eggs · Oeuftermath
+      description: Người giữ Aftermath Egg lúc chụp dữ liệu nhận thẻ thú Oeuftermath. Kiểm tra ví đã giữ Egg khi đó; mua Egg sau này không tạo điều kiện nhận.
+    suicune:
+      title: SWEEBS · Suicune
+      description: Người giữ SWEEBS lúc chụp dữ liệu nhận thẻ thú Suicune. Kết nối ví đủ điều kiện để nhập vào tài khoản trò chơi.
+    suifren_bullshark:
+      title: Suifren Bullsharks
+      description: Đã chọn 500 ví giữ Bullshark đủ điều kiện từ dữ liệu chụp. Kiểm tra thẻ thú trong ví khi đó; chỉ giữ Bullshark không đảm bảo được chọn.
+    suifren_capy:
+      title: Suifren Capys
+      description: Đã chọn 500 ví giữ Capy đủ điều kiện từ dữ liệu chụp. Kiểm tra thẻ thú trong ví khi đó; chỉ giữ Capy không đảm bảo được chọn.
+    primemachin:
+      title: Prime Machin
+      description: Thẻ thú được gửi tới NFT Prime Machin trong dữ liệu chụp. Trước tiên nhận quà gắn với NFT qua Studio Mirai, rồi kết nối ví nhận tại đây để nhập.
+    vaporeon:
+      title: Người giữ Vaporeon
+      description: Ví được chọn từ dữ liệu người giữ Vaporeon nhận thẻ thú Vaporeon. Kiểm tra ví lúc chụp dữ liệu rồi nhập thẻ tại đây.
+    sui_basecamp_singapore:
+      title: Sui Basecamp · Singapore
+      description: Rương Sui được tặng dưới dạng thẻ giấy tại Sui Basecamp ở Singapore. Quét QR trên thẻ và đăng nhập để nhận rương. Giữ kín mã trước khi nhận.
+    hytale_veterans:
+      title: Kỳ cựu Hytale · Top 100
+      description: Lời cảm ơn đặc biệt cho 100 người chơi Hytale đủ điều kiện đứng đầu về bộ sưu tập, thời gian chơi, kinh nghiệm nhân vật và nghề. Thưởng gửi tới địa chỉ Sui trong bản sao lưu Hytale. Dùng tài khoản Google gốc để vào ví đó.
+    hytale_supporters:
+      title: Người ủng hộ Hytale · Mark of the Unbroken
+      description: Dành cho mọi ví Hytale đã liên kết có tổng mua cửa hàng ghi nhận hơn {threshold} SUI, không cần thuộc top 100. Danh hiệu gửi tới địa chỉ Sui trong bản sao lưu. Đăng nhập tài khoản Google gốc để tìm thẻ quà.
+settings_page:
+  suins_title: Tên SuiNS
+  suins_hint: Tên SuiNS chỉ cần trỏ tới ví trò chơi. Nhập name@name để hiển thị @name.
+  suins_current: Tên mặc định hiện tại
+  suins_none: Không có
+  suins_owned: Tên đang sở hữu
+  suins_empty: Không tìm thấy tên đang hoạt động
+  suins_choose: Chọn tên
+  suins_name: Tên hoặc tên phụ
+  suins_placeholder: name@name
+  suins_refresh: Làm mới tên
+  suins_use: Dùng tên này
+  suins_loading: Đang tải tên…
+  suins_saving: Đang đặt tên mặc định…
+  suins_saved: Đã cập nhật tên mặc định. Bảng xếp hạng có thể cần vài phút để làm mới.
+  suins_read_failed: Không tải được tên. Hãy làm mới.
+  suins_write_failed: Chưa xác nhận được việc đổi tên. Hãy làm mới trước khi thử lại.
+  suins_invalid_name: Nhập tên SuiNS hợp lệ.
+  suins_not_targeted: Chọn tên đang hoạt động thuộc ví trò chơi hoặc đã trỏ tới ví này.
+  suins_wallet_required: Đăng nhập để chọn tên.
+  suins_target_hint: Với tên thuộc ví này, nút cũng đặt địa chỉ đích. Nếu không, hãy trỏ tên tới ví trò chơi trong SuiNS trước.
+  day_night_cycle_label: Chu kỳ ngày/đêm
+  day_night_cycle_hint: Tắt để thế giới luôn ở giữa trưa.
+  title: Cài đặt
+  subtitle: Tùy chỉnh AresRPG của bạn
+  master_volume_label: Âm lượng chung
+  master_volume_hint: Điều chỉnh toàn bộ nhạc và hiệu ứng âm thanh.
+  music_label: Âm nhạc
+  music_hint: Phát nhạc thế giới và chiến đấu.
+  footsteps_label: Tiếng bước chân
+  footsteps_hint: Phát tiếng bước chân khi di chuyển.
+  auto_switch_fighter_label: Tự chuyển nhân vật chiến đấu
+  auto_switch_fighter_hint: Tự chọn nhân vật của bạn khi đến lượt chiến đấu.
+  always_craft_from_label: Luôn chế tạo bằng
+  always_craft_from_hint: Cố định trang Nghề và mọi thao tác chế tạo vào một nhân vật.
+  always_craft_from_picker: Nhân vật chế tạo
+  always_craft_from_none: Tắt
+  render_distance_label: Khoảng cách hiển thị
+  render_distance_hint: Khoảng cách tải thế giới xung quanh. Giá trị cao tốn hiệu năng hơn.
+tutorial:
+  progress: '{{current}} / {{total}}'
+  skip: Bỏ qua hướng dẫn
+  back: Quay lại
+  next: Tiếp theo
+  finish: Hoàn tất
+  fight_enter: Vào trận
+  reset_title: Hướng dẫn
+  reset_hint: Hiện lại phần giới thiệu khi bạn mở từng trang lần tới.
+  reset_action: Đặt lại
+  world_compass_title: Thế giới và khu vực chung
+  world_compass_body: AresRPG có nhiều thế giới mở khóa theo tiến trình của bạn. Mỗi thế giới chia thành các khu vực có quái vật, tài nguyên và ngục tối. Ai cũng có thể khám phá khu vực và kết quả được chia sẻ với mọi người chơi.
+  world_hud_title: Máu và ô dùng nhanh
+  world_hud_body: Khu vực này hiển thị máu và các ô dùng nhanh vật phẩm. Khi vào trận, cùng vị trí này trở thành thanh phép.
+  world_fps_title: Điều khiển thế giới
+  world_fps_body: Địa hình được tạo tất định từ dữ liệu đã công bố. Sui lưu thế giới và vị trí X/Z có thẩm quyền, còn độ cao được tính cục bộ. Vì vậy chế độ Phẳng chỉ đổi cách hiển thị cùng không gian. Bạn cũng có thể đổi chất lượng và giới hạn trận ngoài thế giới cho thành viên nhóm.
+  world_character_title: Người chơi trong thế giới
+  world_character_body: Đây là nhân vật đang hoạt động của bạn. Nhấp chuột phải vào nhân vật khác ở gần để mở các tương tác.
+  world_character_tabs_title: Chơi nhiều nhân vật
+  world_character_tabs_body: Bạn có thể sở hữu tối đa sáu nhân vật. Mời các nhân vật khác của mình vào nhóm và bật Theo trưởng nhóm để họ đi cùng bạn, rồi tự tham gia các trận ngoài thế giới phù hợp khi tới nơi.
+  fight_title: Trận chiến trên chuỗi đầu tiên
+  fight_body: Trận đấu diễn ra theo lượt. Chọn di chuyển và phép, các hành động được chuẩn bị cùng nhau. Kết thúc lượt gửi cả lượt bằng một giao dịch Sui, rồi tính các lượt quái tiếp theo cho tới khi người chơi khác có thể hành động. Trạng thái chiến đấu có thẩm quyền được chốt trên Sui. Sau chiến thắng, giao dịch Sui cuối dùng ngẫu nhiên trên chuỗi để chia chiến lợi phẩm và đưa thưởng vào túi đồ của từng người nhận.
+  equipment_gear_title: Trang bị
+  equipment_gear_body: Vật phẩm đang trang bị thuộc nhân vật đã chọn. Kéo trang bị lên hình nhân, xem chỉ số cộng thêm rồi xác nhận tất cả thay đổi.
+  equipment_inventory_title: Túi đồ dùng chung
+  equipment_inventory_body: Mọi nhân vật trong tài khoản dùng chung túi đồ. Chọn nhân vật khác phía trên để trang bị những vật phẩm còn sẵn cho họ.
+  stats_title: Thuộc tính
+  stats_body: Dùng điểm thuộc tính để mạnh hơn. Sinh lực tăng máu; Trí tuệ tăng kinh nghiệm và kháng mất điểm hành động/di chuyển; May mắn tăng sát thương nước và tỷ lệ chiến lợi phẩm; Nhanh nhẹn tăng sát thương gió, chí mạng, khóa chân và thoát khóa chân.
+  spells_title: Phép
+  spells_body: Nhân vật tiến bộ sẽ mở phép mới. Lên cấp cho điểm phép để nâng các phép đã mở tại đây.
+  jobs_title: Nghề
+  jobs_body: Theo dõi tiến trình thu thập và chế tạo, xem công thức và làm vật phẩm tại đây. Nếu có nhiều nhân vật, bạn có thể cố định trang này cho thợ chế tạo trong Cài đặt.
+  runeforge_title: Lò khắc ngọc
+  runeforge_body: Khi nghề chế tạo phù hợp đạt cấp {{level}}, bạn có thể nâng trang bị bằng ngọc khắc. Nghiền vật phẩm để lấy ngọc rồi dùng tại đây.
+admin_page:
+  kicker: Nhà phát hành
+  title: Phát hành nội dung game
+  body: Kiểm tra địa chỉ nội dung tất định, gửi từng lô đã mô phỏng rồi khóa nội dung vĩnh viễn.
+  objects: Đối tượng đã phát hành
+  publisher: ID đối tượng phát hành
+  inspect: Kiểm tra kế hoạch nội dung
+  inspecting: Đang kiểm tra…
+  plan: Kế hoạch nội dung
+  targets: mục tiêu tất định
+  not_inspected: Thêm ID đối tượng đã phát hành rồi kiểm tra kế hoạch.
+  execute: Thực hiện
+  executing: Đang thực hiện…
+  seal_title: Khóa vĩnh viễn
+  seal_body: Khóa sẽ xóa mọi cách ghi nội dung về sau. Nâng cấp hay quyền quản trị cũng không thể hoàn tác.
+  arm_seal: Chuẩn bị khóa vĩnh viễn
+  seal_forever: Khóa nội dung vĩnh viễn
+  sealed: Nội dung đã khóa
+  admin_wallet: Ví quản trị
+  admin_wallet_body: Người ký riêng để phát hành và rút tiền chợ.
+  connect_admin_wallet: Kết nối
+  choose_admin_wallet: Chọn ví
+  choose_admin_address: Chọn địa chỉ
+  cancel_wallet_selection: Hủy
+  wallet_account: Tài khoản
+  select_wallet: Chọn
+  connecting: Đang kết nối…
+  loading_wallets: Đang tải ví…
+  no_admin_wallet: Chưa cài ví trình duyệt tương thích.
+  royalties: tiền bản quyền
+  cap_owned: có quyền
+  cap_missing: thiếu quyền
+  reading_royalties: Đang đọc chính sách…
+  reading: Đang đọc…
+  refresh_revenue: Làm mới doanh thu
+  arm_claim: Chuẩn bị nhận
+  claiming: Đang nhận…
+  confirm_claim: Xác nhận nhận
+  disconnect_admin_wallet: Ngắt kết nối
+  claim_digest: Giao dịch nhận
+  range_24h: 24 giờ
+  range_7d: 7 ngày
+  range_30d: 30 ngày
+  range_90d: 90 ngày
+  range_1y: 1 năm
+  overview_title: Tổng quan
+  overview_body: Hoạt động người chơi và doanh thu, không có thông tin điều khiển dư thừa.
+  overview_unavailable: Tổng quan không khả dụng
+  loading_overview: Đang tải tổng quan…
+  all_systems_current: Mọi hệ thống đã cập nhật
+  checkpoint: điểm kiểm tra
+  refresh: Làm mới
+  retry: Thử lại
+  active_players: Người chơi hoạt động
+  active_players_bucket: Người chơi hoạt động mỗi khoảng
+  daily_active: Người chơi hoạt động mỗi ngày
+  active_interval: Hoạt động mỗi khoảng
+  active_30d: Người chơi hoạt động 30 ngày
+  active_last_30d: hoạt động trong 30 ngày qua
+  player_activity: Hoạt động người chơi
+  population: Quy mô người chơi
+  player_activity_body: Hoạt động ngày và độ phủ 30 ngày trượt
+  stickiness: Ngày / 30 ngày
+  online_players: Người chơi trực tuyến
+  online_players_body: Đỉnh người chơi xác thực duy nhất mỗi khoảng
+  online_now: Người chơi trực tuyến
+  peak: Đỉnh
+  revenue: Doanh thu
+  revenue_over_time: Doanh thu theo thời gian
+  revenue_over_time_body: Mọi doanh thu giao thức theo nguồn
+  item_royalties: Bản quyền vật phẩm
+  character_royalties: Bản quyền nhân vật
+  character_creation_revenue: Tạo nhân vật
+  kolizeum_revenue: Phí đấu trường
+  game_transactions: Giao dịch trò chơi
+  game_gas_fees: Phí gas trò chơi
+  all_time: Toàn thời gian
+  game_transactions_over_time: Giao dịch theo thời gian
+  game_transactions_body: Giao dịch AresRPG thành công, tính một lần mỗi PTB
+  today: Hôm nay
+  selected_period: Khoảng đã chọn
+  lifetime: toàn thời gian
+  average_order: đơn trung bình
+  chart_revenue: Doanh thu
+  chart_players: Người chơi
+  chart_online: Trực tuyến
+  bucket_15m: Khoảng 15 phút
+  bucket_hour: Khoảng giờ
+  bucket_day: Khoảng ngày
+  bucket_week: Khoảng tuần
+  bucket_month: Khoảng tháng
+  unique_addresses: Địa chỉ duy nhất
+  unique_addresses_body: Địa chỉ gọi mô-đun AresRPG thành công
+  unique_addresses_over_time: Địa chỉ duy nhất theo thời gian
+  successful_game_calls: Người gọi mô-đun game thành công
+  total_characters: Tổng nhân vật
+  current_characters: Nhân vật trên chuỗi hiện tại
+  total_characters_body: Đối tượng Character hiện có trên chuỗi
+  characters_over_time: Nhân vật theo thời gian
+  revenue_30d: Doanh thu 30 ngày
+  revenue_mtd: Doanh thu từ đầu tháng
+  last_30_days: 30 ngày qua
+  calendar_month_to_date: Từ đầu tháng dương lịch
+  buyer: Người mua
+  item: Vật phẩm
+  quantity: Số lượng
+  unit_price: Đơn giá
+  total: Tổng
+  when: Thời điểm
+  transaction: Giao dịch
+  treasury: Ngân quỹ
+  treasury_body: Số dư hiện tại, tách khỏi doanh thu đã kiếm
+  available_balance: Số dư khả dụng
+  claim: Nhận
+  close: Đóng
+  loading: Đang tải…
+  load_more: Tải thêm
+  transactions: giao dịch
+simulator_page:
+  title: Mô phỏng chiến đấu
+  local_only: Thiết lập tất định cục bộ
+  board_seed: Hạt giống {seed}
+  reroll: Tạo lại bàn đấu
+  back_to_setup: Quay lại thiết lập
+  characters: Nhân vật
+  create_character: Tạo
+  no_characters: Tạo nhân vật rồi đặt lên ô xanh
+  edit_character: Sửa nhân vật
+  new_character: Nhân vật mới
+  appearance: Ngoại hình
+  create: Tạo
+  delete: Xóa
+  level_label: Cấp
+  stats: Thuộc tính
+  spells: Phép
+  points_left: '{left} / {total} điểm'
+  equipment_short: Trang bị
+  spell_level: Cấp của {name}
+  spell_level_option: Cấp {level} · {cost} điểm
+  class_shugo_title: Hộ vệ
+  class_tomoda_title: Thuần thú sư
+  class_rojin_title: Thợ tìm kho báu
+  class_yajin_title: Sát thủ
+  class_tokei_title: Pháp sư thời gian
+  class_asobi_title: Con bạc
+  class_iyashi_title: Người chữa trị
+  class_senshi_title: Chiến binh
+  class_yogan_title: Cung thủ
+  class_mori_title: Druid
+  class_ikari_title: Cuồng chiến binh
+  class_shusen_title: Đấu sĩ
+  delete_character: Xóa nhân vật
+  assigned_cell: Đã đặt · Ô {cell}
+  pick_character: Chọn nhân vật
+  pick_mob: Chọn quái
+  character_editor: Nhân vật cục bộ
+  character_editor_hint: Danh tính, ngoại hình, cấp, thuộc tính và phép đã mở
+  character_level: Cấp nhân vật
+  character_stats: Thuộc tính đã phân bổ
+  character_spells: Cấp phép
+  stat_points: Còn {points} điểm thuộc tính
+  spell_points: Còn {points} điểm phép
+  spell_unlock: Mở ở cấp {level}
+  reset: Đặt lại
+  delete_confirm: Xác nhận xóa
+  class_change_hint: Đổi lớp sẽ đặt lại thuộc tính tự nhiên và cấp phép đã nâng
+  spells_unavailable: Cấp này chưa mở phép nào
+  save_character: Lưu nhân vật
+  equipment: Trang bị và di vật
+  max_roll: Chỉ số tối đa
+  remove_mob: Xóa quái
+  stat_vitality: Sinh lực
+  stat_wisdom: Trí tuệ
+  stat_strength: Sức mạnh
+  stat_intelligence: Trí lực
+  stat_chance: May mắn
+  stat_agility: Nhanh nhẹn
+  stat_range: Tầm
+  stat_movement: Di chuyển
+  stat_action: Hành động
+  stat_critical: Tỷ lệ chí mạng
+  stat_raw_damage: Sát thương cố định
+  stat_resistance: Kháng
+  stat_power: Uy lực
+  stat_earth_resistance: Kháng đất
+  stat_fire_resistance: Kháng lửa
+  stat_water_resistance: Kháng nước
+  stat_air_resistance: Kháng gió
+  level: Cấp {level}
+  level_range: Cấp {min}–{max}
+  place: Đặt nhân vật chiến đấu
+  start_fight: Bắt đầu trận
+  fight_board: Bàn chiến đấu
+  board_hint: Nhấp trái ô xuất phát · Kéo chuột phải để di chuyển · Cuộn để thu phóng
+  fight_active: Trận đã bắt đầu · {events} sự kiện chuẩn
+  picker_search: Tìm {title}…
+  picker_all: Tất cả
+  picker_no_results: Không có kết quả
+  picker_results: '{filtered} / {total} kết quả'
+  picker_selected: Đã chọn · {label}
+  picker_new: Mới
+  blob_debug: Hình vùng trên bàn
+  blob_color: Màu
+  blob_range: Phạm vi
+  blob_per_cell: Theo ô
+  blob_single: Một hình
+  blob_click: Đặt khi nhấp ô
+fight_hud:
+  stop_spectating: Dừng theo dõi
+  board_label: Bàn chiến đấu
+  turn_order: Thứ tự lượt
+  turn_order_collapse: Thu gọn thứ tự lượt
+  turn_order_expand: Mở rộng thứ tự lượt
+  placement_title: Chuẩn bị chiến đấu
+  placement_hint: Bố trí nhân vật và xác nhận sẵn sàng
+  placement_gas_title: Di chuyển nhân vật lần nữa?
+  placement_gas_body: Mỗi lần đổi ô sẽ thực hiện giao dịch và tốn phí gas. Tránh đổi vị trí liên tục.
+  placement_gas_hide: Không hiện lại
+  placement_gas_confirm: Vẫn di chuyển
+  placement_ready: Sẵn sàng
+  placement_ready_all: Sẵn sàng tất cả
+  placement_ready_all_progress: Đang sẵn sàng tất cả · {completed}/{total}
+  placement_ready_all_complete: Tất cả sẵn sàng · {completed}/{total}
+  placement_ready_all_failed: Chuẩn bị bị gián đoạn · {completed}/{total}
+  placement_waiting: Đang chờ người khác…
+  placement_starting: Đang bắt đầu trận…
+  placement_force_prompt: Có người vắng mặt — buộc bắt đầu trận?
+  placement_force_button: Buộc bắt đầu
+  placement_no_opponent: Không ai nhận lời thách đấu
+  crank_prompt: Người chơi hiện tại chưa kết thúc lượt.
+  crank_button: Buộc kết thúc lượt
+  end_turn: Kết thúc lượt
+  end_turn_queued: Đã xếp hàng kết thúc lượt
+  reset_turn: Đặt lại
+  weapon_attack: Tấn công vũ khí
+  bare_hands: Tay không
+  log_fight_started: Trận đấu bắt đầu
+  log_cast: '{caster} dùng {spell}'
+  log_critical_cast: Chí mạng! {caster} dùng {spell}
+  log_heal: '{source} hồi {amount} máu cho {target}'
+  log_ap_change: '{target}: {delta} điểm hành động'
+  log_mp_change: '{target}: {delta} điểm di chuyển'
+  log_lost: '{target} mất {amount} máu'
+  log_lost_reduced: '{target} mất {amount} máu (giảm {reduced})'
+  log_absorbed: '{target} hấp thụ {reduced} sát thương'
+  log_returned: '{target} phản lại phép'
+  log_stat_change: '{target}: {delta} {stat} ({turns} {turns_word})'
+  unit_ap: ĐHĐ
+  unit_mp: ĐDC
+  log_points_loss: '{target} mất {amount} {unit}'
+  log_points_steal: '{source} lấy {amount} {unit} từ {target}'
+  log_points_partial: '{target} né {dodged} {unit} và mất {amount}'
+  log_points_dodge: '{target} né mất {attempted} {unit}'
+  log_trap_placed: '{owner} đặt bẫy'
+  log_glyph_placed: '{owner} đặt ấn trận'
+  log_death: '{target} gục ngã'
+  log_forfeit: '{target} đã bỏ cuộc'
+  log_draw: Trận đấu kết thúc hòa
+  log_team_wins: Đội {team} thắng
+  forfeit: Bỏ cuộc
+  forfeit_title: Cho {name} bỏ cuộc?
+  forfeit_body: '{name} sẽ mất toàn bộ máu còn lại và rời trận.'
+  confirm_forfeit: Xác nhận bỏ cuộc
+  unit_turns: lượt
+  chat_title: Trò chuyện
+  chat_resize: Đổi kích thước chat
+  chat_tab_general: Chung
+  chat_tab_party: Nhóm
+  chat_tab_private: Riêng
+  chat_tab_combat: Chiến đấu
+  chat_placeholder: Nói gì đó…
+  chat_fetching_item: Đang lấy chỉ số trên chuỗi…
+  chat_item_unavailable: Vật phẩm này không khả dụng trên chuỗi.
+  chat_you: Bạn
+  chat_line: '{name}: {message}'
+  chat_party_line: '(nhóm) {name}: {message}'
+  chat_whisper_to: (tới {name}) {message}
+  result_title: Kết quả trận đấu
+  result_duration: Thời lượng
+  result_gas_spent: Gas đã dùng
+  result_wager_won: SUI thắng được
+  result_wager_lost: SUI mất
+  result_wager_even: Kết quả cược
+  result_party: Nhóm của bạn
+  result_enemies: Kẻ địch
+  result_victory: Chiến thắng
+  result_defeat: Thất bại
+  result_you: Bạn
+  result_fallen: Gục ngã
+  result_survived: Sống sót
+  result_collecting: Đang nhận chiến lợi phẩm…
+  result_collecting_progress: Đang nhận chiến lợi phẩm nhân vật · {completed}/{total}
+  result_collecting_complete: Đã nhận toàn bộ chiến lợi phẩm nhân vật · {completed}/{total}
+  result_collecting_failed: Nhận chiến lợi phẩm bị gián đoạn · {completed}/{total}
+  result_continue: Tiếp tục
+  result_close: Đóng
+  fight_finalize_pending: Sẵn sàng hoàn tất dọn trận.
+  fight_finalize_button: Hoàn tất
+  result_retry: Thử lại
+  result_version_changed: Một số đối tượng đã thay đổi khi nhận thưởng. Không có gì bị mất. Thử lại để làm mới và nhận thưởng.
+  level_up_title: Lên cấp
+  level_up_reached: Đạt cấp
+  level_up_stat_points: Điểm thuộc tính
+  level_up_spell_points: Điểm phép
+  level_up_new_spell: Đã mở phép mới
+  level_up_new_worlds: Đã mở thế giới mới
+  level_up_worlds_note: Đã có điểm đến mới
+  level_up_allocate: Phân bổ điểm
+  level_up_later: Để sau
+wallet_legacy:
+  sui: SUI
+  how_to_get: Cách nhận SUI
+  your_address: Địa chỉ ví của bạn
+  send_sui: Gửi SUI tới địa chỉ này. Nhấp để sao chép.
+  buy_directly: Mua trực tiếp
+  buy_with_card: Mua SUI bằng thẻ tín dụng, nhận thẳng vào ví.
+  buy_on_exchange: Mua trên sàn
+  withdraw_to_wallet: Mua SUI trên sàn rồi rút về địa chỉ ví phía trên.
+  faq: Câu hỏi thường gặp
+  wallet_description: Ví cá nhân chỉ bạn có thể truy cập. Nạp SUI để trả phí mạng và giao dịch với người chơi.
+  moonpay_desc: Thẻ tín dụng, Apple Pay, chuyển khoản
+  transak_desc: Thẻ tín dụng, chuyển khoản, hơn 100 quốc gia
+  faq_what_is_sui: SUI là gì?
+  faq_what_is_sui_answer: SUI là tiền kỹ thuật số, giống tiền mặt số. Nó hoạt động trên mạng nhanh và an toàn gọi là chuỗi Sui. Bạn dùng lượng nhỏ SUI trả phí mạng và có thể giao dịch trực tiếp với người chơi trên chợ.
+  faq_why_sui: Vì sao AresRPG dùng SUI?
+  faq_why_sui_answer: SUI là phương thức thanh toán ưu tiên. Giao dịch tức thì, dưới một giây, phí chỉ một phần xu và không có phí trung gian. Tương lai có thể hỗ trợ USD, EUR và tiền truyền thống khác, nhưng cần nhiều thủ tục pháp lý cùng phí và thuế lớn mà chúng tôi chưa sẵn sàng đảm nhận.
+  faq_legal: Có hợp pháp không?
+  faq_legal_answer: Có. Mua và giữ tiền mã hóa là hợp pháp ở phần lớn quốc gia. SUI là tài sản số được giao dịch trên các sàn lớn được quản lý trên thế giới. AresRPG dùng nó cho phí mạng và giao dịch giữa người chơi.
+  faq_eula: Điều khoản trò chơi có cho phép không?
+  faq_eula_answer: Có. Khi tiền mã hóa chỉ dùng để thanh toán, không liên quan NFT hay mô hình đầu cơ, nó phù hợp điều khoản. Nhiều cửa hàng game lớn cũng hỗ trợ thanh toán bằng tiền mã hóa.
+  faq_access: Ai có thể truy cập ví của tôi?
+  faq_access_answer: Chỉ bạn. Ví được tạo từ đăng nhập Google bằng công nghệ zkLogin của Sui. Không ai, kể cả đội AresRPG, có thể truy cập hoặc chuyển tiền của bạn. Ví này chỉ dành cho hoạt động AresRPG. Không giữ số tiền lớn; chỉ nạp phần định dùng.
+  faq_balance: Đã gửi SUI nhưng số dư chưa cập nhật?
+  faq_balance_answer: Đừng lo, hệ thống cập nhật có thể đang chậm. Kiểm tra đã gửi đúng địa chỉ bằng cách sao chép phía trên. Nếu vẫn chưa thấy, liên hệ nhóm trên Discord kèm mã giao dịch.
+  add_funds: Nạp tiền
+  testnet_faucet_title: SUI mạng thử nghiệm
+  testnet_faucet_body: AresRPG đang chạy trên mạng thử nghiệm Sui. SUI thử nghiệm miễn phí và không có giá trị tiền tệ. Xin token từ vòi Sui chính thức.
+  testnet_faucet_action: Mở vòi Sui
+  how_to_pay: Bạn muốn thanh toán thế nào?
+  add_funds_desc: Chọn cách thanh toán. SUI được gửi thẳng vào ví.
+  method_paypal: PayPal
+  method_paypal_desc: Trả bằng tài khoản PayPal
+  method_card: Thẻ tín dụng / ghi nợ
+  method_card_desc: Visa, Mastercard
+  method_apple_pay: Apple Pay
+  method_apple_pay_desc: Trả bằng Face ID / Touch ID
+  method_google_pay: Google Pay
+  method_google_pay_desc: Trả bằng tài khoản Google
+  method_bank: Chuyển khoản ngân hàng
+  method_bank_desc: SEPA (EU) hoặc ACH (Mỹ)
+  method_have_sui: Tôi đã có SUI
+  method_have_sui_desc: Gửi từ ví khác hoặc sàn
+  paypal_note: Có tại Mỹ, Anh và phần lớn châu Âu qua MoonPay
+  card_note: Chọn nhà cung cấp bên dưới. Tất cả nhận Visa và Mastercard
+  bank_note: Phí thấp nhất, khoảng 1%. SEPA cho châu Âu, ACH cho Mỹ.
+  steps_paypal: 1. Nhấp liên kết dưới  2. Chọn PayPal  3. Nhập số tiền. SUI sẽ vào ví
+  steps_card: Chọn nhà cung cấp, nhập thông tin thẻ và SUI sẽ vào ví.
+  method_swap: Từ Solana, ETH và các mạng khác…
+  method_swap_desc: Chuyển tài sản sang Sui qua Portal Bridge
+  swap_note: Chuyển liên chuỗi do Portal Bridge cung cấp.
+  steps_swap: Mở Portal Bridge, kết nối cả hai ví, chọn Sui và hoàn tất chuyển.
+  steps_wallet: Gửi SUI tới địa chỉ ví bên dưới. Sẽ nhận được sau vài giây.
+  advanced_exchange: 'Nâng cao: mua trên sàn'
+  age_notice: Mọi nhà cung cấp thanh toán đều yêu cầu từ 18 tuổi.
+  send:
+    button: Gửi
+    title: Gửi SUI
+    building_title: Chuẩn bị chuyển
+    building_body: Đang tạo giao dịch…
+    confirm_title: Xác nhận chuyển
+    executing_title: Đang gửi
+    executing_body: Đang phát giao dịch chuyển lên mạng Sui.
+    success_title: Chuyển thành công
+    success_body: Bạn đã gửi {{amount}} cho {{recipient}}.
+    failed_title: Chuyển thất bại
+    recipient_label: Người nhận
+    recipient_placeholder: Tên người chơi hoặc địa chỉ 0x…
+    address_valid: Địa chỉ Sui hợp lệ
+    address_invalid: Địa chỉ Sui không hợp lệ
+    hint: Nhập tên người chơi từ 4 ký tự hoặc địa chỉ Sui 0x
+    player_resolved: 'Đã tìm thấy: {{name}}'
+    player_resolved_address: '{{name}} → {{address}}'
+    player_not_found: Không có người chơi tên này
+    player_lookup_failed: Không tra được tên người chơi. Hãy thử lại.
+    no_results: Không tìm thấy người chơi
+    amount_label: Số lượng
+    submit: Tiếp tục
+    send_confirm: Gửi
+    sending_to: Đang gửi tới
+    sent: Đã gửi
+    send_more: Gửi thêm
+    suins_resolving: Đang phân giải tên…
+    suins_resolved: 'Đã phân giải tên: {{name}}'
+    err:
+      recipient_not_found: Không tìm thấy người chơi tên {{name}}.
+      recipient_no_wallet: '{{name}} chưa liên kết ví trên ứng dụng web. Hãy nhờ họ kết nối tại aresrpg.world trước.'
+      self_send: Không thể gửi SUI cho chính ví của bạn.
+      invalid_address: Địa chỉ đã nhập không phải địa chỉ Sui hợp lệ.
+      insufficient_balance: Ví không đủ SUI cho lần chuyển này.
+      rate_limited: Chuyển quá nhiều. Chờ một phút rồi thử lại.
+      tx_failed: Giao dịch thất bại trên chuỗi. Không chuyển tiền.
+      user_rejected: Chữ ký bị từ chối trong ví.
+      recipient_required: Nhập người nhận trước khi gửi.
+      suins_not_found: Không tìm thấy tên SuiNS “{{name}}”.
+      amount_positive: Nhập số lượng lớn hơn 0.
+      amount_invalid: Số lượng không hợp lệ.
+    drain_hint: Tối đa sẽ rút hết ví — phí mạng trừ từ khoản chuyển.
+    drain_warning: Thao tác sẽ rút hết ví. Phí mạng lấy từ khoản chuyển nên số dư sau đó đúng 0 SUI.
+    drain_sending: Toàn bộ số dư
+    drain_fee_note: trừ từ khoản chuyển
+    drain_remaining: Còn lại trong ví
+    success_drain_body: Ví đã trống — tất cả được gửi tới {{recipient}}.
+wallet_send_shared:
+  cancel: Hủy
+  close: Đóng
+  retry: Thử lại
+  copied: Đã sao chép
+  gas_estimated: Gas dự kiến
+  signing: Đang ký…
+  dont_close: Đừng đóng cửa sổ này
+  add_funds: Nạp tiền
+  total: Tổng
+  transaction: Giao dịch
+encyclopedia_page:
+  minimum: TỐI THIỂU
+  maximum: TỐI ĐA
+  terrain_seed: Hạt giống địa hình
+  sea_level: Mực nước biển
+  world_role:
+    trash: Thường
+    archi: Quái biến thể hiếm
+    elite: Tinh anh
+    boss: Trùm
+    dungeon_boss: Trùm ngục tối
+  gather_job:
+    farmer: Nông dân
+    herbalist: Người hái thuốc
+    miner: Thợ mỏ
+  world_resource_tier: Bậc {{tier}}
+  world_address_copied: Đã sao chép!
+  search_items: TÌM VẬT PHẨM…
+  search_mobs: TÌM QUÁI…
+  all_families: MỌI HỌ QUÁI
+  elements_filter: NGUYÊN TỐ
+  advanced_filters: BỘ LỌC NÂNG CAO
+  no_entries: Không tìm thấy mục
+  select_item: Chọn vật phẩm để xem chi tiết
+  select_mob: Chọn quái để xem chi tiết
+  select_class: Chọn lớp để xem chi tiết
+  loading_details: Đang tải chi tiết…
+  loading_encyclopedia: Đang tải bách khoa…
+  items: Vật phẩm
+  mobs: Quái vật
+  pets: Thú cưng
+  classes: Các lớp
+  gameplay_tab: Lối chơi
+  jobs_tab: Nghề
+  search_jobs: TÌM NGHỀ…
+  select_job: CHỌN NGHỀ
+  crafts: Chế tạo
+  gathering_tiers: TIẾN TRÌNH THU THẬP
+  craftable_items: VẬT PHẨM CHẾ TẠO ĐƯỢC
+  tier: Bậc
+  required_level: Cấp cần
+  resource: Tài nguyên
+  rare_variant: Biến thể hiếm
+  xp_per_harvest: KN / lần thu
+  job_desc:
+    FARMER: Nông dân thu ngũ cốc trên khắp thế giới. Bậc cao mở cây hiếm cần cho công thức nâng cao.
+    HERBALIST: Người hái thuốc thu cây và hoa dùng cho giả kim. Mỗi bậc cần cấp nghề cao hơn.
+    MINER: Thợ mỏ khai thác quặng và khoáng sản. Cấp khai mỏ cao mở kim loại hiếm.
+    FORGER: Thợ rèn làm kiếm, dao găm và rìu.
+    CARVER: Thợ chạm khắc làm cung và giáo.
+    TAILOR: Thợ may làm mũ và áo choàng.
+    JEWELER: Thợ kim hoàn làm nhẫn và bùa.
+    TANNER: Thợ thuộc da làm giày và thắt lưng.
+    HANDYMAN: Thợ đa năng làm công cụ, chìa khóa và nguyên liệu trung gian.
+    ALCHEMIST: Nhà giả kim làm thuốc và nguyên liệu trung gian.
+    BAKER: Thợ bánh làm bánh mì và nguyên liệu trung gian.
+  dungeons_tab: NGỤC TỐI
+  search_dungeons: TÌM NGỤC TỐI…
+  select_dungeon: CHỌN NGỤC TỐI
+  dropped_by: RƠI TỪ
+  recipe: CÔNG THỨC
+  price_history: LỊCH SỬ GIÁ
+  no_price_data: Chưa có lịch sử giá
+  no_recipe: Chưa có dữ liệu công thức
+  ingredient_of: NGUYÊN LIỆU CỦA
+  no_ingredient_of: Không dùng trong công thức nào
+  no_drops: Chưa biết nguồn rơi
+  pet_stats: CHỈ SỐ THÚ
+  pet_diet: THỨC ĂN CỦA THÚ
+  food_sources: NGUỒN THỨC ĂN
+  stat_bonuses_max: CHỈ SỐ CỘNG THÊM KHI TỐI ĐA
+  characteristics: THUỘC TÍNH
+  damages: sát thương
+  range_to: đến
+  level_short: Cấp {{level}}
+  no_diet: Chưa có thông tin thức ăn
+  newborn: Mới sinh
+  max_power: Uy lực tối đa
+  back_to_list: Quay lại danh sách
+  showing_mobs: HIỆN {{count}} / {{total}} QUÁI
+  no_mobs_match: KHÔNG CÓ QUÁI KHỚP BỘ LỌC
+  clear_all: XÓA TẤT CẢ
+  all_jobs: MỌI NGHỀ
+  sort_name_asc: TÊN A–Z
+  level_bracket: CẤP {{range}}
+  unknown_zone: KHÔNG RÕ
+  showing_count: HIỆN {{count}} / {{total}}
+  sort_level_asc: CẤP ↑
+  sort_level_desc: CẤP ↓
+  sort_name: TÊN A–Z
+  sort_newest: MỚI NHẤT
+  clear_filters: XÓA TẤT CẢ
+  no_results: KHÔNG CÓ VẬT PHẨM KHỚP BỘ LỌC
+  filter_by_category: THEO DANH MỤC
+  filter_by_resource: THEO LOẠI TÀI NGUYÊN
+  filter_by_job: THEO NGHỀ CHẾ TẠO
+  filter_by_world: THEO THẾ GIỚI
+  filter_by_mob_family: THEO HỌ QUÁI
+  filter_biome: QUẦN XÃ
+  filter_city: THÀNH PHỐ
+  group_armor: GIÁP
+  group_weapons: VŨ KHÍ
+  group_accessories: PHỤ KIỆN
+  group_pets: THÚ CƯNG
+  group_runes: NGỌC KHẮC
+  group_relics: DI VẬT
+  group_tools: CÔNG CỤ
+  group_consumables: VẬT PHẨM TIÊU HAO
+  group_raw_resources: TÀI NGUYÊN THÔ
+  group_gatherable_resources: TÀI NGUYÊN THU THẬP
+  group_intermediary_resources: NGUYÊN LIỆU TRUNG GIAN
+  group_pet_food_resources: THỨC ĂN CHO THÚ
+  item_category_pet_food: THỨC ĂN CHO THÚ
+  boss_only: CHỈ TRÙM
+  view_all: TẤT CẢ
+  item_type: LOẠI
+  view_by_zone: THEO KHU VỰC
+  view_by_level: THEO CẤP
+  view_by_family: THEO HỌ
+  unknown_family: Họ không rõ
+  stats_filter: THUỘC TÍNH
+  filter_life_steal: HÚT MÁU
+  gameplay:
+    game_mechanics: CƠ CHẾ TRÒ CHƠI
+    section_combat: CHIẾN ĐẤU
+    section_leveling: LÊN CẤP
+    section_stats: THUỘC TÍNH
+    section_loot: CHIẾN LỢI PHẨM
+    section_groups: NHÓM
+    section_dungeons: NGỤC TỐI
+    section_classes: LỚP
+    section_economy: KINH TẾ
+    combat_desc: Chiến đấu theo lượt trên lưới. Trong lượt, dùng điểm hành động để tung phép và điểm di chuyển để đi. Mỗi phép quy định có cần tầm nhìn hay không. Bạn đánh nhóm quái ngoài thế giới và đấu người chơi ở đấu trường. Sát thương tăng theo thuộc tính nguyên tố tương ứng và sát thương cố định.
+    elements: NGUYÊN TỐ
+    element_earth: ĐẤT
+    element_fire: LỬA
+    element_water: NƯỚC
+    element_air: GIÓ
+    stat_strength: Sức mạnh
+    stat_intelligence: Trí lực
+    stat_chance: May mắn
+    stat_agility: Nhanh nhẹn
+    critical_hits: CHÍ MẠNG
+    crit_desc: Mỗi phép hoặc vũ khí có tỷ lệ chí mạng cơ bản 1 trên N. Chỉ số chí mạng giảm N nhưng tỷ lệ cuối không vượt 1 trên 2 (50%).
+    crit_bonus_desc: Khi chí mạng, phép dùng hiệu ứng chí mạng riêng thay cho hiệu ứng thường, như sát thương mạnh hơn hoặc hiệu ứng thêm.
+    blocking: LÁ CHẮN
+    blocking_desc: Một số phép tạo lá chắn hấp thụ sát thương đúng nguyên tố cho tới khi hết. Không có thể lực hay tư thế thủ; lá chắn là cơ chế hấp thụ duy nhất.
+    resistance: KHÁNG
+    resistance_desc: Kháng nguyên tố giảm sát thương cuối theo phần trăm, tối đa 50% mỗi nguyên tố. Kháng âm làm tăng sát thương nhận.
+    mob_level_bands: KHOẢNG CẤP QUÁI
+    mob_level_bands_desc: 'Trong khoảng cấp quy định, máu, kinh nghiệm, Nhanh nhẹn, Trí tuệ, kháng dương và giá trị phép co giãn tăng từ 60% lên 160%. Điểm hành động và di chuyển tăng từ 100% lên 130%. Kháng âm đảo đường cong: độ yếu giảm từ 160% ở cấp thấp nhất xuống 60% ở cấp cao nhất.'
+    life_steal: HÚT MÁU
+    life_steal_desc: Hút máu gây sát thương và hồi cho người dùng một nửa máu mục tiêu thực mất. Chỉ người chơi được hồi; quái dùng cùng phép chỉ gây sát thương.
+    life_steal_note: Tính sát thương theo công thức chuẩn trước, rồi hồi một nửa máu mục tiêu dự định thực mất. Đòn bị chuyển sang người khác hoặc đổi thành hồi máu không hút lại gì.
+    chatiment: TRỪNG PHẠT
+    chatiment_desc: Trừng phạt đổi lượng máu thực mất không gây chết thành thuộc tính tương ứng. Mỗi lượt của người đang hành động có giới hạn riêng; lượt sau cộng thành thưởng riêng kéo dài năm lượt. Sát thương quái tính đủ, sát thương người chơi và giới hạn giảm nửa. Ares không dùng xói mòn.
+    healing: HỒI MÁU
+    healing_desc: Hồi máu dùng giá trị gốc của phép, tăng theo phần trăm Trí lực rồi cộng thưởng Hồi máu cố định từ trang bị và tăng cường. Không vượt máu tối đa của mục tiêu.
+    healing_intel_value: +1% hồi máu mỗi điểm Trí lực
+    heal_bonus: Thưởng hồi máu
+    heal_bonus_value: Thưởng cố định từ trang bị/tăng cường, cộng sau Trí lực
+    mobs: Quái vật
+    healing_mobs_value: Chỉ theo Trí lực, không có thưởng hồi máu
+    leveling_desc: Cấp tối đa là 200. Đánh quái cùng khoảng cấp để nhận kinh nghiệm tốt nhất.
+    points_per_level: ĐIỂM MỖI CẤP
+    stat_points: Điểm thuộc tính
+    stat_points_value: '{{n}} mỗi cấp'
+    stat_costs_desc: Chi phí thuộc tính tùy lớp và giá trị cơ bản hiện tại. Xem thang đầy đủ tại trang từng lớp.
+    spell_points: Điểm phép
+    spell_points_value: '{{n}} mỗi cấp'
+    xp_milestones: MỐC KINH NGHIỆM
+    level_10: Cấp 10
+    level_50: Cấp 50
+    level_100: Cấp 100
+    base_stats: THUỘC TÍNH CƠ BẢN
+    stat_vitality: Sinh lực
+    stat_vitality_desc: +1 máu tối đa mỗi điểm
+    stat_wisdom: Trí tuệ
+    stat_wisdom_desc: Tăng kinh nghiệm nhận
+    stat_strength_desc: Tăng sát thương đất
+    stat_intelligence_desc: Tăng sát thương lửa và hồi máu
+    stat_chance_desc: Sát thương nước, thêm đồ rơi
+    stat_agility_desc: Tăng sát thương gió
+    derived_formulas: CÔNG THỨC SUY RA
+    max_health: MÁU TỐI ĐA
+    loot_desc: Mỗi quái bị hạ gieo từng mục trong bảng rơi một lần. Mục thành công cho số lượng ngẫu nhiên trong khoảng quy định.
+    stat_rolling: GIEO THUỘC TÍNH
+    stat_rolling_desc: Mỗi thuộc tính được gieo đều trong khoảng mẫu. Mọi giá trị có xác suất như nhau.
+    archimobs: QUÁI BIẾN THỂ HIẾM
+    archimobs_desc: Mỗi quái phù hợp có 1% cơ hội được thay bằng biến thể có tên riêng và mạnh hơn vĩnh viễn. Từng con gieo độc lập.
+    max_members: Thành viên tối đa
+    groups_desc: Nhóm gồm tối đa {{max}} người và có chọn trưởng nhóm. Chỉ ở cùng nhóm không tự vào trận; mọi người phải gửi giao dịch tham gia riêng, không tự vào chỉ vì đứng gần.
+    groups_xp: CHIA KINH NGHIỆM
+    groups_xp_desc: Quái bị hạ tạo quỹ kinh nghiệm gốc. Người đủ điều kiện tạo hệ số nhóm Retro; chênh lệch tổng cấp hai bên giảm quỹ, rồi chia theo tỷ trọng cấp từng người. Người dưới một phần ba cấp cao nhất không tăng hệ số. Trí tuệ áp dụng cuối, sát thương cá nhân không ảnh hưởng.
+    groups_loot: CHIA CHIẾN LỢI PHẨM
+    groups_loot_desc: Mỗi quái bị hạ gieo đồ chung một lần. Đồ rơi được chia luân phiên cho người thắng; thêm người không tăng số lần gieo.
+    dungeons_desc: Đến lối vào ngục trong thành phố, dùng chìa khóa rồi vượt các phòng theo thứ tự. Mỗi ngục có một sảnh chuẩn bị đang hoạt động.
+    dungeon_entry: Vào
+    dungeon_entry_value: Chìa phù hợp ở lối vào thành phố
+    dungeon_instance: Phó bản
+    dungeon_instance_value: Sảnh ngục có trận công khai hoặc theo nhóm
+    dungeon_completion: Hoàn thành
+    dungeon_completion_value: Vượt mọi phòng
+    dungeon_reward: Phần thưởng
+    dungeon_reward_value: Chia chiến lợi phẩm tiêu chuẩn
+    classes_desc: Có 12 lớp. Lớp nào cũng dùng được mọi vũ khí, nhưng vũ khí hợp lớp cho +10% sát thương và sát thương chí mạng. Mỗi lớp mở phép ở các cấp cố định.
+    table_class: LỚP
+    table_weapon: TƯƠNG HỢP
+    table_hp: Máu
+    role_warrior: Chiến binh
+    role_assassin: Sát thủ
+    role_berserker: Cuồng chiến binh
+    role_druid: Druid
+    role_chronomancer: Pháp sư thời gian
+    role_guardian: Hộ vệ
+    role_archer: Cung thủ
+    role_prospector: Thợ tìm kho báu
+    role_brawler: Đấu sĩ
+    role_tomoda: Thuần thú sư
+    role_gambler: Con bạc
+    role_healer: Người chữa trị
+    weapon_daggers: Dao găm
+    weapon_spear: Giáo
+    weapon_bow: Cung
+    weapon_axe: Rìu
+    weapon_sword: Kiếm
+    marketplace: CHỢ
+    marketplace_desc: Trang bị và nhân vật được đăng trên quầy với giá bạn chọn, người mua trả ngay. Tài nguyên đổi lấy SUI trong bể hoán đổi, không cần đăng bán. Mỗi lần bán trả 10% bản quyền; chợ là cách bán duy nhất.
+    section_forgemagie: KHẮC NGỌC
+    forgemagie_desc: Khắc ngọc cho phép nghiền trang bị thành ngọc rồi dùng lên trang bị khác để đổi chỉ số. Đây là hệ thống cuối game rủi ro cao, phần thưởng lớn để hoàn thiện đồ.
+    crushing: NGHIỀN
+    crushing_desc: 'Mỗi dòng thuộc tính được gieo riêng khi nghiền; giá trị và trọng lượng cao cho nhiều ngọc hơn. Không cần máy chủ quyết định: số chia sản lượng kết hợp đường cong theo cấp vật phẩm với hệ số lạm phát của mẫu trên chuỗi, từ 1% tới 4000%. Nghiền làm giảm hệ số mẫu đó và tăng mẫu lân cận.'
+    crushing_tiers_desc: Bậc ngọc Ba/Pa/Ra được chọn theo xác suất. Chỉ số cao thiên về ngọc Ra.
+    rune_tiers: BẬC NGỌC
+    rune_ba: 'Bậc 1: trọng lượng thấp nhất'
+    rune_pa: 'Bậc 2: trọng lượng trung bình'
+    rune_ra: 'Bậc 3: trọng lượng cao nhất, kinh nghiệm gấp đôi'
+    rune_weight_desc: Trọng lượng ngọc bằng giá trị nhân trọng lượng đơn vị; Retro làm tròn lên số nguyên. Tính tự động.
+    rune_table_stat: THUỘC TÍNH
+    rune_table_note: Ngọc Tầm, Di chuyển và Hành động áp dụng mỗi loại một lần; Tỷ lệ chí mạng tối đa mười lần. Critical và Critical Outcomes không có ngọc.
+    rune_stat_range: Tầm
+    rune_stat_movement: Di chuyển
+    rune_stat_action: Hành động
+    rune_stat_raw_damage: Sát thương cố định
+    rune_stat_critical_chance: Tỷ lệ chí mạng
+    rune_stat_earth_resist: Kháng đất
+    rune_stat_fire_resist: Kháng lửa
+    rune_stat_water_resist: Kháng nước
+    rune_stat_air_resist: Kháng gió
+    stat_unit_weights: TRỌNG LƯỢNG ĐƠN VỊ
+    stat_unit_weights_desc: Mỗi thuộc tính có trọng lượng phản ánh sức mạnh chiến đấu. Thuộc tính nặng cho nhiều ngọc khi nghiền, dùng nhiều ngân sách vật phẩm và khó nâng vượt mức.
+    rune_application: KHẮC NGỌC
+    rune_application_desc: 'Tạm mở từ cấp 1 nghề chế tạo tương ứng để thử nghiệm. Dùng từng ngọc lên trang bị để đổi chỉ số. Có ba kết quả:'
+    outcome_critical_success: Thành công hoàn hảo
+    outcome_critical_success_desc: Ngọc thành công, không mất thuộc tính
+    outcome_neutral: Thành công thường
+    outcome_neutral_desc: Ngọc thành công, chỉ số khác có thể giảm
+    outcome_critical_failure: Thất bại nghiêm trọng
+    outcome_critical_failure_desc: Ngọc thất bại, mất chỉ số tương đương trọng lượng ngọc
+    success_rate: TỶ LỆ THÀNH CÔNG
+    success_rate_desc: 'Thành công tùy mức gần tối đa: gần 0% là khoảng 99%, gần tối đa khoảng 50%, thuộc tính ngoại lai khoảng 1% bất kể cấp. Tỷ lệ thành công hoàn hảo hoặc thường đổi tương tự, cộng 0,2% mỗi cấp nghề trên cấp 1. Nghề không giới hạn cấp vật phẩm có thể xử lý.'
+    puits: DƯ TRỌNG (PUITS)
+    puits_desc: Bộ đếm trọng lượng tích lũy khi mất chỉ số nhiều hơn trọng lượng ngọc. Nó hấp thụ tổn thất tiếp theo trước các chỉ số khác, được giữ trên vật phẩm khi đổi bàn hay chủ.
+    over_maging: NÂNG VƯỢT MỨC
+    over_maging_desc: Có thể nâng thuộc tính vượt tối đa tự nhiên, mỗi dòng thêm tối đa 101 trọng lượng. Sinh lực nhẹ, trọng lượng 0,25, có thể thêm khoảng 404 điểm; Trí tuệ nặng, trọng lượng 3, chỉ khoảng 33.
+    forgemagie_tips: MẸO
+    forgemagie_tips_desc: Với ngoại thuộc tính hoặc vượt mức, bỏ chỉ số rẻ để tích dư trọng, khắc chỉ số khó khi có đệm rồi thêm lại chỉ số mất, dễ hơn khi còn thấp. Chỉ số vượt mức và ngoại lai mất trước khi thất bại.
+    action_points: ĐIỂM HÀNH ĐỘNG
+    movement_points: ĐIỂM DI CHUYỂN
+    critical_stat: CHÍ MẠNG
+    wisdom_xp: THƯỞNG KN TỪ TRÍ TUỆ
+    wisdom_xp_desc: Mỗi điểm Trí tuệ hiệu lực, gồm hiệu ứng đang có, tăng 1% kinh nghiệm. 100 Trí tuệ cho gấp đôi kinh nghiệm.
+    chance_loot: MAY MẮN VÀ ĐỒ RƠI
+    chance_loot_desc: May mắn hiệu lực trung bình của đội thắng, gồm hiệu ứng, nhân mọi tỷ lệ đồ rơi. Trung bình 600 sẽ gấp đôi tỷ lệ, nhưng không quá 100%.
+    mob_loot_band: CẤP QUÁI VÀ TỶ LỆ RƠI
+    mob_loot_band_desc: Tỷ lệ quy định là điểm giữa. Trong khoảng cấp quái, nó co giãn từ 80% tới 120%, tối đa 100%. Quái có cấp cố định dùng đúng tỷ lệ gốc. Số lượng rơi không đổi theo cấp.
+  unlocks_at_level: MỞ Ở CẤP {{level}}
+  level: CẤP
+  aoe_radius: BÁN KÍNH VÙNG
+  effects: HIỆU ỨNG
+  life_cost: tốn máu
+  duration_short: 'DÀI: {{duration}} giây'
+  coming_soon: SẮP CÓ
+  health: MÁU
+  spells_count: PHÉP ({{count}})
+  mob_spells: PHÉP
+  pet_food: THỨC ĂN
+  pet_full_fed_note: Đây là chỉ số khi nuôi đủ. Thú tăng từ 0 tới tối đa qua {{count}} lần cho ăn, mỗi ngày một lần.
+  pet_diet_note: Ăn một đơn vị bất kỳ trong {{count}} món này, mỗi ngày một lần.
+  consumable_heal: Hồi {{amount}} máu
+  consumable_reset_stats: Đặt lại điểm thuộc tính
+  consumable_reset_spells: Đặt lại điểm phép
+  consumable_recall: Trở về cổng thế giới
+  consumable_city: Đến thành phố {{city}}
+  consumable_loot_box: Mở thưởng ngẫu nhiên
+  consumable_reward_heading: PHẦN THƯỞNG
+  consumable_rewards: THƯỞNG CÓ THỂ NHẬN
+  consumable_reward: '{{item}} · {{chance}}%'
+  rune_effect: Thêm {{amount}} {{stat}} vào vật phẩm
+  rune_obtained_by_crushing: Nhận từ nghiền vật phẩm
+  spell_n: PHÉP {{n}}
+  range: TẦM
+  range_modifiability: KHẢ NĂNG ĐỔI TẦM
+  no_spells_minted: Chưa có phép được tạo trên chuỗi
+  xp_suffix: +{{xp}} KN
+  boss_badge: TRÙM
+  archi_badge: BIẾN THỂ HIẾM
+  recommended_short: Gợi ý {{level}}
+  level_range: Cấp {{min}}–{{max}}
+  up_to_plus: Tối đa +{{val}}
+  element:
+    fire: Lửa
+    water: Nước
+    earth: Đất
+    air: Gió
+    neutral: Trung tính
+  job_category:
+    gathering: Thu thập
+    weapon_craft: Chế tạo vũ khí
+    equipment_craft: Chế tạo trang bị
+    consumable_craft: Chế tạo đồ tiêu hao
+  ap_cost: TỐN ĐHĐ
+  casts_per_turn: SỐ LẦN MỖI LƯỢT
+  casts_per_target: SỐ LẦN MỖI MỤC TIÊU
+  unlimited: KHÔNG GIỚI HẠN
+  cooldown: HỒI CHIÊU
+  cooldown_none: KHÔNG CÓ
+  characteristic_costs: Chi phí thuộc tính
+  characteristic_costs_desc: Điểm cơ bản theo thang của lớp này. Trang bị không đổi chi phí.
+  characteristic_cost_band: '{{cost}} điểm → +{{gain}} · ≤{{cap}}'
+  characteristic_cost_unlimited: '{{cost}} điểm → +{{gain}} · không giới hạn'
+  turns_value: '{{n}} LƯỢT'
+  targeting: CHỌN MỤC TIÊU
+  effect_zone: VÙNG HIỆU ỨNG
+  line_of_sight: TẦM NHÌN
+  los_required: BẮT BUỘC
+  los_not_required: KHÔNG BẮT BUỘC
+  target_cell: Ô MỤC TIÊU
+  target_cell_empty: PHẢI TRỐNG
+  target_cell_any: BẤT KỲ (TRỐNG HOẶC CÓ NGƯỜI)
+  cast_line: HƯỚNG DÙNG PHÉP
+  cast_line_straight: CHỈ ĐƯỜNG THẲNG
+  cast_line_free: NGẮM TỰ DO
+  critical: CHÍ MẠNG
+  crit_chance: TỶ LỆ CHÍ MẠNG
+  crit_chance_value: 1 TRÊN {{n}}
+  on_crit: KHI CHÍ MẠNG
+  proc_chance: '{{n}}% CƠ HỘI'
+  aoe_shape:
+    point: MỘT MỤC TIÊU
+    circle: TRÒN {{size}}
+    cross: CHỮ THẬP {{size}}
+    line: ĐƯỜNG THẲNG {{size}}
+    tbar: CHỮ T {{size}}
+    ring: VÀNH {{size}}
+    allmap: TOÀN BÀN
+    cone: HÌNH NÓN {{size}}
+  no_items_onchain: Chưa có mẫu vật phẩm trên chuỗi
+  no_mobs_onchain: Chưa có sinh vật trên chuỗi
+  obtention_crafted: Có thể chế tạo
+  obtention_dropped_by: Rơi từ {{count}} quái
+  obtention_unknown: Chưa rõ cách nhận
+  total_supply: Tổng cung
+  marketcap: Vốn hóa
+  marketcap_unknown: Không rõ
+  worlds_tab: Các thế giới
+  search_worlds: Tìm tên thế giới…
+  no_worlds: Chưa có thế giới trên chuỗi
+  select_world: Chọn thế giới
+  world_level_unknown: Chưa có khoảng cấp
+  world_biomes: Quần xã
+  world_no_mobs: Chưa biết quái nào
+  world_cities: Thành phố
+  world_no_resources: Chưa biết tài nguyên
+  world_gap_note: RPC chưa cung cấp
+  world_dungeon: Ngục tối
+  world_dungeon_room: Phòng {{n}}
+  world_stat_lean: Thiên hướng thuộc tính
+  world_appears_in: 'Xuất hiện tại:'
+  found_in: TÌM THẤY Ở
+  item_descriptions:
+    abyssal_blood_wheat: ''
+    aloe_crystal_salve: ''
+    aloe_vera: ''
+    amber: ''
+    amber_powder: ''
+    arcane_reagent: ''
+    arcane_spore: ''
+    arcaneshroom: ''
+    arcanite: ''
+    arcanite_powder: ''
+    arcanize_flour: ''
+    barley_flour: ''
+    basic_pickaxe: ''
+    blood_wheat: ''
+    blood_wheat_flour: ''
+    bloodstone: ''
+    bloodstone_powder: ''
+    bloodveil_orchid: ''
+    burnt_wheat_flour: ''
+    crimson_truffle: ''
+    crimson_truffle_heart: ''
+    crystallized_tanjirize: ''
+    cursed_amalgam: ''
+    cursed_fungus: ''
+    cursed_gem: ''
+    cursed_gem_powder: ''
+    cursed_root: ''
+    cursed_wheat: ''
+    diamond: ''
+    diamond_powder: ''
+    draconite: ''
+    draconite_powder: ''
+    draconize_flour: ''
+    dragon_petal_extract: ''
+    dragon_pollen: ''
+    dragonlily: ''
+    duskite: ''
+    duskite_powder: ''
+    ethereal_ukranize: ''
+    genesis_suize: ''
+    ghost_cap: ''
+    golden_mushroom: ''
+    golden_nightcap: ''
+    golden_wheat: ''
+    green_mushroom: ''
+    green_mushroom_powder: ''
+    himalayan_flour: ''
+    infinity_amber: ''
+    infinity_arcanite: ''
+    infinity_bloodstone: ''
+    infinity_cursed_gem: ''
+    infinity_diamond: ''
+    infinity_draconite: ''
+    infinity_duskite: ''
+    infinity_jade: ''
+    infinity_moonstone: ''
+    infinity_obsidianite: ''
+    infinity_quartz: ''
+    ivory_orchid_paste: ''
+    ivory_shrooms: ''
+    jade: ''
+    jade_powder: ''
+    malt_flour: ''
+    moonstone: ''
+    moonstone_powder: ''
+    nightcap: ''
+    nightcap_elixir_base: ''
+    obsidianite: ''
+    obsidianite_powder: ''
+    old_hoe: ''
+    orchid_spore_blend: ''
+    phantom_distillate: ''
+    phantom_essence: ''
+    phantom_spore: ''
+    primordial_draconize: ''
+    pristine_malt: ''
+    quartz: ''
+    quartz_powder: ''
+    red_orchid: ''
+    rune_action_ba: ''
+    rune_agility_ba: ''
+    rune_agility_pa: ''
+    rune_agility_ra: ''
+    rune_air_resistance_ba: ''
+    rune_air_resistance_pa: ''
+    rune_air_resistance_ra: ''
+    rune_chance_ba: ''
+    rune_chance_pa: ''
+    rune_chance_ra: ''
+    rune_critical_ba: ''
+    rune_earth_resistance_ba: ''
+    rune_earth_resistance_pa: ''
+    rune_earth_resistance_ra: ''
+    rune_fire_resistance_ba: ''
+    rune_fire_resistance_pa: ''
+    rune_fire_resistance_ra: ''
+    rune_intelligence_ba: ''
+    rune_intelligence_pa: ''
+    rune_intelligence_ra: ''
+    rune_movement_ba: ''
+    rune_range_ba: ''
+    rune_raw_damage_ba: ''
+    rune_strength_ba: ''
+    rune_strength_pa: ''
+    rune_strength_ra: ''
+    rune_vitality_ba: ''
+    rune_vitality_pa: ''
+    rune_vitality_ra: ''
+    rune_water_resistance_ba: ''
+    rune_water_resistance_pa: ''
+    rune_water_resistance_ra: ''
+    rune_wisdom_ba: ''
+    rune_wisdom_pa: ''
+    rune_wisdom_ra: ''
+    scroll_of_oblivion: Hoàn lại điểm phép đã dùng và đặt mọi phép đã nâng về cấp 1.
+    scroll_of_rebirth: Hoàn lại toàn bộ điểm thuộc tính đã dùng để phân bổ lại.
+    shiny_barley: ''
+    smoldering_wheat: ''
+    spectral_arcanize: ''
+    suize_flour: ''
+    tanjirize_flour: ''
+    title_veteran: ''
+    tool_herbalist: ''
+    truffle_essence_compound: ''
+    ukranize_flour: ''
+    verdant_aloe: ''
+    water: ''
+    wheat: ''
+    wheat_barley: ''
+    wheat_burnt: ''
+    wheat_draconize: ''
+    wheat_flour: ''
+    wheat_malt: ''
+    wheat_purple: ''
+    wheat_suize: ''
+    wheat_tanjirize: ''
+    wheat_ukraine: ''
+    wheat_white: ''
+    wither_concentrate: ''
+    wither_petal: ''
+    witherbloom: ''
+out_of_sui_body: Bạn đã hết SUI để trả phí giao dịch. Hãy nạp ví để tiếp tục chơi.
+characters_page:
+  inventory_selection: Đã chọn {{count}} · Shift-nhấp trang bị để đổi lựa chọn
+  crush_cta_count: Nghiền ({{count}})
+  crush_pending_count: Đang nghiền {{count}}…
+  crush_confirm_selection: Nghiền trang bị đã chọn ({{count}})? Mọi vật phẩm sẽ bị hủy vĩnh viễn.
+  crush_selection_changed: Chọn trang bị khả dụng, chưa đeo từ cùng một quầy. Các món đã xác nhận phải vẫn còn khả dụng.
+  teleport_dungeon_blocked: Hoàn thành hoặc bỏ ngục tối trước khi dịch chuyển.
+  consume_busy: Nhân vật phải rảnh để dùng vật phẩm tiêu hao.
+  progression_busy: Chỉ thay đổi thuộc tính và phép khi nhân vật rảnh.
+  delete_character: Xóa nhân vật
+  delete_warning: Xóa là vĩnh viễn. Mất mọi tiến trình nhân vật và tên vẫn được giữ lại.
+  delete_no_refund: Phí tạo {{amount}} SUI sẽ không được hoàn lại.
+  delete_equipment: Tháo mọi vật phẩm, gồm thú cưng, công cụ và ngoại hình.
+  delete_fight: Rời hoặc hoàn thành trận trước.
+  delete_party: Rời nhóm trước.
+  delete_dungeon: Hoàn thành hoặc bỏ chuyến ngục tối trước.
+  delete_ambush: Giải quyết hộ vệ thu thập trước.
+  delete_listing: Gỡ nhân vật khỏi chợ trước.
+  delete_unavailable: Chờ nhân vật và kết nối khả dụng.
+  delete_pending: Đang xóa…
+  claims_title: Phần thưởng chưa nhận
+  claim_collect: Nhận phần thưởng
+  claim_box: Thưởng từ rương
+  claim_crush: Sản phẩm nghiền
+  tab_equipment: Trang bị
+  tab_stats: Thuộc tính
+  tab_spells: Phép
+  tab_jobs: Nghề
+  tab_runeforge: Lò khắc ngọc
+  no_character: Chưa chọn nhân vật — hãy chọn ở thanh phía trên
+  level: Cấp {{level}}
+  experience: Kinh nghiệm
+  equipment_head: Trang bị
+  equipped_totals: Tổng chỉ số trang bị
+  no_gear_equipped: Chưa có trang bị
+  bag_equipment: Trang bị
+  bag_consumables: Vật phẩm tiêu hao
+  bag_resources: Tài nguyên
+  bag_filter_all: Tất cả
+  bag_filter_raw: Tài nguyên thô
+  bag_filter_gatherable: Tài nguyên thu thập
+  bag_filter_intermediary: Nguyên liệu trung gian
+  bag_filter_keys: Chìa khóa
+  bag_filter_runes: Ngọc khắc
+  accept: Chấp nhận
+  cancel: Hủy
+  equip_pending: Đang cập nhật trang bị…
+  equip_success: Đã cập nhật trang bị
+  consume_one: Dùng 1
+  consume_until_full: Dùng đến khi đầy máu
+  consume_healing_insufficient: Không đủ vật phẩm, cần {{count}}.
+  consume_healing_stock: Mỗi cái hồi {{heal}} máu · còn {{available}}
+  consume_pending: Đang dùng vật phẩm…
+  consume_success: Đã dùng vật phẩm
+  already_full_hp: Máu đã đầy
+  refusal_wrong_slot: Vật phẩm không hợp ô này
+  refusal_level_too_low: Cấp của bạn quá thấp để dùng vật phẩm này
+  refusal_relic_duplicate: Đã đeo di vật cùng loại
+  refusal_item_listed: Vật phẩm đang được đăng bán
+  points_to_assign: Điểm chờ phân bổ
+  spend_hint: Phân điểm vào sáu thuộc tính rồi xác nhận
+  reset: Đặt lại
+  confirm: Xác nhận
+  tx_pending: Đang xác nhận…
+  stats_pending: Đang phân bổ điểm…
+  stats_success: Đã phân bổ điểm
+  health: Máu
+  action: Hành động
+  movement: Di chuyển
+  characteristics: Thuộc tính
+  resistances: Kháng
+  secondary: Phụ
+  element_fire: Lửa
+  element_water: Nước
+  element_earth: Đất
+  element_air: Gió
+  add_point: Thêm một điểm {{stat}}
+  remove_point: Bớt một điểm {{stat}}
+  grimoire: Sách phép
+  spell_points: Điểm phép
+  unlocked: Đã mở {{unlocked}} / {{total}}
+  unlocks_at: Mở ở cấp {{level}}
+  unlock_line: Cấp {{level}}
+  lv_of: '{{current}} / {{max}}'
+  locked: Đã khóa
+  mastered: Đã thành thạo
+  no_points: Không đủ điểm phép
+  upgrading: Đang nâng cấp…
+  upgrade_success: Đã nâng cấp {{spell}}
+  level_up: Nâng cấp · {{cost}} điểm
+  lv: Cấp {{level}}
+  xp_progress: '{{current}} / {{needed}} KN'
+  max: Tối đa
+  resources: Tài nguyên
+  back: Quay lại
+  gate_note: Mở từ nghề chế tạo cấp {{level}}
+  detail_title: Vật phẩm
+  forge_title: Lò rèn
+  inventory_title: Túi đồ
+  tab_gear: Đồ trang bị
+  tab_runes: Ngọc khắc
+  place_gear: Đặt trang bị
+  place_rune: Đặt ngọc khắc
+  random_notice: Kết quả được gieo trên chuỗi. Ngọc có thể thành công, thất bại hoặc làm mất chỉ số khác — không có bảo đảm.
+  one_rune_note: Mỗi lần thử tiêu hao một ngọc
+  apply: Khắc ngọc
+  scribing: Đang khắc…
+  outcome_critical_success: Thành công hoàn hảo
+  outcome_neutral_success: Thành công thường
+  outcome_critical_failure: Thất bại nghiêm trọng
+  runeforge_history: Lịch sử
+  runeforge_history_empty: Khắc ngọc để bắt đầu lịch sử vật phẩm
+  runeforge_puits: Dư trọng
+  runeforge_no_stat_change: Không đổi thuộc tính
+  requires_job: Cần {{job}} cấp {{level}}
+  clear: Xóa chọn
+  inspect_empty: Chọn trang bị để xem
+  no_forge_gear: Túi không có trang bị rèn được
+  no_runes: Túi không có ngọc khắc
+  menu_feed: Cho ăn
+  menu_consume: Sử dụng
+  menu_crush: Nghiền
+  menu_destroy: Hủy vật phẩm
+  menu_view_recipes: Xem công thức
+  menu_explorer: Xem trên trình khám phá
+  menu_link_chat: Liên kết vào chat
+  feed_title: Cho thú ăn
+  feed_power_label: Uy lực
+  feed_power: '{{count}} / {{max}}'
+  feed_pick_food: Chọn thức ăn
+  feed_no_food: Túi không có thức ăn phù hợp
+  feed_already_today: Hôm nay đã cho ăn — quay lại ngày mai
+  feed_full: Đã cho ăn tối đa
+  feed_pending: Đang cho ăn…
+  feed_success: Đã cho thú ăn
+  feed_confirm: Xác nhận cho ăn
+  feed_consumes: Tiêu hao 1 {{name}}
+  feed_daily_note: Mỗi ngày một món. Mạnh hơn một chút mỗi lần.
+  feed_happy: '{{name}} rất thích!'
+  feed_gain: +1 uy lực
+  feed_unavailable: Thú này không còn khả dụng.
+  claim_success: Đã nhận thưởng
+  crush_title: Nghiền trang bị
+  crush_success: Đã nghiền trang bị
+  crush_result_title: Kết quả nghiền
+  crush_result_empty: Chúc may mắn lần sau.
+  destroy_title: Hủy vật phẩm
+  destroy_confirm_body: Hủy {{name}} ×{{amount}}? Không thể hoàn tác.
+  destroy_cta: Hủy vật phẩm
+  destroy_pending: Đang hủy…
+  destroy_success: Đã hủy vật phẩm
+  unsealing: Đang mở niêm phong…
+  skip_hint: Nhấp để bỏ qua
+  reveal_eyebrow: Bạn nhận được
+  revealing: Đang hiện thưởng…
+  collecting: Đang nhận…
+  continue_cta: Tiếp tục
+  stat_maxed: Ngọc vượt giới hạn thuộc tính hoặc trọng lượng vượt mức/ngoại thuộc tính
+  stat:
+    movement: ĐDC
+    action: ĐHĐ
+    range: Tầm
+    critical_chance: Tỷ lệ chí mạng
+    critical_outcomes: Tỷ lệ chí mạng
+    vitality: Sinh lực
+    wisdom: Trí tuệ
+    strength: Sức mạnh
+    intelligence: Trí lực
+    chance: May mắn
+    agility: Nhanh nhẹn
+    heal: Hồi máu
+    critical_hit: Đòn chí mạng
+    percent_damage: Sát thương
+    raw_damage: Sát thương cố định
+    fire_resistance: Kháng lửa
+    water_resistance: Kháng nước
+    earth_resistance: Kháng đất
+    air_resistance: Kháng gió
+  stats:
+    no_character: Chưa chọn nhân vật
+    unavailable: Thuộc tính không khả dụng
+    level: Cấp {{level}}
+    adventurer: Nhà thám hiểm
+    points_to_assign: Điểm chờ phân bổ
+    spend_hint: Dùng điểm cho thuộc tính
+    reset: Đặt lại
+    health: Máu
+    action: Hành động
+    move: Di chuyển
+    characteristics: Thuộc tính
+    resistances: Kháng
+    secondary: Phụ
+    element:
+      fire: Lửa
+      water: Nước
+      earth: Đất
+      air: Gió
+    description:
+      vitality: Tăng máu tối đa
+      wisdom: Tăng kinh nghiệm nhận và kháng mất điểm hành động/di chuyển
+      strength: Tăng sát thương đất
+      intelligence: Tăng sát thương lửa và hồi máu
+      chance: Tăng sát thương nước và tỷ lệ đồ rơi
+      agility: Tăng sát thương gió, chí mạng, khóa chân và thoát khóa
+      critical_hit: Tăng cơ hội chí mạng
+      raw_damage: Cộng lượng cố định vào sát thương và hút máu
+    add_point: Thêm một điểm {{stat}}
+    remove_point: Bớt một điểm {{stat}}
+    tx_pending: Đang phân bổ…
+    point_cost: '{{cost}} điểm → +{{gain}}'
+    tx_success: Đã phân điểm thuộc tính
+  spells:
+    range_modifiable: Tầm có thể thay đổi
+    no_character: Chưa chọn nhân vật
+    select_prompt: Chọn phép
+    level: Cấp {{level}}
+    spell_points: Điểm phép
+    available: Khả dụng
+    grimoire: Sách phép
+    unlocked: Đã mở {{unlocked}} / {{total}}
+    locked: Đã khóa
+    lv: Cấp {{level}}
+    lv_of: Cấp {{cur}}/{{max}}
+    unlocks_at: Mở ở cấp {{level}}
+    current_level: Cấp hiện tại
+    ap_cost: Tốn ĐHĐ
+    range: Tầm
+    cooldown: Hồi chiêu
+    crit_chance: Tỷ lệ chí mạng
+    casts_per_turn: Số lần mỗi lượt
+    unlimited: Không giới hạn
+    description: Mô tả
+    effects: Hiệu ứng
+    levels_head: Các cấp
+    mastered: Đã thành thạo
+    upgrade_success: '{{spell}} đã lên cấp!'
+    upgrading: Đang nâng cấp…
+    level_up_spell: Nâng cấp phép
+    pts: '{{count}} điểm'
+    pts_one: '{{count}} điểm'
+    pts_other: '{{count}} điểm'
+    requires_lv: Cần cấp {{level}}
+    no_points: Không có điểm
+    tag_self: Bản thân
+    tag_melee: Cận chiến
+    tag_ranged: Tầm xa
+    tag_zone: Vùng
+    tag_line_of_sight: Tầm nhìn
+    el_fire: Lửa
+    el_water: Nước
+    el_earth: Đất
+    el_air: Gió
+    buff: Tăng cường
+    utility: Hỗ trợ
+    heal: Hồi máu
+    neutral: Trung tính
+    element: Nguyên tố
+    damage: Sát thương
+    turns: lượt
+    crit_val: chí mạng {{value}}
+    range_fixed: TẦM CỐ ĐỊNH — KHÔNG NHẬN CHỈ SỐ TĂNG TẦM
+  jobs:
+    level_up_title: Nghề lên cấp
+    level_up_reached: Đạt cấp
+    level_up_character: '{{name}} đã tiến bộ'
+    level_up_progress: Cấp {{before}} → {{after}}
+    level_up_continue: Tiếp tục
+    category:
+      gathering: Thu thập
+      weapon: Chế tạo vũ khí
+      equipment: Chế tạo trang bị
+      consumable: Chế tạo đồ tiêu hao
+    recipes_fallback: Công thức
+    equipped: Đã trang bị
+    better_character: '{{name}} có nghề {{job}} cấp {{level}}'
+    switch: Chuyển
+    switch_to_character: Chuyển sang {{name}}
+    table:
+      tier: Bậc
+      req_lvl: Cấp cần
+      resource: Tài nguyên
+      yield: Sản lượng
+      xp: KN
+      unlocks_at: '{{name}} (mở ở cấp {{level}})'
+      gather_detail: '{{name}} · thu {{gather}} giây · hồi {{respawn}} giây'
+      locked: đã khóa
+    lv_badge: Cấp {{level}}
+    tier_badge: Bậc {{tier}}
+    craft:
+      recipe_head: Công thức
+      recipe_not_seeded: Công thức này chưa khả dụng.
+      ingredients_head: Nguyên liệu
+      requires_level: Cần {{job}} cấp {{required}} (bạn cấp {{level}})
+      not_enough: Không đủ nguyên liệu
+      starting_chance: Tỷ lệ ban đầu
+      amount: Số lần thử
+      max: Tối đa
+      prepare_tooltip: Chuẩn bị {{count}} × {{name}}
+      craft_tooltip: Chế tạo {{count}} × {{name}}
+      craft_button: Chế tạo ×{{count}}
+      crafting: Đang chế tạo…
+      craft_result: Đã làm {{successes}} / {{attempts}} {{name}}
+      locked_level: Đã khóa · Cấp {{level}}
+    detail:
+      close_aria: Đóng chi tiết vật phẩm
+      item_not_seeded: Vật phẩm này chưa khả dụng.
+      tool_label: Công cụ
+      crafts_label: Chế tạo {{covers}}
+      xp_progress: '{{current}} / {{needed}} KN'
+      gather_time: 'Thời gian thu: {{seconds}} giây'
+      next_gather_time: 'Tiếp · Cấp {{level}}: {{seconds}} giây'
+    recipes:
+      empty_seed: Công thức nghề này sẽ có khi nội dung chế tạo được thêm.
+      unlocked: Đã mở
+      locked: Đã khóa
+      ingredients: '{{count}} nguyên liệu'
+      required_level: Cần nghề cấp {{level}}
+      best_progress: Tốt nhất
+    gather:
+      in_progress: Đang thu {{name}}…
+      button: Thu thập {{name}}
+      hint: Nhấp điểm tài nguyên {{job}} trong thế giới để thu thập.
+    tabs:
+      resources: Tài nguyên
+      recipes: Công thức
+    no_character: Chưa chọn nhân vật
+  common:
+    experience: Kinh nghiệm
+    confirm: Xác nhận
+    max: TỐI ĐA
+spell_names:
+  Absorption: Hấp thụ
+  Absorptive Arrow: Mũi tên hấp thụ
+  Acceleration: Tăng tốc
+  Aggressive Brambles: Gai hung hãn
+  Aggressive Glyph: Ấn trận tấn công
+  Alcoholic Breath: Hơi thở men rượu
+  All or Nothing: Được ăn cả
+  Chimeric Venom: Nọc chimera
+  Animal Healing: Chữa trị thú
+  Aqueous Armour: Giáp nước
+  Aqueous Vulnerability: Yếu nước
+  Art of Staff: Nghệ thuật gậy
+  Asobi's Fate: Số phận Asobi
+  Asobi's Luck: May mắn Asobi
+  Assault: Đột kích
+  Atonement Arrow: Mũi tên chuộc lỗi
+  Attraction: Hút kéo
+  Backlash: Phản đòn
+  Bamboo Milk: Sữa tre
+  Bat's Eye: Mắt dơi
+  Bear Cry: Tiếng gầm gấu
+  Blazing Fist: Nắm đấm lửa
+  Blazing Vulnerability: Yếu lửa
+  Blinding Protection: Bảo hộ chói mắt
+  Blindness: Mù lòa
+  Bloodthirsty Madness: Điên cuồng khát máu
+  Blow: Cú đánh
+  Bluff: Đánh lừa
+  Bold Punishment: Trừng phạt táo bạo
+  Boozer: Say xỉn
+  Bow Skill: Kỹ năng cung
+  Bramble: Gai
+  Bravery Guide: Dẫn lối dũng cảm
+  Bribery: Hối lộ
+  Bubble: Bong bóng
+  Burning Arrow: Mũi tên cháy
+  Burning Glyph: Ấn trận cháy
+  Bush Fire: Cháy rừng
+  Celestial Sword: Kiếm thiên giới
+  Chakra Concentration: Tập trung chakra
+  Chakra Impulse: Xung chakra
+  Hurl: Ném
+  Claw of Ceangal: Vuốt Ceangal
+  Clock: Đồng hồ
+  Cloudy Attack: Đòn mây
+  Clover: Cỏ ba lá
+  Clumsiness: Vụng về
+  Coins Throwing: Ném xu
+  Compulsion: Thúc ép
+  Con: Lừa gạt
+  Concentration: Tập trung
+  Cooperation: Hợp tác
+  Counter: Phản kích
+  Critical Shooting: Bắn chí mạng
+  Crow: Quạ
+  Curative Word: Lời chữa trị
+  Cut: Cắt
+  Dark Ray: Tia tối
+  Destructive Arrow: Mũi tên hủy diệt
+  Destructive Sword: Kiếm hủy diệt
+  Deviousness: Xảo quyệt
+  Devotion: Tận hiến
+  Dissolution: Hòa tan
+  Distant Shooting: Bắn xa
+  Divine Sword: Kiếm thần
+  Dolly Sacrifice: Hiến tế búp bê
+  Shadowstep: Bước bóng tối
+  Draining Word: Lời rút sức
+  Earth Armour: Giáp đất
+  Earth Vulnerability: Yếu đất
+  Earthquake: Động đất
+  Bloodstep: Bước máu
+  Explosive Arrow: Mũi tên nổ
+  Explosive Flask: Bình nổ
+  Fangs of Boowolf: Nanh Boowolf
+  Fear: Sợ hãi
+  Feline Leap: Nhảy như mèo
+  Feline Movement: Bước mèo
+  Feline Spirit: Linh hồn mèo
+  Flight: Bay
+  Blood Blade: Lưỡi máu
+  Forbidden Word: Lời cấm
+  Forced Punishment: Trừng phạt cưỡng ép
+  Fortune: Tài vận
+  Bonding Word: Lời gắn kết
+  Frightening Word: Lời kinh hãi
+  Frostbite: Tê cóng
+  Frozen Arrow: Mũi tên băng
+  Fury: Cuồng nộ
+  Ghostly Claw: Vuốt ma
+  Ghostly Shovel: Xẻng ma
+  Glowing Armour: Giáp phát sáng
+  Glyph of Blindness: Ấn trận mù
+  Glyph of Silence: Ấn trận câm lặng
+  Greed: Tham lam
+  Hand: Kim đồng hồ
+  Hangover: Dư men
+  Haziness: Mơ hồ
+  Heads or Tails: Sấp hay ngửa
+  Healing Word: Lời hồi máu
+  High-Energy Shot: Bắn năng lượng cao
+  Clockwork Pursuit: Truy đuổi đồng hồ
+  Ikari's Foot: Bàn chân Ikari
+  Immunity: Miễn nhiễm
+  Increase: Gia tăng
+  Insidious Poison: Độc hiểm
+  Insolent Bramble: Gai ngạo mạn
+  Intimidation: Đe dọa
+  Invisibility: Tàng hình
+  Invisibility of Others: Ẩn thân cho người khác
+  Jump: Nhảy
+  Undertow: Dòng ngầm
+  Toxic Knowledge: Tri thức độc
+  Lashing Arrow: Mũi tên quất
+  Lashing Claw: Vuốt quất
+  Lethal Attack: Đòn chí tử
+  Lethal Trap: Bẫy chí tử
+  Life Transfer: Chuyển sinh lực
+  Lifting Word: Lời nâng đỡ
+  Dead Weight: Gánh nặng
+  Golden Fever: Sốt vàng
+  Shovel Uprising: Xẻng nổi dậy
+  Silent Mark: Dấu lặng
+  Loss of Motivation: Mất động lực
+  Magic Arrow: Mũi tên ma thuật
+  Manifold Bramble: Gai lan rộng
+  Mass Clumsiness: Vụng về diện rộng
+  Mass Trap: Bẫy diện rộng
+  Melancholy: U sầu
+  Mistake: Sai lầm
+  Mound: Gò đất
+  Mummification: Ướp xác
+  Mutilation: Tự hủy
+  Natural Attack: Đòn tự nhiên
+  Blood Scent: Mùi máu
+  Nimble Punishment: Trừng phạt lanh lẹ
+  Pandatak: Pandatak
+  Pandiniuras: Pandiniuras
+  Pandora's Box: Hộp Pandora
+  Paralyzing Arrow: Mũi tên tê liệt
+  Paralyzing Glyph: Ấn trận tê liệt
+  Paralyzing Poison: Độc tê liệt
+  Paralyzing Trap: Bẫy tê liệt
+  Paralyzing Word: Lời tê liệt
+  Read the Table: Đọc bàn chơi
+  Plaguing Arrow: Mũi tên dịch bệnh
+  Playful Claw: Vuốt tinh nghịch
+  Poisoned Arrow: Mũi tên độc
+  Poisoned Trap: Bẫy độc
+  Poisoned Wind: Gió độc
+  Power: Uy lực
+  Powerful Shooting: Bắn mạnh
+  Pressure: Áp lực
+  Preventing Word: Lời ngăn ngừa
+  Prime of Life: Tuổi sung sức
+  Mountain Punch: Đấm núi
+  Punishment: Trừng phạt
+  Punitive Arrow: Mũi tên trừng phạt
+  Reducing Key: Chìa thu nhỏ
+  Reflex: Phản xạ
+  Regenerating Word: Lời tái sinh
+  Rekop: Rekop
+  Repelling Trap: Bẫy đẩy lùi
+  Repercussion: Dội ngược
+  Retreat Arrow: Mũi tên rút lui
+  Revitalising Word: Lời hồi sinh lực
+  Rough Tongue: Lưỡi ráp
+  Roulette: Vòng quay
+  Sacrifice: Hy sinh
+  Senshi's Sword: Kiếm Senshi
+  Senshi's Wrath: Cơn giận Senshi
+  Shovel Kiss: Nụ hôn xẻng
+  Shovel of Judgement: Xẻng phán xét
+  Shovel Throwing: Ném xẻng
+  Shriveling: Héo rũ
+  Shugo's Shield: Khiên Shugo
+  Shugo's Teleportation: Dịch chuyển Shugo
+  Slaughtering Shovel: Xẻng tàn sát
+  Slow Down: Làm chậm
+  Slow Down Arrow: Mũi tên làm chậm
+  Smell: Khứu giác
+  Soothing Bramble: Gai xoa dịu
+  Spell Rebound: Phản phép
+  Spirit Rift: Khe nứt linh hồn
+  Spiritual Punishment: Trừng phạt tinh thần
+  Rooted Guard: Hộ vệ cắm rễ
+  Stain: Vết bẩn
+  Stimulating Word: Lời khích lệ
+  Strengthstorm: Bão sức mạnh
+  Lucky Pounce: Vồ may mắn
+  Stampede: Bầy giẫm đạp
+  Suppressing Roar: Gầm áp chế
+  Seismic Command: Lệnh địa chấn
+  Rending Pounce: Vồ xé
+  Binding Howl: Hú trói buộc
+  Primal Cataclysm: Đại họa nguyên thủy
+  Pack Totem: Vật tổ bầy
+  Swap: Đổi chỗ
+  Sword of Fate: Kiếm số phận
+  Sword of Judgement: Kiếm phán xét
+  Sylvan Power: Sức mạnh rừng
+  Tear: Nước mắt
+  Temporal Dust: Bụi thời gian
+  Terror: Kinh hoàng
+  Root Snare: Bẫy rễ
+  Reviving Spores: Bào tử hồi sinh
+  Maddening Spores: Bào tử điên loạn
+  Sacrificial Bloom: Hoa hiến tế
+  Overgrowth: Mọc tràn
+  Time Theft: Trộm thời gian
+  Toad: Cóc
+  Temporal Dial: Mặt số thời gian
+  Tokei's Punch: Cú đấm Tokei
+  Tokei's Sandglass: Đồng hồ cát Tokei
+  Tokei's Teleportation: Dịch chuyển Tokei
+  Topkaj: Topkaj
+  Tormenting Arrow: Mũi tên hành hạ
+  Transposition: Hoán vị
+  Trap of Silence: Bẫy câm lặng
+  Tree: Cây
+  Tricky Blow: Đòn lắt léo
+  Tricky Trap: Bẫy lắt léo
+  Truce: Đình chiến
+  Unsummoning: Giải triệu hồi
+  Vampiric Word: Lời hút máu
+  Vital Exchange: Trao đổi sinh lực
+  Second Wind: Hồi sức
+  Wheel of Fortune: Vòng quay vận may
+  Whip: Roi
+  Wild Grass: Cỏ dại
+  Wind Armour: Giáp gió
+  Wind Vulnerability: Yếu gió
+  Word of Altruism: Lời vị tha
+  Word of Recovery: Lời phục hồi
+  Word of Sacrifice: Lời hy sinh
+  Word of Silence: Lời câm lặng
+  Word of Thorn: Lời gai nhọn
+  Word of Youth: Lời tuổi trẻ
+  Wounding Word: Lời gây thương
+  Zatoishwan Stance: Tư thế Zatoishwan
+item_categories:
+  cosmetic_hat: Mũ ngoại hình
+  cosmetic_cloak: Áo choàng ngoại hình
+  hat: Mũ
+  cloak: Áo choàng
+  belt: Thắt lưng
+  boots: Giày
+  amulet: Bùa hộ mệnh
+  ring: Nhẫn
+  title: Danh hiệu
+  pet: Thú cưng
+  relic: Di vật
+  daggers: Dao găm
+  spear: Giáo
+  bow: Cung
+  axe: Rìu
+  sword: Kiếm
+  tool_farmer: Công cụ nông dân
+  tool_herbalist: Công cụ hái thuốc
+  tool_miner: Công cụ thợ mỏ
+  consumable: Vật phẩm tiêu hao
+  resource: Tài nguyên
+  rune: Ngọc khắc
+  key: Chìa khóa
+  weapon: Vũ khí
+  tool: Công cụ
+  relic_slot: Di vật {{number}}
+kares: Staking
+kares_page:
+  stake_more: Stake thêm
+  additional_daily: Thêm mỗi ngày
+  max: Tối đa
+  external_wallet_hint: Stake và quản lý KARES riêng từ ví bên ngoài.
+  select_wallet: Chọn
+  staking_revenue: Người stake chia 20% tiền bản quyền chợ AresRPG đã thu bằng SUI, cùng thưởng KARES đã được tài trợ.
+  game_account: Tài khoản AresRPG
+  external_wallet: Ví bên ngoài
+  daily_kares: KARES / ngày · dự kiến
+  daily_sui: SUI / ngày · dự kiến
+  daily_estimate_note: Ước tính cho 24 giờ tới theo tỷ trọng stake hiện tại và lịch thưởng đã tài trợ. Số liệu có thể thay đổi.
+  position_rewards: Thưởng vị thế
+  manage_stake: Quản lý stake
+  same_account: Ví này đã là tài khoản AresRPG của bạn. Quản lý stake trong phần tài khoản.
+  claim_kares: Nhận KARES
+  close: Đóng
+  sale_card_soon_title: Sẵn sàng nhé.
+  sale_card_soon_note: Đợt bán công khai sắp mở.
+  sale_card_soon_action: Khám phá đợt bán
+  sale_card_live_label: Đang mở bán
+  sale_card_live_title: THAM GIA NGAY
+  sale_card_target_reached: Đã đạt mục tiêu
+  sale_card_done_title: Đợt bán hoàn tất
+  sale_card_done_note: Nhận KARES và SUI được hoàn lại.
+  sale_card_refund_note: Chưa đạt tối thiểu. Nhận hoàn toàn bộ SUI.
+  community_release_note: Sau khi đợt bán thành công, KARES cộng đồng mở khóa trong 1.825 ngày và chỉ ngân quỹ được nhận. Token đã nhận có thể phân phối hoặc đốt.
+  sale_unlock_note: Token bán được mở khóa hoàn toàn khi đợt bán kết thúc thành công.
+  unlocked_immediately: mở khóa ngay
+  vested_five_years: mở dần trong 5 năm
+  eyebrow: Thế giới đáng xây dựng
+  launch_title: Xây dựng chương tiếp theo.
+  launch_lead: Tham gia đợt bán công khai đầu tiên của KARES. Tài trợ AresRPG và giúp thế giới sống động phát triển.
+  offering: Đợt bán công khai đầu tiên
+  fixed_supply: Nguồn cung cố định
+  fair_share: Một mức giá. Phân bổ theo tỷ lệ.
+  fair_detail: Phần cuối cùng theo mức đóng góp. Tiền vượt mức được hoàn theo tỷ lệ.
+  connect: Kết nối ví
+  disconnect: Ngắt kết nối
+  choose_account: Chọn tài khoản
+  no_wallet: Cài ví Sui để tham gia.
+  refresh: Làm mới
+  loading: Đang đọc trạng thái trên chuỗi…
+  unavailable: Đợt bán chưa có trên mạng này.
+  pending: Đang xác nhận giao dịch…
+  confirmed: Đã xác nhận giao dịch
+  contribute: Đóng góp SUI
+  amount: Số lượng
+  balance: Số dư khả dụng
+  amount_invalid: Nhập số dương với tối đa 9 chữ số thập phân.
+  insufficient: Số tiền vượt số dư khả dụng.
+  gas_note: Giữ lại ít SUI để trả phí giao dịch.
+  raised: Đã đóng góp
+  minimum: Mức huy động tối thiểu
+  maximum: Mức nhận tối đa
+  opens: Mở
+  closes: Đóng
+  estimate: Giá cuối dự kiến
+  price_note: Phân bổ cuối được chốt khi đợt bán đóng.
+  your_contribution: Đóng góp của bạn
+  claim: Nhận KARES và SUI dư
+  refund: Nhận hoàn tiền
+  upcoming: Chưa bắt đầu
+  open: Đợt bán đang mở
+  successful: Đợt bán thành công
+  refundable: Có thể hoàn tiền
+  testnet: Mạng thử nghiệm · chỉ tài sản thử
+  back_game: Khám phá AresRPG
+  funding_title: Thế giới do cộng đồng tài trợ
+  liquidity: Thanh khoản ban đầu
+  development: Ngân quỹ phát triển
+  liquidity_note: Dành cho thị trường KARES/SUI ban đầu. Dự án quản lý việc tạo bể.
+  development_note: Kinh phí cho trò chơi, hạ tầng và chương tiếp theo.
+  staking_title: Stake của bạn. Phần của bạn.
+  staking_lead: Stake KARES để chia thưởng KARES và SUI được mở. Nhận thưởng tích lũy bất cứ lúc nào.
+  pool_stake: Tổng đã stake
+  your_stake: Stake của bạn
+  claimable: Thưởng tích lũy
+  stake: Stake KARES
+  withdraw: Rút stake
+  claim_rewards: Nhận thưởng
+  fund_title: Tài trợ thưởng cộng đồng
+  fund_note: Khoản tặng được chia cho mọi người stake trong 30 ngày thưởng hoạt động và không thể rút lại.
+  donate: Quyên góp
+  no_positions: Vị thế staking sẽ xuất hiện tại đây.
+  inactive: Staking mở sau khi đợt bán được chốt thành công.
+  account_label: Tài khoản
+  position: Vị thế
+  tokenomics: Kinh tế token KARES
+  community: Thưởng cộng đồng
+  team: Phân bổ đội ngũ
+  five_years: Thưởng staking cộng đồng
+  mastery_title: Chơi để nhận thưởng. Hoặc đốt KARES.
+  mastery_note: Mỗi món Tinh thông có cùng giá bằng điểm kiếm được hoặc KARES. KARES đã dùng bị đốt vĩnh viễn.
+  rewards_note: 200.000 KARES được mở trong 1.825 ngày thưởng hoạt động; khoản tặng thêm mở trong 30 ngày. Phân phối dừng khi không ai stake.
+  revenue_note: 20% tiền bản quyền chợ đã thu dùng thưởng SUI cho staking. Thưởng tùy doanh thu và lượng stake tham gia.
+  payment: Thanh toán bằng
+  points: Điểm Tinh thông
+  burn_buy: Đốt {{cost}} KARES
+  kares_missing: Không đủ KARES
+  language: Ngôn ngữ
+  refund_note: Nếu đợt bán đóng dưới mức tối thiểu, bạn được hoàn toàn bộ khoản góp.
+  offering_contract: Hợp đồng đợt bán
+  min_marker: TỐI THIỂU
+  max_marker: TỐI ĐA
+  min_reached: Đã đạt tối thiểu
+  min_pending: Đang tiến tới tối thiểu
+  oversubscribed: Vượt đăng ký
+  subscribed: đã đăng ký
+  oversub_note: Vẫn đang mở. Mọi người cùng một giá; SUI vượt mức hoàn theo tỷ lệ.
+  opens_in: Mở sau
+  closes_in: Đóng sau
+  days_short: ngày
+  your_investment: Đóng góp của bạn
+  your_allocation: Phần KARES của bạn
+  current_price: Giá bán hiện tại
+  estimated_until_close: Ước tính cho tới khi đóng
+  accepted_contribution: Khoản góp được nhận
+  excess_refund: SUI hoàn lại cho bạn
+  unclaimed_note: Khoản góp và phân bổ chưa nhận
+  connect_preview: Kết nối ví để xem phần của bạn
+  no_pending_allocation: Không có khoản góp chưa nhận
+  play_game: Chơi game
+  play_game_note: Khám phá thế giới bạn đang góp sức xây dựng.
+  join_title: Góp mặt trong chương tiếp theo.
+  join_note: 400.000 KARES. Một đợt bán. Phần cho mọi người đóng góp.
+  step_connect: Kết nối ví
+  step_contribute: Chọn lượng SUI đóng góp
+  step_claim: Nhận KARES và SUI dư
+  allocation_lead: Một triệu token. Mọi phân bổ đều công khai.
+  community_detail: 11% giữ trong quỹ cộng đồng cho airdrop, tiếp thị, bảng xếp hạng mùa, thi đấu, thưởng PvP, người tham gia mạng thử nghiệm và người đóng góp hữu ích. Dự án quản lý phân bổ.
+  supply_detail: Toàn bộ 1.000.000 KARES được tạo một lần, không thể tạo thêm. Mua Tinh thông đốt KARES vĩnh viễn.
+  emissions_detail: 200.000 token thưởng staking đến từ nguồn cung có sẵn. Phát thưởng không tạo token mới.
+  price_cap_note: Tổng nhận dừng ở mức tối đa. Thêm đóng góp đổi tỷ lệ phân bổ, không đổi giá bán đã chạm trần.
+  awaiting_minimum: Phân bổ và giá hiện khi đạt mức tối thiểu.
+  claimable_tokens: KARES có thể nhận
+  refundable_sui: SUI hoàn lại của bạn
+  final_price: Giá bán cuối
+  full_refund: Hoàn toàn bộ SUI
+  nav_funding: Tài trợ
+  nav_benefits: Lợi ích
+  nav_tokenomics: Kinh tế token
+  nav_incentives: Khuyến khích công cộng
+  nav_play: Chơi
+  benefits_title: Góp phần vào thế giới. Thêm cách để chơi.
+  benefits_lead: KARES kết nối thưởng trò chơi, khuyến khích cộng đồng và phần chia bản quyền chợ.
+  revenue_title: Chia sẻ thành công của trò chơi.
+  revenue_metric: doanh thu AresRPG
+  revenue_detail: Chia cho người stake KARES.
+  baseline_title: Thưởng cộng đồng đã có trong nguồn cung.
+  baseline_detail: 200.000 KARES có sẵn tài trợ 1.825 ngày thưởng hoạt động. Stake để chia phần và nhận thưởng tích lũy bất cứ lúc nào. Không tạo thêm token.
+  crates_title: KARES của bạn. Rương tiếp theo của bạn.
+  crates_detail: Cửa hàng Tinh thông có rương thức ăn, tài nguyên, thú và ngoại hình. Trả cùng giá bằng KARES hoặc kiếm điểm Tinh thông khi chơi. KARES đã dùng bị đốt vĩnh viễn.
+  incentives_title: Ai cũng có thể tăng quỹ thưởng.
+  incentives_detail: Ai cũng có thể tặng SUI hoặc KARES vào thưởng staking chung. Mỗi khoản bắt đầu từ ngày thưởng hoạt động kế tiếp và trải trong 30 ngày hoạt động. Thưởng chia theo tỷ lệ cho mọi người stake, không thể rút lại.
+  incentives_clock: Đồng hồ thưởng dừng khi không ai stake. Khoản mới không kéo dài lịch của khoản cũ.
+  incentives_examples: Tài trợ sự kiện. Mừng cột mốc. Thưởng cộng đồng.
+  play_title: Thế giới đang chờ. Hãy khám phá.
+  play_detail: Chơi AresRPG trong đợt bán công khai đầu tiên. Gặp cộng đồng và khám phá trò chơi phía sau KARES.
+  confirmed_refresh: Đã xác nhận giao dịch. Làm mới để tải số dư mới.
+  stage_minimum: Tài trợ tối thiểu
+  stage_maximum: Huy động tới tối đa
+  minimum_refund: Hoàn toàn bộ nếu không đạt tối thiểu.
+  full_refund_available: Có thể nhận lại toàn bộ khoản góp.
+  refund_claim_note: Nhận hoàn tiền tại đây nếu đợt bán đóng dưới tối thiểu. Tiền hoàn không tự gửi.
+  staking_unavailable: Staking chưa có trên mạng này.
+  basecamp_announcement: Gặp AresRPG tại Sui Basecamp ở Singapore, ngày 7–9 tháng 10. Ghé chào và nhận rương thưởng nhé.
+  funding_unknown: Dữ liệu tài trợ không khả dụng.
+  success_threshold: Ngưỡng thành công
+  sale_cap: Mức nhận tối đa
+  cap_overflow: Vượt giới hạn
+  overflow_refunds: dành để hoàn theo tỷ lệ
+  combat_rewards: Thưởng trùm
+  combat_detail: 100.000 KARES tài trợ quỹ chiến đấu công cộng; ai cũng có thể thêm token. Cấp trùm quyết định một khoản thưởng chia đều cho nhân vật thắng. Trần mỗi ngày khoảng 54,79 KARES giúp quỹ ban đầu kéo dài ít nhất năm năm. Ngày ít hoạt động và quyên góp kéo dài quỹ. Hoạt động mỗi kỳ điều chỉnh mức thưởng; thưởng chưa phát không thành nợ.
+  allocation_rationale: 'Khi ra mắt có 590.000 KARES (59%): bán, thanh khoản và đội ngũ. Lịch mở thêm tối đa khoảng 82.000 trong năm đầu, tức 13,90% lượng ban đầu, chưa tính đốt. Staking dừng khi không ai stake. Quỹ cộng đồng mở theo lịch. Chiến đấu có thể phát ít hơn. Tất cả dùng token sẵn có, không lạm phát do tạo mới. Quyên góp chỉ phân phối lại token. Không bảo đảm kết quả giá.'
+  launch_market_cap: Vốn hóa lưu hành khi ra mắt
+  launch_market_cap_note: 'Nếu đóng đợt bán ngay: giá bán có trần × 590.000 KARES có sẵn khi ra mắt. Không ra mắt nếu chưa đạt tài trợ tối thiểu.'
+  error_generic: Không thể hoàn thành thao tác.
+  error_rejected: Yêu cầu đã bị hủy.
+  error_funds: Không đủ tiền cho thao tác và phí.
+  error_connection: Kết nối thất bại. Kiểm tra mạng rồi thử lại.
+  error_session: Phiên ví không khả dụng. Hãy kết nối lại.
+  error_unknown: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
+  error_recovered: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
+leaderboard_page:
+  unclaimed: Chưa nhận
+  reset_in: Đặt lại {{time}}
+  xp: Kinh nghiệm chiến đấu
+  kills: Hạ quái
+  dungeons: Ngục tối
+  jobs: Kinh nghiệm nghề
+  marketplace: Chợ
+  kolizeum: Đấu trường
+  zones: Khám phá
+  feeding: Cho thú ăn
+  gathering: Thu thập
+  category: Danh mục
+  loading: Đang tải…
+  user: Người dùng
+  score: Điểm
+  you: Bạn
+  current_characters: Nhân vật hiện tại
+  current_jobs: Nghề hiện tại
+  unavailable: Bảng xếp hạng tạm thời không khả dụng.
+  retry: Thử lại
+  suins_hint: Chọn tên hoặc tên phụ SuiNS trong Cài đặt để hiển thị tại đây.
+  xp_description: Kinh nghiệm thắng trận của mọi nhân vật. Chuyển nhượng không chuyển điểm đã kiếm.
+  kills_description: Quái địch bị hạ trong các trận thắng, tính một lần mỗi trận cho từng địa chỉ thắng.
+  dungeons_description: Phòng cuối hoàn thành, tính một lần mỗi trận cho từng địa chỉ hoàn thành.
+  jobs_description: Kinh nghiệm thu thập và chế tạo của mọi nhân vật. Khắc ngọc không cho kinh nghiệm.
+  marketplace_description: Tổng giá trị SUI mua và bán trên chợ, gồm cả nhân vật.
+  kolizeum_description: SUI nhận từ thắng đấu trường, gồm cả tiền cược hoàn lại.
+  zones_description: Khám phá lần đầu khu vực chung. Làm mới khu vực không được tính.
+  feeding_description: Số lần cho thú ăn thành công. Số lượng thức ăn không nhân điểm.
+  gathering_description: Số đơn vị tài nguyên thu hoạch, gồm thưởng thu thập hiếm.
+  job_FARMER: Nông dân
+  job_HERBALIST: Người hái thuốc
+  job_MINER: Thợ mỏ
+  job_FORGER: Thợ rèn
+  job_CARVER: Thợ chạm khắc
+  job_TAILOR: Thợ may
+  job_JEWELER: Thợ kim hoàn
+  job_TANNER: Thợ thuộc da
+  job_HANDYMAN: Thợ đa năng
+  job_ALCHEMIST: Nhà giả kim
+  job_BAKER: Thợ bánh
+automation_panel:
+  retrying: Đang chờ đồng bộ di chuyển; sẽ thử lại
+  title: Tự động hóa
+  gathering: Thu thập
+  select_resource: Chọn tài nguyên
+  level: Cần cấp {{level}}
+  tool: Cần công cụ phù hợp
+  start: Bắt đầu
+  stop: Dừng
+  idle: Sẵn sàng
+  planning: Đang chọn mục tiêu tiếp theo
+  moving: Đang đến tài nguyên
+  inspecting: Đang chờ di chuyển và dữ liệu khu vực
+  searching: Đang khám phá khu vực
+  waiting: Đang chờ khu vực làm mới
+  protector: Đang bỏ trận hộ vệ
+  stopped: Đã dừng
+  unavailable: 'Tạm dừng: nhân vật hoặc kết nối không khả dụng'
+  blocked: 'Tạm dừng: đường đi bị chặn'
+  failed: 'Tạm dừng: thao tác thất bại. Hãy xem lỗi.'
+  quantity: 'Đã thu thập: {{quantity}}'
+  expand: Mở rộng thu thập tự động
+  collapse: Thu gọn thu thập tự động
+item_drop_sources:
+  title: Quái rơi vật phẩm
+  note: Tỷ lệ cơ bản. Tỷ lệ thực tế tùy cấp quái và May mắn của nhóm.
+  empty: Không có quái nào rơi vật phẩm này.
+  loading: Đang tải vật phẩm rơi…
+  mob: Quái
+  rate: Tỷ lệ cơ bản
+  quantity: Số lượng
+  levels: Cấp {{min}}–{{max}}
+journey:
+  title: Sinh tồn ở Nauvis
+  eyebrow: Cuộc phiêu lưu bắt đầu từ đây
+  progress: Tiến độ hành trình
+  count: '{{count}} / {{total}}'
+  complete: Hoàn thành nhiệm vụ!
+  continue: Tiếp tục
+  start: Bắt đầu nhiệm vụ đầu tiên
+  journal: Nhật ký nhiệm vụ
+  close: Đóng nhật ký
+  collapse: Thu gọn nhiệm vụ
+  recipe: Xem công thức
+  jobs: Nghề
+  resource_details: Chi tiết tài nguyên
+  key_details: Tìm chìa khóa ngục tối
+  next: Tiếp theo
+  chapter_finished: Hoàn tất hành trình
+  finished_title: Đã mở khóa tự động hóa
+  finished_body: AresRPG cũng là một trò chơi về tự động hóa. Nhiều tính năng tương lai sẽ được xây dựng quanh điều đó. Bạn đã hoàn thành mọi nhiệm vụ tân thủ và nhận phần thưởng thu thập tự động! Chọn tài nguyên, nhấn Bắt đầu và để nhân vật thu thập. Bạn có thể thu gọn bảng điều khiển khi đang chạy.
+  reset_title: Nhiệm vụ tân thủ
+  reset_hint: Đặt lại nhiệm vụ của tài khoản trên trình duyệt này. Vật phẩm đang sở hữu sẽ được tính lại khi bạn bắt đầu lại hành trình.
+  reset_action: Đặt lại nhiệm vụ
+  storage_failed: Không lưu được tiến độ nhiệm vụ trên trình duyệt này. Tiến độ có thể mất khi tải lại.
+  chapter_welcome: Chào mừng
+  chapter_tools: Công cụ đầu tiên
+  chapter_gear: Chuẩn bị trang bị
+  chapter_supplies: Tiếp tế
+  chapter_dungeon: Ngục tối
+  chapter_secret: Bí mật cuối cùng
+  welcome_title: Chào mừng đến Nauvis.
+  welcome_body: AresRPG thưởng cho người biết học hỏi, chuẩn bị và làm việc thông minh. Học cách tối ưu, tự động hóa lối chơi và tốn ít SUI nhất có thể. Hãy theo hành trình này để làm quen.
+  hoe_title: Ai cũng cần một cái cuốc.
+  hoe_body: Nauvis là thế giới đầu tiên. Trang bị mạnh hơn giúp bạn tới những thế giới nguy hiểm, còn công cụ thu thập cho nguyên liệu để chế tạo. Mua {{item}} từ người khác hoặc tự làm qua Nhân vật → Nghề → Thợ đa năng.
+  hoe_objective: Sở hữu {{item}}
+  wheat_title: Bắt tay vào việc nào.
+  wheat_body: Tự chế trang bị bắt đầu từ thu thập nguyên liệu. Lúa mì dùng làm thức ăn và vật liệu trang bị nên rất hợp để khởi đầu. Tìm một bụi lúa mì ở Nauvis và thu hoạch lần đầu!
+  wheat_objective: Thu hoạch lúa mì
+  pickaxe_title: Ngôi sao khai mỏ tiếp theo.
+  pickaxe_body: Nâng cấp tiếp theo cần nhiều hơn cây trồng. {{item}} giúp khai thác khoáng sản để làm trang bị. Tìm trên chợ hoặc tự chế. Sự nghiệp khai mỏ phải bắt đầu từ đâu đó.
+  pickaxe_objective: Sở hữu {{item}}
+  quartz_title: Không bỏ sót viên đá nào.
+  quartz_body: Chỉ lúa mì thì chưa đủ để sắm trang bị. Vũ khí và trang sức còn cần khoáng sản như thạch anh. Dùng cuốc chim thu thập một ít cho các món tiếp theo.
+  quartz_objective: Khai thác thạch anh
+  sickle_title: Sắc hơn một bậc.
+  sickle_body: Cây cỏ và nấm cung cấp nguyên liệu cho thuốc và chế tạo. {{item}} mở nghề hái thuốc. Mua từ người khác hoặc tự làm.
+  sickle_objective: Sở hữu {{item}}
+  mushroom_title: Thêm một cây nấm nữa.
+  mushroom_body: Muốn chế tạo tiếp, bạn cần hơn cây trồng và khoáng sản. Nấm xanh dùng cho thuốc, da và các vật liệu khác. Hái cây đầu tiên rồi tiếp tục nâng nghề thu thập để mở thêm nguyên liệu.
+  mushroom_objective: Hái một cây nấm xanh
+  token_title: Tự tạo vận may.
+  token_body: Bạn sẽ cần nhiều vật phẩm để chế tạo tiếp. Tăng May mắn giúp tăng cơ hội nhận chiến lợi phẩm. Hãy tìm bùa {{item}} và trang bị!
+  token_objective: Sở hữu {{item}}
+  croissant_title: Ăn bánh trước khi đánh.
+  croissant_body: Thua trận khiến máu về không. Bạn có thể chờ hồi hoặc ăn để quay lại nhanh hơn. Kiếm {{item}} hoặc nướng qua Nhân vật → Nghề → Thợ bánh.
+  croissant_objective: Sở hữu {{item}}
+  lorito_title: Đến lúc làm xù lông rồi.
+  lorito_body: Trang bị mạnh hơn cần vật liệu không có trên đồng lúa. Ngục tối cho chiến lợi phẩm và kinh nghiệm mới, nhưng bạn phải chiến đấu. Mang thức ăn hồi máu và chìa khóa tới Gilded Lorito ở Thebes, rồi vượt qua phòng cuối.
+  lorito_objective: Hoàn thành ngục tối Gilded Lorito
+  suize_title: Bí mật cuối cùng.
+  suize_body: 'Làm tốt lắm, nhà thám hiểm. Thu hoạch tốt hơn mở ra công thức mới, nên còn một thử thách cuối: tự thu hoạch Suize. Tìm ở đâu ư? Coi như bài toán đầu tiên không có người kèm.'
+  suize_objective: Thu hoạch Suize
+  welcome_objective: ''
+  finished_objective: ''
+  saving: Đang lưu…
+  automation_reward_action: Mở thu thập tự động
+fullscreen_enter: Vào toàn màn hình
+fullscreen_exit: Thoát toàn màn hình
+fullscreen_failed: Không thể đổi chế độ toàn màn hình.
+spell_effects:
+  range: '{{minimum}} đến {{maximum}}'
+  damage: Gây {{value}} sát thương
+  pct_life: Gây sát thương bằng {{value}}% máu tối đa của mục tiêu
+  caster_damage: Gây {{value}} sát thương lên bản thân
+  punishment: Gây {{value}} sát thương, tăng theo máu đã mất
+  heal: Hồi {{value}} máu
+  add: Tăng {{value}} {{stat}}
+  remove: Giảm {{value}} {{stat}}
+  fixed_remove: Giảm {{value}} {{stat}} (không thể né)
+  steal: Hút {{value}} {{stat}}
+  chatiment: Nhận tối đa {{value}} {{stat}} từ sát thương chịu mỗi lượt
+  reduce: Giảm {{value}} sát thương
+  reflect: Phản {{value}} sát thương
+  push: Đẩy {{value}} ô
+  pull: Kéo {{value}} ô
+  teleport: Dịch chuyển {{value}} ô
+  swap: Đổi vị trí
+  trap: Đặt bẫy
+  glyph: Đặt ấn trận
+  dispel: Xóa hiệu ứng
+  invis: Làm mục tiêu tàng hình
+  return: Phản phép có cấp không vượt quá phép này
+  redirect: Chuyển hướng {{value}} sát thương
+  unknown: Hiệu ứng không rõ
+  any_stat: Bất kỳ thuộc tính
+  target_not_team: Chỉ kẻ địch
+  target_not_enemy: Chỉ đồng minh
+  target_not_self: Chỉ mục tiêu khác
+  target_only_caster: Chỉ người dùng phép
+  turns: 'Số lượt: {{count}}'
+  turn_range: 'Số lượt: {{minimum}}–{{maximum}}'
+  critical_only: Chỉ khi chí mạng
+  turn_cap: Giới hạn mỗi lượt · {{stat}}
+  shape_point: Một ô
+  shape_circle: Tròn · {{size}}
+  shape_cross: Chữ thập · {{size}}
+  shape_line: Đường thẳng · {{size}}
+  shape_tbar: Chữ T · {{size}}
+  shape_ring: Vành · {{size}}
+  shape_allmap: Toàn bản đồ
+  shape_cone: Hình nón · {{size}}
+  shape_podium: Bục · {{size}}
+  shape_blob: Vùng tròn · {{size}}
+  active_add: '+{{value}} {{stat}}'
+  active_remove: '−{{value}} {{stat}}'
+  active_damage: '{{value}} sát thương'
+  active_invis: 'Tàng hình'
+  active_chatiment: 'TRỪNG PHẠT · {{value}} {{stat}}/LƯỢT · {{turns}}L'
+  active_turns: '{{count}}L'
+  active_turn_range: '{{minimum}}–{{maximum}}L'
+  short_strength: 'SM'
+  short_intelligence: 'TL'
+  short_chance: 'MM'
+  short_agility: 'NN'
+  short_wisdom: 'TT'
+  short_range: 'TẦM'
+  short_power: 'UL'
+  short_raw_damage: 'ST'
+  short_critical: 'CM'
+  short_stat: 'CHỈ SỐ'
+ui:
+  character: Nhân vật
+  spell_action: '{{name}}, cấp {{level}}, {{cost}} {{unit}}'
+  spell_level: Cấp phép {{level}}
+  vitals: '{{current}} / {{maximum}} {{unit}}'
+  experience_max: Kinh nghiệm tối đa
+  experience_gain: +{{amount}} {{unit}}
+  xp: KN
+  hp: Máu
+  seconds: '{{count}} giây'
+  meters: '{{count}} m'
+  versus: ĐẤU
+  team_format: '{{size}} đấu {{size}}'
+  flat: Phẳng
+  fps: FPS
+  north: B
+  northeast: ĐB
+  east: Đ
+  southeast: ĐN
+  south: N
+  southwest: TN
+  west: T
+  northwest: TB
+  game_description: AresRPG là MMORPG voxel trên trình duyệt dùng Sui, nơi nhân vật, vật phẩm và tiến trình tồn tại trên chuỗi.
+  game_title: AresRPG · MMORPG voxel trên chuỗi
+  world_image: Thế giới voxel AresRPG
+  sale_description: Đợt bán công khai đầu tiên của KARES. Cùng xây dựng chương tiếp theo của AresRPG.
+  formula_chastisement: G = min(ΔMáu × S, GIỚI HẠN × S − Glượt) · S = 1 với quái, ½ với người chơi
+  formula_drop: đồ rơi = min(100%, tỷ lệ cơ bản × khoảng cấp quái × (600 + May mắn trung bình nhóm) / 600)
+  formula_xp: KN = quỹ KN cơ bản × hệ số nhóm × cân bằng cấp × cấp người chơi / cấp nhóm × (100 + Trí tuệ) / 100
