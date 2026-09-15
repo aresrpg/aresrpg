@@ -8,12 +8,12 @@ import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import { useText } from '../i18n/useText.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { EffectLine, type EffectLineView } from '../components/EffectLine.tsx'
+import type { EffectLineView } from '../components/EffectLine.tsx'
 import type { SpellEffect, SpellLevel } from '../content/catalog.ts'
 import { titleize } from '../content/catalog.ts'
 import { element_colors, stat_colors, stat_identities } from '../visual_identity.ts'
 
-import { spell_effect_text } from './spell_effect_text.ts'
+import { critical_effect_text, effect_target_text, spell_effect_text } from './spell_effect_text.ts'
 export type SpellCardPath = readonly (string | number)[]
 export type SpellCardValue =
   string | number | boolean | null | readonly SpellCardValue[] | Readonly<{ [key: string]: SpellCardValue }>
@@ -207,17 +207,17 @@ const InlineEffectField = ({
 }
 
 const AreaGlyph = ({ shape, size }: Readonly<{ shape: number; size: number }>) => {
+  const text = useText()
   const name = area_shapes[shape]
   const mask = name ? area_masks[name] : null
   if (!mask || (name !== 'allmap' && size <= 0))
     return (
       <span className="text-[8px] font-semibold tracking-[0.08em] text-[#8fc4ff] uppercase">
-        {titleize(name ?? 'point')}
-        {name && name !== 'point' ? ` · ${size}` : ''}
+        {text(`spell_effects.shape_${name ?? 'point'}`, { size })}
       </span>
     )
   return (
-    <span className="inline-flex items-center gap-1" title={titleize(name)}>
+    <span className="inline-flex items-center gap-1" title={text(`spell_effects.shape_${name}`, { size })}>
       <span aria-hidden="true" className="grid grid-cols-5 gap-px">
         {mask.flatMap((row, row_index) =>
           [...row].map((cell, column_index) => (
@@ -304,21 +304,6 @@ const target_note = (filter: number): string | null => {
   return null
 }
 
-const critical_delta = (normal: SpellEffect, critical: SpellEffect): string | null => {
-  const critical_range = `${effect_range(critical)}${effect_value_suffix(critical)}`
-  const changes = [
-    (normal.value !== critical.value || normal.value_max !== critical.value_max) && critical_range,
-    normal.turns !== critical.turns && `${critical.turns} turn${critical.turns === 1 ? '' : 's'}`,
-    normal.chance_bp !== critical.chance_bp && `${critical.chance_bp / 100}%`,
-    normal.area_size !== critical.area_size && `area ${critical.area_size}`,
-    normal.area_shape !== critical.area_shape && titleize(area_shapes[critical.area_shape] ?? ''),
-    normal.kind !== critical.kind && titleize(effect_kinds[critical.kind] ?? ''),
-    normal.element !== critical.element && titleize(critical.element),
-    normal.stat !== critical.stat && titleize(channels[critical.stat] ?? ''),
-  ].filter(Boolean)
-  return changes.length > 0 ? changes.join(' · ') : null
-}
-
 type EffectUpdate = (field: keyof SpellEffect, value: SpellCardValue) => void
 
 const CriticalEditor = ({ critical, update }: Readonly<{ critical: SpellEffect; update: EffectUpdate }>) => {
@@ -398,29 +383,74 @@ export const spell_effect_line_view = (effect: SpellEffect, text: CopyText, crit
   })
 }
 
+const SpellEffectIcon = ({ effect }: Readonly<{ effect: SpellEffect }>) => {
+  const identity = effect_identity(effect)
+  const channel = effect_channel(effect)
+  const ChannelIcon = effect_icon(effect, channel)
+  const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
+  return identity ? (
+    <img alt="" className="size-5 object-contain" src={identity.icon} title={identity.label} />
+  ) : ChannelIcon ? (
+    <span className="grid size-5 place-items-center" style={{ color }} title={effect_icon_title(effect, channel)}>
+      <ChannelIcon size={15} strokeWidth={1.6} />
+    </span>
+  ) : (
+    <span
+      aria-hidden="true"
+      className="size-2 rounded-full"
+      style={{ backgroundColor: effect_color(effect.element) }}
+    />
+  )
+}
+
+const effect_row_class =
+  'flex min-h-11 w-full flex-wrap items-center gap-2 border-b border-white/6 px-1 py-2.5 text-[10px] last:border-b-0'
+
+const CriticalBadge = ({ label, value }: Readonly<{ label: string; value?: string }>) => (
+  <span
+    className="inline-flex min-h-8 items-center gap-2 border border-[#e8b44f]/35 bg-[linear-gradient(90deg,rgba(232,180,79,0.12),rgba(232,180,79,0.03))] px-2.5 py-1"
+    data-spell-critical-badge
+  >
+    <span className="text-[7px] font-semibold tracking-[0.12em] text-[#e8b44f] uppercase">{label}</span>
+    {value && <span className="text-[9px] font-semibold text-[#f2cf84]">{value}</span>}
+  </span>
+)
+
 const ReadEffect = ({
   effect,
   critical,
   critical_only,
 }: Readonly<{ effect: SpellEffect; critical?: SpellEffect; critical_only: boolean }>) => {
   const text = useText()
-  const shape = area_shapes[effect.area_shape]
+  const view = spell_effect_line_view(effect, text)
+  const target = effect_target_text(effect, text)
+  const difference = critical ? critical_effect_text(effect, critical, text) : null
   return (
-    <div className="space-y-1">
-      <EffectLine view={spell_effect_line_view(effect, text, critical_only)} />
-      {(effect.area_size > 0 || shape === 'allmap') && (
-        <span className="text-[9px] text-muted">
-          {text(`spell_effects.shape_${shape}`, { size: effect.area_size })}
+    <div className={effect_row_class} data-spell-effect-row>
+      <SpellEffectIcon effect={effect} />
+      <span className="text-[#bbb7b0]">
+        {view.pre}
+        {view.value !== null && <b style={{ color: view.tone }}>{view.value}</b>}
+        {view.post}
+      </span>
+      {(effect.area_size > 0 || area_shapes[effect.area_shape] === 'allmap') && (
+        <AreaGlyph shape={effect.area_shape} size={effect.area_size} />
+      )}
+      {target && (
+        <span className="text-[8px] text-[#858994]" data-spell-effect-target>
+          ({target})
         </span>
       )}
-      {critical && (
-        <div className="border-l border-gold/35 pl-2">
-          <span className="text-[8px] text-gold">{text('encyclopedia_page.crit_chance')}</span>
-          <EffectLine
-            compact
-            view={spell_effect_line_view({ ...critical, target_filter: effect.target_filter }, text)}
-          />
-        </div>
+      {effect.turns > 0 && (
+        <span className="text-[9px] font-semibold text-[#d9b86c]">
+          {text('spell_effects.turns', { count: effect.turns })}
+        </span>
+      )}
+      {effect.chance_bp < 10000 && <span className="text-[8px] text-[#858994]">· {effect.chance_bp / 100}%</span>}
+      {critical_only ? (
+        <CriticalBadge label={text('spell_effects.critical_only')} />
+      ) : (
+        difference && <CriticalBadge label={text('encyclopedia_page.critical')} value={difference} />
       )}
     </div>
   )
@@ -436,15 +466,15 @@ const SpellEffectLine = ({
   remove,
   add_critical,
 }: SpellEffectLineProps) => {
+  const text = useText()
   const identity = effect_identity(effect)
   const channel = effect_channel(effect)
-  const ChannelIcon = effect_icon(effect, channel)
   const color = identity?.tint ?? stat_colors[channel] ?? effect_color(effect.element)
   const words = effect_words(effect)
   const kind = effect_kinds[effect.kind]
   const target_editable = kind !== 'caster_damage'
   const target = target_editable ? target_note(effect.target_filter) : null
-  const difference = critical ? critical_delta(effect, critical) : null
+  const difference = critical ? critical_effect_text(effect, critical, text) : null
   const duration_editable = duration_editable_for(effect.kind)
   const change_kind = (value: string | number): void => {
     const next = Number(value)
@@ -453,23 +483,10 @@ const SpellEffectLine = ({
     if (next === Number(EFFECT_KINDS.chatiment) && effect.turns !== CHATIMENT_TURNS) update('turns', CHATIMENT_TURNS)
     else if (timed_effect_kinds.includes(next) && effect.turns === 0) update('turns', 1)
   }
-  const icon = identity ? (
-    <img alt="" className="size-5 object-contain" src={identity.icon} title={identity.label} />
-  ) : ChannelIcon ? (
-    <span className="grid size-5 place-items-center" style={{ color }} title={effect_icon_title(effect, channel)}>
-      <ChannelIcon size={15} strokeWidth={1.6} />
-    </span>
-  ) : (
-    <span
-      aria-hidden="true"
-      className="size-2 rounded-full"
-      style={{ backgroundColor: effect_color(effect.element) }}
-    />
-  )
   return (
-    <div className="flex min-h-11 w-full flex-wrap items-center gap-2 border-b border-white/6 px-1 py-2.5 text-[10px] last:border-b-0">
+    <div className={effect_row_class}>
       <InlineEffectField
-        display={icon}
+        display={<SpellEffectIcon effect={effect} />}
         edit={edit}
         editor={
           <SelectField
@@ -600,14 +617,7 @@ const SpellEffectLine = ({
       )}
       {(critical_only || difference || (edit && critical)) && (
         <InlineEffectField
-          display={
-            <span className="inline-flex min-h-8 items-center gap-2 border border-[#e8b44f]/35 bg-[linear-gradient(90deg,rgba(232,180,79,0.12),rgba(232,180,79,0.03))] px-2.5 py-1">
-              <span className="text-[7px] font-semibold tracking-[0.12em] text-[#e8b44f] uppercase">Critical</span>
-              <span className="text-[9px] font-semibold text-[#f2cf84]">
-                {difference ?? (critical_only ? 'Only' : 'Same')}
-              </span>
-            </span>
-          }
+          display={<CriticalBadge label="Critical" value={difference ?? (critical_only ? 'Only' : 'Same')} />}
           edit={critical && update_critical ? edit : undefined}
           editor={critical && update_critical ? <CriticalEditor critical={critical} update={update_critical} /> : null}
           label="critical effect"

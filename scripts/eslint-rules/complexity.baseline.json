@@ -144,7 +144,7 @@
     },
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
       "effect_words": [23],
-      "SpellEffectLine": [22]
+      "SpellEffectLine": [19]
     },
     "packages/frontend/src/components/Toasts.tsx": {
       "Toasts > toasts.map[0](toast)": [12]
@@ -588,10 +588,10 @@
       "MobsTab": [11]
     },
     "packages/frontend/src/encyclopedia/SpellCardEffects.tsx": {
-      "critical_delta": [15],
       "effect_words": [25],
       "spell_effect_line_view": [10],
-      "SpellEffectLine": [44]
+      "SpellEffectLine": [42],
+      "ReadEffect": [10]
     },
     "packages/frontend/src/encyclopedia/JobsTab.tsx": {
       "JobsTab > detail.resources .toSorted((left, right) => left.row.tier - right.row.tier) .map[0]({ row, required_level })": [

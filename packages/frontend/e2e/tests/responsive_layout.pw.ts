@@ -141,7 +141,7 @@ test('narrow Kolizeum keeps the wager review and cancellation reachable', async 
   await page.locator('.kz-lobby').last().click()
   await page.locator('.kz-join-side.is-b').click()
   const review = page.locator('.kz-join-confirm')
-  await expect(review).toContainText('1,25')
+  await expect(review).toContainText('1.25')
   for (const button of await review.getByRole('button').all()) {
     await expect(button).toBeInViewport()
     await expect.poll(async () => (await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)

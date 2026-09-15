@@ -256,7 +256,7 @@ test('every effect kind reads as player prose, never as a raw stat row', async (
       why: 'a target restriction stays visibly separated and dimmer than the effect prose',
       effects: [{ ...base_effect, target_filter: 3, turns: 2 }],
       small: true,
-      reads: ['fxl__meta', 'Allies only', 'Turns: 2'],
+      reads: ['data-spell-effect-target', 'Allies only', 'Turns: 2'],
       never: ['(allies only)for'],
     },
     {
@@ -300,4 +300,22 @@ test('read-only effect prose keeps spacing around the highlighted value', async 
   const html = renderToStaticMarkup(<SpellCard spell={fixture} text={() => ''} />)
 
   expect(html.replace(/<[^>]*>/g, '')).toContain('Gains up to 140 Strength from damage received each turn')
+})
+
+test('read cards keep the classic inline layout and omit an identical critical duplicate', async () => {
+  const { SpellCard } = await import('../../src/encyclopedia/SpellCard.tsx')
+  const normal = { ...base_effect, kind: 4, element: '', stat: 10, value: 9, value_max: 9, target_filter: 3, turns: 3 }
+  const fixture = {
+    ...spell,
+    levels: [
+      { ...base_level, effects: [normal], crit_effects: [normal, { ...normal, stat: 8, value: 10, value_max: 10 }] },
+    ],
+  } as unknown as SeedSpell
+  const html = renderToStaticMarkup(<SpellCard spell={fixture} />)
+  expect(html.match(/data-spell-effect-row/g)).toHaveLength(2)
+  expect(html.match(/>9</g)).toHaveLength(1)
+  expect(html.match(/data-spell-critical-badge/g)).toHaveLength(1)
+  expect(html).toContain('Critical only')
+  expect(html).not.toContain('border-l border-gold/35')
+  expect(html).not.toContain('fxl__txt')
 })

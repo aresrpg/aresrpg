@@ -42,7 +42,7 @@ test('food selection waits for confirm and rejection preserves the choice withou
   await expect(modal.getByRole('button', { name: 'Feeding…', exact: true })).toBeDisabled()
   expect(await page.evaluate(() => window.feed_requests.length)).toBe(1)
   await page.evaluate(() => window.reject_feed())
-  await expect(modal.getByRole('alert')).toContainText('Feeding rejected')
+  await expect(modal.getByRole('alert')).toContainText('The request was cancelled.')
   await expect(modal.locator('[data-pet-feeding]')).toHaveAttribute('data-phase', 'selecting')
   await expect(modal.locator('[data-feed-foods] button')).toHaveAttribute('aria-pressed', 'true')
   await expect(modal.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '30')

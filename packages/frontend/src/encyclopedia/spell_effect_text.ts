@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
+import { AREA_SHAPES, CHANNELS, EFFECT_KINDS, TARGET_FILTERS } from '@aresrpg/fight/move_contract'
 
 import type { SpellEffect } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
@@ -33,12 +33,14 @@ const effect_phrase = (effect: SpellEffect): string => {
   return kind === 'remove' ? 'damage' : kind
 }
 
-const effect_magnitude = (effect: SpellEffect, text: CopyText): string => {
+const effect_magnitude = (effect: SpellEffect, text: CopyText, percent_life = false): string => {
   const value =
     effect.value === effect.value_max
       ? String(effect.value)
       : text('spell_effects.range', { minimum: effect.value, maximum: effect.value_max })
-  return `${value}${effect.stat === Number(CHANNELS.resist) ? '%' : ''}`
+  const percentage =
+    effect.stat === Number(CHANNELS.resist) || (percent_life && effect.kind === Number(EFFECT_KINDS.pct_life))
+  return `${value}${percentage ? '%' : ''}`
 }
 
 const effect_sentence = (effect: SpellEffect, text: CopyText, key: string, stat: string) => {
@@ -88,12 +90,16 @@ export const active_effect_text = (effect: SpellEffect, text: CopyText) => {
   return key ? effect_sentence(effect, text, `spell_effects.${key}`, stat) : null
 }
 
+export const effect_target_text = (effect: SpellEffect, text: CopyText): string | null => {
+  if (effect.kind === Number(EFFECT_KINDS.caster_damage)) return null
+  const key = target_keys[effect.target_filter]
+  return key ? text(key) : null
+}
+
 export const spell_effect_text = (effect: SpellEffect, text: CopyText, critical_only?: boolean) => {
-  const target_filter =
-    effect.kind === Number(EFFECT_KINDS.caster_damage) ? Number(TARGET_FILTERS.none) : effect.target_filter
-  const target = target_keys[target_filter]
+  const target = effect_target_text(effect, text)
   const meta = [
-    target ? text(target) : '',
+    target ?? '',
     effect.turns > 0 ? text('spell_effects.turns', { count: effect.turns }) : '',
     effect.chance_bp < 10_000 ? `${effect.chance_bp / 100}%` : '',
     critical_only ? text('spell_effects.critical_only') : '',
@@ -104,4 +110,29 @@ export const spell_effect_text = (effect: SpellEffect, text: CopyText, critical_
     ...effect_sentence(effect, text, `spell_effects.${effect_phrase(effect)}`, effect_stat_text(effect.stat, text)),
     meta,
   }
+}
+
+const shape_names = Object.fromEntries(Object.entries(AREA_SHAPES).map(([name, value]) => [Number(value), name]))
+
+/** Inline critical badges describe only differences, never repeat an identical effect. */
+export const critical_effect_text = (normal: SpellEffect, critical: SpellEffect, text: CopyText): string | null => {
+  const type_changed = normal.kind !== critical.kind || normal.stat !== critical.stat
+  const phrase = spell_effect_text(critical, text)
+  const value = effect_magnitude(critical, text, true)
+  const changes = [
+    [!type_changed && (normal.value !== critical.value || normal.value_max !== critical.value_max), value],
+    [normal.turns !== critical.turns, text('spell_effects.turns', { count: critical.turns })],
+    [normal.chance_bp !== critical.chance_bp, `${critical.chance_bp / 100}%`],
+    [
+      normal.area_size !== critical.area_size || normal.area_shape !== critical.area_shape,
+      text(`spell_effects.shape_${shape_names[critical.area_shape]}`, { size: critical.area_size }),
+    ],
+    [type_changed, [phrase.pre, phrase.value, phrase.post].join('')],
+    [
+      normal.element !== critical.element,
+      critical.element ? text(`encyclopedia_page.element.${critical.element}`) : text('demo_page.none'),
+    ],
+  ] as const
+  const visible = changes.filter(([changed]) => changed).map(([, label]) => label)
+  return visible.length ? visible.join(' · ') : null
 }

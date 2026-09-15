@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { readdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -147,27 +148,12 @@ export default defineConfig(({ mode }) => {
             rollupOptions: {
               input: {
                 app: resolve(frontend_dir, 'index.html'),
-                workload: resolve(frontend_dir, 'e2e/fixtures/workload.html'),
-                staking: resolve(frontend_dir, 'e2e/fixtures/staking.html'),
-                settings: resolve(frontend_dir, 'e2e/fixtures/settings.html'),
-                suins_settings: resolve(frontend_dir, 'e2e/fixtures/suins_settings.html'),
-                marketplace: resolve(frontend_dir, 'e2e/fixtures/marketplace.html'),
-                wallet_switcher: resolve(frontend_dir, 'e2e/fixtures/wallet_switcher.html'),
-                responsive_preview: resolve(frontend_dir, 'e2e/fixtures/responsive_preview.html'),
-                inventory: resolve(frontend_dir, 'e2e/fixtures/inventory.html'),
-                public_sale_card: resolve(frontend_dir, 'e2e/fixtures/public_sale_card.html'),
-                leaderboard: resolve(frontend_dir, 'e2e/fixtures/leaderboard.html'),
-                fight_placement_race: resolve(frontend_dir, 'e2e/fixtures/fight_placement_race.html'),
-                fight_clock: resolve(frontend_dir, 'e2e/fixtures/fight_clock.html'),
-                automation: resolve(frontend_dir, 'e2e/fixtures/automation.html'),
-                music: resolve(frontend_dir, 'e2e/fixtures/music.html'),
-                character_delete: resolve(frontend_dir, 'e2e/fixtures/character_delete.html'),
-                character_progression: resolve(frontend_dir, 'e2e/fixtures/character_progression.html'),
-                dungeon_lobby: resolve(frontend_dir, 'e2e/fixtures/dungeon_lobby.html'),
-                interaction: resolve(frontend_dir, 'e2e/fixtures/interaction.html'),
-                item_drop_sources: resolve(frontend_dir, 'e2e/fixtures/item_drop_sources.html'),
-                journey: resolve(frontend_dir, 'e2e/fixtures/journey.html'),
-                engine_lifecycle: resolve(frontend_dir, 'e2e/fixtures/engine_lifecycle.html'),
+                ...Object.fromEntries(
+                  readdirSync(resolve(frontend_dir, 'e2e/fixtures'))
+                    .filter((file) => file.endsWith('.html'))
+                    .sort()
+                    .map((file) => [file.slice(0, -5), resolve(frontend_dir, 'e2e/fixtures', file)])
+                ),
               },
             },
           }
