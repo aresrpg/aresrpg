@@ -93,7 +93,6 @@ test('the result card keeps every participant on one compact roster line', () =>
   expect(css).toContain('min-height: 26px')
   expect(css).toContain('flex-wrap: nowrap')
   expect(css).toContain('width: 24px')
-  expect(css).toContain('max-width: none')
   expect(css).toContain('text-overflow: ellipsis')
   expect(css).toContain('.fe-settlement__bar')
   expect(css).toContain('rgba(4, 5, 8, 0.48)')

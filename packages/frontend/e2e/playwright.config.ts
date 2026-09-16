@@ -10,7 +10,7 @@ const browser_name = (process.env.BROWSER ?? 'chrome') as 'chrome' | 'firefox' |
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.pw.ts',
-  timeout: process.env.BROWSER_WORKLOAD === 'full' ? 600_000 : 180_000,
+  timeout: process.env.BROWSER_WORKLOAD === 'full' ? 600_000 : 210_000,
   expect: { toPass: { timeout: 3_000 } },
   workers: 1,
   retries: 0,

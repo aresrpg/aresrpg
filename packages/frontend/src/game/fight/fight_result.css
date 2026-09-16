@@ -260,11 +260,30 @@
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
-.fe-tile .item-icon {
-  width: 28px;
-  max-width: none;
-  height: 28px;
+.fe-tile .item-icon,
+.fe-tile [data-kares-logo] {
+  position: absolute;
+  inset: 2px;
+  width: calc(100% - 4px);
+  height: calc(100% - 4px);
   object-fit: contain;
+}
+.fe-rows--party .fe-row {
+  min-height: 44.8px;
+  padding-block: 2.8px;
+}
+.fe-rows--party .fe-tiles {
+  flex-wrap: wrap;
+  gap: 5.6px;
+  padding-block: 1.4px;
+}
+.fe-rows--party .fe-tile {
+  width: 33.6px;
+  height: 33.6px;
+  flex-basis: 33.6px;
+}
+.fe-rows--party .fe-tile .fe-tile__qty {
+  font-size: 10px;
 }
 .fe-tile__letter {
   font-size: 11px;

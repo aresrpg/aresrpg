@@ -32,6 +32,9 @@ type ModelMaterial = Material & {
 
 type LoadedPart = Readonly<{ root: Object3D; materials: readonly Material[] }>
 type Pixels = Readonly<{ data: Uint8ClampedArray; width: number; height: number }>
+// Source images are immutable GLB data; instance-owned recolored textures are never shared.
+const source_pixels = new WeakMap<object, Pixels>()
+
 type Colorizer = Readonly<{
   set: (colors: readonly [string, string, string]) => void
   dispose: () => void
@@ -111,6 +114,8 @@ export const compose_pixels = (
 
 const image_pixels = (image: CanvasImageSource & Readonly<{ width: number; height: number }>): Pixels | null => {
   if (typeof document === 'undefined' || image.width <= 0 || image.height <= 0) return null
+  const cached = source_pixels.get(image)
+  if (cached) return cached
   const canvas = document.createElement('canvas')
   canvas.width = image.width
   canvas.height = image.height
@@ -118,7 +123,9 @@ const image_pixels = (image: CanvasImageSource & Readonly<{ width: number; heigh
   if (!context) return null
   context.drawImage(image, 0, 0)
   const pixels = context.getImageData(0, 0, image.width, image.height)
-  return Object.freeze({ data: pixels.data, width: pixels.width, height: pixels.height })
+  const result = Object.freeze({ data: pixels.data, width: pixels.width, height: pixels.height })
+  source_pixels.set(image, result)
+  return result
 }
 
 const create_colorizer = (root: Object3D): Colorizer => {
@@ -139,9 +146,10 @@ const create_colorizer = (root: Object3D): Colorizer => {
   })
   const layers = [...textures].flatMap(([name, base_texture]) => {
     const match = name.match(/^(.+)_base$/)
+    if (!match?.[1]) return []
     const image = base_texture.image as (CanvasImageSource & Readonly<{ width: number; height: number }>) | undefined
     const base = image ? image_pixels(image) : null
-    if (!match?.[1] || !base) return []
+    if (!base) return []
     const masks = ['color1', 'color2', 'color3'].map((layer) => {
       const mask_texture = textures.get(`${match[1]}_${layer}`)
       const mask_image = mask_texture?.image as
@@ -199,11 +207,24 @@ const create_colorizer = (root: Object3D): Colorizer => {
   })
 }
 
-const prepare_character = (root: Object3D): number => {
+const source_shapes = new WeakMap<Object3D, Readonly<{ scale: number; min_y: number }>>()
+const character_shape = (root: Object3D, source: Object3D) => {
+  const cached = source_shapes.get(source)
+  if (cached) return cached
   root.scale.setScalar(1)
   root.updateWorldMatrix(true, true)
   const raw_height = new Box3().setFromObject(root).getSize(new Vector3()).y
-  root.scale.setScalar(CHARACTER_HEIGHT / (raw_height > 0.05 ? raw_height : 1))
+  const scale = CHARACTER_HEIGHT / (raw_height > 0.05 ? raw_height : 1)
+  root.scale.setScalar(scale)
+  root.updateWorldMatrix(true, true)
+  const shape = Object.freeze({ scale, min_y: new Box3().setFromObject(root).min.y })
+  source_shapes.set(source, shape)
+  return shape
+}
+
+const prepare_character = (root: Object3D, source: Object3D): number => {
+  const shape = character_shape(root, source)
+  root.scale.setScalar(shape.scale)
   root.traverse((object) => {
     const mesh = object as Object3D & {
       isMesh?: boolean
@@ -223,7 +244,7 @@ const prepare_character = (root: Object3D): number => {
     })
   })
   root.updateWorldMatrix(true, true)
-  return new Box3().setFromObject(root).min.y
+  return shape.min_y
 }
 
 const load_part = async (spec: WornModelRender): Promise<LoadedPart> => {
@@ -296,7 +317,7 @@ export const create_character_model = async (
   const root = clone_skinned(body_gltf.scene)
   const owned_materials = [...clone_materials(root)]
   const colorizers: Colorizer[] = []
-  const min_y = prepare_character(root)
+  const min_y = prepare_character(root, body_gltf.scene)
   if (colorize) {
     const body_colors = create_colorizer(root)
     body_colors.set(appearance.colors)

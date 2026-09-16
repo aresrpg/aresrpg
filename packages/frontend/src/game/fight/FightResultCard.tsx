@@ -281,7 +281,7 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <span>{text_of(copy, 'result_party')}</span>
             <span>{party.length}</span>
           </div>
-          <div className="fe-rows">
+          <div className="fe-rows fe-rows--party">
             {party.map((participant) => (
               <ResultRow defeated={false} enemy={false} key={participant.seat} participant={participant} />
             ))}

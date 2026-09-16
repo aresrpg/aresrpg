@@ -67,17 +67,11 @@ const prepare_material = (material: RenderMaterial): void => {
   material.needsUpdate = true
 }
 
-export const prepare_mob_model_root = (root: Object3D, clips: readonly AnimationClip[], label: string): number => {
-  const idle = clips.find(({ name }) => name.toUpperCase().includes('IDLE'))
-  if (idle) {
-    const reference_pose = new AnimationMixer(root)
-    reference_pose.clipAction(idle).play()
-    // Several inherited GLBs have a malformed bind pose at t=0. Sample the authored idle itself,
-    // where the creature actually stands, so off-centre rigs still land on their feet.
-    reference_pose.setTime(idle.duration / 2)
-  }
-  root.scale.setScalar(1)
-  root.updateWorldMatrix(true, true)
+// The sampled unscaled idle geometry belongs to the immutable source, not each creature instance.
+const source_floors = new WeakMap<Object3D, number>()
+const idle_floor = (root: Object3D, source: Object3D, label: string): number => {
+  const cached = source_floors.get(source)
+  if (cached !== undefined) return cached
   const bounds = new Box3()
   root.traverse((object) => {
     const skinned = object as SkinnedMesh
@@ -92,6 +86,28 @@ export const prepare_mob_model_root = (root: Object3D, clips: readonly Animation
     if (mesh.geometry.boundingBox) bounds.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld))
   })
   if (bounds.isEmpty()) console.warn(`[mob_model] "${label}" has no measurable idle-pose bounds`)
+  const min_y = bounds.isEmpty() ? 0 : bounds.min.y
+  source_floors.set(source, min_y)
+  return min_y
+}
+
+export const prepare_mob_model_root = (
+  root: Object3D,
+  clips: readonly AnimationClip[],
+  label: string,
+  source = root
+): number => {
+  const idle = clips.find(({ name }) => name.toUpperCase().includes('IDLE'))
+  if (idle) {
+    const reference_pose = new AnimationMixer(root)
+    reference_pose.clipAction(idle).play()
+    // Several inherited GLBs have a malformed bind pose at t=0. Sample the authored idle itself,
+    // where the creature actually stands, so off-centre rigs still land on their feet.
+    reference_pose.setTime(idle.duration / 2)
+  }
+  root.scale.setScalar(1)
+  root.updateWorldMatrix(true, true)
+  const min_y = idle_floor(root, source, label)
   // Creature GLBs already author meaningful relative sizes: spiders are short, skeletons are
   // tall, sheep are squat. Preserve those proportions; the entity layer adds only context and
   // level scaling. Flattening every species to one height made small fauna character-sized.
@@ -109,7 +125,7 @@ export const prepare_mob_model_root = (root: Object3D, clips: readonly Animation
     mesh.frustumCulled = false
     material_rows(mesh.material).forEach((material) => prepare_material(material as RenderMaterial))
   })
-  return bounds.isEmpty() ? 0 : bounds.min.y
+  return min_y
 }
 
 export const create_mob_model = async (url: string, label = url, variant: string | null = null): Promise<MobModel> => {
@@ -117,7 +133,7 @@ export const create_mob_model = async (url: string, label = url, variant: string
   const root = clone_skinned(gltf.scene)
   await apply_gltf_variant(gltf, root, variant)
   const materials = clone_materials(root)
-  const min_y = prepare_mob_model_root(root, gltf.animations, label)
+  const min_y = prepare_mob_model_root(root, gltf.animations, label, gltf.scene)
   let disposed = false
   return Object.freeze({
     root,

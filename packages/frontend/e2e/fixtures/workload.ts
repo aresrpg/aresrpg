@@ -39,6 +39,7 @@ type Config = Readonly<{
 }>
 type Sample = Readonly<{
   stage: string
+  duration_ms: number
   frames: number
   p95_ms: number
   completed_fps: number | null
@@ -100,13 +101,15 @@ const measure = async (
   const ordered = elapsed.toSorted((a, b) => a - b)
   // Include queued GPU work in throughput without inserting a fence into every frame.
   await window.workload_gpu_done?.()
-  const completed_fps = window.workload_gpu_done ? (elapsed.length * 1000) / (performance.now() - started_at) : null
+  const duration_ms = performance.now() - started_at
+  const completed_fps = window.workload_gpu_done ? (elapsed.length * 1000) / duration_ms : null
   const heap_bytes = stage.startsWith('returned-') && window.collect_heap ? await window.collect_heap() : null
   const state = world.state()
   world.set_active(true)
-  console.info('[workload]', stage, JSON.stringify({ completed_fps, p95_ms: percentile(ordered, 0.95) }))
+  console.info('[workload]', stage, JSON.stringify({ duration_ms, completed_fps, p95_ms: percentile(ordered, 0.95) }))
   return {
     stage,
+    duration_ms,
     frames: elapsed.length,
     p95_ms: percentile(ordered, 0.95),
     completed_fps,
