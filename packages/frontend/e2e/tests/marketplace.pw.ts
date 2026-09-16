@@ -3,7 +3,7 @@
 
 import { expect, test } from '@playwright/test'
 
-test('unique listings retain every item, its exact tooltip, and its own buy action', async ({ page }) => {
+test('different rolls retain their exact tooltip and individual buy action', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html')
   await page
     .locator('[data-marketplace-item-types]')
@@ -75,4 +75,23 @@ test('untraded stackables show an empty period without inventing a price', async
   const chart = page.locator('[data-marketplace-price-history]')
   await expect(chart).toContainText('No completed sales in this period.')
   await expect(chart.locator('canvas')).toHaveCount(0)
+})
+
+test('identical rolls share the cheapest purchasable row and advance after its removal', async ({ page }) => {
+  await page.goto('/e2e/fixtures/marketplace.html?duplicates')
+  await page
+    .locator('[data-marketplace-item-types]')
+    .getByRole('button', { name: /^hat\b/i })
+    .click()
+  const rows = page.locator('[data-marketplace-listings] [data-marketplace-listing-row]')
+  await expect(rows).toHaveCount(3)
+  await expect(rows.first().locator('[data-marketplace-item]')).toHaveAttribute('data-marketplace-item', '0xduplicate')
+  await rows.first().locator('[data-marketplace-item]').hover()
+  await expect(page.getByRole('tooltip')).toContainText('+11')
+  await page.mouse.move(0, 0)
+  await rows.first().getByRole('button', { name: 'Buy', exact: true }).click()
+  await expect(page.locator('[data-pending-listing]')).toHaveAttribute('data-pending-listing', '0xduplicate')
+  await page.evaluate(() => window.dispatchEvent(new Event('market-fixture-remove-cheapest')))
+  await expect(rows).toHaveCount(3)
+  await expect(rows.first().locator('[data-marketplace-item]')).toHaveAttribute('data-marketplace-item', '0xitem1')
 })

@@ -16,6 +16,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, market_group_count, market_observation, type MarketGroup } from '../modules/marketplace.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { cheapest_identical_items } from './listing_groups.ts'
 import { PriceHistoryChart } from './PriceHistoryChart.tsx'
 import {
   buyer_total,
@@ -297,7 +298,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                       </div>
                     ) : (
                       <div className="mx-auto w-full max-w-[560px]" data-marketplace-listings>
-                        {asks.map((listing, index) => (
+                        {cheapest_identical_items(asks, address).map((listing, index) => (
                           <AskRow
                             address={address}
                             balance={balance}

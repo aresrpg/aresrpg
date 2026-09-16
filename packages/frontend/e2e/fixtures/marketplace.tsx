@@ -33,6 +33,24 @@ const listings: ListingRow[] = [1, 2, 3].map((index) => ({
   at_ms: index,
 }))
 
+if (new URLSearchParams(location.search).has('duplicates')) {
+  listings.push(
+    { ...listings[0]!, id: '0xduplicate', price_mist: '500000000' },
+    { ...listings[0]!, id: '0xown', seller: '0xbuyer', price_mist: '100000000' }
+  )
+}
+window.addEventListener('market-fixture-remove-cheapest', () => {
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_slice',
+      observation: market_observation(group),
+      listings: listings.filter(({ id }) => id !== '0xduplicate'),
+      kiosk_versions: { '0xkiosk': '2' },
+    },
+  })
+})
+
 // Synthetic session: no observers, wallet connection, network reads, or transaction execution.
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 dispatch_app({ type: 'auth/connecting' })
