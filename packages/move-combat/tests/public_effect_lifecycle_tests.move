@@ -286,3 +286,64 @@ fun a_range_buff_extends_only_modifiable_spells() {
   assert!(combat::fighter_hp(&state, 1) == 99, 0);
   combat::destroy(state);
 }
+
+#[test]
+fun glyph_bonus_survives_enemy_trap_trigger_and_refreshes_without_stacking() {
+  let mut state = public_lifecycle_tests::active();
+  cast(&mut state, vector[row(13, 0, 3, 0), row(4, 5, 1, 9)], 100);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 3001);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 6001);
+  cast(&mut state, vector[row(12, 0, 0, 0), row(0, 10, 0, 0)], 201);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 9001);
+  combat::move_active_fighter(&mut state, &vector[201]);
+  assert!(combat::fighter_hp(&state, 1) == 85, 0);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 12001);
+  cast(&mut state, vector[row(0, 10, 0, 0)], 201);
+  assert!(combat::fighter_hp(&state, 1) == 70, 1);
+  combat::move_active_fighter(&mut state, &vector[101]);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 15001);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 18001);
+  cast(&mut state, vector[row(0, 10, 0, 0)], 201);
+  assert!(combat::fighter_hp(&state, 1) == 60, 2);
+  combat::destroy(state);
+}
+
+#[test]
+fun a_one_turn_ally_bonus_is_usable_but_not_refilled_twice() {
+  let mut state = public_lifecycle_tests::active();
+  cast(&mut state, vector[row(4, 2, 1, 6), row(4, 5, 1, 9)], 200);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 3001);
+  combat::cast(&mut state, 1, &spell_effect::new_spell_level(8, 0, 40, false, false, false, false, 0, 0, 0, 0, vector[row(0, 10, 0, 0)], vector[]), b"Boosted".to_string(), 100, 1);
+  assert!(combat::fighter_hp(&state, 0) == 85, 1);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 6001);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 9001);
+  combat::cast(&mut state, 1, &spell(vector[row(0, 10, 0, 0)]), b"Unboosted".to_string(), 100, 1);
+  assert!(combat::fighter_hp(&state, 0) == 75, 3);
+  combat::destroy(state);
+}
+
+
+#[test, expected_failure(abort_code = 1715, location = aresrpg_combat::combat)]
+fun expired_one_turn_ap_bonus_cannot_pay_a_second_turn_cast() {
+  let mut state = public_lifecycle_tests::active();
+  cast(&mut state, vector[row(4, 2, 1, 6)], 200);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 3001);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 6001);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 9001);
+  let expensive = spell_effect::new_spell_level(7, 0, 40, false, false, false, false, 0, 0, 0, 0, vector[row(0, 10, 0, 0)], vector[]);
+  combat::cast(&mut state, 1, &expensive, b"Unavailable".to_string(), 100, 1);
+  combat::destroy(state);
+}
+
+
+#[test]
+fun one_turn_poison_and_regeneration_do_not_tick_twice() {
+  let mut state = public_lifecycle_tests::active();
+  cast(&mut state, vector[spell_effect::new_effect(5, b"fire".to_string(), 7, 7, 0, 0, 0, 10000, 1, 12), row(4, 3, 1, 12)], 200);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 3001);
+  assert!(combat::fighter_hp(&state, 1) == 96, 0);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 6001);
+  let _ = combat::end_turn(&mut state, vector[2, 3, 4], 9001);
+  assert!(combat::fighter_hp(&state, 1) == 96, 1);
+  combat::destroy(state);
+}

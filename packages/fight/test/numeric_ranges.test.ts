@@ -150,5 +150,5 @@ test('the target-free HUD retains ranges when area-target count controls later R
   ]
   const projected = project_spell_turn(checkpoint, 0n, 'slash')!
   expect(projected.effects[0]).toMatchObject({ value: 2n, value_max: 30n })
-  expect(projected.effects[1]).toMatchObject({ value: 10n, value_max: 20n })
+  expect(projected.effects[1]).toMatchObject({ value: 20n, value_max: 40n })
 })

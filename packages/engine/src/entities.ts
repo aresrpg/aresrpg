@@ -421,7 +421,9 @@ export const create_entity_layer = ({
         place(mounted)
         sync_animation(mounted)
         mixer?.update(0)
-        object.updateWorldMatrix(true, true)
+        // SkinnedMesh updates bindMatrixInverse in updateMatrixWorld, not updateWorldMatrix.
+        // Refresh that binding before measuring a newly positioned/scaled rig.
+        object.updateMatrixWorld(true)
         const bounds = new Box3().setFromObject(object)
         const center = bounds.getCenter(new Vector3())
         const world_anchor = new Vector3(center.x, bounds.max.y, center.z)
@@ -557,7 +559,7 @@ export const create_entity_layer = ({
     live_crown: (id: string): Vector3 | null => {
       const root = entities.get(id)?.object
       if (!root?.visible) return null
-      root.updateWorldMatrix(true, true)
+      root.updateMatrixWorld(true)
       const bounds = new Box3()
       root.traverse((node) => {
         const skinned = node as SkinnedMesh

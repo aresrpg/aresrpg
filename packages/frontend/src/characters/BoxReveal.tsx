@@ -15,37 +15,31 @@ import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
 
 import { NativeModal } from '../components/ModalFrame.tsx'
-import { encyclopedia_catalog } from '../content/catalog.ts'
-import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { play_fight_audio } from '../game/audio/fight_audio_registry.ts'
 import { rolled_item_types } from '../modules/claims.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { encumbered_asset_ids, stack_merge_sources } from '../inventory_stacks.ts'
 import { toast } from '../toast.ts'
 
+import { BoxRevealCell, type BoxPhase, type BoxResult } from './BoxRevealCell.tsx'
 import './box_reveal.css'
 
 const CHARGING_MS = 1_200
 const BURST_MS = 500
 const PENDING_ESCAPE_MS = 10_000
 
-type Phase = 'pending' | 'charging' | 'burst' | 'resolving' | 'reveal'
-type Rolled = Readonly<{ claim_id: string; item_type: string; amount: number }>
-
 export const BoxReveal = ({
   box,
+  count = 1,
   copy,
   close,
-}: Readonly<{ box: Readonly<ItemRow>; copy: AppCopy; close: () => void }>) => {
+}: Readonly<{ box: Readonly<ItemRow>; count?: number; copy: AppCopy; close: () => void }>) => {
   const t = copy_text(copy.characters_page)
   const wallet = useAppStore(({ session }) => session.wallet)
-  const inventory = useAppStore(({ session }) => session.inventory)
-  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
-  const trades = useAppStore(({ trade }) => trade.rows)
   const claims = useAppStore(({ session }) => session.claims)
-  const [phase, set_phase] = useState<Phase>('pending')
-  const [rolled, set_rolled] = useState<Rolled | null>(null)
+  const [phase, set_phase] = useState<BoxPhase>('pending')
+  const [rolled, set_rolled] = useState<readonly BoxResult[] | null>(null)
   const [anim_done, set_anim_done] = useState(false)
   const [escape_ready, set_escape_ready] = useState(false)
   /** the settle is durable and runs without this overlay — after a wait, stop pretending the
@@ -53,9 +47,7 @@ export const BoxReveal = ({
    *  this button spinning on Collecting… with no way out but the Escape key) */
   const [collect_escape, set_collect_escape] = useState(false)
   // collected the moment the SILENT claimer settles the claim out of the session
-  const collected = !!rolled && !claims.some(({ id }) => id === rolled.claim_id)
-
-  const seed = rolled ? encyclopedia_catalog.item(rolled.item_type)?.item : null
+  const collected = !!rolled && rolled.every((roll) => !claims.some(({ id }) => id === roll.claim_id))
 
   // the reveal fires only when BOTH the celebration finished AND the roll resolved;
   // an animation that outruns a slow resolve shows the honest shimmer, never a frozen tail
@@ -81,17 +73,33 @@ export const BoxReveal = ({
     runtime.opened = true
     void (async () => {
       try {
-        const { claim_id, rolled_template, amount, inventory_changes } = await wallet.character.open_loot_box({
-          merge_sources: stack_merge_sources(inventory, encumbered_asset_ids(listings, trades), box),
+        const state = read_app_state()
+        if (state.session.wallet !== wallet) throw new Error('Wallet changed before opening boxes')
+        const { rolls, inventory_changes } = await wallet.character.open_loot_boxes({
+          count,
+          merge_sources: stack_merge_sources(
+            state.session.inventory,
+            encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows),
+            box
+          ),
           box_item_id: box.id,
           box_item_type: box.item_type,
           custody: { kiosk: box.kiosk },
         })
+        if (read_app_state().session.wallet !== wallet) return
         dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         // the fold lands the claim — the SILENT claimer settles it during the celebration
-        dispatch_app({ type: 'inventory/box_opened', box_item_id: box.id, claim_id })
+        rolls.forEach(({ claim_id }) => dispatch_app({ type: 'inventory/box_opened', box_item_id: box.id, claim_id }))
+        // the event names the template — resolve it PURELY off the authored catalog
+        const results = rolls.map(({ claim_id, rolled_template, amount }) => {
+          const item_type = rolled_item_types().get(rolled_template)
+          if (!item_type) throw new Error('The rolled item is not in the authored catalog')
+          return { claim_id, item_type, amount }
+        })
+
         // receipt proven — celebrate NOW; the resolve + auto-claim run inside the animation
         if (runtime.alive) {
+          set_rolled(results)
           const reduced_motion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches
           if (reduced_motion) set_anim_done(true)
           else {
@@ -110,10 +118,6 @@ export const BoxReveal = ({
             )
           }
         }
-        // the event names the template — resolve it PURELY off the authored catalog
-        const item_type = rolled_item_types().get(rolled_template)
-        if (!item_type) throw new Error('The rolled item is not in the authored catalog')
-        if (runtime.alive) set_rolled({ claim_id, item_type, amount })
       } catch (error) {
         toast.add(error)
         if (runtime.alive) close()
@@ -152,67 +156,29 @@ export const BoxReveal = ({
     <NativeModal
       close={dismiss}
       label={t('reveal_eyebrow')}
-      className="boxreveal"
+      className={`boxreveal${count > 1 ? ' boxreveal--batch' : ''}`}
       data-phase={phase}
       onClick={() => (animating ? skip() : dismiss())}
     >
-      {phase !== 'reveal' && phase !== 'resolving' && (
-        <div className="boxreveal__stage">
-          <div aria-hidden="true" className="boxreveal__aura" />
-          <div className="boxreveal__box">
-            {item_detail_icon(box.item_type) && (
-              <img alt="" className="boxreveal__box-art" draggable={false} src={item_detail_icon(box.item_type)!} />
-            )}
+      <div className="boxreveal__grid">
+        {Array.from({ length: count }, (_, index) => (
+          <div key={index} className="boxreveal__cell">
+            <BoxRevealCell item_type={box.item_type} phase={phase} roll={rolled?.[index]} text={t} />
           </div>
-          <div aria-hidden="true" className="boxreveal__sparks">
-            {[...Array(10).keys()].map((index) => (
-              <span
-                className={`boxreveal__spark boxreveal__spark--${index % 2 ? 'cyan' : 'gold'}`}
-                key={index}
-                style={{ '--i': index } as React.CSSProperties}
-              />
-            ))}
-          </div>
-          <div aria-hidden="true" className="boxreveal__flash" />
-          {phase === 'pending' && <div className="boxreveal__label boxreveal__label--pulse">{t('unsealing')}</div>}
-          {animating && <div className="boxreveal__skip">{t('skip_hint')}</div>}
-        </div>
-      )}
-
-      {phase === 'resolving' && (
-        <div className="boxreveal__card-wrap" onClick={(event) => event.stopPropagation()}>
-          <div className="boxreveal__eyebrow">{t('reveal_eyebrow')}</div>
-          <div aria-busy="true" className="boxreveal__card boxreveal__card--resolving">
-            <div aria-hidden="true" className="boxreveal__shimmer" />
-            <div className="boxreveal__resolving-label">{t('revealing')}</div>
-          </div>
-        </div>
-      )}
-
-      {phase === 'reveal' && rolled && (
-        <div className="boxreveal__card-wrap" onClick={(event) => event.stopPropagation()}>
-          <div className="boxreveal__eyebrow">{t('reveal_eyebrow')}</div>
-          <div className="boxreveal__card">
-            {item_detail_icon(rolled.item_type) && (
-              <img alt="" className="boxreveal__pet-art" draggable={false} src={item_detail_icon(rolled.item_type)!} />
-            )}
-            <div className="boxreveal__pet-name">
-              {seed?.name ?? rolled.item_type}
-              {rolled.amount > 1 && <span> ×{rolled.amount}</span>}
-            </div>
-          </div>
-          {collected || collect_escape ? (
-            <button className="btn-gold boxreveal__collect" onClick={close} type="button">
-              {t('continue_cta')}
-            </button>
-          ) : (
-            <button className="btn-gold boxreveal__collect" disabled type="button">
-              <Loader2 className="boxreveal__spin" size={13} />
-              {t('collecting')}
-            </button>
-          )}
-        </div>
-      )}
+        ))}
+      </div>
+      {animating && <div className="boxreveal__skip">{t('skip_hint')}</div>}
+      {phase === 'reveal' &&
+        (collected || collect_escape ? (
+          <button className="btn-gold boxreveal__collect" onClick={close} type="button">
+            {t('continue_cta')}
+          </button>
+        ) : (
+          <button className="btn-gold boxreveal__collect" disabled type="button">
+            <Loader2 className="boxreveal__spin" size={13} />
+            {t('collecting')}
+          </button>
+        ))}
     </NativeModal>
   )
 }

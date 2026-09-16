@@ -11,7 +11,7 @@ import { resolve_rows } from '../src/effects.ts'
 import { fighter_resistances, KINDS, STATS, sheet_of } from '../src/fighters.ts'
 import { create_runtime } from '../src/runtime.ts'
 import { CONTRACT_CONSTANTS } from '../src/move_contract.gen.ts'
-import { apply_pool_effects, tick_turn_end, tick_turn_start } from '../src/turn_effects.ts'
+import { apply_pool_effects, expire_turn_effects, tick_turn_end, tick_turn_start } from '../src/turn_effects.ts'
 import type { ActiveEffect, BoardZone, SpellEffect } from '../src/types.ts'
 import { on_enter } from '../src/zones.ts'
 
@@ -66,27 +66,6 @@ describe('fight turn effects', () => {
     expect(fighter_resistances(checkpoint, 1n)).toEqual({ earth: 15n, fire: 0n, water: 0n, air: 0n })
   })
 
-  test('a one-turn row remains visible and effective until that turn actually ends', () => {
-    const checkpoint = structuredClone(create_fixture().checkpoint)
-    checkpoint.contract.fighters[0]!.effects = [
-      { ...lasting(KINDS.add, STATS.ap, 2n), turns_left: 1n },
-      { ...lasting(KINDS.add, STATS.power, 50n), turns_left: 1n },
-    ]
-    const base_ap = checkpoint.contract.fighters[0]!.ap
-    const runtime = create_runtime(checkpoint)
-    const base_strength = sheet_of(create_runtime(create_fixture().checkpoint), 0n).strength
-
-    apply_pool_effects(runtime, 0n)
-    tick_turn_start(runtime, 0n)
-
-    expect(runtime.contract.fighters[0]!.ap).toBe(base_ap + 2n)
-    expect(sheet_of(runtime, 0n).strength).toBe(base_strength + 50n)
-    expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([1n, 1n])
-
-    tick_turn_end(runtime, 0n)
-    expect(runtime.contract.fighters[0]!.effects).toEqual([])
-  })
-
   test('dots, regeneration, bonuses, maluses, and shields consume only the target turns', () => {
     const checkpoint = structuredClone(create_fixture().checkpoint)
     const target = checkpoint.contract.fighters[0]!
@@ -101,6 +80,7 @@ describe('fight turn effects', () => {
     const runtime = create_runtime(checkpoint)
 
     const strength_with_rows = sheet_of(runtime, 0n).strength
+    expire_turn_effects(runtime, 1n)
     tick_turn_start(runtime, 1n)
 
     expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([2n, 2n, 2n, 2n, 2n])
@@ -118,16 +98,19 @@ describe('fight turn effects', () => {
       })
     ).toBe(15n)
 
+    expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([2n, 2n, 2n, 2n, 2n])
     expect(sheet_of(runtime, 0n).strength).toBe(strength_with_rows)
     tick_turn_end(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([1n, 1n, 1n, 1n, 1n])
 
+    expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects.map(({ turns_left }) => turns_left)).toEqual([1n, 1n, 1n, 1n, 1n])
     expect(sheet_of(runtime, 0n).strength).toBe(strength_with_rows)
     tick_turn_end(runtime, 0n)
+    expire_turn_effects(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects).toEqual([])
     expect(sheet_of(runtime, 0n).strength).toBe(strength_with_rows - 7n)
     expect(runtime.render_actions.filter(({ type }) => type === 'damage_number')).toHaveLength(3)
@@ -150,13 +133,18 @@ describe('fight turn effects', () => {
     checkpoint.contract.zones = [zone]
     const runtime = create_runtime(checkpoint)
 
+    expire_turn_effects(runtime, 1n)
     tick_turn_start(runtime, 1n)
     expect(runtime.contract.zones[0]?.turns_left).toBe(2n)
+    expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
     expect(runtime.contract.zones[0]?.turns_left).toBe(1n)
+    expire_turn_effects(runtime, 1n)
     tick_turn_start(runtime, 1n)
+    expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
     const hp_after_expiry = runtime.contract.fighters[1]!.hp
+    expire_turn_effects(runtime, 1n)
     tick_turn_start(runtime, 1n)
 
     expect(runtime.contract.zones).toEqual([])
@@ -529,17 +517,20 @@ describe('fight turn effects', () => {
 
     tick_turn_end(runtime, 1n)
     runtime.contract.fighters[1]!.ap = 6n
+    expire_turn_effects(runtime, 1n)
     apply_pool_effects(runtime, 1n)
     expect(runtime.contract.fighters[1]!.ap).toBe(0n)
     expect(runtime.contract.fighters[1]!.effects[0]?.turns_left).toBe(2n)
 
     tick_turn_end(runtime, 1n)
     runtime.contract.fighters[1]!.ap = 6n
+    expire_turn_effects(runtime, 1n)
     apply_pool_effects(runtime, 1n)
     expect(runtime.contract.fighters[1]!.ap).toBe(0n)
 
     tick_turn_end(runtime, 1n)
     runtime.contract.fighters[1]!.ap = 6n
+    expire_turn_effects(runtime, 1n)
     apply_pool_effects(runtime, 1n)
     expect(runtime.contract.fighters[1]!.ap).toBe(6n)
     expect(runtime.contract.fighters[1]!.effects).toEqual([])

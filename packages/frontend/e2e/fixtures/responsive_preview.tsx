@@ -28,6 +28,9 @@ const locale = LOCALES.find(({ code }) => code === params.get('locale'))?.code ?
 const copy = await load_app_copy(locale)
 apply_document_locale(copy, locale)
 const address = '0x' + 'aa'.repeat(32)
+const weapon = content_catalog.items.find(
+  ({ item_type, category }) => item_type === params.get('weapon') && category === 'axe'
+)
 const character: CharacterRow = {
   id: '0xpreview',
   name: 'Aster',
@@ -54,7 +57,19 @@ const character: CharacterRow = {
   },
   kiosk: '0xpreviewkiosk',
   custody: 'kiosk',
-  equipment: [],
+  equipment: weapon
+    ? [
+        {
+          id: 'preview-weapon',
+          slot: 'weapon',
+          amount: 1,
+          item_type: weapon.item_type,
+          name: weapon.name,
+          level: weapon.level,
+          category: weapon.category,
+        },
+      ]
+    : [],
   world: 'nauvis',
   checkpoint_world: 'nauvis',
   x: 50000,
@@ -343,6 +358,16 @@ if (page === 'fight') {
           hp: 180n,
           source: create_character_source({
             name: 'Aster',
+            weapon: weapon
+              ? {
+                  category: weapon.category,
+                  damages: (weapon.damages ?? []).map(({ element, from, to }) => ({
+                    element,
+                    from: BigInt(from),
+                    to: BigInt(to),
+                  })),
+                }
+              : null,
             classe: 'senshi',
             level: 20n,
             spell_levels: Object.fromEntries(

@@ -50,18 +50,22 @@ export const tick_turn_start = (runtime: FightRuntime, fighter: bigint): void =>
   tick_board_zones(runtime, fighter)
 }
 
-/** Duration includes the current turn. A row cast during this turn steps from 2 → 1 when the
- * turn closes, remains active through the next turn, then expires at that turn's close. */
+/** Count completed usable turns; final rows remain active until the next start. */
 export const tick_turn_end = (runtime: FightRuntime, fighter: bigint): void => {
+  const target = runtime.contract.fighters[Number(fighter)]
+  target.effects = target.effects.map((row) => ({ ...row, turns_left: row.turns_left > 0n ? row.turns_left - 1n : 0n }))
+}
+
+/** Expire before pool refill, periodic ticks, glyph refresh, and the incoming turn cue. */
+export const expire_turn_effects = (runtime: FightRuntime, fighter: bigint): void => {
   const target = runtime.contract.fighters[Number(fighter)]
   const rows = [...target.effects]
   const row_ids = [...runtime.render_ids.effects[Number(fighter)]]
   const kept: ActiveEffect[] = []
   const kept_ids: string[] = []
   rows.forEach((row, index) => {
-    const turns_left = row.turns_left > 0n ? row.turns_left - 1n : 0n
-    if (turns_left > 0n) {
-      kept.push({ ...row, turns_left })
+    if (row.turns_left > 0n) {
+      kept.push(row)
       kept_ids.push(row_ids[index])
       return
     }
@@ -71,9 +75,9 @@ export const tick_turn_end = (runtime: FightRuntime, fighter: bigint): void => {
       kind: row.kind,
       channel: row.stat,
     })
-    if (row.kind === KINDS.invis)
-      emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason: 'expired' })
   })
+  if (rows.some((row) => row.kind === KINDS.invis) && !kept.some((row) => row.kind === KINDS.invis))
+    emit(runtime, 'invisibility_changed', { fighter, invisible: false, reason: 'expired' })
   target.effects = kept
   runtime.render_ids.effects[Number(fighter)] = kept_ids
 }

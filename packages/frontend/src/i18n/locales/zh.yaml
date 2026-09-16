@@ -1928,6 +1928,8 @@ characters_page:
     experience: 经验
     confirm: 确认
     max: 最大
+  use_amount: '使用数量'
+  box_batch_limit: '每次最多打开{{count}}个'
 spell_names:
   Absorption: 吸收
   Absorptive Arrow: 吸收箭
@@ -2571,7 +2573,7 @@ spell_effects:
   active_remove: '{{stat}} −{{value}}'
   active_damage: '{{value}}伤害'
   active_invis: '隐形'
-  active_chatiment: '惩戒 · 每回合{{value}}{{stat}} · {{turns}}回合'
+  active_chatiment: '惩戒 · 每回合{{value}}{{stat}} · {{duration}}'
   active_turns: '{{count}}回合'
   active_turn_range: '{{minimum}}–{{maximum}}回合'
   short_strength: '力量'
@@ -2584,6 +2586,7 @@ spell_effects:
   short_raw_damage: '伤害'
   short_critical: '暴击'
   short_stat: '属性'
+  expires_next_turn: '持续至下回合开始'
 ui:
   character: 角色
   spell_action: '{{name}}，等级{{level}}，消耗{{cost}}{{unit}}'

@@ -43,12 +43,16 @@ const effect_magnitude = (effect: SpellEffect, text: CopyText, percent_life = fa
   return `${value}${percentage ? '%' : ''}`
 }
 
+export const active_duration_text = (turns: number, text: CopyText): string =>
+  turns === 0 ? text('spell_effects.expires_next_turn') : text('spell_effects.active_turns', { count: turns })
+
 const effect_sentence = (effect: SpellEffect, text: CopyText, key: string, stat: string) => {
   const marker = '\u0000'
   const sentence = text(key, {
     value: marker,
     stat,
     turns: effect.turns,
+    duration: active_duration_text(effect.turns, text),
   })
   const [pre, post] = sentence.split(marker)
   return { pre, value: post === undefined ? null : effect_magnitude(effect, text), post: post ?? '' }

@@ -1950,6 +1950,8 @@ characters_page:
     experience: 'Досвід'
     confirm: 'Підтвердити'
     max: 'МАКС'
+  use_amount: 'Кількість для використання'
+  box_batch_limit: 'До {{count}} за одне відкриття'
 spell_names:
   'Absorption': 'Поглинання'
   'Absorptive Arrow': 'Поглинальна стріла'
@@ -2604,7 +2606,7 @@ spell_effects:
   active_remove: '−{{value}} {{stat}}'
   active_damage: '{{value}} шкоди'
   active_invis: 'Невидимість'
-  active_chatiment: 'ПОКАРАННЯ · {{value}} {{stat}}/ХІД · {{turns}}х'
+  active_chatiment: 'ПОКАРАННЯ · {{value}} {{stat}}/ХІД · {{duration}}'
   active_turns: '{{count}}х'
   active_turn_range: '{{minimum}}–{{maximum}}х'
   short_strength: 'СИЛ'
@@ -2617,6 +2619,7 @@ spell_effects:
   short_raw_damage: 'ШКД'
   short_critical: 'КРИТ'
   short_stat: 'ХАР'
+  expires_next_turn: 'До наступного ходу'
 
 ui:
   character: 'Персонаж'

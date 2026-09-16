@@ -1049,6 +1049,24 @@ entry fun open_loot_box(
   );
 }
 
+/// Open a reviewed quantity of one box stack in one terminal Random call.
+entry fun open_loot_boxes(
+  registry: &LootRegistry,
+  kiosk: &mut Kiosk,
+  personal: &PersonalKioskCap,
+  box_item_id: ID,
+  box_template: &ItemTemplate,
+  count: u32,
+  protected_item: &AresRPG_TransferPolicy<Item>,
+  randomness: &Random,
+  version: &Version,
+  ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
+  loot_box::open_boxes(registry, kiosk, cap, box_item_id, box_template, protected_item, count, &mut generator, ctx);
+}
+
 /// Claim the rolled quantity from a box claim (any category; gear stats roll here). Terminal
 /// `&Random`. `existing` merges a stackable result into your held stack (no dust).
 entry fun claim_loot(

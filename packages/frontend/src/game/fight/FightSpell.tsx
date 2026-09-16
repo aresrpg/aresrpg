@@ -4,7 +4,7 @@
 import { useText } from '../../i18n/useText.ts'
 // Browser-only spell presentation. Keeping seed assets behind this lazy boundary preserves the pure app shell.
 
-import { spell_icon } from '../../content/assets.ts'
+import { item_icon, spell_icon } from '../../content/assets.ts'
 import { SpellCard } from '../../encyclopedia/SpellCard.tsx'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
@@ -67,12 +67,27 @@ export const fight_spell_detail = (spell: Readonly<FightSpellView>) => {
   })
 }
 
+const FightActionIcon = ({
+  spell,
+  item_type,
+  name,
+  fallback,
+}: Readonly<{ spell: FightSpellView; item_type?: string; name: string; fallback?: ReactNode }>) => {
+  const icon = item_type ? item_icon(item_type) : spell_icon(spell.source.classe, spell.name)
+  return icon ? (
+    <img alt="" data-item-type={item_type} draggable={false} src={icon} />
+  ) : (
+    <span>{fallback ?? name.slice(0, 1).toUpperCase()}</span>
+  )
+}
+
 export const FightSpell = ({
   spell,
   disabled,
   selected,
   select,
   fallback_icon,
+  item_type,
   display_name,
 }: Readonly<{
   spell: FightSpellView
@@ -80,11 +95,11 @@ export const FightSpell = ({
   selected: boolean
   select: () => void
   fallback_icon?: ReactNode
+  item_type?: string
   display_name?: string
 }>) => {
   const ui = useText()
   const [detail_open, set_detail_open] = useState(false)
-  const icon = spell_icon(spell.source.classe, spell.name)
   const name = displayed_name(spell.name, display_name)
   const detail = fight_spell_detail(spell)
   const critical = displays_critical(spell, disabled)
@@ -114,11 +129,7 @@ export const FightSpell = ({
         onClick={select}
         type="button"
       >
-        {icon ? (
-          <img alt="" draggable={false} src={icon} />
-        ) : (
-          <span>{fallback_icon ?? name.slice(0, 1).toUpperCase()}</span>
-        )}
+        <FightActionIcon spell={spell} item_type={item_type} name={name} fallback={fallback_icon} />
         <b>{spell.details.ap_cost.toString()}</b>
         {spell.cooldown > 0n && <em className="fight-hud__spell-cooldown">{spell.cooldown.toString()}</em>}
       </button>

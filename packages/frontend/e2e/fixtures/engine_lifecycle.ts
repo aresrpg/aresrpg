@@ -3,11 +3,15 @@
 
 import { LIFECYCLE_WORLD, probe_backend_lifetime } from '../../../engine/test/browser_lifecycle.ts'
 import { probe_label_scene } from '../../../engine/test/browser_labels.ts'
+import { probe_model_anchors } from '../../../engine/test/browser_model_anchors.ts'
+import { load_character_appearance } from '../../src/game/character_entities.ts'
+import { mob_model_render } from '../../src/content/mob_models.ts'
 import { create_world } from '../../src/game/core/world.ts'
 import { read_pose, subscribe_pose } from '../../src/game/core/pose_feed.ts'
 
 declare global {
   interface Window {
+    probe_model_anchors: () => ReturnType<typeof probe_model_anchors>
     probe_label_scene: () => ReturnType<typeof probe_label_scene>
     probe_engine_lifetime: () => ReturnType<typeof probe_backend_lifetime>
     start_world_input: () => Promise<void>
@@ -16,6 +20,18 @@ declare global {
     stop_world_input: () => void
   }
 }
+window.probe_model_anchors = async () =>
+  probe_model_anchors(
+    document.getElementById('canvas') as HTMLCanvasElement,
+    await load_character_appearance({
+      id: 'hero',
+      classe: 'senshi',
+      male: true,
+      colors: ['#ffffff', '#ff0000', '#0000ff'],
+      loadout: {},
+    }),
+    Object.fromEntries(['tinker', 'fuwa', 'aragne'].map((type) => [type, mob_model_render(type)!]))
+  )
 window.probe_engine_lifetime = () => probe_backend_lifetime(document.getElementById('canvas') as HTMLCanvasElement)
 window.probe_label_scene = () => probe_label_scene(document.getElementById('canvas') as HTMLCanvasElement)
 

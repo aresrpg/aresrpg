@@ -1,0 +1,9 @@
+{
+  "provenance": "Captured from sui move test: aresrpg::loot_box_tests::batch_full_stack, native test_scenario, 2026-09-16. Two boxes opened via api::open_loot_boxes; package source build, no on-chain object version.",
+  "bcs_hex": "ba0f17a903ea5b23d0d0465bf5b04f65effc9d305fccd27541a96d47711e0a5502c5cc0d39085f1baef232e36cc278677575d92f8db9d615e8691ad29ae4cb1bef952f19f2fb99c727f15b9733c0d2979b2393a9c7fb6f80a153e7b0d486704b02",
+  "box_template": "0xba0f17a903ea5b23d0d0465bf5b04f65effc9d305fccd27541a96d47711e0a55",
+  "claim_ids": [
+    "0xc5cc0d39085f1baef232e36cc278677575d92f8db9d615e8691ad29ae4cb1bef",
+    "0x952f19f2fb99c727f15b9733c0d2979b2393a9c7fb6f80a153e7b0d486704b02"
+  ]
+}

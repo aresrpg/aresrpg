@@ -483,9 +483,6 @@
     "packages/frontend/src/game/fight/FightPlacementBanner.tsx": {
       "FightPlacementBanner": [11]
     },
-    "packages/frontend/src/game/fight/FightSpell.tsx": {
-      "FightSpell": [10]
-    },
     "packages/frontend/src/game/fight/FightHud.tsx": {
       "FightHud": [44],
       "FightHud > useEffect[0]() > keydown": [17]
@@ -704,7 +701,7 @@
       ]
     },
     "packages/frontend/src/characters/BoxReveal.tsx": {
-      "BoxReveal": [19]
+      "BoxReveal": [9]
     },
     "packages/frontend/src/modules/party.ts": {
       "observe: NonNullable<AppModule['observe']> > answer": [9],

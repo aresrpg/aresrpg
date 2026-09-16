@@ -1928,6 +1928,8 @@ characters_page:
     experience: Опыт
     confirm: Подтвердить
     max: МАКС.
+  use_amount: 'Количество для использования'
+  box_batch_limit: 'До {{count}} за одно открытие'
 spell_names:
   Absorption: Поглощение
   Absorptive Arrow: Поглощающая стрела
@@ -2571,7 +2573,7 @@ spell_effects:
   active_remove: '−{{value}} {{stat}}'
   active_damage: '{{value}} урона'
   active_invis: 'Невидимость'
-  active_chatiment: 'НАКАЗАНИЕ · {{value}} {{stat}}/ХОД · {{turns}}х'
+  active_chatiment: 'НАКАЗАНИЕ · {{value}} {{stat}}/ХОД · {{duration}}'
   active_turns: '{{count}}х'
   active_turn_range: '{{minimum}}–{{maximum}}х'
   short_strength: 'СИЛ'
@@ -2584,6 +2586,7 @@ spell_effects:
   short_raw_damage: 'УРОН'
   short_critical: 'КРИТ'
   short_stat: 'ХАР'
+  expires_next_turn: 'До следующего хода'
 ui:
   character: Персонаж
   spell_action: '{{name}}, уровень {{level}}, {{cost}} {{unit}}'

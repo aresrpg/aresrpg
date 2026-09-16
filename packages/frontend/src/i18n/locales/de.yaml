@@ -1953,6 +1953,8 @@ characters_page:
     experience: 'Erfahrung'
     confirm: 'Bestätigen'
     max: 'MAX'
+  use_amount: 'Menge verwenden'
+  box_batch_limit: 'Bis zu {{count}} pro Öffnung'
 spell_names:
   'Absorption': 'Absorption'
   'Absorptive Arrow': 'Absorbierender Pfeil'
@@ -2607,7 +2609,7 @@ spell_effects:
   active_remove: '−{{value}} {{stat}}'
   active_damage: '{{value}} Schaden'
   active_invis: 'Unsichtbar'
-  active_chatiment: 'STRAFE · {{value}} {{stat}}/ZUG · {{turns}}Z'
+  active_chatiment: 'STRAFE · {{value}} {{stat}}/ZUG · {{duration}}'
   active_turns: '{{count}}Z'
   active_turn_range: '{{minimum}}–{{maximum}}Z'
   short_strength: 'STÄ'
@@ -2620,6 +2622,7 @@ spell_effects:
   short_raw_damage: 'SCH'
   short_critical: 'KRIT'
   short_stat: 'WERT'
+  expires_next_turn: 'Bis zum nächsten Zug'
 
 ui:
   character: 'Charakter'

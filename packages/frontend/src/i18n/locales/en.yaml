@@ -1956,6 +1956,8 @@ characters_page:
     experience: 'Experience'
     confirm: 'Confirm'
     max: 'MAX'
+  use_amount: 'Use amount'
+  box_batch_limit: 'Up to {{count}} per opening'
 spell_names:
   'Absorption': 'Absorption'
   'Absorptive Arrow': 'Absorptive Arrow'
@@ -2610,7 +2612,7 @@ spell_effects:
   active_remove: '−{{value}} {{stat}}'
   active_damage: '{{value}} damages'
   active_invis: 'Invisible'
-  active_chatiment: 'CHÂTIMENT · {{value}} {{stat}}/TURN · {{turns}}T'
+  active_chatiment: 'CHÂTIMENT · {{value}} {{stat}}/TURN · {{duration}}'
   active_turns: '{{count}}T'
   active_turn_range: '{{minimum}}–{{maximum}}T'
   short_strength: 'STR'
@@ -2623,6 +2625,7 @@ spell_effects:
   short_raw_damage: 'DMG'
   short_critical: 'CRIT'
   short_stat: 'STAT'
+  expires_next_turn: 'Until next turn'
 
 ui:
   character: 'Character'

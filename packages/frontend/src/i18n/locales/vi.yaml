@@ -1928,6 +1928,8 @@ characters_page:
     experience: Kinh nghiệm
     confirm: Xác nhận
     max: TỐI ĐA
+  use_amount: 'Số lượng sử dụng'
+  box_batch_limit: 'Tối đa {{count}} mỗi lần mở'
 spell_names:
   Absorption: Hấp thụ
   Absorptive Arrow: Mũi tên hấp thụ
@@ -2571,7 +2573,7 @@ spell_effects:
   active_remove: '−{{value}} {{stat}}'
   active_damage: '{{value}} sát thương'
   active_invis: 'Tàng hình'
-  active_chatiment: 'TRỪNG PHẠT · {{value}} {{stat}}/LƯỢT · {{turns}}L'
+  active_chatiment: 'TRỪNG PHẠT · {{value}} {{stat}}/LƯỢT · {{duration}}'
   active_turns: '{{count}}L'
   active_turn_range: '{{minimum}}–{{maximum}}L'
   short_strength: 'SM'
@@ -2584,6 +2586,7 @@ spell_effects:
   short_raw_damage: 'ST'
   short_critical: 'CM'
   short_stat: 'CHỈ SỐ'
+  expires_next_turn: 'Đến lượt tiếp theo'
 ui:
   character: Nhân vật
   spell_action: '{{name}}, cấp {{level}}, {{cost}} {{unit}}'

@@ -38,7 +38,9 @@ dispatch_app({
   type: 'server/packet',
   packet: {
     type: 'packet/characters',
-    characters: [{ id: 'player', name: 'Player', custody: 'fight', active_fight: { id: 'clock-ui', seat: 0 } }],
+    characters: [
+      { id: 'player', name: 'Player', equipment: [], custody: 'fight', active_fight: { id: 'clock-ui', seat: 0 } },
+    ],
   },
 } as never)
 dispatch_app({ type: 'character/select', character_id: 'player' })

@@ -63,6 +63,11 @@ const FightVitals = ({
   text: Readonly<Record<string, string>>
   copy: AppCopy
 }>) => {
+  const weapon_item_type = useAppStore(
+    ({ session }) =>
+      session.characters.find(({ id }) => id === fighter.character_id)?.equipment.find(({ slot }) => slot === 'weapon')
+        ?.item_type
+  )
   const weapon_label = fighter.weapon?.bare_hands ? text.bare_hands : text.weapon_attack
   const weapon_spell: FightSpellView | null = fighter.weapon
     ? Object.freeze({
@@ -83,6 +88,7 @@ const FightVitals = ({
             <LazyFightSpell
               display_name={weapon_spell.name}
               disabled={!can_act || fighter.ap < weapon_spell.details.ap_cost}
+              item_type={weapon_item_type}
               fallback_icon={<Swords aria-hidden="true" size={25} strokeWidth={1.6} />}
               select={() => select_action(selected_action?.type === 'weapon' ? null : { type: 'weapon' })}
               selected={selected_action?.type === 'weapon'}

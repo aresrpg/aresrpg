@@ -7,7 +7,7 @@ import { GRID_CELLS, mask_get, neighbours } from '../src/combat_grid.ts'
 import { create_fight } from '../src/fight.ts'
 import { hit, KINDS, STATS } from '../src/fighters.ts'
 import { create_runtime } from '../src/runtime.ts'
-import { tick_turn_end } from '../src/turn_effects.ts'
+import { expire_turn_effects, tick_turn_end } from '../src/turn_effects.ts'
 import type { BoardZone, HydratedFightCheckpoint, SpellEffect, SpellLevel } from '../src/types.ts'
 
 import { create_fixture } from './helpers.ts'
@@ -298,8 +298,10 @@ describe('board-zone placement', () => {
     tick_turn_end(runtime, 0n)
     tick_turn_end(runtime, 0n)
     tick_turn_end(runtime, 0n)
+    expire_turn_effects(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects.filter(({ kind }) => kind === KINDS.add)).toHaveLength(2)
     tick_turn_end(runtime, 0n)
+    expire_turn_effects(runtime, 0n)
     expect(runtime.contract.fighters[0]!.effects.filter(({ kind }) => kind === KINDS.add)).toHaveLength(0)
   })
 

@@ -25,7 +25,7 @@ import { run_direct_transaction } from '../transaction_guard.ts'
 import { is_forge_gear } from './forge_eligibility.ts'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { crush_selection, crush_blocked_ids } from './inventory_selection.ts'
-import { BoxReveal } from './BoxReveal.tsx'
+import { UseBoxModal } from './UseBoxModal.tsx'
 import { FeedPetModal } from './FeedPetModal.tsx'
 
 export type ItemMenuState = Readonly<{
@@ -352,7 +352,7 @@ export const InventoryActionOverlays = ({
     <>
       {menu && <InventoryMenu close_menu={close_menu} copy={copy} entries={entries} menu={menu} />}
       {feed_pet && <FeedPetModal close={() => set_feed_pet(null)} copy={copy} pet={feed_pet} />}
-      {reveal_box && <BoxReveal box={reveal_box} close={() => set_reveal_box(null)} copy={copy} />}
+      {reveal_box && <UseBoxModal box={reveal_box} close={() => set_reveal_box(null)} copy={copy} />}
       {crush_target && (
         <CrushConfirm
           copy={copy}

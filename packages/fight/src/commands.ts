@@ -96,6 +96,7 @@ const join = (runtime: FightRuntime, action: JoinAction): FightRuntime => {
     effects: [],
     cooldowns: [],
   })
+  runtime.render_ids.effects.push([])
   emit(runtime, 'fighter_joined', {
     fighter: BigInt(runtime.contract.fighters.length - 1),
     team: action.team,

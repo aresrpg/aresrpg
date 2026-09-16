@@ -102,3 +102,5 @@ export const character_delete = async (
   })
   return { digest: receipt_digest(receipt) }
 }
+
+export { LOOT_BOX_BATCH_LIMIT } from './loot_boxes.ts'

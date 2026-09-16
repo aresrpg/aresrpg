@@ -502,6 +502,7 @@ on each attempt, while shared template refs remain cached. A failed
 redemption leaves the voucher recoverable. Browser-local attempt markers, scoped by network and
 account, are retained before the SDK call and prevent automatic retries across reloads, including
 certified failures. Missing or unavailable persistence disables automation; manual redemption remains explicit.
+Loot boxes accept one reviewed quantity of up to 50 units in one terminal Random call. Each unit creates its own soulbound claim and reveal event; an ordered batch event binds those outcomes to claim IDs. The quantity modal defaults to one, and one shared animation timeline reveals the results in a grid. Claim redemption retains its existing serialized settlement path.
 Box and crush claims use the same one-attempt rule and remain visible for explicit collection in
 inventory. Their automation markers are written before submission and survive reloads; a failed
 attempt never creates an automatic retry timer.
@@ -528,6 +529,14 @@ quest and progress derive from those IDs; journal visibility and celebration que
 Settings can reset the local completion set. Completion celebrations wait for the local write;
 loading saved completion never replays them. Storage failures remain visible and never overwrite an
 unknown saved set after a failed read.
+
+### Combat effect duration
+
+Timed fighter effects count down at the affected fighter’s turn end and remain active at zero
+until that fighter’s next start. Expiration precedes AP/MP modifier application, poison/regeneration
+ticks, and glyph refresh. Inactive AP/MP pool estimates exclude zero rows. Glyph zone lifetimes and
+spell cooldowns retain their independent clocks. The HUD distinguishes pending expiration from
+remaining usable turns; both combat implementations emit the same resulting state.
 
 ### Forging
 

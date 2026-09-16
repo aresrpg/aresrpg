@@ -39,6 +39,9 @@ use sui::{
 
 // ╔════════════════ [ Constants ] ════════════════════════════════════════════ ]
 
+const EBatchAmount: u64 = 2910;
+const MAX_BOX_BATCH: u32 = 50;
+
 const EZeroWeight: u64 = 2904; // a pool whose total weight is zero can never roll
 const ENotBox: u64 = 2905; // the template is not a gacha box, or the item is not that box
 const ENoTable: u64 = 2906; // no loot table set for this box template
@@ -68,6 +71,8 @@ public struct BoxClaim has key {
 public struct LootTableSet has copy, drop { box_template: ID, rows: u64, weight_sum: u64 }
 
 /// The reveal signal: the roll picked `rolled_template` (the mint follows in `claim_loot`).
+public struct LootBoxesOpened has copy, drop { box_template: ID, claim_ids: vector<ID> }
+
 public struct LootBoxOpened has copy, drop { box_template: ID, rolled_template: ID, amount: u32, opener: address }
 
 public struct LootClaimed has copy, drop { box_template: ID, rolled_template: ID, amount: u32, opener: address }
@@ -144,6 +149,21 @@ public(package) fun open_box(
   generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
+  open_boxes(registry, kiosk, cap, box_item_id, box_template, protected_item, 1, generator, ctx);
+}
+
+public(package) fun open_boxes(
+  registry: &LootRegistry,
+  kiosk: &mut Kiosk,
+  cap: &KioskOwnerCap,
+  box_item_id: ID,
+  box_template: &ItemTemplate,
+  protected_item: &AresRPG_TransferPolicy<Item>,
+  count: u32,
+  generator: &mut RandomGenerator,
+  ctx: &mut TxContext,
+) {
+  assert!(count > 0 && count <= MAX_BOX_BATCH, EBatchAmount);
   assert!(is_gacha_box(box_template), ENotBox);
   let box_tid = item_rows::template_id(box_template);
   assert!(registry.tables.contains(box_tid), ENoTable);
@@ -152,14 +172,20 @@ public(package) fun open_box(
   assert!(sum > 0, EZeroWeight);
   // the passed template must be the burned item's own
   assert!({ let it: &Item = kiosk.borrow(cap, box_item_id); it.template() } == box_tid, ENotBox);
-  item::burn(kiosk, cap, protected_item, box_item_id, 1, ctx);
+  item::burn(kiosk, cap, protected_item, box_item_id, count, ctx);
 
-  let picked = loot_table::pick(&entries, generator.generate_u64_in_range(0, sum - 1));
-  let rolled_template = loot_table::template(&picked);
-  let amount = loot_table::amount(&picked);
-  let opener = ctx.sender();
-  event::emit(LootBoxOpened { box_template: box_tid, rolled_template, amount, opener });
-  transfer::transfer(BoxClaim { id: object::new(ctx), box_template: box_tid, rolled_template, amount }, opener);
+  let mut claim_ids = vector[];
+  count.do!(|_| {
+    let picked = loot_table::pick(&entries, generator.generate_u64_in_range(0, sum - 1));
+    let rolled_template = loot_table::template(&picked);
+    let amount = loot_table::amount(&picked);
+    let opener = ctx.sender();
+    let id = object::new(ctx);
+    claim_ids.push_back(object::uid_to_inner(&id));
+    event::emit(LootBoxOpened { box_template: box_tid, rolled_template, amount, opener });
+    transfer::transfer(BoxClaim { id, box_template: box_tid, rolled_template, amount }, opener);
+  });
+  event::emit(LootBoxesOpened { box_template: box_tid, claim_ids });
 }
 
 // ╔════════════════ [ CLAIM — terminal &Random: mint the rolled item, burn claim ] ═ ]

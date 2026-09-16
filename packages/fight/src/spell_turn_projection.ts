@@ -5,12 +5,12 @@
 import { zone_cells } from './combat_grid.ts'
 import { roll_value, rolls_magnitude } from './damage.ts'
 import { legal_cell } from './effects.ts'
-import { effect_seed } from './fight_math.ts'
-import { KINDS, STATS } from './fighters.ts'
+import { amplify_damage, primary_stat, effect_seed } from './fight_math.ts'
+import { KINDS, STATS, sheet_of } from './fighters.ts'
 import { draw } from './prng.ts'
 import { AREA_SHAPES, TARGET_FILTERS } from './move_contract.gen.ts'
 import { spell_level_of, spell_turn_rows } from './spell_turn.ts'
-import type { HydratedFightCheckpoint, PrngCursor, SpellEffect, SpellLevel } from './types.ts'
+import type { FightSheet, HydratedFightCheckpoint, PrngCursor, SpellEffect, SpellLevel } from './types.ts'
 import { weapon_level_of } from './weapon.ts'
 
 export type SpellTurnEffect = Readonly<SpellEffect & { critical_only: boolean }>
@@ -27,6 +27,18 @@ const target_dependent_roll = (row: Readonly<SpellEffect>): boolean =>
     row.value_max > row.value &&
     row.area_shape !== AREA_SHAPES.point &&
     row.target_filter !== TARGET_FILTERS.only_caster)
+
+/** Card-only damage, before any target resistance, shield, or overkill limit. */
+const display_damage = (sheet: FightSheet, effect: SpellTurnEffect): SpellTurnEffect => {
+  const hp_loss = effect.stat === STATS.hp && [KINDS.remove, KINDS.steal, KINDS.fixed_remove].includes(effect.kind)
+  if (effect.kind !== KINDS.damage && !hp_loss) return effect
+  const primary = primary_stat(effect.element, sheet)
+  return Object.freeze({
+    ...effect,
+    value: amplify_damage(effect.value, primary, sheet.raw_damage),
+    value_max: amplify_damage(effect.value_max, primary, sheet.raw_damage),
+  })
+}
 
 const project_level_turn = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
@@ -50,7 +62,12 @@ const project_level_turn = (
     const value = roll_value(row, cursor)
     return [Object.freeze({ ...row, value, value_max: value, critical_only })]
   })
-  return Object.freeze({ critical, crit_1_in, effects: Object.freeze(effects) })
+  const sheet = sheet_of(checkpoint, caster)
+  return Object.freeze({
+    critical,
+    crit_1_in,
+    effects: Object.freeze(effects.map((effect) => display_damage(sheet, effect))),
+  })
 }
 
 export const project_spell_turn = (

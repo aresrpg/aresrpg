@@ -68,6 +68,7 @@ forgemagie::GearCrushed = crusher: address, items: u64
 pet::PetFed = pet: object::ID, feeder: address, power: u64
 loot_box::LootTableSet = box_template: object::ID, rows: u64, weight_sum: u64
 loot_box::LootBoxOpened = box_template: object::ID, rolled_template: object::ID, amount: u32, opener: address
+loot_box::LootBoxesOpened = box_template: object::ID, claim_ids: vector<object::ID>
 loot_box::LootClaimed = box_template: object::ID, rolled_template: object::ID, amount: u32, opener: address
 mastery::MasteryUpdated = mastery: object::ID, owner: address, points: u64, last_completed_epoch: option::Option<u64>, quest_epoch: u64, quest_started_ms: u64, quest_world: string::String, quest_dungeon: object::ID, quest_reward: u8, quest_completed: bool
 combat::State = board: combat_grid::GridSpec, closed: vector<u64>, fighters: vector<combat::Fighter>, zones: vector<combat::BoardZone>, queue: vector<u64>, turn_pointer: u64, round: u64, ended: bool, winner: option::Option<u8>, turn_seed: u64, turn_cast_index: u64, turn_casts: vector<combat::TurnCast>, placement_started_ms: u64, turn_started_ms: u64

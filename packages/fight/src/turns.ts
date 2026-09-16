@@ -7,7 +7,13 @@ import { KINDS, STATS, base_ap_of, base_mp_of, is_mob, max_hp_of, mob_snapshot, 
 import { casts_this_turn, placement_rows_castable, resolve_rows, resolve_spell, sight_blockers } from './effects.ts'
 import { walk_down, walk_toward, wall_mask } from './movement.ts'
 import { emit, fail } from './runtime.ts'
-import { apply_pool_effects, tick_cooldowns, tick_turn_end, tick_turn_start } from './turn_effects.ts'
+import {
+  apply_pool_effects,
+  expire_turn_effects,
+  tick_cooldowns,
+  tick_turn_end,
+  tick_turn_start,
+} from './turn_effects.ts'
 import { on_enter } from './zones.ts'
 import { CONTRACT_CONSTANTS, TARGET_FILTERS } from './move_contract.gen.ts'
 import type {
@@ -303,6 +309,7 @@ export const run_until_player = ({
     runtime.contract.turn_seed = supplied?.seed ?? 0n
     runtime.contract.turn_slot = 0n
     runtime.contract.turn_casts = []
+    expire_turn_effects(runtime, actor)
     emit(runtime, 'turn_switched', { from, to: actor, round: runtime.contract.round, skipped, reason })
     skipped = []
     set_pools(runtime, actor, base_ap_of(runtime, actor), base_mp_of(runtime, actor), 'turn_refill', actor)

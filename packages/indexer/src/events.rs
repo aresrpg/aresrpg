@@ -242,6 +242,8 @@ events! {
         => |_: &PetFed| "evt:economy".to_string(),
 
     // ── loot boxes (grind-safe gacha, ruling 2026-08-11) ──
+    loot_box::LootBoxesOpened { box_template: Id, claim_ids: Vec<Id> }
+        => |_: &LootBoxesOpened| "evt:economy".to_string(),
     loot_box::LootBoxOpened { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
         => |_: &LootBoxOpened| "evt:economy".to_string(),
     loot_box::LootClaimed { box_template: Id, rolled_template: Id, amount: u32, opener: Addr }
@@ -353,6 +355,20 @@ mod tests {
         let routed = route("fight", "FightEnded", &without).unwrap().unwrap();
         assert!(routed.data["winner"].is_null());
         assert_eq!(routed.topic, format!("evt:fight:0x{}", "04".repeat(32)));
+    }
+
+    #[test]
+    fn batch_opening_routes_captured_move_event_with_ordered_claim_ids() {
+        // Native Move execution capture; provenance is retained with its wire bytes.
+        let capture: Value =
+            serde_json::from_str(include_str!("../tests/loot_boxes.native.json")).unwrap();
+        let bytes = hex::decode(capture["bcs_hex"].as_str().unwrap()).unwrap();
+        let routed = route("loot_box", "LootBoxesOpened", &bytes)
+            .unwrap()
+            .unwrap();
+        assert_eq!(routed.topic, "evt:economy");
+        assert_eq!(routed.data["box_template"], capture["box_template"]);
+        assert_eq!(routed.data["claim_ids"], capture["claim_ids"]);
     }
 
     #[test]

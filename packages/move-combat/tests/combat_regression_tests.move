@@ -84,8 +84,8 @@ fun mob_spell_numbers_scale_but_geometry_does_not() {
 }
 
 #[test]
-fun a_final_turn_buff_stays_visible_and_effective_until_that_turn_closes() {
-  assert!(combat::final_turn_buff_for_testing() == vector[8, 50, 2, 1, 0], 0);
+fun a_final_turn_buff_survives_until_next_start_without_inflating_future_ap() {
+  assert!(combat::final_turn_buff_for_testing() == vector[8, 50, 2, 1, 2, 50, 6, 0, 0], 0);
 }
 
 #[test]

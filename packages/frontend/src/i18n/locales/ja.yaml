@@ -1929,6 +1929,8 @@ characters_page:
     experience: '経験値'
     confirm: '確認'
     max: 'MAX'
+  use_amount: '使用する個数'
+  box_batch_limit: '一度に最大{{count}}個'
 spell_names:
   'Absorption': '吸収'
   'Absorptive Arrow': '吸収の矢'
@@ -2583,7 +2585,7 @@ spell_effects:
   active_remove: '{{stat}} −{{value}}'
   active_damage: '{{value}}ダメージ'
   active_invis: '透明'
-  active_chatiment: 'チャティマン · {{stat}} {{value}}/ターン · {{turns}}T'
+  active_chatiment: 'チャティマン · {{stat}} {{value}}/ターン · {{duration}}'
   active_turns: '{{count}}T'
   active_turn_range: '{{minimum}}～{{maximum}}T'
   short_strength: '力'
@@ -2596,6 +2598,7 @@ spell_effects:
   short_raw_damage: '被害'
   short_critical: '会心'
   short_stat: '能力'
+  expires_next_turn: '次のターンまで'
 
 ui:
   character: 'キャラクター'

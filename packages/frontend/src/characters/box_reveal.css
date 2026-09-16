@@ -404,3 +404,52 @@
     animation: boxreveal-fade 0.2s ease-out both !important;
   }
 }
+
+.boxreveal {
+  flex-direction: column;
+}
+.boxreveal__grid {
+  display: grid;
+  max-width: 100%;
+  overflow: auto;
+  padding: 24px;
+}
+.boxreveal__cell {
+  min-width: 0;
+}
+.boxreveal--batch .boxreveal__grid {
+  width: min(1100px, 100%);
+  max-height: calc(100dvh - 100px);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+.boxreveal--batch .boxreveal__stage {
+  width: 100%;
+  height: 170px;
+}
+.boxreveal--batch .boxreveal__card {
+  width: 100%;
+  max-width: 210px;
+  padding: 12px;
+  gap: 8px;
+}
+.boxreveal--batch .boxreveal__pet-art {
+  width: 96px;
+  height: 96px;
+}
+
+.boxreveal--batch .boxreveal__card-wrap {
+  gap: 10px;
+}
+.boxreveal--batch .boxreveal__pet-name {
+  font-size: 11px;
+}
+.boxreveal--batch .boxreveal__box,
+.boxreveal--batch .boxreveal__box-art {
+  width: 130px;
+  height: 130px;
+}
+.boxreveal--batch .boxreveal__label {
+  bottom: 0;
+  font-size: 9px;
+}

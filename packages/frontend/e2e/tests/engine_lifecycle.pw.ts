@@ -86,3 +86,24 @@ for (const frame_interval of [0, 500])
       await page.evaluate(() => window.stop_world_input())
     }
   })
+
+test('cached real models keep finite combat number and hover anchors', async ({ page }) => {
+  await page.goto('/e2e/fixtures/engine_lifecycle.html')
+  await page.waitForFunction(() => typeof window.probe_model_anchors === 'function')
+  const result = await page.evaluate(() => window.probe_model_anchors())
+  for (const row of result.rows) {
+    expect(row.height).toBeGreaterThan(0)
+    expect(row.anchor?.every(Number.isFinite)).toBe(true)
+    expect(row.crown?.every(Number.isFinite)).toBe(true)
+    expect(Math.abs(row.anchor![0]! - row.expected_x)).toBeLessThan(2)
+    expect(Math.abs(row.crown![0]! - row.expected_x)).toBeLessThan(2)
+    expect(row.label_visible).toBe(true)
+    expect(row.label_transform).not.toContain('NaN')
+  }
+  for (const float of result.floats) {
+    expect(float.played).toBe(true)
+    expect(float.visible).toBe(true)
+    expect(float.projected.every((value) => Math.abs(value) <= 1)).toBe(true)
+  }
+  expect(result.floats).toHaveLength(4)
+})

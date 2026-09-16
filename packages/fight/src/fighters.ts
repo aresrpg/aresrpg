@@ -56,7 +56,12 @@ export const effective = (base: bigint, folded: bigint): bigint => saturating_su
 
 const sum_rows = (runtime: FightReadState, seat: bigint, kind: bigint, stat: bigint): bigint =>
   runtime.contract.fighters[Number(seat)].effects
-    .filter((row) => row.kind === kind && (stat === STATS.any || row.stat === stat))
+    .filter(
+      (row) =>
+        row.kind === kind &&
+        (stat === STATS.any || row.stat === stat) &&
+        (row.turns_left > 0n || (stat !== STATS.ap && stat !== STATS.mp))
+    )
     .reduce((total, row) => total + row.value, 0n)
 
 const row_adjusted = (runtime: FightReadState, seat: bigint, base: bigint, stat: bigint): bigint =>

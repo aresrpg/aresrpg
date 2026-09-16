@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { KINDS, STATS } from '../src/fighters.ts'
-import { project_spell_turn, spell_area_cells } from '../src/spell_turn_projection.ts'
+import { project_spell_turn, project_weapon_turn, spell_area_cells } from '../src/spell_turn_projection.ts'
 
 import { create_fixture } from './helpers.ts'
 
@@ -70,8 +70,8 @@ describe('next spell turn projection', () => {
     expect(first).toEqual(second)
     expect(first?.effects).toHaveLength(2)
     expect(first?.effects[0]?.value).toBe(first?.effects[0]?.value_max)
-    expect(first?.effects[0]?.value).toBeGreaterThanOrEqual(30n)
-    expect(first?.effects[0]?.value).toBeLessThanOrEqual(50n)
+    expect(first?.effects[0]?.value).toBeGreaterThanOrEqual(60n)
+    expect(first?.effects[0]?.value).toBeLessThanOrEqual(100n)
     expect(first?.effects.map(({ critical_only }) => critical_only)).toEqual([false, true])
   })
 
@@ -102,6 +102,58 @@ describe('next spell turn projection', () => {
 
     const projection = project_spell_turn(checkpoint, 0n, 'slash')
 
-    expect(projection?.effects[1]).toMatchObject({ value: 10n, value_max: 20n })
+    expect(projection?.effects[1]).toMatchObject({ value: 20n, value_max: 40n })
   })
+})
+
+test('turn card damage includes allocated stats, folded gear and active buffs against zero resistance', () => {
+  const checkpoint = structuredClone(create_fixture().checkpoint)
+  const player = checkpoint.sources.players['0xc1']!
+  player.folded_stats.strength = 32818n // +50 equipment strength
+  player.folded_stats.raw_damage = 32772n // +4 damage
+  checkpoint.contract.fighters[0]!.effects = [
+    { kind: KINDS.add, stat: STATS.strength, value: 25n, turns_left: 2n, source: 0n, element: '' },
+    { kind: KINDS.add, stat: STATS.power, value: 25n, turns_left: 2n, source: 0n, element: '' },
+  ]
+  const level = checkpoint.sources.spells.slash!.levels[0]!
+  level.effects = [
+    { ...level.effects[0]!, kind: KINDS.trap, value: 0n, value_max: 0n, area_shape: 1n, area_size: 2n },
+    { ...level.effects[0]!, value: 7n, value_max: 16n, area_shape: 1n, area_size: 2n },
+    { ...level.effects[0]!, kind: KINDS.steal, stat: STATS.mp, value: 2n, value_max: 2n },
+  ]
+  const before = structuredClone(checkpoint)
+  const turn = project_spell_turn(checkpoint, 0n, 'slash')!
+  expect(turn.effects[0]).toMatchObject({ kind: KINDS.trap, area_size: 2n })
+  expect(turn.effects[1]).toMatchObject({ value: 25n, value_max: 52n })
+  expect(turn.effects[2]).toMatchObject({ value: 2n, value_max: 2n })
+  expect(checkpoint).toEqual(before)
+})
+
+test('critical damage and life steal use the current sheet without scaling percentages or self damage', () => {
+  const checkpoint = structuredClone(create_fixture().checkpoint)
+  const level = checkpoint.sources.spells.slash!.levels[0]!
+  const base = level.effects[0]!
+  level.crit_1_in = 1n
+  level.crit_effects = [
+    { ...base, value: 30n, value_max: 30n },
+    { ...base, kind: KINDS.steal, stat: STATS.hp, value: 10n, value_max: 10n },
+    { ...base, kind: KINDS.pct_life, value: 10n, value_max: 10n },
+    { ...base, kind: KINDS.caster_damage, value: 10n, value_max: 10n },
+  ]
+  const turn = project_spell_turn(checkpoint, 0n, 'slash')!
+  expect(turn.critical).toBe(true)
+  expect(turn.effects.map(({ value }) => value)).toEqual([60n, 20n, 10n, 10n])
+  checkpoint.sources.players['0xc1']!.strength = 200n
+  expect(project_spell_turn(checkpoint, 0n, 'slash')!.effects[0]!.value).toBe(90n)
+})
+
+test('weapon card damage includes equipment stats once on top of the selected weapon branch', () => {
+  const checkpoint = structuredClone(create_fixture().checkpoint)
+  const player = checkpoint.sources.players['0xc1']!
+  player.weapon = { category: 'sword', damages: [{ element: 'earth', from: 10n, to: 10n }] }
+  const with_stats = project_weapon_turn(checkpoint, 0n)!
+  player.strength = 0n
+  const without_stats = project_weapon_turn(checkpoint, 0n)!
+  expect(with_stats.critical).toBe(without_stats.critical)
+  expect(with_stats.effects[0]!.value).toBe(without_stats.effects[0]!.value * 2n)
 })

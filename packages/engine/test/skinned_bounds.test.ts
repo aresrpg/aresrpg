@@ -135,3 +135,31 @@ test('morph targets retain the full calculation even after a static hull was cac
     dispose()
   }
 })
+
+test('combat and hover anchors translate once when an unmeasured skinned model mounts away from origin', async () => {
+  const models = [rig(), rig()]
+  let index = 0
+  const layer = create_entity_layer({
+    scene: new Scene(),
+    load_model: async () => {
+      const { mesh, dispose } = models[index++]!
+      return { root: mesh, clips: [], min_y: -1, dispose }
+    },
+  })
+  try {
+    layer.set(
+      [0, 100].map((x) => ({
+        id: String(x),
+        kind: 'mob' as const,
+        model_url: 'rig.glb',
+        anchor: { kind: 'world' as const, position: [x, 0, 0] as const },
+        facing: { kind: 'yaw' as const, yaw: 0 },
+      }))
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(layer.world_anchor('100')!.x - layer.world_anchor('0')!.x).toBeCloseTo(100)
+    expect(layer.live_crown('100')!.x - layer.live_crown('0')!.x).toBeCloseTo(100)
+  } finally {
+    layer.dispose()
+  }
+})

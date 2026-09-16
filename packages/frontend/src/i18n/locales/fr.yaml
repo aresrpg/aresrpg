@@ -1958,6 +1958,8 @@ characters_page:
     experience: 'Expérience'
     confirm: 'Confirmer'
     max: 'MAX'
+  use_amount: 'Quantité à utiliser'
+  box_batch_limit: 'Jusqu’à {{count}} par ouverture'
 spell_names:
   'Absorption': 'Absorption'
   'Absorptive Arrow': 'Flèche Absorbante'
@@ -2612,7 +2614,7 @@ spell_effects:
   active_remove: '−{{value}} {{stat}}'
   active_damage: '{{value}} dégâts'
   active_invis: 'Invisible'
-  active_chatiment: 'CHÂTIMENT · {{value}} {{stat}}/TOUR · {{turns}}T'
+  active_chatiment: 'CHÂTIMENT · {{value}} {{stat}}/TOUR · {{duration}}'
   active_turns: '{{count}}T'
   active_turn_range: '{{minimum}}–{{maximum}}T'
   short_strength: 'FOR'
@@ -2625,6 +2627,7 @@ spell_effects:
   short_raw_damage: 'DMG'
   short_critical: 'CRIT'
   short_stat: 'STAT'
+  expires_next_turn: 'Jusqu’au prochain tour'
 
 ui:
   character: 'Personnage'

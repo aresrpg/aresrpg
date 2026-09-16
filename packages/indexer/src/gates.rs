@@ -113,6 +113,7 @@ mod tests {
         ("pet", "PetFed"),
         ("loot_box", "LootTableSet"),
         ("loot_box", "LootBoxOpened"),
+        ("loot_box", "LootBoxesOpened"),
         ("loot_box", "LootClaimed"),
         ("mastery", "MasteryUpdated"),
     ];

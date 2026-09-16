@@ -7,7 +7,7 @@ import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import { useText } from '../../i18n/useText.ts'
 import type { CopyText } from '../../i18n/copy.ts'
-import { active_effect_text, effect_stat_text } from '../../encyclopedia/spell_effect_text.ts'
+import { active_duration_text, active_effect_text, effect_stat_text } from '../../encyclopedia/spell_effect_text.ts'
 import { EffectLine } from '../../components/EffectLine.tsx'
 import type { SpellEffect } from '../../content/catalog.ts'
 import { spell_effect_line_view } from '../../encyclopedia/SpellCardEffects.tsx'
@@ -30,7 +30,7 @@ export const active_effect_lines = (effects: readonly ActiveEffect[]): readonly 
         kind: effect.kind,
         element: effect.element,
         value: effect.value,
-        turns: effect.turns_left > 0n ? effect.turns_left : 1n,
+        turns: effect.turns_left,
         stat: effect.stat,
         key: `${effect.source}:${effect.kind}:${effect.stat}:${index}`,
       })
@@ -96,13 +96,17 @@ const grouped_effect_lines = (
       turns_max: duration_totals.at(-1)?.turns ?? duration_totals[0].turns,
       key: rows.map(({ key }) => key).join('|'),
       breakdown: duration_totals
-        .map(
-          ({ turns, value }) =>
-            `${signed_value(first.kind, value)} / ${text('spell_effects.active_turns', { count: Number(turns) })}`
-        )
+        .map(({ turns, value }) => `${signed_value(first.kind, value)} / ${active_duration_text(Number(turns), text)}`)
         .join(' · '),
     })
   })
+}
+
+const duration_label = (effect: FightEffectLineView, text: CopyText): string => {
+  if (!effect.turns_max || effect.turns_max === effect.turns) return active_duration_text(Number(effect.turns), text)
+  if (effect.turns === 0n)
+    return `${active_duration_text(0, text)} · ${active_duration_text(Number(effect.turns_max), text)}`
+  return text('spell_effects.active_turn_range', { minimum: Number(effect.turns), maximum: Number(effect.turns_max) })
 }
 
 const compact_effect_line = (
@@ -113,15 +117,7 @@ const compact_effect_line = (
   return {
     ...view,
     ...active_effect_text(spell_effect(effect), text),
-    meta:
-      effect.kind === EFFECT_KINDS.chatiment
-        ? null
-        : effect.turns_max && effect.turns_max !== effect.turns
-          ? text('spell_effects.active_turn_range', {
-              minimum: Number(effect.turns),
-              maximum: Number(effect.turns_max),
-            })
-          : text('spell_effects.active_turns', { count: Number(effect.turns) }),
+    meta: effect.kind === EFFECT_KINDS.chatiment ? null : duration_label(effect, text),
     title:
       [
         effect.kind === EFFECT_KINDS.chatiment

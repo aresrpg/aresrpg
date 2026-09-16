@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { create_runtime } from '../src/runtime.ts'
-import { tick_turn_end, tick_turn_start } from '../src/turn_effects.ts'
+import { expire_turn_effects, tick_turn_end, tick_turn_start } from '../src/turn_effects.ts'
 import { tick_board_zones } from '../src/zones.ts'
 
 import { create_fixture } from './helpers.ts'
@@ -43,11 +43,14 @@ describe('render identities', () => {
     const [fighter_effects] = runtime.render_ids.effects
     const [, remaining_id] = fighter_effects
 
+    expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
     tick_turn_end(runtime, 0n)
+    expire_turn_effects(runtime, 0n)
     tick_turn_start(runtime, 0n)
     tick_turn_end(runtime, 0n)
 
+    expire_turn_effects(runtime, 0n)
     expect(runtime.render_actions).toContainEqual({
       type: 'effect_expired',
       payload: { target: 0n, effect_id: remaining_id, kind: 4n, channel: 0n },

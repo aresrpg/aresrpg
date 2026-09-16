@@ -856,6 +856,11 @@
   object-fit: cover;
 }
 
+.fight-hud__spell > img[data-item-type] {
+  object-fit: contain;
+  padding: 3px;
+}
+
 .fight-hud__spell > b {
   position: absolute;
   z-index: 2;

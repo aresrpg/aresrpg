@@ -1538,6 +1538,34 @@ export const open_loot_box = (
   })
 
 /**
+ * `api::open_loot_boxes` — TERMINAL (&Random): last command of its transaction.
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ * @arg box_item_id — ID
+ * @arg box_template — &ItemTemplate
+ * @arg count — u32
+ */
+export const open_loot_boxes = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { kiosk: Resolvable; personal: Resolvable; box_item_id: string; box_template: Resolvable; count: number }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::open_loot_boxes`,
+    arguments: [
+      ctx.pin(tx, 'loot_registry', false),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pure.id(tx, args.box_item_id),
+      ctx.obj(tx, args.box_template, false),
+      ctx.pure.u32(tx, args.count),
+      ctx.pin(tx, 'item_protected_policy', false),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
  * `api::claim_loot` — TERMINAL (&Random): last command of its transaction.
  * @arg claim — BoxClaim
  * @arg rolled_template — &ItemTemplate
@@ -2682,6 +2710,7 @@ export const DOORS = {
   redeem_rune: { params: ['claim', 'template', 'stat', 'tier', 'existing', 'kiosk', 'cap'], terminal: false },
   discard_crush_claim: { params: ['claim'], terminal: false },
   open_loot_box: { params: ['kiosk', 'personal', 'box_item_id', 'box_template'], terminal: true },
+  open_loot_boxes: { params: ['kiosk', 'personal', 'box_item_id', 'box_template', 'count'], terminal: true },
   claim_loot: { params: ['claim', 'rolled_template', 'existing', 'kiosk', 'personal'], terminal: true },
   burn_item: { params: ['kiosk', 'cap', 'item_id', 'amount'], terminal: false },
   redeem_giftcard: { params: ['card', 'template', 'existing', 'kiosk', 'cap'], terminal: false },

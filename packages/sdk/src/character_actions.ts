@@ -6,6 +6,7 @@ import type { KioskOwnerCap } from '@mysten/kiosk'
 import { craft_stackable_batch_limit, type CharacteristicName } from '@aresrpg/immutable'
 import { zone_of } from '@aresrpg/protocol'
 
+import { box_rolls, LOOT_BOX_BATCH_LIMIT, type BoxRoll } from './loot_boxes.ts'
 import { consumable_action } from './consumables.ts'
 import type { SDK } from './client.ts'
 import { changed_object_ids, created_object_id, spending_receipt, receipt_digest, receipt_event } from './cache.ts'
@@ -223,24 +224,26 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return spending_receipt(receipt)
     },
 
-    /** Burn a box and return its durable reveal claim. */
-    open_loot_box: async ({
+    /** Burn a reviewed quantity and return each durable reveal claim. */
+    open_loot_boxes: async ({
       box_item_id,
       box_item_type,
+      count,
       custody,
       merge_sources = [],
     }: {
       box_item_id: string
       box_item_type: string
+      count: number
       merge_sources?: readonly string[]
       custody?: KioskCustody
-    }): Promise<
-      Readonly<ReturnType<typeof spending_receipt> & { claim_id: string; rolled_template: string; amount: number }>
-    > => {
+    }): Promise<Readonly<ReturnType<typeof spending_receipt> & { rolls: readonly BoxRoll[] }>> => {
+      if (!Number.isInteger(count) || count < 1 || count > LOOT_BOX_BATCH_LIMIT)
+        throw new Error('Invalid loot-box batch amount')
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const box_template = item_template_id(content_root, seed_package_original, box_item_type)
       const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) => sdk.doors.open_loot_box(tx, { kiosk, personal, box_item_id, box_template }),
+        (tx, kiosk, personal) => sdk.doors.open_loot_boxes(tx, { kiosk, personal, box_item_id, box_template, count }),
         {
           include: { objectTypes: true },
           custody,
@@ -248,15 +251,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
           merges: [{ target_id: box_item_id, source_ids: merge_sources }],
         }
       )
-      const event = receipt_event(receipt, '::loot_box::LootBoxOpened')
-      const claim_id = created_object_id(receipt, '::loot_box::BoxClaim')
-      if (!event || !claim_id) throw new Error('The open receipt carried no LootBoxOpened reveal')
-      return Object.freeze({
-        ...spending_receipt(receipt),
-        claim_id,
-        rolled_template: event_string(event, 'rolled_template'),
-        amount: event_integer(event, 'amount'),
-      })
+      return Object.freeze({ ...spending_receipt(receipt), rolls: box_rolls(receipt, box_template, count) })
     },
 
     /** Redeem a BoxClaim: mint the rolled item (stats roll here for gear) and burn the claim. */

@@ -844,6 +844,7 @@ fun advance_to_player(
       state.turn_seed = turn_seeds.remove(0);
       state.turn_cast_index = 0;
       state.turn_casts = vector[];
+      expire_turn_effects(state, fighter);
       state.fighters[fighter].ap = state.fighters[fighter].stats.base_ap;
       state.fighters[fighter].mp = state.fighters[fighter].stats.base_mp;
       apply_pools(state, fighter);
@@ -893,9 +894,17 @@ fun tick_turn_end(state: &mut State, fighter: u64) {
   while (index < effects.length()) {
     let mut effect = effects[index];
     if (effect.turns_left > 0) effect.turns_left = effect.turns_left - 1;
-    if (effect.turns_left > 0) kept.push_back(effect);
+    kept.push_back(effect);
     index = index + 1;
   };
+  state.fighters[fighter].effects = kept;
+}
+
+// Zero means the last usable turn ended; the effect remains active until this next start.
+fun expire_turn_effects(state: &mut State, fighter: u64) {
+  let effects = state.fighters[fighter].effects;
+  let mut kept = vector[];
+  effects.do!(|effect| if (effect.turns_left > 0) kept.push_back(effect));
   state.fighters[fighter].effects = kept;
 }
 
@@ -965,7 +974,7 @@ fun adjusted_stat(state: &State, fighter: u64, base: u64, stat: u8): u64 {
   let mut index = 0;
   while (index < effects.length()) {
     let effect = &effects[index];
-    if (effect.stat == stat) {
+    if (effect.stat == stat && (effect.turns_left > 0 || (stat != STAT_AP && stat != STAT_MP))) {
       if (effect.kind == K_ADD) bonus = bonus + effect.value
       else if (effect.kind == K_REMOVE || effect.kind == K_STEAL || effect.kind == K_FIXED_REMOVE)
         malus = malus + effect.value;
@@ -2168,6 +2177,11 @@ public fun final_turn_buff_for_testing(): vector<u64> {
   ];
   tick_turn_end(&mut state, 0);
   answer.push_back(state.fighters[0].effects.length());
+  answer.push_back(sheet_of(&state, 0).strength);
+  answer.push_back(adjusted_stat(&state, 0, BASE_AP, STAT_AP));
+  expire_turn_effects(&mut state, 0);
+  answer.push_back(state.fighters[0].effects.length());
+  answer.push_back(sheet_of(&state, 0).strength);
   destroy(state);
   answer
 }
@@ -2581,11 +2595,13 @@ public fun pool_removal_semantics_for_testing(): vector<u64> {
   let fixed_value = state.fighters[1].effects[0].value;
   tick_turn_end(&mut state, 1);
   state.fighters[1].ap = BASE_AP;
+  expire_turn_effects(&mut state, 1);
   apply_pools(&mut state, 1);
   let fixed_next = state.fighters[1].ap;
   tick_turn_end(&mut state, 1);
   tick_turn_end(&mut state, 1);
   state.fighters[1].ap = BASE_AP;
+  expire_turn_effects(&mut state, 1);
   apply_pools(&mut state, 1);
   let answer = vector[
     inactive_rows, inactive_value, instant_ap, instant_rows,
@@ -2754,6 +2770,7 @@ public fun chatiment_caps_for_testing(): vector<u64> {
     index = index + 1;
   };
   tick_turn_end(&mut state, 1);
+  expire_turn_effects(&mut state, 1);
   let mut after_five = 0;
   index = 0;
   while (index < state.fighters[1].effects.length()) {

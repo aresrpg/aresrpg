@@ -1928,6 +1928,8 @@ characters_page:
     experience: 경험치
     confirm: 확인
     max: 최대
+  use_amount: '사용 수량'
+  box_batch_limit: '한 번에 최대 {{count}}개'
 spell_names:
   Absorption: 흡수
   Absorptive Arrow: 흡수 화살
@@ -2571,7 +2573,7 @@ spell_effects:
   active_remove: '{{stat}} −{{value}}'
   active_damage: '피해 {{value}}'
   active_invis: '투명'
-  active_chatiment: '응징 · {{value}} {{stat}}/턴 · {{turns}}턴'
+  active_chatiment: '응징 · {{value}} {{stat}}/턴 · {{duration}}'
   active_turns: '{{count}}턴'
   active_turn_range: '{{minimum}}~{{maximum}}턴'
   short_strength: '힘'
@@ -2584,6 +2586,7 @@ spell_effects:
   short_raw_damage: '피해'
   short_critical: '치명'
   short_stat: '능력'
+  expires_next_turn: '다음 턴까지'
 ui:
   character: 캐릭터
   spell_action: '{{name}}, 레벨 {{level}}, {{cost}} {{unit}}'
