@@ -48,13 +48,19 @@ export async function get_market_slice(
   const [snapshot] = await graph.read(
     `
     MATCH (u:User)-[:OWNS]->(k:Kiosk)<-[l:LISTED_IN {exclusive: false}]-(asset)
-    WHERE (asset:Item AND asset.category IN $categories) OR (asset:Character AND $characters)
+    WHERE (asset:Item AND asset.category IN $categories AND ($item_type IS NULL OR asset.item_type = $item_type))
+      OR (asset:Character AND $characters)
     WITH asset, k, u, l ORDER BY l.at_ms DESC LIMIT ${MARKET_WINDOW_SIZE}
     WITH collect({asset: asset, kinds: labels(asset), price_mist: l.price, at_ms: l.at_ms,
       kiosk: k.id, market_version: k.market_version, version: l.version, seller: u.address}) AS listings
     OPTIONAL MATCH (previous:Kiosk) WHERE previous.id IN $kiosks
     RETURN listings, collect({kiosk: previous.id, market_version: previous.market_version}) AS kiosks`,
-    { categories: [...observation.categories], characters: observation.characters, kiosks: [...kiosks] }
+    {
+      categories: [...observation.categories],
+      characters: observation.characters,
+      item_type: observation.item_type ?? null,
+      kiosks: [...kiosks],
+    }
   )
   return shape_market_snapshot([...(snapshot?.listings ?? []), ...(snapshot?.kiosks ?? [])])
 }
@@ -63,15 +69,22 @@ export async function get_market_counts(graph: Graph): Promise<MarketCounts> {
   const [items, characters] = await Promise.all([
     graph.read(
       `MATCH (:User)-[:OWNS]->(:Kiosk)<-[:LISTED_IN {exclusive: false}]-(asset:Item)
-       RETURN asset.category AS category, count(asset) AS count`
+       RETURN asset.category AS category, asset.item_type AS item_type, count(asset) AS count`
     ),
     graph.read(
       `MATCH (:User)-[:OWNS]->(:Kiosk)<-[:LISTED_IN {exclusive: false}]-(asset:Character)
        RETURN count(asset) AS count`
     ),
   ])
-  const categories = Object.fromEntries(
-    items.flatMap(({ category, count }) => (typeof category === 'string' ? [[category, Number(count)] as const] : []))
-  ) as MarketCounts['categories']
-  return Object.freeze({ categories: Object.freeze(categories), characters: Number(characters[0]?.count ?? 0) })
+  const categories = items.reduce<Record<string, number>>((totals, { category, count }) => {
+    return typeof category === 'string' ? { ...totals, [category]: (totals[category] ?? 0) + Number(count) } : totals
+  }, {})
+  const item_counts = Object.fromEntries(
+    items.flatMap(({ item_type, count }) => (typeof item_type === 'string' ? [[item_type, Number(count)]] : []))
+  )
+  return Object.freeze({
+    categories: Object.freeze(categories),
+    items: Object.freeze(item_counts),
+    characters: Number(characters[0]?.count ?? 0),
+  })
 }

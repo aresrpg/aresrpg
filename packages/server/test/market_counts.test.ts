@@ -10,11 +10,16 @@ test('market counts cover every public category and characters outside the activ
     read: async (query: string) =>
       query.includes('asset:Item')
         ? [
-            { category: 'hat', count: 2 },
-            { category: 'resource', count: 6 },
+            { category: 'hat', item_type: 'hat_a', count: 2 },
+            { category: 'resource', item_type: 'wood', count: 201 },
+            { category: 'resource', item_type: 'ore', count: 6 },
           ]
         : [{ count: 3 }],
   }
 
-  expect(await get_market_counts(graph as never)).toEqual({ categories: { hat: 2, resource: 6 }, characters: 3 })
+  expect(await get_market_counts(graph as never)).toEqual({
+    categories: { hat: 2, resource: 207 },
+    items: { hat_a: 2, wood: 201, ore: 6 },
+    characters: 3,
+  })
 })

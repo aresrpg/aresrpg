@@ -399,13 +399,8 @@ marketplace_page:
   prices_unavailable: 'Price history unavailable. Retrying automatically.'
   prices_empty: 'No completed sales in this period.'
   prices_empty_day: 'No completed sales'
-  prices_weighted: 'Weighted by units sold · Daily averages'
   prices_units: '{{units}} units sold'
-  prices_since: 'Tracking since {{date}} · UTC'
   prices_inspect: 'Daily unit prices. Point or touch to inspect.'
-  prices_table: 'Show daily prices'
-  prices_date: 'Date'
-  prices_quantity: 'Units'
   volume_24h: '24h volume'
   volume_30d: 30d volume
   volume_window: Public marketplace sales in the last {{window}}, before fees.

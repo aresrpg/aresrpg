@@ -25,7 +25,7 @@ use aresrpg_seed::registry::{Self, Registry};
 use aresrpg_seed::item_rows::{Self, ItemTemplate};
 use aresrpg::{
   consumable,
-  item::{Self, Item},
+  item::{Self, Item, PM},
   protected_policy::AresRPG_TransferPolicy,
 };
 use aresrpg_math::loot_table::{Self, LootEntry};
@@ -204,12 +204,26 @@ public(package) fun claim_loot(
   generator: &mut RandomGenerator,
   ctx: &mut TxContext,
 ) {
-  let BoxClaim { id, box_template, rolled_template: rolled_tid, amount } = claim;
-  assert!(item_rows::template_id(rolled_template) == rolled_tid, EClaimMismatch);
-  let loot = item::mint(rolled_template, amount, generator, ctx); // any item type — stats roll here if it has ranges
-  item::deposit(kiosk, cap, item_policy, existing, loot);
-  event::emit(LootClaimed { box_template, rolled_template: rolled_tid, amount, opener: ctx.sender() });
-  id.delete();
+  assert!(item_rows::template_id(rolled_template) == claim.rolled_template, EClaimMismatch);
+  claim_batch(vector[claim], vector[item::prepare_plan(rolled_template, existing)], kiosk, cap, item_policy, generator, ctx);
+}
+
+/// Every claim is consumed in one terminal call; plans are authenticated before randomness.
+public(package) fun claim_batch(
+  mut claims: vector<BoxClaim>, mut plans: vector<PM>, kiosk: &mut Kiosk, cap: &KioskOwnerCap,
+  item_policy: &TransferPolicy<Item>, generator: &mut RandomGenerator, ctx: &mut TxContext,
+) {
+  assert!(!claims.is_empty() && claims.length() <= (MAX_BOX_BATCH as u64), EBatchAmount);
+  assert!(claims.length() == plans.length(), EClaimMismatch);
+  claims.reverse();
+  plans.reverse();
+  while (!claims.is_empty()) {
+    let BoxClaim { id, box_template, rolled_template, amount } = claims.pop_back();
+    item::deliver_claim(plans.pop_back(), rolled_template, amount, kiosk, cap, item_policy, generator, ctx);
+    event::emit(LootClaimed { box_template, rolled_template, amount, opener: ctx.sender() });
+    id.delete();
+  };
+  claims.destroy_empty();
 }
 
 // ╔════════════════ [ Internals (pure) ] ═════════════════════════════════════ ]

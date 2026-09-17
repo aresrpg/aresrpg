@@ -399,13 +399,8 @@ marketplace_page:
   prices_unavailable: 'Historique indisponible. Nouvelle tentative automatique.'
   prices_empty: 'Aucune vente réalisée sur cette période.'
   prices_empty_day: 'Aucune vente réalisée'
-  prices_weighted: 'Pondéré par les quantités vendues · Moyennes journalières'
   prices_units: '{{units}} unités vendues'
-  prices_since: 'Suivi depuis le {{date}} · UTC'
   prices_inspect: 'Prix unitaires journaliers. Survolez ou touchez pour consulter.'
-  prices_table: 'Afficher les prix journaliers'
-  prices_date: 'Date'
-  prices_quantity: 'Unités'
   volume_24h: 'Volume sur 24 h'
   volume_30d: Volume sur 30 j
   volume_window: Ventes publiques du marché sur les dernières {{window}}, hors frais.

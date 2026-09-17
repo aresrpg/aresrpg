@@ -80,7 +80,7 @@ export type MarketplaceState = Readonly<{
 
 export type MarketplaceInput =
   | PriceHistoryInput
-  | Readonly<{ type: 'market/group_selected'; group: MarketGroup }>
+  | Readonly<{ type: 'market/group_selected'; group: MarketGroup; item_type?: string }>
   | Readonly<{
       type: 'market/list_requested'
       listing: Omit<ListingRow, 'version'>
@@ -171,6 +171,7 @@ export const market_sale_notice = (
 const same_observation = (left: MarketObservation | null, right: MarketObservation): boolean =>
   !!left &&
   left.characters === right.characters &&
+  left.item_type === right.item_type &&
   left.categories.length === right.categories.length &&
   left.categories.every((category, index) => category === right.categories[index])
 
@@ -178,7 +179,9 @@ const listing_is_observed = (observation: MarketObservation | null, listing: Rea
   !!observation &&
   (listing.kind === 'character'
     ? observation.characters
-    : !!listing.category && (observation.categories as readonly string[]).includes(listing.category))
+    : !!listing.category &&
+      (observation.categories as readonly string[]).includes(listing.category) &&
+      (!observation.item_type || listing.item_type === observation.item_type))
 
 const fold_catalogue = (
   market: MarketplaceState,
@@ -317,10 +320,11 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return next === market ? state : Object.freeze({ ...state, marketplace: next })
   }
   if (input.type === 'market/group_selected') {
-    if (market.group === input.group && market.observation !== null) return state
+    const observation = { ...market_observation(input.group), item_type: input.item_type }
+    if (market.group === input.group && same_observation(market.observation, observation)) return state
     return Object.freeze({
       ...state,
-      marketplace: Object.freeze({ ...market, group: input.group, observation: market_observation(input.group) }),
+      marketplace: Object.freeze({ ...market, group: input.group, observation }),
     })
   }
   if (

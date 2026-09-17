@@ -37,7 +37,7 @@ test('stackable listings still show only the cheapest ask for each fixed lot', a
   await expect(page.locator('[data-pending-listing]')).toHaveAttribute('data-pending-listing', '0xitem1')
 })
 
-test('stackable price history uses TradingView with responsive columns, exact tiny prices, and range controls', async ({
+test('stackable price history uses TradingView with responsive columns and range controls without footer clutter', async ({
   page,
 }) => {
   const errors: string[] = []
@@ -50,17 +50,15 @@ test('stackable price history uses TradingView with responsive columns, exact ti
   const lot_bounds = await lots.boundingBox()
   const chart_bounds = await chart.boundingBox()
   expect(chart_bounds!.x).toBeGreaterThan(lot_bounds!.x + lot_bounds!.width)
-  await chart.getByText('Show daily prices', { exact: true }).click()
-  await expect(chart.locator('tbody tr')).toHaveCount(28)
-  await expect(chart.locator('tbody tr').first()).toContainText('0.000000000001')
+  await expect(chart.getByText('Show daily prices', { exact: true })).toHaveCount(0)
+  await expect(chart.getByText(/Weighted by units|Tracking since/)).toHaveCount(0)
   await chart.getByRole('button', { name: '7D', exact: true }).click()
-  await expect(chart.locator('tbody tr')).toHaveCount(7)
+  await expect(chart.getByRole('button', { name: '7D', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.evaluate(() => window.dispatchEvent(new Event('market-price-fixture-update')))
-  await expect(chart.locator('tbody tr').last()).toContainText('0.000000000002')
   await expect(chart.locator('canvas').first()).toBeVisible()
 
   await chart.getByRole('button', { name: '1Y', exact: true }).click()
-  await expect(chart.locator('tbody tr')).toHaveCount(28)
+  await expect(chart.getByRole('button', { name: '1Y', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await page.setViewportSize({ width: 736, height: 1080 })
   await expect(async () => {
     const left = await lots.boundingBox()
@@ -68,6 +66,14 @@ test('stackable price history uses TradingView with responsive columns, exact ti
     expect(right!.y).toBeGreaterThan(left!.y + left!.height)
   }).toPass()
   expect(errors).toEqual([])
+})
+
+test('items outside the latest listing window remain selectable and fetch their own asks', async ({ page }) => {
+  await page.goto('/e2e/fixtures/marketplace.html?stackable&all-types')
+  const name = await page.locator('body').getAttribute('data-older-item')
+  await page.locator('[data-marketplace-template-options]').getByRole('button', { name: name!, exact: true }).click()
+  await page.locator('[data-marketplace-listings]').getByRole('button', { name: 'Buy', exact: true }).click()
+  await expect(page.locator('[data-pending-listing]')).toHaveAttribute('data-pending-listing', '0xolder')
 })
 
 test('untraded stackables show an empty period without inventing a price', async ({ page }) => {

@@ -10,7 +10,7 @@
 // the session. Failures are ONE loud toast each; the claim survives on-chain and retries
 // explicitly from inventory after an unsuccessful automatic attempt. prefers-reduced-motion collapses the celebration.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
 
@@ -89,7 +89,15 @@ export const BoxReveal = ({
         if (read_app_state().session.wallet !== wallet) return
         dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
         // the fold lands the claim — the SILENT claimer settles it during the celebration
-        rolls.forEach(({ claim_id }) => dispatch_app({ type: 'inventory/box_opened', box_item_id: box.id, claim_id }))
+        dispatch_app({
+          type: 'inventory/boxes_opened',
+          claims: rolls.map(({ claim_id, rolled_template, amount }) => ({
+            id: claim_id,
+            kind: 'box',
+            rolled_template,
+            amount,
+          })),
+        })
         // the event names the template — resolve it PURELY off the authored catalog
         const results = rolls.map(({ claim_id, rolled_template, amount }) => {
           const item_type = rolled_item_types().get(rolled_template)
@@ -158,6 +166,14 @@ export const BoxReveal = ({
       label={t('reveal_eyebrow')}
       className={`boxreveal${count > 1 ? ' boxreveal--batch' : ''}`}
       data-phase={phase}
+      style={
+        {
+          '--columns': Math.ceil(Math.sqrt(count * 1.5)),
+          '--rows': Math.ceil(count / Math.ceil(Math.sqrt(count * 1.5))),
+          '--mobile-columns': Math.ceil(Math.sqrt(count / 1.5)),
+          '--mobile-rows': Math.ceil(count / Math.ceil(Math.sqrt(count / 1.5))),
+        } as CSSProperties
+      }
       onClick={() => (animating ? skip() : dismiss())}
     >
       <div className="boxreveal__grid">

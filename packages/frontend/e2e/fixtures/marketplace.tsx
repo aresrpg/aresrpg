@@ -18,6 +18,9 @@ import '../../src/marketplace/marketplace.css'
 const copy = await load_app_copy('en')
 const stackable = new URLSearchParams(location.search).has('stackable')
 const item = content_catalog.items.find(({ category }) => category === (stackable ? 'resource' : 'hat'))!
+const older_item = content_catalog.items.find(
+  (candidate) => candidate.category === item.category && candidate.item_type !== item.item_type
+)!
 const group = stackable ? 'RESOURCES' : 'EQUIPMENT'
 const listings: ListingRow[] = [1, 2, 3].map((index) => ({
   ...item,
@@ -44,7 +47,7 @@ window.addEventListener('market-fixture-remove-cheapest', () => {
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
-      observation: market_observation(group),
+      observation: read_app_state().marketplace.observation!,
       listings: listings.filter(({ id }) => id !== '0xduplicate'),
       kiosk_versions: { '0xkiosk': '2' },
     },
@@ -74,6 +77,20 @@ dispatch_app({
     kiosk_versions: { '0xkiosk': '1' },
   },
 })
+if (new URLSearchParams(location.search).has('all-types')) {
+  document.body.dataset.olderItem = older_item.name
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_counts',
+      counts: {
+        categories: { [item.category]: 201 },
+        characters: 0,
+        items: { [item.item_type]: 200, [older_item.item_type]: 1 },
+      },
+    },
+  })
+}
 // A certified projection refresh, injected only by this browser fixture.
 window.addEventListener('market-price-fixture-update', () => {
   const { observation, history } = read_app_state().marketplace.prices
@@ -99,6 +116,20 @@ window.addEventListener('market-price-fixture-update', () => {
 const Fixture = () => {
   const pending = useAppStore(({ marketplace }) => marketplace.pending)
   const observation = useAppStore(({ marketplace }) => marketplace.prices.observation)
+  const market_observed = useAppStore(({ marketplace }) => marketplace.observation)
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).has('all-types') || market_observed?.item_type !== older_item.item_type)
+      return
+    dispatch_app({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/market_slice',
+        observation: market_observed,
+        listings: [{ ...listings[0]!, ...older_item, stats: undefined, damages: undefined, id: '0xolder' }],
+        kiosk_versions: { '0xkiosk': '2' },
+      },
+    })
+  }, [market_observed])
   useEffect(() => {
     if (!observation) return
     const query = new URLSearchParams(location.search)

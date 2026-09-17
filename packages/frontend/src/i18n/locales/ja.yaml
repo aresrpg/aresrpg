@@ -399,13 +399,8 @@ marketplace_page:
   prices_unavailable: '価格履歴を取得できません。自動的に再試行します。'
   prices_empty: 'この期間に成約済みの取引はありません。'
   prices_empty_day: '成約済み取引なし'
-  prices_weighted: '販売数量による加重平均 · 日次平均'
   prices_units: '販売数量：{{units}}個'
-  prices_since: '記録開始：{{date}} · UTC'
   prices_inspect: '日次単価。ポイントまたはタッチして詳細を確認できます。'
-  prices_table: '日次価格を表示'
-  prices_date: '日付'
-  prices_quantity: '数量'
   volume_24h: '24時間取引量'
   volume_30d: 30日間取引量
   volume_window: 直近{{window}}のマーケットプレイス公開取引額（手数料を除く）。

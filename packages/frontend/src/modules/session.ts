@@ -112,8 +112,8 @@ export type SessionInput =
       character_id: string
       joined: Readonly<{ world: string; x: number; z: number; first_join: boolean }>
     }>
-  | Readonly<{ type: 'inventory/box_opened'; box_item_id: string; claim_id: string }>
-  | Readonly<{ type: 'inventory/claim_settled'; claim_id: string }>
+  | Readonly<{ type: 'inventory/boxes_opened'; claims: readonly ClaimRow[] }>
+  | Readonly<{ type: 'inventory/claims_settled'; claim_ids: readonly string[] }>
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
   | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
   // prettier-ignore

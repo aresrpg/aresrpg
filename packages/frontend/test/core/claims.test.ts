@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { claim_is_settleable } from '../../src/modules/claims.ts'
+import { claim_is_settleable, rolled_item_types } from '../../src/modules/claims.ts'
 
 // REPORTED 2026-08-22: opening a pet box raised "The rolled item is not in the authored
 // catalog" and left the reveal button spinning on Collecting… forever. The catalog was fine —
@@ -20,6 +20,61 @@ test('a box claim is settleable only once the projection has told us what it rol
 test('a crush claim never waits on a projected roll', () => {
   expect(claim_is_settleable({ id: '0x2', kind: 'crush' })).toBeTrue()
   expect(claim_is_settleable({ id: '0x2', kind: 'crush', amount: 3 })).toBeTrue()
+})
+
+test('an opening receipt collects fourteen ready claims in one batch and removes them together', async () => {
+  const { create_app } = await import('../../src/store.ts')
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+  const values = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => void values.set(key, value),
+      removeItem: (key: string) => void values.delete(key),
+    },
+  })
+  const app = create_app()
+  const stop = app.observe(['claims'])
+  let calls = 0
+  try {
+    app.dispatch({ type: 'auth/connecting' })
+    app.dispatch({
+      type: 'auth/connected',
+      session: {
+        address: 'batch-owner',
+        character: {
+          claim_loot_batch: async ({ claims }: { claims: unknown[] }) => {
+            calls++
+            expect(claims).toHaveLength(14)
+            return { digest: 'batch' }
+          },
+          claim_loot: async () => {
+            throw new Error('must use one batch')
+          },
+        },
+      } as never,
+    })
+    app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
+    const [rolled_template] = [...rolled_item_types()].find(([, type]) => type === 'wheat_barley')!
+    app.dispatch({
+      type: 'inventory/boxes_opened',
+      claims: Array.from({ length: 14 }, (_, index) => ({
+        id: `batch-${index}`,
+        kind: 'box',
+        rolled_template,
+        amount: 50,
+      })),
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(calls).toBe(1)
+    expect(app.store.getState().session.claims).toEqual([])
+    expect(app.store.getState().claim_failures).toEqual([])
+  } finally {
+    stop()
+    if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor)
+    else Reflect.deleteProperty(globalThis, 'localStorage')
+  }
 })
 
 // Automatic intent survives observer/reload lifetimes; only explicit recovery can submit again.

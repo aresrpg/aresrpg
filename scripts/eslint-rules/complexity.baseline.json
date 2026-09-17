@@ -65,7 +65,7 @@
       "run": [11]
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "BrowsePanel": [12],
+      "BrowsePanel": [11],
       "CheapestLotMarket > sizes.map[0](size,index)": [12]
     },
     "packages/frontend/src/game/fight/fight_cues.ts": {
@@ -458,7 +458,7 @@
     },
     "packages/frontend/src/marketplace/BrowsePanel.tsx": {
       "AskRow": [10],
-      "BrowsePanel": [29],
+      "BrowsePanel": [21],
       "CheapestLotMarket > sizes.map[0](size,index)": [15]
     },
     "packages/frontend/src/marketplace/SellPanel.tsx": {
@@ -764,7 +764,8 @@
       "select_character_fight": [16]
     },
     "packages/frontend/src/modules/claims.ts": {
-      "observe: NonNullable<AppModule['observe']> > settle": [10]
+      "observe: NonNullable<AppModule['observe']> > redeem": [10],
+      "observe: NonNullable<AppModule['observe']> > settle": [9]
     },
     "packages/frontend/src/modules/fight_chain.ts": {
       "observe: NonNullable<AppModule['observe']> > events.on[1]({ fight, input, origin })": [19],
@@ -909,7 +910,8 @@
     },
     "packages/protocol/src/packets.ts": {
       "assert_bounded_json": [9],
-      "parse_client_packet": [34]
+      "parse_client_packet": [34],
+      "parse_market_observe_packet": [12]
     },
     "packages/launchpad/src/ContributionPanel.tsx": {
       "ContributionPanel": [9]

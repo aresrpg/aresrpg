@@ -402,13 +402,8 @@ marketplace_page:
   prices_unavailable: 价格历史不可用，正在自动重试。
   prices_empty: 此期间没有已完成的交易。
   prices_empty_day: 没有已完成的交易
-  prices_weighted: 按售出数量加权 · 每日均价
   prices_units: 已售{{units}}单位
-  prices_since: 自{{date}}开始记录 · UTC
   prices_inspect: 每日单价，指向或轻触即可查看。
-  prices_table: 显示每日价格
-  prices_date: 日期
-  prices_quantity: 数量
   volume_24h: 24小时交易量
   volume_30d: 30天交易量
   volume_window: 过去{{window}}的公开市场交易额，不含费用。

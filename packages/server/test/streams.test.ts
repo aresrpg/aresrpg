@@ -393,7 +393,7 @@ describe('market + self stream + heartbeat', () => {
     })
     expect(sent.find((packet) => packet.type === 'packet/market_counts')).toEqual({
       type: 'packet/market_counts',
-      counts: { categories: {}, characters: 0 },
+      counts: { categories: {}, characters: 0, items: {} },
     })
     pubsub.emitter.emit('evt:economy', {
       ckpt: 10,

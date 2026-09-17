@@ -7,6 +7,14 @@
 .boxreveal {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
   z-index: 70; /* above HUD panels (45-55) + tooltips (50) */
   display: flex;
   align-items: center;
@@ -411,45 +419,65 @@
 .boxreveal__grid {
   display: grid;
   max-width: 100%;
-  overflow: auto;
   padding: 24px;
 }
 .boxreveal__cell {
   min-width: 0;
 }
 .boxreveal--batch .boxreveal__grid {
-  width: min(1100px, 100%);
-  max-height: calc(100dvh - 100px);
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
+  --cell: min(230px, calc((100vw - 48px) / var(--columns)), calc((100dvh - 120px) / var(--rows)));
+  grid-template-columns: repeat(var(--columns), var(--cell));
+  grid-auto-rows: var(--cell);
+  padding: 0;
+}
+.boxreveal--batch .boxreveal__cell {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
 .boxreveal--batch .boxreveal__stage {
   width: 100%;
-  height: 170px;
+  height: 100%;
 }
 .boxreveal--batch .boxreveal__card {
-  width: 100%;
-  max-width: 210px;
-  padding: 12px;
-  gap: 8px;
+  width: 90%;
+  max-width: none;
+  padding: 8%;
+  gap: 4px;
 }
 .boxreveal--batch .boxreveal__pet-art {
-  width: 96px;
-  height: 96px;
+  width: 65%;
+  height: auto;
+  aspect-ratio: 1;
 }
 
 .boxreveal--batch .boxreveal__card-wrap {
-  gap: 10px;
+  width: 100%;
+  gap: 0;
+}
+.boxreveal--batch .boxreveal__eyebrow {
+  display: none;
 }
 .boxreveal--batch .boxreveal__pet-name {
-  font-size: 11px;
+  font-size: clamp(7px, calc(var(--cell) / 18), 11px);
+  letter-spacing: 0;
 }
 .boxreveal--batch .boxreveal__box,
 .boxreveal--batch .boxreveal__box-art {
-  width: 130px;
-  height: 130px;
+  width: 72%;
+  height: 72%;
+}
+.boxreveal--batch .boxreveal__box-art {
+  width: 100%;
+  height: 100%;
 }
 .boxreveal--batch .boxreveal__label {
   bottom: 0;
   font-size: 9px;
+}
+@media (max-width: 640px) {
+  .boxreveal--batch .boxreveal__grid {
+    --columns: var(--mobile-columns);
+    --rows: var(--mobile-rows);
+  }
 }

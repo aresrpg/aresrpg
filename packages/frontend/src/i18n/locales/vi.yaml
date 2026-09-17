@@ -402,13 +402,8 @@ marketplace_page:
   prices_unavailable: Lịch sử giá không khả dụng. Đang tự thử lại.
   prices_empty: Chưa có giao dịch hoàn tất trong khoảng này.
   prices_empty_day: Chưa có giao dịch hoàn tất
-  prices_weighted: Tính trọng số theo số lượng bán · Giá trung bình ngày
   prices_units: Đã bán {{units}} đơn vị
-  prices_since: Theo dõi từ {{date}} · UTC
   prices_inspect: Đơn giá hằng ngày. Trỏ chuột hoặc chạm để xem.
-  prices_table: Hiện giá hằng ngày
-  prices_date: Ngày
-  prices_quantity: Đơn vị
   volume_24h: Khối lượng 24 giờ
   volume_30d: Khối lượng 30 ngày
   volume_window: Giao dịch công khai trên chợ trong {{window}} qua, trước phí.

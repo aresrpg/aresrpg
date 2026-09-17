@@ -1088,6 +1088,16 @@ entry fun claim_loot(
   );
 }
 
+/// Redeem prepared box rewards in one terminal random call.
+entry fun claim_loot_batch(
+  claims: vector<BoxClaim>, plans: vector<PM>, kiosk: &mut Kiosk, personal: &PersonalKioskCap,
+  item_policy: &TransferPolicy<Item>, randomness: &Random, version: &Version, ctx: &mut TxContext,
+) {
+  let cap = personal_cap(personal, version);
+  let mut generator = randomness.new_generator(ctx);
+  loot_box::claim_batch(claims, plans, kiosk, cap, item_policy, &mut generator, ctx);
+}
+
 /// Delete (burn) `amount` units of an item you own — a whole stack or part of one; the remainder
 /// (if any) stays kiosk-locked. Free disposal of unwanted gear / resources.
 public fun burn_item(

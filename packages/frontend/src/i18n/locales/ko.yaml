@@ -402,13 +402,8 @@ marketplace_page:
   prices_unavailable: 가격 기록을 이용할 수 없습니다. 자동으로 재시도합니다.
   prices_empty: 이 기간에 완료된 판매가 없습니다.
   prices_empty_day: 완료된 판매 없음
-  prices_weighted: 판매 수량 가중 · 일별 평균
   prices_units: '{{units}}개 판매'
-  prices_since: '{{date}}부터 집계 · UTC'
   prices_inspect: 일별 단가입니다. 가리키거나 터치해 확인하세요.
-  prices_table: 일별 가격 보기
-  prices_date: 날짜
-  prices_quantity: 수량
   volume_24h: 24시간 거래량
   volume_30d: 30일 거래량
   volume_window: 최근 {{window}} 동안의 공개 거래소 판매액입니다. 수수료 전 금액입니다.

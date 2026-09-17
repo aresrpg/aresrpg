@@ -399,13 +399,8 @@ marketplace_page:
   prices_unavailable: 'Історія цін недоступна. Автоматична повторна спроба.'
   prices_empty: 'У цей період немає завершених продажів.'
   prices_empty_day: 'Немає завершених продажів'
-  prices_weighted: 'Зважено за проданою кількістю · Середні за день'
   prices_units: 'Продано {{units}} одиниць'
-  prices_since: 'Облік із {{date}} · UTC'
   prices_inspect: 'Щоденні ціни за одиницю. Наведіть або торкніться для перегляду.'
-  prices_table: 'Показати щоденні ціни'
-  prices_date: 'Дата'
-  prices_quantity: 'Кількість'
   volume_24h: 'Обсяг за 24 год'
   volume_30d: Обсяг за 30 днів
   volume_window: Публічні продажі на ринку за останні {{window}}, без комісій.

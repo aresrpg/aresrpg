@@ -182,7 +182,9 @@ fun a_loot_table_cannot_turn_an_ordinary_item_into_a_box() { reject_non_box(true
 fun box_validation_refuses_an_ordinary_item() { reject_non_box(false); }
 
 
-fun run_batch(box_count: u32, count: u32) {
+fun run_batch(box_count: u32, count: u32) { run_batch_claim(box_count, count, 0); }
+
+fun run_batch_claim(box_count: u32, count: u32, invalid: u8) {
   let mut scenario = test_scenario::begin(@0x0);
   random::create_for_testing(scenario.ctx());
   scenario.next_tx(OWNER);
@@ -225,21 +227,26 @@ fun run_batch(box_count: u32, count: u32) {
   test_scenario::return_shared(randomness);
   transfer::public_transfer(kiosk, OWNER);
   personal_kiosk::transfer_to_sender(personal, scenario.ctx());
-  count.do!(|_| {
-    scenario.next_tx(OWNER);
-    let claim = scenario.take_from_sender<loot_box::BoxClaim>();
-    let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
-    let personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
-    let version = scenario.take_shared<version::Version>();
-    let randomness = scenario.take_shared<random::Random>();
-    api::claim_loot(claim, &reward, option::none(), &mut kiosk, &personal, &policy, &randomness, &version, scenario.ctx());
-    let reward_id = object::last_created(scenario.ctx());
-    assert!(item::amount(kiosk.borrow(personal_kiosk::borrow(&personal), reward_id)) == 7, 24);
-    test_scenario::return_shared(version);
-    test_scenario::return_shared(randomness);
-    transfer::public_transfer(kiosk, OWNER);
-    personal_kiosk::transfer_to_sender(personal, scenario.ctx());
+  scenario.next_tx(OWNER);
+  let mut claims = vector[];
+  let mut plans = vector[];
+  (if (invalid == 3) 0 else count).do!(|_| {
+    claims.push_back(scenario.take_from_sender<loot_box::BoxClaim>());
+    plans.push_back(api::prepare_fight_loot(if (invalid == 2) &boxes else &reward, option::none()));
   });
+  if (invalid == 1) plans.push_back(api::prepare_fight_loot(&reward, option::none()));
+  let mut kiosk = scenario.take_from_sender<kiosk::Kiosk>();
+  let personal = scenario.take_from_sender<personal_kiosk::PersonalKioskCap>();
+  let version = scenario.take_shared<version::Version>();
+  let randomness = scenario.take_shared<random::Random>();
+  api::claim_loot_batch(claims, plans, &mut kiosk, &personal, &policy, &randomness, &version, scenario.ctx());
+  let reward_id = object::last_created(scenario.ctx());
+  assert!(item::amount(kiosk.borrow(personal_kiosk::borrow(&personal), reward_id)) == 7, 24);
+  assert!(sui::event::events_by_type<loot_box::LootClaimed>().length() == (count as u64), 25);
+  test_scenario::return_shared(version);
+  test_scenario::return_shared(randomness);
+  transfer::public_transfer(kiosk, OWNER);
+  personal_kiosk::transfer_to_sender(personal, scenario.ctx());
   let mut tables = scenario.take_shared<loot_box::LootRegistry>();
   loot_box::clear_loot_table(&admin, &mut root, &mut tables, &boxes, scenario.ctx());
   assert!(!loot_box::has_valid_table(&tables, &boxes), 4);
@@ -258,6 +265,12 @@ fun run_batch(box_count: u32, count: u32) {
 #[test] fun batch_full_stack() { run_batch(2, 2); }
 #[test] fun batch_partial_stack() { run_batch(14, 3); }
 #[test] fun batch_maximum() { run_batch(50, 50); }
+#[test, expected_failure(abort_code = 2907, location = aresrpg::loot_box)]
+fun batch_claim_plan_length_refused() { run_batch_claim(2, 2, 1); }
+#[test, expected_failure(abort_code = 204, location = aresrpg::item)]
+fun batch_claim_substituted_template_refused() { run_batch_claim(2, 2, 2); }
+#[test, expected_failure(abort_code = 2910, location = aresrpg::loot_box)]
+fun batch_claim_empty_refused() { run_batch_claim(2, 2, 3); }
 #[test, expected_failure(abort_code = 2910, location = aresrpg::loot_box)]
 fun batch_zero_refused() { run_batch(2, 0); }
 #[test, expected_failure(abort_code = 2910, location = aresrpg::loot_box)]

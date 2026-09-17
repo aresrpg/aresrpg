@@ -101,11 +101,13 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
         className="h-64 w-full"
         ref={element}
         role="img"
+        title="TradingView Lightweight Charts™ · © 2025 TradingView, Inc."
         data-tradingview-prices
       />
       <div
         aria-live="polite"
-        className="mt-3 min-h-9 border-t border-border pt-3 text-[11px] text-muted tabular-nums"
+        className="mt-2 text-[11px] text-muted tabular-nums"
+        hidden={!hovered}
         data-price-inspection
       >
         {hovered ? (
@@ -115,43 +117,8 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
               ? text('prices_empty_day')
               : `${format_unit_price(hovered.value, locale)} SUI · ${text('prices_units', { units: BigInt(hovered.bucket!.units).toLocaleString(locale) })}`}
           </>
-        ) : (
-          text('prices_weighted')
-        )}
+        ) : null}
       </div>
-      <details className="mt-2 text-[10px] text-muted">
-        <summary className="cursor-pointer">{text('prices_table')}</summary>
-        <div className="mt-2 max-h-48 overflow-auto">
-          <table className="w-full text-right tabular-nums">
-            <thead>
-              <tr>
-                <th className="text-left">{text('prices_date')}</th>
-                <th>SUI</th>
-                <th>{text('prices_quantity')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {points
-                .filter(({ bucket }) => bucket)
-                .map(({ at_ms, value, bucket }) => (
-                  <tr key={at_ms}>
-                    <td className="text-left">{price_date(at_ms, locale)}</td>
-                    <td>{format_unit_price(value!, locale)}</td>
-                    <td>{BigInt(bucket!.units).toLocaleString(locale)}</td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-      </details>
-      <a
-        className="mt-2 block text-[9px] text-muted hover:text-cyan"
-        href="https://www.tradingview.com/"
-        rel="noreferrer"
-        target="_blank"
-      >
-        TradingView Lightweight Charts™ · © 2025 TradingView, Inc.
-      </a>
     </>
   )
 }

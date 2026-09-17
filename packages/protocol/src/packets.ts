@@ -425,12 +425,14 @@ export type AdminOverviewSectionResult =
 export type MarketObservation = Readonly<{
   categories: readonly ItemCategory[]
   characters: boolean
+  item_type?: string
 }>
 
 /** Public non-exclusive listing totals across the whole market, independent of the active slice. */
 export type MarketCounts = Readonly<{
   categories: Readonly<Partial<Record<ItemCategory, number>>>
   characters: number
+  items?: Readonly<Record<string, number>>
 }>
 
 /** The player's party as projected (MEMBER_OF edges around one Party node). */
@@ -1151,7 +1153,9 @@ const parse_market_observe_packet = (
     !Array.isArray(observation.categories) ||
     observation.categories.length > 32 ||
     !observation.categories.every((category) => typeof category === 'string' && is_item_category(category)) ||
-    typeof observation.characters !== 'boolean'
+    typeof observation.characters !== 'boolean' ||
+    (observation.item_type !== undefined &&
+      (typeof observation.item_type !== 'string' || !/^[a-z0-9_]{1,128}$/.test(observation.item_type)))
   )
     throw new Error('packet/market_observe needs valid categories and characters')
   return {
@@ -1159,6 +1163,7 @@ const parse_market_observe_packet = (
     observation: {
       categories: [...new Set(observation.categories)] as ItemCategory[],
       characters: observation.characters,
+      ...(typeof observation.item_type === 'string' ? { item_type: observation.item_type } : {}),
     },
   }
 }

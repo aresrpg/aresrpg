@@ -66,3 +66,46 @@ test('opening a reviewed box quantity composes one terminal call and refuses inv
     await expect(actions.open_loot_boxes({ ...input, count })).rejects.toThrow('Invalid')
   expect(executions).toBe(1)
 })
+
+test('fourteen rewards prepare their templates then redeem through one terminal transaction', async () => {
+  const calls: string[] = []
+  let executions = 0
+  const sdk = {
+    ...terminal_sdk(
+      {
+        prepare_fight_loot: () => {
+          calls.push('prepare')
+          return { Result: calls.length - 1 }
+        },
+        claim_loot_batch: (_tx: unknown, args: { claims: unknown[]; plans: unknown[] }) => {
+          expect(args.claims).toHaveLength(14)
+          expect(args.plans).toHaveLength(14)
+          calls.push('redeem')
+        },
+      },
+      []
+    ),
+    door_context: { obj: (_tx: unknown, claim: string) => ({ Object: claim }) },
+  }
+  const { execute } = sdk
+  sdk.execute = async () => {
+    executions++
+    return execute()
+  }
+  const actions = gate_actions(sdk as never, { kiosk_cap: async () => kiosk_cap })
+  const claims = Array.from({ length: 14 }, (_, index) => ({
+    claim_id: id(100 + index),
+    rolled_item_type: 'wheat_barley',
+    existing: null,
+  }))
+  await actions.claim_loot_batch({ claims })
+  expect(calls).toEqual([...Array.from({ length: 14 }, () => 'prepare'), 'redeem'])
+  expect(executions).toBe(1)
+  for (const invalid of [
+    [],
+    [claims[0]!, claims[0]!],
+    Array.from({ length: 51 }, (_, index) => ({ ...claims[0]!, claim_id: id(200 + index) })),
+  ])
+    await expect(actions.claim_loot_batch({ claims: invalid })).rejects.toThrow('Invalid')
+  expect(executions).toBe(1)
+})

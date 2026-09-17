@@ -6,6 +6,7 @@
 import type { ClaimRow } from '@aresrpg/protocol'
 import { item_template_id } from '@aresrpg/sdk/seed-ids'
 import { resolve_pins } from '@aresrpg/sdk/pins'
+import { LOOT_BOX_BATCH_LIMIT } from '@aresrpg/sdk/character'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import { env } from '../env.ts'
@@ -18,7 +19,9 @@ import { encumbered_asset_ids, stack_merge_target } from '../inventory_stacks.ts
 
 import { create_claim_attempts } from './giftcard_attempts.ts'
 
-export type ClaimsInput = Readonly<{ type: 'claims/redeem'; claim_id: string }>
+export type ClaimsInput =
+  | Readonly<{ type: 'claims/redeem'; claim_id: string }>
+  | Readonly<{ type: 'claims/failed' | 'claims/started'; claim_ids: readonly string[] }>
 
 /** template id → item_type over the authored catalog — PURE derivation, zero chain reads. */
 export const rolled_item_types = (() => {
@@ -65,7 +68,8 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     if (!active_claim_id) sweep()
   }
 
-  const settle = async (claim: Readonly<ClaimRow>): Promise<PendingCrushResult | null> => {
+  const settle = async (batch: readonly ClaimRow[]): Promise<PendingCrushResult | null> => {
+    const claim = batch[0]!
     const state = get_state()
     const { wallet, inventory } = state.session
     if (!wallet) return null
@@ -74,13 +78,18 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const custody = kiosk ? { kiosk, kiosk_cap: character?.kiosk_cap } : undefined
     const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
     if (claim.kind === 'box') {
-      const rolled_item_type = claim.rolled_template ? rolled_item_types().get(claim.rolled_template) : null
-      if (!rolled_item_type)
-        throw new Error(`The rolled template ${claim.rolled_template} is not in the authored catalog`)
-      const existing = stack_merge_target(inventory, encumbered, rolled_item_type, kiosk)
-      // the yield's CONTENTS stream from the server (ItemWritten — projection-driven);
-      // the receipt only settles the claim locally
-      await wallet.character.claim_loot({ claim_id: claim.id, rolled_item_type, existing, custody })
+      const claims = batch.map((row) => {
+        const rolled_item_type = row.rolled_template ? rolled_item_types().get(row.rolled_template) : null
+        if (!rolled_item_type)
+          throw new Error(`The rolled template ${row.rolled_template} is not in the authored catalog`)
+        return {
+          claim_id: row.id,
+          rolled_item_type,
+          existing: stack_merge_target(inventory, encumbered, rolled_item_type, kiosk),
+        }
+      })
+      if (claims.length === 1) await wallet.character.claim_loot({ ...claims[0]!, custody })
+      else await wallet.character.claim_loot_batch({ claims, custody })
       return null
     }
     const runes = encyclopedia_catalog.items
@@ -103,17 +112,27 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     const { wallet } = session
     if (!wallet || signal.aborted || session.link_status !== 'ready' || active_claim_id || !claim_is_settleable(claim))
       return
-    const retained = attempts.remember(wallet.address, claim.id)
-    if (automatic && !retained) return
+    const batch =
+      claim.kind === 'box'
+        ? session.claims
+            .filter(
+              (row) =>
+                row.kind === 'box' && claim_is_settleable(row) && (!automatic || !attempts.has(wallet.address, row.id))
+            )
+            .slice(0, LOOT_BOX_BATCH_LIMIT)
+        : [claim]
+    const retained = batch.map(({ id }) => attempts.remember(wallet.address, id))
+    if (!batch.length || (automatic && retained.some((value) => !value))) return
     active_claim_id = claim.id
+    dispatch({ type: 'claims/started', claim_ids: batch.map(({ id }) => id) })
     const attempt_lifetime = lifetime
     const current = (): boolean => !signal.aborted && lifetime === attempt_lifetime
-    void settle(claim)
+    void settle(batch)
       .then((pending) => {
         if (!current()) return
         if (pending) pending_crush_results.set(claim.id, pending)
         else active_claim_id = null
-        dispatch({ type: 'inventory/claim_settled', claim_id: claim.id })
+        dispatch({ type: 'inventory/claims_settled', claim_ids: batch.map(({ id }) => id) })
         publish_ready_crush_results()
       })
       .catch((error: Readonly<Error>) => {
@@ -122,6 +141,7 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
           return
         }
         if (claim.kind === 'crush') crush_results.fail(error)
+        dispatch({ type: 'claims/failed', claim_ids: batch.map(({ id }) => id) })
         toast.add(error)
         if (active_claim_id === claim.id) active_claim_id = null
       })
@@ -138,6 +158,10 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
       (candidate) => claim_is_settleable(candidate) && !attempts.has(address, candidate.id)
     )
     if (claim) redeem(claim, true)
+    else {
+      const failed = session.claims.filter(({ id }) => attempts.has(address, id)).map(({ id }) => id)
+      if (failed.length) dispatch({ type: 'claims/failed', claim_ids: failed })
+    }
   }
 
   events.on('claims/redeem', ({ claim_id }) => {
@@ -157,5 +181,16 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   })
 }
 
-// the no-op reduce keeps the MODULES union uniform (fight_chain precedent)
-export default Object.freeze({ name: 'claims', reduce: (state) => state, observe }) satisfies AppModule
+const reduce: NonNullable<AppModule['reduce']> = (state, input) => {
+  if (input.type === 'auth/disconnected') return { ...state, claim_failures: [] }
+  if (input.type === 'claims/failed') {
+    const failed = [...new Set([...state.claim_failures, ...input.claim_ids])]
+    return failed.length === state.claim_failures.length ? state : { ...state, claim_failures: failed }
+  }
+  if (input.type === 'claims/started') {
+    const pending = new Set(input.claim_ids)
+    return { ...state, claim_failures: state.claim_failures.filter((id) => !pending.has(id)) }
+  }
+  return state
+}
+export default Object.freeze({ name: 'claims', reduce, observe }) satisfies AppModule

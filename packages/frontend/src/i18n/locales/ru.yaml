@@ -402,13 +402,8 @@ marketplace_page:
   prices_unavailable: История цен недоступна. Повторяем автоматически.
   prices_empty: За этот период нет завершённых продаж.
   prices_empty_day: Нет завершённых продаж
-  prices_weighted: Взвешено по проданным единицам · Средние цены за день
   prices_units: 'Продано единиц: {{units}}'
-  prices_since: Учёт с {{date}} · UTC
   prices_inspect: Дневные цены за единицу. Наведите указатель или коснитесь для просмотра.
-  prices_table: Показать дневные цены
-  prices_date: Дата
-  prices_quantity: Единицы
   volume_24h: Объём за 24 ч
   volume_30d: Объём за 30 д
   volume_window: Публичные продажи на рынке за последние {{window}}, до комиссий.

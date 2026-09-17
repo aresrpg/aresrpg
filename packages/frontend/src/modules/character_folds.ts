@@ -176,14 +176,13 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
 const with_claim_added = (session: SessionState, claim: Readonly<ClaimRow>): SessionState =>
   Object.freeze({ ...session, claims: Object.freeze([...session.claims.filter(({ id }) => id !== claim.id), claim]) })
 
-const without_claim = (claims: readonly ClaimRow[], claim_id: string | null): readonly ClaimRow[] =>
-  claim_id === null ? claims : claims.filter(({ id }) => id !== claim_id)
-
 /** Inventory-shaped own-transaction receipts: boxes, claims, crushes, feeding, burning. */
 const fold_inventory_receipt = (session: SessionState, input: AppInput): SessionState => {
-  if (input.type === 'inventory/box_opened') return with_claim_added(session, { id: input.claim_id, kind: 'box' })
-  if (input.type === 'inventory/claim_settled')
-    return Object.freeze({ ...session, claims: Object.freeze(without_claim(session.claims, input.claim_id)) })
+  if (input.type === 'inventory/boxes_opened') return input.claims.reduce(with_claim_added, session)
+  if (input.type === 'inventory/claims_settled') {
+    const settled = new Set(input.claim_ids)
+    return { ...session, claims: session.claims.filter(({ id }) => !settled.has(id)) }
+  }
   if (input.type === 'inventory/gear_crushed') {
     const crushed = new Set(input.gear_ids)
     return with_claim_added(

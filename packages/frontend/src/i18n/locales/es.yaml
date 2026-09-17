@@ -399,13 +399,8 @@ marketplace_page:
   prices_unavailable: 'Historial no disponible. Reintento automático.'
   prices_empty: 'No hay ventas completadas en este periodo.'
   prices_empty_day: 'Sin ventas completadas'
-  prices_weighted: 'Ponderado por unidades vendidas · Promedios diarios'
   prices_units: '{{units}} unidades vendidas'
-  prices_since: 'Registro desde {{date}} · UTC'
   prices_inspect: 'Precios unitarios diarios. Señala o toca para consultar.'
-  prices_table: 'Mostrar precios diarios'
-  prices_date: 'Fecha'
-  prices_quantity: 'Unidades'
   volume_24h: 'Volumen de 24 h'
   volume_30d: Volumen de 30 días
   volume_window: Ventas públicas del mercado en las últimas {{window}}, sin comisiones.

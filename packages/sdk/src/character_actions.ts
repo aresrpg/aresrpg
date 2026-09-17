@@ -276,6 +276,41 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return Object.freeze({ digest: receipt_digest(receipt) })
     },
 
+    /** Prepare all authenticated templates before one terminal redemption of the batch. */
+    claim_loot_batch: async ({
+      claims,
+      custody,
+    }: {
+      claims: readonly Readonly<{ claim_id: string; rolled_item_type: string; existing: string | null }>[]
+      custody?: KioskCustody
+    }): Promise<Readonly<{ digest: string }>> => {
+      if (
+        !claims.length ||
+        claims.length > LOOT_BOX_BATCH_LIMIT ||
+        new Set(claims.map(({ claim_id }) => claim_id)).size !== claims.length
+      )
+        throw new Error('Invalid box claim batch')
+      const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
+      const templates = claims.map(({ rolled_item_type }) =>
+        item_template_id(content_root, seed_package_original, rolled_item_type)
+      )
+      const receipt = await with_terminal_kiosk(
+        (tx, kiosk, personal) => {
+          const plans = claims.map(({ existing }, index) =>
+            sdk.doors.prepare_fight_loot(tx, { template: templates[index]!, existing })
+          )
+          sdk.doors.claim_loot_batch(tx, {
+            claims: claims.map(({ claim_id }) => sdk.door_context.obj(tx, claim_id, true)),
+            plans,
+            kiosk,
+            personal,
+          })
+        },
+        { custody, inputs: [...claims.map(({ claim_id }) => claim_id), ...templates], budget: 'estimate' }
+      )
+      return Object.freeze({ digest: receipt_digest(receipt) })
+    },
+
     /** Crush gear into a soulbound CrushClaim (phase 1 — fixed cost, the yield stays sealed). */
     crush_gear: async ({
       gear_ids,

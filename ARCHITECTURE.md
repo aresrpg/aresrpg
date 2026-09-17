@@ -502,7 +502,7 @@ on each attempt, while shared template refs remain cached. A failed
 redemption leaves the voucher recoverable. Browser-local attempt markers, scoped by network and
 account, are retained before the SDK call and prevent automatic retries across reloads, including
 certified failures. Missing or unavailable persistence disables automation; manual redemption remains explicit.
-Loot boxes accept one reviewed quantity of up to 50 units in one terminal Random call. Each unit creates its own soulbound claim and reveal event; an ordered batch event binds those outcomes to claim IDs. The quantity modal defaults to one, and one shared animation timeline reveals the results in a grid. Claim redemption retains its existing serialized settlement path.
+Loot boxes accept one reviewed quantity of up to 50 units in one terminal Random call. Each unit creates its own soulbound claim and reveal event; an ordered batch event binds those outcomes to claim IDs. The quantity modal defaults to one, and one shared animation timeline reveals the results in a viewport grid. Redemption prepares authenticated item plans before one terminal call for up to 50 claims. Single redemption uses the same Move implementation. The receipt folds the batch together; routine collection stays invisible, and failed attempts appear as grouped recovery actions.
 Box and crush claims use the same one-attempt rule and remain visible for explicit collection in
 inventory. Their automation markers are written before submission and survive reloads; a failed
 attempt never creates an automatic retry timer.
@@ -563,7 +563,8 @@ and revisions match. Older-than-certified reads fail instead of authorizing repe
 ### Marketplace
 
 Sui Kiosk objects own listings and custody. The indexer projects the current market and sales
-history. The server pushes one observed category window plus aggregate counts. The frontend
+history. The server pushes complete category and item-type counts plus a bounded listing window
+for the selected item type. Navigation derives from those counts, never from the listing window. The frontend
 reconciles packets and its own certified receipts in one marketplace reducer. Listing rows carry indexed
 rolled stats and weapon damage; marketplace hovers render those rows without a client-side chain read.
 

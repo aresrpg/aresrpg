@@ -104,13 +104,18 @@ const MOVE_VALUE_TYPES = Object.freeze({
   DungeonMob: { type_package: 'math_type_package', module: 'dungeon_data' },
 })
 
+const MOVE_VECTOR_TYPES = Object.freeze({
+  ...MOVE_VALUE_TYPES,
+  BoxClaim: { type_package: 'game_type_package', module: 'loot_box' },
+})
+
 /** @param {string} type @returns {DoorStrategy} */
 const strategy_of = (type) => {
   if (TYPE_MAP[type]) return TYPE_MAP[type]
   const value_vector = type.match(MOVE_VALUE_VECTOR)
   if (value_vector) {
     const [, value_type] = value_vector
-    if (!MOVE_VALUE_TYPES[value_type])
+    if (!MOVE_VECTOR_TYPES[value_type])
       throw new Error(`generate_doors: unknown Move vector value type "${value_type}" — map its defining module`)
     return { kind: 'move_vector', type: value_type }
   }
@@ -169,7 +174,7 @@ const arg_expr = ({ name, strategy }) => {
     case 'pure_vector':
       return `ctx.pure.vector(tx, '${strategy.helper}', args.${name})`
     case 'move_vector': {
-      const value = MOVE_VALUE_TYPES[strategy.type]
+      const value = MOVE_VECTOR_TYPES[strategy.type]
       // type arguments name types by their DEFINING package — never the latest upgrade target
       return `tx.makeMoveVec({ type: \`\${ctx.${value.type_package}}::${value.module}::${strategy.type}\`, elements: [...args.${name}] })`
     }

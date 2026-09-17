@@ -1599,6 +1599,36 @@ export const claim_loot = (
   })
 
 /**
+ * `api::claim_loot_batch` — TERMINAL (&Random): last command of its transaction.
+ * @arg claims — vector<BoxClaim>
+ * @arg plans — vector<PM>
+ * @arg kiosk — &mut Kiosk
+ * @arg personal — &PersonalKioskCap
+ */
+export const claim_loot_batch = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    claims: readonly TransactionObjectArgument[]
+    plans: readonly TransactionObjectArgument[]
+    kiosk: Resolvable
+    personal: Resolvable
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::claim_loot_batch`,
+    arguments: [
+      tx.makeMoveVec({ type: `${ctx.game_type_package}::loot_box::BoxClaim`, elements: [...args.claims] }),
+      tx.makeMoveVec({ type: `${ctx.game_type_package}::item::PM`, elements: [...args.plans] }),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.personal, false),
+      ctx.pin(tx, 'item_policy', false),
+      tx.object.random(),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
  * `api::burn_item`
  * @arg kiosk — &mut Kiosk
  * @arg cap — &KioskOwnerCap
@@ -2712,6 +2742,7 @@ export const DOORS = {
   open_loot_box: { params: ['kiosk', 'personal', 'box_item_id', 'box_template'], terminal: true },
   open_loot_boxes: { params: ['kiosk', 'personal', 'box_item_id', 'box_template', 'count'], terminal: true },
   claim_loot: { params: ['claim', 'rolled_template', 'existing', 'kiosk', 'personal'], terminal: true },
+  claim_loot_batch: { params: ['claims', 'plans', 'kiosk', 'personal'], terminal: true },
   burn_item: { params: ['kiosk', 'cap', 'item_id', 'amount'], terminal: false },
   redeem_giftcard: { params: ['card', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
   enter_dungeon: {

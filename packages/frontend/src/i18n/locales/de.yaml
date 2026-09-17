@@ -399,13 +399,8 @@ marketplace_page:
   prices_unavailable: 'Preisverlauf nicht verfügbar. Automatischer Neuversuch.'
   prices_empty: 'Keine abgeschlossenen Verkäufe in diesem Zeitraum.'
   prices_empty_day: 'Keine abgeschlossenen Verkäufe'
-  prices_weighted: 'Nach verkauften Mengen gewichtet · Tagesdurchschnitt'
   prices_units: '{{units}} Einheiten verkauft'
-  prices_since: 'Aufzeichnung seit {{date}} · UTC'
   prices_inspect: 'Tägliche Stückpreise. Zum Prüfen zeigen oder berühren.'
-  prices_table: 'Tagespreise anzeigen'
-  prices_date: 'Datum'
-  prices_quantity: 'Einheiten'
   volume_24h: '24h-Volumen'
   volume_30d: 30T-Volumen
   volume_window: Öffentliche Marktplatzverkäufe der letzten {{window}}, ohne Gebühren.

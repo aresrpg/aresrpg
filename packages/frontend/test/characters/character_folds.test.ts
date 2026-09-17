@@ -382,9 +382,8 @@ describe('inventory receipt folds', () => {
     const box = item({ id: '0xbox', category: 'consumable', item_type: 'mystery_box', amount: 2 })
     const state = seeded_state([character()], [box])
     const next = reduce_app_state(item_amounts(state, ['0xbox', 1]), {
-      type: 'inventory/box_opened',
-      box_item_id: '0xbox',
-      claim_id: '0xclaim',
+      type: 'inventory/boxes_opened',
+      claims: [{ id: '0xclaim', kind: 'box' }],
     })
     expect(next.session.inventory[0]!.amount).toBe(1)
     expect(next.session.claims).toEqual([{ id: '0xclaim', kind: 'box' }])
@@ -393,11 +392,10 @@ describe('inventory receipt folds', () => {
   test('a settled claim leaves the session; a fresh mint arrives via the item stream', () => {
     const base = seeded_state([character()], [])
     const with_claim = reduce_app_state(base, {
-      type: 'inventory/box_opened',
-      box_item_id: '0xmissing',
-      claim_id: '0xclaim',
+      type: 'inventory/boxes_opened',
+      claims: [{ id: '0xclaim', kind: 'box' }],
     })
-    const settled = reduce_app_state(with_claim, { type: 'inventory/claim_settled', claim_id: '0xclaim' })
+    const settled = reduce_app_state(with_claim, { type: 'inventory/claims_settled', claim_ids: ['0xclaim'] })
     expect(settled.session.claims).toEqual([])
     const minted = reduce_app_state(settled, {
       type: 'server/packet',

@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Search, Store } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { class_names, item_is_stackable, marketplace_lot_sizes } from '@aresrpg/immutable'
 import type { ListingRow } from '@aresrpg/protocol'
 
@@ -16,6 +16,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, market_group_count, market_observation, type MarketGroup } from '../modules/marketplace.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { browse_types } from './browse_types.ts'
 import { cheapest_identical_items } from './listing_groups.ts'
 import { PriceHistoryChart } from './PriceHistoryChart.tsx'
 import {
@@ -64,24 +65,16 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
   const active_subcategory = subcategories.some((category) => category === subcategory)
     ? subcategory
     : (subcategories[0] ?? null)
-  const types = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    const grouped = new Map<string, typeof listings>()
-    for (const listing of listings) {
-      if (listing.kind !== 'item' || listing.category !== active_subcategory || !listing.item_type) continue
-      const name = listing_name(listing)
-      if (query && !`${name} ${listing.item_type}`.toLowerCase().includes(query)) continue
-      grouped.set(listing.item_type, [...(grouped.get(listing.item_type) ?? []), listing])
-    }
-    return [...grouped.entries()].sort(([left], [right]) => {
-      const a = content_catalog.item(left)?.item.level ?? 0
-      const b = content_catalog.item(right)?.item.level ?? 0
-      return a - b || left.localeCompare(right)
-    })
-  }, [active_subcategory, listings, search])
-  const active_type = types.some(([item_type]) => item_type === selected_type) ? selected_type : (types[0]?.[0] ?? null)
-  const selected = types.find(([item_type]) => item_type === active_type) ?? null
-  const asks = selected ? selected[1].toSorted((a, b) => Number(BigInt(a.price_mist) - BigInt(b.price_mist))) : []
+  const types = useMemo(
+    () => browse_types(market.counts, listings, active_subcategory, search),
+    [market.counts, listings, active_subcategory, search]
+  )
+  const selected = types.find(({ item_type }) => item_type === selected_type) ?? types[0] ?? null
+  const active_type = selected?.item_type ?? null
+  useEffect(() => {
+    dispatch_app({ type: 'market/group_selected', group: market.group, item_type: active_type ?? undefined })
+  }, [active_type, market.group])
+  const asks = selected ? selected.rows.toSorted((a, b) => Number(BigInt(a.price_mist) - BigInt(b.price_mist))) : []
   const item = active_type ? (content_catalog.item(active_type)?.item ?? null) : null
 
   const select_group = (group: MarketGroup): void => {
@@ -219,7 +212,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
               />
             </label>
             <div className="min-h-0 overflow-y-auto" data-marketplace-template-options>
-              {types.map(([item_type, rows]) => (
+              {types.map(({ item_type, name }) => (
                 <button
                   className={`flex w-full cursor-pointer items-center gap-2 border-l-2 px-2 py-1.5 text-left text-[9px] ${item_type === active_type ? 'border-l-[#4a9eff] bg-[#4a9eff]/6 text-[#b9d8ff]' : 'border-l-transparent text-[#969ba7] hover:bg-white/[0.045] hover:text-[#ebe7df]'}`}
                   key={item_type}
@@ -228,10 +221,8 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   }}
                   type="button"
                 >
-                  <ListingIcon listing={rows[0]!} size={30} />
-                  <span className="min-w-0 flex-1 truncate text-[10px] text-[#d8d4cc] uppercase">
-                    {listing_name(rows[0]!)}
-                  </span>
+                  <ListingIcon listing={{ kind: 'item', item_type }} size={30} />
+                  <span className="min-w-0 flex-1 truncate text-[10px] text-[#d8d4cc] uppercase">{name}</span>
                 </button>
               ))}
             </div>
@@ -242,18 +233,15 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
             ) : (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="flex shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.16)]">
-                  <ListingIcon listing={selected[1][0]!} size={28} />
+                  <ListingIcon listing={{ kind: 'item', item_type: active_type }} size={28} />
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-[10px] font-semibold tracking-[0.2em] text-[#e8e4dc] uppercase">
-                      {item?.name ?? listing_name(selected[1][0]!)}
+                      {selected.name}
                     </h3>
                   </div>
-                  {(item?.level ?? selected[1][0]!.level) > 0 && (
+                  {selected.level > 0 && (
                     <span className="text-[8px] text-[#6b7280]">
-                      <Text
-                        path="encyclopedia_page.level_short"
-                        values={{ level: item?.level ?? selected[1][0]!.level }}
-                      />
+                      <Text path="encyclopedia_page.level_short" values={{ level: selected.level }} />
                     </span>
                   )}
                   {asks[0] && (
@@ -282,7 +270,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                         />
                       </div>
                     )}
-                    {item_is_stackable(item?.category ?? selected[1][0]!.category ?? '') ? (
+                    {item_is_stackable(selected.category ?? '') ? (
                       <div className="market-item-columns">
                         <div className="min-w-0" data-marketplace-listings>
                           <CheapestLotMarket

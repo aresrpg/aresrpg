@@ -7,6 +7,11 @@ test('a stack asks for an amount, defaults to one, and opens a simultaneous grid
   await page.goto('/e2e/fixtures/box_batch.html')
   const amount = page.getByRole('spinbutton', { name: 'Use amount' })
   await expect(amount).toHaveValue('1')
+  await expect(amount).toBeFocused()
+  await page.getByRole('dialog').evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished))
+  })
+  await page.screenshot({ path: 'test-results/box-use-amount.png' })
   await expect(page.locator('body')).not.toHaveAttribute('data-openings')
   await amount.fill('15')
   await expect(page.getByRole('button', { name: 'Consume', exact: true })).toBeDisabled()
@@ -27,6 +32,9 @@ test('a stack asks for an amount, defaults to one, and opens a simultaneous grid
   expect(await page.locator('.boxreveal__grid').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
     true
   )
+  expect(
+    await page.locator('.boxreveal__grid').evaluate((element) => element.scrollHeight <= element.clientHeight)
+  ).toBe(true)
 })
 
 test('one remaining box opens directly and a rejected batch is never replayed', async ({ page }) => {
@@ -45,9 +53,10 @@ test('batch cap and narrow grid remain usable', async ({ page }) => {
   await page.goto('/e2e/fixtures/box_batch.html?count=60')
   const amount = page.getByRole('spinbutton')
   await expect(amount).toHaveAttribute('max', '50')
-  await amount.fill('4')
+  await amount.fill('50')
   await page.getByRole('button', { name: 'Consume', exact: true }).click()
-  await expect(page.locator('.boxreveal__pet-name')).toHaveCount(4)
+  await expect(page.locator('.boxreveal__pet-name')).toHaveCount(50)
+  await expect(page.locator('.boxreveal__pet-name').last()).toBeInViewport()
   await page.screenshot({ path: 'test-results/box-batch-mobile.png' })
   expect(await page.locator('.boxreveal__grid').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
     true

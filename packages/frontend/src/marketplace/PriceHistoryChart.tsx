@@ -7,7 +7,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { TradingViewPricePlot } from './TradingViewPricePlot.tsx'
-import { PRICE_RANGES, price_date, price_points, type PriceRange } from './price_history_model.ts'
+import { PRICE_RANGES, price_points, type PriceRange } from './price_history_model.ts'
 
 export const PriceHistoryChart = ({ item_type, text }: Readonly<{ item_type: string; text: CopyText }>) => {
   const prices = useAppStore(({ marketplace }) => marketplace.prices)
@@ -52,11 +52,6 @@ export const PriceHistoryChart = ({ item_type, text }: Readonly<{ item_type: str
             status === 'loading' ? 'prices_loading' : status === 'unavailable' ? 'prices_unavailable' : 'prices_empty'
           )}
         </div>
-      )}
-      {history && (
-        <p className="mt-2 text-[10px] text-muted">
-          {text('prices_since', { date: price_date(history.first_timestamp_ms) })}
-        </p>
       )}
     </section>
   )

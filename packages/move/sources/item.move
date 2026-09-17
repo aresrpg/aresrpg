@@ -150,6 +150,15 @@ fun mint_from_plan(row: &PM, amount: u32, generator: &mut RandomGenerator, ctx: 
   mint_resolved_from_plan(row, amount, stats, ctx)
 }
 
+/// Deliver one claim through its authenticated template plan; callers cannot forge PM fields.
+public(package) fun deliver_claim(
+  plan: PM, expected: ID, amount: u32, kiosk: &mut Kiosk, cap: &KioskOwnerCap,
+  policy: &TransferPolicy<Item>, generator: &mut RandomGenerator, ctx: &mut TxContext,
+) {
+  assert!(plan.template == expected, EWrongTemplate);
+  deposit(kiosk, cap, policy, plan.existing, mint_from_plan(&plan, amount, generator, ctx));
+}
+
 /// THE item constructor. Every supply source resolves an optional stat block, then lands here;
 /// source identity cannot change the resulting Item shape.
 fun mint_resolved_from_plan(

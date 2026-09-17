@@ -76,6 +76,7 @@ import external_wallet, {
 } from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
+  claim_failures: readonly string[]
   journey: JourneyState
   chain_clock: ChainClock
   session: SessionState
@@ -211,6 +212,7 @@ export const DEMO_APP_MODULES = Object.freeze(
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
+    claim_failures: [],
     chain_clock: null,
     journey: initial_journey_state(),
     session: initial_session_state(),
