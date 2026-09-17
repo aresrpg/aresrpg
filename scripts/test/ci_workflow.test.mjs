@@ -28,7 +28,7 @@ test('all selective lanes use a successful edge push baseline, including PRs', (
 
 test('browser matrix shards every existing platform and retains independent reports', () => {
   const job = jobs.browsers
-  expect(job['timeout-minutes']).toBe(5)
+  expect(job['timeout-minutes']).toBe(6)
   const targets = new Set(job.strategy.matrix.include.map(({ os, browser }) => `${os}/${browser}`))
   expect([...targets]).toEqual(['ubuntu-latest/chrome', 'ubuntu-latest/firefox', 'macos-latest/chrome'])
   const mac = job.strategy.matrix.include.filter(({ os }) => os === 'macos-latest')

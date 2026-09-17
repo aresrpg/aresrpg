@@ -638,7 +638,7 @@ Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three 
 on macOS, and three quality-specific world workload lanes per platform. Five macOS jobs avoid queuing
 a sixth browser behind the hosted macOS concurrency limit. Runner-provided Chrome is reused and its
 version is logged; absent Chrome and Playwright’s patched Firefox are installed through one setup entry. Each workload lane runs one heavy smoke scenario;
-the low and medium lanes each verify one missing-WebGPU fallback. Browser jobs have a five-minute
+the low and medium lanes each verify one missing-WebGPU fallback. Browser jobs have a six-minute
 execution limit. Smoke world workloads have a 210-second test timeout; full workloads retain their ten-minute local budget. UI layout retries have a three-second
 budget, separate from the longer world-rendering checks. Settings persistence exercises its actual
 controls, reducer, and storage observer across reloads without initializing a renderer. CI UI shards use two workers; each GPU workload job retains one worker. Sharding does not change test
