@@ -40,10 +40,10 @@
     "id": "0x49a2c76be1ce6b2c3ecdc7c1da563c0f36c198de297efee2537fc3a316a24357",
     "shared_version": "1"
   },
-  "package": "0x1ab0d46edaccfdcc8d954725353443e05d7efca47d3612f8666819c0aa4f5af9",
+  "package": "0x2dd900bab23b278e1aba58d4f49d057e6c60ad7c8d8a7d83a9bef03c0c166853",
   "package_original": "0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d",
   "upgrade_cap": "0x425d531804f905bc869dfb40d3130037880fb536f82457922ea9b4911603b405",
-  "package_artifact_digest": "c71b70b7cf5d7b601c7c4f2dafc044571e2cb480f079b51a11e562ac6ac37ac1",
+  "package_artifact_digest": "da62f448170c4159edb4ff5e1ff2c0f17933e7ff470dcab7b3f99273f9989bdc",
   "kiosk_package": "0x0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802",
   "publisher": "0x99983ef9ffdbf7504c41bb832486db0602a04c1b13be13a5c3f054e03627cc46",
   "version": {
