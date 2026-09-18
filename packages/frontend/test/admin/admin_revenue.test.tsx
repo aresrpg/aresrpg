@@ -14,20 +14,18 @@ const revenue: AdminRevenue = {
   claimable: 2_530_000_000n,
   reading: false,
   claiming: false,
-  claim_blocked: null,
+  claim_blocked: false,
   connected: true,
   error: null,
   refresh: () => {},
   claim: () => {},
 }
 
-test('inactive or unread claim status disables withdrawal and explains the restriction', () => {
-  for (const claim_blocked of ['Claims unlock after settlement.', 'Reading…', 'Claim status unavailable.']) {
-    const html = renderToStaticMarkup(<TreasuryStrip copy={{}} revenue={{ ...revenue, claim_blocked }} />)
-    expect(html).toMatch(/<button[^>]*disabled=""/)
-    expect(html).toContain(claim_blocked)
-    expect(html).toContain('role="status"')
-  }
+test('unavailable claims stay disabled without an explanatory paragraph', () => {
+  const html = renderToStaticMarkup(<TreasuryStrip copy={{}} revenue={{ ...revenue, claim_blocked: true }} />)
+  expect(html).toMatch(/<button[^>]*disabled=""/)
+  expect(html).not.toContain('role="status"')
+  expect(html).not.toContain('claims unlock')
 })
 
 test('an available claim invokes the withdrawal directly without an arming step', () => {

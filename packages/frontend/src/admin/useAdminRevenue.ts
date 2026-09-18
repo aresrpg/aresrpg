@@ -32,7 +32,7 @@ export type AdminRevenue = Readonly<{
   claimable: bigint
   reading: boolean
   claiming: boolean
-  claim_blocked: string | null
+  claim_blocked: boolean
   connected: boolean
   error: string | null
   refresh: () => void
@@ -41,13 +41,7 @@ export type AdminRevenue = Readonly<{
 
 export const useAdminRevenue = (copy: Readonly<Record<string, string>>): AdminRevenue => {
   const { state: finance } = useFinance({ network: env.network, rpc_url: env.sui_rpc_url })
-  const claim_blocked = finance.snapshot?.pool.active
-    ? null
-    : translated(
-        copy,
-        finance.snapshot ? 'claim_after_settlement' : finance.error ? 'claim_status_unavailable' : 'reading',
-        'Royalty claims are unavailable.'
-      )
+  const claim_blocked = finance.snapshot?.pool.active !== true
   const wallet = useAppStore((state) => state.external_wallet)
   const { session } = wallet
   const [royalties, set_royalties] = useState<readonly MarketplaceRoyalty[]>([])

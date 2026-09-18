@@ -279,10 +279,17 @@ const fold_union = (world: WorldState, packet: Readonly<ServerPacket>): WorldSta
   return world
 }
 
+const changes_viewed_world = (input: AppInput, state: AppState): boolean =>
+  input.type === 'character/select' ||
+  (input.type === 'character/world_joined' &&
+    input.character_id === state.session.selected_character_id &&
+    state.session.characters.some(({ id }) => id === input.character_id))
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'auth/disconnected' || input.type === 'auth/rejected')
     return with_world(state, initial_world_state())
-  if (input.type === 'character/select') return with_world(state, project_world_window(state.world, input.character_id))
+  if (changes_viewed_world(input, state))
+    return with_world(state, project_world_window(state.world, selected_character(state.session)))
   if (input.type === 'world/player_menu')
     return with_world(state, Object.freeze({ ...state.world, player_menu: input.menu }))
   if (input.type === 'world/search_zone')
@@ -340,16 +347,15 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     const retained = retain_world_characters(
       state.world,
       new Set(input.packet.characters.map(({ id }) => id)),
-      state.session.selected_character_id
+      selected_character(state.session)
     )
     const reconciled = gatherings_from_characters(retained.gathering, input.packet.characters)
     return with_world(state, Object.freeze({ ...retained, gathering: reconciled }))
   }
-  const next = fold_cached_world(state.world, input.packet, state.session.selected_character_id, fold_union)
+  const next = fold_cached_world(state.world, input.packet, selected_character(state.session), fold_union)
   return next === state.world ? state : with_world(state, next)
 }
 
-// the no-op observe keeps the MODULES union uniform (chat.ts precedent)
 /** The chain search door has two useful states: a missing row discovers, while an expired row
  * rerolls. A fresh row is a successful no-op on chain, so the UI suppresses that gas burn. */
 export type ZoneSearchTarget = Readonly<{
@@ -470,8 +476,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
         refresh: target.kind === 'reroll',
         custody: character_custody(character),
       })
-      // The receipt proves submission, not the projected zone. Keep the notice pending until
-      // the streamed row becomes visible; the stream may arrive before or after the receipt.
+      // Wait for projection; the stream can arrive before or after the receipt.
       .then(() => {
         if (context.signal.aborted) return
         awaiting.set(key, {
@@ -483,8 +488,6 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
             dispatch({ type: 'world/search_zone_failed', key })
           }, ZONE_ARRIVAL_TIMEOUT_MS) as unknown as number,
         })
-        // it may ALREADY be here — the stream can beat the receipt, and a fold that only ever
-        // fires on the next delta would hang on the fast path
         settle_arrivals(get_state())
       })
       .catch((error: unknown) => {
@@ -496,7 +499,6 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
       })
   })
 
-  /** THE ARRIVAL DOOR: a transaction is done when its projected result is visible. */
   const settle_arrivals = (state: AppState): void => {
     if (awaiting.size === 0) return
     for (const [key, awaited] of awaiting) {

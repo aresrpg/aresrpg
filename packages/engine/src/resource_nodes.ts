@@ -42,8 +42,7 @@ const BUILDERS: Readonly<Record<ResourceSilhouette, SpriteBuilder>> = Object.fre
   ore: ore_vein,
 })
 
-// The job+tier ramp remains the fallback for grain and minerals. Herbalist identity overrides
-// it because “ivory mushroom” and “red orchid” are visual facts, not interchangeable tier paint.
+// Identity palettes override the job+tier fallback where the resource has a distinct colour.
 const HUES: Readonly<Record<ResourceFamily, readonly [number, number]>> = Object.freeze({
   FARMER: [48, 8],
   HERBALIST: [112, 286],
@@ -52,9 +51,11 @@ const HUES: Readonly<Record<ResourceFamily, readonly [number, number]>> = Object
 
 const clamp_tier = (tier: number): number => Math.max(1, Math.min(11, Math.trunc(tier)))
 
-const HERBALIST_VISUALS: Readonly<
-  Record<string, Readonly<{ silhouette: 'flora' | 'mushroom'; body: string; accent: string }>>
+const RESOURCE_VISUALS: Readonly<
+  Record<string, Readonly<{ silhouette: ResourceSilhouette; body: string; accent: string }>>
 > = Object.freeze({
+  wheat_burnt: Object.freeze({ silhouette: 'grain', body: '#29282d', accent: '#77717b' }),
+  wheat_suize: Object.freeze({ silhouette: 'grain', body: '#2467b5', accent: '#66d9ff' }),
   green_mushroom: Object.freeze({ silhouette: 'mushroom', body: '#b9a57e', accent: '#62bf52' }),
   red_orchid: Object.freeze({ silhouette: 'flora', body: '#315f37', accent: '#e04458' }),
   ivory_shrooms: Object.freeze({ silhouette: 'mushroom', body: '#b7aa90', accent: '#fff4dc' }),
@@ -80,7 +81,7 @@ export const resource_visual = (item_type: string, job: string, tier: number) =>
   const hue = hue_lo + (hue_hi - hue_lo) * step
   const fallback_body = new Color().setHSL(hue / 360, family === 'MINER' ? 0.38 : 0.52, family === 'MINER' ? 0.3 : 0.28)
   const fallback_accent = new Color().setHSL(hue / 360, 0.72, 0.62)
-  const authored = family === 'HERBALIST' ? HERBALIST_VISUALS[item_type] : undefined
+  const authored = RESOURCE_VISUALS[item_type]
   return Object.freeze({
     family,
     tier: clamp_tier(tier),

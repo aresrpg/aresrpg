@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import type { PresenceRow, ServerPacket } from '@aresrpg/protocol'
+import type { CharacterRow, PresenceRow, ServerPacket } from '@aresrpg/protocol'
 
 import world, {
   engage_sword_markers,
@@ -32,7 +32,14 @@ const app_state = (): ReturnType<typeof initial_app_state> => {
   const state = initial_app_state(settings)
   return Object.freeze({
     ...state,
-    session: Object.freeze({ ...state.session, selected_character_id: '0xc' }),
+    session: Object.freeze({
+      ...state.session,
+      selected_character_id: '0xc',
+      characters: [
+        { id: '0xc', world: 'overworld' },
+        { id: '0xd', world: 'verdant' },
+      ] as CharacterRow[],
+    }),
   })
 }
 
@@ -524,7 +531,7 @@ test('a disconnect clears the whole surrounding', () => {
 test('fight markers fold: tracked batches merge, creations upsert, phases flip and despawn', () => {
   const row = {
     id: '0xfight1',
-    world: 'zenith',
+    world: 'overworld',
     x: 100,
     z: 200,
     phase: 'placement',
@@ -537,7 +544,7 @@ test('fight markers fold: tracked batches merge, creations upsert, phases flip a
     placement_ms: '1000',
   }
   // the initial tracked batch seeds the marker set; later batches may contain only fresh zones
-  const snapshotted = fold([tracked('zenith', [{ zx: 0, zz: 0 }]), { type: 'packet/fights', fights: [row] }])
+  const snapshotted = fold([tracked('overworld', [{ zx: 0, zz: 0 }]), { type: 'packet/fights', fights: [row] }])
   expect(Object.keys(snapshotted.fights)).toEqual(['0xfight1'])
 
   // A CREATION SHIPS THE PROJECTED ROW (2026-08-21): the fold stores what the wire carried and
@@ -545,23 +552,23 @@ test('fight markers fold: tracked batches merge, creations upsert, phases flip a
   // must never wear one, until the next snapshot happened to correct it.
   const born = { ...row, id: '0xf2', x: 5, z: 6, managed: true, access_a: 1, placement_ms: '2000' }
   const created = fold([
-    tracked('zenith', [{ zx: 0, zz: 0 }]),
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/fights', fights: [] },
     { type: 'packet/fight_created', fight: born },
   ])
   expect(created.fights['0xf2']).toEqual(born)
 
   const active = fold([
-    tracked('zenith', [{ zx: 0, zz: 0 }]),
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/fights', fights: [row] },
     { type: 'packet/fight_phase', fight: '0xfight1', phase: 'active' },
   ])
   expect(active.fights['0xfight1']?.phase).toBe('active')
-  expect(sword_fights(active.fights, 'zenith').map(({ id }) => id)).toEqual(['0xfight1'])
-  expect(sword_fights(snapshotted.fights, 'zenith').map(({ id }) => id)).toEqual(['0xfight1'])
+  expect(sword_fights(active.fights, 'overworld').map(({ id }) => id)).toEqual(['0xfight1'])
+  expect(sword_fights(snapshotted.fights, 'overworld').map(({ id }) => id)).toEqual(['0xfight1'])
 
   const ended = fold([
-    tracked('zenith', [{ zx: 0, zz: 0 }]),
+    tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/fights', fights: [row] },
     { type: 'packet/fight_phase', fight: '0xfight1', phase: 'ended' },
   ])

@@ -3,11 +3,9 @@
 // Planted fight swords — the join-window clock made physical. A sword slams in from the sky,
 // then sinks linearly across the placement window until only the handle shows (the dapp's
 // exact geometry, including its grow, spin, wobble and one impact edge). Each marker carries
-// an optional DOM element slot floating above it (the prompt/lock tag), positioned by the
-// SAME CSS2D pass the entity labels use.
+// a live world-space anchor consumed by the shared DOM label renderer.
 
-import { AudioListener, AudioLoader, Box3, Object3D, PositionalAudio, type Scene } from 'three'
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import { AudioListener, AudioLoader, Box3, Object3D, PositionalAudio, Vector3, type Scene } from 'three'
 
 import { project_height } from './flatten.ts'
 import { load_gltf_source } from './gltf_loader.ts'
@@ -79,7 +77,6 @@ export const fight_sword_frame = (
 type Planted = Readonly<{
   root: Object3D
   marker: FightSwordMarker
-  label: CSS2DObject | null
   spawned_ms: number
   impacted: boolean
 }>
@@ -193,24 +190,15 @@ export const create_fight_sword_layer = ({
       root.visible = visible
       rebuild(root)
       scene.add(root)
-      planted.set(marker.id, { root, marker, label: null, spawned_ms: Date.now(), impacted: !visible })
+      planted.set(marker.id, { root, marker, spawned_ms: Date.now(), impacted: !visible })
     }
   }
 
-  /** attach (or detach) the DOM tag floating above a sword */
-  const set_label = (id: string, element: HTMLElement | null): void => {
-    if (disposed) return
+  const label_position = new Vector3()
+  const label_anchor = (id: string): Vector3 | null => {
     const entry = planted.get(id)
-    if (!entry) return
-    if (entry.label) {
-      entry.root.remove(entry.label)
-      planted.set(id, { ...entry, label: null })
-    }
-    if (!element) return
-    const label = new CSS2DObject(element)
-    label.position.set(0, fight_sword_label_offset(entry.root.scale.y), 0)
-    entry.root.add(label)
-    planted.set(id, { ...entry, label })
+    if (!entry || !visible || disposed) return null
+    return entry.root.localToWorld(label_position.set(0, fight_sword_label_offset(entry.root.scale.y), 0))
   }
 
   const tick = (_frame_now: number): void => {
@@ -227,7 +215,6 @@ export const create_fight_sword_layer = ({
       const ground_y = fight_sword_ground_height(marker.y, flatten_amount)
       root.position.set(marker.x, ground_y + height, marker.z)
       root.scale.setScalar(Math.max(scale, 0.001))
-      entry.label?.position.set(0, fight_sword_label_offset(scale), 0)
       root.rotation.y = yaw
       if (!impacted) {
         root.rotation.x = Math.random() * 0.02 - 0.01
@@ -259,7 +246,7 @@ export const create_fight_sword_layer = ({
 
   return Object.freeze({
     set_markers,
-    set_label,
+    label_anchor,
     set_volume: (volume: number) => {
       if (!disposed) listener.setMasterVolume(volume)
     },

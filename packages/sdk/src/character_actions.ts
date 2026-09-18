@@ -7,6 +7,7 @@ import { craft_stackable_batch_limit, type CharacteristicName } from '@aresrpg/i
 import { zone_of } from '@aresrpg/protocol'
 
 import { box_rolls, LOOT_BOX_BATCH_LIMIT, type BoxRoll } from './loot_boxes.ts'
+import { search_existing_zone } from './zone_search.ts'
 import { consumable_action } from './consumables.ts'
 import type { SDK } from './client.ts'
 import { changed_object_ids, created_object_id, spending_receipt, receipt_digest, receipt_event } from './cache.ts'
@@ -107,7 +108,6 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       )
       return { digest: receipt_digest(receipt) }
     },
-
     /** Spend exact capital: one class-priced characteristic row per Move call, ONE transaction. */
     raise_stats: async ({
       character_id,
@@ -128,7 +128,6 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       )
       return { digest: receipt_digest(receipt) }
     },
-
     /** Raise one spell a level (n → n+1 costs n points — the chain re-asserts every rule). */
     raise_spell: async ({
       character_id,
@@ -150,7 +149,6 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
     },
 
     use_consumable: consumable_action(sdk, with_kiosk),
-
     /** Scribe one rune and return its certified stat and quantity changes. */
     scribe_rune: async ({
       character_id,
@@ -500,12 +498,14 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       const world_object = world_id(content_root, game_original, world)
       const { zx, zz } = zone_of(x, z)
       const zone_object = zone_id(world_object, game_original, zx, zz)
-      const receipt = await with_terminal_kiosk(
-        (tx, kiosk, personal) =>
-          refresh
-            ? sdk.doors.refresh_zone(tx, { kiosk, personal, character_id, x, z, zone_object })
-            : sdk.doors.create_zone(tx, { kiosk, personal, character_id, x, z, world_object }),
-        { custody, inputs: [refresh ? zone_object : world_object] }
+      const receipt = await search_existing_zone(refresh, (refresh) =>
+        with_terminal_kiosk(
+          (tx, kiosk, personal) =>
+            refresh
+              ? sdk.doors.refresh_zone(tx, { kiosk, personal, character_id, x, z, zone_object })
+              : sdk.doors.create_zone(tx, { kiosk, personal, character_id, x, z, world_object }),
+          { custody, inputs: [refresh ? zone_object : world_object] }
+        )
       )
       return Object.freeze({ digest: receipt_digest(receipt) })
     },

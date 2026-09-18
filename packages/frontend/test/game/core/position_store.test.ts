@@ -21,6 +21,55 @@ import { reset_party_follow_for_testing, update_party_follow } from '../../../sr
 const anchor = Object.freeze({ x: 100, z: 200, at_ms: 1_000 })
 const saved: SavedPosition = Object.freeze({ schema: 1, x: 12, y: 64, z: 34, saved_at: 50_000, anchor })
 
+test('walking after a projected scout saves against its new anchor and survives a new cache lifetime', async () => {
+  reset_owned_character_positions_for_testing()
+  let stored: SavedPosition | null = null
+  const storage = {
+    load: async () => stored,
+    save: async (_id: string, _world: string, row: SavedPosition) => {
+      stored = row
+    },
+    remove: async () => {
+      stored = null
+    },
+  }
+  const cache = create_owned_position_cache({
+    storage,
+    on_error: (message) => {
+      throw new Error(message)
+    },
+  })
+  const character = {
+    id: 'scout',
+    world: 'yakutia',
+    checkpoint_world: 'yakutia',
+    x: 50_006,
+    z: 49_968,
+    at_ms: 200,
+  } as never
+  cache.note(character, {
+    character_id: 'scout',
+    world: 'yakutia',
+    checkpoint: 'yakutia:50006:49968:200',
+    x: 50_080,
+    y: 10,
+    z: 49_990,
+  })
+  cache.flush()
+  await cache.restore([])
+  const reloaded = create_owned_position_cache({
+    storage,
+    on_error: (message) => {
+      throw new Error(message)
+    },
+  })
+  await reloaded.restore([character])
+  expect(owned_character_position('scout', 'yakutia', 'yakutia:50006:49968:200')).toMatchObject({
+    x: 50_080,
+    z: 49_990,
+  })
+})
+
 test('the saved pose resumes only while it explains itself against the chain anchor', () => {
   expect(resume_position(saved, anchor, 60_000)).toEqual({ x: 12, y: 64, z: 34 })
   // chain truth moved — the checkpoint wins

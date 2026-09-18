@@ -19,7 +19,14 @@ import { create_watcher } from '../pubsub_bus.ts'
 const log = logger(import.meta)
 
 const refreshes_roster = (type: string): boolean =>
-  ['DungeonEntered', 'DungeonRoomCleared', 'DungeonEnded', 'CharacterTeleported', 'CharacterDeleted'].includes(type)
+  [
+    'WorldJoined',
+    'DungeonEntered',
+    'DungeonRoomCleared',
+    'DungeonEnded',
+    'CharacterTeleported',
+    'CharacterDeleted',
+  ].includes(type)
 
 export default {
   name: 'player_events',

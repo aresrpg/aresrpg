@@ -44,7 +44,14 @@ const born = (id: string, opener_b: string | null, phase = 'placement'): AppInpu
 const playing =
   (character_id: string) =>
   (state: AppState): AppState =>
-    Object.freeze({ ...state, session: Object.freeze({ ...state.session, selected_character_id: character_id }) })
+    Object.freeze({
+      ...state,
+      session: Object.freeze({
+        ...state.session,
+        selected_character_id: character_id,
+        characters: [{ id: character_id, world: 'w' }] as never,
+      }),
+    })
 
 describe('the duel invitation', () => {
   const base = fold(playing('0xme')(initial_app_state(settings)), {

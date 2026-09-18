@@ -3,6 +3,18 @@
 
 import { expect, test } from '@playwright/test'
 
+for (const kind of ['grid', 'webgpu'] as const)
+  test(`fight sword labels use the rendered label scene (${kind})`, async ({ page }) => {
+    await page.goto('/e2e/fixtures/engine_lifecycle.html')
+    await page.waitForFunction(() => typeof window.probe_sword_labels === 'function')
+    expect(await page.evaluate((kind) => window.probe_sword_labels(kind), kind)).toEqual({
+      attached: true,
+      moved: true,
+      hidden: true,
+      detached: true,
+    })
+  })
+
 test('labels do not update or traverse the game scene', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   await page.waitForFunction(() => typeof window.probe_label_scene === 'function')

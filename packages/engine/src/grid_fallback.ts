@@ -158,7 +158,8 @@ export const create_grid_fallback = (
       fight_swords.set_visible(fight_swords_visible(board_active))
       fight_swords.set_markers(markers)
     },
-    set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
+    set_fight_sword_label: (id, element) =>
+      entity_labels.set_static(`fight:${id}`, element, () => fight_swords?.label_anchor(id) ?? null),
     set_resource_nodes: (markers) =>
       resource_nodes.set_markers(Object.freeze(markers.map((marker) => Object.freeze({ ...marker, y: 0 })))),
     set_resource_node_label: (id, element) =>

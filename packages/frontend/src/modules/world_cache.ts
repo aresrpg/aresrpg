@@ -2,9 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One union of world facts, projected through the selected character's tracked window.
 
-import { zone_of, type ServerPacket } from '@aresrpg/protocol'
+import { zone_of, type CharacterRow, type ServerPacket } from '@aresrpg/protocol'
 
 import type { WorldState } from './world.ts'
+
+type WorldCharacter = Readonly<Pick<CharacterRow, 'id' | 'world'>> | null | undefined
 
 const key_of = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
 
@@ -40,17 +42,17 @@ const prune_world_union = (world: WorldState): WorldState => {
 export const retain_world_characters = (
   world: WorldState,
   character_ids: ReadonlySet<string>,
-  selected_character_id: string | null
+  selected_character: WorldCharacter
 ): WorldState => {
   const windows = Object.freeze(
     Object.fromEntries(Object.entries(world.windows).filter(([character_id]) => character_ids.has(character_id)))
   )
-  return project_world_window(prune_world_union(Object.freeze({ ...world, windows })), selected_character_id)
+  return project_world_window(prune_world_union(Object.freeze({ ...world, windows })), selected_character)
 }
 
-export const project_world_window = (world: WorldState, character_id: string | null): WorldState => {
-  const window = character_id ? world.windows[character_id] : undefined
-  if (!window)
+export const project_world_window = (world: WorldState, character: WorldCharacter): WorldState => {
+  const window = character ? world.windows[character.id] : undefined
+  if (!window || window.world !== character?.world)
     return Object.freeze({
       ...world,
       tracked_world: null,
@@ -99,7 +101,7 @@ export const project_world_window = (world: WorldState, character_id: string | n
 export const fold_cached_world = (
   world: WorldState,
   packet: Readonly<ServerPacket>,
-  character_id: string | null,
+  character: WorldCharacter,
   fold_union: (world: WorldState, packet: Readonly<ServerPacket>) => WorldState
 ): WorldState => {
   if (packet.type === 'packet/tracked_zones')
@@ -113,7 +115,7 @@ export const fold_cached_world = (
           }),
         })
       ),
-      character_id
+      character
     )
   const union = Object.freeze({
     ...world,
@@ -132,6 +134,6 @@ export const fold_cached_world = (
       all_spawns: folded.spawns,
       all_fights: folded.fights,
     }),
-    character_id
+    character
   )
 }

@@ -301,7 +301,7 @@ const claim_label = (copy: Readonly<Record<string, string>>, revenue: AdminReven
 const treasury_value = (revenue: AdminRevenue): string =>
   revenue.treasury_mist === null ? '—' : `${format_sui(revenue.treasury_mist, 2)} SUI`
 const claim_disabled = (revenue: AdminRevenue): boolean =>
-  !revenue.connected || revenue.claimable <= 0n || revenue.claiming || !!revenue.claim_blocked
+  !revenue.connected || revenue.claimable <= 0n || revenue.claiming || revenue.claim_blocked
 
 export const TreasuryStrip = ({
   copy,
@@ -331,11 +331,6 @@ export const TreasuryStrip = ({
       >
         {claim_label(copy, revenue, claimable)}
       </button>
-      {revenue.claim_blocked && (
-        <p className="w-full text-[10px] text-muted" role="status">
-          {revenue.claim_blocked}
-        </p>
-      )}
     </section>
   )
 }

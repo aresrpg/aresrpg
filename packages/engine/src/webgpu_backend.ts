@@ -820,7 +820,8 @@ export const create_webgpu_backend = async (
         fight_swords.set_visible(fight_swords_visible(board_footprint !== null) && !dungeon_stage_active)
         fight_swords.set_markers(markers)
       },
-      set_fight_sword_label: (id, element) => fight_swords?.set_label(id, element),
+      set_fight_sword_label: (id, element) =>
+        entity_labels.set_static(`fight:${id}`, element, () => fight_swords?.label_anchor(id) ?? null),
       set_resource_nodes: resource_nodes.set_markers,
       set_resource_node_label: (id, element) =>
         entity_labels.set_static(`resource:${id}`, element, () => resource_nodes.label_anchor(id)),

@@ -312,6 +312,8 @@ export default {
           zone_x: number
           zone_z: number
         }
+        // Scouting also proves movement. Refresh anchors before clients persist later poses.
+        dispatch({ type: 'action/refresh_account', domain: 'characters' })
         if (has(mesh.pos(w, zone_x, zone_z))) void push_zone(w, zone_x, zone_z)
       }
       if (payload.type === 'ResourceGathered') {
