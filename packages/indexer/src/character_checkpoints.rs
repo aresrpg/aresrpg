@@ -69,24 +69,20 @@ mod tests {
             type_key: &key,
             bytes: &bytes,
         };
+        let outputs = std::slice::from_ref(&output);
         assert_eq!(
-            changed(&[], &[output.clone()], "0xgame").unwrap(),
+            changed(&[], outputs, "0xgame").unwrap(),
             vec![(0, character)]
         );
-        assert!(changed(&[output.clone()], &[output.clone()], "0xgame")
-            .unwrap()
-            .is_empty());
-        assert!(changed(&[], &[output.clone()], "0xother")
-            .unwrap()
-            .is_empty());
-        let outputs = [output.clone()];
+        assert!(changed(outputs, outputs, "0xgame").unwrap().is_empty());
+        assert!(changed(&[], outputs, "0xother").unwrap().is_empty());
         let tx = crate::publish::TxView {
             tx_index: 3,
             sender: crate::decode::Addr([3; 32]),
             move_calls: &[],
             events: &[],
             inputs: &[],
-            outputs: &outputs,
+            outputs,
         };
         let wire = crate::publish::analyze(7, 42, &[tx], "0xgame", "0xseed").unwrap();
         assert_eq!(wire.publications.len(), 1);
