@@ -46,6 +46,7 @@ import {
   type FightBoardFrame,
 } from './cameras.ts'
 import { create_character_controller, type CharacterTransform } from './character.ts'
+import { MOUNT_SPEED_SCALE } from './controller.ts'
 import { create_chunk_manager } from './chunks.ts'
 import { world_keyboard_eligible, WORLD_MOVE_KEYS } from './world_input.ts'
 import { CHARACTER_HEIGHT, following_pet_ground_height, walkable_spawn_height } from './collision.ts'
@@ -759,7 +760,7 @@ export const create_world = ({
   globalThis.addEventListener('focusin', on_focus_in)
   const set_riding = (next: boolean): void => {
     riding = Boolean(next && pet && character_render)
-    character.set_input({ speed_scale: riding ? 1.5 : 1, glide: false })
+    character.set_input({ speed_scale: riding ? MOUNT_SPEED_SCALE : 1, glide: false })
     rendered_transform = null
     render_character()
     render_pet()

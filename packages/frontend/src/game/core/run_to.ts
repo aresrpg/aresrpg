@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { MOUNT_SPEED_SCALE, RUN_SPEED } from './controller.ts'
+
 export const RUN_TO_ARRIVAL_DISTANCE = 2
+
+export const run_to_remaining_seconds = (distance: number, riding: boolean): number =>
+  Math.ceil(Math.max(0, distance - RUN_TO_ARRIVAL_DISTANCE) / (RUN_SPEED * (riding ? MOUNT_SPEED_SCALE : 1)))
 
 export type RunTarget = Readonly<{ x: number; z: number; ride_pet?: boolean }>
 

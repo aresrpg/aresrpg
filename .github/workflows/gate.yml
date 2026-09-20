@@ -31,6 +31,7 @@ jobs:
           filter: blob:none
           sparse-checkout: |
             scripts/ci_inputs.mjs
+            scripts/release_inputs.mjs
             move-packages.json
           sparse-checkout-cone-mode: false
       - id: inputs

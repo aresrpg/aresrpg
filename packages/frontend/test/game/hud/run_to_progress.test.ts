@@ -5,6 +5,14 @@ import { expect, test } from 'bun:test'
 
 import { selected_position_run } from '../../../src/game/hud/RunToProgress.tsx'
 import { run_to_progress_percent } from '../../../src/modules/run_to.ts'
+import { run_to_remaining_seconds } from '../../../src/game/core/run_to.ts'
+
+test('arrival estimate follows running and mounted speed and stops at the arrival radius', () => {
+  expect(run_to_remaining_seconds(317, false)).toBe(30)
+  expect(run_to_remaining_seconds(317, true)).toBe(20)
+  expect(run_to_remaining_seconds(2, false)).toBe(0)
+  expect(run_to_remaining_seconds(0, true)).toBe(0)
+})
 
 test('run-to progress advances toward the target and stays bounded', () => {
   expect(run_to_progress_percent(100, 100)).toBe(0)

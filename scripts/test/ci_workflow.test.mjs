@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 
 import { beforeAll, expect, test } from 'bun:test'
 
@@ -9,6 +11,27 @@ import browser_config from '../../packages/frontend/e2e/playwright.config.ts'
 
 const workflow = Bun.YAML.parse(readFileSync(new URL('../../.github/workflows/gate.yml', import.meta.url), 'utf8'))
 const { jobs } = workflow
+
+test('verification selector executes with only its sparse checkout files', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ares-ci-inputs-'))
+  try {
+    const checkout = jobs.changes.steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+    for (const path of checkout.with['sparse-checkout'].trim().split('\n')) {
+      const destination = join(directory, path)
+      mkdirSync(dirname(destination), { recursive: true })
+      cpSync(new URL(`../../${path}`, import.meta.url), destination, { recursive: true })
+    }
+    const output = join(directory, 'outputs')
+    execFileSync('node', ['scripts/ci_inputs.mjs'], {
+      cwd: directory,
+      env: { ...process.env, BASE_SHA: '', GITHUB_OUTPUT: output },
+      stdio: 'pipe',
+    })
+    expect(readFileSync(output, 'utf8')).toBe('browsers=true\nmove=true\nindexer=true\n')
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
+  }
+})
 
 test('all selective lanes use a successful edge push baseline, including PRs', () => {
   const step = jobs.changes.steps.find(({ id }) => id === 'inputs')
