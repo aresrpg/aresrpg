@@ -1,29 +1,45 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
 #
-# Every entry targets the repository's only persistent branch, `edge`. Minors and patches ride one
-# grouped PR per ecosystem; MAJORS are deliberately left out of every group so each arrives as
-# its own review row, read against its breaking-change notes and landed through the normal
-# train — never batched, never auto-merged.
+# Use the default branch (edge) so grouping also applies to security updates.
+# Weekly minor/patch batches and security fixes each get their own grouped PR.
+# Major updates remain separate reviews; no updates are auto-merged.
 version: 2
 updates:
   - package-ecosystem: 'github-actions'
     directory: '/'
-    target-branch: 'edge'
     schedule:
       interval: 'weekly'
+    open-pull-requests-limit: 2
+    groups:
+      actions-minor-patch:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+      actions-security:
+        applies-to: security-updates
+        patterns: ['*']
+        update-types: ['minor', 'patch']
 
   # The workspace root. `bun`, not `npm`: the lockfile this repo actually resolves against is
   # bun.lock, which the npm ecosystem does not read — it would update package.json manifests and
   # leave the lockfile lying (#1848).
   - package-ecosystem: 'bun'
     directory: '/'
-    target-branch: 'edge'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
+    # 0.186.0 changes renderer disposal to async; world cleanup needs a separate migration.
+    ignore:
+      - dependency-name: 'three'
+        versions: ['0.186.0']
+      - dependency-name: '@types/three'
+        versions: ['0.186.0']
     groups:
       bun-minor-patch:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+      bun-security:
+        applies-to: security-updates
         patterns: ['*']
         update-types: ['minor', 'patch']
 
@@ -32,11 +48,14 @@ updates:
   # CLI, see its Cargo.toml); this entry covers the crates.io half, which was covered by nothing.
   - package-ecosystem: 'cargo'
     directory: '/packages/indexer'
-    target-branch: 'edge'
     schedule:
       interval: 'weekly'
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     groups:
       cargo-minor-patch:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+      cargo-security:
+        applies-to: security-updates
         patterns: ['*']
         update-types: ['minor', 'patch']

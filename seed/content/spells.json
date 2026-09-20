@@ -15584,7 +15584,7 @@
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 1,
-            "chance_bp": 10,
+            "chance_bp": 1000,
             "turns": 0,
             "stat": 12
           }
@@ -15610,7 +15610,7 @@
             "area_shape": 0,
             "area_size": 0,
             "target_filter": 1,
-            "chance_bp": 10,
+            "chance_bp": 1000,
             "turns": 0,
             "stat": 12
           }
