@@ -41,6 +41,7 @@ import {
   sample_relief_grid,
   type ReliefGrid,
 } from './minimap_render.ts'
+import { create_map_resource_icons } from './map_resource_icons.ts'
 import { WorldMap } from './WorldMap.tsx'
 
 const SIZE = 288
@@ -93,7 +94,8 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
   )
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
-  const grid_ref = useRef<Readonly<{ key: string; grid: ReliefGrid }> | null>(null)
+  const grid_ref = useRef<Readonly<{ key: string; world: CompiledWorld; grid: ReliefGrid }> | null>(null)
+  const [resource_icons] = useState(create_map_resource_icons)
   const [map_open, set_map_open] = useState(false)
   const text = copy_text(copy.world_hud)
 
@@ -125,18 +127,27 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     const context = canvas.getContext('2d')
     if (!context) return
     const key = resample_key(pose.x, pose.z)
-    // eslint-disable-next-line functional/immutable-data -- React owns this component-local cache cell
-    if (grid_ref.current?.key !== key) grid_ref.current = { key, grid: sample_relief_grid(compiled, pose.x, pose.z) }
+    if (grid_ref.current?.key !== key || grid_ref.current.world !== compiled) {
+      // eslint-disable-next-line functional/immutable-data -- React owns this component-local cache cell.
+      grid_ref.current = { key, world: compiled, grid: sample_relief_grid(compiled, pose.x, pose.z) }
+    }
     const { grid } = grid_ref.current
     const view = { center_x: grid.center_x, center_z: grid.center_z, size: SIZE, radius: VIEW_RADIUS_BLOCKS }
-    paint_relief(context, grid, SIZE)
-    draw_zone_layer(context, view, (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false))
-    draw_city_layer(context, view, cities)
-    draw_spawn_markers(context, view, spawn_markers(world_state, world_name))
-    draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name))
-    draw_players(context, view, Object.values(world_state.players))
-    draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
-  }, [cities, pose, compiled, world_state, world_name])
+    const paint = (): void => {
+      paint_relief(context, grid, SIZE)
+      draw_zone_layer(context, view, (zx, zz) =>
+        world_name ? zone_key(world_name, zx, zz) in world_state.zones : false
+      )
+      draw_city_layer(context, view, cities)
+      draw_spawn_markers(context, view, spawn_markers(world_state, world_name), icons.image)
+      draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name))
+      draw_players(context, view, Object.values(world_state.players))
+      draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
+    }
+    const icons = resource_icons(pose, paint)
+    paint()
+    return icons.dispose
+  }, [cities, pose, compiled, world_state, world_name, resource_icons])
 
   if (!pose || !compiled) return null
 
@@ -172,7 +183,14 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         location_label={city ? location_name : text('biome')}
         location_name={location_name}
       />
-      {map_open && <WorldMap compiled={compiled} copy={copy} on_close={() => set_map_open(false)} />}
+      {map_open && (
+        <WorldMap
+          compiled={compiled}
+          copy={copy}
+          resource_icons={resource_icons}
+          on_close={() => set_map_open(false)}
+        />
+      )}
     </div>
   )
 }

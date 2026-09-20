@@ -19,6 +19,7 @@ import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/w
 import { dispatch_app, useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 
+import type { MapResourceIcons } from './map_resource_icons.ts'
 import { camera_heading } from './compass_math.ts'
 import {
   draw_dungeon_portal_markers,
@@ -76,7 +77,8 @@ export const WorldMap = ({
   compiled,
   copy,
   on_close,
-}: Readonly<{ compiled: CompiledWorld; copy: AppCopy; on_close: () => void }>) => {
+  resource_icons,
+}: Readonly<{ compiled: CompiledWorld; copy: AppCopy; on_close: () => void; resource_icons: MapResourceIcons }>) => {
   const pose = useWorldPose()
   const world_state = useAppStore(({ world }) => world)
   const world_name = useAppStore(
@@ -160,25 +162,30 @@ export const WorldMap = ({
     const context = canvas.getContext('2d')
     if (!context) return
     const view = { center_x: grid.center_x, center_z: grid.center_z, size: MAP_SIZE, radius: grid.radius }
-    paint_relief(context, grid, MAP_SIZE)
-    if (sampled_rows < MAP_SAMPLES) return
-    const zone_lod = world_map_zone_lod(grid.radius, MAP_SIZE)
-    if (zone_lod.layer)
-      draw_zone_layer(
-        context,
-        view,
-        (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false),
-        zone_lod.labels
+    const paint = (): void => {
+      paint_relief(context, grid, MAP_SIZE)
+      if (sampled_rows < MAP_SAMPLES) return
+      const zone_lod = world_map_zone_lod(grid.radius, MAP_SIZE)
+      if (zone_lod.layer)
+        draw_zone_layer(
+          context,
+          view,
+          (zx, zz) => (world_name ? zone_key(world_name, zx, zz) in world_state.zones : false),
+          zone_lod.labels
+        )
+      draw_city_layer(context, view, cities)
+      draw_zone_selection(context, view, selected_zone)
+      draw_spawn_markers(context, view, spawn_markers(world_state, world_name), icons.image)
+      draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name), Date.now(), (city) =>
+        copy_text(copy.world_hud)('dungeon_city', { city })
       )
-    draw_city_layer(context, view, cities)
-    draw_zone_selection(context, view, selected_zone)
-    draw_spawn_markers(context, view, spawn_markers(world_state, world_name))
-    draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name), Date.now(), (city) =>
-      copy_text(copy.world_hud)('dungeon_city', { city })
-    )
-    draw_players(context, view, Object.values(world_state.players))
-    draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
-  }, [cities, copy, grid, sampled_rows, pose, selected_zone, world_state, world_name])
+      draw_players(context, view, Object.values(world_state.players))
+      draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
+    }
+    const icons = resource_icons(pose, paint)
+    paint()
+    return icons.dispose
+  }, [cities, copy, grid, sampled_rows, pose, selected_zone, world_state, world_name, resource_icons])
 
   const change_lod = (direction: -1 | 1): void => set_lod_level((level) => step_world_map_lod(level, direction))
   const select_zone = (event: Readonly<MouseEvent<HTMLCanvasElement>>): void => {

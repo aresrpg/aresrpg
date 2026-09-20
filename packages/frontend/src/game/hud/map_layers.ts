@@ -152,17 +152,27 @@ export const draw_zone_selection = (
 export const draw_spawn_markers = (
   context: CanvasRenderingContext2D,
   view: MapView,
-  markers: ReturnType<typeof spawn_markers>
+  markers: ReturnType<typeof spawn_markers>,
+  resource_icon: (marker: ReturnType<typeof spawn_markers>[number]) => CanvasImageSource | null = () => null
 ): void => {
   for (const marker of markers) {
+    if (!visible_in_view(view, { min_x: marker.x, max_x: marker.x, min_z: marker.z, max_z: marker.z })) continue
     const { px, pz } = to_canvas(marker.x, marker.z, view.center_x, view.center_z, view.size, view.radius)
-    if (px < 0 || pz < 0 || px > view.size || pz > view.size) continue
     if (marker.kind === 'mob') {
       context.fillStyle = '#ff6b6b'
       context.beginPath()
       context.arc(px, pz, 4.5, 0, Math.PI * 2)
       context.fill()
     } else {
+      const icon = resource_icon(marker)
+      if (icon) {
+        context.save()
+        context.shadowColor = 'rgba(0, 0, 0, 0.9)'
+        context.shadowBlur = 3
+        context.drawImage(icon, px - 10, pz - 10, 20, 20)
+        context.restore()
+        continue
+      }
       context.fillStyle = '#c8963c'
       context.beginPath()
       context.arc(px, pz, 3, 0, Math.PI * 2)
