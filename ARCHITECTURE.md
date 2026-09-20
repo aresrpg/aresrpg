@@ -688,7 +688,9 @@ version is logged; absent Chrome and Playwright’s patched Firefox are installe
 the low and medium lanes each verify one missing-WebGPU fallback. Browser jobs have a six-minute
 execution limit. Smoke world workloads have a 210-second test timeout; full workloads retain their ten-minute local budget. UI layout retries have a three-second
 budget, separate from the longer world-rendering checks. Settings persistence exercises its actual
-controls, reducer, and storage observer across reloads without initializing a renderer. CI UI shards use two workers; each GPU workload job retains one worker. Sharding does not change test
+controls, reducer, and storage observer across reloads without initializing a renderer. Headless CI UI shards use two workers. Linux Firefox runs headed under Xvfb with one worker
+per display so browser windows cannot steal each other’s hover or focus; its separate shards retain
+parallel coverage. Each GPU workload job retains one worker. Sharding does not change test
 selection, and local runs default to one worker.
 
 Owner-authorized release preparation builds immutable images and stages Vercel output concurrently

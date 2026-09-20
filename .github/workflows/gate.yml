@@ -363,7 +363,8 @@ jobs:
         shell: bash
         run: |
           if [ "$RUNNER_OS" = Linux ] && [ "$BROWSER" = firefox ]; then
-            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed --project=${{ matrix.project }} --shard=${{ matrix.shard }} --workers="$BROWSER_WORKERS"
+            # One headed window per display prevents cross-worker hover/focus loss.
+            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed --project=${{ matrix.project }} --shard=${{ matrix.shard }} --workers=1
           else
             bun run test:browser --project=${{ matrix.project }} --shard=${{ matrix.shard }} --workers="$BROWSER_WORKERS"
           fi

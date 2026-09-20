@@ -61,7 +61,9 @@ test('browser matrix shards every existing platform and retains independent repo
   expect(job.steps.find(({ name }) => name === 'prepare browser').run).toBe('bun scripts/prepare_browser.mjs')
   const { run, env } = job.steps.find(({ name }) => name === 'browser compatibility tests')
   expect(env?.BROWSER_WORKERS).toBe("${{ matrix.project == 'ui' && 2 || 1 }}")
-  expect(run.match(/--workers="\$BROWSER_WORKERS"/g)).toHaveLength(2)
+  // Headed Firefox windows share one X display: concurrent workers steal pointer hover.
+  expect(run.split('\n').find((line) => line.includes('--headed'))).toContain('--workers=1')
+  expect(run.match(/--workers="\$BROWSER_WORKERS"/g)).toHaveLength(1)
   expect(run.match(/--project=\$\{\{ matrix.project \}\} --shard=\$\{\{ matrix.shard \}\}/g)).toHaveLength(2)
   expect(job.steps.at(-1).with.name).toContain('${{ strategy.job-index }}')
 })
