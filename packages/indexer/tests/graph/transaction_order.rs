@@ -182,11 +182,7 @@ fn scalar(result: redis::Value) -> redis::Value {
 async fn final_relations_survive_transaction_order_and_partial_replay() {
     let url = std::env::var("FALKOR_TEST_URL").expect("set isolated local FALKOR_TEST_URL");
     assert!(url.starts_with("redis://127.0.0.1:"));
-    let mut connection = redis::Client::open(url)
-        .unwrap()
-        .get_multiplexed_async_connection()
-        .await
-        .unwrap();
+    let mut connection = crate::store::connect(&url).await.unwrap();
     let graph = format!("projection_regression_{}", std::process::id());
     query(
         &mut connection,

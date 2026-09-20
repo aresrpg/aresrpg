@@ -31,6 +31,18 @@ const WATERMARK_PREFIX: &str = "idx:watermark:";
 /// Key holding the hex chain id this cache is bound to (network-mix guard).
 const CHAIN_ID_KEY: &str = "idx:chain_id";
 
+pub async fn connect(url: &str) -> Result<MultiplexedConnection> {
+    // Preserve pre-1.0 behavior: replay and graph indexing may exceed the new 500 ms default.
+    let config = redis::AsyncConnectionConfig::new()
+        .set_connection_timeout(None)
+        .set_response_timeout(None);
+    redis::Client::open(url)
+        .context("opening Redis client")?
+        .get_multiplexed_async_connection_with_config(&config)
+        .await
+        .context("connecting to FalkorDB")
+}
+
 /// Persisted watermark document — a plain JSON string under a plain key.
 #[derive(Debug, Serialize, Deserialize)]
 struct WatermarkDoc {
@@ -49,11 +61,7 @@ pub struct FalkorStore {
 impl FalkorStore {
     /// Connect and verify reachability (fails fast on a bad `REDIS_URL`).
     pub async fn new(url: &str) -> Result<Self> {
-        let client = redis::Client::open(url).context("opening Redis client")?;
-        let mut conn = client
-            .get_multiplexed_async_connection()
-            .await
-            .context("connecting to FalkorDB")?;
+        let mut conn = connect(url).await?;
         let _: () = redis::cmd("PING")
             .query_async(&mut conn)
             .await
@@ -208,3 +216,7 @@ impl Connection for FalkorConnection {
 
 // Sequential pipelines only need the default helper; nothing more to implement.
 impl SequentialConnection for FalkorConnection {}
+
+#[cfg(test)]
+#[path = "../tests/store/connection.rs"]
+mod tests;

@@ -1006,7 +1006,7 @@
     },
     "packages/engine/src/resource_nodes.ts": {
       "geometry_for": [11],
-      "resource_visual": [11]
+      "resource_visual": [10]
     },
     "packages/engine/src/greedy_mesher.ts": {
       "emit_direction": [21]

@@ -139,8 +139,7 @@ async fn main() -> Result<()> {
         .context("connecting store")?;
 
     // ── boot derivation: two ids in, everything else from chain state ──
-    let mut boot_conn = redis::Client::open(args.redis_url.as_str())?
-        .get_multiplexed_async_connection()
+    let mut boot_conn = store::connect(&args.redis_url)
         .await
         .context("boot connection")?;
     boot::ensure_indexes(&mut boot_conn).await?;

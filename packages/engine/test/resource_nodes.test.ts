@@ -181,3 +181,12 @@ describe('resource node visuals', () => {
     layer.dispose()
   })
 })
+
+test('Tanjirize uses green and purple, and barley uses green instead of generic gold', () => {
+  const tanjirize = resource_visual('wheat_tanjirize', 'FARMER', 5)
+  expect(tanjirize.body[1]).toBeGreaterThan(tanjirize.body[0])
+  expect(tanjirize.accent[0]).toBeGreaterThan(tanjirize.accent[1])
+  expect(tanjirize.accent[2]).toBeGreaterThan(tanjirize.accent[1])
+  const barley = resource_visual('wheat_barley', 'FARMER', 2)
+  expect(barley.accent[1]).toBeGreaterThan(barley.accent[0])
+})

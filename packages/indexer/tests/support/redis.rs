@@ -37,9 +37,9 @@ pub async fn redis_process() -> (RedisProcess, MultiplexedConnection) {
         .spawn()
         .expect("Redis integration tests require redis-server on PATH");
     let process = RedisProcess { child, socket };
-    let client = redis::Client::open(format!("redis+unix://{}", process.socket.display())).unwrap();
+    let url = format!("redis+unix://{}", process.socket.display());
     for _ in 0..100 {
-        if let Ok(conn) = client.get_multiplexed_async_connection().await {
+        if let Ok(conn) = crate::store::connect(&url).await {
             return (process, conn);
         }
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;

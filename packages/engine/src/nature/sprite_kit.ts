@@ -6,9 +6,9 @@
 // voxel-game cross sprite as geometry, no textures). Minerals are stacked axis-aligned boxes.
 // One file per sprite lives beside this kit; scatter_layer.ts assembles them into kind pools.
 
-/** x, y, z, accent blend (0 = body color, 1 = accent), wind sway weight. */
+/** x, y, z, accent blend (or an explicit palette index), wind sway weight. */
 export type RecipeVertex = readonly [number, number, number, number, number]
-/** One filled pixel: integer column (0 = centered), integer row, color band 0|1|2. */
+/** One filled pixel: integer column (0 = centered), integer row, zero-based color band. */
 export type PixelCell = readonly [number, number, number]
 export type SpriteBuilder = (random: () => number) => readonly RecipeVertex[]
 
@@ -57,7 +57,7 @@ const merge_cells = (cells: readonly PixelCell[]): ReadonlyMap<string, number> =
 
 /** Bake one vertical plane of pixel art: vertical runs of same-band cells merge into single
  * quads (fewer triangles, same stepped silhouette). Sway grows with height so bases stay rooted. */
-const pixel_plane = (cells: readonly PixelCell[]): readonly RecipeVertex[] => {
+const pixel_plane = (cells: readonly PixelCell[], bands: readonly number[]): readonly RecipeVertex[] => {
   const merged = merge_cells(cells)
   const height_rows = Math.max(...[...merged.keys()].map((key) => Number(key.split(':')[1]))) + 1
   const columns = new Map<number, readonly (readonly [number, number])[]>()
@@ -77,7 +77,7 @@ const pixel_plane = (cells: readonly PixelCell[]): readonly RecipeVertex[] => {
       const x1 = (x + 0.5) * CELL
       const y0 = run_start * CELL
       const y1 = (end_row + 1) * CELL
-      const blend = BAND_BLEND[run_band]!
+      const blend = bands[run_band]!
       const sway_low = (run_start / height_rows) ** 2
       const sway_high = ((end_row + 1) / height_rows) ** 2
       vertices.push(
@@ -105,8 +105,11 @@ const pixel_plane = (cells: readonly PixelCell[]): readonly RecipeVertex[] => {
 }
 
 /** The voxel-game cross: the same pixel art on two perpendicular vertical planes. */
-export const pixel_cross = (cells: readonly PixelCell[]): readonly RecipeVertex[] => {
-  const plane = pixel_plane(cells)
+export const pixel_cross = (
+  cells: readonly PixelCell[],
+  bands: readonly number[] = BAND_BLEND
+): readonly RecipeVertex[] => {
+  const plane = pixel_plane(cells, bands)
   return [...plane, ...plane.map((vertex) => rotate_y(vertex, Math.PI / 2))]
 }
 

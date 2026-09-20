@@ -18,6 +18,8 @@ import {
 } from 'three'
 import { MeshStandardNodeMaterial } from 'three/webgpu'
 
+import grain_visuals from '../../../seed/content/grain_visuals.json'
+
 import { project_height } from './flatten.ts'
 import { flora_cluster } from './nature/flora_cluster.ts'
 import { grain_stalk } from './nature/grain_stalk.ts'
@@ -54,8 +56,6 @@ const clamp_tier = (tier: number): number => Math.max(1, Math.min(11, Math.trunc
 const RESOURCE_VISUALS: Readonly<
   Record<string, Readonly<{ silhouette: ResourceSilhouette; body: string; accent: string }>>
 > = Object.freeze({
-  wheat_burnt: Object.freeze({ silhouette: 'grain', body: '#29282d', accent: '#77717b' }),
-  wheat_suize: Object.freeze({ silhouette: 'grain', body: '#2467b5', accent: '#66d9ff' }),
   green_mushroom: Object.freeze({ silhouette: 'mushroom', body: '#b9a57e', accent: '#62bf52' }),
   red_orchid: Object.freeze({ silhouette: 'flora', body: '#315f37', accent: '#e04458' }),
   ivory_shrooms: Object.freeze({ silhouette: 'mushroom', body: '#b7aa90', accent: '#fff4dc' }),
@@ -74,27 +74,63 @@ const color_tuple = (value: string): readonly [number, number, number] => {
   return Object.freeze([color.r, color.g, color.b] as const)
 }
 
+type GrainVisual = Readonly<{ pattern: string; palette: readonly string[] }>
+const {
+  grains,
+  patterns,
+}: Readonly<{
+  grains: Readonly<Record<string, GrainVisual>>
+  patterns: Readonly<Record<string, readonly (readonly number[])[]>>
+}> = grain_visuals
+const SILHOUETTES: Readonly<Record<ResourceFamily, ResourceSilhouette>> = {
+  FARMER: 'grain',
+  HERBALIST: 'flora',
+  MINER: 'ore',
+}
+
+const grain_visual = (grain: GrainVisual) => {
+  const palette = Object.freeze(grain.palette.map(color_tuple))
+  return {
+    family: 'FARMER' as const,
+    silhouette: 'grain' as const,
+    body: palette[0]!,
+    accent: palette[2]!,
+    pattern: patterns[grain.pattern]!,
+    palette,
+  }
+}
+
 export const resource_visual = (item_type: string, job: string, tier: number) => {
-  const family: ResourceFamily = job === 'FARMER' || job === 'MINER' ? job : 'HERBALIST'
   const step = (clamp_tier(tier) - 1) / 10
+  const size = { tier: clamp_tier(tier), scale: 0.9 + step * 0.22 }
+  const grain = grains[item_type]
+  if (grain) return Object.freeze({ ...size, ...grain_visual(grain) })
+  const family: ResourceFamily = job === 'FARMER' || job === 'MINER' ? job : 'HERBALIST'
   const [hue_lo, hue_hi] = HUES[family]
   const hue = hue_lo + (hue_hi - hue_lo) * step
   const fallback_body = new Color().setHSL(hue / 360, family === 'MINER' ? 0.38 : 0.52, family === 'MINER' ? 0.3 : 0.28)
   const fallback_accent = new Color().setHSL(hue / 360, 0.72, 0.62)
   const authored = RESOURCE_VISUALS[item_type]
   return Object.freeze({
+    ...size,
     family,
-    tier: clamp_tier(tier),
-    silhouette: authored?.silhouette ?? (family === 'FARMER' ? 'grain' : family === 'MINER' ? 'ore' : 'flora'),
+    silhouette: authored?.silhouette ?? SILHOUETTES[family],
+    pattern: undefined,
+    palette: undefined,
     body: authored
       ? color_tuple(authored.body)
       : Object.freeze([fallback_body.r, fallback_body.g, fallback_body.b] as const),
     accent: authored
       ? color_tuple(authored.accent)
       : Object.freeze([fallback_accent.r, fallback_accent.g, fallback_accent.b] as const),
-    scale: 0.9 + step * 0.22,
   })
 }
+
+const resource_recipe = (visual: ReturnType<typeof resource_visual>, random: () => number) =>
+  visual.pattern ? grain_stalk(random, visual.pattern) : BUILDERS[visual.silhouette](random)
+
+const resource_color = (visual: ReturnType<typeof resource_visual>, band: number): readonly number[] =>
+  visual.palette?.[band] ?? visual.body.map((value, index) => value + (visual.accent[index]! - value) * band)
 
 const geometry_for = (item_type: string, job: string, tier: number): BufferGeometry => {
   const visual = resource_visual(item_type, job, tier)
@@ -102,7 +138,7 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
     (hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16_777_619),
     2_166_136_261
   )
-  const recipe = BUILDERS[visual.silhouette](mulberry(item_seed + visual.tier * 977))
+  const recipe = resource_recipe(visual, mulberry(item_seed + visual.tier * 977))
   const positions = new Float32Array(recipe.length * 3)
   const colors = new Float32Array(recipe.length * 3)
   const normals = new Float32Array(recipe.length * 3)
@@ -116,9 +152,7 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
       positions[offset] = x
       positions[offset + 1] = y
       positions[offset + 2] = z
-      colors[offset] = visual.body[0] + (visual.accent[0] - visual.body[0]) * blend
-      colors[offset + 1] = visual.body[1] + (visual.accent[1] - visual.body[1]) * blend
-      colors[offset + 2] = visual.body[2] + (visual.accent[2] - visual.body[2]) * blend
+      colors.set(resource_color(visual, blend), offset)
       if (sways && phases) {
         sways[start + corner] = sway
         phases[start + corner] = (x + z) * 0.8
