@@ -1952,18 +1952,16 @@ mod tests {
         };
         let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert_eq!(wire.publications.len(), 2);
-        assert!(
-            wire.publications
-                .iter()
-                .any(|row| row.payload.contains("MarketDelisted")
-                    && row.payload.contains(&Id([5; 32]).hex()))
-        );
-        assert!(
-            wire.publications
-                .iter()
-                .any(|row| row.payload.contains("MarketListed")
-                    && row.payload.contains(&Id([6; 32]).hex()))
-        );
+        assert!(wire
+            .publications
+            .iter()
+            .any(|row| row.payload.contains("MarketDelisted")
+                && row.payload.contains(&Id([5; 32]).hex())));
+        assert!(wire
+            .publications
+            .iter()
+            .any(|row| row.payload.contains("MarketListed")
+                && row.payload.contains(&Id([6; 32]).hex())));
     }
 
     #[test]
@@ -2155,12 +2153,11 @@ mod tests {
 
         assert_eq!(wire.sales.len(), 2);
         assert!(wire.sales.iter().any(|row| row.address == Addr([9; 32])));
-        assert!(
-            wire.publications
-                .iter()
-                .any(|row| row.payload.contains("MarketPurchased")
-                    && row.payload.contains("wooling_wool"))
-        );
+        assert!(wire
+            .publications
+            .iter()
+            .any(|row| row.payload.contains("MarketPurchased")
+                && row.payload.contains("wooling_wool")));
     }
 
     #[test]
@@ -2302,11 +2299,10 @@ mod tests {
         let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
         // the item WRITE itself still streams (its custody moved) — but nothing money-shaped
-        assert!(
-            wire.publications
-                .iter()
-                .all(|p| p.payload.contains("ItemWritten"))
-        );
+        assert!(wire
+            .publications
+            .iter()
+            .all(|p| p.payload.contains("ItemWritten")));
     }
 
     #[test]
@@ -2417,11 +2413,10 @@ mod tests {
         assert!(channels.contains(&format!("evt:social:0x{}", "09".repeat(32)).as_str()));
         assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
         assert_eq!(wire.publications.len(), 2);
-        assert!(
-            wire.publications
-                .iter()
-                .all(|row| row.payload.contains("TradeChanged"))
-        );
+        assert!(wire
+            .publications
+            .iter()
+            .all(|row| row.payload.contains("TradeChanged")));
     }
 
     #[test]

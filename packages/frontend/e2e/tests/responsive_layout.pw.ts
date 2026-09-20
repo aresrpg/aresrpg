@@ -41,11 +41,8 @@ for (const width of [1920, 1366, 1024]) {
 test('narrow marketplace preserves buying, sale controls, and complete history', async ({ page }) => {
   await page.setViewportSize({ width: 590, height: 850 })
   await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=marketplace&locale=de')
-  await page
-    .locator('[data-marketplace-item-types]')
-    .getByRole('button', { name: /^Hut\b/i })
-    .click()
-  await page.locator('[data-marketplace-template-options] button').first().click()
+  // This layout fixture already selects and hydrates the hat page without a server observer.
+  await expect(page.locator('[data-marketplace-listing-row]')).toHaveCount(5)
   const buy = page.locator('[data-marketplace-listing-row] button').last()
   await buy.scrollIntoViewIfNeeded()
   await expect(buy).toBeInViewport()

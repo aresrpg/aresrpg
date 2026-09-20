@@ -3,9 +3,12 @@
 
 import { expect, test } from '@playwright/test'
 
+import { has_webgpu_adapter } from '../support/webgpu.ts'
+
 for (const kind of ['grid', 'webgpu'] as const)
   test(`fight sword labels use the rendered label scene (${kind})`, async ({ page }) => {
     await page.goto('/e2e/fixtures/engine_lifecycle.html')
+    if (kind === 'webgpu') test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
     await page.waitForFunction(() => typeof window.probe_sword_labels === 'function')
     expect(await page.evaluate((kind) => window.probe_sword_labels(kind), kind)).toEqual({
       attached: true,
@@ -43,11 +46,7 @@ test('unavailable graphics reports initialization failure without waiting for a 
 test('actual backend bounds request metadata and preserves device-loss bookkeeping', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   await page.waitForFunction(() => typeof window.probe_engine_lifetime === 'function')
-  const supported = await page.evaluate(async () => {
-    const gpu = Reflect.get(navigator, 'gpu') as { requestAdapter: () => Promise<unknown> } | undefined
-    return gpu !== undefined && (await gpu.requestAdapter()) !== null
-  })
-  test.skip(!supported, 'This browser has no WebGPU adapter')
+  test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
   const result = await page.evaluate(() => window.probe_engine_lifetime())
   expect(result).toEqual({
     removed: true,
@@ -123,7 +122,7 @@ test('cached real models keep finite combat number and hover anchors', async ({ 
 for (const morph of [false, true])
   test(`crowd shaders preserve independent skinning, geometry and shadows (morph=${morph})`, async ({ page }, info) => {
     await page.goto('/e2e/fixtures/engine_lifecycle.html')
-    test.skip(!(await page.evaluate(() => !!navigator.gpu)), 'WebGPU unavailable')
+    test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     const result = await page.evaluate((morph) => window.probe_crowd(morph), morph)

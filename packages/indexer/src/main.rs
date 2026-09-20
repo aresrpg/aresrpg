@@ -31,11 +31,11 @@ mod store;
 use anyhow::{Context, Result};
 use clap::Parser;
 use sui_indexer_alt_framework::ingestion::{
-    ClientArgs, IngestConcurrencyConfig, IngestionConfig, ingestion_client::IngestionClientArgs,
-    streaming_client::StreamingClientArgs,
+    ingestion_client::IngestionClientArgs, streaming_client::StreamingClientArgs, ClientArgs,
+    IngestConcurrencyConfig, IngestionConfig,
 };
-use sui_indexer_alt_framework::pipeline::IngestionConfig as PipelineIngestionConfig;
 use sui_indexer_alt_framework::pipeline::sequential::SequentialConfig;
+use sui_indexer_alt_framework::pipeline::IngestionConfig as PipelineIngestionConfig;
 use sui_indexer_alt_framework::{Indexer, IndexerArgs};
 use tracing::info;
 use url::Url;

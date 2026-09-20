@@ -25,10 +25,10 @@
 
 use std::collections::BTreeSet;
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::decode::{self, Field, Id, MarkerKey};
-use crate::ownership::{Custody, ObjView, OwnerKind, SUI_FRAMEWORK, TypeKey};
+use crate::ownership::{Custody, ObjView, OwnerKind, TypeKey, SUI_FRAMEWORK};
 
 /// A realised per-unit sale price for one item type — computed by `publish.rs`
 /// (the ONE event-derived graph write; README law 9).
@@ -1012,29 +1012,26 @@ fn emit_fight(cypher: &mut Vec<String>, o: &ObjView<'_>, ckpt: u64) -> anyhow::R
             if fighter.settled && fighter.drops.is_empty() {
                 continue;
             }
-            let drops = json!(
-                fighter
-                    .drops
-                    .iter()
-                    .map(|drop| json!({ "item_type": drop.item_type, "qty": drop.qty }))
-                    .collect::<Vec<_>>()
-            );
+            let drops = json!(fighter
+                .drops
+                .iter()
+                .map(|drop| json!({ "item_type": drop.item_type, "qty": drop.qty }))
+                .collect::<Vec<_>>());
             let loot_types = if f.combat.winner == Some(fighter.team) {
-                json!(
-                    f.combat
-                        .fighters
-                        .iter()
-                        .filter(|candidate| candidate.team != fighter.team)
-                        .flat_map(|candidate| match &candidate.kind {
-                            decode::FighterKind::Mob(snapshot) => snapshot
-                                .loot
-                                .iter()
-                                .map(|row| row.item_type.clone())
-                                .collect::<Vec<_>>(),
-                            decode::FighterKind::Player => vec![],
-                        })
-                        .collect::<BTreeSet<_>>()
-                )
+                json!(f
+                    .combat
+                    .fighters
+                    .iter()
+                    .filter(|candidate| candidate.team != fighter.team)
+                    .flat_map(|candidate| match &candidate.kind {
+                        decode::FighterKind::Mob(snapshot) => snapshot
+                            .loot
+                            .iter()
+                            .map(|row| row.item_type.clone())
+                            .collect::<Vec<_>>(),
+                        decode::FighterKind::Player => vec![],
+                    })
+                    .collect::<BTreeSet<_>>())
             } else {
                 json!([])
             };
@@ -1500,11 +1497,9 @@ mod tests {
             bytes: &bytes,
         }];
         let writes = project(&view(&outputs, &[], &[]), GAME).unwrap();
-        assert!(
-            writes
-                .iter()
-                .any(|write| write.contains("v.version = '9007199254740993'"))
-        );
+        assert!(writes
+            .iter()
+            .any(|write| write.contains("v.version = '9007199254740993'")));
     }
 
     fn view<'a>(
@@ -1757,11 +1752,9 @@ mod tests {
             },
         ];
         let stale = project(&view(&stale_outputs, &[], &[]), GAME).unwrap();
-        assert!(
-            !stale
-                .iter()
-                .any(|write| write.contains("v.checkpoint_world"))
-        );
+        assert!(!stale
+            .iter()
+            .any(|write| write.contains("v.checkpoint_world")));
 
         let current_outputs = [
             ObjView {
@@ -1911,11 +1904,9 @@ mod tests {
             ..output.clone()
         };
         let statements = project(&view(&[output], &[gone], &[]), GAME).unwrap();
-        assert!(
-            statements
-                .iter()
-                .any(|statement| statement.contains("CREATE (o)-[:LISTED_IN"))
-        );
+        assert!(statements
+            .iter()
+            .any(|statement| statement.contains("CREATE (o)-[:LISTED_IN")));
         assert!(statements.last().unwrap().contains("SET k.market_version"));
     }
 

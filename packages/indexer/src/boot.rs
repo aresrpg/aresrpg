@@ -16,9 +16,9 @@
 //! Also declares the graph INDEXES (idempotent — an already-indexed error is
 //! the success state).
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use redis::aio::MultiplexedConnection;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use tracing::info;
 
 /// Ask the official GraphQL endpoint one query. Bounded: a hung endpoint must
@@ -260,14 +260,12 @@ mod tests {
             }
         });
 
-        assert!(
-            lineage_contains(
-                &data,
-                "0xff31200a",
-                "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
-            )
-            .expect("lineage")
-        );
+        assert!(lineage_contains(
+            &data,
+            "0xff31200a",
+            "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
+        )
+        .expect("lineage"));
         assert!(!lineage_contains(&data, "0xff31200a", "0xdead").expect("lineage"));
     }
 

@@ -3,6 +3,7 @@
 
 import { expect, test } from '@playwright/test'
 
+import { LOCALES } from '../../src/i18n/locale.ts'
 import { open_responsive_preview } from '../support/responsive_preview.ts'
 
 for (const height of [360, 900]) {
@@ -20,7 +21,7 @@ for (const height of [360, 900]) {
     const box = (await dropdown.boundingBox())!
     expect(box.y).toBeGreaterThanOrEqual(0)
     expect(box.y + box.height).toBeLessThanOrEqual(height)
-    await expect(dropdown.getByRole('button')).toHaveCount(10)
+    await expect(dropdown.getByRole('button')).toHaveText(LOCALES.map(({ native }) => native))
     await page.keyboard.press('Escape')
     await expect(dropdown).not.toBeVisible()
     await expect(trigger).toBeFocused()

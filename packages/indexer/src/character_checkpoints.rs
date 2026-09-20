@@ -40,7 +40,7 @@ pub fn changed(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ownership::{OwnerKind, SUI_FRAMEWORK, TypeKey};
+    use crate::ownership::{OwnerKind, TypeKey, SUI_FRAMEWORK};
 
     #[test]
     fn captured_checkpoint_targets_only_its_character_and_unchanged_writes_are_silent() {
@@ -73,16 +73,12 @@ mod tests {
             changed(&[], &[output.clone()], "0xgame").unwrap(),
             vec![(0, character)]
         );
-        assert!(
-            changed(&[output.clone()], &[output.clone()], "0xgame")
-                .unwrap()
-                .is_empty()
-        );
-        assert!(
-            changed(&[], &[output.clone()], "0xother")
-                .unwrap()
-                .is_empty()
-        );
+        assert!(changed(&[output.clone()], &[output.clone()], "0xgame")
+            .unwrap()
+            .is_empty());
+        assert!(changed(&[], &[output.clone()], "0xother")
+            .unwrap()
+            .is_empty());
         let outputs = [output.clone()];
         let tx = crate::publish::TxView {
             tx_index: 3,

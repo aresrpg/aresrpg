@@ -2,11 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
+import { has_webgpu_adapter } from '../support/webgpu.ts'
+
 for (const kind of ['grid', 'webgpu'] as const)
   test(`instanced captions preserve the world, health updates and cleanup (${kind})`, async ({ page }, info) => {
     await page.goto('/e2e/fixtures/captions.html')
-    if (kind === 'webgpu')
-      test.skip(!(await page.evaluate(() => !!navigator.gpu)), 'WebGPU unavailable in this browser')
+    if (kind === 'webgpu') test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     const result = await page.evaluate((backend) => window.probe_captions(backend), kind)
