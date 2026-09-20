@@ -138,6 +138,7 @@ test('an invalidation queued behind a failed read is not lost', async () => {
   stop()
 })
 
+// Cold world_population builds the full biome grid; use the population integration budget under coverage.
 test('zone observers share the indexed row and retain population across consumption updates', async () => {
   let reads = 0
   let seed = '7'
@@ -166,4 +167,4 @@ test('zone observers share the indexed row and retain population across consumpt
   await flush()
   expect(values.at(-1).spawns).not.toBe(population)
   stops.forEach((stop) => stop())
-})
+}, 15_000)
