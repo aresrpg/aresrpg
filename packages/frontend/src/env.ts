@@ -67,7 +67,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
     network,
     sui_rpc_url: VITE_SUI_RPC_URL,
     social_description: 'Explore a voxel world in your browser. Your characters, items, and progression live on Sui.',
-    social_image_url: new URL('og-image.png', app_url).href,
+    social_image_url: new URL('og-image.jpg', app_url).href,
     server_ws_url: normalize_ws_url(VITE_SERVER_WS_URL),
     discord_url: 'https://discord.gg/aresrpg',
     theme_color: '#0a0a0f',

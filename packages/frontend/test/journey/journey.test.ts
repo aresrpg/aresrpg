@@ -207,6 +207,7 @@ test('resetting completed quests stops automation in the same app fold', () => {
         character_id: 'hero',
         world: 'nauvis',
         item_type: 'wheat',
+        scope: { type: 'world' },
         visited: {},
         step: { type: 'planning' },
       },

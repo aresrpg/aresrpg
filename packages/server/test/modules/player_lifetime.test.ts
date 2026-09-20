@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import { create_player } from '../../src/player.ts'
+import { create_player } from '../helpers/player.ts'
 import { wire } from '../helpers/stream_wire.ts'
 
 test('closing during presence subscription prevents late who and appear publication', async () => {

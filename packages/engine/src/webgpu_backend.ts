@@ -26,6 +26,7 @@ import { BOARD_WATER_DROP } from './fight_board_surface.ts'
 import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
 import { create_character_crowd_layer, is_character_crowd_spec } from './character_crowd.ts'
 import { create_entity_layer } from './entities.ts'
+import { create_caption_layer } from './caption_layer.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
@@ -183,8 +184,9 @@ export const create_webgpu_backend = async (
       world_anchor: (id: string) => entities.world_anchor(id) ?? character_crowd.world_anchor(id),
       entity_height: (id: string) => entities.entity_height(id) ?? character_crowd.entity_height(id),
     })
+    const captions = own(create_caption_layer({ renderer, canvas, camera, webgpu: true }))
     const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
-    const effects = own(create_transient_effects({ scene, entities }))
+    const effects = own(create_transient_effects({ scene, entities, captions }))
     const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })
     const sun = new DirectionalLight(0xfff2dd, 3)
     const back_fill = new DirectionalLight(0xffd6a8, 1.35)
@@ -633,6 +635,7 @@ export const create_webgpu_backend = async (
         camera.position.x += offset_x
         camera.position.y += offset_y
         frame_renderer.render()
+        captions.render()
         entity_labels.render()
         if (!terrain_presented && terrain.count() > 0) terrain_presented = true
         camera.position.x -= offset_x
@@ -640,6 +643,7 @@ export const create_webgpu_backend = async (
         return
       }
       frame_renderer.render()
+      captions.render()
       entity_labels.render()
       if (!terrain_presented && terrain.count() > 0) terrain_presented = true
     }
@@ -856,6 +860,7 @@ export const create_webgpu_backend = async (
         const anchor = entity_anchors.world_anchor(id)
         return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
       },
+      set_entity_caption: (id, caption) => captions.set(`entity:${id}`, caption, () => entity_anchors.live_crown(id)),
       set_entity_label: entity_labels.set,
       set_world_label: (id, element, position) =>
         entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),

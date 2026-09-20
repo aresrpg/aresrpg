@@ -6,7 +6,7 @@ import { ZONE_RESEARCH_TTL_MS, type CharacterRow } from '@aresrpg/protocol'
 
 import { indexing_blocked } from '../components/IndexingCatchupModal.tsx'
 import { character_travel_ready } from '../game/travel_gate.ts'
-import { gather_gate } from '../game/gather_gate.ts'
+import { collect_all_available, gather_gate } from '../game/gather_gate.ts'
 import { parse_resource_node_id, resource_node_id } from '../game/resource_nodes.ts'
 import { pose_matches_character } from '../game/core/pose_feed.ts'
 import { SPAWN_INTERACTION_RANGE_BLOCKS } from '../game/core/world_input.ts'
@@ -53,7 +53,13 @@ export const automation_resource_gate = (state: AppState): boolean => {
   const resource = gathering_resources(character?.world ?? null).find(
     ({ item_type }) => item_type === state.automation.item_type
   )
-  return !!character && !!resource && gather_gate(character, resource).ok
+  return (
+    !!character &&
+    !!resource &&
+    (state.automation.run?.scope.type === 'pack'
+      ? collect_all_available(character, resource)
+      : gather_gate(character, resource).ok)
+  )
 }
 
 export const automation_character_idle = (state: AppState, character: Readonly<CharacterRow>): boolean =>
@@ -96,6 +102,10 @@ const target_in_range = (target: AutomationTarget, position: Readonly<{ x: numbe
   (target.node ? SPAWN_INTERACTION_RANGE_BLOCKS : RUN_TO_ARRIVAL_DISTANCE)
 
 const plan = (state: AppState, run: AutomationRun, context: RouteContext): AppState => {
+  if (run.scope.type === 'pack')
+    return target_pack(state, run.scope.target)?.item_type === run.item_type
+      ? with_step(state, run, { type: 'inspecting', target: run.scope.target })
+      : stop_automation(state, 'stopped')
   const key = automation_zone_key(run.world, context.x, context.z)
   const current = nearest_resource(context, key)
   const complete = state.world.zones[key] && state.world.spawns[key]
@@ -126,6 +136,7 @@ const inspect_target = (state: AppState, run: AutomationRun, step: StepOf<'inspe
       type: 'gathering',
       target,
       nodes_before: pack.nodes,
+      anchor_at_ms: selected_character(state.session)!.at_ms!,
       seed: state.world.zones[target.key]!.seed,
       attempt_id: null,
       confirmed: false,
@@ -170,7 +181,9 @@ const protector_step = (state: AppState, run: AutomationRun, step: StepOf<'gathe
 
 const gather_step = (state: AppState, run: AutomationRun, step: StepOf<'gathering'>): AppState => {
   if (step.fight) return protector_step(state, run, step)
-  if (!step.confirmed || !automation_character_idle(state, selected_character(state.session)!)) return state
+  const character = selected_character(state.session)!
+  const checkpoint_ready = run.scope.type === 'world' || character.at_ms! > step.anchor_at_ms
+  if (![step.confirmed, checkpoint_ready, automation_character_idle(state, character)].every(Boolean)) return state
   const zone = state.world.zones[step.target.key]
   if (!zone || !state.world.spawns[step.target.key]) return state
   const consumed = zone.seed !== step.seed || (target_pack(state, step.target)?.nodes ?? 0) < step.nodes_before
@@ -240,5 +253,6 @@ const advance_travel = (state: AppState, run: AutomationRun, tick: Tick): AppSta
     x: client_to_chain_coordinate(tick.pose.x),
     z: client_to_chain_coordinate(tick.pose.z),
   }
+  if (run.scope.type === 'pack' && !target_in_range(run.scope.target, context)) return stop_automation(state, 'stopped')
   return advance_world_step(state, run, context, tick)
 }

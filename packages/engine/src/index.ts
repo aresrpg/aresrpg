@@ -113,3 +113,5 @@ export type {
   Vec3,
   WornModelRender,
 } from './types.ts'
+
+export { CAPTION_STYLE, type WorldCaption, type CaptionLine, type CaptionTarget } from './caption_types.ts'

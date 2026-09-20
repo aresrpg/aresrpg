@@ -1,7 +1,9 @@
 {
   "version": 1,
   "cognitive": {
-    "packages/frontend/src/modules/automation.ts": { "movement_outcome": [11] },
+    "packages/frontend/src/modules/automation.ts": {
+      "movement_outcome": [11]
+    },
     "scripts/validate_seed.mjs": {
       "check_effect": [37],
       "check_loot_rewards": [14],
@@ -63,10 +65,6 @@
     },
     "packages/frontend/e2e/fixtures/workload.ts": {
       "run": [11]
-    },
-    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "BrowsePanel": [11],
-      "CheapestLotMarket > sizes.map[0](size,index)": [12]
     },
     "packages/frontend/src/game/fight/fight_cues.ts": {
       "cast_style": [15],
@@ -182,10 +180,6 @@
       "observe_fights > events.on[1]({ packet })": [27],
       "observe_fights > events.on[1](state,previous)": [11]
     },
-    "packages/frontend/src/modules/marketplace.ts": {
-      "market_observation": [15],
-      "reduce": [13]
-    },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [11]
     },
@@ -229,22 +223,11 @@
     "packages/server/test/helpers/stream_wire.ts": {
       "wire > read": [20]
     },
-    "packages/server/src/modules/player_world.ts": {
-      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [24],
-      "observe > forward_presence > anonymous(fact: MeshFact)": [15],
-      "observe > forward_zone_event": [14],
-      "observe > track": [17],
-      "observe > unmount": [17],
-      "reduce": [13]
-    },
     "packages/server/src/modules/player_fight.ts": {
       "reduce": [19]
     },
     "packages/server/src/request_limiter.ts": {
       "create_request_limiter > take": [18]
-    },
-    "packages/protocol/src/packets.ts": {
-      "parse_client_packet": [33]
     },
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [15]
@@ -318,10 +301,24 @@
     },
     "packages/server/test/helpers/world_wire.ts": {
       "wire > read": [24]
+    },
+    "packages/server/src/modules/player_world.ts": {
+      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [24],
+      "observe > track": [12],
+      "observe > unmount": [14],
+      "reduce": [13]
+    },
+    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
+      "BrowsePanel": [11]
+    },
+    "packages/protocol/src/packets.ts": {
+      "parse_client_packet": [33]
     }
   },
   "cyclomatic": {
-    "packages/frontend/src/modules/journey.ts": { "reduce_journey": [10] },
+    "packages/frontend/src/modules/journey.ts": {
+      "reduce_journey": [10]
+    },
     "scripts/validate_seed.mjs": {
       "check_effect": [34],
       "check_level": [9],
@@ -446,7 +443,7 @@
       "BoardGallery": [18]
     },
     "packages/frontend/src/app.tsx": {
-      "App": [44],
+      "App": [43],
       "App > useCallback[0](character: CharacterCreateInput)": [10]
     },
     "packages/frontend/src/kolizeum/KolizeumPage.tsx": {
@@ -455,11 +452,6 @@
     "packages/frontend/src/mastery/MasteryPage.tsx": {
       "MasteryPage": [9],
       "MasteryPage > world_cards.map[0](card)": [10]
-    },
-    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
-      "AskRow": [10],
-      "BrowsePanel": [21],
-      "CheapestLotMarket > sizes.map[0](size,index)": [15]
     },
     "packages/frontend/src/marketplace/SellPanel.tsx": {
       "SellPanel": [17],
@@ -490,9 +482,6 @@
     "packages/frontend/src/game/fight/FightResultCard.tsx": {
       "FightLevelUpCard": [23],
       "FightResultCard": [24]
-    },
-    "packages/frontend/src/game/fight/FightViewport.tsx": {
-      "FightViewport": [9]
     },
     "packages/frontend/src/game/fight/fight_overlays.ts": {
       "fight_visual_checkpoint_after_cue": [18],
@@ -627,9 +616,8 @@
       "DungeonPortalPrompt": [10]
     },
     "packages/frontend/src/components/SpawnNametag.tsx": {
-      "resource_at": [16],
-      "SpawnNametag > Object.entries(spawns).map[0]([spawn_id, element])": [17],
-      "SpawnNametag > useEffect[0]() > on_key": [14]
+      "SpawnNametag > Object.entries(spawns).map[0]([spawn_id, element])": [12],
+      "SpawnNametag > useEffect[0]() > on_key": [11]
     },
     "packages/frontend/src/components/NametagCard.tsx": {
       "NametagCard": [11]
@@ -735,11 +723,6 @@
       "observe_fights > events.on[1]({ packet })": [26],
       "observe_fights > events.on[1](state,previous)": [12],
       "observe_fights > selected_fight_id": [10]
-    },
-    "packages/frontend/src/modules/marketplace.ts": {
-      "fold_packet": [9],
-      "observe > execute": [12],
-      "reduce": [18]
     },
     "packages/frontend/src/modules/engine.ts": {
       "observe > events.on[1](state,previous)": [27],
@@ -885,17 +868,6 @@
     "packages/server/src/index.ts": {
       "fetch": [13]
     },
-    "packages/server/src/modules/player_world.ts": {
-      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [22],
-      "observe > forward_presence > anonymous(fact: MeshFact)": [15],
-      "observe > forward_zone_event": [11],
-      "observe > track": [15],
-      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
-        12
-      ],
-      "observe > unmount": [10],
-      "reduce": [10]
-    },
     "packages/server/src/modules/player_fight.ts": {
       "observe > forward_fight_event": [9],
       "observe > observe_fight > get_fight(graph, { fight_id: action.fight }) .then[0]([fight])": [10],
@@ -907,11 +879,6 @@
     },
     "packages/server/src/request_limiter.ts": {
       "create_request_limiter > take": [9]
-    },
-    "packages/protocol/src/packets.ts": {
-      "assert_bounded_json": [9],
-      "parse_client_packet": [34],
-      "parse_market_observe_packet": [12]
     },
     "packages/launchpad/src/ContributionPanel.tsx": {
       "ContributionPanel": [9]
@@ -1072,16 +1039,64 @@
     "packages/frontend/src/modules/automation.ts": {
       "movement_outcome": [9],
       "gather_outcome": [11],
-      "protector_outcome": [9]
+      "protector_outcome": [9],
+      "automation_wake_delay": [10]
     },
     "packages/frontend/src/modules/automation_step.ts": {
       "advance_world_step": [9],
       "gather_step": [10],
       "inspect_target": [11],
-      "protector_step": [11]
+      "protector_step": [11],
+      "plan": [11]
     },
     "packages/frontend/src/modules/automation_route.ts": {
       "candidate_zone": [9]
+    },
+    "packages/engine/test/browser_captions.ts": {
+      "probe_captions": [9]
+    },
+    "packages/server/src/modules/player_world.ts": {
+      "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [22],
+      "observe > track": [11],
+      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
+        12
+      ],
+      "reduce": [10]
+    },
+    "packages/server/src/shared_projection.ts": {
+      "shared_projection > refresh": [10]
+    },
+    "packages/server/src/reads/get_market_slice.ts": {
+      "get_market_slice": [10]
+    },
+    "packages/frontend/src/modules/marketplace.ts": {
+      "observe > execute": [12],
+      "reduce": [16]
+    },
+    "packages/frontend/src/marketplace/BrowsePanel.tsx": {
+      "BrowsePanel": [21]
+    },
+    "packages/protocol/src/packets.ts": {
+      "assert_bounded_json": [9],
+      "parse_client_packet": [34]
+    },
+    "packages/protocol/src/marketplace.ts": {
+      "parse_market_observation": [9]
+    },
+    "packages/engine/src/caption_layer.ts": {
+      "create_caption_layer > allocate": [10],
+      "create_caption_layer > project": [9],
+      "create_caption_layer > render": [9],
+      "create_caption_layer > set": [12]
+    },
+    "packages/frontend/src/game/gather_target.ts": {
+      "resource_at": [12]
+    },
+    "packages/frontend/src/game/hud/GatherProgress.tsx": {
+      "GatherProgress": [9]
+    },
+    "packages/frontend/src/game/hud/gather_progress.ts": {
+      "gather_progress_view": [12]
     }
   }
 }

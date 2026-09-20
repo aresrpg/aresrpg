@@ -120,6 +120,7 @@ const GatheringControls = ({
 export const AutomationPanel = ({ copy, enabled }: Readonly<{ copy: AppCopy; enabled: boolean }>) => {
   const state = useAppStore((value) => value)
   const character = selected_character(state.session)
+  if (state.automation.run?.scope.type === 'pack') return null
   if (!enabled || !journey_complete(state.journey) || !character) return null
   const panel = <GatheringControls state={state} character={character} copy={copy} />
   if (state.navigation.page === 'world') return panel

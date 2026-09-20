@@ -6,8 +6,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_player } from '../src/player.ts'
-
+import { create_player } from './helpers/player.ts'
 import { embody, fight_node, flush, wire } from './helpers/stream_wire.ts'
 
 describe('chat', () => {
@@ -384,17 +383,14 @@ describe('market + self stream + heartbeat', () => {
     player.on_message(
       JSON.stringify({
         type: 'packet/market_observe',
-        observation: { categories: ['hat'], characters: false },
+        observation: { kind: 'offers', category: 'hat', item_type: 'hat', request: 1 },
       })
     )
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/market_slice')).toMatchObject({
-      observation: { categories: ['hat'], characters: false },
+      observation: { kind: 'offers', category: 'hat', item_type: 'hat', request: 1 },
     })
-    expect(sent.find((packet) => packet.type === 'packet/market_counts')).toEqual({
-      type: 'packet/market_counts',
-      counts: { categories: {}, characters: 0, items: {} },
-    })
+    expect(sent.some((packet) => packet.type === 'packet/market_types')).toBeTrue()
     pubsub.emitter.emit('evt:economy', {
       ckpt: 10,
       tx: 2,

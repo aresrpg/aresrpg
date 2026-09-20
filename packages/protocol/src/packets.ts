@@ -10,7 +10,7 @@
 // snapshot, then streams every fact the player's own transactions did not cause. Correlated,
 // rate-limited requests exist only for facts that cannot be derived, such as current custody.
 
-import { cosmetic_slots, is_item_category, type ItemCategory } from '@aresrpg/immutable'
+import { cosmetic_slots } from '@aresrpg/immutable'
 import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
@@ -20,14 +20,16 @@ import {
   type MarketPriceObservation,
   type MarketPriceHistory,
 } from './market_prices.ts'
+import { parse_market_observation, type MarketObservation, type MarketType } from './marketplace.ts'
+export * from './marketplace.ts'
 export * from './market_prices.ts'
 export * from './leaderboards.ts'
+import type { PlayerPosition } from './position.ts'
 export * from './position.ts'
 
 export type { FightWireAction } from '@aresrpg/fight'
 
 export const MAX_TRACKED_CHARACTERS = 6
-export const MARKET_WINDOW_SIZE = 200
 
 /** Mirror of Move's `naked_rule::MIN_SALE_LEVEL` — a character below this cannot change owners. */
 export const MIN_CHARACTER_SALE_LEVEL = 30
@@ -288,7 +290,7 @@ export type PresenceRow = Record<VisibleSlot, string | null> & {
 }
 
 /** A market listing — the projected item + its LISTED_IN price edge. */
-export type ListingRow = Pick<ItemRow, 'stats' | 'damages'> & {
+export type ListingRow = Pick<ItemRow, 'stats' | 'damages' | 'pet_power' | 'pet_last_day' | 'puits'> & {
   /** Native version of the public Listing dynamic field, scoped by item + kiosk. */
   version: string
   kind: 'item' | 'character'
@@ -420,20 +422,7 @@ export type AdminOverviewSectionResult =
   | Readonly<{ section: 'addresses'; data: AdminAddressesOverview }>
   | Readonly<{ section: 'characters'; data: AdminCharactersOverview }>
 
-/** The exact chain categories wanted by the current browse group. `characters` is separate
- * because Character is not an Item category. Null closes the marketplace subscription. */
-export type MarketObservation = Readonly<{
-  categories: readonly ItemCategory[]
-  characters: boolean
-  item_type?: string
-}>
-
-/** Public non-exclusive listing totals across the whole market, independent of the active slice. */
-export type MarketCounts = Readonly<{
-  categories: Readonly<Partial<Record<ItemCategory, number>>>
-  characters: number
-  items?: Readonly<Record<string, number>>
-}>
+export type MarketPage = MarketSnapshot & Readonly<{ next_cursor: string | null }>
 
 /** The player's party as projected (MEMBER_OF edges around one Party node). */
 export type PartyRow = {
@@ -831,7 +820,7 @@ export type ServerPackets = {
 
   // ── the presence mesh (other players in tracked zones) ──
   'packet/player_appeared': { player: PresenceRow }
-  'packet/player_moved': { character_id: string; x: number; y: number; z: number; riding: boolean }
+  'packet/players_moved': { positions: readonly PlayerPosition[] }
   'packet/player_left': { character_id: string }
 
   /** One of the player's items changed in a way its receipt could not carry (capped scribe
@@ -887,8 +876,8 @@ export type ServerPackets = {
   // ── market stream (only while observing a category — plus your own sales, always) ──
   'packet/leaderboard': { snapshot: LeaderboardSnapshot }
   'packet/leaderboard_error': { observation: LeaderboardObservation; reason: 'unavailable' }
-  'packet/market_slice': MarketSnapshot & { observation: MarketObservation }
-  'packet/market_counts': { counts: MarketCounts }
+  'packet/market_slice': MarketPage & { observation: MarketObservation }
+  'packet/market_types': { observation: MarketObservation; items: readonly MarketType[] }
   'packet/market_prices': { observation: MarketPriceObservation; history: MarketPriceHistory | null }
   'packet/market_history': {
     sales: MarketSaleRow[]
@@ -945,7 +934,7 @@ export const WORLD_PACKETS = [
   'packet/zone_spawns',
   'packet/fights',
   'packet/player_appeared',
-  'packet/player_moved',
+  'packet/players_moved',
   'packet/player_left',
   'packet/player_equipment',
   'packet/chat_message',
@@ -969,7 +958,7 @@ export const FIGHT_PACKETS = [
 export const MARKET_PACKETS = [
   'packet/listings',
   'packet/market_slice',
-  'packet/market_counts',
+  'packet/market_types',
   'packet/market_prices',
   'packet/market_history',
   'packet/listing_sold',
@@ -1144,29 +1133,10 @@ const parse_fight_action_packet = (
 
 const parse_market_observe_packet = (
   packet: Readonly<Record<string, unknown>>
-): Extract<ClientPacket, { type: 'packet/market_observe' }> => {
-  if (packet.observation === null) return { type: 'packet/market_observe', observation: null }
-  if (typeof packet.observation !== 'object' || Array.isArray(packet.observation))
-    throw new Error('packet/market_observe needs an observation or null')
-  const observation = packet.observation as Record<string, unknown>
-  if (
-    !Array.isArray(observation.categories) ||
-    observation.categories.length > 32 ||
-    !observation.categories.every((category) => typeof category === 'string' && is_item_category(category)) ||
-    typeof observation.characters !== 'boolean' ||
-    (observation.item_type !== undefined &&
-      (typeof observation.item_type !== 'string' || !/^[a-z0-9_]{1,128}$/.test(observation.item_type)))
-  )
-    throw new Error('packet/market_observe needs valid categories and characters')
-  return {
-    type: 'packet/market_observe',
-    observation: {
-      categories: [...new Set(observation.categories)] as ItemCategory[],
-      characters: observation.characters,
-      ...(typeof observation.item_type === 'string' ? { item_type: observation.item_type } : {}),
-    },
-  }
-}
+): Extract<ClientPacket, { type: 'packet/market_observe' }> => ({
+  type: 'packet/market_observe',
+  observation: parse_market_observation(packet.observation),
+})
 
 const valid_admin_range = (days: unknown): days is AdminRangeDays =>
   typeof days === 'number' && [1, 7, 30, 90, 365].includes(days)

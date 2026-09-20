@@ -7,9 +7,9 @@ import type { MouseEventHandler, ReactNode } from 'react'
 
 import { item_icon } from '../content/assets.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
-import { dispatch_app } from '../store.ts'
+import { dispatch_app, useAppStore } from '../store.ts'
 
-import { ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
+import { ItemDetailHover, ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
 import { trade_cap_action } from './trade_view.ts'
 
 type TradeCapCellProps = Readonly<{ cap: TradeCapRow; remove?: () => void; remove_label: string }>
@@ -56,8 +56,26 @@ const SnapshotTradeCapCell = ({ copy, ...props }: TradeCapCellProps & Readonly<{
   )
 }
 
-const TradeCapCell = ({ copy, ...props }: TradeCapCellProps & Readonly<{ copy?: AppCopy }>) =>
-  copy ? <SnapshotTradeCapCell {...props} copy={copy} /> : <TradeCapCellView {...props} />
+const TradeCapCell = ({ copy, own, ...props }: TradeCapCellProps & Readonly<{ copy?: AppCopy; own: boolean }>) => {
+  const item = useAppStore((state) => state.session.inventory.find(({ id }) => id === props.cap.object))
+  if (own)
+    return (
+      <ItemDetailHover
+        item={
+          item ?? {
+            id: props.cap.object,
+            name: props.cap.name,
+            item_type: props.cap.item_type,
+            category: props.cap.category,
+            level: props.cap.level,
+          }
+        }
+      >
+        <TradeCapCellView {...props} />
+      </ItemDetailHover>
+    )
+  return copy ? <SnapshotTradeCapCell {...props} copy={copy} /> : <TradeCapCellView {...props} />
+}
 
 export const OfferCaps = ({
   caps,
@@ -82,6 +100,7 @@ export const OfferCaps = ({
       {caps.map((cap) => (
         <TradeCapCell
           cap={cap}
+          own={own}
           copy={copy}
           key={cap.object}
           remove={

@@ -5,20 +5,36 @@ import type { EngineStatus } from '@aresrpg/engine'
 
 import type { AppCopy } from '../i18n/copy.ts'
 
+export const engine_notice_kind = (status: EngineStatus, minimum_graphics = false) => {
+  if (status.issue?.code === 'world_unavailable') return 'world'
+  if (status.state === 'failed') return 'failed'
+  if (minimum_graphics && status.backend !== 'grid') return 'minimum'
+  return status.state === 'degraded' ? 'fallback' : null
+}
+
 export const EngineNotice = ({
   copy,
   status,
   dismiss,
   reload,
+  minimum_graphics = false,
 }: Readonly<{
   copy: AppCopy
   status: EngineStatus
   dismiss: () => void
   reload: () => void
+  minimum_graphics?: boolean
 }>) => {
-  const kind = status.issue?.code === 'world_unavailable' ? 'world' : status.state === 'failed' ? 'failed' : 'fallback'
+  const kind = engine_notice_kind(status, minimum_graphics)
+  if (!kind) return null
   const continue_action = { label: copy.continue, run: dismiss }
   const view = {
+    minimum: {
+      title: copy.engine_minimum_title,
+      body: copy.engine_minimum,
+      hint: null,
+      action: { label: copy.engine_continue, run: dismiss },
+    },
     world: { title: copy.world_unavailable_title, body: copy.world_unavailable, hint: null, action: continue_action },
     failed: {
       title: copy.world_unavailable_title,

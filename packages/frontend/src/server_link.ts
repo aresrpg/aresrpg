@@ -25,7 +25,7 @@ const clock_ms = (): number => globalThis.performance?.now() ?? Date.now()
 /** Position traffic is ~continuous in both directions — pure console noise, never logged. */
 const SILENT_PACKETS: ReadonlySet<string> = new Set([
   'packet/position',
-  'packet/player_moved',
+  'packet/players_moved',
   'packet/ping',
   'packet/pong',
 ])

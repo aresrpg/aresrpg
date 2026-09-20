@@ -1,14 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { save_game_settings, type GameSettings } from '../game/core/settings.ts'
+import { RENDER_DISTANCE_MIN, save_game_settings, type GameSettings } from '../game/core/settings.ts'
 import { master_volume_from, set_master_audio_volume } from '../game/core/audio_volume.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
+
+import { next_engine_recovery } from './engine_state.ts'
 
 export type SettingsInput = Readonly<{ type: 'settings/changed'; settings: GameSettings }>
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   if (input.type === 'settings/changed') return Object.freeze({ ...state, settings: input.settings })
+  if (input.type === 'engine/status' && next_engine_recovery(state.engine, input.status) !== state.engine.recovery)
+    return Object.freeze({
+      ...state,
+      settings: Object.freeze({ ...state.settings, quality: 'low', render_distance: RENDER_DISTANCE_MIN }),
+    })
   if (input.type !== 'server/packet' || input.packet.type !== 'packet/characters') return state
   const character_id = state.settings.always_craft_from_character_id
   if (!character_id || input.packet.characters.some(({ id }) => id === character_id)) return state

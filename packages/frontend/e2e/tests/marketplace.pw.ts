@@ -9,6 +9,7 @@ test('different rolls retain their exact tooltip and individual buy action', asy
     .locator('[data-marketplace-item-types]')
     .getByRole('button', { name: /^hat\b/i })
     .click()
+  await page.locator('[data-marketplace-template-options] button').first().click()
   const rows = page.locator('[data-marketplace-listings] [data-marketplace-listing-row]')
   await expect(rows).toHaveCount(3)
   await expect(page.locator('[data-marketplace-lot-market]')).toHaveCount(0)
@@ -28,10 +29,11 @@ test('different rolls retain their exact tooltip and individual buy action', asy
   await expect(page.locator('[data-pending-listing]')).toHaveAttribute('data-pending-listing', '0xitem2')
 })
 
-test('stackable listings still show only the cheapest ask for each fixed lot', async ({ page }) => {
+test('stackable listings expose the cheapest offers for each fixed lot', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html?stackable')
-  await expect(page.locator('[data-marketplace-cheapest-lot]')).toHaveCount(4)
-  const single = page.locator('[data-marketplace-cheapest-lot="1"]')
+  await expect(page.locator('[data-marketplace-cheapest-lot]')).toHaveCount(6)
+  await expect(page.locator('[data-marketplace-cheapest-lot="1"]')).toHaveCount(3)
+  const single = page.locator('[data-marketplace-cheapest-lot="1"]').first()
   await expect(single).toContainText('1.10')
   await single.getByRole('button', { name: 'Buy', exact: true }).click()
   await expect(page.locator('[data-pending-listing]')).toHaveAttribute('data-pending-listing', '0xitem1')
@@ -83,14 +85,15 @@ test('untraded stackables show an empty period without inventing a price', async
   await expect(chart.locator('canvas')).toHaveCount(0)
 })
 
-test('identical rolls share the cheapest purchasable row and advance after its removal', async ({ page }) => {
+test('identical rolls retain backup offers and advance after the cheapest is removed', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html?duplicates')
   await page
     .locator('[data-marketplace-item-types]')
     .getByRole('button', { name: /^hat\b/i })
     .click()
+  await page.locator('[data-marketplace-template-options] button').first().click()
   const rows = page.locator('[data-marketplace-listings] [data-marketplace-listing-row]')
-  await expect(rows).toHaveCount(3)
+  await expect(rows).toHaveCount(4)
   await expect(rows.first().locator('[data-marketplace-item]')).toHaveAttribute('data-marketplace-item', '0xduplicate')
   await rows.first().locator('[data-marketplace-item]').hover()
   await expect(page.getByRole('tooltip')).toContainText('+11')

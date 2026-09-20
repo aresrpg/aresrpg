@@ -6,6 +6,7 @@ import { EventEmitter } from 'node:events'
 import { expect, test } from 'bun:test'
 import type { ServerPacket } from '@aresrpg/protocol'
 
+import { create_public_world } from '../src/public_world.ts'
 import player_world from '../src/modules/player_world.ts'
 import { channels } from '../src/protocol.ts'
 import type { PlayerState } from '../src/player.ts'
@@ -112,6 +113,7 @@ test('an indexed zone discovery streams its generated mob population', async () 
   player_world.observe!({
     address: '0xowner',
     graph,
+    public_world: create_public_world(graph, pubsub.graph),
     pubsub,
     events,
     signal: controller.signal,

@@ -26,7 +26,7 @@ const leaf_paths = (value: unknown, prefix = ''): readonly string[] =>
     ? Object.entries(value).flatMap(([key, child]) => leaf_paths(child, prefix ? `${prefix}.${key}` : key))
     : [prefix]
 
-test('all ten authored locale documents parse uniquely and carry the same keys, to the leaf', () => {
+test('all authored locale documents parse uniquely and carry the same keys, to the leaf', () => {
   LOCALES.forEach((locale) => expect(() => raw(locale)).not.toThrow())
 
   const expected = [...leaf_paths(en)].sort()
@@ -56,7 +56,7 @@ test('authored copy names the universe and keeps item descriptions inside the lo
   expect(english.encyclopedia_page.item_descriptions).not.toHaveProperty('aberrant_edge')
 })
 
-test('every spell identity has one localized display name in all ten locales', () => {
+test('every spell identity has one localized display name in all supported locales', () => {
   const identities = spells.map(({ name }) => name).toSorted()
   for (const document of documents) {
     const names = (document as unknown as { spell_names: Record<string, string> }).spell_names
@@ -73,7 +73,7 @@ test('every spell identity has one localized display name in all ten locales', (
 })
 
 test('all supported locales cover shared item, stat, profession and equipment-slot vocabulary', () => {
-  expect(LOCALES).toEqual(['en', 'fr', 'es', 'de', 'uk', 'ja', 'zh', 'ru', 'vi', 'ko'])
+  expect(LOCALES).toEqual(['en', 'fr', 'es', 'de', 'uk', 'ja', 'zh', 'ru', 'vi', 'ko', 'pt'])
   for (const document of documents) {
     for (const category of [...item_categories, 'weapon', 'tool', 'relic_slot'])
       expect(document.item_categories[category]?.trim()).not.toBeFalsy()

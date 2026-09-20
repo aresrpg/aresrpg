@@ -12,9 +12,13 @@ import { capture_flat_cpu_profile } from '../support/flat_cpu_profile.ts'
 const mode = process.env.BROWSER_WORKLOAD === 'full' ? 'full' : 'smoke'
 const full = mode === 'full'
 const hardware = process.env.REQUIRE_HARDWARE === '1'
+const profile_stage = process.env.PERF_PROFILE_STAGE === 'entry' ? 'crowd-entry' : 'flat'
 const populations: Readonly<
   Record<string, { characters: number; mobs: number; pets: number; frames: number; packs: number; nodes: number }>
 > = {
+  crowd_1: { characters: 1, mobs: 0, pets: 1, frames: 180, packs: 0, nodes: 0 },
+  crowd_50: { characters: 50, mobs: 0, pets: 50, frames: 180, packs: 0, nodes: 0 },
+  crowd_100: { characters: 100, mobs: 0, pets: 100, frames: 180, packs: 0, nodes: 0 },
   smaller: { characters: 32, mobs: 100, pets: 32, frames: 180, packs: 48, nodes: 20 },
   stress: { characters: 200, mobs: 100, pets: 100, frames: 180, packs: 48, nodes: 20 },
 }
@@ -34,7 +38,7 @@ for (const quality of ['low', 'medium', 'high'] as const)
     const { location } = scene
     const target_fps = process.platform === 'darwin' ? 120 : 30
     test(`${scene.name} / ${quality}`, { tag: `@${quality}` }, async ({ page, browser }, info) => {
-      const finish_profile = await capture_flat_cpu_profile(page, info, process.env.PERF_PROFILE === '1')
+      const finish_profile = await capture_flat_cpu_profile(page, info, process.env.PERF_PROFILE === '1', profile_stage)
       const errors = new Set<string>()
       page.on('pageerror', (error) => errors.add(error.message))
       page.on('console', (message) => {

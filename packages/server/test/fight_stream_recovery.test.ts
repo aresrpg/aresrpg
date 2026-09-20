@@ -3,8 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { create_player } from '../src/player.ts'
-
+import { create_player } from './helpers/player.ts'
 import { embody, fight_node, flush, wire } from './helpers/stream_wire.ts'
 
 test('a cleared preview cannot be re-armed by its older graph read', async () => {

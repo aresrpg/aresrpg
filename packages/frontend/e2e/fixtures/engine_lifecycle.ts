@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { LIFECYCLE_WORLD, probe_backend_lifetime } from '../../../engine/test/browser_lifecycle.ts'
+import { probe_crowd } from '../../../engine/test/browser_crowd.ts'
 import { probe_label_scene } from '../../../engine/test/browser_labels.ts'
 import { probe_model_anchors } from '../../../engine/test/browser_model_anchors.ts'
 import { probe_sword_labels } from '../../../engine/test/browser_sword_labels.ts'
@@ -14,6 +15,7 @@ import { read_pose, subscribe_pose } from '../../src/game/core/pose_feed.ts'
 
 declare global {
   interface Window {
+    probe_crowd: (morph: boolean) => ReturnType<typeof probe_crowd>
     probe_sword_labels: (kind: 'grid' | 'webgpu') => ReturnType<typeof probe_sword_labels>
     probe_model_anchors: () => ReturnType<typeof probe_model_anchors>
     probe_label_scene: () => ReturnType<typeof probe_label_scene>
@@ -24,13 +26,16 @@ declare global {
     stop_world_input: () => void
   }
 }
-window.probe_sword_labels = async (kind) =>
-  probe_sword_labels(
+window.probe_sword_labels = async (kind) => {
+  const impact_sound = fight_audio_src('sword_plant')
+  if (!impact_sound) throw new Error('Sword impact fixture is missing its authored audio')
+  return probe_sword_labels(
     document.getElementById('canvas') as HTMLCanvasElement,
     kind,
     (await load_fight_sword_url())!,
-    fight_audio_src('sword_plant')
+    impact_sound
   )
+}
 window.probe_model_anchors = async () =>
   probe_model_anchors(
     document.getElementById('canvas') as HTMLCanvasElement,
@@ -79,3 +84,5 @@ window.start_world_input = async () => {
   })
 }
 window.read_world_pose = read_pose
+
+window.probe_crowd = (morph) => probe_crowd(document.querySelector('canvas')!, morph)

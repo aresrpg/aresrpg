@@ -6,6 +6,7 @@
 // group over its pack, a resource node over its block, and the zone under the compass. One
 // design, one file: a second copy of these ornaments is how two of them drift apart.
 
+import { CAPTION_STYLE } from '@aresrpg/engine'
 import type { ReactNode } from 'react'
 
 /** A line on the card.
@@ -22,7 +23,7 @@ export const NametagCard = ({
   tone = 'gold',
   children,
 }: Readonly<{ name?: ReactNode; lines?: readonly NametagLine[]; tone?: 'gold' | 'muted'; children?: ReactNode }>) => {
-  const edge = tone === 'gold' ? 'rgba(200,150,60,0.70)' : 'rgba(120,124,134,0.55)'
+  const edge = tone === 'gold' ? CAPTION_STYLE.border : 'rgba(120,124,134,0.55)'
   const glow = tone === 'gold' ? '0 0 14px rgba(200,150,60,0.10)' : '0 0 14px rgba(0,0,0,0.10)'
   return (
     <div className="pointer-events-none flex -translate-y-full flex-col items-center gap-2">
@@ -30,6 +31,8 @@ export const NametagCard = ({
       <div
         className="relative flex flex-col items-center gap-0.5 rounded-lg border bg-bg px-3 py-1.5 text-center"
         style={{
+          background: CAPTION_STYLE.background,
+          fontFamily: CAPTION_STYLE.font,
           borderColor: tone === 'gold' ? 'rgba(200,150,60,0.25)' : 'rgba(120,124,134,0.22)',
           boxShadow: `${glow}, 0 4px 18px rgba(0,0,0,0.5)`,
         }}
@@ -49,7 +52,7 @@ export const NametagCard = ({
         {name !== undefined && (
           <span
             className="font-mono text-[10px] leading-tight tracking-[0.16em] uppercase"
-            style={{ color: tone === 'gold' ? '#f5d0a9' : '#b9bcc4' }}
+            style={{ color: tone === 'gold' ? CAPTION_STYLE.color : '#b9bcc4' }}
           >
             {name}
           </span>
@@ -63,7 +66,7 @@ export const NametagCard = ({
                   <span
                     className="font-mono text-[10px] leading-tight tracking-[0.16em] uppercase"
                     key={line.key}
-                    style={{ color: tone === 'gold' ? '#f5d0a9' : '#b9bcc4' }}
+                    style={{ color: tone === 'gold' ? CAPTION_STYLE.color : '#b9bcc4' }}
                   >
                     {line.text}
                   </span>

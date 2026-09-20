@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- this renderer owns its mutable interpolation cache and Three.js-facing elements. */
+/* eslint-disable functional/immutable-data -- this renderer owns its mutable interpolation cache and Three.js-facing elements. */
 // Nearby players rendered in the world: folds the presence slice (PresenceRow by character id)
 // into the world scene's external-entity door. Appearances load once per identity change; live
-// positions ride packet/player_moved through the store. A row with a pet is MOUNTED by
+// positions ride packet/players_moved through the store. A row with a pet is MOUNTED by
 // definition (the presence contract) — the pet renders under a seated rider.
 
-import type { CharacterAnimationName, EntityRender } from '@aresrpg/engine'
+import type { CharacterAnimationName, EntityRender, WorldCaption } from '@aresrpg/engine'
 import { chain_to_client_coordinate, worn_appearance } from '@aresrpg/immutable'
 import type { PresenceRow } from '@aresrpg/protocol'
 
 import { load_character_appearance, presence_render_source, world_character_entity } from './character_entities.ts'
 import { pet_locomotion_of, pet_seat_height, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
+import { create_caption_target } from './core/caption_target.ts'
 import { publish_other_tag } from './core/nametag_feed.ts'
 import { read_pose } from './core/pose_feed.ts'
 
@@ -77,17 +78,20 @@ export const create_presence_renderer = ({
   entity_height,
   pet_ground_height,
   label,
+  next_frame = raf,
+  appearance_loader = load_character_appearance,
 }: Readonly<{
+  next_frame?: typeof raf
+  appearance_loader?: typeof load_character_appearance
   submit: (entities: readonly EntityRender[]) => void
   entity_height: (id: string) => number | null
   pet_ground_height: (x: number, z: number, owner_y: number) => number
   /** the engine's crown-label door — nametags ride the SAME CSS2D pass as every other tag */
-  label: (character_id: string, element: HTMLElement | null) => void
+  label: (character_id: string, caption: WorldCaption | null) => void
 }>) => {
   const slots = new Map<string, PresenceSlot>()
   const generations = new Map<string, number>()
-  const tag_elements = new Map<string, HTMLElement>()
-  const label_attached = new Set<string>()
+  const tags = new Map<string, ReturnType<typeof create_caption_target>>()
   let idle_timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
   let ticking = false
@@ -98,18 +102,14 @@ export const create_presence_renderer = ({
     const slot = slots.get(character_id)
     const own = read_pose()
     const within_range = !!slot?.loaded && !!own && Math.hypot(slot.x - own.x, slot.z - own.z) <= NAMETAG_RANGE_BLOCKS
-    if (within_range === label_attached.has(character_id)) return
+    if (within_range === tags.has(character_id)) return
     if (within_range) {
-      const div = typeof document === 'undefined' ? null : document.createElement('div')
-      if (!div) return
-      tag_elements.set(character_id, div)
-      label(character_id, div)
-      label_attached.add(character_id)
-      publish_other_tag(character_id, div)
+      const target = create_caption_target((caption) => label(character_id, caption))
+      tags.set(character_id, target)
+      publish_other_tag(character_id, target)
     } else {
-      label(character_id, null)
-      tag_elements.delete(character_id)
-      label_attached.delete(character_id)
+      tags.get(character_id)?.dispose()
+      tags.delete(character_id)
       publish_other_tag(character_id, null)
     }
   }
@@ -147,14 +147,14 @@ export const create_presence_renderer = ({
     }
     build()
     ticking = converging
-    if (converging) raf(tick)
+    if (converging) next_frame(tick)
   }
 
   const wake_tick = (): void => {
     if (ticking || disposed) return
     ticking = true
     last_tick_ms = performance.now()
-    raf(tick)
+    next_frame(tick)
   }
 
   const build = (): void => {
@@ -205,7 +205,7 @@ export const create_presence_renderer = ({
     const any_moving = [...slots.values()].some((slot) => slot.loaded && now - slot.moved_at < IDLE_AFTER_MS)
     if (idle_timer) clearTimeout(idle_timer)
     // one deferred rebuild relaxes run→idle once the last mover's quiet window elapses
-    idle_timer = any_moving ? setTimeout(build, IDLE_AFTER_MS + 50) : null
+    idle_timer = any_moving ? setTimeout(wake_tick, IDLE_AFTER_MS + 50) : null
   }
 
   const load = (character_id: string, row: Readonly<PresenceRow>, source_key: string): void => {
@@ -223,12 +223,12 @@ export const create_presence_renderer = ({
       const item = content_catalog.item(pet_type)?.item
       return model_url && item ? Object.freeze({ model_url, locomotion: pet_locomotion_of(item) }) : null
     }
-    void Promise.all([load_character_appearance(presence_render_source(row)), load_pet()])
+    void Promise.all([appearance_loader(presence_render_source(row)), load_pet()])
       .then(([appearance, pet]) => {
         const slot = slots.get(character_id)
         if (disposed || !slot || slot.source_key !== source_key || generations.get(character_id) !== generation) return
         slot.loaded = { appearance, pet }
-        build()
+        wake_tick()
       })
       .catch((error: unknown) => console.error(`Nearby player ${character_id} failed to load its appearance.`, error))
   }
@@ -250,10 +250,10 @@ export const create_presence_renderer = ({
         slots.delete(stale)
         generations.delete(stale)
         // a gone body takes its tag with it
-        if (label_attached.has(stale)) {
-          label(stale, null)
-          label_attached.delete(stale)
-          tag_elements.delete(stale)
+        const target = tags.get(stale)
+        if (target) {
+          target.dispose()
+          tags.delete(stale)
           publish_other_tag(stale, null)
         }
         changed = true
@@ -308,17 +308,16 @@ export const create_presence_renderer = ({
       // nametag range rides every presence delta (moves fold here) — shown positions lag the
       // targets by one lerp at most, which no eye can read on a 15-block gate
       for (const character_id of slots.keys()) sync_tag(character_id)
-      if (changed) build()
+      if (changed) wake_tick()
     },
     dispose: (): void => {
       disposed = true
       if (idle_timer) clearTimeout(idle_timer)
-      for (const character_id of label_attached) {
-        label(character_id, null)
+      for (const [character_id, target] of tags) {
+        target.dispose()
         publish_other_tag(character_id, null)
       }
-      label_attached.clear()
-      tag_elements.clear()
+      tags.clear()
       slots.clear()
       generations.clear()
       submit(Object.freeze([]))

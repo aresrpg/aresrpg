@@ -125,6 +125,8 @@ export const create_world = ({
   canvas,
   world,
   quality,
+  render_distance,
+  force_grid,
   on_travel,
   on_run_stopped,
   initial_focus = [0, 0],
@@ -132,17 +134,20 @@ export const create_world = ({
   canvas: HTMLCanvasElement
   world: unknown
   quality: EngineQuality
+  render_distance?: number | null
+  force_grid?: boolean
   /** fired when T is pressed beside the star gate — the app owns what travel means */
   on_travel?: () => void
   on_run_stopped?: (reason: 'arrived' | 'manual' | 'blocked' | 'inactive') => void
   initial_focus?: readonly [number, number]
 }>) => {
   const compiled = compile_runtime_world_recipe(parse_world_recipe(world))
-  const engine = create_engine({ canvas, quality, world, initial_focus })
+  const engine = create_engine({ canvas, quality, world, initial_focus, render_distance, force_grid })
   const terrain_planner = create_terrain_planner(compiled.recipe)
   const chunks = create_chunk_manager({
     engine,
     initial_quality: quality,
+    initial_render_distance: render_distance,
     plan_layers: terrain_planner.plan,
     on_failure: (error) => engine.fail({ code: 'terrain_failed', detail: error.message }),
   })
@@ -886,6 +891,7 @@ export const create_world = ({
     follow_camera: () => follow_addon,
     /// The last rendered camera frame — the screen-space pick (player right-click) reads it.
     camera_frame: (): CameraFrame | null => last_view,
+    set_entity_caption: engine.set_entity_caption,
     set_entity_label: (id: string, element: HTMLElement | null) => engine.set_entity_label(id, element),
     set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) =>
       engine.set_world_label(id, element, position),

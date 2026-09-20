@@ -105,6 +105,21 @@ pub fn analyze_with_digests(
     let mut wire = Wire::default();
     for tx in txs {
         route_game_events(&mut wire, ckpt, ts_ms, tx, game, seed)?;
+        for (index, character) in
+            crate::character_checkpoints::changed(tx.inputs, tx.outputs, game)?
+        {
+            wire.publications.push(Publication {
+                channel: format!("evt:character:{}", character.hex()),
+                payload: envelope(
+                    ckpt,
+                    tx.tx_index,
+                    index as u64,
+                    ts_ms,
+                    "CharacterCheckpointChanged",
+                    json!({ "character": character.hex() }),
+                ),
+            });
+        }
         route_game_state(&mut wire, ckpt, ts_ms, tx, game)?;
         route_friend_writes(&mut wire, ckpt, ts_ms, tx, game)?;
         route_party_writes(&mut wire, ckpt, ts_ms, tx, game)?;
@@ -928,6 +943,7 @@ fn kiosk_view<'a>(views: &'a [ObjView<'a>], kiosk: Id) -> anyhow::Result<Option<
 struct SaleShape {
     stackable: bool,
     kind: &'static str,
+    category: Option<String>,
     item_type: Option<String>,
     name: String,
     amount: u64,
@@ -947,6 +963,7 @@ fn sale_shape(sold: &ObjView<'_>) -> anyhow::Result<SaleShape> {
                 "resource" | "consumable" | "rune" | "key"
             ),
             kind: "item",
+            category: Some(item.category),
             item_type: Some(item.item_type),
             name: item.name,
             amount: item.amount.max(1) as u64,
@@ -961,6 +978,7 @@ fn sale_shape(sold: &ObjView<'_>) -> anyhow::Result<SaleShape> {
     Ok(SaleShape {
         stackable: false,
         kind: "character",
+        category: None,
         item_type: None,
         name: character.name,
         amount: 1,
@@ -1150,6 +1168,7 @@ fn analyze_kiosk_market(
                             "seller": seller.map(|address| address.hex()),
                             "buyer": tx.sender.hex(),
                             "kind": shape.kind,
+                            "category": shape.category,
                             "name": shape.name,
                             "item_type": shape.item_type,
                             "amount": shape.amount,
@@ -1205,6 +1224,7 @@ fn analyze_kiosk_market(
                             "object": id.hex(),
                             "seller": crate::personal_kiosk::owner(tx.inputs, tx.outputs, kiosk)?.map(|owner| owner.hex()),
                             "price_mist": price.map(|p| p.to_string()),
+                            "kind": if event.type_params.first() == Some(&format!("{game}::item::Item")) { "item" } else { "character" },
                         }),
                     ),
                 });
@@ -1932,16 +1952,18 @@ mod tests {
         };
         let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert_eq!(wire.publications.len(), 2);
-        assert!(wire
-            .publications
-            .iter()
-            .any(|row| row.payload.contains("MarketDelisted")
-                && row.payload.contains(&Id([5; 32]).hex())));
-        assert!(wire
-            .publications
-            .iter()
-            .any(|row| row.payload.contains("MarketListed")
-                && row.payload.contains(&Id([6; 32]).hex())));
+        assert!(
+            wire.publications
+                .iter()
+                .any(|row| row.payload.contains("MarketDelisted")
+                    && row.payload.contains(&Id([5; 32]).hex()))
+        );
+        assert!(
+            wire.publications
+                .iter()
+                .any(|row| row.payload.contains("MarketListed")
+                    && row.payload.contains(&Id([6; 32]).hex()))
+        );
     }
 
     #[test]
@@ -2133,11 +2155,12 @@ mod tests {
 
         assert_eq!(wire.sales.len(), 2);
         assert!(wire.sales.iter().any(|row| row.address == Addr([9; 32])));
-        assert!(wire
-            .publications
-            .iter()
-            .any(|row| row.payload.contains("MarketPurchased")
-                && row.payload.contains("wooling_wool")));
+        assert!(
+            wire.publications
+                .iter()
+                .any(|row| row.payload.contains("MarketPurchased")
+                    && row.payload.contains("wooling_wool"))
+        );
     }
 
     #[test]
@@ -2279,10 +2302,11 @@ mod tests {
         let wire = analyze(100, 1_000, &[tx], GAME, SEED).unwrap();
         assert!(wire.sales.is_empty() && wire.market.is_empty());
         // the item WRITE itself still streams (its custody moved) — but nothing money-shaped
-        assert!(wire
-            .publications
-            .iter()
-            .all(|p| p.payload.contains("ItemWritten")));
+        assert!(
+            wire.publications
+                .iter()
+                .all(|p| p.payload.contains("ItemWritten"))
+        );
     }
 
     #[test]
@@ -2393,10 +2417,11 @@ mod tests {
         assert!(channels.contains(&format!("evt:social:0x{}", "09".repeat(32)).as_str()));
         assert!(channels.contains(&format!("evt:social:0x{}", "07".repeat(32)).as_str()));
         assert_eq!(wire.publications.len(), 2);
-        assert!(wire
-            .publications
-            .iter()
-            .all(|row| row.payload.contains("TradeChanged")));
+        assert!(
+            wire.publications
+                .iter()
+                .all(|row| row.payload.contains("TradeChanged"))
+        );
     }
 
     #[test]

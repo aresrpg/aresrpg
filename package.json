@@ -20,7 +20,7 @@
     "generate:cities": "bun scripts/generate_cities.mjs",
     "snapshot:holders": "bun scripts/snapshot_sui_holders.mjs",
     "lint": "NODE_OPTIONS=--max-old-space-size=6144 eslint . --max-warnings 0 && prettier . --check",
-    "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck && bun run --cwd packages/launchpad typecheck",
+    "typecheck": "bun run --cwd packages/engine typecheck && bun run --cwd packages/protocol typecheck && bun run --cwd packages/sdk typecheck && bun run --cwd packages/server typecheck && bun run --cwd packages/fight typecheck && bun run --cwd packages/frontend typecheck && bun run --cwd packages/launchpad typecheck && bun run --cwd packages/journal typecheck",
     "format": "prettier . --write && eslint . --fix",
     "coverage:typescript": "bun test packages scripts --coverage --coverage-reporter=lcov --coverage-dir=coverage --reporter=dots && bun scripts/assert_coverage.mjs coverage/lcov.info",
     "coverage:indexer": "sh scripts/coverage_indexer.sh",
@@ -28,7 +28,9 @@
     "coverage:all": "bun run coverage:typescript && bun run coverage:indexer && bun run coverage:move",
     "test": "bun run --cwd packages/fight generate:check && bun scripts/generate_cities.mjs --check && bun run coverage:typescript && bun run validate:seed && node scripts/assert_move_packages.mjs",
     "test:browser": "playwright test --config packages/frontend/e2e/playwright.config.ts",
-    "validate:seed": "bun scripts/validate_seed.mjs --json"
+    "validate:seed": "bun scripts/validate_seed.mjs --json",
+    "dev:journal": "bun run --cwd packages/journal dev",
+    "build:journal": "bun run --cwd packages/journal build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client'
 import { item_stat_center } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
+import { TradeDialog } from '../../src/components/TradeDialog.tsx'
+import '../../src/components/trade_inbox.css'
 import EquipmentTab from '../../src/characters/EquipmentTab.tsx'
 import { CrushResultModal } from '../../src/characters/CrushResultModal.tsx'
 import { SellPanel } from '../../src/marketplace/SellPanel.tsx'
@@ -67,6 +69,10 @@ dispatch_app({
   type: 'auth/connected',
   session: {
     address: 'owner',
+    read_item: async (id: string) => {
+      document.body.dataset.itemReads = id
+      return { ...items[0]!, id, stats: { strength: item_stat_center + 77 } }
+    },
     character: {
       crush_gear: async ({ gear_ids }: { gear_ids: readonly string[] }) => {
         recorded.push([...gear_ids])
@@ -97,12 +103,40 @@ window.addEventListener('fixture-item-stats', () =>
   })
 )
 const sell = new URLSearchParams(location.search).has('sell')
+const trade = {
+  id: 'trade',
+  a: 'owner',
+  b: 'other',
+  phase: 'negotiating' as const,
+  offer_revision: 1,
+  accept_a: false,
+  accept_b: false,
+  sui_a: '0',
+  sui_b: '0',
+  kares_a: '0',
+  kares_b: '0',
+  caps_a: [{ ...items[0]!, object: items[0]!.id }],
+  caps_b: [{ ...items[0]!, object: 'other-item' }],
+}
+if (new URLSearchParams(location.search).has('trade'))
+  dispatch_app({ type: 'server/packet', packet: { type: 'packet/trades', trades: [trade] } })
+if (new URLSearchParams(location.search).has('listed'))
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/listings',
+      listings: [{ ...items[0]!, kind: 'item', version: '1', seller: 'owner', price_mist: '1000000000', at_ms: 0 }],
+      kiosk_versions: { kiosk: '1' },
+    },
+  })
 createRoot(document.getElementById('root')!).render(
   <main
     className="gw-tab market-page flex min-h-0 min-w-0 flex-1"
     style={{ containerType: 'inline-size', containerName: 'app-content' }}
   >
-    {sell ? (
+    {new URLSearchParams(location.search).has('trade') ? (
+      <TradeDialog copy={copy} active={trade} address="owner" />
+    ) : sell ? (
       <SellPanel text={copy_text(copy.marketplace_page)} />
     ) : (
       <>

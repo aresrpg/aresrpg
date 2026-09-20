@@ -6,6 +6,7 @@ import { MIN_CHARACTER_SALE_LEVEL, type CharacterRow, type ItemRow, type Listing
 import { Package, Store, Tag } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { Text } from '../i18n/Text.tsx'
 import { useText } from '../i18n/useText.ts'
@@ -137,7 +138,17 @@ export const SellPanel = ({ text }: Readonly<{ text: CopyText }>) => {
                 className={`flex items-center gap-3 border-b border-white/7 px-4 py-2 ${index % 2 ? 'bg-white/[0.018]' : ''}`}
                 key={listing.id}
               >
-                <ListingIcon listing={listing} size={30} />
+                {listing.kind === 'item' ? (
+                  <ItemDetailHover
+                    item={{ ...listing, item_type: listing.item_type ?? '', category: listing.category ?? '' }}
+                  >
+                    <button type="button" className="cursor-help" aria-label={listing_name(listing)}>
+                      <ListingIcon listing={listing} size={30} />
+                    </button>
+                  </ItemDetailHover>
+                ) : (
+                  <ListingIcon listing={listing} size={30} />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[10px] text-[#e8e4dc] uppercase">{listing_name(listing)}</p>
                   <p className="text-[8px] text-[#6b7280] uppercase">

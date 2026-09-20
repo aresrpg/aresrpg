@@ -7,7 +7,6 @@
 import type {
   EngineQuality,
   EntityRender,
-  EntityScreenAnchor,
   FightBlobSpec,
   FightBoardRender,
   FightPresentationCue,
@@ -89,8 +88,6 @@ export const FightViewport = ({
   label,
   on_cell_click,
   on_cell_hover,
-  on_entity_anchors,
-  tracked_entity_ids = Object.freeze([]),
   blob_request,
   blob_overlays = Object.freeze([]),
   presentation_request,
@@ -107,8 +104,6 @@ export const FightViewport = ({
   label: string
   on_cell_click?: (cell: bigint | null, pointer: Readonly<{ x: number; y: number }>) => void
   on_cell_hover?: (cell: bigint | null) => void
-  on_entity_anchors?: (anchors: Readonly<Record<string, EntityScreenAnchor>>) => void
-  tracked_entity_ids?: readonly string[]
   blob_request?: Readonly<{ sequence: number; blob: FightBlobSpec }> | null
   blob_overlays?: readonly FightBlobOverlay[]
   on_presentation_cue?: (cue: FightPresentationCue, phase: FightCuePhase) => void
@@ -136,7 +131,6 @@ export const FightViewport = ({
   const cue_observer_ref = useRef(on_presentation_cue)
   const presentation_request_ref = useRef(presentation_request)
   const presentation_active_ref = useRef(on_presentation_active)
-  const anchors_ref = useRef(on_entity_anchors)
   // A fight board is immutable under its contract ID. Checkpoint reducers clone it, so depending
   // on object identity would rebuild GPU geometry after every command.
   const anchor_key = world_anchor ? `${world_anchor.x}:${world_anchor.z}` : ''
@@ -165,8 +159,6 @@ export const FightViewport = ({
   cue_observer_ref.current = on_presentation_cue
   presentation_request_ref.current = presentation_request
   presentation_active_ref.current = on_presentation_active
-  anchors_ref.current = on_entity_anchors
-  const tracked_ids = tracked_entity_ids.join('\u0000')
 
   useEffect(() => {
     // THE BOARD IS MOUNTED IN THE LIVE WORLD, never in a renderer of its own: the world is
@@ -273,35 +265,6 @@ export const FightViewport = ({
       current = false
     }
   }, [presentation_request?.fight, presentation_request?.batch])
-
-  useEffect(() => {
-    const ids = tracked_ids ? tracked_ids.split('\u0000') : []
-    if (ids.length === 0) {
-      anchors_ref.current?.(Object.freeze({}))
-      return undefined
-    }
-    let frame = 0
-    let previous = ''
-    const project = (): void => {
-      const view = view_ref.current
-      const anchors = Object.freeze(
-        Object.fromEntries(
-          ids.flatMap((id) => {
-            const anchor = view?.project_entity(id)
-            return anchor ? [[id, anchor] as const] : []
-          })
-        )
-      )
-      const signature = JSON.stringify(anchors)
-      if (signature !== previous) {
-        previous = signature
-        anchors_ref.current?.(anchors)
-      }
-      frame = requestAnimationFrame(project)
-    }
-    frame = requestAnimationFrame(project)
-    return () => cancelAnimationFrame(frame)
-  }, [tracked_ids])
 
   useEffect(() => {
     if (blob_request) view_ref.current?.create_blob(blob_request.blob)

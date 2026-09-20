@@ -53,6 +53,7 @@ mock.module('../src/character_crowd.ts', () => ({
   create_character_crowd_layer: () => resource('crowd'),
   is_character_crowd_spec: () => false,
 }))
+mock.module('../src/caption_layer.ts', () => ({ create_caption_layer: () => resource('captions') }))
 mock.module('../src/entity_labels.ts', () => ({ create_entity_label_layer: () => resource('labels') }))
 mock.module('../src/transient_effects.ts', () => ({ create_transient_effects: () => resource('effects') }))
 mock.module('../src/clouds.ts', () => ({ create_clouds: () => resource('clouds') }))
@@ -66,7 +67,7 @@ await assert.rejects(
   create_webgpu_backend({} as never, 'low', parse_world_recipe(world_terrain('nauvis'))),
   /late construction failure/
 )
-assert.deepEqual(released, ['clouds', 'effects', 'labels', 'crowd', 'entities', 'fight-board', 'renderer'])
+assert.deepEqual(released, ['clouds', 'effects', 'labels', 'captions', 'crowd', 'entities', 'fight-board', 'renderer'])
 assert.equal(cleanup_errors.length, 1)
 renderer.onDeviceLost()
 assert.equal(original_loss, 1)

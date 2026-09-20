@@ -6,6 +6,9 @@ body: 完整世界需要WebGPU。当前已改用轻量网格。
 fatal: 此浏览器无法创建WebGPU或WebGL图形上下文。
 engine_recovery: 世界已停止加载或渲染。请重新加载后再试。
 engine_reload: 重新加载
+engine_minimum_title: '已降低画质'
+engine_minimum: '无法加载或渲染世界。为减轻电脑负担，画质和渲染距离已降至最低设置。'
+engine_continue: '继续'
 world_unavailable_title: 世界不可用
 world_unavailable: 此世界尚未配置地形生成方案。
 mobile_unavailable_label: 移动端访问
@@ -332,6 +335,9 @@ world_hud:
   spawn_engage_conflict: 攻击前怪物群已发生变化，可能已被其他玩家挑战。
   spawn_never_arrived: 战斗已执行，但棋盘未加载
   resource_press_collect: 按{{key}}采集{{name}}
+  resource_press_collect_all: '按 {{key}} 全部采集'
+  resource_collect_all_progress: '正在全部采集 · {{completed}}/{{total}}'
+  resource_collect_all_stop: '停止 (Esc)'
   resource_need_level: 采集需要{{job}}达到{{level}}级
   resource_need_tool: 采集需要{{job}}工具
   resource_gathering: 正在采集…
@@ -391,6 +397,8 @@ demo_page:
   control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
   back: 返回应用
 marketplace_page:
+  previous_page: 上一页
+  next_page: 下一页
   prices_title: 价格历史
   prices_period: 周期
   prices_range_7: 7天

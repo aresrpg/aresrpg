@@ -17,6 +17,7 @@ const picking = { cell: null as number | null }
 const scene: SceneHandle = {
   show_fight_board: () => {},
   set_entities: () => {},
+  set_entity_caption: () => {},
   animate_entity: async () => false,
   play_fight_cue: async () => false,
   project_entity: () => null,

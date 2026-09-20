@@ -3,8 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { create_player } from '../src/player.ts'
-
+import { create_player } from './helpers/player.ts'
 import { wire, flush } from './helpers/world_wire.ts'
 
 test('WorldJoined moves subscriptions and delivers the destination scout without reconnecting', async () => {
@@ -76,6 +75,10 @@ test('WorldJoined moves subscriptions and delivers the destination scout without
     ).toBeTrue()
     searched = true
     anchor_ms = 200
+    fixture.pubsub.emitter.emit('evt:character:0xabc', {
+      type: 'CharacterCheckpointChanged',
+      data: { character: '0xabc' },
+    })
     fixture.pubsub.emitter.emit('evt:zone:yakutia:0:0', { type: 'ZoneSearched', data: { world, zone_x: 0, zone_z: 0 } })
     await flush()
     await flush()
@@ -104,3 +107,48 @@ test('WorldJoined moves subscriptions and delivers the destination scout without
     player.on_close()
   }
 }, 15_000)
+
+test('travel retires pending source-world subscriptions before their continuations resume', async () => {
+  const fixture = wire({ character_ids: ['0xabc'] })
+  const pending = Promise.withResolvers<void>()
+  let world = 'nauvis'
+  fixture.pubsub.mesh.subscribe = async (channel) => {
+    if (channel.startsWith('pos:nauvis:')) await pending.promise
+  }
+  const graph = {
+    ...fixture.graph,
+    read: async (query: string, params?: Record<string, unknown>) => {
+      const rows = await fixture.graph.read(query, params)
+      return rows.map((row) =>
+        'character' in row && row.character
+          ? {
+              ...row,
+              character: {
+                ...row.character,
+                properties: { ...row.character.properties, world, checkpoint_world: world },
+              },
+            }
+          : row
+      )
+    },
+  }
+  const player = create_player({ ...fixture, graph, address: '0xme', admin: false })
+  try {
+    await flush()
+    world = 'yakutia'
+    fixture.pubsub.emitter.emit('evt:character:0xabc', { type: 'WorldJoined', data: { character: '0xabc', world } })
+    await flush()
+    await flush()
+    fixture.published.length = 0
+    pending.resolve()
+    await flush()
+    await flush()
+    expect(fixture.pubsub.emitter.eventNames().some((name) => String(name).startsWith('evt:zone:nauvis:'))).toBeFalse()
+    expect(
+      fixture.published.some(({ payload }) => payload.kind === 'appear' && payload.player.world === 'nauvis')
+    ).toBeFalse()
+  } finally {
+    pending.resolve()
+    player.on_close()
+  }
+})

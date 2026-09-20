@@ -3,6 +3,9 @@ body: Die vollständige Welt benötigt WebGPU. Stattdessen läuft ein leichtes R
 fatal: Dieser Browser kann weder einen WebGPU- noch einen WebGL-Grafikkontext erstellen.
 engine_recovery: Die Welt konnte nicht weiter geladen oder dargestellt werden. Lade sie erneut.
 engine_reload: Neu laden
+engine_minimum_title: 'Grafik reduziert'
+engine_minimum: 'Die Welt konnte nicht geladen oder dargestellt werden. Grafikqualität und Sichtweite wurden auf das Minimum reduziert, um deinen Computer zu entlasten.'
+engine_continue: 'Weiter'
 world_unavailable_title: Welt nicht verfügbar
 world_unavailable: Für diese Welt wurde noch kein Terrainrezept erstellt.
 mobile_unavailable_label: Mobiler Zugriff
@@ -329,6 +332,9 @@ world_hud:
   spawn_engage_conflict: 'Dieses Rudel hat sich vor deinem Angriff geändert. Vielleicht hat ein anderer Spieler es angegriffen.'
   spawn_never_arrived: 'Der Kampf wurde ausgeführt, aber das Spielfeld kam nicht an'
   resource_press_collect: 'Drücke {{key}}, um {{name}} zu sammeln'
+  resource_press_collect_all: 'Drücke {{key}}, um alles zu sammeln'
+  resource_collect_all_progress: 'Alles sammeln · {{completed}}/{{total}}'
+  resource_collect_all_stop: 'Stoppen (Esc)'
   resource_need_level: '{{job}} Stufe {{level}} erforderlich'
   resource_need_tool: 'Ein {{job}}-Werkzeug ist erforderlich'
   resource_gathering: 'Sammeln…'
@@ -388,6 +394,8 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
+  previous_page: Zurück
+  next_page: Weiter
   prices_title: 'Preisverlauf'
   prices_period: 'Zeitraum'
   prices_range_7: '7T'

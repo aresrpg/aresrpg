@@ -8,20 +8,21 @@ import {
   Bone,
   BoxGeometry,
   Group,
+  InstancedBufferGeometry,
   Mesh,
   MeshStandardMaterial,
   Scene,
-  type InstancedMesh,
   type InterleavedBufferAttribute,
 } from 'three'
 
+import type { CrowdMesh } from '../src/character_crowd_mesh.ts'
 import { character_crowd_key, create_character_crowd_layer, is_character_crowd_spec } from '../src/character_crowd.ts'
 import type { CharacterAppearanceRender, CharacterEntityRender } from '../src/types.ts'
 
 const appearance = (colors: readonly [string, string, string]): CharacterAppearanceRender =>
   Object.freeze({
     body_url: '/senshi.glb',
-    hair_url: '/senshi_hair.glb',
+    hair_url: null,
     colors,
     worn: Object.freeze({ head: null, back: null }),
   })
@@ -97,14 +98,14 @@ test('compatible world characters become one skinned instance batch with retaine
   await Promise.resolve()
   await Promise.resolve()
 
-  const meshes: Readonly<{ isInstancedMesh?: boolean; count?: number; geometry?: BoxGeometry }>[] = []
+  const meshes: CrowdMesh[] = []
   scene.traverse((object) => {
-    if ('isInstancedMesh' in object) meshes.push(object as never)
+    if ('geometry' in object && object.geometry instanceof InstancedBufferGeometry) meshes.push(object as CrowdMesh)
   })
   expect(crowd.stats()).toEqual({ batches: 1, instances: 2 })
   expect(meshes).toHaveLength(1)
   const first_mesh = meshes[0]!
-  expect(first_mesh.count).toBe(2)
+  expect(first_mesh.geometry.instanceCount).toBe(2)
   expect(first_mesh.geometry!.getAttribute('crowdColor1').count).toBe(256)
   const color_1 = first_mesh.geometry!.getAttribute('crowdColor1') as InterleavedBufferAttribute
   const color_2 = first_mesh.geometry!.getAttribute('crowdColor2') as InterleavedBufferAttribute
@@ -125,13 +126,13 @@ test('rigid hair and equipment retain the shared attachment-bone transform per i
   await Promise.resolve()
   await Promise.resolve()
 
-  const hair = scene.getObjectByName('hair')! as InstancedMesh
-  const body = scene.getObjectByName('body')! as InstancedMesh
-  const body_detail = scene.getObjectByName('body_detail')! as InstancedMesh
-  const hair_matrix = hair.instanceMatrix.array
-  const body_matrix = body.instanceMatrix.array
-  expect(hair.instanceMatrix).not.toBe(body.instanceMatrix)
-  expect(body_detail.instanceMatrix).toBe(body.instanceMatrix)
+  const hair = scene.getObjectByName('hair')! as CrowdMesh
+  const body = scene.getObjectByName('body')! as CrowdMesh
+  const body_detail = scene.getObjectByName('body_detail')! as CrowdMesh
+  const hair_matrix = hair.instance_matrix.array
+  const body_matrix = body.instance_matrix.array
+  expect(hair.instance_matrix).not.toBe(body.instance_matrix)
+  expect(body_detail.instance_matrix).toBe(body.instance_matrix)
   expect(body_matrix[12]).toBe(4)
   expect(body_matrix[13]).toBe(2)
   expect(body_matrix[14]).toBe(3)
@@ -149,11 +150,11 @@ test('resubmitting identical crowd specs performs no GPU buffer upload', async (
   await Promise.resolve()
   await Promise.resolve()
 
-  const mesh = scene.children[0]!.children[0]!.children[0]! as InstancedMesh
-  const { version } = mesh.instanceMatrix
+  const mesh = scene.children[0]!.children[0]!.children[0]! as CrowdMesh
+  const { version } = mesh.instance_matrix
   crowd.set(Object.freeze([spec]) as never)
 
-  expect(mesh.instanceMatrix.version).toBe(version)
+  expect(mesh.instance_matrix.version).toBe(version)
   crowd.dispose()
 })
 
@@ -190,13 +191,13 @@ test('moving a crowd uploads one shared body transform and no unchanged colors',
   await Promise.resolve()
   await Promise.resolve()
 
-  const body = scene.getObjectByName('body')! as InstancedMesh
-  const body_detail = scene.getObjectByName('body_detail')! as InstancedMesh
-  const hair = scene.getObjectByName('hair')! as InstancedMesh
+  const body = scene.getObjectByName('body')! as CrowdMesh
+  const body_detail = scene.getObjectByName('body_detail')! as CrowdMesh
+  const hair = scene.getObjectByName('hair')! as CrowdMesh
   const color = body.geometry.getAttribute('crowdColor1') as InterleavedBufferAttribute
   const before = Object.freeze({
-    body: body.instanceMatrix.version,
-    hair: hair.instanceMatrix.version,
+    body: body.instance_matrix.version,
+    hair: hair.instance_matrix.version,
     color: color.data.version,
   })
   crowd.set(
@@ -208,11 +209,11 @@ test('moving a crowd uploads one shared body transform and no unchanged colors',
     ]) as never
   )
 
-  expect(body_detail.instanceMatrix).toBe(body.instanceMatrix)
-  expect(body.instanceMatrix.version).toBe(before.body + 1)
-  expect(hair.instanceMatrix.version).toBe(before.hair + 1)
-  expect(body.instanceMatrix.updateRanges).toEqual([{ start: 0, count: 16 }])
-  expect(hair.instanceMatrix.updateRanges).toEqual([{ start: 0, count: 16 }])
+  expect(body_detail.instance_matrix).toBe(body.instance_matrix)
+  expect(body.instance_matrix.version).toBe(before.body + 1)
+  expect(hair.instance_matrix.version).toBe(before.hair + 1)
+  expect(body.instance_matrix.updateRanges).toEqual([{ start: 0, count: 16 }])
+  expect(hair.instance_matrix.updateRanges).toEqual([{ start: 0, count: 16 }])
   expect(color.data.version).toBe(before.color)
   crowd.dispose()
 })
@@ -269,13 +270,57 @@ test('animated accessories update once after movement and animation advance', as
   await Promise.resolve()
   const now = performance.now()
   crowd.tick(now)
-  const hair = scene.getObjectByName('hair')! as InstancedMesh
-  const before = hair.instanceMatrix.version
+  const hair = scene.getObjectByName('hair')! as CrowdMesh
+  const before = hair.instance_matrix.version
   crowd.set([{ ...spec, anchor: { kind: 'world', position: [5, 2, 3] } }] as never)
   crowd.tick(now + 50)
-  expect(hair.instanceMatrix.version).toBe(before + 1)
-  expect(hair.instanceMatrix.array[12]).toBe(5)
-  expect(hair.instanceMatrix.array[13]).toBeGreaterThan(3)
-  expect(hair.instanceMatrix.array[14]).toBe(3)
+  expect(hair.instance_matrix.version).toBe(before + 1)
+  expect(hair.instance_matrix.array[12]).toBe(5)
+  expect(hair.instance_matrix.array[13]).toBeGreaterThan(3)
+  expect(hair.instance_matrix.array[14]).toBe(3)
   crowd.dispose()
+})
+
+test('different outfits share the same body pose and equipment changes retain that body', async () => {
+  const scene = new Scene()
+  let loads = 0
+  const crowd = create_character_crowd_layer({
+    scene,
+    load_model: async (spec) => {
+      loads++
+      expect(spec.hair_url).toBeNull()
+      expect(spec.worn).toEqual({ head: null, back: null })
+      return model()
+    },
+  })
+  const actors = Array.from({ length: 100 }, (_, index) => {
+    const actor = character(String(index), index, ['#fff', '#888', '#111'])
+    return {
+      ...actor,
+      appearance: {
+        ...actor.appearance,
+        worn: {
+          head: { url: `hat_${index}.glb`, variant: null },
+          back: { url: `cloak_${index}.glb`, variant: null },
+        },
+      },
+    }
+  })
+  try {
+    crowd.set(actors as never)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(crowd.stats()).toEqual({ batches: 1, instances: 100 })
+    expect(loads).toBe(1)
+    crowd.set(
+      actors.map((actor) => ({
+        ...actor,
+        appearance: { ...actor.appearance, worn: { head: null, back: null } },
+      })) as never
+    )
+    await Promise.resolve()
+    expect(loads).toBe(1)
+  } finally {
+    crowd.dispose()
+  }
 })

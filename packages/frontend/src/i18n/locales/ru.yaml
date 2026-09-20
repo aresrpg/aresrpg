@@ -6,6 +6,9 @@ body: Для полного мира нужен WebGPU. Пока работае�
 fatal: Браузер не может создать графический контекст WebGPU или WebGL.
 engine_recovery: Загрузка или отрисовка мира остановилась. Перезагрузите страницу.
 engine_reload: Перезагрузить
+engine_minimum_title: 'Графика упрощена'
+engine_minimum: 'Не удалось загрузить или отобразить мир. Качество графики и дальность прорисовки снижены до минимума, чтобы уменьшить нагрузку на компьютер.'
+engine_continue: 'Продолжить'
 world_unavailable_title: Мир недоступен
 world_unavailable: Для этого мира ещё не создан рецепт рельефа.
 mobile_unavailable_label: Мобильный доступ
@@ -332,6 +335,9 @@ world_hud:
   spawn_engage_conflict: Стая изменилась до вашей атаки. Возможно, другой игрок уже вступил в бой.
   spawn_never_arrived: Бой создан, но поле так и не загрузилось
   resource_press_collect: Нажмите {{key}}, чтобы собрать {{name}}
+  resource_press_collect_all: 'Нажмите {{key}}, чтобы собрать всё'
+  resource_collect_all_progress: 'Собираем всё · {{completed}}/{{total}}'
+  resource_collect_all_stop: 'Остановить (Esc)'
   resource_need_level: Для сбора нужен {{job}} уровня {{level}}
   resource_need_tool: 'Для сбора нужен инструмент: {{job}}'
   resource_gathering: Сбор…
@@ -391,6 +397,8 @@ demo_page:
   control_hint: Нажмите на холст · WASD — движение · Пробел — прыжок · Мышь — обзор
   back: Вернуться в приложение
 marketplace_page:
+  previous_page: Назад
+  next_page: Далее
   prices_title: История цен
   prices_period: Период
   prices_range_7: 7Д

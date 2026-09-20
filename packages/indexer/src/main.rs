@@ -12,6 +12,7 @@
 
 mod analytics;
 mod boot;
+mod character_checkpoints;
 mod character_deletions;
 mod decode;
 mod events;
@@ -30,11 +31,11 @@ mod store;
 use anyhow::{Context, Result};
 use clap::Parser;
 use sui_indexer_alt_framework::ingestion::{
-    ingestion_client::IngestionClientArgs, streaming_client::StreamingClientArgs, ClientArgs,
-    IngestConcurrencyConfig, IngestionConfig,
+    ClientArgs, IngestConcurrencyConfig, IngestionConfig, ingestion_client::IngestionClientArgs,
+    streaming_client::StreamingClientArgs,
 };
-use sui_indexer_alt_framework::pipeline::sequential::SequentialConfig;
 use sui_indexer_alt_framework::pipeline::IngestionConfig as PipelineIngestionConfig;
+use sui_indexer_alt_framework::pipeline::sequential::SequentialConfig;
 use sui_indexer_alt_framework::{Indexer, IndexerArgs};
 use tracing::info;
 use url::Url;
@@ -153,7 +154,10 @@ async fn main() -> Result<()> {
             .arg(leaderboards::META_KEY)
             .query_async(&mut boot_conn)
             .await?;
-        anyhow::ensure!(initialized, "leaderboards require a complete replay from original publication; rebuild this disposable indexer store");
+        anyhow::ensure!(
+            initialized,
+            "leaderboards require a complete replay from original publication; rebuild this disposable indexer store"
+        );
     }
     if fresh {
         args.indexer.first_checkpoint = Some(

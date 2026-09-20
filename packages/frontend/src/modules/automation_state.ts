@@ -17,6 +17,7 @@ export type AutomationStep =
       type: 'gathering'
       target: AutomationTarget
       nodes_before: number
+      anchor_at_ms: number
       seed: string
       attempt_id: string | null
       confirmed: boolean
@@ -31,6 +32,7 @@ export type AutomationRun = Readonly<{
   character_id: string
   world: string
   item_type: string
+  scope: Readonly<{ type: 'world' }> | Readonly<{ type: 'pack'; target: AutomationTarget; nodes: number }>
   visited: VisitedZones
   step: AutomationStep
 }>
@@ -46,6 +48,7 @@ export type AutomationInput =
   | Readonly<{ type: 'automation/collapse'; collapsed: boolean }>
   | Readonly<{ type: 'automation/resource'; item_type: string }>
   | Readonly<{ type: 'automation/start'; id: string }>
+  | Readonly<{ type: 'automation/collect_all'; id: string; node: string; pose: WorldPose | null }>
   | Readonly<{ type: 'automation/stop'; reason: AutomationReason }>
   | Readonly<{ type: 'automation/tick'; world_ms: number | null; monotonic_ms: number; pose: WorldPose | null }>
 

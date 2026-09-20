@@ -14,6 +14,22 @@ test('engine is frontend-owned and server/indexer releases stay independent', ()
   expect(classify_release(['packages/server/src/index.ts'])).toEqual({ frontend: false, server: true, indexer: false })
 })
 
+test('journal prose and artwork do not invalidate game artifacts', () => {
+  const paths = ['seed/content/journal/article.md', 'seed/icons/journal/cover.png', 'packages/journal/src/pages.tsx']
+  expect(classify_release(paths)).toEqual({ frontend: false, server: false, indexer: false })
+  expect(
+    fingerprint_runtime_files(
+      paths.map((path) => [path, 'before']),
+      '{}'
+    )
+  ).toEqual(
+    fingerprint_runtime_files(
+      paths.map((path) => [path, 'after']),
+      '{}'
+    )
+  )
+})
+
 test('pins and SDK changes require new frontend artifacts', () => {
   expect(classify_release(['pins.json']).frontend).toBe(true)
   expect(classify_release(['packages/sdk/src/client.ts']).frontend).toBe(true)

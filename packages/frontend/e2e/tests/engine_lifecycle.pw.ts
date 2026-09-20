@@ -119,3 +119,23 @@ test('cached real models keep finite combat number and hover anchors', async ({ 
   }
   expect(result.floats).toHaveLength(4)
 })
+
+for (const morph of [false, true])
+  test(`crowd shaders preserve independent skinning, geometry and shadows (morph=${morph})`, async ({ page }, info) => {
+    await page.goto('/e2e/fixtures/engine_lifecycle.html')
+    test.skip(!(await page.evaluate(() => !!navigator.gpu)), 'WebGPU unavailable')
+    const errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    const result = await page.evaluate((morph) => window.probe_crowd(morph), morph)
+    await info.attach('individual', {
+      body: Buffer.from(result.reference_image.split(',')[1]!, 'base64'),
+      contentType: 'image/png',
+    })
+    await info.attach('crowd', {
+      body: Buffer.from(result.crowd_image.split(',')[1]!, 'base64'),
+      contentType: 'image/png',
+    })
+    expect(result.batches).toBe(2)
+    expect(result.mean_difference).toBeLessThan(0.3)
+    expect(errors).toEqual([])
+  })

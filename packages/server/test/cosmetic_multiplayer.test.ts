@@ -5,9 +5,9 @@ import { expect, test } from 'bun:test'
 import { visible_equipment, type PresenceRow } from '@aresrpg/protocol'
 import { worn_appearance } from '@aresrpg/immutable'
 
-import { create_player } from '../src/player.ts'
 import { channels, mesh } from '../src/protocol.ts'
 
+import { create_player } from './helpers/player.ts'
 import { embody, flush, wire } from './helpers/stream_wire.ts'
 
 const base_equipment = [
@@ -41,7 +41,8 @@ test('reconnected ownership publishes both cosmetic slots and keeps regular equi
     await flush()
     await embody(player)
     const appeared = () =>
-      harness.published.filter(({ payload }) => payload.kind === 'appear').at(-1)?.payload.player as PresenceRow
+      harness.published.filter(({ payload }) => payload.kind === 'appear' || payload.kind === 'reply').at(-1)?.payload
+        .player as PresenceRow
     expect(appeared()).toMatchObject(visible_equipment(equipment))
     expect(worn_appearance(appeared())).toEqual({ hat: 'coiffe_pepe', cloak: 'cosmetic_cape' })
     equipment = [...base_equipment, cosmetics[1]!]
@@ -49,6 +50,8 @@ test('reconnected ownership publishes both cosmetic slots and keeps regular equi
     await flush()
     harness.pubsub.emitter.emit(mesh.pos('overworld', 0, 0), {
       kind: 'who',
+      reply_to: 'presence:reply:test',
+      request: 'test',
       address: '0xother',
       world: 'overworld',
       zx: 0,

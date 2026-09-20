@@ -25,6 +25,7 @@ COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
 COPY packages/frontend/package.json packages/frontend/
 COPY packages/launchpad/package.json packages/launchpad/
+COPY packages/journal/package.json packages/journal/
 COPY packages/immutable/package.json packages/immutable/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/sdk/package.json packages/sdk/

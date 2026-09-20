@@ -30,7 +30,8 @@ type ModelMaterial = Material & {
   needsUpdate: boolean
 }
 
-type LoadedPart = Readonly<{ root: Object3D; materials: readonly Material[] }>
+export type CharacterPartSlot = 'hair' | 'head' | 'back'
+export type CharacterPart = Readonly<{ root: Object3D; dispose: () => void }>
 type Pixels = Readonly<{ data: Uint8ClampedArray; width: number; height: number }>
 // Source images are immutable GLB data; instance-owned recolored textures are never shared.
 const source_pixels = new WeakMap<object, Pixels>()
@@ -247,7 +248,16 @@ const prepare_character = (root: Object3D, source: Object3D): number => {
   return shape.min_y
 }
 
-const load_part = async (spec: WornModelRender): Promise<LoadedPart> => {
+const dispose_character_skeletons = (root: Object3D): void => {
+  const skeletons = new Set<{ dispose: () => void }>()
+  root.traverse((object) => {
+    const skinned = object as Object3D & { isSkinnedMesh?: boolean; skeleton?: { dispose: () => void } }
+    if (skinned.isSkinnedMesh && skinned.skeleton) skeletons.add(skinned.skeleton)
+  })
+  skeletons.forEach((skeleton) => skeleton.dispose())
+}
+
+export const load_character_part = async (slot: CharacterPartSlot, spec: WornModelRender): Promise<CharacterPart> => {
   const gltf = await load_gltf_source(spec.url)
   const root = clone_skinned(gltf.scene)
   await apply_gltf_variant(gltf, root, spec.variant)
@@ -260,7 +270,7 @@ const load_part = async (spec: WornModelRender): Promise<LoadedPart> => {
       receiveShadow: boolean
       frustumCulled: boolean
     }
-    if (!mesh.isMesh || !mesh.material) return
+    if (slot === 'hair' || !mesh.isMesh || !mesh.material) return
     mesh.castShadow = true
     mesh.receiveShadow = false
     mesh.frustumCulled = false
@@ -271,7 +281,17 @@ const load_part = async (spec: WornModelRender): Promise<LoadedPart> => {
       worn.needsUpdate = true
     })
   })
-  return Object.freeze({ root, materials })
+  let disposed = false
+  return Object.freeze({
+    root,
+    dispose: () => {
+      if (disposed) return
+      disposed = true
+      root.removeFromParent()
+      dispose_character_skeletons(root)
+      materials.forEach((material) => material.dispose())
+    },
+  })
 }
 
 const placeholder_model = (): CharacterModel => {
@@ -315,7 +335,8 @@ export const create_character_model = async (
   if (!appearance.body_url) return placeholder_model()
   const body_gltf = await load_gltf_source(appearance.body_url)
   const root = clone_skinned(body_gltf.scene)
-  const owned_materials = [...clone_materials(root)]
+  const owned_materials = clone_materials(root)
+  const parts: CharacterPart[] = []
   const colorizers: Colorizer[] = []
   const min_y = prepare_character(root, body_gltf.scene)
   if (colorize) {
@@ -325,35 +346,29 @@ export const create_character_model = async (
   }
 
   let hair: Object3D | null = null
-  if (appearance.hair_url) {
-    const head = find_character_bone(root, 'Head')
-    if (head) {
-      const hair_gltf = await load_gltf_source(appearance.hair_url)
-      hair = clone_skinned(hair_gltf.scene)
-      owned_materials.push(...clone_materials(hair))
+  const attach = async (slot: CharacterPartSlot, spec: WornModelRender | null): Promise<void> => {
+    if (!spec) return
+    const mount = slot === 'back' ? 'back' : 'head'
+    try {
+      const part = await load_character_part(slot, spec)
+      if (!mount_character_part({ body: root, part: part.root, slot: mount, hair })) {
+        console.warn(`Character body ${appearance.body_url} has no ${mount} attachment bone.`)
+        part.dispose()
+        return
+      }
+      parts.push(part)
+      if (slot !== 'hair') return
+      hair = part.root
       if (colorize) {
         const hair_colors = create_colorizer(hair)
         hair_colors.set(appearance.colors)
         colorizers.push(hair_colors)
       }
-      head.add(hair)
-    } else console.warn(`Character body ${appearance.body_url} has no Head bone; hair was skipped.`)
-  }
-
-  const attach = async (slot: 'head' | 'back', spec: WornModelRender | null): Promise<void> => {
-    if (!spec) return
-    if (!find_character_bone(root, slot === 'head' ? 'head' : 'cape')) {
-      console.warn(`Character body ${appearance.body_url} has no ${slot === 'head' ? 'Head' : 'cape'} bone.`)
-      return
-    }
-    try {
-      const part = await load_part(spec)
-      owned_materials.push(...part.materials)
-      mount_character_part({ body: root, part: part.root, slot, hair })
     } catch (error) {
-      console.warn(`Failed to attach ${slot} equipment ${spec.url}.`, error)
+      console.warn(`Failed to attach ${slot} ${spec.url}.`, error)
     }
   }
+  await attach('hair', appearance.hair_url ? { url: appearance.hair_url, variant: null } : null)
   await Promise.all([attach('head', appearance.worn.head), attach('back', appearance.worn.back)])
 
   let disposed = false
@@ -365,10 +380,8 @@ export const create_character_model = async (
     dispose: () => {
       if (disposed) return
       disposed = true
-      root.traverse((object) => {
-        const skinned = object as Object3D & { isSkinnedMesh?: boolean; skeleton?: { dispose?: () => void } }
-        if (skinned.isSkinnedMesh) skinned.skeleton?.dispose?.()
-      })
+      parts.forEach((part) => part.dispose())
+      dispose_character_skeletons(root)
       colorizers.forEach((colorizer) => colorizer.dispose())
       owned_materials.forEach((material) => material.dispose())
     },

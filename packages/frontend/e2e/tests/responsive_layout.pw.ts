@@ -441,7 +441,11 @@ test('roomy jobs retain the centered original sidebar and single resource table'
   expect(jobs.width).toBe(1440)
   expect(Math.abs(jobs.x + jobs.width / 2 - pane.x - pane.width / 2)).toBeLessThan(1)
   expect((await page.locator('.jobs__list').boundingBox())!.width).toBe(420)
-  await expect(page.locator('.jobs__table')).not.toHaveCSS('display', 'grid')
+  const rows = await page.locator('.jobs__table-row').all()
+  const first = (await rows[0]!.boundingBox())!
+  const second = (await rows[1]!.boundingBox())!
+  expect(second.x).toBe(first.x)
+  expect(second.y).toBeGreaterThanOrEqual(first.y + first.height)
   await page.screenshot({ path: 'test-results/restored-jobs-desktop.png' })
 })
 

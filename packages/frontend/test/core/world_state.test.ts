@@ -223,17 +223,26 @@ test('an ambush receipt replaces gathering animation and automatically resolves 
   expect(selected_world_ambush(refreshed)).toBe('protector_wheat_bricheton')
 })
 
-test('players appear, move by id, and leave — a move for an unknown player is dropped', () => {
+test('players appear, move by id, and leave — unknown identities and wrong-world moves are dropped', () => {
   const state = fold([
     tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
-    { type: 'packet/player_moved', character_id: '0xc1', x: 11, y: 64, z: 12, riding: false },
-    { type: 'packet/player_moved', character_id: '0xghost', x: 1, y: 1, z: 1, riding: false },
+    {
+      type: 'packet/players_moved',
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 11, y: 64, z: 12, riding: false }],
+    },
+    {
+      type: 'packet/players_moved',
+      positions: [
+        { world: 'overworld', character_id: '0xghost', x: 1, y: 1, z: 1, riding: false },
+        { world: 'yakutia', character_id: '0xc1', x: 200, y: 1, z: 200, riding: true },
+      ],
+    },
     { type: 'packet/player_appeared', player: presence('0xc2', 5, 5) },
     { type: 'packet/player_left', character_id: '0xc2' },
   ])
 
-  expect(state.players['0xc1']).toMatchObject({ x: 11, z: 12, name: 'Yogan' })
+  expect(state.players['0xc1']).toMatchObject({ x: 11, z: 12, name: 'Yogan', riding: false })
   expect(state.players['0xghost']).toBeUndefined()
   expect(state.players['0xc2']).toBeUndefined()
 })
@@ -244,13 +253,22 @@ test('mounting rides the position stream — the riding flag folds onto the pres
   const state = fold([
     tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
-    { type: 'packet/player_moved', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true },
+    {
+      type: 'packet/players_moved',
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true }],
+    },
   ])
   const dismounted = fold([
     tracked('overworld', [{ zx: 0, zz: 0 }]),
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
-    { type: 'packet/player_moved', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true },
-    { type: 'packet/player_moved', character_id: '0xc1', x: 10, y: 64, z: 10, riding: false },
+    {
+      type: 'packet/players_moved',
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true }],
+    },
+    {
+      type: 'packet/players_moved',
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: false }],
+    },
   ])
 
   expect(state.players['0xc1']).toMatchObject({ riding: true })

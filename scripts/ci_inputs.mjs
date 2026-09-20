@@ -6,6 +6,8 @@ import { pathToFileURL } from 'node:url'
 
 import move_packages from '../move-packages.json' with { type: 'json' }
 
+import { JOURNAL_CONTENT_PREFIXES } from './release_inputs.mjs'
+
 const BROWSER_PACKAGES = ['frontend', 'launchpad', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
 const BROWSER_FILES = [
   'bun.lock',
@@ -23,6 +25,7 @@ const runtime_manifest = (source) => {
 
 export const browser_checks_required = (paths, manifest_changed) =>
   paths.some((path) => {
+    if (JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix))) return false
     if (path === 'package.json' || BROWSER_PACKAGES.some((name) => path === `packages/${name}/package.json`))
       return manifest_changed(path)
     return (

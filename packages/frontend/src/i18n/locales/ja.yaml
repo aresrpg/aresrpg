@@ -3,6 +3,9 @@ body: 完全なワールドには WebGPU が必要です。代わりに軽量グ
 fatal: このブラウザは WebGPU または WebGL のグラフィックコンテキストを作成できません。
 engine_recovery: ワールドの読み込みまたは描画が停止しました。再読み込みしてもう一度お試しください。
 engine_reload: 再読み込み
+engine_minimum_title: 'グラフィック設定を低減'
+engine_minimum: 'ワールドを読み込むか描画することができませんでした。パソコンの負荷を軽減するため、画質と描画距離を最低設定に下げました。'
+engine_continue: '続ける'
 world_unavailable_title: ワールドを利用できません
 world_unavailable: このワールドにはまだ地形レシピがありません。
 mobile_unavailable_label: モバイルアクセス
@@ -329,6 +332,9 @@ world_hud:
   spawn_engage_conflict: '攻撃前に群れの状態が変わりました。他のプレイヤーが先に交戦した可能性があります。'
   spawn_never_arrived: '戦闘は実行されましたが、ボードが届きませんでした'
   resource_press_collect: '{{key}} で {{name}} を採集'
+  resource_press_collect_all: '{{key}} を押してすべて採集'
+  resource_collect_all_progress: 'すべて採集中 · {{completed}}/{{total}}'
+  resource_collect_all_stop: '停止 (Esc)'
   resource_need_level: '{{job}} レベル {{level}} が必要'
   resource_need_tool: '{{job}} の道具が必要'
   resource_gathering: '採集中…'
@@ -388,6 +394,8 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  previous_page: 前へ
+  next_page: 次へ
   prices_title: '価格履歴'
   prices_period: '期間'
   prices_range_7: '7日'

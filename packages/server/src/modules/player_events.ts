@@ -11,7 +11,6 @@
 import { VISIBLE_SLOTS } from '@aresrpg/protocol'
 
 import type { EventEnvelope } from '../protocol.ts'
-import { equipment_updates } from '../equipment_updates.ts'
 import logger from '../logger.ts'
 import type { PlayerModule, PlayerState } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
@@ -21,6 +20,7 @@ const log = logger(import.meta)
 const refreshes_roster = (type: string): boolean =>
   [
     'WorldJoined',
+    'CharacterCheckpointChanged',
     'DungeonEntered',
     'DungeonRoomCleared',
     'DungeonEnded',
@@ -31,7 +31,7 @@ const refreshes_roster = (type: string): boolean =>
 export default {
   name: 'player_events',
   observe: (context) => {
-    const { pubsub, graph, channels, address, events, signal, dispatch, get_state } = context
+    const { pubsub, public_world, channels, address, events, signal, dispatch, get_state, drop } = context
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
     const refresh_roster = (): void => dispatch({ type: 'action/refresh_account', domain: 'characters' })
     const refresh_resolutions = (): void => dispatch({ type: 'action/refresh_account', domain: 'resolutions' })
@@ -46,12 +46,25 @@ export default {
       }
     }).catch((error: Error) => log.error({ address, error: error.message }, 'social watch failed'))
 
-    const refresh_equipment = equipment_updates(graph, (character_id, equipment) => {
-      if (signal.aborted || !get_state().characters[character_id]) return
-      VISIBLE_SLOTS.forEach((slot) =>
-        dispatch({ type: 'action/equip', character_id, slot, item_type: equipment[slot] })
+    const equipment_watches = new Map<string, () => void>()
+    const watch_equipment = (character_id: string): void => {
+      equipment_watches.set(
+        character_id,
+        public_world.equipment.watch(
+          character_id,
+          (equipment) => {
+            if (signal.aborted || !get_state().characters[character_id]) return
+            VISIBLE_SLOTS.forEach((slot) =>
+              dispatch({ type: 'action/equip', character_id, slot, item_type: equipment[slot] })
+            )
+          },
+          (error) => {
+            log.warn({ character_id, err: error }, 'own equipment refresh failed')
+            drop('SNAPSHOT_FAILED')
+          }
+        )
       )
-    })
+    }
 
     /** Every owned character's chain channel stays armed; selection is client presentation. */
     const forward_self = (tracked_character_id: string) => (payload: EventEnvelope) => {
@@ -86,21 +99,21 @@ export default {
       }
       if (refreshes_roster(payload.type)) refresh_roster()
       if (payload.type === 'FightResolutionChanged' || payload.type === 'CharacterHeld') refresh_resolutions()
-      void refresh_equipment
-        .on_event(payload)
-        .catch((error: Error) =>
-          log.warn({ character: tracked_character_id, error: error.message }, 'own equipment refresh failed')
-        )
     }
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       const before = new Set(Object.keys(previous.characters))
       const current = new Set(Object.keys(state.characters))
       before.forEach((character_id) => {
-        if (!current.has(character_id)) unwatch(channels.character(character_id))
+        if (!current.has(character_id)) {
+          unwatch(channels.character(character_id))
+          equipment_watches.get(character_id)?.()
+          equipment_watches.delete(character_id)
+        }
       })
       current.forEach((character_id) => {
-        if (!before.has(character_id))
+        if (!before.has(character_id)) {
+          watch_equipment(character_id)
           void watch(channels.character(character_id), forward_self(character_id) as (payload: never) => void)
             .then(() => {
               if (signal.aborted) return
@@ -109,10 +122,12 @@ export default {
               dispatch({ type: 'action/character_watch_ready', character_id })
             })
             .catch((error: Error) => log.error({ character_id, error: error.message }, 'character watch failed'))
+        }
       })
     })
 
     signal.addEventListener('abort', () => {
+      equipment_watches.forEach((stop) => stop())
       for (const channel of watched()) unwatch(channel)
     })
   },

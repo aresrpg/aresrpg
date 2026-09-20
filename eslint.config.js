@@ -274,7 +274,7 @@ export default [
       'node_modules/*',
       // `vercel build` output — gitignored, so CI never sees it, but a local build left the
       // repo's own lint gate drowning in ~24k errors from bundled vendor code.
-      '.vercel/**',
+      '**/.vercel/**',
       'deprecated/**',
       '**/generated/*',
       'packages/move/**',

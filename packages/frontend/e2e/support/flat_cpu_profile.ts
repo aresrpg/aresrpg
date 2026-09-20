@@ -4,18 +4,24 @@
 import type { Page, TestInfo } from '@playwright/test'
 
 /** Optional diagnostic rerun: sample JS only during the populated steady flat stage. */
-export const capture_flat_cpu_profile = async (page: Page, info: TestInfo, enabled: boolean) => {
+export const capture_flat_cpu_profile = async (
+  page: Page,
+  info: TestInfo,
+  enabled: boolean,
+  stage: 'flat' | 'crowd-entry' = 'flat'
+) => {
   if (!enabled) return async () => undefined
   const session = await page.context().newCDPSession(page)
   await session.send('Profiler.enable')
   let started: Promise<unknown> | undefined
   let stopped: Promise<void> | undefined
   page.on('console', (message) => {
-    if (message.text().startsWith('[workload] flatten-transition ')) started = session.send('Profiler.start')
-    if (message.text().startsWith('[workload] flat ') && started)
+    if (message.text().startsWith(`[workload] ${stage === 'flat' ? 'flatten-transition' : 'population'} `))
+      started = session.send('Profiler.start')
+    if (message.text().startsWith(`[workload] ${stage} `) && started)
       stopped = started.then(async () => {
         const { profile } = await session.send('Profiler.stop')
-        await info.attach('flat-cpu-profile', { body: JSON.stringify(profile), contentType: 'application/json' })
+        await info.attach(`${stage}-cpu-profile`, { body: JSON.stringify(profile), contentType: 'application/json' })
       })
   })
   return async () => {

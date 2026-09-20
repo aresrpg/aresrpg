@@ -14,7 +14,6 @@ import { apply_document_locale } from '../../src/i18n/document.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import { dispatch_app, read_app_state, observe_app } from '../../src/store.ts'
 import { load_game_settings } from '../../src/game/core/settings.ts'
-import { market_observation } from '../../src/modules/marketplace.ts'
 import { TUTORIAL_IDS } from '../../src/tutorial/tutorial.ts'
 import { publish_pose } from '../../src/game/core/pose_feed.ts'
 import { FightHud } from '../../src/game/fight/FightHud.tsx'
@@ -247,12 +246,17 @@ if (page === 'marketplace') {
       profits: [{ kiosk: character.kiosk, amount_mist: '1250000000' }],
     },
   })
-  dispatch_app({ type: 'market/group_selected', group: 'EQUIPMENT' })
+  dispatch_app({ type: 'market/group_selected', group: 'EQUIPMENT', category: hat.category, item_type: hat.item_type })
+  dispatch_app({
+    type: 'server/packet',
+    packet: { type: 'packet/market_types', observation: read_app_state().marketplace.observation!, items: [hat] },
+  })
   dispatch_app({
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
-      observation: market_observation('EQUIPMENT'),
+      next_cursor: null,
+      observation: read_app_state().marketplace.observation!,
       kiosk_versions: { '0xvendor': '1' },
       listings: [1, 2, 3, 4, 5].map((i) => ({
         version: '1',

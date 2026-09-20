@@ -24,6 +24,7 @@ import {
   type AutomationRun,
 } from './automation_state.ts'
 import { fight_result_available, fight_result_complete } from './fight_result_view.ts'
+import { collect_all_request, automation_access } from './automation_pack.ts'
 
 export { initial_automation_state }
 export type { AutomationInput, AutomationState } from './automation_state.ts'
@@ -48,10 +49,47 @@ const start = (state: AppState, id: string): AppState => {
       character_id: character.id,
       world: character.world!,
       item_type: state.automation.item_type,
+      scope: { type: 'world' },
       visited: {},
       step: { type: 'planning' },
     },
   })
+}
+
+const start_pack = (state: AppState, input: Extract<AppInput, { type: 'automation/collect_all' }>): AppState => {
+  if (
+    [
+      state.automation.run,
+      state.run_to.run,
+      !automation_available(state),
+      Object.keys(state.world.pending_zone_searches).length > 0,
+    ].some(Boolean)
+  )
+    return state
+  const request = collect_all_request(state, input)
+  const character = selected_character(state.session)
+  if (!request || !character || !automation_character_idle(state, character)) return state
+  return with_automation(state, {
+    ...state.automation,
+    item_type: request.item_type,
+    quantity: 0,
+    reason: null,
+    run: {
+      ...request,
+      id: input.id,
+      character_id: character.id,
+      world: character.world!,
+      visited: {},
+      step: { type: 'inspecting', target: request.scope.target },
+    },
+  })
+}
+
+/** A pack waits for observed chain time, never an extrapolated cooldown deadline. */
+export const automation_clock = (state: AppState, monotonic_ms: number): number | null => {
+  const estimated = chain_now(state.chain_clock, monotonic_ms)
+  if (estimated === null) return null
+  return state.automation.run?.scope.type === 'pack' ? state.chain_clock!.chain_ms : estimated
 }
 
 const fold_command = (state: AppState, input: AppInput): AppState | null => {
@@ -64,6 +102,8 @@ const fold_command = (state: AppState, input: AppInput): AppState | null => {
         : with_automation(state, { ...state.automation, item_type: input.item_type, reason: null })
     case 'automation/start':
       return start(state, input.id)
+    case 'automation/collect_all':
+      return start_pack(state, input)
     case 'automation/stop':
       return stop_automation(state, input.reason)
     case 'automation/tick':
@@ -147,7 +187,7 @@ const movement_outcome = (state: AppState, run: AutomationRun, input: AppInput):
 }
 
 export const reduce_automation = (state: AppState, input: AppInput): AppState => {
-  if (state.automation.run && !journey_complete(state.journey)) return stop_automation(state, 'stopped')
+  if (!automation_access(state)) return stop_automation(state, 'stopped')
   const command = fold_command(state, input)
   if (command) return command
   const { run } = state.automation
@@ -210,7 +250,7 @@ const protector_result_ready = (state: AppState): boolean => {
 export const automation_wake_delay = (state: AppState, now: number | null): number => {
   const step = state.automation.run?.step
   const character = selected_character(state.session)
-  if (step?.type !== 'inspecting') return 250
+  if (step?.type !== 'inspecting' || state.automation.run?.scope.type === 'pack') return 250
   const ready = (delay: number): boolean =>
     character !== null && now !== null && character_travel_ready(character, step.target, Math.floor(now + delay))
   let lower = 0
@@ -231,7 +271,12 @@ export const observe_automation_controls = ({
 }: Pick<AppContext, 'get_state' | 'dispatch' | 'signal'>): void => {
   const on_key = (event: Readonly<KeyboardEvent>): void => {
     const state = get_state()
-    if (!state.automation.run || state.navigation.page !== 'world' || !world_keyboard_eligible(event)) return
+    if (
+      !state.automation.run ||
+      (state.navigation.page !== 'world' && event.code !== 'Escape') ||
+      !world_keyboard_eligible(event)
+    )
+      return
     if (WORLD_MOVE_KEYS[event.code] || ['Space', 'Escape'].includes(event.code))
       dispatch({ type: 'automation/stop', reason: 'stopped' })
   }
@@ -248,7 +293,7 @@ export const observe_automation: NonNullable<AppModule['observe']> = (context) =
     const state = get_state()
     const step = state.automation.run?.step
     const now = performance.now()
-    const world_ms = chain_now(state.chain_clock, now)
+    const world_ms = automation_clock(state, now)
     if (!step || !automation_available(state) || world_ms === null) {
       timer = null
       return
@@ -265,7 +310,7 @@ export const observe_automation: NonNullable<AppModule['observe']> = (context) =
       dispatch({
         type: 'automation/tick',
         monotonic_ms: performance.now(),
-        world_ms: chain_now(state.chain_clock, performance.now()),
+        world_ms: automation_clock(state, performance.now()),
         pose: read_pose(),
       })
     schedule()

@@ -73,7 +73,10 @@ test('late pre-recall movement is ignored; new-checkpoint walking works and over
     events,
     signal: abort.signal,
     graph: {},
-    pubsub: { graph: {}, mesh: {} },
+    pubsub: {
+      graph: {},
+      mesh: { emitter: new EventEmitter(), subscribe: async () => {}, unsubscribe: async () => {} },
+    },
     address: '0xowner',
     send: () => {},
     dispatch: (action: unknown) => dispatched.push(action),

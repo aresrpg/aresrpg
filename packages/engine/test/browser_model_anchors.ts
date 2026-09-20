@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Scene, PerspectiveCamera, Vector3, type Sprite } from 'three'
+import { Scene, PerspectiveCamera, Vector3 } from 'three'
 
 import { create_entity_layer } from '../src/entities.ts'
 import { create_entity_label_layer } from '../src/entity_labels.ts'
+import type { WorldCaption } from '../src/caption_types.ts'
 import { create_fight_float_layer } from '../src/fight_floats.ts'
 import { create_mob_model } from '../src/mob_model.ts'
 import { create_character_model } from '../src/character_model.ts'
@@ -22,7 +23,16 @@ export const probe_model_anchors = async (
   camera.lookAt(104, 1, 0)
   camera.updateMatrixWorld(true)
   const labels = create_entity_label_layer({ canvas, camera, entities: layer })
-  const floats = create_fight_float_layer({ scene, entities: layer })
+  const captions = new Map<string, { caption: WorldCaption; anchor: () => Vector3 | null }>()
+  const floats = create_fight_float_layer({
+    entities: layer,
+    captions: {
+      set: (id, caption, anchor) => {
+        if (caption) captions.set(id, { caption, anchor })
+        else captions.delete(id)
+      },
+    },
+  })
   // Prime caches as a preceding overworld view does before entering combat.
   const warm_character = await create_character_model(appearance)
   warm_character.dispose()
@@ -68,7 +78,7 @@ export const probe_model_anchors = async (
     floats.tick(now)
     const played = ids.map((id) => floats.play(id, 14, 'damage'))
     floats.tick(now + 300)
-    const sprites = scene.children.filter((object) => (object as Sprite).isSprite)
+    const numbers = [...captions.values()]
     const rows = ids.map((id, index) => ({
       id,
       expected_x: 100 + index * 3,
@@ -80,10 +90,10 @@ export const probe_model_anchors = async (
     }))
     return {
       rows,
-      floats: sprites.map((sprite, index) => ({
+      floats: numbers.map((number, index) => ({
         played: played[index],
-        visible: sprite.visible,
-        projected: new Vector3().copy(sprite.position).project(camera).toArray(),
+        visible: (number.caption.opacity ?? 1) > 0,
+        projected: new Vector3().copy(number.anchor()!).project(camera).toArray(),
       })),
     }
   } finally {

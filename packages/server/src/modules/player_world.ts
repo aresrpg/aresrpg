@@ -3,23 +3,16 @@
 // Pure reducers own tracking state; validated packets and state deltas own effects.
 // Presence stays ephemeral, and impossible movement drops the connection.
 
-import {
-  zone_of,
-  SPEED_BUDGET_BLOCKS_PER_SECOND,
-  PET_SPEED_MULTIPLIER,
-  VISIBLE_SLOTS,
-  type CharacterRow,
-} from '@aresrpg/protocol'
+import { zone_of, SPEED_BUDGET_BLOCKS_PER_SECOND, PET_SPEED_MULTIPLIER, type CharacterRow } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
-import { mob_groups, resource_packs, world_population } from '../zone_spawns.ts'
 import { get_owned_character } from '../reads/get_owned_character.ts'
-import { get_zones } from '../reads/get_zones.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_fight } from '../reads/get_fight.ts'
-import { equipment_updates } from '../equipment_updates.ts'
 import { refreshed_roster_anchors, refreshed_world_anchor } from '../world_anchor.ts'
 import logger from '../logger.ts'
+import { create_visible_players } from '../visible_players.ts'
+import { presence_discovery } from '../presence_discovery.ts'
 import type { PlayerModule, PlayerContext, PlayerAction, PlayerState, Embodied } from '../player.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 
@@ -32,14 +25,6 @@ const TRACKING_RADIUS = 1
  *  reads any step as infinite speed. A bucket spends distance against banked time instead.) */
 const BUDGET_CAP_S = 1
 const TRANSIENT_SLACK_BLOCKS = 3
-/** Visible-player ceiling per connection (owner 2026-08-12): crowded zones never bloat the
- *  client — the cap drops strangers past 100, FRIENDS always pass. A capped-out stranger
- *  becomes visible on its next zone-cross (appears republish there). */
-const VISIBLE_PLAYERS_CAP = 100
-/** Legacy-tuned distance throttle: past this range a visible player's moves forward at 1/4 rate. */
-const FAR_PLAYER_BLOCKS = 100
-const FAR_MOVE_SKIP = 3
-
 /** The spiral: every zone within TRACKING_RADIUS of the center. */
 const spiral = (zx: number, zz: number) =>
   Array.from({ length: (2 * TRACKING_RADIUS + 1) ** 2 }, (_, index) => ({
@@ -132,18 +117,12 @@ export default {
   },
 
   observe: (context: PlayerContext) => {
-    const { graph, pubsub, events, signal, send, address, dispatch, get_state, drop } = context
+    const { graph, pubsub, events, signal, send, address, dispatch, get_state, drop, public_world } = context
     const tracking_generations = new Map<string, number>()
 
     /** channel → forwarder — the subscription machinery, rebuilt by mount/unmount */
     const { watch, unwatch, has, watched } = create_watcher(pubsub, signal)
-    /** Rendered players with their latest chain-space zone, so a subscription-window shift can
-     *  retire them without waiting for a packet from a channel we just left. */
-    const visible = new Map<string, Readonly<{ address: string; world: string; zx: number; zz: number }>>()
-    /** character_id → skipped-move count — far players forward at 1/4 rate (legacy tuning) */
-    const move_skips = new Map<string, number>()
-    /** character_id → the mount state last forwarded — a toggle always beats the throttle */
-    const riding_seen = new Map<string, boolean>()
+    const visible = create_visible_players(context)
     /** `world:zx:zz` → the seed whose population this connection has already been sent. The
      *  population is pure in the seed, so this is the whole condition for re-sending it: a
      *  consumption update ships the row alone, a re-roll ships the row and the new population. */
@@ -156,84 +135,15 @@ export default {
       )
       probes.forEach((key) => {
         const [world = '', zx = '0', zz = '0'] = key.split(':')
-        void pubsub.mesh.publish(mesh.pos(world, Number(zx), Number(zz)), {
-          kind: 'who',
-          address,
-          world,
-          zx: Number(zx),
-          zz: Number(zz),
-        })
+        discovery.probe(world, Number(zx), Number(zz))
       })
     })
 
-    const refresh_equipment = equipment_updates(graph, (character_id, equipment) => {
-      if (signal.aborted || !visible.has(character_id)) return
-      VISIBLE_SLOTS.forEach((slot) =>
-        send({ type: 'packet/player_equipment', character_id, slot, item_type: equipment[slot] })
-      )
-    })
-    const equipment_failed = (error: Error) => log.warn({ error: error.message }, 'visible equipment refresh failed')
-    const forward_visible_equipment = (payload: EventEnvelope) =>
-      void refresh_equipment.on_event(payload).catch(equipment_failed)
-
-    const drop_visible = (character_id: string): void => {
-      if (!visible.delete(character_id)) return
-      move_skips.delete(character_id)
-      riding_seen.delete(character_id)
-      unwatch(channels.character(character_id))
-      send({ type: 'packet/player_left', character_id })
-    }
+    const zone_watches = new Map<string, () => void>()
 
     const forward_presence = (scope: Readonly<{ world: string; zx: number; zz: number }>) => (fact: MeshFact) => {
-      if (fact.address === address) return // never echo the player to himself
-      if (fact.kind === 'appear') {
-        // Crowds cap strangers; friends always pass and a later zone-cross retries visibility.
-        const known = visible.has(fact.player.character_id)
-        if (!known && !get_state().friends.has(fact.address) && visible.size >= VISIBLE_PLAYERS_CAP) return
-        const at = zone_of(fact.player.x, fact.player.z)
-        visible.set(fact.player.character_id, Object.freeze({ address: fact.address, world: scope.world, ...at }))
-        riding_seen.set(fact.player.character_id, fact.player.riding)
-        const watching = known
-          ? Promise.resolve()
-          : watch(channels.character(fact.player.character_id), forward_visible_equipment as (payload: never) => void)
-        send({ type: 'packet/player_appeared', player: fact.player })
-        // Mesh appearance may predate an indexed equip. Re-read after subscribing to close both gaps.
-        void watching
-          .then(() => {
-            if (!signal.aborted) return refresh_equipment.refresh(fact.player.character_id)
-          })
-          .catch(equipment_failed)
-      }
-      if (fact.kind === 'move') {
-        const known = visible.get(fact.character_id)
-        if (!known) return // never appeared to us — silent until it does
-        const at = zone_of(fact.x, fact.z)
-        visible.set(fact.character_id, Object.freeze({ ...known, ...at }))
-        const far = !Object.values(get_state().characters).some(
-          ({ presence: me }) =>
-            me.world === known.world && Math.hypot(fact.x - me.x, fact.z - me.z) <= FAR_PLAYER_BLOCKS
-        )
-        const skipped = move_skips.get(fact.character_id) ?? 0
-        // Distance throttles positions, never a stationary mount change.
-        const toggled = riding_seen.get(fact.character_id) !== fact.riding
-        if (far && !toggled && skipped < FAR_MOVE_SKIP) {
-          move_skips.set(fact.character_id, skipped + 1)
-          return
-        }
-        move_skips.set(fact.character_id, 0)
-        riding_seen.set(fact.character_id, fact.riding)
-        send({
-          type: 'packet/player_moved',
-          character_id: fact.character_id,
-          x: fact.x,
-          y: fact.y,
-          z: fact.z,
-          riding: fact.riding,
-        })
-      }
-      if (fact.kind === 'leave') {
-        drop_visible(fact.character_id)
-      }
+      if (fact.kind === 'appear' || fact.kind === 'leave') return visible.receive(scope.world, fact)
+      if (fact.address === address) return
       if (fact.kind === 'who') {
         // a later joiner probes the zone it now tracks — only a player STANDING there answers
         Object.values(get_state().characters).forEach(({ presence: me, fight, dungeon_run }) => {
@@ -241,8 +151,9 @@ export default {
           if (me.world !== fact.world) return
           const my_zone = zone_of(me.x, me.z)
           if (my_zone.zx !== fact.zx || my_zone.zz !== fact.zz) return
-          void pubsub.mesh.publish(mesh.pos(me.world, my_zone.zx, my_zone.zz), {
-            kind: 'appear',
+          void pubsub.mesh.publish(fact.reply_to, {
+            kind: 'reply',
+            request: fact.request,
             player: me,
             address,
           })
@@ -250,50 +161,46 @@ export default {
       }
     }
 
-    /** A zone's SEED-DERIVED population (zone_math twin) — the derivation the client never
-     *  runs. Pure in the seed, so it ships once per zone per seed; what is still alive comes
-     *  from the zone row's own bitmaps, which ride `packet/zones`. */
-    const send_zone_spawns = (w: string, zx: number, zz: number, seed: string) => {
-      const population = world_population(w)
-      if (!population) return
-      send({
-        type: 'packet/zone_spawns',
-        world: w,
-        zx,
-        zz,
-        mobs: [...mob_groups(population, zx, zz, BigInt(seed))],
-        resources: [...resource_packs(population, zx, zz, BigInt(seed))],
-      })
+    const discovery = presence_discovery(pubsub, signal, address, (player, owner) => {
+      const at = zone_of(player.x, player.z)
+      if (!has(mesh.pos(player.world, at.zx, at.zz))) return
+      forward_presence({ world: player.world, ...at })({ kind: 'appear', player, address: owner })
+    })
+
+    const watch_zone = (world: string, zx: number, zz: number): void => {
+      const key = `${world}:${zx}:${zz}`
+      if (zone_watches.has(key)) return
+      zone_watches.set(
+        key,
+        public_world.zones.watch(
+          key,
+          (value) => {
+            if (!value || signal.aborted) return
+            send({ type: 'packet/zones', zones: [value.zone] })
+            if (seeds.get(key) === value.zone.seed) return
+            seeds.set(key, value.zone.seed)
+            if (value.spawns) send(value.spawns)
+          },
+          (error) => {
+            log.warn({ key, err: error }, 'zone refresh failed')
+            drop('SNAPSHOT_FAILED')
+          }
+        )
+      )
+    }
+    const release_zone = (key: string): void => {
+      zone_watches.get(key)?.()
+      zone_watches.delete(key)
+      seeds.delete(key)
     }
 
-    /** THE ZONE-STATE DOOR. Anything that consumes a zone (a group engaged, a node gathered)
-     *  or re-rolls it lands here: re-read the projected row and ship it. The event is only the
-     *  TRIGGER — `pipeline.rs` orders graph writes before publishes, so the row already carries
-     *  the change. Every tracker of the zone learns it from ~200 bytes, and a re-roll (a seed
-     *  the client has no population for) pulls the population down with it. */
-    const push_zone = (w: string, zx: number, zz: number) =>
-      get_zones(graph, { world: w, zones: [{ zx, zz }] })
-        .then(([zone]) => {
-          if (!zone) return
-          const known = seeds.get(`${w}:${zx}:${zz}`)
-          send({ type: 'packet/zones', zones: [zone] })
-          if (known === zone.seed) return
-          seeds.set(`${w}:${zx}:${zz}`, zone.seed)
-          send_zone_spawns(zone.world, zone.zx, zone.zz, zone.seed)
-        })
-        .catch((error: Error) => log.warn({ world: w, zx, zz, error: error.message }, 'zone push failed'))
-
-    /** A tracked ZONE's facts (evt:zone channels) — sword markers, zone re-rolls, gathers.
-     *  NOTHING rides a world-global channel anymore: presence is zone-scoped by law. */
+    // Fight markers share the zone channel; public_world owns population invalidation.
     const forward_zone_event = (payload: EventEnvelope) => {
       if (payload.type === 'FightCreated') {
-        const { fight, world: w, x, z } = payload.data as { fight: string; world: string; x: number; z: number }
+        const { fight } = payload.data as { fight: string }
         void get_fight(graph, { fight_id: fight })
           .then(([row]) => row && send({ type: 'packet/fight_created', fight: row }))
           .catch((error: Error) => log.warn({ fight, error: error.message }, 'fight marker read failed'))
-        // A mob engage consumes its source group; duel and dungeon births change no zone bitmap.
-        const born = zone_of(x, z)
-        if (has(mesh.pos(w, born.zx, born.zz))) void push_zone(w, born.zx, born.zz)
       }
       if (payload.type === 'FightStarted' || payload.type === 'FightEnded')
         send({
@@ -301,29 +208,6 @@ export default {
           fight: (payload.data as { fight: string }).fight,
           phase: payload.type === 'FightStarted' ? 'active' : 'ended',
         })
-      if (payload.type === 'ZoneSearched') {
-        // A tracked discovery/re-roll pushes its projected row and newly derived population.
-        const {
-          world: w,
-          zone_x,
-          zone_z,
-        } = payload.data as {
-          world: string
-          zone_x: number
-          zone_z: number
-        }
-        // Scouting also proves movement. Refresh anchors before clients persist later poses.
-        dispatch({ type: 'action/refresh_account', domain: 'characters' })
-        if (has(mesh.pos(w, zone_x, zone_z))) void push_zone(w, zone_x, zone_z)
-      }
-      if (payload.type === 'ResourceGathered') {
-        const { world: w, gatherer } = payload.data as { world: string; gatherer: string }
-        if (gatherer === address) dispatch({ type: 'action/refresh_account', domain: 'characters' })
-        // one node left the pack — the zone's res_taken says which pack and how many
-        const { x, z } = payload.data as { x: number; z: number }
-        const at = zone_of(x, z)
-        if (has(mesh.pos(w, at.zx, at.zz))) void push_zone(w, at.zx, at.zz)
-      }
     }
 
     const wanted_zone_keys = (): Set<string> =>
@@ -335,37 +219,32 @@ export default {
       windows.set(character_id, Object.freeze({ world, zones: Object.freeze([...next]) }))
       send({ type: 'packet/tracked_zones', character_id, world, zones: [...next] })
       const wanted_keys = wanted_zone_keys()
+      discovery.retain(wanted_keys)
       const wanted_channels = new Set([
-        ...[...visible.keys()].map(channels.character),
         ...[...wanted_keys].flatMap((key) => {
           const [w = '', zx = '0', zz = '0'] = key.split(':')
           return [mesh.pos(w, Number(zx), Number(zz)), channels.zone(w, Number(zx), Number(zz))]
         }),
       ])
-      for (const [visible_id, row] of visible)
-        if (!wanted_keys.has(`${row.world}:${row.zx}:${row.zz}`)) drop_visible(visible_id)
-      for (const key of [...seeds.keys()]) if (!wanted_keys.has(key)) seeds.delete(key)
+      visible.retain(wanted_keys)
+      for (const key of zone_watches.keys()) if (!wanted_keys.has(key)) release_zone(key)
       for (const channel of watched()) if (!wanted_channels.has(channel)) unwatch(channel)
       const fresh = next.filter(({ zx, zz }) => !has(mesh.pos(world, zx, zz)))
       await Promise.all(fresh.map(({ zx, zz }) => watch(mesh.pos(world, zx, zz), forward_presence({ world, zx, zz }))))
+      const still_wanted = ({ zx, zz }: { zx: number; zz: number }) => wanted_zone_keys().has(`${world}:${zx}:${zz}`)
       await Promise.all(
-        fresh.map(({ zx, zz }) => watch(channels.zone(world, zx, zz), forward_zone_event as (payload: never) => void))
+        fresh
+          .filter(still_wanted)
+          .map(({ zx, zz }) => watch(channels.zone(world, zx, zz), forward_zone_event as (payload: never) => void))
       )
       if (signal.aborted) return
-      for (const { zx, zz } of fresh)
-        void pubsub.mesh.publish(mesh.pos(world, zx, zz), { kind: 'who', address, world, zx, zz })
-      if (fresh.length === 0) return
-      const [zones, fights] = await Promise.all([
-        get_zones(graph, { world, zones: fresh }),
-        get_world_fights(graph, { world, zones: fresh }),
-      ])
-      if (signal.aborted) return
-      if (zones.length) send({ type: 'packet/zones', zones })
-      if (fights.length) send({ type: 'packet/fights', fights })
-      for (const zone of zones) {
-        seeds.set(`${zone.world}:${zone.zx}:${zone.zz}`, zone.seed)
-        send_zone_spawns(zone.world, zone.zx, zone.zz, zone.seed)
-      }
+      const retained = fresh.filter(still_wanted)
+      for (const { zx, zz } of retained) discovery.probe(world, zx, zz)
+      if (retained.length === 0) return
+      retained.forEach(({ zx, zz }) => watch_zone(world, zx, zz))
+      const fights = await get_world_fights(graph, { world, zones: retained })
+      const current = fights.filter((fight) => still_wanted(zone_of(fight.x, fight.z)))
+      if (!signal.aborted && current.length) send({ type: 'packet/fights', fights: current })
     }
 
     const appear = (character: Embodied): void => {
@@ -385,16 +264,24 @@ export default {
     const mount = async (character: Embodied, present: boolean) => {
       const { zx, zz } = zone_of(character.x, character.z)
       await track(character.character_id, character.world, spiral(zx, zz))
-      if (!signal.aborted && present) appear(character)
+      const tracked = get_state().characters[character.character_id]
+      if (
+        !signal.aborted &&
+        present &&
+        tracked?.presence.world === character.world &&
+        !tracked.fight &&
+        !tracked.dungeon_run
+      )
+        appear(tracked.presence)
     }
 
     const unmount = (character: Embodied) => {
       leave(character)
       windows.delete(character.character_id)
       const wanted = wanted_zone_keys()
-      for (const [visible_id, row] of visible)
-        if (!wanted.has(`${row.world}:${row.zx}:${row.zz}`)) drop_visible(visible_id)
-      for (const key of [...seeds.keys()]) if (!wanted.has(key)) seeds.delete(key)
+      discovery.retain(wanted)
+      visible.retain(wanted)
+      for (const key of zone_watches.keys()) if (!wanted.has(key)) release_zone(key)
       for (const channel of watched()) {
         if (channel.startsWith('pos:')) {
           const key = channel.slice(4)
@@ -588,6 +475,7 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
+      zone_watches.forEach((stop) => stop())
       for (const channel of watched()) unwatch(channel)
     })
   },

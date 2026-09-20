@@ -9,7 +9,6 @@ import { createRoot } from 'react-dom/client'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { BrowsePanel } from '../../src/marketplace/BrowsePanel.tsx'
-import { market_observation } from '../../src/modules/marketplace.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
 
 import '../../src/tailwind.css'
@@ -47,6 +46,7 @@ window.addEventListener('market-fixture-remove-cheapest', () => {
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
+      next_cursor: null,
       observation: read_app_state().marketplace.observation!,
       listings: listings.filter(({ id }) => id !== '0xduplicate'),
       kiosk_versions: { '0xkiosk': '2' },
@@ -67,12 +67,17 @@ dispatch_app({
     },
   } as never,
 })
-dispatch_app({ type: 'market/group_selected', group })
+dispatch_app({ type: 'market/group_selected', group, category: item.category, item_type: item.item_type })
+dispatch_app({
+  type: 'server/packet',
+  packet: { type: 'packet/market_types', observation: read_app_state().marketplace.observation!, items: [item] },
+})
 dispatch_app({
   type: 'server/packet',
   packet: {
     type: 'packet/market_slice',
-    observation: market_observation(group),
+    next_cursor: null,
+    observation: read_app_state().marketplace.observation!,
     listings,
     kiosk_versions: { '0xkiosk': '1' },
   },
@@ -82,12 +87,9 @@ if (new URLSearchParams(location.search).has('all-types')) {
   dispatch_app({
     type: 'server/packet',
     packet: {
-      type: 'packet/market_counts',
-      counts: {
-        categories: { [item.category]: 201 },
-        characters: 0,
-        items: { [item.item_type]: 200, [older_item.item_type]: 1 },
-      },
+      type: 'packet/market_types',
+      observation: read_app_state().marketplace.observation!,
+      items: [item, older_item],
     },
   })
 }
@@ -118,18 +120,34 @@ const Fixture = () => {
   const observation = useAppStore(({ marketplace }) => marketplace.prices.observation)
   const market_observed = useAppStore(({ marketplace }) => marketplace.observation)
   useEffect(() => {
-    if (!new URLSearchParams(location.search).has('all-types') || market_observed?.item_type !== older_item.item_type)
+    if (!market_observed || market_observed.kind === 'characters' || market_observed.kind === 'overview') return
+    if (market_observed.kind === 'types') {
+      const candidates = new URLSearchParams(location.search).has('all-types') ? [item, older_item] : [item]
+      dispatch_app({
+        type: 'server/packet',
+        packet: {
+          type: 'packet/market_types',
+          observation: market_observed,
+          items: candidates.filter((entry) => entry.category === market_observed.category),
+        },
+      })
       return
+    }
     dispatch_app({
       type: 'server/packet',
       packet: {
         type: 'packet/market_slice',
+        next_cursor: null,
         observation: market_observed,
-        listings: [{ ...listings[0]!, ...older_item, stats: undefined, damages: undefined, id: '0xolder' }],
+        listings:
+          market_observed.item_type === older_item.item_type
+            ? [{ ...listings[0]!, ...older_item, stats: undefined, damages: undefined, id: '0xolder' }]
+            : listings.filter(({ seller }) => seller !== '0xbuyer'),
         kiosk_versions: { '0xkiosk': '2' },
       },
     })
   }, [market_observed])
+
   useEffect(() => {
     if (!observation) return
     const query = new URLSearchParams(location.search)
@@ -142,7 +160,7 @@ const Fixture = () => {
           units: '1000',
           sales: '1',
           checkpoint: index + 1,
-        })).filter((_, index) => index !== 10 && index !== 11)
+        })).filter((_, index) => (query.has('sparse') ? [10, 20].includes(index) : index !== 10 && index !== 11))
     dispatch_app({
       type: 'server/packet',
       packet: {

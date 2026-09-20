@@ -26,3 +26,14 @@ export const PromptKey = ({ label }: Readonly<{ label: string }>) => (
     {label}
   </kbd>
 )
+
+export const PromptText = ({ template, label }: Readonly<{ template: string; label: string }>) => {
+  const [before, after] = split_key_template(template)
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {before.trim()}
+      <PromptKey label={label} />
+      {after.trim()}
+    </span>
+  )
+}

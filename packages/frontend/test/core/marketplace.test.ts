@@ -3,13 +3,11 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import marketplace_module, {
-  market_group_count,
-  market_observation,
-  market_sale_notice,
-} from '../../src/modules/marketplace.ts'
+import marketplace_module, { market_categories, market_sale_notice } from '../../src/modules/marketplace.ts'
 import { initial_app_state, reduce_app_state, type AppInput } from '../../src/store.ts'
 import { toast, type Toast } from '../../src/toast.ts'
+
+const equipment_observation = { kind: 'offers', category: 'sword', item_type: 'aberrant_edge', request: 1 } as const
 
 const settings = Object.freeze({
   quality: 'medium',
@@ -63,43 +61,45 @@ describe('marketplace projection', () => {
   })
 
   test('browse groups compile to exact chain-category windows', () => {
-    expect(market_observation('PETS')).toEqual({ categories: ['pet'], characters: false })
-    expect(market_observation('CHARACTERS')).toEqual({ categories: [], characters: true })
-    expect(market_observation('EQUIPMENT').categories).toContain('sword')
-    expect(market_observation('EQUIPMENT').categories).toContain('cosmetic_hat')
-    expect(market_observation('EQUIPMENT').categories).toContain('cosmetic_cloak')
-    expect(market_observation('EQUIPMENT').categories).not.toContain('pet')
-    expect(market_observation('EQUIPMENT').categories).not.toContain('resource')
+    expect(market_categories('PETS')).toEqual(['pet'])
+    expect(market_categories('CHARACTERS')).toEqual([])
+    expect(market_categories('EQUIPMENT')).toContain('sword')
+    expect(market_categories('EQUIPMENT')).toContain('cosmetic_hat')
+    expect(market_categories('EQUIPMENT')).toContain('cosmetic_cloak')
+    expect(market_categories('EQUIPMENT')).not.toContain('pet')
+    expect(market_categories('EQUIPMENT')).not.toContain('resource')
   })
 
-  test('the browse rail counts every group from the aggregate market projection', () => {
-    const counts = { categories: { hat: 2, sword: 3, pet: 4, rune: 5, resource: 6 }, characters: 7 }
-    expect(market_group_count('EQUIPMENT', counts)).toBe(5)
-    expect(
-      market_group_count('EQUIPMENT', { categories: { cosmetic_hat: 2, cosmetic_cloak: 3, pet: 4 }, characters: 0 })
-    ).toBe(5)
-    expect(market_group_count('PETS', counts)).toBe(4)
-    expect(market_group_count('RUNES', counts)).toBe(5)
-    expect(market_group_count('CONSUMABLE', counts)).toBe(0)
-    expect(market_group_count('RESOURCES', counts)).toBe(6)
-    expect(market_group_count('CHARACTERS', counts)).toBe(7)
-    expect(market_group_count('RESOURCES', { categories: {}, characters: 0 }, 1)).toBe(1)
-    const state = reduce_app_state(initial_app_state(settings), {
+  test('opening the market requests overview only and category discovery is scoped', () => {
+    const opened = reduce_app_state(initial_app_state(settings), { type: 'market/opened' })
+    expect(opened.marketplace.observation).toEqual({ kind: 'overview', request: 1 })
+    const selected = reduce_app_state(opened, { type: 'market/group_selected', group: 'RESOURCES' })
+    const observation = selected.marketplace.observation!
+    expect(observation).toEqual({ kind: 'types', category: 'resource', request: 2 })
+    const items = [{ item_type: 'wood', category: 'resource' as const, name: 'Wood', level: 1 }]
+    const current = reduce_app_state(selected, {
       type: 'server/packet',
-      packet: { type: 'packet/market_counts', counts },
+      packet: { type: 'packet/market_types', observation, items },
     })
-    expect(state.marketplace.counts).toEqual(counts)
+    expect(current.marketplace.types).toEqual(items)
+    expect(current.marketplace.listings).toEqual([])
   })
 
   test('a final pushed slice replaces departed listings without a second store', () => {
     const initial = initial_app_state(settings)
-    const opened = reduce_app_state(initial, { type: 'market/group_selected', group: 'EQUIPMENT' })
+    const opened = reduce_app_state(initial, {
+      type: 'market/group_selected',
+      group: 'EQUIPMENT',
+      category: 'sword',
+      item_type: 'aberrant_edge',
+    })
     const sliced = reduce_app_state(opened, {
       type: 'server/packet',
       packet: {
         type: 'packet/market_slice',
+        next_cursor: null,
         kiosk_versions: { [listing.kiosk]: '1' },
-        observation: market_observation('EQUIPMENT'),
+        observation: equipment_observation,
         listings: [listing],
       },
     })
@@ -107,8 +107,9 @@ describe('marketplace projection', () => {
       type: 'server/packet',
       packet: {
         type: 'packet/market_slice',
+        next_cursor: null,
         kiosk_versions: { [listing.kiosk]: '1' },
-        observation: market_observation('EQUIPMENT'),
+        observation: equipment_observation,
         listings: [],
       },
     })
@@ -120,19 +121,22 @@ describe('marketplace projection', () => {
     const equipment = reduce_app_state(initial_app_state(settings), {
       type: 'market/group_selected',
       group: 'EQUIPMENT',
+      category: 'sword',
+      item_type: 'aberrant_edge',
     })
     const pets = reduce_app_state(equipment, { type: 'market/group_selected', group: 'PETS' })
     const stale = reduce_app_state(pets, {
       type: 'server/packet',
       packet: {
         type: 'packet/market_slice',
+        next_cursor: null,
         kiosk_versions: { [listing.kiosk]: '1' },
-        observation: market_observation('EQUIPMENT'),
+        observation: equipment_observation,
         listings: [listing],
       },
     })
     expect(stale).toBe(pets)
-    expect(stale.marketplace.observation).toEqual(market_observation('PETS'))
+    expect(stale.marketplace.observation).toEqual({ kind: 'types', category: 'pet', request: 2 })
   })
 
   test('history and unclaimed proceeds arrive as one server projection', () => {
@@ -301,7 +305,12 @@ test('a certified own listing survives an older empty kiosk catalogue but a late
 })
 
 test('a certified purchase rejects its stale source listing while an equal-version cross-kiosk relist survives', () => {
-  const opened = reduce_app_state(initial_app_state(settings), { type: 'market/group_selected', group: 'EQUIPMENT' })
+  const opened = reduce_app_state(initial_app_state(settings), {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: 'aberrant_edge',
+  })
   const bought = reduce_app_state(opened, {
     type: 'market/write_succeeded',
     operation: 'buy',
@@ -312,7 +321,8 @@ test('a certified purchase rejects its stale source listing while an equal-versi
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
-      observation: market_observation('EQUIPMENT'),
+      next_cursor: null,
+      observation: equipment_observation,
       listings: [{ ...listing, version: '9' }],
       kiosk_versions: { [listing.kiosk]: '9' },
     },
@@ -323,7 +333,8 @@ test('a certified purchase rejects its stale source listing while an equal-versi
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
-      observation: market_observation('EQUIPMENT'),
+      next_cursor: null,
+      observation: equipment_observation,
       listings: [relisted],
       kiosk_versions: { [listing.kiosk]: '10', '0xnew-kiosk': '10' },
     },
@@ -332,7 +343,12 @@ test('a certified purchase rejects its stale source listing while an equal-versi
 })
 
 test('same-revision partial reads cannot erase a receipt and stale rows cannot overwrite its price', () => {
-  const opened = reduce_app_state(initial_app_state(settings), { type: 'market/group_selected', group: 'EQUIPMENT' })
+  const opened = reduce_app_state(initial_app_state(settings), {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: 'aberrant_edge',
+  })
   const row = { ...listing, version: '12', price_mist: '12' }
   const written = reduce_app_state(opened, {
     type: 'market/write_succeeded',
@@ -348,13 +364,14 @@ test('same-revision partial reads cannot erase a receipt and stale rows cannot o
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
-      observation: market_observation('EQUIPMENT'),
+      next_cursor: null,
+      observation: equipment_observation,
       listings: [{ ...listing, version: '11' }],
       kiosk_versions: { [listing.kiosk]: '11' },
     },
   })
   expect(stale.marketplace.own_listings).toEqual([row])
-  expect(stale.marketplace.listings).toEqual([row])
+  expect(stale.marketplace.listings).toEqual([])
   const gone = reduce_app_state(stale, {
     type: 'server/packet',
     packet: { type: 'packet/listings', listings: [], kiosk_versions: { [listing.kiosk]: '13' } },
@@ -364,7 +381,12 @@ test('same-revision partial reads cannot erase a receipt and stale rows cannot o
 })
 
 test('confirmed departures retain only current and previous catalogue metadata', () => {
-  let state = reduce_app_state(initial_app_state(settings), { type: 'market/group_selected', group: 'EQUIPMENT' })
+  let state = reduce_app_state(initial_app_state(settings), {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: 'aberrant_edge',
+  })
   for (let i = 0; i < 500; i += 1) {
     const row = { ...listing, kiosk: `kiosk-${i}`, version: '9' }
     state = reduce_app_state(state, { type: 'market/write_succeeded', operation: 'buy', listing: row, version: '10' })
@@ -372,7 +394,8 @@ test('confirmed departures retain only current and previous catalogue metadata',
       type: 'server/packet',
       packet: {
         type: 'packet/market_slice',
-        observation: market_observation('EQUIPMENT'),
+        next_cursor: null,
+        observation: equipment_observation,
         listings: [],
         kiosk_versions: { [`kiosk-${i}`]: '10', [`kiosk-${i - 1}`]: '10' },
       },
@@ -382,9 +405,14 @@ test('confirmed departures retain only current and previous catalogue metadata',
   expect(Object.keys(state.marketplace.catalogues)).toHaveLength(2)
 })
 
-test('a successful listing receipt keeps the public window sorted and bounded', () => {
-  const opened = reduce_app_state(initial_app_state(settings), { type: 'market/group_selected', group: 'EQUIPMENT' })
-  const rows = Array.from({ length: 200 }, (_, index) => ({
+test('an owned listing receipt does not replace another seller on the current public page', () => {
+  const opened = reduce_app_state(initial_app_state(settings), {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: 'aberrant_edge',
+  })
+  const rows = Array.from({ length: 60 }, (_, index) => ({
     ...listing,
     id: `item-${index}`,
     kiosk: 'other-kiosk',
@@ -394,7 +422,8 @@ test('a successful listing receipt keeps the public window sorted and bounded', 
     type: 'server/packet',
     packet: {
       type: 'packet/market_slice',
-      observation: market_observation('EQUIPMENT'),
+      next_cursor: null,
+      observation: equipment_observation,
       listings: rows,
       kiosk_versions: { 'other-kiosk': '1' },
     },
@@ -406,7 +435,62 @@ test('a successful listing receipt keeps the public window sorted and bounded', 
     listing: row,
     version: '2',
   })
-  expect(written.marketplace.listings).toHaveLength(200)
-  expect(written.marketplace.listings[0]).toEqual(row)
-  expect(written.marketplace.listings.some(({ id }) => id === 'item-0')).toBe(false)
+  expect(written.marketplace.listings).toEqual(rows)
+  expect(written.marketplace.own_listings).toEqual([row])
+  expect(written.marketplace.listings.some(({ id }) => id === row.id)).toBe(false)
+})
+
+test('changing offer pages rejects the previous response and preserves owned catalogue rows', () => {
+  const selected = reduce_app_state(initial_app_state(settings), {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: listing.item_type,
+  })
+  const owned = { ...listing, id: 'owned', kiosk: 'own-kiosk', version: '30' }
+  const with_own = reduce_app_state(selected, {
+    type: 'market/write_succeeded',
+    operation: 'list',
+    listing: owned,
+    version: '30',
+  })
+  const first = reduce_app_state(with_own, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_slice',
+      observation: selected.marketplace.observation!,
+      next_cursor: 'roll:next',
+      listings: [listing],
+      kiosk_versions: { [listing.kiosk]: '1' },
+    },
+  })
+  const next = reduce_app_state(first, { type: 'market/page_requested', direction: 'next' })
+  expect(next.marketplace.listings).toEqual([])
+  const stale = reduce_app_state(next, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_slice',
+      observation: first.marketplace.observation!,
+      next_cursor: null,
+      listings: [listing],
+      kiosk_versions: { [listing.kiosk]: '100' },
+    },
+  })
+  expect(stale).toBe(next)
+  const row = { ...listing, id: 'next-page', kiosk: 'next-kiosk' }
+  const ready = reduce_app_state(stale, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_slice',
+      observation: next.marketplace.observation!,
+      next_cursor: null,
+      listings: [row],
+      kiosk_versions: { [row.kiosk]: '1' },
+    },
+  })
+  expect(ready.marketplace.listings).toEqual([row])
+  expect(ready.marketplace.own_listings).toEqual([owned])
+  const previous = reduce_app_state(ready, { type: 'market/page_requested', direction: 'previous' })
+  expect(previous.marketplace.observation).toMatchObject({ cursor: '', request: 3 })
+  expect(previous.marketplace.page_cursors).toEqual([])
 })

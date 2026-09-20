@@ -15,14 +15,14 @@ describe('frontend environment', () => {
     expect(env.graphql_url).toBe('https://graphql.mainnet.sui.io/graphql')
     expect(env.sui_rpc_url).toBe('https://fullnode.mainnet.sui.io:443')
     expect(env.server_ws_url).toBe('ws://localhost:9800/')
-    expect(env.social_image_url).toBe('https://aresrpg.world/og-image.png')
+    expect(env.social_image_url).toBe('https://aresrpg.world/og-image.jpg')
   })
 
   test('one app URL drives canonical and social asset URLs', () => {
     const env = resolve_env({ VITE_APP_URL: 'https://preview.example/game/' })
 
     expect(env.app_url).toBe('https://preview.example/game/')
-    expect(env.social_image_url).toBe('https://preview.example/game/og-image.png')
+    expect(env.social_image_url).toBe('https://preview.example/game/og-image.jpg')
   })
 
   test('unsupported networks fail during configuration', () => {

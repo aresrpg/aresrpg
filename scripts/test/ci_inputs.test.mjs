@@ -7,6 +7,8 @@ import { ci_checks_for_diff, browser_checks_required } from '../ci_inputs.mjs'
 for (const path of [
   'seed/content/items.json',
   'seed/content/worlds.json',
+  'seed/content/journal/article.md',
+  'seed/icons/journal/cover.png',
   'packages/move/sources/fight.move',
   'packages/move/Move.lock',
   'packages/seed/Move.toml',

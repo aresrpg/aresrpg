@@ -16,3 +16,13 @@ export const character_checkpoint = (
   Number.isFinite(character.z)
     ? position_checkpoint(character.world, { x: character.x!, z: character.z!, at_ms: character.at_ms ?? 0 })
     : null
+
+export const POSITION_INTERVAL_MS = 50
+export type PlayerPosition = Readonly<{
+  character_id: string
+  world: string
+  x: number
+  y: number
+  z: number
+  riding: boolean
+}>

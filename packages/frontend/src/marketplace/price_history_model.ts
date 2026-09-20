@@ -21,14 +21,6 @@ export const price_points = (history: MarketPriceHistory, days: PriceRange): rea
   })
 }
 
-/** TradingView joins whitespace in one line; separate contiguous runs preserve honest gaps. */
-export const price_segments = (points: readonly PricePoint[]): readonly (readonly PricePoint[])[] =>
-  points.reduce<PricePoint[][]>((segments, point, index) => {
-    if (point.value === null) return segments
-    if (index === 0 || points[index - 1]!.value === null) return [...segments, [point]]
-    return [...segments.slice(0, -1), [...segments[segments.length - 1]!, point]]
-  }, [])
-
 export const format_unit_price = (value: number, locale?: string): string =>
   value.toLocaleString(locale, { maximumSignificantDigits: 6 })
 

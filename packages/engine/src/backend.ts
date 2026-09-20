@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
+import type { WorldCaption } from './caption_types.ts'
 import type {
   CameraProjection,
   ChunkRenderOutcome,
@@ -46,6 +46,7 @@ export type EngineBackend = Readonly<{
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  set_entity_caption: (id: string, caption: WorldCaption | null) => void
   set_entity_label: (id: string, element: HTMLElement | null) => void
   set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
   entity_height: (id: string) => number | null

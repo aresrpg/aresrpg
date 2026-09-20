@@ -63,6 +63,7 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                          |
 | `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                   |
 | `packages/launchpad`   | Independently deployed offering UI at `launchpad.aresrpg.world`, using the SDK and neutral frontend finance exports                                                                | Staking UI, game startup, a second finance state authority                          |
+| `packages/journal`     | Static editorial publication at `journal.aresrpg.world`, rendering seed-authored Markdown and published-only feeds, routes, metadata, and cover assets                             | Game runtime, chain writes, browser-visible drafts                                  |
 | `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                 |
 | `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                   |
 | `pins.json`            | Current mainnet lineage, shared object addresses, and active content reconciliation metadata                                                                                       | Authored gameplay values                                                            |
@@ -130,10 +131,11 @@ The launchpad defaults to PublicNode gRPC-Web on mainnet and Mysten's public nod
 its deployment CSP permits those same providers.
 
 The frontend production entry initializes Vercel Web Analytics and Speed Insights once for both
-game and wallet-finance routes. The independent launchpad entry initializes Vercel Web Analytics.
+game and wallet-finance routes. The independent launchpad and journal entries initialize Vercel Web Analytics.
+The journal renders complete HTML at build time and initializes analytics only on its canonical production hostname.
 Telemetry strips URL queries and fragments before sending, so
 claim bearer keys never become analytics data. Development and browser-test builds omit the trackers.
-Both entries initialize the shared errors-only Sentry reporter. Caught toast failures retain their raw
+The frontend and launchpad initialize the shared errors-only Sentry reporter. Caught toast failures retain their raw
 exception before translation; React root failures and boot failures use the same reporter. The outbound
 filter removes credentials and bearer URL data, and Move aborts group by package, module, function and
 code. Deployed builds require a public Sentry DSN and label events with their network, deployment target
@@ -239,7 +241,8 @@ reads at most 366 fields in one pipeline for the selected item, pushes refreshed
 uninitialized history unavailable. The marketplace reducer owns selection and response identity;
 TradingView Lightweight Charts presents unit-weighted daily prices excluding fees in the existing
 purple palette. Listings and history occupy two columns when the detail pane fits, stacking below
-that width. Empty trading dates remain gaps, and accessible daily rows expose the same values.
+that width. The price line connects recorded daily averages across untraded dates; those dates remain unpriced
+in hover details, without fabricated sales or prices.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
 query, including empty owned catalogues. Catalogue markers follow their relation writes. The client
@@ -262,6 +265,11 @@ Each connection owns one server reducer tracking every allowed character. The gr
 `evt:*` chain projections. The mesh Redis carries only ephemeral presence, chat, heartbeats, and
 fight-action courtesy relays.
 
+Outgoing positions coalesce by character into bounded 50 ms batches; input speed validation still sees
+every sample. Reliable appearance/departure packets clear pending positions for that identity. Native
+socket buffers and position queues have hard ceilings; stalled movement closes for reconnect. Frontend
+presence changes submit models at most once per animation frame.
+
 Online history is the deliberate exception to chain replay: authenticated websocket presence is
 off-chain. Each server heartbeat publishes its short-lived authenticated-address snapshot; their
 cluster union collapses into one-minute samples, 15-minute aggregates through seven days, and daily
@@ -271,7 +279,15 @@ separate source and freshness; the indexer never pretends it can reconstruct pas
 One latest reader per account domain serves baseline and refresh demand. Required subscriptions
 precede baseline reads; `packet/characters` becomes the ready barrier only after every prerequisite
 completes. Connection closure terminates its reducer and subscription lifetime, including pending
-acquisitions. Unverified transports and verifiers share one finite admission budget; a claimed
+acquisitions. Public equipment and zone projections share one subscription and at most one in-flight
+read per watched identity in the server process. Indexed invalidations supersede older reads;
+the last viewer releases the projection. Zone populations are derived once per retained seed.
+Mesh appearances never replace indexed equipment. Discovery replies target the requesting session
+and zone acquisition, while ordinary presence deltas remain zone-scoped. Mesh ingress dispatches moves
+to process-local character/zone listeners registered only for admitted visible identities. Appearance,
+departure and probes retain their zone broadcast. Listener retirement is synchronous with visibility
+and world-window removal; it adds no Redis channels or retained presence roster. A failed shared snapshot
+closes affected sessions so normal reconnect rebuilds their subscriptions. Unverified transports and verifiers share one finite admission budget; a claimed
 address grants no capacity exemption. After readiness, graph events and narrow reads push deltas. The server validates identity, locality, rate,
 and relay voice, but it never becomes game authority.
 The existing server-info heartbeat carries the fullnode's latest checkpoint timestamp and the
@@ -282,6 +298,7 @@ timestamp past the deadline.
 Device wall-clock changes cannot unlock placement, and stale or disconnected samples cannot authorize it.
 
 Overworld movement packets name their character and exact chain checkpoint (world, x, z, timestamp).
+The indexer routes changed checkpoint children to their Character channel; zone notifications never refresh unrelated rosters.
 A roster checkpoint change synchronously resets the server's presence and movement allowance before
 that roster is sent. Packets captured under another checkpoint are ignored; matching packets still
 obey the speed budget. Client live poses, follower poses, and resume writes retain that same checkpoint
@@ -374,6 +391,18 @@ Party run-to is the sole direct player checkpoint read. The authenticated SDK re
 member's current-world and checkpoint dynamic fields once, refuses a different world, then the
 client runs toward that immutable snapshot. It never polls or claims to know the member's live pose.
 
+Gathering-job level 30 also unlocks a finite Collect All run for the targeted resource pack,
+independently of journey completion. The same automation reducer owns both run scopes. A finite
+run stays at that pack, waits for its confirmed harvest, consumed-node projection, and newer character checkpoint, then waits
+for a fresh observed chain timestamp to satisfy the next travel/root proof. It never extrapolates
+a cooldown unlock from wall time. Page changes preserve finite collection and run-to movement; the existing background world ticker
+keeps their simulation alive. Finite collection exposes its progress and Stop control on other pages.
+A protector, manual cancellation, connection loss, character/world change, or transaction failure ends
+the finite run; finite runs never forfeit protectors. Unsigned timing refusals
+retain the existing bounded-delay reinspection rule. Pack depletion or generation replacement
+finishes collection without selecting another pack. The HUD derives aggregate progress and an
+estimated remaining time from the live pack and current harvest; it owns no action deadline.
+
 ### Fights
 
 An active forfeit removes the fighter before advancing through mobs to the next living player in
@@ -434,11 +463,25 @@ distance change starts a new request. The GPU pool never grows to absorb an over
 That manager also owns bounded planning and meshing retries, including stationary focus. Worker
 replies settle their exact request, and cancelled or superseded requests settle explicitly. Backend
 request serials remain monotonic while per-key metadata follows only live work. Exhaustion or device
-loss terminates the world lifetime and exposes Reload; late sky success cannot revive a failed engine.
+loss terminates that world lifetime; late callbacks cannot revive a failed engine. The player app
+retries once on a fresh canvas with persisted low quality and the minimum render distance. A second
+failure selects the flat WebGL grid on another fresh canvas without attempting WebGPU or planning
+terrain. Recovery advances at most twice per app lifetime. Grid failure exposes Reload; missing
+authored world content remains a separate error and never reduces graphics settings.
+Nearby character bodies batch by rig and animation pose. Hair and equipment select their own instance
+subsets without changing body identity. Shared model loading owns part preparation, bone mounting and
+disposal. Native skinning precedes geometry-bound instance transforms; immutable texture expressions
+share shader plans without sharing skeletons or instance data. Interactive/tactical characters and the
+WebGL fallback retain individual models. This rendering path does not use temporal motion vectors.
+
 Each resource owner releases its workers, GPU objects, audio nodes, and callbacks on teardown. DOM labels use a separate label-only scene
 with the same world camera and world-space anchors; CSS2D never traverses game meshes or skeletons.
 Resource label anchors are plain world-space vectors, not invisible game-scene objects.
-Nametag cards use opaque surfaces rather than per-card backdrop filtering of the live canvas.
+Passive names, speech, fight health and floating numbers share typed caption descriptors and one instanced
+GPU overlay per backend. Browser-shaped text occupies reference-counted atlas tiles; movement and health
+fractions do not rasterize text again. Visible captions allocate first, and offscreen tiles yield under the
+128 MiB GPU atlas budget. Accessible text derives from the same descriptors. Interactive resource and
+fight-sword prompts retain their DOM hit targets. Captions and interactive labels replay after backend boot.
 
 World content owns cities: fixed 3x3 regions, stable slugs, anchors, structure packs, and one dungeon slug each.
 Dungeon content independently owns each stable dungeon slug, key, and ordered room composition.
@@ -563,10 +606,13 @@ and revisions match. Older-than-certified reads fail instead of authorizing repe
 ### Marketplace
 
 Sui Kiosk objects own listings and custody. The indexer projects the current market and sales
-history. The server pushes complete category and item-type counts plus a bounded listing window
-for the selected item type. Navigation derives from those counts, never from the listing window. The frontend
-reconciles packets and its own certified receipts in one marketplace reducer. Listing rows carry indexed
-rolled stats and weapon damage; marketplace hovers render those rows without a client-side chain read.
+history. Category selection observes its shared listed-type projection without aggregate counts. Selecting
+a type requests twenty groups with three cheapest public offers per group, excluding the viewer's own
+listings before ranking. Stack quantities and complete indexed equipment rolls define groups; unknown
+rolls remain distinct objects. Character listings have their own bounded query and filters. Cursor pages
+carry observation generations and kiosk revisions; the frontend retains only the current page and cursor
+history. One marketplace reducer reconciles packets and certified receipts without treating unseen rows
+as deleted. Indexed changes refresh affected scopes. Hover details use indexed purchase-relevant fields.
 
 ### KARES and the offering
 
@@ -666,6 +712,9 @@ If the explanation needs two owners for one fact, the data model is wrong.
 
 ## Documentation ownership
 
+- `seed/content/journal/`: English editorial articles and publication catalogue. `seed/icons/journal/`
+  owns their cover artwork. Only explicitly published entries enter the journal's static output;
+  drafts remain source-only. The journal deploys independently of game releases and seed transactions.
 - `ARCHITECTURE.md`: current system topology and laws.
 - `DECISIONS.md`: active rulings and their motives; search the domain being changed.
 - `AGENTS.md`: repository working agreement, TypeScript code law, safety, and required gates.

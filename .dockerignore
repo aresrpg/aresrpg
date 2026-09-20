@@ -22,6 +22,9 @@ packages/frontend/*
 !packages/launchpad
 packages/launchpad/*
 !packages/launchpad/package.json
+!packages/journal
+packages/journal/*
+!packages/journal/package.json
 !packages/immutable
 packages/immutable/*
 !packages/immutable/package.json
@@ -41,6 +44,7 @@ packages/server/*
 !seed
 seed/*
 !seed/content
+seed/content/journal
 !seed/structures
 
 # Never, whatever the ladder above re-admits.

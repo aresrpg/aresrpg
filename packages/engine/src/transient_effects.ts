@@ -21,6 +21,7 @@ import {
   type BufferGeometry,
 } from 'three'
 
+import type { CaptionLayer } from './caption_layer.ts'
 import type { create_entity_layer } from './entities.ts'
 import { create_dust_texture } from './dust_texture.ts'
 import { create_fight_float_layer, type FightFloatKind } from './fight_floats.ts'
@@ -112,8 +113,12 @@ const particle_seed = (id: string, index: number): ParticleSeed => {
 
 const eased = (value: number): number => value * value * (3 - 2 * value)
 
-export const create_transient_effects = ({ scene, entities }: Readonly<{ scene: Scene; entities: EffectAnchors }>) => {
-  const floats = create_fight_float_layer({ scene, entities })
+export const create_transient_effects = ({
+  scene,
+  entities,
+  captions,
+}: Readonly<{ scene: Scene; captions: Pick<CaptionLayer, 'set'>; entities: EffectAnchors }>) => {
+  const floats = create_fight_float_layer({ captions, entities })
   const particle_geometry = new SphereGeometry(0.11, 5, 4)
   const fight_geometries = create_fight_vfx_geometries()
   const ring_geometry = new RingGeometry(0.58, 0.76, 28)

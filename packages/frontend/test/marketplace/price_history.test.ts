@@ -8,12 +8,7 @@ import {
   initial_price_history,
   market_price_subscription,
 } from '../../src/marketplace/price_history_state.ts'
-import {
-  format_unit_price,
-  price_points,
-  price_segments,
-  unit_price_sui,
-} from '../../src/marketplace/price_history_model.ts'
+import { format_unit_price, price_points, unit_price_sui } from '../../src/marketplace/price_history_model.ts'
 import type { AppState } from '../../src/store.ts'
 
 const history: MarketPriceHistory = {
@@ -28,13 +23,12 @@ const history: MarketPriceHistory = {
   })),
 }
 
-test('tiny averages stay nonzero and missing days split line runs without fabricated prices', () => {
+test('tiny averages stay nonzero and missing days remain unpriced without fabricated prices', () => {
   expect(unit_price_sui(history.buckets[0]!)).toBe(1e-12)
   expect(format_unit_price(1e-12, 'en')).toBe('0.000000000001')
   const points = price_points(history, 7)
   expect(points.map(({ value }) => value)).toEqual([1e-12, 1e-12, null, 1e-12, null, null, null])
-  expect(price_segments(points).map((run) => run.length)).toEqual([2, 1])
-  expect(price_segments(price_points({ ...history, buckets: [] }, 30))).toEqual([])
+  expect(price_points({ ...history, buckets: [] }, 30).every(({ value }) => value === null)).toBe(true)
   expect(price_points(history, 365)).toHaveLength(365)
 })
 

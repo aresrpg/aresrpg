@@ -242,21 +242,24 @@ describe('the wire contract', () => {
       parse_client_packet(
         JSON.stringify({
           type: 'packet/market_observe',
-          observation: { categories: ['sword', 'sword', 'hat'], characters: false },
+          observation: { kind: 'types', category: 'sword', request: 1 },
         })
       )
     ).toEqual({
       type: 'packet/market_observe',
-      observation: { categories: ['sword', 'hat'], characters: false },
+      observation: { kind: 'types', category: 'sword', request: 1 },
     })
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/market_observe', observation: 7 }))).toThrow(
       /observation/
     )
     expect(() =>
       parse_client_packet(
-        JSON.stringify({ type: 'packet/market_observe', observation: { categories: ['made_up'], characters: false } })
+        JSON.stringify({
+          type: 'packet/market_observe',
+          observation: { kind: 'types', category: 'made_up', request: 1 },
+        })
       )
-    ).toThrow(/categories/)
+    ).toThrow(/category/)
     expect(() =>
       parse_client_packet(JSON.stringify({ type: 'packet/spectate', character_id: '0xc', fight: 'nope' }))
     ).toThrow(/fight id/)

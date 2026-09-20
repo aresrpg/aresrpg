@@ -100,3 +100,16 @@ export const buyer_total = (ask: bigint): bigint => {
 export const legal_lot = (listing: Readonly<Pick<ListingRow, 'category' | 'amount'>>): boolean =>
   !['resource', 'consumable', 'rune'].includes(listing.category ?? '') ||
   marketplace_lot_sizes.includes(listing.amount as (typeof marketplace_lot_sizes)[number])
+
+/** One purchase affordance for quantity rows and individual equipment/character offers. */
+export const offer_purchase = (
+  listing: Readonly<ListingRow> | null,
+  address: string | null,
+  balance: bigint | null,
+  pending: string | null
+) => {
+  if (!listing) return { total: null, label: null, enabled: false }
+  const total = buyer_total(BigInt(listing.price_mist))
+  const label = listing.seller === address ? 'yours' : balance !== null && balance < total ? 'insufficient' : 'buy'
+  return { total, label, enabled: label === 'buy' && pending === null }
+}

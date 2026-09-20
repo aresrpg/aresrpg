@@ -52,7 +52,7 @@ test('each standalone screen exposes only its own surface', async () => {
       view_spells={() => undefined}
     />
   )
-  expect(insufficient).toContain('You need at least 0.2 SUI left in your balance for fees.')
+  expect(insufficient).toContain('You need at least 0.05 SUI left in your balance for fees.')
   expect(insufficient).toMatch(/<button[^>]*disabled=""[^>]*type="submit"/)
 
   // Settings exposes the persisted audio preferences.

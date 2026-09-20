@@ -3,6 +3,9 @@ body: Для повного світу потрібен WebGPU. Натоміст
 fatal: Цей браузер не може створити графічний контекст WebGPU або WebGL.
 engine_recovery: Завантаження або відображення світу зупинилося. Перезавантажте сторінку, щоб спробувати ще раз.
 engine_reload: Перезавантажити
+engine_minimum_title: 'Графіку спрощено'
+engine_minimum: 'Не вдалося завантажити або відобразити світ. Якість графіки та відстань промальовування знижено до мінімуму, щоб зменшити навантаження на комп’ютер.'
+engine_continue: 'Продовжити'
 world_unavailable_title: Світ недоступний
 world_unavailable: Для цього світу ще не створено рецепт рельєфу.
 mobile_unavailable_label: Мобільний доступ
@@ -329,6 +332,9 @@ world_hud:
   spawn_engage_conflict: 'Зграя змінилася до вашої атаки. Можливо, її вже атакував інший гравець.'
   spawn_never_arrived: 'Бій виконано, але поле не надійшло'
   resource_press_collect: 'Натисніть {{key}}, щоб зібрати {{name}}'
+  resource_press_collect_all: 'Натисніть {{key}}, щоб зібрати все'
+  resource_collect_all_progress: 'Збираємо все · {{completed}}/{{total}}'
+  resource_collect_all_stop: 'Зупинити (Esc)'
   resource_need_level: 'Потрібен {{job}} рівня {{level}}'
   resource_need_tool: 'Потрібен інструмент {{job}}'
   resource_gathering: 'Збирання…'
@@ -388,6 +394,8 @@ demo_page:
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
 marketplace_page:
+  previous_page: Попередня
+  next_page: Наступна
   prices_title: 'Історія цін'
   prices_period: 'Період'
   prices_range_7: '7Д'

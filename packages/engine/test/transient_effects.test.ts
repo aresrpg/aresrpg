@@ -45,7 +45,7 @@ describe('transient effects', () => {
 
   test('exposes one disposable warmup object for both fight shader pipelines', () => {
     const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors })
+    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
     const warmup = vfx.create_warmup()
 
     expect(warmup.object.children).toHaveLength(2)
@@ -55,7 +55,7 @@ describe('transient effects', () => {
 
   test('holds a triggered trap beat before movement can resume', async () => {
     const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors })
+    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
     vfx.tick(100)
 
     const played = vfx.play_zone({
@@ -83,7 +83,7 @@ describe('transient effects', () => {
 
   test('resolves a cast at impact with a bounded number of drawables', async () => {
     const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors })
+    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
     vfx.tick(100)
     const played = vfx.play_cast(cast('fire'))
 
@@ -98,7 +98,7 @@ describe('transient effects', () => {
 
   test('resolves delayed authored bursts and cancels pending casts on disposal', async () => {
     const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors })
+    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
     vfx.tick(100)
     const earth = vfx.play_cast(cast('weapon'))
     expect(scene.children).toHaveLength(0)
@@ -115,7 +115,7 @@ describe('transient effects', () => {
     const silhouettes: string[] = []
     for (const element of ['fire', 'water', 'air', 'neutral', 'heal', 'earth']) {
       const scene = new Scene()
-      const vfx = create_transient_effects({ scene, entities: anchors })
+      const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
       vfx.tick(100)
       const played = vfx.play_cast(cast(element))
       expect(scene.getObjectByName(`cast:${element}:windup`)).toBeDefined()
@@ -132,7 +132,7 @@ describe('transient effects', () => {
 
   test('spell mechanics select different pack silhouettes without changing their element palette', () => {
     const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors })
+    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
     vfx.tick(100)
 
     void vfx.play_cast(cast('fire', 'damage'))
@@ -151,7 +151,7 @@ describe('transient effects', () => {
 
   test('plays the legacy double-jump dust and ring as one bounded effect', () => {
     const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors })
+    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
     vfx.tick(100)
 
     vfx.play_jump_puff(Object.freeze([2, 3, 4]))

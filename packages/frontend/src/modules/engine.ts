@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- this module is the explicit lifecycle boundary for mutable engine and browser handles. */
 
-import { parse_world_recipe, type EngineStatus, type EntityRender } from '@aresrpg/engine'
+import { parse_world_recipe, type EntityRender } from '@aresrpg/engine'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import { master_volume_from } from '../game/core/audio_volume.ts'
@@ -23,6 +23,7 @@ import { publish_scene, submit_scene_entities, subscribe_scene } from '../game/c
 import { create_presence_renderer } from '../game/presence_entities.ts'
 import { create_resource_renderer } from '../game/resource_nodes.ts'
 import { resolve_world_hover, type WorldHover } from '../game/core/player_pick.ts'
+import { create_caption_target } from '../game/core/caption_target.ts'
 import { publish_self_tag } from '../game/core/nametag_feed.ts'
 import { world_terrain } from '../content/worlds.ts'
 import { content_catalog } from '../content/catalog.ts'
@@ -44,16 +45,14 @@ import { sword_fights } from './world_engage.ts'
 import { is_world_page, world_scene_active } from './navigation.ts'
 import { run_to_target } from './run_to.ts'
 import { selected_world_action_lock } from './world_gather.ts'
+import { receive_engine_status } from './engine_state.ts'
 
-export type EngineState = EngineStatus
-export type EngineInput =
-  | Readonly<{ type: 'engine/canvas_attached'; canvas: HTMLCanvasElement }>
-  | Readonly<{ type: 'engine/canvas_detached'; canvas: HTMLCanvasElement }>
-  | Readonly<{ type: 'engine/status'; status: EngineStatus }>
-export const initial_engine_state = (): EngineState => ({ state: 'initializing', backend: 'none' })
+export { initial_engine_state, type EngineState, type EngineInput } from './engine_state.ts'
 
 const reduce = (state: AppState, input: AppInput): AppState =>
-  input.type === 'engine/status' ? Object.freeze({ ...state, engine: input.status }) : state
+  input.type === 'engine/status'
+    ? Object.freeze({ ...state, engine: receive_engine_status(state.engine, input.status) })
+    : state
 
 type VisualControl = Readonly<{
   stage: (scene: WorldView & Readonly<{ time_of_day: number }>) => void
@@ -99,7 +98,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const sync_activity = (state: AppState): void => {
     if (!world) return
     const world_page = is_world_page(state.navigation.page)
-    const background = state.automation.run !== null
+    const background = state.automation.run !== null || state.run_to.run?.status === 'running'
     world.set_active(world_scene_active(state.navigation.page, state.fight.mounted, background), background)
     world.set_interactive(world_page && (!!state.session.wallet || state.navigation.guest_spectating))
     world.set_action_lock(selected_world_action_lock(state))
@@ -281,8 +280,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       api.set_fight_swords(assets.model_url, assets.impact_sound_url, markers)
     }
     if (sword_assets) arm(sword_assets)
-    // Preload the shared sword on world mount. An engage press must animate immediately rather
-    // than wait for the first fight to discover its model.
+    // Preload swords on mount so the first engage animation needs no model fetch.
     else if (world_name)
       void Promise.all([import('../content/fight_models.ts'), import('../game/audio/fight_audio_registry.ts')])
         .then(async ([{ load_fight_sword_url }, { fight_audio_src }]) => {
@@ -297,8 +295,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         })
   }
 
-  // the OWN companion — the SAME loader and shape the demo lab uses (one code path, owner
-  // 2026-08-21); it follows the equipped pet slot of the selected character
+  // The selected character's equipped pet uses the shared model loader.
   let pet_key: string | null = null
   let pet_generation = 0
   const sync_pet = (state: AppState): void => {
@@ -365,21 +362,22 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     world?.dispose()
     world = null
     mounted_world_name = undefined
-    // a torn-down world takes its crown labels with it — the feed must not keep a ghost self tag
-    self_tag_on = false
+    self_tag_target?.dispose()
+    self_tag_target = null
     publish_self_tag(null)
     if (import.meta.env.DEV) visual_global.__ares_visual__ = undefined
   }
 
-  const self_tag_element = typeof document === 'undefined' ? null : document.createElement('div')
-  let self_tag_on = false
+  let self_tag_target: ReturnType<typeof create_caption_target> | null = null
   const set_self_tag = (focused: boolean): void => {
-    if (focused === self_tag_on) return
+    if (focused === Boolean(self_tag_target)) return
     const character_id = get_state().session.selected_character_id
     if (!character_id) return
-    self_tag_on = focused
-    world?.set_entity_label(character_id, focused ? self_tag_element : null)
-    publish_self_tag(focused ? self_tag_element : null)
+    self_tag_target?.dispose()
+    const owner = world
+    self_tag_target =
+      focused && owner ? create_caption_target((caption) => owner.set_entity_caption(character_id, caption)) : null
+    publish_self_tag(self_tag_target)
   }
   const hover_under_cursor = (event: MouseEvent): WorldHover | null => {
     const view = world?.camera_frame()
@@ -398,7 +396,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   }
 
   const on_mouse_move = (event: MouseEvent): void => {
-    if (!self_tag_element) return
     set_self_tag(hover_under_cursor(event)?.self ?? false)
   }
 
@@ -458,6 +455,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
           canvas: next_canvas,
           world: parse_world_recipe(terrain),
           quality: get_state().settings.quality,
+          render_distance: get_state().settings.render_distance,
+          force_grid: get_state().engine.recovery === 'grid',
           initial_focus: initial_position ? [initial_position.x, initial_position.z] : [0, 0],
           on_travel: () => dispatch({ type: 'dialog/open', dialog: 'travel' }),
           on_run_stopped: (reason) =>
@@ -467,14 +466,13 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         // Publish the running scene; the fight board mounts here, never in a second engine.
         publish_scene(created)
         presence = create_presence_renderer({
-          // Presence holds its list only outside fights; a fight board shows fighters alone.
           submit: (entities) => {
             presence_entities = entities
             submit_world_entities()
           },
           entity_height: created.entity_height,
           pet_ground_height: created.pet_ground_height,
-          label: (character_id, element) => created.set_entity_label(character_id, element),
+          label: created.set_entity_caption,
         })
         // Spawn models use Vite's import.meta.glob. Keep that edge lazy so store/tests remain build-independent.
         void create_spawns(created).then((renderer) => {
@@ -487,6 +485,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         })
         resources = create_resources(created)
         unsubscribe_status = created.subscribe_status((status) => {
+          if (generation !== own_generation) return
           if (status.state === 'failed') dispose_world()
           dispatch({ type: 'engine/status', status })
         })

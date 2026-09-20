@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { QUALITY_OPTIONS, type EngineQuality } from '@aresrpg/engine'
+import { QUALITY_OPTIONS, QUALITY_PROFILES, type EngineQuality } from '@aresrpg/engine'
 
 import {
   CHAT_CHANNELS,
@@ -18,7 +18,7 @@ import { DEFAULT_MASTER_VOLUME, master_volume_from } from './audio_volume.ts'
 export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
 
 // render_distance: the player's chunk radius override (null = the quality tier's default)
-export const RENDER_DISTANCE_MIN = 4
+export const RENDER_DISTANCE_MIN = QUALITY_PROFILES.low.chunks.far_radius
 export const RENDER_DISTANCE_MAX = 12
 
 // The one derivation door lives in the engine (voxels AND the far shell share it) — re-exported

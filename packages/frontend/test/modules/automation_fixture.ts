@@ -3,11 +3,12 @@
 
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import type { AuthSession } from '../../src/auth.ts'
 import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 import { gathering_resources } from '../../src/modules/automation_route.ts'
 import { reduce_automation } from '../../src/modules/automation.ts'
 import type { AutomationInput } from '../../src/modules/automation_state.ts'
-import { initial_app_state, type AppState } from '../../src/store.ts'
+import { initial_app_state, type create_app, type AppState } from '../../src/store.ts'
 
 export const resource = gathering_resources('nauvis').find(({ tier }) => tier === 1)!
 export const character = (): CharacterRow => ({
@@ -78,4 +79,51 @@ export const tick = (now_ms = 1_000): Extract<AutomationInput, { type: 'automati
 export const ready_to_gather = (): AppState => {
   const planned = reduce_automation(automation_fixture(), tick())
   return reduce_automation(planned, tick(1_250))
+}
+
+export const initialize_automation_app = (
+  app: Pick<ReturnType<typeof create_app>, 'dispatch'>,
+  wallet: AuthSession,
+  controlled = character()
+): void => {
+  const base = automation_fixture()
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: wallet })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [controlled] } })
+  app.dispatch({ type: 'character/select', character_id: 'alice' })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/game_state', frozen: false } })
+  app.dispatch({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/server_info',
+      online: 1,
+      indexing_lag: 0,
+      current_epoch: '1',
+      chain_timestamp_ms: Date.now(),
+      chain_sample_age_ms: 0,
+    },
+  })
+  // The checkpoint-head heartbeat can trail live action time; it must not add another root.
+  app.dispatch({
+    type: 'clock/observed',
+    chain_ms: Date.now() - 5_000,
+    received_ms: performance.now(),
+    sample_age_ms: 5_000,
+  })
+  app.dispatch({
+    type: 'server/packet',
+    packet: { type: 'packet/tracked_zones', character_id: 'alice', world: 'nauvis', zones: [{ zx: 97, zz: 97 }] },
+  })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/zones', zones: [base.world.zones[key]!] } })
+  app.dispatch({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/zone_spawns',
+      world: 'nauvis',
+      zx: 97,
+      zz: 97,
+      mobs: [...base.world.spawns[key]!.mobs],
+      resources: [...base.world.spawns[key]!.resources],
+    },
+  })
 }

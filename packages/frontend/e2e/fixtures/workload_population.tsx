@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { MobEntityRender, ResourceNodeMarker } from '@aresrpg/engine'
+import type { MobEntityRender, ResourceNodeMarker, WorldCaption } from '@aresrpg/engine'
 import { createRoot } from 'react-dom/client'
 
+import { load_gltf_source } from '../../../engine/src/gltf_loader.ts'
+import { load_worn_equipment_model_url } from '../../src/content/character_models.ts'
+import { worn_equipment_options } from '../../src/content/worn_equipment.ts'
+import type { load_crowd } from '../../src/demo/CharacterCrowdLab.tsx'
 import { NametagCard } from '../../src/components/NametagCard.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { load_pet_model_url } from '../../src/content/pet_models.ts'
@@ -74,5 +78,46 @@ export const workload_labels = (
         label(id, null)
         root.unmount()
       }),
+  }
+}
+
+/** Exercise the same authored head/back attachments as the demo and live characters. */
+export const workload_equipped = async (actors: Awaited<ReturnType<typeof load_crowd>>, enabled = true) => {
+  if (!enabled) return actors
+  const [heads, backs] = await Promise.all(
+    [worn_equipment_options.hats, worn_equipment_options.cloaks].map(async (options) =>
+      (await Promise.all(options.map(load_worn_equipment_model_url))).filter((model) => model !== null)
+    )
+  )
+  if (!heads?.length || !backs?.length) throw new Error('Workload omitted authored worn equipment')
+  const equipped = actors.map((actor, index) => ({
+    ...actor,
+    appearance: {
+      ...actor.appearance,
+      worn: { head: heads[index % heads.length]!, back: backs[index % backs.length]! },
+    },
+  }))
+  const urls = new Set(equipped.flatMap(({ appearance }) => Object.values(appearance.worn).map(({ url }) => url)))
+  await Promise.all([...urls].map(load_gltf_source))
+  return equipped
+}
+
+export const workload_speech = (set_caption: (id: string, caption: WorldCaption | null) => void) => {
+  let current = -1
+  let ids: readonly string[] = []
+  return {
+    update: (actors: Awaited<ReturnType<typeof load_crowd>>, elapsed_ms: number): void => {
+      const period = Math.floor(elapsed_ms / 2000)
+      if (period === current) return
+      current = period
+      ids = actors.map(({ id }) => id)
+      actors.forEach(({ id }, index) =>
+        set_caption(id, {
+          name: `Player ${index + 1}`,
+          speech: `Exploring together ${period} · 中文 한국어 👋`,
+        })
+      )
+    },
+    dispose: (): void => ids.forEach((id) => set_caption(id, null)),
   }
 }

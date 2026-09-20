@@ -20,7 +20,13 @@ import { mob_entities } from '../../src/game/mob_entities.ts'
 import { load_character_appearance } from '../../src/game/character_entities.ts'
 import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_waiter.ts'
 
-import { workload_pets, workload_resources, workload_labels } from './workload_population.tsx'
+import {
+  workload_pets,
+  workload_resources,
+  workload_labels,
+  workload_equipped,
+  workload_speech,
+} from './workload_population.tsx'
 
 type Config = Readonly<{
   quality: EngineQuality
@@ -222,6 +228,7 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
   let result
   const resources = workload_resources(profile.packs, profile.nodes, focus, world.ground_height)
   const labels = workload_labels(resources, world.set_resource_node_label)
+  const speech = workload_speech(world.set_entity_caption)
   try {
     samples.push(await measure(world, 'startup', () => settle(world), started))
     const ready_ms = performance.now() - started
@@ -255,6 +262,7 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
         actors = (await load_crowd(profile.characters, (x, z) => world.ground_height(x + focus[0], z + focus[1]))).map(
           (actor) => ({ ...actor, x: actor.x + focus[0], z: actor.z + focus[1] })
         )
+        actors = await workload_equipped(actors, mode === 'full')
         const mob_types = source.mobs.slice(0, 8).map(({ mob_type }) => mob_type)
         mobs = mob_entities(
           Array.from({ length: profile.mobs }, (_, index) => {
@@ -281,16 +289,18 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
           if (performance.now() > asset_deadline) throw new Error('Crowd models did not load')
           await next_frame()
         }
-        await wait_frames(2)
+        // Let independently loaded equipment assemble before sampling the populated scene.
+        await wait_frames(60)
       })
     )
     const animation_started = performance.now()
-    const animate_crowd = (): void =>
+    const animate_crowd = (): void => {
+      speech.update(actors, performance.now() - animation_started)
       world.set_entities([
         ...actors.map((actor) =>
           crowd_benchmark_entity(
             { ...actor, y: world.ground_height(actor.x, actor.z) },
-            'run',
+            ['run', 'jump'][Math.floor(actor.offset) % 2] as 'run' | 'jump',
             performance.now() - animation_started
           )
         ),
@@ -301,6 +311,7 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
           return { ...mob, anchor: { kind: 'world' as const, position: [x, world.ground_height(x, z), z] as const } }
         }),
       ])
+    }
     samples.push(await measure(world, 'crowd-entry', () => wait_frames(2, animate_crowd)))
     samples.push(await measure(world, 'crowd', () => wait_frames(frames, animate_crowd)))
     samples.push(await measure(world, 'crowd-orbit', () => orbit_frames(world, frames, wait_frames)))
@@ -446,12 +457,14 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
       asset_requests,
       mobs: mobs.length,
       characters: actors.length,
+      equipped: mode === 'full',
       pets: pets.length,
       resource_nodes: resources.length,
       resource_labels: labels.count,
       state: world.state(),
     }
   } finally {
+    speech.dispose()
     labels.dispose()
     world.dispose()
   }

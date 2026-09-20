@@ -13,9 +13,12 @@ import { EventEmitter } from 'node:events'
 
 import {
   parse_client_packet,
+  MAX_TRACKED_CHARACTERS,
+  POSITION_INTERVAL_MS,
   type ClientPacket,
   type ServerPacket,
   type PresenceRow,
+  type PlayerPosition,
   type VisibleSlot,
   type MarketObservation,
   type MarketPriceObservation,
@@ -23,6 +26,9 @@ import {
   type CharacterRow,
 } from '@aresrpg/protocol'
 
+import { create_player_output, type PlayerSocket } from './player_output.ts'
+import type { PublicMarket } from './public_market.ts'
+import type { PublicWorld } from './public_world.ts'
 import logger from './logger.ts'
 import { channels } from './protocol.ts'
 import type { Graph } from './graph.ts'
@@ -49,6 +55,8 @@ import player_requests from './modules/player_requests.ts'
 import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
 const log = logger(import.meta)
+// Six independently moving characters plus control packets and normal timer jitter.
+const REALTIME_PACKETS_PER_SECOND = Math.ceil(1_000 / POSITION_INTERVAL_MS) * MAX_TRACKED_CHARACTERS + 30
 
 /** The embodied presence — a PresenceRow pinned to the world it walks in. */
 export type Embodied = PresenceRow & { world: string }
@@ -124,6 +132,8 @@ export type PlayerState = {
 }
 
 export type PlayerContext = {
+  public_world: PublicWorld
+  public_market: PublicMarket
   address: string
   resolve_name?: ResolveName
   admin: boolean
@@ -140,6 +150,7 @@ export type PlayerContext = {
    *  every state change emits `STATE_UPDATED(state, previous)` — observers listen here */
   events: EventEmitter
   send: (packet: ServerPacket) => void
+  send_position: (position: PlayerPosition) => void
   /** Kill the connection with a loud reason — the hacker door (speed, flood). */
   drop: (reason: string) => void
   channels: typeof channels
@@ -207,12 +218,15 @@ const INITIAL_STATE = (): PlayerState => ({
   leaderboard_observation: null,
 })
 
-type PlayerWires = Pick<PlayerContext, 'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name'> & {
+type PlayerWires = Pick<
+  PlayerContext,
+  'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name' | 'public_world' | 'public_market'
+> & {
   game_state?: GameState
   indexing_health?: () => Promise<IndexingHealth>
   request_limiter?: RequestLimiter
   realtime_limiter?: RequestLimiter
-  ws: { send: (raw: string) => unknown; close: (code?: number, reason?: string) => unknown }
+  ws: PlayerSocket
 }
 
 const UNKNOWN_GAME_STATE: GameState = Object.freeze({
@@ -229,33 +243,35 @@ export function create_player({
   admin,
   graph,
   pubsub,
+  public_world,
+  public_market,
   game_state = UNKNOWN_GAME_STATE,
   indexing_health = async () =>
     Object.freeze({ lag: null, epoch: null, chain_timestamp_ms: null, chain_observed_at_ms: null }),
   request_limiter = create_request_limiter(),
-  realtime_limiter = create_request_limiter({ capacity: 120, window_ms: 1_000 }),
+  realtime_limiter = create_request_limiter({ capacity: REALTIME_PACKETS_PER_SECOND, window_ms: 1_000 }),
 }: PlayerWires): Player {
   let state = INITIAL_STATE()
   let closed = false
-  const send = (packet: ServerPacket) => {
-    if (!closed) void ws.send(JSON.stringify(packet))
-  }
+  const controller = new AbortController()
+  const { send, position: send_position } = create_player_output(ws, controller.signal)
   const drop = (reason: string) => void ws.close(1008, reason)
 
   const events = new EventEmitter()
   events.setMaxListeners(0)
-  const controller = new AbortController()
-
   const context: PlayerContext = {
     address,
     resolve_name,
     admin,
     graph,
     pubsub,
+    public_world,
+    public_market,
     game_state,
     indexing_health,
     events,
     send,
+    send_position,
     drop,
     channels,
     get_state: () => state,
@@ -297,9 +313,9 @@ export function create_player({
     },
     on_close: () => {
       if (closed) return
+      controller.abort()
       context.dispatch({ type: 'close' })
       closed = true
-      controller.abort()
       events.removeAllListeners()
     },
   }

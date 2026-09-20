@@ -254,3 +254,8 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
 
 // pure reducer — the feeds live in the modules that own each stream (fight feeds combat)
 export default Object.freeze({ name: 'chat', reduce, observe }) satisfies AppModule
+
+export const speech_text = (speech: PlayerSpeech | undefined): string | undefined => {
+  const message = speech?.line.values.message
+  return message?.parts ? message.parts.map(chat_part_text).join('') : message?.text
+}

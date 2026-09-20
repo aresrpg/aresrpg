@@ -236,22 +236,17 @@ const fold_union = (world: WorldState, packet: Readonly<ServerPacket>): WorldSta
       ...world,
       players: Object.freeze({ ...world.players, [packet.player.character_id]: packet.player }),
     })
-  if (packet.type === 'packet/player_moved') {
-    const known = world.players[packet.character_id]
-    if (!known) return world
-    return Object.freeze({
-      ...world,
-      players: Object.freeze({
-        ...world.players,
-        [packet.character_id]: Object.freeze({
-          ...known,
-          x: packet.x,
-          y: packet.y,
-          z: packet.z,
-          riding: packet.riding,
-        }),
-      }),
+  if (packet.type === 'packet/players_moved') {
+    const updates = packet.positions.filter(
+      (position) => world.players[position.character_id]?.world === position.world
+    )
+    if (!updates.length) return world
+    const players = { ...world.players }
+    updates.forEach(({ character_id, ...position }) => {
+      // eslint-disable-next-line functional/immutable-data -- Construct the fresh batch copy, never mutate the input world.
+      players[character_id] = Object.freeze({ ...players[character_id]!, ...position })
     })
+    return Object.freeze({ ...world, players: Object.freeze(players) })
   }
   if (packet.type === 'packet/player_equipment') {
     const known = world.players[packet.character_id]

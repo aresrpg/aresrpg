@@ -33,6 +33,7 @@ export type SceneHandle = Pick<
   | 'animate_entity'
   | 'play_fight_cue'
   | 'project_entity'
+  | 'set_entity_caption'
   | 'create_fight_blob'
   | 'update_fight_blob'
   | 'remove_fight_blob'

@@ -6,7 +6,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 
 import { gather_gate } from '../../src/game/gather_gate.ts'
 import { resource_markers, resource_seats, resource_tag_ids } from '../../src/game/resource_nodes.ts'
-import { gather_progress } from '../../src/game/hud/GatherProgress.tsx'
+import { gather_progress } from '../../src/game/hud/gather_progress.ts'
 import { gather_completion_ready } from '../../src/modules/world_gather.ts'
 
 const character = (jobs: Record<string, string>, category?: string) =>

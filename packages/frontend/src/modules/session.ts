@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
-import { character_checkpoint } from '@aresrpg/protocol'
+import { character_checkpoint, POSITION_INTERVAL_MS } from '@aresrpg/protocol'
 import { client_to_chain_coordinate, type CharacteristicName } from '@aresrpg/immutable'
 
 import type { Auth, AuthSession } from '../auth.ts'
@@ -549,7 +549,7 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     if (state.session.wallet !== previous.session.wallet && !state.session.wallet)
       forget_session(previous.session.wallet)
   })
-  const POSITION_SEND_MS = 50
+  const POSITION_SEND_MS = POSITION_INTERVAL_MS
   const positions = create_position_publisher({
     send: (character_id, position) => link?.send({ type: 'packet/position', character_id, ...position }) ?? false,
   })

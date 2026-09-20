@@ -22,7 +22,6 @@ const colors: Readonly<Record<Tab, string>> = Object.freeze({ BUY: '#c8963c', SE
 
 export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCopy; locale: Locale }>) {
   const text = copy_text(copy.marketplace_page)
-  const group = useAppStore(({ marketplace }) => marketplace.group)
   const settings = useAppStore((state) => state.settings)
   const volume = useAppStore(({ marketplace }) => marketplace.volume) ?? {
     day_mist: null,
@@ -31,8 +30,8 @@ export default function MarketplacePage({ copy, locale }: Readonly<{ copy: AppCo
   }
   const [tab, set_tab] = useState<Tab>('BUY')
   useEffect(() => {
-    dispatch_app({ type: 'market/group_selected', group })
-  }, [group])
+    dispatch_app({ type: 'market/opened' })
+  }, [])
   if (settings.marketplace_disclaimer_acknowledged !== true)
     return (
       <MarketplaceDisclaimer

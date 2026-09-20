@@ -34,6 +34,7 @@ const create_engine_spy = () => {
     play_jump_puff: () => {},
     project_entity: () => null,
     set_entity_label: () => {},
+    set_entity_caption: () => {},
     set_world_label: () => {},
     entity_height: () => null,
     create_fight_blob: () => 'test_blob',

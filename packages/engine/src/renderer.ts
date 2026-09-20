@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { WorldCaption } from './caption_types.ts'
 import { WebGPUUnavailableError, type EngineBackend } from './backend.ts'
 import { create_grid_fallback } from './grid_fallback.ts'
 import type {
@@ -48,12 +49,16 @@ export const create_engine = ({
   quality: initial_quality = 'medium',
   presentation = 'world',
   initial_focus = [0, 0],
+  render_distance: initial_render_distance = null,
+  force_grid,
 }: Readonly<{
   canvas: HTMLCanvasElement
   world: unknown
   quality?: EngineQuality
   presentation?: EnginePresentation
   initial_focus?: readonly [number, number]
+  render_distance?: number | null
+  force_grid?: boolean
 }>): Engine => {
   const world = parse_world_recipe(world_value)
   const pending_chunks = new Map<string, RenderChunkRequest>()
@@ -65,7 +70,7 @@ export const create_engine = ({
   let backend: EngineBackend | null = null
   let status: EngineStatus = Object.freeze({ state: 'initializing', backend: 'none' })
   let quality = initial_quality
-  let render_distance: number | null = null
+  let render_distance = initial_render_distance
   let audio_volume = 1
   let camera: Readonly<{ position: Vec3; target: Vec3; projection: CameraProjection }> = {
     position: [initial_focus[0] + 36, 34, initial_focus[1] + 36],
@@ -85,6 +90,7 @@ export const create_engine = ({
     impact_sound_url: string
     markers: readonly FightSwordMarker[]
   }> | null = null
+  const entity_captions = create_retained_values<WorldCaption>()
   const entity_labels = create_retained_values<HTMLElement>()
   const world_labels = create_retained_values<Readonly<{ element: HTMLElement; position: Vec3 }>>()
   const resource_labels = create_retained_values<HTMLElement>()
@@ -128,6 +134,7 @@ export const create_engine = ({
     dungeon_portals = Object.freeze([])
     dungeon_stage = null
     fight_swords = null
+    entity_captions.clear()
     entity_labels.clear()
     world_labels.clear()
     resource_labels.clear()
@@ -153,8 +160,13 @@ export const create_engine = ({
       fight_blobs.delete(id)
       backend?.remove_fight_blob(id)
     })
-    update(Object.freeze({ now, delta_seconds }))
-    backend?.render(now)
+    try {
+      update(Object.freeze({ now, delta_seconds }))
+      backend?.render(now)
+    } catch (error) {
+      console.error('World rendering failed.', error)
+      report_failure({ code: 'graphics_unavailable', detail: String(error) })
+    }
     schedule_frame()
   }
 
@@ -207,6 +219,7 @@ export const create_engine = ({
     next.set_dungeon_portals(dungeon_portals)
     next.set_dungeon_stage(dungeon_stage)
     if (fight_swords) next.set_fight_swords(fight_swords.url, fight_swords.impact_sound_url, fight_swords.markers)
+    entity_captions.replay(next.set_entity_caption)
     entity_labels.replay(next.set_entity_label)
     world_labels.replay((id, label) => next.set_world_label(id, label.element, label.position))
     resource_labels.replay(next.set_resource_node_label)
@@ -230,6 +243,7 @@ export const create_engine = ({
 
   const boot = async (): Promise<void> => {
     if (disposed) return
+    if (force_grid) return attach_grid({ code: 'graphics_unavailable' })
     if (!supports_webgpu()) {
       attach_grid({ code: 'webgpu_unavailable' })
       return
@@ -356,6 +370,11 @@ export const create_engine = ({
           : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
     play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
+    set_entity_caption: (id, caption) => {
+      if (disposed) return
+      entity_captions.set(id, caption)
+      backend?.set_entity_caption(id, caption)
+    },
     set_entity_label: (id, element) => {
       entity_labels.set(id, element)
       backend?.set_entity_label(id, element)
@@ -422,7 +441,7 @@ export const create_engine = ({
       },
     quality: () => quality,
     flattened: () => flat_amount >= 1,
-    backend: () => backend?.kind ?? 'initializing',
+    backend: () => backend?.kind ?? (force_grid ? 'grid' : 'initializing'),
     fail: report_failure,
     status: () => status,
     subscribe_status: (listener: (next: EngineStatus) => void) => {

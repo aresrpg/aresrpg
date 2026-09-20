@@ -335,17 +335,25 @@
 
 /* ── resources table ───────────────────────────────────────────────────────── */
 .jobs__table {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: fit-content(20%) fit-content(20%) minmax(0, 1fr) fit-content(20%) fit-content(12%);
+  column-gap: var(--s-2);
 }
 
 .jobs__table-head,
 .jobs__table-row {
   display: grid;
-  grid-template-columns: 46px 58px 1fr 70px 56px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   gap: var(--s-2);
   padding: var(--s-2);
+}
+
+.jobs__table-head > span,
+.jobs__table-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .jobs__table-head {

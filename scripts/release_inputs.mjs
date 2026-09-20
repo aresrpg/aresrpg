@@ -5,6 +5,8 @@ import { resolve } from 'node:path'
 import { promisify } from 'node:util'
 
 // Canonical runtime input ownership for release builds. Version-only metadata is not a build input.
+export const JOURNAL_CONTENT_PREFIXES = ['seed/content/journal/', 'seed/icons/journal/']
+
 export const RELEASE_INPUTS = Object.freeze({
   frontend: Object.freeze([
     'packages/frontend/',
@@ -27,6 +29,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/engine/package.json',
     'packages/frontend/package.json',
     'packages/launchpad/package.json',
+    'packages/journal/package.json',
     'packages/sdk/package.json',
     'packages/fight/src/',
     'packages/fight/package.json',
@@ -44,6 +47,7 @@ export const RELEASE_INPUTS = Object.freeze({
 })
 
 export const component_owns_path = (component, path) =>
+  !JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix)) &&
   RELEASE_INPUTS[component].some((prefix) => path.startsWith(prefix))
 
 export const classify_release = (paths) =>

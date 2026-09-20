@@ -5,6 +5,15 @@ import { readFile } from 'node:fs/promises'
 
 import { expect, test } from 'bun:test'
 
+const jpeg_size = (image: Buffer): readonly [number, number] => {
+  expect(image.readUInt16BE(0)).toBe(0xffd8)
+  for (let offset = 2; offset < image.length; offset += image.readUInt16BE(offset + 2) + 2) {
+    const marker = image.readUInt16BE(offset)
+    if (marker === 0xffc0 || marker === 0xffc2) return [image.readUInt16BE(offset + 7), image.readUInt16BE(offset + 5)]
+  }
+  throw new Error('JPEG frame dimensions are missing')
+}
+
 test('sharing metadata is present without JavaScript and agrees across Open Graph and Twitter', async () => {
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8')
   const tags = [...html.matchAll(/<meta (?:name|property)="([^"]+)" content="([^"]+)"\s*\/>/g)]
@@ -26,8 +35,9 @@ test('sharing metadata is present without JavaScript and agrees across Open Grap
   expect(values['twitter:image:alt']).toBe(values['og:image:alt'])
 
   // Reuse the existing canonical brand image instead of introducing another artwork copy.
-  const image = await readFile(new URL('../../frontend/public/og-image.png', import.meta.url))
-  expect(values['og:image:type']).toBe('image/png')
-  expect(Number(values['og:image:width'])).toBe(image.readUInt32BE(16))
-  expect(Number(values['og:image:height'])).toBe(image.readUInt32BE(20))
+  const image = await readFile(new URL('../../frontend/public/og-image.jpg', import.meta.url))
+  const [width, height] = jpeg_size(image)
+  expect(values['og:image:type']).toBe('image/jpeg')
+  expect(Number(values['og:image:width'])).toBe(width)
+  expect(Number(values['og:image:height'])).toBe(height)
 })

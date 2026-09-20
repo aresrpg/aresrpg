@@ -7,6 +7,7 @@ import { EventEmitter } from 'node:events'
 
 import { character_checkpoint, type ServerPacket } from '@aresrpg/protocol'
 
+import { mesh_event_channel } from '../../src/protocol.ts'
 import type { Pubsub } from '../../src/pubsub_bus.ts'
 
 export const make_character = ({
@@ -126,6 +127,9 @@ export const wire = ({
     close: async () => {},
   }
   const emitter = new EventEmitter()
+  const emit = emitter.emit.bind(emitter)
+  emitter.emit = (channel, ...args) =>
+    emit(typeof channel === 'string' ? mesh_event_channel(channel, args[0]) : channel, ...args)
   const published: { channel: string; payload: any }[] = []
   const bus = {
     emitter,

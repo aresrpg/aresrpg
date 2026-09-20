@@ -12,50 +12,7 @@ import { create_app, type AppInput, type AppState, type AppContext } from '../..
 import { observe_automation, reduce_automation } from '../../src/modules/automation.ts'
 import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 
-import { automation_fixture, character, key, resource, tick } from './automation_fixture.ts'
-
-const initialize_automation_app = (app: ReturnType<typeof create_app>, wallet: AuthSession): void => {
-  const base = automation_fixture()
-  app.dispatch({ type: 'auth/connecting' })
-  app.dispatch({ type: 'auth/connected', session: wallet })
-  app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [character()] } })
-  app.dispatch({ type: 'character/select', character_id: 'alice' })
-  app.dispatch({ type: 'server/packet', packet: { type: 'packet/game_state', frozen: false } })
-  app.dispatch({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/server_info',
-      online: 1,
-      indexing_lag: 0,
-      current_epoch: '1',
-      chain_timestamp_ms: Date.now(),
-      chain_sample_age_ms: 0,
-    },
-  })
-  // The checkpoint-head heartbeat can trail live action time; it must not add another root.
-  app.dispatch({
-    type: 'clock/observed',
-    chain_ms: Date.now() - 5_000,
-    received_ms: performance.now(),
-    sample_age_ms: 5_000,
-  })
-  app.dispatch({
-    type: 'server/packet',
-    packet: { type: 'packet/tracked_zones', character_id: 'alice', world: 'nauvis', zones: [{ zx: 97, zz: 97 }] },
-  })
-  app.dispatch({ type: 'server/packet', packet: { type: 'packet/zones', zones: [base.world.zones[key]!] } })
-  app.dispatch({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/zone_spawns',
-      world: 'nauvis',
-      zx: 97,
-      zz: 97,
-      mobs: [...base.world.spawns[key]!.mobs],
-      resources: [...base.world.spawns[key]!.resources],
-    },
-  })
-}
+import { automation_fixture, character, key, resource, tick, initialize_automation_app } from './automation_fixture.ts'
 
 test('the world observer confirms sequential harvests and reports the exact protector attempt to automation', async () => {
   const app = create_app()

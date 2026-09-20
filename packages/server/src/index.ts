@@ -6,6 +6,8 @@
 import type { ServerWebSocket } from 'bun'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
+import { create_public_market } from './public_market.ts'
+import { create_public_world } from './public_world.ts'
 import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID } from './env.ts'
 import { BANNABLE_REASONS, create_ban_list } from './ban_list.ts'
 import { verify_login } from './auth.ts'
@@ -15,6 +17,7 @@ import { create_game_state } from './game_state.ts'
 import { create_indexing_health } from './indexing_health.ts'
 import { pubsub } from './pubsub.ts'
 import { mesh } from './protocol.ts'
+import { MAX_BUFFERED_BYTES } from './player_output.ts'
 import { create_player, type Player } from './player.ts'
 import logger from './logger.ts'
 import { create_request_limiter } from './request_limiter.ts'
@@ -29,6 +32,8 @@ type Connection = ServerWebSocket<ConnectionData>
 
 /** address → the live seat (one per address; a second login evicts the first) */
 const connections = new Map<string, { ws: Connection; player: Player }>()
+const public_world = create_public_world(graph, pubsub.graph)
+const public_market = create_public_market(graph, pubsub.graph)
 const pending = create_pending_admission()
 const handlers = new Map<Connection, AuthenticatedConnection>()
 const request_limiter = create_request_limiter()
@@ -86,6 +91,8 @@ const server = Bun.serve<ConnectionData>({
   },
   websocket: {
     maxPayloadLength: 64 * 1024,
+    backpressureLimit: MAX_BUFFERED_BYTES,
+    closeOnBackpressureLimit: true,
     open(ws: Connection) {
       const { address } = ws.data
       handlers.set(
@@ -105,6 +112,8 @@ const server = Bun.serve<ConnectionData>({
               admin: ADMIN_ADDRESSES.has(address),
               graph,
               pubsub,
+              public_world,
+              public_market,
               game_state,
               indexing_health,
               request_limiter,

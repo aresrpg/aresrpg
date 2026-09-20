@@ -5,7 +5,7 @@ import { item_stat_center } from '@aresrpg/immutable'
 import type { ItemSnapshot } from '@aresrpg/sdk/auth'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
-import { useRef, useState, type CSSProperties } from 'react'
+import { useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
@@ -125,3 +125,27 @@ export const ItemSnapshotTooltip = ({ copy, hover }: Readonly<{ copy: AppCopy; h
         hover.anchor.closest('dialog') ?? document.body
       )
     : null
+
+/** Local inventory/listing details never enter the SDK snapshot reader. */
+export const ItemDetailHover = ({
+  item,
+  children,
+}: Readonly<{ item: Readonly<ItemTooltipDetails>; children: ReactNode }>) => {
+  const copy = useAppStore((state) => state.copy)
+  const detail = useItemDetailHover(item)
+  return (
+    <div
+      className="contents"
+      onMouseEnter={(event) => {
+        const anchor = event.currentTarget.firstElementChild
+        if (anchor instanceof HTMLElement) detail.open(anchor)
+      }}
+      onMouseLeave={detail.close}
+      onFocus={(event) => detail.open(event.target)}
+      onBlur={detail.close}
+    >
+      {children}
+      {copy && <ItemSnapshotTooltip copy={copy} hover={detail.hover} />}
+    </div>
+  )
+}

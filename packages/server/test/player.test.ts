@@ -12,8 +12,9 @@ import type { ServerPacket } from '@aresrpg/protocol'
 
 import { item_updates } from '../src/item_updates.ts'
 import type { EventEnvelope } from '../src/protocol.ts'
-import { create_player } from '../src/player.ts'
 import { create_request_limiter } from '../src/request_limiter.ts'
+
+import { create_player } from './helpers/player.ts'
 
 const wire = () => {
   const sent: ServerPacket[] = []
@@ -491,7 +492,7 @@ test('purchase invalidation refreshes the current market slice and rejects old e
   const graph = {
     ...wires.graph,
     read: async (cypher: string, params?: Record<string, unknown>) => {
-      if (cypher.includes('ORDER BY l.at_ms DESC')) {
+      if (cypher.includes('AS groups')) {
         reads += 1
         if (reads === 1) {
           await old_slice
@@ -520,7 +521,10 @@ test('purchase invalidation refreshes the current market slice and rejects old e
   }
   const player = create_player({ ...wires, graph, address: '0xme', admin: false })
   player.on_message(
-    JSON.stringify({ type: 'packet/market_observe', observation: { categories: ['hat'], characters: false } })
+    JSON.stringify({
+      type: 'packet/market_observe',
+      observation: { kind: 'offers', category: 'hat', item_type: 'hat', request: 1 },
+    })
   )
   await flush()
   wires.pubsub.emitter.emit('evt:economy', { type: 'MarketPurchased', data: { seller: '0xother', object: 'sold' } })

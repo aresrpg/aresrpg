@@ -51,6 +51,7 @@ export const is_indexer_channel = (channel: string): boolean => channel.startsWi
  *  the indexer's evt:* channels above. */
 export const mesh = {
   /** one zone's presence facts */
+  presence_reply: (session: string) => `presence:reply:${session}`,
   pos: (world: string, zx: number, zz: number) => `pos:${world}:${zx}:${zz}`,
   /** one world's chat — everyone standing there hears it (owner 2026-08-12) */
   chat_world: (world: string) => `chat:world:${world}`,
@@ -64,13 +65,14 @@ export const mesh = {
 } as const
 
 /** What rides a `pos:` channel — presence facts. `who` is the join-later cure: a server
- *  starting to track a zone probes it, and every player already standing there re-announces —
+ *  starting to track a zone probes it, and each occupant answers only that requesting connection —
  *  presence needs no stored snapshot because the occupants themselves are the state. */
 export type MeshFact =
   | { kind: 'appear'; player: import('@aresrpg/protocol').PresenceRow; address: string }
   | { kind: 'move'; character_id: string; address: string; x: number; y: number; z: number; riding: boolean }
   | { kind: 'leave'; character_id: string; address: string }
-  | { kind: 'who'; address: string; world: string; zx: number; zz: number }
+  | { kind: 'who'; address: string; world: string; zx: number; zz: number; reply_to: string; request: string }
+  | { kind: 'reply'; address: string; player: import('@aresrpg/protocol').PresenceRow; request: string }
 
 /** What rides `chat:world:` / `chat:party:` / `chat:user:` channels. */
 export type ChatFact = {
@@ -120,3 +122,15 @@ export const relations = {
   HOLDS_CLAIM: ['User', 'CrushClaim|BoxClaim'],
   HOLDS_VOUCHER: ['User', 'Giftcard'],
 } as const
+
+/** Process-local dispatch keys, never Redis subscriptions or published channels. */
+export const movement_listener_channel = (zone_channel: string, character_id: string): string =>
+  `local:${zone_channel}:${character_id}`
+
+export const mesh_event_channel = (channel: string, payload: unknown): string => {
+  if (!channel.startsWith('pos:') || !payload || typeof payload !== 'object') return channel
+  const fact = payload as Partial<Extract<MeshFact, { kind: 'move' }>>
+  return fact.kind === 'move' && typeof fact.character_id === 'string'
+    ? movement_listener_channel(channel, fact.character_id)
+    : channel
+}

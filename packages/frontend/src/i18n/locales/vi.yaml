@@ -6,6 +6,9 @@ body: Thế giới đầy đủ cần WebGPU. Hiện đang dùng lưới nhẹ t
 fatal: Trình duyệt này không thể tạo ngữ cảnh đồ họa WebGPU hoặc WebGL.
 engine_recovery: Thế giới đã ngừng tải hoặc hiển thị. Hãy tải lại để thử tiếp.
 engine_reload: Tải lại
+engine_minimum_title: 'Đã giảm đồ họa'
+engine_minimum: 'Không thể tải hoặc hiển thị thế giới. Chất lượng đồ họa và khoảng cách hiển thị đã được giảm xuống mức thấp nhất để giảm tải cho máy tính.'
+engine_continue: 'Tiếp tục'
 world_unavailable_title: Thế giới không khả dụng
 world_unavailable: Thế giới này chưa có cấu hình địa hình.
 mobile_unavailable_label: Truy cập trên di động
@@ -332,6 +335,9 @@ world_hud:
   spawn_engage_conflict: Bầy quái đã thay đổi trước khi bạn tấn công. Có thể người khác đã giao chiến.
   spawn_never_arrived: Trận đấu đã thực hiện nhưng bàn đấu chưa xuất hiện
   resource_press_collect: Nhấn {{key}} để thu thập {{name}}
+  resource_press_collect_all: 'Nhấn {{key}} để thu thập tất cả'
+  resource_collect_all_progress: 'Đang thu thập tất cả · {{completed}}/{{total}}'
+  resource_collect_all_stop: 'Dừng (Esc)'
   resource_need_level: Cần {{job}} cấp {{level}} để thu thập
   resource_need_tool: Cần công cụ {{job}} để thu thập
   resource_gathering: Đang thu thập…
@@ -391,6 +397,8 @@ demo_page:
   control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
   back: Quay lại ứng dụng
 marketplace_page:
+  previous_page: Trước
+  next_page: Tiếp
   prices_title: Lịch sử giá
   prices_period: Khoảng thời gian
   prices_range_7: 7 ngày

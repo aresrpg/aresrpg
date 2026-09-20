@@ -3,6 +3,9 @@ body: El mundo completo necesita WebGPU. En su lugar se muestra una cuadrícula 
 fatal: Este navegador no puede crear un contexto gráfico WebGPU ni WebGL.
 engine_recovery: El mundo dejó de cargarse o mostrarse. Recarga para intentarlo de nuevo.
 engine_reload: Recargar
+engine_minimum_title: 'Gráficos reducidos'
+engine_minimum: 'No se pudo cargar o mostrar el mundo. La calidad gráfica y la distancia de renderizado se han reducido al mínimo para ayudar a tu ordenador.'
+engine_continue: 'Continuar'
 world_unavailable_title: Mundo no disponible
 world_unavailable: Este mundo todavía no tiene una receta de terreno creada.
 mobile_unavailable_label: Acceso móvil
@@ -329,6 +332,9 @@ world_hud:
   spawn_engage_conflict: 'El grupo cambió antes de que llegara tu ataque. Puede que otro jugador lo haya atacado.'
   spawn_never_arrived: 'El combate se ejecutó, pero el tablero no llegó'
   resource_press_collect: 'Pulsa {{key}} para recoger {{name}}'
+  resource_press_collect_all: 'Pulsa {{key}} para recolectar todo'
+  resource_collect_all_progress: 'Recolectando todo · {{completed}}/{{total}}'
+  resource_collect_all_stop: 'Detener (Esc)'
   resource_need_level: 'Necesitas {{job}} nv. {{level}}'
   resource_need_tool: 'Necesitas una herramienta de {{job}}'
   resource_gathering: 'Recolectando…'
@@ -388,6 +394,8 @@ demo_page:
   control_hint: Haz clic en el canvas · WASD para moverte · Espacio para saltar · Ratón para mirar
   back: Volver a la aplicación
 marketplace_page:
+  previous_page: Anterior
+  next_page: Siguiente
   prices_title: 'Historial de precios'
   prices_period: 'Periodo'
   prices_range_7: '7D'

@@ -17,6 +17,9 @@ export type AppCopy = Readonly<{
   fatal: string
   engine_recovery: string
   engine_reload: string
+  engine_minimum_title: string
+  engine_minimum: string
+  engine_continue: string
   world_unavailable_title: string
   world_unavailable: string
   mobile_unavailable_label: string
@@ -190,6 +193,7 @@ const loaders: Readonly<Record<Locale, () => Promise<{ default: unknown }>>> = O
   ru: () => import('./locales/ru.yaml'),
   vi: () => import('./locales/vi.yaml'),
   ko: () => import('./locales/ko.yaml'),
+  pt: () => import('./locales/pt.yaml'),
 })
 
 export const load_app_copy = async (locale: Locale): Promise<AppCopy> => (await loaders[locale]()).default as AppCopy

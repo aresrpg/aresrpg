@@ -2,11 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { renderToStaticMarkup } from 'react-dom/server'
 
 import { create_app } from '../../src/store.ts'
-import { SPEECH_DURATION_MS, type ChatLine } from '../../src/modules/chat.ts'
-import { SpeechBubble } from '../../src/components/SpeechBubble.tsx'
+import { SPEECH_DURATION_MS, speech_text, type ChatLine } from '../../src/modules/chat.ts'
 
 const line = (id: string, character_id = '0xa'): ChatLine => ({
   id,
@@ -97,8 +95,6 @@ test('bubbles render structured chat as escaped plain text', () => {
       },
     },
   }
-  const html = renderToStaticMarkup(<SpeechBubble speech={{ line: speech_line, expires_at: 6_000 }} />)
-  expect(html).toContain('&lt;script&gt; [Hat][nauvis · 0, 0]')
-  expect(html).not.toContain('<script>')
-  expect(renderToStaticMarkup(<SpeechBubble speech={undefined} />)).toBe('')
+  expect(speech_text({ line: speech_line, expires_at: 6_000 })).toBe('<script> [Hat][nauvis · 0, 0]')
+  expect(speech_text(undefined)).toBeUndefined()
 })

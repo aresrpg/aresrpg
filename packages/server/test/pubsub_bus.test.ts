@@ -12,6 +12,7 @@ import {
   create_watcher,
   type BusRedis,
 } from '../src/pubsub_bus.ts'
+import { movement_listener_channel } from '../src/protocol.ts'
 
 const fake_redis = () => {
   const emitter = new EventEmitter()
@@ -286,4 +287,45 @@ test('a rejected old watch cannot erase a replacement watch on the same channel'
   watcher.unwatch('pos:w:0:0')
   graph.close()
   mesh.close()
+})
+
+test('concurrent online-count readers share one Redis scan', async () => {
+  const { redis } = fake_redis()
+  let scans = 0
+  redis.scan = async () => {
+    scans++
+    return ['0', []]
+  }
+  const bus = create_mesh_bus({ subscriber: redis, publisher: redis })
+  await Promise.all(Array.from({ length: 100 }, () => bus.cluster_online()))
+  expect(scans).toBe(1)
+  bus.close()
+})
+
+test('mesh movements dispatch only to identity listeners without additional Redis channels', async () => {
+  const subscriber = fake_redis()
+  const publisher = fake_redis()
+  const bus = create_mesh_bus({ subscriber: subscriber.redis, publisher: publisher.redis })
+  let broad = 0
+  let targeted = 0
+  const zone = 'pos:nauvis:97:97'
+  for (let index = 0; index < 100; index++)
+    bus.emitter.on(zone, () => {
+      broad++
+    })
+  bus.emitter.on(movement_listener_channel(zone, 'visible'), () => {
+    targeted++
+  })
+  await bus.subscribe(zone)
+  try {
+    subscriber.emitter.emit('message', zone, JSON.stringify({ kind: 'move', character_id: 'visible' }))
+    subscriber.emitter.emit('message', zone, JSON.stringify({ kind: 'move', character_id: 'hidden' }))
+    expect(broad).toBe(0)
+    expect(targeted).toBe(1)
+    subscriber.emitter.emit('message', zone, JSON.stringify({ kind: 'leave', character_id: 'visible' }))
+    expect(broad).toBe(100)
+    expect(subscriber.calls.filter(([command]) => command === 'subscribe')).toEqual([['subscribe', zone]])
+  } finally {
+    bus.close()
+  }
 })

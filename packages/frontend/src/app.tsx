@@ -16,7 +16,7 @@ import { ThinkingOrb } from 'thinking-orbs'
 import { useNumbers } from './i18n/useNumbers.ts'
 import { LocaleScope } from './i18n/LocaleScope.tsx'
 import { player_error_text } from './i18n/player_error.ts'
-import { EngineNotice } from './components/EngineNotice.tsx'
+import { EngineNotice, engine_notice_kind } from './components/EngineNotice.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
 import { WalletChoices, WalletConnectButton, WalletPickerModal } from './components/WalletPickerModal.tsx'
 import { AppShell } from './components/AppShell.tsx'
@@ -35,7 +35,7 @@ import { RunToProgress } from './game/hud/RunToProgress.tsx'
 import { Minimap } from './game/hud/Minimap.tsx'
 import { OverworldVitals } from './game/hud/OverworldVitals.tsx'
 import { fight_access_from } from './game/core/settings.ts'
-import { GatherProgress } from './game/hud/GatherProgress.tsx'
+import { BackgroundGatherProgress, GatherProgress } from './game/hud/GatherProgress.tsx'
 import { BiomeMusic } from './game/audio/BiomeMusic.tsx'
 import { MountPrompt } from './components/MountPrompt.tsx'
 import { PortalPrompt } from './components/PortalPrompt.tsx'
@@ -266,7 +266,7 @@ export function App() {
   const flatten_locked = engine_status.backend === 'grid'
   const { wallet } = session
   const [show_wallets, set_show_wallets] = useState(false)
-  const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState(false)
+  const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState<string | null>(null)
   const attached_canvas = useRef<HTMLCanvasElement | null>(null)
   const in_app = !!wallet
   /* eslint-disable functional/prefer-immutable-types, functional/immutable-data -- React owns this mutable DOM ref; the engine needs the real canvas element. */
@@ -324,13 +324,13 @@ export function App() {
     [copy, locale, session.characters.length, wallet]
   )
   const sui_insufficient = character_creation_insufficient(session.sui_balance_mist)
-  const world_unavailable = engine_status.issue?.code === 'world_unavailable'
+  const notice_kind = engine_notice_kind(engine_status, engine_status.recovery === 'minimum')
   const show_graphics_notice = graphics_notice_visible(
     navigation.page === 'airdrop',
-    engine_status.state === 'failed',
-    world_unavailable,
-    graphics_notice_dismissed,
-    engine_status.state === 'degraded'
+    notice_kind === 'failed',
+    notice_kind === 'world',
+    graphics_notice_dismissed === notice_kind,
+    notice_kind !== null
   )
   const loading_universe = session.auth_status === 'connecting' || (in_app && !session.roster_loaded)
   if (!copy) return <main className="fixed inset-0 bg-bg" />
@@ -352,7 +352,7 @@ export function App() {
             active={city_arrival_active(in_app, navigation.page, fight_active, dungeon_active)}
             copy={copy}
           />
-          <canvas ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
+          <canvas key={engine_status.recovery} ref={attach_canvas} className="absolute inset-0 size-full touch-none" />
 
           {in_app && navigation.page === 'world' && !fight_active && !dungeon_active && (
             <div className={`${CANVAS_OVERLAY_CLASS} z-[105]`}>
@@ -369,7 +369,7 @@ export function App() {
               <ZoneRevealBanner copy={copy} />
               <Minimap copy={copy} />
               <OverworldVitals />
-              <GatherProgress copy={copy} />
+              <GatherProgress copy={copy} position="world" />
               <WorldChat copy={copy} />
             </div>
           )}
@@ -455,6 +455,7 @@ export function App() {
           )}
         {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
         <Toasts />
+        <BackgroundGatherProgress copy={copy} />
         <CrushResultModal copy={copy} />
         <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />
 
@@ -462,7 +463,8 @@ export function App() {
           <EngineNotice
             copy={copy}
             status={engine_status}
-            dismiss={() => set_graphics_notice_dismissed(true)}
+            minimum_graphics={notice_kind === 'minimum'}
+            dismiss={() => set_graphics_notice_dismissed(notice_kind)}
             reload={() => globalThis.location.reload()}
           />
         )}

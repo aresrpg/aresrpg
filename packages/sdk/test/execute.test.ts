@@ -53,8 +53,8 @@ describe('the execute gate (core interface)', () => {
     expect(client.calls.executions).toBe(0)
   })
 
-  test('game transactions reserve the owner-approved 0.2 SUI ceiling', () => {
-    expect(GAS_BUDGET_MIST).toBe(200_000_000n)
+  test('game transactions reserve the owner-approved 0.05 SUI ceiling', () => {
+    expect(GAS_BUDGET_MIST).toBe(50_000_000n)
   })
 
   test('object hydration stays below the Core query payload limit', async () => {

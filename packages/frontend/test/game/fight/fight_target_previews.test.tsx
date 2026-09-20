@@ -4,57 +4,40 @@
 import { expect, test } from 'bun:test'
 
 import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
-import { FightTargetPreviews } from '../../../src/game/fight/FightTargetPreviews.tsx'
+import { fight_target_caption } from '../../../src/game/fight/FightTargetPreviews.tsx'
 import { active_effect_lines, FightEffectLines } from '../../../src/game/fight/FightEffectLines.tsx'
 
 test('spell aiming keeps the fighter nametag to identity and resolved life only', () => {
-  const html = renderToStaticMarkup(
-    <FightTargetPreviews
-      anchors={Object.freeze({ fight_mob_1: Object.freeze({ x: 320, y: 180 }) })}
-      critical
-      targets={Object.freeze([
-        Object.freeze({
-          entity_id: 'fight_mob_1',
-          fighter: 1n,
-          level: 42n,
-          name: 'Bannerwatch',
-          allied: false,
-          hp_before: 200n,
-          hp_after: 160n,
-          ap_before: 4n,
-          ap_after: 4n,
-          ap_delta: -2n,
-          mp_before: 4n,
-          mp_after: 4n,
-          mp_delta: 0n,
-          cell_before: 32n,
-          cell_after: 34n,
-          movements: Object.freeze([Object.freeze({ mode: 'push' as const, cells: 2n })]),
-          effects: Object.freeze([
-            Object.freeze({ kind: 0n, channel: 12n, element: 'earth', value: 40n, turns: 0n }),
-            Object.freeze({ kind: 5n, channel: 6n, element: '', value: 2n, turns: 2n }),
-          ]),
-        }),
-      ])}
-    />
+  const caption = fight_target_caption(
+    {
+      entity_id: 'fight_mob_1',
+      fighter: 1n,
+      level: 42n,
+      name: 'Bannerwatch',
+      allied: false,
+      hp_before: 200n,
+      hp_after: 160n,
+      ap_before: 4n,
+      ap_after: 4n,
+      ap_delta: -2n,
+      mp_before: 4n,
+      mp_after: 4n,
+      mp_delta: 0n,
+      cell_before: 32n,
+      cell_after: 34n,
+      movements: Object.freeze([Object.freeze({ mode: 'push' as const, cells: 2n })]),
+      effects: Object.freeze([
+        Object.freeze({ kind: 0n, channel: 12n, element: 'earth', value: 40n, turns: 0n }),
+        Object.freeze({ kind: 5n, channel: 6n, element: '', value: 2n, turns: 2n }),
+      ]),
+    },
+    'Lv. 42',
+    true
   )
-  const text = html.replaceAll(/<[^>]+>/g, '')
-  const compact_text = text.replaceAll(/\s+/g, ' ').trim()
-
-  expect(html).toContain('Bannerwatch')
-  expect(html).toContain('Lv. 42')
-  expect(html).toContain('200')
-  expect(html).toContain('−40')
-  expect(html).toContain('ent-tt__delta--dmg')
-  expect(html).not.toContain('fxl__txt')
-  expect(compact_text).not.toContain('AP')
-  expect(compact_text).not.toContain('Pushes')
-  expect(html).not.toContain(' · ')
-  expect(html).not.toContain('fight-hud__effect')
-  expect(html).not.toContain('cast_cost')
-  expect(html).toContain('ent-tt__delta--crit')
-  expect(html).not.toContain('data-fight-resistances')
-  expect(compact_text).toBe('BannerwatchLv. 42(200 −40)')
+  expect(caption.name).toBe('Bannerwatch')
+  expect(caption.suffix?.map(({ text }) => text).join('')).toBe(' Lv. 42 (200 −40)')
+  expect(caption.suffix?.[1]?.color).toBe('#ffd074')
+  expect(caption.lines).toBeUndefined()
 })
 
 test('the compact turn status names a state and keeps the legacy damage-over-time wording', () => {

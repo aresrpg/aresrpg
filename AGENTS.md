@@ -81,7 +81,7 @@ question that would close the evidence gap.
 - Frontend UI: functional React and Tailwind utilities; no component library.
 - Visual language: shared dark-purple surface tokens, gold/cyan semantic accents, JetBrains Mono,
   uppercase micro-labels, sharp terminal structure, and restrained atmospheric motion.
-- Every player-facing string ships in all ten YAML locales under
+- Every player-facing string ships in all supported YAML locales under
   `packages/frontend/src/i18n/locales/` in the same change.
 - `seed/` is the only authored content home. Do not add frontend content copies.
 - The frontend never imports `@mysten/*`; every client-side chain write goes through the SDK.

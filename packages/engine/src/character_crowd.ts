@@ -2,54 +2,45 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import {
   AnimationMixer,
-  Color,
   DynamicDrawUsage,
   Group,
-  InstancedBufferAttribute,
   InstancedInterleavedBuffer,
-  InterleavedBufferAttribute,
+  type InterleavedBufferAttribute,
   Matrix4,
-  MeshStandardMaterial,
   Vector3,
   type AnimationAction,
-  type BufferGeometry,
-  type Material,
   type Mesh,
   type Object3D,
   type Scene,
-  type Texture,
 } from 'three'
-import { MeshStandardNodeMaterial } from 'three/webgpu'
-import { attribute, mix, texture, vec4 } from 'three/tsl'
 
-import { create_character_model, type CharacterModel } from './character_model.ts'
+import {
+  create_instance_buffers,
+  prepare_mesh,
+  texture_rows,
+  write_color,
+  upload_colors,
+  upload_instances,
+  instance_matrix,
+  same_colors,
+  BATCH_CAPACITY,
+  type CrowdSpec,
+  type BatchMesh,
+} from './character_crowd_mesh.ts'
+import { create_crowd_parts, type CharacterPartLoader } from './character_crowd_parts.ts'
+import { create_character_model, load_character_part, type CharacterModel } from './character_model.ts'
 import { resolve_entity_locomotion_clip } from './entities.ts'
 import type { CharacterAnimationName, CharacterAppearanceRender, CharacterEntityRender } from './types.ts'
 
-const BATCH_CAPACITY = 256
 const CHARACTER_HEIGHT = 2
-const COLOR_ATTRIBUTES = Object.freeze(['crowdColor1', 'crowdColor2', 'crowdColor3'] as const)
-const TOPOLOGY_KEYS = new WeakMap<CharacterAppearanceRender, string>()
 
-type CrowdSpec = CharacterEntityRender &
-  Readonly<{ anchor: Readonly<{ kind: 'world'; position: readonly [number, number, number] }> }>
 type CrowdAnimation = Readonly<{ name: CharacterAnimationName; time_scale: number }>
-type InstancedChild = Mesh & {
-  isInstancedMesh: true
-  instanceMatrix: InstancedBufferAttribute
-  count: number
-}
-type BatchMesh = Readonly<{
-  mesh: InstancedChild
-  geometry: BufferGeometry
-  materials: readonly Material[]
-  attachment: Readonly<{ bone: Object3D; offset: Matrix4 }> | null
-}>
 type LoadedBatch = Readonly<{
   root: Group
   model: CharacterModel
+  parts: ReturnType<typeof create_crowd_parts>
   mixer: AnimationMixer | null
-  base_matrices: InstancedBufferAttribute
+  base_matrices: InstancedInterleavedBuffer
   color_buffer: InstancedInterleavedBuffer
   colors: readonly InterleavedBufferAttribute[]
   meshes: readonly BatchMesh[]
@@ -64,17 +55,7 @@ type BatchSlot = {
   loaded: LoadedBatch | null
 }
 
-const material_rows = (material: Material | Material[]): readonly Material[] =>
-  Array.isArray(material) ? material : [material]
-
-const crowd_topology = (appearance: CharacterAppearanceRender): string => {
-  const cached = TOPOLOGY_KEYS.get(appearance)
-  if (cached) return cached
-  const { body_url, hair_url, worn } = appearance
-  const key = JSON.stringify({ body_url, hair_url, worn })
-  TOPOLOGY_KEYS.set(appearance, key)
-  return key
-}
+const crowd_topology = (appearance: CharacterAppearanceRender): string => appearance.body_url ?? 'placeholder'
 
 export const character_crowd_key = (spec: Readonly<CharacterEntityRender>): string => {
   const animation = spec.animation ?? Object.freeze({ name: 'IDLE' as const, time_scale: 1 })
@@ -86,68 +67,6 @@ const crowd_animation = (spec: Readonly<CharacterEntityRender>): CrowdAnimation 
 
 export const is_character_crowd_spec = (spec: Readonly<CharacterEntityRender>): spec is CrowdSpec =>
   spec.presentation === 'crowd' && spec.anchor.kind === 'world' && spec.visible !== false && !spec.visual_effect
-
-const texture_rows = (root: Object3D): ReadonlyMap<string, Texture> => {
-  const rows = new Map<string, Texture>()
-  root.traverse((object) => {
-    const mesh = object as Mesh
-    if (!mesh.isMesh) return
-    material_rows(mesh.material).forEach((material) => {
-      const { map } = material as MeshStandardMaterial
-      if (map?.name) rows.set(map.name, map)
-    })
-  })
-  return rows
-}
-
-const crowd_color_node = (base: Texture, textures: ReadonlyMap<string, Texture>) => {
-  const match = base.name.match(/^(.+)_base$/)
-  const sampled = texture(base)
-  if (!match?.[1]) return sampled
-  let { rgb } = sampled
-  COLOR_ATTRIBUTES.forEach((attribute_name, index) => {
-    const mask = textures.get(`${match[1]}_color${index + 1}`)
-    if (!mask) return
-    const sampled_mask = texture(mask)
-    rgb = mix(rgb, sampled_mask.rgb.mul(attribute(attribute_name, 'vec3')), sampled_mask.a)
-  })
-  return vec4(rgb, sampled.a)
-}
-
-const crowd_material = (source: Material, textures: ReadonlyMap<string, Texture>): MeshStandardNodeMaterial => {
-  const material = new MeshStandardNodeMaterial()
-  material.copy(source as MeshStandardMaterial)
-  const { map } = source as MeshStandardMaterial
-  if (map) material.colorNode = crowd_color_node(map, textures)
-  return material
-}
-
-const prepare_mesh = (
-  mesh: Mesh,
-  textures: ReadonlyMap<string, Texture>,
-  matrices: InstancedBufferAttribute,
-  colors: readonly InterleavedBufferAttribute[],
-  attachment: BatchMesh['attachment']
-): BatchMesh => {
-  const geometry = mesh.geometry.clone()
-  COLOR_ATTRIBUTES.forEach((name, index) => geometry.setAttribute(name, colors[index]!))
-  const materials = material_rows(mesh.material).map((material) => crowd_material(material, textures))
-  mesh.geometry = geometry
-  mesh.material = Array.isArray(mesh.material) ? [...materials] : materials[0]!
-  const instanced = mesh as InstancedChild
-  instanced.isInstancedMesh = true
-  instanced.instanceMatrix = matrices
-  instanced.count = 0
-  instanced.frustumCulled = false
-  instanced.castShadow = true
-  instanced.receiveShadow = true
-  return Object.freeze({
-    mesh: instanced,
-    geometry,
-    materials: Object.freeze(materials),
-    attachment,
-  })
-}
 
 const parent_bone = (parent: Object3D | null, root: Object3D): Object3D | null => {
   if (!parent || parent === root) return null
@@ -176,21 +95,16 @@ const load_batch = async (
   key: string,
   appearance: CharacterAppearanceRender,
   animation: CrowdAnimation,
-  load_model: (appearance: CharacterAppearanceRender) => Promise<CharacterModel>
+  load_model: (appearance: CharacterAppearanceRender) => Promise<CharacterModel>,
+  load_part: CharacterPartLoader
 ): Promise<LoadedBatch> => {
-  const model = await load_model(appearance)
+  const model = await load_model({ ...appearance, hair_url: null, worn: { head: null, back: null } })
   const root = new Group()
   root.name = `character-crowd:${key}`
   root.add(model.root)
   root.position.y = -model.min_y
   const textures = texture_rows(model.root)
-  const base_matrices = new InstancedBufferAttribute(new Float32Array(BATCH_CAPACITY * 16), 16).setUsage(
-    DynamicDrawUsage
-  )
-  const color_buffer = new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 9), 9, 1).setUsage(
-    DynamicDrawUsage
-  )
-  const colors = COLOR_ATTRIBUTES.map((_, index) => new InterleavedBufferAttribute(color_buffer, 3, index * 3))
+  const { base_matrices, color_buffer, colors } = create_instance_buffers()
   const meshes: BatchMesh[] = []
   const source_meshes: Mesh[] = []
   model.root.traverse((object) => {
@@ -200,7 +114,7 @@ const load_batch = async (
   source_meshes.forEach((mesh) => {
     const attachment = detach_attachment(mesh, model.root)
     const matrices = attachment
-      ? new InstancedBufferAttribute(new Float32Array(BATCH_CAPACITY * 16), 16).setUsage(DynamicDrawUsage)
+      ? new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1).setUsage(DynamicDrawUsage)
       : base_matrices
     meshes.push(prepare_mesh(mesh, textures, matrices, colors, attachment))
   })
@@ -215,9 +129,11 @@ const load_batch = async (
   set_animation(animation)
   mixer?.update(0)
   const scale = model.root.scale.x || 1
+  const parts = create_crowd_parts(model.root, scale, load_part)
   let disposed = false
   return Object.freeze({
     root,
+    parts,
     model,
     mixer,
     base_matrices,
@@ -231,30 +147,11 @@ const load_batch = async (
       disposed = true
       action?.stop()
       mixer?.stopAllAction()
-      meshes.forEach(({ geometry, materials }) => {
-        geometry.dispose()
-        materials.forEach((material) => material.dispose())
-      })
+      meshes.forEach((mesh) => mesh.dispose())
+      parts.dispose()
       model.dispose()
     },
   })
-}
-
-const write_color = (attribute_row: InterleavedBufferAttribute, index: number, value: string): void => {
-  const color = new Color(value)
-  attribute_row.setXYZ(index, color.r, color.g, color.b)
-}
-
-const upload_colors = (batch: LoadedBatch, count: number): void => {
-  batch.color_buffer.clearUpdateRanges()
-  batch.color_buffer.addUpdateRange(0, count * batch.color_buffer.stride)
-  batch.color_buffer.needsUpdate = true
-}
-
-const upload_instances = (attribute_row: InstancedBufferAttribute, count: number): void => {
-  attribute_row.clearUpdateRanges()
-  attribute_row.addUpdateRange(0, count * attribute_row.itemSize)
-  attribute_row.needsUpdate = true
 }
 
 const attachment_matrices = (batch: LoadedBatch): readonly (Matrix4 | null)[] => {
@@ -263,13 +160,6 @@ const attachment_matrices = (batch: LoadedBatch): readonly (Matrix4 | null)[] =>
   return batch.meshes.map(({ attachment }) =>
     attachment ? root_inverse.clone().multiply(attachment.bone.matrixWorld).multiply(attachment.offset) : null
   )
-}
-
-const instance_matrix = (spec: CrowdSpec, scale: number, target: Matrix4): Matrix4 => {
-  const [x, y, z] = spec.anchor.position
-  return target
-    .makeRotationY(spec.facing.kind === 'yaw' ? spec.facing.yaw : 0)
-    .setPosition(x / scale, y / scale, z / scale)
 }
 
 const apply_attachment_specs = (batch: LoadedBatch, specs: readonly CrowdSpec[]): void => {
@@ -282,20 +172,14 @@ const apply_attachment_specs = (batch: LoadedBatch, specs: readonly CrowdSpec[])
       matrix
         .fromArray(batch.base_matrices.array, index * 16)
         .multiply(attachment)
-        .toArray(mesh.instanceMatrix.array, index * 16)
+        .toArray(mesh.instance_matrix.array, index * 16)
     })
-    upload_instances(mesh.instanceMatrix, specs.length)
+    upload_instances(mesh.instance_matrix, specs.length)
   })
 }
 
 const same_specs = (left: readonly CrowdSpec[], right: readonly CrowdSpec[]): boolean =>
   left.length === right.length && left.every((spec, index) => spec === right[index])
-
-const same_colors = (left: readonly CrowdSpec[], right: readonly CrowdSpec[]): boolean =>
-  left.length === right.length &&
-  left.every((spec, index) =>
-    spec.appearance.colors.every((color, slot) => color === right[index]?.appearance.colors[slot])
-  )
 
 const grouped_specs = (specs: readonly CrowdSpec[]): ReadonlyMap<string, readonly CrowdSpec[]> => {
   const groups = new Map<string, CrowdSpec[]>()
@@ -319,10 +203,13 @@ const grouped_specs = (specs: readonly CrowdSpec[]): ReadonlyMap<string, readonl
 export const create_character_crowd_layer = ({
   scene,
   load_model = (appearance) => create_character_model(appearance, { colorize: false }),
+  load_part = load_character_part,
 }: Readonly<{
   scene: Scene
   load_model?: (appearance: CharacterAppearanceRender) => Promise<CharacterModel>
+  load_part?: CharacterPartLoader
 }>) => {
+  let disposed = false
   const batches = new Map<string, BatchSlot>()
   const anchors = new Map<string, Vector3>()
   let submitted_specs: readonly CrowdSpec[] = Object.freeze([])
@@ -330,6 +217,7 @@ export const create_character_crowd_layer = ({
 
   // Anchors become live with a loaded model and its instance data.
   const apply_specs = (batch: LoadedBatch, specs: readonly CrowdSpec[], update_colors = true): void => {
+    batch.parts.set(specs)
     const base = new Matrix4()
     specs.forEach((spec, index) => {
       const [x, y, z] = spec.anchor.position
@@ -340,8 +228,8 @@ export const create_character_crowd_layer = ({
         spec.appearance.colors.forEach((color, color_index) => write_color(batch.colors[color_index]!, index, color))
     })
     upload_instances(batch.base_matrices, specs.length)
-    batch.meshes.forEach(({ mesh }) => {
-      mesh.count = specs.length
+    batch.meshes.forEach(({ geometry }) => {
+      geometry.instanceCount = specs.length
     })
     // Animated attachments consume the final pose in tick, immediately before rendering.
     if (!batch.mixer) apply_attachment_specs(batch, specs)
@@ -359,7 +247,7 @@ export const create_character_crowd_layer = ({
   }
 
   const set = (specs: readonly CrowdSpec[]): void => {
-    if (same_specs(submitted_specs, specs)) return
+    if (disposed || same_specs(submitted_specs, specs)) return
     submitted_specs = specs
     anchors.clear()
     const groups = grouped_specs(specs)
@@ -394,7 +282,7 @@ export const create_character_crowd_layer = ({
       const animation = crowd_animation(first)
       const slot: BatchSlot = { key, topology, specs: rows, loaded: null }
       batches.set(key, slot)
-      void load_batch(key, first.appearance, animation, load_model).then(
+      void load_batch(key, first.appearance, animation, load_model, load_part).then(
         (loaded) => {
           const current = batches.get(key)
           if (!current || current !== slot) {
@@ -421,6 +309,7 @@ export const create_character_crowd_layer = ({
       previous_tick = now
       batches.forEach(({ loaded, specs }) => {
         loaded?.mixer?.update(delta)
+        loaded?.parts.tick()
         if (loaded?.mixer && loaded.meshes.some(({ attachment }) => attachment)) apply_attachment_specs(loaded, specs)
       })
     },
@@ -433,6 +322,7 @@ export const create_character_crowd_layer = ({
         instances: [...batches.values()].reduce((count, batch) => count + batch.specs.length, 0),
       }),
     dispose: (): void => {
+      disposed = true
       ;[...batches.keys()].forEach(remove)
       submitted_specs = Object.freeze([])
       anchors.clear()

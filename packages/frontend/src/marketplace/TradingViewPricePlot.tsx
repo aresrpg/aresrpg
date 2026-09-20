@@ -10,7 +10,7 @@ import type { IChartApi, LogicalRange, UTCTimestamp } from 'lightweight-charts'
 import type { CopyText } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 
-import { format_unit_price, price_date, price_segments, type PricePoint } from './price_history_model.ts'
+import { format_unit_price, price_date, type PricePoint } from './price_history_model.ts'
 
 export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readonly PricePoint[]; text: CopyText }>) => {
   const element = useRef<HTMLDivElement>(null)
@@ -60,27 +60,21 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
     const chart = chart_ref.current
     if (!chart || !element.current) return
     const cyan = getComputedStyle(element.current).getPropertyValue('--color-cyan').trim()
-    const series = price_segments(points).map((segment, index) => {
-      const line = chart.addSeries(LineSeries, {
-        color: cyan,
-        lineWidth: 2,
-        lineVisible: segment.length > 1,
-        pointMarkersVisible: segment.length === 1,
-        pointMarkersRadius: 3,
-        priceLineVisible: false,
-        lastValueVisible: false,
-        priceFormat: { type: 'custom', minMove: 1e-12, formatter: (value: number) => format_unit_price(value, locale) },
-      })
-      const values = new Map(segment.map((point) => [point.at_ms, point.value!]))
-      line.setData(
-        (index === 0 ? points : segment).map(({ at_ms }) => {
-          const time = (at_ms / 1000) as UTCTimestamp
-          const value = values.get(at_ms)
-          return value === undefined ? { time } : { time, value }
-        })
-      )
-      return line
+    const line = chart.addSeries(LineSeries, {
+      color: cyan,
+      lineWidth: 2,
+      pointMarkersVisible: true,
+      pointMarkersRadius: 3,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      priceFormat: { type: 'custom', minMove: 1e-12, formatter: (value: number) => format_unit_price(value, locale) },
     })
+    line.setData(
+      points.map(({ at_ms, value }) => {
+        const time = (at_ms / 1000) as UTCTimestamp
+        return value === null ? { time } : { time, value }
+      })
+    )
     if (visible_range.current) chart.timeScale().setVisibleLogicalRange(visible_range.current)
     else chart.timeScale().fitContent()
     const hover = ({ time }: Readonly<{ time?: unknown }>): void => {
@@ -91,7 +85,7 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
       if (chart_ref.current !== chart) return
       visible_range.current = chart.timeScale().getVisibleLogicalRange()
       chart.unsubscribeCrosshairMove(hover)
-      series.forEach((line) => chart.removeSeries(line))
+      chart.removeSeries(line)
     }
   }, [points, locale])
   return (

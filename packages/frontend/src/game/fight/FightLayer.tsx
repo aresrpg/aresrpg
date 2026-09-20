@@ -106,9 +106,6 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
   const [crit_serial, set_crit_serial] = useState(0)
   const [restore_applied, set_restore_applied] = useState(0)
   const [chimed_turn, set_chimed_turn] = useState<string | null>(null)
-  const [entity_anchors, set_entity_anchors] = useState<Readonly<Record<string, Readonly<{ x: number; y: number }>>>>(
-    Object.freeze({})
-  )
   const checkpoint = fight.checkpoint
   const { cell: hovered_cell, seat: hovered_seat } = resolve_fight_hover(checkpoint, hover)
   const command_fight = fight.mode === 'remote' ? (checkpoint?.contract.id ?? null) : null
@@ -547,16 +544,10 @@ export const FightLayer = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Sce
         on_cell_hover={(cell) =>
           set_hover(cell === null ? null : { fight: checkpoint.contract.id, type: 'cell', cell })
         }
-        on_entity_anchors={set_entity_anchors}
         quality={quality}
         show_start_cells={checkpoint.contract.round === 0n}
-        tracked_entity_ids={Object.freeze(preview_targets.map(({ entity_id }) => entity_id))}
       />
-      <FightTargetPreviews
-        anchors={entity_anchors}
-        critical={spell_preview?.critical ?? false}
-        targets={preview_targets}
-      />
+      <FightTargetPreviews scene={scene} critical={spell_preview?.critical ?? false} targets={preview_targets} />
       {crit_serial > 0 && <div aria-hidden className="fight-crit-vignette" key={crit_serial} />}
       <FightHud
         actions_locked={actions_locked}

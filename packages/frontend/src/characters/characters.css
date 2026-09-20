@@ -526,9 +526,11 @@
     max-height: none;
     padding: 0;
   }
+  .gw-tab .jobs__table {
+    column-gap: 4px;
+  }
   .gw-tab .jobs__table-head,
   .gw-tab .jobs__table-row {
-    grid-template-columns: 32px 40px minmax(0, 1fr) 38px 32px;
     gap: 4px;
     padding: 8px 0;
   }

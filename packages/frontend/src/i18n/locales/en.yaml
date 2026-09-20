@@ -3,6 +3,9 @@ body: The full world needs WebGPU. A lightweight grid is running instead.
 fatal: This browser cannot create either a WebGPU or WebGL graphics context.
 engine_recovery: The world stopped loading or rendering. Reload to try again.
 engine_reload: Reload
+engine_minimum_title: 'Graphics reduced'
+engine_minimum: 'The world could not load or render. Graphics quality and render distance were reduced to minimum settings to help your computer.'
+engine_continue: 'Continue'
 world_unavailable_title: World unavailable
 world_unavailable: This world does not have an authored terrain recipe yet.
 mobile_unavailable_label: Mobile access
@@ -329,6 +332,9 @@ world_hud:
   spawn_engage_conflict: 'That pack changed before your attack landed. Another player may have engaged it.'
   spawn_never_arrived: 'The fight executed, but its board never arrived'
   resource_press_collect: 'Press {{key}} to collect {{name}}'
+  resource_press_collect_all: 'Press {{key}} to collect all'
+  resource_collect_all_progress: 'Collecting all · {{completed}}/{{total}}'
+  resource_collect_all_stop: 'Stop (Esc)'
   resource_need_level: 'You need {{job}} lvl {{level}} to collect'
   resource_need_tool: 'You need a {{job}} tool to collect'
   resource_gathering: 'Gathering…'
@@ -388,6 +394,8 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  previous_page: Previous
+  next_page: Next
   prices_title: 'Price history'
   prices_period: 'Period'
   prices_range_7: '7D'

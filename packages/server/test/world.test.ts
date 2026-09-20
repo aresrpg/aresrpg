@@ -3,8 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { create_player } from '../src/player.ts'
-
+import { create_player } from './helpers/player.ts'
 import { wire, make_character, flush } from './helpers/world_wire.ts'
 
 describe('the world module', () => {
@@ -197,8 +196,12 @@ describe('the world module', () => {
         riding: false,
       })
     )
+    await new Promise((resolve) => setTimeout(resolve, 60))
     expect(
-      first.sent.some((packet) => packet.type === 'packet/player_moved' && packet.character_id === '0xb')
+      first.sent.some(
+        (packet) =>
+          packet.type === 'packet/players_moved' && packet.positions.some(({ character_id }) => character_id === '0xb')
+      )
     ).toBeTrue()
 
     second_player.on_message(
@@ -463,6 +466,8 @@ describe('the world module', () => {
         address,
         player: {
           character_id: `0xp${index}`,
+          world: 'overworld',
+          riding: false,
           name: `p${index}`,
           classe: 'senshi',
           sex: 'male',
@@ -478,11 +483,13 @@ describe('the world module', () => {
       })
     for (let index = 0; index < 120; index++) appear(index, `0xstranger${index}`)
     appear(999, '0xbestie') // the friend arrives past the cap
+    await flush()
     const appeared = sent.filter((packet) => packet.type === 'packet/player_appeared')
     expect(appeared).toHaveLength(101) // 100 strangers + the friend
     // a NEAR uncapped stranger's move flows; a capped one's is silent
     pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'move',
+      riding: false,
       character_id: '0xp5',
       address: '0xstranger5',
       x: 105,
@@ -491,27 +498,31 @@ describe('the world module', () => {
     })
     pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'move',
+      riding: false,
       character_id: '0xp115',
       address: '0xstranger115',
       x: 105,
       y: 0,
       z: 105,
     })
-    const moves = sent.filter((packet) => packet.type === 'packet/player_moved')
-    expect(moves.map((move) => (move as { character_id: string }).character_id)).toEqual(['0xp5'])
+    await new Promise((resolve) => setTimeout(resolve, 60))
+    const moves = sent.flatMap((packet) => (packet.type === 'packet/players_moved' ? packet.positions : []))
+    expect(moves.map(({ character_id }) => character_id)).toEqual(['0xp5'])
     // a FAR player's moves throttle to 1-in-4 (legacy tuning: >100 blocks skips 3)
     for (let step = 0; step < 4; step++)
       pubsub.emitter.emit('pos:overworld:0:0', {
         kind: 'move',
+        riding: false,
         character_id: '0xp6',
         address: '0xstranger6',
         x: 300 + step,
         y: 0,
         z: 300,
       })
-    const far_moves = sent.filter(
-      (packet) => packet.type === 'packet/player_moved' && (packet as { character_id: string }).character_id === '0xp6'
-    )
+    await new Promise((resolve) => setTimeout(resolve, 60))
+    const far_moves = sent
+      .flatMap((packet) => (packet.type === 'packet/players_moved' ? packet.positions : []))
+      .filter(({ character_id }) => character_id === '0xp6')
     expect(far_moves).toHaveLength(1)
     expect((far_moves[0] as { x: number }).x).toBe(303)
   })
@@ -534,6 +545,7 @@ describe('the world module', () => {
         y: 0,
       },
     })
+    await flush()
     expect(sent.some((packet) => packet.type === 'packet/player_appeared')).toBe(true)
 
     player.dispatch({
@@ -560,33 +572,29 @@ describe('the world module', () => {
     expect(probes.length).toBeGreaterThan(0)
     published.length = 0
     // someone else probes MY zone — I stand there, so I re-announce myself
-    pubsub.emitter.emit('pos:overworld:0:0', { kind: 'who', address: '0xlater', world: 'overworld', zx: 0, zz: 0 })
-    const announces = published.filter(({ payload }) => payload.kind === 'appear')
+    pubsub.emitter.emit('pos:overworld:0:0', {
+      kind: 'who',
+      reply_to: 'presence:reply:test',
+      request: 'test',
+      address: '0xlater',
+      world: 'overworld',
+      zx: 0,
+      zz: 0,
+    })
+    const announces = published.filter(({ payload }) => payload.kind === 'reply')
     expect(announces).toHaveLength(1)
+    expect(announces[0]?.channel).toBe('presence:reply:test')
     // the other owned character stands in zone 1 and answers even while not selected
     published.length = 0
-    pubsub.emitter.emit('pos:overworld:0:0', { kind: 'who', address: '0xlater', world: 'overworld', zx: 1, zz: 0 })
-    expect(published.filter(({ payload }) => payload.kind === 'appear')).toHaveLength(1)
-  })
-
-  test('a plausible move within the zone publishes a move fact, not a re-track', async () => {
-    const { graph, ws, pubsub, published, checkpoint } = wire()
-    const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })
-    await flush()
-    player.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    published.length = 0
-    player.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: checkpoint('0xabc'),
-        x: 100.3,
-        y: 0,
-        z: 100.3,
-        riding: false,
-      })
-    )
-    expect(published.every(({ payload }) => payload.kind === 'move')).toBe(true)
+    pubsub.emitter.emit('pos:overworld:0:0', {
+      kind: 'who',
+      reply_to: 'presence:reply:test',
+      request: 'test',
+      address: '0xlater',
+      world: 'overworld',
+      zx: 1,
+      zz: 0,
+    })
+    expect(published.filter(({ payload }) => payload.kind === 'reply')).toHaveLength(1)
   })
 })

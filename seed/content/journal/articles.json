@@ -1,0 +1,134 @@
+[
+  {
+    "slug": "when-the-world-keeps-its-own-rules",
+    "title": "Building open worlds on Sui: Proof of Discovery",
+    "description": "What makes a game truly onchain? How far can Sui take it?",
+    "series": "Foundations",
+    "chapter": 1,
+    "status": "published",
+    "published_on": "2026-09-19",
+    "cover": "scalable-open-world.png",
+    "cover_alt": "Close ferns frame a broad green-and-blue world with adventurers farming, gathering, meeting, and exploring connected regions."
+  },
+  {
+    "slug": "who-gets-to-keep-the-sword",
+    "title": "Item ownership and trading on Sui",
+    "description": "A small trade between two friends tells us what ownership promises—and what it does not.",
+    "series": "Foundations",
+    "chapter": 2,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "your-first-playable-loop",
+    "title": "Building a gather-and-craft loop on Sui",
+    "description": "Start with a tree, a piece of wood, and a recipe. Build the rules before building the world.",
+    "series": "Foundations",
+    "chapter": 3,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "your-world-is-an-object-graph",
+    "title": "Modeling game state with Sui objects",
+    "description": "Characters, bags, and places become easier to reason about when each fact has a home.",
+    "series": "Engineering",
+    "chapter": 4,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "one-world-object-is-a-bottleneck",
+    "title": "Scaling shared worlds with independent zone objects",
+    "description": "Two players gather in different forests. Why should their actions need the same shared record?",
+    "series": "Engineering",
+    "chapter": 5,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "making-onchain-combat-feel-immediate",
+    "title": "Onchain combat: prediction and reconciliation",
+    "description": "A player should see their intent right away. The game still needs to distinguish a preview from a result.",
+    "series": "Engineering",
+    "chapter": 6,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "secure-randomness-fair-loot",
+    "title": "Fair randomness on Sui: preventing selective rerolls",
+    "description": "A fair draw is only part of the problem. What happens when someone can refuse an unwanted result?",
+    "series": "Engineering",
+    "chapter": 7,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "one-turn-one-transaction",
+    "title": "Composing a combat turn with Sui PTBs",
+    "description": "How several small game actions can become one deliberate, atomic commitment on Sui.",
+    "series": "Engineering",
+    "chapter": 8,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "the-transaction-succeeded",
+    "title": "Recovering onchain transactions after lost responses",
+    "description": "Lost replies, old inventories, and why trying again can be the wrong response.",
+    "series": "Engineering",
+    "chapter": 9,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "rebuilding-a-game-from-chain-history",
+    "title": "Rebuilding game state from Sui checkpoints",
+    "description": "If the database disappeared, which parts of the world could we recover?",
+    "series": "Engineering",
+    "chapter": 10,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "rewards-with-enforceable-limits",
+    "title": "Onchain game rewards: reserves, limits, and authority",
+    "description": "A reward promise becomes more useful when the rules say where the money comes from and when it stops.",
+    "series": "Economies",
+    "chapter": 11,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  },
+  {
+    "slug": "the-cost-of-a-play-session",
+    "title": "Measuring gas and latency in an onchain game",
+    "description": "Measure the actions players actually take, including the failed ones.",
+    "series": "Engineering",
+    "chapter": 12,
+    "status": "draft",
+    "published_on": null,
+    "cover": null,
+    "cover_alt": ""
+  }
+]

@@ -14,7 +14,7 @@ export const character_creation_insufficient = (balance_mist: bigint | null): bo
   balance_mist !== null && balance_mist < CHARACTER_CREATION_BALANCE_MIST
 
 export const character_creation_funding_text = (template: string, amount_text = format_sui): string =>
-  template.replaceAll('{{fee}}', amount_text(GAS_BUDGET_MIST, 1))
+  template.replaceAll('{{fee}}', amount_text(GAS_BUDGET_MIST, 2))
 
 const is_character_creation_balance_error = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''

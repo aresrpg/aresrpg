@@ -23,7 +23,7 @@ const ERROR_RULES = [
   [/rejected|denied|cancelled|canceled/i, 'error_rejected'],
   [/insufficient|not enough|gas coin|gas balance|no valid gas/i, 'error_funds'],
   [/session|no account|wallet.*unavailable|not authorized|no longer authorized/i, 'error_session'],
-  [/network|fetch|connection|timed? ?out|timeout|unavailable/i, 'error_connection'],
+  [/network|fetch|connection|timed? ?out|timeout|unavailable|SLOW_CONSUMER|SNAPSHOT_FAILED/i, 'error_connection'],
 ] as const
 
 export const error_text = (copy: ErrorCopy, error: unknown): string => {

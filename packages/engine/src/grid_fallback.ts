@@ -16,6 +16,7 @@ import { create_hack_presentation } from './hack_presentation.ts'
 import { create_fight_board_layer } from './fight_board.ts'
 import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
 import { create_entity_layer } from './entities.ts'
+import { create_caption_layer } from './caption_layer.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
 import { create_resource_node_layer, resource_nodes_visible } from './resource_nodes.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
@@ -69,9 +70,10 @@ export const create_grid_fallback = (
   const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
   const fight_board = create_fight_board_layer({ scene, camera, canvas })
   const entities = create_entity_layer({ scene })
+  const captions = create_caption_layer({ renderer, canvas, camera, webgpu: false })
   const entity_labels = create_entity_label_layer({ canvas, camera, entities })
   const resource_nodes = create_resource_node_layer({ scene })
-  const effects = create_transient_effects({ scene, entities })
+  const effects = create_transient_effects({ scene, entities, captions })
   const fight_presentation = create_fight_presentation({ entities, vfx: effects })
   const presentation = create_hack_presentation(scene)
   let disposed = false
@@ -112,6 +114,7 @@ export const create_grid_fallback = (
     effects.tick(now)
     fight_swords?.tick(now)
     renderer.render(scene, camera)
+    captions.render()
     entity_labels.render()
   }
 
@@ -175,6 +178,7 @@ export const create_grid_fallback = (
       const anchor = entities.world_anchor(id)
       return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
     },
+    set_entity_caption: (id, caption) => captions.set(`entity:${id}`, caption, () => entities.live_crown(id)),
     set_entity_label: entity_labels.set,
     set_world_label: (id, element, position) =>
       entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
@@ -201,6 +205,7 @@ export const create_grid_fallback = (
       if (disposed) return
       disposed = true
       fight_swords?.dispose()
+      captions.dispose()
       entity_labels.dispose()
       fight_board.dispose()
       effects.dispose()

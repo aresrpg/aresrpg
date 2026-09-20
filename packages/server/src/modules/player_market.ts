@@ -6,9 +6,12 @@
 //            the delta pushes its graph slice + retained history, then deltas stream while observed.
 // A listed event names an id; the row the client renders is enriched from the graph.
 
+import { market_category } from '@aresrpg/protocol'
+
+import { market_change_matches } from '../public_market.ts'
 import { channels, type EventEnvelope } from '../protocol.ts'
 import { get_market_history } from '../reads/get_market_history.ts'
-import { get_market_counts, get_market_slice } from '../reads/get_market_slice.ts'
+import { get_market_slice } from '../reads/get_market_slice.ts'
 import { create_watcher } from '../pubsub_bus.ts'
 import { observe_market_prices } from '../market_prices_observer.ts'
 import { latest_reader } from '../latest_read.ts'
@@ -29,17 +32,33 @@ export default {
   },
 
   observe: (context) => {
-    const { pubsub, graph, events, send, address, get_state, signal, dispatch } = context
+    const { pubsub, graph, events, send, address, get_state, signal, dispatch, public_market, drop } = context
     const price_event = observe_market_prices(context)
-    const read_latest_counts = latest_reader(
-      () => get_market_counts(graph),
-      (counts) => send({ type: 'packet/market_counts', counts })
-    )
-    const push_counts = (): void => {
-      void read_latest_counts().catch((error: Error) =>
-        log.warn({ error: error.message }, 'market counts refresh failed')
+    let stop_types: (() => void) | null = null
+    const watch_types = (): void => {
+      stop_types?.()
+      const observed = get_state().market_observation
+      if (!observed || observed.kind === 'characters' || observed.kind === 'overview') return
+      stop_types = public_market.watch(
+        observed.category,
+        (items) => {
+          const observation = get_state().market_observation
+          if (
+            !signal.aborted &&
+            observation &&
+            observation.kind !== 'characters' &&
+            observation.kind !== 'overview' &&
+            observation.category === observed.category
+          )
+            send({ type: 'packet/market_types', observation, items })
+        },
+        (error) => {
+          log.warn({ err: error }, 'market type discovery failed')
+          drop('SNAPSHOT_FAILED')
+        }
       )
     }
+    signal.addEventListener('abort', () => stop_types?.(), { once: true })
     const read_latest_history = latest_reader(
       () => get_market_history(graph, pubsub.graph, { address }),
       (history) => send({ type: 'packet/market_history', ...history })
@@ -54,8 +73,8 @@ export default {
     const read_slice = latest_reader(
       async () => {
         const observation = get_state().market_observation
-        return observation
-          ? { observation, ...(await get_market_slice(graph, { observation, kiosks: previous_kiosks })) }
+        return observation && observation.kind !== 'types' && observation.kind !== 'overview'
+          ? { observation, ...(await get_market_slice(graph, { observation, address, kiosks: previous_kiosks })) }
           : null
       },
       (result) => {
@@ -75,8 +94,7 @@ export default {
       const observed = get_state().market_observation
       if (payload.data.seller === address && ['MarketListed', 'MarketDelisted'].includes(payload.type))
         dispatch({ type: 'action/refresh_account', domain: 'listings' })
-      if (observed && ['MarketListed', 'MarketDelisted', 'MarketPurchased'].includes(payload.type)) {
-        push_counts()
+      if (observed && market_change_matches(payload, observed)) {
         push_slice()
       }
       if (payload.type === 'MarketPurchased') {
@@ -118,9 +136,10 @@ export default {
 
     events.on('STATE_UPDATED', (state: PlayerState, previous: PlayerState) => {
       if (state.market_observation === previous.market_observation) return
+      previous_kiosks = []
+      if (market_category(state.market_observation) !== market_category(previous.market_observation)) watch_types()
       push_slice()
       if (!state.market_observation) return
-      push_counts()
       push_history()
     })
   },

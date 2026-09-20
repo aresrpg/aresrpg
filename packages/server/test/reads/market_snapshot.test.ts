@@ -22,15 +22,16 @@ test.skipIf(!url)('real market reads retain exact revisions for listed and empty
     await store.query(`CREATE (u:User {address: 'owner'}), (k:Kiosk {id: 'kiosk', market_version: '9007199254740993'}),
       (u)-[:OWNS]->(k), (i:Item {id: 'asset', category: 'hat', name: 'Hat', item_type: 'hat', level: 1, amount: 1}),
       (i)-[:LISTED_IN {exclusive: false, price: '5', at_ms: 1, version: '9007199254740992'}]->(k)`)
-    const observation = { categories: ['hat'] as const, characters: false }
-    const snapshot = await get_market_slice(graph, { observation })
+    const observation = { kind: 'offers' as const, category: 'hat' as const, item_type: 'hat', request: 1 }
+    const snapshot = await get_market_slice(graph, { observation, address: 'buyer' })
     expect(snapshot.listings).toHaveLength(1)
     expect(snapshot.listings[0]?.version).toBe('9007199254740992')
     expect(snapshot.kiosk_versions).toEqual({ kiosk: '9007199254740993' })
     await store.query(`MATCH (:Item)-[l:LISTED_IN]->(k:Kiosk) DELETE l SET k.market_version = '9007199254740994'`)
-    expect(await get_market_slice(graph, { observation, kiosks: ['kiosk'] })).toEqual({
+    expect(await get_market_slice(graph, { observation, address: 'buyer', kiosks: ['kiosk'] })).toEqual({
       listings: [],
       kiosk_versions: { kiosk: '9007199254740994' },
+      next_cursor: null,
     })
     expect(await get_my_listings(graph, { address: 'owner' })).toEqual({
       listings: [],

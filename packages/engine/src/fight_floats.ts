@@ -2,14 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Semantic combat numbers. Callers provide resolved meaning; this layer owns text, motion, and disposal.
 
-import { CanvasTexture, LinearFilter, Scene, Sprite, SpriteMaterial, SRGBColorSpace, Vector3 } from 'three'
+import { Vector3 } from 'three'
+
+import type { CaptionLayer } from './caption_layer.ts'
+import type { WorldCaption } from './caption_types.ts'
 
 export type FightFloatKind = 'damage' | 'critical' | 'heal' | 'ap' | 'mp'
 type FloatAnchors = Readonly<{ world_anchor: (id: string) => Vector3 | null }>
 type FightFloat = Readonly<{
-  sprite: Sprite
-  material: SpriteMaterial
-  texture: CanvasTexture
+  id: string
+  caption: WorldCaption
+  position: Vector3
   entity_id: string
   anchor: Vector3
   started_at: number
@@ -74,65 +77,31 @@ const drift_sign = (source: string): number => {
   return (hash & 1) === 0 ? -1 : 1
 }
 
-const create_texture = (text: string, kind: FightFloatKind): CanvasTexture | null => {
-  if (typeof document === 'undefined') return null
-  const canvas = document.createElement('canvas')
-  canvas.width = 1_024
-  canvas.height = 256
-  const context = canvas.getContext('2d')
-  if (!context) return null
-  context.clearRect(0, 0, canvas.width, canvas.height)
-  context.textAlign = 'center'
-  context.textBaseline = 'middle'
-  context.font = '600 152px "JetBrains Mono", ui-monospace, monospace'
-  context.lineJoin = 'round'
-  context.lineWidth = 24
-  context.strokeStyle = 'rgba(5, 6, 10, 0.92)'
-  context.strokeText(text, canvas.width / 2, canvas.height / 2)
-  context.fillStyle = COLORS[kind]
-  context.fillText(text, canvas.width / 2, canvas.height / 2)
-  const texture = new CanvasTexture(canvas)
-  texture.colorSpace = SRGBColorSpace
-  texture.magFilter = LinearFilter
-  texture.minFilter = LinearFilter
-  texture.needsUpdate = true
-  return texture
-}
-
-export const create_fight_float_layer = ({ scene, entities }: Readonly<{ scene: Scene; entities: FloatAnchors }>) => {
+export const create_fight_float_layer = ({
+  captions,
+  entities,
+}: Readonly<{ captions: Pick<CaptionLayer, 'set'>; entities: FloatAnchors }>) => {
   const floats: FightFloat[] = []
   let previous_tick = performance.now()
   let serial = 0
 
-  const dispose_float = (effect: FightFloat): void => {
-    scene.remove(effect.sprite)
-    effect.material.dispose()
-    effect.texture.dispose()
-  }
+  const dispose_float = (effect: FightFloat): void => captions.set(effect.id, null, () => null)
 
   return Object.freeze({
     play: (entity_id: string, amount: number, kind: FightFloatKind): boolean => {
       const anchor = entities.world_anchor(entity_id)
       if (!anchor) return false
-      const texture = create_texture(fight_float_text(amount, kind), kind)
-      if (!texture) return false
-      const material = new SpriteMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-        toneMapped: false,
-      })
-      const sprite = new Sprite(material)
-      sprite.renderOrder = 999
-      sprite.position.copy(anchor)
-      scene.add(sprite)
       serial += 1
       floats.push(
         Object.freeze({
-          sprite,
-          material,
-          texture,
+          id: `float:${serial}`,
+          caption: {
+            name: fight_float_text(amount, kind),
+            color: COLORS[kind],
+            variant: 'float',
+            accessible: false,
+          } satisfies WorldCaption,
+          position: anchor.clone(),
           entity_id,
           anchor: anchor.clone(),
           started_at: previous_tick,
@@ -150,10 +119,16 @@ export const create_fight_float_layer = ({ scene, entities }: Readonly<{ scene: 
         const frame = fight_float_frame(now - effect.started_at, effect.kind)
         const anchor = entities.world_anchor(effect.entity_id)
         if (anchor) effect.anchor.copy(anchor)
-        effect.sprite.visible = frame.visible
-        effect.material.opacity = frame.opacity
-        effect.sprite.position.set(effect.anchor.x + frame.x * effect.drift, effect.anchor.y + frame.y, effect.anchor.z)
-        effect.sprite.scale.set(7 * frame.scale * effect.scale, 1.75 * frame.scale * effect.scale, 1)
+        effect.position.set(effect.anchor.x + frame.x * effect.drift, effect.anchor.y + frame.y, effect.anchor.z)
+        captions.set(
+          effect.id,
+          {
+            ...effect.caption,
+            opacity: frame.opacity,
+            world_size: [7 * frame.scale * effect.scale, 1.75 * frame.scale * effect.scale],
+          },
+          () => effect.position
+        )
         if (now - effect.started_at < IMPACT_LAG_MS + LIFE_MS) continue
         floats.splice(index, 1)
         dispose_float(effect)

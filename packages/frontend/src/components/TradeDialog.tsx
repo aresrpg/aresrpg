@@ -19,6 +19,7 @@ import { visible_trade_rows } from '../modules/trade.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { parse_amount } from '../kares/model.ts'
 
+import { ItemDetailHover } from './ItemSnapshotTooltip.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
 import { ModalFrame } from './ModalFrame.tsx'
 import { OfferCaps } from './TradeOfferCaps.tsx'
@@ -244,23 +245,25 @@ const TradeInventory = ({
       </nav>
       <div className="trade-inventory-grid">
         {visible.map((item) => (
-          <button
-            disabled={!can_edit}
-            draggable={can_edit}
-            key={item.id}
-            onDoubleClick={() => add_asset(item.id)}
-            onDragStart={(event) => event.dataTransfer.setData('text/plain', item.id)}
-            title={item.name}
-            type="button"
-          >
-            {item_icon(item.item_type) ? (
-              <img alt="" draggable={false} src={item_icon(item.item_type)!} />
-            ) : (
-              <span>{item.name.slice(0, 1).toUpperCase()}</span>
-            )}
-            {item.amount > 1 && <small>×{item.amount}</small>}
-            <i>{item.level}</i>
-          </button>
+          <ItemDetailHover item={item} key={item.id}>
+            <button
+              disabled={!can_edit}
+              draggable={can_edit}
+              key={item.id}
+              onDoubleClick={() => add_asset(item.id)}
+              onDragStart={(event) => event.dataTransfer.setData('text/plain', item.id)}
+              title={item.name}
+              type="button"
+            >
+              {item_icon(item.item_type) ? (
+                <img alt="" draggable={false} src={item_icon(item.item_type)!} />
+              ) : (
+                <span>{item.name.slice(0, 1).toUpperCase()}</span>
+              )}
+              {item.amount > 1 && <small>×{item.amount}</small>}
+              <i>{item.level}</i>
+            </button>
+          </ItemDetailHover>
         ))}
         {visible.length === 0 && <p>{text('empty_inventory')}</p>}
       </div>

@@ -16,9 +16,9 @@
 //! Also declares the graph INDEXES (idempotent — an already-indexed error is
 //! the success state).
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use redis::aio::MultiplexedConnection;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tracing::info;
 
 /// Ask the official GraphQL endpoint one query. Bounded: a hung endpoint must
@@ -200,6 +200,7 @@ pub async fn ensure_indexes(conn: &mut MultiplexedConnection) -> Result<()> {
         "CREATE INDEX FOR (n:Character) ON (n.owner)",
         "CREATE INDEX FOR (n:Item) ON (n.id)",
         "CREATE INDEX FOR (n:Item) ON (n.item_type)",
+        "CREATE INDEX FOR (n:Item) ON (n.category)",
         "CREATE INDEX FOR (n:Fight) ON (n.id)",
         "CREATE INDEX FOR (n:Party) ON (n.id)",
         "CREATE INDEX FOR (n:Kolizeum) ON (n.id)",
@@ -259,12 +260,14 @@ mod tests {
             }
         });
 
-        assert!(lineage_contains(
-            &data,
-            "0xff31200a",
-            "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
-        )
-        .expect("lineage"));
+        assert!(
+            lineage_contains(
+                &data,
+                "0xff31200a",
+                "0x80ce7b5b5b3b2809da8ea973f9f267f9e5d8372524a01e7427a97a640762c79a"
+            )
+            .expect("lineage")
+        );
         assert!(!lineage_contains(&data, "0xff31200a", "0xdead").expect("lineage"));
     }
 

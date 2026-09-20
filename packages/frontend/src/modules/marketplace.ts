@@ -5,9 +5,11 @@
 import { equipment_categories, type ItemCategory } from '@aresrpg/immutable'
 import {
   MAX_TRACKED_CHARACTERS,
-  MARKET_WINDOW_SIZE,
   type ListingRow,
-  type MarketCounts,
+  type MarketType,
+  type MarketQuery,
+  market_category,
+  has_market_page,
   type MarketVolume,
   type MarketObservation,
   type MarketSaleRow,
@@ -35,36 +37,22 @@ export type MarketGroup = (typeof MARKET_GROUPS)[number]
 
 const equipment = Object.freeze(equipment_categories.filter((category) => category !== 'pet'))
 
-export const market_observation = (group: MarketGroup): MarketObservation =>
-  Object.freeze({
-    categories: Object.freeze(
-      group === 'EQUIPMENT'
-        ? equipment
-        : group === 'PETS'
-          ? ['pet']
-          : group === 'RUNES'
-            ? ['rune']
-            : group === 'CONSUMABLE'
-              ? ['consumable', 'key']
-              : group === 'RESOURCES'
-                ? ['resource']
-                : []
-    ) as readonly ItemCategory[],
-    characters: group === 'CHARACTERS',
-  })
-
-export const market_group_count = (group: MarketGroup, counts: Readonly<MarketCounts>, lower_bound = 0): number => {
-  const observation = market_observation(group)
-  const aggregate = observation.characters
-    ? counts.characters
-    : observation.categories.reduce((total, category) => total + (counts.categories[category] ?? 0), 0)
-  return Math.max(aggregate, lower_bound)
-}
+const MARKET_CATEGORIES: Readonly<Record<MarketGroup, readonly ItemCategory[]>> = Object.freeze({
+  EQUIPMENT: equipment,
+  PETS: ['pet'],
+  RUNES: ['rune'],
+  CONSUMABLE: ['consumable', 'key'],
+  RESOURCES: ['resource'],
+  CHARACTERS: [],
+})
+export const market_categories = (group: MarketGroup): readonly ItemCategory[] => MARKET_CATEGORIES[group]
 
 export type MarketplaceState = Readonly<{
   prices: PriceHistoryState
   group: MarketGroup
-  counts: MarketCounts
+  types: readonly MarketType[]
+  next_cursor: string | null
+  page_cursors: readonly string[]
   observation: MarketObservation | null
   listings: readonly ListingRow[]
   own_listings: readonly ListingRow[]
@@ -80,7 +68,10 @@ export type MarketplaceState = Readonly<{
 
 export type MarketplaceInput =
   | PriceHistoryInput
-  | Readonly<{ type: 'market/group_selected'; group: MarketGroup; item_type?: string }>
+  | Readonly<{ type: 'market/opened' }>
+  | Readonly<{ type: 'market/group_selected'; group: MarketGroup; category?: ItemCategory; item_type?: string }>
+  | Readonly<{ type: 'market/page_requested'; direction: 'next' | 'previous' }>
+  | Readonly<{ type: 'market/characters_filtered'; classe?: string; min_level?: number; max_level?: number }>
   | Readonly<{
       type: 'market/list_requested'
       listing: Omit<ListingRow, 'version'>
@@ -103,7 +94,9 @@ export const initial_marketplace_state = (): MarketplaceState =>
   Object.freeze({
     prices: initial_price_history(),
     group: 'EQUIPMENT',
-    counts: Object.freeze({ categories: Object.freeze({}), characters: 0 }),
+    types: [],
+    next_cursor: null,
+    page_cursors: [],
     observation: null,
     listings: [],
     own_listings: [],
@@ -124,9 +117,6 @@ const latest_listings = (current: readonly ListingRow[], incoming: readonly List
   })
   return Object.freeze([...rows.values()])
 }
-
-const public_window = (current: readonly ListingRow[], incoming: readonly ListingRow[]): readonly ListingRow[] =>
-  Object.freeze([...latest_listings(current, incoming)].sort((a, b) => b.at_ms - a.at_ms).slice(0, MARKET_WINDOW_SIZE))
 
 const without_relation = (rows: readonly ListingRow[], gone: Readonly<ListingRow>): readonly ListingRow[] =>
   rows.filter((row) => row.id !== gone.id || row.kiosk !== gone.kiosk)
@@ -169,19 +159,7 @@ export const market_sale_notice = (
 }
 
 const same_observation = (left: MarketObservation | null, right: MarketObservation): boolean =>
-  !!left &&
-  left.characters === right.characters &&
-  left.item_type === right.item_type &&
-  left.categories.length === right.categories.length &&
-  left.categories.every((category, index) => category === right.categories[index])
-
-const listing_is_observed = (observation: MarketObservation | null, listing: Readonly<ListingRow>): boolean =>
-  !!observation &&
-  (listing.kind === 'character'
-    ? observation.characters
-    : !!listing.category &&
-      (observation.categories as readonly string[]).includes(listing.category) &&
-      (!observation.item_type || listing.item_type === observation.item_type))
+  left?.request === right.request
 
 const fold_catalogue = (
   market: MarketplaceState,
@@ -211,9 +189,8 @@ const fold_catalogue = (
       )
   const public_rows = own ? market.listings : rows
   const owned_relations = new Set([...market.own_listings, ...own_listings].map((row) => `${row.kiosk}:${row.id}`))
-  const listings = public_window(
-    public_rows.filter((row) => row.seller !== address && !owned_relations.has(`${row.kiosk}:${row.id}`)),
-    own_listings.filter((row) => listing_is_observed(market.observation, row))
+  const listings = Object.freeze(
+    public_rows.filter((row) => row.seller !== address && !owned_relations.has(`${row.kiosk}:${row.id}`))
   )
   const departures = Object.fromEntries(
     Object.entries(market.departures).flatMap(([kiosk, removed]) => {
@@ -267,7 +244,7 @@ const fold_write = (
       pending: null,
       catalogues,
       own_listings: latest_listings(market.own_listings, [row]),
-      listings: listing_is_observed(market.observation, row) ? public_window(market.listings, [row]) : market.listings,
+      listings: market.listings,
     })
   return Object.freeze({
     ...market,
@@ -282,6 +259,17 @@ const fold_write = (
   })
 }
 
+const fold_browse = (
+  market: MarketplaceState,
+  packet: Readonly<Extract<ServerPacket, { type: 'packet/market_slice' | 'packet/market_types' }>>,
+  address: string | null
+): MarketplaceState => {
+  if (!same_observation(market.observation, packet.observation)) return market
+  return packet.type === 'packet/market_slice'
+    ? Object.freeze({ ...fold_catalogue(market, packet, false, address), next_cursor: packet.next_cursor })
+    : Object.freeze({ ...market, types: packet.items })
+}
+
 const fold_packet = (
   market: MarketplaceState,
   packet: Readonly<ServerPacket>,
@@ -290,11 +278,8 @@ const fold_packet = (
   if (packet.type === 'packet/server_info' && packet.market_volume !== undefined)
     return Object.freeze({ ...market, volume: packet.market_volume })
   if (packet.type === 'packet/listings') return fold_catalogue(market, packet, true, address)
-  if (packet.type === 'packet/market_slice')
-    return same_observation(market.observation, packet.observation)
-      ? fold_catalogue(market, packet, false, address)
-      : market
-  if (packet.type === 'packet/market_counts') return Object.freeze({ ...market, counts: packet.counts })
+  if (packet.type === 'packet/market_slice' || packet.type === 'packet/market_types')
+    return fold_browse(market, packet, address)
   if (packet.type === 'packet/market_history')
     return Object.freeze({
       ...market,
@@ -305,6 +290,55 @@ const fold_packet = (
     })
   if (packet.type === 'packet/listing_sold') return fold_sale(market, packet.sale)
   return market
+}
+
+const select_query = (market: MarketplaceState, query: MarketQuery, group = market.group): MarketplaceState =>
+  Object.freeze({
+    ...market,
+    group,
+    observation: { ...query, request: (market.observation?.request ?? 0) + 1 },
+    types: market_category(market.observation) === market_category(query) ? market.types : [],
+    listings: [],
+    next_cursor: null,
+    page_cursors: [],
+  })
+const turn_page = (market: MarketplaceState, direction: 'next' | 'previous'): MarketplaceState => {
+  const { observation } = market
+  if (!has_market_page(observation)) return market
+  const next = direction === 'next'
+  const cursor = next ? market.next_cursor : market.page_cursors.at(-1)
+  if (cursor === null || cursor === undefined) return market
+  return Object.freeze({
+    ...market,
+    observation: { ...observation, cursor, request: market.observation!.request + 1 },
+    page_cursors: next ? [...market.page_cursors, observation.cursor ?? ''] : market.page_cursors.slice(0, -1),
+    listings: [],
+    next_cursor: null,
+  })
+}
+const group_query = (input: Extract<MarketplaceInput, { type: 'market/group_selected' }>): MarketQuery => {
+  if (input.group === 'CHARACTERS') return { kind: 'characters' }
+  const category = input.category ?? market_categories(input.group)[0]!
+  return input.item_type ? { kind: 'offers', category, item_type: input.item_type } : { kind: 'types', category }
+}
+const reduce_selection = (market: MarketplaceState, input: AppInput): MarketplaceState => {
+  switch (input.type) {
+    case 'market/opened':
+      return market.observation ? market : select_query(market, { kind: 'overview' })
+    case 'market/group_selected':
+      return select_query(market, group_query(input), input.group)
+    case 'market/characters_filtered':
+      return select_query(market, {
+        kind: 'characters',
+        classe: input.classe,
+        min_level: input.min_level,
+        max_level: input.max_level,
+      })
+    case 'market/page_requested':
+      return turn_page(market, input.direction)
+    default:
+      return market
+  }
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
@@ -319,14 +353,9 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     const next = fold_packet(market, input.packet, state.session.wallet?.address ?? null)
     return next === market ? state : Object.freeze({ ...state, marketplace: next })
   }
-  if (input.type === 'market/group_selected') {
-    const observation = { ...market_observation(input.group), item_type: input.item_type }
-    if (market.group === input.group && same_observation(market.observation, observation)) return state
-    return Object.freeze({
-      ...state,
-      marketplace: Object.freeze({ ...market, group: input.group, observation }),
-    })
-  }
+  const selected = reduce_selection(market, input)
+  if (selected !== market) return Object.freeze({ ...state, marketplace: selected })
+
   if (
     input.type === 'market/list_requested' ||
     input.type === 'market/delist_requested' ||

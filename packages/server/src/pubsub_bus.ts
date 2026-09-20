@@ -22,8 +22,10 @@ import {
   parse_indexed_state,
   type IndexedState,
 } from './indexing_health.ts'
-import { channels, is_indexer_channel, type EventEnvelope } from './protocol.ts'
+import { channels, is_indexer_channel, mesh_event_channel, type EventEnvelope } from './protocol.ts'
 import type { Graph } from './graph.ts'
+import { market_updates } from './market_updates.ts'
+import { is_market_change } from './public_market.ts'
 import { item_updates } from './item_updates.ts'
 import logger from './logger.ts'
 
@@ -161,7 +163,10 @@ const create_bus = ({
   publisher,
   unsubscribe_grace_ms = UNSUBSCRIBE_GRACE_MS,
   item_graph,
-}: BusWires & { item_graph?: Graph }): Bus & { closed: () => boolean } => {
+  local_channel = (channel: string, _payload: unknown) => channel,
+}: BusWires & { item_graph?: Graph; local_channel?: (channel: string, payload: unknown) => string }): Bus & {
+  closed: () => boolean
+} => {
   const emitter = new EventEmitter()
   emitter.setMaxListeners(0)
   const refs = new Map<string, number>()
@@ -182,7 +187,18 @@ const create_bus = ({
           .catch((error: Error) => log.error({ error: error.message }, 'item custody routing failed'))
         return
       }
-      emitter.emit(channel, payload)
+      if (item_graph && channel === channels.economy && is_market_change(payload)) {
+        void market_updates(item_graph, payload)
+          .then((event) => {
+            if (!closed) emitter.emit(channel, event)
+          })
+          .catch((error: unknown) => {
+            log.warn({ err: error }, 'market invalidation enrichment failed')
+            if (!closed) emitter.emit(channel, payload)
+          })
+        return
+      }
+      emitter.emit(local_channel(channel, payload), payload)
     } catch (error) {
       log.error({ channel, error: (error as Error).message }, 'unparseable event payload dropped')
     }
@@ -297,9 +313,27 @@ export const create_graph_bus = ({
 }
 
 export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }: BusWires): MeshBus => {
-  const { closed: _closed, ...doors } = create_bus({ subscriber, publisher, unsubscribe_grace_ms })
+  const { closed: _closed, ...doors } = create_bus({
+    subscriber,
+    publisher,
+    unsubscribe_grace_ms,
+    local_channel: mesh_event_channel,
+  })
   /** one SCAN per pod per window, whatever the connection count */
-  const online_cache = { value: 0, at_ms: 0 }
+  const online_cache = { value: 0, at_ms: 0, pending: null as Promise<number> | null }
+  const read_online = async (): Promise<number> => {
+    const keys: string[] = []
+    for (let cursor = '0'; ;) {
+      const [next, found] = await publisher.scan(cursor, 'MATCH', 'server:*', 'COUNT', 100)
+      keys.push(...found)
+      if (next === '0') break
+      cursor = next
+    }
+    const snapshots = keys.length ? await publisher.mget(keys) : []
+    online_cache.value = cluster_online_count(snapshots)
+    online_cache.at_ms = Date.now()
+    return online_cache.value
+  }
   return {
     ...doors,
     heartbeat: async (server_id, addresses) => {
@@ -307,17 +341,11 @@ export const create_mesh_bus = ({ subscriber, publisher, unsubscribe_grace_ms }:
     },
     cluster_online: async () => {
       if (Date.now() - online_cache.at_ms < 4_000) return online_cache.value
-      const keys: string[] = []
-      for (let cursor = '0'; ;) {
-        const [next, found] = await publisher.scan(cursor, 'MATCH', 'server:*', 'COUNT', 100)
-        keys.push(...found)
-        if (next === '0') break
-        cursor = next
-      }
-      const snapshots = keys.length ? await publisher.mget(keys) : []
-      online_cache.value = cluster_online_count(snapshots)
-      online_cache.at_ms = Date.now()
-      return online_cache.value
+      if (!online_cache.pending)
+        online_cache.pending = read_online().finally(() => {
+          online_cache.pending = null
+        })
+      return online_cache.pending
     },
     record_online: async (online, at_ms) => {
       const minute = Math.floor(at_ms / 60_000) * 60_000

@@ -6,6 +6,9 @@ body: 전체 월드에는 WebGPU가 필요합니다. 현재 경량 격자를 대
 fatal: 이 브라우저는 WebGPU 또는 WebGL 그래픽 컨텍스트를 생성할 수 없습니다.
 engine_recovery: 월드 로딩 또는 렌더링이 중단되었습니다. 새로고침해 다시 시도하세요.
 engine_reload: 새로고침
+engine_minimum_title: '그래픽 설정 낮춤'
+engine_minimum: '월드를 불러오거나 표시할 수 없습니다. 컴퓨터의 부담을 줄이기 위해 그래픽 품질과 표시 거리를 최저 설정으로 낮췄습니다.'
+engine_continue: '계속'
 world_unavailable_title: 월드를 이용할 수 없습니다
 world_unavailable: 이 월드에는 아직 지형 생성 설정이 없습니다.
 mobile_unavailable_label: 모바일 접속
@@ -332,6 +335,9 @@ world_hud:
   spawn_engage_conflict: 공격하기 전에 무리가 바뀌었습니다. 다른 플레이어가 먼저 교전했을 수 있습니다.
   spawn_never_arrived: 전투가 실행되었지만 전장이 도착하지 않았습니다
   resource_press_collect: '{{key}}을(를) 눌러 {{name}} 채집'
+  resource_press_collect_all: '{{key}} 키를 눌러 모두 채집'
+  resource_collect_all_progress: '모두 채집 중 · {{completed}}/{{total}}'
+  resource_collect_all_stop: '중지 (Esc)'
   resource_need_level: 채집하려면 {{job}} 레벨 {{level}}이(가) 필요합니다
   resource_need_tool: 채집하려면 {{job}} 도구가 필요합니다
   resource_gathering: 채집 중…
@@ -391,6 +397,8 @@ demo_page:
   control_hint: 캔버스 클릭 · WASD 이동 · Space 점프 · 마우스로 둘러보기
   back: 앱으로 돌아가기
 marketplace_page:
+  previous_page: 이전
+  next_page: 다음
   prices_title: 가격 기록
   prices_period: 기간
   prices_range_7: 7일
