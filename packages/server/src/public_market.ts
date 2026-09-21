@@ -7,7 +7,7 @@ import type { Graph } from './graph.ts'
 import type { Bus } from './pubsub_bus.ts'
 import { channels, type EventEnvelope } from './protocol.ts'
 import { shared_projection } from './shared_projection.ts'
-import { get_market_types } from './reads/get_market_slice.ts'
+import { get_market_types, get_market_type_counts } from './reads/get_market_slice.ts'
 
 export const is_market_change = ({ type }: EventEnvelope): boolean =>
   ['MarketListed', 'MarketDelisted', 'MarketPurchased'].includes(type)
@@ -27,12 +27,20 @@ export const market_change_matches = (event: EventEnvelope, observation: MarketO
   )
 }
 
-export const create_public_market = (graph: Graph, bus: Pick<Bus, 'emitter' | 'subscribe' | 'unsubscribe'>) =>
-  shared_projection({
+export const create_public_market = (graph: Graph, bus: Pick<Bus, 'emitter' | 'subscribe' | 'unsubscribe'>) => ({
+  ...shared_projection({
     bus,
     channel: () => channels.economy,
     read: (category) => get_market_types(graph, category as ItemCategory),
     invalidates: (event, category) =>
       market_change_matches(event, { kind: 'types', category: category as ItemCategory, request: 0 }),
-  })
+  }),
+  counts: shared_projection({
+    bus,
+    channel: () => channels.economy,
+    read: () => get_market_type_counts(graph),
+    invalidates: (event) => is_market_change(event) && event.data.kind !== 'character',
+    sample_interval_ms: 5_000,
+  }),
+})
 export type PublicMarket = ReturnType<typeof create_public_market>

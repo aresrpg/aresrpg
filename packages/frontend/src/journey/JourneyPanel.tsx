@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Pickaxe, Sparkles } from 'lucide-react'
+import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Sparkles } from 'lucide-react'
 
+import automation_art from '../../../../seed/icons/world/gathering_automation_hd.png'
+import automation_icon from '../../../../seed/icons/world/gathering_automation.png'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -158,7 +160,7 @@ const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: b
       }}
       type="button"
     >
-      <Pickaxe size={15} /> {text('automation_reward_action')}
+      <img alt="" className="size-5" draggable={false} src={automation_icon} /> {text('automation_reward_action')}
     </button>
   )
 }
@@ -173,7 +175,7 @@ const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean
     <div className="journey-quest" data-quest-kind={kind}>
       <div className="journey-art">
         {id === 'finished' ? (
-          <Pickaxe aria-hidden="true" className="size-20 text-cyan" />
+          <img alt="" className="journey-automation-art" draggable={false} src={automation_art} />
         ) : (
           <ItemArt item={item_type} />
         )}

@@ -618,7 +618,11 @@ and revisions match. Older-than-certified reads fail instead of authorizing repe
 ### Marketplace
 
 Sui Kiosk objects own listings and custody. The indexer projects the current market and sales
-history. Category selection observes its shared listed-type projection without aggregate counts. Selecting
+history. Category selection observes its shared listed-type projection. Category badges count distinct publicly
+listed item types, including the viewer’s public offers and excluding private offers. One watched server-local
+snapshot refreshes only when dirty, at most once per five seconds; parent groups sum their subcategories.
+Counts stop refreshing when the last marketplace viewer leaves. They are sampled navigation information,
+separate from purchase-critical offer freshness. Selecting
 a type requests twenty groups with three cheapest public offers per group, excluding the viewer's own
 listings before ranking. Stack quantities and complete indexed equipment rolls define groups; unknown
 rolls remain distinct objects. Character listings have their own bounded query and filters. Cursor pages

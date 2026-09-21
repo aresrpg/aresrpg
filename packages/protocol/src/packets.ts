@@ -20,7 +20,12 @@ import {
   type MarketPriceObservation,
   type MarketPriceHistory,
 } from './market_prices.ts'
-import { parse_market_observation, type MarketObservation, type MarketType } from './marketplace.ts'
+import {
+  parse_market_observation,
+  type MarketObservation,
+  type MarketType,
+  type MarketTypeCounts,
+} from './marketplace.ts'
 export * from './marketplace.ts'
 export * from './market_prices.ts'
 export * from './leaderboards.ts'
@@ -879,6 +884,7 @@ export type ServerPackets = {
   'packet/leaderboard': { snapshot: LeaderboardSnapshot }
   'packet/leaderboard_error': { observation: LeaderboardObservation; reason: 'unavailable' }
   'packet/market_slice': MarketPage & { observation: MarketObservation }
+  'packet/market_counts': { observation: MarketObservation; counts: MarketTypeCounts | null }
   'packet/market_types': { observation: MarketObservation; items: readonly MarketType[] }
   'packet/market_prices': { observation: MarketPriceObservation; history: MarketPriceHistory | null }
   'packet/market_history': {
@@ -960,6 +966,7 @@ export const FIGHT_PACKETS = [
 export const MARKET_PACKETS = [
   'packet/listings',
   'packet/market_slice',
+  'packet/market_counts',
   'packet/market_types',
   'packet/market_prices',
   'packet/market_history',

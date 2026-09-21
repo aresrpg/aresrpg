@@ -10,6 +10,7 @@ export type MarketQuery =
   | Readonly<{ kind: 'offers'; category: ItemCategory; item_type: string; cursor?: string }>
   | Readonly<{ kind: 'characters'; cursor?: string; classe?: string; min_level?: number; max_level?: number }>
 export type MarketObservation = MarketQuery & Readonly<{ request: number }>
+export type MarketTypeCounts = Readonly<Partial<Record<ItemCategory, number>>>
 export type MarketType = Readonly<{ item_type: string; category: ItemCategory; name: string; level: number }>
 export const market_category = (observation: MarketQuery | null): ItemCategory | null =>
   observation && (observation.kind === 'types' || observation.kind === 'offers') ? observation.category : null

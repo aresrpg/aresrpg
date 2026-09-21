@@ -15640,6 +15640,18 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
+          },
+          {
+            "kind": 6,
+            "element": "air",
+            "value": 9,
+            "value_max": 12,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance_bp": 1000,
+            "turns": 0,
+            "stat": 12
           }
         ],
         "crit_effects": [
@@ -15654,6 +15666,18 @@
             "chance_bp": 10000,
             "turns": 0,
             "stat": 0
+          },
+          {
+            "kind": 6,
+            "element": "air",
+            "value": 14,
+            "value_max": 14,
+            "area_shape": 0,
+            "area_size": 0,
+            "target_filter": 1,
+            "chance_bp": 1000,
+            "turns": 0,
+            "stat": 12
           }
         ]
       }

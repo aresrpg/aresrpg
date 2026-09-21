@@ -57,3 +57,36 @@ test('offer invalidation uses indexed item identity and preserves conservative u
   expect(market_change_matches(event({ kind: 'character' }), observation)).toBeFalse()
   expect(market_change_matches(event({}), observation)).toBeTrue()
 })
+
+test('all catalogue badges share one bounded query and no background work without viewers', async () => {
+  const emitter = new EventEmitter()
+  let reads = 0
+  const market = create_public_market(
+    {
+      read: async () => {
+        reads++
+        return [{ category: 'hat', types: 2 }]
+      },
+      close: async () => {},
+    },
+    { emitter, subscribe: async () => {}, unsubscribe: async () => {} }
+  )
+  const delivered: unknown[] = []
+  const stops = Array.from({ length: 100 }, () =>
+    market.counts.watch(
+      'all',
+      (counts) => delivered.push(counts),
+      () => {}
+    )
+  )
+  await flush()
+  expect(reads).toBe(1)
+  expect(delivered).toHaveLength(100)
+  expect(delivered[0]).toEqual({ hat: 2 })
+  for (let i = 0; i < 1000; i++) emitter.emit('evt:economy', { type: 'MarketListed', data: { kind: 'item' } })
+  await flush()
+  expect(reads).toBe(1)
+  stops.forEach((stop) => stop())
+  await flush()
+  expect(emitter.eventNames()).toEqual([])
+})

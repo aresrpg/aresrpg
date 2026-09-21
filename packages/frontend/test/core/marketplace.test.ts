@@ -494,3 +494,27 @@ test('changing offer pages rejects the previous response and preserves owned cat
   expect(previous.marketplace.observation).toMatchObject({ cursor: '', request: 3 })
   expect(previous.marketplace.page_cursors).toEqual([])
 })
+
+test('type-count snapshots reject stale observations and distinguish unavailable from zero', () => {
+  const opened = reduce_app_state(initial_app_state(settings), { type: 'market/opened' })
+  const current = reduce_app_state(opened, {
+    type: 'server/packet',
+    packet: { type: 'packet/market_counts', observation: opened.marketplace.observation!, counts: { hat: 2 } },
+  })
+  const selected = reduce_app_state(current, { type: 'market/group_selected', group: 'RESOURCES' })
+  const stale = reduce_app_state(selected, {
+    type: 'server/packet',
+    packet: { type: 'packet/market_counts', observation: opened.marketplace.observation!, counts: { hat: 99 } },
+  })
+  expect(stale.marketplace.type_counts).toEqual({ hat: 2 })
+  const empty = reduce_app_state(stale, {
+    type: 'server/packet',
+    packet: { type: 'packet/market_counts', observation: selected.marketplace.observation!, counts: {} },
+  })
+  expect(empty.marketplace.type_counts).toEqual({})
+  const unavailable = reduce_app_state(empty, {
+    type: 'server/packet',
+    packet: { type: 'packet/market_counts', observation: selected.marketplace.observation!, counts: null },
+  })
+  expect(unavailable.marketplace.type_counts).toBeNull()
+})

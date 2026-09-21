@@ -81,8 +81,9 @@ test('automation reward art stays above its backdrop and inside the compact art 
   await expect(page.locator('.journey-tracker')).toBeVisible()
   await page.getByRole('button', { name: 'Load completed journey' }).click()
   const art = page.locator('.journey-tracker .journey-art')
-  const glyph = art.locator('svg')
+  const glyph = art.locator('img')
   await expect(glyph).toBeVisible()
+  await expect(glyph).toHaveJSProperty('naturalWidth', 512)
   const contained = await glyph.evaluate((element) => {
     const bounds = element.getBoundingClientRect()
     const parent = element.parentElement!.getBoundingClientRect()
@@ -96,4 +97,5 @@ test('automation reward art stays above its backdrop and inside the compact art 
     return hit === element || element.contains(hit)
   })
   expect(unobscured).toBe(true)
+  await page.screenshot({ animations: 'disabled', path: 'test-results/journey-automation.png' })
 })

@@ -4,12 +4,13 @@
 import { Search, Store } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import {
+  type ItemCategory,
   max_level as character_max_level,
   class_names,
   item_is_stackable,
   marketplace_lot_sizes,
 } from '@aresrpg/immutable'
-import { market_category, type ListingRow } from '@aresrpg/protocol'
+import { market_category, type ListingRow, type MarketTypeCounts } from '@aresrpg/protocol'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { Text } from '../i18n/Text.tsx'
@@ -36,6 +37,19 @@ import {
 } from './marketplace_model.tsx'
 
 const group_key = (group: MarketGroup): string => `group_${group.toLowerCase()}`
+
+const TypeCount = ({
+  counts,
+  categories,
+}: Readonly<{ counts: MarketTypeCounts | null; categories: readonly ItemCategory[] }>) => {
+  const numbers = useNumbers()
+  if (!counts || !categories.length) return null
+  return (
+    <span className="shrink-0 text-[9px] text-muted tabular-nums" data-marketplace-type-count>
+      {numbers.number(categories.reduce((total, category) => total + (counts[category] ?? 0), 0))}
+    </span>
+  )
+}
 
 export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
   const localized_numbers = useNumbers()
@@ -102,6 +116,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                 type="button"
               >
                 <span>{text(group_key(group))}</span>
+                <TypeCount counts={market.type_counts} categories={market_categories(group)} />
               </button>
             ))}
           </nav>
@@ -184,6 +199,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                       <span>
                         <CategoryName category={category} />
                       </span>
+                      <TypeCount counts={market.type_counts} categories={[category]} />
                     </span>
                   </button>
                 ))}

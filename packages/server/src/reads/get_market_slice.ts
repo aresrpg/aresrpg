@@ -5,8 +5,21 @@
 
 import { ITEM_STAT_FIELDS } from '@aresrpg/fight/move_contract'
 import { MARKET_GROUP_PAGE_SIZE, MARKET_OFFERS_PER_GROUP } from '@aresrpg/protocol'
-import { max_level as character_max_level, stackable_item_categories, type ItemCategory } from '@aresrpg/immutable'
-import type { ListingRow, MarketObservation, MarketSnapshot, MarketPage, MarketType, ItemRow } from '@aresrpg/protocol'
+import {
+  max_level as character_max_level,
+  stackable_item_categories,
+  is_item_category,
+  type ItemCategory,
+} from '@aresrpg/immutable'
+import type {
+  ListingRow,
+  MarketObservation,
+  MarketSnapshot,
+  MarketPage,
+  MarketType,
+  MarketTypeCounts,
+  ItemRow,
+} from '@aresrpg/protocol'
 
 import { type Graph, type Node, type GraphRow } from '../graph.ts'
 
@@ -136,4 +149,20 @@ export async function get_market_types(graph: Graph, category: ItemCategory): Pr
     level: Number(level),
     category,
   }))
+}
+
+/** One small public catalogue summary, independent of viewer and listing quantity. */
+export async function get_market_type_counts(graph: Graph): Promise<MarketTypeCounts> {
+  const rows = await graph.read(
+    `MATCH (asset:Item)-[:LISTED_IN {exclusive: false}]->(:Kiosk)<-[:OWNS]-(:User)
+     RETURN asset.category AS category, count(DISTINCT asset.item_type) AS types`
+  )
+  return Object.fromEntries(
+    rows.map(({ category, types }) => {
+      const count = Number(types)
+      if (!is_item_category(category) || !Number.isSafeInteger(count) || count < 0)
+        throw new Error('invalid marketplace type count')
+      return [category, count]
+    })
+  )
 }

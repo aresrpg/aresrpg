@@ -1063,9 +1063,6 @@
       ],
       "reduce": [10]
     },
-    "packages/server/src/shared_projection.ts": {
-      "shared_projection > refresh": [10]
-    },
     "packages/server/src/reads/get_market_slice.ts": {
       "get_market_slice": [10]
     },

@@ -132,3 +132,33 @@ test('stackable capitalization shares chart prices and disappears without a sale
   await page.goto('/e2e/fixtures/marketplace.html?stackable&sparse')
   await expect(card).toContainText('10.00')
 })
+
+test('category badges count item types, aggregate subcategories, and leave characters unnumbered', async ({ page }) => {
+  await page.goto('/e2e/fixtures/marketplace.html')
+  const groups = page.locator('[data-marketplace-general-categories]')
+  await expect(groups.getByRole('button', { name: /^Equipment/ }).locator('[data-marketplace-type-count]')).toHaveText(
+    '3'
+  )
+  await expect(groups.getByRole('button', { name: /^Resources/ }).locator('[data-marketplace-type-count]')).toHaveText(
+    '4'
+  )
+  await expect(
+    groups.getByRole('button', { name: /^Characters/ }).locator('[data-marketplace-type-count]')
+  ).toHaveCount(0)
+  await expect(
+    page
+      .locator('[data-marketplace-item-types]')
+      .getByRole('button', { name: /^Hat\b/i })
+      .locator('[data-marketplace-type-count]')
+  ).toHaveText('2')
+  await page
+    .locator('[data-marketplace-item-types]')
+    .getByRole('button', { name: /^Hat\b/i })
+    .click()
+  await page.locator('[data-marketplace-template-options] button').first().click()
+  await expect(page.locator('[data-marketplace-listing-row]')).toHaveCount(3)
+  await expect(groups.getByRole('button', { name: /^Equipment/ }).locator('[data-marketplace-type-count]')).toHaveText(
+    '3'
+  )
+  await page.screenshot({ path: 'test-results/market-type-counts.png' })
+})

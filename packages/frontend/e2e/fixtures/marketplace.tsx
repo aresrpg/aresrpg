@@ -121,6 +121,17 @@ const Fixture = () => {
   const observation = useAppStore(({ marketplace }) => marketplace.prices.observation)
   const market_observed = useAppStore(({ marketplace }) => marketplace.observation)
   useEffect(() => {
+    if (market_observed)
+      dispatch_app({
+        type: 'server/packet',
+        packet: {
+          type: 'packet/market_counts',
+          observation: market_observed,
+          counts: { hat: 2, cloak: 1, resource: 4 },
+        },
+      })
+  }, [market_observed])
+  useEffect(() => {
     if (!market_observed || market_observed.kind === 'characters' || market_observed.kind === 'overview') return
     if (market_observed.kind === 'types') {
       const candidates = new URLSearchParams(location.search).has('all-types') ? [item, older_item] : [item]

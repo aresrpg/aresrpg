@@ -43,9 +43,8 @@ Leaderboards require replay from the original publication checkpoint. An older s
 leaderboard metadata refuses startup rather than presenting partial seasons. Rebuild that private
 store before running this version; do not initialize scores from current Character balances.
 
-Analytics has no migration or schema-version state. When its projection changes, destroy the local
-store and replay from the original publication checkpoint. Ordinary resumes remain network-free
-and append the configured latest package to the stored activity lineage.
+Existing numeric analytics convert before indexing resumes; see the upgrade procedure below.
+Ordinary resumes remain network-free and append the configured latest package to the stored activity lineage.
 
 ## Storage laws
 

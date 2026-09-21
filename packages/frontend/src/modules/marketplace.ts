@@ -7,6 +7,7 @@ import {
   MAX_TRACKED_CHARACTERS,
   type ListingRow,
   type MarketType,
+  type MarketTypeCounts,
   type MarketQuery,
   market_category,
   has_market_page,
@@ -51,6 +52,7 @@ export type MarketplaceState = Readonly<{
   prices: PriceHistoryState
   group: MarketGroup
   types: readonly MarketType[]
+  type_counts: MarketTypeCounts | null
   next_cursor: string | null
   page_cursors: readonly string[]
   observation: MarketObservation | null
@@ -95,6 +97,7 @@ export const initial_marketplace_state = (): MarketplaceState =>
     prices: initial_price_history(),
     group: 'EQUIPMENT',
     types: [],
+    type_counts: null,
     next_cursor: null,
     page_cursors: [],
     observation: null,
@@ -259,12 +262,14 @@ const fold_write = (
   })
 }
 
-const fold_browse = (
-  market: MarketplaceState,
-  packet: Readonly<Extract<ServerPacket, { type: 'packet/market_slice' | 'packet/market_types' }>>,
-  address: string | null
-): MarketplaceState => {
+const BROWSE_PACKETS = ['packet/market_slice', 'packet/market_types', 'packet/market_counts'] as const
+type BrowsePacket = Readonly<Extract<ServerPacket, { type: (typeof BROWSE_PACKETS)[number] }>>
+const is_browse_packet = (packet: Readonly<ServerPacket>): packet is BrowsePacket =>
+  BROWSE_PACKETS.some((type) => type === packet.type)
+
+const fold_browse = (market: MarketplaceState, packet: BrowsePacket, address: string | null): MarketplaceState => {
   if (!same_observation(market.observation, packet.observation)) return market
+  if (packet.type === 'packet/market_counts') return Object.freeze({ ...market, type_counts: packet.counts })
   return packet.type === 'packet/market_slice'
     ? Object.freeze({ ...fold_catalogue(market, packet, false, address), next_cursor: packet.next_cursor })
     : Object.freeze({ ...market, types: packet.items })
@@ -278,8 +283,7 @@ const fold_packet = (
   if (packet.type === 'packet/server_info' && packet.market_volume !== undefined)
     return Object.freeze({ ...market, volume: packet.market_volume })
   if (packet.type === 'packet/listings') return fold_catalogue(market, packet, true, address)
-  if (packet.type === 'packet/market_slice' || packet.type === 'packet/market_types')
-    return fold_browse(market, packet, address)
+  if (is_browse_packet(packet)) return fold_browse(market, packet, address)
   if (packet.type === 'packet/market_history')
     return Object.freeze({
       ...market,

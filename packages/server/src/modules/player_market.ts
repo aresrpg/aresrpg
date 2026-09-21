@@ -13,6 +13,7 @@ import { channels, type EventEnvelope } from '../protocol.ts'
 import { get_market_history } from '../reads/get_market_history.ts'
 import { get_market_slice } from '../reads/get_market_slice.ts'
 import { create_watcher } from '../pubsub_bus.ts'
+import { observe_market_counts } from '../market_counts_observer.ts'
 import { observe_market_prices } from '../market_prices_observer.ts'
 import { latest_reader } from '../latest_read.ts'
 import logger from '../logger.ts'
@@ -34,6 +35,7 @@ export default {
   observe: (context) => {
     const { pubsub, graph, events, send, address, get_state, signal, dispatch, public_market, drop } = context
     const price_event = observe_market_prices(context)
+    observe_market_counts(context)
     let stop_types: (() => void) | null = null
     const watch_types = (): void => {
       stop_types?.()
