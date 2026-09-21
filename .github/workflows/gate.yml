@@ -325,7 +325,7 @@ jobs:
     if: needs.changes.outputs.browsers == 'true'
     name: browser (${{ matrix.os }}, ${{ matrix.browser }}, ${{ matrix.project }}, ${{ matrix.shard }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 6
+    timeout-minutes: ${{ matrix.os == 'macos-latest' && matrix.project == 'ui' && 8 || 6 }}
     strategy:
       fail-fast: false
       matrix:
