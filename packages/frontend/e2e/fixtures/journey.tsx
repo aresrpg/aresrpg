@@ -6,6 +6,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
 import { content_catalog } from '../../src/content/catalog.ts'
+import { JOURNEY_QUESTS } from '../../src/journey/model.ts'
 import { JourneyHost } from '../../src/journey/JourneyHost.tsx'
 import { JourneyTracker } from '../../src/journey/JourneyPanel.tsx'
 import { JourneySettings } from '../../src/journey/JourneySettings.tsx'
@@ -96,6 +97,20 @@ const Fixture = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </button>
         <button onClick={() => give('wheat')} type="button">
           Buy wheat
+        </button>
+        <button
+          onClick={() => {
+            const { identity, generation } = read_app_state().journey
+            dispatch_app({
+              type: 'journey/loaded',
+              identity: identity!,
+              generation,
+              completed: JOURNEY_QUESTS.map(({ id }) => id),
+            })
+          }}
+          type="button"
+        >
+          Load completed journey
         </button>
         <button onClick={harvest} type="button">
           Harvest wheat

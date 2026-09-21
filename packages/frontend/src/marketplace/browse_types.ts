@@ -15,3 +15,18 @@ export const browse_types = (
     .map((row) => ({ ...row, rows: listings.filter((listing) => listing.item_type === row.item_type) }))
     .sort((a, b) => a.level - b.level || a.item_type.localeCompare(b.item_type))
 }
+
+/** Keep the server's grouping decision; backups remain in reducer state for the next purchase. */
+export const cheapest_offers = (listings: readonly ListingRow[]): readonly ListingRow[] => {
+  const sorted = listings.toSorted((left, right) => {
+    const difference = BigInt(left.price_mist) - BigInt(right.price_mist)
+    return difference < 0n ? -1 : difference > 0n ? 1 : left.id.localeCompare(right.id)
+  })
+  const groups = new Set<string>()
+  return sorted.filter((listing) => {
+    const key = JSON.stringify([listing.item_type, listing.group_key ?? `object:${listing.id}`])
+    if (groups.has(key)) return false
+    groups.add(key)
+    return true
+  })
+}

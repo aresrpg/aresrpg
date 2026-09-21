@@ -397,6 +397,9 @@ demo_page:
   control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
   back: Quay lại ứng dụng
 marketplace_page:
+  total_units: 'Tổng số lượng'
+  market_cap: 'Vốn hóa'
+  market_cap_basis: 'Tổng số đơn vị hiện có × giá trung bình mỗi đơn vị của ngày giao dịch gần nhất trên biểu đồ, không gồm phí.'
   previous_page: Trước
   next_page: Tiếp
   prices_title: Lịch sử giá

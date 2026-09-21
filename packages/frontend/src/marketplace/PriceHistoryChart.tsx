@@ -45,7 +45,7 @@ export const PriceHistoryChart = ({ item_type, text }: Readonly<{ item_type: str
       </div>
       <p className="mt-2 mb-5 text-[10px] tracking-wide text-muted uppercase">{text('prices_subtitle')}</p>
       {available ? (
-        <TradingViewPricePlot key={`${item_type}:${days}`} points={points} text={text} />
+        <TradingViewPricePlot points={points} text={text} />
       ) : (
         <div className="flex min-h-64 items-center justify-center px-4 text-center text-xs text-muted" role="status">
           {text(

@@ -397,6 +397,9 @@ demo_page:
   control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
   back: 返回应用
 marketplace_page:
+  total_units: '总数量'
+  market_cap: '总市值'
+  market_cap_basis: '现存总数量 × 图表最近成交日的平均单价，不含手续费。'
   previous_page: 上一页
   next_page: 下一页
   prices_title: 价格历史

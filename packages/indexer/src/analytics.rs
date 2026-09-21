@@ -17,8 +17,6 @@ pub const ROYALTY_FLOOR_MIST: u64 = 10_000_000;
 pub const CHARACTER_CREATION_MIST: u64 = 1_000_000_000;
 
 pub const ADDRESS_FIRST_SEEN_KEY: &str = "analytics:addresses";
-pub const TRANSACTIONS_ALL_KEY: &str = "analytics:transactions:all";
-pub const GAS_ALL_KEY: &str = "analytics:gas:all";
 
 pub fn bucket_15m(ts_ms: u64) -> u64 {
     ts_ms / BUCKET_15M_MS * BUCKET_15M_MS
@@ -107,30 +105,9 @@ pub struct MoneyFact {
     pub delta: MoneyDelta,
 }
 
-impl MoneyFact {
-    pub fn value(&self) -> String {
-        serde_json::json!({
-            "ts_ms": self.ts_ms,
-            "item_royalty_mist": self.delta.item_royalty_mist.to_string(),
-            "character_royalty_mist": self.delta.character_royalty_mist.to_string(),
-            "character_creation_mist": self.delta.character_creation_mist.to_string(),
-            "kolizeum_mist": self.delta.kolizeum_mist.to_string(),
-        })
-        .to_string()
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ActivityFact {
     pub address: Addr,
-    pub ts_ms: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TransactionFact {
-    pub checkpoint: u64,
-    pub count: u64,
-    pub gas_mist: i64,
     pub ts_ms: u64,
 }
 

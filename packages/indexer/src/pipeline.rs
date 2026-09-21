@@ -22,7 +22,7 @@ use sui_indexer_alt_framework::types::object::{Object, Owner};
 use sui_indexer_alt_framework::types::transaction::{Command, TransactionData, TransactionKind};
 use sui_indexer_alt_framework::types::TypeTag;
 
-use crate::analytics::{self, ActivityFact, CharacterFact, MoneyFact, TransactionFact};
+use crate::analytics::{self, ActivityFact, CharacterFact};
 use crate::decode::{Addr, Id};
 use crate::graph::{self, CheckpointView};
 use crate::ownership::{self, ObjView, OwnerKind, TypeKey};
@@ -54,8 +54,11 @@ pub enum Write {
         score: u64,
         member: String,
     },
-    /// One replay-deduplicated exact-money contribution to both chart tiers.
-    Money(MoneyFact),
+    /// One complete checkpoint contribution to fixed-size numeric analytics.
+    Numeric {
+        ts_ms: u64,
+        totals: crate::analytics_totals::Totals,
+    },
     /// Exact per-item daily totals, with replay identity stored in each bucket value.
     MarketPrices {
         ts_ms: u64,
@@ -70,8 +73,6 @@ pub enum Write {
     },
     /// One successful game-package sender projected into every dashboard activity tier.
     Activity(ActivityFact),
-    /// One checkpoint's successful game count plus net gas for every non-deployment game attempt.
-    Transaction(TransactionFact),
     /// One replay-safe live-character counter delta.
     Character(CharacterFact),
     /// A live-wire event (`PUBLISH channel payload`).
@@ -533,7 +534,7 @@ impl Processor for AresHandler {
                 member: row.member,
             });
         }
-        writes.extend(wire.money.into_iter().map(Write::Money));
+
         writes.push(Write::MarketPrices {
             ts_ms,
             checkpoint: ckpt,
@@ -558,13 +559,16 @@ impl Processor for AresHandler {
                     .checked_add(tx.gas_mist)
                     .ok_or_else(|| anyhow::anyhow!("game gas total overflow at checkpoint {ckpt}"))
             })?;
-        if transaction_count > 0 || transaction_gas_mist != 0 {
-            writes.push(Write::Transaction(TransactionFact {
-                checkpoint: ckpt,
-                count: transaction_count,
-                gas_mist: transaction_gas_mist,
+        if transaction_count > 0 || transaction_gas_mist != 0 || !wire.money.is_empty() {
+            writes.push(Write::Numeric {
                 ts_ms,
-            }));
+                totals: crate::analytics_totals::checkpoint_totals(
+                    ckpt,
+                    transaction_count,
+                    transaction_gas_mist,
+                    &wire.money,
+                )?,
+            });
         }
         writes.extend(
             character_facts(&txs, ckpt, ts_ms, game)
@@ -651,15 +655,8 @@ impl Handler for AresHandler {
                             .query_async(conn.connection())
                             .await?;
                     }
-                    Write::Money(fact) => {
-                        let bucket = analytics::bucket_day(fact.ts_ms);
-                        let key = analytics::series_key("money", "day", bucket);
-                        let _: () = redis::cmd("HSET")
-                            .arg(&key)
-                            .arg(&fact.coordinate)
-                            .arg(fact.value())
-                            .query_async(conn.connection())
-                            .await?;
+                    Write::Numeric { ts_ms, totals } => {
+                        crate::analytics_totals::commit(conn.connection(), *ts_ms, totals).await?;
                     }
                     Write::MarketPrices {
                         ts_ms,
@@ -706,53 +703,6 @@ impl Handler for AresHandler {
                             .arg(address)
                             .query_async(conn.connection())
                             .await?;
-                    }
-                    Write::Transaction(fact) => {
-                        let _: () = redis::cmd("HSET")
-                            .arg(analytics::TRANSACTIONS_ALL_KEY)
-                            .arg(fact.checkpoint)
-                            .arg(fact.count)
-                            .query_async(conn.connection())
-                            .await?;
-                        let _: () = redis::cmd("HSET")
-                            .arg(analytics::GAS_ALL_KEY)
-                            .arg(fact.checkpoint)
-                            .arg(fact.gas_mist)
-                            .query_async(conn.connection())
-                            .await?;
-                        for (tier, bucket, width, retention) in
-                            analytics::activity_buckets(fact.ts_ms)
-                        {
-                            let key = analytics::series_key("transactions", tier, bucket);
-                            let _: () = redis::cmd("HSET")
-                                .arg(&key)
-                                .arg(fact.checkpoint)
-                                .arg(fact.count)
-                                .query_async(conn.connection())
-                                .await?;
-                            let gas_key = analytics::series_key("gas", tier, bucket);
-                            let _: () = redis::cmd("HSET")
-                                .arg(&gas_key)
-                                .arg(fact.checkpoint)
-                                .arg(fact.gas_mist)
-                                .query_async(conn.connection())
-                                .await?;
-                            let keep = if tier == "day" || tier == "week" || tier == "month" {
-                                analytics::DAILY_ACTIVITY_RETENTION_MS
-                            } else {
-                                retention
-                            };
-                            let _: () = redis::cmd("EXPIREAT")
-                                .arg(key)
-                                .arg(analytics::expiry_seconds(bucket, width, keep))
-                                .query_async(conn.connection())
-                                .await?;
-                            let _: () = redis::cmd("EXPIREAT")
-                                .arg(gas_key)
-                                .arg(analytics::expiry_seconds(bucket, width, keep))
-                                .query_async(conn.connection())
-                                .await?;
-                        }
                     }
                     Write::Character(fact) => {
                         let bucket = analytics::bucket_day(fact.ts_ms);

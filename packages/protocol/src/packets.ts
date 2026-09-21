@@ -291,6 +291,8 @@ export type PresenceRow = Record<VisibleSlot, string | null> & {
 
 /** A market listing — the projected item + its LISTED_IN price edge. */
 export type ListingRow = Pick<ItemRow, 'stats' | 'damages' | 'pet_power' | 'pet_last_day' | 'puits'> & {
+  /** Opaque server grouping identity within the observed item type; absent on owned listings. */
+  group_key?: string
   /** Native version of the public Listing dynamic field, scoped by item + kiosk. */
   version: string
   kind: 'item' | 'character'

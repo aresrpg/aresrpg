@@ -11,6 +11,8 @@
 //! origins and the start checkpoint derive from chain state at boot.
 
 mod analytics;
+mod analytics_migration;
+mod analytics_totals;
 mod boot;
 mod character_checkpoints;
 mod character_deletions;
@@ -173,6 +175,8 @@ async fn main() -> Result<()> {
         fresh,
     )
     .await?;
+
+    analytics_migration::initialize(&mut boot_conn, fresh).await?;
 
     info!(
         redis_url = %redacted_url(&args.redis_url),

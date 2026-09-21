@@ -4,8 +4,8 @@
 // TradingView Lightweight Charts™ — Copyright (с) 2025 TradingView, Inc. https://www.tradingview.com/
 
 import { useEffect, useRef, useState } from 'react'
-import { ColorType, CrosshairMode, LineSeries, createChart } from 'lightweight-charts'
-import type { IChartApi, LogicalRange, UTCTimestamp } from 'lightweight-charts'
+import { ColorType, CrosshairMode, LineSeries, LineType, createChart } from 'lightweight-charts'
+import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts'
 
 import type { CopyText } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
@@ -15,7 +15,8 @@ import { format_unit_price, price_date, type PricePoint } from './price_history_
 export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readonly PricePoint[]; text: CopyText }>) => {
   const element = useRef<HTMLDivElement>(null)
   const chart_ref = useRef<IChartApi | null>(null)
-  const visible_range = useRef<LogicalRange | null>(null)
+  const series_ref = useRef<ISeriesApi<'Line'> | null>(null)
+  const fitted_count = useRef(0)
   const [hovered_at, set_hovered] = useState<number | null>(null)
   const hovered = points.find(({ at_ms }) => at_ms === hovered_at) ?? null
   const locale = useAppStore(({ locale }) => locale)
@@ -49,43 +50,44 @@ export const TradingViewPricePlot = ({ points, text }: Readonly<{ points: readon
       },
       localization: { locale, priceFormatter: (value: number) => format_unit_price(value, locale) },
     })
-    chart_ref.current = chart
-    visible_range.current = null
-    return () => {
-      chart.remove()
-      chart_ref.current = null
-    }
-  }, [locale])
-  useEffect(() => {
-    const chart = chart_ref.current
-    if (!chart || !element.current) return
-    const cyan = getComputedStyle(element.current).getPropertyValue('--color-cyan').trim()
     const line = chart.addSeries(LineSeries, {
-      color: cyan,
+      color: color('cyan'),
       lineWidth: 2,
-      pointMarkersVisible: true,
-      pointMarkersRadius: 3,
+      lineType: LineType.Curved,
+      pointMarkersVisible: false,
+      crosshairMarkerVisible: false,
       priceLineVisible: false,
       lastValueVisible: false,
       priceFormat: { type: 'custom', minMove: 1e-12, formatter: (value: number) => format_unit_price(value, locale) },
     })
+    chart_ref.current = chart
+    series_ref.current = line
+    fitted_count.current = 0
+    const hover = ({ time }: Readonly<{ time?: unknown }>): void => {
+      set_hovered(typeof time === 'number' ? time * 1000 : null)
+    }
+    chart.subscribeCrosshairMove(hover)
+    return () => {
+      chart.unsubscribeCrosshairMove(hover)
+      chart.remove()
+      chart_ref.current = null
+      series_ref.current = null
+    }
+  }, [locale])
+  useEffect(() => {
+    const chart = chart_ref.current
+    const line = series_ref.current
+    if (!chart || !line) return
     line.setData(
       points.map(({ at_ms, value }) => {
         const time = (at_ms / 1000) as UTCTimestamp
         return value === null ? { time } : { time, value }
       })
     )
-    if (visible_range.current) chart.timeScale().setVisibleLogicalRange(visible_range.current)
-    else chart.timeScale().fitContent()
-    const hover = ({ time }: Readonly<{ time?: unknown }>): void => {
-      set_hovered(typeof time === 'number' ? time * 1000 : null)
-    }
-    chart.subscribeCrosshairMove(hover)
-    return () => {
-      if (chart_ref.current !== chart) return
-      visible_range.current = chart.timeScale().getVisibleLogicalRange()
-      chart.unsubscribeCrosshairMove(hover)
-      chart.removeSeries(line)
+    // A new period fits once; incoming prices preserve the player's current zoom and scroll.
+    if (fitted_count.current !== points.length) {
+      chart.timeScale().fitContent()
+      fitted_count.current = points.length
     }
   }, [points, locale])
   return (

@@ -10,6 +10,7 @@ import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'bun:test'
 import type { ServerPacket } from '@aresrpg/protocol'
 
+import { ZERO_TOTALS } from '../src/reads/get_analytics_totals.ts'
 import { item_updates } from '../src/item_updates.ts'
 import type { EventEnvelope } from '../src/protocol.ts'
 import { create_request_limiter } from '../src/request_limiter.ts'
@@ -71,7 +72,7 @@ const wire = () => {
       analytics_hashes: async (keys: readonly string[]) => keys.map(() => ({})),
       analytics_sets: async (keys: readonly string[]) => keys.map(() => []),
       analytics_counts: async (keys: readonly string[]) => keys.map(() => 0),
-      analytics_sums: async (keys: readonly string[]) => keys.map(() => 0),
+      analytics_totals: async (keys: readonly string[]) => keys.map(() => ZERO_TOTALS),
       analytics_cumulative_counts: async (_key: string, maxes: readonly number[]) => [...maxes.map(() => 0), 0],
     },
     mesh: {

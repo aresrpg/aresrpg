@@ -26,3 +26,13 @@ export const format_unit_price = (value: number, locale?: string): string =>
 
 export const price_date = (at_ms: number, locale?: string): string =>
   new Date(at_ms).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
+
+/** Use the chart's latest traded-day totals, multiplying before division to avoid rounded unit prices. */
+export const market_capitalization = (history: MarketPriceHistory | null): bigint | null => {
+  if (!history?.total_units) return null
+  const latest = history.buckets.reduce<MarketPriceBucket | null>(
+    (previous, bucket) => (!previous || bucket.at_ms > previous.at_ms ? bucket : previous),
+    null
+  )
+  return latest ? (BigInt(history.total_units) * BigInt(latest.total_mist)) / BigInt(latest.units) : null
+}

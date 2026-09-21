@@ -13,7 +13,9 @@ import { EventEmitter } from 'node:events'
 
 import type { LeaderboardObservation, LeaderboardSnapshot, MarketVolume, MarketPriceHistory } from '@aresrpg/protocol'
 
+import { get_analytics_totals, type AnalyticsTotals } from './reads/get_analytics_totals.ts'
 import { get_leaderboard } from './reads/get_leaderboard.ts'
+import { create_item_supply_reader } from './reads/get_item_supply.ts'
 import { get_market_prices } from './reads/get_market_prices.ts'
 import { get_market_volume } from './reads/get_market_volume.ts'
 import {
@@ -26,6 +28,7 @@ import { channels, is_indexer_channel, mesh_event_channel, type EventEnvelope } 
 import type { Graph } from './graph.ts'
 import { market_updates } from './market_updates.ts'
 import { is_market_change } from './public_market.ts'
+import { sampled_read } from './sampled_read.ts'
 import { item_updates } from './item_updates.ts'
 import logger from './logger.ts'
 
@@ -89,7 +92,7 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
   analytics_sets?: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
   analytics_counts?: (keys: readonly string[]) => Promise<readonly number[]>
-  analytics_sums?: (keys: readonly string[]) => Promise<readonly number[]>
+  analytics_totals?: (keys: readonly string[]) => Promise<readonly AnalyticsTotals[]>
   analytics_cumulative_counts?: (key: string, maxes: readonly number[]) => Promise<readonly number[]>
 }
 
@@ -110,14 +113,6 @@ type BusWires = Readonly<{ subscriber: BusRedis; publisher: BusRedis; unsubscrib
 /** Legacy synchronizer law: movement removes demand immediately, but Redis subscriptions cool
  * down later. This breaks the packet-rate → Redis-command coupling at zone boundaries. */
 const UNSUBSCRIBE_GRACE_MS = 10_000
-const sum_checkpoint_counts = (values: readonly string[]): number =>
-  values.reduce((sum, value) => {
-    const count = Number(value)
-    const next = sum + count
-    if (!Number.isSafeInteger(count) || count < 0 || !Number.isSafeInteger(next))
-      throw new Error('analytics transaction bucket contains an invalid checkpoint count')
-    return next
-  }, 0)
 const online_sample_values = (values: readonly string[]): readonly number[] => {
   const samples = values.filter((_, index) => index % 2 === 1).map(Number)
   if (samples.some((value) => !Number.isFinite(value) || value < 0))
@@ -281,15 +276,20 @@ export const create_graph_bus = ({
   subscriber.on('end', lost('graph connection ended'))
   publisher.on('end', lost('graph connection ended'))
   const { closed: _closed, publish: _publish, ...doors } = bus
+  const item_supply = item_graph ? create_item_supply_reader(item_graph) : null
   return {
     ...doors,
     sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
-    market_prices: (item_type, now_ms) => get_market_prices(publisher, item_type, now_ms),
+    market_prices: sampled_read(async (item_type, now_ms) => {
+      const history = await get_market_prices(publisher, item_type, now_ms)
+      if (!history?.buckets.length) return history
+      return { ...history, total_units: (await item_supply?.(item_type)) ?? null }
+    }, 5_000),
     market_volume: (now_ms) => get_market_volume(publisher, now_ms),
     analytics_hashes: (keys) => Promise.all(keys.map((key) => publisher.hgetall(key))),
     analytics_sets: (keys) => Promise.all(keys.map((key) => publisher.smembers(key))),
     analytics_counts: (keys) => Promise.all(keys.map((key) => publisher.scard(key))),
-    analytics_sums: (keys) => Promise.all(keys.map(async (key) => sum_checkpoint_counts(await publisher.hvals(key)))),
+    analytics_totals: (keys) => get_analytics_totals(publisher, keys),
     analytics_cumulative_counts: (key, maxes) =>
       Promise.all([...maxes.map((max) => publisher.zcount(key, 0, max)), publisher.zcard(key)]),
     leaderboard: (observation, address) => get_leaderboard(publisher, observation, address),

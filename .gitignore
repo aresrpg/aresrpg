@@ -51,3 +51,6 @@ packages/*/traces/
 packages/*/.coverage_map.mvcov
 
 vfx
+
+# Private local database backups.
+/misc/db-backups/

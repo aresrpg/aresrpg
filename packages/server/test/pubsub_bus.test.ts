@@ -12,6 +12,7 @@ import {
   create_watcher,
   type BusRedis,
 } from '../src/pubsub_bus.ts'
+import { ZERO_TOTALS } from '../src/reads/get_analytics_totals.ts'
 import { movement_listener_channel } from '../src/protocol.ts'
 
 const fake_redis = () => {
@@ -156,19 +157,29 @@ test('the graph bus reads the indexer checkpoint marker from ITS OWN redis', asy
 test('transaction bucket reads sum replay-safe checkpoint counts', async () => {
   const subscriber = fake_redis()
   const publisher = fake_redis()
-  const counted: BusRedis = { ...publisher.redis, hvals: async () => ['2', '3'] }
+  const counted: BusRedis = {
+    ...publisher.redis,
+    get: async () => 'compact-v1',
+    mget: async () => [JSON.stringify({ ...ZERO_TOTALS, transactions: '5', gas_mist: '-3' })],
+  }
   const bus = create_graph_bus({ subscriber: subscriber.redis, publisher: counted, on_lost: () => undefined })
 
-  expect(await bus.analytics_sums?.(['analytics:transactions:day:0'])).toEqual([5])
+  expect(await bus.analytics_totals?.(['analytics:totals:day:0'])).toEqual([
+    { ...ZERO_TOTALS, transactions: '5', gas_mist: '-3' },
+  ])
 })
 
 test('a malformed transaction checkpoint count fails instead of disappearing', async () => {
   const subscriber = fake_redis()
   const publisher = fake_redis()
-  const corrupt: BusRedis = { ...publisher.redis, hvals: async () => ['2', 'broken'] }
+  const corrupt: BusRedis = {
+    ...publisher.redis,
+    get: async () => 'compact-v1',
+    mget: async () => [JSON.stringify({ ...ZERO_TOTALS, transactions: 'broken' })],
+  }
   const bus = create_graph_bus({ subscriber: subscriber.redis, publisher: corrupt, on_lost: () => undefined })
 
-  await expect(bus.analytics_sums?.(['analytics:transactions:day:0'])).rejects.toThrow('invalid checkpoint count')
+  await expect(bus.analytics_totals?.(['analytics:totals:day:0'])).rejects.toThrow('invalid compact analytics totals')
 })
 
 test('a malformed online sample never serializes as a null dashboard number', async () => {
@@ -325,6 +336,37 @@ test('mesh movements dispatch only to identity listeners without additional Redi
     subscriber.emitter.emit('message', zone, JSON.stringify({ kind: 'leave', character_id: 'visible' }))
     expect(broad).toBe(100)
     expect(subscriber.calls.filter(([command]) => command === 'subscribe')).toEqual([['subscribe', zone]])
+  } finally {
+    bus.close()
+  }
+})
+
+test('chart reads attach cached supply only after a recorded sale', async () => {
+  let bucket: string | null = null
+  let supply_reads = 0
+  const bus = create_graph_bus({
+    subscriber: fake_redis().redis,
+    publisher: {
+      ...fake_redis().redis,
+      get: async () => '0',
+      pipeline: () => ({ hget: () => {}, exec: async () => [[null, bucket]] }),
+    },
+    item_graph: {
+      read: async () => {
+        supply_reads++
+        return [{ whole: 1, remainder: 25 }]
+      },
+      close: async () => {},
+    },
+    on_lost: () => {},
+  })
+  try {
+    expect((await bus.market_prices!('wood', 1))?.buckets).toEqual([])
+    expect(supply_reads).toBe(0)
+    bucket = JSON.stringify({ total_mist: '7', units: '3', sales: '1', checkpoint: 1 })
+    const samples = await Promise.all(Array.from({ length: 20 }, () => bus.market_prices!('stone', 2)))
+    expect(samples.every((sample) => sample?.total_units === '1000025')).toBe(true)
+    expect(supply_reads).toBe(1)
   } finally {
     bus.close()
   }

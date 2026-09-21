@@ -23,12 +23,13 @@ import type {
 import type { Graph } from '../graph.ts'
 import type { GraphBus, MeshBus } from '../pubsub_bus.ts'
 
+import { ZERO_TOTALS, type AnalyticsTotals } from './get_analytics_totals.ts'
+
 const INTERVAL_MS = 15 * 60 * 1_000
 const HOUR_MS = 60 * 60 * 1_000
 const DAY_MS = 24 * 60 * 60 * 1_000
 const WEEK_MS = 7 * DAY_MS
-const TRANSACTIONS_ALL_KEY = 'analytics:transactions:all'
-const GAS_ALL_KEY = 'analytics:gas:all'
+const ALL_TOTALS_KEY = 'analytics:totals:all'
 
 const bucket_start = (at_ms: number, width_ms: number): number => Math.floor(at_ms / width_ms) * width_ms
 const bucket_range = (from_ms: number, to_ms: number, width_ms: number): readonly number[] => {
@@ -70,8 +71,6 @@ const range_buckets = (days: AdminRangeDays, now_ms: number) => {
 }
 const bigint = (value: string | undefined): bigint => BigInt(value ?? '0')
 const integer = (value: string | undefined): number => Number.parseInt(value ?? '0', 10) || 0
-const sum_hash_values = (rows: readonly Readonly<Record<string, string>>[]): bigint =>
-  rows.reduce((total, row) => total + Object.values(row).reduce((sum, value) => sum + BigInt(value), 0n), 0n)
 const safe_count = (value: bigint, label: string): number => {
   const count = Number(value)
   if (!Number.isSafeInteger(count) || count < 0) throw new Error(`${label} is outside the safe count range`)
@@ -79,46 +78,28 @@ const safe_count = (value: bigint, label: string): number => {
 }
 
 const graph_doors = (graph: GraphBus) => {
-  const { analytics_hashes, analytics_counts, analytics_sums, analytics_sets, analytics_cumulative_counts } = graph
-  if (!analytics_hashes || !analytics_counts || !analytics_sums || !analytics_sets || !analytics_cumulative_counts)
+  const { analytics_hashes, analytics_counts, analytics_sets, analytics_cumulative_counts } = graph
+  if (!analytics_hashes || !analytics_counts || !analytics_sets || !analytics_cumulative_counts)
     throw new Error('admin analytics projection is unavailable')
   return Object.freeze({
     analytics_hashes,
     analytics_counts,
-    analytics_sums,
     analytics_sets,
     analytics_cumulative_counts,
   })
 }
 
-type MoneyObservation = Readonly<{
-  ts_ms: number
-  item_royalty_mist: string
-  character_royalty_mist: string
-  character_creation_mist: string
-  kolizeum_mist: string
-}>
-
-const optional_revenue = (value: unknown): string => {
-  if (value === undefined) return '0'
-  if (typeof value !== 'string') throw new Error('admin money observation has an invalid revenue shape')
-  return value
+const numeric_rows = async (
+  graph: GraphBus,
+  keys: readonly string[]
+): Promise<ReadonlyMap<string, AnalyticsTotals>> => {
+  if (!graph.analytics_totals) throw new Error('compact analytics reader unavailable')
+  const unique = [...new Set(keys)]
+  const rows = await graph.analytics_totals(unique)
+  return new Map(unique.map((key, index) => [key, rows[index]!]))
 }
 
-const parse_money = (raw: string): MoneyObservation => {
-  const row = JSON.parse(raw) as Record<string, unknown>
-  const strings = ['item_royalty_mist', 'character_royalty_mist']
-  if (typeof row.ts_ms !== 'number' || !strings.every((field) => typeof row[field] === 'string'))
-    throw new Error('admin money observation has an invalid shape')
-  const { character_creation_mist, kolizeum_mist } = row
-  return Object.freeze({
-    ...(row as Omit<MoneyObservation, 'character_creation_mist' | 'kolizeum_mist'>),
-    character_creation_mist: optional_revenue(character_creation_mist),
-    kolizeum_mist: optional_revenue(kolizeum_mist),
-  })
-}
-
-const money_point = (at_ms: number, rows: readonly MoneyObservation[]): AdminMoneyPoint =>
+const money_point = (at_ms: number, rows: readonly AnalyticsTotals[]): AdminMoneyPoint =>
   Object.freeze({
     at_ms,
     item_royalty_mist: rows.reduce((sum, row) => sum + bigint(row.item_royalty_mist), 0n).toString(),
@@ -133,21 +114,6 @@ const money_bucket = (tier: AdminBucket, at_ms: number): number => {
   if (tier === 'day') return bucket_start(at_ms, DAY_MS)
   if (tier === 'week') return week_start(at_ms)
   return month_start(at_ms)
-}
-
-const money_points = (
-  buckets: Readonly<{ tier: AdminBucket; values: readonly number[] }>,
-  observations: readonly MoneyObservation[]
-): readonly AdminMoneyPoint[] => {
-  const grouped = new Map<number, MoneyObservation[]>()
-  observations.forEach((row) => {
-    const bucket = money_bucket(buckets.tier, row.ts_ms)
-    const existing = grouped.get(bucket)
-    if (existing) {
-      existing.push(row)
-    } else grouped.set(bucket, [row])
-  })
-  return Object.freeze(buckets.values.map((bucket) => money_point(bucket, grouped.get(bucket) ?? [])))
 }
 
 const online_point = (at_ms: number, samples: readonly number[]): AdminOnlinePoint =>
@@ -170,28 +136,26 @@ const sum_money = (rows: readonly AdminMoneyPoint[]) =>
   )
 
 const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: number): Promise<AdminRevenueOverview> => {
-  const { analytics_hashes } = graph_doors(graph)
   const buckets = range_buckets(days, now_ms)
+  const selected_keys = buckets.values.map((at_ms) => `analytics:totals:${buckets.tier}:${at_ms}`)
   const last_30d_start = recent_buckets(now_ms, 30, DAY_MS)[0]!
   const mtd_start = month_start(now_ms)
-  const first_day = bucket_start(Math.min(buckets.values[0]!, last_30d_start, mtd_start), DAY_MS)
-  const keys = bucket_range(first_day, now_ms, DAY_MS).map((day) => `analytics:money:day:${day}`)
-  const rows = await analytics_hashes(keys)
-  const observations = Object.freeze(rows.flatMap((row) => Object.values(row).map(parse_money)))
-  const money = money_points(buckets, observations)
+  const daily = bucket_range(Math.min(last_30d_start, mtd_start), now_ms, DAY_MS)
+  const day_key = (at_ms: number): string => `analytics:totals:day:${at_ms}`
+  const rows = await numeric_rows(graph, [...selected_keys, ...daily.map(day_key)])
+  const money = buckets.values.map((at_ms, index) =>
+    money_point(at_ms, [rows.get(selected_keys[index]!) ?? ZERO_TOTALS])
+  )
   const selected = sum_money(money)
-  const last_30d = sum_money([
-    money_point(
-      0,
-      observations.filter((row) => row.ts_ms >= last_30d_start)
-    ),
-  ])
-  const month_to_date = sum_money([
-    money_point(
-      0,
-      observations.filter((row) => row.ts_ms >= mtd_start)
-    ),
-  ])
+  const total_since = (start: number) =>
+    sum_money([
+      money_point(
+        0,
+        daily.filter((at_ms) => at_ms >= start).map((at_ms) => rows.get(day_key(at_ms)) ?? ZERO_TOTALS)
+      ),
+    ])
+  const last_30d = total_since(last_30d_start)
+  const month_to_date = total_since(mtd_start)
   const revenue_total = (row: ReturnType<typeof sum_money>): string =>
     (row.item_royalty_mist + row.character_royalty_mist + row.character_creation_mist + row.kolizeum_mist).toString()
   return Object.freeze({
@@ -240,47 +204,29 @@ const load_transactions = async (
   days: AdminRangeDays,
   now_ms: number
 ): Promise<AdminTransactionsOverview> => {
-  const { analytics_hashes, analytics_sums } = graph_doors(graph)
   const buckets = range_buckets(days, now_ms)
-  const last_24h = range_buckets(1, now_ms)
-  const last_30d = range_buckets(30, now_ms)
-  const keys = buckets.values.map((bucket) => `analytics:transactions:${buckets.tier}:${bucket}`)
-  const gas_keys = buckets.values.map((bucket) => `analytics:gas:${buckets.tier}:${bucket}`)
-  const last_24h_keys = last_24h.values.map((bucket) => `analytics:transactions:${last_24h.tier}:${bucket}`)
-  const last_30d_keys = last_30d.values.map((bucket) => `analytics:transactions:${last_30d.tier}:${bucket}`)
-  const gas_last_24h_keys = last_24h.values.map((bucket) => `analytics:gas:${last_24h.tier}:${bucket}`)
-  const gas_last_30d_keys = last_30d.values.map((bucket) => `analytics:gas:${last_30d.tier}:${bucket}`)
-  const count_keys = [...new Set([...keys, ...last_24h_keys, ...last_30d_keys])]
-  const queried_gas_keys = [...new Set([...gas_keys, ...gas_last_24h_keys, ...gas_last_30d_keys])]
-  const [counts, hashes] = await Promise.all([
-    analytics_sums(count_keys),
-    analytics_hashes([TRANSACTIONS_ALL_KEY, GAS_ALL_KEY, ...queried_gas_keys]),
-  ])
-  const count_by_key = new Map(count_keys.map((key, index) => [key, counts[index] ?? 0]))
-  const hash_by_key = new Map(
-    [TRANSACTIONS_ALL_KEY, GAS_ALL_KEY, ...queried_gas_keys].map((key, index) => [key, hashes[index] ?? {}])
-  )
-  const count_total = (selected: readonly string[], label: string): number =>
-    safe_count(
-      selected.reduce((total, key) => total + BigInt(count_by_key.get(key) ?? 0), 0n),
-      label
-    )
-  const gas_total = (selected: readonly string[]): string =>
-    sum_hash_values(selected.map((key) => hash_by_key.get(key) ?? {})).toString()
-  const transactions = Object.freeze(
-    buckets.values.map((at_ms, index) => Object.freeze({ at_ms, transactions: count_by_key.get(keys[index]!) ?? 0 }))
-  )
+  const keys_for = (range: ReturnType<typeof range_buckets>) =>
+    range.values.map((at_ms) => `analytics:totals:${range.tier}:${at_ms}`)
+  const keys = keys_for(buckets)
+  const last_24h_keys = keys_for(range_buckets(1, now_ms))
+  const last_30d_keys = keys_for(range_buckets(30, now_ms))
+  const rows = await numeric_rows(graph, [ALL_TOTALS_KEY, ...keys, ...last_24h_keys, ...last_30d_keys])
+  const sum = (selected: readonly string[], field: 'transactions' | 'gas_mist') =>
+    selected.reduce((total, key) => total + BigInt((rows.get(key) ?? ZERO_TOTALS)[field]), 0n)
+  const count = (selected: readonly string[]) => safe_count(sum(selected, 'transactions'), 'transaction count')
+  const gas = (selected: readonly string[]) => sum(selected, 'gas_mist').toString()
+  const transactions = buckets.values.map((at_ms, index) => ({ at_ms, transactions: count([keys[index]!]) }))
   return Object.freeze({
     days,
     bucket: buckets.tier,
-    total: transactions.reduce((total, point) => total + point.transactions, 0),
-    last_24h: count_total(last_24h_keys, '24-hour transaction count'),
-    last_30d: count_total(last_30d_keys, '30-day transaction count'),
-    all_time: safe_count(sum_hash_values([hash_by_key.get(TRANSACTIONS_ALL_KEY) ?? {}]), 'all-time transaction count'),
-    gas_range_mist: gas_total(gas_keys),
-    gas_last_24h_mist: gas_total(gas_last_24h_keys),
-    gas_last_30d_mist: gas_total(gas_last_30d_keys),
-    gas_all_time_mist: gas_total([GAS_ALL_KEY]),
+    total: count(keys),
+    last_24h: count(last_24h_keys),
+    last_30d: count(last_30d_keys),
+    all_time: count([ALL_TOTALS_KEY]),
+    gas_range_mist: gas(keys),
+    gas_last_24h_mist: gas(last_24h_keys),
+    gas_last_30d_mist: gas(last_30d_keys),
+    gas_all_time_mist: gas([ALL_TOTALS_KEY]),
     transactions,
   })
 }

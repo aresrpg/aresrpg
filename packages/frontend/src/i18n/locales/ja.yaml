@@ -394,6 +394,9 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  total_units: '総数量'
+  market_cap: '時価総額'
+  market_cap_basis: '現存する総数量 × チャートの直近取引日の平均単価（手数料を除く）。'
   previous_page: 前へ
   next_page: 次へ
   prices_title: '価格履歴'

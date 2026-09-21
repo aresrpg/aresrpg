@@ -52,15 +52,8 @@ and append the configured latest package to the stored activity lineage.
 - Output objects, dynamic fields, custody, and deleted pre-state are the graph writers.
 - Events feed pub/sub, sales history, and analytics; successful non-deployment game-package calls feed activity.
   Realized market price remains the sole event-derived graph value because no object contains it.
-- Exact money and Character lifecycle observations are written once to daily hashes under their
-  stable checkpoint coordinates. Replays overwrite the same fields. The server derives the five
-  visible chart intervals at read time, while the current Character total comes from graph nodes.
-- Successful callers use ordinary address sets for active-player ranges and one first-interaction
-  sorted-set entry for lifetime unique addresses. Successful game transaction volume uses one
-  numeric field per checkpoint in each visible bucket and one permanent all-time hash. Net gas for
-  every non-deployment game attempt uses parallel exact-MIST hashes, including failed executions;
-  publish, upgrade, seed, bootstrap, and pause/resume costs stay outside gameplay analytics. Replays
-  overwrite the same checkpoint fields. There are no transaction digests, custom Lua, or analytics schema state.
+- Numeric analytics use the compact checkpoint-marked format described in [ARCHITECTURE.md](../../ARCHITECTURE.md).
+  Character lifecycle records and distinct-address membership retain their separate semantics.
 - Server-mesh online samples are best effort and expire.
 - Every large integer and money value is stored as a decimal string.
 - Writers update only the properties they own; sparse dynamic-field outputs never replace a node.
@@ -78,7 +71,9 @@ covered by server/indexer gates. Do not maintain another schema table here.
 ```text
 src/
 ├── main.rs       boot and sequential pipeline assembly
-├── analytics.rs  exact activity and money buckets
+├── analytics.rs  exact activity and calendar buckets
+├── analytics_totals.rs  compact checkpoint-marked numeric totals
+├── analytics_migration.rs  verified existing-data conversion
 ├── leaderboards.rs       transaction contributions
 ├── leaderboard_store.rs exact rankings and replay-safe commit
 ├── boot.rs       indexes, package binding, lineage, start checkpoint
@@ -119,3 +114,24 @@ snapshot with:
 ```bash
 UPDATE_LAYOUTS=1 cargo test
 ```
+
+
+## Existing-database numeric analytics upgrade
+
+The indexer converts old transaction, gas, and revenue hashes before registering its sequential pipeline.
+It uses the committed watermark, verifies compact writes, and retains the original hashes for at most
+seven days afterward. Failed conversion leaves those originals unexpired and does not start the writer.
+Restarting resumes conversion safely. No database wipe or historical chain replay is required.
+
+Deployment order matters: update the indexer and wait for `numeric analytics ready` and checkpoint
+catch-up before updating server readers. The admin response format is unchanged. Old reader binaries
+see a frozen numeric snapshot during this interval; new readers refuse an unconverted schema rather
+than display zero history. Gameplay graph and protocol data remain compatible.
+
+The one-time conversion holds one legacy hash at a time plus the small destination bucket map.
+Its peak memory depends on the largest legacy hash. Measure and preserve a database backup before a
+production rollout. Only one indexer may write this database, as required by the normal architecture.
+
+The retained originals are verification material, not a live rollback replica. Once new checkpoints
+use compact totals, reverting to an old binary requires restoring the pre-upgrade backup and replaying
+from its watermark, or retaining the new analytics writer. Do not downgrade blindly.

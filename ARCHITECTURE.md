@@ -194,15 +194,23 @@ stream is a render error, never a silent polling deployment.
 
 The same sequential checkpoint pass owns a separate rebuildable analytics projection in that
 indexer's FalkorDB. Successful calls across the game-package lineage write exact UTC activity
-membership plus one first-interaction timestamp per address. Exact money and Character lifecycle
-observations are stored once in daily buckets; the server derives chart intervals at read time and
-reads the current Character count from the graph. Only high-volume active-player membership is
-pre-bucketed into 15-minute, hourly, daily, weekly, and calendar-month sets. Successful game
-transaction volume stores one replay-safe numeric count per checkpoint in those same visible
-buckets plus a permanent all-time hash. Net gas uses the same checkpoint identity for every
-submitted gameplay attempt, including executed failures, while deployment-only core calls and
-publish, upgrade, and seed transactions contribute neither gas nor player/address activity.
-Rebuilding analytics means replaying that indexer from the original publication checkpoint.
+membership plus one first-interaction timestamp per address. Character lifecycle observations remain
+in daily buckets; the server derives their chart intervals and reads the current Character count
+from the graph. Active-player membership stays in 15-minute, hourly, daily, weekly, and calendar-month sets.
+Numeric analytics combine transaction count, signed net gas, and all four revenue channels into one
+fixed-size record per visible time bucket plus one all-time record. Every record stores its exact
+integer totals and last applied checkpoint together; the sequential writer groups all contributions
+within each checkpoint before replacing records. Retries cannot double count a partly committed batch.
+Fine buckets expire after two/eight days; daily, weekly, and monthly records retain four hundred days
+plus their bucket width. Dashboard numeric reads fetch bounded records, never historical checkpoint fields.
+Deployment-only core calls and publish, upgrade, and seed transactions contribute neither gas nor activity.
+
+Before its writer starts, an older database converts its numeric hashes through its committed watermark.
+Uncommitted checkpoint fragments are excluded and normal replay reapplies them. Conversion publishes its
+schema marker only after verified replacements; restarting an interrupted conversion recomputes from
+untouched originals. Once complete, original numeric hashes receive at most seven more days of retention.
+The schema marker gates readers; mixed binary versions require indexer-before-reader rollout.
+Independent indexer databases still reconstruct all projections by replaying from original publication.
 
 Leaderboards are another projection of that same checkpoint pass. Rankings reset at each UTC
 calendar month boundary, using checkpoint timestamps. Only the current standings are retained. Earned combat
@@ -238,11 +246,15 @@ atomic replacement; interrupted batches skip already-applied contributions. Abso
 365 days plus boundary-day padding. Existing indexers begin at their next processed checkpoint,
 recording their collection start without moving ingestion cursors or requesting a backfill. The server
 reads at most 366 fields in one pipeline for the selected item, pushes refreshed snapshots and marks
-uninitialized history unavailable. The marketplace reducer owns selection and response identity;
+uninitialized history unavailable. Server-local five-second samples share each selected item’s history
+read across viewers; periodic client observations refresh these samples only while items are viewed. The marketplace reducer owns selection and response identity;
 TradingView Lightweight Charts presents unit-weighted daily prices excluding fees in the existing
 purple palette. Listings and history occupy two columns when the detail pane fits, stacking below
 that width. The price line connects recorded daily averages across untraded dates; those dates remain unpriced
 in hover details, without fabricated sales or prices.
+The selected stackable item’s chart response also samples total existing indexed units across all custody.
+A bounded server-local cache shares supply reads for thirty seconds. Its header derives estimated market
+capitalization from that supply and the chart’s latest recorded daily average; missing supply does not hide the chart.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
 query, including empty owned catalogues. Catalogue markers follow their relation writes. The client

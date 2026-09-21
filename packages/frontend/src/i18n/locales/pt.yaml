@@ -394,6 +394,9 @@ demo_page:
   control_hint: Clique na tela · WASD para mover · Espaço para pular · Mouse para olhar
   back: Voltar ao aplicativo
 marketplace_page:
+  total_units: 'Unidades totais'
+  market_cap: 'Capitalização'
+  market_cap_basis: 'Total de unidades existentes × preço unitário médio do último dia com vendas no gráfico, sem taxas.'
   previous_page: Anterior
   next_page: Seguinte
   prices_title: Histórico de preços

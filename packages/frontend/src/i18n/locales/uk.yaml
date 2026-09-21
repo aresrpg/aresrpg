@@ -394,6 +394,9 @@ demo_page:
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
 marketplace_page:
+  total_units: 'Усього одиниць'
+  market_cap: 'Капіталізація'
+  market_cap_basis: 'Усі наявні одиниці × середня ціна одиниці за останній день із продажами на графіку, без комісій.'
   previous_page: Попередня
   next_page: Наступна
   prices_title: 'Історія цін'

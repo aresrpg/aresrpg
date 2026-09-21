@@ -3,47 +3,33 @@
 
 import { expect, test } from 'bun:test'
 
+import { ZERO_TOTALS } from '../src/reads/get_analytics_totals.ts'
 import { get_admin_overview } from '../src/reads/get_admin_overview.ts'
 
 const DAY = 86_400_000
 const now_ms = 40 * DAY
 test('overview derives exact active and money totals from the selected tier', async () => {
-  const money = (ts_ms: number, values: Readonly<Record<string, string>>) =>
-    JSON.stringify({
-      ts_ms,
-      item_royalty_mist: '0',
-      character_royalty_mist: '0',
-      character_creation_mist: '0',
-      kolizeum_mist: '0',
-      ...values,
-    })
   let live_reads = 0
   const graph = { read: async () => [{ total: 4 }] }
   const bus = {
-    analytics_hashes: async (keys: readonly string[]) =>
+    analytics_hashes: async (keys: readonly string[]) => keys.map(() => ({})),
+    analytics_totals: async (keys: readonly string[]) =>
       keys.map((key) => {
-        if (key === 'analytics:transactions:all') return { '39': '12' }
-        if (key === 'analytics:gas:all') return { '39': '250000000' }
-        if (key === `analytics:gas:15m:${now_ms}`) return { '40': '25000000' }
-        if (key === `analytics:gas:day:${now_ms}`) return { '40': '100000000' }
-        if (key !== `analytics:money:day:${now_ms}`) return {}
-        return {
-          legacy: JSON.stringify({
-            ts_ms: now_ms - 1,
-            item_royalty_mist: '0',
-            character_royalty_mist: '0',
-          }),
-          royalty: money(now_ms - 1, { item_royalty_mist: '20', character_royalty_mist: '3' }),
-          gameplay: money(now_ms - 1, {
-            item_royalty_mist: '10',
-            character_royalty_mist: '5',
+        if (key === 'analytics:totals:all') return { ...ZERO_TOTALS, transactions: '12', gas_mist: '250000000' }
+        if (key === `analytics:totals:15m:${now_ms}`) return { ...ZERO_TOTALS, transactions: '5', gas_mist: '25000000' }
+        if (key === `analytics:totals:day:${now_ms}`)
+          return {
+            ...ZERO_TOTALS,
+            transactions: '5',
+            gas_mist: '100000000',
+            item_royalty_mist: '30',
+            character_royalty_mist: '8',
             character_creation_mist: '1000',
             kolizeum_mist: '20',
-          }),
-        }
+          }
+        return ZERO_TOTALS
       }),
     analytics_counts: async (keys: readonly string[]) => keys.map((key) => (key.endsWith(String(now_ms)) ? 2 : 0)),
-    analytics_sums: async (keys: readonly string[]) => keys.map((key) => (key.endsWith(String(now_ms)) ? 5 : 0)),
     analytics_cumulative_counts: async (_key: string, maxes: readonly number[]) => [...maxes.map(() => 3), 3],
     analytics_sets: async (keys: readonly string[]) =>
       keys.map((key) => (key.endsWith(String(now_ms)) ? ['0xa', '0xb'] : ['0xa'])),
@@ -97,7 +83,10 @@ test('ranges use compacted hourly, weekly, and monthly buckets', async () => {
       return keys.map(() => ({}))
     },
     analytics_counts: async (keys: readonly string[]) => keys.map(() => 0),
-    analytics_sums: async (keys: readonly string[]) => keys.map(() => 0),
+    analytics_totals: async (keys: readonly string[]) => {
+      seen.push([...keys])
+      return keys.map(() => ZERO_TOTALS)
+    },
     analytics_cumulative_counts: async (_key: string, maxes: readonly number[]) => [...maxes.map(() => 0), 0],
     analytics_sets: async (keys: readonly string[]) => keys.map(() => []),
     indexed_checkpoint: async () => 40,
@@ -118,5 +107,5 @@ test('ranges use compacted hourly, weekly, and monthly buckets', async () => {
   expect(overview.online.bucket).toBe('15m')
   expect(overview.addresses.bucket).toBe('week')
   expect(overview.characters.bucket).toBe('month')
-  expect(seen.flat().some((key) => key.includes('analytics:money:hour:'))).toBe(false)
+  expect(seen.flat().some((key) => key.includes('analytics:totals:hour:'))).toBe(true)
 })

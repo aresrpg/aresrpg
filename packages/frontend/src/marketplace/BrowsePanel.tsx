@@ -21,7 +21,8 @@ import type { CopyText } from '../i18n/copy.ts'
 import { MARKET_GROUPS, market_categories, type MarketGroup } from '../modules/marketplace.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
-import { browse_types } from './browse_types.ts'
+import { browse_types, cheapest_offers } from './browse_types.ts'
+import { MarketCapitalization } from './MarketCapitalization.tsx'
 import { PriceHistoryChart } from './PriceHistoryChart.tsx'
 import {
   buyer_total,
@@ -68,15 +69,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
   )
   const active_type = market.observation?.kind === 'offers' ? market.observation.item_type : null
   const selected = types.find(({ item_type }) => item_type === active_type) ?? null
-  const asks = selected
-    ? selected.rows.toSorted((a, b) =>
-        BigInt(a.price_mist) < BigInt(b.price_mist)
-          ? -1
-          : BigInt(a.price_mist) > BigInt(b.price_mist)
-            ? 1
-            : a.id.localeCompare(b.id)
-      )
-    : []
+  const asks = selected ? cheapest_offers(selected.rows) : []
   useEffect(() => {
     if (market.group !== 'CHARACTERS') return
     dispatch_app({
@@ -257,21 +250,24 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   <div className="market-detail-body min-h-0 flex-1 overflow-y-auto bg-surface-high p-4">
                     <div className="flex min-h-full flex-col gap-4">
                       {item && (
-                        <div className="rounded-[5px] border border-border bg-surface p-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
-                          <ItemDetailView
-                            category={item.category}
-                            damages={item.damages ?? []}
-                            item_type={item.item_type}
-                            labels={{
-                              characteristics: text('characteristics'),
-                              damages: text('damages'),
-                              level_short: ui('encyclopedia_page.level_short', { level: item.level }),
-                              range_to: text('range_to'),
-                            }}
-                            level={item.level}
-                            name={item.name}
-                            stats={item.stats}
-                          />
+                        <div className="flex flex-wrap items-start gap-4 rounded-[5px] border border-border bg-surface p-4 shadow-[0_10px_28px_rgba(0,0,0,0.16)]">
+                          <div className="min-w-0 flex-1 basis-64">
+                            <ItemDetailView
+                              category={item.category}
+                              damages={item.damages ?? []}
+                              item_type={item.item_type}
+                              labels={{
+                                characteristics: text('characteristics'),
+                                damages: text('damages'),
+                                level_short: ui('encyclopedia_page.level_short', { level: item.level }),
+                                range_to: text('range_to'),
+                              }}
+                              level={item.level}
+                              name={item.name}
+                              stats={item.stats}
+                            />
+                          </div>
+                          <MarketCapitalization item_type={item.item_type} text={text} />
                         </div>
                       )}
                       {item_is_stackable(selected.category ?? '') ? (
@@ -375,10 +371,7 @@ const CheapestLotMarket = ({
       </div>
       <div className="divide-y divide-white/7">
         {sizes
-          .flatMap((size) => {
-            const offers = asks.filter(({ amount }) => amount === size)
-            return (offers.length ? offers : [null]).map((ask) => ({ size, ask }))
-          })
+          .map((size) => ({ size, ask: asks.find(({ amount }) => amount === size) ?? null }))
           .map(({ size, ask }, index) => {
             const purchase = offer_purchase(ask, address, balance, pending)
             const { total } = purchase

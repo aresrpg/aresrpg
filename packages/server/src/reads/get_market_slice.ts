@@ -20,12 +20,13 @@ export const shape_market_snapshot = (rows: readonly GraphRow[]): MarketSnapshot
   ),
   listings: rows
     .filter(({ asset }) => asset)
-    .map(({ asset, kinds, price_mist, at_ms, kiosk, seller, version }) => {
+    .map(({ asset, kinds, price_mist, at_ms, kiosk, seller, version, group_key }) => {
       const row = (asset as Node)!.properties
       const kind = (kinds as string[]).includes('Character') ? 'character' : 'item'
       const details = shape_item(row) as ItemRow
       return {
         kind,
+        group_key: group_key as string | undefined,
         version: String(version ?? '0'),
         id: String(row.id),
         name: String(row.name),
@@ -60,7 +61,7 @@ const ROLL_KEY = `CASE WHEN asset.category IN $stackable THEN 'lot:' + toString(
     + '|' + coalesce(toString(asset.pet_power), '')
     + '|' + coalesce(toString(asset.pet_last_day), '')
     + '|' + coalesce(asset.puits, '') END`
-const OFFER = `{asset: asset, kinds: labels(asset), price_mist: listing.price, at_ms: listing.at_ms,
+const OFFER = `{group_key: group_key, asset: asset, kinds: labels(asset), price_mist: listing.price, at_ms: listing.at_ms,
   kiosk: kiosk.id, market_version: kiosk.market_version, version: listing.version, seller: owner.address}`
 
 const listing_query = (observation: Extract<MarketObservation, { kind: 'offers' | 'characters' }>) => {

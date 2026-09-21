@@ -29,6 +29,7 @@ test('marketplace snapshots retain indexed rolls and weapon damage without extra
       kiosk: 'kiosk',
       seller: 'owner',
       version: '42',
+      group_key: 'roll:exact-indexed-values',
     },
     {
       asset: { properties: { id: 'character', name: 'Character', classe: 'iop', level: 30 } },
@@ -40,7 +41,13 @@ test('marketplace snapshots retain indexed rolls and weapon damage without extra
       version: '43',
     },
   ])
-  expect(listings[0]).toMatchObject({ version: '42', stats: { strength: 32_795, vitality: 32_768 }, damages })
+  expect(listings[0]).toMatchObject({
+    group_key: 'roll:exact-indexed-values',
+    version: '42',
+    stats: { strength: 32_795, vitality: 32_768 },
+    damages,
+  })
+  expect(listings[1]?.group_key).toBeUndefined()
   expect(listings[1]).not.toHaveProperty('stats')
   expect(listings[1]).not.toHaveProperty('damages')
 })

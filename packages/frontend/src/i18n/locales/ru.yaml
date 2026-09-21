@@ -397,6 +397,9 @@ demo_page:
   control_hint: Нажмите на холст · WASD — движение · Пробел — прыжок · Мышь — обзор
   back: Вернуться в приложение
 marketplace_page:
+  total_units: 'Всего единиц'
+  market_cap: 'Капитализация'
+  market_cap_basis: 'Все существующие единицы × средняя цена единицы за последний день с продажами на графике, без комиссий.'
   previous_page: Назад
   next_page: Далее
   prices_title: История цен

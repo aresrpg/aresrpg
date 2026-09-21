@@ -49,6 +49,8 @@ test.skipIf(!url)(
       const first = await get_market_slice(graph, { observation, address: 'buyer' })
       expect(first.listings).toHaveLength(60)
       expect(first.next_cursor).not.toBeNull()
+      expect(new Set(first.listings.map((row) => row.group_key)).size).toBe(20)
+      expect(first.listings.every((row) => typeof row.group_key === 'string')).toBeTrue()
       expect(new Set(first.listings.map((row) => row.stats?.wisdom)).size).toBe(20)
       expect(first.listings.slice(0, 3).map((row) => row.price_mist)).toEqual([
         '9007199254740992',

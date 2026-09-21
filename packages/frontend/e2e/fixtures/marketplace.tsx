@@ -26,6 +26,7 @@ const listings: ListingRow[] = [1, 2, 3].map((index) => ({
   kind: 'item',
   id: `0xitem${index}`,
   version: '1',
+  group_key: stackable ? 'lot:1' : index < 3 ? `roll:${index}` : `object:0xitem${index}`,
   amount: 1,
   stats: !stackable && index < 3 ? { strength: item_stat_center + (index === 1 ? 11 : 27) } : undefined,
   damages: !stackable && index === 1 ? [{ element: 'fire', from: 3, to: 7, damage_type: 'damage' }] : undefined,
@@ -167,6 +168,7 @@ const Fixture = () => {
         type: 'packet/market_prices',
         observation,
         history: {
+          total_units: query.has('supply-unavailable') ? null : '1000000',
           first_timestamp_ms: end - 29 * 86_400_000,
           sampled_at_ms: end,
           buckets,

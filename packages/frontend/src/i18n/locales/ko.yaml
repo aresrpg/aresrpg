@@ -397,6 +397,9 @@ demo_page:
   control_hint: 캔버스 클릭 · WASD 이동 · Space 점프 · 마우스로 둘러보기
   back: 앱으로 돌아가기
 marketplace_page:
+  total_units: '총수량'
+  market_cap: '시가총액'
+  market_cap_basis: '현재 존재하는 총수량 × 차트의 최근 거래일 평균 단가. 수수료 제외.'
   previous_page: 이전
   next_page: 다음
   prices_title: 가격 기록

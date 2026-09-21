@@ -14,6 +14,8 @@ export type MarketPriceBucket = Readonly<{
 export type MarketPriceHistory = Readonly<{
   first_timestamp_ms: number
   sampled_at_ms: number
+  /** Current indexed units across all custody; unavailable supply never suppresses the chart. */
+  total_units?: string | null
   buckets: readonly MarketPriceBucket[]
 }>
 

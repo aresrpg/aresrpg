@@ -138,8 +138,10 @@
   border-radius: 50%;
   box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-gold) 6%, transparent);
 }
-.journey-art img {
+.journey-art > :is(img, svg) {
   position: relative;
+}
+.journey-art img {
   width: 160px;
   height: 160px;
   object-fit: contain;
@@ -325,6 +327,10 @@
 .journey-panel--compact .journey-art::before {
   width: 57px;
   height: 57px;
+}
+.journey-panel--compact .journey-art svg {
+  width: 48px;
+  height: 48px;
 }
 .journey-panel--compact .journey-art img {
   width: 80px;

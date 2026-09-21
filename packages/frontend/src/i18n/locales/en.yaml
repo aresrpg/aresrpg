@@ -394,6 +394,9 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  total_units: 'Total units'
+  market_cap: 'Market cap'
+  market_cap_basis: 'Total existing units × the chart’s latest traded-day average unit price, excluding fees.'
   previous_page: Previous
   next_page: Next
   prices_title: 'Price history'

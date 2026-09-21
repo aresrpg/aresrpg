@@ -75,3 +75,25 @@ test('HD journal and compact tracker fit narrow screens in all ten locales', asy
     await page.screenshot({ animations: 'disabled', path: `test-results/journey-${locale}.png` })
   }
 })
+
+test('automation reward art stays above its backdrop and inside the compact art column', async ({ page }) => {
+  await page.goto('/e2e/fixtures/journey.html')
+  await expect(page.locator('.journey-tracker')).toBeVisible()
+  await page.getByRole('button', { name: 'Load completed journey' }).click()
+  const art = page.locator('.journey-tracker .journey-art')
+  const glyph = art.locator('svg')
+  await expect(glyph).toBeVisible()
+  const contained = await glyph.evaluate((element) => {
+    const bounds = element.getBoundingClientRect()
+    const parent = element.parentElement!.getBoundingClientRect()
+    return bounds.left >= parent.left && bounds.right <= parent.right
+  })
+  expect(contained).toBe(true)
+  const unobscured = await glyph.evaluate((element) => {
+    element.style.pointerEvents = 'all'
+    const bounds = element.getBoundingClientRect()
+    const hit = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+    return hit === element || element.contains(hit)
+  })
+  expect(unobscured).toBe(true)
+})

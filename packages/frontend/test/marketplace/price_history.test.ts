@@ -8,7 +8,12 @@ import {
   initial_price_history,
   market_price_subscription,
 } from '../../src/marketplace/price_history_state.ts'
-import { format_unit_price, price_points, unit_price_sui } from '../../src/marketplace/price_history_model.ts'
+import {
+  format_unit_price,
+  market_capitalization,
+  price_points,
+  unit_price_sui,
+} from '../../src/marketplace/price_history_model.ts'
 import type { AppState } from '../../src/store.ts'
 
 const history: MarketPriceHistory = {
@@ -86,4 +91,14 @@ test('only an authenticated open marketplace observes history; reconnect restore
     type: 'packet/market_prices_observe',
     observation: prices.observation,
   })
+})
+
+test('capitalization uses the latest chart average and multiplies exact units before rounding', () => {
+  const latest = { ...history.buckets[0]!, at_ms: 105 * DAY, total_mist: '7', units: '3' }
+  const priced = { ...history, total_units: '9007199254740993', buckets: [latest, ...history.buckets] }
+  expect(market_capitalization(priced)).toBe((9007199254740993n * 7n) / 3n)
+  expect(market_capitalization({ ...priced, total_units: '0' })).toBe(0n)
+  expect(market_capitalization({ ...priced, total_units: null })).toBeNull()
+  expect(market_capitalization({ ...priced, buckets: [] })).toBeNull()
+  expect(market_capitalization(null)).toBeNull()
 })
