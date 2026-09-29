@@ -1,0 +1,60 @@
+.tutorial-tip {
+  position: fixed;
+  width: min(320px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 14px;
+  pointer-events: auto;
+  font-family: var(--aui-font);
+  box-shadow: 0 8px 24px #0007;
+}
+.tutorial-tip > header,
+.tutorial-tip > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tutorial-tip > header > span {
+  color: #b0a58d;
+  font-size: 11px;
+}
+.tutorial-tip h2 {
+  margin: 6px 0;
+  font-size: 17px;
+  color: #ead7af;
+}
+.tutorial-tip p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c4c8ce;
+}
+.tutorial-tip > footer {
+  margin-top: 14px;
+}
+.tutorial-tip .aui-button {
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.tutorial-tip .aui-icon-button {
+  width: 28px;
+  min-height: 28px;
+  padding: 4px;
+}
+.tutorial-tip button:disabled {
+  visibility: hidden;
+}
+.tutorial-focus {
+  position: fixed;
+  border: 1px solid #e8b65499;
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow: 0 0 12px #e8b65420;
+}
+@media (pointer: coarse) {
+  .tutorial-tip .aui-button {
+    min-height: 44px;
+  }
+}

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { AtmosphereTuning } from './atmosphere_tuning.ts'
+import type { DetailCell } from './detail_artifact.ts'
 import type { WorldCaption } from './caption_types.ts'
 
 export type Vec3 = readonly [number, number, number]
@@ -12,6 +14,8 @@ export type FightBoardRenderCell = Readonly<{
   kind: 'floor' | 'obstacle' | 'hole' | 'start_a' | 'start_b'
 }>
 export type FightBoardRender = Readonly<{
+  /** Nearby world presentation keeps scenery and the player camera active. */
+  ambient?: boolean
   width: number
   height: number
   cell_size: number
@@ -24,6 +28,8 @@ export type FightSide = 'a' | 'b'
 /** A planted fight sword — the join-window clock made physical. `y` is the anchor's ground
  *  level; every height the layer animates measures from there. */
 export type FightSwordMarker = Readonly<{
+  /** Keep discovery labels while the live board replaces this sword. */
+  hidden?: boolean
   id: string
   x: number
   y: number
@@ -42,11 +48,14 @@ export type ResourceNodeMarker = Readonly<{
   item_type: string
   job: string
   tier: number
+  /** Optional visual dressing scale; ordinary gather nodes retain their authored identity size. */
+  scale?: number
 }>
 export type DungeonPortalMarker = Readonly<{ id: string; x: number; z: number }>
 export type DungeonStageRender = Readonly<{ x: number; y: number; z: number }>
 export type EntityFacing =
   Readonly<{ kind: 'yaw'; yaw: number }> | Readonly<{ kind: 'fight_opponents'; side: FightSide }>
+export type CharacterAura = 'unbroken' | 'admin'
 export type EntityVisualEffect = Readonly<{ kind: 'invisibility' }>
 export type WornModelRender = Readonly<{ url: string; variant: string | null }>
 export type CharacterAppearanceRender = Readonly<{
@@ -75,6 +84,7 @@ export type CharacterEntityRender = Readonly<{
   /** World crowds batch compatible appearances; controlled and tactical actors stay individual. */
   presentation?: 'individual' | 'crowd'
   appearance: CharacterAppearanceRender
+  aura?: CharacterAura
   anchor: EntityAnchor
   facing: EntityFacing
   animation?: CharacterAnimationRender
@@ -133,7 +143,7 @@ export type EngineIssueCode =
 export type EngineIssue = Readonly<{ code: EngineIssueCode; detail?: string }>
 export type EngineStatus = Readonly<{
   state: 'initializing' | 'ready' | 'degraded' | 'failed'
-  backend: 'none' | 'webgpu' | 'grid'
+  backend: 'none' | 'webgpu'
   issue?: EngineIssue
 }>
 
@@ -171,6 +181,13 @@ export type QualityProfile = Readonly<{
   shadows: Readonly<{ kind: 'none' | 'basic' | 'soft'; map_size: number }>
   effects: Readonly<{
     bloom: Readonly<{ strength: number; radius: number; threshold: number }> | null
+    local_shafts: Readonly<{
+      samples: number
+      resolution: number
+      range: number
+      density: number
+      strength: number
+    }> | null
     sun_shafts: Readonly<{
       samples: number
       resolution: number
@@ -180,6 +197,14 @@ export type QualityProfile = Readonly<{
       threshold: number
     }> | null
   }>
+}>
+
+export type WorldPanel = Readonly<{
+  canvas: HTMLCanvasElement
+  position: Vec3
+  size: readonly [number, number]
+  yaw: number
+  visible: boolean
 }>
 
 export type ChunkRenderData = Readonly<{
@@ -192,16 +217,20 @@ export type ChunkRenderData = Readonly<{
   // Stable material id per local voxel. This worker-only array is folded into
   // word B by the mesher and never uploaded as a separate GPU buffer.
   material_ids: Uint16Array
-  // Three views of the same opaque voxels. Each contains 32×32 rows of 32 bits,
+  // Three views of the same occupied voxels. Each contains 32×32 rows of 32 bits,
   // with the bit axis respectively X, Y, and Z.
   occupancy: readonly [Uint32Array, Uint32Array, Uint32Array]
   // A one-voxel shell around the chunk, packed as a 34³ bitset. It prevents seams
   // and remains sufficient for diagonal ambient-occlusion probes later.
   halo_occupancy: Uint32Array
+  // Clustered foliage occupies collision voxels but cannot hide neighbouring solid faces.
+  foliage?: Readonly<{ occupancy: readonly [Uint32Array, Uint32Array, Uint32Array]; halo_occupancy: Uint32Array }>
 }>
 
 export type RenderedChunk = Readonly<
-  Pick<ChunkRenderData, 'key' | 'coordinate' | 'origin' | 'lod' | 'resolution' | 'cell_size'>
+  Pick<ChunkRenderData, 'key' | 'coordinate' | 'origin' | 'lod' | 'resolution' | 'cell_size'> & {
+    details?: readonly DetailCell[]
+  }
 >
 
 export type CameraProjection = Readonly<{
@@ -362,8 +391,8 @@ export type Engine = Readonly<{
   set_quality: (quality: EngineQuality, render_distance?: number | null) => void
   set_audio_volume: (volume: number) => void
   set_time_of_day: (time: number) => void
+  set_atmosphere: (overrides: Partial<AtmosphereTuning> | null) => void
   set_clouds_visible: (visible: boolean) => void
-  set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
   /** planted fight swords — the join-window clock made physical (whole-set replace) */
@@ -379,10 +408,12 @@ export type Engine = Readonly<{
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  hit_entity_caption: (id: string, client_x: number, client_y: number) => boolean
   /** float a DOM element over an entity's rendered crown, positioned by the frame's own camera
    *  pass (three CSS2D labels — never lags the render); null detaches */
   set_entity_caption: (id: string, caption: WorldCaption | null) => void
   set_entity_label: (id: string, element: HTMLElement | null) => void
+  set_world_panel: (id: string, panel: WorldPanel | null) => void
   set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
   entity_height: (id: string) => number | null
   create_fight_blob: (blob: FightBlobSpec) => string
@@ -394,8 +425,7 @@ export type Engine = Readonly<{
   chunk_count: () => number
   render_state: () => EngineRenderState
   quality: () => EngineQuality
-  flattened: () => boolean
-  backend: () => 'initializing' | 'webgpu' | 'grid'
+  backend: () => 'initializing' | 'webgpu'
   fail: (issue: EngineIssue) => void
   status: () => EngineStatus
   subscribe_status: (listener: (status: EngineStatus) => void) => () => void

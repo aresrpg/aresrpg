@@ -27,11 +27,11 @@ export const ListingIcon = ({
   const icon = listing.item_type ? item_icon(listing.item_type) : null
   return (
     <span
-      className="grid shrink-0 place-items-center border border-[#c8963c]/20 bg-[#c8963c]/6 text-[9px] font-bold text-[#c8963c] uppercase"
+      className="market-listing-icon grid shrink-0 place-items-center text-gold"
       style={{ width: size, height: size }}
     >
       {icon ? (
-        <img alt="" className="size-full object-contain p-0.5" src={icon} />
+        <img alt="" className="size-full object-contain" src={icon} />
       ) : listing.kind === 'character' ? (
         listing.classe?.slice(0, 2)
       ) : (

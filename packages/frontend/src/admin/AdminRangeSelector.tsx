@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { AdminRangeDays } from '@aresrpg/protocol'
-
-import { category_pill } from '../encyclopedia/components.tsx'
+import { Button } from '@aresrpg/ui'
 
 export const ADMIN_RANGES: readonly AdminRangeDays[] = Object.freeze([1, 7, 30, 90, 365])
 
@@ -26,9 +25,15 @@ export const AdminRangeSelector = ({
 }>) => (
   <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-1 gap-y-0.5">
     {ranges.map((range) => (
-      <button className={category_pill(days === range)} key={range} onClick={() => change(range)} type="button">
+      <Button
+        tone={days === range ? 'primary' : 'neutral'}
+        aria-pressed={days === range}
+        key={range}
+        onClick={() => change(range)}
+        type="button"
+      >
         {admin_range_label(copy, range)}
-      </button>
+      </Button>
     ))}
   </div>
 )

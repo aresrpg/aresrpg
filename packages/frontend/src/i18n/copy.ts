@@ -14,7 +14,11 @@ export type AppCopy = Readonly<{
   item_categories: Readonly<Record<string, string>>
   title: string
   body: string
-  fatal: string
+  world_loading_assets: string
+  world_loading_graphics: string
+  world_loading_terrain: string
+  world_loading_sky: string
+  world_loading_finishing: string
   engine_recovery: string
   engine_reload: string
   engine_minimum_title: string
@@ -22,18 +26,10 @@ export type AppCopy = Readonly<{
   engine_continue: string
   world_unavailable_title: string
   world_unavailable: string
-  mobile_unavailable_label: string
-  mobile_unavailable_title: string
-  mobile_unavailable_body: string
-  mobile_unavailable_status: string
-  chrome: string
-  other: string
-  continue: string
   quality: string
   low: string
   medium: string
   high: string
-  flat_mode: string
   identity_connected: string
   sign_in_to_play: string
   loading_universe: string
@@ -41,7 +37,14 @@ export type AppCopy = Readonly<{
   wallet_session_ended: string
   connect_wallet: string
   no_wallet: string
-  watch_world: string
+  menu_build: string
+  menu_subtitle: string
+  menu_start: string
+  menu_start_touch: string
+  menu_music_on: string
+  menu_music_off: string
+  play_demo: string
+  replay_demo: string
   sign_in: string
   drag_hint: string
   navigation: string
@@ -97,8 +100,6 @@ export type AppCopy = Readonly<{
   party_member_unavailable_toast: string
   fight_turn_already_forced_toast: string
   network_testnet: string
-  page_pending_title: string
-  page_pending_body: string
   welcome_title: string
   welcome_body: string
   welcome_need_sui: string
@@ -138,6 +139,7 @@ export type AppCopy = Readonly<{
   wallet_close: string
   wallet_legacy: Readonly<Record<string, unknown>>
   tutorial: Readonly<Record<string, string>>
+  adventure: Readonly<Record<string, string>>
   journey: Readonly<Record<string, string>>
   wallet_send_shared: Readonly<Record<string, string>>
   encyclopedia_page: Readonly<Record<string, unknown>>

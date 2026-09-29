@@ -3,9 +3,11 @@
 
 import { describe, expect, test } from 'bun:test'
 import type { CharacterAppearanceRender } from '@aresrpg/engine'
+import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 
 import {
   character_render_source,
+  character_aura,
   presence_render_source,
   world_character_entity,
 } from '../../src/game/character_entities.ts'
@@ -70,7 +72,7 @@ describe('shared character rendering', () => {
           cloak: null,
           cosmetic_hat: null,
           cosmetic_cloak: null,
-          title: null,
+          title: 'title_veteran',
           pet: 'tofu',
           riding: false,
           x: 50_000,
@@ -83,7 +85,7 @@ describe('shared character rendering', () => {
       classe: 'senshi',
       male: false,
       colors: ['#112233', '#445566', '#778899'],
-      loadout: { hat: 'straw_hat' },
+      loadout: { hat: 'straw_hat', title: 'title_veteran' },
     })
   })
 
@@ -128,4 +130,12 @@ describe('shared character rendering', () => {
       ).presentation
     ).toBe('crowd')
   })
+})
+
+test('the client admin-address aura overrides equipped titles without changing equipment facts', () => {
+  expect(character_aura(null, DEFAULT_ADMIN_ADDRESS)).toBe('admin')
+  expect(character_aura('title_veteran', DEFAULT_ADMIN_ADDRESS.toUpperCase())).toBe('admin')
+  expect(character_aura('title_veteran', '0xother')).toBe('unbroken')
+  expect(character_aura(null, '0xother')).toBeUndefined()
+  expect(character_aura(null, `${DEFAULT_ADMIN_ADDRESS}0`)).toBeUndefined()
 })

@@ -5,16 +5,17 @@
 // commands re-enter the same fight input door as board and streamed actions.
 
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
-import { Swords } from 'lucide-react'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { Button, CombatHud, ConfirmDialog } from '@aresrpg/ui'
+import { Swords, Flag } from 'lucide-react'
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 
-import { ModalFrame } from '../../components/ModalFrame.tsx'
 import { content_catalog } from '../../content/catalog.ts'
 import { spell_name, type AppCopy } from '../../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../../store.ts'
+import { dispatch_app, useAppStore, type AppInput } from '../../store.ts'
 import { owned_placement_readiness } from '../../modules/fight_identity.ts'
 import { chain_deadline_reached, chain_now } from '../../modules/chain_clock.ts'
 import { END_TURN_SUBMIT_GUARD_MS } from '../../modules/fight_lifecycle.ts'
+import { world_keyboard_eligible } from '../core/world_input.ts'
 import { ActionSlots } from '../hud/ActionSlots.tsx'
 import { VitalsDisplay } from '../hud/VitalsDisplay.tsx'
 
@@ -48,7 +49,7 @@ const submit_end_turn = (fight: string | null, fighter: bigint): void =>
     input: { type: 'end_turn', fighter },
   })
 
-const FightVitals = ({
+const FightSpells = ({
   fighter,
   can_act,
   selected_action,
@@ -80,51 +81,48 @@ const FightVitals = ({
       })
     : null
   return (
-    <>
-      <VitalsDisplay ap={fighter.ap} hp={fighter.hp} max_hp={fighter.max_hp} mp={fighter.mp} />
-      <ActionSlots capacity={20} columns={10}>
-        {weapon_spell && (
-          <Suspense fallback={<div className="fight-hud__spell disabled" />}>
+    <ActionSlots capacity={20} columns={10}>
+      {weapon_spell && (
+        <Suspense fallback={<div className="fight-hud__spell disabled" />}>
+          <LazyFightSpell
+            display_name={weapon_spell.name}
+            disabled={!can_act || fighter.ap < weapon_spell.details.ap_cost}
+            item_type={weapon_item_type}
+            fallback_icon={<Swords aria-hidden="true" size={25} strokeWidth={1.6} />}
+            select={() => select_action(selected_action?.type === 'weapon' ? null : { type: 'weapon' })}
+            selected={selected_action?.type === 'weapon'}
+            spell={weapon_spell}
+          />
+        </Suspense>
+      )}
+      {fighter.spells.map((spell) => {
+        const disabled = !can_act || spell.cooldown > 0n || fighter.ap < spell.details.ap_cost
+        return (
+          <Suspense fallback={<div className={`fight-hud__spell${disabled ? ' disabled' : ''}`} />} key={spell.name}>
             <LazyFightSpell
-              display_name={weapon_spell.name}
-              disabled={!can_act || fighter.ap < weapon_spell.details.ap_cost}
-              item_type={weapon_item_type}
-              fallback_icon={<Swords aria-hidden="true" size={25} strokeWidth={1.6} />}
-              select={() => select_action(selected_action?.type === 'weapon' ? null : { type: 'weapon' })}
-              selected={selected_action?.type === 'weapon'}
-              spell={weapon_spell}
+              display_name={spell_name(copy, spell.name)}
+              disabled={disabled}
+              select={() =>
+                select_action(
+                  selected_action?.type === 'spell' && selected_action.name === spell.name
+                    ? null
+                    : { type: 'spell', name: spell.name }
+                )
+              }
+              selected={selected_action?.type === 'spell' && selected_action.name === spell.name}
+              spell={spell}
             />
           </Suspense>
-        )}
-        {fighter.spells.map((spell) => {
-          const disabled = !can_act || spell.cooldown > 0n || fighter.ap < spell.details.ap_cost
-          return (
-            <Suspense fallback={<div className={`fight-hud__spell${disabled ? ' disabled' : ''}`} />} key={spell.name}>
-              <LazyFightSpell
-                display_name={spell_name(copy, spell.name)}
-                disabled={disabled}
-                select={() =>
-                  select_action(
-                    selected_action?.type === 'spell' && selected_action.name === spell.name
-                      ? null
-                      : { type: 'spell', name: spell.name }
-                  )
-                }
-                selected={selected_action?.type === 'spell' && selected_action.name === spell.name}
-                spell={spell}
-              />
-            </Suspense>
-          )
-        })}
-      </ActionSlots>
-    </>
+        )
+      })}
+    </ActionSlots>
   )
 }
 
 // 6px is the radius this HUD's own controls carry (`.fight-hud__controls button`)
 const BANNER_BUTTON = 'mt-1 rounded-[6px] px-4 py-1.5 text-[10px] tracking-[0.14em]'
 
-const placement_readiness = (
+export const placement_readiness = (
   checkpoint: Parameters<typeof owned_placement_readiness>[0],
   session: Readonly<{ wallet: Readonly<{ address: string }> | null; characters: readonly Readonly<{ id: string }>[] }>,
   submitted: readonly number[],
@@ -132,15 +130,25 @@ const placement_readiness = (
 ) => {
   const readiness = owned_placement_readiness(
     checkpoint,
-    session.wallet?.address ?? null,
-    new Set(session.characters.map(({ id }) => id)),
+    remote ? (session.wallet?.address ?? null) : 'local',
+    new Set(remote ? session.characters.map(({ id }) => id) : Object.keys(checkpoint.sources.players)),
     submitted
   )
   return Object.freeze({
     ...readiness,
-    show_all: remote && !checkpoint.contract.wagered && readiness.owned_count > 1,
+    show_all: !checkpoint.contract.wagered && readiness.owned_count > 1,
   })
 }
+
+export const ready_all_inputs = (remote: boolean, fight: string, fighters: readonly bigint[]): readonly AppInput[] =>
+  remote
+    ? [{ type: 'fight/ready_all', fight, fighters }]
+    : fighters.map((fighter) => ({
+        type: 'fight/input',
+        fight: null,
+        origin: 'local',
+        input: { type: 'ready', fighter },
+      }))
 
 export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number): number =>
   Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
@@ -225,17 +233,21 @@ export const FightHud = ({
   presented_turn_seat = null,
   turn_announcement = null,
   mob_icon_for,
+  names: supplied_names,
+  confirmation,
 }: Readonly<{
   copy: AppCopy
+  confirmation?: ReactNode
   display_fighters?: readonly FightFighterDisplay[]
   focus_fighter: (fighter: Pick<FightFighterView, 'cell' | 'seat'> | null) => void
-  target_fighter: (fighter: Pick<FightFighterView, 'cell' | 'seat'>) => void
+  target_fighter: (fighter: Pick<FightFighterView, 'cell' | 'seat'>, pointer_type?: string) => void
   targetable_fighter_cells: readonly bigint[]
   selected_action: FightActionSelection
   select_action: (action: FightActionSelection) => void
   actions_locked: boolean
   presentation_queued?: boolean
   mob_icon_for: MobIconLookup
+  names?: Readonly<Record<string, string>>
   // the seat whose TURN CUE is currently presented: the timeline card follows the played
   // cues (mob turns hold their floor), never the canonical head that reconciles instantly
   presented_turn_seat?: bigint | null
@@ -256,9 +268,10 @@ export const FightHud = ({
           ...session.characters.map(({ id, name }) => [id, name]),
           ...simulator.characters.map(({ id, name }) => [id, name]),
           ...content_catalog.mobs.map(({ mob_type, name }) => [mob_type, name]),
+          ...Object.entries(supplied_names ?? {}),
         ])
       ),
-    [session.characters, simulator.characters]
+    [session.characters, simulator.characters, supplied_names]
   )
   const canonical_view = useMemo(
     () =>
@@ -297,7 +310,6 @@ export const FightHud = ({
   }, [crank_attempt, crank_hidden])
   const wait_ms = observed_turn.key === turn_key ? end_turn_wait_ms(observed_turn.at_ms, performance.now()) : Infinity
   const min_turn_ready = wait_ms === 0
-  const min_wait_seconds = Number.isFinite(wait_ms) ? Math.ceil(wait_ms / 1_000) : 4
 
   useEffect(() => {
     if (!view?.can_end_turn || min_turn_ready) return undefined
@@ -340,8 +352,11 @@ export const FightHud = ({
           : { type: 'spell', name: spell.name }
       )
     }
-    globalThis.addEventListener('keydown', keydown)
-    return () => globalThis.removeEventListener('keydown', keydown)
+    const admitted_keydown = (event: Readonly<KeyboardEvent>): void => {
+      if (world_keyboard_eligible(event)) keydown(event)
+    }
+    globalThis.addEventListener('keydown', admitted_keydown)
+    return () => globalThis.removeEventListener('keydown', admitted_keydown)
   }, [actions_locked, select_action, selected_action, view])
 
   if (!view || !fight.checkpoint) return null
@@ -358,7 +373,7 @@ export const FightHud = ({
       fight.mode === 'remote'
     )
     const own_ready =
-      fight.mode === 'remote' && own_seat !== undefined
+      own_seat !== undefined
         ? (fight.checkpoint.contract.fighters[Number(own_seat)]?.ready ?? false) ||
           fight.ready_submitted_seats.includes(Number(own_seat))
         : null
@@ -396,7 +411,7 @@ export const FightHud = ({
             })
           }
           on_ready_all={() =>
-            dispatch_app({ type: 'fight/ready_all', fight: fight_id, fighters: readiness.unready_seats })
+            ready_all_inputs(fight.mode === 'remote', fight_id, readiness.unready_seats).forEach(dispatch_app)
           }
           ready={own_ready}
           ready_all={readiness.show_all}
@@ -408,6 +423,7 @@ export const FightHud = ({
           text={copy.fight_hud}
         />
         {chat}
+        <div className="fight-hud__bottom">{confirmation}</div>
       </div>
     )
   }
@@ -436,10 +452,6 @@ export const FightHud = ({
       origin: 'local',
       input: { type: 'forfeit', fighter: selected.seat },
     })
-  }
-  const reset_turn = (): void => {
-    select_action(null)
-    dispatch_app({ type: 'fight/reset_turn', fight: command_fight })
   }
   return (
     <div className="fight-hud" data-chat-viewport="">
@@ -493,78 +505,60 @@ export const FightHud = ({
       />
       {chat}
       <div className="fight-hud__bottom">
-        <div className="fight-hud__bar">
-          <div className="fight-hud__controls">
-            <button
-              className={`fight-hud__end-turn${fight.end_turn_queued ? ' queued' : ''}`}
-              disabled={turn_intent === null}
-              onClick={queue_or_end_turn}
-              type="button"
-            >
-              {fight.end_turn_queued
-                ? copy.fight_hud.end_turn_queued
-                : min_wait_seconds > 0
-                  ? `${copy.fight_hud.end_turn} · ${min_wait_seconds}`
-                  : copy.fight_hud.end_turn}
-            </button>
-            <div className="fight-hud__secondary-controls">
-              {fight.mode === 'local' && (
-                <button disabled={actions_locked} onClick={reset_turn} type="button">
-                  {copy.fight_hud.reset_turn}
-                </button>
-              )}
-              <button
-                className="fight-hud__forfeit"
-                disabled={!view.can_forfeit || actions_locked}
-                onClick={() => set_forfeit_open(true)}
-                type="button"
-              >
-                {copy.fight_hud.forfeit}
-              </button>
-            </div>
-          </div>
-          <FightVitals
-            can_act={view.can_end_turn && !actions_locked}
-            copy={copy}
-            fighter={selected}
-            select_action={select_action}
-            selected_action={selected_action}
-            text={copy.fight_hud}
-          />
-        </div>
+        {confirmation}
+        <CombatHud
+          spell_count={selected.spells.length + Number(!!selected.weapon)}
+          label={copy.ui.design_combat}
+          vitals={<VitalsDisplay ap={selected.ap} hp={selected.hp} max_hp={selected.max_hp} mp={selected.mp} />}
+          spells={
+            <FightSpells
+              can_act={view.can_end_turn && !actions_locked}
+              copy={copy}
+              fighter={selected}
+              select_action={select_action}
+              selected_action={selected_action}
+              text={copy.fight_hud}
+            />
+          }
+          timer={
+            turn_clock.seconds === null
+              ? null
+              : {
+                  label: copy.fight_hud.end_turn,
+                  remaining: turn_clock.seconds,
+                  duration: Number(CONTRACT_CONSTANTS.turn_max_ms) / 1000,
+                }
+          }
+          controls={
+            <>
+              <Button tone="primary" disabled={turn_intent === null} onClick={queue_or_end_turn}>
+                {fight.end_turn_queued ? copy.fight_hud.end_turn_queued : copy.fight_hud.end_turn}
+              </Button>
+              <div className="aui-combat-utilities">
+                <Button
+                  tone="danger"
+                  aria-label={copy.fight_hud.forfeit}
+                  disabled={!view.can_forfeit || actions_locked}
+                  onClick={() => set_forfeit_open(true)}
+                >
+                  <Flag size={14} />
+                </Button>
+              </div>
+            </>
+          }
+        />
       </div>
       {forfeit_open && (
-        <ModalFrame
-          close={() => set_forfeit_open(false)}
+        <ConfirmDialog
+          danger
+          title={template(copy.fight_hud.forfeit_title, { name: selected.name })}
+          description={template(copy.fight_hud.forfeit_body, { name: selected.name })}
           close_label={copy.dismiss}
-          label={template(copy.fight_hud.forfeit_title, { name: selected.name })}
-          soft
-        >
-          <div className="p-7">
-            <h2 className="text-sm font-semibold tracking-[0.16em] text-[#f87171] uppercase">
-              {template(copy.fight_hud.forfeit_title, { name: selected.name })}
-            </h2>
-            <p className="mt-4 text-[11px] leading-6 text-[#a3a5ad]">
-              {template(copy.fight_hud.forfeit_body, { name: selected.name })}
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                className="h-11 cursor-pointer rounded-lg border border-white/10 bg-white/3 text-[9px] tracking-[0.16em] uppercase transition hover:bg-white/7"
-                onClick={() => set_forfeit_open(false)}
-                type="button"
-              >
-                {copy.cancel}
-              </button>
-              <button
-                className="h-11 cursor-pointer rounded-lg border border-[#f87171]/40 bg-[#2a1014]/80 text-[9px] tracking-[0.16em] text-[#f87171] uppercase transition hover:bg-[#3a151b]"
-                onClick={forfeit}
-                type="button"
-              >
-                {copy.fight_hud.confirm_forfeit}
-              </button>
-            </div>
-          </div>
-        </ModalFrame>
+          cancel_label={copy.cancel}
+          confirm_label={copy.fight_hud.confirm_forfeit}
+          on_cancel={() => set_forfeit_open(false)}
+          on_confirm={forfeit}
+        />
       )}
     </div>
   )

@@ -4,7 +4,7 @@
 
 import type { CharacterEntityRender } from '@aresrpg/engine'
 
-import { load_character_appearance } from '../character_entities.ts'
+import { load_character_appearance, character_aura } from '../character_entities.ts'
 
 import type { FightCharacterRenderSource } from './character_entity_sources.ts'
 
@@ -20,6 +20,7 @@ const resolved_character_entity = async (source: FightCharacterRenderSource): Pr
     id: source.id,
     kind: 'character',
     appearance: await load_character_appearance(source),
+    aura: character_aura(source.loadout.title, source.owner),
     anchor: Object.freeze({ kind: 'fight_cell', cell: source.cell }),
     facing: Object.freeze({ kind: 'fight_opponents', side: source.side }),
     ...(source.visual_effect ? { visual_effect: source.visual_effect } : {}),
@@ -42,6 +43,7 @@ export const fight_character_entities_from_loaded = (
               id: source.id,
               kind: 'character' as const,
               appearance,
+              aura: character_aura(source.loadout.title, source.owner),
               anchor: Object.freeze({ kind: 'fight_cell' as const, cell: source.cell }),
               facing: Object.freeze({ kind: 'fight_opponents' as const, side: source.side }),
               ...(source.visual_effect ? { visual_effect: source.visual_effect } : {}),

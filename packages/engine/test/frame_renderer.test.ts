@@ -4,7 +4,7 @@
 import { expect, spyOn, test } from 'bun:test'
 import { AgXToneMapping, DirectionalLight, PerspectiveCamera, Scene, SRGBColorSpace } from 'three'
 import type { Renderer } from 'three/webgpu'
-import { float } from 'three/tsl'
+import { float, vec3 } from 'three/tsl'
 import BloomNode from 'three/addons/tsl/display/BloomNode.js'
 
 import { create_frame_renderer } from '../src/frame_renderer.ts'
@@ -24,7 +24,8 @@ test('leaving high quality and disposing the pipeline release owned bloom target
     create_sky_node().sun_direction,
     float(0),
     float(0),
-    liquid_palette([0, 0.1, 0.3])
+    liquid_palette([0, 0.1, 0.3]),
+    vec3(1)
   )
   try {
     pipeline.set_quality('medium')

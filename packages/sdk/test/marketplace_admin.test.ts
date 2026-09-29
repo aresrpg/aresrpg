@@ -6,6 +6,8 @@ import { Transaction } from '@mysten/sui/transactions'
 
 import { claim_marketplace_royalties, read_marketplace_royalties } from '../src/marketplace_admin.ts'
 
+import captured_policies from './fixtures/marketplace_policies.mainnet.json'
+
 const package_id = `0x${'11'.repeat(32)}`
 // the upgraded package object — types never live here, only move-call targets do
 const latest_package_id = `0x${'77'.repeat(32)}`
@@ -35,15 +37,24 @@ const sdk = (withdrawals: string[] = [], owned_caps = caps) => ({
     kares_combat_pot: { id: `0x${'93'.repeat(32)}`, shared_version: '1' },
   },
   get_owned_transfer_policies: async () => owned_caps,
-  get_transfer_policies: async (type: string) => [
-    {
-      id: type === item_type ? item_policy : character_policy,
-      type,
-      balance: type === item_type ? '2500000000' : '500000000',
-      rules: [],
-      owner: { Shared: { initial_shared_version: 1 } },
+  sui_client: {
+    core: {
+      getObjects: async () => ({
+        objects: [
+          {
+            objectId: item_policy,
+            type: `0x2::transfer_policy::TransferPolicy<${item_type}>`,
+            json: { balance: '2500000000' },
+          },
+          {
+            objectId: character_policy,
+            type: `0x2::transfer_policy::TransferPolicy<${character_type}>`,
+            json: { balance: '500000000' },
+          },
+        ],
+      }),
     },
-  ],
+  },
   tx: () => new Transaction(),
   hydrate_unknown: async () => undefined,
   door_context: {
@@ -74,6 +85,45 @@ const sdk = (withdrawals: string[] = [], owned_caps = caps) => ({
 })
 
 describe('marketplace admin', () => {
+  test('reads live pinned policies even when historical creation-event discovery is empty', async () => {
+    const fixture = sdk()
+    const reads: string[][] = []
+    const rows = await read_marketplace_royalties(
+      {
+        ...fixture,
+        get_transfer_policies: async () => [],
+        sui_client: {
+          core: {
+            getObjects: async (input: { objectIds: string[]; include: { json: boolean } }) => {
+              expect(input.include).toEqual({ json: true })
+              reads.push(input.objectIds)
+              return fixture.sui_client.core.getObjects()
+            },
+          },
+        },
+      } as never,
+      address
+    )
+    expect(reads).toEqual([[item_policy, character_policy]])
+    expect(rows.map(({ balance_mist }) => balance_mist)).toEqual([2500000000n, 500000000n])
+  })
+
+  test('decodes captured mainnet policy objects, including the zero-balance character policy', async () => {
+    // Public gRPC capture: object IDs, versions and capture date are retained in the fixture.
+    const [item, character] = captured_policies.objects
+    const rows = await read_marketplace_royalties(
+      {
+        ...sdk([], []),
+        game_type_package: '0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d',
+        pins: { item_policy: { id: item!.objectId }, character_policy: { id: character!.objectId } },
+        get_transfer_policies: async () => [],
+        sui_client: { core: { getObjects: async () => ({ objects: [...captured_policies.objects].reverse() }) } },
+      } as never,
+      address
+    )
+    expect(rows.map(({ balance_mist }) => balance_mist)).toEqual([3600000000n, 0n])
+    expect(rows.every(({ cap }) => cap === null)).toBe(true)
+  })
   test('reads only the two pinned game policies and their owned caps', async () => {
     const rows = await read_marketplace_royalties(sdk() as never, address)
     expect(rows.map(({ kind, balance_mist }) => [kind, balance_mist])).toEqual([
@@ -81,6 +131,34 @@ describe('marketplace admin', () => {
       ['character', 500_000_000n],
     ])
     expect(rows.every(({ cap }) => cap !== null)).toBe(true)
+  })
+
+  test('missing policies and object read failures cannot become zero royalties', async () => {
+    const fixture = sdk()
+    const { objects } = await fixture.sui_client.core.getObjects()
+    for (const result of [[objects[0]], [objects[0], new Error('Policy RPC unavailable')]]) {
+      const reader = { ...fixture, sui_client: { core: { getObjects: async () => ({ objects: result }) } } }
+      await expect(read_marketplace_royalties(reader as never, address)).rejects.toThrow(/unavailable/)
+    }
+  })
+
+  test('rejects mismatched policy types and unreadable balances', async () => {
+    const fixture = sdk()
+    const { objects } = await fixture.sui_client.core.getObjects()
+    for (const invalid of [
+      { ...objects[1], type: objects[0]!.type },
+      { ...objects[1], json: null },
+      { ...objects[1], json: { balance: '-1' } },
+      { ...objects[1], json: { balance: 0 } },
+    ]) {
+      const reader = {
+        ...fixture,
+        sui_client: { core: { getObjects: async () => ({ objects: [objects[0], invalid] }) } },
+      }
+      await expect(read_marketplace_royalties(reader as never, address)).rejects.toThrow(
+        /unexpected type|invalid balance/
+      )
+    }
   })
 
   test('splits the combined live claim and reports certified amounts rather than stale pre-reads', async () => {

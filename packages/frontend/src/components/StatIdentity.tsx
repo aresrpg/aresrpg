@@ -4,6 +4,8 @@
 
 import type { CSSProperties } from 'react'
 
+import './stat_identity.css'
+
 import { stat_identities } from '../visual_identity.ts'
 
 export const StatIdentity = ({

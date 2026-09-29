@@ -1,0 +1,225 @@
+.mastery-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 10px;
+  padding: 12px;
+  font-family: var(--aui-font);
+}
+.mastery-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #aab3bf;
+  font-size: 11px;
+  flex: none;
+}
+.mastery-summary > p {
+  max-width: 80ch;
+}
+.mastery-summary > span {
+  flex: none;
+  color: #d8bc80;
+}
+.mastery-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 2fr);
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+}
+.mastery-quests {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 12px;
+  background: #191e25;
+  border: 1px solid #ffffff12;
+  border-radius: 7px;
+  scrollbar-width: thin;
+}
+.mastery-quests > div:last-child {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.mastery-quests [data-world-card] {
+  min-height: 145px;
+  border-radius: 7px;
+}
+.mastery-quests [data-world-card] > div {
+  padding: 10px;
+}
+.mastery-quests [data-world-card] .aui-button {
+  min-height: 36px;
+}
+.mastery-shop {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.mastery-shop > div:first-child {
+  padding-bottom: 10px;
+  flex: none;
+}
+.mastery-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 4px 2px;
+}
+.mastery-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.mastery-offer[data-affordable='true'] {
+  border-color: #b7995b66;
+}
+.mastery-offer > button {
+  flex: 1;
+  align-items: center;
+  text-align: center;
+}
+.mastery-offer > button > div:first-child {
+  justify-content: center;
+}
+.mastery-offer > button > div:first-child > div {
+  width: 96px;
+  height: 86px;
+  border: 0;
+  background: none;
+}
+.mastery-offer > button img {
+  width: 86px;
+  height: 86px;
+}
+.mastery-offer h3 {
+  font: 700 13px var(--aui-font);
+  color: #e3c287;
+  text-transform: none;
+  letter-spacing: normal;
+  justify-content: center;
+}
+.mastery-offer h3 > span {
+  white-space: normal;
+}
+.mastery-offer > div:last-of-type {
+  margin: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+.mastery-offer [data-mastery-payment] {
+  min-height: 36px;
+  font-size: 11px;
+}
+@container aui-window (max-width:900px) {
+  .mastery-page {
+    padding: 8px;
+    gap: 6px;
+  }
+  .mastery-summary > p {
+    display: none;
+  }
+  .mastery-body {
+    grid-template-columns: minmax(150px, 0.65fr) minmax(0, 2fr);
+    gap: 8px;
+  }
+  .mastery-quests {
+    padding: 8px;
+  }
+  .mastery-quests [data-world-card] {
+    min-height: 125px;
+  }
+  .mastery-offers {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 7px;
+  }
+  .mastery-offer {
+    padding: 8px;
+    gap: 6px;
+  }
+  .mastery-offer > button > div:first-child > div {
+    height: 64px;
+  }
+  .mastery-offer > button img {
+    width: 64px;
+    height: 64px;
+  }
+  .mastery-offer > button > div:last-child {
+    margin-top: 4px;
+  }
+}
+@container aui-window (max-width:500px) {
+  .mastery-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(100px, 25%) minmax(0, 1fr);
+  }
+  .mastery-quests > div:last-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mastery-quests [data-world-card] {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.mastery-world-heading {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px;
+}
+.mastery-world-heading > div {
+  min-width: 0;
+}
+.mastery-world-reward {
+  flex: none;
+  color: #f2ce7f;
+  font: 700 11px var(--aui-font);
+  background: #25221acc;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+.mastery-world-actions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  font-size: 9px;
+}
+.mastery-world-actions > .aui-button {
+  width: 100%;
+}
+
+@container aui-window (max-width: 1100px) {
+  .mastery-offers {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 6px;
+  }
+  .mastery-offer {
+    padding: 6px;
+    gap: 5px;
+  }
+  .mastery-offer > button > div:first-child > div {
+    width: 54px;
+    height: 48px;
+  }
+  .mastery-offer > button img {
+    width: 48px;
+    height: 48px;
+  }
+  .mastery-offer h3 {
+    font-size: 11px;
+  }
+}

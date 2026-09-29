@@ -14,8 +14,6 @@ export type MarketPriceBucket = Readonly<{
 export type MarketPriceHistory = Readonly<{
   first_timestamp_ms: number
   sampled_at_ms: number
-  /** Current indexed units across all custody; unavailable supply never suppresses the chart. */
-  total_units?: string | null
   buckets: readonly MarketPriceBucket[]
 }>
 
@@ -30,3 +28,8 @@ export const parse_market_price_observation = (value: unknown): MarketPriceObser
   if (!Number.isSafeInteger(id) || (id as number) < 0) throw new Error('invalid market price request id')
   return { item_type, id: id as number }
 }
+
+export type MarketPriceSnapshot = Readonly<{
+  history: MarketPriceHistory | null
+  total_units: string | null
+}>

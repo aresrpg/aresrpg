@@ -259,7 +259,6 @@ const MobSpells = ({
                     classe: string_value(mob.mob_type),
                     levels: selected.levels,
                     name: string_value(selected.name),
-                    unlock_level: 1,
                   } as unknown as SeedSpell
                 }
               />

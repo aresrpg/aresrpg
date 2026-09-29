@@ -1,140 +1,35 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Check, ChevronDown, Copy, ExternalLink, Wallet, X } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { Check, Copy, ExternalLink, Wallet, ArrowLeftRight, CreditCard } from 'lucide-react'
+import { lazy, Suspense, useState } from 'react'
+import { NativeModal, GameWindow, Button } from '@aresrpg/ui'
 
 import { env, type Network } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { BridgeFunding, FundingErrorBoundary } from '../funding/BridgeFunding.tsx'
 
-import { NativeModal } from './ModalFrame.tsx'
+const FundingDialog = lazy(() => import('../funding/FundingDialog.tsx'))
 
 export const SUI_FAUCET_URL = 'https://faucet.sui.io/'
 export const add_funds_surface = (network: Network): 'faucet' | 'providers' =>
   network === 'testnet' ? 'faucet' : 'providers'
 
-export const ADD_FUNDS_PAYMENT_METHODS = Object.freeze([
-  Object.freeze({
-    key: 'paypal',
-    label: 'method_paypal',
-    desc: 'method_paypal_desc',
-    providers: [{ name: 'MoonPay', url: 'https://www.moonpay.com/buy/sui' }],
-    note: 'paypal_note',
-    steps: 'steps_paypal',
-  }),
-  Object.freeze({
-    key: 'card',
-    label: 'method_card',
-    desc: 'method_card_desc',
-    providers: [
-      { name: 'MoonPay', url: 'https://www.moonpay.com/buy/sui' },
-      { name: 'Transak', url: 'https://global.transak.com/?cryptoCurrencyCode=SUI' },
-      { name: 'Guardarian', url: 'https://guardarian.com/buy-sui' },
-    ],
-    note: 'card_note',
-    steps: 'steps_card',
-  }),
-  Object.freeze({
-    key: 'apple_pay',
-    label: 'method_apple_pay',
-    desc: 'method_apple_pay_desc',
-    providers: [
-      { name: 'MoonPay', url: 'https://www.moonpay.com/buy/sui' },
-      { name: 'Guardarian', url: 'https://guardarian.com/buy-sui' },
-    ],
-    note: null,
-    steps: null,
-  }),
-  Object.freeze({
-    key: 'google_pay',
-    label: 'method_google_pay',
-    desc: 'method_google_pay_desc',
-    providers: [
-      { name: 'MoonPay', url: 'https://www.moonpay.com/buy/sui' },
-      { name: 'Guardarian', url: 'https://guardarian.com/buy-sui' },
-    ],
-    note: null,
-    steps: null,
-  }),
-  Object.freeze({
-    key: 'bank',
-    label: 'method_bank',
-    desc: 'method_bank_desc',
-    providers: [
-      { name: 'MoonPay', url: 'https://www.moonpay.com/buy/sui' },
-      { name: 'Transak', url: 'https://global.transak.com/?cryptoCurrencyCode=SUI' },
-      { name: 'Guardarian', url: 'https://guardarian.com/buy-sui' },
-    ],
-    note: 'bank_note',
-    steps: null,
-  }),
-  Object.freeze({
-    key: 'swap_crypto',
-    label: 'method_swap',
-    desc: 'method_swap_desc',
-    providers: [{ name: 'Portal Bridge', url: 'https://portalbridge.com/' }],
-    note: 'swap_note',
-    steps: 'steps_swap',
-  }),
-  Object.freeze({
-    key: 'have_sui',
-    label: 'method_have_sui',
-    desc: 'method_have_sui_desc',
-    providers: [],
-    note: null,
-    steps: 'steps_wallet',
-  }),
-])
+export const ADD_FUNDS_PAYMENT_METHODS = [
+  { key: 'direct', label: 'method_have_sui', desc: 'method_have_sui_desc' },
+  { key: 'bridge', label: 'method_swap', desc: 'method_swap_desc' },
+  { key: 'card', label: 'method_card', desc: 'method_card_desc' },
+] as const
 
-const EXCHANGES = Object.freeze([
-  { name: 'Binance', url: 'https://www.binance.com/' },
-  { name: 'Coinbase', url: 'https://www.coinbase.com/' },
-  { name: 'KuCoin', url: 'https://www.kucoin.com/' },
-  { name: 'Bybit', url: 'https://www.bybit.com/' },
-  { name: 'OKX', url: 'https://www.okx.com/' },
-  { name: 'Kraken', url: 'https://www.kraken.com/' },
-])
-
-const FAQ_KEYS = Object.freeze([
-  { question: 'faq_what_is_sui', answer: 'faq_what_is_sui_answer' },
-  { question: 'faq_why_sui', answer: 'faq_why_sui_answer' },
-  { question: 'faq_legal', answer: 'faq_legal_answer' },
-  { question: 'faq_eula', answer: 'faq_eula_answer' },
-  { question: 'faq_access', answer: 'faq_access_answer' },
-  { question: 'faq_balance', answer: 'faq_balance_answer' },
-])
+const CARD_PROVIDERS = [
+  { name: 'MoonPay', url: 'https://www.moonpay.com/buy/sui' },
+  { name: 'Transak', url: 'https://global.transak.com/?cryptoCurrencyCode=SUI' },
+  { name: 'Guardarian', url: 'https://guardarian.com/buy-sui' },
+] as const
 
 const wallet_text = (copy: AppCopy, key: string): string => {
   const value = copy.wallet_legacy[key]
   return typeof value === 'string' ? value : key
-}
-
-const FaqItem = ({
-  answer,
-  is_last,
-  question,
-}: Readonly<{ answer: ReactNode; is_last: boolean; question: string }>) => {
-  const [open, set_open] = useState(false)
-  return (
-    <div className={is_last ? '' : 'border-b border-border'}>
-      <button
-        className="group flex w-full cursor-pointer items-center justify-between p-3"
-        onClick={() => set_open(!open)}
-        type="button"
-      >
-        <span className="text-left text-[11px] tracking-wide text-text uppercase">{question}</span>
-        <ChevronDown
-          className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${open ? 'rotate-180' : ''}`}
-          size={14}
-        />
-      </button>
-      {open && (
-        <div className="p-3 pt-0">
-          <p className="text-[10px] leading-relaxed tracking-wide text-muted">{answer}</p>
-        </div>
-      )}
-    </div>
-  )
 }
 
 const WalletAddressBlock = ({
@@ -144,6 +39,7 @@ const WalletAddressBlock = ({
 }: Readonly<{ address: string; compact?: boolean; copy: AppCopy }>) => {
   const [copied, set_copied] = useState(false)
   const copy_address = (): void => {
+    if (!address) return
     void navigator.clipboard.writeText(address).then(() => {
       set_copied(true)
       setTimeout(() => set_copied(false), 2_000)
@@ -159,111 +55,20 @@ const WalletAddressBlock = ({
           <p className="mb-3 text-[10px] tracking-wide text-muted">{wallet_text(copy, 'send_sui')}</p>
         </>
       )}
-      <button
-        className="group flex w-full cursor-pointer items-center gap-3 border border-border bg-bg/50 p-3 transition-all hover:border-gold/40"
-        onClick={copy_address}
-        type="button"
-      >
+      <Button className="aui-funding-address" disabled={!address} onClick={copy_address} type="button">
         <Wallet className="shrink-0 text-gold opacity-60" size={14} />
         <span className="flex-1 select-all break-all text-left font-mono text-[11px] tracking-wide text-gold">
-          {address}
+          {address || copy.sign_in_to_play}
         </span>
         {copied ? (
           <Check className="shrink-0 text-emerald-400 opacity-80" size={14} />
         ) : (
           <Copy className="shrink-0 opacity-40 transition-opacity group-hover:opacity-80" size={14} />
         )}
-      </button>
+      </Button>
     </section>
   )
 }
-
-const PaymentMethodCard = ({
-  address,
-  copy,
-  expanded,
-  method,
-  toggle,
-}: Readonly<{
-  address: string
-  copy: AppCopy
-  expanded: boolean
-  method: (typeof ADD_FUNDS_PAYMENT_METHODS)[number]
-  toggle: () => void
-}>) => {
-  const bridge = method.key === 'swap_crypto'
-  return (
-    <div className="col-span-1">
-      <button
-        className={`w-full cursor-pointer border p-3 text-left transition-all ${bridge ? 'border-[#7c5cff]/55 bg-[linear-gradient(135deg,rgba(93,69,220,0.3),rgba(47,189,255,0.14),rgba(18,18,26,0.65))] shadow-[0_0_20px_rgba(93,69,220,0.12)] hover:border-[#55c7ff]/70 hover:shadow-[0_0_24px_rgba(93,69,220,0.2)]' : expanded ? 'border-gold/40 bg-bg/50' : 'border-border bg-bg/50 hover:border-gold/40'}`}
-        onClick={toggle}
-        type="button"
-      >
-        <span className="block text-[11px] font-semibold tracking-wide text-text uppercase">
-          {wallet_text(copy, method.label)}
-        </span>
-        <span className="mt-1 block text-[9px] tracking-wide text-muted">{wallet_text(copy, method.desc)}</span>
-      </button>
-      {expanded && (
-        <div className="space-y-3 border border-t-0 border-gold/40 bg-bg/30 p-3">
-          {method.key === 'have_sui' ? (
-            <WalletAddressBlock address={address} copy={copy} />
-          ) : (
-            <div className="flex flex-col gap-2">
-              {method.providers.map((provider) => (
-                <a
-                  className="group relative flex cursor-pointer items-center justify-between border border-border bg-bg/50 p-3 transition-all hover:border-gold/40"
-                  href={provider.url}
-                  key={provider.name}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <span className="text-[11px] font-semibold tracking-wide text-text uppercase transition-colors group-hover:text-gold">
-                    {provider.name}
-                  </span>
-                  <ExternalLink
-                    className="shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-40"
-                    size={12}
-                  />
-                </a>
-              ))}
-            </div>
-          )}
-          {method.steps && (
-            <p className="text-[10px] leading-relaxed tracking-wide text-muted">{wallet_text(copy, method.steps)}</p>
-          )}
-          {method.note && (
-            <p className="text-[9px] leading-relaxed tracking-wide text-muted opacity-70">
-              {wallet_text(copy, method.note)}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const FundingContent = ({
-  copy,
-  providers,
-  testnet,
-}: Readonly<{ copy: AppCopy; providers: ReactNode; testnet: boolean }>) =>
-  testnet ? (
-    <section className="border border-[#6fc7ff]/35 bg-[#6fc7ff]/6 p-5" data-testnet-faucet="">
-      <p className="text-[11px] leading-6 tracking-wide text-text">{wallet_text(copy, 'testnet_faucet_body')}</p>
-      <a
-        className="mt-5 flex w-full items-center justify-center gap-2 border border-[#6fc7ff]/55 bg-[#6fc7ff]/10 px-4 py-3 text-[11px] font-semibold tracking-[0.16em] text-[#9dd9ff] uppercase transition-colors hover:border-[#9dd9ff] hover:bg-[#6fc7ff]/15"
-        href={SUI_FAUCET_URL}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        {wallet_text(copy, 'testnet_faucet_action')}
-        <ExternalLink size={13} />
-      </a>
-    </section>
-  ) : (
-    providers
-  )
 
 export const AddFundsModal = ({
   address,
@@ -271,145 +76,112 @@ export const AddFundsModal = ({
   network = env.network,
   on_close,
   warning,
-}: Readonly<{ address: string; copy: AppCopy; network?: Network; on_close: () => void; warning?: string }>) => {
-  const [expanded, set_expanded] = useState<string | null>(null)
-  const [show_exchanges, set_show_exchanges] = useState(false)
-  const [show_faq, set_show_faq] = useState(true)
+}: Readonly<{ address: string | null; copy: AppCopy; network?: Network; on_close: () => void; warning?: string }>) => {
+  const [selected, set_selected] = useState<'direct' | 'bridge' | 'card'>('direct')
+  const [bridge_opened, set_bridge_opened] = useState(false)
   const testnet = add_funds_surface(network) === 'faucet'
   const title = wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
-
   return (
-    <NativeModal
-      close={on_close}
-      label={title}
-      className="pointer-events-auto fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+    <FundingErrorBoundary
+      fallback={
+        <NativeModal
+          close={on_close}
+          label={title}
+          className="modal-padded open:flex open:items-center open:justify-center bg-black/70"
+        >
+          <div className="max-w-lg border border-border bg-surface p-5 text-text" role="alert">
+            <p className="mb-4 text-xs text-muted">{wallet_text(copy, 'bridge_error')}</p>
+            <WalletAddressBlock address={address ?? ''} copy={copy} />
+          </div>
+        </NativeModal>
+      }
     >
-      <div
-        className="mx-4 flex max-h-[85vh] w-full max-w-2xl flex-col border border-border bg-surface"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-border p-4">
-          <h2 className="text-[13px] font-semibold tracking-[0.2em] text-gold uppercase">{title}</h2>
-          <button
-            aria-label={copy.wallet_close}
-            className="cursor-pointer opacity-40 transition-opacity hover:opacity-80"
-            onClick={on_close}
-            type="button"
+      <Suspense fallback={null}>
+        <FundingDialog close={on_close} label={title}>
+          <GameWindow
+            title={title}
+            icon={<Wallet />}
+            close={on_close}
+            close_label={copy.wallet_close}
+            className="aui-funding-window"
           >
-            <X className="text-muted" size={16} />
-          </button>
-        </div>
-        <div className="flex-1 space-y-6 overflow-y-auto p-4">
-          {warning && (
-            <aside
-              className="border border-[#c8963c]/50 bg-[#c8963c]/8 px-4 py-3 text-[11px] leading-6 text-[#d9af57]"
-              role="alert"
-            >
-              {warning}
-            </aside>
-          )}
-          <FundingContent
-            copy={copy}
-            providers={
-              <>
-                <section>
-                  <h3 className="mb-1 text-[11px] font-semibold tracking-[0.2em] text-text uppercase">
-                    {wallet_text(copy, 'how_to_pay')}
-                  </h3>
-                  <p className="text-[10px] tracking-wide text-muted">{wallet_text(copy, 'add_funds_desc')}</p>
+            <div className="aui-funding-body">
+              {warning && (
+                <p className="mb-4 border border-gold/40 p-3 text-xs text-gold" role="alert">
+                  {warning}
+                </p>
+              )}
+              {testnet ? (
+                <section className="aui-funding-faucet space-y-4 text-xs text-muted" data-testnet-faucet="">
+                  <p>{wallet_text(copy, 'testnet_faucet_body')}</p>
+                  <WalletAddressBlock address={address ?? ''} compact copy={copy} />
+                  <a
+                    className="btn-outline flex items-center justify-center gap-2 p-3"
+                    href={SUI_FAUCET_URL}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {wallet_text(copy, 'testnet_faucet_action')}
+                    <ExternalLink size={13} />
+                  </a>
                 </section>
-                <section>
-                  <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
+              ) : (
+                <>
+                  <div className="aui-funding-methods" role="group" aria-label={wallet_text(copy, 'how_to_pay')}>
                     {ADD_FUNDS_PAYMENT_METHODS.map((method) => (
-                      <PaymentMethodCard
-                        address={address}
-                        copy={copy}
-                        expanded={expanded === method.key}
+                      <Button
+                        className="aui-funding-choice"
+                        data-method={method.key}
+                        aria-pressed={selected === method.key}
                         key={method.key}
-                        method={method}
-                        toggle={() => set_expanded((current) => (current === method.key ? null : method.key))}
-                      />
+                        onClick={() => {
+                          set_selected(method.key)
+                          if (method.key === 'bridge') set_bridge_opened(true)
+                        }}
+                        type="button"
+                      >
+                        <span className="aui-funding-method-icon" aria-hidden="true">
+                          {{ direct: <Wallet />, bridge: <ArrowLeftRight />, card: <CreditCard /> }[method.key]}
+                        </span>
+                        <span className="aui-funding-method-title">{wallet_text(copy, method.label)}</span>
+                        <span className="aui-funding-method-description">{wallet_text(copy, method.desc)}</span>
+                      </Button>
                     ))}
                   </div>
-                </section>
-                <section>
-                  <h3 className="mb-2 text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-                    {wallet_text(copy, 'your_address')}
-                  </h3>
-                  <WalletAddressBlock address={address} compact copy={copy} />
-                </section>
-                <section>
-                  <button
-                    className="group flex w-full cursor-pointer items-center justify-between"
-                    onClick={() => set_show_exchanges(!show_exchanges)}
-                    type="button"
-                  >
-                    <h3 className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-                      {wallet_text(copy, 'advanced_exchange')}
-                    </h3>
-                    <ChevronDown
-                      className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${show_exchanges ? 'rotate-180' : ''}`}
-                      size={14}
-                    />
-                  </button>
-                  {show_exchanges && (
-                    <div className="mt-3 space-y-3">
-                      <p className="text-[10px] tracking-wide text-muted">{wallet_text(copy, 'withdraw_to_wallet')}</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {EXCHANGES.map((exchange) => (
-                          <a
-                            className="group relative cursor-pointer border border-border bg-bg/50 p-3 transition-all hover:border-gold/40"
-                            href={exchange.url}
-                            key={exchange.name}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                          >
-                            <ExternalLink
-                              className="absolute top-2 right-2 text-muted opacity-0 transition-opacity group-hover:opacity-40"
-                              size={12}
-                            />
-                            <span className="text-[11px] font-semibold tracking-wide text-text uppercase transition-colors group-hover:text-gold">
-                              {exchange.name}
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </section>
-                <section>
-                  <button
-                    className="group flex w-full cursor-pointer items-center justify-between"
-                    onClick={() => set_show_faq(!show_faq)}
-                    type="button"
-                  >
-                    <h3 className="text-[11px] font-semibold tracking-[0.2em] text-gold uppercase">
-                      {wallet_text(copy, 'faq')}
-                    </h3>
-                    <ChevronDown
-                      className={`ml-2 shrink-0 text-muted opacity-40 transition-all group-hover:opacity-80 ${show_faq ? 'rotate-180' : ''}`}
-                      size={14}
-                    />
-                  </button>
-                  {show_faq && (
-                    <div className="mt-3 border border-border">
-                      {FAQ_KEYS.map((item, index) => (
-                        <FaqItem
-                          answer={wallet_text(copy, item.answer)}
-                          is_last={index === FAQ_KEYS.length - 1}
-                          key={item.question}
-                          question={wallet_text(copy, item.question)}
-                        />
+                  <section className="aui-funding-detail" hidden={selected !== 'direct'}>
+                    <WalletAddressBlock address={address ?? ''} copy={copy} />
+                  </section>
+                  <section className="aui-funding-detail" hidden={selected !== 'bridge'}>
+                    {bridge_opened && address ? (
+                      <BridgeFunding address={address} copy={copy} key={address} />
+                    ) : (
+                      <p className="aui-funding-connect">{copy.sign_in_to_play}</p>
+                    )}
+                  </section>
+                  <section hidden={selected !== 'card'} className="aui-funding-detail space-y-4">
+                    <p className="text-xs leading-relaxed text-muted">{wallet_text(copy, 'steps_card')}</p>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {CARD_PROVIDERS.map((provider) => (
+                        <a
+                          className="flex items-center justify-between border border-border bg-bg/50 p-3 text-xs text-text hover:border-gold/40"
+                          href={provider.url}
+                          key={provider.name}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                        >
+                          {provider.name}
+                          <ExternalLink size={12} />
+                        </a>
                       ))}
                     </div>
-                  )}
-                </section>
-              </>
-            }
-            testnet={testnet}
-          />
-        </div>
-      </div>
-    </NativeModal>
+                    <WalletAddressBlock address={address ?? ''} compact copy={copy} />
+                  </section>
+                </>
+              )}
+            </div>
+          </GameWindow>
+        </FundingDialog>
+      </Suspense>
+    </FundingErrorBoundary>
   )
 }

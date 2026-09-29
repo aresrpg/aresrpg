@@ -200,6 +200,7 @@ export type PlayerSource = {
   color_3: number
   hat: string | null
   cloak: string | null
+  title: string | null
   level: MoveInteger
   experience: MoveInteger
   vitality: MoveInteger
@@ -487,6 +488,7 @@ export type CharacterSourceInput = {
   color_3?: number
   hat?: string | null
   cloak?: string | null
+  title?: string | null
   level?: MoveInteger
   experience?: MoveInteger
   vitality?: MoveInteger

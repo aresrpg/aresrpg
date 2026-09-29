@@ -1,0 +1,393 @@
+.spell-card {
+  font-family: var(--aui-font);
+  color: #e2e1e5;
+}
+.spell-card .spell-unlock {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 0;
+  color: #a6adba;
+  font-size: 11px;
+}
+.spell-card [data-spell-ap-cost] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.spell-card [data-spell-ap-cost] > div {
+  min-height: 44px;
+  padding: 6px 8px;
+  gap: 8px;
+  border-radius: 4px;
+  background: #141b2380;
+}
+.spell-card [data-spell-ap-cost] > div > span:first-child {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: none !important;
+}
+.spell-card [data-spell-ap-cost] > div > span:last-child {
+  white-space: nowrap;
+}
+.spell-card [data-spell-effects] [data-spell-effect-row] {
+  min-height: 30px;
+  padding-block: 4px;
+  gap: 5px;
+  font-size: 11px;
+}
+.spell-card [data-spell-critical-badge] {
+  min-height: 22px;
+  padding: 2px 5px;
+  gap: 5px;
+  white-space: nowrap;
+  background: #b99a5320;
+  border-color: #c6a36936;
+  border-radius: 3px;
+}
+.spell-card .spell-constraints {
+  padding-top: 0;
+  border-top: 0;
+}
+.spell-card .spell-constraints > div {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 0;
+  background: none;
+  gap: 3px;
+}
+.spell-card .spell-constraints > div > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 25px;
+  padding: 3px 7px;
+  background: #ffffff04;
+  border-bottom: 1px solid #ffffff08;
+  gap: 8px;
+}
+.spell-card .spell-constraints svg {
+  flex: none;
+}
+.spell-card .spell-constraints span {
+  font-size: 10px;
+}
+.spell-card[data-spell-small] {
+  max-width: none;
+}
+.spell-card[data-spell-small] > section > div {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 10px;
+  padding: 8px;
+}
+.spell-card[data-spell-small] [data-spell-ap-cost] {
+  grid-column: 1/-1;
+}
+.spell-card[data-spell-small] > header {
+  margin-bottom: 8px;
+}
+.spell-card[data-spell-small] section {
+  margin-top: 0;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-inspection--spell {
+    width: min(800px, calc(100cqw - 16px));
+  }
+  .aui-inspection--spell .aui-inspection-body {
+    padding: 5px 8px;
+  }
+  .aui-inspection--spell .spell-card > header {
+    margin-bottom: 4px;
+  }
+  .aui-inspection--spell .spell-card .spell-constraints > div > div {
+    min-height: 22px;
+    padding-block: 2px;
+  }
+  .aui-inspection--spell .spell-card > section > div {
+    padding: 6px;
+    gap: 6px 12px;
+  }
+}
+.spell-card > section > div > * {
+  margin-block: 0;
+}
+.spell-card .spell-constraints {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+.spell-card .spell-constraints > div {
+  margin-block: 0;
+}
+.spell-card [data-spell-ap-cost] > div > span:last-child > span:first-child {
+  color: #aab3bf;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-inspection--spell .spell-card > section {
+    margin-top: 4px;
+  }
+  .aui-inspection--spell .spell-card .spell-constraints > div {
+    gap: 0;
+  }
+  .aui-inspection--spell .spell-card .spell-constraints > div > div {
+    min-height: 20px;
+  }
+}
+
+.spell-card .spell-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 10px;
+}
+.spell-card .spell-identity > h3 {
+  flex-basis: 100%;
+}
+.spell-card .spell-caster {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.spell-card .spell-unlock::before,
+.spell-card .spell-unlock > span + span::before {
+  content: '·';
+  color: #7a8493;
+}
+.spell-card .spell-unlock > span + span::before {
+  margin-right: 10px;
+}
+.spell-card .spell-caster:empty + .spell-unlock::before {
+  display: none;
+}
+.spell-card [data-spell-level-tabs] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  min-height: 0;
+  overflow: visible;
+  border-bottom: 1px solid #ffffff0b;
+}
+.spell-card [data-spell-level-tabs] .spell-rank-button {
+  flex: none;
+  width: 36px;
+  height: 32px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  font: 700 12px var(--aui-font);
+}
+.spell-card [data-spell-level-tabs] .spell-rank-button[aria-pressed='true'] {
+  color: #ffe2a9;
+  background-color: #665036;
+  border-color: #ba945955;
+}
+
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-inspection--spell {
+    height: calc(100cqh - 16px);
+    max-height: calc(100cqh - 16px);
+  }
+  .aui-inspection--spell .aui-inspection-body {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+.game-character-window--spells .sb {
+  padding: 8px;
+  font-family: var(--aui-font);
+}
+.game-character-window--spells .sb__top {
+  margin: 0 0 6px;
+  align-items: center;
+}
+.game-character-window--spells .sb__sigil {
+  display: none;
+}
+.game-character-window--spells .sb__name {
+  font-size: 13px;
+  letter-spacing: 0.03em;
+}
+.game-character-window--spells .sb__sub {
+  font-size: 10px;
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__main {
+  grid-template-columns: minmax(180px, 28%) minmax(0, 1fr);
+  gap: 8px;
+}
+.game-character-window--spells .sb__detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.game-character-window--spells .sb__detail > .spell-card {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+.game-character-window--spells .sb__lup {
+  margin: 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid #ffffff12;
+  flex: none;
+}
+.game-character-window--spells .sb__actions {
+  padding: 6px;
+}
+.game-character-window--spells .sb__upgrade {
+  min-height: 40px;
+  font-size: 12px;
+}
+.game-character-window--spells .sb__lhead {
+  padding: 6px 8px;
+}
+.game-character-window--spells .sb__lhead-t,
+.game-character-window--spells .sb__lhead-n {
+  font-size: 10px;
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__row {
+  border-left: 0;
+  min-height: 44px;
+  padding: 5px 8px;
+  gap: 7px;
+}
+.game-character-window--spells .sb__ic {
+  width: 30px;
+  height: 30px;
+}
+.game-character-window--spells .sb__nm {
+  font-size: 11px;
+  letter-spacing: normal;
+}
+.game-character-window--spells .sb__rl {
+  font-size: 9px;
+  letter-spacing: normal;
+}
+
+.game-character-window--spells .sb__rowbtn {
+  border-left: 0;
+}
+.game-character-window--spells .sb__rowbtn.is-active {
+  box-shadow: inset 0 0 0 1px #cba76440;
+  background: #66503645;
+}
+.game-character-window--spells .spell-card > header {
+  padding: 0;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.game-character-window--spells .spell-card > header img {
+  width: 40px;
+  height: 40px;
+}
+.game-character-window--spells .spell-card [data-spell-level-tabs] {
+  padding: 4px;
+}
+
+.game-character-window--spells {
+  width: min(1100px, calc(100cqw - 24px));
+  height: min(620px, calc(100cqh - 24px));
+}
+.game-character-window--spells .game-character-body {
+  padding: 6px;
+}
+.game-character-window--spells .sb {
+  padding: 4px;
+}
+.game-character-window--spells .sb__top {
+  min-height: 32px;
+  margin-bottom: 5px;
+}
+.game-character-window--spells .sb__detail {
+  background: #171c23;
+  border: 1px solid #ffffff10;
+}
+.game-character-window--spells .sb__list {
+  background: #151a21;
+}
+.game-character-window--spells .spell-card {
+  background: transparent;
+  box-shadow: none;
+}
+.game-character-window--spells .spell-card > section {
+  background: transparent;
+  border: 0;
+}
+.game-character-window--spells .spell-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 8px;
+  padding: 6px 0;
+}
+.game-character-window--spells .spell-content > * {
+  margin: 0;
+}
+.game-character-window--spells .spell-content > [data-spell-ap-cost] {
+  grid-column: 1 / -1;
+}
+.game-character-window--spells .spell-content .spell-constraints > div {
+  gap: 2px;
+}
+.game-character-window--spells .sb__mastered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  flex: none;
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-top: 1px solid #ffffff12;
+  background: #242a32;
+  color: #d5c197;
+  font: 600 12px var(--aui-font);
+  letter-spacing: 0.03em;
+  text-shadow: none;
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .game-character-window--spells .sb__top .aui-value-badge {
+    padding: 3px 8px;
+  }
+  .game-character-window--spells .sb__top .aui-value-badge > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .game-character-window--spells .spell-content > [data-spell-ap-cost] {
+    grid-column: 1;
+  }
+  .game-character-window--spells .spell-content > [data-spell-effects] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .game-character-window--spells .spell-content > .spell-constraints {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  .game-character-window--spells .spell-constraints > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .game-character-window--spells .spell-constraints > div > div {
+    min-height: 24px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .game-character-window--spells .spell-constraints span {
+    font-size: 8px;
+    overflow-wrap: anywhere;
+  }
+}

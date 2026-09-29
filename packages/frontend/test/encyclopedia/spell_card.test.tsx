@@ -83,7 +83,7 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(html).toContain('data-spell-level-tabs=""')
   expect(html).toContain('data-spell-effects=""')
   expect(html).toContain('CASTS / TURN')
-  expect(html).not.toContain('Unlocks at')
+  expect(html).toContain('Unlocks at Lv 21')
   expect(html).toContain('Point')
   expect(html).not.toContain('<input')
   expect(html).not.toContain('<select')
@@ -97,7 +97,7 @@ test('the shared spell card keeps its read layout at every size and opens on the
   }) satisfies SeedSpell
   expect(renderToStaticMarkup(<SpellCard initial_level={2} spell={leveled} />)).toContain('data-spell-ap-cost="3"')
 
-  // The small card shows only the invested level's name, critical, and effects.
+  // Compact fight cards keep the same mechanics at the invested level.
   const small_spell = Object.freeze({
     ...spell,
     levels: Object.freeze([base_level, Object.freeze({ ...base_level, ap_cost: 3, crit_1_in: 3 })]),
@@ -116,9 +116,9 @@ test('the shared spell card keeps its read layout at every size and opens on the
   expect(small_html).toContain('!border-b-0')
   expect(small_html).not.toContain('/spell.webp')
   expect(small_html).not.toContain('data-spell-level-tabs=""')
-  expect(small_html).not.toContain('data-spell-ap-cost=')
-  expect(small_html).not.toContain('CASTS / TURN')
-  expect(small_html).not.toContain('COOLDOWN')
+  expect(small_html).toContain('data-spell-ap-cost=')
+  expect(small_html).toContain('CASTS / TURN')
+  expect(small_html).toContain('COOLDOWN')
 })
 
 test('an aligned critical effect stays editable even while it matches its normal row', async () => {

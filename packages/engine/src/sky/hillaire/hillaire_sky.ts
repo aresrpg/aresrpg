@@ -33,6 +33,8 @@ import {
 
 import { create_night_sky_node } from '../night_sky.ts'
 import { DISTANCE_HAZE_MAX, DISTANCE_HAZE_POWER } from '../../distance_fog.ts'
+import { atmosphere_profile, type AtmospherePreset } from '../../atmosphere_profile.ts'
+import { resolve_atmosphere_tuning, type AtmosphereTuning } from '../../atmosphere_tuning.ts'
 import { HEIGHT_FOG } from '../../height_fog.ts'
 import { SUN_DISC_COS } from '../sky_node.ts'
 import {
@@ -127,6 +129,7 @@ export type HillaireSkyOptions = Readonly<{
   sun_direction?: VectorUniform
   cool_tilt?: readonly [number, number, number]
   distance_fog?: Readonly<{ near: number; far: number }>
+  atmosphere?: AtmospherePreset
   params?: Partial<AtmosphereParams>
   rebuild_on_rotate?: boolean
   on_aerial_dispatch?: () => void
@@ -134,7 +137,13 @@ export type HillaireSkyOptions = Readonly<{
 
 export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   const tier = resolve_sky_tier(opts.tier)
-  let params = merge_atmosphere_params(EARTH_ATMOSPHERE, opts.params ?? {})
+  const tuning = resolve_atmosphere_tuning(opts.atmosphere)
+  let params = merge_atmosphere_params(EARTH_ATMOSPHERE, {
+    exposure: tuning.exposure,
+    mie_scattering: tuning.mie_scattering,
+    mie_g: tuning.mie_g,
+    ...opts.params,
+  })
   const rebuild_on_rotate = opts.rebuild_on_rotate !== false
 
   const sun_direction = opts.sun_direction ?? uniform(new Vector3(0.2, 0.6, 0.78).normalize())
@@ -178,11 +187,12 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   // the SAME cinematic cool as the analytic fogNode (renderer.js FOG_COOL_TILT, passed via opts.cool_tilt)
   // so the LOW (analytic) and MEDIUM/HIGH (physical) tiers cannot drift. The night gate reuses far_field.js's
   // proven sun-elevation threshold (y ≥ 0.02 full day, ≤ −0.12 full night), not a fresh magic number.
+  const atmosphere = atmosphere_profile(opts.atmosphere)
   const A = {
     cool_tilt: uniform(new Vector3().fromArray(opts.cool_tilt ?? [0.62, 0.75, 1.0])),
-    tilt_amt: uniform(1), // master scale on the day-gated aerial tilt (0 = raw physics)
-    haze_density: uniform(8), // aerial opacity ×mult — tuned 2026-07-11: noon far-band L≈141 / B−R≈27 (MEDIUM band 144/+26 ±8/±5)
-    factor_max: uniform(0.85), // aerial opacity ceiling — far ridgelines keep their silhouette (RANGE_MAX parity)
+    tilt_amt: uniform(tuning.tint), // master scale on the day-gated aerial tilt (0 = raw physics)
+    haze_density: uniform(tuning.density), // aerial opacity ×mult — tuned 2026-07-11: noon far-band L≈141 / B−R≈27 (MEDIUM band 144/+26 ±8/±5)
+    factor_max: uniform(tuning.max_opacity), // aerial opacity ceiling — far ridgelines keep their silhouette (RANGE_MAX parity)
     // NEAR-FIELD CLEAR (near terrain "high quality, punchy colours"; open terrain keeps ONLY the
     // DISTANCE fog). Aerial in-scatter should be ~0 in the foreground, but MEDIUM's coarse aerial LUT
     // (32²×16 @ 8 steps) over-estimates the nearest slices' in-scatter → ×haze_density paints a blue veil
@@ -190,16 +200,16 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     // gate zeroes the art-directed haze below `near_fog_start` and eases it to full by `near_fog_full`,
     // killing MEDIUM's foreground wash while the TUNED mid/far band is byte-unchanged (near≈0 on HIGH ⇒ a
     // near-no-op there). World units (≈m). Live-tunable via __hillaire.art.near_fog_{start,full}.
-    near_fog_start: uniform(40),
-    near_fog_full: uniform(150),
-    distance_fog_near: uniform(opts.distance_fog?.near ?? 500),
-    distance_fog_far: uniform(opts.distance_fog?.far ?? 1750),
+    near_fog_start: uniform(tuning.near),
+    near_fog_full: uniform(tuning.full),
+    distance_fog_near: uniform((opts.distance_fog?.near ?? 500) * atmosphere.distance_near_scale),
+    distance_fog_far: uniform((opts.distance_fog?.far ?? 1750) * atmosphere.distance_far_scale),
     height_base_y: uniform(0),
     height_humidity: uniform(0.5),
-    height_density: uniform(opts.tier === 'high' ? HEIGHT_FOG.density : 0),
-    height_falloff: uniform(1 / HEIGHT_FOG.falloff_height),
-    height_max: uniform(HEIGHT_FOG.max_opacity),
-    horizon_cap: uniform(0.25), // sky-view background luma ceiling (post-exposure linear, pre-AgX) — MEASURED 2026-07-11: up-horizon L=148 (≤150 gate), rgb(110,153,209) blue not white; zenith L=120 (deep blue)
+    height_density: uniform(opts.tier === 'high' ? tuning.height_density : 0),
+    height_falloff: uniform(1 / tuning.height_falloff),
+    height_max: uniform(tuning.height_max),
+    horizon_cap: uniform(tuning.horizon_cap), // sky-view background luma ceiling (post-exposure linear, pre-AgX) — MEASURED 2026-07-11: up-horizon L=148 (≤150 gate), rgb(110,153,209) blue not white; zenith L=120 (deep blue)
   }
   /** night→day fade on sun elevation (far_field.js's proven pair); tilt = identity at night ⇒ byte-dark. */
   const day_f = smoothstep(float(-0.12), float(0.02), float(dyn.sun_dir.y))
@@ -283,16 +293,20 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
   // elevated exposure. Soft-cap the in-scatter LUMA with a hue-preserving smooth-min (below) so the horizon
   // stays LUMINOUS but never white; the deep-blue zenith (luma ≪ cap) is untouched and a dark night sky is
   // inert. The sun/moon discs are added AFTER the cap so they keep full brightness.
-  const sky_l = sky_radiance.dot(vec3(0.2126, 0.7152, 0.0722)).max(float(1e-4))
   // smooth-min knee (∼min(L,cap) with a soft shoulder): ≈ L when L ≪ cap so the deep-blue zenith is UNTOUCHED,
   // asymptotes to cap when L ≫ cap so only the blown-out horizon is clipped. Hue-preserving (scales RGB by
   // capped/L). Inert at night (L ≪ cap).
-  const sky_l_capped = sky_l.div(pow(float(1).add(pow(sky_l.div(A.horizon_cap), float(4))), float(0.25)))
-  const sky_capped = sky_radiance.mul(sky_l_capped.div(sky_l))
+  const cap_sky = (radiance: Node<'vec3'>) => {
+    const sky_l = radiance.dot(vec3(0.2126, 0.7152, 0.0722)).max(float(1e-4))
+    const sky_l_capped = sky_l.div(pow(float(1).add(pow(sky_l.div(A.horizon_cap), float(4))), float(0.25)))
+    return radiance.mul(sky_l_capped.div(sky_l))
+  }
+  const sky_capped = cap_sky(sky_radiance)
   const background_node = sky_capped.add(sun_glow).add(moon_glow).add(night.node).max(0)
 
   /** @param {*} dir vec3 world dir @returns {*} vec3 in-scatter radiance (ambient/mirror hook). */
-  const sample_sky = (dir: Node<'vec3'>): Node<'vec3'> => luts.sample_skyview(dir.normalize()).mul(U.exposure).max(0)
+  const sample_sky = (dir: Node<'vec3'>): Node<'vec3'> =>
+    cap_sky(luts.sample_skyview(dir.normalize()).mul(U.exposure)).max(0)
 
   // ── consumer 2: aerial-perspective fog on opaques — ART-DIRECTED over the raw physics ─────────────
   // L_out = L_surface·T + L_inscatter, as three's fog(color, factor) = mix(surface, color, factor):
@@ -377,6 +391,25 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     params_dirty = true // transmittance + multiple-scattering rebuild on the next tick
   }
 
+  const set_tuning = (overrides: Partial<AtmosphereTuning> | null): void => {
+    const value = resolve_atmosphere_tuning(opts.atmosphere, overrides)
+    A.tilt_amt.value = value.tint
+    A.haze_density.value = value.density
+    A.factor_max.value = value.max_opacity
+    A.near_fog_start.value = value.near
+    A.near_fog_full.value = value.full
+    A.height_density.value = opts.tier === 'high' ? value.height_density : 0
+    A.height_max.value = value.height_max
+    A.height_falloff.value = 1 / value.height_falloff
+    A.horizon_cap.value = value.horizon_cap
+    if (
+      params.exposure !== value.exposure ||
+      params.mie_scattering !== value.mie_scattering ||
+      params.mie_g !== value.mie_g
+    )
+      set_atmosphere_params({ exposure: value.exposure, mie_scattering: value.mie_scattering, mie_g: value.mie_g })
+  }
+
   const set_ground_haze = (ground_y: number, humidity: number): void => {
     A.height_base_y.value = ground_y + HEIGHT_FOG.base_offset
     A.height_humidity.value = Math.max(0, Math.min(1, humidity))
@@ -458,6 +491,7 @@ export function create_hillaire_sky(opts: HillaireSkyOptions = {}) {
     fog_node,
     sample_sky,
     set_atmosphere_params,
+    set_tuning,
     set_ground_haze,
     bake,
     tick,

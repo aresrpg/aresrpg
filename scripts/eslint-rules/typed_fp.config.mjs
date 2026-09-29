@@ -85,7 +85,11 @@ export default [
     // TT1 — frontend src: .ts/.tsx AND the .js game tree (allowJs puts it in the same program;
     // the marginal cost of harvesting it is rule execution only). Tests are outside the tsconfig
     // program — they MUST stay ignored here.
-    files: ['packages/frontend/src/**/*.{js,jsx,ts,tsx}'],
+    files: [
+      'packages/frontend/src/**/*.{js,jsx,ts,tsx}',
+      'packages/mobile/src/**/*.{ts,tsx}',
+      'packages/ui/src/**/*.{ts,tsx}',
+    ],
     ignores: ['**/*.test.*'],
     plugins: typed_plugins,
     languageOptions: {

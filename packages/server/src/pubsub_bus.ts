@@ -11,7 +11,7 @@
 
 import { EventEmitter } from 'node:events'
 
-import type { LeaderboardObservation, LeaderboardSnapshot, MarketVolume, MarketPriceHistory } from '@aresrpg/protocol'
+import type { LeaderboardObservation, LeaderboardSnapshot, MarketVolume, MarketPriceSnapshot } from '@aresrpg/protocol'
 
 import { get_analytics_totals, type AnalyticsTotals } from './reads/get_analytics_totals.ts'
 import { get_leaderboard } from './reads/get_leaderboard.ts'
@@ -87,7 +87,7 @@ export type GraphBus = Omit<Bus, 'publish'> & {
   indexed_state?: () => Promise<IndexedState | null>
   /** Immutable retained sale rows for one player, newest first. */
   sales_history: (address: string) => Promise<readonly string[]>
-  market_prices?: (item_type: string, now_ms: number) => Promise<MarketPriceHistory | null>
+  market_prices?: (item_type: string, now_ms: number) => Promise<MarketPriceSnapshot>
   market_volume?: (now_ms: number) => Promise<MarketVolume | null>
   analytics_hashes?: (keys: readonly string[]) => Promise<readonly Readonly<Record<string, string>>[]>
   analytics_sets?: (keys: readonly string[]) => Promise<readonly (readonly string[])[]>
@@ -281,9 +281,14 @@ export const create_graph_bus = ({
     ...doors,
     sales_history: (address) => publisher.zrevrange(`sales:${address}`, 0, 499),
     market_prices: sampled_read(async (item_type, now_ms) => {
-      const history = await get_market_prices(publisher, item_type, now_ms)
-      if (!history?.buckets.length) return history
-      return { ...history, total_units: (await item_supply?.(item_type)) ?? null }
+      const [history, total_units] = await Promise.all([
+        get_market_prices(publisher, item_type, now_ms).catch((error: unknown) => {
+          log.warn({ err: error, item_type }, 'marketplace price history unavailable')
+          return null
+        }),
+        item_supply?.(item_type) ?? Promise.resolve(null),
+      ])
+      return { history, total_units }
     }, 5_000),
     market_volume: (now_ms) => get_market_volume(publisher, now_ms),
     analytics_hashes: (keys) => Promise.all(keys.map((key) => publisher.hgetall(key))),

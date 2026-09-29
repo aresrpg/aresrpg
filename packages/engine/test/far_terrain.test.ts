@@ -10,9 +10,8 @@ import { Scene, type Mesh } from 'three'
 import { effective_render_distance, get_quality_profile } from '../src/quality.ts'
 import { create_far_terrain, ring_indices, seam_radius } from '../src/far_terrain.ts'
 import { create_clouds } from '../src/clouds.ts'
-import { create_flatten_uniform } from '../src/flatten.ts'
 import { create_sky_node } from '../src/sky/sky_node.ts'
-import { parse_world_recipe } from '../src/world_recipe.ts'
+import { compile_runtime_world_recipe, parse_world_recipe } from '../src/world_recipe.ts'
 import { world_terrain } from '../src/world_catalog.ts'
 import { CHUNK_EDGE } from '../src/voxel_data.ts'
 
@@ -34,38 +33,26 @@ describe('the far shell hole', () => {
   })
 })
 
-test('flat coverage removes the entire hole without replacing height data', () => {
+test('radius changes preserve vertex data and reuse the index allocation', () => {
   const scene = new Scene()
   const sky = create_sky_node()
-  const flatten = create_flatten_uniform()
+
   const clouds = create_clouds({ scene, sky, quality: 'high', seed: 'flat-coverage' })
+  const world = parse_world_recipe(world_terrain('nauvis'))
   const far = create_far_terrain({
     scene,
     quality: 'high',
-    flatten,
+
     clouds,
     sun_direction: sky.sun_direction,
-    world: parse_world_recipe(world_terrain('nauvis')),
+    world,
+    materials: compile_runtime_world_recipe(world, { structures: false }).materials,
   })
   try {
     const { geometry } = scene.children.at(-1)! as Mesh
     const vertices = geometry.getAttribute('position')
     const retained_index = geometry.index
-    const normal_count = geometry.drawRange.count
-    flatten.set(1)
-    far.set_quality('high', null)
-    expect(geometry.drawRange.count).toBe(ring_indices('high', 0).length)
-    flatten.set(0)
-    far.set_quality('high', null)
-    expect(geometry.drawRange.count).toBe(normal_count)
     far.set_quality('high', 1)
-    const reduced_count = geometry.drawRange.count
-    flatten.set(1)
-    far.set_quality('high', 1)
-    expect(geometry.drawRange.count).toBe(ring_indices('high', 0).length)
-    flatten.set(0)
-    far.set_quality('high', 1)
-    expect(geometry.drawRange.count).toBe(reduced_count)
     expect(geometry.getAttribute('position')).toBe(vertices)
     expect(geometry.index).toBe(retained_index)
     expect(Array.from(geometry.index!.array.slice(0, geometry.drawRange.count))).toEqual(ring_indices('high', 1))

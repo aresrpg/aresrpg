@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 
 import { mock } from 'bun:test'
 
+import { compile_runtime_world_recipe } from '../src/world_recipe.ts'
 import { world_terrain } from '../src/world_catalog.ts'
 import type { EngineIssue } from '../src/types.ts'
 
@@ -36,10 +37,6 @@ mock.module('../src/webgpu_backend.ts', () => ({
     return backend
   },
 }))
-mock.module('../src/grid_fallback.ts', () => ({
-  create_grid_fallback: () =>
-    new Proxy(backend, { get: (target, key) => (key === 'kind' ? 'grid' : Reflect.get(target, key)) }),
-}))
 Object.defineProperties(globalThis, {
   navigator: { value: { gpu: {} }, configurable: true },
   requestAnimationFrame: {
@@ -57,7 +54,7 @@ Object.defineProperties(globalThis, {
   },
 })
 const { create_engine } = await import('../src/renderer.ts')
-const engine = create_engine({ canvas: {} as never, world: world_terrain('nauvis') })
+const engine = create_engine({ canvas: {} as never, world: compile_runtime_world_recipe(world_terrain('nauvis')) })
 await new Promise<void>((resolve) => {
   engine.subscribe_status((status) => {
     if (status.state !== 'initializing') resolve()
@@ -79,17 +76,13 @@ assert.equal(await engine.render_chunk({ key: 'late', coordinate: { x: 0, y: 0, 
 engine.dispose()
 assert.equal(disposed, 1)
 
-const fallback_issue = { code: 'graphics_unavailable' as const }
-const grid = create_engine({ canvas: {} as never, world: world_terrain('nauvis'), force_grid: true })
-assert.equal(grid.backend(), 'grid', 'terrain planning must stop before the fallback attaches')
+const second = create_engine({ canvas: {} as never, world: compile_runtime_world_recipe(world_terrain('nauvis')) })
 await new Promise<void>((resolve) => {
-  grid.subscribe_status((status) => {
+  second.subscribe_status((status) => {
     if (status.state !== 'initializing') resolve()
   })
 })
-assert.equal(boots, 1, 'forced grid must never attempt WebGPU again')
-assert.deepEqual(grid.status(), { state: 'degraded', backend: 'grid', issue: fallback_issue })
-grid.start()
+second.start()
 render_error = true
 const original_error = console.error
 const errors: unknown[][] = []
@@ -102,9 +95,19 @@ try {
   console.error = original_error
 }
 assert.equal(errors.length, 1)
-assert.equal(grid.status().state, 'failed')
-assert.equal(grid.status().backend, 'grid')
+assert.equal(second.status().state, 'failed')
+assert.equal(second.status().backend, 'webgpu')
 assert.equal(disposed, 2)
-grid.dispose()
+second.dispose()
 assert.equal(disposed, 2)
+Object.defineProperty(globalThis, 'navigator', { value: {}, configurable: true })
+const unsupported = create_engine({ canvas: {} as never, world: compile_runtime_world_recipe(world_terrain('nauvis')) })
+await new Promise<void>((resolve) => {
+  unsupported.subscribe_status((status) => {
+    if (status.state !== 'initializing') resolve()
+  })
+})
+assert.equal(boots, 2)
+assert.deepEqual(unsupported.status(), { state: 'failed', backend: 'none', issue: { code: 'webgpu_unavailable' } })
+unsupported.dispose()
 console.log('renderer terminal failure passed')

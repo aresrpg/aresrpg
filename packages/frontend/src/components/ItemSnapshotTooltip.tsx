@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { item_stat_center } from '@aresrpg/immutable'
+import { stat_names } from '@aresrpg/immutable'
 import type { ItemSnapshot } from '@aresrpg/sdk/auth'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
-import { useRef, useState, type ReactNode, type CSSProperties } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { encyclopedia_text } from '../encyclopedia/copy.ts'
+import { item_stat_offset } from '../game/character_stats.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 
+import { ItemDetailContext } from './ItemDetailContext.ts'
 import { ItemDetailView } from './ItemDetailView.tsx'
 import './item_snapshot_tooltip.css'
 
@@ -19,17 +21,14 @@ type ItemTooltipDetails = ItemSnapshot & Pick<ItemRow, 'damages'>
 
 export type ItemSnapshotHover = Readonly<{
   anchor: Readonly<HTMLElement>
-  style: CSSProperties
   status: 'loading' | 'ready' | 'error'
   item: ItemTooltipDetails | null
 }>
 
-const item_snapshot_detail = (item: Readonly<ItemTooltipDetails>) => {
+export const item_snapshot_detail = (item: Readonly<ItemTooltipDetails>) => {
   const rolled = item.stats
     ? Object.fromEntries(
-        Object.entries(item.stats)
-          .map(([stat, value]) => [stat, value - item_stat_center])
-          .filter(([, value]) => value !== 0)
+        stat_names.map((stat) => [stat, item_stat_offset(item, stat)]).filter(([, value]) => value !== 0)
       )
     : null
   return Object.freeze({
@@ -38,17 +37,21 @@ const item_snapshot_detail = (item: Readonly<ItemTooltipDetails>) => {
   })
 }
 
-const ItemSnapshotContent = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: ItemSnapshotHover }>) => {
-  if (hover.status === 'loading')
+export const ItemSnapshotContent = ({
+  copy,
+  status,
+  item,
+}: Readonly<{ copy: AppCopy; status: ItemSnapshotHover['status']; item: ItemTooltipDetails | null }>) => {
+  if (status === 'loading')
     return (
       <span className="item-snapshot-tooltip__loading">
         <Loader2 className="animate-spin" size={13} />
         {copy.fight_hud.chat_fetching_item}
       </span>
     )
-  if (hover.status === 'error' || !hover.item)
+  if (status === 'error' || !item)
     return <span className="item-snapshot-tooltip__loading">{copy.fight_hud.chat_item_unavailable}</span>
-  const detail = item_snapshot_detail(hover.item)
+  const detail = item_snapshot_detail(item)
   const encyclopedia = encyclopedia_text(copy)
   return (
     <ItemDetailView
@@ -71,16 +74,13 @@ const ItemSnapshotContent = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: I
 /** Indexed rows stay live while hovered; only the DOM anchor is retained locally. */
 export const useItemDetailHover = (item: Readonly<ItemTooltipDetails>) => {
   const [anchor, set_anchor] = useState<Readonly<HTMLElement> | null>(null)
-  const bounds = anchor?.getBoundingClientRect()
-  const hover: ItemSnapshotHover | null =
-    anchor && bounds
-      ? {
-          anchor,
-          style: { left: bounds.left + bounds.width / 2, top: bounds.top - 8, pointerEvents: 'none' },
-          status: 'ready',
-          item,
-        }
-      : null
+  const hover: ItemSnapshotHover | null = anchor
+    ? {
+        anchor,
+        status: 'ready',
+        item,
+      }
+    : null
   return { open: set_anchor, close: () => set_anchor(null), hover }
 }
 
@@ -92,18 +92,15 @@ export const useItemSnapshotHover = (item_id: string) => {
     const generation = generation_ref.current + 1
     // eslint-disable-next-line functional/immutable-data -- React ref guards stale async hover completion.
     generation_ref.current = generation
-    const bounds = element.getBoundingClientRect()
-    const style = Object.freeze({ left: bounds.left + bounds.width / 2, top: bounds.top - 8 })
-    set_hover(Object.freeze({ anchor: element, style, status: 'loading', item: null }))
-    if (!wallet) return set_hover(Object.freeze({ anchor: element, style, status: 'error', item: null }))
+    set_hover(Object.freeze({ anchor: element, status: 'loading', item: null }))
+    if (!wallet) return set_hover(Object.freeze({ anchor: element, status: 'error', item: null }))
     void wallet.read_item(item_id).then(
       (item) => {
-        if (generation_ref.current === generation)
-          set_hover(Object.freeze({ anchor: element, style, status: 'ready', item }))
+        if (generation_ref.current === generation) set_hover(Object.freeze({ anchor: element, status: 'ready', item }))
       },
       () => {
         if (generation_ref.current === generation)
-          set_hover(Object.freeze({ anchor: element, style, status: 'error', item: null }))
+          set_hover(Object.freeze({ anchor: element, status: 'error', item: null }))
       }
     )
   }
@@ -115,14 +112,46 @@ export const useItemSnapshotHover = (item_id: string) => {
   return Object.freeze({ close, hover, open })
 }
 
-// Native dialogs own the top layer; a body portal cannot rise above them with z-index.
+const ItemTooltipSurface = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: ItemSnapshotHover }>) => {
+  const root = useRef<HTMLDivElement>(null)
+  const [position, set_position] = useState({ left: 12, top: 12 })
+  useLayoutEffect(() => {
+    const measure = () => {
+      const bounds = hover.anchor.getBoundingClientRect(),
+        box = root.current!.getBoundingClientRect()
+      const left = bounds.right + box.width + 12 < innerWidth ? bounds.right + 8 : bounds.left - box.width - 8
+      const next = {
+        left: Math.max(12, Math.min(left, innerWidth - box.width - 12)),
+        top: Math.max(12, Math.min(bounds.top, innerHeight - box.height - 12)),
+      }
+      set_position((current) => (current.left === next.left && current.top === next.top ? current : next))
+    }
+    const observer = new ResizeObserver(measure)
+    observer.observe(root.current!)
+    globalThis.addEventListener('scroll', measure, true)
+    globalThis.addEventListener('resize', measure)
+    measure()
+    return () => {
+      observer.disconnect()
+      globalThis.removeEventListener('scroll', measure, true)
+      globalThis.removeEventListener('resize', measure)
+    }
+  }, [hover.anchor])
+  return (
+    <div ref={root} className="aui-panel item-snapshot-tooltip" role="tooltip" style={position}>
+      <ItemDetailContext.Provider value="summary">
+        <ItemSnapshotContent copy={copy} status={hover.status} item={hover.item} />
+      </ItemDetailContext.Provider>
+    </div>
+  )
+}
+
+// Native windows own their top layer; keep their tooltips in the same DOM subtree.
 export const ItemSnapshotTooltip = ({ copy, hover }: Readonly<{ copy: AppCopy; hover: ItemSnapshotHover | null }>) =>
   hover && typeof document !== 'undefined'
     ? createPortal(
-        <div className="item-snapshot-tooltip" role="tooltip" style={hover.style}>
-          <ItemSnapshotContent copy={copy} hover={hover} />
-        </div>,
-        hover.anchor.closest('dialog') ?? document.body
+        <ItemTooltipSurface copy={copy} hover={hover} />,
+        hover.anchor.closest('dialog, .aui-floating-window') ?? document.body
       )
     : null
 
@@ -138,10 +167,15 @@ export const ItemDetailHover = ({
       className="contents"
       onMouseEnter={(event) => {
         const anchor = event.currentTarget.firstElementChild
-        if (anchor instanceof HTMLElement) detail.open(anchor)
+        if (event.buttons === 0 && matchMedia('(hover: hover)').matches && anchor instanceof HTMLElement)
+          detail.open(anchor)
       }}
       onMouseLeave={detail.close}
-      onFocus={(event) => detail.open(event.target)}
+      onPointerDown={detail.close}
+      onClickCapture={detail.close}
+      onFocus={(event) => {
+        if (event.target.matches(':focus-visible')) detail.open(event.target)
+      }}
       onBlur={detail.close}
     >
       {children}

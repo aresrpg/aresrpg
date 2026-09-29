@@ -3,20 +3,11 @@
 
 import { useText } from '../../i18n/useText.ts'
 
-import { useState, type CSSProperties } from 'react'
+import { useState } from 'react'
+import { Vitals } from '@aresrpg/ui'
 
 export const vital_percent = (value: bigint, maximum: bigint): number =>
   maximum <= 0n ? 0 : Math.max(0, Math.min(100, Number((value * 10_000n) / maximum) / 100))
-
-const StatGem = ({ kind, value }: Readonly<{ kind: 'ap' | 'mp'; value: bigint }>) => {
-  const ui = useText()
-  return (
-    <div aria-label={`${ui(`fight_hud.unit_${kind}`)} ${value}`} className={`fight-hud__gem fight-hud__gem--${kind}`}>
-      <i />
-      <span>{value.toString()}</span>
-    </div>
-  )
-}
 
 export const VitalsDisplay = ({
   hp,
@@ -27,28 +18,15 @@ export const VitalsDisplay = ({
   const ui = useText()
   const [percent_visible, set_percent_visible] = useState(false)
   return (
-    <div className="fight-hud__vitals">
-      <button
-        className="fight-hud__hp-gem"
-        onClick={() => set_percent_visible((visible) => !visible)}
-        title={ui('ui.vitals', { current: String(hp), maximum: String(max_hp), unit: ui('ui.hp') })}
-        type="button"
-      >
-        <i aria-hidden="true" style={{ '--hp-percent': `${vital_percent(hp, max_hp)}%` } as CSSProperties} />
-        {percent_visible ? (
-          <span>{Math.round(vital_percent(hp, max_hp))}%</span>
-        ) : (
-          <span>
-            {hp.toString()}
-            <b />
-            {max_hp.toString()}
-          </span>
-        )}
-      </button>
-      <div className="fight-hud__stat-gems">
-        <StatGem kind="ap" value={ap} />
-        <StatGem kind="mp" value={mp} />
-      </div>
-    </div>
+    <Vitals
+      health={percent_visible ? `${Math.round(vital_percent(hp, max_hp))}%` : hp.toString()}
+      fill={vital_percent(hp, max_hp)}
+      health_label={ui('ui.vitals', { current: String(hp), maximum: String(max_hp), unit: ui('ui.hp') })}
+      on_health={() => set_percent_visible(!percent_visible)}
+      ap={String(ap)}
+      mp={String(mp)}
+      ap_label={`${ui('fight_hud.unit_ap')} ${ap}`}
+      mp_label={`${ui('fight_hud.unit_mp')} ${mp}`}
+    />
   )
 }

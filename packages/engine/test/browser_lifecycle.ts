@@ -4,6 +4,7 @@
 
 import { WebGPUBackend, type Renderer } from 'three/webgpu'
 
+import { compile_runtime_world_recipe } from '../src/world_recipe.ts'
 import { create_webgpu_backend } from '../src/webgpu_backend.ts'
 import type { EngineIssue, RenderChunkRequest } from '../src/types.ts'
 import { BIOME_SLOTS, type WorldRecipe } from '../src/world_recipe.ts'
@@ -43,7 +44,7 @@ export const probe_backend_lifetime = async (canvas: HTMLCanvasElement) => {
       return Reflect.apply(target, receiver, args)
     },
   })
-  const backend = await create_webgpu_backend(canvas, 'low', LIFECYCLE_WORLD, (issue) => {
+  const backend = await create_webgpu_backend(canvas, 'low', compile_runtime_world_recipe(LIFECYCLE_WORLD), (issue) => {
     if (issue) issues.push(issue)
   }).finally(() => {
     globalThis.Map = native_map

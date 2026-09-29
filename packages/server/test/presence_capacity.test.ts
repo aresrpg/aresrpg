@@ -61,57 +61,81 @@ test('a nearby login burst hydrates each public identity once and directs discov
   expect(emitter.eventNames()).toEqual([])
 })
 
-test('a stale mesh appearance cannot undo indexed gear or restart hydration', async () => {
-  const fixture = wire({ character_ids: ['own'] })
-  let hat = 'mokan'
-  let reads = 0
-  const public_world = create_public_world(
-    {
-      read: async (query) => {
-        if (!query.includes('RETURN e.slot')) return []
-        reads++
-        return [{ slot: 'hat', item_type: hat }]
+test.each([
+  ['hat', 'mokan', 'fud'],
+  ['title', null, 'title_veteran'],
+] as const)(
+  '%s uses indexed equip/unequip updates and rejects stale mesh appearance',
+  async (slot, initial, equipped) => {
+    const fixture = wire({ character_ids: ['own'] })
+    let item: string | null = initial
+    let reads = 0
+    const public_world = create_public_world(
+      {
+        read: async (query) => {
+          if (!query.includes('RETURN e.slot')) return []
+          reads++
+          return item === null ? [] : [{ slot, item_type: item }]
+        },
+        close: async () => {},
       },
-      close: async () => {},
-    },
-    fixture.pubsub.graph
-  )
-  const player = create_player({ ...fixture, public_world, address: 'owner', admin: false })
-  const appearance = {
-    kind: 'appear',
-    address: 'other',
-    player: {
-      character_id: 'other',
-      world: 'overworld',
-      x: 100,
-      y: 0,
-      z: 100,
-      hat: 'stale',
-      cloak: null,
-      pet: null,
-      riding: false,
-    },
+      fixture.pubsub.graph
+    )
+    const player = create_player({ ...fixture, public_world, address: 'owner', admin: false })
+    const appearance = {
+      kind: 'appear',
+      address: 'other',
+      player: {
+        character_id: 'other',
+        world: 'overworld',
+        x: 100,
+        y: 0,
+        z: 100,
+        hat: null,
+        title: null,
+        [slot]: 'stale',
+        cloak: null,
+        pet: null,
+        riding: false,
+      },
+    }
+    try {
+      await flush()
+      fixture.pubsub.emitter.emit('pos:overworld:0:0', appearance)
+      await flush()
+      expect(fixture.sent.filter((packet) => packet.type === 'packet/player_appeared').at(-1)?.player[slot]).toBe(
+        initial
+      )
+      item = equipped
+      fixture.pubsub.emitter.emit('evt:character:other', {
+        type: 'ItemEquipped',
+        data: { character: 'other', slot },
+      })
+      await flush()
+      const before = reads
+      fixture.pubsub.emitter.emit('pos:overworld:0:0', appearance)
+      await flush()
+      expect(fixture.sent.filter((packet) => packet.type === 'packet/player_appeared').at(-1)?.player[slot]).toBe(
+        equipped
+      )
+      expect(reads).toBe(before)
+      item = null
+      fixture.pubsub.emitter.emit('evt:character:other', {
+        type: 'ItemUnequipped',
+        data: { character: 'other', slot },
+      })
+      await flush()
+      expect(
+        fixture.sent
+          .filter((packet) => packet.type === 'packet/player_equipment')
+          .filter((packet) => packet.slot === slot)
+          .at(-1)?.item_type
+      ).toBeNull()
+    } finally {
+      player.on_close()
+    }
   }
-  try {
-    await flush()
-    fixture.pubsub.emitter.emit('pos:overworld:0:0', appearance)
-    await flush()
-    expect(fixture.sent.filter((packet) => packet.type === 'packet/player_appeared').at(-1)?.player.hat).toBe('mokan')
-    hat = 'fud'
-    fixture.pubsub.emitter.emit('evt:character:other', {
-      type: 'ItemEquipped',
-      data: { character: 'other', slot: 'hat' },
-    })
-    await flush()
-    const before = reads
-    fixture.pubsub.emitter.emit('pos:overworld:0:0', appearance)
-    await flush()
-    expect(fixture.sent.filter((packet) => packet.type === 'packet/player_appeared').at(-1)?.player.hat).toBe('fud')
-    expect(reads).toBe(before)
-  } finally {
-    player.on_close()
-  }
-})
+)
 
 test('failed appearance hydration closes the session so reconnect can recover without an equipment event', async () => {
   const fixture = wire({ character_ids: ['own'] })

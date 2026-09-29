@@ -15,7 +15,7 @@ import { dungeon_entry_key, dungeon_operation_reconciled, selected_dungeon_run }
 
 const portal_source = readFileSync(new URL('../../src/components/DungeonPortalPrompt.tsx', import.meta.url), 'utf8')
 const lobby_source = readFileSync(new URL('../../src/components/DungeonLobby.tsx', import.meta.url), 'utf8')
-const app_source = readFileSync(new URL('../../src/app.tsx', import.meta.url), 'utf8')
+const app_source = readFileSync(new URL('../../src/PlayerRuntime.tsx', import.meta.url), 'utf8')
 
 test('dungeon rooms reveal only cleared and current rooms', () => {
   expect([1, 2, 3, 4].map((room) => dungeon_room_state(room, 2))).toEqual([
@@ -118,7 +118,9 @@ test('dungeon surfaces use the global gold card language and rounded expedition 
   expect(lobby_source).toContain('<Chat')
 })
 
-test('friends and party share one HUD home outside the expedition component', () => {
-  expect(app_source.match(/<FriendsPanel/g)).toHaveLength(1)
-  expect(app_source.match(/<PartyFrame/g)).toHaveLength(1)
+test('friends and party retain one host each outside the expedition component', () => {
+  const status_source = readFileSync(new URL('../../src/components/DesktopWorldStatus.tsx', import.meta.url), 'utf8')
+  expect(status_source.match(/<FriendsPanel/g)).toHaveLength(1)
+  const dock = readFileSync(new URL('../../src/game/hud/WorldSocialDock.tsx', import.meta.url), 'utf8')
+  expect(dock.match(/<PartyFrame/g)).toHaveLength(1)
 })

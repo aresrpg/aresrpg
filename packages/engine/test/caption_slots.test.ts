@@ -43,3 +43,19 @@ test('movement, opacity and health fraction do not rerasterize unchanged text', 
   )
   expect(caption_raster_key(first)).not.toBe(caption_raster_key({ ...first, speech: 'Hello' }))
 })
+
+test('speech wraps whole words instead of splitting Sceat’s sentence mid-word', () => {
+  expect(wrap_caption('You won’t get far alone. Let’s travel together.', (text) => text.length, 20)).toEqual([
+    'You won’t get far',
+    'alone. Let’s travel',
+    'together.',
+  ])
+  expect(wrap_caption('  hello   world\nnext line', (text) => text.length, 10)).toEqual(['hello', 'world', 'next line'])
+})
+
+test('nameplate frame changes invalidate the shared atlas tile', () => {
+  const nameplate = { name: 'Sceat', variant: 'nameplate' as const, tone: 'neutral' as const }
+  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ ...nameplate, tone: 'green' }))
+  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ ...nameplate, tone: 'red' }))
+  expect(caption_raster_key(nameplate)).not.toBe(caption_raster_key({ name: nameplate.name, variant: 'card' }))
+})

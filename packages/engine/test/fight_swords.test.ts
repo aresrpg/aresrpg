@@ -7,7 +7,6 @@ import {
   FIGHT_SWORD_AUDIO,
   FIGHT_SWORD_TILT,
   fight_sword_frame,
-  fight_sword_ground_height,
   fight_sword_label_offset,
   fight_sword_plant_height,
   fight_swords_visible,
@@ -52,11 +51,4 @@ test('the planted sword keeps its legacy lean, bbox depth, and world-space label
 test('a mounted board hides every world sword', () => {
   expect(fight_swords_visible(false)).toBeTrue()
   expect(fight_swords_visible(true)).toBeFalse()
-})
-
-test('a planted sword follows the live flat-mode ground projection', () => {
-  expect(fight_sword_ground_height(18, 0)).toBe(18)
-  expect(fight_sword_ground_height(18, 0.6)).toBeGreaterThan(0)
-  expect(fight_sword_ground_height(18, 0.6)).toBeLessThan(18)
-  expect(fight_sword_ground_height(18, 1)).toBe(0)
 })

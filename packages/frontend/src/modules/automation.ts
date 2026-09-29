@@ -161,7 +161,16 @@ const protector_outcome = (state: AppState, run: AutomationRun, input: AppInput)
 const interrupted = (state: AppState, run: AutomationRun, input: AppInput): boolean => {
   const character = selected_character(state.session)
   if (character?.id !== run.character_id || character.world !== run.world) return true
-  if (['auth/connected', 'auth/disconnected', 'auth/rejected', 'world/engage', 'run_to/character'].includes(input.type))
+  if (
+    [
+      'auth/connected',
+      'auth/disconnected',
+      'auth/rejected',
+      'world/engage',
+      'run_to/character',
+      'run_to/fight',
+    ].includes(input.type)
+  )
     return true
   return input.type === 'run_to/position' && input.source !== 'automation'
 }
@@ -320,7 +329,6 @@ export const observe_automation: NonNullable<AppModule['observe']> = (context) =
       dispatch({
         type: 'run_to/stopped',
         reason: state.automation.run ? 'arrived' : 'manual',
-        restore_flat: state.run_to.restore_flat,
       })
     const command = automation_command(state, previous)
     if (command) dispatch(command)

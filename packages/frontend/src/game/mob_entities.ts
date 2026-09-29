@@ -28,8 +28,8 @@ export const mob_model_scalar_for_roll = (mob_type: string, level_scalar: number
   return mob_scalar_from_level(mob.level_min, mob.level_max, level)
 }
 
-export const mob_entity = (source: MobRenderSource): MobEntityRender | null => {
-  const model = mob_model_render(source.mob_type)
+export const mob_entity = (source: MobRenderSource, model_for = mob_model_render): MobEntityRender | null => {
+  const model = model_for(source.mob_type)
   // Asset parity is build-gated. This projection runs on every wander frame, so logging a
   // broken build here floods the main thread and starves terrain scheduling.
   if (!model) return null
@@ -44,8 +44,13 @@ export const mob_entity = (source: MobRenderSource): MobEntityRender | null => {
   })
 }
 
-export const mob_entities = (sources: readonly MobRenderSource[]): readonly MobEntityRender[] =>
-  Object.freeze(sources.map(mob_entity).filter((row): row is MobEntityRender => row !== null))
+export const mob_entities = (
+  sources: readonly MobRenderSource[],
+  model_for = mob_model_render
+): readonly MobEntityRender[] =>
+  Object.freeze(
+    sources.map((source) => mob_entity(source, model_for)).filter((row): row is MobEntityRender => row !== null)
+  )
 
 export const preload_mob_type = (mob_type: string): void => {
   const model = mob_model_render(mob_type)

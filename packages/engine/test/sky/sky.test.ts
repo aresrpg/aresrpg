@@ -10,7 +10,7 @@ import {
   sun_dir_from_tod,
 } from '../../src/sky/celestial_motion.ts'
 import { derive_night_sky_params, horizon_fade_js, night_gate_js } from '../../src/sky/night_sky.ts'
-import { disc_space_uv_js, luminance, palette_for_sun } from '../../src/sky/sky_node.ts'
+import { create_sky_node, disc_space_uv_js, luminance, palette_for_sun } from '../../src/sky/sky_node.ts'
 
 describe('celestial motion', () => {
   test('the configured clock closes after one orbit and the moon stays exactly antipodal', () => {
@@ -53,4 +53,20 @@ describe('sky reference math', () => {
         first.galaxy_n[2] * first.galaxy_a[2]
     ).toBeCloseTo(0, 12)
   })
+})
+
+test('authored sky heading preserves elevation, unit length and the antipodal moon', () => {
+  for (const time of [0, 0.25, 0.69, 0.9])
+    for (const rotation of [0, 0.9, -Math.PI]) {
+      const base = sun_dir_from_tod(time)
+      const sun = sun_dir_from_tod(time, undefined, rotation)
+      const moon = moon_dir_from_tod(time, undefined, rotation)
+      expect(sun.y).toBe(base.y)
+      expect(sun.length()).toBeCloseTo(1, 12)
+      expect(sun.dot(moon)).toBeCloseTo(-1, 12)
+    }
+  const sky = create_sky_node({ initial_tod: 0.25, sky_rotation: 0.9 })
+  expect(sky.sun_direction.value.equals(sun_dir_from_tod(0.25, undefined, 0.9))).toBe(true)
+  sky.set_time_of_day(0.69)
+  expect(sky.sun_direction.value.equals(sun_dir_from_tod(0.69, undefined, 0.9))).toBe(true)
 })

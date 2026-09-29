@@ -1,0 +1,71 @@
+{
+  "bay_width": 6,
+  "floor_height": 7,
+  "depth": 19,
+  "front": 3,
+  "window": [
+    "ppppp",
+    "twwwt",
+    "twWwt",
+    "twWwt",
+    "twwwt",
+    "ppppp",
+    "WWWWW"
+  ],
+  "materials": {
+    "p": "plaster",
+    "t": "trim",
+    "w": "window_dark",
+    "W": "wood"
+  },
+  "variants": [
+    {
+      "floors": 2,
+      "roof": "gable",
+      "cover": "roof",
+      "entry": 0
+    },
+    {
+      "floors": 2,
+      "roof": "gable",
+      "cover": "tile_red",
+      "entry": 0
+    },
+    {
+      "floors": 2,
+      "roof": "cross",
+      "cover": "roof",
+      "entry": 1
+    },
+    {
+      "floors": 2,
+      "roof": "cross",
+      "cover": "tile_red",
+      "entry": 1
+    },
+    {
+      "floors": 3,
+      "roof": "gable",
+      "cover": "roof",
+      "entry": 1
+    },
+    {
+      "floors": 3,
+      "roof": "gable",
+      "cover": "tile_red",
+      "entry": 1
+    },
+    {
+      "floors": 3,
+      "roof": "cross",
+      "cover": "roof",
+      "entry": 0
+    },
+    {
+      "floors": 3,
+      "roof": "cross",
+      "cover": "tile_red",
+      "entry": 0
+    }
+  ]
+}

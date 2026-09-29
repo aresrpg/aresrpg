@@ -36,7 +36,7 @@ test('gathering is per character and late callbacks cannot settle a newer attemp
 })
 
 test('observer restart finishes an elapsed gather without a retained toast', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: false, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: false, render_distance: null })
   let state: AppState = { ...base, world: { ...base.world, gathering: { alice: gather('alice') } } }
   const controller = new AbortController()
   const inputs: unknown[] = []
@@ -65,7 +65,7 @@ test('observer restart finishes an elapsed gather without a retained toast', () 
 
 test('an early timer reschedules until the authoritative deadline', async () => {
   const clock = spyOn(Date, 'now').mockReturnValue(1)
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: false, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: false, render_distance: null })
   let state: AppState = { ...base, world: { ...base.world, gathering: { alice: gather('alice') } } }
   const controller = new AbortController()
   try {
@@ -96,7 +96,7 @@ test('a projected protector resolves for its character despite an unconfirmed lo
   const calls: unknown[] = []
   const listeners = new Map<string, (input: unknown) => void>()
   const controller = new AbortController()
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: false, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: false, render_distance: null })
   const state = {
     ...base,
     session: {
@@ -139,7 +139,7 @@ test('a gather removed by the roster dismisses its loading notice when its reply
   const controller = new AbortController()
   const listeners = new Map<string, (input: unknown) => void>()
   let finish!: (value: { quantity: number; ambushed: boolean }) => void
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: false, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: false, render_distance: null })
   let state = {
     ...base,
     session: {

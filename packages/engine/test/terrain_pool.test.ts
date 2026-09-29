@@ -5,23 +5,26 @@ import { Mesh, OrthographicCamera, Scene, type Material, type InstancedBufferGeo
 
 import { create_board_occlusion } from '../src/board_occlusion.ts'
 import { create_clouds } from '../src/clouds.ts'
-import { create_flatten_uniform } from '../src/flatten.ts'
 import { create_sky_node } from '../src/sky/sky_node.ts'
+import { create_upload_queue } from '../src/upload_queue.ts'
 import { create_terrain_pool } from '../src/terrain_pool.ts'
-import { parse_world_recipe } from '../src/world_recipe.ts'
+import { parse_world_recipe, compile_runtime_world_recipe } from '../src/world_recipe.ts'
 import { world_terrain } from '../src/world_catalog.ts'
 
-for (const quality of ['low', 'medium', 'high'] as const)
-  test(`${quality}: flat terrain hides all voxel draws and restores cached geometry`, () => {
+for (const { quality, canopy } of (['low', 'medium', 'high'] as const).flatMap((quality) =>
+  (['voxels', 'clusters'] as const).map((canopy) => ({ quality, canopy }))
+))
+  test(`${quality}/${canopy}: terrain culls source bounds and reuses lit materials across quality changes`, () => {
     const scene = new Scene()
     const sky = create_sky_node()
     const clouds = create_clouds({ scene, sky, quality, seed: 'visibility' })
-    const flatten = create_flatten_uniform()
+
     const pool = create_terrain_pool({
+      uploads: create_upload_queue(),
       scene,
       quality,
-      flatten,
-      world: parse_world_recipe(world_terrain('nauvis')),
+
+      world: compile_runtime_world_recipe({ ...parse_world_recipe(world_terrain('nauvis')), canopy }),
       sun_direction: sky.sun_direction,
       clouds,
       board_occlusion: create_board_occlusion(),
@@ -53,52 +56,29 @@ for (const quality of ['low', 'medium', 'high'] as const)
     expect(Array.from(terrain!.geometry.indirect!.array.slice(0, 5))).toEqual([6, 1, 0, 0, 0])
     pool.set_view(camera, camera)
     expect(terrain!.geometry.indirectOffset).toEqual([])
-    for (const amount of [0.8, 1, 0.8]) {
-      flatten.set(amount)
-      pool.sync_flatten()
-      pool.set_view(camera, camera)
-      // The elevated nearby chunk enters view as it flattens; the far chunk stays culled.
-      expect(terrain!.geometry.indirectOffset).toEqual(amount === 1 ? [] : [0, 40])
-      expect(shadow!.geometry.indirectOffset).toEqual(amount === 1 ? [] : [0, 40])
-      // Projection uses the fade material; the endpoint submits no voxel draws.
-      expect(terrain!.material.alphaTest).toBe(0.5)
-      expect(shadow!.material.alphaTest).toBe(0.5)
-    }
-    expect(pool.count()).toBe(3) // Flat mode changes draws, not residency.
-    flatten.set(0)
-    pool.sync_flatten()
-    pool.set_view(camera, camera)
-    expect(terrain!.geometry.indirectOffset).toEqual([])
     pool.set_quality('medium')
     const ordinary = terrain!.material
     pool.set_occlusion_active(true)
     const occluded = terrain!.material
-    flatten.set(0.8)
-    pool.sync_flatten()
-    const fading = terrain!.material
     let disposed = 0
-    for (const material of [ordinary, occluded, fading])
+    for (const material of [ordinary, occluded])
       material.addEventListener('dispose', () => {
         disposed += 1
       })
     for (const tier of ['high', 'medium'] as const) {
       pool.set_quality(tier)
-      expect(terrain!.material).toBe(fading)
-      flatten.set(0)
-      pool.sync_flatten()
+
       expect(terrain!.material).toBe(occluded)
       pool.set_occlusion_active(false)
       expect(terrain!.material).toBe(ordinary)
       pool.set_occlusion_active(true)
-      flatten.set(0.8)
-      pool.sync_flatten()
     }
     expect(disposed).toBe(0)
     pool.set_quality('low')
-    expect(disposed).toBe(3)
+    expect(disposed).toBe(2)
     expect(shadow!.castShadow).toBe(false)
     pool.set_quality('high')
-    expect(terrain!.material).not.toBe(fading)
+    expect(terrain!.material).not.toBe(ordinary)
     expect(shadow!.castShadow).toBe(true)
     pool.dispose()
     clouds.dispose()

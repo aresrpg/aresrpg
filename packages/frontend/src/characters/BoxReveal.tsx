@@ -13,9 +13,9 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
+import { NativeModal } from '@aresrpg/ui'
 
-import { NativeModal } from '../components/ModalFrame.tsx'
-import { play_fight_audio } from '../game/audio/fight_audio_registry.ts'
+import { play_audio } from '../game/audio/audio_registry.ts'
 import { rolled_item_types } from '../modules/claims.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
@@ -109,15 +109,17 @@ export const BoxReveal = ({
         if (runtime.alive) {
           set_rolled(results)
           const reduced_motion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-          if (reduced_motion) set_anim_done(true)
-          else {
+          if (reduced_motion) {
+            set_anim_done(true)
+            play_audio('loot_open')
+          } else {
             set_phase('charging')
             runtime.timers.push(
               setTimeout(() => {
                 if (!runtime.alive) return
                 set_phase('burst')
                 try {
-                  play_fight_audio('crit')
+                  play_audio('loot_open')
                 } catch (error) {
                   console.error('best-effort burst sfx failed (the reveal continues)', error)
                 }

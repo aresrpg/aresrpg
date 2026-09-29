@@ -19,7 +19,7 @@ describe('game settings', () => {
   test('malformed storage falls back to the supplied quality', () => {
     expect(load_game_settings('medium', null, memory_storage('{'))).toEqual({
       quality: 'medium',
-      flat_mode: false,
+
       music_enabled: true,
       day_night_cycle_enabled: true,
       master_volume: 1,
@@ -43,7 +43,7 @@ describe('game settings', () => {
     save_game_settings(
       {
         quality: 'high',
-        flat_mode: true,
+
         music_enabled: false,
         day_night_cycle_enabled: false,
         master_volume: 0.4,
@@ -64,7 +64,7 @@ describe('game settings', () => {
 
     expect(load_game_settings('low', null, storage)).toEqual({
       quality: 'high',
-      flat_mode: true,
+
       music_enabled: false,
       day_night_cycle_enabled: false,
       master_volume: 0.4,
@@ -84,11 +84,11 @@ describe('game settings', () => {
   })
 
   test('a valid development override wins without erasing flat mode', () => {
-    const storage = memory_storage(JSON.stringify({ quality: 'low', flat_mode: true }))
+    const storage = memory_storage(JSON.stringify({ quality: 'low' }))
 
     expect(load_game_settings('medium', 'high', storage)).toEqual({
       quality: 'high',
-      flat_mode: true,
+
       music_enabled: true,
       day_night_cycle_enabled: true,
       master_volume: 1,
@@ -108,9 +108,9 @@ describe('game settings', () => {
   })
 
   test('rejects malformed fight access without discarding other saved settings', () => {
-    const storage = memory_storage(JSON.stringify({ flat_mode: true, fight_access: 7 }))
+    const storage = memory_storage(JSON.stringify({ fight_access: 7 }))
 
-    expect(load_game_settings('medium', null, storage)).toMatchObject({ flat_mode: true, fight_access: 0 })
+    expect(load_game_settings('medium', null, storage)).toMatchObject({ fight_access: 0 })
   })
 
   test('defaults legacy volume and clamps persisted master volume to the playable range', () => {

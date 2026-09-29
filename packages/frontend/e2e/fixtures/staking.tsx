@@ -4,7 +4,6 @@
 import { useReducer } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { Sidebar } from '../../src/components/Sidebar.tsx'
 import { load_app_copy, type AppCopy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import { KaresPageView } from '../../src/kares/KaresPage.tsx'
@@ -13,6 +12,7 @@ import { initial_wallet_state, type WalletUiInput, type WalletState } from '../.
 import { finance_state } from '../../test/kares/fixture.ts'
 
 import '../../src/tailwind.css'
+import '@aresrpg/ui/styles.css'
 
 // Presentation-only fixture: no runtime, signer, RPC reader or transaction executor is started.
 const account = finance_state()
@@ -57,15 +57,6 @@ const StakingProbe = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   })
   return (
     <main className="flex h-dvh gap-3 overflow-hidden bg-bg p-3 font-mono text-text">
-      <div className="shrink-0">
-        <Sidebar
-          address={account.snapshot!.address!}
-          copy={copy}
-          network="testnet"
-          open_page={() => undefined}
-          page="kares"
-        />
-      </div>
       <div className="app-content min-w-0 flex-1 overflow-y-auto" data-page-slot="">
         <KaresPageView
           wallet={{ state: state.wallet, dispatch: (input) => dispatch({ owner: 'wallet', input }) }}

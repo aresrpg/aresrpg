@@ -109,6 +109,7 @@ export type PlayerAction =
   | { type: 'action/friends'; friends: readonly string[] }
   | { type: 'action/character_watch_ready'; character_id: string }
   | { type: 'action/party_invites_changed'; character_id: string }
+  | { type: 'action/nearby_fight'; nearby: PlayerState['nearby_fight'] }
   | { type: 'action/spectate'; character_id: string; fight: string | null }
   | { type: 'action/fight_preview'; character_id: string; fight: string | null }
   | { type: 'close' }
@@ -125,6 +126,7 @@ export type PlayerState = {
   friends: ReadonlySet<string>
   spectating: Readonly<Record<string, string>>
   fight_previews: Readonly<Record<string, string>>
+  nearby_fight: Readonly<{ character_id: string; fight: string; world: string; x: number; z: number }> | null
   /** the marketplace category window under observation */
   market_observation: MarketObservation | null
   market_price_observation: MarketPriceObservation | null
@@ -197,6 +199,7 @@ const MODULES: PlayerModule[] = [
 const READ_PACKETS = new Set<string>([
   'packet/spectate',
   'packet/fight_preview',
+  'packet/fight_nearby',
   'packet/fight_resync',
   'packet/market_observe',
   'packet/market_prices_observe',
@@ -213,6 +216,7 @@ const INITIAL_STATE = (): PlayerState => ({
   friends: new Set(),
   spectating: {},
   fight_previews: {},
+  nearby_fight: null,
   market_observation: null,
   market_price_observation: null,
   leaderboard_observation: null,

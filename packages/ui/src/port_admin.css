@@ -1,0 +1,275 @@
+.aui-admin-port {
+  width: calc(100cqw - 32px);
+  height: min(960px, calc(100cqh - 32px));
+  max-width: 1800px;
+}
+.aui-admin-port .admin-overview {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+  height: 100%;
+  padding: 12px;
+  overflow: hidden;
+}
+.aui-admin-port .admin-overview > div {
+  margin: 0;
+}
+.aui-admin-port [data-admin-kpis] {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+}
+.aui-admin-port [data-kpi-group] {
+  width: 100%;
+  max-width: none;
+  height: 126px;
+  border-radius: 5px;
+}
+.aui-admin-port [data-kpi-group] > h2 {
+  padding: 6px 10px;
+  font-size: 10px;
+  flex: none;
+}
+.aui-admin-port [data-kpi-group] > div {
+  display: flex;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.aui-admin-port [data-kpi-group] article {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  flex: 1;
+  padding: 8px 10px;
+  gap: 4px;
+  justify-content: center;
+}
+.aui-admin-port [data-kpi-group] article strong {
+  font-size: 18px;
+  margin-top: 2px;
+}
+.aui-admin-port [data-admin-charts] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+.aui-admin-port [data-admin-charts] > div {
+  display: contents;
+}
+.aui-admin-port [data-admin-charts] > div > section {
+  display: grid;
+  grid-template-rows: auto 30px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  border-radius: 5px;
+}
+.aui-admin-port [data-admin-charts] > div > section > header {
+  padding: 8px;
+  gap: 4px;
+  min-height: 45px;
+}
+.aui-admin-port [data-admin-charts] > div > section > div {
+  padding: 4px 8px;
+}
+.aui-admin-port [data-admin-charts] > div > section > div:last-child {
+  height: 100%;
+  min-height: 0;
+}
+.aui-admin-port [data-admin-charts] [role='img'] {
+  height: 100%;
+  min-height: 0;
+}
+.aui-admin-port [data-admin-charts] svg[viewBox] {
+  height: 100%;
+  max-height: 100%;
+}
+.aui-admin-port .admin-overview > div:nth-child(3) > section {
+  padding: 5px 10px;
+  height: 44px;
+  min-height: 44px;
+  flex-wrap: nowrap;
+  border-radius: 5px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-admin-port {
+    width: calc(100cqw - 12px);
+    height: calc(100cqh - 12px);
+  }
+  .aui-admin-port .admin-overview {
+    grid-template-rows: 19px 80px 34px minmax(0, 1fr);
+    gap: 5px;
+    padding: 6px;
+  }
+  .aui-admin-port [data-admin-kpis] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    height: 80px;
+    overflow: hidden;
+  }
+  .aui-admin-port [data-kpi-group] {
+    height: 80px;
+    min-height: 80px;
+  }
+  .aui-admin-port [data-kpi-group] > h2 {
+    padding: 3px 5px;
+    font-size: 8px;
+    min-height: 17px;
+  }
+  .aui-admin-port [data-kpi-group] > div {
+    gap: 0;
+  }
+  .aui-admin-port [data-kpi-group] article {
+    padding: 3px 5px;
+    gap: 1px;
+  }
+  .aui-admin-port [data-kpi-group] article > span {
+    font-size: 7px;
+    line-height: 1.15;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+  .aui-admin-port [data-kpi-group] article > strong {
+    font-size: 12px;
+    line-height: 1.2;
+    margin: 0;
+  }
+  .aui-admin-port [data-kpi-group] article > div {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+  }
+  .aui-admin-port [data-kpi-group] article > div > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3px;
+    border: 0;
+    padding: 0;
+  }
+  .aui-admin-port [data-kpi-group] article > div > div > span {
+    font-size: 7px;
+    letter-spacing: 0;
+    line-height: 1.15;
+  }
+  .aui-admin-port [data-kpi-group] article > div > div > strong {
+    font-size: 9px;
+    margin: 0;
+    line-height: 1.15;
+  }
+  .aui-admin-port .admin-overview > div:nth-child(3) > section {
+    height: 34px;
+    min-height: 34px;
+    padding: 3px 6px;
+    gap: 8px;
+  }
+  .aui-admin-port .admin-overview > div:nth-child(3) > section button {
+    min-height: 28px;
+    padding: 3px 8px;
+  }
+  .aui-admin-port [data-admin-charts] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(172px, 1fr);
+    gap: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .aui-admin-port [data-admin-charts] > div > section {
+    grid-template-rows: 48px 28px minmax(0, 1fr);
+    min-width: 0;
+  }
+  .aui-admin-port [data-admin-charts] > div > section > header {
+    padding: 5px;
+    gap: 3px;
+    min-height: 0;
+  }
+  .aui-admin-port [data-admin-charts] > div > section > header h2 {
+    font-size: 10px;
+  }
+  .aui-admin-port [data-admin-charts] > div > section > header p {
+    display: none;
+  }
+  .aui-admin-port [data-admin-charts] > div > section > header button {
+    min-height: 24px;
+    padding: 2px 6px;
+    font-size: 8px;
+  }
+  .aui-admin-port [data-admin-charts] > div > section > div {
+    padding: 3px 5px;
+  }
+  .aui-admin-port [data-admin-charts] > div > section > div > span {
+    font-size: 7px;
+    gap: 3px;
+  }
+  .aui-admin-port [data-admin-charts] [role='img'] {
+    min-height: 80px;
+  }
+}
+.aui-admin-port [data-kpi-group='transactions'] article > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.aui-admin-port [data-kpi-group='transactions'] article > div > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+}
+.aui-admin-port [data-kpi-group='transactions'] article > div > div > strong {
+  font-size: 12px;
+  margin: 0;
+}
+.aui-admin-port [data-kpi-group='transactions'] article > div > div > span {
+  font-size: 8px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-admin-port [data-kpi-group='transactions'] article > div {
+    gap: 1px;
+    margin-top: 1px;
+  }
+  .aui-admin-port [data-kpi-group='transactions'] article > div > div > strong {
+    font-size: 9px;
+  }
+  .aui-admin-port [data-kpi-group='transactions'] article > div > div > span {
+    font-size: 7px;
+  }
+}
+.aui-admin-port > .aui-window-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 6px 38px 6px 12px;
+}
+.aui-admin-port > .aui-window-header .aui-window-meta {
+  position: static;
+  min-width: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+.aui-admin-port > .aui-window-header [data-wallet-menu] {
+  max-width: 240px;
+}
+.aui-admin-port > .aui-window-header [data-wallet-menu] > button {
+  min-height: 30px;
+  max-width: 100%;
+  padding: 5px 10px;
+  font-size: 12px;
+  white-space: normal;
+}
+.aui-admin-port > .aui-window-header [data-wallet-accounts] select {
+  height: 32px;
+}

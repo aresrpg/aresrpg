@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-
+import { Button } from '@aresrpg/ui'
 import { AtSign, Check, Copy, Hash, Loader2, Send } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { Text } from '../i18n/Text.tsx'
@@ -11,7 +11,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 import { classify_wallet_recipient, type WalletRecipientKind } from '../wallet_recipient.ts'
 
-import { SendModalShell as Shell } from './SendModalShell.tsx'
+import { SendModalShell as Shell, TransferFact as PropRow } from './SendModalShell.tsx'
 import {
   send_error_text as error_text,
   send_text,
@@ -46,13 +46,6 @@ type WalletView = Readonly<{
   wallet_transfer: WalletTransferState | null
 }>
 const exact_sui = (mist: bigint): string => format_sui(mist, 9).replace(/(?:\.0+|(?<=\.[0-9]*?)0+)$/, '')
-const PropRow = ({ label, value }: Readonly<{ label: string; value: ReactNode }>) => (
-  <div className="flex items-center justify-between gap-3 text-[10px] tracking-wide">
-    <span className="text-[9px] tracking-[0.2em] text-muted uppercase">{label}</span>
-    <span className="text-text">{value}</span>
-  </div>
-)
-
 const RecipientHint = ({
   address_mode,
   copy,
@@ -170,15 +163,14 @@ const SendForm = ({
             <span className="text-[9px] tracking-[0.15em] text-muted uppercase">
               {session.sui_balance_mist === null ? '-' : `${localized_numbers.sui(session.sui_balance_mist, 2)} SUI`}
             </span>
-            <button
+            <Button
               className="cursor-pointer px-2 py-0.5 text-[9px] tracking-[0.2em] text-gold uppercase disabled:cursor-not-allowed disabled:opacity-30"
               disabled={session.sui_balance_mist === null || session.sui_balance_mist <= 0n}
               onClick={max}
-              style={{ border: '1px solid rgba(200,150,60,0.4)' }}
               type="button"
             >
               <Text path="characters_page.common.max" />
-            </button>
+            </Button>
           </div>
         </div>
         <div className="flex flex-col gap-1">
@@ -210,22 +202,23 @@ const SendForm = ({
         </div>
       </div>
       <div className="mt-2 flex gap-3">
-        <button
-          className="btn-gold inline-flex flex-1 cursor-pointer items-center justify-center gap-2 px-6 py-2.5 text-[10px] tracking-[0.2em] disabled:cursor-not-allowed disabled:opacity-40"
+        <Button
+          tone="primary"
+          className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 px-6 py-2.5 text-[10px] tracking-[0.2em] disabled:cursor-not-allowed disabled:opacity-40"
           disabled={!can_submit}
           onClick={build}
           type="button"
         >
           <Send size={12} />
           {send_text(copy, 'submit')}
-        </button>
-        <button
-          className="btn-outline flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        </Button>
+        <Button
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={close}
           type="button"
         >
           {copy.wallet_send_shared.cancel}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -260,14 +253,14 @@ const Review = ({
           <span className="flex-1 break-all font-mono text-[10px] tracking-wide text-text/80">
             {transfer.recipient_address}
           </span>
-          <button
+          <Button
             aria-label={copy.wallet_copy_address}
             className="shrink-0 cursor-pointer text-muted transition-colors hover:text-gold"
             onClick={copy_address}
             type="button"
           >
             {copied ? <Check className="text-emerald-400" size={14} /> : <Copy className="opacity-60" size={14} />}
-          </button>
+          </Button>
         </div>
       </div>
       <div className="h-px w-full bg-border" />
@@ -323,8 +316,9 @@ const Review = ({
         </>
       )}
       <div className="mt-4 flex gap-3">
-        <button
-          className="btn-gold flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        <Button
+          tone="primary"
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={confirm}
           type="button"
         >
@@ -332,14 +326,14 @@ const Review = ({
             <Send size={12} />
             {send_text(copy, 'send_confirm')}
           </span>
-        </button>
-        <button
-          className="btn-outline flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        </Button>
+        <Button
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={cancel}
           type="button"
         >
           {copy.wallet_send_shared.cancel}
-        </button>
+        </Button>
       </div>
     </div>
   )

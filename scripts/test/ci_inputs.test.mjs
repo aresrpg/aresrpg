@@ -3,6 +3,12 @@
 import { expect, test } from 'bun:test'
 
 import { ci_checks_for_diff, browser_checks_required } from '../ci_inputs.mjs'
+import { SCENE_COMPILER_FILES } from '../release_inputs.mjs'
+
+test('scene recipes, artifacts and every scene compiler input launch browser checks', () => {
+  for (const path of ['seed/scenes/main_menu.recipe.json', 'seed/scenes/main_menu.json', ...SCENE_COMPILER_FILES])
+    expect(browser_checks_required([path], () => false)).toBe(true)
+})
 
 for (const path of [
   'seed/content/items.json',
@@ -20,6 +26,7 @@ for (const path of [
 
 for (const path of [
   'packages/engine/src/renderer.ts',
+  'packages/ui/src/controls.tsx',
   'packages/frontend/src/app.tsx',
   'packages/sdk/src/client.ts',
   'packages/fight/src/index.ts',

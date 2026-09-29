@@ -2,17 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 export const LOCALES = [
-  { code: 'en', native: 'English' },
-  { code: 'fr', native: 'Français' },
-  { code: 'es', native: 'Español' },
-  { code: 'de', native: 'Deutsch' },
-  { code: 'uk', native: 'Українська' },
-  { code: 'ja', native: '日本語' },
-  { code: 'zh', native: '简体中文' },
-  { code: 'ru', native: 'Русский' },
-  { code: 'vi', native: 'Tiếng Việt' },
-  { code: 'ko', native: '한국어' },
-  { code: 'pt', native: 'Português (Brasil)' },
+  { code: 'en', badge: '🇬🇧', native: 'English' },
+  { code: 'fr', badge: '🇫🇷', native: 'Français' },
+  { code: 'es', badge: '🇪🇸', native: 'Español' },
+  { code: 'de', badge: '🇩🇪', native: 'Deutsch' },
+  { code: 'uk', badge: '🇺🇦', native: 'Українська' },
+  { code: 'ja', badge: '🇯🇵', native: '日本語' },
+  { code: 'zh', badge: '🇨🇳', native: '简体中文' },
+  { code: 'ru', badge: '🇷🇺', native: 'Русский' },
+  { code: 'vi', badge: '🇻🇳', native: 'Tiếng Việt' },
+  { code: 'ko', badge: '🇰🇷', native: '한국어' },
+  { code: 'pt', badge: '🇧🇷', native: 'Português (Brasil)' },
 ] as const
 
 export type Locale = (typeof LOCALES)[number]['code']

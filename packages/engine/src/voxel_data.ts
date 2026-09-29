@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+export const WORLD_HEIGHT = 384
+export const MAX_SURFACE_Y = WORLD_HEIGHT - 1
 export const CHUNK_EDGE = 32
 const HALO_EDGE = CHUNK_EDGE + 2
 

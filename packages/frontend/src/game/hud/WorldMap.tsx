@@ -8,8 +8,9 @@ import { useNumbers } from '../../i18n/useNumbers.ts'
 // the player remain. Each LOD samples progressively in row bands and completed grids are cached.
 // Closes on the backdrop or Escape.
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
-import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg/immutable'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { MapView, MapInteraction } from '@aresrpg/ui'
+import { chain_to_client_coordinate, client_to_chain_coordinate, world_size } from '@aresrpg/immutable'
 import { ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import { city_map_overlays, type CompiledWorld } from '@aresrpg/engine'
 
@@ -28,35 +29,14 @@ import {
   draw_self_arrow,
   draw_spawn_markers,
   draw_zone_layer,
-  draw_zone_selection,
+  draw_position_target,
 } from './map_layers.ts'
-import { empty_relief_grid, fill_relief_rows, paint_relief, type ReliefGrid } from './minimap_render.ts'
-import {
-  step_world_map_lod,
-  WORLD_MAP_LAST_LOD,
-  world_map_lod,
-  world_map_zone_lod,
-  world_map_zone_target,
-} from './world_map_lod.ts'
+import { useMapRelief, paint_map_relief } from './useMapRelief.ts'
+import { step_world_map_lod, world_map_lod, world_map_zone_lod, world_map_position_target } from './world_map_lod.ts'
 
-const MAP_SAMPLES = 192
 const MAP_SIZE = 768
-/** Sample rows per animation frame — big enough to finish in ~a dozen frames, small enough
- * to never hitch one. */
-const ROWS_PER_FRAME = 16
-const GRID_CACHE_LIMIT = 24
 const WHEEL_STEP_MS = 120
 export const WORLD_MAP_WHEEL_OPTIONS: AddEventListenerOptions = Object.freeze({ passive: false })
-
-/** Finished grids by world + LOD view — the map re-opens instantly on familiar ground. */
-const grid_cache = new Map<string, ReliefGrid>()
-
-const retain_grid = (key: string, grid: ReliefGrid): void => {
-  grid_cache.set(key, grid)
-  if (grid_cache.size <= GRID_CACHE_LIMIT) return
-  const oldest = grid_cache.keys().next().value
-  if (oldest !== undefined) grid_cache.delete(oldest)
-}
 
 const opened_zone_center = (x: number, z: number): Readonly<{ x: number; z: number }> => {
   const chain_x = Math.max(0, client_to_chain_coordinate(x))
@@ -93,45 +73,18 @@ export const WorldMap = ({
   // The lens frames the zone the player stood in when it opened — a static snapshot.
   const opened_at = useRef(opened_zone_center(pose?.x ?? 0, pose?.z ?? 0))
   const [lod_level, set_lod_level] = useState(0)
-  const opened = opened_at.current
+  const [opened, set_opened] = useState(opened_at.current)
   const lod = world_map_lod(opened.x, opened.z, lod_level)
   const { center_x, center_z, radius } = lod
-  const [grid, set_grid] = useState<ReliefGrid>(() => empty_relief_grid(center_x, center_z, radius, MAP_SAMPLES))
-  const [sampled_rows, set_sampled_rows] = useState(0)
+  const relief = useMapRelief(compiled, lod)
   const cities = useMemo(() => city_map_overlays(compiled), [compiled])
-  const selected_zone = useMemo(
+  const selected_position = useMemo(
     () =>
-      run?.status === 'running' && run.source === 'position' && run.world === world_name ? zone_of(run.x, run.z) : null,
+      run?.status === 'running' && run.source === 'position' && run.world === world_name
+        ? { x: chain_to_client_coordinate(run.x), z: chain_to_client_coordinate(run.z) }
+        : null,
     [run, world_name]
   )
-
-  useEffect(() => {
-    const cache_key = `${world_name ?? ''}:${center_x}:${center_z}:${radius}`
-    const cached = grid_cache.get(cache_key)
-    if (cached) {
-      set_grid(cached)
-      set_sampled_rows(MAP_SAMPLES)
-      return
-    }
-    const fresh = empty_relief_grid(center_x, center_z, radius, MAP_SAMPLES)
-    set_grid(fresh)
-    set_sampled_rows(0)
-    let row = 0
-    let frame = 0
-    const advance = (): void => {
-      const next = Math.min(MAP_SAMPLES, row + ROWS_PER_FRAME)
-      fill_relief_rows(compiled, fresh, row, next)
-      row = next
-      set_sampled_rows(next)
-      if (next >= MAP_SAMPLES) {
-        retain_grid(cache_key, fresh)
-        return
-      }
-      frame = requestAnimationFrame(advance)
-    }
-    frame = requestAnimationFrame(advance)
-    return () => cancelAnimationFrame(frame)
-  }, [center_x, center_z, compiled, radius, world_name])
 
   useEffect(() => {
     const on_key = (event: Readonly<KeyboardEvent>): void => {
@@ -161,11 +114,10 @@ export const WorldMap = ({
     if (!canvas || !pose) return
     const context = canvas.getContext('2d')
     if (!context) return
-    const view = { center_x: grid.center_x, center_z: grid.center_z, size: MAP_SIZE, radius: grid.radius }
+    const view = { center_x, center_z, size: MAP_SIZE, radius }
     const paint = (): void => {
-      paint_relief(context, grid, MAP_SIZE)
-      if (sampled_rows < MAP_SAMPLES) return
-      const zone_lod = world_map_zone_lod(grid.radius, MAP_SIZE)
+      paint_map_relief(context, relief, view, MAP_SIZE)
+      const zone_lod = world_map_zone_lod(radius, MAP_SIZE)
       if (zone_lod.layer)
         draw_zone_layer(
           context,
@@ -174,7 +126,7 @@ export const WorldMap = ({
           zone_lod.labels
         )
       draw_city_layer(context, view, cities)
-      draw_zone_selection(context, view, selected_zone)
+      draw_position_target(context, view, selected_position)
       draw_spawn_markers(context, view, spawn_markers(world_state, world_name), icons.image)
       draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name), Date.now(), (city) =>
         copy_text(copy.world_hud)('dungeon_city', { city })
@@ -185,63 +137,67 @@ export const WorldMap = ({
     const icons = resource_icons(pose, paint)
     paint()
     return icons.dispose
-  }, [cities, copy, grid, sampled_rows, pose, selected_zone, world_state, world_name, resource_icons])
+  }, [
+    cities,
+    copy,
+    relief,
+    center_x,
+    center_z,
+    radius,
+    pose,
+    selected_position,
+    world_state,
+    world_name,
+    resource_icons,
+  ])
 
   const change_lod = (direction: -1 | 1): void => set_lod_level((level) => step_world_map_lod(level, direction))
-  const select_zone = (event: Readonly<MouseEvent<HTMLCanvasElement>>): void => {
+  const select_position = (x: number, y: number): void => {
     if (!world_name) return
-    const bounds = event.currentTarget.getBoundingClientRect()
-    const target = world_map_zone_target(
-      lod,
-      ((event.clientX - bounds.left) * MAP_SIZE) / bounds.width,
-      ((event.clientY - bounds.top) * MAP_SIZE) / bounds.height,
-      MAP_SIZE
-    )
+    const target = world_map_position_target(lod, x * MAP_SIZE, y * MAP_SIZE, MAP_SIZE)
     dispatch_app({ type: 'run_to/position', world: world_name, x: target.x, z: target.z })
   }
 
   return (
-    <div aria-label={text('world_map')} className="gw-worldmap" onClick={on_close} role="dialog">
-      <div className="gw-worldmap__panel" onClick={(event) => event.stopPropagation()} ref={panel_ref}>
-        <header className="gw-worldmap__header">
-          <div className="gw-worldmap__title">{text('world_map')}</div>
-          <div className="gw-worldmap__zoom">
-            <button
-              aria-label={text('world_map_zoom_out')}
-              disabled={lod_level === WORLD_MAP_LAST_LOD}
-              onClick={() => change_lod(1)}
-              type="button"
-            >
-              −
-            </button>
-            <span>{text('world_map_extent', { blocks: numbers.number(Math.round(radius * 2)) })}</span>
-            <button
-              aria-label={text('world_map_zoom_in')}
-              disabled={lod_level === 0}
-              onClick={() => change_lod(-1)}
-              type="button"
-            >
-              +
-            </button>
-          </div>
-        </header>
-        <div className="gw-worldmap__lens-wrap">
-          <canvas
-            aria-label={text('world_map')}
-            className="gw-worldmap__lens"
-            height={MAP_SIZE}
-            onClick={select_zone}
-            ref={canvas_ref}
-            role="button"
-            width={MAP_SIZE}
-          />
-          <div aria-hidden="true" className="gw-worldmap__scanlines" />
-          <span aria-hidden="true" className="gw-worldmap__corner gw-worldmap__corner--tl" />
-          <span aria-hidden="true" className="gw-worldmap__corner gw-worldmap__corner--tr" />
-          <span aria-hidden="true" className="gw-worldmap__corner gw-worldmap__corner--bl" />
-          <span aria-hidden="true" className="gw-worldmap__corner gw-worldmap__corner--br" />
+    <MapView
+      header={{ title: text('world_map'), close: on_close, close_label: copy.wallet_close }}
+      world={world_name ?? ''}
+      coordinates={`${Math.round(center_x)}, ${Math.round(center_z)}`}
+      zoom_in={() => change_lod(-1)}
+      zoom_out={() => change_lod(1)}
+      labels={{ zoom_in: text('world_map_zoom_in'), zoom_out: text('world_map_zoom_out') }}
+      legend={
+        <>
+          <span>{text('world_map_extent', { blocks: numbers.number(Math.round(radius * 2)) })}</span>
+          {selected_position && (
+            <span data-map-destination="">
+              {copy.party_panel.run_to_position}: {selected_position.x}, {selected_position.z}
+            </span>
+          )}
+        </>
+      }
+      map={
+        <div ref={panel_ref} style={{ width: '100%', height: '100%' }}>
+          <MapInteraction
+            label={text('world_map')}
+            pan={(x, y) => {
+              if (radius === world_size / 2) return
+              set_opened((current) => {
+                const before = world_map_lod(current.x, current.z, lod_level)
+                const next = world_map_lod(
+                  before.center_x + x * radius * 2,
+                  before.center_z + y * radius * 2,
+                  lod_level
+                )
+                return { x: next.center_x, z: next.center_z }
+              })
+            }}
+            select={select_position}
+          >
+            <canvas aria-label={text('world_map')} height={MAP_SIZE} width={MAP_SIZE} ref={canvas_ref} />
+          </MapInteraction>
         </div>
-      </div>
-    </div>
+      }
+    />
   )
 }

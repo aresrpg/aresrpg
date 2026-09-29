@@ -185,6 +185,16 @@ describe('generic fight view', () => {
     expect(fight_fighter_name(checkpoint, 2n, () => undefined)).toBe('Enemy Name')
   })
 
+  test('character cards resolve class and sex from the checkpoint, independent of their display name', () => {
+    const checkpoint = started_checkpoint()
+    checkpoint.sources.players.mine_a!.sex = 'female'
+    const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: { mine_a: 'Custom Name' } })
+    const character = view.timeline.find(({ character_id }) => character_id === 'mine_a')!
+    const lookup = (classe: string, sex: string) => `/characters/${classe}_${sex}.png`
+    expect(fight_portrait_source(character, () => null, lookup)).toBe('/characters/senshi_female.png')
+    expect(fight_portrait_source({ ...character, character_portrait: null }, () => null, lookup)).toBeNull()
+  })
+
   test('mob turn cards retain their asset identity and resolve its authored portrait', async () => {
     const copy = await load_app_copy('en')
     const checkpoint = started_checkpoint()
@@ -402,7 +412,7 @@ describe('generic fight view', () => {
   })
 
   test('placement keeps the world chat SSOT mounted without fight CSS', () => {
-    const app = readFileSync(new URL('../../../src/app.tsx', import.meta.url), 'utf8')
+    const app = readFileSync(new URL('../../../src/components/DesktopWorldHud.tsx', import.meta.url), 'utf8')
     const chat = readFileSync(new URL('../../../src/components/Chat.tsx', import.meta.url), 'utf8')
     const hud = readFileSync(new URL('../../../src/game/fight/FightHud.tsx', import.meta.url), 'utf8')
     const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
@@ -412,7 +422,7 @@ describe('generic fight view', () => {
     )
 
     expect(app).toContain('<WorldChat copy={copy} />')
-    expect(chat).toContain('<div className="gw-worldchat">')
+    expect(chat).toContain('className="gw-worldchat"')
     expect(hud).toContain('const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />')
     expect(placement).toContain('{chat}')
     expect(css).not.toContain('.fight-hud .chat')

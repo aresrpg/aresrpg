@@ -61,7 +61,6 @@ test('a held voucher resolves its authored item from the template and stays rede
   expect(html).toContain('Sui Crate')
   expect(html).toContain('Giftcards awaiting redemption')
   expect(html).toContain('Claim rewards')
-  expect(html).toContain('max-w-3xl')
   expect(html).not.toContain('>Redeem</button>')
 })
 

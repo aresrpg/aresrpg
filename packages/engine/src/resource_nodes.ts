@@ -15,14 +15,16 @@ import {
   Quaternion,
   Vector3,
   type Scene,
+  type Texture,
 } from 'three'
-import { MeshStandardNodeMaterial } from 'three/webgpu'
+import { MeshSSSNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu'
+import { attribute, float, texture } from 'three/tsl'
 
 import grain_visuals from '../../../seed/content/grain_visuals.json'
 
-import { project_height } from './flatten.ts'
 import { flora_cluster } from './nature/flora_cluster.ts'
 import { grain_stalk } from './nature/grain_stalk.ts'
+import { create_nature_texture, nature_uv, type NatureSurface } from './nature/surface_texture.ts'
 import { mushroom_cluster } from './nature/mushroom_cluster.ts'
 import { ore_vein } from './nature/ore_vein.ts'
 import { plant_wind_position } from './nature/plant_wind.ts'
@@ -37,12 +39,13 @@ export const resource_nodes_visible = ({
   board_active,
 }: Readonly<{ terrain_presented: boolean; board_active: boolean }>): boolean => terrain_presented && !board_active
 
-const BUILDERS: Readonly<Record<ResourceSilhouette, SpriteBuilder>> = Object.freeze({
-  grain: grain_stalk,
-  flora: flora_cluster,
-  mushroom: mushroom_cluster,
-  ore: ore_vein,
-})
+const BUILDERS: Readonly<Record<ResourceSilhouette, Readonly<{ build: SpriteBuilder; surface: NatureSurface }>>> =
+  Object.freeze({
+    grain: { build: grain_stalk, surface: 'plant' },
+    flora: { build: flora_cluster, surface: 'plant' },
+    mushroom: { build: mushroom_cluster, surface: 'mushroom' },
+    ore: { build: ore_vein, surface: 'mineral' },
+  })
 
 // Identity palettes override the job+tier fallback where the resource has a distinct colour.
 const HUES: Readonly<Record<ResourceFamily, readonly [number, number]>> = Object.freeze({
@@ -127,7 +130,7 @@ export const resource_visual = (item_type: string, job: string, tier: number) =>
 }
 
 const resource_recipe = (visual: ReturnType<typeof resource_visual>, random: () => number) =>
-  visual.pattern ? grain_stalk(random, visual.pattern) : BUILDERS[visual.silhouette](random)
+  visual.pattern ? grain_stalk(random, visual.pattern) : BUILDERS[visual.silhouette].build(random)
 
 const resource_color = (visual: ReturnType<typeof resource_visual>, band: number): readonly number[] =>
   visual.palette?.[band] ?? visual.body.map((value, index) => value + (visual.accent[index]! - value) * band)
@@ -142,8 +145,12 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
   const positions = new Float32Array(recipe.length * 3)
   const colors = new Float32Array(recipe.length * 3)
   const normals = new Float32Array(recipe.length * 3)
-  const sways = visual.family === 'MINER' ? null : new Float32Array(recipe.length)
-  const phases = visual.family === 'MINER' ? null : new Float32Array(recipe.length)
+  const wind =
+    visual.family === 'MINER' ? null : { sway: new Float32Array(recipe.length), phase: new Float32Array(recipe.length) }
+  const surface_kind = BUILDERS[visual.silhouette].surface
+  const uvs = new Float32Array(recipe.flatMap((vertex) => nature_uv(surface_kind, vertex)))
+  const glow = new Float32Array(recipe.length)
+  const glow_scale = Number(visual.silhouette === 'mushroom')
   for (let start = 0; start < recipe.length; start += 3) {
     const base = start * 3
     for (let corner = 0; corner < 3; corner += 1) {
@@ -153,9 +160,10 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
       positions[offset + 1] = y
       positions[offset + 2] = z
       colors.set(resource_color(visual, blend), offset)
-      if (sways && phases) {
-        sways[start + corner] = sway
-        phases[start + corner] = (x + z) * 0.8
+      glow[start + corner] = Math.max(0, (blend - 0.65) / 0.35) * glow_scale
+      if (wind) {
+        wind.sway[start + corner] = sway
+        wind.phase[start + corner] = (x + z) * 0.8
       }
     }
     const ab = [
@@ -185,9 +193,11 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
   geometry.setAttribute('normal', new BufferAttribute(normals, 3))
   geometry.setAttribute('color', new BufferAttribute(colors, 3))
-  if (sways && phases) {
-    geometry.setAttribute('sway', new BufferAttribute(sways, 1))
-    geometry.setAttribute('phase', new BufferAttribute(phases, 1))
+  geometry.setAttribute('uv', new BufferAttribute(uvs, 2))
+  geometry.setAttribute('glow', new BufferAttribute(glow, 1))
+  if (wind) {
+    geometry.setAttribute('sway', new BufferAttribute(wind.sway, 1))
+    geometry.setAttribute('phase', new BufferAttribute(wind.phase, 1))
   }
   geometry.computeBoundingSphere()
   return geometry
@@ -195,24 +205,38 @@ const geometry_for = (item_type: string, job: string, tier: number): BufferGeome
 
 const material_for = (
   visual: ReturnType<typeof resource_visual>,
-  wind: boolean
+  wind: boolean,
+  surface: Texture | null
 ): MeshStandardMaterial | MeshStandardNodeMaterial => {
   const options = {
     vertexColors: true,
+    map: surface,
+    bumpMap: visual.family === 'MINER' || visual.silhouette === 'mushroom' ? surface : null,
+    bumpScale: 0.035,
     side: DoubleSide,
     roughness: visual.family === 'MINER' ? 0.55 : 0.9,
     metalness: visual.family === 'MINER' ? 0.12 : 0,
   }
   if (!wind || visual.family === 'MINER') return new MeshStandardMaterial(options)
-  const material = new MeshStandardNodeMaterial(options)
+  const material = new MeshSSSNodeMaterial(options)
   material.positionNode = plant_wind_position()
+  // Thin leaves transmit shadowed light from behind, as in Tidewater's vegetation lighting.
+  // This stays in the existing direct-light shader: no extra render pass or unshadowed glow.
+  material.thicknessColorNode = attribute('color', 'vec3' as const).mul(0.35)
+  material.thicknessScaleNode = float(1)
+  material.thicknessAttenuationNode = float(0.4)
+  material.emissiveNode = attribute('color', 'vec3' as const)
+    .mul(attribute('glow', 'float' as const))
+    .mul(surface ? texture(surface).r.mul(1.1) : float(1.8))
   return material
 }
 
+const marker_scale = (row: ResourceNodeMarker): number => Math.max(0.25, Math.min(4, row.scale ?? 1))
+
 export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ scene: Scene; wind?: boolean }>) => {
-  const meshes = new Map<string, Readonly<{ mesh: InstancedMesh; rows: readonly ResourceNodeMarker[] }>>()
+  const meshes = new Map<string, InstancedMesh>()
   const anchors = new Map<string, Vector3>()
-  let flatten = 0
+  let surface_texture: Texture | null = null
   // The backend reveals resource dressing only after its first terrain frame has presented.
   let visible = false
 
@@ -224,17 +248,19 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
   }
 
   const clear_meshes = (): void => {
-    meshes.forEach(({ mesh }) => release_mesh(mesh))
+    meshes.forEach(release_mesh)
     meshes.clear()
   }
 
   const mesh_for = (key: string, rows: readonly ResourceNodeMarker[]): InstancedMesh => {
-    const known = meshes.get(key)?.mesh
+    const known = meshes.get(key)
     if (known && known.instanceMatrix.count >= rows.length) return known
     const first = rows[0]!
+    const visual = resource_visual(first.item_type, first.job, first.tier)
+    const surface = (surface_texture ??= create_nature_texture())
     const { geometry, material } = known ?? {
       geometry: geometry_for(first.item_type, first.job, first.tier),
-      material: material_for(resource_visual(first.item_type, first.job, first.tier), wind),
+      material: material_for(visual, wind, surface),
     }
     const mesh = new InstancedMesh(geometry, material, 2 ** Math.ceil(Math.log2(rows.length)))
     mesh.name = `resource:${first.item_type}`
@@ -248,21 +274,6 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
     return mesh
   }
 
-  const project_markers = (): void => {
-    const matrix = new Matrix4()
-    meshes.forEach(({ mesh, rows }) => {
-      rows.forEach((row, index) => {
-        const height = project_height(row.y, flatten)
-        mesh.getMatrixAt(index, matrix)
-        matrix.elements[13] = height
-        mesh.setMatrixAt(index, matrix)
-        anchors.get(row.id)!.y = height + (row.job === 'FARMER' ? 2.1 : 1.35)
-      })
-      mesh.instanceMatrix.needsUpdate = true
-      mesh.computeBoundingSphere()
-    })
-  }
-
   const set_markers = (next: readonly ResourceNodeMarker[]): void => {
     const wanted = new Set(next.map(({ id }) => id))
     for (const id of anchors.keys()) if (!wanted.has(id)) anchors.delete(id)
@@ -273,7 +284,7 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
       rows.push(row)
       buckets.set(key, rows)
     })
-    for (const [key, { mesh }] of meshes)
+    for (const [key, mesh] of meshes)
       if (!buckets.has(key)) {
         release_mesh(mesh)
         meshes.delete(key)
@@ -291,35 +302,31 @@ export const create_resource_node_layer = ({ scene, wind = false }: Readonly<{ s
         const matrix = new Matrix4().compose(
           new Vector3(row.x, row.y, row.z),
           new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), yaw),
-          new Vector3(visual.scale, visual.scale, visual.scale)
+          new Vector3().setScalar(visual.scale * marker_scale(row))
         )
         mesh.setMatrixAt(index, matrix)
         const anchor = anchors.get(row.id) ?? new Vector3()
-        anchor.set(row.x, row.y, row.z)
+        anchor.set(row.x, row.y + (row.job === 'FARMER' ? 2.1 : 1.35) * marker_scale(row), row.z)
         anchors.set(row.id, anchor)
       })
       mesh.visible = visible
       mesh.instanceMatrix.needsUpdate = true
-      meshes.set(key, { mesh, rows })
+      mesh.computeBoundingSphere()
+      meshes.set(key, mesh)
     })
-    project_markers()
   }
 
   return Object.freeze({
     set_markers,
-    set_flatten: (amount: number): void => {
-      if (flatten === amount) return
-      flatten = amount
-      project_markers()
-    },
     /** The shared CSS2D layer reads this invisible world point every render. */
     label_anchor: (id: string): Vector3 | null => (visible ? (anchors.get(id) ?? null) : null),
     set_visible: (next: boolean) => {
       visible = next
-      meshes.forEach(({ mesh }) => (mesh.visible = next))
+      meshes.forEach((mesh) => (mesh.visible = next))
     },
     dispose: () => {
       clear_meshes()
+      surface_texture?.dispose()
       anchors.clear()
     },
   })

@@ -2,8 +2,7 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 
 title: WebGPU không khả dụng
-body: Thế giới đầy đủ cần WebGPU. Hiện đang dùng lưới nhẹ thay thế.
-fatal: Trình duyệt này không thể tạo ngữ cảnh đồ họa WebGPU hoặc WebGL.
+body: 'Thế giới cần WebGPU và kết nối an toàn (HTTPS hoặc localhost). Hãy mở bằng trình duyệt hỗ trợ.'
 engine_recovery: Thế giới đã ngừng tải hoặc hiển thị. Hãy tải lại để thử tiếp.
 engine_reload: Tải lại
 engine_minimum_title: 'Đã giảm đồ họa'
@@ -11,18 +10,10 @@ engine_minimum: 'Không thể tải hoặc hiển thị thế giới. Chất lư
 engine_continue: 'Tiếp tục'
 world_unavailable_title: Thế giới không khả dụng
 world_unavailable: Thế giới này chưa có cấu hình địa hình.
-mobile_unavailable_label: Truy cập trên di động
-mobile_unavailable_title: AresRPG chưa hỗ trợ thiết bị di động
-mobile_unavailable_body: Chúng tôi đang xây dựng trải nghiệm riêng cho di động. Hiện tại, hãy vào thế giới bằng trình duyệt máy tính.
-mobile_unavailable_status: Bản máy tính đang hoạt động
-chrome: 'Chrome hoặc Edge: cập nhật trình duyệt, bật tăng tốc đồ họa trong Cài đặt → Hệ thống, rồi khởi động lại.'
-other: Bật tăng tốc phần cứng, cập nhật trình duyệt và trình điều khiển đồ họa, rồi khởi động lại trình duyệt.
-continue: Tiếp tục với lưới
 quality: Chất lượng
 low: Thấp
 medium: Trung bình
 high: Cao
-flat_mode: Chế độ phẳng
 identity_connected: Đã kết nối danh tính
 sign_in_to_play: Đăng nhập để chơi
 loading_universe: Đang tải vũ trụ
@@ -30,7 +21,8 @@ continue_google: Tiếp tục với Google
 wallet_session_ended: Phiên ví đã kết thúc. Hãy đăng nhập lại.
 connect_wallet: Kết nối ví
 no_wallet: Chưa cài ví tương thích
-watch_world: Xem thế giới trực tiếp
+play_demo: 'Chơi thử'
+replay_demo: 'Chơi lại bản thử'
 sign_in: Đăng nhập để chơi
 drag_hint: Kéo để di chuyển · Cuộn để thu phóng
 navigation: Điều hướng
@@ -79,8 +71,6 @@ party_member_unavailable_toast: Nhân vật đó đã ở trong một nhóm.
 fight_turn_already_forced_toast: Đã có người buộc kết thúc lượt này.
 fight_placement_unavailable_toast: Ô xuất phát đó không khả dụng. Hãy chọn ô trống khác.
 network_testnet: MẠNG THỬ NGHIỆM
-page_pending_title: Trang này đang được xây dựng lại
-page_pending_body: Lối vào vẫn hiển thị trong lúc chúng tôi khôi phục trang.
 welcome_title: Chào mừng đến AresRPG
 welcome_body: AresRPG là MMORPG hoàn toàn trên chuỗi với nền kinh tế do người chơi vận hành. Tạo nhân vật đầu tiên, vào thế giới và chiến đấu với quái vật.
 welcome_need_sui: 'Bạn cần một ít SUI để chơi: nhân vật đầu tiên giá {{price}} SUI và cần giữ ít nhất {{fee}} SUI để trả phí. Nạp SUI vào địa chỉ bên dưới để bắt đầu.'
@@ -191,6 +181,7 @@ party_panel:
   run_to_position_wrong_world: Vị trí được liên kết không ở thế giới hiện tại.
   run_to_wrong_world: Thành viên đó không ở thế giới hiện tại.
   run_to_unavailable: Vị trí trên chuỗi của thành viên đó không khả dụng.
+  run_to_blocked: 'Không tìm thấy đường đi bộ. Đã dừng di chuyển.'
 trade_panel:
   kares: KARES đề nghị
   close: Đóng
@@ -232,6 +223,7 @@ trade_panel:
 transaction_unknown_toast: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
 transaction_recovered_toast: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
 world_hud:
+  spawn_welcome: 'Chào mừng nhà thám hiểm! Trò chơi đang trong giai đoạn truy cập sớm. Hãy cố gắng sống sót và tận hưởng cuộc phiêu lưu.'
   compass_label: La bàn
   zone: KHU VỰC
   unsearched: CHƯA KHÁM PHÁ
@@ -260,6 +252,8 @@ world_hud:
   dungeon_portal: Cổng ngục tối
   dungeon_city: Thành phố {{city}}
   dungeon_press_enter: Vào
+  dungeon_talk: 'Trò chuyện'
+  dungeon_guard_requires_key: 'Tôi không thể cho bạn qua nếu bạn không có {{key}}.'
   dungeon_entry_body: Dùng chìa khóa ngục tối để vào sảnh chuẩn bị riêng của cổng này.
   dungeon_required_key: Chìa khóa cần có
   dungeon_enter: Vào ngục tối
@@ -350,6 +344,21 @@ world_hud:
   resource_face_protector: Nhấn {{key}} để đối mặt
   zone_never_arrived: Đã khám phá nhưng thế giới chưa hiển thị kết quả — dữ liệu đọc có thể đang chậm
 demo_page:
+  asset_demo_city: Thành phố mẫu
+  asset_house_1: Nhà phố A
+  asset_house_2: Nhà phố B
+  asset_covered_bridge: Cầu có mái trên phố
+  asset_gate_rampart: Cổng và tháp canh
+  asset_catacomb_entry: Lối vào hầm mộ
+  asset_gallery: Vật thể
+  asset_house: Nhà xưởng
+  asset_banner: Cờ hiệu
+  asset_lantern: Đèn lồng
+  asset_fence: Hàng rào
+  asset_rope: Dây thừng
+  asset_chain: Dây xích
+  asset_campfire: Lửa trại
+  asset_hint: Kéo chuột trái để di chuyển · Kéo chuột phải để xoay · Cuộn để thu phóng
   title: Phòng thử hiển thị
   world_lab: Phòng thử thế giới
   fight_lab: Phòng thử chiến đấu
@@ -393,7 +402,25 @@ demo_page:
   spawn_group: Tạo nhóm
   clear: Xóa chọn
   resources: Tài nguyên
-  resources_missing: Hiển thị tài nguyên chưa được khôi phục. Danh sách vẫn có trong dữ liệu nội dung.
+  hillaire_title: 'Khí quyển Hillaire'
+  hillaire_preview: 'Chỉ xem trước trực tiếp. Đặt lại khôi phục giá trị mặc định của thế giới này.'
+  hillaire_quality: 'Chọn đồ họa Trung bình hoặc Cao để chỉnh Hillaire.'
+  hillaire_haze: 'Sương mờ phía xa'
+  hillaire_ground: 'Sương sát đất · Cao'
+  hillaire_sky: 'Ánh sáng bầu trời'
+  hillaire_density: 'Mật độ sương mờ'
+  hillaire_max_opacity: 'Độ đục tối đa'
+  hillaire_near: 'Điểm bắt đầu sương (m)'
+  hillaire_full: 'Khoảng cách sương đầy đủ (m)'
+  hillaire_tint: 'Sắc xanh lam'
+  hillaire_height_density: 'Mật độ sương sát đất'
+  hillaire_height_max: 'Độ đục sương sát đất'
+  hillaire_height_falloff: 'Độ suy giảm theo chiều cao (m)'
+  hillaire_horizon_cap: 'Độ sáng chân trời'
+  hillaire_exposure: 'Phơi sáng bầu trời'
+  hillaire_mie_scattering: 'Cường độ sương nắng'
+  hillaire_mie_g: 'Tính định hướng sương nắng'
+  hillaire_reset: 'Đặt lại khí quyển'
   control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
   back: Quay lại ứng dụng
 marketplace_page:
@@ -497,7 +524,6 @@ mastery_page:
   daily_title: Chọn nhiệm vụ ngục tối hôm nay
   daily_lead: Chọn thế giới. Bạn sẽ được giao một ngục tối để tìm và hoàn thành.
   unknown_dungeon: Ngục tối không rõ
-  quest_reward: Nhận {{points}} điểm Tinh thông
   quest_objective_before: Tìm và hoàn thành ngục tối
   quest_objective_after: để nhận điểm Tinh thông.
   completed: Đã xác nhận
@@ -620,34 +646,29 @@ tutorial:
   back: Quay lại
   next: Tiếp theo
   finish: Hoàn tất
-  fight_enter: Vào trận
   reset_title: Hướng dẫn
-  reset_hint: Hiện lại phần giới thiệu khi bạn mở từng trang lần tới.
+  reset_hint: 'Hiện lại hướng dẫn khi mở từng tính năng lần sau.'
   reset_action: Đặt lại
-  world_compass_title: Thế giới và khu vực chung
-  world_compass_body: AresRPG có nhiều thế giới mở khóa theo tiến trình của bạn. Mỗi thế giới chia thành các khu vực có quái vật, tài nguyên và ngục tối. Ai cũng có thể khám phá khu vực và kết quả được chia sẻ với mọi người chơi.
-  world_hud_title: Máu và ô dùng nhanh
-  world_hud_body: Khu vực này hiển thị máu và các ô dùng nhanh vật phẩm. Khi vào trận, cùng vị trí này trở thành thanh phép.
-  world_fps_title: Điều khiển thế giới
-  world_fps_body: Địa hình được tạo tất định từ dữ liệu đã công bố. Sui lưu thế giới và vị trí X/Z có thẩm quyền, còn độ cao được tính cục bộ. Vì vậy chế độ Phẳng chỉ đổi cách hiển thị cùng không gian. Bạn cũng có thể đổi chất lượng và giới hạn trận ngoài thế giới cho thành viên nhóm.
-  world_character_title: Người chơi trong thế giới
-  world_character_body: Đây là nhân vật đang hoạt động của bạn. Nhấp chuột phải vào nhân vật khác ở gần để mở các tương tác.
+  world_compass_title: 'Tìm đường'
+  world_compass_body: 'La bàn chỉ các thành phố gần đó. Nhấn M hoặc biểu tượng bản đồ để mở bản đồ.'
+  world_hud_title: 'Thanh điều khiển'
+  world_hud_body: 'Dùng các biểu tượng để mở túi, phép và nghề. Trong trận đấu, khu vực này trở thành thanh phép.'
   world_character_tabs_title: Chơi nhiều nhân vật
-  world_character_tabs_body: Bạn có thể sở hữu tối đa sáu nhân vật. Mời các nhân vật khác của mình vào nhóm và bật Theo trưởng nhóm để họ đi cùng bạn, rồi tự tham gia các trận ngoài thế giới phù hợp khi tới nơi.
+  world_character_tabs_body: 'Đổi nhân vật tại đây. Nhấp chuột phải vào nhân vật để mời vào nhóm.'
   fight_title: Trận chiến trên chuỗi đầu tiên
-  fight_body: Trận đấu diễn ra theo lượt. Chọn di chuyển và phép, các hành động được chuẩn bị cùng nhau. Kết thúc lượt gửi cả lượt bằng một giao dịch Sui, rồi tính các lượt quái tiếp theo cho tới khi người chơi khác có thể hành động. Trạng thái chiến đấu có thẩm quyền được chốt trên Sui. Sau chiến thắng, giao dịch Sui cuối dùng ngẫu nhiên trên chuỗi để chia chiến lợi phẩm và đưa thưởng vào túi đồ của từng người nhận.
+  fight_body: 'Chọn phép hoặc nhấp ô để di chuyển. Kết thúc lượt gửi các hành động cùng lúc.'
   equipment_gear_title: Trang bị
-  equipment_gear_body: Vật phẩm đang trang bị thuộc nhân vật đã chọn. Kéo trang bị lên hình nhân, xem chỉ số cộng thêm rồi xác nhận tất cả thay đổi.
+  equipment_gear_body: 'Nhấp vật phẩm, chọn Trang bị rồi xác nhận thay đổi.'
   equipment_inventory_title: Túi đồ dùng chung
-  equipment_inventory_body: Mọi nhân vật trong tài khoản dùng chung túi đồ. Chọn nhân vật khác phía trên để trang bị những vật phẩm còn sẵn cho họ.
+  equipment_inventory_body: 'Các nhân vật dùng chung vật phẩm. Di chuột để xem chỉ số; nhấp để xem chi tiết và thao tác.'
   stats_title: Thuộc tính
-  stats_body: Dùng điểm thuộc tính để mạnh hơn. Sinh lực tăng máu; Trí tuệ tăng kinh nghiệm và kháng mất điểm hành động/di chuyển; May mắn tăng sát thương nước và tỷ lệ chiến lợi phẩm; Nhanh nhẹn tăng sát thương gió, chí mạng, khóa chân và thoát khóa chân.
+  stats_body: 'Phân bổ điểm, kiểm tra thưởng rồi xác nhận.'
   spells_title: Phép
-  spells_body: Nhân vật tiến bộ sẽ mở phép mới. Lên cấp cho điểm phép để nâng các phép đã mở tại đây.
+  spells_body: 'Chọn phép để so sánh các cấp. Dùng điểm phép để nâng cấp.'
   jobs_title: Nghề
-  jobs_body: Theo dõi tiến trình thu thập và chế tạo, xem công thức và làm vật phẩm tại đây. Nếu có nhiều nhân vật, bạn có thể cố định trang này cho thợ chế tạo trong Cài đặt.
+  jobs_body: 'Chọn nghề và công thức. Nhấp nguyên liệu để xem; chế tạo khi đã có đủ.'
   runeforge_title: Lò khắc ngọc
-  runeforge_body: Khi nghề chế tạo phù hợp đạt cấp {{level}}, bạn có thể nâng trang bị bằng ngọc khắc. Nghiền vật phẩm để lấy ngọc rồi dùng tại đây.
+  runeforge_body: 'Ở cấp nghề {{level}}, dùng rune để nâng cấp trang bị. Nghiền trang bị không cần để nhận rune.'
 admin_page:
   kicker: Nhà phát hành
   title: Phát hành nội dung game
@@ -910,6 +931,8 @@ fight_hud:
   forfeit_body: '{name} sẽ mất toàn bộ máu còn lại và rời trận.'
   confirm_forfeit: Xác nhận bỏ cuộc
   unit_turns: lượt
+  chat_expand: Mở trò chuyện
+  chat_collapse: Thu gọn trò chuyện
   chat_title: Trò chuyện
   chat_resize: Đổi kích thước chat
   chat_tab_general: Chung
@@ -988,25 +1011,28 @@ wallet_legacy:
   add_funds_desc: Chọn cách thanh toán. SUI được gửi thẳng vào ví.
   method_paypal: PayPal
   method_paypal_desc: Trả bằng tài khoản PayPal
-  method_card: Thẻ tín dụng / ghi nợ
-  method_card_desc: Visa, Mastercard
+  method_card: 'Thẻ / PayPal'
+  method_card_desc: 'Mua SUI qua nhà cung cấp thanh toán'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Trả bằng Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Trả bằng tài khoản Google
   method_bank: Chuyển khoản ngân hàng
   method_bank_desc: SEPA (EU) hoặc ACH (Mỹ)
-  method_have_sui: Tôi đã có SUI
+  method_have_sui: 'Nạp trực tiếp'
   method_have_sui_desc: Gửi từ ví khác hoặc sàn
   paypal_note: Có tại Mỹ, Anh và phần lớn châu Âu qua MoonPay
   card_note: Chọn nhà cung cấp bên dưới. Tất cả nhận Visa và Mastercard
   bank_note: Phí thấp nhất, khoảng 1%. SEPA cho châu Âu, ACH cho Mỹ.
   steps_paypal: 1. Nhấp liên kết dưới  2. Chọn PayPal  3. Nhập số tiền. SUI sẽ vào ví
-  steps_card: Chọn nhà cung cấp, nhập thông tin thẻ và SUI sẽ vào ví.
-  method_swap: Từ Solana, ETH và các mạng khác…
-  method_swap_desc: Chuyển tài sản sang Sui qua Portal Bridge
-  swap_note: Chuyển liên chuỗi do Portal Bridge cung cấp.
-  steps_swap: Mở Portal Bridge, kết nối cả hai ví, chọn Sui và hoàn tất chuyển.
+  steps_card: 'Mở nhà cung cấp, chọn SUI và dùng địa chỉ ví trò chơi bên dưới. Phương thức thanh toán tùy thuộc quốc gia và nhà cung cấp.'
+  method_swap: 'Nạp qua cầu nối'
+  method_swap_desc: 'Chuyển tiền mã hóa từ mạng khác sang SUI'
+  bridge_loading: 'Đang tải cầu nối…'
+  bridge_error: 'Không thể tải cầu nối. Bạn vẫn có thể nạp trực tiếp vào ví trò chơi.'
+  bridge_retry: 'Thử lại'
+  swap_note: 'Cung cấp bởi LI.FI. Giao dịch không hoàn tất tức thì. Mở lại mục nạp qua cầu nối và xem lịch sử để kiểm tra hoặc tiếp tục giao dịch bị gián đoạn.'
+  steps_swap: 'Kết nối ví nguồn. Đích nhận là SUI gốc trong ví trò chơi bên dưới. Kiểm tra số tiền, phí và thời gian dự kiến trước khi ký.'
   steps_wallet: Gửi SUI tới địa chỉ ví bên dưới. Sẽ nhận được sau vài giây.
   advanced_exchange: 'Nâng cao: mua trên sàn'
   age_notice: Mọi nhà cung cấp thanh toán đều yêu cầu từ 18 tuổi.
@@ -2454,7 +2480,6 @@ automation_panel:
   collapse: Thu gọn thu thập tự động
 item_drop_sources:
   title: Quái rơi vật phẩm
-  note: Tỷ lệ cơ bản. Tỷ lệ thực tế tùy cấp quái và May mắn của nhóm.
   empty: Không có quái nào rơi vật phẩm này.
   loading: Đang tải vật phẩm rơi…
   mob: Quái
@@ -2592,6 +2617,62 @@ spell_effects:
   short_stat: 'CHỈ SỐ'
   expires_next_turn: 'Đến lượt tiếp theo'
 ui:
+  multiplayer: 'Nhiều người chơi'
+  nearby_fights: 'Trận đấu gần đây'
+  nearby_fights_empty: 'Không có trận đấu được theo dõi ở gần'
+  run_and_join: 'Chạy đến và tham gia'
+  equipment_comparison: 'Thay đổi chỉ số khi trang bị'
+  equipment_replacing: 'Thay thế {{name}}'
+  equipment_unchanged: 'Không thay đổi chỉ số cộng thêm'
+  preview_only: 'Bản xem thử tương tác · không gửi giao dịch'
+  inspect_details: 'Xem chi tiết'
+  design_minimap: 'Bản đồ nhỏ'
+  design_party_invitation: 'Lời mời tổ đội'
+  design_trade_invitation: 'Lời mời trao đổi'
+  progression_rewards: 'Phần thưởng'
+  inventory_selected_count: 'Đã chọn {{count}}'
+  inventory_select: 'Chọn'
+  inventory_deselect: 'Bỏ chọn'
+  inventory_use: 'Dùng'
+  attack: 'Tấn công'
+  character_summary: 'Tổng quan'
+  character_details: 'Chi tiết'
+  allocate_points: 'Phân bổ'
+  inventory_search: 'Tìm trong túi đồ…'
+  nameplate_veteran: 'Cựu binh'
+  design_titles: 'Danh hiệu'
+  design_no_title: 'Không có danh hiệu'
+  design_library: 'Xưởng thiết kế'
+  design_controls: 'Điều khiển'
+  design_dialog: 'Mở hộp thoại'
+  design_disabled: 'Không khả dụng'
+  design_details: 'Chi tiết'
+  design_description: 'Các thành phần giao diện dùng chung. Tương tác với ví dụ cục bộ để xem trạng thái và bố cục thích ứng.'
+  design_volume: 'Âm lượng'
+  design_motion: 'Hoạt ảnh'
+  design_search: 'Tìm kiếm'
+  design_equipment_hint: 'Chọn vật phẩm để trang bị. Chạm vào vật phẩm đã trang bị để tháo.'
+  design_equip: 'Trang bị'
+  design_combat: 'Chiến đấu'
+  design_journal: 'Nhật ký và tiến trình'
+  design_complete: 'Hoàn thành'
+  design_viewport: 'Kích thước xem trước'
+  design_desktop: 'Máy tính'
+  design_mobile: 'Di động'
+  leave_game_title: 'Bạn muốn rời trò chơi?'
+  stay_in_game: 'Chơi tiếp'
+  leave_game_confirm: 'Về màn hình chính'
+  mobile_move: 'Di chuyển'
+  mobile_jump: 'Nhảy'
+  mobile_chat: 'Trò chuyện'
+  mobile_party: 'Nhóm'
+  mobile_confirm_action: 'Xác nhận hành động'
+  mobile_item_actions: 'Thao tác vật phẩm'
+  mobile_unequip: 'Tháo trang bị'
+  mobile_use_item: 'Dùng / trang bị'
+  mobile_language: 'Ngôn ngữ'
+  mobile_menu: 'Menu'
+  mobile_rotate: 'Xoay thiết bị để chơi ở chế độ ngang.'
   character: Nhân vật
   spell_action: '{{name}}, cấp {{level}}, {{cost}} {{unit}}'
   spell_level: Cấp phép {{level}}
@@ -2604,7 +2685,6 @@ ui:
   meters: '{{count}} m'
   versus: ĐẤU
   team_format: '{{size}} đấu {{size}}'
-  flat: Phẳng
   fps: FPS
   north: B
   northeast: ĐB
@@ -2621,3 +2701,50 @@ ui:
   formula_chastisement: G = min(ΔMáu × S, GIỚI HẠN × S − Glượt) · S = 1 với quái, ½ với người chơi
   formula_drop: đồ rơi = min(100%, tỷ lệ cơ bản × khoảng cấp quái × (600 + May mắn trung bình nhóm) / 600)
   formula_xp: KN = quỹ KN cơ bản × hệ số nhóm × cân bằng cấp × cấp người chơi / cấp nhóm × (100 + Trí tuệ) / 100
+
+menu_subtitle: 'AresRPG là MMORPG theo lượt hoạt động hoàn toàn on-chain, được xây dựng trên Sui.'
+menu_start: 'Nhấn Enter để bắt đầu'
+menu_start_touch: 'Chạm để bắt đầu'
+menu_music_on: 'Bật nhạc'
+menu_music_off: 'Tắt nhạc'
+
+menu_build: 'BẢN DỰNG'
+
+world_loading_assets: 'Đang tải khung cảnh…'
+world_loading_graphics: 'Đang chuẩn bị đồ họa…'
+world_loading_terrain: 'Đang xây dựng thế giới…'
+world_loading_sky: 'Đang chuẩn bị bầu trời và ánh sáng…'
+world_loading_finishing: 'Đang chuẩn bị khung hình đầu tiên…'
+
+adventure:
+  goblins_title: 'Dọn đường'
+  goblins_objective: 'Đến gần Goblin và nhấn F.'
+  speak_title: 'Người lạ trên cầu'
+  speak_objective: 'Tìm Sceat trên cầu. Nhấn F để nói chuyện.'
+  invite_title: 'Mạnh hơn khi cùng nhau'
+  invite_objective: 'Nhấp chuột phải vào Sceat và chọn Mời vào nhóm. Trên màn hình cảm ứng, chạm lời mời.'
+  switch_title: 'Điều khiển Yajin'
+  switch_objective: 'Chọn thẻ nhân vật Sceat. Bạn điều khiển cả hai anh hùng, mỗi người có phép và trang bị riêng.'
+  follow_title: 'Theo đội trưởng'
+  follow_objective: 'Chọn Senshi làm đội trưởng. Bật Theo đội trưởng trong bảng nhóm.'
+  guards_title: 'Cận vệ hoàng gia'
+  guards_objective: 'Qua cầu và đánh bại cận vệ hoàng gia. Đặt bẫy Yajin rồi đẩy kẻ địch vào bẫy.'
+  boss_title: 'Di vật của Gobadoc'
+  boss_objective: 'Đối mặt Gobadoc, vua Goblin, để tìm di vật. Hắn mạnh hơn cận vệ rất nhiều.'
+  dialogue_greeting: 'Bạn mới đến đây à! Tôi là Sceat.'
+  dialogue_danger: 'Thế giới này rất nguy hiểm. Đi một mình không được xa đâu. Hãy cùng nhau phiêu lưu.'
+  dialogue_relic: 'Gobadoc, vua Goblin, đang giữ một di vật mạnh mẽ. Giúp tôi vượt qua cận vệ rồi ta sẽ tìm hắn.'
+  journal: 'Phiêu lưu Mosswood'
+  chapter: 'Vua Goblin'
+  speak_action: 'Nói với Sceat'
+  invite_action: 'Mời Sceat'
+  rebirth_title: 'Bạn đã không qua khỏi vì những vết thương…'
+  rebirth_body: 'Đã đến lúc bạn tái sinh. Nhấn bên dưới để đăng nhập và bước vào trò chơi thực sự.'
+  rebirth_login: 'Đăng nhập và vào trò chơi thực sự'
+  goblins_body: 'Mosswood trông yên bình, cho đến khi lũ goblin xem bạn là bữa ăn tiếp theo. Trại của chúng chắn đường ra. Hãy đến gần cả nhóm và bắt đầu trận đấu. Dùng điểm hành động để thi triển phép, đồng thời tính toán đường di chuyển. Chiến thắng sẽ đưa bạn lên cấp 200 và mang lại những trang bị đầu tiên.'
+  speak_body: 'Lũ goblin đã gục, nhưng khu rừng vẫn còn đầy nguy hiểm. Một Yajin tên Sceat đứng trên cầu quan sát trận đấu và có vẻ không muốn đi tiếp một mình. Hãy nói chuyện với anh ấy. Anh đang tìm di vật của Gobadoc, vua goblin, và cần một người đồng hành biết đánh trả.'
+  invite_body: 'Sceat có một kế hoạch. Tiếc là kế hoạch ấy dẫn thẳng đến con goblin lớn nhất khu rừng. Hai nhà thám hiểm với sở trường khác nhau sẽ có cơ hội tốt hơn. Nhấp chuột phải vào Sceat và mời anh ấy vào nhóm. Trong chuyến phiêu lưu này, bạn sẽ điều khiển cả hai và tự kết hợp kỹ năng của họ.'
+  switch_body: 'Thêm đồng đội không chỉ là thêm một thanh máu. Sceat là Yajin, dùng bẫy và vị trí để giải quyết những vấn đề mà Senshi xử lý bằng sức mạnh. Chọn anh ấy trong bộ chuyển nhân vật. Mỗi anh hùng có phép và trang bị riêng. Chọn ai hành động cũng quan trọng như chọn phép nào.'
+  follow_body: 'Bạn đã có một nhóm. Giờ hãy giữ mọi người đi cùng nhau. Chọn Senshi làm trưởng nhóm rồi bật Theo trưởng nhóm trong phần điều khiển nhóm. Sceat sẽ theo bạn khi khám phá, giúp bạn không phải đi cùng một con đường hai lần. Trong chiến đấu, bạn vẫn tự chọn từng bước đi và phép của mỗi người.'
+  guards_body: 'Gobadoc không bỏ ngỏ lối vào. Lính gác đã sẵn sàng, còn bạn có hai anh hùng cần phối hợp. Kiểm tra trang bị mới trước khi thách đấu. Kết hợp sức mạnh của Senshi với bẫy của Sceat. Dụ kẻ địch vào vị trí thuận lợi thường dễ thắng hơn việc cứ đuổi theo chúng.'
+  boss_body: 'Sau lính gác là Gobadoc, đang giữ di vật mà Sceat tìm kiếm. Vua goblin không giành được danh hiệu ấy bằng những thất bại. Hai người đã học cách chiến đấu cùng nhau, nhưng đối thủ này hoàn toàn khác. Hãy cùng đồng đội tiến đến và xem mối hợp tác mới có thể đưa bạn đi xa đến đâu.'

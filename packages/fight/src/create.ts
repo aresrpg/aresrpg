@@ -154,7 +154,8 @@ const character_source_appearance = ({
   color_3 = 0x8b6539,
   hat = null,
   cloak = null,
-}: CharacterSourceInput) => Object.freeze({ sex, color_1, color_2, color_3, hat, cloak })
+  title = null,
+}: CharacterSourceInput) => Object.freeze({ sex, color_1, color_2, color_3, hat, cloak, title })
 
 export const create_character_source = (input: CharacterSourceInput): PlayerSource => {
   const {

@@ -1,0 +1,25 @@
+{
+  "name": "adventure_ancient_tree",
+  "source": "swamp_big_tree_g2",
+  "retain_foliage_from_y": 27,
+  "canopy": {
+    "center": [
+      18.5,
+      21
+    ],
+    "radius": [
+      18,
+      20
+    ],
+    "top": 25.8,
+    "bottom": 18.8,
+    "top_curve": 4,
+    "bottom_curve": 2.8,
+    "wave": 1.2
+  },
+  "branch_canopy": {
+    "from_y": 19,
+    "radius": 2,
+    "height": 1
+  }
+}

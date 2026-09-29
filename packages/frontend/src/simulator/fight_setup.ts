@@ -8,17 +8,18 @@ import {
   item_stat_center,
   stat_names,
   worn_appearance,
+  xp_for_level,
   type CharacterEquipmentSlot,
 } from '@aresrpg/immutable'
 
 import { simulator_board } from '../modules/simulator.ts'
-import { encyclopedia_catalog } from '../content/catalog.ts'
+import { encyclopedia_catalog, type SeedItem, type SeedMob } from '../content/catalog.ts'
 import { catalog_spell_sources, to_mob_template } from '../content/fight_sources.ts'
 import type { SimulatorState } from '../modules/simulator.ts'
 
-const loadout_source = (loadout: Readonly<Record<string, string>>) => {
+const loadout_source = (loadout: Readonly<Record<string, string>>, items: readonly SeedItem[]) => {
   const rows = Object.entries(loadout).map(([slot, item_type]) => {
-    const item = encyclopedia_catalog.items.find((candidate) => candidate.item_type === item_type)
+    const item = items.find((candidate) => candidate.item_type === item_type)
     if (!item || !equipment_slot_accepts(slot as CharacterEquipmentSlot, item.category))
       throw new Error(`Invalid local loadout item ${item_type} in ${slot}`)
     return { slot, item }
@@ -56,7 +57,10 @@ const loadout_source = (loadout: Readonly<Record<string, string>>) => {
 
 const hex_color_number = (color: string): number => Number.parseInt(color.slice(1), 16)
 
-export const simulator_fight_setup = (state: Readonly<SimulatorState>): FightSetup => {
+export const simulator_fight_setup = (
+  state: Readonly<SimulatorState>,
+  content: Readonly<{ items: readonly SeedItem[]; mobs: readonly SeedMob[] }> = encyclopedia_catalog
+): FightSetup => {
   const characters = Object.fromEntries(state.characters.map((character) => [character.id, character]))
   const players = Object.entries(state.character_placements).map(([cell, character_id]) => {
     const character = characters[character_id]
@@ -69,6 +73,7 @@ export const simulator_fight_setup = (state: Readonly<SimulatorState>): FightSet
       color_2: hex_color_number(character.colors[1]),
       color_3: hex_color_number(character.colors[2]),
       level: BigInt(character.level),
+      experience: BigInt(xp_for_level(character.level)!),
       vitality: BigInt(character.vitality),
       wisdom: BigInt(character.wisdom),
       strength: BigInt(character.strength),
@@ -78,7 +83,7 @@ export const simulator_fight_setup = (state: Readonly<SimulatorState>): FightSet
       spell_levels: Object.fromEntries(
         Object.entries(character.spell_levels).map(([spell, level]) => [spell, BigInt(level)])
       ),
-      ...loadout_source(character.loadout),
+      ...loadout_source(character.loadout, content.items),
     })
     return {
       character: character.id,
@@ -91,7 +96,7 @@ export const simulator_fight_setup = (state: Readonly<SimulatorState>): FightSet
     }
   })
   const mobs = Object.entries(state.mob_placements).map(([cell, placement]) => {
-    const seed_mob = encyclopedia_catalog.mobs.find(({ mob_type }) => mob_type === placement.mob_type)
+    const seed_mob = content.mobs.find(({ mob_type }) => mob_type === placement.mob_type)
     if (!seed_mob || placement.level < seed_mob.level_min || placement.level > seed_mob.level_max)
       throw new Error(`Invalid seed mob ${placement.mob_type} level ${placement.level}`)
     const template = to_mob_template(seed_mob)

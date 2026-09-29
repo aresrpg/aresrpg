@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { Loader2, WalletCards } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -17,8 +18,8 @@ export const WalletConnectButton = ({
   busy?: boolean
   disabled?: boolean
 }>) => (
-  <button
-    className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 border border-cyan/45 bg-cyan/7 px-5 py-2.5 text-[9px] font-semibold tracking-[0.18em] text-cyan uppercase shadow-[0_0_22px_rgba(72,207,207,0.06)] transition-colors hover:border-cyan/70 hover:bg-cyan/12 disabled:cursor-not-allowed disabled:opacity-40"
+  <Button
+    tone="primary"
     data-wallet-connect=""
     disabled={busy || disabled}
     onClick={open}
@@ -27,7 +28,7 @@ export const WalletConnectButton = ({
   >
     {busy ? <Loader2 className="animate-spin" size={12} /> : <WalletCards size={12} />}
     {label}
-  </button>
+  </Button>
 )
 
 export const WalletChoices = ({
@@ -50,8 +51,8 @@ export const WalletChoices = ({
   ) : (
     <div className="flex flex-col gap-2" data-wallet-choices="">
       {choices.map((choice) => (
-        <button
-          className="flex min-h-11 w-full cursor-pointer items-center gap-3 border border-white/10 bg-black/25 px-4 py-3 text-left transition-colors hover:border-cyan/45 hover:bg-cyan/6 disabled:cursor-not-allowed disabled:opacity-40"
+        <Button
+          className="w-full justify-start"
           aria-label={choice}
           disabled={busy}
           key={choice}
@@ -64,7 +65,7 @@ export const WalletChoices = ({
             {choice}
           </span>
           <span className="text-[8px] tracking-[0.16em] text-cyan/75 uppercase">{select_label}</span>
-        </button>
+        </Button>
       ))}
     </div>
   )
@@ -88,7 +89,6 @@ export const WalletPickerModal = ({
         <div className="grid size-11 place-items-center border border-cyan/30 bg-cyan/6 text-cyan shadow-[0_0_24px_rgba(72,207,207,0.08)]">
           <WalletCards size={19} />
         </div>
-        <h2 className="text-[11px] font-semibold tracking-[0.22em] text-cyan uppercase">{title}</h2>
         {subtitle && <p className="max-w-xs text-[9px] leading-5 tracking-[0.06em] text-muted">{subtitle}</p>}
       </div>
       {children}

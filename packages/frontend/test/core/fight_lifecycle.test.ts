@@ -12,7 +12,7 @@ import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)

@@ -260,6 +260,7 @@ const normalize_player_appearance = (player: Readonly<Record<string, unknown>>) 
   color_3: Number(player.color_3 ?? 0x8b6539),
   hat: typeof player.hat === 'string' ? player.hat : null,
   cloak: typeof player.cloak === 'string' ? player.cloak : null,
+  title: typeof player.title === 'string' ? player.title : null,
 })
 
 const normalize_player = (input: unknown): PlayerSource => {

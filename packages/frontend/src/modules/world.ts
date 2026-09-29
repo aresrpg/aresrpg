@@ -21,7 +21,7 @@ import { localized_error } from '../i18n/error_text.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { world_biome_at_zone } from '../content/worlds.ts'
 import { read_pose } from '../game/core/pose_feed.ts'
-import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
+import { play_audio } from '../game/audio/audio_registry.ts'
 import { toast } from '../toast.ts'
 import { character_travel_ready } from '../game/travel_gate.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -509,7 +509,7 @@ const observe: NonNullable<AppModule['observe']> = (context) => {
           ...summary,
         })
         settle(key, (pending) => {
-          play_procedural_cue('discovery')
+          play_audio('quest_started')
           pending.dismiss()
         })
         dispatch({ type: 'world/zone_revealed', reveal })

@@ -16,7 +16,7 @@ test('the first placement change submits, the second warns, and the saved opt-ou
 test('a remote placement attempt remains remembered when the fight layer remounts', () => {
   const state = initial_app_state({
     quality: 'medium',
-    flat_mode: false,
+
     music_enabled: true,
     render_distance: null,
   })

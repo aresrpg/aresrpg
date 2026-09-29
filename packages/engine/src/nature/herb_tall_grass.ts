@@ -1,22 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Stepped diagonal blades — the classic tall-grass sprite, drawn column by column.
+import { leaf } from './botanical.ts'
+import type { SpriteBuilder } from './sprite_kit.ts'
 
-import { pixel_cross, randint, type PixelCell, type SpriteBuilder } from './sprite_kit.ts'
-
-export const herb_tall_grass: SpriteBuilder = (random) => {
-  const blades = randint(random, 4, 6)
-  const cells: PixelCell[] = []
-  for (let index = 0; index < blades; index += 1) {
-    const start_x = randint(random, -4, 4)
-    const rows = randint(random, 7, 13)
-    const drift = randint(random, -1, 1)
-    const step_every = randint(random, 2, 4)
-    for (let row = 0; row < rows; row += 1) {
-      const x = start_x + Math.floor(row / step_every) * drift
-      const band = row >= rows - 2 ? 2 : row < rows * 0.4 ? 0 : 1
-      cells.push([x, row, band])
-    }
-  }
-  return pixel_cross(cells)
-}
+export const herb_tall_grass: SpriteBuilder = (random) =>
+  Array.from({ length: 6 }, (_, index) =>
+    leaf(
+      [(random() - 0.5) * 0.2, 0, (random() - 0.5) * 0.2],
+      index * 2.399 + random(),
+      0.25 + random() * 0.4,
+      0.65 + random() * 0.65,
+      0.035 + random() * 0.035,
+      0.25 + random() * 0.2
+    )
+  ).flat()

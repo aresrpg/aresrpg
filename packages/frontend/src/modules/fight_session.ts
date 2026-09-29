@@ -117,7 +117,15 @@ export const create_fight_session = ({
     },
     apply: (input: Readonly<FightInput>): boolean => {
       if (!runtime) return false
-      publish(runtime.apply(stamp_boundary(input, now, mode === 'remote' ? runtime.state() : null)))
+      const result = runtime.apply(stamp_boundary(input, now, mode === 'remote' ? runtime.state() : null))
+      publish(result)
+      if (
+        mode === 'local' &&
+        input.type === 'ready' &&
+        result.error === null &&
+        players_ready_after(result.state.contract.fighters, null)
+      )
+        publish(runtime.apply(stamp_boundary({ type: 'start' }, now, null)))
       return true
     },
     simulate_turn: (): boolean => {

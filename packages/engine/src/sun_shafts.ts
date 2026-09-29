@@ -49,12 +49,14 @@ export const create_sun_shafts = ({
   sun,
   sun_direction,
   scene_texture,
+  depth_texture,
   config,
 }: Readonly<{
   camera: PerspectiveCamera
   sun: DirectionalLight
   sun_direction: VectorUniform
   scene_texture: SampledTexture
+  depth_texture: SampledTexture
   config: ShaftConfig
 }>) => {
   const sun_uv = uniform(new Vector2(0.5, 0.5))
@@ -69,13 +71,17 @@ export const create_sun_shafts = ({
   for (let index = 0; index < config.samples; index += 1) {
     sample_uv = sample_uv.sub(delta)
     const sample = scene_texture.sample(sample_uv)
+    const depth = depth_texture.sample(sample_uv).r
+    const sky = camera.reversedDepth ? depth.lessThan(0.00001) : depth.greaterThan(0.99999)
     const inside = sample_uv.x
       .greaterThanEqual(0)
       .and(sample_uv.x.lessThanEqual(1))
       .and(sample_uv.y.greaterThanEqual(0))
       .and(sample_uv.y.lessThanEqual(1))
       .select(float(1), float(0))
-    const source = smoothstep(source_threshold, source_threshold.add(1), luminance(sample.rgb)).mul(inside)
+    const source = smoothstep(source_threshold, source_threshold.add(1), luminance(sample.rgb))
+      .mul(inside)
+      .mul(sky.select(float(1), float(0)))
     energy = energy.add(source.mul(illumination))
     illumination = illumination.mul(config.decay)
   }

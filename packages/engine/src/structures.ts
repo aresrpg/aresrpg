@@ -130,7 +130,7 @@ export const structure_material_uses = (
   ...city_material_uses(fixed_areas),
 ]
 
-const compile_type = (name: string, materials: CompiledMaterials): CompiledStructureType => {
+export const compile_type = (name: string, materials: CompiledMaterials): CompiledStructureType => {
   const source = STRUCTURE_TYPES[name]
   if (!source) throw new TypeError(`unknown structure type "${name}"`)
   const material_ids = source.palette.map((material) => (material === 'air' ? 0 : materials.id_for(material)))

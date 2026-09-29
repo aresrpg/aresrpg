@@ -7,35 +7,10 @@ import type { ItemRow } from '@aresrpg/protocol'
 
 import { player_error_text } from '../i18n/player_error.ts'
 import { ModalFrame } from '../components/ModalFrame.tsx'
-import { ItemSnapshotTooltip, type ItemSnapshotHover } from '../components/ItemSnapshotTooltip.tsx'
 import { crush_results, type CrushPresentation, type CrushResult } from '../crush_result.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
 import { InventoryItemCell } from './InventoryItemCell.tsx'
-
-const CrushRuneCell = ({ copy, item }: Readonly<{ copy: AppCopy; item: Readonly<ItemRow> }>) => {
-  const [hover, set_hover] = useState<ItemSnapshotHover | null>(null)
-  return (
-    <>
-      <InventoryItemCell
-        item={item}
-        onPointerEnter={(event) => {
-          const bounds = event.currentTarget.getBoundingClientRect()
-          set_hover(
-            Object.freeze({
-              anchor: event.currentTarget,
-              style: Object.freeze({ left: bounds.left + bounds.width / 2, top: bounds.top - 8 }),
-              status: 'ready',
-              item,
-            })
-          )
-        }}
-        onPointerLeave={() => set_hover(null)}
-      />
-      <ItemSnapshotTooltip copy={copy} hover={hover} />
-    </>
-  )
-}
 
 export const CrushProgressDialog = ({
   copy,
@@ -95,7 +70,6 @@ export const CrushResultDialog = ({
           <div className="grid size-12 shrink-0 place-items-center border border-gold/40 bg-gold/10 shadow-[0_0_24px_rgba(200,150,60,0.14)]">
             <Hammer className="text-gold" size={22} />
           </div>
-          <h2 className="text-sm font-semibold tracking-[0.16em] text-white uppercase">{t('crush_result_title')}</h2>
         </header>
 
         {result.items.length === 0 ? (
@@ -111,7 +85,7 @@ export const CrushResultDialog = ({
             data-crush-result-inventory=""
           >
             {result.items.map((item) => (
-              <CrushRuneCell copy={copy} item={item} key={item.id} />
+              <InventoryItemCell item={item} key={item.id} />
             ))}
           </div>
         )}

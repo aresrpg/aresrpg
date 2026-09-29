@@ -37,7 +37,7 @@ const character = (overrides: Partial<CharacterRow> = {}): CharacterRow => ({
 
 const wallet = { address: 'owner' } as AuthSession
 const ready = (rows: readonly CharacterRow[] = [character()]): AppState => {
-  const state = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const state = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   return {
     ...state,
     session: {

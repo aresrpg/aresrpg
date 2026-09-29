@@ -165,7 +165,7 @@ test('a certified settlement receipt releases Continue without waiting for graph
   expect(fight_result_complete(result({ settlement_confirmed: true }))).toBeTrue()
 })
 test('an empty durable-resolution snapshot proves the own settlement completed', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const current = result()
   const pending = {
     fight: '0xf1',
@@ -197,7 +197,7 @@ test('an empty durable-resolution snapshot proves the own settlement completed',
   expect(fight_result_complete(projected)).toBeTrue()
 })
 test('an unrelated empty recovery snapshot cannot certify a newly ended fight', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const current = result()
   const state = fight_result_module.reduce!(
     {
@@ -209,7 +209,7 @@ test('an unrelated empty recovery snapshot cannot certify a newly ended fight', 
   expect(state.fight_result.current_by_character['0xc1']?.settlement_confirmed).toBeFalse()
 })
 test('a durable resolution received before the roster becomes visible when the Character row arrives', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const resolution = {
     fight: '0xf1',
     world: 'nauvis',
@@ -253,7 +253,7 @@ test('a durable resolution received before the roster becomes visible when the C
   expect(loaded.fight_result.current_by_character['0xc1']).toMatchObject({ fight: '0xf1', loot_types: ['silk'] })
 })
 test('nonzero-seat recovery keeps array position separate from the chain fighter index', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const resolution = {
     fight: '0xf1',
     world: 'nauvis',
@@ -316,7 +316,7 @@ test('a forfeiter has no durable loot work and may leave the result immediately'
   expect(fight_result_complete(current)).toBeTrue()
 })
 test('the projected level-up overlays the still-retained fight result', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const current = result({ settlement_confirmed: true })
   const before: AppState = {
     ...base,
@@ -364,7 +364,7 @@ test('the projected level-up overlays the still-retained fight result', () => {
   expect(fight_result_surface(continued.fight_result.current_by_character['0xc1']!)).toBe('level_up')
 })
 test('a failed settlement result may close without discarding its durable recovery row', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const result = {
     fight: '0xf1',
     error: 'settlement unavailable',
@@ -392,7 +392,7 @@ test('a failed settlement result may close without discarding its durable recove
 test('durable closable recovery closes automatically without a routine finalize toast', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   const close_calls: string[] = []
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const state = {
     ...base,
     copy: { fight_hud: { fight_finalize_pending: 'Cleanup ready', fight_finalize_button: 'Finalize' } } as never,
@@ -436,7 +436,7 @@ test('a successful final ordinary settlement closes its newly drained fight', as
   const settlement_calls: string[] = []
   const close_calls: string[] = []
   const dispatched: unknown[] = []
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const current = result({ loot_types: ['silk'] })
   const state: AppState = {
     ...base,
@@ -489,7 +489,7 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
   const listeners = new Map<string, ((input: never) => void)[]>()
   const calls: unknown[] = []
   const dispatched: unknown[] = []
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const current = result({ kolizeum: '0xk1', loot_types: [] })
   const state: AppState = {
     ...base,
@@ -547,7 +547,7 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
 test('a refused settlement waits for explicit Retry instead of reopening signing', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()
   let settlement_calls = 0
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const current = result()
   const state: AppState = {
     ...base,

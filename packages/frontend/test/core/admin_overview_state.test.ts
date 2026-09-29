@@ -6,8 +6,7 @@ import type { AdminOverviewResult } from '@aresrpg/protocol'
 
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
-const state = () =>
-  initial_app_state(Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null }))
+const state = () => initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
 
 const overview: AdminOverviewResult = Object.freeze({
   as_of_checkpoint: 42,

@@ -7,7 +7,7 @@ import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
   always_craft_from_character_id: '0xb',
@@ -51,4 +51,36 @@ test('an authoritative roster removes a stale crafting lock', () => {
 
   expect(loaded.settings.always_craft_from_character_id).toBeNull()
   expect(loaded.session.selected_character_id).toBe('0xa')
+})
+
+test('the HUD Jobs modal locks the configured crafter without requiring a Jobs URL', () => {
+  const base = initial_app_state(settings)
+  const state = {
+    ...base,
+    session: { ...base.session, characters: [character('0xa'), character('0xb')], selected_character_id: '0xa' },
+  }
+  const jobs = reduce_app_state(state as never, { type: 'dialog/open', dialog: 'character_jobs' })
+  expect(jobs.navigation.pathname).toBe('/')
+  expect(jobs.session.selected_character_id).toBe('0xb')
+  expect(reduce_app_state(jobs, { type: 'character/select', character_id: '0xa' }).session.selected_character_id).toBe(
+    '0xb'
+  )
+  const closed = reduce_app_state(jobs, { type: 'dialog/open', dialog: null })
+  expect(
+    reduce_app_state(closed, { type: 'character/select', character_id: '0xa' }).session.selected_character_id
+  ).toBe('0xa')
+})
+
+test('item crafting resolves the preference independently of the selected or inspected character', async () => {
+  const { crafting_character } = await import('../../src/modules/craft_character_lock.ts')
+  const base = initial_app_state(settings)
+  const state = {
+    ...base,
+    session: { ...base.session, characters: [character('0xa'), character('0xb')], selected_character_id: '0xa' },
+  }
+  expect(crafting_character(state as never)?.id).toBe('0xb')
+  expect(crafting_character(state as never, character('0xa') as never)?.id).toBe('0xb')
+  expect(
+    crafting_character({ ...state, settings: { ...settings, always_craft_from_character_id: 'missing' } } as never)?.id
+  ).toBe('0xa')
 })

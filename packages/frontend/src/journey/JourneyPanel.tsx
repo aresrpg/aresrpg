@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useContext } from 'react'
 import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Sparkles } from 'lucide-react'
 
 import automation_art from '../../../../seed/icons/world/gathering_automation_hd.png'
 import automation_icon from '../../../../seed/icons/world/gathering_automation.png'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
-import { content_catalog } from '../content/catalog.ts'
-import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { type AppCopy } from '../i18n/copy.ts'
+import { dispatch_app } from '../store.ts'
 
-import { JOURNEY_CHAPTERS, JOURNEY_QUESTS, next_quest, type JourneyQuest } from './model.ts'
-import { journey_tracker_available } from './facts.ts'
+import { next_quest, type JourneyQuest } from './model.ts'
+import { JourneySourceContext, useJourneySource } from './source.tsx'
 import './journey.css'
 
-const ItemArt = ({ item, className = '' }: Readonly<{ item: string; className?: string }>) => (
-  <img alt="" className={className} draggable={false} src={item_detail_icon(item) ?? undefined} />
-)
-
-const open_journal = (): void => dispatch_app({ type: 'journey/journal', open: true })
+const ItemArt = ({ item, className = '' }: Readonly<{ item: string; className?: string }>) => {
+  const source = useContext(JourneySourceContext)
+  const icon = source ? source.icon(item) : item_detail_icon(item)
+  return <img alt="" className={className} draggable={false} src={icon ?? undefined} />
+}
 
 const open_path = (pathname: string): void => {
   dispatch_app({ type: 'journey/journal', open: false })
@@ -26,11 +26,16 @@ const open_path = (pathname: string): void => {
 }
 
 const QuestActions = ({ quest, copy }: Readonly<{ quest: JourneyQuest; copy: AppCopy }>) => {
-  const text = copy_text(copy.journey)
-  if (quest.kind === 'start')
+  const source = useJourneySource(copy)
+  const { text } = source
+  if (source.activate || quest.kind === 'start')
     return (
-      <button className="journey-button" onClick={() => dispatch_app({ type: 'journey/start' })} type="button">
-        {text('start')} <ArrowRight size={15} />
+      <button
+        className="journey-button"
+        onClick={() => (source.activate ? source.activate(quest) : dispatch_app({ type: 'journey/start' }))}
+        type="button"
+      >
+        {source.action_label ?? text(source.activate ? 'continue' : 'start')} <ArrowRight size={15} />
       </button>
     )
   if (quest.id === 'suize') return null
@@ -68,10 +73,13 @@ const QuestActions = ({ quest, copy }: Readonly<{ quest: JourneyQuest; copy: App
 }
 
 const JourneyProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const completed = useAppStore((state) => state.journey.completed)
-  const text = copy_text(copy.journey)
-  const count = JOURNEY_QUESTS.filter(({ kind, id }) => kind !== 'start' && completed.includes(id)).length
-  const total = JOURNEY_QUESTS.length - 1
+  const {
+    state: { completed },
+    quests,
+    text,
+  } = useJourneySource(copy)
+  const count = quests.filter(({ kind, id }) => kind !== 'start' && completed.includes(id)).length
+  const total = quests.filter(({ kind }) => kind !== 'start').length
   return (
     <div className="journey-progress">
       <div
@@ -93,42 +101,48 @@ const JourneyProgress = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 const Milestones = ({ copy, quest }: Readonly<{ copy: AppCopy; quest: JourneyQuest | null }>) => {
-  const completed = useAppStore((state) => state.journey.completed)
-  const text = copy_text(copy.journey)
+  const {
+    state: { completed },
+    quests,
+    text,
+  } = useJourneySource(copy)
   return (
     <div className="journey-milestones">
-      {JOURNEY_CHAPTERS.filter((chapter) => chapter !== 'welcome').map((chapter) => {
-        const quests = JOURNEY_QUESTS.filter((row) => row.chapter === chapter)
-        const done = quests.every(({ id }) => completed.includes(id))
-        return (
-          <div
-            className={`journey-milestone ${done ? 'is-complete' : ''} ${quest?.chapter === chapter ? 'is-active' : ''}`}
-            key={chapter}
-          >
-            <div className="journey-medal">
-              <ItemArt item={quests[0]!.item} />
-              {done && <Check aria-label={text('complete')} className="journey-medal-check" size={17} />}
+      {[...new Set(quests.map(({ chapter }) => chapter))]
+        .filter((chapter) => chapter !== 'welcome')
+        .map((chapter) => {
+          const chapter_quests = quests.filter((row) => row.chapter === chapter)
+          const done = chapter_quests.every(({ id }) => completed.includes(id))
+          return (
+            <div
+              className={`journey-milestone ${done ? 'is-complete' : ''} ${quest?.chapter === chapter ? 'is-active' : ''}`}
+              key={chapter}
+            >
+              <div className="journey-medal">
+                <ItemArt item={chapter_quests[0]!.item} />
+                {done && <Check aria-label={text('complete')} className="journey-medal-check" size={17} />}
+              </div>
+              <span>{text(`chapter_${chapter}`)}</span>
             </div>
-            <span>{text(`chapter_${chapter}`)}</span>
-          </div>
-        )
-      })}
+          )
+        })}
     </div>
   )
 }
 
-const useJourneyView = () => {
-  const journey = useAppStore((state) => state.journey)
+const useJourneyView = (copy: AppCopy) => {
+  const { state: journey, quests } = useJourneySource(copy)
   const [celebrated] = journey.celebrations
-  const quest = JOURNEY_QUESTS.find(({ id }) => id === celebrated) ?? next_quest(journey.completed)
+  const quest = quests.find(({ id }) => id === celebrated) ?? next_quest(journey.completed, quests)
   const display = quest ?? { id: 'finished', chapter: 'finished', item: 'wheat_suize', kind: 'start' }
   const celebrating = Boolean(celebrated) && !journey.saving
   return { journey, celebrated, quest, display, celebrating }
 }
 
 const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean }>) => {
-  const { journey, celebrated, quest } = useJourneyView()
-  const text = copy_text(copy.journey)
+  const { journey, celebrated, quest } = useJourneyView(copy)
+  const source = useJourneySource(copy)
+  const { text } = source
   if (journey.saving)
     return (
       <button className="journey-button" disabled type="button">
@@ -137,13 +151,13 @@ const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: b
     )
   if (celebrated)
     return (
-      <button className="journey-button" onClick={() => dispatch_app({ type: 'journey/acknowledged' })} type="button">
+      <button className="journey-button" onClick={source.acknowledge} type="button">
         {text('continue')} <ArrowRight size={14} />
       </button>
     )
   if (compact)
     return (
-      <button className="journey-button" onClick={open_journal} type="button">
+      <button className="journey-button" onClick={() => source.journal(true)} type="button">
         <BookOpen size={14} />
         {text(quest?.kind === 'start' ? 'start' : 'journal')}
       </button>
@@ -155,7 +169,7 @@ const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: b
       className="journey-button"
       onClick={() => {
         dispatch_app({ type: 'automation/collapse', collapsed: false })
-        dispatch_app({ type: 'journey/collapse', collapsed: true })
+        source.collapse(true)
         open_path('/')
       }}
       type="button"
@@ -166,10 +180,11 @@ const JourneyControls = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: b
 }
 
 const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean }>) => {
-  const { celebrated, display } = useJourneyView()
-  const text = copy_text(copy.journey)
+  const { celebrated, display } = useJourneyView(copy)
+  const source = useJourneySource(copy)
+  const { text } = source
   const { id, item: item_type, chapter, kind } = display
-  const item = content_catalog.item(item_type)!.item.name
+  const item = source.name(item_type)
   const objective = text(`${id}_objective`, { item })
   return (
     <div className="journey-quest" data-quest-kind={kind}>
@@ -199,26 +214,31 @@ const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean
 }
 
 const JourneyChecklist = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const completed = useAppStore((state) => state.journey.completed)
-  const text = copy_text(copy.journey)
+  const {
+    state: { completed },
+    quests,
+    text,
+  } = useJourneySource(copy)
   return (
     <ol className="journey-checklist">
-      {JOURNEY_QUESTS.filter(({ kind }) => kind !== 'start').map((row) => (
-        <li key={row.id}>
-          <span className="journey-checkbox">
-            {completed.includes(row.id) && <Check aria-label={text('complete')} size={13} />}
-          </span>
-          <span>{text(`${row.id}_title`)}</span>
-        </li>
-      ))}
+      {quests
+        .filter(({ kind }) => kind !== 'start')
+        .map((row) => (
+          <li key={row.id}>
+            <span className="journey-checkbox">
+              {completed.includes(row.id) && <Check aria-label={text('complete')} size={13} />}
+            </span>
+            <span>{text(`${row.id}_title`)}</span>
+          </li>
+        ))}
     </ol>
   )
 }
 
 const JourneyNext = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const { journey, celebrated } = useJourneyView()
-  const following = next_quest(journey.completed)
-  const text = copy_text(copy.journey)
+  const { journey, celebrated } = useJourneyView(copy)
+  const { quests, text } = useJourneySource(copy)
+  const following = next_quest(journey.completed, quests)
   if (!celebrated || !following) return null
   return (
     <div className="journey-next">
@@ -231,8 +251,9 @@ const JourneyNext = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 }
 
 export const JourneyPanel = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean }>) => {
-  const { journey, celebrated, quest, celebrating } = useJourneyView()
-  const text = copy_text(copy.journey)
+  const { journey, celebrated, quest, celebrating } = useJourneyView(copy)
+  const source = useJourneySource(copy)
+  const { text } = source
   return (
     <section
       aria-label={text('title')}
@@ -247,7 +268,7 @@ export const JourneyPanel = ({ copy, compact }: Readonly<{ copy: AppCopy; compac
           <button
             aria-label={text('collapse')}
             className="journey-icon-button"
-            onClick={() => dispatch_app({ type: 'journey/collapse', collapsed: true })}
+            onClick={() => source.collapse(true)}
             type="button"
           >
             <ChevronDown size={17} />
@@ -278,18 +299,13 @@ export const JourneyPanel = ({ copy, compact }: Readonly<{ copy: AppCopy; compac
 }
 
 export const JourneyTracker = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const journey = useAppStore((state) => state.journey)
-  const available = useAppStore(journey_tracker_available)
+  const source = useJourneySource(copy)
+  const { state: journey, available, text } = source
   if (!journey.ready || !journey.identity || !available) return null
-  const text = copy_text(copy.journey)
   return (
     <aside className="journey-tracker">
       {journey.collapsed ? (
-        <button
-          className="journey-launcher"
-          onClick={() => dispatch_app({ type: 'journey/collapse', collapsed: false })}
-          type="button"
-        >
+        <button className="journey-launcher" onClick={() => source.collapse(false)} type="button">
           <BookOpen size={17} />
           <span>{text('title')}</span>
           {journey.celebrations.length > 0 && <Sparkles size={16} />}

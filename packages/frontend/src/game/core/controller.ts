@@ -44,8 +44,10 @@ export type PlayerAnim = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' 
 export type ControllerEnv = Readonly<{
   solid_at: SolidFn
   liquid_at: (x: number, y: number, z: number) => boolean
+  movement_allowed?: (x: number, z: number) => boolean
 }>
 export type ControllerInput = {
+  phase_target?: Readonly<Vec3Mut> | null
   forward: number
   strafe: number
   jump: boolean
@@ -95,7 +97,7 @@ export const create_controller_state = (spawn: Readonly<Vec3Mut>, yaw = 0): Cont
   _step_offset: 0,
 })
 
-/** Camera-relative input → world XZ unit direction (legacy fly-camera basis, verbatim). */
+/** Camera-relative input → bounded world XZ direction, preserving analog input magnitude. */
 export const move_direction = (forward: number, strafe: number, yaw: number): readonly [number, number] => {
   const fwd_x = -Math.sin(yaw)
   const fwd_z = -Math.cos(yaw)
@@ -104,10 +106,10 @@ export const move_direction = (forward: number, strafe: number, yaw: number): re
   let wx = fwd_x * forward + right_x * strafe
   let wz = fwd_z * forward + right_z * strafe
   const len = Math.hypot(wx, wz)
-  if (len > 1e-6) {
+  if (len > 1) {
     wx /= len
     wz /= len
-  } else {
+  } else if (len < 1e-6) {
     wx = 0
     wz = 0
   }
@@ -131,6 +133,38 @@ const turn_toward = (facing: number, target: number, lambda: number, dt: number)
   return facing + delta * (1 - Math.exp(-lambda * dt))
 }
 
+/** Direct automatic travel has the same speed budget, without terrain collision or gravity. */
+const phase_movement = (
+  position: Readonly<Vec3Mut>,
+  target: Readonly<Vec3Mut>,
+  speed: number,
+  dt: number,
+  env: ControllerEnv
+) => {
+  const delta = target.map((value, index) => value - position[index]!) as Vec3Mut
+  const fraction = Math.min(1, (speed * dt) / Math.max(0.001, Math.hypot(...delta)))
+  const next = position.map((value, index) => value + delta[index]! * fraction) as Vec3Mut
+  const allowed = env.movement_allowed?.(next[0], next[2]) ?? true
+  return {
+    position: allowed ? next : ([...position] as Vec3Mut),
+    velocity: delta.map((value) => (allowed ? (value * fraction) / dt : 0)) as Vec3Mut,
+    on_ground: true,
+    hit_ceiling: false,
+    stepped: false,
+  }
+}
+
+const controller_movement = (
+  state: ControllerState,
+  input: Readonly<ControllerInput>,
+  env: ControllerEnv,
+  speed: number,
+  dt: number
+) =>
+  input.phase_target
+    ? phase_movement(state.position, input.phase_target, state.in_water ? SWIM_SPEED : speed, dt, env)
+    : resolve_movement(env.solid_at, state.position, state.velocity, dt, {})
+
 /** Advance one fixed step: intent → curves → jump → gravity → collide → ground/anim bookkeeping. */
 export const step_controller = (
   state: ControllerState,
@@ -140,7 +174,7 @@ export const step_controller = (
 ): ControllerState => {
   const dt = Math.min(0.05, Math.max(1e-4, step_dt)) // a huge hitch must not launch the body
   state._air_jump_fired = false
-  const { solid_at, liquid_at } = env
+  const { liquid_at } = env
   const [pos_x, pos_y, pos_z] = state.position
   const vel = state.velocity
 
@@ -212,7 +246,7 @@ export const step_controller = (
     }
   }
 
-  const res = resolve_movement(solid_at, [pos_x, pos_y, pos_z], vel, dt, {})
+  const res = controller_movement(state, input, env, ground_speed, dt)
   state.position = res.position
   state.velocity = res.velocity
 

@@ -42,7 +42,7 @@ for (const action of ['cast_spell', 'forfeit'] as const) {
     const level = checkpoint.sources.spells.slash!.levels[0]!
     level.effects = [{ ...level.effects[0]!, kind: 2n, value: 100n, value_max: 100n, target_filter: 4n }]
     const listeners = new Map<string, ((...values: unknown[]) => void)[]>()
-    let state = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    let state = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
     const dispatch = (input: AppInput): void => {
       const previous = state
       state = reduce_app_state(state, input)
@@ -92,7 +92,7 @@ for (const origin of ['streamed', 'local'] as const) {
     const commits: unknown[] = []
     const controller = new AbortController()
     const listeners = new Map<string, ((...values: unknown[]) => void)[]>()
-    const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
     let state: AppState = {
       ...base,
       session: {

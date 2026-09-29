@@ -1,35 +1,33 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
    © 2026 Sceat — All rights reserved. See LICENSE.
    The chat palette SSOT — the retro combat-log hierarchy: names gold, targets ice, connective
-   text muted sage, spells violet, damage red, crits amber, heals rose, AP ice, MP mint. Combat
-   lines carry the green gradient wash + 2px accent bar. Retune colors HERE only. */
+   text muted silver, spells violet, damage red, crits amber, heals rose, AP ice, MP mint. Combat
+   lines use a restrained charcoal highlight. Retune colors HERE only. */
 
 .chat {
-  --chat-name: #ffce85;
-  --chat-target: #5db4ff;
-  --chat-verb: #79917a;
-  --chat-spell: #b07cff;
-  --chat-num: #ff6b6b;
-  --chat-num-crit: #ffb454;
+  --chat-name: #e4c58e;
+  --chat-target: #85bedb;
+  --chat-verb: #aeb7c4;
+  --chat-spell: #bea5dd;
+  --chat-num: #ed9292;
+  --chat-num-crit: #e8bb72;
   --chat-num-heal: #ff6bb0;
-  --chat-num-ap: #5db4ff;
-  --chat-num-mp: #4fd6a0;
+  --chat-num-ap: #85bedb;
+  --chat-num-mp: #94c5a2;
   --chat-num-shield: #9aa7ff;
-  --chat-num-gain: #4fd6a0;
+  --chat-num-gain: #94c5a2;
   --chat-stat: #d8c9a3;
-  --chat-death: #ff6b6b;
-  --chat-wash: rgba(79, 214, 160, 0.14);
-  --chat-wash-mid: rgba(79, 214, 160, 0.05);
-  --chat-edge: rgba(79, 214, 160, 0.55);
+  --chat-death: #ed9292;
   display: flex;
   flex-direction: column;
   min-height: 0;
   border: 1px solid rgba(216, 201, 163, 0.14);
-  background: rgba(5, 6, 10, 0.72);
+  background: #1b2027f2;
   font-size: 10px;
 }
 
 .chat > header {
+  background: #2b303af0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -52,9 +50,8 @@
 }
 
 .chat__line--combat {
-  background: linear-gradient(90deg, var(--chat-wash) 0%, var(--chat-wash-mid) 55%, transparent 100%);
-  border-left: 2px solid var(--chat-edge);
-  padding: 2px 4px 2px 7px;
+  background: #ffffff05;
+  padding: 3px 5px;
 }
 
 .chat__line--party span,
@@ -251,10 +248,10 @@
 .gw-worldchat .chat {
   flex: 1;
   min-width: 0;
-  background: rgba(6, 6, 12, 0.8);
+  background: #1b2027f2;
+  background-image: url('../../../ui/src/assets/panel_grain.webp');
+  background-blend-mode: soft-light;
   border: 1px solid var(--color-border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   border-radius: 9px;
   overflow: hidden;
   font-size: 11px;
@@ -323,4 +320,105 @@
 }
 .gw-worldchat:has(.chat__resize) .chat > header {
   padding-right: 24px;
+}
+
+.chat__filter {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .fight-hud[data-chat-viewport] .gw-worldchat {
+    bottom: 145px;
+    left: 8px;
+  }
+  .gw-worldchat .chat > header {
+    padding: 2px 6px;
+    min-height: 32px;
+  }
+  .gw-worldchat .chat > header > span:first-child {
+    display: none;
+  }
+  .gw-worldchat .chat__filters {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .gw-worldchat .chat__filter {
+    min-height: 28px;
+    font-size: 9px;
+  }
+  .gw-worldchat .chat > footer {
+    padding: 3px;
+  }
+  .gw-worldchat .chat__input {
+    min-height: 32px;
+    padding: 4px 6px;
+  }
+}
+
+.chat__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: #e4c58e;
+  cursor: pointer;
+}
+.chat__toggle:focus-visible {
+  outline: 2px solid #e4c58e;
+  outline-offset: -3px;
+}
+.chat__unread {
+  border-radius: 10px;
+  padding: 2px 5px;
+  background: #e4bf84;
+  color: #191e25;
+  font-size: 11px;
+  font-weight: 700;
+}
+.gw-worldchat:has(.chat[data-collapsed='true']) {
+  width: max-content;
+  height: 44px;
+}
+.gw-worldchat .chat[data-collapsed='true'] > header {
+  padding: 0;
+  border: 0;
+}
+.chat[data-collapsed='true'] > :is(.chat__lines, footer),
+.chat[data-collapsed='true'] > header > span,
+.gw-worldchat:has(.chat[data-collapsed='true']) > .chat__resize {
+  display: none;
+}
+.gw-worldchat:has(.chat[data-collapsed='true']) > .current-event-hud {
+  width: min(440px, 80vw);
+}
+
+.gw-worldchat .chat > header {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.gw-worldchat .chat__toggle {
+  touch-action: none;
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .chat__resize {
+    width: 44px;
+    height: 44px;
+    opacity: 0.8;
+  }
+  .chat__resize svg {
+    width: 20px;
+    height: 20px;
+  }
+  .gw-worldchat:has(.chat__resize) .chat:not([data-collapsed='true']) > header {
+    padding-right: 44px;
+  }
 }

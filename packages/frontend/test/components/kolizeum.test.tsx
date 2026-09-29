@@ -12,7 +12,6 @@ test('the War Table selects rows and confirms an explicit side wager before join
   expect(source).toContain('data-kolizeum-page=""')
   for (const column of ['col_format', 'col_access', 'col_status', 'col_pledge', 'col_full_pot', 'col_creator'])
     expect(source).toContain(column)
-  expect(source).toContain('<ModalFrame')
   expect(source).toContain("t('join_confirm_body'")
   expect(source).toContain("type: 'kolizeum/join'")
   expect(source).toContain('character_id: intent.character_id')

@@ -1,0 +1,66 @@
+/* Shared stat identity rows used by the simulator and mobile controller. */
+.stats__prow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+}
+.stats__prow:not(:last-child) {
+  border-bottom: 1px solid var(--hair);
+}
+.stats__prow-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: var(--r-1);
+  background: color-mix(in srgb, var(--tint) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 40%, transparent);
+}
+.stats__prow-icon img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.stats__prow-labels {
+  display: flex;
+  flex-flow: column nowrap;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.stats__prow-label {
+  font-size: 0.84rem;
+  color: var(--fg);
+}
+.stats__prow-desc {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--fg-faint);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+.stats__prow-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.84rem;
+  color: var(--fg);
+  /* keep clear whitespace between the number and the +/- steppers */
+  margin-right: var(--s-1);
+}
+.stats__prow-allocation {
+  display: flex;
+  min-width: 88px;
+  flex-flow: column nowrap;
+  align-items: flex-end;
+}
+.stats__prow-bonus {
+  color: color-mix(in srgb, var(--accent) 42%, var(--fg-muted));
+  font-size: 0.74rem;
+}
+.stats__prow-pending {
+  color: var(--accent);
+  font-size: 0.74rem;
+}

@@ -2,7 +2,17 @@ import { readFileSync } from 'node:fs'
 
 import { test, expect } from 'bun:test'
 
-import { classify_release, runtime_package_json, fingerprint_runtime_files } from '../release_inputs.mjs'
+import {
+  classify_release,
+  runtime_package_json,
+  fingerprint_runtime_files,
+  SCENE_COMPILER_FILES,
+} from '../release_inputs.mjs'
+
+test('scene compiler inputs invalidate the frontend artifact', () => {
+  for (const path of ['seed/scenes/main_menu.recipe.json', 'seed/scenes/main_menu.json', ...SCENE_COMPILER_FILES])
+    expect(classify_release([path])).toEqual({ frontend: true, server: false, indexer: false })
+})
 
 test('engine is frontend-owned and server/indexer releases stay independent', () => {
   expect(classify_release(['packages/engine/src/terrain.ts'])).toEqual({
@@ -88,4 +98,17 @@ test('local recovery still guards backend, SDK, engine, content, and dependency 
   expect(fingerprint_runtime_files([], '{"dependencies":{"a":"1"}}', 'local')).not.toEqual(
     fingerprint_runtime_files([], '{"dependencies":{"a":"2"}}', 'local')
   )
+})
+
+test('mobile presentation changes invalidate the shared frontend artifact', () => {
+  expect(classify_release(['packages/mobile/src/MobileApp.tsx'])).toEqual({
+    frontend: true,
+    server: false,
+    indexer: false,
+  })
+})
+
+test('shared UI changes invalidate browser artifacts and its manifest participates in frozen server installs', () => {
+  expect(classify_release(['packages/ui/src/controls.tsx'])).toEqual({ frontend: true, server: false, indexer: false })
+  expect(classify_release(['packages/ui/package.json'])).toEqual({ frontend: true, server: true, indexer: false })
 })

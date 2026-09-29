@@ -8,8 +8,10 @@
 
 import { character_checkpoint, expand_chat_message, type ChatMessagePart } from '@aresrpg/protocol'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { MessageCircle } from 'lucide-react'
+import { useWindowDrag } from '@aresrpg/ui'
 
+import { CurrentEventHud } from '../game/hud/CurrentEventHud.tsx'
 import {
   chat_line_in_fight,
   chat_line_in_party,
@@ -35,11 +37,12 @@ import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
-import { HUD_PANEL_CLASS } from './ui/HudPanel.tsx'
+import { ContextMenu } from './ContextMenu.tsx'
 import { RunToRow } from './PlayerContextMenu.tsx'
 import '../game/hud/world_responsive.css'
 import { ChatResizeHandle } from './ChatResizeHandle.tsx'
 import './chat.css'
+import { useChatDisclosure } from './chat_disclosure.ts'
 
 type ChatText = Readonly<Record<string, string>>
 type LiveNames = Readonly<Record<number, string>>
@@ -170,7 +173,15 @@ export const Chat = ({
   copy,
   names = Object.freeze({}),
   fight,
-}: Readonly<{ copy: AppCopy; names?: LiveNames; fight?: string }>) => {
+  collapsible,
+  drag_handle,
+}: Readonly<{
+  copy: AppCopy
+  names?: LiveNames
+  fight?: string
+  collapsible?: boolean
+  drag_handle?: ReturnType<typeof useWindowDrag>['header']
+}>) => {
   const text = useMemo(
     () => ({ ...copy.party_panel, ...copy.simulator_page, ...copy.fight_hud, ...copy.spell_names }),
     [copy]
@@ -232,9 +243,10 @@ export const Chat = ({
         ),
     [fight, lines, names, party?.id, text, visible_channels]
   )
+  const disclosure = useChatDisclosure(rendered, Boolean(collapsible))
   useEffect(() => {
     log.current?.scrollTo({ top: log.current.scrollHeight })
-  }, [rendered.length])
+  }, [lines, rendered.length, disclosure.collapsed])
 
   const toggle = (channel: ChatChannel): void =>
     dispatch_app({
@@ -269,8 +281,8 @@ export const Chat = ({
   }
 
   return (
-    <aside aria-label={text.chat_title} className="chat">
-      <header>
+    <aside aria-label={text.chat_title} className="chat" data-collapsed={disclosure.collapsed}>
+      <header {...drag_handle}>
         <span>{text.chat_title}</span>
         <span className="chat__filters">
           {CHANNEL_FILTERS.map(({ channel, label_key }) => (
@@ -281,6 +293,24 @@ export const Chat = ({
             </label>
           ))}
         </span>
+        {collapsible && (
+          <button
+            type="button"
+            className="chat__toggle"
+            data-window-drag-handle
+            aria-expanded={!disclosure.collapsed}
+            aria-label={disclosure.collapsed ? `${text.chat_expand} (${disclosure.unread})` : text.chat_collapse}
+            onClick={() => {
+              disclosure.toggle()
+              set_position_menu(null)
+            }}
+          >
+            <MessageCircle size={20} />
+            <span className="chat__unread" hidden={disclosure.unread === 0}>
+              {disclosure.unread}
+            </span>
+          </button>
+        )}
       </header>
       <div className="chat__lines" ref={log} role="log">
         {rendered.map((line) => (
@@ -349,38 +379,38 @@ export const Chat = ({
           value={draft.text}
         />
       </footer>
-      {position_menu && typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              className={`${HUD_PANEL_CLASS} pointer-events-auto fixed z-[140] min-w-[168px] divide-y divide-white/10 text-[11px]`}
-              onPointerDown={(event) => event.stopPropagation()}
-              role="menu"
-              style={{ left: position_menu.left, top: position_menu.top }}
-            >
-              <RunToRow
-                label={text.run_to_position}
-                run={() => {
-                  dispatch_app({
-                    type: 'run_to/position',
-                    world: position_menu.world,
-                    x: position_menu.x,
-                    z: position_menu.z,
-                  })
-                  set_position_menu(null)
-                }}
-                visible
-              />
-            </div>,
-            document.body
-          )
-        : null}
+      {position_menu && (
+        <ContextMenu x={position_menu.left} y={position_menu.top}>
+          <RunToRow
+            label={text.run_to_position}
+            run={() => {
+              dispatch_app({
+                type: 'run_to/position',
+                world: position_menu.world,
+                x: position_menu.x,
+                z: position_menu.z,
+              })
+              set_position_menu(null)
+            }}
+            visible
+          />
+        </ContextMenu>
+      )}
     </aside>
   )
 }
 
-export const WorldChat = (properties: Parameters<typeof Chat>[0]) => (
-  <div className="gw-worldchat">
-    <Chat {...properties} />
-    <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />
-  </div>
-)
+export const WorldChat = (properties: Parameters<typeof Chat>[0]) => {
+  const drag = useWindowDrag(true, '[data-world-frame], [data-chat-viewport]')
+  return (
+    <section
+      className="gw-worldchat"
+      ref={drag.root}
+      style={{ transform: `translate(${drag.offset.x}px, ${drag.offset.y}px)` }}
+    >
+      <CurrentEventHud copy={properties.copy} />
+      <Chat {...properties} collapsible drag_handle={drag.header} />
+      <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />
+    </section>
+  )
+}

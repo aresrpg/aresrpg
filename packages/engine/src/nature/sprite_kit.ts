@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The sprite kit — shared machinery every nature sprite builds on. Art direction (owner
-// 2026-08-19): pixel art in a voxel world. Plants are CROSSED PIXEL-PLANES: 2D silhouettes drawn
-// cell by cell on a coarse grid (stepped edges, three quantized color bands — the classic
-// voxel-game cross sprite as geometry, no textures). Minerals are stacked axis-aligned boxes.
-// One file per sprite lives beside this kit; scatter_layer.ts assembles them into kind pools.
+// Shared geometry for nature recipes: compact pixel silhouettes, bent botanical ribbons and
+// faceted mineral meshes. Optional UVs address the neutral nature atlas; authored palettes own color.
+// Consumers keep their existing merged/instanced batches and rooted wind.
 
-/** x, y, z, accent blend (or an explicit palette index), wind sway weight. */
-export type RecipeVertex = readonly [number, number, number, number, number]
+/** x, y, z, accent blend (or palette index), wind sway, optional surface UV. */
+export type RecipeVertex =
+  readonly [number, number, number, number, number] | readonly [number, number, number, number, number, number, number]
 /** One filled pixel: integer column (0 = centered), integer row, zero-based color band. */
 export type PixelCell = readonly [number, number, number]
 export type SpriteBuilder = (random: () => number) => readonly RecipeVertex[]
@@ -40,10 +39,12 @@ export const quad = (a: RecipeVertex, b: RecipeVertex, c: RecipeVertex, d: Recip
   d,
 ]
 
-export const rotate_y = ([x, y, z, blend, sway]: RecipeVertex, yaw: number): RecipeVertex => {
+export const rotate_y = (vertex: RecipeVertex, yaw: number): RecipeVertex => {
+  const [x, y, z, blend, sway] = vertex
   const cos_yaw = Math.cos(yaw)
   const sin_yaw = Math.sin(yaw)
-  return [x * cos_yaw + z * sin_yaw, y, z * cos_yaw - x * sin_yaw, blend, sway]
+  const position = [x * cos_yaw + z * sin_yaw, y, z * cos_yaw - x * sin_yaw, blend, sway] as const
+  return vertex.length === 5 ? position : [...position, vertex[5], vertex[6]]
 }
 
 const merge_cells = (cells: readonly PixelCell[]): ReadonlyMap<string, number> => {

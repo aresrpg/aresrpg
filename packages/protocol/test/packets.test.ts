@@ -167,6 +167,7 @@ describe('the wire contract', () => {
       'packet/leaderboard_observe',
       'packet/spectate',
       'packet/fight_preview',
+      'packet/fight_nearby',
       'packet/character_owner_request',
       'packet/admin_request',
       'packet/ping',

@@ -122,3 +122,55 @@ test('a transient item read failure is not cached', async () => {
   expect(await read('0xhat')).toMatchObject({ id: '0xhat', name: 'Hat' })
   expect(calls).toBe(2)
 })
+
+test('linked pets retain feed power while never-fed pets start at zero', async () => {
+  const feed_name = { type: '0xgame::pet::FeedKey', bcs: new Uint8Array([0]) }
+  let fields = [{ name: feed_name }]
+  const calls: string[] = []
+  const client = {
+    core: {
+      getObjects: async () => ({
+        objects: [
+          {
+            objectId: '0xpet',
+            type: '0xgame::item::Item',
+            json: { name: 'Pet', item_type: 'pet', category: 'pet', level: 1 },
+          },
+        ],
+      }),
+      listDynamicFields: async () => ({ dynamicFields: fields }),
+      getDynamicField: async ({ name }: { name: { type: string } }) => {
+        calls.push(name.type)
+        return { dynamicField: { value: { bcs: new Uint8Array([30, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]) } } }
+      },
+    },
+  }
+  expect(await read_item_snapshot(client, '0xgame', '0xpet')).toMatchObject({ pet_power: 30 })
+  expect(calls).toEqual(['0xgame::pet::FeedKey'])
+  fields = []
+  expect(await read_item_snapshot(client, '0xgame', '0xpet')).toMatchObject({ pet_power: 0 })
+})
+
+test('captured mainnet pet with no FeedKey contributes zero power', async () => {
+  const fixture = (await import('./fixtures/item_snapshot_pet.mainnet.json')).default
+  // Public Item and dynamic-field IDs, versions and capture timestamp are retained in the fixture.
+  const client = {
+    core: {
+      getObjects: async () => ({ objects: [fixture.item] }),
+      listDynamicFields: async () => ({
+        dynamicFields: fixture.fields.map(({ name }) => ({ name: { type: name.type, bcs: fromHex(name.bcs_hex) } })),
+      }),
+      getDynamicField: async ({ name }: { name: { type: string } }) => ({
+        dynamicField: {
+          value: {
+            bcs: fromHex(fixture.fields.find((field) => field.name.type === name.type)!.value_bcs_hex),
+          },
+        },
+      }),
+    },
+  }
+  const result = await read_item_snapshot(client, fixture.item.type.split('::')[0]!, fixture.item.objectId)
+  expect(result.pet_power).toBe(0)
+  expect(result.category).toBe('pet')
+  expect(result.stats).toBeDefined()
+})

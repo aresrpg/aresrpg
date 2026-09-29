@@ -326,7 +326,6 @@
   width: 100%;
   max-width: 1280px;
   margin-inline: auto;
-  padding: var(--s-5);
 }
 
 .gw-tab .jobs {

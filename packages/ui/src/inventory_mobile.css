@@ -1,0 +1,178 @@
+/* Only the bag collection scrolls horizontally on landscape touch screens. */
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .game-character-scrim {
+    padding: 4px;
+  }
+  .game-character-window {
+    width: calc(100cqw - 8px);
+    height: calc(100cqh - 8px);
+  }
+  .game-character-window > .aui-window-header {
+    min-height: 38px;
+    padding: 4px 36px;
+  }
+  .game-character-window .aui-window-header h1 {
+    font-size: 18px;
+  }
+  .game-character-body > .chr-equip {
+    grid-template-columns: minmax(280px, 0.85fr) minmax(300px, 1.15fr);
+    gap: 8px;
+    padding: 6px;
+  }
+  .game-character-body .chr-equip__side {
+    position: static;
+    gap: 5px;
+  }
+  .game-character-body .inv__doll--portrait .inv__doll-body {
+    gap: 4px;
+    padding: 0;
+  }
+  .game-character-body .inv__rig {
+    grid-template-columns: repeat(4, 44px);
+    grid-template-rows: repeat(4, 44px);
+    gap: 4px;
+    justify-content: end;
+    align-content: center;
+  }
+  .game-character-body .inv__rig .inv__slot {
+    width: 44px;
+    height: 44px;
+  }
+  .game-character-body .inv__portrait {
+    inset: 0 186px 0 0;
+  }
+  .game-character-body .inv__relics {
+    grid-template-columns: repeat(6, 44px);
+    gap: 4px;
+    padding: 2px 0;
+  }
+  .game-character-body .inv__relics .inv__slot {
+    width: 44px;
+    height: 44px;
+  }
+  .game-character-body .chr-equip__totals {
+    display: none;
+  }
+  .game-character-body .chr-equip__bag {
+    padding: 6px;
+    gap: 6px;
+  }
+  .game-character-body .chr-equip__bagtabs {
+    height: 50px;
+    gap: 10px;
+    padding: 0 10px;
+  }
+  .game-character-body .chr-bagtab {
+    flex-basis: 58px;
+    height: 48px;
+  }
+  .inventory-search {
+    min-height: 36px;
+  }
+  .game-character-body .chr-equip__grid {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-template-rows: repeat(auto-fill, 44px);
+    grid-auto-columns: 44px;
+    grid-auto-rows: 44px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    align-content: start;
+    justify-content: start;
+    gap: 4px;
+  }
+  .game-character-body .chr-cell {
+    width: 44px;
+    height: 44px;
+  }
+  .game-character-body .chr-equip__detail {
+    inset: 6px;
+    padding: 10px;
+    gap: 4px;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    max-width: none;
+    padding: 0 30px 0 0;
+    gap: 12px;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] > header {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] > header > img {
+    width: 68px;
+    height: 68px;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] > .h-px {
+    display: none;
+  }
+  .game-character-body .chr-equip__detail [data-active-item-stats] {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(5, minmax(24px, auto));
+    grid-auto-columns: minmax(150px, 1fr);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+}
+
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-character-body .inv__rig [data-equipment-slot] {
+    grid-area: auto;
+  }
+  .game-character-body .chr-bagtab {
+    gap: 3px;
+    padding: 4px;
+  }
+  .inventory-category-name {
+    font-size: 10px;
+  }
+  .inventory-category-count {
+    font-size: 8px;
+    top: 4px;
+  }
+  .game-character-body .chr-bagtab img {
+    width: 28px;
+    height: 28px;
+  }
+  .game-character-body .inv__slot-placeholder {
+    width: 28px;
+    height: 28px;
+  }
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-character-body .inv__portrait {
+    inset: 0 186px 0 0;
+  }
+  .game-character-body .inv__rig {
+    padding-inline: 4px;
+  }
+  .inventory-commit-bar {
+    height: 30px;
+  }
+  .inventory-resource-filter {
+    min-height: 32px;
+  }
+}
+
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-character-body .inventory-commit-bar {
+    position: absolute;
+    left: 4px;
+    right: auto;
+    top: auto;
+    bottom: 54px;
+    max-width: calc(100% - 188px);
+    flex-wrap: wrap;
+    justify-content: center;
+    z-index: 3;
+    height: auto;
+    padding: 5px;
+    border-radius: 4px;
+    background: #141a22f5;
+    box-shadow: 0 3px 12px #0006;
+  }
+}

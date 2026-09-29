@@ -93,3 +93,10 @@ describe('biome music', () => {
     expect(biome_music_position({ x: 4, z: 8 }, true, checkpoint)).toEqual({ x: 4, z: 8 })
   })
 })
+
+test('the demo uses the Mosswood exploration and fight pair', () => {
+  expect(biome_music_pair('demo:mosswood')).toEqual({
+    roam: '/music/mosswood.mp3',
+    battle: '/music/mosswood_battle.mp3',
+  })
+})

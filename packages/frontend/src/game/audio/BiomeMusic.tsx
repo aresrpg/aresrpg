@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- HTML media and its React ref are browser-owned mutable effect boundaries. */
 // Presentation-edge observer: current biome selects the bed; mounted fight state selects its twin.
 
 import {
@@ -9,13 +8,15 @@ import {
   sample_world_column,
   type CompiledWorld,
 } from '@aresrpg/engine'
-import { chain_to_client_coordinate } from '@aresrpg/immutable'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 import { city_at_position, world_city_areas, world_terrain } from '../../content/worlds.ts'
+import { selected_checkpoint_position } from '../../modules/engine_selection.ts'
+
 import { useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
-import { master_volume_from, scale_audio_volume } from '../core/audio_volume.ts'
+import { MusicBed } from './MusicBed.tsx'
 import {
   biome_music_pair,
   biome_music_position,
@@ -23,7 +24,6 @@ import {
   initial_biome_music_follow,
 } from './biome_music.ts'
 
-const MUSIC_VOLUME = 0.35
 type MusicPosition = Readonly<{ x: number; z: number }>
 
 const music_area_at = (
@@ -39,44 +39,28 @@ const music_area_at = (
   return `${world_name ?? 'guest'}:${area}`
 }
 
-const play = (player: HTMLAudioElement): void => {
-  void player.play().catch((error: unknown) => {
-    if (!(error instanceof DOMException) || error.name !== 'NotAllowedError')
-      console.warn('Biome music could not play.', error)
-  })
-}
-
-export const BiomeMusic = () => {
+export const BiomeMusic = ({ area }: Readonly<{ area?: string }>) => {
   const pose = useWorldPose()
-  const enabled = useAppStore(({ settings }) => settings.music_enabled)
-  const master_volume = useAppStore(({ settings }) => master_volume_from(settings.master_volume))
   const fight_active = useAppStore(({ fight }) => fight.mode !== null && fight.mounted)
   const character = useAppStore(({ session }) =>
     session.characters.find(({ id }) => id === session.selected_character_id)
   )
   const world_name = character?.world ?? null
-  const player_ref = useRef<HTMLAudioElement | null>(null)
   const [biome_follow, set_biome_follow] = useState(initial_biome_music_follow)
 
   const compiled: CompiledWorld | null = useMemo(() => {
     const terrain = world_terrain(world_name)
     if (!terrain) return null
     try {
-      return compile_runtime_world_recipe(parse_world_recipe(terrain))
+      return compile_runtime_world_recipe(terrain)
     } catch (error) {
       console.error('Biome music could not compile the world recipe.', error)
       return null
     }
   }, [world_name])
-  const checkpoint_position =
-    character &&
-    character.world === character.checkpoint_world &&
-    typeof character.x === 'number' &&
-    typeof character.z === 'number'
-      ? Object.freeze({ x: chain_to_client_coordinate(character.x), z: chain_to_client_coordinate(character.z) })
-      : null
+  const checkpoint_position = useAppStore(useShallow(selected_checkpoint_position))
   const position = biome_music_position(pose, fight_active, checkpoint_position)
-  const sampled_music_key = music_area_at(world_name, position, compiled)
+  const sampled_music_key = area ?? music_area_at(world_name, position, compiled)
 
   useEffect(() => set_biome_follow(initial_biome_music_follow()), [world_name])
   useEffect(() => {
@@ -94,49 +78,7 @@ export const BiomeMusic = () => {
       ]),
     [compiled, world_name]
   )
-  const source = enabled && biome_key ? biome_music_pair(biome_key, biome_keys)[fight_active ? 'battle' : 'roam'] : null
+  const source = biome_key ? biome_music_pair(biome_key, biome_keys)[fight_active ? 'battle' : 'roam'] : null
 
-  useEffect(() => {
-    const player = player_ref.current
-    if (!source) {
-      player?.pause()
-      return
-    }
-    const active_player = player ?? new Audio()
-    if (!player) player_ref.current = active_player
-    active_player.pause()
-    active_player.src = source
-    active_player.loop = true
-    active_player.preload = 'auto'
-    active_player.volume = scale_audio_volume(MUSIC_VOLUME)
-    active_player.load()
-    play(active_player)
-  }, [source])
-
-  useEffect(() => {
-    if (player_ref.current) player_ref.current.volume = scale_audio_volume(MUSIC_VOLUME, master_volume)
-  }, [master_volume])
-
-  useEffect(() => {
-    const resume = (): void => {
-      const player = player_ref.current
-      if (source && player?.paused) play(player)
-    }
-    globalThis.addEventListener('pointerdown', resume)
-    globalThis.addEventListener('keydown', resume)
-    return () => {
-      globalThis.removeEventListener('pointerdown', resume)
-      globalThis.removeEventListener('keydown', resume)
-    }
-  }, [source])
-
-  useEffect(
-    () => () => {
-      player_ref.current?.pause()
-      player_ref.current = null
-    },
-    []
-  )
-
-  return null
+  return <MusicBed url={source} />
 }

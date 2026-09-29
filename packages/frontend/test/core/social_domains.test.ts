@@ -15,7 +15,7 @@ import {
   visible_trade_rows,
 } from '../../src/modules/trade.ts'
 
-const settings = { quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null } as const
+const settings = { quality: 'medium', music_enabled: true, render_distance: null } as const
 const party = {
   id: '0xp',
   members: [{ character_id: '0xa', name: 'Ari' }],

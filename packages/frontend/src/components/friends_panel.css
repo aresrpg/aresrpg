@@ -2,7 +2,7 @@
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 
 .friends-manager {
-  padding: 28px;
+  padding: 20px;
 }
 .friends-manager > header {
   display: flex;
@@ -31,7 +31,7 @@
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.2);
-  padding-left: 12px;
+  padding: 6px 6px 6px 12px;
   color: var(--color-muted);
 }
 .friends-manager__add input {
@@ -44,25 +44,6 @@
   font: 10px inherit;
   outline: none;
 }
-.friends-manager__add button {
-  display: flex;
-  align-self: stretch;
-  align-items: center;
-  gap: 6px;
-  border: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(74, 158, 255, 0.08);
-  padding: 0 14px;
-  color: #67adff;
-  cursor: pointer;
-  font-size: 8px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.friends-manager__add button:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-}
 .friends-manager__rows {
   display: grid;
   max-height: 360px;
@@ -72,7 +53,7 @@
 }
 .friends-manager__rows > p {
   margin: 0;
-  border: 1px dashed rgba(255, 255, 255, 0.09);
+  border: 0;
   border-radius: 8px;
   padding: 34px 12px;
   color: var(--color-muted);
@@ -123,21 +104,6 @@
   color: var(--color-muted);
   font-size: 8px;
 }
-.friends-manager__rows article > button {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #5d626d;
-  cursor: pointer;
-}
-.friends-manager__rows article > button:hover {
-  background: rgba(255, 90, 111, 0.08);
-  color: #ff667c;
-}
 .friends-manager__owned {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -175,7 +141,7 @@
   opacity: 0.35;
 }
 .friends-panel__confirm {
-  padding: 28px;
+  padding: 20px;
 }
 .friends-panel__confirm h2 {
   margin: 0 0 10px;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button, IconButton } from '@aresrpg/ui'
 import { Plus, UserRoundPlus, UsersRound, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -11,7 +12,6 @@ import { owned_party_invite_view, selected_party } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
-import { PartyInviteCard } from './PartyFrame.tsx'
 import { HudPanel } from './ui/HudPanel.tsx'
 import './friends_panel.css'
 
@@ -63,7 +63,6 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           </span>
         </button>
       </HudPanel>
-      <PartyInviteCard copy={copy} />
 
       {open && (
         <ModalFrame
@@ -77,7 +76,6 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <header>
               <UsersRound size={18} />
               <div>
-                <h2>{text('title')}</h2>
                 <p>{rows.length}</p>
               </div>
             </header>
@@ -90,9 +88,9 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 placeholder={text('placeholder')}
                 value={target}
               />
-              <button disabled={!target.trim() || !!pending} onClick={add} type="button">
+              <Button tone="primary" disabled={!target.trim() || !!pending} onClick={add}>
                 <Plus size={13} /> {text('add')}
-              </button>
+              </Button>
             </div>
             <div className="friends-manager__rows">
               {ordered.map((row) => {
@@ -107,9 +105,11 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       <strong>{observed_character?.name ?? friend_name(row)}</strong>
                       <span>{row.characters.join(' · ') || row.address}</span>
                     </div>
-                    <button aria-label={text('remove')} onClick={() => set_removing(row.address)} type="button">
-                      <X size={13} />
-                    </button>
+                    <IconButton
+                      label={text('remove')}
+                      onClick={() => set_removing(row.address)}
+                      icon={<X size={13} />}
+                    />
                   </article>
                 )
               })}
@@ -140,7 +140,6 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       {removing && (
         <ModalFrame close={() => set_removing(null)} close_label={text('cancel')} label={text('remove_title')} soft>
           <div className="friends-panel__confirm">
-            <h2>{text('remove_title')}</h2>
             <p>
               {text('remove_body', {
                 name: friend_name(
@@ -149,11 +148,9 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
               })}
             </p>
             <div>
-              <button className="btn-outline" onClick={() => set_removing(null)} type="button">
-                {text('cancel')}
-              </button>
-              <button
-                className="btn-gold"
+              <Button onClick={() => set_removing(null)}>{text('cancel')}</Button>
+              <Button
+                tone="danger"
                 onClick={() => {
                   dispatch_app({ type: 'friends/remove', address: removing })
                   set_removing(null)
@@ -161,7 +158,7 @@ export const FriendsPanel = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 type="button"
               >
                 {text('remove')}
-              </button>
+              </Button>
             </div>
           </div>
         </ModalFrame>

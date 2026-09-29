@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Notifications live TOP-RIGHT of the app, always (owner 2026-08-21: never centered, never
-// repositioned per page). Actions render inline on the toast's own line — the toast grows.
+// Notifications stay bottom-right across pages. Actions remain inline.
 
 import { useEffect, useState } from 'react'
 

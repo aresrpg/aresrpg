@@ -1,0 +1,511 @@
+/* Character windows keep a fixed content scale rather than stretching slots to fill space. */
+.game-character-scrim {
+  padding: 12px;
+  background: #080b1240;
+}
+.game-character-scrim[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.game-character-window {
+  width: min(880px, calc(100cqw - 24px));
+  height: min(650px, calc(100cqh - 24px));
+  min-height: 0;
+  background: #181d23;
+  border: 1px solid #171a25;
+  border-radius: 6px;
+  box-shadow:
+    0 8px 24px #0006,
+    inset 0 1px #cdcbd733;
+}
+.game-character-window > .aui-window-header {
+  min-height: 44px;
+  background: #2b3139;
+}
+.game-character-window .aui-window-meta {
+  display: none;
+}
+.game-character-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  container: app-content / inline-size;
+}
+.game-character-body > .chr-equip {
+  display: grid;
+  grid-template-columns: minmax(290px, 0.85fr) minmax(350px, 1.15fr);
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  gap: 10px;
+  padding: 10px;
+  font-family: var(--aui-font);
+}
+.game-character-body .chr-equip__side {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  min-height: 0;
+  gap: 8px;
+}
+.game-character-body .chr-eyebrow,
+.game-character-body .chr-equip__chip {
+  display: none;
+}
+.game-character-body .chr-equip__side > .flex {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  gap: 6px;
+}
+.game-character-body .inv__doll--portrait {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #192126;
+}
+.game-character-body .inv__doll--portrait .inv__doll-body {
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+  padding: 8px 0 0;
+}
+.game-character-body .inv__rig {
+  position: relative;
+  display: grid;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 44px 44px;
+  grid-template-rows: repeat(7, 44px);
+  align-content: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.game-character-body .inv__portrait {
+  position: absolute;
+  inset: 0 38px;
+  z-index: 1;
+}
+.game-character-body .inv__slot {
+  width: 46px;
+  height: 46px;
+  z-index: 2;
+  border: 1px solid #181d29;
+  border-radius: 5px;
+  background: #2b333d;
+  box-shadow:
+    inset 0 1px #bdc2ce44,
+    0 1px #80879a33;
+}
+.game-character-body .inv__slot:hover {
+  border-color: #c9ad7b;
+}
+.game-character-body .inv__slot-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.game-character-body .inv__slot-art {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+.game-character-body .inv__relics {
+  display: grid;
+  grid-template-columns: repeat(6, 46px);
+  width: 100%;
+  flex: none;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 0;
+  border-top: 1px solid #81839322;
+}
+.game-character-body .inv__relics .inv__slot {
+  width: 46px;
+  height: 46px;
+  background: #202632;
+}
+.game-character-body .chr-equip__totals {
+  flex: none;
+  min-height: 28px;
+  padding: 5px 8px;
+  background: #13181e;
+  border: 1px solid #181d29;
+  border-radius: 3px;
+  font: 10px/1.4 var(--aui-font);
+  color: #b6bdcb;
+}
+.game-character-body .chr-equip__totals > span {
+  font: inherit;
+  letter-spacing: 0.03em;
+}
+.game-character-body .chr-equip__bag {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  gap: 7px;
+  padding: 8px;
+  background: #151a20;
+  border: 1px solid #161c29;
+  border-radius: 5px;
+  box-shadow: inset 0 1px #b9c0d32a;
+  overflow: hidden;
+}
+.game-character-body .chr-equip__bagtabs {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 82px;
+  padding: 3px 18px;
+  border: 0;
+  background: none;
+}
+.game-character-body .chr-bagtab {
+  --category-face: #222a35;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  flex: 0 1 82px;
+  height: 74px;
+  padding: 8px;
+  border: 0;
+  border-radius: 0;
+  background: #424d5b;
+  color: #b5bfcd;
+  cursor: pointer;
+  clip-path: polygon(50% 0, 94% 15%, 100% 23%, 100% 77%, 94% 85%, 50% 100%, 6% 85%, 0 77%, 0 23%, 6% 15%);
+  box-shadow: none;
+}
+.game-character-body .chr-bagtab::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  clip-path: inherit;
+  background-color: var(--category-face);
+  background-image: url('./assets/panel_grain.webp');
+  background-size: 160px;
+  background-blend-mode: soft-light;
+  box-shadow:
+    inset 0 5px 10px #ffffff0a,
+    inset 0 -5px 10px #050b1266;
+}
+.game-character-body .chr-bagtab img {
+  width: 39px;
+  height: 39px;
+  transform: translateY(6px);
+  object-fit: contain;
+  filter: drop-shadow(0 3px 2px #0007);
+}
+.game-character-body .chr-bagtab.is-active {
+  --category-face: #695335;
+  background: #d6b16b;
+  color: #ffe6b6;
+}
+.game-character-body .chr-bagtab:hover {
+  background: #9faab4;
+}
+.game-character-body .chr-bagtab.is-active:hover {
+  background: #f1cd8a;
+}
+.game-character-body .chr-bagtab:focus-visible {
+  background: #f4db9b;
+  outline: none;
+}
+.inventory-category-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.inventory-category-count {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 700 10px var(--aui-font);
+  color: inherit;
+  text-shadow: 0 1px #0008;
+}
+.inventory-search {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 7px;
+  border: 1px solid #171c28;
+  border-radius: 3px;
+  background: #202636;
+  box-shadow: inset 0 1px 3px #0004;
+  color: #a1acbf;
+}
+.inventory-search input {
+  min-width: 0;
+  width: 100%;
+  padding: 5px 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  font: 400 12px var(--aui-font);
+  color: #e5e8ef;
+}
+.inventory-search input::placeholder {
+  color: #969fb2;
+}
+.inventory-search:focus-within {
+  border-color: #9ebed9;
+}
+.game-character-body [data-inventory-selection] {
+  display: none;
+}
+.game-character-body .chr-equip__grid {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  grid-auto-rows: auto;
+  gap: 4px;
+  padding: 1px;
+  align-content: start;
+  justify-content: start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #656d81 #252c3b;
+}
+.game-character-body .chr-cell {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  min-width: 0;
+  aspect-ratio: 1;
+  border: 1px solid #1f2635;
+  border-radius: 4px;
+  background: #2b323c;
+  box-shadow: inset 0 1px #c0c9db20;
+}
+.game-character-body .chr-cell.is-selected,
+.game-character-body .chr-cell:hover {
+  border-color: #ddbd7b;
+  background: #596075;
+}
+.game-character-body .chr-cell--empty {
+  opacity: 1;
+  background: #1b2028;
+  border-color: #1b2332;
+  box-shadow: inset 0 1px #8993a71a;
+}
+.game-character-body .chr-cell__art {
+  width: 87%;
+  height: 87%;
+  object-fit: contain;
+}
+.game-character-body .chr-cell__lvl {
+  left: 2px;
+  top: 2px;
+  color: #e0e4ed;
+  font: 8px/1 var(--aui-font);
+  text-shadow: 0 1px #000;
+}
+.game-character-body .chr-cell__amount {
+  right: 2px;
+  bottom: 1px;
+  font: 700 10px/1 var(--aui-font);
+  color: #fff;
+  text-shadow: 0 1px #000;
+}
+.game-character-body .chr-equip__detail {
+  position: absolute;
+  inset: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 12px;
+  background: #282f3efa;
+  border: 1px solid #0e1523;
+  border-radius: 5px;
+  box-shadow: inset 0 1px #b8c0d62b;
+}
+.inventory-item-close {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  z-index: 2;
+}
+.game-character-body .chr-equip__detail [data-item-detail-view] {
+  padding-top: 28px;
+}
+.game-character-body .chr-equip__detail > .aui-button:not(.inventory-item-close) {
+  margin-top: auto;
+  align-self: flex-end;
+}
+.game-character-window.gw-tab {
+  --bg: #252b38;
+  --surface-1: #2c3442;
+  --surface-2: #394252;
+  --surface-3: #485164;
+  --fg: #eeeef4;
+  --fg-muted: #b4b7c5;
+  --fg-faint: #9399ab;
+  --accent: #dfb16c;
+  --accent-strong: #f4cf96;
+  --accent-ink: #272421;
+  --accent-dim: #dfb16c20;
+  --hair: #8e97ab25;
+  --hair-strong: #8e97ab44;
+  --font-mono: var(--aui-font);
+  --font-ui: var(--aui-font);
+}
+.game-character-window .btn-gold,
+.game-character-window .btn-outline {
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 1px solid #161b26;
+  border-radius: 4px;
+  box-shadow: inset 0 1px #ced2dc33;
+  background: #4a5365;
+  color: #eceef4;
+  font: 700 12px var(--aui-font);
+  letter-spacing: 0;
+  text-transform: none;
+}
+.game-character-window .btn-gold {
+  background: #d6a866;
+  color: #28211b;
+  border-color: #4b3924;
+}
+
+.game-character-body .inv__rig > [data-equipment-slot='hat'] {
+  grid-area: 1/1;
+}
+.game-character-body .inv__rig > [data-equipment-slot='cloak'] {
+  grid-area: 2/1;
+}
+.game-character-body .inv__rig > [data-equipment-slot='weapon'] {
+  grid-area: 4/1;
+}
+.game-character-body .inv__rig > [data-equipment-slot='tool'] {
+  grid-area: 5/1;
+}
+.game-character-body .inv__rig > [data-equipment-slot='title'] {
+  grid-area: 6/1;
+}
+.game-character-body .inv__rig > [data-equipment-slot='pet'] {
+  grid-area: 7/1;
+}
+.game-character-body .inv__rig > [data-equipment-slot='amulet'] {
+  grid-area: 1/2;
+}
+.game-character-body .inv__rig > [data-equipment-slot='left_ring'] {
+  grid-area: 2/2;
+}
+.game-character-body .inv__rig > [data-equipment-slot='right_ring'] {
+  grid-area: 3/2;
+}
+.game-character-body .inv__rig > [data-equipment-slot='belt'] {
+  grid-area: 4/2;
+}
+.game-character-body .inv__rig > [data-equipment-slot='boots'] {
+  grid-area: 5/2;
+}
+/* Cosmetic slots belong to the same equipment grid, with a warm material. */
+.game-character-body .inv__cosmetics {
+  display: contents;
+}
+.game-character-body .inv__cosmetics .inv__slot {
+  width: 46px;
+  height: 46px;
+  min-height: 0;
+  background-color: #43372d;
+  border-color: #aa89644d;
+  box-shadow:
+    inset 0 1px #d5b48b30,
+    0 1px #0004;
+}
+.game-character-body .inv__cosmetics .inv__slot-placeholder {
+  margin: 0;
+}
+.game-character-body [data-equipment-slot='cosmetic_hat'] {
+  grid-area: 6 / 2;
+}
+.game-character-body [data-equipment-slot='cosmetic_cloak'] {
+  grid-area: 7 / 2;
+}
+.game-character-body .inv__slot-placeholder {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  opacity: 0.85;
+  filter: drop-shadow(0 1px 1px #050c14aa);
+}
+
+.inventory-commit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 32px;
+  flex: none;
+}
+.game-character-body .inv__rig {
+  padding-inline: 8px;
+}
+.game-character-body .inv__portrait {
+  inset-inline: 46px;
+}
+.game-character-body .chr-equip__totals {
+  height: 28px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.inventory-resource-filters {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid #ffffff0c;
+}
+.inventory-resource-filter {
+  flex: none;
+  padding: 5px 8px;
+  color: #a8afb9;
+  font: 600 11px var(--aui-font);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #ffffff04;
+  cursor: pointer;
+}
+.inventory-resource-filter[aria-pressed='true'] {
+  color: #eed0a0;
+  border-color: #ad997540;
+  background: #c7a66b12;
+}

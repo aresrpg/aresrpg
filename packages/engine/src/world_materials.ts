@@ -9,7 +9,7 @@ import {
   type MaterialPreset,
 } from './material_presets.ts'
 
-export type WorldMaterial = Readonly<{ color: string; preset: MaterialPreset }>
+export type WorldMaterial = Readonly<{ color: string; preset: MaterialPreset; emission?: number }>
 export type MaterialRole = 'surface' | 'subsurface' | 'filler' | 'liquid'
 export type MaterialUse = Readonly<{
   name: string
@@ -23,6 +23,7 @@ export type CompiledMaterial = Readonly<{
   paired_color: readonly [number, number, number]
   preset: MaterialPreset
   roughness: number
+  emission: number
   climate_tint: boolean
 }>
 export type CompiledMaterials = Readonly<{
@@ -45,6 +46,11 @@ export const material_color = (color: string): readonly [number, number, number]
   return [linear_channel((value >> 16) & 0xff), linear_channel((value >> 8) & 0xff), linear_channel(value & 0xff)]
 }
 
+const validate_emission = (name: string, value: unknown): readonly string[] =>
+  value === undefined || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 8)
+    ? []
+    : [`materials.${name}.emission must be between 0 and 8`]
+
 export const validate_materials = (materials: unknown): readonly string[] => {
   if (materials === null || typeof materials !== 'object' || Array.isArray(materials))
     return ['materials must be an object']
@@ -57,6 +63,7 @@ export const validate_materials = (materials: unknown): readonly string[] => {
       return
     }
     const material = value as Readonly<Record<string, unknown>>
+    errors.push(...validate_emission(name, material.emission))
     if (!is_color(material.color)) errors.push(`materials.${name}.color must be #rrggbb`)
     if (!is_material_preset(material.preset))
       errors.push(`materials.${name}.preset must be one of ${MATERIAL_PRESETS.join(', ')}`)
@@ -88,6 +95,7 @@ export const compile_materials = (
     preset: 'stone',
     roughness: MATERIAL_PRESET_DEFINITIONS.stone.roughness,
     climate_tint: false,
+    emission: 0,
   })
   const entries: CompiledMaterial[] = [empty]
 
@@ -102,6 +110,7 @@ export const compile_materials = (
       color: Object.freeze(material_color(authored.color)),
       paired_color: Object.freeze(material_color(paired.color)),
       preset: authored.preset,
+      emission: authored.emission ?? 0,
       roughness: MATERIAL_PRESET_DEFINITIONS[authored.preset].roughness,
       climate_tint: MATERIAL_PRESET_DEFINITIONS[authored.preset].climate_tint,
     })

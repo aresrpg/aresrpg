@@ -5,7 +5,7 @@ import { error_message } from './i18n/error_text.ts'
 import { report_error, type ReportContext } from './reporting.ts'
 
 export const TOAST_CONTAINER_CLASS =
-  'fixed top-[max(1rem,var(--safe-top))] right-[max(1rem,var(--safe-right))] z-[300] flex max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))] max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))] flex-col items-end gap-2 overflow-hidden'
+  'fixed bottom-[max(1rem,var(--safe-bottom))] right-[max(1rem,var(--safe-right))] z-[300] flex max-h-[calc(100dvh-max(1rem,var(--safe-top))-max(1rem,var(--safe-bottom)))] max-w-[min(24rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))] flex-col items-end gap-2 overflow-hidden'
 
 export const toast_glass_class =
   'flex flex-col gap-2 p-4 border border-white/10 bg-black/70 backdrop-blur-md rounded-[7px] animate-[slide-in_0.3s_ease-out]'

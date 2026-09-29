@@ -21,7 +21,7 @@ const city_world = (
     ...structuredClone(nauvis.terrain),
     structure_areas: [{ id, ...area, structure_packs: [] }],
   }
-  const world = compile_world_recipe(parse_world_recipe(terrain), { city_terrain: false })
+  const world = compile_world_recipe(terrain, { city_terrain: false })
   const [city] = world.structures.cities
   if (!city) throw new Error(`${id} did not compile`)
   return Object.freeze({ world, city })

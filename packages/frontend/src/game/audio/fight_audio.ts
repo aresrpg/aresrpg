@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Fight cue -> exact legacy file-backed audio mix. Presentation order is owned by
+// Authored spell sounds with elemental fallbacks. Presentation order is owned by
 // fight_presenter; this module only selects and plays the sound for each phase.
 
 import type { FightPresentationCue } from '@aresrpg/engine'
@@ -10,11 +10,12 @@ import type { HydratedFightCheckpoint, SpellEffect } from '@aresrpg/fight'
 import type { FightCuePhase } from '../fight/fight_presenter.ts'
 import {
   ELEMENT_AUDIO_VARIANTS,
+  SPELL_AUDIO,
   element_audio_key,
   fight_audio_keys_for_families,
-  play_fight_audio,
-  preload_fight_audio,
-} from './fight_audio_registry.ts'
+  play_audio,
+  preload_audio,
+} from './audio_registry.ts'
 
 type CharacterVoices = Readonly<Record<string, boolean>>
 
@@ -49,10 +50,15 @@ export const fight_audio_families = (checkpoint: Readonly<HydratedFightCheckpoin
   return Object.freeze([...families].sort())
 }
 
-export const preload_fight_sounds = (checkpoint: Readonly<HydratedFightCheckpoint>): void =>
-  preload_fight_audio(fight_audio_keys_for_families(fight_audio_families(checkpoint)))
+export const preload_fight_sounds = (checkpoint: Readonly<HydratedFightCheckpoint>): void => {
+  const classes = new Set(Object.values(checkpoint.sources.players).map(({ classe }) => classe))
+  const spells = Object.entries(checkpoint.sources.spells)
+    .filter(([, spell]) => classes.has(spell.classe))
+    .flatMap(([name]) => (SPELL_AUDIO[name] ? [SPELL_AUDIO[name]!] : []))
+  preload_audio([...fight_audio_keys_for_families(fight_audio_families(checkpoint)), ...spells])
+}
 
-export const play_fight_turn_start = (emit: (key: string, volume?: number) => void = play_fight_audio): void =>
+export const play_fight_turn_start = (emit: (key: string, volume?: number) => void = play_audio): void =>
   emit('turn_start')
 
 const fight_audio_family_layer = (family: string, layer: string): keyof typeof ELEMENT_AUDIO_VARIANTS => {
@@ -80,8 +86,50 @@ export const fight_audio_variant = (
   })
 }
 
+const play_cast_outcome = (
+  cue: Extract<FightPresentationCue, { type: 'cast' }>,
+  emit: (key: string, volume?: number) => void
+): void => {
+  if (cue.critical) emit('crit', 0.35)
+  if (cue.killed) emit('death', 0.4)
+}
+
+const play_cast_impact = (
+  cue: Extract<FightPresentationCue, { type: 'cast' }>,
+  variant: (family: string, layer: string) => string,
+  emit: (key: string, volume?: number) => void
+): void => {
+  emit(
+    cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'),
+    cue.element === 'heal' ? 0.35 : 0.5
+  )
+}
+
+const play_cast = (
+  cue: Extract<FightPresentationCue, { type: 'cast' }>,
+  phase: FightCuePhase,
+  variant: (family: string, layer: string) => string,
+  emit: (key: string, volume?: number) => void
+): void => {
+  const authored = SPELL_AUDIO[cue.spell]
+  if (phase === 'start') {
+    const start = authored ?? CAST_CHARGE[cue.element]
+    if (start) emit(start)
+    return
+  }
+  if (authored) {
+    play_cast_outcome(cue, emit)
+    return
+  }
+  emit('cast_resolve')
+  if (cue.amount <= 0 && !['trap', 'glyph'].includes(cue.style)) return
+  play_cast_impact(cue, variant, emit)
+  play_cast_outcome(cue, emit)
+  if (cue.affected_cells.length >= 3 && cue.element !== 'heal') emit(variant(cue.element, 'aoe'), 0.32)
+}
+
 export const create_fight_audio_observer = (
-  emit: (key: string, volume?: number) => void = play_fight_audio,
+  emit: (key: string, volume?: number) => void = play_audio,
   random: () => number = Math.random
 ) => {
   const last_variant = new Map<string, number>()
@@ -92,23 +140,7 @@ export const create_fight_audio_observer = (
     return resolved.key
   }
   return (cue: FightPresentationCue, phase: FightCuePhase, character_voices: CharacterVoices): void => {
-    if (cue.type === 'cast') {
-      if (phase === 'start') {
-        const charge = CAST_CHARGE[cue.element]
-        if (charge) emit(charge)
-        return
-      }
-      emit('cast_resolve')
-      if (cue.amount <= 0 && cue.style !== 'trap' && cue.style !== 'glyph') return
-      emit(
-        cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'),
-        cue.element === 'heal' ? 0.35 : 0.5
-      )
-      if (cue.critical) emit('crit', 0.45)
-      if (cue.killed) emit('death', 0.4)
-      if (cue.affected_cells.length >= 3 && cue.element !== 'heal') emit(variant(cue.element, 'aoe'), 0.32)
-      return
-    }
+    if (cue.type === 'cast') return play_cast(cue, phase, variant, emit)
     if (phase !== 'start') return
     if (cue.type === 'zone') {
       emit(cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'), 0.5)

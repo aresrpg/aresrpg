@@ -167,6 +167,23 @@ describe('shipped content assets', () => {
     }
   })
 
+  test('every authored class owns transparent HD and runtime portraits', () => {
+    for (const classe of authored_character_model_classes)
+      for (const male of [true, false]) {
+        const { body } = character_model_basenames(classe, male)
+        for (const [suffix, size] of [
+          ['_hd', 1024],
+          ['', 512],
+        ] as const) {
+          const path = seed('icons/characters', `${body}${suffix}.png`)
+          expect(png_dimensions(path)).toEqual({ width: size, height: size })
+          expect(readFileSync(path)[25]).toBe(6) // PNG IHDR color type: truecolor with alpha.
+        }
+      }
+    expect(png_dimensions(seed('icons/items/solomonk_hd.png'))).toEqual({ width: 512, height: 512 })
+    expect(png_dimensions(seed('icons/items/solomonk.png'))).toEqual({ width: 64, height: 64 })
+  })
+
   test('development mob icons bypass the boot-time Vite glob when a file is added', () => {
     const registry = readFileSync(resolve(import.meta.dir, '../../src/content/assets.ts'), 'utf8')
 

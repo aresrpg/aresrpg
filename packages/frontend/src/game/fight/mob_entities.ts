@@ -4,10 +4,15 @@
 
 import type { MobEntityRender } from '@aresrpg/engine'
 
+import { mob_model_render } from '../../content/mob_models.ts'
+
 import { mob_entities } from '../mob_entities.ts'
 import type { FightMobRenderSource } from './mob_entity_sources.ts'
 
-export const fight_mob_entities = (sources: readonly FightMobRenderSource[]): readonly MobEntityRender[] =>
+export const fight_mob_entities = (
+  sources: readonly FightMobRenderSource[],
+  model_for = mob_model_render
+): readonly MobEntityRender[] =>
   mob_entities(
     sources.map(({ id, mob_type, cell, side, level_scalar, visual_effect }) =>
       Object.freeze({
@@ -18,5 +23,6 @@ export const fight_mob_entities = (sources: readonly FightMobRenderSource[]): re
         level_scalar,
         ...(visual_effect ? { visual_effect } : {}),
       })
-    )
+    ),
+    model_for
   )

@@ -5,7 +5,6 @@ import { describe, expect, test } from 'bun:test'
 
 import worlds from '../../../seed/content/worlds.json'
 import { compile_city_structure } from '../src/cities/city_structure.ts'
-import { flat_burn_field } from '../src/flat_nodes.ts'
 import { greedy_mesh } from '../src/greedy_mesher.ts'
 import { get_quality_profile } from '../src/quality.ts'
 import { structure_placements } from '../src/structure_placement.ts'
@@ -13,7 +12,6 @@ import type { StructurePlacement } from '../src/structure_placement.ts'
 import { create_terrain_planner } from '../src/terrain_planner.ts'
 import { chunk_origin, generate_chunk, surface_chunk_layers } from '../src/terrain_generator.ts'
 import { TERRAIN_POOL_LAYOUT } from '../src/terrain_pool.ts'
-import { create_upload_capacity_gate } from '../src/webgpu_backend.ts'
 import {
   BIOME_SLOTS,
   compile_world_recipe,
@@ -44,18 +42,6 @@ const WORLD = compile_world_recipe({
       ],
     },
   ],
-})
-
-test('terrain upload backpressure sleeps until resident capacity is released', () => {
-  const gate = create_upload_capacity_gate()
-
-  expect(gate.can_drain()).toBeTrue()
-  gate.block()
-  expect(gate.can_drain()).toBeFalse()
-  expect(gate.blocked_count(37)).toBe(37)
-  gate.release()
-  expect(gate.can_drain()).toBeTrue()
-  expect(gate.blocked_count(37)).toBe(0)
 })
 
 describe('terrain generation', () => {
@@ -127,6 +113,7 @@ describe('terrain generation', () => {
   test('plans the voxel below a surface on an exact chunk boundary', () => {
     const boundary = compile_world_recipe({
       ...WORLD.recipe,
+      portal: false,
       biomes: WORLD.recipe.biomes.map((biome) => ({
         ...biome,
         landscape: biome.landscape.map((knot) => ({ ...knot, y: CHUNK_EDGE })),
@@ -179,14 +166,6 @@ describe('terrain generation', () => {
 
     expect(new Set(chunks.map(({ resolution }) => resolution))).toEqual(new Set([32]))
     expect(new Set(chunks.map(({ cell_size }) => cell_size))).toEqual(new Set([1]))
-  })
-
-  test('the flat transition field is continuous in world space', () => {
-    const sample = flat_burn_field(73.25, -41.5)
-    const adjacent = flat_burn_field(73.26, -41.5)
-
-    expect(Math.abs(adjacent - sample)).toBeLessThan(0.01)
-    expect(flat_burn_field(180, 90)).not.toBeCloseTo(sample, 3)
   })
 })
 
@@ -271,7 +250,7 @@ describe('terrain streaming', () => {
   test('the shared terrain pool fits Nauvis high-quality residency with movement headroom', () => {
     const first_world = worlds.find(({ world }) => world === 'nauvis')
     if (!first_world) throw new Error('Nauvis is missing')
-    const compiled = compile_world_recipe(parse_world_recipe(first_world.terrain))
+    const compiled = compile_world_recipe(first_world.terrain)
     const radius = get_quality_profile('high').chunks.far_radius
     let required_slots = 0
 

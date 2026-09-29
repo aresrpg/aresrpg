@@ -494,7 +494,7 @@ export const BiomePage = () => {
           <nav className="grid shrink-0 grid-cols-5 border-b border-white/8 bg-black/15">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
-                className={`flex h-10 items-center justify-center gap-1.5 border-b-2 text-[7px] tracking-[0.1em] uppercase ${tab === id ? 'border-[#c8963c] bg-[#c8963c]/7 text-[#e0b86b]' : 'border-transparent text-[#747883] hover:text-[#d8d3ca]'}`}
+                className={`aui-button h-10 gap-1.5 text-[9px] ${tab === id ? 'aui-button--primary' : 'aui-button--neutral'}`}
                 key={id}
                 onClick={() => set_tab(id)}
                 type="button"

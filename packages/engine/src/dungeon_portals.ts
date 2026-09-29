@@ -1,29 +1,26 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Small tracked dungeon gates: one shared blue portal shader/geometry/material, with bounded
-// per-gate motes. Zone truth replaces the whole marker set.
+// Upright dungeon membranes fit the same voxel arch as the spawn portal. Terrain owns
+// the demonic frame; Sceat and the entrance interaction remain frontend-owned.
 
-import { BufferAttribute, BufferGeometry, CircleGeometry, Group, Mesh, Points, PointsMaterial, type Scene } from 'three'
+import { BufferAttribute, BufferGeometry, Group, Mesh, Points, PointsMaterial, type Scene } from 'three'
 
-import { flat_terrain_amount, project_height } from './flatten.ts'
-import { create_portal_material } from './portal.ts'
+import { create_portal_geometry, create_portal_material } from './portal.ts'
+import { PORTAL_ARCH, dungeon_gate_position } from './portal_shape.ts'
 import type { DungeonPortalMarker } from './types.ts'
 import { sample_world_column, type CompiledWorld } from './world_recipe.ts'
 
-const RADIUS = 6.8
-export const DUNGEON_PORTAL_ROOT_HEIGHT = RADIUS * 0.2 + 2
-const LABEL_DROP_FROM_CROWN = 2.5
-/** The tag sits inside the portal's tall silhouette instead of floating above the screen center. */
-export const DUNGEON_PORTAL_LABEL_HEIGHT = RADIUS * 1.2 - LABEL_DROP_FROM_CROWN
+const RADIUS = PORTAL_ARCH.half_width
+const ARCH_HEIGHT = PORTAL_ARCH.spring_height + PORTAL_ARCH.half_width
 const CULL_RANGE_SQUARED = 120 * 120
 const PARTICLES = 22
-const BLUE = [0.08, 0.48, 1] as const
+const GATE_COLOR = [0.48, 0.015, 0.26] as const
 const HUM_RANGE = 28
 
 export const portal_hum_gain = (distance: number, volume = 1): number =>
   0.055 * volume * Math.max(0, 1 - Math.max(0, distance) / HUM_RANGE)
 
-type PortalSlot = Readonly<{ root: Group; particles: Points; base_y: number }>
+type PortalSlot = Readonly<{ root: Group; particles: Points }>
 
 const particle_geometry = (seed: number): BufferGeometry => {
   const positions = new Float32Array(PARTICLES * 3)
@@ -31,7 +28,7 @@ const particle_geometry = (seed: number): BufferGeometry => {
     const angle = (index / PARTICLES) * Math.PI * 2 + seed * 0.017
     const distance = RADIUS * (0.72 + ((index * 17 + seed) % 19) / 42)
     positions[index * 3] = Math.cos(angle) * distance
-    positions[index * 3 + 1] = Math.sin(angle) * distance
+    positions[index * 3 + 1] = ARCH_HEIGHT / 2 + Math.sin(angle) * distance
     positions[index * 3 + 2] = ((index * 13 + seed) % 11) / 25 - 0.2
   }
   const geometry = new BufferGeometry()
@@ -43,12 +40,14 @@ const hash = (value: string): number =>
   [...value].reduce((result, character) => (Math.imul(result, 31) + character.charCodeAt(0)) >>> 0, 0)
 
 export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene; world: CompiledWorld }>) => {
-  const geometry = new CircleGeometry(RADIUS, 48)
-  const material = create_portal_material({ radius: RADIUS, emission_color: BLUE, gain: 2.15 })
-  const particle_material = new PointsMaterial({ color: 0x52b6ff, size: 0.16, transparent: true, opacity: 0.82 })
+  const geometry = create_portal_geometry()
+  const material = create_portal_material({
+    emission_color: GATE_COLOR,
+    gain: 1.7,
+  })
+  const particle_material = new PointsMaterial({ color: 0xe34ca6, size: 0.16, transparent: true, opacity: 0.82 })
   const slots = new Map<string, PortalSlot>()
   let markers: readonly DungeonPortalMarker[] = Object.freeze([])
-  let flatten = 0
   let active = true
   let volume = 1
   let audio: Readonly<{ context: AudioContext; gain: GainNode; oscillators: readonly OscillatorNode[] }> | null = null
@@ -92,20 +91,17 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
   }
   const place = (marker: DungeonPortalMarker): void => {
     if (slots.has(marker.id)) return
-    const base_y = sample_world_column(world, marker.x, marker.z).surface_y
+    const position = dungeon_gate_position(marker.x, marker.z)
+    const base_y = sample_world_column(world, position.x, position.z).surface_y
     const root = new Group()
     const disc = new Mesh(geometry, material)
     const particles = new Points(particle_geometry(hash(marker.id)), particle_material)
     disc.renderOrder = 2
     root.add(disc, particles)
-    root.position.set(
-      marker.x,
-      project_height(base_y, flat_terrain_amount(flatten)) + DUNGEON_PORTAL_ROOT_HEIGHT,
-      marker.z
-    )
+    root.position.set(position.x, base_y, position.z)
     root.visible = false
     scene.add(root)
-    slots.set(marker.id, Object.freeze({ root, particles, base_y }))
+    slots.set(marker.id, Object.freeze({ root, particles }))
   }
 
   return Object.freeze({
@@ -114,14 +110,6 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
       const wanted = new Set(markers.map(({ id }) => id))
       for (const id of [...slots.keys()]) if (!wanted.has(id)) remove(id)
       markers.forEach(place)
-    },
-    set_flatten: (amount: number): void => {
-      flatten = amount
-      markers.forEach((marker) => {
-        const slot = slots.get(marker.id)
-        if (!slot) return
-        slot.root.position.y = project_height(slot.base_y, flat_terrain_amount(flatten)) + DUNGEON_PORTAL_ROOT_HEIGHT
-      })
     },
     set_active: (next: boolean): void => {
       active = next
@@ -138,7 +126,7 @@ export const create_dungeon_portals = ({ scene, world }: Readonly<{ scene: Scene
         const dz = viewer_z - root.position.z
         root.visible = active && dx * dx + dy * dy + dz * dz < CULL_RANGE_SQUARED
         if (root.visible) nearest = Math.min(nearest, Math.hypot(dx, dy, dz))
-        particles.rotation.z = now * 0.00018
+        particles.position.y = Math.sin(now * 0.001 + root.position.x) * 0.15
         particles.scale.setScalar(0.96 + Math.sin(now * 0.0015 + root.position.x) * 0.05)
       })
       if (audio)

@@ -56,6 +56,15 @@ const tint_noise = (raw_px: Node<'float'>, raw_pz: Node<'float'>, salt: number) 
   return mix(mix(h(x0, z0), h(x0.add(1), z0), ux), mix(h(x0, z0.add(1)), h(x0.add(1), z0.add(1)), ux), uz)
 }
 
+/** Optional authored radiance stays independent of AO, sky light and shadow visibility. */
+export const material_emission_node = (materials: CompiledMaterials, material_id: Node<'uint'>): Node<'vec3'> => {
+  if (!materials.entries.some((entry) => entry.emission > 0)) return vec3(0)
+  return uniformArray(
+    materials.entries.map((entry) => new Vector3(...entry.color).multiplyScalar(entry.emission)),
+    'vec3' as const
+  ).element(int(material_id)) as unknown as Node<'vec3'>
+}
+
 /** Macro MOISTURE at a world XZ [0,1] — the tint's low-frequency octave, exposed as the ONE
  * moisture home (water, future foliage, and gameplay dressing read the same field). */
 export const macro_moisture_node = (px: Node<'float'>, pz: Node<'float'>) =>

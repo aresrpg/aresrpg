@@ -3,6 +3,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { create_character_source, create_fight } from '@aresrpg/fight'
+import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 import { EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import { encyclopedia_catalog } from '../../../src/content/catalog.ts'
@@ -46,7 +47,7 @@ describe('fight character projection', () => {
       classe: 'senshi',
       male: true,
       colors: appearance.colors,
-      loadout: {},
+      loadout: { title: 'title_veteran' },
       cell: 9,
       side: 'a',
     } as const
@@ -60,7 +61,10 @@ describe('fight character projection', () => {
       },
     ] as const
 
-    expect(fight_character_entities_from_loaded([source], loaded)[0]?.anchor).toEqual({ kind: 'fight_cell', cell: 9 })
+    expect(fight_character_entities_from_loaded([source], loaded)[0]).toMatchObject({
+      anchor: { kind: 'fight_cell', cell: 9 },
+      aura: 'unbroken',
+    })
   })
 
   test('projects every seat — placed simulator characters and checkpoint players alike', () => {
@@ -109,6 +113,7 @@ describe('fight character projection', () => {
       ...checkpoint.sources.players.missing!,
       hat: 'solomonk',
       cloak: 'cape_fuwa_black',
+      title: 'title_veteran',
     } as never
     const sources = fight_character_entity_sources(checkpoint, [
       {
@@ -127,7 +132,7 @@ describe('fight character projection', () => {
       classe: 'yogan',
       male: false,
       colors: ['#123456', '#789abc', '#def012'],
-      loadout: { hat: 'solomonk', cloak: 'cape_fuwa_black' },
+      loadout: { hat: 'solomonk', cloak: 'cape_fuwa_black', title: 'title_veteran' },
       side: 'b',
     })
   })
@@ -198,4 +203,30 @@ describe('fight character projection', () => {
     } as never
     expect(fight_mob_entity_sources(checkpoint)[0]?.level_scalar).toBe(fixed ? 50 : 100)
   })
+})
+
+test('a remote administrator fight aura derives from the fighter owner without a title or server aura field', () => {
+  const source = create_character_source({ classe: 'senshi', level: 1n })
+  const checkpoint = create_fight({
+    mode: 'local',
+    setup: { players: [{ character: 'admin', owner: DEFAULT_ADMIN_ADDRESS, team: 0n, hp: 55n, source }], mobs: [] },
+  }).state()
+  const sources = fight_character_entity_sources(checkpoint, [])
+  const appearance = {
+    body_url: null,
+    hair_url: null,
+    colors: ['#fff', '#fff', '#fff'],
+    worn: { head: null, back: null },
+  } as const
+  const loaded = [
+    {
+      id: 'fight_character_0',
+      kind: 'character',
+      appearance,
+      anchor: { kind: 'fight_cell', cell: 0 },
+      facing: { kind: 'yaw', yaw: 0 },
+    },
+  ] as const
+  expect(sources[0]?.owner).toBe(DEFAULT_ADMIN_ADDRESS)
+  expect(fight_character_entities_from_loaded(sources, loaded)[0]?.aura).toBe('admin')
 })

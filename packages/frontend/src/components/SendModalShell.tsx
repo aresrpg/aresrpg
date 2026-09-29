@@ -1,14 +1,20 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Check, Copy, ExternalLink, X } from 'lucide-react'
+import { Check, Copy, ExternalLink } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { NativeModal, GameWindow } from '@aresrpg/ui'
 
 import { env } from '../env.ts'
 import { explorer_transaction_url } from '../explorer.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 
-import { NativeModal } from './ModalFrame.tsx'
+export const TransferFact = ({ label, value }: Readonly<{ label: string; value: ReactNode }>) => (
+  <div className="flex items-center justify-between gap-3 text-[10px] tracking-wide">
+    <span className="text-[9px] tracking-[0.2em] text-muted uppercase">{label}</span>
+    <span className="text-text">{value}</span>
+  </div>
+)
 
 export const truncate_digest = (digest: string): string =>
   digest.length <= 16 ? digest : `${digest.slice(0, 10)}...${digest.slice(-6)}`
@@ -71,39 +77,17 @@ export const SendModalShell = ({
   title: string
   tone?: 'default' | 'success' | 'danger'
 }>) => {
-  const { border_color, glow, title_color } = {
-    default: { border_color: 'var(--color-border)', glow: 'none', title_color: '#c8963c' },
-    success: { border_color: 'rgba(52,211,153,0.5)', glow: '0 0 30px rgba(52,211,153,0.12)', title_color: '#34d399' },
-    danger: { border_color: 'rgba(239,68,68,0.45)', glow: '0 0 30px rgba(239,68,68,0.10)', title_color: '#f87171' },
-  }[tone]
   return (
-    <NativeModal
-      close={locked ? null : close}
-      label={title}
-      className="pointer-events-auto fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm max-sm:p-0"
-    >
-      <div
-        className="flex max-h-[90vh] w-full max-w-xl flex-col bg-surface max-sm:h-full max-sm:max-h-none"
-        style={{ border: `1px solid ${border_color}`, boxShadow: glow }}
-        onClick={(event) => event.stopPropagation()}
+    <NativeModal close={locked ? null : close} label={title} className="aui-modal-scrim">
+      <GameWindow
+        title={title}
+        close={locked ? null : close}
+        close_label={close_label}
+        className="aui-send-window"
+        data-tone={tone}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-3">
-          <span className="text-[13px] font-semibold tracking-[0.3em] uppercase" style={{ color: title_color }}>
-            {title}
-          </span>
-          {!locked && (
-            <button
-              aria-label={close_label}
-              className="cursor-pointer opacity-40 transition-opacity hover:opacity-80"
-              onClick={close}
-              type="button"
-            >
-              <X className="text-muted" size={16} />
-            </button>
-          )}
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-      </div>
+        <div className="aui-send-body">{children}</div>
+      </GameWindow>
     </NativeModal>
   )
 }

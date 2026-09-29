@@ -40,13 +40,13 @@ describe('fast cloud field', () => {
     expect(cloud_coverage_threshold(1)).toBeLessThan(cloud_coverage_threshold(0))
   })
 
-  test('fight boards disable the visible cloud deck regardless of quality', () => {
+  test('immersive fight boards disable the visible cloud deck regardless of quality', () => {
     expect(cloud_layer_visible('high', false)).toBeTrue()
     expect(cloud_layer_visible('high', true)).toBeFalse()
     expect(cloud_layer_visible('low', false)).toBeFalse()
     expect(cloud_layer_visible('high', false, false)).toBeFalse()
     const backend = readFileSync(new URL('../src/webgpu_backend.ts', import.meta.url), 'utf8')
-    expect(backend).toContain('clouds.set_active(board === null)')
+    expect(backend).toContain('clouds.set_active(!immersive)')
   })
 })
 

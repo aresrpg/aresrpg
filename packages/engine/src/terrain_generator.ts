@@ -119,6 +119,10 @@ export const generate_chunk = (
     resolution: CHUNK_EDGE,
     cell_size: 1,
     material_ids,
+    foliage:
+      world.recipe.canopy === 'clusters'
+        ? pack_voxel_occupancy((x, y, z) => world.materials.entries[sample(x, y, z)]?.preset === 'foliage')
+        : undefined,
     ...pack_voxel_occupancy((x, y, z) => sample(x, y, z) !== AIR),
   }
 }

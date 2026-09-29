@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { AtmosphereTuning } from './atmosphere_tuning.ts'
 import type { WorldCaption } from './caption_types.ts'
 import type {
   CameraProjection,
@@ -18,10 +19,11 @@ import type {
   DungeonStageRender,
   RenderChunkRequest,
   Vec3,
+  WorldPanel,
 } from './types.ts'
 
 export type EngineBackend = Readonly<{
-  kind: 'webgpu' | 'grid'
+  kind: 'webgpu'
   render: (now: number) => void
   set_camera: (position: Vec3, target: Vec3, projection?: CameraProjection) => void
   /** The followed character's FEET — character-anchored presentation (the night lantern) rides
@@ -30,8 +32,8 @@ export type EngineBackend = Readonly<{
   set_quality: (quality: EngineQuality, render_distance?: number | null) => void
   set_audio_volume: (volume: number) => void
   set_time_of_day: (time: number) => void
+  set_atmosphere: (overrides: Partial<AtmosphereTuning> | null) => void
   set_clouds_visible: (visible: boolean) => void
-  set_flatten_amount: (amount: number) => void
   set_fight_board: (board: FightBoardRender | null) => void
   set_entities: (entities: readonly EntityRender[]) => void
   set_fight_swords: (url: string, impact_sound_url: string, markers: readonly FightSwordMarker[]) => void
@@ -46,8 +48,10 @@ export type EngineBackend = Readonly<{
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null
+  hit_entity_caption: (id: string, client_x: number, client_y: number) => boolean
   set_entity_caption: (id: string, caption: WorldCaption | null) => void
   set_entity_label: (id: string, element: HTMLElement | null) => void
+  set_world_panel: (id: string, panel: WorldPanel | null) => void
   set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
   entity_height: (id: string) => number | null
   upsert_fight_blob: (blob: FightBlobRender) => void
@@ -57,9 +61,5 @@ export type EngineBackend = Readonly<{
   remove_chunk: (key: string) => void
   chunk_count: () => number
   render_state: () => EngineRenderState
-  flattened: () => boolean
   dispose: () => void
 }>
-
-/** Adapter/device acquisition failed before WebGPU bound the canvas. */
-export class WebGPUUnavailableError extends Error {}

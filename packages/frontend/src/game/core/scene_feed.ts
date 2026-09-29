@@ -14,8 +14,8 @@
 // else"). The scene carries ONE entity list, so two writers would clobber each other frame by
 // frame. Instead a single source holds it at a time and the other's writes are dropped at this
 // door — the rule is mechanical here, not a discipline every caller has to remember.
-// The overworld has more than one INHABITANT (players, and the zone's mobs), but it is still one
-// SOURCE: the engine module composes them and writes once.
+// The world device composes its inhabitants: players, zone mobs, and one nearby fight.
+// Only immersive fights claim this feed's exclusive fight source.
 
 import type { EntityRender } from '@aresrpg/engine'
 
@@ -28,8 +28,10 @@ type WorldApi = ReturnType<typeof create_world>
  *  vocabulary that would drift from them. */
 export type SceneHandle = Pick<
   WorldApi,
+  | 'canvas'
   | 'show_fight_board'
   | 'set_entities'
+  | 'set_nearby_entities'
   | 'animate_entity'
   | 'play_fight_cue'
   | 'project_entity'
@@ -48,8 +50,10 @@ export type SceneHandle = Pick<
  *  under one owner would clobber each other exactly like two owners would. */
 export type EntitySource = 'world' | 'fight'
 
+type WorldSceneHandle = SceneHandle & Pick<WorldApi, 'state'>
+
 type Feed = {
-  scene: SceneHandle | null
+  scene: WorldSceneHandle | null
   owner: EntitySource
   listeners: Set<() => void>
 }
@@ -62,7 +66,7 @@ const announce = (): void => {
 
 /** The GAME engine publishes its running scene here, and null when it tears down. One publisher,
  *  by construction — no other surface may call this. */
-export const publish_scene = (scene: SceneHandle | null): void => {
+export const publish_scene = (scene: WorldSceneHandle | null): void => {
   feed.scene = scene
   // a torn-down world takes its ownership with it: leaving the list claimed by a fight that no
   // longer exists would silence presence for the whole of the next world
@@ -75,7 +79,7 @@ export const subscribe_scene = (listener: () => void): (() => void) => {
   return () => void feed.listeners.delete(listener)
 }
 
-export const read_scene = (): SceneHandle | null => feed.scene
+export const read_scene = (): WorldSceneHandle | null => feed.scene
 
 /** Take the entity list. The previous owner's entities are cleared in the same breath, so the
  *  world's players and mobs are gone the instant a board mounts rather than lingering a frame. */

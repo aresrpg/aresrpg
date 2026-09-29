@@ -2,18 +2,17 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Ground scatter — the deterministic clutter a surface column grows (tall grass, flowers,
 // mushrooms, twigs, pebbles, ice spikes). Placement is a pure function of the compiled world and
-// a chunk origin: the column's VISIBLE top material (the same terrain_material_id call the mesher
-// uses) picks the kind family through its preset, and every color derives from the authored
+// generated near-chunk data: the actual ground material and occupancy used by the mesher
+// determine eligibility; every color derives from the authored
 // material colors — nothing here owns a palette. Rendering lives in scatter_layer.ts.
 
 import type { CityNatureKind } from './cities/types.ts'
 import { generated_city_land_use } from './cities/generated_city.ts'
 import type { MaterialPreset } from './material_presets.ts'
-import type { StructurePlacement } from './structure_placement.ts'
-import type { Vec3 } from './types.ts'
-import { CHUNK_EDGE } from './voxel_data.ts'
+import type { ChunkRenderData } from './types.ts'
+import { CHUNK_EDGE, halo_index, voxel_index } from './voxel_data.ts'
 import { field_value, hash_position } from './world_noise.ts'
-import { sample_world_column, terrain_material_id, terrain_slope, type CompiledWorld } from './world_recipe.ts'
+import { sample_world_column, terrain_slope, type CompiledWorld } from './world_recipe.ts'
 
 export type ScatterKind = 'tuft' | 'bush' | 'flower' | 'mushroom' | 'twig' | 'pebble' | 'spike' | CityNatureKind
 /** Pre-built geometry variants per kind (scatter_layer bakes them; placement only picks an index). */
@@ -41,7 +40,7 @@ const PRESET_RULES: Readonly<Record<MaterialPreset, readonly ScatterRule[]>> = O
   grass: [
     { kind: 'flower', chance_bp: 240, humidity_scaled: true },
     { kind: 'bush', chance_bp: 380, humidity_scaled: true },
-    { kind: 'tuft', chance_bp: 3400, humidity_scaled: true },
+    { kind: 'tuft', chance_bp: 1100, humidity_scaled: true },
   ],
   frozen_grass: [
     { kind: 'spike', chance_bp: 280 },
@@ -66,6 +65,11 @@ const PRESET_RULES: Readonly<Record<MaterialPreset, readonly ScatterRule[]>> = O
     { kind: 'pebble', chance_bp: 340 },
   ],
   wood: [],
+  bark: [],
+  plaster: [],
+  slate: [],
+  copper: [],
+  brick: [],
   foliage: [],
   water: [],
 })
@@ -140,17 +144,17 @@ type ColorDeriver = (colors: ColumnColors, roll: number) => ScatterColors
 
 const COLOR_DERIVERS = Object.freeze({
   tuft: ((colors, roll) => {
-    const body = scale_rgb(colors.surface, 0.5 + roll * 0.25)
-    return { color: body, accent: saturate(scale_rgb(colors.surface, 1.2 + roll * 0.25), 0.12) }
+    const body = scale_rgb(colors.surface, 0.62 + roll * 0.2)
+    return { color: body, accent: saturate(scale_rgb(colors.surface, 1.25 + roll * 0.2), 0.22) }
   }) satisfies ColorDeriver,
   bush: ((colors, roll) => {
-    const body = scale_rgb(colors.surface, 0.4 + roll * 0.2)
+    const body = scale_rgb(colors.surface, 0.5 + roll * 0.2)
     return { color: body, accent: saturate(scale_rgb(colors.surface, 0.95 + roll * 0.25), 0.15) }
   }) satisfies ColorDeriver,
   flower: ((colors, roll) => {
     const [surface_hue] = rgb_to_hsv(colors.surface)
     const petal_hue = (surface_hue + (100 + roll * 200) / 360) % 1
-    return { color: scale_rgb(colors.surface, 0.55), accent: hsv_to_rgb([petal_hue, 0.85, 0.95]) }
+    return { color: scale_rgb(colors.surface, 0.55), accent: hsv_to_rgb([petal_hue, 0.9, 1.08]) }
   }) satisfies ColorDeriver,
   mushroom: ((colors, roll) => ({
     color: lighten(colors.subsurface, 0.45),
@@ -202,14 +206,10 @@ const city_nature_at = (world: CompiledWorld, x: number, z: number): readonly Sc
 const scatter_rules_at = (world: CompiledWorld, x: number, z: number, preset: MaterialPreset): readonly ScatterRule[] =>
   city_nature_at(world, x, z) ?? PRESET_RULES[preset]
 
-/** Deterministic clutter for the chunk at `origin` — only columns whose top solid voxel lies in
- * this chunk's vertical slab spawn here, so every (x,z) has exactly one owning chunk. Columns
- * inside a structure's overlap footprint stay bare (nothing grows through a trunk or a ruin). */
-export const chunk_scatter = (
-  world: CompiledWorld,
-  origin: Vec3,
-  structures: readonly StructurePlacement[] = []
-): readonly ScatterInstance[] => {
+/** Near-chunk ground cover reads the same voxel data as meshing. A distant wall or canopy
+ * never makes an entire sparse structure footprint barren. The ground voxel owns each plant. */
+export const chunk_scatter = (world: CompiledWorld, chunk: ChunkRenderData): readonly ScatterInstance[] => {
+  const { origin } = chunk
   const edge = CHUNK_EDGE + 2
   const columns = Array.from({ length: edge * edge }, (_, index) =>
     sample_world_column(world, origin[0] + (index % edge) - 1, origin[2] + Math.floor(index / edge) - 1)
@@ -231,19 +231,13 @@ export const chunk_scatter = (
         columns[index + edge]!.surface_y,
       ])
       if (slope >= MAX_SLOPE) continue
-      const material = world.materials.entries[terrain_material_id(column, 0, slope)]!
+      const local_y = top_y - origin[1]
+      const material_id = chunk.material_ids[voxel_index(x, local_y, z)]!
+      const above = halo_index(x, local_y + 1, z)
+      if (material_id === 0 || (chunk.halo_occupancy[above >>> 5]! & (1 << (above & 31))) !== 0) continue
+      const material = world.materials.entries[material_id]!
       const world_x = origin[0] + x
       const world_z = origin[2] + z
-      if (
-        structures.some(
-          ({ overlap_bounds }) =>
-            world_x >= overlap_bounds.min_x &&
-            world_x <= overlap_bounds.max_x &&
-            world_z >= overlap_bounds.min_z &&
-            world_z <= overlap_bounds.max_z
-        )
-      )
-        continue
       for (const rule of scatter_rules_at(world, world_x, world_z, material.preset)) {
         const broad = field_value(
           world.decoration_seed,

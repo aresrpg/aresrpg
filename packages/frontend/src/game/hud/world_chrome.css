@@ -1,0 +1,561 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+.world-social-dock {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  z-index: 130;
+  width: clamp(190px, 20vw, 270px);
+  max-height: calc(100% - 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+  font-family: var(--aui-font, inherit);
+}
+.world-social-dock > * {
+  flex-shrink: 0;
+  pointer-events: auto;
+  min-width: 0;
+}
+.world-account {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: flex-end;
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  gap: 5px;
+}
+.world-utility-button.aui-icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 5px;
+  color: var(--aui-ink);
+}
+.world-utility-button > svg {
+  width: 22px;
+  height: 22px;
+}
+.world-account .wallet-trigger {
+  flex: 1;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  border: 1px solid #444a51;
+  border-radius: 7px;
+  background: #20252d;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  max-width: min(260px, calc(100vw - 110px));
+  box-shadow:
+    inset 0 1px #ffffff12,
+    0 3px 0 #0c1017;
+}
+.world-account .wallet-trigger__balance {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  color: #8cc8f4;
+  white-space: nowrap;
+}
+.world-account .wallet-trigger__balance--kares {
+  color: #e3bd77;
+}
+.world-account .wallet-trigger__balance > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.world-social-dock .gw-minimap,
+[data-world-frame] .world-social-dock .gw-minimap {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  z-index: auto;
+}
+.world-social-dock .aui-minimap {
+  width: 100%;
+  height: clamp(100px, 26vh, 245px);
+  min-height: 0;
+}
+.world-social-dock .aui-minimap canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.world-social-dock .party-frame {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+  background: #171c22ed;
+}
+.world-social-dock .party-frame__member {
+  min-height: 28px;
+  padding: 4px 8px;
+  grid-template-columns: 12px minmax(0, 1fr) max-content;
+}
+.world-social-dock .party-frame__member b {
+  font-size: 11px;
+  max-width: none;
+}
+.world-social-dock .party-frame > header {
+  padding: 5px 8px;
+}
+.world-social-dock .party-invite-card {
+  width: 100%;
+}
+.world-multiplayer {
+  position: relative;
+  background: #171c22ed;
+  border: 1px solid #343b42;
+  border-radius: 8px;
+  padding: 5px;
+}
+.world-multiplayer > header {
+  display: flex;
+  gap: 5px;
+}
+.world-multiplayer > header .aui-button {
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 7px;
+  font-size: 11px;
+  gap: 5px;
+  flex: 1;
+  white-space: nowrap;
+}
+.world-multiplayer > header .aui-button:last-child {
+  color: #e3bd77;
+}
+.world-nearby-fights {
+  max-height: 108px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.world-nearby-fights > p {
+  margin: 6px 3px 2px;
+  font-size: 11px;
+  color: #a5acb5;
+}
+.world-nearby-fight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 1px;
+  border-top: 1px solid #ffffff0b;
+}
+.world-nearby-fight > span {
+  flex: 1;
+  min-width: 0;
+}
+.world-nearby-fight b,
+.world-nearby-fight small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.world-nearby-fight b {
+  font-size: 12px;
+  color: #ddd6c7;
+}
+.world-nearby-fight small {
+  font-size: 10px;
+  color: #a5acb5;
+}
+.world-nearby-fight .aui-icon-button {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  color: #a9c6d4;
+}
+.world-connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.world-connection i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ba7979;
+}
+.world-connection i[data-connected='true'] {
+  background: #90baa6;
+}
+.world-status {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 40;
+  max-width: min(500px, 44vw);
+}
+.aui-performance .fullscreen-button {
+  min-height: 28px;
+  width: 28px;
+}
+.app-shell {
+  padding: 0;
+}
+@media (max-width: 900px), (max-height: 500px) {
+  .world-social-dock {
+    width: 180px;
+    top: max(6px, env(safe-area-inset-top));
+    right: max(6px, env(safe-area-inset-right));
+    gap: 4px;
+  }
+  .world-social-dock .aui-minimap {
+    height: 100px;
+  }
+  .world-nearby-fights {
+    display: none;
+  }
+  .world-nearby-fights[data-expanded='true'] {
+    display: block;
+    position: absolute;
+    right: calc(100% + 6px);
+    top: auto;
+    bottom: 0;
+    width: min(280px, calc(100vw - 198px));
+    max-height: min(200px, 40vh);
+    padding: 6px;
+    background: #171c22;
+    border: 1px solid #444a51;
+    border-radius: 7px;
+    z-index: 2;
+    box-shadow: 0 8px 24px #0008;
+  }
+  .world-multiplayer > header .aui-button {
+    font-size: 10px;
+    min-height: 34px;
+    padding: 4px;
+  }
+  .world-multiplayer > header svg {
+    display: none;
+  }
+  .world-social-dock .party-frame__member {
+    min-height: 26px;
+    padding-block: 3px;
+  }
+  .world-social-dock .party-frame__member b {
+    font-size: 10px;
+  }
+  .world-status {
+    max-width: 36vw;
+    gap: 4px;
+  }
+  .aui-performance :is(select, .fullscreen-button, [data-fullscreen-toggle]) {
+    display: none;
+  }
+  .aui-performance {
+    width: max-content;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 500px) and (orientation: portrait) {
+  .world-social-dock {
+    width: 160px;
+  }
+  .world-status {
+    max-width: calc(100vw - 182px);
+  }
+}
+
+@media (max-width: 900px), (max-height: 500px) {
+  .world-social-dock .party-frame {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .world-social-dock .party-frame > header {
+    grid-column: 1 / -1;
+  }
+  .world-social-dock .party-frame__member {
+    min-height: 44px;
+    padding: 4px;
+    gap: 3px;
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+  }
+  .world-social-dock .party-follow-toggle > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .world-social-dock .party-follow-toggle {
+    min-height: 36px;
+  }
+  .world-social-dock .party-distance-progress {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .world-nearby-fight .aui-icon-button {
+    width: 44px;
+    height: 44px;
+  }
+}
+.mobile-camera {
+  z-index: 1;
+}
+.mobile-joystick,
+.mobile-jump {
+  z-index: 120;
+}
+
+.world-account .wallet-trigger__balance {
+  padding-left: 0;
+  border: 0;
+}
+.mobile-app .gw-worldchat {
+  bottom: 152px;
+  left: 12px;
+}
+
+.mobile-app [data-world-frame] .gw-worldchat {
+  bottom: 152px;
+  left: 12px;
+}
+.mobile-app [data-world-frame] .fight-hud--overworld .fight-hud__bottom {
+  display: flex;
+  justify-content: center;
+  left: 0;
+  right: 0;
+}
+.mobile-app .mobile-jump {
+  right: 196px;
+  bottom: 148px;
+}
+.world-group-toggle {
+  display: inline-block;
+  width: 22px;
+  height: 12px;
+  padding: 2px;
+  border-radius: 9px;
+  background: #14171c;
+  border: 1px solid #555b65;
+}
+.world-group-toggle::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9299a2;
+}
+[aria-checked='true'] > .world-group-toggle::after {
+  transform: translateX(9px);
+  background: #e2bb6a;
+}
+
+.mobile-app .world-run-progress {
+  top: 80px;
+  width: min(320px, 40vw);
+}
+
+.settings-mobile-quality {
+  display: none;
+}
+.settings-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  margin-top: 18px;
+  border-top: 1px solid #ffffff14;
+}
+.settings-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.settings-socials > a {
+  width: auto;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 7px;
+}
+.settings-footer .language-trigger {
+  gap: 9px;
+}
+.settings-footer .language-trigger .aui-language-badge {
+  width: 26px;
+  height: 24px;
+  font-size: 19px;
+}
+.wallet-popover [data-wallet-actions] button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+@media (max-width: 900px), (max-height: 500px) {
+  .settings-mobile-quality {
+    display: flex;
+  }
+  .settings-footer {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+}
+
+.aui-settings .settings-footer {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.aui-settings .settings-mobile-quality > .aui-setting-row {
+  width: 100%;
+}
+.aui-settings .settings-name {
+  font-family: var(--aui-font);
+}
+.aui-settings .settings-name :is(input, select) {
+  border: 1px solid #424953;
+  border-radius: 5px;
+  background: #171b22;
+  color: #d7dde4;
+}
+
+.aui-hud-shortcut-row [data-notification='true']::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #efc36d;
+  border: 1px solid #3c2c1a;
+}
+
+@media (max-width: 900px), (max-height: 500px) {
+  .app-ui [data-world-frame] .gw-worldchat {
+    bottom: 152px;
+    left: 12px;
+  }
+  .app-ui [data-world-frame] .fight-hud--overworld .fight-hud__bottom {
+    display: flex;
+    justify-content: center;
+    left: 0;
+    right: 0;
+  }
+  .app-ui .world-run-progress {
+    top: 80px;
+    width: min(320px, 40vw);
+  }
+}
+
+.world-social-dock [data-automation-panel] {
+  width: 100%;
+}
+
+.world-social-dock > .world-party-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  flex-shrink: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.world-party-tools > * {
+  flex-shrink: 0;
+}
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .world-status,
+  .world-social-dock {
+    top: max(10px, env(safe-area-inset-top));
+  }
+  .world-status:has(.character-switcher) {
+    display: grid;
+    grid-template-columns: 44px max-content;
+    align-items: center;
+    gap: 6px;
+  }
+  .world-status > * {
+    grid-column: 1 / -1;
+  }
+  .world-status > .character-switcher {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .world-status > .aui-performance {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .world-social-dock {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    width: 230px;
+    align-items: center;
+  }
+  .world-social-dock > * {
+    grid-column: 1 / -1;
+  }
+  .world-social-dock > .world-account {
+    align-self: center;
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+  }
+  .world-social-dock > .gw-minimap {
+    align-self: center;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .fight-hud--overworld .fight-hud__bar--overworld {
+    padding: 5px;
+    gap: 3px;
+  }
+  .fight-hud--overworld .fight-hud__overworld-row {
+    align-items: center;
+    gap: 8px;
+  }
+  .fight-hud--overworld .aui-vitals {
+    width: 84px;
+    gap: 2px;
+  }
+  .fight-hud--overworld .fight-hud__overworld-row .aui-vitals .aui-health {
+    width: 70px;
+    height: 64px;
+    margin-top: 0;
+  }
+  .fight-hud--overworld .fight-hud__overworld-row .aui-vitals .aui-vital-token {
+    width: 32px;
+    height: 32px;
+  }
+  .fight-hud--overworld .aui-vital-tokens {
+    margin-top: 0;
+    gap: 6px;
+  }
+  .fight-hud--overworld .aui-health > span {
+    font-size: 18px;
+  }
+  .fight-hud--overworld .aui-vital-token > strong {
+    font-size: 16px;
+  }
+}

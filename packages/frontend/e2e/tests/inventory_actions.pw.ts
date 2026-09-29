@@ -89,3 +89,33 @@ test('own marketplace listings show rolled details without chain reads', async (
   await expect(page.getByRole('tooltip')).toContainText('3 - 7')
   await expect(page.locator('body')).not.toHaveAttribute('data-item-reads')
 })
+
+test('externally linked pet tooltip shows current power rather than its full-fed stats', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html?trade&pet')
+  await page.locator('.trade-cap').nth(1).hover()
+  await expect(page.getByRole('tooltip')).toContainText('+38')
+  await expect(page.getByRole('tooltip')).not.toContainText('+77')
+})
+
+test('a pet keeps its current bonuses from sale details through the confirmed listing preview', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html?sell&owned-pet')
+  await page.locator('[data-marketplace-owned-item]').first().click()
+  const form = page.locator('.market-sale-form')
+  await expect(form.locator('[data-item-stat=strength]')).toContainText('+5')
+  await expect(form.locator('[data-item-stat=wisdom]')).toContainText('-2')
+  await expect(form.locator('[data-pet-power]')).toContainText('30 / 60')
+  await form.locator('input').fill('1')
+  await form.getByRole('button', { name: 'List for sale', exact: true }).click()
+  await page.locator('.market-own-listings button[aria-label]').hover()
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=strength]')).toContainText('+5')
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=wisdom]')).toContainText('-2')
+})
+
+test('owned trade offers and inventory show power-scaled pet bonuses', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html?trade&owned-pet')
+  await page.locator('.trade-cap').first().hover()
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=strength]')).toContainText('+5')
+  await page.locator('.trade-inventory-grid button').first().hover()
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=strength]')).toContainText('+11')
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=wisdom]')).toContainText('-2')
+})

@@ -13,6 +13,7 @@ export type DungeonPortalPrompt = Readonly<{
   roots: Readonly<Record<string, HTMLElement>>
   portals: Readonly<Record<string, DungeonPortalMarker>>
   focused_id: string | null
+  speak: (id: string, speech: string | null) => void
 }>
 
 export const dungeon_portal_targets = (
@@ -31,7 +32,12 @@ export const dungeon_portal_targets = (
 }
 
 type Feed = { prompt: DungeonPortalPrompt; listeners: Set<() => void> }
-const EMPTY = Object.freeze({ roots: Object.freeze({}), portals: Object.freeze({}), focused_id: null })
+const EMPTY = Object.freeze({
+  roots: Object.freeze({}),
+  portals: Object.freeze({}),
+  focused_id: null,
+  speak: (_id: string, _speech: string | null) => {},
+})
 const feed: Feed = { prompt: EMPTY, listeners: new Set() }
 
 export const publish_dungeon_portal_prompt = (prompt: DungeonPortalPrompt): void => {
@@ -39,6 +45,7 @@ export const publish_dungeon_portal_prompt = (prompt: DungeonPortalPrompt): void
   const next_ids = Object.keys(prompt.roots)
   if (
     feed.prompt.focused_id === prompt.focused_id &&
+    feed.prompt.speak === prompt.speak &&
     current_ids.length === next_ids.length &&
     current_ids.every(
       (id) => feed.prompt.roots[id] === prompt.roots[id] && feed.prompt.portals[id] === prompt.portals[id]
@@ -55,5 +62,7 @@ const subscribe = (listener: () => void): (() => void) => {
 }
 
 export const read_dungeon_portal_prompt = (): DungeonPortalPrompt => feed.prompt
+/** Release the scene-bound speech callback along with the DOM roots. */
+export const clear_dungeon_portal_prompt = (): void => publish_dungeon_portal_prompt(EMPTY)
 export const useDungeonPortalPrompt = (): DungeonPortalPrompt =>
   useSyncExternalStore(subscribe, read_dungeon_portal_prompt, () => feed.prompt)

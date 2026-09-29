@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Collection } from '@aresrpg/ui'
 import { job_groups, job_kind_of, type JobKind } from '@aresrpg/immutable'
 import { Hammer, Shield, Sparkles, Swords, Wheat } from 'lucide-react'
 import { useMemo, useState, type ComponentType } from 'react'
 
+import { JobEmblem } from '../characters/JobEmblem.tsx'
 import { Text } from '../i18n/Text.tsx'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
@@ -69,48 +71,22 @@ export const JobsTab = ({
   const CategoryIcon = category ? JOB_ICONS[category] : Hammer
 
   const job_list = (
-    <aside className="enc-browser__list flex w-[300px] shrink-0 flex-col border-r border-border">
-      <div className="p-2">
-        <SearchField change={set_search} placeholder={text('search_jobs')} value={search} />
+    <div className="enc-browser__list aui-catalogue-browser">
+      <div className="aui-catalogue-tools">
+        <SearchField value={search} change={set_search} placeholder={text('search_jobs')} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {JOB_CATEGORIES.map((group) => {
-          const rows = jobs.filter((job) => job_category(job) === group)
-          if (rows.length === 0) return null
-          const Icon = JOB_ICONS[group]
-          return (
-            <section key={group}>
-              <div className="flex items-center gap-2 border-b border-border bg-white/2 px-3 py-2">
-                <Icon className="text-[#c8963c] opacity-50" size={10} />
-                <span className="text-[8px] font-semibold tracking-[0.2em] text-[#c8963c]/70 uppercase">
-                  {text(`job_category.${group}`)}
-                </span>
-              </div>
-              {rows.map((job) => {
-                const active = selected_id === job.id
-                return (
-                  <button
-                    className={`flex w-full cursor-pointer flex-col border-b border-l-2 border-b-border/50 px-3 py-2.5 text-left transition-colors ${
-                      active ? 'border-l-[#c8963c] bg-[#c8963c]/10' : 'border-l-transparent hover:bg-white/3'
-                    }`}
-                    key={job.id}
-                    onClick={() => select_job(job.id)}
-                    type="button"
-                  >
-                    <span
-                      className={`truncate text-[10px] tracking-[0.1em] uppercase ${active ? 'text-[#c8963c]' : 'text-[#e8e4dc]'}`}
-                    >
-                      {vocabulary.job(job.id)}
-                    </span>
-                    <span className="mt-0.5 truncate text-[8px] text-[#6b7280]">{job_crafts(category_name, job)}</span>
-                  </button>
-                )
-              })}
-            </section>
-          )
-        })}
-      </div>
-    </aside>
+      <Collection
+        label={text('jobs_tab')}
+        selected={selected_id}
+        select={select_job}
+        entries={jobs.map((job) => ({
+          id: job.id,
+          label: vocabulary.job(job.id),
+          icon: <JobEmblem job={job.id} />,
+          meta: job_crafts(category_name, job),
+        }))}
+      />
+    </div>
   )
 
   const job_detail = detail && category && (

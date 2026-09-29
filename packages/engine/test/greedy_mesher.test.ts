@@ -40,13 +40,10 @@ describe('binary greedy voxel meshing', () => {
     expect(greedy_mesh(chunk(() => true)).quad_count).toBe(0)
   })
 
-  test('an isolated solid chunk collapses to nine quads per face (interior + convex border strips)', () => {
+  test('an isolated solid chunk collapses to one square quad per face', () => {
     const data = chunk((x, y, z) => x >= 0 && y >= 0 && z >= 0 && x < CHUNK_EDGE && y < CHUNK_EDGE && z < CHUNK_EDGE)
 
-    // Convex-edge classes split each face into its closed interior, four open border strips,
-    // and four corner cells — the price of exact rounded edges. Inside a continuous world the
-    // halo closes chunk seams, so real terrain never pays this synthetic worst case.
-    expect(greedy_mesh(data).quad_count).toBe(6 * 9)
+    expect(greedy_mesh(data).quad_count).toBe(6)
   })
 
   test('a single voxel emits six packed quads', () => {
@@ -82,29 +79,8 @@ describe('binary greedy voxel meshing', () => {
     expect(word_b & 0xfff).toBe(0xfff)
     expect((word_b >>> 12) & 0x7).toBe(7)
     expect((word_b >>> 15) & 0x7).toBe(7)
-    // A lone voxel's faces have empty in-plane neighbours everywhere: all four edges convex.
-    expect(word_b >>> 28).toBe(0b1111)
+    expect(word_b >>> 28).toBe(0)
     expect((word_b >>> 20) & 0xff).toBe(0xff)
-  })
-
-  test('word B edge flags round only borders with no same-level neighbour', () => {
-    // Two-block plateau: each top cell keeps its own convexity class — the shared edge is
-    // closed on both, the outer lips open — so the tops stay two quads with mirrored flags.
-    const plateau = greedy_mesh(chunk((x, y, z) => y === 0 && z === 0 && (x === 0 || x === 1)))
-    const top_flags = Array.from({ length: plateau.quad_count }, (_, quad) => quad)
-      .filter((quad) => ((plateau.quads[quad * 2]! >>> 28) & 0x7) === 2)
-      .map((quad) => plateau.quads[quad * 2 + 1]! >>> 28)
-      .sort()
-    expect(top_flags).toEqual([0b1101, 0b1110])
-
-    // Lone block at x=0 with a two-high wall at x=1: the +u edge of the top face borders the
-    // wall's same-level voxel, so it must NOT round; the other three edges stay convex.
-    const stepped = greedy_mesh(chunk((x, y, z) => (z === 0 && x === 1 && y <= 1) || (x === 0 && y === 0 && z === 0)))
-    const lone_top = Array.from({ length: stepped.quad_count }, (_, quad) => quad).find((quad) => {
-      const word_a = stepped.quads[quad * 2]!
-      return ((word_a >>> 28) & 0x7) === 2 && (word_a & 0x3f) === 0 && ((word_a >>> 6) & 0x3f) === 0
-    })!
-    expect(stepped.quads[lone_top * 2 + 1]! >>> 28).toBe(0b1101)
   })
 
   test('word B carries classic corner occlusion and prevents shading-incompatible merges', () => {
@@ -175,5 +151,33 @@ describe('binary greedy voxel meshing', () => {
 
     expect(new Set(actual.keys())).toEqual(expected)
     expect([...actual.values()].every((count) => count === 1)).toBeTrue()
+  })
+})
+
+describe('cluster foliage does not occlude solid terrain', () => {
+  const leaf_cover = (boundary: boolean): ChunkRenderData => {
+    const floor = boundary ? 31 : 0
+    const ground = (x: number, y: number, z: number) => x === 4 && z === 4 && y === floor
+    const leaf = (x: number, y: number, z: number) => x === 4 && z === 4 && y === floor + 1
+    const data = chunk((x, y, z) => ground(x, y, z) || leaf(x, y, z))
+    if (!boundary) data.material_ids[voxel_index(4, 1, 4)] = 2
+    return { ...data, foliage: pack_voxel_occupancy(leaf) }
+  }
+  const top_faces = (data: ChunkRenderData) => {
+    const mesh = greedy_mesh(data)
+    return Array.from({ length: mesh.quad_count }, (_, i) => [mesh.quads[i * 2]!, mesh.quads[i * 2 + 1]!]).filter(
+      ([a, b]) => a! >>> 28 === 2 && (b! & 0xfff) === 3
+    )
+  }
+  test('soil retains its top face below clustered leaves, including the vertical chunk halo', () => {
+    for (const boundary of [false, true]) expect(top_faces(leaf_cover(boundary))).toHaveLength(1)
+  })
+  test('ordinary voxel foliage still culls the shared face', () => {
+    const data = leaf_cover(false)
+    expect(top_faces({ ...data, foliage: undefined })).toHaveLength(0)
+  })
+  test('foliage interiors remain culled rather than emitting every leaf voxel', () => {
+    const data = chunk(() => true)
+    expect(greedy_mesh({ ...data, foliage: pack_voxel_occupancy(() => true) }).quad_count).toBe(0)
   })
 })

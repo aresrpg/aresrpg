@@ -6,11 +6,16 @@
 // positions ride packet/players_moved through the store. A row with a pet is MOUNTED by
 // definition (the presence contract) — the pet renders under a seated rider.
 
-import type { CharacterAnimationName, EntityRender, WorldCaption } from '@aresrpg/engine'
+import type { CharacterAura, CharacterAnimationName, EntityRender, WorldCaption } from '@aresrpg/engine'
 import { chain_to_client_coordinate, worn_appearance } from '@aresrpg/immutable'
 import type { PresenceRow } from '@aresrpg/protocol'
 
-import { load_character_appearance, presence_render_source, world_character_entity } from './character_entities.ts'
+import {
+  load_character_appearance,
+  presence_render_source,
+  world_character_entity,
+  character_aura,
+} from './character_entities.ts'
 import { pet_locomotion_of, pet_seat_height, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
 import { create_caption_target } from './core/caption_target.ts'
@@ -41,6 +46,7 @@ type LoadedPresence = {
 
 type PresenceSlot = {
   source_key: string
+  aura: CharacterAura | undefined
   loaded: LoadedPresence | null
   /** shown position — converges toward the target each frame */
   x: number
@@ -172,7 +178,7 @@ export const create_presence_renderer = ({
       const anim: CharacterAnimationName = far ? 'IDLE' : mounted ? 'SIT' : moving ? 'RUN' : 'IDLE'
       const time_scale = far ? 0 : 1
       const character = world_character_entity(
-        Object.freeze({ id: character_id, appearance: slot.loaded.appearance }),
+        Object.freeze({ id: character_id, appearance: slot.loaded.appearance, aura: slot.aura }),
         Object.freeze({
           position: Object.freeze([slot.x, rider_y, slot.z] as const),
           facing_yaw: slot.yaw,
@@ -246,7 +252,9 @@ export const create_presence_renderer = ({
       if (disposed) return
       const now = Date.now()
       let changed = false
-      for (const stale of [...slots.keys()].filter((id) => !(id in rows) || id === own_character_id)) {
+      const visible_rows = Object.entries(rows).filter(([id]) => id !== own_character_id)
+      const visible_ids = new Set(visible_rows.map(([id]) => id))
+      for (const stale of [...slots.keys()].filter((id) => !visible_ids.has(id))) {
         slots.delete(stale)
         generations.delete(stale)
         // a gone body takes its tag with it
@@ -258,8 +266,7 @@ export const create_presence_renderer = ({
         }
         changed = true
       }
-      for (const [character_id, row] of Object.entries(rows)) {
-        if (character_id === own_character_id) continue
+      for (const [character_id, row] of visible_rows) {
         const { hat, cloak } = worn_appearance(row)
         const source_key = [row.classe, row.sex, row.color_1, row.color_2, row.color_3, hat, cloak, row.pet]
           .map(String)
@@ -269,24 +276,31 @@ export const create_presence_renderer = ({
         const z = chain_to_client_coordinate(row.z)
         const slot = slots.get(character_id)
         if (!slot || slot.source_key !== source_key) {
-          // a new arrival spawns AT its target — only subsequent moves interpolate
+          // A new arrival shares one initial pose; gear changes retain the live pose.
+          const initial = slot ?? { x, y: row.y, z, yaw: 0, pet_motion: empty_pet_motion() }
           slots.set(character_id, {
             source_key,
+            aura: character_aura(row.title, row.owner),
             loaded: null,
-            x: slot?.x ?? x,
-            y: slot?.y ?? row.y,
-            z: slot?.z ?? z,
+            x: initial.x,
+            y: initial.y,
+            z: initial.z,
             tx: x,
             ty: row.y,
             tz: z,
-            yaw: slot?.yaw ?? 0,
+            yaw: initial.yaw,
             moved_at: 0,
             riding: row.riding,
-            pet_motion: slot?.pet_motion ?? empty_pet_motion(),
+            pet_motion: initial.pet_motion,
           })
           load(character_id, row, source_key)
           changed = true
           continue
+        }
+        const aura = character_aura(row.title, row.owner)
+        if (aura !== slot.aura) {
+          slot.aura = aura
+          changed = true
         }
         if (row.riding !== slot.riding) {
           slot.riding = row.riding

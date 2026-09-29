@@ -1,0 +1,254 @@
+/* Game-specific compositions share the same compact frame and control material. */
+.aui-progress {
+  display: grid;
+  gap: 5px;
+  font: 400 12px/1.3 var(--aui-font);
+  color: #c3c3ce;
+}
+.aui-progress > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.aui-progress strong {
+  font-weight: 400;
+  color: #eee2c8;
+}
+.aui-progress progress {
+  appearance: none;
+  width: 100%;
+  height: 7px;
+  border: 0;
+  border-radius: 3px;
+  background: #565761;
+  overflow: hidden;
+}
+.aui-progress progress::-webkit-progress-bar {
+  background: #565761;
+}
+.aui-progress progress::-webkit-progress-value {
+  background: #e3ac60;
+  border-radius: 3px;
+  box-shadow: inset 0 1px #ffe3b5;
+}
+.aui-progress progress::-moz-progress-bar {
+  background: #e3ac60;
+}
+.aui-combat-hud {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) max-content;
+  gap: 0;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0;
+  min-height: 110px;
+  background: #2a313b;
+  border: 1px solid #181a23;
+  box-shadow:
+    inset 0 1px #c2c0d33a,
+    0 3px 8px #0004;
+  pointer-events: auto;
+  overflow: visible;
+  border-radius: 6px 6px 3px 3px;
+}
+.aui-combat-vitals {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0 0;
+  border-right: 1px solid #191b25;
+  background: #303944;
+  border-radius: 5px 0 0 2px;
+}
+.aui-combat-spells {
+  display: grid;
+  grid-template-columns: repeat(var(--combat-columns, 10), 46px);
+  grid-template-rows: repeat(2, 46px);
+  gap: 3px;
+  padding: 6px 8px;
+  background: #1c232c;
+  align-content: center;
+}
+.aui-combat-controls {
+  background: #303640;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-left: 1px solid #151722;
+}
+.aui-combat-controls > .aui-progress {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  gap: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+.aui-combat-controls > .aui-progress > span {
+  justify-content: center;
+  position: relative;
+  min-height: 24px;
+  background: #343a44;
+  margin: 0 24px;
+  border: 1px solid #161821;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  font-size: 0;
+}
+.aui-combat-controls > .aui-progress strong {
+  font-size: 18px;
+  color: #f4c26d;
+  font-weight: 800;
+  line-height: 24px;
+  text-shadow: 0 1px #332818;
+}
+.aui-combat-controls > .aui-progress progress {
+  height: 4px;
+  border-radius: 0;
+}
+.aui-combat-controls > .aui-button--primary {
+  white-space: nowrap;
+  height: 44px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid #3d311f;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 1px #ffe9b855,
+    inset 0 -3px #90613288,
+    0 2px 3px #0005;
+}
+.aui-combat-utilities {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.aui-combat-utilities .aui-button {
+  min-height: 23px;
+  min-width: 23px;
+  padding: 2px;
+  font-size: 10px;
+}
+.aui-mob {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 24px);
+  width: 470px;
+  max-width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: #171e25;
+}
+.aui-mob > header {
+  padding: 12px 36px 8px;
+  text-align: center;
+  background: #303740;
+  border-bottom: 1px solid #1c1f2b;
+}
+.aui-mob > header h2 {
+  font-size: 22px;
+  text-shadow: 0 2px #20212b;
+}
+.aui-mob > header p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #cccbd3;
+}
+.aui-mob-overview {
+  display: grid;
+  grid-template-columns: 85px minmax(0, 1fr) 96px;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  background: #222c31;
+  min-height: 185px;
+}
+.aui-mob-hero {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 168px;
+}
+.aui-mob-hero > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-height: 168px;
+}
+.aui-mob-stats {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.aui-mob-stats > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.aui-mob-stats dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0;
+  min-width: 24px;
+}
+.aui-mob-stats img {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+}
+.aui-mob-stats svg {
+  width: 20px;
+  height: 20px;
+}
+.aui-mob-stats dd {
+  margin: 0;
+  font: 700 16px var(--aui-font);
+  color: #eeeef3;
+  text-shadow: 0 1px #17222a;
+}
+.aui-mob-section {
+  padding: 10px 14px;
+  border-top: 1px solid #4c4e5b;
+}
+.aui-mob-section h3 {
+  font-size: 13px;
+  margin: 0 0 8px;
+  color: #d4d4df;
+}
+.aui-mob-section p {
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.4;
+}
+.aui-mob-spells {
+  display: flex;
+  gap: 6px;
+}
+.aui-mob > footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid #141924;
+  background: #242d36;
+}
+
+.aui-combat-utilities .aui-button--danger svg {
+  fill: currentColor;
+}
+
+.aui-mob > header,
+.aui-mob > footer {
+  flex-shrink: 0;
+}
+.aui-mob-content {
+  min-height: 0;
+  overflow-y: auto;
+}

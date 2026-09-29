@@ -408,7 +408,7 @@ const effect_row_class =
 
 const CriticalBadge = ({ label, value }: Readonly<{ label: string; value?: string }>) => (
   <span
-    className="inline-flex min-h-8 items-center gap-2 border border-[#e8b44f]/35 bg-[linear-gradient(90deg,rgba(232,180,79,0.12),rgba(232,180,79,0.03))] px-2.5 py-1"
+    className="inline-flex min-h-8 shrink-0 items-center whitespace-nowrap gap-2 border border-[#e8b44f]/35 bg-[linear-gradient(90deg,rgba(232,180,79,0.12),rgba(232,180,79,0.03))] px-2.5 py-1"
     data-spell-critical-badge
   >
     <span className="text-[7px] font-semibold tracking-[0.12em] text-[#e8b44f] uppercase">{label}</span>

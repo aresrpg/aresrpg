@@ -392,47 +392,82 @@
     transform: rotate(6deg) scale(1.15);
   }
 }
-@media (max-width: 520px) {
-  .journey-header {
-    padding: 22px 16px;
+/* The modal already supplies the journal title. Keep the active quest above the fold. */
+@media (max-width: 1023px), (max-height: 600px) {
+  .journey-panel:not(.journey-panel--compact) {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
-  .journey-header h2 {
-    font-size: 20px;
+  .journey-panel:not(.journey-panel--compact) > .journey-header {
+    display: none;
   }
-  .journey-milestones {
-    padding: 20px 12px 0;
-    gap: 4px;
+  .journey-panel:not(.journey-panel--compact) .journey-milestones {
+    display: flex;
+    gap: 14px;
+    padding: 10px 14px 0;
+    overflow-x: auto;
   }
-  .journey-medal {
-    width: 42px;
-    height: 42px;
+  .journey-panel:not(.journey-panel--compact) .journey-milestone {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    font-size: 9px;
   }
-  .journey-medal img {
-    width: 38px;
-    height: 38px;
+  .journey-panel:not(.journey-panel--compact) .journey-medal {
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    flex-shrink: 0;
+    transform: none;
   }
-  .journey-milestone {
-    font-size: 8px;
-    overflow-wrap: anywhere;
+  .journey-panel:not(.journey-panel--compact) .journey-medal img {
+    width: 26px;
+    height: 26px;
   }
-  .journey-quest {
-    grid-template-columns: 1fr;
-    padding: 18px;
-    gap: 10px;
+  .journey-panel:not(.journey-panel--compact) .journey-progress {
+    padding: 8px 14px;
   }
-  .journey-art {
-    min-height: 125px;
+  .journey-panel:not(.journey-panel--compact) .journey-meter {
+    height: 6px;
   }
-  .journey-art img {
-    width: 125px;
-    height: 125px;
+  .journey-panel:not(.journey-panel--compact) .journey-progress-caption {
+    margin-top: 4px;
   }
-  .journey-art::before {
-    width: 100px;
-    height: 100px;
+  .journey-panel:not(.journey-panel--compact) .journey-quest {
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    padding: 12px 14px;
   }
-  .journey-checklist {
-    grid-template-columns: 1fr;
+  .journey-panel:not(.journey-panel--compact) .journey-art {
+    min-height: 64px;
+  }
+  .journey-panel:not(.journey-panel--compact) .journey-art img {
+    width: 64px;
+    height: 64px;
+  }
+  .journey-panel:not(.journey-panel--compact) .journey-art::before {
+    width: 48px;
+    height: 48px;
+  }
+  .journey-panel:not(.journey-panel--compact) .journey-copy h3 {
+    font-size: 18px;
+    margin: 4px 0 8px;
+  }
+  .journey-panel:not(.journey-panel--compact) .journey-copy p {
+    line-height: 1.5;
+  }
+  .journey-panel:not(.journey-panel--compact) :is(.journey-objective, .journey-actions) {
+    margin-top: 8px;
+  }
+  .journey-panel:not(.journey-panel--compact) .journey-button {
+    min-height: 44px;
+  }
+  .journey-panel:not(.journey-panel--compact) .journey-checklist {
+    gap: 8px 12px;
+    padding: 12px 14px;
   }
 }
 @container world-viewport (max-height:700px) {
@@ -473,4 +508,41 @@
 
 .journey-panel--compact .journey-quest:not([data-quest-kind='start']) .journey-copy > p {
   display: none;
+}
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .journey-tracker {
+    width: min(230px, calc(100vw - 100px));
+  }
+  .journey-panel--compact .journey-header {
+    padding: 3px 8px;
+  }
+  .journey-panel--compact .journey-header h2 {
+    font-size: 11px;
+    margin: 0;
+  }
+  .journey-panel--compact :is(.journey-eyebrow, .journey-progress, .journey-art) {
+    display: none;
+  }
+  .journey-panel--compact .journey-quest {
+    display: block;
+    padding: 6px 8px;
+  }
+  .journey-panel--compact .journey-copy h3 {
+    font-size: 11px;
+    margin: 0;
+  }
+  .journey-panel--compact .journey-objective {
+    margin-top: 4px;
+    font-size: 10px;
+    gap: 5px;
+  }
+  .journey-panel--compact .journey-actions {
+    margin-top: 4px;
+  }
+  .journey-panel--compact .journey-button {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 10px;
+  }
 }

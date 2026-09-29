@@ -1,6 +1,5 @@
 title: WebGPU を利用できません
-body: 完全なワールドには WebGPU が必要です。代わりに軽量グリッドを表示しています。
-fatal: このブラウザは WebGPU または WebGL のグラフィックコンテキストを作成できません。
+body: 'ワールドにはWebGPUと安全な接続（HTTPSまたはlocalhost）が必要です。対応ブラウザーで開いてください。'
 engine_recovery: ワールドの読み込みまたは描画が停止しました。再読み込みしてもう一度お試しください。
 engine_reload: 再読み込み
 engine_minimum_title: 'グラフィック設定を低減'
@@ -8,18 +7,10 @@ engine_minimum: 'ワールドを読み込むか描画することができませ
 engine_continue: '続ける'
 world_unavailable_title: ワールドを利用できません
 world_unavailable: このワールドにはまだ地形レシピがありません。
-mobile_unavailable_label: モバイルアクセス
-mobile_unavailable_title: AresRPGは現在、モバイル端末ではご利用いただけません
-mobile_unavailable_body: モバイル専用の体験を開発中です。それまでは、デスクトップのブラウザからワールドにアクセスしてください。
-mobile_unavailable_status: デスクトップ版はオンラインです
-chrome: Chrome または Edge を更新し、設定 → システムで「ハードウェア アクセラレーションが使用可能な場合は使用する」を有効にして再起動してください。
-other: ハードウェアアクセラレーションを有効にし、ブラウザとグラフィックドライバーを更新してからブラウザを再起動してください。
-continue: グリッドで続行
 quality: 品質
 low: 低
 medium: 中
 high: 高
-flat_mode: フラットモード
 identity_connected: アイデンティティ接続済み
 sign_in_to_play: サインインしてプレイ
 loading_universe: 宇宙を読み込み中
@@ -27,7 +18,8 @@ continue_google: Google で続行
 wallet_session_ended: ウォレットのセッションが終了しました。もう一度ログインしてください。
 connect_wallet: ウォレットを接続
 no_wallet: 対応ウォレットがインストールされていません
-watch_world: ライブワールドを見る
+play_demo: 'デモをプレイ'
+replay_demo: 'デモをもう一度プレイ'
 sign_in: サインインしてプレイ
 drag_hint: ドラッグで移動 · スクロールでズーム
 navigation: ナビゲーション
@@ -76,8 +68,6 @@ party_member_unavailable_toast: そのキャラクターはすでにパーティ
 fight_turn_already_forced_toast: すでに別の誰かがこのターンを強制終了しました。
 fight_placement_unavailable_toast: その開始マスは使用できません。別の空きマスを選んでください。
 network_testnet: TESTNET
-page_pending_title: このページは再構築中です
-page_pending_body: 正しく復元する間も、この場所は表示し続けます。
 welcome_title: AresRPG へようこそ
 welcome_body: AresRPG は、プレイヤー主導の経済を持つ完全オンチェーン MMORPG です。最初のキャラクターを作り、世界に入ってモンスターと戦いましょう。
 welcome_need_sui: プレイには少額の SUI が必要です — 最初のキャラクター作成には {{price}} SUI かかり、手数料のため残高に少なくとも {{fee}} SUI を残す必要があります。下のアドレスに SUI を入金して始めましょう。
@@ -188,6 +178,7 @@ party_panel:
   run_to_position_wrong_world: リンクされた位置は現在のワールドにありません。
   run_to_wrong_world: そのパーティーメンバーは現在のワールドにいません。
   run_to_unavailable: そのパーティーメンバーのオンチェーン位置を取得できません。
+  run_to_blocked: '歩行可能な経路が見つかりません。移動を停止しました。'
 trade_panel:
   kares: '提示KARES'
   close: 閉じる
@@ -229,6 +220,7 @@ trade_panel:
 transaction_unknown_toast: 前の操作を確認しています。結果が判明するまで、新しい取引は実行できません。
 transaction_recovered_toast: 前の取引が見つかりました。ページを更新して結果を確認してから、次の操作を選んでください。
 world_hud:
+  spawn_welcome: '冒険者よ、ようこそ！このゲームは早期アクセス中です。生き延びて、冒険を楽しんでください。'
   compass_label: コンパス
   zone: ゾーン
   unsearched: 未探索
@@ -257,6 +249,8 @@ world_hud:
   dungeon_portal: ダンジョンポータル
   dungeon_city: '{{city}}の都市'
   dungeon_press_enter: 入る
+  dungeon_talk: '話す'
+  dungeon_guard_requires_key: '{{key}}を持っていないなら、通すわけにはいかない。'
   dungeon_entry_body: ダンジョンキーを使い、このポータル専用のロビーに入ります。
   dungeon_required_key: 必要な鍵
   dungeon_enter: ダンジョンに入る
@@ -347,6 +341,21 @@ world_hud:
   resource_face_protector: '{{key}} で立ち向かう'
   zone_never_arrived: '探索は成立したが、世界に反映されなかった — 読み取り層が遅れている可能性がある'
 demo_page:
+  asset_demo_city: デモ都市
+  asset_house_1: 町家 A
+  asset_house_2: 町家 B
+  asset_covered_bridge: 屋根付き街路橋
+  asset_gate_rampart: 門と見張り塔
+  asset_catacomb_entry: 地下墓地の入口
+  asset_gallery: アセット
+  asset_house: 工房の家
+  asset_banner: 旗
+  asset_lantern: ランタン
+  asset_fence: 柵
+  asset_rope: ロープ
+  asset_chain: 鎖
+  asset_campfire: 焚き火
+  asset_hint: 左ドラッグで移動 · 右ドラッグで回転 · スクロールでズーム
   title: レンダリングラボ
   world_lab: ワールド
   fight_lab: 戦闘
@@ -390,7 +399,25 @@ demo_page:
   spawn_group: グループを出現
   clear: クリア
   resources: リソース
-  resources_missing: リソース描画はまだ復元されていません。作成済みリストは seed データで確認できます。
+  hillaire_title: 'Hillaire 大気'
+  hillaire_preview: 'リアルタイムプレビュー専用です。リセットでこのワールドの初期値に戻ります。'
+  hillaire_quality: 'Hillaire の調整には画質を中または高にしてください。'
+  hillaire_haze: '遠景のかすみ'
+  hillaire_ground: '地表の霧 · 高画質'
+  hillaire_sky: '空の光'
+  hillaire_density: 'かすみの密度'
+  hillaire_max_opacity: '最大不透明度'
+  hillaire_near: 'かすみの開始距離（m）'
+  hillaire_full: 'かすみの適用距離（m）'
+  hillaire_tint: '青み'
+  hillaire_height_density: '地表の霧の密度'
+  hillaire_height_max: '地表の霧の最大不透明度'
+  hillaire_height_falloff: '高さによる減衰（m）'
+  hillaire_horizon_cap: '地平線の明るさ'
+  hillaire_exposure: '空の露出'
+  hillaire_mie_scattering: '日光のかすみの強さ'
+  hillaire_mie_g: '日光のかすみの指向性'
+  hillaire_reset: '大気をリセット'
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
@@ -494,7 +521,6 @@ mastery_page:
   daily_title: 今日のダンジョンクエストを選択
   daily_lead: ワールドを選ぶと、見つけてクリアするダンジョンが1つ割り当てられます。
   unknown_dungeon: 不明なダンジョン
-  quest_reward: マスタリーポイントを{{points}}獲得
   quest_objective_before: ダンジョン
   quest_objective_after: を見つけてクリアし、マスタリーポイントを受け取ろう。
   completed: 達成済み
@@ -619,34 +645,29 @@ tutorial:
   back: 戻る
   next: 次へ
   finish: 完了
-  fight_enter: 戦闘に入る
   reset_title: チュートリアル
-  reset_hint: 次に各ページを開いたとき、説明をもう一度表示します。
+  reset_hint: '各機能を次に開いたときにヒントを再表示します。'
   reset_action: リセット
-  world_compass_title: 世界と共有ゾーン
-  world_compass_body: AresRPGには、進行に応じて解放される複数の世界があります。各世界はモンスター、資源、ダンジョンが存在するゾーンに分かれています。誰でもゾーンを発見でき、その発見はすべてのプレイヤーに共有されます。
-  world_hud_title: 体力とクイックスロット
-  world_hud_body: このHUDには体力とクイック使用アイテムが表示されます。戦闘が始まると、同じ場所がスペルバーになります。
-  world_fps_title: 世界の表示設定
-  world_fps_body: 地形は公開データから決定論的に生成されます。Suiは世界と基準となるX/Z位置を保存し、高さは地形からローカルに導出されます。そのためフラットは同じ空間の表示だけを変えます。画質の変更や、世界の戦闘をパーティーメンバーだけに制限することもできます。
-  world_character_title: 世界のプレイヤー
-  world_character_body: これが現在操作しているキャラクターです。近くの別キャラクターを右クリックすると、利用できる交流メニューが開きます。
+  world_compass_title: '道を探す'
+  world_compass_body: 'コンパスは近くの街を示します。Mキーか地図アイコンで地図を開けます。'
+  world_hud_title: 'HUDの使い方'
+  world_hud_body: 'アイコンからバッグ、呪文、職業を開けます。戦闘中はここが呪文バーになります。'
   world_character_tabs_title: 複数のキャラクター
-  world_character_tabs_body: 最大6体のキャラクターを所有できます。ほかの所有キャラクターをパーティーに招待し、パーティー追従を有効にすると、一緒に移動して到着時に参加可能な世界戦闘へ自動参加します。
+  world_character_tabs_body: 'ここでキャラクターを切り替えます。右クリックでパーティーに招待できます。'
   fight_title: 初めてのオンチェーン戦闘
-  fight_body: 戦闘はターン制です。移動とスペルを選ぶと、行動が1つのターンとしてまとめて準備されます。ターン終了で完全なターンが1つのSuiトランザクションとして送信され、次にプレイヤーが行動できるまでのモンスターターンも計算されます。戦闘の基準となる状態はすべてSui上で確定します。勝利後は最後のSuiトランザクションがオンチェーン乱数で共有戦利品を抽選し、各報酬を割り当てられたプレイヤーのインベントリに入れます。
+  fight_body: '呪文を選ぶか、マスをクリックして移動します。ターン終了で行動をまとめて送信します。'
   equipment_gear_title: 装備
-  equipment_gear_body: 装備中のアイテムは選択中のキャラクターに属します。装備を人形へドラッグし、変化するボーナスを確認してからまとめて確定します。
+  equipment_gear_body: 'アイテムをクリックして「装備」を選び、変更を確定します。'
   equipment_inventory_title: 共有インベントリ
-  equipment_inventory_body: インベントリはこのアカウントの全キャラクターで共有されます。上で別のキャラクターを選ぶと、同じ利用可能なアイテムを装備できます。
+  equipment_inventory_body: 'アイテムはキャラクター間で共有されます。カーソルを合わせると能力、クリックすると詳細と操作が表示されます。'
   stats_title: 特性
-  stats_body: 特性ポイントを使って強くなりましょう。生命力は体力、知恵はXPとAP/MP減少への耐性、運は水ダメージと戦利品率、素早さは風ダメージ、クリティカル、足止めと離脱を向上させます。
+  stats_body: 'ポイントを割り振り、ボーナスを確認して確定します。'
   spells_title: スペル
-  spells_body: キャラクターの進行に応じて新しいスペルが解放されます。レベルアップで得たスペルポイントを使い、解放済みスペルを強化できます。
+  spells_body: '呪文を選ぶとレベルごとの性能を比較できます。呪文ポイントで強化しましょう。'
   jobs_title: ジョブ
-  jobs_body: 採集と製作の進行、レシピ、製作可能なアイテムを確認できます。複数キャラクターがいる場合、設定でこのページを専任の職人1体に固定できます。
+  jobs_body: '職業とレシピを選びます。材料をクリックして確認し、揃ったら製作できます。'
   runeforge_title: ルーンフォージ
-  runeforge_body: ジョブレベル{{level}}になると、対応する製作職がルーンで装備を強化できます。アイテムを粉砕してルーンを入手し、ここで適用します。
+  runeforge_body: '職業レベル{{level}}からルーンで装備を強化できます。不要な装備を砕くとルーンを入手できます。'
 admin_page:
   kicker: パブリッシャー
   title: ゲームコンテンツを公開
@@ -909,6 +930,8 @@ fight_hud:
   forfeit_body: '{name}は残りHPをすべて失い、この戦闘から離脱します。'
   confirm_forfeit: 降参を確定
   unit_turns: ターン
+  chat_expand: チャットを開く
+  chat_collapse: チャットを折りたたむ
   chat_title: チャット
   chat_resize: チャットのサイズを変更
   chat_tab_general: 一般
@@ -987,25 +1010,28 @@ wallet_legacy:
   add_funds_desc: ご希望のお支払い方法をお選びください。SUIは直接ウォレットに届きます。
   method_paypal: PayPal
   method_paypal_desc: PayPalアカウントでお支払い
-  method_card: クレジット / デビットカード
-  method_card_desc: Visa、Mastercard
+  method_card: 'カード / PayPal'
+  method_card_desc: '決済サービスで SUI を購入'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Face ID / Touch IDでお支払い
   method_google_pay: Google Pay
   method_google_pay_desc: Googleアカウントでお支払い
   method_bank: 銀行振込
   method_bank_desc: SEPA（EU）またはACH（米国）
-  method_have_sui: 既にSUIをお持ちの方
+  method_have_sui: '直接入金'
   method_have_sui_desc: 別のウォレットまたは取引所から送金
   paypal_note: MoonPay経由で米国、英国、ヨーロッパの大半で利用可能
   card_note: 以下のプロバイダーをお選びください。どちらもVisaとMastercardに対応
   bank_note: 最低手数料（約1%）。ヨーロッパはSEPA、米国はACH。
   steps_paypal: 1. 下のリンクをクリック  2. PayPalを支払い方法として選択  3. 金額を入力。SUIがウォレットに届きます
-  steps_card: プロバイダーを選択し、カード情報を入力するとSUIがウォレットに届きます。
-  method_swap: Solana、ETH、その他から..
-  method_swap_desc: Portal Bridge で資産を Sui へブリッジ
-  swap_note: クロスチェーン転送には Portal Bridge を使用します。
-  steps_swap: Portal Bridge を開き、両方のウォレットを接続して Sui を選び、転送を完了してください。
+  steps_card: 'サービスを開き、SUI を選択して下のゲームウォレットアドレスを指定してください。支払い方法は国とサービスによって異なります。'
+  method_swap: 'ブリッジ入金'
+  method_swap_desc: '他のチェーンの暗号資産を SUI に交換'
+  bridge_loading: 'ブリッジを読み込み中…'
+  bridge_error: 'ブリッジを読み込めませんでした。ゲームウォレットへの直接入金は引き続き利用できます。'
+  bridge_retry: '再試行'
+  swap_note: 'LI.FI 提供。送金は即時ではありません。ブリッジ入金を再度開き、履歴から中断した送金を確認・再開できます。'
+  steps_swap: '送金元ウォレットを接続してください。送金先は下のゲームウォレットで、受取通貨はネイティブ SUI です。署名前に金額、手数料、到着予定時間を確認してください。'
   steps_wallet: 下記のウォレットアドレスにSUIを送金してください。数秒で届きます。
   advanced_exchange: 上級者向け：取引所で購入
   age_notice: すべての決済プロバイダーは18歳以上であることが必要です。
@@ -2463,7 +2489,6 @@ automation_panel:
 
 item_drop_sources:
   title: 'モンスターのドロップ'
-  note: '設定された基本確率です。実際の確率はモンスターのレベルとチームの運により変わります。'
   empty: 'このアイテムを落とすモンスターはいません。'
   loading: 'ドロップを読み込み中…'
   mob: 'モンスター'
@@ -2605,6 +2630,62 @@ spell_effects:
   expires_next_turn: '次のターンまで'
 
 ui:
+  multiplayer: 'マルチプレイ'
+  nearby_fights: '近くの戦闘'
+  nearby_fights_empty: '近くに追跡中の戦闘はありません'
+  run_and_join: '移動して参加'
+  equipment_comparison: '装備時のステータス変化'
+  equipment_replacing: '{{name}} と交換'
+  equipment_unchanged: 'ステータスボーナスに変化なし'
+  preview_only: '操作プレビュー · トランザクションは送信されません'
+  inspect_details: '詳細を見る'
+  design_minimap: 'ミニマップ'
+  design_party_invitation: 'パーティー招待'
+  design_trade_invitation: '取引の招待'
+  progression_rewards: '報酬'
+  inventory_selected_count: '{{count}} 個選択中'
+  inventory_select: '選択'
+  inventory_deselect: '選択解除'
+  inventory_use: '使う'
+  attack: '攻撃'
+  character_summary: '概要'
+  character_details: '詳細'
+  allocate_points: '割り振る'
+  inventory_search: '所持品を検索…'
+  nameplate_veteran: '古参'
+  design_titles: '称号'
+  design_no_title: '称号なし'
+  design_library: 'デザイン工房'
+  design_controls: '操作部品'
+  design_dialog: 'ダイアログを開く'
+  design_disabled: '利用不可'
+  design_details: '詳細'
+  design_description: 'ゲーム共通コンポーネント。ローカルの例を操作し、状態とレスポンシブな配置を確認できます。'
+  design_volume: '音量'
+  design_motion: 'アニメーション'
+  design_search: '検索'
+  design_equipment_hint: 'アイテムを選んで装備します。装備中のアイテムをタップすると外せます。'
+  design_equip: '装備'
+  design_combat: '戦闘'
+  design_journal: '日誌と成長'
+  design_complete: '完了'
+  design_viewport: 'プレビューサイズ'
+  design_desktop: 'デスクトップ'
+  design_mobile: 'モバイル'
+  leave_game_title: 'ゲームを終了しますか？'
+  stay_in_game: 'プレイを続ける'
+  leave_game_confirm: 'ホームに戻る'
+  mobile_move: '移動'
+  mobile_jump: 'ジャンプ'
+  mobile_chat: 'チャット'
+  mobile_party: 'パーティー'
+  mobile_confirm_action: '行動を確定'
+  mobile_item_actions: 'アイテム操作'
+  mobile_unequip: '装備を外す'
+  mobile_use_item: '使う / 装備する'
+  mobile_language: '言語'
+  mobile_menu: 'メニュー'
+  mobile_rotate: '端末を横向きにしてプレイしてください。'
   character: 'キャラクター'
   spell_action: '{{name}}、レベル{{level}}、{{cost}}{{unit}}'
   spell_level: 'スペルレベル{{level}}'
@@ -2617,7 +2698,6 @@ ui:
   meters: '{{count}}m'
   versus: '対'
   team_format: '{{size}}対{{size}}'
-  flat: '平面'
   fps: 'FPS'
   north: '北'
   northeast: '北東'
@@ -2634,3 +2714,50 @@ ui:
   formula_chastisement: 'G = min(ΔHP × S, 上限 × S − 当ターンのG) · S = モンスターは1、プレイヤーは½'
   formula_drop: 'ドロップ率 = min(100%, 基礎値 × モンスター帯補正 × (600 + チーム平均運) / 600)'
   formula_xp: '経験値 = 基礎経験値プール × パーティ係数 × レベル補正 × プレイヤーレベル / パーティ合計レベル × (100 + 知恵) / 100'
+
+menu_subtitle: 'AresRPGは、Sui上で構築された完全オンチェーンのターン制MMORPGです。'
+menu_start: 'Enterキーでスタート'
+menu_start_touch: 'タップしてスタート'
+menu_music_on: '音楽をオンにする'
+menu_music_off: '音楽をミュート'
+
+menu_build: 'ビルド'
+
+world_loading_assets: '風景を読み込み中…'
+world_loading_graphics: 'グラフィックスを準備中…'
+world_loading_terrain: 'ワールドを構築中…'
+world_loading_sky: '空と照明を準備中…'
+world_loading_finishing: '最初のフレームを準備中…'
+
+adventure:
+  goblins_title: '道を切り開く'
+  goblins_objective: 'ゴブリンに近づいてFを押しましょう。'
+  speak_title: '橋の上の旅人'
+  speak_objective: '橋のSceatを見つけて、Fで話しましょう。'
+  invite_title: '力を合わせて'
+  invite_objective: 'Sceatを右クリックしてグループに招待しましょう。タッチ操作では招待表示をタップします。'
+  switch_title: 'ヤジンを操作'
+  switch_objective: 'Sceatのキャラクタータブを選びましょう。それぞれ異なる魔法と装備を持つ二人を操作できます。'
+  follow_title: 'リーダーを追う'
+  follow_objective: 'リーダーのSenshiを選び、グループ欄でリーダーに追従を有効にしましょう。'
+  guards_title: '王の衛兵'
+  guards_objective: '橋を渡り王の衛兵を倒しましょう。ヤジンの罠を置き、敵を押し込みましょう。'
+  boss_title: 'ゴバドックの遺物'
+  boss_objective: '遺物を求めてゴブリン王ゴバドックに挑みましょう。衛兵とは比べものにならない強敵です。'
+  dialogue_greeting: '初めて見る顔だね！僕はSceat。'
+  dialogue_danger: 'この世界は危険だ。一人では先に進めない。一緒に旅をしよう。'
+  dialogue_relic: 'ゴブリン王ゴバドックは強力な遺物を守っている。衛兵を突破して、王を探そう。'
+  journal: 'モスウッドの冒険'
+  chapter: 'ゴブリン王'
+  speak_action: 'Sceatと話す'
+  invite_action: 'Sceatを招待'
+  rebirth_title: 'あなたは傷がもとで命を落としました…'
+  rebirth_body: '生まれ変わる時が来ました。下のボタンからログインして、本当のゲームの世界へ進みましょう。'
+  rebirth_login: 'ログインして本当のゲームを始める'
+  goblins_body: '穏やかに見えるモスウッドも、ゴブリンに夕食だと思われては話が別です。出口へ続く道は彼らの野営地に塞がれています。群れに近づいて戦闘を始めましょう。行動ポイントで呪文を使い、移動先も考えて、一手ずつ確実に。勝てばレベル200に到達し、最初の装備が手に入ります。'
+  speak_body: 'ゴブリンを倒しても、この森の危険はなくなりません。橋の上から戦いを見ていたヤジンのSceatは、一人で先へ進む気がないようです。話しかけてみましょう。彼が探しているのはゴブリン王ゴバドックの遺物。反撃の仕方を知る仲間が必要なのです。'
+  invite_body: 'Sceatには考えがあります。残念ながら、森で一番大きなゴブリンに会いに行く計画です。違う技を持つ二人なら、一人より勝ち目があります。Sceatを右クリックしてグループに招待しましょう。この冒険では両方の英雄を操作し、能力の組み合わせを自分で決められます。'
+  switch_body: '仲間が増える意味は、体力バーが一本増えるだけではありません。ヤジンのSceatは罠と位置取りを得意とし、力で押すセンシとは違う戦い方をします。キャラクター切り替えから彼を選びましょう。呪文も装備も英雄ごとに別です。誰を動かすかも大事な判断になります。'
+  follow_body: 'グループができたら、はぐれないようにしましょう。センシをリーダーに選び、グループ操作でリーダーへの追従を有効にしてください。探索中はSceatがついてくるので、同じ道を二度歩かずに済みます。戦闘では引き続き、各英雄の移動と呪文を自分で選びます。'
+  guards_body: 'ゴバドックは入口を無防備にはしていません。待ち構える衛兵を相手に、今度は二人を連携させましょう。挑む前に新しい装備を確認してください。センシの力とSceatの罠を組み合わせるのが鍵です。敵を追い回すより、有利な位置に誘い込む方が倒しやすいこともあります。'
+  boss_body: '衛兵の先には、Sceatが探す遺物を持ったゴバドックが待っています。負け続けてゴブリン王になれるはずもありません。二人で戦う術は学びましたが、今度の相手は別格です。仲間とともに近づき、新しい絆でどこまで進めるか確かめましょう。'

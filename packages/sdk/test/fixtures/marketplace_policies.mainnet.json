@@ -1,0 +1,55 @@
+{
+  "network": "mainnet",
+  "captured_at": "2026-09-25T17:09:31.570Z",
+  "objects": [
+    {
+      "objectId": "0x355d1d4fcec4dbe78f07d8571810cab9ba9337998e90d91cfad86e02ec39d10f",
+      "version": "1011059433",
+      "digest": "Gua5g1bzKniLYChXRWqkmh4ZQbJvNFzXipjzv5aQjzbL",
+      "owner": {
+        "$kind": "Shared",
+        "Shared": {
+          "initialSharedVersion": "996015699"
+        }
+      },
+      "type": "0x0000000000000000000000000000000000000000000000000000000000000002::transfer_policy::TransferPolicy<0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::item::Item>",
+      "json": {
+        "balance": "3600000000",
+        "id": "0x355d1d4fcec4dbe78f07d8571810cab9ba9337998e90d91cfad86e02ec39d10f",
+        "rules": {
+          "contents": [
+            "434b5bd8f6a7b05fede0ff46c6e511d71ea326ed38056e3bcd681d2d7c2a7879::royalty_rule::Rule",
+            "0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802::personal_kiosk_rule::Rule",
+            "434b5bd8f6a7b05fede0ff46c6e511d71ea326ed38056e3bcd681d2d7c2a7879::kiosk_lock_rule::Rule",
+            "427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::listing_rule::ListingRule",
+            "427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::lot_rule::LotRule"
+          ]
+        }
+      }
+    },
+    {
+      "objectId": "0x3a2485ba7a08f314e308e29bb09016d6393c6f27d36b7367b67062ebbd2c6f3b",
+      "version": "996015699",
+      "digest": "38Cw2bNwfsxbbALxLwyEdwyyFE1M1k3oJ2fZARN2tE8S",
+      "owner": {
+        "$kind": "Shared",
+        "Shared": {
+          "initialSharedVersion": "996015699"
+        }
+      },
+      "type": "0x0000000000000000000000000000000000000000000000000000000000000002::transfer_policy::TransferPolicy<0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::character::Character>",
+      "json": {
+        "balance": "0",
+        "id": "0x3a2485ba7a08f314e308e29bb09016d6393c6f27d36b7367b67062ebbd2c6f3b",
+        "rules": {
+          "contents": [
+            "434b5bd8f6a7b05fede0ff46c6e511d71ea326ed38056e3bcd681d2d7c2a7879::royalty_rule::Rule",
+            "0cb4bcc0560340eb1a1b929cabe56b33fc6449820ec8c1980d69bb98b649b802::personal_kiosk_rule::Rule",
+            "434b5bd8f6a7b05fede0ff46c6e511d71ea326ed38056e3bcd681d2d7c2a7879::kiosk_lock_rule::Rule",
+            "427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::naked_rule::NakedRule"
+          ]
+        }
+      }
+    }
+  ]
+}

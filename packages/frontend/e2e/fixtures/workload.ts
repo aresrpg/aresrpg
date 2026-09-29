@@ -30,6 +30,9 @@ import {
 
 type Config = Readonly<{
   quality: EngineQuality
+  world_name?: string
+  canopy?: 'voxels' | 'clusters'
+  render_distance?: number
   mode: 'full' | 'smoke'
   benchmark?: boolean
   location: 'city' | 'forest'
@@ -141,7 +144,6 @@ const settle = async (
     if (engine.state === 'failed') throw new Error(JSON.stringify(engine))
     if (Math.max(render.failed_chunks, chunks.failed) > 0) throw new Error('Terrain failed to become resident')
     const at_target = focus.every((value, index) => world.camera_frame()?.target[index * 2] === value)
-    if (engine.backend === 'grid' && at_target) return
     if (
       [
         at_target,
@@ -156,8 +158,13 @@ const settle = async (
   throw new Error(`World did not settle: ${JSON.stringify(world.state())}`)
 }
 
-const scene_input = (location: Config['location'], requested?: readonly [number, number]) => {
-  const source = worlds_source.find(({ world }) => world === 'nauvis')!
+const scene_input = (
+  location: Config['location'],
+  requested: readonly [number, number] | undefined,
+  world_name = 'nauvis'
+) => {
+  const source = worlds_source.find(({ world }) => world === world_name)
+  if (!source) throw new Error(`Unknown workload world: ${world_name}`)
   const recipe = parse_world_recipe(world_terrain(source.world))
   if (requested) return { source, recipe, focus: requested }
   const city = source.cities[0]!
@@ -212,13 +219,23 @@ const PROFILES = {
   },
 } as const
 
-const run = async ({ quality, mode, location, focus: requested, population, benchmark }: Config) => {
+const run = async ({
+  quality,
+  mode,
+  location,
+  focus: requested,
+  population,
+  benchmark,
+  world_name,
+  canopy,
+  render_distance,
+}: Config) => {
   const profile = { ...PROFILES[mode], ...population }
   const wait_frames = create_frame_waiter({ benchmark, mode })
-  const { source, recipe, focus } = scene_input(location, requested)
+  const { source, recipe, focus } = scene_input(location, requested, world_name)
   const canvas = document.querySelector('canvas')!
   const started = performance.now()
-  const world = create_world({ canvas, world: recipe, quality, initial_focus: focus })
+  const world = create_world({ canvas, world: { ...recipe, canopy }, quality, render_distance, initial_focus: focus })
   const samples: Sample[] = []
   if (requested) world.set_quality(quality, 11)
   world.point_at({ x: focus[0], z: focus[1] })
@@ -316,44 +333,29 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
     samples.push(await measure(world, 'crowd', () => wait_frames(frames, animate_crowd)))
     samples.push(await measure(world, 'crowd-orbit', () => orbit_frames(world, frames, wait_frames)))
     const crowd_frame = canvas.toDataURL('image/png')
-    const source_height = world.ground_height(...focus)
-    samples.push(
-      await measure(world, 'flatten-transition', async () => {
-        world.set_flattened(true)
-        await wait_frames(60, animate_crowd)
-        await wait_for_frame_condition(() => world.ground_height(...focus) === 0)
-        // Start the overview round-trip on the plane, even if a forest spawn stood on a tree.
-        world.point_at({ x: focus[0], z: focus[1] })
-        world.release()
-        await wait_frames(60, animate_crowd)
-        await wait_for_frame_condition(() => world.camera_frame()?.target[1] === 0)
-        if (world.camera_frame()!.target[1] !== 0) throw new Error('Flat overview camera retained source elevation')
-      })
-    )
-    samples.push(await measure(world, 'flat', () => wait_frames(frames, animate_crowd)))
     const frame = canvas.toDataURL('image/png')
     labels.show(false)
     await wait_frames(30, animate_crowd)
-    samples.push(await measure(world, 'flat-all-no-labels', () => wait_frames(frames, animate_crowd)))
+    samples.push(await measure(world, 'terrain-all-no-labels', () => wait_frames(frames, animate_crowd)))
     world.set_resource_nodes([])
     await wait_frames(30, animate_crowd)
-    samples.push(await measure(world, 'flat-all-no-resources', () => wait_frames(frames, animate_crowd)))
+    samples.push(await measure(world, 'terrain-all-no-resources', () => wait_frames(frames, animate_crowd)))
     world.set_resource_nodes(resources)
     labels.show(true)
     await wait_frames(30, animate_crowd)
-    samples.push(await measure(world, 'flat-all-restored', () => wait_frames(frames, animate_crowd)))
+    samples.push(await measure(world, 'terrain-all-restored', () => wait_frames(frames, animate_crowd)))
     const populations = [
-      { stage: 'flat-empty', entities: [], resources: [], labels: false },
+      { stage: 'terrain-empty', entities: [], resources: [], labels: false },
       {
-        stage: 'flat-characters',
+        stage: 'terrain-characters',
         entities: actors.map((actor) => crowd_benchmark_entity(actor, 'run', 0)),
         resources: [],
         labels: false,
       },
-      { stage: 'flat-mobs', entities: mobs, resources: [], labels: false },
-      { stage: 'flat-pets', entities: pets, resources: [], labels: false },
-      { stage: 'flat-resources', entities: [], resources, labels: false },
-      { stage: 'flat-resource-labels', entities: [], resources, labels: true },
+      { stage: 'terrain-mobs', entities: mobs, resources: [], labels: false },
+      { stage: 'terrain-pets', entities: pets, resources: [], labels: false },
+      { stage: 'terrain-resources', entities: [], resources, labels: false },
+      { stage: 'terrain-resource-labels', entities: [], resources, labels: true },
     ]
     for (const population of populations.slice(0, profile.ablations)) {
       labels.show(population.labels)
@@ -366,26 +368,10 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
     labels.show(true)
     animate_crowd()
     await wait_frames(30, animate_crowd)
-    samples.push(await measure(world, 'flat-all-orbit', () => orbit_frames(world, frames, wait_frames)))
+    samples.push(await measure(world, 'terrain-all-orbit', () => orbit_frames(world, frames, wait_frames)))
     labels.show(false)
     world.set_resource_nodes([])
     world.set_entities([])
-    samples.push(
-      await measure(world, 'restore-transition', async () => {
-        world.set_flattened(false)
-        await wait_frames(60)
-        await wait_for_frame_condition(() =>
-          [
-            Math.abs(world.ground_height(...focus) - source_height) <= 0.01,
-            Math.abs(world.camera_frame()!.target[1] - source_height) <= 0.01,
-          ].every(Boolean)
-        )
-        if (Math.abs(world.camera_frame()!.target[1] - world.ground_height(...focus)) > 0.01)
-          throw new Error(
-            `Overview elevation: ${JSON.stringify({ target: world.camera_frame()!.target, focus, actual_focus: world.camera_focus(), ground: world.ground_height(...focus) })}`
-          )
-      })
-    )
     const board = fight_board_render(generate_board(7n), { x: focus[0], y: world.ground_height(...focus), z: focus[1] })
     samples.push(
       await measure(world, 'fight-entry', async () => {
@@ -403,8 +389,7 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
     // Repeat the same out-and-back route: retained resources must plateau after the first lap.
     for (let lap = 0; lap <= profile.laps; lap += 1) {
       samples.push(
-        await measure(world, lap === profile.laps ? 'flat-traversal' : `traversal-${lap}`, async () => {
-          if (lap === profile.laps) world.set_flattened(true)
+        await measure(world, `traversal-${lap}`, async () => {
           for (let step = 0; step <= route * 2; step += 1) {
             const distance = (step < route ? step : route * 2 - step) * 32
             world.set_view({ focus: [focus[0] + distance, focus[1]] })
@@ -441,7 +426,7 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
       .filter(({ name }) => /\.(glb|bin|json)(?:\?|$)/.test(name)).length
     result = {
       backend,
-      captures: { crowd: crowd_frame, flat: frame },
+      captures: { crowd: crowd_frame, terrain: frame },
       viewport: {
         width: canvas.clientWidth,
         height: canvas.clientHeight,
@@ -451,6 +436,7 @@ const run = async ({ quality, mode, location, focus: requested, population, benc
       },
       quality,
       location,
+      world: source.world,
       focus,
       ready_ms,
       samples,

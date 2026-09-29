@@ -11,7 +11,7 @@ import {
   WORLD_MAP_RADII,
   world_map_lod,
   world_map_zone_lod,
-  world_map_zone_target,
+  world_map_position_target,
 } from '../../../src/game/hud/world_map_lod.ts'
 import { WORLD_MAP_WHEEL_OPTIONS } from '../../../src/game/hud/WorldMap.tsx'
 
@@ -48,11 +48,12 @@ describe('world map LOD', () => {
     expect(world_map_zone_lod(world_size / 2, 768)).toEqual({ layer: false, labels: false })
   })
 
-  test('maps a canvas click to the clicked zone center in chain coordinates', () => {
+  test('maps a canvas click to the exact clicked position in chain coordinates', () => {
     const view = { center_x: 0, center_z: 0, radius: ZONE_SIZE * 1.5 }
 
-    expect(world_map_zone_target(view, 384, 384, 768)).toEqual({ zx: 97, zz: 97, x: 49_920, z: 49_920 })
-    expect(world_map_zone_target(world_map_lod(0, 0, WORLD_MAP_LAST_LOD), 768, 768, 768)).toEqual({
+    expect(world_map_position_target(view, 384, 384, 768)).toEqual({ zx: 97, zz: 97, x: 50_000, z: 50_000 })
+    expect(world_map_position_target(view, 385, 383, 768)).toEqual({ zx: 97, zz: 97, x: 50_002, z: 49_998 })
+    expect(world_map_position_target(world_map_lod(0, 0, WORLD_MAP_LAST_LOD), 768, 768, 768)).toEqual({
       zx: 195,
       zz: 195,
       x: world_size - 1,

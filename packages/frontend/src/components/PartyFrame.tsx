@@ -3,14 +3,13 @@
 
 import { Crown, Footprints, X } from 'lucide-react'
 import type { PartyRow } from '@aresrpg/protocol'
-import { client_to_chain_coordinate } from '@aresrpg/immutable'
 import { useRef, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from 'react'
 
 import { useText } from '../i18n/useText.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { selected_party, selected_party_invitation } from '../modules/party.ts'
-import { run_to_available, run_to_progress_percent, type RunTo } from '../modules/run_to.ts'
+import { run_to_available, run_to_distance, run_to_progress_percent, type RunTo } from '../modules/run_to.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { read_party_follow, subscribe_party_follow } from '../game/core/party_follow_feed.ts'
 import type { PartyFollowerView } from '../game/core/party_follow_feed.ts'
@@ -29,18 +28,22 @@ export const party_run_distance = (run: RunTo | null, pose: WorldPose | null, ch
   run.source === 'character' &&
   run.target_character_id === character_id &&
   pose?.character_id === run.controlled_character_id
-    ? Math.hypot(run.x - client_to_chain_coordinate(pose.x), run.z - client_to_chain_coordinate(pose.z))
+    ? (run_to_distance(run, pose) ?? Infinity)
     : null
 
 const PartyDistanceProgress = ({ distance, running = false }: Readonly<{ distance: number; running?: boolean }>) => {
   const initial = useRef(distance)
   const ui = useText()
   const known = Number.isFinite(distance)
-  const distance_percent = running
-    ? run_to_progress_percent(initial.current, distance)
-    : known
-      ? Math.max(0, 100 - (Math.min(distance, 64) / 64) * 100)
-      : 0
+  if (known && !Number.isFinite(initial.current)) {
+    // eslint-disable-next-line functional/immutable-data -- retain the first known length for this keyed route.
+    initial.current = distance
+  }
+  const distance_percent = !known
+    ? 0
+    : running
+      ? run_to_progress_percent(initial.current, distance)
+      : Math.max(0, 100 - (Math.min(distance, 64) / 64) * 100)
   const label = known ? ui('ui.meters', { count: Math.ceil(distance) }) : '—'
   return (
     <span className={`party-distance-progress${running ? ' is-running' : ''}`} title={label}>
@@ -63,6 +66,8 @@ const PartyMemberIcon = ({
 }
 
 const PartyMemberControl = ({
+  on_follow,
+  on_kick,
   member,
   leader,
   selected,
@@ -73,6 +78,8 @@ const PartyMemberControl = ({
   pending,
   text,
 }: Readonly<{
+  on_follow: (enabled: boolean) => void
+  on_kick: ((id: string) => void) | null
   member: PartyRow['members'][number]
   leader: string | null
   selected: string | null
@@ -83,18 +90,12 @@ const PartyMemberControl = ({
   pending: string | null | undefined
   text: CopyText
 }>) => {
-  const settings = useAppStore((state) => state.settings)
   if (member.character_id === leader && selected === leader)
     return (
       <label className="party-follow-toggle">
         <input
           checked={following}
-          onChange={(event) => {
-            dispatch_app({
-              type: 'settings/changed',
-              settings: Object.freeze({ ...settings, follow_leader: event.target.checked }),
-            })
-          }}
+          onChange={(event) => on_follow(event.target.checked)}
           role="switch"
           type="checkbox"
         />
@@ -103,13 +104,13 @@ const PartyMemberControl = ({
     )
   if (run_distance !== null) return <PartyDistanceProgress distance={run_distance} key={run_key} running />
   if (follower) return <PartyDistanceProgress distance={follower.distance} />
-  return selected === leader && member.character_id !== leader ? (
+  return on_kick && selected === leader && member.character_id !== leader ? (
     <button
       aria-label={text('kick')}
       disabled={!!pending}
       onClick={(event) => {
         event.stopPropagation()
-        dispatch_app({ type: 'party/kick', character_id: member.character_id })
+        on_kick(member.character_id)
       }}
       type="button"
     >
@@ -119,6 +120,9 @@ const PartyMemberControl = ({
 }
 
 const PartyMemberRow = ({
+  on_follow,
+  on_kick,
+  on_select,
   member,
   leader,
   selected,
@@ -130,6 +134,9 @@ const PartyMemberRow = ({
   can_run,
   text,
 }: Readonly<{
+  on_follow: (enabled: boolean) => void
+  on_kick: ((id: string) => void) | null
+  on_select: ((id: string) => void) | null
   member: PartyRow['members'][number]
   leader: string | null
   selected: string | null
@@ -144,23 +151,27 @@ const PartyMemberRow = ({
   <div
     className={`party-frame__member${member.character_id === selected ? ' is-selected' : ''}${can_run ? ' can-run' : ''}`}
     onClick={
-      can_run
-        ? (event: Readonly<ReactMouseEvent<HTMLDivElement>>) =>
-            dispatch_app({
-              type: 'world/player_menu',
-              menu: {
-                character_id: member.character_id,
-                x: event.clientX,
-                y: event.clientY,
-                source: 'party',
-              },
-            })
-        : undefined
+      on_select
+        ? () => on_select(member.character_id)
+        : can_run
+          ? (event: Readonly<ReactMouseEvent<HTMLDivElement>>) =>
+              dispatch_app({
+                type: 'world/player_menu',
+                menu: {
+                  character_id: member.character_id,
+                  x: event.clientX,
+                  y: event.clientY,
+                  source: 'party',
+                },
+              })
+          : undefined
     }
   >
     <PartyMemberIcon follower={follower} leader={member.character_id === leader} text={text} />
     <b>{member.name || text('adventurer')}</b>
     <PartyMemberControl
+      on_follow={on_follow}
+      on_kick={on_kick}
       follower={follower}
       following={following}
       leader={leader}
@@ -215,53 +226,73 @@ export const PartyInviteCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   ) : null
 }
 
-export const PartyFrame = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+export type PartyFrameSource = Readonly<{
+  party: PartyRow
+  selected: string | null
+  following: boolean
+  follow: (enabled: boolean) => void
+  select: (id: string) => void
+}>
+
+type PartyFrameViewProps = Readonly<{
+  copy: AppCopy
+  party: PartyRow
+  selected: string | null
+  following: boolean
+  follow: (enabled: boolean) => void
+  select: ((id: string) => void) | null
+  leave: (() => void) | null
+  kick: ((id: string) => void) | null
+  pending: string | null | undefined
+  rows: readonly Readonly<{
+    member: PartyRow['members'][number]
+    follower: PartyFollowerView | null
+    run_distance: number | null
+    run_key: string | null
+    can_run: boolean
+  }>[]
+}>
+
+const PartyFrameView = ({
+  copy,
+  party,
+  selected,
+  following,
+  follow,
+  select,
+  leave,
+  kick,
+  pending,
+  rows,
+}: PartyFrameViewProps) => {
   const text = copy_text(copy.party_panel)
-  const party = useAppStore(selected_party)
-  const selected = useAppStore((state) => state.session.selected_character_id)
-  const owned = useAppStore((state) => state.session.characters)
-  const controlled_can_run = useAppStore(run_to_available)
-  const run = useAppStore((state) => state.run_to.run)
-  const pose = useWorldPose()
-  const follow_leader = useAppStore((state) => state.settings.follow_leader === true)
-  const follow = useSyncExternalStore(subscribe_party_follow, read_party_follow, read_party_follow)
-  const pending = useAppStore((state) =>
-    state.session.selected_character_id ? state.party.pending_by_character[state.session.selected_character_id] : null
-  )
   const leader = party_leader(party)
-  const following = party_is_following(party, follow_leader)
-  const follower_by_id = followed_members(following, follow.followers)
-  return party_frame_visible(party, pending) ? (
+  return (
     <section className="party-frame">
       <header>
         <span>{text('title')}</span>
-        <small>{party?.members.length ?? 1}/6</small>
-        {party && (
-          <button disabled={!!pending} onClick={() => dispatch_app({ type: 'party/leave' })} type="button">
-            {party.members.length === 1 ? text('disband') : text('leave')}
+        <small>{party.members.length}/6</small>
+        {leave && (
+          <button disabled={!!pending} onClick={leave} type="button">
+            {text(party.members.length === 1 ? 'disband' : 'leave')}
           </button>
         )}
       </header>
-      {party?.members.map((member) => (
+      {rows.map((row) => (
         <PartyMemberRow
-          can_run={controlled_can_run && party_run_available(owned, member.character_id)}
-          follower={follower_by_id.get(member.character_id) ?? null}
-          following={following}
-          key={member.character_id}
+          {...row}
+          key={row.member.character_id}
           leader={leader}
-          member={member}
-          pending={pending}
-          run_distance={party_run_distance(run, pose, member.character_id)}
-          run_key={
-            run?.status === 'running' && run.source === 'character' && run.target_character_id === member.character_id
-              ? `${run.controlled_character_id}:${run.x}:${run.z}`
-              : null
-          }
           selected={selected}
+          following={following}
+          pending={pending}
           text={text}
+          on_follow={follow}
+          on_kick={kick}
+          on_select={select}
         />
       ))}
-      {party?.invited.map((invited) => (
+      {party.invited.map((invited) => (
         <div className="party-frame__member is-invited" key={invited.character_id}>
           <span />
           <b>{invited.name || text('adventurer')}</b>
@@ -269,8 +300,8 @@ export const PartyFrame = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <button
               aria-label={text('rescind')}
               disabled={!!pending}
-              onClick={() => dispatch_app({ type: 'party/rescind', character_id: invited.character_id })}
               type="button"
+              onClick={() => dispatch_app({ type: 'party/rescind', character_id: invited.character_id })}
             >
               <X size={10} />
             </button>
@@ -278,5 +309,63 @@ export const PartyFrame = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         </div>
       ))}
     </section>
-  ) : null
+  )
 }
+
+const LivePartyFrame = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const party = useAppStore(selected_party)
+  const selected = useAppStore((state) => state.session.selected_character_id)
+  const owned = useAppStore((state) => state.session.characters)
+  const controlled_can_run = useAppStore(run_to_available)
+  const run = useAppStore((state) => state.run_to.run)
+  const pose = useWorldPose()
+  const settings = useAppStore((state) => state.settings)
+  const follow = useSyncExternalStore(subscribe_party_follow, read_party_follow, read_party_follow)
+  const pending = useAppStore((state) => (selected ? state.party.pending_by_character[selected] : null))
+  const following = party_is_following(party, settings.follow_leader === true)
+  const follower_by_id = followed_members(following, follow.followers)
+  if (!party_frame_visible(party, pending ?? null) || !party) return null
+  const rows = party.members.map((member) => ({
+    member,
+    can_run: controlled_can_run && party_run_available(owned, member.character_id),
+    follower: follower_by_id.get(member.character_id) ?? null,
+    run_distance: party_run_distance(run, pose, member.character_id),
+    run_key: run?.status === 'running' ? `${run.controlled_character_id}:${run.x}:${run.z}` : null,
+  }))
+  return (
+    <PartyFrameView
+      copy={copy}
+      party={party}
+      selected={selected}
+      following={following}
+      pending={pending}
+      rows={rows}
+      follow={(enabled) =>
+        dispatch_app({ type: 'settings/changed', settings: { ...settings, follow_leader: enabled } })
+      }
+      select={null}
+      kick={(character_id) => dispatch_app({ type: 'party/kick', character_id })}
+      leave={() => dispatch_app({ type: 'party/leave' })}
+    />
+  )
+}
+
+export const PartyFrame = ({ copy, source }: Readonly<{ copy: AppCopy; source?: PartyFrameSource }>) =>
+  source ? (
+    <PartyFrameView
+      copy={copy}
+      {...source}
+      pending={null}
+      leave={null}
+      kick={null}
+      rows={source.party.members.map((member) => ({
+        member,
+        can_run: false,
+        follower: null,
+        run_distance: null,
+        run_key: null,
+      }))}
+    />
+  ) : (
+    <LivePartyFrame copy={copy} />
+  )

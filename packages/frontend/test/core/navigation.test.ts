@@ -5,12 +5,7 @@ import { describe, expect, test } from 'bun:test'
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
 
 import { initial_app_state, reduce_app_state, type AppState } from '../../src/store.ts'
-import navigation, {
-  normalize_pathname,
-  page_from_pathname,
-  pathname_for_page,
-  world_scene_active,
-} from '../../src/modules/navigation.ts'
+import navigation, { normalize_pathname, page_from_pathname, pathname_for_page } from '../../src/modules/navigation.ts'
 
 describe('app navigation routes', () => {
   test('maps browser paths to reducer-owned pages', () => {
@@ -29,9 +24,7 @@ describe('app navigation routes', () => {
   })
 
   test('logout keeps a pending printed gift on its Google-first route', () => {
-    const base = initial_app_state(
-      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
-    )
+    const base = initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
     const state = Object.freeze({
       ...base,
       navigation: Object.freeze({ ...base.navigation, page: 'airdrop' as const, pathname: '/gift' }),
@@ -44,17 +37,8 @@ describe('app navigation routes', () => {
     })
   })
 
-  test('keeps the world scene running for a mounted Kolizeum board', () => {
-    expect(world_scene_active('world', false)).toBeTrue()
-    expect(world_scene_active('kolizeum', false)).toBeFalse()
-    expect(world_scene_active('kolizeum', true)).toBeTrue()
-    expect(world_scene_active('characters', true)).toBeFalse()
-  })
-
   test('returns a terminal Kolizeum fighter to World for the result card', () => {
-    const base = initial_app_state(
-      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
-    )
+    const base = initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
     const state = {
       ...base,
       navigation: { ...base.navigation, page: 'kolizeum' as const, pathname: '/kolizeum' },
@@ -76,10 +60,8 @@ describe('app navigation routes', () => {
     expect(returned.navigation).toMatchObject({ page: 'world', pathname: '/' })
   })
 
-  test('folds sidebar and browser navigation through the same reducer', () => {
-    const state = initial_app_state(
-      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
-    )
+  test('folds HUD and browser navigation through the same reducer', () => {
+    const state = initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
     const creating = reduce_app_state(state, { type: 'dialog/open', dialog: 'character_create' })
     const opened = reduce_app_state(creating, { type: 'page/open', page: 'encyclopedia' })
     const selected = reduce_app_state(opened, { type: 'path/open', pathname: '/encyclopedia/items/aberrant_edge' })
@@ -93,9 +75,7 @@ describe('app navigation routes', () => {
   })
 
   test('opens character creation on its World host from every character-scoped page', () => {
-    const base = initial_app_state(
-      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
-    )
+    const base = initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
     for (const page of ['characters', 'kolizeum'] as const) {
       const outside_world = reduce_app_state(base, { type: 'page/open', page })
       const creating = reduce_app_state(outside_world, { type: 'dialog/open', dialog: 'character_create' })
@@ -118,9 +98,7 @@ describe('app navigation routes', () => {
     })
     const controller = new AbortController()
     let state_listener: ((state: AppState, previous: AppState) => void) | undefined
-    const base = initial_app_state(
-      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
-    )
+    const base = initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
     try {
       navigation.observe?.({
         dispatch: () => undefined,
@@ -159,9 +137,7 @@ describe('app navigation routes', () => {
     const controller = new AbortController()
     let state_listener: ((state: AppState, previous: AppState) => void) | undefined
     const dispatched: unknown[] = []
-    let state = initial_app_state(
-      Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
-    )
+    let state = initial_app_state(Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null }))
     try {
       navigation.observe?.({
         dispatch: (input) => dispatched.push(input),

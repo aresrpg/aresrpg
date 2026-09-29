@@ -1,0 +1,155 @@
+/* Opaque paint with a single fine-grain material; color remains owned by each semantic surface. */
+.aui-mob-pack,
+.aui-inspection,
+.game-character-body .chr-equip__detail,
+.item-detail-view .jobs__craft,
+.aui-panel,
+.aui-surface,
+.aui-window,
+.aui-window-header,
+.aui-button,
+.aui-character-sheet,
+.aui-character-identity,
+.aui-character-statistics,
+.aui-character-statistics > h3,
+.aui-combat-vitals,
+.aui-combat-spells,
+.aui-combat-controls,
+.aui-mob-overview,
+.aui-mob > header,
+.aui-mob > footer,
+.aui-reward,
+.game-character-window,
+.game-character-window > .aui-window-header,
+.game-character-body .chr-equip__bag,
+.game-character-body .inv__doll--portrait,
+.game-character-body .chr-cell,
+.game-character-body .inv__slot {
+  background-image: url('./assets/panel_grain.webp');
+  background-size: 256px 256px;
+  background-repeat: repeat;
+  background-blend-mode: soft-light;
+}
+
+/* Engraved trim belongs to the shared window, never the page backdrop. */
+.aui-window-header,
+.aui-mob > header,
+.aui-progression > header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.aui-window-header::before,
+.aui-window-header::after,
+.aui-mob > header::before,
+.aui-mob > header::after,
+.aui-progression > header::before,
+.aui-progression > header::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(27%, 220px);
+  background:
+    url('./assets/carved_corner.webp') left center / 68px 68px no-repeat,
+    url('./assets/window_flourish.svg') left center / auto 100% no-repeat;
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: -1;
+}
+.aui-window-header::after,
+.aui-mob > header::after,
+.aui-progression > header::after {
+  left: auto;
+  right: 0;
+  transform: scaleX(-1);
+}
+.game-character-body .inv__doll--portrait {
+  box-shadow:
+    inset 0 0 0 1px #b6b0a012,
+    inset 0 0 24px #0003;
+  border-radius: 22px 3px 22px 3px;
+}
+.game-character-body .chr-equip__bag {
+  border-radius: 3px 18px 3px 18px;
+  border-color: #a9a39429;
+}
+
+.aui-window {
+  position: relative;
+  isolation: isolate;
+}
+.aui-window::before,
+.aui-window::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 72px;
+  height: 72px;
+  z-index: 0;
+  background: url('./assets/carved_corner.webp') center / contain no-repeat;
+  opacity: 0.42;
+  pointer-events: none;
+  transform: scaleY(-1);
+}
+.aui-window::after {
+  left: auto;
+  right: 0;
+  transform: rotate(180deg);
+}
+.aui-window > * {
+  z-index: 1;
+}
+.game-character-body .chr-equip__bag {
+  position: relative;
+  isolation: isolate;
+  border-radius: 18px 18px 6px 6px;
+}
+.game-character-body .chr-equip__bag::before,
+.game-character-body .chr-equip__bag::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 76px;
+  height: 76px;
+  z-index: -1;
+  background: url('./assets/carved_corner.webp') center / contain no-repeat;
+  opacity: 0.48;
+  pointer-events: none;
+}
+.game-character-body .chr-equip__bag::after {
+  left: auto;
+  right: 0;
+  transform: scaleX(-1);
+}
+.aui-button {
+  border-radius: 7px;
+  border-color: #101821;
+  box-shadow:
+    inset 0 1px #d5dee044,
+    inset 0 -3px #070b1455,
+    0 2px 2px #0003;
+}
+.aui-button--primary {
+  border-color: #574322;
+  box-shadow:
+    inset 0 1px #ffe5a477,
+    inset 0 -3px #62472266,
+    0 2px 2px #0004;
+}
+.aui-button:active:not(:disabled) {
+  box-shadow: inset 0 2px 3px #0005;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .game-character-body .chr-equip__bag::before,
+  .game-character-body .chr-equip__bag::after {
+    width: 55px;
+    height: 55px;
+  }
+  .aui-window::before,
+  .aui-window::after {
+    width: 50px;
+    height: 50px;
+  }
+}

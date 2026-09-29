@@ -5,9 +5,10 @@
 import { parse_world_recipe, type EntityRender } from '@aresrpg/engine'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import { observe_world_controls } from '../game/core/world_input.ts'
 import { master_volume_from } from '../game/core/audio_volume.ts'
 import type { create_world, WorldView } from '../game/core/world.ts'
-import { character_render_source, load_character_appearance } from '../game/character_entities.ts'
+import { character_render_source, load_character_appearance, character_aura } from '../game/character_entities.ts'
 import {
   browser_position_storage,
   chain_anchor_changed,
@@ -41,10 +42,10 @@ import {
   sync_dungeon_scene,
   world_presence_rows,
 } from './engine_selection.ts'
+import { nearby_fight } from './nearby_fight.ts'
 import { sword_fights } from './world_engage.ts'
-import { is_world_page, world_scene_active } from './navigation.ts'
+import { sync_world_activity } from './engine_activity.ts'
 import { run_to_target } from './run_to.ts'
-import { selected_world_action_lock } from './world_gather.ts'
 import { receive_engine_status } from './engine_state.ts'
 
 export { initial_engine_state, type EngineState, type EngineInput } from './engine_state.ts'
@@ -95,20 +96,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     }
   }
 
-  const sync_activity = (state: AppState): void => {
-    if (!world) return
-    const world_page = is_world_page(state.navigation.page)
-    const background = state.automation.run !== null || state.run_to.run?.status === 'running'
-    world.set_active(world_scene_active(state.navigation.page, state.fight.mounted, background), background)
-    world.set_interactive(world_page && (!!state.session.wallet || state.navigation.guest_spectating))
-    world.set_action_lock(selected_world_action_lock(state))
-  }
-
   const sync_settings = (state: AppState): void => {
     if (!world) return
     world.set_quality(state.settings.quality, state.settings.render_distance)
     world.set_audio_volume(master_volume_from(state.settings.master_volume))
-    world.set_flattened(state.settings.flat_mode)
     world.set_footsteps_enabled(state.settings.footsteps_enabled !== false)
     world.set_day_night_cycle_enabled(state.settings.day_night_cycle_enabled !== false)
   }
@@ -117,7 +108,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const position = checkpoint_only ? selected_checkpoint_position(state) : selected_position(state)
     if (!position) {
       world.release()
-      sync_activity(get_state())
+      sync_world_activity(world, get_state())
       return
     }
     const own_generation = ++target_generation
@@ -126,7 +117,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const point = (resumed: Readonly<{ x: number; z: number }> | null): void => {
       if (signal.aborted || own_generation !== target_generation || !world) return
       world.point_at(resumed ?? position)
-      sync_activity(get_state())
+      sync_world_activity(world, get_state())
     }
     if (checkpoint_only) {
       point(null)
@@ -139,19 +130,17 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (!world) return
     const selected = state.session.characters.find(({ id }) => id === state.session.selected_character_id)
     const source = selected ? character_render_source(selected) : null
-    const next_key = source ? JSON.stringify(source) : null
+    const aura = character_aura(source?.loadout.title, state.session.wallet?.address)
+    const next_key = source ? JSON.stringify({ ...source, aura }) : null
     if (next_key === character_key) return
     character_key = next_key
     character_generation += 1
     const own_generation = character_generation
-    if (!source) {
-      world.set_character(null)
-      return
-    }
+    if (!source) return world.set_character(null)
     void load_character_appearance(source).then(
       (appearance) => {
         if (signal.aborted || own_generation !== character_generation || !world) return
-        world.set_character(Object.freeze({ id: source.id, appearance }))
+        world.set_character(Object.freeze({ id: source.id, appearance, aura }))
       },
       (error: unknown) => {
         if (own_generation !== character_generation || !world) return
@@ -174,6 +163,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         submit_world_entities()
       },
       ground_height: api.mob_ground_height,
+      walk_step: api.walk_step,
       entity_height: api.entity_height,
       label: (group_id, element, position) => api.set_world_label(group_id, element, position),
     })
@@ -195,7 +185,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       state.session.selected_character_id
     )
   }
-  /** The tracked zones' live groups, minus what chain truth says is already taken. */
   const sync_spawns = (state: AppState): void => {
     if (!spawns) return
     const world_name = selected_world(state)
@@ -251,8 +240,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     )
   }
 
-  /** The tracked zones' live fights as planted swords — kolizeum fights are arena-internal
-   *  (nominal world) and never stand in a world's ground. */
   let sword_assets: Readonly<{ model_url: string; impact_sound_url: string }> | null = null
   const sync_fights = (state: AppState): void => {
     const api = world
@@ -266,6 +253,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         const z = chain_to_client_coordinate(fight.z)
         return {
           id: fight.id,
+          hidden: state.fight.nearby?.fight === fight.id && !!state.fight.cached[fight.id] && !state.fight.mounted,
           x,
           y: api.ground_height(x, z),
           z,
@@ -282,10 +270,10 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (sword_assets) arm(sword_assets)
     // Preload swords on mount so the first engage animation needs no model fetch.
     else if (world_name)
-      void Promise.all([import('../content/fight_models.ts'), import('../game/audio/fight_audio_registry.ts')])
-        .then(async ([{ load_fight_sword_url }, { fight_audio_src }]) => {
+      void Promise.all([import('../content/fight_models.ts'), import('../game/audio/audio_registry.ts')])
+        .then(async ([{ load_fight_sword_url }, { audio_src }]) => {
           const model_url = await load_fight_sword_url()
-          const impact_sound_url = fight_audio_src('sword_plant')
+          const impact_sound_url = audio_src('sword_plant')
           return model_url && impact_sound_url ? Object.freeze({ model_url, impact_sound_url }) : null
         })
         .then((assets) => {
@@ -295,7 +283,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         })
   }
 
-  // The selected character's equipped pet uses the shared model loader.
   let pet_key: string | null = null
   let pet_generation = 0
   const sync_pet = (state: AppState): void => {
@@ -338,7 +325,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     // Resolve the real first target before workers receive a batch; never mesh origin then cancel.
     if (initial_position) {
       world?.point_at(initial_position)
-      sync_activity(state)
+      sync_world_activity(world, state)
     } else sync_target(state)
   }
 
@@ -453,17 +440,14 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
         }
         const created = create({
           canvas: next_canvas,
-          world: parse_world_recipe(terrain),
+          world: terrain,
           quality: get_state().settings.quality,
           render_distance: get_state().settings.render_distance,
-          force_grid: get_state().engine.recovery === 'grid',
           initial_focus: initial_position ? [initial_position.x, initial_position.z] : [0, 0],
           on_travel: () => dispatch({ type: 'dialog/open', dialog: 'travel' }),
-          on_run_stopped: (reason) =>
-            dispatch({ type: 'run_to/stopped', reason, restore_flat: get_state().run_to.restore_flat }),
+          on_run_stopped: (reason) => dispatch({ type: 'run_to/stopped', reason }),
         })
         world = created
-        // Publish the running scene; the fight board mounts here, never in a second engine.
         publish_scene(created)
         presence = create_presence_renderer({
           submit: (entities) => {
@@ -526,11 +510,19 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     persist_owned_positions(state)
     sync_presence(state)
   })
+  const sync_nearby = (): void => {
+    const state = get_state()
+    const nearby = nearby_fight(state, read_pose())
+    if (nearby?.fight !== state.fight.nearby?.fight || nearby?.character_id !== state.fight.nearby?.character_id)
+      dispatch({ type: 'fight/nearby', nearby })
+  }
   const unsubscribe_pose = subscribe_pose(() => {
+    sync_nearby()
     const state = get_state()
     spawns?.refresh()
     sync_resources(state)
   })
+  observe_world_controls({ events, get_state, read_world: () => world })
   events.on('engine/canvas_attached', ({ canvas: next_canvas }) => mount(next_canvas))
   events.on('engine/canvas_detached', ({ canvas: previous_canvas }) => {
     if (canvas !== previous_canvas) return
@@ -551,7 +543,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (state.run_to.run !== previous.run_to.run) world?.set_run_target(run_to_target(state))
   }
   events.on('STATE_UPDATED', (state, previous) => {
-    sync_activity(state)
+    sync_world_activity(world, state)
     sync_position_cache(state, previous)
     sync_run_to(state, previous)
     if (state.settings !== previous.settings) sync_settings(state)
@@ -584,8 +576,15 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     if (selection_changed || state.world.spawns !== previous.world.spawns || state.world.zones !== previous.world.zones)
       sync_resources(state)
     if (selection_changed || state.world.spawns !== previous.world.spawns) sync_dungeon_scene(world, state)
-    if (state.world.fights !== previous.world.fights || state.world.pending_engages !== previous.world.pending_engages)
+    if (
+      [
+        state.world.fights !== previous.world.fights,
+        state.world.pending_engages !== previous.world.pending_engages,
+        state.fight !== previous.fight,
+      ].includes(true)
+    )
       sync_fights(state)
+    sync_nearby()
   })
   signal.addEventListener('abort', () => {
     position_cache.flush()

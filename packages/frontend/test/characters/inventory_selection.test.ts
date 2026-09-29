@@ -4,6 +4,8 @@
 import { expect, test } from 'bun:test'
 import type { ItemRow } from '@aresrpg/protocol'
 
+import { inventory_action_selection } from '../../src/characters/InventoryOverlays.tsx'
+import { primary_item_action } from '../../src/characters/InventoryItemActions.tsx'
 import { crush_selection, select_inventory_item } from '../../src/characters/inventory_selection.ts'
 import { owned_item_details } from '../../src/components/OwnedItemDetail.tsx'
 
@@ -47,4 +49,20 @@ test('owned details show signed rolls rather than template ranges and preserve a
   expect(detail.damages).toEqual(gear.damages)
   expect(owned_item_details({ ...gear, category: 'pet', pet_power: 30 }).stats.min).toEqual({ wisdom: -2, strength: 5 })
   expect(owned_item_details({ ...gear, stats: undefined }).stats.min).toEqual({})
+})
+
+test('detail and context actions preserve the exact selected batch', () => {
+  const first = item('a'),
+    second = item('b'),
+    outside = item('c')
+  expect(inventory_action_selection(first, [first, second])?.items).toEqual([first, second])
+  expect(inventory_action_selection(outside, [first, second])?.items).toEqual([outside])
+  expect(inventory_action_selection(undefined, [first])).toBeNull()
+})
+
+test('primary item actions distinguish equipment, usable consumables and resources', () => {
+  expect(primary_item_action(item('a'), false)).toBe('equip')
+  expect(primary_item_action(item('a'), true)).toBe('unequip')
+  expect(primary_item_action({ item_type: 'recall_potion', category: 'consumable' }, false)).toBe('use')
+  expect(primary_item_action({ item_type: 'wheat_barley', category: 'resource' }, false)).toBeNull()
 })

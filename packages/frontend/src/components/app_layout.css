@@ -30,56 +30,10 @@
 }
 
 .app-world-frame {
-  inset: calc(var(--app-top) + var(--app-tabs-height) + var(--app-gap)) var(--app-right) var(--app-bottom)
-    calc(var(--app-left) + var(--app-sidebar-width) + var(--app-gap));
+  inset: 0;
+  border-radius: 0;
 }
 
-.sidebar-viewport {
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  gap: var(--app-gap);
-  min-height: 0;
-  width: var(--app-sidebar-width);
-}
-.sidebar-viewport__content {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--app-gap);
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
-}
-.sidebar-viewport__content > *,
-.sidebar-viewport__footer > * {
-  flex-shrink: 0;
-  min-width: 0;
-  width: 100%;
-}
-.sidebar-viewport__footer {
-  flex-shrink: 0;
-}
-
-.app-header {
-  display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-  min-width: 0;
-  height: var(--app-tabs-height);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-}
-.app-header [data-character-tabs] {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  border: 0;
-  background: transparent;
-}
 .wallet-trigger {
   display: flex;
   align-items: center;
@@ -100,24 +54,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.wallet-trigger__identity {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex: 1;
-  line-height: 15px;
-  font-weight: 600;
-  color: var(--color-text);
-}
-.wallet-trigger__identity > span {
-  max-width: 100%;
-}
-.wallet-trigger__label {
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--color-gold-light);
-}
 .wallet-trigger__balance {
   flex-shrink: 0;
   border-left: 1px solid var(--color-border);
@@ -126,30 +62,21 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.wallet-trigger__icon {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, transparent);
-  background: color-mix(in srgb, var(--color-gold) 15%, transparent);
-}
-.wallet-trigger__chevron {
-  color: var(--color-gold-light);
-}
 .wallet-trigger svg {
   flex-shrink: 0;
 }
 .wallet-trigger:hover,
-.app-header:has(.wallet-popover:popover-open) .wallet-trigger {
+.world-account:has(.wallet-popover:popover-open) .wallet-trigger {
   background: color-mix(in srgb, var(--color-gold) 22%, var(--color-surface));
 }
 .wallet-popover {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   position: fixed;
   inset: calc(var(--app-top, 12px) + var(--app-tabs-height) + 6px) var(--app-right, 12px) auto auto;
   margin: 0;
-  width: min(360px, calc(100vw - 24px));
+  width: min(330px, calc(100vw - 24px));
   max-height: calc(100dvh - var(--app-top, 12px) - var(--app-tabs-height) - 24px);
   overflow-y: auto;
   box-shadow: 0 12px 32px color-mix(in srgb, var(--color-bg) 75%, transparent);
@@ -164,10 +91,68 @@
     padding-inline: 8px;
     font-size: 12px;
   }
-  .wallet-trigger__icon {
-    display: none;
-  }
   .wallet-trigger__balance {
     padding-left: 7px;
   }
+}
+
+.wallet-popover__identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wallet-popover__identity > svg {
+  color: #c9af7b;
+  flex: none;
+}
+.wallet-popover__identity > strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e2cfaa;
+  font-size: 14px;
+}
+.wallet-popover .aui-wallet-balances {
+  gap: 8px;
+}
+.wallet-popover .aui-wallet-balances > div {
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  padding: 10px;
+  gap: 3px 8px;
+  background: #171c22;
+}
+.wallet-popover .aui-wallet-balances :is(svg, img) {
+  grid-row: span 2;
+  width: 24px;
+  height: 24px;
+}
+.wallet-popover .aui-wallet-balances strong {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.wallet-popover__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.wallet-popover__actions .aui-button {
+  min-height: 40px;
+}
+.wallet-popover__gas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 9px;
+  border-top: 1px solid #ffffff12;
+  font-size: 11px;
+  color: #a0a9b4;
+}
+.wallet-popover__gas strong {
+  color: #d1d8e0;
+  font-variant-numeric: tabular-nums;
 }

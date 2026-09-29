@@ -9,7 +9,7 @@ import { create_app } from '../../src/store.ts'
 
 test('a forfeiter can watch the same ongoing fight until stopping or its canonical end', () => {
   const app = create_app()
-  app.initialize({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  app.initialize({ quality: 'medium', music_enabled: true, render_distance: null })
   const stop = app.observe(['fight'])
   // Lifecycle projection fixture: no wire decoding or combat simulation occurs here.
   const checkpoint = {

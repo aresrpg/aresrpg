@@ -7,11 +7,11 @@ import { clamp, float, mix, saturation, smoothstep, vec3 } from 'three/tsl'
 type Rgb = readonly [number, number, number]
 
 const GRADE = Object.freeze({
-  contrast: 1.27,
-  local_contrast: 1.14,
+  contrast: 1.18,
+  local_contrast: 1.1,
   pivot: 0.45,
-  saturation: 1.22,
-  vibrance: 0.18,
+  saturation: 1.08,
+  vibrance: 0.08,
   lift: 0.006,
   shoulder: 0.09,
 })

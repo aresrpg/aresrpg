@@ -6,8 +6,9 @@
 // the shared nametag into each; per-frame presentation state stays outside the app reducer.
 
 import { useSyncExternalStore } from 'react'
+import { FIGHT_VIEW_RADIUS_BLOCKS } from '@aresrpg/protocol'
 
-export const FIGHT_TAG_RANGE_BLOCKS = 50
+export const FIGHT_TAG_RANGE_BLOCKS = FIGHT_VIEW_RADIUS_BLOCKS
 export const FIGHT_INTERACTION_RANGE_BLOCKS = 4
 
 export type FightPrompt = Readonly<{

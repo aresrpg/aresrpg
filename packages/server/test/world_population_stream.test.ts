@@ -54,6 +54,7 @@ const tracked_state = (): PlayerState =>
     friends: new Set(),
     spectating: {},
     fight_previews: {},
+    nearby_fight: null,
     market_observation: null,
     market_price_observation: null,
     leaderboard_observation: null,

@@ -41,7 +41,7 @@ test('the Kolizeum result reports certified winner payout or loser stake', () =>
 })
 
 test('a certified Kolizeum payment completes the wager result', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const settled = fight_result_module.reduce!(
     {
       ...base,

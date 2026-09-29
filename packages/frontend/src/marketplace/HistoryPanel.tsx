@@ -8,8 +8,8 @@ import { useNumbers } from '../i18n/useNumbers.ts'
 import { item_icon } from '../content/assets.ts'
 import { content_catalog, titleize } from '../content/catalog.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
 
+import { useMarketState, useMarketDispatch } from './MarketSource.tsx'
 import { short_address, SuiUnit } from './marketplace_model.tsx'
 
 const PAGE = 30
@@ -28,8 +28,9 @@ const relative_time = (at_ms: number, locale: string): string => {
 }
 
 export const HistoryPanel = ({ locale, text }: Readonly<{ locale: string; text: CopyText }>) => {
+  const dispatch_app = useMarketDispatch()
   const localized_numbers = useNumbers()
-  const market = useAppStore(({ marketplace }) => marketplace)
+  const market = useMarketState()
   const [limit, set_limit] = useState(PAGE)
   const profits = useMemo(
     () => market.profits.reduce((sum, row) => sum + BigInt(row.amount_mist), 0n),

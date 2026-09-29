@@ -7,9 +7,30 @@ import { promisify } from 'node:util'
 // Canonical runtime input ownership for release builds. Version-only metadata is not a build input.
 export const JOURNAL_CONTENT_PREFIXES = ['seed/content/journal/', 'seed/icons/journal/']
 
+export const SCENE_COMPILER_FILES = Object.freeze([
+  'scripts/generate_main_menu.mjs',
+  'scripts/generate_asset_workshop.mjs',
+  'scripts/bake_schematic.mjs',
+  'scripts/partition_blocks.mjs',
+  'scripts/bake_city_instances.mjs',
+  'scripts/bake_thebes_assets.mjs',
+  'scripts/building_kit.mjs',
+  'scripts/module_connections.mjs',
+  'scripts/module_transform.mjs',
+  'scripts/constraint_layout.mjs',
+  'scripts/compile_neighborhood.mjs',
+  'scripts/townhouse.mjs',
+  'scripts/main_menu_buildings.mjs',
+  'scripts/main_menu_landmarks.mjs',
+  'scripts/harbor_details.mjs',
+])
+
 export const RELEASE_INPUTS = Object.freeze({
   frontend: Object.freeze([
+    ...SCENE_COMPILER_FILES,
+    'packages/ui/',
     'packages/frontend/',
+    'packages/mobile/',
     'packages/engine/',
     'packages/sdk/',
     'packages/fight/',
@@ -27,7 +48,9 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/server/',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
     'packages/engine/package.json',
+    'packages/ui/package.json',
     'packages/frontend/package.json',
+    'packages/mobile/package.json',
     'packages/launchpad/package.json',
     'packages/journal/package.json',
     'packages/sdk/package.json',

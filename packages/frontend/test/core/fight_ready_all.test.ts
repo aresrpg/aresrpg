@@ -25,7 +25,7 @@ const fighter = (character: string, owner: string, team: number, cell: number) =
 test('Ready all submits every owned unready seat through one guarded action', async () => {
   const listeners = new Map<string, ((payload: never) => void)[]>()
   const calls: unknown[] = []
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const checkpoint = {
     contract: {
       id: '0xf',

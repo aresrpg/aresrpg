@@ -1,0 +1,121 @@
+/* Encyclopedia layouts own their panes; the game window only supplies bounded space. */
+.aui-codex-port .enc-browser {
+  gap: 0;
+}
+.aui-codex-port .enc-browser__list {
+  min-width: 0;
+}
+.aui-codex-port .aui-workspace-toolbar > .aui-segments {
+  width: 100%;
+}
+.aui-codex-port [data-item-detail-view] h3 {
+  color: #ddc28b;
+}
+.aui-mob-tools {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex: none;
+  padding: 5px 8px;
+  border-bottom: 1px solid #ffffff10;
+}
+.aui-mob-tools .aui-search-field {
+  flex: 1;
+  max-width: 300px;
+}
+.aui-mob-tools > select {
+  min-height: 36px;
+  max-width: 115px;
+  background: #171c24;
+  color: #b9c2ce;
+  border: 1px solid #ffffff18;
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 11px;
+}
+.aui-mob-tools > small {
+  margin-left: auto;
+  color: #8e99a6;
+  font-size: 10px;
+}
+.aui-mob-tools > button {
+  font-size: 11px;
+  min-height: 36px;
+  padding: 5px 9px;
+}
+[data-encyclopedia-tab='bestiary'] .aui-collection {
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  grid-auto-rows: 60px;
+  overflow: visible;
+}
+[data-encyclopedia-tab='bestiary'] .aui-collection-tile,
+[data-encyclopedia-tab='jobs'] .aui-collection-tile,
+[data-encyclopedia-tab='classes'] .aui-collection-tile {
+  flex-direction: row;
+  align-items: center;
+  padding: 8px;
+  gap: 10px;
+}
+[data-encyclopedia-tab='bestiary'] .aui-collection-copy,
+[data-encyclopedia-tab='jobs'] .aui-collection-copy,
+[data-encyclopedia-tab='classes'] .aui-collection-copy {
+  text-align: left;
+}
+[data-encyclopedia-tab='jobs'] .aui-collection,
+[data-encyclopedia-tab='classes'] .aui-collection {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-auto-rows: 64px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-codex-port .aui-workspace-toolbar {
+    padding: 4px;
+  }
+  .aui-codex-port .aui-workspace-toolbar .aui-button {
+    min-height: 36px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .aui-mob-tools > small {
+    display: none;
+  }
+  [data-encyclopedia-tab='bestiary'] .aui-collection {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 46px;
+  }
+  [data-encyclopedia-tab='jobs'] .aui-collection,
+  [data-encyclopedia-tab='classes'] .aui-collection {
+    grid-auto-rows: 54px;
+  }
+}
+
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  [data-encyclopedia-tab='bestiary'] .aui-collection-tile {
+    padding: 4px 8px;
+  }
+  [data-encyclopedia-tab='bestiary'] .aui-collection-copy strong {
+    font-size: 12px;
+  }
+  [data-encyclopedia-tab='bestiary'] .aui-collection-copy small {
+    font-size: 10px;
+  }
+}
+
+[data-encyclopedia-tab='kares'] {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+[data-encyclopedia-tab='kares'] > section {
+  flex: none;
+}
+.aui-codex-port button.aui-navigation-row {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 34px;
+}
+@media (pointer: coarse) {
+  .aui-codex-port button.aui-navigation-row {
+    min-height: 44px;
+  }
+}

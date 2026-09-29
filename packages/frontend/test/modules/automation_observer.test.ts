@@ -87,7 +87,9 @@ test('the world observer confirms sequential harvests and reports the exact prot
     expect(app.store.getState().run_to.run?.source).toBe('automation')
     await Bun.sleep(55)
     publish_pose({ ...tick().pose!, x: -10 })
-    // Pose arrival inside the manual interaction radius stops travel and gathers immediately.
+    // Proximity alone cannot finish a walking route on the far side of an obstacle.
+    expect(gathers).toBe(0)
+    app.dispatch({ type: 'run_to/stopped', reason: 'arrived' })
     expect(gathers).toBe(1)
     expect(app.store.getState().run_to.run).toBeNull()
     // The first root expires while its receipt is still pending. Receipt completion must
@@ -268,7 +270,7 @@ test('gathering exhausts a zone, discovers the next eligible zone, and continues
     })
     publish_pose(null)
     publish_pose({ ...tick().pose!, x: chain_to_client_coordinate(run.x), z: chain_to_client_coordinate(run.z) })
-    app.dispatch({ type: 'run_to/stopped', reason: 'arrived', restore_flat: false })
+    app.dispatch({ type: 'run_to/stopped', reason: 'arrived' })
     await finished
     expect(searches).toHaveLength(1)
     expect(searches[0]).toMatchObject({ world: run.world, refresh: false })

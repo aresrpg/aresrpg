@@ -5,11 +5,10 @@
 
 import { Package, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { NativeModal } from '@aresrpg/ui'
 
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { useAppStore } from '../store.ts'
-
-import { NativeModal } from './ModalFrame.tsx'
 
 export type PickerItem = Readonly<{
   id: string
@@ -208,7 +207,7 @@ export const SearchPickerModal = ({
           <div className="flex shrink-0 flex-wrap gap-1 border-b border-border px-4 py-2">
             {pills.map((pill) => (
               <button
-                className={`min-h-11 cursor-pointer border px-1.5 py-0.5 text-[8px] uppercase ${active_pills.has(pill) ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : 'border-white/8 text-[#6b7280]'}`}
+                className={`min-h-11 cursor-pointer border px-1.5 py-0.5 text-[8px] uppercase ${active_pills.has(pill) ? 'aui-button--primary' : 'border-white/8 text-[#6b7280]'}`}
                 key={pill}
                 onClick={() => toggle_pill(pill)}
                 type="button"
@@ -222,7 +221,7 @@ export const SearchPickerModal = ({
           {categories.length > 0 && (
             <nav className="flex max-h-32 shrink-0 overflow-auto border-b border-border sm:block sm:max-h-none sm:w-48 sm:border-r sm:border-b-0 [&>div]:shrink-0">
               <button
-                className={`block min-h-11 shrink-0 cursor-pointer border-l-2 px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase sm:w-full ${category === null ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                className={`block min-h-11 shrink-0 cursor-pointer aui-button aui-button--neutral px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase sm:w-full ${category === null ? 'aui-button--primary' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
                 onClick={() => set_category(null)}
                 type="button"
               >
@@ -236,7 +235,7 @@ export const SearchPickerModal = ({
                     </p>
                   )}
                   <button
-                    className={`block min-h-11 w-full cursor-pointer border-l-2 py-2 pr-3 text-left text-[10px] tracking-[0.15em] uppercase ${parent ? 'pl-6' : 'pl-3'} ${category === id ? 'border-[#c8963c] bg-[#c8963c]/5 text-[#c8963c]' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                    className={`block min-h-11 w-full cursor-pointer aui-button aui-button--neutral py-2 pr-3 text-left text-[10px] tracking-[0.15em] uppercase ${parent ? 'pl-6' : 'pl-3'} ${category === id ? 'aui-button--primary' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
                     onClick={() => set_category(id)}
                     type="button"
                   >
@@ -257,7 +256,7 @@ export const SearchPickerModal = ({
               const locked = locked_ids?.has(item.id) ?? false
               return (
                 <button
-                  className={`flex min-h-11 w-full items-start gap-3 border-l-2 px-4 py-2 text-left ${selected ? 'border-[#c8963c] bg-[#c8963c]/10 text-[#c8963c]' : locked ? 'border-transparent text-[#555b66] opacity-45' : 'cursor-pointer border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
+                  className={`flex min-h-11 w-full items-start gap-3 aui-button aui-button--neutral px-4 py-2 text-left ${selected ? 'aui-button--primary' : locked ? 'border-transparent text-[#555b66] opacity-45' : 'cursor-pointer border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
                   key={item.id}
                   onClick={() => {
                     if (locked || press_read.current) {

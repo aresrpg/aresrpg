@@ -30,7 +30,7 @@ test('the angle conventions hold: north is -Z, the camera heading is the negated
 test('a city portal compass target exposes its bearing position and exact distance', () => {
   expect(compass_target({ x: 512, z: 100 }, { x: 512, z: 0 }, 0)).toEqual({ distance: 100, x: 0.5 })
   expect(compass_target({ x: 512, z: 0 }, { x: 512, z: 0 }, 1.2)).toEqual({ distance: 0, x: 0.5 })
-  expect(compass_target({ x: 512, z: -100 }, { x: 512, z: 0 }, 0).x).toBe(0.1)
+  expect(compass_target({ x: 512, z: -100 }, { x: 512, z: 0 }, 0).x).toBeNull()
 })
 
 test('the pip pipeline caps per kind, merges near bearings across the ±π seam, and thins labels', () => {
@@ -67,4 +67,14 @@ test('zone edges point at straight cardinal walks and name their neighbor zones'
 
   // near a corner both close edges earn a marker
   expect(nearest_zone_edges(10, 20, 0, 0, 512, 0)).toHaveLength(2)
+})
+
+test('targets leave the compass window instead of jumping inward or swapping sides behind the camera', () => {
+  const origin = { x: 0, z: 0 },
+    target = { x: 0, z: -30 }
+  const radians = (degrees: number) => (degrees * Math.PI) / 180
+  expect(compass_target(origin, target, radians(99)).x).toBeCloseTo(0.005)
+  expect(compass_target(origin, target, radians(101)).x).toBeNull()
+  expect(compass_target(origin, target, radians(179)).x).toBeNull()
+  expect(compass_target(origin, target, radians(181)).x).toBeNull()
 })

@@ -1,0 +1,645 @@
+.aui-settings {
+  width: min(900px, calc(100cqw - 28px));
+  height: min(570px, calc(100cqh - 28px));
+}
+.aui-settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+.aui-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 12px;
+  border-bottom: 1px solid #ffffff0e;
+}
+.aui-setting-row > svg {
+  width: 23px;
+  height: 23px;
+  color: #bda67d;
+  flex: none;
+}
+.aui-setting-copy {
+  flex: 1;
+  min-width: 0;
+}
+.aui-setting-copy strong {
+  font-size: 14px;
+  color: #e1ddcf;
+}
+.aui-setting-copy p {
+  margin-top: 5px;
+  max-width: 38ch;
+}
+.aui-setting-control {
+  flex: none;
+  max-width: 45%;
+}
+.aui-setting-control .aui-field {
+  width: 170px;
+}
+.aui-setting-control .aui-toggle > span:last-child {
+  display: none;
+}
+.aui-wallet-balances {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.aui-wallet-balances > div {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 5px 10px;
+  align-items: center;
+  padding: 14px;
+  background: #0e151db3;
+  border: 1px solid #ffffff0d;
+  border-radius: 5px;
+}
+.aui-wallet-balances svg {
+  grid-row: span 2;
+  width: 30px;
+  height: 30px;
+  color: #82b7d8;
+}
+.aui-wallet-balances span {
+  font-size: 11px;
+  color: #99aab9;
+}
+.aui-wallet-balances strong {
+  font-size: 24px;
+  color: #e6dfce;
+}
+.aui-language {
+  width: min(650px, calc(100cqw - 28px));
+  height: auto;
+}
+.aui-language-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.aui-language-grid .aui-button {
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 48px;
+}
+.aui-language-grid small {
+  font: 10px monospace;
+  color: #cead76;
+}
+.aui-account-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 20px;
+}
+.aui-account-tools .aui-icon-button {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-settings {
+    width: calc(100cqw - 12px);
+    height: calc(100cqh - 12px);
+  }
+  .aui-settings-fields {
+    gap: 4px;
+  }
+  .aui-setting-row {
+    padding: 8px;
+    gap: 9px;
+    flex: 1;
+  }
+  .aui-setting-copy strong {
+    font-size: 12px;
+  }
+  .aui-setting-copy p {
+    font-size: 10px;
+    line-height: 1.35;
+    margin-top: 3px;
+  }
+  .aui-setting-control .aui-field {
+    width: 140px;
+  }
+  .aui-wallet-balances > div {
+    padding: 9px;
+  }
+  .aui-wallet-balances strong {
+    font-size: 18px;
+  }
+  .aui-language-grid {
+    gap: 7px;
+  }
+  .aui-language-grid .aui-button {
+    min-height: 40px;
+    font-size: 12px;
+  }
+}
+.aui-funding-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.aui-funding-methods .aui-button {
+  font-size: 12px;
+  min-height: 44px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-account-tools .aui-icon-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .aui-language-grid .aui-button {
+    min-height: 44px;
+  }
+}
+.aui-language-grid > .aui-button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 64px;
+  gap: 13px;
+  background: #1e2a36 url('./assets/panel_grain.webp');
+  box-shadow: inset 0 1px #bdcedd12;
+}
+.aui-language-badge {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 36px;
+  flex: none;
+  font-size: 27px;
+  border: 1px solid #bdc6d122;
+  border-radius: 6px;
+  background: #101923;
+  box-shadow: 0 2px 5px #0005;
+}
+.aui-language-grid > .aui-button > span:last-child {
+  text-align: left;
+  font-size: 13px;
+}
+.aui-language-grid small {
+  display: block;
+  margin-top: 3px;
+  letter-spacing: 1px;
+}
+.aui-language-grid > .aui-button[aria-pressed='true'] {
+  background-color: #514733;
+  border-color: #ddbd7380;
+}
+.aui-social-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 68px;
+  padding: 14px 20px;
+  border-radius: 7px;
+  border: 1px solid #718ccc70;
+  background: #293355 url('./assets/panel_grain.webp');
+  box-shadow:
+    inset 0 1px #c8ddff22,
+    0 3px 8px #0004;
+  font: 800 16px var(--aui-font);
+  color: #e0e7ff;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+}
+.aui-social-link:before {
+  content: '↗';
+  margin-right: 12px;
+  font-size: 28px;
+  opacity: 0.8;
+}
+.aui-social-link--telegram {
+  background-color: #183b51;
+  border-color: #5cafd170;
+  color: #cfedff;
+}
+.aui-social-link:hover {
+  filter: brightness(1.15);
+}
+.aui-account-tools {
+  padding: 10px 12px;
+  border: 1px solid #788b9f35;
+  border-radius: 7px;
+  background: #121b25ee;
+  gap: 7px;
+  box-shadow: inset 0 1px #d9e6f012;
+}
+.aui-account-tools .aui-performance {
+  padding: 0 10px 0 0;
+  border: 0;
+  border-right: 1px solid #8b9cab33;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.aui-wallet-balances > div:first-child strong {
+  color: #87cee9;
+}
+.aui-wallet-balances > div:last-child strong {
+  color: #ecc37b;
+}
+.aui-wallet-balances > div {
+  box-shadow: inset 0 1px #bdd3e711;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-language-grid > .aui-button {
+    min-height: 48px;
+    gap: 8px;
+    padding: 6px;
+  }
+  .aui-language-badge {
+    width: 32px;
+    height: 29px;
+    font-size: 23px;
+  }
+  .aui-language-grid > .aui-button > span:last-child {
+    font-size: 11px;
+  }
+  .aui-language-grid small {
+    font-size: 8px;
+  }
+  .aui-social-link {
+    min-height: 48px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .aui-social-link:before {
+    font-size: 21px;
+  }
+  .aui-account-tools {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    gap: 4px;
+    padding: 5px;
+  }
+  .aui-account-tools .aui-performance {
+    padding-right: 5px;
+  }
+}
+.aui-funding {
+  border: 1px solid #7c91a166;
+  border-radius: 9px;
+  background: #16212d url('./assets/panel_grain.webp');
+  font-family: var(--aui-font);
+  box-shadow: 0 14px 50px #0009;
+  max-width: 850px;
+}
+.aui-funding > header {
+  background: #26323e;
+  border-radius: 8px 8px 0 0;
+}
+.aui-funding .aui-funding-choice {
+  position: relative;
+  min-height: 110px;
+  border-radius: 7px;
+  padding: 18px 14px;
+  background: #1c2d3c;
+  border-color: #7e9eb455;
+  box-shadow: inset 0 1px #c9ddeb12;
+}
+.aui-funding-choice > span:first-child {
+  font-size: 14px;
+  color: #e2c895;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.aui-funding-choice > span:last-child {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #a9bdcd;
+  margin-top: 8px;
+}
+.aui-funding-choice[aria-pressed='true'] {
+  background: #3c362b;
+  border-color: #dfba73;
+}
+.aui-funding-choice:nth-child(2) {
+  background-color: #162f3d;
+}
+.aui-funding-choice:nth-child(3) {
+  background-color: #263443;
+}
+.aui-funding-choice:hover {
+  filter: brightness(1.13);
+}
+.aui-funding-connect {
+  padding: 25px;
+  text-align: center;
+  color: #91b2c8;
+}
+.aui-funding button:disabled {
+  opacity: 0.5;
+}
+.aui-funding > div {
+  scrollbar-width: thin;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .aui-funding {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 16px);
+    max-width: 1100px;
+  }
+  .aui-funding > header {
+    padding: 8px 12px;
+  }
+  .aui-funding .aui-funding-methods {
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  .aui-funding .aui-funding-choice {
+    min-height: 74px;
+    padding: 9px;
+  }
+  .aui-funding-choice > span:first-child {
+    font-size: 12px;
+  }
+  .aui-funding-choice > span:last-child {
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  .aui-funding > div {
+    padding: 10px;
+  }
+}
+.aui-funding,
+.aui-social-link,
+.aui-language-grid > .aui-button {
+  background-size: 160px;
+  background-blend-mode: soft-light;
+}
+.aui-account-tools {
+  width: max-content;
+  max-width: 100%;
+  justify-content: flex-start;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-account-tools [data-fullscreen-toggle],
+  .aui-account-tools .aui-performance select {
+    display: none;
+  }
+  .aui-account-tools .aui-performance {
+    padding-right: 4px;
+  }
+  .aui-account-tools {
+    padding: 4px;
+    gap: 4px;
+    max-width: calc(100cqw - 20px);
+    flex-wrap: nowrap;
+  }
+  .aui-account-tools .aui-performance-reading {
+    gap: 3px;
+  }
+}
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  [data-fullscreen-toggle] {
+    display: none;
+  }
+}
+.aui-funding-window {
+  width: min(850px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  height: auto;
+  --aui-ink: #e0e7e9;
+}
+.aui-funding-body {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+  max-height: calc(100dvh - 100px);
+  padding: 14px;
+  overflow: hidden;
+}
+.aui-funding-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.aui-funding-methods .aui-funding-choice {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 5px 9px;
+  min-height: 88px;
+  padding: 11px;
+  text-align: left;
+  white-space: normal;
+  border: 1px solid #718da84d;
+  border-radius: 6px;
+  background: #1d3040;
+  color: #ccdce7;
+  box-shadow:
+    inset 0 1px #c5e0ee18,
+    0 2px 4px #0004;
+}
+.aui-funding-method-icon {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  color: #86c1de;
+}
+.aui-funding-method-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.aui-funding-method-title {
+  font-size: 13px;
+  font-weight: 800;
+  align-self: end;
+}
+.aui-funding-method-description {
+  grid-column: 2;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 400;
+  color: #aac2d2;
+}
+.aui-funding-choice[data-method='bridge'] {
+  background: #183738;
+  border-color: #63998c5c;
+}
+.aui-funding-choice[data-method='bridge'] .aui-funding-method-icon {
+  color: #91c8b8;
+}
+.aui-funding-choice[data-method='card'] {
+  background: #3c3027;
+  border-color: #b994635c;
+}
+.aui-funding-choice[data-method='card'] .aui-funding-method-icon {
+  color: #e1b876;
+}
+.aui-funding-methods .aui-funding-choice[aria-pressed='true'] {
+  border-color: #d9bd7c;
+  box-shadow: inset 0 0 0 1px #d9bd7c44;
+  color: #ffe6b3;
+}
+.aui-funding-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 6px;
+}
+.aui-funding-detail[hidden] {
+  display: none;
+}
+.aui-funding-faucet {
+  grid-column: 1 / -1;
+}
+.aui-funding-address {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #aab98a4d;
+  border-radius: 5px;
+  background: #101f2b;
+  color: #d2c397;
+  text-align: left;
+}
+.aui-funding-address span {
+  font: 11px/1.5 monospace;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1;
+}
+.aui-funding-body > [role='alert'] {
+  grid-column: 1 / -1;
+}
+.aui-funding-detail > section > h3 {
+  font: 700 13px var(--aui-font);
+  letter-spacing: 0;
+  text-transform: none;
+  color: #d8c595;
+}
+.aui-funding-detail > section > p {
+  font-size: 11px;
+  line-height: 1.45;
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .aui-funding-window {
+    width: min(900px, calc(100vw - 20px));
+    max-height: calc(100dvh - 16px);
+  }
+  .aui-funding-body {
+    grid-template-columns: 190px minmax(0, 1fr);
+    max-height: calc(100dvh - 70px);
+    padding: 8px;
+    gap: 10px;
+  }
+  .aui-funding-methods .aui-funding-choice {
+    min-height: 67px;
+    padding: 7px;
+    gap: 3px 7px;
+    grid-template-columns: 25px minmax(0, 1fr);
+  }
+  .aui-funding-method-icon svg {
+    width: 24px;
+    height: 24px;
+  }
+  .aui-funding-method-title {
+    font-size: 12px;
+  }
+  .aui-funding-method-description {
+    font-size: 9px;
+  }
+  .aui-funding-detail {
+    padding: 4px;
+  }
+  .aui-funding-address {
+    min-height: 60px;
+    padding: 8px;
+  }
+}
+.aui-settings {
+  height: auto;
+  max-height: calc(100cqh - 24px);
+}
+.aui-settings-fields {
+  flex: none;
+  gap: 6px;
+}
+.aui-setting-row {
+  flex: none;
+  padding: 10px 8px;
+  min-height: 64px;
+}
+.aui-settings .aui-workspace-content {
+  min-height: 220px;
+}
+.aui-settings .aui-workspace-sidebar {
+  align-self: stretch;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-settings {
+    height: auto;
+    max-height: calc(100cqh - 16px);
+  }
+  .aui-settings .aui-workspace-content {
+    min-height: 190px;
+  }
+  .aui-settings .aui-setting-row {
+    flex: none;
+    min-height: 54px;
+    padding: 6px;
+  }
+  .aui-settings-fields {
+    gap: 4px;
+  }
+}
+
+.aui-settings .aui-settings-fields {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.aui-settings .aui-setting-row {
+  align-items: center;
+}
+
+.aui-send-window {
+  width: min(580px, calc(100cqw - 24px));
+  max-height: calc(100cqh - 24px);
+}
+.aui-send-body {
+  padding: 20px;
+  font-family: var(--aui-font);
+  min-height: 0;
+  overflow-y: auto;
+}
+.aui-send-window[data-tone='success'] .aui-window-title {
+  color: #9bceba;
+}
+.aui-send-window[data-tone='danger'] .aui-window-title {
+  color: #ed9e9e;
+}
+
+.aui-send-body input {
+  min-width: 0;
+  border-radius: 5px;
+  font-family: var(--aui-font);
+  font-size: 14px;
+}
+.aui-send-body input[inputmode='decimal'] {
+  padding: 12px;
+  background: #101820;
+  border: 1px solid #ffffff18;
+}
+.aui-send-body .aui-button {
+  min-height: 36px;
+  font-size: 13px;
+  letter-spacing: normal;
+  text-transform: none;
+}

@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { dungeon_gate_materials } from './portal_shape.ts'
+import { validate_details, type DetailCell } from './detail_artifact.ts'
+import { WORLD_HEIGHT, MAX_SURFACE_Y } from './voxel_data.ts'
+import { validate_height_grid } from './height_grid.ts'
 import { create_bounded_memo, type BoundedMemo } from './bounded_memo.ts'
 import {
   compile_materials,
@@ -18,11 +22,16 @@ import {
   type StructureAreaSource,
 } from './structures.ts'
 import { generated_city_surface_y } from './cities/generated_city.ts'
+import { generated_city_surface_height } from './cities/city_terrain.ts'
+import type { GeneratedCityTerrain } from './cities/types.ts'
 import { carved_terrain_surface_y } from './terrain_carving.ts'
+import { validate_canopy } from './opaque_canopy.ts'
+import { validate_atmosphere, type AtmospherePreset } from './atmosphere_profile.ts'
+import { validate_scenery, type WorldScenery } from './scenery_data.ts'
+import { fixed_structure_materials, validate_fixed_structures, type FixedStructure } from './fixed_structures.ts'
 
 export type SplineKnot = readonly [x: number, y: number]
-export const WORLD_HEIGHT = 384
-export const MAX_SURFACE_Y = WORLD_HEIGHT - 1
+export { WORLD_HEIGHT, MAX_SURFACE_Y } from './voxel_data.ts'
 export type BiomeLand = Readonly<{ surface: string; subsurface: string; filler: string }>
 export type LandscapeKnot = Readonly<{ x: number; y: number; land?: BiomeLand; variance?: number }>
 export type ClimateBand = 'low' | 'mid' | 'high'
@@ -55,8 +64,22 @@ export type WorldRecipe = Readonly<{
   biome_slots: Readonly<Record<BiomeSlot, string>>
   biomes: readonly WorldBiome[]
   structure_areas?: readonly StructureAreaSource[]
+  fixed_structures?: readonly FixedStructure[]
+  height_grid?: GeneratedCityTerrain
+  scenery?: WorldScenery
+  details?: readonly DetailCell[]
+  /** Authored scenery worlds may omit the origin travel gate; playable worlds keep it by default. */
+  portal?: boolean
+  water_reflection?: 'planar'
+  water_surface?: 'frozen_shore'
+  sky_rotation?: number
+  atmosphere?: AtmospherePreset
+  canopy?: 'voxels' | 'clusters'
   ocean?: WorldOcean
 }>
+
+/** Geometry workers consume occupancy and material inputs, never renderer-only buffers or effects. */
+export const terrain_recipe = ({ details: _details, scenery: _scenery, ...recipe }: WorldRecipe): WorldRecipe => recipe
 
 export type SampledClimate = Readonly<{
   temperature: number
@@ -236,6 +259,20 @@ const validate_ocean = (value: unknown, biomes: unknown, slots: unknown): readon
   return errors
 }
 
+const validate_sky_rotation = (value: unknown): readonly string[] =>
+  value === undefined || (typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= Math.PI * 2)
+    ? []
+    : ['sky_rotation must be a finite angle within one turn']
+
+const validate_water_surface = (value: unknown): readonly string[] =>
+  [undefined, 'frozen_shore'].some((allowed) => allowed === value) ? [] : ['water_surface must be frozen_shore']
+
+const validate_water_reflection = (value: unknown): readonly string[] =>
+  [undefined, 'planar'].some((allowed) => allowed === value) ? [] : ['water_reflection must be planar']
+
+const validate_portal = (value: unknown): readonly string[] =>
+  [undefined, true, false].some((allowed) => allowed === value) ? [] : ['portal must be a boolean']
+
 export const validate_world_recipe = (recipe: unknown): Readonly<{ ok: boolean; errors: readonly string[] }> => {
   const candidate = record(recipe)
   if (!candidate) return { ok: false, errors: ['recipe must be an object'] }
@@ -248,8 +285,18 @@ export const validate_world_recipe = (recipe: unknown): Readonly<{ ok: boolean; 
     errors.push(`liquid references unknown material "${typeof candidate.liquid === 'string' ? candidate.liquid : ''}"`)
   for (const removed of ['noise', 'biome_selection', 'splines', 'vertical_chunks'] as const)
     if (removed in candidate) errors.push(`${removed} is engine-owned and must not be authored`)
+  errors.push(...validate_height_grid(candidate.height_grid))
   errors.push(...validate_biomes(candidate.biomes, candidate.materials))
   errors.push(...validate_structure_areas(candidate.structure_areas, candidate.materials))
+  errors.push(...validate_fixed_structures(candidate.fixed_structures, candidate.materials))
+  errors.push(...validate_scenery(candidate.scenery))
+  errors.push(...validate_details(candidate.details, candidate.materials))
+  errors.push(...validate_atmosphere(candidate.atmosphere))
+  errors.push(...validate_portal(candidate.portal))
+  errors.push(...validate_water_reflection(candidate.water_reflection))
+  errors.push(...validate_water_surface(candidate.water_surface))
+  errors.push(...validate_sky_rotation(candidate.sky_rotation))
+  errors.push(...validate_canopy(candidate.canopy))
   errors.push(...validate_slots(candidate.biome_slots, candidate.biomes))
   errors.push(...validate_ocean(candidate.ocean, candidate.biomes, candidate.biome_slots))
   return { ok: errors.length === 0, errors }
@@ -332,7 +379,7 @@ const GENERATION_WORLD_COLUMN_CACHE_CAPACITY = 262_144
 export const RUNTIME_WORLD_COLUMN_CACHE_CAPACITY = 65_536
 
 export const compile_world_recipe = (
-  input: WorldRecipe,
+  input: unknown,
   options: Readonly<{ structures?: boolean; city_terrain?: boolean; column_cache_capacity?: number }> = {}
 ): CompiledWorld => {
   const recipe = parse_world_recipe(input)
@@ -375,9 +422,10 @@ export const compile_world_recipe = (
     gain: 0.5,
   })
   const include_structures = options.structures !== false
-  const materials = compile_materials(recipe.materials, [
+  const materials = compile_materials({ ...recipe.materials, ...dungeon_gate_materials(recipe.structure_areas) }, [
     ...material_uses(recipe.biomes),
-    ...(include_structures ? structure_material_uses(recipe.biomes, recipe.structure_areas) : []),
+    ...structure_material_uses(recipe.biomes, recipe.structure_areas),
+    ...fixed_structure_materials(recipe.fixed_structures),
   ])
   return Object.freeze({
     recipe,
@@ -407,7 +455,7 @@ export const compile_world_recipe = (
 
 /** Runtime compilation owns one bounded locality policy across every worker and presentation consumer. */
 export const compile_runtime_world_recipe = (
-  input: WorldRecipe,
+  input: unknown,
   options: Readonly<{ structures?: boolean; city_terrain?: boolean }> = {}
 ): CompiledWorld =>
   compile_world_recipe(input, { ...options, column_cache_capacity: RUNTIME_WORLD_COLUMN_CACHE_CAPACITY })
@@ -463,9 +511,12 @@ const sample_base_column = (world: CompiledWorld, x: number, z: number): WorldCo
     z,
     base_surface_y
   )
-  const surface_y = world.city_terrain
+  const city_surface_y = world.city_terrain
     ? generated_city_surface_y(world.recipe.structure_areas ?? [], x, z, carved_surface_y)
     : carved_surface_y
+  const surface_y = world.recipe.height_grid
+    ? generated_city_surface_height(world.recipe.height_grid, x, z, city_surface_y)
+    : city_surface_y
   const biome = world.ocean && surface_y < world.recipe.sea_level ? world.ocean.biome : terrain_biome
   const land = land_at(biome, climate.ground, climate.transition)
   return {

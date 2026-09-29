@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 
@@ -83,7 +84,7 @@ const StakingAmount = ({
       <div className="staking-form-actions">
         <div className="staking-presets" role="group" aria-label={copy.amount}>
           {([25, 50, 100] as const).map((percent) => (
-            <button
+            <Button
               type="button"
               key={percent}
               disabled={locked || balance === null}
@@ -92,13 +93,13 @@ const StakingAmount = ({
               }}
             >
               {percent === 100 ? copy.max : `${percent}%`}
-            </button>
+            </Button>
           ))}
         </div>
-        <button className="staking-submit" type="submit" disabled={!can_submit}>
+        <Button className="staking-submit" tone="primary" type="submit" disabled={!can_submit}>
           <ArrowUpRight size={12} />
           {copy[mode]}
-        </button>
+        </Button>
       </div>
     </form>
   )
@@ -118,6 +119,7 @@ export const StakingForm = ({
   dispatch: (input: FinanceInput) => void
 }>) => {
   const [mode, set_mode] = useState<'stake' | 'withdraw'>('stake')
+  const [expanded, set_expanded] = useState(false)
   const targets = {
     stake: { kind: 'stake' } as const,
     withdraw: { kind: 'withdraw', positions: snapshot.positions.map(({ id, amount }) => ({ id, amount })) } as const,
@@ -126,18 +128,24 @@ export const StakingForm = ({
   const balances = { stake: balance, withdraw: total_stake }
   const unavailable = { stake: !snapshot.pool.active, withdraw: total_stake === 0n }
   return (
-    <div className="staking-action-box">
+    <div className="staking-action-box" data-expanded={expanded}>
+      <Button className="staking-form-close" type="button" aria-label={copy.close} onClick={() => set_expanded(false)}>
+        ×
+      </Button>
       <div className="staking-action-switch" role="group" aria-label={copy.manage_stake}>
         {(['stake', 'withdraw'] as const).map((action) => (
-          <button
+          <Button
             type="button"
             key={action}
             aria-pressed={mode === action}
             disabled={locked}
-            onClick={() => set_mode(action)}
+            onClick={() => {
+              set_mode(action)
+              set_expanded(true)
+            }}
           >
             {action === 'stake' ? copy.stake_more : copy.withdraw}
-          </button>
+          </Button>
         ))}
       </div>
       <StakingAmount

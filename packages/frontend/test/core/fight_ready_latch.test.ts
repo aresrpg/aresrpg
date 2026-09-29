@@ -9,7 +9,7 @@ import { fight_checkpoint_phase_rank, fight_state_regresses } from '../../src/mo
 
 const settings = Object.freeze({
   quality: 'medium' as const,
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 })

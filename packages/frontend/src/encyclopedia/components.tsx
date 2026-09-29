@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { CollectionTile, FloatingWindow, GameWindow } from '@aresrpg/ui'
 import { ArrowLeft, ChevronLeft, ChevronRight, Search } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
+
+import { useText } from '../i18n/useText.ts'
 
 import type { EncyclopediaText } from './copy.ts'
 
@@ -28,35 +31,41 @@ export const EncyclopediaBrowser = ({
   rail?: ReactNode
   back: () => void
   text: EncyclopediaText
-}>) => (
-  <div className="enc-browser flex min-h-0 min-w-0 flex-1" data-detail={Boolean(detail)}>
-    {rail}
-    {list}
-    {detail && (
-      <aside className="enc-browser__detail flex min-h-0 min-w-0 flex-[3] flex-col border-l border-border">
-        <button className="enc-browser__back" onClick={back} type="button">
-          <ArrowLeft aria-hidden="true" size={16} /> {text('back_to_list')}
-        </button>
-        {detail}
-      </aside>
-    )}
-  </div>
-)
-
-export const category_pill = (active: boolean): string =>
-  `min-h-11 shrink-0 cursor-pointer border-b-2 bg-transparent px-3 py-1 text-[9px] tracking-[0.15em] uppercase transition-colors ${
-    active ? 'border-[#c8963c] text-[#c8963c]' : 'border-transparent text-[#6b7280] hover:text-[#c8963c]'
-  }`
+}>) => {
+  const ui = useText()
+  const identity = useId()
+  return (
+    <div className="enc-browser aui-catalogue-browser flex min-h-0 min-w-0 flex-1">
+      {rail}
+      {list}
+      {detail && (
+        <FloatingWindow identity={identity} close={back} label={ui('ui.character_details')}>
+          <GameWindow
+            draggable
+            title={ui('ui.character_details')}
+            close={back}
+            close_label={ui('wallet_close')}
+            className="aui-catalogue-details"
+          >
+            <div className="aui-catalogue-detail-body">{detail}</div>
+          </GameWindow>
+        </FloatingWindow>
+      )}
+    </div>
+  )
+}
 
 export const SearchField = ({
   value,
   placeholder,
   change,
 }: Readonly<{ value: string; placeholder: string; change: (value: string) => void }>) => (
-  <label className="relative flex min-h-11 items-center border border-border bg-bg/55 text-[#6b7280] focus-within:border-[#c8963c]/45">
+  <label className="aui-search-field">
     <Search aria-hidden="true" className="pointer-events-none absolute left-3 opacity-30" size={14} />
     <input
-      className="size-full min-w-0 bg-transparent pr-3 pl-9 text-[9px] tracking-[0.15em] text-[#e8e4dc] uppercase outline-none placeholder:text-[#6b7280]/60"
+      type="search"
+      aria-label={placeholder}
+      className="aui-search-input"
       onChange={(event) => change(event.target.value)}
       placeholder={placeholder}
       value={value}
@@ -98,30 +107,15 @@ export const EntityButton = ({
   badge?: string
   select: () => void
 }>) => (
-  <button
-    className="flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2 text-left transition-colors hover:bg-white/4"
-    onClick={select}
-    style={{
-      borderLeftColor: active ? '#c8963c' : (accent ?? 'rgba(255,255,255,0.08)'),
-      background: active ? 'rgba(200,150,60,0.08)' : index % 2 === 1 ? 'rgba(255,255,255,0.02)' : 'transparent',
-    }}
-    type="button"
-  >
-    <EntityIcon label={name} size="size-8" src={icon} />
-    <span className="min-w-0 flex-1">
-      <span className="block truncate text-[10px] text-[#dedad2]">{name}</span>
-      <span className="mt-1 block truncate text-[8px] tracking-[0.12em] text-[#6e727e] uppercase">{meta}</span>
-    </span>
-    {badge && (
-      <span className="ml-auto shrink-0 border border-[#5ee38d]/20 bg-[#5ee38d]/7 px-2 py-1 text-[8px] tracking-[0.12em] text-[#77d99a] uppercase">
-        {badge}
-      </span>
-    )}
-  </button>
+  <CollectionTile
+    selected={active}
+    on_select={select}
+    entry={{ id: name, label: name, image: icon ?? undefined, meta, badge }}
+  />
 )
 
 export const EntityGrid = ({ children }: Readonly<{ children: ReactNode }>) => (
-  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-0">{children}</div>
+  <div className="aui-collection">{children}</div>
 )
 
 export const Section = ({ title, children }: Readonly<{ title: string; children: ReactNode }>) => (

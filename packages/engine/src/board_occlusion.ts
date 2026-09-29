@@ -38,6 +38,9 @@ import {
   vec2,
 } from 'three/tsl'
 
+import { BOARD_WATER_DROP } from './fight_board_surface.ts'
+import type { FightBoardRender } from './types.ts'
+
 /** Normalized elliptical radius fully melted — past the footprint's corners, so no rectangle. */
 const MELT_CORE_R = 1.45
 /** Where the melt reaches zero: a wide radial feather, so no boundary shape is ever visible. */
@@ -52,6 +55,8 @@ const DEPTH_BIAS_M = 1.5
 const FOOTPRINT_FEATHER_M = 1.5
 /** Clear only what pokes ABOVE the board's tile line; the ground it rests on stays solid. */
 const FOOTPRINT_FLOOR_M = 0.37
+/** A small clear rim keeps terrain outside the curb before the feather begins. */
+const FOOTPRINT_MARGIN_M = 2
 
 export type BoardOcclusion = ReturnType<typeof create_board_occlusion>
 
@@ -59,6 +64,7 @@ export type BoardOcclusion = ReturnType<typeof create_board_occlusion>
  *  board arms it, and `active` folds the whole term away at zero cost when it is not. */
 export const create_board_occlusion = () => {
   const active = uniform(0)
+  const camera_active = uniform(0)
   const screen_center = uniform(new Vector2(0, 0))
   const screen_half = uniform(new Vector2(-1, -1))
   const view_dist = uniform(1)
@@ -71,35 +77,46 @@ export const create_board_occlusion = () => {
   const clear_half = uniform(new Vector2(-1, -1))
 
   return {
-    uniforms: { active, screen_center, screen_half, view_dist, floor_y, center_xz, radius, clear_center, clear_half },
-    armed: () => active.value === 1,
-    set_active: (on: boolean): void => {
-      active.value = on ? 1 : 0
-      if (!on) {
-        screen_half.value.set(-1, -1)
-        clear_half.value.set(-1, -1)
-        radius.value = -1
-      }
+    uniforms: {
+      active,
+      camera_active,
+      screen_center,
+      screen_half,
+      view_dist,
+      floor_y,
+      center_xz,
+      radius,
+      clear_center,
+      clear_half,
     },
-    /** Per-frame: where the board landed on screen, how far it is, and the world footprint it
-     *  clears. Called by whoever owns the camera; nothing here reads three's camera itself. */
-    set_frame: (frame: {
-      center_ndc: readonly [number, number]
-      half_ndc: readonly [number, number]
-      view_dist: number
-      floor_y: number
-      center_xz: readonly [number, number]
-      radius: number
-      clear_half: readonly [number, number]
-    }): void => {
+    armed: () => active.value === 1,
+    /** Every board clears its physical footprint; only immersive presentation opens a camera peephole. */
+    set_board: (board: FightBoardRender | null): void => {
+      active.value = board ? 1 : 0
+      camera_active.value = 0
+      radius.value = -1
+      if (!board) return
+      const half_x = (board.width * board.cell_size) / 2
+      const half_z = (board.height * board.cell_size) / 2
+      center_xz.value.set(board.origin.x + half_x, board.origin.z + half_z)
+      clear_center.value.copy(center_xz.value)
+      clear_half.value.set(half_x + FOOTPRINT_MARGIN_M, half_z + FOOTPRINT_MARGIN_M)
+      floor_y.value = board.origin.y - BOARD_WATER_DROP
+      if (!board.ambient) radius.value = Math.hypot(half_x, half_z)
+    },
+    /** Camera-independent clearance survives an absent or behind-eye screen projection. */
+    set_frame: (
+      frame: {
+        center_ndc: readonly [number, number]
+        half_ndc: readonly [number, number]
+        view_dist: number
+      } | null
+    ): void => {
+      camera_active.value = frame ? 1 : 0
+      if (!frame) return
       screen_center.value.set(frame.center_ndc[0], frame.center_ndc[1])
       screen_half.value.set(frame.half_ndc[0] + FOOTPRINT_SKIRT_NDC, frame.half_ndc[1] + FOOTPRINT_SKIRT_NDC)
       view_dist.value = frame.view_dist
-      floor_y.value = frame.floor_y
-      center_xz.value.set(frame.center_xz[0], frame.center_xz[1])
-      radius.value = frame.radius
-      clear_center.value.set(frame.center_xz[0], frame.center_xz[1])
-      clear_half.value.set(frame.clear_half[0], frame.clear_half[1])
     },
   }
 }
@@ -120,7 +137,7 @@ export const occlusion_fade_node = (occlusion: BoardOcclusion) => {
   // positionView.z runs negative down the view axis; its magnitude is the distance
   const ahead = u.view_dist.sub(positionView.z.negate()).sub(float(DEPTH_BIAS_M))
   const in_front = smoothstep(float(0), float(DEPTH_FEATHER_M), ahead)
-  const between = max(inside, within_radius).mul(in_front).mul(above_floor)
+  const between = max(inside, within_radius).mul(in_front).mul(above_floor).mul(u.camera_active)
 
   const cdx = positionWorld.x.sub(u.clear_center.x).abs()
   const cdz = positionWorld.z.sub(u.clear_center.y).abs()
@@ -158,6 +175,7 @@ export const occlusion_fade_value = ({
   clear_center = [0, 0],
   clear_half = [-1, -1],
   active = true,
+  camera_active,
 }: {
   frag_ndc: readonly [number, number]
   frag_dist: number
@@ -170,6 +188,7 @@ export const occlusion_fade_value = ({
   clear_center?: readonly [number, number]
   clear_half?: readonly [number, number]
   active?: boolean
+  camera_active?: boolean
 }): number => {
   if (!active) return 1
   const nx = (frag_ndc[0] - center_ndc[0]) / half_ndc[0]
@@ -177,7 +196,7 @@ export const occlusion_fade_value = ({
   const inside = 1 - smoothstep_host(MELT_CORE_R, MELT_OUTER_R, Math.hypot(nx, ny))
   const in_front = smoothstep_host(0, DEPTH_FEATHER_M, view_dist - frag_dist - DEPTH_BIAS_M)
   const above_floor = frag_world ? smoothstep_host(floor_y + 0.1, floor_y + 0.5, frag_world[1]) : 1
-  const between = inside * in_front * above_floor
+  const between = Number(camera_active !== false) * inside * in_front * above_floor
   const footprint = frag_world
     ? Math.min(
         1 -

@@ -7,6 +7,7 @@ import assert from 'node:assert/strict'
 
 import { mock } from 'bun:test'
 
+import { compile_runtime_world_recipe } from '../src/world_recipe.ts'
 import { world_terrain } from '../src/world_catalog.ts'
 
 const document = Object.assign(new EventTarget(), { visibilityState: 'hidden' })
@@ -40,7 +41,7 @@ Object.defineProperties(globalThis, {
   cancelAnimationFrame: { value: () => undefined, configurable: true },
 })
 const { create_engine } = await import('../src/renderer.ts')
-const engine = create_engine({ canvas: {} as never, world: world_terrain('nauvis') })
+const engine = create_engine({ canvas: {} as never, world: compile_runtime_world_recipe(world_terrain('nauvis')) })
 await new Promise<void>((resolve) =>
   engine.subscribe_status((status) => {
     if (status.state !== 'initializing') resolve()

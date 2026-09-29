@@ -18,7 +18,7 @@ test('the spectator exit accepts pointer input and is absent without a spectator
 })
 
 test('only the selected spectator gets the exit, never a participant or simulator', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const state: AppState = {
     ...base,
     session: { ...base.session, selected_character_id: '0xa', wallet: { address: '0xme' } as never },

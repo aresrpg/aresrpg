@@ -13,7 +13,7 @@ import { sample_world_column, type CompiledWorld } from '@aresrpg/engine'
 /** World blocks from center to the minimap's edge (owner 2026-08-19: dezoomed from 128). */
 export const VIEW_RADIUS_BLOCKS = 224
 /** Minimap samples per axis — grid cell = 4 blocks at the default radius. */
-export const SAMPLE_N = 112
+export const SAMPLE_N = 160
 /** The player crosses this many blocks before the terrain grid re-samples. */
 export const RESAMPLE_STEP = 8
 
@@ -96,9 +96,9 @@ export const paint_relief = (context: CanvasRenderingContext2D, grid: ReliefGrid
       const height = grid.heights[index]!
       const upleft = grid.heights[Math.max(0, row - 1) * samples + Math.max(0, col - 1)]!
       const shade = Math.min(1.25, Math.max(0.55, 1 + (height - upleft) * shade_gain))
-      const r = Math.min(255, grid.colors[index * 3]! * shade)
-      const g = Math.min(255, grid.colors[index * 3 + 1]! * shade)
-      const b = Math.min(255, grid.colors[index * 3 + 2]! * shade)
+      const r = Math.min(255, Math.max(0, (grid.colors[index * 3]! - 112) * 1.13 + 112) * shade)
+      const g = Math.min(255, Math.max(0, (grid.colors[index * 3 + 1]! - 112) * 1.13 + 112) * shade)
+      const b = Math.min(255, Math.max(0, (grid.colors[index * 3 + 2]! - 112) * 1.13 + 112) * shade)
       context.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`
       context.fillRect(col * cell, row * cell, cell + 1, cell + 1)
     }

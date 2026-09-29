@@ -15,7 +15,11 @@ import {
 const open_world = () => false // no solids — pure orbit math
 const anchor: CameraAnchor = { x: 10, y: 5, z: -4, eye_height: 1.8, speed: 0, on_ground: true }
 const listener_stub = { addEventListener: () => {}, removeEventListener: () => {} }
-const fake_canvas = { ...listener_stub, ownerDocument: { ...listener_stub } } as unknown as HTMLElement
+const fake_canvas = {
+  ...listener_stub,
+  ownerDocument: { ...listener_stub },
+  style: { touchAction: '', setProperty: () => {} },
+} as unknown as HTMLElement
 const fight_board = Object.freeze({
   origin: { x: 2, y: 3, z: 4 },
   grid_w: 10,
@@ -31,16 +35,16 @@ describe('follow addon (legacy shoulder rig)', () => {
     const dx = settled.position[0] - anchor.x
     const dz = settled.position[2] - anchor.z
     expect(Math.hypot(dx, dz)).toBeGreaterThan(2) // eye sits away from the body…
-    expect(settled.position[1]).toBeGreaterThan(anchor.y + 1) // …and above the head (72° polar)
-    expect(settled.fov).toBeCloseTo(70, 0)
+    expect(settled.position[1]).toBeGreaterThan(anchor.y + 1) // …and above the head (80° polar)
+    expect(settled.fov).toBeCloseTo(68, 0)
     expect(settled.ortho_blend).toBe(0)
 
     const running = create_follow_addon(open_world)
     const sprint = { ...anchor, speed: 12 }
-    expect(Array.from({ length: 240 }, () => running.frame(sprint, 1 / 60)).at(-1)!.fov).toBeGreaterThan(72)
+    expect(Array.from({ length: 240 }, () => running.frame(sprint, 1 / 60)).at(-1)!.fov).toBeCloseTo(72, 0)
   })
 
-  test('the arm survives a wall and a display-only ground projection alike', () => {
+  test('the camera arm stops before a wall', () => {
     // solid everywhere except a small air pocket around the character
     const boxed = (x: number, y: number, z: number): boolean =>
       Math.abs(x + 0.5 - anchor.x) > 2 || Math.abs(z + 0.5 - anchor.z) > 2 || y < 4 || y > 9
@@ -48,19 +52,6 @@ describe('follow addon (legacy shoulder rig)', () => {
     const frame = Array.from({ length: 60 }, () => follow.frame(anchor, 1 / 60)).at(-1)!
     const arm = Math.hypot(frame.position[0] - anchor.x, frame.position[2] - anchor.z)
     expect(arm).toBeLessThan(2.5) // collided well under START_DIST 4.5
-
-    // A display-only ground projection carries the spring without collapsing it.
-    let ground_y = 0
-    const projected_world = (_x: number, y: number): boolean => y < ground_y
-    const projected = create_follow_addon(projected_world)
-    Array.from({ length: 60 }, () => projected.frame({ ...anchor, y: ground_y }, 1 / 60))
-
-    ground_y = 60
-    projected.translate_y(60)
-    const restored = projected.frame({ ...anchor, y: ground_y }, 1 / 60)
-
-    expect(projected.distance()).toBeGreaterThan(3)
-    expect(Math.hypot(restored.position[0] - anchor.x, restored.position[2] - anchor.z)).toBeGreaterThan(2)
   })
 
   test('full zoom-in latches first person and collapses the reported distance', () => {

@@ -1,0 +1,330 @@
+.aui-airdrop-port .aui-workspace-main {
+  padding: 0;
+  min-height: 0;
+}
+.airdrop-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  padding: 12px;
+  gap: 12px;
+  font-family: var(--aui-font);
+}
+.airdrop-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex: none;
+}
+.airdrop-intro details {
+  min-width: 0;
+  flex: 1;
+  color: #aeb7c3;
+  font-size: 11px;
+}
+.airdrop-intro summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  color: #d5c396;
+  list-style: none;
+}
+.airdrop-intro details p {
+  margin: 8px 0 0;
+  max-width: 105ch;
+  line-height: 1.5;
+}
+.airdrop-network {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #8cbdd9;
+  font-size: 10px;
+}
+.airdrop-content {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.aui-airdrop-collection {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.65fr);
+  gap: 10px;
+  flex: none;
+}
+.aui-airdrop-collection .aui-panel {
+  background-color: #1e242c;
+  padding: 12px;
+}
+.airdrop-connect {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.airdrop-holder {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.airdrop-holder > svg {
+  color: #89bdd8;
+}
+.airdrop-holder > div {
+  min-width: 0;
+}
+.airdrop-holder > div > div:first-child {
+  color: #dec58f;
+  font: 600 12px var(--aui-font);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.airdrop-holder > div > div:last-child {
+  color: #aab4bf;
+  font: 10px/1.4 var(--aui-font);
+  overflow-wrap: anywhere;
+}
+.airdrop-holder [data-wallet-menu] {
+  justify-self: end;
+}
+.airdrop-holder .aui-button {
+  white-space: nowrap;
+  min-height: 38px;
+}
+.airdrop-claims {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 14px;
+  align-items: center;
+  min-width: 0;
+}
+.airdrop-claims header {
+  min-width: 0;
+}
+.airdrop-claims h2 {
+  font-size: 12px;
+  color: #ded8ca;
+  margin: 0;
+}
+.airdrop-claims p {
+  font-size: 10px;
+  color: #aab3bf;
+  margin: 3px 0 0;
+}
+.airdrop-claims header p {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.airdrop-claims code {
+  max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #ddc28a;
+}
+.aui-airdrop-vouchers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  grid-column: 1;
+}
+.aui-airdrop-vouchers article {
+  padding: 6px;
+  border-radius: 5px;
+  gap: 6px;
+}
+.aui-airdrop-vouchers article img {
+  width: 32px;
+  height: 32px;
+}
+.aui-airdrop-actions {
+  display: flex;
+  gap: 6px;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+.aui-airdrop-actions .aui-button {
+  min-height: 38px;
+}
+.airdrop-claims > [role='alert'] {
+  grid-column: 1/-1;
+  color: #ed9c96;
+}
+.airdrop-catalogue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.airdrop-catalogue > h2 {
+  flex: none;
+  margin: 0;
+  color: #d9c394;
+  font-size: 12px;
+}
+.aui-campaigns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-auto-rows: 190px;
+  gap: 10px;
+  align-content: start;
+  min-height: 0;
+  overflow: visible;
+}
+.airdrop-campaign.aui-panel {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #20252d;
+  border-color: #555e6944;
+}
+.airdrop-campaign-art {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 0;
+  height: 100%;
+  padding: 8px;
+  background: none;
+}
+.airdrop-campaign-art figure {
+  margin: 0;
+  max-width: 90px;
+}
+.airdrop-campaign-art img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+}
+.airdrop-campaign-art:has(figure:nth-child(2)) {
+  gap: 4px;
+  align-content: center;
+}
+.airdrop-campaign-art:has(figure:nth-child(2)) figure {
+  width: 30px;
+}
+.airdrop-campaign-art:has(figure:nth-child(2)) img {
+  width: 30px;
+  height: 30px;
+}
+.airdrop-campaign-art figcaption {
+  font-size: 8px;
+  text-align: center;
+  color: #aab3bf;
+}
+.airdrop-campaign-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: 12px 10px 12px 0;
+}
+.airdrop-campaign-copy > span {
+  color: #8eb7cb;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.airdrop-campaign-copy h2 {
+  color: #e3c487;
+  font: 700 14px/1.3 var(--aui-font);
+  margin: 0;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.airdrop-campaign-copy p,
+.airdrop-campaign-copy li {
+  font: 11px/1.45 var(--aui-font);
+  margin: 0;
+  color: #b4bdc9;
+}
+.airdrop-campaign-copy ul {
+  margin: 0;
+  padding-top: 6px;
+}
+@container aui-window (max-width:1000px) {
+  .airdrop-holder {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .airdrop-holder [data-wallet-menu] {
+    grid-column: 1/-1;
+    justify-self: stretch;
+  }
+  .aui-airdrop-collection {
+    grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.2fr);
+  }
+  .airdrop-claims {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .aui-airdrop-actions {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .aui-campaigns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 190px;
+  }
+  .airdrop-campaign.aui-panel {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+  .airdrop-campaign-art img {
+    width: 52px;
+    height: 52px;
+  }
+}
+@container aui-window (max-width:650px) {
+  .aui-airdrop-collection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .airdrop-holder {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+  .airdrop-holder [data-wallet-menu] {
+    grid-column: auto;
+  }
+  .aui-campaigns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container aui-viewport (max-height:500px) {
+  .airdrop-page {
+    padding: 8px;
+    gap: 8px;
+  }
+  .airdrop-content {
+    gap: 8px;
+  }
+  .aui-airdrop-collection .aui-panel {
+    padding: 8px;
+  }
+  .airdrop-holder > div > div:last-child {
+    display: none;
+  }
+  .airdrop-holder .aui-button,
+  .aui-airdrop-actions .aui-button {
+    min-height: 34px;
+    font-size: 11px;
+  }
+}
+/* Small campaign catalogues determine the window height instead of reserving an empty full-screen panel. */
+.aui-window.aui-airdrop-port {
+  height: auto;
+  max-height: calc(100cqh - 24px);
+}

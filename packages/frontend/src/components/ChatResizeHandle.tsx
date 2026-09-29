@@ -2,10 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 
+import { combat_center } from '../game/hud/combat_alignment.ts'
 import { chat_size_from } from '../game/core/chat_preferences.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 
 const CHAT_VIEWPORT = '[data-world-frame], [data-chat-viewport]'
+const COMMAND_BAR = '.aui-combat-hud, .fight-hud__bar'
 
 /** One requested size and one bounds observer serve overworld and fight chat. */
 export const ChatResizeHandle = ({ label }: Readonly<{ label: string }>) => {
@@ -19,21 +21,31 @@ export const ChatResizeHandle = ({ label }: Readonly<{ label: string }>) => {
       frame.style.setProperty('--world-chat-requested-width', `${saved_size.width}px`)
       frame.style.setProperty('--world-chat-requested-height', `${saved_size.height}px`)
     }
-    let hud = frame.querySelector<HTMLElement>('.fight-hud__bar')
+    let hud = frame.querySelector<HTMLElement>(COMMAND_BAR)
+    const chat = handle.current!.parentElement!
     const measure = () => {
-      const { width, height } = frame.getBoundingClientRect()
+      const { width, height, left } = frame.getBoundingClientRect()
       const hud_box = hud?.getBoundingClientRect()
       const stacked = width <= 400
-      const max_width = stacked ? width - 20 : Math.min(640, width - (hud_box?.width ?? 0) - 30)
-      const max_height = Math.min(600, height * 0.7, height - (stacked ? (hud_box?.height ?? 0) : 0) - 30)
+      const compact = matchMedia('(max-width: 1023px), (pointer: coarse)').matches
+      const max_width =
+        compact || stacked ? Math.min(640, width - 20) : Math.min(640, width - (hud_box?.width ?? 0) - 32)
+      const max_height = compact ? Math.min(600, height - 20) : Math.min(600, height * 0.7)
       frame.style.setProperty('--world-chat-max-width', `${Math.max(0, max_width)}px`)
       frame.style.setProperty('--world-chat-max-height', `${Math.max(0, max_height)}px`)
+      const bar = hud?.closest<HTMLElement>('.fight-hud:not(.fight-hud--overworld) .fight-hud__bottom')
+      if (bar && hud_box)
+        bar.style.setProperty(
+          'left',
+          `${combat_center(width, hud_box.width, chat.getBoundingClientRect().right - left)}px`
+        )
     }
     const observer = new ResizeObserver(measure)
     observer.observe(frame)
+    observer.observe(chat)
     if (hud) observer.observe(hud)
     const content = new MutationObserver(() => {
-      const next = frame.querySelector<HTMLElement>('.fight-hud__bar')
+      const next = frame.querySelector<HTMLElement>(COMMAND_BAR)
       if (next === hud) return
       if (hud) observer.unobserve(hud)
       hud = next
@@ -56,7 +68,7 @@ export const ChatResizeHandle = ({ label }: Readonly<{ label: string }>) => {
     const max_width = parseFloat(styles.getPropertyValue('--world-chat-max-width'))
     const max_height = parseFloat(styles.getPropertyValue('--world-chat-max-height'))
     frame.style.setProperty('--world-chat-requested-width', `${Math.min(max_width, Math.max(180, width))}px`)
-    frame.style.setProperty('--world-chat-requested-height', `${Math.min(max_height, Math.max(100, height))}px`)
+    frame.style.setProperty('--world-chat-requested-height', `${Math.min(max_height, Math.max(180, height))}px`)
   }
   const remember_size = () => {
     const frame = handle.current!.closest<HTMLElement>(CHAT_VIEWPORT)

@@ -7,14 +7,14 @@
         "city": "thebes",
         "x": 50512,
         "z": 50000,
-        "structure_packs": ["temperate_trees", "temperate_ruins"],
+        "structure_packs": [],
         "dungeon": "gilded_lorito"
       },
       {
         "city": "the_ruins",
         "x": 36064,
         "z": 48672,
-        "structure_packs": ["tropical_trees", "nauvis_rainforest_rocks", "temperate_ruins"],
+        "structure_packs": ["tropical_trees","nauvis_rainforest_rocks","temperate_ruins"],
         "dungeon": "tangled_aftermath"
       },
       {
@@ -42,20 +42,20 @@
           "preset": "stone"
         },
         "thebes_limestone": {
-          "color": "#d8c89b",
-          "preset": "stone"
+          "color": "#858780",
+          "preset": "brick"
         },
         "thebes_sandstone": {
-          "color": "#b98b55",
-          "preset": "sand"
+          "color": "#777365",
+          "preset": "stone"
         },
         "thebes_tile": {
-          "color": "#2f7f86",
-          "preset": "stone"
+          "color": "#343e48",
+          "preset": "slate"
         },
         "thebes_copper": {
-          "color": "#a85f3f",
-          "preset": "stone"
+          "color": "#795346",
+          "preset": "brick"
         },
         "the_ruins_stone": {
           "color": "#252a2d",
@@ -151,7 +151,7 @@
         },
         "grassland_wood": {
           "color": "#76543a",
-          "preset": "wood"
+          "preset": "bark"
         },
         "grassland_foliage": {
           "color": "#64843e",
@@ -159,7 +159,7 @@
         },
         "temperate_wood": {
           "color": "#624936",
-          "preset": "wood"
+          "preset": "bark"
         },
         "temperate_foliage": {
           "color": "#416f49",
@@ -167,7 +167,7 @@
         },
         "tropical_wood": {
           "color": "#5c3c2b",
-          "preset": "wood"
+          "preset": "bark"
         },
         "tropical_foliage": {
           "color": "#317149",
@@ -175,7 +175,7 @@
         },
         "taiga_wood": {
           "color": "#554536",
-          "preset": "wood"
+          "preset": "bark"
         },
         "taiga_foliage": {
           "color": "#315346",
@@ -183,11 +183,40 @@
         },
         "desert_wood": {
           "color": "#77533b",
-          "preset": "wood"
+          "preset": "bark"
         },
         "desert_foliage": {
           "color": "#72814b",
           "preset": "foliage"
+        },
+        "thebes_plaster": {
+          "color": "#c7b897",
+          "preset": "plaster"
+        },
+        "thebes_lantern": {
+          "color": "#ffc779",
+          "preset": "stone",
+          "emission": 2.5
+        },
+        "thebes_timber": {
+          "color": "#392a20",
+          "preset": "wood"
+        },
+        "thebes_banner": {
+          "color": "#713a32",
+          "preset": "plaster"
+        },
+        "thebes_oak": {
+          "color": "#897354",
+          "preset": "wood"
+        },
+        "thebes_window": {
+          "color": "#587b89",
+          "preset": "plaster"
+        },
+        "thebes_carved_stone": {
+          "color": "#a5a394",
+          "preset": "stone"
         }
       },
       "liquid": "water",
@@ -198,7 +227,7 @@
       "biomes": [
         {
           "name": "plains",
-          "structure_packs": ["nauvis_plains_trees", "grassland_rocks", "nauvis_plains_landmarks"],
+          "structure_packs": ["nauvis_plains_trees","grassland_rocks","nauvis_plains_landmarks"],
           "landscape": [
             {
               "x": 0,
@@ -278,7 +307,7 @@
         },
         {
           "name": "forest",
-          "structure_packs": ["temperate_trees", "temperate_rocks", "temperate_ruins", "nauvis_forest_landmarks"],
+          "structure_packs": ["temperate_trees","temperate_rocks","temperate_ruins","nauvis_forest_landmarks"],
           "landscape": [
             {
               "x": 0,
@@ -368,7 +397,7 @@
         },
         {
           "name": "rainforest",
-          "structure_packs": ["tropical_trees", "nauvis_rainforest_rocks", "nauvis_rainforest_landmarks"],
+          "structure_packs": ["tropical_trees","nauvis_rainforest_rocks","nauvis_rainforest_landmarks"],
           "ravines": true,
           "landscape": [
             {
@@ -453,7 +482,7 @@
         },
         {
           "name": "highlands",
-          "structure_packs": ["nauvis_highland_trees", "taiga_rocks", "nauvis_highland_landmarks"],
+          "structure_packs": ["nauvis_highland_trees","taiga_rocks","nauvis_highland_landmarks"],
           "mountain_passes": true,
           "landscape": [
             {
@@ -562,7 +591,7 @@
         },
         {
           "name": "desert",
-          "structure_packs": ["nauvis_desert_scrub", "desert_rocks", "desert_ruins", "nauvis_desert_landmarks"],
+          "structure_packs": ["nauvis_desert_scrub","desert_rocks","desert_ruins","nauvis_desert_landmarks"],
           "ravines": true,
           "landscape": [
             {
@@ -689,13 +718,4293 @@
         "high_low": "desert",
         "high_mid": "forest",
         "high_high": "rainforest"
+      },
+      "canopy": "clusters",
+      "atmosphere": "clear",
+      "scenery": {
+        "waterfalls": [],
+        "vines": [
+          {
+            "top": [-37.5,74.4,-19.3],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [-21.5,74.4,-33.3],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [8.5,74.4,-35.3],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [-29.5,74.4,29.7],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [11.5,74.4,31.7],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [37.5,74.4,19.7],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [-32.5,82,37.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [-42.5,83,45.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [-31.5,83,51.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [-38.5,86,30.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [-46.5,87,38.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [40.5,86,-43.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [54.5,86,-37.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [42.5,86,-32.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [36.5,92,-37.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [38.5,94,-49.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [55.5,92,36.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [65.5,92,38.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [49.5,92,43.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [59.5,92,54.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [47.5,96,34.5],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [102,96,68.88],
+            "length": 7,
+            "yaw": 0
+          },
+          {
+            "top": [102.75,94,68.88],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [106,93,68.88],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [108,98,67.88],
+            "length": 9,
+            "yaw": 0
+          },
+          {
+            "top": [108.75,96,67.88],
+            "length": 7,
+            "yaw": 0
+          },
+          {
+            "top": [116,97,67.88],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [115.25,94,67.88],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [118,95,68.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [122,97,68.88],
+            "length": 8,
+            "yaw": 0
+          },
+          {
+            "top": [121.25,94,68.88],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [100.87,95,72],
+            "length": 7,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [100.87,95,81],
+            "length": 7,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [123.13,95,72],
+            "length": 7,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [123.13,95,81],
+            "length": 7,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [103,94,84.13],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [108,94,84.13],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [116,94,84.13],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [121,94,84.13],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [101.45,96,68.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [102.55,96,68.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [102.1,93.3,68.88],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [103.4,93.3,68.88],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [105.25,91.6,68.88],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [106.75,91.6,68.88],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [107.45,98,67.88],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [108.55,98,67.88],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [108.1,95.3,67.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [109.4,95.3,67.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [115.25,95.6,67.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [116.75,95.6,67.88],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [114.7,94,67.88],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [115.8,94,67.88],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [117.35,94.3,68.88],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [118.65,94.3,68.88],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [121.25,95.6,68.88],
+            "length": 7,
+            "yaw": 0
+          },
+          {
+            "top": [122.75,95.6,68.88],
+            "length": 7,
+            "yaw": 0
+          },
+          {
+            "top": [120.7,94,68.88],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [121.8,94,68.88],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [100.87,94.3,71.35],
+            "length": 4,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [100.87,94.3,72.65],
+            "length": 4,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [100.87,93.6,80.25],
+            "length": 3,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [100.87,93.6,81.75],
+            "length": 3,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [123.13,95,71.45],
+            "length": 6,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [123.13,95,72.55],
+            "length": 6,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [123.13,94.3,80.35],
+            "length": 5,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [123.13,94.3,81.65],
+            "length": 5,
+            "yaw": 1.5707963267948966
+          },
+          {
+            "top": [102.25,92.6,84.13],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [103.75,92.6,84.13],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [107.45,94,84.13],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [108.55,94,84.13],
+            "length": 2,
+            "yaw": 0
+          },
+          {
+            "top": [115.35,93.3,84.13],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [116.65,93.3,84.13],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [120.25,92.6,84.13],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [121.75,92.6,84.13],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [103,93,67.87],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [104.3,93,67.87],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [119,93,67.87],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [120.4,93,67.87],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [110.5,93,66.87],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [113,93,66.87],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [108.2,103,67.87],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [115.8,102,67.87],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [102,99,68.87],
+            "length": 3,
+            "yaw": 0
+          },
+          {
+            "top": [122,100,68.87],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [270,142,15.86],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [276,142,15.86],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [283,142,15.86],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [283,149,15.86],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [289,142,15.86],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [289,149,15.86],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [295,142,15.86],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [295,149,15.86],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [302,142,15.86],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [302,149,15.86],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [308,142,15.86],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [308,149,15.86],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [315,142,15.86],
+            "length": 4,
+            "yaw": 0
+          },
+          {
+            "top": [321,142,15.86],
+            "length": 5,
+            "yaw": 0
+          },
+          {
+            "top": [327,142,15.86],
+            "length": 6,
+            "yaw": 0
+          },
+          {
+            "top": [330,142,-9.86],
+            "length": 4,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [330,149,-9.86],
+            "length": 4,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [324,142,-9.86],
+            "length": 5,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [324,149,-9.86],
+            "length": 5,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [317,142,-9.86],
+            "length": 4,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [311,142,-9.86],
+            "length": 5,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [305,142,-9.86],
+            "length": 6,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [298,142,-9.86],
+            "length": 4,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [292,142,-9.86],
+            "length": 5,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [285,142,-9.86],
+            "length": 4,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [285,149,-9.86],
+            "length": 4,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [279,142,-9.86],
+            "length": 5,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [279,149,-9.86],
+            "length": 5,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [273,142,-9.86],
+            "length": 6,
+            "yaw": 3.141592653589793
+          },
+          {
+            "top": [273,149,-9.86],
+            "length": 6,
+            "yaw": 3.141592653589793
+          }
+        ],
+        "spores": [],
+        "light_shafts": [],
+        "plants": [
+          {
+            "kind": "grass",
+            "center": [-58.5,64,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,64,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,65,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,65,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,66,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,66,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,66,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,66,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,67,-15.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,67,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,67,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,68,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,67,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,67,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,67,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,67,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,67,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,67,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,66,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,66,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,65,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-58.5,65,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-58.5,65,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,64,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,65,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,66,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,66,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,66,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,67,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,67,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,67,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,67,-18.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,67,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,68,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,68,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,68,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,68,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,68,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,68,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,68,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,67,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,67,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,67,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,66,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-55.5,66,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-55.5,66,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,65,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,66,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,66,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,67,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,67,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,67,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,68,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,68,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,68,-18.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,68,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,69,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,69,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,69,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,69,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,68,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,68,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,68,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,68,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,68,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-52.5,67,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,67,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-52.5,66,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,66,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,66,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,67,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,67,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,68,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,68,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,69,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,69,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,69,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,69,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,69,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,69,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,69,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,68,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,68,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,68,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,68,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-49.5,67,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-49.5,67,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,67,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,67,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,67,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,68,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,69,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,69,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,69,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,69,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,69,-18.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,69,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,69,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,70,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,70,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,69,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,69,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,69,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,69,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,68,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,68,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-46.5,67,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-46.5,67,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,68,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,68,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,69,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,69,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,70,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,-15.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,69,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,69,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,70,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,70,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,69,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,69,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,68,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-43.5,68,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-43.5,67,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,68,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,69,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,69,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,69,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,70,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,69,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,69,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,70,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,70,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,70,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,69,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,69,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,69,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-40.5,68,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-40.5,68,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,68,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,69,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,69,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-37.5,69,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,69,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-37.5,68,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,69,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,69,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,69,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,-18.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,-15.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,69,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-34.5,69,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-34.5,69,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,69,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,69,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,-18.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,-15.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,11.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,26.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-31.5,69,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-31.5,69,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,-24.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,-21.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,-15.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,-12.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,-9.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,8.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,14.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,17.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,20.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,23.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-28.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-28.5,69,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-25.5,69,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-25.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-25.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-25.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-25.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-25.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-25.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-25.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-25.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-25.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-25.5,69,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-22.5,69,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-22.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-22.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-22.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-22.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-22.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-22.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-22.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-22.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-22.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-22.5,69,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,69,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-19.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-19.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-19.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-19.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-19.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-19.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-19.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-16.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-16.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-16.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-16.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-16.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-16.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-16.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-13.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-13.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-13.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-13.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-13.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-10.5,70,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-10.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-10.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-10.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-10.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-10.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-10.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-10.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-10.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-10.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-10.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-10.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-7.5,70,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-7.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-7.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-7.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-7.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-7.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-7.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-7.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-7.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-7.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-7.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-7.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-4.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-4.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-4.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-4.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-4.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-4.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-4.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [-1.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [-1.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [1.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [1.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [1.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [1.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [1.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [1.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [1.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [4.5,71,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [4.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [4.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [4.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [4.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [4.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [4.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [4.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [4.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [4.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [4.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [4.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [7.5,71,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [7.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [7.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [7.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [7.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [7.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [7.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [7.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [7.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [7.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [7.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [7.5,70,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [10.5,71,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [10.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [10.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [10.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [10.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [10.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [10.5,70,32.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [10.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [10.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [10.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [10.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [13.5,71,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [13.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [13.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [13.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [13.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [13.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [13.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [13.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [13.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [13.5,70,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [13.5,71,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [16.5,70,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [16.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [16.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [16.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [16.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [16.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [16.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [16.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [16.5,70,44.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [16.5,71,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [16.5,71,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [19.5,71,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [19.5,70,-42.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [19.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [19.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [19.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [19.5,70,-27.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [19.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [19.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [19.5,70,41.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [19.5,71,47.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [19.5,71,50.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [22.5,71,-48.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [22.5,71,-45.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [22.5,70,-39.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [22.5,70,-36.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [22.5,70,-33.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [22.5,70,-30.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [22.5,70,29.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "grass",
+            "center": [22.5,70,35.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "fern",
+            "center": [22.5,70,38.5],
+            "scale": 1.2,
+            "color": [0.09,0.24,0.05],
+            "accent": [0.3,0.5,0.12],
+            "glow": 0
+          },
+          {
+            "kind": "bush",
+            "center": [102.5,93,68.5],
+            "scale": 1.3,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [104.5,93,68.5],
+            "scale": 1.3,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [110.5,93,67.5],
+            "scale": 1.3,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [112.5,93,67.5],
+            "scale": 1.3,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [118.5,93,68.5],
+            "scale": 1.3,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [120.5,93,68.5],
+            "scale": 1.3,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [101,84,69],
+            "scale": 2.1,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [102,84,67],
+            "scale": 2.4,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [104,84,67],
+            "scale": 2.7,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [106,84,67],
+            "scale": 2.1,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [118,84,67],
+            "scale": 2.4,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [120,84,67],
+            "scale": 2.7,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [122,84,67],
+            "scale": 2.1,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [123,84,70],
+            "scale": 2.4,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [100,84,77],
+            "scale": 2.7,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [123,84,78],
+            "scale": 2.1,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [105,84,84],
+            "scale": 2.4,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [119,84,84],
+            "scale": 2.7,
+            "color": [0.1,0.25,0.04],
+            "accent": [0.3,0.52,0.12]
+          },
+          {
+            "kind": "bush",
+            "center": [102.5,93,68.5],
+            "scale": 2,
+            "color": [0.07,0.2,0.025],
+            "accent": [0.27,0.45,0.08]
+          },
+          {
+            "kind": "bush",
+            "center": [106.5,93,68.5],
+            "scale": 2,
+            "color": [0.07,0.2,0.025],
+            "accent": [0.27,0.45,0.08]
+          },
+          {
+            "kind": "bush",
+            "center": [118.5,93,68.5],
+            "scale": 2,
+            "color": [0.07,0.2,0.025],
+            "accent": [0.27,0.45,0.08]
+          },
+          {
+            "kind": "bush",
+            "center": [122.5,93,68.5],
+            "scale": 2,
+            "color": [0.07,0.2,0.025],
+            "accent": [0.27,0.45,0.08]
+          }
+        ],
+        "glows": [
+          {
+            "center": [-22,72.8,16.2],
+            "size": 0.35,
+            "color": [1,0.65,0.25],
+            "range": 8
+          },
+          {
+            "center": [16,72.8,-24.8],
+            "size": 0.35,
+            "color": [1,0.65,0.25],
+            "range": 8
+          }
+        ],
+        "butterflies": [
+          {
+            "center": [-4,73,-18],
+            "size": [38,4,26]
+          }
+        ]
       }
     },
     "mobs": [
       {
         "mob_type": "ant_red",
         "weight_bp": 1000,
-        "biomes": ["forest", "rainforest"]
+        "biomes": ["forest","rainforest"]
       },
       {
         "mob_type": "ant_white",
@@ -717,13 +5026,13 @@
       {
         "mob_type": "aragne__air",
         "weight_bp": 1000,
-        "biomes": ["plains", "highlands"],
+        "biomes": ["plains","highlands"],
         "cities": ["the_ruins"]
       },
       {
         "mob_type": "aragne__earth",
         "weight_bp": 1000,
-        "biomes": ["plains", "forest"],
+        "biomes": ["plains","forest"],
         "cities": ["the_ruins"]
       },
       {
@@ -734,7 +5043,7 @@
       {
         "mob_type": "cro_wani__green",
         "weight_bp": 1000,
-        "biomes": ["rainforest", "desert"]
+        "biomes": ["rainforest","desert"]
       },
       {
         "mob_type": "cro_wani__white",
@@ -744,19 +5053,19 @@
       {
         "mob_type": "fuwa__white",
         "weight_bp": 1000,
-        "biomes": ["plains", "highlands"],
+        "biomes": ["plains","highlands"],
         "cities": ["fuwage"]
       },
       {
         "mob_type": "fuwa__black",
         "weight_bp": 1000,
-        "biomes": ["forest", "rainforest"],
+        "biomes": ["forest","rainforest"],
         "cities": ["fuwage"]
       },
       {
         "mob_type": "wild_boar",
         "weight_bp": 1000,
-        "biomes": ["plains", "forest"]
+        "biomes": ["plains","forest"]
       },
       {
         "mob_type": "misui__fire",
@@ -766,12 +5075,12 @@
       {
         "mob_type": "misui__earth",
         "weight_bp": 1000,
-        "biomes": ["plains", "forest"]
+        "biomes": ["plains","forest"]
       },
       {
         "mob_type": "misui__wind",
         "weight_bp": 1000,
-        "biomes": ["plains", "forest", "highlands"]
+        "biomes": ["plains","forest","highlands"]
       },
       {
         "mob_type": "misui__water",
@@ -786,12 +5095,12 @@
       {
         "mob_type": "moka",
         "weight_bp": 1000,
-        "biomes": ["plains", "forest", "rainforest", "highlands", "desert"]
+        "biomes": ["plains","forest","rainforest","highlands","desert"]
       },
       {
         "mob_type": "moyumi",
         "weight_bp": 1000,
-        "biomes": ["highlands", "desert"]
+        "biomes": ["highlands","desert"]
       },
       {
         "mob_type": "nook",
@@ -844,7 +5153,7 @@
       },
       {
         "item_type": "green_mushroom",
-        "biomes": ["forest", "rainforest"],
+        "biomes": ["forest","rainforest"],
         "cities": ["thebes"]
       },
       {
@@ -872,7 +5181,7 @@
       },
       {
         "item_type": "ivory_shrooms",
-        "biomes": ["forest", "rainforest"],
+        "biomes": ["forest","rainforest"],
         "cities": ["the_ruins"]
       },
       {
@@ -972,7 +5281,7 @@
         },
         "taiga_wood": {
           "color": "#3d4650",
-          "preset": "wood"
+          "preset": "bark"
         },
         "taiga_foliage": {
           "color": "#315965",
@@ -980,7 +5289,7 @@
         },
         "grassland_wood": {
           "color": "#76543a",
-          "preset": "wood"
+          "preset": "bark"
         },
         "grassland_foliage": {
           "color": "#64843e",
@@ -988,7 +5297,7 @@
         },
         "temperate_wood": {
           "color": "#624936",
-          "preset": "wood"
+          "preset": "bark"
         },
         "temperate_foliage": {
           "color": "#416f49",
@@ -996,7 +5305,7 @@
         },
         "swamp_wood": {
           "color": "#52616a",
-          "preset": "wood"
+          "preset": "bark"
         },
         "swamp_foliage": {
           "color": "#395d42",
@@ -1004,7 +5313,7 @@
         },
         "desert_wood": {
           "color": "#77533b",
-          "preset": "wood"
+          "preset": "bark"
         },
         "desert_foliage": {
           "color": "#72814b",
@@ -1012,7 +5321,7 @@
         },
         "tropical_wood": {
           "color": "#5c3c2b",
-          "preset": "wood"
+          "preset": "bark"
         },
         "tropical_foliage": {
           "color": "#317149",
@@ -1047,7 +5356,7 @@
       "biomes": [
         {
           "name": "taiga",
-          "structure_packs": ["taiga_trees", "taiga_rocks"],
+          "structure_packs": ["taiga_trees","taiga_rocks"],
           "landscape": [
             {
               "x": 0,
@@ -1344,7 +5653,7 @@
         },
         {
           "name": "caldera",
-          "structure_packs": ["scorched_rocks", "scorched_ruins"],
+          "structure_packs": ["scorched_rocks","scorched_ruins"],
           "landscape": [
             {
               "x": 0,
@@ -1436,7 +5745,7 @@
       },
       {
         "item_type": "aloe_vera",
-        "biomes": ["frostfen", "caldera"]
+        "biomes": ["frostfen","caldera"]
       },
       {
         "item_type": "moonstone",
@@ -1448,7 +5757,7 @@
       },
       {
         "item_type": "nightcap",
-        "biomes": ["taiga", "frostfen"]
+        "biomes": ["taiga","frostfen"]
       },
       {
         "item_type": "bloodstone",

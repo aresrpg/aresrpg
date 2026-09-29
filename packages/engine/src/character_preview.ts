@@ -7,6 +7,9 @@ import {
   AnimationMixer,
   Box3,
   DirectionalLight,
+  CylinderGeometry,
+  Mesh,
+  MeshStandardMaterial,
   Group,
   HemisphereLight,
   PerspectiveCamera,
@@ -29,7 +32,10 @@ export type CharacterPreview = Readonly<{
 const model_assets_key = ({ body_url, hair_url, worn }: CharacterAppearanceRender): string =>
   JSON.stringify([body_url, hair_url, worn])
 
-export const create_character_preview = async (canvas: HTMLCanvasElement): Promise<CharacterPreview> => {
+export const create_character_preview = async (
+  canvas: HTMLCanvasElement,
+  { pedestal = false }: Readonly<{ pedestal?: boolean }> = {}
+): Promise<CharacterPreview> => {
   const renderer = new WebGPURenderer({
     canvas,
     alpha: true,
@@ -52,6 +58,13 @@ export const create_character_preview = async (canvas: HTMLCanvasElement): Promi
   const camera = new PerspectiveCamera(32, 1, 0.1, 100)
   const pivot = new Group()
   scene.add(pivot)
+  const platform = pedestal
+    ? new Mesh(new CylinderGeometry(0.7, 0.74, 0.12, 8), new MeshStandardMaterial({ color: 0x46505a, roughness: 0.95 }))
+    : null
+  if (platform) {
+    platform.position.y = -0.06
+    scene.add(platform)
+  }
   scene.add(new HemisphereLight(0xdfe8ff, 0x222018, 1.05))
   const key = new DirectionalLight(0xfff0d8, 2.1)
   key.position.set(-3, 5, 4)
@@ -61,6 +74,7 @@ export const create_character_preview = async (canvas: HTMLCanvasElement): Promi
   rim.position.set(0, 4, -5)
   scene.add(key, fill, rim)
 
+  let framing: Readonly<{ body_url: string | null; offset: Vector3 }> | null = null
   let model: CharacterModel | null = null
   let mixer: AnimationMixer | null = null
   let assets_key: string | null = null
@@ -83,14 +97,22 @@ export const create_character_preview = async (canvas: HTMLCanvasElement): Promi
     camera.updateProjectionMatrix()
   }
 
-  const frame_model = (next: CharacterModel): void => {
+  const frame_model = (next: CharacterModel, body_url: string | null): void => {
+    if (framing?.body_url === body_url) {
+      next.root.position.copy(framing.offset)
+      return
+    }
+    yaw = BASE_YAW
     next.root.position.set(0, 0, 0)
     next.root.updateWorldMatrix(true, true)
     const bounds = new Box3().setFromObject(next.root)
     const center = bounds.getCenter(new Vector3())
     const height = bounds.getSize(new Vector3()).y || 1.4
     next.root.position.set(-center.x, -bounds.min.y, -center.z)
-    camera.position.set(0, height * 0.55, height * 1.95)
+    framing = { body_url, offset: next.root.position.clone() }
+    platform?.scale.setScalar(height * 0.55)
+    if (platform) platform.position.y = -0.06 * height * 0.55
+    camera.position.set(0, height * 0.75, height * 2.05)
     camera.lookAt(0, height * 0.5, 0)
   }
 
@@ -157,13 +179,12 @@ export const create_character_preview = async (canvas: HTMLCanvasElement): Promi
       release_model()
       model = next
       assets_key = next_assets_key
-      yaw = BASE_YAW
       pivot.add(next.root)
-      frame_model(next)
       mixer = next.clips.length > 0 ? new AnimationMixer(next.root) : null
       const idle = next.clips.find(({ name }) => name.toUpperCase().includes('IDLE')) ?? next.clips[0]
       if (idle) mixer?.clipAction(idle).play()
       mixer?.update(0)
+      frame_model(next, appearance.body_url)
       return !!appearance.body_url
     },
     dispose: () => {
@@ -176,6 +197,8 @@ export const create_character_preview = async (canvas: HTMLCanvasElement): Promi
       canvas.removeEventListener('pointermove', pointer_move)
       window.removeEventListener('pointerup', pointer_up)
       release_model()
+      platform?.geometry.dispose()
+      platform?.material.dispose()
       renderer.dispose()
     },
   })

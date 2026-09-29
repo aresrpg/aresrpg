@@ -6,6 +6,8 @@
 // so a component physically cannot reach a world it was not given. Nothing here is global, and
 // nothing looks a scene up by ambient lookup.
 
+import { WorldLoading } from '../../components/WorldLoading.tsx'
+
 import { useEffect, useState } from 'react'
 
 import type { EngineQuality } from '@aresrpg/engine'
@@ -24,7 +26,7 @@ export const WorldStage = ({
   children: (scene: SceneHandle) => React.ReactNode
 }>) => {
   const [canvas, set_canvas] = useState<HTMLCanvasElement | null>(null)
-  const [scene, set_scene] = useState<SceneHandle | null>(null)
+  const [scene, set_scene] = useState<ReturnType<typeof create_world> | null>(null)
 
   useEffect(() => {
     if (!canvas || !terrain) return undefined
@@ -46,6 +48,7 @@ export const WorldStage = ({
   return (
     <>
       <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
+      <WorldLoading source={scene} quality={quality} />
       {scene ? children(scene) : null}
     </>
   )

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Marketplace revenue admin: official kiosk policy reads + one wallet-signed withdrawal PTB.
+// Marketplace revenue admin: pinned policy reads + one wallet-signed withdrawal PTB.
 
 import type { TransferPolicyCap } from '@mysten/kiosk'
+import { normalizeStructTag } from '@mysten/sui/utils'
 
 import { receipt_digest, receipt_events } from './cache.ts'
 import type { Sdk } from './client.ts'
@@ -22,7 +23,7 @@ type MarketplaceAdminSdk = Pick<
   | 'pins'
   | 'game_type_package'
   | 'get_owned_transfer_policies'
-  | 'get_transfer_policies'
+  | 'sui_client'
   | 'tx'
   | 'hydrate_unknown'
   | 'door_context'
@@ -54,17 +55,28 @@ export const read_marketplace_royalties = async (
   sdk: MarketplaceAdminSdk,
   address: string
 ): Promise<readonly MarketplaceRoyalty[]> => {
-  const caps = (await sdk.get_owned_transfer_policies(address)) ?? []
-  return Promise.all(
-    policy_targets(sdk).map(async ({ kind, type, pin }) => {
-      const expected_policy = policy_id(pin, kind)
-      const cap = caps.find((candidate) => candidate.type === type && candidate.policyId === expected_policy) ?? null
-      const policies = await sdk.get_transfer_policies(type)
-      const policy = policies.find(({ id }) => id === expected_policy)
-      if (!policy) throw new Error(`The published ${kind} TransferPolicy ${expected_policy} is unavailable`)
-      return Object.freeze({ kind, type, policy_id: expected_policy, cap, balance_mist: BigInt(policy.balance) })
-    })
-  )
+  const targets = policy_targets(sdk).map(({ kind, type, pin }) => ({ kind, type, id: policy_id(pin, kind) }))
+  const [owned_caps, { objects }] = await Promise.all([
+    sdk.get_owned_transfer_policies(address),
+    sdk.sui_client.core.getObjects({ objectIds: targets.map(({ id }) => id), include: { json: true } }),
+  ])
+  const failure = objects.find((object) => object instanceof Error)
+  if (failure instanceof Error) throw failure
+  const caps = owned_caps ?? []
+  return targets.map(({ kind, type, id }) => {
+    const policy = objects.find(({ objectId }) => objectId === id)
+    if (!policy) throw new Error(`The published ${kind} TransferPolicy ${id} is unavailable`)
+    if (
+      !policy.type ||
+      normalizeStructTag(policy.type) !== normalizeStructTag(`0x2::transfer_policy::TransferPolicy<${type}>`)
+    )
+      throw new Error(`The published ${kind} TransferPolicy ${id} has an unexpected type`)
+    const balance = policy.json?.balance
+    if (typeof balance !== 'string' || !/^\d+$/u.test(balance))
+      throw new Error(`The published ${kind} TransferPolicy ${id} has an invalid balance`)
+    const cap = caps.find((candidate) => candidate.type === type && candidate.policyId === id) ?? null
+    return Object.freeze({ kind, type, policy_id: id, cap, balance_mist: BigInt(balance) })
+  })
 }
 
 export const claim_marketplace_royalties = async (sdk: MarketplaceAdminSdk, address: string) => {

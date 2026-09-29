@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { validate_height_grid } from '../height_grid.ts'
+
 import the_ruins_map_source from './generated/the_ruins_map.json'
 import fuwage_map_source from './generated/fuwage_map.json'
 import thebes_map_source from './generated/thebes_map.json'
 import { compile_the_ruins, THE_RUINS_MATERIAL_NAMES } from './the_ruins/runtime.ts'
 import { compile_fuwage, FUWAGE_MATERIAL_NAMES } from './fuwage/runtime.ts'
-import { compile_thebes, THEBES_MATERIAL_NAMES } from './thebes/runtime.ts'
+import { compile_thebes, THEBES_MATERIAL_NAMES, THEBES_LAND_USES } from './thebes/runtime.ts'
 import type { CityRuntimeDefinition, GeneratedCityMapArtifact } from './types.ts'
 
 const definition = (
@@ -15,23 +17,22 @@ const definition = (
   compile: CityRuntimeDefinition['compile'],
   map: unknown,
   land_uses: Readonly<Record<string, string>>
-): CityRuntimeDefinition =>
-  Object.freeze({
+): CityRuntimeDefinition => {
+  const generated_map = map as GeneratedCityMapArtifact
+  const errors = validate_height_grid(generated_map.terrain ?? null)
+  if (errors.length) throw new TypeError(`Invalid ${id} terrain: ${errors.join('; ')}`)
+  return Object.freeze({
     id,
     material_names,
     compile,
     artifact_url: new URL(`./generated/${id}.json`, import.meta.url),
-    map: map as GeneratedCityMapArtifact,
+    map: generated_map,
     land_uses,
   })
+}
 
 export const CITY_DEFINITIONS = Object.freeze([
-  definition('thebes', THEBES_MATERIAL_NAMES, compile_thebes, thebes_map_source, {
-    thebes_field: 'field',
-    thebes_garden: 'garden',
-    thebes_river: 'river',
-    thebes_bridge: 'bridge',
-  }),
+  definition('thebes', THEBES_MATERIAL_NAMES, compile_thebes, thebes_map_source, THEBES_LAND_USES),
   definition('the_ruins', THE_RUINS_MATERIAL_NAMES, compile_the_ruins, the_ruins_map_source, {
     the_ruins_ravine: 'ravine',
     the_ruins_ruin: 'ruins',

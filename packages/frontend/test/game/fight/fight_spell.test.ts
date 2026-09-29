@@ -21,8 +21,8 @@ const effect: SpellEffect = {
   stat: 0n,
 }
 
-test('fight spell details display the fight-projected critical denominator', async () => {
-  const { fight_spell_detail } = await import('../../../src/game/fight/FightSpell.tsx')
+test('fight spell effects use the current turn projection', async () => {
+  const { fight_spell_effects } = await import('../../../src/game/fight/FightSpell.tsx')
   const details: SpellLevel = {
     ap_cost: 3n,
     range_min: 1n,
@@ -51,7 +51,7 @@ test('fight spell details display the fight-projected critical denominator', asy
     }),
   })
 
-  expect(fight_spell_detail(spell).levels[0]?.crit_1_in).toBe(2)
+  expect(fight_spell_effects(spell).map(({ value }) => value)).toEqual([22])
 })
 
 test('an unaffordable spell does not display the turn-critical border', async () => {
@@ -170,8 +170,8 @@ test('an affordable turn-critical spell marks its socket shell for shared hover-
 
 for (const critical of [false, true]) {
   test(`the fight card renders only the resolved ${critical ? 'critical' : 'normal'} effects once`, async () => {
-    const { fight_spell_detail } = await import('../../../src/game/fight/FightSpell.tsx')
-    const { SpellCard } = await import('../../../src/encyclopedia/SpellCard.tsx')
+    const { fight_spell_effects } = await import('../../../src/game/fight/FightSpell.tsx')
+    const { FightSpellEffects } = await import('../../../src/game/fight/FightSpell.tsx')
     const { render_english } = await import('../../i18n/render.ts')
     const details: SpellLevel = {
       ap_cost: 3n,
@@ -200,12 +200,13 @@ for (const critical of [false, true]) {
       source: { classe: 'yogan', unlock_level: 1n, levels: [details] },
       turn: { critical, crit_1_in: 38n, effects: resolved },
     }
-    const detail = fight_spell_detail(spell)
-    expect(detail.levels[0]!.effects.map(({ value }) => value)).toEqual(critical ? [14, 7] : [14])
-    expect(detail.levels[0]!.crit_effects).toEqual([])
-    const html = render_english(createElement(SpellCard, { spell: detail, small: true }))
+    const detail = fight_spell_effects(spell)
+    expect(detail.map(({ value }) => value)).toEqual(critical ? [14, 7] : [14])
+    const html = render_english(createElement(FightSpellEffects, { spell, name: spell.name }))
     expect(html.match(/>14</g)).toHaveLength(1)
-    expect(html.match(/CRIT CHANCE/g)).toHaveLength(1)
+    expect(html).not.toContain('CRIT CHANCE')
+    expect(html).not.toContain('LINE OF SIGHT')
+    expect(html).not.toContain('data-spell-level-tabs')
     expect(html.match(/>7</g)?.length ?? 0).toBe(critical ? 1 : 0)
   })
 }

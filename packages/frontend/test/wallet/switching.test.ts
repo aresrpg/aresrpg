@@ -69,7 +69,7 @@ test('authorized accounts switch across providers without disconnecting or reope
 })
 
 test('claim transfer and redemption block wallet mutations at the app reducer', () => {
-  const initial = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const initial = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const session = { address: '0xholder', wallet_name: 'First' } as never
   for (const pending of ['import', 'redeem']) {
     const state = {

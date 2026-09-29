@@ -126,8 +126,8 @@ export const preview_sample_plan = (
   world: WorldRecipe,
   options: Partial<PreviewOptions> & Pick<PreviewOptions, 'focus_x' | 'focus_z'>
 ): WorldPreviewSamplePlan => {
-  const recipe = parse_world_recipe(world)
-  const compiled = compile_world_recipe(recipe)
+  const compiled = compile_world_recipe(world)
+  const { recipe } = compiled
   const complete = Object.freeze({ ...DEFAULT_OPTIONS, ...options })
   const near_side = complete.near_radius * 2 + 1
   const near = expose_surface(

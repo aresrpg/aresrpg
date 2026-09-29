@@ -18,6 +18,12 @@ import {
   type ServerPacket,
 } from '@aresrpg/protocol'
 
+import {
+  current_offer,
+  market_query_key,
+  remember_offer_page,
+  type RecentOfferPage,
+} from '../marketplace/browse_cache.ts'
 import { localized_error } from '../i18n/error_text.ts'
 import {
   initial_price_history,
@@ -29,7 +35,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast, type ToastPart } from '../toast.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { encumbered_asset_ids, stack_merge_target_row } from '../inventory_stacks.ts'
-import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
+import { play_audio } from '../game/audio/audio_registry.ts'
 import { content_catalog, titleize } from '../content/catalog.ts'
 import { format_sui } from '../wallet_amount.ts'
 
@@ -57,6 +63,8 @@ export type MarketplaceState = Readonly<{
   page_cursors: readonly string[]
   observation: MarketObservation | null
   listings: readonly ListingRow[]
+  ready_request: number | null
+  recent_pages: readonly RecentOfferPage[]
   own_listings: readonly ListingRow[]
   catalogues: Readonly<Record<string, Readonly<{ version: string; owned: boolean }>>>
   departures: Readonly<Record<string, Readonly<Record<string, string>>>>
@@ -102,6 +110,8 @@ export const initial_marketplace_state = (): MarketplaceState =>
     page_cursors: [],
     observation: null,
     listings: [],
+    ready_request: null,
+    recent_pages: [],
     own_listings: [],
     catalogues: {},
     departures: {},
@@ -270,9 +280,14 @@ const is_browse_packet = (packet: Readonly<ServerPacket>): packet is BrowsePacke
 const fold_browse = (market: MarketplaceState, packet: BrowsePacket, address: string | null): MarketplaceState => {
   if (!same_observation(market.observation, packet.observation)) return market
   if (packet.type === 'packet/market_counts') return Object.freeze({ ...market, type_counts: packet.counts })
-  return packet.type === 'packet/market_slice'
-    ? Object.freeze({ ...fold_catalogue(market, packet, false, address), next_cursor: packet.next_cursor })
-    : Object.freeze({ ...market, types: packet.items })
+  if (packet.type === 'packet/market_types') return Object.freeze({ ...market, types: packet.items })
+  const folded = fold_catalogue(market, packet, false, address)
+  return Object.freeze({
+    ...folded,
+    next_cursor: packet.next_cursor,
+    ready_request: packet.observation.request,
+    recent_pages: remember_offer_page(market.recent_pages, packet.observation, folded.listings),
+  })
 }
 
 const fold_packet = (
@@ -296,16 +311,22 @@ const fold_packet = (
   return market
 }
 
-const select_query = (market: MarketplaceState, query: MarketQuery, group = market.group): MarketplaceState =>
+const observe_query = (market: MarketplaceState, query: MarketQuery, group = market.group): MarketplaceState =>
   Object.freeze({
     ...market,
     group,
     observation: { ...query, request: (market.observation?.request ?? 0) + 1 },
     types: market_category(market.observation) === market_category(query) ? market.types : [],
     listings: [],
+    ready_request: null,
     next_cursor: null,
     page_cursors: [],
   })
+const select_query = (market: MarketplaceState, query: MarketQuery, group = market.group): MarketplaceState =>
+  market.observation && market_query_key(market.observation) === market_query_key(query)
+    ? market
+    : observe_query(market, query, group)
+
 const turn_page = (market: MarketplaceState, direction: 'next' | 'previous'): MarketplaceState => {
   const { observation } = market
   if (!has_market_page(observation)) return market
@@ -317,6 +338,7 @@ const turn_page = (market: MarketplaceState, direction: 'next' | 'previous'): Ma
     observation: { ...observation, cursor, request: market.observation!.request + 1 },
     page_cursors: next ? [...market.page_cursors, observation.cursor ?? ''] : market.page_cursors.slice(0, -1),
     listings: [],
+    ready_request: null,
     next_cursor: null,
   })
 }
@@ -328,7 +350,7 @@ const group_query = (input: Extract<MarketplaceInput, { type: 'market/group_sele
 const reduce_selection = (market: MarketplaceState, input: AppInput): MarketplaceState => {
   switch (input.type) {
     case 'market/opened':
-      return market.observation ? market : select_query(market, { kind: 'overview' })
+      return { ...observe_query(market, market.observation ?? { kind: 'overview' }), page_cursors: market.page_cursors }
     case 'market/group_selected':
       return select_query(market, group_query(input), input.group)
     case 'market/characters_filtered':
@@ -341,9 +363,20 @@ const reduce_selection = (market: MarketplaceState, input: AppInput): Marketplac
     case 'market/page_requested':
       return turn_page(market, input.direction)
     default:
-      return market
+      return ['link/connecting', 'link/rejected', 'link/replaced', 'link/violation', 'link/failed'].includes(input.type)
+        ? Object.freeze({ ...market, ready_request: null, listings: [] })
+        : market
   }
 }
+
+const LISTING_REQUESTS = ['market/list_requested', 'market/delist_requested', 'market/buy_requested'] as const
+const accepted_listing_request = (
+  market: MarketplaceState,
+  input: AppInput
+): input is Extract<AppInput, { type: (typeof LISTING_REQUESTS)[number] }> =>
+  LISTING_REQUESTS.some((type) => type === input.type) &&
+  'listing' in input &&
+  (input.type !== 'market/buy_requested' || current_offer(market, input.listing))
 
 const reduce = (state: AppState, input: AppInput): AppState => {
   const market = state.marketplace
@@ -360,18 +393,14 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   const selected = reduce_selection(market, input)
   if (selected !== market) return Object.freeze({ ...state, marketplace: selected })
 
-  if (
-    input.type === 'market/list_requested' ||
-    input.type === 'market/delist_requested' ||
-    input.type === 'market/buy_requested'
-  )
+  if (accepted_listing_request(market, input))
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: input.listing.id }) })
   if (input.type === 'market/collect_requested')
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: 'collect' }) })
   if (input.type === 'market/write_failed')
     return Object.freeze({ ...state, marketplace: Object.freeze({ ...market, pending: null }) })
   if (input.type === 'market/write_succeeded')
-    return Object.freeze({ ...state, marketplace: fold_write(market, input) })
+    return Object.freeze({ ...state, marketplace: Object.freeze({ ...fold_write(market, input), recent_pages: [] }) })
   return state
 }
 
@@ -402,7 +431,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const copy = get_state().copy?.marketplace_page.sold_toast
     const notice = market_sale_notice(packet.sale, typeof copy === 'string' ? copy : undefined, get_state().locale)
     toast.rich(notice.message, notice.parts, 'success')
-    play_procedural_cue('sale')
+    play_audio('sale')
   })
   const execute = (
     operation: 'list' | 'delist' | 'buy',
@@ -475,6 +504,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       toast.add(localized_error(reason), 'error')
       return dispatch({ type: 'market/write_failed', error: reason })
     }
+    if (!current_offer(state.marketplace, listing)) return
     const action = state.session.wallet?.marketplace.buy
     if (action) execute('buy', listing, action)
   })

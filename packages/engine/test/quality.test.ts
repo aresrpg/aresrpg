@@ -16,16 +16,20 @@ describe('engine quality profiles', () => {
   })
 
   test('reserves selective HDR bloom and bounded sun shafts for high quality', () => {
-    expect(Object.values(QUALITY_PROFILES).map(({ effects }) => Object.keys(effects))).toEqual([
-      ['bloom', 'sun_shafts'],
-      ['bloom', 'sun_shafts'],
-      ['bloom', 'sun_shafts'],
+    expect(Object.values(QUALITY_PROFILES).map(({ effects }) => Object.keys(effects).sort())).toEqual([
+      ['bloom', 'local_shafts', 'sun_shafts'],
+      ['bloom', 'local_shafts', 'sun_shafts'],
+      ['bloom', 'local_shafts', 'sun_shafts'],
     ])
     expect(QUALITY_PROFILES.low.effects.bloom).toBeNull()
     expect(QUALITY_PROFILES.medium.effects.bloom).toBeNull()
     expect(QUALITY_PROFILES.high.effects.bloom).not.toBeNull()
     expect(QUALITY_PROFILES.low.effects.sun_shafts).toBeNull()
     expect(QUALITY_PROFILES.medium.effects.sun_shafts).toBeNull()
+    expect(QUALITY_PROFILES.low.effects.local_shafts).toBeNull()
+    expect(QUALITY_PROFILES.medium.effects.local_shafts).toBeNull()
+    const local = QUALITY_PROFILES.high.effects.local_shafts
+    expect(local.samples * local.resolution ** 2).toBeLessThanOrEqual(4)
     const shafts = QUALITY_PROFILES.high.effects.sun_shafts!
     expect(shafts.samples * shafts.resolution ** 2).toBeLessThanOrEqual(4)
   })

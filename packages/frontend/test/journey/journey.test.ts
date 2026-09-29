@@ -21,8 +21,7 @@ import { LOCALES } from '../../src/i18n/locale.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import type { FightResult } from '../../src/modules/fight_result.ts'
 
-const base = (): AppState =>
-  initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+const base = (): AppState => initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
 const item = (item_type: string, amount = 1): ItemRow => ({
   id: item_type,
   item_type,

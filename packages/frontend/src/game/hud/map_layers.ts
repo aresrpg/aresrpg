@@ -123,29 +123,22 @@ export const draw_zone_layer = (
   }
 }
 
-/** The active position run owns the selected zone highlight on the full map. */
-export const draw_zone_selection = (
+/** The active run is an exact client-space destination, never an entire zone. */
+export const draw_position_target = (
   context: CanvasRenderingContext2D,
   view: MapView,
-  zone: Readonly<{ zx: number; zz: number }> | null
+  target: Readonly<{ x: number; z: number }> | null
 ): void => {
-  if (!zone) return
-  const x = chain_to_client_coordinate(zone.zx * ZONE_SIZE)
-  const z = chain_to_client_coordinate(zone.zz * ZONE_SIZE)
-  const area = canvas_bounds(view, {
-    min_x: x,
-    max_x: x + ZONE_SIZE - 1,
-    min_z: z,
-    max_z: z + ZONE_SIZE - 1,
-  })
+  if (!target) return
+  const { px, pz } = to_canvas(target.x, target.z, view.center_x, view.center_z, view.size, view.radius)
   context.save()
-  context.fillStyle = 'rgba(72, 207, 207, 0.18)'
-  context.fillRect(area.x, area.y, area.width, area.height)
-  context.strokeStyle = '#48cfcf'
-  context.lineWidth = 2
-  context.shadowColor = 'rgba(72, 207, 207, 0.9)'
-  context.shadowBlur = 10
-  context.strokeRect(area.x + 1, area.y + 1, Math.max(1, area.width - 2), Math.max(1, area.height - 2))
+  context.beginPath()
+  context.arc(px, pz, 7, 0, Math.PI * 2)
+  context.strokeStyle = '#ffe2a0'
+  context.lineWidth = 3
+  context.shadowColor = '#071018'
+  context.shadowBlur = 4
+  context.stroke()
   context.restore()
 }
 

@@ -9,7 +9,7 @@ import { world_center } from '@aresrpg/immutable'
 import { party_frame_visible, party_run_available, party_run_distance } from '../../src/components/PartyFrame.tsx'
 import en from '../../src/i18n/locales/en.yaml'
 
-const friends_source = readFileSync(new URL('../../src/components/FriendsPanel.tsx', import.meta.url), 'utf8')
+const social_source = readFileSync(new URL('../../src/game/hud/WorldSocialDock.tsx', import.meta.url), 'utf8')
 const shell_source = readFileSync(new URL('../../src/components/AppShell.tsx', import.meta.url), 'utf8')
 const party_source = readFileSync(new URL('../../src/components/PartyFrame.tsx', import.meta.url), 'utf8')
 const party_css = readFileSync(new URL('../../src/components/party_frame.css', import.meta.url), 'utf8')
@@ -23,15 +23,16 @@ test('owned character candidates do not impersonate a created party', () => {
   expect(party_source).not.toContain("text('invite_owned')")
 })
 
-test('party invitations live below friends and name the group invitation', () => {
-  expect(friends_source).toContain('<PartyInviteCard')
+test('party invitations live in the social dock and name the group invitation', () => {
+  expect(social_source).toContain('<PartyInviteCard')
   expect(shell_source).not.toContain('<PartyInviteCard')
   expect(en.party_panel.invited_by).toBe('{{name}} invited you to join his group')
 })
 
 test('the leader controls one follow mode and follower rows expose distance progress', () => {
   expect(en.party_panel.follow_leader).toBe('Follow leader')
-  expect(party_source).toContain('follow_leader: event.target.checked')
+  expect(party_source).toContain('on_follow(event.target.checked)')
+  expect(party_source).toContain('follow_leader: enabled')
   expect(party_source).toContain('<Footprints')
   expect(party_source).toContain('PartyDistanceProgress')
   expect(party_css).toContain('width: max-content')
@@ -59,7 +60,7 @@ test('the active external run target reuses distance progress in green', () => {
     x: world_center + 12,
     z: world_center + 5,
   } as const
-  const pose = { character_id: '0xa', x: 0, y: 0, z: 0 } as never
+  const pose = { character_id: '0xa', x: 0, y: 0, z: 0, route: { x: 12, z: 5, remaining: 13 } } as never
   expect(party_run_distance(run, pose, '0xc')).toBe(13)
   expect(party_run_distance(run, pose, '0xb')).toBeNull()
   expect(party_css).toContain('.party-distance-progress.is-running em')
@@ -71,7 +72,8 @@ test('member removal occupies the trailing control cell', () => {
     party_source.indexOf('const PartyMemberControl'),
     party_source.indexOf('const PartyMemberRow')
   )
-  expect(control).toContain("type: 'party/kick'")
+  expect(control).toContain('on_kick(member.character_id)')
+  expect(party_source).toContain("type: 'party/kick'")
 })
 
 test('only external party members open the shared player menu for run-to', () => {

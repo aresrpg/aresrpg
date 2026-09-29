@@ -65,6 +65,9 @@ export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | '
     captions.set('test', caption, () => anchor)
     await settle()
     const full = pixels()
+    const rect = canvas.getBoundingClientRect()
+    const caption_hit = captions.hit_test('test', rect.left + 160, rect.top + 71)
+    const outside_hit = captions.hit_test('test', rect.left + 8, rect.top + 8)
     const before = captions.stats()
     const image = canvas.toDataURL('image/png')
     const semantics = [...canvas.parentElement!.querySelectorAll('[role="listitem"]')].map(
@@ -103,6 +106,9 @@ export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | '
     await settle()
     const clean = pixel(pixels(), 160, 71)
     return {
+      caption_hit,
+      outside_hit,
+      removed_hit: captions.hit_test('test', rect.left + 160, rect.top + 71),
       recovered_health,
       background,
       retained: pixel(full, 8, 8),

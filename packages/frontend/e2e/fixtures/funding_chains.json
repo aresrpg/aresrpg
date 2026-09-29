@@ -1,0 +1,489 @@
+{
+  "source": "https://li.quest/v1/chains?chainTypes=EVM,SVM,MVM",
+  "captured_at": "2026-09-26",
+  "chains": [
+    {
+      "key": "eth",
+      "chainType": "EVM",
+      "name": "Ethereum",
+      "coin": "ETH",
+      "id": 1,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/ethereum.svg",
+      "tokenlistUrl": "https://gateway.ipfs.io/ipns/tokens.uniswap.org",
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": false,
+      "metamask": {
+        "chainId": "0x1",
+        "blockExplorerUrls": [
+          "https://etherscan.io/"
+        ],
+        "chainName": "Ethereum Mainnet",
+        "nativeCurrency": {
+          "name": "ETH",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://ethereum-rpc.publicnode.com",
+          "https://eth.drpc.org"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 1,
+        "symbol": "ETH",
+        "decimals": 18,
+        "name": "ETH",
+        "coinKey": "ETH",
+        "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+        "priceUSD": "2692.11",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "sol",
+      "chainType": "SVM",
+      "name": "Solana",
+      "coin": "SOL",
+      "id": 1151111081099710,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/solana.svg",
+      "faucetUrls": [],
+      "metamask": {
+        "chainId": "1151111081099710",
+        "blockExplorerUrls": [
+          "https://solscan.io/",
+          "https://solana.fm/",
+          "https://explorer.solana.com/"
+        ],
+        "chainName": "Solana",
+        "nativeCurrency": {
+          "name": "SOL",
+          "symbol": "SOL",
+          "decimals": 9
+        },
+        "rpcUrls": [
+          "https://api.mainnet-beta.solana.com",
+          "https://solana-rpc.publicnode.com"
+        ]
+      },
+      "nativeToken": {
+        "address": "11111111111111111111111111111111",
+        "chainId": 1151111081099710,
+        "symbol": "SOL",
+        "decimals": 9,
+        "name": "SOL",
+        "coinKey": "SOL",
+        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/5426.png",
+        "priceUSD": "119.591120526975",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "unverified",
+        "verificationStatusBreakdown": []
+      },
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "arb",
+      "chainType": "EVM",
+      "name": "Arbitrum",
+      "coin": "ETH",
+      "id": 42161,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/arbitrum.svg",
+      "tokenlistUrl": "https://raw.githubusercontent.com/sushiswap/default-token-list/master/tokens/arbitrum.json",
+      "faucetUrls": [
+        "https://bridge.arbitrum.io/"
+      ],
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": true,
+      "metamask": {
+        "chainId": "0xa4b1",
+        "blockExplorerUrls": [
+          "https://arbiscan.io/"
+        ],
+        "chainName": "Arbitrum One",
+        "nativeCurrency": {
+          "name": "ETH",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://arb1.arbitrum.io/rpc",
+          "https://arbitrum-one-rpc.publicnode.com",
+          "https://arbitrum.drpc.org"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 42161,
+        "symbol": "ETH",
+        "decimals": 18,
+        "name": "ETH",
+        "coinKey": "ETH",
+        "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+        "priceUSD": "2687.14",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "bas",
+      "chainType": "EVM",
+      "name": "Base",
+      "coin": "ETH",
+      "id": 8453,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/base.svg",
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": true,
+      "metamask": {
+        "chainId": "0x2105",
+        "blockExplorerUrls": [
+          "https://basescan.org/"
+        ],
+        "chainName": "Base",
+        "nativeCurrency": {
+          "name": "Ethereum",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://mainnet.base.org",
+          "https://base-rpc.publicnode.com",
+          "https://base.drpc.org"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 8453,
+        "symbol": "ETH",
+        "decimals": 18,
+        "name": "ETH",
+        "coinKey": "ETH",
+        "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+        "priceUSD": "2688.74",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "bsc",
+      "chainType": "EVM",
+      "name": "BSC",
+      "coin": "BNB",
+      "id": 56,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/bsc.svg",
+      "tokenlistUrl": "https://tokens.pancakeswap.finance/pancakeswap-extended.json",
+      "faucetUrls": [
+        "https://stakely.io/faucet/bsc-chain-bnb"
+      ],
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": true,
+      "metamask": {
+        "chainId": "0x38",
+        "blockExplorerUrls": [
+          "https://bscscan.com/"
+        ],
+        "chainName": "BNB Smart Chain Mainnet",
+        "nativeCurrency": {
+          "name": "BNB",
+          "symbol": "BNB",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://bsc-dataseed.binance.org",
+          "https://bsc-dataseed.bnbchain.org",
+          "https://bsc-rpc.publicnode.com",
+          "https://bsc-dataseed1.defibit.io",
+          "https://bsc-dataseed1.ninicoin.io"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 56,
+        "symbol": "BNB",
+        "decimals": 18,
+        "name": "BNB",
+        "coinKey": "BNB",
+        "logoURI": "https://assets.coingecko.com/coins/images/825/small/binance-coin-logo.png?1547034615",
+        "priceUSD": "773.25",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "sui",
+      "chainType": "MVM",
+      "name": "Sui",
+      "coin": "SUI",
+      "id": 9270000000000000,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/sui.svg",
+      "faucetUrls": [
+        "https://stakely.io/faucet/sui-sui"
+      ],
+      "metamask": {
+        "chainId": "9270000000000000",
+        "blockExplorerUrls": [
+          "https://suivision.xyz/",
+          "https://www.suiscan.xyz/"
+        ],
+        "chainName": "Sui",
+        "nativeCurrency": {
+          "name": "Sui",
+          "symbol": "SUI",
+          "decimals": 9
+        },
+        "rpcUrls": [
+          "https://fullnode.mainnet.sui.io:443"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
+        "chainId": 9270000000000000,
+        "symbol": "SUI",
+        "decimals": 9,
+        "name": "SUI",
+        "coinKey": "SUI",
+        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/20947.png",
+        "priceUSD": "1.11",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "opt",
+      "chainType": "EVM",
+      "name": "OP Mainnet",
+      "coin": "ETH",
+      "id": 10,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/optimism.svg",
+      "tokenlistUrl": "https://static.optimism.io/optimism.tokenlist.json",
+      "faucetUrls": [
+        "https://gateway.optimism.io/"
+      ],
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": true,
+      "metamask": {
+        "chainId": "0xa",
+        "blockExplorerUrls": [
+          "https://optimistic.etherscan.io/"
+        ],
+        "chainName": "OP Mainnet",
+        "nativeCurrency": {
+          "name": "ETH",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://mainnet.optimism.io/",
+          "https://optimism-rpc.publicnode.com",
+          "https://optimism.drpc.org"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 10,
+        "symbol": "ETH",
+        "decimals": 18,
+        "name": "ETH",
+        "coinKey": "ETH",
+        "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/logo.png",
+        "priceUSD": "2692.31",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "pol",
+      "chainType": "EVM",
+      "name": "Polygon",
+      "coin": "POL",
+      "id": 137,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/polygon.svg",
+      "tokenlistUrl": "https://unpkg.com/quickswap-default-token-list@1.0.71/build/quickswap-default.tokenlist.json",
+      "faucetUrls": [
+        "https://stakely.io/faucet/polygon-matic"
+      ],
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": true,
+      "metamask": {
+        "chainId": "0x89",
+        "blockExplorerUrls": [
+          "https://polygonscan.com/"
+        ],
+        "chainName": "Polygon Mainnet",
+        "nativeCurrency": {
+          "name": "Polygon Ecosystem Token",
+          "symbol": "POL",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://polygon-bor-rpc.publicnode.com",
+          "https://polygon.drpc.org"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 137,
+        "symbol": "POL",
+        "decimals": 18,
+        "name": "Polygon Ecosystem Token",
+        "coinKey": "POL",
+        "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+        "priceUSD": "0.113914457488965",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    },
+    {
+      "key": "ava",
+      "chainType": "EVM",
+      "name": "Avalanche",
+      "coin": "AVAX",
+      "id": 43114,
+      "mainnet": true,
+      "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/chains/avalanche.svg",
+      "tokenlistUrl": "https://raw.githubusercontent.com/sushiswap/default-token-list/master/tokens/avalanche.json",
+      "multicallAddress": "0xcA11bde05977b3631167028862bE2a173976CA11",
+      "relayerSupported": true,
+      "metamask": {
+        "chainId": "0xa86a",
+        "blockExplorerUrls": [
+          "https://snowtrace.io/"
+        ],
+        "chainName": "Avalanche C-Chain",
+        "nativeCurrency": {
+          "name": "AVAX",
+          "symbol": "AVAX",
+          "decimals": 18
+        },
+        "rpcUrls": [
+          "https://api.avax.network/ext/bc/C/rpc",
+          "https://avalanche-c-chain-rpc.publicnode.com",
+          "https://avalanche.drpc.org"
+        ]
+      },
+      "nativeToken": {
+        "address": "0x0000000000000000000000000000000000000000",
+        "chainId": 43114,
+        "symbol": "AVAX",
+        "decimals": 18,
+        "name": "AVAX",
+        "coinKey": "AVAX",
+        "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
+        "priceUSD": "10.39",
+        "tags": [
+          "major_asset"
+        ],
+        "verificationStatus": "verified",
+        "verificationStatusBreakdown": [
+          {
+            "provider": "hypernative",
+            "result": "verified",
+            "providerResult": "accept"
+          }
+        ]
+      },
+      "diamondAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      "permit2Proxy": "0x89c6340B1a1f4b25D36cd8B063D49045caF3f818",
+      "nonStandardNativeDecimals": false
+    }
+  ]
+}

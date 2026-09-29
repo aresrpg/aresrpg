@@ -2,17 +2,22 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { ArrowUpRight, Gem, Loader2 } from 'lucide-react'
-import { useEffect } from 'react'
+import { Button } from '@aresrpg/ui'
+import { useEffect, useRef } from 'react'
 import { KARES_UNIT } from '@aresrpg/sdk/kares-economics'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { content_catalog } from '../content/catalog.ts'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 import { item_icon } from '../content/assets.ts'
-import { encyclopedia_item_path } from '../encyclopedia/routes.ts'
+import { useInspections } from '../components/useInspections.ts'
+import { InspectionWindow } from '../components/ItemDetailView.tsx'
+import { CatalogueItemDetails } from '../encyclopedia/CatalogueItemDetails.tsx'
+import { encyclopedia_text } from '../encyclopedia/copy.ts'
+import { stat_name } from '../i18n/copy.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
 
+import { useMasterySource } from './MasterySource.tsx'
 import { effective_mastery_points } from './model.ts'
 
 const offer_redeem_disabled = (
@@ -25,15 +30,15 @@ const offer_redeem_disabled = (
 export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const numbers = useNumbers()
   const text = copy_text(copy.mastery_page)
-  const balance = useAppStore((state) => state.session.kares_balance)
+  const { balance, mastery, current_epoch, connected, dispatch: dispatch_app } = useMasterySource()
   const kares_balance = balance ?? 0n
-  const mastery = useAppStore((state) => state.mastery)
-  const current_epoch = useAppStore((state) => state.session.current_epoch)
-  const connected = useAppStore((state) => !!state.session.wallet && state.session.link_status === 'ready')
+  const root = useRef<HTMLElement>(null)
+  const { inspections, open, close } = useInspections(root)
+  const encyclopedia = encyclopedia_text(copy)
   const points = effective_mastery_points(mastery.row, current_epoch)
   useEffect(() => {
     if (mastery.pending === null) dispatch_app({ type: 'wallet/refresh' })
-  }, [mastery.pending])
+  }, [mastery.pending, dispatch_app])
   const redemption = {
     mastery: {
       balance: points,
@@ -50,19 +55,19 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       buy: (cost: string | number) => copy.kares_page.burn_buy.replace('{{cost}}', String(cost)),
     },
   }
-  const offers = mastery.offers
-    .flatMap((state) => {
-      const authored = content_catalog.mastery.offers.find(({ item_type }) => item_type === state.item_type)
-      return state.enabled && authored?.item ? [Object.freeze({ state, authored, item: authored.item })] : []
+  const offers = content_catalog.mastery.offers
+    .flatMap((authored) => {
+      const state = mastery.offers.find((offer) => offer.item_type === authored.item_type)
+      return authored.item && (state?.enabled || !mastery.loaded) ? [{ state, item: authored.item }] : []
     })
     .toSorted((left, right) => {
-      const left_cost = BigInt(left.state.cost)
-      const right_cost = BigInt(right.state.cost)
-      return left_cost < right_cost ? -1 : left_cost > right_cost ? 1 : 0
+      const a = BigInt(left.state?.cost ?? 0),
+        b = BigInt(right.state?.cost ?? 0)
+      return a < b ? -1 : a > b ? 1 : 0
     })
 
   return (
-    <section className="mt-5 border border-border bg-surface-low/78 p-4 lg:p-5">
+    <section ref={root} className="mastery-shop">
       <div className="border-b border-border pb-4">
         <div className="text-[9px] font-semibold tracking-[0.24em] text-gold uppercase">{text('shop_title')}</div>
         <p className="mt-1 text-[9px] text-muted">{text('shop_lead')}</p>
@@ -77,31 +82,25 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       {offers.length === 0 ? (
         <div className="py-12 text-center text-[9px] tracking-[0.16em] text-muted uppercase">{text('shop_empty')}</div>
       ) : (
-        <div
-          className="mt-5 grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
-          data-mastery-shop=""
-        >
+        <div className="mastery-offers" data-mastery-shop="">
           {offers.map(({ state, item }) => {
-            const cost = BigInt(state.cost)
-            const affordable = Object.values(redemption).some(
-              (option) => option.ready && option.balance >= cost * option.unit
-            )
-            const busy = mastery.pending === `redeem:${state.item_type}`
+            const cost = BigInt(state?.cost ?? 0)
+            const affordable =
+              !!state &&
+              Object.values(redemption).some((option) => option.ready && option.balance >= cost * option.unit)
+            const busy = mastery.pending === `redeem:${item.item_type}`
             const icon = item_icon(item.item_type)
             return (
               <article
-                className={`flex h-full min-h-56 flex-col border p-4 ${
-                  affordable
-                    ? 'border-gold/28 bg-[radial-gradient(circle_at_85%_0%,rgba(200,150,60,0.13),transparent_38%),linear-gradient(145deg,rgba(200,150,60,0.07),rgba(72,207,207,0.025))] hover:border-gold/50'
-                    : 'border-white/7 bg-black/15 opacity-48 grayscale'
-                } transition-colors`}
-                data-mastery-offer={state.item_type}
-                key={state.item_type}
+                className="mastery-offer aui-panel"
+                data-affordable={affordable}
+                data-mastery-offer={item.item_type}
+                key={item.item_type}
               >
                 <button
                   aria-label={item.name}
                   className="group flex min-w-0 flex-1 cursor-pointer flex-col text-left"
-                  onClick={() => dispatch_app({ type: 'path/open', pathname: encyclopedia_item_path(state.item_type) })}
+                  onClick={() => open('item')(item.item_type)}
                   type="button"
                 >
                   <div className="flex w-full items-start justify-between gap-4">
@@ -125,18 +124,23 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                     const option = redemption[payment]
                     const can_afford = option.balance >= cost * option.unit
                     return (
-                      <button
-                        className="flex min-h-10 flex-1 cursor-pointer items-center justify-center gap-2 border border-gold/35 bg-gold/8 px-3 py-2 text-[8px] tracking-[0.1em] text-gold uppercase hover:bg-gold/13 disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/3 disabled:text-muted"
+                      <Button
+                        tone={payment === 'mastery' ? 'primary' : 'neutral'}
                         data-mastery-payment={payment}
                         key={payment}
-                        disabled={offer_redeem_disabled(can_afford, mastery.pending, connected, option.ready)}
+                        disabled={offer_redeem_disabled(
+                          can_afford,
+                          mastery.pending,
+                          connected,
+                          option.ready && !!state
+                        )}
                         title={can_afford ? undefined : option.missing(cost)}
-                        onClick={() => dispatch_app({ type: 'mastery/redeem', item_type: state.item_type, payment })}
+                        onClick={() => dispatch_app({ type: 'mastery/redeem', item_type: item.item_type, payment })}
                         type="button"
                       >
                         {payment === 'mastery' ? <Gem size={13} /> : <KaresLogo size={16} />}
-                        {option.buy(state.cost)}
-                      </button>
+                        {option.buy(state?.cost ?? '—')}
+                      </Button>
                     )
                   })}
                 </div>
@@ -151,6 +155,32 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           })}
         </div>
       )}
+      {inspections.map((entry) => (
+        <InspectionWindow
+          key={`${entry.kind}:${entry.id}`}
+          entry={entry}
+          open={open}
+          close={() => close(entry)}
+          props={{
+            labels: {
+              characteristics: encyclopedia('characteristics'),
+              damages: encyclopedia('damages'),
+              level_short: '',
+              range_to: encyclopedia('range_to'),
+            },
+          }}
+          render_item={(item_type) => (
+            <CatalogueItemDetails
+              item_type={item_type}
+              select_item={open('item')}
+              select_mob={open('mob')}
+              select_world={open('world')}
+              text={encyclopedia}
+              stat_name={(stat) => stat_name(copy, stat)}
+            />
+          )}
+        />
+      ))}
     </section>
   )
 }

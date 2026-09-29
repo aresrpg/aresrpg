@@ -15,8 +15,12 @@ import '../../src/tailwind.css'
 // Real fight reducers, observers and React UI; GPU presentation and chain execution are isolated.
 const picking = { cell: null as number | null }
 const scene: SceneHandle = {
+  get canvas() {
+    return document.querySelector('canvas')!
+  },
   show_fight_board: () => {},
   set_entities: () => {},
+  set_nearby_entities: () => {},
   set_entity_caption: () => {},
   animate_entity: async () => false,
   play_fight_cue: async () => false,
@@ -99,12 +103,15 @@ const boot = async (): Promise<void> => {
       mobs: [],
     },
   })
+  picking.cell = Number(chain.state().contract.board.start_cells_a[1]!)
+  document.body.dataset.placement_calls = '0'
   let refuse = (_error: Error): void => {}
   const wallet = {
     address: 'owner',
     fight: {
       place: () =>
         new Promise((_resolve, reject) => {
+          document.body.dataset.placement_calls = String(Number(document.body.dataset.placement_calls) + 1)
           refuse = reject
         }),
     },
@@ -139,10 +146,27 @@ const boot = async (): Promise<void> => {
   createRoot(document.getElementById('root')!).render(
     <main className="fixed inset-0 bg-[#24202e] font-mono text-white">
       <canvas className="absolute inset-0 size-full" />
+      <canvas data-other-canvas className="absolute top-20 right-4 h-20 w-32 bg-black" />
       <FightLayer copy={copy} scene={scene} />
       <div className="absolute top-3 left-3 z-[200] flex gap-3">
         <RosterCount />
         <button onClick={place_and_join}>Place and join</button>
+        <button
+          onClick={() =>
+            push(
+              chain.apply({
+                type: 'join',
+                team: 0n,
+                hp: 55n,
+                character: 'ally',
+                owner: 'owner',
+                source: create_character_source({ name: 'Ally', classe: 'senshi', level: 1n }),
+              }).state
+            )
+          }
+        >
+          Join without placement
+        </button>
         <button
           onClick={() =>
             refuse(

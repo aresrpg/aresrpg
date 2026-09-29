@@ -1,6 +1,5 @@
 title: WebGPU ist nicht verfügbar
-body: Die vollständige Welt benötigt WebGPU. Stattdessen läuft ein leichtes Raster.
-fatal: Dieser Browser kann weder einen WebGPU- noch einen WebGL-Grafikkontext erstellen.
+body: 'Die Welt benötigt WebGPU und eine sichere Verbindung (HTTPS oder localhost). Öffne sie in einem unterstützten Browser.'
 engine_recovery: Die Welt konnte nicht weiter geladen oder dargestellt werden. Lade sie erneut.
 engine_reload: Neu laden
 engine_minimum_title: 'Grafik reduziert'
@@ -8,18 +7,10 @@ engine_minimum: 'Die Welt konnte nicht geladen oder dargestellt werden. Grafikqu
 engine_continue: 'Weiter'
 world_unavailable_title: Welt nicht verfügbar
 world_unavailable: Für diese Welt wurde noch kein Terrainrezept erstellt.
-mobile_unavailable_label: Mobiler Zugriff
-mobile_unavailable_title: AresRPG ist auf Mobilgeräten noch nicht verfügbar
-mobile_unavailable_body: Wir schmieden ein eigenes mobiles Erlebnis. Betritt die Welt vorerst über einen Desktop-Browser.
-mobile_unavailable_status: Desktop-Version online
-chrome: 'Chrome oder Edge: Browser aktualisieren, unter Einstellungen → System „Grafikbeschleunigung verwenden, falls verfügbar“ aktivieren und neu starten.'
-other: Hardwarebeschleunigung aktivieren, Browser und Grafiktreiber aktualisieren und den Browser neu starten.
-continue: Mit Raster fortfahren
 quality: Qualität
 low: Niedrig
 medium: Mittel
 high: Hoch
-flat_mode: Flachmodus
 identity_connected: Identität verbunden
 sign_in_to_play: Zum Spielen anmelden
 loading_universe: Universum wird geladen
@@ -27,7 +18,8 @@ continue_google: Mit Google fortfahren
 wallet_session_ended: Deine Wallet-Sitzung ist beendet. Melde dich erneut an.
 connect_wallet: Wallet verbinden
 no_wallet: Keine kompatible Wallet installiert
-watch_world: Live-Welt ansehen
+play_demo: 'Demo spielen'
+replay_demo: 'Demo erneut spielen'
 sign_in: Zum Spielen anmelden
 drag_hint: Ziehen zum Verschieben · Scrollen zum Zoomen
 navigation: Navigation
@@ -76,8 +68,6 @@ party_member_unavailable_toast: Dieser Charakter ist bereits in einer Gruppe.
 fight_turn_already_forced_toast: Jemand hat diesen Zug bereits zwangsweise beendet.
 fight_placement_unavailable_toast: Dieses Startfeld ist nicht verfügbar. Wähle ein anderes freies Feld.
 network_testnet: TESTNET
-page_pending_title: Diese Seite wird neu aufgebaut
-page_pending_body: Ihr Platz bleibt sichtbar, während wir sie sauber wiederherstellen.
 welcome_title: Willkommen bei AresRPG
 welcome_body: AresRPG ist ein vollständig On-Chain-MMORPG mit einer spielergesteuerten Wirtschaft. Erstelle deinen ersten Charakter, betrete die Welt und finde Monster zum Kämpfen.
 welcome_need_sui: Du brauchst etwas SUI zum Spielen — dein erster Charakter kostet {{price}} SUI, und mindestens {{fee}} SUI müssen für Gebühren in deinem Guthaben bleiben. Zahle etwas SUI auf deine Adresse unten ein, um zu beginnen.
@@ -188,6 +178,7 @@ party_panel:
   run_to_position_wrong_world: Die verlinkte Position liegt nicht in deiner aktuellen Welt.
   run_to_wrong_world: Dieses Gruppenmitglied befindet sich nicht in deiner aktuellen Welt.
   run_to_unavailable: Die On-Chain-Position dieses Gruppenmitglieds ist nicht verfügbar.
+  run_to_blocked: 'Kein begehbarer Weg gefunden. Bewegung angehalten.'
 trade_panel:
   kares: 'Angebotene KARES'
   close: Schließen
@@ -229,6 +220,7 @@ trade_panel:
 transaction_unknown_toast: Deine letzte Aktion wird noch geprüft. Weitere Transaktionen bleiben gesperrt, bis ihr Ergebnis bekannt ist.
 transaction_recovered_toast: Deine vorherige Transaktion wurde gefunden. Lade die Seite neu, um ihr Ergebnis vor der nächsten Aktion zu sehen.
 world_hud:
+  spawn_welcome: 'Willkommen, Abenteurer! Dieses Spiel ist im Early Access. Versuche zu überleben und genieße deine Zeit.'
   compass_label: Kompass
   zone: ZONE
   unsearched: UNDURCHSUCHT
@@ -257,6 +249,8 @@ world_hud:
   dungeon_portal: Dungeonportal
   dungeon_city: 'Stadt {{city}}'
   dungeon_press_enter: Betreten
+  dungeon_talk: 'Sprechen'
+  dungeon_guard_requires_key: 'Ohne {{key}} kann ich dich nicht durchlassen.'
   dungeon_entry_body: Benutze den Dungeonschlüssel, um die private Lobby dieses Portals zu betreten.
   dungeon_required_key: Benötigter Schlüssel
   dungeon_enter: Dungeon betreten
@@ -347,6 +341,21 @@ world_hud:
   resource_face_protector: 'Drücke {{key}}, um zu kämpfen'
   zone_never_arrived: 'Die Suche ging durch, aber die Welt zeigte sie nie — die Leseschicht hängt womöglich zurück'
 demo_page:
+  asset_demo_city: Demostadt
+  asset_house_1: Stadthaus A
+  asset_house_2: Stadthaus B
+  asset_covered_bridge: Überdachte Straßenbrücke
+  asset_gate_rampart: Tor und Wachturm
+  asset_catacomb_entry: Katakombeneingang
+  asset_gallery: Objekte
+  asset_house: Werkstatthaus
+  asset_banner: Banner
+  asset_lantern: Laterne
+  asset_fence: Zaun
+  asset_rope: Seil
+  asset_chain: Kette
+  asset_campfire: Lagerfeuer
+  asset_hint: Links ziehen zum Verschieben · Rechts ziehen zum Drehen · Scrollen zum Zoomen
   title: Renderlabor
   world_lab: Welt
   fight_lab: Kampf
@@ -390,7 +399,25 @@ demo_page:
   spawn_group: Gruppe erzeugen
   clear: Leeren
   resources: Ressourcen
-  resources_missing: Die Ressourcendarstellung ist noch nicht wiederhergestellt. Die erstellte Liste bleibt in den Seed-Daten verfügbar.
+  hillaire_title: 'Hillaire-Atmosphäre'
+  hillaire_preview: 'Nur Live-Vorschau. Zurücksetzen stellt die Weltvorgaben wieder her.'
+  hillaire_quality: 'Wähle mittlere oder hohe Grafik für Hillaire.'
+  hillaire_haze: 'Fernnebel'
+  hillaire_ground: 'Bodennebel · Hoch'
+  hillaire_sky: 'Himmelslicht'
+  hillaire_density: 'Nebeldichte'
+  hillaire_max_opacity: 'Maximale Nebeldeckkraft'
+  hillaire_near: 'Nebelbeginn (m)'
+  hillaire_full: 'Volle Nebeldichte (m)'
+  hillaire_tint: 'Blaustich'
+  hillaire_height_density: 'Bodennebeldichte'
+  hillaire_height_max: 'Maximale Bodendeckkraft'
+  hillaire_height_falloff: 'Höhenabnahme (m)'
+  hillaire_horizon_cap: 'Horizonthelligkeit'
+  hillaire_exposure: 'Himmelsbelichtung'
+  hillaire_mie_scattering: 'Sonnendunststärke'
+  hillaire_mie_g: 'Sonnendunstrichtung'
+  hillaire_reset: 'Atmosphäre zurücksetzen'
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
@@ -494,7 +521,6 @@ mastery_page:
   daily_title: Wähle die heutige Dungeon-Quest
   daily_lead: Wähle eine Welt. Dir wird ein Dungeon zugewiesen, den du finden und abschließen musst.
   unknown_dungeon: Unbekannter Dungeon
-  quest_reward: Erhalte {{points}} Meisterschaftspunkte
   quest_objective_before: Finde und schließe den Dungeon
   quest_objective_after: ab, um deine Meisterschaftspunkte zu erhalten.
   completed: Bestätigt
@@ -619,34 +645,29 @@ tutorial:
   back: Zurück
   next: Weiter
   finish: Abschließen
-  fight_enter: Kampf betreten
   reset_title: Tutorials
-  reset_hint: Zeigt jede Einführung beim nächsten Besuch der jeweiligen Seite erneut.
+  reset_hint: 'Tipps beim nächsten Öffnen der jeweiligen Funktion wieder anzeigen.'
   reset_action: Zurücksetzen
-  world_compass_title: Welten und geteilte Zonen
-  world_compass_body: AresRPG enthält mehrere Welten, die du im Verlauf freischaltest. Jede Welt ist in Zonen mit Monstern, Ressourcen und Dungeons unterteilt. Jeder kann eine Zone entdecken, und diese Entdeckung wird mit allen Spielern geteilt.
-  world_hud_title: Leben und Schnellplätze
-  world_hud_body: Dieses HUD zeigt dein Leben und deine Schnellplätze für Gegenstände. Sobald ein Kampf beginnt, wird derselbe Bereich zu deiner Zauberleiste.
-  world_fps_title: Deine Weltsteuerung
-  world_fps_body: Das Gelände wird deterministisch aus veröffentlichten Daten erzeugt. Sui speichert die Welt und die verbindliche X/Z-Position, während das Gelände die Höhe lokal ableitet. Flach verändert daher nur die Darstellung. Hier kannst du außerdem die Qualität ändern und Weltkämpfe auf Gruppenmitglieder beschränken.
-  world_character_title: Spieler in der Welt
-  world_character_body: Das ist dein aktiver Charakter. Klicke mit der rechten Maustaste auf einen Charakter in der Nähe, um die verfügbaren Interaktionen zu öffnen.
+  world_compass_title: 'Finde deinen Weg'
+  world_compass_body: 'Der Kompass zeigt nahe Städte. Öffne die Karte mit M oder ihrem HUD-Symbol.'
+  world_hud_title: 'Dein HUD'
+  world_hud_body: 'Diese Symbole öffnen Tasche, Zauber und Berufe. Im Kampf erscheint hier deine Zauberleiste.'
   world_character_tabs_title: Spiele mehrere Charaktere
-  world_character_tabs_body: Du kannst bis zu sechs Charaktere besitzen. Lade deine anderen Charaktere in eine Gruppe ein und aktiviere Gruppenfolge, damit sie mitreisen und geeigneten Weltkämpfen bei ihrer Ankunft automatisch beitreten.
+  world_character_tabs_body: 'Wechsle hier den Charakter. Lade einen Charakter per Rechtsklick in deine Gruppe ein.'
   fight_title: Dein erster On-Chain-Kampf
-  fight_body: Kämpfe sind rundenbasiert. Wähle Bewegung und Zauber, und deine Aktionen werden gemeinsam vorbereitet. Runde beenden übermittelt den vollständigen Zug als eine Sui-Transaktion und berechnet die folgenden Monsterzüge, bis wieder ein Spieler handeln kann. Der verbindliche Kampfzustand wird vollständig auf Sui abgewickelt. Nach dem Sieg nutzt eine letzte Sui-Transaktion On-Chain-Zufall, um die gemeinsame Beute auszuwürfeln und jede Belohnung dem zugewiesenen Inventar hinzuzufügen.
+  fight_body: 'Wähle Zauber oder klicke zum Bewegen auf ein Feld. Zug beenden sendet deine Aktionen gemeinsam.'
   equipment_gear_title: Ausrüstung
-  equipment_gear_body: Ausgerüstete Gegenstände gehören zum ausgewählten Charakter. Ziehe Ausrüstung auf die Figur, prüfe die neuen Boni und bestätige anschließend alle Änderungen gemeinsam.
+  equipment_gear_body: 'Klicke auf einen Gegenstand, wähle Ausrüsten und bestätige die Änderungen.'
   equipment_inventory_title: Geteiltes Inventar
-  equipment_inventory_body: Dein Inventar wird von allen Charakteren dieses Kontos geteilt. Wähle oben einen anderen Charakter, um ihm dieselben verfügbaren Gegenstände anzulegen.
+  equipment_inventory_body: 'Deine Charaktere teilen sich Gegenstände. Darüberfahren zeigt Werte, Anklicken öffnet Details und Aktionen.'
   stats_title: Eigenschaften
-  stats_body: Verteile Eigenschaftspunkte, um stärker zu werden. Vitalität erhöht Leben, Weisheit verbessert XP und Widerstand gegen AP/BP-Verlust, Chance verbessert Wasserschaden und Beutechance, und Agilität verbessert Luftschaden, kritische Treffer, Fesselung und Flucht.
+  stats_body: 'Verteile Punkte, prüfe die Boni und bestätige.'
   spells_title: Zauber
-  spells_body: Neue Zauber werden mit dem Fortschritt deines Charakters freigeschaltet. Stufenaufstiege gewähren Zauberpunkte, die du hier zum Verbessern freigeschalteter Zauber ausgeben kannst.
+  spells_body: 'Wähle einen Zauber und vergleiche seine Stufen. Verbessere ihn mit Zauberpunkten.'
   jobs_title: Berufe
-  jobs_body: Verfolge Sammel- und Handwerksfortschritt, prüfe Rezepte und stelle verfügbare Gegenstände her. Bei mehreren Charakteren kannst du diese Seite in den Einstellungen auf einen festen Handwerker sperren.
+  jobs_body: 'Wähle Beruf und Rezept. Klicke Zutaten für Details an und stelle mit genügend Material her.'
   runeforge_title: Runenschmiede
-  runeforge_body: Ab Berufsstufe {{level}} kann der passende Handwerksberuf Ausrüstung mit Runen verbessern. Runen erhältst du durch das Zerstören von Gegenständen und kannst sie hier anwenden.
+  runeforge_body: 'Ab Berufsstufe {{level}} verbessern Runen deine Ausrüstung. Zerlege ungewollte Ausrüstung für Runen.'
 admin_page:
   kicker: Herausgeber
   title: Spielinhalte veröffentlichen
@@ -909,6 +930,8 @@ fight_hud:
   forfeit_body: '{name} verliert alle verbleibenden LP und verlässt diesen Kampf.'
   confirm_forfeit: Aufgabe bestätigen
   unit_turns: Züge
+  chat_expand: Chat öffnen
+  chat_collapse: Chat einklappen
   chat_title: Chat
   chat_resize: Chatgröße ändern
   chat_tab_general: Allgemein
@@ -1006,27 +1029,29 @@ wallet_legacy:
     Wallet geliefert.
   method_paypal: PayPal
   method_paypal_desc: Mit deinem PayPal-Konto bezahlen
-  method_card: Kredit- / Debitkarte
-  method_card_desc: Visa, Mastercard
+  method_card: 'Karte / PayPal'
+  method_card_desc: 'SUI über einen Zahlungsanbieter kaufen'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Mit Face ID / Touch ID bezahlen
   method_google_pay: Google Pay
   method_google_pay_desc: Mit deinem Google-Konto bezahlen
   method_bank: Banküberweisung
   method_bank_desc: SEPA (EU) oder ACH (US)
-  method_have_sui: Ich habe bereits SUI
+  method_have_sui: 'Direkte Einzahlung'
   method_have_sui_desc: Von einem anderen Wallet oder Exchange senden
   paypal_note: In den USA, UK und den meisten europäischen Ländern über MoonPay verfügbar
   card_note: Wähle einen Anbieter unten. Alle akzeptieren Visa und Mastercard
   bank_note: Niedrigste Gebühren (~1%). SEPA für Europa, ACH für die USA.
   steps_paypal: 1. Klicke auf den Link unten  2. Wähle PayPal als Zahlung  3. Gib
     den Betrag ein. SUI landet in deinem Wallet
-  steps_card: Wähle einen Anbieter, gib deine Kartendaten ein, und SUI landet in deinem
-    Wallet.
-  method_swap: Von Solana, ETH und mehr..
-  method_swap_desc: Übertrage Assets mit Portal Bridge zu Sui
-  swap_note: Chainübergreifende Transfers laufen über Portal Bridge.
-  steps_swap: Öffne Portal Bridge, verbinde beide Wallets, wähle Sui und schließe den Transfer ab.
+  steps_card: 'Öffne einen Anbieter, wähle SUI und nutze die unten angegebene Spiel-Wallet-Adresse. Zahlungsarten hängen von Land und Anbieter ab.'
+  method_swap: 'Bridge-Einzahlung'
+  method_swap_desc: 'Krypto von einer anderen Chain in SUI umwandeln'
+  bridge_loading: 'Bridge wird geladen…'
+  bridge_error: 'Die Bridge konnte nicht geladen werden. Direkte Einzahlungen in deine Spiel-Wallet sind weiterhin möglich.'
+  bridge_retry: 'Erneut versuchen'
+  swap_note: 'Bereitgestellt von LI.FI. Transfers sind nicht sofort abgeschlossen. Öffne die Bridge-Einzahlung erneut und prüfe oder setze unter Verlauf einen unterbrochenen Transfer fort.'
+  steps_swap: 'Verbinde deine Quell-Wallet. Das Ziel ist natives SUI in der unten angezeigten Spiel-Wallet. Prüfe Betrag, Gebühren und geschätzte Ankunft vor dem Signieren.'
   steps_wallet: Sende SUI an deine Wallet-Adresse unten. Es kommt in Sekunden an.
   advanced_exchange: 'Erweitert: Auf einer Börse kaufen'
   age_notice: Alle Zahlungsanbieter verlangen, dass du mindestens 18 Jahre alt bist.
@@ -2487,7 +2512,6 @@ automation_panel:
 
 item_drop_sources:
   title: 'Monsterbeute'
-  note: 'Festgelegte Grundchancen. Tatsächliche Chancen hängen von Monsterstufe und Gruppen-Glück ab.'
   empty: 'Kein Monster lässt diesen Gegenstand fallen.'
   loading: 'Monsterbeute wird geladen…'
   mob: 'Monster'
@@ -2629,6 +2653,62 @@ spell_effects:
   expires_next_turn: 'Bis zum nächsten Zug'
 
 ui:
+  multiplayer: 'Mehrspieler'
+  nearby_fights: 'Kämpfe in der Nähe'
+  nearby_fights_empty: 'Keine erfassten Kämpfe in der Nähe'
+  run_and_join: 'Hinlaufen und beitreten'
+  equipment_comparison: 'Attributänderungen beim Ausrüsten'
+  equipment_replacing: 'Ersetzt {{name}}'
+  equipment_unchanged: 'Keine Änderung der Attributboni'
+  preview_only: 'Interaktive Vorschau · keine Transaktion wird gesendet'
+  inspect_details: 'Ansehen'
+  design_minimap: 'Minikarte'
+  design_party_invitation: 'Gruppeneinladung'
+  design_trade_invitation: 'Handelseinladung'
+  progression_rewards: 'Belohnungen'
+  inventory_selected_count: '{{count}} ausgewählt'
+  inventory_select: 'Auswählen'
+  inventory_deselect: 'Abwählen'
+  inventory_use: 'Benutzen'
+  attack: 'Angreifen'
+  character_summary: 'Übersicht'
+  character_details: 'Details'
+  allocate_points: 'Verteilen'
+  inventory_search: 'Inventar durchsuchen…'
+  nameplate_veteran: 'Veteran'
+  design_titles: 'Titel'
+  design_no_title: 'Kein Titel'
+  design_library: 'Designwerkstatt'
+  design_controls: 'Bedienelemente'
+  design_dialog: 'Dialog öffnen'
+  design_disabled: 'Nicht verfügbar'
+  design_details: 'Details'
+  design_description: 'Gemeinsame Spielkomponenten. Teste lokale Beispiele und ihre Zustände und anpassbaren Layouts.'
+  design_volume: 'Lautstärke'
+  design_motion: 'Animation'
+  design_search: 'Suchen'
+  design_equipment_hint: 'Wähle einen Gegenstand zum Ausrüsten. Tippe ausgerüstete Gegenstände zum Ablegen an.'
+  design_equip: 'Ausrüsten'
+  design_combat: 'Kampf'
+  design_journal: 'Journal und Fortschritt'
+  design_complete: 'Abgeschlossen'
+  design_viewport: 'Vorschaugröße'
+  design_desktop: 'Desktop'
+  design_mobile: 'Mobil'
+  leave_game_title: 'Möchtest du das Spiel verlassen?'
+  stay_in_game: 'Weiterspielen'
+  leave_game_confirm: 'Zur Startseite'
+  mobile_move: 'Bewegen'
+  mobile_jump: 'Springen'
+  mobile_chat: 'Chat'
+  mobile_party: 'Gruppe'
+  mobile_confirm_action: 'Aktion bestätigen'
+  mobile_item_actions: 'Gegenstandsaktionen'
+  mobile_unequip: 'Ablegen'
+  mobile_use_item: 'Benutzen / ausrüsten'
+  mobile_language: 'Sprache'
+  mobile_menu: 'Menü'
+  mobile_rotate: 'Drehe dein Gerät, um im Querformat zu spielen.'
   character: 'Charakter'
   spell_action: '{{name}}, Stufe {{level}}, {{cost}} {{unit}}'
   spell_level: 'Zauberstufe {{level}}'
@@ -2641,7 +2721,6 @@ ui:
   meters: '{{count}}m'
   versus: 'GEGEN'
   team_format: '{{size}} gegen {{size}}'
-  flat: 'Flach'
   fps: 'FPS'
   north: 'N'
   northeast: 'NO'
@@ -2658,3 +2737,50 @@ ui:
   formula_chastisement: 'G = min(ΔLP × S, GRENZE × S − Gzug) · S = 1 für Monster, ½ für Spieler'
   formula_drop: 'Beute = min(100 %, Basiswert × Monsterband × (600 + durchschnittliches Teamglück) / 600)'
   formula_xp: 'EP = Basis-EP-Pool × Gruppenkoeffizient × Stufenausgleich × Spielerstufe / Gruppenstufe × (100 + WEI) / 100'
+
+menu_subtitle: 'AresRPG ist ein vollständig on-chain entwickeltes, rundenbasiertes MMORPG auf Sui.'
+menu_start: 'Zum Starten Enter drücken'
+menu_start_touch: 'Zum Starten tippen'
+menu_music_on: 'Musik einschalten'
+menu_music_off: 'Musik stummschalten'
+
+menu_build: 'BUILD'
+
+world_loading_assets: 'Szenerie wird geladen…'
+world_loading_graphics: 'Grafik wird vorbereitet…'
+world_loading_terrain: 'Welt wird aufgebaut…'
+world_loading_sky: 'Himmel und Beleuchtung werden vorbereitet…'
+world_loading_finishing: 'Erstes Bild wird vorbereitet…'
+
+adventure:
+  goblins_title: 'Den Weg freimachen'
+  goblins_objective: 'Gehe zu den Goblins und drücke F.'
+  speak_title: 'Ein Fremder auf der Brücke'
+  speak_objective: 'Finde Sceat auf der Brücke. Drücke F zum Sprechen.'
+  invite_title: 'Gemeinsam stärker'
+  invite_objective: 'Klicke Sceat rechts an und wähle In Gruppe einladen. Auf Touchscreens tippe auf seine Einladung.'
+  switch_title: 'Dein Yajin'
+  switch_objective: 'Wähle Sceats Charakterreiter. Du steuerst beide Helden mit eigenen Zaubern und eigener Ausrüstung.'
+  follow_title: 'Dem Anführer folgen'
+  follow_objective: 'Wähle Senshi, deinen Gruppenführer. Aktiviere Dem Anführer folgen im Gruppenfenster.'
+  guards_title: 'Die königliche Wache'
+  guards_objective: 'Überquere die Brücke und besiege die königlichen Wachen. Lege Yajin-Fallen und stoße Gegner hinein.'
+  boss_title: 'Gobadocs Relikt'
+  boss_objective: 'Stelle dich Gobadoc, dem Goblinkönig, und suche sein Relikt. Er ist viel stärker als seine Wachen.'
+  dialogue_greeting: 'Du bist neu hier! Ich bin Sceat.'
+  dialogue_danger: 'Diese Welt ist gefährlich. Allein kommst du nicht weit. Reisen wir zusammen.'
+  dialogue_relic: 'Gobadoc, der Goblinkönig, bewacht ein mächtiges Relikt. Hilf mir durch seine Wachen, dann finden wir ihn.'
+  journal: 'Mosswood-Abenteuer'
+  chapter: 'Der Goblinkönig'
+  speak_action: 'Mit Sceat sprechen'
+  invite_action: 'Sceat einladen'
+  rebirth_title: 'Du bist deinen Wunden erlegen…'
+  rebirth_body: 'Es ist Zeit, neu geboren zu werden. Melde dich unten an und betrete das echte Spiel.'
+  rebirth_login: 'Anmelden und das echte Spiel betreten'
+  goblins_body: 'Mosswood wirkt friedlich, bis die Goblins euch zum nächsten Essen erklären. Ihr Lager versperrt den Ausgang. Nähert euch der Gruppe und beginnt den Kampf. Nutzt Aktionspunkte für Zauber und plant eure Bewegung. Jeder Zug zählt. Ein Sieg bringt euch auf Stufe 200 und verschafft euch die erste Ausrüstung.'
+  speak_body: 'Die Goblins sind besiegt, doch der Wald bleibt gefährlich. Ein Yajin namens Sceat hat den Kampf von der Brücke aus beobachtet. Allein möchte er offenbar nicht weiter. Sprecht ihn an. Er sucht ein Relikt im Besitz von Gobadoc, dem Goblinkönig, und braucht jemanden, der sich wehren kann.'
+  invite_body: 'Sceat hat einen Plan. Leider führt er zum größten Goblin des Waldes. Zwei Abenteurer haben bessere Chancen, besonders mit unterschiedlichen Fähigkeiten. Klickt Sceat mit der rechten Maustaste an und ladet ihn in eure Gruppe ein. In diesem Abenteuer steuert ihr beide Helden und kombiniert ihre Fähigkeiten selbst.'
+  switch_body: 'Ein Gefährte ist mehr als ein weiterer Lebensbalken. Als Yajin setzt Sceat auf Fallen und geschickte Positionierung, während Senshi rohe Kraft bevorzugt. Wählt ihn im Charakterwechsler aus. Jeder Held behält seine eigenen Zauber und Ausrüstung. Wer handelt, ist genauso wichtig wie die Wahl des Zaubers.'
+  follow_body: 'Ihr habt eine Gruppe. Jetzt soll sie auch zusammenbleiben. Wählt Senshi als Anführer und aktiviert Anführer folgen in den Gruppensteuerungen. Sceat folgt euch beim Erkunden, damit ihr denselben Weg nicht zweimal laufen müsst. Im Kampf bestimmt ihr weiterhin selbst die Bewegungen und Zauber beider Helden.'
+  guards_body: 'Gobadoc lässt seinen Eingang nicht unbewacht. Seine Wachen erwarten euch, und diesmal müsst ihr zwei Helden koordinieren. Prüft eure neue Ausrüstung vor dem Kampf. Verbindet Senshis Stärke mit Sceats Fallen und Positionierung. Ein geschickt platzierter Gegner lässt sich leichter besiegen als einer, dem ihr blind hinterherlauft.'
+  boss_body: 'Hinter den Wachen wartet Gobadoc mit Sceats gesuchtem Relikt. Der Goblinkönig hat seinen Titel nicht durch verlorene Kämpfe erhalten. Ihr habt gelernt, gemeinsam zu kämpfen, doch dieser Gegner spielt in einer anderen Liga. Nähert euch mit eurem Gefährten und entdeckt, wie weit eure neue Partnerschaft euch trägt.'

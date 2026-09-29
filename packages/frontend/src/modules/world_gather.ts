@@ -9,7 +9,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 
 import { item_icon } from '../content/assets.ts'
 import { content_catalog } from '../content/catalog.ts'
-import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
+import { play_audio } from '../game/audio/audio_registry.ts'
 import { gather_gate } from '../game/gather_gate.ts'
 import { parse_resource_node_id } from '../game/resource_nodes.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -179,7 +179,7 @@ export const observe_world_gather = ({ events, get_state, dispatch, signal }: Ap
     const state = get_state()
     const text = state.copy ? copy_text(state.copy.world_hud) : (value: string) => value
     const item_name = content_catalog.item(current.item_type)?.item.name ?? current.item_type
-    play_procedural_cue('gather')
+    play_audio('gather')
     notice.success(
       text(current.ambushed ? 'resource_gathered_amount_ambushed' : 'resource_gathered_amount', {
         quantity: current.quantity,

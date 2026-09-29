@@ -15,7 +15,7 @@ import { Text } from '../../i18n/Text.tsx'
 import { DAY_FRAC } from '@aresrpg/engine'
 import { client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
 import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
-import { Building2, Skull } from 'lucide-react'
+import { Building2, Skull, Diamond } from 'lucide-react'
 import type { CSSProperties } from 'react'
 
 import './compass_strip.css'
@@ -58,16 +58,19 @@ export const city_compass_markers = (
 ): readonly CityCompassMarker[] => {
   const current = city_at_position(world_name, pose.x, pose.z)?.id ?? null
   return Object.freeze(
-    world_city_areas(world_name).map((city) => {
+    world_city_areas(world_name).flatMap((city) => {
       const target = compass_target(pose, { x: city.anchor_x, z: city.anchor_z }, heading)
-      return Object.freeze({
-        id: city.id,
-        label: titleize(city.id),
-        distance: target.distance,
-        x: target.x,
-        dungeon: city.id === current,
-        show_label: city.id !== current,
-      })
+      if (target.x === null) return []
+      return [
+        Object.freeze({
+          id: city.id,
+          label: titleize(city.id),
+          distance: target.distance,
+          x: target.x,
+          dungeon: city.id === current,
+          show_label: city.id !== current,
+        }),
+      ]
     })
   )
 }
@@ -94,7 +97,35 @@ const CityCompassMarkerView = ({ marker, city_label }: Readonly<{ marker: CityCo
   )
 }
 
-export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+const ObjectiveCompassMarker = ({
+  objective,
+  pose,
+  heading,
+}: Readonly<{
+  objective?: Readonly<{ x: number; z: number; label: string }>
+  pose: Readonly<{ x: number; z: number }>
+  heading: number
+}>) => {
+  if (!objective) return null
+  const marker = compass_target(pose, objective, heading)
+  if (marker.x === null) return null
+  return (
+    <span className="gw-compass__objective" title={objective.label} style={{ left: `${marker.x * 100}%` }}>
+      <Diamond size={18} fill="currentColor" />
+      <span>
+        <Text path="ui.meters" values={{ count: Math.round(marker.distance) }} />
+      </span>
+    </span>
+  )
+}
+
+export const CompassStrip = ({
+  copy,
+  objective,
+}: Readonly<{
+  copy: AppCopy
+  objective?: Readonly<{ x: number; z: number; label: string }>
+}>) => {
   const pose = useWorldPose()
   const zones = useAppStore(({ world }) => world.zones)
   const world_state = useAppStore(({ world }) => world)
@@ -182,6 +213,7 @@ export const CompassStrip = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             <span className="gw-compass__caret" />
             <span className="gw-compass__stem" />
           </div>
+          <ObjectiveCompassMarker objective={objective} pose={pose} heading={heading} />
           {pips.map((pip) => (
             <span
               className={`gw-compass__pip gw-compass__pip--${pip.kind} gw-compass__pip--${pip.tier}`}

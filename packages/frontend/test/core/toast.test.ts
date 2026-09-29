@@ -44,8 +44,8 @@ describe('app toast effects', () => {
     unsubscribe()
   })
 
-  test('retains the legacy safe-area toast placement and glass recipe', () => {
-    expect(TOAST_CONTAINER_CLASS).toContain('top-[max(1rem,var(--safe-top))]')
+  test('anchors notifications bottom-right within the safe area', () => {
+    expect(TOAST_CONTAINER_CLASS).toContain('bottom-[max(1rem,var(--safe-bottom))]')
     expect(TOAST_CONTAINER_CLASS).toContain('right-[max(1rem,var(--safe-right))]')
     expect(toast_glass_class).toContain('animate-[slide-in_0.3s_ease-out]')
   })

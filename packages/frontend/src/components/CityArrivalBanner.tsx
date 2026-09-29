@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { city_at_position } from '../content/worlds.ts'
 import { titleize } from '../content/catalog.ts'
-import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
+import { play_audio } from '../game/audio/audio_registry.ts'
 import { pose_matches_character, useWorldPose } from '../game/core/pose_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -58,7 +58,6 @@ export const CityArrivalBanner = ({ active, copy }: Readonly<{ active: boolean; 
   const world = useAppStore(
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
   )
-  const music_enabled = useAppStore(({ settings }) => settings.music_enabled)
   const observing = active && pose_matches_character(pose, selected_character_id)
   const city = observing ? city_at_position(world, pose.x, pose.z) : null
   const city_key = observing ? (city && world ? `${world}:${city.id}` : null) : undefined
@@ -72,10 +71,10 @@ export const CityArrivalBanner = ({ active, copy }: Readonly<{ active: boolean; 
     memory.current = next.memory
     if (!next.entered || !city) return
     set_title(copy_text(copy.world_hud)('dungeon_city', { city: titleize(city.id) }))
-    if (music_enabled) play_procedural_cue('city')
+    play_audio('city')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => set_title(null), CITY_TITLE_DURATION_MS)
-  }, [city, city_key, copy, music_enabled])
+  }, [city, city_key, copy])
 
   useEffect(
     () => () => {

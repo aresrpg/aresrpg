@@ -3,7 +3,7 @@
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import type { ScatterInstance } from './scatter.ts'
 import type { RenderChunkRequest, RenderedChunk } from './types.ts'
-import type { WorldRecipe } from './world_recipe.ts'
+import { terrain_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { WorkerReply } from './worker_reply.ts'
 
 export type MeshResult = Readonly<{
@@ -88,7 +88,7 @@ export const create_mesh_pool = (
     worker.addEventListener('messageerror', () => report_failure(new Error('mesh worker reply could not be decoded')))
   })
   try {
-    workers.forEach((worker) => worker.postMessage({ type: 'initialize', world }))
+    workers.forEach((worker) => worker.postMessage({ type: 'initialize', world: terrain_recipe(world) }))
   } catch (error) {
     report_failure(error instanceof Error ? error : new Error(String(error)))
   }

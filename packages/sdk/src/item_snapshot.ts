@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// One explicit chat-tooltip read: fetch the linked Item plus only its stat and damage dynamic
+// One explicit chat-tooltip read: fetch the linked Item plus its stats and pet feed dynamic
 // fields. This is presentation data, never transaction resolution state.
 
 import { stat_names } from '@aresrpg/immutable'
@@ -47,12 +47,15 @@ const ROLLED_STATS_BCS = bcs.struct('RolledStats', {
   revision: bcs.u64(),
 })
 
+const FEED_STATE_BCS = bcs.struct('FeedState', { count: bcs.u64(), last_day: bcs.u64() })
+
 export type ItemSnapshot = Readonly<{
   id: string
   name: string
   item_type: string
   category: string
   level: number
+  pet_power?: number
   stats?: Readonly<Record<string, number>>
 }>
 
@@ -61,8 +64,8 @@ export const LINKED_ITEM_CACHE_CAPACITY = 20
 const dynamic_name = (
   fields: readonly Readonly<{ name: DynamicFieldName }>[],
   type_package: string,
-  suffix: 'StatsKey'
-): DynamicFieldName | null => fields.find(({ name }) => name.type === `${type_package}::item::${suffix}`)?.name ?? null
+  suffix: 'item::StatsKey' | 'pet::FeedKey'
+): DynamicFieldName | null => fields.find(({ name }) => name.type === `${type_package}::${suffix}`)?.name ?? null
 
 const item_json = (
   objects: readonly (Error | Readonly<{ objectId?: string; type?: string; json?: Record<string, unknown> | null }>)[],
@@ -82,17 +85,18 @@ const item_json = (
   return json
 }
 
-const item_stats_value = async (
+const item_field_value = async (
   client: ItemReadClient,
   item_id: string,
   type_package: string,
-  fields: readonly Readonly<{ name: DynamicFieldName }>[]
+  fields: readonly Readonly<{ name: DynamicFieldName }>[],
+  suffix: 'item::StatsKey' | 'pet::FeedKey'
 ) => {
-  const stats_name = dynamic_name(fields, type_package, 'StatsKey')
-  return stats_name ? client.core.getDynamicField({ parentId: item_id, name: stats_name }) : null
+  const name = dynamic_name(fields, type_package, suffix)
+  return name ? client.core.getDynamicField({ parentId: item_id, name }) : null
 }
 
-const stats_record = (stats_field: Awaited<ReturnType<typeof item_stats_value>>) => {
+const stats_record = (stats_field: Awaited<ReturnType<typeof item_field_value>>) => {
   if (!stats_field) return undefined
   const { statistics: stats } = ROLLED_STATS_BCS.parse(stats_field.dynamicField.value.bcs)
   return Object.freeze(Object.fromEntries(stat_names.map((name) => [name, Number(stats[name])])))
@@ -109,7 +113,10 @@ export const read_item_snapshot = async (
     client.core.listDynamicFields({ parentId: item_id }),
   ])
   const json = item_json(objects, item_id, type_package)
-  const stats_field = await item_stats_value(client, item_id, type_package, dynamicFields)
+  const [stats_field, feed_field] = await Promise.all([
+    item_field_value(client, item_id, type_package, dynamicFields, 'item::StatsKey'),
+    json.category === 'pet' ? item_field_value(client, item_id, type_package, dynamicFields, 'pet::FeedKey') : null,
+  ])
   const stats = stats_record(stats_field)
   return Object.freeze({
     id: item_id,
@@ -117,6 +124,9 @@ export const read_item_snapshot = async (
     item_type: String(json.item_type),
     category: String(json.category),
     level: Number(json.level),
+    ...(json.category === 'pet'
+      ? { pet_power: feed_field ? Number(FEED_STATE_BCS.parse(feed_field.dynamicField.value.bcs).count) : 0 }
+      : {}),
     ...(stats ? { stats } : {}),
   })
 }

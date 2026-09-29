@@ -7,7 +7,7 @@ import { Heart, Loader2, Utensils } from 'lucide-react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
 import { encyclopedia_catalog } from '../content/catalog.ts'
-import { play_fight_audio, preload_fight_audio } from '../game/audio/fight_audio_registry.ts'
+import { play_audio, preload_audio } from '../game/audio/audio_registry.ts'
 import { copy_text, type AppCopy, type CopyText } from '../i18n/copy.ts'
 import {
   available_inventory_items,
@@ -138,12 +138,12 @@ export const FeedPetModal = ({
   const choosing = state.phase === 'selecting'
 
   useEffect(() => {
-    preload_fight_audio(Object.values(FEEDING_ANIMATION).map(({ sound }) => sound))
+    preload_audio(Object.values(FEEDING_ANIMATION).map(({ sound }) => sound))
   }, [])
   useEffect(() => {
     if (state.phase !== 'throwing' && state.phase !== 'celebrating') return
     const step = FEEDING_ANIMATION[state.phase]
-    play_fight_audio(step.sound, 0.28)
+    play_audio(step.sound, 0.28)
     const reduced = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches
     const timer = setTimeout(() => dispatch({ type: step.input }), reduced ? 0 : step.duration)
     return () => clearTimeout(timer)
@@ -197,7 +197,7 @@ export const FeedPetModal = ({
           text={t}
           select={(food_id) => {
             dispatch({ type: 'select', food_id })
-            play_fight_audio('menu_carousel', 0.15)
+            play_audio('menu_carousel', 0.15)
           }}
           confirm={confirm}
           close={close}

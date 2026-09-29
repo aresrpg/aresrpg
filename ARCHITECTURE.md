@@ -47,26 +47,28 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 
 ## Package ownership
 
-| Home                   | Owns                                                                                                                                                                               | Must not own                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `packages/move-math`   | Pure on-chain values, validation, curves, grids, and deterministic transforms                                                                                                      | Objects, capabilities, clocks, entropy, state writes                                |
-| `packages/control`     | The deployment lineage's administrative capability and freeze authority                                                                                                            | Gameplay, content values, player state                                              |
-| `packages/kares`       | Independent burn-only currency, one-use offering setup, escrow settlement, staking principal and reward schedules                                                                  | Game state, content, external pool creation                                         |
-| `packages/move-combat` | Authority-free deterministic fight state and transitions over plain values                                                                                                         | UID, keys, custody, transfers, events, clocks, entropy sources, transaction context |
-| `packages/seed`        | Registry-rooted living content objects and AdminCap-gated content mutation                                                                                                         | Player state or gameplay custody                                                    |
-| `packages/move`        | Player and world objects, authority, custody, events, randomness, clocks, and the thin fight lifecycle wrapper                                                                     | Duplicated combat rules, authored content, browser or indexer policy                |
-| `packages/fight`       | Deterministic TypeScript fight runtime and presentation inputs mirroring Move                                                                                                      | Chain access, React, rendering                                                      |
-| `packages/immutable`   | Shared TypeScript vocabularies and tested mirrors of stable game math                                                                                                              | Live state, network access                                                          |
-| `packages/sdk`         | Every client-side Sui transaction plus the explicit one-shot Party checkpoint and linked-Item tooltip reads, PTB composition, object-ref cache, receipt projection, gas accounting | General player-facing reads, app state                                              |
-| `packages/indexer`     | Checkpoint decoding and the only writes to the FalkorDB projection and indexer pub/sub                                                                                             | Game authority, authored content                                                    |
-| `packages/server`      | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                                                    |
-| `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                          |
-| `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                   |
-| `packages/launchpad`   | Independently deployed offering UI at `launchpad.aresrpg.world`, using the SDK and neutral frontend finance exports                                                                | Staking UI, game startup, a second finance state authority                          |
-| `packages/journal`     | Static editorial publication at `journal.aresrpg.world`, rendering seed-authored Markdown and published-only feeds, routes, metadata, and cover assets                             | Game runtime, chain writes, browser-visible drafts                                  |
-| `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                 |
-| `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                   |
-| `pins.json`            | Current mainnet lineage, shared object addresses, and active content reconciliation metadata                                                                                       | Authored gameplay values                                                            |
+| Home                   | Owns                                                                                                                                                                               | Must not own                                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `packages/move-math`   | Pure on-chain values, validation, curves, grids, and deterministic transforms                                                                                                      | Objects, capabilities, clocks, entropy, state writes                                         |
+| `packages/control`     | The deployment lineage's administrative capability and freeze authority                                                                                                            | Gameplay, content values, player state                                                       |
+| `packages/kares`       | Independent burn-only currency, one-use offering setup, escrow settlement, staking principal and reward schedules                                                                  | Game state, content, external pool creation                                                  |
+| `packages/move-combat` | Authority-free deterministic fight state and transitions over plain values                                                                                                         | UID, keys, custody, transfers, events, clocks, entropy sources, transaction context          |
+| `packages/seed`        | Registry-rooted living content objects and AdminCap-gated content mutation                                                                                                         | Player state or gameplay custody                                                             |
+| `packages/move`        | Player and world objects, authority, custody, events, randomness, clocks, and the thin fight lifecycle wrapper                                                                     | Duplicated combat rules, authored content, browser or indexer policy                         |
+| `packages/fight`       | Deterministic TypeScript fight runtime and presentation inputs mirroring Move                                                                                                      | Chain access, React, rendering                                                               |
+| `packages/immutable`   | Shared TypeScript vocabularies and tested mirrors of stable game math                                                                                                              | Live state, network access                                                                   |
+| `packages/sdk`         | Every client-side Sui transaction plus the explicit one-shot Party checkpoint and linked-Item tooltip reads, PTB composition, object-ref cache, receipt projection, gas accounting | General player-facing reads, app state                                                       |
+| `packages/indexer`     | Checkpoint decoding and the only writes to the FalkorDB projection and indexer pub/sub                                                                                             | Game authority, authored content                                                             |
+| `packages/server`      | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                                                             |
+| `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                                   |
+| `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                            |
+| `packages/ui`          | Shared visual tokens, accessible React controls, windows, and responsive game layouts                                                                                              | Stores, wallet/SDK calls, gameplay calculations, or authored content                         |
+| `packages/mobile`      | Landscape player presentation, touch adapters, and fullscreen management overlays using the shared frontend runtime and controllers                                                | Separate game state, transaction execution, authored content, or duplicated page controllers |
+| `packages/launchpad`   | Independently deployed offering UI at `launchpad.aresrpg.world`, using the SDK and neutral frontend finance exports                                                                | Staking UI, game startup, a second finance state authority                                   |
+| `packages/journal`     | Static editorial publication at `journal.aresrpg.world`, rendering seed-authored Markdown and published-only feeds, routes, metadata, and cover assets                             | Game runtime, chain writes, browser-visible drafts                                           |
+| `packages/engine`      | Terrain, models, cameras, audio, effects, rendering, collision presentation                                                                                                        | Network, wallet, gameplay authority                                                          |
+| `seed/`                | Authored items, mobs, spells, recipes, worlds, boards, distributions, Mastery offers, structures, and assets                                                                       | Live player state                                                                            |
+| `pins.json`            | Current mainnet lineage, shared object addresses, and active content reconciliation metadata                                                                                       | Authored gameplay values                                                                     |
 
 Root `pins.json` describes one current mainnet deployment. It contains no previous deployments,
 address-book copies, or retired Registry maps. The optional flat `seed_ledger` contains only the
@@ -98,15 +100,108 @@ input ──▶ pure reducer ──▶ new state ──▶ observer ──▶ ef
 - Presentation fires from state deltas. Events may enrich a delta but do not make arrival order
   authoritative.
 
+The frontend has one entry, build, environment and authentication lifecycle. That entry selects
+`packages/mobile` for compact gameplay viewports; demo, gifts and finance retain their existing
+responsive surfaces. `PlayerRuntime.tsx` owns the canvas, shared login (including Play Demo), and
+global recovery. Desktop and mobile share the full-viewport canvas HUD and `GamePageWindow` feature host.
+The mobile surface adds touch input beneath the shared HUD in the same canvas stacking context.
+Feature windows consume the same equipment, allocation, spell, crafting, forge and marketplace
+controllers; mobile never imports the entry that loads it. Feature navigation selects HUD modals, with URLs retained for deep links. There is no page-versus-overlay mode. The world HUD and fight presentation remain mounted while feature modals suspend manual input. Portrait blocks gameplay
+controls without replacing the canvas. Pending confirmations use compact dialogs.
+
+The existing world input device accepts bounded touch axes, jump and camera deltas alongside keyboard
+and mouse input. Releasing a touch clears its manual input without cancelling an automated run.
+Fight interaction retains one action, inspection target and optional reviewed checkpoint. Touch taps
+preview; confirmation revalidates the same checkpoint through the existing cell-selection door.
+Changed checkpoints, action changes and locked actions invalidate review. Board input belongs to the
+scene's exact canvas; dragging, cancellation and other UI canvases cannot select a fight cell.
+
 Development module reloads retain the same app-store instance for mounted and lazy consumers.
 Stateful core edits restart the app to rebuild reducer and observer lifecycles together.
+
+`@aresrpg/ui` owns the shared visual system and browser modal lifecycle. Its components consume
+presentation props and emit callbacks; they import neither application stores nor game services.
+Frontend and mobile controllers keep data projection, validation, and writes. The `/demo#ui`
+workshop exercises these components with local fixtures and the existing feature controllers.
+Marketplace and leaderboard views accept isolated presentation sources; their live controllers remain
+the default. Crafting context supplies local inventory throughout preview trees, including portals,
+so mock item details cannot fall back to a connected account.
+Layout adapts to both viewport and window-container width; touch controls retain native keyboard
+semantics and at least 44px targets. Migration replaces each old primitive at its existing owner;
+unmigrated feature layouts remain in their application package until converted.
 
 The player app and `/demo` arm different observers. The player app owns wallet/server effects;
 the demo owns content editing and local simulation. One ordered registry in
 `packages/frontend/src/store.ts` declares each module’s player, demo, or shared observer lifetime.
-Both activation lists derive from that registry; reducers retain the same shared order.
+Activation lists derive from that registry; reducers retain the same shared order.
+The world demo exposes Hillaire preview controls through the ordinary world and engine API.
+Engine-owned ranges and preset defaults resolve finite, bounded plain-data overrides. The renderer
+retains the latest preview through backend startup and quality changes; Hillaire updates uniforms
+and rebuilds its existing LUTs only when physical parameters change. Reset and panel teardown
+restore the world's preset. These controls never write seed content or persisted player settings.
+Localization
+observation is shared by player, demo and adventure. Adventure feature windows use real pages
+with their actual session state; public finance reads may run, but opening a page never creates
+a wallet or submits a transaction.
 
-The `/kares` staking route uses the same app entry, navigation reducer and persistent sidebar as
+The read-only `/demo#assets` workshop presents the complete seed-authored kit in one grass-grid
+world, through the ordinary world runtime, camera, terrain, detail-cell and plant renderers.
+`seed/structures/workshop.recipe.json` owns authored assets, street parcels, landmarks and workshop layout.
+`seed/structures/townhouse.family.json` owns townhouse bay dimensions, facade patterns and allowed
+variants. The offline neighborhood compiler expands parcels into building plans, uses deterministic
+uniform-weight WFC with propagation and bounded backtracking to choose compatible neighboring
+roof forms and heights, then constructs geometry from those plans. WFC does not plan roads or
+terrain. Floor bands, structural bays, recessed windows, planters, roofs and entrance clearances
+derive from each building plan. Attached sides have continuous walls and parcel-contained roofs;
+exposed sides receive windows. The original authored house remains the visual reference and street landmark.
+The rejected demonstration keep, wall circuit and separate urban-tree asset are removed.
+
+A module declares its cell volume and named boundary ports: position, normal face, opening span
+and connection profile. Sealed ports prove solid half-cell coverage over their declared contact
+patch. Clearances reject architectural occupancy both within the module and after all placements
+are composed. Placement plans name exact port pairs; validation rejects mismatched or reused
+endpoints. One offline placement transform applies quarter turns and optional mirroring to geometry,
+decoration, clearances and ports; mirrored detail faces retain outward winding. The browser receives
+neither architectural plans nor the solver. Existing production city compilers retain their ownership.
+
+Building recipes accept only integer-grid full blocks, top/bottom half-slabs, and straight/inner/outer
+stairs in four quarter-turn orientations. Named prop exceptions are chains, cords, banners, lanterns, fences
+and the complete campfire. `building_kit.mjs` expands architectural pieces into half-cell occupancy,
+rejects intersecting volumes, removes internal faces and merges exposed slab/stair faces offline.
+Full blocks remain ordinary voxels; partial pieces become non-colliding detail cells. Both use
+the same world-aligned texture coordinates. Square voxel normals retain material micro-relief
+without a synthetic edge bevel or convex-edge merge classes. House recipes cannot smuggle arbitrary
+boxes or beams through nested building parts. Wall vines reuse scenery.
+
+`bake_schematic.mjs` composes placement plans into existing render formats. The workshop compiler
+packs the catalogue into bounded grid cells, partitions full voxels into 32³ structures, and bakes the composition once into
+`seed/scenes/asset_workshop.json`. One abortable fetch owns the scene; the normal world-label layer
+names its cells. The generated street is the initial camera focus; catalogue captions hide while the
+camera focus is inside its cell and return when inspecting the surrounding kit. There is no selection
+list, per-asset scene loader or second camera controller.
+Authoring stays in seed/code. Banners, ropes and chain links are static baked geometry; plants retain
+rooted wind. Campfire assets place bounded GPU flame/smoke batches under the existing scenery lifecycle.
+The canonical test command checks the single workshop artifact. City-specific compilers remain the
+owners of production cities; the module workshop does not introduce another runtime generation path.
+
+The public adventure owns its local hero, recruited companion, selection, dialogue and combat progress in
+one adventure reducer. `seed/content/adventure.json` authors its encounters, companion and quest order;
+these never enter the published catalogue. Quest progress derives from those facts. Live gameplay, the local tutorial and `/demo#ui` share the same character selector and quest journal.
+The journey source boundary changes facts and actions, never markup; the existing production `JourneyPanel`
+owns both the compact tracker and full journal, including progress, quest art, milestones and checklist. The local source also reuses party controls, speech captions and the ordinary multi-character fight resolver.
+Recruiting Sceat requires an explicit context-menu invitation; the talk shortcut cannot recruit him.
+The local party uses the shared social dock. Speaking actors face the listener, and caption context-menu
+picking uses the caption renderer’s own projected bounds. Speech wraps whole words, with grapheme
+fallback for long unbroken text.
+The world owns disposable actor positions; selection restores each actor once, while equipment changes
+preserve its position. Companion following uses the shared automatic-travel navigator and locomotion controller.
+The quest tracker and compass supply objective guidance. Local fight presentation takes its encounter anchor from the active fight identity, including its authored floor height; it never falls back to the simulator origin. The first victory advances level 199 to 200; the boss defeats the party through
+ordinary combat. Local fight sources derive experience from their authored level, so every participant
+retains the same level in result projections. Final defeat waits for the animation queue to drain,
+then keeps the adventure scene beneath a cinematic rebirth modal. Only the modal’s login link
+navigates to the real login; defeat never redirects automatically or adds a main-menu banner.
+
+The `/kares` staking route uses the same app entry, navigation reducer and shared feature-window host as
 other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,
 staking, and gift import. It retains authorized accounts grouped by provider for live switching, with one active signing session.
 Switching disposes the previous SDK session without disconnecting its provider, and claim transfers or
@@ -135,6 +230,13 @@ game and wallet-finance routes. The independent launchpad and journal entries in
 The journal renders complete HTML at build time and initializes analytics only on its canonical production hostname.
 Telemetry strips URL queries and fragments before sending, so
 claim bearer keys never become analytics data. Development and browser-test builds omit the trackers.
+The frontend also initializes PostHog product analytics in production, excluding the editor and OAuth
+callback. Explicit state-delta events describe anonymous visits, demo fights, login and character creation.
+The session retains the submitted creation outcome; only the SDK's certified creation receipt marks activation,
+never an acquired roster member. PostHog retains a browser-local anonymous identity across reloads; no wallet
+address or player name identifies it. An outbound property allowlist excludes URLs, referrers and nested person
+properties. Autocapture, replay, surveys and remote feature flags are disabled. Public project-token and host
+build variables override the default project; an empty token disables capture. Analytics failures never block gameplay.
 The frontend and launchpad initialize the shared errors-only Sentry reporter. Caught toast failures retain their raw
 exception before translation; React root failures and boot failures use the same reporter. The outbound
 filter removes credentials and bearer URL data, and Move aborts group by package, module, function and
@@ -168,7 +270,8 @@ The SDK logs every certified transaction once with digest and net gas. Its recei
 fresh object references; explicit hydration is the only bootstrap read for unknown transaction
 inputs, while the lazy previous-digest barrier synchronizes consecutive writes. Narrow presentation reads are explicit exceptions: Party may snapshot one external
 character checkpoint for run-to, and an item hover in chat or trades may read that exact Item plus its
-rolled-stat field through a session-bounded LRU. The external-wallet giftcard import explicitly inspects only that
+rolled-stat and pet-feed fields through a session-bounded LRU. Linked pet tooltips derive current bonuses
+through the same power scaling as equipment. The external-wallet giftcard import explicitly inspects only that
 wallet's canonical vouchers through the SDK, on connection or manual refresh. Game-wallet holdings
 remain indexed and pushed. Package type identity uses original package IDs;
 Move-call targets use latest package IDs.
@@ -252,9 +355,10 @@ TradingView Lightweight Charts presents unit-weighted daily prices excluding fee
 purple palette. Listings and history occupy two columns when the detail pane fits, stacking below
 that width. The price line connects recorded daily averages across untraded dates; those dates remain unpriced
 in hover details, without fabricated sales or prices.
-The selected stackable item’s chart response also samples total existing indexed units across all custody.
+The selected stackable item’s response carries price history and total existing indexed units across all custody independently.
 A bounded server-local cache shares supply reads for thirty seconds. Its header derives estimated market
-capitalization from that supply and the chart’s latest recorded daily average; missing supply does not hide the chart.
+capitalization from that supply and the chart’s latest recorded daily average. Missing supply does not hide the chart,
+and missing price history does not hide known supply.
 
 Marketplace snapshots include native Listing versions and kiosk catalogue Lamport revisions in one
 query, including empty owned catalogues. Catalogue markers follow their relation writes. The client
@@ -349,6 +453,18 @@ server issues a challenge and verifies the personal-message signature. Until
 connection; replacement is terminal until the player explicitly reconnects. Login reads no game
 state from chain—the app becomes ready only after the server's indexed snapshot.
 
+### Funding
+
+Mainnet funding offers direct SUI deposits, external card/PayPal providers, and a lazily loaded LI.FI
+widget. The bridge owns its external EVM/Solana source-wallet connections and route execution;
+the game wallet is only the fixed native-SUI recipient. Destination chain, token and address are
+locked, URL defaults are disabled, and transfer history is scoped to the receiving game address.
+LI.FI completion requests an ordinary wallet refresh; only the existing SDK balance read updates
+the session. The funding surface shares the vendor's focus-managed DOM modal stack so wallet and
+WalletConnect portals remain interactive; game dialogs retain their native top-layer shell.
+Testnet funding exposes only the faucet. No LI.FI API key, integrator fee, or game-wallet signer is
+passed to the bridge.
+
 ### Equipment
 
 The Character's existing equipment map owns both stat gear and the statless `cosmetic_hat` and
@@ -356,6 +472,20 @@ The Character's existing equipment map owns both stat gear and the statless `cos
 stats and damage lines. Presence retains the raw slots; one shared pure presentation rule selects
 each cosmetic before its regular hat or cloak. Equip and unequip refresh the indexed visible slots
 through latest-request-wins reads, so delayed enrichment cannot restore removed equipment.
+
+Equipped title identity uses those same visible-equipment snapshots and deltas, including owned followers.
+Fight appearance rows retain that title through normalization for participants and spectators. The frontend
+maps equipped title and existing custody-wallet identity to one engine aura descriptor beside model
+appearance; title changes do not alter model asset keys or crowd eligibility. One bounded engine layer renders Unbroken's rising emerald energy
+and motion trail in two shared billboard batches. The canonical admin wallet selects a client-only red/purple
+profile regardless of title, with priority over Unbroken. A third shared normal-blended haze batch runs only
+for visible admin bearers; the server sends neither an aura ID nor a special admin-appearance flag. The layer
+follows rendered world or animated fight positions, uses canonical character scale, and reduces range and particle count with quality. Trails emit from observed
+horizontal displacement; idle replay emits nothing, and teleports or visibility gaps reset retained particles.
+Unequipping a title retires its derived effect; hidden/invisible actors, removal and scene teardown retire
+all effects, including the admin override. No aura packets, polling, chain writes, dynamic lights or
+per-character render passes exist. World Lab's title selector exercises the
+same title mapping and renderer used by gameplay; its Admin preview supplies only a local fixture owner.
 
 ### World actions
 
@@ -399,6 +529,22 @@ Unsigned movement/cooldown refusals wait 500 ms before re-entering inspection; t
 travel proof are checked again. Stop, manual control, identity changes, and all other failed or
 uncertain actions stop further automated writes. Executed transactions never retry. Its controls remain available on other pages. Reload never resumes a run.
 
+One automatic-travel navigator owns run-to for position links, party snapshots, nearby fights and
+gathering, plus owned-party and adventure following. Open ground uses a one-block clearance probe
+without a route search. Obstacles trigger an incremental local search capped at 128 retained cells,
+16 expansions per update and an eight-block leg. Easy routes retain full body collision, ordinary
+one-block steps and bridge/tunnel layers. A failed search or locomotion stall selects a four-block
+direct segment through terrain at the ordinary movement speed; its endpoint height uses the shared
+collision projection. Segment endpoints resume local navigation, and a materially moved target
+invalidates the old route. No world blocks change and no second follower navigator exists.
+The locomotion controller owns both ordinary collision and bounded direct motion. Explicit movement
+areas remain enforced. Manual input cancels run-to immediately, including inside solid geometry;
+cancellation neither ejects nor rewinds the character. Another target can move it out.
+City readiness remains per requested chunk; unknown collision suspends navigation rather than
+becoming passable terrain. Terrain obstruction no longer terminates automatic travel. Only the final
+target completes travel; partial routes supply no invented ETA. Gathering retains its final-arrival,
+chain-time and transaction gates, while server speed validation and combat restrictions remain unchanged.
+
 Party run-to is the sole direct player checkpoint read. The authenticated SDK reads another
 member's current-world and checkpoint dynamic fields once, refuses a different world, then the
 client runs toward that immutable snapshot. It never polls or claims to know the member's live pose.
@@ -416,6 +562,24 @@ finishes collection without selecting another pack. The HUD derives aggregate pr
 estimated remaining time from the live pack and current harvest; it owns no action deadline.
 
 ### Fights
+
+Overworld exploration automatically observes one public fight within 50 blocks of the selected
+character. The nearest eligible fight is chosen once and retained while it stays in range;
+leaving, ending, changing worlds, entering a dungeon, or mounting an immersive fight releases it.
+The server independently validates locality and caps this ambient interest at one fight per
+connection. Participant, explicit spectator, modal preview and ambient demand share subscriptions.
+Fight checkpoint reads coalesce across viewers for each indexer event, while each connection
+retains its ordered witness delivery and its own projected authority.
+
+The ambient board replaces its sword but retains the join marker. It uses the ordinary fight
+models, spectator visibility and animation queue alongside world entities. It takes neither
+camera nor movement ownership and shows no combat HUD or non-spatial combat audio. Leaving drops
+queued animations and releases the runtime unless another watch still needs it. Every board temporarily
+clears terrain, foliage, scatter and water above its floor within its footprint and a feathered two-block
+rim, through the existing occlusion shader. Ambient clearance is camera-independent; only immersive
+fights dissolve foreground geometry toward the camera. Unmount restores the ordinary terrain material;
+world occupancy and collision remain unchanged. The selected
+character's own or explicitly spectated fight takes precedence and retains immersive presentation.
 
 An active forfeit removes the fighter before advancing through mobs to the next living player in
 one terminal transaction. Placement and out-of-turn forfeits leave turn order unchanged; a side
@@ -456,11 +620,192 @@ fixed reserve cannot block an affordable settlement. Team drop selection uses en
 Random rolls only fixed-shape item statistics. The certified settlement receipt enables Continue immediately. `RESULT_FOR`
 exists only for interrupted-client recovery. Character XP awards restore maximum HP when the character level increases. Settlement writes
 combat damage before awarding XP; the existing HP projection carries the healed value and clock.
-Character level and experience come from the projected Character row. Result presents before level-up.
+Character level and experience come from the projected Character row. Level-up overlays the result; dismissing it reveals the result and loot.
 The mounted fight board owns HUD visibility; pending settlement custody does not hide the overworld HUD.
 Settlement status and explicit Retry remain visible for solo fights as well as groups.
 
+### Sound presentation
+
+`seed/sounds/` owns the file-backed effects; `seed/content/audio.json` assigns semantic cues and
+spell names to those files. The frontend audio registry is the one bounded playback pool for
+fight and interface sounds. It applies the master volume to both new and active voices and releases
+players with the app observer lifetime. Named spells play through the ordered fight cue edge;
+unmapped spells retain their elemental fallback. Game feedback observes copied state slices,
+not receipt or packet arrivals. The fight-over cue follows the newly visible result once, for
+both player and local-demo fights, regardless of outcome or boss rewards. Payout updates do not replay it. Craft and consumable
+receipts retain their latest digest and outcome in the session so duplicate delivery cannot repeat
+the feedback or the receipt fold. Adventure quest cues diff the same completed-ID projection used
+by the journal, including the final encounter. Level-up audio shares the dialog’s eligibility rule,
+even when that dialog overlays an open result. The quest chime restarts one voice on rapid completions
+instead of dropping cues or stacking them. Observer initialization and account changes establish silent baselines.
+Trusted DOM control activation has separate local feedback in the shared settings lifecycle, so
+demo and player buttons work without an account. One delegated listener covers keyboard, touch,
+portals and native controls. It waits until dispatch completes and yields to any semantic sound
+already emitted by that action. Disabled controls, programmatic clicks and disposed observers stay silent.
+Overworld footsteps use recorded samples for every engine material preset. Grounded distance owns
+cadence; the audio edge decodes and level-balances each source once, varies successive samples, and releases its
+Web Audio context with the world. Each stride fades the previous voice before starting the next;
+long material tails cannot stack while running. Reset, disable and disposal also retire the active voice.
+Missing recordings remain silent rather than synthesizing a substitute.
+Water footsteps sample liquid at the feet using the collision skin, independently of head-depth
+swimming. Five short cuts from the owner-provided splash recording use the same stride cadence.
+Descending air-to-water contact emits one presentation pulse across fixed physics substeps;
+the shared audio registry plays the owner-provided water-entry recording once. Spawning,
+teleporting and shallow wading do not invent an entry splash. Jumping itself has no sound.
+
+The anonymous main menu mounts one bounded camera view through the normal engine and chunk manager;
+it does not mount the gameplay canvas. Its authored winter scene lives in `seed/scenes/main_menu.recipe.json`,
+compiled by `scripts/generate_main_menu.mjs` into the validated scene recipe. Harbor houses reference the original workshop architecture and the newer townhouse family through
+`seed/structures/main_menu_houses.recipe.json`; the former wing grammar and diagonal timber meshes
+are removed. The menu adapter adds only a winter palette and half-block snow caps. Tower roofs
+use the same strict kit; heraldry reads the canonical workshop banner, including its larger quay standard. Catalogue firs replace the bespoke menu tree builder. `tree_placement.ts` owns the
+shared grounded placement used by both the menu compiler and cities. Harbor dressing samples the
+compiled height grid, so it follows the same surface as rendering and collision. That recipe is an abortable
+static-asset fetch scoped to the mounted menu, rather than part of the shared gameplay JavaScript bundle. The aerial camera follows
+a bounded orbit around the authored harbor focus. That subject anchors chunk residency, the far-shell
+opening, water, and sunlight shadows; the camera stays inside the loaded area on a clearance-tested route. The scene pauses while the document is hidden
+and releases its engine and workers on unmount. Existing demo-visit storage selects the start prompt or
+existing sign-in actions. Seed also authors three slow, collision-checked resident routes. The menu
+projects these into ordinary character world anchors and animation clips; it creates no gameplay
+actors or network observers. Reduced motion pins the camera and keeps residents idle.
+Menu and biome music share the mounted `MusicBed` media lifecycle and volume settings.
+Menu, gameplay, adventure and editor stages share one centered world-loading presentation. It reads
+the owning world's engine and chunk snapshots during startup and explicit quality/distance changes,
+then stops sampling after readiness. Terrain progress counts completed requested chunks; graphics,
+asset and atmosphere preparation remain indeterminate because no shader-completion percentage exists.
+Ordinary movement streaming does not reopen the overlay. Its local presentation reducer owns no
+engine state; teardown cancels its frame callbacks and polling.
+
 ### Terrain presentation
+
+The WebGPU backend owns one Neutral tone mapper and fixed exposure for world and fight rendering.
+The post-processing pipeline reads those renderer settings instead of declaring a second tone mapper.
+This preserves stronger authored colors without adding a saturation pass; existing quality-specific
+grading and atmosphere retain their lifetimes. Sun-shadow depth bias derives from a small world-space
+offset and the shadow camera depth range, so ledge contacts do not drift with projection depth.
+
+Optional seed-authored scenery places waterfalls, their derived spray, bounded mist, spore volumes,
+and up to 384 hanging-vine placements in one shader-animated batch. Optional butterfly volumes share one opaque instanced wing mesh, with bounded GPU flight
+and wing articulation; quality selects 4/8/16 insects per volume. The WebGPU world backend owns
+these batches and shader animation.
+Optional snow uses one batch capped at 96/384/768 flakes per volume by quality. Glow billboards use
+one batch capped at 96 placements. Up to four authored glow sources may also illuminate nearby
+surfaces through shadowless point lights, with 1/2/4 active on Low/Medium/High. No extra shadow maps
+are created. One merged mesh owns at most 512 authored plants, ice sprites, and distant conifer
+silhouettes. These reuse ordinary ground-scatter builders and rooted wind; hanging ice remains still.
+Scenery appears after terrain, hides during fights and dungeon stages, and releases its buffers,
+materials and lights with the world. These are presentation assets; fixed voxel structures retain
+ordinary residency and collision. The public adventure remains authored in `seed/content/adventure_environment.json`.
+
+Authored architectural detail uses one offline mesh compiler for thin trim, railings, rigging,
+lantern housings, canvas and snow caps. It clips triangles into 32-block cells and writes bounded,
+little-endian vertex artifacts with named material palettes. Runtime validates the artifact, remaps
+palette IDs, and admits bounded interleaved buffer parts per resident cell; it never rebuilds prop geometry.
+The terrain pool owns these cells through its existing column residency and releases their geometry
+when the last terrain layer leaves. Retention queues detail parts rather than constructing a whole
+column synchronously. The backend's single upload queue admits voxel and detail buffers under the same
+byte and CPU-time budgets; detail parts fit the minimum tier's byte budget. Eviction cancels queued
+parts before releasing admitted buffers, and readiness includes all pending uploads. Details borrow
+the pool's material atlas, share material tint,
+roughness and emission, use ordinary frustum culling and the existing sun shadow pass, and hide with
+world dressing during fights and dungeons. There are no per-lamp or per-rope runtime objects.
+These surfaces are explicitly non-colliding ornament; walkable floors, walls and structural occupancy
+remain voxel-owned. A thin visual snow cap does not define a second collision surface. Worker recipe
+projection excludes baked details and scenery before transfer, preserving identical terrain inputs
+without cloning rendering assets into planning, meshing or horizon workers. Worlds without
+baked details allocate no detail material or geometry. Generated city artifacts carry the same detail cells.
+Meshing workers return only the requested column; the existing layer registers them on terrain admission,
+retains them across vertical layers, and releases them at final column eviction. City artifacts and maps
+share one provenance; the current version is required rather than accepting an older geometry path. The home screen authors its lantern kit in
+`seed/structures/harbor_details.json`; its old voxel lamp, railing, rigging and window-trim emitters
+are replaced rather than retained as quality alternatives.
+
+The runtime owner validates and compiles a world once, then passes that compiled world to the renderer
+and its terrain, water and material consumers. Rendering layers do not recompile recipes. Each worker
+compiles its transported terrain projection once within its isolated lifetime. Material palette IDs
+are invariant under structure-compilation options. Height-grid validation is shared by world recipes,
+city compilation and imported city maps; malformed grids fail before terrain sampling. The canonical
+test command checks menu artifact freshness alongside generated cities. Scene compiler files belong
+to the shared browser-check and frontend-release input classification.
+
+World materials may author bounded `emission` radiance (0–8), independent of AO and illumination.
+Near terrain and the far shell use the same compiled emission table; ordinary materials remain zero.
+Plaster, slate, oxidized copper, brick and ice own their seamless detail in the existing texture atlas.
+Tree trunks use a separate bark preset with irregular fissures; constructed wood retains plank joints.
+Bark reuses wood footstep recordings and adds no rendering pass.
+The origin portal uses a seed-authored arch profile shared by its voxel frame, collision opening, effect mesh,
+and shader boundary. The portal material is a translucent flowing membrane: local-space noise
+warps the rendered scene, depth rejection protects foreground silhouettes, and the aperture edge
+seals the distortion to the frame. The center gate uses blue emission. Dungeon entrances use the same upright arch and a refractive red-purple membrane behind a Sceat guide.
+Their seed-authored demonic basalt, masonry and emissive crimson inlays use the ordinary voxel frame,
+terrain residency and collision path. Palette entries append identically for render and surface-only compilation.
+Both gates share the same aperture geometry and portal material. Water and portals
+share the viewport-copy lifecycle helper; every material releases its private color/depth captures.
+The origin arch uses the local terrain filler palette. Ordinary fixed-structure residency owns both
+frame types; explicit portal frames bypass the reserved origin clearing. A scenery recipe may disable the origin
+`portal`; the same switch removes the frame, effect, and structure-clearance cutout.
+The frontend world composes dungeon guides into its ordinary entity list using the tutorial's
+seed-authored Sceat appearance. Guide yaw continuously tracks the local controlled player's world position,
+independently of dialogue. Facing changes reuse loaded appearance and stationary anchors without resampling
+terrain; unchanged player positions do not resubmit entities. Guide labels retain the existing dungeon interaction range and
+chain anchor. Interaction uses the same unlocked-key selector as the entry transaction: possession
+opens the normal entry modal; absence produces a localized speech caption naming the required key.
+The dungeon frame and membrane derive their shared offset from one seed profile; the offset is presentation only. Guide models, captions and pending appearance loads
+retire with their markers and world, and immersive fights exclude them with other world actors.
+
+Water uses one calm Genshin-derived material on every quality tier. A single sea-level plane
+reconstructs world-space bed depth from the rendered scene; there is no water sampling worker,
+heightfield mesh or legacy quality shader. Depth-checked refraction, moving normal maps, bounded
+caustics and shoreline foam share per-target color/depth copies. Those copies are released with
+their render target and world. The surface sits exactly at sea level so coplanar sand stays dry.
+Body, foam, ice and immersed in-scatter read the scene key and hemisphere lights. Surface optics
+own dry-camera views; immersion starts continuously below the waterline and uses ray distance,
+so it cannot tint the surface twice. Water borrows the active sky sampler: Hillaire's sky-view LUT
+with its shared horizon grade when active, or the analytic sky when that is displayed. Authored
+glows contribute at most eight analytic light highlights. An optional `planar` water reflection
+reuses the world scene and Three's clipped reflection camera, capped at 12 updates/second and
+1024 pixels on its longest axis. Low uses 12.5% resolution at six updates/second, Medium 25%,
+and High 40%. It creates no second world, worker or shadow map. Optional `frozen_shore`
+shading uses the same rendered bed depth; the deep channel retains liquid optics. Quality changes
+and world teardown own all reflection resources. The `winter` atmosphere keeps cool ambient fill and bounded haze alongside the
+existing cinematic and clear presets; omitted presets preserve the shipped appearance. Optional sky
+azimuth rotates the shared sun/moon direction once at its owner; sky, shadows and water consume that
+same direction without changing celestial elevation or the day/night cycle.
+Recipes select engine-owned atmosphere presets. The `clear` preset supplies the owner-tuned haze,
+height mist, horizon brightness and physical sky parameters through the same defaults used by the
+demo controls. Omitted presets retain cinematic atmosphere. Quality still owns the distant horizon
+closure independently of the preset's aerial-perspective range.
+Far terrain samples the same biome material texture generator as direct terrain, with flat triangle
+material IDs and world-space UVs. Its texture cache is bounded by quality resolution and released with
+the world. Nature rendering shares one neutral four-tile atlas definition across resources, ground scatter and authored
+scenery. Each layer owns one texture lifetime; palettes and climate tint still own color. Padded tiles supply
+leaf veins, mineral striations, mushroom caps, gills and stem fibres. Bent botanical ribbons and faceted ore
+reuse the existing merged or instanced batches, wind, culling and disposal. The dedicated mushroom-only
+texture factory and old city shrub silhouette are removed.
+Recipes may opt into `canopy: clusters`; the default remains voxel crowns. Workers replace exposed
+foliage faces with compact six-face volumes in the existing packed terrain pool. Near, mid and far
+chunks use progressively coarser occupied-cell grids and clump sizes from `canopy_transforms.ts`.
+Centers belong to occupied cells behind the source faces, rather than to the faces themselves.
+A neutral seed-authored texture supplies biome-tinted foliage atlas pixels; there are no crossed
+cards, silhouette-rectangle payloads, alpha tests or separate tree render objects.
+Workers retain a separate foliage occupancy mask when using clusters. Solid faces and AO probes
+treat foliage as non-occluding because the replacement volumes do not fill every source voxel;
+foliage interiors still cull against occupied neighbours. Collision occupancy is unchanged.
+Packed face codes 6/7 identify opposing faces. Word A holds the center; word B holds material,
+quarter-block size, face axis, source AO and deterministic rotation. The same bounded transforms
+serve all tiers, with jitter confined to the coarser clumps. Existing pool capacity, upload budgets,
+culling, shadows and disposal remain the owners. Leaf clumps suppress direct and indirect specular in
+the shared lighting model; ordinary voxel materials retain their physical response. A camera-independent rounded lighting basis
+prevents dark slabs when viewing crowns from below. Internal canopy attenuation multiplies actual
+external shadow visibility; roofs still block direct sunlight. Bounds include every rotated corner.
+The source PNG and generation prompt live beside the derived atlas data in `seed/textures`;
+`scripts/bake_canopy_texture.py --check` verifies the texture samples against that source.
+Authored local shaft bounds opt High quality into one reduced-resolution sunlight pass. It borrows
+scene depth and the existing sun shadow texture, integrates only inside those bounds, and reconstructs
+against depth to protect foreground silhouettes. The shared cloud field modulates that light. Quality
+owns finite sampling and distance budgets; Low, Medium, worlds without bounds, and fight-only renderers
+allocate no local shaft target. The pass stops outside the visible bounds, underwater, during fights and
+dungeons; quality changes and world teardown release its owned material and target, never the borrowed shadow map.
 
 Biome structure packs own sparse deterministic slots, weighted voxel types, terrain-fit limits, and an optional
 integer scale range. Each placement derives its type, 90-degree rotation, and scale from its world cell. Search
@@ -469,22 +814,26 @@ into rare engine-shaped mountain passes or ravines; the canonical column sampler
 before city terrain, so near terrain, far terrain, preview, scatter, and collision consume the same surface.
 
 The game chunk manager owns effective terrain residency. It starts at the requested quality and
-distance, then contracts outer rings when the engine reports blocked GPU uploads. The visible voxel footprint drives the far-terrain opening. Fully flat presentation hides all voxel draws and uses the existing ground-only far surface across the whole view.
-Trees and buildings disappear; voxel residency stays cached for restoration. Movement retains that capacity bound; an explicit quality or
+distance, then contracts outer rings when the engine reports blocked GPU uploads. The visible voxel footprint drives the far-terrain opening. Movement retains that capacity bound; an explicit quality or
 distance change starts a new request. The GPU pool never grows to absorb an oversized residency plan.
 That manager also owns bounded planning and meshing retries, including stationary focus. Worker
 replies settle their exact request, and cancelled or superseded requests settle explicitly. Backend
 request serials remain monotonic while per-key metadata follows only live work. Exhaustion or device
 loss terminates that world lifetime; late callbacks cannot revive a failed engine. The player app
 retries once on a fresh canvas with persisted low quality and the minimum render distance. A second
-failure selects the flat WebGL grid on another fresh canvas without attempting WebGPU or planning
-terrain. Recovery advances at most twice per app lifetime. Grid failure exposes Reload; missing
-authored world content remains a separate error and never reduces graphics settings.
+failure stops the world and exposes Reload. Missing WebGPU blocks world rendering immediately and
+explains the secure-context requirement; missing authored world content remains a separate error.
+Neither condition reduces graphics settings. Terrain always retains its source elevation; there is no flat mode or playable grid fallback.
 Nearby character bodies batch by rig and animation pose. Hair and equipment select their own instance
 subsets without changing body identity. Shared model loading owns part preparation, bone mounting and
 disposal. Native skinning precedes geometry-bound instance transforms; immutable texture expressions
-share shader plans without sharing skeletons or instance data. Interactive/tactical characters and the
-WebGL fallback retain individual models. This rendering path does not use temporal motion vectors.
+share shader plans without sharing skeletons or instance data. Interactive/tactical characters retain individual models. This rendering path does not use temporal motion vectors.
+
+The localized spawn welcome display uses a fixed, depth-tested world plane with the canonical
+AresRPG wordmark. Seed owns its position, orientation and size. The shared game world controller
+rasters text only when the locale changes, then updates a retained canvas texture in the ordinary
+renderer. World panels share backend replay and disposal, hide with world dressing, and never face
+the camera automatically. World Lab and the real game mount that same controller.
 
 Each resource owner releases its workers, GPU objects, audio nodes, and callbacks on teardown. DOM labels use a separate label-only scene
 with the same world camera and world-space anchors; CSS2D never traverses game meshes or skeletons.
@@ -501,15 +850,46 @@ The `/demo` content editor authors both sources directly. City structures and ma
 from world content; zone discovery carries no copied portal fact.
 The city build registry maps a slug to one city-specific deterministic compiler; cities share artifact mechanics,
 not a universal settlement grammar. Each compiler owns its complete 3x3 land-use map, sparse eight-block target
-height grid, structures, and local dressing rules. Thebes plans organic streets, a river, fields, gardens, districts,
-and connected WFC interiors; other cities may instead preserve ravines, terraces, caves, or fortifications. One
-target-height adapter drives near terrain, far terrain, collision, roads, bridges, and plateaus. Generated voxel
+height grid, structures, and local dressing rules. Thebes authored landmarks and districts live in `seed/structures/thebes_*.recipe.json`:
+the arrival court, farmstead, guardian gate, entrance street, left-bank districts, castle and fortified lower ward. They compile through the same strict schematic
+baker and canonical prop assets as the workshop. The farm reuses the original house architecture;
+the separate procedural farmstead and entrance-gate builders are removed. The guardian gate
+uses buried full statue volumes with native integer scaling. The left bank contains attached market rows and separate terrain-fitted hillside homes,
+a market court, cathedral, cemetery and a terrain-fitted curtain with roofed bastions.
+Seed-side excavation bounds subtract rock before authored masonry is packed; narrow paths and
+quarry homes use the existing explicit-air voxel operation, preserving relief and rock ceilings. The cemetery
+descends into the existing explicit-air catacomb network. Shared schematic components bake separately
+into one detail builder; voxel output partitions into native 32³ placement cells before city packing. Reserved parcel bounds in the city plan own land-use and exclude incidental park trees and procedural road lamps. The city build
+adds those voxel placements and details to its existing compressed artifact; there is no standalone
+spawn renderer or runtime construction path. World scenery owns the grove’s rooted plants and hanging
+vines through the existing batches. The central portal and both court approaches retain clear space.
+Thebes reads its landmark layout from `seed/scenes/thebes.recipe.json`:
+terraces, explicit lots, routes with elevations, river, bridges, ridges, grove and fortress circuit share that plan.
+River points carry channel half-widths. The same interpolated bank distance owns carving and river
+land use; the mouth widens into natural ocean, and carving never raises the existing seabed.
+Terrain preserves relief outside its local terraces and route grading. The castle recipe owns its dominant keep,
+offset donjon, stepped wings, gatehouse, curtain walks, galleries and interior stair flights. The former native keep,
+curtain and keep-stair builders are removed. The lower ward continues the castle defenses and uses
+the same authored house family plus the workshop manor. The native house-style generator and its
+facade decorator are removed; reserved parcels are the sole building land-use and scenery exclusion input. Cathedral and castle use the same strict schematic ingredients;
+houses have connected interiors, varied proportions and shared baked facade details.
+The former WFC layout, its unused solver, and blanket land grading are removed. City trees are placements of the same packed structure catalogue used by the procedural world.
+The ordinary structure voxel transform owns integer scale and quarter turns; city seed data owns
+placement, source selection and material remapping. Giant placements use the broad-trunked swamp
+assets also used at spawn, remapped to temperate bark and foliage. Tree anchoring samples the bottom footprint
+and lowers its origin to meet descending terrain. The separate Thebes branching generator is removed. Land-use policy owns nature density, including the quiet portal grove. Scatter reads the
+mesher's existing material and occupancy buffers, including the upper chunk halo, rather than excluding whole
+structure bounds. Route, bridge, tree-volume and catacomb tests verify support and clearance. Underground passages
+use ordinary explicit-air operations. One target-height adapter drives near terrain, far terrain,
+collision, roads, bridges, and plateaus. Generated voxel
 operations are tri-state: absent preserves procedural terrain, a material adds or replaces it, and explicit air
 subtracts it. The same operation function owns render and collision occupancy, so caves create no parallel world
 store or gameplay coordinate system; dungeon entrances remain at the authored surface anchor. Generation
 partitions final operations into provenance-hashed, palette-compressed 32³ chunks. Runtime solves nothing:
 workers compile terrain immediately, request only intersecting city artifacts, and decode/cache only intersecting
-chunks. The ordinary collision and WebGPU voxel-mesh paths remain the consumers.
+chunks. The ordinary collision and WebGPU voxel-mesh paths remain the consumers. City detail archives permit
+4,096 cells and 500,000 triangles across the complete settlement; small scenes retain their 512-cell,
+100,000-triangle limits. Per-column residency and GPU upload budgets remain unchanged.
 
 ### Dungeons and progression
 
@@ -626,8 +1006,10 @@ separate from purchase-critical offer freshness. Selecting
 a type requests twenty groups with three cheapest public offers per group, excluding the viewer's own
 listings before ranking. Stack quantities and complete indexed equipment rolls define groups; unknown
 rolls remain distinct objects. Character listings have their own bounded query and filters. Cursor pages
-carry observation generations and kiosk revisions; the frontend retains only the current page and cursor
-history. One marketplace reducer reconciles packets and certified receipts without treating unseen rows
+carry observation generations and kiosk revisions; the frontend retains the current live page and cursor history. Up to ten recent offer-page snapshots
+provide immediate display when returning to an item. They never enter the live purchase catalogue;
+selection, reopening, and reconnects require a fresh observation before buying. Repeated selection of
+the current query is a no-op, and certified writes discard historical display snapshots. One marketplace reducer reconciles packets and certified receipts without treating unseen rows
 as deleted. Indexed changes refresh affected scopes. Hover details use indexed purchase-relevant fields.
 
 ### KARES and the offering
@@ -701,7 +1083,7 @@ Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three 
 on macOS, and three quality-specific world workload lanes per platform. Five macOS jobs avoid queuing
 a sixth browser behind the hosted macOS concurrency limit. Runner-provided Chrome is reused and its
 version is logged; absent Chrome and Playwright’s patched Firefox are installed through one setup entry. Each workload lane runs one heavy smoke scenario;
-the low and medium lanes each verify one missing-WebGPU fallback. Browser jobs have a six-minute
+the low and medium lanes each verify one missing-WebGPU failure. Browser jobs have a six-minute
 execution limit. Smoke world workloads have a 210-second test timeout; full workloads retain their ten-minute local budget. UI layout retries have a three-second
 budget, separate from the longer world-rendering checks. Settings persistence exercises its actual
 controls, reducer, and storage observer across reloads without initializing a renderer. Headless CI UI shards use two workers. Linux Firefox runs headed under Xvfb with one worker

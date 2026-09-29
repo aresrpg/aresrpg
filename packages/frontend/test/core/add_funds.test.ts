@@ -13,14 +13,11 @@ describe('add funds methods', () => {
     expect(SUI_FAUCET_URL).toBe('https://faucet.sui.io/')
   })
 
-  test('the former crypto swap routes through Portal Bridge', async () => {
-    const bridge = ADD_FUNDS_PAYMENT_METHODS.find(({ key }) => key === 'swap_crypto')
+  test('funding has three choices with an embedded LI.FI bridge', async () => {
     const copy = await load_app_copy('en')
 
-    expect(bridge?.providers).toEqual([{ name: 'Portal Bridge', url: 'https://portalbridge.com/' }])
-    expect(copy.wallet_legacy.method_swap).toBe('From Solana, ETH, and more..')
-    expect(
-      ADD_FUNDS_PAYMENT_METHODS.flatMap(({ providers }) => providers).some(({ name }) => name === 'ChangeNOW')
-    ).toBeFalse()
+    expect(ADD_FUNDS_PAYMENT_METHODS.map(({ key }) => key)).toEqual(['direct', 'bridge', 'card'])
+    expect(copy.wallet_legacy.method_swap).toBe('Bridge deposit')
+    expect(copy.wallet_legacy.swap_note).toContain('LI.FI')
   })
 })

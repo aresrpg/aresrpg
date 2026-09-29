@@ -37,7 +37,6 @@ export const ConsumeHealingModal = ({
         <div className="flex items-center gap-3 pr-6">
           <img alt="" className="size-12 object-contain" src={item_icon(item.item_type) ?? undefined} />
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-text">{item.name}</h2>
             <p className="mt-1 text-xs text-muted">
               {t('consume_healing_stock', { heal: plan.heal, available: plan.available })}
             </p>

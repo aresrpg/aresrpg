@@ -7,12 +7,12 @@ import type { EngineQuality } from '@aresrpg/engine'
 
 import type {} from '../fixtures/workload.ts'
 import { install_probe } from '../support/browser_probe.ts'
-import { capture_flat_cpu_profile } from '../support/flat_cpu_profile.ts'
+import { capture_crowd_cpu_profile } from '../support/crowd_cpu_profile.ts'
 
 const mode = process.env.BROWSER_WORKLOAD === 'full' ? 'full' : 'smoke'
 const full = mode === 'full'
 const hardware = process.env.REQUIRE_HARDWARE === '1'
-const profile_stage = process.env.PERF_PROFILE_STAGE === 'entry' ? 'crowd-entry' : 'flat'
+const profile_stage = process.env.PERF_PROFILE_STAGE === 'entry' ? 'crowd-entry' : 'crowd'
 const populations: Readonly<
   Record<string, { characters: number; mobs: number; pets: number; frames: number; packs: number; nodes: number }>
 > = {
@@ -38,7 +38,12 @@ for (const quality of ['low', 'medium', 'high'] as const)
     const { location } = scene
     const target_fps = process.platform === 'darwin' ? 120 : 30
     test(`${scene.name} / ${quality}`, { tag: `@${quality}` }, async ({ page, browser }, info) => {
-      const finish_profile = await capture_flat_cpu_profile(page, info, process.env.PERF_PROFILE === '1', profile_stage)
+      const finish_profile = await capture_crowd_cpu_profile(
+        page,
+        info,
+        process.env.PERF_PROFILE === '1',
+        profile_stage
+      )
       const errors = new Set<string>()
       page.on('pageerror', (error) => errors.add(error.message))
       page.on('console', (message) => {
@@ -121,15 +126,8 @@ for (const quality of ['low', 'medium', 'high'] as const)
         expect(JSON.stringify(adapter)).not.toMatch(/swiftshader|llvmpipe|software/i)
         const running = result.samples.filter(
           ({ stage }) =>
-            ![
-              'startup',
-              'population',
-              'player-entry',
-              'crowd-entry',
-              'fight-entry',
-              'flatten-transition',
-              'restore-transition',
-            ].includes(stage) && !stage.startsWith('quality-')
+            !['startup', 'population', 'player-entry', 'crowd-entry', 'fight-entry'].includes(stage) &&
+            !stage.startsWith('quality-')
         )
         // Teleport stress keeps stall/resource bounds; steady gameplay owns the FPS target.
         for (const sample of running.filter(({ stage }) => !stage.includes('traversal'))) {
@@ -153,7 +151,7 @@ for (const [missing, tag] of [
   ['api', '@low'],
   ['adapter', '@medium'],
 ] as const)
-  test(`missing WebGPU ${missing} uses the playable flat fallback`, { tag }, async ({ page }, info) => {
+  test(`missing WebGPU ${missing} stops with a graphics failure`, { tag }, async ({ page }) => {
     await page.addInitScript(install_probe)
     await page.addInitScript(
       (kind) =>
@@ -164,12 +162,7 @@ for (const [missing, tag] of [
     )
     await page.goto('/e2e/fixtures/workload.html')
     await page.waitForFunction(() => typeof window.run_workload === 'function')
-    const result = await page.evaluate(() =>
-      window.run_workload({ quality: 'low' as EngineQuality, mode: 'smoke', location: 'city' })
-    )
-    expect(result.backend).toBe('grid')
-    expect(result.state.chunks).toMatchObject({ resident: 0, planning: 0, queued: 0, in_flight: 0 })
-    expect(result.characters).toBe(24)
-    expect(result.mobs).toBe(12)
-    await info.attach('fallback', { body: JSON.stringify(result), contentType: 'application/json' })
+    await expect(
+      page.evaluate(() => window.run_workload({ quality: 'low' as EngineQuality, mode: 'smoke', location: 'city' }))
+    ).rejects.toThrow(missing === 'api' ? 'webgpu_unavailable' : 'webgpu_initialization_failed')
   })

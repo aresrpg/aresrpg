@@ -1,0 +1,19 @@
+{
+  "extends": "../frontend/tsconfig.json",
+  "include": [
+    "src",
+    "test",
+    "playwright.config.ts"
+  ],
+  "compilerOptions": {
+    "types": [
+      "vite/client",
+      "bun"
+    ],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  }
+}

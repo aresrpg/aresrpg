@@ -78,14 +78,14 @@ export function is_linear_celestial_step(
  * @param {Vector3} [out] optional target
  * @returns {Vector3}
  */
-export function sun_dir_from_tod(tod: number, out = new Vector3()): Vector3 {
+export function sun_dir_from_tod(tod: number, out = new Vector3(), azimuth = 0): Vector3 {
   const angle = tod * TAU + ORBIT_PHASE
   const sin_angle = Math.sin(angle)
-  return out.set(
-    ORBIT_RADIUS * Math.cos(angle),
-    ORBIT_CENTER + ORBIT_VERTICAL * sin_angle,
-    ORBIT_CENTER - ORBIT_VERTICAL * sin_angle
-  )
+  const x = ORBIT_RADIUS * Math.cos(angle)
+  const z = ORBIT_CENTER - ORBIT_VERTICAL * sin_angle
+  const cos = Math.cos(azimuth),
+    sin = Math.sin(azimuth)
+  return out.set(x * cos + z * sin, ORBIT_CENTER + ORBIT_VERTICAL * sin_angle, z * cos - x * sin)
 }
 
 /**
@@ -94,6 +94,6 @@ export function sun_dir_from_tod(tod: number, out = new Vector3()): Vector3 {
  * @param {Vector3} [out] optional target
  * @returns {Vector3}
  */
-export function moon_dir_from_tod(tod: number, out = new Vector3()): Vector3 {
-  return sun_dir_from_tod(tod, out).multiplyScalar(-1)
+export function moon_dir_from_tod(tod: number, out = new Vector3(), azimuth = 0): Vector3 {
+  return sun_dir_from_tod(tod, out, azimuth).multiplyScalar(-1)
 }

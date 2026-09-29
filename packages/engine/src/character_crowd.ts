@@ -28,11 +28,14 @@ import {
   type BatchMesh,
 } from './character_crowd_mesh.ts'
 import { create_crowd_parts, type CharacterPartLoader } from './character_crowd_parts.ts'
-import { create_character_model, load_character_part, type CharacterModel } from './character_model.ts'
+import {
+  CHARACTER_HEIGHT,
+  create_character_model,
+  load_character_part,
+  type CharacterModel,
+} from './character_model.ts'
 import { resolve_entity_locomotion_clip } from './entities.ts'
 import type { CharacterAnimationName, CharacterAppearanceRender, CharacterEntityRender } from './types.ts'
-
-const CHARACTER_HEIGHT = 2
 
 type CrowdAnimation = Readonly<{ name: CharacterAnimationName; time_scale: number }>
 type LoadedBatch = Readonly<{

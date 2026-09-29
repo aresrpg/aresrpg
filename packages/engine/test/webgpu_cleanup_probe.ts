@@ -6,8 +6,9 @@ import assert from 'node:assert/strict'
 import { mock } from 'bun:test'
 import * as gpu from 'three/webgpu'
 
+import * as entities from '../src/entities.ts'
 import { world_terrain } from '../src/world_catalog.ts'
-import { parse_world_recipe } from '../src/world_recipe.ts'
+import { compile_runtime_world_recipe } from '../src/world_recipe.ts'
 
 const released: string[] = []
 let device_destroyed = 0
@@ -48,7 +49,9 @@ const resource = (name: string) => ({
   },
 })
 mock.module('../src/fight_board.ts', () => ({ create_fight_board_layer: () => resource('fight-board') }))
-mock.module('../src/entities.ts', () => ({ create_entity_layer: () => resource('entities') }))
+mock.module('../src/entities.ts', () => ({ ...entities, create_entity_layer: () => resource('entities') }))
+mock.module('../src/character_aura_layer.ts', () => ({ create_character_aura_layer: () => resource('auras') }))
+mock.module('../src/world_panels.ts', () => ({ create_world_panels: () => resource('world-panels') }))
 mock.module('../src/character_crowd.ts', () => ({
   create_character_crowd_layer: () => resource('crowd'),
   is_character_crowd_spec: () => false,
@@ -64,16 +67,27 @@ mock.module('../src/terrain_pool.ts', () => ({
 }))
 const { create_webgpu_backend } = await import('../src/webgpu_backend.ts')
 await assert.rejects(
-  create_webgpu_backend({} as never, 'low', parse_world_recipe(world_terrain('nauvis'))),
+  create_webgpu_backend({} as never, 'low', compile_runtime_world_recipe(world_terrain('nauvis'))),
   /late construction failure/
 )
-assert.deepEqual(released, ['clouds', 'effects', 'labels', 'captions', 'crowd', 'entities', 'fight-board', 'renderer'])
+assert.deepEqual(released, [
+  'clouds',
+  'effects',
+  'labels',
+  'captions',
+  'world-panels',
+  'auras',
+  'crowd',
+  'entities',
+  'fight-board',
+  'renderer',
+])
 assert.equal(cleanup_errors.length, 1)
 renderer.onDeviceLost()
 assert.equal(original_loss, 1)
 initialization_fails = true
 await assert.rejects(
-  create_webgpu_backend({} as never, 'low', parse_world_recipe(world_terrain('nauvis'))),
+  create_webgpu_backend({} as never, 'low', compile_runtime_world_recipe(world_terrain('nauvis'))),
   /adapter unavailable/
 )
 assert.equal(released.filter((name) => name === 'renderer').length, 1)

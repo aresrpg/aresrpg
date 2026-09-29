@@ -1,0 +1,267 @@
+.aui-minimap {
+  position: relative;
+  width: 230px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  color: #efe6d1;
+  font: 11px var(--aui-font);
+  border: 2px solid #70818c66;
+  border-radius: 9px;
+  background: #121b23;
+  box-shadow:
+    inset 0 1px #fff2,
+    0 5px 18px #0007;
+}
+.aui-minimap-lens {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.aui-minimap-lens canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.aui-minimap header {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #8198a333;
+  border-radius: 4px;
+  background: #0d1722e8;
+  pointer-events: none;
+  text-shadow: 0 1px #000;
+}
+.aui-minimap header strong {
+  color: #f1d39c;
+}
+.aui-minimap header span {
+  font-variant-numeric: tabular-nums;
+  color: #d6e2e8;
+}
+.aui-minimap-controls {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  gap: 4px;
+}
+.aui-minimap-controls .aui-button {
+  background: #152431ed;
+  min-height: 36px;
+  font-size: 10px;
+}
+.aui-map-north {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 800 13px var(--aui-font);
+  color: #fff0b7;
+  text-shadow:
+    0 1px 3px #000,
+    0 0 4px #000;
+  pointer-events: none;
+}
+.aui-minimap > .aui-map-north {
+  top: 48px;
+}
+.aui-world-map {
+  width: min(1100px, calc(100cqw - 24px));
+  height: min(800px, calc(100cqh - 24px));
+}
+.aui-world-map .aui-workspace-main {
+  padding: 5px;
+  gap: 0;
+}
+.aui-map-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #738c8566;
+  border-radius: 4px;
+  background: #14232c;
+}
+.aui-map-viewport canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: auto;
+}
+.aui-map-interaction {
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.aui-map-interaction:active {
+  cursor: grabbing;
+}
+.aui-map-readout,
+.aui-map-legend {
+  position: absolute;
+  left: 10px;
+  padding: 8px 12px;
+  border: 1px solid #78909d44;
+  border-radius: 4px;
+  background: #111d29ed;
+  color: #cfdee5;
+  font: 12px var(--aui-font);
+  pointer-events: none;
+}
+.aui-map-readout {
+  top: 10px;
+  display: flex;
+  gap: 12px;
+}
+.aui-map-readout strong {
+  color: #efcf93;
+}
+.aui-map-legend {
+  bottom: 10px;
+  display: flex;
+  gap: 8px;
+}
+.aui-map-zoom {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  gap: 5px;
+}
+.aui-map-zoom .aui-button {
+  width: 44px;
+  min-height: 44px;
+  font-size: 22px;
+  background: #172735ef;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-minimap {
+    width: 195px;
+  }
+  .aui-minimap-controls .aui-button {
+    min-height: 44px;
+  }
+  .aui-world-map {
+    width: calc(100cqw - 12px);
+    height: calc(100cqh - 12px);
+  }
+}
+:root {
+  --game-minimap-size: 230px;
+}
+.gw-minimap {
+  width: var(--game-minimap-size);
+  pointer-events: auto;
+}
+.gw-minimap > .aui-minimap {
+  width: 100%;
+}
+.party-frame {
+  top: calc(24px + var(--game-minimap-size));
+  width: var(--game-minimap-size);
+  min-width: 0;
+  border-color: #71889c44;
+  background: #14212cec;
+  font-family: var(--aui-font);
+  box-shadow:
+    inset 0 1px #d3e3ec12,
+    0 6px 18px #0005;
+}
+.party-frame > header span {
+  color: #d4bd8e;
+  letter-spacing: 0.5px;
+}
+.party-frame__member {
+  min-height: 42px;
+  border-bottom-color: #93a9b515;
+}
+.party-frame__member.is-selected {
+  background: #638ba020;
+}
+@media (max-height: 500px) {
+  :root {
+    --game-minimap-size: 165px;
+  }
+  .party-frame {
+    max-height: 100px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .party-frame__member {
+    min-height: 38px;
+  }
+  .gw-minimap .aui-minimap-controls .aui-button {
+    font-size: 9px;
+    padding: 3px 6px;
+    min-height: 32px;
+  }
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-minimap {
+    width: 132px;
+  }
+  .aui-minimap header {
+    font-size: 9px;
+    padding: 4px;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+  }
+  .aui-minimap-controls {
+    right: 4px;
+    bottom: 4px;
+  }
+  .aui-minimap-controls .aui-button {
+    min-height: 32px;
+    font-size: 8px;
+    padding: 3px 5px;
+  }
+  .aui-minimap > .aui-map-north {
+    top: 33px;
+    font-size: 11px;
+  }
+  .gw-minimap > .aui-minimap {
+    width: 100%;
+  }
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-minimap {
+    width: 105px;
+  }
+  .gw-minimap > .aui-minimap {
+    width: 100%;
+  }
+}
+@media (max-height: 500px) {
+  .party-frame {
+    width: 230px;
+    max-height: none;
+    overflow: visible;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .party-frame > header {
+    grid-column: 1 / -1;
+  }
+  .party-frame__member {
+    min-width: 0;
+    grid-template-columns: 12px minmax(0, 1fr) 20px;
+    min-height: 44px;
+    padding: 4px;
+    font-size: 9px;
+  }
+  .party-frame__member > span {
+    min-width: 0;
+  }
+}

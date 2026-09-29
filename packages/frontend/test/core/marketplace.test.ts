@@ -11,7 +11,7 @@ const equipment_observation = { kind: 'offers', category: 'sword', item_type: 'a
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -517,4 +517,31 @@ test('type-count snapshots reject stale observations and distinguish unavailable
     packet: { type: 'packet/market_counts', observation: selected.marketplace.observation!, counts: null },
   })
   expect(unavailable.marketplace.type_counts).toBeNull()
+})
+
+test('reselecting the same item preserves its observation and visible offers', () => {
+  const selected = reduce_app_state(initial_app_state(settings), {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: 'aberrant_edge',
+  })
+  const ready = reduce_app_state(selected, {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_slice',
+      observation: selected.marketplace.observation!,
+      listings: [listing],
+      kiosk_versions: { '0xkiosk': '1' },
+      next_cursor: null,
+    },
+  })
+  const again = reduce_app_state(ready, {
+    type: 'market/group_selected',
+    group: 'EQUIPMENT',
+    category: 'sword',
+    item_type: 'aberrant_edge',
+  })
+  expect(again.marketplace.observation).toBe(ready.marketplace.observation)
+  expect(again.marketplace.listings).toEqual([listing])
 })

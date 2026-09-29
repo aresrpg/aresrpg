@@ -1,0 +1,467 @@
+{
+  "name": "thebes_farmstead",
+  "anchor": "farmhouse",
+  "root": "farmstead",
+  "palette": {
+    "stone": "thebes_limestone",
+    "stone_dark": "thebes_sandstone",
+    "copper": "thebes_copper",
+    "wood": "thebes_oak",
+    "trim": "thebes_timber",
+    "leaf": "temperate_foliage",
+    "iron": "thebes_timber",
+    "brass": "thebes_copper",
+    "window": "thebes_lantern",
+    "banner": "thebes_banner",
+    "cloth_dark": "thebes_timber",
+    "cloth_gold": "thebes_copper",
+    "cloth_steel": "thebes_limestone",
+    "cloth_cyan": "thebes_tile",
+    "rope": "thebes_timber",
+    "roof_edge": "thebes_copper",
+    "sand": "sand",
+    "plaster": "thebes_plaster",
+    "roof": "thebes_tile",
+    "window_dark": "thebes_window",
+    "brick": "thebes_sandstone"
+  },
+  "assets": {
+    "farmstead": {
+      "kind": "building",
+      "pieces": [
+        ["block", [-5, -1, -26], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -25], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -24], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -23], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -22], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -21], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -20], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -19], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -18], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -17], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -16], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -15], "stone_dark", 0, "bottom"],
+        ["block", [-5, -1, -14], "stone_dark", 0, "bottom"],
+        ["block", [-4, -1, -26], "stone", 0, "bottom"],
+        ["block", [-4, -1, -25], "stone", 0, "bottom"],
+        ["block", [-4, -1, -24], "stone", 0, "bottom"],
+        ["block", [-4, -1, -23], "stone", 0, "bottom"],
+        ["block", [-4, -1, -22], "stone", 0, "bottom"],
+        ["block", [-4, -1, -21], "stone", 0, "bottom"],
+        ["block", [-4, -1, -20], "stone", 0, "bottom"],
+        ["block", [-4, -1, -19], "stone", 0, "bottom"],
+        ["block", [-4, -1, -18], "stone", 0, "bottom"],
+        ["block", [-4, -1, -17], "stone", 0, "bottom"],
+        ["block", [-4, -1, -16], "stone", 0, "bottom"],
+        ["block", [-4, -1, -15], "stone", 0, "bottom"],
+        ["block", [-4, -1, -14], "stone", 0, "bottom"],
+        ["block", [-3, -1, -26], "stone", 0, "bottom"],
+        ["block", [-3, -1, -25], "stone", 0, "bottom"],
+        ["block", [-3, -1, -24], "stone", 0, "bottom"],
+        ["block", [-3, -1, -23], "stone", 0, "bottom"],
+        ["block", [-3, -1, -22], "stone", 0, "bottom"],
+        ["block", [-3, -1, -21], "stone", 0, "bottom"],
+        ["block", [-3, -1, -20], "stone", 0, "bottom"],
+        ["block", [-3, -1, -19], "stone", 0, "bottom"],
+        ["block", [-3, -1, -18], "stone", 0, "bottom"],
+        ["block", [-3, -1, -17], "stone", 0, "bottom"],
+        ["block", [-3, -1, -16], "stone", 0, "bottom"],
+        ["block", [-3, -1, -15], "stone", 0, "bottom"],
+        ["block", [-3, -1, -14], "stone", 0, "bottom"],
+        ["block", [-2, -1, -26], "stone", 0, "bottom"],
+        ["block", [-2, -1, -25], "stone", 0, "bottom"],
+        ["block", [-2, -1, -24], "stone", 0, "bottom"],
+        ["block", [-2, -1, -23], "stone", 0, "bottom"],
+        ["block", [-2, -1, -22], "stone", 0, "bottom"],
+        ["block", [-2, -1, -21], "stone", 0, "bottom"],
+        ["block", [-2, -1, -20], "stone", 0, "bottom"],
+        ["block", [-2, -1, -19], "stone", 0, "bottom"],
+        ["block", [-2, -1, -18], "stone", 0, "bottom"],
+        ["block", [-2, -1, -17], "stone", 0, "bottom"],
+        ["block", [-2, -1, -16], "stone", 0, "bottom"],
+        ["block", [-2, -1, -15], "stone", 0, "bottom"],
+        ["block", [-2, -1, -14], "stone", 0, "bottom"],
+        ["block", [-1, -1, -26], "stone", 0, "bottom"],
+        ["block", [-1, -1, -25], "stone", 0, "bottom"],
+        ["block", [-1, -1, -24], "stone", 0, "bottom"],
+        ["block", [-1, -1, -23], "stone", 0, "bottom"],
+        ["block", [-1, -1, -22], "stone", 0, "bottom"],
+        ["block", [-1, -1, -21], "stone", 0, "bottom"],
+        ["block", [-1, -1, -20], "stone", 0, "bottom"],
+        ["block", [-1, -1, -19], "stone", 0, "bottom"],
+        ["block", [-1, -1, -18], "stone", 0, "bottom"],
+        ["block", [-1, -1, -17], "stone", 0, "bottom"],
+        ["block", [-1, -1, -16], "stone", 0, "bottom"],
+        ["block", [-1, -1, -15], "stone", 0, "bottom"],
+        ["block", [-1, -1, -14], "stone", 0, "bottom"],
+        ["block", [0, -1, -26], "stone", 0, "bottom"],
+        ["block", [0, -1, -25], "stone", 0, "bottom"],
+        ["block", [0, -1, -24], "stone", 0, "bottom"],
+        ["block", [0, -1, -23], "stone", 0, "bottom"],
+        ["block", [0, -1, -22], "stone", 0, "bottom"],
+        ["block", [0, -1, -21], "stone", 0, "bottom"],
+        ["block", [0, -1, -20], "stone", 0, "bottom"],
+        ["block", [0, -1, -19], "stone", 0, "bottom"],
+        ["block", [0, -1, -18], "stone", 0, "bottom"],
+        ["block", [0, -1, -17], "stone", 0, "bottom"],
+        ["block", [0, -1, -16], "stone", 0, "bottom"],
+        ["block", [0, -1, -15], "stone", 0, "bottom"],
+        ["block", [0, -1, -14], "stone", 0, "bottom"],
+        ["block", [1, -1, -26], "stone", 0, "bottom"],
+        ["block", [1, -1, -25], "stone", 0, "bottom"],
+        ["block", [1, -1, -24], "stone", 0, "bottom"],
+        ["block", [1, -1, -23], "stone", 0, "bottom"],
+        ["block", [1, -1, -22], "stone", 0, "bottom"],
+        ["block", [1, -1, -21], "stone", 0, "bottom"],
+        ["block", [1, -1, -20], "stone", 0, "bottom"],
+        ["block", [1, -1, -19], "stone", 0, "bottom"],
+        ["block", [1, -1, -18], "stone", 0, "bottom"],
+        ["block", [1, -1, -17], "stone", 0, "bottom"],
+        ["block", [1, -1, -16], "stone", 0, "bottom"],
+        ["block", [1, -1, -15], "stone", 0, "bottom"],
+        ["block", [1, -1, -14], "stone", 0, "bottom"],
+        ["block", [2, -1, -26], "stone", 0, "bottom"],
+        ["block", [2, -1, -25], "stone", 0, "bottom"],
+        ["block", [2, -1, -24], "stone", 0, "bottom"],
+        ["block", [2, -1, -23], "stone", 0, "bottom"],
+        ["block", [2, -1, -22], "stone", 0, "bottom"],
+        ["block", [2, -1, -21], "stone", 0, "bottom"],
+        ["block", [2, -1, -20], "stone", 0, "bottom"],
+        ["block", [2, -1, -19], "stone", 0, "bottom"],
+        ["block", [2, -1, -18], "stone", 0, "bottom"],
+        ["block", [2, -1, -17], "stone", 0, "bottom"],
+        ["block", [2, -1, -16], "stone", 0, "bottom"],
+        ["block", [2, -1, -15], "stone", 0, "bottom"],
+        ["block", [2, -1, -14], "stone", 0, "bottom"],
+        ["block", [3, -1, -26], "stone", 0, "bottom"],
+        ["block", [3, -1, -25], "stone", 0, "bottom"],
+        ["block", [3, -1, -24], "stone", 0, "bottom"],
+        ["block", [3, -1, -23], "stone", 0, "bottom"],
+        ["block", [3, -1, -22], "stone", 0, "bottom"],
+        ["block", [3, -1, -21], "stone", 0, "bottom"],
+        ["block", [3, -1, -20], "stone", 0, "bottom"],
+        ["block", [3, -1, -19], "stone", 0, "bottom"],
+        ["block", [3, -1, -18], "stone", 0, "bottom"],
+        ["block", [3, -1, -17], "stone", 0, "bottom"],
+        ["block", [3, -1, -16], "stone", 0, "bottom"],
+        ["block", [3, -1, -15], "stone", 0, "bottom"],
+        ["block", [3, -1, -14], "stone", 0, "bottom"],
+        ["block", [4, -1, -26], "stone", 0, "bottom"],
+        ["block", [4, -1, -25], "stone", 0, "bottom"],
+        ["block", [4, -1, -24], "stone", 0, "bottom"],
+        ["block", [4, -1, -23], "stone", 0, "bottom"],
+        ["block", [4, -1, -22], "stone", 0, "bottom"],
+        ["block", [4, -1, -21], "stone", 0, "bottom"],
+        ["block", [4, -1, -20], "stone", 0, "bottom"],
+        ["block", [4, -1, -19], "stone", 0, "bottom"],
+        ["block", [4, -1, -18], "stone", 0, "bottom"],
+        ["block", [4, -1, -17], "stone", 0, "bottom"],
+        ["block", [4, -1, -16], "stone", 0, "bottom"],
+        ["block", [4, -1, -15], "stone", 0, "bottom"],
+        ["block", [4, -1, -14], "stone", 0, "bottom"],
+        ["block", [5, -1, -26], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -25], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -24], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -23], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -22], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -21], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -20], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -19], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -18], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -17], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -16], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -15], "stone_dark", 0, "bottom"],
+        ["block", [5, -1, -14], "stone_dark", 0, "bottom"],
+        ["block", [-21, 0, 14], "wood", 0, "bottom"],
+        ["block", [-21, 0, 15], "wood", 0, "bottom"],
+        ["block", [-21, 0, 16], "wood", 0, "bottom"],
+        ["block", [-21, 0, 17], "wood", 0, "bottom"],
+        ["block", [-21, 1, 14], "wood", 0, "bottom"],
+        ["block", [-21, 1, 15], "wood", 0, "bottom"],
+        ["block", [-21, 1, 16], "wood", 0, "bottom"],
+        ["block", [-21, 1, 17], "wood", 0, "bottom"],
+        ["block", [-20, 0, 14], "wood", 0, "bottom"],
+        ["block", [-20, 0, 15], "wood", 0, "bottom"],
+        ["block", [-20, 0, 16], "wood", 0, "bottom"],
+        ["block", [-20, 0, 17], "wood", 0, "bottom"],
+        ["block", [-20, 1, 14], "wood", 0, "bottom"],
+        ["block", [-20, 1, 15], "wood", 0, "bottom"],
+        ["block", [-20, 1, 16], "wood", 0, "bottom"],
+        ["block", [-20, 1, 17], "wood", 0, "bottom"],
+        ["block", [-19, 0, 14], "wood", 0, "bottom"],
+        ["block", [-19, 0, 15], "wood", 0, "bottom"],
+        ["block", [-19, 0, 16], "wood", 0, "bottom"],
+        ["block", [-19, 0, 17], "wood", 0, "bottom"],
+        ["block", [-19, 1, 14], "wood", 0, "bottom"],
+        ["block", [-19, 1, 15], "wood", 0, "bottom"],
+        ["block", [-19, 1, 16], "wood", 0, "bottom"],
+        ["block", [-19, 1, 17], "wood", 0, "bottom"],
+        ["block", [-18, 0, 14], "wood", 0, "bottom"],
+        ["block", [-18, 0, 15], "wood", 0, "bottom"],
+        ["block", [-18, 0, 16], "wood", 0, "bottom"],
+        ["block", [-18, 0, 17], "wood", 0, "bottom"],
+        ["block", [-18, 1, 14], "wood", 0, "bottom"],
+        ["block", [-18, 1, 15], "wood", 0, "bottom"],
+        ["block", [-18, 1, 16], "wood", 0, "bottom"],
+        ["block", [-18, 1, 17], "wood", 0, "bottom"],
+        ["block", [-17, 0, 14], "wood", 0, "bottom"],
+        ["block", [-17, 0, 15], "wood", 0, "bottom"],
+        ["block", [-17, 0, 16], "wood", 0, "bottom"],
+        ["block", [-17, 0, 17], "wood", 0, "bottom"],
+        ["block", [-17, 1, 14], "wood", 0, "bottom"],
+        ["block", [-17, 1, 15], "wood", 0, "bottom"],
+        ["block", [-17, 1, 16], "wood", 0, "bottom"],
+        ["block", [-17, 1, 17], "wood", 0, "bottom"],
+        ["slab", [-22, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-22, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-22, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-22, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-22, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-22, 2, 18], "roof", 0, "bottom"],
+        ["slab", [-21, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-21, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-21, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-21, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-21, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-21, 2, 18], "roof", 0, "bottom"],
+        ["slab", [-20, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-20, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-20, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-20, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-20, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-20, 2, 18], "roof", 0, "bottom"],
+        ["slab", [-19, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-19, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-19, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-19, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-19, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-19, 2, 18], "roof", 0, "bottom"],
+        ["slab", [-18, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-18, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-18, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-18, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-18, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-18, 2, 18], "roof", 0, "bottom"],
+        ["slab", [-17, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-17, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-17, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-17, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-17, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-17, 2, 18], "roof", 0, "bottom"],
+        ["slab", [-16, 2, 13], "roof", 0, "bottom"],
+        ["slab", [-16, 2, 14], "roof", 0, "bottom"],
+        ["slab", [-16, 2, 15], "roof", 0, "bottom"],
+        ["slab", [-16, 2, 16], "roof", 0, "bottom"],
+        ["slab", [-16, 2, 17], "roof", 0, "bottom"],
+        ["slab", [-16, 2, 18], "roof", 0, "bottom"]
+      ],
+      "parts": [
+        {
+          "asset": "house_architecture",
+          "position": [0, 0, 0],
+          "rotation": 0
+        },
+        {
+          "asset": "market_well",
+          "position": [16, 0, 9],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-20, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-20, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-16, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-16, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-12, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-12, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-8, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-8, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-4, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [0, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [4, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [8, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [8, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [12, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [12, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [16, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [16, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [20, 0, -17],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [20, 0, 19],
+          "rotation": 0
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, -17],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, -17],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, -13],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, -13],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, -9],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, -9],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, -5],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, -5],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, -1],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, -1],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, 3],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, 3],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, 7],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, 7],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, 11],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, 11],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [-24, 0, 15],
+          "rotation": 1
+        },
+        {
+          "asset": "fence",
+          "position": [24, 0, 15],
+          "rotation": 1
+        }
+      ]
+    }
+  }
+}

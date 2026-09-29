@@ -539,7 +539,6 @@ export function SDK({
     // lookup by the DEFINING package (the default client) — see the lineage-split note above
     get_owned_kiosks: (address: string) => kiosk_client.getOwnedKiosks({ address }),
     get_owned_transfer_policies: (address: string) => kiosk_client.getOwnedTransferPolicies({ address }),
-    get_transfer_policies: (type: string) => kiosk_client.getTransferPolicies({ type }),
     transfer_policy_transaction: (transaction: Transaction, rule_package?: string) =>
       new TransferPolicyTransaction({
         kioskClient: rule_package

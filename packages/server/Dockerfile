@@ -23,7 +23,9 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/engine/package.json packages/engine/
 COPY packages/fight/package.json packages/fight/
+COPY packages/ui/package.json packages/ui/
 COPY packages/frontend/package.json packages/frontend/
+COPY packages/mobile/package.json packages/mobile/
 COPY packages/launchpad/package.json packages/launchpad/
 COPY packages/journal/package.json packages/journal/
 COPY packages/immutable/package.json packages/immutable/

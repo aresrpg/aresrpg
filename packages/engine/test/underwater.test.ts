@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { float } from 'three/tsl'
+import { float, vec3 } from 'three/tsl'
 
 import { liquid_palette } from '../src/liquid_palette.ts'
 import { create_underwater_pass, UNDERWATER, underwater_effect_active, is_submerged } from '../src/underwater.ts'
@@ -39,6 +39,7 @@ test('a mounted fight board suppresses immersion without faking a water exit', (
     water_gate: float(1),
     water_level: float(60),
     palette: liquid_palette([0.1, 0.4, 0.8]),
+    illumination: vec3(1),
   })
   pass.update({ submerged: true, suppressed: false, dt: 0 })
   pass.update({ submerged: false, suppressed: true, dt: 0 })

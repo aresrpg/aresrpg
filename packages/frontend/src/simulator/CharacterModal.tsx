@@ -469,8 +469,6 @@ export function CharacterModal({
     <ModalFrame close={close} close_label={copy.wallet_close} label={title} max_width="max-w-6xl">
       <div className="gw-tab gw-tab--carrier">
         <div className="flex flex-col gap-5 px-7 py-6">
-          <div className="text-gradient text-[12px] font-semibold tracking-[0.28em] uppercase">{title}</div>
-          <div className="h-px w-full bg-border" />
           {character ? (
             <CharacterEditor character={character} copy={copy} on_deleted={close} />
           ) : (

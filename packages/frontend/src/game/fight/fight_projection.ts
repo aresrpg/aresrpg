@@ -18,6 +18,7 @@ import {
   type FightMode,
   type FighterResistances,
   type HydratedFightCheckpoint,
+  type PlayerSource,
   type SpellLevel,
   type SpellSource,
   type SpellTurnProjection,
@@ -73,6 +74,7 @@ export type FightFighterView = Readonly<{
   name: string
   level: bigint
   character_id: string | null
+  character_portrait: Readonly<Pick<PlayerSource, 'classe' | 'sex'>> | null
   mob_type: string | null
   owned: boolean
   active: boolean
@@ -250,6 +252,7 @@ export const select_fight_view = ({
           ? fighter.kind.snapshot.level
           : (checkpoint.sources.players[fighter.kind.character]?.level ?? 1n),
       character_id,
+      character_portrait: player_source,
       mob_type: fighter.kind.type === 'mob' ? fighter.kind.snapshot.mob_type : null,
       owned: fighter.kind.type === 'player' && fighter.kind.owner === owner,
       active: seat === active_seat,

@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { occlusion_fade_value, project_board_screen } from '../src/board_occlusion.ts'
+import { create_board_occlusion, occlusion_fade_value, project_board_screen } from '../src/board_occlusion.ts'
 
 const board = { center_ndc: [0, 0] as const, half_ndc: [0.5, 0.5] as const, view_dist: 40 }
 
@@ -63,4 +63,42 @@ describe('the board peephole', () => {
     expect(projected!.center_ndc[0]).toBeCloseTo(0, 5)
     expect(projected!.half_ndc[0]).toBeCloseTo(4, 5)
   })
+})
+
+describe('temporary ambient board clearance', () => {
+  const clearance = {
+    ...board,
+    camera_active: false,
+    floor_y: 10,
+    clear_center: [0, 0] as const,
+    clear_half: [12, 12] as const,
+    frag_ndc: [0, 0] as const,
+    frag_dist: 10,
+  }
+
+  test('only the board footprint clears, even when foreground terrain overlaps it on screen', () => {
+    expect(occlusion_fade_value({ ...clearance, frag_world: [0, 14, 0] })).toBe(0)
+    expect(occlusion_fade_value({ ...clearance, frag_world: [30, 14, 0] })).toBe(1)
+    expect(occlusion_fade_value({ ...clearance, frag_world: [0, 9, 0] })).toBe(1)
+    expect(occlusion_fade_value({ ...clearance, frag_world: [0, 14, 0], active: false })).toBe(1)
+  })
+})
+
+test('board clearance survives camera projection loss and releases on unmount', () => {
+  const mask = create_board_occlusion()
+  const source = { width: 10, height: 8, cell_size: 1, origin: { x: -5, y: 12, z: -4 }, cells: [] }
+  mask.set_board(source)
+  mask.set_frame({ center_ndc: [0, 0], half_ndc: [0.4, 0.4], view_dist: 20 })
+  expect(mask.uniforms.camera_active.value).toBe(1)
+  mask.set_frame(null)
+  expect(mask.armed()).toBe(true)
+  expect(mask.uniforms.camera_active.value).toBe(0)
+  mask.set_frame({ center_ndc: [0, 0], half_ndc: [0.4, 0.4], view_dist: 20 })
+  mask.set_board({ ...source, ambient: true })
+  expect(mask.armed()).toBe(true)
+  expect(mask.uniforms.camera_active.value).toBe(0)
+  expect(mask.uniforms.clear_half.value.toArray()).toEqual([7, 6])
+  mask.set_board(null)
+  expect(mask.armed()).toBe(false)
+  expect(mask.uniforms.camera_active.value).toBe(0)
 })

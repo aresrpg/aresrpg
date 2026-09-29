@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { AtmosphereTuning } from './atmosphere_tuning.ts'
 import type { WorldCaption } from './caption_types.ts'
-import { WebGPUUnavailableError, type EngineBackend } from './backend.ts'
-import { create_grid_fallback } from './grid_fallback.ts'
+import { type EngineBackend } from './backend.ts'
 import type {
+  WorldPanel,
   CameraProjection,
   ChunkRenderOutcome,
   DungeonPortalMarker,
@@ -25,7 +26,7 @@ import type {
   RenderChunkRequest,
   Vec3,
 } from './types.ts'
-import { parse_world_recipe } from './world_recipe.ts'
+import type { CompiledWorld } from './world_recipe.ts'
 
 const ENGINE_BOOT = Symbol('aresrpg.engine_boot')
 
@@ -50,17 +51,15 @@ export const create_engine = ({
   presentation = 'world',
   initial_focus = [0, 0],
   render_distance: initial_render_distance = null,
-  force_grid,
 }: Readonly<{
   canvas: HTMLCanvasElement
-  world: unknown
+  world: CompiledWorld
   quality?: EngineQuality
   presentation?: EnginePresentation
   initial_focus?: readonly [number, number]
   render_distance?: number | null
-  force_grid?: boolean
 }>): Engine => {
-  const world = parse_world_recipe(world_value)
+  const world = world_value
   const pending_chunks = new Map<string, RenderChunkRequest>()
   const chunk_waiters = new Map<
     string,
@@ -78,8 +77,8 @@ export const create_engine = ({
     projection: {},
   }
   let time_of_day = 0.31
+  let atmosphere_overrides: Partial<AtmosphereTuning> | null = null
   let clouds_visible = true
-  let flat_amount = 0
   let fight_board: FightBoardRender | null = null
   let entities: readonly EntityRender[] = Object.freeze([])
   let resource_nodes: readonly ResourceNodeMarker[] = Object.freeze([])
@@ -90,6 +89,7 @@ export const create_engine = ({
     impact_sound_url: string
     markers: readonly FightSwordMarker[]
   }> | null = null
+  const world_panels = create_retained_values<WorldPanel>()
   const entity_captions = create_retained_values<WorldCaption>()
   const entity_labels = create_retained_values<HTMLElement>()
   const world_labels = create_retained_values<Readonly<{ element: HTMLElement; position: Vec3 }>>()
@@ -137,6 +137,7 @@ export const create_engine = ({
     entity_captions.clear()
     entity_labels.clear()
     world_labels.clear()
+    world_panels.clear()
     resource_labels.clear()
     fight_sword_labels.clear()
     portal_labels.clear()
@@ -211,14 +212,15 @@ export const create_engine = ({
     next.set_camera(camera.position, camera.target, camera.projection)
     next.set_character_anchor(character_anchor)
     next.set_time_of_day(time_of_day)
+    next.set_atmosphere(atmosphere_overrides)
     next.set_clouds_visible(clouds_visible)
-    next.set_flatten_amount(flat_amount)
     next.set_fight_board(fight_board)
     next.set_entities(entities)
     next.set_resource_nodes(resource_nodes)
     next.set_dungeon_portals(dungeon_portals)
     next.set_dungeon_stage(dungeon_stage)
     if (fight_swords) next.set_fight_swords(fight_swords.url, fight_swords.impact_sound_url, fight_swords.markers)
+    world_panels.replay(next.set_world_panel)
     entity_captions.replay(next.set_entity_caption)
     entity_labels.replay(next.set_entity_label)
     world_labels.replay((id, label) => next.set_world_label(id, label.element, label.position))
@@ -231,21 +233,10 @@ export const create_engine = ({
     publish_status({ state: issue ? 'degraded' : 'ready', backend: next.kind, ...(issue ? { issue } : {}) })
   }
 
-  const attach_grid = (issue: EngineIssue): void => {
-    try {
-      attach(create_grid_fallback(canvas, quality, presentation), issue)
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error)
-      console.error('No supported graphics context is available.', error)
-      report_failure({ code: 'graphics_unavailable', detail })
-    }
-  }
-
   const boot = async (): Promise<void> => {
     if (disposed) return
-    if (force_grid) return attach_grid({ code: 'graphics_unavailable' })
     if (!supports_webgpu()) {
-      attach_grid({ code: 'webgpu_unavailable' })
+      report_failure({ code: 'webgpu_unavailable' })
       return
     }
     try {
@@ -267,8 +258,7 @@ export const create_engine = ({
         code: 'webgpu_initialization_failed' as const,
         detail: error instanceof Error ? error.message : String(error),
       }
-      if (error instanceof WebGPUUnavailableError && !previous_boot) attach_grid(issue)
-      else report_failure(issue)
+      report_failure(issue)
       return
     }
   }
@@ -316,13 +306,13 @@ export const create_engine = ({
       time_of_day = ((time % 1) + 1) % 1
       backend?.set_time_of_day(time_of_day)
     },
+    set_atmosphere: (overrides) => {
+      atmosphere_overrides = overrides === null ? null : Object.freeze({ ...overrides })
+      backend?.set_atmosphere(atmosphere_overrides)
+    },
     set_clouds_visible: (visible: boolean) => {
       clouds_visible = visible
       backend?.set_clouds_visible(visible)
-    },
-    set_flatten_amount: (next: number) => {
-      flat_amount = Math.min(1, Math.max(0, next))
-      backend?.set_flatten_amount(flat_amount)
     },
     set_fight_board: (next: FightBoardRender | null) => {
       fight_blobs.clear()
@@ -370,6 +360,7 @@ export const create_engine = ({
           : new Promise<boolean>((resolve) => pending_fight_cues.push(Object.freeze({ cue, resolve }))),
     play_jump_puff: (position) => backend?.play_jump_puff(position),
     project_entity: (id) => backend?.project_entity(id) ?? null,
+    hit_entity_caption: (id, x, y) => backend?.hit_entity_caption(id, x, y) ?? false,
     set_entity_caption: (id, caption) => {
       if (disposed) return
       entity_captions.set(id, caption)
@@ -378,6 +369,11 @@ export const create_engine = ({
     set_entity_label: (id, element) => {
       entity_labels.set(id, element)
       backend?.set_entity_label(id, element)
+    },
+    set_world_panel: (id, panel) => {
+      if (disposed) return
+      world_panels.set(id, panel)
+      backend?.set_world_panel(id, panel)
     },
     set_world_label: (id, element, position) => {
       const label =
@@ -440,8 +436,7 @@ export const create_engine = ({
         sky_ready: false,
       },
     quality: () => quality,
-    flattened: () => flat_amount >= 1,
-    backend: () => backend?.kind ?? (force_grid ? 'grid' : 'initializing'),
+    backend: () => backend?.kind ?? 'initializing',
     fail: report_failure,
     status: () => status,
     subscribe_status: (listener: (next: EngineStatus) => void) => {

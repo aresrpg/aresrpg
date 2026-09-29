@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { create_character_preview, type CharacterPreview } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
 import { CHARACTER_NAME_MAX_LENGTH, is_valid_character_name } from '@aresrpg/sdk/character-name'
 import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { character_creation_funding_text } from '../character_creation_funding.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
+
+import { CharacterPreviewCanvas } from './CharacterPreviewCanvas.tsx'
 
 type CharacterIdentity = Readonly<{
   name: string
@@ -29,59 +30,6 @@ const DEFAULT_IDENTITY: CharacterIdentity = Object.freeze({
 
 export const character_name_error_text = (copy: AppCopy, name: string): string | null =>
   name.length > 0 && !is_valid_character_name(name) ? copy.name_invalid : null
-
-const CharacterPreviewCanvas = ({ identity }: Readonly<{ identity: CharacterIdentity }>) => {
-  const canvas_ref = useRef<HTMLCanvasElement>(null)
-  const preview_ref = useRef<Promise<CharacterPreview | null> | null>(null)
-
-  useEffect(() => {
-    const canvas = canvas_ref.current
-    if (!canvas) return
-    const preview = create_character_preview(canvas).catch((error: unknown) => {
-      console.error('Failed to initialize the character preview.', error)
-      return null
-    })
-    // eslint-disable-next-line functional/immutable-data -- This ref owns the modal renderer lifecycle.
-    preview_ref.current = preview
-    return () => {
-      // eslint-disable-next-line functional/immutable-data -- Cleanup detaches the renderer before disposal resolves.
-      preview_ref.current = null
-      void preview.then((handle) => handle?.dispose())
-    }
-  }, [])
-
-  useEffect(() => {
-    const preview = preview_ref.current
-    if (!preview) return
-    let current = true
-    void Promise.all([
-      preview,
-      import('../content/character_models.ts').then(({ load_character_model_urls }) =>
-        load_character_model_urls(identity.classe, identity.male)
-      ),
-    ])
-      .then(async ([handle, urls]) => {
-        if (!current || !handle) return
-        await handle.set_appearance({
-          ...urls,
-          colors: identity.colors,
-          worn: Object.freeze({ head: null, back: null }),
-        })
-      })
-      .catch((error: unknown) => console.error('Failed to display the selected character.', error))
-    return () => {
-      current = false
-    }
-  }, [identity.classe, identity.colors, identity.male])
-
-  return (
-    <canvas
-      className="absolute inset-0 size-full cursor-grab touch-none active:cursor-grabbing"
-      data-character-preview=""
-      ref={canvas_ref}
-    />
-  )
-}
 
 export const CharacterCreateModal = ({
   copy,
@@ -101,6 +49,8 @@ export const CharacterCreateModal = ({
   const [submitting, set_submitting] = useState(false)
   const name_error = character_name_error_text(copy, identity.name)
   const valid = is_valid_character_name(identity.name)
+  const preview_source = useMemo(() => ({ ...identity, id: 'creation_preview', loadout: {} }), [identity])
+
   useEffect(() => {
     const close_on_escape = (event: Readonly<KeyboardEvent>): void => {
       if (event.key === 'Escape') cancel()
@@ -137,7 +87,7 @@ export const CharacterCreateModal = ({
         <p className="mt-1 text-[10px] tracking-[0.04em] text-[#8d9099]">{copy.create_lead}</p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
           <div className="relative grid min-h-80 place-items-center overflow-hidden border border-white/8 bg-[radial-gradient(circle_at_50%_42%,rgba(200,150,60,0.12),transparent_58%)]">
-            <CharacterPreviewCanvas identity={identity} />
+            <CharacterPreviewCanvas source={preview_source} />
             <div className="pointer-events-none absolute bottom-5 left-0 w-full text-center uppercase">
               <div className="text-[12px] tracking-[0.25em]">{identity.classe}</div>
               <div className="mt-1 text-[8px] tracking-[0.18em] text-[#858994]">

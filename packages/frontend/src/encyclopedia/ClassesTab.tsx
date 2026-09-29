@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { NavigationRow } from '@aresrpg/ui'
+import { Collection } from '@aresrpg/ui'
 import { useState } from 'react'
 import { characteristic_ladders, characteristic_names, is_class_name } from '@aresrpg/immutable'
 
+import { character_icon } from '../content/assets.ts'
 import { Text } from '../i18n/Text.tsx'
 import { spell_icon } from '../content/assets.ts'
 import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
@@ -39,27 +42,17 @@ export const ClassesTab = ({
       back={() => choose_class('')}
       text={text}
       list={
-        <aside className="enc-browser__list w-[300px] shrink-0 overflow-y-auto border-r border-border">
-          {encyclopedia_catalog.classes.map((row, index) => {
-            const active = selected_id === row.id
-            return (
-              <button
-                className="flex w-full border-l-2 px-3 py-3 text-left"
-                key={row.id}
-                onClick={() => choose_class(row.id)}
-                style={{
-                  borderLeftColor: active ? '#c8963c' : 'transparent',
-                  background: active ? 'rgba(200,150,60,0.08)' : index % 2 ? 'rgba(255,255,255,0.02)' : 'transparent',
-                }}
-                type="button"
-              >
-                <span className="bg-[linear-gradient(135deg,#fad9b3,#d4a145,#f0c474)] bg-clip-text text-[11px] font-semibold tracking-[0.15em] text-transparent uppercase">
-                  {titleize(row.id)}
-                </span>
-              </button>
-            )
-          })}
-        </aside>
+        <Collection
+          label={text('classes')}
+          selected={selected_id}
+          select={choose_class}
+          entries={encyclopedia_catalog.classes.map((row) => ({
+            id: row.id,
+            label: titleize(row.id),
+            image: character_icon(row.id, 'male') ?? undefined,
+            meta: `${row.spells.length} ${text('spells')}`,
+          }))}
+        />
       }
       detail={
         detail && (
@@ -123,8 +116,8 @@ export const ClassesTab = ({
                   {spells?.map((row) => {
                     const active = spell?.name === row.name
                     return (
-                      <button
-                        className={`flex w-full items-center gap-2 border-l-2 px-2.5 py-2 text-left ${active ? 'border-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]' : 'border-transparent text-[#e8e4dc]'}`}
+                      <NavigationRow
+                        selected={active}
                         key={row.name}
                         onClick={() => set_spell_name(row.name)}
                         type="button"
@@ -142,7 +135,7 @@ export const ClassesTab = ({
                         <span className="shrink-0 text-[7px] tracking-[0.08em] text-[#777b86] uppercase">
                           <Text path="encyclopedia_page.level_short" values={{ level: row.unlock_level }} />
                         </span>
-                      </button>
+                      </NavigationRow>
                     )
                   })}
                 </div>

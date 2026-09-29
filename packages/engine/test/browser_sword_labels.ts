@@ -1,24 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { create_grid_fallback } from '../src/grid_fallback.ts'
+import { compile_runtime_world_recipe } from '../src/world_recipe.ts'
 import { create_webgpu_backend } from '../src/webgpu_backend.ts'
 
 import { LIFECYCLE_WORLD } from './browser_lifecycle.ts'
 
-export const probe_sword_labels = async (
-  canvas: HTMLCanvasElement,
-  kind: 'grid' | 'webgpu',
-  url: string,
-  sound: string
-) => {
-  const backend =
-    kind === 'grid'
-      ? create_grid_fallback(canvas, 'low')
-      : await create_webgpu_backend(canvas, 'low', LIFECYCLE_WORLD, () => {})
+export const probe_sword_labels = async (canvas: HTMLCanvasElement, url: string, sound: string) => {
+  const backend = await create_webgpu_backend(canvas, 'low', compile_runtime_world_recipe(LIFECYCLE_WORLD), () => {})
   const element = document.createElement('div')
   element.textContent = 'Join fight · F'
-  element.dataset.swordProbe = kind
+  element.dataset.swordProbe = 'webgpu'
   try {
     backend.set_camera([0, 8, 20], [0, 3, 0])
     backend.set_audio_volume(0)

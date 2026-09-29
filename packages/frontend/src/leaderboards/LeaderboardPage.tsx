@@ -7,15 +7,16 @@ import podium_first from '../assets/leaderboards/podium-1.png'
 import podium_second from '../assets/leaderboards/podium-2.png'
 import podium_third from '../assets/leaderboards/podium-3.png'
 import { copy_text } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { useAppStore } from '../store.ts'
 
 import { display_address, display_suins_name, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
 import { BadgeRow } from './BadgeRow.tsx'
+import { useLeaderboardState, useLeaderboardDispatch } from './LeaderboardSource.tsx'
 import './leaderboards.css'
 
 const EntryBadges = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   const copy = useAppStore(({ copy }) => copy)
-  const metric = useAppStore(({ leaderboards }) => leaderboards.observation.metric)
+  const { metric } = useLeaderboardState().observation
   if (!copy) return null
   const text = copy_text(copy.leaderboard_page)
   const characters = metric === 'xp'
@@ -40,7 +41,7 @@ const EntryBadges = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
 
 const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   const copy = useAppStore(({ copy }) => copy)
-  const { observation } = useAppStore(({ leaderboards }) => leaderboards)
+  const { observation } = useLeaderboardState()
   const address = useAppStore(({ session }) => session.wallet?.address)
   const locale = useAppStore(({ locale }) => locale)
   if (!copy) return null
@@ -72,13 +73,13 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
 }
 
 const Podium = () => {
-  const { snapshot, observation } = useAppStore(({ leaderboards }) => leaderboards)
+  const { snapshot, observation } = useLeaderboardState()
   const locale = useAppStore(({ locale }) => locale)
   const copy = useAppStore(({ copy }) => copy)
   if (!copy) return null
   const text = copy_text(copy.leaderboard_page)
   return (
-    <div className="leaderboard-standings">
+    <div className="leaderboard-standings" aria-label={text(observation.metric)}>
       {[1, 0, 2].map((position) => {
         const entry = snapshot?.entries[position]
         return (
@@ -110,7 +111,6 @@ const Podium = () => {
             <span className="mt-1 text-center text-[10px] tracking-wide text-muted uppercase">
               {text(observation.metric)}
             </span>
-            <div className="leaderboard-step">#{position + 1}</div>
           </div>
         )
       })}
@@ -119,8 +119,9 @@ const Podium = () => {
 }
 
 const CategoryTabs = () => {
+  const dispatch_app = useLeaderboardDispatch()
   const copy = useAppStore(({ copy }) => copy)
-  const { observation } = useAppStore(({ leaderboards }) => leaderboards)
+  const { observation } = useLeaderboardState()
   if (!copy) return null
   const text = copy_text(copy.leaderboard_page)
   return (
@@ -147,7 +148,7 @@ const CategoryTabs = () => {
 
 const ResetCountdown = () => {
   const copy = useAppStore(({ copy }) => copy)
-  const snapshot = useAppStore(({ leaderboards }) => leaderboards.snapshot)
+  const { snapshot } = useLeaderboardState()
   const locale = useAppStore(({ locale }) => locale)
   if (!copy || !snapshot) return null
   const days = Math.max(0, Math.ceil((snapshot.reset_at_ms - snapshot.timestamp_ms) / 86_400_000))
@@ -160,8 +161,9 @@ const ResetCountdown = () => {
 }
 
 const ErrorNotice = () => {
+  const dispatch_app = useLeaderboardDispatch()
   const copy = useAppStore(({ copy }) => copy)
-  const error = useAppStore(({ leaderboards }) => leaderboards.error)
+  const { error } = useLeaderboardState()
   if (!copy || !error) return null
   const text = copy_text(copy.leaderboard_page)
   return (
@@ -180,7 +182,7 @@ const ErrorNotice = () => {
 
 const Rankings = () => {
   const copy = useAppStore(({ copy }) => copy)
-  const { snapshot, observation, error } = useAppStore(({ leaderboards }) => leaderboards)
+  const { snapshot, observation, error } = useLeaderboardState()
   if (!copy) return null
   const text = copy_text(copy.leaderboard_page)
   const self = snapshot?.self
@@ -193,11 +195,7 @@ const Rankings = () => {
         </p>
       )}
       <Podium />
-      <div
-        role="table"
-        aria-label={text(observation.metric)}
-        className="flex flex-col divide-y divide-border/50 border border-border bg-surface-low"
-      >
+      <div role="table" aria-label={text(observation.metric)} className="leaderboard-table">
         <div
           role="row"
           className="leaderboard-row sticky top-0 z-1 border-b border-border bg-surface text-[10px] tracking-[0.1em] text-muted uppercase"
@@ -208,22 +206,24 @@ const Rankings = () => {
             {text('score')}
           </span>
         </div>
-        {Array.from({ length: LEADERBOARD_LIMIT }, (_, index) => {
-          const entry = snapshot?.entries[index]
-          return entry ? (
-            <EntryRow key={index} entry={entry} />
-          ) : (
-            <div key={index} role="row" className="leaderboard-row text-[11px] text-muted">
-              <span role="cell" className="text-[10px]">
-                {index + 1}
-              </span>
-              <span role="cell">—</span>
-              <span role="cell" className="text-right">
-                —
-              </span>
-            </div>
-          )
-        })}
+        <div className="leaderboard-entries" role="rowgroup">
+          {Array.from({ length: LEADERBOARD_LIMIT }, (_, index) => {
+            const entry = snapshot?.entries[index]
+            return entry ? (
+              <EntryRow key={index} entry={entry} />
+            ) : (
+              <div key={index} role="row" className="leaderboard-row text-[11px] text-muted">
+                <span role="cell" className="text-[10px]">
+                  {index + 1}
+                </span>
+                <span role="cell">—</span>
+                <span role="cell" className="text-right">
+                  —
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
       {outside && (
         <div role="table" aria-label={text('you')}>
@@ -236,23 +236,20 @@ const Rankings = () => {
 
 export default function LeaderboardPage() {
   const copy = useAppStore(({ copy }) => copy)
-  const metric = useAppStore(({ leaderboards }) => leaderboards.observation.metric)
+  const { metric } = useLeaderboardState().observation
   if (!copy) return null
   const text = copy_text(copy.leaderboard_page)
   return (
-    <section
-      className="pointer-events-auto z-12 flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto p-3 lg:p-6"
-      aria-label={copy.leaderboard}
-    >
+    <section className="leaderboard-page" aria-label={copy.leaderboard}>
       <header className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-medium text-text">{copy.leaderboard}</h1>
         <ResetCountdown />
       </header>
       <CategoryTabs />
-      <p className="text-[10px] leading-5 text-muted">{text(`${metric}_description`)}</p>
+      <p className="leaderboard-description text-[10px] leading-5 text-muted">{text(`${metric}_description`)}</p>
       <ErrorNotice />
       <Rankings />
-      <p className="text-[9px] leading-5 text-muted">{text('suins_hint')}</p>
+      <p className="leaderboard-hint text-[9px] leading-5 text-muted">{text('suins_hint')}</p>
     </section>
   )
 }

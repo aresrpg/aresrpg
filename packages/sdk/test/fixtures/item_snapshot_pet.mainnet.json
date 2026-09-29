@@ -1,0 +1,29 @@
+{
+  "network": "mainnet",
+  "captured_at": "2026-09-21T19:49:19.241Z",
+  "item": {
+    "objectId": "0x00976af92ca250359859312ccbb4770458df98f354a6ab965634c400b24b2084",
+    "version": "1011059047",
+    "type": "0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::item::Item",
+    "json": {
+      "amount": 1,
+      "category": "pet",
+      "id": "0x00976af92ca250359859312ccbb4770458df98f354a6ab965634c400b24b2084",
+      "item_type": "krinan",
+      "level": 1,
+      "name": "Krinan",
+      "template": "0xc3c028bd6c77d1093b6510d3b8581733c4c96b6f2a05090f97e39d7174a90e24"
+    }
+  },
+  "fields": [
+    {
+      "id": "0xa3687a568cb2ac8c7f144f05f1467bc9818f5989b4de246c67489ba17185e92b",
+      "version": "1008770124",
+      "name": {
+        "type": "0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::item::StatsKey",
+        "bcs_hex": "00"
+      },
+      "value_bcs_hex": "008000800080008000803c8000800080008000800080008000800080008000000000000000000000000000000000"
+    }
+  ]
+}

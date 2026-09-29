@@ -9,7 +9,7 @@ import { initial_app_state } from '../../src/store.ts'
 
 const idle = { id: '0xa', custody: 'kiosk', kiosk: '0xk', at_ms: 0 } as CharacterRow
 const state_for = (character = idle) => {
-  const state = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const state = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   return { ...state, session: { ...state.session, characters: [character], selected_character_id: character.id } }
 }
 

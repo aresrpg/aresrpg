@@ -1,6 +1,7 @@
 /* The established fight chrome, detached from the legacy stores: opaque obsidian cards,
    gold active state, red enemy/destructive state, and the gem/socket command bar. */
 .fight-hud {
+  container: aui-viewport / size;
   --fh-gold: #c8963c;
   --fh-ink: #e8e4dc;
   --fh-muted: #6b7280;
@@ -519,10 +520,11 @@
 }
 
 .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
-  right: 10px;
-  left: calc(10px + var(--world-chat-width) + var(--fh-lane-gap));
+  right: auto;
+  left: 50%;
+  width: max-content;
   justify-content: center;
-  transform: none;
+  transform: translateX(-50%);
 }
 
 .fight-hud__controls {
@@ -609,12 +611,6 @@
     inset 0 1px rgba(255, 255, 255, 0.04);
 }
 
-.fight-hud__vitals {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .fight-hud__bar--overworld {
   display: flex;
   flex-direction: column;
@@ -657,101 +653,6 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   line-height: 1;
-  text-shadow: 0 1px 2px #000;
-}
-
-.fight-hud__hp-gem {
-  position: relative;
-  display: grid;
-  width: 80px;
-  height: 80px;
-  place-items: center;
-  cursor: pointer;
-  border: 0;
-  border-radius: 50%;
-  background: linear-gradient(180deg, #040405, #0e0e15);
-  box-shadow:
-    inset 0 5px 10px rgba(0, 0, 0, 0.82),
-    inset 0 -2px 3px rgba(255, 255, 255, 0.05);
-  padding: 0;
-  font: inherit;
-}
-
-.fight-hud__hp-gem > i,
-.fight-hud__gem > i {
-  position: absolute;
-  inset: 4px;
-  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-}
-
-.fight-hud__hp-gem > i {
-  inset: 1px;
-  overflow: hidden;
-  background: linear-gradient(180deg, #261012, #110708);
-  box-shadow: inset 0 0 0 2px #200808;
-}
-
-.fight-hud__hp-gem > i::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: var(--hp-percent);
-  background: linear-gradient(180deg, #ff9898, #e2453f 34%, #a3282a 72%, #6b1414);
-  content: '';
-  transition: height 220ms ease;
-}
-
-.fight-hud__hp-gem > span {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  text-shadow:
-    1px 0 #000,
-    -1px 0 #000,
-    0 1px #000,
-    0 -1px #000;
-}
-
-.fight-hud__hp-gem b {
-  width: 22px;
-  height: 2px;
-  margin-block: 3px;
-  background: #fff;
-}
-
-.fight-hud__stat-gems {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.fight-hud__gem {
-  position: relative;
-  display: grid;
-  width: 36px;
-  height: 36px;
-  place-items: center;
-}
-
-.fight-hud__gem--ap > i {
-  background: linear-gradient(155deg, #a9d4ff, #3f8fe2 48%, #123a63);
-}
-
-.fight-hud__gem--mp > i {
-  background: linear-gradient(155deg, #b6f5b0, #3fbf4e 48%, #14471c);
-}
-
-.fight-hud__gem > span {
-  position: relative;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
   text-shadow: 0 1px 2px #000;
 }
 
@@ -904,46 +805,33 @@
 }
 
 .fight-hud__spell-detail {
-  position: absolute;
-  bottom: calc(100% + 14px);
-  left: 50%;
-  z-index: 8;
+  position: fixed;
+  z-index: 140;
   width: min(720px, 76vw);
-  max-height: min(720px, 72vh);
-  transform: translate(-50%, 8px);
+  max-height: calc(100dvh - 16px);
   overflow: auto;
-  visibility: hidden;
   border: 1px solid rgba(200, 150, 60, 0.42);
-  border-radius: 12px;
-  background: linear-gradient(165deg, rgba(18, 18, 26, 0.99), rgba(7, 7, 11, 0.99));
-  padding: 18px;
-  opacity: 0;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.75);
-  transition:
-    opacity 120ms ease,
-    transform 120ms ease,
-    visibility 120ms;
+  border-radius: 5px;
+  background: #1b232df5;
+  padding: 12px;
+  pointer-events: auto;
+  box-shadow: 0 12px 32px #0008;
 }
 
 .fight-hud__spell-detail--small {
-  width: min(420px, 82vw);
-  max-height: min(420px, 60vh);
-  padding: 14px;
+  width: min(600px, 92vw);
+  max-height: calc(100dvh - 150px);
+  padding: 10px;
+  background: #1b232df5;
+  border-radius: 5px;
 }
 
-.fight-hud__spell-shell.critical .fight-hud__spell-detail {
+.fight-hud__spell-detail.critical {
   border-color: #e8ad37;
   box-shadow:
     0 0 0 1px rgba(255, 213, 105, 0.24),
     0 0 28px rgba(214, 145, 28, 0.24),
     0 24px 70px rgba(0, 0, 0, 0.75);
-}
-
-.fight-hud__spell-shell:hover .fight-hud__spell-detail,
-.fight-hud__spell-shell:focus-within .fight-hud__spell-detail {
-  transform: translate(-50%, 0);
-  visibility: visible;
-  opacity: 1;
 }
 
 @keyframes fight-hud-pulse {
@@ -972,20 +860,21 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1023px), (pointer: coarse) {
   .fight-hud__turn-card {
-    top: 8px;
+    top: 56px;
     left: 8px;
-    width: min(420px, calc(100vw - 12px));
-    height: 180px;
+    width: min(300px, calc(100vw - 16px));
+    height: 96px;
+    grid-template-columns: 96px minmax(0, 1fr);
   }
   .fight-hud__turn-card-body strong {
-    padding: 9px 11px;
-    font-size: 19px;
+    padding: 6px 8px;
+    font-size: 15px;
   }
   .fight-hud__turn-card-body span {
-    padding: 7px 11px;
-    font-size: 11px;
+    padding: 5px 8px;
+    font-size: 10px;
   }
   .fight-hud__turns {
     right: 8px;
@@ -1003,13 +892,97 @@
     transform-origin: bottom center;
   }
   .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
-    transform: scale(0.62);
+    transform: translateX(-50%);
   }
 }
 
 @media (min-width: 901px) and (max-width: 1200px) {
   .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {
-    transform: scale(0.78);
+    transform: translateX(-50%);
     transform-origin: bottom center;
   }
+}
+/* CombatHud owns the layout; the existing spell controller keeps targeting and tooltips. */
+.aui-combat-spells > .fight-hud__spells {
+  display: contents;
+}
+.aui-combat-spells .fight-hud__spell-shell,
+.aui-combat-spells .fight-hud__spell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.aui-combat-spells .fight-hud__spell {
+  border-radius: 6px;
+  border-color: #181c28;
+  padding: 0;
+  background: #2a2e3c;
+}
+.aui-combat-spells .fight-hud__spell > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.fight-hud__placement {
+  background: #363b49;
+  border-color: #141a28;
+  box-shadow:
+    inset 0 1px #b9bfce33,
+    0 5px 14px #0005;
+  font-family: var(--aui-font);
+}
+.fight-hud__placement > span {
+  color: #e4bf84;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+.fight-hud__placement > small {
+  color: #b9becc;
+  font-size: 12px;
+}
+
+@media (max-height: 500px) {
+  .fight-hud__spell-detail--small {
+    width: min(800px, calc(100vw - 16px));
+    max-height: calc(100dvh - 16px);
+    padding: 8px;
+  }
+  .fight-hud__spell-detail--small .spell-card .spell-constraints > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fight-hud__spell-detail--small .spell-card .spell-constraints > div > div {
+    min-height: 25px;
+    padding: 3px 5px;
+    gap: 5px;
+  }
+}
+
+/* In-fight hover is the resolved action, not the encyclopaedia rule sheet. */
+.fight-hud__spell-detail--small {
+  width: max-content;
+  min-width: 200px;
+  max-width: min(440px, calc(100vw - 16px));
+  max-height: min(260px, calc(100dvh - 100px));
+  background: #1b2027f5;
+  padding: 10px 12px;
+  border-color: #7c818c55;
+}
+.fight-spell-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-family: var(--aui-font);
+}
+.fight-spell-preview > strong {
+  color: #e4c58e;
+  font-size: 13px;
+}
+.fight-spell-preview [data-spell-effects-compact] {
+  font-size: 12px;
+}
+
+/* The world canvas is pointer-transparent; its action dock must explicitly receive clicks. */
+.fight-hud__bar--overworld {
+  pointer-events: auto;
 }

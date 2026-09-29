@@ -44,7 +44,7 @@ export const ItemDropSources = ({ item_type }: Readonly<{ item_type: string }>) 
   if (!copy) return null
   const text = copy_text(copy.item_drop_sources)
   return (
-    <SheetSection title={text('title')} note={text('note')} accent="#c8963c">
+    <SheetSection title={text('title')} accent="#c8963c">
       <div data-item-drop-sources="" className="overflow-x-auto">
         {sources.length === 0 ? (
           <p className="py-3 text-[10px] text-muted">{text(mobs === undefined ? 'loading' : 'empty')}</p>

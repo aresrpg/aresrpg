@@ -28,8 +28,7 @@ export const create_entity_label_layer = ({
   const labels = new Map<string, CSS2DObject>()
   /** world-dressing tags (the star gate) — anchored at one fixed point, never an entity */
   const statics = new Map<string, CSS2DObject>()
-  /** static tags track LIVE anchors — a fixed world point goes stale the moment the world
-   *  itself moves under it (the flatten projection), so anchors are getters, re-read per frame */
+  /** Static tags read their owner’s current anchor each frame. */
   const static_anchors = new Map<string, () => Vector3 | null>()
 
   return Object.freeze({
@@ -46,8 +45,7 @@ export const create_entity_label_layer = ({
       labels.set(id, label)
       scene.add(label)
     },
-    /** attach a DOM element at a world position that may MOVE (a getter re-read every frame —
-     *  the flatten projection drags anchors around); null detaches */
+    /** Attach a DOM element at a live world position; null detaches. */
     set_static: (id: string, element: HTMLElement | null, anchor: (() => Vector3 | null) | Vector3): void => {
       const existing = statics.get(id)
       const read_anchor = typeof anchor === 'function' ? anchor : () => anchor

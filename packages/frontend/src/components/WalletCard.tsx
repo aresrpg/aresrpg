@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Check, ChevronDown, Copy, LogOut, Plus, Send, Wallet } from 'lucide-react'
+import { Check, Copy, LogOut, Plus, Send, Wallet } from 'lucide-react'
+import { Button, IconButton, WalletBalances } from '@aresrpg/ui'
 import { useCallback, useId, useRef, useState } from 'react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
@@ -12,9 +13,15 @@ import { display_suins_name } from '../leaderboards/presentation.ts'
 
 import { AddFundsModal } from './AddFundsModal.tsx'
 import { SendSuiModal } from './SendSuiModal.tsx'
+import { SuiLogo } from './SuiLogo.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
 
-const short_address = (address: string): string => `${address.slice(0, 8)}…${address.slice(-5)}`
+const wallet_identity = (address: string | null, name: string | null, fallback: string): string => {
+  if (name) return display_suins_name(name)
+  return address ? `${address.slice(0, 8)}…${address.slice(-5)}` : fallback
+}
+const balance_label = (value: bigint | null, format: (value: bigint) => string): string =>
+  value === null ? '—' : format(value)
 
 export const WalletCard = ({
   copy,
@@ -33,15 +40,16 @@ export const WalletCard = ({
       new Promise((resolve, reject) => dispatch_app({ type: 'wallet/resolve_character', name, resolve, reject })),
     []
   )
-  if (!wallet) return null
-  const { address } = wallet
-  const sui_balance = session.sui_balance_mist === null ? '—' : localized_numbers.sui(session.sui_balance_mist, 2)
+  const address = wallet?.address ?? null
+  const sui_balance = balance_label(session.sui_balance_mist, localized_numbers.sui)
+  const kares_balance = balance_label(session.kares_balance, localized_numbers.amount)
   const open_modal = (next: 'funds' | 'send'): void => {
     menu.current?.hidePopover()
     set_modal(next)
   }
 
   const copy_address = (): void => {
+    if (!address) return
     void navigator.clipboard.writeText(address).then(() => {
       set_copied(true)
       setTimeout(() => set_copied(false), 2_000)
@@ -52,24 +60,24 @@ export const WalletCard = ({
     <>
       <button
         aria-label={copy.account}
+        aria-description={`${sui_balance} SUI · ${kares_balance} KARES`}
         aria-haspopup="dialog"
         className="wallet-trigger"
         data-wallet-trigger=""
         popoverTarget={menu_id}
         type="button"
       >
-        <span className="wallet-trigger__icon">
-          <Wallet aria-hidden="true" size={16} />
+        <span className="wallet-trigger__balance" title={`${sui_balance} SUI`}>
+          <SuiLogo size={16} />
+          <span>{sui_balance}</span>
         </span>
-        <span className="wallet-trigger__identity" title={address}>
-          <span className="wallet-trigger__label">{copy.account}</span>
-          <span>{default_name ? display_suins_name(default_name) : short_address(address)}</span>
+        <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares_balance} KARES`}>
+          <KaresLogo size={16} />
+          <span>{kares_balance}</span>
         </span>
-        <span className="wallet-trigger__balance">{sui_balance} SUI</span>
-        <ChevronDown aria-hidden="true" className="wallet-trigger__chevron" size={16} />
       </button>
       <section
-        className="wallet-popover flex flex-col gap-3 border border-gold/40 bg-surface p-4 text-text"
+        className="aui-panel wallet-popover"
         id={menu_id}
         popover="auto"
         ref={menu}
@@ -77,76 +85,68 @@ export const WalletCard = ({
         aria-label={copy.account}
         data-wallet-card=""
       >
-        <div className="flex items-center gap-2">
-          <Wallet className="shrink-0 text-[#c8963c] opacity-60" size={12} />
-          <span className="min-w-0 flex-1 truncate font-mono text-[12px] tracking-wide text-[#c8963c]">
-            {short_address(address)}
-          </span>
-          <button
-            aria-label={copy.wallet_copy_address}
-            className="shrink-0 cursor-pointer opacity-45 hover:opacity-90"
+        <header className="wallet-popover__identity">
+          <Wallet size={20} aria-hidden="true" />
+          <strong>{wallet_identity(address, default_name, copy.sign_in_to_play)}</strong>
+          <IconButton
+            label={copy.wallet_copy_address}
+            disabled={!address}
             onClick={copy_address}
-            type="button"
+            icon={copied ? <Check size={16} /> : <Copy size={16} />}
+          />
+        </header>
+        <WalletBalances
+          balances={[
+            { label: 'SUI', value: sui_balance, icon: <SuiLogo size={24} /> },
+            { label: 'KARES', value: kares_balance, icon: <KaresLogo size={24} /> },
+          ]}
+        />
+        <div className="wallet-popover__actions" data-wallet-actions="">
+          <Button disabled={!wallet} onClick={() => open_modal('send')}>
+            <Send size={16} />
+            {copy.wallet_send}
+          </Button>
+          <Button tone="primary" disabled={!wallet} onClick={() => open_modal('funds')}>
+            <Plus size={16} />
+            {copy.wallet_add_funds}
+          </Button>
+        </div>
+        <div className="wallet-popover__gas">
+          <span>{copy.wallet_gas_spent}</span>
+          <strong>{localized_numbers.sui(session.gas_spent_mist, 4)} SUI</strong>
+        </div>
+        {wallet ? (
+          <Button
+            onClick={() => {
+              menu.current?.hidePopover()
+              disconnect()
+            }}
           >
-            {copied ? <Check className="text-emerald-400" size={13} /> : <Copy size={13} />}
-          </button>
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-mono text-[22px] font-semibold text-text">{sui_balance}</span>
-          <span className="text-[12px] tracking-wide text-muted uppercase">SUI</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[13px] text-gold" data-kares-balance="">
-          <KaresLogo size={16} />
-          <span className="tabular-nums">
-            {session.kares_balance === null ? '—' : localized_numbers.amount(session.kares_balance)}
-          </span>
-          <span className="text-[11px] text-muted">KARES</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2" data-wallet-actions="">
-          <button
-            className="flex w-full cursor-pointer items-center gap-2 border border-[#4a9eff]/30 bg-[linear-gradient(135deg,rgba(74,158,255,0.15)_0%,rgba(77,227,255,0.07)_48%,rgba(18,18,26,0.72)_100%)] px-2.5 py-2.5 text-[11px] tracking-[0.1em] text-[#67adff] uppercase shadow-[0_0_16px_rgba(74,158,255,0.05)] transition-all hover:border-[#4a9eff]/60 hover:shadow-[0_0_20px_rgba(74,158,255,0.1)]"
-            onClick={() => open_modal('send')}
-            type="button"
-          >
-            <Send size={14} /> {copy.wallet_send}
-          </button>
-          <button
-            className="flex w-full cursor-pointer items-center gap-2 border border-[#c8963c]/30 bg-[linear-gradient(135deg,rgba(200,150,60,0.16)_0%,rgba(240,196,116,0.07)_48%,rgba(18,18,26,0.72)_100%)] px-2.5 py-2.5 text-[11px] tracking-[0.1em] text-[#d9ad5c] uppercase shadow-[0_0_16px_rgba(200,150,60,0.05)] transition-all hover:border-[#c8963c]/60 hover:shadow-[0_0_20px_rgba(200,150,60,0.1)]"
-            onClick={() => open_modal('funds')}
-            type="button"
-          >
-            <Plus size={14} /> {copy.wallet_add_funds}
-          </button>
-        </div>
-        <div className="flex items-center justify-between gap-2 border-t border-white/8 pt-2 text-[11px]">
-          <span className="tracking-[0.08em] text-[#777b86]">{copy.wallet_gas_spent}</span>
-          <span className="shrink-0 whitespace-nowrap font-mono text-[#d6d1c8] tabular-nums">
-            {localized_numbers.sui(session.gas_spent_mist, 4)} SUI
-          </span>
-        </div>
-        <button
-          className="flex w-full cursor-pointer items-center justify-center gap-1.5 border border-white/8 px-2 py-2 text-[10px] tracking-[0.16em] text-[#777b86] uppercase hover:text-red-400"
-          onClick={() => {
-            menu.current?.hidePopover()
-            disconnect()
-          }}
-          type="button"
-        >
-          <LogOut size={10} /> {copy.wallet_disconnect}
-        </button>
+            <LogOut size={16} />
+            {copy.wallet_disconnect}
+          </Button>
+        ) : (
+          <a className="aui-button aui-button--primary" href="/">
+            {copy.sign_in}
+          </a>
+        )}
       </section>
 
-      {modal === 'funds' && <AddFundsModal address={address} copy={copy} on_close={() => set_modal(null)} />}
-      {modal === 'send' && (
-        <SendSuiModal
-          balance_mist={session.sui_balance_mist}
-          close={() => set_modal(null)}
-          copy={copy}
-          on_sent={() => dispatch_app({ type: 'wallet/refresh' })}
-          open_funds={() => set_modal('funds')}
-          resolve_character={resolve_character}
-          wallet={wallet}
-        />
+      {wallet && (
+        <>
+          {modal === 'funds' && <AddFundsModal address={wallet.address} copy={copy} on_close={() => set_modal(null)} />}
+          {modal === 'send' && (
+            <SendSuiModal
+              balance_mist={session.sui_balance_mist}
+              close={() => set_modal(null)}
+              copy={copy}
+              on_sent={() => dispatch_app({ type: 'wallet/refresh' })}
+              open_funds={() => set_modal('funds')}
+              resolve_character={resolve_character}
+              wallet={wallet}
+            />
+          )}
+        </>
       )}
     </>
   )

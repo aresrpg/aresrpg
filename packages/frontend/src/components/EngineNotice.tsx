@@ -7,9 +7,9 @@ import type { AppCopy } from '../i18n/copy.ts'
 
 export const engine_notice_kind = (status: EngineStatus, minimum_graphics = false) => {
   if (status.issue?.code === 'world_unavailable') return 'world'
+  if (status.issue?.code === 'webgpu_unavailable') return 'unsupported'
   if (status.state === 'failed') return 'failed'
-  if (minimum_graphics && status.backend !== 'grid') return 'minimum'
-  return status.state === 'degraded' ? 'fallback' : null
+  return minimum_graphics ? 'minimum' : null
 }
 
 export const EngineNotice = ({
@@ -27,7 +27,7 @@ export const EngineNotice = ({
 }>) => {
   const kind = engine_notice_kind(status, minimum_graphics)
   if (!kind) return null
-  const continue_action = { label: copy.continue, run: dismiss }
+  const continue_action = { label: copy.engine_continue, run: dismiss }
   const view = {
     minimum: {
       title: copy.engine_minimum_title,
@@ -42,11 +42,11 @@ export const EngineNotice = ({
       hint: null,
       action: { label: copy.engine_reload, run: reload },
     },
-    fallback: {
+    unsupported: {
       title: copy.title,
       body: copy.body,
-      hint: /Chrome|Chromium|Edg/.test(navigator.userAgent) ? copy.chrome : copy.other,
-      action: continue_action,
+      hint: null,
+      action: { label: copy.engine_reload, run: reload },
     },
   }[kind]
   return (

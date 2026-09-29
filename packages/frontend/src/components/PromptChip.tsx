@@ -5,7 +5,9 @@
 // this component only renders the content portaled into it. Per the owner's 2026-08-21 law,
 // the chip's pixels have exactly one home.
 
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode, type ComponentProps } from 'react'
+
+import { world_keyboard_eligible } from '../game/core/world_input.ts'
 
 /** Splits a `{{key}}` copy template into [before, after]. */
 export const split_key_template = (template: string): readonly [string, string] => {
@@ -13,11 +15,32 @@ export const split_key_template = (template: string): readonly [string, string] 
   return [before ?? '', after ?? '']
 }
 
-export const PromptChip = ({ children }: Readonly<{ children: ReactNode }>) => (
+const CHIP_CLASS =
+  'flex items-center gap-1.5 rounded-xl border border-white/12 bg-bg/82 px-3 py-1.5 text-[10px] tracking-[0.18em] whitespace-nowrap text-[#e8e4dc] uppercase shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-md'
+
+export const PromptChip = ({
+  children,
+  activate,
+  on_context_menu,
+}: Readonly<{
+  children: ReactNode
+  activate?: () => void
+  on_context_menu?: ComponentProps<'button'>['onContextMenu']
+}>) => (
   <div className="pointer-events-none -translate-y-full">
-    <div className="flex items-center gap-1.5 rounded-xl border border-white/12 bg-bg/82 px-3 py-1.5 text-[10px] tracking-[0.18em] whitespace-nowrap text-[#e8e4dc] uppercase shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-md">
-      {children}
-    </div>
+    {activate ? (
+      <button
+        data-world-interaction
+        type="button"
+        className={`${CHIP_CLASS} pointer-events-auto`}
+        onClick={activate}
+        onContextMenu={on_context_menu}
+      >
+        {children}
+      </button>
+    ) : (
+      <div className={CHIP_CLASS}>{children}</div>
+    )}
   </div>
 )
 
@@ -36,4 +59,25 @@ export const PromptText = ({ template, label }: Readonly<{ template: string; lab
       {after.trim()}
     </span>
   )
+}
+
+/** Shared hotkey admission for actionable world prompts; domain callbacks own the action. */
+export const usePromptKey = ({
+  enabled,
+  code = 'KeyF',
+  activate,
+}: Readonly<{
+  enabled: boolean
+  code?: string
+  activate: () => void | boolean
+}>) => {
+  useEffect(() => {
+    if (!enabled) return
+    const key = (event: Readonly<KeyboardEvent>) => {
+      if (event.code !== code || event.repeat || !world_keyboard_eligible(event, true)) return
+      if (activate() !== false) event.preventDefault()
+    }
+    globalThis.addEventListener('keydown', key)
+    return () => globalThis.removeEventListener('keydown', key)
+  }, [enabled, code, activate])
 }

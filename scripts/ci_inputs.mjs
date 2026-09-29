@@ -6,10 +6,11 @@ import { pathToFileURL } from 'node:url'
 
 import move_packages from '../move-packages.json' with { type: 'json' }
 
-import { JOURNAL_CONTENT_PREFIXES } from './release_inputs.mjs'
+import { JOURNAL_CONTENT_PREFIXES, SCENE_COMPILER_FILES } from './release_inputs.mjs'
 
-const BROWSER_PACKAGES = ['frontend', 'launchpad', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
+const BROWSER_PACKAGES = ['ui', 'frontend', 'mobile', 'launchpad', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
 const BROWSER_FILES = [
+  ...SCENE_COMPILER_FILES,
   'bun.lock',
   'bunfig.toml',
   '.github/workflows/gate.yml',
@@ -31,7 +32,9 @@ export const browser_checks_required = (paths, manifest_changed) =>
     return (
       BROWSER_FILES.includes(path) ||
       BROWSER_PACKAGES.some((name) => path.startsWith(`packages/${name}/`)) ||
-      ['seed/models/', 'seed/icons/', 'seed/structures/', 'music/'].some((prefix) => path.startsWith(prefix)) ||
+      ['seed/models/', 'seed/icons/', 'seed/structures/', 'seed/scenes/', 'music/'].some((prefix) =>
+        path.startsWith(prefix)
+      ) ||
       /^(?:vite|vercel)\.config\./.test(path)
     )
   })

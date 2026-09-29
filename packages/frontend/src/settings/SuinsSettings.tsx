@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { AtSign, RefreshCw } from 'lucide-react'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -37,21 +38,21 @@ export const SuinsSettings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const name = snapshot.default_name
   const choice = snapshot.names.some((row) => row.name === state.draft) ? state.draft : ''
   return (
-    <section className="min-w-0 border border-border bg-surface/80 p-4 lg:p-5" data-suins-settings="">
+    <section className="aui-panel settings-name" data-suins-settings="">
       <header className="flex items-center justify-between gap-3">
         <h2 className="flex items-center gap-3 text-[11px] tracking-wide text-text">
           <AtSign className="text-gold opacity-70" size={15} />
           {t('suins_title')}
         </h2>
-        <button
+        <Button
           type="button"
-          className="btn-outline p-2 disabled:opacity-40"
+
           disabled={disabled}
           aria-label={t('suins_refresh')}
           onClick={() => dispatch_app({ type: 'suins/refresh' })}
         >
           <RefreshCw size={12} />
-        </button>
+        </Button>
       </header>
       <p className="mt-3 text-[10px] leading-5 text-muted">{t('suins_hint')}</p>
       <p className="mt-3 text-[10px] text-muted">
@@ -100,13 +101,9 @@ export const SuinsSettings = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             />
           </label>
           <p className="text-[9px] leading-5 text-muted">{t('suins_target_hint')}</p>
-          <button
-            type="submit"
-            className="btn-outline px-4 py-2 text-[10px] uppercase disabled:opacity-40"
-            disabled={!state.draft.trim()}
-          >
+          <Button type="submit" tone="primary" disabled={!state.draft.trim()}>
             {t('suins_use')}
-          </button>
+          </Button>
         </fieldset>
       </form>
       <SuinsMessages copy={copy} />

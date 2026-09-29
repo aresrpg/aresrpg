@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { Page } from '../modules/navigation.ts'
+import type { AppDialog, Page } from '../modules/navigation.ts'
 
 export const TUTORIAL_IDS = Object.freeze([
   'world',
@@ -17,7 +17,6 @@ export type TutorialId = (typeof TUTORIAL_IDS)[number]
 export type TutorialTargetName =
   | 'compass'
   | 'overworld_hud'
-  | 'fps'
   | 'character_tabs'
   | 'character_equipment'
   | 'shared_inventory'
@@ -25,7 +24,7 @@ export type TutorialTargetName =
   | 'character_spells'
   | 'character_jobs'
   | 'character_runeforge'
-export type TutorialTarget = Readonly<{ kind: 'dom'; name: TutorialTargetName }> | Readonly<{ kind: 'entity' }>
+export type TutorialTarget = Readonly<{ kind: 'dom'; name: TutorialTargetName }>
 export type TutorialStep = Readonly<{ key: string; target: TutorialTarget | null }>
 
 const dom = (name: TutorialTargetName): TutorialTarget => Object.freeze({ kind: 'dom', name })
@@ -34,8 +33,6 @@ const STEPS: Readonly<Record<TutorialId, readonly TutorialStep[]>> = Object.free
   world: Object.freeze([
     Object.freeze({ key: 'world_compass', target: dom('compass') }),
     Object.freeze({ key: 'world_hud', target: dom('overworld_hud') }),
-    Object.freeze({ key: 'world_fps', target: dom('fps') }),
-    Object.freeze({ key: 'world_character', target: Object.freeze({ kind: 'entity' as const }) }),
     Object.freeze({ key: 'world_character_tabs', target: dom('character_tabs') }),
   ]),
   fight: Object.freeze([Object.freeze({ key: 'fight', target: null })]),
@@ -68,7 +65,7 @@ export const completed_tutorials_from = (value: unknown): readonly TutorialId[] 
 export type TutorialFacts = Readonly<{
   page: Page
   pathname: string
-  dialog_open: boolean
+  dialog: AppDialog | null
   player_ready: boolean
   selected_character_id: string | null
   fight_mounted: boolean
@@ -84,6 +81,10 @@ const character_tutorial = (pathname: string): TutorialId => {
 }
 
 const tutorial_candidate = (facts: Readonly<TutorialFacts>): TutorialId | null => {
+  if (facts.dialog) {
+    const id = facts.dialog.replace('character_', 'characters_')
+    return is_tutorial_id(id) ? id : null
+  }
   if (facts.fight_mounted) return facts.fight_owned ? 'fight' : null
   if (facts.page === 'world' && facts.world_available) return 'world'
   if (facts.page === 'characters') return character_tutorial(facts.pathname)
@@ -94,7 +95,7 @@ export const tutorial_id_for = (
   facts: Readonly<TutorialFacts>,
   completed: readonly TutorialId[]
 ): TutorialId | null => {
-  if (!facts.player_ready || facts.dialog_open || !facts.selected_character_id) return null
+  if (!facts.player_ready || !facts.selected_character_id) return null
   const candidate = tutorial_candidate(facts)
   return candidate && !completed.includes(candidate) ? candidate : null
 }

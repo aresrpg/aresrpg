@@ -15,16 +15,16 @@ const initial = () => {
 const status = (state: AppState, value: EngineStatus) =>
   reduce_app_state(state, { type: 'engine/status', status: value })
 
-test('device loss retries minimum settings once, then grid, then stops', () => {
+test('device loss retries minimum settings once, then stops', () => {
   const first = status(initial(), { state: 'failed', backend: 'webgpu', issue: { code: 'webgpu_device_lost' } })
   expect(first.engine).toMatchObject({ state: 'initializing', recovery: 'minimum' })
   expect(first.settings).toMatchObject({ quality: 'low', render_distance: RENDER_DISTANCE_MIN })
   const ready = status(first, { state: 'ready', backend: 'webgpu' })
   expect(ready.engine.recovery).toBe('minimum')
   const second = status(ready, { state: 'failed', backend: 'webgpu', issue: { code: 'terrain_failed' } })
-  expect(second.engine).toMatchObject({ state: 'initializing', recovery: 'grid' })
+  expect(second.engine).toMatchObject({ state: 'failed', recovery: 'minimum' })
   const third = status(second, { state: 'failed', backend: 'none', issue: { code: 'graphics_unavailable' } })
-  expect(third.engine).toMatchObject({ state: 'failed', recovery: 'grid' })
+  expect(third.engine).toMatchObject({ state: 'failed', recovery: 'minimum' })
 })
 
 test('missing world content never reduces graphics or retries', () => {
@@ -34,9 +34,9 @@ test('missing world content never reduces graphics or retries', () => {
   expect(after.settings).toBe(before.settings)
 })
 
-test('an already running grid failure is terminal', () => {
+test('missing WebGPU is terminal without reducing quality', () => {
   const before = initial()
-  const after = status(before, { state: 'failed', backend: 'grid', issue: { code: 'graphics_unavailable' } })
+  const after = status(before, { state: 'failed', backend: 'none', issue: { code: 'webgpu_unavailable' } })
   expect(after.engine.state).toBe('failed')
   expect(after.settings).toBe(before.settings)
 })

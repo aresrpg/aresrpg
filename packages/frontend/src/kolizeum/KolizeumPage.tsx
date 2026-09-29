@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { KolizeumFighterRow, KolizeumLobbyRow } from '@aresrpg/protocol'
+import type { KolizeumFighterRow, KolizeumLobbyRow, CharacterRow } from '@aresrpg/protocol'
 import { Loader2, Plus, Swords } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Button, NativeModal, GameWindow } from '@aresrpg/ui'
 
-import { useNumbers } from '../i18n/useNumbers.ts'
 import { Text } from '../i18n/Text.tsx'
-import { ModalFrame } from '../components/ModalFrame.tsx'
+import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { kolizeum_side_open, parse_kolizeum_pledge, selected_kolizeum_pending } from '../modules/kolizeum.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { format_sui } from '../wallet_amount.ts'
 
+import { KolizeumCreate, FormatChips, type Format } from './KolizeumControls.tsx'
 import { kolizeum_join_review, type KolizeumJoinReview } from './join_confirmation.ts'
 
 import './kolizeum.css'
 
 type Tab = 'open' | 'mine'
-type Format = 1 | 3 | 6
 
-const FORMATS = Object.freeze([1, 3, 6] as const)
 const STATUS_COLOR = Object.freeze({ open: '#4a9eff', started: '#f59e0b', settling: '#34d399' })
 const CLASS_COLORS: Readonly<Record<string, string>> = Object.freeze({
   senshi: '#e0533a',
@@ -67,21 +66,6 @@ const SelectedPot = ({ lobby, t }: Readonly<{ lobby: KolizeumLobbyRow; t: CopyTe
   )
 }
 
-const FormatChips = ({ active, pick }: Readonly<{ active: Format | null; pick: (format: Format | null) => void }>) => (
-  <span className="kz-chips">
-    {FORMATS.map((format) => (
-      <button
-        className={active === format ? 'is-active' : ''}
-        key={format}
-        onClick={() => pick(active === format ? null : format)}
-        type="button"
-      >
-        <Text path="ui.team_format" values={{ size: format }} />
-      </button>
-    ))}
-  </span>
-)
-
 const FighterRow = ({ fighter }: Readonly<{ fighter: KolizeumFighterRow }>) => {
   const color = CLASS_COLORS[fighter.classe] ?? '#6b7280'
   return (
@@ -112,20 +96,22 @@ const SideRoster = ({
 }>) => (
   <div className={`kz-roster ${side === 0 ? 'is-a' : 'is-b'}`}>
     <label>{t(side === 0 ? 'side_a' : 'side_b')}</label>
-    {lobby.fighters
-      .filter((fighter) => fighter.team === side && (lobby.status !== 'open' || !fighter.settled))
-      .map((fighter) => (
-        <FighterRow fighter={fighter} key={fighter.seat} />
-      ))}
+    <div className="kz-fighters">
+      {lobby.fighters
+        .filter((fighter) => fighter.team === side && (lobby.status !== 'open' || !fighter.settled))
+        .map((fighter) => (
+          <FighterRow fighter={fighter} key={fighter.seat} />
+        ))}
+    </div>
     {lobby.status === 'open' && (
-      <button
+      <Button
         className={`kz-join-side ${side === 0 ? 'is-a' : 'is-b'}`}
         disabled={disabled || !kolizeum_side_open(lobby, side)}
         onClick={() => request_join(side)}
         type="button"
       >
         {t(side === 0 ? 'join_a' : 'join_b')}
-      </button>
+      </Button>
     )}
   </div>
 )
@@ -157,26 +143,27 @@ const JoinConfirmation = ({
   if (!intent) return null
   const side = t(intent.side === 0 ? 'side_a' : 'side_b')
   return (
-    <ModalFrame close={close} close_label={copy.cancel} label={t('join_confirm_title')} max_width="max-w-sm" soft>
-      <div className="kz-join-confirm">
-        <h2>{t('join_confirm_title')}</h2>
-        <p>
-          {t('join_confirm_body', {
-            character: intent.character_name,
-            amount: numbers.amount(intent.stake_mist, 9),
-            side,
-          })}
-        </p>
-        <div>
-          <button className="btn-outline" onClick={close} type="button">
-            {copy.cancel}
-          </button>
-          <button className="btn-gold" disabled={pending} onClick={() => confirm(intent)} type="button">
-            {t('join_confirm_cta', { amount: numbers.amount(intent.stake_mist, 9), side })}
-          </button>
+    <NativeModal close={close} label={t('join_confirm_title')} className="aui-modal-scrim">
+      <GameWindow title={t('join_confirm_title')} close={close} close_label={copy.cancel} className="aui-arena-confirm">
+        <div className="kz-join-confirm">
+          <p>
+            {t('join_confirm_body', {
+              character: intent.character_name,
+              amount: numbers.amount(intent.stake_mist, 9),
+              side,
+            })}
+          </p>
+          <div>
+            <Button className="btn-outline" onClick={close} type="button">
+              {copy.cancel}
+            </Button>
+            <Button className="btn-gold" disabled={pending} onClick={() => confirm(intent)} type="button">
+              {t('join_confirm_cta', { amount: numbers.amount(intent.stake_mist, 9), side })}
+            </Button>
+          </div>
         </div>
-      </div>
-    </ModalFrame>
+      </GameWindow>
+    </NativeModal>
   )
 }
 
@@ -188,14 +175,46 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
   const characters = useAppStore((state) => state.session.characters)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const pending = useAppStore(selected_kolizeum_pending)
+  const has_friends = useAppStore((state) => state.friends.rows.length > 0)
+  return (
+    <KolizeumView
+      copy={copy}
+      lobbies={lobbies}
+      address={address}
+      characters={characters}
+      selected_character_id={selected_character_id}
+      pending={pending}
+      has_friends={has_friends}
+      dispatch={dispatch_app}
+    />
+  )
+}
+export const KolizeumView = ({
+  copy,
+  lobbies,
+  address,
+  characters,
+  selected_character_id,
+  pending,
+  has_friends,
+  dispatch,
+}: Readonly<{
+  copy: AppCopy
+  lobbies: readonly KolizeumLobbyRow[]
+  address: string | null
+  characters: readonly CharacterRow[]
+  selected_character_id: string | null
+  pending: string | null
+  has_friends: boolean
+  dispatch: (input: import('../modules/kolizeum.ts').KolizeumInput) => void
+}>) => {
+  const localized_numbers = useNumbers()
+  const t = copy_text(copy.kolizeum_page)
   const selected_character = characters.find(({ id }) => id === selected_character_id) ?? null
   const [tab, set_tab] = useState<Tab>('open')
+  const [creating, set_creating] = useState(false)
   const [filter_format, set_filter_format] = useState<Format | null>(null)
   const [selected_id, set_selected_id] = useState<string | null>(null)
-  const [form_format, set_form_format] = useState<Format>(3)
-  const [access, set_access] = useState<'public' | 'friends'>('public')
-  const [pledge, set_pledge] = useState('1.00')
-  const [max_diff, set_max_diff] = useState('10')
   const [join_intent, set_join_intent] = useState<KolizeumJoinReview | null>(null)
   const owned_ids = useMemo(() => new Set(characters.map(({ id }) => id)), [characters])
   const rows = useMemo(
@@ -203,15 +222,8 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
     [address, filter_format, lobbies, owned_ids, tab]
   )
   const selected = lobbies.find(({ id }) => id === selected_id) ?? null
-  const pledge_mist = parse_kolizeum_pledge(pledge)
-  const has_friends = useAppStore((state) => state.friends.rows.length > 0)
+
   const character_available = selected_character?.custody === 'kiosk'
-  const can_create =
-    !!selected_character &&
-    character_available &&
-    pledge_mist !== null &&
-    pending === null &&
-    (access === 'public' || has_friends)
   const join_disabled = (lobby: Readonly<KolizeumLobbyRow>): boolean =>
     !selected_character ||
     !character_available ||
@@ -224,23 +236,13 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
     set_join_intent(join_review(lobby, selected_character, join_disabled(lobby), side))
   }
   const confirm_join = (intent: KolizeumJoinReview): void => {
-    dispatch_app({
+    dispatch({
       type: 'kolizeum/join',
       kolizeum: intent.kolizeum,
       side: intent.side,
       character_id: intent.character_id,
     })
     set_join_intent(null)
-  }
-  const create = (): void => {
-    if (!can_create || pledge_mist === null) return
-    dispatch_app({
-      type: 'kolizeum/create',
-      format: form_format,
-      pledge_mist,
-      max_level_diff: Math.max(0, Number(max_diff) || 0),
-      access,
-    })
   }
 
   return (
@@ -255,16 +257,20 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
           <div className="kz-main">
             <nav className="kz-tabs">
               {(['open', 'mine'] as const).map((next) => (
-                <button
+                <Button
                   className={tab === next ? 'is-active' : ''}
                   key={next}
                   onClick={() => set_tab(next)}
                   type="button"
                 >
                   {t(`tab_${next}`)}
-                </button>
+                </Button>
               ))}
               <FormatChips active={filter_format} pick={set_filter_format} />
+              <Button tone="primary" className="aui-arena-create-trigger" onClick={() => set_creating(true)}>
+                <Plus size={13} />
+                {t('create_title')}
+              </Button>
             </nav>
             <div className="kz-table">
               <div className="kz-row kz-columns">
@@ -279,13 +285,12 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
               {rows.length === 0 ? (
                 <div className="kz-empty">{t('empty')}</div>
               ) : (
-                rows.map((lobby, index) => (
-                  <button
+                rows.map((lobby) => (
+                  <Button
                     className={`kz-row kz-lobby${selected_id === lobby.id ? ' is-selected' : ''}`}
                     key={lobby.id}
                     onClick={() => set_selected_id(lobby.id)}
                     type="button"
-                    style={{ background: index % 2 === 0 ? 'rgba(255,255,255,.02)' : 'transparent' }}
                   >
                     <strong>
                       <Text path="ui.team_format" values={{ size: lobby.format }} />
@@ -313,7 +318,7 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
                     ) : (
                       <em>● {t(`status_${lobby.status}`)}</em>
                     )}
-                  </button>
+                  </Button>
                 ))
               )}
             </div>
@@ -346,69 +351,26 @@ export default function KolizeumPage({ copy }: Readonly<{ copy: AppCopy }>) {
               </section>
             )}
           </div>
-          <aside className="kz-create">
-            <h2>
-              <Plus aria-hidden="true" size={11} /> {t('create_title')}
-            </h2>
-            <label>{t('form_format')}</label>
-            <FormatChips active={form_format} pick={(format) => format && set_form_format(format)} />
-            <label>{t('form_access')}</label>
-            <span className="kz-chips">
-              <button
-                className={access === 'public' ? 'is-active' : ''}
-                onClick={() => set_access('public')}
-                type="button"
-              >
-                {t('access_public')}
-              </button>
-              <button
-                className={access === 'friends' ? 'is-active' : ''}
-                disabled={!has_friends}
-                onClick={() => set_access('friends')}
-                type="button"
-              >
-                {t('access_friends')}
-              </button>
-            </span>
-            <label>{t('form_pledge')}</label>
-            <input
-              className="template-input"
-              inputMode="decimal"
-              onChange={(event) => set_pledge(event.target.value)}
-              value={pledge}
-            />
-            <label>{t('form_max_diff')}</label>
-            <input
-              className="template-input"
-              inputMode="numeric"
-              onChange={(event) => set_max_diff(event.target.value.replace(/[^0-9]/g, ''))}
-              value={max_diff}
-            />
-            <label>{t('form_character')}</label>
-            {selected_character ? (
-              <div className="kz-character">
-                <b>{selected_character.name}</b>
-                <span>{selected_character.classe}</span>
-                <small>
-                  <Text path="encyclopedia_page.level_short" values={{ level: selected_character.level }} />
-                </small>
-              </div>
-            ) : (
-              <p>{t('no_character')}</p>
-            )}
-            <p>
-              {t('full_pot_summary', {
-                pot: localized_numbers.sui((pledge_mist ?? 0n) * BigInt(form_format) * 2n, 2),
-                format: copy_text(copy.ui)('team_format', { size: form_format }),
-              })}
-            </p>
-            <button className="btn-gold kz-create-button" disabled={!can_create} onClick={create} type="button">
-              {pending === 'create' && <Loader2 aria-hidden="true" className="animate-spin" size={11} />}
-              {t('create_cta')}
-            </button>
-          </aside>
         </div>
       </section>
+      {creating && (
+        <NativeModal label={t('create_title')} close={() => set_creating(false)} className="aui-modal-scrim">
+          <GameWindow
+            title={t('create_title')}
+            close={() => set_creating(false)}
+            close_label={copy.wallet_close}
+            className="aui-arena-create-window"
+          >
+            <KolizeumCreate
+              copy={copy}
+              selected_character={selected_character}
+              pending={pending}
+              has_friends={has_friends}
+              dispatch={dispatch}
+            />
+          </GameWindow>
+        </NativeModal>
+      )}
       <JoinConfirmation
         close={() => set_join_intent(null)}
         confirm={confirm_join}

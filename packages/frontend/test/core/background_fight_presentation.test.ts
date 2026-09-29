@@ -10,7 +10,7 @@ import { initial_app_state, reduce_app_state, type AppState } from '../../src/st
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -81,10 +81,10 @@ test('switching boards drops both queues — arriving is like never having left'
   expect(state.fight.environments['0xfa']?.presentations).toEqual([])
 })
 
-test('leaving the board pages clears the animation queue on the next fold', () => {
+test('opening a feature modal keeps the mounted fight presentation active', () => {
   let state = reduce_app_state(two_fight_state(), { type: 'page/open', page: 'marketplace' })
   state = reconcile(state, fight_a)
 
-  expect(state.fight.presentations).toEqual([])
-  expect(state.fight.environments['0xfa']?.presentations).toEqual([])
+  expect(state.fight.presentations).toHaveLength(1)
+  expect(state.fight.environments['0xfa']?.presentations).toHaveLength(1)
 })

@@ -46,6 +46,7 @@ test.each([false, true])(
             worn: [
               { slot: 'hat', item_type: 'solomonk' },
               { slot: 'cloak', item_type: 'cape_fuwa_black' },
+              { slot: 'title', item_type: 'title_veteran' },
               ...(cosmetics
                 ? [
                     { slot: 'cosmetic_hat', item_type: 'coiffe_pepe' },
@@ -61,6 +62,7 @@ test.each([false, true])(
     const checkpoint = await get_fight_checkpoint(graph as never, { fight_id: '0xfight' })
 
     expect(checkpoint?.players['0xcharacter']).toMatchObject({
+      title: 'title_veteran',
       hat: cosmetics ? 'coiffe_pepe' : 'solomonk',
       cloak: cosmetics ? 'cosmetic_cape' : 'cape_fuwa_black',
     })

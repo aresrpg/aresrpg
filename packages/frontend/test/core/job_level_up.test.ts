@@ -10,7 +10,7 @@ import { initial_app_state } from '../../src/store.ts'
 const character = (level: number) =>
   ({ id: '0xcharacter', name: 'Crafter', jobs: { TAILOR: String(job_xp_for_level(level) ?? 0) } }) as never
 
-const settings = Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+const settings = Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null })
 
 test('job level changes ignore login snapshots and derive every crossed level from XP truth', () => {
   expect(job_level_changes([], [character(12)])).toEqual([])

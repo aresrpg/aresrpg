@@ -12,7 +12,7 @@ import { TUTORIAL_IDS, completed_tutorials_from, tutorial_id_for, tutorial_steps
 const facts = (overrides: Readonly<Record<string, unknown>> = {}) => ({
   page: 'world' as const,
   pathname: '/',
-  dialog_open: false,
+  dialog: null,
   player_ready: true,
   selected_character_id: '0xc1',
   fight_mounted: false,
@@ -22,13 +22,11 @@ const facts = (overrides: Readonly<Record<string, unknown>> = {}) => ({
 })
 
 describe('tutorial sequencing', () => {
-  test('the loaded world tour follows the approved five anchors once', () => {
+  test('the loaded world tour follows the three HUD anchors once', () => {
     expect(tutorial_id_for(facts(), [])).toBe('world')
     expect(tutorial_steps('world').map(({ target }) => target)).toEqual([
       { kind: 'dom', name: 'compass' },
       { kind: 'dom', name: 'overworld_hud' },
-      { kind: 'dom', name: 'fps' },
-      { kind: 'entity' },
       { kind: 'dom', name: 'character_tabs' },
     ])
     expect(tutorial_id_for(facts(), ['world'])).toBeNull()
@@ -52,7 +50,7 @@ describe('tutorial sequencing', () => {
   })
 
   test('tutorials wait behind dialogs and reject malformed persisted identities', () => {
-    expect(tutorial_id_for(facts({ dialog_open: true }), [])).toBeNull()
+    expect(tutorial_id_for(facts({ dialog: 'top_up' }), [])).toBeNull()
     expect(tutorial_id_for(facts({ world_available: false }), [])).toBeNull()
     expect(completed_tutorials_from(['world', 'bad', 'fight', 'world', 3])).toEqual(['world', 'fight'])
     expect(completed_tutorials_from(null)).toEqual([])
@@ -104,8 +102,8 @@ describe('tutorial sequencing', () => {
     expect(host).toContain('!indexing_blocked(link_status, indexing_lag)')
   })
 
-  test('all six locales ship the complete tutorial book', async () => {
-    const locales: readonly Locale[] = ['en', 'fr', 'de', 'es', 'ja', 'uk']
+  test('all supported locales ship the complete tutorial book', async () => {
+    const locales: readonly Locale[] = ['en', 'fr', 'de', 'es', 'pt', 'ru', 'uk', 'ja', 'ko', 'zh', 'vi']
     const copies = await Promise.all(locales.map(load_app_copy))
     const keys = Object.keys(copies[0]!.tutorial).sort()
 
@@ -115,4 +113,10 @@ describe('tutorial sequencing', () => {
       expect(fight_hud.result_version_changed?.trim().length).toBeGreaterThan(0)
     })
   })
+})
+
+test('character HUD modals select their own tutorial instead of suppressing all guidance', () => {
+  expect(tutorial_id_for(facts({ dialog: 'character_equipment' }), [])).toBe('characters_equipment')
+  expect(tutorial_id_for(facts({ dialog: 'character_jobs' }), [])).toBe('characters_jobs')
+  expect(tutorial_id_for(facts({ dialog: 'character_create' }), [])).toBeNull()
 })

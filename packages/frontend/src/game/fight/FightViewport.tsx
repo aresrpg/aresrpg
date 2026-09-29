@@ -20,6 +20,8 @@ import { create_fight_presenter } from './fight_presenter.ts'
 import type { FightBlobOverlay } from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
 
+import { board_pointer_taps, move_board_pointer, type BoardPointer } from './board_pointer.ts'
+
 const CELL_SIZE = 1.33
 const BOARD_Y = 0
 // One block of clearance above the ground it is laid on: the arena reads as a built platform
@@ -53,19 +55,28 @@ export const fight_board_render = (
   })
 }
 
+export const grounded_fight_board = (
+  board: Readonly<FightBoard>,
+  ground: (x: number, z: number) => number,
+  anchor: Readonly<{ x: number; y?: number; z: number }> | null
+): FightBoardRender => {
+  const point = anchor ?? { x: 0, z: 0 }
+  return fight_board_render(board, { ...point, y: (point.y ?? ground(point.x, point.z)) + BOARD_LIFT })
+}
+
 export const fight_placement_overlays = fight_placement_blobs
 
-/** The live world, dressed as the board view this surface drives. Mounting claims the scene's
- *  entity list (a fight shows its fighters and nobody else); disposing hands the board back and
- *  returns the camera to the player, which releases the list to presence again. */
-const scene_fight_view = (scene: SceneHandle) => {
-  claim_scene_entities('fight')
+/** Immersive fights claim the scene; nearby boards append fighters to its world inhabitants.
+ * Disposing releases only the entities and board owned by this surface. */
+export const scene_fight_view = (scene: SceneHandle, ambient = false) => {
+  if (!ambient) claim_scene_entities('fight')
   return Object.freeze({
-    set_board: (board: FightBoardRender) => scene.show_fight_board(board),
+    set_board: (board: FightBoardRender) => scene.show_fight_board({ ...board, ambient }),
     // entities draw into the scene THIS viewport was handed — the claim above only silences the
     // game world's other source. A stage world (the demo lab) is not the published scene, so a
     // feed-routed write would land in the void while the board mounts here.
-    set_entities: (entities: readonly EntityRender[]) => scene.set_entities(entities),
+    set_entities: (entities: readonly EntityRender[]) =>
+      ambient ? scene.set_nearby_entities(entities) : scene.set_entities(entities),
     animate_entity: scene.animate_entity,
     play_fight_cue: scene.play_fight_cue,
     project_entity: scene.project_entity,
@@ -75,13 +86,17 @@ const scene_fight_view = (scene: SceneHandle) => {
     pick_cell: scene.pick_fight_cell,
     dispose: (): void => {
       scene.show_fight_board(null)
-      scene.set_entities(Object.freeze([]))
-      claim_scene_entities('world')
+      if (ambient) scene.set_nearby_entities(Object.freeze([]))
+      else {
+        scene.set_entities(Object.freeze([]))
+        claim_scene_entities('world')
+      }
     },
   })
 }
 
 export const FightViewport = ({
+  ambient,
   board,
   board_key,
   quality,
@@ -98,11 +113,12 @@ export const FightViewport = ({
   world_anchor = null,
   scene,
 }: Readonly<{
+  ambient?: boolean
   board: FightBoard
   board_key: string
   quality: EngineQuality
   label: string
-  on_cell_click?: (cell: bigint | null, pointer: Readonly<{ x: number; y: number }>) => void
+  on_cell_click?: (cell: bigint | null, pointer: Readonly<{ x: number; y: number; pointer_type?: string }>) => void
   on_cell_hover?: (cell: bigint | null) => void
   blob_request?: Readonly<{ sequence: number; blob: FightBlobSpec }> | null
   blob_overlays?: readonly FightBlobOverlay[]
@@ -117,7 +133,7 @@ export const FightViewport = ({
   show_start_cells?: boolean
   entities?: readonly EntityRender[]
   /** the fight's world position in CLIENT coordinates — null keeps the board at the origin */
-  world_anchor?: Readonly<{ x: number; z: number }> | null
+  world_anchor?: Readonly<{ x: number; y?: number; z: number }> | null
   /** THE WORLD THIS BOARD IS MOUNTED IN, handed over by its owner. Not looked up: a surface that
    *  could find "the live scene" on its own will eventually draw into somebody else's. */
   scene: SceneHandle
@@ -133,18 +149,9 @@ export const FightViewport = ({
   const presentation_active_ref = useRef(on_presentation_active)
   // A fight board is immutable under its contract ID. Checkpoint reducers clone it, so depending
   // on object identity would rebuild GPU geometry after every command.
-  const anchor_key = world_anchor ? `${world_anchor.x}:${world_anchor.z}` : ''
+  const anchor_key = world_anchor ? `${world_anchor.x}:${world_anchor.y}:${world_anchor.z}` : ''
   const render_board = useMemo(
-    () =>
-      // EVERY board rests on the ground, anchored or not. A local or simulator board has no
-      // world coordinates, but it is still mounted in a real world now — left at y=0 it would
-      // be buried under the terrain instead of standing on it.
-      ((anchor = world_anchor ?? { x: 0, z: 0 }) =>
-        fight_board_render(board, {
-          x: anchor.x,
-          y: scene.ground_height(anchor.x, anchor.z) + BOARD_LIFT,
-          z: anchor.z,
-        }))(),
+    () => grounded_fight_board(board, scene.ground_height, world_anchor),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- board_key + the anchor are the board's domain identity.
     [board_key, anchor_key, scene]
   )
@@ -161,10 +168,8 @@ export const FightViewport = ({
   presentation_active_ref.current = on_presentation_active
 
   useEffect(() => {
-    // THE BOARD IS MOUNTED IN THE LIVE WORLD, never in a renderer of its own: the world is
-    // already drawn behind it, the camera rig travels down to the board instead of cutting,
-    // and the fight stops being an opaque panel over the app.
-    const view = scene_fight_view(scene)
+    // Both board presentations share the live world's renderer and entity lifecycle.
+    const view = scene_fight_view(scene, ambient)
     view_ref.current = view
     // a freshly mounted scene holds none of our GPU blobs — the bookkeeping starts empty or the
     // overlay pass would try to update ids that no longer exist
@@ -178,30 +183,73 @@ export const FightViewport = ({
       play: view.play_fight_cue,
       observe: (cue, phase) => cue_observer_ref.current?.(cue, phase),
     })
-    // the board draws on the WORLD's canvas, which this surface does not own — so pointer work
-    // rides the document and answers only for events that landed on that canvas. Anything over
-    // the HUD is the HUD's, and the world's own controls are inert outside follow mode.
-    const on_board = (event: MouseEvent): boolean => event.target instanceof HTMLCanvasElement
-    const click = (event: MouseEvent): void => {
-      if (event.button !== 0 || !on_board(event)) return
-      const cell = view.pick_cell(event.clientX, event.clientY)
-      click_ref.current?.(cell === null ? null : BigInt(cell), { x: event.clientX, y: event.clientY })
-    }
-    const move = (event: MouseEvent): void => {
-      publish_hover(on_board(event) ? view.pick_cell(event.clientX, event.clientY) : null)
-    }
-    globalThis.addEventListener('click', click)
-    globalThis.addEventListener('mousemove', move)
-    return () => {
-      globalThis.removeEventListener('click', click)
-      globalThis.removeEventListener('mousemove', move)
+    const dispose = (): void => {
       hovered_cell_ref.current = null
       view_ref.current = null
       presenter_ref.current?.dispose()
       presenter_ref.current = null
       view.dispose()
     }
-  }, [scene])
+    if (ambient) return dispose
+    // the board draws on the WORLD's canvas, which this surface does not own — so pointer work
+    // rides the document and answers only for events that landed on that canvas. Anything over
+    // the HUD is the HUD's, and the world's own controls are inert outside follow mode.
+    const on_board = (event: MouseEvent): boolean => event.target === scene.canvas
+    const click = (event: MouseEvent): void => {
+      if ((event as PointerEvent).pointerType === 'touch' || event.button !== 0 || !on_board(event)) return
+      const cell = view.pick_cell(event.clientX, event.clientY)
+      click_ref.current?.(cell === null ? null : BigInt(cell), {
+        x: event.clientX,
+        y: event.clientY,
+        pointer_type: 'mouse',
+      })
+    }
+    const move = (event: MouseEvent): void => {
+      publish_hover(on_board(event) ? view.pick_cell(event.clientX, event.clientY) : null)
+    }
+    let touch: BoardPointer | null = null
+    const touch_down = (event: PointerEvent): void => {
+      if (event.pointerType !== 'touch' || !on_board(event)) return
+      touch = touch
+        ? { ...touch, dragged: true }
+        : { id: event.pointerId, x: event.clientX, y: event.clientY, dragged: false }
+    }
+    const touch_move = (event: PointerEvent): void => {
+      if (touch) touch = move_board_pointer(touch, event.pointerId, event.clientX, event.clientY)
+    }
+    const touch_up = (event: PointerEvent): void => {
+      if (!touch || touch.id !== event.pointerId) return
+      const taps = board_pointer_taps(touch, event.pointerId, event.clientX, event.clientY)
+      touch = null
+      if (!taps || !on_board(event)) return
+      const cell = view.pick_cell(event.clientX, event.clientY)
+      click_ref.current?.(cell === null ? null : BigInt(cell), {
+        x: event.clientX,
+        y: event.clientY,
+        pointer_type: 'touch',
+      })
+    }
+    const touch_cancel = (): void => {
+      touch = null
+    }
+    globalThis.addEventListener('pointerdown', touch_down)
+    globalThis.addEventListener('pointermove', touch_move)
+    globalThis.addEventListener('pointerup', touch_up)
+    globalThis.addEventListener('pointercancel', touch_cancel)
+    globalThis.addEventListener('blur', touch_cancel)
+    globalThis.addEventListener('click', click)
+    globalThis.addEventListener('mousemove', move)
+    return () => {
+      globalThis.removeEventListener('pointerdown', touch_down)
+      globalThis.removeEventListener('pointermove', touch_move)
+      globalThis.removeEventListener('pointerup', touch_up)
+      globalThis.removeEventListener('pointercancel', touch_cancel)
+      globalThis.removeEventListener('blur', touch_cancel)
+      globalThis.removeEventListener('click', click)
+      globalThis.removeEventListener('mousemove', move)
+      dispose()
+    }
+  }, [scene, ambient])
 
   useEffect(() => {
     view_ref.current?.set_board(render_board)

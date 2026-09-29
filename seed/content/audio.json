@@ -1,0 +1,236 @@
+{
+  "sounds": {
+    "level_up": {
+      "file": "level_up.ogg",
+      "volume": 0.55
+    },
+    "job_level_up": {
+      "file": "job_level_up.ogg",
+      "volume": 0.5
+    },
+    "fight_over": {
+      "file": "fight_over.ogg",
+      "volume": 0.6
+    },
+    "quest_completed": {
+      "file": "quest_completed.aac",
+      "volume": 0.5,
+      "restart": true
+    },
+    "quest_started": {
+      "file": "quest_started.ogg",
+      "volume": 0.35
+    },
+    "craft_completed": {
+      "file": "craft_completed.ogg",
+      "volume": 0.45
+    },
+    "gather": {
+      "file": "loot_coin.ogg",
+      "volume": 0.3
+    },
+    "sale": {
+      "file": "item_sold.ogg",
+      "volume": 0.4
+    },
+    "loot_open": {
+      "file": "loot_chest_open.ogg",
+      "volume": 0.45
+    },
+    "inventory_open": {
+      "file": "inventory_open.ogg",
+      "volume": 0.18
+    },
+    "inventory_close": {
+      "file": "inventory_close.ogg",
+      "volume": 0.18
+    },
+    "settings_changed": {
+      "file": "settings_changed.ogg",
+      "volume": 0.18
+    },
+    "button_confirm": {
+      "file": "button_confirm.ogg",
+      "volume": 0.15
+    },
+    "debuff_sound": {
+      "file": "debuff_sound.ogg",
+      "volume": 0.45
+    },
+    "igris_firebolt": {
+      "file": "igris_firebolt.ogg",
+      "volume": 0.45
+    },
+    "ikari_disso": {
+      "file": "ikari_disso.ogg",
+      "volume": 0.45
+    },
+    "ikari_haki": {
+      "file": "ikari_haki.ogg",
+      "volume": 0.45
+    },
+    "ikari_punishment": {
+      "file": "ikari_punishment.ogg",
+      "volume": 0.45
+    },
+    "ikari_sacrifice": {
+      "file": "ikari_sacrifice.ogg",
+      "volume": 0.45
+    },
+    "ikari_senzu": {
+      "file": "ikari_senzu.ogg",
+      "volume": 0.45
+    },
+    "ikari_unleashed": {
+      "file": "ikari_unleashed.ogg",
+      "volume": 0.45
+    },
+    "iyashi_bunny": {
+      "file": "iyashi_bunny.ogg",
+      "volume": 0.45
+    },
+    "iyashi_heal": {
+      "file": "iyashi_heal.ogg",
+      "volume": 0.45
+    },
+    "iyashi_heartbreak": {
+      "file": "iyashi_heartbreak.ogg",
+      "volume": 0.45
+    },
+    "iyashi_last": {
+      "file": "iyashi_last.ogg",
+      "volume": 0.45
+    },
+    "iyashi_regebn": {
+      "file": "iyashi_regebn.ogg",
+      "volume": 0.45
+    },
+    "iyashi_stimu": {
+      "file": "iyashi_stimu.ogg",
+      "volume": 0.45
+    },
+    "senshi_power": {
+      "file": "senshi_power.ogg",
+      "volume": 0.45
+    },
+    "senshi_powerstorm": {
+      "file": "senshi_powerstorm.ogg",
+      "volume": 0.45
+    },
+    "senshi_wrath": {
+      "file": "senshi_wrath.ogg",
+      "volume": 0.45
+    },
+    "staff_water": {
+      "file": "staff_water.ogg",
+      "volume": 0.45
+    },
+    "yajin_arise": {
+      "file": "yajin_arise.ogg",
+      "volume": 0.45
+    },
+    "yajin_deathattack": {
+      "file": "yajin_deathattack.ogg",
+      "volume": 0.45
+    },
+    "yajin_mutilation": {
+      "file": "yajin_mutilation.ogg",
+      "volume": 0.45
+    },
+    "yajin_shadow_attack": {
+      "file": "yajin_shadow_attack.ogg",
+      "volume": 0.45
+    },
+    "yajin_shadow_trap": {
+      "file": "yajin_shadow_trap.ogg",
+      "volume": 0.45
+    },
+    "yajin_vanish": {
+      "file": "yajin_vanish.ogg",
+      "volume": 0.45
+    },
+    "notification": {
+      "file": "notification.ogg",
+      "volume": 0.3
+    },
+    "power_up": {
+      "file": "power_up.ogg",
+      "volume": 0.35
+    },
+    "consume": {
+      "file": "consume.ogg",
+      "volume": 0.35
+    },
+    "teleport": {
+      "file": "teleport.ogg",
+      "volume": 0.4
+    },
+    "craft_failed": {
+      "file": "craft_failed.ogg",
+      "volume": 0.25
+    },
+    "city": {
+      "file": "city.ogg",
+      "volume": 0.4
+    },
+    "water_enter": {
+      "file": "water_enter.aac",
+      "volume": 0.45,
+      "restart": true
+    }
+  },
+  "spells": {
+    "Power": "senshi_power",
+    "Increase": "senshi_power",
+    "Compulsion": "senshi_power",
+    "Bravery Guide": "senshi_power",
+    "Strengthstorm": "senshi_powerstorm",
+    "Celestial Sword": "senshi_powerstorm",
+    "Senshi's Wrath": "senshi_wrath",
+    "Healing Word": "iyashi_heal",
+    "Curative Word": "iyashi_heal",
+    "Revitalising Word": "iyashi_heal",
+    "Stimulating Word": "iyashi_stimu",
+    "Regenerating Word": "iyashi_regebn",
+    "Wounding Word": "iyashi_heartbreak",
+    "Forbidden Word": "iyashi_heartbreak",
+    "Word of Recovery": "iyashi_last",
+    "Word of Altruism": "iyashi_last",
+    "Bonding Word": "iyashi_bunny",
+    "Dissolution": "ikari_disso",
+    "Fury": "ikari_haki",
+    "Punishment": "ikari_punishment",
+    "Forced Punishment": "ikari_punishment",
+    "Spiritual Punishment": "ikari_punishment",
+    "Bold Punishment": "ikari_punishment",
+    "Nimble Punishment": "ikari_punishment",
+    "Sacrifice": "ikari_sacrifice",
+    "Vital Exchange": "ikari_senzu",
+    "Life Transfer": "ikari_senzu",
+    "Bloodthirsty Madness": "ikari_senzu",
+    "Blood Blade": "ikari_unleashed",
+    "Lethal Attack": "yajin_deathattack",
+    "Con": "yajin_shadow_attack",
+    "Deviousness": "yajin_shadow_attack",
+    "Mutilation": "yajin_mutilation",
+    "Shadowstep": "yajin_arise",
+    "Lethal Trap": "yajin_shadow_trap",
+    "Tricky Trap": "yajin_shadow_trap",
+    "Mass Trap": "yajin_shadow_trap",
+    "Poisoned Trap": "yajin_shadow_trap",
+    "Paralyzing Trap": "yajin_shadow_trap",
+    "Repelling Trap": "yajin_shadow_trap",
+    "Trap of Silence": "yajin_shadow_trap",
+    "Invisibility": "yajin_vanish",
+    "Invisibility of Others": "yajin_vanish",
+    "Bubble": "staff_water",
+    "Cloudy Attack": "staff_water",
+    "Melancholy": "staff_water",
+    "Natural Attack": "igris_firebolt",
+    "Hand": "igris_firebolt",
+    "Topkaj": "igris_firebolt",
+    "Insolent Bramble": "debuff_sound",
+    "Word of Youth": "debuff_sound",
+    "Stain": "debuff_sound"
+  }
+}

@@ -7,7 +7,6 @@
 
 import { AudioListener, AudioLoader, Box3, Object3D, PositionalAudio, Vector3, type Scene } from 'three'
 
-import { project_height } from './flatten.ts'
 import { load_gltf_source } from './gltf_loader.ts'
 import type { FightSwordMarker } from './types.ts'
 
@@ -33,8 +32,6 @@ export const FIGHT_SWORD_AUDIO = Object.freeze({
 })
 export const fight_sword_plant_height = (minimum_y: number, maximum_y: number): number => -(minimum_y + maximum_y) / 2
 export const fight_sword_label_offset = (scale: number): number => LABEL_WORLD_HEIGHT / Math.max(scale, 0.001)
-export const fight_sword_ground_height = (source_y: number, flatten_amount: number): number =>
-  project_height(source_y, flatten_amount)
 
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
 const ease_out_quad = (t: number): number => t * (2 - t)
@@ -129,7 +126,6 @@ export const create_fight_sword_layer = ({
 
   const planted = new Map<string, Planted>()
   let visible = true
-  let flatten_amount = 0
 
   const release_sound = (sound: PositionalAudio): void => {
     if (sound.isPlaying) sound.stop()
@@ -181,16 +177,17 @@ export const create_fight_sword_layer = ({
       if (planted.has(marker.id)) {
         // anchor facts may refresh (ground re-projection) — update in place
         const existing = planted.get(marker.id)!
-        const updated = { ...existing, marker }
+        existing.root.visible = visible && !marker.hidden
+        const updated = { ...existing, marker, impacted: existing.impacted || !!marker.hidden }
         planted.set(marker.id, updated)
         continue
       }
       const root = new Object3D()
-      root.position.set(marker.x, fight_sword_ground_height(marker.y, flatten_amount), marker.z)
-      root.visible = visible
+      root.position.set(marker.x, marker.y, marker.z)
+      root.visible = visible && !marker.hidden
       rebuild(root)
       scene.add(root)
-      planted.set(marker.id, { root, marker, spawned_ms: Date.now(), impacted: !visible })
+      planted.set(marker.id, { root, marker, spawned_ms: Date.now(), impacted: !visible || !!marker.hidden })
     }
   }
 
@@ -198,6 +195,8 @@ export const create_fight_sword_layer = ({
   const label_anchor = (id: string): Vector3 | null => {
     const entry = planted.get(id)
     if (!entry || !visible || disposed) return null
+    if (entry.marker.hidden)
+      return label_position.set(entry.marker.x, entry.marker.y + LABEL_WORLD_HEIGHT, entry.marker.z)
     return entry.root.localToWorld(label_position.set(0, fight_sword_label_offset(entry.root.scale.y), 0))
   }
 
@@ -206,13 +205,14 @@ export const create_fight_sword_layer = ({
     const now_ms = Date.now()
     planted.forEach((entry, id) => {
       const { root, marker } = entry
+      if (marker.hidden) return
       const { height, scale, yaw, impacted } = fight_sword_frame(
         marker.placement_ms,
         entry.spawned_ms,
         now_ms,
         plant_height
       )
-      const ground_y = fight_sword_ground_height(marker.y, flatten_amount)
+      const ground_y = marker.y
       root.position.set(marker.x, ground_y + height, marker.z)
       root.scale.setScalar(Math.max(scale, 0.001))
       root.rotation.y = yaw
@@ -250,15 +250,11 @@ export const create_fight_sword_layer = ({
     set_volume: (volume: number) => {
       if (!disposed) listener.setMasterVolume(volume)
     },
-    set_flatten: (amount: number) => {
-      if (disposed) return
-      flatten_amount = amount
-    },
     set_visible: (next: boolean) => {
       if (disposed) return
       visible = next
       planted.forEach((entry, id) => {
-        entry.root.visible = next
+        entry.root.visible = next && !entry.marker.hidden
         if (!next && !entry.impacted) planted.set(id, Object.freeze({ ...entry, impacted: true }))
       })
     },

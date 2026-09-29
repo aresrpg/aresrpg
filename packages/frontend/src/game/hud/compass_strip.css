@@ -325,3 +325,58 @@
     transition: none;
   }
 }
+
+.gw-compass__objective {
+  transition: left 60ms linear;
+  position: absolute;
+  top: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translateX(-50%);
+  color: #ffe49b;
+  filter: drop-shadow(0 0 7px #eab94a);
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gw-compass__objective {
+    transition: none;
+  }
+}
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .gw-compass-wrap,
+  [data-world-frame] .gw-compass-wrap {
+    top: 6px;
+    min-width: 0;
+    width: min(360px, calc(100vw - 280px));
+    gap: 0;
+  }
+  .gw-compass__band {
+    height: 34px;
+  }
+  .gw-compass__info,
+  .gw-compass__edge-label,
+  .gw-compass__city {
+    display: none;
+  }
+  .gw-compass__objective {
+    top: 15px;
+    flex-direction: row;
+    gap: 3px;
+  }
+  .gw-compass__objective svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+@media (max-width: 520px) {
+  .gw-compass-wrap,
+  [data-world-frame] .gw-compass-wrap {
+    top: 52px;
+    width: calc(100vw - 130px);
+  }
+}

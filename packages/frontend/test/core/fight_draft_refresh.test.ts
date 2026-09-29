@@ -80,7 +80,7 @@ const checkpoint = () => ({
 test('a same-turn spectator refresh discards paths drafted from the replaced checkpoint', () => {
   const listeners = new Map<string, ((payload: never) => void)[]>()
   const turns: unknown[] = []
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   let state: AppState = {
     ...base,
     session: {

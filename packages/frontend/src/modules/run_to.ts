@@ -6,6 +6,7 @@
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import { localized_error } from '../i18n/error_text.ts'
+import type { WorldPose } from '../game/core/pose_feed.ts'
 import type { RunTarget } from '../game/core/run_to.ts'
 import { copy_text } from '../i18n/copy.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
@@ -26,19 +27,21 @@ export type RunToRequest = Readonly<{
 export type RunTo =
   | RunToRequest
   | Readonly<Omit<RunToRequest, 'status'> & { status: 'running'; x: number; z: number }>
-  | Readonly<{
-      status: 'running'
-      source: 'position' | 'automation'
-      controlled_character_id: string
-      name: string
-      world: string
-      x: number
-      z: number
-    }>
+  | Readonly<
+      {
+        status: 'running'
+        controlled_character_id: string
+        name: string
+        world: string
+        x: number
+        z: number
+      } & ({ source: 'position' | 'automation' } | { source: 'fight'; fight_id: string })
+    >
 
-export type RunToState = Readonly<{ run: RunTo | null; restore_flat: boolean }>
+export type RunToState = Readonly<{ run: RunTo | null }>
 
 export type RunToInput =
+  | Readonly<{ type: 'run_to/fight'; fight_id: string }>
   | Readonly<{ type: 'run_to/character'; character_id: string }>
   | Readonly<{ type: 'run_to/position'; world: string; x: number; z: number; source?: 'automation' }>
   | Readonly<{
@@ -49,10 +52,17 @@ export type RunToInput =
   | Readonly<{
       type: 'run_to/stopped'
       reason: 'arrived' | 'manual' | 'blocked' | 'inactive'
-      restore_flat: boolean
     }>
 
-export const initial_run_to_state = (): RunToState => Object.freeze({ run: null, restore_flat: false })
+export const initial_run_to_state = (): RunToState => Object.freeze({ run: null })
+
+export const run_to_distance = (run: RunTo | null, pose: WorldPose | null): number | null => {
+  if (run?.status !== 'running' || !pose?.route) return null
+  if (pose.character_id !== run.controlled_character_id) return null
+  return pose.route.x === chain_to_client_coordinate(run.x) && pose.route.z === chain_to_client_coordinate(run.z)
+    ? pose.route.remaining
+    : null
+}
 
 export const run_to_progress_percent = (initial: number, remaining: number): number =>
   initial <= 0 ? 100 : Math.max(0, Math.min(100, Math.round((1 - remaining / initial) * 100)))
@@ -104,7 +114,7 @@ const character_request = (state: Readonly<AppState>, target: string): RunToRequ
 const position_run = (
   state: Readonly<AppState>,
   input: Readonly<Extract<RunToInput, { type: 'run_to/position' }>>
-): RunTo | null => {
+): Extract<RunTo, { status: 'running' }> | null => {
   if (!character_can_run(state)) return null
   const controlled = selected_character(state.session)
   return controlled?.world === input.world
@@ -120,25 +130,33 @@ const position_run = (
     : null
 }
 
-const with_run = (state: Readonly<AppState>, run: RunTo | null, restore_flat = state.run_to.restore_flat): AppState =>
-  Object.freeze({ ...state, run_to: Object.freeze({ run, restore_flat }) })
+const fight_run = (state: Readonly<AppState>, fight_id: string): RunTo | null => {
+  const fight = state.world.fights[fight_id]
+  if (!fight || fight.phase !== 'placement' || fight.managed || fight.wagered) return null
+  const run = position_run(state, { type: 'run_to/position', world: fight.world, x: fight.x, z: fight.z })
+  return run ? { ...run, source: 'fight', fight_id } : null
+}
 
-const start_run = (state: Readonly<AppState>, run: RunTo | null): AppState =>
-  with_run(state, run, run !== null && (state.run_to.restore_flat || !state.settings.flat_mode))
+const with_run = (state: Readonly<AppState>, run: RunTo | null): AppState =>
+  Object.freeze({ ...state, run_to: Object.freeze({ run }) })
 
-const run_member_exists = (state: Readonly<AppState>, run: Readonly<RunTo>): boolean =>
-  run.source !== 'character' ||
-  selected_party(state)?.members.some(({ character_id }) => character_id === run.target_character_id) === true
+const run_target_exists = (state: Readonly<AppState>, run: Readonly<RunTo>): boolean => {
+  if (run.source === 'fight') return state.world.fights[run.fight_id] !== undefined
+  return (
+    run.source !== 'character' ||
+    selected_party(state)?.members.some(({ character_id }) => character_id === run.target_character_id) === true
+  )
+}
 
 const fold_command = (state: AppState, input: AppInput): AppState | null => {
-  if (input.type === 'run_to/character') return start_run(state, character_request(state, input.character_id))
-  if (input.type === 'run_to/position') return start_run(state, position_run(state, input))
+  if (input.type === 'run_to/fight') return with_run(state, fight_run(state, input.fight_id))
+  if (input.type === 'run_to/character') return with_run(state, character_request(state, input.character_id))
+  if (input.type === 'run_to/position') return with_run(state, position_run(state, input))
   if (input.type === 'run_to/resolved') {
     if (state.run_to.run !== input.request) return state
     return with_run(
       state,
-      input.checkpoint ? Object.freeze({ ...input.request, status: 'running' as const, ...input.checkpoint }) : null,
-      input.checkpoint ? state.run_to.restore_flat : false
+      input.checkpoint ? Object.freeze({ ...input.request, status: 'running' as const, ...input.checkpoint }) : null
     )
   }
   return null
@@ -152,11 +170,8 @@ const cancels_run = (state: AppState, input: Readonly<AppInput>): boolean =>
 const reduce = (state: AppState, input: AppInput): AppState => {
   const command = fold_command(state, input)
   if (command) return command
-  if (cancels_run(state, input)) return state.run_to.run ? with_run(state, null, false) : state
-  if (input.type === 'server/packet' && input.packet.type === 'packet/party') {
-    const { run: next } = state.run_to
-    return next && !run_member_exists(state, next) ? with_run(state, null) : state
-  }
+  const { run } = state.run_to
+  if (run && (cancels_run(state, input) || !run_target_exists(state, run))) return with_run(state, null)
   return state
 }
 
@@ -164,11 +179,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
   const text = (key: string, values?: Readonly<Record<string, string>>) => {
     const { copy } = get_state()
     return copy ? copy_text(copy.party_panel)(key, values) : key
-  }
-  const enable_flat_mode = (): void => {
-    const state = get_state()
-    if (!state.settings.flat_mode)
-      dispatch({ type: 'settings/changed', settings: Object.freeze({ ...state.settings, flat_mode: true }) })
   }
   events.on('run_to/character', () => {
     const state = get_state()
@@ -182,7 +192,6 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         if (current.run_to.run !== request || current.session.wallet !== wallet) return
         dispatch({ type: 'run_to/resolved', request, checkpoint })
         if (!checkpoint) return void toast.add(localized_error(text('run_to_wrong_world')))
-        enable_flat_mode()
         toast.add(text('run_to_started', { name: request.name }), 'info')
       })
       .catch((error: unknown) => {
@@ -205,14 +214,11 @@ const observe: NonNullable<AppModule['observe']> = ({ events, get_state, dispatc
         toast.add(localized_error(text('run_to_position_wrong_world')))
       return
     }
-    enable_flat_mode()
     if (!input.source) toast.add(text('run_to_started_position'), 'info')
   })
-  events.on('run_to/stopped', ({ reason, restore_flat }) => {
-    if (reason !== 'arrived' || !restore_flat) return
-    const state = get_state()
-    if (state.settings.flat_mode)
-      dispatch({ type: 'settings/changed', settings: Object.freeze({ ...state.settings, flat_mode: false }) })
+
+  events.on('run_to/stopped', ({ reason }) => {
+    if (reason === 'blocked') toast.add(localized_error(text('run_to_blocked')))
   })
 }
 

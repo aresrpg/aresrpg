@@ -217,7 +217,12 @@ const character_stat_values = (character: Readonly<SimulatorCharacter>): Readonl
 const empty_character_stats = (): Readonly<Record<CharacterStat, number>> =>
   Object.freeze(Object.fromEntries(CHARACTER_STATS.map((stat) => [stat, 0])) as Record<CharacterStat, number>)
 
-const affordable_stat_value = (classe: ClassName, stat: CharacterStat, wanted: number, budget: number): number => {
+export const affordable_stat_value = (
+  classe: ClassName,
+  stat: CharacterStat,
+  wanted: number,
+  budget: number
+): number => {
   let value = clamp_int(wanted, 0, stat === 'vitality' && classe === 'ikari' ? budget * 2 : budget)
   while (value > 0) {
     const cost = characteristic_value_cost(classe, stat, value)

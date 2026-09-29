@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { DetailCell } from '../detail_artifact.ts'
 import type { CompiledStructureType, StructureAreaSource } from '../structures.ts'
 
 export type CityArea = StructureAreaSource & Readonly<{ anchor_x: number; anchor_z: number }>
@@ -57,6 +58,7 @@ export type GeneratedCityArtifact = Readonly<{
   id: string
   source_hash: string
   area: CityArea
+  details: readonly DetailCell[]
   chunks: readonly GeneratedCityChunk[]
 }>
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { WorldRecipe } from './world_recipe.ts'
+import { terrain_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { WorkerReply } from './worker_reply.ts'
 
 export type TerrainColumnCoordinate = Readonly<{ x: number; z: number }>
@@ -59,7 +59,7 @@ export const create_terrain_planner = (
   worker.addEventListener('error', (event) => report_failure(new Error(event.message)))
   worker.addEventListener('messageerror', () => report_failure(new Error('terrain planner reply could not be decoded')))
   try {
-    worker.postMessage({ type: 'initialize', world })
+    worker.postMessage({ type: 'initialize', world: terrain_recipe(world) })
   } catch (error) {
     report_failure(error instanceof Error ? error : new Error(String(error)))
   }

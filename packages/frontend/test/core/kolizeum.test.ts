@@ -11,7 +11,7 @@ import { initial_app_state, reduce_app_state, type AppInput, type AppState } fro
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -104,6 +104,7 @@ const placement_checkpoint = () => ({
       color_3: 0x8b6539,
       hat: null,
       cloak: null,
+      title: null,
       level: 10,
       experience: '0',
       vitality: 0,
@@ -125,6 +126,7 @@ const placement_checkpoint = () => ({
       color_3: 0x8b6539,
       hat: null,
       cloak: null,
+      title: null,
       level: 10,
       experience: '0',
       vitality: 0,

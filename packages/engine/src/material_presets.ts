@@ -3,10 +3,15 @@
 
 export const MATERIAL_PRESETS = Object.freeze([
   'stone',
+  'plaster',
+  'slate',
+  'copper',
+  'brick',
   'earth',
   'grass',
   'frozen_grass',
   'wood',
+  'bark',
   'foliage',
   'sand',
   'snow',
@@ -163,16 +168,123 @@ const grass_pattern = seamless((x: number, y: number): number => {
   return patch + grain - 0.055 + blade * 0.18 + tip * 0.12
 })
 
-const wood_pattern: MaterialPattern = seamless((x, y, size) => {
-  const grain = (tile_noise(x, y, size, 12, 811) - 0.5) * 0.12
-  const long_grain = (tile_noise(x * 0.3, y, size, 5, 977) - 0.5) * 0.16
-  const ring = Math.sin((x / size) * Math.PI * 8 + tile_noise(x, y, size, 3, 1231) * 2) * 0.035
-  return grain + long_grain + ring
-})
+/** Crisp periodic planks and stepped fibres, baked into the existing nearest-sampled atlas. */
+const wood_pattern: MaterialPattern = (x, y, size) => {
+  const across = (wrap(x + size * 0.25, size) / size) * 5
+  const plank = Math.floor(across)
+  const u = across - plank
+  const along = (wrap(y + size * 0.3125, size) / size) * 2 + (plank % 2) * 0.5
+  const v = along - Math.floor(along)
+  const border = Math.min(u, 1 - u) < 1.5 / size
+  const joint = Math.min(v, 1 - v) < 0.75 / size
+  const fibre = Math.floor(u * 14 + Math.sin(v * Math.PI * 2) * 0.8)
+  const grain = (hash(plank, fibre, 811) - 0.5) * 0.16
+  const board = (hash(plank, Math.floor(along) % 2, 977) - 0.5) * 0.14
+  return border || joint ? -0.26 : board + grain + 0.035
+}
 
-const foliage_pattern = noise_pattern({ contrast: 0.22, flecks: 0.12, streak: 0.45 })
+/** Continuous vertical fissures and irregular plates; trunks have no sawn-board joints. */
+const bark_pattern: MaterialPattern = (x, y, size) => {
+  const u = wrap(x, size) / size
+  const v = wrap(y, size) / size
+  const bend = Math.sin(v * Math.PI * 2) * 0.28 + Math.sin(v * Math.PI * 6) * 0.1
+  const fibre = u * 12 + bend
+  const ridge = Math.abs(Math.sin(fibre * Math.PI))
+  const plate = hash(Math.floor(fibre), Math.floor(v * 8), 389) - 0.5
+  const grain = hash(Math.floor(u * 48), Math.floor(v * 64), 521) - 0.5
+  return ridge < 0.18 ? -0.28 : (ridge - 0.5) * 0.14 + plate * 0.16 + grain * 0.07
+}
+
+/** Baked overlapping leaves: rotated pointed silhouettes, a folded midrib, and shaded gaps.
+ * Periodic cell identity keeps the atlas seamless; no leaf geometry or shader work is added. */
+const foliage_leaf = (x: number, y: number, cell_x: number, cell_y: number): number => {
+  const identity_x = wrap(cell_x, 7)
+  const identity_y = wrap(cell_y, 7)
+  const angle = hash(identity_x, identity_y, 301) * Math.PI * 2
+  const dx = x - cell_x - 0.2 - hash(identity_x, identity_y, 307) * 0.6
+  const dy = y - cell_y - 0.2 - hash(identity_x, identity_y, 311) * 0.6
+  const along = (dx * Math.cos(angle) + dy * Math.sin(angle)) / 0.8
+  const across = (-dx * Math.sin(angle) + dy * Math.cos(angle)) / 0.45
+  const silhouette = 1 - along * along - Math.abs(across)
+  const fold = across > 0 ? 0.1 : -0.035
+  const vein = Math.max(0, 1 - Math.abs(across) * 12) * 0.055
+  return Math.max(0, Math.min(1, silhouette * 5)) * (0.27 + fold + vein)
+}
+
+const foliage_pattern: MaterialPattern = (x, y, size) => {
+  const sample_x = (x / size) * 7
+  const sample_y = (y / size) * 7
+  let leaf = 0
+  for (let dy = -1; dy <= 1; dy += 1)
+    for (let dx = -1; dx <= 1; dx += 1)
+      leaf = Math.max(leaf, foliage_leaf(sample_x, sample_y, Math.floor(sample_x) + dx, Math.floor(sample_y) + dy))
+  return -0.17 + leaf + (tile_noise(x, y, size, 3, 331) - 0.5) * 0.1
+}
+
+/** Seamless frost fractures and tiny trapped bubbles, baked into the existing atlas. */
+const ice_pattern: MaterialPattern = (x, y, size) => {
+  const u = (x / size) * Math.PI * 2 + 0.37
+  const v = (y / size) * Math.PI * 2 + 0.73
+  const fractures = Math.abs(Math.sin(u * 2 + Math.sin(v)) * Math.sin(v * 3 + Math.sin(u)))
+  const crack = Math.max(0, 1 - fractures * 14)
+  const bubbles = Math.max(0, tile_noise(x, y, size, 13, 947) - 0.72) * 0.25
+  return -0.09 + crack * 0.32 + bubbles + (tile_noise(x, y, size, 4, 941) - 0.5) * 0.07
+}
+
+// Place the atlas seam through a representative interior section, away from aligned mortar rows.
+const phased_pattern =
+  (phase_x: number, phase_y: number, pattern: MaterialPattern): MaterialPattern =>
+  (x, y, size) =>
+    pattern(wrap(x + phase_x * size, size), wrap(y + phase_y * size, size), size)
 
 export const MATERIAL_PRESET_DEFINITIONS = Object.freeze({
+  brick: Object.freeze({
+    roughness: 0.9,
+    roughness_detail: 0.14,
+    climate_tint: false,
+    pattern: (x, y, size) => {
+      // Integer texel courses keep mortar continuous even in the small atlas.
+      const px = Math.floor((wrap(x, size) / size) * 32)
+      const py = Math.floor((wrap(y + size * 0.0625, size) / size) * 32)
+      const row = Math.floor(py / 4)
+      const shifted = wrap(px + (row % 2) * 4, 32)
+      const column = Math.floor(shifted / 8)
+      const u = shifted % 8,
+        v = py % 4
+      const shade = (hash(column, row, 919) - 0.5) * 0.18
+      const grit = (hash(px, py, 923) - 0.5) * 0.055
+      const mortar = u === 0 || v === 0
+      const edge = u === 1 || v === 1
+      return mortar ? -0.17 + grit : shade + grit + (edge ? 0.065 : 0.015)
+    },
+  }),
+  plaster: Object.freeze({
+    roughness: 0.9,
+    roughness_detail: 0.08,
+    climate_tint: false,
+    pattern: noise_pattern({ contrast: 0.035, flecks: 0.02, streak: 0.05 }),
+  }),
+  slate: Object.freeze({
+    roughness: 0.65,
+    roughness_detail: 0.14,
+    climate_tint: false,
+    pattern: phased_pattern(0.1875, 0.75, (x, y, size) => {
+      const row = Math.floor((y / size) * 8 + 0.37)
+      const edge = Math.min(((x / size) * 6 + (row % 2) * 0.5 + 0.27) % 1, ((y / size) * 8 + 0.37) % 1)
+      return (edge < 0.15 ? -0.2 : 0.04) + (tile_noise(x, y, size, 7, 881) - 0.5) * 0.08
+    }),
+  }),
+  copper: Object.freeze({
+    roughness: 0.4,
+    roughness_detail: 0.14,
+    climate_tint: false,
+    pattern: phased_pattern(
+      0.65625,
+      0.5625,
+      (x, y, size) => (tile_noise(x, y, size, 3, 887) - 0.5) * 0.15 + (((x / size) * 4 + 0.32) % 1 < 0.12 ? -0.14 : 0)
+    ),
+  }),
+
   stone: Object.freeze({
     roughness: 0.95,
     roughness_detail: -0.25,
@@ -203,6 +315,12 @@ export const MATERIAL_PRESET_DEFINITIONS = Object.freeze({
     climate_tint: false,
     pattern: wood_pattern,
   }),
+  bark: Object.freeze({
+    roughness: 0.94,
+    roughness_detail: 0.22,
+    climate_tint: false,
+    pattern: bark_pattern,
+  }),
   foliage: Object.freeze({
     roughness: 0.88,
     roughness_detail: 0.2,
@@ -222,10 +340,10 @@ export const MATERIAL_PRESET_DEFINITIONS = Object.freeze({
     pattern: noise_pattern({ contrast: 0.1, flecks: 0.08, streak: 0.15 }),
   }),
   ice: Object.freeze({
-    roughness: 0.24,
-    roughness_detail: -0.12,
+    roughness: 0.13,
+    roughness_detail: 0.08,
     climate_tint: false,
-    pattern: noise_pattern({ contrast: 0.08, flecks: 0.04, streak: 0.35 }),
+    pattern: ice_pattern,
   }),
   water: Object.freeze({
     roughness: 0.16,

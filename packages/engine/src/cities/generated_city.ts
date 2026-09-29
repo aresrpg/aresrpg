@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { CITY_DETAIL_LIMITS, validate_details, type DetailCell } from '../detail_artifact.ts'
 import type { StructurePlacement } from '../structure_placement.ts'
 import type { CompiledStructureType } from '../structures.ts'
 import type { CompiledWorld } from '../world_recipe.ts'
@@ -82,8 +83,15 @@ const load_generated_city_artifact = (id: string): Promise<void> => {
   if (!definition) return Promise.resolve()
   const next = load_json<GeneratedCityArtifact>(definition.artifact_url)
     .then((artifact) => {
-      if (artifact.id !== id || definition.map.source_hash !== artifact.source_hash)
+      if (artifact.version !== 3 || artifact.id !== id || definition.map.source_hash !== artifact.source_hash)
         throw new TypeError(`Generated ${id} voxel and map artifacts do not share provenance`)
+      if (!Array.isArray(artifact.details)) throw new TypeError(`Generated ${id} is missing baked details`)
+      const errors = validate_details(
+        artifact.details,
+        Object.fromEntries(definition.material_names.map((name) => [name, {}])),
+        CITY_DETAIL_LIMITS
+      )
+      if (errors.length) throw new TypeError(`Generated ${id}: ${errors.join('; ')}`)
       generated_cities.set(id, Object.freeze(artifact))
     })
     .catch((error: unknown) => {
@@ -112,6 +120,13 @@ export const load_generated_city_artifacts_for = (
       .filter((city) => GENERATED_MAPS[city.id] !== undefined && overlaps_area(city.area, area))
       .map(({ id }) => load_generated_city_artifact(id))
   ).then(() => undefined)
+
+/** Worker projection: only the requested column's baked details travel with its terrain result. */
+export const generated_city_details = (cities: readonly CompiledCity[], x: number, z: number): readonly DetailCell[] =>
+  cities.flatMap(
+    (city) =>
+      generated_cities.get(city.id)?.details.filter((cell) => cell.origin[0] === x && cell.origin[2] === z) ?? []
+  )
 
 const assert_matching_area = (city: CompiledCity, artifact: Pick<GeneratedCityArtifact, 'id' | 'area'>): void => {
   const authored = city.area

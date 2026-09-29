@@ -27,7 +27,9 @@ const harness = () => {
     pubsub: {
       graph: {
         market_prices: (item_type: string) =>
-          new Promise<MarketPriceHistory | null>((resolve, reject) => reads.push({ item_type, resolve, reject })),
+          new Promise<MarketPriceHistory | null>((resolve, reject) => reads.push({ item_type, resolve, reject })).then(
+            (history) => ({ history, total_units: '42' })
+          ),
       },
     },
   } as unknown as PlayerContext)
@@ -54,7 +56,9 @@ test('selection changes coalesce behind one read and obsolete results never reac
     expect(h.reads.map(({ item_type }) => item_type)).toEqual(['quartz', 'ore'])
     h.reads[1]!.resolve(history)
     await Bun.sleep(0)
-    expect(h.packets).toEqual([{ type: 'packet/market_prices', observation: { item_type: 'ore', id: 3 }, history }])
+    expect(h.packets).toEqual([
+      { type: 'packet/market_prices', observation: { item_type: 'ore', id: 3 }, history, total_units: '42' },
+    ])
     h.observe({ item_type: 'quartz', id: 4 })
     h.observe(null)
     h.reads[2]!.resolve(history)
@@ -72,7 +76,7 @@ test('failed reads report unavailable; connection teardown suppresses later comp
     h.reads[0]!.reject(new Error('price test failure'))
     await Bun.sleep(0)
     expect(h.packets).toEqual([
-      { type: 'packet/market_prices', observation: { item_type: 'quartz', id: 1 }, history: null },
+      { type: 'packet/market_prices', observation: { item_type: 'quartz', id: 1 }, history: null, total_units: null },
     ])
     h.observe({ item_type: 'wood', id: 2 })
     h.controller.abort()

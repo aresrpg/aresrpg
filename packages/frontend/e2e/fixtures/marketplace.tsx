@@ -15,12 +15,19 @@ import '../../src/tailwind.css'
 import '../../src/marketplace/marketplace.css'
 
 const copy = await load_app_copy('en')
-const stackable = new URLSearchParams(location.search).has('stackable')
-const item = content_catalog.items.find(({ category }) => category === (stackable ? 'resource' : 'hat'))!
-const older_item = content_catalog.items.find(
-  (candidate) => candidate.category === item.category && candidate.item_type !== item.item_type
+const bags = new URLSearchParams(location.search).has('bags')
+const pet = new URLSearchParams(location.search).has('pet')
+const pet_powers = pet ? [30, 60, 60] : []
+const stackable = bags || new URLSearchParams(location.search).has('stackable')
+const item = content_catalog.items.find((row) =>
+  bags ? row.item_type === 'bag_barley' : row.category === (stackable ? 'resource' : pet ? 'pet' : 'hat')
 )!
-const group = stackable ? 'RESOURCES' : 'EQUIPMENT'
+const older_item = content_catalog.items.find((candidate) =>
+  bags
+    ? candidate.item_type === 'bag_quartz'
+    : candidate.category === item.category && candidate.item_type !== item.item_type
+)!
+const group = bags ? 'CONSUMABLE' : stackable ? 'RESOURCES' : 'EQUIPMENT'
 const listings: ListingRow[] = [1, 2, 3].map((index) => ({
   ...item,
   kind: 'item',
@@ -30,6 +37,7 @@ const listings: ListingRow[] = [1, 2, 3].map((index) => ({
   amount: 1,
   stats: !stackable && index < 3 ? { strength: item_stat_center + (index === 1 ? 11 : 27) } : undefined,
   damages: !stackable && index === 1 ? [{ element: 'fire', from: 3, to: 7, damage_type: 'damage' }] : undefined,
+  pet_power: pet_powers[index - 1],
   price_mist: String(index * 1_000_000_000),
   kiosk: '0xkiosk',
   seller: '0xseller',
@@ -103,6 +111,7 @@ window.addEventListener('market-price-fixture-update', () => {
     packet: {
       type: 'packet/market_prices',
       observation,
+      total_units: read_app_state().marketplace.prices.total_units,
       history: {
         ...history,
         sampled_at_ms: history.sampled_at_ms + 1,
@@ -145,19 +154,26 @@ const Fixture = () => {
       })
       return
     }
-    dispatch_app({
-      type: 'server/packet',
-      packet: {
-        type: 'packet/market_slice',
-        next_cursor: null,
-        observation: market_observed,
-        listings:
-          market_observed.item_type === older_item.item_type
-            ? [{ ...listings[0]!, ...older_item, stats: undefined, damages: undefined, id: '0xolder' }]
-            : listings.filter(({ seller }) => seller !== '0xbuyer'),
-        kiosk_versions: { '0xkiosk': '2' },
-      },
-    })
+    document.body.dataset.marketRequest = String(market_observed.request)
+    const send_slice = () =>
+      dispatch_app({
+        type: 'server/packet',
+        packet: {
+          type: 'packet/market_slice',
+          next_cursor: null,
+          observation: market_observed,
+          listings:
+            market_observed.item_type === older_item.item_type
+              ? [{ ...listings[0]!, ...older_item, stats: undefined, damages: undefined, id: '0xolder' }]
+              : listings.filter(({ seller }) => seller !== '0xbuyer'),
+          kiosk_versions: { '0xkiosk': '2' },
+        },
+      })
+    if (new URLSearchParams(location.search).has('delayed')) {
+      const timer = setTimeout(send_slice, 350)
+      return () => clearTimeout(timer)
+    }
+    send_slice()
   }, [market_observed])
 
   useEffect(() => {
@@ -178,12 +194,14 @@ const Fixture = () => {
       packet: {
         type: 'packet/market_prices',
         observation,
-        history: {
-          total_units: query.has('supply-unavailable') ? null : '1000000',
-          first_timestamp_ms: end - 29 * 86_400_000,
-          sampled_at_ms: end,
-          buckets,
-        },
+        total_units: query.has('supply-unavailable') ? null : '1000000',
+        history: query.has('prices-unavailable')
+          ? null
+          : {
+              first_timestamp_ms: end - 29 * 86_400_000,
+              sampled_at_ms: end,
+              buckets,
+            },
       },
     })
   }, [observation])

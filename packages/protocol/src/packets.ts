@@ -18,7 +18,7 @@ import { parse_leaderboard_observation, type LeaderboardObservation, type Leader
 import {
   parse_market_price_observation,
   type MarketPriceObservation,
-  type MarketPriceHistory,
+  type MarketPriceSnapshot,
 } from './market_prices.ts'
 import {
   parse_market_observation,
@@ -235,6 +235,7 @@ export type FightPlayerSourceRow = {
   /** Immutable visible equipment while fight custody prevents loadout changes. */
   hat: string | null
   cloak: string | null
+  title: string | null
   level: number
   experience: string
   vitality: number
@@ -739,6 +740,8 @@ export type ClientPackets = {
   'packet/spectate': { character_id: string; fight: string | null }
   /** Temporary F-modal hydration; never changes committed spectator state. */
   'packet/fight_preview': { character_id: string; fight: string | null }
+  /** One ambient fight per connection; locality is checked against this character. */
+  'packet/fight_nearby': { character_id: string; fight: string | null }
   /** Registry + name derived the character ID client-side. Current wallet custody is mutable,
    *  so this narrowly asks the indexed owner of that exact object. */
   'packet/character_owner_request': { id: number; character_id: string }
@@ -886,7 +889,7 @@ export type ServerPackets = {
   'packet/market_slice': MarketPage & { observation: MarketObservation }
   'packet/market_counts': { observation: MarketObservation; counts: MarketTypeCounts | null }
   'packet/market_types': { observation: MarketObservation; items: readonly MarketType[] }
-  'packet/market_prices': { observation: MarketPriceObservation; history: MarketPriceHistory | null }
+  'packet/market_prices': { observation: MarketPriceObservation } & MarketPriceSnapshot
   'packet/market_history': {
     sales: MarketSaleRow[]
     revenue_30d_mist: string
@@ -1046,6 +1049,7 @@ export const CLIENT_PACKET_TYPES = [
   'packet/leaderboard_observe',
   'packet/spectate',
   'packet/fight_preview',
+  'packet/fight_nearby',
   'packet/character_owner_request',
   'packet/admin_request',
   'packet/ping',
@@ -1279,7 +1283,7 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
   }
   const observation_parser = OBSERVATION_PARSERS.get(type as string)
   if (observation_parser) return observation_parser(packet)
-  if (type === 'packet/spectate' || type === 'packet/fight_preview') {
+  if (['packet/spectate', 'packet/fight_preview', 'packet/fight_nearby'].includes(String(type))) {
     if (!is_id(packet.character_id)) throw new Error('packet/spectate needs a character_id')
     if (packet.fight !== null && !is_id(packet.fight)) throw new Error('packet/spectate needs a fight id or null')
     return packet as ClientPacket
@@ -1294,3 +1298,6 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
 }
 
 export type MarketVolume = Readonly<{ day_mist: string; month_mist: string; history_days: number }>
+
+/** Public fight board and marker visibility, in world blocks. */
+export const FIGHT_VIEW_RADIUS_BLOCKS = 50

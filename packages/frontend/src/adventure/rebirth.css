@@ -1,0 +1,114 @@
+.adventure-rebirth[open] {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 24px;
+  color: #ece7dc;
+  background: #060710d9;
+  backdrop-filter: grayscale(1) blur(2px);
+  font-family: var(--aui-font);
+  animation: rebirth-wounds 1.8s ease-out both;
+}
+.adventure-rebirth::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 9vh #030409,
+    inset 0 -9vh #030409;
+}
+.adventure-rebirth__soul {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #b7ecffb0, #6ecde622 35%, transparent 70%);
+  filter: blur(12px);
+  pointer-events: none;
+  animation: rebirth-soul 3s ease-out both;
+}
+.adventure-rebirth__card {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100%);
+  padding: 32px 24px;
+  text-align: center;
+  border-block: 1px solid #c8963c55;
+  background: #10131bd9;
+  box-shadow: 0 24px 100px #0008;
+  animation: rebirth-arrive 0.8s ease-out 1.8s both;
+}
+.adventure-rebirth__card h1 {
+  margin: 0;
+  font-size: clamp(22px, 4vw, 32px);
+  line-height: 1.25;
+  font-weight: 700;
+  color: #e3c284;
+}
+.adventure-rebirth__card p {
+  margin: 22px 0 28px;
+  color: #b8c2cd;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.adventure-rebirth__login {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  background: #c8963c;
+  color: #16130d;
+  font-weight: 700;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.adventure-rebirth__login:focus-visible {
+  outline: 2px solid #b7ecff;
+  outline-offset: 5px;
+}
+@keyframes rebirth-wounds {
+  from {
+    background: #4b0d1670;
+    backdrop-filter: grayscale(0) blur(0);
+  }
+  to {
+    background: #060710d9;
+    backdrop-filter: grayscale(1) blur(2px);
+  }
+}
+@keyframes rebirth-soul {
+  from {
+    opacity: 0;
+    transform: translateY(70px) scale(0.3);
+  }
+  25% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-180px) scale(1.5);
+  }
+}
+@keyframes rebirth-arrive {
+  from {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adventure-rebirth[open],
+  .adventure-rebirth__card {
+    animation: none;
+  }
+  .adventure-rebirth__soul {
+    display: none;
+  }
+}

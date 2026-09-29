@@ -11,13 +11,14 @@ import { character_max_hp, projected_hp } from '../../../src/game/character_stat
 import { EmptyActionCells, ExperienceBar } from '../../../src/game/hud/OverworldVitals.tsx'
 import { vital_percent, VitalsDisplay } from '../../../src/game/hud/VitalsDisplay.tsx'
 
-test('the HP hex drains downward and exposes its exact remaining fill', () => {
+test('the HP display supplies the exact bounded remaining percentage to the shared heart', () => {
   const html = renderToStaticMarkup(<VitalsDisplay ap={6n} hp={19n} max_hp={55n} mp={3n} />)
-  const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
 
   expect(vital_percent(19n, 55n)).toBe(34.54)
   expect(html).toContain('--hp-percent:34.54%')
-  expect(css).toMatch(/bottom:\s*0;[\s\S]*height:\s*var\(--hp-percent\)/)
+  expect(vital_percent(0n, 55n)).toBe(0)
+  expect(vital_percent(60n, 55n)).toBe(100)
+  expect(vital_percent(0n, 0n)).toBe(0)
 })
 
 test('the overworld action bar keeps ten empty cells', () => {

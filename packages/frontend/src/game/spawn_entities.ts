@@ -15,6 +15,7 @@
 import type { EntityRender } from '@aresrpg/engine'
 import { mulberry } from '@aresrpg/engine'
 
+import type { WalkPoint } from './core/walkable.ts'
 import { mob_entity, mob_model_scalar_for_roll } from './mob_entities.ts'
 import {
   group_label_anchor,
@@ -34,10 +35,10 @@ export const MOB_TAG_RANGE_BLOCKS = 50
 const ANIMATION_RANGE_BLOCKS = 60
 
 // bun's test runtime has no requestAnimationFrame — a timer keeps the module loadable there
-const raf: (callback: (now: number) => void) => void =
-  typeof globalThis.requestAnimationFrame === 'function'
-    ? (callback) => globalThis.requestAnimationFrame(callback)
-    : (callback) => void setTimeout(() => callback(performance.now()), 16)
+const raf = (callback: (now: number) => void): void => {
+  if (typeof globalThis.requestAnimationFrame === 'function') globalThis.requestAnimationFrame(callback)
+  else setTimeout(() => callback(performance.now()), 16)
+}
 
 type MemberSlot = {
   /** the entity id — `${group}:${ordinal}`, stable so the engine keeps the loaded model */
@@ -48,8 +49,6 @@ type MemberSlot = {
   random: () => number
   /** ground height under the member, re-sampled as it ambles across columns */
   y: number
-  /** the column the height was sampled on — a cheap "did it cross a block" check */
-  column: string
 }
 
 type GroupSlot = {
@@ -60,13 +59,19 @@ type GroupSlot = {
 export const create_spawn_renderer = ({
   submit,
   ground_height,
+  walk_step,
   entity_height,
   label,
+  model_for,
+  scalar_for = mob_model_scalar_for_roll,
 }: Readonly<{
   submit: (entities: readonly EntityRender[]) => void
   ground_height: (x: number, z: number) => number
+  walk_step: (from: WalkPoint, x: number, z: number) => WalkPoint | null | undefined
   entity_height: (id: string) => number | null
   label: (group_id: string, element: HTMLElement | null, position: readonly [number, number, number] | null) => void
+  model_for?: Parameters<typeof mob_entity>[1]
+  scalar_for?: typeof mob_model_scalar_for_roll
 }>) => {
   const groups = new Map<string, GroupSlot>()
   let tracked_groups: readonly WorldMobGroup[] = Object.freeze([])
@@ -85,14 +90,10 @@ export const create_spawn_renderer = ({
       return {
         id: `${row.id}:${ordinal}`,
         mob_type: row.members[ordinal]!.mob_type,
-        model_level_scalar: mob_model_scalar_for_roll(
-          row.members[ordinal]!.mob_type,
-          row.members[ordinal]!.level_scalar
-        ),
+        model_level_scalar: scalar_for(row.members[ordinal]!.mob_type, row.members[ordinal]!.level_scalar),
         wander: start_wander(anchor, random),
         random,
         y: ground_height(anchor.x, anchor.z),
-        column: column_of(anchor.x, anchor.z),
       }
     })
 
@@ -142,16 +143,19 @@ export const create_spawn_renderer = ({
       members.flatMap((member): EntityRender[] => {
         const far = own ? Math.hypot(member.wander.x - own.x, member.wander.z - own.z) > ANIMATION_RANGE_BLOCKS : false
         const moving = member.wander.moving && !far
-        const entity = mob_entity({
-          id: member.id,
-          mob_type: member.mob_type,
-          anchor: Object.freeze({
-            kind: 'world' as const,
-            position: Object.freeze([member.wander.x, member.y, member.wander.z] as const),
-          }),
-          facing: Object.freeze({ kind: 'yaw' as const, yaw: member.wander.yaw }),
-          level_scalar: member.model_level_scalar,
-        })
+        const entity = mob_entity(
+          {
+            id: member.id,
+            mob_type: member.mob_type,
+            anchor: Object.freeze({
+              kind: 'world' as const,
+              position: Object.freeze([member.wander.x, member.y, member.wander.z] as const),
+            }),
+            facing: Object.freeze({ kind: 'yaw' as const, yaw: member.wander.yaw }),
+            level_scalar: member.model_level_scalar,
+          },
+          model_for
+        )
         return entity
           ? [
               Object.freeze({
@@ -176,18 +180,19 @@ export const create_spawn_renderer = ({
     if (disposed) return
     const delta_seconds = Math.min((now - last_tick_ms) / 1000, 0.25)
     last_tick_ms = now
-    let moving = false
     for (const slot of groups.values())
       for (const member of slot.members) {
-        member.wander = step_wander(member.wander, delta_seconds, member.random)
-        if (!member.wander.moving) continue
-        moving = true
-        // re-ground only when it actually crosses a column — a height sample per member per
-        // frame is the kind of cost that only shows up on somebody else's machine
-        const column = column_of(member.wander.x, member.wander.z)
-        if (column !== member.column) {
-          member.column = column
-          member.y = ground_height(member.wander.x, member.wander.z)
+        const next = step_wander(member.wander, delta_seconds, member.random)
+        if (!next.moving) {
+          member.wander = next
+          continue
+        }
+        const point = walk_step([member.wander.x, member.y, member.wander.z], next.x, next.z)
+        if (point) {
+          member.wander = next
+          member.y = point[1]
+        } else {
+          member.wander = { ...member.wander, moving: false, walking: false, decide_s: 1 }
         }
       }
     build()
@@ -196,7 +201,6 @@ export const create_spawn_renderer = ({
     // counting down to its next decision, and the countdown is what makes it start again
     ticking = groups.size > 0
     if (ticking) raf(tick)
-    else void moving
   }
 
   const wake = (): void => {
@@ -257,5 +261,3 @@ const hash_group = (id: string): number => {
   for (let index = 0; index < id.length; index += 1) hash = (Math.imul(hash, 31) + id.charCodeAt(index)) | 0
   return hash >>> 0
 }
-
-const column_of = (x: number, z: number): string => `${Math.floor(x)}:${Math.floor(z)}`

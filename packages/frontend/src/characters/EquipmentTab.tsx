@@ -8,258 +8,117 @@
 // it, double-click to equip (or drink), drag it onto a slot to aim a specific slot, click
 // a filled slot to inspect it, double-click to stage its unequip.
 
+import { IconButton } from '@aresrpg/ui'
+import { character_equipment_slots } from '@aresrpg/immutable'
 import { useMemo, useState } from 'react'
-import type { CharacterEquipmentSlot } from '@aresrpg/immutable'
-import { item_stat_center, stat_names } from '@aresrpg/immutable'
-import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
+import { Search } from 'lucide-react'
+import type { CharacterRow } from '@aresrpg/protocol'
 
-import { localized_error } from '../i18n/error_text.ts'
+import { item_icon } from '../content/assets.ts'
+import { CharacterPreviewCanvas } from '../components/CharacterPreviewCanvas.tsx'
+import { character_render_source } from '../game/character_entities.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
-import { fold_equipment_stats } from '../game/character_stats.ts'
+import { titleize } from '../content/catalog.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
-import { available_inventory_items, encumbered_asset_ids, inventory_groups } from '../inventory_stacks.ts'
-import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
-import { toast } from '../toast.ts'
-import { run_direct_transaction } from '../transaction_guard.ts'
 
-import {
-  equip_refusal,
-  equipment_change_set,
-  equipment_map_of,
-  natural_slot_for,
-  stage_equip,
-  stage_unequip,
-  type EquipmentMap,
-} from './equipment_stage.ts'
-import {
-  BAG_CATEGORIES,
-  bag_category_of,
-  bag_item_matches,
-  InventoryResourceFilters,
-  type BagCategory,
-  type ResourceFilter,
-} from './InventoryResourceFilters.tsx'
-import { PendingClaims } from './PendingClaims.tsx'
-import { select_inventory_item } from './inventory_selection.ts'
-import { is_forge_gear } from './forge_eligibility.ts'
-import { InventoryActionOverlays, is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
-import { InventoryItemCell } from './InventoryItemCell.tsx'
-import { editable_character } from './character_activity.ts'
+import { equipment_comparison } from './equipment_comparison.ts'
+import { useEquipment } from './useEquipment.ts'
+import type { CharacterSession } from './character_session.ts'
 import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
-import { consumable_plan } from './consumable_plan.ts'
-
-const consumable_action = (item: Readonly<ItemRow>) => {
-  const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
-  if (!effect || effect.type === 'loot_box') return null
-  return Object.freeze({
-    effect,
-    heal: effect.type === 'heal' ? effect.amount : 0,
-  })
-}
-
-const MIN_GRID_CELLS = 40
+import { equip_refusal, stage_unequip } from './equipment_stage.ts'
+import { InventorySelectionGrid } from './InventorySelectionGrid.tsx'
+import { InventoryItemCell } from './InventoryItemCell.tsx'
+import { inventory_action_selection, useInventoryActions } from './InventoryOverlays.tsx'
+import { InventoryItemActions } from './InventoryItemActions.tsx'
+import { select_inventory_item } from './inventory_selection.ts'
+import { BAG_CATEGORIES, InventoryResourceFilters } from './InventoryResourceFilters.tsx'
+import { PendingClaims } from './PendingClaims.tsx'
 
 export default function EquipmentTab({
   character,
   copy,
-}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
-  const t = copy_text(copy.characters_page)
-  const wallet = useAppStore(({ session }) => session.wallet)
-  const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
-  const all_inventory = useAppStore(({ session }) => session.inventory)
-  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
-  const trades = useAppStore(({ trade }) => trade.rows)
-  const encumbered_ids = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
-  const inventory = useMemo(
-    () => available_inventory_items(all_inventory, encumbered_ids, character.kiosk),
-    [all_inventory, character.kiosk, encumbered_ids]
-  )
-  const real = useMemo(() => equipment_map_of(character), [character])
-  const [staged, set_staged] = useState<EquipmentMap | null>(null)
-  const [category, set_category] = useState<BagCategory>('equipment')
-  const [resource_filter, set_resource_filter] = useState<ResourceFilter>('all')
-  const [inspected_id, set_inspected_id] = useState<string | null>(null)
-  const [selected_ids, set_selected_ids] = useState<readonly string[]>([])
-  const [dragging_id, set_dragging_id] = useState<string | null>(null)
-  const [committing, set_committing] = useState(false)
-  const [menu, set_menu] = useState<ItemMenuState>(null)
-  const [reveal_box, set_reveal_box] = useState<ItemRow | null>(null)
-  const [healing_item, set_healing_item] = useState<Readonly<ItemRow> | null>(null)
+  session,
+}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy; session?: CharacterSession }>) {
+  const {
+    t,
+    encumbered_ids,
+    inventory,
+    staged,
+    set_staged,
+    category,
+    set_category,
+    resource_filter,
+    set_resource_filter,
+    set_inspected_id,
+    selected_ids,
+    set_selected_ids,
+    dragging_id,
+    set_dragging_id,
+    committing,
+    menu,
+    set_menu,
+    reveal_box,
+    set_reveal_box,
+    healing_item,
+    set_healing_item,
+    equipment,
+    changes,
+    dirty,
+    bag,
+    display_bag,
+    counts,
+    grid_items,
+    selected_items,
+    select_item,
+    inspected,
+    try_stage,
+    drink,
+    activate,
+    accept,
+    totals,
+    empty_cells,
+  } = useEquipment({ character, copy, session })
 
-  const equipment = staged ?? real
-  const changes = useMemo(() => equipment_change_set(equipment, real), [equipment, real])
-  const dirty = changes.to_equip.length > 0 || changes.to_unequip.length > 0
-  const staged_ids = useMemo(
-    () => new Set(Object.values(equipment).flatMap((item) => (item ? [item.id] : []))),
-    [equipment]
-  )
+  const [query, set_query] = useState('')
+  const filtered = grid_items.filter(({ item }) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+  const category_art = { equipment: 'theban_scrapblade', consumables: 'recall_potion', resources: 'wheat_barley' }
 
-  // items whose unequip is STAGED come back to the bag view immediately (re-clickable to
-  // cancel); they leave the doll but must never vanish from both surfaces at once
-  const freed = useMemo(
+  const preview_source = useMemo(
     () =>
-      character.equipment
-        .filter(({ id }) => !staged_ids.has(id))
-        .map(({ slot: _slot, ...item }) => ({ ...item, kiosk: character.kiosk })),
-    [character, staged_ids]
-  )
-  const bag = useMemo(
-    () => [...inventory.filter((item) => !staged_ids.has(item.id)), ...freed],
-    [inventory, staged_ids, freed]
-  )
-  const display_bag = useMemo(() => inventory_groups(bag), [bag])
-  const counts = useMemo(
-    () =>
-      display_bag.reduce(
-        (totals, { item }) => ({ ...totals, [bag_category_of(item)]: totals[bag_category_of(item)] + 1 }),
-        {
-          equipment: 0,
-          consumables: 0,
-          resources: 0,
-        }
-      ),
-    [display_bag]
-  )
-  const grid_items = useMemo(
-    () => display_bag.filter(({ item }) => bag_item_matches(item, category, resource_filter)),
-    [display_bag, category, resource_filter]
+      character_render_source({
+        ...character,
+        equipment: Object.values(equipment).flatMap((item) => (item ? [item] : [])),
+      }),
+    [character, equipment]
   )
 
-  const selected_items = grid_items.map(({ item }) => item).filter(({ id }) => selected_ids.includes(id))
-  const select_item = (item: Readonly<ItemRow>, toggle: boolean): void => {
-    set_inspected_id(item.id)
-    set_selected_ids(
-      select_inventory_item(
-        selected_items.filter(is_forge_gear).map(({ id }) => id),
-        item.id,
-        toggle && is_forge_gear(item)
-      )
-    )
-  }
+  const inspected_slot = character_equipment_slots.find((slot) => equipment[slot]?.id === inspected?.id)
+  const inspected_bag_item = bag.find((item) => item.id === inspected?.id)
 
-  const inspected =
-    bag.find(({ id }) => id === inspected_id) ??
-    Object.values(equipment).find((item) => item?.id === inspected_id) ??
-    null
-
-  const refuse = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot): boolean => {
-    const refusal = equip_refusal({
-      item,
-      slot,
-      character_level: character.level,
-      equipment,
-      listed_ids: encumbered_ids,
-    })
-    if (refusal) toast.add(t(`refusal_${refusal}`), 'info')
-    return refusal !== null
-  }
-
-  const try_stage = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot | null): void => {
-    if (committing) return
-    const target = slot ?? natural_slot_for(item, equipment)
-    if (!target) return void toast.add(t('refusal_wrong_slot'), 'info')
-    if (refuse(item, target)) return
-    set_staged(stage_equip(equipment, item, target))
-  }
-
-  const drink = (item: Readonly<ItemRow>, mode: 'one' | 'full' = 'one'): void => {
-    const action = consumable_action(item)
-    if (!action || !wallet) return
-    if (!available) return void toast.add(t('consume_busy'), 'info')
-    if (action.effect.type === 'city' && !character.world) return
-    const transaction = run_direct_transaction(async () => {
-      const state = read_app_state()
-      const current_character = editable_character(state, character.id, Date.now())
-      if (!current_character) throw localized_error(t('consume_busy'))
-      if (current_character.dungeon_run && ['recall', 'city'].includes(action.effect.type))
-        throw localized_error(t('teleport_dungeon_blocked'))
-      const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
-      const plan = consumable_plan(current_character, item, state.session.inventory, encumbered, Date.now())
-      const amount = mode === 'full' ? plan.needed : 1
-      if (plan.needed === 0) throw localized_error(t('already_full_hp'))
-      if (amount > plan.available) throw localized_error(t('consume_healing_insufficient', { count: amount }))
-      const result = await wallet.character.use_consumable({
-        character_id: character.id,
-        item_id: item.id,
-        item_type: item.item_type,
-        amount,
-        merge_sources: plan.merge_sources,
-        ...(action.effect.type === 'city' ? { world: current_character.world } : {}),
-        custody: { kiosk: current_character.kiosk, kiosk_cap: current_character.kiosk_cap },
-      })
-      return { ...result, amount }
-    })
-    if (!transaction) return
-    set_healing_item(null)
-    set_committing(true)
-    const pending = toast.loading(t('consume_pending'))
-    void transaction
-      .then(({ inventory_changes, amount }) => {
-        dispatch_app({ type: 'inventory/amounts_changed', changes: inventory_changes })
-        dispatch_app({
-          type: 'character/consumed',
-          character_id: character.id,
-          item_id: item.id,
-          effect: action.effect.type,
-          heal: action.heal * amount,
-        })
-        pending.success(t('consume_success'))
-      })
-      .catch(pending.error)
-      .finally(() => set_committing(false))
-  }
-
-  const activate = (item: Readonly<ItemRow>): void => {
-    if (encumbered_ids.has(item.id)) return void toast.add(t('refusal_item_listed'), 'info')
-    if (is_loot_box(item)) return set_reveal_box(item)
-    const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
-    if (effect) return effect.type === 'heal' ? set_healing_item(item) : drink(item)
-    try_stage(item, null)
-  }
-
-  const accept = (): void => {
-    if (!dirty || committing || !wallet) return
-    const transaction = run_direct_transaction(() =>
-      wallet.character.equip({
-        character_id: character.id,
-        to_equip: changes.to_equip,
-        to_unequip: changes.to_unequip,
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
-      })
-    )
-    if (!transaction) return
-    set_committing(true)
-    const pending = toast.loading(t('equip_pending'))
-    void transaction
-      .then(() => {
-        dispatch_app({
-          type: 'character/equip_folded',
-          character_id: character.id,
-          equipped: changes.to_equip,
-          unequipped: changes.to_unequip,
-        })
-        set_staged(null)
-        pending.success(t('equip_success'))
-      })
-      .catch(pending.error)
-      .finally(() => set_committing(false))
-  }
-
-  const totals = useMemo(() => {
-    // the ONE fold home (clamped, pet-scaled) — display exactly what the chain folds
-    const folded = fold_equipment_stats(Object.values(equipment).flatMap((item) => (item ? [item] : [])))
-    return stat_names
-      .map((stat) => ({ stat, value: folded[stat] - item_stat_center }))
-      .filter(({ value }) => value !== 0)
-  }, [equipment])
-
-  const empty_cells = Math.max(0, MIN_GRID_CELLS - grid_items.length)
-
+  const item_actions = useInventoryActions({
+    copy,
+    menu,
+    close_menu: () => set_menu(null),
+    reveal_box,
+    set_reveal_box,
+    inventory_override: session?.inventory,
+    detail: inventory_action_selection(inspected_bag_item, selected_items),
+  })
   return (
-    <div className="chr-equip">
-      {/* LEFT — identity chip, the paper-doll, equipped totals, the selected item's sheet */}
+    <div
+      className="chr-equip"
+      onClick={(event) => {
+        if (committing) return
+        const target = event.target as Element
+        if (
+          !target.closest(
+            'button, input, select, textarea, a, label, [role="button"], .aui-selection-grid, .chr-equip__detail'
+          )
+        )
+          set_selected_ids([])
+      }}
+    >
       <div className="chr-equip__side" data-tutorial-target="character_equipment">
         <div className="chr-equip__chip">
           <div className="min-w-0 flex-1">
@@ -275,6 +134,7 @@ export default function EquipmentTab({
 
         <div className="chr-eyebrow">{t('equipment_head')}</div>
         <EquipmentDoll
+          preview={<CharacterPreviewCanvas source={preview_source} pedestal />}
           item_for={(slot) => equipment[slot] ?? null}
           open={(slot) => {
             if (committing) return
@@ -310,21 +170,19 @@ export default function EquipmentTab({
             }
           }}
           footer={
-            dirty ? (
-              <div className="flex gap-2">
-                <button
-                  className="btn-outline chr-btn"
-                  disabled={committing}
-                  onClick={() => set_staged(null)}
-                  type="button"
-                >
-                  {t('cancel')}
-                </button>
-                <button className="btn-gold chr-btn" disabled={committing} onClick={accept} type="button">
-                  {committing ? '…' : t('accept')}
-                </button>
-              </div>
-            ) : null
+            <div className="inventory-commit-bar" style={{ visibility: dirty ? 'visible' : 'hidden' }}>
+              <button
+                className="btn-outline chr-btn"
+                disabled={committing}
+                onClick={() => set_staged(null)}
+                type="button"
+              >
+                {t('cancel')}
+              </button>
+              <button className="btn-gold chr-btn" disabled={committing} onClick={accept} type="button">
+                {committing ? '…' : t('accept')}
+              </button>
+            </div>
           }
         />
 
@@ -345,19 +203,51 @@ export default function EquipmentTab({
         </div>
 
         {inspected && (
-          <div className="chr-equip__detail">
-            <OwnedItemDetail item={inspected} copy={copy} />
+          <div className="chr-equip__detail" data-item-category={inspected.category}>
+            <IconButton
+              className="inventory-item-close"
+              label={copy.wallet_close}
+              icon={<span aria-hidden="true">×</span>}
+              onClick={() => set_inspected_id(null)}
+            />
+            <OwnedItemDetail
+              item={inspected}
+              copy={copy}
+              craft_session={{ character, inventory: session?.inventory }}
+              comparison={equipment_comparison(inspected, equipment)}
+            />
+            <InventoryItemActions
+              item={inspected}
+              equipped={!!inspected_slot}
+              selected={selected_ids.includes(inspected.id)}
+              disabled={committing}
+              can_use={!session}
+              entries={item_actions.detail_entries}
+              copy={copy}
+              toggle={() => {
+                set_selected_ids(select_inventory_item(selected_ids, inspected.id, true))
+                set_inspected_id(null)
+              }}
+              close={() => set_inspected_id(null)}
+              activate={() => {
+                if (inspected_slot) set_staged(stage_unequip(equipment, inspected_slot))
+                else if (inspected_bag_item) activate(inspected_bag_item)
+                set_inspected_id(null)
+              }}
+            />
           </div>
         )}
       </div>
 
-      {/* RIGHT — the bag: category tabs + grid */}
       <div className="chr-equip__bag" data-tutorial-target="shared_inventory">
         <PendingClaims copy={copy} />
         <div className="chr-equip__bagtabs">
           {BAG_CATEGORIES.map((key) => (
             <button
               className={`chr-bagtab ${category === key ? 'is-active' : ''}`}
+              aria-label={t(`bag_${key}`)}
+              aria-pressed={category === key}
+              title={t(`bag_${key}`)}
               key={key}
               onClick={() => {
                 set_category(key)
@@ -365,11 +255,24 @@ export default function EquipmentTab({
               }}
               type="button"
             >
-              {t(`bag_${key}`)}
-              <span className="tabular-nums opacity-60">{counts[key]}</span>
+              <img src={item_icon(category_art[key]) ?? undefined} alt="" />
+              <span className="inventory-category-name">{t(`bag_${key}`)}</span>
+              <span className="inventory-category-count">{counts[key]}</span>
             </button>
           ))}
         </div>
+        <label className="inventory-search">
+          <Search size={18} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label={copy.ui.inventory_search}
+            placeholder={copy.ui.inventory_search}
+            value={query}
+            onChange={(event) => {
+              set_query(event.target.value)
+            }}
+          />
+        </label>
         <InventoryResourceFilters
           category={category}
           filter={resource_filter}
@@ -377,32 +280,32 @@ export default function EquipmentTab({
           items={display_bag}
           copy={copy}
         />
-        <p className="px-3 py-2 text-[10px] text-muted" data-inventory-selection>
-          {t('inventory_selection', { count: selected_items.length })}
-        </p>
-        <div className="chr-equip__grid">
-          {grid_items.map(({ item, amount }) => (
+        <InventorySelectionGrid
+          class_name="chr-equip__grid"
+          copy={copy}
+          items={grid_items.map(({ item }) => item)}
+          selected={selected_ids}
+          change={set_selected_ids}
+          menu={set_menu}
+          disabled={committing}
+          drag_item={set_dragging_id}
+          equip={try_stage}
+        >
+          {filtered.map(({ item, amount }) => (
             <InventoryItemCell
               amount={amount}
               class_name={selected_ids.includes(item.id) ? 'is-selected' : ''}
               aria-pressed={selected_ids.includes(item.id)}
-              draggable
               item={item}
               key={item.id}
               onClick={(event) => select_item(item, event.shiftKey)}
               onDoubleClick={(event) => {
                 if (!event.shiftKey) activate(item)
               }}
-              onDragEnd={() => set_dragging_id(null)}
-              onDragStart={(event) => {
-                event.dataTransfer.setData('text/plain', item.id)
-                set_dragging_id(item.id)
-              }}
               onContextMenu={(event) => {
                 event.preventDefault()
-                const items = selected_ids.includes(item.id) ? selected_items : [item]
                 if (!selected_ids.includes(item.id)) select_item(item, false)
-                set_menu({ x: event.clientX, y: event.clientY, item, items })
+                set_menu({ x: event.clientX, y: event.clientY, ...inventory_action_selection(item, selected_items)! })
               }}
               show_level
             />
@@ -410,7 +313,7 @@ export default function EquipmentTab({
           {Array.from({ length: empty_cells }, (_, index) => (
             <span aria-hidden="true" className="chr-cell chr-cell--empty" key={`empty-${index}`} />
           ))}
-        </div>
+        </InventorySelectionGrid>
       </div>
       <ConsumeHealingModal
         character={character}
@@ -419,13 +322,7 @@ export default function EquipmentTab({
         copy={copy}
         item={healing_item}
       />
-      <InventoryActionOverlays
-        close_menu={() => set_menu(null)}
-        copy={copy}
-        menu={menu}
-        reveal_box={reveal_box}
-        set_reveal_box={set_reveal_box}
-      />
+      {item_actions.overlays}
     </div>
   )
 }

@@ -17,6 +17,19 @@ const pattern_field = (preset: keyof typeof MATERIAL_PRESET_DEFINITIONS, size: n
 const average = (values: readonly number[]): number => values.reduce((sum, value) => sum + value, 0) / values.length
 
 describe('material appearance', () => {
+  test('brick mortar contains continuous courses rather than isolated dark dashes', () => {
+    const rows = Array.from({ length: 32 }, (_, y) =>
+      Array.from({ length: 32 }, (_, x) => material_pattern('brick', x, y, 32))
+    )
+    expect(rows.filter((row) => row.every((value) => value < -0.1)).length).toBeGreaterThanOrEqual(4)
+    expect(rows.some((row) => row.some((value) => value < -0.1) && row.some((value) => value > 0))).toBe(true)
+  })
+  test('wood retains crisp joints instead of only smooth low-contrast noise', () => {
+    const field = Array.from({ length: 32 * 32 }, (_, i) => material_pattern('wood', i % 32, Math.floor(i / 32), 32))
+    const neighbour_contrast = field.slice(1).map((value, i) => Math.abs(value - field[i]!))
+    expect(Math.max(...neighbour_contrast)).toBeGreaterThan(0.25)
+    expect(Math.max(...field) - Math.min(...field)).toBeGreaterThan(0.3)
+  })
   test('material detail is deterministic, preset-distinct, and directional where the surface is', () => {
     const samples = (preset: keyof typeof MATERIAL_PRESET_DEFINITIONS) => pattern_field(preset, 8)
 
@@ -194,4 +207,13 @@ describe('world materials', () => {
     expect(material_tint_tables(first).classes).toEqual(material_tint_tables(renamed).classes)
     expect(material_tint_tables(first).classes).toEqual([0, 1, 3, 0])
   })
+})
+
+test('bark has vertical fissures without the horizontal courses of planks', () => {
+  const rows = Array.from({ length: 32 }, (_, y) =>
+    Array.from({ length: 32 }, (_, x) => material_pattern('bark', x, y, 32))
+  )
+  expect(rows.some((row) => row.some((value) => value < -0.2))).toBe(true)
+  expect(rows.every((row) => row.filter((value) => value < -0.2).length < 16)).toBe(true)
+  expect(rows.flat()).not.toEqual(pattern_field('wood', 32))
 })

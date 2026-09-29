@@ -3,6 +3,7 @@
 
 import type { ServerPacket } from '@aresrpg/protocol'
 
+import type { DetailTab } from '../characters/character_navigation.ts'
 import { is_admin_address } from '../admin_access.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
@@ -21,13 +22,21 @@ export const pages = [
 ] as const
 
 export type Page = (typeof pages)[number]
-export type AppDialog = 'welcome' | 'character_create' | 'top_up' | 'travel'
+export type AppDialog =
+  | 'welcome'
+  | 'character_create'
+  | 'top_up'
+  | 'travel'
+  | 'leave_game'
+  | 'world_map'
+  | `character_${DetailTab}`
+  | `mob:${string}`
+  | `fight:${string}`
 
 export type NavigationState = Readonly<{
   page: Page
   pathname: string
   dialog: AppDialog | null
-  guest_spectating: boolean
 }>
 
 export type NavigationInput =
@@ -35,13 +44,12 @@ export type NavigationInput =
   | Readonly<{ type: 'path/open'; pathname: string }>
   | Readonly<{ type: 'route/changed'; pathname: string }>
   | Readonly<{ type: 'dialog/open'; dialog: AppDialog | null }>
-  | Readonly<{ type: 'spectate/changed'; enabled: boolean }>
   | Readonly<{ type: 'auth/rejected'; error: string }>
   | Readonly<{ type: 'auth/disconnected' }>
   | Readonly<{ type: 'server/packet'; packet: Readonly<ServerPacket> }>
 
 export const initial_navigation_state = (): NavigationState =>
-  Object.freeze({ page: 'world', pathname: '/', dialog: null, guest_spectating: false })
+  Object.freeze({ page: 'world', pathname: '/', dialog: null })
 
 export const normalize_pathname = (pathname: string): string => {
   const normalized = `/${pathname.split('?')[0]?.split('#')[0]?.split('/').filter(Boolean).join('/') ?? ''}`
@@ -59,16 +67,7 @@ export const pathname_for_page = (page: Page): string =>
 
 export const is_world_page = (page: Page): boolean => page === 'world'
 
-/** The pages able to host the mounted fight board (the arena route shares the world's board). */
-export const is_fight_board_page = (page: Page): boolean => is_world_page(page) || page === 'kolizeum'
-
 export const is_jobs_pathname = (pathname: string): boolean => normalize_pathname(pathname) === '/characters/jobs'
-
-/** The persistent world renderer runs for ordinary world play and while the Kolizeum route
- *  presents its mounted board. Other routes keep the renderer paused even if a fight continues
- *  in the background. */
-export const world_scene_active = (page: Page, fight_mounted: boolean, background = false): boolean =>
-  is_world_page(page) || (is_fight_board_page(page) && fight_mounted) || background
 
 const open_page = (state: AppState, page: Page): AppState => {
   if (page === 'admin' && !is_admin_address(state.session.wallet?.address ?? null)) return state
@@ -108,29 +107,39 @@ const return_from_kolizeum_fight = (
 
 const logged_out_navigation = (state: AppState): NavigationState =>
   state.distribution.gift_link_ready
-    ? Object.freeze({ ...initial_navigation_state(), page: 'airdrop', pathname: '/gift' })
+    ? Object.freeze({
+        ...initial_navigation_state(),
+        page: 'airdrop',
+        pathname: '/gift',
+      })
     : initial_navigation_state()
 
+const arrived_fight = (state: AppState, reason: string): AppState => {
+  const { run } = state.run_to
+  if (reason !== 'arrived' || run?.source !== 'fight' || !state.world.fights[run.fight_id]) return state
+  return open_dialog(state, `fight:${run.fight_id}`)
+}
+
+const packet_navigation = (state: AppState, packet: Readonly<ServerPacket>): AppState => {
+  if (packet.type === 'packet/characters') return open_dialog(state, packet.characters.length === 0 ? 'welcome' : null)
+  if (
+    packet.type === 'packet/fight_phase' &&
+    packet.phase === 'ended' &&
+    state.navigation.dialog === `fight:${packet.fight}`
+  )
+    return open_dialog(state, null)
+  return state
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
+  if (input.type === 'run_to/stopped') return arrived_fight(state, input.reason)
   if (input.type === 'fight_result/checkpoint') return return_from_kolizeum_fight(state, input)
   if (input.type === 'page/open') return open_page(state, input.page)
   if (input.type === 'path/open' || input.type === 'route/changed') return open_path(state, input.pathname)
   if (input.type === 'dialog/open') return open_dialog(state, input.dialog)
-  if (input.type === 'spectate/changed')
-    return Object.freeze({
-      ...state,
-      navigation: Object.freeze({ ...state.navigation, guest_spectating: input.enabled }),
-    })
   if (input.type === 'auth/rejected' || input.type === 'auth/disconnected')
     return Object.freeze({ ...state, navigation: logged_out_navigation(state) })
-  if (input.type === 'server/packet' && input.packet.type === 'packet/characters')
-    return Object.freeze({
-      ...state,
-      navigation: Object.freeze({
-        ...state.navigation,
-        dialog: input.packet.characters.length === 0 ? 'welcome' : null,
-      }),
-    })
+  if (input.type === 'server/packet') return packet_navigation(state, input.packet)
   return state
 }
 

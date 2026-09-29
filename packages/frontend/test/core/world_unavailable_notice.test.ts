@@ -11,3 +11,7 @@ test('an unavailable world notice is dismissible without hiding fatal renderer f
   expect(graphics_notice_visible(false, true, false, true, false)).toBeTrue()
   expect(graphics_notice_visible(true, true, false, false, false)).toBeFalse()
 })
+
+test('graphics failures do not block management surfaces', () => {
+  expect(graphics_notice_visible(true, true, false, false, true)).toBe(false)
+})

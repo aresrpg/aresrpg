@@ -7,6 +7,7 @@ import { Text } from '../../i18n/Text.tsx'
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
+import { character_icon } from '../../content/assets.ts'
 import type { AppCopy } from '../../i18n/copy.ts'
 import type { FightFighterView } from './fight_projection.ts'
 import { active_effect_lines, FightEffectLines } from './FightEffectLines.tsx'
@@ -19,9 +20,13 @@ const percent = (value: bigint, maximum: bigint): number =>
   maximum <= 0n ? 0 : Math.max(0, Math.min(100, Number((value * 10_000n) / maximum) / 100))
 
 export const fight_portrait_source = (
-  { mob_type }: Pick<FightFighterView, 'mob_type'>,
-  mob_icon_for: MobIconLookup
-): string | null => (mob_type ? mob_icon_for(mob_type) : null)
+  { mob_type, character_portrait }: Pick<FightFighterView, 'mob_type' | 'character_portrait'>,
+  mob_icon_for: MobIconLookup,
+  character_icon_for: typeof character_icon = character_icon
+): string | null => {
+  if (mob_type) return mob_icon_for(mob_type)
+  return character_portrait ? character_icon_for(character_portrait.classe, character_portrait.sex) : null
+}
 
 const timeline_card_class = (fighter: FightFighterView, targetable: boolean): string =>
   [
@@ -67,7 +72,7 @@ export const FightTimeline = ({
   focus: (fighter: TimelineFighter | null) => void
   label: string
   mob_icon_for: MobIconLookup
-  target: (fighter: TimelineFighter) => void
+  target: (fighter: TimelineFighter, pointer_type?: string) => void
   targetable_cells: readonly bigint[]
   targeting: boolean
   turn_progress: number | null
@@ -95,8 +100,8 @@ export const FightTimeline = ({
               className={timeline_card_class(fighter, can_target)}
               key={fighter.seat.toString()}
               onBlur={() => focus(null)}
-              onClick={() => {
-                if (can_target) target(fighter)
+              onClick={(event) => {
+                if (can_target) target(fighter, (event.nativeEvent as PointerEvent).pointerType)
               }}
               onFocus={() => focus(fighter)}
               onMouseEnter={() => focus(fighter)}

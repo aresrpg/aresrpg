@@ -6,31 +6,30 @@
 // dims with the eye's depth; a submerged eye also gets the classic time-driven refraction
 // wobble. It composes in linear HDR before tone mapping, so the blue keeps its depth range.
 //
-// The tint is PER-PIXEL: it keys on how far each view ray runs below the sea plane, so a
-// waterline view tints exactly its submerged half and a dry frame is untouched arithmetically.
+// The surface owns optics for a dry viewer. Once the eye enters water, per-pixel submerged
+// ray length controls absorption; a short continuous waterline ramp prevents a hard transition.
 // Only the screen warp and the droplet exit edge need the CPU's whole-eye state (the hysteresis
 // fn below, which kills waterline flicker); low quality drops the warp (amp forced 0).
 
-import { cos, exp, float, max, min, mix, sin, uniform, vec2, vec3 } from 'three/tsl'
+import { cos, exp, float, max, min, mix, sin, smoothstep, uniform, vec2, vec3 } from 'three/tsl'
 import type { Node } from 'three/webgpu'
 
 import type { EngineQuality } from './types.ts'
 import type { LiquidPalette } from './liquid_palette.ts'
 
-/** Tuning knobs — the legacy owner-graded calibration, verbatim. Colours are LINEAR (the pass
- * runs pre-AgX); distances in blocks (1 voxel = 1 m). */
+/** Linear turquoise immersion before tone mapping. Distances are blocks (1 voxel = 1 m). */
 export const UNDERWATER = Object.freeze({
   /** Hysteresis half-band (blocks): submerge this far below the surface plane, surface this far
    * above it — a dead-band across the waterline kills per-frame flicker. */
   hysteresis_m: 0.1,
   /** In-scatter visibility (blocks) — view depth at which the water's own colour is ~63% of
    * what a surface returns. */
-  visibility_m: 7,
+  visibility_m: 18,
   /** Per-channel absorption (1/blocks) over the LIGHT PATH (eye depth + view depth): red dies
    * first, blue survives. This — not a darken — is what makes depth read as blue: the frame's
    * auto-exposure grade restores any value we remove, but it cannot restore a hue (owner
    * 2026-08-15: "real blue depth"). */
-  absorption: [0.3, 0.1, 0.045],
+  absorption: [0.18, 0.06, 0.03],
   /** Strength of the up/down view-ray re-tint of the fog target. */
   vertical_gradient: 0.85,
   /** Depth (blocks below the surface) at which the depth-darkening reaches its floor. */
@@ -93,11 +92,13 @@ export const create_underwater_pass = ({
   water_gate,
   water_level,
   palette,
+  illumination,
 }: Readonly<{
   quality: EngineQuality
   water_gate: Node<'float'>
   water_level: Node<'float'>
   palette: LiquidPalette
+  illumination: Node<'vec3'>
 }>): UnderwaterPass => {
   const u_active = uniform(0)
   const u_enabled = uniform(1)
@@ -125,13 +126,9 @@ export const create_underwater_pass = ({
     // Vertical gradient: lean the fog target from navy (down) to cyan (up) by the view ray's y.
     const up_t = ray_dir.y.mul(0.5).add(0.5).clamp(0, 1)
     const grad = mix(down_color, up_color, up_t)
-    const target = mix(fog_color, grad, float(UNDERWATER.vertical_gradient))
-    // PER-PIXEL WATER PATH — the immersion is not a whole-frame flag: this pixel's view ray
-    // runs from the eye to its fragment, and the part of that segment BELOW the sea plane is
-    // the water it crossed. Standing at the waterline therefore tints exactly the submerged
-    // half of the frame, and wading in fades the tint up continuously (owner 2026-08-15: "I
-    // see half underwater before the effect kicks in"). Terrain below the sea plane is water
-    // by construction in this generator, so the plane alone answers "is there water here".
+    const target = mix(fog_color, grad, float(UNDERWATER.vertical_gradient)).mul(illumination)
+    // Once the eye enters water, integrate the submerged part of each ray up to its fragment.
+    // Upward rays stop at the waterline; downward rays retain the additional lighting column.
     const frag_y = eye_y.add(ray_dir.y.mul(frag_dist))
     const submerged_fraction = water_level
       .sub(min(eye_y, frag_y))
@@ -140,7 +137,9 @@ export const create_underwater_pass = ({
     const through_water = frag_dist.mul(submerged_fraction)
     // Add the vertical column ABOVE the fragment: the light that lit it came down through the
     // water first, so a deep bed is dim and blue even when the eye is a metre away.
-    const immersion_gate = water_gate.mul(u_enabled)
+    // A dry viewer sees the surface shader's completed optics. Applying immersion there would tint the same water twice.
+    const eye_immersion = smoothstep(0, UNDERWATER.hysteresis_m, water_level.sub(eye_y))
+    const immersion_gate = water_gate.mul(u_enabled).mul(eye_immersion)
     const path = through_water.add(max(water_level.sub(frag_y), float(0))).mul(immersion_gate)
     const absorb = vec3(
       exp(path.mul(-UNDERWATER.absorption[0]!)),

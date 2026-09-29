@@ -61,17 +61,18 @@ test('only a negotiating own offer item exposes a remove action', () => {
   expect(trade_cap_action({ phase: 'cancelled', own: true })).toBeNull()
 })
 
-test('the rendered opponent offer has no button in any phase', () => {
+test('the opponent offer can be inspected but never withdrawn in any phase', () => {
   for (const phase of ['negotiating', 'settling', 'cancelled'] as const) {
     const markup = renderToStaticMarkup(
       <OfferCaps caps={[cap]} own={false} pending={false} text={text} trade={trade(phase)} />
     )
-    expect(markup).not.toContain('<button')
+    expect(markup).not.toContain(`aria-label="${text('remove_item')}"`)
+    expect(markup).toContain(`aria-label="${cap.name}"`)
   }
   const own = renderToStaticMarkup(
     <OfferCaps caps={[cap]} own pending={false} text={text} trade={trade('negotiating')} />
   )
-  expect(own).toContain('<button')
+  expect(own).toContain(`aria-label="${text('remove_item')}"`)
 })
 
 test('the trade surface has no per-item or per-SUI claim dispatch', () => {

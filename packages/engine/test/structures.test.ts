@@ -59,7 +59,7 @@ const recipe = {
 
 describe('voxel structures', () => {
   test('loads every preprocessed type through human-editable packs', () => {
-    expect(Object.keys(STRUCTURE_TYPES)).toHaveLength(178)
+    expect(Object.keys(STRUCTURE_TYPES)).toHaveLength(179)
     expect(STRUCTURE_PACKS.temperate_trees?.types.length).toBeGreaterThan(5)
     expect(STRUCTURE_PACKS.temperate_ruins?.types).toEqual([{ type: 'temperate_ruined_arch', weight: 1 }])
   })
@@ -129,7 +129,7 @@ describe('voxel structures', () => {
     expect(compiled.structures.packs.find(({ name }) => name === 'temperate_ruins')?.fixed_areas[0]?.id).toBe('thebes')
   })
 
-  test('keeps every structure footprint outside the world-origin portal radius', () => {
+  test('keeps unrelated structure footprints outside the world-origin portal radius', () => {
     const compiled = compile_world_recipe(recipe)
     const dense_world = Object.freeze({
       ...compiled,
@@ -140,7 +140,9 @@ describe('voxel structures', () => {
         ),
       }),
     })
-    const placements = structure_placements(dense_world, { min_x: -32, max_x: 32, min_z: -32, max_z: 32 })
+    const placements = structure_placements(dense_world, { min_x: -32, max_x: 32, min_z: -32, max_z: 32 }).filter(
+      (p) => p.id !== 'world-portal-frame'
+    )
     const distance_squared = ({ min_x, max_x, min_z, max_z }: (typeof placements)[number]['bounds']) => {
       const nearest_x = Math.max(min_x, Math.min(0, max_x))
       const nearest_z = Math.max(min_z, Math.min(0, max_z))
@@ -159,13 +161,20 @@ describe('voxel structures', () => {
       ...structuredClone(nauvis.terrain),
       structure_areas: [thebes_map.area],
     }
-    const compiled = compile_world_recipe(parse_world_recipe(terrain))
-    const area = { min_x: -10, max_x: 10, min_z: -10, max_z: 10 }
-    const city_chunks = structure_placements(compiled, area).filter(({ pack }) => pack === 'city:thebes')
-    const voxels = structure_voxels(compiled, area)
-
-    expect(city_chunks.length).toBeGreaterThan(0)
-    expect(voxels.every(({ x, z }) => x * x + z * z > 10 * 10)).toBeTrue()
+    const compiled = compile_world_recipe(terrain)
+    const source = structure_placements(compiled, thebes_map.area).find(({ pack }) => pack === 'city:thebes')!
+    const { type } = source
+    const placement = {
+      ...source,
+      origin: [-16, source.origin[1], -16] as const,
+      bounds: { ...source.bounds, min_x: -16, max_x: 15, min_z: -16, max_z: 15 },
+      portal_clearance: true,
+    }
+    const emitted: [number, number][] = []
+    for_each_structure_voxel(placement, (x, _y, z) => emitted.push([x, z]))
+    expect(type.packed_voxels.length).toBeGreaterThan(0)
+    expect(emitted.length).toBeGreaterThan(0)
+    expect(emitted.every(([x, z]) => x * x + z * z > 100)).toBeTrue()
   })
 
   test('generated city land use covers both axes of rectangular landmarks', () => {
@@ -175,7 +184,7 @@ describe('voxel structures', () => {
     expect(generated_city_land_use('fuwage', plateau.max_x - 8, plateau.max_z - 8)).toBe('plateau')
   })
 
-  test('builds Thebes from deterministic procedural block structures at its authored anchor', async () => {
+  test('loads deterministic baked Thebes structures and park trees at its authored anchor', async () => {
     await load_generated_city_artifacts()
     const nauvis = worlds.find(({ world }) => world === 'nauvis')
     if (!nauvis?.terrain) throw new Error('Nauvis terrain is missing')
@@ -194,12 +203,14 @@ describe('voxel structures', () => {
         },
       ],
     }
-    const compiled = compile_world_recipe(parse_world_recipe(terrain))
+    const compiled = compile_world_recipe(terrain)
     const area = { min_x: 360, max_x: 640, min_z: -120, max_z: 120 }
     const first = structure_placements(compiled, area).filter(({ pack }) => pack === 'city:thebes')
     const second = structure_placements(compiled, area).filter(({ pack }) => pack === 'city:thebes')
-    const garden_trees = structure_placements(compiled, compiled.structures.cities[0]!.area).filter(({ pack }) =>
-      pack.endsWith('_trees')
+    const foliage_chunks = structure_placements(compiled, compiled.structures.cities[0]!.area).filter(
+      ({ pack, type }) =>
+        pack === 'city:thebes' &&
+        type.packed_voxels.some((packed) => packed >>> 24 === compiled.materials.id_for('temperate_foliage'))
     )
     const city_materials = new Set(
       compiled.materials.entries.filter(({ name }) => name.startsWith('thebes_')).map(({ name }) => name)
@@ -218,33 +229,35 @@ describe('voxel structures', () => {
 
     expect(first).toEqual(second)
     expect(first.length).toBeGreaterThan(10)
-    expect(garden_trees.length).toBeGreaterThan(10)
-    garden_trees.forEach(({ origin }) => expect(generated_city_land_use('thebes', origin[0], origin[2])).toBe('garden'))
-    expect([...city_types].sort()).toEqual(
-      [
-        'thebes_dungeon_plaza',
-        'thebes_road',
-        'thebes_gate',
-        'thebes_wall',
-        'thebes_field',
-        'thebes_garden',
-        'thebes_river',
-        'thebes_bridge',
-        'thebes_house',
-        'thebes_tower',
-        'thebes_wood',
-        'thebes_barracks',
-        'thebes_watchtower',
-        'thebes_town_hall',
-        'thebes_castle',
-        'thebes_market',
-        'thebes_temple',
-        'thebes_ruin',
-      ].sort()
-    )
+    expect(foliage_chunks.length).toBeGreaterThan(10)
+    for (const type of [
+      'thebes_dungeon_plaza',
+      'thebes_field',
+      'thebes_garden',
+      'thebes_river',
+      'thebes_urban',
+      'thebes_catacombs',
+      'thebes_castle',
+      'thebes_temple',
+    ])
+      expect(city_types.has(type)).toBe(true)
     expect(overlay.bounds).toEqual({ min_x: -336, max_x: 1199, min_z: -848, max_z: 687 })
     expect(portal_blocks).toEqual([])
-    expect(city_materials).toEqual(new Set(['thebes_limestone', 'thebes_sandstone', 'thebes_tile', 'thebes_copper']))
+    expect(city_materials).toEqual(
+      new Set([
+        'thebes_limestone',
+        'thebes_sandstone',
+        'thebes_tile',
+        'thebes_copper',
+        'thebes_plaster',
+        'thebes_lantern',
+        'thebes_timber',
+        'thebes_banner',
+        'thebes_oak',
+        'thebes_window',
+        'thebes_carved_stone',
+      ])
+    )
     expect(
       structure_voxels(compiled, area).some(({ material_id }) =>
         city_materials.has(compiled.materials.entries[material_id]!.name)
@@ -255,7 +268,7 @@ describe('voxel structures', () => {
   test('populates every Nauvis biome with an intentional atmosphere pack', () => {
     const nauvis = worlds.find(({ world }) => world === 'nauvis')
     if (!nauvis?.terrain) throw new Error('Nauvis terrain is missing')
-    const compiled = compile_world_recipe(parse_world_recipe(nauvis.terrain))
+    const compiled = compile_world_recipe(nauvis.terrain)
 
     expect(
       compiled.biomes.every(({ name, structure_packs = [] }) =>
@@ -275,7 +288,7 @@ describe('voxel structures', () => {
   test('Nauvis keeps forests dense and its spawn plain open', () => {
     const nauvis = worlds.find(({ world }) => world === 'nauvis')
     if (!nauvis?.terrain) throw new Error('Nauvis terrain is missing')
-    const compiled = compile_world_recipe(parse_world_recipe(nauvis.terrain))
+    const compiled = compile_world_recipe(nauvis.terrain)
     const forest = structure_placements(compiled, { min_x: -3072, max_x: -2561, min_z: -4096, max_z: -3585 }).filter(
       ({ pack }) => pack === 'temperate_trees'
     )
@@ -293,7 +306,7 @@ describe('voxel structures', () => {
   test('Nauvis never places a tree footprint below sea level', () => {
     const nauvis = worlds.find(({ world }) => world === 'nauvis')
     if (!nauvis?.terrain) throw new Error('Nauvis terrain is missing')
-    const compiled = compile_world_recipe(parse_world_recipe(nauvis.terrain))
+    const compiled = compile_world_recipe(nauvis.terrain)
     const trees = structure_placements(compiled, { min_x: -1024, max_x: 1024, min_z: -1024, max_z: 1024 }).filter(
       ({ pack }) => pack.endsWith('_trees')
     )
@@ -305,7 +318,7 @@ describe('voxel structures', () => {
   test('varies colossal landmark scale and rotation while keeping spawn and the world ceiling clear', () => {
     const nauvis = worlds.find(({ world }) => world === 'nauvis')
     if (!nauvis?.terrain) throw new Error('Nauvis terrain is missing')
-    const compiled = compile_world_recipe(parse_world_recipe(nauvis.terrain))
+    const compiled = compile_world_recipe(nauvis.terrain)
     const packs = compiled.structures.packs.filter(({ name }) => name.endsWith('_landmarks'))
     const landmark_world = Object.freeze({
       ...compiled,
@@ -316,7 +329,7 @@ describe('voxel structures', () => {
       max_x: 8_192,
       min_z: -8_192,
       max_z: 8_192,
-    })
+    }).filter((p) => p.pack.endsWith('_landmarks'))
 
     expect(new Set(placements.map(({ scale }) => scale))).toEqual(new Set([3, 4, 5]))
     expect(new Set(placements.map(({ rotation }) => rotation))).toEqual(new Set([0, 1, 2, 3]))

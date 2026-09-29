@@ -12,7 +12,8 @@ export const useNumbers = () => {
   const locale = useLocale()
   return useMemo(
     () => ({
-      number: (value: number | bigint): string => value.toLocaleString(locale),
+      number: (value: number | bigint, options?: Readonly<Intl.NumberFormatOptions>): string =>
+        new Intl.NumberFormat(locale, options).format(value),
       compact: (value: number): string =>
         new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(value),
       daily: (value: bigint): string => format_sui(value, 3, locale),

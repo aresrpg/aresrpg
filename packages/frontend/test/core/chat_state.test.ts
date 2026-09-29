@@ -17,7 +17,7 @@ const line = (id: string, fight = '0xf'): ChatLine =>
 
 const settings = Object.freeze({
   quality: 'medium' as const,
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 })

@@ -6,8 +6,7 @@ import { expect, test } from 'bun:test'
 import { chain_deadline_reached, chain_now } from '../../src/modules/chain_clock.ts'
 import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
-const initial = () =>
-  initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+const initial = () => initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
 
 test('placement follows sampled chain time, regardless of a device wall clock ahead or behind', () => {
   const state = reduce_app_state(initial(), { type: 'clock/observed', chain_ms: 1_000, received_ms: 100 })

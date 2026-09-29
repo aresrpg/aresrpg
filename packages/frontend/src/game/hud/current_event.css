@@ -1,0 +1,93 @@
+/* Sale status and colors belong to PublicSaleCard; the HUD only arranges it. */
+.current-event-hud {
+  position: absolute;
+  inset: auto 0 calc(100% + 8px);
+  pointer-events: auto;
+  container-type: inline-size;
+}
+.current-event-hud .public-sale-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+  align-items: center;
+}
+.current-event-hud .sale-card-emblem {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+}
+.current-event-hud .sale-card-emblem img {
+  width: 34px;
+  height: 34px;
+}
+.current-event-hud .sale-card-eyebrow {
+  grid-column: 2;
+  justify-content: flex-start;
+}
+.current-event-hud .sale-card-title {
+  grid-column: 2;
+  font-size: 14px;
+}
+.current-event-hud .sale-card-note {
+  grid-column: 2;
+  margin: 0;
+  line-height: 1.4;
+}
+.current-event-hud .sale-card-action {
+  grid-column: 3;
+  grid-row: 1 / 4;
+  width: auto;
+  margin: 0;
+  padding: 8px;
+  border-radius: 5px;
+}
+.current-event-hud .sale-card-funding {
+  grid-column: 1 / 3;
+  grid-row: 4;
+  margin: 4px 0 0;
+}
+.current-event-hud .sale-card-countdown {
+  grid-column: 3;
+  grid-row: 4;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  text-align: right;
+}
+.current-event-hud .sale-card-track {
+  margin: 3px 0;
+}
+.current-event-hud .sale-card-overflow {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+@container (max-width: 330px) {
+  .current-event-hud .public-sale-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 8px;
+    padding: 8px;
+  }
+  .current-event-hud .sale-card-emblem {
+    display: none;
+  }
+  .current-event-hud :is(.sale-card-eyebrow, .sale-card-title, .sale-card-note, .sale-card-funding) {
+    grid-column: 1;
+  }
+  .current-event-hud :is(.sale-card-action, .sale-card-countdown) {
+    grid-column: 2;
+  }
+  .current-event-hud .sale-card-title {
+    font-size: 12px;
+  }
+}

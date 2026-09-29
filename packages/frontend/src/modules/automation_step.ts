@@ -190,25 +190,13 @@ const gather_step = (state: AppState, run: AutomationRun, step: StepOf<'gatherin
   return consumed ? with_step(state, run, { type: 'planning' }) : state
 }
 
-const advance_movement = (
-  state: AppState,
-  run: AutomationRun,
-  step: StepOf<'moving'>,
-  context: RouteContext,
-  tick: Tick
-): AppState => {
-  if (target_in_range(step.target, context) && travel_ready(state, step.target, tick.world_ms))
-    return with_step(state, run, { type: 'inspecting', target: step.target })
-  return state
-}
-
 const advance_world_step = (state: AppState, run: AutomationRun, context: RouteContext, tick: Tick): AppState => {
   const { step } = run
   switch (step.type) {
     case 'planning':
       return plan(state, run, context)
     case 'moving':
-      return advance_movement(state, run, step, context, tick)
+      return state
     case 'inspecting':
       return inspect_target(state, run, step, tick)
     case 'searching':

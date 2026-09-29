@@ -55,7 +55,6 @@ const DeletionConfirmation = ({
   return (
     <ModalFrame close={busy ? null : close} close_label={copy.wallet_close} label={t('delete_character')}>
       <div className="flex flex-col gap-4 p-6" data-character-delete="">
-        <h2 className="pr-6 text-xs tracking-[0.18em] text-gold uppercase">{t('delete_character')}</h2>
         <p className="text-sm break-words text-text">{character.name}</p>
         <p className="text-xs leading-6 text-text">{t('delete_warning')}</p>
         <p className="text-xs leading-6 text-[#ff7d94]">

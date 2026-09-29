@@ -9,7 +9,7 @@ import { create_app } from '../../src/store.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -53,6 +53,17 @@ test('rapid marketplace intents execute one wallet transaction', async () => {
   const stop = app.observe(['marketplace'])
   app.dispatch({ type: 'auth/connecting' })
   app.dispatch({ type: 'auth/connected', session: wallet as never })
+  app.dispatch({ type: 'market/group_selected', group: 'RESOURCES', category: 'resource', item_type: 'wool' })
+  app.dispatch({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/market_slice',
+      observation: app.store.getState().marketplace.observation!,
+      listings: [listing],
+      kiosk_versions: { '0xother': '1' },
+      next_cursor: null,
+    },
+  })
   app.dispatch({ type: 'market/buy_requested', listing })
   app.dispatch({ type: 'market/buy_requested', listing })
   await tick()

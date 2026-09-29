@@ -16,11 +16,9 @@ const labels = Object.freeze({
 })
 
 test('the shared detail sheet owns HD item art instead of accepting a thumbnail URL', () => {
-  const component = readFileSync(new URL('../../src/components/ItemDetailView.tsx', import.meta.url), 'utf8')
-
+  const component = readFileSync(new URL('../../src/components/ItemDetailBody.tsx', import.meta.url), 'utf8')
   expect(component).toContain("import { item_detail_icon } from '../content/item_detail_assets.ts'")
   expect(component).toContain('const icon = item_detail_icon(item_type)')
-  expect(component).toContain('item_type: string')
   expect(component).not.toContain('icon: string | null')
 })
 

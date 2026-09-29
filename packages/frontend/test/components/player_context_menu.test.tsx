@@ -109,7 +109,7 @@ test('the shared player menu owns the party run action', () => {
 })
 
 test('the one menu host is global instead of disappearing during fights', () => {
-  const app = readFileSync(new URL('../../src/app.tsx', import.meta.url), 'utf8')
+  const app = readFileSync(new URL('../../src/PlayerRuntime.tsx', import.meta.url), 'utf8')
 
   expect(app).toContain('<PlayerContextMenu copy={copy} />')
   expect(app).not.toContain('PlayerContextLayer')

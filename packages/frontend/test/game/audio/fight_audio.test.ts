@@ -12,7 +12,7 @@ import {
   fight_audio_variant,
   play_fight_turn_start,
 } from '../../../src/game/audio/fight_audio.ts'
-import { FIGHT_AUDIO_ASSETS, fight_audio_keys_for_families } from '../../../src/game/audio/fight_audio_registry.ts'
+import { AUDIO_ASSETS, fight_audio_keys_for_families } from '../../../src/game/audio/audio_registry.ts'
 import { FOOTSTEP_AUDIO_ASSETS } from '../../../src/game/audio/footstep_recordings.ts'
 
 const cast_cue = Object.freeze({
@@ -40,7 +40,7 @@ describe('fight audio', () => {
     const authored = readdirSync(resolve(import.meta.dir, '../../../../../seed/sounds'))
       .filter((name) => name !== 'PROVENANCE.md')
       .sort()
-    const registered = [...Object.values(FIGHT_AUDIO_ASSETS), ...Object.values(FOOTSTEP_AUDIO_ASSETS)]
+    const registered = [...Object.values(AUDIO_ASSETS), ...Object.values(FOOTSTEP_AUDIO_ASSETS)]
       .map((source) => source.replace('/sound_effect/', ''))
       .sort()
     expect(registered).toEqual(authored)
@@ -121,6 +121,7 @@ describe('fight audio', () => {
     const keys = fight_audio_keys_for_families(['fire'])
 
     expect(keys).toContain('turn_start')
+    expect(keys).toContain('fight_over')
     expect(keys).toContain('cast_charge_fire')
     expect(keys).toContain('element_impact_fire_1')
     expect(keys).not.toContain('cast_charge_water')
@@ -132,4 +133,22 @@ describe('fight audio', () => {
     play_fight_turn_start((key) => played.push(key))
     expect(played).toEqual(['turn_start'])
   })
+})
+
+test('a named buff plays its recovered cast once, even with zero damage', () => {
+  const played: string[] = []
+  const observe = create_fight_audio_observer((key) => played.push(key))
+  const buff = { ...cast_cue, spell: 'Power', amount: 0, critical: false, killed: false } as const
+  observe(buff, 'start', {})
+  observe(buff, 'complete', {})
+  expect(played).toEqual(['senshi_power'])
+})
+
+test('a named damage spell retains critical/death cues without generic cast masking', () => {
+  const played: string[] = []
+  const observe = create_fight_audio_observer((key) => played.push(key))
+  const wrath = { ...cast_cue, spell: "Senshi's Wrath" } as const
+  observe(wrath, 'start', {})
+  observe(wrath, 'complete', {})
+  expect(played).toEqual(['senshi_wrath', 'crit', 'death'])
 })

@@ -47,7 +47,6 @@ const PlacementGasWarning = ({
 }>) => (
   <ModalFrame close={close} close_label={cancel} label={text.placement_gas_title ?? ''} max_width="max-w-sm" soft>
     <div className="p-7">
-      <h2 className="text-sm font-semibold tracking-[0.16em] text-[#f0c36a] uppercase">{text.placement_gas_title}</h2>
       <p className="mt-4 text-[11px] leading-6 text-[#c5c0b8]">{text.placement_gas_body}</p>
       <label className="mt-5 flex cursor-pointer items-center gap-3 text-[9px] tracking-[0.1em] text-[#a3a5ad] uppercase">
         <input

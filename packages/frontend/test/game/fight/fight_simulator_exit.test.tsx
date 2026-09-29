@@ -5,7 +5,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import type { AppCopy } from '../../../src/i18n/copy.ts'
-import { FightSimulatorExit } from '../../../src/game/fight/FightLayer.tsx'
+import { FightSimulatorExit } from '../../../src/game/fight/FightSimulatorExit.tsx'
 
 const copy = { simulator_page: { back_to_setup: 'Back to setup' } } as unknown as AppCopy
 

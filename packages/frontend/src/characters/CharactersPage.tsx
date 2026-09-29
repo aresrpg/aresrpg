@@ -12,6 +12,7 @@ import { lazy, Suspense } from 'react'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
+import { DETAIL_TABS, character_detail_tab, character_detail_path } from './character_navigation.ts'
 import { CharacterWorkspace } from './CharacterWorkspace.tsx'
 
 // the doll/rows/stat-row primitives every character surface shares (one home)
@@ -23,16 +24,6 @@ const StatsTab = lazy(() => import('./StatsTab.tsx'))
 const SpellsTab = lazy(() => import('./SpellsTab.tsx'))
 const JobsTab = lazy(() => import('./JobsTab.tsx'))
 const RuneforgeTab = lazy(() => import('./RuneforgeTab.tsx'))
-
-const DETAIL_TABS = ['equipment', 'stats', 'spells', 'jobs', 'runeforge'] as const
-type DetailTab = (typeof DETAIL_TABS)[number]
-
-export const character_detail_tab = (pathname: string): DetailTab => {
-  const tab = pathname.split('?')[0]?.split('#')[0]?.split('/').filter(Boolean)[1]
-  return DETAIL_TABS.find((candidate) => candidate === tab) ?? 'equipment'
-}
-
-export const character_detail_path = (tab: DetailTab): string => `/characters/${tab}`
 
 export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
   const t = copy_text(copy.characters_page)
@@ -50,9 +41,8 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
           const active = key === tab
           return (
             <button
-              className={`shrink-0 cursor-pointer border-b-2 px-5 py-2.5 text-[9px] font-semibold tracking-[0.24em] uppercase transition-colors ${
-                active ? 'border-gold text-gold' : 'border-transparent text-muted hover:text-text'
-              }`}
+              className={`aui-button ${active ? 'aui-button--primary' : 'aui-button--neutral'}`}
+              aria-pressed={active}
               data-character-detail-tab={key}
               key={key}
               onClick={() => dispatch_app({ type: 'path/open', pathname: character_detail_path(key) })}
@@ -89,7 +79,13 @@ export default function CharactersPage({ copy }: Readonly<{ copy: AppCopy }>) {
                 <SpellsTab character={character} copy={copy} />
               </CharacterWorkspace>
             )}
-            {tab === 'jobs' && <JobsTab character={character} copy={copy} />}
+            {tab === 'jobs' && (
+              <JobsTab
+                navigate_job={(pathname) => dispatch_app({ type: 'path/open', pathname })}
+                character={character}
+                copy={copy}
+              />
+            )}
             {tab === 'runeforge' && (
               <CharacterWorkspace kind="runeforge">
                 <RuneforgeTab character={character} copy={copy} />

@@ -22,11 +22,13 @@ export const create_position_publisher = ({
 }>) => {
   const sent = new Map<string, Readonly<{ at_ms: number; position: PublishedPosition }>>()
   return Object.freeze({
-    publish: (character_id: string, position: PublishedPosition, interval_ms: number): boolean => {
+    publish: (character_id: string, position: PublishedPosition, interval_ms: number, force?: boolean): boolean => {
       const at_ms = now()
       const previous = sent.get(character_id)
-      if (previous && at_ms - previous.at_ms < interval_ms) return false
-      if (!position_changed(previous?.position ?? null, position)) return false
+      if (!force) {
+        if (previous && at_ms - previous.at_ms < interval_ms) return false
+        if (!position_changed(previous?.position ?? null, position)) return false
+      }
       if (!send(character_id, position)) return false
       sent.set(character_id, Object.freeze({ at_ms, position }))
       return true

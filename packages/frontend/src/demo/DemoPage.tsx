@@ -1,100 +1,60 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Public composition lab. It owns controls only; every rendered fact crosses a production boundary.
-import { effective_flattened, parse_world_recipe, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
-import { class_names } from '@aresrpg/immutable'
-import { Boxes, FlaskConical, Grid2X2, Mountain, Package, RotateCcw, Swords, UserRound, UsersRound } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
+import { type EngineQuality, type EngineStatus } from '@aresrpg/engine'
+import { class_names } from '@aresrpg/immutable'
+import { FlaskConical, UserRound } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+
+import { WorldLoading } from '../components/WorldLoading.tsx'
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { fight_lab_surface } from '../components/app_layout.ts'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
-import { content_catalog, titleize, type SeedWorld } from '../content/catalog.ts'
+import { content_catalog, titleize } from '../content/catalog.ts'
 import { client_world_position, worlds_source, world_terrain } from '../content/worlds.ts'
 import { load_pet_companion } from '../content/pet_models.ts'
 import { worn_equipment_options } from '../content/worn_equipment.ts'
 import { create_world } from '../game/core/world.ts'
 import type { SceneHandle } from '../game/core/scene_feed.ts'
 import { WorldStage } from '../game/core/WorldStage.tsx'
-import { load_character_appearance } from '../game/character_entities.ts'
+import { load_character_appearance, character_aura } from '../game/character_entities.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
-import { mob_entities } from '../game/mob_entities.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { dungeon_portal_markers } from '../modules/world_spawns.ts'
+import { DungeonPortalPrompt } from '../components/DungeonPortalPrompt.tsx'
 import { dispatch_app, useAppStore } from '../store.ts'
 import SimulatorPage from '../simulator/SimulatorPage.tsx'
 
+import { AtmosphereControls } from './AtmosphereControls.tsx'
+import { AssetWorkshop } from './AssetWorkshop.tsx'
 import { BoardGallery } from './BoardGallery.tsx'
 import { CharacterCrowdLab } from './CharacterCrowdLab.tsx'
+import { UiWorkshop } from './UiWorkshop.tsx'
 import { DemoCheckbox } from './DemoCheckbox.tsx'
 import { DemoDevPage } from './DemoDevPage.tsx'
+import { DEMO_VIEWS, VIEW_ICONS, demo_view, type DemoView } from './demo_views.ts'
 import { demo_world_coordinate } from './world_target.ts'
 
-type DemoView = 'world' | 'fight' | 'boards' | 'content' | 'biomes'
-const DEMO_VIEWS: readonly DemoView[] = Object.freeze(
-  import.meta.env.DEV ? ['world', 'fight', 'boards', 'content', 'biomes'] : ['world', 'fight', 'boards']
-)
-const VIEW_ICONS = Object.freeze({
-  world: FlaskConical,
-  fight: Swords,
-  boards: Grid2X2,
-  content: Package,
-  biomes: Mountain,
-})
-const initial_view = (): DemoView => {
-  const [hash = ''] = globalThis.location.hash.slice(1).split('/')
-  return (DEMO_VIEWS as readonly string[]).includes(hash) ? (hash as DemoView) : 'world'
-}
 const initial_target = (): string => globalThis.location.hash.slice(1).split('/')[1] ?? ''
-type SpawnedGroup = Readonly<{ mob_type: string; amount: number; serial: number }>
 type DemoWorld = ReturnType<typeof create_world>
 
 const renderable_worlds = Object.freeze(content_catalog.worlds.filter(({ terrain }) => terrain !== undefined))
 const initial_world = renderable_worlds[0] ?? null
-const initial_mob = initial_world?.mobs[0]?.mob_type ?? content_catalog.mobs[0]?.mob_type ?? ''
 const DEFAULT_COLORS = Object.freeze(['#f3eadb', '#2f8fe8', '#d9af57'] as const)
 const { hats, cloaks } = worn_equipment_options
 const pets = Object.freeze(content_catalog.items.filter(({ category }) => category === 'pet'))
 
-const update_demo_mobs = (world_api: DemoWorld | null, group: SpawnedGroup | null, crowd_active: boolean): void => {
-  if (!world_api || crowd_active) return
-  if (!group) return world_api.set_entities(Object.freeze([]))
-  const entities = mob_entities(
-    Array.from({ length: group.amount }, (_, index) => {
-      const angle = (index / group.amount) * Math.PI * 2
-      const x = Math.cos(angle) * 5
-      const z = Math.sin(angle) * 5
-      return Object.freeze({
-        id: `demo_mob_${group.serial}_${index}`,
-        mob_type: group.mob_type,
-        anchor: Object.freeze({
-          kind: 'world' as const,
-          position: Object.freeze([x, world_api.ground_height(x, z), z] as const),
-        }),
-        facing: Object.freeze({ kind: 'yaw' as const, yaw: Math.atan2(-x, -z) }),
-      })
-    })
-  )
-  world_api.set_entities(entities)
-}
-
 const WorldCrowdLab = ({
-  set_active,
   text,
   world_api,
 }: Readonly<{
-  set_active: (active: boolean) => void
   text: AppCopy['demo_page']
   world_api: DemoWorld | null
 }>) => {
   if (!world_api) return null
-  return (
-    <CharacterCrowdLab
-      ground_height={world_api.ground_height}
-      set_active={set_active}
-      submit={world_api.set_entities}
-      text={text}
-    />
-  )
+  return <CharacterCrowdLab ground_height={world_api.ground_height} submit={world_api.set_entities} text={text} />
 }
 
 const field_class =
@@ -107,14 +67,6 @@ const FightLabSurface = ({ copy, scene }: Readonly<{ copy: AppCopy; scene: Scene
   const surface = fight_lab_surface(useAppStore((state) => state.fight.mounted))
   return surface === 'fight' ? <FightLayer copy={copy} scene={scene} /> : <SimulatorPage copy={copy} scene={scene} />
 }
-
-const world_mob_rows = (world: SeedWorld | null) =>
-  Object.freeze(
-    (world?.mobs ?? []).flatMap(({ mob_type }) => {
-      const mob = content_catalog.mob(mob_type)?.mob
-      return mob ? [Object.freeze({ mob_type, name: mob.name })] : []
-    })
-  )
 
 const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>) => {
   const text = copy.demo_page
@@ -133,33 +85,17 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   const [character_enabled, set_character_enabled] = useState(false)
   const [hat, set_hat] = useState('')
   const [cloak, set_cloak] = useState('')
+  const [title, set_title] = useState('')
+  const [admin_preview, set_admin_preview] = useState(false)
   const [pet, set_pet] = useState('')
   const [riding, set_riding] = useState(false)
-  const [mob_type, set_mob_type] = useState(initial_mob)
-  const [mob_amount, set_mob_amount] = useState(3)
-  const [spawned_group, set_spawned_group] = useState<SpawnedGroup | null>(null)
-  const [crowd_active, set_crowd_active] = useState(false)
   const selected_world = content_catalog.world(world_id)
-  const mob_rows = useMemo(() => world_mob_rows(selected_world), [selected_world])
-  const resource_rows = useMemo(
-    () =>
-      Object.freeze(
-        (selected_world?.resources ?? []).map(({ item_type }) =>
-          Object.freeze({ item_type, name: content_catalog.item(item_type)?.item.name ?? titleize(item_type) })
-        )
-      ),
-    [selected_world]
-  )
 
   useEffect(() => {
     const update_target = (): void => set_target(initial_target())
     globalThis.addEventListener('hashchange', update_target)
     return () => globalThis.removeEventListener('hashchange', update_target)
   }, [])
-
-  useEffect(() => {
-    if (!mob_rows.some((row) => row.mob_type === mob_type)) set_mob_type(mob_rows[0]?.mob_type ?? '')
-  }, [mob_rows, mob_type])
 
   useEffect(() => {
     // THE LAB'S ENGINE IS LAZY (owner 2026-08-21): every pane on this page stays mounted and is
@@ -172,10 +108,11 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
     const initial_focus = city ? client_world_position(city.x, city.z) : demo_world_coordinate(target)
     const created = create_world({
       canvas,
-      world: parse_world_recipe(terrain),
+      world: terrain,
       quality: settings.quality,
       ...(initial_focus ? { initial_focus } : {}),
     })
+    created.set_dungeon_portals(dungeon_portal_markers(selected_world.world))
     const unsubscribe = created.subscribe_status(set_status)
     set_world_api(created)
     return () => {
@@ -193,8 +130,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
 
   useEffect(() => {
     world_api?.set_quality(settings.quality, settings.render_distance)
-    world_api?.set_flattened(settings.flat_mode)
-  }, [settings.flat_mode, settings.quality, settings.render_distance, world_api])
+  }, [settings.quality, settings.render_distance, world_api])
 
   useEffect(() => {
     world_api?.set_time_of_day(live_time ? null : time)
@@ -214,19 +150,25 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       classe,
       male,
       colors,
-      loadout: Object.freeze({ ...(hat ? { hat } : {}), ...(cloak ? { cloak } : {}) }),
+      loadout: Object.freeze({ ...(hat ? { hat } : {}), ...(cloak ? { cloak } : {}), ...(title ? { title } : {}) }),
     })
     void load_character_appearance(source).then(
       (appearance) => {
         if (!current) return
-        world_api.set_character(Object.freeze({ id: source.id, appearance }))
+        world_api.set_character(
+          Object.freeze({
+            id: source.id,
+            appearance,
+            aura: character_aura(title, admin_preview ? DEFAULT_ADMIN_ADDRESS : null),
+          })
+        )
       },
       (error: unknown) => console.error('The demo character model failed to load.', error)
     )
     return () => {
       current = false
     }
-  }, [character_enabled, classe, cloak, colors, hat, male, world_api])
+  }, [character_enabled, classe, cloak, colors, hat, male, title, admin_preview, world_api])
 
   // handing over control spawns at the camera's current focus — never a hardcoded origin;
   // worn-equipment re-renders keep the character exactly where it stands
@@ -266,17 +208,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
     return () => globalThis.removeEventListener('keydown', toggle)
   }, [active, character_enabled, pet, world_api])
 
-  useEffect(() => {
-    update_demo_mobs(world_api, spawned_group, crowd_active)
-  }, [crowd_active, spawned_group, world_api])
-
   const change_quality = (quality: EngineQuality): void =>
     dispatch_app({ type: 'settings/changed', settings: Object.freeze({ ...settings, quality }) })
-  const toggle_flattened = (): void =>
-    dispatch_app({
-      type: 'settings/changed',
-      settings: Object.freeze({ ...settings, flat_mode: !settings.flat_mode }),
-    })
   const update_color = (index: number, value: string): void =>
     set_colors(
       Object.freeze(colors.map((color, color_index) => (color_index === index ? value : color))) as typeof colors
@@ -285,18 +218,17 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   return (
     <section className={`absolute inset-0 ${active ? 'visible opacity-100' : 'invisible opacity-0'}`}>
       <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
+      <DungeonPortalPrompt copy={copy} />
+      <WorldLoading source={world_api} quality={settings.quality} render_distance={settings.render_distance} />
       <div className="pointer-events-none absolute inset-0 z-10 p-3">
         <FpsPanel
           active={active}
           change_quality={change_quality}
           copy={copy}
           fight_access={null}
-          flatten_locked={status.backend === 'grid'}
-          flattened={effective_flattened(settings.flat_mode, status.backend)}
           party_available={false}
           quality={settings.quality}
           toggle_fight_access={() => undefined}
-          toggle_flattened={toggle_flattened}
         />
         <HudPanel className="pointer-events-auto absolute top-3 right-3 flex max-h-[calc(100%-24px)] w-[270px] flex-col overflow-y-auto p-3">
           <div className="flex items-center gap-2 border-b border-white/8 pb-3">
@@ -309,7 +241,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
             </div>
           </div>
 
-          <WorldCrowdLab set_active={set_crowd_active} text={text} world_api={world_api} />
+          <WorldCrowdLab text={text} world_api={world_api} />
 
           <div className="grid gap-3 border-b border-white/8 py-3">
             <label className={label_class}>
@@ -410,6 +342,20 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
               </label>
             </div>
             <label className={label_class}>
+              {copy.ui.design_titles}
+              <select className={field_class} onChange={(event) => set_title(event.target.value)} value={title}>
+                <option value="">{text.none}</option>
+                {content_catalog.items
+                  .filter(({ category }) => category === 'title')
+                  .map(({ item_type, name }) => (
+                    <option key={item_type} value={item_type}>
+                      {name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <DemoCheckbox checked={admin_preview} label={copy.admin} on_change={set_admin_preview} />
+            <label className={label_class}>
               {text.pet}
               <select className={field_class} onChange={(event) => set_pet(event.target.value)} value={pet}>
                 <option value="">{text.none}</option>
@@ -425,65 +371,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
             </button>
           </div>
 
-          <div className="grid gap-3 border-b border-white/8 py-3">
-            <h2 className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-[#c8963c] uppercase">
-              <UsersRound size={12} /> {text.mob_group}
-            </h2>
-            <label className={label_class}>
-              {text.mob}
-              <select className={field_class} onChange={(event) => set_mob_type(event.target.value)} value={mob_type}>
-                {mob_rows.map((mob) => (
-                  <option key={mob.mob_type} value={mob.mob_type}>
-                    {mob.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={label_class}>
-              {text.amount}
-              <input
-                className={field_class}
-                max={8}
-                min={1}
-                onChange={(event) => set_mob_amount(Number(event.target.value))}
-                type="number"
-                value={mob_amount}
-              />
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                className={button_class}
-                disabled={!mob_type}
-                onClick={() =>
-                  set_spawned_group((group) =>
-                    Object.freeze({
-                      mob_type,
-                      amount: Math.min(8, Math.max(1, Math.trunc(mob_amount) || 1)),
-                      serial: (group?.serial ?? 0) + 1,
-                    })
-                  )
-                }
-                type="button"
-              >
-                {text.spawn_group}
-              </button>
-              <button className={button_class} onClick={() => set_spawned_group(null)} type="button">
-                <RotateCcw size={11} /> {text.clear}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-2 pt-3">
-            <h2 className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-[#c8963c] uppercase">
-              <Boxes size={12} /> {text.resources}
-            </h2>
-            {resource_rows.map(({ item_type, name }) => (
-              <div className="border border-white/8 bg-black/18 px-2 py-2 text-[8px] text-[#a3a5ad]" key={item_type}>
-                {name}
-              </div>
-            ))}
-            <p className="text-[8px] leading-4 text-[#777b86]">{text.resources_missing}</p>
-          </div>
+          <AtmosphereControls key={world_id} world={world_api} quality={settings.quality} text={text} />
         </HudPanel>
         {character_enabled && pet ? (
           <button
@@ -511,11 +399,14 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
 
 export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const quality = useAppStore((state) => state.settings.quality)
-  const [view, set_view] = useState<DemoView>(initial_view)
+  const [view, set_view] = useState<DemoView>(() => demo_view(globalThis.location.hash))
   const text = copy.demo_page
   const seed_changed = useRef(false)
-  // the seed corpus loads on first editor-tab open, never on a plain lab visit (reducer ignores
-  // the input unless the editor is still idle)
+  useEffect(() => {
+    const restore_view = () => set_view(demo_view(globalThis.location.hash))
+    globalThis.addEventListener('hashchange', restore_view)
+    return () => globalThis.removeEventListener('hashchange', restore_view)
+  }, [])
   useEffect(() => {
     if (view === 'boards' || view === 'content' || view === 'biomes') dispatch_app({ type: 'editor/load' })
   }, [view])
@@ -546,7 +437,9 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   }
   const view_label = (candidate: DemoView): string =>
     ({
+      ui: copy.ui.design_library,
       world: text.world_lab,
+      assets: text.asset_gallery,
       fight: text.fight_lab,
       boards: text.fight_board,
       content: 'Content',
@@ -556,26 +449,25 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return (
     <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
       <WorldLab active={view === 'world'} copy={copy} />
-      {/* UNMOUNTED, not merely hidden: a surface you cannot see must not exist, and a mounted
-          one would keep a whole world alive behind the tab you are actually looking at. */}
       {view === 'fight' && (
         <section className="absolute inset-0">
-          {/* ONE stage, handed to both children. The setup board and any live fight draw into
-              the SAME world, and neither can reach the biome lab's. Exactly one surface owns
-              its board and canvas listeners at a time. */}
           <WorldStage quality={quality} terrain={worlds_source[0]?.terrain}>
             {(scene) => <FightLabSurface copy={copy} scene={scene} />}
           </WorldStage>
         </section>
       )}
+      {view === 'assets' && <AssetWorkshop copy={copy} />}
       {view === 'boards' && <BoardGallery text={text} />}
       <DemoDevPage view={view} />
-      <HudPanel className="pointer-events-auto fixed top-3 left-1/2 z-50 flex -translate-x-1/2 overflow-hidden text-[8px] tracking-[0.16em] uppercase">
+      {view === 'ui' && <UiWorkshop copy={copy} />}
+      <HudPanel
+        className={`pointer-events-auto fixed top-3 left-1/2 z-50 flex max-w-[calc(100vw-16px)] -translate-x-1/2 overflow-x-auto text-[8px] tracking-[0.16em] uppercase`}
+      >
         {DEMO_VIEWS.map((candidate) => {
           const ViewIcon = VIEW_ICONS[candidate]
           return (
             <button
-              className={`flex cursor-pointer items-center gap-2 px-4 py-2.5 ${
+              className={`flex min-h-11 shrink-0 cursor-pointer items-center gap-2 px-4 py-2.5 ${
                 view === candidate ? 'bg-[#4a9eff]/12 text-[#67adff]' : 'text-[#777b86] hover:text-[#d5d2cb]'
               }`}
               key={candidate}
@@ -591,9 +483,11 @@ export const DemoPage = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           {text.back}
         </a>
       </HudPanel>
-      <div className="pointer-events-none fixed inset-0 z-40 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]" />
+      <div
+        hidden={view === 'ui'}
+        className="pointer-events-none fixed inset-0 z-40 bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(200,150,60,0.014)_2px,rgba(200,150,60,0.014)_4px)]"
+      />
     </main>
   )
 }
-
 export default DemoPage

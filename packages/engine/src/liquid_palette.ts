@@ -16,8 +16,8 @@ const scaled = (color: LinearColor, scale: LinearColor): LinearColor =>
  * from the seed-authored linear base color through this transform. */
 export const liquid_palette = (color: LinearColor): LiquidPalette =>
   Object.freeze({
-    body: scaled(color, [0.54, 0.54, 0.54]),
-    shallow: scaled(color, [0.92, 4.8, 2]),
-    up: scaled(color, [1.85, 2.74, 1.64]),
-    down: scaled(color, [0.15, 0.385, 0.41]),
+    body: scaled(color, [0.3, 3.8, 1.65]),
+    shallow: scaled(color, [0.3, 5.2, 0.95]),
+    up: scaled(color, [0.8, 4.6, 1.8]),
+    down: scaled(color, [0.15, 0.8, 0.65]),
   })

@@ -7,6 +7,7 @@ import { ROYALTY_FLOOR_MIST } from '@aresrpg/sdk/marketplace'
 import { trade_incoming, trade_own_offer, trade_offer_has_value } from '@aresrpg/sdk/trade'
 import { Check, Handshake, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Button, NativeModal, GameWindow } from '@aresrpg/ui'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { item_icon } from '../content/assets.ts'
@@ -14,12 +15,11 @@ import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { encumbered_asset_ids, trade_stack_targets } from '../inventory_stacks.ts'
 import { SuiUnit } from '../marketplace/marketplace_model.tsx'
-import { selected_character } from '../modules/session.ts'
 import { visible_trade_rows } from '../modules/trade.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
 import { parse_amount } from '../kares/model.ts'
 
-import { ItemDetailHover } from './ItemSnapshotTooltip.tsx'
+import { useTradeData, useTradeDispatch } from './TradeSource.tsx'
+import { TradeInventory } from './TradeInventory.tsx'
 import { KaresLogo } from './KaresLogo.tsx'
 import { ModalFrame } from './ModalFrame.tsx'
 import { OfferCaps } from './TradeOfferCaps.tsx'
@@ -46,10 +46,12 @@ const OfferHeader = ({
       <b>{own ? text('your_offer') : text('their_offer')}</b>
       <small>{name}</small>
     </div>
-    <span className={accepted ? 'is-accepted' : ''}>
-      {accepted ? <Check size={11} /> : null}
-      {text(accepted ? 'accepted' : 'reviewing')}
-    </span>
+    {accepted && (
+      <span className="is-accepted">
+        <Check size={11} />
+        {text('accepted')}
+      </span>
+    )}
   </header>
 )
 
@@ -75,7 +77,7 @@ const OfferCurrency = ({
   normalize_amount: () => void
   text: CopyText
 }>) => (
-  <label className="trade-sui">
+  <label className="trade-sui" data-currency={currency}>
     {currency === 'sui' ? (
       <SuiUnit size={12} />
     ) : (
@@ -185,91 +187,14 @@ const OfferDraftActions = ({
 }>) =>
   actions?.visible ? (
     <div className="trade-offer-actions">
-      <button className="btn-outline" disabled={pending} onClick={actions.discard} type="button">
+      <Button disabled={pending} onClick={actions.discard} type="button">
         {text('discard_changes')}
-      </button>
-      <button className="btn-gold" disabled={pending} onClick={actions.confirm} type="button">
+      </Button>
+      <Button tone="primary" disabled={pending} onClick={actions.confirm} type="button">
         {text('confirm_changes')}
-      </button>
+      </Button>
     </div>
   ) : null
-
-const TradeInventory = ({
-  items,
-  can_edit,
-  add_asset,
-  balance,
-  category_text,
-  text,
-}: Readonly<{
-  items: readonly ItemRow[]
-  can_edit: boolean
-  add_asset: (id: string) => void
-  balance: bigint | null
-  category_text: CopyText
-  text: CopyText
-}>) => {
-  const localized_numbers = useNumbers()
-  const [category, set_category] = useState<TradeInventoryCategory>('equipment')
-  const count = (key: TradeInventoryCategory): number =>
-    items.filter((item) => trade_inventory_category(item) === key).length
-  const counts = Object.fromEntries(TRADE_INVENTORY_CATEGORIES.map((key) => [key, count(key)])) as Record<
-    TradeInventoryCategory,
-    number
-  >
-  const visible = items.filter((item) => trade_inventory_category(item) === category)
-  return (
-    <section className="trade-inventory">
-      <header>
-        <b>{text('inventory')}</b>
-        <div className="trade-inventory-meta">
-          <span>{text('drag_hint')}</span>
-          <output aria-label={text('sui')} className="trade-wallet-balance">
-            <SuiUnit size={10} />
-            <strong>{balance === null ? '—' : localized_numbers.sui(balance, 2)}</strong>
-          </output>
-        </div>
-      </header>
-      <nav className="trade-inventory-tabs">
-        {TRADE_INVENTORY_CATEGORIES.map((key) => (
-          <button
-            className={category === key ? 'is-active' : ''}
-            key={key}
-            onClick={() => set_category(key)}
-            type="button"
-          >
-            {category_text(`bag_${key}`)}
-            <span>{counts[key]}</span>
-          </button>
-        ))}
-      </nav>
-      <div className="trade-inventory-grid">
-        {visible.map((item) => (
-          <ItemDetailHover item={item} key={item.id}>
-            <button
-              disabled={!can_edit}
-              draggable={can_edit}
-              key={item.id}
-              onDoubleClick={() => add_asset(item.id)}
-              onDragStart={(event) => event.dataTransfer.setData('text/plain', item.id)}
-              title={item.name}
-              type="button"
-            >
-              {item_icon(item.item_type) ? (
-                <img alt="" draggable={false} src={item_icon(item.item_type)!} />
-              ) : (
-                <span>{item.name.slice(0, 1).toUpperCase()}</span>
-              )}
-              {item.amount > 1 && <small>×{item.amount}</small>}
-              <i>{item.level}</i>
-            </button>
-          </ItemDetailHover>
-        ))}
-        {visible.length === 0 && <p>{text('empty_inventory')}</p>}
-      </div>
-    </section>
-  )
-}
 
 const TerminalFooter = ({
   trade,
@@ -277,6 +202,7 @@ const TerminalFooter = ({
   pending,
   text,
 }: Readonly<{ trade: TradeRow; address: string; pending: boolean; text: CopyText }>) => {
+  const dispatch_app = useTradeDispatch()
   const offer = trade.phase === 'settling' ? trade_incoming(trade, address) : trade_own_offer(trade, address)
   const actionable = trade_offer_has_value(offer)
   const operation = trade.phase === 'settling' ? ('settle' as const) : ('recover' as const)
@@ -284,15 +210,15 @@ const TerminalFooter = ({
     <footer>
       <p>{text(actionable ? `${operation}_notice` : 'waiting_counterparty')}</p>
       {actionable && (
-        <button
-          className="btn-gold"
+        <Button
+          tone="primary"
           disabled={pending}
           onClick={() => dispatch_app({ type: `trade/${operation}`, trade: trade.id })}
           type="button"
         >
           {pending ? <Loader2 className="animate-spin" size={12} /> : <Check size={12} />}
           {text(pending ? 'finalizing' : operation)}
-        </button>
+        </Button>
       )}
     </footer>
   )
@@ -313,22 +239,23 @@ const NegotiatingFooter = ({
   text: CopyText
   dirty: boolean
 }>) => {
+  const dispatch_app = useTradeDispatch()
   const accepted = trade[`accept_${own_side}`]
   const incoming_count = trade_incoming(trade, address).caps.length
   const fee = ROYALTY_FLOOR_MIST * BigInt(incoming_count)
   const notice = text('accept_notice', { count: incoming_count, amount: input_sui(fee) })
   return (
     <footer>
-      <button
-        className="btn-outline"
+      <Button
+        tone="neutral"
         disabled={pending}
         onClick={() => dispatch_app({ type: 'trade/cancel', trade: trade.id })}
         type="button"
       >
         {text('cancel')}
-      </button>
-      <button
-        className={accepted ? 'btn-outline is-accepted' : 'btn-gold'}
+      </Button>
+      <Button
+        tone={accepted ? 'neutral' : 'primary'}
         disabled={pending || accepted || dirty}
         onClick={() => dispatch_app({ type: 'trade/accept', trade: trade.id })}
         title={notice}
@@ -336,7 +263,7 @@ const NegotiatingFooter = ({
       >
         {accepted ? <Check size={12} /> : null}
         {text(accepted ? 'accepted' : 'accept')}
-      </button>
+      </Button>
     </footer>
   )
 }
@@ -402,13 +329,8 @@ export const TradeDialog = ({
 }: Readonly<{ copy: AppCopy; active: TradeRow; address: string }>) => {
   const text = copy_text(copy.trade_panel)
   const category_text = copy_text(copy.characters_page)
-  const rows = useAppStore((state) => state.trade.rows)
-  const pending_operation = useAppStore((state) => state.trade.pending)
-  const inventory = useAppStore((state) => state.session.inventory)
-  const balance = useAppStore((state) => state.session.sui_balance_mist)
-  const listings = useAppStore((state) => state.marketplace.own_listings)
-  const own_name = useAppStore((state) => selected_character(state.session)?.name ?? null)
-  const players = useAppStore((state) => state.world.all_players)
+  const { rows, pending_operation, inventory, balance, listings, own_name, players } = useTradeData()
+  const dispatch_app = useTradeDispatch()
   const center_rows = visible_trade_rows(rows).filter(({ phase }) => phase !== 'requested')
   const own_side = active.a === address ? ('a' as const) : ('b' as const)
   const other_side = own_side === 'a' ? ('b' as const) : ('a' as const)
@@ -423,7 +345,7 @@ export const TradeDialog = ({
   const [additions, set_additions] = useState<readonly TradeDraftAddition[]>([])
   const [amount_item, set_amount_item] = useState<Readonly<ItemRow> | null>(null)
   const display_name = (player_address: string): string =>
-    trade_display_name(player_address, address, own_name, Object.values(players))
+    trade_display_name(player_address, address, own_name, players)
 
   useEffect(() => {
     set_currencies({ sui: input_sui(own_amounts.sui), kares: input_sui(own_amounts.kares) })
@@ -499,97 +421,97 @@ export const TradeDialog = ({
     else set_kept_caps((current) => Object.freeze(current.filter(({ object }) => object !== cap.object)))
   }
   return (
-    <ModalFrame
+    <NativeModal
       close={() => dispatch_app({ type: 'trade/open', trade: null })}
-      close_label={text('close')}
       label={text('title')}
-      max_width="max-w-5xl"
-      soft
+      className="aui-modal-scrim"
     >
-      <section className="trade-modal">
-        {center_rows.length > 1 && (
-          <nav className="trade-switcher">
-            {center_rows.map((row) => (
-              <button
-                className={row.id === active.id ? 'is-active' : ''}
-                key={row.id}
-                onClick={() => dispatch_app({ type: 'trade/open', trade: row.id })}
-                type="button"
-              >
-                {display_name(row.a === address ? row.b : row.a)}
-              </button>
-            ))}
-          </nav>
-        )}
-        <div className="trade-dialog-heading">
-          <Handshake size={17} />
-          <div>
-            <h2>{text('title')}</h2>
-            <p>{display_name(own_side === 'a' ? active.b : active.a)}</p>
-          </div>
-        </div>
-        <div className={`trade-workspace${active.phase === 'negotiating' ? '' : ' is-terminal'}`}>
-          <OfferPanel
-            add_asset={add_asset}
-            caps={displayed_caps}
-            commit_currency={commit_currency}
-            copy={copy}
-            draft_actions={Object.freeze({ confirm, discard, visible: dirty })}
-            name={display_name(active[own_side])}
-            own
-            pending={pending}
-            remove_cap={remove_cap}
-            set_currency={set_currency}
-            side={own_side}
-            currencies={currencies}
-            text={text}
-            trade={active}
-          />
-          <OfferPanel
-            add_asset={add_asset}
-            commit_currency={commit_currency}
-            copy={copy}
-            name={display_name(active[other_side])}
-            own={false}
-            pending={pending}
-            set_currency={set_currency}
-            side={other_side}
-            currencies={currencies}
-            text={text}
-            trade={active}
-          />
-          {active.phase === 'negotiating' && (
-            <TradeInventory
-              add_asset={add_asset}
-              balance={balance}
-              can_edit={can_edit}
-              category_text={category_text}
-              items={available_items}
-              text={text}
-            />
+      <GameWindow
+        title={text('title')}
+        icon={<Handshake />}
+        close={() => dispatch_app({ type: 'trade/open', trade: null })}
+        close_label={text('close')}
+        className="aui-trade-window"
+      >
+        <section className="trade-modal">
+          {center_rows.length > 1 && (
+            <nav className="trade-switcher">
+              {center_rows.map((row) => (
+                <button
+                  className={row.id === active.id ? 'is-active' : ''}
+                  key={row.id}
+                  onClick={() => dispatch_app({ type: 'trade/open', trade: row.id })}
+                  type="button"
+                >
+                  {display_name(row.a === address ? row.b : row.a)}
+                </button>
+              ))}
+            </nav>
           )}
-        </div>
-        {active.phase === 'negotiating' ? (
-          <NegotiatingFooter
-            address={address}
-            dirty={dirty}
-            own_side={own_side}
-            pending={pending}
+          <div className={`trade-workspace${active.phase === 'negotiating' ? '' : ' is-terminal'}`}>
+            <OfferPanel
+              add_asset={add_asset}
+              caps={displayed_caps}
+              commit_currency={commit_currency}
+              copy={copy}
+              draft_actions={Object.freeze({ confirm, discard, visible: dirty })}
+              name={display_name(active[own_side])}
+              own
+              pending={pending}
+              remove_cap={remove_cap}
+              set_currency={set_currency}
+              side={own_side}
+              currencies={currencies}
+              text={text}
+              trade={active}
+            />
+            <OfferPanel
+              add_asset={add_asset}
+              commit_currency={commit_currency}
+              copy={copy}
+              name={display_name(active[other_side])}
+              own={false}
+              pending={pending}
+              set_currency={set_currency}
+              side={other_side}
+              currencies={currencies}
+              text={text}
+              trade={active}
+            />
+            {active.phase === 'negotiating' && (
+              <TradeInventory
+                copy={copy}
+                add_asset={add_asset}
+                balance={balance}
+                can_edit={can_edit}
+                category_text={category_text}
+                items={available_items}
+                text={text}
+              />
+            )}
+          </div>
+          {active.phase === 'negotiating' ? (
+            <NegotiatingFooter
+              address={address}
+              dirty={dirty}
+              own_side={own_side}
+              pending={pending}
+              text={text}
+              trade={active}
+            />
+          ) : (
+            <TerminalFooter address={address} pending={pending} text={text} trade={active} />
+          )}
+        </section>
+        {amount_item && (
+          <TradeAmountModal
+            choose={(amount) => stage_asset(amount_item, amount)}
+            close={() => set_amount_item(null)}
+            item={amount_item}
             text={text}
-            trade={active}
           />
-        ) : (
-          <TerminalFooter address={address} pending={pending} text={text} trade={active} />
         )}
-      </section>
-      {amount_item && (
-        <TradeAmountModal
-          choose={(amount) => stage_asset(amount_item, amount)}
-          close={() => set_amount_item(null)}
-          item={amount_item}
-          text={text}
-        />
-      )}
-    </ModalFrame>
+      </GameWindow>
+    </NativeModal>
   )
 }

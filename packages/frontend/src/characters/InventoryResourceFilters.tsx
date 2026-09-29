@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { DragScroll } from '@aresrpg/ui'
 import type { ItemRow } from '@aresrpg/protocol'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
@@ -45,18 +46,14 @@ export const InventoryResourceFilters = ({
   if (category !== 'resources') return null
   const text = copy_text(copy.characters_page)
   return (
-    <div
-      className="flex shrink-0 flex-wrap gap-1 border-b border-white/8 px-3 py-2"
-      role="group"
-      aria-label={text('bag_resources')}
-    >
+    <DragScroll className="inventory-resource-filters" role="group" aria-label={text('bag_resources')}>
       {RESOURCE_FILTERS.map((key) => (
         <button
           type="button"
           key={key}
           aria-pressed={filter === key}
           onClick={() => select(key)}
-          className={`cursor-pointer border px-2 py-1.5 text-[9px] tracking-wider uppercase ${filter === key ? 'border-gold/40 bg-gold/10 text-gold' : 'border-transparent text-muted hover:border-white/15 hover:text-white'}`}
+          className="inventory-resource-filter"
         >
           {text(`bag_filter_${key}`)}
           <span className="ml-2 tabular-nums opacity-60">
@@ -64,6 +61,6 @@ export const InventoryResourceFilters = ({
           </span>
         </button>
       ))}
-    </div>
+    </DragScroll>
   )
 }

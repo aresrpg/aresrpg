@@ -5,8 +5,9 @@ import { useText } from '../../i18n/useText.ts'
 // Browser-only spell presentation. Keeping seed assets behind this lazy boundary preserves the pure app shell.
 
 import { item_icon, spell_icon } from '../../content/assets.ts'
-import { SpellCard } from '../../encyclopedia/SpellCard.tsx'
-import { useState, type FocusEvent, type ReactNode } from 'react'
+import { EffectLines } from '../../encyclopedia/SpellCardEffects.tsx'
+import { useId, useLayoutEffect, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 import type { FightSpellView } from './fight_projection.ts'
 
@@ -30,42 +31,21 @@ const number_effect = (effect: Readonly<FightSpellView['details']['effects'][num
     stat: Number(effect.stat),
   })
 
-const number_level = (
-  level: Readonly<FightSpellView['details']>,
-  effects: Readonly<FightSpellView['details']['effects']> = level.effects,
-  crit_1_in: bigint = level.crit_1_in
-) =>
-  Object.freeze({
-    ap_cost: Number(level.ap_cost),
-    range_min: Number(level.range_min),
-    range_max: Number(level.range_max),
-    modifiable_range: level.modifiable_range,
-    line_of_sight: level.line_of_sight,
-    line_launch: level.line_launch,
-    free_cell: level.free_cell,
-    casts_per_turn: Number(level.casts_per_turn),
-    casts_per_target: Number(level.casts_per_target),
-    cooldown_turns: Number(level.cooldown_turns),
-    crit_1_in: Number(crit_1_in),
-    effects: Object.freeze(effects.map(number_effect)),
-    crit_effects: Object.freeze([]),
-  })
+/** The fight projection already resolves this turn's normal/critical branch and rolls. */
+export const fight_spell_effects = (spell: Readonly<FightSpellView>) =>
+  Object.freeze((spell.turn?.effects ?? spell.details.effects).map(number_effect))
 
-export const fight_spell_detail = (spell: Readonly<FightSpellView>) => {
-  const invested_index = Number(spell.level - 1n)
-  return Object.freeze({
-    name: spell.name,
-    classe: spell.source.classe,
-    unlock_level: Number(spell.source.unlock_level),
-    levels: Object.freeze(
-      spell.source.levels.map((level, index) =>
-        index === invested_index && spell.turn
-          ? number_level(level, spell.turn.effects, spell.turn.crit_1_in)
-          : number_level(level)
-      )
-    ),
-  })
-}
+export const FightSpellEffects = ({ spell, name }: Readonly<{ spell: FightSpellView; name: string }>) => (
+  <div className="fight-spell-preview" data-fight-spell-effects="">
+    <strong>{name}</strong>
+    <EffectLines
+      compact
+      effects={fight_spell_effects(spell)}
+      critical_effects={[]}
+      level_index={Number(spell.level - 1n)}
+    />
+  </div>
+)
 
 const FightActionIcon = ({
   spell,
@@ -99,21 +79,46 @@ export const FightSpell = ({
   display_name?: string
 }>) => {
   const ui = useText()
+  const tooltip_id = useId()
   const [detail_open, set_detail_open] = useState(false)
+  const tooltip = useRef<HTMLDivElement>(null)
+  const anchor = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const element = tooltip.current
+    if (!element) return
+    const place = (): void => {
+      const origin = anchor.current!.getBoundingClientRect()
+      const { width, height } = element.getBoundingClientRect()
+      const x = Math.max(8, Math.min(globalThis.innerWidth - width - 8, origin.left + origin.width / 2 - width / 2))
+      const y = Math.max(8, Math.min(globalThis.innerHeight - height - 8, origin.top - height - 12))
+      element.style.setProperty('left', `${x}px`)
+      element.style.setProperty('top', `${y}px`)
+    }
+    const observer = new ResizeObserver(place)
+    observer.observe(element)
+    globalThis.addEventListener('resize', place)
+    place()
+    return () => {
+      observer.disconnect()
+      globalThis.removeEventListener('resize', place)
+    }
+  }, [detail_open])
   const name = displayed_name(spell.name, display_name)
-  const detail = fight_spell_detail(spell)
   const critical = displays_critical(spell, disabled)
-  const close_focus = (event: Readonly<FocusEvent<HTMLDivElement>>): void => {
-    if (event.relatedTarget && event.currentTarget.contains(event.relatedTarget)) return
+  const critical_class = critical ? ' critical' : ''
+  const close_focus = (event: Readonly<FocusEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>>): void => {
+    const target = event.relatedTarget
+    if (target instanceof Node && (anchor.current?.contains(target) || tooltip.current?.contains(target))) return
     set_detail_open(false)
   }
   return (
     <div
-      className={`fight-hud__spell-shell${critical ? ' critical' : ''}`}
+      ref={anchor}
+      className={`fight-hud__spell-shell${critical_class}`}
       onBlur={close_focus}
       onFocus={() => set_detail_open(true)}
       onMouseEnter={() => set_detail_open(true)}
-      onMouseLeave={() => set_detail_open(false)}
+      onMouseLeave={close_focus}
     >
       <button
         aria-label={ui('ui.spell_action', {
@@ -123,7 +128,8 @@ export const FightSpell = ({
           unit: ui('fight_hud.unit_ap'),
         })}
         aria-pressed={selected}
-        className={`fight-hud__spell${disabled ? ' disabled' : ''}${selected ? ' selected' : ''}${critical ? ' critical' : ''}`}
+        aria-describedby={detail_open ? tooltip_id : undefined}
+        className={`fight-hud__spell${disabled ? ' disabled' : ''}${selected ? ' selected' : ''}${critical_class}`}
         data-turn-critical={critical || undefined}
         disabled={disabled}
         onClick={select}
@@ -133,17 +139,19 @@ export const FightSpell = ({
         <b>{spell.details.ap_cost.toString()}</b>
         {spell.cooldown > 0n && <em className="fight-hud__spell-cooldown">{spell.cooldown.toString()}</em>}
       </button>
-      {detail_open && (
-        <div className="fight-hud__spell-detail fight-hud__spell-detail--small">
-          <SpellCard
-            display_name={name}
-            initial_level={Number(spell.level)}
-            key={`${spell.name}:${spell.level}`}
-            small
-            spell={detail}
-          />
-        </div>
-      )}
+      {detail_open &&
+        createPortal(
+          <div
+            ref={tooltip}
+            id={tooltip_id}
+            role="tooltip"
+            onMouseLeave={close_focus}
+            className={`fight-hud__spell-detail fight-hud__spell-detail--small${critical_class}`}
+          >
+            <FightSpellEffects spell={spell} name={name} />
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

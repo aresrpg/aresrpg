@@ -7,7 +7,7 @@
 // (equipment::FoldedKey projection — never recomputed here), the spell book, and the equipped
 // weapon's damage lines. Spell templates are seed content the client already holds.
 
-import type { FightPlayerSourceRow, FightStateRow } from '@aresrpg/protocol'
+import { visible_equipment, type FightPlayerSourceRow, type FightStateRow } from '@aresrpg/protocol'
 import { worn_appearance } from '@aresrpg/immutable'
 
 import { type Graph, type Node } from '../graph.ts'
@@ -57,6 +57,7 @@ const player_source_of = (
     color_2: Number(character.color_2),
     color_3: Number(character.color_3),
     ...worn_appearance(Object.fromEntries(worn.map(({ slot, item_type }) => [slot, item_type]))),
+    title: visible_equipment(worn).title,
     level: Number(character.level),
     experience: String(character.experience ?? 0),
     vitality: Number(character.vitality),

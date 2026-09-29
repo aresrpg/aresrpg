@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { CheckCircle2, XCircle } from 'lucide-react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
@@ -76,20 +77,21 @@ export const SuiTransferSuccess = ({
       </div>
       {transfer.digest && <DigestLink copy={copy} digest={transfer.digest} />}
       <div className="mt-2 flex w-full gap-3">
-        <button
-          className="btn-gold flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        <Button
+          tone="primary"
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={reset}
           type="button"
         >
           {send_text(copy, 'send_more')}
-        </button>
-        <button
-          className="btn-outline flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        </Button>
+        <Button
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={close}
           type="button"
         >
           {copy.wallet_send_shared.close}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -125,20 +127,21 @@ export const SuiTransferFailed = ({
         {send_error_text(copy, key)}
       </div>
       <div className="mt-2 flex w-full gap-3">
-        <button
-          className="btn-gold flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        <Button
+          tone="primary"
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={key === 'insufficient_balance' ? open_funds : reset}
           type="button"
         >
           {key === 'insufficient_balance' ? copy.wallet_send_shared.add_funds : copy.wallet_send_shared.retry}
-        </button>
-        <button
-          className="btn-outline flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
+        </Button>
+        <Button
+          className="flex-1 cursor-pointer px-6 py-2.5 text-[10px] tracking-[0.2em]"
           onClick={close}
           type="button"
         >
           {copy.wallet_send_shared.close}
-        </button>
+        </Button>
       </div>
     </div>
   )

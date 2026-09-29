@@ -10,7 +10,10 @@ test('an occupied placement rollback keeps the joining character and hovered fig
   await page.getByRole('button', { name: 'Place and join', exact: true }).click()
   const participants = page.getByLabel('Participants', { exact: true })
   await expect(participants).toHaveText('3')
-  await page.locator('canvas').hover({ position: { x: 70, y: 300 } })
+  await page
+    .locator('canvas')
+    .first()
+    .hover({ position: { x: 70, y: 300 } })
   // Trigger the failed response while the pointer remains over the newly joined fighter.
   await page
     .getByRole('button', { name: 'Reject placement', exact: true })

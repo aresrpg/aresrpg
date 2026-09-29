@@ -8,7 +8,7 @@ import { create_app } from '../../src/store.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -92,7 +92,6 @@ test('run-to reads one external checkpoint and enables flat mode', async () => {
 
   expect(reads).toEqual(['0xother:nauvis'])
   expect(app.store.getState().run_to.run).toMatchObject({ status: 'running', x: 50_010, z: 50_020 })
-  expect(app.store.getState().settings.flat_mode).toBeTrue()
   app.dispatch({ type: 'run_to/position', world: 'nauvis', x: 50_030, z: 50_040 })
   expect(app.store.getState().run_to.run).toMatchObject({
     status: 'running',
@@ -100,9 +99,7 @@ test('run-to reads one external checkpoint and enables flat mode', async () => {
     x: 50_030,
     z: 50_040,
   })
-  expect(app.store.getState().run_to.restore_flat).toBeTrue()
-  app.dispatch({ type: 'run_to/stopped', reason: 'arrived', restore_flat: true })
-  expect(app.store.getState().settings.flat_mode).toBeFalse()
+  app.dispatch({ type: 'run_to/stopped', reason: 'arrived' })
   expect(app.store.getState().run_to.run).toBeNull()
   stop()
 })

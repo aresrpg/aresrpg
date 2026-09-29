@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+export { ATMOSPHERE_CONTROLS, resolve_atmosphere_tuning, type AtmosphereTuning } from './atmosphere_tuning.ts'
 export { create_engine } from './renderer.ts'
 export { create_character_preview } from './character_preview.ts'
 export { fight_path_gait, mob_entity_scale } from './entities.ts'
@@ -28,7 +29,7 @@ export {
   worlds_source,
   type WorldCityArea,
 } from './world_catalog.ts'
-export { DUNGEON_PORTAL_LABEL_HEIGHT, DUNGEON_PORTAL_ROOT_HEIGHT } from './dungeon_portals.ts'
+export { DUNGEON_GATE } from './portal_shape.ts'
 export { preload_mob_model } from './mob_model.ts'
 export { create_terrain_planner } from './terrain_planner.ts'
 export { city_map_overlays, structure_voxels } from './structure_placement.ts'
@@ -39,17 +40,14 @@ export {
 } from './cities/generated_city.ts'
 export type { CityMapOverlay } from './structure_placement.ts'
 export { STRUCTURE_PACKS, STRUCTURE_TYPES } from './structures.ts'
-export {
-  create_flat_projection,
-  effective_flattened,
-  project_height,
-  set_flat_projection,
-  step_flat_projection,
-} from './flatten.ts'
+export { city_blocks } from './cities/city_structure.ts'
+export type { FixedStructure } from './fixed_structures.ts'
+export type { GeneratedCityTerrain as TerrainHeightGrid } from './cities/types.ts'
 // the engine's deterministic-placement PRNG, shared upward: the world's chain-driven spawns seed
 // their own scatter and wander from it, so a mob stands where it stood last reload and never
 // grows a second copy of this algorithm
 export { mulberry } from './nature/sprite_kit.ts'
+export { create_fbm_sampler } from './world_noise.ts'
 export {
   BIOME_SLOTS,
   compile_runtime_world_recipe,
@@ -79,6 +77,7 @@ export type {
   DungeonPortalMarker,
   DungeonStageRender,
   CharacterAppearanceRender,
+  CharacterAura,
   CharacterAnimationName,
   CharacterAnimationRender,
   CharacterEntityRender,
@@ -112,6 +111,9 @@ export type {
   RenderChunkRequest,
   Vec3,
   WornModelRender,
+  WorldPanel,
 } from './types.ts'
 
 export { CAPTION_STYLE, type WorldCaption, type CaptionLine, type CaptionTarget } from './caption_types.ts'
+
+export { wrap_caption, create_caption_raster } from './caption_raster.ts'

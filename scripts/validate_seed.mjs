@@ -61,7 +61,7 @@ const check_rule = (condition, rule, message) => {
 }
 
 // The seed boundary has five physical homes; structures keep generated voxel types beside editable packs.
-const SEED_HOMES = ['content', 'icons', 'models', 'sounds', 'structures']
+const SEED_HOMES = ['content', 'icons', 'models', 'scenes', 'sounds', 'structures', 'textures']
 const actual_seed_homes = readdirSync(seed_dir).sort()
 if (actual_seed_homes.join(',') !== SEED_HOMES.join(','))
   red('S-LAYOUT', `seed contains [${actual_seed_homes.join(', ')}], expected only [${SEED_HOMES.join(', ')}]`)

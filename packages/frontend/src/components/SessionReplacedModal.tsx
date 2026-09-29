@@ -20,9 +20,6 @@ export const SessionReplacedModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <ModalFrame close={() => set_dismissed(true)} close_label={copy.wallet_close} label={copy.session_replaced_title}>
       <div className="grid gap-4 p-6 text-center">
         <MonitorX className="mx-auto text-[#ff7d9f]" size={28} strokeWidth={1.5} />
-        <h2 className="text-[12px] font-semibold tracking-[0.18em] text-[#e8e4dc] uppercase">
-          {copy.session_replaced_title}
-        </h2>
         <p className="text-[10px] leading-5 text-[#a3a5ad]">{copy.session_replaced_body}</p>
         <button
           className="mx-auto h-9 cursor-pointer border border-[#c8963c]/45 bg-[#c8963c]/8 px-5 text-[9px] tracking-[0.16em] text-[#efc15a] uppercase hover:border-[#c8963c]"

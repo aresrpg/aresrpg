@@ -139,30 +139,4 @@ describe('character facade', () => {
     expect(transform.position[2]).toBeLessThan(0.5) // forward = −Z under yaw 0 (legacy basis)
     expect(transform.speed).toBeGreaterThan(0)
   })
-
-  test('rides projected ground and is pushed above relief restored underneath it', () => {
-    const character = create_character_controller({ solid_at: flat, liquid_at: no_liquid, position: [0.5, 0, 0.5] })
-
-    character.reconcile_ground(0, -5)
-    expect(character.get_transform().position[1]).toBe(-5)
-    character.reconcile_ground(-5, 7)
-    const raised = character.get_transform()
-    expect(raised.position[1]).toBe(7)
-    expect(raised.velocity[1]).toBe(0)
-    expect(raised.on_ground).toBeTrue()
-  })
-
-  test('restored relief pushes an intersecting airborne body but never pulls one down', () => {
-    const intersecting = create_character_controller({
-      solid_at: flat,
-      liquid_at: no_liquid,
-      position: [0.5, 1, 0.5],
-    })
-    intersecting.reconcile_ground(0, 4)
-    expect(intersecting.get_transform().position[1]).toBe(4)
-
-    const clear = create_character_controller({ solid_at: flat, liquid_at: no_liquid, position: [0.5, 9, 0.5] })
-    clear.reconcile_ground(0, 4)
-    expect(clear.get_transform().position[1]).toBe(9)
-  })
 })

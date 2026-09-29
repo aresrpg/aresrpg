@@ -117,13 +117,11 @@ test('manual run-to stops automation while renderer inactivity preserves it', ()
   const far = { ...tick(), pose: { ...tick().pose!, x: -100 } }
   const moving = reduce_automation(state, far)
   expect(moving.automation.run?.step.type).toBe('moving')
-  const inactive = reduce_automation(moving, { type: 'run_to/stopped', reason: 'inactive', restore_flat: false })
+  const inactive = reduce_automation(moving, { type: 'run_to/stopped', reason: 'inactive' })
   expect(inactive.automation.run?.step.type).toBe('planning')
   expect(reduce_automation(moving, { ...far, world_ms: 120_000 })).toBe(moving)
   expect(reduce_automation(moving, { type: 'run_to/position', world: 'nauvis', x: 1, z: 1 }).automation.run).toBeNull()
-  expect(
-    reduce_automation(moving, { type: 'run_to/stopped', reason: 'manual', restore_flat: false }).automation.run
-  ).toBeNull()
+  expect(reduce_automation(moving, { type: 'run_to/stopped', reason: 'manual' }).automation.run).toBeNull()
 })
 
 test('only the gather-correlated protector is forfeited, once, then custody gates resumption', () => {
@@ -266,8 +264,8 @@ test('automation requests pet riding while ordinary run-to preserves manual cont
     x: 50_010,
     z: 50_020,
   }
-  expect(run_to_target({ ...state, run_to: { run, restore_flat: false } })).toEqual({ x: 10, z: 20, ride_pet: true })
-  expect(run_to_target({ ...state, run_to: { run: { ...run, source: 'position' }, restore_flat: false } })).toEqual({
+  expect(run_to_target({ ...state, run_to: { run } })).toEqual({ x: 10, z: 20, ride_pet: true })
+  expect(run_to_target({ ...state, run_to: { run: { ...run, source: 'position' } } })).toEqual({
     x: 10,
     z: 20,
   })

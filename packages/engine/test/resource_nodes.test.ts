@@ -13,7 +13,7 @@ describe('resource node visuals', () => {
     const layer = create_resource_node_layer({ scene, wind: true })
     const marker = { id: 'wheat', x: 4, y: 80, z: 9, item_type: 'wheat', job: 'FARMER', tier: 1 }
     const rows = Array.from({ length: 8 }, (_, index) => ({ ...marker, id: String(index), x: index }))
-    layer.set_flatten(1)
+
     layer.set_markers(rows)
     const mesh = scene.children.find((child): child is InstancedMesh => child instanceof InstancedMesh)!
     expect(scene.children).toHaveLength(1)
@@ -45,13 +45,13 @@ describe('resource node visuals', () => {
     layer.dispose()
   })
 
-  test('world resources stay visible when flat and disappear for the entire fight-board lifetime', () => {
+  test('world resources disappear for the entire fight-board lifetime', () => {
     expect(resource_nodes_visible({ terrain_presented: true, board_active: false })).toBeTrue()
     expect(resource_nodes_visible({ terrain_presented: true, board_active: true })).toBeFalse()
     expect(resource_nodes_visible({ terrain_presented: false, board_active: false })).toBeFalse()
   })
 
-  test('resource geometry and labels follow flattening, arrivals, and restoration without rebuilding', () => {
+  test('resource geometry and labels retain source elevation across population updates', () => {
     const scene = new Scene()
     const layer = create_resource_node_layer({ scene })
     const marker = { id: 'wheat', x: 4, y: 80, z: 9, item_type: 'wheat', job: 'FARMER', tier: 1 }
@@ -61,30 +61,17 @@ describe('resource node visuals', () => {
     const { geometry } = mesh
     const matrix = new Matrix4()
 
-    layer.set_flatten(0.6)
-    mesh.getMatrixAt(0, matrix)
-    expect(matrix.elements[13]).toBeCloseTo(40)
-    expect(layer.label_anchor('wheat')?.y).toBeCloseTo(42.1)
-    layer.set_flatten(1)
-    mesh.getMatrixAt(0, matrix)
-    expect(matrix.elements[13]).toBe(0)
-    expect(mesh.visible).toBeTrue()
-    expect(mesh.geometry).toBe(geometry)
-    expect(mesh.boundingSphere!.center.y).toBeLessThan(5)
-    expect(layer.label_anchor('wheat')?.y).toBeCloseTo(2.1)
-    layer.set_flatten(0)
     mesh.getMatrixAt(0, matrix)
     expect(matrix.elements[13]).toBe(80)
     expect(layer.label_anchor('wheat')?.y).toBeCloseTo(82.1)
 
-    layer.set_flatten(1)
     layer.set_markers([{ ...marker, id: 'new', y: 120 }])
     const arriving = scene.children.find((child): child is InstancedMesh => child instanceof InstancedMesh)!
     arriving.getMatrixAt(0, matrix)
-    expect(matrix.elements[13]).toBe(0)
+    expect(matrix.elements[13]).toBe(120)
     expect(layer.label_anchor('wheat')).toBeNull()
-    expect(layer.label_anchor('new')?.y).toBeCloseTo(2.1)
-    layer.set_flatten(0)
+    expect(layer.label_anchor('new')?.y).toBeCloseTo(122.1)
+
     arriving.getMatrixAt(0, matrix)
     expect(matrix.elements[13]).toBe(120)
     layer.dispose()
@@ -189,4 +176,27 @@ test('Tanjirize uses green and purple, and barley uses green instead of generic 
   expect(tanjirize.accent[2]).toBeGreaterThan(tanjirize.accent[1])
   const barley = resource_visual('wheat_barley', 'FARMER', 2)
   expect(barley.accent[1]).toBeGreaterThan(barley.accent[0])
+})
+
+test('dressing scale shares resource buffers and keeps projected label anchors above the model', () => {
+  const scene = new Scene()
+  const layer = create_resource_node_layer({ scene })
+  const marker = { id: 'mushroom', x: 4, y: 72, z: 9, item_type: 'arcaneshroom', job: 'HERBALIST', tier: 4 }
+  layer.set_markers([marker, { ...marker, id: 'large', x: 8, scale: 3 }])
+  layer.set_visible(true)
+  expect(scene.children).toHaveLength(1)
+  const mesh = scene.children[0] as InstancedMesh
+  const normal = new Matrix4()
+  const large = new Matrix4()
+  mesh.getMatrixAt(0, normal)
+  mesh.getMatrixAt(1, large)
+  const size = (matrix: Matrix4) => Math.hypot(matrix.elements[0]!, matrix.elements[1]!, matrix.elements[2]!)
+  expect(size(large) / size(normal)).toBeCloseTo(3)
+  expect(layer.label_anchor('large')?.y).toBeCloseTo(76.05)
+
+  mesh.getMatrixAt(1, large)
+  expect(large.elements[13]).toBe(72)
+  expect(size(large) / size(normal)).toBeCloseTo(3)
+  expect(layer.label_anchor('large')?.y).toBeCloseTo(76.05)
+  layer.dispose()
 })

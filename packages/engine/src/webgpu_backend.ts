@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable max-lines -- the WebGPU backend remains one cohesive device adapter pending a behavior-neutral extraction. */
 import {
-  AgXToneMapping,
+  NeutralToneMapping,
   Matrix4,
   DirectionalLight,
   Fog,
@@ -18,13 +18,18 @@ import {
 import { Renderer, StandardNodeLibrary, WebGPUBackend } from 'three/webgpu'
 import { float } from 'three/tsl'
 
-import { WebGPUUnavailableError, type EngineBackend } from './backend.ts'
+import { create_world_panels } from './world_panels.ts'
+import type { AtmosphereTuning } from './atmosphere_tuning.ts'
+import { atmosphere_profile } from './atmosphere_profile.ts'
+import { reflection_scale } from './water_reflection.ts'
+import { type EngineBackend } from './backend.ts'
+import { create_scenery } from './scenery.ts'
 import { create_clouds } from './clouds.ts'
 import { create_far_terrain } from './far_terrain.ts'
 import { create_fight_board_layer } from './fight_board.ts'
-import { BOARD_WATER_DROP } from './fight_board_surface.ts'
 import { create_fight_sword_layer, fight_swords_visible } from './fight_swords.ts'
 import { create_character_crowd_layer, is_character_crowd_spec } from './character_crowd.ts'
+import { create_character_aura_layer } from './character_aura_layer.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_caption_layer } from './caption_layer.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
@@ -32,7 +37,6 @@ import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import { create_frame_renderer } from './frame_renderer.ts'
-import { create_flatten_uniform, flat_terrain_amount } from './flatten.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
 import { create_lantern } from './lantern.ts'
@@ -45,6 +49,7 @@ import type { ScatterInstance } from './scatter.ts'
 import { create_scatter_layer } from './scatter_layer.ts'
 import { create_resource_node_layer, resource_nodes_visible as should_show_resource_nodes } from './resource_nodes.ts'
 import { chunk_origin } from './terrain_generator.ts'
+import { create_upload_queue } from './upload_queue.ts'
 import { create_terrain_pool } from './terrain_pool.ts'
 import { create_board_occlusion, project_board_screen } from './board_occlusion.ts'
 import { is_submerged } from './underwater.ts'
@@ -62,7 +67,7 @@ import type {
   RenderedChunk,
   Vec3,
 } from './types.ts'
-import { compile_runtime_world_recipe, sample_world_column, type WorldRecipe } from './world_recipe.ts'
+import { sample_world_column, type CompiledWorld } from './world_recipe.ts'
 
 const FOG_COOL_TILT = [0.62, 0.75, 1] as const
 
@@ -104,30 +109,17 @@ export const surface_is_drawable = (
   )
 }
 
-export const create_upload_capacity_gate = () => {
-  let blocked = false
-  return Object.freeze({
-    can_drain: (): boolean => !blocked,
-    block: (): void => {
-      blocked = true
-    },
-    release: (): void => {
-      blocked = false
-    },
-    blocked_count: (pending: number): number => (blocked ? pending : 0),
-  })
-}
-
 export const create_webgpu_backend = async (
   canvas: HTMLCanvasElement,
   initial_quality: EngineQuality,
-  world: WorldRecipe,
+  compiled_world: CompiledWorld,
   report_issue: (issue?: EngineIssue) => void = () => {},
   presentation: EnginePresentation = 'world',
   initial_focus: readonly [number, number] = [0, 0]
 ): Promise<EngineBackend> => {
+  const world = compiled_world.recipe
   // This owner requires WebGPU storage/indirect buffers. Construct that backend directly;
-  // Three's convenience renderer silently substitutes WebGL, which belongs to our grid.
+  // This world requires WebGPU; it never substitutes another rendering backend.
   const options = { canvas, antialias: false, powerPreference: 'high-performance' as const }
   const gpu_backend = new WebGPUBackend(options)
   const renderer = new Renderer(gpu_backend, options)
@@ -164,13 +156,13 @@ export const create_webgpu_backend = async (
     disposed = true
     const device = Reflect.get(gpu_backend, 'device') as { destroy: () => void } | null
     device?.destroy()
-    throw new WebGPUUnavailableError(String(error), { cause: error })
+    throw error
   }
   own(renderer)
   try {
     renderer.outputColorSpace = SRGBColorSpace
-    renderer.toneMapping = AgXToneMapping
-    renderer.toneMappingExposure = 0.85
+    renderer.toneMapping = NeutralToneMapping
+    renderer.toneMappingExposure = 1.15
 
     const scene = new Scene()
     const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
@@ -184,6 +176,8 @@ export const create_webgpu_backend = async (
       world_anchor: (id: string) => entities.world_anchor(id) ?? character_crowd.world_anchor(id),
       entity_height: (id: string) => entities.entity_height(id) ?? character_crowd.entity_height(id),
     })
+    const auras = own(create_character_aura_layer(scene, camera, entity_anchors, initial_quality))
+    const world_panels = own(create_world_panels(scene))
     const captions = own(create_caption_layer({ renderer, canvas, camera, webgpu: true }))
     const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
     const effects = own(create_transient_effects({ scene, entities, captions }))
@@ -194,13 +188,13 @@ export const create_webgpu_backend = async (
     // Terrain shadows use a layer-1 mesh with their own bounded indirect list; the main camera
     // remains layer 0 and never draws that duplicate.
     sun.shadow.camera.layers.enable(1)
-    const analytic_sky = create_sky_node({ seed: world.seed })
-    const compiled_world = compile_runtime_world_recipe(world, { structures: false })
+    const analytic_sky = create_sky_node({ seed: world.seed, sky_rotation: world.sky_rotation })
     const liquid_material =
       world.liquid === undefined
         ? null
         : compiled_world.materials.entries[compiled_world.materials.id_for(world.liquid)]!
     const water_palette = liquid_palette(liquid_material ? liquid_material.color : [0, 0, 0])
+    const atmosphere = atmosphere_profile(world.atmosphere)
     const light_baseline = Object.freeze({
       sun_color: [sun.color.r, sun.color.g, sun.color.b] as const,
       sun_intensity: sun.intensity,
@@ -213,8 +207,6 @@ export const create_webgpu_backend = async (
     scene.add(hemisphere, back_fill, back_fill.target, sun, sun.target)
     scene.backgroundNode = analytic_sky.background_node
 
-    const flatten = create_flatten_uniform()
-    let flatten_amount = 0
     const clouds = own(create_clouds({ scene, quality: initial_quality, seed: world.seed, sky: analytic_sky }))
     const board_occlusion = create_board_occlusion()
     let board_footprint: Readonly<{
@@ -224,12 +216,13 @@ export const create_webgpu_backend = async (
     }> | null = null
     // scratch, reused every frame — the draw loop allocates nothing
     const board_view_projection = new Matrix4()
+    const uploads = own(create_upload_queue())
     const terrain = own(
       create_terrain_pool({
         scene,
         quality: initial_quality,
-        flatten,
-        world,
+        world: compiled_world,
+        uploads,
         sun_direction: analytic_sky.sun_direction,
         clouds,
         board_occlusion,
@@ -239,25 +232,26 @@ export const create_webgpu_backend = async (
       create_far_terrain({
         scene,
         quality: initial_quality,
-        flatten,
         world,
         sun_direction: analytic_sky.sun_direction,
         clouds,
         initial_focus,
+        materials: compiled_world.materials,
       })
     )
     const scatter = own(create_scatter_layer({ scene, board_occlusion }))
     const resource_nodes = own(create_resource_node_layer({ scene, wind: true }))
+    const scenery = own(create_scenery({ scene, scenery: world.scenery, presentation }))
     const lantern = own(create_lantern({ scene }))
     const water = own(
       create_water({
         scene,
         quality: initial_quality,
-        flatten,
         sky: analytic_sky,
         clouds,
         world: compiled_world,
         palette: water_palette,
+        lights: { key: sun, ambient: hemisphere },
         board_occlusion,
       })
     )
@@ -267,10 +261,10 @@ export const create_webgpu_backend = async (
     const dungeon_stage = own(create_dungeon_stage({ scene }))
     // Water state for the frame passes: the tint is per-pixel (the underwater pass reads the sea
     // plane itself), so the CPU only answers "does this world have water right now" — a world
-    // without a liquid material, or a flattened one, has none — plus the eye's own submerged
+    // without a liquid material has none — plus the eye's own submerged
     // flag, which the refraction wobble and the droplet exit edge need.
     const has_water = Number(world.liquid !== undefined)
-    const water_gate = float(has_water).mul(flatten.water_visibility)
+    const water_gate = float(has_water)
     const water_level = float(world.sea_level)
     let was_submerged = false
     const mesh_pool = own(create_mesh_pool(world))
@@ -285,7 +279,9 @@ export const create_webgpu_backend = async (
         analytic_sky.sun_direction,
         water_gate,
         water_level,
-        water_palette
+        water_palette,
+        water.illumination,
+        { scenery: world.scenery, clouds }
       )
     )
     let next_revision = 0
@@ -294,14 +290,11 @@ export const create_webgpu_backend = async (
       string,
       Readonly<{ revision: number; resolve: (outcome: ChunkRenderOutcome) => void }>
     >()
-    const pending_uploads = new Map<string, PendingUpload>()
-    const upload_capacity = create_upload_capacity_gate()
     const failed_chunks = new Set<string>()
-    let upload_order: readonly PendingUpload[] = []
-    let uploads_dirty = false
     let quality = initial_quality
     let sky_revision = 0
     let hillaire: ReturnType<typeof create_hillaire_sky> | null = null
+    let atmosphere_overrides: Partial<AtmosphereTuning> | null = null
     let sky_ready = false
     let previous_frame = performance.now()
     let render_width = 0
@@ -317,9 +310,7 @@ export const create_webgpu_backend = async (
     const last_shadow_direction = new Vector3()
 
     cleanup.push(() => {
-      pending_uploads.clear()
-      upload_order = []
-      upload_capacity.release()
+      uploads.clear()
       failed_chunks.clear()
       revisions.clear()
       completions.forEach(({ resolve }) => resolve('removed'))
@@ -346,9 +337,13 @@ export const create_webgpu_backend = async (
       sun.shadow.intensity = lighting.shadow_intensity
       back_fill.color.setRGB(lighting.fill_color[0], lighting.fill_color[1], lighting.fill_color[2])
       back_fill.intensity = lighting.fill_intensity
-      hemisphere.color.setRGB(lighting.hemi_sky[0], lighting.hemi_sky[1], lighting.hemi_sky[2])
+      hemisphere.color.setRGB(
+        lighting.hemi_sky[0] * atmosphere.ambient_tint[0]!,
+        lighting.hemi_sky[1] * atmosphere.ambient_tint[1]!,
+        lighting.hemi_sky[2] * atmosphere.ambient_tint[2]!
+      )
       hemisphere.groundColor.setRGB(lighting.hemi_ground[0], lighting.hemi_ground[1], lighting.hemi_ground[2])
-      hemisphere.intensity = lighting.hemi_intensity
+      hemisphere.intensity = lighting.hemi_intensity * atmosphere.ambient_gain
       const fog_color = palette_for_sun(direction.y).horizon
       scene.fog?.color.setRGB(
         fog_color[0] * FOG_COOL_TILT[0],
@@ -382,6 +377,7 @@ export const create_webgpu_backend = async (
         hillaire?.dispose()
         hillaire = null
         scene.backgroundNode = analytic_sky.background_node
+        water.set_sky(analytic_sky.sample_sky_dome)
         scene.fogNode = null
         sky_ready = true
         report_issue()
@@ -396,7 +392,9 @@ export const create_webgpu_backend = async (
           sun_direction: analytic_sky.sun_direction,
           cool_tilt: FOG_COOL_TILT,
           distance_fog: profile.fog,
+          atmosphere: world.atmosphere,
         })
+        replacement.set_tuning(atmosphere_overrides)
         await replacement.bake(renderer)
         if (disposed || revision !== sky_revision) {
           replacement.dispose()
@@ -404,7 +402,9 @@ export const create_webgpu_backend = async (
         }
         hillaire?.dispose()
         hillaire = replacement
+        hillaire.set_tuning(atmosphere_overrides)
         scene.backgroundNode = replacement.background_node
+        water.set_sky(replacement.sample_sky)
         scene.fogNode = replacement.fog_node
         sky_ready = true
         report_issue()
@@ -414,6 +414,7 @@ export const create_webgpu_backend = async (
         hillaire?.dispose()
         hillaire = null
         scene.backgroundNode = analytic_sky.background_node
+        water.set_sky(analytic_sky.sample_sky_dome)
         scene.fogNode = null
         sky_ready = true
         report_issue({ code: 'advanced_sky_failed', detail: error instanceof Error ? error.message : String(error) })
@@ -437,7 +438,8 @@ export const create_webgpu_backend = async (
       sun.shadow.camera.bottom = -shadow_extent
       sun.shadow.camera.near = 1
       sun.shadow.camera.far = 520
-      sun.shadow.bias = -0.00035
+      // Depth bias is normalized by the shadow range: retain only 0.01 block of separation.
+      sun.shadow.bias = -0.01 / (sun.shadow.camera.far - sun.shadow.camera.near)
       // A large normal offset detaches shadows from voxel terrace edges (peter-panning).
       sun.shadow.normalBias = 0.002
       sun.shadow.needsUpdate = true
@@ -446,6 +448,8 @@ export const create_webgpu_backend = async (
       far_terrain.set_quality(next, render_distance)
       clouds.set_quality(next)
       water.set_quality(next)
+      scenery.set_quality(next)
+      auras.set_quality(next)
       frame_renderer.set_quality(next)
       if (update_sky) void use_sky_quality(profile.sky)
     }
@@ -489,9 +493,16 @@ export const create_webgpu_backend = async (
         presentation,
       })
       const profile = get_quality_profile(quality)
-      const smallest_attachment_scale = uses_world_post_processing(quality, presentation)
-        ? Math.min(profile.render.scene_scale, profile.effects.sun_shafts?.resolution ?? 1)
-        : 1
+      const reflected_scale =
+        world.water_reflection === 'planar'
+          ? reflection_scale(quality, width * pixel_ratio, height * pixel_ratio) || 1
+          : 1
+      const smallest_attachment_scale = Math.min(
+        reflected_scale,
+        uses_world_post_processing(quality, presentation)
+          ? Math.min(profile.render.scene_scale, profile.effects.sun_shafts?.resolution ?? 1)
+          : 1
+      )
       // Route transitions can briefly collapse the canvas. Three floors every scaled pass size;
       // rendering then would create a zero-sized GPU texture and poison all later attachment views.
       if (!surface_is_drawable(width, height, pixel_ratio, smallest_attachment_scale)) return false
@@ -507,56 +518,38 @@ export const create_webgpu_backend = async (
       return true
     }
 
+    const admit_chunk = (entry: PendingUpload): boolean => {
+      if (revisions.get(entry.chunk.key) !== entry.revision) return true
+      const result = terrain.upload(entry.chunk, entry.data)
+      if (result === 'full') return false
+      if (result === 'too_large') {
+        settle_chunk(entry.chunk.key, entry.revision, 'failed')
+        console.error(`Terrain chunk ${entry.chunk.key} exceeds the complete GPU pool and cannot be displayed.`)
+        return true
+      }
+      scatter.add(entry.chunk, entry.scatter)
+      settle_chunk(entry.chunk.key, entry.revision, 'rendered')
+      sun.shadow.needsUpdate = true
+      return true
+    }
+
     const drain_uploads = (): void => {
-      if (pending_uploads.size === 0 || !upload_capacity.can_drain()) return
-      if (uploads_dirty) {
-        upload_order = [...pending_uploads.values()].sort((left, right) => {
-          const left_x = left.chunk.origin[0] - camera.position.x
-          const left_z = left.chunk.origin[2] - camera.position.z
-          const right_x = right.chunk.origin[0] - camera.position.x
-          const right_z = right.chunk.origin[2] - camera.position.z
-          return left_x * left_x + left_z * left_z - right_x * right_x - right_z * right_z
-        })
-        uploads_dirty = false
-      }
-      const { upload_bytes_per_frame, upload_time_ms } = get_quality_profile(quality).chunks
-      const start = performance.now()
-      let bytes = 0
-      let uploaded = 0
-      for (const entry of upload_order) {
-        if (pending_uploads.get(entry.chunk.key) !== entry) continue
-        if (uploaded > 0 && performance.now() - start >= upload_time_ms) break
-        if (bytes > 0 && bytes + entry.data.quads.byteLength > upload_bytes_per_frame) break
-        if (revisions.get(entry.chunk.key) !== entry.revision) {
-          pending_uploads.delete(entry.chunk.key)
-          continue
-        }
-        const result = terrain.upload(entry.chunk, entry.data)
-        if (result === 'full') {
-          upload_capacity.block()
-          break
-        }
-        if (result === 'too_large') {
-          pending_uploads.delete(entry.chunk.key)
-          settle_chunk(entry.chunk.key, entry.revision, 'failed')
-          console.error(`Terrain chunk ${entry.chunk.key} exceeds the complete GPU pool and cannot be displayed.`)
-          continue
-        }
-        pending_uploads.delete(entry.chunk.key)
-        scatter.add(entry.chunk, entry.scatter)
-        settle_chunk(entry.chunk.key, entry.revision, 'rendered')
+      const upload_profile = get_quality_profile(quality).chunks
+      if (
+        uploads.drain(
+          [camera.position.x, camera.position.y, camera.position.z],
+          upload_profile.upload_bytes_per_frame,
+          upload_profile.upload_time_ms
+        ) > 0
+      )
         sun.shadow.needsUpdate = true
-        bytes += entry.data.quads.byteLength
-        uploaded += 1
-      }
-      upload_order = upload_order.filter((entry) => pending_uploads.get(entry.chunk.key) === entry)
     }
 
     // one short camera shock per critical hit, whoever lands it — decays over ~260ms
     let shock_at = -10_000
     const CRIT_SHOCK_MS = 260
     const crit_shock = (): void => {
-      shock_at = previous_frame
+      if (board_footprint) shock_at = previous_frame
     }
 
     const draw = (now = performance.now()): void => {
@@ -566,7 +559,7 @@ export const create_webgpu_backend = async (
       if (presentation === 'world') {
         const camera_column = sample_world_column(compiled_world, camera.position.x, camera.position.z)
         const surface_plane =
-          dungeon_stage_active || has_water === 0 || flatten.flattened()
+          dungeon_stage_active || has_water === 0
             ? null
             : camera_column.surface_y < world.sea_level
               ? world.sea_level
@@ -578,14 +571,14 @@ export const create_webgpu_backend = async (
         was_submerged = is_submerged(camera.position.y, surface_plane, was_submerged)
         frame_renderer.set_underwater({
           submerged: was_submerged,
-          suppressed: board_footprint !== null,
+          suppressed: !resource_nodes_visible,
           dt: delta_seconds,
         })
         hillaire?.tick(renderer, camera, delta_seconds)
       }
       fight_board.tick(now)
-      // the peephole follows the camera: where the board lands on screen this frame decides what
-      // stands between the eye and it. A board behind the eye occludes nothing, so the mask rests.
+      // Only immersive boards open the camera peephole. Every board retains its local clearance,
+      // including when its screen projection crosses or passes behind the eye.
       if (board_footprint) {
         camera.updateMatrixWorld()
         board_view_projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
@@ -597,19 +590,11 @@ export const create_webgpu_backend = async (
           board_footprint.half_z,
           board_footprint.center[1]
         )
-        if (projected)
-          board_occlusion.set_frame({
-            ...projected,
-            // the clear floor sits at the WATER level, not the tile line: terrain and herbs the
-            // world grows inside a basin must dissolve too, not only what pokes above the paving
-            floor_y: board_footprint.center[1] - BOARD_WATER_DROP,
-            center_xz: [board_footprint.center[0], board_footprint.center[2]],
-            radius: Math.hypot(board_footprint.half_x, board_footprint.half_z),
-            clear_half: [board_footprint.half_x + 1, board_footprint.half_z + 1],
-          })
+        board_occlusion.set_frame(projected)
       }
       entities.tick(now)
       character_crowd.tick(now)
+      auras.tick(now)
       effects.tick(now)
       const show_resource_nodes =
         !dungeon_stage_active &&
@@ -617,6 +602,8 @@ export const create_webgpu_backend = async (
           terrain_presented,
           board_active: board_footprint !== null,
         })
+      scenery.set_visible(show_resource_nodes)
+      terrain.set_details_visible(show_resource_nodes)
       if (show_resource_nodes !== resource_nodes_visible) {
         resource_nodes_visible = show_resource_nodes
         resource_nodes.set_visible(show_resource_nodes)
@@ -652,16 +639,14 @@ export const create_webgpu_backend = async (
       const previous_revision = revisions.get(key) ?? 0
       revisions.delete(key)
       settle_chunk(key, previous_revision, 'removed')
-      pending_uploads.delete(key)
+      uploads.remove(`terrain:${key}`)
       failed_chunks.delete(key)
       mesh_pool.cancel(key)
-      upload_order = upload_order.filter((entry) => entry.chunk.key !== key)
-      uploads_dirty = true
     }
 
     const remove_chunk = (key: string): void => {
       cancel_chunk(key)
-      if (terrain.remove(key)) upload_capacity.release()
+      if (terrain.remove(key)) uploads.release()
       scatter.remove(key)
       sun.shadow.needsUpdate = true
     }
@@ -675,11 +660,13 @@ export const create_webgpu_backend = async (
         .then(({ chunk: generated, mesh: data, scatter: scatter_instances }) => {
           if (disposed || revisions.get(chunk.key) !== revision) return
           failed_chunks.delete(chunk.key)
-          pending_uploads.set(
-            chunk.key,
-            Object.freeze({ chunk: generated, data, scatter: scatter_instances, revision })
-          )
-          uploads_dirty = true
+          const entry = Object.freeze({ chunk: generated, data, scatter: scatter_instances, revision })
+          uploads.add({
+            key: `terrain:${chunk.key}`,
+            origin: generated.origin,
+            bytes: data.quads.byteLength,
+            upload: () => admit_chunk(entry),
+          })
         })
         .catch((error: unknown) => {
           if (disposed || revisions.get(chunk.key) !== revision) return
@@ -756,28 +743,20 @@ export const create_webgpu_backend = async (
         analytic_sky.set_time_of_day(time)
         apply_sky_lighting()
       },
-      set_clouds_visible: clouds.set_enabled,
-      set_flatten_amount: (amount: number) => {
-        flatten_amount = amount
-        if (flatten.set(amount)) {
-          sun.shadow.needsUpdate = true
-          far_terrain.set_quality(quality, render_distance)
-        }
-        terrain.sync_flatten()
-        scatter.set_flatten_active(flat_terrain_amount(amount) > 0)
-        resource_nodes.set_flatten(amount)
-        portal?.set_flatten(amount)
-        dungeon_portals.set_flatten(amount)
-        fight_swords?.set_flatten(amount)
+      set_atmosphere: (overrides) => {
+        atmosphere_overrides = overrides
+        hillaire?.set_tuning(overrides)
       },
+      set_clouds_visible: clouds.set_enabled,
       set_fight_board: (board) => {
         fight_board.set(board)
-        clouds.set_active(board === null)
-        portal?.set_active(board === null && !dungeon_stage_active)
-        dungeon_portals.set_active(board === null && !dungeon_stage_active)
-        // the peephole arms with the board and remembers its footprint; disarming restores the
-        // fast terrain material, so the discard never survives the fight
-        board_footprint = board
+        const immersive = board !== null && !board.ambient
+        clouds.set_active(!immersive)
+        portal?.set_active(!immersive && !dungeon_stage_active)
+        dungeon_portals.set_active(!immersive && !dungeon_stage_active)
+        // Ambient boards clear their local footprint without taking over the camera or world dressing.
+        // Removing the board restores the ordinary terrain material.
+        board_footprint = immersive
           ? Object.freeze({
               center: [
                 board.origin.x + (board.width * board.cell_size) / 2,
@@ -788,9 +767,9 @@ export const create_webgpu_backend = async (
               half_z: (board.height * board.cell_size) / 2,
             })
           : null
-        board_occlusion.set_active(board !== null)
+        board_occlusion.set_board(board)
         terrain.set_occlusion_active(board !== null)
-        fight_swords?.set_visible(fight_swords_visible(board !== null) && !dungeon_stage_active)
+        fight_swords?.set_visible(fight_swords_visible(immersive) && !dungeon_stage_active)
         resource_nodes_visible =
           !dungeon_stage_active &&
           should_show_resource_nodes({
@@ -806,6 +785,7 @@ export const create_webgpu_backend = async (
         const individual = next.filter((spec) => spec.kind !== 'character' || !is_character_crowd_spec(spec))
         character_crowd.set(Object.freeze(crowd))
         entities.set(Object.freeze(individual))
+        auras.set(next)
         sun.shadow.needsUpdate = true
       },
       set_fight_swords: (url, impact_sound_url, markers) => {
@@ -820,7 +800,6 @@ export const create_webgpu_backend = async (
           })
         )
         fight_swords.set_volume(audio_volume)
-        fight_swords.set_flatten(flatten_amount)
         fight_swords.set_visible(fight_swords_visible(board_footprint !== null) && !dungeon_stage_active)
         fight_swords.set_markers(markers)
       },
@@ -830,7 +809,6 @@ export const create_webgpu_backend = async (
       set_resource_node_label: (id, element) =>
         entity_labels.set_static(`resource:${id}`, element, () => resource_nodes.label_anchor(id)),
       set_portal_label: (element) => {
-        // the anchor is a GETTER — the gate's ground rides the flatten projection, so must its tag
         if (portal) entity_labels.set_static('portal', element, portal.label_anchor)
       },
       set_dungeon_portals: dungeon_portals.set_markers,
@@ -841,6 +819,7 @@ export const create_webgpu_backend = async (
         far_terrain.set_visible(!dungeon_stage_active)
         scatter.set_visible(!dungeon_stage_active)
         water.set_visible(!dungeon_stage_active)
+        world_panels.set_visible(!dungeon_stage_active && board_footprint === null)
         portal?.set_active(!dungeon_stage_active && board_footprint === null)
         dungeon_portals.set_active(!dungeon_stage_active && board_footprint === null)
         fight_swords?.set_visible(!dungeon_stage_active && board_footprint === null)
@@ -860,8 +839,10 @@ export const create_webgpu_backend = async (
         const anchor = entity_anchors.world_anchor(id)
         return anchor ? project_screen_anchor(anchor, camera, canvas.getBoundingClientRect()) : null
       },
+      hit_entity_caption: (id, x, y) => captions.hit_test(`entity:${id}`, x, y),
       set_entity_caption: (id, caption) => captions.set(`entity:${id}`, caption, () => entity_anchors.live_crown(id)),
       set_entity_label: entity_labels.set,
+      set_world_panel: world_panels.set,
       set_world_label: (id, element, position) =>
         entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
       entity_height: entity_anchors.entity_height,
@@ -885,8 +866,8 @@ export const create_webgpu_backend = async (
         const state = {
           mesh_queued: mesh.queued,
           mesh_active: mesh.active,
-          uploads_pending: pending_uploads.size,
-          uploads_blocked: upload_capacity.blocked_count(pending_uploads.size),
+          uploads_pending: uploads.size(),
+          uploads_blocked: uploads.blocked_count(),
           retries_pending: 0,
           failed_chunks: failed_chunks.size,
           far_ready: far_terrain.ready(),
@@ -905,7 +886,6 @@ export const create_webgpu_backend = async (
           ...state,
         })
       },
-      flattened: flatten.flattened,
       dispose,
     })
   } catch (error) {

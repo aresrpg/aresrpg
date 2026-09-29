@@ -6,4 +6,8 @@ export const THEBES_MATERIALS = Object.freeze({
   sandstone: 'thebes_sandstone',
   tile: 'thebes_tile',
   copper: 'thebes_copper',
+  plaster: 'thebes_plaster',
+  timber: 'thebes_timber',
+  banner: 'thebes_banner',
+  lantern: 'thebes_lantern',
 })

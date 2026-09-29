@@ -1,0 +1,29 @@
+.fight-touch-confirm {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+.fight-touch-confirm button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: #171b23;
+  cursor: pointer;
+}
+.fight-touch-cancel {
+  color: #f08080;
+}
+.fight-touch-accept {
+  color: #80d49b;
+}
+.fight-touch-confirm button:active {
+  background: #30343e;
+}

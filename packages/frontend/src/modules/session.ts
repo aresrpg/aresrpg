@@ -25,10 +25,12 @@ import { toast } from '../toast.ts'
 import { market_price_subscription } from '../marketplace/price_history_state.ts'
 
 import { leaderboard_subscription } from './leaderboards.ts'
+import { fold_character_creation, type CharacterCreation, type CharacterCreationInput } from './character_creation.ts'
 import { fold_character_deletion, with_character_roster } from './character_roster.ts'
 import { fold_character_receipt } from './character_folds.ts'
 import { reduce_craft_character_selection, with_craft_character_session } from './craft_character_lock.ts'
 import { fight_environment } from './fight.ts'
+import { nearby_watch_changes } from './nearby_fight.ts'
 import { spectator_changes } from './fight_identity.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
 import { fold_link_input } from './session_link.ts'
@@ -37,6 +39,7 @@ export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
 export type SessionState = Readonly<{
+  character_creation: CharacterCreation | null
   auth_status: AuthStatus
   auth_request: AuthRequest | null
   auth_error: string | null
@@ -47,6 +50,8 @@ export type SessionState = Readonly<{
   indexing_lag: number | null
   current_epoch: string | null
   game_frozen: boolean | null
+  consumption_result: Pick<Extract<SessionInput, { type: 'character/consumed' }>, 'digest' | 'effect'> | null
+  craft_result: Pick<Extract<SessionInput, { type: 'character/crafted' }>, 'digest' | 'successes'> | null
   roster_loaded: boolean
   deleted_character_ids: readonly string[]
   characters: readonly CharacterRow[]
@@ -64,8 +69,8 @@ export type SessionState = Readonly<{
   kares_balance: bigint | null
   gas_spent_mist: bigint
 }>
-
 export type SessionInput =
+  | CharacterCreationInput
   | Readonly<{ type: 'inventory/amounts_changed'; changes: readonly ItemAmountChange[] }>
   | Readonly<{ type: 'auth/connecting' }>
   | Readonly<{ type: 'auth/ready'; wallets: readonly string[] }>
@@ -102,6 +107,7 @@ export type SessionInput =
   | Readonly<{ type: 'character/spell_raised'; character_id: string; spell: string }>
   | Readonly<{
       type: 'character/consumed'
+      digest: string
       character_id: string
       item_id: string
       effect: 'heal' | 'reset_stats' | 'reset_spells' | 'recall' | 'city'
@@ -117,8 +123,7 @@ export type SessionInput =
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
   | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
   // prettier-ignore
-  // prettier-ignore
-  | Readonly<{ type: 'character/crafted'; character_id: string; job: string; xp: number; inputs: readonly Readonly<{ item_id: string; amount: number }>[] }>
+  | Readonly<{ type: 'character/crafted'; digest: string; successes: number; character_id: string; job: string; xp: number; inputs: readonly Readonly<{ item_id: string; amount: number }>[] }>
   | Readonly<{
       type: 'wallet/resolve_character'
       name: string
@@ -128,12 +133,11 @@ export type SessionInput =
 /** The played character row; the roster owns custody and every transaction reads its kiosk pair here. */
 export const selected_character = (session: Readonly<SessionState>): CharacterRow | null =>
   session.characters.find(({ id }) => id === session.selected_character_id) ?? null
-
 export const character_custody = (character: Readonly<CharacterRow>) =>
   Object.freeze({ kiosk: character.kiosk, ...(character.kiosk_cap ? { kiosk_cap: character.kiosk_cap } : {}) })
-
 export const initial_session_state = (): SessionState =>
   Object.freeze({
+    character_creation: null,
     auth_status: 'idle',
     auth_request: null,
     auth_error: null,
@@ -145,6 +149,8 @@ export const initial_session_state = (): SessionState =>
     current_epoch: null,
     game_frozen: null,
     roster_loaded: false,
+    craft_result: null,
+    consumption_result: null,
     characters: [],
     deleted_character_ids: [],
     inventory: [],
@@ -161,9 +167,7 @@ export const initial_session_state = (): SessionState =>
     kares_balance: null,
     gas_spent_mist: 0n,
   })
-
 const with_session = (state: AppState, session: SessionState): AppState => Object.freeze({ ...state, session })
-
 const fold_inventory_input = (session: SessionState, input: AppInput): SessionState => {
   if (input.type === 'inventory/amounts_changed')
     return input.changes.reduce((session, change) => {
@@ -196,24 +200,20 @@ const fold_inventory_input = (session: SessionState, input: AppInput): SessionSt
     })
   return session
 }
-
 type ItemPacket = Extract<ServerPacket, { type: 'packet/item_updated' | 'packet/item_removed' }>
 const ITEM_PACKETS = new Set<ServerPacket['type']>(['packet/item_updated', 'packet/item_removed'])
 const is_item_packet = (packet: Readonly<ServerPacket>): packet is ItemPacket => ITEM_PACKETS.has(packet.type)
 const latest_item = (incoming: Readonly<ItemRow>, current: Readonly<ItemRow> | undefined): Readonly<ItemRow> =>
   BigInt(incoming.version ?? '0') < BigInt(current?.version ?? '0') ? current! : incoming
-
 type InventoryProjection = Pick<SessionState, 'inventory' | 'removed_item_versions'>
 const newer_than_departure = (item: Readonly<ItemRow>, removed: Readonly<Record<string, string>>): boolean =>
   removed[item.id] === undefined || BigInt(item.version ?? '0') > BigInt(removed[item.id]!)
-
 const fold_inventory = (current: InventoryProjection, incoming: readonly ItemRow[]): readonly ItemRow[] => {
   const by_id = new Map(current.inventory.map((item) => [item.id, item]))
   return incoming
     .map((item) => latest_item(item, by_id.get(item.id)))
     .filter((item) => newer_than_departure(item, current.removed_item_versions))
 }
-
 const fold_item_packet = (current: InventoryProjection, packet: Readonly<ItemPacket>): InventoryProjection => {
   if (packet.type === 'packet/item_removed') {
     const previous = current.inventory.find(({ id }) => id === packet.item)
@@ -230,7 +230,6 @@ const fold_item_packet = (current: InventoryProjection, packet: Readonly<ItemPac
     : [...current.inventory, packet.item]
   return Object.freeze({ ...current, inventory })
 }
-
 const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): SessionState => {
   if (packet.type === 'packet/characters') {
     return Object.freeze({
@@ -261,12 +260,12 @@ const fold_packet = (session: SessionState, packet: Readonly<ServerPacket>): Ses
     return packet.id === undefined ? Object.freeze({ ...session, link_error: packet.reason }) : session
   return session
 }
-
 const reduce = (state: AppState, input: AppInput): AppState => {
   const current = state.session
   const can_start_auth = current.auth_status === 'idle' && current.auth_ready
   const receipt = fold_inventory_input(fold_character_receipt(fold_character_deletion(current, input), input), input)
-  if (receipt !== current) return with_session(state, receipt)
+  const creation = fold_character_creation(receipt, input)
+  if (creation !== current) return with_session(state, creation)
   const link_state = fold_link_input(current, input)
   if (link_state !== current) return with_session(state, link_state)
   const craft_selection = reduce_craft_character_selection(state, input)
@@ -353,7 +352,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   }
   return state
 }
-
 const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable<AppModule['observe']>>[0]): void => {
   let link: ServerLink | null = null
   let auth: Auth | null = null
@@ -514,12 +512,15 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
   }
   events.on('STATE_UPDATED', (state, previous) => {
     sync_market_subscription(state, previous)
+    const reconnected = state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
+    nearby_watch_changes(state.fight.nearby, previous.fight.nearby, reconnected).forEach((packet) => {
+      publish_selected_position(true)
+      link?.send(packet)
+    })
     remember_selected_character_change(state.session.selected_character_id, previous.session.selected_character_id)
-    spectator_changes(
-      state.fight.spectating_by_character,
-      previous.fight.spectating_by_character,
-      state.session.link_status === 'ready' && previous.session.link_status !== 'ready'
-    ).forEach((change) => link?.send({ type: 'packet/spectate', ...change }))
+    spectator_changes(state.fight.spectating_by_character, previous.fight.spectating_by_character, reconnected).forEach(
+      (change) => link?.send({ type: 'packet/spectate', ...change })
+    )
     if (state.session.auth_request !== previous.session.auth_request) {
       const request = state.session.auth_request
       if (request === 'restore' && auth) {
@@ -549,11 +550,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     if (state.session.wallet !== previous.session.wallet && !state.session.wallet)
       forget_session(previous.session.wallet)
   })
-  const POSITION_SEND_MS = POSITION_INTERVAL_MS
   const positions = create_position_publisher({
     send: (character_id, position) => link?.send({ type: 'packet/position', character_id, ...position }) ?? false,
   })
-  const unsubscribe_pose = subscribe_pose(() => {
+  const publish_selected_position = (force = false): void => {
     const pose = read_pose()
     const state = get_state()
     if (state.session.link_status !== 'ready' || !pose_matches_character(pose, state.session.selected_character_id))
@@ -569,12 +569,12 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       riding: pose.riding,
     }
     record_owned_character_position(pose.character_id, character!.world!, next)
-    positions.publish(pose.character_id, next, POSITION_SEND_MS)
-  })
-  const PARTY_FOLLOW_SEND_MS = 100
+    positions.publish(pose.character_id, next, POSITION_INTERVAL_MS, force)
+  }
+  const unsubscribe_pose = subscribe_pose(publish_selected_position)
   events.on('party/follower_moved', ({ character_id, checkpoint, x, y, z }) => {
     if (get_state().session.link_status !== 'ready') return
-    positions.publish(character_id, Object.freeze({ checkpoint, x, y, z, riding: false }), PARTY_FOLLOW_SEND_MS)
+    positions.publish(character_id, Object.freeze({ checkpoint, x, y, z, riding: false }), 100)
   })
   events.on('fight/input', ({ fight, input, origin }) => {
     const state = get_state()

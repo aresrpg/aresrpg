@@ -191,7 +191,7 @@ export const create_caption_layer = <Target>({
     return page
   }
   const definition = (entry: Entry): Tile => {
-    const key = `${revision}:${ratio}:${caption_raster_key(entry.caption)}`
+    const key = `${revision}:${raster.revision()}:${ratio}:${caption_raster_key(entry.caption)}`
     if (entry.tile && entry.key === key) return entry.tile
     release(entry)
     entry.key = key
@@ -296,6 +296,16 @@ export const create_caption_layer = <Target>({
     }
   }
   return Object.freeze({
+    hit_test: (id: string, client_x: number, client_y: number): boolean => {
+      const entry = entries.get(id)
+      if (!entry || disposed) return false
+      const rect = canvas.getBoundingClientRect()
+      const frame = project(entry, rect.width, rect.height)
+      if (!frame) return false
+      const x = rect.left + rect.width / 2 + frame.x
+      const y = rect.top + rect.height / 2 - frame.y
+      return Math.abs(client_x - x) <= frame.w / 2 && Math.abs(client_y - y) <= frame.h / 2
+    },
     set: (id: string, caption: WorldCaption | null, anchor: () => Vector3 | null): void => {
       if (disposed) return
       const current = entries.get(id)
@@ -422,6 +432,7 @@ export const create_caption_layer = <Target>({
       pages.length = 0
       empty_atlases.clear()
       scratch.dispose()
+      raster.dispose()
       accessible.remove()
     },
   })

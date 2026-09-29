@@ -6,7 +6,7 @@ import { MOUNT_SPEED_SCALE, RUN_SPEED } from './controller.ts'
 export const RUN_TO_ARRIVAL_DISTANCE = 2
 
 export const run_to_remaining_seconds = (distance: number, riding: boolean): number =>
-  Math.ceil(Math.max(0, distance - RUN_TO_ARRIVAL_DISTANCE) / (RUN_SPEED * (riding ? MOUNT_SPEED_SCALE : 1)))
+  Math.ceil(Math.max(0, distance) / (RUN_SPEED * (riding ? MOUNT_SPEED_SCALE : 1)))
 
 export type RunTarget = Readonly<{ x: number; z: number; ride_pet?: boolean }>
 
@@ -24,16 +24,4 @@ export const run_to_mount = ({
 }>): 'run' | 'mount' | 'wait' => {
   if (!requested || !available || riding) return 'run'
   return nearby ? 'mount' : 'wait'
-}
-
-export const run_to_input = (
-  current: Readonly<{ x: number; z: number }>,
-  target: Readonly<{ x: number; z: number }>
-): Readonly<{ arrived: boolean; yaw: number }> => {
-  const dx = target.x - current.x
-  const dz = target.z - current.z
-  return Object.freeze({
-    arrived: Math.hypot(dx, dz) <= RUN_TO_ARRIVAL_DISTANCE,
-    yaw: Math.atan2(-dx, -dz),
-  })
 }

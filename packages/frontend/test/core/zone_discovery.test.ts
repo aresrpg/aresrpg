@@ -22,7 +22,7 @@ import type { GameSettings } from '../../src/game/core/settings.ts'
 
 const settings: GameSettings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
   fight_access: 0,

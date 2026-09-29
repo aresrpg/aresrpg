@@ -4,18 +4,19 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import type { CopyText } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
 
+import { useMarketState, useMarketDispatch } from './MarketSource.tsx'
 import { TradingViewPricePlot } from './TradingViewPricePlot.tsx'
 import { PRICE_RANGES, price_points, type PriceRange } from './price_history_model.ts'
 
 export const PriceHistoryChart = ({ item_type, text }: Readonly<{ item_type: string; text: CopyText }>) => {
-  const prices = useAppStore(({ marketplace }) => marketplace.prices)
+  const dispatch_app = useMarketDispatch()
+  const { prices } = useMarketState()
   const [days, set_days] = useState<PriceRange>(30)
   useEffect(() => {
     dispatch_app({ type: 'market/price_item_selected', item_type })
     return () => dispatch_app({ type: 'market/price_item_selected', item_type: null })
-  }, [item_type])
+  }, [item_type, dispatch_app])
   const current = prices.observation?.item_type === item_type
   const history = current ? prices.history : null
   const points = useMemo(() => (history ? price_points(history, days) : []), [history, days])

@@ -4,6 +4,8 @@
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
+import analytics from './modules/analytics.ts'
+import adventure, { initial_adventure_state, type AdventureState, type AdventureInput } from './modules/adventure.ts'
 import type { GameSettings } from './game/core/settings.ts'
 import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
 import journey, { type JourneyInput } from './modules/journey.ts'
@@ -39,6 +41,7 @@ import suins, { initial_suins_state, type SuinsInput, type SuinsState } from './
 import chain_clock, { type ChainClock, type ChainClockInput } from './modules/chain_clock.ts'
 import simulator, { initial_simulator_state, type SimulatorInput, type SimulatorState } from './modules/simulator.ts'
 import settings, { type SettingsInput } from './modules/settings.ts'
+import audio from './modules/audio.ts'
 import world, { initial_world_state, type WorldInput, type WorldState } from './modules/world.ts'
 import marketplace, {
   initial_marketplace_state,
@@ -76,6 +79,7 @@ import external_wallet, {
 } from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
+  adventure: AdventureState
   claim_failures: readonly string[]
   journey: JourneyState
   chain_clock: ChainClock
@@ -110,6 +114,7 @@ export type AppState = Readonly<{
 }>
 
 export type AppInput =
+  | AdventureInput
   | JourneyInput
   | ChainClockInput
   | SessionInput
@@ -165,13 +170,16 @@ export type AppModule = Readonly<{
 
 // Registration owns observer availability. Keep reducer order explicit: session folds first.
 const MODULE_REGISTRY = [
+  [adventure, 'adventure'],
   [session, 'player'],
   [suins, 'player'],
   [chain_clock, 'player'],
   [external_wallet, 'player'],
   [navigation, 'player'],
+  [analytics, 'public'],
   [settings, 'shared'],
-  [locale, 'player'],
+  [audio, 'shared'],
+  [locale, 'shared'],
   [engine, 'player'],
   [simulator, 'demo'],
   [fight, 'shared'],
@@ -198,21 +206,30 @@ const MODULE_REGISTRY = [
   [mastery, 'player'],
   [distribution, 'player'],
   [job_level_up, 'player'],
-] as const satisfies readonly (readonly [AppModule, 'player' | 'demo' | 'shared'])[]
+] as const satisfies readonly (readonly [AppModule, 'player' | 'demo' | 'adventure' | 'shared' | 'public'])[]
 
 const MODULES = MODULE_REGISTRY.map(([module]) => module)
 export type AppModuleName = (typeof MODULES)[number]['name']
 
 export const PLAYER_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => runtime !== 'demo').map(([module]) => module.name)
+  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'player' || runtime === 'shared' || runtime === 'public').map(
+    ([module]) => module.name
+  )
 )
 export const DEMO_APP_MODULES = Object.freeze(
-  MODULE_REGISTRY.filter(([, runtime]) => runtime !== 'player').map(([module]) => module.name)
+  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'demo' || runtime === 'shared').map(([module]) => module.name)
+)
+
+export const ADVENTURE_APP_MODULES = Object.freeze(
+  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'adventure' || runtime === 'shared' || runtime === 'public').map(
+    ([module]) => module.name
+  )
 )
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
     claim_failures: [],
+    adventure: initial_adventure_state(),
     chain_clock: null,
     journey: initial_journey_state(),
     session: initial_session_state(),
@@ -265,7 +282,6 @@ const create_events = () => {
 export const create_app = () => {
   const default_settings = Object.freeze({
     quality: 'medium',
-    flat_mode: false,
     music_enabled: true,
     master_volume: 1,
     footsteps_enabled: true,

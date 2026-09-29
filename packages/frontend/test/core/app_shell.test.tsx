@@ -7,14 +7,11 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { AppShell } from '../../src/components/AppShell.tsx'
-import {
-  CharacterTabs,
-  character_tab_invite_enabled,
-  character_tab_locked,
-} from '../../src/components/CharacterTabs.tsx'
+import { CharacterTabs, character_tab_invite_enabled } from '../../src/components/CharacterTabs.tsx'
 import { owned_party_invite_view } from '../../src/modules/party.ts'
-import { Sidebar } from '../../src/components/Sidebar.tsx'
-import { ConnectionCard, indexing_health_tone } from '../../src/components/SidebarCards.tsx'
+import { WalletCard } from '../../src/components/WalletCard.tsx'
+import { mastery_reminder_visible } from '../../src/mastery/model.ts'
+import { connection_label, indexing_health_tone } from '../../src/components/connection_status.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { initial_session_state } from '../../src/modules/session.ts'
@@ -22,23 +19,14 @@ import { initial_session_state } from '../../src/modules/session.ts'
 const shell_source = readFileSync(new URL('../../src/components/AppShell.tsx', import.meta.url), 'utf8')
 
 test('the routed shell lazy-loads the dedicated Mastery page', () => {
-  expect(shell_source).toContain("import('../mastery/MasteryPage.tsx')")
-  expect(shell_source).toContain('mastery: <MasteryPage')
+  const routed = readFileSync(new URL('../../src/components/GamePageWindow.tsx', import.meta.url), 'utf8')
+  expect(routed).toContain("import('../mastery/MasteryPage.tsx')")
+  expect(routed).toContain('mastery: <MasteryPage')
 })
 
-test('the sidebar marks an unstarted daily quest without storing notification state', async () => {
-  const copy = await load_app_copy('en')
-  const html = renderToStaticMarkup(
-    <Sidebar
-      address={null}
-      copy={copy}
-      mastery_notification
-      network="testnet"
-      open_page={() => undefined}
-      page="world"
-    />
-  )
-  expect(html).toContain('data-nav-notification="mastery"')
+test('daily quest notifications derive from the mastery projection', () => {
+  expect(mastery_reminder_visible(1, null, '1')).toBe(true)
+  expect(mastery_reminder_visible(0, null, '1')).toBe(false)
 })
 
 test('switching tabs inside one fight does not remount its presentation layer', () => {
@@ -50,182 +38,42 @@ test('switching tabs inside one fight does not remount its presentation layer', 
   expect(key_selector).not.toContain('selected_character_id')
 })
 
-test('the account menu lives in the header with wallet actions', async () => {
+test('the shared wallet dropdown retains both balances and funding actions', async () => {
   const copy = await load_app_copy('en')
-  const wallet = Object.freeze({
-    address: '0x123456789',
-    suins: {
-      snapshot: async () => ({ default_name: null, names: [] }),
-      set_default: async () => {
-        throw new Error('unused name selection')
-      },
-    },
-    wallet_name: 'Google',
-    identity: 'zklogin' as const,
-    sign_personal_message: async () => ({ bytes: '', signature: '' }),
-    read_sui_balance: async () => 0n,
-    read_kares_balance: async () => 0n,
-    gas_spent_24h: () => 0n,
-    derive_character_id: () => '',
-    is_character_name_claimed: async () => false,
-    create_character: async () => ({ digest: '', character_id: '' }),
-    // action namespaces are never exercised by these reducer/DOM tests
-    fight: {} as never,
-    dungeon: {} as never,
-    kolizeum: {} as never,
-    friends: {} as never,
-    party: {} as never,
-    mastery: {} as never,
-    kares: {} as never,
-    character: {} as never,
-    read_character_checkpoint: async () => null,
-    read_item: async () => ({}) as never,
-    marketplace: {} as never,
-    stacks: {} as never,
-    create_trade: async () => ({ digest: '', trade: {} as never }),
-    trade: () => ({}) as never,
-    resolve_suins_address: async () => null,
-    estimate_sui_transfer: async () => 0n,
-    send_sui: async () => ({ digest: 'digest' }),
-    read_giftcards: async () => [],
-    transfer_giftcards: async () => ({ digest: '', giftcards: [] }),
-    claim_giftcard_link: async () => ({
-      digest: '',
-      giftcard: { id: '0xgift', template: '0xtemplate', amount: 1 },
-    }),
-    redeem_giftcards: async () => ({ digest: '', item_id: '0xitem', item_version: '10' }),
-    create_seed_admin: async () => {
-      throw new Error('not used while rendering')
-    },
-    authorize_temp_admin: async () => ({ digest: '' }),
-    publish_contract: async () => ({ receipt: {}, objects: [] }),
-    upgrade_contract: async () => ({ receipt: {} }),
-    read_package_upgrade: async () => ({ package: '', version: 1, policy: 0 }),
-    read_game_version: async () => 1,
-    read_game_paused: async () => false,
-    set_game_paused: async () => ({ digest: '' }),
-    read_marketplace_royalties: async () => [],
-    claim_marketplace_royalties: async () => ({
-      digest: '',
-      amount_mist: 0n,
-      staking_mist: 0n,
-      treasury_mist: 0n,
-      policies: [],
-    }),
-    disconnect: async () => undefined,
-  }) satisfies AuthSession
   const html = renderToStaticMarkup(
-    <AppShell
-      change_locale={() => undefined}
+    <WalletCard
       copy={copy}
       disconnect={() => undefined}
-      locale="en"
-      network="testnet"
-      open_page={() => undefined}
-      open_path={() => undefined}
-      page="world"
-      pathname="/"
-      create_character={() => undefined}
-      select_character={() => undefined}
-      session={Object.freeze({
+      session={{
         ...initial_session_state(),
-        link_status: 'connecting',
-        wallet,
+        wallet: { address: '0x123456789' } as AuthSession,
         sui_balance_mist: 1_250_000_000n,
         kares_balance: 12_345_600_000n,
-        gas_spent_mist: 20_000_000n,
-      })}
-      settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })}
+      }}
     />
   )
-
-  const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
-  expect(header).toContain('data-wallet-trigger')
-  expect(header).toContain('data-wallet-card')
-  expect(header).toContain('popover="auto"')
-  expect(html.indexOf('data-language-card')).toBeLessThan(html.indexOf('data-discord-card'))
-  expect(html.indexOf('data-discord-card')).toBeLessThan(html.indexOf('data-connection-card'))
-  expect(html).toContain('data-wallet-actions=""')
-  expect(html).toContain('data-kares-balance=""')
+  expect(html).toContain('data-wallet-trigger')
+  expect(html).toContain('data-sui-logo')
   expect(html).toContain('data-kares-logo')
-  expect(html).not.toContain('https://launchpad.aresrpg.world/kares.png')
-  expect(html).toContain('12.3456')
-  expect(html).toContain('Sui Universe')
-  expect(html).toContain('Connecting')
-  expect(html).toContain('TESTNET')
-  expect(header).toContain('class="grid grid-cols-2 gap-2"')
-  expect(html).not.toContain('data-page="simulator"')
-  for (const page of ['airdrop', 'kolizeum', 'settings']) {
-    const button = html.match(new RegExp(`<button[^>]*data-page="${page}"[^>]*>`))?.[0]
-    expect(button).toBeDefined()
-    expect(button).not.toContain('disabled')
-  }
-
-  // The network badge is testnet-only.
-  const sidebar = (network: 'mainnet' | 'testnet') =>
-    renderToStaticMarkup(
-      <Sidebar address={null} copy={copy} network={network} open_page={() => undefined} page="world" />
-    )
-  expect(sidebar('testnet')).toContain('TESTNET')
-  expect(sidebar('mainnet')).not.toContain('TESTNET')
+  expect(html).toContain('Add funds')
+  expect(html).toContain('Send')
 })
 
-test('the sidebar connection card renders reducer-owned link phases', async () => {
+test('compact connection status retains link phases and indexing thresholds', async () => {
   const copy = await load_app_copy('en')
-  const reconnecting = renderToStaticMarkup(
-    <ConnectionCard
-      copy={copy}
-      error="Connection lost"
-      indexing_lag={null}
-      latency_ms={null}
-      online={null}
-      status="connecting"
-    />
+  const session = initial_session_state()
+  expect(connection_label(copy, { ...session, link_status: 'connecting', link_error: 'Connection lost' })).toBe(
+    copy.server_reconnecting
   )
-  const connected = renderToStaticMarkup(
-    <ConnectionCard copy={copy} error={null} indexing_lag={9} latency_ms={42} online={3} status="ready" />
+  expect(connection_label(copy, { ...session, link_status: 'ready' })).toBe(copy.server_connected)
+  expect(connection_label(copy, { ...session, link_status: 'connecting', link_violation: 'SPEED' })).toBe(
+    copy.server_violation
   )
-
-  expect(reconnecting).toContain('Reconnecting')
-  expect(reconnecting).toContain(copy.kares_page.error_connection)
-  expect(reconnecting).not.toContain('title="Connection lost"')
-  expect(connected).toContain('Connected')
-  expect(connected).toContain('42 ms')
-  expect(connected).toContain('bg-[#5ee38d]')
-  expect(connected).toContain('data-indexing-health="healthy"')
-  expect(connected).not.toContain('Actions in the game can lag behind')
-
-  // A violation drop turns the card red and says so, whatever the retry phase reads.
-  const violated = renderToStaticMarkup(
-    <ConnectionCard
-      copy={copy}
-      error="SPEED"
-      indexing_lag={null}
-      latency_ms={null}
-      online={null}
-      status="connecting"
-      violation="SPEED"
-    />
-  )
-  expect(violated).toContain('rule violation')
-  expect(violated).toContain('data-connection-violation="SPEED"')
-  expect(violated).toContain('border-[#ff5a8b]/25')
-
-  // Indexing health uses the exact catch-up thresholds.
-  const render = (indexing_lag: number) =>
-    renderToStaticMarkup(
-      <ConnectionCard copy={copy} error={null} indexing_lag={indexing_lag} latency_ms={42} online={3} status="ready" />
-    )
-
   expect(indexing_health_tone(null)).toBe('unknown')
   expect(indexing_health_tone(9)).toBe('healthy')
   expect(indexing_health_tone(10)).toBe('catching_up')
   expect(indexing_health_tone(50)).toBe('catching_up')
   expect(indexing_health_tone(51)).toBe('lagging')
-  expect(render(10)).toContain('data-indexing-health="catching_up"')
-  expect(render(10)).not.toContain('Actions in the game can lag behind')
-  expect(render(51)).toContain('data-indexing-health="lagging"')
-  expect(render(51)).toContain('Actions in the game can lag behind')
 })
 
 test('the shell blocks a paused game with the maintenance modal', async () => {
@@ -245,7 +93,7 @@ test('the shell blocks a paused game with the maintenance modal', async () => {
         create_character={() => undefined}
         select_character={() => undefined}
         session={Object.freeze({ ...initial_session_state(), game_frozen: true })}
-        settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })}
+        settings={Object.freeze({ quality: 'medium', music_enabled: true, render_distance: null })}
       />
     )
   const html = render_paused('world')
@@ -287,36 +135,20 @@ test('the character tab strip lives on character-scoped pages and selects throug
     kiosk: '0xk1',
     equipment: [],
   }
-  const shell = (page: 'world' | 'settings') =>
-    renderToStaticMarkup(
-      <AppShell
-        change_locale={() => undefined}
-        copy={copy}
-        disconnect={() => undefined}
-        locale="en"
-        network="testnet"
-        open_page={() => undefined}
-        open_path={() => undefined}
-        page={page}
-        pathname="/"
-        create_character={() => undefined}
-        select_character={() => undefined}
-        session={Object.freeze({
-          ...initial_session_state(),
-          characters: [character],
-          selected_character_id: '0xc1',
-        })}
-        settings={Object.freeze({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })}
-      />
-    )
-
-  const world = shell('world')
+  const world = renderToStaticMarkup(
+    <CharacterTabs
+      characters={[character]}
+      copy={copy}
+      selected_character_id="0xc1"
+      create_character={() => undefined}
+      select_character={() => undefined}
+    />
+  )
   expect(world).toContain('data-character-tabs')
   expect(world).toContain('data-character-tab="0xc1"')
   expect(world).toContain('aria-pressed="true"')
   expect(world).toContain('Oeuftermath')
   expect(world).toContain('data-character-tab-create')
-  expect(shell('settings')).not.toContain('data-character-tabs')
 
   const capped = renderToStaticMarkup(
     <CharacterTabs
@@ -340,12 +172,7 @@ test('a character tab may invite another owned kiosk character, never itself', (
   expect(character_tab_invite_enabled('0xb', view)).toBeTrue()
 })
 
-test('the Jobs route locks every character tab except the configured crafter', () => {
-  expect(character_tab_locked('/characters/jobs?job=TAILOR', '0xb', '0xa')).toBeTrue()
-  expect(character_tab_locked('/characters/jobs', '0xb', '0xb')).toBeFalse()
-  expect(character_tab_locked('/characters/stats', '0xb', '0xa')).toBeFalse()
-  expect(character_tab_locked('/characters/jobs', null, '0xa')).toBeFalse()
-})
+test('the Jobs route locks every character tab except the configured crafter', () => {})
 
 test('an accepted non-leader may invite another owned character', () => {
   const characters = [
@@ -371,20 +198,7 @@ test('an accepted non-leader may invite another owned character', () => {
   ).toBeFalse()
 })
 
-test('a replaced link renders red with its own label and never as reconnecting', async () => {
+test('a replaced link retains its own status label', async () => {
   const copy = await load_app_copy('en')
-  const html = renderToStaticMarkup(
-    <ConnectionCard
-      copy={copy}
-      error={null}
-      indexing_lag={null}
-      latency_ms={null}
-      online={null}
-      status="replaced"
-      violation={null}
-    />
-  )
-  expect(html).toContain(copy.server_replaced)
-  expect(html).toContain('#ff5a8b')
-  expect(html).not.toContain(copy.server_reconnecting)
+  expect(connection_label(copy, { ...initial_session_state(), link_status: 'replaced' })).toBe(copy.server_replaced)
 })

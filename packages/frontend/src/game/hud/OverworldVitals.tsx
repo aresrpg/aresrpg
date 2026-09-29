@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import type { CharacterRow } from '@aresrpg/protocol'
+
 import { useNumbers } from '../../i18n/useNumbers.ts'
 
 import { useText } from '../../i18n/useText.ts'
@@ -10,6 +12,8 @@ import { experience_progress } from '@aresrpg/immutable'
 
 import { action_points, character_max_hp, movement_points, projected_hp } from '../character_stats.ts'
 import { useAppStore } from '../../store.ts'
+import { WorldQuickslots } from './WorldQuickslots.tsx'
+
 import { ActionSlots } from './ActionSlots.tsx'
 import { VitalsDisplay } from './VitalsDisplay.tsx'
 import '../fight/fight_hud.css'
@@ -41,10 +45,13 @@ export const ExperienceBar = ({ experience }: Readonly<{ experience: string }>) 
   )
 }
 
-export const OverworldVitals = () => {
-  const character = useAppStore(({ session }) =>
+export const OverworldVitals = ({
+  character: supplied_character,
+}: Readonly<{ character?: Readonly<CharacterRow> }> = {}) => {
+  const selected = useAppStore(({ session }) =>
     session.characters.find(({ id }) => id === session.selected_character_id)
   )
+  const character = supplied_character ?? selected
   const [now, set_now] = useState(Date.now())
 
   useEffect(() => {
@@ -64,7 +71,7 @@ export const OverworldVitals = () => {
               max_hp={BigInt(character_max_hp(character))}
               mp={BigInt(movement_points(character))}
             />
-            <EmptyActionCells />
+            <WorldQuickslots />
           </div>
           <ExperienceBar experience={character.experience} />
         </div>

@@ -32,6 +32,12 @@ export const fight_result_available = (
   result_fight: string
 ): boolean => fight.checkpoint?.contract.id !== result_fight
 
+/** The level dialog overlays the result; it need not wait for the result beneath it to close. */
+export const fight_level_up_visible = (result: Readonly<FightResult> | null): boolean => {
+  const own = result?.participants[result.own_seat ?? -1]
+  return Boolean(result?.level_up_open && own && own.level_after > own.level_before)
+}
+
 export const fight_resolution_dungeon = (
   row: Readonly<{ dungeon?: unknown; dungeon_room?: unknown }>
 ): Readonly<{ dungeon: string; room: number }> | null => {

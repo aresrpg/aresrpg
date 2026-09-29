@@ -15,7 +15,8 @@ export const MUSIC_TRACKS = Object.freeze([
   'tropical',
 ] as const)
 
-const AUTHORED_TRACKS: Readonly<Record<string, (typeof MUSIC_TRACKS)[number]>> = Object.freeze({
+const AUTHORED_TRACKS: Readonly<Record<string, (typeof MUSIC_TRACKS)[number] | 'mosswood'>> = Object.freeze({
+  'demo:mosswood': 'mosswood',
   'nauvis:plains': 'grassland',
   'nauvis:forest': 'temperate',
   'nauvis:rainforest': 'tropical',

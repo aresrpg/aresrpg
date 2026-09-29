@@ -1,0 +1,185 @@
+/* The catalogue is separate from the game interfaces it displays. */
+.ui-workshop {
+  container: aui-viewport / size;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 154px minmax(0, 1fr);
+  grid-template-rows: 44px minmax(0, 1fr);
+  gap: 12px 18px;
+  overflow: auto;
+  padding: 70px 20px 20px;
+  background: #151821;
+  color: var(--aui-ink);
+  font-family: var(--aui-font);
+}
+.ui-workshop-heading {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #ffffff0d;
+  padding-bottom: 8px;
+}
+.ui-workshop-heading h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #b5b8c5;
+}
+.ui-workshop-heading > .aui-segments {
+  border: 0;
+  background: none;
+}
+.ui-workshop-heading .aui-button {
+  min-height: 28px;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.ui-workshop-navigation {
+  min-width: 0;
+}
+.ui-workshop-navigation > .aui-segments {
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  background: none;
+  gap: 3px;
+}
+.ui-workshop-navigation .aui-button {
+  justify-content: flex-start;
+  text-align: left;
+  flex: none;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 3px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.ui-workshop-navigation .aui-button[aria-pressed='true'] {
+  background: #4b454033;
+  box-shadow: none;
+}
+.ui-workshop-preview {
+  grid-column: 2;
+  align-self: start;
+  min-width: 0;
+  container: aui-window / inline-size;
+}
+.ui-workshop-preview--mobile {
+  width: min(932px, 100%);
+  height: auto;
+  aspect-ratio: 932/430;
+  overflow: hidden;
+  border: 1px solid #62697755;
+  background: #20242e;
+}
+
+.ui-workshop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  align-items: start;
+  max-width: 880px;
+}
+.ui-workshop-grid > .aui-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ui-workshop-grid h2 {
+  font-size: 16px;
+}
+.ui-workshop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ui-workshop-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  min-width: 0;
+}
+.ui-workshop-stack:has(> .aui-combat-hud) {
+  padding-top: 30px;
+}
+.ui-workshop-mob,
+.ui-workshop-rotate {
+  display: none;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .ui-workshop {
+    container: aui-viewport / size;
+    grid-template-columns: 125px minmax(0, 1fr);
+    padding: 62px 10px 10px;
+    gap: 8px;
+    grid-template-rows: 36px minmax(0, 1fr);
+  }
+  .ui-workshop-heading h1 {
+    font-size: 12px;
+  }
+  .ui-workshop-navigation .aui-button {
+    font-size: 11px;
+    min-height: 32px;
+  }
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .ui-workshop-rotate {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    inset: 64px 0 0;
+    z-index: 10;
+    padding: 30px;
+    text-align: center;
+    background: #151821;
+    color: #b8bdc9;
+  }
+}
+.ui-workshop-pack {
+  display: grid;
+  place-items: center;
+  width: 230px;
+  height: 150px;
+  padding-top: 130px;
+  margin-bottom: 12px;
+}
+/* Feature navigation is a catalogue rail, not another window around the preview. */
+.ui-workshop {
+  overflow: hidden;
+}
+.ui-workshop-navigation {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .ui-workshop {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 30px 38px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .ui-workshop-heading {
+    grid-column: 1;
+  }
+  .ui-workshop-navigation {
+    grid-column: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .ui-workshop-navigation > .aui-segments {
+    flex-direction: row;
+    width: max-content;
+  }
+  .ui-workshop-preview {
+    grid-column: 1;
+  }
+}

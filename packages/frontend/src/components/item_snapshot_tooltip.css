@@ -4,13 +4,13 @@
 .item-snapshot-tooltip {
   position: fixed;
   z-index: 220;
-  width: min(420px, calc(100vw - 24px));
-  max-height: min(620px, calc(100vh - 24px));
+  width: min(300px, calc(100vw - 24px));
+  max-height: min(440px, calc(100vh - 24px));
   overflow: auto;
-  transform: translate(-50%, -100%);
   border: 1px solid rgb(200 150 60 / 35%);
-  background: rgb(13 10 20 / 97%);
-  padding: 14px;
+  padding: 12px;
+  pointer-events: none;
+  font-family: var(--aui-font);
   box-shadow: 0 18px 60px rgb(0 0 0 / 75%);
 }
 
@@ -26,4 +26,25 @@
     monospace;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.item-snapshot-tooltip .item-detail-header {
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+.item-snapshot-tooltip .item-detail-art {
+  width: 54px;
+  height: 54px;
+}
+.item-snapshot-tooltip [data-item-detail-name] {
+  font-size: 15px;
+}
+.item-snapshot-tooltip [data-item-detail-view] {
+  padding: 0;
+  gap: 8px;
+}
+.item-snapshot-tooltip [data-characteristic] {
+  padding: 4px 6px;
+  font-size: 12px;
 }

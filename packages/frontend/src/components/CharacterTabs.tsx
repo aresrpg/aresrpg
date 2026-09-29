@@ -1,39 +1,45 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button, IconButton, NavigationRow } from '@aresrpg/ui'
 import { MAX_TRACKED_CHARACTERS, type CharacterRow } from '@aresrpg/protocol'
-import { Plus } from 'lucide-react'
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type PointerEvent as ReactPointerEvent,
-} from 'react'
+import { Plus, UsersRound } from 'lucide-react'
+import { useEffect, useId, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 
+import { character_icon } from '../content/assets.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { is_jobs_pathname, type Page } from '../modules/navigation.ts'
+import { crafting_lock_id } from '../modules/craft_character_lock.ts'
 import { owned_party_invite_view } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { CharacterDeleteModal } from './CharacterDeleteModal.tsx'
-import { HUD_PANEL_CLASS } from './ui/HudPanel.tsx'
-
-/** The pages whose content is scoped to ONE owned character — the tab strip only lives there. */
-const CHARACTER_PAGES: readonly Page[] = Object.freeze(['world', 'characters', 'kolizeum'])
-
-export const character_tabs_visible = (page: Page): boolean => CHARACTER_PAGES.includes(page)
+import './character_tabs.css'
+import { ContextMenu } from './ContextMenu.tsx'
 
 export const character_tab_invite_enabled = (
   character_id: string,
   invite_view: ReturnType<typeof owned_party_invite_view>
 ): boolean => invite_view.enabled && invite_view.candidates.some(({ id }) => id === character_id)
 
-export const character_tab_locked = (
-  pathname: string,
-  craft_character_id: string | null | undefined,
-  character_id: string
-): boolean => is_jobs_pathname(pathname) && !!craft_character_id && character_id !== craft_character_id
+const CreateCharacterTab = ({
+  copy,
+  create,
+  count,
+}: Readonly<{ copy: AppCopy; create: (() => void) | null; count: number }>) => {
+  if (!create || count >= MAX_TRACKED_CHARACTERS) return null
+  return (
+    <Button
+      aria-label={copy.create_character}
+      className="grid w-[34px] shrink-0 cursor-pointer place-items-center border-r border-border text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
+      data-character-tab-create=""
+      onClick={create}
+      title={copy.create_character}
+      type="button"
+    >
+      <Plus aria-hidden="true" size={11} />
+    </Button>
+  )
+}
 
 /** The app-wide character selector: one tab per owned character, plus a create tab. Selecting
  *  a tab re-points every character-scoped surface (world embodiment, stats, gear, spells,
@@ -47,18 +53,39 @@ export const CharacterTabs = ({
 }: Readonly<{
   characters: readonly CharacterRow[]
   copy: AppCopy
-  create_character: () => void
+  create_character: (() => void) | null
   select_character: (character_id: string) => void
   selected_character_id: string | null
 }>) => {
+  const [expanded, set_expanded] = useState(false)
+  const selector_id = useId()
+  const selector = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!expanded) return
+    const dismiss = (event: Readonly<PointerEvent>) => {
+      if (!selector.current?.contains(event.target as Node)) set_expanded(false)
+    }
+    const escape = (event: Readonly<KeyboardEvent>) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      set_expanded(false)
+      selector.current?.querySelector('button')?.focus()
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', escape, true)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', escape, true)
+    }
+  }, [expanded])
+  const locked_character = useAppStore(crafting_lock_id)
   const wallet = useAppStore((state) => state.session.wallet)
   const [delete_target, set_delete_target] = useState<string | null>(null)
   useEffect(() => set_delete_target(null), [wallet])
   const party_by_character = useAppStore((state) => state.party.party_by_character)
   const parties = useAppStore((state) => state.party.by_id)
   const pending_by_character = useAppStore((state) => state.party.pending_by_character)
-  const pathname = useAppStore((state) => state.navigation.pathname)
-  const craft_character_id = useAppStore((state) => state.settings.always_craft_from_character_id)
   const [menu, set_menu] = useState<Readonly<{ character_id: string; x: number; y: number }> | null>(null)
   const party_id = selected_character_id ? party_by_character[selected_character_id] : undefined
   const party = party_id ? (parties[party_id] ?? null) : null
@@ -73,102 +100,104 @@ export const CharacterTabs = ({
     if (!menu) return undefined
     const close = (): void => set_menu(null)
     const keydown = (event: Readonly<KeyboardEvent>): void => {
-      if (event.key === 'Escape') close()
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        close()
+      }
     }
     globalThis.addEventListener('pointerdown', close)
-    globalThis.addEventListener('keydown', keydown)
+    globalThis.addEventListener('keydown', keydown, true)
     return () => {
       globalThis.removeEventListener('pointerdown', close)
-      globalThis.removeEventListener('keydown', keydown)
+      globalThis.removeEventListener('keydown', keydown, true)
     }
   }, [menu])
 
   return (
     <>
-      <nav
-        aria-label={copy.characters}
-        className="pointer-events-auto flex h-[var(--app-tabs-height)] shrink-0 items-stretch overflow-x-auto border border-border bg-surface/95"
-        data-character-tabs=""
-        data-tutorial-target="character_tabs"
-      >
-        {characters.map((character) => {
-          const active = character.id === selected_character_id
-          const locked = character_tab_locked(pathname, craft_character_id, character.id)
-          return (
+      <div className="character-switcher" ref={selector}>
+        <IconButton
+          className="character-switcher-trigger world-utility-button"
+          label={copy.characters}
+          aria-expanded={expanded}
+          aria-controls={selector_id}
+          onClick={() => set_expanded(!expanded)}
+          icon={<UsersRound size={22} />}
+        />
+        <nav
+          id={selector_id}
+          data-expanded={expanded}
+          aria-label={copy.characters}
+          className="character-tabs"
+          data-character-tabs=""
+          data-tutorial-target="character_tabs"
+        >
+          {characters.map((character) => {
+            const active = character.id === selected_character_id
+            const locked = !!locked_character && character.id !== locked_character
+            return (
+              <NavigationRow
+                selected={active}
+                className="character-tab"
+                data-character-tab={character.id}
+                disabled={locked}
+                key={character.id}
+                onClick={() => {
+                  select_character(character.id)
+                  set_expanded(false)
+                }}
+                onContextMenu={(event: Readonly<ReactMouseEvent<HTMLButtonElement>>) => {
+                  event.preventDefault()
+                  if (!create_character) return
+                  set_menu({ character_id: character.id, x: event.clientX, y: event.clientY })
+                }}
+                title={locked ? copy.settings_page.always_craft_from_hint : undefined}
+                type="button"
+              >
+                <img
+                  className="character-tab-portrait"
+                  src={character_icon(character.classe, character.sex) ?? undefined}
+                  alt=""
+                />
+                <span className="character-tab-name">{character.name}</span>
+                <small className="character-tab-level">{character.level}</small>
+              </NavigationRow>
+            )
+          })}
+          <CreateCharacterTab copy={copy} create={create_character} count={characters.length} />
+        </nav>
+      </div>
+      {menu && (
+        <ContextMenu x={menu.x} y={menu.y}>
+          <div data-character-tab-menu="">
             <button
-              aria-pressed={active}
-              className={`flex min-w-0 max-w-52 shrink-0 items-center gap-2.5 border-r border-border px-5 transition-colors duration-200 ${
-                locked ? 'cursor-not-allowed opacity-35' : 'cursor-pointer'
-              } ${
-                active
-                  ? 'bg-[#c8963c]/8 text-[#e8c07a] shadow-[inset_0_-2px_0_0_#c8963c]'
-                  : 'text-[#6b7280] hover:bg-[#c8963c]/5 hover:text-[#d6d1c8]'
-              }`}
-              data-character-tab={character.id}
-              disabled={locked}
-              key={character.id}
-              onClick={() => select_character(character.id)}
-              onContextMenu={(event: Readonly<ReactMouseEvent<HTMLButtonElement>>) => {
-                event.preventDefault()
-                set_menu({ character_id: character.id, x: event.clientX, y: event.clientY })
+              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
+              disabled={!can_invite || !!pending}
+              onClick={() => {
+                const target = characters.find(({ id }) => id === menu.character_id)
+                if (can_invite && target)
+                  dispatch_app({ type: 'party/invite', character_id: target.id, name: target.name })
+                set_menu(null)
               }}
-              title={locked ? copy.settings_page.always_craft_from_hint : undefined}
+              role="menuitem"
               type="button"
             >
-              <span className="truncate text-[12px] tracking-[0.12em] uppercase">{character.name}</span>
-              <span className={`text-[10px] tracking-[0.12em] ${active ? 'text-[#c8963c]' : 'text-[#4b5058]'}`}>
-                {character.level}
-              </span>
+              {copy.world_hud.menu_group}
             </button>
-          )
-        })}
-        {characters.length < MAX_TRACKED_CHARACTERS && (
-          <button
-            aria-label={copy.create_character}
-            className="grid w-[34px] shrink-0 cursor-pointer place-items-center border-r border-border text-[#6b7280] transition-colors duration-200 hover:bg-[#c8963c]/5 hover:text-[#e8c07a]"
-            data-character-tab-create=""
-            onClick={create_character}
-            title={copy.create_character}
-            type="button"
-          >
-            <Plus aria-hidden="true" size={11} />
-          </button>
-        )}
-      </nav>
-      {menu && (
-        <div
-          className={`${HUD_PANEL_CLASS} pointer-events-auto fixed z-[170] min-w-44 overflow-hidden !rounded-[8px] p-1 text-[9px] tracking-[0.14em] uppercase`}
-          data-character-tab-menu=""
-          onPointerDown={(event: Readonly<ReactPointerEvent<HTMLDivElement>>) => event.stopPropagation()}
-          role="menu"
-          style={{ left: menu.x, top: menu.y }}
-        >
-          <button
-            className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#d6d1c8] hover:bg-[#4a9eff]/10 hover:text-[#67adff] disabled:cursor-not-allowed disabled:opacity-35"
-            disabled={!can_invite || !!pending}
-            onClick={() => {
-              const target = characters.find(({ id }) => id === menu.character_id)
-              if (can_invite && target)
-                dispatch_app({ type: 'party/invite', character_id: target.id, name: target.name })
-              set_menu(null)
-            }}
-            role="menuitem"
-            type="button"
-          >
-            {copy.world_hud.menu_group}
-          </button>
-          <button
-            className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#ff7d94] hover:bg-[#ff496c]/10"
-            onClick={() => {
-              set_delete_target(menu.character_id)
-              set_menu(null)
-            }}
-            role="menuitem"
-            type="button"
-          >
-            {copy_text(copy.characters_page)('delete_character')}
-          </button>
-        </div>
+            <button
+              className="w-full cursor-pointer rounded-[5px] px-3 py-2 text-left text-[#ff7d94] hover:bg-[#ff496c]/10"
+              onClick={() => {
+                set_delete_target(menu.character_id)
+                set_menu(null)
+              }}
+              role="menuitem"
+              type="button"
+            >
+              {copy_text(copy.characters_page)('delete_character')}
+            </button>
+          </div>
+        </ContextMenu>
       )}
       <CharacterDeleteModal character_id={delete_target} close={() => set_delete_target(null)} copy={copy} />
     </>

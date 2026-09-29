@@ -9,7 +9,7 @@ import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 const app_state = (): ReturnType<typeof initial_app_state> => {
   const state = initial_app_state({
     quality: 'medium',
-    flat_mode: false,
+
     music_enabled: true,
     render_distance: null,
     fight_access: 0,

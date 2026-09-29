@@ -14,12 +14,10 @@ test('entity rows render the level as a trailing badge', () => {
   expect(html).toContain('Aetherwing')
   expect(html).toContain('PET')
   expect(html).toContain('LV. 1')
-  expect(html).toContain('text-[#77d99a]')
 })
 
 test('job recipes reuse the item-tab cards in the shared responsive grid', async () => {
   const source = await Bun.file(new URL('../../src/encyclopedia/JobRecipesSection.tsx', import.meta.url)).text()
-  const component_source = await Bun.file(new URL('../../src/encyclopedia/components.tsx', import.meta.url)).text()
   const jobs_source = await Bun.file(new URL('../../src/encyclopedia/JobsTab.tsx', import.meta.url)).text()
 
   expect(source).toContain('<EntityGrid>')
@@ -27,7 +25,5 @@ test('job recipes reuse the item-tab cards in the shared responsive grid', async
   expect(source).toContain("text('level_short'")
   expect(source).not.toContain("text('required_level'")
   expect(source).not.toContain("text('xp_suffix'")
-  expect(component_source).toContain('grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))]')
-  expect(component_source).toContain('text-[#77d99a]')
   expect(jobs_source).not.toContain('max-w-2xl')
 })

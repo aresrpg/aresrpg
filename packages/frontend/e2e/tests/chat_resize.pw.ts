@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
-import { open_responsive_preview } from '../support/responsive_preview.ts'
+const open_responsive_preview = async (page: Page, url: string): Promise<void> => {
+  await page.goto(url)
+  await page.locator('.gw-worldchat .chat').waitFor({ state: 'attached' })
+}
 
-test('chat resizing persists across reloads while staying bounded beside the HUD', async ({ page }) => {
+test('chat resizing persists across reloads while staying inside the game viewport', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
   await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
   const chat = page.locator('.gw-worldchat')
@@ -46,6 +49,7 @@ test('chat resizing persists across reloads while staying bounded beside the HUD
     { width: 440, height: 360 },
   ]) {
     await page.setViewportSize(viewport)
+    await expect(page.locator('.chat__toggle')).toHaveAttribute('aria-expanded', 'false')
     await expect(async () => {
       const box = (await chat.boundingBox())!
       const frame = (await page.locator('[data-world-frame]').boundingBox())!
@@ -53,7 +57,7 @@ test('chat resizing persists across reloads while staying bounded beside the HUD
       expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width)
       expect(box.y).toBeGreaterThanOrEqual(frame.y)
       expect(hud.x + hud.width).toBeLessThanOrEqual(frame.x + frame.width)
-      expect(hud.y + hud.height <= box.y + 1 || hud.x >= box.x + box.width).toBe(true)
+      expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1)
     }).toPass()
   }
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('aresrpg.settings')!).chat_size)).toEqual(saved)
@@ -103,7 +107,7 @@ test('fight chat uses the same resize handle and saved size as overworld chat', 
   const resized = (await chat.boundingBox())!
   expect(resized.width).toBeGreaterThan(initial.width)
   expect(resized.height).toBeGreaterThan(initial.height)
-  const hud = (await page.locator('.preview-fight .fight-hud__bar').boundingBox())!
+  const hud = (await page.locator('.preview-fight .aui-combat-hud').boundingBox())!
   expect(hud.x).toBeGreaterThanOrEqual(resized.x + resized.width)
   expect(hud.x + hud.width).toBeLessThanOrEqual(1920)
 

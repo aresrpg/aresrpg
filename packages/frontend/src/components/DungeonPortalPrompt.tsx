@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-/* eslint-disable functional/prefer-immutable-types -- React owns browser keyboard events at this lifecycle boundary. */
-
 import { DoorOpen, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -12,15 +10,15 @@ import { content_catalog, titleize } from '../content/catalog.ts'
 import { useDungeonPortalPrompt } from '../game/core/dungeon_portal_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { dungeon_entry_key, selected_dungeon_pending } from '../modules/dungeon.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
-import { NametagCard } from './NametagCard.tsx'
-import { PromptKey } from './PromptChip.tsx'
+import { PromptChip, PromptKey, usePromptKey } from './PromptChip.tsx'
 
 export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const prompt = useDungeonPortalPrompt()
+  const { focused_id, speak } = prompt
   const [open_id, set_open_id] = useState<string | null>(null)
   const pending = useAppStore(selected_dungeon_pending)
   const text = copy_text(copy.world_hud)
@@ -28,40 +26,38 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const dungeon = portal ? content_catalog.dungeon(portal.dungeon) : null
   const entry_key = useAppStore((state) => (dungeon ? dungeon_entry_key(state, dungeon.key) : null))
 
-  useEffect(() => {
-    const on_key = (event: KeyboardEvent): void => {
-      if (event.code !== 'KeyE' || event.repeat || !prompt.focused_id || open_id) return
-      event.preventDefault()
-      set_open_id(prompt.focused_id)
+  const interact = (id: string | null) => {
+    if (!id) return
+    const target = prompt.portals[id]
+    const destination = target ? content_catalog.dungeon(target.dungeon) : null
+    if (!destination) return
+    if (!dungeon_entry_key(read_app_state(), destination.key)) {
+      const key = content_catalog.item(destination.key)?.item.name ?? destination.key
+      prompt.speak(id, text('dungeon_guard_requires_key', { key }))
+      return
     }
-    globalThis.addEventListener('keydown', on_key)
-    return () => globalThis.removeEventListener('keydown', on_key)
-  }, [open_id, prompt.focused_id])
+    prompt.speak(id, null)
+    set_open_id(id)
+  }
+  usePromptKey({ enabled: prompt.focused_id !== null, activate: () => interact(prompt.focused_id) })
+  useEffect(() => {
+    return () => {
+      if (focused_id) speak(focused_id, null)
+    }
+  }, [focused_id, speak])
 
   return (
     <>
-      {Object.entries(prompt.roots).map(([id, root]) =>
-        createPortal(
-          <NametagCard
-            lines={
-              prompt.focused_id === id
-                ? [
-                    {
-                      key: 'enter',
-                      text: (
-                        <span className="inline-flex items-center gap-1.5">
-                          {text('dungeon_press_enter')} <PromptKey label="E" />
-                        </span>
-                      ),
-                    },
-                  ]
-                : []
-            }
-            name={text('dungeon_portal')}
-          />,
-          root,
-          id
-        )
+      {Object.entries(prompt.roots).map(
+        ([id, root]) =>
+          prompt.focused_id === id &&
+          createPortal(
+            <PromptChip activate={() => interact(id)}>
+              {text('dungeon_talk')} <PromptKey label="F" />
+            </PromptChip>,
+            root,
+            id
+          )
       )}
       {portal && dungeon ? (
         <ModalFrame

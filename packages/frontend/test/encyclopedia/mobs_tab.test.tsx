@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { MobsTab } from '../../src/encyclopedia/MobsTab.tsx'
 
-test('mob details render the current authored selection with one facet rail', () => {
+test('mob browser exposes its search and authored catalogue', () => {
   const [mob] = encyclopedia_catalog.mobs
   const html = renderToStaticMarkup(
     <MobsTab
@@ -18,10 +18,6 @@ test('mob details render the current authored selection with one facet rail', ()
       text={(key) => key}
     />
   )
-  expect(html.match(/data-facet-rail=""/g)).toHaveLength(1)
-  expect(html).not.toContain('<select data-mob-filter')
-  if (mob) {
-    for (const stat of ['hp', 'ap', 'mp', 'agility', 'wisdom', 'xp'])
-      expect(html).toContain(`data-mob-stat-icon="${stat}"`)
-  }
+  expect(html).toContain('type="search"')
+  if (mob) expect(html).toContain(mob.name)
 })

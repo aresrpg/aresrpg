@@ -2,8 +2,7 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 
 title: WebGPU를 사용할 수 없습니다
-body: 전체 월드에는 WebGPU가 필요합니다. 현재 경량 격자를 대신 표시합니다.
-fatal: 이 브라우저는 WebGPU 또는 WebGL 그래픽 컨텍스트를 생성할 수 없습니다.
+body: '월드에는 WebGPU와 보안 연결(HTTPS 또는 localhost)이 필요합니다. 지원되는 브라우저에서 열어 주세요.'
 engine_recovery: 월드 로딩 또는 렌더링이 중단되었습니다. 새로고침해 다시 시도하세요.
 engine_reload: 새로고침
 engine_minimum_title: '그래픽 설정 낮춤'
@@ -11,18 +10,10 @@ engine_minimum: '월드를 불러오거나 표시할 수 없습니다. 컴퓨터
 engine_continue: '계속'
 world_unavailable_title: 월드를 이용할 수 없습니다
 world_unavailable: 이 월드에는 아직 지형 생성 설정이 없습니다.
-mobile_unavailable_label: 모바일 접속
-mobile_unavailable_title: AresRPG는 아직 모바일 기기를 지원하지 않습니다
-mobile_unavailable_body: 전용 모바일 환경을 준비하고 있습니다. 지금은 데스크톱 브라우저로 월드에 접속해 주세요.
-mobile_unavailable_status: 데스크톱 버전 이용 가능
-chrome: Chrome 또는 Edge를 업데이트한 뒤 설정 → 시스템에서 그래픽 가속을 켜고 다시 실행하세요.
-other: 하드웨어 가속을 켜고 브라우저와 그래픽 드라이버를 업데이트한 뒤 브라우저를 다시 실행하세요.
-continue: 격자로 계속하기
 quality: 그래픽 품질
 low: 낮음
 medium: 보통
 high: 높음
-flat_mode: 평면 모드
 identity_connected: 신원 연결됨
 sign_in_to_play: 로그인하고 플레이
 loading_universe: 세계 불러오는 중
@@ -30,7 +21,8 @@ continue_google: Google로 계속하기
 wallet_session_ended: 지갑 세션이 종료되었습니다. 다시 로그인하세요.
 connect_wallet: 지갑 연결
 no_wallet: 호환되는 지갑이 설치되어 있지 않습니다
-watch_world: 실시간 월드 관전
+play_demo: '데모 플레이'
+replay_demo: '데모 다시 플레이'
 sign_in: 로그인하고 플레이
 drag_hint: 드래그로 이동 · 스크롤로 확대/축소
 navigation: 탐색
@@ -79,8 +71,6 @@ party_member_unavailable_toast: 그 캐릭터는 이미 파티에 속해 있습�
 fight_turn_already_forced_toast: 누군가 이미 이 턴을 강제로 종료했습니다.
 fight_placement_unavailable_toast: 해당 시작 칸을 사용할 수 없습니다. 다른 빈 칸을 선택하세요.
 network_testnet: 테스트넷
-page_pending_title: 페이지를 재구성하고 있습니다
-page_pending_body: 복구 작업 중에도 페이지 위치는 유지됩니다.
 welcome_title: AresRPG에 오신 것을 환영합니다
 welcome_body: AresRPG는 플레이어가 경제를 이끄는 완전한 온체인 MMORPG입니다. 첫 캐릭터를 만들고 월드에 들어가 몬스터와 싸우세요.
 welcome_need_sui: 플레이하려면 소량의 SUI가 필요합니다. 첫 캐릭터는 {{price}} SUI이며 수수료용으로 최소 {{fee}} SUI를 남겨야 합니다. 아래 주소로 SUI를 입금해 시작하세요.
@@ -191,6 +181,7 @@ party_panel:
   run_to_position_wrong_world: 링크된 위치가 현재 월드에 없습니다.
   run_to_wrong_world: 해당 파티원이 현재 월드에 없습니다.
   run_to_unavailable: 해당 파티원의 온체인 위치를 확인할 수 없습니다.
+  run_to_blocked: '걸어서 갈 수 있는 경로를 찾지 못했습니다. 이동을 멈췄습니다.'
 trade_panel:
   kares: 제시한 KARES
   close: 닫기
@@ -232,6 +223,7 @@ trade_panel:
 transaction_unknown_toast: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
 transaction_recovered_toast: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
 world_hud:
+  spawn_welcome: '모험가여, 환영합니다! 이 게임은 얼리 액세스 중입니다. 살아남아 즐거운 모험을 펼쳐 보세요.'
   compass_label: 나침반
   zone: 구역
   unsearched: 미탐색
@@ -260,6 +252,8 @@ world_hud:
   dungeon_portal: 던전 포털
   dungeon_city: '{{city}} 도시'
   dungeon_press_enter: 입장
+  dungeon_talk: '대화'
+  dungeon_guard_requires_key: '{{key}}이 없으면 통과시켜 줄 수 없어.'
   dungeon_entry_body: 던전 열쇠를 사용해 이 포털의 전용 준비 대기실로 입장하세요.
   dungeon_required_key: 필요한 열쇠
   dungeon_enter: 던전 입장
@@ -350,6 +344,21 @@ world_hud:
   resource_face_protector: '{{key}}을(를) 눌러 맞서기'
   zone_never_arrived: 탐색은 실행되었지만 월드에 반영되지 않았습니다. 데이터 갱신이 지연될 수 있습니다
 demo_page:
+  asset_demo_city: 시연 도시
+  asset_house_1: 도시 주택 A
+  asset_house_2: 도시 주택 B
+  asset_covered_bridge: 지붕 있는 거리 다리
+  asset_gate_rampart: 성문과 망루
+  asset_catacomb_entry: 지하 묘지 입구
+  asset_gallery: 에셋
+  asset_house: 공방 주택
+  asset_banner: 깃발
+  asset_lantern: 랜턴
+  asset_fence: 울타리
+  asset_rope: 밧줄
+  asset_chain: 사슬
+  asset_campfire: 모닥불
+  asset_hint: 왼쪽 드래그로 이동 · 오른쪽 드래그로 회전 · 스크롤로 확대/축소
   title: 렌더 실험실
   world_lab: 월드 실험실
   fight_lab: 전투 실험실
@@ -393,7 +402,25 @@ demo_page:
   spawn_group: 무리 생성
   clear: 비우기
   resources: 자원
-  resources_missing: 자원 렌더링은 아직 복구되지 않았습니다. 정의된 목록은 시드 데이터에 남아 있습니다.
+  hillaire_title: 'Hillaire 대기'
+  hillaire_preview: '실시간 미리보기 전용입니다. 초기화하면 이 월드의 기본값으로 돌아갑니다.'
+  hillaire_quality: 'Hillaire를 조정하려면 그래픽을 중간 또는 높음으로 선택하세요.'
+  hillaire_haze: '원거리 안개'
+  hillaire_ground: '지면 안개 · 높음'
+  hillaire_sky: '하늘빛'
+  hillaire_density: '안개 밀도'
+  hillaire_max_opacity: '최대 불투명도'
+  hillaire_near: '안개 시작 거리(m)'
+  hillaire_full: '안개 완전 적용 거리(m)'
+  hillaire_tint: '푸른 색조'
+  hillaire_height_density: '지면 안개 밀도'
+  hillaire_height_max: '지면 안개 최대 불투명도'
+  hillaire_height_falloff: '높이 감쇠(m)'
+  hillaire_horizon_cap: '수평선 밝기'
+  hillaire_exposure: '하늘 노출'
+  hillaire_mie_scattering: '햇빛 안개 강도'
+  hillaire_mie_g: '햇빛 안개 방향성'
+  hillaire_reset: '대기 초기화'
   control_hint: 캔버스 클릭 · WASD 이동 · Space 점프 · 마우스로 둘러보기
   back: 앱으로 돌아가기
 marketplace_page:
@@ -497,7 +524,6 @@ mastery_page:
   daily_title: 오늘의 던전 퀘스트 선택
   daily_lead: 월드를 선택하면 찾아서 완료할 던전이 배정됩니다.
   unknown_dungeon: 알 수 없는 던전
-  quest_reward: 숙련 포인트 {{points}} 획득
   quest_objective_before: '던전을 찾아 완료하세요:'
   quest_objective_after: 완료하면 숙련 포인트를 받습니다.
   completed: 확인 완료
@@ -620,34 +646,29 @@ tutorial:
   back: 뒤로
   next: 다음
   finish: 완료
-  fight_enter: 전투 입장
   reset_title: 튜토리얼
-  reset_hint: 다음에 각 페이지를 방문할 때 소개를 다시 표시합니다.
+  reset_hint: '각 기능을 다음에 열 때 도움말을 다시 표시합니다.'
   reset_action: 초기화
-  world_compass_title: 월드와 공유 구역
-  world_compass_body: AresRPG에는 성장에 따라 열리는 여러 월드가 있습니다. 각 월드는 몬스터, 자원, 던전이 있는 구역으로 나뉩니다. 누구나 구역을 발견할 수 있으며 발견 내용은 모든 플레이어에게 공유됩니다.
-  world_hud_title: 체력과 빠른 슬롯
-  world_hud_body: 이 HUD에는 체력과 빠른 아이템 슬롯이 표시됩니다. 전투가 시작되면 같은 자리가 주문 바로 바뀝니다.
-  world_fps_title: 월드 설정
-  world_fps_body: 지형은 공개된 데이터에서 결정론적으로 생성됩니다. Sui는 월드와 기준 X/Z 위치를 저장하고 높이는 로컬 지형에서 계산합니다. 따라서 평면 모드는 같은 공간의 표현만 바꿉니다. 그래픽 품질을 바꾸거나 월드 전투를 파티원 전용으로 제한할 수도 있습니다.
-  world_character_title: 월드의 플레이어
-  world_character_body: 현재 조종 중인 캐릭터입니다. 근처의 다른 캐릭터를 마우스 오른쪽 버튼으로 클릭하면 상호작용 메뉴가 열립니다.
+  world_compass_title: '길 찾기'
+  world_compass_body: '나침반은 가까운 도시를 가리킵니다. M 키나 지도 아이콘으로 지도를 여세요.'
+  world_hud_title: 'HUD 사용법'
+  world_hud_body: '아이콘으로 가방, 주문, 직업을 엽니다. 전투 중에는 이곳이 주문 막대가 됩니다.'
   world_character_tabs_title: 여러 캐릭터로 플레이
-  world_character_tabs_body: 최대 여섯 캐릭터를 소유할 수 있습니다. 다른 내 캐릭터를 파티에 초대하고 파티장 따라가기를 켜면 함께 이동하며 도착 후 참가 가능한 월드 전투에 자동으로 합류합니다.
+  world_character_tabs_body: '여기서 캐릭터를 바꾸세요. 캐릭터를 우클릭하면 파티에 초대할 수 있습니다.'
   fight_title: 첫 온체인 전투
-  fight_body: 전투는 턴제로 진행됩니다. 이동과 주문을 선택하면 행동이 함께 준비됩니다. 턴 종료는 전체 턴을 Sui 거래 한 건으로 제출하고 다음 플레이어가 행동할 때까지 이어지는 몬스터 턴을 계산합니다. 전투의 기준 상태는 모두 Sui에서 확정됩니다. 승리 후 마지막 Sui 거래가 온체인 난수로 공동 전리품을 추첨하고 각 보상을 지정된 플레이어의 가방에 넣습니다.
+  fight_body: '주문을 고르거나 칸을 클릭해 이동하세요. 턴 종료를 누르면 행동을 함께 전송합니다.'
   equipment_gear_title: 장비
-  equipment_gear_body: 장착한 아이템은 선택한 캐릭터의 소유입니다. 장비를 인형에 드래그하고 보너스를 확인한 뒤 변경 사항을 함께 확정하세요.
+  equipment_gear_body: '아이템을 클릭하고 장착을 선택한 뒤 변경을 확정하세요.'
   equipment_inventory_title: 공유 가방
-  equipment_inventory_body: 이 계정의 모든 캐릭터가 가방을 공유합니다. 위에서 다른 캐릭터를 선택해 같은 사용 가능한 아이템을 장착할 수 있습니다.
+  equipment_inventory_body: '아이템은 캐릭터끼리 공유합니다. 마우스를 올리면 능력치, 클릭하면 상세 정보와 행동이 나옵니다.'
   stats_title: 능력치
-  stats_body: 능력치 포인트로 강해지세요. 활력은 체력을, 지혜는 경험치와 AP/MP 감소 저항을 높입니다. 행운은 물 피해와 드롭 확률을, 민첩은 바람 피해와 치명타, 태클 및 태클 탈출 능력을 높입니다.
+  stats_body: '포인트를 배분하고 보너스를 확인한 뒤 확정하세요.'
   spells_title: 주문
-  spells_body: 캐릭터가 성장하면 새 주문이 열립니다. 레벨업으로 얻은 주문 포인트를 여기서 사용해 열린 주문을 강화할 수 있습니다.
+  spells_body: '주문을 선택해 레벨별 효과를 비교하세요. 주문 포인트로 강화할 수 있습니다.'
   jobs_title: 생산 직업
-  jobs_body: 채집과 제작 진행도를 확인하고 제작법을 살펴보며 아이템을 만드세요. 캐릭터가 여러 명이면 설정에서 전용 제작 캐릭터로 이 페이지를 고정할 수 있습니다.
+  jobs_body: '직업과 제작법을 고르세요. 재료를 클릭해 확인하고 충분히 모이면 제작하세요.'
   runeforge_title: 룬 대장간
-  runeforge_body: 해당 제작 직업이 {{level}}레벨에 도달하면 룬으로 장비를 강화할 수 있습니다. 아이템을 분쇄해 룬을 얻고 여기서 사용하세요.
+  runeforge_body: '직업 레벨 {{level}}부터 룬으로 장비를 강화할 수 있습니다. 불필요한 장비를 분해해 룬을 얻으세요.'
 admin_page:
   kicker: 게시자
   title: 게임 콘텐츠 게시
@@ -910,6 +931,8 @@ fight_hud:
   forfeit_body: '{name}은(는) 남은 체력을 모두 잃고 전투를 떠납니다.'
   confirm_forfeit: 포기 확인
   unit_turns: 턴
+  chat_expand: 채팅 열기
+  chat_collapse: 채팅 접기
   chat_title: 채팅
   chat_resize: 채팅 크기 조절
   chat_tab_general: 일반
@@ -988,25 +1011,28 @@ wallet_legacy:
   add_funds_desc: 결제 방법을 선택하세요. SUI가 지갑으로 바로 전송됩니다.
   method_paypal: PayPal
   method_paypal_desc: PayPal 계정으로 결제
-  method_card: 신용/체크카드
-  method_card_desc: Visa, Mastercard
+  method_card: '카드 / PayPal'
+  method_card_desc: '결제 업체를 통해 SUI 구매'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Face ID / Touch ID로 결제
   method_google_pay: Google Pay
   method_google_pay_desc: Google 계정으로 결제
   method_bank: 계좌 이체
   method_bank_desc: SEPA(EU) 또는 ACH(미국)
-  method_have_sui: 이미 SUI가 있습니다
+  method_have_sui: '직접 입금'
   method_have_sui_desc: 다른 지갑이나 거래소에서 전송
   paypal_note: MoonPay를 통해 미국, 영국 및 대부분의 유럽에서 이용 가능
   card_note: 아래 제공업체를 선택하세요. 모두 Visa와 Mastercard를 지원합니다
   bank_note: 수수료가 가장 낮습니다(약 1%). 유럽은 SEPA, 미국은 ACH를 사용합니다.
   steps_paypal: 1. 아래 링크 클릭  2. PayPal 선택  3. 금액 입력. SUI가 지갑에 도착합니다
-  steps_card: 제공업체를 선택하고 카드 정보를 입력하면 SUI가 지갑에 도착합니다.
-  method_swap: Solana, ETH 등에서 전송…
-  method_swap_desc: Portal Bridge로 자산을 Sui에 전송
-  swap_note: 체인 간 전송은 Portal Bridge를 이용합니다.
-  steps_swap: Portal Bridge를 열고 두 지갑을 연결한 뒤 Sui를 선택해 전송을 완료하세요.
+  steps_card: '업체를 열고 SUI를 선택한 뒤 아래 게임 지갑 주소를 사용하세요. 결제 수단은 국가와 업체에 따라 다릅니다.'
+  method_swap: '브리지 입금'
+  method_swap_desc: '다른 체인의 암호화폐를 SUI로 전환'
+  bridge_loading: '브리지 불러오는 중…'
+  bridge_error: '브리지를 불러올 수 없습니다. 게임 지갑으로 직접 입금은 계속 가능합니다.'
+  bridge_retry: '다시 시도'
+  swap_note: 'LI.FI 제공. 전송은 즉시 완료되지 않습니다. 브리지 입금을 다시 열고 기록에서 중단된 전송을 확인하거나 재개하세요.'
+  steps_swap: '출발 지갑을 연결하세요. 도착지는 아래 게임 지갑이며 수령 자산은 네이티브 SUI입니다. 서명 전 금액, 수수료, 예상 시간을 확인하세요.'
   steps_wallet: 아래 지갑 주소로 SUI를 보내세요. 몇 초 안에 도착합니다.
   advanced_exchange: '고급: 거래소에서 구매'
   age_notice: 모든 결제 제공업체는 만 18세 이상만 이용할 수 있습니다.
@@ -2454,7 +2480,6 @@ automation_panel:
   collapse: 자동 채집 접기
 item_drop_sources:
   title: 몬스터 드롭
-  note: 기본 드롭률입니다. 실제 확률은 몬스터 레벨과 팀의 행운에 따라 달라집니다.
   empty: 이 아이템을 드롭하는 몬스터가 없습니다.
   loading: 드롭 정보 불러오는 중…
   mob: 몬스터
@@ -2592,6 +2617,62 @@ spell_effects:
   short_stat: '능력'
   expires_next_turn: '다음 턴까지'
 ui:
+  multiplayer: '멀티플레이'
+  nearby_fights: '주변 전투'
+  nearby_fights_empty: '주변에 추적 중인 전투가 없습니다'
+  run_and_join: '이동 후 참가'
+  equipment_comparison: '장착 시 능력치 변화'
+  equipment_replacing: '{{name}} 교체'
+  equipment_unchanged: '능력치 보너스 변화 없음'
+  preview_only: '인터랙티브 미리보기 · 거래가 제출되지 않습니다'
+  inspect_details: '자세히 보기'
+  design_minimap: '미니맵'
+  design_party_invitation: '파티 초대'
+  design_trade_invitation: '거래 초대'
+  progression_rewards: '보상'
+  inventory_selected_count: '{{count}}개 선택됨'
+  inventory_select: '선택'
+  inventory_deselect: '선택 해제'
+  inventory_use: '사용'
+  attack: '공격'
+  character_summary: '요약'
+  character_details: '상세'
+  allocate_points: '분배'
+  inventory_search: '소지품 검색…'
+  nameplate_veteran: '베테랑'
+  design_titles: '칭호'
+  design_no_title: '칭호 없음'
+  design_library: '디자인 작업실'
+  design_controls: '컨트롤'
+  design_dialog: '대화상자 열기'
+  design_disabled: '사용 불가'
+  design_details: '상세 정보'
+  design_description: '공통 게임 컴포넌트입니다. 로컬 예제를 조작하여 상태와 반응형 레이아웃을 확인하세요.'
+  design_volume: '음량'
+  design_motion: '애니메이션'
+  design_search: '검색'
+  design_equipment_hint: '아이템을 선택하여 장착하세요. 장착한 아이템을 누르면 해제됩니다.'
+  design_equip: '장착'
+  design_combat: '전투'
+  design_journal: '일지 및 성장'
+  design_complete: '완료'
+  design_viewport: '미리보기 크기'
+  design_desktop: '데스크톱'
+  design_mobile: '모바일'
+  leave_game_title: '게임을 나가시겠습니까?'
+  stay_in_game: '계속 플레이'
+  leave_game_confirm: '홈으로 돌아가기'
+  mobile_move: '이동'
+  mobile_jump: '점프'
+  mobile_chat: '채팅'
+  mobile_party: '파티'
+  mobile_confirm_action: '행동 확인'
+  mobile_item_actions: '아이템 동작'
+  mobile_unequip: '장비 해제'
+  mobile_use_item: '사용 / 장착'
+  mobile_language: '언어'
+  mobile_menu: '메뉴'
+  mobile_rotate: '기기를 가로로 돌려 플레이하세요.'
   character: 캐릭터
   spell_action: '{{name}}, 레벨 {{level}}, {{cost}} {{unit}}'
   spell_level: 주문 레벨 {{level}}
@@ -2604,7 +2685,6 @@ ui:
   meters: '{{count}}m'
   versus: 대
   team_format: '{{size}}대{{size}}'
-  flat: 평면
   fps: FPS
   north: 북
   northeast: 북동
@@ -2621,3 +2701,50 @@ ui:
   formula_chastisement: G = min(ΔHP × S, 상한 × S − 현재 턴 G) · S = 몬스터 1, 플레이어 ½
   formula_drop: 드롭률 = min(100%, 기본값 × 몬스터 구간 × (600 + 팀 평균 행운) / 600)
   formula_xp: 경험치 = 기본 경험치 총량 × 파티 계수 × 레벨 균형 × 플레이어 레벨 / 파티 레벨 × (100 + 지혜) / 100
+
+menu_subtitle: 'AresRPG는 Sui 기반의 완전 온체인 턴제 MMORPG입니다.'
+menu_start: 'Enter 키를 눌러 시작'
+menu_start_touch: '탭하여 시작'
+menu_music_on: '음악 켜기'
+menu_music_off: '음악 끄기'
+
+menu_build: '빌드'
+
+world_loading_assets: '풍경 불러오는 중…'
+world_loading_graphics: '그래픽 준비 중…'
+world_loading_terrain: '월드 구성 중…'
+world_loading_sky: '하늘과 조명 준비 중…'
+world_loading_finishing: '첫 프레임 준비 중…'
+
+adventure:
+  goblins_title: '길을 열어라'
+  goblins_objective: '고블린에게 다가가 F를 누르세요.'
+  speak_title: '다리 위의 낯선 이'
+  speak_objective: '다리에서 Sceat을 찾아 F로 대화하세요.'
+  invite_title: '함께라면 강해진다'
+  invite_objective: 'Sceat을 우클릭해 그룹에 초대하세요. 터치 화면에서는 초대 표시를 누르세요.'
+  switch_title: '야진 조작하기'
+  switch_objective: 'Sceat의 캐릭터 탭을 선택하세요. 서로 다른 주문과 장비를 가진 두 영웅을 조작합니다.'
+  follow_title: '리더 따라가기'
+  follow_objective: '리더 Senshi를 선택하고 그룹 패널에서 리더 따라가기를 켜세요.'
+  guards_title: '왕실 경비병'
+  guards_objective: '다리를 건너 왕실 경비병을 처치하세요. 야진의 함정을 놓고 적을 밀어 넣으세요.'
+  boss_title: '고바독의 유물'
+  boss_objective: '유물을 찾아 고블린 왕 고바독에게 도전하세요. 경비병보다 훨씬 강합니다.'
+  dialogue_greeting: '처음 보는 얼굴이네! 나는 Sceat이야.'
+  dialogue_danger: '이 세계는 위험해. 혼자서는 멀리 못 가. 함께 여행하자.'
+  dialogue_relic: '고블린 왕 고바독이 강력한 유물을 지키고 있어. 경비병을 돌파하고 왕을 찾자.'
+  journal: '모스우드 모험'
+  chapter: '고블린 왕'
+  speak_action: 'Sceat과 대화'
+  invite_action: 'Sceat 초대'
+  rebirth_title: '상처로 인해 목숨을 잃었습니다…'
+  rebirth_body: '이제 다시 태어날 시간입니다. 아래 버튼을 눌러 로그인하고 진짜 게임에 입장하세요.'
+  rebirth_login: '로그인하고 진짜 게임에 입장하기'
+  goblins_body: '모스우드는 평화로워 보이지만, 고블린들은 당신을 다음 식사로 생각하는 모양입니다. 출구로 가는 길은 그들의 야영지를 지나갑니다. 무리에게 다가가 전투를 시작하세요. 행동 포인트로 주문을 쓰고 이동할 위치를 계획하세요. 한 턴 한 턴이 중요합니다. 승리하면 레벨 200과 첫 장비를 얻습니다.'
+  speak_body: '고블린은 쓰러졌지만 숲의 위험은 아직 끝나지 않았습니다. 다리에서 전투를 지켜보던 야진 Sceat는 혼자 건너갈 생각이 없어 보입니다. 말을 걸어 보세요. 그는 고블린 왕 고바독이 가진 유물을 찾고 있으며, 함께 맞서 싸울 동료가 필요합니다.'
+  invite_body: 'Sceat에게는 계획이 있습니다. 안타깝게도 숲에서 가장 큰 고블린을 만나러 가는 계획입니다. 서로 다른 재주를 가진 두 모험가라면 승산이 더 크겠죠. Sceat를 우클릭해 그룹에 초대하세요. 이 모험에서는 두 영웅을 모두 조종하고 능력을 어떻게 조합할지 직접 결정합니다.'
+  switch_body: '동료는 체력 막대 하나가 늘어나는 것 이상의 의미가 있습니다. 야진인 Sceat는 센시가 힘으로 해결하는 문제를 함정과 위치 선정으로 풀어냅니다. 캐릭터 전환에서 그를 선택하세요. 각 영웅의 주문과 장비는 별개입니다. 누구를 움직일지도 어떤 주문을 쓸지만큼 중요합니다.'
+  follow_body: '그룹이 생겼으니 이제 함께 움직여 봅시다. 센시를 리더로 선택하고 그룹 설정에서 리더 따라가기를 켜세요. 탐험 중에는 Sceat가 따라오므로 같은 길을 두 번 걸을 필요가 없습니다. 전투가 시작되면 각 영웅의 이동과 주문은 여전히 직접 선택합니다.'
+  guards_body: '고바독은 입구를 비워 두지 않습니다. 경비병들이 기다리고 있으니 이번에는 두 영웅의 행동을 맞춰야 합니다. 도전하기 전에 새 장비를 확인하세요. 센시의 힘과 Sceat의 함정을 조합해 보세요. 적을 무작정 쫓기보다 유리한 위치로 유도하면 더 쉽게 이길 수 있습니다.'
+  boss_body: '경비병 너머에는 Sceat가 찾던 유물을 가진 고바독이 기다립니다. 고블린 왕이라는 칭호를 패배로 얻지는 않았을 것입니다. 함께 싸우는 법은 배웠지만 이번 상대는 차원이 다릅니다. 동료와 함께 다가가 새로운 협력이 어디까지 통할지 확인하세요.'

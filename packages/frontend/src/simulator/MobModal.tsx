@@ -57,7 +57,6 @@ export const MobModal = ({ cell, close, copy }: Readonly<{ cell: bigint; close: 
         <header className="flex items-center gap-3 pr-8">
           <EntityIcon label={mob.name} size="size-12" src={mob_icon(mob.mob_type)} />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[12px] tracking-[0.2em] text-[#c8963c] uppercase">{mob.name}</h2>
             <p className="mt-1 text-[8px] tracking-[0.16em] text-[#6b7280] uppercase">
               {template(text.level_range, { min: mob.level_min, max: mob.level_max })}
             </p>

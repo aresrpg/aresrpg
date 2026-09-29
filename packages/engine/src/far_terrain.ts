@@ -8,6 +8,7 @@ import {
   DynamicDrawUsage,
   Mesh,
   Vector2,
+  type DataArrayTexture,
   type Material,
   type Scene,
 } from 'three'
@@ -20,6 +21,10 @@ import {
 } from 'three/webgpu'
 import {
   Fn,
+  int,
+  texture,
+  varying,
+  vec2,
   abs,
   attribute,
   float,
@@ -33,14 +38,14 @@ import {
 } from 'three/tsl'
 
 import type { Clouds } from './clouds.ts'
-import type { FlattenUniform } from './flatten.ts'
-import { create_flat_nodes } from './flat_nodes.ts'
 import { effective_render_distance, get_quality_profile } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
-import { macro_surface_tint_nodes } from './terrain_tint.ts'
+import { material_emission_node, macro_surface_tint_nodes, material_color_node } from './terrain_tint.ts'
 import type { EngineQuality } from './types.ts'
 import { CHUNK_EDGE } from './voxel_data.ts'
-import type { WorldRecipe } from './world_recipe.ts'
+import { terrain_recipe, type WorldRecipe } from './world_recipe.ts'
+import type { CompiledMaterials } from './world_materials.ts'
+import { create_material_texture, MATERIAL_TEXTURE_BLOCK_SPAN } from './material_texture.ts'
 
 type FarSample = Readonly<{
   id: number
@@ -51,6 +56,7 @@ type FarSample = Readonly<{
   paired_colors: Float32Array
   roughness: Float32Array
   climate_tint: Float32Array
+  material_ids: Float32Array
 }>
 
 export type FarTerrain = Readonly<{
@@ -110,6 +116,7 @@ const create_ring_geometry = (quality: EngineQuality, far_radius: number): Buffe
   geometry.setAttribute('base_color', new BufferAttribute(new Float32Array(positions.length), 3))
   geometry.setAttribute('paired_color', new BufferAttribute(new Float32Array(positions.length), 3))
   geometry.setAttribute('roughness', new BufferAttribute(new Float32Array(side * side), 1))
+  geometry.setAttribute('material_id', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setAttribute('climate_tint', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setIndex(new BufferAttribute(new Uint32Array((side - 1) ** 2 * 6), 1).setUsage(DynamicDrawUsage))
   update_ring_indices(geometry, quality, far_radius)
@@ -118,11 +125,12 @@ const create_ring_geometry = (quality: EngineQuality, far_radius: number): Buffe
 
 const build_material = (
   quality: EngineQuality,
-  flatten: FlattenUniform,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   clouds: Clouds,
   center: UniformNode<'vec2', Vector2>,
-  seam: UniformNode<'float', number>
+  seam: UniformNode<'float', number>,
+  materials: CompiledMaterials,
+  material_texture: DataArrayTexture
 ): Material => {
   const material =
     quality === 'low'
@@ -137,17 +145,31 @@ const build_material = (
   const climate_tint = attribute('climate_tint', 'float' as const)
   const position_world = { x: local.x.add(center.x), z: local.z.add(center.y) }
   const tint = macro_surface_tint_nodes({ paired_color, roughness, climate_tint, position_world })
-  const color = tint.tint_albedo(base_color).mul(environment_light)
-  const flat = create_flat_nodes(position_world.x, position_world.z, flatten.amount, color)
-  // The seam sinks below voxels during projection; the flat endpoint has no voxel draws.
+  const face_normal = positionWorld.dFdx().cross(positionWorld.dFdy()).normalize()
+  const upward_normal = face_normal.mul(face_normal.y.greaterThanEqual(0).select(float(1), float(-1)))
+  const normal = upward_normal.abs()
+  const surface_uv = normal.x
+    .greaterThan(normal.y)
+    .and(normal.x.greaterThan(normal.z))
+    .select(
+      vec2(positionWorld.y, positionWorld.z.negate()),
+      normal.y
+        .greaterThanEqual(normal.z)
+        .select(vec2(positionWorld.x, positionWorld.z.negate()), vec2(positionWorld.x, positionWorld.y.negate()))
+    )
+  // Material identity is flat per triangle: interpolating IDs would sample unrelated atlas layers.
+  const material_id = varying(attribute('material_id', 'float' as const)).setInterpolation('flat')
+  const detail = texture(material_texture, surface_uv.div(MATERIAL_TEXTURE_BLOCK_SPAN)).depth(int(material_id)).rgb
+  const authored_color = material_color_node(materials, material_id.toUint()).max(vec3(1e-4))
+  const color = tint.tint_albedo(base_color.mul(detail.div(authored_color))).mul(environment_light)
   const { horizon_step } = get_quality_profile(quality).chunks
   const seam_band = smoothstep(seam, seam.add(float(horizon_step * 2)), max(abs(local.x), abs(local.z)))
   const terrain_y = local.y.sub(float(1).sub(seam_band).mul(8))
-  material.positionNode = vec3(local.x, mix(terrain_y, float(0), flatten.amount), local.z)
-  const face_normal = positionWorld.dFdx().cross(positionWorld.dFdy()).normalize()
-  const upward_normal = face_normal.mul(face_normal.y.greaterThanEqual(0).select(float(1), float(-1)))
-  material.normalNode = transformNormalToView(mix(upward_normal, vec3(0, 1, 0), flatten.amount).normalize())
-  material.colorNode = flat.color
+  material.positionNode = vec3(local.x, terrain_y, local.z)
+  material.normalNode = transformNormalToView(upward_normal)
+  // NodeMaterial consumes emissiveNode for Basic too; Three types declare it on Standard only.
+  ;(material as MeshStandardNodeMaterial).emissiveNode = material_emission_node(materials, material_id.toUint())
+  material.colorNode = color
   if (quality !== 'low')
     material.receivedShadowNode = Fn((args: readonly [Node<'float'>], _builder: NodeBuilder) =>
       args[0].mul(clouds.shadow_at(vec3(position_world.x, 0, position_world.z).xz, local.y))
@@ -159,16 +181,16 @@ const build_material = (
 export const create_far_terrain = ({
   scene,
   quality,
-  flatten,
   world,
+  materials,
   sun_direction,
   clouds,
   initial_focus = [0, 0],
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
-  flatten: FlattenUniform
   world: WorldRecipe
+  materials: CompiledMaterials
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction']
   clouds: Clouds
   initial_focus?: readonly [number, number]
@@ -180,7 +202,7 @@ export const create_far_terrain = ({
     high: uniform(new Vector2()),
   })
   const tier_radius = (tier: EngineQuality): number =>
-    flatten.flattened() ? 0 : effective_render_distance(get_quality_profile(tier).chunks.far_radius, render_distance)
+    effective_render_distance(get_quality_profile(tier).chunks.far_radius, render_distance)
   let render_distance: number | null = null
   const applied_radii = new Map<EngineQuality, number>()
   const seams = Object.freeze({
@@ -188,13 +210,17 @@ export const create_far_terrain = ({
     medium: uniform(seam_radius(tier_radius('medium'))),
     high: uniform(seam_radius(tier_radius('high'))),
   })
+  const textures = new Map<number, DataArrayTexture>()
   const meshes = Object.freeze(
     Object.fromEntries(
       (['low', 'medium', 'high'] as const).map((tier) => {
         applied_radii.set(tier, tier_radius(tier))
+        const size = get_quality_profile(tier).terrain.texture_size
+        const atlas = textures.get(size) ?? create_material_texture(materials, size)
+        textures.set(size, atlas)
         const mesh = new Mesh(
           create_ring_geometry(tier, tier_radius(tier)),
-          build_material(tier, flatten, sun_direction, clouds, centers[tier], seams[tier])
+          build_material(tier, sun_direction, clouds, centers[tier], seams[tier], materials, atlas)
         )
         mesh.frustumCulled = false
         mesh.matrixAutoUpdate = false
@@ -259,6 +285,9 @@ export const create_far_terrain = ({
       const climate_tint = mesh.geometry.getAttribute('climate_tint') as BufferAttribute
       ;(climate_tint.array as Float32Array).set(data.climate_tint)
       climate_tint.needsUpdate = true
+      const material_ids = mesh.geometry.getAttribute('material_id') as BufferAttribute
+      ;(material_ids.array as Float32Array).set(data.material_ids)
+      material_ids.needsUpdate = true
       centers[data.quality].value.set(data.center[0], data.center[1])
       mesh.position.set(data.center[0], 0, data.center[1])
       mesh.updateMatrix()
@@ -276,7 +305,7 @@ export const create_far_terrain = ({
     console.error('[engine] far-terrain worker failed.', event.error)
     in_flight_id = null
   })
-  worker.postMessage({ type: 'initialize', world })
+  worker.postMessage({ type: 'initialize', world: terrain_recipe(world) })
   request()
 
   return Object.freeze({
@@ -304,6 +333,7 @@ export const create_far_terrain = ({
     dispose: () => {
       disposed = true
       worker.terminate()
+      textures.forEach((atlas) => atlas.dispose())
       Object.values(meshes).forEach((mesh) => {
         scene.remove(mesh)
         mesh.geometry.dispose()

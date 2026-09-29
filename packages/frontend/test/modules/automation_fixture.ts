@@ -42,7 +42,7 @@ export const character = (): CharacterRow => ({
 })
 export const key = 'nauvis:97:97'
 export const automation_fixture = (): AppState => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: false, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: false, render_distance: null })
   const state: AppState = {
     ...base,
     session: {

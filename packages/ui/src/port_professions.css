@@ -1,0 +1,555 @@
+.aui-job-emblem {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 36px;
+  border: 1px solid #9c896452;
+  border-radius: 5px;
+  background: #171e24 url('./assets/panel_grain.webp');
+  color: #b7a681;
+  box-shadow:
+    inset 0 2px 5px #0007,
+    inset 0 -1px #ddcfa626;
+}
+.aui-job-emblem svg {
+  width: 25px;
+  height: 25px;
+  filter: drop-shadow(0 1px 0 #000) drop-shadow(0 -1px 0 #d4c5a533);
+}
+.aui-forge-port .chr-forge {
+  height: 100%;
+  min-height: 0;
+}
+.aui-forge-port .chr-forge__layout {
+  height: 100%;
+  min-height: 0;
+}
+.aui-forge-port [data-runeforge-history] {
+  min-height: 100px;
+}
+.aui-forge-port [data-rune-effect] {
+  color: #f0c574;
+  font-size: 15px;
+  font-weight: 700;
+}
+.aui-forge-port .chr-forge__pool {
+  gap: 6px;
+}
+.aui-forge-port button[role='tab'] {
+  background: #24313e;
+  border: 1px solid #76869844;
+  border-radius: 5px;
+  color: #ccd9e4;
+}
+.aui-forge-port button[role='tab'][aria-selected='true'] {
+  background: #594b33;
+  color: #ffe1a0;
+}
+
+.aui-forge-port .chr-forge__head {
+  display: none;
+}
+.aui-forge-port .chr-forge__panels {
+  height: 100%;
+  min-height: 0;
+  gap: 12px;
+}
+.aui-forge-port .chr-forge__panel {
+  background: #191e25;
+  border: 1px solid #8192a32e;
+  border-radius: 6px;
+}
+.aui-forge-port .chr-forge__ptitle {
+  padding: 9px;
+  font-size: 11px;
+  color: #d5c29c;
+  background: #232830;
+}
+.aui-forge-port .chr-forge__inventory > div:nth-child(2) > button {
+  padding: 6px 14px;
+  border: 1px solid #8e9baa30;
+  border-radius: 5px;
+  background: #23313e;
+  min-height: 40px;
+  color: #c5d2de;
+}
+
+.aui-job-emblem {
+  background-blend-mode: soft-light;
+  background-size: 160px;
+}
+.aui-forge-port .chr-forge__inventory > div:nth-child(2) > .aui-button[aria-pressed='true'] {
+  background: #675235;
+  border-color: #c3a26a;
+  color: #ffe3b1;
+}
+.aui-jobs-port .jobs {
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+}
+.aui-jobs-port .jobs__list {
+  padding: 8px;
+  gap: 10px;
+  overflow-y: auto;
+}
+.aui-jobs-port .jobs__list-head {
+  margin: 0;
+  font-size: 10px;
+}
+.aui-jobs-port .jobs__list-entry {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+.aui-jobs-port .jobs__alternate-slot:empty {
+  display: none;
+}
+.aui-jobs-port .jobs__alternate-slot:not(:empty) {
+  grid-row: 2;
+}
+.aui-jobs-port .jobs__list-row {
+  gap: 8px;
+  min-height: 48px;
+  padding: 5px;
+}
+.aui-jobs-port .jobs__list-name {
+  font-size: 12px;
+}
+.aui-jobs-port .jobs__detail {
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
+}
+.aui-jobs-port .jobs__detail-head {
+  padding: 0;
+  min-height: 40px;
+  gap: 8px;
+}
+.aui-jobs-port .jobs__detail-sub {
+  font-size: 10px;
+}
+.aui-jobs-port .jobs__icon {
+  width: 34px;
+  height: 36px;
+}
+.aui-jobs-port .jobs__xp {
+  height: 12px;
+  flex: none;
+}
+.aui-jobs-port .jobs__browse {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  padding: 0;
+}
+.aui-jobs-port .jobs__gather-section {
+  flex: 0 1 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 100px;
+}
+.aui-jobs-port .jobs__recipes-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 6px;
+}
+.aui-jobs-port .jobs__section-head {
+  flex: none;
+  margin: 0;
+  padding: 4px 0;
+  font-size: 11px;
+  min-height: 24px;
+}
+.aui-jobs-port .jobs__table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  column-width: auto;
+}
+.aui-jobs-port .jobs__table-head,
+.aui-jobs-port .jobs__table-row {
+  display: grid;
+  grid-template-columns: 32px 55px minmax(100px, 1fr) 60px 44px;
+  grid-column: auto;
+  gap: 6px;
+  padding: 6px;
+  font-size: 11px;
+  min-height: 40px;
+}
+.aui-jobs-port .jobs__table-head {
+  flex: none;
+  min-height: 30px;
+  padding-block: 4px;
+}
+.aui-jobs-port .jobs__gather-rows {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.aui-jobs-port .jobs__col-name {
+  min-width: 0;
+}
+.aui-jobs-port .jobs__col-name img {
+  width: 28px;
+  height: 28px;
+}
+.aui-jobs-port .jobs__recipes.jobs__recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-auto-rows: 72px;
+  gap: 6px;
+  align-content: start;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  min-height: 0;
+}
+.aui-jobs-port .jobs__recipe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 7px;
+  border: 1px solid #71849633;
+  border-radius: 5px;
+  background: #202d39;
+  box-shadow: inset 0 1px #e7dcc30a;
+}
+.aui-jobs-port .jobs__recipe:hover {
+  background: #2b3b49;
+}
+.aui-jobs-port .jobs__recipe.is-selected {
+  border-color: #ceb27b;
+  background: #4c4433;
+}
+.aui-jobs-port .jobs__recipe.is-locked {
+  opacity: 0.65;
+}
+.aui-jobs-port .jobs__recipe-name {
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.aui-jobs-port .jobs__recipe-meta-row {
+  margin-top: 5px;
+  gap: 5px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.aui-jobs-port .jobs__recipe-meta {
+  font-size: 9px;
+  line-height: 1.2;
+}
+.aui-jobs-port .jobs__recipe-progress {
+  position: static;
+  font-size: 8px;
+  padding: 1px 4px;
+}
+.aui-jobs-port .jobs__recipe-id {
+  min-width: 0;
+  flex: 1;
+}
+.aui-jobs-port .jobs__recipe > img {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-jobs-port .jobs {
+    grid-template-columns: 145px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .aui-jobs-port .jobs__list {
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 4px;
+    gap: 6px;
+  }
+  .aui-jobs-port .jobs__list-row {
+    min-height: 44px;
+    padding: 4px;
+    gap: 5px;
+  }
+  .aui-jobs-port .jobs__list-name {
+    font-size: 11px;
+  }
+  .aui-jobs-port .jobs__detail {
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  .aui-jobs-port .jobs__detail-head {
+    min-height: 27px;
+    height: 27px;
+    padding: 0;
+  }
+  .aui-jobs-port .jobs__detail-sub,
+  .aui-jobs-port .jobs__icon {
+    display: none;
+  }
+  .aui-jobs-port .jobs__detail-name {
+    font-size: 13px;
+  }
+  .aui-jobs-port .jobs__detail-head > .flex {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .aui-jobs-port .jobs__detail-head > .flex .text-sm {
+    font-size: 11px;
+  }
+  .aui-jobs-port .jobs__xp {
+    height: 8px;
+  }
+  .aui-jobs-port .jobs__xp-num {
+    font-size: 7px;
+    line-height: 8px;
+  }
+  .aui-jobs-port .jobs__browse {
+    gap: 5px;
+  }
+  .aui-jobs-port .jobs__section-head {
+    min-height: 16px;
+    height: 16px;
+    padding: 0;
+    font-size: 10px;
+  }
+  .aui-jobs-port .jobs__gather-section {
+    flex: 0 0 68px;
+    min-height: 68px;
+    gap: 3px;
+  }
+  .aui-jobs-port .jobs__table-head {
+    display: none;
+  }
+  .aui-jobs-port .jobs__recipes-section {
+    gap: 4px;
+  }
+  .aui-jobs-port .jobs__recipes.jobs__recipe-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(3, 68px);
+    grid-auto-columns: calc((100% - 18px) / 4);
+    grid-auto-rows: auto;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .aui-jobs-port .jobs__browse:has(.jobs__gather-section) .jobs__recipe-grid {
+    grid-template-rows: repeat(2, 68px);
+  }
+  .aui-jobs-port .jobs__recipe {
+    padding: 5px;
+    gap: 6px;
+  }
+  .aui-jobs-port .jobs__recipe-name {
+    font-size: 11px;
+  }
+  .aui-jobs-port .jobs__recipe-meta {
+    font-size: 8px;
+  }
+  .aui-jobs-port .jobs__recipe-meta-row {
+    gap: 3px;
+    margin-top: 3px;
+  }
+  .aui-jobs-port .jobs__recipe-progress {
+    font-size: 7px;
+    padding: 0 3px;
+  }
+  .aui-jobs-port .jobs__recipe > img {
+    width: 28px;
+    height: 28px;
+  }
+  .aui-jobs-port .jobs__craft-head {
+    padding-right: 30px;
+    font-size: 11px;
+  }
+}
+.aui-jobs-port .jobs__list-lvl {
+  border: 0;
+  background: none;
+  color: #e0cda9;
+  font-size: 10px;
+  padding: 0;
+  min-width: 0;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-jobs-port .jobs__recipes.jobs__recipe-grid {
+    height: 100%;
+    flex: 1;
+    grid-template-rows: repeat(3, minmax(44px, 1fr));
+    align-content: stretch;
+  }
+  .aui-jobs-port .jobs__browse:has(.jobs__gather-section) .jobs__recipe-grid {
+    grid-template-rows: repeat(2, minmax(44px, 1fr));
+  }
+}
+
+.game-character-window--jobs {
+  width: min(1540px, calc(100cqw - 24px));
+  height: min(780px, calc(100cqh - 24px));
+}
+.aui-jobs-port .jobs__detail {
+  container: jobs-detail / inline-size;
+}
+
+/* Browsing keeps its full width; recipe inspection uses the shared movable item window. */
+.aui-jobs-port .jobs__gather-rows {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  align-content: start;
+  overflow-y: auto;
+}
+.aui-jobs-port .jobs__table-head {
+  display: none;
+}
+.aui-jobs-port .jobs__table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto;
+  height: auto;
+  gap: 4px 10px;
+  min-height: 76px;
+  padding: 8px;
+  border: 1px solid #ffffff12;
+  border-radius: 6px;
+  background: #20252d;
+}
+.aui-jobs-port .jobs__col-name {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.aui-jobs-port .jobs__col-name img {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+.aui-jobs-port .jobs__col-tier {
+  display: none;
+}
+.aui-jobs-port .jobs__col-req,
+.aui-jobs-port .jobs__col-yield,
+.aui-jobs-port .jobs__col-xp {
+  grid-row: 2;
+  font-size: 10px;
+}
+.aui-jobs-port .jobs__list-sub {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  text-transform: none;
+}
+.aui-jobs-port .jobs__list-lvl {
+  flex: none;
+  white-space: nowrap;
+}
+.aui-jobs-port .jobs__recipe-grid .jobs__recipe {
+  min-height: 58px;
+  height: auto;
+}
+@container aui-window (max-width: 650px) {
+  .aui-jobs-port .jobs__gather-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.aui-jobs-port .jobs__gather-section {
+  flex-basis: 270px;
+}
+@container aui-window (max-width:1100px) {
+  .aui-jobs-port .jobs__gather-rows {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container aui-window (max-width: 1100px) {
+  .aui-forge-port .chr-forge {
+    padding: 6px;
+  }
+  .aui-forge-port .chr-forge__panels {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    flex: 1;
+  }
+  .aui-forge-port .chr-forge__panel {
+    min-width: 0;
+  }
+  .aui-forge-port .chr-forge__inventory {
+    grid-column: auto;
+    grid-row: auto;
+    max-height: none;
+  }
+  .aui-forge-port .chr-forge__workspace {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    gap: 8px;
+    overflow-y: auto;
+  }
+  .aui-forge-port .chr-forge__workspace > div {
+    flex: none;
+    gap: 8px;
+    overflow: visible;
+  }
+  .aui-forge-port .chr-forge__workspace > div > div {
+    gap: 4px;
+  }
+  .aui-forge-port .chr-forge__slot {
+    width: min(80px, 40%);
+    height: 90px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .aui-forge-port .chr-forge__slot img {
+    width: 36px;
+    height: 36px;
+  }
+  .aui-forge-port .chr-forge__pool {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 4px;
+  }
+  .aui-forge-port .chr-forge__inspection > div:last-child,
+  .aui-forge-port .chr-forge__inventory > div:last-child {
+    padding: 6px;
+    overflow-y: auto;
+  }
+  .aui-forge-port [data-runeforge-history] {
+    flex: none;
+    min-height: 100px;
+  }
+  .aui-forge-port .chr-forge__inventory > div:nth-child(2) {
+    flex-wrap: wrap;
+    padding: 4px;
+  }
+  .aui-forge-port .chr-forge__inventory > div:nth-child(2) > button {
+    padding: 4px 6px;
+    min-height: 36px;
+  }
+  .aui-jobs-port .jobs {
+    grid-template-columns: minmax(110px, 20%) minmax(0, 1fr);
+  }
+  .aui-jobs-port .jobs__list {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}

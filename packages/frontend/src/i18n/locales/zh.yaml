@@ -2,8 +2,7 @@
 # © 2026 Sceat — All rights reserved. See LICENSE.
 
 title: WebGPU不可用
-body: 完整世界需要WebGPU。当前已改用轻量网格。
-fatal: 此浏览器无法创建WebGPU或WebGL图形上下文。
+body: '世界需要 WebGPU 和安全连接（HTTPS 或 localhost）。请使用支持的浏览器打开。'
 engine_recovery: 世界已停止加载或渲染。请重新加载后再试。
 engine_reload: 重新加载
 engine_minimum_title: '已降低画质'
@@ -11,18 +10,10 @@ engine_minimum: '无法加载或渲染世界。为减轻电脑负担，画质和
 engine_continue: '继续'
 world_unavailable_title: 世界不可用
 world_unavailable: 此世界尚未配置地形生成方案。
-mobile_unavailable_label: 移动端访问
-mobile_unavailable_title: AresRPG尚不支持移动设备
-mobile_unavailable_body: 我们正在打造专属移动端体验。目前请使用桌面浏览器进入世界。
-mobile_unavailable_status: 桌面版已上线
-chrome: Chrome或Edge：更新浏览器，在“设置→系统”中启用“使用图形加速（如果可用）”，然后重新启动。
-other: 启用硬件加速，更新浏览器和显卡驱动，然后重启浏览器。
-continue: 使用网格继续
 quality: 画质
 low: 低
 medium: 中
 high: 高
-flat_mode: 平面模式
 identity_connected: 身份已连接
 sign_in_to_play: 登录开始游戏
 loading_universe: 正在加载宇宙
@@ -30,7 +21,8 @@ continue_google: 使用Google继续
 wallet_session_ended: 钱包会话已结束。请重新登录。
 connect_wallet: 连接钱包
 no_wallet: 未安装兼容钱包
-watch_world: 观看实时世界
+play_demo: '试玩演示'
+replay_demo: '再次试玩演示'
 sign_in: 登录开始游戏
 drag_hint: 拖动平移 · 滚动缩放
 navigation: 导航
@@ -79,8 +71,6 @@ party_member_unavailable_toast: 该角色已加入队伍。
 fight_turn_already_forced_toast: 已有其他人强制结束此回合。
 fight_placement_unavailable_toast: 该起始格不可用。请选择其他空格。
 network_testnet: 测试网
-page_pending_title: 此页面正在重建
-page_pending_body: 恢复期间，入口仍会保留。
 welcome_title: 欢迎来到AresRPG
 welcome_body: AresRPG是一款完全链上的MMORPG，经济由玩家驱动。创建首个角色，进入世界并挑战怪物。
 welcome_need_sui: 游戏需要少量SUI：首个角色价格为{{price}} SUI，余额中还需保留至少{{fee}} SUI支付费用。向下方地址存入SUI即可开始。
@@ -191,6 +181,7 @@ party_panel:
   run_to_position_wrong_world: 链接中的位置不在当前世界。
   run_to_wrong_world: 该队员不在当前世界。
   run_to_unavailable: 无法获取该队员的链上位置。
+  run_to_blocked: '未找到可步行的路线，已停止移动。'
 trade_panel:
   kares: 提供的KARES
   close: 关闭
@@ -232,6 +223,7 @@ trade_panel:
 transaction_unknown_toast: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
 transaction_recovered_toast: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
 world_hud:
+  spawn_welcome: '欢迎，冒险者！本游戏正处于抢先体验阶段，努力生存，享受这段冒险吧。'
   compass_label: 指南针
   zone: 区域
   unsearched: 未探索
@@ -260,6 +252,8 @@ world_hud:
   dungeon_portal: 地下城传送门
   dungeon_city: '{{city}}城'
   dungeon_press_enter: 进入
+  dungeon_talk: '交谈'
+  dungeon_guard_requires_key: '没有{{key}}，我不能让你通过。'
   dungeon_entry_body: 使用地下城钥匙进入此传送门的私人准备大厅。
   dungeon_required_key: 所需钥匙
   dungeon_enter: 进入地下城
@@ -350,6 +344,21 @@ world_hud:
   resource_face_protector: 按{{key}}迎战
   zone_never_arrived: 探索已执行，但世界未显示结果，读取层可能仍有延迟
 demo_page:
+  asset_demo_city: 演示城市
+  asset_house_1: 联排住宅 A
+  asset_house_2: 联排住宅 B
+  asset_covered_bridge: 有顶街桥
+  asset_gate_rampart: 城门与瞭望塔
+  asset_catacomb_entry: 地下墓穴入口
+  asset_gallery: 场景资产
+  asset_house: 工坊小屋
+  asset_banner: 旗帜
+  asset_lantern: 灯笼
+  asset_fence: 栅栏
+  asset_rope: 绳索
+  asset_chain: 锁链
+  asset_campfire: 篝火
+  asset_hint: 左键拖动平移 · 右键拖动环绕 · 滚动缩放
   title: 渲染实验室
   world_lab: 世界实验室
   fight_lab: 战斗实验室
@@ -393,7 +402,25 @@ demo_page:
   spawn_group: 生成群体
   clear: 清空
   resources: 资源
-  resources_missing: 资源渲染尚未恢复，已编写的资源列表仍保留在种子数据中。
+  hillaire_title: 'Hillaire 大气'
+  hillaire_preview: '仅实时预览。重置会恢复当前世界的默认值。'
+  hillaire_quality: '选择中等或高画质以调整 Hillaire。'
+  hillaire_haze: '远景薄雾'
+  hillaire_ground: '地面雾 · 高画质'
+  hillaire_sky: '天空光照'
+  hillaire_density: '薄雾密度'
+  hillaire_max_opacity: '最大不透明度'
+  hillaire_near: '薄雾起始距离（米）'
+  hillaire_full: '薄雾完全生效距离（米）'
+  hillaire_tint: '蓝色色调'
+  hillaire_height_density: '地面雾密度'
+  hillaire_height_max: '地面雾最大不透明度'
+  hillaire_height_falloff: '高度衰减（米）'
+  hillaire_horizon_cap: '地平线亮度'
+  hillaire_exposure: '天空曝光'
+  hillaire_mie_scattering: '日光薄雾强度'
+  hillaire_mie_g: '日光薄雾方向性'
+  hillaire_reset: '重置大气'
   control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
   back: 返回应用
 marketplace_page:
@@ -497,7 +524,6 @@ mastery_page:
   daily_title: 选择今日地下城任务
   daily_lead: 选择世界后，你将获得一个需要寻找并完成的地下城任务。
   unknown_dungeon: 未知地下城
-  quest_reward: 获得{{points}}精通点
   quest_objective_before: 找到并完成地下城
   quest_objective_after: 以领取精通点。
   completed: 已完成验证
@@ -620,34 +646,29 @@ tutorial:
   back: 上一步
   next: 下一步
   finish: 完成
-  fight_enter: 进入战斗
   reset_title: 教程
-  reset_hint: 下次访问各页面时重新显示介绍。
+  reset_hint: '下次打开各项功能时重新显示提示。'
   reset_action: 重置
-  world_compass_title: 世界与共享区域
-  world_compass_body: AresRPG有多个世界，随成长逐步解锁。每个世界分为包含怪物、资源和地下城的区域。任何人都能探索区域，发现结果会与所有玩家共享。
-  world_hud_title: 生命与快捷栏
-  world_hud_body: 此界面显示生命值和快捷物品栏。战斗开始后，同一区域会变为技能栏。
-  world_fps_title: 世界控制选项
-  world_fps_body: 地形由已发布数据确定性生成。Sui保存世界及权威X/Z坐标，高度在本地由地形计算，因此平面模式只改变同一空间的显示方式。你也可以调整画质，并将世界战斗限制为队伍成员。
-  world_character_title: 世界中的玩家
-  world_character_body: 这是你当前使用的角色。右键点击附近其他角色，即可查看可用的玩家互动。
+  world_compass_title: '寻找方向'
+  world_compass_body: '罗盘会指向附近的城镇。按 M 或点击地图图标打开地图。'
+  world_hud_title: '你的操作栏'
+  world_hud_body: '点击图标打开背包、法术和职业。战斗时，这里会变成法术栏。'
   world_character_tabs_title: 操控多个角色
-  world_character_tabs_body: 你最多可以拥有六个角色。邀请自己的其他角色入队并开启队伍跟随，他们便会随你移动，并在抵达后自动加入符合条件的世界战斗。
+  world_character_tabs_body: '在这里切换角色。右键点击角色可邀请其加入队伍。'
   fight_title: 你的首场链上战斗
-  fight_body: 战斗采用回合制。选择移动和技能，所有操作会一起准备。结束回合会将整个回合作为一笔Sui交易提交，并计算后续怪物回合，直到下一位玩家能够行动。所有权威战斗状态均在Sui上结算。获胜后，最后一笔Sui交易使用链上随机数抽取共享战利品，将每份奖励放入对应玩家的背包。
+  fight_body: '选择法术或点击格子移动。结束回合会一次提交所有行动。'
   equipment_gear_title: 装备
-  equipment_gear_body: 装备中的物品属于当前角色。将装备拖到人偶上，检查加成，然后一并确认更改。
+  equipment_gear_body: '点击物品，选择装备，然后确认更改。'
   equipment_inventory_title: 共享背包
-  equipment_inventory_body: 此账户的所有角色共享背包。选择上方另一个角色，即可让其装备相同的可用物品。
+  equipment_inventory_body: '角色共享物品。悬停查看属性，点击查看详情和操作。'
   stats_title: 属性
-  stats_body: 分配属性点让角色更强。体力增加生命，智慧提高经验收益及AP/MP损失抗性，幸运增强水系伤害和掉落概率，敏捷增强风系伤害、暴击、牵制与脱离牵制能力。
+  stats_body: '分配点数，检查加成，然后确认。'
   spells_title: 技能
-  spells_body: 角色成长会解锁新技能。升级获得的技能点可以在这里用于强化已解锁技能。
+  spells_body: '选择法术以比较各等级效果。使用法术点数进行升级。'
   jobs_title: 专业
-  jobs_body: 在这里查看采集和制作进度、查阅配方并制作物品。如果有多个角色，可以在设置中将此页面锁定到专属工匠。
+  jobs_body: '选择职业和配方。点击材料查看详情，备齐后即可制作。'
   runeforge_title: 符文锻造
-  runeforge_body: 对应制作专业达到{{level}}级后，可用符文强化装备。分解物品获得符文，然后在这里使用。
+  runeforge_body: '职业达到 {{level}} 级后，可用符文强化装备。粉碎不需要的装备可获得符文。'
 admin_page:
   kicker: 发布者
   title: 发布游戏内容
@@ -910,6 +931,8 @@ fight_hud:
   forfeit_body: '{name}将失去所有剩余生命并退出此战斗。'
   confirm_forfeit: 确认认输
   unit_turns: 回合
+  chat_expand: 打开聊天
+  chat_collapse: 收起聊天
   chat_title: 聊天
   chat_resize: 调整聊天窗口大小
   chat_tab_general: 综合
@@ -988,25 +1011,28 @@ wallet_legacy:
   add_funds_desc: 选择支付方式，SUI将直接发送到钱包。
   method_paypal: PayPal
   method_paypal_desc: 使用PayPal账户支付
-  method_card: 信用卡/借记卡
-  method_card_desc: Visa、Mastercard
+  method_card: '银行卡 / PayPal'
+  method_card_desc: '通过支付服务商购买 SUI'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: 使用Face ID/Touch ID支付
   method_google_pay: Google Pay
   method_google_pay_desc: 使用Google账户支付
   method_bank: 银行转账
   method_bank_desc: SEPA（欧盟）或ACH（美国）
-  method_have_sui: 我已有SUI
+  method_have_sui: '直接充值'
   method_have_sui_desc: 从其他钱包或交易所发送
   paypal_note: 通过MoonPay支持美国、英国和欧洲大部分地区
   card_note: 选择下方提供商，均支持Visa和Mastercard
   bank_note: 费用最低（约1%）。欧洲使用SEPA，美国使用ACH。
   steps_paypal: 1. 点击下方链接  2. 选择PayPal支付  3. 输入金额，SUI将进入钱包
-  steps_card: 选择提供商，输入卡片信息，SUI即可进入钱包。
-  method_swap: 从Solana、ETH等转入…
-  method_swap_desc: 通过Portal Bridge将资产跨链到Sui
-  swap_note: 跨链转账由Portal Bridge提供。
-  steps_swap: 打开Portal Bridge，连接两个钱包，选择Sui并完成转账。
+  steps_card: '打开服务商，选择 SUI 并使用下方的游戏钱包地址。支付方式取决于所在国家和服务商。'
+  method_swap: '跨链充值'
+  method_swap_desc: '将其他链的加密资产兑换为 SUI'
+  bridge_loading: '正在加载跨链功能…'
+  bridge_error: '无法加载跨链功能。您仍可直接向游戏钱包充值。'
+  bridge_retry: '重试'
+  swap_note: '由 LI.FI 提供支持。转账并非即时完成。重新打开跨链充值，通过历史记录查看或继续中断的转账。'
+  steps_swap: '连接来源钱包。收款目标为下方游戏钱包中的原生 SUI。签名前请核对金额、费用和预计到账时间。'
   steps_wallet: 向下方钱包地址发送SUI，几秒后即可到账。
   advanced_exchange: 高级：在交易所购买
   age_notice: 所有支付提供商均要求年满18岁。
@@ -2454,7 +2480,6 @@ automation_panel:
   collapse: 收起自动采集
 item_drop_sources:
   title: 怪物掉落
-  note: 基础掉率。实际概率随怪物等级和队伍幸运值变化。
   empty: 没有怪物掉落此物品。
   loading: 正在加载掉落信息…
   mob: 怪物
@@ -2592,6 +2617,62 @@ spell_effects:
   short_stat: '属性'
   expires_next_turn: '持续至下回合开始'
 ui:
+  multiplayer: '多人游戏'
+  nearby_fights: '附近战斗'
+  nearby_fights_empty: '附近没有已追踪的战斗'
+  run_and_join: '跑去参战'
+  equipment_comparison: '装备后的属性变化'
+  equipment_replacing: '替换 {{name}}'
+  equipment_unchanged: '属性加成不变'
+  preview_only: '交互预览 · 不会提交交易'
+  inspect_details: '查看详情'
+  design_minimap: '小地图'
+  design_party_invitation: '组队邀请'
+  design_trade_invitation: '交易邀请'
+  progression_rewards: '奖励'
+  inventory_selected_count: '已选择 {{count}} 件'
+  inventory_select: '选择'
+  inventory_deselect: '取消选择'
+  inventory_use: '使用'
+  attack: '攻击'
+  character_summary: '概览'
+  character_details: '详情'
+  allocate_points: '分配'
+  inventory_search: '搜索背包…'
+  nameplate_veteran: '老兵'
+  design_titles: '称号'
+  design_no_title: '无称号'
+  design_library: '设计工坊'
+  design_controls: '控件'
+  design_dialog: '打开对话框'
+  design_disabled: '不可用'
+  design_details: '详情'
+  design_description: '游戏共享组件。操作本地示例，查看不同状态和响应式布局。'
+  design_volume: '音量'
+  design_motion: '动画'
+  design_search: '搜索'
+  design_equipment_hint: '选择物品进行装备。点击已装备的物品可将其卸下。'
+  design_equip: '装备'
+  design_combat: '战斗'
+  design_journal: '日志与成长'
+  design_complete: '已完成'
+  design_viewport: '预览尺寸'
+  design_desktop: '桌面'
+  design_mobile: '移动设备'
+  leave_game_title: '要离开游戏吗？'
+  stay_in_game: '继续游戏'
+  leave_game_confirm: '返回主页'
+  mobile_move: '移动'
+  mobile_jump: '跳跃'
+  mobile_chat: '聊天'
+  mobile_party: '队伍'
+  mobile_confirm_action: '确认操作'
+  mobile_item_actions: '物品操作'
+  mobile_unequip: '卸下'
+  mobile_use_item: '使用 / 装备'
+  mobile_language: '语言'
+  mobile_menu: '菜单'
+  mobile_rotate: '请将设备横置以开始游戏。'
   character: 角色
   spell_action: '{{name}}，等级{{level}}，消耗{{cost}}{{unit}}'
   spell_level: 技能等级{{level}}
@@ -2604,7 +2685,6 @@ ui:
   meters: '{{count}}米'
   versus: 对战
   team_format: '{{size}}对{{size}}'
-  flat: 平面
   fps: 帧率
   north: 北
   northeast: 东北
@@ -2621,3 +2701,50 @@ ui:
   formula_chastisement: G = min(Δ生命 × S, 上限 × S − 本回合G) · 怪物S = 1，玩家S = ½
   formula_drop: 掉率 = min(100%, 基础值 × 怪物等级段系数 × (600 + 队伍平均幸运) / 600)
   formula_xp: 经验 = 基础经验池 × 队伍系数 × 等级平衡 × 玩家等级 / 队伍总等级 × (100 + 智慧) / 100
+
+menu_subtitle: 'AresRPG 是一款基于 Sui 的全链回合制 MMORPG。'
+menu_start: '按 Enter 开始'
+menu_start_touch: '轻触开始'
+menu_music_on: '开启音乐'
+menu_music_off: '关闭音乐'
+
+menu_build: '版本'
+
+world_loading_assets: '正在加载场景…'
+world_loading_graphics: '正在准备图形…'
+world_loading_terrain: '正在构建世界…'
+world_loading_sky: '正在准备天空和光照…'
+world_loading_finishing: '正在准备第一帧…'
+
+adventure:
+  goblins_title: '清理道路'
+  goblins_objective: '靠近哥布林并按F。'
+  speak_title: '桥上的陌生人'
+  speak_objective: '找到桥上的Sceat，按F交谈。'
+  invite_title: '携手同行'
+  invite_objective: '右键点击Sceat并选择邀请入队。触屏玩家可点击邀请提示。'
+  switch_title: '操控你的夜刃'
+  switch_objective: '选择Sceat的角色标签。你能操控两位英雄，各有不同的法术和装备。'
+  follow_title: '跟随队长'
+  follow_objective: '选择队长Senshi，在队伍面板开启跟随队长。'
+  guards_title: '皇家卫兵'
+  guards_objective: '过桥击败皇家卫兵。用夜刃布置陷阱，再将敌人推入其中。'
+  boss_title: '哥巴多克的遗物'
+  boss_objective: '挑战哥布林之王哥巴多克，寻找他的遗物。他远比卫兵强大。'
+  dialogue_greeting: '你是新来的吧！我是Sceat。'
+  dialogue_danger: '这个世界非常危险，独自一人走不远。我们一起冒险吧。'
+  dialogue_relic: '哥布林之王哥巴多克守着一件强大的遗物。帮我突破卫兵，我们去找他。'
+  journal: '苔木林冒险'
+  chapter: '哥布林之王'
+  speak_action: '与Sceat交谈'
+  invite_action: '邀请Sceat'
+  rebirth_title: '你因伤重而亡……'
+  rebirth_body: '是时候重获新生了。点击下方按钮登录，进入真正的游戏。'
+  rebirth_login: '登录并进入真正的游戏'
+  goblins_body: '苔木林看起来很安静，直到哥布林把你当成下一顿晚餐。通往出口的路被它们的营地挡住了。靠近这群敌人，开始战斗吧。用行动点施放法术，也要规划好移动位置，每一回合都很重要。获胜后，你将升到200级，并获得第一批装备。'
+  speak_body: '哥布林倒下了，但森林的危险远未结束。一位名叫Sceat的亚津一直在桥上观战，看起来并不想独自过桥。去和他聊聊吧。他正在寻找哥布林王戈巴多克持有的遗物，需要一位懂得还击的伙伴。'
+  invite_body: 'Sceat有个计划。可惜，这个计划是去找森林里最大的哥布林。两位各有所长的冒险者，总比孤身一人更有胜算。右键点击Sceat，邀请他加入队伍。在这段冒险中，你将控制两位英雄，亲自决定如何配合他们的能力。'
+  switch_body: '多一个伙伴，不只是多一条生命值。Sceat是亚津，擅长用陷阱和站位解决问题；森士则更喜欢直接用力量。在角色切换器中选择他，接管他的行动。每位英雄都有自己的法术和装备，选择谁行动与选择什么法术同样重要。'
+  follow_body: '队伍已经组好了，接下来要一起行动。选择森士作为队长，然后在队伍控制中开启跟随队长。探索时Sceat会跟着你，不必把同一条路走两遍。进入战斗后，你仍然需要亲自选择每位英雄的移动和法术。'
+  guards_body: '戈巴多克不会让自己的门口无人把守。卫兵已经准备好迎战，这次你需要协调两位英雄。挑战前先检查新装备，把森士的力量与Sceat的陷阱结合起来。有时，把敌人引到有利的位置，比一味追着它打更容易获胜。'
+  boss_body: '卫兵后方，戈巴多克正守着Sceat寻找的遗物。哥布林王可不是靠输掉战斗赢得这个称号的。你们已经学会并肩作战，但眼前的对手非同寻常。带上伙伴靠近他，看看这份新结成的同盟究竟能走多远。'

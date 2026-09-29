@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { type ReactNode } from 'react'
 import { Gamepad2, WalletCards } from 'lucide-react'
 
@@ -59,8 +60,9 @@ export const StakingContent = ({
             <span className="text-cyan">{format_amount(stats.accrued_sui, 3)} SUI</span>
           </div>
         </div>
-        <button
+        <Button
           className="staking-claim"
+          tone="primary"
           type="button"
           disabled={locked || stats.accrued_kares + stats.accrued_sui === 0n}
           onClick={() =>
@@ -74,7 +76,7 @@ export const StakingContent = ({
           }
         >
           {copy.claim_rewards}
-        </button>
+        </Button>
       </section>
       <StakingForm copy={copy} balance={balance} locked={locked} snapshot={snapshot} dispatch={dispatch} />
     </div>
@@ -101,7 +103,7 @@ export const StakingAccount = ({
   wallet_control?: ReactNode
 }>) => (
   <section
-    className={`staking-account ${external ? 'staking-external' : ''}`}
+    className={`aui-panel staking-account ${external ? 'staking-external' : ''}`}
     data-staking-account={state.address ?? ''}
   >
     <header className="staking-account-header">

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { IconButton, MinimapView } from '@aresrpg/ui'
+import { Map } from 'lucide-react'
 import { Text } from '../../i18n/Text.tsx'
 // MINIMAP — the top-right 2D map. North-up (the real-map convention); only the centered player
 // arrow rotates with the camera. Terrain is the analytic relief from minimap_render; the overlay
@@ -22,7 +24,7 @@ import { titleize } from '../../content/catalog.ts'
 import { city_at_position, world_terrain } from '../../content/worlds.ts'
 import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
-import { useAppStore } from '../../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
 
 import { camera_heading } from './compass_math.ts'
@@ -87,7 +89,7 @@ export const MinimapReadout = ({
   </div>
 )
 
-export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: AppCopy; terrain?: unknown }>) => {
   const pose = useWorldPose()
   const world_state = useAppStore(({ world }) => world)
   const world_name = useAppStore(
@@ -96,29 +98,33 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
   const grid_ref = useRef<Readonly<{ key: string; world: CompiledWorld; grid: ReliefGrid }> | null>(null)
   const [resource_icons] = useState(create_map_resource_icons)
-  const [map_open, set_map_open] = useState(false)
+  const map_open = useAppStore(({ navigation }) => navigation.dialog === 'world_map')
+  const set_map_open = (open: boolean): void => dispatch_app({ type: 'dialog/open', dialog: open ? 'world_map' : null })
   const text = copy_text(copy.world_hud)
 
   useEffect(() => {
     const toggle = (event: Readonly<KeyboardEvent>): void => {
       if (!toggles_world_map(event)) return
       event.preventDefault()
-      set_map_open((open) => !open)
+      dispatch_app({
+        type: 'dialog/open',
+        dialog: read_app_state().navigation.dialog === 'world_map' ? null : 'world_map',
+      })
     }
     globalThis.addEventListener('keydown', toggle)
     return () => globalThis.removeEventListener('keydown', toggle)
   }, [])
 
   const compiled: CompiledWorld | null = useMemo(() => {
-    const terrain = world_terrain(world_name)
+    const terrain = supplied_terrain ?? world_terrain(world_name)
     if (!terrain) return null
     try {
-      return compile_runtime_world_recipe(parse_world_recipe(terrain))
+      return compile_runtime_world_recipe(terrain)
     } catch (error) {
       console.error('The minimap could not compile the world recipe.', error)
       return null
     }
-  }, [world_name])
+  }, [supplied_terrain, world_name])
   const cities = useMemo(() => (compiled ? city_map_overlays(compiled) : Object.freeze([])), [compiled])
 
   useEffect(() => {
@@ -158,30 +164,18 @@ export const Minimap = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   return (
     <div className="gw-minimap" data-minimap="">
-      <div className="gw-minimap__frame">
-        <button
-          aria-label={text('world_map')}
-          className="gw-minimap__open"
-          onClick={() => set_map_open(true)}
-          type="button"
-        >
-          <canvas className="gw-minimap__lens" height={SIZE} ref={canvas_ref} width={SIZE} />
-          <span aria-hidden="true" className="gw-minimap__scanlines" />
-        </button>
-        <span aria-hidden="true" className="gw-minimap__corner gw-minimap__corner--tl" />
-        <span aria-hidden="true" className="gw-minimap__corner gw-minimap__corner--tr" />
-        <span aria-hidden="true" className="gw-minimap__corner gw-minimap__corner--bl" />
-        <span aria-hidden="true" className="gw-minimap__corner gw-minimap__corner--br" />
-        <span aria-hidden="true" className="gw-minimap__north">
-          <Text path="ui.north" />
-        </span>
-      </div>
-      <MinimapReadout
-        city={city !== null}
-        coordinates={coords}
-        coordinates_label={text('coordinates')}
-        location_label={city ? location_name : text('biome')}
-        location_name={location_name}
+      <IconButton
+        className="world-map-trigger world-utility-button"
+        label={text('world_map')}
+        onClick={() => set_map_open(true)}
+        icon={<Map size={22} />}
+      />
+      <MinimapView
+        title={location_name}
+        coordinates={`${coords.x}, ${coords.z}`}
+        open_label={text('world_map')}
+        open={() => set_map_open(true)}
+        map={<canvas height={SIZE} ref={canvas_ref} width={SIZE} />}
       />
       {map_open && (
         <WorldMap

@@ -10,6 +10,7 @@ import { character_color_hex, type CharacterRenderSource } from '../character_en
 export type FightCharacterRenderSource = CharacterRenderSource &
   Readonly<{
     cell: number
+    owner?: string
     side: FightSide
     visual_effect?: EntityVisualEffect
   }>
@@ -17,7 +18,7 @@ export type FightCharacterRenderSource = CharacterRenderSource &
 export type FightCharacterAppearance = CharacterRenderSource
 
 type CheckpointAppearance = Readonly<
-  Pick<PlayerSource, 'classe' | 'sex' | 'color_1' | 'color_2' | 'color_3' | 'hat' | 'cloak'>
+  Pick<PlayerSource, 'classe' | 'sex' | 'color_1' | 'color_2' | 'color_3' | 'hat' | 'cloak' | 'title'>
 >
 const DEFAULT_APPEARANCE: CheckpointAppearance = Object.freeze({
   classe: 'senshi',
@@ -27,6 +28,7 @@ const DEFAULT_APPEARANCE: CheckpointAppearance = Object.freeze({
   color_3: 0x8b6539,
   hat: null,
   cloak: null,
+  title: null,
 })
 
 export const fight_character_roster_key = (checkpoint: Readonly<HydratedFightCheckpoint> | null): string =>
@@ -64,6 +66,7 @@ const checkpoint_appearance = (character_id: string, source: Readonly<PlayerSour
     loadout: Object.freeze({
       ...(appearance.hat ? { hat: appearance.hat } : {}),
       ...(appearance.cloak ? { cloak: appearance.cloak } : {}),
+      ...(appearance.title ? { title: appearance.title } : {}),
     }),
   })
 }
@@ -85,6 +88,7 @@ export const fight_character_entity_sources = (
       return [
         Object.freeze({
           ...appearance,
+          owner: fighter.kind.owner,
           cell: Number(fighter.cell),
           side: fighter.team === 0n ? ('a' as const) : ('b' as const),
           id: `fight_character_${seat}`,

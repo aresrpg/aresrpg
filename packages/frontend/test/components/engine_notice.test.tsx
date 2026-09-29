@@ -22,7 +22,7 @@ for (const { code: locale } of LOCALES) {
     )
     expect(markup).toContain(copy.engine_reload)
     expect(markup).toContain(copy.engine_recovery)
-    expect(markup).not.toContain(copy.continue)
+    expect(markup).not.toContain(copy.engine_continue)
   })
   test(`${locale}: minimum graphics notice offers continue without claiming the computer is underpowered`, async () => {
     const copy = await load_app_copy(locale)
@@ -41,11 +41,12 @@ for (const { code: locale } of LOCALES) {
   })
 }
 
-test('dismissed minimum notice cannot suppress a later grid fallback', () => {
-  const dismissed = engine_notice_kind({ state: 'ready', backend: 'webgpu' }, true)
-  const grid = engine_notice_kind({ state: 'degraded', backend: 'grid' }, true)
-  expect(dismissed).toBe('minimum')
-  expect(grid).toBe('fallback')
-  expect(graphics_notice_visible(false, false, false, dismissed === grid, grid !== null)).toBe(true)
-  expect(engine_notice_kind({ state: 'failed', backend: 'grid' }, true)).toBe('failed')
+test('missing WebGPU blocks gameplay; a degraded sky is not a missing renderer', () => {
+  expect(engine_notice_kind({ state: 'failed', backend: 'none', issue: { code: 'webgpu_unavailable' } })).toBe(
+    'unsupported'
+  )
+  expect(
+    engine_notice_kind({ state: 'degraded', backend: 'webgpu', issue: { code: 'advanced_sky_failed' } })
+  ).toBeNull()
+  expect(graphics_notice_visible(false, false, false, false, true)).toBe(true)
 })

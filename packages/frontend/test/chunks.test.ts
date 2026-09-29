@@ -18,8 +18,9 @@ const create_engine_spy = () => {
     set_quality: () => {},
     set_audio_volume: () => {},
     set_time_of_day: () => {},
+    set_atmosphere: () => {},
     set_clouds_visible: () => {},
-    set_flatten_amount: () => {},
+
     set_fight_board: () => {},
     set_entities: () => {},
     set_fight_swords: () => {},
@@ -33,8 +34,10 @@ const create_engine_spy = () => {
     play_fight_cue: () => Promise.resolve(false),
     play_jump_puff: () => {},
     project_entity: () => null,
+    hit_entity_caption: () => false,
     set_entity_label: () => {},
     set_entity_caption: () => {},
+    set_world_panel: () => {},
     set_world_label: () => {},
     entity_height: () => null,
     create_fight_blob: () => 'test_blob',
@@ -59,7 +62,7 @@ const create_engine_spy = () => {
       sky_ready: true,
     }),
     quality: () => 'medium',
-    flattened: () => false,
+
     backend: () => 'webgpu',
     status: () => ({ state: 'ready', backend: 'webgpu' }),
     subscribe_status: () => () => {},
@@ -321,35 +324,6 @@ test('a removed request cannot consume the completion of a newer request for the
   expect(chunks.stats().resident).toBe(1)
   requests[1]!.resolve('removed')
   await requests[1]!.promise
-  chunks.dispose()
-})
-
-test('the grid backend stops terrain work and discards pending voxel plans', async () => {
-  const spy = create_engine_spy()
-  const pending = Promise.withResolvers<readonly { x: number; z: number; layers: readonly number[] }[]>()
-  let backend: 'webgpu' | 'grid' = 'webgpu'
-  let plans = 0
-  const chunks = create_chunk_manager({
-    engine: { ...spy.engine, backend: () => backend },
-    initial_quality: 'low',
-    plan_layers: () => {
-      plans += 1
-      return pending.promise
-    },
-  })
-  chunks.set_focus(0, 0)
-  expect(plans).toBe(1)
-  backend = 'grid'
-  chunks.set_focus(32, 0)
-  chunks.tick()
-  pending.resolve([{ x: 0, z: 0, layers: [0] }])
-  await pending.promise
-  chunks.set_quality('high', null)
-  chunks.set_focus(64, 0)
-  chunks.tick()
-  expect(plans).toBe(1)
-  expect(spy.rendered).toHaveLength(0)
-  expect(chunks.stats()).toMatchObject({ resident: 0, planning: 0, queued: 0, in_flight: 0 })
   chunks.dispose()
 })
 

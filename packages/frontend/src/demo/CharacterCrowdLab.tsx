@@ -201,12 +201,10 @@ const CrowdBenchmarkStatus = ({
 
 export const CharacterCrowdLab = ({
   ground_height,
-  set_active,
   submit,
   text,
 }: Readonly<{
   ground_height: (x: number, z: number) => number
-  set_active: (active: boolean) => void
   submit: (entities: readonly EntityRender[]) => void
   text: AppCopy['demo_page']
 }>) => {
@@ -238,7 +236,6 @@ export const CharacterCrowdLab = ({
 
   const spawn = async (benchmark: boolean): Promise<void> => {
     const token = ++generation.current
-    set_active(true)
     set_loading(true)
     set_running(false)
     set_results(Object.freeze([]))
@@ -258,7 +255,6 @@ export const CharacterCrowdLab = ({
     set_phase(null)
     set_results(Object.freeze([]))
     submit(Object.freeze([]))
-    set_active(false)
   }
 
   useEffect(() => {
@@ -271,9 +267,8 @@ export const CharacterCrowdLab = ({
     () => () => {
       generation.current += 1
       submit(Object.freeze([]))
-      set_active(false)
     },
-    [set_active, submit]
+    [submit]
   )
 
   return (

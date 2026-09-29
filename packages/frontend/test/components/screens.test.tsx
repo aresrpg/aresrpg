@@ -11,12 +11,12 @@ import { load_app_copy } from '../../src/i18n/copy.ts'
 
 const SETTINGS = Object.freeze({
   quality: 'medium' as const,
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 })
 
-test('each standalone screen exposes only its own surface', async () => {
+test('each modal exposes its own initial surface', async () => {
   const copy = await load_app_copy('en')
 
   // Character creation reserves the model preview and carries no release-status copy.
@@ -55,21 +55,13 @@ test('each standalone screen exposes only its own surface', async () => {
   expect(insufficient).toContain('You need at least 0.05 SUI left in your balance for fees.')
   expect(insufficient).toMatch(/<button[^>]*disabled=""[^>]*type="submit"/)
 
-  // Settings exposes the persisted audio preferences.
+  // Settings initially opens graphics; audio interactions are covered in browser tests.
   const settings = renderToStaticMarkup(<SettingsPage copy={copy} settings={SETTINGS} />)
 
-  expect(settings).toContain('Music')
-  expect(settings).toContain('General volume')
+  expect(settings).toContain('Render distance')
   expect(settings).toContain('type="range"')
-  expect(settings).toContain('100%')
-  expect(settings).toContain('Footsteps')
   expect(settings).toContain('Day/night cycle')
   expect(settings).toContain('Disable to keep the world at midday.')
-  expect(settings).toContain('Tutorials')
-  expect(settings).toContain('Always craft from')
-  expect(settings).toContain('Crafting character')
   expect(settings).toContain('role="switch"')
-  expect(settings).not.toContain(copy.quality)
-  expect(settings).not.toContain(copy.flat_mode)
   expect(settings).not.toContain('Rendering Options')
 })

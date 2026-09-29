@@ -70,7 +70,7 @@ export type FightResult = Readonly<{
   /** The projected Character row caught up to this fight's expected experience. */
   progression_synced: boolean
   error: string | null
-  /** Result first, level-up second. The current record survives Continue until both are acknowledged. */
+  /** The level-up modal overlays the result; retain the record until both are acknowledged. */
   result_open: boolean
   level_up_open: boolean
   level_up_acknowledged: boolean
@@ -249,7 +249,7 @@ const result_kolizeum = (
   })
 }
 
-const merge_checkpoint = (
+export const merge_checkpoint = (
   state: AppState,
   character_id: string,
   checkpoint: Readonly<HydratedFightCheckpoint>,

@@ -51,12 +51,6 @@ export const TravelModal = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return (
     <ModalFrame close={close} close_label={copy.cancel} label={text('travel_title')} max_width="max-w-5xl" soft>
       <section className="p-6 sm:p-8">
-        <header className="mb-6 border-l-2 border-[#4a9eff] pl-4">
-          <p className="text-[8px] tracking-[0.24em] text-[#67adff] uppercase">AresRPG</p>
-          <h2 className="mt-1 text-lg font-semibold tracking-[0.12em] text-[#e8e4dc] uppercase">
-            {text('travel_title')}
-          </h2>
-        </header>
         <div className="grid gap-4 md:grid-cols-2">
           {world_card_rows().map((world) => {
             const current = world.id === character?.world

@@ -3,6 +3,7 @@
 // One icon index shared by every frontend feature.
 
 import { indexed_asset_key, spell_asset_basename, spell_asset_key } from './asset_keys.ts'
+import { character_model_basenames } from './character_model_catalog.ts'
 
 const item_modules: Readonly<Record<string, string>> =
   typeof Bun === 'undefined'
@@ -32,6 +33,15 @@ const spell_modules: Readonly<Record<string, string>> =
       }) as Readonly<Record<string, string>>)
     : Object.freeze({})
 
+const character_modules: Readonly<Record<string, string>> =
+  typeof Bun === 'undefined'
+    ? (import.meta.glob(['../../../../seed/icons/characters/*.png', '!../../../../seed/icons/characters/*_hd.png'], {
+        eager: true,
+        import: 'default',
+        query: '?url',
+      }) as Readonly<Record<string, string>>)
+    : Object.freeze({})
+
 const asset_key = (path: string): string =>
   path
     .split('/')
@@ -43,6 +53,7 @@ const index_assets = (modules: Readonly<Record<string, string>>): Readonly<Recor
   return Object.freeze(Object.fromEntries(entries))
 }
 
+const character_assets = index_assets(character_modules)
 const item_assets = index_assets(item_modules)
 const mob_assets = index_assets(mob_modules)
 const spell_assets = Object.freeze(
@@ -69,3 +80,6 @@ export const spell_icon = (classe: string, name: string): string | null =>
     : development
       ? `${DEV_SEED_ICON_ROOT}spells/${encodeURIComponent(spell_asset_basename(classe, name))}.webp`
       : (spell_assets[spell_asset_key(classe, name)] ?? null)
+
+export const character_icon = (classe: string, sex: string): string | null =>
+  character_assets[character_model_basenames(classe, sex === 'male').body] ?? null

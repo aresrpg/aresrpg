@@ -180,10 +180,6 @@
   width: 100%;
   min-width: 0;
 }
-/* item selected -> the browse collapses to a narrower column + the detail opens on the right. */
-.jobs__browse-area.has-detail {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-}
 .jobs__browse {
   display: flex;
   flex-direction: column;
@@ -316,7 +312,7 @@
   transition: width var(--dur-2) var(--ease);
 }
 
-/* stacked section headings — the retired active-tab marker becomes each section's accent marker */
+/* Resource and recipe section labels. */
 .jobs__section-head {
   display: flex;
   border-bottom: 1px solid var(--hair);
@@ -328,9 +324,7 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fg);
-  border-bottom: 2px solid var(--accent);
   padding: var(--s-1) 0 var(--s-2);
-  margin-bottom: -1px;
 }
 
 /* ── resources table ───────────────────────────────────────────────────────── */
@@ -455,48 +449,6 @@
   color: var(--fg-faint);
 }
 
-.jobs__recipe-tiers,
-.jobs__recipe-tier {
-  display: flex;
-  flex-direction: column;
-}
-
-.jobs__recipe-tiers {
-  gap: var(--s-3);
-}
-
-.jobs__recipe-tier {
-  gap: var(--s-1);
-}
-
-.jobs__recipe-tier-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: 0.58rem;
-  font-weight: 400;
-  letter-spacing: 0.03em;
-  color: var(--fg-faint);
-}
-
-.jobs__recipe-tier-head span {
-  white-space: normal;
-}
-
-.jobs__recipe-tier-head span + span::before {
-  content: '·';
-  margin-right: var(--s-2);
-  color: var(--fg-faint);
-}
-
-.jobs__recipe-tier-head::after {
-  content: '';
-  height: 1px;
-  flex: 1;
-  background: var(--hair);
-}
-
 .jobs__recipe-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
@@ -616,64 +568,6 @@
 .jobs__item-glyph svg {
   width: 60%;
   height: 60%;
-}
-
-/* ── item detail (RIGHT pane of the browse split) — the reused encyclopedia ItemDetailView.
-   Sits ALONGSIDE the resource/recipe list (not replacing it) + scrolls independently, so the list stays
-   browsable beside an open item. Mirrors .enc__detail--items. ──────────────── */
-.jobs__item-detail {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  min-width: 0;
-  min-height: 0;
-  max-height: 100%;
-  overflow-y: auto;
-  border-left: 1px solid var(--hair);
-  /* T74: symmetric L/R padding on the detail pane (qa: right was 0 → content flush right). */
-  padding-left: var(--s-4);
-  padding-right: var(--s-4);
-  /* T86: breathing room under the last element so the CRAFT button is never flush at the scroll
-     bottom / clipped at short viewports — scrolled to the end, the button sits clear of the panel edge. */
-  padding-bottom: var(--s-5);
-}
-
-.jobs__item-detail [data-item-detail-name] {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  overflow-wrap: anywhere;
-  line-height: 1.45;
-}
-
-/* X close (top-right of the item-detail pane), mirroring .enc__detail-close. The detail now sits BESIDE
-   the browse list (not replacing it), so it closes — it doesn't "go back". */
-.jobs__detail-close {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: none;
-  border: 1px solid var(--hair);
-  border-radius: var(--r-1);
-  color: var(--fg-muted);
-  cursor: pointer;
-  transition:
-    border-color var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease);
-}
-.jobs__detail-close:hover {
-  border-color: var(--accent);
-  color: var(--accent-strong);
-}
-.jobs__detail-close svg {
-  width: 14px;
-  height: 14px;
 }
 
 /* ── inline craft controls (rendered as ItemDetailView children) ───────────── */
@@ -823,4 +717,40 @@
 
 .jobs__craft-btn {
   min-width: 110px;
+}
+.jobs__browse {
+  overflow: hidden;
+}
+.jobs__gather-section,
+.jobs__recipes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+.jobs__gather-section {
+  flex: 0 1 230px;
+}
+.jobs__recipes-section {
+  flex: 1;
+}
+.jobs__table {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.jobs__table-head,
+.jobs__table-row {
+  grid-template-columns: 32px 55px minmax(100px, 1fr) 60px 44px;
+}
+.jobs__gather-rows {
+  min-height: 0;
+  overflow-y: auto;
+}
+.jobs__recipes.jobs__recipe-grid {
+  display: grid;
+  overflow-y: auto;
+  min-height: 0;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  align-content: start;
 }

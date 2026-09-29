@@ -5,16 +5,17 @@ import { readFileSync } from 'node:fs'
 
 import { expect, test } from 'bun:test'
 
-import { character_detail_path, character_detail_tab } from '../../src/characters/CharactersPage.tsx'
+import { character_detail_path, character_detail_tab } from '../../src/characters/character_navigation.ts'
 
 const source = (name: string): string => readFileSync(new URL(`../../src/characters/${name}`, import.meta.url), 'utf8')
 
 test('every character progression tab crosses the wallet action and proven receipt fold boundary', () => {
   const page = source('CharactersPage.tsx')
-  const stats = source('StatsTab.tsx')
-  const spells = source('SpellsTab.tsx')
-  const jobs = source('JobsTab.tsx')
-  const forge = source('RuneforgeTab.tsx')
+  const stats = source('useStats.ts')
+  expect(source('StatsTab.tsx')).toContain('useStats({ character, copy, raise_stats })')
+  const spells = source('useSpells.ts') + source('SpellsTab.tsx')
+  const jobs = source('JobsTab.tsx') + source('CraftControls.tsx') + source('../components/ItemCrafting.tsx')
+  const forge = source('RuneforgeTab.tsx') + source('useRuneforge.ts')
   const forge_eligibility = source('forge_eligibility.ts')
 
   for (const tab of ['stats', 'spells', 'jobs', 'runeforge']) expect(page).toContain(`tab === '${tab}'`)
@@ -44,13 +45,4 @@ test('character detail tabs have stable deep links for level-up allocation', () 
   expect(character_detail_tab('/characters/stats')).toBe('stats')
   expect(character_detail_tab('/characters/nope')).toBe('equipment')
   expect(character_detail_path('stats')).toBe('/characters/stats')
-})
-
-test('short and narrow screens scroll the whole stats sheet instead of clipping its pinned regions', () => {
-  const styles = source('stats_panels.css')
-
-  expect(styles).toContain('@media (max-height: 800px), (max-width: 700px)')
-  expect(styles).toContain('overflow-y: auto;')
-  expect(styles).toContain('overscroll-behavior: contain;')
-  expect(styles).toContain('grid-template-columns: repeat(2, 1fr);')
 })

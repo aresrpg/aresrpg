@@ -25,7 +25,7 @@ export const QUALITY_PROFILES = Object.freeze({
     terrain: Object.freeze({ kind: 'flat', texture_size: 16 }),
     fog: Object.freeze({ near: 200, far: 640 }),
     shadows: Object.freeze({ kind: 'none', map_size: 0 }),
-    effects: Object.freeze({ bloom: null, sun_shafts: null }),
+    effects: Object.freeze({ bloom: null, sun_shafts: null, local_shafts: null }),
   }),
   medium: Object.freeze({
     name: 'medium',
@@ -46,7 +46,7 @@ export const QUALITY_PROFILES = Object.freeze({
     terrain: Object.freeze({ kind: 'lit', texture_size: 32 }),
     fog: Object.freeze({ near: 250, far: 1000 }),
     shadows: Object.freeze({ kind: 'basic', map_size: 1024 }),
-    effects: Object.freeze({ bloom: null, sun_shafts: null }),
+    effects: Object.freeze({ bloom: null, sun_shafts: null, local_shafts: null }),
   }),
   high: Object.freeze({
     name: 'high',
@@ -68,6 +68,7 @@ export const QUALITY_PROFILES = Object.freeze({
     fog: Object.freeze({ near: 500, far: 1750 }),
     shadows: Object.freeze({ kind: 'soft', map_size: 2048 }),
     effects: Object.freeze({
+      local_shafts: Object.freeze({ samples: 32, resolution: 0.35, range: 80, density: 0.022, strength: 1 }),
       bloom: Object.freeze({ strength: 0.18, radius: 0.65, threshold: 1.6 }),
       sun_shafts: Object.freeze({
         samples: 24,

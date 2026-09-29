@@ -55,15 +55,15 @@ export const world_map_zone_lod = (
   return Object.freeze({ layer: zone_pixels >= ZONE_LAYER_MIN_PX, labels: zone_pixels >= ZONE_LABEL_MIN_PX })
 }
 
-export type WorldMapZoneTarget = Readonly<{ zx: number; zz: number; x: number; z: number }>
+export type WorldMapPositionTarget = Readonly<{ zx: number; zz: number; x: number; z: number }>
 
-/** Canvas click → the clicked zone and its legal chain-space center. */
-export const world_map_zone_target = (
+/** Canvas click → an exact legal chain position, retaining zone metadata. */
+export const world_map_position_target = (
   view: Readonly<{ center_x: number; center_z: number; radius: number }>,
   canvas_x: number,
   canvas_z: number,
   canvas_size: number
-): WorldMapZoneTarget => {
+): WorldMapPositionTarget => {
   const client_x = view.center_x + (clamp(canvas_x, 0, canvas_size) / canvas_size - 0.5) * view.radius * 2
   const client_z = view.center_z + (clamp(canvas_z, 0, canvas_size) / canvas_size - 0.5) * view.radius * 2
   const chain_x = clamp(Math.floor(client_to_chain_coordinate(client_x)), 0, world_size - 1)
@@ -72,7 +72,7 @@ export const world_map_zone_target = (
   return Object.freeze({
     zx,
     zz,
-    x: Math.min(world_size - 1, zx * ZONE_SIZE + ZONE_SIZE / 2),
-    z: Math.min(world_size - 1, zz * ZONE_SIZE + ZONE_SIZE / 2),
+    x: chain_x,
+    z: chain_z,
   })
 }

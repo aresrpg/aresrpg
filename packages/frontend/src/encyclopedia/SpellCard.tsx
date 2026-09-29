@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { class_names } from '@aresrpg/immutable'
 import { Check, Crosshair, Sparkles, X, Zap, type LucideIcon } from 'lucide-react'
 import { useState, type FocusEvent, type ReactNode } from 'react'
@@ -20,7 +21,7 @@ export type SpellCardLevel = SpellLevel & Readonly<{ mp_cost?: number }>
 export type SpellCardSpell = Readonly<{
   classe: string
   name: string
-  unlock_level: number
+  unlock_level?: number
   levels: readonly SpellCardLevel[]
 }>
 type EffectsFooter = (context: Readonly<{ level: SpellCardLevel; level_index: number }>) => ReactNode
@@ -133,7 +134,7 @@ const Metric = ({
     >
       <Icon size={15} strokeWidth={1.6} />
     </span>
-    <span className="min-w-0">
+    <span className="min-w-0 whitespace-nowrap">
       <span className="block text-[8px] tracking-[0.13em] text-[#747883] uppercase">{label}</span>
       <span className="mt-1 flex items-center gap-1 text-[13px] font-semibold tabular-nums" style={{ color }}>
         {children}
@@ -149,10 +150,10 @@ const Rule = ({
   change,
 }: Readonly<{ label: string; value: boolean; edit?: SpellCardEdit; change: (value: boolean) => void }>) => {
   const content = (
-    <>
+    <div className="spell-rule flex min-h-10 w-full items-center justify-between gap-3 bg-surface-low px-3">
       <span className="text-[9px] text-[#a5a19a]">{label}</span>
       {value ? <Check className="text-[#68d391]" size={13} /> : <X className="text-[#ff7d8f]" size={13} />}
-    </>
+    </div>
   )
   return (
     <InlineField
@@ -189,14 +190,22 @@ const SpellEffects = ({
   level_index,
   edit,
   footer,
+  compact,
 }: Readonly<{
   level: SpellCardLevel
   level_index: number
   edit?: SpellCardEdit
   footer?: EffectsFooter
+  compact?: boolean
 }>) => (
   <>
-    <EffectLines critical_effects={level.crit_effects} edit={edit} effects={level.effects} level_index={level_index} />
+    <EffectLines
+      compact={compact}
+      critical_effects={level.crit_effects}
+      edit={edit}
+      effects={level.effects}
+      level_index={level_index}
+    />
     {footer?.({ level, level_index })}
   </>
 )
@@ -212,6 +221,16 @@ const SpellArt = ({
       <EntityIcon label={name} size="size-18" src={spell_icon(classe, spell_name)} />
     </span>
   ) : null
+
+const SpellSubtitle = ({ rank, unlock_level }: Readonly<{ rank: number; unlock_level?: number }>) => {
+  const text = useText()
+  return (
+    <p className="spell-unlock">
+      <span>{text('ui.spell_level', { level: rank })}</span>
+      {unlock_level !== undefined && <span>{text('characters_page.spells.unlocks_at', { level: unlock_level })}</span>}
+    </p>
+  )
+}
 
 export const SpellCard = ({
   spell,
@@ -239,46 +258,23 @@ export const SpellCard = ({
   const level = spell.levels[safe_index]
   const name = displayed_name(spell, display_name)
   if (!level) return null
-  if (small)
-    return (
-      <article
-        className="w-full max-w-sm space-y-3"
-        data-spell-current-level={safe_index + 1}
-        data-spell-detail-card=""
-        data-spell-small=""
-      >
-        <header className="flex items-center justify-between gap-5 border-b border-white/9 pb-3">
-          <h3 className="min-w-0 truncate text-[13px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">
-            {name}
-          </h3>
-          <span className="flex shrink-0 items-center gap-2 text-[9px] tracking-[0.12em] text-[#858994] uppercase">
-            <Sparkles className="text-[#f0c35a]" size={13} strokeWidth={1.6} />
-            {text('crit_chance')}
-            <b className="text-[11px] text-[#f0c35a] tabular-nums">
-              {level.crit_1_in ? `1 / ${level.crit_1_in}` : '—'}
-            </b>
-          </span>
-        </header>
-        <section className="space-y-2" data-spell-effects="">
-          <h4 className="text-[9px] font-semibold tracking-[0.2em] text-[#777b86] uppercase">{text('effects')}</h4>
-          <EffectLines compact critical_effects={level.crit_effects} effects={level.effects} level_index={safe_index} />
-        </section>
-      </article>
-    )
   const accent = effect_color(level.effects.find(({ element }) => element)?.element ?? '')
   const change_level = (field: keyof SpellLevel, value: SpellCardValue): void =>
     edit?.change(['levels', safe_index, field], value)
 
   return (
-    <article className="mx-auto w-full max-w-3xl space-y-4" data-spell-detail-card="">
+    <article
+      className="spell-card mx-auto w-full max-w-3xl space-y-4"
+      data-spell-detail-card=""
+      data-spell-small={small ? '' : undefined}
+      data-spell-current-level={safe_index + 1}
+    >
       <header className="flex items-center gap-4">
         <SpellArt classe={spell.classe} name={name} spell_name={spell.name} visible={show_icon !== false} />
-        <div className="min-w-0 flex-1">
+        <div className="spell-identity min-w-0 flex-1">
           <InlineField
             class_name="block max-w-full"
-            display={
-              <h3 className="truncate text-[14px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">{name}</h3>
-            }
+            display={<h3 className="text-[14px] font-semibold tracking-[0.13em] text-[#e6bf79] uppercase">{name}</h3>}
             edit={edit}
             editor={
               <input
@@ -294,7 +290,7 @@ export const SpellCard = ({
           <InlineField
             class_name="mt-2 block w-fit"
             display={
-              <p className="text-[9px] tracking-[0.14em] uppercase" style={{ color: accent }}>
+              <p className="spell-caster" style={{ color: accent }}>
                 {titleize(spell.classe)}
               </p>
             }
@@ -309,28 +305,29 @@ export const SpellCard = ({
             }
             label="class"
           />
+          <SpellSubtitle rank={safe_index + 1} unlock_level={spell.unlock_level} />
         </div>
       </header>
 
       <section className="border border-white/9 bg-black/10">
-        <nav
-          className="flex min-h-11 items-end gap-1 overflow-x-auto border-b border-white/9 px-3"
-          data-spell-level-tabs=""
-        >
-          {spell.levels.map((_, index) => (
-            <button
-              aria-label={app_text('ui.spell_level', { level: index + 1 })}
-              className={`relative -mb-px min-h-11 min-w-11 shrink-0 border px-3 text-[9px] font-semibold ${index === safe_index ? 'z-[1] border-[#c8963c]/55 border-b-surface-low bg-surface-low text-[#e0b86b]' : 'border-transparent text-[#626670] hover:border-white/8 hover:text-[#aaa6a0]'}`}
-              key={index}
-              onClick={() => set_level_index(index)}
-              type="button"
-            >
-              {index + 1}
-            </button>
-          ))}
-        </nav>
+        {!small && (
+          <nav className="spell-rank-picker" data-spell-level-tabs="">
+            {spell.levels.map((_, index) => (
+              <Button
+                aria-label={app_text('ui.spell_level', { level: index + 1 })}
+                aria-pressed={index === safe_index}
+                className="spell-rank-button"
+                key={index}
+                onClick={() => set_level_index(index)}
+                type="button"
+              >
+                {index + 1}
+              </Button>
+            ))}
+          </nav>
+        )}
 
-        <div className="space-y-5 p-4">
+        <div className="spell-content space-y-5 p-4">
           <div className="grid gap-2 sm:grid-cols-3" data-spell-ap-cost={level.ap_cost}>
             <Metric Icon={Zap} color="#e8b44f" label={text('ap_cost')}>
               <InlineField
@@ -392,10 +389,10 @@ export const SpellCard = ({
 
           <section className="space-y-2" data-spell-effects="">
             <h4 className="text-[9px] font-semibold tracking-[0.2em] text-[#777b86] uppercase">{text('effects')}</h4>
-            <SpellEffects edit={edit} footer={effects_footer} level={level} level_index={safe_index} />
+            <SpellEffects compact={small} edit={edit} footer={effects_footer} level={level} level_index={safe_index} />
           </section>
 
-          <section className="space-y-2 border-t border-white/8 pt-4">
+          <section className="spell-constraints space-y-2 border-t border-white/8 pt-4">
             <div className="grid gap-px border border-white/8 bg-white/8 sm:grid-cols-2">
               <Rule
                 change={(value) => change_level('modifiable_range', value)}

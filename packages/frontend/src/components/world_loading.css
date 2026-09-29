@@ -1,0 +1,71 @@
+.world-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgb(8 13 24 / 64%), rgb(8 13 24 / 12%) 65%);
+}
+.world-loading-content {
+  width: min(22rem, 76vw);
+  padding: 1.8rem 1.6rem;
+  text-align: center;
+  color: #eee9dc;
+  background: linear-gradient(90deg, transparent, rgb(9 16 27 / 82%) 18%, rgb(9 16 27 / 82%) 82%, transparent);
+}
+.world-loading-mark {
+  display: inline-block;
+  color: #b5dfed;
+  font-size: 2rem;
+  text-shadow: 0 0 20px #53bde980;
+  animation: world-loading-breathe 1.8s ease-in-out infinite;
+}
+.world-loading-content p {
+  margin: 0.7rem 0 1rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+.world-loading-track {
+  height: 3px;
+  overflow: hidden;
+  background: rgb(177 201 218 / 18%);
+}
+.world-loading-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #6a9bad, #d3eeef, #e6c482);
+  box-shadow: 0 0 12px #8ed8fa80;
+  transition: width 160ms ease-out;
+}
+.world-loading-track > span[data-indeterminate='true'] {
+  animation: world-loading-travel 1.4s ease-in-out infinite;
+}
+.world-loading-content button {
+  pointer-events: auto;
+  margin-top: 1rem;
+  color: #e6c482;
+  cursor: pointer;
+}
+@keyframes world-loading-travel {
+  from {
+    transform: translateX(-105%);
+  }
+  to {
+    transform: translateX(420%);
+  }
+}
+@keyframes world-loading-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-loading-mark,
+  .world-loading-track > span[data-indeterminate='true'] {
+    animation: none;
+  }
+  .world-loading-track > span {
+    transition: none;
+  }
+}

@@ -364,11 +364,35 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
   const overview = useAppStore((state) => state.admin.overview)
   const online_count = useAppStore((state) => state.session.online)
   const revenue_wallet = useAdminRevenue(copy)
+  return (
+    <OverviewPageView
+      copy={copy}
+      overview={overview}
+      online_count={online_count}
+      revenue_wallet={revenue_wallet}
+      dispatch={dispatch_app}
+    />
+  )
+}
+
+export const OverviewPageView = ({
+  copy,
+  overview,
+  online_count,
+  revenue_wallet,
+  dispatch,
+}: Readonly<{
+  copy: Readonly<Record<string, string>>
+  overview: AdminOverviewState
+  online_count: number | null
+  revenue_wallet: AdminRevenue
+  dispatch: (input: import('./admin_state.ts').AdminInput) => void
+}>) => {
   const { result } = overview
   if (!result) return <LoadingOverview copy={copy} overview={overview} />
   const { revenue, players, transactions, online, addresses, characters } = result
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto bg-surface/50 p-4">
+    <div className="admin-overview min-h-0 flex-1 bg-surface/50">
       <div className="flex items-center gap-3 px-1 text-[8px] tracking-[0.12em] text-[#6b7280] uppercase">
         <span className="text-[#77d99a]">● {text(copy, 'all_systems_current', 'All systems current')}</span>
         <span>
@@ -376,7 +400,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
         </span>
         <button
           className="ml-auto text-[#c8963c]"
-          onClick={() => dispatch_app({ type: 'admin/overview_refresh' })}
+          onClick={() => dispatch({ type: 'admin/overview_refresh' })}
           type="button"
         >
           ↻ {text(copy, 'refresh', 'Refresh')}
@@ -462,7 +486,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
         <div className="grid gap-3 xl:grid-cols-2">
           <ChartPanel
             bucket={revenue.bucket}
-            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'revenue', days })}
+            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'revenue', days })}
             copy={copy}
             days={overview.ranges.revenue}
             loading={!!overview.pending.revenue}
@@ -475,7 +499,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           />
           <ChartPanel
             bucket={transactions.bucket}
-            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'transactions', days })}
+            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'transactions', days })}
             copy={copy}
             days={overview.ranges.transactions}
             loading={!!overview.pending.transactions}
@@ -490,7 +514,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
         <div className="grid gap-3 xl:grid-cols-2">
           <ChartPanel
             bucket={players.bucket}
-            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'players', days })}
+            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'players', days })}
             copy={copy}
             days={overview.ranges.players}
             loading={!!overview.pending.players}
@@ -503,7 +527,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           />
           <ChartPanel
             bucket={online.bucket}
-            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'online', days })}
+            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'online', days })}
             copy={copy}
             days={overview.ranges.online}
             loading={!!overview.pending.online}
@@ -518,7 +542,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
         <div className="grid gap-3 xl:grid-cols-2">
           <ChartPanel
             bucket={addresses.bucket}
-            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'addresses', days })}
+            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'addresses', days })}
             copy={copy}
             days={overview.ranges.addresses}
             loading={!!overview.pending.addresses}
@@ -531,7 +555,7 @@ export const OverviewPage = ({ copy }: Readonly<{ copy: Readonly<Record<string, 
           />
           <ChartPanel
             bucket={characters.bucket}
-            change={(days) => dispatch_app({ type: 'admin/overview_range_changed', section: 'characters', days })}
+            change={(days) => dispatch({ type: 'admin/overview_range_changed', section: 'characters', days })}
             copy={copy}
             days={overview.ranges.characters}
             loading={!!overview.pending.characters}

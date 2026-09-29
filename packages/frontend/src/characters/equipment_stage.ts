@@ -24,7 +24,10 @@ const as_equipped = (item: Readonly<ItemRow>, slot: CharacterEquipmentSlot): Equ
 
 /** The slot a bag item lands in: its category's slot, first free among the multi-slots
  *  (rings, relics) — falling back to the first multi-slot when all are taken (a replace). */
-export const natural_slot_for = (item: Readonly<ItemRow>, equipment: EquipmentMap): CharacterEquipmentSlot | null => {
+export const natural_slot_for = (
+  item: Readonly<Pick<ItemRow, 'category'>>,
+  equipment: EquipmentMap
+): CharacterEquipmentSlot | null => {
   const candidates = character_equipment_slots.filter((slot) => equipment_slot_accepts(slot, item.category))
   if (candidates.length === 0) return null
   return candidates.find((slot) => !equipment[slot]) ?? candidates[0] ?? null

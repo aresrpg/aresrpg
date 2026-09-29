@@ -8,45 +8,22 @@
 // certified input folds both the item delta and the session ledger. The gear category's
 // forgery job comes from the shared category map and is available from level 1, matching Move.
 
-import { useMemo, useState } from 'react'
-import {
-  craft_job_of,
-  format_rune_weight,
-  item_stat_center,
-  rune_can_apply,
-  rune_effect,
-  stat_names,
-} from '@aresrpg/immutable'
+import { Button } from '@aresrpg/ui'
+import { format_rune_weight, rune_effect } from '@aresrpg/immutable'
 import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 import { Gem, Plus, Sparkles, Swords, X } from 'lucide-react'
 
-import { localized_error } from '../i18n/error_text.ts'
 import { ItemDetailView } from '../components/ItemDetailView.tsx'
-import { encyclopedia_catalog, titleize } from '../content/catalog.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
-import { useVocabulary } from '../i18n/useVocabulary.ts'
-import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
-import {
-  available_inventory_items,
-  encumbered_asset_ids,
-  inventory_groups,
-  stack_merge_sources,
-} from '../inventory_stacks.ts'
-import { scribe_outcome_kind, type ScribeHistoryEntry, type ScribeOutcomeKind } from '../modules/runeforge.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
-import { toast } from '../toast.ts'
-import { run_direct_transaction } from '../transaction_guard.ts'
+import { inventory_groups } from '../inventory_stacks.ts'
+import { type ScribeHistoryEntry, type ScribeOutcomeKind } from '../modules/runeforge.ts'
 
-import { has_runeforge_job_level, is_forge_gear, is_rune, RUNE_UNLOCK_LEVEL } from './forge_eligibility.ts'
+import { useRuneforge, OUTCOME_COPY_KEY } from './useRuneforge.ts'
+import { RUNE_UNLOCK_LEVEL } from './forge_eligibility.ts'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
 
-const EMPTY_HISTORY = Object.freeze([]) as readonly ScribeHistoryEntry[]
-const OUTCOME_COPY_KEY: Readonly<Record<ScribeOutcomeKind, string>> = Object.freeze({
-  critical_success: 'outcome_critical_success',
-  neutral_success: 'outcome_neutral_success',
-  critical_failure: 'outcome_critical_failure',
-})
 const OUTCOME_CLASS: Readonly<Record<ScribeOutcomeKind, string>> = Object.freeze({
   critical_success: 'text-cyan',
   neutral_success: 'text-gold',
@@ -129,16 +106,6 @@ const PlacedRuneDetails = ({ item, copy }: Readonly<{ item: Readonly<ItemRow>; c
   )
 }
 
-const selected_runeforge_view = (
-  gear: Readonly<ItemRow> | null,
-  gear_id: string | null,
-  history_by_gear: Readonly<Record<string, readonly ScribeHistoryEntry[]>>
-): Readonly<{ current_puits: string; history: readonly ScribeHistoryEntry[] }> =>
-  Object.freeze({
-    current_puits: gear?.puits ?? '0',
-    history: history_by_gear[gear_id ?? ''] ?? EMPTY_HISTORY,
-  })
-
 const WorkSlot = ({
   clear,
   copy,
@@ -193,107 +160,35 @@ const WorkSlot = ({
   )
 }
 
-/** Predict the same current-stat limits as Move from the canonical authored template. */
-const rune_stat_maxed = (gear: Readonly<ItemRow> | null, rune: Readonly<ItemRow> | null): boolean => {
-  if (!gear?.stats || !rune) return false
-  const effect = rune_effect(rune.item_type)
-  const maximum = encyclopedia_catalog.item(gear.item_type)?.item.stats?.max
-  if (!effect || !maximum) return false
-  const { stats } = gear
-  const current = Object.fromEntries(stat_names.map((stat) => [stat, stats[stat] - item_stat_center]))
-  return !rune_can_apply(current, maximum, effect)
-}
-
 export default function RuneforgeTab({
   character,
   copy,
-}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
-  const t = copy_text(copy.characters_page)
-  const vocabulary = useVocabulary()
-  const encyclopedia = encyclopedia_text(copy)
-  const wallet = useAppStore(({ session }) => session.wallet)
-  const all_inventory = useAppStore(({ session }) => session.inventory)
-  const listings = useAppStore(({ marketplace }) => marketplace.own_listings)
-  const trades = useAppStore(({ trade }) => trade.rows)
-  const history_by_gear = useAppStore(({ runeforge }) => runeforge.history_by_gear)
-  const encumbered = useMemo(() => encumbered_asset_ids(listings, trades), [listings, trades])
-  const inventory = useMemo(
-    () => available_inventory_items(all_inventory, encumbered, character.kiosk),
-    [all_inventory, character.kiosk, encumbered]
-  )
-  const [gear_id, set_gear_id] = useState<string | null>(null)
-  const [rune_id, set_rune_id] = useState<string | null>(null)
-  const [pool_tab, set_pool_tab] = useState<'gear' | 'runes'>('gear')
-  const [busy, set_busy] = useState(false)
-
-  const gear = useMemo(() => inventory.filter(is_forge_gear), [inventory])
-  const runes = useMemo(() => inventory.filter(is_rune), [inventory])
-  const sel_gear = gear.find(({ id }) => id === gear_id) ?? null
-  const sel_rune = runes.find(({ id }) => id === rune_id) ?? null
-  const { current_puits, history } = selected_runeforge_view(sel_gear, gear_id, history_by_gear)
-
-  const forge_job = sel_gear ? craft_job_of(sel_gear.category) : null
-  const job_short = !!sel_gear && !has_runeforge_job_level(sel_gear.category, character.jobs, RUNE_UNLOCK_LEVEL)
-  const stat_maxed = rune_stat_maxed(sel_gear, sel_rune)
-  const can_apply = !!wallet && !!sel_gear && !!sel_rune && !job_short && !stat_maxed && !busy
-
-  const apply = (): void => {
-    if (!can_apply || !wallet || !sel_gear || !sel_rune) return
-    const transaction = run_direct_transaction(() =>
-      wallet.character.scribe_rune({
-        merge_sources: stack_merge_sources(all_inventory, encumbered, sel_rune),
-        character_id: character.id,
-        gear_id: sel_gear.id,
-        gear_item_type: sel_gear.item_type,
-        rune_item_id: sel_rune.id,
-        rune_item_type: sel_rune.item_type,
-        custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
-      })
-    )
-    if (!transaction) return
-    set_busy(true)
-    const pending = toast.loading(t('scribing'))
-    void transaction
-      .then((outcome) => {
-        dispatch_app({ type: 'inventory/amounts_changed', changes: outcome.inventory_changes ?? [] })
-        dispatch_app({
-          type: 'runeforge/scribed',
-          gear_before: sel_gear,
-          rune_before: sel_rune,
-          outcome,
-        })
-        const key = scribe_outcome_kind(outcome.outcome)
-        const message = t(OUTCOME_COPY_KEY[key])
-        if (key === 'critical_failure') pending.error(localized_error(message))
-        else pending.success(message)
-      })
-      .catch(pending.error)
-      .finally(() => set_busy(false))
-  }
-
-  const gear_detail = useMemo(() => {
-    if (!sel_gear) return null
-    const rolled = sel_gear.stats
-      ? Object.fromEntries(
-          Object.entries(sel_gear.stats)
-            .map(([stat, value]) => [stat, value - item_stat_center])
-            .filter(([, value]) => value !== 0)
-        )
-      : null
-    return {
-      name: sel_gear.name,
-      category: sel_gear.category,
-      level: sel_gear.level,
-      item_type: sel_gear.item_type,
-      stats: rolled ? { min: rolled, max: rolled } : undefined,
-      damages: (sel_gear.damages ?? []).map((line) => ({
-        element: line.element,
-        from: Number(line.from),
-        to: Number(line.to),
-        damage_type: 'damage',
-      })),
-    }
-  }, [sel_gear])
+  inventory,
+}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy; inventory?: readonly ItemRow[] }>) {
+  const {
+    t,
+    vocabulary,
+    encyclopedia,
+    gear_id,
+    set_gear_id,
+    rune_id,
+    set_rune_id,
+    pool_tab,
+    set_pool_tab,
+    busy,
+    gear,
+    runes,
+    sel_gear,
+    sel_rune,
+    current_puits,
+    history,
+    forge_job,
+    job_short,
+    stat_maxed,
+    can_apply,
+    apply,
+    gear_detail,
+  } = useRuneforge({ character, copy, inventory })
 
   const empty = (label: string) => (
     <div className="flex flex-1 flex-col items-center justify-center gap-2 py-8 text-center text-muted">
@@ -399,10 +294,9 @@ export default function RuneforgeTab({
           <div className="chr-forge__ptitle">{t('inventory_title')}</div>
           <div className="flex shrink-0 gap-1 border-b border-border px-3 py-2">
             {(['gear', 'runes'] as const).map((key) => (
-              <button
-                className={`flex cursor-pointer items-center gap-1.5 px-2.5 py-1 text-[9px] tracking-[0.12em] uppercase transition-colors ${
-                  pool_tab === key ? 'text-gold' : 'text-muted hover:text-text'
-                }`}
+              <Button
+                className="chr-forge-tab"
+                aria-pressed={pool_tab === key}
                 key={key}
                 onClick={() => set_pool_tab(key)}
                 type="button"
@@ -411,7 +305,7 @@ export default function RuneforgeTab({
                 <span className="text-[9px] opacity-70 tabular-nums">
                   {key === 'gear' ? gear.length : inventory_groups(runes).length}
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">

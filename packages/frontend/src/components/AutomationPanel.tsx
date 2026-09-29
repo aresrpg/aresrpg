@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { ChevronDown, Pickaxe, Square } from 'lucide-react'
-import { createPortal } from 'react-dom'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { content_catalog, type WorldResource } from '../content/catalog.ts'
@@ -84,7 +83,7 @@ const GatheringControls = ({
           {text(activity_text(state))} · {text('quantity', { quantity })}
         </div>
       )}
-      <div className="space-y-2 p-3" hidden={collapsed} id="automation-controls">
+      <div className="space-y-1 p-2" hidden={collapsed} id="automation-controls">
         <label className="block text-[8px] tracking-widest text-white/55 uppercase" htmlFor="automation-resource">
           {text('gathering')}
         </label>
@@ -92,7 +91,7 @@ const GatheringControls = ({
           id="automation-resource"
           value={item_type}
           disabled={running}
-          className="w-full rounded-sm border border-white/15 bg-[#171226] px-2 py-2 text-[10px] text-white disabled:opacity-60"
+          className="w-full rounded-sm border border-white/15 bg-[#161c23] px-2 py-2 text-[10px] text-white disabled:opacity-60"
           onChange={(event) => dispatch_app({ type: 'automation/resource', item_type: event.target.value })}
         >
           <option value="">{text('select_resource')}</option>
@@ -122,9 +121,5 @@ export const AutomationPanel = ({ copy, enabled }: Readonly<{ copy: AppCopy; ena
   const character = selected_character(state.session)
   if (state.automation.run?.scope.type === 'pack') return null
   if (!enabled || !journey_complete(state.journey) || !character) return null
-  const panel = <GatheringControls state={state} character={character} copy={copy} />
-  if (state.navigation.page === 'world') return panel
-  return state.automation.run
-    ? createPortal(<div className="fixed right-4 bottom-4 z-[150] font-mono">{panel}</div>, document.body)
-    : null
+  return <GatheringControls state={state} character={character} copy={copy} />
 }

@@ -1,0 +1,189 @@
+/* One charcoal presentation for the original browse, sell, lot and history controllers. */
+.aui-market-port {
+  --color-bg: #141920;
+  --color-surface: #1b2028;
+  --color-surface-high: #242a33;
+  --color-surface-low: #171b23;
+  --color-surface-raised: #2b303a;
+  --color-border: #7b818c2b;
+  --color-muted: #aab1bf;
+  --color-text: #e4e6eb;
+  background: #1b2027;
+}
+.aui-market-port .aui-workspace-toolbar {
+  padding: 6px 10px;
+  background: #181d25;
+}
+.aui-market-port :is(.market-groups, .market-subcategories, .market-templates) {
+  background: #191e26;
+  padding: 5px;
+}
+.aui-market-port .market-groups {
+  width: 135px;
+}
+.aui-market-port .market-subcategories {
+  width: 130px;
+}
+.aui-market-port .market-templates {
+  width: 210px;
+}
+.aui-market-port :is(.market-filter, .market-template) {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: none;
+  color: #b8c0cd;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 11px;
+  text-align: left;
+}
+.aui-market-port .market-filter {
+  justify-content: space-between;
+}
+.aui-market-port :is(.market-filter, .market-template)[aria-pressed='true'] {
+  border-color: #b7985a50;
+  background: #423b2d;
+  color: #f0d6a8;
+  box-shadow: inset 0 1px #fff1c80d;
+}
+.aui-market-port :is(.market-filter, .market-template):hover {
+  background-color: #2a303a;
+}
+.aui-market-port :is(.market-groups, .market-subcategories, .market-templates) button {
+  border-left-width: 1px;
+}
+.aui-market-port .market-detail-body {
+  background: #191e26;
+  padding: 10px;
+}
+.aui-market-port .market-detail-body > div {
+  min-height: 0;
+  gap: 10px;
+}
+.aui-market-port .market-item-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid #ffffff0c;
+  border-radius: 5px;
+  background: #1d222b;
+  padding: 12px;
+}
+.aui-market-port .market-ask {
+  min-height: 52px;
+  border: 1px solid #ffffff0d;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background: #232933;
+}
+.aui-market-port .market-sell {
+  grid-template-rows: minmax(0, 1fr);
+  display: grid;
+  grid-template-columns: minmax(180px, 0.6fr) minmax(300px, 1fr) minmax(260px, 1.1fr);
+}
+.aui-market-port .market-sell > section {
+  min-height: 0;
+  width: auto;
+  min-width: 0;
+  background: #1b2028;
+}
+.aui-market-port .market-sell > section > h3 {
+  background: #262c36;
+  padding: 9px 12px;
+  color: #d8c096;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.aui-market-port .market-sale-form > div {
+  padding: 10px;
+}
+.aui-market-port .market-sale-form [data-item-detail-view] {
+  gap: 10px;
+}
+.aui-market-port .market-sale-form .item-detail-header {
+  padding: 0 0 8px;
+}
+.aui-market-port .market-sale-form .item-detail-art {
+  width: 56px;
+  height: 56px;
+}
+.aui-market-port :is(input, select) {
+  background: #10151c;
+  border: 1px solid #727b8c35;
+  color: #e2e6ed;
+}
+.aui-market-port .market-inventory {
+  background: #181d25;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-market-port .market-sell {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(140px, 0.6fr) minmax(270px, 1fr) minmax(230px, 1fr);
+  }
+  .aui-market-port .market-sale-form > div {
+    padding: 6px;
+  }
+  .aui-market-port .market-sale-form [data-active-item-stats] {
+    max-height: 80px;
+    overflow-y: auto;
+  }
+  .aui-market-port .market-detail-body {
+    padding: 6px;
+  }
+  .aui-market-port .market-item-summary {
+    padding: 8px;
+    gap: 8px;
+  }
+  .aui-market-port .market-filter {
+    min-height: 36px;
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+}
+
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-market-port :is(.market-groups, .market-subcategories, .market-templates) {
+    width: 100%;
+  }
+}
+
+.aui-market-port .market-template {
+  min-height: 52px;
+  padding: 4px 8px;
+  gap: 10px;
+}
+
+.market-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+.market-toolbar > .aui-segments {
+  flex: 1;
+  padding: 2px;
+}
+.market-volumes {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+}
+.market-volumes > * {
+  padding: 4px 8px;
+}
+@container aui-window (max-width: 650px) {
+  .market-volumes {
+    display: none;
+  }
+}

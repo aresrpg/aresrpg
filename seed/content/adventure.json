@@ -1,0 +1,120 @@
+{
+  "companion": {
+    "id": "adventure_sceat",
+    "name": "Sceat",
+    "classe": "yajin",
+    "level": 200,
+    "colors": [
+      "#e8dfc7",
+      "#433946",
+      "#94704d"
+    ],
+    "loadout": {
+      "hat": "solomonk",
+      "cloak": "momaku"
+    },
+    "spells": [
+      "Deviousness",
+      "Tricky Blow",
+      "Tricky Trap",
+      "Mass Trap",
+      "Fear",
+      "Lethal Attack",
+      "Lethal Trap",
+      "Shadowstep"
+    ],
+    "position": {
+      "x": 129,
+      "y": 80,
+      "z": 196
+    },
+    "hat_bonuses": {
+      "vitality": 250,
+      "strength": 150,
+      "action": 1
+    }
+  },
+  "dialogue": [
+    "greeting",
+    "danger",
+    "relic"
+  ],
+  "quests": [
+    "goblins",
+    "speak",
+    "invite",
+    "switch",
+    "follow",
+    "guards",
+    "boss"
+  ],
+  "encounters": [
+    {
+      "model": 1,
+      "name": "Goblin",
+      "hp": 700,
+      "damage": 25,
+      "range": 1,
+      "count": 3,
+      "position": {
+        "x": 119,
+        "y": 72,
+        "z": 135
+      },
+      "boss": false,
+      "line_of_sight": true,
+      "spell": "Goblin Strike",
+      "level_min": 100,
+      "level_max": 150,
+      "casts_per_target": 2
+    },
+    {
+      "model": 3,
+      "name": "Royal Goblin Guard",
+      "hp": 1600,
+      "damage": 90,
+      "range": 3,
+      "count": 3,
+      "position": {
+        "x": 128,
+        "y": 80,
+        "z": 218
+      },
+      "boss": false,
+      "line_of_sight": true,
+      "spell": "Goblin Strike",
+      "level_min": 100,
+      "level_max": 150,
+      "casts_per_target": 2
+    },
+    {
+      "model": 5,
+      "name": "Gobadoc, the Goblin King",
+      "hp": 8000,
+      "damage": 450,
+      "range": 30,
+      "count": 1,
+      "position": {
+        "x": 128,
+        "y": 40,
+        "z": 252
+      },
+      "boss": true,
+      "line_of_sight": false,
+      "spell": "Royal Judgment",
+      "level_min": 350,
+      "level_max": 350,
+      "casts_per_target": 1
+    }
+  ],
+  "starting_level": 199,
+  "quest_art": {
+    "goblins": "demo_goblin_1",
+    "speak": "adventure_sceat",
+    "invite": "adventure_sceat",
+    "switch": "adventure_sceat",
+    "follow": "adventure_sceat",
+    "guards": "demo_goblin_3",
+    "boss": "demo_goblin_5"
+  }
+}

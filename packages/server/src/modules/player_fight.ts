@@ -4,7 +4,7 @@
 // an optional spectator watch is anchored to an explicit character. Overlapping characters
 // share the same indexer + action subscriptions, and full checkpoints feed the client cache.
 
-import { zone_of } from '@aresrpg/protocol'
+import { zone_of, FIGHT_VIEW_RADIUS_BLOCKS } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type FightActionFact } from '../protocol.ts'
 import { get_fight } from '../reads/get_fight.ts'
@@ -29,26 +29,16 @@ export default {
   name: 'player_fight',
 
   reduce: (state, action) => {
+    if (action.type === 'action/nearby_fight') return { ...state, nearby_fight: action.nearby }
     if (action.type === 'action/fight') {
       const tracked = state.characters[action.character_id]
       if (!tracked) return state
-      return {
-        ...state,
-        characters: {
-          ...state.characters,
-          [action.character_id]: {
-            ...tracked,
-            fight: action.fight,
-            fight_seat: action.fight === null ? null : action.seat === undefined ? tracked.fight_seat : action.seat,
-            active_fighter:
-              action.fight === null
-                ? null
-                : action.active_fighter === undefined
-                  ? tracked.active_fighter
-                  : action.active_fighter,
-          },
-        },
-      }
+      const { seat = tracked.fight_seat, active_fighter = tracked.active_fighter } = action
+      const custody =
+        action.fight === null
+          ? { fight: null, fight_seat: null, active_fighter: null }
+          : { fight: action.fight, fight_seat: seat, active_fighter }
+      return { ...state, characters: { ...state.characters, [action.character_id]: { ...tracked, ...custody } } }
     }
     if (action.type === 'action/spectate')
       return {
@@ -74,13 +64,13 @@ export default {
   },
 
   observe: (context) => {
-    const { pubsub, graph, events, send, address, dispatch, get_state, signal } = context
+    const { pubsub, graph, public_world, events, send, address, dispatch, get_state, signal } = context
     const { watch, unwatch, watched } = create_watcher(pubsub, signal)
     const fight_tails = new Map<string, Promise<void>>()
     const observation_versions = new Map<string, number>()
     const enqueue_fight = (fight: string, work: () => Promise<void>): void => {
       const next = (fight_tails.get(fight) ?? Promise.resolve()).then(() => {
-        if (!signal.aborted) return work()
+        if (!signal.aborted && fights_of(get_state()).has(fight)) return work()
       })
       fight_tails.set(
         fight,
@@ -119,15 +109,13 @@ export default {
 
     /** The full projected checkpoint — pushed on arm and on every STRUCTURAL beacon
      *  (roster/queue changes the light packets cannot carry); the client replaces into it. */
-    const read_latest_state = latest_fight_state_reader(
-      (fight_id) => get_fight_checkpoint(graph, { fight_id }),
-      (fight_id, state) => {
-        const projected = project_authority(fight_id, state)
-        if (projected) send({ type: 'packet/fight_state', fight: fight_id, ...projected })
-      }
-    )
-    const push_state = (fight_id: string) =>
-      read_latest_state(fight_id).catch((error: Error) =>
+    const read_latest_state = latest_fight_state_reader(public_world.fight_checkpoint, (fight_id, state) => {
+      if (signal.aborted || !fights_of(get_state()).has(fight_id)) return
+      const projected = project_authority(fight_id, state)
+      if (projected) send({ type: 'packet/fight_state', fight: fight_id, ...projected })
+    })
+    const push_state = (fight_id: string, event?: EventEnvelope) =>
+      read_latest_state(fight_id, event).catch((error: Error) =>
         log.warn({ fight: fight_id, error: error.message }, 'fight state read failed')
       )
     const fights_of = (value: PlayerState): Set<string> =>
@@ -136,12 +124,13 @@ export default {
         ...Object.values(value.roster_fights),
         ...Object.values(value.spectating),
         ...Object.values(value.fight_previews),
+        ...(value.nearby_fight ? [value.nearby_fight.fight] : []),
       ])
 
     const forward_fight_event = (payload: EventEnvelope) => {
       if (payload.type === 'FighterJoined') {
         const { fight } = payload.data as { fight: string }
-        void push_state(fight) // the roster grew — light packets cannot carry the new source
+        void push_state(fight, payload) // the roster grew — light packets cannot carry the new source
       }
       if (payload.type === 'FightStarted') {
         const { fight, queue } = payload.data as { fight: string; queue: string[] }
@@ -157,7 +146,7 @@ export default {
         // Seed witnesses must retain event order. The trailing FightProjected write is queued
         // behind them and sends the final pools/cells after the replay has everything it needs.
         enqueue_fight(fight, async () => {
-          const state = await get_fight_checkpoint(graph, { fight_id: fight })
+          const state = await public_world.fight_checkpoint(fight, payload)
           project_authority(fight, state)
           send({ type: 'packet/turn_seed', fight, seat, seed })
         })
@@ -173,7 +162,7 @@ export default {
       }
       if (payload.type === 'FightProjected') {
         const { fight } = payload.data as { fight: string }
-        enqueue_fight(fight, () => push_state(fight))
+        enqueue_fight(fight, () => push_state(fight, payload))
       }
       if (payload.type === 'FightEnded') {
         const { fight, winner } = payload.data as { fight: string; winner: number | null }
@@ -234,6 +223,43 @@ export default {
         })
         .catch((error: Error) => log.warn({ fight: action.fight, error: error.message }, 'spectate read failed'))
     }
+    let nearby_version = 0
+    const nearby_in_range = (nearby: NonNullable<PlayerState['nearby_fight']>): boolean => {
+      const character = get_state().characters[nearby.character_id]
+      return (
+        !!character &&
+        !character.fight &&
+        !character.dungeon_run &&
+        character.presence.world === nearby.world &&
+        Math.hypot(character.presence.x - nearby.x, character.presence.z - nearby.z) <= FIGHT_VIEW_RADIUS_BLOCKS
+      )
+    }
+    events.on('packet/fight_nearby', ({ character_id, fight }) => {
+      const version = ++nearby_version
+      dispatch({ type: 'action/nearby_fight', nearby: null })
+      if (fight === null || !get_state().characters[character_id]) return
+      void get_fight(graph, { fight_id: fight })
+        .then(([row]) => {
+          if (
+            signal.aborted ||
+            version !== nearby_version ||
+            !row ||
+            row.phase === 'ended' ||
+            row.managed ||
+            row.wagered
+          )
+            return
+          const nearby = { character_id, fight, world: row.world, x: row.x, z: row.z }
+          if (nearby_in_range(nearby)) dispatch({ type: 'action/nearby_fight', nearby })
+        })
+        .catch((error: Error) => log.warn({ fight, error: error.message }, 'nearby fight read failed'))
+    })
+    events.on('STATE_UPDATED', (state) => {
+      if (state.nearby_fight && !nearby_in_range(state.nearby_fight)) {
+        nearby_version++
+        dispatch({ type: 'action/nearby_fight', nearby: null })
+      }
+    })
     events.on('packet/spectate', (action) => observe_fight(action, 'action/spectate'))
     events.on('packet/fight_preview', (action) => observe_fight(action, 'action/fight_preview'))
 
@@ -265,6 +291,10 @@ export default {
     })
     events.on('packet/fight_resync', (action: Extract<PlayerAction, { type: 'packet/fight_resync' }>) => {
       const participant = Object.values(get_state().characters).some(({ fight }) => fight === action.fight)
+      if (!participant && fights_of(get_state()).has(action.fight)) {
+        void push_state(action.fight)
+        return
+      }
       if (!participant) {
         send({ type: 'packet/error', reason: 'not in this fight' })
         return

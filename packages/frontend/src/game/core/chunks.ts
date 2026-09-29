@@ -215,10 +215,6 @@ export const create_chunk_manager = ({
   return Object.freeze({
     set_focus: (world_x: number, world_z: number) => {
       if (disposed) return
-      if (engine.backend() === 'grid') {
-        if (focus) dispose()
-        return
-      }
       const next = { x: chunk_at(world_x), y: 0, z: chunk_at(world_z) }
       if (focus && chunk_key(next) === chunk_key(focus)) return
       focus = next
@@ -305,6 +301,8 @@ export const create_chunk_manager = ({
       const radius = effective_render_distance(get_quality_profile(quality).chunks.far_radius, render_distance)
       return Object.freeze({
         resident: resident.size,
+        total: wanted.size,
+        ready: Math.max(0, wanted.size - queued.length - in_flight.size),
         queued: queued.length,
         in_flight: in_flight.size,
         evicting: evicting.length,

@@ -341,14 +341,15 @@ test('mesh movements dispatch only to identity listeners without additional Redi
   }
 })
 
-test('chart reads attach cached supply only after a recorded sale', async () => {
+test('chart reads attach cached supply before the first sale', async () => {
   let bucket: string | null = null
+  let tracking = true
   let supply_reads = 0
   const bus = create_graph_bus({
     subscriber: fake_redis().redis,
     publisher: {
       ...fake_redis().redis,
-      get: async () => '0',
+      get: async () => (tracking ? '0' : null),
       pipeline: () => ({ hget: () => {}, exec: async () => [[null, bucket]] }),
     },
     item_graph: {
@@ -361,12 +362,17 @@ test('chart reads attach cached supply only after a recorded sale', async () => 
     on_lost: () => {},
   })
   try {
-    expect((await bus.market_prices!('wood', 1))?.buckets).toEqual([])
-    expect(supply_reads).toBe(0)
+    const empty = await bus.market_prices!('wood', 1)
+    expect(empty?.history?.buckets).toEqual([])
+    expect(empty?.total_units).toBe('1000025')
+    expect(supply_reads).toBe(1)
     bucket = JSON.stringify({ total_mist: '7', units: '3', sales: '1', checkpoint: 1 })
     const samples = await Promise.all(Array.from({ length: 20 }, () => bus.market_prices!('stone', 2)))
     expect(samples.every((sample) => sample?.total_units === '1000025')).toBe(true)
-    expect(supply_reads).toBe(1)
+    expect(supply_reads).toBe(2)
+    tracking = false
+    const untracked = await bus.market_prices!('untracked', 3)
+    expect(untracked).toEqual({ history: null, total_units: '1000025' })
   } finally {
     bus.close()
   }

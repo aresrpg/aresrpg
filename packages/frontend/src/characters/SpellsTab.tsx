@@ -7,22 +7,18 @@
 // (n → n+1 costs n points, progression.move law — enabled only when the chain would
 // accept, never a dead click).
 
-import { useEffect, useMemo, useState } from 'react'
+import { Button, ValueBadge } from '@aresrpg/ui'
 import type { CharacterRow } from '@aresrpg/protocol'
 
-import { localized_error } from '../i18n/error_text.ts'
 import { SpellRow } from '../components/SpellRow.tsx'
 import { spell_icon } from '../content/assets.ts'
-import { encyclopedia_catalog, titleize, type SeedSpell, type SpellLevel } from '../content/catalog.ts'
-import { encyclopedia_text } from '../encyclopedia/copy.ts'
+import { titleize, type SpellLevel } from '../content/catalog.ts'
 import { SpellCard } from '../encyclopedia/SpellCard.tsx'
 import { effect_color } from '../encyclopedia/SpellCardEffects.tsx'
-import { copy_text, spell_name, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
-import { toast } from '../toast.ts'
-import { run_direct_transaction } from '../transaction_guard.ts'
+import { type AppCopy } from '../i18n/copy.ts'
 
-import { editable_character } from './character_activity.ts'
+import type { CharacterSession } from './character_session.ts'
+import { useSpells } from './useSpells.ts'
 
 import './spellbook.css'
 
@@ -31,66 +27,31 @@ const spell_tint = (level: Readonly<SpellLevel> | undefined): string => {
   return damage ? effect_color(damage.element) : '#c8963c'
 }
 
-export default function SpellsTab({ character, copy }: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy }>) {
-  const t = copy_text(copy.characters_page)
-  const encyclopedia = encyclopedia_text(copy)
-  const display_name = (identity: string): string => spell_name(copy, identity)
-  const wallet = useAppStore(({ session }) => session.wallet)
-  const available = useAppStore((state) => editable_character(state, character.id, Date.now()))
-  const [selected_name, set_selected_name] = useState<string | null>(null)
-  const [raising, set_raising] = useState(false)
-  const locked = [!available, raising].some(Boolean)
-
-  const spells = useMemo(
-    () =>
-      (encyclopedia_catalog.class(character.classe)?.spells ?? []).toSorted(
-        (left, right) => left.unlock_level - right.unlock_level || left.name.localeCompare(right.name)
-      ),
-    [character.classe]
-  )
-  // progression.move spell_level: 0 below unlock, else the book's entry (absent = 1)
-  const level_of = (spell: Readonly<SeedSpell>): number =>
-    character.level < spell.unlock_level ? 0 : (character.spells[spell.name] ?? 1)
-
-  const unlocked_count = spells.filter((spell) => level_of(spell) >= 1).length
-  const selected =
-    spells.find(({ name }) => name === selected_name) ?? spells.find((spell) => level_of(spell) >= 1) ?? spells[0]
-  const points = character.available_spell_points
-
-  const current = selected ? level_of(selected) : 0
-  const max_level = selected?.levels.length ?? 0
-  const mastered = current >= max_level && current > 0
-  const cost = current
-  const can_raise = !!wallet && !!selected && current >= 1 && !mastered && points >= cost && !locked
-  const raise_hint =
-    !selected || locked || can_raise || mastered
-      ? undefined
-      : current < 1
-        ? t('spells.requires_lv', { level: selected.unlock_level })
-        : t('spells.no_points')
-
-  const raise = (): void => {
-    if (!can_raise || !wallet || !selected) return
-    const transaction = run_direct_transaction(() => {
-      const current_character = editable_character(read_app_state(), character.id, Date.now())
-      if (!current_character) throw localized_error(t('progression_busy'))
-      return wallet.character.raise_spell({
-        character_id: character.id,
-        spell: selected.name,
-        custody: { kiosk: current_character.kiosk, kiosk_cap: current_character.kiosk_cap },
-      })
-    })
-    if (!transaction) return
-    set_raising(true)
-    const pending = toast.loading(t('spells.upgrading'))
-    void transaction
-      .then(() => {
-        dispatch_app({ type: 'character/spell_raised', character_id: character.id, spell: selected.name })
-        pending.success(t('spells.upgrade_success', { spell: display_name(selected.name) }))
-      })
-      .catch(pending.error)
-      .finally(() => set_raising(false))
-  }
+export default function SpellsTab({
+  character,
+  copy,
+  session,
+}: Readonly<{ character: Readonly<CharacterRow>; copy: AppCopy; session?: CharacterSession }>) {
+  const {
+    t,
+    encyclopedia,
+    display_name,
+    available,
+    set_selected_name,
+    raising,
+    locked,
+    spells,
+    level_of,
+    unlocked_count,
+    selected,
+    points,
+    current,
+    mastered,
+    cost,
+    can_raise,
+    raise_hint,
+    raise,
+  } = useSpells({ character, copy, session })
 
   return (
     <div className="sb" data-tutorial-target="character_spells">
@@ -105,13 +66,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
             </div>
           </div>
         </div>
-        <div className="sb__points">
-          <div>
-            <div className="sb__points-lab">{t('spells.spell_points')}</div>
-            <div className="sb__points-sub">{t('spells.available')}</div>
-          </div>
-          <div className="sb__points-val">{points}</div>
-        </div>
+        <ValueBadge label={t('spells.spell_points')} value={points} />
       </div>
 
       <p hidden={!!available} role="status" className="px-3 text-xs text-muted">
@@ -190,8 +145,9 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
               ) : (
                 <div className="sb__lup">
                   <div className="sb__actions">
-                    <button
-                      className={`sb__btn-compact${can_raise ? ' sb__btn-gold' : ' sb__btn-off'}`}
+                    <Button
+                      tone="primary"
+                      className="sb__upgrade"
                       disabled={!can_raise}
                       onClick={raise}
                       title={raise_hint}
@@ -200,7 +156,7 @@ export default function SpellsTab({ character, copy }: Readonly<{ character: Rea
                       {raising
                         ? t('spells.upgrading')
                         : `${t('spells.level_up_spell')} · ${t('spells.pts', { count: cost })}`}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

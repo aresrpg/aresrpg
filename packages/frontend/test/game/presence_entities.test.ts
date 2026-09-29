@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 import type { CharacterAppearanceRender, EntityRender } from '@aresrpg/engine'
-import type { PresenceRow } from '@aresrpg/protocol'
+import { DEFAULT_ADMIN_ADDRESS, type PresenceRow } from '@aresrpg/protocol'
 
 import { create_presence_renderer } from '../../src/game/presence_entities.ts'
 
@@ -106,4 +106,52 @@ test('scene disposal retires pending appearance loads and scheduled frames', asy
   frames.forEach((frame) => frame(performance.now()))
   expect(submitted).toEqual([[]])
   expect(renderer.positions()).toEqual([])
+})
+
+test('equipping and removing a title updates a remote aura without reloading models or leaving the crowd', async () => {
+  const frames = new Set<(now: number) => void>()
+  const submitted: (readonly EntityRender[])[] = []
+  let loads = 0
+  const renderer = create_presence_renderer({
+    submit: (entities) => submitted.push(entities),
+    entity_height: () => 2,
+    pet_ground_height: () => 0,
+    label: () => {},
+    next_frame: (frame) => {
+      frames.add(frame)
+    },
+    appearance_loader: async () => {
+      loads++
+      return appearance
+    },
+  })
+  const frame = () => {
+    const callbacks = [...frames]
+    frames.clear()
+    callbacks.forEach((run) => run(performance.now() + 16))
+  }
+  const base = rows_at(50_000).player_0!
+  const latest = () => submitted.at(-1)?.find(({ id }) => id === base.character_id)
+  try {
+    renderer.update({ [base.character_id]: base }, null)
+    await Bun.sleep(0)
+    frame()
+    renderer.update({ [base.character_id]: { ...base, title: 'title_veteran' } }, null)
+    frame()
+    expect(latest()).toMatchObject({ kind: 'character', aura: 'unbroken', presentation: 'crowd' })
+    expect(loads).toBe(1)
+    renderer.update({ [base.character_id]: base }, null)
+    frame()
+    expect(latest()).not.toHaveProperty('aura')
+    expect(loads).toBe(1)
+    renderer.update({ [base.character_id]: { ...base, owner: DEFAULT_ADMIN_ADDRESS } }, null)
+    frame()
+    expect(latest()).toMatchObject({ aura: 'admin', presentation: 'crowd' })
+    renderer.update({ [base.character_id]: base }, null)
+    frame()
+    expect(latest()).not.toHaveProperty('aura')
+    expect(loads).toBe(1)
+  } finally {
+    renderer.dispose()
+  }
 })

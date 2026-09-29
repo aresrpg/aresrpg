@@ -1,0 +1,213 @@
+.aui-mob-pack {
+  display: flex;
+  flex-direction: column;
+  width: 210px;
+  transform: translateY(-100%);
+  border: 1px solid #091a2b;
+  border-radius: 5px;
+  background: #1e252c;
+  box-shadow:
+    inset 0 1px #aac8dd2b,
+    0 5px 14px #0007;
+  overflow: hidden;
+  pointer-events: auto;
+  font: 600 12px var(--aui-font);
+}
+.aui-mob-pack > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-bottom: 1px solid #7899b51c;
+  background: none;
+  color: #e0eaf3;
+  cursor: pointer;
+  text-align: left;
+}
+.aui-mob-pack > button:hover {
+  background: #343b43;
+}
+.aui-mob-pack > button > img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.aui-mob-pack > button > span {
+  flex: 1;
+}
+.aui-mob-pack > button > strong {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d9b984;
+}
+.aui-mob-pack > footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px;
+  background: #161c22;
+  color: #b9cddf;
+  font-size: 11px;
+}
+.aui-mob-stats > button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  color: #e4eef5;
+  cursor: pointer;
+  font: 700 16px var(--aui-font);
+}
+.aui-mob-stats > button > span {
+  display: flex;
+  align-items: center;
+  min-width: 24px;
+}
+.aui-mob-stats > button:hover {
+  color: #f0c88d;
+}
+.aui-mob-stats > button img {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+}
+.aui-mob-stats > button svg {
+  width: 20px;
+  height: 20px;
+}
+.aui-mob-loot {
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+}
+.aui-mob-loot > button {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 46px;
+  padding: 2px 2px 11px;
+  border: 1px solid #0d2031;
+  border-radius: 4px;
+  background: #303741;
+  color: #cedcea;
+  cursor: pointer;
+}
+.aui-mob-loot > button > img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.aui-mob-loot > button > span {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font: 9px var(--aui-font);
+}
+.aui-inspection {
+  width: min(600px, calc(100cqw - 24px));
+  max-height: calc(100cqh - 24px);
+  background: #1b2229;
+}
+.aui-inspection-body {
+  padding: 12px;
+  min-height: 0;
+}
+.aui-inspection--spell [data-spell-detail-card] > header h3 {
+  display: none;
+}
+.aui-inspection--spell [data-spell-detail-card] > section > div {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 12px;
+  padding: 10px;
+}
+.aui-inspection--spell [data-spell-ap-cost] {
+  grid-column: 1/-1;
+}
+.aui-inspection--spell [data-spell-detail-card] section {
+  margin-top: 0;
+}
+.aui-drop-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+.aui-drop-facts > span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #82909e20;
+  border-radius: 4px;
+  background: #10161d66;
+  font: 11px/1.25 var(--aui-font);
+  color: #aeb6c2;
+}
+.aui-drop-facts strong {
+  font: 700 20px/1.15 var(--aui-font);
+  font-variant-numeric: tabular-nums;
+  color: #ece5d8;
+}
+.aui-drop-note {
+  font: 11px/1.45 var(--aui-font);
+  color: #919ba8;
+  margin: 0;
+}
+.aui-inspection--stats {
+  width: min(500px, calc(100cqw - 24px));
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .aui-inspection {
+    width: min(820px, calc(100cqw - 12px));
+    max-height: calc(100cqh - 12px);
+  }
+  .aui-inspection-body {
+    padding: 8px;
+  }
+  .aui-inspection--spell [data-spell-detail-card] {
+    max-width: none;
+  }
+  .aui-inspection--spell [data-spell-detail-card] > section > div {
+    gap: 8px;
+    padding: 8px;
+  }
+  .aui-inspection--drop [data-item-detail-view] {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 12px;
+    max-width: none;
+  }
+  .aui-inspection--drop [data-item-detail-view] > .h-px {
+    display: none;
+  }
+  .aui-inspection--drop [data-item-detail-view] > header {
+    flex-direction: column;
+    gap: 5px;
+  }
+  .aui-inspection--drop [data-item-detail-view] > header > img {
+    width: 64px;
+    height: 64px;
+  }
+  .aui-inspection--drop [data-active-item-stats] {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(4, minmax(24px, auto));
+    grid-auto-columns: minmax(180px, 1fr);
+    overflow-x: auto;
+  }
+  .aui-drop-note {
+    margin: 5px 0 7px;
+    font-size: 10px;
+  }
+}

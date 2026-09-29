@@ -14,6 +14,6 @@ describe('app runtime boundaries', () => {
   })
 
   test('the demo arms only local settings, combat, simulation, and editing', () => {
-    expect(DEMO_APP_MODULES).toEqual(['settings', 'simulator', 'fight', 'editor'])
+    expect(DEMO_APP_MODULES).toEqual(['settings', 'audio', 'locale', 'simulator', 'fight', 'editor'])
   })
 })

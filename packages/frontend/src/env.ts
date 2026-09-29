@@ -7,6 +7,8 @@ export type Network = 'mainnet' | 'testnet'
 export type EngineQuality = 'low' | 'medium' | 'high'
 
 export type PublicEnv = Readonly<{
+  posthog_project_token: string
+  posthog_host: string
   app_name: string
   app_url: string
   enoki_api_key: string
@@ -36,6 +38,11 @@ const normalize_ws_url = (value: string): string => {
   return `${url.href.replace(/\/+$/, '')}/`
 }
 
+const resolve_analytics_env = (source: Readonly<Record<string, string | undefined>>) => ({
+  posthog_project_token: source.VITE_POSTHOG_PROJECT_TOKEN ?? 'phc_pi5yrMJfu5h6rN86ugdURJcTWUkXQsGmCfMR6hSZ3RP8',
+  posthog_host: source.VITE_POSTHOG_HOST ?? 'https://us.i.posthog.com',
+})
+
 export const resolve_env = (source: Readonly<Record<string, string | undefined>>): PublicEnv => {
   const {
     VITE_APP_URL = 'https://aresrpg.world/',
@@ -55,6 +62,7 @@ export const resolve_env = (source: Readonly<Record<string, string | undefined>>
 
   const app_url = normalize_url(VITE_APP_URL)
   return Object.freeze({
+    ...resolve_analytics_env(source),
     app_name: 'AresRPG',
     app_url,
     enoki_api_key: VITE_ENOKI_API_KEY,

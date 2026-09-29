@@ -287,6 +287,7 @@
 }
 
 .inv__cosmetics {
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--s-2);
@@ -302,7 +303,8 @@
   grid-template-columns: repeat(2, 44px);
 }
 
-.inv__cosmetics .inv__slot-glyph {
+.inv__cosmetics .inv__slot-placeholder {
+  object-fit: contain;
   margin-bottom: 14px;
 }
 
@@ -397,7 +399,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.inv__slot-glyph {
+.inv__slot-placeholder {
+  object-fit: contain;
   width: 42%;
   height: 42%;
   color: var(--fg-faint);
@@ -418,8 +421,9 @@
   text-transform: uppercase;
 }
 
-.inv__doll--compact .inv__slot-glyph,
-.inv__cosmetics--compact .inv__slot-glyph {
+.inv__doll--compact .inv__slot-placeholder,
+.inv__cosmetics--compact .inv__slot-placeholder {
+  object-fit: contain;
   width: 36%;
   height: 36%;
   margin-bottom: 7px;
@@ -477,7 +481,8 @@
   height: 64px;
 }
 
-[data-fight-lab-equipment] .inv__slot-glyph {
+[data-fight-lab-equipment] .inv__slot-placeholder {
+  object-fit: contain;
   width: 48%;
   height: 48%;
 }

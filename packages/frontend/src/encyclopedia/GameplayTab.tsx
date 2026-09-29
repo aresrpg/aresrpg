@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { NavigationRow } from '@aresrpg/ui'
 import { max_level, xp_for_level } from '@aresrpg/immutable'
 import { RETRO_GROUP_XP_TENTHS } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
@@ -95,19 +96,10 @@ export const GameplayTab = ({ text }: Readonly<{ text: EncyclopediaText }>) => {
           {SECTIONS.map(({ id, icon: Icon }) => {
             const active = active_section === id
             return (
-              <button
-                className={`flex w-full cursor-pointer items-center gap-2 border-l-2 px-3 py-2.5 text-left transition-colors ${
-                  active
-                    ? 'border-l-[#c8963c] bg-[#c8963c]/8 text-[#c8963c]'
-                    : 'border-l-transparent text-[#6b7280] hover:bg-white/4 hover:text-[#e8e4dc]'
-                }`}
-                key={id}
-                onClick={() => go(id)}
-                type="button"
-              >
+              <NavigationRow selected={active} key={id} onClick={() => go(id)} type="button">
                 <Icon className={active ? 'opacity-80' : 'opacity-40'} size={12} />
-                <span className="text-[10px] tracking-[0.15em] uppercase">{text(`gameplay.section_${id}`)}</span>
-              </button>
+                <span className="text-[12px]">{text(`gameplay.section_${id}`)}</span>
+              </NavigationRow>
             )
           })}
         </div>

@@ -39,19 +39,22 @@ import {
   vec3,
 } from 'three/tsl'
 
+import type { UploadQueue } from './upload_queue.ts'
+import { create_detail_layer } from './detail_layer.ts'
 import type { Clouds } from './clouds.ts'
+import { CANOPY_BOUNDS_MARGIN } from './opaque_canopy.ts'
+import { CanopyLightingModel } from './canopy_lighting.ts'
+import { opaque_leaf_nodes, opaque_voxel_nodes } from './opaque_canopy_nodes.ts'
 import { chunk_in_frustum } from './chunk_visibility.ts'
-import type { FlattenUniform } from './flatten.ts'
-import { create_flat_nodes } from './flat_nodes.ts'
 import { FACE_WINDING_FLIP_BITS, type GreedyMeshData } from './greedy_mesher.ts'
 import { get_quality_profile } from './quality.ts'
-import { create_material_texture } from './material_texture.ts'
+import { create_material_texture, MATERIAL_TEXTURE_BLOCK_SPAN } from './material_texture.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
-import { macro_tint_nodes } from './terrain_tint.ts'
+import { material_emission_node, macro_tint_nodes } from './terrain_tint.ts'
 import { AO_FLOOR, AO_LEVELS, FACE_BRIGHTNESS, LIT_FACE_BRIGHTNESS } from './terrain_lighting.ts'
 import { occlusion_dither_discard, type BoardOcclusion } from './board_occlusion.ts'
 import type { EngineQuality, RenderedChunk } from './types.ts'
-import { compile_world_recipe, type WorldRecipe } from './world_recipe.ts'
+import type { CompiledWorld } from './world_recipe.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 import { CHUNK_EDGE } from './voxel_data.ts'
 
@@ -60,14 +63,13 @@ const SLOT_QUADS = TERRAIN_POOL_LAYOUT.slot_quads
 const MAX_SLOTS = TERRAIN_POOL_LAYOUT.max_slots
 const SLOT_SHIFT = Math.log2(SLOT_QUADS)
 const INDIRECT_WORDS = 5
-const MATERIAL_TEXTURE_BLOCK_SPAN = 4
 
 export type TerrainPool = Readonly<{
   set_visible: (visible: boolean) => void
+  set_details_visible: (visible: boolean) => void
   upload: (chunk: RenderedChunk, data: GreedyMeshData) => 'uploaded' | 'full' | 'too_large'
   remove: (key: string) => boolean
   set_quality: (quality: EngineQuality) => void
-  sync_flatten: () => void
   /** swap the see-through variant in while a fight board is mounted */
   set_occlusion_active: (active: boolean) => void
   set_view: (camera: Camera, shadow_camera: Camera | null) => void
@@ -88,13 +90,12 @@ const build_material = (
   quality: EngineQuality,
   pool_attr: StorageBufferAttribute,
   meta_attr: StorageBufferAttribute,
-  flatten: FlattenUniform,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   clouds: Clouds,
   materials: CompiledMaterials,
   material_texture: DataArrayTexture,
-  flatten_variant: boolean,
-  occlusion: BoardOcclusion | null
+  occlusion: BoardOcclusion | null,
+  surface_nodes: typeof opaque_leaf_nodes
 ): Material => {
   const terrain_kind = get_quality_profile(quality).terrain.kind
   const material =
@@ -139,11 +140,13 @@ const build_material = (
   const face_sign = float(1).sub(float(face.bitAnd(uint(1))).mul(2))
   const normal = vec3(axis_x_f.mul(face_sign), axis_y_f.mul(face_sign), axis_z_f.mul(face_sign))
   const push = positive.select(normal, vec3(0))
-  const local = vec3(x, y, z)
+  const voxel_local = vec3(x, y, z)
     .add(u_axis.mul(rendered_corner_u.mul(width)))
     .add(v_axis.mul(corner_v.mul(height)))
     .add(push)
     .add(meta.xyz)
+  const surface = surface_nodes(word_a, word_b, corner_u, corner_v, meta.xyz)
+  const local = surface.position(voxel_local)
   // EXPLICIT interpolation: color math must see the per-FRAGMENT position. Left implicit,
   // the reconstruction collapsed to per-quad values in the fragment stage — every pixel/tint
   // layer flattened to one flat shade per greedy quad (the owner's "I see quads" bug).
@@ -183,12 +186,21 @@ const build_material = (
   const ao = mix(ao_floor, float(1), ao_fraction)
   // One world-space field spans several blocks. A material never switches texture layers at a
   // voxel boundary, so greedy-quad and block identity cannot draw a straight texture seam.
-  const texture_uv = vec2(local_frag.dot(u_axis), local_frag.dot(v_axis).negate()).div(
-    float(MATERIAL_TEXTURE_BLOCK_SPAN)
+  const texture_uv = surface.uv(
+    vec2(local_frag.dot(u_axis), local_frag.dot(v_axis).negate()).div(float(MATERIAL_TEXTURE_BLOCK_SPAN))
   )
   const texture_sample = texture(material_texture, texture_uv).depth(int(material_id))
   const texture_color = texture_sample.rgb
   const micro_roughness = texture_sample.a.sub(0.5)
+  // The texture's micro-relief bends lighting normals, not the silhouette or collision.
+  // World-space UVs preserve continuity across greedy quads and chunk boundaries.
+  const relief_step = 1 / material_texture.image.width
+  const relief_u = texture(material_texture, texture_uv.add(vec2(relief_step, 0)))
+    .depth(int(material_id))
+    .a.sub(texture_sample.a)
+  const relief_v = texture(material_texture, texture_uv.add(vec2(0, relief_step)))
+    .depth(int(material_id))
+    .a.sub(texture_sample.a)
   const environment_light =
     terrain_kind === 'flat' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
   // The legacy NG-TINT macro field (moisture, climate, underlayer patches, and macro gradient)
@@ -199,38 +211,16 @@ const build_material = (
     materials,
   })
   const base_color = tint.tint_albedo(texture_color).mul(face_brightness).mul(ao).mul(environment_light)
-  // Rounded corners (port of the legacy engine's uSmoothEdgeRadius): near a CONVEX quad edge
-  // the fragment normal bends as if the surface curved away — lighting reads the edge as a
-  // bevel, geometry never changes. Edge flags come from the mesher (word B bits 28-31); the
-  // whole computation stays branchless arithmetic — select chains in the normalNode context
-  // compile to garbage on WebGPU (2026-08-15 probe chain).
-  // SUBTLE is the whole point (owner 2026-08-19: 0.3 read as fat white chalk lips): a thin
-  // 0.1-block margin, and the bend capped below 45° so a lit top edge brightens instead of
-  // turning into a specular stripe.
-  const round_radius = float(0.1)
-  const round_strength = float(0.7)
-  const edge_flags = word_b.shiftRight(uint(28))
-  const round_u_low = float(edge_flags.bitAnd(uint(1)))
-  const round_u_high = float(edge_flags.shiftRight(uint(1)).bitAnd(uint(1)))
-  const round_v_low = float(edge_flags.shiftRight(uint(2)).bitAnd(uint(1)))
-  const round_v_high = float(edge_flags.shiftRight(uint(3)).bitAnd(uint(1)))
-  const overrun_u = round_u_high
-    .mul(u_cells.sub(width_frag.sub(round_radius)).max(0))
-    .sub(round_u_low.mul(round_radius.sub(u_cells).max(0)))
-  const overrun_v = round_v_high
-    .mul(v_cells.sub(height_frag.sub(round_radius)).max(0))
-    .sub(round_v_low.mul(round_radius.sub(v_cells).max(0)))
-  const bent_local = vec3(overrun_u.mul(round_strength), overrun_v.mul(round_strength), round_radius).normalize()
-  const rounded_normal = u_axis.mul(bent_local.x).add(v_axis.mul(bent_local.y)).add(normal.mul(bent_local.z))
-  // The scan front is presentation only. Geometry uses the one global projection amount so
-  // the renderer, character collision, boards, and markers all agree on exact height.
-  const flat = create_flat_nodes(local_frag.x, local_frag.z, flatten.amount, base_color)
-  const flattened_position = vec3(local.x, mix(local.y, float(0), flatten.amount), local.z)
-  const flattened_normal = mix(rounded_normal, vec3(0, 1, 0), flatten.amount).normalize()
-  const solid_opacity = top.select(float(1), float(1).sub(flatten.amount))
-
-  material.positionNode = flattened_position
-  material.normalNode = transformNormalToView(flattened_normal)
+  // Square voxel faces meet authored stairs/slabs without an invented rounded highlight.
+  const detailed_normal = normal
+    .sub(u_axis.mul(relief_u.mul(2.5)))
+    .add(v_axis.mul(relief_v.mul(2.5)))
+    .normalize()
+  const surface_normal = surface.normal(detailed_normal)
+  // NodeMaterial consumes emissiveNode for Basic too; Three types declare it on Standard only.
+  ;(material as MeshStandardNodeMaterial).emissiveNode = material_emission_node(materials, material_id)
+  material.positionNode = local
+  material.normalNode = transformNormalToView(surface_normal)
   // The peephole's screen-door discard MUST ride the colour output graph: a nested Fn's Discard
   // never reaches the outer stack, and a bare build-scope discard is compiled away entirely
   // (three's node builder only emits what an output slot reaches). This variant is the only
@@ -238,47 +228,44 @@ const build_material = (
   material.colorNode = occlusion
     ? (Fn(() => {
         occlusion_dither_discard(occlusion)
-        return flat.color
-      })() as typeof flat.color)
-    : flat.color
+        return base_color
+      })() as typeof base_color)
+    : base_color
   if (terrain_kind !== 'flat')
     material.receivedShadowNode = Fn((args: readonly [Node<'float'>], _builder: NodeBuilder) =>
-      args[0].mul(clouds.shadow_at(local_frag.xz, local_frag.y))
+      surface.shadow(args[0]).mul(clouds.shadow_at(local_frag.xz, local_frag.y))
     ) as unknown as () => Node
-  // The side-face fade exists ONLY for the flat-world projection; on the normal path the
-  // material stays fully opaque with NO alphaTest — a discard in the opaque terrain shader
-  // kills early-Z on every GPU (perf audit) for a feature that is off in normal play.
-  if (flatten_variant) {
-    material.opacityNode = solid_opacity
-    material.alphaTest = 0.5
-  }
   // Quality changes workload, not the material's meaning. Every lit tier keeps the same
   // role-derived dielectric response; low remains the explicit unlit fallback.
-  if (terrain_kind !== 'flat')
-    (material as MeshStandardNodeMaterial).roughnessNode = tint.roughness_node.add(micro_roughness).clamp(0.1, 1)
+  if (terrain_kind !== 'flat') {
+    const lit = material as MeshStandardNodeMaterial
+    lit.roughnessNode = tint.roughness_node.add(micro_roughness).clamp(0.1, 1)
+    lit.setupLightingModel = () => new CanopyLightingModel(surface.specular(float(1)))
+  }
   return material
 }
 
 export const create_terrain_pool = ({
   scene,
   quality,
-  flatten,
-  world,
+  world: compiled_world,
+  uploads,
   sun_direction,
   clouds,
   board_occlusion,
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
-  flatten: FlattenUniform
-  world: WorldRecipe
+  world: CompiledWorld
+  uploads: UploadQueue
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction']
   clouds: Clouds
   /** the shared peephole uniforms — the see-through variant is built against them */
   board_occlusion: BoardOcclusion
 }>): TerrainPool => {
   const capacity = MAX_SLOTS * SLOT_QUADS
-  const compiled_materials = compile_world_recipe(world).materials
+  const world = compiled_world.recipe
+  const compiled_materials = compiled_world.materials
   const pool_array = new Uint32Array(capacity * 2)
   const meta_array = new Float32Array(MAX_SLOTS * 4)
   const indirect_array = new Uint32Array(MAX_SLOTS * INDIRECT_WORDS)
@@ -288,38 +275,34 @@ export const create_terrain_pool = ({
   const geometry = create_geometry(capacity)
   const shadow_geometry = create_geometry(capacity)
   const free_slots = Array.from({ length: MAX_SLOTS }, (_, index) => MAX_SLOTS - index - 1)
-  const chunk_slots = new Map<string, Readonly<{ origin: RenderedChunk['origin']; slots: readonly number[] }>>()
-  const build = (
-    tier: EngineQuality,
-    material_texture: DataArrayTexture,
-    flatten_variant: boolean,
-    occlusion: BoardOcclusion | null = null
-  ) =>
+  const bounds_margin = world.canopy === 'clusters' ? CANOPY_BOUNDS_MARGIN : 0
+  const bounds_edge = CHUNK_EDGE + bounds_margin * 2
+  const chunk_slots = new Map<string, Readonly<{ bounds_origin: RenderedChunk['origin']; slots: readonly number[] }>>()
+  const build = (tier: EngineQuality, material_texture: DataArrayTexture, occlusion: BoardOcclusion | null = null) =>
     build_material(
       tier,
       pool_attr,
       meta_attr,
-      flatten,
       sun_direction,
       clouds,
       compiled_materials,
       material_texture,
-      flatten_variant,
-      occlusion
+      occlusion,
+      world.canopy === 'clusters' ? opaque_leaf_nodes : opaque_voxel_nodes
     )
   const create_quality_resources = (tier: EngineQuality, retained_texture?: DataArrayTexture) => {
     const { kind, texture_size } = get_quality_profile(tier).terrain
-    const material_texture = retained_texture ?? create_material_texture(compiled_materials, texture_size)
+    const material_texture =
+      retained_texture ?? create_material_texture(compiled_materials, texture_size, world.canopy === 'clusters')
     return Object.freeze({
       kind,
       texture_size,
       material_texture,
-      material: build(tier, material_texture, false),
-      flatten_material: build(tier, material_texture, true),
+      material: build(tier, material_texture),
       // THE PEEPHOLE VARIANT. Its screen-door discard costs early-Z on every GPU, so it exists
       // beside the fast material and is swapped in only while a board is mounted — normal play
       // never renders a shader that can discard.
-      occlusion_material: build(tier, material_texture, false, board_occlusion),
+      occlusion_material: build(tier, material_texture, board_occlusion),
     })
   }
   const dispose_quality_resources = (
@@ -327,16 +310,24 @@ export const create_terrain_pool = ({
     dispose_texture = true
   ): void => {
     resources.material.dispose()
-    resources.flatten_material.dispose()
     resources.occlusion_material.dispose()
     if (dispose_texture) resources.material_texture.dispose()
   }
   let occlusion_active = false
   const pick_material = () => {
-    if (flatten.amount.value > 0) return quality_resources.flatten_material
     return occlusion_active ? quality_resources.occlusion_material : quality_resources.material
   }
   let quality_resources = create_quality_resources(quality)
+  const details = create_detail_layer({
+    scene,
+    cells: world.details ?? [],
+    uploads,
+    clouds,
+    materials: compiled_materials,
+    atlas: quality_resources.material_texture,
+    quality,
+    sun_direction,
+  })
   const mesh = new Mesh(geometry, quality_resources.material)
   mesh.frustumCulled = false
   mesh.matrixAutoUpdate = false
@@ -387,14 +378,10 @@ export const create_terrain_pool = ({
   const rebuild_draws = (): void => {
     visible_scratch.length = 0
     shadow_scratch.length = 0
-    // Cull the same projected bounds the shader draws, including during the transition.
-    const height_scale = 1 - flatten.amount.value
-    chunk_slots.forEach(({ origin, slots }) => {
-      // The ground-only far surface owns the complete flat view.
-      if (height_scale === 0) return
-      if (!view_active || chunk_in_frustum(origin, CHUNK_EDGE, view_frustum.planes, height_scale))
+    chunk_slots.forEach(({ bounds_origin, slots }) => {
+      if (!view_active || chunk_in_frustum(bounds_origin, bounds_edge, view_frustum.planes))
         visible_scratch.push(...slots)
-      if (shadow_view_active && chunk_in_frustum(origin, CHUNK_EDGE, shadow_frustum.planes, height_scale))
+      if (shadow_view_active && chunk_in_frustum(bounds_origin, bounds_edge, shadow_frustum.planes))
         shadow_scratch.push(...slots)
     })
     visible_draw_slots = write_draws(geometry, visible_scratch, visible_draw_slots)
@@ -424,6 +411,7 @@ export const create_terrain_pool = ({
   }
 
   const remove = (key: string): boolean => {
+    details.remove(key)
     if (!release_chunk(key)) return false
     update_buffers()
     rebuild_draws()
@@ -431,6 +419,7 @@ export const create_terrain_pool = ({
   }
 
   return Object.freeze({
+    set_details_visible: details.set_visible,
     set_visible: (visible: boolean) => {
       mesh.visible = visible
       shadow_mesh.visible = visible
@@ -441,6 +430,7 @@ export const create_terrain_pool = ({
       if (required > MAX_SLOTS) return 'too_large'
       if (required > free_slots.length + reusable) return 'full'
       release_chunk(chunk.key)
+      details.retain(chunk.key, chunk.origin, chunk.details)
       if (required === 0) return 'uploaded'
       const slots = Array.from({ length: required }, (_, index) => {
         const slot = free_slots.pop()!
@@ -453,7 +443,12 @@ export const create_terrain_pool = ({
         indirect_array[slot * INDIRECT_WORDS + 1] = quad_count
         return slot
       })
-      chunk_slots.set(chunk.key, Object.freeze({ origin: chunk.origin, slots: Object.freeze(slots) }))
+      const bounds_origin = [
+        chunk.origin[0] - bounds_margin,
+        chunk.origin[1] - bounds_margin,
+        chunk.origin[2] - bounds_margin,
+      ] as const
+      chunk_slots.set(chunk.key, Object.freeze({ bounds_origin, slots: Object.freeze(slots) }))
       update_buffers()
       rebuild_draws()
       return 'uploaded'
@@ -469,6 +464,7 @@ export const create_terrain_pool = ({
         next,
         reuse_texture ? previous_resources.material_texture : undefined
       )
+      details.set_quality(next, quality_resources.material_texture)
       mesh.material = pick_material()
       shadow_mesh.material = pick_material()
       shadow_mesh.castShadow = kind !== 'flat'
@@ -476,16 +472,6 @@ export const create_terrain_pool = ({
       rebuild_draws()
       dispose_quality_resources(previous_resources, !reuse_texture)
     },
-    /// Only the transition needs the side-fade shader. The uniform owns projection state.
-    sync_flatten: () => {
-      const material = pick_material()
-      if (mesh.material === material) return
-      mesh.material = material
-      shadow_mesh.material = material
-      rebuild_draws()
-    },
-    /// The see-through variant rides ONLY while a fight board is mounted (flat mode already
-    /// flattens every occluder away, so the peephole is unnecessary).
     set_occlusion_active: (active: boolean) => {
       if (active === occlusion_active) return
       occlusion_active = active
@@ -514,6 +500,7 @@ export const create_terrain_pool = ({
       scene.remove(mesh, shadow_mesh)
       geometry.dispose()
       shadow_geometry.dispose()
+      details.dispose()
       dispose_quality_resources(quality_resources)
       chunk_slots.clear()
       free_slots.length = 0

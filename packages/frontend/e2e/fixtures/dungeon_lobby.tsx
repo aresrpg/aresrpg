@@ -38,7 +38,7 @@ const fight = (id: string, name: string, opener: string, access: number): Dungeo
 })
 initialize_app_store({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: false,
   render_distance: null,
   fight_access: 0,

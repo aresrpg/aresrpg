@@ -7,16 +7,28 @@ import { dirname, resolve } from 'node:path'
 
 import { format, resolveConfig } from 'prettier'
 
+import { detail_builder } from '../packages/engine/src/detail_builder.ts'
+import { CITY_DETAIL_LIMITS, validate_details } from '../packages/engine/src/detail_artifact.ts'
+import { validate_height_grid } from '../packages/engine/src/height_grid.ts'
 import { compile_world_recipe, parse_world_recipe, WORLD_HEIGHT } from '../packages/engine/src/world_recipe.ts'
 import { map_the_ruins, plan_the_ruins, terrain_the_ruins } from '../packages/engine/src/cities/the_ruins/generate.ts'
 import { map_fuwage, plan_fuwage, terrain_fuwage } from '../packages/engine/src/cities/fuwage/generate.ts'
 import { map_thebes, plan_thebes, terrain_thebes } from '../packages/engine/src/cities/thebes/generate.ts'
 import { world_terrain } from '../packages/engine/src/world_catalog.ts'
 
+import { bake_thebes_assets } from './bake_thebes_assets.mjs'
+
 const ROOT = resolve(import.meta.dir, '..')
 const CHUNK_EDGE = 32
 const GENERATORS = Object.freeze([
-  Object.freeze({ id: 'thebes', world: 'nauvis', plan: plan_thebes, map: map_thebes, terrain: terrain_thebes }),
+  Object.freeze({
+    id: 'thebes',
+    world: 'nauvis',
+    plan: plan_thebes,
+    map: map_thebes,
+    terrain: terrain_thebes,
+    authored: bake_thebes_assets,
+  }),
   Object.freeze({
     id: 'the_ruins',
     world: 'nauvis',
@@ -31,14 +43,35 @@ const source_paths = async (id) => {
   const city_sources = [...new Bun.Glob(`packages/engine/src/cities/${id}/**/*.ts`).scanSync({ cwd: ROOT })]
   return [
     'scripts/generate_cities.mjs',
+    'scripts/bake_thebes_assets.mjs',
+    'scripts/bake_schematic.mjs',
+    'scripts/partition_blocks.mjs',
+    'packages/engine/src/tree_placement.ts',
+    'scripts/bake_city_instances.mjs',
+    'scripts/building_kit.mjs',
+    'scripts/module_connections.mjs',
+    'scripts/module_transform.mjs',
+    'seed/structures/thebes_arrival.recipe.json',
+    'seed/structures/thebes_farmstead.recipe.json',
+    'seed/structures/thebes_gate.recipe.json',
+    'seed/structures/thebes_entry_street.recipe.json',
+    'seed/structures/thebes_left_bank.recipe.json',
+    'seed/structures/thebes_castle.recipe.json',
+    'seed/structures/thebes_castle_ward.recipe.json',
+    'seed/structures/workshop.recipe.json',
+    'seed/scenes/thebes.recipe.json',
+    'packages/engine/src/detail_builder.ts',
+    'packages/engine/src/detail_partition.ts',
+    'packages/engine/src/detail_artifact.ts',
     'seed/content/worlds.json',
     'packages/engine/src/bounded_memo.ts',
     'packages/engine/src/cities/city_structure.ts',
     'packages/engine/src/cities/city_terrain.ts',
     'packages/engine/src/cities/registry.ts',
     'packages/engine/src/cities/types.ts',
-    'packages/engine/src/cities/tiled_wfc.ts',
     'packages/engine/src/world_recipe.ts',
+    'packages/engine/src/height_grid.ts',
+    'packages/engine/src/voxel_data.ts',
     'packages/engine/src/world_noise.ts',
     'packages/engine/src/world_materials.ts',
     'packages/engine/src/world_catalog.ts',
@@ -122,16 +155,24 @@ const generate_city = async (generator) => {
   const world = compile_world_recipe(parse_world_recipe(terrain), { city_terrain: false })
   const city = world.structures.cities.find(({ id }) => id === generator.id)
   if (!city) throw new TypeError(`${generator.id} city area is missing`)
-  const drafts = generator.plan(world, city)
+  const builder = detail_builder()
+  const drafts = [...generator.plan(world, city, builder), ...(generator.authored?.(world, city, builder) ?? [])]
+  const details = builder.finish()
+  const detail_errors = validate_details(details, world.recipe.materials, CITY_DETAIL_LIMITS)
+  if (detail_errors.length) throw new Error(detail_errors.join('; '))
   const chunks = city_voxel_chunks(world, drafts).map(serialized_chunk)
+  const generated_terrain = generator.terrain(world, city)
+  const errors = validate_height_grid(generated_terrain ?? null)
+  if (errors.length) throw new Error(`Invalid ${city.id} terrain: ${errors.join('; ')}`)
   return Object.freeze({
-    version: 2,
+    version: 3,
+    details,
     id: city.id,
     source_hash: await source_hash(city.id),
     area: city.area,
     chunks,
     map: generator.map(world, city),
-    terrain: generator.terrain(world, city),
+    terrain: generated_terrain,
     placements: drafts.length,
     voxels: chunks.reduce((total, chunk) => total + chunk.voxels, 0),
   })

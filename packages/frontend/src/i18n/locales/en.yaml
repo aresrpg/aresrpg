@@ -1,6 +1,5 @@
 title: WebGPU is unavailable
-body: The full world needs WebGPU. A lightweight grid is running instead.
-fatal: This browser cannot create either a WebGPU or WebGL graphics context.
+body: 'The world requires WebGPU and a secure connection (HTTPS or localhost). Open it in a supported browser.'
 engine_recovery: The world stopped loading or rendering. Reload to try again.
 engine_reload: Reload
 engine_minimum_title: 'Graphics reduced'
@@ -8,18 +7,10 @@ engine_minimum: 'The world could not load or render. Graphics quality and render
 engine_continue: 'Continue'
 world_unavailable_title: World unavailable
 world_unavailable: This world does not have an authored terrain recipe yet.
-mobile_unavailable_label: Mobile access
-mobile_unavailable_title: AresRPG is not yet available on mobile devices
-mobile_unavailable_body: We are forging a dedicated mobile experience. For now, enter the world from a desktop browser.
-mobile_unavailable_status: Desktop build online
-chrome: 'Chrome or Edge: update the browser, then enable “Use graphics acceleration when available” under Settings → System and relaunch it.'
-other: Enable hardware acceleration, update the browser and graphics driver, then restart the browser.
-continue: Continue with grid
 quality: Quality
 low: Low
 medium: Medium
 high: High
-flat_mode: Flat mode
 identity_connected: Identity connected
 sign_in_to_play: Sign in to play
 loading_universe: Loading the universe
@@ -27,7 +18,8 @@ continue_google: Continue with Google
 wallet_session_ended: Your wallet session ended. Sign in again.
 connect_wallet: Connect wallet
 no_wallet: No compatible wallet installed
-watch_world: Watch the live world
+play_demo: 'Play demo'
+replay_demo: 'Play the demo again'
 sign_in: Sign in to play
 drag_hint: Drag to pan · Scroll to zoom
 navigation: Navigation
@@ -76,8 +68,6 @@ party_member_unavailable_toast: That character is already in a party.
 fight_turn_already_forced_toast: Someone already forced this turn to end.
 fight_placement_unavailable_toast: That starting cell is unavailable. Choose another free cell.
 network_testnet: TESTNET
-page_pending_title: This page is being rebuilt
-page_pending_body: Its place remains visible while we restore it cleanly.
 welcome_title: Welcome to AresRPG
 welcome_body: AresRPG is a fully on-chain MMORPG with a player-driven economy. Create your first character, enter the world, and find mobs to fight.
 welcome_need_sui: You need a little SUI to play — your first character costs {{price}} SUI, and you need at least {{fee}} SUI left in your balance for fees. Deposit some SUI to your address below to begin.
@@ -188,6 +178,7 @@ party_panel:
   run_to_position_wrong_world: The linked position is not in your current world.
   run_to_wrong_world: That party member is not in your current world.
   run_to_unavailable: That party member's on-chain position is unavailable.
+  run_to_blocked: 'No walkable route was found. Movement stopped.'
 trade_panel:
   kares: 'KARES offered'
   close: Close
@@ -229,6 +220,7 @@ trade_panel:
 transaction_unknown_toast: Your last action is still being checked. Further transactions are blocked until its outcome is known.
 transaction_recovered_toast: Your previous transaction was found. Refresh to see its result before choosing your next action.
 world_hud:
+  spawn_welcome: 'Welcome adventurer, this game is in early access, try to survive and enjoy your time'
   compass_label: Compass
   zone: ZONE
   unsearched: UNSEARCHED
@@ -257,6 +249,8 @@ world_hud:
   dungeon_portal: Dungeon portal
   dungeon_city: 'City of {{city}}'
   dungeon_press_enter: Enter
+  dungeon_talk: 'Talk'
+  dungeon_guard_requires_key: "I can't let you pass if you don't have the {{key}}."
   dungeon_entry_body: Use the dungeon key to enter this portal's private staging lobby.
   dungeon_required_key: Required key
   dungeon_enter: Enter dungeon
@@ -347,6 +341,21 @@ world_hud:
   resource_face_protector: 'Press {{key}} to face it'
   zone_never_arrived: 'The search went through, but the world never showed it — the read layer may be behind'
 demo_page:
+  asset_demo_city: Demo city
+  asset_house_1: Townhouse A
+  asset_house_2: Townhouse B
+  asset_covered_bridge: Covered street bridge
+  asset_gate_rampart: Gate and watchtower
+  asset_catacomb_entry: Catacomb entrance
+  asset_gallery: Assets
+  asset_house: Workshop house
+  asset_banner: Banner
+  asset_lantern: Lantern
+  asset_fence: Fence
+  asset_rope: Rope
+  asset_chain: Chain
+  asset_campfire: Campfire
+  asset_hint: Left-drag to pan · Right-drag to orbit · Scroll to zoom
   title: Render lab
   world_lab: World lab
   fight_lab: Fight lab
@@ -390,7 +399,25 @@ demo_page:
   spawn_group: Spawn group
   clear: Clear
   resources: Resources
-  resources_missing: Resource rendering has not been restored yet. The authored roster remains available in seed data.
+  hillaire_title: 'Hillaire atmosphere'
+  hillaire_preview: 'Live preview only. Reset restores this world’s defaults.'
+  hillaire_quality: 'Select Medium or High graphics to adjust Hillaire.'
+  hillaire_haze: 'Distance haze'
+  hillaire_ground: 'Ground mist · High'
+  hillaire_sky: 'Sky light'
+  hillaire_density: 'Haze density'
+  hillaire_max_opacity: 'Maximum haze opacity'
+  hillaire_near: 'Haze start (m)'
+  hillaire_full: 'Full haze distance (m)'
+  hillaire_tint: 'Blue tint'
+  hillaire_height_density: 'Mist density'
+  hillaire_height_max: 'Maximum mist opacity'
+  hillaire_height_falloff: 'Mist height falloff (m)'
+  hillaire_horizon_cap: 'Horizon brightness'
+  hillaire_exposure: 'Sky exposure'
+  hillaire_mie_scattering: 'Sun haze strength'
+  hillaire_mie_g: 'Sun haze directionality'
+  hillaire_reset: 'Reset atmosphere'
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
@@ -494,7 +521,6 @@ mastery_page:
   daily_title: Choose today's dungeon quest
   daily_lead: Choose a world. You will be assigned one dungeon to find and complete.
   unknown_dungeon: Unknown dungeon
-  quest_reward: Earn {{points}} Mastery points
   quest_objective_before: Find and complete the dungeon
   quest_objective_after: to claim your Mastery points.
   completed: Validated
@@ -619,34 +645,29 @@ tutorial:
   back: Back
   next: Next
   finish: Finish
-  fight_enter: Enter the fight
   reset_title: Tutorials
-  reset_hint: Show each introduction again when you next visit its page.
+  reset_hint: 'Show tips again when you next open each feature.'
   reset_action: Reset
-  world_compass_title: Worlds and shared zones
-  world_compass_body: AresRPG contains multiple worlds unlocked during your progression. Each world is divided into zones containing monsters, resources, and dungeons. Anyone can discover a zone, and that discovery is shared with every player.
-  world_hud_title: Health and quick slots
-  world_hud_body: This HUD shows your health and quick-use item slots. When a fight begins, the same area becomes your spell bar.
-  world_fps_title: Your world controls
-  world_fps_body: World terrain is generated deterministically from published data. Sui stores the world and authoritative X/Z position while terrain derives height locally, so Flat changes only the presentation of that same space. You can also change visual quality and restrict world fights to Party members.
-  world_character_title: Players in the world
-  world_character_body: This is your active character. Right-click another nearby character to open the available player interactions.
+  world_compass_title: 'Find your way'
+  world_compass_body: 'The compass points to nearby cities. Open the map with M or its HUD icon.'
+  world_hud_title: 'Your HUD'
+  world_hud_body: 'Use these icons to open your bag, spells and jobs. In a fight, this area becomes your spell bar.'
   world_character_tabs_title: Play several characters
-  world_character_tabs_body: You can own up to six characters. Invite your other characters into a Party and enable Party Follow to make them travel with you and automatically join eligible world fights when they arrive.
+  world_character_tabs_body: 'Switch characters here. Right-click a character to invite them to your party.'
   fight_title: Your first on-chain fight
-  fight_body: Fights are turn-based. Choose movement and spells, and your actions are prepared together. End Turn submits the complete turn as one Sui transaction and computes the following monster turns until another player can act. All authoritative fight state is settled on Sui. After victory, a final Sui transaction uses on-chain randomness to roll shared loot and place each reward in its assigned player’s inventory.
+  fight_body: 'Choose spells or click a cell to move. End Turn sends your actions together.'
   equipment_gear_title: Equipment
-  equipment_gear_body: Equipped items belong to the selected character. Drag gear onto the doll, review the resulting bonuses, then confirm the changes together.
+  equipment_gear_body: 'Click an item, choose Equip, then confirm your equipment changes.'
   equipment_inventory_title: Shared inventory
-  equipment_inventory_body: Your inventory is shared by all characters on this account. Select another character above to equip those same available items on them.
+  equipment_inventory_body: 'Items are shared across your characters. Hover for stats; click for details and actions.'
   stats_title: Characteristics
-  stats_body: Spend characteristic points to become stronger. Vitality increases health, Wisdom improves XP and resistance to AP/MP loss, Chance improves water damage and loot chance, and Agility improves air damage, critical hits, tackle, and tackle escape.
+  stats_body: 'Spend points, review the bonuses, then confirm.'
   spells_title: Spells
-  spells_body: New spells unlock as your character progresses. Leveling grants spell points that you can spend here to upgrade unlocked spells.
+  spells_body: 'Select a spell to compare its levels. Spend spell points to upgrade it.'
   jobs_title: Jobs
-  jobs_body: Track gathering and crafting progression, inspect recipes, and craft available items here. With several characters, Settings can lock this page to one dedicated crafter.
+  jobs_body: 'Choose a profession and a recipe. Click ingredients to inspect them; craft when you have enough.'
   runeforge_title: Runeforge
-  runeforge_body: At job level {{level}}, the matching crafting profession can improve equipment with runes. Obtain runes by crushing items, then apply them here.
+  runeforge_body: 'At profession level {{level}}, use runes to improve gear. Crush unwanted gear to get runes.'
 admin_page:
   kicker: Publisher
   title: Publish game content
@@ -909,6 +930,8 @@ fight_hud:
   forfeit_body: '{name} will lose all remaining HP and leave this fight.'
   confirm_forfeit: Confirm forfeit
   unit_turns: turns
+  chat_expand: Open chat
+  chat_collapse: Collapse chat
   chat_title: Chat
   chat_resize: Resize chat
   chat_tab_general: General
@@ -1005,27 +1028,29 @@ wallet_legacy:
     to your wallet.
   method_paypal: PayPal
   method_paypal_desc: Pay with your PayPal account
-  method_card: Credit / Debit Card
-  method_card_desc: Visa, Mastercard
+  method_card: 'Card / PayPal'
+  method_card_desc: 'Buy SUI through a payment provider'
   method_apple_pay: Apple Pay
   method_apple_pay_desc: Pay with Face ID / Touch ID
   method_google_pay: Google Pay
   method_google_pay_desc: Pay with your Google account
   method_bank: Bank Transfer
   method_bank_desc: SEPA (EU) or ACH (US)
-  method_have_sui: I already have SUI
+  method_have_sui: 'Direct deposit'
   method_have_sui_desc: Send from another wallet or exchange
   paypal_note: Available in US, UK, and most of Europe via MoonPay
   card_note: Choose a provider below. All accept Visa and Mastercard
   bank_note: Lowest fees (~1%). SEPA for Europe, ACH for US.
   steps_paypal: 1. Click the link below  2. Select PayPal as payment  3. Enter the
     amount. SUI arrives in your wallet
-  steps_card: Select a provider, enter your card details, and SUI arrives in your
-    wallet.
-  method_swap: From Solana, ETH, and more..
-  method_swap_desc: Bridge assets to Sui with Portal Bridge
-  swap_note: Cross-chain transfers are powered by Portal Bridge.
-  steps_swap: Open Portal Bridge, connect both wallets, choose Sui, and complete the transfer.
+  steps_card: 'Open a provider, choose SUI, and use the game wallet address below. Payment methods depend on your country and provider.'
+  method_swap: 'Bridge deposit'
+  method_swap_desc: 'Move crypto from another chain into SUI'
+  bridge_loading: 'Loading bridge…'
+  bridge_error: 'The bridge could not load. Your game wallet remains available for direct deposits.'
+  bridge_retry: 'Try again'
+  swap_note: 'Powered by LI.FI. Transfers are not instant. Reopen Bridge deposit and use its history to check or resume an interrupted transfer.'
+  steps_swap: 'Connect your source wallet. The destination is native SUI in the game wallet shown below. Review the amount, fees, and estimated arrival before signing.'
   steps_wallet: Send SUI to your wallet address below. It arrives in seconds.
   advanced_exchange: 'Advanced: Buy on an Exchange'
   age_notice: All payment providers require you to be 18 or older.
@@ -2490,7 +2515,6 @@ automation_panel:
 
 item_drop_sources:
   title: 'Mob drops'
-  note: 'Authored base rates. Actual rates vary with mob level and team Chance.'
   empty: 'No mob drops this item.'
   loading: 'Loading mob drops…'
   mob: 'Mob'
@@ -2632,6 +2656,62 @@ spell_effects:
   expires_next_turn: 'Until next turn'
 
 ui:
+  multiplayer: 'Multiplayer'
+  nearby_fights: 'Nearby fights'
+  nearby_fights_empty: 'No tracked fights nearby'
+  run_and_join: 'Run & join'
+  equipment_comparison: 'Stat changes on equip'
+  equipment_replacing: 'Replacing {{name}}'
+  equipment_unchanged: 'No change to stat bonuses'
+  preview_only: 'Interactive preview · no transaction is submitted'
+  inspect_details: 'Inspect'
+  design_minimap: 'Minimap'
+  design_party_invitation: 'Party invitation'
+  design_trade_invitation: 'Trade invitation'
+  progression_rewards: 'Rewards'
+  inventory_selected_count: '{{count}} selected'
+  inventory_select: 'Select'
+  inventory_deselect: 'Deselect'
+  inventory_use: 'Use'
+  attack: 'Attack'
+  character_summary: 'Summary'
+  character_details: 'Details'
+  allocate_points: 'Allocate'
+  inventory_search: 'Search inventory…'
+  nameplate_veteran: 'Veteran'
+  design_titles: 'Titles'
+  design_no_title: 'No title'
+  design_library: 'Design workshop'
+  design_controls: 'Controls'
+  design_dialog: 'Open dialog'
+  design_disabled: 'Unavailable'
+  design_details: 'Details'
+  design_description: 'Shared game components. Interact with local examples to explore their states and responsive layouts.'
+  design_volume: 'Volume'
+  design_motion: 'Animation'
+  design_search: 'Search'
+  design_equipment_hint: 'Select an item to equip it. Tap equipped items to remove them.'
+  design_equip: 'Equip'
+  design_combat: 'Combat'
+  design_journal: 'Journal & progression'
+  design_complete: 'Completed'
+  design_viewport: 'Preview size'
+  design_desktop: 'Desktop'
+  design_mobile: 'Mobile'
+  leave_game_title: 'Do you want to leave the game?'
+  stay_in_game: 'Keep playing'
+  leave_game_confirm: 'Return to home'
+  mobile_move: 'Move'
+  mobile_jump: 'Jump'
+  mobile_chat: 'Chat'
+  mobile_party: 'Party'
+  mobile_confirm_action: 'Confirm action'
+  mobile_item_actions: 'Item actions'
+  mobile_unequip: 'Unequip'
+  mobile_use_item: 'Use / equip'
+  mobile_language: 'Language'
+  mobile_menu: 'Menu'
+  mobile_rotate: 'Rotate your device to play in landscape.'
   character: 'Character'
   spell_action: '{{name}}, level {{level}}, {{cost}} {{unit}}'
   spell_level: 'Spell level {{level}}'
@@ -2644,7 +2724,6 @@ ui:
   meters: '{{count}}m'
   versus: 'VS'
   team_format: '{{size}} vs {{size}}'
-  flat: 'Flat'
   fps: 'FPS'
   north: 'N'
   northeast: 'NE'
@@ -2661,3 +2740,50 @@ ui:
   formula_chastisement: 'G = min(ΔHP × S, CAP × S − Gturn) · S = 1 for mobs, ½ for players'
   formula_drop: 'drop = min(100%, authored × mob band × (600 + average team Chance) / 600)'
   formula_xp: 'XP = base-XP pool × party coefficient × level balance × player level / party level × (100 + WIS) / 100'
+
+menu_subtitle: 'AresRPG is a fully on-chain, turn-based MMORPG built on Sui.'
+menu_start: 'Press Enter to start'
+menu_start_touch: 'Tap to start'
+menu_music_on: 'Enable music'
+menu_music_off: 'Mute music'
+
+menu_build: 'BUILD'
+
+world_loading_assets: 'Loading scenery…'
+world_loading_graphics: 'Preparing graphics…'
+world_loading_terrain: 'Building the world…'
+world_loading_sky: 'Preparing sky and lighting…'
+world_loading_finishing: 'Preparing the first frame…'
+
+adventure:
+  goblins_title: 'Clear the path'
+  goblins_objective: 'Approach the Goblins and press F.'
+  speak_title: 'A stranger on the bridge'
+  speak_objective: 'Find Sceat on the bridge. Press F to speak.'
+  invite_title: 'Stronger together'
+  invite_objective: 'Right-click Sceat and choose Invite to group. On touch, tap his invitation prompt.'
+  switch_title: 'Meet your Yajin'
+  switch_objective: 'Select Sceat’s character tab. You control both heroes, each with their own spells and equipment.'
+  follow_title: 'Follow the leader'
+  follow_objective: 'Select Senshi, your party leader. Enable Follow leader in the party panel so Sceat travels with you.'
+  guards_title: 'The royal guard'
+  guards_objective: 'Cross the bridge and defeat the Royal Guards. Use both heroes: place Yajin traps and push enemies into them.'
+  boss_title: 'Gobadoc’s relic'
+  boss_objective: 'Face Gobadoc, the Goblin King, and seek his relic. His power is far beyond the guards.'
+  dialogue_greeting: 'You’re new here! I’m Sceat.'
+  dialogue_danger: 'This world is dangerous. You won’t get far alone. Let’s travel together.'
+  dialogue_relic: 'Gobadoc, the Goblin King, guards a powerful relic. Help me get past his guards and we’ll find him.'
+  journal: 'Mosswood adventure'
+  chapter: 'The Goblin King'
+  speak_action: 'Speak to Sceat'
+  invite_action: 'Invite Sceat'
+  rebirth_title: 'You died of your wounds…'
+  rebirth_body: 'It’s time for you to be reborn. Click below to log in and enter the real game.'
+  rebirth_login: 'Log in and enter the real game'
+  goblins_body: 'Mosswood looks peaceful enough, until the goblins decide you are their next meal. Your way out runs straight through their camp. Approach the pack and start a fight. Spend your action points on spells, keep an eye on your movement, and make every turn count. Victory will take you to level 200 and earn your first equipment.'
+  speak_body: 'The goblins are down, but the forest has hardly run out of teeth. Someone watched your fight from the bridge: a Yajin named Sceat, apparently in no hurry to cross alone. Go speak with him. He is searching for a relic held by Gobadoc, the Goblin King, and could use someone who knows how to hit back.'
+  invite_body: 'Sceat has a plan. Unfortunately, it involves walking toward the biggest goblin in the forest. Two adventurers stand a better chance than one, especially when they bring different tricks. Right-click Sceat and invite him to your group. In this adventure, you will control both heroes and decide how their abilities work together.'
+  switch_body: 'A new companion means more than another health bar. Sceat is a Yajin: traps and positioning are his way of solving problems that Senshi solves with force. Select him in the character switcher to take control. Each hero keeps their own spells and equipment, so choosing who acts matters as much as choosing what to cast.'
+  follow_body: 'You have a party. Now try keeping it together. Select Senshi as your leader, then enable Follow leader in the group controls. Sceat will follow while you explore, saving you from walking the same road twice. Once combat begins, you still choose each hero’s moves and spells yourself.'
+  guards_body: 'Gobadoc does not leave his doorstep unguarded. The next goblins are ready for a fight, and this time you have two heroes to coordinate. Check your new equipment before challenging them. Use Senshi’s strength alongside Sceat’s traps and positioning: a well-placed enemy is often easier to beat than a stubbornly chased one.'
+  boss_body: 'Beyond the guards waits Gobadoc himself, with the relic Sceat came looking for. The Goblin King did not earn that title by losing arguments. You have learned to fight together, but this is a very different opponent. Approach him with your companion and see how far your new partnership can take you.'

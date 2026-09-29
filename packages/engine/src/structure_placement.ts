@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { portal_frame_source, dungeon_gate_source, dungeon_gate_position } from './portal_shape.ts'
 import { create_bounded_memo, type BoundedMemo } from './bounded_memo.ts'
 import type { CompiledStructurePack, CompiledStructureType } from './structures.ts'
+import { compile_type } from './structures.ts'
+import { compile_city_structure } from './cities/city_structure.ts'
 import { compile_city_placements, map_city } from './cities/index.ts'
 import { generated_city_land_use } from './cities/generated_city.ts'
 import { field_value, hash_position } from './world_noise.ts'
@@ -13,6 +16,7 @@ export type StructureBounds = StructureArea & Readonly<{ min_y: number; max_y: n
 export type StructurePlacement = Readonly<{
   id: string
   pack: string
+  portal_clearance?: boolean
   type: CompiledStructureType
   origin: readonly [number, number, number]
   rotation: 0 | 1 | 2 | 3
@@ -37,7 +41,7 @@ const rotated_offset = (x: number, z: number, rotation: 0 | 1 | 2 | 3): readonly
   return [x, z]
 }
 
-const placement_bounds = (
+export const placement_bounds = (
   type: CompiledStructureType,
   origin: readonly [number, number, number],
   rotation: 0 | 1 | 2 | 3,
@@ -62,7 +66,76 @@ const placement_bounds = (
 }
 
 const city_placements = (world: CompiledWorld, area: StructureArea): readonly StructurePlacement[] =>
-  Object.freeze(world.structures.cities.flatMap((city) => compile_city_placements(world, city, area)))
+  Object.freeze(
+    world.structures.cities
+      .flatMap((city) => compile_city_placements(world, city, area))
+      .map((placement) => ({ ...placement, portal_clearance: world.recipe.portal !== false }))
+  )
+
+const fixed_cache = new WeakMap<CompiledWorld, readonly StructurePlacement[]>()
+const fixed_placements = (world: CompiledWorld): readonly StructurePlacement[] => {
+  const cached = fixed_cache.get(world)
+  if (cached) return cached
+  const placements: StructurePlacement[] = (world.recipe.fixed_structures ?? []).map(
+    ({ source, origin, rotation, scale = 1 }, index) => {
+      const type =
+        typeof source === 'string'
+          ? compile_type(source, world.materials)
+          : compile_city_structure(source, world.materials)
+      const bounds = placement_bounds(type, origin, rotation, scale)
+      return Object.freeze({
+        id: `fixed:${index}`,
+        pack: 'fixed',
+        portal_clearance: world.recipe.portal !== false,
+        type,
+        origin,
+        rotation,
+        scale,
+        bounds,
+        overlap_bounds: bounds,
+      })
+    }
+  )
+  if (world.recipe.portal !== false) {
+    const column = sample_world_column(world, 0, 0)
+    const type = compile_city_structure(
+      portal_frame_source(world.materials.entries[column.filler_id]!.name),
+      world.materials
+    )
+    const origin = [0, column.surface_y, 0] as const
+    const bounds = placement_bounds(type, origin, 0, 1)
+    placements.push({
+      id: 'world-portal-frame',
+      pack: 'fixed',
+      portal_clearance: false,
+      type,
+      origin,
+      rotation: 0,
+      scale: 1,
+      bounds,
+      overlap_bounds: bounds,
+    })
+  }
+  world.structures.cities.forEach(({ id, area }) => {
+    const position = dungeon_gate_position(area.anchor_x, area.anchor_z)
+    const type = compile_city_structure(dungeon_gate_source(), world.materials)
+    const origin = [position.x, sample_world_column(world, position.x, position.z).surface_y, position.z] as const
+    const bounds = placement_bounds(type, origin, 0, 1)
+    placements.push({
+      id: `dungeon-portal-frame:${id}`,
+      pack: 'fixed',
+      portal_clearance: false,
+      type,
+      origin,
+      rotation: 0,
+      scale: 1,
+      bounds,
+      overlap_bounds: bounds,
+    })
+  })
+  fixed_cache.set(world, placements)
+  return placements
+}
 
 export const city_map_overlays = (world: CompiledWorld): readonly CityMapOverlay[] => {
   return Object.freeze(
@@ -111,7 +184,8 @@ const overlaps = (left: StructureArea, right: StructureArea): boolean =>
 const clears_world_origin_portal_point = (x: number, z: number): boolean =>
   x * x + z * z > WORLD_ORIGIN_PORTAL_CLEAR_RADIUS ** 2
 
-const clears_world_origin_portal = ({ bounds }: StructurePlacement): boolean => {
+const clears_world_origin_portal = ({ bounds, portal_clearance = true }: StructurePlacement): boolean => {
+  if (!portal_clearance) return true
   const nearest_x = Math.max(bounds.min_x, Math.min(0, bounds.max_x))
   const nearest_z = Math.max(bounds.min_z, Math.min(0, bounds.max_z))
   return clears_world_origin_portal_point(nearest_x, nearest_z)
@@ -208,6 +282,7 @@ const compute_candidate = (
   return Object.freeze({
     id: `${pack.name}:${cell_x}:${cell_z}`,
     pack: pack.name,
+    portal_clearance: world.recipe.portal !== false,
     type,
     origin,
     rotation,
@@ -254,6 +329,7 @@ export const structure_placements = (world: CompiledWorld, area: StructureArea):
     [...accepted, ...cities]
       .filter(({ bounds }) => overlaps(bounds, area))
       .sort((left, right) => left.id.localeCompare(right.id))
+      .concat(fixed_placements(world).filter(({ bounds }) => overlaps(bounds, area)))
   )
 }
 

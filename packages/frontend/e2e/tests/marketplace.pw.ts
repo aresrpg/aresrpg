@@ -3,6 +3,16 @@
 
 import { expect, test } from '@playwright/test'
 
+test('public pet offers display their individual current power', async ({ page }) => {
+  await page.goto('/e2e/fixtures/marketplace.html?pet')
+  await expect(page.locator('.market-detail-body')).toContainText('These are the full-fed stats.')
+  await page.locator('[data-marketplace-item="0xitem1"]').hover()
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=strength]')).toContainText('+5')
+  await page.locator('[data-marketplace-item="0xitem2"]').hover()
+  await expect(page.getByRole('tooltip').locator('[data-item-stat=strength]')).toContainText('+27')
+  await expect(page.locator('body')).not.toHaveAttribute('data-read-item')
+})
+
 test('different rolls retain their exact tooltip and individual buy action', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html')
   await page
@@ -115,7 +125,7 @@ test('identical rolls retain backup offers and advance after the cheapest is rem
   await expect(rows.first().locator('[data-marketplace-item]')).toHaveAttribute('data-marketplace-item', '0xitem1')
 })
 
-test('stackable capitalization shares chart prices and disappears without a sale or supply', async ({ page }) => {
+test('stackable capitalization shares chart prices and shows supply before the first sale', async ({ page }) => {
   await page.goto('/e2e/fixtures/marketplace.html?stackable')
   const card = page.locator('[data-marketplace-capitalization]')
   await expect(card).toContainText('1,000,000')
@@ -125,7 +135,12 @@ test('stackable capitalization shares chart prices and disappears without a sale
   await page.screenshot({ path: 'test-results/market-capitalization.png' })
   await page.goto('/e2e/fixtures/marketplace.html?stackable&empty')
   await expect(page.locator('[data-marketplace-price-history]')).toBeVisible()
-  await expect(card).toHaveCount(0)
+  await expect(card).toContainText('1,000,000')
+  await expect(card).not.toContainText('Market cap')
+  await page.goto('/e2e/fixtures/marketplace.html?stackable&prices-unavailable')
+  await expect(page.locator('[data-marketplace-price-history]')).toContainText('unavailable')
+  await expect(card).toContainText('1,000,000')
+  await expect(card).not.toContainText('Market cap')
   await page.goto('/e2e/fixtures/marketplace.html?stackable&supply-unavailable')
   await expect(page.locator('[data-marketplace-price-history] canvas').first()).toBeVisible()
   await expect(card).toHaveCount(0)
@@ -161,4 +176,24 @@ test('category badges count item types, aggregate subcategories, and leave chara
     '3'
   )
   await page.screenshot({ path: 'test-results/market-type-counts.png' })
+})
+
+test('barley to quartz to barley restores offers immediately and waits for fresh buy authority', async ({ page }) => {
+  await page.goto('/e2e/fixtures/marketplace.html?bags&all-types&delayed')
+  const options = page.locator('[data-marketplace-template-options]')
+  const barley = options.getByRole('button', { name: 'Bag of Barley', exact: true })
+  const quartz = options.getByRole('button', { name: 'Bag of Quartz', exact: true })
+  const unit = page.locator('[data-marketplace-cheapest-lot="1"]')
+  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeEnabled()
+  const request = await page.locator('body').getAttribute('data-market-request')
+  await barley.click()
+  await expect(page.locator('body')).toHaveAttribute('data-market-request', request!)
+  await quartz.click()
+  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeEnabled()
+  await barley.click()
+  await expect(page.locator('[data-marketplace-listings]')).toHaveAttribute('aria-busy', 'true')
+  await expect(unit).toContainText('1.10')
+  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeDisabled()
+  await expect(unit.getByRole('button', { name: 'Buy', exact: true })).toBeEnabled()
+  await expect(page.locator('[data-marketplace-listings]')).toHaveAttribute('aria-busy', 'false')
 })

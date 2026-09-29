@@ -1,0 +1,10 @@
+{
+  "offset_z": 5,
+  "inlay_heights": [2, 6, 10],
+  "inlay_columns": [-5, -1, 0, 4],
+  "materials": {
+    "dungeon_basalt": { "color": "#271526", "preset": "stone" },
+    "dungeon_masonry": { "color": "#50202d", "preset": "brick" },
+    "dungeon_ember": { "color": "#b02b3b", "preset": "stone", "emission": 0.35 }
+  }
+}

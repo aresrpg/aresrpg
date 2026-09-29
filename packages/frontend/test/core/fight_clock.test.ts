@@ -58,7 +58,7 @@ for (const device_ms of [53_000n, 73_000n]) {
 }
 
 const queued_state = (): AppState => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   return {
     ...base,
     chain_clock: { chain_ms: 63_500, received_ms: 500 },

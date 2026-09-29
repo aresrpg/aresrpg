@@ -1,177 +1,32 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import {
-  type FightEvent,
-  type FightInput,
-  type FightMode,
-  type FightRuntimeError,
-  type FightSetup,
-  type HydratedFightCheckpoint,
-} from '@aresrpg/fight'
-import type { FightPresentationCue } from '@aresrpg/engine'
+import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
+import {
+  initial_fight_environment,
+  initial_fight_session_state,
+  type FightSessionState,
+  type FightEnvironment,
+  type FightSessionInput,
+  type ReadyAllProgress,
+} from './fight_state.ts'
 import { holds_character_seat } from './fight_identity.ts'
 import { fight_latch } from './fight_latch.ts'
 import { end_turn_submission_after_reconcile, same_fight_turn } from './fight_lifecycle.ts'
-import { is_fight_board_page } from './navigation.ts'
 import { observe_fights } from './fight_observer.ts'
 export { create_fight_session, type ActiveFightSession } from './fight_session.ts'
 export { fight_should_close, terminal_remote_draft_needs_commit } from './fight_lifecycle.ts'
-export type FightPresentationBatch = Readonly<{
-  batch: number
-  before: HydratedFightCheckpoint
-  checkpoint: HydratedFightCheckpoint
-  zone_ids: readonly string[]
-  events: readonly FightEvent[]
-}>
-export type FightEnvironment = Readonly<{
-  zone_ids: readonly string[]
-  presentations: readonly FightPresentationBatch[]
-  error: FightRuntimeError | null
-  canonical_ended: boolean
-  started_at_ms: number | null
-  transaction_pending: boolean
-  placement_changed_seats: Readonly<Record<number, true>>
-  ready_submitted_seats: readonly number[]
-  ready_all_progress: ReadyAllProgress | null
-  end_turn_queued: boolean
-  end_turn_submitted: boolean
-  restore_serial: number
-  awaiting_turn_witness: boolean
-}>
-export type ReadyAllProgress = Readonly<{
-  completed: number
-  total: number
-  status: 'running' | 'failed' | 'complete'
-}>
-export type FightKolizeumManager = Readonly<{ id: string; pledge_mist: bigint }>
-export type FightSessionState = Readonly<{
-  cached: Readonly<Record<string, HydratedFightCheckpoint>>
-  environments: Readonly<Record<string, FightEnvironment>>
-  /** Immutable wager manager terms, projected beside the fight machine and cached per fight. */
-  kolizeum_by_fight: Readonly<Record<string, FightKolizeumManager>>
-  mode: FightMode | null
-  checkpoint: HydratedFightCheckpoint | null
-  zone_ids: readonly string[]
-  presentations: readonly FightPresentationBatch[]
-  error: FightRuntimeError | null
-  canonical_ended: boolean
-  /** The board is on screen. Derived from the selected owned seat or the spectator identity
-   * anchored to this selected character. */
-  mounted: boolean
-  /** a spectator's commit — the one mount that no seat can witness */
-  spectating_by_character: Readonly<Record<string, string>>
-  /** the start's wall-clock witness (null when armed after the fight had already begun) */
-  started_at_ms: number | null
-  transaction_pending: boolean
-  /** optimistic placement latch; receipt success does not reopen Ready before projection */
-  ready_submitted_seats: readonly number[]
-  ready_all_progress: ReadyAllProgress | null
-  end_turn_queued: boolean
-  end_turn_submitted: boolean
-  restore_serial: number
-  awaiting_turn_witness: boolean
-}>
-export type FightSessionInput =
-  | Readonly<{
-      type: 'fight/opened'
-      mode: FightMode
-      setup?: FightSetup
-      state?: HydratedFightCheckpoint
-      seed?: bigint
-    }>
-  | Readonly<{ type: 'fight/input'; fight: string | null; input: FightInput; origin: 'local' | 'streamed' }>
-  | Readonly<{ type: 'fight/ready_all'; fight: string; fighters: readonly bigint[] }>
-  | Readonly<{
-      type: 'fight/ready_all_progress'
-      fight: string
-      completed: number
-      total: number
-      status: ReadyAllProgress['status']
-      fighter?: bigint
-    }>
-  | Readonly<{ type: 'fight/cancel_pending_turn'; fight: string }>
-  | Readonly<{ type: 'fight/runtime_input'; fight: string; input: FightInput }>
-  | Readonly<{ type: 'fight/reset_turn'; fight: string | null }>
-  | Readonly<{ type: 'fight/replaced'; checkpoint: HydratedFightCheckpoint }>
-  | Readonly<{ type: 'fight/cached'; checkpoint: HydratedFightCheckpoint }>
-  | Readonly<{ type: 'fight/checkpoint_confirmed'; checkpoint: HydratedFightCheckpoint }>
-  | Readonly<{ type: 'fight/uncached'; fight: string }>
-  | Readonly<{ type: 'fight/kolizeum'; fight: string; kolizeum: FightKolizeumManager | null }>
-  /** authoritative rollback after a refused remote transaction; pending witnesses are discarded */
-  | Readonly<{ type: 'fight/restored'; checkpoint: HydratedFightCheckpoint }>
-  | Readonly<{
-      type: 'fight/reconciled'
-      mode: FightMode
-      checkpoint: HydratedFightCheckpoint
-      zone_ids: readonly string[]
-      events: readonly FightEvent[]
-      presentation_batch: number
-      error: FightRuntimeError | null
-      awaiting_turn_witness: boolean
-      project?: boolean
-    }>
-  | Readonly<{ type: 'fight/presented'; presentation: FightPresentationBatch }>
-  | Readonly<{
-      type: 'fight/presentation_cue'
-      presentation: FightPresentationBatch | null
-      cue: FightPresentationCue
-      phase: 'start' | 'complete'
-    }>
-  | Readonly<{ type: 'fight/spectating'; character_id: string; fight: string | null }>
-  | Readonly<{ type: 'fight/preview_closed'; character_id: string; fight: string }>
-  | Readonly<{ type: 'fight/started_at'; fight: string; at_ms: number }>
-  | Readonly<{ type: 'fight/transaction_pending'; fight: string; pending: boolean }>
-  | Readonly<{ type: 'fight/forfeit_completed'; fight: string; fighter: bigint; ok: boolean }>
-  | Readonly<{ type: 'fight/end_turn_queued'; fight: string; queued: boolean }>
-  | Readonly<{ type: 'fight/canonical_ended'; fight: string; ended: boolean }>
-  /** arm/disarm the server-side watch for a fight — folded by NO state; session.ts sends it */
-  | Readonly<{ type: 'fight/watch'; character_id: string; fight: string | null }>
-  | Readonly<{ type: 'fight/resync'; fight: string }>
-  | Readonly<{ type: 'fight/released'; character_id: string }>
-  | Readonly<{ type: 'fight/closed'; fight: string | null }>
-
-export const initial_fight_session_state = (): FightSessionState =>
-  Object.freeze({
-    cached: Object.freeze({}),
-    environments: Object.freeze({}),
-    kolizeum_by_fight: Object.freeze({}),
-    mode: null,
-    checkpoint: null,
-    zone_ids: Object.freeze([]),
-    presentations: Object.freeze([]),
-    error: null,
-    canonical_ended: false,
-    mounted: false,
-    spectating_by_character: Object.freeze({}),
-    started_at_ms: null,
-    transaction_pending: false,
-    ready_submitted_seats: Object.freeze([]),
-    ready_all_progress: null,
-    end_turn_queued: false,
-    end_turn_submitted: false,
-    restore_serial: 0,
-    awaiting_turn_witness: false,
-  })
-
-const initial_fight_environment = (): FightEnvironment =>
-  Object.freeze({
-    zone_ids: Object.freeze([]),
-    presentations: Object.freeze([]),
-    error: null,
-    canonical_ended: false,
-    started_at_ms: null,
-    transaction_pending: false,
-    placement_changed_seats: Object.freeze({}),
-    ready_submitted_seats: Object.freeze([]),
-    ready_all_progress: null,
-    end_turn_queued: false,
-    end_turn_submitted: false,
-    restore_serial: 0,
-    awaiting_turn_witness: false,
-  })
+export { initial_fight_session_state } from './fight_state.ts'
+export type {
+  FightSessionInput,
+  FightSessionState,
+  FightEnvironment,
+  FightPresentationBatch,
+  FightKolizeumManager,
+  ReadyAllProgress,
+} from './fight_state.ts'
 
 const presentation_start_checkpoint = (
   previous: Readonly<HydratedFightCheckpoint> | undefined,
@@ -248,8 +103,11 @@ const reconcile_fight = (
       ))
   // A fight nobody is watching runs like a background window: its state advances, its
   // animations are simply never scheduled. Switching back lands on the live checkpoint.
-  const on_screen =
-    input.mode === 'local' || (input.project !== false && mounted && is_fight_board_page(state.navigation.page))
+  const on_screen = [
+    input.mode === 'local',
+    input.project !== false && mounted,
+    state.fight.nearby?.fight === fight_id,
+  ].includes(true)
   const presentations = !on_screen
     ? Object.freeze([])
     : input.events.length === 0
@@ -292,6 +150,7 @@ const reconcile_fight = (
   return Object.freeze({
     ...state,
     fight: Object.freeze({
+      nearby: state.fight.nearby,
       mode: input.mode,
       cached,
       environments,
@@ -340,6 +199,7 @@ const uncache_fight = (state: Readonly<AppState>, fight: string): AppState => {
         ...state,
         fight: Object.freeze({
           ...initial_fight_session_state(),
+          nearby: state.fight.nearby,
           cached,
           environments,
           kolizeum_by_fight,
@@ -384,6 +244,7 @@ const select_character_fight = (state: Readonly<AppState>, character_id: string)
       ...state,
       fight: Object.freeze({
         ...initial_fight_session_state(),
+        nearby: state.fight.nearby,
         cached: state.fight.cached,
         environments,
         kolizeum_by_fight: state.fight.kolizeum_by_fight,
@@ -411,6 +272,7 @@ const select_character_fight = (state: Readonly<AppState>, character_id: string)
       ...state,
       fight: Object.freeze({
         ...initial_fight_session_state(),
+        nearby: state.fight.nearby,
         cached: state.fight.cached,
         environments: drop_presentation_queue(state.fight.environments, state.fight.checkpoint?.contract.id),
         kolizeum_by_fight: state.fight.kolizeum_by_fight,
@@ -444,6 +306,7 @@ const close_fight = (state: Readonly<AppState>): AppState => {
     ...state,
     fight: Object.freeze({
       ...initial_fight_session_state(),
+      nearby: state.fight.nearby,
       cached,
       environments,
       kolizeum_by_fight,
@@ -456,17 +319,13 @@ const close_fight_preview = (state: Readonly<AppState>, fight: string): AppState
   const checkpoint =
     state.fight.cached[fight] ?? (state.fight.checkpoint?.contract.id === fight ? state.fight.checkpoint : null)
   if (!checkpoint) return state
-  const roster = new Set(state.session.characters.map(({ id }) => id))
   const owner = state.session.wallet?.address ?? null
-  const retained_spectator = Object.values(state.fight.spectating_by_character).includes(fight)
-  const owned = checkpoint.contract.fighters.some(
-    (fighter) =>
-      fighter.kind.type === 'player' &&
-      fighter.kind.owner === owner &&
-      roster.has(fighter.kind.character) &&
-      !fighter.settled
-  )
-  return owned || retained_spectator
+  const retained_spectator = [
+    state.fight.nearby?.fight,
+    ...Object.values(state.fight.spectating_by_character),
+  ].includes(fight)
+  const owned = state.session.characters.some(({ id }) => holds_character_seat(checkpoint, id, owner))
+  return [owned, retained_spectator].includes(true)
     ? state.session.selected_character_id
       ? select_character_fight(state, state.session.selected_character_id)
       : state
@@ -530,14 +389,49 @@ const reduce_local_fight_latch = (state: AppState, input: AppInput): AppState | 
   return latch ? update_fight_environment(state, latch.fight, latch.update) : null
 }
 
+type TransformInput = Extract<
+  FightSessionInput,
+  {
+    type:
+      | 'fight/cached'
+      | 'fight/uncached'
+      | 'fight/reconciled'
+      | 'fight/spectating'
+      | 'fight/preview_closed'
+      | 'fight/closed'
+      | 'fight/released'
+      | 'fight/nearby'
+  }
+>
+const FIGHT_TRANSFORMS: { [Input in TransformInput as Input['type']]: (state: AppState, input: Input) => AppState } = {
+  'fight/cached': (state, input) => cache_fight(state, input.checkpoint),
+  'fight/uncached': (state, input) => uncache_fight(state, input.fight),
+  'fight/reconciled': reconcile_fight,
+  'fight/spectating': spectate_fight,
+  'fight/preview_closed': (state, input) => close_fight_preview(state, input.fight),
+  'fight/closed': (state, input) => close_requested_fight(state, input.fight),
+  'fight/released': (state, input) => release_character_fight(state, input.character_id),
+  'fight/nearby': (state, { nearby }) => ({
+    ...state,
+    fight: {
+      ...state.fight,
+      nearby,
+      environments: drop_presentation_queue(
+        state.fight.environments,
+        state.fight.mounted ? undefined : state.fight.nearby?.fight
+      ),
+    },
+  }),
+}
 const reduce = (state: AppState, input: AppInput): AppState => {
+  const transform = FIGHT_TRANSFORMS[input.type as TransformInput['type']]
+  if (transform) return transform(state, input as never)
   const local_latch = reduce_local_fight_latch(state, input)
   if (local_latch) return local_latch
   if (input.type === 'server/packet' && input.packet.type === 'packet/characters') {
     const selected = state.session.selected_character_id
     return selected ? select_character_fight(state, selected) : state
   }
-  if (input.type === 'fight/cached') return cache_fight(state, input.checkpoint)
   if (input.type === 'fight/kolizeum') {
     const kolizeum_by_fight = Object.freeze({
       ...Object.fromEntries(Object.entries(state.fight.kolizeum_by_fight).filter(([fight]) => fight !== input.fight)),
@@ -549,10 +443,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     return update_fight_environment(state, input.fight, (environment) =>
       Object.freeze({ ...environment, canonical_ended: input.ended })
     )
-  if (input.type === 'fight/uncached') return uncache_fight(state, input.fight)
-  if (input.type === 'fight/reconciled') return reconcile_fight(state, input)
-  if (input.type === 'fight/spectating') return spectate_fight(state, input)
-  if (input.type === 'fight/preview_closed') return close_fight_preview(state, input.fight)
   if (input.type === 'character/select') return select_character_fight(state, input.character_id)
   if (input.type === 'fight/started_at')
     return update_fight_environment(state, input.fight, (environment) =>
@@ -591,8 +481,6 @@ const reduce = (state: AppState, input: AppInput): AppState => {
       Object.freeze({ ...current, presentations: Object.freeze(current.presentations.slice(1)) })
     )
   }
-  if (input.type === 'fight/closed') return close_requested_fight(state, input.fight)
-  if (input.type === 'fight/released') return release_character_fight(state, input.character_id)
   return state
 }
 

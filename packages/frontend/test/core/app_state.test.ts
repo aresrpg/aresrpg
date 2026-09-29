@@ -9,7 +9,7 @@ import { initial_app_state, reduce_app_state } from '../../src/store.ts'
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -265,7 +265,7 @@ describe('app state', () => {
     expect(rejected.session.wallet).toBeNull()
     expect(rejected.session.auth_status).toBe('idle')
     expect(rejected.session.auth_error).toBe('Session expired')
-    expect(rejected.navigation).toEqual({ page: 'world', pathname: '/', dialog: null, guest_spectating: false })
+    expect(rejected.navigation).toEqual({ page: 'world', pathname: '/', dialog: null })
   })
   test('all external surfaces share an explicitly selected provider and account', () => {
     const session = auth_session('0xadmin')

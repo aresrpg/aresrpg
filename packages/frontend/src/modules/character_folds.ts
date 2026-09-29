@@ -122,6 +122,7 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
       })
     })
   if (input.type === 'character/consumed') {
+    if (session.consumption_result?.digest === input.digest) return session
     const now = Date.now()
     const consumed = with_character(session, input.character_id, (character) => {
       if (input.effect === 'heal')
@@ -150,6 +151,7 @@ export const fold_character_receipt = (session: SessionState, input: AppInput): 
     })
     return Object.freeze({
       ...consumed,
+      consumption_result: Object.freeze({ digest: input.digest, effect: input.effect }),
       inventory: consumed.inventory,
     })
   }
@@ -202,6 +204,7 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
     })
   }
   if (input.type === 'character/crafted') {
+    if (session.craft_result?.digest === input.digest) return session
     // Burn the receipt-proven aggregate plan and bank its total XP; stackable output arrives as
     // one item write, while unique successes arrive independently through the item stream.
     const characters = session.characters.map((character) =>
@@ -215,7 +218,12 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
           })
         : character
     )
-    return Object.freeze({ ...session, inventory: session.inventory, characters: Object.freeze(characters) })
+    return Object.freeze({
+      ...session,
+      craft_result: Object.freeze({ digest: input.digest, successes: input.successes }),
+      inventory: session.inventory,
+      characters: Object.freeze(characters),
+    })
   }
 
   return session

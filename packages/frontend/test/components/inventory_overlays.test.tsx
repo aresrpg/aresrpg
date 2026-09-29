@@ -5,7 +5,7 @@ import { expect, test } from 'bun:test'
 import type { ItemRow } from '@aresrpg/protocol'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { InventoryMenu } from '../../src/characters/InventoryOverlays.tsx'
+import { InventoryMenuRows } from '../../src/characters/InventoryOverlays.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 
 const item = Object.freeze({
@@ -25,7 +25,12 @@ test('the inventory menu links its exact item object ID', async () => {
   })
   const copy = await load_app_copy('en')
   const markup = renderToStaticMarkup(
-    <InventoryMenu close_menu={() => undefined} copy={copy} entries={[]} menu={{ x: 10, y: 20, items: [item], item }} />
+    <InventoryMenuRows
+      close_menu={() => undefined}
+      copy={copy}
+      entries={[]}
+      menu={{ x: 10, y: 20, items: [item], item }}
+    />
   )
 
   expect(markup).toContain('href="https://suivision.xyz/object/0xitem"')

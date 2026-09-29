@@ -169,3 +169,23 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
+.gw-minimap > .aui-minimap {
+  width: 100%;
+}
+
+.world-map-trigger {
+  display: none;
+}
+@media (max-width: 1023px), (pointer: coarse) {
+  .gw-minimap > .aui-minimap {
+    display: none;
+  }
+  .world-social-dock .gw-minimap {
+    width: 44px;
+    align-self: flex-end;
+  }
+  .world-map-trigger {
+    display: grid;
+    margin-left: auto;
+  }
+}

@@ -1,0 +1,83 @@
+/* Mobile owns touch input and orientation only; shared frontend components own management UI. */
+.mobile-app {
+  --app-sidebar-width: 0px;
+}
+.mobile-app .app-world-frame {
+  inset: 0;
+  border-radius: 0;
+  opacity: 1;
+}
+.mobile-rotate {
+  display: none;
+}
+@media (orientation: portrait) {
+  .mobile-rotate {
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 24px;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: #17111f;
+    color: #e1c68f;
+  }
+  .mobile-rotate strong {
+    font-size: 64px;
+  }
+}
+
+.mobile-camera {
+  position: absolute;
+  right: 0;
+  top: 25%;
+  bottom: 145px;
+  width: 45%;
+  pointer-events: auto;
+  touch-action: none;
+}
+.mobile-joystick {
+  position: absolute;
+  left: max(24px, env(safe-area-inset-left));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  width: 100px;
+  height: 100px;
+  border: 1px solid #ccb6dd35;
+  border-radius: 50%;
+  background: #20152d66;
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+.mobile-joystick span {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #bc9ad859;
+  border: 1px solid #ccb6dd35;
+}
+.mobile-client :is(input, textarea, select) {
+  font-size: 16px;
+}
+.mobile-client [role='menu'] :is(button, a) {
+  min-height: 44px;
+  width: 100%;
+  font-size: 11px;
+}
+
+.mobile-jump {
+  position: absolute;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: 154px;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid #ccb6dd35;
+  background: #21192dcc;
+  color: #dec79d;
+  pointer-events: auto;
+  touch-action: none;
+}

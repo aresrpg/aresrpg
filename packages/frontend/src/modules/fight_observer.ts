@@ -82,9 +82,18 @@ export const observe_fights = ({
     new Set([
       ...state.session.characters.flatMap(({ active_fight }) => (active_fight ? [active_fight.id] : [])),
       ...Object.values(state.fight.spectating_by_character),
+      ...(state.fight.nearby ? [state.fight.nearby.fight] : []),
+      ...previews.values(),
     ])
+  const accepts_checkpoint = (checkpoint: Readonly<HydratedFightCheckpoint>): boolean => {
+    const state = get_state()
+    return (
+      state_fights(state).has(checkpoint.contract.id) ||
+      holds_character_seat(checkpoint, state.session.selected_character_id, state.session.wallet?.address ?? null)
+    )
+  }
   const evict_if_unreferenced = (fight: string): void => {
-    if (state_fights(get_state()).has(fight) || [...previews.values()].includes(fight)) return
+    if (state_fights(get_state()).has(fight)) return
     sessions.get(fight)?.close()
     sessions.delete(fight)
     witnesses.delete(fight)
@@ -210,13 +219,14 @@ export const observe_fights = ({
     fight_instance += 1
   })
   events.on('fight/presented', ({ presentation }) => {
-    dispatch_combat_lines(presentation)
+    if (get_state().fight.nearby?.fight !== presentation.checkpoint.contract.id) dispatch_combat_lines(presentation)
     const { checkpoint, batch } = presentation
     if (get_state().fight.mode === 'local') local_session?.acknowledge(batch)
     else sessions.get(checkpoint.contract.id)?.acknowledge(batch)
   })
   events.on('fight/presentation_cue', ({ presentation, cue, phase }) => {
-    if (!presentation || phase !== 'start') return
+    if (!presentation || phase !== 'start' || get_state().fight.nearby?.fight === presentation.checkpoint.contract.id)
+      return
     const prefix = `${presentation.checkpoint.contract.id}:${presentation.batch}:`
     if (!cue.id.startsWith(prefix)) return
     const event_index = Number.parseInt(cue.id.slice(prefix.length), 10)
@@ -271,8 +281,13 @@ export const observe_fights = ({
       return
     }
     if (packet.type === 'packet/fight_state') {
+      const wire_checkpoint = {
+        contract: packet.state.contract,
+        sources: { players: packet.state.players, spells: catalog_spell_sources() },
+      } as unknown as HydratedFightCheckpoint
       const floor = phase_floors.get(packet.fight) ?? 0
-      if (fight_state_regresses(floor, packet.state.contract)) return
+      if ([fight_state_regresses(floor, packet.state.contract), !accepts_checkpoint(wire_checkpoint)].includes(true))
+        return
       phase_floors.set(
         packet.fight,
         Math.max(floor, fight_checkpoint_phase_rank(packet.state.contract)) as FightPhaseRank
@@ -282,10 +297,6 @@ export const observe_fights = ({
         fight: packet.fight,
         kolizeum: kolizeum_manager(packet.state.kolizeum),
       })
-      const wire_checkpoint = {
-        contract: packet.state.contract,
-        sources: { players: packet.state.players, spells: catalog_spell_sources() },
-      } as unknown as HydratedFightCheckpoint
       const session = remote_session(packet.fight)
       if (session.state()) session.replace(wire_checkpoint)
       else session.open({ mode: 'remote', state: wire_checkpoint })

@@ -52,46 +52,6 @@
   text-transform: uppercase;
   margin-top: 3px;
 }
-.sb__points {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: none;
-  position: relative;
-  border: 1px solid var(--color-border);
-  background: rgba(6, 6, 12, 0.6);
-  padding: 8px 15px 8px 14px;
-}
-.sb__points::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--color-gold);
-}
-.sb__points-lab {
-  font-size: 0.5rem;
-  letter-spacing: 0.24em;
-  color: var(--color-muted);
-  text-transform: uppercase;
-}
-.sb__points-sub {
-  font-size: 0.5rem;
-  letter-spacing: 0.22em;
-  color: var(--color-gold-light);
-  text-transform: uppercase;
-  margin-top: 3px;
-}
-.sb__points-val {
-  font-size: 1.4rem;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--color-gold);
-  text-shadow: 0 0 14px rgba(200, 150, 60, 0.4);
-}
-
 /* ── tab strip (canon: gold underline active) ── */
 .sb__tabs {
   display: flex;

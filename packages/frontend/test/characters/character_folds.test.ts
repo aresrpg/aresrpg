@@ -21,7 +21,7 @@ import { initial_app_state, reduce_app_state, type AppState } from '../../src/st
 
 const settings = Object.freeze({
   quality: 'medium',
-  flat_mode: false,
+
   music_enabled: true,
   render_distance: null,
 } as const)
@@ -137,6 +137,8 @@ describe('character receipt folds', () => {
     const amounts = item_amounts(state, [target.id, 2], [source.id, 0])
     const crafted = reduce_app_state(amounts, {
       type: 'character/crafted',
+      digest: 'craft-confirmed',
+      successes: 1,
       character_id: '0xchar',
       job: 'TAILOR',
       xp: 20,
@@ -214,6 +216,7 @@ describe('character receipt folds', () => {
     const state = seeded_state([hurt], [potion])
     const next = reduce_app_state(item_amounts(state, ['0xpotion', 1]), {
       type: 'character/consumed',
+      digest: 'consume-confirmed',
       character_id: '0xchar',
       item_id: '0xpotion',
       effect: 'heal',
@@ -225,6 +228,7 @@ describe('character receipt folds', () => {
     expect(next.session.inventory[0]!.amount).toBe(1)
     const drained = reduce_app_state(item_amounts(next, ['0xpotion', 0]), {
       type: 'character/consumed',
+      digest: 'consume-confirmed',
       character_id: '0xchar',
       item_id: '0xpotion',
       effect: 'heal',
@@ -237,6 +241,7 @@ describe('character receipt folds', () => {
     const state = seeded_state([character({ spells: { fracture: 4 } })], [item({ id: '0xreset', amount: 1 })])
     const stats_reset = reduce_app_state(state, {
       type: 'character/consumed',
+      digest: 'consume-confirmed',
       character_id: '0xchar',
       item_id: '0xreset',
       effect: 'reset_stats',
@@ -247,6 +252,7 @@ describe('character receipt folds', () => {
     expect(after_stats.available_points).toBe(45)
     const spells_reset = reduce_app_state(state, {
       type: 'character/consumed',
+      digest: 'consume-confirmed',
       character_id: '0xchar',
       item_id: '0xreset',
       effect: 'reset_spells',

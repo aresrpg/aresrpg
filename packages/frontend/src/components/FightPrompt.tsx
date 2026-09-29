@@ -6,18 +6,22 @@
 // then only a frontend commit over a stream that is already flowing.
 
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- React refs and lifecycle events are mutable platform boundaries. */
+import { chain_to_client_coordinate } from '@aresrpg/immutable'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
 import { Lock, Swords, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { run_to_available } from '../modules/run_to.ts'
+import { useWorldPose } from '../game/core/pose_feed.ts'
+import { world_keyboard_eligible } from '../game/core/world_input.ts'
 import { Text } from '../i18n/Text.tsx'
 import { content_catalog } from '../content/catalog.ts'
 import { mob_icon } from '../content/assets.ts'
 import { copy_text } from '../i18n/copy.ts'
 import type { AppCopy } from '../i18n/copy.ts'
-import { useFightPrompt } from '../game/core/fight_prompt_feed.ts'
+import { useFightPrompt, FIGHT_INTERACTION_RANGE_BLOCKS } from '../game/core/fight_prompt_feed.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { run_direct_transaction } from '../transaction_guard.ts'
 import { selected_character } from '../modules/session.ts'
@@ -35,8 +39,12 @@ const ACCESS_INVITED = 2
 const ACCESS_UNSET = 255
 const PLACEMENT_WINDOW_MS = Number(CONTRACT_CONSTANTS.placement_force_ms)
 
-const join_can_submit = (wallet: unknown, character: string | null, checkpoint: unknown, pending: boolean): boolean =>
-  Boolean(wallet && character && checkpoint && !pending)
+const join_can_submit = (
+  wallet: unknown,
+  character: string | null,
+  checkpoint: unknown,
+  ...blocked: readonly boolean[]
+): boolean => Boolean(wallet && character && checkpoint && !blocked.some(Boolean))
 
 type FightAccess = Readonly<{
   phase: string
@@ -78,6 +86,18 @@ export const fight_joinable_teams = (
   )
 }
 
+export const fight_in_reach = (
+  fight: Readonly<{ world: string; x: number; z: number }>,
+  character: Readonly<{ id: string; world?: string }> | null,
+  pose: Readonly<{ character_id: string; x: number; z: number }> | null
+): boolean =>
+  !!pose &&
+  !!character &&
+  pose.character_id === character.id &&
+  character.world === fight.world &&
+  Math.hypot(chain_to_client_coordinate(fight.x) - pose.x, chain_to_client_coordinate(fight.z) - pose.z) <=
+    FIGHT_INTERACTION_RANGE_BLOCKS
+
 const elapsed_label = (from_ms: number, now: number | null): string => {
   if (now === null) return '—'
   const seconds = Math.max(0, Math.floor((now - from_ms) / 1000))
@@ -89,15 +109,30 @@ export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const fights = useAppStore((state) => state.world.fights)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const fight = prompt.focused_id ? (fights[prompt.focused_id] ?? null) : null
-  const [open_id, set_open_id] = useState<string | null>(null)
+  const dialog = useAppStore((state) => state.navigation.dialog)
+  const open_id = dialog?.startsWith('fight:') ? dialog.slice(6) : null
+  const set_open_id = (id: string | null): void =>
+    dispatch_app({ type: 'dialog/open', dialog: id ? `fight:${id}` : null })
+
+  useEffect(() => {
+    if (open_id && !fights[open_id]) dispatch_app({ type: 'dialog/open', dialog: null })
+  }, [open_id, fights])
 
   // The sword is public world discovery. Access decides which buttons work inside the modal;
   // it never suppresses the nametag or the interaction that explains the fight.
   useEffect(() => {
     const on_key = (event: KeyboardEvent): void => {
-      if (event.code !== 'KeyF' || event.repeat || !prompt.focused_id || open_id || !fight) return
+      if (
+        event.code !== 'KeyF' ||
+        event.repeat ||
+        !world_keyboard_eligible(event) ||
+        !prompt.focused_id ||
+        open_id ||
+        !fight
+      )
+        return
       event.preventDefault()
-      set_open_id(prompt.focused_id)
+      dispatch_app({ type: 'dialog/open', dialog: `fight:${prompt.focused_id}` })
     }
     globalThis.addEventListener('keydown', on_key)
     return () => globalThis.removeEventListener('keydown', on_key)
@@ -288,6 +323,8 @@ const JoinButton = ({
 
 /** The join/spectate modal — renders the LIVE roster off the armed watch's hydration. */
 const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; copy: AppCopy; fight_id: string }>) => {
+  const pose = useWorldPose()
+  const available = useAppStore(run_to_available)
   const session = useAppStore((state) => state.fight)
   const clock = useAppStore((state) => state.chain_clock)
   const now = chain_now(clock, performance.now())
@@ -323,6 +360,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   }, [])
 
   if (!row) return null
+  const nearby = fight_in_reach(row, own_row, pose)
   const checkpoint = fight_prompt_checkpoint(session, fight_id)
   const phase = checkpoint
     ? (['placement', 'active', 'ended'] as const)[fight_checkpoint_phase_rank(checkpoint.contract)]
@@ -357,16 +395,16 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
   const joinable_teams = admitted_teams.filter(
     (team): team is 0 | 1 => !already_seated && (team === 0 || team === 1) && team_has_room(team)
   )
-  const can_submit = join_can_submit(wallet, selected_character_id, checkpoint, joining)
+  const can_submit = join_can_submit(wallet, selected_character_id, checkpoint, joining, !available, !nearby)
 
   const join = (team: number): void => {
-    if (!wallet || !selected_character_id) return
+    if (!can_submit) return
     const custody = own_row ? { kiosk: own_row.kiosk, kiosk_cap: own_row.kiosk_cap } : undefined
     const grouped = Number(team === 0 ? access_a : access_b) === ACCESS_GROUP
     const transaction = run_direct_transaction(() =>
-      wallet.fight.join({
+      wallet!.fight.join({
         fight: fight_id,
-        character_id: selected_character_id,
+        character_id: selected_character_id!,
         custody,
         team,
         access: 0,
@@ -406,9 +444,6 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
         <header className="flex items-center gap-3">
           <Swords className="text-[#c8963c]" size={18} />
           <div>
-            <h2 className="font-mono text-sm tracking-[0.16em] text-[#e8e4dc] uppercase">
-              {phase === 'placement' ? text.fight_join_title : text.fight_spectate_title}
-            </h2>
             <p className="mt-1 font-mono text-[9px] tracking-[0.14em] text-[#777b86] uppercase">
               {phase === 'active'
                 ? `${text.fight_started_ago} ${elapsed_label(started_ms, now)}`
@@ -459,7 +494,7 @@ const FightModal = ({ close, copy, fight_id }: Readonly<{ close: () => void; cop
         )}
 
         <footer className="grid gap-2">
-          {phase !== 'placement' ? (
+          {phase !== 'ended' ? (
             <button
               className="h-10 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 font-mono text-[10px] tracking-[0.16em] text-[#67adff] uppercase transition hover:border-[#4a9eff] hover:bg-[#4a9eff]/14 disabled:cursor-wait disabled:opacity-35"
               disabled={!checkpoint}

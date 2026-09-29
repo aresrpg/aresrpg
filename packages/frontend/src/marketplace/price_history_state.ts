@@ -9,6 +9,7 @@ export type PriceHistoryState = Readonly<{
   observation: MarketPriceObservation | null
   revision: number
   history: MarketPriceHistory | null
+  total_units: string | null
   status: 'loading' | 'ready' | 'unavailable'
 }>
 export type PriceHistoryInput = Readonly<{ type: 'market/price_item_selected'; item_type: string | null }>
@@ -17,6 +18,7 @@ export const initial_price_history = (): PriceHistoryState => ({
   observation: null,
   revision: 0,
   history: null,
+  total_units: null,
   status: 'loading',
 })
 
@@ -27,6 +29,7 @@ const select_price_item = (state: PriceHistoryState, item_type: string | null): 
     revision,
     observation: item_type ? { item_type, id: revision } : null,
     history: null,
+    total_units: null,
     status: 'loading',
   }
 }
@@ -36,10 +39,10 @@ const fold_price_packet = (
   packet: Extract<Extract<AppInput, { type: 'server/packet' }>['packet'], { type: 'packet/market_prices' }>
 ): PriceHistoryState => {
   const { observation, history } = packet
-  if (observation.id !== state.observation?.id) return state
-  if (observation.item_type !== state.observation.item_type) return state
+  const same_observation = (['id', 'item_type'] as const).every((key) => state.observation?.[key] === observation[key])
+  if (!same_observation) return state
   if (history && state.history && history.sampled_at_ms < state.history.sampled_at_ms) return state
-  return { ...state, history, status: history ? 'ready' : 'unavailable' }
+  return { ...state, history, total_units: packet.total_units ?? null, status: history ? 'ready' : 'unavailable' }
 }
 
 /** Folded only by the existing marketplace reducer. Range selection is local presentation. */

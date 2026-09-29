@@ -12,23 +12,25 @@ import { CrushResultModal } from '../../src/characters/CrushResultModal.tsx'
 import { SellPanel } from '../../src/marketplace/SellPanel.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
-import { dispatch_app, read_app_state } from '../../src/store.ts'
+import { dispatch_app, observe_app, read_app_state } from '../../src/store.ts'
 import '../../src/tailwind.css'
 import '../../src/characters/characters.css'
 import '../../src/marketplace/marketplace.css'
 
 const copy = await load_app_copy('en')
-const seed = content_catalog.items.find(({ category }) => category === 'hat')!
+const owned_pet = new URLSearchParams(location.search).has('owned-pet')
+const seed = content_catalog.items.find(({ category }) => category === (owned_pet ? 'pet' : 'hat'))!
 const items: ItemRow[] = [1, 2, 3].map((index) => ({
   id: `gear-${index}`,
   name: `Test Hat ${index}`,
   item_type: seed.item_type,
-  category: 'hat',
+  category: seed.category,
   level: 5,
   amount: 1,
   kiosk: 'kiosk',
   stats: { strength: item_stat_center + index * 11, wisdom: item_stat_center - 4 },
   damages: [{ element: 'fire', from: index * 3, to: index * 7, damage_type: 'damage' }],
+  ...(owned_pet ? { pet_power: 30, pet_last_day: 20000 } : {}),
 }))
 const character: CharacterRow = {
   id: 'character',
@@ -69,9 +71,15 @@ dispatch_app({
   type: 'auth/connected',
   session: {
     address: 'owner',
+    marketplace: { list: async () => ({ digest: 'fixture-listing', version: '2' }) },
     read_item: async (id: string) => {
       document.body.dataset.itemReads = id
-      return { ...items[0]!, id, stats: { strength: item_stat_center + 77 } }
+      return {
+        ...items[0]!,
+        id,
+        stats: { strength: item_stat_center + 77 },
+        ...(new URLSearchParams(location.search).has('pet') ? { category: 'pet', pet_power: 30 } : {}),
+      }
     },
     character: {
       crush_gear: async ({ gear_ids }: { gear_ids: readonly string[] }) => {
@@ -103,6 +111,7 @@ window.addEventListener('fixture-item-stats', () =>
   })
 )
 const sell = new URLSearchParams(location.search).has('sell')
+if (sell) observe_app(['marketplace'])
 const trade = {
   id: 'trade',
   a: 'owner',

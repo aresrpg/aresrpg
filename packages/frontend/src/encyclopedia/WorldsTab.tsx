@@ -51,25 +51,27 @@ export const WorldsTab = ({
 
   return (
     <div className="world-atlas">
-      <nav className="world-atlas__worlds" aria-label={text('worlds_tab')}>
-        {encyclopedia_catalog.worlds.map((row) => (
-          <button
-            key={row.world}
-            aria-pressed={row.world === world?.world}
-            onClick={() => select_world(row.world)}
-            type="button"
-            data-world-select={row.world}
-          >
-            <Globe2 aria-hidden="true" size={22} />
-            <span>
-              <strong>{titleize(row.world)}</strong>
-              <small>{text('world_entry', { level: row.entry_level })}</small>
-            </span>
-          </button>
-        ))}
-      </nav>
-      <div className="world-atlas__search">
-        <SearchField value={search} change={set_search} placeholder={text('world_search_places')} />
+      <div className="world-atlas__toolbar">
+        <nav className="world-atlas__worlds" aria-label={text('worlds_tab')}>
+          {encyclopedia_catalog.worlds.map((row) => (
+            <button
+              key={row.world}
+              aria-pressed={row.world === world?.world}
+              onClick={() => select_world(row.world)}
+              type="button"
+              data-world-select={row.world}
+            >
+              <Globe2 aria-hidden="true" size={22} />
+              <span>
+                <strong>{titleize(row.world)}</strong>
+                <small>{text('world_entry', { level: row.entry_level })}</small>
+              </span>
+            </button>
+          ))}
+        </nav>
+        <div className="world-atlas__search">
+          <SearchField value={search} change={set_search} placeholder={text('world_search_places')} />
+        </div>
       </div>
       <div className="world-atlas__body">
         <nav className="world-atlas__places" aria-label={text('world_locations')}>

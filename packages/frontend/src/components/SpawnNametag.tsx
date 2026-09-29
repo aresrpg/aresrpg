@@ -12,7 +12,7 @@
 // here is the level that will stand on the board, not an estimate of it.
 
 /* eslint-disable functional/prefer-immutable-types -- React lifecycle boundary. */
-import { useEffect, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
@@ -30,10 +30,11 @@ import { collect_all_available, gather_gate } from '../game/gather_gate.ts'
 import { resource_at } from '../game/gather_target.ts'
 import { selected_character } from '../modules/session.ts'
 import { read_dungeon_portal_prompt } from '../game/core/dungeon_portal_feed.ts'
-import { SPAWN_INTERACTION_RANGE_BLOCKS, world_keyboard_eligible } from '../game/core/world_input.ts'
+import { SPAWN_INTERACTION_RANGE_BLOCKS } from '../game/core/world_input.ts'
 
+import { MobPackCard } from './MobPackCard.tsx'
 import { NametagCard, type NametagLine } from './NametagCard.tsx'
-import { PromptText } from './PromptChip.tsx'
+import { PromptText, usePromptKey } from './PromptChip.tsx'
 
 type InteractionCandidate = Readonly<{ id: string; x: number; z: number }>
 type InteractionPose = Readonly<Pick<WorldPose, 'x' | 'z'>>
@@ -120,20 +121,6 @@ const useInteractionTarget = (ids: readonly string[], state: AppState): string |
     () => null
   )
 
-/** One member row: its species and the exact level it will bring to the board. */
-const member_line = (mob_type: string, scalar: number, index: number, copy: AppCopy): NametagLine => {
-  const detail = content_catalog.mob(mob_type)?.mob
-  const name = detail?.name ?? copy.world_hud.spawn_unknown_mob
-  return {
-    key: `${mob_type}:${index}`,
-    // the pack has no header, so every member reads as a title of its own
-    title: true,
-    text: detail
-      ? `${name} · ${copy_text(copy.encyclopedia_page)('level_short', { level: member_level(detail.level_min, detail.level_max, scalar) })}`
-      : name,
-  }
-}
-
 const collect_all_line = (
   row: NonNullable<ReturnType<typeof resource_at>>,
   template: string
@@ -155,34 +142,30 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const has_party = selected_party(state) !== null
   const effective_access = has_party ? (state.settings.fight_access ?? 0) : 0
 
-  useEffect(() => {
-    const on_key = (event: KeyboardEvent): void => {
-      if (!['KeyE', 'KeyR'].includes(event.code) || event.repeat || !world_keyboard_eligible(event)) return
-      if (read_dungeon_portal_prompt().focused_id) return
-      const current_target = interaction_target(Object.keys(spawns), state, read_pose())
-      if (!current_target) return
-      event.preventDefault()
-      const resource = resource_at(current_target, state)
-      if (event.code === 'KeyR')
-        dispatch_app({
-          type: 'automation/collect_all',
-          id: crypto.randomUUID(),
-          node: current_target,
-          pose: read_pose(),
-        })
-      else if (resource?.character && gather_gate(resource.character, resource.resource).ok)
-        dispatch_app({ type: 'world/gather', node: current_target })
-      else if (parse_mob_group_id(current_target))
-        dispatch_app({
-          type: 'world/engage',
-          group: current_target,
-          access: effective_access,
-          started_at_ms: Date.now(),
-        })
-    }
-    globalThis.addEventListener('keydown', on_key)
-    return () => globalThis.removeEventListener('keydown', on_key)
-  }, [effective_access, has_party, spawns, state])
+  const activate = (code: 'KeyF' | 'KeyR') => {
+    if (read_dungeon_portal_prompt().focused_id) return false
+    const current_target = interaction_target(Object.keys(spawns), state, read_pose())
+    if (!current_target) return false
+    const resource = resource_at(current_target, state)
+    if (code === 'KeyR')
+      dispatch_app({
+        type: 'automation/collect_all',
+        id: crypto.randomUUID(),
+        node: current_target,
+        pose: read_pose(),
+      })
+    else if (resource?.character && gather_gate(resource.character, resource.resource).ok)
+      dispatch_app({ type: 'world/gather', node: current_target })
+    else if (parse_mob_group_id(current_target))
+      dispatch_app({
+        type: 'world/engage',
+        group: current_target,
+        access: effective_access,
+        started_at_ms: Date.now(),
+      })
+  }
+  usePromptKey({ enabled: target !== null, activate: () => activate('KeyF') })
+  usePromptKey({ enabled: target !== null, code: 'KeyR', activate: () => activate('KeyR') })
 
   return (
     <>
@@ -209,7 +192,7 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       {
                         key: 'press',
                         muted: !gate.ok,
-                        text: gate.ok ? <PromptText template={requirement} label="E" /> : requirement,
+                        text: gate.ok ? <PromptText template={requirement} label="F" /> : requirement,
                       },
                       ...collect_all_line(row, text('resource_press_collect_all')),
                     ]
@@ -225,21 +208,7 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         // element and this render — the card says nothing rather than the last thing it knew
         if (!group) return null
         return createPortal(
-          <NametagCard
-            lines={[
-              ...group.members.map(({ mob_type, level_scalar }, index) =>
-                member_line(mob_type, level_scalar, index, copy)
-              ),
-              ...(target === spawn_id
-                ? [
-                    {
-                      key: 'press',
-                      text: <PromptText template={text('spawn_press_attack')} label="E" />,
-                    },
-                  ]
-                : []),
-            ]}
-          />,
+          <MobPackCard members={group.members} copy={copy} active={target === spawn_id} />,
           element,
           spawn_id
         )

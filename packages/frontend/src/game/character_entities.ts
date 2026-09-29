@@ -5,6 +5,7 @@
 
 import type {
   CharacterAnimationName,
+  CharacterAura,
   CharacterAppearanceRender,
   CharacterEntityRender,
   Vec3,
@@ -12,6 +13,8 @@ import type {
 } from '@aresrpg/engine'
 import type { CharacterRow, EquippedItem, PresenceRow } from '@aresrpg/protocol'
 import { worn_appearance } from '@aresrpg/immutable'
+
+import { is_admin_address } from '../admin_access.ts'
 
 type CharacterRenderRow = Readonly<
   Omit<CharacterRow, 'equipment'> & {
@@ -30,7 +33,16 @@ export type CharacterRenderSource = Readonly<{
 export type LoadedCharacterRender = Readonly<{
   id: string
   appearance: CharacterAppearanceRender
+  aura?: CharacterAura
 }>
+
+export const character_aura = (
+  title: string | null | undefined,
+  owner: string | null | undefined = null
+): CharacterAura | undefined => {
+  if (is_admin_address(owner ?? null)) return 'admin'
+  return title === 'title_veteran' ? 'unbroken' : undefined
+}
 
 export const character_color_hex = (value: number): string => `#${value.toString(16).padStart(6, '0').slice(-6)}`
 
@@ -61,6 +73,7 @@ export const presence_render_source = (row: Readonly<PresenceRow>): CharacterRen
     loadout: Object.freeze({
       ...(row.hat ? { hat: row.hat } : {}),
       ...(row.cloak ? { cloak: row.cloak } : {}),
+      ...(row.title ? { title: row.title } : {}),
       ...(row.cosmetic_hat ? { cosmetic_hat: row.cosmetic_hat } : {}),
       ...(row.cosmetic_cloak ? { cosmetic_cloak: row.cosmetic_cloak } : {}),
     }),
@@ -69,15 +82,10 @@ export const presence_render_source = (row: Readonly<PresenceRow>): CharacterRen
 export const load_character_appearance = async (
   source: Readonly<CharacterRenderSource>
 ): Promise<CharacterAppearanceRender> => {
-  const [{ load_character_model_urls, load_worn_equipment_model_url }, { worn_equipment_options }] = await Promise.all([
-    import('../content/character_models.ts'),
-    import('../content/worn_equipment.ts'),
-  ])
+  const { load_character_model_urls, load_worn_equipment_model_url } = await import('../content/character_models.ts')
   const worn_model = async (item_type: string | null, category: 'hat' | 'cloak'): Promise<WornModelRender | null> => {
     if (!item_type) return null
-    const options = category === 'hat' ? worn_equipment_options.hats : worn_equipment_options.cloaks
-    const item = options.find((candidate) => candidate.item_type === item_type)
-    return item ? load_worn_equipment_model_url(item) : null
+    return load_worn_equipment_model_url({ item_type, category })
   }
   const appearance = worn_appearance(source.loadout)
   const [{ body_url, hair_url }, head, back] = await Promise.all([
@@ -109,6 +117,7 @@ export const world_character_entity = (
     kind: 'character',
     ...(transform.presentation ? { presentation: transform.presentation } : {}),
     appearance: character.appearance,
+    ...(character.aura ? { aura: character.aura } : {}),
     anchor: Object.freeze({ kind: 'world', position: transform.position }),
     facing: Object.freeze({ kind: 'yaw', yaw: transform.facing_yaw }),
     animation: Object.freeze({ name: transform.anim, time_scale: transform.gait_scale }),

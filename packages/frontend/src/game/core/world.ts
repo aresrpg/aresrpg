@@ -3,21 +3,10 @@
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types, functional/prefer-tacit, max-lines, no-param-reassign -- the world runtime is the explicit mutable engine and browser-device boundary. */
 
 import {
-  CHUNK_EDGE,
-  DUNGEON_PORTAL_LABEL_HEIGHT,
-  apply_voxel_operation,
   compile_runtime_world_recipe,
-  create_flat_projection,
   create_engine,
   create_terrain_planner,
-  effective_flattened,
-  load_generated_city_artifacts_for,
   parse_world_recipe,
-  project_height,
-  sample_world_column,
-  set_flat_projection,
-  step_flat_projection,
-  structure_voxels,
   type EngineRenderState,
   type EngineQuality,
   type EngineStatus,
@@ -31,8 +20,10 @@ import {
   type Vec3,
 } from '@aresrpg/engine'
 
+import { create_spawn_hologram, hologram_city } from './spawn_hologram.ts'
 import { world_daylight } from './daylight.ts'
 import { world_character_entity, type LoadedCharacterRender } from '../character_entities.ts'
+import { preload_audio } from '../audio/audio_registry.ts'
 import { create_footsteps, footstep_preset } from '../audio/footsteps.ts'
 import {
   camera_mode_after,
@@ -49,15 +40,23 @@ import { create_character_controller, type CharacterTransform } from './characte
 import { MOUNT_SPEED_SCALE } from './controller.ts'
 import { create_chunk_manager } from './chunks.ts'
 import { world_keyboard_eligible, WORLD_MOVE_KEYS } from './world_input.ts'
-import { CHARACTER_HEIGHT, following_pet_ground_height, walkable_spawn_height } from './collision.ts'
+import { CHARACTER_HEIGHT, following_pet_ground_height } from './collision.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.ts'
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
 import { publish_portal_prompt } from './portal_prompt_feed.ts'
 import { fight_prompt_targets, publish_fight_prompt } from './fight_prompt_feed.ts'
-import { dungeon_portal_targets, publish_dungeon_portal_prompt } from './dungeon_portal_feed.ts'
-import { publish_pose } from './pose_feed.ts'
+import { create_dungeon_guides, DUNGEON_GUIDE_LABEL_HEIGHT } from '../dungeon_guides.ts'
+import {
+  clear_dungeon_portal_prompt,
+  dungeon_portal_targets,
+  publish_dungeon_portal_prompt,
+} from './dungeon_portal_feed.ts'
+import { publish_pose, type WorldPose } from './pose_feed.ts'
 import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
-import { run_to_input, run_to_mount, type RunTarget } from './run_to.ts'
+import { run_to_mount, type RunTarget } from './run_to.ts'
+import { create_world_collision } from './world_collision.ts'
+import { walking_edge, type WalkPoint } from './walkable.ts'
+import { begin_walking, step_walking } from './walking.ts'
 import { create_world_ticker } from './world_ticker.ts'
 import type { DungeonPortalMarker } from '../../modules/world.ts'
 
@@ -73,42 +72,6 @@ export type WorldState = Readonly<{
   chunks: ReturnType<ReturnType<typeof create_chunk_manager>['stats']>
   displayed_chunks: number
 }>
-
-export const city_collision_readiness = (
-  world: ReturnType<typeof compile_runtime_world_recipe>,
-  on_ready: () => void,
-  load_artifacts: typeof load_generated_city_artifacts_for = load_generated_city_artifacts_for
-): ((area: Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>) => boolean) => {
-  const ready = new Set<string>()
-  const requested = new Set<string>()
-  return (area) => {
-    const city = world.structures.cities.find(
-      ({ area: city_area }) =>
-        city_area.max_x >= area.min_x &&
-        city_area.min_x <= area.max_x &&
-        city_area.max_z >= area.min_z &&
-        city_area.min_z <= area.max_z
-    )
-    if (!city || ready.has(city.id)) return true
-    if (!requested.has(city.id)) {
-      requested.add(city.id)
-      void load_artifacts([city], area)
-        .then(() => {
-          ready.add(city.id)
-          on_ready()
-        })
-        .catch((error: unknown) => console.error('City collision artifact failed to load.', error))
-    }
-    return false
-  }
-}
-
-const structure_collision_available = (
-  world: ReturnType<typeof compile_runtime_world_recipe>,
-  city_ready: boolean,
-  flat_amount: number
-): boolean =>
-  (world.structures.packs.length > 0 || world.structures.cities.length > 0) && city_ready && flat_amount === 0
 
 export const compose_world_entities = (
   controlled: EntityRender | null,
@@ -127,23 +90,34 @@ export const create_world = ({
   world,
   quality,
   render_distance,
-  force_grid,
   on_travel,
   on_run_stopped,
   initial_focus = [0, 0],
+  initial_yaw,
+  initial_pitch,
+  initial_spectate,
 }: Readonly<{
   canvas: HTMLCanvasElement
   world: unknown
   quality: EngineQuality
   render_distance?: number | null
-  force_grid?: boolean
   /** fired when T is pressed beside the star gate — the app owns what travel means */
   on_travel?: () => void
   on_run_stopped?: (reason: 'arrived' | 'manual' | 'blocked' | 'inactive') => void
   initial_focus?: readonly [number, number]
+  initial_yaw?: number
+  initial_pitch?: number
+  initial_spectate?: Readonly<{
+    y: number
+    zoom: number
+    yaw: number
+    pitch: number
+    min_zoom: number
+    max_zoom: number
+  }>
 }>) => {
-  const compiled = compile_runtime_world_recipe(parse_world_recipe(world))
-  const engine = create_engine({ canvas, quality, world, initial_focus, render_distance, force_grid })
+  const compiled = compile_runtime_world_recipe(world)
+  const engine = create_engine({ canvas, quality, world: compiled, initial_focus, render_distance })
   const terrain_planner = create_terrain_planner(compiled.recipe)
   const chunks = create_chunk_manager({
     engine,
@@ -153,66 +127,26 @@ export const create_world = ({
     on_failure: (error) => engine.fail({ code: 'terrain_failed', detail: error.message }),
   })
 
-  // World oracles for the ported physics/camera: columns are analytic (the compiled recipe), so
-  // solidity is "below the surface" and liquid fills up to the authored absolute sea plane — the
-  // faithful adaptation until client-side block edits exist (legacy read per-block ids).
-  const column_at = (x: number, z: number): ReturnType<typeof sample_world_column> =>
-    sample_world_column(compiled, x, z)
-  const surface_y = (x: number, z: number): number => column_at(x, z).surface_y
-  // One projection state drives both the renderer and collision. The engine owns the pure
-  // projection law; game core owns this one current frame snapshot.
-  let flat_projection = create_flat_projection()
-  let requested_flattened = false
-  const sync_flat_projection = (): void => {
-    const next = effective_flattened(requested_flattened, engine.backend())
-    if ((flat_projection.target === 1) !== next) flat_projection = set_flat_projection(flat_projection, next)
-  }
-  const projected_surface_y = (x: number, z: number): number => project_height(surface_y(x, z), flat_projection.amount)
-  const structure_chunks = new Map<string, ReadonlyMap<number, number>>()
-  const city_artifacts_ready = city_collision_readiness(compiled, () => structure_chunks.clear())
-  const structure_material_at = (x: number, y: number, z: number): number | undefined => {
-    const block_x = Math.floor(x)
-    const block_y = Math.floor(y)
-    const block_z = Math.floor(z)
-    const chunk_x = Math.floor(block_x / CHUNK_EDGE)
-    const chunk_z = Math.floor(block_z / CHUNK_EDGE)
-    const area = {
-      min_x: chunk_x * CHUNK_EDGE,
-      max_x: (chunk_x + 1) * CHUNK_EDGE - 1,
-      min_z: chunk_z * CHUNK_EDGE,
-      max_z: (chunk_z + 1) * CHUNK_EDGE - 1,
-    }
-    if (!structure_collision_available(compiled, city_artifacts_ready(area), flat_projection.amount)) return undefined
-    const key = `${chunk_x}:${chunk_z}`
-    let materials = structure_chunks.get(key)
-    if (!materials) {
-      if (structure_chunks.size > 256) structure_chunks.clear()
-      materials = new Map(
-        structure_voxels(compiled, area).map(({ x: world_x, y: world_y, z: world_z, material_id }) => [
-          (world_y << 10) | ((world_z - chunk_z * CHUNK_EDGE) << 5) | (world_x - chunk_x * CHUNK_EDGE),
-          material_id,
-        ])
-      )
-      structure_chunks.set(key, materials)
-    }
-    return materials.get((block_y << 10) | ((block_z - chunk_z * CHUNK_EDGE) << 5) | (block_x - chunk_x * CHUNK_EDGE))
-  }
-  const solid_at = (x: number, y: number, z: number): boolean => {
-    const operation = structure_material_at(x, y, z)
-    return apply_voxel_operation(operation, y < projected_surface_y(x, z) ? 1 : 0) !== 0
-  }
-  const mob_ground_height = (x: number, z: number): number =>
-    walkable_spawn_height(solid_at, x, projected_surface_y(x, z), z)
-  // Followers have no collision body, so ground them against the same solid world as the player.
-  // The owner's feet select the vertical layer: a pet follows across a bridge or roof instead of
-  // snapping to terrain below it, without climbing onto roofs while its owner walks indoors.
+  const collision = create_world_collision(compiled, (error) =>
+    engine.fail({ code: 'terrain_failed', detail: String(error) })
+  )
+  const {
+    solid_at,
+    liquid_at,
+    ready: city_artifacts_ready,
+    surface_y,
+    column_at,
+    structure_material_at,
+    ground_height: mob_ground_height,
+  } = collision
   const pet_ground_height = (x: number, z: number, owner_y: number): number =>
-    following_pet_ground_height(solid_at, x, z, owner_y, projected_surface_y(x, z))
-  const liquid_at = (x: number, y: number, z: number): boolean =>
-    flat_projection.amount < 1 && y < compiled.recipe.sea_level && y >= projected_surface_y(x, z)
-
+    following_pet_ground_height(solid_at, x, z, owner_y, surface_y(x, z))
+  const holograms = compiled.structures.cities
+    .filter(({ id }) => id === hologram_city)
+    .map(() => create_spawn_hologram(engine, surface_y(0, 0)))
   const character = create_character_controller({ solid_at, liquid_at, position: [0, surface_y(0, 0), 0] })
   const footsteps = create_footsteps()
+  preload_audio(['water_enter'])
   const liquid_preset: MaterialPreset =
     compiled.recipe.liquid === undefined
       ? 'water'
@@ -223,7 +157,7 @@ export const create_world = ({
     const structure_id = structure_material_at(x, y - 0.01, z)
     const structure =
       structure_id === undefined || structure_id === 0 ? undefined : compiled.materials.entries[structure_id]?.preset
-    return footstep_preset({ surface, structure, liquid: liquid_preset, in_water: transform.in_water })
+    return footstep_preset({ surface, structure, liquid: liquid_preset, in_water: transform.feet_in_water })
   }
   let character_render: LoadedCharacterRender | null = null
   let controlled_entity: EntityRender | null = null
@@ -232,7 +166,9 @@ export const create_world = ({
   let pet_motion: PetMotion = empty_pet_motion()
   let pet_elapsed_seconds = 0
   let riding = false
+  let dungeon_guide_entities: readonly EntityRender[] = []
   let external_entities: readonly EntityRender[] = Object.freeze([])
+  let nearby_entities: readonly EntityRender[] = Object.freeze([])
   let rendered_transform: Readonly<{
     id: string
     x: number
@@ -246,16 +182,25 @@ export const create_world = ({
   const pressed = { forward: new Set<string>(), strafe: new Set<string>() }
   const held = { forward: 0, strafe: 0 }
   const spectate = { x: initial_focus[0], z: initial_focus[1] }
-  let spectate_y = surface_y(spectate.x, spectate.z)
-  let spectate_zoom = 180
-  let spectate_yaw = Math.PI * 0.25
-  let spectate_pitch = 0.55
+  const overview = {
+    y: surface_y(spectate.x, spectate.z),
+    zoom: 180,
+    yaw: Math.PI * 0.25,
+    pitch: 0.55,
+    min_zoom: 60,
+    max_zoom: 1_600,
+    ...initial_spectate,
+  }
+  let { y: spectate_y, zoom: spectate_zoom, yaw: spectate_yaw, pitch: spectate_pitch } = overview
   let mode: 'spectate' | 'follow' | 'fight' = 'spectate'
   let fight_board: FightBoardFrame = { origin: { x: 0, y: 0, z: 0 }, grid_w: 1, grid_h: 1, cell_size: 1 }
   let active = false
   let enabled = false
   let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
   let run_target: RunTarget | null = null
+  let walking: ReturnType<typeof begin_walking> | null = null
+  let run_route: WorldPose['route'] = null
+  const walking_world = { solid_at, liquid_at, ready: city_artifacts_ready, ground_height: mob_ground_height }
   let action_animation_timer: ReturnType<typeof setInterval> | null = null
   let dragging: 'pan' | 'orbit' | null = null
   let pointer = [0, 0] as [number, number]
@@ -268,11 +213,11 @@ export const create_world = ({
   const spectate_addon = create_spectate_addon({
     focus: () => [spectate.x, spectate.z] as const,
     zoom: () => spectate_zoom,
-    ground_y: () => project_height(spectate_y, flat_projection.amount),
+    ground_y: () => spectate_y,
     yaw: () => spectate_yaw,
     pitch: () => spectate_pitch,
   })
-  const follow_addon = create_follow_addon(solid_at)
+  const follow_addon = create_follow_addon(solid_at, { yaw: initial_yaw, pitch: initial_pitch })
   const fight_addon = create_fight_addon({
     board: () => fight_board,
     viewport: () => [canvas.clientWidth, canvas.clientHeight],
@@ -289,11 +234,14 @@ export const create_world = ({
     held.forward = 0
     held.strafe = 0
     mouse_forward = false
-    character.set_input({ forward: 0, strafe: 0, jump: false, glide: false, walk: false })
+    touch_axes = { forward: 0, strafe: 0 }
+    character.set_input({ forward: 0, strafe: 0, jump: false, glide: false, walk: false, phase_target: null })
   }
   const stop_run = (reason: 'arrived' | 'manual' | 'blocked' | 'inactive' = 'manual', notify = true): void => {
     if (!run_target) return
     run_target = null
+    walking = null
+    run_route = null
     clear_movement()
     if (notify) on_run_stopped?.(reason)
   }
@@ -303,31 +251,46 @@ export const create_world = ({
   const stop_run_for_action_lock = (next: typeof action_lock): void => {
     if (next) stop_run('blocked')
   }
-  const apply_run_input = (position: Readonly<Vec3>): void => {
-    const run = run_target ? run_to_input({ x: position[0], z: position[2] }, run_target) : null
-    if (run?.arrived) stop_run('arrived')
-    else if (run) {
-      footsteps.unlock()
-      const mounting = run_to_mount({
-        requested: run_target?.ride_pet === true,
-        available: pet !== null,
-        riding,
-        nearby: pet_mountable(),
-      })
-      if (mounting === 'mount') set_riding(true)
-      character.set_input({ yaw: run.yaw, forward: mounting === 'wait' ? 0 : 1, strafe: 0 })
-    } else character.set_input({ yaw: director.active().get_yaw() })
+  const apply_run_input = (position: Readonly<Vec3>, delta_seconds: number): void => {
+    if (!run_target || !walking) return character.set_input({ yaw: director.active().get_yaw() })
+    const mounting = run_to_mount({
+      requested: run_target.ride_pet === true,
+      available: pet !== null,
+      riding,
+      nearby: pet_mountable(),
+    })
+    if (mounting === 'mount') set_riding(true)
+    if (mounting === 'wait') return character.set_input({ forward: 0, strafe: 0, phase_target: null })
+    const step = step_walking(walking_world, walking, position, run_target, delta_seconds)
+    walking = step.state
+    run_route = { x: run_target.x, z: run_target.z, remaining: step.remaining }
+    if (step.status === 'arrived') return stop_run(step.status)
+    footsteps.unlock()
+    character.set_input({ yaw: step.yaw, forward: step.forward, strafe: 0, phase_target: step.phase_target })
   }
 
   const submitted_entities = (): readonly EntityRender[] =>
-    // A MOUNTED BOARD SHOWS ITS FIGHTERS AND NOBODY ELSE (owner 2026-08-21). Your overworld
+    // AN IMMERSIVE BOARD SHOWS ITS FIGHTERS AND NOBODY ELSE (owner 2026-08-21). Your overworld
     // avatar and your pet are not among them — your FIGHTER is — so the composition that
     // normally leads with the controlled character steps aside while a fight holds the scene.
     mode === 'fight'
       ? external_entities
-      : compose_world_entities(controlled_entity, pet_entity ? [pet_entity, ...external_entities] : external_entities)
+      : compose_world_entities(controlled_entity, [
+          ...(pet_entity ? [pet_entity] : []),
+          ...external_entities,
+          ...nearby_entities,
+          ...dungeon_guide_entities,
+        ])
 
   const submit_entities = (): void => engine.set_entities(submitted_entities())
+  const dungeon_guides = create_dungeon_guides({
+    submit: (entities) => {
+      dungeon_guide_entities = entities
+      submit_entities()
+    },
+    caption: engine.set_entity_caption,
+    ground_height: mob_ground_height,
+  })
 
   const set_mode = (next: typeof mode): void => {
     if (next === mode) return
@@ -341,9 +304,7 @@ export const create_world = ({
       const { position } = character.get_transform()
       spectate.x = position[0]
       spectate.z = position[2]
-      // Retain source elevation when leaving an already projected character view.
-      const ground = surface_y(position[0], position[2])
-      spectate_y = ground + position[1] - project_height(ground, flat_projection.amount)
+      spectate_y = position[1]
     }
     clear_movement()
     footsteps.reset()
@@ -355,6 +316,7 @@ export const create_world = ({
 
   // ── both-mouse-buttons run (the classic MMO gesture): chorded buttons never fire a second
   // pointerdown — the state is the `buttons` bitmask, read on every pointer event ──
+  let touch_axes = { forward: 0, strafe: 0 }
   let mouse_forward = false
   const update_mouse_forward = (buttons: number): void => {
     const next = enabled && !action_lock && mode === 'follow' && (buttons & 3) === 3
@@ -388,9 +350,7 @@ export const create_world = ({
     }
     pointer = [event.clientX, event.clientY]
   }
-  // the release listens on the WINDOW: a button let go off-canvas must still clear the run, and
-  // follow mode cannot capture the pointer — its rotate drag holds a native pointer lock, which
-  // both voids an existing capture and makes setPointerCapture throw InvalidStateError
+  // Window-level release also clears a held run when the cursor leaves the canvas.
   const on_pointer_up = (event: PointerEvent): void => {
     update_mouse_forward(event.buttons)
     dragging = null
@@ -403,15 +363,23 @@ export const create_world = ({
   const on_wheel = (event: WheelEvent): void => {
     if (!enabled || mode !== 'spectate') return
     event.preventDefault()
-    spectate_zoom = Math.min(1_600, Math.max(60, spectate_zoom * Math.exp(event.deltaY * 0.0015)))
+    spectate_zoom = Math.min(
+      overview.max_zoom,
+      Math.max(overview.min_zoom, spectate_zoom * Math.exp(event.deltaY * 0.0015))
+    )
   }
 
   // ── movement keys (camera-relative axes; the addons own their own mouse gestures) ──
   const apply_axes = (): void => {
     // both mouse buttons override the keys — holding S while double-gripping still runs forward
-    held.forward = mouse_forward ? 1 : pressed.forward.size ? Number([...pressed.forward].at(-1)) : 0
-    held.strafe = pressed.strafe.size ? Number([...pressed.strafe].at(-1)) : 0
+    held.forward = mouse_forward ? 1 : pressed.forward.size ? Number([...pressed.forward].at(-1)) : touch_axes.forward
+    held.strafe = pressed.strafe.size ? Number([...pressed.strafe].at(-1)) : touch_axes.strafe
     character.set_input({ forward: held.forward, strafe: held.strafe })
+  }
+  const set_jump = (down: boolean): void => {
+    if (!enabled || mode !== 'follow' || action_lock) return
+    if (down) stop_run('manual')
+    character.set_input({ jump: down, glide: down && riding && pet?.locomotion === 'fly' })
   }
   const on_key = (event: KeyboardEvent, down: boolean): void => {
     const move = WORLD_MOVE_KEYS[event.code]
@@ -423,7 +391,7 @@ export const create_world = ({
       apply_axes()
       return
     }
-    if (event.code === 'Space') character.set_input({ jump: down, glide: down && riding && pet?.locomotion === 'fly' })
+    if (event.code === 'Space') set_jump(down)
     if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') character.set_input({ walk: down })
     if (event.code === 'KeyX' && down) {
       if (riding) set_riding(false)
@@ -507,7 +475,7 @@ export const create_world = ({
       if (existing) {
         engine.set_world_label(id, existing, [
           portal.x,
-          projected_surface_y(portal.x, portal.z) + DUNGEON_PORTAL_LABEL_HEIGHT,
+          mob_ground_height(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
           portal.z,
         ])
         continue
@@ -517,7 +485,7 @@ export const create_world = ({
       dungeon_portal_labels.set(id, element)
       engine.set_world_label(id, element, [
         portal.x,
-        projected_surface_y(portal.x, portal.z) + DUNGEON_PORTAL_LABEL_HEIGHT,
+        mob_ground_height(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
         portal.z,
       ])
       changed = true
@@ -528,6 +496,7 @@ export const create_world = ({
         roots: Object.freeze(Object.fromEntries(dungeon_portal_labels)),
         portals: Object.freeze(Object.fromEntries(dungeon_portal_markers.map((portal) => [portal.id, portal]))),
         focused_id: focused_dungeon_portal_id,
+        speak: dungeon_guides.speak,
       })
   }
 
@@ -535,7 +504,7 @@ export const create_world = ({
     for (const id of dungeon_portal_labels.keys()) engine.set_world_label(id, null, null)
     dungeon_portal_labels.clear()
     focused_dungeon_portal_id = null
-    publish_dungeon_portal_prompt({ roots: Object.freeze({}), portals: Object.freeze({}), focused_id: null })
+    clear_dungeon_portal_prompt()
   }
   const on_key_down = (event: KeyboardEvent): void => {
     if (!enabled || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
@@ -663,16 +632,12 @@ export const create_world = ({
   }
 
   const tick = (now: number, delta_seconds: number): void => {
-    sync_flat_projection()
-    const previous_flat = flat_projection
-    flat_projection = step_flat_projection(flat_projection, delta_seconds)
-    engine.set_flatten_amount(flat_projection.amount)
     const world_time_of_day = world_daylight(now, pinned_time, day_night_cycle_enabled)
     let anchor: CameraAnchor
     if (mode === 'spectate') {
       anchor = {
         x: spectate.x,
-        y: project_height(spectate_y, flat_projection.amount),
+        y: spectate_y,
         z: spectate.z,
         eye_height: 0,
         speed: 0,
@@ -680,16 +645,19 @@ export const create_world = ({
       }
     } else if (mode === 'follow') {
       const before = character.get_transform().position
-      const source_ground = surface_y(before[0], before[2])
-      const previous_ground = project_height(source_ground, previous_flat.amount)
-      const next_ground = project_height(source_ground, flat_projection.amount)
-      character.reconcile_ground(previous_ground, next_ground)
-      follow_addon.translate_y(next_ground - previous_ground)
-      apply_run_input(before)
-      character.tick(delta_seconds)
+      const ready = city_artifacts_ready({
+        min_x: before[0] - 3,
+        max_x: before[0] + 3,
+        min_z: before[2] - 3,
+        max_z: before[2] + 3,
+      })
+      const physics_seconds = delta_seconds * Number(ready)
+      apply_run_input(before, physics_seconds)
+      character.tick(physics_seconds)
       const transform = character.get_transform()
       const character_changed = render_character(transform)
       const pet_changed = render_pet(transform, delta_seconds)
+      dungeon_guides.face_player(transform.position)
       if (character_changed || pet_changed) submit_entities()
       label_portal(portal_eligible())
       sync_fight_labels()
@@ -699,9 +667,9 @@ export const create_world = ({
         on_ground: transform.on_ground,
         preset: ground_preset(transform),
         speed: transform.speed,
+        water_entered: transform.water_entered,
       })
-      if (transform.air_jumped)
-        engine.play_jump_puff([transform.position[0], transform.visual_y, transform.position[2]])
+      if (transform.air_jumped) engine.play_jump_puff(transform.visual_position)
       anchor = {
         x: transform.visual_position[0],
         y: transform.visual_position[1],
@@ -718,6 +686,7 @@ export const create_world = ({
         yaw: director.active().get_yaw(),
         riding,
         time_of_day: world_time_of_day,
+        route: run_route,
       })
       // the night lantern (and any character-anchored presentation) follows the FEET, never
       // the camera target — the follow camera leads ahead of the body
@@ -737,6 +706,7 @@ export const create_world = ({
     const view = director.frame(anchor, delta_seconds)
     if (mode === 'follow' && render_character()) submit_entities()
     last_view = view
+    holograms.forEach((hologram) => hologram.update(view, mode !== 'fight'))
     engine.set_camera(view.position, view.target, {
       fov: view.fov,
       ortho_blend: view.ortho_blend,
@@ -770,6 +740,7 @@ export const create_world = ({
   const ticker = create_world_ticker({ tick })
 
   return Object.freeze({
+    canvas,
     set_quality: (quality: 'low' | 'medium' | 'high', render_distance: number | null) => {
       // one radius for both terrains: voxel chunks AND the far shell's hole track the override
       chunks.set_quality(quality, render_distance)
@@ -785,12 +756,14 @@ export const create_world = ({
       pinned_time = time
       if (time !== null) engine.set_time_of_day(time)
     },
+    atmosphere_preset: compiled.recipe.atmosphere,
+    set_atmosphere: engine.set_atmosphere,
     set_clouds_visible: engine.set_clouds_visible,
     set_view: ({ focus }: Pick<WorldView, 'focus'>) => {
       spectate.x = focus[0]
       spectate.z = focus[1]
     },
-    set_character: (next: Readonly<{ id: string; appearance: CharacterAppearanceRender }> | null) => {
+    set_character: (next: LoadedCharacterRender | null) => {
       character_render = next ? Object.freeze(next) : null
       controlled_entity = null
       rendered_transform = null
@@ -801,6 +774,10 @@ export const create_world = ({
         pet_entity = null
       }
       render_pet()
+      submit_entities()
+    },
+    set_nearby_entities: (next: readonly EntityRender[]) => {
+      nearby_entities = next
       submit_entities()
     },
     set_entities: (next: readonly EntityRender[]) => {
@@ -814,12 +791,12 @@ export const create_world = ({
       engine.set_fight_swords(url, impact_sound_url, markers)
       sync_fight_labels()
     },
-    // Keep source terrain heights so nodes arriving while flat can rise again on restoration.
-    set_resource_nodes: (markers: readonly ResourceNodeMarker[]) =>
-      engine.set_resource_nodes(markers.map((marker) => ({ ...marker, y: surface_y(marker.x, marker.z) }))),
+    set_resource_nodes: (markers: readonly ResourceNodeMarker[], height_at = surface_y) =>
+      engine.set_resource_nodes(markers.map((marker) => ({ ...marker, y: height_at(marker.x, marker.z) }))),
     set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => {
       dungeon_portal_markers = Object.freeze([...markers])
       engine.set_dungeon_portals(markers)
+      dungeon_guides.set_markers(markers)
       sync_dungeon_portal_labels()
     },
     set_dungeon_stage: engine.set_dungeon_stage,
@@ -840,17 +817,19 @@ export const create_world = ({
     },
     set_riding,
     riding: () => riding,
-    ground_height: (x: number, z: number) => projected_surface_y(x, z),
+    ground_height: (x: number, z: number) => surface_y(x, z),
     mob_ground_height,
+    walking_world,
+    walk_step: (from: WalkPoint, x: number, z: number) => walking_edge(walking_world, from, x, z),
     pet_ground_height,
     /// Where the camera currently looks — its ground focus. The natural spawn when handing
     /// control to a character mid-session.
     camera_focus: () => Object.freeze({ x: spectate.x, z: spectate.z }),
     /// Point the system at a character: the camera and terrain travel to its position.
     /// Cross-world pointing waits on more worlds having terrain recipes.
-    point_at: (position: Readonly<{ x: number; z: number }>, reconcile = false) => {
+    point_at: (position: Readonly<{ x: number; y?: number; z: number }>, reconcile = false) => {
       footsteps.reset()
-      character.teleport([position.x, projected_surface_y(position.x, position.z), position.z], {
+      character.teleport([position.x, position.y ?? surface_y(position.x, position.z), position.z], {
         smooth: reconcile && mode === 'follow',
       })
       set_mode(camera_mode_after(mode, { mode: 'follow', from: 'character' }))
@@ -866,8 +845,10 @@ export const create_world = ({
     },
     show_fight_board: (board: FightBoardRender | null) => {
       engine.set_fight_board(board)
-      if (board === null) set_mode('follow')
-      else {
+      if (board?.ambient) return
+      if (board === null) {
+        if (mode === 'fight') set_mode('follow')
+      } else {
         fight_board = {
           origin: board.origin,
           grid_w: board.width,
@@ -887,6 +868,7 @@ export const create_world = ({
     play_fight_cue: engine.play_fight_cue,
     animate_entity: engine.animate_entity,
     project_entity: engine.project_entity,
+    hit_entity_caption: engine.hit_entity_caption,
     mode: () => mode,
     /// The follow rig's knobs (cinematic toggle, programmatic dolly) for the app layer.
     follow_camera: () => follow_addon,
@@ -903,15 +885,26 @@ export const create_world = ({
         chunks: chunks.stats(),
         displayed_chunks: engine.chunk_count(),
       }),
-    set_flattened: (next: boolean) => {
-      requested_flattened = next
-      sync_flat_projection()
+    set_jump,
+    set_movement_area: character.set_movement_area,
+    set_movement: (axes: Readonly<{ forward: number; strafe: number }>) => {
+      if (!enabled || mode !== 'follow' || action_lock) return
+      const magnitude = Math.hypot(axes.forward, axes.strafe)
+      if (magnitude > 0) stop_run('manual')
+      const length = Math.max(1, magnitude)
+      touch_axes = { forward: axes.forward / length, strafe: axes.strafe / length }
+      footsteps.unlock()
+      apply_axes()
+    },
+    rotate_camera: (dx: number, dy: number) => {
+      if (enabled && mode === 'follow') follow_addon.rotate(dx, dy)
     },
     set_run_target: (next: RunTarget | null) => {
       stop_run('manual', false)
       if (!next) return
       clear_movement()
       run_target = Object.freeze(next)
+      walking = begin_walking(character.get_transform().position, run_target)
     },
     set_active: (next: boolean, background = false) => {
       ticker.set_active(next, background)
@@ -971,10 +964,12 @@ export const create_world = ({
     },
     dispose: () => {
       ticker.dispose()
+      holograms.forEach((hologram) => hologram.dispose())
       if (action_animation_timer) clearInterval(action_animation_timer)
       publish_pose(null)
       clear_fight_labels()
       clear_dungeon_portal_labels()
+      dungeon_guides.dispose()
       canvas.removeEventListener('pointerdown', on_pointer_down)
       canvas.removeEventListener('pointermove', on_pointer_move)
       globalThis.removeEventListener('pointerup', on_pointer_up)

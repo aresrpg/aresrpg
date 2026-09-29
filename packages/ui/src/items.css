@@ -1,0 +1,521 @@
+.item-sheet-container {
+  container: aui-item-sheet / inline-size;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  flex: 1;
+}
+/* One item sheet is shared by inventory, recipes, drops and linked items. */
+.item-detail-view {
+  font-family: var(--aui-font);
+  color: var(--aui-ink);
+  min-height: 0;
+}
+.item-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ffffff0b;
+}
+.item-detail-art {
+  width: 72px;
+  height: 72px;
+  flex: none;
+  object-fit: contain;
+}
+.item-detail-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+[data-item-detail-name] {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.game-character-body .chr-equip__side {
+  position: static;
+}
+.game-character-body .chr-equip__detail {
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: min(760px, calc(100% - 24px));
+  max-height: calc(100% - 20px);
+  padding: 22px;
+  background: #1b2027;
+  border-color: #777e8944;
+  box-shadow:
+    0 8px 24px #0008,
+    inset 0 1px #ffffff12;
+}
+.game-character-body .chr-equip__detail [data-item-detail-view] {
+  padding-top: 10px;
+  max-width: none;
+}
+.item-detail-view .jobs__craft {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding: 12px;
+  border: 1px solid #90979f24;
+  border-radius: 5px;
+  background: #151b21;
+}
+.item-detail-view .jobs__craft-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e1c69e;
+}
+.item-detail-view .jobs__ingredients {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+}
+.item-detail-view .jobs__ingredient {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ffffff09;
+  border-radius: 3px;
+  background: #252c35;
+  color: #dddfe4;
+  text-align: left;
+  cursor: pointer;
+}
+.item-detail-view .jobs__ingredient-id {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.item-detail-view .jobs__ingredient-name {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.item-detail-view .jobs__ingredient-lvl {
+  font-size: 9px;
+  color: #a2aab5;
+}
+.item-detail-view .jobs__ingredient-amt {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.item-detail-view .jobs__ingredient-amt.is-short {
+  color: #e88b80;
+}
+.item-detail-view .jobs__ingredient-amt.is-enough {
+  color: #b8d396;
+}
+.item-detail-view .jobs__craft-chance {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #bbc2cb;
+}
+.item-detail-view .jobs__craft-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+.item-detail-view .jobs__craft-amount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  font-size: 10px;
+}
+.item-detail-view .jobs__craft-input {
+  width: 50px;
+  height: 30px;
+  padding: 4px;
+  background: #0e141b;
+  border: 1px solid #69727d44;
+  border-radius: 3px;
+  color: #f0e9dd;
+}
+.item-detail-view .jobs__craft-btn {
+  margin-left: auto;
+}
+.aui-inspection--item {
+  width: min(760px, calc(100cqw - 20px));
+}
+.aui-inspection--item > .item-sheet-container > .item-detail-view {
+  padding: 16px;
+  max-width: none;
+}
+.aui-mob-loot > button {
+  height: 54px;
+  padding-bottom: 16px;
+}
+.aui-mob-loot > button > small {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font: 700 9px var(--aui-font);
+  color: #f4e4c5;
+  text-shadow: 0 1px 2px #000;
+}
+@container aui-item-sheet (min-width: 600px) {
+  .item-detail-view:has(> .jobs__craft) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 1fr);
+    align-content: start;
+    gap: 12px 22px;
+  }
+  .item-detail-view:has(> .jobs__craft) > * {
+    grid-column: 1;
+  }
+  .item-detail-view:has(> .jobs__craft) > .jobs__craft {
+    grid-column: 2;
+    grid-row: 1 / span 8;
+  }
+}
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .game-character-body .chr-equip__detail {
+    width: calc(100% - 20px);
+    padding: 10px;
+    gap: 4px;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] {
+    display: grid;
+    grid-template-columns: minmax(200px, 1fr) minmax(220px, 1fr);
+    align-content: start;
+    gap: 8px 16px;
+    padding: 0 26px 0 0;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] > .item-detail-header {
+    flex-direction: row;
+    gap: 10px;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] > section {
+    grid-column: 1;
+  }
+  .item-detail-art,
+  .game-character-body .chr-equip__detail [data-item-detail-view] > header > img {
+    width: 48px;
+    height: 48px;
+  }
+  .item-detail-view .jobs__craft {
+    padding: 8px;
+    gap: 6px;
+  }
+  .item-detail-view .jobs__ingredients {
+    grid-template-rows: repeat(var(--ingredient-rows), 44px);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(190px, 1fr);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .item-detail-view .jobs__ingredient {
+    padding: 4px;
+  }
+  .item-detail-view .jobs__ingredient img {
+    width: 26px;
+    height: 26px;
+  }
+  .item-detail-view .jobs__ingredient-lvl {
+    display: none;
+  }
+  .aui-inspection--item > .item-sheet-container > .item-detail-view {
+    padding: 10px;
+  }
+}
+
+.game-character-body .chr-equip__detail > .aui-button:not(.inventory-item-close) {
+  margin-top: 8px;
+}
+.aui-inspection--drop:not(:has(.jobs__craft)) {
+  width: min(420px, calc(100cqw - 24px));
+}
+.aui-inspection--drop:has(.jobs__craft) {
+  width: min(740px, calc(100cqw - 24px));
+}
+
+.item-detail-view .jobs__craft-profession {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #adb9c4;
+  font: 10px var(--aui-font);
+}
+
+.aui-inspection--item:not(:has(.jobs__craft)) {
+  width: min(480px, calc(100cqw - 24px));
+  max-width: calc(100cqw - 24px);
+}
+.aui-inspection--item:not(:has(.jobs__craft)) > .item-detail-view {
+  width: auto;
+}
+.aui-inspection--item:not(:has(.jobs__craft)) .item-detail-header {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.inventory-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff0c;
+}
+.inventory-item-actions .aui-button {
+  font-size: 12px;
+}
+.inventory-item-primary {
+  margin-left: auto;
+}
+.aui-item-confirm {
+  width: min(480px, calc(100cqw - 24px));
+}
+.aui-item-confirm p {
+  font: 13px/1.5 var(--aui-font);
+  color: #d2d6db;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  .inventory-item-actions {
+    flex-wrap: nowrap;
+    padding-top: 6px;
+    gap: 4px;
+  }
+  .inventory-item-actions .aui-button {
+    min-height: 32px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  .aui-item-confirm [data-crush-selection] {
+    display: flex;
+    flex-flow: column wrap;
+    height: 100px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+}
+
+.aui-item-sources {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.aui-item-sources:empty {
+  display: none;
+}
+.aui-item-sources h3 {
+  color: #e9c994;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.aui-item-sources p {
+  color: #aab5bf;
+  font-size: 11px;
+  margin-bottom: 5px;
+}
+.aui-item-source-list {
+  display: grid;
+  gap: 4px;
+  max-height: none;
+  overflow-y: visible;
+  scrollbar-width: thin;
+}
+.aui-item-source-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 5px 9px;
+  text-align: left;
+  background: #ffffff05;
+  border: 1px solid #ffffff0a;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.aui-item-source-row img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.aui-item-source-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.aui-item-source-row b {
+  font-size: 12px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.aui-item-source-row small {
+  display: block;
+  color: #aab5bf;
+  font-size: 10px;
+}
+.aui-item-source-row strong {
+  text-align: right;
+  color: #e9c994;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.aui-item-sources .aui-item-source-row.aui-button {
+  background: #252c33;
+  background-image: none;
+  box-shadow: inset 0 1px #ffffff08;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #e4e5e9;
+}
+.aui-item-sources .aui-item-source-row.aui-button:hover {
+  background: #303941;
+}
+.item-detail-view > .jobs__craft {
+  align-self: start;
+}
+
+.aui-comparison-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: #aab5bf;
+  font-size: 10px;
+}
+.aui-comparison-heading strong {
+  color: #e9c994;
+  text-align: left;
+  font-weight: 500;
+}
+.aui-stat-delta {
+  min-width: 38px;
+  color: #ee9691;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.aui-stat-delta[data-gain='true'] {
+  color: #9cd5ad;
+}
+.game-character-body .chr-equip__detail > [data-owned-item-id] {
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.game-character-body .chr-equip__detail > .inventory-item-actions {
+  flex-shrink: 0;
+}
+
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .item-detail-view [data-item-stat] {
+    min-height: 26px;
+  }
+}
+
+.aui-inspection--item:not(:has(.jobs__craft)):has(.aui-item-sources section) {
+  width: min(560px, calc(100cqw - 24px));
+}
+@container aui-viewport (max-height: 500px) and (min-width: 501px) {
+  .aui-inspection--item:not(:has(.jobs__craft)) .aui-item-sources {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+  .aui-inspection--item:not(:has(.jobs__craft)) .aui-item-source-list {
+    max-height: 145px;
+  }
+}
+
+/* Related values stay together even when the surrounding sheet has room for crafting. */
+[data-active-item-stats] {
+  width: max-content;
+  max-width: 100%;
+}
+[data-active-item-stats] .aui-stat-delta {
+  margin-left: 16px;
+}
+
+/* The item sheet owns scrolling; ingredients never create a second scroll area. */
+.item-detail-view > .jobs__craft {
+  max-height: none;
+}
+.item-detail-view .jobs__ingredients {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: none;
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(44px, auto);
+  overflow: visible;
+  flex: none;
+}
+.item-detail-view .jobs__craft-head {
+  padding-top: 0;
+  border: 0;
+}
+.item-detail-view .jobs__craft-chance {
+  margin: 0;
+  padding: 0;
+}
+.item-detail-view .jobs__craft-bar {
+  margin: 0;
+  padding: 4px 0 0;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.item-detail-view .jobs__craft-amount {
+  min-width: 0;
+  gap: 4px;
+}
+.item-detail-view .jobs__craft-bar .aui-button {
+  min-height: 36px;
+  padding: 4px 8px;
+  font-size: 10px;
+  letter-spacing: normal;
+}
+.item-detail-view .jobs__craft-btn {
+  min-width: 0;
+}
+.item-detail-view .jobs__craft-input {
+  width: 42px;
+}
+.item-detail-view:has(> .jobs__craft) .aui-item-source-list {
+  max-height: none;
+  overflow: visible;
+}
+
+.aui-inspection--item:has([data-loot-rewards]) {
+  width: min(820px, calc(100cqw - 24px));
+}
+.aui-inspection--item [data-loot-rewards] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 6px;
+}
+.aui-inspection--item [data-loot-rewards] > span {
+  grid-column: 1/-1;
+}
+@container aui-window (max-width:500px) {
+  .aui-inspection--item [data-loot-rewards] {
+    grid-template-columns: 1fr;
+  }
+}
+
+.game-character-body .chr-equip__detail[data-item-category='pet'] {
+  inset: 50% auto auto 50%;
+  width: min(460px, calc(100% - 24px));
+}
+.game-character-body .chr-equip__detail[data-item-category='pet'] [data-item-detail-view] {
+  display: block;
+}

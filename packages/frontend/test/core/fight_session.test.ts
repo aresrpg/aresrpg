@@ -59,7 +59,7 @@ describe('fight session owner', () => {
   test('local commands and reset stay inside the Fight Lab', () => {
     const listeners = new Map<string, ((input: AppInput) => void)[]>()
     const wallet_calls: unknown[] = []
-    const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+    const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
     let state: AppState = {
       ...base,
       session: {

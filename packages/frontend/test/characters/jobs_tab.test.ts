@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs'
 import { craft_required_level, job_xp_for_level } from '@aresrpg/immutable'
 import { expect, test } from 'bun:test'
 
-import { better_job_character, craft_result_tone, recipe_tiers } from '../../src/characters/JobsTab.tsx'
+import { better_job_character, recipe_tiers } from '../../src/characters/JobsTab.tsx'
+import { craft_result_tone } from '../../src/characters/CraftControls.tsx'
 import { ingredient_destination, job_from_path, job_path } from '../../src/characters/job_navigation.ts'
 
 const character = (id: string, name: string, farmer_level: number) => ({
@@ -67,12 +68,4 @@ test('ingredient navigation opens intermediaries at their owning craft job and e
     job: null,
     selection: null,
   })
-})
-
-test('the narrow job detail lets long item names wrap instead of cropping them', () => {
-  const styles = readFileSync(new URL('../../src/characters/jobs.css', import.meta.url), 'utf8')
-
-  expect(styles).toContain('.jobs__item-detail [data-item-detail-name]')
-  expect(styles).toContain('white-space: normal;')
-  expect(styles).toContain('overflow-wrap: anywhere;')
 })

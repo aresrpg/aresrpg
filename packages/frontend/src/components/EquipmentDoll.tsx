@@ -3,7 +3,7 @@
 // The established paper-doll layout, extracted from the inventory for reuse by local character
 // authoring AND the live characters page (drag-drop staging rides the optional slot_state).
 
-import { Award, Cat, CircleDot, Crown, Footprints, Gem, Minus, Shirt, Sparkles, Swords } from 'lucide-react'
+import { slot_art } from '@aresrpg/ui/art'
 import type { DragEvent, ReactNode } from 'react'
 import { cosmetic_slots, relic_slots, rig_slots, type CharacterEquipmentSlot } from '@aresrpg/immutable'
 
@@ -39,24 +39,6 @@ export type DollSlotState = Readonly<{
   on_drop?: (event: Readonly<DragEvent<HTMLButtonElement>>) => void
 }>
 
-const SLOT_ICON: Readonly<Record<string, typeof Sparkles>> = Object.freeze({
-  relic: Sparkles,
-  hat: Crown,
-  cosmetic_hat: Crown,
-  cloak: Shirt,
-  cosmetic_cloak: Shirt,
-  amulet: Gem,
-  title: Award,
-  weapon: Swords,
-  tool: Swords,
-  ring: CircleDot,
-  left_ring: CircleDot,
-  right_ring: CircleDot,
-  belt: Minus,
-  boots: Footprints,
-  pet: Cat,
-})
-
 const slot_label = (slot: CharacterEquipmentSlot, category_name: (category: string) => string): string =>
   slot.startsWith('relic_')
     ? category_name('relic_slot').replace('{{number}}', slot.slice(6))
@@ -75,7 +57,7 @@ const EquipmentSlot = ({
 }>) => {
   const category_name = useItemCategoryName()
   const label = slot_label(slot, category_name)
-  const Glyph = SLOT_ICON[slot] ?? Sparkles
+  const placeholder = slot_art[slot] ?? slot_art.relic
   return (
     <button
       className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}${state.staged ? ' is-staged' : ''}`}
@@ -92,13 +74,13 @@ const EquipmentSlot = ({
           {item_detail_icon(item.item_type) ? (
             <img alt="" className="inv__slot-art" src={item_detail_icon(item.item_type)!} />
           ) : (
-            <Glyph className="inv__slot-glyph" />
+            <img alt="" className="inv__slot-placeholder" src={placeholder} />
           )}
           <span className="inv__slot-lvl">{item.level}</span>
         </>
       ) : (
         <>
-          <Glyph aria-hidden="true" className="inv__slot-glyph" strokeWidth={1.5} />
+          <img alt="" className="inv__slot-placeholder" src={placeholder} />
           <span className="inv__slot-label">{label}</span>
         </>
       )}
@@ -113,18 +95,22 @@ export const EquipmentDoll = ({
   footer,
   flat = false,
   compact = false,
+  preview,
 }: Readonly<{
   item_for: (slot: CharacterEquipmentSlot) => DollItem | null
   open: (slot: CharacterEquipmentSlot) => void
   slot_state?: (slot: CharacterEquipmentSlot) => DollSlotState
   footer?: ReactNode
+  preview?: ReactNode
   /** layout only, no frame — for surfaces that are already a card (a dialog) */
   flat?: boolean
   /** fixed index-size cells — for wide dialogs where stretching misfires */
   compact?: boolean
 }>) => (
   <div className="flex w-full flex-col gap-2">
-    <div className={`inv__doll${flat ? ' inv__doll--flat' : ''}${compact ? ' inv__doll--compact' : ''}`}>
+    <div
+      className={`inv__doll${flat ? ' inv__doll--flat' : ''}${compact ? ' inv__doll--compact' : ''}${preview ? ' inv__doll--portrait' : ''}`}
+    >
       <div className="inv__doll-body">
         <div className="inv__relics">
           {relic_slots.map((slot) => (
@@ -132,20 +118,21 @@ export const EquipmentDoll = ({
           ))}
         </div>
         <div className="inv__rig">
-          {RIG_ORDER.map((slot) =>
+          {preview && <div className="inv__portrait">{preview}</div>}
+          {(preview ? RIG_ORDER.filter((slot) => slot !== null) : RIG_ORDER).map((slot) =>
             slot === null ? (
               <span aria-hidden="true" className="inv__slot-gap" key="gap" />
             ) : (
               <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
             )
           )}
+          <div className={`inv__cosmetics${compact ? ' inv__cosmetics--compact' : ''}`}>
+            {cosmetic_slots.map((slot) => (
+              <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-    <div className={`inv__cosmetics${compact ? ' inv__cosmetics--compact' : ''}`}>
-      {cosmetic_slots.map((slot) => (
-        <EquipmentSlot item={item_for(slot)} key={slot} open={open} slot={slot} state={slot_state?.(slot)} />
-      ))}
     </div>
     {footer}
   </div>

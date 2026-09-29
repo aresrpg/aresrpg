@@ -59,9 +59,9 @@ test('real IndexedDB completion survives reload, ignores purchases for harvestin
   await expect(page.getByRole('button', { name: 'Start my first quest' })).toBeVisible()
 })
 
-test('HD journal and compact tracker fit narrow screens in all ten locales', async ({ page }) => {
+test('HD journal and compact tracker fit narrow screens in all locales', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  for (const locale of ['en', 'fr', 'de', 'es', 'uk', 'ja', 'zh', 'ru', 'vi', 'ko']) {
+  for (const locale of ['en', 'fr', 'de', 'es', 'pt', 'uk', 'ja', 'zh', 'ru', 'vi', 'ko']) {
     await page.goto(`/e2e/fixtures/journey.html?locale=${locale}`)
     await page.locator('.journey-tracker .journey-button').click()
     const journal = page.getByRole('dialog')
@@ -75,6 +75,32 @@ test('HD journal and compact tracker fit narrow screens in all ten locales', asy
     await page.screenshot({ animations: 'disabled', path: `test-results/journey-${locale}.png` })
   }
 })
+
+for (const viewport of [
+  { width: 844, height: 390 },
+  { width: 667, height: 375 },
+  { width: 390, height: 844 },
+]) {
+  test(`mobile adventure journal prioritizes the active objective at ${viewport.width}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/e2e/fixtures/adventure_quests.html')
+    await page.locator('.journey-tracker .journey-button').click()
+    const dialog = page.getByRole('dialog')
+    const panel = dialog.locator('.journey-panel')
+    await expect(panel.locator('.journey-header')).toBeHidden()
+    await expect(panel.locator('.journey-copy h3')).toHaveText('Clear the path')
+    const objective = (await panel.locator('.journey-objective').boundingBox())!
+    const window = (await dialog.locator('.aui-window').boundingBox())!
+    expect(objective.y + objective.height).toBeLessThanOrEqual(window.y + window.height)
+    expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
+    expect((await panel.locator('.journey-art').boundingBox())!.width).toBe(64)
+    await expect(panel.locator('.journey-checklist li')).toHaveCount(7)
+    await panel.locator('.journey-checklist li').last().scrollIntoViewIfNeeded()
+    await expect(panel.locator('.journey-checklist li').last()).toBeInViewport()
+    await panel.locator('.journey-copy h3').scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `/tmp/mobile-quest-${viewport.width}.png` })
+  })
+}
 
 test('automation reward art stays above its backdrop and inside the compact art column', async ({ page }) => {
   await page.goto('/e2e/fixtures/journey.html')

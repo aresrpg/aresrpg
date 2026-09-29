@@ -226,13 +226,13 @@ export function sample_sky_rgb(view: Rgb, sun: Rgb): Rgb {
 /**
  * Build the analytic sky node. Mirrors `sample_sky_rgb` exactly, reading the palette/halo constants
  * above. GPU behavior is verified at wiring time (this wave ships the node, not the render loop).
- * @param {{ initial_tod?: number, seed?: string|number }} [opts] seed drives the per-world night sky
+ * @param {{ initial_tod?: number, seed?: string|number, sky_rotation?: number }} [opts] seed drives the per-world night sky
  *   (star density variance + planet orbits — night_sky.js); defaults to the master seed.
  * @returns {SkyNode}
  */
-export function create_sky_node({ initial_tod = 0.3, seed = 'aresrpg' } = {}) {
+export function create_sky_node({ initial_tod = 0.3, seed = 'aresrpg', sky_rotation = 0 } = {}) {
   const time_of_day = uniform(initial_tod)
-  const sun_direction = uniform(sun_dir_from_tod(initial_tod))
+  const sun_direction = uniform(sun_dir_from_tod(initial_tod, undefined, sky_rotation))
 
   /** @param {Rgb} c @returns {*} constant vec3 node */
   const c3 = (c: Rgb): Node<'vec3'> => vec3(c[0], c[1], c[2])
@@ -327,7 +327,7 @@ export function create_sky_node({ initial_tod = 0.3, seed = 'aresrpg' } = {}) {
   const set_time_of_day = (tod: number): void => {
     const t = tod - Math.floor(tod)
     time_of_day.value = t
-    sun_dir_from_tod(t, sun_direction.value)
+    sun_dir_from_tod(t, sun_direction.value, sky_rotation)
     night.tick(sun_direction.value) // planet drift follows the tod push (cheap CPU)
   }
 

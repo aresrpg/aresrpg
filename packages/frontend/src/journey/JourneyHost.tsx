@@ -4,14 +4,16 @@
 import { useEffect, useRef } from 'react'
 
 import { ModalFrame } from '../components/ModalFrame.tsx'
-import { play_procedural_cue } from '../game/audio/procedural_cues.ts'
-import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { play_audio } from '../game/audio/audio_registry.ts'
+import { type AppCopy } from '../i18n/copy.ts'
+import { useAppStore } from '../store.ts'
 
+import { useJourneySource } from './source.tsx'
 import { JourneyPanel } from './JourneyPanel.tsx'
 
 export const JourneyHost = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const journey = useAppStore((state) => state.journey)
+  const source = useJourneySource(copy)
+  const { state: journey, text } = source
   const unobstructed = useAppStore(
     (state) =>
       state.navigation.dialog === null &&
@@ -30,13 +32,12 @@ export const JourneyHost = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     if (journey.saving || !unobstructed || !visible || !sound_key || played.current === sound_key) return
     // eslint-disable-next-line functional/immutable-data -- presentation-only ref prevents replay when the journal opens.
     played.current = sound_key
-    play_procedural_cue('level_up')
+    play_audio('quest_completed')
   }, [journey.saving, sound_key, unobstructed, visible])
   if (!journey.journal_open || !journey.ready) return null
-  const text = copy_text(copy.journey)
   return (
     <ModalFrame
-      close={() => dispatch_app({ type: 'journey/journal', open: false })}
+      close={() => source.journal(false)}
       close_label={text('close')}
       label={text('title')}
       max_width="max-w-2xl"

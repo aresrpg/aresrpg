@@ -27,7 +27,6 @@ export { effective_render_distance } from '@aresrpg/engine'
 
 export type GameSettings = Readonly<{
   quality: EngineQuality
-  flat_mode: boolean
   /** Absent preserves the live cycle for older saved preferences. */
   day_night_cycle_enabled?: boolean
   music_enabled: boolean
@@ -77,7 +76,6 @@ export const load_game_settings = (
 ): GameSettings => {
   const defaults = Object.freeze({
     quality: default_quality,
-    flat_mode: false,
     music_enabled: true,
     day_night_cycle_enabled: true,
     master_volume: DEFAULT_MASTER_VOLUME,
@@ -102,7 +100,6 @@ export const load_game_settings = (
       : is_quality(Reflect.get(record, 'quality'))
         ? Reflect.get(record, 'quality')
         : defaults.quality
-    const flat_mode = Reflect.get(record, 'flat_mode')
     const music_enabled = Reflect.get(record, 'music_enabled')
     const master_volume = master_volume_from(Reflect.get(record, 'master_volume'))
     const footsteps_enabled = Reflect.get(record, 'footsteps_enabled')
@@ -127,7 +124,6 @@ export const load_game_settings = (
         : null
     return Object.freeze({
       quality,
-      flat_mode: typeof flat_mode === 'boolean' ? flat_mode : defaults.flat_mode,
       music_enabled: typeof music_enabled === 'boolean' ? music_enabled : defaults.music_enabled,
       day_night_cycle_enabled: Reflect.get(record, 'day_night_cycle_enabled') !== false,
       master_volume,

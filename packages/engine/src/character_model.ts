@@ -43,7 +43,7 @@ type Colorizer = Readonly<{
 
 export type CharacterModel = EntityModel & Readonly<{ set_colors: (colors: readonly [string, string, string]) => void }>
 
-const CHARACTER_HEIGHT = 2
+export const CHARACTER_HEIGHT = 2
 const PLACEHOLDER_COLOR = 0x8a8fa3
 const material_rows = (material: Material | Material[]): readonly Material[] =>
   Array.isArray(material) ? material : [material]

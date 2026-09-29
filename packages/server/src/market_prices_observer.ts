@@ -26,12 +26,12 @@ export const observe_market_prices = ({ pubsub, events, send, get_state, signal 
       if (!pubsub.graph.market_prices) throw new Error('marketplace price reader unavailable')
       return pubsub.graph.market_prices(observation.item_type, Date.now())
     })()
-      .then((history) => {
-        if (current()) send({ type: 'packet/market_prices', observation, history })
+      .then((snapshot) => {
+        if (current()) send({ type: 'packet/market_prices', observation, ...snapshot })
       })
       .catch((error: Error) => {
         log.warn({ error: error.message }, 'marketplace price refresh failed')
-        if (current()) send({ type: 'packet/market_prices', observation, history: null })
+        if (current()) send({ type: 'packet/market_prices', observation, history: null, total_units: null })
       })
       .finally(() => {
         running = false

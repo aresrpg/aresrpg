@@ -6,6 +6,8 @@ import type { Graph } from './graph.ts'
 import type { Bus } from './pubsub_bus.ts'
 import { channels } from './protocol.ts'
 import { shared_projection } from './shared_projection.ts'
+import { shared_fight_checkpoints } from './fight_checkpoints.ts'
+import { get_fight_checkpoint } from './reads/get_fight_checkpoint.ts'
 import { get_zones } from './reads/get_zones.ts'
 import { mob_groups, resource_packs, world_population } from './zone_spawns.ts'
 
@@ -18,6 +20,7 @@ const zone_coordinates = (key: string) => {
 type ZoneProjection = Readonly<{ zone: ZoneRow; spawns: Extract<ServerPacket, { type: 'packet/zone_spawns' }> | null }>
 
 export const create_public_world = (graph: Graph, bus: Pick<Bus, 'emitter' | 'subscribe' | 'unsubscribe'>) => ({
+  fight_checkpoint: shared_fight_checkpoints((fight_id) => get_fight_checkpoint(graph, { fight_id })),
   equipment: shared_projection({
     bus,
     channel: channels.character,

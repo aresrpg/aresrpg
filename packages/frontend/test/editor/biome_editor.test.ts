@@ -53,7 +53,7 @@ test('the terrain patch uses exact engine columns for its live voxel preview', (
   if (!terrain) throw new Error('first terrain missing')
   const patch = terrain_patch(terrain, { center_x: 128, center_z: -64, side: 3, spacing: 32 })
   const [, , , , middle] = patch.columns
-  const exact = sample_world_column(compile_world_recipe(parse_world_recipe(terrain)), 128, -64)
+  const exact = sample_world_column(compile_world_recipe(terrain), 128, -64)
   expect(middle).toMatchObject({ x: 128, z: -64, surface_y: exact.surface_y, biome: exact.biome.name })
   expect(middle.color).toBe(parse_world_recipe(terrain).materials[exact.land.surface]?.color)
 })

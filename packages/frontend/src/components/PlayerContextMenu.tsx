@@ -5,7 +5,7 @@
 
 import type { PartyRow, TradePhase } from '@aresrpg/protocol'
 import { character_checkpoint, CHAT_MAX_LENGTH, expand_chat_message, type ChatMessage } from '@aresrpg/protocol'
-import { useEffect, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import type { AppCopy } from '../i18n/copy.ts'
 import { copy_text } from '../i18n/copy.ts'
@@ -17,7 +17,7 @@ import { trade_row_visible } from '../modules/trade.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
-import { HUD_PANEL_CLASS } from './ui/HudPanel.tsx'
+import { ContextMenu } from './ContextMenu.tsx'
 
 const ROW_CLASS =
   'block w-full cursor-pointer px-3 py-2 text-left uppercase tracking-[0.15em] enabled:hover:bg-white/10 enabled:hover:text-[#7fd6d0] disabled:cursor-default disabled:opacity-35'
@@ -280,12 +280,7 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return (
     <>
       {menu && (target || menu.source === 'party') ? (
-        <div
-          className={`${HUD_PANEL_CLASS} pointer-events-auto fixed z-[140] min-w-[168px] divide-y divide-white/10 text-[11px]`}
-          style={{ left: menu.x, top: menu.y }}
-          onPointerDown={(event: Readonly<ReactPointerEvent<HTMLDivElement>>) => event.stopPropagation()}
-          role="menu"
-        >
+        <ContextMenu x={menu.x} y={menu.y}>
           <PlayerSocialRows
             add_friend={add_friend}
             already_friend={already_friend}
@@ -301,7 +296,7 @@ export const PlayerContextMenu = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             visible={!!target}
           />
           <RunToRow label={party_text('run_to_position')} run={run_to} visible={menu.source === 'party'} />
-        </div>
+        </ContextMenu>
       ) : null}
       <WhisperModal close={() => set_recipient(null)} copy={copy} recipient={recipient} />
     </>

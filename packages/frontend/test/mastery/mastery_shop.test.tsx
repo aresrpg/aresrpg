@@ -13,7 +13,7 @@ test('each Mastery card offers both currencies with independent affordability an
   const copy = await load_app_copy('en')
   const base = store.initial_app_state({
     quality: 'medium',
-    flat_mode: false,
+
     music_enabled: true,
     render_distance: null,
   })
@@ -40,6 +40,7 @@ test('each Mastery card offers both currencies with independent affordability an
       },
       mastery: {
         ...base.mastery,
+        loaded: true,
         pending: scenario.pending,
         row: { points: scenario.points } as never,
         offers: [{ id: 'offer', template: 'template', item_type: offer.item_type, cost: '2', enabled: true }],
@@ -59,5 +60,37 @@ test('each Mastery card offers both currencies with independent affordability an
     } finally {
       select.mockRestore()
     }
+  }
+})
+
+test('unloaded catalogue remains inspectable without inventing redeemable prices', async () => {
+  const copy = await load_app_copy('en')
+  const base = store.initial_app_state({
+    quality: 'medium',
+
+    music_enabled: true,
+    render_distance: null,
+  })
+  const state = {
+    ...base,
+    session: {
+      ...base.session,
+      wallet: { address: '0xowner' } as never,
+      link_status: 'ready' as const,
+      current_epoch: '1',
+      kares_balance: 1_000_000_000_000n,
+    },
+  }
+  const select = spyOn(store, 'useAppStore').mockImplementation(<T,>(selector: (value: store.AppState) => T): T =>
+    selector(state)
+  )
+  try {
+    const html = renderToStaticMarkup(<MasteryShop copy={copy} />)
+    const buttons = [...html.matchAll(/<button[^>]*data-mastery-payment="(mastery|kares)"[^>]*>/g)]
+    expect(buttons.length).toBeGreaterThan(0)
+    expect(buttons.every((match) => match[0].includes('disabled=""'))).toBe(true)
+    expect(html).toContain('—')
+  } finally {
+    select.mockRestore()
   }
 })

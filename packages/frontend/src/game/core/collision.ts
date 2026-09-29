@@ -27,7 +27,7 @@ export const AUTO_STEP_HEIGHT = 1.05
 export const CORNER_NUDGE = 0.3
 const NUDGE_PROBE = 0.05
 /** Skin width kept between the box and resolved faces (kills grid-line flicker under float error). */
-const SKIN = 1e-3
+export const COLLISION_SKIN = 1e-3
 /** Sub-step ceiling per axis move — a sprint or frame hitch can never leap a 1-block wall. */
 const MAX_STEP_M = 0.5
 
@@ -39,12 +39,12 @@ export const box_overlaps_solid = (
   r: number,
   h: number
 ): boolean => {
-  const min_x = Math.floor(px - r + SKIN)
-  const max_x = Math.floor(px + r - SKIN)
-  const min_y = Math.floor(py + SKIN)
-  const max_y = Math.floor(py + h - SKIN)
-  const min_z = Math.floor(pz - r + SKIN)
-  const max_z = Math.floor(pz + r - SKIN)
+  const min_x = Math.floor(px - r + COLLISION_SKIN)
+  const max_x = Math.floor(px + r - COLLISION_SKIN)
+  const min_y = Math.floor(py + COLLISION_SKIN)
+  const max_y = Math.floor(py + h - COLLISION_SKIN)
+  const min_z = Math.floor(pz - r + COLLISION_SKIN)
+  const max_z = Math.floor(pz + r - COLLISION_SKIN)
   for (let y = min_y; y <= max_y; y += 1)
     for (let z = min_z; z <= max_z; z += 1) for (let x = min_x; x <= max_x; x += 1) if (solid(x, y, z)) return true
   return false
@@ -212,7 +212,8 @@ export const resolve_movement = (
   } else pos[1] = ry.value
 
   // Resting contact: solid within the skin under the feet still counts as grounded.
-  if (!on_ground && vel[1] <= 0 && box_overlaps_solid(solid, pos[0], pos[1] - 2 * SKIN, pos[2], r, h)) on_ground = true
+  if (!on_ground && vel[1] <= 0 && box_overlaps_solid(solid, pos[0], pos[1] - 2 * COLLISION_SKIN, pos[2], r, h))
+    on_ground = true
 
   return { position: pos, velocity: vel, on_ground, hit_ceiling, stepped }
 }

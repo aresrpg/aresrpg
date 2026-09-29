@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
+import { useRef } from 'react'
+
+import { InspectionWindow } from '../../components/ItemDetailView.tsx'
+import { useInspections } from '../../components/useInspections.ts'
 import { useNumbers } from '../../i18n/useNumbers.ts'
 
 import { useText } from '../../i18n/useText.ts'
 
 import { Text } from '../../i18n/Text.tsx'
-// Direct port of deprecated/FightReport + LevelUp. Data adapters live here; the locked visual
-// structure and CSS remain recognizable instead of being reinterpreted in utility classes.
-
-import { useEffect, type CSSProperties } from 'react'
 import { KaresLogo } from '../../components/KaresLogo.tsx'
 
-import { item_icon, spell_icon } from '../../content/assets.ts'
-import { content_catalog, titleize } from '../../content/catalog.ts'
-import { spell_name, type AppCopy } from '../../i18n/copy.ts'
+import { item_icon } from '../../content/assets.ts'
+import { content_catalog, titleize, type SeedItem } from '../../content/catalog.ts'
+import { type AppCopy } from '../../i18n/copy.ts'
 import {
   fight_result_available,
   fight_result_complete,
@@ -27,15 +28,22 @@ import {
   type ResultParticipant,
 } from '../../modules/fight_result.ts'
 import { fight_result_error_text } from '../../modules/fight_result_error.ts'
-import { fight_settlement_progress, type FightSettlementProgress } from '../../modules/fight_result_view.ts'
+import {
+  fight_level_up_visible,
+  fight_settlement_progress,
+  type FightSettlementProgress,
+} from '../../modules/fight_result_view.ts'
 import { dispatch_app, useAppStore, type AppState } from '../../store.ts'
-import { play_procedural_cue } from '../audio/procedural_cues.ts'
 
+import { CharacterLevelUpView } from './CharacterLevelUpView.tsx'
 import './fight_result.css'
 
 const text_of = (copy: AppCopy, key: string): string => copy.fight_hud[key] ?? key
 const initial = (name: string): string => name.trim()[0]?.toUpperCase() ?? '?'
-const selected_result = (state: AppState) => {
+const loot_item = (id: string, items?: readonly SeedItem[]) =>
+  items?.find(({ item_type }) => item_type === id) ?? content_catalog.item(id)?.item
+const selected_result = (state: AppState, supplied?: FightResult | null) => {
+  if (supplied !== undefined) return supplied
   const character_id = state.session.selected_character_id
   return character_id ? (state.fight_result.current_by_character[character_id] ?? null) : null
 }
@@ -146,7 +154,11 @@ const ResultRow = ({
   participant,
   enemy,
   defeated,
+  inspect,
+  items,
 }: Readonly<{
+  inspect: (id: string) => void
+  items?: readonly SeedItem[]
   participant: ResultParticipant
   enemy: boolean
   defeated: boolean
@@ -198,9 +210,15 @@ const ResultRow = ({
           </div>
         )}
         {participant.loot.slice(0, 8).map((loot) => {
-          const item_name = content_catalog.item(loot.item_type)?.item.name ?? titleize(loot.item_type)
+          const item_name = loot_item(loot.item_type, items)?.name ?? titleize(loot.item_type)
           return (
-            <div aria-label={item_name} className="fe-tile" key={loot.item_type}>
+            <button
+              type="button"
+              onClick={() => inspect(loot.item_type)}
+              aria-label={item_name}
+              className="fe-tile"
+              key={loot.item_type}
+            >
               {item_icon(loot.item_type) ? (
                 <img alt="" className="item-icon" src={item_icon(loot.item_type)!} />
               ) : (
@@ -210,7 +228,7 @@ const ResultRow = ({
               <span className="fe-tile__tooltip" role="tooltip">
                 {item_name}
               </span>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -218,9 +236,17 @@ const ResultRow = ({
   )
 }
 
-export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+export const FightResultCard = ({
+  copy,
+  result: supplied_result,
+  on_close,
+  items,
+}: Readonly<{ copy: AppCopy; result?: FightResult | null; on_close?: () => void; items?: readonly SeedItem[] }>) => {
+  const root = useRef<HTMLDivElement>(null)
+  const { inspections, open, close: close_inspection } = useInspections(root)
+  const text = useText()
   const localized_numbers = useNumbers()
-  const result = useAppStore(selected_result)
+  const result = useAppStore((state) => selected_result(state, supplied_result))
   const fight = useAppStore((state) => state.fight)
   const results = useAppStore((state) => state.fight_result.current_by_character)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
@@ -231,10 +257,6 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const { failed } = settlement
   const own = !result || result.own_seat === null ? null : result.participants[result.own_seat]
   const victory = result ? (own ? result.winner === own.team : result.winner !== null) : false
-  const fight_id = result?.fight ?? null
-  useEffect(() => {
-    if (fight_id && available && surface === 'result') play_procedural_cue(victory ? 'victory' : 'defeat')
-  }, [available, fight_id, surface, victory])
   if (!result || !available || surface !== 'result') return null
 
   const own_team = own?.team ?? result.winner ?? 0
@@ -242,225 +264,148 @@ export const FightResultCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const enemies = result.participants.filter(({ team }) => team !== own_team)
   const verdict = text_of(copy, victory ? 'result_victory' : 'result_defeat')
   const close = (): void => {
+    if (on_close) return on_close()
     // A local-lab result has no roster seat; selection still names its result owner.
     const character_id = own?.character_id ?? selected_character_id
     if (character_id) dispatch_app({ type: 'fight_result/closed', character_id })
   }
   return (
-    <section className="fe-stage" aria-label={verdict} aria-modal="true" role="dialog">
-      <div className={`result result--fe ${victory ? 'fe--win' : 'fe--loss'}`}>
-        <div className="fe-head">
-          <div className="fe-title">{verdict}</div>
-          <div className="fe-sub">
-            {text_of(copy, 'result_title')} · {verdict}
+    <>
+      <section className="fe-stage" aria-label={verdict} aria-modal="true" role="dialog">
+        <div ref={root} className={`aui-window result result--fe ${victory ? 'fe--win' : 'fe--loss'}`}>
+          <div className="aui-window-header fe-head">
+            <div className="fe-title">{verdict}</div>
+            <div className="fe-sub">
+              {text_of(copy, 'result_title')} · {verdict}
+            </div>
           </div>
-        </div>
-        <div className="fe-divider" aria-hidden="true">
-          ◇
-        </div>
-        <div className="fe-facts">
-          <div className="fe-fact">
-            <span>{text_of(copy, 'result_duration')}</span>
-            <b>{result.duration_ms === null ? '—' : format_fight_duration(result.duration_ms)}</b>
+          <div className="fe-divider" aria-hidden="true">
+            ◇
           </div>
-          <div className="fe-fact">
-            <span>{text_of(copy, 'result_gas_spent')}</span>
-            <b>
-              {result.gas_spent_mist < 0n ? '-' : ''}
-              {localized_numbers.sui(
-                result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist,
-                3
-              )}{' '}
-              SUI
-            </b>
+          <div className="fe-facts">
+            <div className="fe-fact">
+              <span>{text_of(copy, 'result_duration')}</span>
+              <b>{result.duration_ms === null ? '—' : format_fight_duration(result.duration_ms)}</b>
+            </div>
+            <div className="fe-fact">
+              <span>{text_of(copy, 'result_gas_spent')}</span>
+              <b>
+                {result.gas_spent_mist < 0n ? '-' : ''}
+                {localized_numbers.sui(
+                  result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist,
+                  3
+                )}{' '}
+                SUI
+              </b>
+            </div>
+            <WagerFact copy={copy} wager={result.kolizeum_wager} />
           </div>
-          <WagerFact copy={copy} wager={result.kolizeum_wager} />
-        </div>
-        <div className="fe-sec">
-          <div className="fe-lbl">
-            <span>{text_of(copy, 'result_party')}</span>
-            <span>{party.length}</span>
-          </div>
-          <div className="fe-rows fe-rows--party">
-            {party.map((participant) => (
-              <ResultRow defeated={false} enemy={false} key={participant.seat} participant={participant} />
-            ))}
-          </div>
-        </div>
-        {enemies.length > 0 && (
           <div className="fe-sec">
             <div className="fe-lbl">
-              <span>{text_of(copy, 'result_enemies')}</span>
-              <span>{enemies.length}</span>
+              <span>{text_of(copy, 'result_party')}</span>
+              <span>{party.length}</span>
             </div>
-            <div className="fe-rows">
-              {enemies.map((participant) => (
-                <ResultRow defeated={victory} enemy key={participant.seat} participant={participant} />
+            <div className="fe-rows fe-rows--party">
+              {party.map((participant) => (
+                <ResultRow
+                  items={items}
+                  inspect={open('item')}
+                  defeated={false}
+                  enemy={false}
+                  key={participant.seat}
+                  participant={participant}
+                />
               ))}
             </div>
           </div>
-        )}
-        <FightSettlementStatus copy={copy} settlement={settlement} />
-        <div className="fe-cta">
-          <button disabled={!complete && !failed} onClick={close} type="button">
-            {text_of(copy, failed ? 'result_close' : complete ? 'result_continue' : 'result_collecting')}
-          </button>
+          {enemies.length > 0 && (
+            <div className="fe-sec">
+              <div className="fe-lbl">
+                <span>{text_of(copy, 'result_enemies')}</span>
+                <span>{enemies.length}</span>
+              </div>
+              <div className="fe-rows">
+                {enemies.map((participant) => (
+                  <ResultRow
+                    items={items}
+                    inspect={open('item')}
+                    defeated={victory}
+                    enemy
+                    key={participant.seat}
+                    participant={participant}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          <FightSettlementStatus copy={copy} settlement={settlement} />
+          <div className="fe-cta">
+            <Button tone="primary" disabled={!complete && !failed} onClick={close}>
+              {text_of(copy, failed ? 'result_close' : complete ? 'result_continue' : 'result_collecting')}
+            </Button>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+      {inspections.map((entry) => (
+        <InspectionWindow
+          key={`${entry.kind}:${entry.id}`}
+          entry={entry}
+          item={loot_item(entry.id, items)}
+          open={open}
+          close={() => close_inspection(entry)}
+          props={{
+            labels: {
+              characteristics: text('encyclopedia_page.characteristics'),
+              damages: text('encyclopedia_page.damages'),
+              range_to: text('encyclopedia_page.range_to'),
+              level_short: '',
+            },
+          }}
+        />
+      ))}
+    </>
   )
 }
 
-export const FightLevelUpCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const result = useAppStore(selected_result)
+export const FightLevelUpCard = ({
+  copy,
+  result: supplied_result,
+  on_acknowledge,
+  on_allocate,
+  can_allocate,
+}: Readonly<{
+  copy: AppCopy
+  result?: FightResult | null
+  on_acknowledge?: () => void
+  on_allocate?: () => void
+  can_allocate?: boolean
+}>) => {
+  const result = useAppStore((state) => selected_result(state, supplied_result))
   const fight = useAppStore((state) => state.fight)
   const characters = useAppStore(({ session }) => session.characters)
   const own = result && result.own_seat !== null ? result.participants[result.own_seat] : null
-  const visible = Boolean(
-    result?.level_up_open && fight_result_available(fight, result.fight) && own && own.level_after > own.level_before
-  )
-  useEffect(() => {
-    if (visible) play_procedural_cue('level_up')
-  }, [result?.fight, own?.level_after, visible])
+  const visible = Boolean(result && fight_result_available(fight, result.fight) && fight_level_up_visible(result))
   if (!result || !own || !visible) return null
-  const levels_gained = own.level_after - own.level_before
-  const character = characters.find(({ id }) => id === own.character_id)
-  const classe = character?.classe ?? ''
-  const class_name = classe ? titleize(classe) : own.name
-  const class_title = classe ? copy.simulator_page[`class_${classe}_title`] : null
-  const unlocked_spell = content_catalog.spells
-    .filter(
-      (spell) =>
-        spell.classe === classe && spell.unlock_level > own.level_before && spell.unlock_level <= own.level_after
-    )
-    .toSorted((left, right) => right.unlock_level - left.unlock_level)[0]
-  const unlocked_worlds = content_catalog.worlds.filter(
-    ({ entry_level }) => entry_level > own.level_before && entry_level <= own.level_after
-  )
+  const character = characters.find(({ id }) => id === own.character_id) ?? { classe: '' }
   const acknowledge = (): void => {
+    if (on_acknowledge) return on_acknowledge()
     if (own.character_id) dispatch_app({ type: 'fight_result/level_acknowledged', character_id: own.character_id })
   }
   const allocate = (): void => {
+    if (on_allocate) return on_allocate()
     acknowledge()
     if (own.character_id) dispatch_app({ type: 'character/select', character_id: own.character_id })
-    dispatch_app({ type: 'path/open', pathname: '/characters/stats' })
+    dispatch_app({ type: 'dialog/open', dialog: 'character_stats' })
   }
   return (
-    <section className="lvlup-stage" aria-label={text_of(copy, 'level_up_title')} aria-modal="true" role="dialog">
-      <div className="result result--fe result--level-up radiant">
-        <svg aria-hidden="true" height="0" width="0">
-          <defs>
-            <symbol id="fight-level-filigree" viewBox="0 0 64 64">
-              <path
-                d="M6 48 6 16Q6 6 16 6h32"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeWidth="1.15"
-              />
-              <path d="M6 30q13 0 13-13Q19 6 6 6" fill="none" opacity="0.7" stroke="currentColor" strokeWidth="0.9" />
-              <path d="m6 1 5 5-5 5-5-5Z" fill="currentColor" />
-              <circle cx="48" cy="6" fill="currentColor" r="1.7" />
-              <circle cx="6" cy="48" fill="currentColor" r="1.7" />
-            </symbol>
-          </defs>
-        </svg>
-        {['tl', 'tr', 'bl', 'br'].map((corner) => (
-          <svg aria-hidden="true" className={`rad-crn rad-crn--${corner}`} key={corner} viewBox="0 0 64 64">
-            <use href="#fight-level-filigree" />
-          </svg>
-        ))}
-        <div className="lvllabel">{text_of(copy, 'level_up_title')}</div>
-        <div className="lvlhero">
-          <div aria-hidden="true" className="rad-rays" />
-          <div aria-hidden="true" className="rad-glow" />
-          {[
-            ['-168px', '-108px', '420ms'],
-            ['172px', '-96px', '460ms'],
-            ['198px', '-4px', '500ms'],
-            ['-196px', '20px', '540ms'],
-            ['-120px', '138px', '460ms'],
-            ['130px', '148px', '500ms'],
-            ['4px', '-172px', '580ms'],
-          ].map(([x, y, delay], index) => (
-            <span
-              aria-hidden="true"
-              className={`rad-spark${index % 2 ? ' rad-spark--em' : ''}`}
-              key={`${x}:${y}`}
-              style={{ '--x': x, '--y': y, '--d': delay } as CSSProperties}
-            />
-          ))}
-          <div className="rad-numwrap">
-            <span className="rad-pre">{text_of(copy, 'level_up_reached')}</span>
-            <div className="rad-num" data-level={own.level_after}>
-              {own.level_after}
-            </div>
-          </div>
-        </div>
-        <div className="lvlcap">
-          {class_name}
-          {class_title && class_title !== class_name ? ` · ${class_title}` : ''}
-        </div>
-        <hr className="lvl-hr" />
-        <div className="lvl-rewards">
-          <div className="lvl-reward">
-            <svg aria-hidden="true" className="lvl-reward__icon" fill="currentColor" viewBox="0 0 24 24">
-              <path d="m12 2 2.6 6.9L21 10l-5.2 4.2 1.8 6.8-5.6-3.9L6.4 21l1.8-6.8L3 10l6.4-1.1Z" />
-            </svg>
-            <b>+{levels_gained * 5}</b>
-            <small>{text_of(copy, 'level_up_stat_points')}</small>
-          </div>
-          <div className="lvl-reward">
-            <svg aria-hidden="true" className="lvl-reward__icon" fill="currentColor" viewBox="0 0 24 24">
-              <path d="m12 2 1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6Z" />
-            </svg>
-            <b>+{levels_gained}</b>
-            <small>{text_of(copy, 'level_up_spell_points')}</small>
-          </div>
-        </div>
-        {unlocked_spell && (
-          <div className="lvl-unlock">
-            <div className="lvl-unlock__well">
-              {spell_icon(unlocked_spell.classe, unlocked_spell.name) ? (
-                <img alt="" src={spell_icon(unlocked_spell.classe, unlocked_spell.name)!} />
-              ) : (
-                <span aria-hidden="true">✦</span>
-              )}
-            </div>
-            <div>
-              <small>{text_of(copy, 'level_up_new_spell')}</small>
-              <strong>{spell_name(copy, unlocked_spell.name)}</strong>
-              <span className="lvl-unlock__meta">{titleize(unlocked_spell.classe)}</span>
-            </div>
-            <b>
-              {unlocked_spell.levels[0]?.ap_cost ?? 0} <Text path="fight_hud.unit_ap" />
-            </b>
-          </div>
-        )}
-        {unlocked_worlds.length > 0 && (
-          <div className="lvl-unlock">
-            <div className="lvl-unlock__well">
-              <svg aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18" />
-              </svg>
-            </div>
-            <div>
-              <small>{text_of(copy, 'level_up_new_worlds')}</small>
-              <strong>{unlocked_worlds.map(({ world }) => titleize(world)).join(' · ')}</strong>
-              <span className="lvl-unlock__meta">{text_of(copy, 'level_up_worlds_note')}</span>
-            </div>
-          </div>
-        )}
-        <div className="fe-cta lvl-cta">
-          <button className="lvl-cta__allocate" onClick={allocate} type="button">
-            {text_of(copy, 'level_up_allocate')}
-          </button>
-          <button className="lvl-cta__later" onClick={acknowledge} type="button">
-            {text_of(copy, 'level_up_later')}
-          </button>
-        </div>
-      </div>
-    </section>
+    <CharacterLevelUpView
+      copy={copy}
+      name={own.name}
+      classe={character.classe}
+      before={own.level_before}
+      after={own.level_after}
+      close={acknowledge}
+      allocate={can_allocate === false ? undefined : allocate}
+    />
   )
 }

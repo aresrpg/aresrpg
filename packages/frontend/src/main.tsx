@@ -4,6 +4,7 @@
 import { inject } from '@vercel/analytics'
 import { injectSpeedInsights as inject_speed_insights } from '@vercel/speed-insights'
 
+import { init_analytics } from './analytics.ts'
 import { init_reporting, report_error } from './reporting.ts'
 
 import './tailwind.css'
@@ -12,6 +13,11 @@ const boot = async (): Promise<void> => {
   // Enoki's opener reads this popup's OAuth result. App routing would erase it.
   if (globalThis.location.pathname.replace(/\/+$/, '') === '/enoki') return
   init_reporting()
+  try {
+    init_analytics()
+  } catch (error) {
+    report_error(error, { area: 'analytics' })
+  }
   if (import.meta.env.MODE === 'production') {
     // Claim fragments carry bearer keys; telemetry only needs the page path.
     const before_send = <T extends { readonly url: string }>(event: T): T => ({

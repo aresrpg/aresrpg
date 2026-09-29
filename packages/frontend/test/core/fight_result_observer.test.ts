@@ -61,7 +61,7 @@ test('settlement leaves fragments for later spend-time merges', async () => {
   const listeners = new Map<string, ((...args: never[]) => void)[]>()
   const settlement_batches: unknown[] = []
   const merge_calls: unknown[] = []
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const participants = Object.freeze([participant(0, '0xc1'), participant(1, '0xc2')])
   let state: AppState = {
     ...base,
@@ -139,7 +139,7 @@ test('settlement leaves fragments for later spend-time merges', async () => {
 })
 
 test('certified KARES rewards survive late packets and use the chain seat on nonzero-seat recovery', () => {
-  const base = initial_app_state({ quality: 'medium', flat_mode: false, music_enabled: true, render_distance: null })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
   const result = fight_result(0, [participant(2, '0xc1')])
   const state = { ...base, fight_result: { ...base.fight_result, current_by_character: { '0xc1': result } } }
   const paid = fight_result_module.reduce!(state, {

@@ -3,10 +3,12 @@
 // Effect-only client automation. Party owns the toggle fact; this module advances the external
 // presentation feed, emits existing position intents, and composes existing fight join doors.
 
+import { compile_runtime_world_recipe, parse_world_recipe, world_terrain } from '@aresrpg/engine'
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 import { character_checkpoint, type CharacterRow, type FightRow, type PartyRow } from '@aresrpg/protocol'
 
+import { create_world_collision } from '../game/core/world_collision.ts'
 import {
   PARTY_FOLLOW_JOIN_DISTANCE,
   read_party_follow,
@@ -264,8 +266,20 @@ export const observe_party_follow: NonNullable<AppModule['observe']> = ({ events
       .finally(() => joining_fights.delete(fight))
   }
   const try_auto_fights = (): void => auto_fights.forEach(try_auto_join)
+  let collision_world: string | null = null
+  let collision: ReturnType<typeof create_world_collision> | null = null
   const tick = (): void => {
-    const snapshot = update_party_follow(follow_feed_input(get_state()))
+    const input = follow_feed_input(get_state())
+    if ((input?.world ?? null) !== collision_world) {
+      collision_world = input?.world ?? null
+      const recipe = collision_world ? world_terrain(collision_world) : null
+      collision = recipe
+        ? create_world_collision(compile_runtime_world_recipe(recipe), (error) => {
+            console.error('Follower collision failed to load.', error)
+          })
+        : null
+    }
+    const snapshot = update_party_follow(input, Date.now(), collision)
     snapshot.followers.forEach((follower) =>
       dispatch({
         type: 'party/follower_moved',

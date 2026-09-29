@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { opaque_canopy_mesh } from './opaque_canopy.ts'
 import { greedy_mesh } from './greedy_mesher.ts'
-import { load_generated_city_artifacts_for } from './cities/generated_city.ts'
+import { load_generated_city_artifacts_for, generated_city_details } from './cities/generated_city.ts'
 import { chunk_scatter } from './scatter.ts'
 import { structure_placements, type StructurePlacement } from './structure_placement.ts'
 import { generate_chunk } from './terrain_generator.ts'
@@ -42,6 +43,7 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
       }
       const generated = generate_chunk(world, data.chunk, structures)
       const chunk: RenderedChunk = {
+        details: generated_city_details(world.structures.cities, generated.origin[0], generated.origin[2]),
         key: generated.key,
         coordinate: generated.coordinate,
         origin: generated.origin,
@@ -49,10 +51,13 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
         resolution: generated.resolution,
         cell_size: generated.cell_size,
       }
-      const mesh = greedy_mesh(generated)
-      // Scatter reuses this worker's world + structure plan so the main thread never re-samples
-      // columns; only near chunks carry clutter.
-      const scatter = data.chunk.lod === 'near' ? chunk_scatter(world, generated.origin, structures) : []
+      const source_mesh = greedy_mesh(generated)
+      const mesh =
+        world.recipe.canopy === 'clusters'
+          ? opaque_canopy_mesh(source_mesh, world.materials, data.chunk.lod, generated.origin)
+          : source_mesh
+      // Scatter consumes this exact generated voxel state; only near chunks carry clutter.
+      const scatter = data.chunk.lod === 'near' ? chunk_scatter(world, generated) : []
       // Never transfer a zero-length buffer — transferring detaches, and a detached buffer in a
       // later message is a DataCloneError that kills the chunk.
       self.postMessage(

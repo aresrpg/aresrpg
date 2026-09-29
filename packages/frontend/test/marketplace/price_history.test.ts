@@ -42,7 +42,7 @@ test('late packets cannot replace another item, an earlier selection, or newer h
   const second = fold_price_history(first, { type: 'market/price_item_selected', item_type: 'wood' })
   const response = {
     type: 'server/packet' as const,
-    packet: { type: 'packet/market_prices' as const, observation: first.observation!, history },
+    packet: { type: 'packet/market_prices' as const, observation: first.observation!, history, total_units: '42' },
   }
   expect(fold_price_history(second, response)).toBe(second)
   const third = fold_price_history(second, { type: 'market/price_item_selected', item_type: 'quartz' })
@@ -95,10 +95,10 @@ test('only an authenticated open marketplace observes history; reconnect restore
 
 test('capitalization uses the latest chart average and multiplies exact units before rounding', () => {
   const latest = { ...history.buckets[0]!, at_ms: 105 * DAY, total_mist: '7', units: '3' }
-  const priced = { ...history, total_units: '9007199254740993', buckets: [latest, ...history.buckets] }
-  expect(market_capitalization(priced)).toBe((9007199254740993n * 7n) / 3n)
-  expect(market_capitalization({ ...priced, total_units: '0' })).toBe(0n)
-  expect(market_capitalization({ ...priced, total_units: null })).toBeNull()
-  expect(market_capitalization({ ...priced, buckets: [] })).toBeNull()
-  expect(market_capitalization(null)).toBeNull()
+  const priced = { ...history, buckets: [latest, ...history.buckets] }
+  expect(market_capitalization(priced, '9007199254740993')).toBe((9007199254740993n * 7n) / 3n)
+  expect(market_capitalization(priced, '0')).toBe(0n)
+  expect(market_capitalization(priced, null)).toBeNull()
+  expect(market_capitalization({ ...priced, buckets: [] }, '42')).toBeNull()
+  expect(market_capitalization(null, '42')).toBeNull()
 })
