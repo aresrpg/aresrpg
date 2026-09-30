@@ -220,6 +220,18 @@ trade_panel:
 transaction_unknown_toast: Votre dernière action est encore en cours de vérification. Les transactions suivantes sont bloquées tant que son résultat reste inconnu.
 transaction_recovered_toast: Votre transaction précédente a été retrouvée. Actualisez pour voir son résultat avant de choisir votre prochaine action.
 world_hud:
+  dismount_prompt_touch: 'Touchez pour descendre'
+  spawn_press_attack_touch: 'Touchez pour attaquer'
+  resource_press_collect_touch: 'Touchez pour récolter {{name}}'
+  resource_press_collect_all_touch: 'Touchez pour tout récolter'
+  mount_prompt_touch: 'Touchez pour monter'
+  portal_prompt_touch: 'Touchez pour changer de monde'
+  zone_press_search_touch: 'Touchez pour explorer'
+  zone_press_reroll_touch: 'Touchez pour explorer à nouveau'
+  fight_press_join_touch: 'Touchez pour rejoindre'
+  fight_press_spectate_touch: 'Touchez pour observer'
+  dungeon_talk_touch: 'Touchez pour parler'
+  character_options_touch: 'Touchez pour les actions'
   spawn_welcome: 'Bienvenue, aventurier ! Ce jeu est en accès anticipé. Essayez de survivre et profitez de votre aventure.'
   compass_label: Boussole
   zone: ZONE
@@ -2759,11 +2771,11 @@ world_loading_finishing: 'Préparation de la première image…'
 
 adventure:
   goblins_title: 'Dégager le chemin'
-  goblins_objective: 'Approchez des Gobelins et appuyez sur F.'
+  goblins_objective: 'Approchez des Gobelins et utilisez le bouton d’attaque.'
   speak_title: 'Un inconnu sur le pont'
-  speak_objective: 'Retrouvez Sceat sur le pont. Appuyez sur F pour parler.'
+  speak_objective: 'Retrouvez Sceat sur le pont et parlez-lui.'
   invite_title: 'Plus forts ensemble'
-  invite_objective: 'Faites un clic droit sur Sceat et choisissez Inviter au groupe. Sur écran tactile, touchez son invitation.'
+  invite_objective: 'Ouvrez le menu de Sceat et choisissez Inviter au groupe.'
   switch_title: 'Découvrez votre Yajin'
   switch_objective: 'Sélectionnez l’onglet de Sceat. Vous contrôlez les deux héros, chacun avec ses sorts et son équipement.'
   follow_title: 'Suivre le chef'
@@ -2784,7 +2796,7 @@ adventure:
   rebirth_body: 'Continuez avec Google pour renaître et entrer dans le vrai jeu.'
   goblins_body: 'Mosswood paraît paisible, jusqu’à ce que les gobelins vous prennent pour leur prochain repas. Leur camp bloque la sortie. Approchez du groupe et engagez le combat. Dépensez vos points d’action en sorts, surveillez vos déplacements et profitez de chaque tour. La victoire vous fera atteindre le niveau 200 et gagner votre premier équipement.'
   speak_body: 'Les gobelins sont à terre, mais la forêt a encore des crocs. Un Yajin nommé Sceat observait le combat depuis le pont et semble peu pressé de le traverser seul. Allez lui parler. Il cherche une relique détenue par Gobadoc, le roi des gobelins, et aurait bien besoin de quelqu’un qui sait riposter.'
-  invite_body: 'Sceat a un plan. Malheureusement, il implique de rencontrer le plus gros gobelin de la forêt. Deux aventuriers ont plus de chances qu’un seul, surtout avec des talents différents. Faites un clic droit sur Sceat et invitez-le dans votre groupe. Vous contrôlerez les deux héros et choisirez comment combiner leurs capacités.'
+  invite_body: 'Sceat a un plan. Malheureusement, il implique de rencontrer le plus gros gobelin de la forêt. Deux aventuriers ont plus de chances qu’un seul, surtout avec des talents différents. Ouvrez le menu de Sceat et invitez-le dans votre groupe. Vous contrôlerez les deux héros et choisirez comment combiner leurs capacités.'
   switch_body: 'Un compagnon, ce n’est pas seulement une barre de vie supplémentaire. Sceat est un Yajin : ses pièges et son placement règlent les problèmes que Senshi résout par la force. Sélectionnez-le dans le sélecteur de personnages. Chaque héros garde ses propres sorts et équipements : choisir qui agit compte autant que choisir son sort.'
   follow_body: 'Vous avez un groupe. Reste à ne pas le perdre en route. Sélectionnez Senshi comme meneur, puis activez Suivre le meneur dans les commandes du groupe. Sceat vous suivra pendant l’exploration. En combat, vous choisirez toujours vous-même les déplacements et les sorts de chaque héros.'
   guards_body: 'Gobadoc ne laisse pas sa porte sans surveillance. Ses gardes vous attendent, et vous avez désormais deux héros à coordonner. Vérifiez votre nouvel équipement avant de les défier. Associez la force de Senshi aux pièges de Sceat : un ennemi bien placé est souvent plus facile à vaincre qu’un ennemi poursuivi sans réfléchir.'

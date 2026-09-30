@@ -29,6 +29,7 @@ export type CameraAnchor = Readonly<{
   eye_height: number
   speed: number
   on_ground: boolean
+  movement_yaw?: number
 }>
 export type CameraAddon = Readonly<{
   frame: (anchor: CameraAnchor, dt: number) => CameraFrame
@@ -162,6 +163,8 @@ const create_spring = (initial_halflife: number) => {
 
 export type FollowAddon = CameraAddon &
   Readonly<{
+    set_touch_moving: (moving: boolean) => void
+    get_movement_yaw: () => number
     rotate: (dx: number, dy: number) => void
     dolly: (meters: number) => void
     get_bob_offset: () => number
@@ -193,7 +196,12 @@ export const create_follow_addon = (
   let fp_blend = 0
   let last_arm_blend = target_dist
 
+  let touch_yaw: number | null = null
+  let manual_pause = 0
+
   const apply_rotate = (dx: number, dy: number): void => {
+    manual_pause = 1.2
+    if (touch_yaw !== null) touch_yaw -= dx * ROTATE_SENSITIVITY
     target_azimuth -= dx * ROTATE_SENSITIVITY
     target_polar = clamp(target_polar - dy * ROTATE_SENSITIVITY, MIN_POLAR, MAX_POLAR)
   }
@@ -207,7 +215,26 @@ export const create_follow_addon = (
     on_wheel: (delta) => dolly(Math.sign(delta) * 0.5),
   })
 
+  const follow_movement = (anchor: CameraAnchor, dt: number): void => {
+    manual_pause = Math.max(0, manual_pause - dt)
+    if (
+      touch_yaw !== null &&
+      anchor.speed > 0.5 &&
+      anchor.movement_yaw !== undefined &&
+      manual_pause === 0 &&
+      !controls.is_dragging() &&
+      !fp_mode
+    ) {
+      const difference = Math.atan2(
+        Math.sin(anchor.movement_yaw - target_azimuth),
+        Math.cos(anchor.movement_yaw - target_azimuth)
+      )
+      target_azimuth += difference * (1 - Math.exp(-2 * dt))
+    }
+  }
+
   const frame = (anchor: CameraAnchor, dt: number): CameraFrame => {
+    follow_movement(anchor, dt)
     azimuth = damp(azimuth, target_azimuth, LOOK_LAMBDA, dt)
     polar = damp(polar, target_polar, LOOK_LAMBDA, dt)
     const { x: head_x, y: feet_y, z: head_z, eye_height, speed, on_ground } = anchor
@@ -299,6 +326,10 @@ export const create_follow_addon = (
   return Object.freeze({
     frame,
     get_yaw: () => azimuth,
+    get_movement_yaw: () => touch_yaw ?? azimuth,
+    set_touch_moving: (moving: boolean) => {
+      touch_yaw = moving ? (touch_yaw ?? azimuth) : null
+    },
     attach: (canvas: HTMLElement) => controls.attach(canvas),
     detach: () => controls.detach(),
     rotate: apply_rotate,

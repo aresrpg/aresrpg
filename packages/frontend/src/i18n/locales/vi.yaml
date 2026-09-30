@@ -223,6 +223,18 @@ trade_panel:
 transaction_unknown_toast: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
 transaction_recovered_toast: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
 world_hud:
+  dismount_prompt_touch: 'Chạm để xuống thú'
+  spawn_press_attack_touch: 'Chạm để tấn công'
+  resource_press_collect_touch: 'Chạm để thu thập {{name}}'
+  resource_press_collect_all_touch: 'Chạm để thu thập tất cả'
+  mount_prompt_touch: 'Chạm để cưỡi'
+  portal_prompt_touch: 'Chạm để đến thế giới khác'
+  zone_press_search_touch: 'Chạm để tìm kiếm'
+  zone_press_reroll_touch: 'Chạm để tìm kiếm lại'
+  fight_press_join_touch: 'Chạm để tham gia'
+  fight_press_spectate_touch: 'Chạm để theo dõi'
+  dungeon_talk_touch: 'Chạm để trò chuyện'
+  character_options_touch: 'Chạm để chọn hành động'
   spawn_welcome: 'Chào mừng nhà thám hiểm! Trò chơi đang trong giai đoạn truy cập sớm. Hãy cố gắng sống sót và tận hưởng cuộc phiêu lưu.'
   compass_label: La bàn
   zone: KHU VỰC
@@ -2718,11 +2730,11 @@ world_loading_finishing: 'Đang chuẩn bị khung hình đầu tiên…'
 
 adventure:
   goblins_title: 'Dọn đường'
-  goblins_objective: 'Đến gần Goblin và nhấn F.'
+  goblins_objective: 'Đến gần Goblin và chọn hành động tấn công.'
   speak_title: 'Người lạ trên cầu'
-  speak_objective: 'Tìm Sceat trên cầu. Nhấn F để nói chuyện.'
+  speak_objective: 'Tìm Sceat trên cầu và nói chuyện với anh ấy.'
   invite_title: 'Mạnh hơn khi cùng nhau'
-  invite_objective: 'Nhấp chuột phải vào Sceat và chọn Mời vào nhóm. Trên màn hình cảm ứng, chạm lời mời.'
+  invite_objective: 'Mở menu hành động của Sceat và chọn Mời vào nhóm.'
   switch_title: 'Điều khiển Yajin'
   switch_objective: 'Chọn thẻ nhân vật Sceat. Bạn điều khiển cả hai anh hùng, mỗi người có phép và trang bị riêng.'
   follow_title: 'Theo đội trưởng'
@@ -2743,7 +2755,7 @@ adventure:
   rebirth_body: 'Tiếp tục với Google để tái sinh và bước vào trò chơi thực sự.'
   goblins_body: 'Mosswood trông yên bình, cho đến khi lũ goblin xem bạn là bữa ăn tiếp theo. Trại của chúng chắn đường ra. Hãy đến gần cả nhóm và bắt đầu trận đấu. Dùng điểm hành động để thi triển phép, đồng thời tính toán đường di chuyển. Chiến thắng sẽ đưa bạn lên cấp 200 và mang lại những trang bị đầu tiên.'
   speak_body: 'Lũ goblin đã gục, nhưng khu rừng vẫn còn đầy nguy hiểm. Một Yajin tên Sceat đứng trên cầu quan sát trận đấu và có vẻ không muốn đi tiếp một mình. Hãy nói chuyện với anh ấy. Anh đang tìm di vật của Gobadoc, vua goblin, và cần một người đồng hành biết đánh trả.'
-  invite_body: 'Sceat có một kế hoạch. Tiếc là kế hoạch ấy dẫn thẳng đến con goblin lớn nhất khu rừng. Hai nhà thám hiểm với sở trường khác nhau sẽ có cơ hội tốt hơn. Nhấp chuột phải vào Sceat và mời anh ấy vào nhóm. Trong chuyến phiêu lưu này, bạn sẽ điều khiển cả hai và tự kết hợp kỹ năng của họ.'
+  invite_body: 'Sceat có một kế hoạch. Tiếc là kế hoạch ấy dẫn thẳng đến con goblin lớn nhất khu rừng. Hai nhà thám hiểm với sở trường khác nhau sẽ có cơ hội tốt hơn. Mở menu hành động của Sceat và mời anh ấy vào nhóm. Trong chuyến phiêu lưu này, bạn sẽ điều khiển cả hai và tự kết hợp kỹ năng của họ.'
   switch_body: 'Thêm đồng đội không chỉ là thêm một thanh máu. Sceat là Yajin, dùng bẫy và vị trí để giải quyết những vấn đề mà Senshi xử lý bằng sức mạnh. Chọn anh ấy trong bộ chuyển nhân vật. Mỗi anh hùng có phép và trang bị riêng. Chọn ai hành động cũng quan trọng như chọn phép nào.'
   follow_body: 'Bạn đã có một nhóm. Giờ hãy giữ mọi người đi cùng nhau. Chọn Senshi làm trưởng nhóm rồi bật Theo trưởng nhóm trong phần điều khiển nhóm. Sceat sẽ theo bạn khi khám phá, giúp bạn không phải đi cùng một con đường hai lần. Trong chiến đấu, bạn vẫn tự chọn từng bước đi và phép của mỗi người.'
   guards_body: 'Gobadoc không bỏ ngỏ lối vào. Lính gác đã sẵn sàng, còn bạn có hai anh hùng cần phối hợp. Kiểm tra trang bị mới trước khi thách đấu. Kết hợp sức mạnh của Senshi với bẫy của Sceat. Dụ kẻ địch vào vị trí thuận lợi thường dễ thắng hơn việc cứ đuổi theo chúng.'

@@ -32,7 +32,7 @@ import { selected_party } from '../modules/party.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
 import { NametagCard } from './NametagCard.tsx'
-import { PromptKey, split_key_template } from './PromptChip.tsx'
+import { PromptText } from './PromptChip.tsx'
 
 const ACCESS_GROUP = 1
 const ACCESS_INVITED = 2
@@ -146,7 +146,8 @@ export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         const action = fight_prompt_action(row.phase)
         const interactive = prompt.focused_id === fight_id
         const template = action === 'spectate' ? copy.world_hud.fight_press_spectate : copy.world_hud.fight_press_join
-        const [before, after] = split_key_template(template)
+        const touch_template =
+          action === 'spectate' ? copy.world_hud.fight_press_spectate_touch! : copy.world_hud.fight_press_join_touch!
         return createPortal(
           <NametagCard
             lines={
@@ -154,13 +155,8 @@ export const FightPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                 ? [
                     {
                       key: 'press',
-                      text: (
-                        <span className="inline-flex items-center gap-1.5">
-                          {before?.trim()}
-                          <PromptKey label="F" />
-                          {after?.trim()}
-                        </span>
-                      ),
+                      activate: () => set_open_id(fight_id),
+                      text: <PromptText template={template!} touch_template={touch_template} label="F" />,
                     },
                   ]
                 : []

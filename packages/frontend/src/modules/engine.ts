@@ -5,6 +5,7 @@
 import { parse_world_recipe, type EntityRender } from '@aresrpg/engine'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
+import { attach_context_menu_input } from '../game/core/context_menu_input.ts'
 import { observe_world_controls } from '../game/core/world_input.ts'
 import { master_volume_from } from '../game/core/audio_volume.ts'
 import type { create_world, WorldView } from '../game/core/world.ts'
@@ -385,8 +386,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   const on_mouse_move = (event: MouseEvent): void => {
     set_self_tag(hover_under_cursor(event)?.self ?? false)
   }
-
-  // Right-click player bodies for their menu; elsewhere keep the camera's right-drag.
+  let detach_context_menu: (() => void) | null = null
   const on_context_menu = (event: MouseEvent): void => {
     event.preventDefault()
     const hover = hover_under_cursor(event)
@@ -401,11 +401,11 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     const world_name = selected_world(get_state())
     if (canvas === next_canvas && world && mounted_world_name === world_name) return
     dispose_world()
-    canvas?.removeEventListener('contextmenu', on_context_menu)
+    detach_context_menu?.()
     canvas?.removeEventListener('mousemove', on_mouse_move)
     set_self_tag(false)
     canvas = next_canvas
-    next_canvas.addEventListener('contextmenu', on_context_menu)
+    detach_context_menu = attach_context_menu_input(next_canvas, on_context_menu)
     next_canvas.addEventListener('mousemove', on_mouse_move)
     mounted_world_name = world_name
     const boot_anchor = JSON.stringify(selected_anchor(get_state()))
@@ -526,7 +526,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   events.on('engine/canvas_attached', ({ canvas: next_canvas }) => mount(next_canvas))
   events.on('engine/canvas_detached', ({ canvas: previous_canvas }) => {
     if (canvas !== previous_canvas) return
-    previous_canvas.removeEventListener('contextmenu', on_context_menu)
+    detach_context_menu?.()
+    detach_context_menu = null
     previous_canvas.removeEventListener('mousemove', on_mouse_move)
     set_self_tag(false)
     canvas = null
@@ -587,6 +588,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
     sync_nearby()
   })
   signal.addEventListener('abort', () => {
+    detach_context_menu?.()
     position_cache.flush()
     unsubscribe_pose()
     unsubscribe_owned_positions()

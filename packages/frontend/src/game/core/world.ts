@@ -239,6 +239,7 @@ export const create_world = ({
     held.strafe = 0
     mouse_forward = false
     touch_axes = { forward: 0, strafe: 0 }
+    follow_addon.set_touch_moving(false)
     character.set_input({ forward: 0, strafe: 0, jump: false, glide: false, walk: false, phase_target: null })
   }
   const stop_run = (reason: 'arrived' | 'manual' | 'blocked' | 'inactive' = 'manual', notify = true): void => {
@@ -256,12 +257,12 @@ export const create_world = ({
     if (next) stop_run('blocked')
   }
   const apply_run_input = (position: Readonly<Vec3>, delta_seconds: number): void => {
-    if (!run_target || !walking) return character.set_input({ yaw: director.active().get_yaw() })
+    if (!run_target || !walking) return character.set_input({ yaw: follow_addon.get_movement_yaw() })
     const mounting = run_to_mount({
       requested: run_target.ride_pet === true,
       available: pet !== null,
       riding,
-      nearby: pet_mountable(),
+      nearby: pet_interactable(),
     })
     if (mounting === 'mount') set_riding(true)
     if (mounting === 'wait') return character.set_input({ forward: 0, strafe: 0, phase_target: null })
@@ -399,17 +400,16 @@ export const create_world = ({
     if (event.code === 'Space') set_jump(down)
     if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') character.set_input({ walk: down })
     if (event.code === 'KeyX' && down) {
-      if (riding) set_riding(false)
-      else if (pet_mountable()) set_riding(true)
+      toggle_mount()
     }
-    if (event.code === 'KeyT' && down && portal_labeled) on_travel?.()
+    if (event.code === 'KeyT' && down) travel()
   }
 
   /** X mounts only while the companion is beside you — the nametag's own rule. */
-  const pet_mountable = (): boolean => {
-    if (!pet || riding || !character_render) return false
+  const pet_interactable = (): boolean => {
+    if (!pet || !character_render) return false
     const [owner_x, , owner_z] = character.get_transform().position
-    return Math.hypot(pet_motion.x - owner_x, pet_motion.z - owner_z) <= MOUNT_RANGE
+    return riding || Math.hypot(pet_motion.x - owner_x, pet_motion.z - owner_z) <= MOUNT_RANGE
   }
 
   // ── fight swords: the world mirrors what it renders so F-key focus stays pure geometry ──
@@ -572,7 +572,7 @@ export const create_world = ({
     if (labeled_pet_id) engine.set_entity_label(labeled_pet_id, null)
     if (pet_id && mount_label) engine.set_entity_label(pet_id, mount_label)
     labeled_pet_id = pet_id && mount_label ? pet_id : null
-    publish_mount_prompt(labeled_pet_id ? mount_label : null)
+    publish_mount_prompt(labeled_pet_id ? { root: mount_label!, riding, activate: toggle_mount } : null)
   }
 
   // the star-gate prompt rides the SAME engine label pass — one element floated over the portal
@@ -584,13 +584,22 @@ export const create_world = ({
     if (attach === portal_labeled) return
     engine.set_portal_label(attach && portal_label ? portal_label : null)
     portal_labeled = attach
-    publish_portal_prompt(attach && portal_label ? portal_label : null)
+    publish_portal_prompt(attach && portal_label ? { root: portal_label, activate: travel } : null)
   }
   /** eligibility delegates to the exported origin law — one distance rule everywhere */
   const portal_eligible = (): boolean => {
     if (mode !== 'follow' || !character_render) return false
     const [x, , z] = character.get_transform().position
     return portal_near(x, z)
+  }
+
+  const toggle_mount = (): void => {
+    if (!enabled || mode !== 'follow' || action_lock) return
+    if (riding) set_riding(false)
+    else if (pet_interactable()) set_riding(true)
+  }
+  const travel = (): void => {
+    if (enabled && !action_lock && portal_eligible()) on_travel?.()
   }
 
   const render_pet = (transform = character.get_transform(), delta_seconds = 0): boolean => {
@@ -632,7 +641,7 @@ export const create_world = ({
       // scale so the feet match the floor (2026-08-21: the run looked like slow motion)
       animation: Object.freeze({ name: animation, time_scale: animation === 'RUN' ? 1.5 : 1 }),
     })
-    label_pet(pet_mountable() ? pet.id : null)
+    label_pet(pet_interactable() ? pet.id : null)
     return true
   }
 
@@ -681,6 +690,7 @@ export const create_world = ({
         z: transform.visual_position[2],
         eye_height: CHARACTER_HEIGHT * 0.9,
         speed: transform.speed,
+        movement_yaw: Math.atan2(-transform.velocity[0], -transform.velocity[2]),
         on_ground: transform.on_ground,
       }
       publish_pose({
@@ -734,6 +744,7 @@ export const create_world = ({
   globalThis.addEventListener('blur', on_blur)
   globalThis.addEventListener('focusin', on_focus_in)
   const set_riding = (next: boolean): void => {
+    label_pet(null)
     riding = Boolean(next && pet && character_render)
     character.set_input({ speed_scale: riding ? MOUNT_SPEED_SCALE : 1, glide: false })
     rendered_transform = null
@@ -898,6 +909,7 @@ export const create_world = ({
       if (magnitude > 0) stop_run('manual')
       const length = Math.max(1, magnitude)
       touch_axes = { forward: axes.forward / length, strafe: axes.strafe / length }
+      follow_addon.set_touch_moving(magnitude > 0)
       footsteps.unlock()
       apply_axes()
     },

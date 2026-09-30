@@ -194,9 +194,6 @@
       ]
     },
     "packages/frontend/src/game/core/world.ts": {
-      "create_world > on_key": [
-        13
-      ],
       "create_world > render_pet": [
         21
       ],
@@ -929,7 +926,7 @@
         12
       ],
       "create_world > on_key": [
-        14
+        10
       ],
       "create_world > render_character": [
         16

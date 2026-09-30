@@ -117,7 +117,14 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
       {encounter_visible &&
         label &&
         createPortal(
-          <MobPackCard members={group.members} copy={copy} active={nearby} action_key="F" mob_for={adventure_mob} />,
+          <MobPackCard
+            members={group.members}
+            copy={copy}
+            active={nearby}
+            activate={challenge}
+            action_key="F"
+            mob_for={adventure_mob}
+          />,
           label
         )}
       <FightResultCard

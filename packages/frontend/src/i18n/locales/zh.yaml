@@ -223,6 +223,18 @@ trade_panel:
 transaction_unknown_toast: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
 transaction_recovered_toast: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
 world_hud:
+  dismount_prompt_touch: '轻点以下坐骑'
+  spawn_press_attack_touch: '轻点以攻击'
+  resource_press_collect_touch: '轻点以采集{{name}}'
+  resource_press_collect_all_touch: '轻点以全部采集'
+  mount_prompt_touch: '轻点以骑乘'
+  portal_prompt_touch: '轻点以前往其他世界'
+  zone_press_search_touch: '轻点以搜索'
+  zone_press_reroll_touch: '轻点以再次搜索'
+  fight_press_join_touch: '轻点以加入'
+  fight_press_spectate_touch: '轻点以观战'
+  dungeon_talk_touch: '轻点以交谈'
+  character_options_touch: '轻点以选择操作'
   spawn_welcome: '欢迎，冒险者！本游戏正处于抢先体验阶段，努力生存，享受这段冒险吧。'
   compass_label: 指南针
   zone: 区域
@@ -2718,11 +2730,11 @@ world_loading_finishing: '正在准备第一帧…'
 
 adventure:
   goblins_title: '清理道路'
-  goblins_objective: '靠近哥布林并按F。'
+  goblins_objective: '靠近哥布林并使用攻击按钮。'
   speak_title: '桥上的陌生人'
-  speak_objective: '找到桥上的Sceat，按F交谈。'
+  speak_objective: '找到桥上的Sceat并与他交谈。'
   invite_title: '携手同行'
-  invite_objective: '右键点击Sceat并选择邀请入队。触屏玩家可点击邀请提示。'
+  invite_objective: '打开Sceat的操作菜单并选择邀请入队。'
   switch_title: '操控你的夜刃'
   switch_objective: '选择Sceat的角色标签。你能操控两位英雄，各有不同的法术和装备。'
   follow_title: '跟随队长'
@@ -2743,7 +2755,7 @@ adventure:
   rebirth_body: '使用Google登录，重获新生，进入真正的游戏。'
   goblins_body: '苔木林看起来很安静，直到哥布林把你当成下一顿晚餐。通往出口的路被它们的营地挡住了。靠近这群敌人，开始战斗吧。用行动点施放法术，也要规划好移动位置，每一回合都很重要。获胜后，你将升到200级，并获得第一批装备。'
   speak_body: '哥布林倒下了，但森林的危险远未结束。一位名叫Sceat的亚津一直在桥上观战，看起来并不想独自过桥。去和他聊聊吧。他正在寻找哥布林王戈巴多克持有的遗物，需要一位懂得还击的伙伴。'
-  invite_body: 'Sceat有个计划。可惜，这个计划是去找森林里最大的哥布林。两位各有所长的冒险者，总比孤身一人更有胜算。右键点击Sceat，邀请他加入队伍。在这段冒险中，你将控制两位英雄，亲自决定如何配合他们的能力。'
+  invite_body: 'Sceat有个计划。可惜，这个计划是去找森林里最大的哥布林。两位各有所长的冒险者，总比孤身一人更有胜算。打开Sceat的操作菜单，邀请他加入队伍。在这段冒险中，你将控制两位英雄，亲自决定如何配合他们的能力。'
   switch_body: '多一个伙伴，不只是多一条生命值。Sceat是亚津，擅长用陷阱和站位解决问题；森士则更喜欢直接用力量。在角色切换器中选择他，接管他的行动。每位英雄都有自己的法术和装备，选择谁行动与选择什么法术同样重要。'
   follow_body: '队伍已经组好了，接下来要一起行动。选择森士作为队长，然后在队伍控制中开启跟随队长。探索时Sceat会跟着你，不必把同一条路走两遍。进入战斗后，你仍然需要亲自选择每位英雄的移动和法术。'
   guards_body: '戈巴多克不会让自己的门口无人把守。卫兵已经准备好迎战，这次你需要协调两位英雄。挑战前先检查新装备，把森士的力量与Sceat的陷阱结合起来。有时，把敌人引到有利的位置，比一味追着它打更容易获胜。'

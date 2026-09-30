@@ -220,6 +220,18 @@ trade_panel:
 transaction_unknown_toast: Tu última acción sigue en comprobación. Las siguientes transacciones están bloqueadas hasta conocer su resultado.
 transaction_recovered_toast: Se encontró tu transacción anterior. Actualiza para ver su resultado antes de elegir tu próxima acción.
 world_hud:
+  dismount_prompt_touch: 'Toca para desmontar'
+  spawn_press_attack_touch: 'Toca para atacar'
+  resource_press_collect_touch: 'Toca para recolectar {{name}}'
+  resource_press_collect_all_touch: 'Toca para recolectar todo'
+  mount_prompt_touch: 'Toca para montar'
+  portal_prompt_touch: 'Toca para viajar a otro mundo'
+  zone_press_search_touch: 'Toca para buscar'
+  zone_press_reroll_touch: 'Toca para buscar de nuevo'
+  fight_press_join_touch: 'Toca para unirte'
+  fight_press_spectate_touch: 'Toca para observar'
+  dungeon_talk_touch: 'Toca para hablar'
+  character_options_touch: 'Toca para ver las acciones'
   spawn_welcome: '¡Bienvenido, aventurero! Este juego está en acceso anticipado. Intenta sobrevivir y disfruta de la aventura.'
   compass_label: Brújula
   zone: ZONA
@@ -2753,11 +2765,11 @@ world_loading_finishing: 'Preparando el primer fotograma…'
 
 adventure:
   goblins_title: 'Despeja el camino'
-  goblins_objective: 'Acércate a los Goblins y pulsa F.'
+  goblins_objective: 'Acércate a los Goblins y usa el botón de ataque.'
   speak_title: 'Un extraño en el puente'
-  speak_objective: 'Encuentra a Sceat en el puente. Pulsa F para hablar.'
+  speak_objective: 'Encuentra a Sceat en el puente y habla con él.'
   invite_title: 'Más fuertes juntos'
-  invite_objective: 'Haz clic derecho en Sceat y elige Invitar al grupo. En pantalla táctil, toca su invitación.'
+  invite_objective: 'Abre el menú de Sceat y elige Invitar al grupo.'
   switch_title: 'Conoce a tu Yajin'
   switch_objective: 'Selecciona la pestaña de Sceat. Controlas a ambos héroes, cada uno con sus hechizos y equipo.'
   follow_title: 'Sigue al líder'
@@ -2778,7 +2790,7 @@ adventure:
   rebirth_body: 'Continúa con Google para renacer y entrar en el juego real.'
   goblins_body: 'Mosswood parece tranquilo hasta que los goblins deciden que eres su próxima comida. Su campamento bloquea la salida. Acércate al grupo e inicia un combate. Gasta tus puntos de acción en hechizos y planea tus movimientos. Cada turno cuenta. La victoria te llevará al nivel 200 y te dará tu primer equipo.'
   speak_body: 'Los goblins han caído, pero el bosque aún tiene dientes. Un Yajin llamado Sceat observaba la pelea desde el puente y no parece querer cruzarlo solo. Habla con él. Busca una reliquia que posee Gobadoc, el rey goblin, y necesita a alguien que sepa defenderse.'
-  invite_body: 'Sceat tiene un plan. Por desgracia, implica buscar al goblin más grande del bosque. Dos aventureros tienen más posibilidades, sobre todo con talentos diferentes. Haz clic derecho sobre Sceat e invítalo a tu grupo. En esta aventura controlarás a ambos héroes y decidirás cómo combinar sus habilidades.'
+  invite_body: 'Sceat tiene un plan. Por desgracia, implica buscar al goblin más grande del bosque. Dos aventureros tienen más posibilidades, sobre todo con talentos diferentes. Abre el menú de Sceat e invítalo a tu grupo. En esta aventura controlarás a ambos héroes y decidirás cómo combinar sus habilidades.'
   switch_body: 'Un compañero es más que otra barra de salud. Sceat es un Yajin: usa trampas y posicionamiento donde Senshi prefiere la fuerza. Selecciónalo en el selector de personajes para controlarlo. Cada héroe conserva sus propios hechizos y equipo. Elegir quién actúa importa tanto como elegir qué lanzar.'
   follow_body: 'Ya tienes un grupo. Ahora toca mantenerlo unido. Selecciona a Senshi como líder y activa Seguir al líder en los controles del grupo. Sceat te seguirá durante la exploración, evitando recorrer dos veces el mismo camino. En combate seguirás decidiendo los movimientos y hechizos de cada héroe.'
   guards_body: 'Gobadoc no deja su puerta sin vigilancia. Sus guardias están preparados, y esta vez tienes dos héroes que coordinar. Revisa tu nuevo equipo antes de desafiarlos. Combina la fuerza de Senshi con las trampas de Sceat: un enemigo bien colocado suele ser más fácil de vencer que uno al que persigues sin pensar.'

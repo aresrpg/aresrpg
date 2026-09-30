@@ -8,7 +8,7 @@ import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import type { WorldMobGroup } from '../game/core/spawn_residency.ts'
 import { dispatch_app } from '../store.ts'
 
-import { PromptKey } from './PromptChip.tsx'
+import { PromptText } from './PromptChip.tsx'
 
 const catalog_mob = (type: string) => content_catalog.mob(type)?.mob
 
@@ -18,11 +18,13 @@ export const MobPackCard = ({
   active,
   mob_for = catalog_mob,
   action_key = 'F',
+  activate,
 }: Readonly<{
   members: WorldMobGroup['members']
   copy: AppCopy
   active: boolean
   mob_for?: typeof catalog_mob
+  activate?: () => void
   action_key?: string
 }>) => (
   <div className="aui-mob-pack" data-mob-pack="">
@@ -48,8 +50,19 @@ export const MobPackCard = ({
     })}
     {active && (
       <footer>
-        <PromptKey label={action_key} />
-        <span>{copy.ui.attack}</span>
+        <button
+          type="button"
+          data-world-interaction
+          className="min-h-11 w-full"
+          onClick={activate}
+          disabled={!activate}
+        >
+          <PromptText
+            template={copy.world_hud.spawn_press_attack!}
+            touch_template={copy.world_hud.spawn_press_attack_touch!}
+            label={action_key}
+          />
+        </button>
       </footer>
     )}
   </div>

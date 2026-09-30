@@ -220,6 +220,18 @@ trade_panel:
 transaction_unknown_toast: 前の操作を確認しています。結果が判明するまで、新しい取引は実行できません。
 transaction_recovered_toast: 前の取引が見つかりました。ページを更新して結果を確認してから、次の操作を選んでください。
 world_hud:
+  dismount_prompt_touch: 'タップして降りる'
+  spawn_press_attack_touch: 'タップして攻撃'
+  resource_press_collect_touch: 'タップして{{name}}を採集'
+  resource_press_collect_all_touch: 'タップしてすべて採集'
+  mount_prompt_touch: 'タップして騎乗'
+  portal_prompt_touch: 'タップして別のワールドへ移動'
+  zone_press_search_touch: 'タップして探索'
+  zone_press_reroll_touch: 'タップして再探索'
+  fight_press_join_touch: 'タップして参加'
+  fight_press_spectate_touch: 'タップして観戦'
+  dungeon_talk_touch: 'タップして話す'
+  character_options_touch: 'タップして操作を選択'
   spawn_welcome: '冒険者よ、ようこそ！このゲームは早期アクセス中です。生き延びて、冒険を楽しんでください。'
   compass_label: コンパス
   zone: ゾーン
@@ -2731,11 +2743,11 @@ world_loading_finishing: '最初のフレームを準備中…'
 
 adventure:
   goblins_title: '道を切り開く'
-  goblins_objective: 'ゴブリンに近づいてFを押しましょう。'
+  goblins_objective: 'ゴブリンに近づいて攻撃ボタンを使いましょう。'
   speak_title: '橋の上の旅人'
-  speak_objective: '橋のSceatを見つけて、Fで話しましょう。'
+  speak_objective: '橋のSceatを見つけて話しましょう。'
   invite_title: '力を合わせて'
-  invite_objective: 'Sceatを右クリックしてグループに招待しましょう。タッチ操作では招待表示をタップします。'
+  invite_objective: 'Sceatの操作メニューを開いてグループに招待しましょう。'
   switch_title: 'ヤジンを操作'
   switch_objective: 'Sceatのキャラクタータブを選びましょう。それぞれ異なる魔法と装備を持つ二人を操作できます。'
   follow_title: 'リーダーを追う'
@@ -2756,7 +2768,7 @@ adventure:
   rebirth_body: 'Googleでログインして生まれ変わり、本当のゲームの世界へ進みましょう。'
   goblins_body: '穏やかに見えるモスウッドも、ゴブリンに夕食だと思われては話が別です。出口へ続く道は彼らの野営地に塞がれています。群れに近づいて戦闘を始めましょう。行動ポイントで呪文を使い、移動先も考えて、一手ずつ確実に。勝てばレベル200に到達し、最初の装備が手に入ります。'
   speak_body: 'ゴブリンを倒しても、この森の危険はなくなりません。橋の上から戦いを見ていたヤジンのSceatは、一人で先へ進む気がないようです。話しかけてみましょう。彼が探しているのはゴブリン王ゴバドックの遺物。反撃の仕方を知る仲間が必要なのです。'
-  invite_body: 'Sceatには考えがあります。残念ながら、森で一番大きなゴブリンに会いに行く計画です。違う技を持つ二人なら、一人より勝ち目があります。Sceatを右クリックしてグループに招待しましょう。この冒険では両方の英雄を操作し、能力の組み合わせを自分で決められます。'
+  invite_body: 'Sceatには考えがあります。残念ながら、森で一番大きなゴブリンに会いに行く計画です。違う技を持つ二人なら、一人より勝ち目があります。Sceatの操作メニューを開いてグループに招待しましょう。この冒険では両方の英雄を操作し、能力の組み合わせを自分で決められます。'
   switch_body: '仲間が増える意味は、体力バーが一本増えるだけではありません。ヤジンのSceatは罠と位置取りを得意とし、力で押すセンシとは違う戦い方をします。キャラクター切り替えから彼を選びましょう。呪文も装備も英雄ごとに別です。誰を動かすかも大事な判断になります。'
   follow_body: 'グループができたら、はぐれないようにしましょう。センシをリーダーに選び、グループ操作でリーダーへの追従を有効にしてください。探索中はSceatがついてくるので、同じ道を二度歩かずに済みます。戦闘では引き続き、各英雄の移動と呪文を自分で選びます。'
   guards_body: 'ゴバドックは入口を無防備にはしていません。待ち構える衛兵を相手に、今度は二人を連携させましょう。挑む前に新しい装備を確認してください。センシの力とSceatの罠を組み合わせるのが鍵です。敵を追い回すより、有利な位置に誘い込む方が倒しやすいこともあります。'

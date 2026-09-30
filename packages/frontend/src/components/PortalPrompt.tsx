@@ -8,19 +8,19 @@ import { createPortal } from 'react-dom'
 import type { AppCopy } from '../i18n/copy.ts'
 import { usePortalPrompt } from '../game/core/portal_prompt_feed.ts'
 
-import { PromptChip, PromptKey, split_key_template } from './PromptChip.tsx'
+import { PromptChip, PromptText } from './PromptChip.tsx'
 
 export const PortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const root = usePortalPrompt()
-  if (!root) return null
-  const template = copy.world_hud.portal_prompt ?? 'Press {{key}} to travel to another world'
-  const [before, after] = split_key_template(template)
+  const prompt = usePortalPrompt()
+  if (!prompt) return null
   return createPortal(
-    <PromptChip>
-      {before?.trim()}
-      <PromptKey label="T" />
-      {after?.trim()}
+    <PromptChip activate={prompt.activate}>
+      <PromptText
+        template={copy.world_hud.portal_prompt!}
+        touch_template={copy.world_hud.portal_prompt_touch!}
+        label="T"
+      />
     </PromptChip>,
-    root
+    prompt.root
   )
 }

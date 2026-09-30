@@ -14,7 +14,7 @@ import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { dungeon_entry_key, selected_dungeon_pending } from '../modules/dungeon.ts'
 
 import { ModalFrame } from './ModalFrame.tsx'
-import { PromptChip, PromptKey, usePromptKey } from './PromptChip.tsx'
+import { PromptChip, PromptText, usePromptKey } from './PromptChip.tsx'
 
 export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const prompt = useDungeonPortalPrompt()
@@ -53,7 +53,11 @@ export const DungeonPortalPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
           prompt.focused_id === id &&
           createPortal(
             <PromptChip activate={() => interact(id)}>
-              {text('dungeon_talk')} <PromptKey label="F" />
+              <PromptText
+                template={`${text('dungeon_talk')} {{key}}`}
+                touch_template={text('dungeon_talk_touch')}
+                label="F"
+              />
             </PromptChip>,
             root,
             id

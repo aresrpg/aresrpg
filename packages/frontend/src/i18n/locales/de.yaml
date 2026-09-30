@@ -220,6 +220,18 @@ trade_panel:
 transaction_unknown_toast: Deine letzte Aktion wird noch geprüft. Weitere Transaktionen bleiben gesperrt, bis ihr Ergebnis bekannt ist.
 transaction_recovered_toast: Deine vorherige Transaktion wurde gefunden. Lade die Seite neu, um ihr Ergebnis vor der nächsten Aktion zu sehen.
 world_hud:
+  dismount_prompt_touch: 'Tippen zum Absteigen'
+  spawn_press_attack_touch: 'Tippen zum Angreifen'
+  resource_press_collect_touch: 'Tippen, um {{name}} zu sammeln'
+  resource_press_collect_all_touch: 'Tippen, um alles zu sammeln'
+  mount_prompt_touch: 'Tippen zum Aufsteigen'
+  portal_prompt_touch: 'Tippen zum Weltenwechsel'
+  zone_press_search_touch: 'Tippen zum Suchen'
+  zone_press_reroll_touch: 'Tippen zum erneuten Suchen'
+  fight_press_join_touch: 'Tippen zum Beitreten'
+  fight_press_spectate_touch: 'Tippen zum Zuschauen'
+  dungeon_talk_touch: 'Tippen zum Sprechen'
+  character_options_touch: 'Tippen für Aktionen'
   spawn_welcome: 'Willkommen, Abenteurer! Dieses Spiel ist im Early Access. Versuche zu überleben und genieße deine Zeit.'
   compass_label: Kompass
   zone: ZONE
@@ -2754,11 +2766,11 @@ world_loading_finishing: 'Erstes Bild wird vorbereitet…'
 
 adventure:
   goblins_title: 'Den Weg freimachen'
-  goblins_objective: 'Gehe zu den Goblins und drücke F.'
+  goblins_objective: 'Gehe zu den Goblins und nutze die Angriffsaktion.'
   speak_title: 'Ein Fremder auf der Brücke'
-  speak_objective: 'Finde Sceat auf der Brücke. Drücke F zum Sprechen.'
+  speak_objective: 'Finde Sceat auf der Brücke und sprich mit ihm.'
   invite_title: 'Gemeinsam stärker'
-  invite_objective: 'Klicke Sceat rechts an und wähle In Gruppe einladen. Auf Touchscreens tippe auf seine Einladung.'
+  invite_objective: 'Öffne Sceats Aktionsmenü und wähle In Gruppe einladen.'
   switch_title: 'Dein Yajin'
   switch_objective: 'Wähle Sceats Charakterreiter. Du steuerst beide Helden mit eigenen Zaubern und eigener Ausrüstung.'
   follow_title: 'Dem Anführer folgen'
@@ -2779,7 +2791,7 @@ adventure:
   rebirth_body: 'Fahre mit Google fort, um neu geboren zu werden und das echte Spiel zu betreten.'
   goblins_body: 'Mosswood wirkt friedlich, bis die Goblins euch zum nächsten Essen erklären. Ihr Lager versperrt den Ausgang. Nähert euch der Gruppe und beginnt den Kampf. Nutzt Aktionspunkte für Zauber und plant eure Bewegung. Jeder Zug zählt. Ein Sieg bringt euch auf Stufe 200 und verschafft euch die erste Ausrüstung.'
   speak_body: 'Die Goblins sind besiegt, doch der Wald bleibt gefährlich. Ein Yajin namens Sceat hat den Kampf von der Brücke aus beobachtet. Allein möchte er offenbar nicht weiter. Sprecht ihn an. Er sucht ein Relikt im Besitz von Gobadoc, dem Goblinkönig, und braucht jemanden, der sich wehren kann.'
-  invite_body: 'Sceat hat einen Plan. Leider führt er zum größten Goblin des Waldes. Zwei Abenteurer haben bessere Chancen, besonders mit unterschiedlichen Fähigkeiten. Klickt Sceat mit der rechten Maustaste an und ladet ihn in eure Gruppe ein. In diesem Abenteuer steuert ihr beide Helden und kombiniert ihre Fähigkeiten selbst.'
+  invite_body: 'Sceat hat einen Plan. Leider führt er zum größten Goblin des Waldes. Zwei Abenteurer haben bessere Chancen, besonders mit unterschiedlichen Fähigkeiten. Öffnet Sceats Aktionsmenü und ladet ihn in eure Gruppe ein. In diesem Abenteuer steuert ihr beide Helden und kombiniert ihre Fähigkeiten selbst.'
   switch_body: 'Ein Gefährte ist mehr als ein weiterer Lebensbalken. Als Yajin setzt Sceat auf Fallen und geschickte Positionierung, während Senshi rohe Kraft bevorzugt. Wählt ihn im Charakterwechsler aus. Jeder Held behält seine eigenen Zauber und Ausrüstung. Wer handelt, ist genauso wichtig wie die Wahl des Zaubers.'
   follow_body: 'Ihr habt eine Gruppe. Jetzt soll sie auch zusammenbleiben. Wählt Senshi als Anführer und aktiviert Anführer folgen in den Gruppensteuerungen. Sceat folgt euch beim Erkunden, damit ihr denselben Weg nicht zweimal laufen müsst. Im Kampf bestimmt ihr weiterhin selbst die Bewegungen und Zauber beider Helden.'
   guards_body: 'Gobadoc lässt seinen Eingang nicht unbewacht. Seine Wachen erwarten euch, und diesmal müsst ihr zwei Helden koordinieren. Prüft eure neue Ausrüstung vor dem Kampf. Verbindet Senshis Stärke mit Sceats Fallen und Positionierung. Ein geschickt platzierter Gegner lässt sich leichter besiegen als einer, dem ihr blind hinterherlauft.'

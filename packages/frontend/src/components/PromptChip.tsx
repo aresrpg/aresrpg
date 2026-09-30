@@ -32,7 +32,7 @@ export const PromptChip = ({
       <button
         data-world-interaction
         type="button"
-        className={`${CHIP_CLASS} pointer-events-auto`}
+        className={`${CHIP_CLASS} pointer-events-auto min-h-11`}
         onClick={activate}
         onContextMenu={on_context_menu}
       >
@@ -50,14 +50,21 @@ export const PromptKey = ({ label }: Readonly<{ label: string }>) => (
   </kbd>
 )
 
-export const PromptText = ({ template, label }: Readonly<{ template: string; label: string }>) => {
+export const PromptText = ({
+  template,
+  touch_template,
+  label,
+}: Readonly<{ template: string; touch_template: string; label: string }>) => {
   const [before, after] = split_key_template(template)
   return (
-    <span className="inline-flex items-center gap-1.5">
-      {before.trim()}
-      <PromptKey label={label} />
-      {after.trim()}
-    </span>
+    <>
+      <span className="inline-flex items-center gap-1.5 [@media(pointer:coarse)]:hidden">
+        {before.trim()}
+        {template.includes('{{key}}') && <PromptKey label={label} />}
+        {after.trim()}
+      </span>
+      <span className="hidden [@media(pointer:coarse)]:inline">{touch_template}</span>
+    </>
   )
 }
 

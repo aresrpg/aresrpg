@@ -4,8 +4,9 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 
+import { attach_context_menu_input } from '../game/core/context_menu_input.ts'
 import source from '../../../../seed/content/adventure.json'
-import { PromptChip, PromptKey, usePromptKey } from '../components/PromptChip.tsx'
+import { PromptChip, PromptText, usePromptKey } from '../components/PromptChip.tsx'
 import { nearest_interaction_id } from '../components/SpawnNametag.tsx'
 import { ContextMenu } from '../components/ContextMenu.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
@@ -39,16 +40,16 @@ export const CompanionInteraction = ({
     ? {
         activate: invite,
         keyboard: () => false,
-        label: text('invite_action'),
+        template: text('invite_action'),
+        touch_template: copy.world_hud.character_options_touch!,
         menu_label: copy.world_hud.menu_group,
-        key: null,
       }
     : {
         activate: talk,
         keyboard: talk,
-        label: text('speak_action'),
+        template: `{{key}} ${text('speak_action')}`,
+        touch_template: copy.world_hud.dungeon_talk_touch!,
         menu_label: text('speak_action'),
-        key: <PromptKey label="F" />,
       }
   useEffect(() => {
     if (!world || !available) return
@@ -94,8 +95,7 @@ export const CompanionInteraction = ({
         set_menu({ x: event.clientX, y: event.clientY })
       }
     }
-    canvas.addEventListener('contextmenu', pick)
-    return () => canvas.removeEventListener('contextmenu', pick)
+    return attach_context_menu_input(canvas, pick)
   }, [canvas, world, available, point])
   useEffect(() => {
     if (!menu) return
@@ -120,8 +120,7 @@ export const CompanionInteraction = ({
               set_menu({ x: event.clientX, y: event.clientY })
             }}
           >
-            {interaction.key}
-            {interaction.label}
+            <PromptText template={interaction.template} touch_template={interaction.touch_template} label="F" />
           </PromptChip>,
           anchor
         )}

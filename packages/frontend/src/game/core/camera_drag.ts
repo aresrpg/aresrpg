@@ -125,5 +125,6 @@ export const create_camera_drag = ({
       globalThis.addEventListener('blur', stop)
     },
     detach,
+    is_dragging: () => gesture !== null,
   }
 }

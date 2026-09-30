@@ -223,6 +223,18 @@ trade_panel:
 transaction_unknown_toast: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
 transaction_recovered_toast: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
 world_hud:
+  dismount_prompt_touch: '탭하여 내리기'
+  spawn_press_attack_touch: '탭하여 공격'
+  resource_press_collect_touch: '탭하여 {{name}} 채집'
+  resource_press_collect_all_touch: '탭하여 모두 채집'
+  mount_prompt_touch: '탭하여 탑승'
+  portal_prompt_touch: '탭하여 다른 세계로 이동'
+  zone_press_search_touch: '탭하여 탐색'
+  zone_press_reroll_touch: '탭하여 다시 탐색'
+  fight_press_join_touch: '탭하여 참가'
+  fight_press_spectate_touch: '탭하여 관전'
+  dungeon_talk_touch: '탭하여 대화'
+  character_options_touch: '탭하여 행동 선택'
   spawn_welcome: '모험가여, 환영합니다! 이 게임은 얼리 액세스 중입니다. 살아남아 즐거운 모험을 펼쳐 보세요.'
   compass_label: 나침반
   zone: 구역
@@ -2718,11 +2730,11 @@ world_loading_finishing: '첫 프레임 준비 중…'
 
 adventure:
   goblins_title: '길을 열어라'
-  goblins_objective: '고블린에게 다가가 F를 누르세요.'
+  goblins_objective: '고블린에게 다가가 공격 버튼을 사용하세요.'
   speak_title: '다리 위의 낯선 이'
-  speak_objective: '다리에서 Sceat을 찾아 F로 대화하세요.'
+  speak_objective: '다리에서 Sceat을 찾아 대화하세요.'
   invite_title: '함께라면 강해진다'
-  invite_objective: 'Sceat을 우클릭해 그룹에 초대하세요. 터치 화면에서는 초대 표시를 누르세요.'
+  invite_objective: 'Sceat의 행동 메뉴를 열어 그룹에 초대하세요.'
   switch_title: '야진 조작하기'
   switch_objective: 'Sceat의 캐릭터 탭을 선택하세요. 서로 다른 주문과 장비를 가진 두 영웅을 조작합니다.'
   follow_title: '리더 따라가기'
@@ -2743,7 +2755,7 @@ adventure:
   rebirth_body: 'Google로 계속하여 다시 태어나고 진짜 게임에 입장하세요.'
   goblins_body: '모스우드는 평화로워 보이지만, 고블린들은 당신을 다음 식사로 생각하는 모양입니다. 출구로 가는 길은 그들의 야영지를 지나갑니다. 무리에게 다가가 전투를 시작하세요. 행동 포인트로 주문을 쓰고 이동할 위치를 계획하세요. 한 턴 한 턴이 중요합니다. 승리하면 레벨 200과 첫 장비를 얻습니다.'
   speak_body: '고블린은 쓰러졌지만 숲의 위험은 아직 끝나지 않았습니다. 다리에서 전투를 지켜보던 야진 Sceat는 혼자 건너갈 생각이 없어 보입니다. 말을 걸어 보세요. 그는 고블린 왕 고바독이 가진 유물을 찾고 있으며, 함께 맞서 싸울 동료가 필요합니다.'
-  invite_body: 'Sceat에게는 계획이 있습니다. 안타깝게도 숲에서 가장 큰 고블린을 만나러 가는 계획입니다. 서로 다른 재주를 가진 두 모험가라면 승산이 더 크겠죠. Sceat를 우클릭해 그룹에 초대하세요. 이 모험에서는 두 영웅을 모두 조종하고 능력을 어떻게 조합할지 직접 결정합니다.'
+  invite_body: 'Sceat에게는 계획이 있습니다. 안타깝게도 숲에서 가장 큰 고블린을 만나러 가는 계획입니다. 서로 다른 재주를 가진 두 모험가라면 승산이 더 크겠죠. Sceat의 행동 메뉴를 열어 그룹에 초대하세요. 이 모험에서는 두 영웅을 모두 조종하고 능력을 어떻게 조합할지 직접 결정합니다.'
   switch_body: '동료는 체력 막대 하나가 늘어나는 것 이상의 의미가 있습니다. 야진인 Sceat는 센시가 힘으로 해결하는 문제를 함정과 위치 선정으로 풀어냅니다. 캐릭터 전환에서 그를 선택하세요. 각 영웅의 주문과 장비는 별개입니다. 누구를 움직일지도 어떤 주문을 쓸지만큼 중요합니다.'
   follow_body: '그룹이 생겼으니 이제 함께 움직여 봅시다. 센시를 리더로 선택하고 그룹 설정에서 리더 따라가기를 켜세요. 탐험 중에는 Sceat가 따라오므로 같은 길을 두 번 걸을 필요가 없습니다. 전투가 시작되면 각 영웅의 이동과 주문은 여전히 직접 선택합니다.'
   guards_body: '고바독은 입구를 비워 두지 않습니다. 경비병들이 기다리고 있으니 이번에는 두 영웅의 행동을 맞춰야 합니다. 도전하기 전에 새 장비를 확인하세요. 센시의 힘과 Sceat의 함정을 조합해 보세요. 적을 무작정 쫓기보다 유리한 위치로 유도하면 더 쉽게 이길 수 있습니다.'

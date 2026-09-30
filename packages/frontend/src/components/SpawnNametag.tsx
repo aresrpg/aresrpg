@@ -123,10 +123,23 @@ const useInteractionTarget = (ids: readonly string[], state: AppState): string |
 
 const collect_all_line = (
   row: NonNullable<ReturnType<typeof resource_at>>,
-  template: string
+  copy: AppCopy,
+  activate: () => void
 ): readonly NametagLine[] =>
   collect_all_available(row.character, row.resource)
-    ? [{ key: 'collect-all', text: <PromptText template={template} label="R" /> }]
+    ? [
+        {
+          key: 'collect-all',
+          activate,
+          text: (
+            <PromptText
+              template={copy.world_hud.resource_press_collect_all!}
+              touch_template={copy.world_hud.resource_press_collect_all_touch!}
+              label="R"
+            />
+          ),
+        },
+      ]
     : []
 
 export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
@@ -142,27 +155,25 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const has_party = selected_party(state) !== null
   const effective_access = has_party ? (state.settings.fight_access ?? 0) : 0
 
-  const activate = (code: 'KeyF' | 'KeyR') => {
+  const actions = {
+    KeyR: (node: string) => {
+      const resource = resource_at(node, state)
+      if (!resource || !collect_all_available(resource.character, resource.resource)) return false
+      dispatch_app({ type: 'automation/collect_all', id: crypto.randomUUID(), node, pose: read_pose() })
+    },
+    KeyF: (node: string) => {
+      const resource = resource_at(node, state)
+      if (resource?.character && gather_gate(resource.character, resource.resource).ok)
+        dispatch_app({ type: 'world/gather', node })
+      else if (parse_mob_group_id(node))
+        dispatch_app({ type: 'world/engage', group: node, access: effective_access, started_at_ms: Date.now() })
+    },
+  }
+  const activate = (code: 'KeyF' | 'KeyR', requested_target = target) => {
     if (read_dungeon_portal_prompt().focused_id) return false
     const current_target = interaction_target(Object.keys(spawns), state, read_pose())
-    if (!current_target) return false
-    const resource = resource_at(current_target, state)
-    if (code === 'KeyR')
-      dispatch_app({
-        type: 'automation/collect_all',
-        id: crypto.randomUUID(),
-        node: current_target,
-        pose: read_pose(),
-      })
-    else if (resource?.character && gather_gate(resource.character, resource.resource).ok)
-      dispatch_app({ type: 'world/gather', node: current_target })
-    else if (parse_mob_group_id(current_target))
-      dispatch_app({
-        type: 'world/engage',
-        group: current_target,
-        access: effective_access,
-        started_at_ms: Date.now(),
-      })
+    if (!current_target || requested_target !== current_target) return false
+    return actions[code](current_target)
   }
   usePromptKey({ enabled: target !== null, activate: () => activate('KeyF') })
   usePromptKey({ enabled: target !== null, code: 'KeyR', activate: () => activate('KeyR') })
@@ -192,9 +203,20 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                       {
                         key: 'press',
                         muted: !gate.ok,
-                        text: gate.ok ? <PromptText template={requirement} label="F" /> : requirement,
+                        ...(gate.ok
+                          ? {
+                              activate: () => activate('KeyF', spawn_id),
+                              text: (
+                                <PromptText
+                                  template={requirement}
+                                  touch_template={text('resource_press_collect_touch', { name: item_name })}
+                                  label="F"
+                                />
+                              ),
+                            }
+                          : { text: requirement }),
                       },
-                      ...collect_all_line(row, text('resource_press_collect_all')),
+                      ...collect_all_line(row, copy, () => activate('KeyR', spawn_id)),
                     ]
                   : []
               }
@@ -208,7 +230,12 @@ export const SpawnNametag = ({ copy }: Readonly<{ copy: AppCopy }>) => {
         // element and this render — the card says nothing rather than the last thing it knew
         if (!group) return null
         return createPortal(
-          <MobPackCard members={group.members} copy={copy} active={target === spawn_id} />,
+          <MobPackCard
+            members={group.members}
+            copy={copy}
+            active={target === spawn_id}
+            activate={() => activate('KeyF', spawn_id)}
+          />,
           element,
           spawn_id
         )

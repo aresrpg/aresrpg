@@ -10,19 +10,19 @@ import { createPortal } from 'react-dom'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useMountPrompt } from '../game/core/mount_prompt_feed.ts'
 
-import { PromptChip, PromptKey, split_key_template } from './PromptChip.tsx'
+import { PromptChip, PromptText } from './PromptChip.tsx'
 
 export const MountPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const root = useMountPrompt()
-  if (!root) return null
-  const template = copy.world_hud.mount_prompt ?? 'Press {{key}} to mount'
-  const [before, after] = split_key_template(template)
+  const prompt = useMountPrompt()
+  if (!prompt) return null
   return createPortal(
-    <PromptChip>
-      {before?.trim()}
-      <PromptKey label="X" />
-      {after?.trim()}
+    <PromptChip activate={prompt.activate}>
+      <PromptText
+        template={prompt.riding ? `${copy.world_hud.dismount_pet} {{key}}` : copy.world_hud.mount_prompt!}
+        touch_template={copy.world_hud[prompt.riding ? 'dismount_prompt_touch' : 'mount_prompt_touch']!}
+        label="X"
+      />
     </PromptChip>,
-    root
+    prompt.root
   )
 }

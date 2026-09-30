@@ -15,7 +15,13 @@ import type { ReactNode } from 'react'
  *  - `muted` reads as a requirement not yet met — the gather gate's "you need a pickaxe" — so a
  *    card states a refusal in the same shape as an offer.
  *  Default is the quiet subtitle: an affordance line ("press E…"), never the subject itself. */
-export type NametagLine = Readonly<{ key: string; text: ReactNode; title?: boolean; muted?: boolean }>
+export type NametagLine = Readonly<{
+  key: string
+  text: ReactNode
+  title?: boolean
+  muted?: boolean
+  activate?: () => void
+}>
 
 export const NametagCard = ({
   name,
@@ -76,7 +82,18 @@ export const NametagCard = ({
                     key={line.key}
                     style={{ color: line.muted ? '#777b86' : '#a3a5ad' }}
                   >
-                    {line.text}
+                    {line.activate ? (
+                      <button
+                        type="button"
+                        data-world-interaction
+                        className="pointer-events-auto min-h-11 px-2"
+                        onClick={line.activate}
+                      >
+                        {line.text}
+                      </button>
+                    ) : (
+                      line.text
+                    )}
                   </span>
                 )
               )}

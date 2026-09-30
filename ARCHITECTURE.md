@@ -116,6 +116,12 @@ The mobile joystick and jump button serve both the signed-in world and the local
 supplies its existing input device. Their hit regions remain available while their visuals appear only
 during a press. The canvas camera adapter owns mouse and touch dragging across exposed game space;
 HUD controls never enter that adapter. Releasing a touch clears its manual input without cancelling an automated run.
+During joystick movement, the follow camera eases behind horizontal travel. The held joystick retains
+its starting world basis so automatic camera rotation cannot steer it; manual look adjusts that basis,
+pauses automatic follow, and keeps pitch under player control. Release clears the basis.
+World prompts expose the same actions through buttons and keyboard shortcuts, with localized tap
+instructions on touch devices. Character taps open the existing context menu through the same body
+picker as desktop. Camera drags and cancelled touches never become menu taps.
 Fight interaction retains one action, inspection target and optional reviewed checkpoint. Touch taps
 preview; confirmation revalidates the same checkpoint through the existing cell-selection door.
 Changed checkpoints, action changes and locked actions invalidate review. Board input belongs to the
