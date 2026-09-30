@@ -1088,8 +1088,8 @@ the PTB split is not a claim that every possible cap withdrawal is mechanically 
 ## Verification and release preparation
 
 Verification has three purposes: fast native unit coverage, bounded browser regressions, and opt-in
-performance measurement. One source job runs lint, formatting, types, unit coverage, seed validation,
-and authored artifact freshness. The native test command does not repeatedly regenerate the cities;
+performance measurement. Independent source jobs run lint/formatting, types, unit coverage with
+seed validation, and authored artifact freshness in parallel. The native test command does not repeatedly regenerate the cities;
 `validate:assets` checks all generated scenes once. Expensive production-sized inputs belong in
 artifact validation or performance measurements, not tests of array dimensions or wiring.
 
@@ -1098,16 +1098,17 @@ One input classifier selects Move, indexer parity, and browser checks against th
 retain their native coverage and authority/parity checks. The final gate rejects failed, cancelled,
 or unjustifiably skipped verification. PRs also retain the production bundle check.
 
-One Chrome job on macOS runs browser regressions against one production test build. Two workers
-run independent UI cases alongside one sequential world/renderer worker. There is no
-platform/quality/shard matrix, separate mobile runner, WebGL fallback test, or development-HMR gate.
-Fixtures use production components with controlled inputs. Browser-only risks include focus,
-gestures, confirmation, persistence, decoded assets and GPU cleanup; CSS literals, duplicate viewport
-tours and source-string wiring assertions do not establish those behaviors. Screenshots belong to
-the test output directory, never a developer-specific absolute path.
+Required browser checks cover authentication, irreversible-action confirmation, exact item selection,
+and fight/session input boundaries. Two Chrome workers run those critical interactions. One isolated
+macOS worker runs one renderer smoke check: present bounded flat terrain through WebGPU and release
+its GPU allocations. Both jobs stop on their first failure; a failed job cancels the browser matrix.
+New browser scenarios are manual diagnostics unless explicitly included in the critical set.
 
-Renderer lifecycle checks use a small fixed scene, bounded residency and every quality tier through
-the production engine. They require WebGPU and retain resource-growth and disposal assertions.
+Layout, pixels, lighting, animation choreography, camera timing, and extended renderer lifecycle
+scenarios run only through the manual browser diagnostics command. They never block routine changes.
+Fixtures still use production components with controlled inputs; no fallback renderer or skipped
+GPU requirement can certify the smoke check. Screenshots belong to the test output directory.
+
 Full authored city/forest workloads run through the manually dispatched performance workflow or
 `test:performance`. They record actual hardware and completed GPU work; there is no universal FPS
 claim derived from an OS name. Performance runs use one worker and no tracing. The native suites

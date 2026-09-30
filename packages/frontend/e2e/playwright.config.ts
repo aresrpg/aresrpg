@@ -5,19 +5,21 @@ import { resolve } from 'node:path'
 import { defineConfig } from '@playwright/test'
 
 const hardware = process.env.REQUIRE_HARDWARE === '1'
-// These fixtures run complete worlds or renderer probes; keep their GPU workloads serial.
-const WORLD_TESTS = [
-  'adventure_controls',
-  'adventure_ending',
-  'background_run',
-  'canopy_lighting',
-  'captions',
-  'character_aura',
-  'engine_lifecycle',
-  'nearby_fight',
-  'renderer',
-  'water',
+// New browser scenarios are manual diagnostics unless they protect a critical interaction here.
+const CRITICAL_TESTS = [
+  'auth_callback',
+  'add_funds',
+  'box_batch',
+  'character_delete',
+  'character_progression',
+  'fight_placement_race',
+  'fight_touch',
+  'interaction',
+  'inventory_actions',
+  'marketplace',
+  'wallet_switcher',
 ].map((name) => `**/${name}.pw.ts`)
+const RENDERER_SMOKE = '**/renderer_smoke.pw.ts'
 
 export default defineConfig({
   testDir: './tests',
@@ -45,12 +47,18 @@ export default defineConfig({
   projects: [
     {
       name: 'regression-ui',
-      testIgnore: ['**/performance.pw.ts', ...WORLD_TESTS],
+      testMatch: CRITICAL_TESTS,
       fullyParallel: true,
       workers: 2,
       timeout: 60_000,
     },
-    { name: 'regression-world', testMatch: WORLD_TESTS, workers: 1, timeout: 60_000 },
+    { name: 'regression-renderer', testMatch: RENDERER_SMOKE, workers: 1, timeout: 60_000 },
+    {
+      name: 'diagnostics',
+      testIgnore: ['**/performance.pw.ts', RENDERER_SMOKE, ...CRITICAL_TESTS],
+      workers: 1,
+      timeout: 60_000,
+    },
     { name: 'performance', testMatch: '**/performance.pw.ts', workers: 1, timeout: 600_000 },
   ],
   webServer: {

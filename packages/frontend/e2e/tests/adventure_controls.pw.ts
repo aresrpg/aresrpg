@@ -9,6 +9,7 @@ test('the adventure joystick moves the real hero while a second finger jumps and
   page,
 }) => {
   await page.goto('/e2e/fixtures/adventure_controls.html')
+  await page.getByRole('button', { name: 'Collapse quests', exact: true }).click()
   const joystick = page.getByRole('group', { name: 'Move', exact: true })
   await expect(joystick).toBeVisible()
   const jump = page.getByRole('button', { name: 'Jump', exact: true })
@@ -16,6 +17,7 @@ test('the adventure joystick moves the real hero while a second finger jumps and
   await expect(joystick).toHaveCSS('opacity', '0')
   await expect(jump).toHaveCSS('opacity', '0')
   await page.waitForFunction(() => window.adventure_pose()?.character_id === 'adventure_senshi')
+  await page.locator('[data-world-loading]').waitFor({ state: 'hidden', timeout: 30_000 })
   const origin = (await page.evaluate(() => window.adventure_pose()))!
   const stick = (await joystick.boundingBox())!
   const button = (await jump.boundingBox())!
@@ -47,25 +49,28 @@ test('the adventure joystick moves the real hero while a second finger jumps and
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await expect(joystick).toHaveCSS('opacity', '0')
   await expect(jump).toHaveCSS('opacity', '0')
-  // Settle the jump before choosing exposed canvas: projected mob cards move with the airborne camera.
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const start = window.adventure_pose()!
-        const until = performance.now() + 500
-        do {
-          await new Promise(requestAnimationFrame)
-        } while (performance.now() < until)
-        const end = window.adventure_pose()!
-        return Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z)
-      })
-    )
-    .toBeLessThan(0.1)
+  // Observe consecutive rendered frames: slow graphics stretch physics time beyond a short UI assertion budget.
+  await page.waitForFunction(async () => {
+    const start = window.adventure_pose()!
+    for (let frame = 0; frame < 10; frame++) {
+      await new Promise(requestAnimationFrame)
+      const pose = window.adventure_pose()!
+      if (Math.hypot(pose.x - start.x, pose.y - start.y, pose.z - start.z) >= 0.1) return false
+    }
+    return true
+  })
   const point = await page.locator('main > canvas').evaluate((element) => {
     const box = element.getBoundingClientRect()
-    return [0.45, 0.4, 0.25, 0.1]
-      .flatMap((x) => [0.25, 0.45, 0.55].map((y) => ({ x: box.x + box.width * x, y: box.y + box.height * y })))
-      .find(({ x, y }) => document.elementFromPoint(x, y) === element)
+    return (
+      [0.45, 0.4, 0.25, 0.1]
+        .flatMap((x) =>
+          [0.25, 0.45, 0.55, 0.75, 0.85].map((y) => ({ x: box.x + box.width * x, y: box.y + box.height * y }))
+        )
+        // A whole touch-sized patch must be exposed; a point beside an animated label is not a stable target.
+        .find(({ x, y }) =>
+          [-24, 0, 24].every((dx) => [-24, 0, 24].every((dy) => document.elementFromPoint(x + dx, y + dy) === element))
+        )
+    )
   })
   expect(point).toBeDefined()
   expect(point!.x).toBeLessThan(667 / 2)

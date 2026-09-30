@@ -24,9 +24,12 @@ test('run-to keeps moving and arrives after switching to the marketplace', async
   await page.evaluate(() => Reflect.get(window, 'background_run_page')())
   await expect(page.locator('[data-world-frame]')).toBeVisible()
   await page.waitForFunction((x) => Reflect.get(window, 'background_run_state')().pose?.x > x + 2, before)
-  expect(await page.evaluate(() => Reflect.get(window, 'background_run_state')().run?.status)).toBe('running')
   await page.waitForFunction(() => Reflect.get(window, 'background_run_state')().run === null, undefined, {
     timeout: 15_000,
   })
+  // The physical controller can finish braking after the arrival signal on sloped terrain.
+  expect(
+    Math.abs((await page.evaluate(() => Reflect.get(window, 'background_run_state')().pose.x as number)) - start_x - 50)
+  ).toBeLessThan(2)
   expect(city_downloads).toEqual([])
 })

@@ -17,19 +17,16 @@ for (const victory of [false, true]) {
     expect(await page.evaluate(() => window.ending_probe.snapshot().ready)).toBe(false)
     await page.evaluate(() => window.ending_probe.finish())
     const modal = page.getByRole('dialog', { name: 'You died of your wounds…', exact: true })
+    // Scene loading plus the complete cinematic use the test budget, not a five-second UI assertion budget.
+    await modal.waitFor({ state: 'visible', timeout: 60_000 })
     if (victory) {
-      const ending = page.locator('[data-adventure-ending]')
-      await expect(ending).toHaveAttribute('data-stage', 'orbit')
-      await expect(modal).toHaveCount(0)
-      const yaw = await page.evaluate(() => window.ending_probe.snapshot().yaw)
-      await expect.poll(() => page.evaluate(() => window.ending_probe.snapshot().yaw)).not.toBe(yaw)
-      await expect(ending).toHaveAttribute('data-stage', 'poison')
-      expect(await page.evaluate(() => window.ending_probe.snapshot().ready)).toBe(false)
-      await expect(modal).toHaveCount(0)
-      await expect(ending).toHaveAttribute('data-stage', 'dying')
-      await expect(modal).toHaveCount(0)
+      const frames = await page.evaluate(() => window.ending_probe.frames())
+      expect([...new Set(frames.map(({ stage }) => stage))]).toEqual(['orbit', 'poison', 'dying'])
+      expect(frames.every(({ ready, rebirth }) => !ready && !rebirth)).toBe(true)
+      const orbit = frames.filter(({ stage }) => stage === 'orbit')
+      expect(orbit[0]!.yaw).not.toBeNull()
+      expect(orbit.at(-1)!.yaw).not.toBe(orbit[0]!.yaw)
     }
-    await expect(modal).toBeVisible()
     await modal.locator('article').evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished))
     })

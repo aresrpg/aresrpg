@@ -32,6 +32,7 @@
     "dev:journal": "bun run --cwd packages/journal dev",
     "build:journal": "bun run --cwd packages/journal build",
     "test:regression": "playwright test --config packages/frontend/e2e/playwright.config.ts --project='regression*'",
+    "test:browser:diagnostics": "playwright test --config packages/frontend/e2e/playwright.config.ts --project=diagnostics",
     "test:performance": "REQUIRE_HARDWARE=1 playwright test --config packages/frontend/e2e/playwright.config.ts --project=performance",
     "validate:assets": "bun scripts/generate_cities.mjs --check && bun scripts/generate_main_menu.mjs --check && bun scripts/generate_asset_workshop.mjs --check"
   },

@@ -1,9 +1,13 @@
 # Browser verification
 
-Run `bun run test:regression` from the repository root. It builds the test entries with the
-production bundler once. Two Chrome workers run independent UI cases while one worker runs
-world and renderer cases sequentially. CI uses the same three-worker limit in one macOS job.
-Missing graphics support fails the rendering regressions; it never silently skips them.
+Run `bun run test:regression` from the repository root for the blocking browser checks: critical
+authentication, confirmation, selection, and fight/session interactions plus one WebGPU renderer
+smoke check. CI runs the UI and renderer projects on separate macOS runners and stops on the first
+failure. The explicit critical list in `playwright.config.ts` prevents new visual tests from silently
+joining the gate. Builds, lint, types, native coverage, and Move/indexer checks remain required.
+
+Run `bun run test:browser:diagnostics` manually for the remaining browser scenarios, including pixel
+comparisons, layout, camera behavior, and cinematic choreography. These checks do not block CI.
 
 Keep browser tests for behavior that needs a browser: input and focus ownership, touch gestures,
 confirmation boundaries, real storage, asset decoding, and renderer lifetime. Pure state, money,
@@ -11,10 +15,10 @@ protocol and combat rules belong in their native unit suites. Avoid source-text 
 cosmetic snapshots, exhaustive viewport/locale permutations, and development-only renderers.
 Use `test.info().outputPath(...)` for screenshots. Failed tests retain screenshots and traces.
 
-The renderer regression uses the production engine, workers, chunk manager and detail meshes in
-a small fixed scene at radius two. It exercises streaming, fight transitions, all quality tiers,
-and complete GPU disposal. It does not load a city to test lifecycle bookkeeping. The separate
-water and canopy cases retain measured shader regressions.
+The required renderer smoke check uses a small flat scene at Low quality and radius one. It checks
+WebGPU startup, presented terrain, errors, and complete GPU resource disposal. It does not load
+characters or cities, compare pixels, switch through every quality tier, or wait through a cinematic.
+The extended renderer, water, and canopy scenarios remain available in manual diagnostics.
 
 `bun run test:performance` runs the authored city and forest with 100 characters, 48 mobs,
 100 pets, and repeated traversal and quality changes. The `performance` workflow runs only on

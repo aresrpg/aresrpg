@@ -43,6 +43,25 @@ const finish_tutorial = () => {
   dispatch_app({ type: 'adventure/result_acknowledged', screen: 'result' })
   settle(victory ? 0n : 1n)
 }
+// Observe every presented stage inside the browser; the test runner can be slower than a cinematic stage.
+const frames: { stage: string; yaw: number | null; ready: boolean; rebirth: boolean }[] = []
+const presentation = new MutationObserver((records) => {
+  for (const { target } of records) {
+    if (!(target instanceof HTMLElement) || !target.matches('[data-adventure-ending]')) continue
+    frames.push({
+      stage: target.dataset.stage!,
+      yaw: read_pose()?.yaw ?? null,
+      ready: read_app_state().session.auth_ready,
+      rebirth: document.querySelector('.adventure-rebirth') !== null,
+    })
+  }
+})
+presentation.observe(document.getElementById('root')!, {
+  attributes: true,
+  subtree: true,
+  attributeFilter: ['data-stage'],
+})
+window.addEventListener('pagehide', () => presentation.disconnect(), { once: true })
 // Substitute only the external authentication/network boundary. Rendering and the player runtime stay real.
 const activate_player = () => {
   const stop = observe_app(['navigation', 'settings', 'audio'])
@@ -52,6 +71,7 @@ const activate_player = () => {
 declare global {
   interface Window {
     ending_probe: {
+      frames: () => typeof frames
       snapshot: () => { phase: string; yaw: number | null; auth: unknown; ready: boolean }
       finish: typeof finish_tutorial
       fail_login: () => void
@@ -60,6 +80,7 @@ declare global {
   }
 }
 window.ending_probe = {
+  frames: () => frames,
   snapshot: () => ({
     phase: read_app_state().adventure.phase,
     yaw: read_pose()?.yaw ?? null,

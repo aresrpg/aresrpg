@@ -518,11 +518,33 @@ const run_diagnostics = async ({
   }
 }
 
+// The blocking smoke check proves the real renderer can present terrain and release its resources.
+const run_renderer_smoke = async () => {
+  const world = create_world({
+    canvas: document.querySelector('canvas')!,
+    world: LIFECYCLE_WORLD,
+    quality: 'low',
+    render_distance: 1,
+  })
+  world.set_audio_volume(0)
+  world.point_at({ x: 0, z: 0 })
+  world.set_active(true)
+  try {
+    await settle(world)
+    await window.workload_gpu_done!()
+    return { backend: world.backend(), displayed: world.state().displayed_chunks }
+  } finally {
+    world.dispose()
+  }
+}
+
 declare global {
   interface Window {
+    run_renderer_smoke: typeof run_renderer_smoke
     run_diagnostics: typeof run_diagnostics
     run_workload: typeof run
   }
 }
+window.run_renderer_smoke = run_renderer_smoke
 window.run_diagnostics = run_diagnostics
 window.run_workload = run
