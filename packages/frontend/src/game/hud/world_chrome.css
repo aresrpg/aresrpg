@@ -311,9 +311,6 @@
     height: 44px;
   }
 }
-.mobile-camera {
-  z-index: 1;
-}
 .mobile-joystick,
 .mobile-jump {
   z-index: 120;
@@ -337,10 +334,6 @@
   justify-content: center;
   left: 0;
   right: 0;
-}
-.mobile-app .mobile-jump {
-  right: 196px;
-  bottom: 148px;
 }
 .world-group-toggle {
   display: inline-block;
@@ -529,21 +522,31 @@
     grid-column: 2;
     grid-row: 1;
   }
+  .fight-hud--overworld {
+    --world-hud-bottom: max(4px, env(safe-area-inset-bottom));
+    --world-hud-padding: 0px;
+  }
   .fight-hud--overworld .fight-hud__bar--overworld {
-    padding: 5px;
-    gap: 3px;
+    padding: 0;
+    gap: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .fight-hud--overworld .fight-hud__experience {
+    display: none;
   }
   .fight-hud--overworld .fight-hud__overworld-row {
     align-items: center;
     gap: 8px;
   }
   .fight-hud--overworld .aui-vitals {
-    width: 84px;
-    gap: 2px;
+    width: 68px;
+    gap: 0;
   }
   .fight-hud--overworld .fight-hud__overworld-row .aui-vitals .aui-health {
-    width: 70px;
-    height: 64px;
+    width: 68px;
+    height: 62px;
     margin-top: 0;
   }
   .fight-hud--overworld .fight-hud__overworld-row .aui-vitals .aui-vital-token {
@@ -551,8 +554,8 @@
     height: 32px;
   }
   .fight-hud--overworld .aui-vital-tokens {
-    margin-top: 0;
-    gap: 6px;
+    margin-top: -12px;
+    gap: 0;
   }
   .fight-hud--overworld .aui-health > span {
     font-size: 18px;

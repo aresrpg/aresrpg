@@ -34,8 +34,8 @@ export const selected_adventurer = (state: AdventureState) =>
 export const adventure_roster = (state: AdventureState) =>
   [state.character, state.companion].filter((character) => character !== null)
 
-export const adventure_defeated = (state: Readonly<AdventureState>): boolean =>
-  state.result?.winner === 1 && state.result.fight === `adventure_${ADVENTURE_ENCOUNTERS.length - 1}`
+export const adventure_has_ending = (state: Readonly<AdventureState>): boolean =>
+  state.result?.fight === `adventure_${ADVENTURE_ENCOUNTERS.length - 1}`
 
 export const adventure_completed_quests = (state: Readonly<AdventureState>): readonly AdventureQuest[] =>
   state.character === null

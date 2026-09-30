@@ -27,15 +27,6 @@
   }
 }
 
-.mobile-camera {
-  position: absolute;
-  right: 0;
-  top: 25%;
-  bottom: 145px;
-  width: 45%;
-  pointer-events: auto;
-  touch-action: none;
-}
 .mobile-joystick {
   position: absolute;
   left: max(24px, env(safe-area-inset-left));
@@ -69,7 +60,7 @@
 .mobile-jump {
   position: absolute;
   bottom: max(24px, env(safe-area-inset-bottom));
-  right: 154px;
+  right: max(24px, env(safe-area-inset-right));
   display: grid;
   place-items: center;
   width: 52px;
@@ -80,4 +71,13 @@
   color: #dec79d;
   pointer-events: auto;
   touch-action: none;
+}
+
+.mobile-joystick,
+.mobile-jump {
+  opacity: 0;
+}
+.mobile-joystick[data-active='true'],
+.mobile-jump[data-active='true'] {
+  opacity: 1;
 }

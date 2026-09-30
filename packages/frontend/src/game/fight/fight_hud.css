@@ -888,7 +888,8 @@
     bottom: 104px;
   }
   .fight-hud__bottom {
-    transform: translateX(-50%) scale(0.8);
+    bottom: max(4px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
     transform-origin: bottom center;
   }
   .fight-hud:not(.fight-hud--overworld) .fight-hud__bottom {

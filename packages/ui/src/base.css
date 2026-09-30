@@ -624,17 +624,17 @@
     display: none;
   }
   .aui-hud-shortcut-row > .aui-icon-button {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    min-height: 40px;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
   }
 }
 
 @media (max-width: 1023px), (pointer: coarse), (max-height: 500px) {
   .aui-hud-shortcut-row {
-    grid-template-columns: repeat(var(--hud-mobile-columns), 40px);
-    grid-template-rows: repeat(2, 40px);
+    grid-template-columns: repeat(var(--hud-mobile-columns), 44px);
+    grid-template-rows: repeat(2, 44px);
     gap: 2px;
   }
 }

@@ -26,7 +26,7 @@ import { JourneyHost } from '../journey/JourneyHost.tsx'
 
 import {
   adventure_can_fight,
-  adventure_defeated,
+  adventure_has_ending,
   adventure_objective,
   adventure_roster,
   selected_adventurer,
@@ -87,7 +87,8 @@ export const AdventurePartyFrame = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
 export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; challenge: () => void }>) => {
   const adventure = useAppStore((state) => state.adventure)
-  const { encounter, phase, result } = adventure
+  const { encounter, phase } = adventure
+  const result = adventure_has_ending(adventure) ? null : adventure.result
   const character = selected_adventurer(adventure)
   const objective = adventure_objective(adventure)
   const row = useMemo(() => (character ? adventure_character_row(character) : null), [character])
@@ -122,7 +123,7 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
       <FightResultCard
         items={[...ADVENTURE_ITEMS, ADVENTURE_PET_ITEM]}
         copy={copy}
-        result={adventure_defeated(adventure) ? null : result}
+        result={result}
         on_close={() => acknowledge('result')}
       />
       <FightLevelUpCard

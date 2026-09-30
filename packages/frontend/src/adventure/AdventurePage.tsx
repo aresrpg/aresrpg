@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { EngineStatus, Vec3 } from '@aresrpg/engine'
 
+import { AdventureTouchControls } from '../../../mobile/src/AdventureTouchControls.tsx'
 import { WorldLoading } from '../components/WorldLoading.tsx'
 import { BiomeMusic } from '../game/audio/BiomeMusic.tsx'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
@@ -173,6 +174,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
           />
         )}
         <CompanionInteraction world={world} canvas={canvas} copy={copy} />
+        <AdventureTouchControls copy={copy} device={world} />
         <AdventureHud copy={copy} challenge={challenge} />
         {display_status.state === 'initializing' && (
           <p className="absolute top-1/2 left-1/2 -translate-1/2">{copy.loading_universe}</p>

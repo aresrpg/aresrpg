@@ -40,7 +40,7 @@ export const observe_world_controls = ({
 }: Readonly<{
   events: AppContext['events']
   get_state: AppContext['get_state']
-  read_world: () => Pick<ReturnType<typeof create_world>, 'set_jump' | 'set_movement' | 'rotate_camera'> | null
+  read_world: () => Pick<ReturnType<typeof create_world>, 'set_jump' | 'set_movement'> | null
 }>): void => {
   events.on('engine/jump', ({ down }) => {
     if (get_state().navigation.page === 'world') read_world()?.set_jump(down)
@@ -49,10 +49,5 @@ export const observe_world_controls = ({
     if (get_state().navigation.page !== 'world') return
     if (!Number.isFinite(forward) || !Number.isFinite(strafe)) return
     read_world()?.set_movement({ forward, strafe })
-  })
-  events.on('engine/camera', ({ dx, dy }) => {
-    if (get_state().navigation.page !== 'world') return
-    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return
-    read_world()?.rotate_camera(dx, dy)
   })
 }

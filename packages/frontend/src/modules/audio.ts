@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Observe immutable presentation facts, never receipt/packet arrival counts.
 
-import { adventure_completed_quests } from '../adventure/quest.ts'
+import { adventure_completed_quests, adventure_has_ending } from '../adventure/quest.ts'
 import { dispose_audio, play_audio } from '../game/audio/audio_registry.ts'
 import type { AppModule, AppState } from '../store.ts'
 
@@ -30,7 +30,7 @@ export type AudioSnapshot = Readonly<{
 const result_notices = (state: AppState) => {
   const results = [
     ...Object.values(state.fight_result.current_by_character),
-    ...(state.adventure.result ? [state.adventure.result] : []),
+    ...(state.adventure.result && !adventure_has_ending(state.adventure) ? [state.adventure.result] : []),
   ]
   const visible = results.filter((result) => fight_result_available(state.fight, result.fight))
   const result_surfaces = visible.filter((result) => fight_result_surface(result) === 'result')

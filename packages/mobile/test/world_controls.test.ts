@@ -12,7 +12,6 @@ test('overlay input cannot move the world, and non-finite axes never reach the d
   let state = initial_app_state(settings)
   const listeners = new Map<string, (input: never) => void>()
   const movements: unknown[] = []
-  const camera: unknown[] = []
   observe_world_controls({
     events: { on: (name: string, listener: (input: never) => void) => listeners.set(name, listener) } as never,
     get_state: () => state,
@@ -21,9 +20,6 @@ test('overlay input cannot move the world, and non-finite axes never reach the d
       set_movement: (value) => {
         movements.push(value)
       },
-      rotate_camera: (...value) => {
-        camera.push(value)
-      },
     }),
   })
   const move = (forward: number): void => listeners.get('engine/movement')!({ forward, strafe: 0 } as never)
@@ -31,9 +27,7 @@ test('overlay input cannot move the world, and non-finite axes never reach the d
   expect(movements).toEqual([])
   state = reduce_app_state(state, { type: 'page/open', page: 'settings' })
   move(1)
-  listeners.get('engine/camera')!({ dx: 3, dy: 4 } as never)
   expect(movements).toEqual([])
-  expect(camera).toEqual([])
   state = reduce_app_state(state, { type: 'page/open', page: 'world' })
   move(1)
   move(0)

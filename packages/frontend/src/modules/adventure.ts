@@ -10,7 +10,7 @@ import {
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 
 import source from '../../../../seed/content/adventure.json'
-import { adventure_can_fight, adventure_defeated, selected_adventurer } from '../adventure/quest.ts'
+import { adventure_can_fight, adventure_has_ending, selected_adventurer } from '../adventure/quest.ts'
 import { adventure_character, adventure_companion } from '../adventure/character.ts'
 import { remember_demo_played } from '../adventure/visit.ts'
 import { adventure_result } from '../adventure/result.ts'
@@ -120,10 +120,10 @@ const raise_stats = (state: AdventureState, spending: CharacteristicValues): Adv
 
 const acknowledge = (state: AdventureState, screen: 'result' | 'level'): AdventureState => {
   const { result } = state
-  if (!result) return state
+  if (!result || adventure_has_ending(state)) return state
   if (screen === 'level') return { ...state, result: { ...result, level_up_open: false, level_up_acknowledged: true } }
   if (result.level_up_open) return state
-  return { ...state, phase: adventure_defeated(state) ? 'complete' : 'explore', result: null }
+  return { ...state, phase: 'explore', result: null }
 }
 
 const UI_TRANSITIONS: Readonly<Record<string, (state: AdventureState) => AdventureState>> = Object.freeze({
@@ -196,8 +196,8 @@ const transition = (state: AppState, input: AdventureInput): AdventureState => {
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
-  if (input.type === 'fight/closed' && input.fight === null && adventure_defeated(state.adventure))
-    return { ...state, adventure: { ...state.adventure, phase: 'complete', result: null } }
+  if (input.type === 'fight/closed' && input.fight === null && adventure_has_ending(state.adventure))
+    return { ...state, adventure: { ...state.adventure, phase: 'complete' } }
 
   if (!input.type.startsWith('adventure/')) return state
   const adventure = transition(state, input as AdventureInput)

@@ -2736,6 +2736,7 @@ adventure:
   speak_action: 'Falar com Sceat'
   invite_action: 'Convidar Sceat'
   rebirth_title: 'Você morreu devido aos seus ferimentos…'
+  rebirth_victory: 'Você derrotou Gobadoc. Muito bem! Mas o ataque dele havia envenenado você. Você perdeu a consciência, e o exército dele devorou seu corpo indefeso. A vitória custou sua vida.'
   rebirth_body: 'É hora de renascer. Clique abaixo para entrar na sua conta e começar o jogo de verdade.'
   rebirth_login: 'Entrar na conta e no jogo de verdade'
   goblins_body: 'Mosswood parece tranquila, até os goblins decidirem que você será a próxima refeição. O acampamento deles bloqueia a saída. Aproxime-se do grupo e comece uma luta. Use pontos de ação em feitiços e planeje seus movimentos. Cada turno conta. A vitória dará seu primeiro equipamento e levará você ao nível 200.'

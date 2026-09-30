@@ -2064,11 +2064,6 @@
         10
       ]
     },
-    "packages/frontend/src/game/core/camera_drag.ts": {
-      "create_camera_drag > move": [
-        9
-      ]
-    },
     "packages/frontend/src/game/core/loading_progress.ts": {
       "loading_progress": [
         11

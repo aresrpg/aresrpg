@@ -6,6 +6,8 @@
   min-height: 0;
   width: 100%;
   flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 /* One item sheet is shared by inventory, recipes, drops and linked items. */
 .item-detail-view {
@@ -431,9 +433,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: 12px;
-  }
-  .aui-inspection--item:not(:has(.jobs__craft)) .aui-item-source-list {
-    max-height: 145px;
   }
 }
 

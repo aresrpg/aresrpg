@@ -356,8 +356,6 @@
 }
 .aui-inspection--item > .item-sheet-container {
   padding: 12px;
-  min-height: 0;
-  overflow: hidden;
 }
 .enc-browser.aui-catalogue-browser {
   flex-direction: column;

@@ -7,6 +7,7 @@ import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 
 import source from '../../../../seed/content/adventure.json'
 import { create_app } from '../../src/store.ts'
+import { audio_snapshot } from '../../src/modules/audio.ts'
 import { adventure_quest, adventure_roster } from '../../src/adventure/quest.ts'
 import { adventure_character, adventure_companion } from '../../src/adventure/character.ts'
 import { adventure_fight_setup } from '../../src/adventure/fight_setup.ts'
@@ -113,31 +114,37 @@ test('the companion walks the authored bridge using the same solid-world navigat
   expect(Math.hypot(position[0] - 128, position[2] - 218)).toBeLessThan(2.5)
 })
 
-test('the terminal defeat waits for the fight presentation to close and never initiates login itself', () => {
-  const app = create_app()
-  win_first_fight(app)
-  for (let index = 0; index <= source.dialogue.length; index++) app.dispatch({ type: 'adventure/talk' })
-  app.dispatch({ type: 'adventure/invite' })
-  app.dispatch({ type: 'adventure/select', character_id: source.companion.id })
-  app.dispatch({ type: 'adventure/select', character_id: app.store.getState().adventure.character!.id })
-  app.dispatch({ type: 'adventure/follow', enabled: true })
-  for (const encounter of [1, 2]) {
+for (const winner of [0n, 1n])
+  test(`the final boss ending waits for presentation and preserves outcome ${winner} for rebirth`, () => {
+    const app = create_app()
+    win_first_fight(app)
+    for (let index = 0; index <= source.dialogue.length; index++) app.dispatch({ type: 'adventure/talk' })
+    app.dispatch({ type: 'adventure/invite' })
+    app.dispatch({ type: 'adventure/select', character_id: source.companion.id })
+    app.dispatch({ type: 'adventure/select', character_id: app.store.getState().adventure.character!.id })
+    app.dispatch({ type: 'adventure/follow', enabled: true })
+    for (const encounter of [1, 2]) {
+      app.dispatch({ type: 'adventure/challenge' })
+      const state = app.store.getState().adventure
+      const checkpoint = create_fight_state(adventure_fight_setup(state.character!, encounter, state.companion))
+      app.dispatch({
+        type: 'adventure/settled',
+        checkpoint: {
+          ...checkpoint,
+          contract: { ...checkpoint.contract, ended: true, winner: encounter === 1 ? 0n : winner },
+        },
+      })
+      if (encounter === 1) app.dispatch({ type: 'adventure/result_acknowledged', screen: 'result' })
+    }
+    expect(app.store.getState().adventure.phase).toBe('reward')
+    app.dispatch({ type: 'adventure/result_acknowledged', screen: 'result' })
+    expect(app.store.getState().adventure.phase).toBe('reward')
+    app.dispatch({ type: 'fight/closed', fight: null })
+    expect(app.store.getState().adventure.phase).toBe('complete')
+    expect(app.store.getState().adventure.result?.winner).toBe(Number(winner))
+    expect(audio_snapshot(app.store.getState()).completed_fights).not.toContain('adventure_2')
     app.dispatch({ type: 'adventure/challenge' })
-    const state = app.store.getState().adventure
-    const checkpoint = create_fight_state(adventure_fight_setup(state.character!, encounter, state.companion))
-    app.dispatch({
-      type: 'adventure/settled',
-      checkpoint: {
-        ...checkpoint,
-        contract: { ...checkpoint.contract, ended: true, winner: encounter === 1 ? 0n : 1n },
-      },
-    })
-    if (encounter === 1) app.dispatch({ type: 'adventure/result_acknowledged', screen: 'result' })
-  }
-  expect(app.store.getState().adventure.phase).toBe('reward')
-  app.dispatch({ type: 'fight/closed', fight: null })
-  expect(app.store.getState().adventure.phase).toBe('complete')
-  expect(app.store.getState().adventure.result).toBeNull()
-  expect(app.store.getState().session.auth_request).toBeNull()
-  expect(app.store.getState().session.wallet).toBeNull()
-})
+    expect(app.store.getState().adventure.phase).toBe('complete')
+    expect(app.store.getState().session.auth_request).toBeNull()
+    expect(app.store.getState().session.wallet).toBeNull()
+  })

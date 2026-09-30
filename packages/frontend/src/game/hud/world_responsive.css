@@ -51,7 +51,7 @@
 [data-world-frame] .fight-hud--overworld .fight-hud__bottom {
   left: 0;
   right: 0;
-  bottom: 10px;
+  bottom: var(--world-hud-bottom, 10px);
   display: grid;
   grid-template-columns: minmax(calc(var(--world-chat-width) + 20px), 1fr) max-content minmax(10px, 1fr);
   transform: none;
@@ -59,7 +59,7 @@
 [data-world-frame] .fight-hud--overworld .fight-hud__bar {
   grid-column: 2;
   max-width: calc(100cqw - 20px);
-  padding: 6px;
+  padding: var(--world-hud-padding, 6px);
   gap: 5px;
 }
 [data-world-frame] .fight-hud--overworld .fight-hud__overworld-row {

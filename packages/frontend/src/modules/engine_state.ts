@@ -6,7 +6,6 @@ import type { EngineStatus } from '@aresrpg/engine'
 export type EngineInput =
   | Readonly<{ type: 'engine/jump'; down: boolean }>
   | Readonly<{ type: 'engine/movement'; forward: number; strafe: number }>
-  | Readonly<{ type: 'engine/camera'; dx: number; dy: number }>
   | Readonly<{ type: 'engine/canvas_attached'; canvas: HTMLCanvasElement }>
   | Readonly<{ type: 'engine/canvas_detached'; canvas: HTMLCanvasElement }>
   | Readonly<{ type: 'engine/status'; status: EngineStatus }>

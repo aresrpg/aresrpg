@@ -99,16 +99,26 @@
 }
 
 @media (max-width: 1023px), (pointer: coarse) {
+  .aui-combat-hud.aui-panel,
+  .aui-combat-hud > div {
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .aui-combat-vitals .aui-vital-tokens {
+    margin-top: -12px;
+    gap: 0;
+  }
   .aui-combat-hud {
-    --combat-slot-size: clamp(28px, calc((100vw - 230px) / var(--combat-columns, 10)), 44px);
-    grid-template-columns: 70px minmax(0, 1fr) 92px;
+    --combat-slot-size: clamp(28px, calc((100vw - 200px) / var(--combat-columns, 10)), 48px);
+    grid-template-columns: 68px minmax(0, 1fr) 84px;
     min-height: 0;
   }
   .aui-combat-spells {
     grid-template-columns: repeat(var(--combat-columns, 10), var(--combat-slot-size));
     grid-template-rows: repeat(2, var(--combat-slot-size));
     gap: 3px;
-    padding: 6px;
+    padding: 2px;
   }
   .aui-combat-controls {
     padding: 5px;
@@ -123,7 +133,7 @@
     letter-spacing: normal;
   }
   .aui-combat-vitals .aui-vitals {
-    width: 70px;
+    width: 68px;
   }
   .aui-combat-vitals .aui-health {
     width: 68px;

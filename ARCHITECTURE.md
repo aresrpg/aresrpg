@@ -109,8 +109,11 @@ Feature windows consume the same equipment, allocation, spell, crafting, forge a
 controllers; mobile never imports the entry that loads it. Feature navigation selects HUD modals, with URLs retained for deep links. There is no page-versus-overlay mode. The world HUD and fight presentation remain mounted while feature modals suspend manual input. Portrait blocks gameplay
 controls without replacing the canvas. Pending confirmations use compact dialogs.
 
-The existing world input device accepts bounded touch axes, jump and camera deltas alongside keyboard
-and mouse input. Releasing a touch clears its manual input without cancelling an automated run.
+The existing world input device accepts bounded touch axes and jump alongside keyboard and mouse input.
+The mobile joystick and jump button serve both the signed-in world and the local adventure; each scene
+supplies its existing input device. Their hit regions remain available while their visuals appear only
+during a press. The canvas camera adapter owns mouse and touch dragging across exposed game space;
+HUD controls never enter that adapter. Releasing a touch clears its manual input without cancelling an automated run.
 Fight interaction retains one action, inspection target and optional reviewed checkpoint. Touch taps
 preview; confirmation revalidates the same checkpoint through the existing cell-selection door.
 Changed checkpoints, action changes and locked actions invalidate review. Board input belongs to the
@@ -195,11 +198,11 @@ picking uses the caption renderer’s own projected bounds. Speech wraps whole w
 fallback for long unbroken text.
 The world owns disposable actor positions; selection restores each actor once, while equipment changes
 preserve its position. Companion following uses the shared automatic-travel navigator and locomotion controller.
-The quest tracker and compass supply objective guidance. Local fight presentation takes its encounter anchor from the active fight identity, including its authored floor height; it never falls back to the simulator origin. The first victory advances level 199 to 200; the boss defeats the party through
-ordinary combat. Local fight sources derive experience from their authored level, so every participant
-retains the same level in result projections. Final defeat waits for the animation queue to drain,
-then keeps the adventure scene beneath a cinematic rebirth modal. Only the modal’s login link
-navigates to the real login; defeat never redirects automatically or adds a main-menu banner.
+The quest tracker and compass supply objective guidance. Local fight presentation takes its encounter anchor from the active fight identity, including its authored floor height; it never falls back to the simulator origin. The first victory advances level 199 to 200; the boss fight ends the local adventure regardless of the combat winner. Local fight sources derive experience from their authored level, so every participant
+retains the same level in result projections. The final result waits for the animation queue to drain,
+then keeps the adventure scene beneath a cinematic rebirth modal. A victory acknowledges the win
+before explaining that poison and the remaining goblin army killed the hero. Only the modal’s login link
+navigates to the real login; the ending never redirects automatically or adds a main-menu banner.
 
 The `/kares` staking route uses the same app entry, navigation reducer and shared feature-window host as
 other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,

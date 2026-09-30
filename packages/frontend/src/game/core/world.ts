@@ -896,9 +896,6 @@ export const create_world = ({
       footsteps.unlock()
       apply_axes()
     },
-    rotate_camera: (dx: number, dy: number) => {
-      if (enabled && mode === 'follow') follow_addon.rotate(dx, dy)
-    },
     set_run_target: (next: RunTarget | null) => {
       stop_run('manual', false)
       if (!next) return

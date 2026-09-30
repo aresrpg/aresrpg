@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// The cursor is free between gestures. Only an actual held camera drag hides/captures it.
+// The canvas owns mouse and touch drags; only a held mouse drag requests pointer lock.
 
 export const create_camera_drag = ({
   on_rotate,
@@ -13,12 +13,22 @@ export const create_camera_drag = ({
 }>) => {
   let element: HTMLElement | null = null
   let pending: HTMLElement | null = null
-  let gesture: Readonly<{ x: number; y: number; start_x: number; start_y: number; rotating: boolean }> | null = null
+  let previous_touch_action = ''
+  let gesture: Readonly<{
+    id: number
+    x: number
+    y: number
+    start_x: number
+    start_y: number
+    rotating: boolean
+  }> | null = null
   const release = (target: Readonly<HTMLElement> | null): void => {
     if (target?.ownerDocument.pointerLockElement === target && target) target.ownerDocument.exitPointerLock()
   }
   const stop = (): void => {
+    const held = gesture
     gesture = null
+    if (held && element?.hasPointerCapture(held.id)) element.releasePointerCapture(held.id)
     release(element)
   }
   const stop_listening = (document: Readonly<Document>): void => {
@@ -30,9 +40,9 @@ export const create_camera_drag = ({
     pending = null
     if (target && element?.ownerDocument !== target.ownerDocument) stop_listening(target.ownerDocument)
   }
-  const capture_drag = (): void => {
+  const capture_drag = (pointer_type: string): void => {
     const target = element
-    if (!target || pending) return
+    if (pointer_type !== 'mouse' || !target || pending) return
     pending = target
     // Some browsers return void and report the eventual grant only through DOM events.
     void Promise.resolve(target.requestPointerLock()).catch((error: unknown) => {
@@ -40,13 +50,20 @@ export const create_camera_drag = ({
       console.warn('Camera capture unavailable; using held drag.', error)
     })
   }
-  const down = (event: Readonly<MouseEvent>): void => {
-    if (event.button !== 0 && event.button !== 2) return
-    gesture = { x: event.clientX, y: event.clientY, start_x: event.clientX, start_y: event.clientY, rotating: false }
+  const down = (event: Readonly<PointerEvent>): void => {
+    if (gesture || (event.button !== 0 && event.button !== 2)) return
+    gesture = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      start_x: event.clientX,
+      start_y: event.clientY,
+      rotating: false,
+    }
+    if (event.pointerType !== 'mouse') element?.setPointerCapture(event.pointerId)
   }
-  const move = (event: Readonly<MouseEvent>): void => {
-    if (!gesture) return
-    if ((event.buttons & 3) === 0) return stop()
+  const move = (event: Readonly<PointerEvent>): void => {
+    if (gesture?.id !== event.pointerId) return
     const previous = gesture
     const rotating =
       previous.rotating ||
@@ -54,11 +71,14 @@ export const create_camera_drag = ({
     const locked = element?.ownerDocument.pointerLockElement === element
     gesture = { ...previous, x: event.clientX, y: event.clientY, rotating }
     if (!rotating) return
-    on_rotate(
-      locked ? event.movementX : event.clientX - previous.x,
-      locked ? event.movementY : event.clientY - previous.y
-    )
-    if (!previous.rotating) capture_drag()
+    const [dx, dy] = locked
+      ? [event.movementX, event.movementY]
+      : [event.clientX - previous.x, event.clientY - previous.y]
+    on_rotate(dx!, dy!)
+    if (!previous.rotating) capture_drag(event.pointerType)
+  }
+  const up = (event: Readonly<PointerEvent>): void => {
+    if (gesture?.id === event.pointerId) stop()
   }
   const lock_changed = (): void => {
     const target = pending ?? element
@@ -76,11 +96,14 @@ export const create_camera_drag = ({
   }
   const detach = (): void => {
     stop()
-    element?.removeEventListener('mousedown', down)
+    element?.removeEventListener('pointerdown', down)
+    element?.removeEventListener('lostpointercapture', up)
+    element?.style.setProperty('touch-action', previous_touch_action)
     element?.removeEventListener('wheel', wheel)
     if (element && !pending) stop_listening(element.ownerDocument)
-    globalThis.removeEventListener('mousemove', move)
-    globalThis.removeEventListener('mouseup', stop)
+    globalThis.removeEventListener('pointermove', move)
+    globalThis.removeEventListener('pointerup', up)
+    globalThis.removeEventListener('pointercancel', up)
     globalThis.removeEventListener('blur', stop)
     element = null
   }
@@ -88,13 +111,17 @@ export const create_camera_drag = ({
     attach: (target: Readonly<HTMLElement>): void => {
       detach()
       element = target
+      previous_touch_action = target.style.touchAction
+      target.style.setProperty('touch-action', 'none')
       release(target)
-      target.addEventListener('mousedown', down)
+      target.addEventListener('pointerdown', down)
+      target.addEventListener('lostpointercapture', up)
       target.addEventListener('wheel', wheel, { passive: false })
       target.ownerDocument.addEventListener('pointerlockchange', lock_changed)
       target.ownerDocument.addEventListener('pointerlockerror', lock_error)
-      globalThis.addEventListener('mousemove', move)
-      globalThis.addEventListener('mouseup', stop)
+      globalThis.addEventListener('pointermove', move)
+      globalThis.addEventListener('pointerup', up)
+      globalThis.addEventListener('pointercancel', up)
       globalThis.addEventListener('blur', stop)
     },
     detach,

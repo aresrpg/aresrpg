@@ -2739,6 +2739,7 @@ adventure:
   speak_action: 'Nói với Sceat'
   invite_action: 'Mời Sceat'
   rebirth_title: 'Bạn đã không qua khỏi vì những vết thương…'
+  rebirth_victory: 'Bạn đã đánh bại Gobadoc. Giỏi lắm! Nhưng đòn tấn công của hắn đã đầu độc bạn. Bạn bất tỉnh, và đội quân của hắn đã ăn thịt bạn khi bạn không thể tự vệ. Chiến thắng này đã khiến bạn mất mạng.'
   rebirth_body: 'Đã đến lúc bạn tái sinh. Nhấn bên dưới để đăng nhập và bước vào trò chơi thực sự.'
   rebirth_login: 'Đăng nhập và vào trò chơi thực sự'
   goblins_body: 'Mosswood trông yên bình, cho đến khi lũ goblin xem bạn là bữa ăn tiếp theo. Trại của chúng chắn đường ra. Hãy đến gần cả nhóm và bắt đầu trận đấu. Dùng điểm hành động để thi triển phép, đồng thời tính toán đường di chuyển. Chiến thắng sẽ đưa bạn lên cấp 200 và mang lại những trang bị đầu tiên.'

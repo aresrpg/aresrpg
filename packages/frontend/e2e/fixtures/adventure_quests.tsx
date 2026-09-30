@@ -49,12 +49,13 @@ const world = {
   },
 } as unknown as ReturnType<typeof create_world>
 
+const boss_victory = new URLSearchParams(location.search).has('victory')
 const finish = (boss = false) => {
   dispatch_app({ type: 'adventure/challenge' })
   const state = read_app_state()
   const setup = adventure_fight_setup(state.adventure.character!, state.adventure.encounter, state.adventure.companion)
   const game = create_fight({ state: create_fight_state(setup), mode: 'local', seed: 42n })
-  if (boss) {
+  if (boss && !boss_victory) {
     setup.players.forEach((_, index) => game.apply({ type: 'ready', fighter: BigInt(index) }))
     game.apply({ type: 'start', observed_ms: 60000n })
     for (let turn = 0; turn < 24 && !game.state().contract.ended; turn++)
@@ -63,9 +64,10 @@ const finish = (boss = false) => {
   const checkpoint = game.state()
   dispatch_app({
     type: 'adventure/settled',
-    checkpoint: boss
-      ? checkpoint
-      : { ...checkpoint, contract: { ...checkpoint.contract, ended: true, winner: 0n, ended_ms: 10000n } },
+    checkpoint:
+      boss && !boss_victory
+        ? checkpoint
+        : { ...checkpoint, contract: { ...checkpoint.contract, ended: true, winner: 0n, ended_ms: 10000n } },
   })
   dispatch_app({ type: 'fight/closed', fight: null })
 }
