@@ -243,7 +243,7 @@
 }
 .game-character-window--stats {
   width: min(720px, calc(100cqw - 24px));
-  height: min(630px, calc(100cqh - 24px));
+  height: min(720px, calc(100cqh - 24px));
 }
 @container aui-viewport (max-height:500px) and (min-width:501px) {
   .game-character-window--stats {
