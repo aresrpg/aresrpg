@@ -134,10 +134,15 @@ test('run-to walks around a rendered voxel wall and arrives through the world li
   const result = await page.evaluate(() => window.run_terrain_route())
   expect(result.reason).toBe('arrived')
   expect(result.detoured).toBe(true)
+  expect(result.crossed_wall).toBe(false)
   expect(Math.hypot(result.x - 136.5, result.z - 128.5)).toBeLessThan(0.25)
 })
 
 test('run-to clips through a difficult wall and arrives through the world lifecycle', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.requestAnimationFrame = (callback) => window.setTimeout(() => callback(performance.now()), 200)
+    window.cancelAnimationFrame = (handle) => window.clearTimeout(handle)
+  })
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   const result = await page.evaluate(() => window.run_terrain_route(63))
   expect(result.reason).toBe('arrived')

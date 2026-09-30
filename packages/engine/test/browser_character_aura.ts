@@ -66,6 +66,8 @@ export const create_aura_probe = async (
   let visible = true
   let x = 0
   let previous = performance.now()
+  let animation_time = previous
+  let peak_particles = 0
   const id = () => (fighting ? 'fighter' : 'subject')
   const spec = (): CharacterEntityRender => ({
     id: id(),
@@ -96,9 +98,12 @@ export const create_aura_probe = async (
       if (x > 2.5) x = -2.5
       submit()
     }
-    entities.tick(now)
-    crowd.tick(now)
-    auras.tick(now)
+    // Render assertions use the same bounded animation clock as fixture movement, including shader stalls.
+    animation_time += delta * 1000
+    entities.tick(animation_time)
+    crowd.tick(animation_time)
+    auras.tick(animation_time)
+    peak_particles = Math.max(peak_particles, auras.stats().particles)
     renderer.render(scene, camera)
     requestAnimationFrame(draw)
   }
@@ -131,7 +136,11 @@ export const create_aura_probe = async (
       batched = false
       submit()
     },
-    walk_fight: () => entities.animate({ id: 'fighter', cells: [0, 1, 2, 3], gait: 'walk' }),
+    walk_fight: async () => {
+      peak_particles = 0
+      const completed = await entities.animate({ id: 'fighter', cells: [0, 1, 2, 3], gait: 'walk' })
+      return { completed, particles: peak_particles }
+    },
     snapshot: () => ({
       ...auras.stats(),
       height: anchors.entity_height(id()),

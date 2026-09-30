@@ -19,6 +19,7 @@ import { character as fixture_character } from '../../test/modules/automation_fi
 import '../../src/tailwind.css'
 import '../../src/components/app_layout.css'
 import '../../src/game/hud/world_responsive.css'
+import '../../src/game/hud/world_chrome.css'
 
 const params = new URLSearchParams(location.search)
 const page = params.get('page') ?? 'world'

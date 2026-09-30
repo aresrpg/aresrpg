@@ -67,5 +67,6 @@ test('a receipt throws the selected food, reacts with hearts and sounds, and ref
   expect(played.some((src) => src.endsWith('/sound_effect/cast_heal.ogg'))).toBe(true)
   expect(await page.evaluate(() => window.feed_requests.length)).toBe(1)
   await modal.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.getByRole('button', { name: 'Siluri', exact: true }).click()
   await expect(page.locator('[data-item-stats]')).toContainText('+41')
 })

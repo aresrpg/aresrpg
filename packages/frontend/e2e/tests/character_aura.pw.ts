@@ -27,8 +27,13 @@ test('Unbroken uses the same live effect in crowds and fight motion and clears o
   })
   await expect.poll(() => page.evaluate(() => window.aura_probe.snapshot().auras)).toBe(1)
   expect((await page.evaluate(() => window.aura_probe.snapshot())).aura_height).toBeCloseTo(1.4)
-  await page.evaluate(() => window.aura_probe.walk_fight())
-  await expect.poll(() => page.evaluate(() => window.aura_probe.snapshot().particles)).toBeGreaterThan(0)
+  // Hosted shader stalls must not make this visual fixture skip the entire fight animation.
+  await page.evaluate(() => {
+    window.requestAnimationFrame = (callback) => window.setTimeout(() => callback(performance.now()), 300)
+  })
+  const motion = await page.evaluate(() => window.aura_probe.walk_fight())
+  expect(motion.completed).toBe(true)
+  expect(motion.particles).toBeGreaterThan(0)
   await page.evaluate(() => window.aura_probe.visible(false))
   await expect.poll(() => page.evaluate(() => window.aura_probe.snapshot().auras)).toBe(0)
   expect(errors).toEqual([])

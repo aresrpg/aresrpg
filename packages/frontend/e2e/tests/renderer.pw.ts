@@ -6,6 +6,8 @@ import { install_probe } from '../support/browser_probe.ts'
 import { expect_released_resources } from '../support/workload_assertions.ts'
 
 test('production rendering streams, switches quality and releases every GPU allocation', async ({ page }) => {
+  // Hosted GPU shader compilation spans several quality changes before the disposal assertions.
+  test.setTimeout(120_000)
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {

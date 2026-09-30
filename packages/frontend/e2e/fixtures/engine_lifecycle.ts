@@ -130,9 +130,16 @@ window.run_terrain_route = async (width = 7) => {
     return {
       reason,
       detoured: positions.some(({ z }) => Math.abs(z - 128) > 3),
-      crossed_wall: positions.some(
-        ({ x, y, z }) => Math.abs(x - 132.5) < 0.4 && y < 4.9 && Math.abs(z - 128) < width / 2
-      ),
+      // Fast movement can cross the entire voxel between rendered frames. Observe the swept segment.
+      crossed_wall: positions.some((pose, index) => {
+        const previous = positions[index - 1]
+        return (
+          previous !== undefined &&
+          previous.x <= 132.5 &&
+          pose.x >= 132.5 &&
+          [previous, pose].every(({ y, z }) => y < 4.9 && Math.abs(z - 128) < width / 2)
+        )
+      }),
       x: pose?.x ?? NaN,
       z: pose?.z ?? NaN,
     }
