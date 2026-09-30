@@ -18,7 +18,7 @@ export const step_walking_follower = (
   position: WalkPoint,
   target: RunTarget,
   elapsed_ms: number
-): Readonly<{ motion: FollowerMotion; position: WalkPoint; distance: number }> => {
+): Readonly<{ motion: FollowerMotion; position: WalkPoint }> => {
   const body = previous
     ? {
         ...previous.body,
@@ -27,7 +27,6 @@ export const step_walking_follower = (
       }
     : create_controller_state([...position])
   let walking = previous?.walking ?? begin_walking(position, target)
-  let distance = Infinity
   const steps = Math.min(8, Math.max(0, Math.ceil(elapsed_ms / (1000 / 60))))
   const dt = Math.min(1 / 60, Math.max(0, elapsed_ms) / 1000 / Math.max(1, steps))
   for (let index = 0; index < steps; index += 1) {
@@ -49,7 +48,6 @@ export const step_walking_follower = (
       world,
       dt
     )
-    distance = Math.hypot(target.x - body.position[0], target.z - body.position[2])
   }
-  return { motion: { body, walking }, position: body.position, distance }
+  return { motion: { body, walking }, position: body.position }
 }

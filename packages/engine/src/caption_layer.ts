@@ -322,7 +322,12 @@ export const create_caption_layer = ({
         visible: false,
       }
       entry.caption = caption
-      entry.anchor = anchor
+      entry.anchor = () => {
+        const point = anchor()
+        return point && point.distanceToSquared(camera.position) > (caption.max_distance ?? Infinity) ** 2
+          ? null
+          : point
+      }
       const text = [
         caption.name,
         ...(caption.suffix ?? []).map((line) => line.text),

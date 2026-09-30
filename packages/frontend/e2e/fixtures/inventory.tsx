@@ -9,7 +9,7 @@ import EquipmentTab from '../../src/characters/EquipmentTab.tsx'
 import RuneforgeTab from '../../src/characters/RuneforgeTab.tsx'
 import { CrushResultDialog } from '../../src/characters/CrushResultModal.tsx'
 import { Toasts } from '../../src/components/Toasts.tsx'
-import { encyclopedia_catalog } from '../../src/content/catalog.ts'
+import { content_catalog, encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import type { AuthSession } from '../../src/auth.ts'
@@ -58,21 +58,24 @@ const character: CharacterRow = {
   hp_ms: Date.now(),
   equipment: [],
 }
-const items: ItemRow[] = [
-  'scroll_of_oblivion',
-  'scroll_of_rebirth',
-  'croissant',
-  'siluri',
-  'gilded_pet_food',
-  'recall_potion',
-  'potion_of_thebes',
-  'rune_vitality_ba',
-  'gnawed_branch',
-  'wheat',
-  'wheat',
-  'wheat_flour',
-  'key_of_tangled_aftermath',
-].map((item_type, index) => {
+const item_types = new URLSearchParams(location.search).has('crowded')
+  ? content_catalog.items.filter(({ category }) => category === 'resource').map(({ item_type }) => item_type)
+  : [
+      'scroll_of_oblivion',
+      'scroll_of_rebirth',
+      'croissant',
+      'siluri',
+      'gilded_pet_food',
+      'recall_potion',
+      'potion_of_thebes',
+      'rune_vitality_ba',
+      'gnawed_branch',
+      'wheat',
+      'wheat',
+      'wheat_flour',
+      'key_of_tangled_aftermath',
+    ]
+const items: ItemRow[] = item_types.map((item_type, index) => {
   const seed = encyclopedia_catalog.item(item_type)!.item
   return {
     id: `0xitem${index}`,
@@ -183,7 +186,10 @@ void load_app_copy(locale)
         {new URLSearchParams(location.search).get('view') === 'forge' ? (
           <RuneforgeTab character={equipped_character} copy={copy} />
         ) : (
-          <div className="game-character-body">
+          <div
+            className="game-character-body"
+            style={new URLSearchParams(location.search).has('crowded') ? { width: 880, height: 600 } : undefined}
+          >
             <EquipmentTab character={equipped_character} copy={copy} />
           </div>
         )}

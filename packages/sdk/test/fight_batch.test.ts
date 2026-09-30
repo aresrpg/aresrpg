@@ -32,6 +32,13 @@ test.each([false, true])(
           $kind: 'Transaction',
           Transaction: {
             digest,
+            objectTypes: { [id(71)]: `${id(1)}::item::Item`, [id(72)]: `${id(1)}::item::Item` },
+            effects: {
+              changedObjects: [
+                { objectId: id(71), idOperation: 'Created', outputState: 'ObjectWrite' },
+                { objectId: id(72), idOperation: 'None', outputState: 'ObjectWrite' },
+              ],
+            },
             events: [
               {
                 type: `${id(1)}::fight::DropsRolled`,
@@ -86,6 +93,7 @@ test.each([false, true])(
         inputs: expect.arrayContaining([id(40)]),
         gas_scope: `fight:${id(40)}`,
         budget: 'estimate',
+        include: { objectTypes: true },
       },
     ])
     expect(calls.map(({ door }) => door)).toEqual([
@@ -104,6 +112,7 @@ test.each([false, true])(
       personal: { objectId: kiosk_cap.objectId, version: kiosk_cap.version, digest: kiosk_cap.digest },
     })
     expect(result).toMatchObject({ digest, closable: true, closed: true })
+    expect(result.item_ids).toEqual([id(71), id(72)])
     expect(result.kares_rewards).toEqual([{ fighter: 0n, amount: boss_rewards ? 7n : 0n }])
     if (boss_rewards) expect(calls[0]?.args).toEqual({ fight_object: id(40), fighter_idx: 0n })
   }

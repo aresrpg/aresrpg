@@ -11,6 +11,7 @@ import { ContextMenu } from '../components/ContextMenu.tsx'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import type { create_world } from '../game/core/world.ts'
 import { read_pose, useWorldPose } from '../game/core/pose_feed.ts'
+import { npc_caption } from '../game/npc_caption.ts'
 import { resolve_world_hover } from '../game/core/player_pick.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
@@ -64,12 +65,7 @@ export const CompanionInteraction = ({
     const line = source.dialogue[adventure.dialogue ?? -1]
     world.set_entity_caption(
       source.companion.id,
-      available
-        ? {
-            name: source.companion.name,
-            speech: line ? text(`dialogue_${line}`) : undefined,
-          }
-        : null
+      available ? npc_caption(source.companion.name, line ? text(`dialogue_${line}`) : undefined) : null
     )
     return () => world.set_entity_caption(source.companion.id, null)
   }, [world, available, adventure.dialogue, text])

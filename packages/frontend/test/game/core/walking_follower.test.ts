@@ -35,13 +35,12 @@ test('followers cross an impassable wall and only claim arrival after crossing',
   const world: WalkWorld = { ...floor, solid_at: (x, y) => y < 0 || (x === 3 && y < 4) }
   let motion: Parameters<typeof step_walking_follower>[1] = null
   let position = start
-  let distance = 0
   for (let tick = 0; tick < 120; tick++) {
     const result = step_walking_follower(world, motion, position, { x: 4.5, z: 0.5 }, 1000 / 60)
-    ;({ motion, position, distance } = result)
+    ;({ motion, position } = result)
   }
   expect(position[0]).toBeGreaterThan(4.3)
-  expect(distance).toBeLessThan(0.2)
+  expect(Math.hypot(4.5 - position[0], 0.5 - position[2])).toBeLessThan(0.2)
 })
 
 test('unknown terrain suspends followers without physics probes or movement', () => {
@@ -56,7 +55,6 @@ test('unknown terrain suspends followers without physics probes or movement', ()
   }
   const result = step_walking_follower(world, null, start, { x: 100, z: 0.5 }, 100)
   expect(result.position).toEqual(start)
-  expect(result.distance).toBe(Infinity)
   expect(reads).toBe(0)
 })
 
@@ -78,5 +76,6 @@ test.each(['water', 'cliff'] as const)('direct following crosses %s when no easy
 })
 
 test('a zero-time follower update does not move or search', () => {
-  expect(step_walking_follower(floor, null, start, { x: 100, z: 100 }, 0).position).toEqual(start)
+  const result = step_walking_follower(floor, null, start, { x: 2.5, z: 0.5 }, 0)
+  expect(result.position).toEqual(start)
 })

@@ -2,10 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Button } from '@aresrpg/ui'
-import { useRef } from 'react'
 
-import { InspectionWindow } from '../../components/ItemDetailView.tsx'
-import { useInspections } from '../../components/useInspections.ts'
 import { useNumbers } from '../../i18n/useNumbers.ts'
 
 import { useText } from '../../i18n/useText.ts'
@@ -13,8 +10,7 @@ import { useText } from '../../i18n/useText.ts'
 import { Text } from '../../i18n/Text.tsx'
 import { KaresLogo } from '../../components/KaresLogo.tsx'
 
-import { item_icon } from '../../content/assets.ts'
-import { content_catalog, titleize, type SeedItem } from '../../content/catalog.ts'
+import type { SeedItem } from '../../content/catalog.ts'
 import { type AppCopy } from '../../i18n/copy.ts'
 import {
   fight_result_available,
@@ -35,13 +31,12 @@ import {
 } from '../../modules/fight_result_view.ts'
 import { dispatch_app, useAppStore, type AppState } from '../../store.ts'
 
+import { FightLoot } from './FightLoot.tsx'
+
 import { CharacterLevelUpView } from './CharacterLevelUpView.tsx'
 import './fight_result.css'
 
 const text_of = (copy: AppCopy, key: string): string => copy.fight_hud[key] ?? key
-const initial = (name: string): string => name.trim()[0]?.toUpperCase() ?? '?'
-const loot_item = (id: string, items?: readonly SeedItem[]) =>
-  items?.find(({ item_type }) => item_type === id) ?? content_catalog.item(id)?.item
 const selected_result = (state: AppState, supplied?: FightResult | null) => {
   if (supplied !== undefined) return supplied
   const character_id = state.session.selected_character_id
@@ -154,10 +149,12 @@ const ResultRow = ({
   participant,
   enemy,
   defeated,
-  inspect,
+  copy,
+  item_ids,
   items,
 }: Readonly<{
-  inspect: (id: string) => void
+  copy: AppCopy
+  item_ids?: readonly string[]
   items?: readonly SeedItem[]
   participant: ResultParticipant
   enemy: boolean
@@ -209,28 +206,9 @@ const ResultRow = ({
             </span>
           </div>
         )}
-        {participant.loot.slice(0, 8).map((loot) => {
-          const item_name = loot_item(loot.item_type, items)?.name ?? titleize(loot.item_type)
-          return (
-            <button
-              type="button"
-              onClick={() => inspect(loot.item_type)}
-              aria-label={item_name}
-              className="fe-tile"
-              key={loot.item_type}
-            >
-              {item_icon(loot.item_type) ? (
-                <img alt="" className="item-icon" src={item_icon(loot.item_type)!} />
-              ) : (
-                <span className="fe-tile__letter">{initial(loot.item_type)}</span>
-              )}
-              <span className="fe-tile__qty">×{loot.qty}</span>
-              <span className="fe-tile__tooltip" role="tooltip">
-                {item_name}
-              </span>
-            </button>
-          )
-        })}
+        {participant.loot.slice(0, 8).map((loot) => (
+          <FightLoot key={loot.item_type} loot={loot} copy={copy} items={items} item_ids={item_ids} />
+        ))}
       </div>
     </div>
   )
@@ -242,13 +220,11 @@ export const FightResultCard = ({
   on_close,
   items,
 }: Readonly<{ copy: AppCopy; result?: FightResult | null; on_close?: () => void; items?: readonly SeedItem[] }>) => {
-  const root = useRef<HTMLDivElement>(null)
-  const { inspections, open, close: close_inspection } = useInspections(root)
-  const text = useText()
   const localized_numbers = useNumbers()
   const result = useAppStore((state) => selected_result(state, supplied_result))
   const fight = useAppStore((state) => state.fight)
   const results = useAppStore((state) => state.fight_result.current_by_character)
+  const characters = useAppStore((state) => state.session.characters)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const available = !result || fight_result_available(fight, result.fight)
   const surface = result ? fight_result_surface(result) : null
@@ -272,7 +248,7 @@ export const FightResultCard = ({
   return (
     <>
       <section className="fe-stage" aria-label={verdict} aria-modal="true" role="dialog">
-        <div ref={root} className={`aui-window result result--fe ${victory ? 'fe--win' : 'fe--loss'}`}>
+        <div className={`aui-window result result--fe ${victory ? 'fe--win' : 'fe--loss'}`}>
           <div className="aui-window-header fe-head">
             <div className="fe-title">{verdict}</div>
             <div className="fe-sub">
@@ -306,16 +282,24 @@ export const FightResultCard = ({
               <span>{party.length}</span>
             </div>
             <div className="fe-rows fe-rows--party">
-              {party.map((participant) => (
-                <ResultRow
-                  items={items}
-                  inspect={open('item')}
-                  defeated={false}
-                  enemy={false}
-                  key={participant.seat}
-                  participant={participant}
-                />
-              ))}
+              {party.map((participant) => {
+                const receipt =
+                  participant.character_id === own?.character_id ? result : results[participant.character_id ?? '']
+                const item_ids = receipt?.fight === result.fight ? receipt.loot_item_ids : undefined
+                return (
+                  <ResultRow
+                    items={items}
+                    copy={copy}
+                    item_ids={
+                      characters.some(({ id }) => id === participant.character_id) ? (item_ids ?? []) : undefined
+                    }
+                    defeated={false}
+                    enemy={false}
+                    key={participant.seat}
+                    participant={participant}
+                  />
+                )
+              })}
             </div>
           </div>
           {enemies.length > 0 && (
@@ -328,7 +312,7 @@ export const FightResultCard = ({
                 {enemies.map((participant) => (
                   <ResultRow
                     items={items}
-                    inspect={open('item')}
+                    copy={copy}
                     defeated={victory}
                     enemy
                     key={participant.seat}
@@ -346,23 +330,6 @@ export const FightResultCard = ({
           </div>
         </div>
       </section>
-      {inspections.map((entry) => (
-        <InspectionWindow
-          key={`${entry.kind}:${entry.id}`}
-          entry={entry}
-          item={loot_item(entry.id, items)}
-          open={open}
-          close={() => close_inspection(entry)}
-          props={{
-            labels: {
-              characteristics: text('encyclopedia_page.characteristics'),
-              damages: text('encyclopedia_page.damages'),
-              range_to: text('encyclopedia_page.range_to'),
-              level_short: '',
-            },
-          }}
-        />
-      ))}
     </>
   )
 }

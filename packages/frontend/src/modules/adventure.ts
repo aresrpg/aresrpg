@@ -35,11 +35,11 @@ export type AdventureState = Readonly<{
   journal_open: boolean
   character: SimulatorCharacter | null
   encounter: number
-  phase: 'explore' | 'fighting' | 'reward' | 'complete'
+  phase: 'explore' | 'fighting' | 'reward' | 'ending' | 'complete' | 'entered'
   result: FightResult | null
 }>
 export type AdventureInput =
-  | Readonly<{ type: 'adventure/talk' | 'adventure/invite' }>
+  | Readonly<{ type: 'adventure/talk' | 'adventure/invite' | 'adventure/ending_finished' | 'adventure/game_entered' }>
   | Readonly<{ type: 'adventure/select'; character_id: string }>
   | Readonly<{ type: 'adventure/follow'; enabled: boolean }>
   | Readonly<{ type: 'adventure/journal'; open: boolean }>
@@ -126,17 +126,19 @@ const acknowledge = (state: AdventureState, screen: 'result' | 'level'): Adventu
   return { ...state, phase: 'explore', result: null }
 }
 
-const UI_TRANSITIONS: Readonly<Record<string, (state: AdventureState) => AdventureState>> = Object.freeze({
-  'adventure/entered': (state) => {
+const UI_TRANSITIONS: Readonly<Record<string, (state: AppState) => AdventureState>> = Object.freeze({
+  'adventure/entered': ({ adventure: state }) => {
     if (state.character) return state
     const character = adventure_character()
     return { ...state, character, selected_character_id: character.id }
   },
-  'adventure/challenge': (state) =>
-    state.phase === 'explore' && state.character && adventure_can_fight(state)
-      ? { ...state, phase: 'fighting' }
-      : state,
-  'adventure/cancelled': (state) => ({ ...state, phase: 'explore' }),
+  'adventure/challenge': ({ adventure: state }) =>
+    state.character && adventure_can_fight(state) ? { ...state, phase: 'fighting' } : state,
+  'adventure/cancelled': ({ adventure: state }) => ({ ...state, phase: 'explore' }),
+  'adventure/ending_finished': ({ adventure: state }) =>
+    state.phase === 'ending' ? { ...state, phase: 'complete' } : state,
+  'adventure/game_entered': ({ adventure: state, session }) =>
+    state.phase === 'complete' && session.wallet ? { ...state, phase: 'entered' } : state,
 })
 
 const control_adventurer = (state: AdventureState, input: AdventureInput): AdventureState => {
@@ -180,7 +182,7 @@ const transition = (state: AppState, input: AdventureInput): AdventureState => {
   const social = recruit(state.adventure, input)
   if (social !== state.adventure) return social
   const action = UI_TRANSITIONS[input.type]
-  if (action) return action(state.adventure)
+  if (action) return action(state)
   switch (input.type) {
     case 'adventure/stats_raised':
       return raise_stats(state.adventure, input.spending)
@@ -196,8 +198,16 @@ const transition = (state: AppState, input: AdventureInput): AdventureState => {
 }
 
 const reduce = (state: AppState, input: AppInput): AppState => {
-  if (input.type === 'fight/closed' && input.fight === null && adventure_has_ending(state.adventure))
-    return { ...state, adventure: { ...state.adventure, phase: 'complete' } }
+  if (
+    input.type === 'fight/closed' &&
+    input.fight === null &&
+    state.adventure.phase === 'reward' &&
+    adventure_has_ending(state.adventure)
+  )
+    return {
+      ...state,
+      adventure: { ...state.adventure, phase: state.adventure.result!.winner === 0 ? 'ending' : 'complete' },
+    }
 
   if (!input.type.startsWith('adventure/')) return state
   const adventure = transition(state, input as AdventureInput)

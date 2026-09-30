@@ -13,6 +13,11 @@
   pointer-events: none;
   font-family: var(--aui-font, inherit);
 }
+/* Keep the combat turn strip and action bar clear; long rosters use the existing party scroller. */
+.world-social-dock[data-fighting='true'] {
+  display: flex;
+  max-height: calc(100% - 180px);
+}
 .world-social-dock > * {
   flex-shrink: 0;
   pointer-events: auto;

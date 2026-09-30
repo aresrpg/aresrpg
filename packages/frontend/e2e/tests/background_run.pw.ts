@@ -10,6 +10,7 @@ test('run-to keeps moving and arrives after switching to the marketplace', async
     timeout: 30_000,
   })
   await page.evaluate(() => Reflect.get(window, 'background_run_start')())
+  await expect(page.locator('.world-run-progress')).toContainText(/≈\d+:\d{2}/)
   await page.waitForFunction(() => Reflect.get(window, 'background_run_state')().pose?.x > 1)
   const before = await page.evaluate(() => Reflect.get(window, 'background_run_state')().pose.x as number)
   await page.evaluate(() => Reflect.get(window, 'background_run_page')())

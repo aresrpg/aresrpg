@@ -64,16 +64,14 @@ const step_follower = (
   target: PartyFollowPoint | null,
   elapsed_ms: number,
   world: string,
-  index: number,
   terrain: WalkWorld | null
-): PartyFollowerView => {
+): Omit<PartyFollowerView, 'distance'> => {
   const current = owned_character_position(source.character_id, world, source.checkpoint) ?? source
   const point = { x: current.x, y: current.y, z: current.z }
-  let stepped = { ...point, distance: Infinity }
+  let stepped = point
   if (target && terrain) {
     const x = chain_to_client_coordinate(point.x)
     const z = chain_to_client_coordinate(point.z)
-    const destination = party_follower_target(target, index)
     const retained = feed.motions.get(source.character_id)
     const previous_motion = retained?.checkpoint === source.checkpoint ? retained.motion : null
     if (terrain.ready({ min_x: x - 3, max_x: x + 3, min_z: z - 3, max_z: z + 3 })) {
@@ -84,8 +82,8 @@ const step_follower = (
         previous_motion,
         [x, y, z],
         {
-          x: chain_to_client_coordinate(destination.x),
-          z: chain_to_client_coordinate(destination.z),
+          x: chain_to_client_coordinate(target.x),
+          z: chain_to_client_coordinate(target.z),
         },
         elapsed_ms
       )
@@ -94,7 +92,6 @@ const step_follower = (
         x: client_to_chain_coordinate(result.position[0]),
         y: result.position[1],
         z: client_to_chain_coordinate(result.position[2]),
-        distance: result.distance,
       }
     }
   }
@@ -117,9 +114,13 @@ export const update_party_follow = (
   })
   const elapsed_ms = elapsed_since_last_follow(same_party, now_ms)
   const target = follow_target(input, same_party)
-  const followers = input.followers.map((source, index) =>
-    step_follower(source, target, elapsed_ms, input.world, index, terrain)
-  )
+  const followers = input.followers.map((source, index) => {
+    const destination = target ? party_follower_target(target, index) : null
+    const follower = step_follower(source, destination, elapsed_ms, input.world, terrain)
+    // Join range follows the final position, even while terrain or path planning suspends movement.
+    const distance = destination ? Math.hypot(destination.x - follower.x, destination.z - follower.z) : Infinity
+    return Object.freeze({ ...follower, distance })
+  })
   feed.last_ms = now_ms
   feed.snapshot = Object.freeze({
     party_id: input.party_id,

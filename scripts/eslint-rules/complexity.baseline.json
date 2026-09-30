@@ -1982,7 +1982,7 @@
     },
     "packages/frontend/src/components/Login.tsx": {
       "Login": [
-        11
+        9
       ]
     },
     "packages/frontend/src/components/AddFundsModal.tsx": {
@@ -2125,9 +2125,6 @@
       ]
     },
     "packages/frontend/src/adventure/AdventurePage.tsx": {
-      "AdventurePage": [
-        9
-      ],
       "AdventurePage > useEffect[0]()": [
         9
       ]

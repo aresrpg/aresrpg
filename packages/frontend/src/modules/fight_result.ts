@@ -2,13 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { ClosableFightRow, FightResolutionRow, ServerPacket } from '@aresrpg/protocol'
 import { player_max_hp, xp_award_of, type Fighter, type HydratedFightCheckpoint } from '@aresrpg/fight'
-import { item_is_stackable, level_from_xp } from '@aresrpg/immutable'
+import { level_from_xp } from '@aresrpg/immutable'
 
 import { encyclopedia_catalog } from '../content/catalog.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 import { observe_fight_results } from './fight_result_observer.ts'
 import {
+  aggregate_result_loot,
+  merge_result_loot,
   result_accounting,
   participant_kares,
   fight_resolution_dungeon,
@@ -16,6 +18,8 @@ import {
 } from './fight_result_view.ts'
 
 export {
+  aggregate_result_loot,
+  merge_result_loot,
   fight_duration,
   fight_resolution_dungeon,
   fight_result_available,
@@ -65,6 +69,8 @@ export type FightResult = Readonly<{
   own_seat: number | null
   /** Immutable template set needed to compose settlement without waiting for the graph. */
   loot_types: readonly string[]
+  /** Exact items delivered by this character's settlement batch; inventory owns their rolls. */
+  loot_item_ids?: readonly string[]
   /** A certified settlement receipt, or an empty durable recovery snapshot, proved completion. */
   settlement_confirmed: boolean
   /** The projected Character row caught up to this fight's expected experience. */
@@ -98,6 +104,7 @@ export type FightResultInput =
       character_id: string
       fight: string
       paid_mist: bigint | null
+      item_ids?: readonly string[]
       kares_rewards?: readonly Readonly<{ fighter: bigint; amount: bigint }>[]
     }>
   | Readonly<{ type: 'fight_result/level_acknowledged'; character_id: string }>
@@ -106,28 +113,6 @@ export type FightResultInput =
 
 export const initial_fight_result_state = (): FightResultState =>
   Object.freeze({ current_by_character: Object.freeze({}), resolutions: [], closable_fights: [] })
-
-export const aggregate_result_loot = (
-  drops: readonly Readonly<{ item_type: string; qty: bigint | number }>[]
-): readonly ResultLoot[] =>
-  Object.freeze(
-    Object.entries(
-      drops.reduce<Record<string, number>>((rows, drop) => {
-        const category = encyclopedia_catalog.item(drop.item_type)?.item.category
-        const qty = category && !item_is_stackable(category) ? 1 : Number(drop.qty)
-        return { ...rows, [drop.item_type]: (rows[drop.item_type] ?? 0) + qty }
-      }, {})
-    ).map(([item_type, qty]) => Object.freeze({ item_type, qty }))
-  )
-
-export const merge_result_loot = (
-  current: readonly ResultLoot[],
-  incoming: readonly ResultLoot[]
-): readonly ResultLoot[] => {
-  const quantities = new Map(current.map((row) => [row.item_type, row.qty]))
-  for (const row of incoming) quantities.set(row.item_type, Math.max(quantities.get(row.item_type) ?? 0, row.qty))
-  return Object.freeze([...quantities].map(([item_type, qty]) => Object.freeze({ item_type, qty })))
-}
 
 const participant_from = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
@@ -272,6 +257,7 @@ export const merge_checkpoint = (
     next_own?.forfeited === true
   )
   return Object.freeze({
+    ...existing,
     fight: checkpoint.contract.id,
     boss_weight: Number(checkpoint.contract.boss_weight),
     dungeon: projected_dungeon(checkpoint),
@@ -559,6 +545,7 @@ const reduce = (state: AppState, input: AppInput): AppState => {
                 ? result.kolizeum_wager
                 : Object.freeze({ ...result.kolizeum_wager, payout_mist: input.paid_mist }),
             settlement_confirmed: true,
+            loot_item_ids: input.item_ids ?? result.loot_item_ids,
             participants: Object.freeze(
               result.participants.map((participant, index) => {
                 const paid =

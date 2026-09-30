@@ -70,9 +70,17 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
     hydrate_unknown: async () => {},
     with_owner_kiosk: (_tx: unknown, _cap: unknown, compose: (kiosk: string, cap: string) => void) =>
       compose(kiosk_cap.kioskId, kiosk_cap.objectId),
-    execute: async (_tx: unknown, options: { budget?: unknown }) => {
+    execute: async (_tx: unknown, options: { budget?: unknown; include?: object }) => {
       budgets.push(options.budget)
-      return { $kind: 'Transaction', Transaction: { digest } }
+      if (options.budget === 'estimate') expect(options.include).toEqual({ objectTypes: true })
+      return {
+        $kind: 'Transaction',
+        Transaction: {
+          digest,
+          objectTypes: { [id(71)]: `${id(1)}::item::Item` },
+          effects: { changedObjects: [{ objectId: id(71), idOperation: 'Created', outputState: 'ObjectWrite' }] },
+        },
+      }
     },
     doors: {
       enter_dungeon: record('enter'),
@@ -97,7 +105,7 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
   })
   await actions.join_fight({ fight, character_id: id(20), custody, party: null })
   await actions.join_fight({ fight, character_id: id(20), custody, party: id(22) })
-  await actions.settle({
+  const settled = await actions.settle({
     fight,
     dungeon: 'tangled_aftermath',
     custody,
@@ -111,7 +119,7 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
       },
     ],
   })
-  await actions.settle({
+  const settled_last = await actions.settle({
     fight,
     dungeon: 'tangled_aftermath',
     custody,
@@ -122,6 +130,8 @@ test('every dungeon lifecycle action uses its dungeon-specific custody door', as
     ],
   })
   expect(budgets.slice(3, 5)).toEqual(['estimate', 'estimate'])
+  expect(settled.item_ids).toEqual([id(71)])
+  expect(settled_last.item_ids).toEqual([id(71)])
   await actions.give_up_fight({ fight, fighter_idx: 2n, custody })
   await actions.abandon({ character_id: id(20), custody })
 

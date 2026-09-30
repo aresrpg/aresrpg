@@ -7,7 +7,7 @@
 // the indexer → server stream.
 
 import { SDK, living_content } from './client.ts'
-import { receipt_digest, receipt_event, receipt_events, type Receipt } from './cache.ts'
+import { changed_object_ids, receipt_digest, receipt_event, receipt_events, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import {
   board_catalog_id,
@@ -24,6 +24,7 @@ type GameSdk = ReturnType<typeof SDK>
 export type FightTurnWitness = Readonly<{ fighter: bigint; seed: bigint }>
 export type FightReceipt = {
   digest: string
+  item_ids?: readonly string[]
   turn_witnesses?: readonly FightTurnWitness[]
   kares_rewards?: readonly Readonly<{ fighter: bigint; amount: bigint }>[]
   started?: boolean
@@ -442,11 +443,13 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
             inputs: [fight, ...templates],
             gas_scope: scope_of(fight),
             budget: 'estimate',
+            include: { objectTypes: true },
           }
         )
       const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
         ...project_receipt(receipt),
+        item_ids: changed_object_ids(receipt, '::item::Item'),
         kares_rewards: fight_kares_rewards(receipt),
         closable: receipt_event(receipt, '::fight::FightClosable') !== null,
         closed: receipt_event(receipt, '::fight::FightClosed') !== null,

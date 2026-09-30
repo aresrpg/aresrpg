@@ -76,7 +76,7 @@ test('settlement leaves fragments for later spend-time merges', async () => {
         fight: {
           settle: async ({ settlements, last }: { settlements: unknown; last: boolean }) => {
             settlement_batches.push({ settlements, last })
-            return { digest: `settled-${settlement_batches.length}` }
+            return { digest: `settled-${settlement_batches.length}`, item_ids: ['0xamber-a', '0xamber-b'] }
           },
           gas_spent: () => 0n,
         },
@@ -136,6 +136,8 @@ test('settlement leaves fragments for later spend-time merges', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(merge_calls).toEqual([])
+  expect(state.fight_result.current_by_character['0xc1']?.loot_item_ids).toEqual(['0xamber-a', '0xamber-b'])
+  expect(state.fight_result.current_by_character['0xc2']?.loot_item_ids).toEqual(['0xamber-a', '0xamber-b'])
 })
 
 test('certified KARES rewards survive late packets and use the chain seat on nonzero-seat recovery', () => {

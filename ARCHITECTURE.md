@@ -106,7 +106,9 @@ responsive surfaces. `PlayerRuntime.tsx` owns the canvas, shared login (includin
 global recovery. Desktop and mobile share the full-viewport canvas HUD and `GamePageWindow` feature host.
 The mobile surface adds touch input beneath the shared HUD in the same canvas stacking context.
 Feature windows consume the same equipment, allocation, spell, crafting, forge and marketplace
-controllers; mobile never imports the entry that loads it. Feature navigation selects HUD modals, with URLs retained for deep links. There is no page-versus-overlay mode. The world HUD and fight presentation remain mounted while feature modals suspend manual input. Portrait blocks gameplay
+controllers; mobile never imports the entry that loads it. Feature navigation selects HUD modals, with URLs retained for deep links. There is no page-versus-overlay mode. The world HUD and fight presentation remain mounted while feature modals suspend manual input. The
+shared social dock keeps wallet information, Settings and the party roster during combat; the minimap,
+nearby-fight browser and gathering controls remain overworld-only. Portrait blocks gameplay
 controls without replacing the canvas. Pending confirmations use compact dialogs.
 
 The existing world input device accepts bounded touch axes and jump alongside keyboard and mouse input.
@@ -134,7 +136,10 @@ semantics and at least 44px targets. Migration replaces each old primitive at it
 unmigrated feature layouts remain in their application package until converted.
 
 The player app and `/demo` arm different observers. The player app owns wallet/server effects;
-the demo owns content editing and local simulation. One ordered registry in
+the demo owns content editing and local simulation. The public adventure remains local until its
+ending modal is ready, then activates the same player observers for direct Google sign-in. The
+ending scene stays mounted during authentication; successful login replaces it with the player
+runtime in the same app store, without showing the home screen. One ordered registry in
 `packages/frontend/src/store.ts` declares each module’s player, demo, or shared observer lifetime.
 Activation lists derive from that registry; reducers retain the same shared order.
 The world demo exposes Hillaire preview controls through the ordinary world and engine API.
@@ -199,10 +204,12 @@ fallback for long unbroken text.
 The world owns disposable actor positions; selection restores each actor once, while equipment changes
 preserve its position. Companion following uses the shared automatic-travel navigator and locomotion controller.
 The quest tracker and compass supply objective guidance. Local fight presentation takes its encounter anchor from the active fight identity, including its authored floor height; it never falls back to the simulator origin. The first victory advances level 199 to 200; the boss fight ends the local adventure regardless of the combat winner. Local fight sources derive experience from their authored level, so every participant
-retains the same level in result projections. The final result waits for the animation queue to drain,
-then keeps the adventure scene beneath a cinematic rebirth modal. A victory acknowledges the win
-before explaining that poison and the remaining goblin army killed the hero. Only the modal’s login link
-navigates to the real login; the ending never redirects automatically or adds a main-menu banner.
+retains the same level in result projections. The final result waits for the fight animation queue
+to drain. A victory then orbits the two heroes, gradually blurs the view as poison takes hold, and
+awaits both ordinary entity death animations before opening the rebirth modal. Defeat opens that
+modal directly. Its shared Continue with Google button uses the existing authentication reducer
+and provider; cancellation stays in the modal and permits retry. Only an authenticated session
+can hand off to the real player runtime. Local adventure progress never becomes live character data.
 
 The `/kares` staking route uses the same app entry, navigation reducer and shared feature-window host as
 other game routes. Its finance reads and writes use the neutral finance reducer and SDK. The root external-wallet reducer owns one persistent Wallet Standard session shared by admin royalties,
@@ -845,7 +852,8 @@ Resource label anchors are plain world-space vectors, not invisible game-scene o
 Passive names, speech, fight health and floating numbers share typed caption descriptors and one instanced
 GPU overlay per backend. Browser-shaped text occupies reference-counted atlas tiles; movement and health
 fractions do not rasterize text again. Visible captions allocate first, and offscreen tiles yield under the
-128 MiB GPU atlas budget. Accessible text derives from the same descriptors. Interactive resource and
+128 MiB GPU atlas budget. NPC captions share a 50-block camera-distance limit; rendering, accessible
+text and hit testing use that same visibility rule. Accessible text derives from the same descriptors. Interactive resource and
 fight-sword prompts retain their DOM hit targets. Captions and interactive labels replay after backend boot.
 
 World content owns cities: fixed 3x3 regions, stable slugs, anchors, structure packs, and one dungeon slug each.

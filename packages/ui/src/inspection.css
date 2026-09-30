@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   width: 210px;
-  transform: translateY(-100%);
+  transform: translateY(-50%);
   border: 1px solid #091a2b;
   border-radius: 5px;
   background: #1e252c;

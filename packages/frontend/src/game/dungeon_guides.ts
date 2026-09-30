@@ -11,6 +11,7 @@ import type {
 
 import source from '../../../../seed/content/adventure.json'
 
+import { npc_caption } from './npc_caption.ts'
 import { actor_facing } from './actor_facing.ts'
 import { load_character_appearance, world_character_entity } from './character_entities.ts'
 
@@ -71,7 +72,7 @@ export const create_dungeon_guides = ({
       const wanted = new Set(next.map(({ id }) => id))
       markers.filter(({ id }) => !wanted.has(id)).forEach(({ id }) => caption(dungeon_guide_id(id), null))
       markers = next
-      markers.forEach(({ id }) => caption(dungeon_guide_id(id), { name: source.companion.name }))
+      markers.forEach(({ id }) => caption(dungeon_guide_id(id), npc_caption(source.companion.name)))
       if (markers.length === 0) {
         entities = []
         return submit(entities)
@@ -95,7 +96,7 @@ export const create_dungeon_guides = ({
     },
     speak: (id: string, speech: string | null) => {
       if (disposed || !markers.some((row) => row.id === id)) return
-      caption(dungeon_guide_id(id), { name: source.companion.name, speech: speech ?? undefined })
+      caption(dungeon_guide_id(id), npc_caption(source.companion.name, speech ?? undefined))
     },
     dispose: () => {
       disposed = true

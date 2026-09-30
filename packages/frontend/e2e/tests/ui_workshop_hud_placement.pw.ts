@@ -66,5 +66,5 @@ test('Settings return-to-home uses the existing leave confirmation', async ({ pa
   await expect(leave).toBeVisible()
   await leave.click()
   await confirmation.getByRole('button', { name: 'Return to home', exact: true }).click()
-  await expect(page.locator('[data-wallet-trigger]')).toContainText('—')
+  await expect(page.locator('[data-wallet-trigger]')).toHaveCount(0)
 })

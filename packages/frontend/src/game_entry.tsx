@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { StrictMode, type ComponentType } from 'react'
+import { lazy, StrictMode, type ComponentType } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import {
@@ -21,30 +21,40 @@ import { register_service_worker } from './pwa.ts'
 import { react_error_handlers, report_error } from './reporting.ts'
 import { MOBILE_VIEWPORT_QUERY, uses_mobile_overlays } from './player_layout.ts'
 
+const activate_player = () => observe_app(PLAYER_APP_MODULES)
+
+const load_player_surface = async (pathname: string): Promise<ComponentType> => {
+  if (uses_mobile_overlays(pathname, globalThis.matchMedia(MOBILE_VIEWPORT_QUERY).matches)) {
+    const { MobileApp } = await import('../../mobile/src/MobileApp.tsx')
+    document.documentElement.classList.add('mobile-client')
+    return MobileApp
+  }
+  const { App } = await import('./app.tsx')
+  return App
+}
+
 const load_surface = async (
   locale: Locale
 ): Promise<Readonly<{ Surface: ComponentType; modules: readonly AppModuleName[] }>> => {
   const route = globalThis.location.pathname.replace(/\/+$/, '')
   if (route === '/play-demo') {
-    const [{ AdventurePage }, copy] = await Promise.all([
-      import('./adventure/AdventurePage.tsx'),
+    const [{ AdventureRuntime }, copy] = await Promise.all([
+      import('./adventure/AdventureRuntime.tsx'),
       load_app_copy(locale),
     ])
     dispatch_app({ type: 'locale/loaded', locale, copy })
-    return { Surface: () => <AdventurePage copy={copy} />, modules: ADVENTURE_APP_MODULES }
+    const Player = lazy(async () => ({ default: await load_player_surface('/') }))
+    return {
+      Surface: () => <AdventureRuntime copy={copy} Player={Player} activate_player={activate_player} />,
+      modules: ADVENTURE_APP_MODULES,
+    }
   }
   if (route === '/demo') {
     const [{ DemoPage }, copy] = await Promise.all([import('./demo/DemoPage.tsx'), load_app_copy(locale)])
     dispatch_app({ type: 'locale/loaded', locale, copy })
     return { Surface: () => <DemoPage copy={copy} />, modules: DEMO_APP_MODULES }
   }
-  if (uses_mobile_overlays(globalThis.location.pathname, globalThis.matchMedia(MOBILE_VIEWPORT_QUERY).matches)) {
-    const { MobileApp } = await import('../../mobile/src/MobileApp.tsx')
-    document.documentElement.classList.add('mobile-client')
-    return { Surface: MobileApp, modules: PLAYER_APP_MODULES }
-  }
-  const { App } = await import('./app.tsx')
-  return { Surface: App, modules: PLAYER_APP_MODULES }
+  return { Surface: await load_player_surface(globalThis.location.pathname), modules: PLAYER_APP_MODULES }
 }
 
 export const boot_game = (): void => {

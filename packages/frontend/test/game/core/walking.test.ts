@@ -183,7 +183,7 @@ test('rolling local legs cross zones and only report arrival at the real destina
   let status = ''
   let partial = false
   for (let tick = 0; tick < 60 * 60; tick++) {
-    const result = step_walking(floor, state, body.position, goal, 1 / 60)
+    const result = step_walking(wall, state, body.position, goal, 1 / 60)
     ;({ state, status } = result)
     if (status === 'arrived') break
     if (status === 'walking' && result.remaining === null) partial = true
@@ -198,7 +198,7 @@ test('rolling local legs cross zones and only report arrival at the real destina
         walk: false,
         speed_scale: 1,
       },
-      floor,
+      wall,
       1 / 60
     )
   }
@@ -246,4 +246,13 @@ test('difficult local searches retain at most 128 cells before choosing direct t
     ;({ search } = result)
   }
   expect(ended).toBe(true)
+})
+
+test('direct steering reports the full remaining distance instead of an empty cached path', () => {
+  const goal = { x: 50.5, z: 0.5 }
+  const initial = step_walking(floor, begin_walking(start, goal), start, goal, 1 / 60)
+  expect(initial.status).toBe('walking')
+  expect(initial.remaining).toBeCloseTo(50, 4)
+  const advanced = step_walking(floor, initial.state, [10.5, 0.001, 0.5], goal, 1 / 60)
+  expect(advanced.remaining).toBeCloseTo(40, 4)
 })

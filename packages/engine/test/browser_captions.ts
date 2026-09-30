@@ -69,7 +69,22 @@ export const probe_captions = async (canvas: HTMLCanvasElement) => {
     captions.set('test', null, () => null)
     await settle()
     const clean = pixel(pixels(), 160, 71)
+    const range = []
+    captions.set('range', { ...caption, max_distance: 50 }, () => anchor)
+    for (const distance of [49.9, 50, 50.1, 49.9]) {
+      anchor.z = camera.position.z - distance
+      await settle()
+      range.push({
+        distance,
+        instances: captions.stats().instances,
+        hit: captions.hit_test('range', rect.left + 160, rect.top + 71),
+        accessible: canvas.parentElement!.querySelectorAll('[role="listitem"]:not([hidden])').length,
+      })
+    }
+    captions.set('range', null, () => null)
+    await settle()
     return {
+      range,
       caption_hit,
       outside_hit,
       removed_hit: captions.hit_test('test', rect.left + 160, rect.top + 71),

@@ -8,11 +8,13 @@ import { useNumbers } from '../../i18n/useNumbers.ts'
 import { useText } from '../../i18n/useText.ts'
 
 import { useEffect, useState } from 'react'
-import { experience_progress } from '@aresrpg/immutable'
+import { experience_progress, job_experience_progress, type JobSlug } from '@aresrpg/immutable'
 
 import { action_points, character_max_hp, movement_points, projected_hp } from '../character_stats.ts'
 import { useAppStore } from '../../store.ts'
+import { useVocabulary } from '../../i18n/useVocabulary.ts'
 import { WorldQuickslots } from './WorldQuickslots.tsx'
+import { gathering_job } from './gather_progress.ts'
 
 import { ActionSlots } from './ActionSlots.tsx'
 import { VitalsDisplay } from './VitalsDisplay.tsx'
@@ -20,21 +22,23 @@ import '../fight/fight_hud.css'
 
 export const EmptyActionCells = () => <ActionSlots />
 
-export const ExperienceBar = ({ experience }: Readonly<{ experience: string }>) => {
+export const ExperienceBar = ({ experience, job }: Readonly<{ experience: string; job?: JobSlug | null }>) => {
   const numbers = useNumbers()
   const ui = useText()
-  const { into, span, percent } = experience_progress(Number(experience))
-  const label =
+  const vocabulary = useVocabulary()
+  const { into, span, percent } = (job ? job_experience_progress : experience_progress)(Number(experience))
+  const amount =
     span === 0
       ? ui('ui.experience_max')
       : ui('ui.vitals', { current: numbers.number(into), maximum: numbers.number(span), unit: ui('ui.xp') })
+  const label = job ? `${vocabulary.job(job)} · ${amount}` : amount
   return (
     <div
       aria-label={label}
       aria-valuemax={100}
       aria-valuemin={0}
       aria-valuenow={percent}
-      className="fight-hud__experience"
+      className={`fight-hud__experience${job ? ' fight-hud__experience--job' : ''}`}
       role="progressbar"
     >
       <span aria-hidden="true" className="fight-hud__experience-fill" style={{ width: `${percent}%` }} />
@@ -52,6 +56,7 @@ export const OverworldVitals = ({
     session.characters.find(({ id }) => id === session.selected_character_id)
   )
   const character = supplied_character ?? selected
+  const job = useAppStore((state) => gathering_job(state, character))
   const [now, set_now] = useState(Date.now())
 
   useEffect(() => {
@@ -73,7 +78,7 @@ export const OverworldVitals = ({
             />
             <WorldQuickslots />
           </div>
-          <ExperienceBar experience={character.experience} />
+          <ExperienceBar experience={job ? (character.jobs[job] ?? '0') : character.experience} job={job} />
         </div>
       </div>
     </div>

@@ -656,6 +656,18 @@
   text-shadow: 0 1px 2px #000;
 }
 
+.fight-hud__experience--job {
+  border-color: rgba(74, 222, 128, 0.28);
+}
+
+.fight-hud__experience--job .fight-hud__experience-fill {
+  background: linear-gradient(90deg, #166534, #4ade80);
+}
+
+.fight-hud__experience--job .fight-hud__experience-amount {
+  color: #bbf7d0;
+}
+
 .fight-hud__spells {
   display: grid;
   grid-template-columns: repeat(5, 50px);

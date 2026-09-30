@@ -27,6 +27,19 @@ test('the overworld vitals show progress within the selected character level', (
   expect(html).toContain('>270 / 540 XP<')
 })
 
+test('gathering XP uses the job curve and names the profession', () => {
+  const html = renderToStaticMarkup(<ExperienceBar experience="95" job="FARMER" />)
+  expect(html).toContain('aria-label="Farmer · 45 / 90 XP"')
+  expect(html).toContain('aria-valuenow="50"')
+  expect(html).toContain('fight-hud__experience--job')
+})
+
+test('a max-level profession displays a full bar', () => {
+  const html = renderToStaticMarkup(<ExperienceBar experience="581687" job="FARMER" />)
+  expect(html).toContain('aria-valuenow="100"')
+  expect(html).not.toContain('NaN')
+})
+
 test('a projected level-up fills HP against the new level and all vitality bonuses', () => {
   const character = {
     level: 2,

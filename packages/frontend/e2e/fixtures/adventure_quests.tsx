@@ -18,14 +18,17 @@ import '../../src/tailwind.css'
 
 const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
+dispatch_app({ type: 'auth/ready', wallets: [] })
 const audio_events: AudioPlayback[] = []
 capture_audio((record) => audio_events.push(record))
 declare global {
   interface Window {
     adventure_audio: readonly AudioPlayback[]
+    adventure_auth: () => string | null
   }
 }
 window.adventure_audio = audio_events
+window.adventure_auth = () => read_app_state().session.auth_request as string | null
 observe_app(['settings', 'audio', 'adventure', 'fight'])
 dispatch_app({ type: 'adventure/entered' })
 publish_pose({ character_id: 'adventure_senshi', x: 129, y: 80, z: 196, yaw: Math.PI, time_of_day: 0.3, riding: false })
@@ -70,6 +73,8 @@ const finish = (boss = false) => {
         : { ...checkpoint, contract: { ...checkpoint.contract, ended: true, winner: 0n, ended_ms: 10000n } },
   })
   dispatch_app({ type: 'fight/closed', fight: null })
+  // This HUD-only fixture advances presentation explicitly; the real cinematic has its own browser regression.
+  dispatch_app({ type: 'adventure/ending_finished' })
 }
 
 createRoot(document.getElementById('root')!).render(
@@ -78,6 +83,9 @@ createRoot(document.getElementById('root')!).render(
       <AdventurePartyFrame copy={copy} />
     </WorldSocialDock>
     <div style={{ position: 'fixed', bottom: 10, right: 10, zIndex: 200 }}>
+      <button data-start onClick={() => dispatch_app({ type: 'adventure/challenge' })}>
+        Start encounter
+      </button>
       <button data-win onClick={() => finish()}>
         Win encounter
       </button>

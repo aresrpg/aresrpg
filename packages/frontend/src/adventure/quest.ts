@@ -28,7 +28,7 @@ export const adventure_objective = (state: AdventureState) => {
 }
 
 export const adventure_can_fight = (state: AdventureState): boolean =>
-  ['goblins', 'guards', 'boss'].includes(adventure_quest(state))
+  state.phase === 'explore' && ['goblins', 'guards', 'boss'].includes(adventure_quest(state))
 export const selected_adventurer = (state: AdventureState) =>
   state.companion?.id === state.selected_character_id ? state.companion : state.character
 export const adventure_roster = (state: AdventureState) =>
@@ -42,5 +42,7 @@ export const adventure_completed_quests = (state: Readonly<AdventureState>): rea
     ? []
     : ADVENTURE_QUESTS.slice(
         0,
-        state.phase === 'complete' ? ADVENTURE_QUESTS.length : ADVENTURE_QUESTS.indexOf(adventure_quest(state))
+        ['complete', 'entered'].includes(state.phase)
+          ? ADVENTURE_QUESTS.length
+          : ADVENTURE_QUESTS.indexOf(adventure_quest(state))
       )

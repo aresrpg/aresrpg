@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { gather_time_ms, job_level_from_xp } from '@aresrpg/immutable'
+import type { CharacterRow } from '@aresrpg/protocol'
 
 import { gathering_resources } from '../../modules/automation_route.ts'
 import { selected_gathering } from '../../modules/world_gather.ts'
@@ -9,6 +10,18 @@ import { selected_character } from '../../modules/session.ts'
 import type { PendingGather } from '../../modules/world.ts'
 import type { AppState } from '../../store.ts'
 import { resource_at } from '../gather_target.ts'
+
+export const gathering_job = (
+  state: Readonly<Pick<AppState, 'world' | 'automation'>>,
+  character: Readonly<CharacterRow> | undefined
+) => {
+  if (!character) return null
+  const activity = [state.world.gathering[character.id], state.automation.run].find(
+    (activity) => activity?.character_id === character.id
+  )
+  const item_type = activity?.item_type
+  return gathering_resources(character.world ?? null).find((resource) => resource.item_type === item_type)?.job ?? null
+}
 
 export const gather_progress = (
   gathering: Readonly<PendingGather>,

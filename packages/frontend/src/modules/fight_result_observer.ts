@@ -223,6 +223,7 @@ const observe_with_wait = (
             fight: candidate.fight,
             paid_mist: kolizeum_payment(candidate.kolizeum, receipt),
             kares_rewards: 'kares_rewards' in receipt ? receipt.kares_rewards : [],
+            item_ids: 'item_ids' in receipt ? receipt.item_ids : [],
           })
         })
         if (settlement_needs_close(receipt)) close_once({ fight: first.fight, kolizeum: first.kolizeum })

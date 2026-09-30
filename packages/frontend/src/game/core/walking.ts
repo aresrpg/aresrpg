@@ -50,14 +50,18 @@ const remaining_distance = (position: WalkPoint, path: readonly WalkPoint[], tar
   }, 0)
 }
 
-const steer = (state: WalkingState, position: WalkPoint, point: WalkPoint): WalkingStep => ({
-  state,
-  status: 'walking',
-  yaw: Math.atan2(position[0] - point[0], position[2] - point[2]),
-  forward: Math.min(1, distance(position, point) / 1.5),
-  phase_target: state.phase_target,
-  remaining: remaining_distance(position, state.phase_target ? [state.phase_target] : state.path, state.target),
-})
+const steer = (state: WalkingState, position: WalkPoint, path: readonly WalkPoint[]): WalkingStep => {
+  const point = path[0]!
+  return {
+    state,
+    status: 'walking',
+    yaw: Math.atan2(position[0] - point[0], position[2] - point[2]),
+    forward: Math.min(1, distance(position, point) / 1.5),
+    phase_target: state.phase_target,
+    remaining: remaining_distance(position, path, state.target),
+  }
+}
+
 const ahead = (position: WalkPoint, target: RunTarget, range: number): WalkPoint => {
   const dx = target.x - position[0],
     dz = target.z - position[2]
@@ -82,7 +86,7 @@ const phase = (world: WalkWorld, state: WalkingState, position: WalkPoint, targe
   const point = state.phase_target ?? ahead(position, target, 4)
   if (!ready(world, position, point)) return idle_step(state)
   const phase_target = state.phase_target ?? phase_destination(world, position, point)
-  return steer({ ...state, search: null, path: [], phase_target }, position, phase_target)
+  return steer({ ...state, search: null, path: [], phase_target }, position, [phase_target])
 }
 
 const plan_walk = (world: WalkWorld, state: WalkingState, position: WalkPoint, target: RunTarget): WalkingStep => {
@@ -106,7 +110,7 @@ const follow_path = (world: WalkWorld, state: WalkingState, position: WalkPoint)
   const edge = walking_edge(world, position, point[0], point[2])
   if (edge === undefined) return idle_step(state)
   if (!edge || Math.abs(edge[1] - point[1]) > 0.1) return idle_step({ ...state, path: [] })
-  return steer({ ...state, path }, position, point)
+  return steer({ ...state, path }, position, path)
 }
 
 const advance_walk = (world: WalkWorld, state: WalkingState, position: WalkPoint, target: RunTarget): WalkingStep => {
@@ -120,7 +124,7 @@ const advance_walk = (world: WalkWorld, state: WalkingState, position: WalkPoint
   if (edge === undefined) return idle_step(state)
   if (edge) {
     // Steer at the actual destination: the one-block probe must not throttle long journeys.
-    return steer(state, position, [target.x, edge[1], target.z])
+    return steer(state, position, [[target.x, edge[1], target.z]])
   }
   return plan_walk(world, { ...state, search: begin_walking_search(position, target) }, position, target)
 }

@@ -26,6 +26,7 @@ import {
   adventure_movement_area,
   ADVENTURE_SPAWN,
 } from './terrain.ts'
+import { AdventureEnding } from './AdventureEnding.tsx'
 import { AdventureHud, AdventurePartyFrame } from './AdventureHud.tsx'
 import { ADVENTURE_NAMES, adventure_fight_position } from './content.ts'
 import { adventure_model } from './models.ts'
@@ -41,6 +42,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
   const route_unlocked = useAppStore((state) => state.adventure.encounter > 0)
   const encounter = useAppStore((state) => state.adventure.encounter)
   const phase = useAppStore((state) => state.adventure.phase)
+  const finale = ['ending', 'complete', 'entered'].includes(phase)
   const page = useAppStore((state) => state.navigation.page)
   const dialog = useAppStore((state) => state.navigation.dialog)
   const mounted = useAppStore((state) => state.fight.mounted)
@@ -94,7 +96,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
 
   useEffect(() => {
     if (!world || !character) return
-    if (mounted || phase === 'complete') {
+    if (mounted || finale) {
       // eslint-disable-next-line functional/immutable-data -- scene identity is retained only for position restoration.
       embodied.current = null
       world.set_character(null)
@@ -121,12 +123,12 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
     return () => {
       active = false
     }
-  }, [character, mounted, phase, world])
+  }, [character, mounted, finale, world])
 
   useEffect(() => {
     if (!world || mounted) return
     world.set_interactive(phase === 'explore' && !adventure.journal_open && dialog === null && page === 'world')
-    if (!character?.loadout.pet || phase === 'complete') {
+    if (!character?.loadout.pet || finale) {
       world.set_pet(null)
       return
     }
@@ -139,11 +141,11 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
     return () => {
       active = false
     }
-  }, [character?.loadout.pet, adventure.journal_open, dialog, encounter, mounted, page, phase, world])
+  }, [character?.loadout.pet, adventure.journal_open, dialog, encounter, finale, mounted, page, phase, world])
 
   useEffect(() => {
-    if (world && !mounted && phase !== 'complete') return create_adventure_actors(world, positions.current)
-  }, [world, mounted, phase])
+    if (world && !mounted && !finale) return create_adventure_actors(world, positions.current)
+  }, [world, mounted, finale])
 
   const challenge = (): void => {
     const pose = read_pose()
@@ -156,7 +158,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
     <LocaleScope locale={locale}>
       <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
         <BiomeMusic area="demo:mosswood" />
-        {!mounted && phase !== 'complete' && (
+        {!finale && (
           <WorldSocialDock copy={copy} terrain={terrain}>
             <AdventurePartyFrame copy={copy} />
           </WorldSocialDock>
@@ -175,6 +177,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
         )}
         <CompanionInteraction world={world} canvas={canvas} copy={copy} />
         <AdventureTouchControls copy={copy} device={world} />
+        <AdventureEnding world={world} positions={positions.current} />
         <AdventureHud copy={copy} challenge={challenge} />
         {display_status.state === 'initializing' && (
           <p className="absolute top-1/2 left-1/2 -translate-1/2">{copy.loading_universe}</p>

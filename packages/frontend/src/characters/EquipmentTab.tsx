@@ -308,7 +308,6 @@ export default function EquipmentTab({
               }}
               onContextMenu={(event) => {
                 event.preventDefault()
-                if (!selected_ids.includes(item.id)) select_item(item, false)
                 set_menu({ x: event.clientX, y: event.clientY, ...inventory_action_selection(item, selected_items)! })
               }}
               show_level

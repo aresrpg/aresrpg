@@ -141,6 +141,21 @@ test('position publication throttles and suppresses stationary follower packets'
   expect(sent).toEqual(['0xb', '0xb'])
 })
 
+test('nearby followers retain their join distance while collision is loading', () => {
+  reset_party_follow_for_testing()
+  reset_owned_character_positions_for_testing()
+  const input = {
+    party_id: '0xp',
+    leader_id: '0xa',
+    world: 'nauvis',
+    target: { x: 50_000, y: 0, z: 50_000 },
+    followers: [{ character_id: '0xb', checkpoint: 'nauvis:50003:50000:0', x: 50_003, y: 0, z: 50_000 }],
+  }
+  expect(update_party_follow(input, 1_000).followers[0]?.distance).toBe(1)
+  const waiting = update_party_follow(input, 1_100, { ...terrain, ready: () => false })
+  expect(waiting.followers[0]).toMatchObject({ x: 50_003, z: 50_000, distance: 1 })
+})
+
 test('nearby followers join incrementally while distant followers keep approaching', () => {
   const state = {
     settings: { follow_leader: true },
@@ -203,7 +218,14 @@ test('nearby followers join incrementally while distant followers keep approachi
   expect(second?.followers.map(({ id }) => id)).toEqual(['0xc'])
 })
 
-test('an engage confirmed after switching tabs still joins that follower when control returns', () => {
+test.each([
+  { name: 'after control returns to the leader', controlled: '0xb', collision: terrain },
+  {
+    name: 'without switching tabs while terrain loads',
+    controlled: '0xa',
+    collision: { ...terrain, ready: () => false },
+  },
+])('a nearby follower joins $name', ({ controlled, collision }) => {
   reset_party_follow_for_testing()
   reset_owned_character_positions_for_testing()
   const joins: string[][] = []
@@ -226,7 +248,7 @@ test('an engage confirmed after switching tabs still joins that follower when co
     },
     session: {
       link_status: 'ready',
-      selected_character_id: '0xb',
+      selected_character_id: controlled,
       characters: [
         { id: '0xa', world: 'nauvis' },
         { id: '0xb', world: 'nauvis', custody: 'kiosk', kiosk: '0xk', kiosk_cap: '0xcap', x: 2, z: 0 },
@@ -292,7 +314,7 @@ test('an engage confirmed after switching tabs still joins that follower when co
       followers: [{ character_id: '0xb', checkpoint: 'nauvis:0:0:0', x: 2, y: 0, z: 0 }],
     },
     Date.now() + 100,
-    terrain
+    collision
   )
   expect(joins).toEqual([['0xb']])
   controller.abort()

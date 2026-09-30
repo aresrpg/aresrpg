@@ -2,9 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { Fighter, HydratedFightCheckpoint } from '@aresrpg/fight'
-import { experience_progress } from '@aresrpg/immutable'
+import { experience_progress, item_is_stackable } from '@aresrpg/immutable'
 
-import type { FightResult, ResultParticipant } from './fight_result.ts'
+import { encyclopedia_catalog } from '../content/catalog.ts'
+
+import type { FightResult, ResultParticipant, ResultLoot } from './fight_result.ts'
 
 export type FightSettlementProgress = Readonly<{
   completed: number
@@ -130,3 +132,25 @@ export const participant_kares = (
 
 export const own_result_kares = (result?: FightResult): bigint =>
   result?.participants[result.own_seat ?? -1]?.kares ?? 0n
+
+export const aggregate_result_loot = (
+  drops: readonly Readonly<{ item_type: string; qty: bigint | number }>[]
+): readonly ResultLoot[] =>
+  Object.freeze(
+    Object.entries(
+      drops.reduce<Record<string, number>>((rows, drop) => {
+        const category = encyclopedia_catalog.item(drop.item_type)?.item.category
+        const qty = category && !item_is_stackable(category) ? 1 : Number(drop.qty)
+        return { ...rows, [drop.item_type]: (rows[drop.item_type] ?? 0) + qty }
+      }, {})
+    ).map(([item_type, qty]) => Object.freeze({ item_type, qty }))
+  )
+
+export const merge_result_loot = (
+  current: readonly ResultLoot[],
+  incoming: readonly ResultLoot[]
+): readonly ResultLoot[] => {
+  const quantities = new Map(current.map((row) => [row.item_type, row.qty]))
+  for (const row of incoming) quantities.set(row.item_type, Math.max(quantities.get(row.item_type) ?? 0, row.qty))
+  return Object.freeze([...quantities].map(([item_type, qty]) => Object.freeze({ item_type, qty })))
+}

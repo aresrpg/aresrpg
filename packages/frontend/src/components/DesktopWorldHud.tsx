@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { CompassStrip } from '../game/hud/CompassStrip.tsx'
 import { GatherProgress } from '../game/hud/GatherProgress.tsx'
-import { WorldSocialDock } from '../game/hud/WorldSocialDock.tsx'
 import { OverworldVitals } from '../game/hud/OverworldVitals.tsx'
 import { RunToProgress } from '../game/hud/RunToProgress.tsx'
 import { WorldInteractions } from '../game/WorldInteractions.tsx'
@@ -19,7 +18,6 @@ export const DesktopWorldHud = ({ copy }: Readonly<{ copy: AppCopy }>) => (
     <RunToProgress copy={copy} />
     <ZonePrompt copy={copy} />
     <ZoneRevealBanner copy={copy} />
-    <WorldSocialDock copy={copy} />
     <OverworldVitals />
     <GatherProgress copy={copy} position="world" />
     <WorldChat copy={copy} />

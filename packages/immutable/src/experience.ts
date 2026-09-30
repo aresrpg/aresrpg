@@ -44,16 +44,17 @@ export function level_from_xp(xp: number): number {
   return low
 }
 
-export const experience_progress = (xp: number) => {
-  const level = level_from_xp(xp)
-  if (level === max_level) return { level, into: 0, span: 0, percent: 100 }
+const progress_in_curve = (curve: readonly number[], level: number, xp: number) => {
+  if (level === curve.length - 1) return { level, into: 0, span: 0, percent: 100 }
 
-  const floor = experience_curve[level]!
-  const ceiling = experience_curve[level + 1]!
+  const floor = curve[level]!
+  const ceiling = curve[level + 1]!
   const into = Math.max(0, xp - floor)
   const span = ceiling - floor
   return { level, into, span, percent: Math.floor((into * 100) / span) }
 }
+
+export const experience_progress = (xp: number) => progress_in_curve(experience_curve, level_from_xp(xp), xp)
 
 // ── JOB XP (the second immutable curve) ──
 // Mirrors packages/move-math/sources/job_xp.move JOB_CURVE exactly: index = job level,
@@ -86,6 +87,9 @@ export function job_level_from_xp(xp: number): number {
   }
   return low
 }
+
+export const job_experience_progress = (xp: number) =>
+  progress_in_curve(job_experience_curve, job_level_from_xp(xp), xp)
 
 /// Resource tier (T1–T11) → the job level that unlocks it (job_xp.move tier_to_level).
 export const tier_unlock_level = (tier: number): number => (tier <= 1 ? 1 : Math.min((tier - 1) * 10, job_max_level))

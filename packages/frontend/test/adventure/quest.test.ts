@@ -7,6 +7,7 @@ import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 
 import source from '../../../../seed/content/adventure.json'
 import { create_app } from '../../src/store.ts'
+import type { AuthSession } from '../../src/auth.ts'
 import { audio_snapshot } from '../../src/modules/audio.ts'
 import { adventure_quest, adventure_roster } from '../../src/adventure/quest.ts'
 import { adventure_character, adventure_companion } from '../../src/adventure/character.ts'
@@ -109,7 +110,7 @@ test('the companion walks the authored bridge using the same solid-world navigat
     expect(position[0]).toBeGreaterThan(124)
     expect(position[0]).toBeLessThan(132)
     expect(position[1]).toBeGreaterThan(79)
-    if (next.distance === 0) break
+    if (Math.hypot(position[0] - 128, position[2] - 218) < 0.2) break
   }
   expect(Math.hypot(position[0] - 128, position[2] - 218)).toBeLessThan(2.5)
 })
@@ -140,6 +141,10 @@ for (const winner of [0n, 1n])
     app.dispatch({ type: 'adventure/result_acknowledged', screen: 'result' })
     expect(app.store.getState().adventure.phase).toBe('reward')
     app.dispatch({ type: 'fight/closed', fight: null })
+    expect(app.store.getState().adventure.phase).toBe(winner === 0n ? 'ending' : 'complete')
+    app.dispatch({ type: 'fight/closed', fight: null })
+    expect(app.store.getState().adventure.phase).toBe(winner === 0n ? 'ending' : 'complete')
+    app.dispatch({ type: 'adventure/ending_finished' })
     expect(app.store.getState().adventure.phase).toBe('complete')
     expect(app.store.getState().adventure.result?.winner).toBe(Number(winner))
     expect(audio_snapshot(app.store.getState()).completed_fights).not.toContain('adventure_2')
@@ -147,4 +152,14 @@ for (const winner of [0n, 1n])
     expect(app.store.getState().adventure.phase).toBe('complete')
     expect(app.store.getState().session.auth_request).toBeNull()
     expect(app.store.getState().session.wallet).toBeNull()
+    app.dispatch({ type: 'adventure/game_entered' })
+    expect(app.store.getState().adventure.phase).toBe('complete')
+    app.dispatch({ type: 'auth/ready', wallets: [] })
+    app.dispatch({ type: 'auth/login_google' })
+    expect(app.store.getState().session.auth_request).toBe('google')
+    app.dispatch({ type: 'auth/connected', session: { address: '0x1' } as AuthSession })
+    app.dispatch({ type: 'adventure/game_entered' })
+    expect(app.store.getState().adventure.phase).toBe('entered')
+    app.dispatch({ type: 'auth/disconnected' })
+    expect(app.store.getState().adventure.phase).toBe('entered')
   })

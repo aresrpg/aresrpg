@@ -9,6 +9,8 @@ export type WorldCaption = Readonly<{
   color?: string
   health?: Readonly<{ fraction: number; color: string }>
   opacity?: number
+  /** Maximum world-space distance from the viewing camera. */
+  max_distance?: number
   /** Floating combat text keeps its existing world-unit sizing; cards use CSS pixels. */
   world_size?: readonly [number, number]
   accessible?: boolean

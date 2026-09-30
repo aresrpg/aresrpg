@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from '@playwright/test'
+import type {} from '../fixtures/adventure_quests.tsx'
 
 for (const victory of [false, true])
   test(`the local quest ends in rebirth and login after boss ${victory ? 'victory' : 'defeat'}`, async ({ page }) => {
@@ -49,6 +50,10 @@ for (const victory of [false, true])
     await expect(page.locator('dialog[open] .journey-checklist li')).toHaveCount(7)
     await page.locator('dialog[open]').getByRole('button', { name: 'Continue', exact: true }).click()
     expect(await quests()).toBe(5)
+    await page.locator('[data-start]').click()
+    await expect(page.locator('.world-social-dock .party-frame')).toBeVisible()
+    await expect(page.locator('.world-social-dock .party-frame__member')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
     await page.locator('[data-win]').click()
     await expect.poll(quests).toBe(6)
     expect(await levels()).toHaveLength(1)
@@ -60,7 +65,7 @@ for (const victory of [false, true])
     await rebirth.locator('article').evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished))
     })
-    await expect(rebirth).toContainText('It’s time for you to be reborn.')
+    await expect(rebirth).toContainText('Continue with Google to be reborn')
     await expect(rebirth.getByText(/You defeated Gobadoc/)).toHaveCount(victory ? 1 : 0)
     if (victory) await expect(rebirth).toContainText('his attack poisoned you')
     await page.keyboard.press('Escape')
@@ -69,7 +74,10 @@ for (const victory of [false, true])
     expect(await levels()).toHaveLength(1)
     expect((await heard('/sound_effect/quest_completed.aac')).every(({ volume }) => volume === 0.5)).toBe(true)
     await expect(page).toHaveURL(/adventure_quests\.html(?:\?victory)?$/)
-    await rebirth.getByRole('link', { name: 'Log in and enter the real game', exact: true }).click()
-    await expect(page.locator('[data-player-login]')).toBeVisible()
+    await rebirth.getByRole('button', { name: 'Continue with Google', exact: true }).click()
+    await expect.poll(() => page.evaluate(() => window.adventure_auth())).toBe('google')
+    await expect(rebirth).toBeVisible()
+    await expect(page).toHaveURL(/adventure_quests\.html(?:\?victory)?$/)
+    await expect(page.locator('[data-player-login]')).toHaveCount(0)
     await expect(page.getByText('Defeated by Gobadoc, the Goblin King.', { exact: true })).toHaveCount(0)
   })

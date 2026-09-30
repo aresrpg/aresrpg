@@ -480,6 +480,7 @@ test('a successful final ordinary settlement closes its newly drained fight', as
   expect(dispatched).toContainEqual({
     type: 'fight_result/settled',
     kares_rewards: [],
+    item_ids: [],
     character_id: '0xc1',
     fight: '0xf1',
     paid_mist: null,
@@ -539,6 +540,7 @@ test('a wagered result settles through the Kolizeum escrow manager', async () =>
   expect(dispatched).toContainEqual({
     type: 'fight_result/settled',
     kares_rewards: [],
+    item_ids: [],
     character_id: '0xc1',
     fight: '0xf1',
     paid_mist: 9n,

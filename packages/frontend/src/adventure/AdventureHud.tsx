@@ -66,7 +66,7 @@ const AdventureStatus = ({ copy, visible }: Readonly<{ copy: AppCopy; visible: b
 
 export const AdventurePartyFrame = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const adventure = useAppStore((state) => state.adventure)
-  if (!adventure.companion || adventure.phase !== 'explore') return null
+  if (!adventure.companion || !['explore', 'fighting', 'reward'].includes(adventure.phase)) return null
   return (
     <PartyFrame
       copy={copy}
@@ -97,12 +97,12 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
   const group = useMemo(() => adventure_group(encounter), [encounter])
   const nearby = nearest_interaction_id([group], pose) !== null
   const label = useNametags().spawns[group.id]
-  const encounter_visible = phase === 'explore' && adventure_can_fight(adventure)
+  const encounter_visible = adventure_can_fight(adventure)
   usePromptKey({ enabled: nearby && encounter_visible, activate: challenge })
   const acknowledge = (screen: 'result' | 'level'): void =>
     dispatch_app({ type: 'adventure/result_acknowledged', screen })
   if (phase === 'complete') return <AdventureRebirth copy={copy} />
-  if (!row) return null
+  if (!row || phase === 'ending') return null
   return (
     <>
       {!mounted && (

@@ -50,3 +50,14 @@ test('right-clicking an unselected item replaces the batch', async ({ page }) =>
   await expect(page.getByRole('dialog').locator('[data-crush-item]')).toHaveCount(1)
   await expect(page.getByRole('dialog')).toContainText('Test Hat 3')
 })
+
+test('right-click opens only the item context menu; left-click still opens details', async ({ page }) => {
+  await page.goto('/e2e/fixtures/inventory_actions.html')
+  const item = page.locator('.chr-equip__grid button').first()
+  await item.click({ button: 'right' })
+  await expect(page.getByRole('menu')).toBeVisible()
+  await expect(page.locator('.chr-equip__detail')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await item.click()
+  await expect(page.locator('.chr-equip__detail')).toBeVisible()
+})

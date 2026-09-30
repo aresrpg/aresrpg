@@ -14,6 +14,7 @@ export {
   gather_time_ms,
   gather_xp,
   job_experience_curve,
+  job_experience_progress,
   job_level_from_xp,
   job_max_level,
   job_xp_for_level,

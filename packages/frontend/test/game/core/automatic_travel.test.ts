@@ -98,5 +98,4 @@ test('a direct segment samples its height once and waits when its collision data
   expect(position[0]).toBeGreaterThan(3)
   const paused = step_walking_follower({ ...sampled_world, ready: () => false }, motion, position, target, 100)
   expect(paused.position).toEqual(position)
-  expect(paused.distance).toBe(Infinity)
 })

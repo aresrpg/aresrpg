@@ -284,7 +284,7 @@
   flex: 1;
   min-height: 0;
   grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
-  grid-auto-rows: auto;
+  grid-auto-rows: max-content;
   gap: 4px;
   padding: 1px;
   align-content: start;

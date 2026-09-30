@@ -6,6 +6,7 @@ import { JourneyTracker } from '../journey/JourneyPanel.tsx'
 import { selected_dungeon_run } from '../modules/dungeon.ts'
 import { selected_party } from '../modules/party.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { WorldSocialDock } from '../game/hud/WorldSocialDock.tsx'
 import { CharacterHud } from '../game/hud/CharacterHud.tsx'
 
 import { social_hud_visible } from './app_layout.ts'
@@ -23,6 +24,7 @@ export const DesktopWorldStatus = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const social_hud_open = social_hud_visible(navigation.page, fight_active, dungeon_active)
   return (
     <>
+      {in_app && (!dungeon_active || fight_active) && <WorldSocialDock copy={copy} />}
       <CharacterHud copy={copy} enabled={in_app} leave={() => dispatch_app({ type: 'auth/disconnected' })} />
       <WorldStatus copy={copy} party_available={party_available} active={navigation.page === 'world'}>
         {in_app && (

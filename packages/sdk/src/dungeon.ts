@@ -3,7 +3,7 @@
 // Dungeon writes are a thin coordinator over kiosk custody, living content, and normal fights.
 
 import { SDK, living_content } from './client.ts'
-import { receipt_digest, receipt_event, spending_receipt } from './cache.ts'
+import { changed_object_ids, receipt_digest, receipt_event, spending_receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import {
   fight_kares_rewards,
@@ -232,7 +232,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
             if (final) sdk.doors.settle_last_dungeon_room(tx, args)
             else sdk.doors.settle_dungeon_room(tx, args)
           },
-          { custody, gas_scope: `fight:${fight}`, budget: 'estimate' }
+          { custody, gas_scope: `fight:${fight}`, budget: 'estimate', include: { objectTypes: true } }
         )
       const receipt = await execute_settlement_mode(last, execute_settlement)
       return Object.freeze({
@@ -240,6 +240,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
         closable: receipt_event(receipt, '::fight::FightClosable') !== null,
         closed: receipt_event(receipt, '::fight::FightClosed') !== null,
         mastery: mastery_receipt_row(receipt),
+        item_ids: changed_object_ids(receipt, '::item::Item'),
         kares_rewards: fight_kares_rewards(receipt),
       })
     },
