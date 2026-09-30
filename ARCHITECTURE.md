@@ -543,7 +543,8 @@ One automatic-travel navigator owns run-to for position links, party snapshots, 
 gathering, plus owned-party and adventure following. Open ground uses a one-block clearance probe
 without a route search. Obstacles trigger an incremental local search capped at 128 retained cells,
 16 expansions per update and an eight-block leg. Easy routes retain full body collision, ordinary
-one-block steps and bridge/tunnel layers. A failed search or locomotion stall selects a four-block
+one-block steps and bridge/tunnel layers. Steering targets the furthest clear point among at most
+four upcoming waypoints and only reduces run input near the final destination. A failed search or locomotion stall selects a four-block
 direct segment through terrain at the ordinary movement speed; its endpoint height uses the shared
 collision projection. Segment endpoints resume local navigation, and a materially moved target
 invalidates the old route. No world blocks change and no second follower navigator exists.

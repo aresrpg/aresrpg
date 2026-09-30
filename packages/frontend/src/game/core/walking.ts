@@ -6,6 +6,9 @@ import { walking_edge, type WalkPoint, type WalkWorld } from './walkable.ts'
 import { ground_height_below } from './collision.ts'
 import type { RunTarget } from './run_to.ts'
 
+// Bound collision-checked lookahead; path smoothing must not become another search.
+const WAYPOINT_LOOKAHEAD = 4
+
 type WalkingState = Readonly<{
   search: WalkingSearch | null
   path: readonly WalkPoint[]
@@ -52,13 +55,14 @@ const remaining_distance = (position: WalkPoint, path: readonly WalkPoint[], tar
 
 const steer = (state: WalkingState, position: WalkPoint, path: readonly WalkPoint[]): WalkingStep => {
   const point = path[0]!
+  const remaining = remaining_distance(position, path, state.target)
   return {
     state,
     status: 'walking',
     yaw: Math.atan2(position[0] - point[0], position[2] - point[2]),
-    forward: Math.min(1, distance(position, point) / 1.5),
+    forward: Math.min(1, (remaining ?? Infinity) / 1.5),
     phase_target: state.phase_target,
-    remaining: remaining_distance(position, path, state.target),
+    remaining,
   }
 }
 
@@ -98,7 +102,7 @@ const plan_walk = (world: WalkWorld, state: WalkingState, position: WalkPoint, t
     case 'waiting':
       return idle_step({ ...state, search: result.search })
     case 'route':
-      return idle_step({ ...state, search: null, path: result.path.slice(1), stalled: 0 })
+      return follow_path(world, { ...state, search: null, path: result.path.slice(1), stalled: 0 }, position)
   }
 }
 
@@ -106,11 +110,11 @@ const follow_path = (world: WalkWorld, state: WalkingState, position: WalkPoint)
   const first = state.path.findIndex((point) => distance(position, point) > 0.15)
   const path = first < 0 ? [] : state.path.slice(first)
   if (!path.length) return idle_step({ ...state, path })
-  const point = path[0]!
-  const edge = walking_edge(world, position, point[0], point[2])
-  if (edge === undefined) return idle_step(state)
-  if (!edge || Math.abs(edge[1] - point[1]) > 0.1) return idle_step({ ...state, path: [] })
-  return steer({ ...state, path }, position, path)
+  const edges = path.slice(0, WAYPOINT_LOOKAHEAD).map((point) => walking_edge(world, position, point[0], point[2]))
+  const visible = edges.findLastIndex((edge, index) => edge != null && Math.abs(edge[1] - path[index]![1]) <= 0.1)
+  if (visible < 0) return idle_step(edges.includes(undefined) ? state : { ...state, path: [] })
+  const remaining_path = path.slice(visible)
+  return steer({ ...state, path: remaining_path }, position, remaining_path)
 }
 
 const advance_walk = (world: WalkWorld, state: WalkingState, position: WalkPoint, target: RunTarget): WalkingStep => {
@@ -138,11 +142,11 @@ export const step_walking = (
 ): WalkingStep => {
   // Moving followers keep a useful local detour until their target changes direction materially.
   const changed = Math.hypot(target.x - previous.target.x, target.z - previous.target.z) > 2
-  const state = changed ? begin_walking(position, target) : previous
-  if (state.phase_target) {
-    const remaining = Math.hypot(...position.map((value, index) => value - state.phase_target![index]!))
-    return remaining > 0.05 ? phase(world, state, position, target) : idle_step(begin_walking(position, target))
-  }
+  const finished_phase =
+    previous.phase_target !== null &&
+    Math.hypot(...position.map((value, index) => value - previous.phase_target![index]!)) <= 0.05
+  const state = changed || finished_phase ? begin_walking(position, target) : previous
+  if (state.phase_target) return phase(world, state, position, target)
   const moved = distance(position, state.last_position) > 0.05
   const stalled = moved ? 0 : state.stalled + Math.min(delta_seconds, 0.1)
   const next = { ...state, stalled, last_position: moved ? position : state.last_position }

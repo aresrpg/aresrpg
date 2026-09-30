@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
+import { MOUNT_SPEED_SCALE } from '../../../src/game/core/controller.ts'
 import { create_character_controller } from '../../../src/game/core/character.ts'
 import { begin_walking, step_walking } from '../../../src/game/core/walking.ts'
 import { step_walking_follower } from '../../../src/game/core/walking_follower.ts'
@@ -98,4 +99,48 @@ test('a direct segment samples its height once and waits when its collision data
   expect(position[0]).toBeGreaterThan(3)
   const paused = step_walking_follower({ ...sampled_world, ready: () => false }, motion, position, target, 100)
   expect(paused.position).toEqual(position)
+})
+
+test.each([30, 60, 120])('obstacle detours keep running between waypoints at %i FPS', (fps) => {
+  const detour_world = {
+    ...world,
+    solid_at: (x: number, y: number, z: number) => y < 0 || (x === 4 && y < 4 && z >= -1 && z <= 1),
+  }
+  const goal = { x: 20.5, z: 0.5 }
+  // Twenty blocks and this short detour fit in three simulated seconds; waypoint circling does not.
+  for (const speed_scale of [1, MOUNT_SPEED_SCALE]) {
+    const character = create_character_controller({ ...detour_world, position: start })
+    let walking = begin_walking(start, goal)
+    let arrived = false
+    for (let frame = 0; frame < fps * 3; frame++) {
+      const { position } = character.get_transform()
+      const step = step_walking(detour_world, walking, position, goal, 1 / fps)
+      walking = step.state
+      if (step.status === 'arrived') {
+        arrived = true
+        break
+      }
+      if (step.status === 'walking' && Math.hypot(goal.x - position[0], goal.z - position[2]) > 2)
+        expect(step.forward).toBe(1)
+      character.set_input({ yaw: step.yaw, forward: step.forward, phase_target: step.phase_target, speed_scale })
+      character.tick(1 / fps)
+    }
+    expect(arrived).toBe(true)
+    character.dispose()
+  }
+})
+
+test.each([30, 60, 120])('leader follow keeps running through the same detour at %i FPS', (fps) => {
+  const detour_world = {
+    ...world,
+    solid_at: (x: number, y: number, z: number) => y < 0 || (x === 4 && y < 4 && z >= -1 && z <= 1),
+  }
+  const goal = { x: 20.5, z: 0.5 }
+  let position: readonly [number, number, number] = start
+  let motion: Parameters<typeof step_walking_follower>[1] = null
+  for (let frame = 0; frame < fps * 3; frame++) {
+    const next = step_walking_follower(detour_world, motion, position, goal, 1000 / fps)
+    ;({ position, motion } = next)
+  }
+  expect(Math.hypot(position[0] - goal.x, position[2] - goal.z)).toBeLessThan(0.2)
 })

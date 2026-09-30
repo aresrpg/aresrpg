@@ -256,3 +256,29 @@ test('direct steering reports the full remaining distance instead of an empty ca
   const advanced = step_walking(floor, initial.state, [10.5, 0.001, 0.5], goal, 1 / 60)
   expect(advanced.remaining).toBeCloseTo(40, 4)
 })
+
+test('detour lookahead stays bounded and retains its route while collision loads', () => {
+  let probes = 0
+  const path = Array.from({ length: 8 }, (_, index) => [start[0] + index + 1, start[1], start[2]] as const)
+  const goal = { x: 100.5, z: 0.5 }
+  const state = { ...begin_walking(start, goal), path }
+  const step = step_walking(
+    {
+      ...floor,
+      ready: () => {
+        probes++
+        return true
+      },
+    },
+    state,
+    start,
+    goal,
+    1 / 60
+  )
+  expect(probes).toBeLessThanOrEqual(5)
+  expect(step.forward).toBe(1)
+  const waiting = step_walking({ ...floor, ready: () => false }, step.state, start, goal, 1 / 60)
+  expect(waiting.status).toBe('planning')
+  expect(waiting.forward).toBe(0)
+  expect(waiting.state.path).toEqual(step.state.path)
+})
