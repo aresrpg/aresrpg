@@ -47,6 +47,20 @@ test('the adventure joystick moves the real hero while a second finger jumps and
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await expect(joystick).toHaveCSS('opacity', '0')
   await expect(jump).toHaveCSS('opacity', '0')
+  // Settle the jump before choosing exposed canvas: projected mob cards move with the airborne camera.
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const start = window.adventure_pose()!
+        const until = performance.now() + 500
+        do {
+          await new Promise(requestAnimationFrame)
+        } while (performance.now() < until)
+        const end = window.adventure_pose()!
+        return Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z)
+      })
+    )
+    .toBeLessThan(0.1)
   const point = await page.locator('main > canvas').evaluate((element) => {
     const box = element.getBoundingClientRect()
     return [0.45, 0.4, 0.25, 0.1]
@@ -60,20 +74,6 @@ test('the adventure joystick moves the real hero while a second finger jumps and
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...camera, x: camera.x + 50 }] })
   await expect.poll(() => page.evaluate(() => window.adventure_pose()!.yaw)).not.toBe(origin.yaw)
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-  // Allow airborne momentum and ground braking to settle; a held axis would keep moving throughout this window.
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const start = window.adventure_pose()!
-        const until = performance.now() + 500
-        do {
-          await new Promise(requestAnimationFrame)
-        } while (performance.now() < until)
-        const end = window.adventure_pose()!
-        return Math.hypot(end.x - start.x, end.z - start.z)
-      })
-    )
-    .toBeLessThan(0.1)
   await page.setViewportSize({ width: 1280, height: 720 })
   await expect(joystick).not.toBeVisible()
 })

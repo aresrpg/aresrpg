@@ -733,7 +733,8 @@ share one provenance; the current version is required rather than accepting an o
 are replaced rather than retained as quality alternatives.
 
 The runtime owner validates and compiles a world once, then passes that compiled world to the renderer
-and its terrain, water and material consumers. Rendering layers do not recompile recipes. Each worker
+and its terrain, water and material consumers. Character collision initializes at the requested world
+focus. Rendering layers do not recompile recipes. Each worker
 compiles its transported terrain projection once within its isolated lifetime. Material palette IDs
 are invariant under structure-compilation options. Height-grid validation is shared by world recipes,
 city compilation and imported city maps; malformed grids fail before terrain sampling. The canonical
@@ -757,7 +758,8 @@ The origin arch uses the local terrain filler palette. Ordinary fixed-structure 
 frame types; explicit portal frames bypass the reserved origin clearing. A scenery recipe may disable the origin
 `portal`; the same switch removes the frame, effect, and structure-clearance cutout.
 The frontend world composes dungeon guides into its ordinary entity list using the tutorial's
-seed-authored Sceat appearance. Guide yaw continuously tracks the local controlled player's world position,
+seed-authored Sceat appearance. Guides and their labels use the portal’s authored terrain height,
+so preparing remote guides never requests city collision. Guide yaw continuously tracks the local controlled player's world position,
 independently of dialogue. Facing changes reuse loaded appearance and stationary anchors without resampling
 terrain; unchanged player positions do not resubmit entities. Guide labels retain the existing dungeon interaction range and
 chain anchor. Interaction uses the same unlocked-key selector as the entry transaction: possession

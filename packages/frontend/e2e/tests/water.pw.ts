@@ -5,22 +5,16 @@ import type {} from '../fixtures/water.ts'
 
 test.use({ viewport: { width: 480, height: 320 } })
 
-const pixels = async (page: Page) => {
-  const frame = await page.screenshot()
-  return page.evaluate(
-    async (bytes) => {
-      const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/png' }))
-      const canvas = document.createElement('canvas')
-      canvas.width = 480
-      canvas.height = 320
-      const context = canvas.getContext('2d')!
-      context.drawImage(bitmap, 0, 0)
-      bitmap.close()
-      return [...context.getImageData(160, 130, 160, 80).data]
-    },
-    [...frame]
-  )
-}
+const pixels = (page: Page) =>
+  page.locator('canvas').evaluate(async (source: HTMLCanvasElement) => {
+    await new Promise(requestAnimationFrame)
+    const canvas = document.createElement('canvas')
+    canvas.width = 480
+    canvas.height = 320
+    const context = canvas.getContext('2d')!
+    context.drawImage(source, 0, 0, canvas.width, canvas.height)
+    return [...context.getImageData(160, 130, 160, 80).data]
+  })
 const luminance = (rgba: readonly number[]) =>
   rgba.reduce((sum, value, index) => sum + (index % 4 === 3 ? 0 : value), 0) / (rgba.length * 0.75)
 const ready = (page: Page) => page.waitForFunction(() => window.water_probe?.ready)

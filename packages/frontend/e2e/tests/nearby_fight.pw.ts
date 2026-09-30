@@ -31,31 +31,26 @@ test('nearby fights animate alongside a walking player and release their models 
   expect(crashes).toEqual([])
 })
 
-const obstruction_pixels = async (page: Page): Promise<number> => {
-  const bytes = await page.screenshot()
-  return page.evaluate(
-    async (bytes) => {
-      const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/png' }))
-      const canvas = document.createElement('canvas')
-      canvas.width = bitmap.width
-      canvas.height = bitmap.height
-      const context = canvas.getContext('2d')!
-      context.drawImage(bitmap, 0, 0)
-      bitmap.close()
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
-      let count = 0
-      for (let offset = 0; offset < pixels.length; offset += 4)
-        if (
-          pixels[offset]! > 120 &&
-          pixels[offset]! > pixels[offset + 1]! * 1.8 &&
-          pixels[offset]! > pixels[offset + 2]! * 1.8
-        )
-          count++
-      return count
-    },
-    [...bytes]
-  )
-}
+const obstruction_pixels = (page: Page): Promise<number> =>
+  page.locator('canvas').evaluate(async (source: HTMLCanvasElement) => {
+    // Read the rendered canvas in the browser; PNG bytes must not make a round trip through the test runner.
+    await new Promise(requestAnimationFrame)
+    const canvas = document.createElement('canvas')
+    canvas.width = source.width
+    canvas.height = source.height
+    const context = canvas.getContext('2d')!
+    context.drawImage(source, 0, 0)
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data
+    let count = 0
+    for (let offset = 0; offset < pixels.length; offset += 4)
+      if (
+        pixels[offset]! > 120 &&
+        pixels[offset]! > pixels[offset + 1]! * 1.8 &&
+        pixels[offset]! > pixels[offset + 2]! * 1.8
+      )
+        count++
+    return count
+  })
 
 test('ambient board clears obstructing voxels and restores them when it leaves view', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })

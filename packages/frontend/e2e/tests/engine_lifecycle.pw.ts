@@ -36,6 +36,11 @@ test('unavailable graphics reports initialization failure without waiting for a 
 })
 
 test('actual backend bounds request metadata and preserves device-loss bookkeeping', async ({ page }) => {
+  // Worker startup can outlast several render frames on a hosted runner.
+  await page.route('**/mesh_worker-*.js', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1_000))
+    await route.continue()
+  })
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   await page.waitForFunction(() => typeof window.probe_engine_lifetime === 'function')
   const result = await page.evaluate(() => window.probe_engine_lifetime())

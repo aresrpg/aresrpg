@@ -15,36 +15,29 @@ test('rounded canopy lighting has no roughness-dependent sun reflection undernea
   await page.evaluate(
     () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
   )
-  const before = await page.screenshot({ path: test.info().outputPath('canopy.png') })
-  await page.evaluate(() => window.canopy_lighting.max_roughness())
-  await page.evaluate(
-    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-  )
-  const after = await page.screenshot()
-  const delta = await page.evaluate(
-    async ({ before, after }) => {
-      const read = async (bytes: number[]) => {
-        const image = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/png' }))
-        const canvas = document.createElement('canvas')
-        canvas.width = image.width
-        canvas.height = image.height
-        const context = canvas.getContext('2d')!
-        context.drawImage(image, 0, 0)
-        image.close()
-        return context.getImageData(200, 150, 400, 400).data
-      }
-      const a = await read(before),
-        b = await read(after)
-      let total = 0
-      for (let index = 0; index < a.length; index += 4)
-        total +=
-          Math.abs(a[index]! - b[index]!) +
-          Math.abs(a[index + 1]! - b[index + 1]!) +
-          Math.abs(a[index + 2]! - b[index + 2]!)
-      return total / (400 * 400 * 3)
-    },
-    { before: [...before], after: [...after] }
-  )
+  await page.screenshot({ path: test.info().outputPath('canopy.png') })
+  const delta = await page.locator('canvas').evaluate(async (source: HTMLCanvasElement) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 800
+    canvas.height = 700
+    const context = canvas.getContext('2d')!
+    const read = () => {
+      context.drawImage(source, 0, 0, canvas.width, canvas.height)
+      return context.getImageData(200, 150, 400, 400).data
+    }
+    await new Promise(requestAnimationFrame)
+    const before = read()
+    window.canopy_lighting.max_roughness()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    const after = read()
+    let total = 0
+    for (let index = 0; index < before.length; index += 4)
+      total +=
+        Math.abs(before[index]! - after[index]!) +
+        Math.abs(before[index + 1]! - after[index + 1]!) +
+        Math.abs(before[index + 2]! - after[index + 2]!)
+    return total / (400 * 400 * 3)
+  })
   expect(delta).toBeLessThan(0.25)
   expect(errors).toEqual([])
 })

@@ -4,6 +4,10 @@
 import { expect, test } from '@playwright/test'
 
 test('run-to keeps moving and arrives after switching to the marketplace', async ({ page }) => {
+  const city_downloads: string[] = []
+  page.on('request', (request) => {
+    if (/\/assets\/(thebes|the_ruins|fuwage)-.*\.json$/.test(request.url())) city_downloads.push(request.url())
+  })
   await page.goto('/e2e/fixtures/background_run.html')
   // Let the real world boot before spending the UI action budget on its notice.
   await page.waitForFunction(() => Boolean(Reflect.get(window, 'background_run_state')?.().pose), undefined, {
@@ -24,4 +28,5 @@ test('run-to keeps moving and arrives after switching to the marketplace', async
   await page.waitForFunction(() => Reflect.get(window, 'background_run_state')().run === null, undefined, {
     timeout: 15_000,
   })
+  expect(city_downloads).toEqual([])
 })

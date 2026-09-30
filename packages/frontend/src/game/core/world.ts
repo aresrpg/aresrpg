@@ -144,7 +144,11 @@ export const create_world = ({
   const holograms = compiled.structures.cities
     .filter(({ id }) => id === hologram_city)
     .map(() => create_spawn_hologram(engine, surface_y(0, 0)))
-  const character = create_character_controller({ solid_at, liquid_at, position: [0, surface_y(0, 0), 0] })
+  const character = create_character_controller({
+    solid_at,
+    liquid_at,
+    position: [initial_focus[0], surface_y(initial_focus[0], initial_focus[1]), initial_focus[1]],
+  })
   const footsteps = create_footsteps()
   preload_audio(['water_enter'])
   const liquid_preset: MaterialPreset =
@@ -289,7 +293,8 @@ export const create_world = ({
       submit_entities()
     },
     caption: engine.set_entity_caption,
-    ground_height: mob_ground_height,
+    // Stationary guides share the portal's authored terrain height, without loading remote city collision.
+    ground_height: surface_y,
   })
 
   const set_mode = (next: typeof mode): void => {
@@ -475,7 +480,7 @@ export const create_world = ({
       if (existing) {
         engine.set_world_label(id, existing, [
           portal.x,
-          mob_ground_height(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
+          surface_y(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
           portal.z,
         ])
         continue
@@ -485,7 +490,7 @@ export const create_world = ({
       dungeon_portal_labels.set(id, element)
       engine.set_world_label(id, element, [
         portal.x,
-        mob_ground_height(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
+        surface_y(portal.x, portal.z) + DUNGEON_GUIDE_LABEL_HEIGHT,
         portal.z,
       ])
       changed = true
