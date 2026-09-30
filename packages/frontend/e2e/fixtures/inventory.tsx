@@ -183,7 +183,9 @@ void load_app_copy(locale)
         {new URLSearchParams(location.search).get('view') === 'forge' ? (
           <RuneforgeTab character={equipped_character} copy={copy} />
         ) : (
-          <EquipmentTab character={equipped_character} copy={copy} />
+          <div className="game-character-body">
+            <EquipmentTab character={equipped_character} copy={copy} />
+          </div>
         )}
         {new URLSearchParams(location.search).get('view') === 'crush' && (
           <CrushResultDialog

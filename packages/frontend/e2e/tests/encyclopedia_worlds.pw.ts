@@ -40,7 +40,8 @@ test('city resources and dungeon encounters have separate clickable entries', as
   await expect(dungeon).toBeVisible()
   expect(await dungeon.locator('[data-world-mob]').count()).toBeGreaterThan(0)
   await dungeon.locator('.world-atlas__key').click()
-  await expect(page.locator('main')).toHaveAttribute('data-path', '/encyclopedia/items/key_of_gilded_lorito')
+  await expect(page.locator('[data-modal-identity="item:key_of_gilded_lorito"]')).toBeVisible()
+  await expect(page.locator('main')).toHaveAttribute('data-path', '/encyclopedia/worlds/nauvis/city/thebes')
 })
 
 for (const [attribute, route] of [
@@ -53,7 +54,8 @@ for (const [attribute, route] of [
     const row = page.locator(`[${attribute}]`).first()
     const id = await row.getAttribute(attribute)
     await row.click()
-    await expect(page.locator('main')).toHaveAttribute('data-path', `/encyclopedia/${route}/${id}`)
+    await expect(page.locator(`[data-modal-identity="${route === 'items' ? 'item' : 'mob'}:${id}"]`)).toBeVisible()
+    await expect(page.locator('main')).toHaveAttribute('data-path', '/encyclopedia/worlds/nauvis')
   })
 }
 

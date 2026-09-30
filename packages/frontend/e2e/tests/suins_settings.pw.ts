@@ -6,6 +6,7 @@ import { expect, test } from '@playwright/test'
 test('Settings selects owned and target-only names, reports refusal, and fits a narrow viewport', async ({ page }) => {
   await page.setViewportSize({ width: 480, height: 800 })
   await page.goto('/e2e/fixtures/suins_settings.html')
+  await page.getByRole('button', { name: 'Account', exact: true }).click()
   const section = page.locator('[data-suins-settings]')
   const use = section.getByRole('button', { name: 'Use this name' })
   await section.getByRole('combobox', { name: 'Owned names' }).selectOption('mine.sui')

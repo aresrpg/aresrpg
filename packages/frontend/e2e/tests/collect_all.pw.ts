@@ -20,13 +20,13 @@ test('level 30 exposes R, starts a combined timer once, and Escape cancels the r
   expect(await page.evaluate(() => Reflect.get(window, 'collect_all_state')().run)).toBeNull()
 })
 
-test('level 29 retains E gathering but cannot start Collect All', async ({ page }) => {
+test('level 29 retains F gathering but cannot start Collect All', async ({ page }) => {
   await page.goto('/e2e/fixtures/collect_all.html?level=29')
   await expect(page.locator('#tag')).toContainText('to collect Wheat')
   await expect(page.locator('#tag')).not.toContainText('to collect all')
   await page.keyboard.press('r')
   expect(await page.evaluate(() => Reflect.get(window, 'collect_all_state')().gathers)).toBe(0)
-  await page.keyboard.press('e')
+  await page.keyboard.press('f')
   expect(await page.evaluate(() => Reflect.get(window, 'collect_all_state')().gathers)).toBe(1)
 })
 

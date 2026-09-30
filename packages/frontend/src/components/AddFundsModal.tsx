@@ -79,8 +79,93 @@ export const AddFundsModal = ({
 }: Readonly<{ address: string | null; copy: AppCopy; network?: Network; on_close: () => void; warning?: string }>) => {
   const [selected, set_selected] = useState<'direct' | 'bridge' | 'card'>('direct')
   const [bridge_opened, set_bridge_opened] = useState(false)
+  const wallet_address = address ?? ''
   const testnet = add_funds_surface(network) === 'faucet'
   const title = wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
+  const content = (
+    <GameWindow
+      title={title}
+      icon={<Wallet />}
+      close={on_close}
+      close_label={copy.wallet_close}
+      className="aui-funding-window"
+    >
+      <div className="aui-funding-body">
+        {warning && (
+          <p className="mb-4 border border-gold/40 p-3 text-xs text-gold" role="alert">
+            {warning}
+          </p>
+        )}
+        {testnet ? (
+          <section className="aui-funding-faucet space-y-4 text-xs text-muted" data-testnet-faucet="">
+            <p>{wallet_text(copy, 'testnet_faucet_body')}</p>
+            <WalletAddressBlock address={wallet_address} compact copy={copy} />
+            <a
+              className="btn-outline flex items-center justify-center gap-2 p-3"
+              href={SUI_FAUCET_URL}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              {wallet_text(copy, 'testnet_faucet_action')}
+              <ExternalLink size={13} />
+            </a>
+          </section>
+        ) : (
+          <>
+            <div className="aui-funding-methods" role="group" aria-label={wallet_text(copy, 'how_to_pay')}>
+              {ADD_FUNDS_PAYMENT_METHODS.map((method) => (
+                <Button
+                  className="aui-funding-choice"
+                  data-method={method.key}
+                  aria-pressed={selected === method.key}
+                  key={method.key}
+                  onClick={() => {
+                    set_selected(method.key)
+                    if (method.key === 'bridge') set_bridge_opened(true)
+                  }}
+                  type="button"
+                >
+                  <span className="aui-funding-method-icon" aria-hidden="true">
+                    {{ direct: <Wallet />, bridge: <ArrowLeftRight />, card: <CreditCard /> }[method.key]}
+                  </span>
+                  <span className="aui-funding-method-title">{wallet_text(copy, method.label)}</span>
+                  <span className="aui-funding-method-description">{wallet_text(copy, method.desc)}</span>
+                </Button>
+              ))}
+            </div>
+            <section className="aui-funding-detail" hidden={selected !== 'direct'}>
+              <WalletAddressBlock address={wallet_address} copy={copy} />
+            </section>
+            <section className="aui-funding-detail" hidden={selected !== 'bridge'}>
+              {bridge_opened && address ? (
+                <BridgeFunding address={address} copy={copy} key={address} />
+              ) : (
+                <p className="aui-funding-connect">{copy.sign_in_to_play}</p>
+              )}
+            </section>
+            <section hidden={selected !== 'card'} className="aui-funding-detail space-y-4">
+              <p className="text-xs leading-relaxed text-muted">{wallet_text(copy, 'steps_card')}</p>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {CARD_PROVIDERS.map((provider) => (
+                  <a
+                    className="flex items-center justify-between border border-border bg-bg/50 p-3 text-xs text-text hover:border-gold/40"
+                    href={provider.url}
+                    key={provider.name}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    {provider.name}
+                    <ExternalLink size={12} />
+                  </a>
+                ))}
+              </div>
+              <WalletAddressBlock address={wallet_address} compact copy={copy} />
+            </section>
+          </>
+        )}
+      </div>
+    </GameWindow>
+  )
   return (
     <FundingErrorBoundary
       fallback={
@@ -91,97 +176,22 @@ export const AddFundsModal = ({
         >
           <div className="max-w-lg border border-border bg-surface p-5 text-text" role="alert">
             <p className="mb-4 text-xs text-muted">{wallet_text(copy, 'bridge_error')}</p>
-            <WalletAddressBlock address={address ?? ''} copy={copy} />
+            <WalletAddressBlock address={wallet_address} copy={copy} />
           </div>
         </NativeModal>
       }
     >
-      <Suspense fallback={null}>
-        <FundingDialog close={on_close} label={title}>
-          <GameWindow
-            title={title}
-            icon={<Wallet />}
-            close={on_close}
-            close_label={copy.wallet_close}
-            className="aui-funding-window"
-          >
-            <div className="aui-funding-body">
-              {warning && (
-                <p className="mb-4 border border-gold/40 p-3 text-xs text-gold" role="alert">
-                  {warning}
-                </p>
-              )}
-              {testnet ? (
-                <section className="aui-funding-faucet space-y-4 text-xs text-muted" data-testnet-faucet="">
-                  <p>{wallet_text(copy, 'testnet_faucet_body')}</p>
-                  <WalletAddressBlock address={address ?? ''} compact copy={copy} />
-                  <a
-                    className="btn-outline flex items-center justify-center gap-2 p-3"
-                    href={SUI_FAUCET_URL}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    {wallet_text(copy, 'testnet_faucet_action')}
-                    <ExternalLink size={13} />
-                  </a>
-                </section>
-              ) : (
-                <>
-                  <div className="aui-funding-methods" role="group" aria-label={wallet_text(copy, 'how_to_pay')}>
-                    {ADD_FUNDS_PAYMENT_METHODS.map((method) => (
-                      <Button
-                        className="aui-funding-choice"
-                        data-method={method.key}
-                        aria-pressed={selected === method.key}
-                        key={method.key}
-                        onClick={() => {
-                          set_selected(method.key)
-                          if (method.key === 'bridge') set_bridge_opened(true)
-                        }}
-                        type="button"
-                      >
-                        <span className="aui-funding-method-icon" aria-hidden="true">
-                          {{ direct: <Wallet />, bridge: <ArrowLeftRight />, card: <CreditCard /> }[method.key]}
-                        </span>
-                        <span className="aui-funding-method-title">{wallet_text(copy, method.label)}</span>
-                        <span className="aui-funding-method-description">{wallet_text(copy, method.desc)}</span>
-                      </Button>
-                    ))}
-                  </div>
-                  <section className="aui-funding-detail" hidden={selected !== 'direct'}>
-                    <WalletAddressBlock address={address ?? ''} copy={copy} />
-                  </section>
-                  <section className="aui-funding-detail" hidden={selected !== 'bridge'}>
-                    {bridge_opened && address ? (
-                      <BridgeFunding address={address} copy={copy} key={address} />
-                    ) : (
-                      <p className="aui-funding-connect">{copy.sign_in_to_play}</p>
-                    )}
-                  </section>
-                  <section hidden={selected !== 'card'} className="aui-funding-detail space-y-4">
-                    <p className="text-xs leading-relaxed text-muted">{wallet_text(copy, 'steps_card')}</p>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {CARD_PROVIDERS.map((provider) => (
-                        <a
-                          className="flex items-center justify-between border border-border bg-bg/50 p-3 text-xs text-text hover:border-gold/40"
-                          href={provider.url}
-                          key={provider.name}
-                          rel="noopener noreferrer"
-                          target="_blank"
-                        >
-                          {provider.name}
-                          <ExternalLink size={12} />
-                        </a>
-                      ))}
-                    </div>
-                    <WalletAddressBlock address={address ?? ''} compact copy={copy} />
-                  </section>
-                </>
-              )}
-            </div>
-          </GameWindow>
-        </FundingDialog>
-      </Suspense>
+      {testnet ? (
+        <NativeModal close={on_close} label={title} className="aui-modal-scrim">
+          {content}
+        </NativeModal>
+      ) : (
+        <Suspense fallback={null}>
+          <FundingDialog close={on_close} label={title}>
+            {content}
+          </FundingDialog>
+        </Suspense>
+      )}
     </FundingErrorBoundary>
   )
 }

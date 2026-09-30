@@ -4,6 +4,7 @@
 import type { ItemRow } from '@aresrpg/protocol'
 import type { ButtonHTMLAttributes } from 'react'
 
+import { useItemClick } from '../components/useItemClick.ts'
 import { ItemDetailHover } from '../components/ItemSnapshotTooltip.tsx'
 import { item_icon } from '../content/assets.ts'
 
@@ -24,22 +25,26 @@ export const InventoryItemCell = ({
   title: _title,
   type = 'button',
   ...button_props
-}: InventoryItemCellProps) => (
-  <ItemDetailHover item={item}>
-    <button
-      data-selection-id={item.id}
-      className={`chr-cell ${class_name}`.trim()}
-      aria-label={item.name}
-      type={type}
-      {...button_props}
-    >
-      {item_icon(item.item_type) ? (
-        <img alt="" className="chr-cell__art" draggable={false} src={item_icon(item.item_type)!} />
-      ) : (
-        <span className="chr-cell__fallback">{item.name.slice(0, 1).toUpperCase()}</span>
-      )}
-      {amount > 1 && <span className="chr-cell__amount tabular-nums">×{amount}</span>}
-      {show_level && <span className="chr-cell__lvl tabular-nums">{item.level}</span>}
-    </button>
-  </ItemDetailHover>
-)
+}: InventoryItemCellProps) => {
+  const on_click = useItemClick(button_props.onClick, !!button_props.onDoubleClick)
+  return (
+    <ItemDetailHover item={item}>
+      <button
+        data-selection-id={item.id}
+        className={`chr-cell ${class_name}`.trim()}
+        aria-label={item.name}
+        type={type}
+        {...button_props}
+        onClick={on_click}
+      >
+        {item_icon(item.item_type) ? (
+          <img alt="" className="chr-cell__art" draggable={false} src={item_icon(item.item_type)!} />
+        ) : (
+          <span className="chr-cell__fallback">{item.name.slice(0, 1).toUpperCase()}</span>
+        )}
+        {amount > 1 && <span className="chr-cell__amount tabular-nums">×{amount}</span>}
+        {show_level && <span className="chr-cell__lvl tabular-nums">{item.level}</span>}
+      </button>
+    </ItemDetailHover>
+  )
+}

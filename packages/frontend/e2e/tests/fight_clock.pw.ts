@@ -8,7 +8,7 @@ for (const device_ms of [1_000, 9_000_000_000_000]) {
       Date.now = () => time
     }, device_ms)
     await page.goto('/e2e/fixtures/fight_clock.html')
-    await expect(page.locator('.fight-hud__bar')).toBeVisible()
+    await expect(page.locator('.aui-combat-hud')).toBeVisible()
     await expect(page.locator('.fight-hud__crank')).toHaveCount(0)
     await page.evaluate(() => window.sample_fight_clock(120_000))
     await expect(page.locator('.fight-hud__crank')).toBeVisible()

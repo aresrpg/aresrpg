@@ -122,6 +122,7 @@ export const create_detail_layer = ({
     meshes.get(column)?.forEach((mesh) => {
       scene.remove(mesh)
       mesh.geometry.dispose()
+      mesh.material.dispose()
     })
     meshes.delete(column)
     city_columns.delete(column)
@@ -148,7 +149,7 @@ export const create_detail_layer = ({
           origin: cell.origin,
           bytes: (cell.vertices.length * 3) / 4,
           upload: () => {
-            const mesh = new Mesh(detail_geometry(cell, materials), material!)
+            const mesh = new Mesh(detail_geometry(cell, materials), material!.clone())
             mesh.position.set(...cell.origin)
             mesh.updateMatrix()
             mesh.matrixAutoUpdate = false
@@ -185,7 +186,8 @@ export const create_detail_layer = ({
       material = detail_material(next_atlas, materials, next, sun_direction, clouds)
       meshes.forEach((rows) =>
         rows.forEach((mesh) => {
-          mesh.material = material!
+          mesh.material.dispose()
+          mesh.material = material!.clone()
           mesh.castShadow = lit
           mesh.receiveShadow = lit
         })

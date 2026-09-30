@@ -67,10 +67,11 @@ test('level-up radiance animates and spell points use the spell emblem', async (
   await expect(card).toBeVisible()
   const reward = card.locator('.aui-reward').filter({ hasText: 'Spell points' })
   await expect(reward.locator('img')).toHaveAttribute('src', /carved_spells/)
-  const first = await card.evaluate((node) => getComputedStyle(node, '::before').transform)
-  await expect.poll(() => card.evaluate((node) => getComputedStyle(node, '::before').transform)).not.toBe(first)
+  const aura = page.locator('.aui-progression-aura')
+  const first = await aura.evaluate((node) => getComputedStyle(node, '::before').transform)
+  await expect.poll(() => aura.evaluate((node) => getComputedStyle(node, '::before').transform)).not.toBe(first)
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  expect(await card.evaluate((node) => getComputedStyle(node, '::before').animationName)).toBe('none')
+  expect(await aura.evaluate((node) => getComputedStyle(node, '::before').animationName)).toBe('none')
 })
 
 test('demo Goblin inspection has readable spells, finite resistances and clickable rewards', async ({ page }) => {

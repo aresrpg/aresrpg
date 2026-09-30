@@ -15,6 +15,7 @@ declare global {
 }
 
 const copy = await load_app_copy('en')
+dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 const source = create_character_source({ classe: 'senshi', level: 1n })
 const local = create_fight({
   mode: 'local',

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
 .world-atlas {
+  container: world-atlas / inline-size;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -398,5 +399,23 @@
   .world-atlas__related > span:first-child {
     width: 52px;
     font-size: 9px;
+  }
+}
+
+@container world-atlas (max-width: 500px) {
+  .world-atlas__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .world-atlas__places > section {
+    display: none;
+  }
+  .world-atlas__place-select {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
   }
 }

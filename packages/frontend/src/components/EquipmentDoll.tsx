@@ -28,6 +28,8 @@ const RIG_ORDER = Object.freeze([
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
+import { useItemClick } from './useItemClick.ts'
+
 /** What a slot needs to paint — the seed catalog rows and the projected chain rows both fit. */
 export type DollItem = Readonly<{ name: string; item_type: string; level: number }>
 
@@ -58,11 +60,12 @@ const EquipmentSlot = ({
   const category_name = useItemCategoryName()
   const label = slot_label(slot, category_name)
   const placeholder = slot_art[slot] ?? slot_art.relic
+  const click = useItemClick(() => open(slot), !!state.on_double_click)
   return (
     <button
       className={`inv__slot inv__slot--${slot}${item ? ' is-filled' : ''}${state.valid ? ' is-valid' : ''}${state.staged ? ' is-staged' : ''}`}
       data-equipment-slot={slot}
-      onClick={() => open(slot)}
+      onClick={click}
       onDoubleClick={state.on_double_click}
       onDragOver={state.on_drop ? (event) => event.preventDefault() : undefined}
       onDrop={state.on_drop}

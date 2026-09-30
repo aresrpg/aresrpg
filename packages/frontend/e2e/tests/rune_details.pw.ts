@@ -18,9 +18,14 @@ test('crush rune details stay above the native result dialog', async ({ page }) 
     .poll(() =>
       tooltip.evaluate((element) => {
         const bounds = element.getBoundingClientRect()
-        return element.contains(
+        // The tooltip deliberately passes pointer events through. Enable hit testing only for this paint-order probe.
+        const previous = (element as HTMLElement).style.pointerEvents
+        ;(element as HTMLElement).style.pointerEvents = 'auto'
+        const on_top = element.contains(
           document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2)
         )
+        ;(element as HTMLElement).style.pointerEvents = previous
+        return on_top
       })
     )
     .toBe(true)
@@ -30,7 +35,7 @@ test('crush rune details stay above the native result dialog', async ({ page }) 
 test('the selected forge rune displays its effect and stack quantity', async ({ page }) => {
   await page.goto('/e2e/fixtures/inventory.html?view=forge')
   await page.getByRole('button', { name: /^Runes/ }).click()
-  await page.getByTitle('Rune Ba Vi', { exact: true }).click()
+  await page.getByRole('button', { name: 'Rune Ba Vi', exact: true }).click()
   const slot = page.locator('.chr-forge__slot.is-filled')
   await expect(slot).toContainText('+3 Vitality')
   await expect(slot).toContainText('×2')
@@ -46,7 +51,7 @@ test('forge rune effects use the current stat translation in all six locales', a
       .last()
       .getByRole('button', { name: new RegExp(`^${copy.characters_page.tab_runes}`) })
       .click()
-    await page.getByTitle('Rune Ba Vi', { exact: true }).click()
+    await page.getByRole('button', { name: 'Rune Ba Vi', exact: true }).click()
     await expect(page.locator('.chr-forge__slot [data-rune-effect]')).toHaveText(
       `+3 ${copy.simulator_page.stat_vitality}`
     )

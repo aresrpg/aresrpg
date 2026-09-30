@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
-import { Scene, Vector3 } from 'three'
+import { Scene, Vector3, type Mesh, type BufferGeometry } from 'three'
+import type { MeshStandardNodeMaterial } from 'three/webgpu'
 import { float, uniform } from 'three/tsl'
 
 import { detail_builder } from '../src/detail_builder.ts'
@@ -225,5 +226,50 @@ test('streamed city details share column residency and are recreated after evict
   uploads.drain([0, 0, 0], 131072, 1)
   expect(scene.children).toHaveLength(0)
   layer.dispose()
+  atlas.dispose()
+})
+
+test('evicted detail meshes release their render bindings without disposing another column', () => {
+  const builder = detail_builder()
+  builder.box([1, 1, 1], [2, 2, 2], 'wood')
+  builder.box([33, 1, 1], [34, 2, 2], 'wood')
+  const scene = new Scene(),
+    materials = compile_materials(palette),
+    atlas = create_material_texture(materials, 16)
+  const uploads = create_upload_queue(() => 0)
+  const layer = create_detail_layer({
+    scene,
+    cells: builder.finish(),
+    materials,
+    atlas,
+    quality: 'high',
+    uploads,
+    clouds: { shadow_at: () => float(1) },
+    sun_direction: uniform(new Vector3(0, 1, 0)),
+  })
+  layer.retain('first', [0, 0, 0])
+  layer.retain('second', [32, 0, 0])
+  uploads.drain([0, 0, 0], 131072, 1)
+  const [first, second] = scene.children as Mesh<BufferGeometry, MeshStandardNodeMaterial>[]
+  let first_disposals = 0,
+    second_disposals = 0
+  first!.material.addEventListener('dispose', () => {
+    first_disposals++
+  })
+  second!.material.addEventListener('dispose', () => {
+    second_disposals++
+  })
+  layer.remove('first')
+  expect(first_disposals).toBe(1)
+  expect(second_disposals).toBe(0)
+  layer.set_quality('low', atlas)
+  expect(second_disposals).toBe(1)
+  const replacement = second!.material
+  let final_disposals = 0
+  replacement.addEventListener('dispose', () => {
+    final_disposals++
+  })
+  layer.dispose()
+  expect(final_disposals).toBe(1)
   atlas.dispose()
 })

@@ -13,8 +13,7 @@ test('compact chat counts filtered social messages, preserves drafts and clears 
   await expect(page.locator('.chat__input')).toBeHidden()
   expect((await page.locator('.gw-worldchat').boundingBox())!.width).toBeLessThan(90)
   await page.evaluate(async () => {
-    const module_path = '/src/store.ts'
-    const { dispatch_app } = (await import(module_path)) as typeof import('../../src/store.ts')
+    const dispatch_app = window.dispatch_hud_input
     dispatch_app({ type: 'chat/line', line: { id: 'social-1', channel: 'general', key: 'Hello', values: {} } })
     dispatch_app({
       type: 'chat/line',

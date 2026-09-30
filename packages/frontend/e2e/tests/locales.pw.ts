@@ -17,7 +17,7 @@ for (const [locale, settings] of [
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await open_responsive_preview(page, `/e2e/fixtures/responsive_preview.html?page=settings&locale=${locale}`)
-    await expect(page.locator('[data-app-sidebar]')).toContainText(settings!)
+    await expect(page.getByRole('heading', { name: settings!, exact: true })).toBeVisible()
     await expect(page.locator('html')).toHaveAttribute('lang', locale!)
     await open_responsive_preview(page, `/e2e/fixtures/responsive_preview.html?page=world&locale=${locale}`)
     await expect(page.locator('.chat__resize')).toBeVisible()

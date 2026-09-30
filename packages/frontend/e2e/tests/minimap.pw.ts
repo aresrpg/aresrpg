@@ -3,7 +3,9 @@
 import { expect, test } from '@playwright/test'
 
 const marker_pixel = ({ center, x, large = false }: { center: number; x: number; large?: boolean }) => {
-  const canvas = document.querySelector<HTMLCanvasElement>(large ? '.gw-worldmap__lens' : '.gw-minimap__lens')!
+  const canvas = document.querySelector<HTMLCanvasElement>(
+    large ? '.aui-map-interaction canvas' : '[data-minimap] canvas'
+  )!
   const size = large ? 768 : 288
   const diameter = large ? 1536 : 448
   const px = Math.round(size / 2 + ((x - center) * size) / diameter)
@@ -36,7 +38,7 @@ test('resource icons repaint while stationary and follow the current zone and co
   await page.evaluate(() => Reflect.get(window, 'minimap_fixture').move(200))
   await expect.poll(() => page.evaluate(marker_pixel, { center: 200, x: 220 })).not.toEqual(gold)
   expect(await page.evaluate(marker_pixel, { center: 200, x: 120 })).toEqual(gold)
-  await page.locator('.gw-minimap__open').click()
+  await page.locator('.aui-minimap-lens').click()
   await expect(page.getByRole('dialog')).toBeVisible()
   // The expanded map remains centered on the zone where it opened, even as the player moves.
   await expect.poll(() => page.evaluate(marker_pixel, { center: 432, x: 220, large: true })).not.toEqual(gold)

@@ -16,7 +16,6 @@ test('a selected checkpoint keeps the music subscription stable across renders',
   await expect
     .poll(async () => (errors.length ? errors : await page.locator('[data-world-frame] canvas').count()))
     .toBe(1)
-  await page.getByRole('button', { name: 'Menu', exact: true }).click()
   await page.getByRole('button', { name: 'Settings', exact: true }).click()
   await expect(page.locator('[data-world-frame] canvas')).toBeAttached()
   expect(errors).toEqual([])

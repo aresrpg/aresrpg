@@ -10,8 +10,8 @@ import type {} from '../fixtures/inventory.tsx'
 
 const open_feeding = async (page: Page) => {
   await page.goto('/e2e/fixtures/inventory.html')
-  await page.getByTitle('Siluri', { exact: true }).click({ button: 'right' })
-  await page.getByRole('button', { name: 'Feed', exact: true }).click()
+  await page.getByRole('button', { name: 'Siluri', exact: true }).click({ button: 'right' })
+  await page.getByRole('menu').getByRole('button', { name: 'Feed', exact: true }).click()
   return page.getByRole('dialog', { name: 'Feed pet', exact: true })
 }
 
@@ -87,8 +87,8 @@ test('food selection and confirmation remain visible in all six locales', async 
     const source = await readFile(new URL(`../../src/i18n/locales/${locale}.yaml`, import.meta.url), 'utf8')
     const copy = (parse(source) as { characters_page: Record<string, string> }).characters_page
     await page.goto(`/e2e/fixtures/inventory.html?locale=${locale}`)
-    await page.getByTitle('Siluri', { exact: true }).click({ button: 'right' })
-    await page.getByRole('button', { name: copy.menu_feed, exact: true }).click()
+    await page.getByRole('button', { name: 'Siluri', exact: true }).click({ button: 'right' })
+    await page.getByRole('menu').getByRole('button', { name: copy.menu_feed, exact: true }).click()
     const modal = page.getByRole('dialog', { name: copy.feed_title, exact: true })
     await modal.locator('[data-feed-foods] button').click()
     const confirm = modal.getByRole('button', { name: copy.feed_confirm, exact: true })

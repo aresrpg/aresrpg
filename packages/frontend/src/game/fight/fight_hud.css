@@ -922,7 +922,6 @@
 .aui-combat-spells .fight-hud__spell > img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
 .fight-hud__placement {
   background: #363b49;

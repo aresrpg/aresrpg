@@ -16,6 +16,7 @@ import { CHUNK_EDGE } from '../packages/engine/src/voxel_data.ts'
 
 import { partition_blocks } from './partition_blocks.mjs'
 import { bake_city_instances } from './bake_city_instances.mjs'
+import { validate_connections } from './module_connections.mjs'
 import { bake_schematic } from './bake_schematic.mjs'
 
 const bake_asset = (world, source, position, details) => {
@@ -40,6 +41,7 @@ const bake_asset = (world, source, position, details) => {
     ])
   )
   const root = assets[source.root]
+  if (root.connections) validate_connections(assets, root)
   const components = [
     { ...root, parts: [], connections: [] },
     ...(root.parts ?? []).map((part) => ({ kind: 'building', parts: [part] })),

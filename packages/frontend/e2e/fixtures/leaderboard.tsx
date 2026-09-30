@@ -7,7 +7,7 @@ import { createRoot } from 'react-dom/client'
 import type { LeaderboardEntry, LeaderboardObservation, LeaderboardSnapshot } from '@aresrpg/protocol'
 
 import type { AuthSession } from '../../src/auth.ts'
-import LeaderboardPage from '../../src/leaderboards/LeaderboardPage.tsx'
+import { GamePageWindow } from '../../src/components/GamePageWindow.tsx'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import { dispatch_app, useAppStore } from '../../src/store.ts'
@@ -42,6 +42,7 @@ const snapshot = (observation: LeaderboardObservation): LeaderboardSnapshot => (
   self: parameters.get('state') === 'empty' ? null : entry(501),
 })
 const Probe = () => {
+  const copy = useAppStore((state) => state.copy)
   const observation = useAppStore(({ leaderboards }) => leaderboards.observation)
   useEffect(() => {
     if (parameters.get('state') === 'error') {
@@ -53,11 +54,7 @@ const Probe = () => {
     }
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/leaderboard', snapshot: snapshot(observation) } })
   }, [observation])
-  return (
-    <main className="flex h-dvh min-w-0 bg-bg font-mono text-text">
-      <LeaderboardPage />
-    </main>
-  )
+  return <main className="flex h-dvh min-w-0 bg-bg font-mono text-text">{copy && <GamePageWindow copy={copy} />}</main>
 }
 const locale = LOCALES.find(({ code }) => code === parameters.get('locale'))?.code ?? 'en'
 void load_app_copy(locale)

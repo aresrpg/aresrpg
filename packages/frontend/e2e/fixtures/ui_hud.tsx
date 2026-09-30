@@ -21,6 +21,13 @@ import '../../src/tailwind.css'
 import '@aresrpg/ui/styles.css'
 import '../../src/game/fight/fight_hud.css'
 
+declare global {
+  interface Window {
+    dispatch_hud_input: typeof dispatch_app
+  }
+}
+window.dispatch_hud_input = dispatch_app
+
 const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 const spells = content_catalog.spells.filter(({ classe }) => classe === 'senshi')

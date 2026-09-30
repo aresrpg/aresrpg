@@ -73,7 +73,7 @@ test('encyclopedia tiles contain metadata and its staking section scrolls indepe
   await expect.poll(() => content.evaluate((node) => node.scrollTop)).toBeGreaterThan(100)
   expect((await tabs.boundingBox())!.y).toBe(y)
   await tabs.getByRole('button', { name: 'Gameplay', exact: true }).click()
-  const row = page.locator('.aui-navigation-row').first()
+  const row = page.locator('.aui-navigation-row:visible').first()
   await expect(row).toBeVisible()
   expect(await row.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none')
   expect(await row.evaluate((node) => getComputedStyle(node).borderLeftWidth)).toBe('0px')

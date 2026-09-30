@@ -47,3 +47,15 @@ test('nested placement uses one transform for solid occupancy, detail geometry a
   expect([0, 1, 2].map((axis) => Math.max(...positions.map((point) => point[axis])))).toEqual([68, 39, 20])
   expect(JSON.stringify(assets)).toBe(source)
 })
+
+test('baking validates the reachable assembly rather than unrelated library entries', () => {
+  const assets = {
+    used: { kind: 'building', pieces: [['block', [0, 0, 0], 'stone', 0, 'bottom']] },
+    unused: {
+      get module() {
+        throw new Error('Unreachable template was inspected')
+      },
+    },
+  }
+  expect(bake_schematic(assets, 'used').blocks).toEqual([[0, 0, 0, 'stone']])
+})

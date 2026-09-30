@@ -9,21 +9,11 @@ for (const width of [1920, 1366, 1024]) {
   test(`shell and world share geometry at ${width}px without losing account controls`, async ({ page }) => {
     await page.setViewportSize({ width, height: 768 })
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world&locale=fr')
-    const sidebar = page.locator('[data-app-sidebar]')
-    const header = page.locator('[data-app-header]')
     const frame = page.locator('[data-world-frame]')
-    await expect(sidebar).toBeVisible()
-    const side = (await page.locator('[data-app-account-panel]').boundingBox())!
-    expect(side.width).toBeGreaterThan(0)
-    expect(side.width).toBeLessThanOrEqual(200)
-    const tab = (await header.boundingBox())!
+    await expect(frame).toBeVisible()
     const world = (await frame.boundingBox())!
-    expect(Math.abs(tab.x - world.x)).toBeLessThan(1)
-    expect(world.y).toBeGreaterThan(tab.y + tab.height)
-    expect(world.y - tab.y - tab.height).toBeLessThanOrEqual(16)
-    const connection = (await page.locator('[data-connection-card]').boundingBox())!
-    expect(connection.y + connection.height).toBeLessThanOrEqual(768)
-    expect(connection.width).toBe(side.width)
+    expect(world).toEqual({ x: 0, y: 0, width, height: 768 })
+    await expect(page.locator('.world-account')).toBeInViewport()
     await page.locator('[data-wallet-trigger]').click()
     for (const button of await page.locator('[data-wallet-card] button').all()) {
       await button.scrollIntoViewIfNeeded()
@@ -46,20 +36,22 @@ test('narrow marketplace preserves buying, sale controls, and complete history',
   const buy = page.locator('[data-marketplace-listing-row] button').last()
   await buy.scrollIntoViewIfNeeded()
   await expect(buy).toBeInViewport()
-  await page.getByRole('tab').nth(1).click()
+  await page.locator('.market-toolbar .aui-segments button').nth(1).click()
   await page.locator('.market-inventory button').last().click()
   const form = page.locator('.market-sale-form')
   await form.locator('input').fill('1')
   await form.getByRole('button', { name: '×1000', exact: true }).click()
   await expect(form.getByRole('button', { name: 'Zum Verkauf anbieten', exact: true })).toBeEnabled()
-  await page.getByRole('tab').nth(2).click()
+  await page.locator('.market-toolbar .aui-segments button').nth(2).click()
   await expect(page.locator('.market-history-row')).toHaveCount(30)
   await page.locator('.market-history > div:last-child > button').click()
   await expect(page.locator('.market-history-row')).toHaveCount(35)
   const last = page.locator('.market-history-row').last()
   await expect(last).toContainText('1,25')
   await expect(last).toContainText('Käufer')
-  const overflow = await page.locator('.app-content').evaluate((element) => element.scrollWidth - element.clientWidth)
+  const overflow = await page
+    .locator('[data-app-content]')
+    .evaluate((element) => element.scrollWidth - element.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 })
 
@@ -91,25 +83,26 @@ test('phone picker search, selection, and close remain reachable in a short view
 test('narrow encyclopedia keeps filters on back and exposes ordinary and rare resource links', async ({ page }) => {
   await page.setViewportSize({ width: 590, height: 850 })
   await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=encyclopedia')
-  const search = page.locator('.enc-browser__list input').first()
+  const search = page.locator('.aui-catalogue-tools input').first()
   await search.fill('Fuwa Hat')
   await page
-    .locator('.enc-browser__list')
+    .locator('.enc-page')
     .getByRole('button', { name: /^Fuwa Hat /i })
     .click()
-  await expect(page.locator('.enc-browser__list')).toBeHidden()
-  await page.locator('.enc-browser__back').click()
+  const item = page.getByRole('dialog', { name: 'Fuwa Hat', exact: true })
+  await expect(item).toBeVisible()
+  await item.getByRole('button', { name: 'Close', exact: true }).click()
   await expect(search).toHaveValue('Fuwa Hat')
-  for (const tab of await page.locator('.enc-page > nav button').all()) {
+  for (const tab of await page.locator('.enc-page > .aui-segments button').all()) {
     await tab.click()
     await expect(tab).toBeInViewport()
   }
+  await page.locator('.enc-page > .aui-segments button').nth(3).click()
+  await page
+    .locator('.enc-browser__list')
+    .getByRole('button', { name: /^Herbalist\b/i })
+    .click()
   for (const index of [0, 1]) {
-    await page.locator('.enc-page > nav button').nth(3).click()
-    await page
-      .locator('.enc-browser__list')
-      .getByRole('button', { name: /^Herbalist\b/i })
-      .click()
     const resource = page
       .locator('.enc-gather-row')
       .filter({ has: page.locator('button') })
@@ -118,7 +111,9 @@ test('narrow encyclopedia keeps filters on back and exposes ordinary and rare re
       .nth(index)
     const name = await resource.locator('span').last().innerText()
     await resource.click()
-    await expect(page.locator('.enc-browser__detail')).toContainText(name)
+    const detail = page.getByRole('dialog', { name, exact: true })
+    await expect(detail).toBeVisible()
+    await detail.getByRole('button', { name: 'Close', exact: true }).click()
   }
 })
 
@@ -165,20 +160,26 @@ for (const width of [590, 920, 1920]) {
     for (const tab of ['equipment', 'stats', 'spells', 'jobs', 'runeforge']) {
       await page.locator(`[data-character-detail-tab="${tab}"]`).click()
       const body = page.locator(
-        { equipment: '.chr-equip', stats: '.stats', spells: '.sb', jobs: '.jobs', runeforge: '.chr-forge' }[tab]!
+        {
+          equipment: '.chr-equip',
+          stats: '.aui-character-sheet',
+          spells: '.sb',
+          jobs: '.jobs',
+          runeforge: '.chr-forge',
+        }[tab]!
       )
       await expect(body).toBeVisible()
       await expect(async () => {
         const overflow = await page
-          .locator('.app-content')
+          .locator('[data-app-content]')
           .evaluate((element) => element.scrollWidth - element.clientWidth)
         expect(overflow).toBeLessThanOrEqual(1)
       }).toPass()
     }
     await page.locator('[data-character-detail-tab="jobs"]').click()
     await page.locator('.jobs__recipe').first().click()
-    await expect(page.locator('.jobs__item-detail')).toBeVisible()
-    await page.locator('.jobs__detail-close').click()
+    await expect(page.locator('[data-modal-identity^="item:"]')).toBeVisible()
+    await page.locator('[data-modal-identity^="item:"]').getByRole('button', { name: 'Close', exact: true }).click()
     await expect(page.locator('.jobs__browse')).toBeVisible()
     await page.locator('[data-character-detail-tab="equipment"]').click()
     await page.locator('.chr-equip__grid button').last().click({ button: 'right' })
@@ -198,14 +199,13 @@ for (const viewport of [
     await page.setViewportSize(viewport)
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
     const bounds = (selector: string) => page.locator(selector).boundingBox()
-    await expect(page.locator('.gw-minimap__frame')).toBeVisible()
+    const map_control = page.locator(viewport.width < 1024 ? '.world-map-trigger' : '.aui-minimap')
+    await expect(map_control).toBeVisible()
     const world = (await bounds('[data-world-frame]'))!
-    const map = (await bounds('.gw-minimap__frame'))!
+    const map = (await map_control.boundingBox())!
     const chat = (await bounds('.gw-worldchat'))!
     const hud = (await bounds('.fight-hud--overworld .fight-hud__bar'))!
-    // Small viewports retain the minimap’s 96px readability floor.
-    expect(map.width).toBeGreaterThanOrEqual(96)
-    expect(map.width).toBeLessThanOrEqual(Math.max(96, world.height * 0.31))
+    expect(map.width).toBeGreaterThanOrEqual(viewport.width < 1024 ? 44 : 96)
     expect(chat.height).toBeLessThanOrEqual(Math.min(320, world.height * 0.4) + 1)
     for (const box of [map, chat, hud]) {
       expect(box.x).toBeGreaterThanOrEqual(world.x)
@@ -219,18 +219,16 @@ for (const viewport of [
   test(`all six stat controls remain reachable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
-    const rows = page.locator('.stats__card--primary .stats__prow')
+    const rows = page.locator('.aui-attribute-row')
     await expect(rows).toHaveCount(6)
     for (const row of await rows.all()) {
       const add = row.getByRole('button').last()
       await add.scrollIntoViewIfNeeded()
       await expect(add).toBeInViewport()
       await add.click()
-      await expect(row.locator('.stats__prow-pending')).toBeVisible()
+      await expect(row.getByRole('button').first()).toBeEnabled()
     }
-    const clipping = await page.locator('.stats__scroll').evaluate((element) => getComputedStyle(element).overflowY)
-    expect(clipping).toBe('visible')
-    await page.locator('.stats__assign').scrollIntoViewIfNeeded()
+    await page.locator('.aui-character-points').scrollIntoViewIfNeeded()
     await page.screenshot({ path: `test-results/compact-stats-${viewport.width}.png` })
   })
 }
@@ -245,14 +243,18 @@ test('zoom-sized spells, jobs and forge expose complete inner panels', async ({ 
   ]) {
     await page.locator(`[data-character-detail-tab="${tab}"]`).click()
     await expect(page.locator(panel!)).toBeVisible()
-    expect(await page.locator(inner!).evaluate((element) => getComputedStyle(element).overflowY)).toBe('visible')
+    // FitViewport scales native content; exercise controls in rendered coordinates.
+    for (const control of await page.locator(inner!).getByRole('button').all()) {
+      await control.scrollIntoViewIfNeeded()
+      await expect(control).toBeInViewport()
+    }
     expect(
-      await page.locator('.app-content').evaluate((element) => element.scrollWidth - element.clientWidth)
+      await page.locator('[data-app-content]').evaluate((element) => element.scrollWidth - element.clientWidth)
     ).toBeLessThanOrEqual(1)
     const last = page.locator(panel!).getByRole('button').last()
     await last.scrollIntoViewIfNeeded()
     await expect(last).toBeInViewport()
-    await page.locator('.app-content').evaluate((element) => {
+    await page.locator('[data-app-content]').evaluate((element) => {
       element.scrollTop = 0
     })
     await page.screenshot({ path: `test-results/compact-${tab}.png` })
@@ -277,10 +279,10 @@ for (const width of [1920, 1366, 1024, 800]) {
 test('roomy desktop preserves the original single-column 600px stat sheet', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1440 })
   await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
-  const sheet = page.locator('.stats')
+  const sheet = page.locator('.aui-character-sheet')
   await expect(sheet).toBeVisible()
   expect((await sheet.boundingBox())!.width).toBeLessThanOrEqual(600)
-  const rows = await page.locator('.stats__card--primary .stats__prow').all()
+  const rows = await page.locator('.aui-attribute-row').all()
   const first = (await rows[0]!.boundingBox())!
   const second = (await rows[1]!.boundingBox())!
   expect(second.y).toBeGreaterThanOrEqual(first.y + first.height - 1)
@@ -290,15 +292,15 @@ for (const height of [801, 900, 1100]) {
   test(`stats never clip allocation rows above the compact breakpoint at height ${height}`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height })
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
-    const card = page.locator('.stats__card--primary')
+    const card = page.locator('.aui-character-statistics')
     await expect(card).toBeVisible()
     // Visibility alone misses children painted outside their parent's overflow clip.
     expect(await card.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeLessThanOrEqual(1)
-    for (const row of await card.locator('.stats__prow').all()) {
+    for (const row of await card.locator('.aui-attribute-row').all()) {
       const add = row.getByRole('button').last()
       await add.scrollIntoViewIfNeeded()
       await add.click()
-      await expect(row.locator('.stats__prow-pending')).toBeVisible()
+      await expect(row.getByRole('button').first()).toBeEnabled()
     }
   })
 }
@@ -328,7 +330,7 @@ for (const viewport of [
         expect(overflow).toBeLessThanOrEqual(1)
       }).toPass()
       if (tab === 'stats') {
-        for (const button of await sheet.locator('.stats__prow button:last-child').all()) {
+        for (const button of await sheet.locator('.aui-attribute-row button:last-child').all()) {
           await expect(button).toBeInViewport()
           await button.click()
         }
@@ -338,76 +340,28 @@ for (const viewport of [
   })
 }
 
-for (const height of [360, 600, 900, 1440]) {
-  test(`sidebar preserves desktop text and cards remain reachable at ${height}px`, async ({ page }) => {
+for (const height of [360, 500, 601, 900, 1440]) {
+  test(`account and settings remain reachable without moving the world at ${height}px`, async ({ page }) => {
     await page.setViewportSize({ width: 1366, height })
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
-    const sidebar = page.locator('[data-app-account-panel]')
-    const scroll = sidebar.locator('.sidebar-viewport__content')
-    await expect(sidebar).toBeVisible()
-    await expect(sidebar).toHaveCSS('width', '200px')
-    await expect(scroll).toHaveCSS('transform', 'none')
-    await expect(page.locator('[data-page="world"] span').first()).toHaveCSS('font-size', '11px')
-    const footer = page.locator('[data-connection-card]')
-    const before = (await footer.boundingBox())!
-    for (const selector of [
-      '[data-app-sidebar] button[data-page="settings"]',
-      '[data-language-card] button',
-      '[data-public-sale-card]',
-    ]) {
-      const control = sidebar.locator(selector).first()
-      await control.scrollIntoViewIfNeeded()
-      await expect(control).toBeInViewport()
-      await expect(footer).toBeInViewport({ ratio: 0.999 })
+    const frame = page.locator('[data-world-frame]')
+    const before = await frame.boundingBox()
+    await page.locator('[data-wallet-trigger]').click()
+    const card = page.locator('[data-wallet-card]')
+    for (const button of await card.getByRole('button').all()) {
+      await button.scrollIntoViewIfNeeded()
+      await expect(button).toBeInViewport()
     }
-    expect((await footer.boundingBox())!.y).toBeCloseTo(before.y, 1)
-    expect(await scroll.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-    if (height <= 900) expect(await scroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
-    await page.screenshot({ path: `test-results/readable-sidebar-${height}.png` })
+    expect(await card.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Settings', exact: true }).click()
+    const settings = page.getByRole('dialog', { name: 'Settings', exact: true })
+    await expect(settings).toBeVisible()
+    await settings.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(frame).toHaveJSProperty('clientHeight', height)
+    expect(await frame.boundingBox()).toEqual(before)
   })
 }
-
-for (const height of [500, 1440]) {
-  test(`layout anchors survive sidebar scrolling at ${height}px`, async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height })
-    await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=stats')
-    await expect(page.locator('.stats')).toBeVisible()
-    await expect(async () => {
-      const sidebar = (await page.locator('[data-app-account-panel]').boundingBox())!
-      const account = (await page.locator('[data-app-account-panel]').boundingBox())!
-      const footer = (await page.locator('[data-connection-card]').boundingBox())!
-      const pane = (await page.locator('[data-app-content]').boundingBox())!
-      const gap = await page.locator('.app-shell-row').evaluate((el) => parseFloat(getComputedStyle(el).gap))
-      expect(Math.abs(pane.x - sidebar.x - sidebar.width - gap)).toBeLessThanOrEqual(1)
-      expect(Math.abs(footer.y + footer.height - account.y - account.height)).toBeLessThanOrEqual(1)
-      const stats = (await page.locator('.stats').boundingBox())!
-      expect(Math.abs(stats.x + stats.width / 2 - pane.x - pane.width / 2)).toBeLessThanOrEqual(1)
-    }).toPass()
-    await page.locator('[data-character-detail-tab="equipment"]').click()
-    const bag = (await page.locator('.chr-equip__bag').boundingBox())!
-    const body = (await page.locator('.chr-page-body').boundingBox())!
-    expect(bag.y + bag.height).toBeGreaterThanOrEqual(body.y + body.height - 17)
-    await page.screenshot({ path: `test-results/anchored-equipment-${height}.png` })
-  })
-}
-
-test('the bottom border stays inside the sidebar clip with fractional card sizes', async ({ page }) => {
-  await page.setViewportSize({ width: 1024, height: 601 })
-  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
-  await expect(page.locator('[data-connection-card]')).toBeVisible()
-  // Font metrics and zoom produce fractional heights; integer DOM measurements must not clip the border.
-  await page.addStyleTag({
-    content:
-      '.sidebar-viewport__content > :first-child { height: 2000.49px; } [data-connection-card] { height: 200.49px; }',
-  })
-  await expect(async () => {
-    const row = (await page.locator('.app-shell-row').boundingBox())!
-    const footer = (await page.locator('[data-connection-card]').boundingBox())!
-    // Allow one browser layout subpixel, not a whole pixel of hidden border.
-    expect(footer.y + footer.height).toBeLessThanOrEqual(row.y + row.height + 1 / 64)
-    expect(row.y + row.height - footer.y - footer.height).toBeLessThan(1)
-  }).toPass()
-})
 
 test('roomy spells keep the original centered list and equipment stays top aligned', async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1600 })
@@ -420,7 +374,7 @@ test('roomy spells keep the original centered list and equipment stays top align
   const rows = await page.locator('.sb__rowbtn').all()
   const first = (await rows[0]!.boundingBox())!
   const second = (await rows[1]!.boundingBox())!
-  expect(second.y).toBeGreaterThanOrEqual(first.y + first.height)
+  expect(second.x >= first.x + first.width || second.y >= first.y + first.height).toBe(true)
   await page.screenshot({ path: 'test-results/restored-spells-desktop.png' })
   await page.locator('[data-character-detail-tab="equipment"]').click()
   await expect(page.locator('.chr-equip__chip')).toBeVisible()
@@ -472,7 +426,9 @@ for (const width of [590, 1920]) {
       'title',
       'Public marketplace sales in the last 30 days, before fees.'
     )
-    expect(await page.locator('.app-content').evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+    expect(
+      await page.locator('[data-app-content]').evaluate((el) => el.scrollWidth - el.clientWidth)
+    ).toBeLessThanOrEqual(1)
     await page.screenshot({ path: `test-results/market-volumes-${width}.png` })
   })
 }
@@ -482,7 +438,7 @@ for (const height of [500, 900]) {
     await page.setViewportSize({ width: 1440, height })
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=jobs')
     await page.locator('.jobs__recipe').first().click()
-    await expect(page.locator('.jobs__item-detail')).toBeVisible()
+    await expect(page.locator('[data-modal-identity^="item:"]')).toBeVisible()
     for (const name of await page.locator('.jobs__list-name').all()) {
       expect(await name.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
     }

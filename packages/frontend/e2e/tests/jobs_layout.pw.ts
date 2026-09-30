@@ -29,7 +29,7 @@ for (const viewport of [
     await recipes.last().scrollIntoViewIfNeeded()
     await expect(recipes.last()).toBeInViewport()
     await recipes.first().click()
-    await expect(page.locator('.jobs__item-detail')).toBeVisible()
+    await expect(page.locator('[data-modal-identity^="item:"]')).toBeVisible()
     if (await page.locator('.jobs__browse').isVisible()) {
       for (const name of await names.all()) {
         expect(await name.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
@@ -41,7 +41,7 @@ for (const viewport of [
     const craft = page.locator('.jobs__craft-btn')
     await craft.scrollIntoViewIfNeeded()
     await expect(craft).toBeInViewport()
-    await page.locator('.jobs__detail-close').click()
+    await page.locator('[data-modal-identity^="item:"]').getByRole('button', { name: 'Close', exact: true }).click()
     await expect(recipes.first()).toBeVisible()
     await page.screenshot({ path: test.info().outputPath('jobs.png') })
   })

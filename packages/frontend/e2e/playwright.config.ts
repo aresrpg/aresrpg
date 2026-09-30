@@ -4,6 +4,8 @@ import { resolve } from 'node:path'
 
 import { defineConfig } from '@playwright/test'
 
+import { browser_launch_options } from './support/browser_launch.ts'
+
 const hardware = process.env.REQUIRE_HARDWARE === '1'
 const browser_name = (process.env.BROWSER ?? 'chrome') as 'chrome' | 'firefox' | 'webkit'
 
@@ -27,12 +29,7 @@ export default defineConfig({
     trace: hardware ? 'off' : 'retain-on-failure',
     browserName: browser_name === 'chrome' ? 'chromium' : browser_name,
     ...(browser_name === 'chrome' ? { channel: 'chrome' } : {}),
-    ...(browser_name === 'firefox' && process.platform === 'linux' && !hardware
-      ? { launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } }
-      : {}),
-    ...(browser_name === 'chrome' && hardware
-      ? { launchOptions: { args: ['--disable-frame-rate-limit', '--disable-gpu-vsync'] } }
-      : {}),
+    launchOptions: browser_launch_options(browser_name, process.platform, hardware),
   },
   projects: [
     {

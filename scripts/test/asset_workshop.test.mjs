@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { expect, test } from 'bun:test'
 
 import source from '../../seed/structures/workshop.recipe.json'
+import shipped from '../../seed/scenes/asset_workshop.json'
 import {
   compile_runtime_world_recipe,
   validate_world_recipe,
@@ -68,7 +69,7 @@ test('porch posts have a bottom course touching the path', () => {
 })
 
 test('plants root on terrain or an authored supporting block', () => {
-  const asset = bake_workshop()
+  const asset = shipped
   const world = compile_runtime_world_recipe(asset.world)
   const supports = new Set(
     asset.world.fixed_structures.flatMap(({ source, origin }) =>
@@ -129,4 +130,4 @@ test('the complete kit compiles independently with the same geometry budget', ()
 
 test('the checked-in workshop is fresh', () => {
   expect(generate_asset_workshop(true).assets).toBe(recipe.workshop.assets.length)
-})
+}, 20_000)

@@ -15,17 +15,23 @@ const apply_operations = (writer, operations) => {
   }
 }
 
+const validate_reachable = (assets, id, seen = new Set()) => {
+  const asset = assets[id]
+  if (!asset || seen.has(id)) return
+  seen.add(id)
+  if (asset.module) validate_module(asset)
+  if (asset.connections) validate_connections(assets, asset)
+  asset.parts?.forEach(({ asset }) => validate_reachable(assets, asset, seen))
+}
+
 /** Reusable asset data → the existing voxel, detail-cell and flora formats. Offline only. */
 export const bake_schematic = (assets, id, origin = [0, 0, 0], external_details) => {
+  validate_reachable(assets, id)
   const details = external_details ?? detail_builder()
   const plants = []
   const fires = []
   const vines = []
   const kit = building_kit()
-  Object.values(assets).forEach((asset) => {
-    if (asset.module) validate_module(asset)
-    if (asset.connections) validate_connections(assets, asset)
-  })
   const names = Object.keys(assets)
   const allowed = new Set(
     assets[id]?.kind === 'building' ? [...PROPS, ...names.filter((name) => assets[name].kind === 'building')] : names

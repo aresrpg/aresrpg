@@ -701,8 +701,9 @@ Authored architectural detail uses one offline mesh compiler for thin trim, rail
 lantern housings, canvas and snow caps. It clips triangles into 32-block cells and writes bounded,
 little-endian vertex artifacts with named material palettes. Runtime validates the artifact, remaps
 palette IDs, and admits bounded interleaved buffer parts per resident cell; it never rebuilds prop geometry.
-The terrain pool owns these cells through its existing column residency and releases their geometry
-when the last terrain layer leaves. Retention queues detail parts rather than constructing a whole
+The terrain pool owns these cells through its existing column residency. Each admitted mesh owns its
+material instance as well as its geometry; final eviction disposes both so Three.js releases the mesh's
+WebGPU uniform bindings. Instances share the node graph, pipeline and borrowed atlas, not their lifetime. Retention queues detail parts rather than constructing a whole
 column synchronously. The backend's single upload queue admits voxel and detail buffers under the same
 byte and CPU-time budgets; detail parts fit the minimum tier's byte budget. Eviction cancels queued
 parts before releasing admitted buffers, and readiness includes all pending uploads. Details borrow
@@ -1082,7 +1083,7 @@ complete project/shard partitions without repeatedly launching discovery for eac
 Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three UI shards on Linux, two
 on macOS, and three quality-specific world workload lanes per platform. Five macOS jobs avoid queuing
 a sixth browser behind the hosted macOS concurrency limit. Runner-provided Chrome is reused and its
-version is logged; absent Chrome and Playwright’s patched Firefox are installed through one setup entry. Each workload lane runs one heavy smoke scenario;
+version is logged; absent Chrome and Playwright’s patched Firefox are installed through one setup entry. Linux compatibility uses Chrome SwiftShader Vulkan and Firefox WebGPU Vulkan with Mesa software drivers. Hardware runs keep the native adapter. Each workload lane runs one heavy smoke scenario;
 the low and medium lanes each verify one missing-WebGPU failure. Browser jobs have a six-minute
 execution limit. Smoke world workloads have a 210-second test timeout; full workloads retain their ten-minute local budget. UI layout retries have a three-second
 budget, separate from the longer world-rendering checks. Settings persistence exercises its actual

@@ -51,7 +51,9 @@ test('switching app pages and browser focus preserves the run and keeps Stop ava
   await panel.getByRole('button', { name: 'Start', exact: true }).click()
   await page.getByRole('button', { name: 'Leaderboard', exact: true }).click()
   await expect(panel.getByRole('button', { name: 'Stop', exact: true })).toBeVisible()
-  expect(await panel.evaluate((element) => element.closest('[data-world-frame]') === null)).toBe(true)
+  expect(
+    await panel.evaluate((element) => element.closest('[data-world-frame]')?.getAttribute('aria-hidden') !== 'true')
+  ).toBe(true)
   const other = await page.context().newPage()
   await other.goto('about:blank')
   await other.bringToFront()

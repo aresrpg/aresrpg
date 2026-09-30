@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Local presentation fixture. Only settings persistence runs; no game observers, signer, or transaction executor.
-import { useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { create_character_source, create_fight } from '@aresrpg/fight'
 import { item_stat_center, job_xp_for_level } from '@aresrpg/immutable'
@@ -415,22 +414,9 @@ if (page === 'fight') {
     awaiting_turn_witness: false,
   })
 }
-const Annotate = () => {
-  useEffect(() => {
-    const sidebar = document.querySelector('[data-app-sidebar]')
-    const column = sidebar?.parentElement?.parentElement
-    if (column) {
-      column.dataset.previewSidebarColumn = ''
-      const shell = column.parentElement?.parentElement
-      if (shell) shell.dataset.previewShell = ''
-    }
-  }, [])
-  return null
-}
 createRoot(document.getElementById('root')!).render(
   <>
     <App />
-    <Annotate />
     {page === 'fight' && (
       <div className="preview-fight">
         <FightHud

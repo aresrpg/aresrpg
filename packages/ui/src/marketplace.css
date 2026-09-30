@@ -183,7 +183,11 @@
   padding: 4px 8px;
 }
 @container aui-window (max-width: 650px) {
+  .market-toolbar {
+    flex-wrap: wrap;
+  }
   .market-volumes {
-    display: none;
+    flex-wrap: wrap;
+    padding-bottom: 4px;
   }
 }
