@@ -5,12 +5,25 @@ import { resolve } from 'node:path'
 import { defineConfig } from '@playwright/test'
 
 const hardware = process.env.REQUIRE_HARDWARE === '1'
+// These fixtures run complete worlds or renderer probes; keep their GPU workloads serial.
+const WORLD_TESTS = [
+  'adventure_controls',
+  'adventure_ending',
+  'background_run',
+  'canopy_lighting',
+  'captions',
+  'character_aura',
+  'engine_lifecycle',
+  'nearby_fight',
+  'renderer',
+  'water',
+].map((name) => `**/${name}.pw.ts`)
 
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.pw.ts',
   expect: { toPass: { timeout: 3_000 } },
-  workers: 1,
+  workers: hardware ? 1 : 3,
   retries: 0,
   outputDir: '../../../test-results/browser',
   reporter: [
@@ -30,8 +43,15 @@ export default defineConfig({
     navigationTimeout: 20_000,
   },
   projects: [
-    { name: 'regression', testIgnore: '**/performance.pw.ts', timeout: 60_000 },
-    { name: 'performance', testMatch: '**/performance.pw.ts', timeout: 600_000 },
+    {
+      name: 'regression-ui',
+      testIgnore: ['**/performance.pw.ts', ...WORLD_TESTS],
+      fullyParallel: true,
+      workers: 2,
+      timeout: 60_000,
+    },
+    { name: 'regression-world', testMatch: WORLD_TESTS, workers: 1, timeout: 60_000 },
+    { name: 'performance', testMatch: '**/performance.pw.ts', workers: 1, timeout: 600_000 },
   ],
   webServer: {
     command:

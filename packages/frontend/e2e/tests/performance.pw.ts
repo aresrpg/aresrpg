@@ -66,3 +66,74 @@ for (const location of ['city', 'forest'] as const) {
     expect(errors).toEqual([])
   })
 }
+
+const diagnostic_cases = [
+  { location: 'city', quality: 'high', canopy: 'clusters', water: true },
+  { location: 'city', quality: 'high', canopy: 'clusters', water: false },
+  { location: 'city', quality: 'high', canopy: 'voxels', water: true },
+  { location: 'forest', quality: 'high', canopy: 'clusters', water: true },
+  { location: 'forest', quality: 'high', canopy: 'clusters', water: false },
+  { location: 'forest', quality: 'high', canopy: 'voxels', water: true },
+  { location: 'city', quality: 'medium', canopy: 'clusters', water: true },
+  { location: 'city', quality: 'low', canopy: 'clusters', water: true },
+  { location: 'ruins', quality: 'high', canopy: 'clusters', water: true, party_size: 3 },
+  { location: 'ruins', quality: 'high', canopy: 'clusters', water: false, party_size: 3 },
+  { location: 'ruins', quality: 'high', canopy: 'voxels', water: true, party_size: 3 },
+  { location: 'ruins', quality: 'high', canopy: 'clusters', water: true, party_size: 3, navigation: true },
+] as const
+
+for (const config of diagnostic_cases) {
+  const name = `${config.location}-${config.quality}-${config.canopy}-water-${config.water}${'navigation' in config ? '-navigation' : ''}`
+  test(`diagnostic ${name}`, async ({ page, browser }, info) => {
+    const errors: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(message.text())
+      if (message.text().startsWith('[workload]')) console.log(name, message.text())
+    })
+    await page.addInitScript(install_probe)
+    await page.goto('/e2e/fixtures/workload.html')
+    await page.waitForFunction(() => typeof window.run_diagnostics === 'function')
+    const session = await page.context().newCDPSession(page)
+    if ('navigation' in config) {
+      await session.send('Profiler.enable')
+      await session.send('Profiler.start')
+    }
+    const { captures, ...measurements } = await page.evaluate((config) => window.run_diagnostics(config), config)
+    if ('navigation' in config) {
+      const { profile } = await session.send('Profiler.stop')
+      await info.attach('cpu-profile', { contentType: 'application/json', body: JSON.stringify(profile) })
+    }
+    const adapter = await page.evaluate(() => window.workload_adapter)
+    await info.attach('diagnostic', {
+      contentType: 'application/json',
+      body: JSON.stringify(
+        {
+          os: process.platform,
+          os_release: release(),
+          cpu: cpus()[0]!.model,
+          memory_bytes: totalmem(),
+          browser: browser.version(),
+          adapter,
+          ...measurements,
+        },
+        null,
+        2
+      ),
+    })
+    for (const [name, frame] of Object.entries(captures)) {
+      await info.attach(name, { body: Buffer.from(frame.split(',')[1]!, 'base64'), contentType: 'image/png' })
+    }
+    expect(measurements.backend).toBe('webgpu')
+    expect(adapter).not.toBeNull()
+    expect(adapter!.fallback).toBe(false)
+    expect(JSON.stringify(adapter)).not.toMatch(/swiftshader|llvmpipe|software/i)
+    expect(await page.evaluate(() => window.workload_resources())).toEqual({
+      buffers: 0,
+      large_buffers: 0,
+      buffer_bytes: 0,
+      textures: 0,
+    })
+    expect(errors).toEqual([])
+  })
+}

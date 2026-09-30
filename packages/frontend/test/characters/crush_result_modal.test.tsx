@@ -19,16 +19,22 @@ const rune = Object.freeze({
   kiosk: '0xkiosk',
 }) satisfies ItemRow
 
-test('the rounded crush result is an inventory subset rendered with normal item cells', async () => {
+test('crush cells show the awarded amount rather than the existing inventory total', async () => {
   const copy = await load_app_copy('en')
   const markup = renderToStaticMarkup(
-    <CrushResultDialog close={() => undefined} copy={copy} result={{ digest: 'tx', items: [rune] }} />
+    <CrushResultDialog
+      close={() => undefined}
+      copy={copy}
+      result={{ digest: 'tx', items: [rune], received_amounts: { rune_ba_feu: 2 } }}
+    />
   )
 
   expect(markup).toContain('role="dialog"')
   expect(markup).toContain('data-crush-result-inventory=""')
   expect(markup).toContain('class="chr-cell"')
-  expect(markup).toContain('×6')
+  expect(markup).toContain('×2')
+  expect(markup).not.toContain('×6')
+  expect(rune.amount).toBe(6)
   expect(markup).not.toContain('chr-cell__lvl')
   expect(markup).not.toContain('+6')
   expect(markup).not.toContain('item-snapshot-tooltip')

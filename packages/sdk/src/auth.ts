@@ -40,7 +40,8 @@ import {
 import { receipt_digest } from './cache.ts'
 import { create_personal_kiosk_runner } from './kiosk_runner.ts'
 
-export type { CharacterActions, ScribeOutcome } from './character_actions.ts'
+export type { CharacterActions } from './character_actions.ts'
+export type { ScribeOutcome } from './forgemagie.ts'
 export type { FightActions } from './fight.ts'
 export type { DungeonActions } from './dungeon.ts'
 export type { KolizeumActions } from './kolizeum.ts'

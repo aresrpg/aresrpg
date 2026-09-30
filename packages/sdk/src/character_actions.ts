@@ -14,6 +14,7 @@ import { changed_object_ids, created_object_id, spending_receipt, receipt_digest
 import { character_delete, type CharacterDeleteInput } from './character.ts'
 import { living_content } from './client.ts'
 import { crush_owed_from_receipt, rune_coordinates, scribe_losses } from './forgemagie.ts'
+import type { ScribeOutcome } from './forgemagie.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { created_fight_id, type FightCreatedReceipt } from './fight.ts'
 import { event_boolean, event_integer, event_string, event_u64 } from './receipt_decode.ts'
@@ -58,20 +59,6 @@ const craft_outcome = (
   if (!identity_matches || !totals_are_valid) throw new Error('The craft receipt did not match the submitted batch')
   return Object.freeze({ attempts, successes, job_xp_gained })
 }
-
-/** The RuneScribed event, projected — the ONLY truth about a scribe's random outcome. */
-export type ScribeOutcome = Readonly<
-  Partial<ReturnType<typeof spending_receipt>> & {
-    digest: string
-    /** catalog stat id (stat_names order) the rune targeted */
-    stat: number
-    /** 0 = success, then the degraded outcomes (forge.move outcome codes) */
-    outcome: number
-    applied_value: number
-    lost_amounts: readonly number[]
-    new_puits: string
-  }
->
 
 export type CharacterActionsCtx = {
   /** async loader — the session's cached personal kiosk caps (kiosks are for life) */
@@ -328,7 +315,7 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       return Object.freeze({ digest: receipt_digest(receipt), claim_id })
     },
 
-    /** Reveal a CrushClaim, redeem only nonzero rune types, discard it, and return final touched stacks. */
+    /** Reveal a CrushClaim, redeem only nonzero rune types, discard it, and return touched stacks with the committed awards. */
     redeem_crush: async ({
       claim_id,
       runes,
@@ -337,7 +324,9 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       claim_id: string
       runes: readonly Readonly<{ item_type: string; existing: string | null }>[]
       custody?: KioskCustody
-    }): Promise<Readonly<{ digest: string; item_ids: readonly string[] }>> => {
+    }): Promise<
+      Readonly<{ digest: string; item_ids: readonly string[]; received_amounts: Readonly<Record<string, number>> }>
+    > => {
       if (!runes.length) throw new Error('The rune roster is empty')
       const rune_by_index = new Map(runes.map((rune) => [rune_coordinates(rune.item_type).index, rune]))
       if (rune_by_index.size !== runes.length) throw new Error('The rune roster contains duplicate catalog entries')
@@ -346,11 +335,18 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
       const owed = crush_owed_from_receipt(await sdk.execute(reveal_tx), claim_id)
       const missing = owed.findIndex((amount, index) => amount > 0 && !rune_by_index.has(index))
       if (missing >= 0) throw new Error(`The rune roster cannot redeem committed catalog entry ${missing}`)
-      const awarded = owed.flatMap((amount, index) => (amount > 0 ? [rune_by_index.get(index)!] : []))
+      const awarded = owed.flatMap((amount, index) => (amount > 0 ? [{ ...rune_by_index.get(index)!, amount }] : []))
+      const received_amounts = Object.freeze(
+        Object.fromEntries(awarded.map(({ item_type, amount }) => [item_type, amount]))
+      )
       if (!awarded.length) {
         const close_tx = sdk.tx()
         sdk.doors.discard_crush_claim(close_tx, { claim: claim_id })
-        return Object.freeze({ digest: receipt_digest(await sdk.execute(close_tx)), item_ids: Object.freeze([]) })
+        return Object.freeze({
+          digest: receipt_digest(await sdk.execute(close_tx)),
+          item_ids: Object.freeze([]),
+          received_amounts,
+        })
       }
       const { content_root, seed_package_original } = living_content(sdk, 'Character transaction')
       const templates = awarded.map(({ item_type }) => item_template_id(content_root, seed_package_original, item_type))
@@ -373,7 +369,11 @@ export const character_actions = (sdk: GameSdk, { kiosk_cap }: CharacterActionsC
         },
         { include: { objectTypes: true }, custody }
       )
-      return Object.freeze({ digest: receipt_digest(receipt), item_ids: changed_object_ids(receipt, '::item::Item') })
+      return Object.freeze({
+        digest: receipt_digest(receipt),
+        item_ids: changed_object_ids(receipt, '::item::Item'),
+        received_amounts,
+      })
     },
 
     /** Craft a bounded batch with optional merge preparation and exact receipt outcomes. */

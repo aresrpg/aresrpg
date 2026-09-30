@@ -85,7 +85,7 @@ export const CrushResultDialog = ({
             data-crush-result-inventory=""
           >
             {result.items.map((item) => (
-              <InventoryItemCell item={item} key={item.id} />
+              <InventoryItemCell amount={result.received_amounts[item.item_type]} item={item} key={item.id} />
             ))}
           </div>
         )}

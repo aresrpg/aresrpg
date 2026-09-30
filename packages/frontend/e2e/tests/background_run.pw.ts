@@ -9,9 +9,13 @@ test('run-to keeps moving and arrives after switching to the marketplace', async
   await page.waitForFunction(() => Boolean(Reflect.get(window, 'background_run_state')?.().pose), undefined, {
     timeout: 30_000,
   })
+  const start_x = await page.evaluate(() => Reflect.get(window, 'background_run_state')().pose.x as number)
   await page.evaluate(() => Reflect.get(window, 'background_run_start')())
+  // A spawned pose is not movement: terrain can still be loading, so the ETA is legitimately unknown.
+  await page.waitForFunction((x) => Reflect.get(window, 'background_run_state')().pose?.x > x + 1, start_x, {
+    timeout: 30_000,
+  })
   await expect(page.locator('.world-run-progress')).toContainText(/≈\d+:\d{2}/)
-  await page.waitForFunction(() => Reflect.get(window, 'background_run_state')().pose?.x > 1)
   const before = await page.evaluate(() => Reflect.get(window, 'background_run_state')().pose.x as number)
   await page.evaluate(() => Reflect.get(window, 'background_run_page')())
   await expect(page.locator('[data-world-frame]')).toBeVisible()

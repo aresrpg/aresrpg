@@ -3,9 +3,23 @@
 
 import { rune_effect, stat_names, type RuneTier } from '@aresrpg/immutable'
 
-import type { Receipt } from './cache.ts'
+import type { Receipt, spending_receipt } from './cache.ts'
 import { receipt_event } from './cache.ts'
 import { event_integer, event_string } from './receipt_decode.ts'
+
+/** The RuneScribed event, projected — the ONLY truth about a scribe's random outcome. */
+export type ScribeOutcome = Readonly<
+  Partial<ReturnType<typeof spending_receipt>> & {
+    digest: string
+    /** catalog stat id (stat_names order) the rune targeted */
+    stat: number
+    /** 0 = success, then the degraded outcomes (forge.move outcome codes) */
+    outcome: number
+    applied_value: number
+    lost_amounts: readonly number[]
+    new_puits: string
+  }
+>
 
 const RUNE_TIERS: readonly RuneTier[] = Object.freeze(['ba', 'pa', 'ra'])
 

@@ -5,7 +5,11 @@
 
 import type { ItemRow } from '@aresrpg/protocol'
 
-export type CrushResult = Readonly<{ digest: string; items: readonly Readonly<ItemRow>[] }>
+export type CrushResult = Readonly<{
+  digest: string
+  items: readonly Readonly<ItemRow>[]
+  received_amounts: Readonly<Record<string, number>>
+}>
 export type CrushPresentation =
   | Readonly<{ type: 'crushing'; items: readonly Readonly<ItemRow>[] }>
   | Readonly<{ type: 'result'; result: Readonly<CrushResult> }>
@@ -14,6 +18,7 @@ export type PendingCrushResult = Readonly<{
   digest: string
   item_ids: readonly string[]
   previous_amounts: Readonly<Record<string, number>>
+  received_amounts: CrushResult['received_amounts']
 }>
 
 /** Null means at least one receipt-touched stack has not reached the projection yet. */

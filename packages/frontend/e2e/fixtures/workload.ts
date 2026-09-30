@@ -13,6 +13,7 @@ import {
 import { generate_board } from '@aresrpg/fight'
 
 import { LIFECYCLE_WORLD } from '../../../engine/test/browser_lifecycle.ts'
+import { load_generated_city_artifacts_for } from '../../../engine/src/cities/generated_city.ts'
 import { detail_builder } from '../../../engine/src/detail_builder.ts'
 import { structure_placements } from '../../../engine/src/structure_placement.ts'
 import { crowd_benchmark_entity, load_crowd } from '../../src/demo/CharacterCrowdLab.tsx'
@@ -21,6 +22,7 @@ import { create_world } from '../../src/game/core/world.ts'
 import { mob_entities } from '../../src/game/mob_entities.ts'
 import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_waiter.ts'
 
+import { workload_follow_cost } from './workload_follow_cost.ts'
 import {
   workload_pets,
   workload_resources,
@@ -34,13 +36,15 @@ type Config = Readonly<{
   render_distance?: number
   mode: 'full' | 'smoke'
   benchmark?: boolean
-  location: 'city' | 'forest' | 'fixture'
+  location: 'city' | 'forest' | 'fixture' | 'ruins'
 }>
 type Sample = Readonly<{
   stage: string
   duration_ms: number
   frames: number
   p95_ms: number
+  p50_ms: number
+  over_budget_percent: number
   completed_fps: number | null
   p99_ms: number
   max_ms: number
@@ -111,6 +115,8 @@ const measure = async (
     duration_ms,
     frames: elapsed.length,
     p95_ms: percentile(ordered, 0.95),
+    p50_ms: percentile(ordered, 0.5),
+    over_budget_percent: (elapsed.filter((delta) => delta > 1000 / 120).length * 100) / elapsed.length,
     completed_fps,
     p99_ms: percentile(ordered, 0.99),
     max_ms: ordered.at(-1)!,
@@ -148,7 +154,26 @@ const settle = async (
   throw new Error(`World did not settle: ${JSON.stringify(world.state())}`)
 }
 
-const scene_input = (location: Config['location']) => {
+const ruins_forest = async (recipe: ReturnType<typeof parse_world_recipe>) => {
+  const city = world_city_areas('nauvis').find(({ id }) => id === 'the_ruins')!
+  const compiled = compile_runtime_world_recipe(recipe)
+  await load_generated_city_artifacts_for(compiled.structures.cities, city)
+  const candidates = Array.from(
+    { length: 256 },
+    (_, index) => [city.anchor_x + ((index % 16) - 8) * 32, city.anchor_z + (Math.floor(index / 16) - 8) * 32] as const
+  )
+  const [forest] = candidates
+    .filter(([x, z]) => ['forest', 'rainforest'].includes(sample_world_column(compiled, x, z).biome.name))
+    .map(([x, z]) => ({
+      focus: [x, z] as const,
+      trees: structure_placements(compiled, { min_x: x - 32, max_x: x + 32, min_z: z - 32, max_z: z + 32 }).length,
+    }))
+    .toSorted((left, right) => right.trees - left.trees)
+  if (!forest) throw new Error('No forest near the Ruins')
+  return forest.focus
+}
+
+const scene_input = async (location: Config['location']) => {
   const source = worlds_source.find(({ world }) => world === 'nauvis')
   if (!source) throw new Error('Missing performance world: nauvis')
   const recipe = parse_world_recipe(world_terrain(source.world))
@@ -157,6 +182,7 @@ const scene_input = (location: Config['location']) => {
     for (const x of [-64, 0, 64, 128]) details.box([x + 0.25, 2, 0.25], [x + 1.75, 3, 1.75], 'stone')
     return { source, recipe: { ...LIFECYCLE_WORLD, portal: false, details: details.finish() }, focus: [0, 0] as const }
   }
+  if (location === 'ruins') return { source, recipe, focus: await ruins_forest(recipe) }
   const city = source.cities[0]!
   if (location === 'city') return { source, recipe, focus: client_world_position(city.x, city.z) }
   const compiled = compile_runtime_world_recipe(recipe)
@@ -210,7 +236,7 @@ const PROFILES = {
 const run = async ({ quality, mode, location, benchmark, render_distance }: Config) => {
   const profile = PROFILES[mode]
   const wait_frames = create_frame_waiter({ benchmark, mode })
-  const { source, recipe, focus } = scene_input(location)
+  const { source, recipe, focus } = await scene_input(location)
   const canvas = document.querySelector('canvas')!
   const started = performance.now()
   const world = create_world({ canvas, world: recipe, quality, render_distance, initial_focus: focus })
@@ -399,9 +425,104 @@ const run = async ({ quality, mode, location, benchmark, render_distance }: Conf
   return { ...result, disposed_resources: window.workload_resources() }
 }
 
+// This fails if warm-up, camera, lighting, or residency differ between comparisons.
+// Keep scene inputs fixed, warm each variant, then repeat in reverse order.
+const run_diagnostics = async ({
+  quality,
+  location,
+  render_distance,
+  canopy,
+  water,
+  party_size = 6,
+  navigation,
+}: Readonly<
+  Pick<Config, 'quality' | 'location' | 'render_distance'> & {
+    canopy: 'clusters' | 'voxels'
+    water: boolean
+    party_size?: number
+    navigation?: boolean
+  }
+>) => {
+  const input = await scene_input(location)
+  const recipe = { ...input.recipe, canopy, liquid: water ? input.recipe.liquid : undefined }
+  const canvas = document.querySelector('canvas')!
+  const world = create_world({ canvas, world: recipe, quality, render_distance, initial_focus: input.focus })
+  const wait_frames = create_frame_waiter({ benchmark: true })
+  const samples: Sample[] = []
+  const captures: Record<string, string> = {}
+  world.point_at({ x: input.focus[0], z: input.focus[1] })
+  world.set_time_of_day(0.31)
+  world.set_audio_volume(0)
+  world.set_active(true)
+  try {
+    await settle(world)
+    const actors = await workload_equipped(
+      (await load_crowd(party_size, (x, z) => world.ground_height(x + input.focus[0], z + input.focus[1]))).map(
+        (actor) => ({
+          ...actor,
+          x: actor.x + input.focus[0],
+          z: actor.z + input.focus[1],
+        })
+      )
+    )
+    const cases = [
+      { name: 'empty', count: 0, aura: undefined },
+      { name: 'solo', count: 1, aura: undefined },
+      { name: 'party', count: party_size, aura: undefined },
+      { name: 'party-unbroken', count: party_size, aura: 'unbroken' },
+      { name: 'party-admin', count: party_size, aura: 'admin' },
+    ] as const
+    for (const [repeat, variants] of [cases, cases.toReversed()].entries()) {
+      for (const variant of variants) {
+        const selected = actors.slice(0, variant.count)
+        const started = performance.now()
+        const update = (): void =>
+          world.set_entities(
+            selected.map((actor) => ({
+              ...crowd_benchmark_entity(actor, 'run', performance.now() - started),
+              presentation: 'individual',
+              aura: variant.aura,
+            }))
+          )
+        update()
+        await wait_for_frame_condition(() => selected.every(({ id }) => world.entity_height(id) !== null))
+        const animate = selected.length > 0 ? update : undefined
+        await wait_frames(120, animate)
+        await window.workload_gpu_done!()
+        samples.push(await measure(world, `${variant.name}-${repeat}`, () => wait_frames(180, animate)))
+        captures[variant.name] = canvas.toDataURL('image/png')
+      }
+    }
+    return {
+      quality,
+      location,
+      canopy,
+      water,
+      party_size,
+      focus: input.focus,
+      render_distance: world.state().chunks.render_distance,
+      viewport: {
+        width: canvas.clientWidth,
+        height: canvas.clientHeight,
+        device_pixel_ratio: devicePixelRatio,
+        render_width: canvas.width,
+        render_height: canvas.height,
+      },
+      backend: world.backend(),
+      navigation: navigation ? await workload_follow_cost(world, actors) : null,
+      samples,
+      captures,
+    }
+  } finally {
+    world.dispose()
+  }
+}
+
 declare global {
   interface Window {
+    run_diagnostics: typeof run_diagnostics
     run_workload: typeof run
   }
 }
+window.run_diagnostics = run_diagnostics
 window.run_workload = run

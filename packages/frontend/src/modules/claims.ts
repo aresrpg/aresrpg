@@ -61,7 +61,9 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     for (const [claim_id, pending] of pending_crush_results) {
       const items = projected_crush_items(pending, inventory)
       if (items === null) continue
-      crush_results.publish(Object.freeze({ digest: pending.digest, items }))
+      crush_results.publish(
+        Object.freeze({ digest: pending.digest, items, received_amounts: pending.received_amounts })
+      )
       pending_crush_results.delete(claim_id)
       if (active_claim_id === claim_id) active_claim_id = null
     }
@@ -99,12 +101,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         existing: stack_merge_target(inventory.filter(is_rune), encumbered, item_type, kiosk),
       }))
     const previous_amounts = Object.freeze(Object.fromEntries(inventory.map(({ id, amount }) => [id, amount])))
-    const { digest, item_ids } = await wallet.character.redeem_crush({
+    const { digest, item_ids, received_amounts } = await wallet.character.redeem_crush({
       claim_id: claim.id,
       runes,
       custody,
     })
-    return Object.freeze({ digest, item_ids, previous_amounts })
+    return Object.freeze({ digest, item_ids, previous_amounts, received_amounts })
   }
 
   const redeem = (claim: Readonly<ClaimRow>, automatic: boolean): void => {

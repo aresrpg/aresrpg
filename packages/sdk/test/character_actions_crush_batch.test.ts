@@ -24,7 +24,7 @@ test('crush redemption reveals first and composes calls only for awarded rune ty
   const calls: Readonly<{ door: string; args: Readonly<Record<string, unknown>> }>[] = []
   const hydrated: string[][] = []
   const owed = Array.from({ length: 45 }, () => '0')
-  owed[15] = '1' // agility Ba: stat index 5 × three tiers
+  owed[15] = '3' // agility Ba: stat index 5 × three tiers
   let execution = 0
   const sdk = {
     pins: { content_root: { id: id(61) }, seed_package_original: id(60) },
@@ -70,7 +70,7 @@ test('crush redemption reveals first and composes calls only for awarded rune ty
     existing: null,
   })
   expect(hydrated).toEqual([[item_template_id(id(61), id(60), 'rune_agility_ba')]])
-  expect(result).toEqual({ digest: redeem_digest, item_ids: [] })
+  expect(result).toEqual({ digest: redeem_digest, item_ids: [], received_amounts: { rune_agility_ba: 3 } })
 })
 
 test('an already revealed empty crush remains closable without any rune calls', async () => {
@@ -107,10 +107,11 @@ test('an already revealed empty crush remains closable without any rune calls', 
     },
   }
 
-  await character_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).redeem_crush({
+  const result = await character_actions(sdk as never, { kiosk_cap: async () => kiosk_cap }).redeem_crush({
     claim_id,
     runes: [{ item_type: 'rune_strength_ba', existing: null }],
   })
 
   expect(calls).toEqual(['reveal', 'discard'])
+  expect(result).toEqual({ digest: redeem_digest, item_ids: [], received_amounts: {} })
 })

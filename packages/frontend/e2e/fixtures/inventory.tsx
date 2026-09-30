@@ -197,7 +197,11 @@ void load_app_copy(locale)
           <CrushResultDialog
             close={() => undefined}
             copy={copy}
-            result={{ digest: 'fixture', items: items.filter(({ category }) => category === 'rune') }}
+            result={{
+              digest: 'fixture',
+              items: items.filter(({ category }) => category === 'rune'),
+              received_amounts: { rune_vitality_ba: 1 },
+            }}
           />
         )}
         <Toasts />

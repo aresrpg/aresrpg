@@ -21,6 +21,7 @@ test('a crush result waits until every touched rune stack carries its projected 
     digest: 'tx',
     item_ids: ['0xexisting', '0xnew'],
     previous_amounts: { '0xexisting': 4 },
+    received_amounts: { ba_fo: 3, pa_fo: 2 },
   }
 
   expect(projected_crush_items(pending, [rune('0xexisting', 'ba_fo', 4)])).toBeNull()
@@ -32,14 +33,20 @@ test('a crush result waits until every touched rune stack carries its projected 
 })
 
 test('a receipt touching no rune stacks is an immediate empty crush result', () => {
-  expect(projected_crush_items({ digest: 'tx', item_ids: [], previous_amounts: {} }, [])).toEqual([])
+  expect(projected_crush_items({ digest: 'tx', item_ids: [], previous_amounts: {}, received_amounts: {} }, [])).toEqual(
+    []
+  )
 })
 
 test('crush presentation stays one lifecycle from item animation through result or failure', () => {
   const seen: string[] = []
   const unsubscribe = crush_results.subscribe(({ type }) => void seen.push(type))
   crush_results.start([rune('0xhat', 'hat', 1)])
-  crush_results.publish({ digest: 'tx', items: [rune('0xrune', 'rune_vitality_pa', 1)] })
+  crush_results.publish({
+    digest: 'tx',
+    items: [rune('0xrune', 'rune_vitality_pa', 1)],
+    received_amounts: { rune_vitality_pa: 1 },
+  })
   crush_results.fail(new Error('offline'))
   unsubscribe()
 

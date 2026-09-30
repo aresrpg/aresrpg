@@ -4,6 +4,7 @@
 import { expect, test } from 'bun:test'
 
 import { claim_is_settleable, rolled_item_types } from '../../src/modules/claims.ts'
+import { crush_results, type CrushPresentation } from '../../src/crush_result.ts'
 
 // REPORTED 2026-08-22: opening a pet box raised "The rolled item is not in the authored
 // catalog" and left the reveal button spinning on Collecting… forever. The catalog was fine —
@@ -136,6 +137,17 @@ test('unavailable persistence disables automation but explicit recovery remains 
   let calls = 0
   const app = create_app()
   const stop = app.observe(['claims'])
+  const seen: CrushPresentation[] = []
+  const unsubscribe = crush_results.subscribe((result) => void seen.push(result))
+  const rune = {
+    id: '0xrune',
+    item_type: 'rune_agility_ba',
+    name: 'Rune',
+    category: 'rune',
+    level: 1,
+    amount: 40,
+    kiosk: '0xkiosk',
+  }
   try {
     app.dispatch({ type: 'auth/connecting' })
     app.dispatch({
@@ -145,7 +157,12 @@ test('unavailable persistence disables automation but explicit recovery remains 
         character: {
           redeem_crush: async () => {
             calls++
-            return { digest: 'manual', item_ids: [] }
+            // Another inventory change can arrive during settlement; the receipt still awards only three.
+            app.dispatch({
+              type: 'server/packet',
+              packet: { type: 'packet/inventory', items: [{ ...rune, amount: 50 }] },
+            })
+            return { digest: 'manual', item_ids: [rune.id], received_amounts: { rune_agility_ba: 3 } }
           },
         },
       } as never,
@@ -157,11 +174,20 @@ test('unavailable persistence disables automation but explicit recovery remains 
     })
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(calls).toBe(0)
+    app.dispatch({ type: 'server/packet', packet: { type: 'packet/inventory', items: [rune] } })
     app.dispatch({ type: 'claims/redeem', claim_id: '0xmanual' })
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(calls).toBe(1)
     expect(app.store.getState().session.claims).toEqual([])
+    expect(app.store.getState().session.inventory[0]?.amount).toBe(50)
+    expect(seen).toEqual([
+      {
+        type: 'result',
+        result: { digest: 'manual', items: [{ ...rune, amount: 50 }], received_amounts: { rune_agility_ba: 3 } },
+      },
+    ])
   } finally {
+    unsubscribe()
     stop()
     if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor)
     else Reflect.deleteProperty(globalThis, 'localStorage')
@@ -170,7 +196,11 @@ test('unavailable persistence disables automation but explicit recovery remains 
 
 test('late claim settlement cannot remove another account claim or publish its yield', async () => {
   const { create_app } = await import('../../src/store.ts')
-  let resolve_claim: (result: { digest: string; item_ids: string[] }) => void = () => undefined
+  let resolve_claim: (result: {
+    digest: string
+    item_ids: string[]
+    received_amounts: Record<string, number>
+  }) => void = () => undefined
   const app = create_app()
   const stop = app.observe(['claims'])
   const claim = { id: '0xsharedprojection', kind: 'crush' as const }
@@ -199,7 +229,7 @@ test('late claim settlement cannot remove another account claim or publish its y
       },
     },
   })
-  resolve_claim({ digest: 'old', item_ids: [] })
+  resolve_claim({ digest: 'old', item_ids: [], received_amounts: {} })
   await new Promise((resolve) => setTimeout(resolve, 0))
   expect(app.store.getState().session.claims).toEqual([claim])
   stop()

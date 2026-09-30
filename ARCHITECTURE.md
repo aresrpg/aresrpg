@@ -998,6 +998,8 @@ Every attempt increments that revision, so Sui cannot omit an unchanged child wr
 never gates rune eligibility, and scribing grants no profession XP. The receipt carries
 net gain and all fifteen net losses, which the frontend folds before indexed reconciliation.
 Crushing retains its separate committed seed, deterministic reveal, and explicit redemption.
+The result uses projected rune rows for identity and the reveal receipt’s committed amounts for
+received quantities; existing inventory totals do not become crush awards.
 
 ### Content
 
@@ -1094,7 +1096,8 @@ One input classifier selects Move, indexer parity, and browser checks against th
 retain their native coverage and authority/parity checks. The final gate rejects failed, cancelled,
 or unjustifiably skipped verification. PRs also retain the production bundle check.
 
-One Chrome job on macOS runs browser regressions against a production test build. There is no
+One Chrome job on macOS runs browser regressions against one production test build. Two workers
+run independent UI cases alongside one sequential world/renderer worker. There is no
 platform/quality/shard matrix, separate mobile runner, WebGL fallback test, or development-HMR gate.
 Fixtures use production components with controlled inputs. Browser-only risks include focus,
 gestures, confirmation, persistence, decoded assets and GPU cleanup; CSS literals, duplicate viewport
