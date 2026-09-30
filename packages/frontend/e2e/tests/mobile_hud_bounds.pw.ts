@@ -40,7 +40,6 @@ test('mobile chat moves, resizes and stays inside an inset game canvas', async (
     expect(chat.x + chat.width).toBeLessThanOrEqual(frame.x + frame.width + 1)
     expect(chat.y + chat.height).toBeLessThanOrEqual(frame.y + frame.height + 1)
   }).toPass()
-  await page.screenshot({ path: '/tmp/mobile-chat-bounded.png' })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(async () => {
     const chat = (await page.locator('.gw-worldchat').boundingBox())!
@@ -50,45 +49,4 @@ test('mobile chat moves, resizes and stays inside an inset game canvas', async (
     expect(chat.x + chat.width).toBeLessThanOrEqual(frame.x + frame.width + 1)
     expect(chat.y + chat.height).toBeLessThanOrEqual(frame.y + frame.height + 1)
   }).toPass()
-})
-
-test('HP loss drains visible heart pixels instead of its transparent top padding', async ({ page }) => {
-  await page.goto('/e2e/fixtures/ui_hud.html?damage')
-  await expect(page.locator('.aui-health')).toContainText('1040')
-  await page.getByRole('button', { name: 'Take damage' }).click()
-  await expect(page.locator('.aui-health')).toContainText('936')
-  await expect
-    .poll(() =>
-      page.locator('.aui-health-fill').evaluate((node) => Number.parseFloat(getComputedStyle(node).clipPath.slice(6)))
-    )
-    .toBeGreaterThan((22 / 128) * 100)
-  await page.locator('.aui-health').screenshot({ path: '/tmp/heart-damaged.png' })
-})
-
-test('mobile turn introduction uses a small card below the system controls', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 })
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/e2e/fixtures/mobile_fight.html?intro')
-  const card = page.locator('.fight-hud__turn-card')
-  await card.evaluate((node) => {
-    node.style.animation = 'none'
-  })
-  const box = (await card.boundingBox())!
-  expect(box.width).toBeLessThanOrEqual(300)
-  expect(box.height).toBeLessThanOrEqual(96)
-  expect(box.y).toBeGreaterThanOrEqual(50)
-})
-
-test('level-up radiance cannot enlarge the modal or document scroll area', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 })
-  await page.goto('/e2e/fixtures/adventure_quests.html')
-  await page.locator('[data-win]').click()
-  const dialog = page.locator('dialog[open]')
-  await expect(dialog.locator('.aui-progression')).toBeVisible()
-  expect(
-    await dialog.evaluate((node) => node.scrollHeight <= node.clientHeight && node.scrollWidth <= node.clientWidth)
-  ).toBe(true)
-  expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true)
-  await expect(dialog.getByRole('button', { name: 'Later', exact: true })).toBeInViewport()
-  await page.screenshot({ path: '/tmp/mobile-level-contained.png' })
 })

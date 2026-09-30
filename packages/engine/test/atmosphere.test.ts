@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 
 import { cloud_coverage_threshold, cloud_layer_visible, cloud_sample_xz, cloud_shadow_strength } from '../src/clouds.ts'
@@ -45,8 +43,6 @@ describe('fast cloud field', () => {
     expect(cloud_layer_visible('high', true)).toBeFalse()
     expect(cloud_layer_visible('low', false)).toBeFalse()
     expect(cloud_layer_visible('high', false, false)).toBeFalse()
-    const backend = readFileSync(new URL('../src/webgpu_backend.ts', import.meta.url), 'utf8')
-    expect(backend).toContain('clouds.set_active(!immersive)')
   })
 })
 

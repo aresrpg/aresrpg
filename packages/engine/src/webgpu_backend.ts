@@ -178,7 +178,7 @@ export const create_webgpu_backend = async (
     })
     const auras = own(create_character_aura_layer(scene, camera, entity_anchors, initial_quality))
     const world_panels = own(create_world_panels(scene))
-    const captions = own(create_caption_layer({ renderer, canvas, camera, webgpu: true }))
+    const captions = own(create_caption_layer({ renderer, canvas, camera }))
     const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
     const effects = own(create_transient_effects({ scene, entities, captions }))
     const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })

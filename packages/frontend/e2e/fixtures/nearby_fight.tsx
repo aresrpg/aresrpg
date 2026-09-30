@@ -116,6 +116,7 @@ const probe = {
   walk: (forward: number) => world.set_movement({ forward, strafe: 0 }),
   snapshot: () => ({
     engine: world.state().engine,
+    terrain_ready: world.state().render.settled && world.state().chunks.queued + world.state().chunks.in_flight === 0,
     viewer: world.entity_height('viewer'),
     fighter: world.entity_height('fight_character_0'),
     cell: String(

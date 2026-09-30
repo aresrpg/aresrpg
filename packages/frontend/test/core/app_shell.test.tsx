@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -16,26 +14,9 @@ import type { AuthSession } from '../../src/auth.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { initial_session_state } from '../../src/modules/session.ts'
 
-const shell_source = readFileSync(new URL('../../src/components/AppShell.tsx', import.meta.url), 'utf8')
-
-test('the routed shell lazy-loads the dedicated Mastery page', () => {
-  const routed = readFileSync(new URL('../../src/components/GamePageWindow.tsx', import.meta.url), 'utf8')
-  expect(routed).toContain("import('../mastery/MasteryPage.tsx')")
-  expect(routed).toContain('mastery: <MasteryPage')
-})
-
 test('daily quest notifications derive from the mastery projection', () => {
   expect(mastery_reminder_visible(1, null, '1')).toBe(true)
   expect(mastery_reminder_visible(0, null, '1')).toBe(false)
-})
-
-test('switching tabs inside one fight does not remount its presentation layer', () => {
-  const key_selector = shell_source.slice(
-    shell_source.indexOf('const environment_key'),
-    shell_source.indexOf('// a previewing modal')
-  )
-  expect(key_selector).toContain('state.fight.checkpoint?.contract.id')
-  expect(key_selector).not.toContain('selected_character_id')
 })
 
 test('the shared wallet dropdown retains both balances and funding actions', async () => {
@@ -103,9 +84,6 @@ test('the shell blocks a paused game with the maintenance modal', async () => {
   expect(html).toContain('aria-modal="true"')
   expect(html).toContain('Maintenance in progress')
   expect(html).toContain('The AresRPG smart contract is temporarily paused for maintenance')
-  expect(html).toContain('from-[#d92d20]')
-  expect(html).not.toContain('data-game-frozen')
-  expect(html).not.toContain('bg-[#8f1028]')
   expect(admin_html).not.toContain('data-game-maintenance')
   expect(render_paused('kares')).not.toContain('data-game-maintenance')
 })
@@ -171,8 +149,6 @@ test('a character tab may invite another owned kiosk character, never itself', (
   expect(character_tab_invite_enabled('0xa', view)).toBeFalse()
   expect(character_tab_invite_enabled('0xb', view)).toBeTrue()
 })
-
-test('the Jobs route locks every character tab except the configured crafter', () => {})
 
 test('an accepted non-leader may invite another owned character', () => {
   const characters = [

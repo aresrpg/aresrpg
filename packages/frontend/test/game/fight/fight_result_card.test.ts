@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 
 import {
@@ -54,43 +52,4 @@ test('multi-character settlement progress counts confirmations and identifies th
       '0xf'
     )
   ).toEqual({ completed: 1, total: 2, failed_character: '0xc2' })
-})
-
-test('the result card keeps every participant on one compact roster line', () => {
-  const component = readFileSync(new URL('../../../src/game/fight/FightResultCard.tsx', import.meta.url), 'utf8')
-  const css = readFileSync(new URL('../../../src/game/fight/fight_result.css', import.meta.url), 'utf8')
-  const app = readFileSync(new URL('../../../src/PlayerRuntime.tsx', import.meta.url), 'utf8')
-  const world_frame = app.slice(
-    app.indexOf('data-world-frame'),
-    app.indexOf('pointer-events-none fixed inset-0 z-[100]')
-  )
-  expect(component).not.toContain('result_you')
-  expect(component).not.toContain('fe-hp')
-  expect(component).toContain('left: `${base_percent}%`')
-  expect(component).toContain('<CharacterLevelUpView')
-  expect(component).toContain("dialog: 'character_stats'")
-  expect(component).toContain("type: 'character/select'")
-  expect(component).toContain('item_icon(loot.item_type)')
-  expect(component).not.toContain('item_detail_icon')
-  expect(component).toContain("'result_duration'")
-  expect(component).toContain("'result_gas_spent'")
-  expect(component).toContain('result_wager_${outcome.kind}')
-  expect(component).toContain("'result_close'")
-  expect(component).toContain('role="progressbar"')
-  expect(component).toContain('result_collecting_progress')
-  expect(component).toMatch(/result.gas_spent_mist,\s*3/)
-  expect(css).toContain('.result.result--fe > *')
-  expect(css).toContain('width: min(980px, 96%)')
-  expect(component).not.toContain('fe-rows--grid')
-  expect(css).not.toContain('grid-template-columns: repeat(auto-fit')
-  expect(css).toContain('grid-template-columns: minmax(90px, 0.8fr)')
-  expect(css).toContain('min-height: 26px')
-  expect(css).toContain('flex-wrap: nowrap')
-  expect(css).toContain('width: 24px')
-  expect(css).toContain('text-overflow: ellipsis')
-  expect(css).toContain('.fe-settlement__bar')
-  expect(css).toContain('rgba(4, 5, 8, 0.48)')
-  expect(css).toContain('position: absolute')
-  expect(world_frame).toContain('<FightResultCard')
-  expect(world_frame).toContain('<FightLevelUpCard')
 })

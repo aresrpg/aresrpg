@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 import type { CharacterRow } from '@aresrpg/protocol'
 
 import { render_english as renderToStaticMarkup } from '../../i18n/render.ts'
 import { character_max_hp, projected_hp } from '../../../src/game/character_stats.ts'
-import { EmptyActionCells, ExperienceBar } from '../../../src/game/hud/OverworldVitals.tsx'
+import { ExperienceBar } from '../../../src/game/hud/OverworldVitals.tsx'
 import { vital_percent, VitalsDisplay } from '../../../src/game/hud/VitalsDisplay.tsx'
 
 test('the HP display supplies the exact bounded remaining percentage to the shared heart', () => {
@@ -21,23 +19,12 @@ test('the HP display supplies the exact bounded remaining percentage to the shar
   expect(vital_percent(0n, 0n)).toBe(0)
 })
 
-test('the overworld action bar keeps ten empty cells', () => {
-  const html = renderToStaticMarkup(<EmptyActionCells />)
-
-  expect(html.match(/data-empty-action-cell/g)).toHaveLength(10)
-})
-
 test('the overworld vitals show progress within the selected character level', () => {
   const html = renderToStaticMarkup(<ExperienceBar experience="380" />)
-  const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
 
   expect(html).toContain('aria-label="270 / 540 XP"')
   expect(html).toContain('width:50%')
   expect(html).toContain('>270 / 540 XP<')
-  expect(css).toMatch(/\.fight-hud__bar--overworld\s*\{[^}]*flex-direction:\s*column/)
-  expect(css).toMatch(/\.fight-hud__overworld-row\s*\{[^}]*display:\s*flex/)
-  expect(css).toMatch(/\.fight-hud__experience-fill\s*\{[^}]*#f59e0b/)
-  expect(css).not.toContain('#d4e157')
 })
 
 test('a projected level-up fills HP against the new level and all vitality bonuses', () => {

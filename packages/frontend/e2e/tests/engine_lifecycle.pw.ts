@@ -3,11 +3,8 @@
 
 import { expect, test } from '@playwright/test'
 
-import { has_webgpu_adapter } from '../support/webgpu.ts'
-
 test('fight sword labels use the rendered label scene', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
-  test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
   await page.waitForFunction(() => typeof window.probe_sword_labels === 'function')
   expect(await page.evaluate(() => window.probe_sword_labels())).toEqual({
     attached: true,
@@ -32,10 +29,6 @@ test('labels do not update or traverse the game scene', async ({ page }) => {
 test('unavailable graphics reports initialization failure without waiting for a world pose', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'gpu', { value: undefined })
-    const get_context = HTMLCanvasElement.prototype.getContext
-    HTMLCanvasElement.prototype.getContext = new Proxy(get_context, {
-      apply: (target, receiver, args) => (args[0] === 'webgl2' ? null : Reflect.apply(target, receiver, args)),
-    })
   })
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   await page.waitForFunction(() => typeof window.start_world_input === 'function')
@@ -45,7 +38,6 @@ test('unavailable graphics reports initialization failure without waiting for a 
 test('actual backend bounds request metadata and preserves device-loss bookkeeping', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
   await page.waitForFunction(() => typeof window.probe_engine_lifetime === 'function')
-  test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
   const result = await page.evaluate(() => window.probe_engine_lifetime())
   expect(result).toEqual({
     removed: true,
@@ -121,7 +113,6 @@ test('cached real models keep finite combat number and hover anchors', async ({ 
 for (const morph of [false, true])
   test(`crowd shaders preserve independent skinning, geometry and shadows (morph=${morph})`, async ({ page }, info) => {
     await page.goto('/e2e/fixtures/engine_lifecycle.html')
-    test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     const result = await page.evaluate((morph) => window.probe_crowd(morph), morph)
@@ -140,7 +131,6 @@ for (const morph of [false, true])
 
 test('run-to walks around a rendered voxel wall and arrives through the world lifecycle', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
-  test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
   const result = await page.evaluate(() => window.run_terrain_route())
   expect(result.reason).toBe('arrived')
   expect(result.detoured).toBe(true)
@@ -149,7 +139,6 @@ test('run-to walks around a rendered voxel wall and arrives through the world li
 
 test('run-to clips through a difficult wall and arrives through the world lifecycle', async ({ page }) => {
   await page.goto('/e2e/fixtures/engine_lifecycle.html')
-  test.skip(!(await has_webgpu_adapter(page)), 'This browser has no WebGPU adapter')
   const result = await page.evaluate(() => window.run_terrain_route(63))
   expect(result.reason).toBe('arrived')
   expect(result.crossed_wall).toBe(true)

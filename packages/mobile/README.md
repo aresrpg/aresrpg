@@ -6,8 +6,8 @@ service worker and deployment belong to the frontend. This package has no separa
 
 ```sh
 bun run --cwd packages/mobile typecheck
-bun run --cwd packages/mobile test:browser
+bun run test:regression
 ```
 
-Browser tests use the existing frontend development server on port 5173. Fixtures render the real
-player canvas owner and shared reducers with mock transaction methods at 667×375 and 844×390.
+Touch gestures, modal actions, and orientation run in the shared production-build browser suite.
+There is no separate mobile browser runner or set of legacy mobile page selectors.

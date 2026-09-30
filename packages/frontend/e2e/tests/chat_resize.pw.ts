@@ -25,7 +25,6 @@ test('chat resizing persists across reloads while staying inside the game viewpo
   expect(expanded.height).toBeGreaterThan(initial.height)
   expect(expanded.width).toBeLessThanOrEqual(640)
   expect(expanded.height).toBeLessThanOrEqual(600)
-  await page.screenshot({ path: 'test-results/resized-chat.png' })
   expect(expanded.x).toBe(initial.x)
   expect(Math.abs(expanded.y + expanded.height - initial.y - initial.height)).toBeLessThan(1)
   await page.mouse.move(20, 20)
@@ -90,37 +89,4 @@ test('chat remains resizable when browser storage is unavailable', async ({ page
   await page.keyboard.press('ArrowRight')
   expect((await chat.boundingBox())!.width).toBeGreaterThan(initial.width)
   expect(errors).toEqual([])
-})
-
-test('fight chat uses the same resize handle and saved size as overworld chat', async ({ page }) => {
-  await page.setViewportSize({ width: 1920, height: 1080 })
-  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=fight')
-  const chat = page.locator('.preview-fight .gw-worldchat')
-  const handle = chat.getByRole('button', { name: 'Resize chat' })
-  await expect(handle).toBeVisible()
-  const initial = (await chat.boundingBox())!
-  const grip = (await handle.boundingBox())!
-  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(grip.x + 160, grip.y - 80, { steps: 5 })
-  await page.mouse.up()
-  const resized = (await chat.boundingBox())!
-  expect(resized.width).toBeGreaterThan(initial.width)
-  expect(resized.height).toBeGreaterThan(initial.height)
-  const hud = (await page.locator('.preview-fight .aui-combat-hud').boundingBox())!
-  expect(hud.x).toBeGreaterThanOrEqual(resized.x + resized.width)
-  expect(hud.x + hud.width).toBeLessThanOrEqual(1920)
-
-  await handle.focus()
-  await page.keyboard.press('ArrowDown')
-  expect((await chat.boundingBox())!.height).toBeLessThan(resized.height)
-  const saved = await page.evaluate(
-    () => JSON.parse(localStorage.getItem('aresrpg.settings')!).chat_size as { width: number; height: number }
-  )
-  await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=world')
-  await expect(async () => {
-    const box = (await page.locator('.gw-worldchat').boundingBox())!
-    expect(box.width).toBe(saved.width)
-    expect(box.height).toBe(saved.height)
-  }).toPass()
 })

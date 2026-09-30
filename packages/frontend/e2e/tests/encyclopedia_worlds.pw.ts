@@ -25,7 +25,6 @@ for (const width of [1920, 1024, 590, 390]) {
     expect(
       await page.locator('main').evaluate((element) => element.scrollWidth - element.clientWidth)
     ).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: test.info().outputPath('worlds.png'), animations: 'disabled' })
   })
 }
 

@@ -7,7 +7,7 @@ test('nearby fights animate alongside a walking player and release their models 
   page.on('pageerror', (error) => crashes.push(error.message))
   await page.goto('/e2e/fixtures/nearby_fight.html')
   await page.waitForFunction(
-    () => window.nearby_probe?.snapshot().viewer !== null && window.nearby_probe?.snapshot().engine.state === 'ready'
+    () => window.nearby_probe?.snapshot().viewer !== null && window.nearby_probe?.snapshot().terrain_ready
   )
   const before = await page.evaluate(() => window.nearby_probe.snapshot())
   await page.evaluate(() => window.nearby_probe.show())
@@ -25,7 +25,6 @@ test('nearby fights animate alongside a walking player and release their models 
     return !!pose && Math.hypot(pose.x - start!.x, pose.z - start!.z) > 1
   }, shown.pose)
   await page.evaluate(() => window.nearby_probe.walk(0))
-  await page.screenshot({ path: 'test-results/nearby-fight.png' })
   await page.evaluate(() => window.nearby_probe.hide())
   await page.waitForFunction(() => window.nearby_probe.snapshot().fighter === null)
   expect(await page.evaluate(() => window.nearby_probe.snapshot().viewer)).not.toBeNull()
@@ -61,13 +60,12 @@ const obstruction_pixels = async (page: Page): Promise<number> => {
 test('ambient board clears obstructing voxels and restores them when it leaves view', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.goto('/e2e/fixtures/nearby_fight.html?clearance')
-  await page.waitForFunction(() => window.nearby_probe?.snapshot().engine.state === 'ready')
+  await page.waitForFunction(() => window.nearby_probe?.snapshot().terrain_ready)
   await expect.poll(() => obstruction_pixels(page)).toBeGreaterThan(100)
   const before = await obstruction_pixels(page)
   await page.evaluate(() => window.nearby_probe.show())
   await page.waitForFunction(() => window.nearby_probe.snapshot().fighter !== null)
   await expect.poll(() => obstruction_pixels(page)).toBeLessThan(before * 0.2)
-  await page.screenshot({ path: 'test-results/nearby-fight-clearance.png' })
   await page.evaluate(() => window.nearby_probe.hide())
   await expect.poll(() => obstruction_pixels(page)).toBeGreaterThan(before * 0.8)
 })

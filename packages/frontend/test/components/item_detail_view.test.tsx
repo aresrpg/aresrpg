@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -13,13 +11,6 @@ const labels = Object.freeze({
   damages: 'damages',
   level_short: 'Lv. 80',
   range_to: 'to',
-})
-
-test('the shared detail sheet owns HD item art instead of accepting a thumbnail URL', () => {
-  const component = readFileSync(new URL('../../src/components/ItemDetailBody.tsx', import.meta.url), 'utf8')
-  expect(component).toContain("import { item_detail_icon } from '../content/item_detail_assets.ts'")
-  expect(component).toContain('const icon = item_detail_icon(item_type)')
-  expect(component).not.toContain('icon: string | null')
 })
 
 test('editable item stat rows promote defined values and retain the complete vocabulary', () => {

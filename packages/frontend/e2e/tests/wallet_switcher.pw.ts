@@ -23,7 +23,6 @@ test('wallet selector retains provider accounts and blocks switching during a tr
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await accounts.selectOption('First wallet:0x2222222222222222')
   await expect(page.locator('[data-active-wallet]')).toHaveText('First wallet:0x2222222222222222')
-  await page.screenshot({ path: test.info().outputPath('wallet-dropdown.png') })
   await page.getByRole('button', { name: 'Toggle pending transfer' }).click()
   await expect(accounts).toBeDisabled()
 })

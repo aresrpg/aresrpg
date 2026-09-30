@@ -1,0 +1,26 @@
+# Opt-in measurements of the production engine. Machine-specific timing is not a release gate.
+name: performance
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  performance:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bun scripts/prepare_browser.mjs
+      - run: bun run test:performance
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: performance
+          path: |
+            test-results/browser
+            test-results/browser-results.json
+          retention-days: 14

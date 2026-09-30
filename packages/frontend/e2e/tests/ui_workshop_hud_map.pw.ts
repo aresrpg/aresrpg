@@ -32,7 +32,6 @@ test('fight effects stay compact, chat avoids overlap, and HUD returns to center
   await expect(tooltip.locator('.spell-constraints,[data-spell-level-tabs]')).toHaveCount(0)
   expect((await tooltip.boundingBox())!.height).toBeLessThan(180)
   await expect(page.locator('.aui-carved-icon img')).toHaveCount(12)
-  await page.screenshot({ path: '/tmp/hud-generated-desktop.png' })
   await page.setViewportSize({ width: 844, height: 390 })
   await page.mouse.move(3, 3)
   await expect
@@ -43,7 +42,6 @@ test('fight effects stay compact, chat avoids overlap, and HUD returns to center
     })
     .toBeGreaterThanOrEqual(10)
   expect((await hud.boundingBox())!.x + (await hud.boundingBox())!.width).toBeLessThanOrEqual(844)
-  await page.screenshot({ path: '/tmp/hud-generated-mobile.png' })
 })
 
 test('production map reuses completed terrain during drag and zoom instead of exposing unfinished rows', async ({
@@ -81,5 +79,4 @@ test('production map reuses completed terrain during drag and zoom instead of ex
   await page.mouse.up()
   await page.getByRole('button', { name: 'Zoom out', exact: true }).click()
   expect(await terrain_pixels()).toBe(16)
-  await page.screenshot({ path: '/tmp/map-completed-terrain.png' })
 })

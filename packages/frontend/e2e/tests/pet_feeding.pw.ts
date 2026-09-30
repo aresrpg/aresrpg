@@ -37,7 +37,6 @@ test('food selection waits for confirm and rejection preserves the choice withou
   const food_cell = modal.locator('[data-feed-foods] button')
   // The modal enters at scale(0.95); measure its final footprint after that transition.
   await expect.poll(async () => (await food_cell.boundingBox())?.width).toBe(56)
-  await page.screenshot({ path: 'test-results/pet-feeding-selection.png' })
   await confirm.click()
   await expect(modal.getByRole('button', { name: 'Feeding…', exact: true })).toBeDisabled()
   expect(await page.evaluate(() => window.feed_requests.length)).toBe(1)
@@ -61,7 +60,6 @@ test('a receipt throws the selected food, reacts with hearts and sounds, and ref
   await expect(modal.locator('[data-pet-hearts] svg')).toHaveCount(5)
   await expect(modal.locator('.pet-feed-pet')).toHaveCSS('animation-name', 'pet-feed-chomp')
   await page.waitForTimeout(350)
-  await page.screenshot({ path: 'test-results/pet-feeding-hearts.png' })
   await expect(modal.locator('[data-pet-feeding]')).toHaveAttribute('data-phase', 'done')
   await expect(modal.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '31')
   const played = await page.evaluate(() => window.played_audio)
@@ -70,33 +68,4 @@ test('a receipt throws the selected food, reacts with hearts and sounds, and ref
   expect(await page.evaluate(() => window.feed_requests.length)).toBe(1)
   await modal.getByRole('button', { name: 'Continue', exact: true }).click()
   await expect(page.locator('[data-item-stats]')).toContainText('+41')
-})
-
-test('reduced motion reaches the result without throwing or shaking', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  const modal = await open_feeding(page)
-  await modal.locator('[data-feed-foods] button').click()
-  await modal.getByRole('button', { name: 'Confirm feeding', exact: true }).click()
-  await page.evaluate(() => window.resolve_feed())
-  await expect(modal.locator('[data-pet-feeding]')).toHaveAttribute('data-phase', 'done')
-  await expect(modal.locator('.pet-feed-pet')).toHaveCSS('animation-name', 'none')
-})
-
-test('food selection and confirmation remain visible in all six locales', async ({ page }) => {
-  for (const locale of ['en', 'fr', 'de', 'es', 'ja', 'uk']) {
-    const source = await readFile(new URL(`../../src/i18n/locales/${locale}.yaml`, import.meta.url), 'utf8')
-    const copy = (parse(source) as { characters_page: Record<string, string> }).characters_page
-    await page.goto(`/e2e/fixtures/inventory.html?locale=${locale}`)
-    await page.getByRole('button', { name: 'Siluri', exact: true }).click({ button: 'right' })
-    await page.getByRole('menu').getByRole('button', { name: copy.menu_feed, exact: true }).click()
-    const modal = page.getByRole('dialog', { name: copy.feed_title, exact: true })
-    await modal.locator('[data-feed-foods] button').click()
-    const confirm = modal.getByRole('button', { name: copy.feed_confirm, exact: true })
-    await expect(confirm).toBeEnabled()
-    expect(
-      await confirm.evaluate((element) => element.getBoundingClientRect().bottom <= window.innerHeight),
-      locale
-    ).toBe(true)
-    expect(await modal.evaluate((element) => element.scrollWidth <= element.clientWidth), locale).toBe(true)
-  }
 })

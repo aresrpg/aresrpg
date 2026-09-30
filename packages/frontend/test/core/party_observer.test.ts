@@ -54,7 +54,7 @@ test('party acceptance stays single-flight through the receipt-to-projection gap
   stop()
 })
 
-test('run-to reads one external checkpoint and enables flat mode', async () => {
+test('run-to reads one external checkpoint and starts ordinary travel', async () => {
   const reads: string[] = []
   const own = {
     id: '0xown',

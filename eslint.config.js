@@ -284,4 +284,22 @@ export default [
       'packages/engine/public/draco/**',
     ],
   },
+  {
+    files: ['packages/frontend/e2e/tests/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'CallExpression[callee.property.name="screenshot"] Property[key.name="path"] Literal[value=/^\\u002f/]',
+          message: 'Use test.info().outputPath(...) for screenshots; absolute paths are not portable.',
+        },
+        {
+          selector:
+            'CallExpression[callee.property.name="screenshot"] Property[key.name="path"] > TemplateLiteral > TemplateElement:first-child[value.raw=/^\\u002f/]',
+          message: 'Use test.info().outputPath(...) for screenshots; absolute paths are not portable.',
+        },
+      ],
+    },
+  },
 ]

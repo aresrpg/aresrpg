@@ -1,65 +1,39 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Local presentation fixture. Only settings persistence runs; no game observers, signer, or transaction executor.
+// Production UI with synthetic state; no renderer, wallet effects, or alternate layout CSS.
 import { createRoot } from 'react-dom/client'
 import { create_character_source, create_fight } from '@aresrpg/fight'
-import { item_stat_center, job_xp_for_level } from '@aresrpg/immutable'
-import type { CharacterRow, ItemRow } from '@aresrpg/protocol'
 
-import { App } from '../../src/app.tsx'
+import type { AuthSession } from '../../src/auth.ts'
+import { WorldChat } from '../../src/components/Chat.tsx'
+import SettingsPage from '../../src/settings/SettingsPage.tsx'
+import { OverworldVitals } from '../../src/game/hud/OverworldVitals.tsx'
+import { FightHud } from '../../src/game/fight/FightHud.tsx'
 import { content_catalog } from '../../src/content/catalog.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
-import { apply_document_locale } from '../../src/i18n/document.ts'
-import { LOCALES } from '../../src/i18n/locale.ts'
-import { dispatch_app, read_app_state, observe_app } from '../../src/store.ts'
+import { LocaleScope } from '../../src/i18n/LocaleScope.tsx'
+import { dispatch_app, initialize_app_store, observe_app, useAppStore } from '../../src/store.ts'
 import { load_game_settings } from '../../src/game/core/settings.ts'
 import { TUTORIAL_IDS } from '../../src/tutorial/tutorial.ts'
-import { publish_pose } from '../../src/game/core/pose_feed.ts'
-import { FightHud } from '../../src/game/fight/FightHud.tsx'
+import { character as fixture_character } from '../../test/modules/automation_fixture.ts'
 import '../../src/tailwind.css'
-import './responsive_preview.css'
+import '../../src/components/app_layout.css'
+import '../../src/game/hud/world_responsive.css'
 
 const params = new URLSearchParams(location.search)
-const page = params.get('page') ?? 'settings'
-document.documentElement.dataset.previewDensity = params.get('density') ?? 'current'
-const locale = LOCALES.find(({ code }) => code === params.get('locale'))?.code ?? 'en'
-const copy = await load_app_copy(locale)
-apply_document_locale(copy, locale)
-const address = '0x' + 'aa'.repeat(32)
-const weapon = content_catalog.items.find(
-  ({ item_type, category }) => item_type === params.get('weapon') && category === 'axe'
-)
-const character: CharacterRow = {
+const page = params.get('page') ?? 'world'
+const weapon = content_catalog.items.find(({ item_type }) => item_type === params.get('weapon'))
+const character = {
+  ...fixture_character(),
   id: '0xpreview',
   name: 'Aster',
   classe: 'senshi',
-  sex: 'female',
   level: 20,
-  experience: '6000',
-  color_1: 0xb38540,
-  color_2: 0x507d83,
-  color_3: 0xc4b0a3,
-  vitality: 35,
-  wisdom: 12,
-  strength: 45,
-  intelligence: 10,
-  chance: 5,
-  agility: 8,
-  available_points: 15,
-  available_spell_points: 8,
-  spells: {},
-  jobs: {
-    HERBALIST: String(job_xp_for_level(15)),
-    FARMER: String(job_xp_for_level(10)),
-    TAILOR: String(job_xp_for_level(8)),
-  },
-  kiosk: '0xpreviewkiosk',
-  custody: 'kiosk',
   equipment: weapon
     ? [
         {
           id: 'preview-weapon',
-          slot: 'weapon',
+          slot: 'weapon' as const,
           amount: 1,
           item_type: weapon.item_type,
           name: weapon.name,
@@ -68,283 +42,15 @@ const character: CharacterRow = {
         },
       ]
     : [],
-  world: 'nauvis',
-  checkpoint_world: 'nauvis',
-  x: 50000,
-  z: 50000,
-  at_ms: 0,
-  hp: '150',
-  hp_ms: Date.now(),
 }
-const selected_types = [
-  ...new Set([
-    ...content_catalog.items
-      .filter(({ category }) => ['hat', 'cloak', 'amulet', 'ring', 'sword', 'boots', 'belt', 'pet'].includes(category))
-      .slice(0, 20)
-      .map(({ item_type }) => item_type),
-    ...content_catalog.items
-      .filter(({ category }) => category === 'resource')
-      .slice(0, 18)
-      .map(({ item_type }) => item_type),
-    'green_mushroom',
-    'water',
-    'croissant',
-    'recall_potion',
-    'rune_strength_ba',
-    'rune_vitality_ba',
-  ]),
-]
-const items: ItemRow[] = selected_types.flatMap((type, index) => {
-  const seed = content_catalog.item(type)?.item
-  return seed
-    ? [
-        {
-          id: `0xitem${index}`,
-          name: seed.name,
-          item_type: type,
-          category: seed.category,
-          level: seed.level,
-          amount: ['resource', 'consumable', 'rune'].includes(seed.category) ? 1048 : 1,
-          kiosk: character.kiosk,
-          ...(seed.stats ? { stats: { strength: item_stat_center + 24, vitality: item_stat_center + 38 } } : {}),
-        },
-      ]
-    : []
-})
-const settings = {
-  ...load_game_settings('medium'),
-  music_enabled: false,
-  footsteps_enabled: false,
-  completed_tutorials: TUTORIAL_IDS,
-  marketplace_disclaimer_acknowledged: true,
-}
-observe_app(['settings'])
-dispatch_app({ type: 'settings/changed', settings })
-dispatch_app({ type: 'locale/changed', locale })
-dispatch_app({ type: 'locale/loaded', locale, copy })
+initialize_app_store({ ...load_game_settings('low'), completed_tutorials: TUTORIAL_IDS })
+observe_app(['settings', 'locale'])
+const copy = await load_app_copy('en')
+dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 dispatch_app({ type: 'auth/connecting' })
-dispatch_app({
-  type: 'auth/connected',
-  session: { address, suins: { snapshot: async () => ({ default_name: 'aster.aster.sui', names: [] }) } } as never,
-})
-dispatch_app({
-  type: 'server/packet',
-  packet: {
-    type: 'packet/characters',
-    characters: [character, { ...character, id: '0xalt', name: 'Nyx', classe: 'shugo', level: 14 }],
-  },
-})
+dispatch_app({ type: 'auth/connected', session: { address: '0x' + 'aa'.repeat(32) } as AuthSession })
+dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [character] } })
 dispatch_app({ type: 'character/select', character_id: character.id })
-dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items } })
-dispatch_app({
-  type: 'wallet/refreshed',
-  balance_mist: 42500000000n,
-  kares_balance: 1250000000000n,
-  gas_spent_mist: 0n,
-})
-dispatch_app({ type: 'server/packet', packet: { type: 'packet/game_state', frozen: false } })
-dispatch_app({
-  type: 'server/packet',
-  packet: {
-    type: 'packet/server_info',
-    online: 42,
-    indexing_lag: params.get('connection') === 'lagging' ? 900 : 0,
-    current_epoch: '1250',
-    chain_timestamp_ms: Date.now(),
-    chain_sample_age_ms: 0,
-    market_volume: { day_mist: '1284500000000', month_mist: '5678900000000', history_days: 30 },
-  },
-})
-if (params.get('connection') === 'offline')
-  dispatch_app({ type: 'link/failed', error: 'Preview connection unavailable' })
-dispatch_app({ type: 'engine/status', status: { state: 'ready', backend: 'webgpu' } })
-const routes: Record<string, string> = {
-  equipment: '/characters/equipment',
-  stats: '/characters/stats',
-  spells: '/characters/spells',
-  jobs: '/characters/jobs?job=HERBALIST',
-  runeforge: '/characters/runeforge',
-  marketplace: '/marketplace',
-  settings: '/settings',
-  mastery: '/mastery',
-  airdrop: '/airdrop',
-  encyclopedia: '/encyclopedia/items',
-  leaderboard: '/leaderboard',
-  kolizeum: '/kolizeum',
-  kares: '/kares',
-  world: '/world',
-  fight: '/world',
-  dungeon: '/world',
-}
-dispatch_app({ type: 'path/open', pathname: routes[page] ?? '/settings' })
-dispatch_app({ type: 'dialog/open', dialog: null })
-if (params.has('suins')) {
-  dispatch_app({ type: 'suins/refresh' })
-  const { request } = read_app_state().suins
-  if (request)
-    dispatch_app({
-      type: 'suins/loaded',
-      request,
-      snapshot: {
-        default_name: params.get('suins'),
-        names: [],
-      },
-    })
-}
-
-if (page === 'kolizeum')
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/kolizeums',
-      lobbies: [1, 3, 6].map((format) => ({
-        id: `lobby-${format}`,
-        fight: `fight-${format}`,
-        creator: '0xother',
-        format: format as 1 | 3 | 6,
-        pledge_mist: '1250000000',
-        pot_mist: '1250000000',
-        level_min: 1,
-        level_max: 200,
-        public: true,
-        can_join: true,
-        status: 'open' as const,
-        fighters: [
-          {
-            seat: 0,
-            team: 0 as const,
-            character_id: '0xother',
-            name: 'LongCharacterName',
-            classe: 'senshi',
-            level: 20,
-            settled: false,
-          },
-        ],
-      })),
-    },
-  })
-if (page === 'marketplace') {
-  const hat = content_catalog.items.find(({ category }) => category === 'hat')!
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/market_history',
-      sales: Array.from({ length: 35 }, (_, index) => ({
-        id: `sale-${index}`,
-        object: `sold-${index}`,
-        kind: 'item' as const,
-        name: hat.name,
-        item_type: hat.item_type,
-        amount: 1,
-        price_mist: '1250000000',
-        counterparty: '0xother',
-        ts_ms: Date.now() - index * 3600000,
-      })),
-      revenue_30d_mist: '43750000000',
-      total: 35,
-      profits: [{ kiosk: character.kiosk, amount_mist: '1250000000' }],
-    },
-  })
-  dispatch_app({ type: 'market/group_selected', group: 'EQUIPMENT', category: hat.category, item_type: hat.item_type })
-  dispatch_app({
-    type: 'server/packet',
-    packet: { type: 'packet/market_types', observation: read_app_state().marketplace.observation!, items: [hat] },
-  })
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/market_slice',
-      next_cursor: null,
-      observation: read_app_state().marketplace.observation!,
-      kiosk_versions: { '0xvendor': '1' },
-      listings: [1, 2, 3, 4, 5].map((i) => ({
-        version: '1',
-        kind: 'item',
-        id: `0xoffer${i}`,
-        name: hat.name,
-        item_type: hat.item_type,
-        category: hat.category,
-        level: hat.level,
-        amount: 1,
-        price_mist: String(i * 1250000000),
-        kiosk: '0xvendor',
-        seller: '0xother',
-        at_ms: i,
-        stats: { strength: item_stat_center + i * 7 },
-      })),
-    },
-  })
-}
-if (page === 'mastery')
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/mastery',
-      mastery: {
-        id: '0xmastery',
-        owner: address,
-        points: '24',
-        last_completed_epoch: '1249',
-        quest_epoch: '1250',
-        quest_started_ms: String(Date.now()),
-        quest_world: 'nauvis',
-        quest_dungeon: content_catalog.dungeons[0]!.dungeon,
-        quest_reward: 1,
-        quest_completed: false,
-      },
-      offers: [],
-    },
-  } as never)
-if (page === 'leaderboard') {
-  const { observation } = read_app_state().leaderboards
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/leaderboard',
-      snapshot: {
-        observation,
-        reset_at_ms: Date.now() + 12 * 86400000,
-        timestamp_ms: Date.now(),
-        checkpoint: 123,
-        entries: Array.from({ length: 30 }, (_, i) => ({
-          address: `0xrank${i}`,
-          name: ['aster.sui', 'nyx.sui', 'kael.sui'][i] ?? null,
-          rank: i + 1,
-          score: String(250000 - i * 3241),
-          characters: [{ name: ['Aster', 'Nyx', 'Kael'][i % 3]!, classe: 'senshi', level: 20 + i }],
-          character_count: 1,
-          jobs: [{ job: 'FARMER', level: 30 }],
-        })),
-        self: null,
-      },
-    },
-  })
-}
-for (const [index, line] of [
-  'Anyone heading to Ivory Rampart?',
-  'I can join after gathering some mushrooms.',
-  'Nice rolls on that Fuwa Hat!',
-].entries())
-  dispatch_app({
-    type: 'server/packet',
-    packet: {
-      type: 'packet/chat_message',
-      channel: 'world',
-      scope: 'nauvis',
-      from: '0xfriend',
-      character_id: `0xfriend${index}`,
-      character: ['Nyx', 'Aster', 'Kael'][index]!,
-      parts: [{ kind: 'text', text: line }],
-    },
-  })
-publish_pose({ character_id: character.id, x: 1100, y: 0, z: 1100, yaw: 0.6, riding: false, time_of_day: 0.38 })
-if (page === 'dungeon') {
-  const { dungeon } = content_catalog.dungeons[0]!
-  dispatch_app({
-    type: 'server/packet',
-    packet: { type: 'packet/characters', characters: [{ ...character, dungeon_run: { dungeon, room: 1 } }] },
-  })
-}
 if (page === 'fight') {
   const fight = create_fight({
     mode: 'local',
@@ -414,23 +120,35 @@ if (page === 'fight') {
     awaiting_turn_witness: false,
   })
 }
-createRoot(document.getElementById('root')!).render(
-  <>
-    <App />
-    {page === 'fight' && (
-      <div className="preview-fight">
-        <FightHud
-          copy={copy}
-          focus_fighter={() => {}}
-          target_fighter={() => {}}
-          targetable_fighter_cells={[]}
-          selected_action={null}
-          select_action={() => {}}
-          actions_locked={false}
-          mob_icon_for={() => null}
-        />
-      </div>
-    )}
-  </>
-)
-document.body.dataset.previewPage = page
+const Fixture = () => {
+  const copy = useAppStore((state) => state.copy)!
+  const settings = useAppStore((state) => state.settings)
+  const locale = useAppStore((state) => state.locale)
+  return (
+    <LocaleScope locale={locale}>
+      <main data-app-content="" className="app-ui" style={{ position: 'fixed', inset: 0 }}>
+        <div data-world-frame="" className="app-world-frame" style={{ position: 'absolute', inset: 0 }}>
+          <WorldChat copy={copy} />
+          {page === 'fight' ? (
+            <div className="preview-fight">
+              <FightHud
+                copy={copy}
+                focus_fighter={() => {}}
+                target_fighter={() => {}}
+                targetable_fighter_cells={[]}
+                selected_action={null}
+                select_action={() => {}}
+                actions_locked={false}
+                mob_icon_for={() => null}
+              />
+            </div>
+          ) : (
+            <OverworldVitals />
+          )}
+        </div>
+        {page === 'settings' && <SettingsPage copy={copy} settings={settings} />}
+      </main>
+    </LocaleScope>
+  )
+}
+createRoot(document.getElementById('root')!).render(<Fixture />)

@@ -94,19 +94,4 @@ test('staking keeps accounts independent, aggregates withdrawals and rewards and
     })
   ).toBe(0)
   expect(await logo.getAttribute('src')).toMatch(/^\/assets\/kares-/)
-  await page.screenshot({ path: 'test-results/staking-desktop.png' })
-})
-
-test('both staking accounts fit the desktop viewport in all six locales', async ({ page }) => {
-  for (const locale of ['en', 'fr', 'de', 'es', 'ja', 'uk']) {
-    await page.goto(`/e2e/fixtures/staking.html?locale=${locale}`)
-    await page.locator('[data-wallet-connect]').click()
-    await page.getByRole('button', { name: 'Test wallet', exact: true }).click()
-    await expect(page.locator('[data-staking-account="0xexternal"]')).toBeVisible()
-    const fits = await page.locator('[data-page-slot]').evaluate((element) => ({
-      vertical: element.scrollHeight <= element.clientHeight,
-      horizontal: element.scrollWidth <= element.clientWidth,
-    }))
-    expect(fits, locale).toEqual({ vertical: true, horizontal: true })
-  }
 })

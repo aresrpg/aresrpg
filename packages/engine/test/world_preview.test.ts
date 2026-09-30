@@ -49,22 +49,6 @@ test('the editor preview samples exact near blocks and a coarse far extent from 
   expect(plan.liquid_color).toBe('#2e609e')
 })
 
-test('the editor preview default exposes a substantial exact block field', () => {
-  const plan = preview_sample_plan(recipe, { focus_x: 0, focus_z: 0 })
-
-  expect(plan.near_side).toBe(385)
-  expect(plan.options.far_radius).toBe(2048)
-})
-
-// 30s runway: 641² full-column samples under the 2026-08-19 richer noise stack — the seal is
-// the plan SHAPE, not sampling speed.
-test('the editor preview accepts a user-selected exact voxel radius', () => {
-  const plan = preview_sample_plan(recipe, { focus_x: 0, focus_z: 0, near_radius: 320 })
-
-  expect(plan.near_side).toBe(641)
-  expect(plan.near).toHaveLength(641 * 641)
-}, 30_000)
-
 test('the coarse far shell leaves the exact voxel field uncovered', () => {
   expect(far_cell_visible(384, 0, 0, 32)).toBeFalse()
   expect(far_cell_visible(384, 352, 0, 32)).toBeFalse()

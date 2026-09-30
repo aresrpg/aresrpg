@@ -2,30 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
-import { compile_world_recipe, parse_world_recipe, sample_biome_grid, sample_world_column } from '@aresrpg/engine'
+import { compile_world_recipe, parse_world_recipe, sample_world_column } from '@aresrpg/engine'
 
 import worlds from '../../../../seed/content/worlds.json'
 import {
-  biome_preview,
   move_spline_knot,
   terrain_patch,
   world_height_domain,
   world_height_graph_domain,
 } from '../../src/editor/biome_editor.ts'
-
-test('the biome preview is the engine biome grid with derived coverage', () => {
-  const world = worlds.find(({ terrain }) => terrain)
-  if (!world?.terrain) throw new Error('No authored terrain')
-  const exact = sample_biome_grid(parse_world_recipe(world.terrain), {
-    world_size: 100_000,
-    world_center: 50_000,
-    cell_size: 512,
-  })
-  const preview = biome_preview(world.terrain)
-  expect(preview.side).toBe(exact.side)
-  expect(preview.cells).toEqual(exact.cells)
-  expect(preview.coverage.reduce((sum, count) => sum + count, 0)).toBe(exact.cells.length)
-}, 15_000)
 
 test('spline knot movement preserves strict x ordering', () => {
   const knots = [

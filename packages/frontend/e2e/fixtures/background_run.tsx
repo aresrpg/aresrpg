@@ -16,6 +16,7 @@ import '../../src/tailwind.css'
 // This fixture tests movement lifetime, not first-login tutorials or graphics workload.
 initialize_app_store({
   ...load_game_settings('low', null, null),
+  render_distance: 2,
   completed_tutorials: TUTORIAL_IDS,
   marketplace_disclaimer_acknowledged: true,
   music_enabled: false,

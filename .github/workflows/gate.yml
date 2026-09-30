@@ -43,17 +43,9 @@ jobs:
           export BASE_SHA
           node scripts/ci_inputs.mjs
   source:
-    name: source (${{ matrix.check.name }})
+    name: source
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        check:
-          - { name: lint, command: 'bunx eslint . --max-warnings 0' }
-          - { name: format, command: 'bunx prettier . --check' }
-          - { name: types, command: 'bun run typecheck' }
-          - { name: tests, command: 'bun run test' }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,10 +92,14 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - name: install
         run: bun install --frozen-lockfile
-      - name: ${{ matrix.check.name }}
-        env:
-          NODE_OPTIONS: --max-old-space-size=6144
-        run: ${{ matrix.check.command }}
+      - name: lint and format
+        run: bun run lint
+      - name: types
+        run: bun run typecheck
+      - name: unit tests and coverage
+        run: bun run test
+      - name: authored artifact validation
+        run: bun run validate:assets
   tests_move:
     needs: changes
     if: needs.changes.outputs.move == 'true'
@@ -323,32 +319,9 @@ jobs:
   browsers:
     needs: changes
     if: needs.changes.outputs.browsers == 'true'
-    name: browser (${{ matrix.os }}, ${{ matrix.browser }}, ${{ matrix.project }}, ${{ matrix.shard }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: ${{ matrix.os == 'macos-latest' && matrix.project == 'ui' && 8 || 6 }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: ubuntu-latest, browser: chrome, project: ui, shard: '1/3' }
-          - { os: ubuntu-latest, browser: chrome, project: ui, shard: '2/3' }
-          - { os: ubuntu-latest, browser: chrome, project: ui, shard: '3/3' }
-          - { os: ubuntu-latest, browser: chrome, project: workloads-low, shard: '1/1' }
-          - { os: ubuntu-latest, browser: chrome, project: workloads-medium, shard: '1/1' }
-          - { os: ubuntu-latest, browser: chrome, project: workloads-high, shard: '1/1' }
-          - { os: ubuntu-latest, browser: firefox, project: ui, shard: '1/3' }
-          - { os: ubuntu-latest, browser: firefox, project: ui, shard: '2/3' }
-          - { os: ubuntu-latest, browser: firefox, project: ui, shard: '3/3' }
-          - { os: ubuntu-latest, browser: firefox, project: workloads-low, shard: '1/1' }
-          - { os: ubuntu-latest, browser: firefox, project: workloads-medium, shard: '1/1' }
-          - { os: ubuntu-latest, browser: firefox, project: workloads-high, shard: '1/1' }
-          - { os: macos-latest, browser: chrome, project: ui, shard: '1/2' }
-          - { os: macos-latest, browser: chrome, project: ui, shard: '2/2' }
-          - { os: macos-latest, browser: chrome, project: workloads-low, shard: '1/1' }
-          - { os: macos-latest, browser: chrome, project: workloads-medium, shard: '1/1' }
-          - { os: macos-latest, browser: chrome, project: workloads-high, shard: '1/1' }
-    env:
-      BROWSER: ${{ matrix.browser }}
+    name: browser regressions
+    runs-on: macos-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
@@ -357,21 +330,12 @@ jobs:
       - run: bun install --frozen-lockfile --ignore-scripts
       - name: prepare browser
         run: bun scripts/prepare_browser.mjs
-      - name: browser compatibility tests
-        env:
-          BROWSER_WORKERS: ${{ matrix.project == 'ui' && 2 || 1 }}
-        shell: bash
-        run: |
-          if [ "$RUNNER_OS" = Linux ] && [ "$BROWSER" = firefox ]; then
-            # One headed window per display prevents cross-worker hover/focus loss.
-            LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a bun run test:browser --headed --project=${{ matrix.project }} --shard=${{ matrix.shard }} --workers=1
-          else
-            bun run test:browser --project=${{ matrix.project }} --shard=${{ matrix.shard }} --workers="$BROWSER_WORKERS"
-          fi
+      - name: browser regressions
+        run: bun run test:regression
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: browser-${{ matrix.os }}-${{ matrix.browser }}-${{ matrix.project }}-${{ strategy.job-index }}
+          name: browser-regressions
           path: |
             test-results/browser
             test-results/browser-results.json

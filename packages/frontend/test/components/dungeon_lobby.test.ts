@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 
 import {
@@ -12,10 +10,6 @@ import {
 } from '../../src/components/DungeonLobby.tsx'
 import { dungeon_portal_targets } from '../../src/game/core/dungeon_portal_feed.ts'
 import { dungeon_entry_key, dungeon_operation_reconciled, selected_dungeon_run } from '../../src/modules/dungeon.ts'
-
-const portal_source = readFileSync(new URL('../../src/components/DungeonPortalPrompt.tsx', import.meta.url), 'utf8')
-const lobby_source = readFileSync(new URL('../../src/components/DungeonLobby.tsx', import.meta.url), 'utf8')
-const app_source = readFileSync(new URL('../../src/PlayerRuntime.tsx', import.meta.url), 'utf8')
 
 test('dungeon rooms reveal only cleared and current rooms', () => {
   expect([1, 2, 3, 4].map((room) => dungeon_room_state(room, 2))).toEqual([
@@ -106,21 +100,4 @@ test('the portal entry control exists only while an unlocked matching key is ava
   expect(
     dungeon_entry_key({ ...state, marketplace: { own_listings: [{ id: '0xkey' }] } } as never, 'nauvis_key')
   ).toBeNull()
-})
-
-test('dungeon surfaces use the global gold card language and rounded expedition frame', () => {
-  expect(portal_source).toContain('data-dungeon-entry-card')
-  expect(portal_source).not.toContain('#328dff')
-  expect(portal_source).toContain('portal.zx')
-  expect(portal_source).toContain('rounded-[11px]')
-  expect(lobby_source).toContain('data-dungeon-expedition')
-  expect(lobby_source).toContain('rounded-xl')
-  expect(lobby_source).toContain('<Chat')
-})
-
-test('friends and party retain one host each outside the expedition component', () => {
-  const status_source = readFileSync(new URL('../../src/components/DesktopWorldStatus.tsx', import.meta.url), 'utf8')
-  expect(status_source.match(/<FriendsPanel/g)).toHaveLength(1)
-  const dock = readFileSync(new URL('../../src/game/hud/WorldSocialDock.tsx', import.meta.url), 'utf8')
-  expect(dock.match(/<PartyFrame/g)).toHaveLength(1)
 })

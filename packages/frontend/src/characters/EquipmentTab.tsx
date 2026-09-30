@@ -5,7 +5,7 @@
 // the right (category tabs, grid, drag-drop). Changes STAGE locally; Accept composes ONE
 // SDK transaction and the proven receipt folds through the session reducer (the server
 // never re-sends what this player's own transaction caused). Click a bag item to inspect
-// it, double-click to equip (or drink), drag it onto a slot to aim a specific slot, click
+// it, Shift-click to equip, double-click to equip (or drink), drag onto a specific slot, click
 // a filled slot to inspect it, double-click to stage its unequip.
 
 import { IconButton } from '@aresrpg/ui'
@@ -26,7 +26,7 @@ import { equipment_comparison } from './equipment_comparison.ts'
 import { useEquipment } from './useEquipment.ts'
 import type { CharacterSession } from './character_session.ts'
 import { ConsumeHealingModal } from './ConsumeHealingModal.tsx'
-import { equip_refusal, stage_unequip } from './equipment_stage.ts'
+import { equip_refusal, natural_slot_for, stage_unequip } from './equipment_stage.ts'
 import { InventorySelectionGrid } from './InventorySelectionGrid.tsx'
 import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { inventory_action_selection, useInventoryActions } from './InventoryOverlays.tsx'
@@ -298,7 +298,11 @@ export default function EquipmentTab({
               aria-pressed={selected_ids.includes(item.id)}
               item={item}
               key={item.id}
-              onClick={(event) => select_item(item, event.shiftKey)}
+              onClick={(event) => {
+                const slot = event.shiftKey ? natural_slot_for(item, equipment) : null
+                if (slot) try_stage(item, slot)
+                else select_item(item, event.shiftKey)
+              }}
               onDoubleClick={(event) => {
                 if (!event.shiftKey) activate(item)
               }}

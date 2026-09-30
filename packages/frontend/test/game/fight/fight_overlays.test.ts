@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { create_character_source, create_fight, fight_path_to, reachable_fight_cells } from '@aresrpg/fight'
 import { AREA_SHAPES, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import { expect, test } from 'bun:test'
@@ -348,9 +346,6 @@ test('unpresented events retain the previous visual checkpoint until their cue b
 
   expect(fight_visual_checkpoint(before, after, true)).toBe(before)
   expect(fight_visual_checkpoint(before, after, false)).toBe(after)
-  const layer = readFileSync(new URL('../../../src/game/fight/FightLayer.tsx', import.meta.url), 'utf8')
-  expect(layer).toContain('fight_visual_checkpoint(presented_checkpoint, checkpoint, presentation_queued)')
-  expect(layer).toContain('fight.presentations.length > 0 || fight.awaiting_turn_witness')
 })
 
 test('a trap placement advances persistent zones when its presentation beat completes', () => {

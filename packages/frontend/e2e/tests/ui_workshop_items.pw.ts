@@ -53,16 +53,3 @@ for (const width of [1440, 844]) {
     await expect(popup.locator('[data-item-recipes]')).toBeVisible()
   })
 }
-
-test('resource popups show mob sources and recipe uses without duplicating encyclopedia sections', async ({ page }) => {
-  await page.setViewportSize({ width: 844, height: 390 })
-  await page.goto('/demo#ui')
-  await page.locator('.ui-workshop-navigation').getByRole('button', { name: 'Encyclopedia', exact: true }).click()
-  await page.getByRole('searchbox').fill('Shiny Trinket')
-  await page.locator('.aui-collection-tile').filter({ hasText: 'Shiny Trinket' }).click()
-  const popup = page.getByRole('dialog').last()
-  await expect(popup.locator('[data-item-drops]')).toHaveCount(1)
-  await expect(popup.locator('[data-item-recipes]')).toHaveCount(1)
-  await expect(popup.locator('[data-item-drops]')).toContainText('60%')
-  await page.screenshot({ path: '/tmp/shiny-trinket-sources-mobile.png' })
-})

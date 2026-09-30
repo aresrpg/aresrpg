@@ -23,5 +23,4 @@ test('Settings selects owned and target-only names, reports refusal, and fits a 
   await expect(section.getByRole('alert')).toContainText('owned by your game wallet')
   await expect(section.locator('strong')).toHaveText('@sceat')
   expect(await section.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
-  await page.screenshot({ path: 'test-results/suins-settings.png', fullPage: true })
 })

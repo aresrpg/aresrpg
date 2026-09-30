@@ -61,10 +61,10 @@ previous tag's deployment — no revert commit, no re-promotion needed. Diff two
   the executable TypeScript law.
 - **RED-FIRST**: a bug fix's first artifact is a failing test reproducing it; the PR carries
   both runs.
-- Every player-facing string ships in all six locales in the same commit.
-- The gate (`.github/workflows/gate.yml`) is required and only ever grows.
+- Every player-facing string ships in all supported locales in the same commit.
+- The gate (`.github/workflows/gate.yml`) is required. Remove superseded or redundant checks; preserve behavioral guarantees and coverage floors.
 - Coverage is language-native and aggregate: Bun JS/TS 60% lines + 75% functions; Rust indexer 65%
-  LLVM lines; Move control/seed/math/combat/game 98.01%/30%/30%/25%/25%. Tests and generated JS/TS
+  LLVM lines; Move package/module floors are declared only in `scripts/coverage_move.sh`. Tests and generated JS/TS
   are excluded, but no authored module is hidden. CI and pre-commit route each changed language
   through its gate; `bun run coverage:all` runs the complete local set. Every production Move
   module targets more than 98%; meaningful gains raise its package floor in the same change, and

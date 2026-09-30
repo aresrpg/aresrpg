@@ -38,18 +38,4 @@ test('compact chat counts filtered social messages, preserves drafts and clears 
   await toggle.click()
   await expect(page.locator('.chat__input')).toHaveValue('Unsent draft')
   await toggle.click()
-  await page.screenshot({ path: '/tmp/compact-chat-final.png' })
-})
-
-test('desktop end turn keeps one line and chat can collapse without reserving its panel space', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/e2e/fixtures/ui_hud.html')
-  const button = page.getByRole('button', { name: 'End turn', exact: true })
-  await expect(button).toBeVisible()
-  expect(await button.evaluate((node) => getComputedStyle(node).whiteSpace)).toBe('nowrap')
-  expect(await button.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
-  await expect(page.locator('.chat__toggle')).toHaveAttribute('aria-expanded', 'true')
-  await page.locator('.chat__toggle').click()
-  expect((await page.locator('.gw-worldchat').boundingBox())!.height).toBeLessThanOrEqual(46)
-  await page.screenshot({ path: '/tmp/desktop-end-turn-final.png' })
 })

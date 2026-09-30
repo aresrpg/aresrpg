@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "test:browser": "playwright test --config playwright.config.ts"
+    "test": "bun test"
   },
   "dependencies": {
     "@aresrpg/frontend": "workspace:*",

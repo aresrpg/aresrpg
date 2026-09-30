@@ -5,7 +5,7 @@ import '../../src/tailwind.css'
 
 declare global {
   interface Window {
-    probe_captions: (kind: 'grid' | 'webgpu') => ReturnType<typeof probe_captions>
+    probe_captions: () => ReturnType<typeof probe_captions>
   }
 }
-window.probe_captions = (kind) => probe_captions(document.querySelector('canvas')!, kind)
+window.probe_captions = () => probe_captions(document.querySelector('canvas')!)

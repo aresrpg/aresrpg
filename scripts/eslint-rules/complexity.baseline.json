@@ -777,16 +777,6 @@
         15
       ]
     },
-    "packages/frontend/e2e/fixtures/workload.ts": {
-      "run": [
-        9
-      ]
-    },
-    "packages/frontend/e2e/tests/workloads.pw.ts": {
-      "test[2]({ page, browser },info)": [
-        9
-      ]
-    },
     "packages/frontend/src/demo/DemoPage.tsx": {
       "WorldLab": [
         10
@@ -1896,11 +1886,6 @@
         9
       ]
     },
-    "packages/engine/test/browser_captions.ts": {
-      "probe_captions": [
-        9
-      ]
-    },
     "packages/server/src/modules/player_world.ts": {
       "observe > events.on[1](state: PlayerState,previous: PlayerState) > ids.forEach[0](character_id)": [
         22
@@ -1949,9 +1934,6 @@
     "packages/engine/src/caption_layer.ts": {
       "create_caption_layer > allocate": [
         10
-      ],
-      "create_caption_layer > project": [
-        9
       ],
       "create_caption_layer > render": [
         9

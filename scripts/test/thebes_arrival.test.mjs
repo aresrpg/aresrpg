@@ -7,12 +7,9 @@ import workshop from '../../seed/structures/workshop.recipe.json'
 import { piece_cells } from '../building_kit.mjs'
 import { module_transform } from '../module_transform.mjs'
 import { bake_schematic } from '../bake_schematic.mjs'
-import { bake_thebes_assets } from '../bake_thebes_assets.mjs'
 import { thebes_city_terrain } from '../../packages/engine/src/cities/thebes/sky_map.ts'
 import { compile_world_recipe, sample_world_column } from '../../packages/engine/src/world_recipe.ts'
 import { world_terrain } from '../../packages/engine/src/world_catalog.ts'
-import { detail_builder } from '../../packages/engine/src/detail_builder.ts'
-import { CITY_DETAIL_LIMITS, validate_details } from '../../packages/engine/src/detail_artifact.ts'
 
 test('the authored court preserves portal clearance and both ground-level approaches', () => {
   const baked = bake_schematic({ ...workshop.assets, ...source.assets }, source.root)
@@ -21,18 +18,6 @@ test('the authored court preserves portal clearance and both ground-level approa
   expect(above_ground.filter(([x, y, z]) => Math.abs(x) <= 8 && Math.abs(z) <= 8 && y < 6)).toEqual([])
   expect(baked.blocks.length).toBeGreaterThan(5000)
 })
-
-test('city and workshop share one bake path and one detail builder', () => {
-  const world = compile_world_recipe(world_terrain('nauvis'), { city_terrain: false })
-  const city = world.structures.cities.find((c) => c.id === 'thebes')
-  const details = detail_builder()
-  details.box([100, 70, 100], [101, 71, 101], 'thebes_limestone')
-  const drafts = bake_thebes_assets(world, city, details)
-  expect(new Set(drafts.map(({ type }) => type.name)).size).toBe(7)
-  expect(drafts[0].type.name).toBe('thebes_portal_grove')
-  expect(validate_details(details.finish(), world.recipe.materials, CITY_DETAIL_LIMITS)).toEqual([])
-  expect(details.finish().some(({ origin }) => origin[0] === 96 && origin[2] === 96)).toBe(true)
-}, 90000)
 
 test('authored grove plants follow natural ground or solid ruins', () => {
   const baked = bake_schematic({ ...workshop.assets, ...source.assets }, source.root)

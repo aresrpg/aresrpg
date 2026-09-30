@@ -83,7 +83,7 @@ describe('game settings', () => {
     })
   })
 
-  test('a valid development override wins without erasing flat mode', () => {
+  test('a valid development override wins without erasing saved preferences', () => {
     const storage = memory_storage(JSON.stringify({ quality: 'low' }))
 
     expect(load_game_settings('medium', 'high', storage)).toEqual({

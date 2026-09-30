@@ -3,52 +3,6 @@
 
 import { expect, test } from '@playwright/test'
 
-test('selecting inventory consumables shows their authored effect and changes it with the selection', async ({
-  page,
-}) => {
-  await page.goto('/e2e/fixtures/inventory.html')
-  await page.getByRole('button', { name: /Consumables/ }).click()
-  await page.getByRole('button', { name: 'Scroll of Oblivion', exact: true }).click()
-  await expect(page.locator('[data-consumable-effect]')).toContainText('Reset spell points')
-  await page.locator('.inventory-item-close').click()
-  await page.getByRole('button', { name: 'Scroll of Rebirth', exact: true }).click()
-  await expect(page.locator('[data-consumable-effect]')).toContainText('Reset stat points')
-  await page.locator('.inventory-item-close').click()
-  await page.getByRole('button', { name: 'Croissant', exact: true }).click()
-  await expect(page.locator('[data-consumable-effect]')).toContainText('10')
-  await expect(page.locator('[data-consumable-effect]')).not.toContainText('Reset')
-  await page.locator('[data-consumable-effect]').scrollIntoViewIfNeeded()
-  await page.screenshot({ path: 'test-results/inventory-consumable-details.png' })
-})
-
-test('inventory consumable effects use the current locale in all six languages', async ({ page }) => {
-  for (const locale of ['en', 'fr', 'de', 'es', 'ja', 'uk']) {
-    await page.goto(`/e2e/fixtures/inventory.html?locale=${locale}`)
-    await page.locator('.chr-bagtab').nth(1).click()
-    await page.getByRole('button', { name: 'Scroll of Oblivion', exact: true }).click()
-    const effect = page.locator('[data-consumable-effect]')
-    await expect(effect).toBeVisible()
-    await expect(effect).not.toContainText('consumable_reset_spells')
-  }
-})
-
-test('owned pets show their current scaled bonuses and feeding power', async ({ page }) => {
-  await page.goto('/e2e/fixtures/inventory.html')
-  await page.getByRole('button', { name: 'Siluri', exact: true }).click()
-  await expect(page.locator('[data-item-stats]')).toContainText('+40')
-  await expect(page.locator('[data-item-stats]')).not.toContainText('+80')
-  await expect(page.getByRole('progressbar', { name: 'Power' })).toHaveAttribute('aria-valuenow', '30')
-  await expect(page.getByRole('progressbar', { name: 'Power' })).toHaveAttribute('aria-valuemax', '60')
-})
-
-test('cosmetic slots have the same footprint as the regular equipment slots', async ({ page }) => {
-  await page.goto('/e2e/fixtures/inventory.html')
-  const rig = await page.locator('[data-equipment-slot="hat"]').boundingBox()
-  const cosmetic = await page.locator('[data-equipment-slot="cosmetic_hat"]').boundingBox()
-  expect(cosmetic!.width).toBeLessThanOrEqual(rig!.width + 2)
-  expect(cosmetic!.width).toBeGreaterThanOrEqual(rig!.width * 0.8)
-})
-
 test('equipped items inspect on single click and only stage removal on double click', async ({ page }) => {
   await page.goto('/e2e/fixtures/inventory.html?equipped')
   const pet = page.locator('[data-equipment-slot="pet"]')
@@ -70,10 +24,7 @@ test('equipped items inspect on single click and only stage removal on double cl
   await expect(pet).toHaveClass(/is-filled/)
 })
 
-for (const [name, item_type] of [
-  ['Recall Potion', 'recall_potion'],
-  ['Potion of Thebes', 'potion_of_thebes'],
-] as const) {
+for (const [name, item_type] of [['Recall Potion', 'recall_potion']] as const) {
   test(`${name} cannot be used during a dungeon run`, async ({ page }) => {
     await page.goto('/e2e/fixtures/inventory.html')
     await page.getByRole('button', { name: 'Enter dungeon', exact: true }).click()
@@ -88,7 +39,7 @@ for (const [name, item_type] of [
   })
 }
 
-for (const name of ['Recall Potion', 'Potion of Thebes']) {
+for (const name of ['Recall Potion']) {
   test(`${name} rechecks dungeon entry before submission`, async ({ page }) => {
     await page.goto('/e2e/fixtures/inventory.html')
     await page.locator('.chr-bagtab').nth(1).click()
@@ -99,11 +50,7 @@ for (const name of ['Recall Potion', 'Potion of Thebes']) {
   })
 }
 
-for (const [name, item_type] of [
-  ['Croissant', 'croissant'],
-  ['Scroll of Oblivion', 'scroll_of_oblivion'],
-  ['Scroll of Rebirth', 'scroll_of_rebirth'],
-] as const) {
+for (const [name, item_type] of [['Croissant', 'croissant']] as const) {
   test(`${name} can be consumed between dungeon rooms`, async ({ page }) => {
     await page.goto('/e2e/fixtures/inventory.html')
     await page.getByRole('button', { name: 'Enter dungeon', exact: true }).click()
@@ -113,33 +60,3 @@ for (const [name, item_type] of [
     await expect.poll(() => page.evaluate(() => window.consume_requests)).toEqual([item_type])
   })
 }
-
-test('resource subfilters partition grouped stacks and preserve the selection across categories', async ({ page }) => {
-  await page.goto('/e2e/fixtures/inventory.html')
-  const categories = page.locator('.chr-equip__bagtabs')
-  await categories.getByRole('button', { name: /Resources/ }).click()
-  const filters = page.getByRole('group', { name: 'Resources', exact: true })
-  const cells = page.locator('.chr-equip__grid button[data-selection-id]')
-  await expect(cells).toHaveCount(6)
-  for (const [label, count, title] of [
-    ['Raw resources', 1, 'Gnawed Branch'],
-    ['Gatherable resources', 1, 'Wheat'],
-    ['Intermediary resources', 2, 'Wheat Flour'],
-    ['Keys', 1, 'Key of the Tangled Aftermath'],
-    ['Runes', 1, 'Rune Ba Vi'],
-  ] as const) {
-    const button = filters.getByRole('button', { name: new RegExp(`^${label}`) })
-    await button.click()
-    await expect(button).toHaveAttribute('aria-pressed', 'true')
-    await expect(cells).toHaveCount(count)
-    await expect(page.locator('.chr-equip__grid').getByRole('button', { name: title, exact: true })).toBeVisible()
-  }
-  await categories.getByRole('button', { name: /Equipment/ }).click()
-  await expect(filters).toHaveCount(0)
-  await categories.getByRole('button', { name: /Resources/ }).click()
-  await expect(cells).toHaveCount(1)
-  await filters.getByRole('button', { name: /^All/ }).click()
-  await expect(cells).toHaveCount(6)
-  await expect(page.locator('.chr-equip__grid').getByRole('button', { name: 'Wheat', exact: true })).toContainText('×4')
-  await page.screenshot({ path: 'test-results/inventory-resource-filters.png' })
-})

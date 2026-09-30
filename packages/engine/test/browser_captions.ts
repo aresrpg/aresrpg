@@ -1,38 +1,28 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { AgXToneMapping, Color, PerspectiveCamera, Scene, SRGBColorSpace, Vector3, WebGLRenderer } from 'three'
+import { NeutralToneMapping, Color, PerspectiveCamera, Scene, SRGBColorSpace, Vector3 } from 'three'
 import { RenderPipeline, Renderer, StandardNodeLibrary, WebGPUBackend } from 'three/webgpu'
 import { pass } from 'three/tsl'
 
 import { create_caption_layer } from '../src/caption_layer.ts'
 import type { WorldCaption } from '../src/caption_types.ts'
 
-export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | 'webgpu') => {
+export const probe_captions = async (canvas: HTMLCanvasElement) => {
   canvas.style.width = '320px'
   canvas.style.height = '180px'
-  const renderer =
-    kind === 'webgpu'
-      ? new Renderer(new WebGPUBackend({ canvas }), {})
-      : new WebGLRenderer({ canvas, preserveDrawingBuffer: true })
-  if (renderer instanceof Renderer) {
-    renderer.library = new StandardNodeLibrary()
-    await renderer.init()
-  }
+  const renderer = new Renderer(new WebGPUBackend({ canvas }), {})
+  renderer.library = new StandardNodeLibrary()
+  await renderer.init()
   renderer.setSize(320, 180, false)
-  renderer.toneMapping = AgXToneMapping
+  renderer.toneMapping = NeutralToneMapping
   renderer.outputColorSpace = SRGBColorSpace
   const scene = new Scene()
   scene.background = new Color('#254872')
   const camera = new PerspectiveCamera(60, 320 / 180, 0.1, 100)
   camera.position.z = 10
   camera.updateMatrixWorld()
-  const pipeline =
-    renderer instanceof Renderer ? new RenderPipeline(renderer, pass(scene, camera).getTextureNode()) : null
-  // Both concrete renderers expose the same overlay operations; retain their native target type.
-  const captions =
-    renderer instanceof Renderer
-      ? create_caption_layer({ renderer, canvas, camera, webgpu: true })
-      : create_caption_layer({ renderer, canvas, camera, webgpu: false })
+  const pipeline = new RenderPipeline(renderer, pass(scene, camera).getTextureNode())
+  const captions = create_caption_layer({ renderer, canvas, camera })
   const read = document.createElement('canvas')
   read.width = 320
   read.height = 180
@@ -46,8 +36,7 @@ export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | '
   ]
   const frame = async () => {
     await new Promise(requestAnimationFrame)
-    if (pipeline) pipeline.render()
-    else renderer.render(scene, camera)
+    pipeline.render()
     captions.render()
   }
   const settle = async () => {
@@ -76,31 +65,6 @@ export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | '
     captions.set('test', { ...caption, health: { fraction: 0.25, color: '#00ff00' } }, () => anchor)
     await settle()
     const reduced = pixels()
-    let recovered_health: number[] | null = null
-    if (renderer instanceof WebGLRenderer) {
-      const extension = renderer.getContext().getExtension('WEBGL_lose_context')!
-      const lost = new Promise<void>((resolve) =>
-        canvas.addEventListener(
-          'webglcontextlost',
-          (event) => {
-            event.preventDefault()
-            resolve()
-          },
-          { once: true }
-        )
-      )
-      extension.loseContext()
-      await lost
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      const restored = new Promise<void>((resolve) =>
-        canvas.addEventListener('webglcontextrestored', () => resolve(), { once: true })
-      )
-      extension.restoreContext()
-      await restored
-      captions.set('test', caption, () => anchor)
-      await settle()
-      recovered_health = pixel(pixels(), 200, 71)
-    }
     const after = captions.stats()
     captions.set('test', null, () => null)
     await settle()
@@ -109,7 +73,6 @@ export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | '
       caption_hit,
       outside_hit,
       removed_hit: captions.hit_test('test', rect.left + 160, rect.top + 71),
-      recovered_health,
       background,
       retained: pixel(full, 8, 8),
       full_health: pixel(full, 200, 71),
@@ -122,11 +85,13 @@ export const probe_captions = async (canvas: HTMLCanvasElement, kind: 'grid' | '
       scripts: canvas.parentElement!.querySelectorAll('script').length,
       image,
       restored:
-        renderer.autoClear && renderer.toneMapping === AgXToneMapping && renderer.outputColorSpace === SRGBColorSpace,
+        renderer.autoClear &&
+        renderer.toneMapping === NeutralToneMapping &&
+        renderer.outputColorSpace === SRGBColorSpace,
     }
   } finally {
     captions.dispose()
-    pipeline?.dispose()
+    pipeline.dispose()
     renderer.dispose()
   }
 }

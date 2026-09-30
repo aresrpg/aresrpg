@@ -4,15 +4,11 @@ import { resolve } from 'node:path'
 
 import { defineConfig } from '@playwright/test'
 
-import { browser_launch_options } from './support/browser_launch.ts'
-
 const hardware = process.env.REQUIRE_HARDWARE === '1'
-const browser_name = (process.env.BROWSER ?? 'chrome') as 'chrome' | 'firefox' | 'webkit'
 
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.pw.ts',
-  timeout: process.env.BROWSER_WORKLOAD === 'full' ? 600_000 : 210_000,
   expect: { toPass: { timeout: 3_000 } },
   workers: 1,
   retries: 0,
@@ -27,23 +23,15 @@ export default defineConfig({
     deviceScaleFactor: hardware ? 2 : 1,
     screenshot: 'only-on-failure',
     trace: hardware ? 'off' : 'retain-on-failure',
-    browserName: browser_name === 'chrome' ? 'chromium' : browser_name,
-    ...(browser_name === 'chrome' ? { channel: 'chrome' } : {}),
-    launchOptions: browser_launch_options(browser_name, process.platform, hardware),
+    browserName: 'chromium',
+    channel: 'chrome',
+    launchOptions: { args: hardware ? ['--disable-frame-rate-limit', '--disable-gpu-vsync'] : [] },
+    actionTimeout: 10_000,
+    navigationTimeout: 20_000,
   },
   projects: [
-    {
-      name: 'ui',
-      testIgnore: '**/workloads.pw.ts',
-      fullyParallel: true,
-      timeout: 60_000,
-      use: { actionTimeout: 10_000, navigationTimeout: 20_000 },
-    },
-    ...(['low', 'medium', 'high'] as const).map((quality) => ({
-      name: `workloads-${quality}`,
-      testMatch: '**/workloads.pw.ts',
-      grep: new RegExp(`@${quality}\\b`),
-    })),
+    { name: 'regression', testIgnore: '**/performance.pw.ts', timeout: 60_000 },
+    { name: 'performance', testMatch: '**/performance.pw.ts', timeout: 600_000 },
   ],
   webServer: {
     command:

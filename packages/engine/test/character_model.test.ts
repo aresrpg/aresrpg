@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 import {
   AnimationClip,
@@ -20,12 +18,6 @@ import { compose_pixels, find_character_bone, mount_character_part } from '../sr
 import { prepare_mob_model_root } from '../src/mob_model.ts'
 
 describe('character model legacy contract', () => {
-  test('the shared entity loader installs Draco for the shipped character assets', () => {
-    const source = readFileSync(new URL('../src/gltf_loader.ts', import.meta.url), 'utf8')
-    expect(source).toContain("from 'three/addons/loaders/DRACOLoader.js'")
-    expect(source).toContain('new GLTFLoader().setDRACOLoader(draco)')
-  })
-
   test('finds namespaced Head and cape bones by case-insensitive substring', () => {
     const body = new Group()
     const head = new Bone()
@@ -72,14 +64,6 @@ describe('character model legacy contract', () => {
       [0.5, 1, 0]
     )
     expect([...result]).toEqual([100, 100, 0, 123])
-  })
-
-  test('preserves authored character samplers while creatures keep their pixel-art policy', () => {
-    const character_source = readFileSync(new URL('../src/character_model.ts', import.meta.url), 'utf8')
-    const mob_source = readFileSync(new URL('../src/mob_model.ts', import.meta.url), 'utf8')
-
-    expect(character_source).not.toContain('prepare_pixel_texture')
-    expect(mob_source).toContain('prepare_pixel_texture')
   })
 })
 

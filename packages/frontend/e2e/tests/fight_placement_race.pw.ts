@@ -20,6 +20,5 @@ test('an occupied placement rollback keeps the joining character and hovered fig
     .evaluate((button) => (button as HTMLButtonElement).click())
   await expect(page.getByRole('button', { name: 'Ready all', exact: true })).toBeEnabled()
   await expect(participants).toHaveText('3')
-  await page.screenshot({ path: 'test-results/placement-race-recovered.png' })
   expect(crashes).toEqual([])
 })

@@ -27,11 +27,13 @@
     "coverage:indexer": "sh scripts/coverage_indexer.sh",
     "coverage:move": "sh scripts/coverage_move.sh",
     "coverage:all": "bun run coverage:typescript && bun run coverage:indexer && bun run coverage:move",
-    "test": "bun run --cwd packages/fight generate:check && bun scripts/generate_cities.mjs --check && bun scripts/generate_main_menu.mjs --check && bun scripts/generate_asset_workshop.mjs --check && bun run coverage:typescript && bun run validate:seed && node scripts/assert_move_packages.mjs",
-    "test:browser": "playwright test --config packages/frontend/e2e/playwright.config.ts",
+    "test": "bun run --cwd packages/fight generate:check && bun run coverage:typescript && bun run validate:seed && node scripts/assert_move_packages.mjs",
     "validate:seed": "bun scripts/validate_seed.mjs --json",
     "dev:journal": "bun run --cwd packages/journal dev",
-    "build:journal": "bun run --cwd packages/journal build"
+    "build:journal": "bun run --cwd packages/journal build",
+    "test:regression": "playwright test --config packages/frontend/e2e/playwright.config.ts --project=regression",
+    "test:performance": "REQUIRE_HARDWARE=1 playwright test --config packages/frontend/e2e/playwright.config.ts --project=performance",
+    "validate:assets": "bun scripts/generate_cities.mjs --check && bun scripts/generate_main_menu.mjs --check && bun scripts/generate_asset_workshop.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

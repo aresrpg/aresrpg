@@ -12,12 +12,13 @@ import {
 } from '@aresrpg/engine'
 import { generate_board } from '@aresrpg/fight'
 
+import { LIFECYCLE_WORLD } from '../../../engine/test/browser_lifecycle.ts'
+import { detail_builder } from '../../../engine/src/detail_builder.ts'
 import { structure_placements } from '../../../engine/src/structure_placement.ts'
 import { crowd_benchmark_entity, load_crowd } from '../../src/demo/CharacterCrowdLab.tsx'
 import { fight_board_render } from '../../src/game/fight/FightViewport.tsx'
 import { create_world } from '../../src/game/core/world.ts'
 import { mob_entities } from '../../src/game/mob_entities.ts'
-import { load_character_appearance } from '../../src/game/character_entities.ts'
 import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_waiter.ts'
 
 import {
@@ -30,21 +31,10 @@ import {
 
 type Config = Readonly<{
   quality: EngineQuality
-  world_name?: string
-  canopy?: 'voxels' | 'clusters'
   render_distance?: number
   mode: 'full' | 'smoke'
   benchmark?: boolean
-  location: 'city' | 'forest'
-  focus?: readonly [number, number]
-  population?: Readonly<{
-    characters: number
-    mobs: number
-    pets: number
-    frames: number
-    packs: number
-    nodes: number
-  }>
+  location: 'city' | 'forest' | 'fixture'
 }>
 type Sample = Readonly<{
   stage: string
@@ -158,15 +148,15 @@ const settle = async (
   throw new Error(`World did not settle: ${JSON.stringify(world.state())}`)
 }
 
-const scene_input = (
-  location: Config['location'],
-  requested: readonly [number, number] | undefined,
-  world_name = 'nauvis'
-) => {
-  const source = worlds_source.find(({ world }) => world === world_name)
-  if (!source) throw new Error(`Unknown workload world: ${world_name}`)
+const scene_input = (location: Config['location']) => {
+  const source = worlds_source.find(({ world }) => world === 'nauvis')
+  if (!source) throw new Error('Missing performance world: nauvis')
   const recipe = parse_world_recipe(world_terrain(source.world))
-  if (requested) return { source, recipe, focus: requested }
+  if (location === 'fixture') {
+    const details = detail_builder()
+    for (const x of [-64, 0, 64, 128]) details.box([x + 0.25, 2, 0.25], [x + 1.75, 3, 1.75], 'stone')
+    return { source, recipe: { ...LIFECYCLE_WORLD, portal: false, details: details.finish() }, focus: [0, 0] as const }
+  }
   const city = source.cities[0]!
   if (location === 'city') return { source, recipe, focus: client_world_position(city.x, city.z) }
   const compiled = compile_runtime_world_recipe(recipe)
@@ -195,49 +185,36 @@ const scene_input = (
 const PROFILES = {
   full: {
     frames: 180,
-    characters: 200,
-    mobs: 100,
+    characters: 100,
+    mobs: 48,
     pets: 100,
-    packs: 48,
-    nodes: 20,
-    steps: 64,
-    laps: 3,
-    ablations: 6,
-    quality_cycles: 3,
+    packs: 12,
+    nodes: 8,
+    steps: 8,
+    laps: 2,
+    quality_cycles: 1,
   },
   smoke: {
     frames: 30,
-    characters: 24,
-    mobs: 12,
-    pets: 12,
+    characters: 2,
+    mobs: 1,
+    pets: 1,
     packs: 12,
     nodes: 8,
     steps: 4,
     laps: 1,
-    ablations: 0,
-    quality_cycles: 0,
+    quality_cycles: 1,
   },
 } as const
 
-const run = async ({
-  quality,
-  mode,
-  location,
-  focus: requested,
-  population,
-  benchmark,
-  world_name,
-  canopy,
-  render_distance,
-}: Config) => {
-  const profile = { ...PROFILES[mode], ...population }
+const run = async ({ quality, mode, location, benchmark, render_distance }: Config) => {
+  const profile = PROFILES[mode]
   const wait_frames = create_frame_waiter({ benchmark, mode })
-  const { source, recipe, focus } = scene_input(location, requested, world_name)
+  const { source, recipe, focus } = scene_input(location)
   const canvas = document.querySelector('canvas')!
   const started = performance.now()
-  const world = create_world({ canvas, world: { ...recipe, canopy }, quality, render_distance, initial_focus: focus })
+  const world = create_world({ canvas, world: recipe, quality, render_distance, initial_focus: focus })
   const samples: Sample[] = []
-  if (requested) world.set_quality(quality, 11)
   world.point_at({ x: focus[0], z: focus[1] })
   world.set_time_of_day(0.31)
   world.set_audio_volume(0)
@@ -251,21 +228,6 @@ const run = async ({
     const ready_ms = performance.now() - started
     const backend = world.backend()
     const { frames } = profile
-    if (requested)
-      samples.push(
-        await measure(world, 'player-entry', async () => {
-          const appearance = await load_character_appearance({
-            id: 'workload_player',
-            classe: 'senshi',
-            male: true,
-            colors: ['#f3eadb', '#2f8fe8', '#d9af57'],
-            loadout: {},
-          })
-          world.set_character({ id: 'workload_player', appearance })
-          while (world.entity_height('workload_player') === null) await next_frame()
-          await wait_frames(2)
-        })
-      )
     samples.push(await measure(world, location, () => wait_frames(frames)))
     world.set_time_of_day(null)
     samples.push(await measure(world, `${location}-live`, () => wait_frames(frames)))
@@ -332,8 +294,7 @@ const run = async ({
     samples.push(await measure(world, 'crowd-entry', () => wait_frames(2, animate_crowd)))
     samples.push(await measure(world, 'crowd', () => wait_frames(frames, animate_crowd)))
     samples.push(await measure(world, 'crowd-orbit', () => orbit_frames(world, frames, wait_frames)))
-    const crowd_frame = canvas.toDataURL('image/png')
-    const frame = canvas.toDataURL('image/png')
+    const captures = mode === 'full' ? { crowd: canvas.toDataURL('image/png') } : {}
     labels.show(false)
     await wait_frames(30, animate_crowd)
     samples.push(await measure(world, 'terrain-all-no-labels', () => wait_frames(frames, animate_crowd)))
@@ -344,26 +305,6 @@ const run = async ({
     labels.show(true)
     await wait_frames(30, animate_crowd)
     samples.push(await measure(world, 'terrain-all-restored', () => wait_frames(frames, animate_crowd)))
-    const populations = [
-      { stage: 'terrain-empty', entities: [], resources: [], labels: false },
-      {
-        stage: 'terrain-characters',
-        entities: actors.map((actor) => crowd_benchmark_entity(actor, 'run', 0)),
-        resources: [],
-        labels: false,
-      },
-      { stage: 'terrain-mobs', entities: mobs, resources: [], labels: false },
-      { stage: 'terrain-pets', entities: pets, resources: [], labels: false },
-      { stage: 'terrain-resources', entities: [], resources, labels: false },
-      { stage: 'terrain-resource-labels', entities: [], resources, labels: true },
-    ]
-    for (const population of populations.slice(0, profile.ablations)) {
-      labels.show(population.labels)
-      world.set_resource_nodes(population.resources)
-      world.set_entities(population.entities)
-      await wait_frames(30)
-      samples.push(await measure(world, population.stage, () => wait_frames(frames)))
-    }
     world.set_resource_nodes(resources)
     labels.show(true)
     animate_crowd()
@@ -405,7 +346,7 @@ const run = async ({
     for (const tier of ['low', 'medium', 'high', quality] as const) {
       samples.push(
         await measure(world, `quality-${tier}`, async () => {
-          world.set_quality(tier, null)
+          world.set_quality(tier, render_distance ?? null)
           await settle(world)
         })
       )
@@ -414,7 +355,7 @@ const run = async ({
       for (const tier of ['low', 'high'] as const) {
         samples.push(
           await measure(world, `quality-cycle-${tier}`, async () => {
-            world.set_quality(tier, null)
+            world.set_quality(tier, render_distance ?? null)
             await settle(world)
             await wait_frames(2)
           })
@@ -426,7 +367,7 @@ const run = async ({
       .filter(({ name }) => /\.(glb|bin|json)(?:\?|$)/.test(name)).length
     result = {
       backend,
-      captures: { crowd: crowd_frame, terrain: frame },
+      captures,
       viewport: {
         width: canvas.clientWidth,
         height: canvas.clientHeight,

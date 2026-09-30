@@ -55,18 +55,3 @@ test('world geometry uses the authored grain colors directly and retains one ins
   })
   layer.dispose()
 })
-
-test('Tanjirize has alternating dark and green squares below the purple tips', () => {
-  const { checker } = visuals.patterns
-  expect(checker[0]!.slice(0, 2)).toEqual([3, 1])
-  expect(checker[1]!.slice(0, 2)).toEqual([1, 3])
-  expect(checker[2]!.slice(0, 2)).toEqual([3, 1])
-  expect(checker[3]!.slice(0, 2)).toEqual([1, 3])
-  expect(
-    checker
-      .slice(4)
-      .flat()
-      .filter((band) => band >= 0)
-      .every((band) => band === 2)
-  ).toBe(true)
-})

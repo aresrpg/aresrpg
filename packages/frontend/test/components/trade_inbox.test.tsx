@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 import type { ItemRow, TradeCapRow, TradeRow } from '@aresrpg/protocol'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -21,13 +19,6 @@ import {
   trade_draft_inventory,
 } from '../../src/components/trade_view.ts'
 
-const dialog_source = ['../../src/components/TradeDialog.tsx', '../../src/components/TradeOfferCaps.tsx']
-  .map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'))
-  .join('\n')
-const source = ['../../src/components/TradeInbox.tsx']
-  .map((path) => readFileSync(new URL(path, import.meta.url), 'utf8'))
-  .concat(dialog_source)
-  .join('\n')
 const cap = {
   object: '0xitem',
   name: 'Wool',
@@ -75,11 +66,6 @@ test('the opponent offer can be inspected but never withdrawn in any phase', () 
   expect(own).toContain(`aria-label="${text('remove_item')}"`)
 })
 
-test('the trade surface has no per-item or per-SUI claim dispatch', () => {
-  expect(source).not.toContain("type: 'trade/claim_cap'")
-  expect(source).not.toContain("type: 'trade/claim_sui'")
-})
-
 test('negotiations stay visible while drained terminal rows close', () => {
   expect(trade_modal_visible({ ...trade('negotiating'), caps_a: [], caps_b: [] })).toBeTrue()
   expect(trade_modal_visible({ ...trade('settling'), caps_a: [], caps_b: [] })).toBeFalse()
@@ -96,18 +82,10 @@ test('trade identities prefer known character names without inventing durable id
   expect(trade_display_name('0xunknown-address', '0xme', 'Ari', players)).toBe('0xunkno…dress')
 })
 
-test('Zustand trade selectors retain store-owned references', () => {
-  expect(source).not.toContain('useAppStore((state) => Object.values(state.world.players))')
-  expect(source).not.toContain('useAppStore((state) => state.world.players)')
-  expect(source).toContain('useAppStore((state) => state.world.all_players)')
-})
-
 test('trade inventory uses the established three bag filters', () => {
   expect(trade_inventory_category({ category: 'hat' } as never)).toBe('equipment')
   expect(trade_inventory_category({ category: 'consumable' } as never)).toBe('consumables')
   expect(trade_inventory_category({ category: 'rune' } as never)).toBe('resources')
-  expect(source).toContain('<SuiUnit size={12} />')
-  expect(source).not.toContain('<Coins')
 })
 
 test('a partial staged stack remains in inventory with its residual amount', () => {
@@ -144,26 +122,6 @@ test('a staged offer removal merges into the matching draft inventory stack', ()
   ])
 })
 
-test('trade offer cells reuse the shared item snapshot tooltip', () => {
-  expect(dialog_source).toContain('useItemSnapshotHover(props.cap.object)')
-  expect(dialog_source).toContain('<ItemSnapshotTooltip copy={copy} hover={item_hover.hover} />')
-})
-
-test('draft confirmation belongs to Your Offer, never the acceptance footer', () => {
-  const offer = dialog_source.slice(
-    dialog_source.indexOf('const OfferPanel'),
-    dialog_source.indexOf('const TradeInventory')
-  )
-  const footer = dialog_source.slice(
-    dialog_source.indexOf('const NegotiatingFooter'),
-    dialog_source.indexOf('const TradeAmountModal')
-  )
-  expect(offer).toContain("text('confirm_changes')")
-  expect(offer).toContain("text('discard_changes')")
-  expect(footer).not.toContain("text('confirm_changes')")
-  expect(footer).toContain("type: 'trade/accept'")
-})
-
 test('counterparty confirmation and offer changes never reset my local offer draft', () => {
   const initial = trade('negotiating')
   const key = trade_offer_draft_key(initial, 'b')
@@ -174,11 +132,6 @@ test('counterparty confirmation and offer changes never reset my local offer dra
   ).toBe(key)
   expect(trade_offer_draft_key({ ...initial, caps_b: [{ ...cap, amount: 9 }] }, 'b')).not.toBe(key)
   expect(trade_offer_draft_key({ ...initial, sui_b: '1' }, 'b')).not.toBe(key)
-})
-
-test('acceptance cost detail stays available without occupying the action bar', () => {
-  expect(source).not.toContain("<p>{text('accept_notice'")
-  expect(source).toContain('title={notice}')
 })
 
 test('KARES alone keeps a completed exchange visible and changes its local draft identity', () => {

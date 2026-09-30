@@ -3,7 +3,6 @@
 
 import { IconButton, MinimapView } from '@aresrpg/ui'
 import { Map } from 'lucide-react'
-import { Text } from '../../i18n/Text.tsx'
 // MINIMAP — the top-right 2D map. North-up (the real-map convention); only the centered player
 // arrow rotates with the camera. Terrain is the analytic relief from minimap_render; the overlay
 // marks (zone delimitation, spawns, players, arrow) are the shared map_layers painters. Labeled
@@ -48,9 +47,6 @@ import { WorldMap } from './WorldMap.tsx'
 
 const SIZE = 288
 
-const AXES = ['x', 'y', 'z'] as const
-type Coordinates = Readonly<Record<(typeof AXES)[number], number>>
-
 export const toggles_world_map = (event: Readonly<Pick<KeyboardEvent, 'code' | 'repeat' | 'target'>>): boolean => {
   const target = event.target as Readonly<{ isContentEditable?: boolean; tagName?: string }> | null
   return (
@@ -60,34 +56,6 @@ export const toggles_world_map = (event: Readonly<Pick<KeyboardEvent, 'code' | '
     !['INPUT', 'TEXTAREA'].includes(target?.tagName ?? '')
   )
 }
-
-export const MinimapReadout = ({
-  location_name,
-  location_label,
-  city,
-  coordinates,
-  coordinates_label,
-}: Readonly<{
-  location_name: string
-  location_label: string
-  city: boolean
-  coordinates: Coordinates
-  coordinates_label: string
-}>) => (
-  <div className="gw-minimap__readout">
-    <span aria-label={location_label} className={`gw-minimap__biome${city ? ' gw-minimap__biome--city' : ''}`}>
-      {location_name}
-    </span>
-    <div aria-label={coordinates_label} className="gw-minimap__coords">
-      {AXES.map((axis) => (
-        <span className="gw-minimap__coord" key={axis}>
-          <span className="gw-minimap__axis">{axis}</span>
-          {coordinates[axis]}
-        </span>
-      ))}
-    </div>
-  </div>
-)
 
 export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: AppCopy; terrain?: unknown }>) => {
   const pose = useWorldPose()

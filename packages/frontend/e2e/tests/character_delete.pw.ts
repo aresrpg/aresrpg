@@ -28,7 +28,6 @@ test('deletes the right-clicked tab once and ignores a stale roster', async ({ p
   await expect(dialog).toContainText('Ash')
   await expect(dialog).toContainText('Deletion is permanent.')
   await expect(dialog.locator('.aui-window')).toHaveCSS('opacity', '1')
-  await page.screenshot({ path: 'test-results/character-delete-confirm.png' })
   await dialog.getByRole('button', { name: 'Delete character', exact: true }).dblclick()
   await expect(page.locator('[data-character-tab="second"]')).toHaveCount(0)
   await expect(page.locator('[data-calls]')).toHaveText('["second"]')

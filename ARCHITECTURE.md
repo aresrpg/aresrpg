@@ -887,8 +887,10 @@ operations are tri-state: absent preserves procedural terrain, a material adds o
 subtracts it. The same operation function owns render and collision occupancy, so caves create no parallel world
 store or gameplay coordinate system; dungeon entrances remain at the authored surface anchor. Generation
 partitions final operations into provenance-hashed, palette-compressed 32³ chunks. Runtime solves nothing:
-workers compile terrain immediately, request only intersecting city artifacts, and decode/cache only intersecting
-chunks. The ordinary collision and WebGPU voxel-mesh paths remain the consumers. City detail archives permit
+workers compile terrain immediately and request only intersecting city artifacts. Voxel decoding and
+caching are scoped to intersecting chunks. The active version stores voxel runs and unindexed float32
+detail triangles as base64 inside JSON; each loading worker currently parses the whole city and validates
+all detail vertices before returning requested columns. The ordinary collision and WebGPU voxel-mesh paths remain the consumers. City detail archives permit
 4,096 cells and 500,000 triangles across the complete settlement; small scenes retain their 512-cell,
 100,000-triangle limits. Per-column residency and GPU upload budgets remain unchanged.
 
@@ -1069,28 +1071,30 @@ the PTB split is not a claim that every possible cap withdrawal is mechanically 
 
 ## Verification and release preparation
 
-The gate runs lint, formatting, typechecking, and tests as four independent source matrix jobs.
-The tests job retains coverage, generated-data checks, and seed validation; the final gate requires
-every source job. One input classifier selects
-Move, indexer parity, and browser lanes against the last successful `edge` push, including for PRs.
-Missing baseline evidence runs every lane; a failed or cancelled change remains in the comparison.
-Move package inputs come from `move-packages.json`. An unchanged lane may skip only when the
-classifier explicitly says so; every required lane and browser shard must succeed. Workflow edits
-compare each lane’s job and shared header/setup. Unknown workflow structure runs all lanes.
-Classifier source changes are checked by the source suite, rather than invalidating unchanged
-compiled-language inputs. Browser-matrix tests discover the catalogue once per browser, then verify
-complete project/shard partitions without repeatedly launching discovery for each shard.
-Browser coverage retains Chrome on Linux/macOS and Firefox on Linux, with three UI shards on Linux, two
-on macOS, and three quality-specific world workload lanes per platform. Five macOS jobs avoid queuing
-a sixth browser behind the hosted macOS concurrency limit. Runner-provided Chrome is reused and its
-version is logged; absent Chrome and Playwright’s patched Firefox are installed through one setup entry. Linux compatibility uses Chrome SwiftShader Vulkan and Firefox WebGPU Vulkan with Mesa software drivers. Hardware runs keep the native adapter. Each workload lane runs one heavy smoke scenario;
-the low and medium lanes each verify one missing-WebGPU failure. Browser jobs have a six-minute
-execution limit. Smoke world workloads have a 210-second test timeout; full workloads retain their ten-minute local budget. UI layout retries have a three-second
-budget, separate from the longer world-rendering checks. Settings persistence exercises its actual
-controls, reducer, and storage observer across reloads without initializing a renderer. Headless CI UI shards use two workers. Linux Firefox runs headed under Xvfb with one worker
-per display so browser windows cannot steal each other’s hover or focus; its separate shards retain
-parallel coverage. Each GPU workload job retains one worker. Sharding does not change test
-selection, and local runs default to one worker.
+Verification has three purposes: fast native unit coverage, bounded browser regressions, and opt-in
+performance measurement. One source job runs lint, formatting, types, unit coverage, seed validation,
+and authored artifact freshness. The native test command does not repeatedly regenerate the cities;
+`validate:assets` checks all generated scenes once. Expensive production-sized inputs belong in
+artifact validation or performance measurements, not tests of array dimensions or wiring.
+
+One input classifier selects Move, indexer parity, and browser checks against the last successful
+`edge` push, including for PRs. Missing evidence runs every lane. Conditional Move and Rust jobs
+retain their native coverage and authority/parity checks. The final gate rejects failed, cancelled,
+or unjustifiably skipped verification. PRs also retain the production bundle check.
+
+One Chrome job on macOS runs browser regressions against a production test build. There is no
+platform/quality/shard matrix, separate mobile runner, WebGL fallback test, or development-HMR gate.
+Fixtures use production components with controlled inputs. Browser-only risks include focus,
+gestures, confirmation, persistence, decoded assets and GPU cleanup; CSS literals, duplicate viewport
+tours and source-string wiring assertions do not establish those behaviors. Screenshots belong to
+the test output directory, never a developer-specific absolute path.
+
+Renderer lifecycle checks use a small fixed scene, bounded residency and every quality tier through
+the production engine. They require WebGPU and retain resource-growth and disposal assertions.
+Full authored city/forest workloads run through the manually dispatched performance workflow or
+`test:performance`. They record actual hardware and completed GPU work; there is no universal FPS
+claim derived from an OS name. Performance runs use one worker and no tracing. The native suites
+remain the owners of deterministic correctness, and no coverage floor is lowered for test deletion.
 
 Owner-authorized release preparation builds immutable images and stages Vercel output concurrently
 with verification of that exact source SHA. Only a successful `edge` push gate permits the prepared

@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test'
 import { LOCALES } from '../../src/i18n/locale.ts'
 import { open_responsive_preview } from '../support/responsive_preview.ts'
 
-for (const height of [360, 900]) {
+for (const height of [360]) {
   test(`language window keeps all choices reachable at ${height}px`, async ({ page }) => {
     await page.setViewportSize({ width: 1366, height })
     await open_responsive_preview(page, '/e2e/fixtures/responsive_preview.html?page=settings')

@@ -96,6 +96,8 @@ bun run dev
 bun run lint
 bun run typecheck
 bun run test
+bun run validate:assets
+bun run test:regression
 bun run coverage:all
 ```
 
@@ -105,7 +107,9 @@ coverage gate over handwritten JS/TS. `bun run coverage:all` additionally runs t
 Every production Move module targets more than 98%; raise its enforced floor in the same change as meaningful test
 coverage gains, and never lower a floor. The script is the sole list of current Move floors.
 No authored module is excluded. Rust coverage requires `cargo-llvm-cov` 0.9.0 plus
-`llvm-tools-preview` or Homebrew LLVM. The complete CI gate also includes indexer parity/package-size
+`llvm-tools-preview` or Homebrew LLVM. Authored artifact freshness runs separately through `bun run validate:assets`; CI runs it once.
+Browser regressions use the production test build; `bun run test:performance` is opt-in.
+The complete CI gate also includes indexer parity/package-size
 tests and the production frontend build.
 
 After every edit under `packages/move` or `packages/move-math`, run both:

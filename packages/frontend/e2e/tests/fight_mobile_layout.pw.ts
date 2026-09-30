@@ -27,7 +27,6 @@ for (const viewport of [
     expect(
       await filters.evaluateAll((nodes) => new Set(nodes.map((node) => node.getBoundingClientRect().y)).size)
     ).toBe(1)
-    await page.screenshot({ path: `/private/tmp/fight-mobile-${viewport.width}.png` })
   })
 }
 

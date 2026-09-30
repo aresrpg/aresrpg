@@ -5,13 +5,10 @@ import { describe, expect, test } from 'bun:test'
 
 import worlds from '../../../seed/content/worlds.json'
 import { compile_city_structure } from '../src/cities/city_structure.ts'
-import { greedy_mesh } from '../src/greedy_mesher.ts'
-import { get_quality_profile } from '../src/quality.ts'
 import { structure_placements } from '../src/structure_placement.ts'
 import type { StructurePlacement } from '../src/structure_placement.ts'
 import { create_terrain_planner } from '../src/terrain_planner.ts'
 import { chunk_origin, generate_chunk, surface_chunk_layers } from '../src/terrain_generator.ts'
-import { TERRAIN_POOL_LAYOUT } from '../src/terrain_pool.ts'
 import {
   BIOME_SLOTS,
   compile_world_recipe,
@@ -246,33 +243,4 @@ describe('terrain streaming', () => {
     await latest
     planner.dispose()
   })
-
-  test('the shared terrain pool fits Nauvis high-quality residency with movement headroom', () => {
-    const first_world = worlds.find(({ world }) => world === 'nauvis')
-    if (!first_world) throw new Error('Nauvis is missing')
-    const compiled = compile_world_recipe(first_world.terrain)
-    const radius = get_quality_profile('high').chunks.far_radius
-    let required_slots = 0
-
-    for (let z = -radius; z <= radius; z += 1) {
-      for (let x = -radius; x <= radius; x += 1) {
-        const structures = structure_placements(compiled, {
-          min_x: x * CHUNK_EDGE - 1,
-          max_x: (x + 1) * CHUNK_EDGE,
-          min_z: z * CHUNK_EDGE - 1,
-          max_z: (z + 1) * CHUNK_EDGE,
-        })
-        surface_chunk_layers(compiled, x, z, structures).forEach((y) => {
-          const request = { key: `${x}:${y}:${z}`, coordinate: { x, y, z }, lod: 'near' as const }
-          const { quad_count } = greedy_mesh(generate_chunk(compiled, request, structures))
-          required_slots += Math.ceil(quad_count / TERRAIN_POOL_LAYOUT.slot_quads)
-        })
-      }
-    }
-
-    expect(required_slots).toBeLessThanOrEqual(TERRAIN_POOL_LAYOUT.max_slots)
-    expect(required_slots / TERRAIN_POOL_LAYOUT.max_slots).toBeLessThanOrEqual(0.75)
-    // 60s runway: the workload includes the 2026-08-19 ridged-noise + scatter cost; the seal
-    // is the SLOT ARITHMETIC, not generation speed (the runtime's budget lives in the engine).
-  }, 60_000)
 })

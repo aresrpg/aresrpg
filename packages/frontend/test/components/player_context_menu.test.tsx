@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -106,11 +104,4 @@ test('the shared player menu owns the party run action', () => {
   const markup = renderToStaticMarkup(<RunToRow label="RUN TO POSITION" run={noop} visible />)
   expect(markup).toContain('RUN TO POSITION')
   expect(markup).not.toContain('MESSAGE')
-})
-
-test('the one menu host is global instead of disappearing during fights', () => {
-  const app = readFileSync(new URL('../../src/PlayerRuntime.tsx', import.meta.url), 'utf8')
-
-  expect(app).toContain('<PlayerContextMenu copy={copy} />')
-  expect(app).not.toContain('PlayerContextLayer')
 })

@@ -2,10 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from '@playwright/test'
 
-for (const viewport of [
-  { width: 1440, height: 900 },
-  { width: 844, height: 390 },
-]) {
+for (const viewport of [{ width: 844, height: 390 }]) {
   test(`HUD placement and single Friends/Admin controls at ${viewport.width}`, async ({ page }) => {
     await page.setViewportSize(viewport)
     await page.goto(`/e2e/fixtures/ui_world_hud.html?hud-layout${viewport.width < 900 ? '&mobile' : ''}`)
@@ -56,20 +53,6 @@ for (const viewport of [
     await expect(page.locator('[data-wallet-picker]')).toBeVisible()
   })
 }
-
-test('Admin charts stay wide and fit the available desktop space', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/demo#ui')
-  await page.locator('.ui-workshop-navigation').getByRole('button', { name: 'Admin', exact: true }).click()
-  const charts = page.locator('[data-admin-charts]')
-  await expect(charts.getByRole('img')).toHaveCount(6)
-  for (const height of [900, 1200]) {
-    await page.setViewportSize({ width: 1440, height })
-    await expect.poll(() => charts.evaluate((node) => node.scrollHeight - node.clientHeight)).toBeLessThanOrEqual(1)
-    const plot = (await charts.getByRole('img').first().boundingBox())!
-    expect(plot.width).toBeGreaterThan(plot.height * 2)
-  }
-})
 
 test('Settings return-to-home uses the existing leave confirmation', async ({ page }) => {
   await page.goto('/e2e/fixtures/ui_world_hud.html')

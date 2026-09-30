@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { describe, expect, test } from 'bun:test'
 
 import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
@@ -64,42 +62,6 @@ describe('tutorial sequencing', () => {
     expect(text('stats.description.wisdom')).toContain('resistance to AP/MP loss')
     expect(text('stats.description.agility')).toContain('tackle escape')
     expect(text('stats.description.agility')).not.toContain('AP/MP loss')
-  })
-
-  test('every DOM coach mark has one stable semantic target', () => {
-    const files = [
-      'game/hud/CompassStrip.tsx',
-      'game/hud/OverworldVitals.tsx',
-      'components/FpsPanel.tsx',
-      'components/CharacterTabs.tsx',
-      'characters/EquipmentTab.tsx',
-      'characters/StatsTab.tsx',
-      'characters/SpellsTab.tsx',
-      'characters/JobsTab.tsx',
-      'characters/RuneforgeTab.tsx',
-    ]
-    const source = files.map((file) => readFileSync(new URL(`../../src/${file}`, import.meta.url), 'utf8')).join('\n')
-    const targets = tutorial_steps('world')
-      .concat(
-        tutorial_steps('characters_equipment'),
-        tutorial_steps('characters_stats'),
-        tutorial_steps('characters_spells'),
-        tutorial_steps('characters_jobs'),
-        tutorial_steps('characters_runeforge')
-      )
-      .flatMap(({ target }) => (target?.kind === 'dom' ? [target.name] : []))
-
-    targets.forEach((target) => expect(source).toContain(`data-tutorial-target="${target}"`))
-    const hud = readFileSync(new URL('../../src/game/hud/OverworldVitals.tsx', import.meta.url), 'utf8')
-    expect(hud).toContain('fight-hud__bar fight-hud__bar--overworld" data-tutorial-target="overworld_hud"')
-    expect(hud).not.toContain('fight-hud fight-hud--overworld" data-tutorial-target')
-  })
-
-  test('maintenance and indexer catch-up prevent the tutorial host from mounting', () => {
-    const host = readFileSync(new URL('../../src/tutorial/TutorialHost.tsx', import.meta.url), 'utf8')
-
-    expect(host).toContain('game_frozen !== true')
-    expect(host).toContain('!indexing_blocked(link_status, indexing_lag)')
   })
 
   test('all supported locales ship the complete tutorial book', async () => {

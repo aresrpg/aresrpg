@@ -17,7 +17,6 @@ test('fight rows show access and refuse external groups without a duplicate sele
     if (joinable) await expect(row.getByRole('button')).toBeEnabled()
     else await expect(row.getByRole('button')).toBeDisabled()
   }
-  await page.screenshot({ path: 'test-results/dungeon-lobby-access.png' })
 })
 
 for (const [query, group, expected] of [

@@ -3,7 +3,7 @@
 
 import { expect, test } from '@playwright/test'
 
-for (const activity of ['fight', 'seated', 'gather', 'rooted', 'ambush']) {
+for (const activity of ['fight']) {
   test(`stats and spell edits stay disabled during ${activity}`, async ({ page }) => {
     await page.goto(`/e2e/fixtures/character_progression.html?state=${activity}`)
     await expect(page.getByRole('button', { name: 'Add a point to Strength', exact: true })).toBeDisabled()

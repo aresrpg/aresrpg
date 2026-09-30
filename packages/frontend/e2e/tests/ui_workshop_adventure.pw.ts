@@ -64,7 +64,6 @@ test('the local quest teaches party control and keeps defeat in the scene until 
   expect(await levels()).toHaveLength(1)
   expect((await heard('/sound_effect/quest_completed.aac')).every(({ volume }) => volume === 0.5)).toBe(true)
   await expect(page).toHaveURL(/adventure_quests\.html$/)
-  await page.screenshot({ path: 'test-results/adventure-rebirth.png' })
   await rebirth.getByRole('link', { name: 'Log in and enter the real game', exact: true }).click()
   await expect(page.locator('[data-player-login]')).toBeVisible()
   await expect(page.getByText('Defeated by Gobadoc, the Goblin King.', { exact: true })).toHaveCount(0)

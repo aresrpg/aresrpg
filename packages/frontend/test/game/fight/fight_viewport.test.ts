@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { generate_board } from '@aresrpg/fight'
 import { expect, test } from 'bun:test'
 
@@ -20,20 +18,6 @@ test('placement cells are transient overlays rather than static board state', ()
   expect(overlays.map(({ id }) => id)).toEqual(['__fight_start_a', '__fight_start_b'])
   expect(overlays.every(({ blob }) => blob.shape === 'per_cell')).toBeTrue()
   expect(fight_placement_overlays(board, false)).toEqual([])
-})
-
-test('cell picking is pointer-driven instead of polled by a second animation loop', () => {
-  const source = readFileSync(new URL('../../../src/game/fight/FightViewport.tsx', import.meta.url), 'utf8')
-
-  expect(source).not.toContain('pointer_ref')
-  expect(source).not.toContain('requestAnimationFrame')
-  expect(source).toContain("addEventListener('pointerup', touch_up)")
-})
-
-test('a canvas click with no picked fight cell still reaches the fight interaction owner', () => {
-  const source = readFileSync(new URL('../../../src/game/fight/FightViewport.tsx', import.meta.url), 'utf8')
-
-  expect(source).toContain('click_ref.current?.(cell === null ? null : BigInt(cell)')
 })
 
 test('authored encounter anchors keep local fights on their exact floor, not the simulator origin or canopy', async () => {

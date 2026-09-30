@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readFileSync } from 'node:fs'
-
 import { create_character_source, create_fight, reachable_fight_cells } from '@aresrpg/fight'
 import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import { createElement } from 'react'
@@ -130,20 +128,6 @@ describe('generic fight view', () => {
     expect(end_turn_intent({ ...ready, actions_locked: true })).toBeNull()
     expect(end_turn_intent({ ...ready, min_turn_ready: false })).toBe('queue')
     expect(end_turn_intent(ready)).toBe('submit')
-  })
-
-  test('the fight surface neither builds a world nor goes looking for one', () => {
-    // The board is mounted INSIDE a live world (owner 2026-08-21). Two laws, both learned the
-    // hard way: a second engine hides the very world it stands in, and a surface that can ASK
-    // for "the live scene" draws into whichever one happens to be published — it landed the
-    // fight board in the biome lab twice. The world arrives as an argument or not at all.
-    const source = readFileSync(new URL('../../../src/game/fight/FightViewport.tsx', import.meta.url), 'utf8')
-
-    expect(source).not.toContain('create_engine')
-    expect(source).not.toContain('create_fight_view')
-    expect(source).not.toContain('read_scene')
-    expect(source).not.toContain('subscribe_scene')
-    expect(source).toContain('scene: SceneHandle')
   })
 
   test('selects the next living owned fighter from the canonical queue', () => {
@@ -318,13 +302,6 @@ describe('generic fight view', () => {
         FightTurnCard({ fighter: character!.fighter, level_label: 'Level 1', mob_icon_for: () => null })
       )
     ).toContain('data-character-placeholder=""')
-
-    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
-    const card_rule = /\.fight-hud__turn-card\s*\{(?<body>[^}]*)\}/s.exec(css)?.groups?.body ?? ''
-    const body_rule = /\.fight-hud__turn-card-body\s*\{(?<body>[^}]*)\}/s.exec(css)?.groups?.body ?? ''
-    expect(card_rule).toContain('background: transparent')
-    expect(card_rule).not.toContain('clip-path')
-    expect(body_rule).toContain('justify-content: flex-start')
   })
 
   test('the same logical turn does not replay its card when chain time replaces predicted time', () => {
@@ -406,37 +383,6 @@ describe('generic fight view', () => {
     const view = select_fight_view({ checkpoint, mode: 'remote', owner: 'mine', names: {} })
     expect(view.ready_starts_fight).toBeTrue()
     expect(view.show_turn_timer).toBeFalse()
-    const hud = readFileSync(new URL('../../../src/game/fight/FightHud.tsx', import.meta.url), 'utf8')
-    expect(hud).not.toContain('should_auto_start_placement')
-    expect(hud).not.toContain('auto_attempted')
-  })
-
-  test('placement keeps the world chat SSOT mounted without fight CSS', () => {
-    const app = readFileSync(new URL('../../../src/components/DesktopWorldHud.tsx', import.meta.url), 'utf8')
-    const chat = readFileSync(new URL('../../../src/components/Chat.tsx', import.meta.url), 'utf8')
-    const hud = readFileSync(new URL('../../../src/game/fight/FightHud.tsx', import.meta.url), 'utf8')
-    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
-    const placement = hud.slice(
-      hud.indexOf("if (view.phase === 'placement')"),
-      hud.indexOf("if (view.phase !== 'active'")
-    )
-
-    expect(app).toContain('<WorldChat copy={copy} />')
-    expect(chat).toContain('className="gw-worldchat"')
-    expect(hud).toContain('const chat = <WorldChat copy={copy} fight={fight_id} names={chat_names} />')
-    expect(placement).toContain('{chat}')
-    expect(css).not.toContain('.fight-hud .chat')
-  })
-
-  test('turn cards keep their collapse arrow in-row and expose elapsed time as a strong curtain', () => {
-    const css = readFileSync(new URL('../../../src/game/fight/fight_hud.css', import.meta.url), 'utf8')
-    const timeline = readFileSync(new URL('../../../src/game/fight/FightTimeline.tsx', import.meta.url), 'utf8')
-
-    expect(css).toContain('grid-template-columns: minmax(0, auto) 26px')
-    expect(css).toContain('width: 114%')
-    expect(css).toContain('backdrop-filter: grayscale(1) brightness(0.58)')
-    expect(timeline).toContain('<ChevronRight')
-    expect(timeline).toContain('<ChevronLeft')
   })
 
   test('the remote clock counts down from the chain 45-second window', () => {

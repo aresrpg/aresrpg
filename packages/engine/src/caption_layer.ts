@@ -21,8 +21,8 @@ import {
   Vector3,
   Vector4,
   type Camera,
-  type WebGLRenderer,
 } from 'three'
+import type { Renderer } from 'three/webgpu'
 
 import { caption_raster_key, create_caption_raster } from './caption_raster.ts'
 import {
@@ -37,13 +37,6 @@ import type { WorldCaption } from './caption_types.ts'
 
 const MAX_ATLAS_BYTES = 128 * 1024 * 1024
 const MAX_INSTANCES = 4096
-type Renderer<Target> = Pick<
-  WebGLRenderer,
-  'copyTextureToTexture' | 'render' | 'clearDepth' | 'autoClear' | 'toneMapping' | 'outputColorSpace'
-> & {
-  getRenderTarget: () => Target | null
-  setRenderTarget: (target: Target | null) => void
-}
 type Page = ReturnType<typeof create_page>
 type Tile = {
   allocation: Readonly<{ page: Page; slot: CaptionSlot }> | null
@@ -62,7 +55,7 @@ type Entry = {
   visible: boolean
 }
 
-const create_page = (scene: Scene, webgpu: boolean, size: number, empty: Uint8Array) => {
+const create_page = (scene: Scene, size: number, empty: Uint8Array) => {
   const atlas = new DataTexture(empty, size, size)
   atlas.colorSpace = SRGBColorSpace
   atlas.minFilter = LinearFilter
@@ -74,7 +67,7 @@ const create_page = (scene: Scene, webgpu: boolean, size: number, empty: Uint8Ar
   const tints = new InstancedBufferAttribute(new Float32Array(MAX_INSTANCES * 4), 4).setUsage(DynamicDrawUsage)
   geometry.setAttribute('caption_uv', rectangles)
   geometry.setAttribute('caption_tint', tints)
-  const material = create_caption_material(atlas, webgpu)
+  const material = create_caption_material(atlas)
   const mesh = new InstancedMesh(geometry, material, MAX_INSTANCES)
   mesh.instanceMatrix.setUsage(DynamicDrawUsage)
   mesh.frustumCulled = false
@@ -105,16 +98,14 @@ const upload = (attribute: InstancedBufferAttribute, count: number): void => {
   attribute.needsUpdate = true
 }
 
-export const create_caption_layer = <Target>({
+export const create_caption_layer = ({
   renderer,
   canvas,
   camera,
-  webgpu,
 }: Readonly<{
-  renderer: Renderer<Target>
+  renderer: Renderer
   canvas: HTMLCanvasElement
   camera: Camera
-  webgpu: boolean
 }>) => {
   const scene = new Scene()
   const overlay_camera = new OrthographicCamera(-1, 1, 1, -1, -1, 1)
@@ -144,7 +135,6 @@ export const create_caption_layer = <Target>({
     revision++
   }
   document.fonts?.addEventListener('loadingdone', font_changed)
-  canvas.addEventListener('webglcontextrestored', font_changed)
   void document.fonts?.ready
     .then(() => {
       if (!disposed) font_changed()
@@ -178,10 +168,10 @@ export const create_caption_layer = <Target>({
     let empty = empty_atlases.get(size)
     if (!empty) {
       empty = new Uint8Array(bytes)
-      empty.fill(255, 0, 4) // Reserved solid texel also survives native GPU context restoration.
+      empty.fill(255, 0, 4) // Reserved solid texel for health bars.
       empty_atlases.set(size, empty)
     }
-    const page = create_page(scene, webgpu, size, empty)
+    const page = create_page(scene, size, empty)
     pages.push(page)
     const context = raster.canvas.getContext('2d')!
     context.resetTransform()
@@ -254,7 +244,7 @@ export const create_caption_layer = <Target>({
       .set(anchor.x, anchor.y, anchor.z, 1)
       .applyMatrix4(camera.matrixWorldInverse)
       .applyMatrix4(camera.projectionMatrix)
-    if (clip.w <= 0 || clip.z > clip.w || clip.z < (webgpu ? 0 : -clip.w)) return
+    if (clip.w <= 0 || clip.z > clip.w || clip.z < 0) return
     const tile = definition(entry)
     const pixels = (height * camera.projectionMatrix.elements[5]!) / (2 * clip.w)
     const dimensions = entry.caption.world_size
@@ -425,7 +415,6 @@ export const create_caption_layer = <Target>({
     dispose: (): void => {
       disposed = true
       document.fonts?.removeEventListener('loadingdone', font_changed)
-      canvas.removeEventListener('webglcontextrestored', font_changed)
       entries.clear()
       tiles.clear()
       pages.forEach((page) => page.dispose())
