@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable functional/immutable-data, functional/prefer-immutable-types, no-param-reassign -- collision probes are caller-owned scratch vectors mutated in this measured hot path. */
-// Capsule-vs-voxel collision resolution — LOSSLESS PORT of the proven legacy solver
-// (deprecated/engine/src/player/collision.js). Pure math, no renderer coupling: the player is an
+/* eslint-disable functional/immutable-data -- collision probes are caller-owned scratch vectors mutated in this measured hot path. */
+// Capsule-vs-voxel collision resolution. Pure math, no renderer coupling: the player is an
 // axis-aligned box around a feet-centre against a `solid(x, y, z)` voxel oracle. Single home for
 // "don't walk through blocks, climb a 1-block step, slide along walls, don't tunnel at sprint".
 
@@ -50,25 +49,16 @@ export const box_overlaps_solid = (
   return false
 }
 
-const snap_to_face = (
-  solid: SolidFn,
-  from: number,
-  to: number,
-  axis: 0 | 1 | 2,
-  probe: Vec3Mut,
-  r: number,
-  h: number
-): number => {
-  let lo = from // known clear
-  let hi = to // known blocked
-  for (let i = 0; i < 12; i += 1) {
-    const mid = (lo + hi) / 2
-    probe[axis] = mid
-    if (box_overlaps_solid(solid, probe[0], probe[1], probe[2], r, h)) hi = mid
-    else lo = mid
+// Each axis step is at most half a voxel. From clear to blocked, its leading face
+// therefore crosses exactly one grid boundary; no binary search or extra solidity reads.
+// This fails if SolidFn stops describing unit voxels or MAX_STEP_M exceeds one voxel.
+const snap_to_face = (from: number, to: number, axis: 0 | 1 | 2, r: number, h: number): number => {
+  if (to > from) {
+    const extent = axis === 1 ? h : r
+    return Math.max(from, Math.floor(to + extent - COLLISION_SKIN) - extent)
   }
-  probe[axis] = lo
-  return lo
+  const extent = axis === 1 ? 0 : r
+  return Math.min(from, Math.floor(to - extent + COLLISION_SKIN) + 1 + extent)
 }
 
 const move_axis = (
@@ -91,7 +81,10 @@ const move_axis = (
     const saved = probe[axis]
     probe[axis] = next
     if (box_overlaps_solid(solid, probe[0], probe[1], probe[2], r, h)) {
-      probe[axis] = snap_to_face(solid, saved, next, axis, probe, r, h)
+      probe[axis] = saved
+      // Direct travel can leave a body inside terrain. Only a clear start proves a crossed face.
+      if (!box_overlaps_solid(solid, probe[0], probe[1], probe[2], r, h))
+        probe[axis] = snap_to_face(saved, next, axis, r, h)
       blocked = true
       break
     }

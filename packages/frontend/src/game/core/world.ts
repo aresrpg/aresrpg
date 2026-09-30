@@ -239,7 +239,6 @@ export const create_world = ({
     held.strafe = 0
     mouse_forward = false
     touch_axes = { forward: 0, strafe: 0 }
-    follow_addon.set_touch_moving(false)
     character.set_input({ forward: 0, strafe: 0, jump: false, glide: false, walk: false, phase_target: null })
   }
   const stop_run = (reason: 'arrived' | 'manual' | 'blocked' | 'inactive' = 'manual', notify = true): void => {
@@ -257,7 +256,7 @@ export const create_world = ({
     if (next) stop_run('blocked')
   }
   const apply_run_input = (position: Readonly<Vec3>, delta_seconds: number): void => {
-    if (!run_target || !walking) return character.set_input({ yaw: follow_addon.get_movement_yaw() })
+    if (!run_target || !walking) return character.set_input({ yaw: director.active().get_yaw() })
     const mounting = run_to_mount({
       requested: run_target.ride_pet === true,
       available: pet !== null,
@@ -690,7 +689,6 @@ export const create_world = ({
         z: transform.visual_position[2],
         eye_height: CHARACTER_HEIGHT * 0.9,
         speed: transform.speed,
-        movement_yaw: Math.atan2(-transform.velocity[0], -transform.velocity[2]),
         on_ground: transform.on_ground,
       }
       publish_pose({
@@ -909,7 +907,6 @@ export const create_world = ({
       if (magnitude > 0) stop_run('manual')
       const length = Math.max(1, magnitude)
       touch_axes = { forward: axes.forward / length, strafe: axes.strafe / length }
-      follow_addon.set_touch_moving(magnitude > 0)
       footsteps.unlock()
       apply_axes()
     },

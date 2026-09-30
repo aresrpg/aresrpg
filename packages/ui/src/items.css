@@ -187,7 +187,8 @@
 }
 @container aui-viewport (max-height: 500px) and (min-width: 501px) {
   .game-character-body .chr-equip__detail {
-    width: calc(100% - 20px);
+    width: max-content;
+    max-width: calc(100% - 20px);
     padding: 10px;
     gap: 4px;
   }

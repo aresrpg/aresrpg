@@ -107,6 +107,22 @@ export default [
     rules: mutation_family_off,
   },
   {
+    files: ['packages/engine/src/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: ['three', 'three/webgpu'].map((name) => ({
+            name,
+            importNames: ['DynamicDrawUsage'],
+            message:
+              'WebGPU forces an upload on every render for DynamicDrawUsage. Use explicit needsUpdate/version changes and update ranges.',
+          })),
+        },
+      ],
+    },
+  },
+  {
     // T5 — tests/benches choreograph state and fixtures by design (LAST: wins over T2/T3)
     files: ['**/*.test.*', '**/*.spec.*', '**/e2e/**', '**/bench/**'],
     rules: {

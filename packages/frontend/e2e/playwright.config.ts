@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { defineConfig } from '@playwright/test'
 
 const hardware = process.env.REQUIRE_HARDWARE === '1'
+const mobile_viewport = process.env.PERF_VIEWPORT === 'mobile'
 // New browser scenarios are manual diagnostics unless they protect a critical interaction here.
 const CRITICAL_TESTS = [
   'auth_callback',
@@ -34,8 +35,12 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://127.0.0.1:5180',
-    viewport: hardware ? { width: 1920, height: 1080 } : { width: 1280, height: 720 },
-    deviceScaleFactor: hardware ? 2 : 1,
+    viewport: mobile_viewport
+      ? { width: 844, height: 390 }
+      : hardware
+        ? { width: 1920, height: 1080 }
+        : { width: 1280, height: 720 },
+    deviceScaleFactor: mobile_viewport ? 3 : hardware ? 2 : 1,
     screenshot: 'only-on-failure',
     trace: hardware ? 'off' : 'retain-on-failure',
     browserName: 'chromium',

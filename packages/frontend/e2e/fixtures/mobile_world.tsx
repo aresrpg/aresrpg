@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
+import { TouchControls, type TouchDevice } from '../../../mobile/src/TouchControls.tsx'
 import { MobPackCard } from '../../src/components/MobPackCard.tsx'
 import { NametagCard } from '../../src/components/NametagCard.tsx'
 import { PromptText } from '../../src/components/PromptChip.tsx'
@@ -18,6 +19,13 @@ import '../../src/tailwind.css'
 import '../../../ui/src/inspection.css'
 
 const copy = await load_app_copy('en')
+const controls_only = new URLSearchParams(location.search).has('controls')
+const device: TouchDevice = {
+  set_movement: (axes) => {
+    document.body.dataset.movement = JSON.stringify(axes)
+  },
+  set_jump: () => {},
+}
 
 const Probe = () => {
   const canvas = useRef<HTMLCanvasElement>(null)
@@ -26,7 +34,13 @@ const Probe = () => {
   const [action, set_action] = useState('')
   const [menu, set_menu] = useState<Readonly<{ x: number; y: number }> | null>(null)
   useEffect(() => {
-    const controls = create_camera_drag({ on_rotate: () => set_action('rotate') })
+    const controls = create_camera_drag({
+      on_rotate: (dx, dy) => {
+        set_action('rotate')
+        document.body.dataset.rotationX = String(Number(document.body.dataset.rotationX ?? 0) + dx)
+        document.body.dataset.rotationY = String(Number(document.body.dataset.rotationY ?? 0) + dy)
+      },
+    })
     controls.attach(canvas.current!)
     const detach = attach_context_menu_input(canvas.current!, (event) => {
       event.preventDefault()
@@ -48,7 +62,7 @@ const Probe = () => {
     }
   }, [])
   return (
-    <main className="bg-bg p-4 text-text">
+    <main className={controls_only ? 'fixed inset-0 bg-bg text-text' : 'bg-bg p-4 text-text'}>
       <output aria-label="Last action">{action}</output>
       <div className="flex items-end gap-4 pt-20">
         <MobPackCard members={[]} copy={copy} active activate={() => set_action('attack')} />
@@ -80,7 +94,14 @@ const Probe = () => {
       </div>
       <MountPrompt copy={copy} />
       <PortalPrompt copy={copy} />
-      <canvas aria-label="Character" width={500} height={200} ref={canvas} className="bg-surface-high" />
+      <canvas
+        aria-label="Character"
+        width={500}
+        height={200}
+        ref={canvas}
+        className={controls_only ? 'absolute inset-0 size-full bg-surface-high' : 'bg-surface-high'}
+      />
+      {controls_only && <TouchControls copy={copy} device={device} />}
       {menu && (
         <ContextMenu {...menu}>
           <button

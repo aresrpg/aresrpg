@@ -5,7 +5,6 @@ import {
   DataTexture,
   ConeGeometry,
   DoubleSide,
-  DynamicDrawUsage,
   Group,
   InstancedMesh,
   LinearFilter,
@@ -316,7 +315,6 @@ const build_visual = (
   const drawable = merged ? new Mesh(geometry, material) : new InstancedMesh(geometry, material, board.cells.length)
   if (drawable instanceof InstancedMesh) {
     drawable.name = 'fight_blob_cells'
-    drawable.instanceMatrix.setUsage(DynamicDrawUsage)
     drawable.count = cells.length
     drawable.renderOrder = 3 + (blob.priority ?? 0)
     drawable.frustumCulled = false

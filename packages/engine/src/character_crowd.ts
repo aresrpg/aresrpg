@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import {
   AnimationMixer,
-  DynamicDrawUsage,
   Group,
   InstancedInterleavedBuffer,
   type InterleavedBufferAttribute,
@@ -117,7 +116,7 @@ const load_batch = async (
   source_meshes.forEach((mesh) => {
     const attachment = detach_attachment(mesh, model.root)
     const matrices = attachment
-      ? new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1).setUsage(DynamicDrawUsage)
+      ? new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1)
       : base_matrices
     meshes.push(prepare_mesh(mesh, textures, matrices, colors, attachment))
   })

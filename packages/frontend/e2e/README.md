@@ -41,10 +41,19 @@ the sampled scenes. These rendering workloads do not simulate live party navigat
 traffic. Water removal changes the recipe; it measures the complete water path, not one shader.
 The separate `navigation` case also replays sixty seconds of two followers against resident
 terrain at the production feed’s 100 ms cadence. It reports synchronous navigation cost with
-rendering paused and attach a Chrome CPU profile of the complete run. Profiled frame timings
+rendering paused and attaches a Chrome CPU profile of the complete run. Profiled frame timings
 are diagnostic only; use the unprofiled cases for throughput comparisons. This replay excludes
 app-store subscribers and network publication. Timing is reported rather than asserted against
 an unspecified hardware target.
+
+Performance samples count actual canvas render frames, not all animation callbacks. Upload
+instrumentation reports real `writeBuffer` calls, bytes and CPU time. One separately fenced frame
+per stage records render-pass GPU timestamps when supported; this is a sample, not a GPU percentile.
+Stationary empty scenes enforce a 64 KiB/frame upload ceiling to catch accidental full-buffer uploads.
+Set `PERF_GPU=0` to disable upload and timestamp instrumentation for a throughput-only run.
+`PERF_VIEWPORT=mobile PERF_CPU_RATE=4 bun run test:performance --grep ruins` uses an 844×390
+viewport at DPR 3 with fourfold CPU throttling. It is a constrained desktop experiment, not a claim
+about a physical phone's GPU, browser, thermals, or refresh rate.
 
 Results live under `test-results/browser/`. Unit coverage remains separate from browser and
 performance measurements. Authored asset freshness runs once in CI through `bun run validate:assets`.

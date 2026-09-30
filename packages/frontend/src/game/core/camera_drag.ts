@@ -2,6 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // The canvas owns mouse and touch drags; only a held mouse drag requests pointer lock.
 
+const TOUCH_ROTATION_MULTIPLIER = 3
+
 export const create_camera_drag = ({
   on_rotate,
   on_wheel,
@@ -21,6 +23,7 @@ export const create_camera_drag = ({
     start_x: number
     start_y: number
     rotating: boolean
+    sensitivity: number
   }> | null = null
   const release = (target: Readonly<HTMLElement> | null): void => {
     if (target?.ownerDocument.pointerLockElement === target && target) target.ownerDocument.exitPointerLock()
@@ -59,6 +62,7 @@ export const create_camera_drag = ({
       start_x: event.clientX,
       start_y: event.clientY,
       rotating: false,
+      sensitivity: event.pointerType === 'touch' ? TOUCH_ROTATION_MULTIPLIER : 1,
     }
     if (event.pointerType !== 'mouse') element?.setPointerCapture(event.pointerId)
   }
@@ -74,7 +78,7 @@ export const create_camera_drag = ({
     const [dx, dy] = locked
       ? [event.movementX, event.movementY]
       : [event.clientX - previous.x, event.clientY - previous.y]
-    on_rotate(dx!, dy!)
+    on_rotate(dx! * previous.sensitivity, dy! * previous.sensitivity)
     if (!previous.rotating) capture_drag(event.pointerType)
   }
   const up = (event: Readonly<PointerEvent>): void => {
@@ -125,6 +129,5 @@ export const create_camera_drag = ({
       globalThis.addEventListener('blur', stop)
     },
     detach,
-    is_dragging: () => gesture !== null,
   }
 }

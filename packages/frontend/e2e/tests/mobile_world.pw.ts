@@ -56,3 +56,31 @@ test.describe('desktop inputs', () => {
     await expect(page.getByLabel('Last action')).toHaveText('')
   })
 })
+
+for (const first_thumb of ['joystick', 'camera']) {
+  test(`two thumbs move and rotate together when ${first_thumb} starts first`, async ({ page }) => {
+    await page.goto('/e2e/fixtures/mobile_world.html?controls')
+    const bounds = (await page.locator('.mobile-joystick').boundingBox())!
+    const joystick = { id: 1, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+    const camera = { id: 2, x: 600, y: 260 }
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [first_thumb === 'joystick' ? joystick : camera],
+    })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [joystick, camera] })
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        { ...joystick, x: joystick.x + 36 },
+        { ...camera, x: camera.x + 80, y: camera.y + 30 },
+      ],
+    })
+    await expect(page.locator('body')).toHaveAttribute('data-movement', JSON.stringify({ forward: 0, strafe: 1 }))
+    await expect(page.locator('body')).toHaveAttribute('data-rotation-x', '240')
+    await expect(page.locator('body')).toHaveAttribute('data-rotation-y', '90')
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect(page.locator('body')).toHaveAttribute('data-movement', JSON.stringify({ forward: 0, strafe: 0 }))
+    await expect(page.getByRole('menu')).toHaveCount(0)
+  })
+}

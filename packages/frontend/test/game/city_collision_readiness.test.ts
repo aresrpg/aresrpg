@@ -13,12 +13,8 @@ test('loading one city chunk cannot mark an unrequested chunk ready', async () =
   const z = Math.ceil(city.area.min_z / 32) * 32
   const area = { min_x: x, max_x: x + 31, min_z: z, max_z: z + 31 }
   const resolvers: (() => void)[] = []
-  let ready_count = 0
   const ready = city_collision_readiness(
     world,
-    () => {
-      ready_count += 1
-    },
     () =>
       new Promise<void>((resolve) => {
         resolvers.push(resolve)
@@ -32,7 +28,6 @@ test('loading one city chunk cannot mark an unrequested chunk ready', async () =
   expect(ready(area)).toBe(true)
   expect(ready({ ...area, min_x: x + 32, max_x: x + 63 })).toBe(false)
   expect(resolvers).toHaveLength(2)
-  expect(ready_count).toBe(1)
   resolvers[1]!()
   await Promise.resolve()
   expect(ready({ ...area, min_x: x + 32, max_x: x + 63 })).toBe(true)

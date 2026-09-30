@@ -252,8 +252,8 @@
   }
   .aui-character-sheet {
     grid-template-columns: minmax(185px, 0.8fr) minmax(0, 1.8fr);
-    grid-template-rows: 48px 25px minmax(270px, 1fr) 30px 40px;
-    overflow-y: auto;
+    grid-template-rows: 48px 25px minmax(0, 1fr) 30px 40px;
+    overflow: hidden;
     overscroll-behavior: contain;
   }
   .aui-character-identity {

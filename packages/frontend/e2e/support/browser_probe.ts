@@ -11,6 +11,8 @@ type Adapter = Readonly<{
 }>
 declare global {
   interface Window {
+    workload_frame_count: number
+    workload_on_frame?: (at_ms: number) => void
     workload_adapter: Adapter | null
     workload_resources: () => Resources
     workload_gpu_done?: () => Promise<void>
@@ -26,6 +28,30 @@ export const install_probe = (): void => {
     bytes: number
   }
   const allocations = new Set<Allocation>()
+  window.workload_frame_count = 0
+  let frame_time = -1
+  let presented_time = -2
+  const request_frame = window.requestAnimationFrame.bind(window)
+  window.requestAnimationFrame = (callback) =>
+    request_frame((at_ms) => {
+      frame_time = at_ms
+      callback(at_ms)
+    })
+  const context = document.createElement('canvas').getContext('webgpu')
+  if (context) {
+    const prototype = Object.getPrototypeOf(context) as GPUCanvasContext
+    const current_texture = prototype.getCurrentTexture
+    prototype.getCurrentTexture = new Proxy(current_texture, {
+      apply: (method, receiver, args): GPUTexture => {
+        if (presented_time !== frame_time) {
+          presented_time = frame_time
+          window.workload_frame_count += 1
+          window.workload_on_frame?.(performance.now())
+        }
+        return Reflect.apply(method, receiver, args) as GPUTexture
+      },
+    })
+  }
   window.workload_adapter = null
   window.workload_resources = () => {
     const counts = { buffers: 0, large_buffers: 0, buffer_bytes: 0, textures: 0 }

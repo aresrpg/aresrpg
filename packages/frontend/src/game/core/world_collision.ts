@@ -13,7 +13,6 @@ import { walkable_spawn_height } from './collision.ts'
 
 export const city_collision_readiness = (
   world: ReturnType<typeof compile_runtime_world_recipe>,
-  on_ready: () => void,
   load_artifacts: typeof load_generated_city_artifacts_for = load_generated_city_artifacts_for,
   on_error: (error: unknown) => void = console.error
 ): ((area: Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>) => boolean) => {
@@ -46,7 +45,6 @@ export const city_collision_readiness = (
             ready.add(key)
             requested.delete(key)
             if (ready.size > 256) ready.delete(ready.values().next().value!)
-            on_ready()
           })
           .catch(on_error)
       }
@@ -75,30 +73,28 @@ export const create_world_collision = (
   const column_at = (x: number, z: number): ReturnType<typeof sample_world_column> =>
     sample_world_column(compiled, x, z)
   const surface_y = (x: number, z: number): number => column_at(x, z).surface_y
-  const structure_chunks = new Map<string, ReadonlyMap<number, number>>()
-  const city_artifacts_ready = city_collision_readiness(
-    compiled,
-    () => structure_chunks.clear(),
-    load_generated_city_artifacts_for,
-    on_error
-  )
+  const structure_chunks = new Map<number, ReadonlyMap<number, number>>()
+  const city_artifacts_ready = city_collision_readiness(compiled, load_generated_city_artifacts_for, on_error)
   const structure_material_at = (x: number, y: number, z: number): number | undefined => {
     const block_x = Math.floor(x)
     const block_y = Math.floor(y)
     const block_z = Math.floor(z)
     const chunk_x = Math.floor(block_x / CHUNK_EDGE)
     const chunk_z = Math.floor(block_z / CHUNK_EDGE)
-    const area = {
-      min_x: chunk_x * CHUNK_EDGE,
-      max_x: (chunk_x + 1) * CHUNK_EDGE - 1,
-      min_z: chunk_z * CHUNK_EDGE,
-      max_z: (chunk_z + 1) * CHUNK_EDGE - 1,
-    }
-    if (!structure_collision_available(compiled, city_artifacts_ready(area))) return undefined
-    const key = `${chunk_x}:${chunk_z}`
+    // The bounded 100k-block world fits signed 16-bit chunk coordinates.
+    const key = (chunk_x << 16) | (chunk_z & 0xffff)
     let materials = structure_chunks.get(key)
     if (!materials) {
-      if (structure_chunks.size > 256) structure_chunks.clear()
+      const area = {
+        min_x: chunk_x * CHUNK_EDGE,
+        max_x: (chunk_x + 1) * CHUNK_EDGE - 1,
+        min_z: chunk_z * CHUNK_EDGE,
+        max_z: (chunk_z + 1) * CHUNK_EDGE - 1,
+      }
+      // Cached columns were built only after readiness. The compiled world is immutable;
+      // repeated voxel probes need neither another area allocation nor another readiness scan.
+      if (!structure_collision_available(compiled, city_artifacts_ready(area))) return undefined
+      if (structure_chunks.size >= 256) structure_chunks.delete(structure_chunks.keys().next().value!)
       materials = new Map(
         structure_voxels(compiled, area).map(({ x: world_x, y: world_y, z: world_z, material_id }) => [
           (world_y << 10) | ((world_z - chunk_z * CHUNK_EDGE) << 5) | (world_x - chunk_x * CHUNK_EDGE),

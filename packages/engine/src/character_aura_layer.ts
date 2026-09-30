@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import {
-  DynamicDrawUsage,
   InstancedBufferAttribute,
   InstancedBufferGeometry,
   Mesh,
@@ -34,15 +33,15 @@ const create_batch = (kind: 'shell' | 'mote' | 'haze', capacity: number) => {
   geometry.index = plane.index
   geometry.attributes = plane.attributes
   geometry.instanceCount = 0
-  const centers = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3).setUsage(DynamicDrawUsage)
-  const sizes = new InstancedBufferAttribute(new Float32Array(capacity), 1).setUsage(DynamicDrawUsage)
-  const phases = new InstancedBufferAttribute(new Float32Array(capacity), 1).setUsage(DynamicDrawUsage)
-  const ages = new InstancedBufferAttribute(new Float32Array(capacity), 1).setUsage(DynamicDrawUsage)
+  const centers = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3)
+  const sizes = new InstancedBufferAttribute(new Float32Array(capacity), 1)
+  const phases = new InstancedBufferAttribute(new Float32Array(capacity), 1)
+  const ages = new InstancedBufferAttribute(new Float32Array(capacity), 1)
   geometry.setAttribute('aura_center', centers)
   geometry.setAttribute('aura_size', sizes)
   geometry.setAttribute('aura_phase', phases)
   geometry.setAttribute('aura_age', ages)
-  const profiles = new InstancedBufferAttribute(new Float32Array(capacity), 1).setUsage(DynamicDrawUsage)
+  const profiles = new InstancedBufferAttribute(new Float32Array(capacity), 1)
   geometry.setAttribute('aura_profile', profiles)
   const material = create_character_aura_material(kind)
   const mesh = new Mesh(geometry, material)

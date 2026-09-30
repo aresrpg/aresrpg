@@ -6,7 +6,7 @@ import { useText } from '../../i18n/useText.ts'
 
 import { item_icon, spell_icon } from '../../content/assets.ts'
 import { EffectLines } from '../../encyclopedia/SpellCardEffects.tsx'
-import { useId, useLayoutEffect, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import type { FightSpellView } from './fight_projection.ts'
@@ -83,6 +83,19 @@ export const FightSpell = ({
   const [detail_open, set_detail_open] = useState(false)
   const tooltip = useRef<HTMLDivElement>(null)
   const anchor = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!detail_open) return
+    const dismiss_outside = (event: Readonly<Event>): void => {
+      if (event.composedPath().some((target) => target === anchor.current || target === tooltip.current)) return
+      set_detail_open(false)
+    }
+    document.addEventListener('pointerdown', dismiss_outside, true)
+    document.addEventListener('focusin', dismiss_outside, true)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss_outside, true)
+      document.removeEventListener('focusin', dismiss_outside, true)
+    }
+  }, [detail_open])
   useLayoutEffect(() => {
     const element = tooltip.current
     if (!element) return
@@ -106,7 +119,7 @@ export const FightSpell = ({
   const name = displayed_name(spell.name, display_name)
   const critical = displays_critical(spell, disabled)
   const critical_class = critical ? ' critical' : ''
-  const close_focus = (event: Readonly<FocusEvent<HTMLDivElement> | MouseEvent<HTMLDivElement>>): void => {
+  const close_hover = (event: Readonly<MouseEvent<HTMLDivElement>>): void => {
     const target = event.relatedTarget
     if (target instanceof Node && (anchor.current?.contains(target) || tooltip.current?.contains(target))) return
     set_detail_open(false)
@@ -115,10 +128,10 @@ export const FightSpell = ({
     <div
       ref={anchor}
       className={`fight-hud__spell-shell${critical_class}`}
-      onBlur={close_focus}
       onFocus={() => set_detail_open(true)}
+      onPointerDown={() => set_detail_open(true)}
       onMouseEnter={() => set_detail_open(true)}
-      onMouseLeave={close_focus}
+      onMouseLeave={close_hover}
     >
       <button
         aria-label={ui('ui.spell_action', {
@@ -145,7 +158,7 @@ export const FightSpell = ({
             ref={tooltip}
             id={tooltip_id}
             role="tooltip"
-            onMouseLeave={close_focus}
+            onMouseLeave={close_hover}
             className={`fight-hud__spell-detail fight-hud__spell-detail--small${critical_class}`}
           >
             <FightSpellEffects spell={spell} name={name} />

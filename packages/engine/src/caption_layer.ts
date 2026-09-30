@@ -8,7 +8,6 @@ import {
   ColorManagement,
   NoToneMapping,
   DataTexture,
-  DynamicDrawUsage,
   InstancedBufferAttribute,
   InstancedMesh,
   LinearFilter,
@@ -63,13 +62,12 @@ const create_page = (scene: Scene, size: number, empty: Uint8Array) => {
   atlas.generateMipmaps = false
   atlas.needsUpdate = true
   const geometry = new PlaneGeometry(1, 1)
-  const rectangles = new InstancedBufferAttribute(new Float32Array(MAX_INSTANCES * 4), 4).setUsage(DynamicDrawUsage)
-  const tints = new InstancedBufferAttribute(new Float32Array(MAX_INSTANCES * 4), 4).setUsage(DynamicDrawUsage)
+  const rectangles = new InstancedBufferAttribute(new Float32Array(MAX_INSTANCES * 4), 4)
+  const tints = new InstancedBufferAttribute(new Float32Array(MAX_INSTANCES * 4), 4)
   geometry.setAttribute('caption_uv', rectangles)
   geometry.setAttribute('caption_tint', tints)
   const material = create_caption_material(atlas)
   const mesh = new InstancedMesh(geometry, material, MAX_INSTANCES)
-  mesh.instanceMatrix.setUsage(DynamicDrawUsage)
   mesh.frustumCulled = false
   mesh.count = 0
   scene.add(mesh)

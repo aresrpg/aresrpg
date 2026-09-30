@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { create_character_source, create_fight } from '@aresrpg/fight'
 
 import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { TouchFightConfirmation } from '../../src/game/fight/TouchFightConfirmation.tsx'
+import { attach_fight_camera_input } from '../../src/game/core/fight_camera_input.ts'
 import { FightHud } from '../../src/game/fight/FightHud.tsx'
 import { FightTurnCard } from '../../src/game/fight/FightTurnCard.tsx'
-import { select_fight_view } from '../../src/game/fight/fight_projection.ts'
+import { select_fight_view, type FightActionSelection } from '../../src/game/fight/fight_projection.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { dispatch_app } from '../../src/store.ts'
 import '../../src/tailwind.css'
@@ -61,25 +63,46 @@ dispatch_app({
   awaiting_turn_witness: false,
 })
 dispatch_app({ type: 'clock/observed', chain_ms: 62_000, sample_age_ms: 0, received_ms: performance.now() })
-createRoot(document.getElementById('root')!).render(
-  <>
-    {new URLSearchParams(location.search).has('intro') && (
-      <FightTurnCard
-        fighter={select_fight_view({ checkpoint, mode: 'local', owner: 'wallet', names: {} }).timeline[0]!}
-        level_label="Level 200"
+const Probe = () => {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  useEffect(
+    () =>
+      attach_fight_camera_input(
+        canvas.current!,
+        () => {},
+        () => {}
+      ),
+    []
+  )
+  const [selected_action, select_action] = useState<FightActionSelection>(null)
+  const [confirmed, set_confirmed] = useState(0)
+  return (
+    <>
+      <canvas ref={canvas} aria-label="Fight board" className="fixed inset-0 size-full" />
+      <output aria-label="Confirmed actions" className="fixed top-2 right-2">
+        {confirmed}
+      </output>
+      {new URLSearchParams(location.search).has('intro') && (
+        <FightTurnCard
+          fighter={select_fight_view({ checkpoint, mode: 'local', owner: 'wallet', names: {} }).timeline[0]!}
+          level_label="Level 200"
+          mob_icon_for={() => null}
+        />
+      )}
+      <FightHud
+        confirmation={
+          <TouchFightConfirmation visible copy={copy} cancel={() => {}} confirm={() => set_confirmed(confirmed + 1)} />
+        }
+        copy={copy}
+        focus_fighter={() => {}}
+        target_fighter={() => {}}
+        targetable_fighter_cells={[]}
+        selected_action={selected_action}
+        select_action={select_action}
+        actions_locked={false}
         mob_icon_for={() => null}
       />
-    )}
-    <FightHud
-      confirmation={<TouchFightConfirmation visible copy={copy} cancel={() => {}} confirm={() => {}} />}
-      copy={copy}
-      focus_fighter={() => {}}
-      target_fighter={() => {}}
-      targetable_fighter_cells={[]}
-      selected_action={null}
-      select_action={() => {}}
-      actions_locked={false}
-      mob_icon_for={() => null}
-    />
-  </>
-)
+    </>
+  )
+}
+createRoot(document.getElementById('root')!).render(<Probe />)

@@ -5,7 +5,6 @@ import {
   BufferAttribute,
   BufferGeometry,
   DoubleSide,
-  DynamicDrawUsage,
   Mesh,
   Vector2,
   type DataArrayTexture,
@@ -118,7 +117,9 @@ const create_ring_geometry = (quality: EngineQuality, far_radius: number): Buffe
   geometry.setAttribute('roughness', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setAttribute('material_id', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setAttribute('climate_tint', new BufferAttribute(new Float32Array(side * side), 1))
-  geometry.setIndex(new BufferAttribute(new Uint32Array((side - 1) ** 2 * 6), 1).setUsage(DynamicDrawUsage))
+  // WebGPU DynamicDrawUsage forces a full upload on every render. Version changes
+  // already mark the rare radius edits; keep stationary topology resident.
+  geometry.setIndex(new BufferAttribute(new Uint32Array((side - 1) ** 2 * 6), 1))
   update_ring_indices(geometry, quality, far_radius)
   return geometry
 }

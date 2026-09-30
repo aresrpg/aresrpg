@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { DynamicDrawUsage, InstancedInterleavedBuffer, Matrix4, type Mesh, type Object3D } from 'three'
+import { InstancedInterleavedBuffer, Matrix4, type Mesh, type Object3D } from 'three'
 
 import {
   find_character_bone,
@@ -63,7 +63,7 @@ const prepare_part = (part: CharacterPart) => {
           textures,
           index === 0
             ? buffers.base_matrices
-            : new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1).setUsage(DynamicDrawUsage),
+            : new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1),
           buffers.colors,
           null
         )

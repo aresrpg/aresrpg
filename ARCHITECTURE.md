@@ -116,9 +116,8 @@ The mobile joystick and jump button serve both the signed-in world and the local
 supplies its existing input device. Their hit regions remain available while their visuals appear only
 during a press. The canvas camera adapter owns mouse and touch dragging across exposed game space;
 HUD controls never enter that adapter. Releasing a touch clears its manual input without cancelling an automated run.
-During joystick movement, the follow camera eases behind horizontal travel. The held joystick retains
-its starting world basis so automatic camera rotation cannot steer it; manual look adjusts that basis,
-pauses automatic follow, and keeps pitch under player control. Release clears the basis.
+Camera rotation is manual. Touch drags turn faster than mouse drags, and the joystick and canvas
+retain separate pointer identities so movement and looking work together with two thumbs.
 World prompts expose the same actions through buttons and keyboard shortcuts, with localized tap
 instructions on touch devices. Character taps open the existing context menu through the same body
 picker as desktop. Camera drags and cancelled touches never become menu taps.
@@ -558,7 +557,10 @@ The locomotion controller owns both ordinary collision and bounded direct motion
 areas remain enforced. Manual input cancels run-to immediately, including inside solid geometry;
 cancellation neither ejects nor rewinds the character. Another target can move it out.
 City readiness remains per requested chunk; unknown collision suspends navigation rather than
-becoming passable terrain. Terrain obstruction no longer terminates automatic travel. Only the final
+becoming passable terrain. Voxel contact snaps to the crossed grid face within the bounded axis step; it does not binary-search
+occupancy. Collision retains only completed immutable structure columns, evicts the oldest column
+at capacity, and keeps existing columns when unrelated city artifacts become ready.
+Terrain obstruction no longer terminates automatic travel. Only the final
 target completes travel; partial routes supply no invented ETA. Gathering retains its final-arrival,
 chain-time and transaction gates, while server speed validation and combat restrictions remain unchanged.
 
@@ -844,6 +846,9 @@ retries once on a fresh canvas with persisted low quality and the minimum render
 failure stops the world and exposes Reload. Missing WebGPU blocks world rendering immediately and
 explains the secure-context requirement; missing authored world content remains a separate error.
 Neither condition reduces graphics settings. Terrain always retains its source elevation; there is no flat mode or playable grid fallback.
+GPU attributes upload through explicit version changes and bounded update ranges. Engine-owned
+buffers never use WebGPU's forced-per-render `DynamicDrawUsage`; stationary far-shell indices and
+unchanged instance colors stay resident, including across shadow and color passes.
 Nearby character bodies batch by rig and animation pose. Hair and equipment select their own instance
 subsets without changing body identity. Shared model loading owns part preparation, bone mounting and
 disposal. Native skinning precedes geometry-bound instance transforms; immutable texture expressions

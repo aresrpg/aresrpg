@@ -2,7 +2,6 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import {
   Color,
-  DynamicDrawUsage,
   InstancedBufferGeometry,
   InstancedInterleavedBuffer,
   InterleavedBufferAttribute,
@@ -163,12 +162,8 @@ export const same_colors = (left: readonly CrowdSpec[], right: readonly CrowdSpe
   )
 
 export const create_instance_buffers = () => {
-  const base_matrices = new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1).setUsage(
-    DynamicDrawUsage
-  )
-  const color_buffer = new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 9), 9, 1).setUsage(
-    DynamicDrawUsage
-  )
+  const base_matrices = new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 16), 16, 1)
+  const color_buffer = new InstancedInterleavedBuffer(new Float32Array(BATCH_CAPACITY * 9), 9, 1)
   const colors = COLOR_ATTRIBUTES.map((_, index) => new InterleavedBufferAttribute(color_buffer, 3, index * 3))
   return { base_matrices, color_buffer, colors }
 }

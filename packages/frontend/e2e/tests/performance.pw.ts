@@ -4,8 +4,11 @@ import { cpus, release, totalmem } from 'node:os'
 
 import { expect, test } from '@playwright/test'
 
+import { install_gpu_timing_probe } from '../support/gpu_timing_probe.ts'
 import { install_probe } from '../support/browser_probe.ts'
 import { expect_released_resources } from '../support/workload_assertions.ts'
+
+const CPU_RATE = Number(process.env.PERF_CPU_RATE ?? 1)
 
 // Report measured throughput with machine identity; OS names are not hardware budgets.
 for (const location of ['city', 'forest'] as const) {
@@ -17,6 +20,7 @@ for (const location of ['city', 'forest'] as const) {
       if (message.text().startsWith('[workload]')) console.log(location, message.text())
     })
     await page.addInitScript(install_probe)
+    if (process.env.PERF_GPU !== '0') await page.addInitScript(install_gpu_timing_probe)
     const session = await page.context().newCDPSession(page)
     await session.send('Performance.enable')
     await page.exposeFunction('collect_heap', async () => {
@@ -48,6 +52,7 @@ for (const location of ['city', 'forest'] as const) {
           memory_bytes: totalmem(),
           browser: browser.version(),
           adapter,
+          cpu_throttle: CPU_RATE,
           ...measurements,
         },
         null,
@@ -92,9 +97,11 @@ for (const config of diagnostic_cases) {
       if (message.text().startsWith('[workload]')) console.log(name, message.text())
     })
     await page.addInitScript(install_probe)
+    if (process.env.PERF_GPU !== '0') await page.addInitScript(install_gpu_timing_probe)
     await page.goto('/e2e/fixtures/workload.html')
     await page.waitForFunction(() => typeof window.run_diagnostics === 'function')
     const session = await page.context().newCDPSession(page)
+    await session.send('Emulation.setCPUThrottlingRate', { rate: CPU_RATE })
     if ('navigation' in config) {
       await session.send('Profiler.enable')
       await session.send('Profiler.start')
@@ -115,6 +122,7 @@ for (const config of diagnostic_cases) {
           memory_bytes: totalmem(),
           browser: browser.version(),
           adapter,
+          cpu_throttle: CPU_RATE,
           ...measurements,
         },
         null,
@@ -123,6 +131,9 @@ for (const config of diagnostic_cases) {
     })
     for (const [name, frame] of Object.entries(captures)) {
       await info.attach(name, { body: Buffer.from(frame.split(',')[1]!, 'base64'), contentType: 'image/png' })
+    }
+    for (const sample of measurements.samples.filter(({ stage }) => stage.startsWith('empty-'))) {
+      if (sample.uploads) expect(sample.uploads.bytes / sample.frames).toBeLessThan(65_536)
     }
     expect(measurements.backend).toBe('webgpu')
     expect(adapter).not.toBeNull()

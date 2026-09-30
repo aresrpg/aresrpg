@@ -21,6 +21,7 @@ import { fight_board_render } from '../../src/game/fight/FightViewport.tsx'
 import { create_world } from '../../src/game/core/world.ts'
 import { mob_entities } from '../../src/game/mob_entities.ts'
 import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_waiter.ts'
+import { upload_delta, sample_gpu_frame, type GpuFrame, type UploadMetrics } from '../support/gpu_timing_probe.ts'
 
 import { workload_follow_cost } from './workload_follow_cost.ts'
 import {
@@ -54,6 +55,8 @@ type Sample = Readonly<{
   in_flight: number
   displayed: number
   heap_bytes: number | null
+  gpu_frame: GpuFrame | null
+  uploads: UploadMetrics | null
   resources: ReturnType<Window['workload_resources']>
 }>
 
@@ -84,34 +87,38 @@ const measure = async (
   work: () => Promise<void>,
   started_at = performance.now()
 ): Promise<Sample> => {
+  const uploads_before = window.workload_uploads?.(true)
   const elapsed: number[] = []
   let previous = started_at
-  let frame: number
-  const record = (): void => {
-    const now = performance.now()
+  const rendered_before = window.workload_frame_count
+  window.workload_on_frame = (now): void => {
     elapsed.push(now - previous)
     previous = now
-    frame = requestAnimationFrame(record)
   }
-  frame = requestAnimationFrame(record)
   try {
     await work()
     await next_frame()
   } finally {
-    cancelAnimationFrame(frame)
+    window.workload_on_frame = undefined
     world.set_active(false)
   }
   const ordered = elapsed.toSorted((a, b) => a - b)
   // Include queued GPU work in throughput without inserting a fence into every frame.
   await window.workload_gpu_done?.()
   const duration_ms = performance.now() - started_at
-  const completed_fps = window.workload_gpu_done ? (elapsed.length * 1000) / duration_ms : null
+  const completed_fps = window.workload_gpu_done
+    ? ((window.workload_frame_count - rendered_before) * 1000) / duration_ms
+    : null
   const heap_bytes = stage.startsWith('returned-') && window.collect_heap ? await window.collect_heap() : null
   const state = world.state()
+  const uploads_after = window.workload_uploads?.()
   world.set_active(true)
+  const gpu_frame = await sample_gpu_frame()
   console.info('[workload]', stage, JSON.stringify({ duration_ms, completed_fps, p95_ms: percentile(ordered, 0.95) }))
   return {
     stage,
+    gpu_frame,
+    uploads: upload_delta(uploads_before, uploads_after),
     duration_ms,
     frames: elapsed.length,
     p95_ms: percentile(ordered, 0.95),
