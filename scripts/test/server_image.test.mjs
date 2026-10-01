@@ -1,5 +1,6 @@
 import { globSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
 
 import { expect, test } from 'bun:test'
 
@@ -15,6 +16,12 @@ test('the frozen server image includes every workspace manifest before installat
   const manifests = workspaces.flatMap((workspace) => globSync(`${workspace}/package.json`, { cwd: root }))
   expect(manifests.length).toBeGreaterThan(0)
   expect(manifests.filter((manifest) => !copied.has(manifest))).toEqual([])
+  // The deny-by-default context needs the parent, contents exclusion, and manifest exception in order.
+  const context = readFileSync(new URL('../../.dockerignore', import.meta.url), 'utf8')
+  for (const manifest of manifests) {
+    const directory = dirname(manifest)
+    expect(context).toContain(`\n!${directory}\n${directory}/*\n!${manifest}\n`)
+  }
 })
 
 test('the server image uses the repository Bun version and an immutable image digest', () => {

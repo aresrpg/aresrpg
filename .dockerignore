@@ -16,9 +16,15 @@ packages/engine/*
 packages/fight/*
 !packages/fight/package.json
 !packages/fight/src
+!packages/ui
+packages/ui/*
+!packages/ui/package.json
 !packages/frontend
 packages/frontend/*
 !packages/frontend/package.json
+!packages/mobile
+packages/mobile/*
+!packages/mobile/package.json
 !packages/launchpad
 packages/launchpad/*
 !packages/launchpad/package.json
