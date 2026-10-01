@@ -483,8 +483,9 @@ locked, URL defaults are disabled, and transfer history is scoped to the receivi
 LI.FI completion requests an ordinary wallet refresh; only the existing SDK balance read updates
 the session. The funding surface shares the vendor's focus-managed DOM modal stack so wallet and
 WalletConnect portals remain interactive; game dialogs retain their native top-layer shell.
-Testnet funding exposes only the faucet. No LI.FI API key, integrator fee, or game-wallet signer is
-passed to the bridge.
+Testnet funding exposes only the faucet. Mainnet bridge quotes request a 1% integrator fee for
+the registered `aresrpg` integration. LI.FI routes that fee to its configured fee wallets and shows
+the AresRPG name and percentage in the fee breakdown. No LI.FI API key or game-wallet signer is passed to the bridge.
 Solana funding reads use a same-origin, read-only Vercel function. Its `SOLANA_RPC_URL` credential
 stays server-side. The relay restricts methods, origin, request and response sizes, and upstream
 time; provider failures never expose credentials. Successful response bytes retain exact u64

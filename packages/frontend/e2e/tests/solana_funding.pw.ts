@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test'
 import deployment from '../../vercel.json' with { type: 'json' }
 import { mock_solflare_funding } from '../support/solana_funding.ts'
 
-test('Solflare USDC balance is available without a signing request', async ({ page }) => {
+test('Solflare balance and the 1% AresRPG quote require no signing request', async ({ page }) => {
   const external_reads: string[] = []
   page.on('request', (request) => {
     if (request.url().includes('alchemy.com')) external_reads.push(request.url())
@@ -27,6 +27,13 @@ test('Solflare USDC balance is available without a signing request', async ({ pa
   await bridge.getByRole('button', { name: /^From / }).click()
   await page.getByText('USDC', { exact: true }).click()
   await expect(bridge).toContainText('12.5')
+  const quote = page.waitForRequest('https://li.quest/v1/advanced/routes')
+  await bridge.locator('input[name="fromAmount"]').fill('1')
+  expect((await quote).postDataJSON()).toMatchObject({
+    fromAmount: '1000000',
+    toAddress: `0x${'11'.repeat(32)}`,
+    options: { integrator: 'aresrpg', fee: 0.01 },
+  })
   expect(external_reads).toEqual([])
   await expect(page.locator('[data-bridge-recipient]')).toHaveText(`0x${'11'.repeat(32)}`)
 })

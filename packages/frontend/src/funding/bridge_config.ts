@@ -13,6 +13,7 @@ export const bridge_config = (address: string, locale: Locale, origin: string): 
   const rpc_url = new URL(SOLANA_RPC_PATH, origin).href
   return {
     integrator: 'aresrpg',
+    feeConfig: { fee: 0.01, name: 'AresRPG', showFeePercentage: true, showFeeTooltip: true },
     keyPrefix: `aresrpg-funding-${address.toLowerCase()}`,
     appearance: 'dark',
     variant: 'compact',

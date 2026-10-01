@@ -29,7 +29,13 @@ test('funding locks native SUI and the game recipient independently of URL or so
   expect(config.buildUrl).toBe(false)
   expect(config.sdkConfig!.routeOptions!.allowSwitchChain).toBe(false)
   expect(config.apiKey).toBeUndefined()
-  expect(config.feeConfig).toBeUndefined()
+  expect(config.integrator).toBe('aresrpg')
+  expect(config.feeConfig).toEqual({
+    fee: 0.01,
+    name: 'AresRPG',
+    showFeePercentage: true,
+    showFeeTooltip: true,
+  })
 })
 test('transfer history is stable per recipient and isolated across game accounts', () => {
   expect(bridge_config(address, 'fr', ORIGIN).keyPrefix).toBe(bridge_config(address, 'en', ORIGIN).keyPrefix)
