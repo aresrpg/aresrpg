@@ -5,17 +5,14 @@
 // world map share this pipeline at different radii). North-up, analytic: the terrain comes
 // straight from the compiled world recipe's per-column sampler (no chunk residency, works before
 // terrain streams in), hill-shaded from its own height gradient under a fixed daylight palette.
-// The grid re-samples only when the player crosses a resample cell; painting is a cheap
-// per-frame pass over the cached grid plus the overlay marks.
+// Both map lenses build terrain rasters in row bands; pose updates reproject the completed image.
 
 import { sample_world_column, type CompiledWorld } from '@aresrpg/engine'
 
 /** World blocks from center to the minimap's edge (owner 2026-08-19: dezoomed from 128). */
 export const VIEW_RADIUS_BLOCKS = 224
-/** Minimap samples per axis — grid cell = 4 blocks at the default radius. */
+/** Visible minimap samples per axis; overscan preserves this density. */
 export const SAMPLE_N = 160
-/** The player crosses this many blocks before the terrain grid re-samples. */
-export const RESAMPLE_STEP = 8
 
 export type ReliefGrid = Readonly<{
   center_x: number
@@ -28,11 +25,7 @@ export type ReliefGrid = Readonly<{
 
 const srgb = (linear: number): number => Math.round(255 * Math.min(1, Math.max(0, linear) ** (1 / 2.2)))
 
-export const resample_key = (x: number, z: number): string =>
-  `${Math.round(x / RESAMPLE_STEP)}:${Math.round(z / RESAMPLE_STEP)}`
-
-/** Fill one row band of a relief grid in place — the big map samples progressively so a
- * zone-scale grid never freezes the main thread. */
+/** Fill one row band in place so map sampling can yield between bounded batches. */
 export const fill_relief_rows = (world: CompiledWorld, grid: ReliefGrid, from_row: number, to_row: number): void => {
   const { samples, radius, center_x, center_z, heights, colors } = grid
   const step = (radius * 2) / samples
@@ -82,7 +75,13 @@ export const sample_relief_grid = (
 }
 
 /** Paint the cached grid hill-shaded (light from the north-west) onto the canvas. */
-export const paint_relief = (context: CanvasRenderingContext2D, grid: ReliefGrid, size: number): void => {
+export const paint_relief = (
+  context: CanvasRenderingContext2D,
+  grid: ReliefGrid,
+  size: number,
+  from_row = 0,
+  to_row = grid.samples
+): void => {
   const { samples, radius } = grid
   const cell = size / samples
   // The local lenses sample every 4–8 blocks. Whole-world LOD samples hundreds of blocks per
@@ -90,7 +89,7 @@ export const paint_relief = (context: CanvasRenderingContext2D, grid: ReliefGrid
   // hill shade into alternating black and white cells.
   const sample_step = (radius * 2) / samples
   const shade_gain = 0.045 * Math.min(1, 8 / sample_step)
-  for (let row = 0; row < samples; row += 1) {
+  for (let row = from_row; row < to_row; row += 1) {
     for (let col = 0; col < samples; col += 1) {
       const index = row * samples + col
       const height = grid.heights[index]!

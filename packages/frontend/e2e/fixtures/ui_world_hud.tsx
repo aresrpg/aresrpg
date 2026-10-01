@@ -17,7 +17,7 @@ import { Toasts } from '../../src/components/Toasts.tsx'
 import { DesktopWorldHud } from '../../src/components/DesktopWorldHud.tsx'
 import { DesktopWorldStatus } from '../../src/components/DesktopWorldStatus.tsx'
 import { GamePageWindow } from '../../src/components/GamePageWindow.tsx'
-import { publish_pose } from '../../src/game/core/pose_feed.ts'
+import { publish_pose, read_pose } from '../../src/game/core/pose_feed.ts'
 import '../../src/tailwind.css'
 import '@aresrpg/ui/styles.css'
 import '../../src/components/app_layout.css'
@@ -185,6 +185,36 @@ createRoot(document.getElementById('root')!).render(
       {new URLSearchParams(location.search).has('tutorial') && <TutorialHost blocked={false} copy={copy} />}
       <button hidden data-test-notification onClick={() => toast.persistent('HUD verification', 'info')}>
         Notify
+      </button>
+      <button
+        hidden
+        data-test-rotate
+        onClick={() => {
+          const pose = read_pose()!
+          publish_pose({ ...pose, yaw: pose.yaw + 0.5 })
+        }}
+      >
+        Rotate
+      </button>
+      <button
+        hidden
+        data-test-move
+        onClick={() => {
+          const pose = read_pose()!
+          publish_pose({ ...pose, x: pose.x + 9 })
+        }}
+      >
+        Move
+      </button>
+      <button
+        hidden
+        data-test-travel
+        onClick={() => {
+          const pose = read_pose()!
+          publish_pose({ ...pose, x: pose.x + 128 })
+        }}
+      >
+        Travel
       </button>
     </main>
   </LocaleScope>

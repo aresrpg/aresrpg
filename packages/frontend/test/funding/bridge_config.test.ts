@@ -6,15 +6,17 @@ import { expect, test } from 'bun:test'
 import {
   bridge_config,
   FUNDING_SOURCE_CHAINS,
+  FUNDING_SOLANA_CHAIN,
   FUNDING_SUI_CHAIN,
   FUNDING_SUI_TOKEN,
 } from '../../src/funding/bridge_config.ts'
 import chains from '../../e2e/fixtures/funding_chains.json'
 import deployment from '../../vercel.json'
 
+const ORIGIN = 'https://aresrpg.world'
 const address = `0x${'11'.repeat(32)}`
 test('funding locks native SUI and the game recipient independently of URL or source wallet', () => {
-  const config = bridge_config(address, 'en')
+  const config = bridge_config(address, 'en', ORIGIN)
   expect(config.toChain).toBe(FUNDING_SUI_CHAIN)
   expect(config.toToken).toBe(FUNDING_SUI_TOKEN)
   expect(config.toAddress!.address).toBe(address)
@@ -30,9 +32,24 @@ test('funding locks native SUI and the game recipient independently of URL or so
   expect(config.feeConfig).toBeUndefined()
 })
 test('transfer history is stable per recipient and isolated across game accounts', () => {
-  expect(bridge_config(address, 'fr').keyPrefix).toBe(bridge_config(address, 'en').keyPrefix)
-  expect(bridge_config(`0x${'22'.repeat(32)}`, 'en').keyPrefix).not.toBe(bridge_config(address, 'en').keyPrefix)
-  expect(() => bridge_config('0x1234', 'en')).toThrow('Invalid funding address')
+  expect(bridge_config(address, 'fr', ORIGIN).keyPrefix).toBe(bridge_config(address, 'en', ORIGIN).keyPrefix)
+  expect(bridge_config(`0x${'22'.repeat(32)}`, 'en', ORIGIN).keyPrefix).not.toBe(
+    bridge_config(address, 'en', ORIGIN).keyPrefix
+  )
+  expect(() => bridge_config('0x1234', 'en', ORIGIN)).toThrow('Invalid funding address')
+})
+
+test('Solana reads use the credential-free relay while signed transactions use a public broadcaster', () => {
+  const config = bridge_config(address, 'en', ORIGIN)
+  expect(config.sdkConfig!.rpcUrls).toEqual({
+    [FUNDING_SOLANA_CHAIN]: {
+      read: [`${ORIGIN}/api/solana`],
+      write: ['https://solana-rpc.publicnode.com'],
+    },
+  })
+  expect(config.toAddress!.address).toBe(address)
+  expect(config.sdkConfig!.routeOptions!.allowSwitchChain).toBe(false)
+  expect(JSON.stringify(config)).not.toMatch(/alchemy|api-key|SOLANA_RPC_URL/)
 })
 
 test('production policy permits the captured RPCs for every offered funding chain', () => {
@@ -48,5 +65,12 @@ test('production policy permits the captured RPCs for every offered funding chai
     expect(chain).toBeDefined()
     for (const url of chain.metamask.rpcUrls) expect(connections).toContain(new URL(url).origin)
   }
+  expect(connections).not.toContain('https://solana-mainnet.g.alchemy.com')
   expect(chains.chains.find(({ id }) => id === FUNDING_SUI_CHAIN)!.nativeToken.address).toBe(FUNDING_SUI_TOKEN)
+})
+
+test('Vercel routes the RPC to its function instead of the single-page app', () => {
+  const fallback = new RegExp(`^${deployment.rewrites[0]!.source}$`)
+  expect(fallback.test('/api/solana')).toBe(false)
+  expect(fallback.test('/characters')).toBe(true)
 })

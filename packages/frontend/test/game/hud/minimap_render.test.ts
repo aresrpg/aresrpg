@@ -4,7 +4,7 @@
 import { expect, test } from 'bun:test'
 import { BIOME_SLOTS, compile_world_recipe, type WorldRecipe } from '@aresrpg/engine'
 
-import { sample_relief_grid } from '../../../src/game/hud/minimap_render.ts'
+import { paint_relief, sample_relief_grid } from '../../../src/game/hud/minimap_render.ts'
 
 const recipe: WorldRecipe = {
   seed: 'map-water',
@@ -42,4 +42,24 @@ test('dry worlds and exposed shores keep their actual ground material and relief
     expect([...grid.heights]).toEqual([20, 20, 20, 20])
     expect(grid.colors[1]!).toBeGreaterThan(grid.colors[2]!)
   }
+})
+
+test('row-band painting preserves complete raster order, colors and hill shading', () => {
+  const world = compile_world_recipe(recipe, { structures: false, city_terrain: false })
+  const grid = {
+    ...sample_relief_grid(world, 0, 0, 8, 4),
+    heights: Float32Array.from({ length: 16 }, (_, index) => (index * 7) % 13),
+  }
+  const record = () => {
+    const draws: unknown[] = []
+    const context = { fillStyle: '', fillRect: (...bounds: number[]) => draws.push([context.fillStyle, ...bounds]) }
+    return { draws, context: context as unknown as CanvasRenderingContext2D }
+  }
+  const full = record(),
+    bands = record()
+  paint_relief(full.context, grid, 16)
+  paint_relief(bands.context, grid, 16, 0, 2)
+  paint_relief(bands.context, grid, 16, 2, 4)
+  expect(bands.draws).toEqual(full.draws)
+  expect(bands.draws).toHaveLength(16)
 })

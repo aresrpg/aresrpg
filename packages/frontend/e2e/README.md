@@ -52,6 +52,12 @@ separate standing, cold-walk and warm-walk CPU profiles. Lighting stays fixed fo
 The route assertion catches blocked movement; Low/Medium/High horizon captures and final resource
 disposal verify the renderer. This isolated workload excludes HUD subscribers and network traffic.
 
+`bun run test:performance --grep 'solo Thebes rotating'` keeps the character stationary and repeats
+the same camera orbit before, during, and after mounting the production minimap. Separate CPU
+profiles expose HUD painting costs that the renderer-only workload excludes.
+`bun run test:performance --grep 'solo Thebes forward-with-hud'` repeats the same forward walk
+with and without the minimap to expose movement-triggered sampling and rasterization stalls.
+
 Performance samples count actual canvas render frames, not all animation callbacks. Upload
 instrumentation reports real `writeBuffer` calls, bytes and CPU time. One separately fenced frame
 per stage records render-pass GPU timestamps when supported; this is a sample, not a GPU percentile.

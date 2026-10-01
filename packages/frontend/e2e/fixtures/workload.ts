@@ -25,6 +25,7 @@ import { upload_delta, sample_gpu_frame, type GpuFrame, type UploadMetrics } fro
 
 import { workload_follow_cost } from './workload_follow_cost.ts'
 import { run_solo_walk } from './workload_solo.ts'
+import { run_hud_workload } from './workload_hud.tsx'
 import {
   workload_pets,
   workload_resources,
@@ -557,3 +558,4 @@ window.run_renderer_smoke = run_renderer_smoke
 window.run_diagnostics = run_diagnostics
 window.run_workload = run
 window.run_solo_walk = run_solo_walk
+window.run_hud_workload = run_hud_workload

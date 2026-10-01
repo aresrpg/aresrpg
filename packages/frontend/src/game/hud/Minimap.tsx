@@ -35,13 +35,8 @@ import {
   draw_spawn_markers,
   draw_zone_layer,
 } from './map_layers.ts'
-import {
-  VIEW_RADIUS_BLOCKS,
-  paint_relief,
-  resample_key,
-  sample_relief_grid,
-  type ReliefGrid,
-} from './minimap_render.ts'
+import { VIEW_RADIUS_BLOCKS, SAMPLE_N } from './minimap_render.ts'
+import { useMapRelief, paint_map_relief } from './useMapRelief.ts'
 import { create_map_resource_icons } from './map_resource_icons.ts'
 import { WorldMap } from './WorldMap.tsx'
 
@@ -64,7 +59,6 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
   )
   const canvas_ref = useRef<HTMLCanvasElement | null>(null)
-  const grid_ref = useRef<Readonly<{ key: string; world: CompiledWorld; grid: ReliefGrid }> | null>(null)
   const [resource_icons] = useState(create_map_resource_icons)
   const map_open = useAppStore(({ navigation }) => navigation.dialog === 'world_map')
   const set_map_open = (open: boolean): void => dispatch_app({ type: 'dialog/open', dialog: open ? 'world_map' : null })
@@ -94,21 +88,19 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
     }
   }, [supplied_terrain, world_name])
   const cities = useMemo(() => (compiled ? city_map_overlays(compiled) : Object.freeze([])), [compiled])
+  const position = pose ?? { x: 0, z: 0 }
+  const view = { center_x: position.x, center_z: position.z, radius: VIEW_RADIUS_BLOCKS, size: SIZE }
+  const relief = useMapRelief(pose && compiled, view, { samples: SAMPLE_N, image_size: SIZE })
 
   useEffect(() => {
-    const canvas = canvas_ref.current
-    if (!canvas || !pose || !compiled) return
-    const context = canvas.getContext('2d')
+    if (!pose || !compiled) return
+    const context = canvas_ref.current!.getContext('2d')
     if (!context) return
-    const key = resample_key(pose.x, pose.z)
-    if (grid_ref.current?.key !== key || grid_ref.current.world !== compiled) {
-      // eslint-disable-next-line functional/immutable-data -- React owns this component-local cache cell.
-      grid_ref.current = { key, world: compiled, grid: sample_relief_grid(compiled, pose.x, pose.z) }
-    }
-    const { grid } = grid_ref.current
-    const view = { center_x: grid.center_x, center_z: grid.center_z, size: SIZE, radius: VIEW_RADIUS_BLOCKS }
+    const view = { center_x: pose.x, center_z: pose.z, radius: VIEW_RADIUS_BLOCKS, size: SIZE }
     const paint = (): void => {
-      paint_relief(context, grid, SIZE)
+      context.save()
+      paint_map_relief(context, relief, view, SIZE)
+      context.restore()
       draw_zone_layer(context, view, (zx, zz) =>
         world_name ? zone_key(world_name, zx, zz) in world_state.zones : false
       )
@@ -121,7 +113,7 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
     const icons = resource_icons(pose, paint)
     paint()
     return icons.dispose
-  }, [cities, pose, compiled, world_state, world_name, resource_icons])
+  }, [cities, pose, compiled, relief, world_state, world_name, resource_icons])
 
   if (!pose || !compiled) return null
 

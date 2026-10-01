@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "types": ["vite/client", "vite-plugin-pwa/client", "bun"]
   },
-  "include": ["src", "test", "e2e", "vite.config.ts"]
+  "include": ["src", "api", "server", "test", "e2e", "vite.config.ts"]
 }

@@ -4,10 +4,11 @@
   "git": { "deploymentEnabled": false },
   "rewrites": [
     {
-      "source": "/((?!assets/|item/|classe/|sw\\.js$|workbox-[^/]+\\.js$).*)",
+      "source": "/((?!api/|assets/|item/|classe/|sw\\.js$|workbox-[^/]+\\.js$).*)",
       "destination": "/index.html"
     }
   ],
+  "functions": { "api/solana.ts": { "maxDuration": 15 } },
   "headers": [
     {
       "source": "/(.*)",

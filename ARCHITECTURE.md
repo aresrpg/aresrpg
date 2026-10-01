@@ -480,6 +480,11 @@ the session. The funding surface shares the vendor's focus-managed DOM modal sta
 WalletConnect portals remain interactive; game dialogs retain their native top-layer shell.
 Testnet funding exposes only the faucet. No LI.FI API key, integrator fee, or game-wallet signer is
 passed to the bridge.
+Solana funding reads use a same-origin, read-only Vercel function. Its `SOLANA_RPC_URL` credential
+stays server-side. The relay restricts methods, origin, request and response sizes, and upstream
+time; provider failures never expose credentials. Successful response bytes retain exact u64
+values. LI.FI broadcasts signed Solana transactions through its separate public write RPC.
+Vite serves the same handler locally; no second wallet-balance state or chain writer exists.
 
 ### Equipment
 

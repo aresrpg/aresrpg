@@ -32,6 +32,15 @@ The offering site is a separate Vercel project rooted at `packages/launchpad`, t
 `launchpad.aresrpg.world`. Its environment selects `VITE_NETWORK` and `VITE_SUI_RPC_URL`.
 The app's `/kares` page hosts staking; the encyclopedia explains the tokenomics.
 
+Solana bridge reads use the same-origin `/api/solana` function. Set `SOLANA_RPC_URL` as a
+server-only secret in the frontend Vercel project's production and `edge` preview environments.
+The endpoint must support SPL Token and Token-2022 account reads. Never use a `VITE_` variable
+for this credential. For local development, set the same server-only variable in the frontend's
+ignored local environment; Vite serves the same relay handler. Requests retain the site's Origin,
+so the upstream provider must allow that domain (including localhost when used locally).
+The relay admits bounded read requests only; LI.FI broadcasts signed Solana transactions through
+its separate public write RPC. The receiving Sui wallet remains fixed and has no bridge signer.
+
 ## Contributing
 
 Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) for the current system, [`DECISIONS.md`](./DECISIONS.md)

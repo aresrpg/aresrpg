@@ -27,7 +27,7 @@ export default function BridgeWidget({ address }: Readonly<{ address: string }>)
     []
   )
   const config = useMemo(() => {
-    const base = bridge_config(address, locale)
+    const base = bridge_config(address, locale, window.location.origin)
     const style = getComputedStyle(document.documentElement)
     return {
       ...base,

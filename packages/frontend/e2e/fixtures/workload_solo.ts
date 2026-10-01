@@ -10,7 +10,13 @@ import { upload_delta } from '../support/gpu_timing_probe.ts'
 
 import { workload_equipped } from './workload_population.tsx'
 
-const walk_sample = async (world: ReturnType<typeof create_world>, stage: string, seconds: number, moving: boolean) => {
+export const measure_scene = async (
+  world: ReturnType<typeof create_world>,
+  stage: string,
+  seconds: number,
+  moving: boolean,
+  update?: () => void
+) => {
   const frames: Array<Record<string, unknown> & { dt: number }> = []
   await window.solo_profile(stage, true)
   let previous = performance.now()
@@ -31,7 +37,7 @@ const walk_sample = async (world: ReturnType<typeof create_world>, stage: string
     previous = now
     uploads = next_uploads
   }
-  await create_frame_waiter({})(seconds * 60)
+  await create_frame_waiter({})(seconds * 60, update)
   window.workload_on_frame = undefined
   const pose = read_pose()
   world.set_active(false)
@@ -82,11 +88,11 @@ export const run_solo_walk = async () => {
     await wait_for_frame_condition(() => world.entity_height(actor!.id) !== null)
     await create_frame_waiter({})(120)
     await wait_for_frame_condition(settled)
-    const standing = await walk_sample(world, 'standing', 5, false)
-    const cold = await walk_sample(world, 'cold-walk', 25, true)
+    const standing = await measure_scene(world, 'standing', 5, false)
+    const cold = await measure_scene(world, 'cold-walk', 25, true)
     world.point_at({ x: 420, z: 0 })
     await create_frame_waiter({})(180)
-    const warm = await walk_sample(world, 'warm-walk', 25, true)
+    const warm = await measure_scene(world, 'warm-walk', 25, true)
     const captures: Record<string, string> = {}
     for (const quality of ['low', 'medium', 'high'] as const) {
       world.set_quality(quality, 1)

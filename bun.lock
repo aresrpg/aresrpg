@@ -52,7 +52,7 @@
         "@aresrpg/sdk": "workspace:*",
         "@aresrpg/ui": "workspace:*",
         "@lifi/sdk-provider-sui": "4.2.4",
-        "@lifi/widget": "4.7.0",
+        "@lifi/widget": "4.7.1",
         "@lifi/widget-provider": "4.5.0",
         "@lifi/widget-provider-ethereum": "4.1.5",
         "@lifi/widget-provider-solana": "4.1.5",
@@ -612,7 +612,7 @@
 
     "@lifi/wallet-management": ["@lifi/wallet-management@4.3.0", "", { "dependencies": { "@emotion/react": "^11.14.0", "@emotion/styled": "^11.14.1", "@lifi/sdk": "^4.8.0", "@lifi/widget-provider": "4.5.0", "@mui/icons-material": "^9.4.0", "@mui/material": "^9.4.0", "@mui/system": "^9.4.0", "eventemitter3": "^5.0.4", "i18next": "^26.4.2", "react-i18next": "^17.0.14", "zustand": "^5.0.15" }, "peerDependencies": { "@tanstack/react-query": ">=5.90.0", "react": ">=19", "react-dom": ">=19" } }, "sha512-h3SRVubRrqn+RvaQqoUJACkq3k39HBjrJr1Nq6D+T0mLvZ8nnUV6ck/N4eexlEcP4b9pSDBEdil6iir3ypGhGQ=="],
 
-    "@lifi/widget": ["@lifi/widget@4.7.0", "", { "dependencies": { "@emotion/react": "^11.14.0", "@emotion/styled": "^11.14.1", "@lifi/sdk": "^4.8.0", "@lifi/wallet-management": "4.3.0", "@lifi/widget-provider": "4.5.0", "@mui/icons-material": "^9.4.0", "@mui/material": "^9.4.0", "@mui/system": "^9.4.0", "@tanstack/react-router": "^1.170.38", "@tanstack/react-virtual": "^3.14.13", "eventemitter3": "^5.0.4", "i18next": "^26.4.2", "microdiff": "^1.6.0", "motion": "^13.4.0", "react-i18next": "^17.0.14", "react-intersection-observer": "^11.0.1", "react-transition-group": "^4.4.5", "zustand": "^5.0.15" }, "peerDependencies": { "@tanstack/react-query": ">=5.90.0", "react": ">=19", "react-dom": ">=19" } }, "sha512-PXrxguP+Z7nPUsYV6F53JV6oTXaqv+uTzmWfr3z9bw2PNzippMx5+YyWVVf7OO2abKHDXDM2wSOaNofaVQyUjQ=="],
+    "@lifi/widget": ["@lifi/widget@4.7.1", "", { "dependencies": { "@emotion/react": "^11.14.0", "@emotion/styled": "^11.14.1", "@lifi/sdk": "^4.8.0", "@lifi/wallet-management": "4.3.0", "@lifi/widget-provider": "4.5.0", "@mui/icons-material": "^9.4.0", "@mui/material": "^9.4.0", "@mui/system": "^9.4.0", "@tanstack/react-router": "^1.170.38", "@tanstack/react-virtual": "^3.14.13", "eventemitter3": "^5.0.4", "i18next": "^26.4.2", "microdiff": "^1.6.0", "motion": "^13.4.0", "react-i18next": "^17.0.14", "react-intersection-observer": "^11.0.1", "react-transition-group": "^4.4.5", "zustand": "^5.0.15" }, "peerDependencies": { "@tanstack/react-query": ">=5.90.0", "react": ">=19", "react-dom": ">=19" } }, "sha512-0iWAsv2OVjlC4xvxTx1/flkHQU9dj/fLI7gxcIW7QBC1UVvV3qKHPaXHaTzU3JEI7mnwTtE6TIXnvMU6Cq7v3Q=="],
 
     "@lifi/widget-provider": ["@lifi/widget-provider@4.5.0", "", { "dependencies": { "@lifi/sdk": "^4.8.0", "zustand": "^5.0.15" }, "peerDependencies": { "react": ">=19" } }, "sha512-29PCZfa62zI1GxGnym0FpdDMk6DNbZbfJedizXCk2Jilgbaw/Vf6pot9MtXh/aA2Zns0EgvEN+Kj1KQ6FqAbxw=="],
 
