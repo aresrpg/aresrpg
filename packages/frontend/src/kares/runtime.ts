@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { create_kares_reader, KaresSnapshotPending } from '@aresrpg/sdk/kares'
+import { transaction_error_outcome } from '@aresrpg/sdk/transaction-error'
 import { createStore } from 'zustand/vanilla'
 
 import { initial_finance, reduce_finance, type FinanceAction, type FinanceInput, type FinanceSession } from './model.ts'
@@ -96,7 +97,12 @@ export const create_finance_runtime = (options: FinanceOptions, session: Finance
       }
       void run().catch((error: unknown) => {
         console.error('KARES operation failed.', error)
-        send({ type: 'failed', sequence, error: error instanceof Error ? error.message : String(error) })
+        send({
+          type: 'failed',
+          sequence,
+          error: error instanceof Error ? error.message : String(error),
+          transaction_error: transaction_error_outcome(error),
+        })
       })
     })
     dispatch({ type: 'resume' })

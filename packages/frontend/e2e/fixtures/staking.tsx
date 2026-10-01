@@ -15,7 +15,23 @@ import '../../src/tailwind.css'
 import '@aresrpg/ui/styles.css'
 
 // Presentation-only fixture: no runtime, signer, RPC reader or transaction executor is started.
-const account = finance_state()
+const initial_account = finance_state()
+const fragmented = new URLSearchParams(location.search).get('positions') === '200'
+const account = fragmented
+  ? {
+      ...initial_account,
+      snapshot: {
+        ...initial_account.snapshot!,
+        positions: Array.from({ length: 200 }, (_, index) => ({
+          id: `0x${index.toString(16).padStart(64, '0')}`,
+          version: '1',
+          amount: 1_000_000_000n,
+          pending_kares: 1_000_000_000n,
+          pending_sui: 0n,
+        })),
+      },
+    }
+  : initial_account
 const external = {
   ...finance_state(),
   address: '0xexternal',

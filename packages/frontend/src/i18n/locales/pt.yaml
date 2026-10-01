@@ -2242,6 +2242,12 @@ item_categories:
   relic_slot: Relíquia {{number}}
 kares: Staking
 kares_page:
+  batch_max: 'Máx. por transação'
+  batch_withdraw_limit: 'Levantamento máximo por transação'
+  batch: 'Lote de transações'
+  batch_note: 'Cada lote exige uma confirmação e uma taxa de gás separadas. Apenas o lote selecionado é enviado.'
+  batch_selected: 'Esta transação'
+  batch_remaining: 'Outros lotes'
   stake_more: Adicionar ao staking
   additional_daily: Adicional / dia
   max: Máx
@@ -2266,7 +2272,7 @@ kares_page:
   sale_card_target_reached: Meta atingida
   sale_card_done_title: Venda concluída
   sale_card_done_note: Resgate seus tokens KARES e eventuais reembolsos em SUI.
-  sale_card_refund_note: Mínimo não atingido. Resgate o reembolso integral em SUI.
+  sale_card_refund_note: 'Mínimo não atingido. Solicite o reembolso integral dos seus SUI antes de a tesouraria reiniciar a venda.'
   community_release_note: Só a tesouraria pode resgatar KARES da comunidade, liberados ao longo de 1.825 dias após a liquidação bem-sucedida da venda. Tokens resgatados podem ser distribuídos ou queimados.
   sale_unlock_note: Os tokens da venda são liberados integralmente quando ela termina com sucesso.
   unlocked_immediately: liberados imediatamente
@@ -2342,7 +2348,7 @@ kares_page:
   burn_buy: Queimar {{cost}} KARES
   kares_missing: KARES insuficientes
   language: Idioma
-  refund_note: Se a venda terminar abaixo do mínimo, sua contribuição inteira poderá ser reembolsada.
+  refund_note: 'Se a venda encerrar abaixo do mínimo, sua contribuição poderá ser reembolsada integralmente até a tesouraria reiniciá-la. Os fundos não reembolsados entram automaticamente na próxima venda e ficam bloqueados até ela encerrar.'
   offering_contract: Contrato da oferta
   min_marker: MÍN
   max_marker: MÁX
@@ -2405,7 +2411,7 @@ kares_page:
   stage_maximum: Arrecadando até o máximo
   minimum_refund: Reembolso integral se o mínimo não for atingido.
   full_refund_available: Sua contribuição inteira está disponível para reembolso.
-  refund_claim_note: Resgate seu reembolso aqui se a venda terminar abaixo do mínimo. Reembolsos não são enviados automaticamente.
+  refund_claim_note: 'Os reembolsos não são automáticos. Solicite o seu aqui antes de a tesouraria reiniciar a venda; as contribuições não reembolsadas entram na próxima venda e ficam bloqueadas durante todo o seu período.'
   staking_unavailable: O staking ainda não está disponível nesta rede.
   basecamp_announcement: Encontre o AresRPG no Sui Basecamp em Singapura, de 7 a 9 de outubro. Venha conversar e pegar caixas de saque.
   funding_unknown: Dados de financiamento indisponíveis.
@@ -2423,8 +2429,9 @@ kares_page:
   error_funds: Não há fundos suficientes para esta ação e suas taxas.
   error_connection: A conexão falhou. Verifique sua conexão e tente novamente.
   error_session: A sessão da carteira está indisponível. Conecte novamente.
-  error_unknown: Sua última ação ainda está sendo verificada. Novas transações estão bloqueadas até o resultado ser conhecido.
-  error_recovered: Sua transação anterior foi encontrada. Atualize para ver o resultado antes de escolher a próxima ação.
+  error_unknown: 'O resultado da sua última transação é desconhecido. Consulte a transação no link e recarregue a página ou reconecte sua carteira antes de tentar novamente. Novos envios permanecem bloqueados até a recuperação do resultado.'
+  transaction_failed: 'A transação falhou na blockchain. Taxas de rede podem ter sido cobradas.'
+  error_recovered: 'Sua transação anterior foi encontrada. Recarregue a página ou reconecte sua carteira e atualize seus saldos antes de escolher a próxima ação.'
 leaderboard_page:
   unclaimed: Não resgatado
   reset_in: Reinício {{time}}

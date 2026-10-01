@@ -205,3 +205,32 @@ test('staking always shows both panels and keeps external signing separate', asy
   expect(occurrences(duplicate, 'data-staking-account=')).toBe(2)
   expect(duplicate).toContain(copy.kares_page.same_account)
 })
+
+test('fragmented staking reviews the exact batch and preserves payable withdrawn positions', async () => {
+  const copy = await load_app_copy('en')
+  const original = finance_state()
+  const snapshot = {
+    ...original.snapshot!,
+    positions: Array.from({ length: 51 }, (_, index) => ({
+      id: `0x${index.toString(16).padStart(64, '0')}`,
+      version: '1',
+      amount: 0n,
+      pending_kares: 1_000_000_000n,
+      pending_sui: 0n,
+    })),
+  }
+  const html = renderToStaticMarkup(
+    <StakingContent
+      balance={0n}
+      copy={copy}
+      dispatch={() => undefined}
+      snapshot={snapshot}
+      state={{ ...original, snapshot }}
+    />
+  )
+  expect(html).toContain('data-finance-batch=""')
+  expect(html).toContain(copy.kares_page.batch_note)
+  expect(html).toContain('50 KARES · 0 SUI')
+  expect(html).toContain('1 KARES · 0 SUI')
+  expect(html).toContain('<option value="1">2 / 2</option>')
+})

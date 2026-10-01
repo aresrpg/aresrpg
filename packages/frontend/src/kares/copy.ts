@@ -5,6 +5,13 @@ import type { ErrorCopy } from '../i18n/error_text.ts'
 
 export type KaresCopy = ErrorCopy &
   Readonly<{
+    batch_withdraw_limit: string
+    batch_max: string
+    batch: string
+    batch_note: string
+    batch_selected: string
+    batch_remaining: string
+    transaction_failed: string
     stake_more: string
     additional_daily: string
     max: string

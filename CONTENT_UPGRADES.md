@@ -201,7 +201,7 @@ offering, combat pot and staking originals, objects and balances. Publish KARES 
 ## KARES offering operations
 
 The SDK exposes explicit administrative transactions for publication, atomic offering setup,
-one-time start, settlement, treasury vesting, combat funding, authorization, and metadata updates.
+start and failed-sale restart, settlement, treasury vesting, combat funding, authorization, and metadata updates.
 Each transaction requires its native authority and retains its certified receipt for recovery.
 Mainnet publication requires explicit owner approval. Local testnet uses an ignored deployment file
 and never enters production release workflows. KARES is published only once on each network;
@@ -217,7 +217,7 @@ game republishing reuses that monetary identity.
 5. Configure and seal the offering once. Setup registers native Currency, destroys its genuine UpgradeCap,
    allocates Genesis and fixes the offering terms. Recovery must prove the canonical cap's deletion
    in that same successful setup receipt; an absent-cap read alone is insufficient. The offering stays
-   inactive until its configured treasury starts it once.
+   inactive until its configured treasury starts it.
 6. Record the canonical combat-pot ID and initial shared version from the setup receipt. Before
    enabling combat on mainnet, the immutable treasury moves the reserved 100,000 KARES directly
    into that pot. Confirm its balance from certified effects.
@@ -225,10 +225,19 @@ game republishing reuses that monetary identity.
    `<original_game_package>::fight_rewards::BossVictory`, using the original type ID, not an upgrade target.
    Read the pot back and verify that exact type before enabling gameplay. Repeat authorization after
    a game republish; preserve the existing pot and counters. Zero payouts before activation are final.
-8. When ready, the treasury starts the offering once. Contributors use the public launch page.
-   Closing below the minimum permits full refunds; otherwise claims return tokens plus
-   excess SUI and distribute proceeds once when needed. Claims never expire. No early close, restart,
-   or extension exists.
+8. When ready, the treasury starts the offering. Contributors use the public launch page.
+   Closing below the minimum permits full refunds until the treasury explicitly starts another
+   complete window. Unrefunded contributions automatically enter that window, remain locked until
+   its close, and count alongside new deposits. Notify contributors before restarting; no minimum
+   refund grace period is enforced. The same start transaction resets the allocation denominator
+   from remaining escrow without changing receipt identities, terms or reserved tokens.
+   An open or successful sale cannot restart. After success, claims return tokens plus excess SUI
+   and distribute proceeds once when needed; these claims never expire. No early close or extension exists.
+
+The restart behavior requires a newly published monetary package. An already sealed deployment is
+immutable and cannot gain this behavior through an upgrade or changed frontend pins alone. Existing
+contributions belong to their original offering; they do not migrate to a replacement. Replacement
+publication and its participant migration plan require separate owner approval.
 
 After a successful sale, an optional settlement transaction can distribute proceeds before the first
 participant claim. Use the delivered liquidity allocation to create the market manually.

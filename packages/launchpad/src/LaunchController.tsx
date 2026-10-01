@@ -15,7 +15,12 @@ export default function LaunchController(props: Omit<LaunchViewProps, 'state' | 
       create_wallet_runtime({
         network: env.network,
         storage: browser_auth_storage(),
-        create_auth: async () => create_kares_wallet_auth({ network: env.network, rpc_url: env.sui_rpc_url }),
+        create_auth: async () =>
+          create_kares_wallet_auth({
+            network: env.network,
+            rpc_url: env.sui_rpc_url,
+            receipt_rpc_urls: env.receipt_rpc_urls,
+          }),
       }),
     []
   )

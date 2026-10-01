@@ -2245,6 +2245,12 @@ item_categories:
   relic_slot: 유물 {{number}}
 kares: 스테이킹
 kares_page:
+  batch_max: '거래당 최대'
+  batch_withdraw_limit: '한 거래의 최대 출금액'
+  batch: '거래 묶음'
+  batch_note: '각 묶음에는 별도의 승인과 가스 수수료가 필요합니다. 선택한 묶음만 전송됩니다.'
+  batch_selected: '이번 거래'
+  batch_remaining: '나머지 묶음'
   stake_more: 추가 스테이킹
   additional_daily: 하루 추가 보상
   max: 최대
@@ -2269,7 +2275,7 @@ kares_page:
   sale_card_target_reached: 목표 달성
   sale_card_done_title: 판매 완료
   sale_card_done_note: KARES 토큰과 환급받을 SUI를 수령하세요.
-  sale_card_refund_note: 최소 목표에 도달하지 못했습니다. SUI 전액을 환급받으세요.
+  sale_card_refund_note: '최소 목표에 도달하지 못했습니다. 트레저리가 판매를 재시작하기 전에 SUI 전액 환불을 청구하세요.'
   community_release_note: 판매가 성공적으로 정산된 뒤 커뮤니티 KARES가 1,825일에 걸쳐 해제되며 금고만 수령할 수 있습니다. 수령한 토큰은 배포하거나 소각할 수 있습니다.
   sale_unlock_note: 판매가 성공적으로 종료되면 판매 토큰이 모두 해제됩니다.
   unlocked_immediately: 즉시 해제
@@ -2345,7 +2351,7 @@ kares_page:
   burn_buy: '{{cost}} KARES 소각'
   kares_missing: KARES 부족
   language: 언어
-  refund_note: 판매가 최소 목표에 미달한 채 끝나면 기여금 전액을 환급받을 수 있습니다.
+  refund_note: '판매 종료 시 최소 목표에 도달하지 못하면 트레저리가 재시작할 때까지 기여금 전액을 환불받을 수 있습니다. 환불받지 않은 자금은 자동으로 다음 판매에 참여하며 해당 판매가 끝날 때까지 잠깁니다.'
   offering_contract: 판매 계약
   min_marker: 최소
   max_marker: 최대
@@ -2408,7 +2414,7 @@ kares_page:
   stage_maximum: 최대 목표까지 모금
   minimum_refund: 최소 목표 미달 시 전액 환급합니다.
   full_refund_available: 기여금 전액을 환급받을 수 있습니다.
-  refund_claim_note: 판매가 최소 목표 미달로 끝나면 여기서 환급을 받으세요. 자동으로 전송되지 않습니다.
+  refund_claim_note: '환불은 자동으로 지급되지 않습니다. 트레저리가 판매를 재시작하기 전에 여기서 청구하세요. 환불받지 않은 기여금은 다음 판매에 참여하며 해당 판매 기간 전체에 걸쳐 잠깁니다.'
   staking_unavailable: 이 네트워크에서는 아직 스테이킹을 이용할 수 없습니다.
   basecamp_announcement: 10월 7~9일 싱가포르 Sui Basecamp에서 AresRPG를 만나세요. 인사도 나누고 전리품 상자도 받아 가세요.
   funding_unknown: 모금 데이터를 이용할 수 없습니다.
@@ -2426,8 +2432,9 @@ kares_page:
   error_funds: 이 작업과 수수료를 지불할 자금이 부족합니다.
   error_connection: 연결에 실패했습니다. 연결 상태를 확인하고 다시 시도하세요.
   error_session: 지갑 세션을 이용할 수 없습니다. 다시 연결하세요.
-  error_unknown: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
-  error_recovered: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
+  error_unknown: '마지막 거래의 결과를 확인할 수 없습니다. 연결된 거래를 확인한 뒤 페이지를 새로고침하거나 지갑을 다시 연결한 후 재시도하세요. 결과가 복구될 때까지 새 거래 전송은 차단됩니다.'
+  transaction_failed: '거래가 온체인에서 실패했습니다. 네트워크 수수료가 부과되었을 수 있습니다.'
+  error_recovered: '이전 거래를 찾았습니다. 페이지를 새로고침하거나 지갑을 다시 연결한 뒤 잔액을 갱신하고 다음 작업을 선택하세요.'
 leaderboard_page:
   unclaimed: 미수령
   reset_in: '{{time}} 초기화'

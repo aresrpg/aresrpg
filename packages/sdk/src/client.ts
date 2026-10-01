@@ -125,6 +125,8 @@ export type SdkOptions = {
   graphql_url?: string
   /** Sui gRPC endpoint for resolution, submission, and complete receipt recovery */
   rpc_url?: string
+  /** Independent gRPC endpoints used only to recover an already-submitted exact digest. */
+  receipt_rpc_urls?: readonly string[]
   /** override for tests/local publishes; defaults to the current deployment */
   pins?: Pins
   /** optional explicit budget in MIST; `'estimate'` lets the Sui resolver price the
@@ -221,6 +223,7 @@ export function SDK({
   network = DEFAULT_NETWORK,
   graphql_url,
   rpc_url,
+  receipt_rpc_urls,
   pins: supplied_pins,
   gas_budget,
   transaction_storage,
@@ -445,6 +448,9 @@ export function SDK({
 
   const execution = create_transaction_execution({
     core: sui_client.core,
+    recovery_cores: [...new Set(receipt_rpc_urls)].map(
+      (base_url) => sui_transport(new SuiGrpcClient({ network, baseUrl: base_url })).core
+    ),
     key: `aresrpg:transaction:${network}:${sender}`,
     storage: transaction_storage,
     on_receipt: (receipt, gas_scope) => {

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import type { KaresWalletSession, KaresStakingSnapshot, KaresBalances } from '@aresrpg/sdk/kares'
+import type { TransactionErrorOutcome } from '@aresrpg/sdk/transaction-error'
 
 import { format_sui, parse_sui_amount } from '../wallet_amount.ts'
 
@@ -24,6 +25,7 @@ export type FinanceState = Readonly<{
   request: FinanceRequest | null
   error: string | null
   digest: string | null
+  transaction_error: TransactionErrorOutcome | null
 }>
 export type FinanceInput =
   | Readonly<{ type: 'resume' }>
@@ -36,7 +38,7 @@ export type FinanceInput =
       digest?: string
     }>
   | Readonly<{ type: 'receipt'; sequence: number; digest: string }>
-  | Readonly<{ type: 'failed'; sequence: number; error: string }>
+  | Readonly<{ type: 'failed'; sequence: number; error: string; transaction_error?: TransactionErrorOutcome | null }>
 
 export const initial_finance = (address: string | null = null): FinanceState => ({
   address,
@@ -46,6 +48,7 @@ export const initial_finance = (address: string | null = null): FinanceState => 
   request: null,
   error: null,
   digest: null,
+  transaction_error: null,
 })
 
 export const reduce_finance = (state: FinanceState, input: FinanceInput): FinanceState => {
@@ -63,6 +66,8 @@ const begin_request = (state: FinanceState, request: FinanceRequest): FinanceSta
     request,
     sequence: state.sequence + 1,
     error: null,
+    transaction_error:
+      request.kind === 'execute' && state.transaction_error?.status !== 'unknown' ? null : state.transaction_error,
     digest: request.kind === 'execute' ? null : state.digest,
   }
 }
@@ -70,7 +75,7 @@ const begin_request = (state: FinanceState, request: FinanceRequest): FinanceSta
 const finish_finance = (state: FinanceState, input: Extract<FinanceInput, { sequence: number }>): FinanceState => {
   switch (input.type) {
     case 'receipt':
-      return { ...state, digest: input.digest, snapshot: null, balances: null }
+      return { ...state, digest: input.digest, transaction_error: null, snapshot: null, balances: null }
     case 'snapshot':
       return {
         ...state,
@@ -81,7 +86,12 @@ const finish_finance = (state: FinanceState, input: Extract<FinanceInput, { sequ
         digest: input.digest ?? state.digest,
       }
     case 'failed':
-      return { ...state, request: null, error: input.error }
+      return {
+        ...state,
+        request: null,
+        error: input.error,
+        transaction_error: input.transaction_error ?? state.transaction_error,
+      }
   }
 }
 

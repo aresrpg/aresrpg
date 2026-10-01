@@ -97,7 +97,7 @@ test('combat activation uses the canonical reserve and original game witness wit
   expect(() => create_kares_combat_authorization_transaction(pins, undefined)).toThrow('original game package')
 })
 
-test('one-time start supplies only the canonical offering and native Clock, never a client timestamp', () => {
+test('start or restart supplies only the canonical offering and native Clock, never a client timestamp', () => {
   const pins = {
     package: id(100),
     original: id(100),

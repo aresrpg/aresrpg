@@ -12,7 +12,9 @@ import { KaresLogo } from '../components/KaresLogo.tsx'
 
 import { FinanceStatus, finance_empty_message } from './components.tsx'
 import { type FinanceInput, type FinanceSnapshot, type FinanceState } from './model.ts'
-import { staking_gains } from './staking_model.ts'
+import { FinanceBatch } from './FinanceBatch.tsx'
+import { useFinanceBatch } from './useFinanceBatch.ts'
+import { staking_gains, staking_reward_batches } from './staking_model.ts'
 import { StakingForm } from './StakingForm.tsx'
 
 export const StakingContent = ({
@@ -31,6 +33,9 @@ export const StakingContent = ({
   const { amount: format_amount, daily: daily_amount } = useNumbers()
   const copy = app_copy.kares_page
   const stats = staking_gains(snapshot)
+  const batches = staking_reward_batches(snapshot.positions)
+  const { index, select, batch } = useFinanceBatch(batches)
+  const rewards = staking_gains({ ...snapshot, positions: batch })
   const locked = !!state.request || !state.address
   return (
     <div className="staking-account-content" data-kares-staking="">
@@ -64,13 +69,13 @@ export const StakingContent = ({
           className="staking-claim"
           tone="primary"
           type="button"
-          disabled={locked || stats.accrued_kares + stats.accrued_sui === 0n}
+          disabled={locked || batch.length === 0}
           onClick={() =>
             dispatch({
               type: 'request',
               request: {
                 kind: 'execute',
-                action: { kind: 'claim_rewards', ids: snapshot.positions.map(({ id }) => id) },
+                action: { kind: 'claim_rewards', ids: batch.map(({ id }) => id) },
               },
             })
           }
@@ -78,6 +83,15 @@ export const StakingContent = ({
           {copy.claim_rewards}
         </Button>
       </section>
+      <FinanceBatch
+        copy={copy}
+        count={batches.length}
+        index={index}
+        select={select}
+        disabled={locked}
+        selected={`${format_amount(rewards.accrued_kares, 9)} KARES · ${format_amount(rewards.accrued_sui, 9)} SUI`}
+        remaining={`${format_amount(stats.accrued_kares - rewards.accrued_kares, 9)} KARES · ${format_amount(stats.accrued_sui - rewards.accrued_sui, 9)} SUI`}
+      />
       <StakingForm copy={copy} balance={balance} locked={locked} snapshot={snapshot} dispatch={dispatch} />
     </div>
   )

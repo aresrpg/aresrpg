@@ -17,6 +17,7 @@ import {
 } from './kares_ptb.ts'
 import { create_kares_snapshot_reader, type KaresSnapshot, type KaresStakingSnapshot } from './kares_snapshot.ts'
 import { plan_staking_withdrawal, type StakeWithdrawal } from './kares_staking.ts'
+import { require_kares_batch } from './kares_batches.ts'
 
 export type KaresIntent =
   | Readonly<{ kind: 'contribute' | 'stake' | 'fund_combat'; amount: bigint }>
@@ -70,6 +71,7 @@ export const create_kares_transaction = async (
     case 'claim': {
       const ids = [...new Set(intent.ids.map((id) => normalizeSuiObjectId(id)))]
       if (!ids.length) throw new Error('Select at least one KARES position to claim')
+      require_kares_batch(ids.length)
       await sdk.hydrate_unknown(ids)
       const shared = { offering: [pins.offering, pins.pool], staking: [pins.pool] }[intent.source]
       const payments = ids.flatMap((id) => {
@@ -91,6 +93,7 @@ export const create_kares_transaction = async (
       break
     }
     case 'withdraw': {
+      require_kares_batch(intent.withdrawals.length)
       positive_kares_amount(intent.withdrawals.reduce((total, row) => total + row.amount, 0n))
       await sdk.hydrate_unknown(intent.withdrawals.map(({ id }) => id))
       const payments = intent.withdrawals.map((withdrawal) => {
@@ -122,9 +125,14 @@ export const create_kares_transaction = async (
 
 export const kares_actions = (context: FinanceContext): KaresActions => {
   const reader = create_kares_snapshot_reader(context.client, context.sdk.pins, context.sdk.network, context.sdk.cache)
-  const execute_transaction = async (tx: Transaction, consumed: readonly string[] = []): Promise<KaresOutcome> => {
+  const execute_transaction = async (
+    tx: Transaction,
+    consumed: readonly string[] = [],
+    budget?: 'estimate'
+  ): Promise<KaresOutcome> => {
     const receipt = await context.sdk.execute(tx, {
       include: { objectTypes: true },
+      budget,
     })
     reader.observe_receipt(receipt, consumed)
     return Object.freeze({ digest: receipt_digest(receipt), receipt })
@@ -132,7 +140,8 @@ export const kares_actions = (context: FinanceContext): KaresActions => {
   const execute = async (intent: KaresIntent): Promise<KaresOutcome> =>
     execute_transaction(
       await create_kares_transaction(context, intent),
-      intent.kind === 'claim' && intent.source === 'offering' ? intent.ids : []
+      intent.kind === 'claim' && intent.source === 'offering' ? intent.ids : [],
+      intent.kind === 'claim' || intent.kind === 'withdraw' ? 'estimate' : undefined
     )
   return Object.freeze({
     snapshot: () => reader.snapshot(context.address),
