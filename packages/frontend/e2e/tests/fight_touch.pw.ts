@@ -60,7 +60,7 @@ test('a pinch never previews or submits a board action', async ({ page }) => {
 test('targeting dismisses spell details without clearing the selected spell', async ({ page }) => {
   await page.setViewportSize({ width: 980, height: 640 })
   await page.goto('/e2e/fixtures/mobile_fight.html')
-  const spell = page.locator('.aui-combat-spells button.fight-hud__spell:not(:disabled)').nth(1)
+  const spell = page.getByRole('button', { name: 'Intimidation, level 1, 4 AP', exact: true })
   await spell.tap()
   await expect(spell).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('tooltip')).toBeVisible()
@@ -81,20 +81,19 @@ test('targeting dismisses spell details without clearing the selected spell', as
 })
 
 for (const pointer_type of ['touch', 'mouse']) {
-  test(`outside ${pointer_type} input dismisses details while focus stays on the spell`, async ({ page }) => {
+  test(`outside ${pointer_type} input dismisses details without clearing the selected spell`, async ({ page }) => {
     await page.goto('/e2e/fixtures/mobile_fight.html')
-    const spell = page.locator('.aui-combat-spells button.fight-hud__spell:not(:disabled)').nth(1)
+    const spell = page.getByRole('button', { name: 'Intimidation, level 1, 4 AP', exact: true })
     await spell.tap()
+    await expect(spell).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByRole('tooltip')).toBeVisible()
-    await page.getByLabel('Fight board', { exact: true }).dispatchEvent('pointerdown', {
-      pointerType: pointer_type,
-      pointerId: 9,
-      clientX: 40,
-      clientY: 80,
-      button: 0,
-    })
+    const board = page.getByLabel('Fight board', { exact: true })
+    const position = { x: 40, y: 80 }
+    if (pointer_type === 'touch') await board.tap({ position })
+    else await board.click({ position })
     await expect(page.getByRole('tooltip')).toHaveCount(0)
     await expect(spell).toHaveAttribute('aria-pressed', 'true')
+    if (pointer_type === 'touch') await expect(spell).toBeFocused()
   })
 }
 
