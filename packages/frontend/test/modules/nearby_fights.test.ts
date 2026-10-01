@@ -6,6 +6,8 @@ import type { FightRow } from '@aresrpg/protocol'
 import { reduce_app_state, type AppState } from '../../src/store.ts'
 import { fight_in_reach } from '../../src/components/FightPrompt.tsx'
 import { nearby_fights } from '../../src/game/hud/MultiplayerHud.tsx'
+import { nearby_fight } from '../../src/modules/nearby_fight.ts'
+import { sword_fights } from '../../src/modules/world_engage.ts'
 import { run_to_target } from '../../src/modules/run_to.ts'
 
 import { automation_fixture } from './automation_fixture.ts'
@@ -76,4 +78,54 @@ test('unavailable characters and untracked fights cannot start travel; joins req
   expect(fight_in_reach(fight, character, { ...pose, x: 10 })).toBe(true)
   expect(fight_in_reach(fight, character, { ...pose, x: 10, character_id: 'other' })).toBe(false)
   expect(fight_in_reach(fight, { ...character, world: 'incarnam' }, { ...pose, x: 10 })).toBe(false)
+})
+
+const heartbeat = (state: AppState, chain_ms: number): AppState =>
+  reduce_app_state(reduce_app_state(state, { type: 'clock/observed', chain_ms, received_ms: 0 }), {
+    type: 'server/packet',
+    packet: {
+      type: 'packet/server_info',
+      online: 1,
+      indexing_lag: 0,
+      current_epoch: '1',
+      chain_timestamp_ms: chain_ms,
+      chain_sample_age_ms: 0,
+    },
+  })
+
+test('clock expiry removes all public surfaces and cancels travel without a fight event', () => {
+  const running = reduce_app_state(fixture(), { type: 'run_to/fight', fight_id: 'fight' })
+  const boundary = heartbeat(running, 3_600_000)
+  expect(boundary.world.fights.fight).toBeDefined()
+  const expired = heartbeat(boundary, 3_600_001)
+  expect(expired.world.fights).toEqual({})
+  expect(expired.world.all_fights).toEqual({})
+  expect(sword_fights(expired.world.fights, 'nauvis')).toEqual([])
+  expect(nearby_fights(expired.world.fights, 'nauvis', pose)).toEqual([])
+  expect(nearby_fight(expired, pose)).toBeNull()
+  expect(expired.run_to.run).toBeNull()
+  for (const packet of [
+    { type: 'packet/fights', fights: [fight] },
+    { type: 'packet/fight_created', fight },
+  ] as const) {
+    const replayed = reduce_app_state(expired, { type: 'server/packet', packet: packet as never })
+    expect(replayed.world.fights).toEqual({})
+    expect(replayed.world.all_fights).toEqual({})
+  }
+})
+
+test('expiry prunes other character windows but preserves participant custody and fight state', () => {
+  const base = fixture()
+  const state: AppState = {
+    ...base,
+    session: {
+      ...base.session,
+      characters: [{ ...base.session.characters[0]!, custody: 'fight', active_fight: { id: 'fight', seat: 0 } }],
+    },
+    world: { ...base.world, all_fights: { fight, other: { ...fight, id: 'other', world: 'incarnam' } } },
+  }
+  const expired = heartbeat(state, 3_600_001)
+  expect(expired.world.all_fights).toEqual({})
+  expect(expired.session.characters[0]?.active_fight).toEqual({ id: 'fight', seat: 0 })
+  expect(expired.fight).toBe(state.fight)
 })

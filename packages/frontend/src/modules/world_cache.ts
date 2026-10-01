@@ -2,13 +2,28 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // One union of world facts, projected through the selected character's tracked window.
 
-import { zone_of, type CharacterRow, type ServerPacket } from '@aresrpg/protocol'
+import { fight_discoverable, zone_of, type CharacterRow, type FightRow, type ServerPacket } from '@aresrpg/protocol'
 
+import type { ChainClock } from './chain_clock.ts'
 import type { WorldState } from './world.ts'
 
 type WorldCharacter = Readonly<Pick<CharacterRow, 'id' | 'world'>> | null | undefined
 
 const key_of = (world: string, zx: number, zz: number): string => `${world}:${zx}:${zz}`
+
+/** Remove discovery only. Owned fight checkpoints and settlement stay in the fight domain. */
+const expire_world_fights = (world: WorldState, now_ms: number): WorldState => {
+  const retain = (rows: Readonly<Record<string, FightRow>>) => {
+    const entries = Object.entries(rows)
+    const current = entries.filter(([, fight]) => fight_discoverable(fight, now_ms))
+    return current.length === entries.length ? rows : Object.freeze(Object.fromEntries(current))
+  }
+  const all_fights = retain(world.all_fights)
+  const fights = retain(world.fights)
+  return all_fights === world.all_fights && fights === world.fights
+    ? world
+    : Object.freeze({ ...world, all_fights, fights })
+}
 
 const prune_world_union = (world: WorldState): WorldState => {
   const wanted = new Set(
@@ -102,8 +117,11 @@ export const fold_cached_world = (
   world: WorldState,
   packet: Readonly<ServerPacket>,
   character: WorldCharacter,
-  fold_union: (world: WorldState, packet: Readonly<ServerPacket>) => WorldState
+  fold_union: (world: WorldState, packet: Readonly<ServerPacket>) => WorldState,
+  clock: ChainClock
 ): WorldState => {
+  const now_ms = clock?.chain_ms ?? 0
+  if (packet.type === 'packet/server_info') return expire_world_fights(world, now_ms)
   if (packet.type === 'packet/tracked_zones')
     return project_world_window(
       prune_world_union(
@@ -124,8 +142,9 @@ export const fold_cached_world = (
     spawns: world.all_spawns,
     fights: world.all_fights,
   })
-  const folded = fold_union(union, packet)
-  if (folded === union) return world
+  const update = fold_union(union, packet)
+  if (update === union) return world
+  const folded = expire_world_fights(update, now_ms)
   return project_world_window(
     Object.freeze({
       ...folded,

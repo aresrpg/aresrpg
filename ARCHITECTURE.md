@@ -598,7 +598,11 @@ estimated remaining time from the live pack and current harvest; it owns no acti
 ### Fights
 
 Overworld exploration automatically observes one public fight within 50 blocks of the selected
-character. The nearest eligible fight is chosen once and retained while it stays in range;
+character. Public discovery expires one hour after the chain placement timestamp. The server excludes
+older fights from discovery reads and releases expired ambient streams. The frontend heartbeat prunes
+the shared discovery cache, so swords, ambient boards and nearby dialogs disappear together.
+Participant custody, recovery and settlement remain available regardless of age.
+The nearest eligible fight is chosen once and retained while it stays in range;
 leaving, ending, changing worlds, entering a dungeon, or mounting an immersive fight releases it.
 The server independently validates locality and caps this ambient interest at one fight per
 connection. Participant, explicit spectator, modal preview and ambient demand share subscriptions.

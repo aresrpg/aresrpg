@@ -31,6 +31,7 @@ export * from './market_prices.ts'
 export * from './leaderboards.ts'
 import type { PlayerPosition } from './position.ts'
 export * from './position.ts'
+export * from './fights.ts'
 
 export type { FightWireAction } from '@aresrpg/fight'
 

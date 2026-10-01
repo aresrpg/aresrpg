@@ -4,7 +4,7 @@
 // an optional spectator watch is anchored to an explicit character. Overlapping characters
 // share the same indexer + action subscriptions, and full checkpoints feed the client cache.
 
-import { zone_of, FIGHT_VIEW_RADIUS_BLOCKS } from '@aresrpg/protocol'
+import { fight_discoverable, FIGHT_DISCOVERY_MAX_AGE_MS, zone_of, FIGHT_VIEW_RADIUS_BLOCKS } from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type FightActionFact } from '../protocol.ts'
 import { get_fight } from '../reads/get_fight.ts'
@@ -224,6 +224,7 @@ export default {
         .catch((error: Error) => log.warn({ fight: action.fight, error: error.message }, 'spectate read failed'))
     }
     let nearby_version = 0
+    let nearby_expiry: ReturnType<typeof setTimeout> | undefined
     const nearby_in_range = (nearby: NonNullable<PlayerState['nearby_fight']>): boolean => {
       const character = get_state().characters[nearby.character_id]
       return (
@@ -236,27 +237,36 @@ export default {
     }
     events.on('packet/fight_nearby', ({ character_id, fight }) => {
       const version = ++nearby_version
+      clearTimeout(nearby_expiry)
       dispatch({ type: 'action/nearby_fight', nearby: null })
       if (fight === null || !get_state().characters[character_id]) return
       void get_fight(graph, { fight_id: fight })
         .then(([row]) => {
           if (
-            signal.aborted ||
             version !== nearby_version ||
             !row ||
+            !fight_discoverable(row, Date.now()) ||
             row.phase === 'ended' ||
             row.managed ||
             row.wagered
           )
             return
           const nearby = { character_id, fight, world: row.world, x: row.x, z: row.z }
-          if (nearby_in_range(nearby)) dispatch({ type: 'action/nearby_fight', nearby })
+          if (!nearby_in_range(nearby)) return
+          dispatch({ type: 'action/nearby_fight', nearby })
+          nearby_expiry = setTimeout(
+            () => {
+              if (version === nearby_version) dispatch({ type: 'action/nearby_fight', nearby: null })
+            },
+            Math.max(0, Number(row.placement_ms) + FIGHT_DISCOVERY_MAX_AGE_MS + 1 - Date.now())
+          )
         })
         .catch((error: Error) => log.warn({ fight, error: error.message }, 'nearby fight read failed'))
     })
     events.on('STATE_UPDATED', (state) => {
       if (state.nearby_fight && !nearby_in_range(state.nearby_fight)) {
         nearby_version++
+        clearTimeout(nearby_expiry)
         dispatch({ type: 'action/nearby_fight', nearby: null })
       }
     })
@@ -325,6 +335,8 @@ export default {
     })
 
     signal.addEventListener('abort', () => {
+      nearby_version++
+      clearTimeout(nearby_expiry)
       for (const channel of watched()) unwatch(channel)
     })
   },

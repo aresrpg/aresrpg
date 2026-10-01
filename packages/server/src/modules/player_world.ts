@@ -3,7 +3,13 @@
 // Pure reducers own tracking state; validated packets and state deltas own effects.
 // Presence stays ephemeral, and impossible movement drops the connection.
 
-import { zone_of, SPEED_BUDGET_BLOCKS_PER_SECOND, PET_SPEED_MULTIPLIER, type CharacterRow } from '@aresrpg/protocol'
+import {
+  fight_discoverable,
+  zone_of,
+  SPEED_BUDGET_BLOCKS_PER_SECOND,
+  PET_SPEED_MULTIPLIER,
+  type CharacterRow,
+} from '@aresrpg/protocol'
 
 import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.ts'
 import { get_owned_character } from '../reads/get_owned_character.ts'
@@ -199,7 +205,9 @@ export default {
       if (payload.type === 'FightCreated') {
         const { fight } = payload.data as { fight: string }
         void get_fight(graph, { fight_id: fight })
-          .then(([row]) => row && send({ type: 'packet/fight_created', fight: row }))
+          .then(
+            ([row]) => row && fight_discoverable(row, Date.now()) && send({ type: 'packet/fight_created', fight: row })
+          )
           .catch((error: Error) => log.warn({ fight, error: error.message }, 'fight marker read failed'))
       }
       if (payload.type === 'FightStarted' || payload.type === 'FightEnded')

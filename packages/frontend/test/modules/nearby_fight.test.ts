@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
-import { create_character_source, create_fight, type HydratedFightCheckpoint } from '@aresrpg/fight'
+import {
+  create_character_source,
+  create_fight,
+  encode_fight_action,
+  fight_path_to,
+  reachable_fight_cells,
+  type HydratedFightCheckpoint,
+} from '@aresrpg/fight'
 import type { FightRow } from '@aresrpg/protocol'
 
 import { nearby_fight, nearby_fight_view } from '../../src/modules/nearby_fight.ts'
@@ -119,6 +126,59 @@ test('ambient events animate without mounting a player fight; leaving releases t
     expect(app.store.getState().fight.cached.nearby).toBeUndefined()
     app.dispatch({ type: 'server/packet', packet: packet as never })
     expect(app.store.getState().fight.cached.nearby).toBeUndefined()
+  } finally {
+    stop()
+  }
+})
+
+test('ambient action packets change fighter cells and queue animation without mounting or committing', () => {
+  const placement = checkpoint()
+  const runtime = create_fight({
+    mode: 'local',
+    state: {
+      ...placement,
+      contract: {
+        ...placement.contract,
+        fighters: placement.contract.fighters.map((fighter) => ({ ...fighter, ready: true })),
+      },
+    },
+  })
+  const started = runtime.apply({ type: 'start', observed_ms: 60_000n })
+  expect(started.error).toBeNull()
+  const initial = started.state
+  const fighter = initial.contract.queue[0]!
+  const origin = initial.contract.fighters[Number(fighter)]!.cell
+  const target = reachable_fight_cells(initial, fighter).find((cell) => cell !== origin)!
+  const action = encode_fight_action({ type: 'move_to', fighter, path: fight_path_to(initial, fighter, target)! })
+  const app = create_app()
+  app.initialize({ quality: 'low', music_enabled: false, render_distance: null })
+  const stop = app.observe(['fight'])
+  try {
+    app.dispatch({ type: 'fight/nearby', nearby: { character_id: 'alice', fight: 'nearby' } })
+    app.dispatch({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/fight_state',
+        fight: 'nearby',
+        seats: {},
+        state: { contract: initial.contract, players: initial.sources.players },
+      } as never,
+    })
+    app.dispatch({
+      type: 'server/packet',
+      packet: {
+        type: 'packet/fight_action',
+        fight: 'nearby',
+        from: 'other',
+        action,
+      },
+    })
+    const state = app.store.getState().fight
+    expect(state.cached.nearby?.contract.fighters[Number(fighter)]?.cell).toBe(target)
+    expect(state.environments.nearby?.presentations.length).toBeGreaterThan(0)
+    expect(state.mounted).toBe(false)
+    expect(state.checkpoint).toBeNull()
+    expect(state.environments.nearby?.end_turn_queued).toBe(false)
   } finally {
     stop()
   }

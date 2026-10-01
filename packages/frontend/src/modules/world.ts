@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-// The world's server-streamed surroundings; one reducer feeds the compass and minimap.
-
 import { chain_to_client_coordinate, client_to_chain_coordinate, world_size } from '@aresrpg/immutable'
 import {
   live_mob_groups,
@@ -347,7 +345,13 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     const reconciled = gatherings_from_characters(retained.gathering, input.packet.characters)
     return with_world(state, Object.freeze({ ...retained, gathering: reconciled }))
   }
-  const next = fold_cached_world(state.world, input.packet, selected_character(state.session), fold_union)
+  const next = fold_cached_world(
+    state.world,
+    input.packet,
+    selected_character(state.session),
+    fold_union,
+    state.chain_clock
+  )
   return next === state.world ? state : with_world(state, next)
 }
 
