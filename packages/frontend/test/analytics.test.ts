@@ -91,3 +91,25 @@ test('restored authentication completes login without inventing an interactive s
   app.dispatch({ type: 'auth/connected', session: wallet })
   expect(analytics_events(app.store.getState(), restoring)).toEqual([{ name: 'login_completed' }])
 })
+
+test('analytics proxy routes precede the app fallback and keep SDK assets on the asset host', async () => {
+  const { rewrites, headers } = await Bun.file(new URL('../vercel.json', import.meta.url)).json()
+  const fallback = rewrites.findIndex(({ destination }: { destination: string }) => destination === '/index.html')
+  for (const [prefix, host] of [
+    ['static/', 'us-assets.i.posthog.com'],
+    ['array/', 'us-assets.i.posthog.com'],
+    ['', 'us.i.posthog.com'],
+  ]) {
+    const index = rewrites.findIndex(({ source }: { source: string }) => source === `/ingest/${prefix}:path(.*)`)
+    expect(index).toBeGreaterThanOrEqual(0)
+    expect(index).toBeLessThan(fallback)
+    expect(rewrites[index].destination).toBe(`https://${host}/${prefix}:path`)
+  }
+  const page = new RegExp(`^${rewrites[fallback].source}$`)
+  for (const path of ['/ingest', '/ingest/e/', '/ingest/array/project/config.js']) expect(page.test(path)).toBe(false)
+  expect(page.test('/characters')).toBe(true)
+  const referrer = headers
+    .flatMap(({ headers }: { headers: { key: string; value: string }[] }) => headers)
+    .find(({ key }: { key: string }) => key === 'Referrer-Policy')
+  expect(referrer.value).toBe('strict-origin')
+})

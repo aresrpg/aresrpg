@@ -3,13 +3,13 @@
 
 import { expect, test } from 'bun:test'
 
+import { bridge_config } from '../../src/funding/bridge_config.ts'
 import {
-  bridge_config,
   FUNDING_SOURCE_CHAINS,
   FUNDING_SOLANA_CHAIN,
   FUNDING_SUI_CHAIN,
   FUNDING_SUI_TOKEN,
-} from '../../src/funding/bridge_config.ts'
+} from '../../src/funding/chains.ts'
 import chains from '../../e2e/fixtures/funding_chains.json'
 import deployment from '../../vercel.json'
 
@@ -70,7 +70,9 @@ test('production policy permits the captured RPCs for every offered funding chai
 })
 
 test('Vercel routes the RPC to its function instead of the single-page app', () => {
-  const fallback = new RegExp(`^${deployment.rewrites[0]!.source}$`)
+  const fallback = new RegExp(
+    `^${deployment.rewrites.find(({ destination }) => destination === '/index.html')!.source}$`
+  )
   expect(fallback.test('/api/solana')).toBe(false)
   expect(fallback.test('/characters')).toBe(true)
 })

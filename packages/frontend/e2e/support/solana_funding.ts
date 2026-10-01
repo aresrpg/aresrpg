@@ -3,7 +3,7 @@
 import type { Page, Route } from '@playwright/test'
 
 import snapshot from '../fixtures/funding_chains.json' with { type: 'json' }
-import { FUNDING_SOLANA_CHAIN } from '../../src/funding/bridge_config.ts'
+import { FUNDING_SOLANA_CHAIN } from '../../src/funding/chains.ts'
 
 import { mock_funding } from './funding.ts'
 

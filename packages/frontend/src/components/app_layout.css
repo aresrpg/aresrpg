@@ -69,10 +69,12 @@
 .world-account:has(.wallet-popover:popover-open) .wallet-trigger {
   background: color-mix(in srgb, var(--color-gold) 22%, var(--color-surface));
 }
-.wallet-popover {
+.wallet-panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.wallet-popover {
   position: fixed;
   inset: calc(var(--app-top, 12px) + var(--app-tabs-height) + 6px) var(--app-right, 12px) auto auto;
   margin: 0;
@@ -114,22 +116,22 @@
   color: #e2cfaa;
   font-size: 14px;
 }
-.wallet-popover .aui-wallet-balances {
+.wallet-panel .aui-wallet-balances {
   gap: 8px;
 }
-.wallet-popover .aui-wallet-balances > div {
+.wallet-panel .aui-wallet-balances > div {
   min-width: 0;
   grid-template-columns: 24px minmax(0, 1fr);
   padding: 10px;
   gap: 3px 8px;
   background: #171c22;
 }
-.wallet-popover .aui-wallet-balances :is(svg, img) {
+.wallet-panel .aui-wallet-balances :is(svg, img) {
   grid-row: span 2;
   width: 24px;
   height: 24px;
 }
-.wallet-popover .aui-wallet-balances strong {
+.wallet-panel .aui-wallet-balances strong {
   font-size: 18px;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
@@ -155,4 +157,34 @@
 .wallet-popover__gas strong {
   color: #d1d8e0;
   font-variant-numeric: tabular-nums;
+}
+
+.welcome-card .aui-button {
+  min-height: 44px;
+}
+
+@media (min-width: 640px) and (max-height: 500px) {
+  .welcome-card {
+    display: grid;
+    max-width: 760px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 24px;
+  }
+  .welcome-card > header {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .welcome-card > [data-welcome-cost] {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .welcome-card > .aui-button {
+    grid-column: 1;
+    grid-row: 3;
+    align-self: end;
+  }
+  .welcome-card > .wallet-panel {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
 }

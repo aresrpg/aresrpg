@@ -10,6 +10,14 @@ for (const mobile of [false, true]) {
     const party = page.locator('.party-frame')
     await expect(party).toBeVisible()
     await expect(party.locator('.party-frame__member')).toHaveCount(6)
+    if (mobile) {
+      expect((await party.boundingBox())!.width).toBeLessThanOrEqual(150)
+      expect(
+        await party
+          .locator('.party-frame__member')
+          .evaluateAll((rows) => new Set(rows.map((row) => row.getBoundingClientRect().left)).size)
+      ).toBe(1)
+    }
     await expect(page.locator('.world-multiplayer')).toBeVisible()
     await page.evaluate(() => window.mobile_fight(true))
     await expect.poll(() => page.evaluate(() => window.mobile_fight_active())).toBe(true)
@@ -19,6 +27,7 @@ for (const mobile of [false, true]) {
     await expect(page.locator('.world-account .wallet-trigger')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible()
     await expect(page.locator('.world-multiplayer, .gw-minimap')).toHaveCount(0)
+    await page.screenshot({ path: test.info().outputPath('party-in-fight.png') })
     await party.locator('.party-frame__member').last().scrollIntoViewIfNeeded()
     await expect(party.locator('.party-frame__member').last()).toBeInViewport()
     await page.getByRole('button', { name: 'Settings', exact: true }).click()

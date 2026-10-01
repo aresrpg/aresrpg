@@ -316,7 +316,6 @@ export const FIGHT_POLAR_RAD = (50 * Math.PI) / 180
 const FIGHT_AZIMUTH = Math.PI / 4
 const FIGHT_FOV = 66
 const FIGHT_LOOK_UP_RAD = 0.07
-const PAN_ENVELOPE_FRAC = 0.35
 const PAN_METERS_PER_PIXEL = 0.015
 const ZOOM_MIN = 11
 const ZOOM_MAX = 42
@@ -360,10 +359,8 @@ export const create_fight_addon = ({
 
   const pan_limits = (): readonly [number, number] => {
     const frame = board()
-    return [
-      frame.grid_w * frame.cell_size * 0.5 * PAN_ENVELOPE_FRAC,
-      frame.grid_h * frame.cell_size * 0.5 * PAN_ENVELOPE_FRAC,
-    ]
+    // Any board edge can reach the focus and clear the HUD; the focus never leaves the board.
+    return [frame.grid_w * frame.cell_size * 0.5, frame.grid_h * frame.cell_size * 0.5]
   }
   const clamp_pan = (): void => {
     const [limit_x, limit_z] = pan_limits()

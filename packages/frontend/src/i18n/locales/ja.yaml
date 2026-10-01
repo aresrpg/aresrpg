@@ -70,7 +70,7 @@ fight_placement_unavailable_toast: その開始マスは使用できません。
 network_testnet: TESTNET
 welcome_title: AresRPG へようこそ
 welcome_body: AresRPG は、プレイヤー主導の経済を持つ完全オンチェーン MMORPG です。最初のキャラクターを作り、世界に入ってモンスターと戦いましょう。
-welcome_need_sui: プレイには少額の SUI が必要です — 最初のキャラクター作成には {{price}} SUI かかり、手数料のため残高に少なくとも {{fee}} SUI を残す必要があります。下のアドレスに SUI を入金して始めましょう。
+welcome_need_sui: '最初のキャラクターの作成費用は{{price}}です。取引手数料のため、ウォレットに少なくとも{{fee}}を残してください。下のボタンから入金して始めましょう。'
 insufficient_sui: 手数料のため、残高に少なくとも {{fee}} SUI を残す必要があります。
 create_character: キャラクター作成
 create_title: キャラクターを作成

@@ -46,9 +46,9 @@ test('the dev display route discovers HD item art added after server startup', a
 
 test('production SPA rewrites never capture stable Sui Display assets', async () => {
   const config = JSON.parse(await Bun.file(new URL('../vercel.json', import.meta.url)).text()) as {
-    rewrites: readonly Readonly<{ source: string }>[]
+    rewrites: readonly Readonly<{ source: string; destination: string }>[]
   }
-  const source = config.rewrites[0]?.source ?? ''
+  const source = config.rewrites.find(({ destination }) => destination === '/index.html')?.source ?? ''
   expect(source).toContain('item/')
   expect(source).toContain('classe/')
   const rewrite = new RegExp(`^${source}$`)

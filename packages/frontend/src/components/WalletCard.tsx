@@ -10,6 +10,7 @@ import type { AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { display_suins_name } from '../leaderboards/presentation.ts'
+import type { Network } from '../env.ts'
 
 import { AddFundsModal } from './AddFundsModal.tsx'
 import { SendSuiModal } from './SendSuiModal.tsx'
@@ -27,7 +28,15 @@ export const WalletCard = ({
   copy,
   disconnect,
   session,
-}: Readonly<{ copy: AppCopy; disconnect: () => void; session: SessionState }>) => {
+  embedded = false,
+  network,
+}: Readonly<{
+  copy: AppCopy
+  disconnect: () => void
+  session: SessionState
+  embedded?: boolean
+  network?: Network
+}>) => {
   const localized_numbers = useNumbers()
   const default_name = useAppStore((state) => state.suins.snapshot?.default_name ?? null)
   const menu_id = useId()
@@ -41,10 +50,16 @@ export const WalletCard = ({
     []
   )
   const address = wallet?.address ?? null
+  const panel_attributes = embedded
+    ? { className: 'wallet-panel' }
+    : { className: 'aui-panel wallet-panel wallet-popover', popover: 'auto' as const, role: 'dialog' }
   const sui_balance = balance_label(session.sui_balance_mist, localized_numbers.sui)
   const kares_balance = balance_label(session.kares_balance, localized_numbers.amount)
+  const close_menu = (): void => {
+    if (!embedded) menu.current?.hidePopover()
+  }
   const open_modal = (next: 'funds' | 'send'): void => {
-    menu.current?.hidePopover()
+    close_menu()
     set_modal(next)
   }
 
@@ -58,33 +73,27 @@ export const WalletCard = ({
 
   return (
     <>
-      <button
-        aria-label={copy.account}
-        aria-description={`${sui_balance} SUI · ${kares_balance} KARES`}
-        aria-haspopup="dialog"
-        className="wallet-trigger"
-        data-wallet-trigger=""
-        popoverTarget={menu_id}
-        type="button"
-      >
-        <span className="wallet-trigger__balance" title={`${sui_balance} SUI`}>
-          <SuiLogo size={16} />
-          <span>{sui_balance}</span>
-        </span>
-        <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares_balance} KARES`}>
-          <KaresLogo size={16} />
-          <span>{kares_balance}</span>
-        </span>
-      </button>
-      <section
-        className="aui-panel wallet-popover"
-        id={menu_id}
-        popover="auto"
-        ref={menu}
-        role="dialog"
-        aria-label={copy.account}
-        data-wallet-card=""
-      >
+      {!embedded && (
+        <button
+          aria-label={copy.account}
+          aria-description={`${sui_balance} SUI · ${kares_balance} KARES`}
+          aria-haspopup="dialog"
+          className="wallet-trigger"
+          data-wallet-trigger=""
+          popoverTarget={menu_id}
+          type="button"
+        >
+          <span className="wallet-trigger__balance" title={`${sui_balance} SUI`}>
+            <SuiLogo size={16} />
+            <span>{sui_balance}</span>
+          </span>
+          <span className="wallet-trigger__balance wallet-trigger__balance--kares" title={`${kares_balance} KARES`}>
+            <KaresLogo size={16} />
+            <span>{kares_balance}</span>
+          </span>
+        </button>
+      )}
+      <section {...panel_attributes} id={menu_id} ref={menu} aria-label={copy.account} data-wallet-card="">
         <header className="wallet-popover__identity">
           <Wallet size={20} aria-hidden="true" />
           <strong>{wallet_identity(address, default_name, copy.sign_in_to_play)}</strong>
@@ -118,7 +127,7 @@ export const WalletCard = ({
         {wallet ? (
           <Button
             onClick={() => {
-              menu.current?.hidePopover()
+              close_menu()
               disconnect()
             }}
           >
@@ -134,7 +143,9 @@ export const WalletCard = ({
 
       {wallet && (
         <>
-          {modal === 'funds' && <AddFundsModal address={wallet.address} copy={copy} on_close={() => set_modal(null)} />}
+          {modal === 'funds' && (
+            <AddFundsModal address={wallet.address} copy={copy} network={network} on_close={() => set_modal(null)} />
+          )}
           {modal === 'send' && (
             <SendSuiModal
               balance_mist={session.sui_balance_mist}

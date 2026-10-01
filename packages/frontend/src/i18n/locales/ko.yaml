@@ -73,7 +73,7 @@ fight_placement_unavailable_toast: 해당 시작 칸을 사용할 수 없습니�
 network_testnet: 테스트넷
 welcome_title: AresRPG에 오신 것을 환영합니다
 welcome_body: AresRPG는 플레이어가 경제를 이끄는 완전한 온체인 MMORPG입니다. 첫 캐릭터를 만들고 월드에 들어가 몬스터와 싸우세요.
-welcome_need_sui: 플레이하려면 소량의 SUI가 필요합니다. 첫 캐릭터는 {{price}} SUI이며 수수료용으로 최소 {{fee}} SUI를 남겨야 합니다. 아래 주소로 SUI를 입금해 시작하세요.
+welcome_need_sui: '첫 캐릭터 생성 비용은 {{price}}입니다. 거래 수수료를 위해 지갑에 최소 {{fee}}를 남겨 두세요. 아래에서 자금을 추가하고 시작하세요.'
 insufficient_sui: 수수료용으로 잔액에 최소 {{fee}} SUI를 남겨야 합니다.
 create_character: 캐릭터 생성
 create_title: 캐릭터를 만드세요

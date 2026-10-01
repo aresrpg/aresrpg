@@ -10,6 +10,7 @@ import {
   FIGHT_POLAR_RAD,
   idle_wobble,
   type CameraAnchor,
+  type FightBoardFrame,
 } from '../../src/game/core/cameras.ts'
 
 const open_world = () => false // no solids — pure orbit math
@@ -85,12 +86,37 @@ describe('fight addon (legacy board rig)', () => {
     expect(fight.get_state()).toEqual({ pan_x: 0, pan_z: 0, zoom: 0 })
   })
 
-  test('manual pan stays inside 35% of each board half-span', () => {
-    const fight = create_fight()
-    fight.pan_by_pixels(100_000, -100_000)
-    const state = fight.get_state()
-    expect(Math.abs(state.pan_x)).toBeLessThanOrEqual(3.5)
-    expect(Math.abs(state.pan_z)).toBeLessThanOrEqual(2.8)
+  test('each board corner can reach the camera focus without panning beyond the board', () => {
+    for (const [grid_w, grid_h] of [
+      [6, 14],
+      [20, 20],
+    ] as const) {
+      const board = { ...fight_board, grid_w, grid_h }
+      for (const [x, z] of [
+        [-1, -1],
+        [-1, 1],
+        [1, -1],
+        [1, 1],
+      ] as const) {
+        const fight = create_fight_addon({ board: () => board, viewport: () => [844, 390] })
+        // Drag past the limit in each camera-relative direction, as repeated touch swipes would.
+        fight.pan_by_pixels((-x + z) * 100_000, (-x - z) * 100_000)
+        const frame = fight.frame(anchor, 0)
+        expect(frame.target[0]).toBeCloseTo(board.origin.x + ((x + 1) * board.grid_w * board.cell_size) / 2)
+        expect(frame.target[2]).toBeCloseTo(board.origin.z + ((z + 1) * board.grid_h * board.cell_size) / 2)
+        expect(Math.abs(fight.get_state().pan_x)).toBe((board.grid_w * board.cell_size) / 2)
+        expect(Math.abs(fight.get_state().pan_z)).toBe((board.grid_h * board.cell_size) / 2)
+      }
+    }
+  })
+
+  test('changing to a smaller board clamps the retained pan to its footprint', () => {
+    let board: FightBoardFrame = fight_board
+    const fight = create_fight_addon({ board: () => board })
+    fight.pan_by_pixels(100_000, 0)
+    board = { ...fight_board, grid_w: 4, grid_h: 3 }
+    fight.frame(anchor, 0)
+    expect(fight.get_state()).toEqual({ pan_x: -4, pan_z: 3, zoom: 0 })
   })
 })
 

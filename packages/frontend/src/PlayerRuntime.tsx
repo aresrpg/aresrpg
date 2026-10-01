@@ -6,18 +6,12 @@ import './game/hud/world_responsive.css'
 import { useSyncExternalStore } from 'react'
 import { MAX_TRACKED_CHARACTERS } from '@aresrpg/protocol'
 import type { CharacterCreateInput } from '@aresrpg/sdk/character'
-import { CHARACTER_PRICE_MIST } from '@aresrpg/sdk/character-price'
-import { Check, Copy } from 'lucide-react'
 import { useCallback, useRef, useState, type ComponentType } from 'react'
 import { ThinkingOrb } from 'thinking-orbs'
 
 import { read_scene, subscribe_scene } from './game/core/scene_feed.ts'
 import { WorldLoading } from './components/WorldLoading.tsx'
-import {
-  character_creation_failure_message,
-  character_creation_funding_text,
-  character_creation_insufficient,
-} from './character_creation_funding.ts'
+import { character_creation_failure_message, character_creation_insufficient } from './character_creation_funding.ts'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
 import { Login } from './components/Login.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
@@ -45,7 +39,7 @@ import { JobLevelUpCard } from './game/jobs/JobLevelUpCard.tsx'
 import { type AppCopy } from './i18n/copy.ts'
 import type { Locale } from './i18n/locale.ts'
 import { LocaleScope } from './i18n/LocaleScope.tsx'
-import { useNumbers } from './i18n/useNumbers.ts'
+import { Welcome } from './components/Welcome.tsx'
 import { JourneyHost } from './journey/JourneyHost.tsx'
 import { selected_dungeon_run } from './modules/dungeon.ts'
 import { type Page } from './modules/navigation.ts'
@@ -56,62 +50,6 @@ import { TutorialHost } from './tutorial/TutorialHost.tsx'
 
 const city_arrival_active = (in_app: boolean, page: Page, fight_active: boolean, dungeon_active: boolean): boolean =>
   in_app && page === 'world' && !fight_active && !dungeon_active
-
-const Welcome = ({
-  copy,
-  create,
-  funding_address,
-}: Readonly<{ copy: AppCopy; create: () => void; funding_address: string | null }>) => {
-  const localized_numbers = useNumbers()
-  const [copied, set_copied] = useState(false)
-  const copy_address = (): void => {
-    if (!funding_address) return
-    void navigator.clipboard.writeText(funding_address).then(() => {
-      set_copied(true)
-      setTimeout(() => set_copied(false), 2_000)
-    })
-  }
-  return (
-    <section className="absolute inset-0 z-[140] grid place-items-center bg-bg/34 p-5 backdrop-blur-[3px]">
-      <div className="w-full max-w-xl border border-white/10 border-t-[#c8963c] bg-bg/94 p-8 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-        <p className="mb-3 text-[8px] tracking-[0.28em] text-[#c8963c] uppercase">AresRPG</p>
-        <h2 className="text-xl font-semibold tracking-[0.06em]">{copy.welcome_title}</h2>
-        <p className="mt-4 text-[11px] leading-6 text-[#9da0a9]">{copy.welcome_body}</p>
-        {funding_address && (
-          <div className="mt-5 border border-[#c8963c]/35 bg-[#c8963c]/6 p-4">
-            <p className="text-[11px] leading-6 text-[#d9af57]">
-              {character_creation_funding_text(copy.welcome_need_sui, localized_numbers.sui).replaceAll(
-                '{{price}}',
-                localized_numbers.sui(CHARACTER_PRICE_MIST, 0)
-              )}
-            </p>
-            <div className="mt-3 flex items-center gap-2 border border-white/10 bg-black/30 px-3 py-2">
-              <span className="min-w-0 flex-1 font-mono text-[10px] break-all text-[#c8963c] select-all">
-                {funding_address}
-              </span>
-              <button
-                aria-label={copy.wallet_copy_address}
-                className="shrink-0 cursor-pointer opacity-55 hover:opacity-95"
-                onClick={copy_address}
-                type="button"
-              >
-                {copied ? <Check className="text-emerald-400" size={13} /> : <Copy size={13} />}
-              </button>
-            </div>
-          </div>
-        )}
-        <button
-          className="mt-7 h-11 cursor-pointer border border-[#4a9eff]/40 bg-[#4a9eff]/8 px-6 text-[9px] tracking-[0.18em] text-[#67adff] uppercase hover:border-[#4a9eff]/70 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-[#5a5e68]"
-          disabled={!!funding_address}
-          onClick={create}
-          type="button"
-        >
-          {copy.create_character}
-        </button>
-      </div>
-    </section>
-  )
-}
 
 export function PlayerRuntime({
   Shell,
@@ -246,7 +184,7 @@ export function PlayerRuntime({
                 <Welcome
                   copy={copy}
                   create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
-                  funding_address={sui_insufficient && wallet ? wallet.address : null}
+                  session={session}
                 />
               )}
               {

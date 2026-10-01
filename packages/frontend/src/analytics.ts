@@ -58,7 +58,8 @@ export const capture_analytics = (event: string, properties: Readonly<Record<str
 export const init_analytics = (): void => {
   if (!enabled()) return
   posthog.init(env.posthog_project_token, {
-    api_host: env.posthog_host,
+    api_host: '/ingest',
+    ui_host: 'https://us.posthog.com',
     persistence: 'localStorage',
     person_profiles: 'never',
     autocapture: false,

@@ -31,6 +31,7 @@ for (const viewport of [
 }
 
 test('fight camera pans with one finger, pinches both ways, and detaches cleanly', async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 })
   await page.goto('/e2e/fixtures/camera_drag.html?fight')
   const cdp = await page.context().newCDPSession(page)
   const touch = async (
@@ -50,6 +51,15 @@ test('fight camera pans with one finger, pinches both ways, and detaches cleanly
   expect((await state()).pan_x).toBe(0)
   await touch('touchMove', [{ id: 1, x: 210, y: 185 }])
   expect((await state()).pan_x).not.toBe(0)
+  // Repeated swipes must move beyond the old 3.5 m limit, without losing the board.
+  await touch('touchEnd', [])
+  for (let swipe = 0; swipe < 4; swipe++) {
+    await touch('touchStart', [{ id: 1, x: 70, y: 185 }])
+    await touch('touchMove', [{ id: 1, x: 450, y: 185 }])
+    await touch('touchEnd', [])
+  }
+  expect((await state()).pan_x).toBe(-10)
+  expect((await state()).pan_z).toBe(10)
   await touch('touchStart', [
     { id: 1, x: 210, y: 185 },
     { id: 2, x: 310, y: 185 },

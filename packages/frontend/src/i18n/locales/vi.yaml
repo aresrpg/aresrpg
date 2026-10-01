@@ -73,7 +73,7 @@ fight_placement_unavailable_toast: Ô xuất phát đó không khả dụng. Hã
 network_testnet: MẠNG THỬ NGHIỆM
 welcome_title: Chào mừng đến AresRPG
 welcome_body: AresRPG là MMORPG hoàn toàn trên chuỗi với nền kinh tế do người chơi vận hành. Tạo nhân vật đầu tiên, vào thế giới và chiến đấu với quái vật.
-welcome_need_sui: 'Bạn cần một ít SUI để chơi: nhân vật đầu tiên giá {{price}} SUI và cần giữ ít nhất {{fee}} SUI để trả phí. Nạp SUI vào địa chỉ bên dưới để bắt đầu.'
+welcome_need_sui: 'Nhân vật đầu tiên có giá {{price}}. Giữ lại ít nhất {{fee}} trong ví để trả phí giao dịch. Nạp tiền bên dưới để bắt đầu.'
 insufficient_sui: Cần giữ ít nhất {{fee}} SUI trong số dư để trả phí.
 create_character: Tạo nhân vật
 create_title: Tạo nhân vật của bạn

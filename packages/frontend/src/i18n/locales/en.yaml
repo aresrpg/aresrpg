@@ -70,7 +70,7 @@ fight_placement_unavailable_toast: That starting cell is unavailable. Choose ano
 network_testnet: TESTNET
 welcome_title: Welcome to AresRPG
 welcome_body: AresRPG is a fully on-chain MMORPG with a player-driven economy. Create your first character, enter the world, and find mobs to fight.
-welcome_need_sui: You need a little SUI to play — your first character costs {{price}} SUI, and you need at least {{fee}} SUI left in your balance for fees. Deposit some SUI to your address below to begin.
+welcome_need_sui: 'Your first character costs {{price}}. Keep at least {{fee}} in your wallet for transaction fees. Add funds below to get started.'
 insufficient_sui: You need at least {{fee}} SUI left in your balance for fees.
 create_character: Create character
 create_title: Create your character

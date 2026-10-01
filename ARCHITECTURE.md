@@ -126,6 +126,8 @@ preview through one pointer-gesture path; compatibility clicks never select agai
 requires a fresh press on its control and revalidates the same checkpoint through the existing cell-selection door.
 Changed checkpoints, action changes and locked actions invalidate review. Board input belongs to the
 scene's exact canvas; dragging, cancellation and other UI canvases cannot select a fight cell.
+Fight panning lets the camera focus reach every board edge, so touch users can pull cells clear
+of HUD controls; the focus remains bounded to the board footprint.
 
 Development module reloads retain the same app-store instance for mounted and lazy consumers.
 Stateful core edits restart the app to rebuild reducer and observer lifecycles together.
@@ -251,8 +253,11 @@ callback. Explicit state-delta events describe anonymous visits, demo fights, lo
 The session retains the submitted creation outcome; only the SDK's certified creation receipt marks activation,
 never an acquired roster member. PostHog retains a browser-local anonymous identity across reloads; no wallet
 address or player name identifies it. An outbound property allowlist excludes URLs, referrers and nested person
-properties. Autocapture, replay, surveys and remote feature flags are disabled. Public project-token and host
-build variables override the default project; an empty token disables capture. Analytics failures never block gameplay.
+properties. Autocapture, replay, surveys and remote feature flags are disabled. Events use the same-origin `/ingest` Vercel proxy, with static and remote-config routes sent to
+PostHog's US asset host before the US ingestion route. Both the deployment and service-worker page
+fallbacks exclude that namespace. The document referrer policy is origin-only, including same-origin
+requests that the proxy forwards. The public project-token build variable overrides the default project;
+an empty token disables capture. Analytics failures never block gameplay.
 The frontend and launchpad initialize the shared errors-only Sentry reporter. Caught toast failures retain their raw
 exception before translation; React root failures and boot failures use the same reporter. The outbound
 filter removes credentials and bearer URL data, and Move aborts group by package, module, function and
@@ -485,6 +490,9 @@ stays server-side. The relay restricts methods, origin, request and response siz
 time; provider failures never expose credentials. Successful response bytes retain exact u64
 values. LI.FI broadcasts signed Solana transactions through its separate public write RPC.
 Vite serves the same handler locally; no second wallet-balance state or chain writer exists.
+The first-character welcome embeds the same wallet card and funding controls as the HUD.
+Its mainnet character cost and fee reserve include optional, minute-refreshed LI.FI USD estimates;
+unavailable quotes hide those estimates. Only the canonical SUI amounts and wallet balance gate creation.
 
 ### Equipment
 

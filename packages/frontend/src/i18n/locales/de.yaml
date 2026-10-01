@@ -70,7 +70,7 @@ fight_placement_unavailable_toast: Dieses Startfeld ist nicht verfügbar. Wähle
 network_testnet: TESTNET
 welcome_title: Willkommen bei AresRPG
 welcome_body: AresRPG ist ein vollständig On-Chain-MMORPG mit einer spielergesteuerten Wirtschaft. Erstelle deinen ersten Charakter, betrete die Welt und finde Monster zum Kämpfen.
-welcome_need_sui: Du brauchst etwas SUI zum Spielen — dein erster Charakter kostet {{price}} SUI, und mindestens {{fee}} SUI müssen für Gebühren in deinem Guthaben bleiben. Zahle etwas SUI auf deine Adresse unten ein, um zu beginnen.
+welcome_need_sui: 'Dein erster Charakter kostet {{price}}. Behalte mindestens {{fee}} für Transaktionsgebühren in deiner Wallet. Füge unten Guthaben hinzu, um loszulegen.'
 insufficient_sui: Mindestens {{fee}} SUI müssen für Gebühren in deinem Guthaben bleiben.
 create_character: Charakter erstellen
 create_title: Erstelle deinen Charakter

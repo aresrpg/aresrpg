@@ -73,7 +73,7 @@ fight_placement_unavailable_toast: 该起始格不可用。请选择其他空格
 network_testnet: 测试网
 welcome_title: 欢迎来到AresRPG
 welcome_body: AresRPG是一款完全链上的MMORPG，经济由玩家驱动。创建首个角色，进入世界并挑战怪物。
-welcome_need_sui: 游戏需要少量SUI：首个角色价格为{{price}} SUI，余额中还需保留至少{{fee}} SUI支付费用。向下方地址存入SUI即可开始。
+welcome_need_sui: '创建首个角色需要{{price}}。请在钱包中至少保留{{fee}}用于交易手续费。在下方充值即可开始。'
 insufficient_sui: 余额中需保留至少{{fee}} SUI支付费用。
 create_character: 创建角色
 create_title: 创建你的角色

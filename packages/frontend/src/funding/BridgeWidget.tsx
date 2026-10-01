@@ -11,7 +11,8 @@ import { useEffect, useMemo, type PropsWithChildren } from 'react'
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { dispatch_app, read_app_state } from '../store.ts'
 
-import { bridge_config, FUNDING_SUI_CHAIN, FUNDING_SUI_TOKEN } from './bridge_config.ts'
+import { bridge_config } from './bridge_config.ts'
+import { FUNDING_SUI_CHAIN, FUNDING_SUI_TOKEN } from './chains.ts'
 
 // Destination reads only. There is no Sui wallet connector, client executor, or signer.
 const SuiDestinationProvider = ({ children }: Readonly<PropsWithChildren>) => {

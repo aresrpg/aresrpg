@@ -1956,7 +1956,7 @@
     },
     "packages/frontend/src/PlayerRuntime.tsx": {
       "PlayerRuntime": [
-        26
+        24
       ],
       "PlayerRuntime > useCallback[0](character: CharacterCreateInput)": [
         10
@@ -2128,6 +2128,16 @@
     },
     "packages/frontend/src/adventure/AdventureHud.tsx": {
       "AdventureHud": [
+        10
+      ]
+    },
+    "packages/frontend/src/components/WalletCard.tsx": {
+      "WalletCard": [
+        11
+      ]
+    },
+    "packages/frontend/src/funding/useSuiUsd.ts": {
+      "read_sui_usd": [
         10
       ]
     }
