@@ -780,6 +780,7 @@ admin_page:
   characters_over_time: 角色数量走势
   revenue_30d: 30天收入
   revenue_mtd: 本月至今收入
+  revenue_total: 总收入
   last_30_days: 过去30天
   calendar_month_to_date: 本自然月至今
   buyer: 买家

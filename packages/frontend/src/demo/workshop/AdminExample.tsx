@@ -24,6 +24,7 @@ const result: AdminOverviewResult = {
     kolizeum_mist: '13800000000',
     last_30d_revenue_mist: '93540000000',
     month_to_date_revenue_mist: '93540000000',
+    all_time_revenue_mist: '452130000000',
     money: values.map((n, i) => ({
       at_ms: at(i),
       item_royalty_mist: String(n * 100000000),

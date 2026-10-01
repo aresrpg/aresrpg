@@ -150,6 +150,15 @@ export const create_detail_layer = ({
           bytes: (cell.vertices.length * 3) / 4,
           upload: () => {
             const mesh = new Mesh(detail_geometry(cell, materials), material!.clone())
+            // These surfaces are opaque. Three otherwise wraps each cloned color graph in a
+            // unique shadow graph, compiling it when that cell first enters the shadow frustum.
+            // Keep chunk-owned material disposal, but use the shared constant shadow program.
+            mesh.onBeforeShadow = () => {
+              mesh.material.colorNode = null
+            }
+            mesh.onAfterShadow = () => {
+              mesh.material.colorNode = material!.colorNode
+            }
             mesh.position.set(...cell.origin)
             mesh.updateMatrix()
             mesh.matrixAutoUpdate = false

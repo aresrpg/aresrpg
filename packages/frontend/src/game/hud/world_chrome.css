@@ -147,9 +147,7 @@
   color: #e3bd77;
 }
 .world-nearby-fights {
-  max-height: 108px;
-  overflow-y: auto;
-  scrollbar-width: thin;
+  padding: 4px 12px;
 }
 .world-nearby-fights > p {
   margin: 6px 3px 2px;
@@ -227,24 +225,6 @@
   }
   .world-social-dock .aui-minimap {
     height: 100px;
-  }
-  .world-nearby-fights {
-    display: none;
-  }
-  .world-nearby-fights[data-expanded='true'] {
-    display: block;
-    position: absolute;
-    right: calc(100% + 6px);
-    top: auto;
-    bottom: 0;
-    width: min(280px, calc(100vw - 198px));
-    max-height: min(200px, 40vh);
-    padding: 6px;
-    background: #171c22;
-    border: 1px solid #444a51;
-    border-radius: 7px;
-    z-index: 2;
-    box-shadow: 0 8px 24px #0008;
   }
   .world-multiplayer > header .aui-button {
     font-size: 10px;

@@ -16,7 +16,8 @@ test('touch prompts show tap instructions and activate their own actions', async
   ]) {
     const button = page.getByRole('button', { name: label!, exact: true })
     await expect(button).toBeVisible()
-    expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    if (action === 'attack') expect((await button.boundingBox())!.height).toBeLessThanOrEqual(28)
+    else expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     await button.tap()
     await expect(page.getByLabel('Last action')).toHaveText(action!)
   }

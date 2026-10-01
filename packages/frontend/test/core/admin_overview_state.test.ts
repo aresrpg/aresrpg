@@ -20,6 +20,7 @@ const overview: AdminOverviewResult = Object.freeze({
     kolizeum_mist: '0',
     last_30d_revenue_mist: '5',
     month_to_date_revenue_mist: '5',
+    all_time_revenue_mist: '105',
     money: Object.freeze([]),
   }),
   players: Object.freeze({
@@ -94,6 +95,7 @@ test('a cached overview range switches locally without another pending request',
     days: 7 as const,
     bucket: 'hour' as const,
     last_30d_revenue_mist: '99',
+    all_time_revenue_mist: '999',
   }
   const loaded = reduce_app_state(section_requested, {
     type: 'server/packet',
@@ -106,6 +108,7 @@ test('a cached overview range switches locally without another pending request',
   })
   const back = reduce_app_state(loaded, { type: 'admin/overview_range_changed', section: 'revenue', days: 30 })
   const cached = reduce_app_state(back, { type: 'admin/overview_range_changed', section: 'revenue', days: 7 })
+  expect(back.admin.overview.result?.revenue.all_time_revenue_mist).toBe('999')
   expect(cached.admin.overview.result?.revenue).toEqual(seven_days)
   expect(cached.admin.overview.result?.revenue.last_30d_revenue_mist).toBe('99')
   expect(cached.admin.overview.pending).toEqual({})

@@ -251,6 +251,13 @@ test('evicted detail meshes release their render bindings without disposing anot
   layer.retain('second', [32, 0, 0])
   uploads.drain([0, 0, 0], 131072, 1)
   const [first, second] = scene.children as Mesh<BufferGeometry, MeshStandardNodeMaterial>[]
+  const color = first!.material.colorNode
+  // Opaque details need no appearance graph in the shadow pass. Distinct cloned materials
+  // must reach Three's shared constant shadow shader instead of compiling one per city cell.
+  Reflect.apply(first!.onBeforeShadow, first, [])
+  expect(first!.material.colorNode).toBeNull()
+  Reflect.apply(first!.onAfterShadow, first, [])
+  expect(first!.material.colorNode).toBe(color)
   let first_disposals = 0,
     second_disposals = 0
   first!.material.addEventListener('dispose', () => {

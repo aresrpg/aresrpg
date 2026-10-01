@@ -423,7 +423,7 @@
     },
     "packages/engine/src/far_worker.ts": {
       "self.addEventListener[1]({ data }: MessageEvent<Request>)": [
-        20
+        17
       ]
     },
     "packages/engine/src/fight_blobs.ts": {
@@ -1664,7 +1664,7 @@
     },
     "packages/engine/src/far_worker.ts": {
       "self.addEventListener[1]({ data }: MessageEvent<Request>)": [
-        10
+        9
       ]
     },
     "packages/engine/src/fight_blobs.ts": {

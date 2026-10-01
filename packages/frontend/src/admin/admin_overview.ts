@@ -47,6 +47,7 @@ const with_current_summary = (
         ...cached.data,
         last_30d_revenue_mist: current.revenue.last_30d_revenue_mist,
         month_to_date_revenue_mist: current.revenue.month_to_date_revenue_mist,
+        all_time_revenue_mist: current.revenue.all_time_revenue_mist,
       }),
     })
   if (cached.section === 'players')

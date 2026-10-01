@@ -46,6 +46,12 @@ are diagnostic only; use the unprofiled cases for throughput comparisons. This r
 app-store subscribers and network publication. Timing is reported rather than asserted against
 an unspecified hardware target.
 
+`bun run test:performance --grep 'solo Thebes'` profiles an equipped, controlled character walking
+the same 260-block street twice. It records per-frame position, residency and uploads alongside
+separate standing, cold-walk and warm-walk CPU profiles. Lighting stays fixed for comparisons.
+The route assertion catches blocked movement; Low/Medium/High horizon captures and final resource
+disposal verify the renderer. This isolated workload excludes HUD subscribers and network traffic.
+
 Performance samples count actual canvas render frames, not all animation callbacks. Upload
 instrumentation reports real `writeBuffer` calls, bytes and CPU time. One separately fenced frame
 per stage records render-pass GPU timestamps when supported; this is a sample, not a GPU percentile.

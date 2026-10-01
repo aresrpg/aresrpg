@@ -10,7 +10,8 @@ import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import { TouchFightConfirmation } from '../../src/game/fight/TouchFightConfirmation.tsx'
 import { attach_fight_camera_input } from '../../src/game/core/fight_camera_input.ts'
 import { FightHud } from '../../src/game/fight/FightHud.tsx'
-import { FightTurnCard } from '../../src/game/fight/FightTurnCard.tsx'
+import { FightSpectatorExit } from '../../src/game/fight/FightSpectatorExit.tsx'
+import { FightTurnCard, fight_turn_announcement_after_cue } from '../../src/game/fight/FightTurnCard.tsx'
 import { select_fight_view, type FightActionSelection } from '../../src/game/fight/fight_projection.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { dispatch_app } from '../../src/store.ts'
@@ -18,6 +19,7 @@ import '../../src/tailwind.css'
 import '../../../mobile/src/mobile.css'
 
 const copy = await load_app_copy('en')
+const spectating = new URLSearchParams(location.search).has('spectator')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 const source = create_character_source({
   classe: 'senshi',
@@ -41,17 +43,23 @@ const local = create_fight({
 })
 const checkpoint = local.apply({ type: 'start', observed_ms: 60_000n }).state
 dispatch_app({ type: 'auth/connecting' })
-dispatch_app({ type: 'auth/connected', session: { address: 'wallet' } as never })
+dispatch_app({ type: 'auth/connected', session: { address: spectating ? 'observer' : 'wallet' } as never })
 dispatch_app({
   type: 'server/packet',
   packet: {
     type: 'packet/characters',
     characters: [
-      { id: 'player', name: 'Player', equipment: [], custody: 'fight', active_fight: { id: 'mobile-fight', seat: 0 } },
+      {
+        id: spectating ? 'viewer' : 'player',
+        name: 'Player',
+        equipment: [],
+        custody: spectating ? 'kiosk' : 'fight',
+        active_fight: spectating ? null : { id: 'mobile-fight', seat: 0 },
+      },
     ],
   },
 } as never)
-dispatch_app({ type: 'character/select', character_id: 'player' })
+dispatch_app({ type: 'character/select', character_id: spectating ? 'viewer' : 'player' })
 dispatch_app({
   type: 'fight/reconciled',
   mode: 'remote',
@@ -76,6 +84,7 @@ const Probe = () => {
   )
   const [selected_action, select_action] = useState<FightActionSelection>(null)
   const [confirmed, set_confirmed] = useState(0)
+  const [announcement, set_announcement] = useState<ReturnType<typeof fight_turn_announcement_after_cue>>(null)
   return (
     <>
       <canvas ref={canvas} aria-label="Fight board" className="fixed inset-0 size-full" />
@@ -89,7 +98,32 @@ const Probe = () => {
           mob_icon_for={() => null}
         />
       )}
+      {spectating && (
+        <>
+          <button
+            className="fixed top-4 left-4 z-50"
+            onClick={() =>
+              set_announcement(
+                fight_turn_announcement_after_cue(
+                  null,
+                  {
+                    id: 'spectator-turn',
+                    type: 'turn',
+                    entity_id: 'fight_character_0',
+                    turn_key: 'mobile-fight:turn:1:0',
+                  },
+                  'start'
+                )
+              )
+            }
+          >
+            Play turn cue
+          </button>
+          <FightSpectatorExit character_id="viewer" copy={copy} />
+        </>
+      )}
       <FightHud
+        turn_announcement={announcement}
         confirmation={
           <TouchFightConfirmation visible copy={copy} cancel={() => {}} confirm={() => set_confirmed(confirmed + 1)} />
         }

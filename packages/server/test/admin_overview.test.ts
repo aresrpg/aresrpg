@@ -15,7 +15,16 @@ test('overview derives exact active and money totals from the selected tier', as
     analytics_hashes: async (keys: readonly string[]) => keys.map(() => ({})),
     analytics_totals: async (keys: readonly string[]) =>
       keys.map((key) => {
-        if (key === 'analytics:totals:all') return { ...ZERO_TOTALS, transactions: '12', gas_mist: '250000000' }
+        if (key === 'analytics:totals:all')
+          return {
+            ...ZERO_TOTALS,
+            transactions: '12',
+            gas_mist: '250000000',
+            item_royalty_mist: '9007199254740993',
+            character_royalty_mist: '30',
+            character_creation_mist: '40',
+            kolizeum_mist: '50',
+          }
         if (key === `analytics:totals:15m:${now_ms}`) return { ...ZERO_TOTALS, transactions: '5', gas_mist: '25000000' }
         if (key === `analytics:totals:day:${now_ms}`)
           return {
@@ -64,6 +73,7 @@ test('overview derives exact active and money totals from the selected tier', as
   expect(result.transactions.gas_all_time_mist).toBe('250000000')
   expect(result.revenue.character_creation_mist).toBe('1000')
   expect(result.revenue.kolizeum_mist).toBe('20')
+  expect(result.revenue.all_time_revenue_mist).toBe('9007199254741113')
   expect(result.revenue.last_30d_revenue_mist).toBe('1058')
   expect(result.revenue.month_to_date_revenue_mist).toBe('1058')
   expect(result.online).not.toHaveProperty('online_now')
@@ -101,6 +111,7 @@ test('ranges use compacted hourly, weekly, and monthly buckets', async () => {
     characters_days: 365,
     now_ms,
   })
+  expect(overview.revenue.all_time_revenue_mist).toBe('0')
   expect(overview.revenue.bucket).toBe('hour')
   expect(overview.players.bucket).toBe('day')
   expect(overview.transactions.bucket).toBe('hour')

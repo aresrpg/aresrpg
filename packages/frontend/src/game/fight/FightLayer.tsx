@@ -99,7 +99,6 @@ export const FightLayer = ({
   const simulator = useAppStore((state) => state.simulator)
   const session = useAppStore((state) => state.session)
   const settings = useAppStore((state) => state.settings)
-  const quality = settings.quality
   const [loaded_characters, set_loaded_characters] = useState<
     Readonly<{ fight: string | null; entities: readonly CharacterEntityRender[] }>
   >(Object.freeze({ fight: null, entities: Object.freeze([]) }))
@@ -496,7 +495,7 @@ export const FightLayer = ({
   }, [checkpoint, fight.restore_serial, restore_applied, scene])
 
   const target_cell = (cell: bigint | null, pointer_type?: string): void => {
-    if (pointer_type !== 'touch') return select_cell(cell)
+    if (pointer_type === 'mouse') return select_cell(cell)
     if (cell === null || actions_locked || !checkpoint) return interact({ type: 'cancel' })
     interact({ type: 'target', checkpoint, cell })
   }
@@ -554,7 +553,7 @@ export const FightLayer = ({
         on_cell_hover={(cell) =>
           set_hover(cell === null ? null : { fight: checkpoint.contract.id, type: 'cell', cell })
         }
-        quality={quality}
+        quality={settings.quality}
         show_start_cells={checkpoint.contract.round === 0n}
       />
       {!ambient && (
@@ -564,6 +563,7 @@ export const FightLayer = ({
           <FightHud
             confirmation={
               <TouchFightConfirmation
+                key={String(hovered_cell)}
                 visible={reviewed_cell(interaction, checkpoint, actions_locked) !== null}
                 copy={copy}
                 cancel={() => interact({ type: 'cancel' })}

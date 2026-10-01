@@ -364,6 +364,7 @@ export type AdminRevenueOverview = Readonly<{
   kolizeum_mist: string
   last_30d_revenue_mist: string
   month_to_date_revenue_mist: string
+  all_time_revenue_mist: string
   money: readonly AdminMoneyPoint[]
 }>
 

@@ -350,9 +350,6 @@
 }
 .aui-inspection--item [data-owned-item-id] {
   padding: 12px;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 .aui-inspection--item > .item-sheet-container {
   padding: 12px;

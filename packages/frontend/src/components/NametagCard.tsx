@@ -3,7 +3,7 @@
 // THE NAMETAG — the house's one identity card: gold ornament corners, a center diamond, a name
 // in warm mono caps, and a stack of detail lines beneath it. It is a pure presentation shell
 // with no idea what it labels, because the same card names a player over their crown, a mob
-// group over its pack, a resource node over its block, and the zone under the compass. One
+// group over its pack, or a resource node over its block. One
 // design, one file: a second copy of these ornaments is how two of them drift apart.
 
 import { CAPTION_STYLE } from '@aresrpg/engine'

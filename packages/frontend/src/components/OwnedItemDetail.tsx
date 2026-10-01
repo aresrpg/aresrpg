@@ -45,7 +45,7 @@ export const OwnedItemDetail = ({
   const detail = owned_item_details(item)
   const text = encyclopedia_text(copy)
   return (
-    <div data-owned-item-id={item.id}>
+    <div className="flex min-h-0 flex-col" data-owned-item-id={item.id}>
       <ItemDetailView
         craft_session={craft_session}
         category={detail.category}

@@ -17,13 +17,30 @@
   width: min(720px, calc(100vw - 660px));
   min-width: 340px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  max-width: 720px;
+  margin-inline: auto;
   pointer-events: none;
 }
 
+.world-zone-search.aui-icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  order: -1;
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
 .gw-compass {
+  flex: 1;
+  min-width: 0;
   position: relative;
   width: 100%;
   overflow: hidden;
@@ -353,7 +370,8 @@
     top: 6px;
     min-width: 0;
     width: min(360px, calc(100vw - 280px));
-    gap: 0;
+    max-width: 360px;
+    gap: 4px;
   }
   .gw-compass__band {
     height: 34px;

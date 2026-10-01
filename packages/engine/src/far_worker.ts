@@ -29,10 +29,6 @@ self.addEventListener('message', ({ data }: MessageEvent<Request>) => {
   const side = Math.floor((horizon_radius * 2) / horizon_step) + 1
   const count = side * side
   const heights = new Float32Array(count)
-  const base_colors = new Float32Array(count * 3)
-  const paired_colors = new Float32Array(count * 3)
-  const roughness = new Float32Array(count)
-  const climate_tint = new Float32Array(count)
   const material_ids = new Float32Array(count)
   const columns = Array.from({ length: count }, (_, index) => {
     const x = index % side
@@ -56,12 +52,7 @@ self.addEventListener('message', ({ data }: MessageEvent<Request>) => {
       ].flatMap((candidate) => (candidate ? [candidate.surface_y] : []))
       const layer = surface_layer_for_slope(terrain_slope(column.surface_y, neighbours, horizon_step))
       const material_id = column[`${layer}_id`]
-      const surface = world.materials.entries[material_id]!
       material_ids[index] = material_id
-      base_colors.set(surface.color, index * 3)
-      paired_colors.set(surface.paired_color, index * 3)
-      roughness[index] = surface.roughness
-      climate_tint[index] = surface.climate_tint ? 1 : 0
     }
   }
   self.postMessage(
@@ -70,21 +61,10 @@ self.addEventListener('message', ({ data }: MessageEvent<Request>) => {
       quality: data.quality,
       center: data.center,
       heights,
-      base_colors,
-      paired_colors,
-      roughness,
-      climate_tint,
       material_ids,
     },
     {
-      transfer: [
-        heights.buffer,
-        base_colors.buffer,
-        paired_colors.buffer,
-        roughness.buffer,
-        climate_tint.buffer,
-        material_ids.buffer,
-      ],
+      transfer: [heights.buffer, material_ids.buffer],
     }
   )
 })

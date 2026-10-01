@@ -779,6 +779,7 @@ admin_page:
   characters_over_time: Charaktere im Zeitverlauf
   revenue_30d: Umsatz der letzten 30 Tage
   revenue_mtd: Umsatz im laufenden Monat
+  revenue_total: Gesamteinnahmen
   last_30_days: Letzte 30 Tage
   calendar_month_to_date: Laufender Kalendermonat
   buyer: Käufer

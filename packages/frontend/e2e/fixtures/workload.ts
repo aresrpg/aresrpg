@@ -24,6 +24,7 @@ import { create_frame_waiter, wait_for_frame_condition } from '../support/frame_
 import { upload_delta, sample_gpu_frame, type GpuFrame, type UploadMetrics } from '../support/gpu_timing_probe.ts'
 
 import { workload_follow_cost } from './workload_follow_cost.ts'
+import { run_solo_walk } from './workload_solo.ts'
 import {
   workload_pets,
   workload_resources,
@@ -555,3 +556,4 @@ declare global {
 window.run_renderer_smoke = run_renderer_smoke
 window.run_diagnostics = run_diagnostics
 window.run_workload = run
+window.run_solo_walk = run_solo_walk

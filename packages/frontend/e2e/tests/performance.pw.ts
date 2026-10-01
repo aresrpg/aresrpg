@@ -10,6 +10,56 @@ import { expect_released_resources } from '../support/workload_assertions.ts'
 
 const CPU_RATE = Number(process.env.PERF_CPU_RATE ?? 1)
 
+test('solo Thebes walking', async ({ page, browser }, info) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+    if (message.text().startsWith('[workload]')) console.log(message.text())
+  })
+  await page.addInitScript(install_probe)
+  await page.addInitScript(install_gpu_timing_probe)
+  const session = await page.context().newCDPSession(page)
+  await session.send('Performance.enable')
+  await session.send('Profiler.enable')
+  await page.exposeFunction('solo_profile', async (stage: string, running: boolean) => {
+    if (running) await session.send('Profiler.start')
+    else {
+      const { profile } = await session.send('Profiler.stop')
+      const { metrics } = await session.send('Performance.getMetrics')
+      await info.attach(stage, { contentType: 'application/json', body: JSON.stringify({ ...profile, metrics }) })
+      await info.attach(`${stage}-view`, { contentType: 'image/png', body: await page.screenshot() })
+    }
+  })
+  await page.goto('/e2e/fixtures/workload.html')
+  await page.waitForFunction(() => typeof window.run_solo_walk === 'function')
+  const { captures, ...result } = await page.evaluate(() => window.run_solo_walk())
+  const adapter = await page.evaluate(() => window.workload_adapter)
+  await info.attach('solo-walk', {
+    contentType: 'application/json',
+    body: JSON.stringify({ cpu: cpus()[0]!.model, browser: browser.version(), adapter, ...result }),
+  })
+  for (const [quality, capture] of Object.entries(captures)) {
+    await info.attach(`horizon-${quality}`, {
+      contentType: 'image/png',
+      body: Buffer.from(capture.split(',')[1]!, 'base64'),
+    })
+  }
+  expect(result.cold.pose!.x).toBeLessThan(200)
+  expect(result.warm.pose!.x).toBeLessThan(200)
+  expect(result.backend).toBe('webgpu')
+  expect(adapter).not.toBeNull()
+  expect(adapter!.fallback).toBe(false)
+  expect(JSON.stringify(adapter)).not.toMatch(/swiftshader|llvmpipe|software/i)
+  expect(await page.evaluate(() => window.workload_resources())).toEqual({
+    buffers: 0,
+    large_buffers: 0,
+    buffer_bytes: 0,
+    textures: 0,
+  })
+  expect(errors).toEqual([])
+})
+
 // Report measured throughput with machine identity; OS names are not hardware budgets.
 for (const location of ['city', 'forest'] as const) {
   test(`production ${location} streaming and population`, async ({ page, browser }, info) => {

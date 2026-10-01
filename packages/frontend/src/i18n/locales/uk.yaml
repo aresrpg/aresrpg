@@ -779,6 +779,7 @@ admin_page:
   characters_over_time: Персонажі в часі
   revenue_30d: Дохід за 30 днів
   revenue_mtd: Дохід від початку місяця
+  revenue_total: Загальний дохід
   last_30_days: Останні 30 днів
   calendar_month_to_date: Від початку календарного місяця
   buyer: Покупець

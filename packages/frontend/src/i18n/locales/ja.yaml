@@ -779,6 +779,7 @@ admin_page:
   characters_over_time: キャラクター数の推移
   revenue_30d: 30日間の収益
   revenue_mtd: 月初来収益
+  revenue_total: 総収益
   last_30_days: 過去30日
   calendar_month_to_date: 今月の月初来
   buyer: 購入者

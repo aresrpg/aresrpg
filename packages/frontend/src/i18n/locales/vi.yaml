@@ -780,6 +780,7 @@ admin_page:
   characters_over_time: Nhân vật theo thời gian
   revenue_30d: Doanh thu 30 ngày
   revenue_mtd: Doanh thu từ đầu tháng
+  revenue_total: Tổng doanh thu
   last_30_days: 30 ngày qua
   calendar_month_to_date: Từ đầu tháng dương lịch
   buyer: Người mua

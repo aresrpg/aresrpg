@@ -91,3 +91,9 @@
     font-size: 12px;
   }
 }
+
+@media (max-width: 1023px), (pointer: coarse) {
+  .current-event-hud {
+    display: none;
+  }
+}

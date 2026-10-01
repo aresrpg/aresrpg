@@ -7,6 +7,7 @@ import {
   DoubleSide,
   Mesh,
   Vector2,
+  Vector3,
   type DataArrayTexture,
   type Material,
   type Scene,
@@ -33,6 +34,7 @@ import {
   smoothstep,
   transformNormalToView,
   uniform,
+  uniformArray,
   vec3,
 } from 'three/tsl'
 
@@ -51,10 +53,6 @@ type FarSample = Readonly<{
   quality: EngineQuality
   center: readonly [number, number]
   heights: Float32Array
-  base_colors: Float32Array
-  paired_colors: Float32Array
-  roughness: Float32Array
-  climate_tint: Float32Array
   material_ids: Float32Array
 }>
 
@@ -112,11 +110,8 @@ const create_ring_geometry = (quality: EngineQuality, far_radius: number): Buffe
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(positions, 3))
-  geometry.setAttribute('base_color', new BufferAttribute(new Float32Array(positions.length), 3))
-  geometry.setAttribute('paired_color', new BufferAttribute(new Float32Array(positions.length), 3))
-  geometry.setAttribute('roughness', new BufferAttribute(new Float32Array(side * side), 1))
+  geometry.setAttribute('height', new BufferAttribute(new Float32Array(side * side), 1))
   geometry.setAttribute('material_id', new BufferAttribute(new Float32Array(side * side), 1))
-  geometry.setAttribute('climate_tint', new BufferAttribute(new Float32Array(side * side), 1))
   // WebGPU DynamicDrawUsage forces a full upload on every render. Version changes
   // already mark the rare radius edits; keep stationary topology resident.
   geometry.setIndex(new BufferAttribute(new Uint32Array((side - 1) ** 2 * 6), 1))
@@ -137,13 +132,30 @@ const build_material = (
     quality === 'low'
       ? new MeshBasicNodeMaterial({ side: DoubleSide })
       : new MeshStandardNodeMaterial({ side: DoubleSide, roughness: 0.94, metalness: 0 })
-  const local = attribute('position', 'vec3' as const)
+  const grid = attribute('position', 'vec3' as const)
+  const local = vec3(grid.x, attribute('height', 'float' as const), grid.z)
   const environment_light =
     quality === 'low' ? mix(float(0.32), float(1), smoothstep(-0.14, 0.18, sun_direction.y)) : float(1)
-  const base_color = attribute('base_color', 'vec3' as const)
-  const paired_color = attribute('paired_color', 'vec3' as const)
-  const roughness = attribute('roughness', 'float' as const)
-  const climate_tint = attribute('climate_tint', 'float' as const)
+  // Look up appearance in the vertex stage, then interpolate colors and response, never IDs.
+  // Walking resends only height + identity; the immutable palette stays on the GPU.
+  const vertex_id = attribute('material_id', 'float' as const)
+  const base_color = varying(material_color_node(materials, vertex_id.toUint()))
+  const paired_color = varying(
+    uniformArray(
+      materials.entries.map(({ paired_color }) => new Vector3(...paired_color)),
+      'vec3' as const
+    ).element(int(vertex_id)) as unknown as Node<'vec3'>
+  )
+  const roughness = varying(
+    uniformArray(materials.entries.map(({ roughness }) => roughness)).element(
+      int(vertex_id)
+    ) as unknown as Node<'float'>
+  )
+  const climate_tint = varying(
+    uniformArray(materials.entries.map(({ climate_tint }) => Number(climate_tint))).element(
+      int(vertex_id)
+    ) as unknown as Node<'float'>
+  )
   const position_world = { x: local.x.add(center.x), z: local.z.add(center.y) }
   const tint = macro_surface_tint_nodes({ paired_color, roughness, climate_tint, position_world })
   const face_normal = positionWorld.dFdx().cross(positionWorld.dFdy()).normalize()
@@ -159,7 +171,7 @@ const build_material = (
         .select(vec2(positionWorld.x, positionWorld.z.negate()), vec2(positionWorld.x, positionWorld.y.negate()))
     )
   // Material identity is flat per triangle: interpolating IDs would sample unrelated atlas layers.
-  const material_id = varying(attribute('material_id', 'float' as const)).setInterpolation('flat')
+  const material_id = varying(vertex_id).setInterpolation('flat')
   const detail = texture(material_texture, surface_uv.div(MATERIAL_TEXTURE_BLOCK_SPAN)).depth(int(material_id)).rgb
   const authored_color = material_color_node(materials, material_id.toUint()).max(vec3(1e-4))
   const color = tint.tint_albedo(base_color.mul(detail.div(authored_color))).mul(environment_light)
@@ -270,22 +282,9 @@ export const create_far_terrain = ({
     if (!disposed && data.id === request_id && data.quality === active_quality) {
       applied_id = data.id
       const mesh = meshes[data.quality]
-      const positions = mesh.geometry.getAttribute('position') as BufferAttribute
-      const position_array = positions.array as Float32Array
-      for (let index = 0; index < data.heights.length; index += 1) position_array[index * 3 + 1] = data.heights[index]
-      positions.needsUpdate = true
-      const base_colors = mesh.geometry.getAttribute('base_color') as BufferAttribute
-      ;(base_colors.array as Float32Array).set(data.base_colors)
-      base_colors.needsUpdate = true
-      const paired_colors = mesh.geometry.getAttribute('paired_color') as BufferAttribute
-      ;(paired_colors.array as Float32Array).set(data.paired_colors)
-      paired_colors.needsUpdate = true
-      const roughness = mesh.geometry.getAttribute('roughness') as BufferAttribute
-      ;(roughness.array as Float32Array).set(data.roughness)
-      roughness.needsUpdate = true
-      const climate_tint = mesh.geometry.getAttribute('climate_tint') as BufferAttribute
-      ;(climate_tint.array as Float32Array).set(data.climate_tint)
-      climate_tint.needsUpdate = true
+      const heights = mesh.geometry.getAttribute('height') as BufferAttribute
+      ;(heights.array as Float32Array).set(data.heights)
+      heights.needsUpdate = true
       const material_ids = mesh.geometry.getAttribute('material_id') as BufferAttribute
       ;(material_ids.array as Float32Array).set(data.material_ids)
       material_ids.needsUpdate = true

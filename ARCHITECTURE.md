@@ -122,7 +122,8 @@ World prompts expose the same actions through buttons and keyboard shortcuts, wi
 instructions on touch devices. Character taps open the existing context menu through the same body
 picker as desktop. Camera drags and cancelled touches never become menu taps.
 Fight interaction retains one action, inspection target and optional reviewed checkpoint. Touch taps
-preview; confirmation revalidates the same checkpoint through the existing cell-selection door.
+preview through one pointer-gesture path; compatibility clicks never select again. Confirmation
+requires a fresh press on its control and revalidates the same checkpoint through the existing cell-selection door.
 Changed checkpoints, action changes and locked actions invalidate review. Board input belongs to the
 scene's exact canvas; dragging, cancellation and other UI canvases cannot select a fight cell.
 
@@ -590,6 +591,8 @@ connection. Participant, explicit spectator, modal preview and ambient demand sh
 Fight checkpoint reads coalesce across viewers for each indexer event, while each connection
 retains its ordered witness delivery and its own projected authority.
 
+Explicit spectating presents turn order and played turn portraits through the shared fight HUD;
+only participants receive action controls.
 The ambient board replaces its sword but retains the join marker. It uses the ordinary fight
 models, spectator visibility and animation queue alongside world entities. It takes neither
 camera nor movement ownership and shows no combat HUD or non-spatial combat audio. Leaving drops
@@ -798,7 +801,10 @@ height mist, horizon brightness and physical sky parameters through the same def
 demo controls. Omitted presets retain cinematic atmosphere. Quality still owns the distant horizon
 closure independently of the preset's aerial-perspective range.
 Far terrain samples the same biome material texture generator as direct terrain, with flat triangle
-material IDs and world-space UVs. Its texture cache is bounded by quality resolution and released with
+material IDs and world-space UVs. Focus updates transfer only heights and material IDs; static XZ
+vertices and the material palette stay resident. Vertex-stage palette lookups preserve interpolated
+appearance without resending colors and roughness. Opaque baked details omit their color graph
+during shadow passes, so chunk-owned material lifetimes reuse one constant shadow program. Its texture cache is bounded by quality resolution and released with
 the world. Nature rendering shares one neutral four-tile atlas definition across resources, ground scatter and authored
 scenery. Each layer owns one texture lifetime; palettes and climate tint still own color. Padded tiles supply
 leaf veins, mineral striations, mushroom caps, gills and stem fibres. Bent botanical ribbons and faceted ore

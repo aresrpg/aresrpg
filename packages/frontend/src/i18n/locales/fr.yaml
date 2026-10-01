@@ -779,6 +779,7 @@ admin_page:
   characters_over_time: Personnages dans le temps
   revenue_30d: Revenus sur 30 jours
   revenue_mtd: Revenus du mois en cours
+  revenue_total: Revenus totaux
   last_30_days: 30 derniers jours
   calendar_month_to_date: Mois calendaire en cours
   buyer: Acheteur

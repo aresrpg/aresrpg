@@ -8,12 +8,14 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 /* One item sheet is shared by inventory, recipes, drops and linked items. */
 .item-detail-view {
   font-family: var(--aui-font);
   color: var(--aui-ink);
   min-height: 0;
+  flex-shrink: 0;
 }
 .item-detail-header {
   display: flex;
@@ -192,12 +194,23 @@
     padding: 10px;
     gap: 4px;
   }
+  .game-character-body .chr-equip__detail .item-sheet-container {
+    /* The viewport owns this layout; inline containment hides its intrinsic recipe width. */
+    container-type: normal;
+  }
   .game-character-body .chr-equip__detail [data-item-detail-view] {
     display: grid;
-    grid-template-columns: minmax(200px, 1fr) minmax(220px, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-content: start;
     gap: 8px 16px;
     padding: 0 26px 0 0;
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view]:has(> .jobs__craft) {
+    grid-template-columns: minmax(200px, 1fr) minmax(220px, 1fr);
+  }
+  .game-character-body .chr-equip__detail [data-item-detail-view] > .jobs__craft {
+    grid-column: 2;
+    grid-row: 1 / span 8;
   }
   .game-character-body .chr-equip__detail [data-item-detail-view] > .item-detail-header {
     flex-direction: row;
@@ -410,11 +423,6 @@
 }
 .aui-stat-delta[data-gain='true'] {
   color: #9cd5ad;
-}
-.game-character-body .chr-equip__detail > [data-owned-item-id] {
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
 }
 .game-character-body .chr-equip__detail > .inventory-item-actions {
   flex-shrink: 0;

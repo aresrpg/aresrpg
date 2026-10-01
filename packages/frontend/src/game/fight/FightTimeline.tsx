@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+/* eslint-disable functional/immutable-data -- Refs retain pending pointer gestures at this DOM input boundary. */
 
 import { useText } from '../../i18n/useText.ts'
 
 import { Text } from '../../i18n/Text.tsx'
 
+import { useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { character_icon } from '../../content/assets.ts'
@@ -79,6 +81,7 @@ export const FightTimeline = ({
   turn_seconds: number | null
 }>) => {
   const ui = useText()
+  const pointer_type = useRef<string | undefined>(undefined)
   const targetable = new Set(targetable_cells)
   return (
     <details aria-label={label} className="fight-hud__turns" open>
@@ -100,8 +103,19 @@ export const FightTimeline = ({
               className={timeline_card_class(fighter, can_target)}
               key={fighter.seat.toString()}
               onBlur={() => focus(null)}
+              onPointerDown={(event) => {
+                pointer_type.current = event.pointerType
+              }}
+              onPointerCancel={() => {
+                pointer_type.current = undefined
+              }}
+              onPointerLeave={() => {
+                pointer_type.current = undefined
+              }}
               onClick={(event) => {
-                if (can_target) target(fighter, (event.nativeEvent as PointerEvent).pointerType)
+                const input = event.detail === 0 ? undefined : pointer_type.current
+                pointer_type.current = undefined
+                if (can_target) target(fighter, input)
               }}
               onFocus={() => focus(fighter)}
               onMouseEnter={() => focus(fighter)}

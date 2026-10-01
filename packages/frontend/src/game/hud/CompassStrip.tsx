@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { ZonePrompt } from '../../components/ZonePrompt.tsx'
 import { useText } from '../../i18n/useText.ts'
 
 import { Text } from '../../i18n/Text.tsx'
@@ -16,7 +17,7 @@ import { DAY_FRAC } from '@aresrpg/engine'
 import { client_to_chain_coordinate, world_center } from '@aresrpg/immutable'
 import { ZONE_RESEARCH_TTL_MS, ZONE_SIZE, zone_of } from '@aresrpg/protocol'
 import { Building2, Skull, Diamond } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 
 import './compass_strip.css'
 import { city_at_position, world_city_areas } from '../../content/worlds.ts'
@@ -127,6 +128,32 @@ export const CompassStrip = ({
   objective?: Readonly<{ x: number; z: number; label: string }>
 }>) => {
   const pose = useWorldPose()
+  const root = useRef<HTMLDivElement>(null)
+  const visible = pose !== null
+  useEffect(() => {
+    const element = root.current
+    if (!element) return
+    const scope = element.closest('.app-ui') ?? document
+    const status = scope.querySelector<HTMLElement>('.world-status > .aui-performance')
+    const dock = scope.querySelector<HTMLElement>('.world-social-dock')
+    const frame = element.offsetParent
+    if (!status || !dock || !(frame instanceof HTMLElement)) return
+    const arrange = (): void => {
+      const bounds = frame.getBoundingClientRect()
+      element.style.setProperty('left', `${Math.max(8, status.getBoundingClientRect().right - bounds.left + 8)}px`)
+      element.style.setProperty('right', `${Math.max(8, bounds.right - dock.getBoundingClientRect().left + 8)}px`)
+      element.style.setProperty('width', 'auto')
+      element.style.setProperty('transform', 'none')
+    }
+    const observer = new ResizeObserver(arrange)
+    for (const target of [frame, status, dock]) observer.observe(target)
+    window.addEventListener('resize', arrange)
+    arrange()
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', arrange)
+    }
+  }, [visible])
   const zones = useAppStore(({ world }) => world.zones)
   const world_state = useAppStore(({ world }) => world)
   const world_name = useAppStore(
@@ -192,7 +219,7 @@ export const CompassStrip = ({
   const night = pose.time_of_day >= DAY_FRAC
 
   return (
-    <div className="gw-compass-wrap" data-tutorial-target="compass">
+    <div ref={root} className="gw-compass-wrap" data-tutorial-target="compass">
       <div
         aria-label={text('compass_label')}
         className={`gw-compass${searchable ? ' gw-compass--searchable' : ''}`}
@@ -269,6 +296,7 @@ export const CompassStrip = ({
           <span className="gw-compass__tod-mark" style={{ left: `${pose.time_of_day * 100}%` }} />
         </div>
       </div>
+      <ZonePrompt copy={copy} />
     </div>
   )
 }

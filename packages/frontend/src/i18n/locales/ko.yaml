@@ -780,6 +780,7 @@ admin_page:
   characters_over_time: 시간별 캐릭터 수
   revenue_30d: 30일 수익
   revenue_mtd: 이번 달 누적 수익
+  revenue_total: 총 수익
   last_30_days: 최근 30일
   calendar_month_to_date: 이번 달 시작부터 현재까지
   buyer: 구매자

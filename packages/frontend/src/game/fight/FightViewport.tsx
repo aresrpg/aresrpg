@@ -195,57 +195,48 @@ export const FightViewport = ({
     // rides the document and answers only for events that landed on that canvas. Anything over
     // the HUD is the HUD's, and the world's own controls are inert outside follow mode.
     const on_board = (event: MouseEvent): boolean => event.target === scene.canvas
-    const click = (event: MouseEvent): void => {
-      if ((event as PointerEvent).pointerType === 'touch' || event.button !== 0 || !on_board(event)) return
-      const cell = view.pick_cell(event.clientX, event.clientY)
-      click_ref.current?.(cell === null ? null : BigInt(cell), {
-        x: event.clientX,
-        y: event.clientY,
-        pointer_type: 'mouse',
-      })
-    }
     const move = (event: MouseEvent): void => {
       publish_hover(on_board(event) ? view.pick_cell(event.clientX, event.clientY) : null)
     }
-    let touch: BoardPointer | null = null
-    const touch_down = (event: PointerEvent): void => {
-      if (event.pointerType !== 'touch' || !on_board(event)) return
-      touch = touch
-        ? { ...touch, dragged: true }
+    let pointer: BoardPointer | null = null
+    const down = (event: PointerEvent): void => {
+      if (event.button !== 0 || !on_board(event)) return
+      pointer = pointer
+        ? { ...pointer, dragged: true }
         : { id: event.pointerId, x: event.clientX, y: event.clientY, dragged: false }
     }
-    const touch_move = (event: PointerEvent): void => {
-      if (touch) touch = move_board_pointer(touch, event.pointerId, event.clientX, event.clientY)
+    const drag = (event: PointerEvent): void => {
+      if (pointer) pointer = move_board_pointer(pointer, event.pointerId, event.clientX, event.clientY)
     }
-    const touch_up = (event: PointerEvent): void => {
-      if (!touch || touch.id !== event.pointerId) return
-      const taps = board_pointer_taps(touch, event.pointerId, event.clientX, event.clientY)
-      touch = null
+    const up = (event: PointerEvent): void => {
+      if (!pointer || pointer.id !== event.pointerId) return
+      const taps = board_pointer_taps(pointer, event.pointerId, event.clientX, event.clientY)
+      pointer = null
       if (!taps || !on_board(event)) return
       const cell = view.pick_cell(event.clientX, event.clientY)
       click_ref.current?.(cell === null ? null : BigInt(cell), {
         x: event.clientX,
         y: event.clientY,
-        pointer_type: 'touch',
+        pointer_type: event.pointerType,
       })
     }
-    const touch_cancel = (): void => {
-      touch = null
+    const cancel = (): void => {
+      pointer = null
     }
-    globalThis.addEventListener('pointerdown', touch_down)
-    globalThis.addEventListener('pointermove', touch_move)
-    globalThis.addEventListener('pointerup', touch_up)
-    globalThis.addEventListener('pointercancel', touch_cancel)
-    globalThis.addEventListener('blur', touch_cancel)
-    globalThis.addEventListener('click', click)
+    // One pointer gesture owns selection. A browser's later compatibility click must not
+    // turn a touch preview into a second, immediate mouse action.
+    globalThis.addEventListener('pointerdown', down)
+    globalThis.addEventListener('pointermove', drag)
+    globalThis.addEventListener('pointerup', up)
+    globalThis.addEventListener('pointercancel', cancel)
+    globalThis.addEventListener('blur', cancel)
     globalThis.addEventListener('mousemove', move)
     return () => {
-      globalThis.removeEventListener('pointerdown', touch_down)
-      globalThis.removeEventListener('pointermove', touch_move)
-      globalThis.removeEventListener('pointerup', touch_up)
-      globalThis.removeEventListener('pointercancel', touch_cancel)
-      globalThis.removeEventListener('blur', touch_cancel)
-      globalThis.removeEventListener('click', click)
+      globalThis.removeEventListener('pointerdown', down)
+      globalThis.removeEventListener('pointermove', drag)
+      globalThis.removeEventListener('pointerup', up)
+      globalThis.removeEventListener('pointercancel', cancel)
+      globalThis.removeEventListener('blur', cancel)
       globalThis.removeEventListener('mousemove', move)
       dispose()
     }

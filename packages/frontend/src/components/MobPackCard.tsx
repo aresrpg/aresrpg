@@ -50,13 +50,7 @@ export const MobPackCard = ({
     })}
     {active && (
       <footer>
-        <button
-          type="button"
-          data-world-interaction
-          className="min-h-11 w-full"
-          onClick={activate}
-          disabled={!activate}
-        >
+        <button type="button" data-world-interaction className="w-full" onClick={activate} disabled={!activate}>
           <PromptText
             template={copy.world_hud.spawn_press_attack!}
             touch_template={copy.world_hud.spawn_press_attack_touch!}

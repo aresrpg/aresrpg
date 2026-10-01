@@ -79,8 +79,15 @@ export const TutorialSequence = ({
   complete,
   copy,
   id,
-}: Readonly<{ complete: () => void; copy: AppCopy; id: TutorialId }>) => {
-  const [index, set_index] = useState(0)
+  index,
+  select_step,
+}: Readonly<{
+  complete: () => void
+  copy: AppCopy
+  id: TutorialId
+  index: number
+  select_step: (index: number) => void
+}>) => {
   const text = copy_text(copy.tutorial)
   const steps = tutorial_steps(id),
     step = steps[index]!
@@ -98,10 +105,10 @@ export const TutorialSequence = ({
         <h2>{text(`${step.key}_title`)}</h2>
         <p>{text(`${step.key}_body`, { level: RUNE_UNLOCK_LEVEL })}</p>
         <footer>
-          <Button disabled={index === 0} onClick={() => set_index((current) => current - 1)}>
+          <Button disabled={index === 0} onClick={() => select_step(index - 1)}>
             <ArrowLeft size={13} /> {text('back')}
           </Button>
-          <Button tone="primary" onClick={() => (last ? complete() : set_index((current) => current + 1))}>
+          <Button tone="primary" onClick={() => (last ? complete() : select_step(index + 1))}>
             {last ? text('finish') : text('next')}
             {last ? <Check size={13} /> : <ArrowRight size={13} />}
           </Button>
@@ -127,6 +134,12 @@ const owns_fighter = (
 export const TutorialHost = ({ blocked, copy }: Readonly<{ blocked: boolean; copy: AppCopy }>) => {
   const navigation = useAppStore((state) => state.navigation)
   const settings = useAppStore((state) => state.settings)
+  const [progress, set_progress] = useState<Partial<Record<TutorialId, number>>>({})
+  useEffect(() => {
+    // Settings keeps this array when editing ordinary preferences; replacing it with an
+    // empty list is the existing explicit tutorial reset, including an unfinished tour.
+    if (settings.completed_tutorials?.length === 0) set_progress({})
+  }, [settings.completed_tutorials])
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const roster_loaded = useAppStore((state) => state.session.roster_loaded)
   const link_status = useAppStore((state) => state.session.link_status)
@@ -168,5 +181,14 @@ export const TutorialHost = ({ blocked, copy }: Readonly<{ blocked: boolean; cop
       type: 'settings/changed',
       settings: Object.freeze({ ...settings, completed_tutorials: Object.freeze([...completed, id]) }),
     })
-  return <TutorialSequence complete={complete} copy={copy} id={id} key={id} />
+  return (
+    <TutorialSequence
+      complete={complete}
+      copy={copy}
+      id={id}
+      key={id}
+      index={progress[id] ?? 0}
+      select_step={(index) => set_progress((current) => ({ ...current, [id]: index }))}
+    />
+  )
 }

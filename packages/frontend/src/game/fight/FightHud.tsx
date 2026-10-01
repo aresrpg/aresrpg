@@ -427,7 +427,7 @@ export const FightHud = ({
       </div>
     )
   }
-  if (view.phase !== 'active' || !view.selected) return null
+  if (view.phase !== 'active') return null
   const selected = view.selected
   const turn_intent = end_turn_intent({
     can_end_turn: view.can_end_turn,
@@ -437,20 +437,20 @@ export const FightHud = ({
     end_turn_submitted: fight.end_turn_submitted,
     transaction_pending: fight.transaction_pending,
   })
-  const queue_or_end_turn = (): void => {
+  const queue_or_end_turn = (seat: bigint): void => {
     if (turn_intent === 'queue') {
       dispatch_app({ type: 'fight/end_turn_queued', fight: fight_id, queued: true })
       return
     }
-    if (turn_intent === 'submit') submit_end_turn(command_fight, selected.seat)
+    if (turn_intent === 'submit') submit_end_turn(command_fight, seat)
   }
-  const forfeit = (): void => {
+  const forfeit = (seat: bigint): void => {
     set_forfeit_open(false)
     dispatch_app({
       type: 'fight/input',
       fight: command_fight,
       origin: 'local',
-      input: { type: 'forfeit', fighter: selected.seat },
+      input: { type: 'forfeit', fighter: seat },
     })
   }
   return (
@@ -461,26 +461,6 @@ export const FightHud = ({
           key={displayed_turn_card.key}
           level_label={template(copy.simulator_page.level, { level: displayed_turn_card.fighter.level.toString() })}
           mob_icon_for={mob_icon_for}
-        />
-      )}
-      {watching_stall && !crank_hidden && (
-        <CrankBanner
-          ready={chain_deadline_reached(
-            clock,
-            fight.checkpoint.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms,
-            monotonic_ms
-          )}
-          on_crank={() => {
-            if (!turn_key || actions_locked) return
-            set_crank_attempt(Object.freeze({ turn_key, restore_serial: fight.restore_serial }))
-            dispatch_app({
-              type: 'fight/input',
-              fight: command_fight,
-              origin: 'local',
-              input: { type: 'crank' },
-            })
-          }}
-          text={copy.fight_hud}
         />
       )}
       <FightTimeline
@@ -504,61 +484,89 @@ export const FightHud = ({
         turn_seconds={turn_clock.seconds}
       />
       {chat}
-      <div className="fight-hud__bottom">
-        {confirmation}
-        <CombatHud
-          spell_count={selected.spells.length + Number(!!selected.weapon)}
-          label={copy.ui.design_combat}
-          vitals={<VitalsDisplay ap={selected.ap} hp={selected.hp} max_hp={selected.max_hp} mp={selected.mp} />}
-          spells={
-            <FightSpells
-              can_act={view.can_end_turn && !actions_locked}
-              copy={copy}
-              fighter={selected}
-              select_action={select_action}
-              selected_action={selected_action}
+      {selected && (
+        <>
+          {watching_stall && !crank_hidden && (
+            <CrankBanner
+              ready={chain_deadline_reached(
+                clock,
+                fight.checkpoint.contract.turn_started_ms + CONTRACT_CONSTANTS.turn_max_ms,
+                monotonic_ms
+              )}
+              on_crank={() => {
+                if (!turn_key || actions_locked) return
+                set_crank_attempt(Object.freeze({ turn_key, restore_serial: fight.restore_serial }))
+                dispatch_app({
+                  type: 'fight/input',
+                  fight: command_fight,
+                  origin: 'local',
+                  input: { type: 'crank' },
+                })
+              }}
               text={copy.fight_hud}
             />
-          }
-          timer={
-            turn_clock.seconds === null
-              ? null
-              : {
-                  label: copy.fight_hud.end_turn,
-                  remaining: turn_clock.seconds,
-                  duration: Number(CONTRACT_CONSTANTS.turn_max_ms) / 1000,
-                }
-          }
-          controls={
-            <>
-              <Button tone="primary" disabled={turn_intent === null} onClick={queue_or_end_turn}>
-                {fight.end_turn_queued ? copy.fight_hud.end_turn_queued : copy.fight_hud.end_turn}
-              </Button>
-              <div className="aui-combat-utilities">
-                <Button
-                  tone="danger"
-                  aria-label={copy.fight_hud.forfeit}
-                  disabled={!view.can_forfeit || actions_locked}
-                  onClick={() => set_forfeit_open(true)}
-                >
-                  <Flag size={14} />
-                </Button>
-              </div>
-            </>
-          }
-        />
-      </div>
-      {forfeit_open && (
-        <ConfirmDialog
-          danger
-          title={template(copy.fight_hud.forfeit_title, { name: selected.name })}
-          description={template(copy.fight_hud.forfeit_body, { name: selected.name })}
-          close_label={copy.dismiss}
-          cancel_label={copy.cancel}
-          confirm_label={copy.fight_hud.confirm_forfeit}
-          on_cancel={() => set_forfeit_open(false)}
-          on_confirm={forfeit}
-        />
+          )}
+          <div className="fight-hud__bottom">
+            {confirmation}
+            <CombatHud
+              spell_count={selected.spells.length + Number(!!selected.weapon)}
+              label={copy.ui.design_combat}
+              vitals={<VitalsDisplay ap={selected.ap} hp={selected.hp} max_hp={selected.max_hp} mp={selected.mp} />}
+              spells={
+                <FightSpells
+                  can_act={view.can_end_turn && !actions_locked}
+                  copy={copy}
+                  fighter={selected}
+                  select_action={select_action}
+                  selected_action={selected_action}
+                  text={copy.fight_hud}
+                />
+              }
+              timer={
+                turn_clock.seconds === null
+                  ? null
+                  : {
+                      label: copy.fight_hud.end_turn,
+                      remaining: turn_clock.seconds,
+                      duration: Number(CONTRACT_CONSTANTS.turn_max_ms) / 1000,
+                    }
+              }
+              controls={
+                <>
+                  <Button
+                    tone="primary"
+                    disabled={turn_intent === null}
+                    onClick={() => queue_or_end_turn(selected.seat)}
+                  >
+                    {fight.end_turn_queued ? copy.fight_hud.end_turn_queued : copy.fight_hud.end_turn}
+                  </Button>
+                  <div className="aui-combat-utilities">
+                    <Button
+                      tone="danger"
+                      aria-label={copy.fight_hud.forfeit}
+                      disabled={!view.can_forfeit || actions_locked}
+                      onClick={() => set_forfeit_open(true)}
+                    >
+                      <Flag size={14} />
+                    </Button>
+                  </div>
+                </>
+              }
+            />
+          </div>
+          {forfeit_open && (
+            <ConfirmDialog
+              danger
+              title={template(copy.fight_hud.forfeit_title, { name: selected.name })}
+              description={template(copy.fight_hud.forfeit_body, { name: selected.name })}
+              close_label={copy.dismiss}
+              cancel_label={copy.cancel}
+              confirm_label={copy.fight_hud.confirm_forfeit}
+              on_cancel={() => set_forfeit_open(false)}
+              on_confirm={() => forfeit(selected.seat)}
+            />
+          )}
+        </>
       )}
     </div>
   )

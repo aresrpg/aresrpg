@@ -142,7 +142,7 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
   const mtd_start = month_start(now_ms)
   const daily = bucket_range(Math.min(last_30d_start, mtd_start), now_ms, DAY_MS)
   const day_key = (at_ms: number): string => `analytics:totals:day:${at_ms}`
-  const rows = await numeric_rows(graph, [...selected_keys, ...daily.map(day_key)])
+  const rows = await numeric_rows(graph, [ALL_TOTALS_KEY, ...selected_keys, ...daily.map(day_key)])
   const money = buckets.values.map((at_ms, index) =>
     money_point(at_ms, [rows.get(selected_keys[index]!) ?? ZERO_TOTALS])
   )
@@ -156,6 +156,7 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     ])
   const last_30d = total_since(last_30d_start)
   const month_to_date = total_since(mtd_start)
+  const all_time = sum_money([money_point(0, [rows.get(ALL_TOTALS_KEY) ?? ZERO_TOTALS])])
   const revenue_total = (row: ReturnType<typeof sum_money>): string =>
     (row.item_royalty_mist + row.character_royalty_mist + row.character_creation_mist + row.kolizeum_mist).toString()
   return Object.freeze({
@@ -167,6 +168,7 @@ const load_revenue = async (graph: GraphBus, days: AdminRangeDays, now_ms: numbe
     kolizeum_mist: selected.kolizeum_mist.toString(),
     last_30d_revenue_mist: revenue_total(last_30d),
     month_to_date_revenue_mist: revenue_total(month_to_date),
+    all_time_revenue_mist: revenue_total(all_time),
     money,
   })
 }

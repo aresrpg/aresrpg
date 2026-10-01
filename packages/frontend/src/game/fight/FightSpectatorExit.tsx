@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { Button } from '@aresrpg/ui'
 import { LogOut } from 'lucide-react'
 
 import type { AppCopy } from '../../i18n/copy.ts'
@@ -28,13 +29,13 @@ export const FightSpectatorExit = ({
 }: Readonly<{ copy: AppCopy; character_id: string | null }>) => {
   if (!character_id) return null
   return (
-    <button
-      className="pointer-events-auto absolute top-3 right-3 z-10 flex cursor-pointer items-center gap-2 border border-white/10 bg-black/55 px-3 py-2 text-[10px] tracking-[0.14em] text-[#a3a5ad] uppercase backdrop-blur hover:border-[#c8963c]/40 hover:text-[#c8963c]"
+    <Button
+      className="pointer-events-auto absolute right-[max(12px,env(safe-area-inset-right))] bottom-[max(12px,env(safe-area-inset-bottom))] z-10"
       onClick={() => dispatch_app({ type: 'fight/spectating', character_id, fight: null })}
       type="button"
     >
-      <LogOut size={14} />
+      <LogOut size={16} aria-hidden="true" />
       {copy.fight_hud.stop_spectating}
-    </button>
+    </Button>
   )
 }

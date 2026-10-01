@@ -8,18 +8,15 @@ for (const viewport of [{ width: 844, height: 390 }]) {
     await page.goto(`/e2e/fixtures/ui_world_hud.html?hud-layout${viewport.width < 900 ? '&mobile' : ''}`)
     const chat = page.locator('.gw-worldchat'),
       banner = page.locator('.current-event-hud')
-    await expect(banner).toBeVisible()
-    const chat_box = (await chat.boundingBox())!,
-      banner_box = (await banner.boundingBox())!
-    expect(banner_box.x).toBe(chat_box.x)
-    if (viewport.width >= 1024) expect(banner_box.width).toBe(chat_box.width)
-    else {
-      expect(chat_box.width).toBeLessThan(90)
-      expect(banner_box.width).toBeGreaterThan(chat_box.width)
-      expect(banner_box.x + banner_box.width).toBeLessThanOrEqual(viewport.width)
-    }
-    expect(banner_box.y + banner_box.height).toBeLessThan(chat_box.y)
-    expect(banner_box.height).toBeLessThan(100)
+    await expect(banner).toBeHidden()
+    expect((await chat.boundingBox())!.width).toBeLessThan(90)
+    const search = page.locator('.world-zone-search')
+    await expect(search).toHaveAccessibleName('Tap to search')
+    await search.click({ trial: true })
+    const search_box = (await search.boundingBox())!
+    expect(search_box.height).toBeGreaterThanOrEqual(44)
+    expect(search_box.x + search_box.width).toBeLessThanOrEqual((await page.locator('.gw-compass').boundingBox())!.x)
+    await page.screenshot({ path: test.info().outputPath('mobile-hud.png') })
     const automation = page.locator('.world-social-dock [data-automation-panel]')
     await expect(automation).toBeVisible()
     expect((await automation.boundingBox())!.y).toBeGreaterThan((await page.locator('.party-frame').boundingBox())!.y)
@@ -68,3 +65,31 @@ test('Settings return-to-home uses the existing leave confirmation', async ({ pa
   await confirmation.getByRole('button', { name: 'Return to home', exact: true }).click()
   await expect(page.locator('[data-wallet-trigger]')).toHaveCount(0)
 })
+
+for (const viewport of [
+  { width: 667, height: 320 },
+  { width: 1440, height: 900 },
+]) {
+  test(`nearby fights open in a bounded modal at ${viewport.width}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/e2e/fixtures/ui_world_hud.html?hud-layout&mobile')
+    const button = page.locator('.world-multiplayer [aria-expanded]')
+    const before = (await button.boundingBox())!
+    await expect(page.locator('.world-nearby-fights')).toHaveCount(0)
+    await button.click()
+    const modal = page.getByRole('dialog', { name: 'Nearby fights', exact: true })
+    await expect(modal).toBeVisible()
+    const list = modal.locator('.world-nearby-fights')
+    await expect(list.locator('.world-nearby-fight')).toHaveCount(2)
+    const bounds = (await modal.locator('.aui-window').boundingBox())!
+    expect(bounds.x).toBeGreaterThanOrEqual(0)
+    expect(bounds.y).toBeGreaterThanOrEqual(0)
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.width)
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height)
+    expect((await button.boundingBox())!.y).toBe(before.y)
+    await expect(list.getByRole('button').first()).toBeInViewport()
+    await page.screenshot({ path: test.info().outputPath('nearby-fights.png') })
+    await modal.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect(page.locator('.world-nearby-fights')).toHaveCount(0)
+  })
+}

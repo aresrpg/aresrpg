@@ -33,7 +33,7 @@ describe('the far shell hole', () => {
   })
 })
 
-test('radius changes preserve vertex data and reuse the index allocation', () => {
+test('radius changes preserve vertex data and focus updates upload only heights and material IDs', async () => {
   const scene = new Scene()
   const sky = create_sky_node()
 
@@ -56,6 +56,20 @@ test('radius changes preserve vertex data and reuse the index allocation', () =>
     expect(geometry.getAttribute('position')).toBe(vertices)
     expect(geometry.index).toBe(retained_index)
     expect(Array.from(geometry.index!.array.slice(0, geometry.drawRange.count))).toEqual(ring_indices('high', 1))
+    await new Promise<void>((resolve, reject) => {
+      const deadline = Date.now() + 10_000
+      const poll = (): void => {
+        if (far.ready()) resolve()
+        else if (Date.now() > deadline) reject(new Error('Far terrain did not finish sampling'))
+        else setTimeout(poll, 10)
+      }
+      poll()
+    })
+    const uploaded_bytes = Object.values(geometry.attributes)
+      .filter((attribute) => 'version' in attribute && attribute.version > 0)
+      .reduce((sum, attribute) => sum + attribute.array.byteLength, 0)
+    // Walking changes samples, never XZ topology or the shared material palette.
+    expect(uploaded_bytes).toBeLessThanOrEqual(vertices.count * 8)
   } finally {
     far.dispose()
     clouds.dispose()

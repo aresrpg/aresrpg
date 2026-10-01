@@ -420,6 +420,12 @@ export const OverviewPageView = ({
             tone="gold"
             value={`${format_sui(BigInt(revenue.month_to_date_revenue_mist), 2)} SUI`}
           />
+          <KpiCard
+            detail={text(copy, 'all_time', 'All time')}
+            label={text(copy, 'revenue_total', 'Total revenue')}
+            tone="gold"
+            value={display_sui(revenue.all_time_revenue_mist)}
+          />
         </KpiGroup>
         <KpiGroup label={text(copy, 'player_activity', 'Player activity')} tone="activity">
           <KpiCard

@@ -36,6 +36,7 @@ const characters = ['Senshi', 'Rin', 'Kaori'].map((name, index) => ({
   name,
   custody: 'kiosk' as const,
   checkpoint_world: 'nauvis',
+  at_ms: 0,
   x: 50000,
   z: 50000,
 }))

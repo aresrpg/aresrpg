@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client'
 import { create_character_source, create_fight, type HydratedFightCheckpoint } from '@aresrpg/fight'
 import type { CharacterRow } from '@aresrpg/protocol'
 
+import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
+import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import type { AuthSession } from '../../src/auth.ts'
 import { FightLayer } from '../../src/game/fight/FightLayer.tsx'
 import type { SceneHandle } from '../../src/game/core/scene_feed.ts'
@@ -13,6 +15,7 @@ import { dispatch_app, observe_app, useAppStore, type AppInput } from '../../src
 import '../../src/tailwind.css'
 
 // Real fight reducers, observers and React UI; GPU presentation and chain execution are isolated.
+const spell_probe = new URLSearchParams(location.search).has('spell')
 const picking = { cell: null as number | null }
 const scene: SceneHandle = {
   get canvas() {
@@ -69,6 +72,12 @@ const push = (checkpoint: HydratedFightCheckpoint): void =>
     },
   } as unknown as AppInput)
 
+const ActionPoints = () => (
+  <output aria-label="Action points">
+    {useAppStore((state) => state.fight.checkpoint?.contract.fighters[0]?.ap.toString())}
+  </output>
+)
+
 const RosterCount = () => (
   <output aria-label="Participants">
     {useAppStore((state) => state.fight.checkpoint?.contract.fighters.length ?? 0)}
@@ -77,6 +86,16 @@ const RosterCount = () => (
 
 const boot = async (): Promise<void> => {
   const copy = await load_app_copy('en')
+  dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
+  const character_source = (name: string) =>
+    create_character_source({
+      name,
+      classe: 'senshi',
+      level: spell_probe ? 200n : 1n,
+      spell_levels: spell_probe
+        ? Object.fromEntries(encyclopedia_catalog.class('senshi')!.spells.map((spell) => [spell.name, 1n]))
+        : {},
+    })
   const chain = create_fight({
     mode: 'local',
     seed: 17n,
@@ -84,20 +103,23 @@ const boot = async (): Promise<void> => {
       fight_id: 'placement-race',
       world: 'nauvis',
       board_seed: 17n,
+      spells: { ...catalog_spell_sources() },
       players: [
         {
           character: 'alice',
           owner: 'owner',
           team: 0n,
           hp: 55n,
-          source: create_character_source({ name: 'Alice', classe: 'senshi', level: 1n }),
+          ready: spell_probe,
+          source: character_source('Alice'),
         },
         {
           character: 'enemy',
           owner: 'other',
           team: 1n,
           hp: 55n,
-          source: create_character_source({ name: 'Enemy', classe: 'senshi', level: 1n }),
+          ready: spell_probe,
+          source: character_source('Enemy'),
         },
       ],
       mobs: [],
@@ -124,7 +146,9 @@ const boot = async (): Promise<void> => {
   })
   dispatch_app({ type: 'character/select', character_id: 'alice' })
   observe_app(['fight', 'fight_chain'])
-  push(chain.state())
+  const initial = spell_probe ? chain.apply({ type: 'start', observed_ms: 60_000n }).state : chain.state()
+  if (spell_probe) picking.cell = Number(initial.contract.fighters[0]!.cell)
+  push(initial)
   const place_and_join = (): void => {
     picking.cell = Number(chain.state().contract.board.start_cells_a[1]!)
     dispatch_app({
@@ -150,6 +174,7 @@ const boot = async (): Promise<void> => {
       <FightLayer copy={copy} scene={scene} />
       <div className="absolute top-3 left-3 z-[200] flex gap-3">
         <RosterCount />
+        <ActionPoints />
         <button onClick={place_and_join}>Place and join</button>
         <button
           onClick={() =>
