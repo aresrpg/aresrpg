@@ -260,6 +260,7 @@ world_hud:
   message_send: Gửi
   message_cancel: Hủy
   mount_prompt: Nhấn {{key}} để cưỡi
+  dismount_prompt: 'Nhấn {{key}} để xuống thú'
   portal_prompt: Nhấn {{key}} để đến thế giới khác
   dungeon_portal: Cổng ngục tối
   dungeon_city: Thành phố {{city}}

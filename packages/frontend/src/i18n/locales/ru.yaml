@@ -260,6 +260,7 @@ world_hud:
   message_send: Отправить
   message_cancel: Отмена
   mount_prompt: Нажмите {{key}}, чтобы сесть верхом
+  dismount_prompt: 'Нажмите {{key}}, чтобы спешиться'
   portal_prompt: Нажмите {{key}}, чтобы отправиться в другой мир
   dungeon_portal: Портал подземелья
   dungeon_city: Город {{city}}

@@ -260,6 +260,7 @@ world_hud:
   message_send: 보내기
   message_cancel: 취소
   mount_prompt: '{{key}}을(를) 눌러 탑승'
+  dismount_prompt: '{{key}}을(를) 눌러 내리기'
   portal_prompt: '{{key}}을(를) 눌러 다른 월드로 이동'
   dungeon_portal: 던전 포털
   dungeon_city: '{{city}} 도시'

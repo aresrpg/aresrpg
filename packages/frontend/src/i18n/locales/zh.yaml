@@ -260,6 +260,7 @@ world_hud:
   message_send: 发送
   message_cancel: 取消
   mount_prompt: 按{{key}}骑乘
+  dismount_prompt: '按{{key}}下坐骑'
   portal_prompt: 按{{key}}前往其他世界
   dungeon_portal: 地下城传送门
   dungeon_city: '{{city}}城'

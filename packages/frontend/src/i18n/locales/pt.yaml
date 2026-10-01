@@ -257,6 +257,7 @@ world_hud:
   message_send: Enviar
   message_cancel: Cancelar
   mount_prompt: Pressione {{key}} para montar
+  dismount_prompt: 'Pressione {{key}} para desmontar'
   portal_prompt: Pressione {{key}} para viajar a outro mundo
   dungeon_portal: Portal da masmorra
   dungeon_city: Cidade de {{city}}

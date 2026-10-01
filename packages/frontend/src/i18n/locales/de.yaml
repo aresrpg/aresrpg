@@ -257,6 +257,7 @@ world_hud:
   message_send: Senden
   message_cancel: Abbrechen
   mount_prompt: 'Drücke {{key}} zum Aufsteigen'
+  dismount_prompt: 'Drücke {{key}} zum Absteigen'
   portal_prompt: 'Drücke {{key}}, um in eine andere Welt zu reisen'
   dungeon_portal: Dungeonportal
   dungeon_city: 'Stadt {{city}}'

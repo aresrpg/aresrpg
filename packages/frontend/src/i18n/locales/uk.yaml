@@ -257,6 +257,7 @@ world_hud:
   message_send: Надіслати
   message_cancel: Скасувати
   mount_prompt: 'Натисніть {{key}}, щоб осідлати'
+  dismount_prompt: 'Натисніть {{key}}, щоб спішитися'
   portal_prompt: 'Натисніть {{key}}, щоб подорожувати до іншого світу'
   dungeon_portal: Портал підземелля
   dungeon_city: 'Місто {{city}}'

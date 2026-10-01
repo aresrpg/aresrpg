@@ -18,7 +18,7 @@ export const MountPrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   return createPortal(
     <PromptChip activate={prompt.activate}>
       <PromptText
-        template={prompt.riding ? `${copy.world_hud.dismount_pet} {{key}}` : copy.world_hud.mount_prompt!}
+        template={copy.world_hud[prompt.riding ? 'dismount_prompt' : 'mount_prompt']!}
         touch_template={copy.world_hud[prompt.riding ? 'dismount_prompt_touch' : 'mount_prompt_touch']!}
         label="X"
       />

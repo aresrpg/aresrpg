@@ -257,6 +257,7 @@ world_hud:
   message_send: 送信
   message_cancel: キャンセル
   mount_prompt: '{{key}} で騎乗'
+  dismount_prompt: '{{key}} で降りる'
   portal_prompt: '{{key}} を押して別のワールドへ移動'
   dungeon_portal: ダンジョンポータル
   dungeon_city: '{{city}}の都市'
