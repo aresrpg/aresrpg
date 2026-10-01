@@ -24,11 +24,13 @@ export const consumable_plan = (
   const available = live
     ? live.amount + inventory.reduce((sum, row) => sum + (sources.has(row.id) ? row.amount : 0), 0)
     : 0
+  const needed = heal > 0 ? Math.ceil(Math.max(0, maximum - hp) / heal) : 1
   return Object.freeze({
     hp,
     maximum,
     heal,
-    needed: heal > 0 ? Math.ceil(Math.max(0, maximum - hp) / heal) : 1,
+    needed,
+    maximum_amount: Math.min(needed, available),
     available,
     merge_sources,
   })

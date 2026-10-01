@@ -453,7 +453,8 @@ The indexer routes changed checkpoint children to their Character channel; zone 
 A roster checkpoint change synchronously resets the server's presence and movement allowance before
 that roster is sent. Packets captured under another checkpoint are ignored; matching packets still
 obey the speed budget. Client live poses, follower poses, and resume writes retain that same checkpoint
-provenance. A new checkpoint invalidates old poses; a duplicate roster preserves ordinary walking.
+provenance. One follow tick publishes all changed owned poses together; continuing followers reuse
+their controller footing instead of probing spawn height again. A new checkpoint invalidates old poses; a duplicate roster preserves ordinary walking.
 
 Reader processes boot independently of projection freshness. The server pushes its cached
 checkpoint lag every five seconds; a connected client blocks interaction while freshness is

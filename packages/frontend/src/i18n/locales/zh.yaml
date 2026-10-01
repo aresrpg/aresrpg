@@ -1213,6 +1213,7 @@ encyclopedia_page:
   clear_filters: 全部清除
   no_results: 没有符合筛选条件的物品
   filter_by_category: 按类别
+  filter_by_stat: 按属性
   filter_by_resource: 按资源类型
   filter_by_job: 按制作专业
   filter_by_world: 按世界

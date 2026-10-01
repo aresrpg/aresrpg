@@ -26,16 +26,24 @@
 }
 
 .world-zone-search.aui-icon-button {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
+  display: none;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   padding: 10px;
   order: -1;
   flex-shrink: 0;
-  border: 0;
-  background: none;
-  box-shadow: none;
+}
+
+.world-zone-prompt {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 20;
+  transform: translateX(-50%);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .gw-compass {
@@ -365,6 +373,12 @@
 }
 
 @media (max-width: 1023px), (pointer: coarse) {
+  .world-zone-search.aui-icon-button {
+    display: inline-flex;
+  }
+  .world-zone-prompt {
+    display: none;
+  }
   .gw-compass-wrap,
   [data-world-frame] .gw-compass-wrap {
     top: 6px;

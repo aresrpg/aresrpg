@@ -2,12 +2,12 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Item facets derive availability from authored items, recipes, mob loot, and world placement.
 
-import { item_categories, job_slugs, rare_pet_food_tier } from '@aresrpg/immutable'
+import { item_categories, job_slugs, rare_pet_food_tier, stat_names, type StatName } from '@aresrpg/immutable'
 
 import type { MobFilterRow } from './mob_filters.ts'
 import { item_resource_kind, resource_kinds } from './resource_kind.ts'
 
-export type ItemFilterGroup = 'category' | 'resource' | 'job' | 'world' | 'family'
+export type ItemFilterGroup = 'category' | 'stat' | 'resource' | 'job' | 'world' | 'family'
 export type ItemFilterRow = Readonly<{
   group: ItemFilterGroup
   kind: ItemFilterGroup | 'biome' | 'city'
@@ -16,7 +16,11 @@ export type ItemFilterRow = Readonly<{
   item_types: readonly string[]
 }>
 
-type FilterItem = Readonly<{ item_type: string; category: string }>
+type FilterItem = Readonly<{
+  item_type: string
+  category: string
+  stats?: Readonly<{ max: Readonly<Partial<Record<StatName, number>>> }>
+}>
 type FilterRecipe = Readonly<{ output_type: string; inputs: Readonly<Record<string, unknown>> }>
 type FilterMob = Readonly<{ mob_type: string; loot: readonly Readonly<{ item_type: string }>[] }>
 type FilterWorld = Readonly<{
@@ -62,6 +66,14 @@ export const derive_item_filter_rows = <Recipe extends FilterRecipe>(
     const matching = items.filter((item) => item.category === category).map(({ item_type }) => item_type)
     return matching.length ? [row('category', 'category', category, matching)] : []
   })
+  const stats = stat_names.map((stat) =>
+    row(
+      'stat',
+      'stat',
+      stat,
+      items.filter((item) => (item.stats?.max[stat] ?? 0) > 0).map(({ item_type }) => item_type)
+    )
+  )
   const resources = resource_kinds.map((kind) =>
     row(
       'resource',
@@ -100,7 +112,9 @@ export const derive_item_filter_rows = <Recipe extends FilterRecipe>(
     filter.kind === 'family' ? [row('family', 'family', filter.id, loot_for(filter.mob_types))] : []
   )
   return Object.freeze(
-    [...categories, ...resources, ...jobs, ...places, ...families].filter(({ item_types }) => item_types.length > 0)
+    [...categories, ...stats, ...resources, ...jobs, ...places, ...families].filter(
+      ({ item_types }) => item_types.length > 0
+    )
   )
 }
 

@@ -460,9 +460,7 @@ export const ItemDetailBody = ({
 
       {has_characteristics && (
         <section className="flex flex-col gap-2">
-          <h3 className="text-[9px] font-semibold tracking-[0.25em] text-[#6b7280] uppercase">
-            {labels.characteristics}
-          </h3>
+          <h3 className="item-detail-section-title">{labels.characteristics}</h3>
           <ComparisonHeading comparison={comparison} />
           <CharacteristicsNote note={labels.characteristics_note} />
           <RuneEffectLine item_type={item_type} />

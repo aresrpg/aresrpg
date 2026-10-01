@@ -1212,6 +1212,7 @@ encyclopedia_page:
   clear_filters: TOUT EFFACER
   no_results: AUCUN OBJET NE CORRESPOND AUX FILTRES
   filter_by_category: PAR CATÉGORIE
+  filter_by_stat: PAR CARACTÉRISTIQUE
   filter_by_resource: PAR TYPE DE RESSOURCE
   filter_by_job: PAR MÉTIER
   filter_by_world: PAR MONDE

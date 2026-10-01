@@ -1184,6 +1184,7 @@ encyclopedia_page:
   clear_filters: すべてクリア
   no_results: フィルターに一致するアイテムがありません
   filter_by_category: カテゴリ別
+  filter_by_stat: 能力値別
   filter_by_resource: 素材タイプ別
   filter_by_job: 製作職業別
   filter_by_world: ワールド別

@@ -1206,6 +1206,7 @@ encyclopedia_page:
   clear_filters: BORRAR TODO
   no_results: NINGÚN OBJETO COINCIDE CON LOS FILTROS
   filter_by_category: POR CATEGORÍA
+  filter_by_stat: POR ATRIBUTO
   filter_by_resource: POR TIPO DE RECURSO
   filter_by_job: POR OFICIO
   filter_by_world: POR MUNDO

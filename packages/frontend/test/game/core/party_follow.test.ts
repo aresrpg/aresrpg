@@ -13,6 +13,8 @@ import {
   owned_character_position,
   record_owned_character_position,
   reset_owned_character_positions_for_testing,
+  subscribe_owned_character_positions,
+  read_owned_character_positions,
 } from '../../../src/game/core/owned_character_feed.ts'
 import { create_position_publisher } from '../../../src/game/core/position_publication.ts'
 import {
@@ -29,6 +31,49 @@ const terrain = {
   ready: () => true,
   ground_height: () => 0.001,
 }
+
+test('one follow update publishes the complete roster once and repeated time does no collision work', () => {
+  reset_party_follow_for_testing()
+  reset_owned_character_positions_for_testing()
+  const input = {
+    party_id: 'party',
+    leader_id: 'leader',
+    world: 'nauvis',
+    target: { x: 50_020, y: 0, z: 50_000 },
+    followers: Array.from({ length: 5 }, (_, index) => ({
+      character_id: `follower-${index}`,
+      checkpoint: 'checkpoint',
+      x: 50_000 + index * 2,
+      y: 0,
+      z: 50_000,
+    })),
+  }
+  const snapshots: number[] = []
+  const stop = subscribe_owned_character_positions(() =>
+    snapshots.push(Object.keys(read_owned_character_positions()).length)
+  )
+  try {
+    update_party_follow(input, 1_000, terrain)
+    expect(snapshots).toEqual([5])
+    snapshots.length = 0
+    let probes = 0
+    update_party_follow(input, 1_000, {
+      ...terrain,
+      solid_at: (x, y) => {
+        probes++
+        return terrain.solid_at(x, y)
+      },
+    })
+    expect(probes).toBe(0)
+    expect(snapshots).toEqual([])
+    update_party_follow(input, 1_100, terrain)
+    expect(snapshots).toEqual([5])
+  } finally {
+    stop()
+    reset_party_follow_for_testing()
+    reset_owned_character_positions_for_testing()
+  }
+})
 
 test('followers occupy distinct slots in one line beside the leader', () => {
   const leader = { x: 10, y: 4, z: 20 }

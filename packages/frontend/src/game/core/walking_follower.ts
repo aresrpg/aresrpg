@@ -14,7 +14,7 @@ type FollowerMotion = Readonly<{
 /** Followers share run-to's bounded local detours and direct passage through hard obstacles. */
 export const step_walking_follower = (
   world: WalkWorld,
-  previous: FollowerMotion | null,
+  previous: FollowerMotion | null | undefined,
   position: WalkPoint,
   target: RunTarget,
   elapsed_ms: number

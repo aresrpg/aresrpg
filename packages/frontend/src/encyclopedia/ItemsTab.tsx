@@ -84,6 +84,7 @@ export const ItemsTab = ({
           selected={facet_selection}
           select={set_facet_selection}
           text={text}
+          stat_name={stat_name}
           total={encyclopedia_catalog.items.length}
         />
       </div>

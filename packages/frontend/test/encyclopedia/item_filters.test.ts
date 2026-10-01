@@ -35,3 +35,24 @@ test('item facets intersect sections without inventing memberships', () => {
   expect(matching({ category: 'hat', family: 'fixture_family' })).toEqual(['fixture_hat'])
   expect(matching({ category: 'hat', resource: 'intermediary' })).toEqual([])
 })
+
+test('stat inclusion matches possible positive bonuses and intersects existing facets', () => {
+  const stat_items = [
+    { item_type: 'wisdom_amulet', category: 'amulet', stats: { max: { wisdom: 15 } } },
+    { item_type: 'wisdom_pet', category: 'pet', stats: { max: { wisdom: 30 } } },
+    { item_type: 'mixed_roll', category: 'amulet', stats: { min: { wisdom: -2 }, max: { wisdom: 2 } } },
+    { item_type: 'wisdom_penalty', category: 'amulet', stats: { max: { wisdom: -1 } } },
+    { item_type: 'neutral_wisdom', category: 'amulet', stats: { max: { wisdom: 0 } } },
+    { item_type: 'strength_amulet', category: 'amulet', stats: { max: { strength: 10 } } },
+    { item_type: 'statless_amulet', category: 'amulet' },
+  ]
+  const rows = derive_item_filter_rows(stat_items, [], () => '', [], [], [])
+  const types = stat_items.map(({ item_type }) => item_type)
+  expect(filter_item_types(types, rows, { stat: 'wisdom' })).toEqual(['wisdom_amulet', 'wisdom_pet', 'mixed_roll'])
+  expect(filter_item_types(types, rows, { stat: 'wisdom', category: 'amulet' })).toEqual([
+    'wisdom_amulet',
+    'mixed_roll',
+  ])
+  expect(filter_item_types(types, rows, { stat: 'strength' })).toEqual(['strength_amulet'])
+  expect(rows.some(({ group, id }) => group === 'stat' && id === 'agility')).toBe(false)
+})

@@ -1210,6 +1210,7 @@ encyclopedia_page:
   clear_filters: LIMPAR TUDO
   no_results: NENHUM ITEM CORRESPONDE AOS FILTROS
   filter_by_category: POR CATEGORIA
+  filter_by_stat: POR ATRIBUTO
   filter_by_resource: POR TIPO DE RECURSO
   filter_by_job: POR PROFISSÃO DE FABRICAÇÃO
   filter_by_world: POR MUNDO

@@ -71,17 +71,15 @@ export const ConsumeHealingModal = ({
           </button>
           <button
             className="btn-gold min-h-10 px-4 py-2 text-xs disabled:opacity-40"
-            disabled={plan.needed === 0 || plan.available < plan.needed}
+            disabled={plan.maximum_amount === 0}
             onClick={() => confirm(item, 'full')}
             style={{ textTransform: 'none' }}
             type="button"
           >
-            {t('consume_until_full')} <span className="ml-1.5 opacity-70 tabular-nums">×{plan.needed}</span>
+            {t(plan.available < plan.needed ? 'max' : 'consume_until_full')}{' '}
+            <span className="ml-1.5 opacity-70 tabular-nums">×{plan.maximum_amount}</span>
           </button>
         </div>
-        {plan.available < plan.needed && (
-          <p className="mt-3 text-xs text-muted">{t('consume_healing_insufficient', { count: plan.needed })}</p>
-        )}
       </div>
     </ModalFrame>
   )

@@ -1213,6 +1213,7 @@ encyclopedia_page:
   clear_filters: 모두 지우기
   no_results: 필터에 맞는 아이템이 없습니다
   filter_by_category: 분류별
+  filter_by_stat: 능력치별
   filter_by_resource: 자원 유형별
   filter_by_job: 제작 직업별
   filter_by_world: 월드별

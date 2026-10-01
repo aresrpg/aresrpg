@@ -6,7 +6,7 @@ import { chain_to_client_coordinate, client_to_chain_coordinate } from '@aresrpg
 import { step_walking_follower } from './walking_follower.ts'
 import { walking_edge, type WalkWorld } from './walkable.ts'
 
-import { owned_character_position, record_owned_character_position } from './owned_character_feed.ts'
+import { owned_character_position, record_owned_character_positions } from './owned_character_feed.ts'
 
 const FOLLOW_SPACING = 2
 export const PARTY_FOLLOW_JOIN_DISTANCE = 3
@@ -33,12 +33,15 @@ const feed: {
   snapshot: PartyFollowSnapshot
   last_ms: number
   target: PartyFollowPoint | null
-  motions: Map<string, Readonly<{ checkpoint: string; motion: ReturnType<typeof step_walking_follower>['motion'] }>>
+  motions: Map<string, ReturnType<typeof step_walking_follower>['motion']>
   listeners: Set<() => void>
 } = { snapshot: EMPTY, last_ms: 0, target: null, motions: new Map(), listeners: new Set() }
 
 export const party_follower_target = (leader: PartyFollowPoint, index: number): PartyFollowPoint =>
   Object.freeze({ x: leader.x + (index + 1) * FOLLOW_SPACING, y: leader.y, z: leader.z })
+
+const follower_motion_key = (source: PartyFollowInput['followers'][number]): string =>
+  `${source.character_id}:${source.checkpoint}`
 
 const stop_party_follow = (): PartyFollowSnapshot => {
   if (feed.snapshot.party_id === null) return feed.snapshot
@@ -72,10 +75,10 @@ const step_follower = (
   if (target && terrain) {
     const x = chain_to_client_coordinate(point.x)
     const z = chain_to_client_coordinate(point.z)
-    const retained = feed.motions.get(source.character_id)
-    const previous_motion = retained?.checkpoint === source.checkpoint ? retained.motion : null
+    const motion_key = follower_motion_key(source)
+    const previous_motion = feed.motions.get(motion_key)
     if (terrain.ready({ min_x: x - 3, max_x: x + 3, min_z: z - 3, max_z: z + 3 })) {
-      const footing = walking_edge(terrain, [x, point.y, z], x, z)
+      const footing = previous_motion?.body.position ?? walking_edge(terrain, [x, point.y, z], x, z)
       const y = footing?.[1] ?? terrain.ground_height(x, z)
       const result = step_walking_follower(
         terrain,
@@ -87,7 +90,7 @@ const step_follower = (
         },
         elapsed_ms
       )
-      feed.motions.set(source.character_id, { checkpoint: source.checkpoint, motion: result.motion })
+      feed.motions.set(motion_key, result.motion)
       stepped = {
         x: client_to_chain_coordinate(result.position[0]),
         y: result.position[1],
@@ -95,9 +98,7 @@ const step_follower = (
       }
     }
   }
-  const row = Object.freeze({ character_id: source.character_id, world, checkpoint: source.checkpoint, ...stepped })
-  record_owned_character_position(source.character_id, world, row)
-  return row
+  return Object.freeze({ character_id: source.character_id, world, checkpoint: source.checkpoint, ...stepped })
 }
 
 export const update_party_follow = (
@@ -108,7 +109,7 @@ export const update_party_follow = (
   if (!input) return stop_party_follow()
   const same_party = feed.snapshot.party_id === input.party_id && feed.snapshot.leader_id === input.leader_id
   if (!same_party) feed.motions.clear()
-  const identities = new Set(input.followers.map((row) => row.character_id))
+  const identities = new Set(input.followers.map(follower_motion_key))
   feed.motions.forEach((_, id) => {
     if (!identities.has(id)) feed.motions.delete(id)
   })
@@ -127,6 +128,7 @@ export const update_party_follow = (
     leader_id: input.leader_id,
     followers: Object.freeze(followers),
   })
+  record_owned_character_positions(followers)
   feed.listeners.forEach((listener) => listener())
   return feed.snapshot
 }

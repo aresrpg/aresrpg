@@ -1205,6 +1205,7 @@ encyclopedia_page:
   clear_filters: ОЧИСТИТИ ВСЕ
   no_results: ЖОДЕН ПРЕДМЕТ НЕ ВІДПОВІДАЄ ФІЛЬТРАМ
   filter_by_category: ЗА КАТЕГОРІЄЮ
+  filter_by_stat: ЗА ХАРАКТЕРИСТИКОЮ
   filter_by_resource: ЗА ТИПОМ РЕСУРСУ
   filter_by_job: ЗА ПРОФЕСІЄЮ
   filter_by_world: ЗА СВІТОМ

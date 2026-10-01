@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Zone discovery shares one search control beside the compass on every viewport.
+// Desktop keeps the discovery card below the compass; mobile uses a compact action beside it.
 //
 // It shows exactly while a search would change state: the zone is absent or its reroll TTL elapsed.
 // The key press and the button read the same predicate, so neither can offer an action the
@@ -16,7 +16,8 @@ import { searchable_zone } from '../modules/world.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { useWorldPose } from '../game/core/pose_feed.ts'
 
-import { usePromptKey } from './PromptChip.tsx'
+import { NametagCard } from './NametagCard.tsx'
+import { PromptText, usePromptKey } from './PromptChip.tsx'
 
 /** Discovery is a WORLD action, not an interaction with a thing — E stays for the mob group and
  *  the resource node you are pointed at, F for a fight sword's join. */
@@ -41,14 +42,31 @@ export const ZonePrompt = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const text = copy_text(copy.world_hud)
   const reroll = search_kind === 'reroll'
   const template = text(reroll ? 'zone_press_reroll' : 'zone_press_search')
+  const touch_template = text(reroll ? 'zone_press_reroll_touch' : 'zone_press_search_touch')
   return (
-    <IconButton
-      className="world-zone-search pointer-events-auto"
-      data-world-interaction
-      label={text(reroll ? 'zone_press_reroll_touch' : 'zone_press_search_touch')}
-      title={template.replace('{{key}}', 'G')}
-      icon={<Search className="text-emerald-400" size={20} />}
-      onClick={activate}
-    />
+    <>
+      <div className="world-zone-prompt">
+        <div className="translate-y-full">
+          <NametagCard
+            name={text(reroll ? 'zone_reroll_title' : 'zone_unsearched_title')}
+            lines={[
+              {
+                key: 'press',
+                activate,
+                text: <PromptText template={template} touch_template={touch_template} label="G" />,
+              },
+            ]}
+          />
+        </div>
+      </div>
+      <IconButton
+        className="world-zone-search pointer-events-auto"
+        data-world-interaction
+        label={touch_template}
+        title={template.replace('{{key}}', 'G')}
+        icon={<Search className="text-emerald-400" size={24} />}
+        onClick={activate}
+      />
+    </>
   )
 }

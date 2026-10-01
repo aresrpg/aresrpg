@@ -1213,6 +1213,7 @@ encyclopedia_page:
   clear_filters: ОЧИСТИТЬ ВСЁ
   no_results: НЕТ ПРЕДМЕТОВ ПО ВАШИМ ФИЛЬТРАМ
   filter_by_category: ПО КАТЕГОРИИ
+  filter_by_stat: ПО ХАРАКТЕРИСТИКЕ
   filter_by_resource: ПО ТИПУ РЕСУРСА
   filter_by_job: ПО ПРОФЕССИИ
   filter_by_world: ПО МИРУ

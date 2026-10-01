@@ -1213,6 +1213,7 @@ encyclopedia_page:
   clear_filters: XÓA TẤT CẢ
   no_results: KHÔNG CÓ VẬT PHẨM KHỚP BỘ LỌC
   filter_by_category: THEO DANH MỤC
+  filter_by_stat: THEO CHỈ SỐ
   filter_by_resource: THEO LOẠI TÀI NGUYÊN
   filter_by_job: THEO NGHỀ CHẾ TẠO
   filter_by_world: THEO THẾ GIỚI

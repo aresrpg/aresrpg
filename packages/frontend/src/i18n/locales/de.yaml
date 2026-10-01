@@ -1207,6 +1207,7 @@ encyclopedia_page:
   clear_filters: ALLE LÖSCHEN
   no_results: KEINE GEGENSTÄNDE ENTSPRECHEN DEN FILTERN
   filter_by_category: NACH KATEGORIE
+  filter_by_stat: NACH ATTRIBUT
   filter_by_resource: NACH RESSOURCENTYP
   filter_by_job: NACH HANDWERKSBERUF
   filter_by_world: NACH WELT

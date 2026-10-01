@@ -158,9 +158,9 @@ export function useEquipment({
         throw localized_error(t('teleport_dungeon_blocked'))
       const encumbered = encumbered_asset_ids(state.marketplace.own_listings, state.trade.rows)
       const plan = consumable_plan(current_character, item, state.session.inventory, encumbered, Date.now())
-      const amount = mode === 'full' ? plan.needed : 1
+      const amount = mode === 'full' ? plan.maximum_amount : 1
       if (plan.needed === 0) throw localized_error(t('already_full_hp'))
-      if (amount > plan.available) throw localized_error(t('consume_healing_insufficient', { count: amount }))
+      if (plan.available < 1) throw localized_error(t('consume_healing_insufficient', { count: 1 }))
       const result = await wallet.character.use_consumable({
         character_id: character.id,
         item_id: item.id,

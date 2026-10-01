@@ -88,25 +88,30 @@ export const owned_character_presence_rows = (
       )
     : Object.freeze({})
 
+export const record_owned_character_positions = (positions: readonly OwnedCharacterPosition[]): void => {
+  const changed = positions.filter((position) => {
+    const previous = feed.positions.get(position.character_id)
+    return !(
+      previous?.world === position.world &&
+      previous.checkpoint === position.checkpoint &&
+      previous.x === position.x &&
+      previous.y === position.y &&
+      previous.z === position.z
+    )
+  })
+  if (!changed.length) return
+  changed.forEach(({ character_id, world, checkpoint, x, y, z }) =>
+    feed.positions.set(character_id, Object.freeze({ character_id, world, checkpoint, x, y, z }))
+  )
+  feed.snapshot = Object.freeze(Object.fromEntries(feed.positions))
+  feed.listeners.forEach((listener) => listener())
+}
+
 export const record_owned_character_position = (
   character_id: string,
   world: string,
   position: Readonly<{ checkpoint: string; x: number; y: number; z: number }>
-): void => {
-  const previous = feed.positions.get(character_id)
-  if (
-    previous?.world === world &&
-    previous.checkpoint === position.checkpoint &&
-    previous.x === position.x &&
-    previous.y === position.y &&
-    previous.z === position.z
-  )
-    return
-  const row = Object.freeze({ character_id, world, ...position })
-  feed.positions.set(character_id, row)
-  feed.snapshot = Object.freeze(Object.fromEntries(feed.positions))
-  feed.listeners.forEach((listener) => listener())
-}
+): void => record_owned_character_positions([{ character_id, world, ...position }])
 
 export const owned_character_position = (
   character_id: string,

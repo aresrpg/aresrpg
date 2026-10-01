@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { Button, FilterMenu } from '@aresrpg/ui'
-import { ChevronDown, X } from 'lucide-react'
+import { is_stat_name, type StatName } from '@aresrpg/immutable'
 
 import { titleize } from '../content/catalog.ts'
 import type { ItemFilterGroup, ItemFilterRow } from '../content/item_filters.ts'
@@ -9,29 +9,34 @@ import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 
 import type { EncyclopediaText } from './copy.ts'
 export type ItemFilterSelection = Readonly<Partial<Record<ItemFilterGroup, string>>>
-const GROUPS = ['category', 'resource', 'job', 'world', 'family'] as const
+const GROUPS = ['category', 'stat', 'resource', 'job', 'world', 'family'] as const
 const TITLES = {
   category: 'filter_by_category',
+  stat: 'filter_by_stat',
   resource: 'filter_by_resource',
   job: 'filter_by_job',
   world: 'filter_by_world',
   family: 'filter_by_mob_family',
 } as const
-const option_label = (row: ItemFilterRow, text: EncyclopediaText) =>
-  row.group === 'resource'
-    ? text(`group_${row.id}_resources`)
-    : titleize(row.parent ? row.id.slice(row.id.indexOf(':') + 1) : row.id)
+const option_label = (row: ItemFilterRow, text: EncyclopediaText, stat_name: (stat: StatName) => string) =>
+  row.group === 'stat' && is_stat_name(row.id)
+    ? stat_name(row.id)
+    : row.group === 'resource'
+      ? text(`group_${row.id}_resources`)
+      : titleize(row.parent ? row.id.slice(row.id.indexOf(':') + 1) : row.id)
 export const ItemFilters = ({
   rows,
   selected,
   select,
   text,
+  stat_name,
   total,
 }: Readonly<{
   rows: readonly ItemFilterRow[]
   selected: ItemFilterSelection
   select: (selection: ItemFilterSelection) => void
   text: EncyclopediaText
+  stat_name: (stat: StatName) => string
   total: number
 }>) => {
   const category_name = useItemCategoryName()
@@ -56,7 +61,7 @@ export const ItemFilters = ({
             .filter((row) => row.group === group)
             .map((row) => ({
               id: row.id,
-              label: row.group === 'category' ? category_name(row.id) : option_label(row, text),
+              label: row.group === 'category' ? category_name(row.id) : option_label(row, text, stat_name),
               count: row.item_types.length,
             }))}
         />

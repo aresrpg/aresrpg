@@ -1235,6 +1235,7 @@ encyclopedia_page:
   clear_filters: CLEAR ALL
   no_results: NO ITEMS MATCH YOUR FILTERS
   filter_by_category: BY CATEGORY
+  filter_by_stat: BY STAT
   filter_by_resource: BY RESOURCE TYPE
   filter_by_job: BY CRAFTING JOB
   filter_by_world: BY WORLD

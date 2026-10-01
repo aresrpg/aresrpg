@@ -3,9 +3,13 @@
 set -e
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 [ -z "$staged" ] && exit 0
-js=$(printf '%s\n' "$staged" | grep -E '\.(js|mjs|cjs|jsx|ts|tsx)$' || true)
+# Style tools check source files, not symlinks to their canonical assets.
+style_files=$(printf '%s\n' "$staged" | while IFS= read -r path; do
+  [ -L "$path" ] || printf '%s\n' "$path"
+done)
+js=$(printf '%s\n' "$style_files" | grep -E '\.(js|mjs|cjs|jsx|ts|tsx)$' || true)
 if [ -n "$js" ]; then printf '%s\n' "$js" | xargs bunx eslint; fi
-printf '%s\n' "$staged" | xargs bunx prettier --check --ignore-unknown
+if [ -n "$style_files" ]; then printf '%s\n' "$style_files" | xargs bunx prettier --check --ignore-unknown; fi
 typescript_inputs=$(printf '%s\n' "$staged" | grep -E '(^|/)(package\.json|bunfig\.toml|bun\.lock|.*\.(js|mjs|cjs|jsx|ts|tsx))$' || true)
 indexer_inputs=$(printf '%s\n' "$staged" | grep -E '^(packages/indexer/(Cargo\.(toml|lock)|.*\.rs)|scripts/coverage_indexer\.sh)$' || true)
 move_inputs=$(printf '%s\n' "$staged" | grep -E '^(packages/(control|seed|move-math|move-combat|move)/(Move\.(toml|lock)|.*\.move)|scripts/coverage_move\.sh)$' || true)

@@ -174,7 +174,7 @@ export const CraftControls = ({
       </div>
 
       <div className="jobs__craft-bar" data-stackable-output={String(stackable_output)}>
-        <fieldset className="jobs__craft-amount" disabled={pending}>
+        <fieldset className="jobs__craft-amount" disabled={pending} hidden={!stackable_output}>
           <span className="jobs__craft-amount-label">{t('jobs.craft.amount')}</span>
           <input
             aria-label={t('jobs.craft.amount')}

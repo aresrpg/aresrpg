@@ -38,3 +38,13 @@ test('a stale displayed stack uses its current amount and reports insufficient s
     available: 1,
   })
 })
+
+test('maximum healing consumes available stock up to full HP, including a partial heal', () => {
+  expect(consumable_plan(character, bread, [bread], new Set(), now).maximum_amount).toBe(1)
+  expect(consumable_plan(character, bread, [{ ...bread, amount: 20 }], new Set(), now).maximum_amount).toBe(3)
+  expect(consumable_plan(character, bread, [], new Set(), now).maximum_amount).toBe(0)
+  expect(
+    consumable_plan({ ...character, hp: String(character_max_hp(character)) }, bread, [bread], new Set(), now)
+      .maximum_amount
+  ).toBe(0)
+})

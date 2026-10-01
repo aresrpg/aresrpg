@@ -17,6 +17,14 @@
   min-height: 0;
   flex-shrink: 0;
 }
+.item-detail-view .item-detail-section-title {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  color: var(--aui-muted);
+  text-transform: uppercase;
+}
 .item-detail-header {
   display: flex;
   align-items: center;
@@ -142,13 +150,17 @@
   font-size: 10px;
 }
 .item-detail-view .jobs__craft-input {
-  width: 50px;
+  width: calc(4ch + 2rem);
+  flex: none;
   height: 30px;
   padding: 4px;
   background: #0e141b;
   border: 1px solid #69727d44;
   border-radius: 3px;
   color: #f0e9dd;
+}
+.item-detail-view .jobs__craft-amount[hidden] {
+  display: none;
 }
 .item-detail-view .jobs__craft-btn {
   margin-left: auto;
@@ -493,9 +505,6 @@
 }
 .item-detail-view .jobs__craft-btn {
   min-width: 0;
-}
-.item-detail-view .jobs__craft-input {
-  width: 42px;
 }
 .item-detail-view:has(> .jobs__craft) .aui-item-source-list {
   max-height: none;

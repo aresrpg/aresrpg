@@ -3,6 +3,7 @@
 import { expect, spyOn, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import * as zustand from 'zustand'
+import { item_is_stackable } from '@aresrpg/immutable'
 
 import { CraftControls } from '../../src/characters/CraftControls.tsx'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
@@ -11,6 +12,33 @@ import { adventure_character } from '../../src/adventure/character.ts'
 import { copy_text, type AppCopy } from '../../src/i18n/copy.ts'
 import en from '../../src/i18n/locales/en.yaml'
 import { read_app_state, type AppState } from '../../src/store.ts'
+
+test.each([false, true])('craft attempt controls are visible only for stackable output: %j', (stackable) => {
+  const recipe = encyclopedia_catalog.recipes.find(
+    ({ output_type }) => item_is_stackable(encyclopedia_catalog.item(output_type)!.item.category) === stackable
+  )!
+  const state = { ...read_app_state(), copy: en } as AppState
+  const reader = spyOn(zustand, 'useStore').mockImplementation(((
+    _store: unknown,
+    selector: (state: AppState) => unknown
+  ) => selector(state)) as typeof zustand.useStore)
+  try {
+    const html = renderToStaticMarkup(
+      <CraftControls
+        recipe={recipe}
+        job="FARMER"
+        level={100}
+        t={copy_text((en as AppCopy).characters_page)}
+        open_ingredient={() => undefined}
+      />
+    )
+    const [controls = ''] = html.match(/<fieldset[^>]*>/)!
+    expect(controls.includes('hidden=""')).toBe(!stackable)
+    expect(html).toContain('jobs__craft-btn')
+  } finally {
+    reader.mockRestore()
+  }
+})
 
 test('local ingredient projections cannot enable a chain craft even with a connected wallet', () => {
   const recipe = encyclopedia_catalog.recipes[0]!

@@ -30,12 +30,15 @@ test('sharing metadata is present without JavaScript and agrees across Open Grap
   expect(values['og:type']).toBe('website')
   expect(values['twitter:card']).toBe('summary_large_image')
   expect(values['twitter:image']).toBe(values['og:image'])
-  expect(new URL(values['og:image']).protocol).toBe('https:')
+  const image_url = new URL(values['og:image'])
+  expect(image_url.protocol).toBe('https:')
+  expect(image_url.origin).toBe(new URL(canonical).origin)
+  expect(image_url.pathname).toBe('/assets/kares-launchpad.jpg')
   expect(values['og:image:alt']).toBeTruthy()
   expect(values['twitter:image:alt']).toBe(values['og:image:alt'])
 
-  // Reuse the existing canonical brand image instead of introducing another artwork copy.
-  const image = await readFile(new URL('../../frontend/public/og-image.jpg', import.meta.url))
+  // The public asset links to the seed-owned offering artwork and bypasses the SPA rewrite.
+  const image = await readFile(new URL(`../public${image_url.pathname}`, import.meta.url))
   const [width, height] = jpeg_size(image)
   expect(values['og:image:type']).toBe('image/jpeg')
   expect(Number(values['og:image:width'])).toBe(width)
