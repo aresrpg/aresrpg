@@ -25,3 +25,5 @@ export type { WalletView } from '../wallet/model.ts'
 
 export { useNumbers } from '../i18n/useNumbers.ts'
 export { useLocale } from '../i18n/LocaleScope.tsx'
+export { FinanceBatch } from './FinanceBatch.tsx'
+export { useFinanceBatch } from './useFinanceBatch.ts'

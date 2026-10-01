@@ -74,6 +74,7 @@ const verify_receipt = (receipt: Receipt, record: PendingTransaction): Receipt =
 /** One execution boundary: submit once, recover by digest, then feed the ordinary receipt pipeline once. */
 export const create_transaction_execution = ({
   core,
+  recovery_cores = [],
   key,
   storage = browser_transaction_storage(),
   on_receipt,
@@ -81,6 +82,8 @@ export const create_transaction_execution = ({
   recovery_timeout_ms = 60_000,
 }: Readonly<{
   core: ExecutionCore
+  /** Read-only alternatives; submission and the primary visibility barrier never switch providers. */
+  recovery_cores?: readonly Pick<ExecutionCore, 'waitForTransaction'>[]
   key: string
   storage?: TransactionStorage | null
   on_receipt: (receipt: Receipt, gas_scope?: string) => void
@@ -94,25 +97,26 @@ export const create_transaction_execution = ({
     return stored ? decode_pending(stored) : pending
   }
   const recover = async (record: PendingTransaction): Promise<Receipt> => {
-    try {
-      const receipt = await bounded_request(
-        (signal) =>
-          core.waitForTransaction({
-            digest: record.digest,
-            include: record.include,
-            signal,
-            timeout: recovery_timeout_ms,
-          }),
-        recovery_timeout_ms
-      )
-      return verify_receipt(receipt, record)
-    } catch (cause) {
-      throw new Error(
-        `[sdk] transaction outcome unknown: ${record.digest}; check this transaction before trying again`,
-        { cause }
-      )
+    const readers = [core, ...recovery_cores]
+    const timeout = Math.max(1, Math.floor(recovery_timeout_ms / readers.length))
+    const failures: unknown[] = []
+    for (const reader of readers) {
+      try {
+        const receipt = await bounded_request(
+          (signal) => reader.waitForTransaction({ digest: record.digest, include: record.include, signal, timeout }),
+          timeout
+        )
+        return verify_receipt(receipt, record)
+        // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Bounded reader failures are retained and rethrown together if no verified receipt is available.
+      } catch (error) {
+        failures.push(error)
+      }
     }
+    throw new Error(`[sdk] transaction outcome unknown: ${record.digest}; check this transaction before trying again`, {
+      cause: new AggregateError(failures, 'Receipt recovery failed on every configured provider'),
+    })
   }
+
   const accept = (receipt: Receipt, record: PendingTransaction): void => {
     // Keep recovery evidence until receipt processing succeeds. This callback accounts for failures too.
     on_receipt(receipt, record.gas_scope)

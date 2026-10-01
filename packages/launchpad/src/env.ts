@@ -9,11 +9,20 @@ export const resolve_launch_env = (source: Readonly<Record<string, string | unde
   const sui_rpc_url =
     source.VITE_SUI_RPC_URL ??
     (network === 'mainnet' ? 'https://sui-grpc-web.publicnode.com:443' : 'https://fullnode.testnet.sui.io:443')
-  const url = new URL(sui_rpc_url)
-  if (url.protocol !== 'https:') throw new Error('The launchpad requires an HTTPS Sui endpoint')
+  // These independent mainnet providers were checked for complete exact-digest receipts.
+  // Keep testnet on its configured provider until a second receipt reader is verified there.
+  const receipt_rpc_urls =
+    network === 'mainnet'
+      ? ['https://fullnode.mainnet.sui.io:443', 'https://sui-grpc-web.publicnode.com:443'].filter(
+          (endpoint) => new URL(endpoint).href !== new URL(sui_rpc_url).href
+        )
+      : []
+  if ([sui_rpc_url, ...receipt_rpc_urls].some((endpoint) => new URL(endpoint).protocol !== 'https:'))
+    throw new Error('The launchpad requires an HTTPS Sui endpoint')
   return Object.freeze({
     network,
     sui_rpc_url,
+    receipt_rpc_urls,
     game_url: 'https://aresrpg.world/',
     discord_url: 'https://discord.gg/aresrpg',
   })

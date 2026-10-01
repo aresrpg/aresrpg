@@ -235,8 +235,11 @@ presentation derives current rewards and proposed-stake gains from each accountâ
 share. The session reducer alone owns game-wallet SUI and KARES balances; staking and Mastery
 consume those values directly. Managed staking reads positions and shared finance state without
 querying or retaining another balance. External finance sessions own their separate wallet balances.
-Staking presents one aggregate per account; the SDK claims rewards or distributes a withdrawal
-across its underlying positions in one atomic PTB. Position objects never become UI selections.
+Staking presents one aggregate per account. Finance claims use SDK-bounded, separately reviewed
+position batches; each click submits one batch and refreshed holdings retain every unsubmitted
+entitlement. Withdrawals preserve the exact requested amount in one atomic PTB and refuse amounts
+above the largest principal fitting the same position bound. The UI names that per-transaction
+maximum. The exact resolver estimate owns gas; individual position objects never become UI selections.
 The separate launchpad package contains only the offering surface and boots independently of the game.
 It reuses the neutral wallet reducer, observer, picker, and finance exports; the launchpad never
 imports the player entry or its environment.
@@ -245,7 +248,10 @@ The SDK checks Enoki's network-scoped session before signing. Missing or expired
 invalidates the wallet session and returns the player to sign-in; background server challenges
 never renew authorization by opening a popup. Temporary read failures remain reconnectable.
 The launchpad defaults to PublicNode gRPC-Web on mainnet and Mysten's public node on testnet;
-its deployment CSP permits those same providers.
+its deployment CSP permits those same providers. Mainnet submission recovery may read the exact
+digest from the independent Mysten endpoint after the primary receipt read fails. Preparation,
+live snapshots, submission and the next-write visibility barrier retain the primary provider.
+Testnet retains its configured reader; no unverified secondary is silently selected.
 
 The frontend production entry initializes Vercel Web Analytics and Speed Insights once for both
 game and wallet-finance routes. The independent launchpad and journal entries initialize Vercel Web Analytics.
@@ -288,7 +294,9 @@ The frontend never imports `@mysten/*`. It asks the SDK to compose a transaction
 objects, simulates the exact unsigned bytes, signs once, executes once, and folds the certified
 receipt. An executed failure has a digest and is never automatically retried. The SDK derives the
 digest from the signed bytes before submitting once. A bounded submission request that loses its
-response recovers that exact receipt through the gRPC Core transaction reader. GraphQL remains
+response recovers that exact receipt through the gRPC Core transaction readers, with bounded
+read-only fallback when configured. Every provider must satisfy the same digest and complete-field
+checks; no fallback resubmits transaction bytes. GraphQL remains
 available for reads; its capped event pages cannot supply complete business receipts for writes. Missing or incomplete
 receipts remain uncertain; no retry handler may treat them as an unsubmitted transaction.
 One pending record owns both submission recovery and the next-write visibility barrier. Browser
@@ -1093,9 +1101,13 @@ package in the same transaction. Its cap package ID must match KARES's original 
 its version must be one; a foreign cap or previously upgraded lineage cannot initialize the sale.
 One setup creates the canonical inactive offering, empty combat pot and inactive funded staking pool.
 Durations and recipients become immutable before contribution. Only the configured treasury can start
-the sale once; its native-clock timestamp owns the derived closing time.
-The reviewed sale lasts 15 minutes on testnet and seven days on mainnet. There is no restart, extension,
-or pause after activation. Settlement allocates accepted SUI between the
+the sale; its native-clock timestamp owns the derived closing time. After a window closes below the
+minimum, contributors may claim full refunds until the treasury starts another complete window.
+Unrefunded contributions automatically carry forward and lock until the new close; existing receipts
+remain valid and can receive new contributions. Each start resets the contribution total to the
+remaining SUI escrow, excluding refunded receipts from the next sale's allocation denominator.
+The reviewed window lasts 15 minutes on testnet and seven days on mainnet. An open or successful
+sale cannot restart; there is no early close, extension or pause. Settlement allocates accepted SUI between the
 treasury and liquidity wallet, transfers the liquidity KARES allocation, retains excess refunds,
 and activates staking and participant claims atomically. A participant claim finalizes a successful
 sale when needed, so claim availability does not depend on the treasury. Repeated finalization is
@@ -1128,7 +1140,10 @@ Cumulative per-asset indexes retain earned rewards across stake changes and anyt
 Wallet finance is an explicit SDK read exception: canonical Currency, offering, combat pot and staking objects,
 owned positions, balances and chain time come directly from Sui, including before game publication.
 The SDK rejects foreign identities and receipt-older snapshots. The UI derives estimated accrual;
-certified execution owns the actual payout. Finance receipts do not create another game projection.
+certified execution owns the actual payout. Finance receipts do not create another game projection. Unknown, executed-failure and recovered
+transaction digests remain visible separately from successful receipts across ordinary finance
+refreshes. A snapshot cannot clear the SDK's unresolved submission or recovered-session barrier;
+the user must reload or reconnect and reconcile before choosing a new action.
 
 The admin claim PTB combines the two policy withdrawals, splits their actual on-chain amount through
 the KARES funding door, and delivers the remainder to the selected treasury wallet. Its certified

@@ -99,14 +99,17 @@ public fun setup(
     transfer::share_object(offering);
 }
 
-/// Configuration is already sealed. Only its treasury can start the immutable window, once.
+/// Only the treasury can start a window, or restart a closed failed sale with its remaining deposits.
 public fun start(offering: &mut Offering, clock: &Clock, ctx: &TxContext) {
     assert!(ctx.sender() == offering.treasury, ENotTreasury);
-    assert!(offering.started_ms.is_none(), EAlreadyStarted);
+    assert!(!offering.settled && (offering.started_ms.is_none()
+        || (clock.timestamp_ms() >= closes_ms(offering) && offering.total_deposited < offering.minimum)), EAlreadyStarted);
     // Prove the closing boundary fit before committing the start timestamp.
     let end = (clock.timestamp_ms() as u128) + (offering.duration_ms as u128);
     assert!(end <= 18_446_744_073_709_551_615, EInvalidTerms);
-    offering.started_ms.fill(clock.timestamp_ms());
+    // Failed refunds burn their receipts and leave escrow; only unrefunded principal rolls over.
+    offering.total_deposited = offering.deposits.value();
+    offering.started_ms = option::some(clock.timestamp_ms());
 }
 
 /// Owner-triggered deployment funding never exposes the reserved allocation as liquid treasury coins.

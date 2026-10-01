@@ -171,3 +171,37 @@ test('a new payment cannot inherit the previous payment success message', () => 
   const failed = reduce_finance(next, { type: 'failed', sequence: next.sequence, error: 'preflight refused' })
   expect(failed.digest).toBeNull()
 })
+
+test('an unsigned failure on a later intent cannot erase the previous unknown transaction', () => {
+  const unknown = {
+    ...finance_state(),
+    error: '[sdk] transaction outcome unknown: pending-digest; check this transaction',
+    transaction_error: { digest: 'pending-digest', status: 'unknown' as const },
+  }
+  const next = reduce_finance(unknown, {
+    type: 'request',
+    request: { kind: 'execute', action: { kind: 'claim_offering', ids: ['position'] } },
+  })
+  expect(next.transaction_error).toEqual(unknown.transaction_error)
+  const failed = reduce_finance(next, {
+    type: 'failed',
+    sequence: next.sequence,
+    error: 'owned object read unavailable',
+  })
+  const refreshing = reduce_finance(failed, { type: 'request', request: { kind: 'refresh' } })
+  const refreshed = reduce_finance(refreshing, {
+    type: 'snapshot',
+    sequence: refreshing.sequence,
+    snapshot,
+    balances: null,
+  })
+  expect(refreshed.transaction_error).toEqual(unknown.transaction_error)
+  expect(refreshed.digest).toBeNull()
+  const known = reduce_finance(refreshed, {
+    type: 'failed',
+    sequence: refreshed.sequence,
+    error: '[sdk] previous transaction recovered: pending-digest; refresh',
+    transaction_error: { digest: 'pending-digest', status: 'recovered' },
+  })
+  expect(known.transaction_error?.status).toBe('recovered')
+})

@@ -17,7 +17,9 @@ export type KaresWalletSession = Readonly<{
 }>
 
 /** Finance-only wallet entry: no Enoki registration, game reads, or game action factories. */
-export const create_kares_wallet_auth = (options: Readonly<{ network: SdkNetwork; rpc_url?: string; pins?: Pins }>) => {
+export const create_kares_wallet_auth = (
+  options: Readonly<{ network: SdkNetwork; rpc_url?: string; receipt_rpc_urls?: readonly string[]; pins?: Pins }>
+) => {
   const client = new SuiGrpcClient({
     network: options.network,
     baseUrl: options.rpc_url ?? `https://fullnode.${options.network}.sui.io:443`,
@@ -29,6 +31,7 @@ export const create_kares_wallet_auth = (options: Readonly<{ network: SdkNetwork
       address: account.address,
       network: options.network,
       pins: options.pins,
+      receipt_rpc_urls: options.receipt_rpc_urls,
       sign_transaction: binding.sign_transaction,
     })
     return Object.freeze({

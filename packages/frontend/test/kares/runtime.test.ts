@@ -107,3 +107,44 @@ test('stopping an old finance owner prevents delayed reads reaching a replacemen
   expect(replacement.store.getState().snapshot?.address).toBe('0xnew')
   stop_replacement()
 })
+
+test('unknown and on-chain failure evidence survives ordinary snapshots without replay', async () => {
+  for (const [message, status] of [
+    ['[sdk] transaction outcome unknown: pending-digest; check this transaction', 'unknown'],
+    ['[sdk] transaction failed-digest failed on-chain: Move abort', 'failed'],
+    ['[sdk] previous transaction recovered: recovered-digest; refresh your game state', 'recovered'],
+  ] as const) {
+    let submissions = 0
+    const session = finance_session()
+    const runtime = create_finance_runtime(
+      { network: 'testnet' },
+      {
+        ...session,
+        kares: {
+          ...session.kares,
+          snapshot: async () => ({ ...finance_snapshot(), kares_balance: 7n, sui_balance: 9n }),
+          contribute: async () => {
+            submissions += 1
+            throw new Error(message)
+          },
+        },
+      }
+    )
+    const stop = runtime.start()
+    try {
+      await Bun.sleep(0)
+      runtime.dispatch({ type: 'request', request: { kind: 'execute', action: { kind: 'contribute', amount: 1n } } })
+      await Bun.sleep(0)
+      const outcome = runtime.store.getState().transaction_error
+      expect(outcome?.status).toBe(status)
+      expect(runtime.store.getState().digest).toBeNull()
+      runtime.dispatch({ type: 'request', request: { kind: 'refresh' } })
+      await Bun.sleep(0)
+      expect(runtime.store.getState().transaction_error).toEqual(outcome)
+      expect(runtime.store.getState().error).toBeNull()
+      expect(submissions).toBe(1)
+    } finally {
+      stop()
+    }
+  }
+})
