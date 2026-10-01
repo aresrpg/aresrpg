@@ -10,11 +10,13 @@ import { character_creation_insufficient } from '../character_creation_funding.t
 import { env, type Network } from '../env.ts'
 import { useSuiUsd } from '../funding/useSuiUsd.ts'
 import type { AppCopy } from '../i18n/copy.ts'
+import { useLocale } from '../i18n/LocaleScope.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app } from '../store.ts'
 
 import { WalletCard } from './WalletCard.tsx'
+import { LanguageCard } from './AccountControls.tsx'
 
 export const Welcome = ({
   copy,
@@ -23,6 +25,7 @@ export const Welcome = ({
   network = env.network,
 }: Readonly<{ copy: AppCopy; create: () => void; session: SessionState; network?: Network }>) => {
   const numbers = useNumbers()
+  const locale = useLocale()
   const price_usd = useSuiUsd(network === 'mainnet')
   const amount = (mist: bigint, decimals: number): string => {
     const sui = `${numbers.sui(mist, decimals)} SUI`
@@ -41,8 +44,18 @@ export const Welcome = ({
         data-welcome=""
       >
         <header>
-          <p className="mb-2 text-[10px] tracking-[0.24em] text-gold uppercase">AresRPG</p>
-          <h2 className="text-xl font-semibold text-text">{copy.welcome_title}</h2>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="mb-2 text-[10px] tracking-[0.24em] text-gold uppercase">AresRPG</p>
+              <h2 className="text-xl font-semibold text-text">{copy.welcome_title}</h2>
+            </div>
+            <LanguageCard
+              compact
+              copy={copy}
+              locale={locale}
+              change_locale={(locale) => dispatch_app({ type: 'locale/changed', locale })}
+            />
+          </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">{copy.welcome_body}</p>
         </header>
         <p

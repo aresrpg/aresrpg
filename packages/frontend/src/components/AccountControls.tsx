@@ -3,7 +3,7 @@
 
 import { Languages, Send } from 'lucide-react'
 import { useState } from 'react'
-import { Button, LanguageView } from '@aresrpg/ui'
+import { Button, IconButton, LanguageView } from '@aresrpg/ui'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { LOCALES, type Locale } from '../i18n/locale.ts'
@@ -12,10 +12,12 @@ export const LanguageCard = ({
   copy,
   locale,
   change_locale,
+  compact = false,
 }: Readonly<{
   copy: AppCopy
   locale: Locale
   change_locale: (locale: Locale) => void
+  compact?: boolean
 }>) => {
   const [open, set_open] = useState(false)
   const current = LOCALES.find(({ code }) => code === locale)!
@@ -23,13 +25,17 @@ export const LanguageCard = ({
   const close = () => set_open(false)
   return (
     <>
-      <Button className="language-trigger" aria-label={title} onClick={() => set_open(true)}>
-        <span className="aui-language-badge" aria-hidden="true">
-          {current.badge}
-        </span>
-        {current.native}
-        <Languages size={16} />
-      </Button>
+      {compact ? (
+        <IconButton label={title} icon={<Languages />} onClick={() => set_open(true)} />
+      ) : (
+        <Button className="language-trigger" aria-label={title} onClick={() => set_open(true)}>
+          <span className="aui-language-badge" aria-hidden="true">
+            {current.badge}
+          </span>
+          {current.native}
+          <Languages size={16} />
+        </Button>
+      )}
       {open && (
         <LanguageView
           header={{ title, icon: <Languages />, close, close_label: copy.wallet_close }}

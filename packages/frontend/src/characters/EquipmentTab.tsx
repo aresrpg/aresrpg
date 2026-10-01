@@ -132,6 +132,12 @@ export default function EquipmentTab({
           </span>
         </div>
 
+        <p
+          className="border-l-2 border-gold/60 p-3 text-xs leading-relaxed text-text empty:hidden"
+          data-equipment-quest=""
+        >
+          {session?.equipment_notice}
+        </p>
         <div className="chr-eyebrow">{t('equipment_head')}</div>
         <EquipmentDoll
           preview={<CharacterPreviewCanvas source={preview_source} pedestal />}

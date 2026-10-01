@@ -1956,7 +1956,7 @@
     },
     "packages/frontend/src/PlayerRuntime.tsx": {
       "PlayerRuntime": [
-        24
+        20
       ],
       "PlayerRuntime > useCallback[0](character: CharacterCreateInput)": [
         10

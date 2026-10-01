@@ -6,6 +6,10 @@ import posthog from 'posthog-js'
 import { env } from './env.ts'
 import { report_error } from './reporting.ts'
 
+export const DEMO_VERSION = 3
+export type AnalyticsEvent = Readonly<{ name: string; properties?: Readonly<Record<string, string | number>> }>
+export type AnalyticsCapture = (event: string, properties?: Readonly<Record<string, string | number>>) => void
+
 // Deliberately allowlist fields: SDK URL/referrer/person defaults must never leak claim bearers.
 const SAFE_PROPERTIES = new Set([
   'distinct_id',
@@ -35,6 +39,9 @@ const SAFE_PROPERTIES = new Set([
   'method',
   'surface',
   'demo_version',
+  'duration_ms',
+  'stage',
+  'quest_id',
 ])
 
 export const analytics_properties = (properties: Readonly<Record<string, unknown>>): Record<string, unknown> =>
@@ -49,7 +56,7 @@ const enabled = (): boolean =>
 export const capture_analytics = (event: string, properties: Readonly<Record<string, string | number>> = {}): void => {
   if (!enabled()) return
   try {
-    posthog.capture(event, { ...properties, network: env.network })
+    posthog.capture(event, { ...properties, network: env.network, demo_version: DEMO_VERSION })
   } catch (error) {
     report_error(error, { area: 'analytics' })
   }
@@ -79,7 +86,16 @@ export const init_analytics = (): void => {
     store_google: false,
     before_send: (event) => (event ? { ...event, properties: analytics_properties(event.properties) } : null),
   })
-  capture_analytics('site_visited', {
-    surface: globalThis.location.pathname === '/play-demo' ? 'demo' : 'game',
+  const demo = globalThis.location.pathname.replace(/\/+$/, '') === '/play-demo'
+  capture_analytics('site_visited', { surface: demo ? 'demo' : 'game' })
+  if (demo) capture_analytics('demo_requested')
+}
+
+/** Boot failures occur before the adventure observer can mount; never send raw exception text. */
+export const capture_demo_boot_failure = (stage: 'entry' | 'boot'): void => {
+  if (globalThis.location?.pathname.replace(/\/+$/, '') !== '/play-demo') return
+  capture_analytics('demo_load_failed', {
+    stage,
+    duration_ms: Math.round(performance.now()),
   })
 }

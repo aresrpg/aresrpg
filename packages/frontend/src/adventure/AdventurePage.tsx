@@ -32,6 +32,7 @@ import { ADVENTURE_NAMES, adventure_fight_position } from './content.ts'
 import { adventure_model } from './models.ts'
 import { create_adventure_actors } from './actors.ts'
 import { selected_adventurer } from './quest.ts'
+import { useDemoAnalytics } from './useDemoAnalytics.ts'
 import { CompanionInteraction } from './CompanionInteraction.tsx'
 
 export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }>) => {
@@ -57,6 +58,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
   const [world, set_world] = useState<ReturnType<typeof create_world> | null>(null)
   const [status, set_status] = useState<EngineStatus>({ state: 'initializing', backend: 'none' })
   const [model_failed, set_model_failed] = useState(false)
+  const demo_loading = useDemoAnalytics(world, adventure.character)
   const display_status: EngineStatus = model_failed ? { state: 'failed', backend: status.backend } : status
 
   useEffect(() => dispatch_app({ type: 'adventure/entered' }), [])
@@ -164,7 +166,13 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
           </WorldSocialDock>
         )}
         <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
-        <WorldLoading source={world} quality={settings.quality} render_distance={settings.render_distance} />
+        <WorldLoading
+          source={world}
+          quality={settings.quality}
+          render_distance={settings.render_distance}
+          failed={model_failed}
+          {...demo_loading}
+        />
         {mounted && world && (
           <FightLayer
             world_anchor={fight_position}

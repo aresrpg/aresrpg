@@ -4,7 +4,7 @@
 import { inject } from '@vercel/analytics'
 import { injectSpeedInsights as inject_speed_insights } from '@vercel/speed-insights'
 
-import { init_analytics } from './analytics.ts'
+import { capture_demo_boot_failure, init_analytics } from './analytics.ts'
 import { init_reporting, report_error } from './reporting.ts'
 
 import './tailwind.css'
@@ -31,4 +31,7 @@ const boot = async (): Promise<void> => {
   boot_game()
 }
 
-void boot().catch((error: unknown) => report_error(error, { area: 'entry' }))
+void boot().catch((error: unknown) => {
+  capture_demo_boot_failure('entry')
+  report_error(error, { area: 'entry' })
+})

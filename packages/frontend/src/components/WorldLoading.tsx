@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useEffect, useReducer } from 'react'
-import type { EngineQuality } from '@aresrpg/engine'
+import type { EngineQuality, EngineStatus } from '@aresrpg/engine'
 
 import { useAppStore } from '../store.ts'
 import { loading_progress, type LoadingProgress, type WorldLoadingSource } from '../game/core/loading_progress.ts'
@@ -17,11 +17,15 @@ export const WorldLoading = ({
   quality,
   render_distance = null,
   failed = false,
+  assets_ready,
+  on_progress,
 }: Readonly<{
   source: WorldLoadingSource | null
   quality: EngineQuality
   render_distance?: number | null
   failed?: boolean
+  assets_ready?: () => boolean
+  on_progress?: (progress: LoadingProgress, engine: EngineStatus) => void
 }>) => {
   const copy = useAppStore((state) => state.copy)
   const [progress, dispatch] = useReducer(reduce_progress, { stage: 'assets', fraction: null })
@@ -31,8 +35,12 @@ export const WorldLoading = ({
     let timer = 0
     let frame = 0
     const sample = () => {
-      const next = loading_progress(source.state())
+      const state = source.state()
+      const progress: LoadingProgress = failed ? { stage: 'failed', fraction: null } : loading_progress(state)
+      const next: LoadingProgress =
+        progress.stage === 'ready' && assets_ready?.() === false ? { stage: 'assets', fraction: null } : progress
       dispatch(next)
+      on_progress?.(next, state.engine)
       if (next.stage !== 'ready' && next.stage !== 'failed') timer = window.setTimeout(sample, 100)
     }
     // Let the requested tier reach the existing world lifecycle before testing its queues.
@@ -43,7 +51,7 @@ export const WorldLoading = ({
       clearTimeout(timer)
       cancelAnimationFrame(frame)
     }
-  }, [source, quality, render_distance])
+  }, [source, quality, render_distance, failed, assets_ready, on_progress])
   if (!copy || (!failed && progress.stage === 'ready')) return null
   const stage = failed ? 'failed' : progress.stage
   const labels = {

@@ -41,6 +41,7 @@ import type { Locale } from './i18n/locale.ts'
 import { LocaleScope } from './i18n/LocaleScope.tsx'
 import { Welcome } from './components/Welcome.tsx'
 import { JourneyHost } from './journey/JourneyHost.tsx'
+import { character_creation_surface } from './modules/character_creation.ts'
 import { selected_dungeon_run } from './modules/dungeon.ts'
 import { type Page } from './modules/navigation.ts'
 import type { PlayerShellProps } from './player_presentation.ts'
@@ -119,6 +120,7 @@ export function PlayerRuntime({
     },
     [copy, locale, session.characters.length, wallet]
   )
+  const creation_surface = character_creation_surface(session, navigation)
   const sui_insufficient = character_creation_insufficient(session.sui_balance_mist)
   const notice_kind = engine_notice_kind(engine_status, engine_status.recovery === 'minimum')
   const show_graphics_notice = graphics_notice_visible(
@@ -180,7 +182,7 @@ export function PlayerRuntime({
                   </div>
                 </div>
               )}
-              {navigation.page === 'world' && navigation.dialog === 'welcome' && (
+              {creation_surface === 'welcome' && (
                 <Welcome
                   copy={copy}
                   create={() => dispatch_app({ type: 'dialog/open', dialog: 'character_create' })}
@@ -211,22 +213,19 @@ export function PlayerRuntime({
             warning={copy.out_of_sui_body}
           />
         )}
-        {in_app &&
-          navigation.page === 'world' &&
-          navigation.dialog === 'character_create' &&
-          session.characters.length < MAX_TRACKED_CHARACTERS && (
-            <CharacterCreateModal
-              cancel={() =>
-                dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
-              }
-              copy={copy}
-              create={create_character}
-              insufficient={sui_insufficient}
-              view_spells={(classe) => {
-                open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
-              }}
-            />
-          )}
+        {creation_surface === 'character_create' && (
+          <CharacterCreateModal
+            cancel={() =>
+              dispatch_app({ type: 'dialog/open', dialog: session.characters.length === 0 ? 'welcome' : null })
+            }
+            copy={copy}
+            create={create_character}
+            insufficient={sui_insufficient}
+            view_spells={(classe) => {
+              open_path(`/encyclopedia/classes/${encodeURIComponent(classe)}`)
+            }}
+          />
+        )}
         {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
         <Toasts />
         <BackgroundGatherProgress copy={copy} />

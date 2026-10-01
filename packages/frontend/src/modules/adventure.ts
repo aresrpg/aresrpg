@@ -10,7 +10,12 @@ import {
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 
 import source from '../../../../seed/content/adventure.json'
-import { adventure_can_fight, adventure_has_ending, selected_adventurer } from '../adventure/quest.ts'
+import {
+  adventure_can_fight,
+  adventure_has_ending,
+  adventure_rewards_equipped,
+  selected_adventurer,
+} from '../adventure/quest.ts'
 import { adventure_character, adventure_companion } from '../adventure/character.ts'
 import { remember_demo_played } from '../adventure/visit.ts'
 import { adventure_result } from '../adventure/result.ts'
@@ -27,6 +32,7 @@ import type { SimulatorCharacter } from './simulator.ts'
 export type AdventureState = Readonly<{
   companion: SimulatorCharacter | null
   selected_character_id: string | null
+  equipped_rewards: boolean
   switched_companion: boolean
   followed: boolean
   following: boolean
@@ -54,6 +60,7 @@ export const initial_adventure_state = (): AdventureState =>
     character: null,
     companion: null,
     selected_character_id: null,
+    equipped_rewards: false,
     switched_companion: false,
     followed: false,
     following: false,
@@ -95,11 +102,13 @@ const equip = (state: AdventureState, equipment: EquipmentMap): AdventureState =
       })
   )
   if (!valid) return state
+  const loadout = Object.fromEntries(rows.map(([slot, item]) => [slot, item!.item_type]))
   return {
     ...state,
+    equipped_rewards: state.equipped_rewards || adventure_rewards_equipped(loadout),
     [character.id === state.character?.id ? 'character' : 'companion']: {
       ...character,
-      loadout: Object.fromEntries(rows.map(([slot, item]) => [slot, item!.item_type])),
+      loadout,
     },
   }
 }
@@ -163,7 +172,7 @@ const control_adventurer = (state: AdventureState, input: AdventureInput): Adven
 }
 
 const recruit = (state: AdventureState, input: AdventureInput): AdventureState => {
-  if (state.phase !== 'explore' || state.encounter === 0) return state
+  if (state.phase !== 'explore' || !state.equipped_rewards) return state
   switch (input.type) {
     case 'adventure/talk':
       return { ...state, dialogue: Math.min(source.dialogue.length, (state.dialogue ?? -1) + 1) }

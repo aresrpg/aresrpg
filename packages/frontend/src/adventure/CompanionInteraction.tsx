@@ -30,7 +30,7 @@ export const CompanionInteraction = ({
   const pose = useWorldPose()
   const point = source.companion.position
   const nearby = nearest_interaction_id([{ id: source.companion.id, ...point }], pose) !== null
-  const available = adventure.encounter > 0 && !adventure.companion && adventure.phase === 'explore'
+  const available = adventure.equipped_rewards && !adventure.companion && adventure.phase === 'explore'
   const [anchor, set_anchor] = useState<HTMLElement | null>(null)
   const [menu, set_menu] = useState<Readonly<{ x: number; y: number }> | null>(null)
   const can_invite = adventure.dialogue === source.dialogue.length

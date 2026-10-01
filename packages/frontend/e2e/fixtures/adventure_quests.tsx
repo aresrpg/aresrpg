@@ -25,10 +25,12 @@ declare global {
   interface Window {
     adventure_audio: readonly AudioPlayback[]
     adventure_auth: () => string | null
+    adventure_equipped: () => boolean
   }
 }
 window.adventure_audio = audio_events
 window.adventure_auth = () => read_app_state().session.auth_request as string | null
+window.adventure_equipped = () => read_app_state().adventure.equipped_rewards
 observe_app(['settings', 'audio', 'adventure', 'fight'])
 dispatch_app({ type: 'adventure/entered' })
 publish_pose({ character_id: 'adventure_senshi', x: 129, y: 80, z: 196, yaw: Math.PI, time_of_day: 0.3, riding: false })

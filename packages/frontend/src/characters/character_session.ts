@@ -8,6 +8,7 @@ import type { EquipmentMap } from './equipment_stage.ts'
 
 /** Optional local adapter. Absent adapters use the ordinary session projection and SDK effects. */
 export type CharacterSession = Readonly<{
+  equipment_notice?: string
   raise_spell?: (spell: string) => void
   inventory: readonly ItemRow[]
   commit: (equipment: EquipmentMap) => void

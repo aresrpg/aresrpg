@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { LiFiWidget, WidgetEvent, widgetEvents, type Route } from '@lifi/widget'
+import { LiFiWidget, WidgetEvent, widgetEvents, type Route, type RouteExecutionUpdate } from '@lifi/widget'
 import { EthereumProvider } from '@lifi/widget-provider-ethereum'
 import { SolanaProvider } from '@lifi/widget-provider-solana'
 import { SuiProvider } from '@lifi/sdk-provider-sui'
@@ -10,9 +10,10 @@ import { useEffect, useMemo, type PropsWithChildren } from 'react'
 
 import { useLocale } from '../i18n/LocaleScope.tsx'
 import { dispatch_app, read_app_state } from '../store.ts'
+import { capture_analytics } from '../analytics.ts'
 
+import { create_bridge_observer } from './analytics.ts'
 import { bridge_config } from './bridge_config.ts'
-import { FUNDING_SUI_CHAIN, FUNDING_SUI_TOKEN } from './chains.ts'
 
 // Destination reads only. There is no Sui wallet connector, client executor, or signer.
 const SuiDestinationProvider = ({ children }: Readonly<PropsWithChildren>) => {
@@ -55,14 +56,20 @@ export default function BridgeWidget({ address }: Readonly<{ address: string }>)
     }
   }, [address, locale, providers])
   useEffect(() => {
+    const observe = create_bridge_observer(address, capture_analytics)
+    const started = (route: Readonly<Route>) => observe(route, 'started')
+    const failed = ({ route }: Readonly<RouteExecutionUpdate>) => observe(route, 'failed')
     const completed = (route: Readonly<Route>) => {
-      if (route.toChainId !== FUNDING_SUI_CHAIN || route.toToken.address !== FUNDING_SUI_TOKEN) return
-      if (route.toAddress?.toLowerCase() !== address.toLowerCase()) return
+      if (!observe(route, 'completed')) return
       if (read_app_state().session.wallet?.address.toLowerCase() === address.toLowerCase())
         dispatch_app({ type: 'wallet/refresh' })
     }
+    widgetEvents.on(WidgetEvent.RouteExecutionStarted, started)
+    widgetEvents.on(WidgetEvent.RouteExecutionFailed, failed)
     widgetEvents.on(WidgetEvent.RouteExecutionCompleted, completed)
     return () => {
+      widgetEvents.off(WidgetEvent.RouteExecutionStarted, started)
+      widgetEvents.off(WidgetEvent.RouteExecutionFailed, failed)
       widgetEvents.off(WidgetEvent.RouteExecutionCompleted, completed)
     }
   }, [address])

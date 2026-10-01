@@ -90,7 +90,7 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
   const { encounter, phase } = adventure
   const result = adventure_has_ending(adventure) ? null : adventure.result
   const character = selected_adventurer(adventure)
-  const objective = adventure_objective(adventure)
+  const objective = adventure_objective(adventure, (quest) => copy_text(copy.adventure)(`${quest}_title`))
   const row = useMemo(() => (character ? adventure_character_row(character) : null), [character])
   const mounted = useAppStore((state) => state.fight.mounted)
   const pose = useWorldPose()
@@ -107,10 +107,7 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
     <>
       {!mounted && (
         <>
-          <CompassStrip
-            copy={copy}
-            objective={{ ...objective.position, label: copy_text(copy.adventure)(`${objective.quest}_title`) }}
-          />
+          <CompassStrip copy={copy} objective={objective} />
           <OverworldVitals character={row} />
         </>
       )}
@@ -149,6 +146,9 @@ export const AdventureHud = ({ copy, challenge }: Readonly<{ copy: AppCopy; chal
         leave={() => globalThis.location.assign('/')}
         session={{
           inventory: adventure_available_inventory(adventure),
+          equipment_notice: copy_text(copy.adventure)('equip_body', {
+            confirm: copy_text(copy.characters_page)('accept'),
+          }),
           commit: (equipment) => dispatch_app({ type: 'adventure/equipment_changed', equipment }),
           raise_stats: (spending) => dispatch_app({ type: 'adventure/stats_raised', spending }),
         }}

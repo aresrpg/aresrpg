@@ -2,12 +2,14 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Check, Copy, ExternalLink, Wallet, ArrowLeftRight, CreditCard } from 'lucide-react'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import { NativeModal, GameWindow, Button } from '@aresrpg/ui'
 
 import { env, type Network } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { BridgeFunding, FundingErrorBoundary } from '../funding/BridgeFunding.tsx'
+import { useFundingAnalytics, type FundingMethod } from '../funding/analytics.ts'
+import { capture_analytics } from '../analytics.ts'
 
 const FundingDialog = lazy(() => import('../funding/FundingDialog.tsx'))
 
@@ -36,8 +38,12 @@ const WalletAddressBlock = ({
   address,
   compact,
   copy,
-}: Readonly<{ address: string; compact?: boolean; copy: AppCopy }>) => {
+  method,
+}: Readonly<{ address: string; compact?: boolean; copy: AppCopy; method: FundingMethod }>) => {
   const [copied, set_copied] = useState(false)
+  useEffect(() => {
+    if (copied) capture_analytics('funding_address_copied', { method })
+  }, [copied, method])
   const copy_address = (): void => {
     if (!address) return
     void navigator.clipboard.writeText(address).then(() => {
@@ -77,10 +83,11 @@ export const AddFundsModal = ({
   on_close,
   warning,
 }: Readonly<{ address: string | null; copy: AppCopy; network?: Network; on_close: () => void; warning?: string }>) => {
-  const [selected, set_selected] = useState<'direct' | 'bridge' | 'card'>('direct')
+  const [selected, set_selected] = useState<Exclude<FundingMethod, 'faucet'>>('direct')
   const [bridge_opened, set_bridge_opened] = useState(false)
   const wallet_address = address ?? ''
   const testnet = add_funds_surface(network) === 'faucet'
+  useFundingAnalytics(selected, network)
   const title = wallet_text(copy, testnet ? 'testnet_faucet_title' : 'add_funds')
   const content = (
     <GameWindow
@@ -99,7 +106,7 @@ export const AddFundsModal = ({
         {testnet ? (
           <section className="aui-funding-faucet space-y-4 text-xs text-muted" data-testnet-faucet="">
             <p>{wallet_text(copy, 'testnet_faucet_body')}</p>
-            <WalletAddressBlock address={wallet_address} compact copy={copy} />
+            <WalletAddressBlock address={wallet_address} compact copy={copy} method="faucet" />
             <a
               className="btn-outline flex items-center justify-center gap-2 p-3"
               href={SUI_FAUCET_URL}
@@ -134,7 +141,7 @@ export const AddFundsModal = ({
               ))}
             </div>
             <section className="aui-funding-detail" hidden={selected !== 'direct'}>
-              <WalletAddressBlock address={wallet_address} copy={copy} />
+              <WalletAddressBlock address={wallet_address} copy={copy} method="direct" />
             </section>
             <section className="aui-funding-detail" hidden={selected !== 'bridge'}>
               {bridge_opened && address ? (
@@ -159,7 +166,7 @@ export const AddFundsModal = ({
                   </a>
                 ))}
               </div>
-              <WalletAddressBlock address={wallet_address} compact copy={copy} />
+              <WalletAddressBlock address={wallet_address} compact copy={copy} method="card" />
             </section>
           </>
         )}
@@ -176,7 +183,7 @@ export const AddFundsModal = ({
         >
           <div className="max-w-lg border border-border bg-surface p-5 text-text" role="alert">
             <p className="mb-4 text-xs text-muted">{wallet_text(copy, 'bridge_error')}</p>
-            <WalletAddressBlock address={wallet_address} copy={copy} />
+            <WalletAddressBlock address={wallet_address} copy={copy} method="direct" />
           </div>
         </NativeModal>
       }

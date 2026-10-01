@@ -202,7 +202,11 @@ owners of production cities; the module workshop does not introduce another runt
 
 The public adventure owns its local hero, recruited companion, selection, dialogue and combat progress in
 one adventure reducer. `seed/content/adventure.json` authors its encounters, companion and quest order;
-these never enter the published catalogue. Quest progress derives from those facts. Live gameplay, the local tutorial and `/demo#ui` share the same character selector and quest journal.
+these never enter the published catalogue. Quest progress derives from those facts. After the first
+victory, the equipment quest requires confirming every earned item, including the pet, through the
+ordinary inventory staging and acceptance flow before Sceat becomes interactive. Its completion is
+retained even if equipment later changes. The tutorial explains that confirmation is a Sui transaction
+in the real game; local confirmation stays free and never initializes a wallet. Live gameplay, the local tutorial and `/demo#ui` share the same character selector and quest journal.
 The journey source boundary changes facts and actions, never markup; the existing production `JourneyPanel`
 owns both the compact tracker and full journal, including progress, quest art, milestones and checklist. The local source also reuses party controls, speech captions and the ordinary multi-character fight resolver.
 Recruiting Sceat requires an explicit context-menu invitation; the talk shortcut cannot recruit him.
@@ -250,6 +254,16 @@ Telemetry strips URL queries and fragments before sending, so
 claim bearer keys never become analytics data. Development and browser-test builds omit the trackers.
 The frontend also initializes PostHog product analytics in production, excluding the editor and OAuth
 callback. Explicit state-delta events describe anonymous visits, demo fights, login and character creation.
+Demo request capture precedes the lazy game/demo download. The existing loading observer reports
+playability only after terrain, rendering and the hero model are ready; navigation-to-playable duration
+and playable-to-first-horizontal-movement duration use the monotonic browser clock. Initial failures
+report only a bounded loading stage. Quality changes and repeated samples do not replay startup events.
+Fight start/completion retains the encounter number and outcome. Quest completion uses authored quest
+IDs and real progress deltas, including the confirmed equipment quest; restored journey progress emits
+nothing. Funding captures modal opens, method views, successful address copies and deduplicated bridge
+execution transitions. Viewing direct deposit is not a payment; a balance change cannot infer its source.
+The first-character funding welcome and creation form have separate events. Shared telemetry metadata
+marks the tutorial revision so the equipment-quest funnel can be compared with earlier cohorts.
 The session retains the submitted creation outcome; only the SDK's certified creation receipt marks activation,
 never an acquired roster member. PostHog retains a browser-local anonymous identity across reloads; no wallet
 address or player name identifies it. An outbound property allowlist excludes URLs, referrers and nested person

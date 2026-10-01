@@ -41,6 +41,7 @@
   ],
   "quests": [
     "goblins",
+    "equip",
     "speak",
     "invite",
     "switch",
@@ -110,6 +111,7 @@
   "starting_level": 199,
   "quest_art": {
     "goblins": "demo_goblin_1",
+    "equip": "zukin_muru",
     "speak": "adventure_sceat",
     "invite": "adventure_sceat",
     "switch": "adventure_sceat",

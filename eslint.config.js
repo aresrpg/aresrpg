@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import fs from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 import js from '@eslint/js'
+import { includeIgnoreFile as include_ignore_file } from 'eslint/config'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import importPlugin from 'eslint-plugin-import-x'
@@ -19,6 +21,7 @@ const unchanged_input_guard_baseline = JSON.parse(
 )
 
 export default [
+  include_ignore_file(fileURLToPath(new URL('.gitignore', import.meta.url)), { gitignoreResolution: true }),
   js.configs.recommended,
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
@@ -267,15 +270,6 @@ export default [
   {
     // Move and the Rust indexer keep their own language-specific gates.
     ignores: [
-      '.dev/**', // Gitignored local deployment artifacts and scratch backups are not release source.
-      '**/test-results/**',
-      'packages/*/traces/**', // Sui creates and removes coverage traces while native tests run.
-      '**/dist/*',
-      'node_modules/*',
-      // `vercel build` output — gitignored, so CI never sees it, but a local build left the
-      // repo's own lint gate drowning in ~24k errors from bundled vendor code.
-      '**/.vercel/**',
-      'deprecated/**',
       '**/generated/*',
       'packages/move/**',
       'packages/indexer/**',

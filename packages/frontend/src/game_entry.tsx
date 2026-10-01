@@ -16,6 +16,7 @@ import {
 import { load_app_copy } from './i18n/copy.ts'
 import { load_locale, type Locale } from './i18n/locale.ts'
 import { env } from './env.ts'
+import { capture_demo_boot_failure } from './analytics.ts'
 import { load_game_settings } from './game/core/settings.ts'
 import { register_service_worker } from './pwa.ts'
 import { react_error_handlers, report_error } from './reporting.ts'
@@ -74,6 +75,7 @@ export const boot_game = (): void => {
       )
     })
     .catch((error: unknown) => {
+      capture_demo_boot_failure('boot')
       report_error(error, { area: 'boot' })
       root.render(<main className="fixed inset-0 bg-bg" />)
     })

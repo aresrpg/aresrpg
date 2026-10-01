@@ -12,7 +12,8 @@ import { audio_snapshot } from '../../src/modules/audio.ts'
 import { adventure_quest, adventure_roster } from '../../src/adventure/quest.ts'
 import { adventure_character, adventure_companion } from '../../src/adventure/character.ts'
 import { adventure_fight_setup } from '../../src/adventure/fight_setup.ts'
-import { adventure_available_inventory } from '../../src/adventure/projection.ts'
+import { natural_slot_for, stage_equip } from '../../src/characters/equipment_stage.ts'
+import { adventure_available_inventory, ADVENTURE_INVENTORY } from '../../src/adventure/projection.ts'
 
 const win_first_fight = (app: ReturnType<typeof create_app>) => {
   app.dispatch({ type: 'adventure/entered' })
@@ -26,6 +27,14 @@ const win_first_fight = (app: ReturnType<typeof create_app>) => {
   app.dispatch({ type: 'adventure/result_acknowledged', screen: 'result' })
 }
 
+const equip_rewards = (app: ReturnType<typeof create_app>) => {
+  const equipment = ADVENTURE_INVENTORY.reduce(
+    (equipment, item) => stage_equip(equipment, item, natural_slot_for(item, equipment)!),
+    {}
+  )
+  app.dispatch({ type: 'adventure/equipment_changed', equipment })
+}
+
 test('quest progression teaches recruitment, both characters and follow before the guards', () => {
   const app = create_app()
   app.dispatch({ type: 'adventure/entered' })
@@ -35,6 +44,17 @@ test('quest progression teaches recruitment, both characters and follow before t
   expect(app.store.getState().adventure.companion).toBeNull()
   win_first_fight(app)
   expect(app.store.getState().adventure.character!.level).toBe(200)
+  expect(adventure_quest(app.store.getState().adventure)).toBe('equip')
+  app.dispatch({ type: 'adventure/talk' })
+  app.dispatch({ type: 'adventure/invite' })
+  expect(app.store.getState().adventure.dialogue).toBeNull()
+  expect(app.store.getState().adventure.companion).toBeNull()
+  const hat = ADVENTURE_INVENTORY.find(({ category }) => category === 'hat')!
+  app.dispatch({ type: 'adventure/equipment_changed', equipment: stage_equip({}, hat, 'hat') })
+  expect(adventure_quest(app.store.getState().adventure)).toBe('equip')
+  equip_rewards(app)
+  expect(adventure_quest(app.store.getState().adventure)).toBe('speak')
+  app.dispatch({ type: 'adventure/equipment_changed', equipment: {} })
   expect(adventure_quest(app.store.getState().adventure)).toBe('speak')
   app.dispatch({ type: 'adventure/challenge' })
   expect(app.store.getState().adventure.phase).toBe('explore')
@@ -119,6 +139,7 @@ for (const winner of [0n, 1n])
   test(`the final boss ending waits for presentation and preserves outcome ${winner} for rebirth`, () => {
     const app = create_app()
     win_first_fight(app)
+    equip_rewards(app)
     for (let index = 0; index <= source.dialogue.length; index++) app.dispatch({ type: 'adventure/talk' })
     app.dispatch({ type: 'adventure/invite' })
     app.dispatch({ type: 'adventure/select', character_id: source.companion.id })
@@ -163,3 +184,16 @@ for (const winner of [0n, 1n])
     app.dispatch({ type: 'auth/disconnected' })
     expect(app.store.getState().adventure.phase).toBe('entered')
   })
+
+test('every locale explains equipment confirmation without an actual transaction in the tutorial', async () => {
+  const { load_app_copy, copy_text } = await import('../../src/i18n/copy.ts')
+  const { LOCALES } = await import('../../src/i18n/locale.ts')
+  for (const { code } of LOCALES) {
+    const copy = await load_app_copy(code)
+    const text = copy_text(copy.adventure)
+    const confirm = copy_text(copy.characters_page)('accept')
+    expect(text('equip_title')).not.toBe('equip_title')
+    expect(text('equip_objective', { confirm })).not.toContain('{{confirm}}')
+    expect(text('equip_body', { confirm })).toContain('Sui')
+  }
+})
