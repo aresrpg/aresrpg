@@ -93,14 +93,39 @@ export const AmountForm = ({
 export const finance_empty_message = (state: FinanceState, copy: KaresCopy, unavailable = copy.unavailable): string =>
   state.digest ? copy.confirmed_refresh : state.request ? copy.loading : unavailable
 
-const FinanceError = ({ state, copy }: Readonly<{ state: FinanceState; copy: KaresCopy }>) => (
+const FinanceError = ({
+  state,
+  copy,
+  network,
+}: Readonly<{ state: FinanceState; copy: KaresCopy; network: 'testnet' | 'mainnet' }>) => (
   <>
-    {state.error && !state.error.includes('is not configured') && (
+    {(state.transaction_error || (state.error && !state.error.includes('is not configured'))) && (
       <p
         className="break-words border border-rose-400/25 bg-rose-400/5 p-3 text-[10px] leading-5 text-rose-200"
         role="alert"
       >
-        {state.error === 'same_account' ? copy.same_account : error_text(copy, state.error)}
+        {state.transaction_error
+          ? {
+              unknown: copy.error_unknown,
+              failed: copy.transaction_failed,
+              recovered: copy.error_recovered,
+            }[state.transaction_error.status]
+          : state.error === 'same_account'
+            ? copy.same_account
+            : error_text(copy, state.error)}
+        {state.transaction_error && (
+          <>
+            <br />
+            <a
+              className="break-all underline underline-offset-4"
+              href={`https://suiscan.xyz/${network}/tx/${state.transaction_error.digest}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              {state.transaction_error.digest}
+            </a>
+          </>
+        )}
       </p>
     )}
   </>
@@ -112,7 +137,7 @@ export const FinanceStatus = ({
   network,
 }: Readonly<{ state: FinanceState; copy: KaresCopy; network: 'testnet' | 'mainnet' }>) => (
   <div aria-live="polite" className="space-y-3">
-    <FinanceError state={state} copy={copy} />
+    <FinanceError state={state} copy={copy} network={network} />
     {state.digest && (
       <p className="break-all border border-cyan/20 bg-cyan/5 p-3 text-[9px] leading-5 text-cyan">
         {copy.confirmed}

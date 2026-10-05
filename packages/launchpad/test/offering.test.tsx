@@ -505,3 +505,38 @@ test('after closing, a successful sale exposes claims before a separate settleme
   expect(html.split('Claim KARES &amp; excess SUI').length - 1).toBe(1)
   expect(html).not.toContain('inputMode="decimal"')
 })
+
+test('mainnet receipt fallback stays independent, HTTPS and inside the deployed CSP', async () => {
+  const mainnet = resolve_launch_env({ VITE_NETWORK: 'mainnet' })
+  expect(mainnet.receipt_rpc_urls).toEqual(['https://fullnode.mainnet.sui.io:443'])
+  expect(resolve_launch_env({ VITE_NETWORK: 'testnet' }).receipt_rpc_urls).toEqual([])
+  const overridden = resolve_launch_env({ VITE_SUI_RPC_URL: 'https://fullnode.mainnet.sui.io' })
+  expect(overridden.receipt_rpc_urls).toEqual(['https://sui-grpc-web.publicnode.com:443'])
+  const configuration = await Bun.file(new URL('../vercel.json', import.meta.url)).json()
+  const policy = configuration.headers[0].headers.find(({ key }: { key: string }) => key === 'Content-Security-Policy')
+    .value as string
+  for (const endpoint of [mainnet.sui_rpc_url, ...mainnet.receipt_rpc_urls])
+    expect(policy).toContain(new URL(endpoint).origin)
+})
+
+test('fragmented refunds show the reviewed amount and keep the rest available for later batches', async () => {
+  const state = finance_state()
+  const snapshot = state.snapshot!
+  const html = await render_offering({
+    ...state,
+    snapshot: {
+      ...snapshot,
+      clock_ms: snapshot.offering.closes_ms,
+      offering: { ...snapshot.offering, total_contributed: 1n },
+      contributions: Array.from({ length: 51 }, (_, index) => ({
+        id: `0x${index.toString(16).padStart(64, '0')}`,
+        version: '1',
+        amount: KARES_UNIT,
+      })),
+    },
+  })
+  expect(html).toContain('data-finance-batch=""')
+  expect(html).toContain('0 KARES · 50 SUI')
+  expect(html).toContain('0 KARES · 1 SUI')
+  expect(html).toContain('<option value="1">2 / 2</option>')
+})

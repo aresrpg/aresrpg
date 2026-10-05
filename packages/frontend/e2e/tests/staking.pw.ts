@@ -95,3 +95,28 @@ test('staking keeps accounts independent, aggregates withdrawals and rewards and
   ).toBe(0)
   expect(await logo.getAttribute('src')).toMatch(/^\/assets\/kares-/)
 })
+
+test('fragmented staking chooses an exact reward batch and refuses an oversized withdrawal', async ({ page }) => {
+  await page.goto('/e2e/fixtures/staking.html?positions=200')
+  const account = page.locator('[data-staking-account="0xparticipant"]')
+  const batch = account.locator('[data-finance-batch]')
+  await expect(batch).toContainText('This transaction: 50 KARES')
+  await expect(batch).toContainText('Other batches: 150 KARES')
+  await batch.getByRole('combobox').selectOption('3')
+  await account.getByRole('button', { name: 'Claim rewards', exact: true }).click()
+  await account.getByRole('button', { name: 'Withdraw stake', exact: true }).click()
+  await expect(account.locator('[data-staking-withdrawal-limit]')).toContainText('50 KARES')
+  await account.getByRole('textbox').fill('100')
+  await expect(account.getByRole('button', { name: 'Withdraw stake', exact: true }).last()).toBeDisabled()
+  await account.getByRole('button', { name: 'Max per transaction', exact: true }).click()
+  await expect(account.getByRole('textbox')).toHaveValue('50.000000000')
+  await account.getByRole('button', { name: 'Withdraw stake', exact: true }).last().click()
+  const inputs = JSON.parse((await page.locator('[data-staking-inputs]').textContent()) ?? '[]') as {
+    input: { request: { action: { ids?: string[]; amount?: string } } }
+  }[]
+  expect(inputs).toHaveLength(2)
+  expect(inputs[0].input.request.action.ids).toEqual(
+    Array.from({ length: 50 }, (_, index) => `0x${(index + 150).toString(16).padStart(64, '0')}`)
+  )
+  expect(inputs[1].input.request.action.amount).toBe('50000000000')
+})

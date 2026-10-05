@@ -2245,6 +2245,12 @@ item_categories:
   relic_slot: 遗物{{number}}
 kares: 质押
 kares_page:
+  batch_max: '单笔交易上限'
+  batch_withdraw_limit: '单笔交易最大提取额'
+  batch: '交易批次'
+  batch_note: '每个批次都需要单独确认并支付 Gas 费。仅提交所选批次。'
+  batch_selected: '本次交易'
+  batch_remaining: '其他批次'
   stake_more: 增加质押
   additional_daily: 每日新增
   max: 最大
@@ -2269,7 +2275,7 @@ kares_page:
   sale_card_target_reached: 目标已达成
   sale_card_done_title: 发售已结束
   sale_card_done_note: 领取KARES代币及可退还的SUI。
-  sale_card_refund_note: 未达到最低目标，请领取全部SUI退款。
+  sale_card_refund_note: '未达到最低目标。请在金库重启发售前领取全部SUI退款。'
   community_release_note: 成功结算后，社区KARES将在1825天内解锁，只有金库可以领取。已领取代币可分发或销毁。
   sale_unlock_note: 发售成功结束后，销售代币将完全解锁。
   unlocked_immediately: 立即解锁
@@ -2345,7 +2351,7 @@ kares_page:
   burn_buy: 销毁{{cost}} KARES
   kares_missing: KARES不足
   language: 语言
-  refund_note: 若发售结束时未达到最低目标，全部出资均可退还。
+  refund_note: '若发售结束时未达到最低目标，在金库重启前可退还全部出资。未退款资金将自动参与下一次发售，并锁定至该次发售结束。'
   offering_contract: 发售合约
   min_marker: 最低
   max_marker: 最大
@@ -2408,7 +2414,7 @@ kares_page:
   stage_maximum: 向最高额度筹资
   minimum_refund: 未达到最低目标时全额退款。
   full_refund_available: 全部出资均可申请退款。
-  refund_claim_note: 若发售结束时低于最低目标，请在这里领取退款。退款不会自动发送。
+  refund_claim_note: '退款不会自动发送。请在金库重启前在此领取；未退款的出资将参与下一次发售，并在该次发售的整个期间保持锁定。'
   staking_unavailable: 此网络尚未开放质押。
   basecamp_announcement: 10月7日至9日，在新加坡Sui Basecamp与AresRPG见面。来打个招呼，领取战利品箱吧。
   funding_unknown: 筹资数据不可用。
@@ -2426,8 +2432,9 @@ kares_page:
   error_funds: 资金不足以支付此操作及其费用。
   error_connection: 连接失败。请检查网络后重试。
   error_session: 钱包会话不可用。请重新连接。
-  error_unknown: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
-  error_recovered: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
+  error_unknown: '上一笔交易的结果未知。请查看链接中的交易，然后重新加载页面或重新连接钱包后再试。结果恢复前，新的交易提交将保持锁定。'
+  transaction_failed: '交易在链上执行失败。可能已收取网络手续费。'
+  error_recovered: '已找到上一笔交易。请重新加载页面或重新连接钱包，然后刷新余额，再选择下一步操作。'
 leaderboard_page:
   unclaimed: 未领取
   reset_in: '{{time}}重置'

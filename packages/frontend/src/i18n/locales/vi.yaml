@@ -2245,6 +2245,12 @@ item_categories:
   relic_slot: Di vật {{number}}
 kares: Staking
 kares_page:
+  batch_max: 'Tối đa mỗi giao dịch'
+  batch_withdraw_limit: 'Số tiền rút tối đa trong một giao dịch'
+  batch: 'Lô giao dịch'
+  batch_note: 'Mỗi lô cần xác nhận riêng và phí gas riêng. Chỉ lô được chọn mới được gửi.'
+  batch_selected: 'Giao dịch này'
+  batch_remaining: 'Các lô còn lại'
   stake_more: Stake thêm
   additional_daily: Thêm mỗi ngày
   max: Tối đa
@@ -2269,7 +2275,7 @@ kares_page:
   sale_card_target_reached: Đã đạt mục tiêu
   sale_card_done_title: Đợt bán hoàn tất
   sale_card_done_note: Nhận KARES và SUI được hoàn lại.
-  sale_card_refund_note: Chưa đạt tối thiểu. Nhận hoàn toàn bộ SUI.
+  sale_card_refund_note: 'Chưa đạt mức tối thiểu. Nhận lại toàn bộ SUI trước khi ngân quỹ khởi động lại đợt bán.'
   community_release_note: Sau khi đợt bán thành công, KARES cộng đồng mở khóa trong 1.825 ngày và chỉ ngân quỹ được nhận. Token đã nhận có thể phân phối hoặc đốt.
   sale_unlock_note: Token bán được mở khóa hoàn toàn khi đợt bán kết thúc thành công.
   unlocked_immediately: mở khóa ngay
@@ -2345,7 +2351,7 @@ kares_page:
   burn_buy: Đốt {{cost}} KARES
   kares_missing: Không đủ KARES
   language: Ngôn ngữ
-  refund_note: Nếu đợt bán đóng dưới mức tối thiểu, bạn được hoàn toàn bộ khoản góp.
+  refund_note: 'Nếu đợt bán kết thúc dưới mức tối thiểu, bạn có thể nhận lại toàn bộ khoản góp cho đến khi ngân quỹ khởi động lại. Khoản chưa hoàn sẽ tự động tham gia đợt bán tiếp theo và bị khóa đến khi đợt đó kết thúc.'
   offering_contract: Hợp đồng đợt bán
   min_marker: TỐI THIỂU
   max_marker: TỐI ĐA
@@ -2408,7 +2414,7 @@ kares_page:
   stage_maximum: Huy động tới tối đa
   minimum_refund: Hoàn toàn bộ nếu không đạt tối thiểu.
   full_refund_available: Có thể nhận lại toàn bộ khoản góp.
-  refund_claim_note: Nhận hoàn tiền tại đây nếu đợt bán đóng dưới tối thiểu. Tiền hoàn không tự gửi.
+  refund_claim_note: 'Tiền hoàn không được gửi tự động. Hãy nhận tại đây trước khi ngân quỹ khởi động lại; khoản chưa hoàn sẽ tham gia đợt bán tiếp theo và bị khóa trong toàn bộ thời gian của đợt đó.'
   staking_unavailable: Staking chưa có trên mạng này.
   basecamp_announcement: Gặp AresRPG tại Sui Basecamp ở Singapore, ngày 7–9 tháng 10. Ghé chào và nhận rương thưởng nhé.
   funding_unknown: Dữ liệu tài trợ không khả dụng.
@@ -2426,8 +2432,9 @@ kares_page:
   error_funds: Không đủ tiền cho thao tác và phí.
   error_connection: Kết nối thất bại. Kiểm tra mạng rồi thử lại.
   error_session: Phiên ví không khả dụng. Hãy kết nối lại.
-  error_unknown: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
-  error_recovered: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
+  error_unknown: 'Chưa xác định được kết quả giao dịch gần nhất. Hãy kiểm tra giao dịch qua liên kết, rồi tải lại trang hoặc kết nối lại ví trước khi thử lại. Giao dịch mới vẫn bị chặn cho đến khi khôi phục được kết quả.'
+  transaction_failed: 'Giao dịch đã thất bại trên chuỗi. Phí mạng có thể đã được thu.'
+  error_recovered: 'Đã tìm thấy giao dịch trước đó. Hãy tải lại trang hoặc kết nối lại ví, rồi làm mới số dư trước khi chọn thao tác tiếp theo.'
 leaderboard_page:
   unclaimed: Chưa nhận
   reset_in: Đặt lại {{time}}

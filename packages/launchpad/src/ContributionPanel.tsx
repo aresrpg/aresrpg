@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { plan_kares_batches } from '@aresrpg/sdk/kares'
 import { useNumbers } from '@aresrpg/frontend/finance'
 import { ArrowUpRight } from 'lucide-react'
 import type { Locale } from '@aresrpg/frontend/locale'
 import {
   AmountForm,
+  FinanceBatch,
+  useFinanceBatch,
   Metric,
   finance_button,
   type FinanceInput,
@@ -44,6 +47,9 @@ export const ContributionPanel = ({
 }>) => {
   const { amount: format_amount } = useNumbers()
   const preview = offering_preview(snapshot)
+  const batches = plan_kares_batches(snapshot.contributions)
+  const { index, select, batch } = useFinanceBatch(batches)
+  const selected = offering_preview({ ...snapshot, contributions: batch })
   const { phase } = preview
   const { offering } = snapshot
   const balance = state.balances === null ? 0n : state.balances.sui_balance
@@ -75,24 +81,35 @@ export const ContributionPanel = ({
           </p>
         </section>
       )}
-      {claim_action && snapshot.contributions.length > 0 && (
-        <button
-          className={finance_button}
-          data-finance-claim=""
-          disabled={!!state.request}
-          onClick={() =>
-            dispatch({
-              type: 'request',
-              request: {
-                kind: 'execute',
-                action: { kind: claim_action, ids: snapshot.contributions.map(({ id }) => id) },
-              },
-            })
-          }
-          type="button"
-        >
-          {{ claim_offering: token_claim_label(copy, preview.refund), refund: copy.refund }[claim_action]}
-        </button>
+      {claim_action && batch.length > 0 && (
+        <>
+          <FinanceBatch
+            copy={copy}
+            count={batches.length}
+            index={index}
+            select={select}
+            disabled={!!state.request}
+            selected={`${format_amount(selected.tokens, 9)} KARES · ${format_amount(selected.refund, 9)} SUI`}
+            remaining={`${format_amount(preview.tokens - selected.tokens, 9)} KARES · ${format_amount(preview.refund - selected.refund, 9)} SUI`}
+          />
+          <button
+            className={finance_button}
+            data-finance-claim=""
+            disabled={!!state.request}
+            onClick={() =>
+              dispatch({
+                type: 'request',
+                request: {
+                  kind: 'execute',
+                  action: { kind: claim_action, ids: batch.map(({ id }) => id) },
+                },
+              })
+            }
+            type="button"
+          >
+            {{ claim_offering: token_claim_label(copy, preview.refund), refund: copy.refund }[claim_action]}
+          </button>
+        </>
       )}
       <div className="space-y-3 text-[10px] leading-5">
         <div className="flex flex-wrap justify-between gap-2">

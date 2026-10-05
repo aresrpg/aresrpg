@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { staking_withdrawal_limit } from '@aresrpg/sdk/kares'
 import { Button } from '@aresrpg/ui'
 import { useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
@@ -24,6 +25,7 @@ const StakingAmount = ({
   snapshot,
   dispatch,
   mode,
+  max_label,
 }: Readonly<{
   copy: KaresCopy
   balance: bigint | null
@@ -32,6 +34,7 @@ const StakingAmount = ({
   snapshot: FinanceSnapshot
   dispatch: (input: FinanceInput) => void
   mode: 'stake' | 'withdraw'
+  max_label: string
 }>) => {
   const { amount: format_amount, daily: daily_amount } = useNumbers()
   const [value, set_value] = useState('')
@@ -92,7 +95,7 @@ const StakingAmount = ({
                 if (balance !== null) set_value(staking_preset(balance, percent))
               }}
             >
-              {percent === 100 ? copy.max : `${percent}%`}
+              {percent === 100 ? max_label : `${percent}%`}
             </Button>
           ))}
         </div>
@@ -118,6 +121,7 @@ export const StakingForm = ({
   snapshot: FinanceSnapshot
   dispatch: (input: FinanceInput) => void
 }>) => {
+  const { amount: format_amount } = useNumbers()
   const [mode, set_mode] = useState<'stake' | 'withdraw'>('stake')
   const [expanded, set_expanded] = useState(false)
   const targets = {
@@ -125,7 +129,9 @@ export const StakingForm = ({
     withdraw: { kind: 'withdraw', positions: snapshot.positions.map(({ id, amount }) => ({ id, amount })) } as const,
   }
   const total_stake = staking_gains(snapshot).stake
-  const balances = { stake: balance, withdraw: total_stake }
+  const withdrawal_limit = staking_withdrawal_limit(snapshot.positions)
+  const batch_limited = mode === 'withdraw' && withdrawal_limit < total_stake
+  const balances = { stake: balance, withdraw: withdrawal_limit }
   const unavailable = { stake: !snapshot.pool.active, withdraw: total_stake === 0n }
   return (
     <div className="staking-action-box" data-expanded={expanded}>
@@ -148,6 +154,11 @@ export const StakingForm = ({
           </Button>
         ))}
       </div>
+      {batch_limited && (
+        <p className="staking-notice" data-staking-withdrawal-limit="">
+          {copy.batch_withdraw_limit}: {format_amount(withdrawal_limit, 9)} KARES. {copy.batch_note}
+        </p>
+      )}
       <StakingAmount
         copy={copy}
         balance={balances[mode]}
@@ -156,6 +167,7 @@ export const StakingForm = ({
         snapshot={snapshot}
         dispatch={dispatch}
         mode={mode}
+        max_label={batch_limited ? copy.batch_max : copy.max}
         key={mode}
       />
     </div>

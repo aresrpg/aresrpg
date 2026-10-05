@@ -63,3 +63,16 @@ export const pre_submission_failure = (error: unknown): boolean => {
     (message.startsWith('[sdk] gas budget exceeded') && message.includes('NOT submitted'))
   )
 }
+
+export type TransactionErrorOutcome = Readonly<{ digest: string; status: 'unknown' | 'failed' | 'recovered' }>
+
+/** Retain SDK transaction evidence separately from a successful receipt or a pre-submission refusal. */
+export const transaction_error_outcome = (error: unknown): TransactionErrorOutcome | null => {
+  const message = readable_transaction_error(error)
+  const failed = executed_transaction_digest(error)
+  if (failed) return { digest: failed, status: 'failed' }
+  const unknown = message.match(/^\[sdk\] transaction outcome unknown: (\S+);/)
+  if (unknown) return { digest: unknown[1]!, status: 'unknown' }
+  const recovered = message.match(/^\[sdk\] previous transaction recovered: (\S+);/)
+  return recovered ? { digest: recovered[1]!, status: 'recovered' } : null
+}

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { plan_kares_batches } from '@aresrpg/sdk/kares'
+
 import type { FinanceSnapshot } from './model.ts'
 
 const UNIT = 1_000_000_000n
@@ -29,3 +31,7 @@ export const staking_gains = (snapshot: FinanceSnapshot, additional = 0n) => {
     additional_sui: share(snapshot.pool.daily_sui, stake + additional, after_total) - sui,
   }
 }
+
+/** Fully withdrawn positions can still hold earned rewards; principal does not gate claims. */
+export const staking_reward_batches = (positions: FinanceSnapshot['positions']) =>
+  plan_kares_batches(positions.filter(({ pending_kares, pending_sui }) => pending_kares + pending_sui > 0n))
