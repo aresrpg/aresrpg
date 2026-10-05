@@ -21,14 +21,44 @@ assert_floor() {
   echo "Move coverage: $label $actual% (floor $minimum%)"
 }
 
+type_only_package() (
+  inspection=$(mktemp -d) || exit 1
+  trap 'rm -rf "$inspection"' EXIT
+  # Rebuild production bytecode: test-only helpers and stale modules are not evidence.
+  sui move build --path "$1" >"$inspection/build.log" 2>&1 || {
+    cat "$inspection/build.log" >&2
+    exit 1
+  }
+  for modules in "$1"/build/*/bytecode_modules; do
+    [ -d "$modules" ] || exit 1
+    # Sui's model needs dependency bytecode, but only this package's direct modules count.
+    sui move summary --bytecode --path "$modules" --output-directory "$inspection/summary" >/dev/null || exit 1
+    for bytecode in "$modules"/*.mv; do
+      [ -f "$bytecode" ] || exit 1
+      module=${bytecode##*/}
+      jq -e -s --arg module "${module%.mv}" \
+        'map(select(.id.name == $module)) | length == 1 and all(.[]; (.functions | type) == "object" and (.functions | length) == 0)' \
+        "$inspection"/summary/*/*.json >/dev/null || exit 1
+    done
+  done
+)
+
 cover_package() {
   package_path=$1
   floor=$2
   shift 2
+  rm -f "$package_path/.coverage_map.mvcov"
   sui move test --path "$package_path" --coverage
-  summary=$(sui move coverage summary --path "$package_path")
+  if summary=$(sui move coverage summary --path "$package_path"); then
+    coverage=$(printf '%s\n' "$summary" | awk '/\| % Move Coverage:/ { print $5 }')
+  elif type_only_package "$package_path"; then
+    summary="No executable production functions in $package_path"
+    coverage=100
+  else
+    printf '%s\n' "$summary" >&2
+    exit 1
+  fi
   printf '%s\n' "$summary"
-  coverage=$(printf '%s\n' "$summary" | awk '/\| % Move Coverage:/ { print $5 }')
   # Type-only compatibility packages contain no executable instructions to cover.
   if [ "$coverage" = NaN ] && printf '%s\n' "$summary" | awk '
     /^Module / { modules++ }
