@@ -47,8 +47,15 @@ const seed_dir = argument('--seed-dir') ?? join(repo_dir, 'seed')
 const content_dir = argument('--content-dir') ?? join(seed_dir, 'content')
 const load = (name) => JSON.parse(readFileSync(join(content_dir, name), 'utf8'))
 const deployment_object_ids = new Set(
-  Object.values(JSON.parse(readFileSync(process.env.ARES_PINS_FILE ?? join(repo_dir, 'pins.json'), 'utf8'))).filter(
-    (value) => typeof value === 'string' && /^0x[\da-f]{64}$/iu.test(value)
+  Object.entries(JSON.parse(readFileSync(process.env.ARES_PINS_FILE ?? join(repo_dir, 'pins.json'), 'utf8'))).flatMap(
+    ([name, value]) => {
+      // Wallet pins are addresses too. Only package/capability pins and object references identify objects.
+      const id =
+        typeof value === 'string' && /(?:^|_)(?:package(?:_original)?|cap|setup|publisher)$/u.test(name)
+          ? value
+          : value?.id
+      return typeof id === 'string' && /^0x[\da-f]{64}$/iu.test(id) ? [id.toLowerCase()] : []
+    }
   )
 )
 
@@ -971,11 +978,8 @@ const check_giftcard_values = (card) => {
 const is_giftcard_address = (custody) => typeof custody === 'string' && /^0x[\da-f]{64}$/iu.test(custody)
 const check_giftcard_custody = (item_type, custody) => {
   if (!is_giftcard_address(custody)) red('L4-CUSTODY', `giftcard ${item_type}: custody must be a 32-byte Sui address`)
-  else if (deployment_object_ids.has(custody))
-    red(
-      'L4-CUSTODY-OBJECT',
-      `giftcard ${item_type}: custody is a pinned package/capability object ID, not a signer address`
-    )
+  else if (deployment_object_ids.has(custody.toLowerCase()))
+    red('L4-CUSTODY-OBJECT', `giftcard ${item_type}: custody is a pinned deployment object ID, not a signer address`)
 }
 for (const card of airdrop.giftcards) {
   check_exact_keys(`airdrop.giftcards[${card.id ?? '?'}]`, card, [
