@@ -49585,5 +49585,15 @@
       "label": "board #49",
       "domain": "board"
     }
-  }
+  },
+  "kares_rewards_package": "0x1fbcc2f95306b6db869466c8b2c1461d5102b158584cced9036ee758c4b8cfce",
+  "kares_rewards_package_original": "0x1fbcc2f95306b6db869466c8b2c1461d5102b158584cced9036ee758c4b8cfce",
+  "kares_rewards_upgrade_cap": "0xa7dce2a574dcd2e9f58ababd6874813f3931b451b869b819e618f7a1f7343207",
+  "kares_rewards_artifact_digest": "6c681e59d0af221fe26c1125dee42a2dfd6a2c8be81ec3d5bde65f733b6ecceb",
+  "kares_rewards_setup": "0x8bbd036ce8a29650b5d13aad4dc6920a62d50e92edfdfac532e41f17fd50f4fd",
+  "kares_economy": {
+    "id": "0x3a129a2197afb8e12b43530247b8f502a558f36ba2dbe91a5e1fa9ad48aa0f61",
+    "shared_version": "1"
+  },
+  "kares_treasury": "0x37cf46b499f740e653644bd2f7a8ed97f248e8b3c69d5d12c97d7845a54c0cd8"
 }
