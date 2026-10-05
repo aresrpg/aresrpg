@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Button } from '@aresrpg/ui'
+import { staking_withdrawal_batch, STAKING_POSITION_BATCH_LIMIT } from '@aresrpg/sdk/kares'
 import { useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 
@@ -120,12 +121,14 @@ export const StakingForm = ({
 }>) => {
   const [mode, set_mode] = useState<'stake' | 'withdraw'>('stake')
   const [expanded, set_expanded] = useState(false)
+  const withdrawals = staking_withdrawal_batch(snapshot.positions)
+  const withdrawal_balance = withdrawals.reduce((sum, position) => sum + position.amount, 0n)
   const targets = {
     stake: { kind: 'stake' } as const,
-    withdraw: { kind: 'withdraw', positions: snapshot.positions.map(({ id, amount }) => ({ id, amount })) } as const,
+    withdraw: { kind: 'withdraw', positions: withdrawals } as const,
   }
   const total_stake = staking_gains(snapshot).stake
-  const balances = { stake: balance, withdraw: total_stake }
+  const balances = { stake: balance, withdraw: withdrawal_balance }
   const unavailable = { stake: !snapshot.pool.active, withdraw: total_stake === 0n }
   return (
     <div className="staking-action-box" data-expanded={expanded}>
@@ -148,6 +151,11 @@ export const StakingForm = ({
           </Button>
         ))}
       </div>
+      {mode === 'withdraw' && withdrawal_balance < total_stake && (
+        <p className="text-xs text-muted">
+          {copy.withdraw_batch.replace('{{count}}', String(STAKING_POSITION_BATCH_LIMIT))}
+        </p>
+      )}
       <StakingAmount
         copy={copy}
         balance={balances[mode]}

@@ -31,6 +31,38 @@ export const front_window = (document: Readonly<Document>): HTMLElement | undefi
     .sort((left, right) => Number(left.dataset.windowOrder) - Number(right.dataset.windowOrder))
     .at(-1)
 
+/** Passive consumers follow real browser windows rather than maintaining a second stack. */
+export const observe_window_changes = (document: Readonly<Document>, changed: () => void): (() => void) => {
+  const observer = new MutationObserver((records) => {
+    if (
+      records.some(
+        (record) =>
+          record.type === 'attributes' ||
+          [...record.addedNodes, ...record.removedNodes].some(
+            (node) =>
+              node instanceof Element &&
+              !!(
+                node.matches('dialog, [popover], [aria-modal]') || node.querySelector('dialog, [popover], [aria-modal]')
+              )
+          )
+      )
+    )
+      changed()
+  })
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['open', 'aria-modal', 'data-window-order'],
+  })
+  return () => observer.disconnect()
+}
+
+export const active_modal = (document: Readonly<Document>): HTMLDialogElement | undefined =>
+  [...document.querySelectorAll<HTMLDialogElement>('.aui-native-modal[open]')]
+    .sort((left, right) => Number(left.dataset.windowOrder) - Number(right.dataset.windowOrder))
+    .at(-1)
+
 const mark_front = (element: Readonly<HTMLElement>): void =>
   element.setAttribute(
     'data-window-order',

@@ -1,46 +1,36 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { SuiClientTypes } from '@mysten/sui/client'
 import { SuiGrpcClient } from '@mysten/sui/grpc'
 import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 
+import { decode_rewards_economy } from './kares_economy.ts'
 import { resolve_pins } from './pins.ts'
 import type { Pins, SdkNetwork } from './client.ts'
 import { absorb_object, absorb_receipt, type Receipt, type ResolutionCache } from './cache.ts'
-import { kares_coin_type, kares_pins, type KaresPins } from './kares_ptb.ts'
-import { KaresSnapshotPending, reconcile_kares_positions, type FinanceObject } from './kares_ownership.ts'
+import { kares_pins, type KaresPins } from './kares_ptb.ts'
 import {
   CLOCK_BCS,
   COMBAT_POT_BCS,
-  CONTRIBUTION_BCS,
   KARES_CURRENCY_BCS,
-  OFFERING_BCS,
+  COMMUNITY_POOL_BCS,
   STAKE_POSITION_BCS,
   STAKING_POOL_BCS,
   project_kares_pool,
   project_kares_position,
   project_community_claimable,
-  project_kares_schedule,
 } from './kares_decode.ts'
 
-export { KaresSnapshotPending } from './kares_ownership.ts'
+type FinanceObject = SuiClientTypes.Object<{ content: true; json: true }>
+export class KaresSnapshotPending extends Error {}
 
-export type KaresOfferingSnapshot = Readonly<{
+export type KaresCommunitySnapshot = Readonly<{
   id: string
   version: string
-  started: boolean
-  duration_ms: bigint
-  opens_ms: bigint
-  closes_ms: bigint
-  min_raise: bigint
-  max_raise: bigint
-  total_contributed: bigint
-  accepted: bigint
-  settled: boolean
-  settled_ms: bigint
-  community_remaining: bigint
-  community_claimable: bigint
+  started_ms: bigint
+  remaining: bigint
+  claimable: bigint
   treasury: string
-  liquidity: string
 }>
 export type KaresPoolSnapshot = Readonly<{
   id: string
@@ -54,7 +44,6 @@ export type KaresPoolSnapshot = Readonly<{
   daily_kares: bigint
   daily_sui: bigint
 }>
-export type KaresContributionSnapshot = Readonly<{ id: string; version: string; amount: bigint }>
 export type KaresPositionSnapshot = Readonly<{
   id: string
   version: string
@@ -66,10 +55,16 @@ export type KaresStakingSnapshot = Readonly<{
   network: SdkNetwork
   address: string | null
   clock_ms: bigint
-  offering: KaresOfferingSnapshot
+  community: KaresCommunitySnapshot
   pool: KaresPoolSnapshot
-  combat_pot: Readonly<{ id: string; version: string; balance: bigint; quota: bigint; spent: bigint }>
-  contributions: readonly KaresContributionSnapshot[]
+  combat_pot: Readonly<{
+    id: string
+    version: string
+    balance: bigint
+    quota: bigint
+    spent: bigint
+    authorized: string
+  }>
   positions: readonly KaresPositionSnapshot[]
   total_supply: bigint
 }>
@@ -88,7 +83,7 @@ const owned_objects = async (client: SuiGrpcClient, owner: string, type: string)
   const objects: FinanceObject[] = []
   let cursor: string | null | undefined
   do {
-    const page = await client.core.listOwnedObjects({ owner, type, cursor, include: { content: true } })
+    const page = await client.core.listOwnedObjects({ owner, type, cursor, include: { content: true, json: true } })
     for (const object of page.objects) {
       if (object.owner.$kind !== 'AddressOwner' || normalizeSuiObjectId(object.owner.AddressOwner) !== owner)
         throw new Error('KARES position belongs to another wallet')
@@ -101,14 +96,11 @@ const owned_objects = async (client: SuiGrpcClient, owner: string, type: string)
   return objects
 }
 
-const wallet_objects = async (client: SuiGrpcClient, pins: KaresPins, owner: string | null) => {
-  if (!owner) return { contributions: [], positions: [] }
-  const [contributions, positions] = await Promise.all([
-    owned_objects(client, owner, `${pins.original}::offering::Contribution`),
-    owned_objects(client, owner, `${pins.original}::staking::StakePosition`),
-  ])
-  return { contributions, positions }
-}
+const wallet_objects = async (client: SuiGrpcClient, pins: KaresPins, owner: string | null) => ({
+  positions: owner
+    ? await owned_objects(client, owner, `${pins.original}::staking::StakePosition<${pins.coin_type}>`)
+    : [],
+})
 
 const wallet_balances = async (
   client: SuiGrpcClient,
@@ -117,22 +109,30 @@ const wallet_balances = async (
 ): Promise<KaresBalances> => {
   if (!owner) return { kares_balance: 0n, sui_balance: 0n }
   const [kares, sui] = await Promise.all([
-    client.core.getBalance({ owner, coinType: kares_coin_type(pins.original) }),
+    client.core.getBalance({ owner, coinType: pins.coin_type }),
     client.core.getBalance({ owner }),
   ])
   return { kares_balance: BigInt(kares.balance.balance), sui_balance: BigInt(sui.balance.balance) }
 }
 
 const shared_objects = async (client: SuiGrpcClient, pins: KaresPins) => {
-  const ids = [pins.offering.id, pins.pool.id, pins.currency.id, normalizeSuiObjectId('0x6'), pins.combat_pot.id]
-  const types = [
-    `${pins.original}::offering::Offering`,
-    `${pins.original}::staking::StakingPool`,
-    `0x2::coin_registry::Currency<${kares_coin_type(pins.original)}>`,
-    '0x2::clock::Clock',
-    `${pins.original}::combat_rewards::CombatPot`,
+  const ids = [
+    pins.economy.id,
+    pins.pool.id,
+    pins.currency.id,
+    normalizeSuiObjectId('0x6'),
+    pins.combat_pot.id,
+    pins.community.id,
   ]
-  const { objects } = await client.core.getObjects({ objectIds: ids, include: { content: true } })
+  const types = [
+    `${pins.original}::economy::Economy`,
+    `${pins.original}::staking::StakingPool<${pins.coin_type}>`,
+    `0x2::coin_registry::Currency<${pins.coin_type}>`,
+    '0x2::clock::Clock',
+    `${pins.original}::combat_rewards::CombatPot<${pins.coin_type}>`,
+    `${pins.original}::community::CommunityPool<${pins.coin_type}>`,
+  ]
+  const { objects } = await client.core.getObjects({ objectIds: ids, include: { content: true, json: true } })
   const checked = ids.map((id, index) => {
     const object = objects.find(
       (candidate) => !(candidate instanceof Error) && normalizeSuiObjectId(candidate.objectId) === id
@@ -140,17 +140,18 @@ const shared_objects = async (client: SuiGrpcClient, pins: KaresPins) => {
     if (!object || object instanceof Error) throw new Error(`KARES object ${id} is unavailable`)
     const verified = canonical_object(object, id, types[index])
     const expected = [
-      pins.offering.shared_version,
+      pins.economy.shared_version,
       pins.pool.shared_version,
       pins.currency.shared_version,
       '1',
       pins.combat_pot.shared_version,
+      pins.community.shared_version,
     ][index]
     if (verified.owner.$kind !== 'Shared' || verified.owner.Shared.initialSharedVersion !== expected)
       throw new Error('KARES shared-object version does not match its deployment pins')
     return verified
   })
-  return checked as [FinanceObject, FinanceObject, FinanceObject, FinanceObject, FinanceObject]
+  return checked
 }
 
 const assert_currency = (currency: ReturnType<typeof KARES_CURRENCY_BCS.parse>, pins: KaresPins): void => {
@@ -165,25 +166,29 @@ const decode_snapshot = (
   shared: readonly FinanceObject[],
   wallet: Awaited<ReturnType<typeof wallet_objects>>
 ): KaresStakingSnapshot => {
-  const [offering_object, pool_object, currency_object, clock_object, combat_object] = shared
-  const offering = OFFERING_BCS.parse(offering_object.content)
+  const [economy_object, pool_object, currency_object, clock_object, combat_object, community_object] = shared
+  const economy = decode_rewards_economy(economy_object.json!)
+  const community = COMMUNITY_POOL_BCS.parse(community_object.content)
   const pool = STAKING_POOL_BCS.parse(pool_object.content)
   const combat = COMBAT_POT_BCS.parse(combat_object.content)
-  if (offering.combat_pot !== pins.combat_pot.id || combat.id !== pins.combat_pot.id)
-    throw new Error('KARES offering and combat pot are not linked')
   const currency = KARES_CURRENCY_BCS.parse(currency_object.content)
   const { timestamp_ms: clock_ms } = CLOCK_BCS.parse(clock_object.content)
-  if (offering.pool !== pins.pool.id || offering.id !== pins.offering.id || pool.id !== pins.pool.id)
-    throw new Error('KARES offering and staking pool are not linked')
+  const links = [
+    [economy.coin_type, pins.coin_type],
+    [economy.id, pins.economy.id],
+    [economy.currency, pins.currency.id],
+    [economy.staking_pool, pins.pool.id],
+    [pool.id, pins.pool.id],
+    [economy.combat_pot, pins.combat_pot.id],
+    [combat.id, pins.combat_pot.id],
+    [economy.community_pool, pins.community.id],
+    [community.id, pins.community.id],
+  ]
+  if (links.some(([actual, expected]) => actual !== expected))
+    throw new Error('KARES economy and reserves are not linked')
   assert_currency(currency, pins)
   if (pool.buckets.length !== 31) throw new Error('KARES reward schedule is malformed')
   const projected = project_kares_pool(pool, clock_ms)
-  const contributions = wallet.contributions.map((object) => {
-    const contribution = CONTRIBUTION_BCS.parse(object.content)
-    if (contribution.id !== normalizeSuiObjectId(object.objectId) || contribution.offering !== pins.offering.id)
-      throw new Error('Contribution targets another offering')
-    return Object.freeze({ id: object.objectId, version: object.version, amount: contribution.amount })
-  })
   const positions = wallet.positions.map((object) => {
     const position = STAKE_POSITION_BCS.parse(object.content)
     if (position.id !== normalizeSuiObjectId(object.objectId) || position.pool !== pins.pool.id)
@@ -206,24 +211,17 @@ const decode_snapshot = (
       balance: combat.balance,
       quota: combat.quota,
       spent: combat.spent,
+      authorized: normalizeStructTag(combat.authorized.name),
     }),
     total_supply: currency.supply!.BurnOnly!,
-    contributions: Object.freeze(contributions),
     positions: Object.freeze(positions),
-    offering: Object.freeze({
-      id: offering.id,
-      version: offering_object.version,
-      ...project_kares_schedule(offering),
-      min_raise: offering.minimum,
-      max_raise: offering.maximum,
-      total_contributed: offering.total_deposited,
-      accepted: offering.accepted,
-      settled: offering.settled,
-      settled_ms: offering.settled_ms,
-      community_remaining: offering.community_tokens,
-      community_claimable: project_community_claimable(offering, clock_ms),
-      treasury: offering.treasury,
-      liquidity: offering.liquidity,
+    community: Object.freeze({
+      id: community.id,
+      version: community_object.version,
+      started_ms: community.started_ms,
+      remaining: community.remaining,
+      claimable: project_community_claimable(community, clock_ms),
+      treasury: community.treasury,
     }),
     pool: Object.freeze({
       id: pool.id,
@@ -245,7 +243,7 @@ type ChangedObject = NonNullable<NonNullable<NonNullable<Receipt['Transaction']>
 
 const position_type = (type: string | undefined, pins: KaresPins): boolean => {
   if (!type || type === 'package') return false
-  return [`${pins.original}::offering::Contribution`, `${pins.original}::staking::StakePosition`]
+  return [`${pins.original}::staking::StakePosition<${pins.coin_type}>`]
     .map(normalizeStructTag)
     .includes(normalizeStructTag(type))
 }
@@ -270,7 +268,7 @@ const retain_floor = (floors: Map<string, VersionFloor>, id: string, observed: V
 
 const observe_finance_receipt = (floors: Map<string, VersionFloor>, pins: KaresPins, receipt: Receipt) => {
   const { types, changes } = receipt_changes(receipt)
-  const shared_ids = [pins.offering.id, pins.pool.id, pins.currency.id, pins.combat_pot.id]
+  const shared_ids = [pins.economy.id, pins.pool.id, pins.currency.id, pins.combat_pot.id, pins.community.id]
   for (const change of changes) {
     if (!change.objectId) continue
     const id = normalizeSuiObjectId(change.objectId)
@@ -310,35 +308,6 @@ export const create_kares_snapshot_reader = (
   cache?: ResolutionCache
 ) => {
   const floors = new Map<string, VersionFloor>()
-  const reconcile_wallet = async (
-    pins: KaresPins,
-    owner: string | null,
-    wallet: Awaited<ReturnType<typeof wallet_objects>>
-  ) => {
-    if (!owner) return wallet
-    const ids = new Set(
-      [...wallet.contributions, ...wallet.positions].map(({ objectId }) => normalizeSuiObjectId(objectId))
-    )
-    const missing = [...floors]
-      .filter(([id, known]) => !known.deleted && known.owner === owner && !ids.has(id))
-      .map(([id, known]) => ({ id, version: known.version }))
-    const resolved = await reconcile_kares_positions(client, pins, owner, missing)
-    for (const result of resolved) {
-      if ('receipt' in result) {
-        observe_finance_receipt(floors, pins, result.receipt)
-        if (cache) absorb_receipt(cache, result.receipt)
-      }
-    }
-    const restored = resolved.flatMap((result) => ('object' in result ? [result.object] : []))
-    return {
-      ...wallet,
-      contributions: [
-        ...wallet.contributions,
-        ...restored.filter(({ type }) => type.endsWith('::offering::Contribution')),
-      ],
-      positions: [...wallet.positions, ...restored.filter(({ type }) => type.endsWith('::staking::StakePosition'))],
-    }
-  }
   const retain_snapshot = (objects: readonly FinanceObject[], owner: string | null): void => {
     const ids = new Set(objects.map(({ objectId }) => normalizeSuiObjectId(objectId)))
     const versions = objects.map((object) => ({
@@ -369,11 +338,11 @@ export const create_kares_snapshot_reader = (
     const pins = kares_pins(raw_pins)
     const owner = address ? normalizeSuiObjectId(address) : null
     // Positions precede shared indexes. The game session owns its balances independently.
-    const wallet = await reconcile_wallet(pins, owner, await wallet_objects(client, pins, owner))
+    const wallet = await wallet_objects(client, pins, owner)
     const balances = include_balances ? await wallet_balances(client, pins, owner) : null
     const shared = await shared_objects(client, pins)
     const snapshot = decode_snapshot(network, owner, pins, shared, wallet)
-    retain_snapshot([...shared, ...wallet.contributions, ...wallet.positions], owner)
+    retain_snapshot([...shared, ...wallet.positions], owner)
     return { snapshot, balances }
   }
   return Object.freeze({
@@ -383,15 +352,8 @@ export const create_kares_snapshot_reader = (
     },
     staking_snapshot: async (address?: string): Promise<KaresStakingSnapshot> =>
       (await read_snapshot(address, false)).snapshot,
-    observe_receipt: (receipt: Receipt, consumed: readonly string[] = []): void => {
+    observe_receipt: (receipt: Receipt): void => {
       observe_finance_receipt(floors, kares_pins(raw_pins), receipt)
-      for (const id of consumed) {
-        const normalized = normalizeSuiObjectId(id)
-        floors.set(
-          normalized,
-          Object.freeze({ version: floors.get(normalized)?.version ?? 0n, deleted: true, owner: null })
-        )
-      }
     },
   })
 }

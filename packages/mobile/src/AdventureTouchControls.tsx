@@ -15,7 +15,7 @@ export const AdventureTouchControls = ({ copy, device }: Readonly<{ copy: AppCop
       state.navigation.page === 'world'
   )
   return (
-    <div className="pointer-events-none absolute inset-0 lg:hidden">
+    <div className="adventure-touch-controls pointer-events-none absolute inset-0">
       {enabled && device && <TouchControls copy={copy} device={device} />}
     </div>
   )

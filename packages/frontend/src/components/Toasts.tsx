@@ -2,7 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Notifications stay bottom-right across pages. Actions remain inline.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+import { active_modal, observe_window_changes } from '@aresrpg/ui'
 
 import { TOAST_CONTAINER_CLASS, toast as toast_api, toast_glass_class, type Toast } from '../toast.ts'
 
@@ -25,6 +27,54 @@ const ToastMessage = ({ toast }: Readonly<{ toast: Toast }>) => (
   </span>
 )
 
+const raise_toasts = (element: Readonly<HTMLElement> | null): void => {
+  if (!element?.isConnected) return
+  if (element.matches(':popover-open')) element.hidePopover()
+  element.showPopover()
+}
+
+/** Top-layer rendering handles occlusion; dialog ancestry keeps actions outside the inert page. */
+const ToastLayer = ({ children }: Readonly<{ children: ReactNode }>) => {
+  const layer = useRef<HTMLElement>(null)
+  const [host, set_host] = useState<HTMLElement>(() => active_modal(document) ?? document.body)
+  useLayoutEffect(
+    () =>
+      observe_window_changes(document, () => {
+        set_host(active_modal(document) ?? document.body)
+        raise_toasts(layer.current)
+      }),
+    []
+  )
+  useLayoutEffect(() => {
+    const element = layer.current
+    raise_toasts(element)
+    return () => element?.hidePopover()
+  }, [host])
+  return createPortal(
+    <aside
+      ref={layer}
+      popover="manual"
+      role="status"
+      aria-live="polite"
+      data-blocking-overlay="false"
+      data-toasts=""
+      className={`${TOAST_CONTAINER_CLASS} pointer-events-none`}
+      style={{
+        top: 'auto',
+        left: 'auto',
+        margin: 0,
+        padding: 0,
+        border: 0,
+        background: 'transparent',
+        color: 'inherit',
+      }}
+    >
+      {children}
+    </aside>,
+    host
+  )
+}
+
 export const Toasts = () => {
   const [toasts, set_toasts] = useState<readonly Toast[]>([])
   useEffect(
@@ -40,10 +90,10 @@ export const Toasts = () => {
   )
   if (toasts.length === 0) return null
   return (
-    <aside className={TOAST_CONTAINER_CLASS}>
+    <ToastLayer>
       {toasts.map((toast) => (
         <div
-          className={`${toast_glass_class} ${
+          className={`${toast_glass_class} pointer-events-auto ${
             toast.type === 'error'
               ? 'text-red-400'
               : toast.type === 'pending'
@@ -83,6 +133,6 @@ export const Toasts = () => {
           </div>
         </div>
       ))}
-    </aside>
+    </ToastLayer>
   )
 }

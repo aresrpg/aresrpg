@@ -3,9 +3,16 @@
 
 import { expect, test } from 'bun:test'
 import { close, flush, type ErrorEvent } from '@sentry/react'
+import type { EngineStatus } from '@aresrpg/engine'
 
 import { on_error_translate, toast } from '../../src/toast.ts'
-import { before_send, init_reporting, react_error_handlers, scrub_report } from '../../src/reporting.ts'
+import {
+  before_send,
+  init_reporting,
+  observe_engine_reporting,
+  react_error_handlers,
+  scrub_report,
+} from '../../src/reporting.ts'
 import { reporting_config, require_reporting_dsn } from '../../src/reporting_config.ts'
 
 test('a caught pre-submission MoveAbort reaches Sentry before toast translation', async () => {
@@ -94,4 +101,73 @@ test('development never reports and deployed builds require their own public DSN
   expect(() =>
     require_reporting_dsn({ VERCEL_ENV: 'production', VITE_SENTRY_DSN: source.VITE_SENTRY_DSN })
   ).not.toThrow()
+})
+
+test('caught engine failures reach Sentry once with original diagnostics and redacted details', async () => {
+  const events: ErrorEvent[] = []
+  init_reporting({ MODE: 'production', VITE_SENTRY_DSN: 'https://public@example.com/1' }, () => ({
+    send: async ([, items]) => {
+      for (const [header, payload] of items) if (header.type === 'event') events.push(payload as ErrorEvent)
+      return { statusCode: 200 }
+    },
+    flush: async () => true,
+  }))
+  let listener: ((status: EngineStatus) => void) | null = null
+  const emit = (status: EngineStatus): void => {
+    listener?.(status)
+  }
+  const stop = observe_engine_reporting({
+    quality: () => 'low',
+    subscribe_status: (next) => {
+      listener = next
+      next({ state: 'initializing', backend: 'none' })
+      return () => {
+        listener = null
+      }
+    },
+  })
+  try {
+    emit({ state: 'ready', backend: 'webgpu' })
+    await flush(2_000)
+    expect(events).toHaveLength(0)
+    const failure: EngineStatus = {
+      state: 'failed',
+      backend: 'webgpu',
+      issue: {
+        code: 'webgpu_device_lost',
+        detail: 'Device lost https://aresrpg.world/claim#private-bearer',
+        reason: 'unknown',
+        stack: 'Error: GPU lost\n    at render_frame (https://aresrpg.world/assets/renderer.js:42:7)',
+      },
+    }
+    emit(failure)
+    emit(structuredClone(failure))
+    await flush(2_000)
+    expect(events).toHaveLength(1)
+    expect(events[0]!.tags).toMatchObject({ area: 'engine', engine_issue: 'webgpu_device_lost' })
+    expect(events[0]!.contexts!.application).toMatchObject({ quality: 'low', backend: 'webgpu', reason: 'unknown' })
+    expect(events[0]!.exception!.values![0]!.stacktrace!.frames).toContainEqual(
+      expect.objectContaining({ function: 'render_frame', lineno: 42 })
+    )
+    expect(JSON.stringify(events)).not.toContain('private-bearer')
+    stop()
+    emit({ state: 'failed', backend: 'none', issue: { code: 'webgpu_initialization_failed' } })
+    await flush(2_000)
+    expect(events).toHaveLength(1)
+    const stop_unsupported = observe_engine_reporting({
+      quality: () => 'medium',
+      subscribe_status: (next) => {
+        next({ state: 'failed', backend: 'none', issue: { code: 'webgpu_unavailable' } })
+        return () => {}
+      },
+    })
+    await flush(2_000)
+    expect(events).toHaveLength(2)
+    expect(events[1]!.level).toBe('warning')
+    expect(events[1]!.tags!.engine_issue).toBe('webgpu_unavailable')
+    stop_unsupported()
+  } finally {
+    stop()
+    await close()
+  }
 })

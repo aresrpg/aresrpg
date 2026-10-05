@@ -24,11 +24,15 @@ mod leaderboard_store;
 mod leaderboards;
 mod market_prices;
 mod market_volume;
+mod notification_events;
+mod notification_loot;
+mod notification_sales;
 mod ownership;
 mod personal_kiosk;
 mod pipeline;
 mod publish;
 mod store;
+mod trade_tokens;
 
 use anyhow::{Context, Result};
 use clap::Parser;

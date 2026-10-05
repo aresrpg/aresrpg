@@ -58,6 +58,7 @@ const tracked_state = (): PlayerState =>
     market_observation: null,
     market_price_observation: null,
     leaderboard_observation: null,
+    inspection: null,
   }) as PlayerState
 
 const empty_state = (): PlayerState =>

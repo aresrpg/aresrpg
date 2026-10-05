@@ -166,7 +166,11 @@ export const create_engine = ({
       backend?.render(now)
     } catch (error) {
       console.error('World rendering failed.', error)
-      report_failure({ code: 'graphics_unavailable', detail: String(error) })
+      report_failure({
+        code: 'graphics_unavailable',
+        detail: String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
     }
     schedule_frame()
   }
@@ -257,6 +261,7 @@ export const create_engine = ({
       const issue = {
         code: 'webgpu_initialization_failed' as const,
         detail: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       }
       report_failure(issue)
       return

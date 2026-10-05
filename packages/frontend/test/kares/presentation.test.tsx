@@ -8,7 +8,7 @@ import { load_app_copy } from '../../src/i18n/copy.ts'
 import KaresPage, { KaresPageView } from '../../src/kares/KaresPage.tsx'
 import { StakingContent } from '../../src/kares/StakingAccount.tsx'
 import { TokenomicsTab } from '../../src/kares/TokenomicsTab.tsx'
-import { AmountForm, FinanceStatus } from '../../src/kares/components.tsx'
+import { FinanceStatus } from '../../src/kares/components.tsx'
 import { WalletChoices } from '../../src/components/WalletPickerModal.tsx'
 import { initial_finance } from '../../src/kares/model.ts'
 
@@ -38,10 +38,8 @@ test('staking combines every position into one stake and one accrued-rewards sec
   expect(html).toContain('>30 <small')
   expect(html).toContain('>1.500</strong>')
   expect(html).toContain('>0.750</strong>')
-  expect(html).not.toContain(copy.kares_page.fund_note)
   expect(html).not.toContain(copy.kares_page.rewards_note)
   expect(html).not.toContain(copy.kares_page.combat_rewards)
-  expect(html).not.toContain(copy.kares_page.staking_lead)
   expect(html).not.toContain('<select')
 })
 
@@ -54,36 +52,16 @@ test('unconfigured staking renders an honest unavailable state and independent w
   expect(html).not.toContain('Google')
 })
 
-test('tokenomics derives all six allocations and explains burns and variable rewards', async () => {
+test('tokenomics derives funded reserves and remaining supply and explains burns and variable rewards', async () => {
   const copy = (await load_app_copy('en')).kares_page
   const html = renderToStaticMarkup(<TokenomicsTab copy={copy} />)
-  for (const amount of ['1,000,000', '110,000', '400,000', '200,000', '160,000', '100,000', '30,000'])
+  for (const amount of ['1,000,000,000', '110,000,000', '200,000,000', '100,000,000', '30,000,000', '560,000,000'])
     expect(html).toContain(amount)
   expect(html).toContain('11%')
   expect(html).toContain('3%')
   expect(html).toContain(copy.mastery_note)
   expect(html).toContain(copy.revenue_note)
   expect(html).not.toContain('APR')
-})
-
-test('forms reject unavailable writes and clearly identify irrevocable donation assets', async () => {
-  const copy = (await load_app_copy('en')).kares_page
-  const html = renderToStaticMarkup(
-    <AmountForm
-      asset="SUI"
-      balance={0n}
-      busy={false}
-      copy={copy}
-      disabled
-      label={copy.donate}
-      submit={() => {
-        throw new Error('render must not submit')
-      }}
-    />
-  )
-  expect(html).toContain('disabled=""')
-  expect(html).toContain('inputMode="decimal"')
-  expect(html).toContain(copy.gas_note)
 })
 
 test('wallet selection shows each authorized account explicitly', async () => {
@@ -103,29 +81,29 @@ test('wallet selection shows each authorized account explicitly', async () => {
       busy={false}
       select={() => undefined}
       empty_label={copy.no_wallet}
-      select_label={copy.choose_account}
+      select_label={copy.connect}
     />
   )
-  expect(html).toContain(copy.choose_account)
+  expect(html).toContain(copy.connect)
   expect(html).toContain('0xone')
   expect(html).toContain('0xtwo')
 })
 
-test('receipts link the requested network and unavailable configuration stays out of public errors', async () => {
+test('receipt confirmations stay out of the panel and unavailable configuration stays out of public errors', async () => {
   const copy = (await load_app_copy('en')).kares_page
   const hidden = renderToStaticMarkup(
     <FinanceStatus
       copy={copy}
-      network="mainnet"
+
       state={{ ...initial_finance(), error: 'KARES package is not configured' }}
     />
   )
   expect(hidden).not.toContain('not configured')
   const receipt = renderToStaticMarkup(
-    <FinanceStatus copy={copy} network="mainnet" state={{ ...initial_finance(), digest: 'receipt-digest' }} />
+    <FinanceStatus copy={copy} state={{ ...initial_finance(), digest: 'receipt-digest' }} />
   )
-  expect(receipt).toContain('https://suiscan.xyz/mainnet/tx/receipt-digest')
-  expect(receipt).toContain(copy.confirmed)
+  expect(receipt).not.toContain('receipt-digest')
+  expect(receipt).not.toContain(copy.confirmed)
 })
 
 test('multiple wallet accounts use the shared picker rows with full accessible addresses', async () => {
@@ -146,7 +124,7 @@ test('multiple wallet accounts use the shared picker rows with full accessible a
       busy={false}
       select={() => undefined}
       empty_label={copy.no_wallet}
-      select_label={copy.choose_account}
+      select_label={copy.connect}
     />
   )
   expect(html).toContain('data-wallet-choices=""')

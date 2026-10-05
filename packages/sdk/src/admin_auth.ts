@@ -14,15 +14,13 @@ import { admin_wallet_context, type AuthSession } from './auth.ts'
 import { receipt_digest, type Receipt } from './cache.ts'
 import { SDK, sui_transport } from './client.ts'
 import { delegate } from './delegated_admin.ts'
+import { create_seed_admin } from './seed_admin.ts'
+import type { SeedContent } from './seed.ts'
 import {
-  create_kares_setup_transaction,
-  create_kares_settlement_transaction,
-  create_kares_start_transaction,
+  create_rewards_setup_transaction,
   create_kares_community_claim_transaction,
-  create_kares_combat_seed_transaction,
-  create_kares_combat_authorization_transaction,
   kares_pins,
-  type OfferingSetup,
+  type RewardsSetup,
 } from './kares_ptb.ts'
 import { read_kares_metadata, update_kares_metadata_into, type KaresMetadataUpdate } from './kares_metadata.ts'
 import {
@@ -45,11 +43,8 @@ export type AdminAuthSession = AuthSession &
       upgrade_cap: string
     ) => Promise<Readonly<{ package: string; version: number; policy: number }>>
     bootstrap_deployment: (deployment: GameDeployment) => Promise<Receipt>
-    setup_kares: (terms: OfferingSetup) => Promise<Receipt>
-    start_kares: () => Promise<Receipt>
-    settle_kares: () => Promise<Receipt>
-    seed_combat_kares: () => Promise<Receipt>
-    authorize_combat_kares: () => Promise<Receipt>
+    setup_rewards: (terms: RewardsSetup) => Promise<Receipt>
+    freeze_project: (content: SeedContent) => Promise<Readonly<{ digest: string }>>
     claim_community_kares: () => Promise<Receipt>
     update_kares_metadata: (update: KaresMetadataUpdate) => Promise<Receipt>
     create_giftcard_links: (
@@ -191,44 +186,38 @@ export const as_admin_session = (session: AuthSession): AdminAuthSession => {
       return Object.freeze({ receipt })
     },
     read_package_upgrade,
-    setup_kares: async (terms) => {
+    setup_rewards: async (terms) => {
       const upgrade = await read_package_upgrade(terms.upgrade_cap)
-      if (normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(terms.package) || upgrade.version !== 1)
-        throw new Error('KARES setup requires its original, never-upgraded publication capability')
-      await context.sdk.hydrate([terms.genesis, terms.upgrade_cap, terms.currency, normalizeSuiObjectId('0xc')])
-      return context.sdk.execute(create_kares_setup_transaction(context.sdk, terms), {
+      if (
+        normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(terms.package) ||
+        upgrade.version !== 1 ||
+        upgrade.policy !== 0
+      )
+        throw new Error(
+          'Reward setup requires its original, never-upgraded publication capability with unrestricted upgrade authority'
+        )
+      await context.sdk.hydrate([terms.setup, terms.upgrade_cap])
+      return context.sdk.execute(create_rewards_setup_transaction(context.sdk, terms), {
         budget: 'estimate',
         include: { objectTypes: true },
       })
     },
-    start_kares: () =>
-      context.sdk.execute(create_kares_start_transaction(kares_pins(context.sdk.pins)), {
-        budget: 'estimate',
-        include: { objectTypes: true },
-      }),
-    settle_kares: () =>
-      context.sdk.execute(create_kares_settlement_transaction(kares_pins(context.sdk.pins)), {
-        budget: 'estimate',
-        include: { objectTypes: true },
-      }),
+    freeze_project: async (content) => {
+      const { pins } = context.sdk
+      const { admin_cap } = pins
+      const root = pins.content_root as Readonly<{ id?: string }> | undefined
+      if (typeof admin_cap !== 'string' || !root?.id) throw new Error('Project freeze authority is not configured')
+      const admin = await create_seed_admin({ sdk: context.sdk, content, config: { admin_cap, content_root: root.id } })
+      return admin.freeze_forever()
+    },
     claim_community_kares: () =>
       context.sdk.execute(
         create_kares_community_claim_transaction(kares_pins(context.sdk.pins), context.account.address),
         { budget: 'estimate', include: { objectTypes: true } }
       ),
-    seed_combat_kares: () =>
-      context.sdk.execute(create_kares_combat_seed_transaction(kares_pins(context.sdk.pins)), {
-        budget: 'estimate',
-        include: { objectTypes: true },
-      }),
-    authorize_combat_kares: () =>
-      context.sdk.execute(
-        create_kares_combat_authorization_transaction(kares_pins(context.sdk.pins), context.sdk.game_type_package),
-        { budget: 'estimate', include: { objectTypes: true } }
-      ),
     update_kares_metadata: async (update) => {
       const pins = kares_pins(context.sdk.pins)
-      const metadata = await read_kares_metadata(context.resolution_client, pins.currency, pins.original)
+      const metadata = await read_kares_metadata(context.resolution_client, pins.currency, pins.coin_type)
       if (!metadata.metadata_cap || metadata.owner !== normalizeSuiObjectId(context.account.address))
         throw new Error('Connect the cold wallet that owns the KARES metadata capability')
       await context.sdk.hydrate([metadata.metadata_cap])

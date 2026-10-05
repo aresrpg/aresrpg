@@ -10,7 +10,8 @@ import { SDK, living_content } from './client.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
 import { event_boolean, event_integer, event_string, event_u64 } from './receipt_decode.ts'
 import { item_template_id, mastery_offer_id, world_content_id } from './seed_ids.ts'
-import { KARES_UNIT, kares_payment } from './kares.ts'
+import { kares_payment } from './kares.ts'
+import { mastery_kares_price, MASTERY_PURCHASE_LIMIT, valid_mastery_purchase_quantity } from './kares_economics.ts'
 
 type GameSdk = ReturnType<typeof SDK>
 type OfferInput = Omit<Parameters<GameSdk['doors']['redeem_mastery_offer']>[1], 'mastery_object'>
@@ -90,9 +91,9 @@ export const mastery_actions = (
     },
     kares: (cost = 0n) => ({
       compose: (tx, input) =>
-        sdk.doors.redeem_mastery_offer_kares(tx, {
+        sdk.doors.redeem_mastery_offer_token(tx, {
           ...input,
-          payment: kares_payment(sdk, tx, cost * KARES_UNIT),
+          payment: kares_payment(sdk, tx, mastery_kares_price(cost)),
         }),
       project: () => null,
     }),
@@ -129,13 +130,18 @@ export const mastery_actions = (
       custody,
       payment = 'mastery',
       expected_cost,
+      count = 1,
     }: Readonly<{
       item_type: string
       existing: string | null
       custody?: KioskCustody
       payment?: 'mastery' | 'kares'
       expected_cost?: bigint
+      count?: number
     }>) => {
+      if (!valid_mastery_purchase_quantity(count))
+        throw new Error(`Purchase quantity must be between 1 and ${MASTERY_PURCHASE_LIMIT}`)
+      if (payment === 'mastery' && count !== 1) throw new Error('Mastery-point purchases redeem one item at a time')
       const { content_root, seed_package_original } = living_content(sdk, 'Mastery redemption')
       if (!sdk.game_type_package) throw new Error('Mastery is unavailable: the defining package is missing.')
       const offer = mastery_offer_id(content_root, sdk.game_type_package, item_type)
@@ -143,8 +149,11 @@ export const mastery_actions = (
       await sdk.hydrate_unknown([offer, template, ...(existing ? [existing] : [])])
       const prepared = await prepare_payment[payment](expected_cost)
       const receipt = await with_kiosk(
-        (tx, kiosk, cap) => prepared.compose(tx, { offer, template, existing, kiosk, cap }),
-        { custody, gas_scope: `mastery:${address}` }
+        (tx, kiosk, cap) => {
+          for (let purchase = 0; purchase < count; purchase += 1)
+            prepared.compose(tx, { offer, template, existing, kiosk, cap })
+        },
+        { custody, gas_scope: `mastery:${address}`, ...(count > 1 ? { budget: 'estimate' as const } : {}) }
       )
       return Object.freeze({ digest: receipt_digest(receipt), mastery: prepared.project(receipt) })
     },

@@ -156,3 +156,4 @@ export {
   rig_slots,
   type CharacterEquipmentSlot,
 } from './equipment.ts'
+export { roll_quality } from './roll_quality.ts'

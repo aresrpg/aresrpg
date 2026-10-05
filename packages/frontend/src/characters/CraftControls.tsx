@@ -121,10 +121,11 @@ export const CraftControls = ({
           type: 'character/crafted',
           digest,
           successes,
+          attempts: completed_attempts,
+          output_type: recipe.output_type,
           character_id: character.id,
           job,
           xp: job_xp_gained,
-          inputs: stack_plan.map(({ target_id, amount }) => ({ item_id: target_id, amount })),
         })
         const message = t('jobs.craft.craft_result', { attempts: completed_attempts, successes, name })
         if (craft_result_tone(successes) === 'error') pending_toast.error(localized_error(message))

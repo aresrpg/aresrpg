@@ -14,7 +14,7 @@ import { run_to_remaining_seconds } from '../core/run_to.ts'
 
 export const selected_position_run = (run: Readonly<RunTo> | null, selected: string | null) =>
   run?.status === 'running' &&
-  (run.source === 'position' || run.source === 'fight') &&
+  ['position', 'map', 'fight'].includes(run.source) &&
   run.controlled_character_id === selected
     ? run
     : null

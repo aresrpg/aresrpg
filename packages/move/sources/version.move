@@ -7,7 +7,7 @@ module aresrpg::version;
 
 use aresrpg_control::admin::AdminCap;
 
-const PACKAGE_VERSION: u64 = 3;
+const PACKAGE_VERSION: u64 = 4;
 
 const EVersionMismatch: u64 = 601;
 
@@ -45,3 +45,8 @@ public fun assert_latest(self: &Version) {
 
 #[test_only]
 public fun test_init(ctx: &mut TxContext) { init(ctx) }
+
+#[test_only]
+public fun stale_for_testing(ctx: &mut TxContext): Version {
+  Version { id: object::new(ctx), current_version: 0 }
+}

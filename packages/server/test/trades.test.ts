@@ -146,3 +146,30 @@ test('the request inbox exposes only the newest incoming invitation and outgoing
   expect(queries.filter((query) => query.includes('AND NOT'))).toHaveLength(2)
   expect(queries.filter((query) => query.includes('AND NOT')).every((query) => query.includes('LIMIT 1'))).toBeTrue()
 })
+
+test('active token fields own trade consideration and retired balances never leak into the wire', async () => {
+  const properties = {
+    id: 'trade',
+    a: 'a',
+    b: 'b',
+    phase: 'settling',
+    offer_revision: 4,
+    kares_a: '999',
+    kares_b: '888',
+    token_a: '123000000000',
+    token_b: '0',
+    caps_a: '[]',
+    caps_b: '[]',
+  }
+  const graph = { read: async (query: string) => (query.includes('AND NOT') ? [] : [{ trade: { properties } }]) }
+  const [trade] = await get_trades(graph as never, { address: 'a' })
+  expect(trade.kares_a).toBe('123000000000')
+  expect(trade.kares_b).toBe('0')
+  const legacy = { ...properties, token_a: undefined, token_b: undefined }
+  const [retired] = await get_trades(
+    { read: async (query: string) => (query.includes('AND NOT') ? [] : [{ trade: { properties: legacy } }]) } as never,
+    { address: 'a' }
+  )
+  expect(retired.kares_a).toBe('0')
+  expect(retired.kares_b).toBe('0')
+})

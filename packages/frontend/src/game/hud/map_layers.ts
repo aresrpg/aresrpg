@@ -210,10 +210,16 @@ export const draw_dungeon_portal_markers = (
   }
 }
 
+const PLAYER_MARKS = {
+  player: { color: '#4a9eff', radius: 3.5 },
+  party: { color: '#4ee6cf', radius: 3.5 },
+  leader: { color: '#f5cf73', radius: 5 },
+} as const
+
 export const draw_players = (
   context: CanvasRenderingContext2D,
   view: MapView,
-  players: readonly Readonly<{ x: number; z: number }>[]
+  players: readonly Readonly<{ x: number; z: number; role?: 'player' | 'party' | 'leader' }>[]
 ): void => {
   for (const player of players) {
     const { px, pz } = to_canvas(
@@ -225,9 +231,10 @@ export const draw_players = (
       view.radius
     )
     if (px < 0 || pz < 0 || px > view.size || pz > view.size) continue
-    context.fillStyle = '#4a9eff'
+    const mark = PLAYER_MARKS[player.role ?? 'player']
+    context.fillStyle = mark.color
     context.beginPath()
-    context.arc(px, pz, 3.5, 0, Math.PI * 2)
+    context.arc(px, pz, mark.radius, 0, Math.PI * 2)
     context.fill()
     context.strokeStyle = 'rgba(10, 10, 15, 0.8)'
     context.lineWidth = 1

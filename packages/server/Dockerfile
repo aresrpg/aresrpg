@@ -26,14 +26,14 @@ COPY packages/fight/package.json packages/fight/
 COPY packages/ui/package.json packages/ui/
 COPY packages/frontend/package.json packages/frontend/
 COPY packages/mobile/package.json packages/mobile/
-COPY packages/launchpad/package.json packages/launchpad/
 COPY packages/journal/package.json packages/journal/
 COPY packages/immutable/package.json packages/immutable/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/server/package.json packages/server/
+COPY packages/discord/package.json packages/discord/
 # --ignore-scripts: the root "prepare" hook arms git hooks — meaningless in an image.
-RUN bun install --frozen-lockfile --production --ignore-scripts
+RUN bun install --filter @aresrpg/server --frozen-lockfile --production --ignore-scripts
 
 COPY packages/server packages/server
 COPY packages/protocol packages/protocol
@@ -43,7 +43,6 @@ COPY packages/immutable packages/immutable
 COPY packages/engine/src packages/engine/src
 COPY seed/content seed/content
 COPY seed/structures seed/structures
-
 USER bun
 EXPOSE 9800
 CMD ["bun", "run", "packages/server/src/index.ts"]

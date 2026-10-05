@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+@keyframes dismount-prompt-fade {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (pointer: fine) {
+  .mount-prompt--riding {
+    animation: dismount-prompt-fade 400ms ease 5s forwards;
+  }
+}
+
+@media (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .mount-prompt--riding {
+    animation-duration: 0s;
+  }
+}

@@ -220,7 +220,12 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
     )
     return Object.freeze({
       ...session,
-      craft_result: Object.freeze({ digest: input.digest, successes: input.successes }),
+      craft_result: Object.freeze({
+        digest: input.digest,
+        successes: input.successes,
+        attempts: input.attempts,
+        output_type: input.output_type,
+      }),
       inventory: session.inventory,
       characters: Object.freeze(characters),
     })

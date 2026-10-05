@@ -138,11 +138,12 @@ describe('character receipt folds', () => {
     const crafted = reduce_app_state(amounts, {
       type: 'character/crafted',
       digest: 'craft-confirmed',
+      attempts: 1,
+      output_type: 'hat',
       successes: 1,
       character_id: '0xchar',
       job: 'TAILOR',
       xp: 20,
-      inputs: [],
     })
     expect(crafted.session.inventory).toEqual([{ ...target, amount: 2, version: '1' }])
     expect(crafted.session.characters[0]!.jobs.TAILOR).toBe('20')

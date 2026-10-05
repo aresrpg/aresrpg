@@ -103,6 +103,53 @@ test.each([
   expect(values.size).toBe(0)
   expect(app.store.getState().session.giftcards).toEqual([card])
   expect(app.store.getState().distribution).toMatchObject({ gift_link_ready: false, pending: null })
+  expect(app.store.getState().distribution.notice).toEqual({ kind: 'received', giftcards: [card] })
+  stop()
+})
+
+test('gift confirmation survives automatic redemption and duplicate snapshots do not reopen it', async () => {
+  const card = { id: '0xcelebrate', template: TEMPLATE_ID, amount: 1 }
+  const wallet = { address: '0xgame', identity: 'zklogin', redeem_giftcards: async () => ({ digest: 'redeemed' }) }
+  const app = create_app()
+  const stop = app.observe(['distribution'])
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: wallet as never })
+  app.dispatch({ type: 'path/open', pathname: '/claim' })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/giftcards', giftcards: [card] } })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(app.store.getState().session.giftcards).toEqual([])
+  expect(app.store.getState().distribution.notice).toEqual({ kind: 'received', giftcards: [card] })
+  app.dispatch({ type: 'distribution/notice_dismissed' })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/giftcards', giftcards: [card] } })
+  expect(app.store.getState().distribution.notice).toBeNull()
+  stop()
+})
+
+test('a spent printed card clears the bearer intent and presents its unavailable state', async () => {
+  const values = new Map<string, string>([['aresrpg:gift-link', 'https://aresrpg.world/claim#$spent']])
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    },
+  })
+  const wallet = { address: '0xgame', identity: 'zklogin', claim_giftcard_link: async () => null }
+  const app = create_app()
+  const stop = app.observe(['distribution'])
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session: wallet as never })
+  app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [] } })
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(app.store.getState().distribution).toMatchObject({
+    notice: { kind: 'unavailable' },
+    gift_link_ready: false,
+    pending: null,
+  })
+  expect(values.size).toBe(0)
+  expect(app.store.getState().session.giftcards).toEqual([])
   stop()
 })
 

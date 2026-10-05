@@ -29,6 +29,12 @@ cover_package() {
   summary=$(sui move coverage summary --path "$package_path")
   printf '%s\n' "$summary"
   coverage=$(printf '%s\n' "$summary" | awk '/\| % Move Coverage:/ { print $5 }')
+  # Type-only compatibility packages contain no executable instructions to cover.
+  if [ "$coverage" = NaN ] && printf '%s\n' "$summary" | awk '
+    /^Module / { modules++ }
+    /No source code to compute coverage/ { empty++ }
+    END { exit !(modules > 0 && modules == empty) }
+  '; then coverage=100; fi
   assert_floor "$package_path" "$coverage" "$floor"
 
   for requirement in "$@"; do
@@ -40,7 +46,8 @@ cover_package() {
 }
 
 cover_package packages/control 98.01
-cover_package packages/kares 100 kares:100 offering:100 combat_rewards:100 staking:100
+cover_package packages/kares 100
+cover_package packages/rewards 100 amounts:100 economy:100 community:100 combat_rewards:100 staking:100
 cover_package packages/seed 98.01 \
   registry:98.01 board_catalog:98.01 dungeon_content:98.01 item_rows:98.01 \
   mob_rows:98.01 recipe_rows:98.01 spell_rows:98.01 world_content:98.01
@@ -65,7 +72,7 @@ printf '%s\n' "$forge_work" | awk -F, '
 # Check the potentially nonterminating cases under a finite budget before broad coverage.
 sui move test --path packages/move-combat mob_work_bounds_tests --gas-limit 200000000
 cover_package packages/move-combat 98.09 combat:98.09
-cover_package packages/move 99.24 forgemagie:99.56 zone:98.01 trade:98.75 fight_rewards:100 loot_box:100 gathering:98.01 item:98.65 dungeon:99.47 kolizeum:99.68 \
+cover_package packages/move 99.27 forgemagie:99.56 zone:98.01 trade:99.29 fight_rewards:100 loot_box:100 gathering:98.01 item:98.65 dungeon:99.47 kolizeum:99.68 \
   protected_policy:100 character:98.94 progression:100 friends:100 party:98.72 \
   equipment:98.58 pet:100 crafting:100 world:100 version:100 \
-  listing_rule:100 lot_rule:100 naked_rule:100 consumable:99.13 fight:98.37 distribution:100 mastery:100 api:99.41
+  listing_rule:100 lot_rule:100 naked_rule:100 consumable:99.13 fight:98.39 distribution:100 mastery:100 api:99.42

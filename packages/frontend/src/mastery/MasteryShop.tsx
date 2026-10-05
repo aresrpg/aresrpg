@@ -4,12 +4,11 @@
 import { ArrowUpRight, Gem, Loader2 } from 'lucide-react'
 import { Button } from '@aresrpg/ui'
 import { useEffect, useRef } from 'react'
-import { KARES_UNIT } from '@aresrpg/sdk/kares-economics'
+import { mastery_kares_price } from '@aresrpg/sdk/kares-economics'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import { content_catalog } from '../content/catalog.ts'
-import { KaresLogo } from '../components/KaresLogo.tsx'
-import { item_icon } from '../content/assets.ts'
+import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { useInspections } from '../components/useInspections.ts'
 import { InspectionWindow } from '../components/ItemDetailView.tsx'
 import { CatalogueItemDetails } from '../encyclopedia/CatalogueItemDetails.tsx'
@@ -17,6 +16,7 @@ import { encyclopedia_text } from '../encyclopedia/copy.ts'
 import { stat_name } from '../i18n/copy.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 
+import { MasteryKaresPurchase } from './MasteryKaresPurchase.tsx'
 import { useMasterySource } from './MasterySource.tsx'
 import { effective_mastery_points } from './model.ts'
 
@@ -39,22 +39,6 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   useEffect(() => {
     if (mastery.pending === null) dispatch_app({ type: 'wallet/refresh' })
   }, [mastery.pending, dispatch_app])
-  const redemption = {
-    mastery: {
-      balance: points,
-      unit: 1n,
-      ready: current_epoch !== null,
-      missing: (cost: bigint) => text('points_missing', { points: (cost - points).toString() }),
-      buy: (cost: string | number) => text('buy', { cost }),
-    },
-    kares: {
-      balance: kares_balance,
-      unit: KARES_UNIT,
-      ready: balance !== null,
-      missing: (_cost: bigint) => copy.kares_page.kares_missing,
-      buy: (cost: string | number) => copy.kares_page.burn_buy.replace('{{cost}}', String(cost)),
-    },
-  }
   const offers = content_catalog.mastery.offers
     .flatMap((authored) => {
       const state = mastery.offers.find((offer) => offer.item_type === authored.item_type)
@@ -68,14 +52,23 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
 
   return (
     <section ref={root} className="mastery-shop">
-      <div className="border-b border-border pb-4">
-        <div className="text-[9px] font-semibold tracking-[0.24em] text-gold uppercase">{text('shop_title')}</div>
-        <p className="mt-1 text-[9px] text-muted">{text('shop_lead')}</p>
-        <div className="mt-3 flex flex-wrap gap-4 text-[10px] text-muted">
-          <span>
-            {copy.kares_page.points}: {points.toString()}
-          </span>
-          <span>KARES: {balance !== null ? numbers.amount(kares_balance, 9) : '—'}</span>
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+        <div>
+          <div className="text-[9px] font-semibold tracking-[0.24em] text-gold uppercase">{text('shop_title')}</div>
+          <p className="mt-1 text-[9px] text-muted">{text('shop_lead')}</p>
+        </div>
+        <div
+          data-mastery-points=""
+          aria-label={`${copy.kares_page.points}: ${numbers.number(points)}`}
+          className="inline-flex items-center gap-3 border border-gold/40 bg-gold/10 px-4 py-3 shadow-sm"
+        >
+          <Gem className="shrink-0 text-gold" size={26} />
+          <div className="flex flex-col">
+            <span className="text-[9px] font-semibold tracking-[0.16em] text-gold uppercase">
+              {copy.kares_page.points}
+            </span>
+            <strong className="text-3xl leading-none font-bold text-gold tabular-nums">{numbers.number(points)}</strong>
+          </div>
         </div>
       </div>
 
@@ -87,9 +80,12 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
             const cost = BigInt(state?.cost ?? 0)
             const affordable =
               !!state &&
-              Object.values(redemption).some((option) => option.ready && option.balance >= cost * option.unit)
+              [
+                current_epoch !== null && points >= cost,
+                balance !== null && kares_balance >= mastery_kares_price(cost),
+              ].some(Boolean)
             const busy = mastery.pending === `redeem:${item.item_type}`
-            const icon = item_icon(item.item_type)
+            const icon = item_detail_icon(item.item_type)
             return (
               <article
                 className="mastery-offer aui-panel"
@@ -120,29 +116,25 @@ export const MasteryShop = ({ copy }: Readonly<{ copy: AppCopy }>) => {
                   </div>
                 </button>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {(['mastery', 'kares'] as const).map((payment) => {
-                    const option = redemption[payment]
-                    const can_afford = option.balance >= cost * option.unit
-                    return (
-                      <Button
-                        tone={payment === 'mastery' ? 'primary' : 'neutral'}
-                        data-mastery-payment={payment}
-                        key={payment}
-                        disabled={offer_redeem_disabled(
-                          can_afford,
-                          mastery.pending,
-                          connected,
-                          option.ready && !!state
-                        )}
-                        title={can_afford ? undefined : option.missing(cost)}
-                        onClick={() => dispatch_app({ type: 'mastery/redeem', item_type: item.item_type, payment })}
-                        type="button"
-                      >
-                        {payment === 'mastery' ? <Gem size={13} /> : <KaresLogo size={16} />}
-                        {option.buy(state?.cost ?? '—')}
-                      </Button>
-                    )
-                  })}
+                  <Button
+                    tone="primary"
+                    data-mastery-payment="mastery"
+                    disabled={offer_redeem_disabled(
+                      points >= cost,
+                      mastery.pending,
+                      connected,
+                      current_epoch !== null && !!state
+                    )}
+                    title={points >= cost ? undefined : text('points_missing', { points: (cost - points).toString() })}
+                    onClick={() =>
+                      dispatch_app({ type: 'mastery/redeem', item_type: item.item_type, payment: 'mastery' })
+                    }
+                    type="button"
+                  >
+                    <Gem size={13} />
+                    {text('buy', { cost: state ? cost.toString() : '—' })}
+                  </Button>
+                  <MasteryKaresPurchase item_type={item.item_type} name={item.name} copy={copy} />
                 </div>
                 {busy && (
                   <span className="mt-2 flex items-center gap-2 text-[9px] text-muted" role="status">

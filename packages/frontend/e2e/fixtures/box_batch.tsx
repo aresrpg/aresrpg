@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { StrictMode, useState } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { ItemRow } from '@aresrpg/protocol'
+import { NativeModal } from '@aresrpg/ui'
 
 import type { AuthSession } from '../../src/auth.ts'
 import { UseBoxModal } from '../../src/characters/UseBoxModal.tsx'
@@ -54,8 +55,20 @@ dispatch_app({ type: 'auth/connecting' })
 dispatch_app({ type: 'auth/connected', session: wallet })
 dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items: [box] } })
 const App = () => {
-  const [open, set_open] = useState(true)
-  return <main>{open ? <UseBoxModal box={box} copy={copy} close={() => set_open(false)} /> : <p>Closed</p>}</main>
+  const [open, set_open] = useState(!params.has('nested'))
+  // Inventory is already open before the consumable creates its nested modal.
+  useEffect(() => set_open(true), [])
+  const content = open ? <UseBoxModal box={box} copy={copy} close={() => set_open(false)} /> : <p>Closed</p>
+  return params.has('nested') ? (
+    <NativeModal close={null} label="Inventory" className="aui-modal-scrim">
+      <div style={{ height: '100%', background: '#b91c70' }}>
+        <button type="button">Inventory behind unsealing</button>
+        {content}
+      </div>
+    </NativeModal>
+  ) : (
+    <main>{content}</main>
+  )
 }
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

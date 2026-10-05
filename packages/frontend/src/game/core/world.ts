@@ -59,6 +59,7 @@ import { walking_edge, type WalkPoint } from './walkable.ts'
 import { begin_walking, step_walking } from './walking.ts'
 import { create_world_ticker } from './world_ticker.ts'
 import type { DungeonPortalMarker } from '../../modules/world.ts'
+import { observe_engine_reporting } from '../../reporting.ts'
 
 export type WorldView = Readonly<{
   focus: readonly [number, number]
@@ -118,6 +119,7 @@ export const create_world = ({
 }>) => {
   const compiled = compile_runtime_world_recipe(world)
   const engine = create_engine({ canvas, quality, world: compiled, initial_focus, render_distance })
+  const stop_reporting = observe_engine_reporting(engine)
   const terrain_planner = create_terrain_planner(compiled.recipe)
   const chunks = create_chunk_manager({
     engine,
@@ -974,6 +976,7 @@ export const create_world = ({
       action_animation_timer = setInterval(play, 2_200)
     },
     dispose: () => {
+      stop_reporting()
       ticker.dispose()
       holograms.forEach((hologram) => hologram.dispose())
       if (action_animation_timer) clearInterval(action_animation_timer)

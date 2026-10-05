@@ -144,6 +144,8 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: { exclude: ['@aresrpg/engine', '@aresrpg/sdk'] },
     // Three.js is isolated in the lazy world chunk; 550 kB keeps the warning meaningful for accidental growth.
     build: {
+      // GLTFLoader fetches models; production connect-src deliberately excludes data URLs.
+      assetsInlineLimit: (path) => (path.endsWith('.glb') ? false : undefined),
       chunkSizeWarningLimit: 550,
       ...(mode === 'test'
         ? {

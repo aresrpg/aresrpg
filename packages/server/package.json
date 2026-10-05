@@ -11,17 +11,21 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@aresrpg/engine": "workspace:*",
+    "@aresrpg/fight": "workspace:*",
     "@aresrpg/immutable": "workspace:*",
+    "@aresrpg/protocol": "workspace:*",
     "@mysten/sui": "2.31.3",
     "falkordb": "^6.8.0",
     "ioredis": "^6.0.0",
-    "pino": "^10.3.1",
-    "@aresrpg/protocol": "workspace:*",
-    "@aresrpg/fight": "workspace:*",
-    "@aresrpg/engine": "workspace:*"
+    "pino": "^10.3.1"
   },
   "devDependencies": {
     "typescript": "~6.0.3",
     "@types/bun": "^1.4.2"
+  },
+  "exports": {
+    "./suins": "./src/suins.ts",
+    "./logger": "./src/logger.ts"
   }
 }

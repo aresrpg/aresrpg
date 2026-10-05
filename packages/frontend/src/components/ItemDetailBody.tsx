@@ -2,13 +2,18 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { element_names, item_categories, rune_effect, stat_names } from '@aresrpg/immutable'
-import { Shield } from 'lucide-react'
 import { useState, type FocusEvent, type ReactNode } from 'react'
 
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import { useVocabulary } from '../i18n/useVocabulary.ts'
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
-import { element_colors, item_category_colors, stat_colors, stat_identities } from '../visual_identity.ts'
+import {
+  element_colors,
+  item_category_colors,
+  stat_colors,
+  stat_identities,
+  resistance_shape,
+} from '../visual_identity.ts'
 import type { equipment_comparison } from '../characters/equipment_comparison.ts'
 
 import { comparison_values, ComparisonHeading, StatDelta } from './ItemComparison.tsx'
@@ -109,7 +114,20 @@ const StatIdentity = ({ stat }: Readonly<{ stat: string }>) => {
   return (
     <span className="grid size-6 shrink-0 place-items-center" style={{ color }}>
       {stat.endsWith('_resistance') ? (
-        <Shield size={19} fill="currentColor" fillOpacity={0.16} strokeWidth={1.7} />
+        <svg
+          width={19}
+          height={19}
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          fillOpacity={0.16}
+          stroke="currentColor"
+          strokeWidth={1.7}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d={resistance_shape} />
+        </svg>
       ) : identity ? (
         <img alt="" className="size-5 object-contain" src={identity.icon} />
       ) : (
@@ -143,7 +161,7 @@ const item_has_characteristics = (
 const CharacteristicsNote = ({ note }: Readonly<{ note?: string }>) =>
   note ? <p className="text-[8px] leading-relaxed text-[#686d77]">{note}</p> : null
 
-const StatLine = ({
+export const StatLine = ({
   edit,
   labels,
   row,

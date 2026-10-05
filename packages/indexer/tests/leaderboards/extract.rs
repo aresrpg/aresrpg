@@ -163,6 +163,7 @@ fn run(
 ) -> Result<Vec<Contribution>> {
     extract(
         &TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([99; 32]),
             move_calls: &[],

@@ -10,12 +10,14 @@ import { update_kares_metadata_into } from '../src/kares_metadata.ts'
 import { digest, fake_client, id, signer } from './helpers/transport.ts'
 
 const pins = {
-  kares_package: id(101),
-  kares_package_original: id(100),
+  kares_rewards_package: id(101),
+  kares_rewards_package_original: id(100),
+  kares_coin_type: `${id(100)}::kares::KARES`,
   kares_currency: { id: id(102), shared_version: '2' },
-  kares_offering: { id: id(103), shared_version: '3' },
+  kares_economy: { id: id(103), shared_version: '3' },
   kares_staking_pool: { id: id(104), shared_version: '3' },
   kares_combat_pot: { id: id(105), shared_version: '3' },
+  kares_community_pool: { id: id(106), shared_version: '3' },
 }
 
 test('metadata composition exposes only native presentation setters with the original KARES identity', () => {
@@ -25,7 +27,7 @@ test('metadata composition exposes only native presentation setters with the ori
   update_kares_metadata_into(tx, sdk, kares_pins(pins), id(105), {
     name: 'AresRPG KARES',
     description: 'Community and Mastery rewards',
-    icon_url: 'https://launchpad.aresrpg.world/kares.png',
+    icon_url: 'https://aresrpg.world/kares.png',
   })
   const calls = tx.getData().commands.map((command) => command.MoveCall!)
   expect(calls.map((call) => call.function)).toEqual(['set_name', 'set_description', 'set_icon_url'])

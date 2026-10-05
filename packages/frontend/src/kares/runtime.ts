@@ -27,7 +27,6 @@ const execute_action = (session: FinanceSession, action: FinanceAction) => {
   const { kares } = session
   if (action.kind === 'withdraw') return kares.withdraw(action.positions, action.amount)
   const action_methods = {
-    contribute: kares.contribute,
     stake: kares.stake,
     fund_kares: kares.fund_kares,
     fund_sui: kares.fund_sui,
@@ -35,10 +34,6 @@ const execute_action = (session: FinanceSession, action: FinanceAction) => {
   }
   if ('amount' in action) return action_methods[action.kind](action.amount)
   switch (action.kind) {
-    case 'claim_offering':
-      return kares.claim_offering(action.ids)
-    case 'refund':
-      return kares.refund(action.ids)
     case 'claim_rewards':
       return kares.claim_rewards(action.ids)
   }

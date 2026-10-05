@@ -68,6 +68,8 @@ pub struct TxView<'a> {
     /// This tx's INPUT (pre-state) and OUTPUT objects.
     pub inputs: &'a [ObjView<'a>],
     pub outputs: &'a [ObjView<'a>],
+    /// Certified deletions, not inferred from the absence of an output for a read-only input.
+    pub deleted: &'a [ObjView<'a>],
 }
 
 /// Everything one checkpoint's events produce.
@@ -367,55 +369,21 @@ fn route_trade_writes(
     tx: &TxView<'_>,
     game: &str,
 ) -> anyhow::Result<()> {
-    let output_ids = tx
-        .outputs
-        .iter()
-        .filter(|output| is_core(output, game, "trade", "Trade"))
-        .map(|output| output.id)
-        .collect::<std::collections::HashSet<_>>();
-    for (index, output) in tx.outputs.iter().enumerate() {
-        if !is_core(output, game, "trade", "Trade") {
-            continue;
-        }
-        let trade = decode::from_bytes::<decode::Trade>(output.bytes).map_err(|error| {
-            anyhow::anyhow!(
-                "layout drift: trade::Trade {} failed decode: {error}",
-                output.id.hex()
-            )
-        })?;
+    for (index, (trade, deleted)) in crate::trade_tokens::changes(tx, game)?
+        .into_iter()
+        .enumerate()
+    {
         let payload = envelope(
             ckpt,
             tx.tx_index,
             index as u64,
             ts_ms,
-            "TradeChanged",
-            json!({ "trade": output.id.hex() }),
-        );
-        for address in std::collections::HashSet::from([trade.state.initiator, trade.state.invitee])
-        {
-            wire.publications.push(Publication {
-                channel: format!("evt:social:{}", address.hex()),
-                payload: payload.clone(),
-            });
-        }
-    }
-    for (index, input) in tx.inputs.iter().enumerate() {
-        if !is_core(input, game, "trade", "Trade") || output_ids.contains(&input.id) {
-            continue;
-        }
-        let trade = decode::from_bytes::<decode::Trade>(input.bytes).map_err(|error| {
-            anyhow::anyhow!(
-                "layout drift: trade::Trade {} failed decode: {error}",
-                input.id.hex()
-            )
-        })?;
-        let payload = envelope(
-            ckpt,
-            tx.tx_index,
-            index as u64,
-            ts_ms,
-            "TradeDestroyed",
-            json!({ "trade": input.id.hex() }),
+            if deleted {
+                "TradeDestroyed"
+            } else {
+                "TradeChanged"
+            },
+            json!({ "trade": trade.id.hex() }),
         );
         for address in std::collections::HashSet::from([trade.state.initiator, trade.state.invitee])
         {
@@ -1131,11 +1099,11 @@ fn analyze_kiosk_market(
                         e.price,
                     ),
                 ]);
-                // A purchase may merge the bought stack into an existing destination stack in
-                // the SAME PTB. The bought object is then deleted, so its authoritative sale
-                // shape survives only in pre-state.
-                let Some(sold) = is_game_obj(tx.outputs, e.id, game)
-                    .or_else(|| is_game_obj(tx.inputs, e.id, game))
+                // Buyer commands may consume the bought stack OR merge more units into it.
+                // The input lot owns the sale quantity; final output is only a fallback for
+                // objects created within this PTB, never a replacement for an observed lot.
+                let Some(sold) = is_game_obj(tx.inputs, e.id, game)
+                    .or_else(|| is_game_obj(tx.outputs, e.id, game))
                 else {
                     continue;
                 };
@@ -1361,6 +1329,8 @@ mod tests {
     const GAME: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const SEED: &str = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
+    include!("../tests/publish/sale_shape.rs");
+
     fn game_item_param() -> Vec<String> {
         vec![format!("{GAME}::item::Item")]
     }
@@ -1371,6 +1341,7 @@ mod tests {
         let extension = format!("0x{}::royalty_rule::pay", "ee".repeat(32));
         let unrelated = format!("0x{}::other_rule::pay", "dd".repeat(32));
         let base = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&exact),
@@ -1380,10 +1351,12 @@ mod tests {
         };
         assert!(pays_royalty(&base));
         assert!(pays_royalty(&TxView {
+            deleted: &[],
             move_calls: std::slice::from_ref(&extension),
             ..base.clone()
         }));
         assert!(!pays_royalty(&TxView {
+            deleted: &[],
             move_calls: std::slice::from_ref(&unrelated),
             ..base
         }));
@@ -1405,6 +1378,7 @@ mod tests {
             ..before.clone()
         };
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([1; 32]),
             move_calls: &[],
@@ -1424,7 +1398,17 @@ mod tests {
             format!("evt:social:{}", Addr([2; 32]).hex())
         );
         let mut burned = Wire::default();
-        route_giftcard_writes(&mut burned, 1, 2, &TxView { outputs: &[], ..tx }, GAME);
+        route_giftcard_writes(
+            &mut burned,
+            1,
+            2,
+            &TxView {
+                deleted: &[],
+                outputs: &[],
+                ..tx
+            },
+            GAME,
+        );
         assert_eq!(burned.publications.len(), 1);
     }
 
@@ -1541,6 +1525,7 @@ mod tests {
             index: 0,
         };
         let tx = TxView {
+            deleted: &[],
             tx_index: 2,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1627,6 +1612,7 @@ mod tests {
         };
         let start_call = "0x99::api::start_kolizeum".to_string();
         let tx = TxView {
+            deleted: &[],
             tx_index: 4,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&start_call),
@@ -1659,6 +1645,7 @@ mod tests {
             bytes: &bytes,
         };
         let output_tx = TxView {
+            deleted: &[],
             tx_index: 2,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1667,6 +1654,7 @@ mod tests {
             outputs: std::slice::from_ref(&run),
         };
         let deleted_tx = TxView {
+            deleted: &[],
             tx_index: 3,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1700,6 +1688,7 @@ mod tests {
             bytes: &bytes,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 2,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1746,6 +1735,7 @@ mod tests {
             },
         ];
         let tx = TxView {
+            deleted: &[],
             tx_index: 2,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1777,6 +1767,7 @@ mod tests {
             bytes: &bytes,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 2,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1806,6 +1797,7 @@ mod tests {
             bytes: &version,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 3,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -1943,6 +1935,7 @@ mod tests {
             },
         ];
         let tx = TxView {
+            deleted: &[],
             tx_index: 1,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -2020,6 +2013,7 @@ mod tests {
 
         // WITH the royalty proof → two rows + a per-unit stamp (1000 / 10)
         let tx = TxView {
+            deleted: &[],
             tx_index: 1,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&pay_call),
@@ -2068,6 +2062,7 @@ mod tests {
 
         // A wrapper may pay royalties internally; the certified purchase still counts.
         let wrapper = TxView {
+            deleted: &[],
             move_calls: &[],
             ..tx.clone()
         };
@@ -2141,6 +2136,7 @@ mod tests {
         ];
         let pay_call = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
         let tx = TxView {
+            deleted: &[],
             tx_index: 1,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&pay_call),
@@ -2222,6 +2218,7 @@ mod tests {
         ];
         let extension_pay = format!("0x{}::royalty_rule::pay", "ee".repeat(32));
         let tx = TxView {
+            deleted: &[],
             tx_index: 3,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&extension_pay),
@@ -2252,6 +2249,7 @@ mod tests {
         }];
         let pay_call = format!("{SUI_FRAMEWORK}::royalty_rule::pay");
         let tx = TxView {
+            deleted: &[],
             tx_index: 1,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&pay_call),
@@ -2289,6 +2287,7 @@ mod tests {
         }];
         let spoofed_pay = format!("0x{}::royalty_rule::pay", "ee".repeat(32));
         let tx = TxView {
+            deleted: &[],
             tx_index: 1,
             sender: Addr([7; 32]),
             move_calls: std::slice::from_ref(&spoofed_pay),
@@ -2320,6 +2319,7 @@ mod tests {
             index: 0,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -2355,6 +2355,7 @@ mod tests {
             },
         ];
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([7; 32]),
             move_calls: &[], // the ruleless protected policy — no royalty call
@@ -2397,6 +2398,7 @@ mod tests {
             bytes: &bytes,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -2453,6 +2455,7 @@ mod tests {
         };
         let outputs = [friend, party];
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([7; 32]),
             move_calls: &[],
@@ -2504,6 +2507,7 @@ mod tests {
             index: 0,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([5; 32]),
             move_calls: &[],
@@ -2550,6 +2554,7 @@ mod tests {
             index: 0,
         }];
         let tx = TxView {
+            deleted: &[],
             tx_index: 0,
             sender: Addr([5; 32]),
             move_calls: &[],

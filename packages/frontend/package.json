@@ -57,7 +57,6 @@
   },
   "exports": {
     "./reporting": "./src/reporting.ts",
-    "./finance": "./src/kares/index.ts",
     "./finance/runtime": "./src/kares/useFinance.ts",
     "./wallet/runtime": "./src/wallet/runtime.ts",
     "./i18n": "./src/i18n/copy.ts",

@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./styles.css": "./src/styles.css",
-    "./art": "./src/art.ts"
+    "./art": "./src/art.ts",
+    "./identity": "./src/visual_identity.ts",
+    "./sui": "./src/sui.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -802,11 +802,6 @@
         10
       ]
     },
-    "packages/frontend/src/kares/PublicSaleCard.tsx": {
-      "PublicSaleCardView": [
-        12
-      ]
-    },
     "packages/frontend/src/game/fight/fight_cues.ts": {
       "cast_rows": [
         13
@@ -1070,11 +1065,6 @@
         11
       ]
     },
-    "packages/frontend/src/components/NametagCard.tsx": {
-      "NametagCard": [
-        11
-      ]
-    },
     "packages/frontend/src/components/EquipmentDoll.tsx": {
       "EquipmentDoll": [
         9
@@ -1173,11 +1163,6 @@
     "packages/frontend/src/characters/JobsTab.tsx": {
       "JobsTab": [
         16
-      ]
-    },
-    "packages/frontend/src/characters/BoxReveal.tsx": {
-      "BoxReveal": [
-        9
       ]
     },
     "packages/frontend/src/modules/party.ts": {
@@ -1557,11 +1542,6 @@
         9
       ]
     },
-    "packages/launchpad/src/ContributionPanel.tsx": {
-      "ContributionPanel": [
-        9
-      ]
-    },
     "packages/sdk/scripts/generate_doors.mjs": {
       "arg_expr": [
         11
@@ -1584,19 +1564,11 @@
       ],
       "project_temp_admin_cap": [
         10
-      ],
-      "verify_upgrade_cap_targets": [
-        10
       ]
     },
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [
         22
-      ]
-    },
-    "packages/sdk/src/kares_actions.ts": {
-      "create_kares_transaction": [
-        9
       ]
     },
     "packages/sdk/src/seed_session.ts": {
@@ -1638,6 +1610,9 @@
     },
     "packages/sdk/src/mastery.ts": {
       "option_u64": [
+        9
+      ],
+      "mastery_actions > redeem": [
         9
       ]
     },
@@ -2139,6 +2114,21 @@
     "packages/frontend/src/funding/useSuiUsd.ts": {
       "read_sui_usd": [
         10
+      ]
+    },
+    "packages/frontend/src/mastery/MasteryKaresPurchase.tsx": {
+      "MasteryKaresPurchase": [
+        11
+      ]
+    },
+    "packages/frontend/src/mastery/MasteryShop.tsx": {
+      "MasteryShop > offers.map[0]({ state, item })": [
+        11
+      ]
+    },
+    "packages/sdk/src/kares_economy.ts": {
+      "read_rewards_economy": [
+        11
       ]
     }
   }

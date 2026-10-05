@@ -3,22 +3,6 @@
   "kares_package": "0x09ec62f9d6a4b3ac73931f06392765e8e351b0ff299bfb4d7387a7869114a436",
   "kares_package_original": "0x09ec62f9d6a4b3ac73931f06392765e8e351b0ff299bfb4d7387a7869114a436",
   "kares_artifact_digest": "cd59c77549062f4c2ae6446951f12af87034cdd90ce359820a8897c5186ce0b1",
-  "kares_currency": {
-    "id": "0xcf4f6d3ce7e4fadffdd6250bf008555d0ce9852f563bc15e3a6e979c736a390c",
-    "shared_version": "996179309"
-  },
-  "kares_offering": {
-    "id": "0x08398ec5d9f123f9a3d0dee54bd1828d560ea7ef2b855a0a4b1b5f65ffca3973",
-    "shared_version": "996179309"
-  },
-  "kares_staking_pool": {
-    "id": "0x1c01602e2537b51aaa25deeace8a468eaa18c414285b675095caa1edd21e05a0",
-    "shared_version": "996179309"
-  },
-  "kares_combat_pot": {
-    "id": "0x3741f35a66dd425ac093c43cde1687c942d2ef7ddba2610d7c999e5338bedfcd",
-    "shared_version": "996179309"
-  },
   "math_package": "0xa0834c4478e642a381211fa2348b444106fceabeb7a41dda5a93a6645f4aca2d",
   "math_package_original": "0xa0834c4478e642a381211fa2348b444106fceabeb7a41dda5a93a6645f4aca2d",
   "math_upgrade_cap": "0xe771688fcd013b55b91deb548f2cef1bedbb69809e07af52aedb633dab257dfd",

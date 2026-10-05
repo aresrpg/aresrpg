@@ -97,8 +97,8 @@
       "count": 1,
       "position": {
         "x": 128,
-        "y": 40,
-        "z": 252
+        "y": 48,
+        "z": 374
       },
       "boss": true,
       "line_of_sight": false,

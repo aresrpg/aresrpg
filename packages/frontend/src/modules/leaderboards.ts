@@ -3,20 +3,32 @@
 
 import type { ClientPacket, LeaderboardMetric, LeaderboardObservation, LeaderboardSnapshot } from '@aresrpg/protocol'
 
+import {
+  initial_inspection,
+  reduce_inspection,
+  fold_inspection,
+  inspection_request,
+  type InspectionState,
+  type InspectionInput,
+} from '../leaderboards/inspection.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 
 export type LeaderboardsState = Readonly<{
   observation: LeaderboardObservation
   snapshot: LeaderboardSnapshot | null
   error: boolean
+  inspection: InspectionState
 }>
 export type LeaderboardsInput =
-  Readonly<{ type: 'leaderboards/select'; metric: LeaderboardMetric }> | Readonly<{ type: 'leaderboards/refresh' }>
+  | InspectionInput
+  | Readonly<{ type: 'leaderboards/select'; metric: LeaderboardMetric }>
+  | Readonly<{ type: 'leaderboards/refresh' }>
 
 export const initial_leaderboards_state = (): LeaderboardsState => ({
   observation: { metric: 'xp', id: 0 },
   snapshot: null,
   error: false,
+  inspection: initial_inspection(),
 })
 
 export const leaderboard_subscription = (state: AppState, previous: AppState): ClientPacket | null => {
@@ -32,17 +44,22 @@ export const leaderboard_subscription = (state: AppState, previous: AppState): C
 }
 
 export const reduce_leaderboards = (state: LeaderboardsState, input: AppInput): LeaderboardsState => {
-  if (input.type === 'auth/disconnected' || input.type === 'auth/rejected') return initial_leaderboards_state()
+  if (['auth/disconnected', 'auth/rejected'].includes(input.type))
+    return { ...initial_leaderboards_state(), inspection: initial_inspection(state.inspection.id) }
+  if (input.type.startsWith('leaderboards/inspect'))
+    return { ...state, inspection: reduce_inspection(state.inspection, input as InspectionInput) }
   if (input.type === 'leaderboards/select' || input.type === 'leaderboards/refresh') {
     const selected = input.type === 'leaderboards/select' ? input : state.observation
     return {
+      ...state,
       observation: { metric: selected.metric, id: state.observation.id + 1 },
       snapshot: null,
       error: false,
     }
   }
   if (input.type !== 'server/packet') return state
-  return fold_snapshot(state, input.packet)
+  const inspection = fold_inspection(state.inspection, input.packet)
+  return fold_snapshot(inspection === state.inspection ? state : { ...state, inspection }, input.packet)
 }
 
 const fold_snapshot = (
@@ -61,9 +78,18 @@ const fold_snapshot = (
 const leaderboards: AppModule = {
   name: 'leaderboards',
   reduce: (state, input) => {
-    const leaderboards = reduce_leaderboards(state.leaderboards, input)
+    const next = reduce_leaderboards(state.leaderboards, input)
+    const leaderboards =
+      state.navigation.page !== 'leaderboard' && next.inspection.target
+        ? { ...next, inspection: initial_inspection(next.inspection.id + 1) }
+        : next
     return leaderboards === state.leaderboards ? state : { ...state, leaderboards }
   },
 }
 
 export default leaderboards
+
+export const inspection_subscription = (state: AppState, previous: AppState): ClientPacket | null =>
+  state.session.link_status === 'ready' && state.leaderboards.inspection.id !== previous.leaderboards.inspection.id
+    ? inspection_request(state.leaderboards.inspection)
+    : null

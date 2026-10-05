@@ -5,6 +5,7 @@ import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { AirdropExample, MasteryExample } from './EconomyExamples.tsx'
 import { JobsExample, RuneforgeExample } from './ProfessionExamples.tsx'
 import { TitlesExample } from './TitlesExample.tsx'
+import { PlayerProfileExample } from './PlayerProfileExample.tsx'
 import { LeaderboardExample } from './DiscoveryExamples.tsx'
 import { EncyclopediaExample } from './EncyclopediaExample.tsx'
 import { AdminExample } from './AdminExample.tsx'
@@ -33,6 +34,7 @@ export const SERVICE_PANELS = {
   professions: JobsExample,
   runeforge: RuneforgeExample,
   leaderboards: LeaderboardExample,
+  player_profile: PlayerProfileExample,
   encyclopedia: EncyclopediaExample,
   kolizeum: KolizeumExample,
   admin: AdminExample,
@@ -55,6 +57,7 @@ export const service_options = (copy: AppCopy): readonly Readonly<{ value: Servi
   { value: 'professions', label: copy_text(copy.characters_page)('tab_jobs') },
   { value: 'runeforge', label: copy_text(copy.characters_page)('tab_runeforge') },
   { value: 'leaderboards', label: copy.leaderboard },
+  { value: 'player_profile', label: copy_text(copy.leaderboard_page)('profile_title') },
   { value: 'encyclopedia', label: copy.encyclopedia },
   { value: 'kolizeum', label: copy.kolizeum },
   { value: 'admin', label: copy.admin },

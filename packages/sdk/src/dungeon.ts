@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Dungeon writes are a thin coordinator over kiosk custody, living content, and normal fights.
 
+import { prepare_boss_rewards } from './kares_economy.ts'
 import { SDK, living_content } from './client.ts'
 import { changed_object_ids, receipt_digest, receipt_event, spending_receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
@@ -197,6 +198,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
         ),
       ]
       await sdk.hydrate_unknown([fight, dungeon_content, ...templates, ...(mastery ? [mastery.id] : [])])
+      const prepare_rewards = boss_rewards ? await prepare_boss_rewards(sdk) : null
       const execute_settlement = (final: boolean) =>
         with_terminal_kiosk(
           (tx, kiosk, personal) => {
@@ -207,11 +209,7 @@ export const dungeon_actions = (sdk: GameSdk, { kiosk_cap }: DungeonActionsCtx) 
                 fighter_idx: mastery.fighter_idx,
                 dungeon_content,
               })
-            if (boss_rewards)
-              sdk.doors.prepare_boss_rewards(tx, {
-                fight_object: fight,
-                fighter_idx: normalized[0]!.fighter_idx,
-              })
+            prepare_rewards?.(tx, fight, normalized[0]!.fighter_idx)
             const plan = normalized.flatMap(({ loot }) =>
               loot.map(({ item_type, existing }) =>
                 sdk.doors.prepare_fight_loot(tx, {

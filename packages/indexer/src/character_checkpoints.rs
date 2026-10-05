@@ -77,6 +77,7 @@ mod tests {
         assert!(changed(outputs, outputs, "0xgame").unwrap().is_empty());
         assert!(changed(&[], outputs, "0xother").unwrap().is_empty());
         let tx = crate::publish::TxView {
+            deleted: &[],
             tx_index: 3,
             sender: crate::decode::Addr([3; 32]),
             move_calls: &[],

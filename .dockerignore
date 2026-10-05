@@ -1,6 +1,6 @@
-# Build context for packages/server/Dockerfile — the only root-context build in this repo
-# (packages/indexer builds from its own directory). Deny everything, then re-admit exactly
-# what the server image reads: the workspace manifests and the server's dependency closure.
+# Shared build context for the realtime and Discord Dockerfiles.
+# The indexer builds from its own directory. Deny everything, then admit the workspace
+# manifests and the two separately selected runtime dependency closures.
 # A path ladder is required because a "!" exception cannot re-admit a file whose parent
 # directory is still excluded.
 *
@@ -19,15 +19,18 @@ packages/fight/*
 !packages/ui
 packages/ui/*
 !packages/ui/package.json
+!packages/ui/src
 !packages/frontend
 packages/frontend/*
 !packages/frontend/package.json
+!packages/frontend/src
+packages/frontend/src/*
+!packages/frontend/src/i18n
+packages/frontend/src/i18n/*
+!packages/frontend/src/i18n/locales
 !packages/mobile
 packages/mobile/*
 !packages/mobile/package.json
-!packages/launchpad
-packages/launchpad/*
-!packages/launchpad/package.json
 !packages/journal
 packages/journal/*
 !packages/journal/package.json
@@ -42,6 +45,10 @@ packages/protocol/*
 !packages/sdk
 packages/sdk/*
 !packages/sdk/package.json
+!packages/discord
+packages/discord/*
+!packages/discord/package.json
+!packages/discord/src
 !packages/server
 packages/server/*
 !packages/server/package.json
@@ -52,6 +59,12 @@ seed/*
 !seed/content
 seed/content/journal
 !seed/structures
+!seed/icons
+seed/icons/*
+!seed/icons/items
+seed/icons/items/*_hd.*
+!seed/icons/mobs
+seed/icons/mobs/*_hd.*
 
 # Never, whatever the ladder above re-admits.
 **/node_modules

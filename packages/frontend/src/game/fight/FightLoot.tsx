@@ -3,6 +3,8 @@
 
 import { useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { item_is_stackable } from '@aresrpg/immutable'
+import type { ItemRow } from '@aresrpg/protocol'
 
 import { InspectionWindow } from '../../components/ItemDetailView.tsx'
 import { OwnedItemDetail } from '../../components/OwnedItemDetail.tsx'
@@ -14,27 +16,42 @@ import { useText } from '../../i18n/useText.ts'
 import type { ResultLoot } from '../../modules/fight_result.ts'
 import { useAppStore } from '../../store.ts'
 
+/** A settlement receipt spans several loot types. Only missing copies of this reward are pending. */
+export const fight_loot_inventory = (
+  loot: ResultLoot,
+  item_ids: readonly string[],
+  inventory: readonly ItemRow[],
+  removed_item_versions: Readonly<Record<string, string>>
+) => {
+  const inventory_ids = new Set(inventory.map(({ id }) => id))
+  const received = inventory.filter((item) => item_ids.includes(item.id) && item.item_type === loot.item_type)
+  const missing = received.length < loot.qty
+  const pending = missing && item_ids.some((id) => !inventory_ids.has(id) && removed_item_versions[id] === undefined)
+  return { received, missing, pending }
+}
+
 /** Receipt IDs select the delivered copies; a matching older inventory item is never a substitute. */
 export const FightLoot = ({
   loot,
   copy,
   items,
-  item_ids,
+  item_ids = [],
 }: Readonly<{
   loot: ResultLoot
   copy: AppCopy
   items?: readonly SeedItem[]
-  /** Undefined is catalogue-only loot (another player's result or a local preview). */
+  /** Missing IDs cannot identify a delivered roll; those rewards use their catalogue details. */
   item_ids?: readonly string[]
 }>) => {
   const root = useRef<HTMLButtonElement>(null)
   const { inspections, open, close } = useInspections(root)
   const inventory = useAppStore(({ session }) => session.inventory)
+  const removed_item_versions = useAppStore(({ session }) => session.removed_item_versions)
   const text = useText()
   const template = (id: string) => items?.find(({ item_type }) => item_type === id) ?? content_catalog.item(id)?.item
-  const name = template(loot.item_type)?.name ?? titleize(loot.item_type)
-  const received = inventory.filter(({ id, item_type }) => item_ids?.includes(id) && item_type === loot.item_type)
-  const pending = item_ids?.some((id) => !inventory.some((item) => item.id === id))
+  const { name, category } = template(loot.item_type) ?? { name: titleize(loot.item_type), category: '' }
+  const exact = item_ids.length > 0 && !item_is_stackable(category)
+  const { received, missing, pending } = fight_loot_inventory(loot, item_ids, inventory, removed_item_versions)
   return (
     <>
       <button
@@ -64,13 +81,17 @@ export const FightLoot = ({
               open={open}
               close={() => close(entry)}
               render_item={
-                item_ids && entry.id === loot.item_type
+                exact && entry.id === loot.item_type
                   ? () => (
                       <div className="flex flex-col gap-6">
                         {received.map((item) => (
                           <OwnedItemDetail key={item.id} item={item} copy={copy} />
                         ))}
-                        {(pending || received.length === 0) && <p>{copy.fight_hud.chat_fetching_item}</p>}
+                        {missing && (
+                          <p>
+                            {pending ? copy.fight_hud.result_waiting_items : copy.fight_hud.result_item_unavailable}
+                          </p>
+                        )}
                       </div>
                     )
                   : undefined

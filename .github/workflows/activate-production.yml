@@ -95,7 +95,7 @@ jobs:
           jq -e --arg sha "${{ steps.release.outputs.source_sha }}" --arg version "${{ steps.release.outputs.version }}" --arg network "$SUI_NETWORK" \
             '.status == "prepared" and .source_sha == $sha and .version == $version and .network == $network and (.vercel.built | type == "boolean") and (.vercel.built == false or (.vercel.staged_url | startswith("https://")))' \
             "$manifest" >/dev/null
-          for image in server indexer; do
+          for image in server indexer discord; do
             digest=$(jq -r ".images.$image.digest" "$manifest")
             repository=$(jq -r ".images.$image.repository" "$manifest")
             [ -n "$digest" ] && [ "$digest" != null ] || { echo "::error::$image digest is missing"; exit 1; }

@@ -11,7 +11,7 @@ import {
 
 test('scene compiler inputs invalidate the frontend artifact', () => {
   for (const path of ['seed/scenes/main_menu.recipe.json', 'seed/scenes/main_menu.json', ...SCENE_COMPILER_FILES])
-    expect(classify_release([path])).toEqual({ frontend: true, server: false, indexer: false })
+    expect(classify_release([path])).toEqual({ frontend: true, server: false, indexer: false, discord: false })
 })
 
 test('engine is frontend-owned and server/indexer releases stay independent', () => {
@@ -19,14 +19,25 @@ test('engine is frontend-owned and server/indexer releases stay independent', ()
     frontend: true,
     server: false,
     indexer: false,
+    discord: false,
   })
-  expect(classify_release(['packages/indexer/src/main.rs'])).toEqual({ frontend: false, server: false, indexer: true })
-  expect(classify_release(['packages/server/src/index.ts'])).toEqual({ frontend: false, server: true, indexer: false })
+  expect(classify_release(['packages/indexer/src/main.rs'])).toEqual({
+    frontend: false,
+    server: false,
+    indexer: true,
+    discord: false,
+  })
+  expect(classify_release(['packages/server/src/index.ts'])).toEqual({
+    frontend: false,
+    server: true,
+    indexer: false,
+    discord: false,
+  })
 })
 
 test('journal prose and artwork do not invalidate game artifacts', () => {
   const paths = ['seed/content/journal/article.md', 'seed/icons/journal/cover.png', 'packages/journal/src/pages.tsx']
-  expect(classify_release(paths)).toEqual({ frontend: false, server: false, indexer: false })
+  expect(classify_release(paths)).toEqual({ frontend: false, server: false, indexer: false, discord: false })
   expect(
     fingerprint_runtime_files(
       paths.map((path) => [path, 'before']),
@@ -90,6 +101,7 @@ test('local recovery still guards backend, SDK, engine, content, and dependency 
     'seed/content/items.json',
     'bun.lock',
     'packages/frontend/package.json',
+    'packages/frontend/src/i18n/locales/en.yaml',
   ]) {
     expect(fingerprint_runtime_files([[path, 'before']], '{}', 'local')).not.toEqual(
       fingerprint_runtime_files([[path, 'after']], '{}', 'local')
@@ -105,10 +117,49 @@ test('mobile presentation changes invalidate the shared frontend artifact', () =
     frontend: true,
     server: false,
     indexer: false,
+    discord: false,
   })
 })
 
 test('shared UI changes invalidate browser artifacts and its manifest participates in frozen server installs', () => {
-  expect(classify_release(['packages/ui/src/controls.tsx'])).toEqual({ frontend: true, server: false, indexer: false })
-  expect(classify_release(['packages/ui/package.json'])).toEqual({ frontend: true, server: true, indexer: false })
+  expect(classify_release(['packages/ui/src/controls.tsx'])).toEqual({
+    frontend: true,
+    server: false,
+    indexer: false,
+    discord: false,
+  })
+  expect(classify_release(['packages/ui/package.json'])).toEqual({
+    frontend: true,
+    server: true,
+    indexer: false,
+    discord: true,
+  })
+})
+
+test('Discord artwork, typography, and identity changes rebuild the backend image', () => {
+  for (const path of [
+    'packages/ui/src/base.css',
+    'packages/ui/src/visual_identity.ts',
+    'packages/ui/src/sui.ts',
+    'packages/ui/src/assets/stat_critical.png',
+    'seed/icons/items/gnawed_branch.png',
+    'seed/icons/mobs/golden_lorito.png',
+  ]) {
+    expect(classify_release([path])).toEqual({ frontend: true, server: false, indexer: false, discord: true })
+  }
+})
+
+test('notification implementation changes rebuild only the independently deployed bot', () => {
+  expect(classify_release(['packages/discord/src/render.ts'])).toEqual({
+    frontend: false,
+    server: false,
+    indexer: false,
+    discord: true,
+  })
+  expect(classify_release(['packages/server/src/suins.ts'])).toEqual({
+    frontend: false,
+    server: true,
+    indexer: false,
+    discord: true,
+  })
 })

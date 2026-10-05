@@ -4,6 +4,7 @@
 module aresrpg::trade_kares_tests;
 
 use aresrpg::{trade, version};
+use aresrpg_rewards::{economy::{Self, Economy}, test_coin::TEST_COIN};
 use sui::{coin, test_scenario};
 
 const A: address = @0xA;
@@ -14,42 +15,53 @@ const B: address = @0xB;
 fun funded(): test_scenario::Scenario {
   let mut scenario = test_scenario::begin(A);
   version::test_init(scenario.ctx());
+  economy::share_for_testing(economy::economy_for_testing<TEST_COIN>(@0x0.to_id(), @0x0.to_id(), scenario.ctx()));
   scenario.next_tx(A);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   trade::create(B, &version, scenario.ctx());
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
   scenario.next_tx(B);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   trade::join(&mut row, 0, &version, scenario.ctx());
   trade::put_sui(&mut row, coin::mint_for_testing(20, scenario.ctx()), 1, &version, scenario.ctx());
   test_scenario::return_shared(row);
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
   scenario.next_tx(A);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
-  trade::put_kares(&mut row, coin::mint_for_testing(12, scenario.ctx()), 2, &version, scenario.ctx());
-  let withdrawn = trade::take_kares(&mut row, 2, 3, &version, scenario.ctx());
+  trade::put_token<TEST_COIN>(&mut row, coin::mint_for_testing(12, scenario.ctx()), 2, &economy, &version, scenario.ctx());
+  let withdrawn = trade::take_token<TEST_COIN>(&mut row, 2, 3, &economy, &version, scenario.ctx());
   assert!(coin::value(&withdrawn) == 2, 0);
   coin::burn_for_testing(withdrawn);
   test_scenario::return_shared(row);
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
   scenario
 }
 
 fun accept_both(scenario: &mut test_scenario::Scenario) {
   scenario.next_tx(A);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   trade::accept(&mut row, 4, &version, scenario.ctx());
   test_scenario::return_shared(row);
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
   scenario.next_tx(B);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   trade::accept(&mut row, 4, &version, scenario.ctx());
   test_scenario::return_shared(row);
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
 }
 
 #[test]
@@ -63,10 +75,11 @@ fun exercise(cancel: bool) {
   if (!cancel) accept_both(&mut scenario);
   scenario.next_tx(A);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   if (cancel) {
     trade::cancel(&mut row, 4, &version, scenario.ctx());
-    let coin = trade::recover_kares(&mut row, &version, scenario.ctx());
+    let coin = trade::recover_token<TEST_COIN>(&mut row, &economy, &version, scenario.ctx());
     assert!(coin.value() == 10, 1);
     coin::burn_for_testing(coin);
   } else {
@@ -76,20 +89,23 @@ fun exercise(cancel: bool) {
   };
   test_scenario::return_shared(row);
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
   scenario.next_tx(B);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   if (cancel) {
     let coin = trade::recover_sui(&mut row, &version, scenario.ctx());
     assert!(coin.value() == 20, 3);
     coin::burn_for_testing(coin);
   } else {
-    let coin = trade::claim_kares(&mut row, &version, scenario.ctx());
+    let coin = trade::claim_token<TEST_COIN>(&mut row, &economy, &version, scenario.ctx());
     assert!(coin.value() == 10, 4);
     coin::burn_for_testing(coin);
   };
-  trade::close(row, &version, scenario.ctx());
+  trade::close_token<TEST_COIN>(row, &economy, &version, scenario.ctx());
   test_scenario::return_shared(version);
+  test_scenario::return_shared(economy);
   scenario.next_tx(A);
   assert!(!test_scenario::has_most_recent_shared<trade::Trade>(), 5);
   scenario.end();
@@ -100,9 +116,10 @@ fun a_stale_kares_edit_cannot_change_an_accepted_offer() {
   let mut scenario = funded();
   scenario.next_tx(A);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   trade::accept(&mut row, 4, &version, scenario.ctx());
-  let _coin = trade::take_kares(&mut row, 1, 3, &version, scenario.ctx());
+  let _coin = trade::take_token<TEST_COIN>(&mut row, 1, 3, &economy, &version, scenario.ctx());
   abort 999
 }
 
@@ -112,8 +129,9 @@ fun outsiders_cannot_take_kares() {
   accept_both(&mut scenario);
   scenario.next_tx(@0xC);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
-  let _coin = trade::claim_kares(&mut row, &version, scenario.ctx());
+  let _coin = trade::claim_token<TEST_COIN>(&mut row, &economy, &version, scenario.ctx());
   abort 999
 }
 
@@ -123,9 +141,10 @@ fun kares_cannot_be_claimed_twice() {
   accept_both(&mut scenario);
   scenario.next_tx(B);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
-  coin::burn_for_testing(trade::claim_kares(&mut row, &version, scenario.ctx()));
-  let _coin = trade::claim_kares(&mut row, &version, scenario.ctx());
+  coin::burn_for_testing(trade::claim_token<TEST_COIN>(&mut row, &economy, &version, scenario.ctx()));
+  let _coin = trade::claim_token<TEST_COIN>(&mut row, &economy, &version, scenario.ctx());
   abort 999
 }
 
@@ -135,8 +154,9 @@ fun outstanding_kares_prevents_close_even_after_sui_was_claimed() {
   accept_both(&mut scenario);
   scenario.next_tx(A);
   let version = scenario.take_shared<version::Version>();
+  let economy = scenario.take_shared<Economy>();
   let mut row = scenario.take_shared<trade::Trade>();
   coin::burn_for_testing(trade::claim_sui(&mut row, &version, scenario.ctx()));
-  trade::close(row, &version, scenario.ctx());
+  trade::close_token<TEST_COIN>(row, &economy, &version, scenario.ctx());
   abort 999
 }

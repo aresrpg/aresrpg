@@ -80,7 +80,7 @@ export const TouchControls = ({ copy, device = PLAYER_DEVICE }: Readonly<{ copy:
         onPointerCancel={release_pointer}
         onLostPointerCapture={release_pointer}
       >
-        {offset && <span style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }} />}
+        <span style={{ transform: `translate(${offset?.x ?? 0}px, ${offset?.y ?? 0}px)` }} />
       </div>
       <button
         className="mobile-jump"

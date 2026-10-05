@@ -272,6 +272,34 @@ describe('the player harness (push model)', () => {
     })
   })
 
+  test('inspection cancellation bypasses an exhausted read budget and suppresses pending delivery', async () => {
+    const { sent, ws, graph, pubsub } = wire()
+    const pending = Promise.withResolvers<Record<string, unknown>[]>()
+    const player = create_player({
+      ws,
+      address: '0xme',
+      admin: false,
+      pubsub,
+      request_limiter: create_request_limiter({ capacity: 1 }),
+      graph: {
+        ...graph,
+        read: (query, params) =>
+          query.includes('owner: $address') && params?.character_id ? pending.promise : graph.read(query, params),
+      },
+    })
+    await flush()
+    const query = { kind: 'equipment', address: `0x${'a'.repeat(64)}`, character_id: `0x${'b'.repeat(64)}` }
+    player.on_message(JSON.stringify({ type: 'packet/inspection_request', id: 1, query }))
+    player.on_message(JSON.stringify({ type: 'packet/inspection_request', id: 2, query }))
+    player.on_message(JSON.stringify({ type: 'packet/inspection_request', id: 3, query: null }))
+    pending.resolve([{ slot: null, item: null }])
+    await flush()
+    player.on_close()
+    expect(sent.filter((packet) => packet.type.startsWith('packet/inspection'))).toEqual([
+      { type: 'packet/inspection_error', id: 2 },
+    ])
+  })
+
   test('position folds into state — the tracking module reads it from there', async () => {
     const { ws, graph, pubsub } = wire()
     const player = create_player({ ws, address: '0xme', admin: false, graph, pubsub })

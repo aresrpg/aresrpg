@@ -6,8 +6,10 @@
 import type { KioskOwnerCap } from '@mysten/kiosk'
 import type { GiftcardRow } from '@aresrpg/protocol'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
+import { bcs } from '@mysten/sui/bcs'
+import { ObjectError } from '@mysten/sui/client'
 import { isValidSuiAddress, normalizeSuiAddress, normalizeStructTag } from '@mysten/sui/utils'
-import { ZkSendClient } from '@mysten/zksend'
+import { MAINNET_CONTRACT_IDS, TESTNET_CONTRACT_IDS, ZkSendClient } from '@mysten/zksend'
 
 import type { Sdk } from './client.ts'
 import { absorb_receipt, receipt_digest } from './cache.ts'
@@ -52,18 +54,38 @@ export const canonical_zksend_gift_url = (url: string, network: 'testnet' | 'mai
   return canonical.toString()
 }
 
+/** zkSend treats every bag lookup failure as claimed. Confirm absence without hiding RPC failures. */
+const gift_link_missing = async (client: SuiGrpcClient, address: string): Promise<boolean> => {
+  const contract = client.network === 'mainnet' ? MAINNET_CONTRACT_IDS : TESTNET_CONTRACT_IDS
+  try {
+    await client.core.getDynamicField({
+      parentId: contract.bagStoreTableId,
+      name: { type: 'address', bcs: bcs.Address.serialize(address).toBytes() },
+    })
+    return false
+  } catch (error) {
+    if (error instanceof ObjectError && error.reason === 'notFound') return true
+    throw error
+  }
+}
+
 /** Claims one bearer voucher through zkSend's hosted claim service. That service pays this
- * transport leg; the authenticated game wallet pays only the later AresRPG redemption. */
+ * transport leg; the authenticated game wallet pays only the later AresRPG redemption.
+ * A missing link returns null: it was already claimed, reclaimed, or never issued. */
 export const claim_giftcard_link = async (
   client: SuiGrpcClient,
   sdk: Sdk,
   url: string,
   recipient: string
-): Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>> => {
+): Promise<Readonly<{ digest: string; giftcard: GiftcardRow }> | null> => {
   const expected_type = giftcard_type(sdk)
   const link = await new ZkSendClient(client).loadLinkFromUrl(canonical_zksend_gift_url(url, sdk.network))
-  const assets = link.assets?.nfts.filter(({ type }) => normalizeStructTag(type) === normalizeStructTag(expected_type))
-  if (assets?.length !== 1) throw new Error('The zkSend link must contain exactly one AresRPG giftcard')
+  if (!link.assets) {
+    if (await gift_link_missing(client, link.address)) return null
+    throw new Error('The giftcard could not be loaded. Try again.')
+  }
+  const assets = link.assets.nfts.filter(({ type }) => normalizeStructTag(type) === normalizeStructTag(expected_type))
+  if (assets.length !== 1) throw new Error('The zkSend link must contain exactly one AresRPG giftcard')
   const [asset] = assets
   const { objects } = await client.core.getObjects({ objectIds: [asset.objectId], include: { json: true } })
   const [object] = objects

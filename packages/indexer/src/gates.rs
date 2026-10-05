@@ -178,6 +178,9 @@ mod tests {
         // Treasury vesting is independent wallet finance. Its certified receipt and the
         // canonical offering balance own this claim; it has no game projection consumer.
         ("offering", "CommunityClaimed"),
+        // Independent rewards are read directly through the wallet-finance SDK.
+        ("community", "CommunityClaimed"),
+        ("economy", "Funded"),
     ];
 
     fn repo_root() -> PathBuf {
@@ -236,6 +239,7 @@ mod tests {
             ("control", "packages/control", "aresrpg_control"),
             ("combat", "packages/move-combat", "aresrpg_combat"),
             ("seed", "packages/seed", "aresrpg_seed"),
+            ("rewards", "packages/rewards", "aresrpg_rewards"),
             ("game", "packages/move", "aresrpg"),
         ];
         for (slot, package_path, package_name) in packages {
@@ -529,6 +533,7 @@ mod tests {
             repo_root().join("packages/move/sources"),
             repo_root().join("packages/seed/sources"),
             repo_root().join("packages/kares/sources"),
+            repo_root().join("packages/rewards/sources"),
         ] {
             for entry in std::fs::read_dir(&sources).expect("listing move sources") {
                 let path = entry.expect("dir entry").path();
@@ -545,6 +550,7 @@ mod tests {
                             .or_else(|| line.trim().strip_prefix("module aresrpg::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg_seed::"))
                             .or_else(|| line.trim().strip_prefix("module aresrpg_kares::"))
+                            .or_else(|| line.trim().strip_prefix("module aresrpg_rewards::"))
                             .map(|rest| rest.trim_end_matches(';').to_string())
                     })
                     .unwrap_or_else(|| panic!("no module decl in {}", path.display()));

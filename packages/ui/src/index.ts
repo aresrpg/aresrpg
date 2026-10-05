@@ -13,7 +13,7 @@ export {
   Select,
   Slider,
 } from './controls.tsx'
-export { NativeModal, focus_modal } from './NativeModal.tsx'
+export { NativeModal, focus_modal, active_modal, observe_window_changes } from './NativeModal.tsx'
 export { Panel, GameWindow, ConfirmDialog } from './surfaces.tsx'
 export { CombatHud, ProgressBar, MobDetails, ProgressionCard } from './game.tsx'
 export type { StatView, ItemView } from './game.tsx'
@@ -43,3 +43,6 @@ export { CarvedIcon, type CarvedSymbol } from './CarvedIcon.tsx'
 
 export { FloatingWindow } from './FloatingWindow.tsx'
 export { useWindowDrag } from './useWindowDrag.ts'
+
+export { NotificationCard } from './NotificationCard.tsx'
+export type { NotificationCardProps } from './NotificationCard.tsx'

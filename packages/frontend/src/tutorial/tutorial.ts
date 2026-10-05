@@ -11,6 +11,7 @@ export const TUTORIAL_IDS = Object.freeze([
   'characters_spells',
   'characters_jobs',
   'characters_runeforge',
+  'craft_failure',
 ] as const)
 
 export type TutorialId = (typeof TUTORIAL_IDS)[number]
@@ -30,6 +31,7 @@ export type TutorialStep = Readonly<{ key: string; target: TutorialTarget | null
 const dom = (name: TutorialTargetName): TutorialTarget => Object.freeze({ kind: 'dom', name })
 
 const STEPS: Readonly<Record<TutorialId, readonly TutorialStep[]>> = Object.freeze({
+  craft_failure: Object.freeze([Object.freeze({ key: 'craft_failure', target: null })]),
   world: Object.freeze([
     Object.freeze({ key: 'world_compass', target: dom('compass') }),
     Object.freeze({ key: 'world_hud', target: dom('overworld_hud') }),

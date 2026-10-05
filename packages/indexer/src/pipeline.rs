@@ -458,6 +458,7 @@ impl Processor for AresHandler {
             .iter()
             .enumerate()
             .map(|(i, tx)| TxView {
+                deleted: &deleted_views[i],
                 tx_index: i as u64,
                 sender: tx.sender,
                 move_calls: &tx.move_calls,
@@ -505,6 +506,7 @@ impl Processor for AresHandler {
                 },
                 game,
             )?);
+            cypher.extend(crate::trade_tokens::project(tx, game, ckpt)?);
         }
         cypher.extend(graph::project(
             &CheckpointView {
@@ -520,6 +522,12 @@ impl Processor for AresHandler {
             game,
         )?);
 
+        let mut notifications = crate::notification_sales::extract(&wire.sales, &digests)?;
+        for (tx, digest) in tx_views.iter().zip(&digests) {
+            notifications.extend(crate::notification_events::extract(
+                ckpt, ts_ms, tx, digest, game,
+            )?);
+        }
         let mut leaderboard_facts = wire.leaderboard;
         for tx in &tx_views {
             leaderboard_facts.extend(leaderboards::extract(tx, game)?);
@@ -586,6 +594,14 @@ impl Processor for AresHandler {
                 payload: publication.payload,
             });
         }
+        writes.extend(
+            notifications
+                .into_iter()
+                .map(|notification| Write::Publish {
+                    channel: format!("evt:notifications:{game}"),
+                    payload: notification.to_string(),
+                }),
+        );
         writes.push(Write::SetKey {
             key: LATEST_CHECKPOINT_KEY.to_string(),
             value: serde_json::json!({

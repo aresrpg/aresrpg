@@ -22,13 +22,18 @@
       "slot": "combat",
       "path": "packages/move-combat",
       "package_name": "aresrpg_combat",
-      "dependencies": ["math"]
+      "dependencies": [
+        "math"
+      ]
     },
     {
       "slot": "seed",
       "path": "packages/seed",
       "package_name": "aresrpg_seed",
-      "dependencies": ["math", "control"]
+      "dependencies": [
+        "math",
+        "control"
+      ]
     },
     {
       "slot": "kares",
@@ -37,10 +42,23 @@
       "dependencies": []
     },
     {
+      "slot": "rewards",
+      "path": "packages/rewards",
+      "package_name": "aresrpg_rewards",
+      "dependencies": []
+    },
+    {
       "slot": "game",
       "path": "packages/move",
       "package_name": "aresrpg",
-      "dependencies": ["math", "control", "combat", "seed", "kares"]
+      "dependencies": [
+        "math",
+        "control",
+        "combat",
+        "seed",
+        "kares",
+        "rewards"
+      ]
     }
   ]
 }

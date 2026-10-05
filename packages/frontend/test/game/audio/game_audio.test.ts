@@ -118,11 +118,12 @@ test('craft sounds follow distinct confirmed outcomes, including failed and zero
   const action = {
     type: 'character/crafted',
     digest: 'craft-1',
+    attempts: 2,
+    output_type: 'hat',
     successes: 2,
     character_id: 'character',
     job: 'TAILOR',
     xp: 0,
-    inputs: [],
   } as const
   const crafted = reduce_app_state(before, action)
   expect(cues(before, crafted)).toEqual(['craft_completed'])
@@ -180,12 +181,18 @@ test('the observer establishes a silent baseline and stops effects on disposal',
   })
   expect(played).toEqual([])
   const previous = state
-  state = { ...state, session: { ...state.session, craft_result: { digest: 'craft', successes: 1 } } }
+  state = {
+    ...state,
+    session: { ...state.session, craft_result: { digest: 'craft', successes: 1, attempts: 1, output_type: 'hat' } },
+  }
   listener?.(state, previous)
   listener?.(state, state)
   expect(played).toEqual(['craft_completed'])
   controller.abort()
-  state = { ...state, session: { ...state.session, craft_result: { digest: 'later', successes: 1 } } }
+  state = {
+    ...state,
+    session: { ...state.session, craft_result: { digest: 'later', successes: 1, attempts: 1, output_type: 'hat' } },
+  }
   listener?.(state, previous)
   expect(played).toEqual(['craft_completed'])
 })

@@ -12,6 +12,7 @@
 import type { Transaction, TransactionObjectArgument } from '@mysten/sui/transactions'
 
 import type { DoorCtx, Resolvable } from './client.ts'
+import { kares_coin_type } from './kares_ptb.ts'
 
 /**
  * `api::split_stack`
@@ -879,42 +880,6 @@ export const redeem_mastery_offer = (
     target: `${ctx.pins.package}::api::redeem_mastery_offer`,
     arguments: [
       ctx.obj(tx, args.mastery_object, true),
-      ctx.obj(tx, args.offer, false),
-      ctx.obj(tx, args.template, false),
-      ctx.pure.option(tx, 'id', args.existing ?? null),
-      ctx.obj(tx, args.kiosk, true),
-      ctx.obj(tx, args.cap, false),
-      ctx.pin(tx, 'item_policy', false),
-      ctx.pin(tx, 'version', false),
-    ],
-  })
-
-/**
- * `api::redeem_mastery_offer_kares`
- * @arg payment — Coin<KARES>
- * @arg offer — &MasteryOffer
- * @arg template — &ItemTemplate
- * @arg existing — Option<ID>
- * @arg kiosk — &mut Kiosk
- * @arg cap — &KioskOwnerCap
- */
-export const redeem_mastery_offer_kares = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: {
-    payment: Resolvable
-    offer: Resolvable
-    template: Resolvable
-    existing: string | null | undefined
-    kiosk: Resolvable
-    cap: Resolvable
-  }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::api::redeem_mastery_offer_kares`,
-    arguments: [
-      ctx.pin(tx, 'kares_currency', true),
-      ctx.obj(tx, args.payment, true),
       ctx.obj(tx, args.offer, false),
       ctx.obj(tx, args.template, false),
       ctx.pure.option(tx, 'id', args.existing ?? null),
@@ -2377,24 +2342,85 @@ export const trade_recover_item = (tx: Transaction, ctx: DoorCtx, args: { trade_
   })
 
 /**
- * `api::prepare_boss_rewards`
+ * `api::redeem_mastery_offer_token`
+ * @arg payment — Coin<Token>
+ * @arg offer — &MasteryOffer
+ * @arg template — &ItemTemplate
+ * @arg existing — Option<ID>
+ * @arg kiosk — &mut Kiosk
+ * @arg cap — &KioskOwnerCap
+ */
+export const redeem_mastery_offer_token = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: {
+    payment: Resolvable
+    offer: Resolvable
+    template: Resolvable
+    existing: string | null | undefined
+    kiosk: Resolvable
+    cap: Resolvable
+    coin_type?: string
+  }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::redeem_mastery_offer_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [
+      ctx.pin(tx, 'kares_economy', false),
+      ctx.pin(tx, 'kares_currency', true),
+      ctx.obj(tx, args.payment, true),
+      ctx.obj(tx, args.offer, false),
+      ctx.obj(tx, args.template, false),
+      ctx.pure.option(tx, 'id', args.existing ?? null),
+      ctx.obj(tx, args.kiosk, true),
+      ctx.obj(tx, args.cap, false),
+      ctx.pin(tx, 'item_policy', false),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
+ * `api::prepare_boss_rewards_token`
+ * @arg fight_object — &mut Fight
+ * @arg fighter_idx — u64
+ * @arg pot — &mut aresrpg_rewards::combat_rewards::CombatPot<Token>
+ */
+export const prepare_boss_rewards_token = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { fight_object: Resolvable; fighter_idx: bigint | number | string; pot: Resolvable; coin_type?: string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::api::prepare_boss_rewards_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [
+      ctx.obj(tx, args.fight_object, true),
+      ctx.pure.u64(tx, args.fighter_idx),
+      ctx.pin(tx, 'kares_economy', false),
+      ctx.obj(tx, args.pot, true),
+      ctx.pin(tx, 'version', false),
+      tx.object.clock(),
+    ],
+  })
+
+/**
+ * `api::prepare_boss_rewards_unfunded`
  * @arg fight_object — &mut Fight
  * @arg fighter_idx — u64
  */
-export const prepare_boss_rewards = (
+export const prepare_boss_rewards_unfunded = (
   tx: Transaction,
   ctx: DoorCtx,
   args: { fight_object: Resolvable; fighter_idx: bigint | number | string }
 ) =>
   tx.moveCall({
-    target: `${ctx.pins.package}::api::prepare_boss_rewards`,
+    target: `${ctx.pins.package}::api::prepare_boss_rewards_unfunded`,
     arguments: [
       ctx.obj(tx, args.fight_object, true),
       ctx.pure.u64(tx, args.fighter_idx),
-      ctx.pin(tx, 'kares_offering', false),
-      ctx.pin(tx, 'kares_combat_pot', true),
+      ctx.pin(tx, 'kares_economy', false),
       ctx.pin(tx, 'version', false),
-      tx.object.clock(),
     ],
   })
 
@@ -2490,27 +2516,6 @@ export const trade_put_sui = (
   })
 
 /**
- * `trade::put_kares`
- * @arg trade — &mut Trade
- * @arg coin — Coin<KARES>
- * @arg seen — u64
- */
-export const trade_put_kares = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: { trade: Resolvable; coin: Resolvable; seen: bigint | number | string }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::trade::put_kares`,
-    arguments: [
-      ctx.obj(tx, args.trade, true),
-      ctx.obj(tx, args.coin, true),
-      ctx.pure.u64(tx, args.seen),
-      ctx.pin(tx, 'version', false),
-    ],
-  })
-
-/**
  * `trade::take_sui`
  * @arg trade — &mut Trade
  * @arg amount — u64
@@ -2523,27 +2528,6 @@ export const trade_take_sui = (
 ) =>
   tx.moveCall({
     target: `${ctx.pins.package}::trade::take_sui`,
-    arguments: [
-      ctx.obj(tx, args.trade, true),
-      ctx.pure.u64(tx, args.amount),
-      ctx.pure.u64(tx, args.seen),
-      ctx.pin(tx, 'version', false),
-    ],
-  })
-
-/**
- * `trade::take_kares`
- * @arg trade — &mut Trade
- * @arg amount — u64
- * @arg seen — u64
- */
-export const trade_take_kares = (
-  tx: Transaction,
-  ctx: DoorCtx,
-  args: { trade: Resolvable; amount: bigint | number | string; seen: bigint | number | string }
-) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::trade::take_kares`,
     arguments: [
       ctx.obj(tx, args.trade, true),
       ctx.pure.u64(tx, args.amount),
@@ -2578,32 +2562,12 @@ export const trade_claim_sui = (tx: Transaction, ctx: DoorCtx, args: { trade: Re
   })
 
 /**
- * `trade::claim_kares`
- * @arg trade — &mut Trade
- */
-export const trade_claim_kares = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable }) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::trade::claim_kares`,
-    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
-  })
-
-/**
  * `trade::recover_sui`
  * @arg trade — &mut Trade
  */
 export const trade_recover_sui = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable }) =>
   tx.moveCall({
     target: `${ctx.pins.package}::trade::recover_sui`,
-    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
-  })
-
-/**
- * `trade::recover_kares`
- * @arg trade — &mut Trade
- */
-export const trade_recover_kares = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable }) =>
-  tx.moveCall({
-    target: `${ctx.pins.package}::trade::recover_kares`,
     arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
   })
 
@@ -2615,6 +2579,85 @@ export const trade_close = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolv
   tx.moveCall({
     target: `${ctx.pins.package}::trade::close`,
     arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'version', false)],
+  })
+
+/**
+ * `trade::put_token`
+ * @arg trade — &mut Trade
+ * @arg coin — Coin<Token>
+ * @arg seen — u64
+ */
+export const trade_put_kares = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { trade: Resolvable; coin: Resolvable; seen: bigint | number | string; coin_type?: string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::put_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [
+      ctx.obj(tx, args.trade, true),
+      ctx.obj(tx, args.coin, true),
+      ctx.pure.u64(tx, args.seen),
+      ctx.pin(tx, 'kares_economy', false),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
+ * `trade::take_token`
+ * @arg trade — &mut Trade
+ * @arg amount — u64
+ * @arg seen — u64
+ */
+export const trade_take_kares = (
+  tx: Transaction,
+  ctx: DoorCtx,
+  args: { trade: Resolvable; amount: bigint | number | string; seen: bigint | number | string; coin_type?: string }
+) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::take_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [
+      ctx.obj(tx, args.trade, true),
+      ctx.pure.u64(tx, args.amount),
+      ctx.pure.u64(tx, args.seen),
+      ctx.pin(tx, 'kares_economy', false),
+      ctx.pin(tx, 'version', false),
+    ],
+  })
+
+/**
+ * `trade::claim_token`
+ * @arg trade — &mut Trade
+ */
+export const trade_claim_kares = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable; coin_type?: string }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::claim_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'kares_economy', false), ctx.pin(tx, 'version', false)],
+  })
+
+/**
+ * `trade::recover_token`
+ * @arg trade — &mut Trade
+ */
+export const trade_recover_kares = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable; coin_type?: string }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::recover_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'kares_economy', false), ctx.pin(tx, 'version', false)],
+  })
+
+/**
+ * `trade::close_token`
+ * @arg trade — Trade
+ */
+export const trade_close_token = (tx: Transaction, ctx: DoorCtx, args: { trade: Resolvable; coin_type?: string }) =>
+  tx.moveCall({
+    target: `${ctx.pins.package}::trade::close_token`,
+    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],
+    arguments: [ctx.obj(tx, args.trade, true), ctx.pin(tx, 'kares_economy', false), ctx.pin(tx, 'version', false)],
   })
 
 /** Every door, by name — { params: caller-facing names, terminal: carries &Random }. */
@@ -2674,7 +2717,6 @@ export const DOORS = {
     params: ['mastery_object', 'offer', 'template', 'existing', 'kiosk', 'cap'],
     terminal: false,
   },
-  redeem_mastery_offer_kares: { params: ['payment', 'offer', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
   settle_fight: {
     params: ['fight_object', 'fighter_indices', 'plan_lengths', 'plan', 'kiosk', 'personal'],
     terminal: true,
@@ -2814,20 +2856,23 @@ export const DOORS = {
   trade_take_item: { params: ['trade_object', 'item', 'seen_offer_revision'], terminal: false },
   trade_claim_item: { params: ['trade_object', 'item', 'source'], terminal: false },
   trade_recover_item: { params: ['trade_object', 'item'], terminal: false },
-  prepare_boss_rewards: { params: ['fight_object', 'fighter_idx'], terminal: false },
+  redeem_mastery_offer_token: { params: ['payment', 'offer', 'template', 'existing', 'kiosk', 'cap'], terminal: false },
+  prepare_boss_rewards_token: { params: ['fight_object', 'fighter_idx', 'pot'], terminal: false },
+  prepare_boss_rewards_unfunded: { params: ['fight_object', 'fighter_idx'], terminal: false },
   trade_create: { params: ['counterparty'], terminal: false },
   trade_join: { params: ['trade', 'seen'], terminal: false },
   trade_cancel_request: { params: ['trade', 'seen'], terminal: false },
   trade_decline_request: { params: ['trade', 'seen'], terminal: false },
   trade_cancel: { params: ['trade', 'seen'], terminal: false },
   trade_put_sui: { params: ['trade', 'coin', 'seen'], terminal: false },
-  trade_put_kares: { params: ['trade', 'coin', 'seen'], terminal: false },
   trade_take_sui: { params: ['trade', 'amount', 'seen'], terminal: false },
-  trade_take_kares: { params: ['trade', 'amount', 'seen'], terminal: false },
   trade_accept: { params: ['trade', 'seen'], terminal: false },
   trade_claim_sui: { params: ['trade'], terminal: false },
-  trade_claim_kares: { params: ['trade'], terminal: false },
   trade_recover_sui: { params: ['trade'], terminal: false },
-  trade_recover_kares: { params: ['trade'], terminal: false },
   trade_close: { params: ['trade'], terminal: false },
+  trade_put_kares: { params: ['trade', 'coin', 'seen'], terminal: false },
+  trade_take_kares: { params: ['trade', 'amount', 'seen'], terminal: false },
+  trade_claim_kares: { params: ['trade'], terminal: false },
+  trade_recover_kares: { params: ['trade'], terminal: false },
+  trade_close_token: { params: ['trade'], terminal: false },
 }

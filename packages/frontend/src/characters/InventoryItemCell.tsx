@@ -11,7 +11,7 @@ import { item_icon } from '../content/assets.ts'
 type InventoryItemCellProps = Readonly<Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className'>> &
   Readonly<{
     class_name?: string
-    item: Readonly<ItemRow>
+    item: Readonly<Omit<ItemRow, 'kiosk'>>
     amount?: number
     show_level?: boolean
   }>

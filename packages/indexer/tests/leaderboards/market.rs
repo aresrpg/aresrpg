@@ -70,6 +70,7 @@ fn public_sale_volume_uses_each_exact_receipt_despite_batches_and_profit_withdra
         },
     ];
     let tx = TxView {
+        deleted: &[],
         tx_index: 0,
         sender: Addr([7; 32]),
         move_calls: &[],
@@ -81,6 +82,7 @@ fn public_sale_volume_uses_each_exact_receipt_despite_batches_and_profit_withdra
         1,
         100,
         &[TxView {
+            deleted: &[],
             inputs: &tx.inputs[..1],
             ..tx.clone()
         }],
@@ -93,6 +95,7 @@ fn public_sale_volume_uses_each_exact_receipt_despite_batches_and_profit_withdra
             1,
             100,
             &[TxView {
+                deleted: &[],
                 events: &events[..2],
                 ..tx.clone()
             }],

@@ -15,6 +15,7 @@ import { character_creation_failure_message, character_creation_insufficient } f
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
 import { Login } from './components/Login.tsx'
 import { AddFundsModal } from './components/AddFundsModal.tsx'
+import { GiftClaimNotice, gift_funding_text } from './airdrop/GiftClaimNotice.tsx'
 import {
   CANVAS_OVERLAY_CLASS,
   dungeon_lobby_visible,
@@ -63,6 +64,7 @@ export function PlayerRuntime({
 }>) {
   const loading_scene = useSyncExternalStore(subscribe_scene, read_scene, read_scene)
   const session = useAppStore(({ session }) => session)
+  const distribution = useAppStore((state) => state.distribution)
   const navigation = useAppStore(({ navigation }) => navigation)
   const settings = useAppStore((state) => state.settings)
   const locale = useAppStore((state) => state.locale)
@@ -210,7 +212,7 @@ export function PlayerRuntime({
             address={wallet.address}
             copy={copy}
             on_close={() => dispatch_app({ type: 'dialog/open', dialog: null })}
-            warning={copy.out_of_sui_body}
+            warning={gift_funding_text(copy, distribution, session)}
           />
         )}
         {creation_surface === 'character_create' && (
@@ -275,6 +277,7 @@ export function PlayerRuntime({
             <TutorialHost blocked={show_graphics_notice} copy={copy} />
           </>
         )}
+        <GiftClaimNotice copy={copy} />
       </main>
     </LocaleScope>
   )

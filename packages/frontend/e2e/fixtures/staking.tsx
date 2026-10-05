@@ -15,7 +15,20 @@ import '../../src/tailwind.css'
 import '@aresrpg/ui/styles.css'
 
 // Presentation-only fixture: no runtime, signer, RPC reader or transaction executor is started.
-const account = finance_state()
+const initial = finance_state()
+const position_count = Number(new URLSearchParams(location.search).get('positions') ?? 0)
+const account = position_count
+  ? finance_state({
+      ...initial.snapshot!,
+      positions: Array.from({ length: position_count }, (_, index) => ({
+        id: `position-${index}`,
+        version: String(index + 1),
+        amount: 1_000_000_000n,
+        pending_kares: 1_000_000_000n,
+        pending_sui: 0n,
+      })),
+    })
+  : initial
 const external = {
   ...finance_state(),
   address: '0xexternal',

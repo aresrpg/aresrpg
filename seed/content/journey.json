@@ -1,5 +1,9 @@
 [
   { "id": "welcome", "chapter": "welcome", "item": "old_hoe", "kind": "start" },
+  { "id": "map_travel", "chapter": "welcome", "item": "recall_potion", "kind": "map", "superseded_by": "hoe" },
+  { "id": "first_hunt", "chapter": "tools", "item": "gnawed_branch", "kind": "hunt", "mob": "tinker", "superseded_by": "hoe" },
+  { "id": "hoe_materials", "chapter": "tools", "item": "old_hoe", "kind": "materials", "superseded_by": "hoe" },
+  { "id": "first_craft", "chapter": "tools", "item": "old_hoe", "kind": "craft", "superseded_by": "hoe" },
   { "id": "hoe", "chapter": "tools", "item": "old_hoe", "kind": "own" },
   { "id": "wheat", "chapter": "tools", "item": "wheat", "kind": "harvest" },
   { "id": "pickaxe", "chapter": "tools", "item": "basic_pickaxe", "kind": "own" },

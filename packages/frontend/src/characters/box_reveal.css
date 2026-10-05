@@ -1,352 +1,379 @@
 /* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
 /* © 2026 Sceat — All rights reserved. See LICENSE. */
-/* PET LOOT-BOX reveal overlay — dark-fantasy terminal: SOLID near-black backdrop (fight-overlay law: no
- * see-through), gold #c8963c / cyan #4a9eff palette, JetBrains Mono, sharp corners, uppercase labels. Every
- * phase is driven off the container's [data-phase] so the keyframes live HERE, not in JSX. */
 
 .boxreveal {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  max-width: none;
-  max-height: none;
-  margin: 0;
   padding: 0;
-  border: 0;
   overflow: hidden;
-  z-index: 70; /* above HUD panels (45-55) + tooltips (50) */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(8, 8, 12, 0.96); /* SOLID near-black — matches the fight overlay opacity law */
-  font-family: 'JetBrains Mono', monospace;
-  animation: boxreveal-fade 0.28s ease-out both;
+  font-family: var(--aui-font);
+  color: var(--color-text);
   user-select: none;
-  cursor: default;
 }
-.boxreveal[data-phase='charging'],
-.boxreveal[data-phase='burst'] {
-  cursor: pointer; /* click-to-skip is live only during the animation */
+/* Nested modal scrims are transparent. This foreground owns the opaque reveal surface. */
+.boxreveal__surface {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(8px, 2.5vw, 28px);
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--color-gold) 12%, transparent), transparent 60%),
+    radial-gradient(ellipse at 85% 90%, color-mix(in srgb, var(--color-cyan) 8%, transparent), transparent 55%);
 }
-
-@keyframes boxreveal-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ── BOX STAGE ─────────────────────────────────────────────────────────────────────────────────────── */
-.boxreveal__stage {
-  position: relative;
-  width: 260px;
-  height: 260px;
+.boxreveal__panel {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  width: min(1040px, 100%);
+  height: min(660px, 100%);
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 45%, var(--color-border));
+  border-radius: 8px;
+  background: var(--color-surface-low);
+  box-shadow:
+    0 24px 80px #0009,
+    inset 0 1px color-mix(in srgb, var(--color-gold) 20%, transparent);
+  animation: boxreveal-arrive 300ms ease-out both;
 }
-
+.boxreveal__heading {
+  flex: none;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--color-surface-high), var(--color-surface-low));
+  text-align: center;
+}
+.boxreveal__heading p {
+  margin: 0 0 6px;
+  color: var(--color-gold);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+.boxreveal__heading h2 {
+  margin: 0;
+  color: var(--color-gold-light);
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 800;
+}
+.boxreveal__body {
+  container-type: size;
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  place-items: center;
+  padding: clamp(8px, 2vw, 24px);
+  overflow: hidden;
+}
+.boxreveal__grid {
+  --gap: clamp(4px, 0.8vw, 12px);
+  --cell: min(
+    270px,
+    calc((100cqw - (var(--columns) - 1) * var(--gap)) / var(--columns)),
+    calc((100cqh - (var(--rows) - 1) * var(--gap)) / var(--rows))
+  );
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--cell));
+  grid-template-rows: repeat(var(--rows), var(--cell));
+  gap: var(--gap);
+}
+.boxreveal__cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  isolation: isolate;
+}
+.boxreveal__stage,
+.boxreveal__card-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+.boxreveal__stage::before {
+  content: '';
+  position: absolute;
+  inset: 10%;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 40%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-gold) 4%, transparent);
+}
 .boxreveal__aura {
   position: absolute;
-  inset: -20%;
+  inset: -8%;
   border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(200, 150, 60, 0.32) 0%,
-    rgba(200, 150, 60, 0.08) 40%,
-    transparent 70%
-  );
-  opacity: 0.5;
-  transition: opacity 0.4s ease;
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-gold) 24%, transparent), transparent 68%);
   pointer-events: none;
 }
-.boxreveal[data-phase='pending'] .boxreveal__aura {
-  animation: boxreveal-aura-pulse 2.4s ease-in-out infinite;
-}
-.boxreveal[data-phase='charging'] .boxreveal__aura {
-  animation: boxreveal-glow-ramp 1.2s ease-in forwards;
-}
-.boxreveal[data-phase='burst'] .boxreveal__aura {
-  opacity: 1;
-}
-
 .boxreveal__box {
-  position: relative;
-  width: 150px;
-  height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  filter: drop-shadow(0 0 14px rgba(200, 150, 60, 0.45));
+  width: 65%;
+  height: 65%;
+  filter: drop-shadow(0 10px 12px #0008);
 }
 .boxreveal__box-art {
-  width: 150px;
-  height: 150px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 .boxreveal[data-phase='pending'] .boxreveal__box {
-  animation: boxreveal-float 3.2s ease-in-out infinite;
+  animation: boxreveal-float 2.4s ease-in-out infinite;
 }
 .boxreveal[data-phase='charging'] .boxreveal__box {
-  animation: boxreveal-shake 1.2s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+  animation: boxreveal-charge 1.2s ease-in forwards;
+}
+.boxreveal[data-phase='charging'] .boxreveal__aura,
+.boxreveal[data-phase='charging'] .boxreveal__stage::before {
+  animation: boxreveal-gather 1.2s ease-in forwards;
 }
 .boxreveal[data-phase='burst'] .boxreveal__box {
-  animation: boxreveal-vanish 0.5s ease-in forwards;
+  animation: boxreveal-release 0.5s ease-out forwards;
 }
-
-@keyframes boxreveal-float {
-  0%,
-  100% {
-    transform: translateY(-6px);
-  }
-  50% {
-    transform: translateY(6px);
-  }
+.boxreveal[data-phase='burst'] .boxreveal__stage::before {
+  animation: boxreveal-ring 0.5s ease-out forwards;
 }
-@keyframes boxreveal-aura-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.06);
-  }
-}
-@keyframes boxreveal-glow-ramp {
-  from {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1.25);
-  }
-}
-/* building-intensity shake — amplitude ramps up as the charge peaks */
-@keyframes boxreveal-shake {
-  0% {
-    transform: translate(0, 0) rotate(0deg) scale(1);
-  }
-  20% {
-    transform: translate(-2px, 1px) rotate(-1deg) scale(1.02);
-  }
-  40% {
-    transform: translate(3px, -2px) rotate(1.5deg) scale(1.04);
-  }
-  60% {
-    transform: translate(-4px, 2px) rotate(-2deg) scale(1.06);
-  }
-  80% {
-    transform: translate(5px, -3px) rotate(2.5deg) scale(1.09);
-  }
-  100% {
-    transform: translate(-6px, 3px) rotate(-3deg) scale(1.12);
-  }
-}
-@keyframes boxreveal-vanish {
-  from {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-}
-
-/* ── the white/gold burst flash ─────────────────────────────────────────────────────────────────────── */
 .boxreveal__flash {
   position: absolute;
-  inset: -60%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(245, 208, 169, 0.7) 25%,
-    transparent 60%
-  );
+  inset: -12%;
   opacity: 0;
+  background: radial-gradient(
+    circle,
+    var(--color-gold-light),
+    color-mix(in srgb, var(--color-gold) 30%, transparent) 28%,
+    transparent 65%
+  );
   pointer-events: none;
 }
 .boxreveal[data-phase='burst'] .boxreveal__flash {
   animation: boxreveal-flash 0.5s ease-out forwards;
 }
-@keyframes boxreveal-flash {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  35% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.4);
-  }
-}
-
-/* ── particles (converge on charging, explode on burst) ─────────────────────────────────────────────── */
 .boxreveal__sparks {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 .boxreveal__spark {
+  --angle: calc(var(--i) * 36deg);
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
-  border-radius: 50%;
+  width: clamp(2px, calc(var(--cell) / 45), 6px);
+  aspect-ratio: 1;
   opacity: 0;
-  --angle: calc(var(--i) * 36deg);
-}
-.boxreveal__spark--gold {
-  background: #c8963c;
-  box-shadow: 0 0 8px #c8963c;
+  border-radius: 2px;
+  background: var(--color-gold);
 }
 .boxreveal__spark--cyan {
-  background: #4a9eff;
-  box-shadow: 0 0 8px #4a9eff;
+  background: var(--color-cyan);
 }
 .boxreveal[data-phase='charging'] .boxreveal__spark {
-  animation: boxreveal-converge 1.2s ease-in infinite;
-  animation-delay: calc(var(--i) * -0.12s);
+  animation: boxreveal-converge 0.8s ease-in infinite;
+  animation-delay: calc(var(--i) * -0.08s);
 }
 .boxreveal[data-phase='burst'] .boxreveal__spark {
-  animation: boxreveal-explode 0.5s ease-out forwards;
-  animation-delay: calc(var(--i) * 0.01s);
-}
-@keyframes boxreveal-converge {
-  0% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateX(150px) scale(0.4);
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateX(0) scale(1);
-  }
-}
-@keyframes boxreveal-explode {
-  0% {
-    opacity: 1;
-    transform: rotate(var(--angle)) translateX(0) scale(1.2);
-  }
-  100% {
-    opacity: 0;
-    transform: rotate(var(--angle)) translateX(220px) scale(0.3);
-  }
-}
-
-/* ── labels ─────────────────────────────────────────────────────────────────────────────────────────── */
-.boxreveal__label {
-  position: absolute;
-  bottom: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: 12px;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: #f5d0a9;
-  text-shadow: 0 0 12px rgba(200, 150, 60, 0.6);
-}
-.boxreveal__label--pulse {
-  animation: boxreveal-text-pulse 1.6s ease-in-out infinite;
-}
-@keyframes boxreveal-text-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.boxreveal__skip {
-  position: fixed;
-  bottom: 26px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 9px;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: #6b7280;
-  animation: boxreveal-text-pulse 2s ease-in-out infinite;
-}
-
-/* ── REVEAL CARD ────────────────────────────────────────────────────────────────────────────────────── */
-.boxreveal__card-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  animation: boxreveal-fade 0.3s ease-out both;
-}
-.boxreveal__eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  color: rgba(200, 150, 60, 0.7);
+  animation: boxreveal-scatter 0.5s ease-out forwards;
 }
 .boxreveal__card {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  width: 240px;
-  padding: 26px 22px 22px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid #c8963c; /* tiers are dead — one gold frame for every companion */
-  box-shadow: 0 0 26px rgba(200, 150, 60, 0.3);
-  overflow: hidden;
-  animation: boxreveal-card-punch 0.6s cubic-bezier(0.2, 1.4, 0.35, 1) both;
-}
-.boxreveal__pet-art {
-  position: relative;
-  width: 128px;
-  height: 128px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6));
-}
-.boxreveal__pet-name {
-  position: relative;
-  font-size: 13px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #e8e4dc;
-  text-align: center;
-}
-/* RESOLVING — honest post-burst wait: the card slot shimmers while the pet read lands (UX-A), never a blank tail */
-.boxreveal__card--resolving {
   justify-content: center;
-  min-height: 188px;
+  width: 100%;
+  height: 100%;
+  gap: clamp(1px, calc(var(--cell) / 35), 8px);
+  padding: 5%;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-gold) 60%, var(--color-border));
+  border-radius: 6px;
+  background:
+    radial-gradient(ellipse at 50% 20%, color-mix(in srgb, var(--color-gold) 13%, transparent), transparent 70%),
+    var(--color-surface-high);
+  box-shadow:
+    inset 0 1px color-mix(in srgb, var(--color-gold-light) 16%, transparent),
+    0 8px 16px #0004;
+  animation: boxreveal-reward 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+.boxreveal__reward-art {
+  width: 60%;
+  height: 60%;
+  min-height: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px #0007);
+}
+.boxreveal__reward-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text);
+  font-size: clamp(7px, calc(var(--cell) / 17), 16px);
+  font-weight: 700;
+}
+.boxreveal__quantity {
+  color: var(--color-gold-light);
+  font-size: clamp(8px, calc(var(--cell) / 14), 20px);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.boxreveal__card--resolving {
+  border-color: var(--color-border);
 }
 .boxreveal__shimmer {
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 34%, rgba(200, 150, 60, 0.16) 50%, transparent 66%);
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    color-mix(in srgb, var(--color-gold) 15%, transparent),
+    transparent 65%
+  );
   background-size: 240% 100%;
   animation: boxreveal-shimmer 1.5s ease-in-out infinite;
 }
 .boxreveal__resolving-label {
-  position: relative;
-  font-size: 10px;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: #c8963c;
-  animation: boxreveal-text-pulse 1.6s ease-in-out infinite;
+  color: var(--color-gold);
+  font-size: clamp(8px, calc(var(--cell) / 18), 13px);
+}
+.boxreveal__footer {
+  display: flex;
+  flex: none;
+  min-height: 72px;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.boxreveal__footer .aui-button {
+  min-height: 44px;
+  min-width: 180px;
+}
+.boxreveal__spin {
+  animation: boxreveal-spin 0.9s linear infinite;
+}
+
+@keyframes boxreveal-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes boxreveal-float {
+  0%,
+  100% {
+    transform: translateY(-4px);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+@keyframes boxreveal-gather {
+  from {
+    opacity: 0.35;
+    transform: scale(1.15);
+  }
+  to {
+    opacity: 1;
+    transform: scale(0.88);
+  }
+}
+@keyframes boxreveal-charge {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: rotate(-3deg) scale(1.03);
+  }
+  50% {
+    transform: rotate(4deg) scale(1.06);
+  }
+  65% {
+    transform: rotate(-5deg) scale(1.09);
+  }
+  80% {
+    transform: rotate(5deg) scale(1.12);
+  }
+  90% {
+    transform: rotate(-4deg) scale(1.15);
+  }
+  100% {
+    transform: rotate(0) scale(1.18);
+  }
+}
+@keyframes boxreveal-release {
+  0% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1.3);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.5);
+  }
+}
+@keyframes boxreveal-ring {
+  from {
+    opacity: 1;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+@keyframes boxreveal-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+@keyframes boxreveal-converge {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(calc(var(--cell) * 0.45)) scale(0.5);
+  }
+  45% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(calc(var(--cell) * 0.08));
+  }
+}
+@keyframes boxreveal-scatter {
+  from {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateX(calc(var(--cell) * 0.08));
+  }
+  to {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateX(calc(var(--cell) * 0.5)) scale(0.2);
+  }
+}
+@keyframes boxreveal-reward {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--cell) * 0.04)) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 @keyframes boxreveal-shimmer {
   from {
@@ -356,128 +383,46 @@
     background-position: -140% 0;
   }
 }
-
-/* the honest failure line above the manual RETRY COLLECT (auto-claim latched — TX-RETRY law) */
-.boxreveal__hint {
-  max-width: 300px;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  line-height: 1.5;
-  text-align: center;
-  color: #fca5a5;
-}
-.boxreveal__collect {
-  min-width: 180px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 11px 24px;
-  font-size: 11px;
-}
-.boxreveal__spin {
-  animation: boxreveal-spin 0.9s linear infinite;
-}
-
-@keyframes boxreveal-card-punch {
-  0% {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
 @keyframes boxreveal-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* ── reduced motion: collapse the spectacle to a plain fade ─────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .boxreveal__box,
-  .boxreveal__aura,
-  .boxreveal__spark,
-  .boxreveal__flash,
-  .boxreveal__label--pulse,
-  .boxreveal__skip,
-  .boxreveal__shimmer,
-  .boxreveal__resolving-label,
-  .boxreveal__card {
-    animation: none !important;
-  }
-  .boxreveal__card {
-    animation: boxreveal-fade 0.2s ease-out both !important;
-  }
-}
-
-.boxreveal {
-  flex-direction: column;
-}
-.boxreveal__grid {
-  display: grid;
-  max-width: 100%;
-  padding: 24px;
-}
-.boxreveal__cell {
-  min-width: 0;
-}
-.boxreveal--batch .boxreveal__grid {
-  --cell: min(230px, calc((100vw - 48px) / var(--columns)), calc((100dvh - 120px) / var(--rows)));
-  grid-template-columns: repeat(var(--columns), var(--cell));
-  grid-auto-rows: var(--cell);
-  padding: 0;
-}
-.boxreveal--batch .boxreveal__cell {
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-.boxreveal--batch .boxreveal__stage {
-  width: 100%;
-  height: 100%;
-}
-.boxreveal--batch .boxreveal__card {
-  width: 90%;
-  max-width: none;
-  padding: 8%;
-  gap: 4px;
-}
-.boxreveal--batch .boxreveal__pet-art {
-  width: 65%;
-  height: auto;
-  aspect-ratio: 1;
-}
-
-.boxreveal--batch .boxreveal__card-wrap {
-  width: 100%;
-  gap: 0;
-}
-.boxreveal--batch .boxreveal__eyebrow {
-  display: none;
-}
-.boxreveal--batch .boxreveal__pet-name {
-  font-size: clamp(7px, calc(var(--cell) / 18), 11px);
-  letter-spacing: 0;
-}
-.boxreveal--batch .boxreveal__box,
-.boxreveal--batch .boxreveal__box-art {
-  width: 72%;
-  height: 72%;
-}
-.boxreveal--batch .boxreveal__box-art {
-  width: 100%;
-  height: 100%;
-}
-.boxreveal--batch .boxreveal__label {
-  bottom: 0;
-  font-size: 9px;
-}
-@media (max-width: 640px) {
-  .boxreveal--batch .boxreveal__grid {
+@media (max-width: 640px) and (orientation: portrait) {
+  .boxreveal__grid {
     --columns: var(--mobile-columns);
     --rows: var(--mobile-rows);
+  }
+}
+@media (max-height: 500px) {
+  .boxreveal__grid {
+    --columns: var(--wide-columns);
+    --rows: var(--wide-rows);
+  }
+  .boxreveal__heading {
+    padding: 8px 12px;
+  }
+  .boxreveal__heading p {
+    margin-bottom: 2px;
+    font-size: 9px;
+  }
+  .boxreveal__heading h2 {
+    font-size: 20px;
+  }
+  .boxreveal__footer {
+    min-height: 52px;
+    padding: 4px 12px;
+  }
+  .boxreveal__body {
+    padding: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boxreveal__panel,
+  .boxreveal__surface *,
+  .boxreveal__stage::before {
+    animation: none !important;
+    transition: none !important;
   }
 }

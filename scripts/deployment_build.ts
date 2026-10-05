@@ -141,6 +141,7 @@ export const create_contract_build_service = ({
   const combat_dir = join(repo_dir, 'packages', 'move-combat')
   const seed_dir = join(repo_dir, 'packages', 'seed')
   const kares_dir = join(repo_dir, 'packages', 'kares')
+  const rewards_dir = join(repo_dir, 'packages', 'rewards')
   const game_dir = join(repo_dir, 'packages', 'move')
   const version_path = join(game_dir, 'sources', 'version.move')
   const chain_identifier = async (network: Network): Promise<string> => {
@@ -247,12 +248,12 @@ export const create_contract_build_service = ({
       { path: control_dir, publication: control },
       ...(seed ? [{ path: seed_dir, publication: seed }] : []),
     ])
-  const compile_kares = async (network: Network, kares?: PackagePublication): Promise<ContractArtifact> =>
+  const compile_rewards = async (network: Network, rewards?: PackagePublication): Promise<ContractArtifact> =>
     compile_with_publications(
       network,
-      kares_dir,
-      'aresrpg_kares',
-      kares ? [{ path: kares_dir, publication: kares }] : []
+      rewards_dir,
+      'aresrpg_rewards',
+      rewards ? [{ path: rewards_dir, publication: rewards }] : []
     )
 
   const compile_game = async (
@@ -262,6 +263,7 @@ export const create_contract_build_service = ({
     combat: PackagePublication,
     seed: PackagePublication,
     kares: PackagePublication,
+    rewards: PackagePublication,
     game?: PackagePublication
   ): Promise<ContractArtifact> => {
     const chain_id = await chain_identifier(network)
@@ -295,6 +297,7 @@ export const create_contract_build_service = ({
       { path: combat_dir, publication: combat },
       { path: seed_dir, publication: seed },
       { path: kares_dir, publication: kares },
+      { path: rewards_dir, publication: rewards },
       { path: kiosk_path, publication: kiosk, version: kiosk_version },
       ...(game ? [{ path: game_dir, publication: game }] : []),
     ])
@@ -321,7 +324,7 @@ export const create_contract_build_service = ({
     compile_control,
     compile_combat,
     compile_seed,
-    compile_kares,
+    compile_rewards,
     compile_game,
     prepare_upgrade,
     game_version,

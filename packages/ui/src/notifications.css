@@ -1,0 +1,101 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+.aui-notification {
+  --notification-accent: var(--aui-orange);
+  width: 100%;
+  max-width: 400px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--aui-raised) 75%, var(--notification-accent) 25%);
+  border-radius: 5px;
+  background: var(--aui-surface) url('./assets/panel_grain.webp') repeat;
+  background-size: 256px;
+  background-blend-mode: soft-light;
+  color: var(--aui-ink);
+  font: 400 12px/1.35 var(--aui-font);
+  box-shadow: inset 0 1px #ffffff09;
+  text-align: left;
+}
+.aui-notification--blue {
+  --notification-accent: var(--aui-blue);
+}
+.aui-notification *,
+.aui-notification *::before,
+.aui-notification *::after {
+  box-sizing: border-box;
+}
+.aui-notification__hero {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+.aui-notification__art {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 2px #0006);
+}
+.aui-notification__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--notification-accent);
+}
+.aui-notification__meta > span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+.aui-notification__meta > strong {
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+/* Sale amounts use the same SUI mark as wallet and marketplace prices. */
+.aui-notification__amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--aui-blue) 10%, transparent);
+  color: var(--aui-blue);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.aui-notification__amount svg {
+  flex: none;
+}
+.aui-notification__amount small {
+  font-size: 10px;
+  font-weight: 700;
+}
+.aui-notification__identity h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.aui-notification__identity p {
+  margin: 4px 0 0;
+  color: var(--aui-muted);
+  font-size: 11px;
+}
+.aui-notification__details {
+  margin: 0 12px 8px 76px;
+  padding-top: 4px;
+  border-top: 1px solid #ffffff0a;
+}
+.aui-notification__party {
+  margin: 2px 0 4px;
+  color: var(--aui-muted);
+  font-size: 10px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}

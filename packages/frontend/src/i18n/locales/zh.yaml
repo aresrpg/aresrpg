@@ -223,6 +223,7 @@ trade_panel:
 transaction_unknown_toast: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
 transaction_recovered_toast: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
 world_hud:
+  map_party_legend: '青色：队友 · 金色：队长'
   dismount_prompt_touch: '轻点以下坐骑'
   spawn_press_attack_touch: '轻点以攻击'
   resource_press_collect_touch: '轻点以采集{{name}}'
@@ -528,6 +529,8 @@ marketplace_page:
   collect_success: 市场收入已领取
   volume_partial: 已记录的{{window}}交易量。记录尚未覆盖完整周期，因此这是最低值。
 mastery_page:
+  buy_quantity: '购买数量'
+  purchase_limit: '每次最多购买 {{count}} 个。'
   subtitle: 每日挑战
   title: 精通
   lead: 完成每日地下城任务，获得独特奖励。错过一天不会扣除已保存的精通点。
@@ -557,6 +560,16 @@ mastery_page:
   quest_started: 每日任务已分配。
   offer_purchased: 已购买精通奖励。
 airdrop_page:
+  reward_title: '你收到了礼物！'
+  reward_received: '你收到了{items}！'
+  reward_needs_sui: '礼物已安全存入你的钱包。请充值少量 SUI 支付领取交易的手续费，然后领取奖励。'
+  reward_complete: '奖励已存入你的背包。'
+  reward_redeeming: '礼物已到账，正在添加到背包…'
+  reward_held: '礼物已在你的钱包中。领取后，奖励将添加到背包。'
+  reward_used_title: '卡片已被领取'
+  reward_used_body: '此卡片已被领取或已失效。每张卡片只能使用一次。'
+  reward_continue: '继续'
+  reward_item: '礼物'
   destination: 游戏钱包：
   refresh: 刷新
   title: 空投
@@ -654,6 +667,9 @@ settings_page:
   render_distance_label: 渲染距离
   render_distance_hint: 周围世界的加载范围。更高的距离会降低性能。
 tutorial:
+  got_it: '知道了'
+  craft_failure_title: '制作失败了'
+  craft_failure_body: '制作可能失败，材料仍会消耗。提高职业等级可以增加成功率。再次尝试前，请查看成功率。'
   progress: '{{current}} / {{total}}'
   skip: 跳过教程
   back: 上一步
@@ -679,7 +695,7 @@ tutorial:
   spells_title: 技能
   spells_body: '选择法术以比较各等级效果。使用法术点数进行升级。'
   jobs_title: 专业
-  jobs_body: '选择职业和配方。点击材料查看详情，备齐后即可制作。'
+  jobs_body: '选择职业和配方。制作前查看成功率。选择材料即可查看获取来源。'
   runeforge_title: 符文锻造
   runeforge_body: '职业达到 {{level}} 级后，可用符文强化装备。粉碎不需要的装备可获得符文。'
 admin_page:
@@ -889,6 +905,8 @@ simulator_page:
   blob_single: 单一形状
   blob_click: 点击格子放置
 fight_hud:
+  turn_timer_hint: '倒计时结束后，其他玩家可以结束你的回合。回合不会自动结束。'
+  result_gas_hint: '过去24小时内记录的本场战斗个人净Gas费用，包含创建费用和存储返还，不包含其他玩家的费用。'
   stop_spectating: 停止观战
   board_label: 战斗棋盘
   turn_order: 行动顺序
@@ -955,6 +973,8 @@ fight_hud:
   chat_tab_combat: 战斗
   chat_placeholder: 说点什么…
   chat_fetching_item: 正在链上获取属性…
+  result_waiting_items: 正在等待奖励详情…
+  result_item_unavailable: 此奖励已不在你的背包中。
   chat_item_unavailable: 链上无法找到此物品。
   chat_you: 你
   chat_line: '{name}：{message}'
@@ -2245,6 +2265,21 @@ item_categories:
   relic_slot: 遗物{{number}}
 kares: 质押
 kares_page:
+  blast_soon: '代币即将在 Blast 发售'
+  blast_live: 'KARES 正在发售'
+  blast_closing: '销售结束 · 等待结算'
+  blast_funded: '筹款完成 · 等待上线'
+  blast_complete: 'KARES 已在 Blast 上线'
+  blast_cancelled: '销售取消 · 可申请退款'
+  blast_loading: '正在查询 Blast 销售状态…'
+  blast_unavailable: '暂时无法获取销售状态'
+  blast_note: '一起创造 AresRPG 的新篇章。'
+  blast_action: '前往 Blast'
+  blast_progress: '筹款进度'
+  upgradeability_note: '奖励合约在项目最终冻结前仍可升级。新增代币铸造始终禁用。'
+  claim_batch: '领取 {{total}} 个仓位中的 {{count}} 个'
+  withdraw_batch: '每次最多提取 {{count}} 个仓位。重复操作可提取剩余质押。'
+  unallocated_supply: '剩余供应量'
   stake_more: 增加质押
   additional_daily: 每日新增
   max: 最大
@@ -2256,171 +2291,53 @@ kares_page:
   daily_kares: KARES/天 · 预计
   daily_sui: SUI/天 · 预计
   daily_estimate_note: 每日估算基于当前质押占比和已注资奖励计划，覆盖未来24小时，数值可能变化。
-  position_rewards: 仓位奖励
   manage_stake: 管理质押
   same_account: 此钱包已是你的AresRPG账户。请在账户区域管理质押。
-  claim_kares: 领取KARES
   close: 关闭
-  sale_card_soon_title: 准备出发。
-  sale_card_soon_note: 公开发售即将开始。
-  sale_card_soon_action: 了解发售
-  sale_card_live_label: 发售进行中
-  sale_card_live_title: 立即参与
-  sale_card_target_reached: 目标已达成
-  sale_card_done_title: 发售已结束
-  sale_card_done_note: 领取KARES代币及可退还的SUI。
-  sale_card_refund_note: 未达到最低目标，请领取全部SUI退款。
-  community_release_note: 成功结算后，社区KARES将在1825天内解锁，只有金库可以领取。已领取代币可分发或销毁。
-  sale_unlock_note: 发售成功结束后，销售代币将完全解锁。
-  unlocked_immediately: 立即解锁
+  community_release_note: '已注资的储备将在1,825个自然日内逐步解锁给国库。'
   vested_five_years: 5年逐步解锁
-  eyebrow: 值得共同打造的世界
-  launch_title: 打造下一个篇章。
-  launch_lead: 参与KARES首次公开发售，为AresRPG注资，帮助鲜活的世界成长。
-  offering: 首次公开发售
-  fixed_supply: 固定供应量
-  fair_share: 统一价格，按比例分配。
-  fair_detail: 最终份额取决于你的出资，超额出资按比例退还。
+  fixed_supply: '初始供应量'
   connect: 连接钱包
   disconnect: 断开连接
-  choose_account: 选择账户
   no_wallet: 安装Sui钱包即可参与。
   refresh: 刷新
   loading: 正在读取链上状态…
-  unavailable: 此网络尚未开放发售。
   pending: 正在确认交易…
   confirmed: 交易已确认
-  contribute: 投入SUI
   amount: 数量
   balance: 可用余额
   amount_invalid: 请输入正数，最多9位小数。
   insufficient: 金额超过可用余额。
   gas_note: 请保留少量SUI支付交易费用。
-  raised: 已投入
-  minimum: 最低筹资额
-  maximum: 最高接收额
-  opens: 开始
-  closes: 结束
-  estimate: 预计最终价格
-  price_note: 发售结束时确定最终分配。
-  your_contribution: 你的出资
-  claim: 领取KARES与超额SUI
-  refund: 领取退款
-  upcoming: 尚未开始
-  open: 发售开放
-  successful: 发售成功
-  refundable: 可以退款
   testnet: 测试网 · 仅测试资产
   back_game: 探索AresRPG
-  funding_title: 由社区资助的世界
-  liquidity: 初始流动性
-  development: 开发金库
-  liquidity_note: 为初始KARES/SUI市场预留，流动池由项目方创建。
-  development_note: 用于游戏、基础设施和下一个篇章的资金。
   staking_title: 你的质押，你的份额。
-  staking_lead: 质押KARES，分享释放的KARES和SUI奖励。可随时领取已累积奖励。
-  pool_stake: 总质押量
   your_stake: 你的质押
   claimable: 已累积奖励
   stake: 质押KARES
   withdraw: 提取质押
   claim_rewards: 领取奖励
-  fund_title: 为社区奖励注资
-  fund_note: 捐赠会在30个有效奖励日内分配给所有质押者，且不可撤回。
-  donate: 捐赠
-  no_positions: 你的质押仓位将在这里显示。
-  inactive: 发售成功结算后开放质押。
-  account_label: 账户
+  inactive: '奖励储备注资后开放质押。'
   position: 仓位
   tokenomics: KARES代币经济
   community: 社区奖励
   team: 团队分配
   five_years: 社区质押奖励
   mastery_title: 通过游戏获奖，或销毁KARES。
-  mastery_note: 每件精通商品都可用相同数量的精通点或KARES购买。花费的KARES会永久销毁。
-  rewards_note: 200000 KARES将在1825个有效奖励日内释放，额外捐赠在30个有效日内释放。无人质押时停止释放。
+  mastery_note: '精通价格每1点相当于1,000 KARES。支付的KARES将永久销毁。'
+  rewards_note: '质押奖励在 1,825 个活跃日内释放。任何人都可捐赠 KARES 或 SUI，从下一个活跃日边界起在 30 个活跃日内分配，不延长旧计划。捐赠不可撤回。无人质押时计时暂停；已获得的奖励仍可领取。'
   revenue_note: 市场已收取版税的20%用于SUI质押奖励。奖励随收入和参与质押量变化。
-  payment: 支付方式
   points: 精通点
-  burn_buy: 销毁{{cost}} KARES
+  buy_kares: '购买 - {{cost}} KARES'
   kares_missing: KARES不足
   language: 语言
-  refund_note: 若发售结束时未达到最低目标，全部出资均可退还。
-  offering_contract: 发售合约
-  min_marker: 最低
-  max_marker: 最大
-  min_reached: 已达最低目标
-  min_pending: 正在迈向最低目标
-  oversubscribed: 超额认购
-  subscribed: 已认购
-  oversub_note: 仍可参与。所有人享有相同价格，超额SUI按比例退还。
-  opens_in: 距开始还有
-  closes_in: 距结束还有
-  days_short: 天
-  your_investment: 你的出资
-  your_allocation: 你的KARES份额
-  current_price: 当前发售价格
-  estimated_until_close: 发售结束前均为估算
-  accepted_contribution: 已接受的出资
-  excess_refund: 退还给你的SUI
-  unclaimed_note: 尚未领取的出资与份额
-  connect_preview: 连接钱包查看你的份额
-  no_pending_allocation: 没有未领取的出资
-  play_game: 开始游戏
-  play_game_note: 探索你正在帮助打造的世界。
-  join_title: 在下一个篇章中留下你的位置。
-  join_note: 400000 KARES，一个发售窗口，每位出资者都有份额。
-  step_connect: 连接钱包
-  step_contribute: 选择投入的SUI数量
-  step_claim: 领取KARES及超额SUI
-  allocation_lead: 一百万枚代币，所有分配公开。
-  community_detail: 11%保留为社区储备，用于空投、营销、赛季排行榜、比赛、PvP竞技奖励、测试网参与者和有价值的贡献者，由项目方管理分配。
-  supply_detail: 全部1000000 KARES一次性铸造，不会再增发。精通商店消费会永久销毁KARES。
-  emissions_detail: 200000枚质押奖励来自已有供应。奖励释放不会铸造新代币。
-  price_cap_note: 接受的筹资额以最高额度为限。更多出资会改变份额，不会改变已封顶的发售价格。
-  awaiting_minimum: 达到最低目标后显示价格和分配。
-  claimable_tokens: 可领取的KARES
-  refundable_sui: 你的SUI退款
-  final_price: 最终发售价格
-  full_refund: 全额SUI退款
-  nav_funding: 筹资
-  nav_benefits: 权益
-  nav_tokenomics: 代币经济
-  nav_incentives: 公共激励
-  nav_play: 游戏
-  benefits_title: 参与这个世界，体验更多玩法。
-  benefits_lead: KARES连接游戏奖励、社区激励与市场版税分成。
-  revenue_title: 分享游戏的成功。
-  revenue_metric: AresRPG收入
-  revenue_detail: 与KARES质押者共享。
-  baseline_title: 社区奖励，已在供应中。
-  baseline_detail: 已有的200000 KARES支持1825个有效奖励日。质押即可分享释放，并随时领取累积奖励，不会增发代币。
-  crates_title: 你的KARES，你的下一个箱子。
-  crates_detail: 游戏内精通商品包括食物、资源、宠物和外观箱。可支付同等数量的KARES，或通过游戏赚取精通点。花费的KARES会永久销毁。
-  incentives_title: 任何人都能增加奖励。
-  incentives_detail: 任何人都能向共享质押奖励捐赠SUI或KARES。每笔捐赠从下一个有效奖励日起，在30个有效日内释放，按比例奖励所有质押者，且不可撤回。
-  incentives_clock: 无人质押时，奖励时钟暂停。新增资金不会延长旧捐赠的释放周期。
-  incentives_examples: 资助活动，庆祝里程碑，回馈社区。
-  play_title: 世界正在等待，出发探索吧。
-  play_detail: 在首次公开发售期间游玩AresRPG，认识社区，了解KARES背后的游戏。
+  community_detail: '社区储备用于活动、空投、贡献者奖励、赛季排名及 PvP 奖品。国库手动分配已解锁的代币。'
+  supply_detail: '仅发行一次，不再增发。销毁代币会减少供应量。'
+  emissions_detail: '所有奖励均使用已有代币。发放奖励不会增发代币。'
   confirmed_refresh: 交易已确认。请刷新以加载最新余额。
-  stage_minimum: 最低筹资目标
-  stage_maximum: 向最高额度筹资
-  minimum_refund: 未达到最低目标时全额退款。
-  full_refund_available: 全部出资均可申请退款。
-  refund_claim_note: 若发售结束时低于最低目标，请在这里领取退款。退款不会自动发送。
   staking_unavailable: 此网络尚未开放质押。
-  basecamp_announcement: 10月7日至9日，在新加坡Sui Basecamp与AresRPG见面。来打个招呼，领取战利品箱吧。
-  funding_unknown: 筹资数据不可用。
-  success_threshold: 成功门槛
-  sale_cap: 最高接收额
-  cap_overflow: 超出上限
-  overflow_refunds: 预留用于按比例退款
   combat_rewards: 首领奖励
-  combat_detail: 100000 KARES为公共战斗奖池注资，任何人都可追加代币。首领等级决定一份赏金，由获胜角色平分。每日上限约54.79 KARES，使初始奖池至少可提供五年奖励。平静的日子和捐赠会延长其寿命。每个纪元的活跃度调整奖励大小，未发出的奖励不会成为债务。
-  allocation_rationale: 启动时有590000 KARES（59%）可用：销售、流动性和团队份额。按计划，第一年最多释放约82000枚，相当于初始流通量的13.90%，未计销毁。无人质押时质押奖励暂停，社区解锁按日历时间进行，战斗奖励可能更少。这些释放使用已有代币，新增铸币通胀为零。捐赠只重新分配已有代币，不保证任何价格结果。
-  launch_market_cap: 启动流通市值
-  launch_market_cap_note: 若现在结束发售：封顶发售价 × 启动时可用的590000 KARES。未达到最低筹资额则不会启动。
+  combat_detail: '首领等级决定一笔奖励，由获胜角色平均分配。从设置时刻起计算，每日上限为 {{cap}} KARES。每个纪元的活跃度会调整奖励金额。闲置日期的额度不会结转，捐赠可延长储备寿命。'
   error_generic: 无法完成此操作。
   error_rejected: 请求已取消。
   error_funds: 资金不足以支付此操作及其费用。
@@ -2429,6 +2346,14 @@ kares_page:
   error_unknown: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
   error_recovered: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
 leaderboard_page:
+  profile_title: '玩家资料'
+  profile_jobs: '所有角色的最高职业等级'
+  profile_empty: '当前没有拥有的角色。'
+  profile_select: '选择角色以查看装备。'
+  profile_unavailable: '暂时无法获取玩家资料。'
+  profile_missing: '该角色已不属于此玩家。'
+  profile_previous: '上一页'
+  profile_next: '下一页'
   unclaimed: 未领取
   reset_in: '{{time}}重置'
   xp: 战斗经验
@@ -2502,6 +2427,19 @@ item_drop_sources:
   quantity: 数量
   levels: 等级{{min}}–{{max}}
 journey:
+  map_travel_title: '找到你的路'
+  map_travel_body: '打开地图，选择附近一个可到达的位置，让角色自动走到那里。被障碍物卡住时，也可以用这个方法脱困。'
+  map_travel_objective: '通过地图到达附近的目的地'
+  mob_details: '查看怪物'
+  first_hunt_title: '第一次狩猎'
+  first_hunt_body: '在Thebes附近或森林中寻找Tinker。赢得战斗并领取奖励。获得的树枝可以用来制作第一把工具。'
+  first_hunt_objective: '赢得一场对抗Tinker的战斗'
+  hoe_materials_title: '准备一次尝试'
+  hoe_materials_body: 'Tinker可能掉落啃过的树枝，Nook可能掉落回收的废铁。收集下方配方所需的材料，或直接购买。已有且可使用的材料也会计入。'
+  hoe_materials_objective: '收集制作一件{{item}}的材料'
+  first_craft_title: '在尝试中学习'
+  first_craft_body: '打开配方并查看成功率。即使失败，材料也会消耗。在职业初期等级，失败的尝试也能获得职业经验。尝试一次即可完成此任务。'
+  first_craft_objective: '尝试制作{{item}}'
   title: 在Nauvis生存
   eyebrow: 你的冒险从这里开始
   progress: 旅程进度
@@ -2533,7 +2471,7 @@ journey:
   welcome_title: 欢迎来到Nauvis。
   welcome_body: AresRPG奖励善于学习、准备和巧干的玩家。学习优化并自动化游戏过程，尽可能节省SUI。沿着这段旅程找到自己的节奏吧。
   hoe_title: 人人都需要一把锄头。
-  hoe_body: Nauvis是你的第一个世界。更强的装备能助你探索危险世界，采集工具则让你收集制作材料。从其他玩家处购买{{item}}，或前往“角色→专业→杂工”自行制作。
+  hoe_body: '购买{{item}}，或在角色 → 职业 → 工匠中制作。打开配方并选择材料，即可查看来源。在Thebes附近和森林中寻找Tinker；实力提升后，可在平原和森林猎杀野猪，获取啃过的树枝。'
   hoe_objective: 拥有{{item}}
   wheat_title: 动手干起来。
   wheat_body: 自制装备从收集材料开始。小麦可用于食物和装备材料，是不错的起点。在Nauvis找到小麦，完成第一次收获！
@@ -2766,3 +2704,18 @@ adventure:
   follow_body: '队伍已经组好了，接下来要一起行动。选择森士作为队长，然后在队伍控制中开启跟随队长。探索时Sceat会跟着你，不必把同一条路走两遍。进入战斗后，你仍然需要亲自选择每位英雄的移动和法术。'
   guards_body: '戈巴多克不会让自己的门口无人把守。卫兵已经准备好迎战，这次你需要协调两位英雄。挑战前先检查新装备，把森士的力量与Sceat的陷阱结合起来。有时，把敌人引到有利的位置，比一味追着它打更容易获胜。'
   boss_body: '卫兵后方，戈巴多克正守着Sceat寻找的遗物。哥布林王可不是靠输掉战斗赢得这个称号的。你们已经学会并肩作战，但眼前的对手非同寻常。带上伙伴靠近他，看看这份新结成的同盟究竟能走多远。'
+
+discord_marketplace:
+  title: '市场 · 成交'
+  sale: '**{seller}** 刚以 **{price} SUI** 售出 **{amount}× {item}**'
+  price_before_fees: '成交价不含手续费'
+  gather_title: '稀有采集'
+  gather: '**{player}** 在采集中发现了 **{item}**。'
+  victory_title: '地牢胜利'
+  victory: '**{party}** 击败了 **{boss}**！'
+  loot_title: '极品战利品'
+  loot: '**{player}** 获得了属性品质为 **{quality}%** 的 **{item}**。'
+  sold_by: '卖家：{player}'
+  found_by: '发现者：{player}'
+  boss_defeated: '已击败最终首领'
+  level: '等级'

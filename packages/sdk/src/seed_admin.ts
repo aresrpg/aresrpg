@@ -8,8 +8,10 @@
 import { class_spell_shape_errors } from '@aresrpg/immutable'
 import { normalizeSuiObjectId } from '@mysten/sui/utils'
 
+import { read_rewards_economy } from './kares_economy.ts'
 import { object_revision, owned_ref, receipt_digest, shared_ref, type OwnedRef, type Receipt } from './cache.ts'
 import type { Sdk } from './client.ts'
+import { freeze_upgrade_targets } from './freeze_targets.ts'
 import {
   create_freeze_forever_transaction,
   create_seed_plan,
@@ -51,8 +53,6 @@ export type SeedAdminConfig = Readonly<{
   admin_cap: string
   /** the seed package's Registry root object */
   content_root: string
-  /** math, control, combat, seed, core — verified and consumed only by the permanent freeze. */
-  upgrade_caps?: readonly Readonly<{ cap: string; package: string }>[]
 }>
 
 export type SeedBatchState = 'complete' | 'ready' | 'blocked' | 'pending'
@@ -177,20 +177,8 @@ export const project_temp_admin_cap = (receipt: Receipt): OwnedRef => {
 // mixed-case id would report a hydrated object as missing forever.
 const object_exists = (sdk: Sdk, id: string): boolean => !!owned_ref(sdk.cache, id) || !!shared_ref(sdk.cache, id)
 
-export const verify_upgrade_cap_targets = async (
-  sdk: Sdk,
-  targets: readonly Readonly<{ cap: string; package: string }>[]
-): Promise<readonly string[]> => {
-  if (targets.length !== 5)
-    throw new Error('Permanent freeze requires math, control, combat, seed, and core UpgradeCaps')
-  const normalized = targets.map(({ cap, package: package_id }) =>
-    Object.freeze({ cap: normalizeSuiObjectId(cap), package: normalizeSuiObjectId(package_id) })
-  )
-  if (
-    new Set(normalized.map(({ cap }) => cap)).size !== 5 ||
-    new Set(normalized.map(({ package: id }) => id)).size !== 5
-  )
-    throw new Error('Permanent freeze requires five distinct UpgradeCaps and package lineages')
+export const verify_upgrade_cap_targets = async (sdk: Sdk): Promise<readonly string[]> => {
+  const normalized = freeze_upgrade_targets(sdk.pins)
   const { objects } = await sdk.sui_client.core.getObjects({
     objectIds: normalized.map(({ cap }) => cap),
     include: { json: true },
@@ -475,10 +463,12 @@ export const create_seed_admin = async ({
     },
     freeze_forever: async () => {
       if (gift_campaign !== undefined) throw new Error('Gift issuance cannot freeze content')
+      if (!(await read_rewards_economy(sdk)).coin_type)
+        throw new Error('Fund the reward reserves before freezing the project')
       const snapshot = await refresh()
       if (snapshot.batches.some(({ state }) => state !== 'complete'))
         throw new Error('Every seed batch must complete before freezing the game forever')
-      const upgrade_caps = await verify_upgrade_cap_targets(sdk, config.upgrade_caps ?? [])
+      const upgrade_caps = await verify_upgrade_cap_targets(sdk)
       await hydrate_ids(upgrade_caps)
       const receipt = await sdk.execute(
         create_freeze_forever_transaction(sdk, config.admin_cap, config.content_root, upgrade_caps)

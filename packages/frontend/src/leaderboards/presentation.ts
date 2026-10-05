@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { LeaderboardMetric } from '@aresrpg/protocol'
+import type { LeaderboardMetric, LeaderboardEntry } from '@aresrpg/protocol'
 
 /** Retained Hytale leaderboard colors; identities follow the current game vocabulary. */
 export const BADGE_COLORS: Readonly<Record<string, readonly [string, string]>> = {
@@ -58,3 +58,6 @@ export const compact_leaderboard_score = (score: string, metric: LeaderboardMetr
   }).format(Number(amount) / Number(scale))
   return `${formatted}${money ? ' SUI' : ''}`
 }
+
+export const player_name = (entry: Pick<LeaderboardEntry, 'address' | 'name'>): string =>
+  entry.name ? display_suins_name(entry.name) : display_address(entry.address)

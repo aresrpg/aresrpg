@@ -5,7 +5,7 @@ module aresrpg::fight_coverage_tests;
 use aresrpg::{api, version, character, equipment, fight, friends::FriendRegistry, item, party, protected_policy, world};
 use aresrpg_combat::combat;
 use aresrpg_control::admin;
-use aresrpg_kares::{kares, offering, combat_rewards};
+use aresrpg_rewards::{economy, combat_rewards, test_coin::TEST_COIN};
 use aresrpg_math::{combat_grid, item_damages, spell_effect};
 use aresrpg_seed::{board_catalog, item_rows, registry, spell_rows, world_content};
 use kiosk::personal_kiosk;
@@ -450,13 +450,10 @@ fun a_victory_must_seal_its_terminal_entropy_before_reward_preparation() {
   test_scenario::return_shared(spell);
   test_scenario::return_shared(content);
   test_scenario::return_shared(catalog);
-  let genesis = kares::genesis_for_testing(scenario.ctx());
-  let cap = sui::package::test_publish(object::id_from_address(@aresrpg_kares), scenario.ctx());
-  offering::setup(genesis, cap, 1, 10, 100, OWNER, OWNER, OWNER, OWNER, scenario.ctx());
+  let mut pot = combat_rewards::pot_for_testing<TEST_COIN, aresrpg::fight_rewards::BossVictory>(0, &clock, scenario.ctx());
+  let offering = economy::economy_for_testing<TEST_COIN>(@0x0.to_id(), object::id(&pot), scenario.ctx());
   scenario.next_tx(OWNER);
   let mut fight = scenario.take_shared<fight::Fight>();
-  let offering = scenario.take_shared<offering::Offering>();
-  let mut pot = scenario.take_shared<combat_rewards::CombatPot>();
   fight::prepare_boss_rewards(&mut fight, 0, &offering, &mut pot, &clock, scenario.ctx());
   abort 999
 }

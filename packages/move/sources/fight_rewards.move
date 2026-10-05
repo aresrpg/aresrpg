@@ -2,7 +2,7 @@
 module aresrpg::fight_rewards;
 
 use aresrpg_combat::combat::{Self, Fighter};
-use aresrpg_kares::{combat_rewards::CombatPot, offering::{Self, Offering}};
+use aresrpg_rewards::{combat_rewards::{Self, CombatPot}, economy::{Self, Economy}};
 use aresrpg_math::mob_data;
 use aresrpg_seed::mob_rows::MobTemplate;
 use sui::clock::Clock;
@@ -22,15 +22,16 @@ public(package) fun add_mob(rewards: &mut FightRewards, template: &MobTemplate, 
 }
 
 /// Runs before terminal Random. Everyone is paid atomically, including disconnected winners.
-public(package) fun allocate(
-    rewards: &mut FightRewards, offering: &Offering, pot: &mut CombatPot,
+public(package) fun allocate<Token>(
+    rewards: &mut FightRewards, economy: &Economy, pot: &mut CombatPot<Token>,
     recipients: vector<address>, clock: &Clock, ctx: &mut TxContext,
 ) {
     if (rewards.weight == 0 || rewards.paid.is_some()) return;
     let count = recipients.length();
     assert!(count > 0, 0);
-    let mut bounty = offering::boss_bounty(
-        offering, pot, BossVictory {}, rewards.weight, count, clock, ctx,
+    economy::assert_combat_pot(economy, pot);
+    let mut bounty = combat_rewards::take(
+        pot, BossVictory {}, rewards.weight, count, clock, ctx,
     );
     let share = bounty.value() / count;
     rewards.paid = option::some(share);
@@ -42,6 +43,12 @@ public(package) fun allocate(
         };
     };
     bounty.destroy_zero();
+}
+
+/// A proof against the same shared object makes funding/settlement races serialize safely.
+public(package) fun unfunded(rewards: &mut FightRewards, economy: &Economy) {
+    assert!(!economy::is_funded(economy), 0);
+    if (rewards.paid.is_none()) rewards.paid = option::some(0);
 }
 
 public(package) fun ready(rewards: &FightRewards): bool { rewards.weight == 0 || rewards.paid.is_some() }

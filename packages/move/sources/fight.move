@@ -6,7 +6,7 @@
 module aresrpg::fight;
 
 use aresrpg::fight_rewards::{Self, FightRewards};
-use aresrpg_kares::{combat_rewards::CombatPot, offering::Offering};
+use aresrpg_rewards::{combat_rewards::CombatPot, economy::Economy};
 
 
 use aresrpg::{
@@ -790,9 +790,18 @@ fun release_forfeit(
   kiosk.lock(cap, policy, character);
 }
 
+public(package) fun prepare_unfunded_rewards(
+  fight: &mut Fight, fighter: u64, economy: &Economy, ctx: &TxContext,
+) {
+  let _ = assert_fighter_owner(fight, fighter, ctx);
+  if (!combat::fighter_won(&fight.combat, fighter)) return;
+  assert!(fight.loot_entropy_ready, EWrongDoor);
+  fight_rewards::unfunded(&mut fight.rewards, economy);
+}
+
 /// The SDK composes this before the existing terminal settlement door for boss fights.
-public(package) fun prepare_boss_rewards(
-  fight: &mut Fight, fighter: u64, offering: &Offering, pot: &mut CombatPot,
+public(package) fun prepare_boss_rewards<Token>(
+  fight: &mut Fight, fighter: u64, economy: &Economy, pot: &mut CombatPot<Token>,
   clock: &Clock, ctx: &mut TxContext,
 ) {
   let _ = assert_fighter_owner(fight, fighter, ctx);
@@ -809,7 +818,7 @@ public(package) fun prepare_boss_rewards(
     };
     seat = seat + 1;
   };
-  fight_rewards::allocate(&mut fight.rewards, offering, pot, recipients, clock, ctx);
+  fight_rewards::allocate(&mut fight.rewards, economy, pot, recipients, clock, ctx);
 }
 
 public(package) fun settle(

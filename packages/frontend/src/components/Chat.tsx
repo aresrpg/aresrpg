@@ -11,7 +11,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { useWindowDrag } from '@aresrpg/ui'
 
-import { CurrentEventHud } from '../game/hud/CurrentEventHud.tsx'
 import {
   chat_line_in_fight,
   chat_line_in_party,
@@ -35,6 +34,7 @@ import { selected_character } from '../modules/session.ts'
 import { owned_character_position } from '../game/core/owned_character_feed.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
+import { BlastSaleCard } from '../kares/BlastSaleCard.tsx'
 
 import { ItemSnapshotTooltip, useItemSnapshotHover } from './ItemSnapshotTooltip.tsx'
 import { ContextMenu } from './ContextMenu.tsx'
@@ -408,7 +408,9 @@ export const WorldChat = (properties: Parameters<typeof Chat>[0]) => {
       ref={drag.root}
       style={{ transform: `translate(${drag.offset.x}px, ${drag.offset.y}px)` }}
     >
-      <CurrentEventHud copy={properties.copy} />
+      <aside className="blast-sale-hud">
+        <BlastSaleCard copy={properties.copy} />
+      </aside>
       <Chat {...properties} collapsible drag_handle={drag.header} />
       <ChatResizeHandle label={properties.copy.fight_hud.chat_resize!} />
     </section>

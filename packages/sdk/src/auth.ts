@@ -68,6 +68,7 @@ export type AuthSession = Readonly<{
   read_sui_balance: () => Promise<bigint>
   read_kares_balance: () => Promise<bigint | null>
   gas_spent_24h: () => bigint
+  on_transaction: ReturnType<typeof SDK>['on_transaction']
   derive_character_id: (name: string) => string
   is_character_name_claimed: (name: string) => Promise<boolean>
   create_character: (
@@ -101,7 +102,7 @@ export type AuthSession = Readonly<{
   transfer_giftcards: (
     transfers: readonly GiftcardTransfer[]
   ) => Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>>
-  claim_giftcard_link: (url: string) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }>>
+  claim_giftcard_link: (url: string) => Promise<Readonly<{ digest: string; giftcard: GiftcardRow }> | null>
   redeem_giftcards: (
     cards: readonly GiftcardRow[],
     received_transaction?: string
@@ -206,6 +207,7 @@ const create_wallet_session = (
     read_sui_balance: sdk.read_sui_balance,
     read_kares_balance: sdk.read_kares_balance,
     gas_spent_24h: sdk.gas_spent_24h,
+    on_transaction: sdk.on_transaction,
     derive_character_id: (name: string) => character_id(require_registry(), name),
     is_character_name_claimed: async (name: string) => {
       const claim_id = character_claim_id(require_registry(), name)

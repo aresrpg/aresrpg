@@ -9,7 +9,7 @@ import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 
 import { absorb_receipt, type Receipt } from '../src/cache.ts'
 import { SDK, type SuiTransport } from '../src/client.ts'
-import { trade_actions, trade_is_drained } from '../src/trade.ts'
+import { trade_actions, trade_create, trade_is_drained } from '../src/trade.ts'
 
 import { execution_receipt } from './helpers/execution_receipt.ts'
 
@@ -56,7 +56,7 @@ const resolve_inputs: TransactionPlugin = async (transaction_data, options, next
   await next()
 }
 
-const fake_client = () => ({
+const fake_client = (funded = true) => ({
   core: {
     resolveTransactionPlugin: () => resolve_inputs,
     getObjects: async ({ objectIds }: { objectIds: string[] }) => ({
@@ -65,6 +65,20 @@ const fake_client = () => ({
         version: '1',
         digest,
         owner: { $kind: 'Shared', Shared: { initialSharedVersion: '1' } },
+        ...(object_id === id(16)
+          ? {
+              type: `${id(17)}::economy::Economy`,
+              json: {
+                id: id(16),
+                token: funded ? pins.kares_coin_type : '',
+                currency: id(18),
+                staking_pool: id(19),
+                combat_pot: id(21),
+                community_pool: id(22),
+                started_ms: '0',
+              },
+            }
+          : {}),
       })),
     }),
     simulateTransaction: async (): Promise<Receipt> => ({ $kind: 'Transaction', Transaction: { digest } }),
@@ -79,6 +93,9 @@ const load_kiosk_cap = async (kiosk?: string) => kiosk_cap(kiosk)
 
 const pins = {
   package: package_id,
+  kares_coin_type: `${id(15)}::kares::KARES`,
+  kares_economy: { id: id(16), shared_version: '1' },
+  kares_rewards_package_original: id(17),
   package_original: id(13),
   kiosk_package: id(9),
   version: { id: id(6), shared_version: '1' },
@@ -87,8 +104,12 @@ const pins = {
   item_protected_policy: { id: id(12), shared_version: '1' },
 }
 
-const game = () => {
-  const sdk = SDK({ client: fake_client() as unknown as SuiTransport, signer: new Ed25519Keypair(), pins })
+const game = (funded = true, configured = true) => {
+  const sdk = SDK({
+    client: fake_client(funded) as unknown as SuiTransport,
+    signer: new Ed25519Keypair(),
+    pins: { ...pins, kares_coin_type: configured ? pins.kares_coin_type : undefined },
+  })
   absorb_receipt(sdk.cache, {
     effects: {
       changedObjects: [
@@ -412,7 +433,7 @@ test('a KARES-only offer is funded with the native coin intent and advances its 
   let composed: Transaction | null = null
   const submitting = {
     ...sdk,
-    pins: { ...sdk.pins, kares_package_original: id(15) },
+    pins: { ...sdk.pins, kares_coin_type: `${id(15)}::kares::KARES` },
     execute: async (tx: Transaction) => {
       composed = tx
       return { Transaction: { digest } }
@@ -421,7 +442,7 @@ test('a KARES-only offer is funded with the native coin intent and advances its 
   const actions = trade_actions(submitting as never, { trade: trade_row(), address: me, kiosk_cap: load_kiosk_cap })
   const receipt = await actions.commit_offer({ additions: [], removals: [], sui: 1000n, kares: 10_000_000_000n })
   expect(receipt.offer_revision).toBe(5)
-  expect(targets(composed!)).toContain(`${package_id}::trade::put_kares`)
+  expect(targets(composed!)).toContain(`${package_id}::trade::put_token`)
   expect(targets(composed!)).not.toContain(`${package_id}::trade::put_sui`)
   expect(
     JSON.stringify(composed!.getData().commands, (_, value) => (typeof value === 'bigint' ? value.toString() : value))
@@ -436,8 +457,8 @@ test('KARES alone keeps terminal trades recoverable and prevents premature close
   const receipt = await trade_actions(sdk as never, { trade: row, address: me, kiosk_cap: load_kiosk_cap }).settle_all(
     {}
   )
-  expect(targets(tx())).toContain(`${package_id}::trade::claim_kares`)
-  expect(targets(tx())).not.toContain(`${package_id}::trade::close`)
+  expect(targets(tx())).toContain(`${package_id}::trade::claim_token`)
+  expect(targets(tx())).not.toContain(`${package_id}::trade::close_token`)
   expect(receipt.delta).toMatchObject({ clear_balances: 'b', closed: false })
   const recovery = game()
   const cancelled = { ...row, phase: 'cancelled' as const, kares_b: '0' }
@@ -446,7 +467,55 @@ test('KARES alone keeps terminal trades recoverable and prevents premature close
     address: me,
     kiosk_cap: load_kiosk_cap,
   }).recover_all()
-  expect(targets(recovery.tx())).toContain(`${package_id}::trade::recover_kares`)
-  expect(targets(recovery.tx())).toContain(`${package_id}::trade::close`)
+  expect(targets(recovery.tx())).toContain(`${package_id}::trade::recover_token`)
+  expect(targets(recovery.tx())).toContain(`${package_id}::trade::close_token`)
   expect(recovered.delta).toMatchObject({ clear_balances: 'a', closed: true })
 })
+
+test.each([false, true])('SUI-only trade completion works before funding, token configured: %s', async (configured) => {
+  for (const operation of ['cancel_and_recover', 'settle_all', 'recover_all'] as const) {
+    const { sdk, tx } = game(false, configured)
+    const row =
+      operation === 'settle_all'
+        ? trade_row({ phase: 'settling', sui_a: '0', sui_b: '1000' })
+        : trade_row({ phase: operation === 'recover_all' ? 'cancelled' : 'negotiating' })
+    const actions = trade_actions(sdk as never, { trade: row, address: me, kiosk_cap: load_kiosk_cap })
+    const receipt = await actions[operation]({})
+    expect(receipt.delta.closed).toBeTrue()
+    expect(targets(tx())).toContain(`${package_id}::trade::close`)
+    expect(targets(tx())).not.toContain(`${package_id}::trade::close_token`)
+    expect(
+      tx()
+        .getData()
+        .commands.filter((command) => command.MoveCall?.module === 'trade')
+        .every((command) => command.MoveCall!.typeArguments.length === 0)
+    ).toBeTrue()
+  }
+})
+
+test.each([false, true])(
+  'drained-trade cleanup follows live funding despite missing token pins: %s',
+  async (funded) => {
+    const { sdk } = game(funded, false)
+    let composed: Transaction | null = null
+    const creating = {
+      ...sdk,
+      execute: async (tx: Transaction) => {
+        composed = tx
+        return {
+          Transaction: {
+            digest,
+            objectTypes: { [id(23)]: `${package_id}::trade::Trade` },
+            effects: { changedObjects: [{ objectId: id(23), idOperation: 'Created' }] },
+          },
+        }
+      },
+    }
+    await trade_create(creating as never, { address: me, counterparty: other, cleanup: [id(20)] })
+    expect(targets(composed!)).toEqual([
+      `${package_id}::trade::${funded ? 'close_token' : 'close'}`,
+      `${package_id}::trade::create`,
+    ])
+    expect(composed!.getData().commands[0]!.MoveCall!.typeArguments).toEqual(funded ? [pins.kares_coin_type] : [])
+  }
+)

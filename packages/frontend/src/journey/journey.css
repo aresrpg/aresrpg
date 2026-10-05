@@ -510,6 +510,32 @@
   display: none;
 }
 
+.journey-ingredients {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+.journey-ingredients button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 4px 6px;
+  border: 1px solid #c8963c33;
+  cursor: pointer;
+  font-size: 11px;
+}
+.journey-ingredients img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+.journey-ingredients strong {
+  margin-left: auto;
+  white-space: nowrap;
+  color: #e8b654;
+}
+
 @media (max-width: 1023px), (pointer: coarse) {
   .journey-tracker {
     width: min(230px, calc(100vw - 100px));

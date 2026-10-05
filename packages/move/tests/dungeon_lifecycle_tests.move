@@ -5,7 +5,7 @@ module aresrpg::dungeon_lifecycle_tests;
 
 use aresrpg::{api, character, dungeon, fight, fight_rewards::BossVictory, item, mastery, party, protected_policy, version, world};
 use aresrpg_control::admin;
-use aresrpg_kares::{kares, offering::{Self, Offering}, staking::StakingPool, combat_rewards::{Self, CombatPot}};
+use aresrpg_rewards::{economy::{Self, Economy}, combat_rewards::{Self, CombatPot}, test_coin::TEST_COIN};
 use aresrpg_combat::combat;
 use aresrpg_math::{city_map, combat_grid, dungeon_data, item_stats, mob_data, prng};
 use aresrpg_seed::{board_catalog, dungeon_content, item_rows, mob_rows, registry, world_content};
@@ -13,7 +13,7 @@ use kiosk::personal_kiosk;
 use sui::{clock, event, kiosk, package::Publisher, random, test_scenario, transfer_policy};
 
 const OWNER: address = @0xA;
-public enum Variant has copy, drop { Win, Abandon, GiveUp, GiveUpActive, WrongKey, Reenter, NoRun, WrongRoom, RawForfeit, BadBatch, WrongDungeon, MissingPortal, WrongWorld, Shrink, Rescue, Grouped, PendingParty, EmptyBatch, OversizedPlan, ForeignSettler, MobSeat, SkipBossRewards, WrongEngageContent, WrongSettleContent, MismatchedRunSettle, MismatchedRunGiveUp, ForeignCharacterWorld, SuppliedBlueprints, TrailingBlueprint, Api }
+public enum Variant has copy, drop { Win, Abandon, GiveUp, GiveUpActive, WrongKey, Reenter, NoRun, WrongRoom, RawForfeit, BadBatch, WrongDungeon, MissingPortal, WrongWorld, Shrink, Rescue, Grouped, PendingParty, EmptyBatch, OversizedPlan, ForeignSettler, MobSeat, SkipBossRewards, WrongEngageContent, WrongSettleContent, MismatchedRunSettle, MismatchedRunGiveUp, ForeignCharacterWorld, SuppliedBlueprints, TrailingBlueprint, Api, Unfunded, FundedBypass, UnfundedUnsealed }
 
 fun mob(slug: vector<u8>): mob_data::MobData {
   let shift = item_stats::shift();
@@ -29,43 +29,40 @@ fun board(swap: bool): combat_grid::GridSpec {
     vector[106, 107, 108, 109, 110, 111])
 }
 
-fun initialize_rewards(scenario: &mut test_scenario::Scenario, clock: &mut clock::Clock) {
-  let genesis = kares::genesis_for_testing(scenario.ctx());
-  let cap = sui::package::test_publish(object::id_from_address(@aresrpg_kares), scenario.ctx());
-  offering::setup(genesis, cap, 1, 10, 1, OWNER, OWNER, OWNER, OWNER, scenario.ctx());
+fun initialize_rewards(scenario: &mut test_scenario::Scenario, clock: &clock::Clock, unfunded: bool) {
+  if (unfunded) {
+    economy::share_for_testing(economy::unfunded_for_testing(scenario.ctx()));
+    scenario.next_tx(OWNER);
+    return
+  };
+  let pot = combat_rewards::pot_for_testing<TEST_COIN, BossVictory>(combat_rewards::initial_tokens(), clock, scenario.ctx());
+  let economy = economy::economy_for_testing<TEST_COIN>(@0x0.to_id(), object::id(&pot), scenario.ctx());
+  economy::share_for_testing(economy);
+  combat_rewards::share_for_testing(pot);
   scenario.next_tx(OWNER);
-  let mut offering = scenario.take_shared<Offering>();
-  offering::start(&mut offering, clock, scenario.ctx());
-  let mut pool = scenario.take_shared<StakingPool>();
-  let mut pot = scenario.take_shared<CombatPot>();
-  offering::seed_combat(&mut offering, &mut pot, scenario.ctx());
-  offering::authorize_combat<BossVictory>(&offering, &mut pot, scenario.ctx());
-  let contribution = offering::contribution_for_testing(&mut offering, 1, clock, scenario.ctx());
-  clock.increment_for_testing(1);
-  offering::settle(&mut offering, &mut pool, clock, scenario.ctx());
-  let (tokens, refund) = offering::claim(&mut offering, &mut pool, contribution, clock, scenario.ctx());
-  sui::coin::burn_for_testing(tokens);
-  sui::coin::burn_for_testing(refund);
-  test_scenario::return_shared(offering);
-  test_scenario::return_shared(pool);
-  test_scenario::return_shared(pot);
 }
 
 fun prepare_rewards(scenario: &mut test_scenario::Scenario, fight: &mut fight::Fight, clock: &clock::Clock, version: &version::Version) {
-  let offering = scenario.take_shared<Offering>();
-  let mut pot = scenario.take_shared<CombatPot>();
-  api::prepare_boss_rewards(fight, 0, &offering, &mut pot, version, clock, scenario.ctx());
+  let offering = scenario.take_shared<Economy>();
+  if (!economy::is_funded(&offering)) {
+    api::prepare_boss_rewards_unfunded(fight, 0, &offering, version, scenario.ctx());
+    api::prepare_boss_rewards_unfunded(fight, 2, &offering, version, scenario.ctx());
+    test_scenario::return_shared(offering);
+    return
+  };
+  let mut pot = scenario.take_shared<CombatPot<TEST_COIN>>();
+  api::prepare_boss_rewards_token(fight, 0, &offering, &mut pot, version, clock, scenario.ctx());
   let balance = combat_rewards::balance(&pot);
   // Two winning characters share one level-one boss bounty, despite sharing a wallet.
   assert!(combat_rewards::initial_tokens() - balance == (combat_rewards::daily_budget() / 20_000 / 2) * 2);
-  api::prepare_boss_rewards(fight, 2, &offering, &mut pot, version, clock, scenario.ctx());
+  api::prepare_boss_rewards_token(fight, 2, &offering, &mut pot, version, clock, scenario.ctx());
   assert!(combat_rewards::balance(&pot) == balance);
   test_scenario::return_shared(offering);
   test_scenario::return_shared(pot);
 }
 
 fun run(variant: Variant) {
-  let api_run = variant == Variant::Api;
+  let api_run = variant == Variant::Api || variant == Variant::Unfunded;
   let giving_up = variant == Variant::GiveUp || variant == Variant::GiveUpActive;
   let mismatched_run = variant == Variant::MismatchedRunSettle || variant == Variant::MismatchedRunGiveUp;
   let needs_other = variant == Variant::WrongDungeon || variant == Variant::WrongEngageContent
@@ -76,7 +73,7 @@ fun run(variant: Variant) {
   item::test_init(scenario.ctx());
   version::test_init(scenario.ctx());
   let mut clock = clock::create_for_testing(scenario.ctx());
-  initialize_rewards(&mut scenario, &mut clock);
+  initialize_rewards(&mut scenario, &clock, variant == Variant::Unfunded || variant == Variant::UnfundedUnsealed);
   if (variant == Variant::Win) { scenario.next_epoch(OWNER); };
   let admin = admin::cap_for_testing(scenario.ctx());
   let mut root = registry::registry_for_testing(scenario.ctx());
@@ -242,6 +239,11 @@ fun run(variant: Variant) {
     if (api_run) assert!(first_cell == 100 || first_cell == 101, 22)
     else assert!(first_cell == if (prng::mix(77, room) % 2 == 0) 100 else 101, 15);
     let version = scenario.take_shared<version::Version>();
+    if (variant == Variant::Unfunded && room == 1) {
+      let economy = scenario.take_shared<Economy>();
+      api::prepare_boss_rewards_unfunded(&mut fight, 0, &economy, &version, scenario.ctx());
+      test_scenario::return_shared(economy);
+    };
     if (variant == Variant::RawForfeit) {
       let randomness = scenario.take_shared<random::Random>();
       api::forfeit_fight_terminal(&mut fight, 0, &mut kiosk, &personal, &character_policy, &randomness, &version, &clock, scenario.ctx());
@@ -281,12 +283,22 @@ fun run(variant: Variant) {
       if (!single) assert!(fight::ready(&mut fight, 2, scenario.ctx()), 6);
       fight::start(&mut fight, &mut entropy, &clock);
       fight::strike(&mut fight, 0, 106, scenario.ctx());
+      if (room == 2 && variant == Variant::UnfundedUnsealed) {
+        let economy = scenario.take_shared<Economy>();
+        api::prepare_boss_rewards_unfunded(&mut fight, 0, &economy, &version, scenario.ctx());
+        test_scenario::return_shared(economy);
+      };
       fight::end_turn(&mut fight, &mut entropy, &clock, scenario.ctx());
       if (daily.is_some()) {
         let completed = api::complete_daily_quest_if_eligible(daily.borrow_mut(), &fight, 0, &content, &version, scenario.ctx());
         assert!(completed == (room == 2), 16);
         assert!(mastery::points_for_testing(daily.borrow()) == (if (room == 2) 1 else 0), 17);
         assert!(!api::complete_daily_quest_if_eligible(daily.borrow_mut(), &fight, 0, &content, &version, scenario.ctx()), 18);
+      };
+      if (room == 2 && variant == Variant::FundedBypass) {
+        let economy = scenario.take_shared<Economy>();
+        api::prepare_boss_rewards_unfunded(&mut fight, 0, &economy, &version, scenario.ctx());
+        test_scenario::return_shared(economy);
       };
       if (room == 2 && variant != Variant::SkipBossRewards) prepare_rewards(&mut scenario, &mut fight, &clock, &version);
       if (api_run) {
@@ -431,3 +443,12 @@ fun terminal_dungeon_apis_use_native_entropy_advance_and_delete_the_last_fight()
 
 #[test]
 fun active_room_forfeit_runs_the_mob_and_hands_the_turn_to_the_remaining_player() { run(Variant::GiveUpActive); }
+
+#[test]
+fun unfunded_boss_settlement_returns_all_characters_without_a_token_or_pool() { run(Variant::Unfunded); }
+
+#[test, expected_failure(abort_code = 0, location = aresrpg::fight_rewards)]
+fun funded_boss_settlement_cannot_use_the_unfunded_door() { run(Variant::FundedBypass); }
+
+#[test, expected_failure(abort_code = 1730, location = aresrpg::fight)]
+fun unfunded_boss_preparation_requires_committed_terminal_entropy() { run(Variant::UnfundedUnsealed); }

@@ -22,12 +22,14 @@ import {
 import { digest, fake_client, id, signer } from './helpers/transport.ts'
 
 const pins = {
-  kares_package: id(101),
-  kares_package_original: id(100),
+  kares_rewards_package: id(101),
+  kares_rewards_package_original: id(100),
+  kares_coin_type: `${id(100)}::kares::KARES`,
   kares_currency: { id: id(102), shared_version: '2' },
-  kares_offering: { id: id(103), shared_version: '3' },
+  kares_economy: { id: id(103), shared_version: '3' },
   kares_staking_pool: { id: id(104), shared_version: '3' },
   kares_combat_pot: { id: id(105), shared_version: '3' },
+  kares_community_pool: { id: id(106), shared_version: '3' },
 }
 const empty_bucket = { start_ms: 0n, kares: 0n, sui: 0n, released_kares: 0n, released_sui: 0n }
 const pool = (overrides: Partial<KaresPoolState> = {}): KaresPoolState => ({
@@ -56,31 +58,26 @@ const position = (amount: bigint) => ({
   sui_accrued: 0n,
 })
 
-test('display allocation conserves fixed issuance and matches Move custody constants', () => {
-  expect(Object.values(KARES_ALLOCATION).reduce((sum, value) => sum + value, 0n)).toBe(KARES_SUPPLY)
-  const offering = readFileSync(new URL('../../kares/sources/offering.move', import.meta.url), 'utf8')
-  const constants = {
-    SALE_TOKENS: 'offering',
-    LIQUIDITY_TOKENS: 'liquidity',
-    STAKING_TOKENS: 'rewards',
-    TEAM_TOKENS: 'team',
-    COMMUNITY_TOKENS: 'community',
+test('display allocations and Mastery conversion match the native monetary owner', () => {
+  const source = readFileSync(new URL('../../rewards/sources/amounts.move', import.meta.url), 'utf8')
+  const functions = {
+    staking_tokens: 'rewards',
+    combat_tokens: 'combat',
+    community_tokens: 'community',
+    team_tokens: 'team',
   } as const
-  for (const [constant, allocation] of Object.entries(constants)) {
-    const match = offering.match(new RegExp(`const ${constant}: u64 = ([\\d_]+) \\* UNIT;`))
-    expect(match).not.toBeNull()
-    expect(BigInt(match![1].replaceAll('_', '')) * KARES_UNIT).toBe(KARES_ALLOCATION[allocation])
+  for (const [name, allocation] of Object.entries(functions)) {
+    const match = source.match(new RegExp(`fun ${name}\\(\\): u64 \\{ ([\\d_]+) \\* UNIT`))!
+    expect(BigInt(match[1].replaceAll('_', '')) * KARES_UNIT).toBe(KARES_ALLOCATION[allocation])
   }
-  const combat = readFileSync(new URL('../../kares/sources/combat_rewards.move', import.meta.url), 'utf8')
-  const initial = combat.match(/const INITIAL_TOKENS: u64 = ([\d_]+) \* UNIT;/)!
-  expect(BigInt(initial[1].replaceAll('_', '')) * KARES_UNIT).toBe(KARES_ALLOCATION.combat)
+  expect(Object.values(KARES_ALLOCATION).reduce((sum, value) => sum + value, 0n)).toBe(440_000_000n * KARES_UNIT)
+  expect(KARES_SUPPLY).toBe(1_000_000_000n * KARES_UNIT)
 })
 
 test('the reward projection pins its precision and durations to the Move owner', () => {
-  const source = readFileSync(new URL('../../kares/sources/staking.move', import.meta.url), 'utf8')
+  const source = readFileSync(new URL('../../rewards/sources/staking.move', import.meta.url), 'utf8')
   const expected = {
     DAY_MS: REWARD_DAY_MS,
-    INITIAL_REWARDS,
     SCALE: REWARD_SCALE,
     MONTH_MS: SUPPLEMENTARY_DURATION_MS,
     INITIAL_DURATION_MS,
@@ -106,7 +103,7 @@ test('empty staking pauses all releases and does not give the next entrant a bac
 test('five-year rewards stop exactly and accrue proportionally without compounding', () => {
   const projected = project_kares_pool(pool(), 1_825n * REWARD_DAY_MS)
   const rewards = project_kares_position(projected, position(25n * KARES_UNIT))
-  expect(rewards.pending_kares).toBe(50_000n * KARES_UNIT)
+  expect(rewards.pending_kares).toBe(50_000_000n * KARES_UNIT)
   expect(rewards.pending_sui).toBe(0n)
   expect(projected.initial_remaining).toBe(0n)
   expect(project_kares_pool(pool(), 9_000n * REWARD_DAY_MS)).toMatchObject({ kares_index: projected.kares_index })
@@ -143,21 +140,21 @@ test('late entrants cannot receive historical rewards and withdrawn principal re
   expect(() => project_kares_pool(pool({ last_wall_ms: 1n }), 0n)).toThrow('older than the pool')
 })
 
-test('standalone offering PTBs have no game markers, use latest targets and canonical shared pins', async () => {
+test('standalone reward PTBs have no game markers, use latest targets and canonical shared pins', async () => {
   const client = fake_client({ simulate_ok: true })
   const sdk = SDK({ client, pins, signer, transaction_storage: null })
   const tx = await create_kares_transaction(
     { sdk, address: signer.toSuiAddress() },
-    { kind: 'contribute', amount: 5n * KARES_UNIT }
+    { kind: 'fund', asset: 'sui', amount: 5n * KARES_UNIT }
   )
   const calls = tx.getData().commands.flatMap((command) => (command.MoveCall ? [command.MoveCall] : []))
   expect(calls).toHaveLength(1)
-  expect(calls[0]).toMatchObject({ package: id(101), module: 'offering', function: 'contribute' })
-  expect(tx.getData().inputs.some((input) => input.Object?.SharedObject?.objectId === id(103))).toBe(true)
+  expect(calls[0]).toMatchObject({ package: id(101), module: 'staking', function: 'fund_sui' })
+  expect(tx.getData().inputs.some((input) => input.Object?.SharedObject?.objectId === id(104))).toBe(true)
   expect(client.calls.executions).toBe(0)
   expect(() => kares_pins({})).toThrow('not configured')
   await expect(
-    create_kares_transaction({ sdk, address: signer.toSuiAddress() }, { kind: 'contribute', amount: 0n })
+    create_kares_transaction({ sdk, address: signer.toSuiAddress() }, { kind: 'fund', asset: 'sui', amount: 0n })
   ).rejects.toThrow('positive u64')
 })
 
@@ -238,11 +235,11 @@ test('official KARES resolver covers fragmented, paginated, address-only and mix
   }
 })
 
-test('offering actions use the existing executor and a failed simulation never submits', async () => {
+test('reward actions use the existing executor and a failed simulation never submits', async () => {
   const client = fake_client({ simulate_ok: false })
   const sdk = SDK({ client, pins, signer, transaction_storage: null })
   const actions = kares_actions({ sdk, client: client as never, address: signer.toSuiAddress() })
-  await expect(actions.contribute(KARES_UNIT)).rejects.toThrow('NOT submitted')
+  await expect(actions.fund_sui(KARES_UNIT)).rejects.toThrow('NOT submitted')
   expect(client.calls.executions).toBe(0)
 })
 
@@ -259,7 +256,7 @@ test('the game wallet reads native KARES balances without offering or staking co
       },
     },
   }
-  const sdk = SDK({ client, signer, pins: { kares_package_original: id(100), kares_package: id(101) } })
+  const sdk = SDK({ client, signer, pins: { kares_coin_type: `${id(100)}::kares::KARES` } })
   expect(await sdk.read_kares_balance()).toBe(12_345_678_901n)
   expect(requests).toEqual([{ owner: signer.toSuiAddress(), coinType: `${id(100)}::kares::KARES` }])
   const unpublished = SDK({ client, signer, pins: {} })
@@ -267,39 +264,38 @@ test('the game wallet reads native KARES balances without offering or staking co
   expect(requests).toHaveLength(1)
 })
 
-test('sale claims carry their canonical staking pool for atomic finalization; staking claims keep their own shape', async () => {
+test('staking claims reference only the canonical pool and bind its currency type', async () => {
   const client = fake_client({ simulate_ok: true })
   const sdk = SDK({ client, pins, signer, transaction_storage: null })
   sdk.cache.owned.set(id(201), { objectId: id(201), version: '1', digest })
-  for (const source of ['offering', 'staking'] as const) {
-    const tx = await create_kares_transaction(
-      { sdk, address: signer.toSuiAddress() },
-      { kind: 'claim', source, ids: [id(201)] }
-    )
-    const data = tx.getData()
-    const [command] = data.commands
-    expect(command.MoveCall!.arguments).toHaveLength(source === 'offering' ? 4 : 3)
-    const shared_ids = data.inputs.flatMap((input) =>
-      input.Object?.SharedObject ? [input.Object.SharedObject.objectId] : []
-    )
-    expect(shared_ids).toContain(pins.kares_staking_pool.id)
-    expect(shared_ids.includes(pins.kares_offering.id)).toBe(source === 'offering')
-  }
+  const tx = await create_kares_transaction({ sdk, address: signer.toSuiAddress() }, { kind: 'claim', ids: [id(201)] })
+  const call = tx.getData().commands[0].MoveCall!
+  expect(call.arguments).toHaveLength(3)
+  expect(call.typeArguments).toEqual([pins.kares_coin_type])
+  expect(tx.getData().inputs.some((input) => input.Object?.SharedObject?.objectId === pins.kares_staking_pool.id)).toBe(
+    true
+  )
   expect(client.calls.executions).toBe(0)
 })
 
-test('one claim PTB consumes every selected contribution once and transfers every payout together', async () => {
+test('one claim PTB deduplicates selected staking positions and transfers every payout together', async () => {
   const client = fake_client({ simulate_ok: true })
   const sdk = SDK({ client, pins, signer, transaction_storage: null })
   for (const object_id of [id(201), id(202)])
     sdk.cache.owned.set(object_id, { objectId: object_id, version: '1', digest })
   const tx = await create_kares_transaction(
     { sdk, address: signer.toSuiAddress() },
-    { kind: 'claim', source: 'offering', ids: [id(201), id(202), id(201)] }
+    { kind: 'claim', ids: [id(201), id(202), id(201)] }
   )
   const data = tx.getData()
-  expect(data.commands.map((command) => command.$kind)).toEqual(['MoveCall', 'MoveCall', 'TransferObjects'])
-  expect(data.commands[2].TransferObjects!.objects).toHaveLength(4)
+  expect(data.commands.map((command) => command.$kind)).toEqual([
+    'MoveCall',
+    'MoveCall',
+    'MergeCoins',
+    'MergeCoins',
+    'TransferObjects',
+  ])
+  expect(data.commands.at(-1)!.TransferObjects!.objects).toHaveLength(2)
   expect(
     data.inputs.flatMap((input) => (input.Object?.ImmOrOwnedObject ? [input.Object.ImmOrOwnedObject.objectId] : []))
   ).toEqual([id(201), id(202)])
@@ -308,11 +304,11 @@ test('one claim PTB consumes every selected contribution once and transfers ever
       { sdk, address: signer.toSuiAddress() },
       {
         kind: 'claim',
-        source: 'offering',
+
         ids: [],
       }
     )
-  ).rejects.toThrow('at least one')
+  ).rejects.toThrow('1..50')
   expect(client.calls.executions).toBe(0)
 })
 
@@ -332,11 +328,18 @@ test('aggregated staking withdrawal and reward claims each compose one atomic mu
   expect(withdraw.getData().commands.map((command) => command.$kind)).toEqual([
     'MoveCall',
     'MoveCall',
+    'MergeCoins',
     'TransferObjects',
   ])
-  expect(withdraw.getData().commands.at(-1)!.TransferObjects!.objects).toHaveLength(2)
-  const claim = await create_kares_transaction(context, { kind: 'claim', source: 'staking', ids: [id(201), id(202)] })
-  expect(claim.getData().commands.map((command) => command.$kind)).toEqual(['MoveCall', 'MoveCall', 'TransferObjects'])
-  expect(claim.getData().commands.at(-1)!.TransferObjects!.objects).toHaveLength(4)
+  expect(withdraw.getData().commands.at(-1)!.TransferObjects!.objects).toHaveLength(1)
+  const claim = await create_kares_transaction(context, { kind: 'claim', ids: [id(201), id(202)] })
+  expect(claim.getData().commands.map((command) => command.$kind)).toEqual([
+    'MoveCall',
+    'MoveCall',
+    'MergeCoins',
+    'MergeCoins',
+    'TransferObjects',
+  ])
+  expect(claim.getData().commands.at(-1)!.TransferObjects!.objects).toHaveLength(2)
   expect(client.calls.executions).toBe(0)
 })

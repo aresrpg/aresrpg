@@ -10,6 +10,7 @@ import type { Transaction, TransactionArgument, TransactionObjectArgument } from
 import { created_object_id, receipt_digest } from './cache.ts'
 import { SDK } from './client.ts'
 import { kares_payment } from './kares_ptb.ts'
+import { prepare_trade_close } from './kares_economy.ts'
 import { resolve_kiosk_cap, retry_stale_kiosk_ref, type KioskCapLoader } from './kiosk_runner.ts'
 import { resolve_marketplace_transfer } from './marketplace.ts'
 import { merge_stacks_ptb, split_stack_ptb } from './stacks.ts'
@@ -115,8 +116,6 @@ const projected_caps = (trade: Readonly<TradeRow>, side: Side, caps: readonly Tr
   [`caps_${side}`]: Object.freeze(caps),
 })
 
-const projected_sui = (side: Side, amount: bigint): Partial<TradeRow> => ({ [`sui_${side}`]: amount.toString() })
-
 export const trade_create = async (
   sdk: GameSdk,
   {
@@ -126,8 +125,9 @@ export const trade_create = async (
   }: Readonly<{ address: string; counterparty: string; cleanup?: readonly string[] }>
 ): Promise<TradeReceipt> => {
   await sdk.hydrate_unknown(cleanup)
+  const close = cleanup.length ? await prepare_trade_close(sdk) : null
   const tx = sdk.tx()
-  for (const trade of cleanup) sdk.doors.trade_close(tx, { trade })
+  for (const trade of cleanup) close!(tx, trade)
   sdk.doors.trade_create(tx, { counterparty })
   const receipt = await sdk.execute(tx, { include: { objectTypes: true } })
   const trade_id = created_object_id(receipt, '::trade::Trade')
@@ -160,10 +160,12 @@ export type TradeActionsCtx = Readonly<{
 
 export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: TradeActionsCtx) => {
   const side = own_side(trade, address)
-  const submit = async (compose: (tx: Transaction) => void): Promise<string> => {
+  const submit = async (compose: (tx: Transaction) => void, closing = false): Promise<string> => {
     await sdk.hydrate_unknown([trade.id])
+    const close = closing ? await prepare_trade_close(sdk) : null
     const tx = sdk.tx()
     compose(tx)
+    close?.(tx, trade.id)
     return receipt_digest(await sdk.execute(tx))
   }
   const cap_for = async (kiosk?: string, fresh = false): Promise<KioskOwnerCap> => {
@@ -423,7 +425,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
   const terminal_receipt = async (
     compose: (tx: Transaction) => void,
     delta: TradeTerminalDelta
-  ): Promise<TradeTerminalReceipt> => Object.freeze({ digest: await submit(compose), delta })
+  ): Promise<TradeTerminalReceipt> => Object.freeze({ digest: await submit(compose, delta.closed), delta })
 
   return Object.freeze({
     join: async (): Promise<TradeReceipt> => {
@@ -501,7 +503,7 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
         (tx) => {
           append_currency_offer(tx, 'sui', amount, trade.offer_revision)
         },
-        touched_offer(trade, projected_sui(side, amount))
+        touched_offer(trade, { [`sui_${side}`]: amount.toString() })
       )
     },
 
@@ -527,7 +529,6 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
                 for (const { cap } of group.rows) recover_cap_ptb(tx, cap, kiosk)
               })
             transfer_balances(tx, own, 'recover')
-            if (closed) sdk.doors.trade_close(tx, { trade: trade.id })
           },
           terminal_delta(
             'cancelled',
@@ -557,7 +558,6 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
                 }
               })
             transfer_balances(tx, incoming, 'claim')
-            if (closed) sdk.doors.trade_close(tx, { trade: trade.id })
           },
           terminal_delta(
             'settling',
@@ -583,7 +583,6 @@ export const trade_actions = (sdk: GameSdk, { trade, address, kiosk_cap }: Trade
                 for (const { cap } of group.rows) recover_cap_ptb(tx, cap, kiosk)
               })
             transfer_balances(tx, own, 'recover')
-            if (closed) sdk.doors.trade_close(tx, { trade: trade.id })
           },
           terminal_delta(
             'cancelled',

@@ -143,7 +143,7 @@ manifest_digest = "C4FE4C91DE74CBF223B2E380AE40F592177D21870DC2D7EB6227D2D694E05
 deps = {}
 
 [pinned.testnet.MoveStdlib_1]
-source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/move-stdlib", rev = "46f18562f1f5af2438d35828e8b62d5e0b972db7" }
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/move-stdlib", rev = "bf0c491c17b83a69df85f0e82fd55515484d585a" }
 use_environment = "testnet"
 manifest_digest = "C4FE4C91DE74CBF223B2E380AE40F592177D21870DC2D7EB6227D2D694E05363"
 deps = {}
@@ -155,7 +155,7 @@ manifest_digest = "7AFB66695545775FBFBB2D3078ADFD084244D5002392E837FDE21D9EA1C6D
 deps = { MoveStdlib = "MoveStdlib" }
 
 [pinned.testnet.Sui_1]
-source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "46f18562f1f5af2438d35828e8b62d5e0b972db7" }
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "bf0c491c17b83a69df85f0e82fd55515484d585a" }
 use_environment = "testnet"
 manifest_digest = "7AFB66695545775FBFBB2D3078ADFD084244D5002392E837FDE21D9EA1C6D01C"
 deps = { MoveStdlib = "MoveStdlib_1" }
@@ -163,8 +163,8 @@ deps = { MoveStdlib = "MoveStdlib_1" }
 [pinned.testnet.aresrpg]
 source = { root = true }
 use_environment = "testnet"
-manifest_digest = "33CD716A2B69B1E90AF940951C11E823A362EF94BDAE59E3F130D24862DA7E18"
-deps = { Kiosk = "Kiosk", aresrpg_combat = "aresrpg_combat", aresrpg_control = "aresrpg_control", aresrpg_kares = "aresrpg_kares", aresrpg_math = "aresrpg_math", aresrpg_seed = "aresrpg_seed", std = "MoveStdlib", sui = "Sui" }
+manifest_digest = "1E4A06EC263B0381F0EAEB184655B627C5B77B7A4463CD5903A0C68F332F173D"
+deps = { Kiosk = "Kiosk", aresrpg_combat = "aresrpg_combat", aresrpg_control = "aresrpg_control", aresrpg_kares = "aresrpg_kares", aresrpg_math = "aresrpg_math", aresrpg_rewards = "aresrpg_rewards", aresrpg_seed = "aresrpg_seed", std = "MoveStdlib", sui = "Sui" }
 
 [pinned.testnet.aresrpg_combat]
 source = { local = "../move-combat" }
@@ -186,6 +186,12 @@ deps = { std = "MoveStdlib", sui = "Sui" }
 
 [pinned.testnet.aresrpg_math]
 source = { local = "../move-math" }
+use_environment = "testnet"
+manifest_digest = "5745706258F61D6CE210904B3E6AE87A73CE9D31A6F93BE4718C442529332A87"
+deps = { std = "MoveStdlib", sui = "Sui" }
+
+[pinned.testnet.aresrpg_rewards]
+source = { local = "../rewards" }
 use_environment = "testnet"
 manifest_digest = "5745706258F61D6CE210904B3E6AE87A73CE9D31A6F93BE4718C442529332A87"
 deps = { std = "MoveStdlib", sui = "Sui" }

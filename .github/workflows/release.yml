@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 # © 2026 Sceat — All rights reserved. See LICENSE.
-# Release preparation — every owner-pushed vX.Y.Z tag publishes changed backend images to GHCR,
+# Release preparation — an owner-dispatched vX.Y.Z tag publishes changed backend images to GHCR,
 # and stages a production-variable Vercel deployment without moving aresrpg.world. The separate
 # manual activation workflow promotes that exact deployment and publishes the generated draft
 # GitHub Release after production answers. Discord communication is a separate owner-requested action.
@@ -163,6 +163,9 @@ jobs:
       contents: read
     outputs:
       previous_tag: ${{ steps.plan.outputs.previous_tag }}
+      discord: ${{ steps.plan.outputs.discord }}
+      discord_version: ${{ steps.plan.outputs.discord_version }}
+      discord_digest: ${{ steps.plan.outputs.discord_digest }}
       server: ${{ steps.plan.outputs.server }}
       server_version: ${{ steps.plan.outputs.server_version }}
       server_digest: ${{ steps.plan.outputs.server_digest }}
@@ -183,6 +186,7 @@ jobs:
             packages/indexer
             packages/protocol
             packages/server
+            packages/discord
             seed/content
             seed/structures
             scripts/release_inputs.mjs
@@ -191,6 +195,9 @@ jobs:
         id: plan
         run: |
           previous_tag=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName // ""')
+          discord_version="${{ needs.tag-and-release.outputs.version }}"
+          discord=true
+          discord_digest=""
           server_version="${{ needs.tag-and-release.outputs.version }}"
           indexer_version="${{ needs.tag-and-release.outputs.version }}"
           server=true
@@ -207,6 +214,7 @@ jobs:
           const after = await runtime_fingerprints(process.cwd(), process.env.GITHUB_SHA)
           console.log(JSON.stringify(Object.fromEntries(Object.keys(after).map(key => [key, before[key] !== after[key]]))))
           NODE
+            discord=$(jq -r .discord "$RUNNER_TEMP/runtime-plan.json")
             server=$(jq -r .server "$RUNNER_TEMP/runtime-plan.json")
             indexer=$(jq -r .indexer "$RUNNER_TEMP/runtime-plan.json")
             frontend=$(jq -r .frontend "$RUNNER_TEMP/runtime-plan.json")
@@ -226,10 +234,16 @@ jobs:
                 ([.images.server.digest, .images.indexer.digest] |
                   all(type == "string" and test("^sha256:[0-9a-f]{64}$")))
               ' "$previous_manifest" >/dev/null; then
+              if jq -e '.images.discord.repository == "ghcr.io/aresrpg/discord" and (.images.discord.digest | type == "string" and test("^sha256:[0-9a-f]{64}$"))' "$previous_manifest" >/dev/null; then
+                discord_digest=$(jq -r .images.discord.digest "$previous_manifest")
+              else
+                discord=true
+              fi
               server_digest=$(jq -r .images.server.digest "$previous_manifest")
               indexer_digest=$(jq -r .images.indexer.digest "$previous_manifest")
             else
               echo "No reusable mainnet preparation manifest; rebuilding all artifacts"
+              discord=true
               server=true
               indexer=true
               frontend=true
@@ -238,6 +252,9 @@ jobs:
 
           {
             echo "previous_tag=$previous_tag"
+            echo "discord=$discord"
+            echo "discord_version=$discord_version"
+            echo "discord_digest=$discord_digest"
             echo "server=$server"
             echo "server_version=$server_version"
             echo "server_digest=$server_digest"
@@ -345,6 +362,108 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+  build-discord:
+    needs: backend-plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest || steps.build.outputs.digest || steps.alias.outputs.digest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          sparse-checkout: |
+            /*
+            !seed/icons/*
+            /seed/icons/items/
+            !seed/icons/items/*_hd.*
+            /seed/icons/mobs/
+            !seed/icons/mobs/*_hd.*
+            !seed/models
+            !music
+          sparse-checkout-cone-mode: false
+      - name: authenticate to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: create Buildx builder
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - name: reuse this immutable discord semver on a preparation rerun
+        id: image
+        run: |
+          image="ghcr.io/${{ github.repository_owner }}/discord:${{ needs.backend-plan.outputs.discord_version }}"
+          if docker manifest inspect "$image" >/dev/null 2>&1; then
+            if [ "${{ needs.backend-plan.outputs.discord }}" = true ]; then
+              revision=$(docker buildx imagetools inspect "$image" --format '{{json .Image.Config.Labels}}' \
+                | jq -r '.["org.opencontainers.image.revision"]')
+              [ "$revision" = "$GITHUB_SHA" ] || {
+                echo "::error::$image already belongs to source $revision, refusing semver reuse for $GITHUB_SHA"
+                exit 1
+              }
+            else
+              expected="${{ needs.backend-plan.outputs.discord_digest }}"
+              [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::certified discord digest is missing"; exit 1; }
+              actual=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
+              [ "$actual" = "$expected" ] || {
+                echo "::error::$image does not alias the expected unchanged discord digest"
+                exit 1
+              }
+            fi
+            digest=$(docker buildx imagetools inspect "$image" --format '{{json .Manifest.Digest}}' | tr -d '"')
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: build and push discord
+        id: build
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.discord == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          file: packages/discord/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/discord:${{ needs.backend-plan.outputs.discord_version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.backend-plan.outputs.discord_version }}
+            org.opencontainers.image.licenses=LicenseRef-AresRPG-Source-Available
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/discord:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/discord:buildcache,mode=max
+          provenance: false
+          sbom: true
+      - name: alias unchanged discord digest to this release
+        id: alias
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.discord != 'true'
+        run: |
+          repository="ghcr.io/${{ github.repository_owner }}/discord"
+          expected="${{ needs.backend-plan.outputs.discord_digest }}"
+          [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::certified discord digest is missing"; exit 1; }
+          source="$repository@$expected"
+          docker manifest inspect "$source" >/dev/null || { echo "::error::no previous discord image exists"; exit 1; }
+          docker buildx imagetools create --prefer-index=false --tag "$repository:${{ needs.backend-plan.outputs.discord_version }}" "$source"
+          digest=$(docker buildx imagetools inspect "$repository:${{ needs.backend-plan.outputs.discord_version }}" \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+          [ "$digest" = "$expected" ] || { echo "::error::discord alias changed the certified manifest digest"; exit 1; }
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - name: attest discord provenance
+        if: steps.image.outputs.exists != 'true' && needs.backend-plan.outputs.discord == 'true'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/discord
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
   build-indexer:
     needs: backend-plan
     runs-on: ubuntu-latest
@@ -439,13 +558,14 @@ jobs:
           push-to-registry: true
 
   release-manifest:
-    needs: [tag-and-release, verify-gate, backend-plan, build-server, build-indexer, prepare-production]
+    needs: [tag-and-release, verify-gate, backend-plan, build-server, build-discord, build-indexer, prepare-production]
     if: >-
       always() &&
       needs.tag-and-release.outputs.prepare == 'true' &&
       needs.verify-gate.result == 'success' &&
       needs.backend-plan.result == 'success' &&
       (needs.prepare-production.result == 'success' || needs.prepare-production.result == 'skipped') &&
+      (needs.build-discord.result == 'success' || needs.build-discord.result == 'skipped') &&
       (needs.build-server.result == 'success' || needs.build-server.result == 'skipped') &&
       (needs.build-indexer.result == 'success' || needs.build-indexer.result == 'skipped')
     runs-on: ubuntu-latest
@@ -461,6 +581,9 @@ jobs:
         env:
           VERSION: ${{ needs.tag-and-release.outputs.version }}
           PREVIOUS_TAG: ${{ needs.backend-plan.outputs.previous_tag }}
+          DISCORD_BUILT: ${{ needs.backend-plan.outputs.discord }}
+          DISCORD_VERSION: ${{ needs.backend-plan.outputs.discord_version }}
+          DISCORD_DIGEST: ${{ needs.build-discord.outputs.digest }}
           SERVER_BUILT: ${{ needs.backend-plan.outputs.server }}
           SERVER_VERSION: ${{ needs.backend-plan.outputs.server_version }}
           SERVER_DIGEST: ${{ needs.build-server.outputs.digest }}
@@ -488,6 +611,9 @@ jobs:
             --arg source_sha "$GITHUB_SHA" \
             --arg previous_tag "$PREVIOUS_TAG" \
             --arg vercel_url "$VERCEL_URL" \
+            --arg discord_version "$DISCORD_VERSION" \
+            --arg discord_digest "$DISCORD_DIGEST" \
+            --argjson discord_built "$DISCORD_BUILT" \
             --arg server_version "$SERVER_VERSION" \
             --arg server_digest "$SERVER_DIGEST" \
             --arg indexer_version "$INDEXER_VERSION" \
@@ -521,6 +647,7 @@ jobs:
                 seed: {original: $seed_original, latest: $seed_latest}
               },
               images: {
+                discord: {repository: "ghcr.io/aresrpg/discord", version: $discord_version, digest: $discord_digest, built: $discord_built},
                 server: {repository: "ghcr.io/aresrpg/server", version: $server_version, digest: $server_digest, built: $server_built},
                 indexer: {repository: "ghcr.io/aresrpg/indexer", version: $indexer_version, digest: $indexer_digest, built: $indexer_built}
               }

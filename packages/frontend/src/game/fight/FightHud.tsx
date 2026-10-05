@@ -7,7 +7,7 @@
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight'
 import { Button, CombatHud, ConfirmDialog } from '@aresrpg/ui'
 import { Swords, Flag } from 'lucide-react'
-import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { content_catalog } from '../../content/catalog.ts'
 import { spell_name, type AppCopy } from '../../i18n/copy.ts'
@@ -257,6 +257,7 @@ export const FightHud = ({
   const session = useAppStore((state) => state.session)
   const simulator = useAppStore((state) => state.simulator)
   const [forfeit_open, set_forfeit_open] = useState(false)
+  const end_turn_button = useRef<HTMLButtonElement>(null)
   const [crank_attempt, set_crank_attempt] = useState<CrankAttempt | null>(null)
   const clock = useAppStore((state) => state.chain_clock)
   const [monotonic_ms, set_monotonic_ms] = useState(() => performance.now())
@@ -353,7 +354,13 @@ export const FightHud = ({
       )
     }
     const admitted_keydown = (event: Readonly<KeyboardEvent>): void => {
-      if (world_keyboard_eligible(event)) keydown(event)
+      if (!world_keyboard_eligible(event)) return
+      if (event.code === 'F1') {
+        event.preventDefault()
+        if (!event.repeat) end_turn_button.current?.click()
+        return
+      }
+      keydown(event)
     }
     globalThis.addEventListener('keydown', admitted_keydown)
     return () => globalThis.removeEventListener('keydown', admitted_keydown)
@@ -527,6 +534,7 @@ export const FightHud = ({
                   ? null
                   : {
                       label: copy.fight_hud.end_turn,
+                      hint: copy.fight_hud.turn_timer_hint,
                       remaining: turn_clock.seconds,
                       duration: Number(CONTRACT_CONSTANTS.turn_max_ms) / 1000,
                     }
@@ -534,6 +542,9 @@ export const FightHud = ({
               controls={
                 <>
                   <Button
+                    ref={end_turn_button}
+                    aria-keyshortcuts="F1"
+                    title={`${copy.fight_hud.end_turn} (F1)`}
                     tone="primary"
                     disabled={turn_intent === null}
                     onClick={() => queue_or_end_turn(selected.seat)}

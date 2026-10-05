@@ -16,6 +16,7 @@ let cancelled = 0
 let boots = 0
 let frame: FrameRequestCallback = () => undefined
 let render_error = false
+let initialization_error: Error | null = null
 const backend = new Proxy(
   {
     kind: 'webgpu',
@@ -33,6 +34,7 @@ const backend = new Proxy(
 mock.module('../src/webgpu_backend.ts', () => ({
   create_webgpu_backend: async (_canvas: unknown, _quality: unknown, _world: unknown, callback: typeof report) => {
     boots++
+    if (initialization_error) throw initialization_error
     report = callback
     return backend
   },
@@ -97,6 +99,7 @@ try {
 assert.equal(errors.length, 1)
 assert.equal(second.status().state, 'failed')
 assert.equal(second.status().backend, 'webgpu')
+assert.match(second.status().issue?.stack ?? '', /GPU submission failed/)
 assert.equal(disposed, 2)
 second.dispose()
 assert.equal(disposed, 2)
@@ -110,4 +113,16 @@ await new Promise<void>((resolve) => {
 assert.equal(boots, 2)
 assert.deepEqual(unsupported.status(), { state: 'failed', backend: 'none', issue: { code: 'webgpu_unavailable' } })
 unsupported.dispose()
+Object.defineProperty(globalThis, 'navigator', { value: { gpu: {} }, configurable: true })
+initialization_error = new Error('adapter initialization rejected')
+const failed_boot = create_engine({ canvas: {} as never, world: compile_runtime_world_recipe(world_terrain('nauvis')) })
+await new Promise<void>((resolve) => {
+  failed_boot.subscribe_status((status) => {
+    if (status.state !== 'initializing') resolve()
+  })
+})
+assert.equal(failed_boot.status().issue?.code, 'webgpu_initialization_failed')
+assert.equal(failed_boot.status().issue?.detail, initialization_error.message)
+assert.equal(failed_boot.status().issue?.stack, initialization_error.stack)
+failed_boot.dispose()
 console.log('renderer terminal failure passed')

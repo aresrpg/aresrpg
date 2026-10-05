@@ -22,6 +22,7 @@ export type DistributionState = Readonly<{
   gift_link_ready: boolean
   pending: string | null
   error: string | null
+  notice: Readonly<{ kind: 'received'; giftcards: readonly GiftcardRow[] } | { kind: 'unavailable' }> | null
 }>
 
 export type DistributionInput =
@@ -33,6 +34,9 @@ export type DistributionInput =
   | Readonly<{ type: 'distribution/claim_gift_link' }>
   | Readonly<{ type: 'distribution/gift_link_ready' }>
   | Readonly<{ type: 'distribution/gift_link_claimed' }>
+  | Readonly<{ type: 'distribution/gift_link_unavailable' }>
+  | Readonly<{ type: 'distribution/gifts_received'; giftcards: readonly GiftcardRow[] }>
+  | Readonly<{ type: 'distribution/notice_dismissed' }>
   | Readonly<{
       type: 'distribution/redeem'
       giftcards: readonly GiftcardRow[]
@@ -49,6 +53,7 @@ export const initial_distribution_state = (): DistributionState =>
     gift_link_ready: false,
     pending: null,
     error: null,
+    notice: null,
   })
 
 const GIFT_LINK_STORAGE_KEY = 'aresrpg:gift-link'
@@ -117,6 +122,20 @@ const reduce_gift_link_input = (current: DistributionState, input: AppInput): Di
     return Object.freeze({ ...current, gift_link_ready: true, error: null })
   if (input.type === 'distribution/gift_link_claimed')
     return Object.freeze({ ...current, gift_link_ready: false, pending: null, error: null })
+  if (input.type === 'distribution/gift_link_unavailable')
+    return Object.freeze({
+      ...current,
+      gift_link_ready: false,
+      pending: null,
+      error: null,
+      notice: Object.freeze({ kind: 'unavailable' }),
+    })
+  if (input.type === 'distribution/notice_dismissed') return Object.freeze({ ...current, notice: null })
+  if (input.type === 'distribution/gifts_received') {
+    const previous = current.notice?.kind === 'received' ? current.notice.giftcards : []
+    const giftcards = [...new Map([...previous, ...input.giftcards].map((card) => [card.id, card])).values()]
+    return Object.freeze({ ...current, notice: Object.freeze({ kind: 'received', giftcards }) })
+  }
   return null
 }
 
@@ -227,10 +246,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     dispatch({ type: 'distribution/pending', operation: 'gift-link' })
     void wallet
       .claim_giftcard_link(gift_link)
-      .then(({ digest, giftcard }) => {
+      .then((result) => {
         if (!current()) return
         gift_link = null
         remember_gift_intent(storage, null)
+        if (!result) return dispatch({ type: 'distribution/gift_link_unavailable' })
+        const { digest, giftcard } = result
         dispatch({ type: 'distribution/gift_link_claimed' })
         if (!signal.aborted && get_state().session.wallet === wallet) dispatch({ type: 'giftcard/received', giftcard })
         dispatch({ type: 'distribution/redeem', giftcards: [giftcard], automatic: true, received_transaction: digest })
@@ -321,6 +342,13 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
   events.on('STATE_UPDATED', (state, previous) => {
     if (state.session.wallet !== previous.session.wallet) game_lifetime++
     if (state.external_wallet.session !== previous.external_wallet.session) holder_lifetime++
+  })
+  events.on('STATE_UPDATED', (state, previous) => {
+    if (!state.session.wallet || state.session.wallet !== previous.session.wallet) return
+    if (state.session.giftcards === previous.session.giftcards) return
+    const prior = new Set(previous.session.giftcards.map(({ id }) => id))
+    const giftcards = state.session.giftcards.filter(({ id }) => !prior.has(id))
+    if (giftcards.length) dispatch({ type: 'distribution/gifts_received', giftcards })
   })
   events.on('STATE_UPDATED', (state, previous) => {
     if (state.navigation.page !== 'airdrop' || state.distribution.error) return

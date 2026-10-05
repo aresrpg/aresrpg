@@ -220,6 +220,7 @@ trade_panel:
 transaction_unknown_toast: Sua última ação ainda está sendo verificada. Novas transações estão bloqueadas até o resultado ser conhecido.
 transaction_recovered_toast: Sua transação anterior foi encontrada. Atualize para ver o resultado antes de escolher a próxima ação.
 world_hud:
+  map_party_legend: 'Ciano: grupo · Dourado: líder'
   dismount_prompt_touch: 'Toque para desmontar'
   spawn_press_attack_touch: 'Toque para atacar'
   resource_press_collect_touch: 'Toque para coletar {{name}}'
@@ -525,6 +526,8 @@ marketplace_page:
   collect_success: Valores do mercado retirados
   volume_partial: Volume registrado em {{window}}. O acompanhamento ainda não cobre todo o período, portanto este é um valor mínimo.
 mastery_page:
+  buy_quantity: 'Quantidade a comprar'
+  purchase_limit: 'Até {{count}} por compra.'
   subtitle: Desafios diários
   title: Maestria
   lead: Conclua missões diárias de masmorras para ganhar recompensas únicas. Pular um dia nunca custa pontos de Maestria acumulados.
@@ -554,6 +557,16 @@ mastery_page:
   quest_started: Missão diária atribuída.
   offer_purchased: Recompensa de Maestria comprada.
 airdrop_page:
+  reward_title: 'Recebeste um presente!'
+  reward_received: 'Recebeste {items}!'
+  reward_needs_sui: 'O teu presente está seguro na tua carteira. Adiciona um pouco de SUI para pagar a transação e depois resgata a tua recompensa.'
+  reward_complete: 'A tua recompensa está disponível no inventário.'
+  reward_redeeming: 'O teu presente chegou. A adicionar ao inventário…'
+  reward_held: 'O teu presente está na tua carteira. Resgata-o para adicionar a recompensa ao inventário.'
+  reward_used_title: 'Cartão já resgatado'
+  reward_used_body: 'Este cartão já foi resgatado ou já não está disponível. Cada cartão só pode ser usado uma vez.'
+  reward_continue: 'Continuar'
+  reward_item: 'Presente'
   destination: 'Carteira do jogo:'
   refresh: Atualizar
   title: Airdrops
@@ -651,6 +664,9 @@ settings_page:
   render_distance_label: Distância de renderização
   render_distance_hint: Até onde o mundo carrega ao seu redor. Valores maiores exigem mais desempenho.
 tutorial:
+  got_it: 'Entendi'
+  craft_failure_title: 'A fabricação falhou'
+  craft_failure_body: 'A fabricação pode falhar e consome os ingredientes. Aumente o nível da profissão para melhorar suas chances. Confira a chance de sucesso antes de tentar novamente.'
   progress: '{{current}} / {{total}}'
   skip: Pular tutorial
   back: Voltar
@@ -676,7 +692,7 @@ tutorial:
   spells_title: Feitiços
   spells_body: 'Escolha um feitiço para comparar níveis. Use pontos de feitiço para melhorá-lo.'
   jobs_title: Profissões
-  jobs_body: 'Escolha profissão e receita. Clique nos ingredientes para inspecioná-los e fabrique quando tiver o suficiente.'
+  jobs_body: 'Escolha uma profissão e uma receita. Confira a chance de sucesso antes de fabricar. Selecione ingredientes para encontrar suas fontes.'
   runeforge_title: Forja de runas
   runeforge_body: 'No nível de profissão {{level}}, use runas para melhorar equipamentos. Triture equipamentos indesejados para obter runas.'
 admin_page:
@@ -886,6 +902,8 @@ simulator_page:
   blob_single: Forma única
   blob_click: Posicionar ao clicar na célula
 fight_hud:
+  turn_timer_hint: 'Quando o tempo acabar, outro jogador poderá encerrar seu turno. Ele não termina automaticamente.'
+  result_gas_hint: 'Seu gas líquido registrado neste combate nas últimas 24 horas, incluindo criação e reembolsos de armazenamento. Não inclui custos de outros jogadores.'
   stop_spectating: Parar de assistir
   board_label: Tabuleiro de combate
   turn_order: Ordem dos turnos
@@ -952,6 +970,8 @@ fight_hud:
   chat_tab_combat: Combate
   chat_placeholder: Diga algo…
   chat_fetching_item: Buscando atributos na blockchain…
+  result_waiting_items: Aguardando os detalhes da recompensa…
+  result_item_unavailable: Esta recompensa não está mais no seu inventário.
   chat_item_unavailable: Este item está indisponível na blockchain.
   chat_you: Você
   chat_line: '{name}: {message}'
@@ -2242,6 +2262,21 @@ item_categories:
   relic_slot: Relíquia {{number}}
 kares: Staking
 kares_page:
+  blast_soon: 'Venda de tokens em breve na Blast'
+  blast_live: 'A venda de KARES está aberta'
+  blast_closing: 'Venda encerrada · liquidação pendente'
+  blast_funded: 'Venda financiada · lançamento pendente'
+  blast_complete: 'KARES já está na Blast'
+  blast_cancelled: 'Venda cancelada · reembolsos disponíveis'
+  blast_loading: 'Consultando a venda da Blast…'
+  blast_unavailable: 'Estado da venda indisponível'
+  blast_note: 'Ajude a construir o próximo capítulo de AresRPG.'
+  blast_action: 'Ver na Blast'
+  blast_progress: 'Progresso do financiamento'
+  upgradeability_note: 'Os contratos de recompensas poderão ser atualizados até ao congelamento definitivo do projeto. A emissão de tokens permanece desativada.'
+  claim_batch: 'Resgatar {{count}} de {{total}} posições'
+  withdraw_batch: 'Até {{count}} posições por saque. Repita para sacar o saldo restante.'
+  unallocated_supply: 'Oferta restante'
   stake_more: Adicionar ao staking
   additional_daily: Adicional / dia
   max: Máx
@@ -2253,171 +2288,53 @@ kares_page:
   daily_kares: KARES / dia · est.
   daily_sui: SUI / dia · est.
   daily_estimate_note: As estimativas diárias cobrem as próximas 24 horas com sua participação atual e o cronograma financiado de recompensas. Elas podem mudar.
-  position_rewards: Recompensas da posição
   manage_stake: Gerenciar staking
   same_account: Esta carteira já é sua conta AresRPG. Gerencie seu staking na seção da conta.
-  claim_kares: Resgatar KARES
   close: Fechar
-  sale_card_soon_title: Prepare-se.
-  sale_card_soon_note: A venda pública começará em breve.
-  sale_card_soon_action: Explorar a venda
-  sale_card_live_label: Venda aberta
-  sale_card_live_title: GARANTA SEU LUGAR AGORA
-  sale_card_target_reached: Meta atingida
-  sale_card_done_title: Venda concluída
-  sale_card_done_note: Resgate seus tokens KARES e eventuais reembolsos em SUI.
-  sale_card_refund_note: Mínimo não atingido. Resgate o reembolso integral em SUI.
-  community_release_note: Só a tesouraria pode resgatar KARES da comunidade, liberados ao longo de 1.825 dias após a liquidação bem-sucedida da venda. Tokens resgatados podem ser distribuídos ou queimados.
-  sale_unlock_note: Os tokens da venda são liberados integralmente quando ela termina com sucesso.
-  unlocked_immediately: liberados imediatamente
+  community_release_note: 'A reserva financiada é desbloqueada para a tesouraria durante 1.825 dias de calendário.'
   vested_five_years: liberação em 5 anos
-  eyebrow: Um mundo que vale construir
-  launch_title: Construa o próximo capítulo.
-  launch_lead: Participe da venda pública inicial de KARES. Financie o AresRPG e ajude um mundo vivo a crescer.
-  offering: Venda pública inicial
-  fixed_supply: Oferta fixa
-  fair_share: Um preço. Distribuição proporcional.
-  fair_detail: Sua parcela final acompanha sua contribuição. Contribuições excedentes são reembolsadas proporcionalmente.
+  fixed_supply: 'Oferta inicial'
   connect: Conectar carteira
   disconnect: Desconectar
-  choose_account: Escolha uma conta
   no_wallet: Instale uma carteira Sui para participar.
   refresh: Atualizar
   loading: Lendo estado da blockchain…
-  unavailable: A oferta ainda não está disponível nesta rede.
   pending: Confirmando transação…
   confirmed: Transação confirmada
-  contribute: Contribuir SUI
   amount: Quantidade
   balance: Saldo disponível
   amount_invalid: Digite uma quantidade positiva com até 9 casas decimais.
   insufficient: A quantidade excede seu saldo disponível.
   gas_note: Mantenha algum SUI disponível para taxas de transação.
-  raised: Contribuído
-  minimum: Arrecadação mínima
-  maximum: Máximo aceito
-  opens: Abre
-  closes: Fecha
-  estimate: Preço final estimado
-  price_note: A distribuição final é definida quando a oferta termina.
-  your_contribution: Sua contribuição
-  claim: Resgatar KARES e SUI excedente
-  refund: Resgatar reembolso
-  upcoming: Não iniciado
-  open: Oferta aberta
-  successful: Venda bem-sucedida
-  refundable: Reembolsos disponíveis
   testnet: Testnet · somente ativos de teste
   back_game: Explorar AresRPG
-  funding_title: Um mundo financiado pela comunidade
-  liquidity: Liquidez inicial
-  development: Tesouraria de desenvolvimento
-  liquidity_note: Reservado para o mercado inicial KARES/SUI. A criação do pool é gerenciada pelo projeto.
-  development_note: Financiamento do jogo, da infraestrutura e do próximo capítulo.
   staking_title: Seu staking. Sua participação.
-  staking_lead: Faça staking de KARES para participar das recompensas liberadas em KARES e SUI. Resgate as recompensas acumuladas a qualquer momento.
-  pool_stake: Total em staking
   your_stake: Seu staking
   claimable: Recompensas acumuladas
   stake: Fazer staking de KARES
   withdraw: Retirar do staking
   claim_rewards: Resgatar recompensas
-  fund_title: Financiar recompensas da comunidade
-  fund_note: Doações são divididas entre todos os participantes ao longo de 30 dias ativos de recompensas. Não podem ser retiradas.
-  donate: Doar
-  no_positions: Suas posições de staking aparecerão aqui.
-  inactive: O staking abre após a liquidação bem-sucedida da oferta.
-  account_label: Conta
+  inactive: 'O staking abre quando as reservas estiverem financiadas.'
   position: Posição
   tokenomics: Economia do token KARES
   community: Recompensas da comunidade
   team: Alocação da equipe
   five_years: Recompensas comunitárias de staking
   mastery_title: Jogue por recompensas. Ou queime KARES.
-  mastery_note: Cada oferta de Maestria custa o mesmo número de pontos ganhos ou KARES. KARES gastos são queimados permanentemente.
-  rewards_note: 200.000 KARES são liberados ao longo de 1.825 dias ativos de recompensas. Doações adicionais são liberadas em 30 dias ativos. A emissão pausa quando ninguém faz staking.
+  mastery_note: 'Cada ponto do preço de Maestria equivale a 1.000 KARES. Os KARES gastos são queimados permanentemente.'
+  rewards_note: 'As recompensas são libertadas ao longo de 1.825 dias ativos. Qualquer pessoa pode doar KARES ou SUI: a distribuição começa no próximo dia ativo e dura 30 dias ativos, sem prolongar os calendários anteriores. As doações não podem ser recuperadas. O relógio pausa sem participantes; as recompensas ganhas continuam disponíveis.'
   revenue_note: 20% dos royalties coletados no mercado vão para recompensas de staking em SUI. As recompensas variam com a receita e a participação no staking.
-  payment: Pagar com
   points: Pontos de Maestria
-  burn_buy: Queimar {{cost}} KARES
+  buy_kares: 'Comprar - {{cost}} KARES'
   kares_missing: KARES insuficientes
   language: Idioma
-  refund_note: Se a venda terminar abaixo do mínimo, sua contribuição inteira poderá ser reembolsada.
-  offering_contract: Contrato da oferta
-  min_marker: MÍN
-  max_marker: MÁX
-  min_reached: Mínimo atingido
-  min_pending: Rumo ao mínimo
-  oversubscribed: Demanda acima do limite
-  subscribed: de adesão
-  oversub_note: Ainda aberta. Todos compartilham o mesmo preço; SUI excedente é reembolsado proporcionalmente.
-  opens_in: Abre em
-  closes_in: Fecha em
-  days_short: d
-  your_investment: Sua contribuição
-  your_allocation: Sua alocação de KARES
-  current_price: Preço atual da oferta
-  estimated_until_close: Estimado até o fechamento da oferta
-  accepted_contribution: Contribuição aceita
-  excess_refund: SUI devolvido a você
-  unclaimed_note: Sua contribuição e alocação não resgatadas
-  connect_preview: Conecte sua carteira para ver sua participação
-  no_pending_allocation: Nenhuma contribuição não resgatada
-  play_game: Jogar
-  play_game_note: Explore o mundo que você está ajudando a construir.
-  join_title: Garanta seu lugar no próximo capítulo.
-  join_note: 400.000 KARES. Uma janela de oferta. Uma parcela para cada contribuinte.
-  step_connect: Conecte sua carteira
-  step_contribute: Escolha sua contribuição em SUI
-  step_claim: Resgate KARES e SUI excedente
-  allocation_lead: Um milhão de tokens. Todas as alocações divulgadas.
-  community_detail: 11% ficam em reservas comunitárias para airdrops, marketing, classificações sazonais, competições, prêmios de arena PvP, participantes da testnet e colaboradores úteis. As alocações são gerenciadas pelo projeto.
-  supply_detail: Todos os 1.000.000 KARES são criados uma única vez. Nenhum outro pode ser criado. Compras de Maestria queimam KARES permanentemente.
-  emissions_detail: Os 200.000 KARES de recompensas de staking vêm dessa oferta existente. A liberação de recompensas não cria novos tokens.
-  price_cap_note: A arrecadação aceita para no máximo. Mais contribuições alteram as parcelas, não o preço limitado da oferta.
-  awaiting_minimum: Alocação e preço aparecem quando o mínimo é atingido.
-  claimable_tokens: KARES prontos para resgate
-  refundable_sui: Seu reembolso em SUI
-  final_price: Preço final da oferta
-  full_refund: Seu reembolso integral em SUI
-  nav_funding: Financiamento
-  nav_benefits: Benefícios
-  nav_tokenomics: Economia do token
-  nav_incentives: Incentivos públicos
-  nav_play: Jogar
-  benefits_title: Uma participação no mundo. Mais formas de jogar.
-  benefits_lead: KARES conecta recompensas do jogo, incentivos comunitários e uma parcela dos royalties do mercado.
-  revenue_title: Participe do sucesso do jogo.
-  revenue_metric: das receitas do AresRPG
-  revenue_detail: Compartilhados com participantes do staking de KARES.
-  baseline_title: Recompensas comunitárias. Já na oferta existente.
-  baseline_detail: 200.000 KARES existentes financiam 1.825 dias ativos de recompensas. Faça staking para participar da liberação e resgate o acumulado quando quiser. Nenhum token adicional é criado.
-  crates_title: Seus KARES. Sua próxima caixa.
-  crates_detail: As ofertas de Maestria incluem caixas de alimentos, recursos, mascotes e cosméticos. Pague o mesmo custo em KARES ou ganhe pontos de Maestria jogando. KARES gastos são queimados permanentemente.
-  incentives_title: Qualquer pessoa pode aumentar as recompensas.
-  incentives_detail: Qualquer pessoa pode doar SUI ou KARES às recompensas compartilhadas de staking. Cada depósito começa a ser liberado no próximo dia ativo de recompensas e se distribui por 30 dias ativos. As doações recompensam todos os participantes proporcionalmente e não podem ser retiradas.
-  incentives_clock: O relógio de recompensas pausa quando ninguém faz staking. Novos fundos nunca prolongam os cronogramas de depósitos anteriores.
-  incentives_examples: Financie um evento. Celebre uma conquista. Recompense a comunidade.
-  play_title: O mundo espera por você. Vá explorá-lo.
-  play_detail: Jogue AresRPG durante a venda pública inicial. Conheça a comunidade e descubra o jogo por trás de KARES.
+  community_detail: 'A reserva comunitária financia eventos, airdrops, colaboradores, classificações sazonais e prémios PvP. A tesouraria distribui manualmente os tokens desbloqueados.'
+  supply_detail: 'Emitida uma única vez. Não há nova emissão. A queima reduz a oferta.'
+  emissions_detail: 'Todas as recompensas usam tokens existentes. Os pagamentos nunca criam nova oferta.'
   confirmed_refresh: Transação confirmada. Atualize para carregar seus saldos atuais.
-  stage_minimum: Financiamento mínimo
-  stage_maximum: Arrecadando até o máximo
-  minimum_refund: Reembolso integral se o mínimo não for atingido.
-  full_refund_available: Sua contribuição inteira está disponível para reembolso.
-  refund_claim_note: Resgate seu reembolso aqui se a venda terminar abaixo do mínimo. Reembolsos não são enviados automaticamente.
   staking_unavailable: O staking ainda não está disponível nesta rede.
-  basecamp_announcement: Encontre o AresRPG no Sui Basecamp em Singapura, de 7 a 9 de outubro. Venha conversar e pegar caixas de saque.
-  funding_unknown: Dados de financiamento indisponíveis.
-  success_threshold: Limite de sucesso
-  sale_cap: Máximo aceito
-  cap_overflow: Acima do teto
-  overflow_refunds: reservados para reembolsos proporcionais
   combat_rewards: Recompensas de chefes
-  combat_detail: 100.000 KARES financiam um fundo público de combate. Qualquer pessoa pode adicionar tokens. Os níveis dos chefes determinam uma recompensa, dividida igualmente entre os personagens vencedores. O teto diário de cerca de 54,79 KARES garante ao fundo inicial pelo menos cinco anos de recompensas. Dias tranquilos e doações prolongam sua duração. A atividade por época ajusta o valor; recompensas não pagas nunca viram dívida.
-  allocation_rationale: '590.000 KARES (59%) estão disponíveis no lançamento: venda, liquidez e equipe. Liberações programadas adicionam no máximo cerca de 82.000 no primeiro ano, ou 13,90% do valor inicial, antes de queimas. O staking pausa sem participantes. A liberação comunitária segue o calendário. O combate pode liberar menos. Essas liberações usam tokens existentes; a inflação por criação é zero. Doações redistribuem tokens existentes. Nenhum resultado de preço é garantido.'
-  launch_market_cap: Capitalização circulante no lançamento
-  launch_market_cap_note: 'Se a venda terminasse agora: preço limitado da venda × 590.000 KARES disponíveis no lançamento. Sem lançamento abaixo do financiamento mínimo.'
+  combat_detail: 'O nível dos chefes determina uma recompensa dividida igualmente entre as personagens vencedoras. O limite é de {{cap}} KARES por dia desde a configuração. A atividade por época ajusta a recompensa. Dias calmos não acumulam pagamentos; doações prolongam a reserva.'
   error_generic: Não foi possível concluir a ação.
   error_rejected: A solicitação foi cancelada.
   error_funds: Não há fundos suficientes para esta ação e suas taxas.
@@ -2426,6 +2343,14 @@ kares_page:
   error_unknown: Sua última ação ainda está sendo verificada. Novas transações estão bloqueadas até o resultado ser conhecido.
   error_recovered: Sua transação anterior foi encontrada. Atualize para ver o resultado antes de escolher a próxima ação.
 leaderboard_page:
+  profile_title: 'Perfil do jogador'
+  profile_jobs: 'Maiores profissões entre todos os personagens'
+  profile_empty: 'Nenhum personagem possuído atualmente.'
+  profile_select: 'Selecione um personagem para ver seu equipamento.'
+  profile_unavailable: 'As informações do perfil estão temporariamente indisponíveis.'
+  profile_missing: 'Este personagem não pertence mais a este jogador.'
+  profile_previous: 'Anterior'
+  profile_next: 'Próximo'
   unclaimed: Não resgatado
   reset_in: Reinício {{time}}
   xp: XP de combate
@@ -2499,6 +2424,19 @@ item_drop_sources:
   quantity: Quantidade
   levels: Nível {{min}}–{{max}}
 journey:
+  map_travel_title: 'Encontre seu caminho'
+  map_travel_body: 'Abra o mapa e escolha um local acessível próximo. Deixe seu personagem caminhar até lá automaticamente. Isso também ajuda a sair de obstáculos quando ficar preso.'
+  map_travel_objective: 'Chegue a um destino próximo usando o mapa'
+  mob_details: 'Ver criatura'
+  first_hunt_title: 'Sua primeira caçada'
+  first_hunt_body: 'Encontre um Tinker perto de Thebes ou na floresta. Vença a luta e receba as recompensas. Os galhos dele podem ajudar a fazer sua primeira ferramenta.'
+  first_hunt_objective: 'Vença uma luta contra um Tinker'
+  hoe_materials_title: 'Prepare uma tentativa'
+  hoe_materials_body: 'Tinkers podem deixar galhos roídos; Nooks, sucata recuperada. Junte os ingredientes da receita abaixo ou compre-os. Recursos disponíveis que você já tem contam.'
+  hoe_materials_objective: 'Junte ingredientes para um {{item}}'
+  first_craft_title: 'Aprenda tentando'
+  first_craft_body: 'Abra a receita e confira a chance de sucesso. Os ingredientes são consumidos mesmo se falhar. Nos níveis iniciais, falhas também dão XP de profissão. Uma tentativa completa esta missão.'
+  first_craft_objective: 'Tente fabricar {{item}}'
   title: Sobrevivendo em Nauvis
   eyebrow: Sua aventura começa aqui
   progress: Progresso da jornada
@@ -2530,7 +2468,7 @@ journey:
   welcome_title: Boas-vindas a Nauvis.
   welcome_body: AresRPG recompensa quem aprende, se prepara e joga com inteligência. Aprenda a otimizar e automatizar seu jogo gastando o mínimo de SUI possível. Siga esta jornada para dar os primeiros passos.
   hoe_title: Todos precisamos de uma enxada.
-  hoe_body: Nauvis é seu primeiro mundo. Equipamentos mais fortes ajudam você a alcançar mundos mais perigosos, e ferramentas permitem coletar ingredientes para fabricá-los. Compre {{item}} de outro jogador ou fabrique em Personagens → Profissões → Artesão.
+  hoe_body: 'Compre {{item}} ou fabrique em Personagens → Profissões → Faz-tudo. Abra a receita e selecione ingredientes para ver suas fontes. Procure Tinkers perto de Thebes e nas florestas; jogadores mais fortes podem caçar javalis nas planícies e florestas para obter galhos roídos.'
   hoe_objective: Tenha {{item}}
   wheat_title: Vamos pôr a mão na massa.
   wheat_body: Fabricar seus equipamentos começa pela coleta de ingredientes. Trigo é usado em alimentos e materiais de equipamento, então é um bom começo. Encontre um ponto de trigo em Nauvis e faça sua primeira colheita!
@@ -2763,3 +2701,18 @@ adventure:
   follow_body: 'Você tem um grupo. Agora precisa mantê-lo unido. Selecione Senshi como líder e ative Seguir líder nos controles do grupo. Sceat seguirá você durante a exploração, evitando percorrer a mesma estrada duas vezes. No combate, você continuará escolhendo os movimentos e feitiços de cada herói.'
   guards_body: 'Gobadoc não deixa sua entrada desprotegida. Os guardas estão prontos, e agora há dois heróis para coordenar. Confira seu novo equipamento antes de desafiá-los. Combine a força de Senshi com as armadilhas de Sceat. Um inimigo bem posicionado costuma ser mais fácil de derrotar que um perseguido sem pensar.'
   boss_body: 'Depois dos guardas espera Gobadoc, com a relíquia que Sceat procura. O rei goblin não ganhou seu título perdendo lutas. Vocês aprenderam a lutar juntos, mas este adversário é diferente. Aproxime-se com seu companheiro e descubra até onde essa nova parceria pode levar vocês.'
+
+discord_marketplace:
+  title: 'MERCADO · VENDA'
+  sale: '**{seller}** acabou de vender **{amount}× {item}** por **{price} SUI**'
+  price_before_fees: 'Preço de venda antes das taxas'
+  gather_title: 'Coleta rara'
+  gather: '**{player}** descobriu **{item}** durante a coleta.'
+  victory_title: 'Vitória na masmorra'
+  victory: '**{party}** derrotou **{boss}**!'
+  loot_title: 'Saque excepcional'
+  loot: '**{player}** encontrou **{item}** com **{quality}% de qualidade**.'
+  sold_by: 'Vendido por {player}'
+  found_by: 'Encontrado por {player}'
+  boss_defeated: 'Chefe final derrotado'
+  level: 'Nível'

@@ -18,19 +18,9 @@ import { rolled_item_types } from '../modules/claims.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
-type CampaignRow = (typeof content_catalog.airdrop.campaigns)[number]
-type GiftcardGroup = Readonly<{ template: string; amount: number }>
+import { group_giftcards, type GiftcardGroup } from './gift_rewards.ts'
 
-export const group_giftcards = (cards: SessionState['giftcards']): readonly GiftcardGroup[] =>
-  Object.values(
-    [...new Map(cards.map((card) => [card.id, card])).values()].reduce<Record<string, GiftcardGroup>>(
-      (groups, card) => ({
-        ...groups,
-        [card.template]: { template: card.template, amount: (groups[card.template]?.amount ?? 0) + card.amount },
-      }),
-      {}
-    )
-  )
+type CampaignRow = (typeof content_catalog.airdrop.campaigns)[number]
 
 const giftcard_item = (giftcard: GiftcardGroup) => {
   const item_type = rolled_item_types().get(giftcard.template)

@@ -13,7 +13,7 @@ use aresrpg::{
   item::{Self, Item},
 };
 use aresrpg_control::admin::AdminCap;
-use aresrpg_kares::kares::{Self, KARES};
+use aresrpg_rewards::{amounts, economy::{Self, Economy}};
 use aresrpg_math::{city_map, dungeon_data, world_map};
 use aresrpg_seed::{
   dungeon_content::{Self, DungeonContent},
@@ -97,7 +97,7 @@ public fun new_offer(
   enabled: bool,
   ctx: &TxContext,
 ) {
-  assert!(cost > 0 && cost <= std::u64::max_value!() / kares::unit(), EInvalidCost);
+  assert!(cost > 0 && cost <= std::u64::max_value!() / amounts::mastery_price(1), EInvalidCost);
   assert!(!item_rows::has_stats(template), EOfferNeedsPlainTemplate);
   let item_type = item_rows::template_type(template);
   transfer::share_object(MasteryOffer {
@@ -255,9 +255,10 @@ public(package) fun redeem(
 }
 
 /// The same authored offer can burn whole KARES without creating or changing a Mastery score.
-public(package) fun redeem_kares(
-  currency: &mut Currency<KARES>,
-  payment: Coin<KARES>,
+public(package) fun redeem_token<Token>(
+  economy: &Economy,
+  currency: &mut Currency<Token>,
+  payment: Coin<Token>,
   offer: &MasteryOffer,
   template: &ItemTemplate,
   existing: Option<ID>,
@@ -267,7 +268,8 @@ public(package) fun redeem_kares(
   ctx: &mut TxContext,
 ) {
   assert_offer(offer, template);
-  assert!(payment.value() == offer.cost * kares::unit(), EIncorrectPayment);
+  economy::assert_currency(economy, currency);
+  assert!(payment.value() == amounts::mastery_price(offer.cost), EIncorrectPayment);
   coin_registry::burn(currency, payment);
   item::deposit(kiosk, cap, policy, existing, item::mint_plain(template, 1, ctx));
 }

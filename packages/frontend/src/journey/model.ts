@@ -7,11 +7,20 @@ export type JourneyQuest = Readonly<{
   id: string
   chapter: string
   item: string
-  kind: 'start' | 'own' | 'harvest' | 'dungeon' | 'tutorial'
+  kind: 'start' | 'own' | 'harvest' | 'dungeon' | 'tutorial' | 'hunt' | 'materials' | 'craft' | 'map'
   dungeon?: string
+  mob?: string
+  /** Optional learning steps retire once their practical milestone is already achieved. */
+  superseded_by?: string
 }>
 
 export const JOURNEY_QUESTS: readonly JourneyQuest[] = source as readonly JourneyQuest[]
+
+export const relevant_quests = (
+  completed: readonly string[],
+  quests: readonly JourneyQuest[] = JOURNEY_QUESTS
+): readonly JourneyQuest[] =>
+  quests.filter((quest) => completed.includes(quest.id) || !completed.includes(quest.superseded_by ?? ''))
 
 export const completed_quests_from = (value: unknown): readonly string[] =>
   Object.freeze(JOURNEY_QUESTS.filter(({ id }) => Array.isArray(value) && value.includes(id)).map(({ id }) => id))
@@ -19,7 +28,7 @@ export const completed_quests_from = (value: unknown): readonly string[] =>
 export const next_quest = (
   completed: readonly string[],
   quests: readonly JourneyQuest[] = JOURNEY_QUESTS
-): JourneyQuest | null => quests.find(({ id }) => !completed.includes(id)) ?? null
+): JourneyQuest | null => relevant_quests(completed, quests).find(({ id }) => !completed.includes(id)) ?? null
 
 export type JourneyState = Readonly<{
   identity: string | null

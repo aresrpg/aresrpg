@@ -8,7 +8,7 @@ import move_packages from '../move-packages.json' with { type: 'json' }
 
 import { JOURNAL_CONTENT_PREFIXES, SCENE_COMPILER_FILES } from './release_inputs.mjs'
 
-const BROWSER_PACKAGES = ['ui', 'frontend', 'mobile', 'launchpad', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
+const BROWSER_PACKAGES = ['ui', 'frontend', 'mobile', 'engine', 'sdk', 'fight', 'immutable', 'protocol']
 const BROWSER_FILES = [
   ...SCENE_COMPILER_FILES,
   'bun.lock',

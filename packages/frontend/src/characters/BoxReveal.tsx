@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// LOOT-BOX reveal overlay — the canon OPEN → CHARGE → BURST → REVEAL lifecycle, ported from
-// the proven BoxReveal (visuals verbatim in box_reveal.css, [data-phase]-driven keyframes).
+// One OPEN → CHARGE → BURST → REVEAL timeline presents single and batch rewards.
 // ONE player gesture: consume the box. The open transaction fires on mount; its RECEIPT
 // starts the celebration and names the roll (the event carries the template — the item
 // resolves PURELY off the authored catalog, zero chain reads). The CLAIM is the SILENT
@@ -13,7 +12,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { ItemRow } from '@aresrpg/protocol'
 import { Loader2 } from 'lucide-react'
-import { NativeModal } from '@aresrpg/ui'
+import { Button, NativeModal } from '@aresrpg/ui'
 
 import { play_audio } from '../game/audio/audio_registry.ts'
 import { rolled_item_types } from '../modules/claims.ts'
@@ -28,6 +27,13 @@ import './box_reveal.css'
 const CHARGING_MS = 1_200
 const BURST_MS = 500
 const PENDING_ESCAPE_MS = 10_000
+const PHASE_TITLE = {
+  pending: 'unsealing',
+  charging: 'unsealing',
+  burst: 'revealing',
+  resolving: 'revealing',
+  reveal: 'reveal_eyebrow',
+} as const
 
 export const BoxReveal = ({
   box,
@@ -161,42 +167,65 @@ export const BoxReveal = ({
     // the claim flight is durable — dismissing never cancels it, its toast narrates
     if (phase === 'reveal' || phase === 'resolving' || (phase === 'pending' && escape_ready)) close()
   }, [phase, escape_ready, close])
+  const columns = Math.min(count, Math.ceil(Math.sqrt(count * 1.5)))
+  const mobile_columns = Math.ceil(Math.sqrt(count / 1.5))
+  const wide_columns = Math.min(count, Math.ceil(Math.sqrt(count * 3)))
 
   return (
     <NativeModal
       close={dismiss}
-      label={t('reveal_eyebrow')}
-      className={`boxreveal${count > 1 ? ' boxreveal--batch' : ''}`}
+      label={t(PHASE_TITLE[phase])}
+      className="boxreveal"
       data-phase={phase}
       style={
         {
-          '--columns': Math.ceil(Math.sqrt(count * 1.5)),
-          '--rows': Math.ceil(count / Math.ceil(Math.sqrt(count * 1.5))),
-          '--mobile-columns': Math.ceil(Math.sqrt(count / 1.5)),
-          '--mobile-rows': Math.ceil(count / Math.ceil(Math.sqrt(count / 1.5))),
+          '--columns': columns,
+          '--rows': Math.ceil(count / columns),
+          '--mobile-columns': mobile_columns,
+          '--mobile-rows': Math.ceil(count / mobile_columns),
+          '--wide-columns': wide_columns,
+          '--wide-rows': Math.ceil(count / wide_columns),
         } as CSSProperties
       }
       onClick={() => (animating ? skip() : dismiss())}
     >
-      <div className="boxreveal__grid">
-        {Array.from({ length: count }, (_, index) => (
-          <div key={index} className="boxreveal__cell">
-            <BoxRevealCell item_type={box.item_type} phase={phase} roll={rolled?.[index]} text={t} />
+      <div className="boxreveal__surface">
+        <section className="boxreveal__panel">
+          <header className="boxreveal__heading" aria-live="polite">
+            <p>
+              {box.name} ×{count}
+            </p>
+            <h2>{t(PHASE_TITLE[phase])}</h2>
+          </header>
+          <div className="boxreveal__body">
+            <div className="boxreveal__grid">
+              {Array.from({ length: count }, (_, index) => (
+                <div
+                  key={index}
+                  className="boxreveal__cell"
+                  style={{ '--reveal-delay': `${Math.min(index, 8) * 45}ms` } as CSSProperties}
+                >
+                  <BoxRevealCell item_type={box.item_type} phase={phase} roll={rolled?.[index]} text={t} />
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+          <footer className="boxreveal__footer" onClick={(event) => event.stopPropagation()}>
+            {animating && <Button onClick={skip}>{t('skip_hint')}</Button>}
+            {phase === 'reveal' &&
+              (collected || collect_escape ? (
+                <Button tone="primary" className="boxreveal__collect" onClick={close}>
+                  {t('continue_cta')}
+                </Button>
+              ) : (
+                <Button tone="primary" className="boxreveal__collect" disabled>
+                  <Loader2 className="boxreveal__spin" size={15} />
+                  {t('collecting')}
+                </Button>
+              ))}
+          </footer>
+        </section>
       </div>
-      {animating && <div className="boxreveal__skip">{t('skip_hint')}</div>}
-      {phase === 'reveal' &&
-        (collected || collect_escape ? (
-          <button className="btn-gold boxreveal__collect" onClick={close} type="button">
-            {t('continue_cta')}
-          </button>
-        ) : (
-          <button className="btn-gold boxreveal__collect" disabled type="button">
-            <Loader2 className="boxreveal__spin" size={13} />
-            {t('collecting')}
-          </button>
-        ))}
     </NativeModal>
   )
 }

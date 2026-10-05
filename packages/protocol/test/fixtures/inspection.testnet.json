@@ -1,0 +1,15 @@
+{
+  "provenance": {
+    "source": "Authenticated local rehearsal websocket, projected from Sui testnet",
+    "captured_at": "2026-10-04T07:26:13.244Z",
+    "package_original": "0x4f532487e0cc336b593f79bc20b9f9220d02f8e554b754e0b5971f1dfc9e5d01",
+    "character": "0x865eddaf08e65a13db6523a49a62bd5d2a5b9296dbb12401cb4bb14175fe7e8a",
+    "equipped_item": "0x0be1ba9ccdbf6e4d9f5877c0a6fafc67e13f983439c2abe296f104c22e76cea9",
+    "item_version": "1037913476",
+    "checkpoint": 390183928
+  },
+  "messages": [
+    "{\"type\":\"packet/inspection_result\",\"id\":1,\"result\":{\"kind\":\"profile\",\"profile\":{\"characters\":[{\"id\":\"0x865eddaf08e65a13db6523a49a62bd5d2a5b9296dbb12401cb4bb14175fe7e8a\",\"name\":\"karesrehearsal\",\"classe\":\"senshi\",\"level\":30}],\"character_count\":1,\"next\":null,\"jobs\":[{\"job\":\"FARMER\",\"level\":1},{\"job\":\"HERBALIST\",\"level\":1},{\"job\":\"MINER\",\"level\":1},{\"job\":\"FORGER\",\"level\":1},{\"job\":\"CARVER\",\"level\":1},{\"job\":\"TAILOR\",\"level\":1},{\"job\":\"JEWELER\",\"level\":1},{\"job\":\"TANNER\",\"level\":1},{\"job\":\"HANDYMAN\",\"level\":1},{\"job\":\"ALCHEMIST\",\"level\":1},{\"job\":\"BAKER\",\"level\":1}]}}}",
+    "{\"type\":\"packet/inspection_result\",\"id\":2,\"result\":{\"kind\":\"equipment\",\"equipment\":[{\"slot\":\"relic_1\",\"id\":\"0x0be1ba9ccdbf6e4d9f5877c0a6fafc67e13f983439c2abe296f104c22e76cea9\",\"ckpt\":390183928,\"name\":\"Temporary Dev Relic\",\"item_type\":\"sun_eyed_lorito\",\"category\":\"relic\",\"level\":1,\"amount\":1,\"version\":\"1037913476\",\"puits\":\"0\",\"stats\":{\"vitality\":33768,\"wisdom\":33768,\"strength\":33768,\"intelligence\":33768,\"chance\":33768,\"agility\":33768,\"range\":33768,\"movement\":32778,\"action\":32778,\"critical\":33768,\"raw_damage\":33768,\"earth_resistance\":33768,\"fire_resistance\":33768,\"water_resistance\":33768,\"air_resistance\":33768}}]}}"
+  ]
+}

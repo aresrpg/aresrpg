@@ -13,15 +13,14 @@ import {
   type WorldRecipe,
 } from '@aresrpg/engine'
 
-import adventure from '../../../../seed/content/adventure.json'
 import environment from '../../../../seed/content/adventure_environment.json'
 
-import { adventure_axis, adventure_biome, BRIDGE_HEIGHT, RIVER_CENTER_Z } from './biome.ts'
+import { adventure_axis, adventure_biome, cavern_floor, BRIDGE_HEIGHT, RIVER_CENTER_Z } from './biome.ts'
+import { adventure_cavern, cavern_movement_area } from './cavern.ts'
 
 export const ADVENTURE_SPAWN = Object.freeze(environment.spawn)
 export const ADVENTURE_GATE = Object.freeze({ min_z: 148, max_z: 154 })
 const ORIGIN = [96, 0, 96] as const
-const ROUTE_END = adventure.encounters.at(-1)!.position.z + 7
 const CAVE_ROCKS = [
   [116, 117],
   [137, 123],
@@ -37,11 +36,13 @@ const radius_at = (z: number): number => landscape_height(path_radius, z)
 export const adventure_movement_area =
   (unlocked: boolean) =>
   (x: number, z: number): boolean => {
+    if (z >= environment.descent.start_z) return unlocked && cavern_movement_area(x, z)
     const radius = z < 180 ? Math.max(3, radius_at(z) - 4) : 3.5
-    return z >= 100 && z < (unlocked ? ROUTE_END : ADVENTURE_GATE.min_z) && Math.abs(x - adventure_axis(z)) < radius
+    return z >= 100 && (unlocked || z < ADVENTURE_GATE.min_z) && Math.abs(x - adventure_axis(z)) < radius
   }
 
 export const adventure_floor = (world_x: number, world_z: number): number => {
+  if (world_z >= environment.descent.start_z) return cavern_floor(world_z)
   const x = Math.floor(world_x)
   const z = Math.floor(world_z)
   const route = landscape_height(
@@ -123,14 +124,12 @@ export const adventure_terrain = (): WorldRecipe => {
   Array.from({ length: 64 * 84 }, (_, index) => cave_column(96 + (index % 64), 96 + Math.floor(index / 64)))
     .flat()
     .forEach((fill) => blocks.fill(...fill))
-  for (let z = 180; z < 246; z += 1) {
-    const terrain_height = sample_world_column(world, 128, z).surface_y
+  for (let z = 180; z < environment.descent.start_z; z += 1) {
     const path_height = landscape_height(
       [
         [180, 76],
         [194, BRIDGE_HEIGHT],
         [228, BRIDGE_HEIGHT],
-        [246, terrain_height],
       ],
       z
     )
@@ -177,5 +176,5 @@ export const adventure_terrain = (): WorldRecipe => {
     origin: [x!, adventure_floor(x!, z!) - 1, z!],
     rotation: (index % 4) as 0 | 1 | 2 | 3,
   }))
-  return Object.freeze({ ...source, fixed_structures: Object.freeze([...trees, route, ...rocks]) })
+  return Object.freeze({ ...source, fixed_structures: Object.freeze([...trees, route, ...rocks, adventure_cavern()]) })
 }

@@ -223,6 +223,7 @@ trade_panel:
 transaction_unknown_toast: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
 transaction_recovered_toast: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
 world_hud:
+  map_party_legend: 'Xanh ngọc: tổ đội · Vàng: trưởng nhóm'
   dismount_prompt_touch: 'Chạm để xuống thú'
   spawn_press_attack_touch: 'Chạm để tấn công'
   resource_press_collect_touch: 'Chạm để thu thập {{name}}'
@@ -528,6 +529,8 @@ marketplace_page:
   collect_success: Đã nhận tiền bán trên chợ
   volume_partial: Khối lượng {{window}} đã ghi nhận. Dữ liệu chưa bao phủ cả kỳ nên đây là mức tối thiểu.
 mastery_page:
+  buy_quantity: 'Số lượng mua'
+  purchase_limit: 'Tối đa {{count}} mỗi lần mua.'
   subtitle: Thử thách hằng ngày
   title: Tinh thông
   lead: Hoàn thành nhiệm vụ ngục tối hằng ngày để nhận thưởng độc đáo. Bỏ lỡ một ngày không làm mất điểm Tinh thông đã tích lũy.
@@ -557,6 +560,16 @@ mastery_page:
   quest_started: Đã giao nhiệm vụ hằng ngày.
   offer_purchased: Đã mua phần thưởng Tinh thông.
 airdrop_page:
+  reward_title: 'Bạn đã nhận được quà!'
+  reward_received: 'Bạn đã nhận được {items}!'
+  reward_needs_sui: 'Quà của bạn đã được giữ an toàn trong ví. Hãy nạp một ít SUI để trả phí giao dịch, rồi nhận phần thưởng.'
+  reward_complete: 'Phần thưởng đã có trong túi đồ của bạn.'
+  reward_redeeming: 'Quà đã đến. Đang thêm vào túi đồ…'
+  reward_held: 'Quà đang ở trong ví của bạn. Hãy nhận để thêm phần thưởng vào túi đồ.'
+  reward_used_title: 'Thẻ đã được sử dụng'
+  reward_used_body: 'Thẻ này đã được sử dụng hoặc không còn khả dụng. Mỗi thẻ chỉ có thể dùng một lần.'
+  reward_continue: 'Tiếp tục'
+  reward_item: 'Quà'
   destination: 'Ví trò chơi:'
   refresh: Làm mới
   title: Airdrop
@@ -654,6 +667,9 @@ settings_page:
   render_distance_label: Khoảng cách hiển thị
   render_distance_hint: Khoảng cách tải thế giới xung quanh. Giá trị cao tốn hiệu năng hơn.
 tutorial:
+  got_it: 'Đã hiểu'
+  craft_failure_title: 'Chế tạo thất bại'
+  craft_failure_body: 'Chế tạo có thể thất bại và vẫn tiêu hao nguyên liệu. Tăng cấp nghề để cải thiện tỉ lệ thành công. Kiểm tra tỉ lệ trước khi thử lại.'
   progress: '{{current}} / {{total}}'
   skip: Bỏ qua hướng dẫn
   back: Quay lại
@@ -679,7 +695,7 @@ tutorial:
   spells_title: Phép
   spells_body: 'Chọn phép để so sánh các cấp. Dùng điểm phép để nâng cấp.'
   jobs_title: Nghề
-  jobs_body: 'Chọn nghề và công thức. Nhấp nguyên liệu để xem; chế tạo khi đã có đủ.'
+  jobs_body: 'Chọn nghề và công thức. Kiểm tra tỉ lệ thành công trước khi chế tạo. Chọn nguyên liệu để xem nguồn.'
   runeforge_title: Lò khắc ngọc
   runeforge_body: 'Ở cấp nghề {{level}}, dùng rune để nâng cấp trang bị. Nghiền trang bị không cần để nhận rune.'
 admin_page:
@@ -889,6 +905,8 @@ simulator_page:
   blob_single: Một hình
   blob_click: Đặt khi nhấp ô
 fight_hud:
+  turn_timer_hint: 'Khi hết giờ, người chơi khác có thể kết thúc lượt của bạn. Lượt không tự động kết thúc.'
+  result_gas_hint: 'Phí gas ròng của bạn được ghi nhận cho trận này trong 24 giờ qua, gồm phí tạo trận và khoản hoàn lưu trữ. Không gồm phí của người chơi khác.'
   stop_spectating: Dừng theo dõi
   board_label: Bàn chiến đấu
   turn_order: Thứ tự lượt
@@ -955,6 +973,8 @@ fight_hud:
   chat_tab_combat: Chiến đấu
   chat_placeholder: Nói gì đó…
   chat_fetching_item: Đang lấy chỉ số trên chuỗi…
+  result_waiting_items: Đang chờ thông tin phần thưởng…
+  result_item_unavailable: Phần thưởng này không còn trong túi đồ của bạn.
   chat_item_unavailable: Vật phẩm này không khả dụng trên chuỗi.
   chat_you: Bạn
   chat_line: '{name}: {message}'
@@ -2245,6 +2265,21 @@ item_categories:
   relic_slot: Di vật {{number}}
 kares: Staking
 kares_page:
+  blast_soon: 'Sắp mở bán token trên Blast'
+  blast_live: 'Đợt bán KARES đang diễn ra'
+  blast_closing: 'Đã kết thúc · chờ quyết toán'
+  blast_funded: 'Đã đủ vốn · chờ ra mắt'
+  blast_complete: 'KARES đã có trên Blast'
+  blast_cancelled: 'Đã hủy bán · có thể hoàn tiền'
+  blast_loading: 'Đang kiểm tra đợt bán trên Blast…'
+  blast_unavailable: 'Không thể xem trạng thái đợt bán'
+  blast_note: 'Cùng xây dựng chương tiếp theo của AresRPG.'
+  blast_action: 'Khám phá trên Blast'
+  blast_progress: 'Tiến độ huy động vốn'
+  upgradeability_note: 'Hợp đồng phần thưởng vẫn có thể nâng cấp cho đến khi dự án đóng băng vĩnh viễn. Việc phát hành token mới vẫn bị vô hiệu hóa.'
+  claim_batch: 'Nhận từ {{count}} trên {{total}} vị thế'
+  withdraw_batch: 'Tối đa {{count}} vị thế mỗi lần rút. Lặp lại để rút số đã stake còn lại.'
+  unallocated_supply: 'Nguồn cung còn lại'
   stake_more: Stake thêm
   additional_daily: Thêm mỗi ngày
   max: Tối đa
@@ -2256,171 +2291,53 @@ kares_page:
   daily_kares: KARES / ngày · dự kiến
   daily_sui: SUI / ngày · dự kiến
   daily_estimate_note: Ước tính cho 24 giờ tới theo tỷ trọng stake hiện tại và lịch thưởng đã tài trợ. Số liệu có thể thay đổi.
-  position_rewards: Thưởng vị thế
   manage_stake: Quản lý stake
   same_account: Ví này đã là tài khoản AresRPG của bạn. Quản lý stake trong phần tài khoản.
-  claim_kares: Nhận KARES
   close: Đóng
-  sale_card_soon_title: Sẵn sàng nhé.
-  sale_card_soon_note: Đợt bán công khai sắp mở.
-  sale_card_soon_action: Khám phá đợt bán
-  sale_card_live_label: Đang mở bán
-  sale_card_live_title: THAM GIA NGAY
-  sale_card_target_reached: Đã đạt mục tiêu
-  sale_card_done_title: Đợt bán hoàn tất
-  sale_card_done_note: Nhận KARES và SUI được hoàn lại.
-  sale_card_refund_note: Chưa đạt tối thiểu. Nhận hoàn toàn bộ SUI.
-  community_release_note: Sau khi đợt bán thành công, KARES cộng đồng mở khóa trong 1.825 ngày và chỉ ngân quỹ được nhận. Token đã nhận có thể phân phối hoặc đốt.
-  sale_unlock_note: Token bán được mở khóa hoàn toàn khi đợt bán kết thúc thành công.
-  unlocked_immediately: mở khóa ngay
+  community_release_note: 'Quỹ đã nạp được mở khóa cho ngân khố trong 1.825 ngày theo lịch.'
   vested_five_years: mở dần trong 5 năm
-  eyebrow: Thế giới đáng xây dựng
-  launch_title: Xây dựng chương tiếp theo.
-  launch_lead: Tham gia đợt bán công khai đầu tiên của KARES. Tài trợ AresRPG và giúp thế giới sống động phát triển.
-  offering: Đợt bán công khai đầu tiên
-  fixed_supply: Nguồn cung cố định
-  fair_share: Một mức giá. Phân bổ theo tỷ lệ.
-  fair_detail: Phần cuối cùng theo mức đóng góp. Tiền vượt mức được hoàn theo tỷ lệ.
+  fixed_supply: 'Nguồn cung ban đầu'
   connect: Kết nối ví
   disconnect: Ngắt kết nối
-  choose_account: Chọn tài khoản
   no_wallet: Cài ví Sui để tham gia.
   refresh: Làm mới
   loading: Đang đọc trạng thái trên chuỗi…
-  unavailable: Đợt bán chưa có trên mạng này.
   pending: Đang xác nhận giao dịch…
   confirmed: Đã xác nhận giao dịch
-  contribute: Đóng góp SUI
   amount: Số lượng
   balance: Số dư khả dụng
   amount_invalid: Nhập số dương với tối đa 9 chữ số thập phân.
   insufficient: Số tiền vượt số dư khả dụng.
   gas_note: Giữ lại ít SUI để trả phí giao dịch.
-  raised: Đã đóng góp
-  minimum: Mức huy động tối thiểu
-  maximum: Mức nhận tối đa
-  opens: Mở
-  closes: Đóng
-  estimate: Giá cuối dự kiến
-  price_note: Phân bổ cuối được chốt khi đợt bán đóng.
-  your_contribution: Đóng góp của bạn
-  claim: Nhận KARES và SUI dư
-  refund: Nhận hoàn tiền
-  upcoming: Chưa bắt đầu
-  open: Đợt bán đang mở
-  successful: Đợt bán thành công
-  refundable: Có thể hoàn tiền
   testnet: Mạng thử nghiệm · chỉ tài sản thử
   back_game: Khám phá AresRPG
-  funding_title: Thế giới do cộng đồng tài trợ
-  liquidity: Thanh khoản ban đầu
-  development: Ngân quỹ phát triển
-  liquidity_note: Dành cho thị trường KARES/SUI ban đầu. Dự án quản lý việc tạo bể.
-  development_note: Kinh phí cho trò chơi, hạ tầng và chương tiếp theo.
   staking_title: Stake của bạn. Phần của bạn.
-  staking_lead: Stake KARES để chia thưởng KARES và SUI được mở. Nhận thưởng tích lũy bất cứ lúc nào.
-  pool_stake: Tổng đã stake
   your_stake: Stake của bạn
   claimable: Thưởng tích lũy
   stake: Stake KARES
   withdraw: Rút stake
   claim_rewards: Nhận thưởng
-  fund_title: Tài trợ thưởng cộng đồng
-  fund_note: Khoản tặng được chia cho mọi người stake trong 30 ngày thưởng hoạt động và không thể rút lại.
-  donate: Quyên góp
-  no_positions: Vị thế staking sẽ xuất hiện tại đây.
-  inactive: Staking mở sau khi đợt bán được chốt thành công.
-  account_label: Tài khoản
+  inactive: 'Staking mở sau khi quỹ dự trữ được nạp đủ.'
   position: Vị thế
   tokenomics: Kinh tế token KARES
   community: Thưởng cộng đồng
   team: Phân bổ đội ngũ
   five_years: Thưởng staking cộng đồng
   mastery_title: Chơi để nhận thưởng. Hoặc đốt KARES.
-  mastery_note: Mỗi món Tinh thông có cùng giá bằng điểm kiếm được hoặc KARES. KARES đã dùng bị đốt vĩnh viễn.
-  rewards_note: 200.000 KARES được mở trong 1.825 ngày thưởng hoạt động; khoản tặng thêm mở trong 30 ngày. Phân phối dừng khi không ai stake.
+  mastery_note: 'Mỗi điểm giá Tinh thông tương đương 1.000 KARES. KARES thanh toán được đốt vĩnh viễn.'
+  rewards_note: 'Phần thưởng được phân phối trong 1.825 ngày hoạt động. Ai cũng có thể đóng góp KARES hoặc SUI: bắt đầu ở mốc ngày hoạt động tiếp theo và kéo dài 30 ngày hoạt động, không kéo dài lịch cũ. Khoản đóng góp không thể rút lại. Đồng hồ dừng khi không ai staking; phần thưởng đã kiếm được vẫn có thể nhận.'
   revenue_note: 20% tiền bản quyền chợ đã thu dùng thưởng SUI cho staking. Thưởng tùy doanh thu và lượng stake tham gia.
-  payment: Thanh toán bằng
   points: Điểm Tinh thông
-  burn_buy: Đốt {{cost}} KARES
+  buy_kares: 'Mua - {{cost}} KARES'
   kares_missing: Không đủ KARES
   language: Ngôn ngữ
-  refund_note: Nếu đợt bán đóng dưới mức tối thiểu, bạn được hoàn toàn bộ khoản góp.
-  offering_contract: Hợp đồng đợt bán
-  min_marker: TỐI THIỂU
-  max_marker: TỐI ĐA
-  min_reached: Đã đạt tối thiểu
-  min_pending: Đang tiến tới tối thiểu
-  oversubscribed: Vượt đăng ký
-  subscribed: đã đăng ký
-  oversub_note: Vẫn đang mở. Mọi người cùng một giá; SUI vượt mức hoàn theo tỷ lệ.
-  opens_in: Mở sau
-  closes_in: Đóng sau
-  days_short: ngày
-  your_investment: Đóng góp của bạn
-  your_allocation: Phần KARES của bạn
-  current_price: Giá bán hiện tại
-  estimated_until_close: Ước tính cho tới khi đóng
-  accepted_contribution: Khoản góp được nhận
-  excess_refund: SUI hoàn lại cho bạn
-  unclaimed_note: Khoản góp và phân bổ chưa nhận
-  connect_preview: Kết nối ví để xem phần của bạn
-  no_pending_allocation: Không có khoản góp chưa nhận
-  play_game: Chơi game
-  play_game_note: Khám phá thế giới bạn đang góp sức xây dựng.
-  join_title: Góp mặt trong chương tiếp theo.
-  join_note: 400.000 KARES. Một đợt bán. Phần cho mọi người đóng góp.
-  step_connect: Kết nối ví
-  step_contribute: Chọn lượng SUI đóng góp
-  step_claim: Nhận KARES và SUI dư
-  allocation_lead: Một triệu token. Mọi phân bổ đều công khai.
-  community_detail: 11% giữ trong quỹ cộng đồng cho airdrop, tiếp thị, bảng xếp hạng mùa, thi đấu, thưởng PvP, người tham gia mạng thử nghiệm và người đóng góp hữu ích. Dự án quản lý phân bổ.
-  supply_detail: Toàn bộ 1.000.000 KARES được tạo một lần, không thể tạo thêm. Mua Tinh thông đốt KARES vĩnh viễn.
-  emissions_detail: 200.000 token thưởng staking đến từ nguồn cung có sẵn. Phát thưởng không tạo token mới.
-  price_cap_note: Tổng nhận dừng ở mức tối đa. Thêm đóng góp đổi tỷ lệ phân bổ, không đổi giá bán đã chạm trần.
-  awaiting_minimum: Phân bổ và giá hiện khi đạt mức tối thiểu.
-  claimable_tokens: KARES có thể nhận
-  refundable_sui: SUI hoàn lại của bạn
-  final_price: Giá bán cuối
-  full_refund: Hoàn toàn bộ SUI
-  nav_funding: Tài trợ
-  nav_benefits: Lợi ích
-  nav_tokenomics: Kinh tế token
-  nav_incentives: Khuyến khích công cộng
-  nav_play: Chơi
-  benefits_title: Góp phần vào thế giới. Thêm cách để chơi.
-  benefits_lead: KARES kết nối thưởng trò chơi, khuyến khích cộng đồng và phần chia bản quyền chợ.
-  revenue_title: Chia sẻ thành công của trò chơi.
-  revenue_metric: doanh thu AresRPG
-  revenue_detail: Chia cho người stake KARES.
-  baseline_title: Thưởng cộng đồng đã có trong nguồn cung.
-  baseline_detail: 200.000 KARES có sẵn tài trợ 1.825 ngày thưởng hoạt động. Stake để chia phần và nhận thưởng tích lũy bất cứ lúc nào. Không tạo thêm token.
-  crates_title: KARES của bạn. Rương tiếp theo của bạn.
-  crates_detail: Cửa hàng Tinh thông có rương thức ăn, tài nguyên, thú và ngoại hình. Trả cùng giá bằng KARES hoặc kiếm điểm Tinh thông khi chơi. KARES đã dùng bị đốt vĩnh viễn.
-  incentives_title: Ai cũng có thể tăng quỹ thưởng.
-  incentives_detail: Ai cũng có thể tặng SUI hoặc KARES vào thưởng staking chung. Mỗi khoản bắt đầu từ ngày thưởng hoạt động kế tiếp và trải trong 30 ngày hoạt động. Thưởng chia theo tỷ lệ cho mọi người stake, không thể rút lại.
-  incentives_clock: Đồng hồ thưởng dừng khi không ai stake. Khoản mới không kéo dài lịch của khoản cũ.
-  incentives_examples: Tài trợ sự kiện. Mừng cột mốc. Thưởng cộng đồng.
-  play_title: Thế giới đang chờ. Hãy khám phá.
-  play_detail: Chơi AresRPG trong đợt bán công khai đầu tiên. Gặp cộng đồng và khám phá trò chơi phía sau KARES.
+  community_detail: 'Quỹ cộng đồng hỗ trợ sự kiện, airdrop, người đóng góp, bảng xếp hạng mùa và giải PvP. Kho bạc phân phối thủ công các token đã mở khóa.'
+  supply_detail: 'Chỉ phát hành một lần. Không đúc thêm. Đốt token làm giảm nguồn cung.'
+  emissions_detail: 'Mọi phần thưởng dùng token hiện có. Chi trả thưởng không tạo thêm nguồn cung.'
   confirmed_refresh: Đã xác nhận giao dịch. Làm mới để tải số dư mới.
-  stage_minimum: Tài trợ tối thiểu
-  stage_maximum: Huy động tới tối đa
-  minimum_refund: Hoàn toàn bộ nếu không đạt tối thiểu.
-  full_refund_available: Có thể nhận lại toàn bộ khoản góp.
-  refund_claim_note: Nhận hoàn tiền tại đây nếu đợt bán đóng dưới tối thiểu. Tiền hoàn không tự gửi.
   staking_unavailable: Staking chưa có trên mạng này.
-  basecamp_announcement: Gặp AresRPG tại Sui Basecamp ở Singapore, ngày 7–9 tháng 10. Ghé chào và nhận rương thưởng nhé.
-  funding_unknown: Dữ liệu tài trợ không khả dụng.
-  success_threshold: Ngưỡng thành công
-  sale_cap: Mức nhận tối đa
-  cap_overflow: Vượt giới hạn
-  overflow_refunds: dành để hoàn theo tỷ lệ
   combat_rewards: Thưởng trùm
-  combat_detail: 100.000 KARES tài trợ quỹ chiến đấu công cộng; ai cũng có thể thêm token. Cấp trùm quyết định một khoản thưởng chia đều cho nhân vật thắng. Trần mỗi ngày khoảng 54,79 KARES giúp quỹ ban đầu kéo dài ít nhất năm năm. Ngày ít hoạt động và quyên góp kéo dài quỹ. Hoạt động mỗi kỳ điều chỉnh mức thưởng; thưởng chưa phát không thành nợ.
-  allocation_rationale: 'Khi ra mắt có 590.000 KARES (59%): bán, thanh khoản và đội ngũ. Lịch mở thêm tối đa khoảng 82.000 trong năm đầu, tức 13,90% lượng ban đầu, chưa tính đốt. Staking dừng khi không ai stake. Quỹ cộng đồng mở theo lịch. Chiến đấu có thể phát ít hơn. Tất cả dùng token sẵn có, không lạm phát do tạo mới. Quyên góp chỉ phân phối lại token. Không bảo đảm kết quả giá.'
-  launch_market_cap: Vốn hóa lưu hành khi ra mắt
-  launch_market_cap_note: 'Nếu đóng đợt bán ngay: giá bán có trần × 590.000 KARES có sẵn khi ra mắt. Không ra mắt nếu chưa đạt tài trợ tối thiểu.'
+  combat_detail: 'Cấp độ boss quyết định một khoản thưởng chia đều cho các nhân vật chiến thắng. Giới hạn là {{cap}} KARES mỗi ngày tính từ lúc thiết lập. Hoạt động mỗi epoch điều chỉnh mức thưởng. Ngày ít hoạt động không tích lũy phần bù; khoản đóng góp kéo dài quỹ.'
   error_generic: Không thể hoàn thành thao tác.
   error_rejected: Yêu cầu đã bị hủy.
   error_funds: Không đủ tiền cho thao tác và phí.
@@ -2429,6 +2346,14 @@ kares_page:
   error_unknown: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
   error_recovered: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
 leaderboard_page:
+  profile_title: 'Hồ sơ người chơi'
+  profile_jobs: 'Cấp nghề cao nhất trên tất cả nhân vật'
+  profile_empty: 'Hiện không sở hữu nhân vật nào.'
+  profile_select: 'Chọn nhân vật để xem trang bị.'
+  profile_unavailable: 'Thông tin hồ sơ tạm thời không khả dụng.'
+  profile_missing: 'Nhân vật này không còn thuộc người chơi này.'
+  profile_previous: 'Trước'
+  profile_next: 'Tiếp'
   unclaimed: Chưa nhận
   reset_in: Đặt lại {{time}}
   xp: Kinh nghiệm chiến đấu
@@ -2502,6 +2427,19 @@ item_drop_sources:
   quantity: Số lượng
   levels: Cấp {{min}}–{{max}}
 journey:
+  map_travel_title: 'Tìm đường đi'
+  map_travel_body: 'Mở bản đồ và chọn một vị trí gần đó có thể đến được. Để nhân vật tự động đi tới nơi. Bạn cũng có thể dùng cách này để thoát khỏi chướng ngại vật khi bị kẹt.'
+  map_travel_objective: 'Dùng bản đồ để tới một điểm gần đó'
+  mob_details: 'Xem sinh vật'
+  first_hunt_title: 'Cuộc săn đầu tiên'
+  first_hunt_body: 'Tìm Tinker gần Thebes hoặc trong rừng. Thắng trận và nhận phần thưởng. Cành cây của chúng có thể giúp bạn làm công cụ đầu tiên.'
+  first_hunt_objective: 'Thắng một trận đấu với Tinker'
+  hoe_materials_title: 'Chuẩn bị một lần thử'
+  hoe_materials_body: 'Tinker có thể rơi cành cây bị gặm; Nook có thể rơi phế liệu thu hồi. Thu thập nguyên liệu theo công thức dưới đây hoặc mua chúng. Nguyên liệu đang có và có thể sử dụng cũng được tính.'
+  hoe_materials_objective: 'Thu thập nguyên liệu cho một {{item}}'
+  first_craft_title: 'Học qua thực hành'
+  first_craft_body: 'Mở công thức và kiểm tra tỉ lệ thành công. Nguyên liệu vẫn bị tiêu hao nếu thất bại. Ở cấp nghề ban đầu, thất bại vẫn cho XP nghề. Thử một lần là hoàn thành nhiệm vụ này.'
+  first_craft_objective: 'Thử chế tạo {{item}}'
   title: Sinh tồn ở Nauvis
   eyebrow: Cuộc phiêu lưu bắt đầu từ đây
   progress: Tiến độ hành trình
@@ -2533,7 +2471,7 @@ journey:
   welcome_title: Chào mừng đến Nauvis.
   welcome_body: AresRPG thưởng cho người biết học hỏi, chuẩn bị và làm việc thông minh. Học cách tối ưu, tự động hóa lối chơi và tốn ít SUI nhất có thể. Hãy theo hành trình này để làm quen.
   hoe_title: Ai cũng cần một cái cuốc.
-  hoe_body: Nauvis là thế giới đầu tiên. Trang bị mạnh hơn giúp bạn tới những thế giới nguy hiểm, còn công cụ thu thập cho nguyên liệu để chế tạo. Mua {{item}} từ người khác hoặc tự làm qua Nhân vật → Nghề → Thợ đa năng.
+  hoe_body: 'Mua {{item}} hoặc chế tạo qua Nhân vật → Nghề → Thợ đa năng. Mở công thức và chọn nguyên liệu để xem nguồn. Tìm Tinker quanh Thebes và trong rừng; khi mạnh hơn, hãy săn lợn rừng ở đồng bằng và rừng để lấy cành cây bị gặm.'
   hoe_objective: Sở hữu {{item}}
   wheat_title: Bắt tay vào việc nào.
   wheat_body: Tự chế trang bị bắt đầu từ thu thập nguyên liệu. Lúa mì dùng làm thức ăn và vật liệu trang bị nên rất hợp để khởi đầu. Tìm một bụi lúa mì ở Nauvis và thu hoạch lần đầu!
@@ -2766,3 +2704,18 @@ adventure:
   follow_body: 'Bạn đã có một nhóm. Giờ hãy giữ mọi người đi cùng nhau. Chọn Senshi làm trưởng nhóm rồi bật Theo trưởng nhóm trong phần điều khiển nhóm. Sceat sẽ theo bạn khi khám phá, giúp bạn không phải đi cùng một con đường hai lần. Trong chiến đấu, bạn vẫn tự chọn từng bước đi và phép của mỗi người.'
   guards_body: 'Gobadoc không bỏ ngỏ lối vào. Lính gác đã sẵn sàng, còn bạn có hai anh hùng cần phối hợp. Kiểm tra trang bị mới trước khi thách đấu. Kết hợp sức mạnh của Senshi với bẫy của Sceat. Dụ kẻ địch vào vị trí thuận lợi thường dễ thắng hơn việc cứ đuổi theo chúng.'
   boss_body: 'Sau lính gác là Gobadoc, đang giữ di vật mà Sceat tìm kiếm. Vua goblin không giành được danh hiệu ấy bằng những thất bại. Hai người đã học cách chiến đấu cùng nhau, nhưng đối thủ này hoàn toàn khác. Hãy cùng đồng đội tiến đến và xem mối hợp tác mới có thể đưa bạn đi xa đến đâu.'
+
+discord_marketplace:
+  title: 'CHỢ · GIAO DỊCH'
+  sale: '**{seller}** vừa bán **{amount}× {item}** với giá **{price} SUI**'
+  price_before_fees: 'Giá bán chưa gồm phí'
+  gather_title: 'Thu thập hiếm'
+  gather: '**{player}** phát hiện **{item}** khi thu thập.'
+  victory_title: 'Chiến thắng hầm ngục'
+  victory: '**{party}** đã đánh bại **{boss}**!'
+  loot_title: 'Chiến lợi phẩm xuất sắc'
+  loot: '**{player}** tìm thấy **{item}** với **chất lượng {quality}%**.'
+  sold_by: 'Người bán: {player}'
+  found_by: 'Người tìm thấy: {player}'
+  boss_defeated: 'Đã hạ trùm cuối'
+  level: 'Cấp'

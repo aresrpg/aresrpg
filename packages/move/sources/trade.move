@@ -10,6 +10,8 @@ use aresrpg_math::trade_state::{Self, TradeState};
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 use sui::dynamic_object_field as dof;
+use sui::dynamic_field as df;
+use aresrpg_rewards::economy::{Self, Economy};
 use sui::kiosk::{Self, Kiosk, PurchaseCap};
 use sui::sui::SUI;
 use aresrpg_kares::kares::KARES;
@@ -70,12 +72,9 @@ public fun put_sui(trade: &mut Trade, coin: Coin<SUI>, seen: u64, version: &Vers
   my_sui_balance(trade, ctx.sender()).join(coin.into_balance());
   trade_state::touch(&mut trade.state);
 }
-public fun put_kares(trade: &mut Trade, coin: Coin<KARES>, seen: u64, version: &Version, ctx: &TxContext) {
+public fun put_kares(_trade: &mut Trade, _coin: Coin<KARES>, _seen: u64, version: &Version, _ctx: &TxContext) {
   version.assert_latest();
-  trade_state::assert_editable(&trade.state, seen, ctx.sender());
-  trade_state::assert_positive(coin.value());
-  my_kares_balance(trade, ctx.sender()).join(coin.into_balance());
-  trade_state::touch(&mut trade.state);
+  abort 602
 }
 public fun take_sui(
   trade: &mut Trade,
@@ -92,18 +91,14 @@ public fun take_sui(
   coin
 }
 public fun take_kares(
-  trade: &mut Trade,
-  amount: u64,
-  seen: u64,
+  _trade: &mut Trade,
+  _amount: u64,
+  _seen: u64,
   version: &Version,
-  ctx: &mut TxContext,
+  _ctx: &mut TxContext,
 ): Coin<KARES> {
   version.assert_latest();
-  trade_state::assert_editable(&trade.state, seen, ctx.sender());
-  trade_state::assert_positive(amount);
-  let coin = coin::from_balance(my_kares_balance(trade, ctx.sender()).split(amount), ctx);
-  trade_state::touch(&mut trade.state);
-  coin
+  abort 602
 }
 public fun accept(trade: &mut Trade, seen: u64, version: &Version, ctx: &TxContext) {
   version.assert_latest();
@@ -116,9 +111,9 @@ public fun claim_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext):
   version.assert_latest();
   take_terminal_sui(trade, false, ctx)
 }
-public fun claim_kares(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<KARES> {
+public fun claim_kares(_trade: &mut Trade, version: &Version, _ctx: &mut TxContext): Coin<KARES> {
   version.assert_latest();
-  take_terminal_kares(trade, false, ctx)
+  abort 602
 }
 public(package) fun recover_item(trade: &mut Trade, item: ID, ctx: &TxContext): PurchaseCap<Item> {
   take_terminal_cap(trade, item, true, ctx.sender())
@@ -127,9 +122,9 @@ public fun recover_sui(trade: &mut Trade, version: &Version, ctx: &mut TxContext
   version.assert_latest();
   take_terminal_sui(trade, true, ctx)
 }
-public fun recover_kares(trade: &mut Trade, version: &Version, ctx: &mut TxContext): Coin<KARES> {
+public fun recover_kares(_trade: &mut Trade, version: &Version, _ctx: &mut TxContext): Coin<KARES> {
   version.assert_latest();
-  take_terminal_kares(trade, true, ctx)
+  abort 602
 }
 fun take_terminal_cap(trade: &mut Trade, item: ID, own: bool, sender: address): PurchaseCap<Item> {
   trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
@@ -146,14 +141,7 @@ fun take_terminal_sui(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<S
   trade_state::assert_positive(balance.value());
   coin::from_balance(balance.withdraw_all(), ctx)
 }
-fun take_terminal_kares(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<KARES> {
-  trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
-  let sender = ctx.sender();
-  trade_state::assert_party(&trade.state, sender);
-  let balance = if (trade_state::is_initiator(&trade.state, sender) == own) &mut trade.kares_a else &mut trade.kares_b;
-  trade_state::assert_positive(balance.value());
-  coin::from_balance(balance.withdraw_all(), ctx)
-}
+
 public fun close(trade: Trade, version: &Version, ctx: &TxContext) {
   version.assert_latest();
   trade_state::assert_terminal(&trade.state);
@@ -166,19 +154,92 @@ fun my_manifest(trade: &mut Trade, sender: address): &mut vector<ID> {
 fun my_sui_balance(trade: &mut Trade, sender: address): &mut Balance<SUI> {
   if (trade_state::is_initiator(&trade.state, sender)) &mut trade.sui_a else &mut trade.sui_b
 }
-fun my_kares_balance(trade: &mut Trade, sender: address): &mut Balance<KARES> {
-  if (trade_state::is_initiator(&trade.state, sender)) &mut trade.kares_a else &mut trade.kares_b
-}
+
 fun remove_from(manifest: &mut vector<ID>, item: ID) {
   let index = trade_state::item_index(manifest, item);
   manifest.remove(index);
 }
 fun destroy_drained(trade: Trade, ctx: &TxContext) {
   trade_state::assert_party(&trade.state, ctx.sender());
+  assert!(!df::exists(&trade.id, b"kares"), 603);
   let Trade { id, sui_a, sui_b, kares_a, kares_b, caps_a, caps_b, .. } = trade;
   trade_state::assert_drained(caps_a.length(), caps_b.length());
   sui_a.destroy_zero(); sui_b.destroy_zero();
   kares_a.destroy_zero(); kares_b.destroy_zero(); id.delete();
+}
+
+
+/// One extension keeps published Trade layouts stable across the currency replacement.
+public fun put_token<Token>(
+  trade: &mut Trade, coin: Coin<Token>, seen: u64, economy: &Economy, version: &Version, ctx: &TxContext,
+) {
+  version.assert_latest();
+  economy::assert_token<Token>(economy);
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_positive(coin.value());
+  if (!df::exists(&trade.id, b"kares")) {
+    df::add(&mut trade.id, b"kares", vector[balance::zero<Token>(), balance::zero<Token>()]);
+  };
+  token_balance<Token>(trade, true, ctx.sender()).join(coin.into_balance());
+  trade_state::touch(&mut trade.state);
+}
+
+public fun take_token<Token>(
+  trade: &mut Trade, amount: u64, seen: u64, economy: &Economy, version: &Version, ctx: &mut TxContext,
+): Coin<Token> {
+  version.assert_latest();
+  economy::assert_token<Token>(economy);
+  trade_state::assert_editable(&trade.state, seen, ctx.sender());
+  trade_state::assert_positive(amount);
+  let coin = token_balance<Token>(trade, true, ctx.sender()).split(amount).into_coin(ctx);
+  trade_state::touch(&mut trade.state);
+  coin
+}
+
+public fun claim_token<Token>(
+  trade: &mut Trade, economy: &Economy, version: &Version, ctx: &mut TxContext,
+): Coin<Token> {
+  version.assert_latest();
+  economy::assert_token<Token>(economy);
+  terminal_token(trade, false, ctx)
+}
+
+public fun recover_token<Token>(
+  trade: &mut Trade, economy: &Economy, version: &Version, ctx: &mut TxContext,
+): Coin<Token> {
+  version.assert_latest();
+  economy::assert_token<Token>(economy);
+  terminal_token(trade, true, ctx)
+}
+
+public fun close_token<Token>(
+  mut trade: Trade, economy: &Economy, version: &Version, ctx: &TxContext,
+) {
+  version.assert_latest();
+  economy::assert_token<Token>(economy);
+  trade_state::assert_terminal(&trade.state);
+  trade_state::assert_party(&trade.state, ctx.sender());
+  if (df::exists(&trade.id, b"kares")) {
+    let mut balances: vector<Balance<Token>> = df::remove(&mut trade.id, b"kares");
+    balances.pop_back().destroy_zero();
+    balances.pop_back().destroy_zero();
+    balances.destroy_empty();
+  };
+  destroy_drained(trade, ctx);
+}
+
+fun terminal_token<Token>(trade: &mut Trade, own: bool, ctx: &mut TxContext): Coin<Token> {
+  trade_state::assert_phase(&trade.state, if (own) trade_state::cancelled() else trade_state::settling());
+  trade_state::assert_party(&trade.state, ctx.sender());
+  let balance = token_balance<Token>(trade, own, ctx.sender());
+  trade_state::assert_positive(balance.value());
+  balance.withdraw_all().into_coin(ctx)
+}
+
+fun token_balance<Token>(trade: &mut Trade, own: bool, sender: address): &mut Balance<Token> {
+  let left = trade_state::is_initiator(&trade.state, sender) == own;
+  let balances = df::borrow_mut<vector<u8>, vector<Balance<Token>>>(&mut trade.id, b"kares");
+  &mut balances[if (left) 0 else 1]
 }
 
 #[test_only]

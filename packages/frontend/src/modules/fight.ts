@@ -127,6 +127,7 @@ const reconcile_fight = (
   // streamed placement rows; only starting the fight or an explicit refusal restores it.
   const ready_confirmed = input.checkpoint.contract.round !== 0n
   const environment = Object.freeze({
+    return_character_id: previous.return_character_id,
     zone_ids: Object.freeze([...input.zone_ids]),
     presentations,
     error: input.error,
@@ -484,4 +485,21 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-export default Object.freeze({ name: 'fight', reduce, observe: observe_fights }) satisfies AppModule
+const retain_fight_entry = (state: AppState): AppState => {
+  const { mode, mounted, checkpoint } = state.fight
+  if (mode !== 'remote' || !mounted || !checkpoint) return state
+  const environment = fight_environment(state.fight, checkpoint.contract.id)
+  if (environment.return_character_id) return state
+  if (!holds_character_seat(checkpoint, state.session.selected_character_id, state.session.wallet?.address ?? null))
+    return state
+  return update_fight_environment(state, checkpoint.contract.id, (current) => ({
+    ...current,
+    return_character_id: state.session.selected_character_id,
+  }))
+}
+
+export default Object.freeze({
+  name: 'fight',
+  reduce: (state, input) => retain_fight_entry(reduce(state, input)),
+  observe: observe_fights,
+}) satisfies AppModule

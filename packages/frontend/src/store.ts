@@ -4,7 +4,7 @@
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
-import analytics from './modules/analytics.ts'
+import analytics, { type AnalyticsInput, type AnalyticsState } from './modules/analytics.ts'
 import adventure, { initial_adventure_state, type AdventureState, type AdventureInput } from './modules/adventure.ts'
 import type { GameSettings } from './game/core/settings.ts'
 import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
@@ -79,6 +79,7 @@ import external_wallet, {
 } from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
+  analytics: AnalyticsState
   adventure: AdventureState
   claim_failures: readonly string[]
   journey: JourneyState
@@ -114,6 +115,7 @@ export type AppState = Readonly<{
 }>
 
 export type AppInput =
+  | AnalyticsInput
   | AdventureInput
   | JourneyInput
   | ChainClockInput
@@ -197,8 +199,9 @@ const MODULE_REGISTRY = [
   [kolizeum, 'player'],
   [friends, 'player'],
   [party, 'player'],
-  [run_to, 'player'],
+  // Arrival consumers read the accepted target before run-to releases it.
   [journey, 'player'],
+  [run_to, 'player'],
   [automation, 'player'],
   [party_follow, 'player'],
   [trade, 'player'],
@@ -237,6 +240,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     external_wallet: initial_external_wallet_state(),
     navigation: initial_navigation_state(),
     settings: settings_state,
+    analytics: null,
     locale: 'en',
     engine: initial_engine_state(),
     fight: initial_fight_session_state(),

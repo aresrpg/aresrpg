@@ -83,6 +83,10 @@ const observe_with_wait = (
   const locks = globalThis.navigator?.locks
   let settlement_owner = !locks
   let lease_address: string | null = null
+  const update_gas = (fight: string, wallet: AppState['session']['wallet']): void => {
+    if (!wallet || get_state().session.wallet !== wallet) return
+    dispatch({ type: 'fight_result/gas_updated', fight, gas_spent_mist: wallet.fight.gas_spent(fight) })
+  }
   let release_lease: (() => void) | null = null
   const close_once = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
     const { fight } = row
@@ -100,6 +104,7 @@ const observe_with_wait = (
         offer_close(row)
         console.warn('[fight_result] authoritative close failed; explicit retry is available', error)
       })
+      .finally(() => update_gas(fight, wallet))
   }
   const offer_close = (row: Readonly<{ fight: string; kolizeum: string | null }>): void => {
     const { fight } = row
@@ -249,16 +254,7 @@ const observe_with_wait = (
         return false
       })
       .then((settled) => {
-        const gas_spent_mist = get_state().session.wallet?.fight.gas_spent(first.fight)
-        if (gas_spent_mist !== undefined)
-          pending.forEach((candidate) =>
-            dispatch({
-              type: 'fight_result/gas_updated',
-              character_id: candidate.character,
-              fight: candidate.fight,
-              gas_spent_mist,
-            })
-          )
+        update_gas(first.fight, wallet)
         active = null
         if (settled) sweep()
       })

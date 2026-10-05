@@ -7,7 +7,7 @@ import { ArrowRight, BookOpen, Check, ChevronDown, Compass, Sparkles } from 'luc
 import automation_art from '../../../../seed/icons/world/gathering_automation_hd.png'
 import automation_icon from '../../../../seed/icons/world/gathering_automation.png'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
-import { type AppCopy } from '../i18n/copy.ts'
+import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app } from '../store.ts'
 
 import { next_quest, type JourneyQuest } from './model.ts'
@@ -28,6 +28,18 @@ const open_path = (pathname: string): void => {
 const QuestActions = ({ quest, copy }: Readonly<{ quest: JourneyQuest; copy: AppCopy }>) => {
   const source = useJourneySource(copy)
   const { text } = source
+  const actions: Partial<Record<JourneyQuest['kind'], Readonly<{ label: string; open: () => void }>>> = {
+    harvest: { label: text('resource_details'), open: () => open_path(`/encyclopedia/items/${quest.item}`) },
+    hunt: { label: text('mob_details'), open: () => open_path(`/encyclopedia/bestiary/${quest.mob}`) },
+    map: {
+      label: copy_text(copy.world_hud)('world_map'),
+      open: () => {
+        open_path('/')
+        dispatch_app({ type: 'dialog/open', dialog: 'world_map' })
+      },
+    },
+  }
+  const information = actions[quest.kind]
   if (source.activate || quest.kind === 'start')
     return (
       <button
@@ -39,14 +51,10 @@ const QuestActions = ({ quest, copy }: Readonly<{ quest: JourneyQuest; copy: App
       </button>
     )
   if (quest.id === 'suize') return null
-  if (quest.kind === 'harvest')
+  if (information)
     return (
-      <button
-        className="journey-button journey-button--secondary"
-        onClick={() => open_path(`/encyclopedia/items/${quest.item}`)}
-        type="button"
-      >
-        {text('resource_details')} <ArrowRight size={14} />
+      <button className="journey-button journey-button--secondary" onClick={information.open} type="button">
+        {information.label} <ArrowRight size={14} />
       </button>
     )
   return (
@@ -199,6 +207,19 @@ const QuestCard = ({ copy, compact }: Readonly<{ copy: AppCopy; compact: boolean
         <span className="journey-eyebrow">{text(`chapter_${chapter}`)}</span>
         <h3>{text(`${id}_title`)}</h3>
         <p>{text(`${id}_body`, { item })}</p>
+        {kind === 'materials' && (
+          <div className="journey-ingredients">
+            {source.ingredients?.(item_type).map(({ item, have, need }) => (
+              <button key={item} type="button" onClick={() => open_path(`/encyclopedia/items/${item}`)}>
+                <ItemArt item={item} />
+                <span>{source.name(item)}</span>
+                <strong>
+                  {have} / {need}
+                </strong>
+              </button>
+            ))}
+          </div>
+        )}
         {objective && (
           <div className="journey-objective">
             <span className="journey-checkbox">{celebrated && <Check size={15} />}</span>

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { describe, expect, test } from 'bun:test'
+import { KARES_UNIT } from '@aresrpg/sdk/kares-economics'
 
 import {
   initial_finance,
@@ -9,7 +10,6 @@ import {
   validate_amount,
   format_amount,
   reduce_finance,
-  offering_phase,
   type FinanceSnapshot,
 } from '../../src/kares/model.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -21,25 +21,22 @@ const snapshot: FinanceSnapshot = {
   network: 'testnet',
   address: null,
   clock_ms: 100n,
-  combat_pot: { id: '0xcombat', version: '1', balance: 0n, quota: 20_000n, spent: 0n },
-  total_supply: 1_000_000_000_000_000n,
-  offering: {
-    id: 'offering',
+  combat_pot: {
+    authorized: '0x1::fight_rewards::BossVictory',
+    id: '0xcombat',
     version: '1',
-    started: true,
-    duration_ms: 100n,
-    opens_ms: 100n,
-    closes_ms: 200n,
-    min_raise: 5n,
-    max_raise: 20n,
-    total_contributed: 0n,
-    accepted: 0n,
-    settled: false,
-    settled_ms: 0n,
-    community_remaining: 110_000_000_000_000n,
-    community_claimable: 0n,
-    treasury: 'treasury',
-    liquidity: 'liquidity',
+    balance: 0n,
+    quota: 20_000n,
+    spent: 0n,
+  },
+  total_supply: 1_000_000_000_000_000n,
+  community: {
+    id: '0xcommunity',
+    version: '1',
+    started_ms: 0n,
+    remaining: 110_000_000n * KARES_UNIT,
+    claimable: 0n,
+    treasury: '0xtreasury',
   },
   pool: {
     id: 'pool',
@@ -53,7 +50,6 @@ const snapshot: FinanceSnapshot = {
     daily_kares: 0n,
     daily_sui: 0n,
   },
-  contributions: [],
   positions: [],
 }
 
@@ -82,12 +78,12 @@ describe('KARES finance reconciliation', () => {
   test('refuses double submission and retains the certified digest when refresh fails', () => {
     const pending = reduce_finance(finance_state(), {
       type: 'request',
-      request: { kind: 'execute', action: { kind: 'contribute', amount: 1n } },
+      request: { kind: 'execute', action: { kind: 'stake', amount: 1n } },
     })
     expect(
       reduce_finance(pending, {
         type: 'request',
-        request: { kind: 'execute', action: { kind: 'contribute', amount: 1n } },
+        request: { kind: 'execute', action: { kind: 'stake', amount: 1n } },
       })
     ).toBe(pending)
     const certified = reduce_finance(pending, { type: 'receipt', sequence: pending.sequence, digest: 'certified' })
@@ -100,16 +96,6 @@ describe('KARES finance reconciliation', () => {
     expect(failed.error).toBe('snapshot unavailable')
     expect(failed.request).toBeNull()
   })
-})
-
-test('offering deadlines do not expose early claims or refunds', () => {
-  expect(offering_phase({ ...snapshot, clock_ms: 99n })).toBe('upcoming')
-  expect(offering_phase(snapshot)).toBe('open')
-  expect(offering_phase({ ...snapshot, clock_ms: 200n })).toBe('refundable')
-  const funded = { ...snapshot, offering: { ...snapshot.offering, total_contributed: 30n }, clock_ms: 200n }
-  expect(offering_phase(funded)).toBe('successful')
-  expect(offering_phase({ ...funded, clock_ms: 300_000_000_000n })).toBe('successful')
-  expect(offering_phase({ ...funded, offering: { ...funded.offering, settled: true } })).toBe('successful')
 })
 
 test('every KARES string exists in all supported locales', async () => {

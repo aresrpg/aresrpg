@@ -101,7 +101,6 @@ test('mobile login and touch controls expose explicit actions without executing 
           category: 'resource',
           level: 1,
           amount: 2,
-          kiosk: 'kiosk',
         }}
         amount={2}
         aria-pressed={false}

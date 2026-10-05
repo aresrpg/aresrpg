@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const manifest = JSON.parse(readFileSync(join(root, 'move-packages.json'), 'utf8'))
-const expected_slots = ['math', 'control', 'combat', 'seed', 'kares', 'game']
+const expected_slots = ['math', 'control', 'combat', 'seed', 'kares', 'rewards', 'game']
 
 if (manifest.schema !== 1 || !Array.isArray(manifest.packages)) throw new Error('move-packages.json schema is invalid')
 if (manifest.packages.map(({ slot }) => slot).join(',') !== expected_slots.join(','))

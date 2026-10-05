@@ -48,6 +48,14 @@ test('camera drags and cancelled touches never open a character menu', async ({ 
 
 test.describe('desktop inputs', () => {
   test.use({ hasTouch: false, isMobile: false })
+  test('compact resource prompts keep desktop actions close to their text', async ({ page }) => {
+    await page.goto('/e2e/fixtures/mobile_world.html')
+    const gather = page.getByRole('button', { name: 'Press F to gather Wood', exact: true })
+    await expect(gather).toBeVisible()
+    expect((await gather.boundingBox())!.height).toBeLessThanOrEqual(30)
+    await gather.click()
+    await expect(page.getByLabel('Last action')).toHaveText('gather')
+  })
   test('keyboard hints remain visible and right-click opens the same menu', async ({ page }) => {
     await page.goto('/e2e/fixtures/mobile_world.html')
     await expect(page.getByRole('button', { name: 'Press F to attack', exact: true })).toBeVisible()

@@ -18,6 +18,8 @@ const CRITICAL_TESTS = [
   'interaction',
   'inventory_actions',
   'marketplace',
+  'mastery_shop',
+  'staking',
   'wallet_switcher',
 ].map((name) => `**/${name}.pw.ts`)
 const RENDERER_SMOKE = '**/renderer_smoke.pw.ts'

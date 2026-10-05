@@ -5,10 +5,9 @@ module aresrpg::mastery_kares_tests;
 
 use aresrpg::{api, item::{Self, Item}, mastery::{Self, MasteryOffer}, version};
 use aresrpg_control::admin::{Self, AdminCap};
-use aresrpg_kares::{kares::{Self, Genesis, KARES}, offering};
+use aresrpg_rewards::{amounts as kares, economy::{Self, Economy}, test_coin::{Self, TEST_COIN as KARES}};
 use aresrpg_seed::{item_rows::{Self, ItemTemplate}, registry::{Self, Registry}};
 use sui::{
-  clock,
   coin::Coin,
   coin_registry::Currency,
   kiosk::{Self, Kiosk, KioskOwnerCap},
@@ -26,6 +25,7 @@ public struct Fixture {
   root: Registry,
   template: ItemTemplate,
   offer: MasteryOffer,
+  economy: Economy,
   currency: Currency<KARES>,
   payment: Coin<KARES>,
   kiosk: Kiosk,
@@ -39,14 +39,7 @@ fun fixture(cost: u64): Fixture {
   let mut scenario = test_scenario::begin(OWNER);
   item::test_init(scenario.ctx());
   version::test_init(scenario.ctx());
-  kares::init_for_testing(scenario.ctx());
-  scenario.next_tx(OWNER);
-  let genesis = scenario.take_from_sender<Genesis>();
-  let clock = clock::create_for_testing(scenario.ctx());
-  let upgrade_cap = sui::package::test_publish(object::id_from_address(@aresrpg_kares), scenario.ctx());
-  offering::setup(genesis, upgrade_cap, 5_000_000_000, 20_000_000_000, 100,
-    OWNER, OWNER, OWNER, @0xB, scenario.ctx());
-  clock.destroy_for_testing();
+  test_coin::mint(kares::initial_supply(), 9, true, scenario.ctx());
   let admin = admin::cap_for_testing(scenario.ctx());
   let mut root = registry::registry_for_testing(scenario.ctx());
   let template = item_rows::template_for_testing(b"mastery_reward".to_string(), b"resource".to_string(), scenario.ctx());
@@ -55,14 +48,15 @@ fun fixture(cost: u64): Fixture {
   let offer = scenario.take_shared<MasteryOffer>();
   let currency = scenario.take_from_address<Currency<KARES>>(@0xC);
   let payment = scenario.take_from_sender<Coin<KARES>>();
+  let economy = economy::economy_for_testing<KARES>(object::id(&currency), @0x0.to_id(), scenario.ctx());
   let publisher = scenario.take_from_sender<Publisher>();
   let (policy, policy_cap) = transfer_policy::new<Item>(&publisher, scenario.ctx());
   let (kiosk, kiosk_cap) = kiosk::new(scenario.ctx());
-  Fixture { scenario, admin, root, template, offer, currency, payment, kiosk, kiosk_cap, policy, policy_cap, publisher }
+  Fixture { scenario, admin, root, template, offer, economy, currency, payment, kiosk, kiosk_cap, policy, policy_cap, publisher }
 }
 
 fun finish(fixture: Fixture) {
-  let Fixture { scenario, admin, root, template, offer, currency, payment, kiosk, kiosk_cap, policy, policy_cap, publisher } = fixture;
+  let Fixture { scenario, admin, root, template, offer, economy, currency, payment, kiosk, kiosk_cap, policy, policy_cap, publisher } = fixture;
   test_scenario::return_shared(offer);
   test_scenario::return_to_address(@0xC, currency);
   transfer::public_transfer(payment, OWNER);
@@ -71,6 +65,7 @@ fun finish(fixture: Fixture) {
   transfer::public_share_object(policy);
   transfer::public_transfer(policy_cap, OWNER);
   publisher.burn();
+  economy::destroy_for_testing(economy);
   registry::destroy_for_testing(root);
   admin::destroy_for_testing(admin);
   item_rows::destroy_for_testing(template);
@@ -80,7 +75,7 @@ fun finish(fixture: Fixture) {
 fun buy_kares(fixture: &mut Fixture, amount: u64, existing: Option<ID>) {
   let payment = fixture.payment.split(amount, fixture.scenario.ctx());
   let version = fixture.scenario.take_shared<version::Version>();
-  api::redeem_mastery_offer_kares(&mut fixture.currency, payment, &fixture.offer, &fixture.template,
+  api::redeem_mastery_offer_token(&fixture.economy, &mut fixture.currency, payment, &fixture.offer, &fixture.template,
     existing, &mut fixture.kiosk, &fixture.kiosk_cap, &fixture.policy, &version, fixture.scenario.ctx());
   test_scenario::return_shared(version);
 }
@@ -100,12 +95,12 @@ fun both_payment_routes_deliver_the_same_locked_item_and_only_kares_reduces_supp
   assert!(mastery::points_for_testing(&mastery) == 150);
   assert!(fixture.currency.total_supply() == option::some(supply));
   assert!(fixture.kiosk.borrow<Item>(&fixture.kiosk_cap, target_id).amount() == 2);
-  let payment = fixture.payment.split(COST * kares::unit(), fixture.scenario.ctx());
-  api::redeem_mastery_offer_kares(&mut fixture.currency, payment, &fixture.offer, &fixture.template,
+  let payment = fixture.payment.split(kares::mastery_price(COST), fixture.scenario.ctx());
+  api::redeem_mastery_offer_token(&fixture.economy, &mut fixture.currency, payment, &fixture.offer, &fixture.template,
     option::some(target_id), &mut fixture.kiosk, &fixture.kiosk_cap, &fixture.policy, &version, fixture.scenario.ctx());
   test_scenario::return_shared(version);
   assert!(mastery::points_for_testing(&mastery) == 150);
-  assert!(fixture.currency.total_supply() == option::some(supply - COST * kares::unit()));
+  assert!(fixture.currency.total_supply() == option::some(supply - kares::mastery_price(COST)));
   let item = fixture.kiosk.borrow<Item>(&fixture.kiosk_cap, target_id);
   assert!(item.amount() == 3 && item.template() == object::id(&fixture.template));
   assert!(!item.has_stats() && fixture.kiosk.is_locked(target_id));
@@ -118,7 +113,7 @@ fun kares_redemption_needs_no_mastery_object_or_existing_stack() {
   let mut state = fixture(COST);
   let fixture = &mut state;
   assert!(fixture.kiosk.item_count() == 0);
-  buy_kares(fixture, COST * kares::unit(), option::none());
+  buy_kares(fixture, kares::mastery_price(COST), option::none());
   assert!(fixture.kiosk.item_count() == 1);
   assert!(test_scenario::ids_for_address<mastery::Mastery>(OWNER).is_empty());
   finish(state);
@@ -133,7 +128,7 @@ fun retirement_and_reenable_preserve_price_and_content_revision() {
   assert!(registry::revision(&fixture.root) == revision + 1);
   mastery::set_offer(&fixture.admin, &mut fixture.root, &mut fixture.offer, COST, true, fixture.scenario.ctx());
   assert!(registry::revision(&fixture.root) == revision + 2);
-  buy_kares(fixture, COST * kares::unit(), option::none());
+  buy_kares(fixture, kares::mastery_price(COST), option::none());
   assert!(fixture.kiosk.item_count() == 1);
   finish(state);
 }
@@ -150,7 +145,7 @@ fun existing_offer_price_is_immutable() {
 fun underpayment_cannot_purchase_an_offer() {
   let mut state = fixture(COST);
   let fixture = &mut state;
-  buy_kares(fixture, COST * kares::unit() - 1, option::none());
+  buy_kares(fixture, kares::mastery_price(COST) - 1, option::none());
   finish(state);
 }
 
@@ -158,7 +153,7 @@ fun underpayment_cannot_purchase_an_offer() {
 fun overpayment_is_rejected_instead_of_burning_the_excess() {
   let mut state = fixture(COST);
   let fixture = &mut state;
-  buy_kares(fixture, COST * kares::unit() + 1, option::none());
+  buy_kares(fixture, kares::mastery_price(COST) + 1, option::none());
   finish(state);
 }
 
@@ -167,7 +162,7 @@ fun retired_offer_rejects_kares_payment() {
   let mut state = fixture(COST);
   let fixture = &mut state;
   mastery::set_enabled(&fixture.admin, &mut fixture.root, &mut fixture.offer, false, fixture.scenario.ctx());
-  buy_kares(fixture, COST * kares::unit(), option::none());
+  buy_kares(fixture, kares::mastery_price(COST), option::none());
   finish(state);
 }
 
@@ -188,8 +183,8 @@ fun kares_cannot_purchase_a_substituted_template() {
   let mut state = fixture(COST);
   let fixture = &mut state;
   let other = item_rows::template_for_testing(b"other_reward".to_string(), b"resource".to_string(), fixture.scenario.ctx());
-  let payment = fixture.payment.split(COST * kares::unit(), fixture.scenario.ctx());
-  mastery::redeem_kares(&mut fixture.currency, payment, &fixture.offer, &other, option::none(),
+  let payment = fixture.payment.split(kares::mastery_price(COST), fixture.scenario.ctx());
+  mastery::redeem_token(&fixture.economy, &mut fixture.currency, payment, &fixture.offer, &other, option::none(),
     &mut fixture.kiosk, &fixture.kiosk_cap, &fixture.policy, fixture.scenario.ctx());
   item_rows::destroy_for_testing(other);
   finish(state);
@@ -211,8 +206,8 @@ fun kares_redemption_requires_the_owning_kiosk_cap() {
   let mut state = fixture(COST);
   let fixture = &mut state;
   let (_other_kiosk, wrong_cap) = kiosk::new(fixture.scenario.ctx());
-  let payment = fixture.payment.split(COST * kares::unit(), fixture.scenario.ctx());
-  mastery::redeem_kares(&mut fixture.currency, payment, &fixture.offer, &fixture.template, option::none(),
+  let payment = fixture.payment.split(kares::mastery_price(COST), fixture.scenario.ctx());
+  mastery::redeem_token(&fixture.economy, &mut fixture.currency, payment, &fixture.offer, &fixture.template, option::none(),
     &mut fixture.kiosk, &wrong_cap, &fixture.policy, fixture.scenario.ctx());
   abort 999
 }
@@ -222,5 +217,19 @@ fun zero_offer_price_is_rejected() { finish(fixture(0)) }
 
 #[test, expected_failure(abort_code = 3109, location = aresrpg::mastery)]
 fun offer_price_must_fit_whole_kares_base_units() {
-  finish(fixture(std::u64::max_value!() / kares::unit() + 1))
+  finish(fixture(std::u64::max_value!() / kares::mastery_price(1) + 1))
+}
+
+#[test, expected_failure(abort_code = 602, location = aresrpg::api)]
+fun retired_native_currency_cannot_buy_mastery_rewards() {
+  let mut state = fixture(COST);
+  let state = &mut state;
+  aresrpg_kares::kares::init_for_testing(state.scenario.ctx());
+  state.scenario.next_tx(OWNER);
+  let mut legacy = state.scenario.take_from_address<Currency<aresrpg_kares::kares::KARES>>(@0xC);
+  let version = state.scenario.take_shared<version::Version>();
+  api::redeem_mastery_offer_kares(&mut legacy, sui::coin::mint_for_testing(1, state.scenario.ctx()),
+    &state.offer, &state.template, option::none(), &mut state.kiosk, &state.kiosk_cap,
+    &state.policy, &version, state.scenario.ctx());
+  abort 999
 }

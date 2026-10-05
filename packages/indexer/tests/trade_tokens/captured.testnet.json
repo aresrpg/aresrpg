@@ -1,0 +1,30 @@
+{
+  "network": "testnet",
+  "captured_at": "2026-10-02T09:48:45.524Z",
+  "game_original": "0x4f532487e0cc336b593f79bc20b9f9220d02f8e554b754e0b5971f1dfc9e5d01",
+  "transaction_digest": "kMU6bnCgtk7jftAjc4kQAhA9gLemeWCCAKBxkXi6Kxh",
+  "objects": [
+    {
+      "object_id": "0x94f3eae093eabd64f7824db7449710ef854ec3bf09e3c3a57fa3cc357d24905b",
+      "version": "1037886856",
+      "type": "0x4f532487e0cc336b593f79bc20b9f9220d02f8e554b754e0b5971f1dfc9e5d01::trade::Trade",
+      "owner": {
+        "$kind": "Shared",
+        "Shared": {
+          "initialSharedVersion": "3"
+        }
+      },
+      "bcs": "94f3eae093eabd64f7824db7449710ef854ec3bf09e3c3a57fa3cc357d24905b087aa862ca645c0b94400c49e11b491011fca35db837361ccfc4c6f69d356e8698e6f1c0af28f5f90d9ca30b7a326509d63f0cdcdd155c8059e6d56b0ea77c30020400000000000000010100000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "object_id": "0x1fbd4cdfc2501b7d70e9914dc8df8a1acd0b2c247cadaf691bef494a54646052",
+      "version": "1037886856",
+      "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<vector<u8>,vector<0x0000000000000000000000000000000000000000000000000000000000000002::balance::Balance<0xe9fa9c14f5f24e83a194d2db8bb843d65717f48f78cfb763dd8524aee466ed44::kares::KARES>>>",
+      "owner": {
+        "$kind": "ObjectOwner",
+        "ObjectOwner": "0x94f3eae093eabd64f7824db7449710ef854ec3bf09e3c3a57fa3cc357d24905b"
+      },
+      "bcs": "1fbd4cdfc2501b7d70e9914dc8df8a1acd0b2c247cadaf691bef494a54646052056b6172657302000e5fa31c0000000000000000000000"
+    }
+  ]
+}

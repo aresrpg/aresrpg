@@ -20,6 +20,8 @@ export type FightPresentationBatch = Readonly<{
   events: readonly FightEvent[]
 }>
 export type FightEnvironment = Readonly<{
+  /** The owned character selected before combat starts switching turns. */
+  return_character_id: string | null
   zone_ids: readonly string[]
   presentations: readonly FightPresentationBatch[]
   error: FightRuntimeError | null
@@ -153,6 +155,7 @@ export const initial_fight_session_state = (): FightSessionState =>
 
 export const initial_fight_environment = (): FightEnvironment =>
   Object.freeze({
+    return_character_id: null,
     zone_ids: Object.freeze([]),
     presentations: Object.freeze([]),
     error: null,

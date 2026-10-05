@@ -14,10 +14,24 @@ import {
 } from '@aresrpg/engine'
 
 import environment from '../../../../seed/content/adventure_environment.json'
+import adventure from '../../../../seed/content/adventure.json'
 
 const relief = create_fbm_sampler(1934, { period: 64, octaves: 3, gain: 0.5 })
 const path_center = environment.path.center.map(([x, y]) => [x!, y!] as const)
 export const adventure_axis = (z: number): number => landscape_height(path_center, z)
+const descent_elevations = environment.descent.floor.map(([z, y]) => [z!, y!] as const)
+export const cavern_floor = (z: number): number => Math.floor(landscape_height(descent_elevations, Math.floor(z)))
+
+/** The cave is excavated inside this massif; the far terrain must retain its enclosing rock too. */
+const cavern_massif = (x: number, z: number): number => {
+  const plan = environment.descent
+  if (z < plan.start_z) return 0
+  const boss = adventure.encounters.at(-1)!.position
+  const tunnel = z <= boss.z ? Math.abs(x - adventure_axis(z)) / (plan.radius + 14) : Infinity
+  const chamber = Math.hypot(x - boss.x, z - boss.z) / (plan.chamber_radius + 14)
+  const envelope = Math.max(0, Math.min(1, (1 - Math.min(tunnel, chamber)) * 3))
+  return (cavern_floor(z) + plan.arena_vault_height + plan.roof_thickness + 12) * envelope
+}
 
 export const RIVER_CENTER_Z = 211
 export const BRIDGE_HEIGHT = 80
@@ -67,7 +81,7 @@ const valley_height = (x: number, z: number): number => {
   const route_width = z < 142 ? 33 : 4
   const route = Math.max(0, Math.min(1, (route_width - Math.abs(x - adventure_axis(z))) / 4))
   const approach = z < 280 ? (z < 180 ? 72 : BRIDGE_HEIGHT - 1) * route : 0
-  return Math.max(environment.sea_level - 2, approach, ...terraces)
+  return Math.max(environment.sea_level - 2, approach, cavern_massif(x, z), ...terraces)
 }
 
 export const adventure_biome = (): WorldRecipe => {

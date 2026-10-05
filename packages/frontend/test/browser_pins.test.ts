@@ -46,7 +46,7 @@ test('browser pin imports exclude reconciliation metadata without changing runti
     network: 'testnet',
     package: 'testnet-package',
     content_root: { id: 'live-registry', shared_version: '42' },
-    kares_offering: { id: 'live-offering', shared_version: '7' },
+    kares_economy: { id: 'live-economy', shared_version: '7' },
   }
   const source = JSON.stringify({ ...runtime, seed_ledger: { current: 'reconciliation-must-not-ship' } })
   try {
@@ -72,7 +72,7 @@ test('browser pin imports exclude reconciliation metadata without changing runti
       })
       .join('\n')
     expect(code).toContain('live-registry')
-    expect(code).toContain('live-offering')
+    expect(code).toContain('live-economy')
     expect(code).not.toContain('reconciliation-must-not-ship')
     expect(await readFile(pins_path, 'utf8')).toBe(source)
     await writeFile(pins_path, JSON.stringify({ ...runtime, package: 'new-publication' }))

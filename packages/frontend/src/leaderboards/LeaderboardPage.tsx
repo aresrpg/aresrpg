@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { LEADERBOARD_LIMIT, LEADERBOARD_METRICS, type LeaderboardEntry } from '@aresrpg/protocol'
+import { LEADERBOARD_LIMIT, type LeaderboardEntry } from '@aresrpg/protocol'
 
 import podium_first from '../assets/leaderboards/podium-1.png'
 import podium_second from '../assets/leaderboards/podium-2.png'
@@ -9,8 +9,10 @@ import podium_third from '../assets/leaderboards/podium-3.png'
 import { copy_text } from '../i18n/copy.ts'
 import { useAppStore } from '../store.ts'
 
-import { display_address, display_suins_name, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
+import { player_name, leaderboard_score, compact_leaderboard_score } from './presentation.ts'
+import { PlayerProfileModal } from './PlayerProfileModal.tsx'
 import { BadgeRow } from './BadgeRow.tsx'
+import { LeaderboardCategories } from './LeaderboardCategories.tsx'
 import { useLeaderboardState, useLeaderboardDispatch } from './LeaderboardSource.tsx'
 import './leaderboards.css'
 
@@ -42,6 +44,7 @@ const EntryBadges = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
 const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
   const copy = useAppStore(({ copy }) => copy)
   const { observation } = useLeaderboardState()
+  const dispatch = useLeaderboardDispatch()
   const address = useAppStore(({ session }) => session.wallet?.address)
   const locale = useAppStore(({ locale }) => locale)
   if (!copy) return null
@@ -52,11 +55,16 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
       <span role="cell" className="text-[10px] text-muted">
         {entry.rank}
       </span>
-      <div role="cell" className="flex min-w-0 flex-col gap-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <span title={[entry.name, entry.address].filter(Boolean).join(' · ')} className="truncate text-text">
-            {entry.name ? display_suins_name(entry.name) : display_address(entry.address)}
-          </span>
+      <div role="cell" className="leaderboard-user">
+        <div className="leaderboard-user-name">
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'leaderboards/inspect', address: entry.address, name: entry.name })}
+            title={[entry.name, entry.address].filter(Boolean).join(' · ')}
+            className="leaderboard-player-name truncate text-left text-text hover:text-gold"
+          >
+            {player_name(entry)}
+          </button>
           {self && <span className="shrink-0 text-[10px] text-cyan uppercase">{text('you')}</span>}
         </div>
         {['xp', 'jobs'].includes(observation.metric) && <EntryBadges entry={entry} />}
@@ -74,6 +82,7 @@ const EntryRow = ({ entry }: Readonly<{ entry: LeaderboardEntry }>) => {
 
 const Podium = () => {
   const { snapshot, observation } = useLeaderboardState()
+  const dispatch = useLeaderboardDispatch()
   const locale = useAppStore(({ locale }) => locale)
   const copy = useAppStore(({ copy }) => copy)
   if (!copy) return null
@@ -92,16 +101,17 @@ const Podium = () => {
               height={128}
               draggable={false}
             />
-            <span
+            <button
+              type="button"
+              disabled={!entry}
+              onClick={() =>
+                entry && dispatch({ type: 'leaderboards/inspect', address: entry.address, name: entry.name })
+              }
               title={[entry?.name, entry?.address].filter(Boolean).join(' · ')}
-              className="w-full truncate text-center text-xs text-text"
+              className="leaderboard-player-name w-full truncate text-center text-xs text-text"
             >
-              {entry
-                ? entry.name
-                  ? display_suins_name(entry.name)
-                  : display_address(entry.address)
-                : text('unclaimed')}
-            </span>
+              {entry ? player_name(entry) : text('unclaimed')}
+            </button>
             <div
               className="mt-2 max-w-full text-center text-lg font-semibold break-all"
               title={entry ? leaderboard_score(entry.score, observation.metric, locale) : undefined}
@@ -114,34 +124,6 @@ const Podium = () => {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-const CategoryTabs = () => {
-  const dispatch_app = useLeaderboardDispatch()
-  const copy = useAppStore(({ copy }) => copy)
-  const { observation } = useLeaderboardState()
-  if (!copy) return null
-  const text = copy_text(copy.leaderboard_page)
-  return (
-    <div
-      className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border pb-3"
-      role="tablist"
-      aria-label={text('category')}
-    >
-      {LEADERBOARD_METRICS.map((metric) => (
-        <button
-          key={metric}
-          type="button"
-          role="tab"
-          aria-selected={metric === observation.metric}
-          className={`leaderboard-category ${metric === observation.metric ? 'active' : ''}`}
-          onClick={() => dispatch_app({ type: 'leaderboards/select', metric })}
-        >
-          {text(metric)}
-        </button>
-      ))}
     </div>
   )
 }
@@ -196,10 +178,7 @@ const Rankings = () => {
       )}
       <Podium />
       <div role="table" aria-label={text(observation.metric)} className="leaderboard-table">
-        <div
-          role="row"
-          className="leaderboard-row sticky top-0 z-1 border-b border-border bg-surface text-[10px] tracking-[0.1em] text-muted uppercase"
-        >
+        <div role="row" className="sr-only">
           <span role="columnheader">#</span>
           <span role="columnheader">{text('user')}</span>
           <span role="columnheader" className="text-right">
@@ -245,10 +224,11 @@ export default function LeaderboardPage() {
         <h1 className="text-2xl font-medium text-text">{copy.leaderboard}</h1>
         <ResetCountdown />
       </header>
-      <CategoryTabs />
+      <LeaderboardCategories />
       <p className="leaderboard-description text-[10px] leading-5 text-muted">{text(`${metric}_description`)}</p>
       <ErrorNotice />
       <Rankings />
+      <PlayerProfileModal />
       <p className="leaderboard-hint text-[9px] leading-5 text-muted">{text('suins_hint')}</p>
     </section>
   )

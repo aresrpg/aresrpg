@@ -146,7 +146,7 @@ export const create_webgpu_backend = async (
   const on_device_lost = renderer.onDeviceLost.bind(renderer)
   renderer.onDeviceLost = (info) => {
     on_device_lost(info)
-    if (!disposed) report_issue({ code: 'webgpu_device_lost', detail: info.message })
+    if (!disposed) report_issue({ code: 'webgpu_device_lost', detail: info.message, reason: info.reason ?? undefined })
   }
   renderer.library = new StandardNodeLibrary()
   try {

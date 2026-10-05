@@ -4,10 +4,12 @@
 import { useStore } from 'zustand'
 import { useEffect, useMemo } from 'react'
 
+import { toast } from '../toast.ts'
+
 import type { FinanceSession } from './model.ts'
 import { create_finance_runtime, type FinanceOptions } from './runtime.ts'
 
-export const useFinance = (options: FinanceOptions, session?: FinanceSession | null) => {
+export const useFinance = (options: FinanceOptions, session?: FinanceSession | null, confirmation?: string) => {
   const runtime = useMemo(
     () =>
       create_finance_runtime(
@@ -19,6 +21,13 @@ export const useFinance = (options: FinanceOptions, session?: FinanceSession | n
         session ?? null
       ),
     [options.network, options.rpc_url, options.managed, session]
+  )
+  useEffect(
+    () =>
+      runtime.store.subscribe((state, previous) => {
+        if (confirmation && state.digest && state.digest !== previous.digest) toast.add(confirmation, 'success')
+      }),
+    [runtime, confirmation]
   )
   const state = useStore(runtime.store)
   useEffect(() => runtime.start(), [runtime])

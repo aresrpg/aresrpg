@@ -19,6 +19,7 @@ import { copy_text, type AppCopy } from '../../i18n/copy.ts'
 import { dungeon_portal_markers, spawn_markers, zone_key } from '../../modules/world.ts'
 import { dispatch_app, useAppStore } from '../../store.ts'
 import { useWorldPose } from '../core/pose_feed.ts'
+import { useMapPlayers } from './useMapPlayers.ts'
 
 import type { MapResourceIcons } from './map_resource_icons.ts'
 import { camera_heading } from './compass_math.ts'
@@ -60,6 +61,7 @@ export const WorldMap = ({
   resource_icons,
 }: Readonly<{ compiled: CompiledWorld; copy: AppCopy; on_close: () => void; resource_icons: MapResourceIcons }>) => {
   const pose = useWorldPose()
+  const players = useMapPlayers()
   const world_state = useAppStore(({ world }) => world)
   const world_name = useAppStore(
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
@@ -80,7 +82,7 @@ export const WorldMap = ({
   const cities = useMemo(() => city_map_overlays(compiled), [compiled])
   const selected_position = useMemo(
     () =>
-      run?.status === 'running' && run.source === 'position' && run.world === world_name
+      run?.status === 'running' && ['position', 'map'].includes(run.source) && run.world === world_name
         ? { x: chain_to_client_coordinate(run.x), z: chain_to_client_coordinate(run.z) }
         : null,
     [run, world_name]
@@ -131,7 +133,7 @@ export const WorldMap = ({
       draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name), Date.now(), (city) =>
         copy_text(copy.world_hud)('dungeon_city', { city })
       )
-      draw_players(context, view, Object.values(world_state.players))
+      draw_players(context, view, players)
       draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
     }
     const icons = resource_icons(pose, paint)
@@ -145,6 +147,7 @@ export const WorldMap = ({
     center_z,
     radius,
     pose,
+    players,
     selected_position,
     world_state,
     world_name,
@@ -155,7 +158,7 @@ export const WorldMap = ({
   const select_position = (x: number, y: number): void => {
     if (!world_name) return
     const target = world_map_position_target(lod, x * MAP_SIZE, y * MAP_SIZE, MAP_SIZE)
-    dispatch_app({ type: 'run_to/position', world: world_name, x: target.x, z: target.z })
+    dispatch_app({ type: 'run_to/position', world: world_name, x: target.x, z: target.z, source: 'map' })
   }
 
   return (
@@ -169,6 +172,7 @@ export const WorldMap = ({
       legend={
         <>
           <span>{text('world_map_extent', { blocks: numbers.number(Math.round(radius * 2)) })}</span>
+          <span>{text('map_party_legend')}</span>
           {selected_position && (
             <span data-map-destination="">
               {copy.party_panel.run_to_position}: {selected_position.x}, {selected_position.z}

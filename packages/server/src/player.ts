@@ -51,6 +51,7 @@ import player_trade from './modules/player_trade.ts'
 import player_kolizeum from './modules/player_kolizeum.ts'
 import player_friends from './modules/player_friends.ts'
 import player_admin from './modules/player_admin.ts'
+import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
 import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
@@ -130,6 +131,7 @@ export type PlayerState = {
   /** the marketplace category window under observation */
   market_observation: MarketObservation | null
   market_price_observation: MarketPriceObservation | null
+  inspection: Extract<ClientPacket, { type: 'packet/inspection_request' }> | null
   leaderboard_observation: LeaderboardObservation | null
 }
 
@@ -190,6 +192,7 @@ const MODULES: PlayerModule[] = [
   player_trade,
   player_kolizeum,
   player_requests,
+  player_inspection,
   player_admin,
 ]
 
@@ -203,10 +206,15 @@ const READ_PACKETS = new Set<string>([
   'packet/fight_resync',
   'packet/market_observe',
   'packet/market_prices_observe',
+  'packet/inspection_request',
   'packet/leaderboard_observe',
   'packet/character_owner_request',
   'packet/admin_request',
 ])
+
+// Retiring an inspection starts no graph work and must remain possible after the read budget is spent.
+const requests_graph = (packet: Readonly<ClientPacket>): boolean =>
+  READ_PACKETS.has(packet.type) && !(packet.type === 'packet/inspection_request' && packet.query === null)
 
 const INITIAL_STATE = (): PlayerState => ({
   characters: {},
@@ -220,6 +228,7 @@ const INITIAL_STATE = (): PlayerState => ({
   market_observation: null,
   market_price_observation: null,
   leaderboard_observation: null,
+  inspection: null,
 })
 
 type PlayerWires = Pick<
@@ -304,9 +313,13 @@ export function create_player({
       if (!realtime_limiter.take(address)) return drop('RATE_LIMIT')
       try {
         const packet = parse_client_packet(raw)
-        if (READ_PACKETS.has(packet.type) && !request_limiter.take(address)) {
-          const id = 'id' in packet && Number.isInteger(packet.id) ? { id: packet.id } : {}
-          send({ type: 'packet/error', ...id, reason: 'rate limited' })
+        if (requests_graph(packet) && !request_limiter.take(address)) {
+          const id = 'id' in packet ? { id: packet.id } : {}
+          send(
+            packet.type === 'packet/inspection_request'
+              ? { type: 'packet/inspection_error', id: packet.id }
+              : { type: 'packet/error', ...id, reason: 'rate limited' }
+          )
           return
         }
         context.dispatch(packet)

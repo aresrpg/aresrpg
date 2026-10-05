@@ -214,3 +214,12 @@ test('resetting completed quests stops automation in the same app fold', () => {
   } as AppState
   expect(reduce_app_state(running, { type: 'journey/reset' }).automation.run).toBeNull()
 })
+
+test.each([...JOURNEY_QUESTS])('quest references and forward milestones are valid: %p', (quest) => {
+  if (quest.kind === 'hunt') expect(content_catalog.mob(quest.mob!)?.mob).toBeDefined()
+  if (['materials', 'craft'].includes(quest.kind)) expect(content_catalog.item(quest.item)?.recipe).toBeTruthy()
+  if (quest.superseded_by)
+    expect(JOURNEY_QUESTS.findIndex(({ id }) => id === quest.superseded_by)).toBeGreaterThan(
+      JOURNEY_QUESTS.indexOf(quest)
+    )
+})

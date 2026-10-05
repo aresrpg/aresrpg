@@ -16,8 +16,8 @@ import {
   project_math_deployment,
   project_control_deployment,
   project_seed_deployment,
-  project_kares_setup,
-  project_kares_deployment,
+  project_rewards_setup,
+  project_rewards_deployment,
   DISPLAY_REGISTRY_ID,
 } from '../src/deployment_admin.ts'
 import { SDK, type Pins, type SuiTransport } from '../src/client.ts'
@@ -30,22 +30,33 @@ describe('deployment admin', () => {
     // The literal package sentinel was observed in testnet receipt
     // BEnojWNcqiW4ri57r9J2qwgo7RtBGvUxcERhzdtWLndh on 2026-09-06.
     const original = id('1')
-    const deployment = project_kares_deployment({
+    const deployment = project_rewards_deployment({
       Transaction: {
         objectTypes: {
           [original]: 'package',
           [id('2')]: '0x2::package::UpgradeCap',
-          [id('3')]: `${original}::kares::Genesis`,
-          [id('4')]: `0x2::coin_registry::Currency<${original}::kares::KARES>`,
+          [id('3')]: `${original}::economy::Setup`,
+          [id('4')]: `${original}::economy::Economy`,
         },
         effects: {
           changedObjects: [
             { objectId: original, idOperation: 'Created', outputState: 'PackageWrite', outputOwner: null },
+            {
+              objectId: id('4'),
+              idOperation: 'Created',
+              outputState: 'ObjectWrite',
+              outputOwner: { Shared: { initialSharedVersion: '42' } },
+            },
           ],
         },
       },
     })
-    expect(deployment).toEqual({ package: original, upgrade_cap: id('2'), genesis: id('3'), currency: id('4') })
+    expect(deployment).toEqual({
+      package: original,
+      upgrade_cap: id('2'),
+      setup: id('3'),
+      economy: { id: id('4'), shared_version: '42' },
+    })
   })
 
   test('KARES registration projects the new shared currency, not the consumed receiving object', () => {
@@ -56,14 +67,15 @@ describe('deployment admin', () => {
         objectTypes: {
           [id('2')]: currency_type,
           [id('3')]: currency_type,
-          [id('4')]: `${original}::staking::StakingPool`,
-          [id('5')]: `${original}::offering::Offering`,
-          [id('6')]: `${original}::combat_rewards::CombatPot`,
+          [id('4')]: `${original}::staking::StakingPool<${original}::kares::KARES>`,
+          [id('5')]: `${original}::economy::Economy<${original}::kares::KARES>`,
+          [id('6')]: `${original}::combat_rewards::CombatPot<${original}::kares::KARES>`,
+          [id('7')]: `${original}::community::CommunityPool<${original}::kares::KARES>`,
         },
         effects: {
           changedObjects: [
             { objectId: id('2'), idOperation: 'Deleted', outputState: 'NotExist', outputOwner: null },
-            ...['3', '4', '5', '6'].map((value) => ({
+            ...['3', '4', '5', '6', '7'].map((value) => ({
               objectId: id(value),
               idOperation: 'Created',
               outputState: 'ObjectWrite',
@@ -73,10 +85,9 @@ describe('deployment admin', () => {
         },
       },
     }
-    expect(project_kares_setup(receipt as never, original)).toEqual({
-      currency: { id: id('3'), shared_version: '42' },
+    expect(project_rewards_setup(receipt as never, original, `${original}::kares::KARES`)).toEqual({
+      community: { id: id('7'), shared_version: '42' },
       pool: { id: id('4'), shared_version: '42' },
-      offering: { id: id('5'), shared_version: '42' },
       combat_pot: { id: id('6'), shared_version: '42' },
     })
   })

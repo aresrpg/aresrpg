@@ -26,6 +26,7 @@ import { JourneyHost } from '../journey/JourneyHost.tsx'
 import { JourneySourceContext } from '../journey/source.tsx'
 import { initial_journey_state } from '../journey/model.ts'
 import { JOURNEY_QUESTS } from '../journey/model.ts'
+import { journey_ingredients } from '../journey/ingredients.ts'
 import { MobInspectionOverlay } from '../game/hud/MobInspectionOverlay.tsx'
 import { MobDetailsDialog } from '../game/hud/MobDetailsDialog.tsx'
 import { MobPackCard } from '../components/MobPackCard.tsx'
@@ -289,6 +290,7 @@ const Journals = ({ copy }: Readonly<{ copy: AppCopy }>) => {
       value={{
         state: { ...initial_journey_state('workshop'), ready: true, journal_open: open, completed },
         quests: JOURNAL_QUESTS,
+        ingredients: (output) => journey_ingredients(output, [], new Set(), null),
         available: true,
         text,
         icon: item_icon,

@@ -10,8 +10,7 @@ export type FinanceSession = Pick<KaresWalletSession, 'address' | 'kares'>
 export type FinanceSnapshot = KaresStakingSnapshot
 export type FinanceBalances = KaresBalances
 export type FinanceAction =
-  | Readonly<{ kind: 'contribute' | 'stake' | 'fund_kares' | 'fund_sui' | 'fund_combat'; amount: bigint }>
-  | Readonly<{ kind: 'claim_offering' | 'refund'; ids: readonly string[] }>
+  | Readonly<{ kind: 'stake' | 'fund_kares' | 'fund_sui' | 'fund_combat'; amount: bigint }>
   | Readonly<{ kind: 'claim_rewards'; ids: readonly string[] }>
   | Readonly<{ kind: 'withdraw'; positions: readonly Readonly<{ id: string; amount: bigint }>[]; amount: bigint }>
 export type FinanceRequest = Readonly<{ kind: 'refresh' }> | Readonly<{ kind: 'execute'; action: FinanceAction }>
@@ -97,14 +96,6 @@ export const format_amount = (value: bigint, decimals = 4, locale = 'en'): strin
   const fraction = decimal.replace(/0+$/, '')
   const separator = new Intl.NumberFormat(locale).formatToParts(1.1).find(({ type }) => type === 'decimal')!.value
   return fraction ? `${whole}${separator}${fraction}` : whole
-}
-
-export const offering_phase = (snapshot: FinanceSnapshot): 'upcoming' | 'open' | 'successful' | 'refundable' => {
-  const { offering, clock_ms } = snapshot
-  if (!offering.started) return 'upcoming'
-  if (clock_ms < offering.opens_ms) return 'upcoming'
-  if (clock_ms < offering.closes_ms) return 'open'
-  return offering.total_contributed < offering.min_raise ? 'refundable' : 'successful'
 }
 
 export const validate_amount = (

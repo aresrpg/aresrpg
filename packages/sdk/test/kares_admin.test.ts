@@ -10,7 +10,7 @@ import { as_admin_session } from '../src/admin_auth.ts'
 
 import { digest, id } from './helpers/transport.ts'
 
-test('setup seals its original capability atomically and rejects a foreign or upgraded package', async () => {
+test('setup passes the retained original capability and rejects a foreign or upgraded package', async () => {
   const account = {
     address: id(200),
     publicKey: new Uint8Array(32),
@@ -19,7 +19,7 @@ test('setup seals its original capability atomically and rejects a foreign or up
   }
   const wallet = {
     version: '1.0.0',
-    name: 'KARES seal test',
+    name: 'KARES funding test',
     icon: 'data:image/svg+xml,<svg/>',
     chains: ['sui:testnet'],
     accounts: [account],
@@ -53,42 +53,44 @@ test('setup seals its original capability atomically and rejects a foreign or up
     let submitted: Transaction | null = null
     const execute = spyOn(context.sdk, 'execute').mockImplementation(async (transaction) => {
       submitted = transaction
-      return { Transaction: { digest: 'immutable' } }
+      return { Transaction: { digest: 'funded' } }
     })
     try {
       const admin = as_admin_session(session)
       const terms = {
         package: id(100),
         upgrade_cap: id(101),
-        genesis: id(103),
-        currency: id(104),
-        minimum: 5n,
-        maximum: 20n,
-        duration_ms: 100n,
+        setup: id(103),
+        economy: { id: id(107), shared_version: '1' },
+        currency: { id: id(106), shared_version: '1' },
+        coin_type: `${id(500)}::token::TOKEN`,
         treasury: account.address,
-        liquidity: id(201),
-        team: id(202),
-        community: id(203),
+        victory_type: `${id(600)}::fight_rewards::BossVictory`,
       }
-      await admin.setup_kares(terms)
+      await admin.setup_rewards(terms)
       const data = (submitted as Transaction | null)!.getData()
-      expect(data.commands).toHaveLength(2)
-      expect(data.commands[1].MoveCall).toMatchObject({
+      const calls = data.commands.flatMap((command) => (command.MoveCall ? [command.MoveCall] : []))
+      expect(calls).toHaveLength(1)
+      expect(calls[0]).toMatchObject({
         package: id(100),
-        module: 'offering',
+        module: 'economy',
         function: 'setup',
       })
-      const [, argument] = data.commands[1].MoveCall!.arguments
+      const [, , argument] = calls[0].arguments
       if (argument.$kind !== 'Input') throw new Error('Setup capability must be a direct object input')
       expect(data.inputs[argument.Input].Object?.ImmOrOwnedObject?.objectId).toBe(id(101))
       read.mockResolvedValue({
         objects: [{ objectId: id(101), json: { package: id(999), version: '1', policy: 0 } }],
       } as never)
-      await expect(admin.setup_kares(terms)).rejects.toThrow('original, never-upgraded')
+      await expect(admin.setup_rewards(terms)).rejects.toThrow('original, never-upgraded')
       read.mockResolvedValue({
         objects: [{ objectId: id(101), json: { package: id(100), version: '2', policy: 0 } }],
       } as never)
-      await expect(admin.setup_kares(terms)).rejects.toThrow('original, never-upgraded')
+      await expect(admin.setup_rewards(terms)).rejects.toThrow('original, never-upgraded')
+      read.mockResolvedValue({
+        objects: [{ objectId: id(101), json: { package: id(100), version: '1', policy: 192 } }],
+      } as never)
+      await expect(admin.setup_rewards(terms)).rejects.toThrow('unrestricted upgrade authority')
       expect(execute).toHaveBeenCalledTimes(1)
     } finally {
       read.mockRestore()

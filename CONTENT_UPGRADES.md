@@ -39,7 +39,7 @@ Every player spell always has exactly six levels.
 - Boards: add, replace, reorder, and remove.
 - Mastery offers: enabled state. Existing costs cannot change; reconciliation checks the authored
   cost against the immutable chain value. Removing an offer disables it without rewriting its price.
-  Either earned points or burned KARES mint the same statless item. Loot boxes retain their current table.
+  Either earned points or 1,000 burned KARES per point mint the same statless item. Loot boxes retain their current table.
 
 Stackable consumables and loot boxes use their template's current behavior. Unstackable equipment
 keeps the stats and damages rolled when it was minted. Running fights keep their mob and board
@@ -186,8 +186,8 @@ Package deployment follows the dependency graph:
 
     math → combat
     math + control → seed
-    independent kares
-    math + control + combat + seed + kares → core
+    retired kares + independent rewards
+    math + control + combat + seed + kares + rewards → core
 
 Upgrade only a package whose desired artifact changed. Reuse unchanged published dependencies.
 
@@ -195,56 +195,52 @@ Republish abandons every active package lineage, publishes fresh math, control, 
 core packages in dependency order, and creates a fresh empty Registry. The previous game pins and
 content ledger are discarded; no active package or content object is reused. Compatibility belongs only to Upgrade; Republish never attempts selective reuse.
 
-KARES is outside that five-package game lifecycle. A game republish must retain its currency,
-offering, combat pot and staking originals, objects and balances. Publish KARES independently before preparing a game package that imports it.
+Currency and rewards are outside that five-package game lifecycle. Preserve their identities and
+objects across compatible upgrades. The rewards package binds the original game victory
+witness, so a fresh game lineage cannot inherit combat payouts. Production migration uses Upgrade.
 
-## KARES offering operations
+## KARES reward operations
 
-The SDK exposes explicit administrative transactions for publication, atomic offering setup,
-one-time start, settlement, treasury vesting, combat funding, authorization, and metadata updates.
-Each transaction requires its native authority and retains its certified receipt for recovery.
-Mainnet publication requires explicit owner approval. Local testnet uses an ignored deployment file
-and never enters production release workflows. KARES is published only once on each network;
-game republishing reuses that monetary identity.
+Blast owns the standalone presale, its start, settlement and external-market migration. The
+administrative SDK publishes and funds reward reserves; it never issues currency or starts a sale.
+Mainnet publication, funding, upgrades and permanent freeze require explicit owner approval.
 
-1. Publish the KARES package. Record its receipt-derived lineage and Genesis.
-2. Review the intended name, description and icon asset before a public offering.
-3. Keep the original, never-upgraded UpgradeCap with the publisher until setup. Never freeze it
-   separately: setup must consume that exact capability, and premature destruction strands Genesis.
-4. Review and save the immutable sale duration and recipient addresses. The sale lasts
-   15 minutes on testnet and seven days on mainnet, measured from its separate native start.
-   Mainnet accepts 50,000–200,000 SUI. The testnet rehearsal requires 5–20 SUI.
-5. Configure and seal the offering once. Setup registers native Currency, destroys its genuine UpgradeCap,
-   allocates Genesis and fixes the offering terms. Recovery must prove the canonical cap's deletion
-   in that same successful setup receipt; an absent-cap read alone is insufficient. The offering stays
-   inactive until its configured treasury starts it once.
-6. Record the canonical combat-pot ID and initial shared version from the setup receipt. Before
-   enabling combat on mainnet, the immutable treasury moves the reserved 100,000 KARES directly
-   into that pot. Confirm its balance from certified effects.
-7. After publishing the game, the treasury authorizes game victories. The witness is
-   `<original_game_package>::fight_rewards::BossVictory`, using the original type ID, not an upgrade target.
-   Read the pot back and verify that exact type before enabling gameplay. Repeat authorization after
-   a game republish; preserve the existing pot and counters. Zero payouts before activation are final.
-8. When ready, the treasury starts the offering once. Contributors use the public launch page.
-   Closing below the minimum permits full refunds; otherwise claims return tokens plus
-   excess SUI and distribute proceeds once when needed. Claims never expire. No early close, restart,
-   or extension exists.
+1. Publish `packages/rewards` from the intended reserve-funding wallet. Record the shared Economy,
+   unique Setup and genuine version-one UpgradeCap. Publication creates no token and funds no pool.
+   Keep the package at version one until initial funding; Setup checks that original capability.
+2. Compile and deploy the game with both the compatibility ABI and active rewards dependency.
+   Record the unfunded Economy pin. Follow the normal Version activation runbook. Boss settlement
+   pays zero KARES while that Economy is unfunded; ordinary gameplay does not require a token.
+3. Inspect the external native Currency object. Require nine decimals, unregulated status and
+   burn-only supply. Blast accepts `burnable`; it must be true. Nine decimals are not guaranteed
+   by its standalone presale. Verify the reviewed one-billion-token issuance.
+4. Record the full coin type, shared Currency reference and existing treasury. Optionally record
+   `blast_presale: { id, package_original, url }`. Require an HTTPS URL on Blast's domain.
+   These are verified external facts, not locally published objects.
+5. Ensure external migration delivered at least 410 million spendable tokens to the treasury.
+   Escrowed or vested tokens cannot fund reserves. The treasury must sign funding and own both Setup and UpgradeCap.
+   If custody changed after publication, explicitly transfer both capabilities before funding.
+   Review the exact Currency, treasury and `<original_game_package>::fight_rewards::BossVictory`.
+6. Execute setup once against the published Economy. It consumes Setup and allocates 200M staking,
+   100M combat and 110M community. It only borrows UpgradeCap. Record the three pools from certified
+   effects. Reject any receipt that destroyed upgrade authority. Recover uncertain digests; never retry them.
+7. Read back Economy links, treasury, witness and balances. Funding immediately enables boss rewards
+   on-chain. There is no separate payout activation. Include the certified currency and pool pins
+   in the frontend release for staking, trade and Mastery interfaces.
+8. Reconcile the separate 30M team allocation with Blast's allocations or a reviewed transfer.
+   Reward setup never sends it. Do not duplicate an external payout.
+9. Exercise Mastery (1 point = 1,000 KARES), staking, boss payouts and trade. Capture the actual
+   presale JSON response and deployment provenance for the read adapter when its object exists.
 
-After a successful sale, an optional settlement transaction can distribute proceeds before the first
-participant claim. Use the delivered liquidity allocation to create the market manually.
-Community vesting claims remain available as tokens unlock to the treasury over 1,825
-wall-clock days from successful settlement. Claim frequency does not change total entitlement.
-Unlocked tokens may be distributed or burned; failed offerings never start this release.
+Rewards upgrades retain their own treasury-held UpgradeCap. A future migration must preserve
+staking principal and accrued rewards; no withdrawal or witness-rotation door is currently exposed.
+A fresh game lineage cannot silently replace the authorized witness. Game republishing therefore
+requires an explicit rewards migration when reserves are already funded.
 
-Treasury controls which witness proves eligibility. Authorizing a publicly constructible type would
-allow its holders to claim the daily allowance directly; the immutable monetary ceiling still applies.
-Keep the treasury signer trusted and verify the game witness type. There is no automatic deployment
-or funding action merely because these SDK methods exist.
-
-The community cold wallet receives native metadata authority independently of mint authority and
-the package UpgradeCap. The metadata transaction verifies its actual holder and accepts only
-name, description and HTTPS image URL. It cannot change ticker, decimals or supply.
-The image is served by the independent launchpad deployment; publishing contracts does not publish that site.
+Community vesting lasts 1,825 wall-clock days from setup. Staking emissions advance for 1,825 active
+days, only while principal is nonzero. Supplemental deposits begin at the next active-day boundary,
+stream for 30 active days, and cannot be withdrawn. Marketplace claims fund staking with 20% of
+actual withdrawn SUI royalties. External market fees remain a separate treasury arrangement.
 
 Local read stacks must replace their derived projection when the branch's game or seed original changes and
 may preserve it only across compatible upgrades of the same original. The client blocks play while
@@ -259,10 +255,11 @@ Before requesting approval:
 
 1. Confirm every authored row is published.
 2. Confirm release inspection discovers the Registry as unfrozen.
-3. Confirm the exact active math, control, combat, seed, and core UpgradeCaps.
+3. Confirm the exact active math, control, combat, seed, rewards, and core UpgradeCaps.
 4. Run all repository gates.
-5. Record the intended package IDs and content state for human review.
+5. Require funded reward reserves and one cold wallet owning every active UpgradeCap and the AdminCap.
+6. Record the intended package IDs and content state for human review.
 
 After explicit owner approval, one PTB freezes the Registry and calls
-Sui package::make_immutable for all five AresRPG UpgradeCaps. No content or package upgrade is
+Sui package::make_immutable for all six active AresRPG UpgradeCaps, including the rewards cap. No content or package upgrade is
 possible afterward.

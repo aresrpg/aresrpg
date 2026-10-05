@@ -4,7 +4,11 @@
 import { expect, test } from 'bun:test'
 
 import fight_result_module, { type FightResult, type ResultParticipant } from '../../src/modules/fight_result.ts'
-import { create_fight_result_observer, settlement_is_final } from '../../src/modules/fight_result_observer.ts'
+import {
+  create_fight_result_observer,
+  settlement_is_final,
+  observe_fight_results,
+} from '../../src/modules/fight_result_observer.ts'
 import session_module from '../../src/modules/session.ts'
 import { initial_app_state, type AppState } from '../../src/store.ts'
 
@@ -157,4 +161,71 @@ test('certified KARES rewards survive late packets and use the chain seat on non
     packet: { type: 'packet/fight_drops', fight: '0xf1', fighter: '2', drops: [], kares: '0' },
   })
   expect(late.fight_result.current_by_character['0xc1']?.participants[0]?.kares).toBe(17n)
+})
+
+test('a successful final ordinary settlement closes its newly drained fight', async () => {
+  const listeners = new Map<string, ((input: never) => void)[]>()
+  const settlement_calls: string[] = []
+  const close_calls: string[] = []
+  const dispatched: unknown[] = []
+  let gas_spent = 2000n
+  let release_cleanup = () => {}
+  const cleanup = new Promise<void>((resolve) => {
+    release_cleanup = resolve
+  })
+  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
+  const current = fight_result(0, [participant(0, '0xc1')])
+  const state: AppState = {
+    ...base,
+    session: {
+      ...base.session,
+      link_status: 'ready',
+      characters: [{ id: '0xc1', kiosk: '0xk', custody: 'kiosk' }] as never,
+      wallet: {
+        fight: {
+          settle: async () => {
+            settlement_calls.push('settle')
+            return { digest: 'settled', closable: true, closed: false }
+          },
+          close: async () => {
+            close_calls.push('close')
+            await cleanup
+            gas_spent = -300n
+            return { digest: 'closed' }
+          },
+          gas_spent: () => gas_spent,
+        },
+      } as never,
+    },
+    fight_result: { ...base.fight_result, current_by_character: { '0xc1': current } },
+  }
+  observe_fight_results({
+    events: {
+      on: (name, listener) =>
+        listeners.set(name, [...(listeners.get(name) ?? []), listener as unknown as (input: never) => void]),
+    },
+    signal: new AbortController().signal,
+    get_state: () => state,
+    dispatch: (input) => void dispatched.push(input),
+  })
+  const previous = { ...state, fight_result: { ...state.fight_result, current_by_character: {} } }
+  listeners
+    .get('STATE_UPDATED')
+    ?.forEach((listener) => (listener as unknown as (next: AppState, before: AppState) => void)(state, previous))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  expect(settlement_calls).toEqual(['settle'])
+  expect(close_calls).toEqual(['close'])
+  expect(dispatched).toContainEqual({ type: 'fight_result/gas_updated', fight: '0xf1', gas_spent_mist: 2000n })
+  release_cleanup()
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  expect(dispatched).toContainEqual({ type: 'fight_result/gas_updated', fight: '0xf1', gas_spent_mist: -300n })
+  expect(dispatched).toContainEqual({
+    type: 'fight_result/settled',
+    kares_rewards: [],
+    item_ids: [],
+    character_id: '0xc1',
+    fight: '0xf1',
+    paid_mist: null,
+  })
 })

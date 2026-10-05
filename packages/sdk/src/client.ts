@@ -31,7 +31,7 @@ import {
 import { create_balance_cache } from './balance.ts'
 import { kares_coin_type } from './kares_ptb.ts'
 import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } from './ptb.ts'
-import { create_gas_ledger, log_transaction_receipt } from './gas.ts'
+import { create_gas_ledger, gas_mist_from_receipt, log_transaction_receipt } from './gas.ts'
 import { GAS_BUDGET_MIST } from './gas_budget.ts'
 import { create_transaction_execution, type ExecutionCore, type TransactionStorage } from './transaction_execution.ts'
 
@@ -105,6 +105,7 @@ export const sui_transport = (client: SuiGraphQLClient | SuiGrpcClient): SuiTran
   client as unknown as SuiTransport
 
 export type SdkNetwork = 'testnet' | 'mainnet'
+export type TransactionExecution = Readonly<{ digest: string; outcome: 'success' | 'failure'; gas_mist?: string }>
 
 export type TransactionSigner = (
   transaction: Transaction
@@ -274,6 +275,7 @@ export function SDK({
   let execution_tail: Promise<unknown> = Promise.resolve()
   const sender = address ?? signer?.toSuiAddress() ?? null
   const gas_ledger = create_gas_ledger({ address: sender, network })
+  const transaction_listeners = new Set<(execution: TransactionExecution) => void>()
   const balance = create_balance_cache({
     get_balance: async (owner) => {
       if (!sui_client.core.getBalance) throw new Error('[sdk] transport does not support balance reads')
@@ -416,19 +418,8 @@ export function SDK({
     return error ?? JSON.stringify('unknown')
   }
 
-  /** A dry run refused for gas is TWO different sentences, and only one of them is the player's
-   *  fault. The budget is ours and constant, so `InsufficientGas` means the action outgrew it —
-   *  a bug to fix here, never "top up your wallet". The raw verdict is deliberately NOT quoted:
-   *  the app's out-of-SUI prompt watches for that vocabulary. */
-  // The official Core resolver selects gas and simulates once before signing. A successful
-  // resolution is signed once and submitted unchanged; a failed transaction never leaves.
-  // An EXECUTED failure still throws and is never auto-retried (a digest exists = gas burned).
-  // GAS PAYMENT IS THE RESOLVER'S (2026-08-21, the duel incident): the SDK used to pin the
-  // receipt's gas coin onto the next transaction, with no fallback when that single ref stopped
-  // covering the budget. Which coin — or whether a coin is involved at all — depends on how the
-  // address holds its SUI (Coin objects vs an address balance), and only the resolver knows.
-  // The default BUDGET is fixed; `'estimate'` hands pricing to the resolver for variable-cost
-  // surfaces such as settlements, deployments, and seed ceremonies.
+  // The resolver selects gas and simulates before signing; never pin gas from a prior receipt.
+  // Executed failures never retry. Variable-cost actions opt into the resolver's estimated budget.
   const prepare_transaction = async (
     tx: Transaction,
     sender_address: string,
@@ -453,6 +444,18 @@ export function SDK({
       if (gas_scope) gas_ledger.tag(receipt, gas_scope)
       if (sender) balance.invalidate(sender)
       absorb_receipt(cache, receipt)
+      const execution: TransactionExecution = {
+        digest: receipt_digest(receipt),
+        outcome: failure_of(receipt) === null ? 'success' : 'failure',
+        ...(gas_mist_from_receipt(receipt) === null ? {} : { gas_mist: gas_mist_from_receipt(receipt)!.toString() }),
+      }
+      for (const listener of transaction_listeners) {
+        try {
+          listener(execution)
+        } catch (error) {
+          console.error('Transaction observer failed.', error)
+        }
+      }
     },
   })
   const execute_signed = async (
@@ -568,12 +571,18 @@ export function SDK({
     },
     read_kares_balance: async (): Promise<bigint | null> => {
       if (!sender) throw new Error('[sdk] balance reads need an address')
-      if (!pins.kares_package_original) return null
-      const coin_type = kares_coin_type(pins.kares_package_original)
+      if (!pins.kares_coin_type) return null
+      const coin_type = kares_coin_type(pins.kares_coin_type)
       const result = await sui_client.core.getBalance({ owner: sender, coinType: coin_type })
       return BigInt(result.balance.balance)
     },
     gas_spent_24h: gas_ledger.spent_24h,
+    on_transaction: (listener: (execution: TransactionExecution) => void): (() => void) => {
+      transaction_listeners.add(listener)
+      return () => {
+        transaction_listeners.delete(listener)
+      }
+    },
     tag_gas: gas_ledger.tag,
     with_owner_kiosk: <T>(tx: Transaction, cap: KioskOwnerCap | null, compose: Parameters<typeof with_kiosk<T>>[3]) => {
       if (!cap) throw new Error('No owned kiosk cap is available for this transaction.')

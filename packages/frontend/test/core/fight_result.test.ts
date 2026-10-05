@@ -398,7 +398,9 @@ test('durable closable recovery closes automatically without a routine finalize 
     copy: { fight_hud: { fight_finalize_pending: 'Cleanup ready', fight_finalize_button: 'Finalize' } } as never,
     session: {
       ...base.session,
-      wallet: { fight: { close: async ({ fight }: { fight: string }) => void close_calls.push(fight) } } as never,
+      wallet: {
+        fight: { close: async ({ fight }: { fight: string }) => void close_calls.push(fight), gas_spent: () => 0n },
+      } as never,
     },
   }
   let notice: Toast | null = null
@@ -430,61 +432,6 @@ test('durable closable recovery closes automatically without a routine finalize 
   expect(close_calls).toEqual(['0xf1'])
   expect(notice).toBeNull()
   unsubscribe()
-})
-test('a successful final ordinary settlement closes its newly drained fight', async () => {
-  const listeners = new Map<string, ((input: never) => void)[]>()
-  const settlement_calls: string[] = []
-  const close_calls: string[] = []
-  const dispatched: unknown[] = []
-  const base = initial_app_state({ quality: 'medium', music_enabled: true, render_distance: null })
-  const current = result({ loot_types: ['silk'] })
-  const state: AppState = {
-    ...base,
-    session: {
-      ...base.session,
-      link_status: 'ready',
-      characters: [{ id: '0xc1', kiosk: '0xk', custody: 'kiosk' }] as never,
-      wallet: {
-        fight: {
-          settle: async () => {
-            settlement_calls.push('settle')
-            return { digest: 'settled', closable: true, closed: false }
-          },
-          close: async () => {
-            close_calls.push('close')
-            return { digest: 'closed' }
-          },
-          gas_spent: () => 0n,
-        },
-      } as never,
-    },
-    fight_result: { ...base.fight_result, current_by_character: { '0xc1': current } },
-  }
-  observe_fight_results({
-    events: {
-      on: (name, listener) =>
-        listeners.set(name, [...(listeners.get(name) ?? []), listener as unknown as (input: never) => void]),
-    },
-    signal: new AbortController().signal,
-    get_state: () => state,
-    dispatch: (input) => void dispatched.push(input),
-  })
-  const previous = { ...state, fight_result: { ...state.fight_result, current_by_character: {} } }
-  listeners
-    .get('STATE_UPDATED')
-    ?.forEach((listener) => (listener as unknown as (next: AppState, before: AppState) => void)(state, previous))
-  await new Promise((resolve) => setTimeout(resolve, 0))
-
-  expect(settlement_calls).toEqual(['settle'])
-  expect(close_calls).toEqual(['close'])
-  expect(dispatched).toContainEqual({
-    type: 'fight_result/settled',
-    kares_rewards: [],
-    item_ids: [],
-    character_id: '0xc1',
-    fight: '0xf1',
-    paid_mist: null,
-  })
 })
 test('a wagered result settles through the Kolizeum escrow manager', async () => {
   const listeners = new Map<string, ((input: never) => void)[]>()

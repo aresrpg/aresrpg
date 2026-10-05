@@ -39,6 +39,7 @@ import { VIEW_RADIUS_BLOCKS, SAMPLE_N } from './minimap_render.ts'
 import { useMapRelief, paint_map_relief } from './useMapRelief.ts'
 import { create_map_resource_icons } from './map_resource_icons.ts'
 import { WorldMap } from './WorldMap.tsx'
+import { useMapPlayers } from './useMapPlayers.ts'
 
 const SIZE = 288
 
@@ -54,6 +55,7 @@ export const toggles_world_map = (event: Readonly<Pick<KeyboardEvent, 'code' | '
 
 export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: AppCopy; terrain?: unknown }>) => {
   const pose = useWorldPose()
+  const players = useMapPlayers()
   const world_state = useAppStore(({ world }) => world)
   const world_name = useAppStore(
     ({ session }) => session.characters.find(({ id }) => id === session.selected_character_id)?.world ?? null
@@ -107,13 +109,13 @@ export const Minimap = ({ copy, terrain: supplied_terrain }: Readonly<{ copy: Ap
       draw_city_layer(context, view, cities)
       draw_spawn_markers(context, view, spawn_markers(world_state, world_name), icons.image)
       draw_dungeon_portal_markers(context, view, dungeon_portal_markers(world_name))
-      draw_players(context, view, Object.values(world_state.players))
+      draw_players(context, view, players)
       draw_self_arrow(context, view, pose.x, pose.z, camera_heading(pose.yaw))
     }
     const icons = resource_icons(pose, paint)
     paint()
     return icons.dispose
-  }, [cities, pose, compiled, relief, world_state, world_name, resource_icons])
+  }, [cities, pose, players, compiled, relief, world_state, world_name, resource_icons])
 
   if (!pose || !compiled) return null
 

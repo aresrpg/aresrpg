@@ -7,31 +7,17 @@ import { COMMUNITY_VESTING_MS, KARES_ALLOCATION } from './kares_economics.ts'
 const U64 = bcs.u64().transform({ input: (value: bigint) => value, output: BigInt })
 const U256 = bcs.u256().transform({ input: (value: bigint) => value, output: BigInt })
 
-export const OFFERING_BCS = bcs.struct('Offering', {
+export const COMMUNITY_POOL_BCS = bcs.struct('CommunityPool', {
   id: bcs.Address,
-  pool: bcs.Address,
-  minimum: U64,
-  maximum: U64,
-  started_ms: bcs.option(U64),
-  duration_ms: U64,
   treasury: bcs.Address,
-  liquidity: bcs.Address,
-  deposits: U64,
-  sale_tokens: U64,
-  liquidity_tokens: U64,
-  total_deposited: U64,
-  accepted: U64,
-  settled: bcs.bool(),
-  community_tokens: U64,
-  settled_ms: U64,
-  combat_pot: bcs.Address,
-  combat_tokens: U64,
+  started_ms: U64,
+  remaining: U64,
 })
-
 export const COMBAT_POT_BCS = bcs.struct('CombatPot', {
   id: bcs.Address,
   balance: U64,
-  authorized: bcs.option(bcs.struct('TypeName', { name: bcs.String })),
+  authorized: bcs.struct('TypeName', { name: bcs.String }),
+  started_ms: U64,
   epoch: U64,
   epoch_started_ms: U64,
   work: U64,
@@ -40,49 +26,20 @@ export const COMBAT_POT_BCS = bcs.struct('CombatPot', {
   spent: U64,
 })
 
-/** The one start timestamp owns every boundary; configuration alone never starts a timer. */
-export const project_kares_schedule = (
-  offering: Readonly<{
-    started_ms: bigint | null
-    duration_ms: bigint
-  }>
-) => {
-  if (offering.duration_ms <= 0n) throw new Error('KARES offering has invalid durations')
-  const started = offering.started_ms !== null
-  const opens_ms = offering.started_ms ?? 0n
-  const closes_ms = started ? opens_ms + offering.duration_ms : 0n
-  return Object.freeze({
-    started,
-    duration_ms: offering.duration_ms,
-    opens_ms,
-    closes_ms,
-  })
-}
-
-/** Calendar vesting belongs to the offering; it never reads the paused staking clock. */
+/** Calendar vesting is independent of the paused staking clock. */
 export const project_community_claimable = (
-  offering: Readonly<{ settled: boolean; settled_ms: bigint; community_tokens: bigint }>,
+  pool: Readonly<{ started_ms: bigint; remaining: bigint }>,
   clock_ms: bigint
 ): bigint => {
   const total = KARES_ALLOCATION.community
-  if (offering.community_tokens < 0n || offering.community_tokens > total)
-    throw new Error('KARES community reserve is malformed')
-  const claimed = total - offering.community_tokens
-  if (!offering.settled) {
-    if (claimed !== 0n) throw new Error('KARES community reserve changed before settlement')
-    return 0n
-  }
-  if (clock_ms < offering.settled_ms) throw new Error('KARES clock read is older than settlement')
-  const elapsed = clock_ms - offering.settled_ms
+  if (pool.remaining < 0n || pool.remaining > total) throw new Error('KARES community reserve is malformed')
+  if (clock_ms < pool.started_ms) throw new Error('KARES clock read is older than funding')
+  const elapsed = clock_ms - pool.started_ms
   const vested = (total * (elapsed < COMMUNITY_VESTING_MS ? elapsed : COMMUNITY_VESTING_MS)) / COMMUNITY_VESTING_MS
+  const claimed = total - pool.remaining
   if (vested < claimed) throw new Error('KARES clock read is older than the community claim')
   return vested - claimed
 }
-export const CONTRIBUTION_BCS = bcs.struct('Contribution', {
-  id: bcs.Address,
-  offering: bcs.Address,
-  amount: U64,
-})
 const BUCKET_BCS = bcs.struct('RewardBucket', {
   start_ms: U64,
   kares: U64,

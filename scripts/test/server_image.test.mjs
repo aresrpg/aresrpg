@@ -6,23 +6,26 @@ import { expect, test } from 'bun:test'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
 
-test('the frozen server image includes every workspace manifest before installation', () => {
-  const { workspaces } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
-  const dockerfile = readFileSync(new URL('../../packages/server/Dockerfile', import.meta.url), 'utf8')
-  const [before_install] = dockerfile.split('RUN bun install')
-  const copied = new Set(
-    [...before_install.matchAll(/^COPY (packages\/[^ ]+\/package\.json) /gm)].map((match) => match[1])
-  )
-  const manifests = workspaces.flatMap((workspace) => globSync(`${workspace}/package.json`, { cwd: root }))
-  expect(manifests.length).toBeGreaterThan(0)
-  expect(manifests.filter((manifest) => !copied.has(manifest))).toEqual([])
-  // The deny-by-default context needs the parent, contents exclusion, and manifest exception in order.
-  const context = readFileSync(new URL('../../.dockerignore', import.meta.url), 'utf8')
-  for (const manifest of manifests) {
-    const directory = dirname(manifest)
-    expect(context).toContain(`\n!${directory}\n${directory}/*\n!${manifest}\n`)
+test.each(['server', 'discord'])(
+  'the frozen %s image includes every workspace manifest before installation',
+  (component) => {
+    const { workspaces } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+    const dockerfile = readFileSync(new URL(`../../packages/${component}/Dockerfile`, import.meta.url), 'utf8')
+    const [before_install] = dockerfile.split('RUN bun install')
+    const copied = new Set(
+      [...before_install.matchAll(/^COPY (packages\/[^ ]+\/package\.json) /gm)].map((match) => match[1])
+    )
+    const manifests = workspaces.flatMap((workspace) => globSync(`${workspace}/package.json`, { cwd: root }))
+    expect(manifests.length).toBeGreaterThan(0)
+    expect(manifests.filter((manifest) => !copied.has(manifest))).toEqual([])
+    // The deny-by-default context needs the parent, contents exclusion, and manifest exception in order.
+    const context = readFileSync(new URL('../../.dockerignore', import.meta.url), 'utf8')
+    for (const manifest of manifests) {
+      const directory = dirname(manifest)
+      expect(context).toContain(`\n!${directory}\n${directory}/*\n!${manifest}\n`)
+    }
   }
-})
+)
 
 test('the server image uses the repository Bun version and an immutable image digest', () => {
   const { packageManager } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))

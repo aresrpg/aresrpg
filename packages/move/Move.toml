@@ -22,6 +22,8 @@ aresrpg_control = { local = "../control" }
 aresrpg_seed = { local = "../seed" }
 # Independent currency lineage survives every game republish.
 aresrpg_kares = { local = "../kares" }
+# One manually funded currency; the legacy dependency above is retained only for published ABI.
+aresrpg_rewards = { local = "../rewards" }
 
 [addresses]
 # Fixed proceeds sink (one home, never a per-sale field).

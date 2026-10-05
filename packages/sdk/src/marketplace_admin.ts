@@ -109,6 +109,7 @@ export const claim_marketplace_royalties = async (sdk: MarketplaceAdminSdk, addr
   if (other_proceeds.length) transaction.mergeCoins(proceeds, other_proceeds)
   const remainder = transaction.moveCall({
     target: `${pins.package}::staking::fund_royalties`,
+    typeArguments: [pins.coin_type],
     arguments: [kares_shared(transaction, pins.pool), proceeds, kares_clock(transaction)],
   })
   transaction.transferObjects([remainder], address)

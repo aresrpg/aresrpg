@@ -1,0 +1,24 @@
+{
+  "name": "@aresrpg/discord",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The independent AresRPG Discord notification worker.",
+  "scripts": {
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@aresrpg/immutable": "workspace:*",
+    "@aresrpg/server": "workspace:*",
+    "@aresrpg/ui": "workspace:*",
+    "@mysten/sui": "2.31.3",
+    "@napi-rs/canvas": "1.0.10",
+    "ioredis": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "typescript": "~6.0.3"
+  }
+}

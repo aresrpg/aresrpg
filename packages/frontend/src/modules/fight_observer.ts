@@ -63,6 +63,26 @@ export const automatic_turn_character = (state: Readonly<AppState>, previous: Re
   return active === previous_active ? null : active
 }
 
+export const returning_fight_character = (state: Readonly<AppState>, previous: Readonly<AppState>): string | null => {
+  if (state.session.wallet !== previous.session.wallet) return null
+  const before = previous.fight
+  const { checkpoint } = before
+  if (!checkpoint) return null
+  const finished = [before.canonical_ended, checkpoint.contract.ended].includes(true)
+  if (![before.mode === 'remote', before.mounted, !state.fight.mounted, finished].every(Boolean)) return null
+  const character_id = before.environments[checkpoint.contract.id]?.return_character_id
+  const selected = state.session.selected_character_id
+  const belonged = checkpoint.contract.fighters.some(
+    (fighter) => fighter.kind.type === 'player' && fighter.kind.character === selected
+  )
+  if (!belonged) return null
+  const character = state.session.characters.find(
+    ({ id, active_fight }) =>
+      id === character_id && id !== selected && [undefined, checkpoint.contract.id].includes(active_fight?.id)
+  )
+  return character?.id ?? null
+}
+
 export const observe_fights = ({
   dispatch,
   events,
@@ -398,7 +418,7 @@ export const observe_fights = ({
       local_session?.simulate_turn()
   })
   events.on('STATE_UPDATED', (state, previous) => {
-    const character_id = automatic_turn_character(state, previous)
+    const character_id = returning_fight_character(state, previous) ?? automatic_turn_character(state, previous)
     if (character_id) dispatch({ type: 'character/select', character_id })
   })
   events.on('fight/spectating', ({ character_id, fight }) => {

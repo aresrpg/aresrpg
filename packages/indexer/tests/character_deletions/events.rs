@@ -30,6 +30,7 @@ fn only_final_game_character_destruction_invalidates_its_roster() {
         bytes: &[],
     };
     let tx = TxView {
+        deleted: &[],
         tx_index: 4,
         sender: Addr([3; 32]),
         move_calls: &[],
@@ -72,6 +73,7 @@ fn only_final_game_character_destruction_invalidates_its_roster() {
         100,
         1_000,
         &TxView {
+            deleted: &[],
             outputs: std::slice::from_ref(&deleted),
             ..tx
         },

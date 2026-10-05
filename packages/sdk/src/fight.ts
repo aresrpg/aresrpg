@@ -6,6 +6,7 @@
 // witnesses for immediate deterministic presentation; the final state still reconciles from
 // the indexer → server stream.
 
+import { prepare_boss_rewards } from './kares_economy.ts'
 import { SDK, living_content } from './client.ts'
 import { changed_object_ids, receipt_digest, receipt_event, receipt_events, type Receipt } from './cache.ts'
 import { create_kiosk_runner, type KioskCapLoader, type KioskCustody } from './kiosk_runner.ts'
@@ -411,14 +412,11 @@ export const fight_actions = (sdk: GameSdk, { kiosk_cap }: FightActionsCtx) => {
           )
         ),
       ]
+      const prepare_rewards = boss_rewards ? await prepare_boss_rewards(sdk) : null
       const execute_settlement = (final: boolean) =>
         with_terminal_kiosk(
           (tx, kiosk, personal) => {
-            if (boss_rewards)
-              sdk.doors.prepare_boss_rewards(tx, {
-                fight_object: fight,
-                fighter_idx: normalized[0]!.fighter_idx,
-              })
+            prepare_rewards?.(tx, fight, normalized[0]!.fighter_idx)
             const plan = normalized.flatMap(({ loot }) =>
               loot.map(({ item_type, existing }) =>
                 sdk.doors.prepare_fight_loot(tx, {

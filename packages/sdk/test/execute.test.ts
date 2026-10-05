@@ -21,6 +21,27 @@ const game = async (client: ReturnType<typeof fake_client>) => {
 }
 
 describe('the execute gate (core interface)', () => {
+  test('transaction observers report certified success and failure, never simulation or preflight refusal', async () => {
+    for (const execution_ok of [false, true]) {
+      const sdk = await game(fake_client({ simulate_ok: true, execution_ok }))
+      const observed: unknown[] = []
+      const unsubscribe = sdk.on_transaction((execution) => observed.push(execution))
+      await sdk.simulate(sdk.tx())
+      expect(observed).toEqual([])
+      if (execution_ok) await sdk.execute(sdk.tx())
+      else await expect(sdk.execute(sdk.tx())).rejects.toThrow('failed on-chain')
+      expect(observed).toEqual([{ digest: expect.any(String), outcome: execution_ok ? 'success' : 'failure' }])
+      unsubscribe()
+      if (execution_ok) await sdk.execute(sdk.tx())
+      else await expect(sdk.execute(sdk.tx())).rejects.toThrow('failed on-chain')
+      expect(observed).toHaveLength(1)
+    }
+    const refused = await game(fake_client({ simulate_ok: false }))
+    const observed: unknown[] = []
+    refused.on_transaction((execution) => observed.push(execution))
+    await expect(refused.execute(refused.tx())).rejects.toThrow('NOT submitted')
+    expect(observed).toEqual([])
+  })
   test('pre-sign resolution lag is classified without retrying inside the SDK', () => {
     const lag = new Error(
       '[sdk] transaction resolution failed — NOT submitted: provided version does not match for object 0x1, provided: 10 actual: 0x9'

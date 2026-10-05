@@ -35,6 +35,7 @@ import { JobItemIcon } from './JobItemIcon.tsx'
 
 import './jobs.css'
 import './jobs_adviser.css'
+import './jobs_recipe_sections.css'
 const CATEGORY_ORDER = Object.freeze(Object.keys(job_groups) as JobKind[])
 const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
   gathering: 'jobs.category.gathering',
@@ -369,12 +370,21 @@ export default function JobsTab({
               {!detail || detail.recipes.length === 0 ? (
                 <div className="jobs__recipe-empty">{t('jobs.recipes.empty_seed')}</div>
               ) : (
-                <div className="jobs__recipes jobs__recipe-grid aui-collection aui-collection--rows">
-                  {recipe_sections.flatMap((section) =>
-                    section.groups.flatMap((group) =>
-                      group.recipes.map((recipe) => recipe_cell(recipe, section.locked))
-                    )
-                  )}
+                <div className="jobs__recipe-sections">
+                  {recipe_sections.map((section) => (
+                    <section
+                      className="jobs__recipe-section"
+                      aria-label={t(`jobs.recipes.${section.id}`)}
+                      key={section.id}
+                    >
+                      <h4>{t(`jobs.recipes.${section.id}`)}</h4>
+                      <div className="jobs__recipes jobs__recipe-grid aui-collection aui-collection--rows">
+                        {section.groups.flatMap((group) =>
+                          group.recipes.map((recipe) => recipe_cell(recipe, section.locked))
+                        )}
+                      </div>
+                    </section>
+                  ))}
                 </div>
               )}
             </section>

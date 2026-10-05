@@ -18,12 +18,12 @@ const activation = Bun.YAML.parse(
 const certified_digest = `sha256:${'b'.repeat(64)}`
 const moved_tag_digest = `sha256:${'a'.repeat(64)}`
 
-const run_baseline_plan = (network) => {
+const run_baseline_plan = (network, include_discord = true) => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-release-baseline-'))
   const output = join(directory, 'output')
   const plan = workflow.jobs['backend-plan'].steps.find(({ id }) => id === 'plan').run
-  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false
-server_version=2.0.0; indexer_version=2.0.0; server_digest=''; indexer_digest=''
+  const script = `previous_tag=v1.0.0; server=false; indexer=false; frontend=false; discord=false
+server_version=2.0.0; indexer_version=2.0.0; discord_version=2.0.0; server_digest=''; indexer_digest=''; discord_digest=''
 if true; then
 ${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER,,}', 'aresrpg')}`
   try {
@@ -36,7 +36,7 @@ ${plan.slice(plan.indexOf('  previous_run=')).replace('${GITHUB_REPOSITORY_OWNER
         version: '1.0.0',
         network,
         images: Object.fromEntries(
-          ['server', 'indexer'].map((name) => [
+          (include_discord ? ['server', 'indexer', 'discord'] : ['server', 'indexer']).map((name) => [
             name,
             {
               repository: `ghcr.io/aresrpg/${name}`,
@@ -74,14 +74,14 @@ cp "$RUNNER_TEMP/manifest.json" "$RUNNER_TEMP/previous-release/release-manifest.
 
 test('a previous testnet release triggers a full mainnet build instead of aborting preparation', () => {
   const output = run_baseline_plan('testnet')
-  for (const component of ['server', 'indexer', 'frontend']) expect(output).toContain(`${component}=true`)
+  for (const component of ['server', 'indexer', 'frontend', 'discord']) expect(output).toContain(`${component}=true`)
   expect(output).toContain('server_digest=\n')
   expect(output).toContain('indexer_digest=\n')
 })
 
 test('a certified mainnet baseline retains the fast path for unchanged runtime inputs', () => {
   const output = run_baseline_plan('mainnet')
-  for (const component of ['server', 'indexer', 'frontend']) expect(output).toContain(`${component}=false`)
+  for (const component of ['server', 'indexer', 'frontend', 'discord']) expect(output).toContain(`${component}=false`)
   expect(output).toContain(`server_digest=${certified_digest}`)
   expect(output).toContain(`indexer_digest=${certified_digest}`)
 })
@@ -150,7 +150,7 @@ printf '"%s"\\n' "$digest"
   }
 }
 
-for (const component of ['server', 'indexer']) {
+for (const component of ['server', 'indexer', 'discord']) {
   test(`${component}: alias copies the certified digest even when the previous tag has moved`, () => {
     const result = run_image_step(component, 'alias', moved_tag_digest)
     expect(result.output).toContain(`digest=${certified_digest}`)
@@ -269,7 +269,7 @@ test('release builds overlap verification but certification requires the green g
   const manifest = workflow.jobs['release-manifest']
   expect(manifest.needs).toContain('verify-gate')
   expect(manifest.if).toContain("needs.verify-gate.result == 'success'")
-  for (const name of ['backend-plan', 'prepare-production', 'build-server', 'build-indexer']) {
+  for (const name of ['backend-plan', 'prepare-production', 'build-server', 'build-discord', 'build-indexer']) {
     expect(workflow.jobs[name].steps.some(({ run }) => run?.includes('actions/workflows/gate.yml'))).toBe(false)
     expect(workflow.jobs[name].needs).not.toContain('verify-gate')
   }
@@ -301,3 +301,10 @@ for (const conclusion of ['success', 'failure', 'cancelled', ''])
       rmSync(directory, { recursive: true, force: true })
     }
   })
+
+test('an older release without a bot image builds Discord without rebuilding unchanged game backends', () => {
+  const output = run_baseline_plan('mainnet', false)
+  expect(output).toContain('discord=true')
+  expect(output).toContain('server=false')
+  expect(output).toContain('indexer=false')
+})

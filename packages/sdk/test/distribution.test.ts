@@ -4,6 +4,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import { ObjectError } from '@mysten/sui/client'
 import { PERSONAL_KIOSK_RULE_ADDRESS, type KioskOwnerCap } from '@mysten/kiosk'
 import type { Transaction, TransactionPlugin } from '@mysten/sui/transactions'
 import { ZkSendClient } from '@mysten/zksend'
@@ -263,6 +264,33 @@ describe('distribution SDK actions', () => {
       expect(result).toEqual({ digest, giftcard: { id: card_id, template, amount: 1 } })
       expect(claimed).toEqual([recipient])
       expect(loaded).toEqual(['https://my.slush.app/claim?network=testnet#$secret'])
+    } finally {
+      ZkSendClient.prototype.loadLinkFromUrl = original
+    }
+  })
+
+  test('a spent link is unavailable, but a failed provider read cannot pretend it was claimed', async () => {
+    const { sdk } = game()
+    let failure: Error | null = new ObjectError('notExists', 'Missing bag', { reason: 'notFound' })
+    const client = {
+      network: 'testnet',
+      core: {
+        getDynamicField: async () => {
+          if (failure) throw failure
+          return { dynamicField: {} }
+        },
+      },
+    }
+    const original = ZkSendClient.prototype.loadLinkFromUrl
+    ZkSendClient.prototype.loadLinkFromUrl = async () => ({ claimed: true, address: id(99) }) as never
+    const claim = () =>
+      claim_giftcard_link(client as never, sdk, 'https://aresrpg.world/claim?network=testnet#$spent', id(88))
+    try {
+      expect(await claim()).toBeNull()
+      failure = new Error('Network unavailable')
+      await expect(claim()).rejects.toThrow('Network unavailable')
+      failure = null
+      await expect(claim()).rejects.toThrow('could not be loaded')
     } finally {
       ZkSendClient.prototype.loadLinkFromUrl = original
     }

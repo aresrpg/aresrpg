@@ -33,8 +33,10 @@ const preview_result = adventure_result(
   199
 )
 stop()
-const rolled = new URLSearchParams(location.search).has('rolled')
+const params = new URLSearchParams(location.search)
+const rolled = params.has('rolled')
 const character = adventure_character_row(state.adventure.character!)
+const companion = { ...character, id: 'other-character', name: 'Other hero' }
 const seed = content_catalog.item('gravebrand')!.item
 const received = [
   { id: 'old-sword', strength: 99, agility: 99 },
@@ -51,18 +53,44 @@ const received = [
   stats: { strength: item_stat_center + strength, agility: item_stat_center + agility },
   damages: [...(seed.damages ?? [])],
 }))
-const result = rolled
+const own_result = rolled
   ? {
       ...preview_result,
-      loot_item_ids: ['new-sword-a', 'new-sword-b'],
+      loot_item_ids: params.has('empty-receipt')
+        ? []
+        : ['new-sword-a', 'new-sword-b', ...(params.has('unrelated-pending') ? ['missing-resource'] : [])],
       participants: preview_result.participants.map((participant) => ({
         ...participant,
-        loot: participant.character_id === character.id ? [{ item_type: seed.item_type, qty: 2 }] : [],
+        loot:
+          participant.character_id === character.id
+            ? [{ item_type: params.has('resource') ? 'tree_resin' : seed.item_type, qty: 2 }]
+            : [],
       })),
     }
   : preview_result
+const result = params.has('other-character')
+  ? {
+      ...own_result,
+      participants: [
+        ...own_result.participants,
+        {
+          ...own_result.participants[0]!,
+          seat: own_result.participants.length,
+          character_id: companion.id,
+          name: companion.name,
+          loot: [{ item_type: params.has('resource') ? 'tree_resin' : seed.item_type, qty: 1 }],
+        },
+      ],
+    }
+  : own_result
 if (rolled) {
-  dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [character] } })
+  dispatch_app({
+    type: 'server/packet',
+    packet: {
+      type: 'packet/characters',
+      characters: [character, ...(params.has('other-character') ? [companion] : [])],
+    },
+  })
   dispatch_app({
     type: 'server/packet',
     packet: {
@@ -73,6 +101,10 @@ if (rolled) {
   window.addEventListener('fixture-loot-arrived', () =>
     dispatch_app({ type: 'server/packet', packet: { type: 'packet/inventory', items: received } })
   )
+  window.addEventListener('fixture-loot-removed', () => {
+    for (const item of ['new-sword-a', 'new-sword-b'])
+      dispatch_app({ type: 'server/packet', packet: { type: 'packet/item_removed', item, version: '5' } })
+  })
 }
 const Fixture = () => {
   const [open, set_open] = useState(true)

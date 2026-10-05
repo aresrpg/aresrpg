@@ -12,7 +12,15 @@ import type { Sdk } from './client.ts'
 import { ROYALTY_FLOOR_MIST } from './marketplace.ts'
 
 export type ContractArtifact = Readonly<{
-  package_name: 'aresrpg_math' | 'aresrpg_control' | 'aresrpg_combat' | 'aresrpg_seed' | 'aresrpg_kares' | 'aresrpg'
+  package_name:
+    | 'aresrpg_math'
+    | 'aresrpg_control'
+    | 'aresrpg_combat'
+    | 'aresrpg_seed'
+    | 'aresrpg_kares'
+    | 'aresrpg_rewards'
+    | 'kares_test_token'
+    | 'aresrpg'
   digest: readonly number[]
   modules: readonly string[]
   dependencies: readonly string[]
@@ -258,21 +266,16 @@ export const project_seed_deployment = (receipt: DeploymentReceipt): SeedDeploym
     content_root: shared_pin(receipt, id_of_type(receipt, '::registry::Registry')),
   })
 
-/** Publication precedes native Currency registration and the one-shot offering setup. */
-export const project_kares_deployment = (receipt: DeploymentReceipt) => {
-  const package_id = project_package_id(receipt)
-  const currency_type = normalizeStructTag(`0x2::coin_registry::Currency<${package_id}::kares::KARES>`)
-  const currency = type_entries(receipt).find(([, type]) => normalizeStructTag(type) === currency_type)?.[0]
-  if (!currency) throw new Error('KARES publication did not create its native Currency')
-  return Object.freeze({
-    package: package_id,
+/** One-use setup authority is created at publication; no currency is minted here. */
+export const project_rewards_deployment = (receipt: DeploymentReceipt) =>
+  Object.freeze({
+    package: project_package_id(receipt),
     upgrade_cap: id_of_type(receipt, '::package::UpgradeCap'),
-    genesis: id_of_type(receipt, `${package_id}::kares::Genesis`),
-    currency,
+    setup: id_of_type(receipt, '::economy::Setup'),
+    economy: shared_pin(receipt, id_of_type(receipt, '::economy::Economy')),
   })
-}
 
-export const project_kares_setup = (receipt: DeploymentReceipt, original: string) => {
+export const project_rewards_setup = (receipt: DeploymentReceipt, original: string, coin_type: string) => {
   const shared_ids = new Set(
     changed_objects(receipt)
       .filter(({ outputOwner }) => outputOwner?.Shared?.initialSharedVersion !== undefined)
@@ -283,14 +286,13 @@ export const project_kares_setup = (receipt: DeploymentReceipt, original: string
     const id = type_entries(receipt).find(
       ([id, actual]) => shared_ids.has(id) && normalizeStructTag(actual) === expected
     )?.[0]
-    if (!id) throw new Error(`KARES setup did not create ${type}`)
+    if (!id) throw new Error(`Reward setup did not create ${type}`)
     return shared_pin(receipt, id)
   }
   return Object.freeze({
-    currency: shared(`0x2::coin_registry::Currency<${original}::kares::KARES>`),
-    pool: shared(`${original}::staking::StakingPool`),
-    combat_pot: shared(`${original}::combat_rewards::CombatPot`),
-    offering: shared(`${original}::offering::Offering`),
+    pool: shared(`${original}::staking::StakingPool<${coin_type}>`),
+    combat_pot: shared(`${original}::combat_rewards::CombatPot<${coin_type}>`),
+    community: shared(`${original}::community::CommunityPool<${coin_type}>`),
   })
 }
 

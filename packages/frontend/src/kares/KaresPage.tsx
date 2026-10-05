@@ -78,10 +78,18 @@ export default function KaresPage({
   copy,
   initial_session,
 }: Readonly<{ copy: AppCopy; initial_session?: FinanceSession | null }>) {
-  const account = useFinance({ network: env.network, rpc_url: env.sui_rpc_url, managed: true }, initial_session)
+  const account = useFinance(
+    { network: env.network, rpc_url: env.sui_rpc_url, managed: true },
+    initial_session,
+    copy.kares_page.confirmed
+  )
   const wallet_state = useAppStore((state) => state.external_wallet)
   const external_session = wallet_state.session?.address === initial_session?.address ? null : wallet_state.session
-  const external = useFinance({ network: env.network, rpc_url: env.sui_rpc_url }, external_session)
+  const external = useFinance(
+    { network: env.network, rpc_url: env.sui_rpc_url },
+    external_session,
+    copy.kares_page.confirmed
+  )
   const balance = useAppStore((state) => state.session.kares_balance)
   useEffect(() => {
     if (account.state.digest) dispatch_app({ type: 'wallet/refresh' })

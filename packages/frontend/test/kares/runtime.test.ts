@@ -23,9 +23,9 @@ test('a confirmed contribution retries a lagging ownership read without submitti
           if (reads === 2) throw new KaresSnapshotPending('KARES ownership snapshot is behind a certified transaction')
           return { ...snapshot, kares_balance: 7n, sui_balance: 9n }
         },
-        contribute: async () => {
+        stake: async () => {
           submissions += 1
-          return { digest: 'certified-contribution', receipt: {} }
+          return { digest: 'certified-stake', receipt: {} }
         },
       },
     }
@@ -33,9 +33,9 @@ test('a confirmed contribution retries a lagging ownership read without submitti
   const stop = runtime.start()
   try {
     await Bun.sleep(0)
-    runtime.dispatch({ type: 'request', request: { kind: 'execute', action: { kind: 'contribute', amount: 1n } } })
+    runtime.dispatch({ type: 'request', request: { kind: 'execute', action: { kind: 'stake', amount: 1n } } })
     await Bun.sleep(400)
-    expect(runtime.store.getState().digest).toBe('certified-contribution')
+    expect(runtime.store.getState().digest).toBe('certified-stake')
     expect(runtime.store.getState().error).toBeNull()
     expect(runtime.store.getState().snapshot).toEqual(snapshot)
     expect(submissions).toBe(1)

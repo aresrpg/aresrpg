@@ -630,21 +630,21 @@ public fun redeem_mastery_offer(
   mastery::redeem(mastery_object, offer, template, existing, kiosk, cap, item_policy, ctx);
 }
 
-/// Burn KARES for the same statless offer without debiting earned Mastery points.
+/// Retained published signature; the former currency cannot purchase game content.
 public fun redeem_mastery_offer_kares(
-  currency: &mut Currency<KARES>,
-  payment: Coin<KARES>,
-  offer: &MasteryOffer,
-  template: &ItemTemplate,
-  existing: Option<ID>,
-  kiosk: &mut Kiosk,
-  cap: &KioskOwnerCap,
-  item_policy: &TransferPolicy<Item>,
+  _currency: &mut Currency<KARES>,
+  _payment: Coin<KARES>,
+  _offer: &MasteryOffer,
+  _template: &ItemTemplate,
+  _existing: Option<ID>,
+  _kiosk: &mut Kiosk,
+  _cap: &KioskOwnerCap,
+  _item_policy: &TransferPolicy<Item>,
   version: &Version,
-  ctx: &mut TxContext,
+  _ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  mastery::redeem_kares(currency, payment, offer, template, existing, kiosk, cap, item_policy, ctx);
+  abort 602
 }
 
 fun settle_fight_batch(
@@ -1574,13 +1574,46 @@ public fun trade_recover_item(
 }
 
 
-/// Currency rewards settle once, before the Random-bound item settlement in the same PTB.
+/// Retained published signature; the former monetary package is retired.
 public fun prepare_boss_rewards(
+  _fight_object: &mut Fight, _fighter_idx: u64,
+  _offering: &aresrpg_kares::offering::Offering,
+  _pot: &mut aresrpg_kares::combat_rewards::CombatPot,
+  version: &Version, _clock: &Clock, _ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  abort 602
+}
+
+
+/// The funded economy binds the generic payment to its one configured native coin.
+public fun redeem_mastery_offer_token<Token>(
+  economy: &aresrpg_rewards::economy::Economy,
+  currency: &mut Currency<Token>, payment: Coin<Token>,
+  offer: &MasteryOffer, template: &ItemTemplate, existing: Option<ID>,
+  kiosk: &mut Kiosk, cap: &KioskOwnerCap, item_policy: &TransferPolicy<Item>,
+  version: &Version, ctx: &mut TxContext,
+) {
+  version.assert_latest();
+  mastery::redeem_token(economy, currency, payment, offer, template, existing, kiosk, cap, item_policy, ctx);
+}
+
+/// One proved boss payout, composed before the ordinary terminal item settlement.
+public fun prepare_boss_rewards_token<Token>(
   fight_object: &mut Fight, fighter_idx: u64,
-  offering: &aresrpg_kares::offering::Offering,
-  pot: &mut aresrpg_kares::combat_rewards::CombatPot,
+  economy: &aresrpg_rewards::economy::Economy,
+  pot: &mut aresrpg_rewards::combat_rewards::CombatPot<Token>,
   version: &Version, clock: &Clock, ctx: &mut TxContext,
 ) {
   version.assert_latest();
-  fight::prepare_boss_rewards(fight_object, fighter_idx, offering, pot, clock, ctx);
+  fight::prepare_boss_rewards(fight_object, fighter_idx, economy, pot, clock, ctx);
+}
+
+/// Proves that rewards have not been funded, without requiring a token type or placeholder pool.
+public fun prepare_boss_rewards_unfunded(
+  fight_object: &mut Fight, fighter_idx: u64,
+  economy: &aresrpg_rewards::economy::Economy, version: &Version, ctx: &TxContext,
+) {
+  version.assert_latest();
+  fight::prepare_unfunded_rewards(fight_object, fighter_idx, economy, ctx);
 }

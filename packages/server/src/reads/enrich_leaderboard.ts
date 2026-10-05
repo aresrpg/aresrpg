@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { job_slugs, job_level_from_xp, job_xp_for_level, job_max_level } from '@aresrpg/immutable'
 import type { LeaderboardEntry, LeaderboardSnapshot } from '@aresrpg/protocol'
 
 import type { Graph } from '../graph.ts'
 import type { ResolveName } from '../suins.ts'
 import logger from '../logger.ts'
 
+import { PROFILE_JOB_COLUMNS, profile_jobs } from './profile_jobs.ts'
+
 const log = logger(import.meta)
 const ENRICHMENT_BUDGET_MS = 250
-
-const MAX_JOB_XP = job_xp_for_level(job_max_level)!
 
 /** Character badges are current presentation. Neither their presence nor their count gates rank. */
 export const enrich_leaderboard = async (
@@ -59,13 +58,7 @@ export const enrich_leaderboard = async (
       ? within(
           () =>
             graph.read(
-              `MATCH (c:Character) WHERE c.owner IN $addresses RETURN c.owner AS address, ${job_slugs
-                .map((job) => {
-                  const property = `coalesce(c.job_${job.toLowerCase()}, '0')`
-                  // Clamp values wider than the final level threshold before graph integer conversion.
-                  return `max(CASE WHEN size(${property}) > ${String(MAX_JOB_XP).length} THEN ${MAX_JOB_XP} ELSE toInteger(${property}) END) AS ${job}`
-                })
-                .join(', ')}`,
+              `MATCH (c:Character) WHERE c.owner IN $addresses RETURN c.owner AS address, ${PROFILE_JOB_COLUMNS}`,
               { addresses }
             ),
           []
@@ -75,17 +68,7 @@ export const enrich_leaderboard = async (
     clearTimeout(timer)
   )
   const names = new Map(name_rows)
-  const jobs = new Map(
-    job_rows.map((row) => [
-      String(row.address),
-      job_slugs
-        .map((job) => ({
-          job,
-          level: job_level_from_xp(Number(row[job] ?? 0)),
-        }))
-        .filter(({ level }) => level > 1),
-    ])
-  )
+  const jobs = new Map(job_rows.map((row) => [String(row.address), profile_jobs(row).filter(({ level }) => level > 1)]))
   const badges = new Map(rows.map((row) => [String(row.address), row]))
   const enrich = (entry: LeaderboardEntry): LeaderboardEntry => ({
     ...entry,

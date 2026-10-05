@@ -2,6 +2,9 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { expect, test } from 'bun:test'
+import type { HydratedFightCheckpoint } from '@aresrpg/fight'
+import type { CharacterRow } from '@aresrpg/protocol'
+import type { TransactionExecution } from '@aresrpg/sdk'
 
 import { analytics_enabled, analytics_properties } from '../src/analytics.ts'
 import { analytics_events } from '../src/modules/analytics.ts'
@@ -15,6 +18,88 @@ const connected_app = () => {
   app.dispatch({ type: 'auth/connected', session: wallet })
   return app
 }
+
+test('transaction observation follows the game wallet and stops on observer teardown', () => {
+  const app = create_app()
+  const listeners = new Set<(execution: TransactionExecution) => void>()
+  const session = {
+    ...wallet,
+    on_transaction: (listener: (execution: TransactionExecution) => void) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+  } as AuthSession
+  const stop = app.observe(['analytics'])
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session })
+  expect(listeners.size).toBe(1)
+  listeners.forEach((listener) => listener({ digest: 'confirmed', outcome: 'success' }))
+  expect(app.store.getState().analytics).toEqual({ digest: 'confirmed', outcome: 'success' })
+  app.dispatch({ type: 'auth/disconnected' })
+  expect(listeners.size).toBe(0)
+  expect(app.store.getState().analytics).toBeNull()
+  app.dispatch({ type: 'auth/connecting' })
+  app.dispatch({ type: 'auth/connected', session })
+  expect(listeners.size).toBe(1)
+  stop()
+  expect(listeners.size).toBe(0)
+})
+
+test('certified transaction deltas count once, exclude stale wallets, and omit identifiers', () => {
+  const app = connected_app()
+  const before = app.store.getState()
+  const input = {
+    type: 'analytics/transaction_executed' as const,
+    wallet,
+    execution: { digest: 'private-digest', outcome: 'success' as const },
+  }
+  app.dispatch(input)
+  const executed = app.store.getState()
+  expect(analytics_events(executed, before)).toEqual([
+    { name: 'transaction_executed', properties: { outcome: 'success' } },
+  ])
+  app.dispatch(input)
+  expect(app.store.getState()).toBe(executed)
+  app.dispatch({ ...input, execution: { digest: 'failed', outcome: 'failure' } })
+  expect(analytics_events(app.store.getState(), executed)).toEqual([
+    { name: 'transaction_executed', properties: { outcome: 'failure' } },
+  ])
+  app.dispatch({ type: 'auth/disconnected' })
+  const disconnected = app.store.getState()
+  app.dispatch(input)
+  expect(app.store.getState()).toBe(disconnected)
+})
+
+test('real fights count once per fight, excluding spectators, demo and restored combat', () => {
+  const base = connected_app().store.getState()
+  // State projection fixture; no wire decoding occurs here.
+  const checkpoint = {
+    contract: {
+      id: 'fight',
+      round: 0n,
+      fighters: ['hero', 'companion'].map((character) => ({
+        kind: { type: 'player', character, owner: wallet.address },
+        settled: false,
+      })),
+    },
+  } as HydratedFightCheckpoint
+  const before = {
+    ...base,
+    session: { ...base.session, characters: [{ id: 'hero' }, { id: 'companion' }] as CharacterRow[] },
+    fight: { ...base.fight, mode: 'remote' as const, cached: { fight: checkpoint } },
+  }
+  const after = {
+    ...before,
+    fight: { ...before.fight, cached: { fight: { ...checkpoint, contract: { ...checkpoint.contract, round: 1n } } } },
+  }
+  expect(analytics_events(after, before)).toEqual([{ name: 'fight_started' }])
+  expect(analytics_events(after, after)).toEqual([])
+  expect(analytics_events(after, { ...before, fight: { ...before.fight, cached: {} } })).toEqual([])
+  expect(analytics_events({ ...after, session: { ...after.session, characters: [] } }, before)).toEqual([])
+  expect(analytics_events({ ...after, fight: { ...after.fight, mode: 'local' } }, before)).toEqual([])
+})
 
 test('remote analytics is absent from development, tests, editor and OAuth callbacks', () => {
   for (const mode of ['development', 'test']) expect(analytics_enabled(mode, '/', 'public')).toBe(false)

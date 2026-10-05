@@ -140,7 +140,12 @@ export type EngineIssueCode =
   | 'world_unavailable'
   | 'webgpu_device_lost'
   | 'terrain_failed'
-export type EngineIssue = Readonly<{ code: EngineIssueCode; detail?: string }>
+export type EngineIssue = Readonly<{
+  code: EngineIssueCode
+  detail?: string
+  stack?: string
+  reason?: string
+}>
 export type EngineStatus = Readonly<{
   state: 'initializing' | 'ready' | 'degraded' | 'failed'
   backend: 'none' | 'webgpu'

@@ -1,0 +1,7 @@
+[package]
+name = "aresrpg_rewards"
+edition = "2024"
+license = "LicenseRef-AresRPG-Source-Available"
+
+[addresses]
+aresrpg_rewards = "0x0"

@@ -21,13 +21,12 @@
 .aui-rankings-port .leaderboard-page > header > h1 {
   display: none;
 }
-.aui-rankings-port [role='tablist'] {
+.aui-rankings-port .leaderboard-category-tabs {
   display: flex;
   flex-wrap: wrap;
   flex: none;
   gap: 4px;
-  padding: 0 0 6px;
-  overflow: visible;
+  padding-bottom: 4px;
 }
 .aui-rankings-port .leaderboard-category {
   border: 1px solid #49515e;
@@ -35,8 +34,8 @@
   background: #2b3039;
   color: #bfc7d2;
   font: 600 11px var(--aui-font);
-  padding: 6px 10px;
-  min-height: 32px;
+  padding: 3px 9px;
+  min-height: 26px;
   text-transform: none;
   letter-spacing: normal;
 }
@@ -44,6 +43,44 @@
   border-color: #b29558;
   background: #5d4c31;
   color: #f4d592;
+}
+.aui-rankings-port .leaderboard-category-toggle {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 2px;
+  z-index: 4;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px;
+}
+.aui-rankings-port .leaderboard-category-menu[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: 232px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 6px;
+  border-color: #5a606d;
+  background-color: #20252d;
+  box-shadow: 0 8px 22px #0009;
+}
+.aui-rankings-port .leaderboard-category-menu:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.aui-rankings-port .leaderboard-category-menu > .leaderboard-category {
+  flex: none;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 8px 10px;
+  font-size: 12px;
+  text-align: left;
 }
 .aui-rankings-port .leaderboard-page > p {
   flex: none;
@@ -54,48 +91,53 @@
 .aui-rankings-port .leaderboard-standings {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
   flex: none;
-  max-width: none;
   gap: 8px;
-  padding: 0;
+  padding: 4px 0 0;
   margin: 0;
 }
 .aui-rankings-port .leaderboard-podium {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 4px 8px;
-  padding: 8px;
+  gap: 4px 10px;
+  min-height: 91px;
+  padding: 12px;
   border: 1px solid #575e6955;
   border-radius: 7px;
-  background: #20252d url('./assets/panel_grain.webp');
+  background: #20252d url('../../../ui/src/assets/panel_grain.webp');
   background-blend-mode: soft-light;
 }
 .aui-rankings-port .leaderboard-podium[data-rank='1'] {
+  min-height: 111px;
+  padding-block: 20px;
   background-color: #363023;
   border-color: #aa8b5055;
+  border-top-color: #b29558;
 }
 .aui-rankings-port .leaderboard-podium .leaderboard-medal {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   margin: 0;
   grid-row: 1 / 3;
 }
-.aui-rankings-port .leaderboard-podium > span:first-of-type {
+.aui-rankings-port .leaderboard-podium > .leaderboard-player-name {
   text-align: left;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
 }
 .aui-rankings-port .leaderboard-podium > div {
+  grid-column: 2;
+  grid-row: 2;
   margin: 0;
-  font-size: 15px;
-  grid-column: 3;
-  grid-row: 1 / 3;
+  font-size: 20px;
+  line-height: 1.2;
+  text-align: left;
 }
 .aui-rankings-port .leaderboard-podium > span:last-of-type {
-  text-align: left;
-  margin: 0;
-  font-size: 9px;
-  letter-spacing: normal;
+  display: none;
 }
 .aui-rankings-port .leaderboard-table {
   display: flex;
@@ -103,84 +145,147 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-.aui-rankings-port .leaderboard-table > .leaderboard-row {
-  flex: none;
-  min-height: 26px;
-  margin: 0;
+  border-top: 1px solid #ffffff0d;
 }
 .aui-rankings-port .leaderboard-entries {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-content: start;
-  gap: 4px 8px;
-  overflow-y: auto;
+  display: block;
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
 }
 .aui-rankings-port .leaderboard-row {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
+  column-gap: 10px;
   min-width: 0;
-  min-height: 48px;
-  padding: 6px 8px;
+  min-height: 38px;
+  padding: 6px 9px;
   margin: 0;
-  border: 1px solid #ffffff0d;
-  border-radius: 5px;
-  background: #20262f;
+  border: 0;
+  border-bottom: 1px solid #ffffff0c;
+  background: transparent;
 }
-.aui-rankings-port .leaderboard-row-self {
-  border-color: #8ec7d877;
+.aui-rankings-port .leaderboard-entries > .leaderboard-row:nth-child(even) {
+  background: #20262f66;
+}
+.aui-rankings-port .leaderboard-row:not(.leaderboard-row-filled) {
+  min-height: 29px;
+}
+.aui-rankings-port .leaderboard-row.leaderboard-row-self {
   background: #273340;
+  box-shadow: inset 2px 0 #8ec7d8;
 }
-.aui-rankings-port .leaderboard-row-filled > div {
+.aui-rankings-port .leaderboard-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   min-width: 0;
+}
+.aui-rankings-port .leaderboard-user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.aui-rankings-port .leaderboard-user:has([data-badge-row]) > .leaderboard-user-name {
+  flex: none;
+  width: 190px;
+  max-width: 40%;
+}
+.aui-rankings-port [data-badge-row] {
+  flex: 1;
 }
 .aui-rankings-port .leaderboard-row-filled > span:last-child {
   color: #e8bc6b;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.aui-rankings-port .leaderboard-hint {
+  padding-top: 5px;
+  border-top: 1px solid #ffffff0b;
 }
 @container aui-window (max-width: 1000px) {
-  .aui-rankings-port .leaderboard-entries {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .aui-rankings-port .leaderboard-podium {
-    grid-template-columns: 30px minmax(0, 1fr);
-    padding: 5px 7px;
-  }
-  .aui-rankings-port .leaderboard-podium .leaderboard-medal {
-    width: 28px;
-    height: 28px;
-  }
-  .aui-rankings-port .leaderboard-podium > div {
-    grid-column: 2;
-    grid-row: 2;
-    font-size: 12px;
-    text-align: left;
-  }
-  .aui-rankings-port .leaderboard-podium > span:last-of-type {
+  .aui-rankings-port .leaderboard-category-tabs {
     display: none;
   }
-}
-@container aui-window (max-width: 550px) {
-  .aui-rankings-port .leaderboard-entries {
-    grid-template-columns: minmax(0, 1fr);
+  .aui-rankings-port .leaderboard-category-toggle {
+    display: inline-flex;
+  }
+  .aui-rankings-port > .aui-window-header > .aui-icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    top: 0;
+    right: 0;
   }
 }
-@container aui-viewport (max-height:500px) {
+@media (pointer: coarse) {
+  .aui-rankings-port .leaderboard-category-tabs {
+    display: none;
+  }
+  .aui-rankings-port .leaderboard-category-toggle {
+    display: inline-flex;
+  }
+}
+@container aui-window (max-width: 650px) {
+  .aui-rankings-port .leaderboard-page {
+    padding: 9px;
+    gap: 7px;
+  }
+  .aui-rankings-port .leaderboard-row {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    column-gap: 7px;
+    min-height: 46px;
+    padding: 5px 6px;
+  }
+  .aui-rankings-port .leaderboard-user {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .aui-rankings-port .leaderboard-user:has([data-badge-row]) > .leaderboard-user-name {
+    width: auto;
+    max-width: none;
+  }
+  .aui-rankings-port .leaderboard-standings {
+    gap: 5px;
+  }
+  .aui-rankings-port .leaderboard-podium {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 83px;
+    padding: 7px 4px;
+  }
+  .aui-rankings-port .leaderboard-podium[data-rank='1'] {
+    min-height: 97px;
+    padding: 11px 4px;
+  }
+  .aui-rankings-port .leaderboard-podium .leaderboard-medal {
+    width: 29px;
+    height: 29px;
+    flex: none;
+  }
+  .aui-rankings-port .leaderboard-podium > .leaderboard-player-name {
+    font-size: 10px;
+    text-align: center;
+  }
+  .aui-rankings-port .leaderboard-podium > div {
+    font-size: 15px;
+    text-align: center;
+  }
+}
+@container aui-viewport (max-height: 500px) and (min-width: 650px) {
   .aui-rankings-port .leaderboard-page {
     padding: 7px;
     gap: 5px;
-  }
-  .aui-rankings-port .leaderboard-row {
-    min-height: 36px;
-    padding: 4px 6px;
-  }
-  .aui-rankings-port .leaderboard-category {
-    min-height: 30px;
-    padding: 4px 6px;
-    font-size: 10px;
   }
   .aui-rankings-port .leaderboard-page > header {
     position: absolute;
@@ -190,55 +295,51 @@
   .aui-rankings-port .leaderboard-page > p {
     font-size: 9px;
   }
-}
-
-@container aui-viewport (max-height:500px) and (min-width:650px) {
-  .aui-rankings-port .leaderboard-page {
-    display: grid;
-    grid-template-columns: 120px minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-  }
-  .aui-rankings-port [role='tablist'] {
-    grid-column: 1/-1;
-    grid-row: 1;
-  }
-  .aui-rankings-port .leaderboard-description {
-    grid-column: 1/-1;
-    grid-row: 2;
-  }
   .aui-rankings-port .leaderboard-standings {
-    grid-column: 1;
-    grid-row: 3;
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start;
-    gap: 5px;
-  }
-  .aui-rankings-port .leaderboard-table {
-    grid-column: 2;
-    grid-row: 3;
-    height: 100%;
-  }
-  .aui-rankings-port .leaderboard-hint {
-    grid-column: 1/-1;
-    grid-row: 4;
+    gap: 6px;
+    padding-top: 0;
   }
   .aui-rankings-port .leaderboard-podium {
-    min-height: 52px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    min-height: 58px;
+    padding: 6px 9px;
+    gap: 3px 7px;
   }
-  .aui-rankings-port .leaderboard-page:has(> [role='alert']),
-  .aui-rankings-port .leaderboard-page:has(> p[role='status']) {
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  .aui-rankings-port .leaderboard-podium[data-rank='1'] {
+    min-height: 72px;
+    padding: 11px 9px;
   }
-  .aui-rankings-port .leaderboard-page > :is([role='alert'], p[role='status']) {
-    grid-column: 1/-1;
-    grid-row: 3;
+  .aui-rankings-port .leaderboard-podium .leaderboard-medal {
+    width: 28px;
+    height: 28px;
   }
-  .aui-rankings-port
-    .leaderboard-page:has(> :is([role='alert'], p[role='status']))
-    :is(.leaderboard-table, .leaderboard-standings) {
-    grid-row: 4;
+  .aui-rankings-port .leaderboard-podium > .leaderboard-player-name {
+    font-size: 11px;
   }
-  .aui-rankings-port .leaderboard-page:has(> :is([role='alert'], p[role='status'])) .leaderboard-hint {
-    grid-row: 5;
+  .aui-rankings-port .leaderboard-podium > div {
+    font-size: 16px;
+  }
+  .aui-rankings-port .leaderboard-row {
+    min-height: 36px;
+    padding: 5px 7px;
+  }
+  .aui-rankings-port .leaderboard-row:not(.leaderboard-row-filled) {
+    min-height: 27px;
+  }
+  .aui-rankings-port .leaderboard-user:has([data-badge-row]) > .leaderboard-user-name {
+    width: 150px;
+  }
+}
+
+.aui-feature-port.aui-rankings-port .leaderboard-page .leaderboard-player-name {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+@media (pointer: coarse) {
+  .aui-feature-port.aui-rankings-port .leaderboard-page .leaderboard-player-name {
+    min-height: 44px;
   }
 }

@@ -3,6 +3,7 @@
 
 import { captureException as capture_exception, init, type ErrorEvent, type EventHint } from '@sentry/react'
 import type { ErrorInfo } from 'react'
+import type { create_engine, EngineStatus } from '@aresrpg/engine'
 
 import { reporting_config } from './reporting_config.ts'
 
@@ -64,6 +65,41 @@ export const report_error = (error: unknown, context: ReportContext = {}): void 
   console.error('Application error.', error, context)
   capture_exception(error instanceof Error ? error : new Error(String(error)), {
     contexts: { application: context },
+  })
+}
+
+/** Observe the shared world's terminal failure before UI recovery can replace its status. */
+export const observe_engine_reporting = (
+  engine: Readonly<Pick<ReturnType<typeof create_engine>, 'subscribe_status' | 'quality'>>
+): (() => void) => {
+  let previous: EngineStatus['state'] | null = null
+  const started_at = performance.now()
+  const surface = globalThis.location?.pathname === '/play-demo' ? 'tutorial' : 'world'
+  return engine.subscribe_status((status) => {
+    const changed = status.state !== previous
+    previous = status.state
+    if (!changed || status.state !== 'failed' || !status.issue) return
+    const { issue } = status
+    const error = new Error(issue.detail ?? issue.code)
+    // eslint-disable-next-line functional/immutable-data -- Construction of this fresh Error preserves engine diagnostics.
+    error.name = issue.code
+    // eslint-disable-next-line functional/immutable-data -- The caught stack belongs on this fresh Error, not a reporting-site stack.
+    if (issue.stack) error.stack = issue.stack
+    capture_exception(error, {
+      level: issue.code === 'webgpu_unavailable' ? 'warning' : 'error',
+      tags: { area: 'engine', engine_issue: issue.code, surface },
+      fingerprint: ['engine', issue.code, '{{ default }}'],
+      contexts: {
+        application: {
+          backend: status.backend,
+          quality: engine.quality(),
+          reason: issue.reason,
+          elapsed_ms: Math.round(performance.now() - started_at),
+          secure_context: globalThis.isSecureContext === true,
+          webgpu_available: globalThis.navigator?.gpu != null,
+        },
+      },
+    })
   })
 }
 

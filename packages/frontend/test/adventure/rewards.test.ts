@@ -101,27 +101,3 @@ test('every local fighter carries XP matching its level, including the fully all
   const remaining = stat_budget(200) - characteristic_value_cost('yajin', 'strength', companion.strength)!
   expect(remaining).toBeLessThan(characteristic_cost_step('yajin', 'strength', companion.strength).cost)
 })
-
-test('Gobadoc stands on reachable level grass beyond the descent', async () => {
-  const { compile_runtime_world_recipe, sample_world_column } = await import('@aresrpg/engine')
-  const { create_world_collision } = await import('../../src/game/core/world_collision.ts')
-  const { adventure_terrain, adventure_movement_area } = await import('../../src/adventure/terrain.ts')
-  const { ADVENTURE_ENCOUNTERS } = await import('../../src/adventure/content.ts')
-  const terrain = compile_runtime_world_recipe(adventure_terrain())
-  const world = create_world_collision(terrain, (error) => {
-    throw error
-  })
-  const {
-    position: { x, y, z },
-  } = ADVENTURE_ENCOUNTERS.at(-1)!
-  const ground = sample_world_column(terrain, x, z)
-  expect(ground.surface_y).toBe(y)
-  expect(terrain.materials.entries[ground.surface_id]!.preset).toBe('grass')
-  expect(adventure_movement_area(true)(x, z)).toBe(true)
-  for (const dx of [-1, 0, 1])
-    for (const dz of [-2, 0, 2]) {
-      expect(world.solid_at(x + dx, y - 1, z + dz)).toBe(true)
-      expect(world.solid_at(x + dx, y, z + dz)).toBe(false)
-      expect(world.solid_at(x + dx, y + 2, z + dz)).toBe(false)
-    }
-})

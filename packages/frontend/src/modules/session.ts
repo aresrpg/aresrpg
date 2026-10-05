@@ -24,7 +24,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
 import { market_price_subscription } from '../marketplace/price_history_state.ts'
 
-import { leaderboard_subscription } from './leaderboards.ts'
+import { leaderboard_subscription, inspection_subscription } from './leaderboards.ts'
 import { fold_character_creation, type CharacterCreation, type CharacterCreationInput } from './character_creation.ts'
 import { fold_character_deletion, with_character_roster } from './character_roster.ts'
 import { fold_character_receipt } from './character_folds.ts'
@@ -38,6 +38,7 @@ export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
+type CraftOutcome = Readonly<{ digest: string; successes: number; attempts: number; output_type: string }>
 export type SessionState = Readonly<{
   character_creation: CharacterCreation | null
   auth_status: AuthStatus
@@ -51,7 +52,7 @@ export type SessionState = Readonly<{
   current_epoch: string | null
   game_frozen: boolean | null
   consumption_result: Pick<Extract<SessionInput, { type: 'character/consumed' }>, 'digest' | 'effect'> | null
-  craft_result: Pick<Extract<SessionInput, { type: 'character/crafted' }>, 'digest' | 'successes'> | null
+  craft_result: CraftOutcome | null
   roster_loaded: boolean
   deleted_character_ids: readonly string[]
   characters: readonly CharacterRow[]
@@ -122,8 +123,7 @@ export type SessionInput =
   | Readonly<{ type: 'inventory/claims_settled'; claim_ids: readonly string[] }>
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
   | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
-  // prettier-ignore
-  | Readonly<{ type: 'character/crafted'; digest: string; successes: number; character_id: string; job: string; xp: number; inputs: readonly Readonly<{ item_id: string; amount: number }>[] }>
+  | (CraftOutcome & Readonly<{ type: 'character/crafted'; character_id: string; job: string; xp: number }>)
   | Readonly<{
       type: 'wallet/resolve_character'
       name: string
@@ -388,7 +388,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
       dispatch({ type: 'auth/ready', wallets: [] })
       dispatch({ type: 'auth/failed', error: error instanceof Error ? error.message : String(error) })
     })
-
   const login = (request: AuthRequest, connect: () => Promise<AuthSession | null>): void => {
     void connect()
       .then((connected) => {
@@ -584,7 +583,8 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     link?.send({ type: 'packet/fight_action', fight, action })
   })
   events.on('STATE_UPDATED', (next, prior) => {
-    ;[leaderboard_subscription(next, prior), market_price_subscription(next, prior)].forEach((packet) => {
+    ;[leaderboard_subscription, inspection_subscription, market_price_subscription].forEach((subscribe) => {
+      const packet = subscribe(next, prior)
       if (packet) link?.send(packet)
     })
   })

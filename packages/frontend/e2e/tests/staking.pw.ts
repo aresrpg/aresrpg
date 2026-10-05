@@ -59,8 +59,8 @@ test('staking keeps accounts independent, aggregates withdrawals and rewards and
             action: {
               kind: 'withdraw',
               positions: [
-                { id: '0xstake-one', amount: '10000000000' },
                 { id: '0xstake-two', amount: '20000000000' },
+                { id: '0xstake-one', amount: '10000000000' },
               ],
               amount: '25000000000',
             },
@@ -94,4 +94,19 @@ test('staking keeps accounts independent, aggregates withdrawals and rewards and
     })
   ).toBe(0)
   expect(await logo.getAttribute('src')).toMatch(/^\/assets\/kares-/)
+})
+
+test('fragmented accounts explicitly claim and withdraw bounded batches', async ({ page }) => {
+  await page.goto('/e2e/fixtures/staking.html?positions=257')
+  const account = page.locator('[data-staking-account="0xparticipant"]')
+  await account.getByRole('button', { name: 'Claim 50 of 257 positions' }).click()
+  await account.getByRole('button', { name: 'Withdraw stake', exact: true }).click()
+  await expect(account).toContainText('Up to 50 positions per withdrawal')
+  await account.getByRole('button', { name: 'Max', exact: true }).click()
+  await expect(account.getByRole('textbox')).toHaveValue('50.000000000')
+  await account.getByRole('button', { name: 'Withdraw stake', exact: true }).last().click()
+  const inputs = JSON.parse((await page.locator('[data-staking-inputs]').textContent()) ?? '[]')
+  expect(inputs[0].input.request.action.ids).toHaveLength(50)
+  expect(inputs[1].input.request.action.positions).toHaveLength(50)
+  expect(inputs[1].input.request.action.amount).toBe('50000000000')
 })

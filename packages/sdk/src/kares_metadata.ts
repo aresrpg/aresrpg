@@ -6,7 +6,7 @@ import { normalizeStructTag, normalizeSuiObjectId } from '@mysten/sui/utils'
 import type { Transaction } from '@mysten/sui/transactions'
 
 import { KARES_CURRENCY_BCS } from './kares_decode.ts'
-import { kares_coin_type, kares_shared, type KaresPins } from './kares_ptb.ts'
+import { kares_shared, type KaresPins } from './kares_ptb.ts'
 import type { Sdk } from './client.ts'
 
 export type KaresMetadataUpdate = Readonly<{ name: string; description: string; icon_url: string }>
@@ -22,9 +22,8 @@ export type KaresMetadata = KaresMetadataUpdate &
 export const read_kares_metadata = async (
   client: SuiGrpcClient,
   currency_pin: KaresPins['currency'],
-  original: string
+  coin_type: string
 ): Promise<KaresMetadata> => {
-  const coin_type = `${normalizeSuiObjectId(original)}::kares::KARES`
   const { object } = await client.core.getObject({ objectId: currency_pin.id, include: { content: true } })
   if (normalizeStructTag(object.type) !== normalizeStructTag(`0x2::coin_registry::Currency<${coin_type}>`))
     throw new Error('The metadata object is not the canonical KARES Currency')
@@ -76,7 +75,7 @@ export const update_kares_metadata_into = (
   for (const [field, value] of Object.entries(fields)) {
     tx.moveCall({
       target: `0x2::coin_registry::set_${field}`,
-      typeArguments: [kares_coin_type(pins.original)],
+      typeArguments: [pins.coin_type],
       arguments: [
         kares_shared(tx, pins.currency),
         sdk.door_context.obj(tx, metadata_cap, false),

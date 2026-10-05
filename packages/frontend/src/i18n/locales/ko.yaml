@@ -223,6 +223,7 @@ trade_panel:
 transaction_unknown_toast: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
 transaction_recovered_toast: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
 world_hud:
+  map_party_legend: '청록색: 파티 · 금색: 리더'
   dismount_prompt_touch: '탭하여 내리기'
   spawn_press_attack_touch: '탭하여 공격'
   resource_press_collect_touch: '탭하여 {{name}} 채집'
@@ -528,6 +529,8 @@ marketplace_page:
   collect_success: 거래소 대금 수령 완료
   volume_partial: 기록된 {{window}} 거래량입니다. 아직 전체 기간을 집계하지 못했으므로 최소값입니다.
 mastery_page:
+  buy_quantity: '구매 수량'
+  purchase_limit: '한 번에 최대 {{count}}개까지 구매할 수 있습니다.'
   subtitle: 일일 도전
   title: 숙련
   lead: 일일 던전 퀘스트로 특별한 보상을 얻으세요. 하루를 건너뛰어도 모은 숙련 포인트는 사라지지 않습니다.
@@ -557,6 +560,16 @@ mastery_page:
   quest_started: 일일 퀘스트가 배정되었습니다.
   offer_purchased: 숙련 보상을 구매했습니다.
 airdrop_page:
+  reward_title: '선물을 받았어요!'
+  reward_received: '{items}을(를) 받았어요!'
+  reward_needs_sui: '선물은 지갑에 안전하게 보관되어 있어요. 거래 수수료를 낼 소량의 SUI를 충전한 뒤 보상을 수령하세요.'
+  reward_complete: '보상이 인벤토리에 추가되었어요.'
+  reward_redeeming: '선물이 도착했어요. 인벤토리에 추가하는 중…'
+  reward_held: '선물이 지갑에 있어요. 수령하면 보상이 인벤토리에 추가돼요.'
+  reward_used_title: '이미 사용된 카드'
+  reward_used_body: '이 카드는 이미 사용되었거나 더 이상 이용할 수 없어요. 각 카드는 한 번만 사용할 수 있어요.'
+  reward_continue: '계속'
+  reward_item: '선물'
   destination: '게임 지갑:'
   refresh: 새로고침
   title: 에어드롭
@@ -654,6 +667,9 @@ settings_page:
   render_distance_label: 표시 거리
   render_distance_hint: 주변 월드를 불러오는 거리입니다. 높을수록 성능 부담이 커집니다.
 tutorial:
+  got_it: '알겠어요'
+  craft_failure_title: '제작에 실패했어요'
+  craft_failure_body: '제작은 실패할 수 있으며 재료는 소모됩니다. 직업 레벨을 올리면 성공 확률이 높아집니다. 다시 시도하기 전에 성공 확률을 확인하세요.'
   progress: '{{current}} / {{total}}'
   skip: 튜토리얼 건너뛰기
   back: 뒤로
@@ -679,7 +695,7 @@ tutorial:
   spells_title: 주문
   spells_body: '주문을 선택해 레벨별 효과를 비교하세요. 주문 포인트로 강화할 수 있습니다.'
   jobs_title: 생산 직업
-  jobs_body: '직업과 제작법을 고르세요. 재료를 클릭해 확인하고 충분히 모이면 제작하세요.'
+  jobs_body: '직업과 레시피를 선택하세요. 제작 전에 성공 확률을 확인하세요. 재료를 선택하면 획득처를 볼 수 있어요.'
   runeforge_title: 룬 대장간
   runeforge_body: '직업 레벨 {{level}}부터 룬으로 장비를 강화할 수 있습니다. 불필요한 장비를 분해해 룬을 얻으세요.'
 admin_page:
@@ -889,6 +905,8 @@ simulator_page:
   blob_single: 단일 형태
   blob_click: 칸을 클릭해 배치
 fight_hud:
+  turn_timer_hint: '시간이 지나면 다른 플레이어가 내 턴을 끝낼 수 있습니다. 자동으로 끝나지는 않습니다.'
+  result_gas_hint: '최근 24시간 동안 기록된 이 전투의 내 순 가스 비용입니다. 생성 비용과 저장소 환급을 포함하며 다른 플레이어의 비용은 제외합니다.'
   stop_spectating: 관전 중지
   board_label: 전장
   turn_order: 턴 순서
@@ -955,6 +973,8 @@ fight_hud:
   chat_tab_combat: 전투
   chat_placeholder: 메시지 입력…
   chat_fetching_item: 온체인 능력치 불러오는 중…
+  result_waiting_items: 보상 정보를 기다리는 중…
+  result_item_unavailable: 이 보상은 더 이상 인벤토리에 없습니다.
   chat_item_unavailable: 이 아이템을 온체인에서 확인할 수 없습니다.
   chat_you: 나
   chat_line: '{name}: {message}'
@@ -2245,6 +2265,21 @@ item_categories:
   relic_slot: 유물 {{number}}
 kares: 스테이킹
 kares_page:
+  blast_soon: '곧 Blast에서 토큰 판매 시작'
+  blast_live: 'KARES 판매 진행 중'
+  blast_closing: '판매 종료 · 정산 대기'
+  blast_funded: '모금 완료 · 출시 대기'
+  blast_complete: 'Blast에서 KARES를 만나보세요'
+  blast_cancelled: '판매 취소 · 환불 가능'
+  blast_loading: 'Blast 판매 상태 확인 중…'
+  blast_unavailable: '판매 상태를 확인할 수 없습니다'
+  blast_note: 'AresRPG의 다음 장을 함께 만들어 주세요.'
+  blast_action: 'Blast에서 보기'
+  blast_progress: '모금 진행률'
+  upgradeability_note: '보상 계약은 프로젝트의 최종 동결까지 업그레이드할 수 있습니다. 신규 토큰 발행은 계속 비활성화됩니다.'
+  claim_batch: '{{total}}개 중 {{count}}개 포지션 보상 받기'
+  withdraw_batch: '한 번에 최대 {{count}}개 포지션을 출금합니다. 남은 스테이크는 다시 출금하세요.'
+  unallocated_supply: '남은 공급량'
   stake_more: 추가 스테이킹
   additional_daily: 하루 추가 보상
   max: 최대
@@ -2256,171 +2291,53 @@ kares_page:
   daily_kares: KARES/일 · 예상
   daily_sui: SUI/일 · 예상
   daily_estimate_note: 현재 스테이킹 비중과 마련된 보상 일정으로 향후 24시간을 추정합니다. 수치는 달라질 수 있습니다.
-  position_rewards: 포지션 보상
   manage_stake: 스테이킹 관리
   same_account: 이 지갑은 이미 AresRPG 계정입니다. 계정 영역에서 스테이킹을 관리하세요.
-  claim_kares: KARES 수령
   close: 닫기
-  sale_card_soon_title: 준비하세요.
-  sale_card_soon_note: 공개 판매가 곧 시작됩니다.
-  sale_card_soon_action: 판매 알아보기
-  sale_card_live_label: 판매 진행 중
-  sale_card_live_title: 지금 참여하세요
-  sale_card_target_reached: 목표 달성
-  sale_card_done_title: 판매 완료
-  sale_card_done_note: KARES 토큰과 환급받을 SUI를 수령하세요.
-  sale_card_refund_note: 최소 목표에 도달하지 못했습니다. SUI 전액을 환급받으세요.
-  community_release_note: 판매가 성공적으로 정산된 뒤 커뮤니티 KARES가 1,825일에 걸쳐 해제되며 금고만 수령할 수 있습니다. 수령한 토큰은 배포하거나 소각할 수 있습니다.
-  sale_unlock_note: 판매가 성공적으로 종료되면 판매 토큰이 모두 해제됩니다.
-  unlocked_immediately: 즉시 해제
+  community_release_note: '입금된 준비금은 1,825일 동안 재무 지갑에 해제됩니다.'
   vested_five_years: 5년에 걸쳐 해제
-  eyebrow: 함께 만들 가치가 있는 세계
-  launch_title: 다음 장을 만들어 갑니다.
-  launch_lead: KARES 첫 공개 판매에 참여하세요. AresRPG를 지원하고 살아 있는 세계의 성장을 함께하세요.
-  offering: 첫 공개 판매
-  fixed_supply: 고정 공급량
-  fair_share: 하나의 가격, 비례 배분.
-  fair_detail: 최종 지분은 기여금에 비례합니다. 초과 기여금은 비례하여 환급합니다.
+  fixed_supply: '초기 공급량'
   connect: 지갑 연결
   disconnect: 연결 해제
-  choose_account: 계정 선택
   no_wallet: 참여하려면 Sui 지갑을 설치하세요.
   refresh: 새로고침
   loading: 온체인 상태 읽는 중…
-  unavailable: 이 네트워크에서는 아직 판매를 이용할 수 없습니다.
   pending: 거래 확인 중…
   confirmed: 거래 확인 완료
-  contribute: SUI 기여
   amount: 금액
   balance: 사용 가능한 잔액
   amount_invalid: 소수점 이하 최대 9자리의 양수를 입력하세요.
   insufficient: 금액이 사용 가능한 잔액을 초과합니다.
   gas_note: 거래 수수료용으로 SUI를 조금 남겨 두세요.
-  raised: 기여금
-  minimum: 최소 모금액
-  maximum: 최대 수락액
-  opens: 시작
-  closes: 종료
-  estimate: 예상 최종 가격
-  price_note: 판매 종료 시 최종 배분이 확정됩니다.
-  your_contribution: 내 기여금
-  claim: KARES 및 초과 SUI 수령
-  refund: 환급 수령
-  upcoming: 시작 전
-  open: 판매 중
-  successful: 판매 성공
-  refundable: 환급 가능
   testnet: 테스트넷 · 테스트 자산 전용
   back_game: AresRPG 탐험
-  funding_title: 커뮤니티가 지원하는 세계
-  liquidity: 초기 유동성
-  development: 개발 금고
-  liquidity_note: 초기 KARES/SUI 시장을 위한 물량입니다. 풀 생성은 프로젝트가 관리합니다.
-  development_note: 게임, 인프라 및 다음 장을 위한 자금입니다.
   staking_title: 내 스테이킹, 내 몫.
-  staking_lead: KARES를 스테이킹해 지급되는 KARES와 SUI 보상을 나누세요. 쌓인 보상은 언제든 받을 수 있습니다.
-  pool_stake: 총 스테이킹
   your_stake: 내 스테이킹
   claimable: 누적 보상
   stake: KARES 스테이킹
   withdraw: 스테이킹 출금
   claim_rewards: 보상 수령
-  fund_title: 커뮤니티 보상 지원
-  fund_note: 기부금은 활성 보상일 30일 동안 모든 스테이커에게 배분되며 회수할 수 없습니다.
-  donate: 기부
-  no_positions: 스테이킹 포지션이 여기에 표시됩니다.
-  inactive: 판매가 성공적으로 정산된 후 스테이킹이 열립니다.
-  account_label: 계정
+  inactive: '보상 준비금이 입금되면 스테이킹이 시작됩니다.'
   position: 포지션
   tokenomics: KARES 토큰 경제
   community: 커뮤니티 보상
   team: 팀 배분
   five_years: 커뮤니티 스테이킹 보상
   mastery_title: 플레이로 보상을 얻거나 KARES를 소각하세요.
-  mastery_note: 숙련 상품은 획득 포인트나 KARES로 같은 수량을 지불합니다. 사용한 KARES는 영구 소각됩니다.
-  rewards_note: 200,000 KARES는 활성 보상일 1,825일 동안, 추가 기부금은 30일 동안 지급됩니다. 스테이커가 없으면 지급이 멈춥니다.
+  mastery_note: '마스터리 가격 1포인트는 1,000 KARES입니다. 사용한 KARES는 영구 소각됩니다.'
+  rewards_note: '보상은 활성 1,825일 동안 지급됩니다. 누구나 KARES 또는 SUI를 기부할 수 있으며, 다음 활성 일자 경계부터 활성 30일 동안 배분됩니다. 기존 일정은 연장되지 않고 기부금은 회수할 수 없습니다. 스테이크가 없으면 시계가 멈추며 획득한 보상은 계속 청구할 수 있습니다.'
   revenue_note: 수령한 거래소 로열티의 20%가 SUI 스테이킹 보상으로 배분됩니다. 보상은 수익과 참여 스테이킹에 따라 달라집니다.
-  payment: 결제 수단
   points: 숙련 포인트
-  burn_buy: '{{cost}} KARES 소각'
+  buy_kares: '구매 - {{cost}} KARES'
   kares_missing: KARES 부족
   language: 언어
-  refund_note: 판매가 최소 목표에 미달한 채 끝나면 기여금 전액을 환급받을 수 있습니다.
-  offering_contract: 판매 계약
-  min_marker: 최소
-  max_marker: 최대
-  min_reached: 최소 목표 달성
-  min_pending: 최소 목표를 향해 모금 중
-  oversubscribed: 초과 청약
-  subscribed: 청약됨
-  oversub_note: 계속 참여할 수 있습니다. 모두 같은 가격이며 초과 SUI는 비례 환급됩니다.
-  opens_in: 시작까지
-  closes_in: 종료까지
-  days_short: 일
-  your_investment: 내 기여금
-  your_allocation: 내 KARES 배분량
-  current_price: 현재 판매 가격
-  estimated_until_close: 판매 종료 전까지 예상치
-  accepted_contribution: 수락된 기여금
-  excess_refund: 환급받을 SUI
-  unclaimed_note: 미수령 기여금 및 배분량
-  connect_preview: 지갑을 연결해 내 몫을 확인하세요
-  no_pending_allocation: 미수령 기여금 없음
-  play_game: 게임 플레이
-  play_game_note: 함께 만들어 가는 세계를 탐험하세요.
-  join_title: 다음 장에 함께하세요.
-  join_note: 400,000 KARES, 한 번의 판매 기간, 모든 기여자에게 배분.
-  step_connect: 지갑 연결
-  step_contribute: SUI 기여금 선택
-  step_claim: KARES 및 초과 SUI 수령
-  allocation_lead: 백만 개의 토큰, 모든 배분 공개.
-  community_detail: 11%는 에어드롭, 마케팅, 시즌 순위표, 대회, PvP 보상, 테스트넷 참여자와 기여자를 위한 커뮤니티 물량으로 남습니다. 배분은 프로젝트가 관리합니다.
-  supply_detail: 1,000,000 KARES 전량을 한 번만 발행하며 추가 발행은 불가능합니다. 숙련 구매에 쓴 KARES는 영구 소각됩니다.
-  emissions_detail: 스테이킹 보상 200,000개는 기존 공급량에서 나옵니다. 보상 지급으로 새 토큰을 발행하지 않습니다.
-  price_cap_note: 수락되는 모금액에는 상한이 있습니다. 추가 기여는 배분 비율을 바꾸지만 상한에 도달한 판매 가격은 바꾸지 않습니다.
-  awaiting_minimum: 최소 목표에 도달하면 가격과 배분이 표시됩니다.
-  claimable_tokens: 수령 가능한 KARES
-  refundable_sui: 내 SUI 환급금
-  final_price: 최종 판매 가격
-  full_refund: SUI 전액 환급
-  nav_funding: 모금
-  nav_benefits: 혜택
-  nav_tokenomics: 토큰 경제
-  nav_incentives: 공개 인센티브
-  nav_play: 플레이
-  benefits_title: 세계에 참여하고 더 다양하게 플레이하세요.
-  benefits_lead: KARES는 게임 보상, 커뮤니티 인센티브와 거래소 로열티 배분을 연결합니다.
-  revenue_title: 게임의 성공을 함께 나눕니다.
-  revenue_metric: AresRPG 수익
-  revenue_detail: KARES 스테이커와 나눕니다.
-  baseline_title: 커뮤니티 보상은 이미 공급량에 포함되어 있습니다.
-  baseline_detail: 기존 200,000 KARES로 활성 보상일 1,825일을 지원합니다. 스테이킹으로 배분에 참여하고 누적 보상을 언제든 받으세요. 추가 토큰 발행은 없습니다.
-  crates_title: 내 KARES로 다음 상자를.
-  crates_detail: 게임 내 숙련 상품에는 음식, 자원, 펫과 외형 상자가 있습니다. 같은 수량의 KARES를 쓰거나 플레이로 숙련 포인트를 모으세요. 사용한 KARES는 영구 소각됩니다.
-  incentives_title: 누구나 보상을 늘릴 수 있습니다.
-  incentives_detail: 누구나 공동 스테이킹 보상에 SUI나 KARES를 기부할 수 있습니다. 각 기부금은 다음 활성 보상일부터 30일에 걸쳐 지급됩니다. 모든 스테이커에게 비례 배분되며 회수할 수 없습니다.
-  incentives_clock: 스테이커가 없으면 보상 시계가 멈춥니다. 새 기부금은 기존 기부금의 지급 기간을 늘리지 않습니다.
-  incentives_examples: 이벤트를 지원하고 성과를 기념하며 커뮤니티에 보답하세요.
-  play_title: 세계가 기다립니다. 탐험을 시작하세요.
-  play_detail: 첫 공개 판매 기간에도 AresRPG를 즐기세요. 커뮤니티를 만나고 KARES 뒤에 있는 게임을 알아보세요.
+  community_detail: '커뮤니티 준비금은 이벤트, 에어드롭, 기여자, 시즌 순위 및 PvP 상금에 사용됩니다. 재무 지갑이 해제된 토큰을 수동으로 배분합니다.'
+  supply_detail: '한 번만 발행됩니다. 추가 발행은 없습니다. 소각하면 공급량이 줄어듭니다.'
+  emissions_detail: '모든 보상은 기존 토큰을 사용합니다. 보상 지급으로 새 토큰을 발행하지 않습니다.'
   confirmed_refresh: 거래가 확인되었습니다. 새로고침해 갱신된 잔액을 불러오세요.
-  stage_minimum: 최소 모금
-  stage_maximum: 최대 목표까지 모금
-  minimum_refund: 최소 목표 미달 시 전액 환급합니다.
-  full_refund_available: 기여금 전액을 환급받을 수 있습니다.
-  refund_claim_note: 판매가 최소 목표 미달로 끝나면 여기서 환급을 받으세요. 자동으로 전송되지 않습니다.
   staking_unavailable: 이 네트워크에서는 아직 스테이킹을 이용할 수 없습니다.
-  basecamp_announcement: 10월 7~9일 싱가포르 Sui Basecamp에서 AresRPG를 만나세요. 인사도 나누고 전리품 상자도 받아 가세요.
-  funding_unknown: 모금 데이터를 이용할 수 없습니다.
-  success_threshold: 성공 기준
-  sale_cap: 최대 수락액
-  cap_overflow: 상한 초과
-  overflow_refunds: 비례 환급을 위해 보관
   combat_rewards: 보스 보상
-  combat_detail: 100,000 KARES가 공개 전투 보상금을 마련하며 누구나 토큰을 추가할 수 있습니다. 보스 레벨에 따라 정한 보상금을 승리 캐릭터가 균등하게 나눕니다. 하루 약 54.79 KARES의 상한으로 초기 보상금은 최소 5년간 지속됩니다. 조용한 날과 기부는 기간을 늘립니다. 에포크 활동에 따라 보상 크기가 조정되며 지급하지 않은 보상이 부채가 되지는 않습니다.
-  allocation_rationale: 출시 시 590,000 KARES(59%)가 판매, 유동성, 팀 물량으로 유통됩니다. 예정된 첫해 추가 해제는 소각 전 기준 최대 약 82,000개로 초기 물량의 13.90%입니다. 스테이커가 없으면 스테이킹 지급은 멈추며 커뮤니티 물량은 달력 시간에 따라 해제됩니다. 전투 지급은 더 적을 수 있습니다. 모두 기존 토큰을 사용해 추가 발행 인플레이션은 0입니다. 기부는 기존 토큰을 재분배하며 가격 결과를 보장하지 않습니다.
-  launch_market_cap: 출시 유통 시가총액
-  launch_market_cap_note: '지금 판매가 끝난다면: 상한 적용 판매 가격 × 출시 시 유통되는 590,000 KARES입니다. 최소 모금 미달이면 출시되지 않습니다.'
+  combat_detail: '보스 레벨에 따라 정해진 보상을 승리한 캐릭터들이 균등하게 나눕니다. 설정 시점부터 계산한 하루 한도는 {{cap}} KARES입니다. 에포크 활동량에 따라 보상액이 조정됩니다. 미사용 한도는 이월되지 않으며 기부는 준비금 수명을 늘립니다.'
   error_generic: 작업을 완료할 수 없습니다.
   error_rejected: 요청이 취소되었습니다.
   error_funds: 이 작업과 수수료를 지불할 자금이 부족합니다.
@@ -2429,6 +2346,14 @@ kares_page:
   error_unknown: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
   error_recovered: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
 leaderboard_page:
+  profile_title: '플레이어 프로필'
+  profile_jobs: '전체 캐릭터의 최고 직업 레벨'
+  profile_empty: '현재 소유한 캐릭터가 없습니다.'
+  profile_select: '장비를 확인할 캐릭터를 선택하세요.'
+  profile_unavailable: '프로필 정보를 일시적으로 불러올 수 없습니다.'
+  profile_missing: '이 캐릭터는 더 이상 이 플레이어의 소유가 아닙니다.'
+  profile_previous: '이전'
+  profile_next: '다음'
   unclaimed: 미수령
   reset_in: '{{time}} 초기화'
   xp: 전투 경험치
@@ -2502,6 +2427,19 @@ item_drop_sources:
   quantity: 수량
   levels: 레벨 {{min}}~{{max}}
 journey:
+  map_travel_title: '길 찾기'
+  map_travel_body: '지도를 열고 가까운 이동 가능한 장소를 선택하세요. 캐릭터가 자동으로 걸어가 도착하게 하세요. 장애물에 갇혔을 때도 이 방법으로 벗어날 수 있어요.'
+  map_travel_objective: '지도를 사용해 가까운 목적지에 도착하기'
+  mob_details: '몬스터 정보'
+  first_hunt_title: '첫 사냥'
+  first_hunt_body: 'Thebes 근처나 숲에서 Tinker를 찾으세요. 전투에서 이기고 보상을 받으세요. 나뭇가지는 첫 도구를 만드는 데 도움이 돼요.'
+  first_hunt_objective: 'Tinker와의 전투에서 승리하기'
+  hoe_materials_title: '한 번 시도할 재료'
+  hoe_materials_body: 'Tinker는 갉아먹힌 나뭇가지를, Nook은 회수한 고철을 떨어뜨릴 수 있어요. 아래 레시피의 재료를 모으거나 구매하세요. 이미 가진 사용 가능한 재료도 포함돼요.'
+  hoe_materials_objective: '{{item}} 하나를 만들 재료 모으기'
+  first_craft_title: '시도하며 배우기'
+  first_craft_body: '레시피를 열고 성공 확률을 확인하세요. 실패해도 재료는 소모돼요. 직업 레벨이 낮을 때는 실패해도 직업 XP를 얻어요. 한 번 시도하면 이 퀘스트가 완료돼요.'
+  first_craft_objective: '{{item}} 제작 시도하기'
   title: 나우비스에서 살아남기
   eyebrow: 모험은 여기서 시작됩니다
   progress: 여정 진행도
@@ -2533,7 +2471,7 @@ journey:
   welcome_title: 나우비스에 오신 것을 환영합니다.
   welcome_body: AresRPG는 배우고 준비하며 영리하게 플레이하는 사람에게 보답합니다. SUI를 최대한 아끼며 플레이를 최적화하고 자동화하는 법을 익히세요. 이 여정으로 첫걸음을 시작해 보세요.
   hoe_title: 누구에게나 괭이는 필요하죠.
-  hoe_body: 나우비스는 첫 번째 월드입니다. 더 강한 장비로 위험한 월드에 도전하고, 채집 도구로 제작 재료를 모으세요. 다른 플레이어에게 {{item}}을(를) 사거나 캐릭터 → 생산 직업 → 만능공에서 직접 만드세요.
+  hoe_body: '{{item}}을 구매하거나 캐릭터 → 직업 → 잡역부에서 제작하세요. 레시피의 재료를 선택하면 획득처를 볼 수 있어요. Thebes 주변과 숲에서 Tinker를 찾으세요. 강해지면 평원과 숲의 멧돼지에게서 갉아먹힌 나뭇가지를 얻을 수 있어요.'
   hoe_objective: '{{item}} 소유'
   wheat_title: 이제 손에 흙을 묻혀 볼까요.
   wheat_body: 직접 장비를 만들려면 재료부터 모아야 합니다. 밀은 음식과 장비 재료에 쓰이니 시작하기 좋습니다. 나우비스에서 밀을 찾아 첫 수확을 해 보세요!
@@ -2766,3 +2704,18 @@ adventure:
   follow_body: '그룹이 생겼으니 이제 함께 움직여 봅시다. 센시를 리더로 선택하고 그룹 설정에서 리더 따라가기를 켜세요. 탐험 중에는 Sceat가 따라오므로 같은 길을 두 번 걸을 필요가 없습니다. 전투가 시작되면 각 영웅의 이동과 주문은 여전히 직접 선택합니다.'
   guards_body: '고바독은 입구를 비워 두지 않습니다. 경비병들이 기다리고 있으니 이번에는 두 영웅의 행동을 맞춰야 합니다. 도전하기 전에 새 장비를 확인하세요. 센시의 힘과 Sceat의 함정을 조합해 보세요. 적을 무작정 쫓기보다 유리한 위치로 유도하면 더 쉽게 이길 수 있습니다.'
   boss_body: '경비병 너머에는 Sceat가 찾던 유물을 가진 고바독이 기다립니다. 고블린 왕이라는 칭호를 패배로 얻지는 않았을 것입니다. 함께 싸우는 법은 배웠지만 이번 상대는 차원이 다릅니다. 동료와 함께 다가가 새로운 협력이 어디까지 통할지 확인하세요.'
+
+discord_marketplace:
+  title: '거래소 · 판매'
+  sale: '**{seller}**님이 **{amount}× {item}**을 **{price} SUI**에 판매했습니다'
+  price_before_fees: '수수료 제외 판매 가격'
+  gather_title: '희귀 채집'
+  gather: '**{player}**님이 채집 중 **{item}**을 발견했습니다.'
+  victory_title: '던전 승리'
+  victory: '**{party}** 파티가 **{boss}**을 물리쳤습니다!'
+  loot_title: '뛰어난 전리품'
+  loot: '**{player}**님이 **품질 {quality}%**의 **{item}**을 획득했습니다.'
+  sold_by: '판매자: {player}'
+  found_by: '발견자: {player}'
+  boss_defeated: '최종 보스 처치'
+  level: '레벨'

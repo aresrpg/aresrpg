@@ -33,7 +33,7 @@ import prettier from 'prettier'
  *   | { kind: 'receiving', type: string }
  *   | { kind: 'object', type: string, mutable: boolean }} DoorStrategy
  * @typedef {{ name: string, type: string, strategy: DoorStrategy }} DoorParam
- * @typedef {{ name: string, params: DoorParam[], module?: string, package_key?: string, export_name?: string }} Door
+ * @typedef {{ name: string, params: DoorParam[], module?: string, package_key?: string, export_name?: string, token?: boolean }} Door
  */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -58,9 +58,10 @@ const TYPE_MAP = {
   '&Clock': { kind: 'clock' },
   '&Random': { kind: 'random' },
   '&Version': { kind: 'pin', pin: 'version' },
-  '&mut Currency<KARES>': { kind: 'pin', pin: 'kares_currency', mutable: true },
-  '&aresrpg_kares::offering::Offering': { kind: 'pin', pin: 'kares_offering' },
-  '&mut aresrpg_kares::combat_rewards::CombatPot': { kind: 'pin', pin: 'kares_combat_pot', mutable: true },
+  '&mut Currency<Token>': { kind: 'pin', pin: 'kares_currency', mutable: true },
+  '&aresrpg_rewards::economy::Economy': { kind: 'pin', pin: 'kares_economy' },
+  '&Economy': { kind: 'pin', pin: 'kares_economy' },
+  '&mut aresrpg_rewards::combat_rewards::CombatPot<Token>': { kind: 'object', mutable: true },
   '&TransferPolicy<Item>': { kind: 'pin', pin: 'item_policy' },
   '&TransferPolicy<Character>': { kind: 'pin', pin: 'character_policy' },
   '&AresRPG_TransferPolicy<Item>': { kind: 'pin', pin: 'item_protected_policy' },
@@ -125,7 +126,8 @@ const strategy_of = (type) => {
   // CrushClaim, FightBuild…). Mutability drives the sharedObjectRef flag: `&T` is the only
   // read-only shape — `&mut T` and by-value consumption both need mutable access.
   const bare = type.replace(/^&mut\s+|^&/, '')
-  if (/^[A-Z]/.test(bare)) return { kind: 'object', type, mutable: !type.startsWith('&') || type.startsWith('&mut ') }
+  if (/^(?:[a-zA-Z_][a-zA-Z0-9_]*::)*[A-Z]/.test(bare))
+    return { kind: 'object', type, mutable: !type.startsWith('&') || type.startsWith('&mut ') }
   throw new Error(`generate_doors: unknown Move parameter type "${type}" — add it to TYPE_MAP deliberately`)
 }
 
@@ -138,8 +140,8 @@ export function parse_doors(move_source, include_names = null) {
   const sig_re = /(?:public\s+entry\s+fun|public\s+fun|entry\s+fun)\s+(\w+)\s*(<[^>]*>)?\s*\(([^)]*)\)/g
   for (const [, name, generics, raw_params] of stripped.matchAll(sig_re)) {
     if (include_names && !include_names.has(name)) continue
-    if (generics)
-      throw new Error(`generate_doors: door "${name}" is generic — the generator does not model type arguments yet`)
+    if (![undefined, '<Token>'].includes(generics))
+      throw new Error(`generate_doors: door "${name}" is generic — only the pinned <Token> type argument is supported`)
     const params = raw_params
       .split(',')
       .map((p) => p.trim())
@@ -147,9 +149,9 @@ export function parse_doors(move_source, include_names = null) {
       .map((p) => {
         const [pname, ...rest] = p.split(':')
         const type = rest.join(':').trim().replace(/\s+/g, ' ')
-        return { name: pname.trim(), type, strategy: strategy_of(type) }
+        return { name: pname.trim().replace(/^mut\s+/, ''), type, strategy: strategy_of(type) }
       })
-    doors.push({ name, params })
+    doors.push({ name, params, token: generics === '<Token>' })
   }
   if (doors.length === 0)
     throw new Error('generate_doors: parsed ZERO doors — the instrument is broken, not the surface empty')
@@ -244,7 +246,7 @@ export function emit_doors(doors, { source = 'packages/move/sources/api.move', d
 import type { Transaction${value_vector_import} } from '@mysten/sui/transactions'
 
 import type { DoorCtx, Resolvable } from './client.ts'
-
+${doors.some((door) => door.token) ? "import { kares_coin_type } from './kares_ptb.ts'\n" : ''}
 `
   const fns = doors
     .map((door) => {
@@ -254,9 +256,14 @@ import type { DoorCtx, Resolvable } from './client.ts'
       const args = door.params.filter((p) => p.strategy.kind !== 'skip')
       const caller_args = args.filter((p) => !['clock', 'random', 'pin'].includes(p.strategy.kind))
       const arg_list = args.map(arg_expr).join(',\n      ')
-      const args_type = caller_args.length
-        ? `{ ${caller_args.map((p) => `${p.name}: ${arg_type(p)}`).join('; ')} }`
-        : 'Record<string, never>'
+      const generic = door.token
+        ? {
+            fields: ['coin_type?: string'],
+            call: '    typeArguments: [kares_coin_type(args.coin_type ?? ctx.pins.kares_coin_type)],\n',
+          }
+        : { fields: [], call: '' }
+      const fields = [...caller_args.map((p) => `${p.name}: ${arg_type(p)}`), ...generic.fields]
+      const args_type = fields.length ? `{ ${fields.join('; ')} }` : 'Record<string, never>'
       const terminal = door.params.some((p) => p.type === '&Random')
       const jsdoc_params = args
         .filter((p) => !['clock', 'random', 'pin'].includes(p.strategy.kind))
@@ -269,7 +276,7 @@ ${jsdoc_params || ' * (no caller arguments)'}
 export const ${export_name} = (tx: Transaction, ctx: DoorCtx, args: ${args_type}) =>
   tx.moveCall({
     target: \`\${ctx.pins.${package_key}}::${module}::${door.name}\`,
-    arguments: [
+${generic.call}    arguments: [
       ${arg_list}
     ],
   })`
@@ -310,15 +317,16 @@ const TRADE_DOORS = Object.freeze({
   join: 'trade_join',
   cancel: 'trade_cancel',
   put_sui: 'trade_put_sui',
-  put_kares: 'trade_put_kares',
+  put_token: 'trade_put_kares',
   take_sui: 'trade_take_sui',
-  take_kares: 'trade_take_kares',
+  take_token: 'trade_take_kares',
   accept: 'trade_accept',
   claim_sui: 'trade_claim_sui',
-  claim_kares: 'trade_claim_kares',
+  claim_token: 'trade_claim_kares',
   recover_sui: 'trade_recover_sui',
-  recover_kares: 'trade_recover_kares',
+  recover_token: 'trade_recover_kares',
   close: 'trade_close',
+  close_token: 'trade_close_token',
 })
 
 export const generate_game_doors = async (api_source, trade_source) => {
@@ -332,7 +340,10 @@ export const generate_game_doors = async (api_source, trade_source) => {
         ]
       : [{ ...projected, export_name: TRADE_DOORS[door.name] }]
   })
-  const raw = emit_doors([...parse_doors(api_source), ...trade], {
+  const active = parse_doors(api_source).filter(
+    ({ name }) => !['redeem_mastery_offer_kares', 'prepare_boss_rewards'].includes(name)
+  )
+  const raw = emit_doors([...active, ...trade], {
     source: 'packages/move/sources/{api,trade}.move',
     description: 'public game doors',
   })

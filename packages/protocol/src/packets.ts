@@ -14,6 +14,7 @@ import { cosmetic_slots } from '@aresrpg/immutable'
 import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
+import { parse_inspection_request, type InspectionQuery, type InspectionResult } from './inspection.ts'
 import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
 import {
   parse_market_price_observation,
@@ -29,6 +30,7 @@ import {
 export * from './marketplace.ts'
 export * from './market_prices.ts'
 export * from './leaderboards.ts'
+export * from './inspection.ts'
 import type { PlayerPosition } from './position.ts'
 export * from './position.ts'
 export * from './fights.ts'
@@ -733,6 +735,8 @@ export type ClientPackets = {
   'packet/fight_action': { fight: string; action: FightWireAction }
   /** A rejected drafted turn asks every watcher to replace from indexed chain truth. */
   'packet/fight_resync': { fight: string }
+  /** One sampled public profile/equipment read; null retires the current inspection. */
+  'packet/inspection_request': { id: number; query: InspectionQuery | null }
   /** Browse intent — folds the observed category into state; the server pushes the slice and
    *  streams its deltas while observed. Null stops observing. Not a query: state, then push. */
   'packet/leaderboard_observe': { observation: LeaderboardObservation | null }
@@ -886,6 +890,8 @@ export type ServerPackets = {
   'packet/party_invites': { character_id: string; parties: PartyRow[] }
 
   // ── market stream (only while observing a category — plus your own sales, always) ──
+  'packet/inspection_result': { id: number; result: InspectionResult }
+  'packet/inspection_error': { id: number }
   'packet/leaderboard': { snapshot: LeaderboardSnapshot }
   'packet/leaderboard_error': { observation: LeaderboardObservation; reason: 'unavailable' }
   'packet/market_slice': MarketPage & { observation: MarketObservation }
@@ -978,7 +984,12 @@ export const MARKET_PACKETS = [
   'packet/listing_sold',
 ] as const
 
-export const LEADERBOARD_PACKETS = ['packet/leaderboard', 'packet/leaderboard_error'] as const
+export const LEADERBOARD_PACKETS = [
+  'packet/leaderboard',
+  'packet/leaderboard_error',
+  'packet/inspection_result',
+  'packet/inspection_error',
+] as const
 
 export const KOLIZEUM_PACKETS = ['packet/kolizeums'] as const
 export const FRIEND_PACKETS = ['packet/friends'] as const
@@ -1048,6 +1059,7 @@ export const CLIENT_PACKET_TYPES = [
   'packet/fight_resync',
   'packet/market_prices_observe',
   'packet/market_observe',
+  'packet/inspection_request',
   'packet/leaderboard_observe',
   'packet/spectate',
   'packet/fight_preview',
@@ -1221,6 +1233,7 @@ const parse_admin_request_packet = (
 
 type ObservationParser = (packet: Readonly<Record<string, unknown>>) => ClientPacket
 const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<string, ObservationParser>([
+  ['packet/inspection_request', parse_inspection_request],
   ['packet/market_observe', parse_market_observe_packet],
   [
     'packet/market_prices_observe',

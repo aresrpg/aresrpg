@@ -2,11 +2,11 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Button } from '@aresrpg/ui'
+import { staking_claim_batch } from '@aresrpg/sdk/kares'
 import { type ReactNode } from 'react'
 import { Gamepad2, WalletCards } from 'lucide-react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
-import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { KaresLogo } from '../components/KaresLogo.tsx'
 
@@ -29,6 +29,7 @@ export const StakingContent = ({
   balance: bigint | null
 }>) => {
   const { amount: format_amount, daily: daily_amount } = useNumbers()
+  const claims = staking_claim_batch(snapshot.positions)
   const copy = app_copy.kares_page
   const stats = staking_gains(snapshot)
   const locked = !!state.request || !state.address
@@ -70,12 +71,16 @@ export const StakingContent = ({
               type: 'request',
               request: {
                 kind: 'execute',
-                action: { kind: 'claim_rewards', ids: snapshot.positions.map(({ id }) => id) },
+                action: { kind: 'claim_rewards', ids: claims.ids },
               },
             })
           }
         >
-          {copy.claim_rewards}
+          {claims.total > claims.ids.length
+            ? copy.claim_batch
+                .replace('{{count}}', String(claims.ids.length))
+                .replace('{{total}}', String(claims.total))
+            : copy.claim_rewards}
         </Button>
       </section>
       <StakingForm copy={copy} balance={balance} locked={locked} snapshot={snapshot} dispatch={dispatch} />
@@ -115,10 +120,8 @@ export const StakingAccount = ({
       (state.snapshot ? (
         <StakingContent copy={copy} dispatch={dispatch} snapshot={state.snapshot} state={state} balance={balance} />
       ) : (
-        <p className="staking-empty-message">
-          {finance_empty_message(state, copy.kares_page, copy.kares_page.staking_unavailable)}
-        </p>
+        <p className="staking-empty-message">{finance_empty_message(state, copy.kares_page)}</p>
       ))}
-    <FinanceStatus network={env.network} copy={copy.kares_page} state={state} />
+    <FinanceStatus copy={copy.kares_page} state={state} />
   </section>
 )

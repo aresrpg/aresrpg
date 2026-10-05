@@ -1,0 +1,45 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+
+.world-prompt-card.aui-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 6px;
+  text-align: center;
+}
+.world-prompt-card__name {
+  padding: 0 4px;
+  color: var(--aui-ink);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.world-prompt-card__line {
+  padding: 2px 4px;
+  color: var(--aui-muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+.world-prompt-card__line[data-title] {
+  color: var(--aui-ink);
+  font-weight: 700;
+}
+.world-prompt-card[data-tone='muted'] .world-prompt-card__name,
+.world-prompt-card__line[data-muted] {
+  color: var(--color-muted);
+}
+.world-prompt-card .world-prompt-card__action {
+  pointer-events: auto;
+  min-height: 26px;
+  padding: 3px 8px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+@media (pointer: coarse) {
+  .world-prompt-card .world-prompt-card__action {
+    min-height: 44px;
+  }
+}

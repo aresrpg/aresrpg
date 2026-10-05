@@ -4,7 +4,13 @@
 import { DEFAULT_NETWORK, resolve_pins } from '@aresrpg/sdk/pins'
 
 import type { AppContext, AppInput, AppModule, AppState } from '../store.ts'
-import { complete_quests, completed_quests_from, initial_journey_state, type JourneyState } from '../journey/model.ts'
+import {
+  complete_quests,
+  completed_quests_from,
+  initial_journey_state,
+  JOURNEY_QUESTS,
+  type JourneyState,
+} from '../journey/model.ts'
 import { quest_changes } from '../journey/facts.ts'
 import { browser_journey_storage, type JourneyStorage } from '../journey/persistence.ts'
 
@@ -67,10 +73,33 @@ const identity_for = (state: AppState): string | null => {
     : null
 }
 
+const complete_map_travel = (state: AppState, input: AppInput): JourneyState => {
+  const { journey } = state
+  if (input.type !== 'run_to/stopped' || input.reason !== 'arrived') return journey
+  const { run } = state.run_to
+  if (run?.source !== 'map') return journey
+  if (
+    ![
+      journey.ready,
+      journey.completed.includes('welcome'),
+      run.controlled_character_id === state.session.selected_character_id,
+    ].every(Boolean)
+  )
+    return journey
+  return complete_quests(
+    journey,
+    JOURNEY_QUESTS.filter(
+      (quest) => quest.kind === 'map' && !journey.completed.includes(quest.superseded_by ?? '')
+    ).map(({ id }) => id)
+  )
+}
+
 const reduce = (state: AppState, input: AppInput): AppState => {
   const identity = identity_for(state)
   if (identity !== state.journey.identity)
     return { ...state, journey: initial_journey_state(identity, state.journey.generation + 1) }
+  const arrived = complete_map_travel(state, input)
+  if (arrived !== state.journey) return { ...state, journey: arrived }
   if (!input.type.startsWith('journey/')) return state
   const action = input as JourneyInput
   if (!accepts_input(state.journey, action)) return state

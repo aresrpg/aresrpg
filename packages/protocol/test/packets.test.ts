@@ -164,6 +164,7 @@ describe('the wire contract', () => {
       'packet/fight_resync',
       'packet/market_prices_observe',
       'packet/market_observe',
+      'packet/inspection_request',
       'packet/leaderboard_observe',
       'packet/spectate',
       'packet/fight_preview',

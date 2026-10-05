@@ -10,7 +10,7 @@ import type { CopyText } from '../i18n/copy.ts'
 export type BoxPhase = 'pending' | 'charging' | 'burst' | 'resolving' | 'reveal'
 export type BoxResult = Readonly<{ claim_id: string; item_type: string; amount: number }>
 
-const OpeningBox = ({ item_type, phase, text }: Readonly<{ item_type: string; phase: BoxPhase; text: CopyText }>) => (
+const OpeningBox = ({ item_type }: Readonly<{ item_type: string }>) => (
   <div className="boxreveal__stage">
     <div aria-hidden="true" className="boxreveal__aura" />
     <div className="boxreveal__box">
@@ -26,7 +26,6 @@ const OpeningBox = ({ item_type, phase, text }: Readonly<{ item_type: string; ph
       ))}
     </div>
     <div aria-hidden="true" className="boxreveal__flash" />
-    {phase === 'pending' && <div className="boxreveal__label boxreveal__label--pulse">{text('unsealing')}</div>}
   </div>
 )
 
@@ -36,22 +35,19 @@ export const BoxRevealCell = ({
   roll,
   text,
 }: Readonly<{ item_type: string; phase: BoxPhase; roll?: BoxResult; text: CopyText }>) => {
-  if (phase !== 'reveal' && phase !== 'resolving') return <OpeningBox item_type={item_type} phase={phase} text={text} />
+  if (phase !== 'reveal' && phase !== 'resolving') return <OpeningBox item_type={item_type} />
   return (
     <div className="boxreveal__card-wrap" onClick={(event) => event.stopPropagation()}>
-      <div className="boxreveal__eyebrow">{text('reveal_eyebrow')}</div>
       {roll ? (
         <div className="boxreveal__card">
           <img
             alt=""
-            className="boxreveal__pet-art"
+            className="boxreveal__reward-art"
             draggable={false}
             src={item_detail_icon(roll.item_type) ?? undefined}
           />
-          <div className="boxreveal__pet-name">
-            {encyclopedia_catalog.item(roll.item_type)!.item.name}
-            <span> ×{roll.amount}</span>
-          </div>
+          <div className="boxreveal__reward-name">{encyclopedia_catalog.item(roll.item_type)!.item.name}</div>
+          <strong className="boxreveal__quantity">×{roll.amount}</strong>
         </div>
       ) : (
         <div aria-busy="true" className="boxreveal__card boxreveal__card--resolving">

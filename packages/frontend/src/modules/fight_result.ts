@@ -56,6 +56,8 @@ export type ResultParticipant = Readonly<{
 
 export type FightResult = Readonly<{
   fight: string
+  /** Present when the terminal checkpoint identified the defeated mobs. Recovery may lack it. */
+  defeated_mob_types?: readonly string[]
   boss_weight: number
   dungeon: Readonly<{ dungeon: string; room: number }> | null
   kolizeum: string | null
@@ -96,7 +98,7 @@ export type FightResultInput =
       observed_at_ms: number
       gas_spent_mist: bigint
     }>
-  | Readonly<{ type: 'fight_result/gas_updated'; character_id: string; fight: string; gas_spent_mist: bigint }>
+  | Readonly<{ type: 'fight_result/gas_updated'; fight: string; gas_spent_mist: bigint }>
   | Readonly<{ type: 'fight_result/retry'; character_id: string }>
   | Readonly<{ type: 'fight_result/claim_failed'; character_id: string; fight: string; error: string }>
   | Readonly<{
@@ -259,6 +261,9 @@ export const merge_checkpoint = (
   return Object.freeze({
     ...existing,
     fight: checkpoint.contract.id,
+    defeated_mob_types: checkpoint.contract.fighters.flatMap(({ kind, team, dead }) =>
+      kind.type === 'mob' && dead && team !== checkpoint.contract.winner ? [kind.snapshot.mob_type] : []
+    ),
     boss_weight: Number(checkpoint.contract.boss_weight),
     dungeon: projected_dungeon(checkpoint),
     ...kolizeum_result,
@@ -526,9 +531,18 @@ const reduce = (state: AppState, input: AppInput): AppState => {
     })
   }
   if (input.type === 'fight_result/gas_updated')
-    return update_result(state, input.character_id, (result) =>
-      result.fight === input.fight ? Object.freeze({ ...result, gas_spent_mist: input.gas_spent_mist }) : result
-    )
+    return {
+      ...state,
+      fight_result: {
+        ...state.fight_result,
+        current_by_character: Object.fromEntries(
+          Object.entries(state.fight_result.current_by_character).map(([character, result]) => [
+            character,
+            result.fight === input.fight ? { ...result, gas_spent_mist: input.gas_spent_mist } : result,
+          ])
+        ),
+      },
+    }
   if (input.type === 'server/packet') return fold_packet(state, input.packet)
   if (input.type === 'fight_result/claim_failed')
     return update_result(state, input.character_id, (result) =>

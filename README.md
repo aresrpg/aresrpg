@@ -25,12 +25,12 @@ bun run lint           # eslint + prettier
 bun run test           # every package's unit tests — same command CI runs
 ```
 
-Each branch owns its deployment through the root `pins.json`. A new development branch republishes
-its inherited lineage on first sync, then records those pins here. Run the frontend normally.
+Committed `pins.json` describes mainnet. Local testnet uses ignored `.dev/pins.json`; it never
+falls back to mainnet. Run the frontend normally for the selected network.
 
-The offering site is a separate Vercel project rooted at `packages/launchpad`, targeting
-`launchpad.aresrpg.world`. Its environment selects `VITE_NETWORK` and `VITE_SUI_RPC_URL`.
-The app's `/kares` page hosts staking; the encyclopedia explains the tokenomics.
+Blast hosts the standalone KARES presale. The in-game card links to Blast and reads its funding
+progress when a presale is configured. The app's `/kares` page hosts staking; the encyclopedia
+explains allocations, vesting and rewards.
 
 Solana bridge reads use the same-origin `/api/solana` function. Set `SOLANA_RPC_URL` as a
 server-only secret in the frontend Vercel project's production and `edge` preview environments.

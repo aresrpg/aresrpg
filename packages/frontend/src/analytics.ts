@@ -42,6 +42,11 @@ const SAFE_PROPERTIES = new Set([
   'duration_ms',
   'stage',
   'quest_id',
+  'journey_step',
+  'attempts',
+  'successes',
+  'output_type',
+  'gas_mist',
 ])
 
 export const analytics_properties = (properties: Readonly<Record<string, unknown>>): Record<string, unknown> =>

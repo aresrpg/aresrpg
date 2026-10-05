@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { Button } from '@aresrpg/ui'
+import { KARES_UNIT } from '@aresrpg/sdk/kares-economics'
 
 import { useNumbers } from '../../i18n/useNumbers.ts'
 
@@ -200,7 +201,16 @@ const ResultRow = ({
         {participant.kares > 0n && (
           <div aria-label="KARES" className="fe-tile">
             <KaresLogo size={32} />
-            <span className="fe-tile__qty">×{numbers.amount(participant.kares)}</span>
+            <span className="fe-tile__qty">
+              ×
+              {numbers
+                .number(participant.kares / KARES_UNIT, {
+                  notation: 'compact',
+                  maximumFractionDigits: 0,
+                  roundingMode: 'trunc',
+                })
+                .replace(/K$/, 'k')}
+            </span>
             <span className="fe-tile__tooltip" role="tooltip">
               KARES
             </span>
@@ -224,7 +234,6 @@ export const FightResultCard = ({
   const result = useAppStore((state) => selected_result(state, supplied_result))
   const fight = useAppStore((state) => state.fight)
   const results = useAppStore((state) => state.fight_result.current_by_character)
-  const characters = useAppStore((state) => state.session.characters)
   const selected_character_id = useAppStore((state) => state.session.selected_character_id)
   const available = !result || fight_result_available(fight, result.fight)
   const surface = result ? fight_result_surface(result) : null
@@ -263,13 +272,13 @@ export const FightResultCard = ({
               <span>{text_of(copy, 'result_duration')}</span>
               <b>{result.duration_ms === null ? '—' : format_fight_duration(result.duration_ms)}</b>
             </div>
-            <div className="fe-fact">
+            <div className="fe-fact" title={text_of(copy, 'result_gas_hint')}>
               <span>{text_of(copy, 'result_gas_spent')}</span>
               <b>
                 {result.gas_spent_mist < 0n ? '-' : ''}
                 {localized_numbers.sui(
                   result.gas_spent_mist < 0n ? -result.gas_spent_mist : result.gas_spent_mist,
-                  3
+                  6
                 )}{' '}
                 SUI
               </b>
@@ -290,9 +299,7 @@ export const FightResultCard = ({
                   <ResultRow
                     items={items}
                     copy={copy}
-                    item_ids={
-                      characters.some(({ id }) => id === participant.character_id) ? (item_ids ?? []) : undefined
-                    }
+                    item_ids={item_ids}
                     defeated={false}
                     enemy={false}
                     key={participant.seat}

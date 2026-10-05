@@ -21,6 +21,7 @@ import {
   type TutorialTarget,
 } from './tutorial.ts'
 import './tutorial.css'
+import { CraftFailureNotice } from './CraftFailureNotice.tsx'
 
 type TargetRect = Readonly<{ left: number; top: number; width: number; height: number }>
 type Target = Readonly<{ rect: TargetRect | null; host: HTMLElement | null }>
@@ -175,20 +176,33 @@ export const TutorialHost = ({ blocked, copy }: Readonly<{ blocked: boolean; cop
     },
     completed
   )
-  if (!id || !selected_character_id) return null
-  const complete = (): void =>
+  const complete = (id: TutorialId): void =>
     dispatch_app({
       type: 'settings/changed',
       settings: Object.freeze({ ...settings, completed_tutorials: Object.freeze([...completed, id]) }),
     })
+  const available = [player_ready, !!selected_character_id, !fight_mounted].every(Boolean)
   return (
-    <TutorialSequence
-      complete={complete}
-      copy={copy}
-      id={id}
-      key={id}
-      index={progress[id] ?? 0}
-      select_step={(index) => set_progress((current) => ({ ...current, [id]: index }))}
-    />
+    <>
+      {id && selected_character_id && (
+        <TutorialSequence
+          complete={() => complete(id)}
+          copy={copy}
+          id={id}
+          key={id}
+          index={progress[id] ?? 0}
+          select_step={(index) => set_progress((current) => ({ ...current, [id]: index }))}
+        />
+      )}
+      {owner && (
+        <CraftFailureNotice
+          key={owner}
+          copy={copy}
+          completed={completed.includes('craft_failure')}
+          complete={() => complete('craft_failure')}
+          available={available}
+        />
+      )}
+    </>
   )
 }

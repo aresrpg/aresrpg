@@ -49,9 +49,9 @@ export const RELEASE_INPUTS = Object.freeze({
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
     'packages/engine/package.json',
     'packages/ui/package.json',
+    'packages/discord/package.json',
     'packages/frontend/package.json',
     'packages/mobile/package.json',
-    'packages/launchpad/package.json',
     'packages/journal/package.json',
     'packages/sdk/package.json',
     'packages/fight/src/',
@@ -65,6 +65,35 @@ export const RELEASE_INPUTS = Object.freeze({
     'bun.lock',
     '.dockerignore',
     'scripts/release_inputs.mjs',
+  ]),
+  discord: Object.freeze([
+    'packages/discord/',
+    'packages/server/src/suins.ts',
+    'packages/server/src/logger.ts',
+    'packages/server/package.json',
+    'packages/immutable/',
+    'packages/ui/package.json',
+    'packages/ui/src/base.css',
+    'packages/ui/src/art.ts',
+    'packages/ui/src/visual_identity.ts',
+    'packages/ui/src/sui.ts',
+    'packages/ui/src/assets/',
+    'packages/frontend/src/i18n/locales/',
+    'seed/icons/items/',
+    'seed/icons/mobs/',
+    'seed/content/items.json',
+    'seed/content/mobs.json',
+    'bun.lock',
+    '.dockerignore',
+    'scripts/release_inputs.mjs',
+    'packages/journal/package.json',
+    'packages/fight/package.json',
+    'packages/immutable/package.json',
+    'packages/frontend/package.json',
+    'packages/protocol/package.json',
+    'packages/mobile/package.json',
+    'packages/sdk/package.json',
+    'packages/engine/package.json',
   ]),
   indexer: Object.freeze(['packages/indexer/', 'scripts/release_inputs.mjs']),
 })
@@ -143,7 +172,10 @@ export const runtime_fingerprints = async (cwd, ref = null, scope = 'all') => {
 export const fingerprint_runtime_files = (files, metadata, scope = 'all') => {
   if (scope !== 'all' && scope !== 'local') throw new Error('Unsupported runtime fingerprint scope')
   const selected = files.filter(
-    ([path]) => scope !== 'local' || !path.startsWith('packages/frontend/') || path === 'packages/frontend/package.json'
+    ([path]) =>
+      scope !== 'local' ||
+      !path.startsWith('packages/frontend/') ||
+      Object.keys(RELEASE_INPUTS).some((component) => component !== 'frontend' && component_owns_path(component, path))
   )
   return Object.freeze(
     Object.fromEntries(

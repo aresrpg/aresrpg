@@ -38,6 +38,7 @@ const message_of = error_message
  *  top-up prompt (never a balance poll: first logins stay unbothered). */
 const GAS_EMPTY_PATTERN =
   /gas coin|no valid gas|insufficientgas|gasbalancetoolow|unable to select a gas|gas selection.*insufficient sui balance/i
+export const gas_empty_error = (error: unknown): boolean => GAS_EMPTY_PATTERN.test(message_of(error))
 const gas_empty_cell: { listener: (() => void) | null } = { listener: null }
 /** Registered by the session observer (injection breaks the store↔toast cycle). */
 export const on_gas_empty = (listener: (() => void) | null): void => {
@@ -45,7 +46,7 @@ export const on_gas_empty = (listener: (() => void) | null): void => {
   gas_empty_cell.listener = listener
 }
 const notice_gas_empty = (type: ToastType, message: string): boolean => {
-  if (type !== 'error' || !GAS_EMPTY_PATTERN.test(message) || !gas_empty_cell.listener) return false
+  if (type !== 'error' || !gas_empty_error(message) || !gas_empty_cell.listener) return false
   gas_empty_cell.listener()
   return true
 }

@@ -135,7 +135,7 @@ export const CombatHud = ({
   controls: ReactNode
   label: string
   spell_count?: number
-  timer?: Readonly<{ label: string; remaining: number; duration: number }> | null
+  timer?: Readonly<{ label: string; remaining: number; duration: number; hint?: string }> | null
 }>) => (
   <Panel
     className="aui-combat-hud"
@@ -146,12 +146,14 @@ export const CombatHud = ({
     <div className="aui-combat-spells">{spells}</div>
     <div className="aui-combat-controls">
       {timer && (
-        <ProgressBar
-          label={timer.label}
-          value={timer.remaining}
-          max={timer.duration}
-          detail={Math.max(0, Math.ceil(timer.remaining))}
-        />
+        <div title={timer.hint} aria-label={timer.hint} tabIndex={timer.hint ? 0 : undefined}>
+          <ProgressBar
+            label={timer.label}
+            value={timer.remaining}
+            max={timer.duration}
+            detail={Math.max(0, Math.ceil(timer.remaining))}
+          />
+        </div>
       )}
       {controls}
     </div>

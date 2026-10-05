@@ -10,6 +10,14 @@
 .mobile-rotate {
   display: none;
 }
+.adventure-touch-controls {
+  display: none;
+}
+@media (max-width: 1023px), (any-pointer: coarse) {
+  .adventure-touch-controls {
+    display: block;
+  }
+}
 @media (orientation: portrait) {
   .mobile-rotate {
     display: grid;
@@ -75,7 +83,7 @@
 
 .mobile-joystick,
 .mobile-jump {
-  opacity: 0;
+  opacity: 0.55;
 }
 .mobile-joystick[data-active='true'],
 .mobile-jump[data-active='true'] {

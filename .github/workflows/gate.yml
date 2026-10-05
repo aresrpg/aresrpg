@@ -116,6 +116,7 @@ jobs:
             packages/control
             packages/seed
             packages/kares
+            packages/rewards
             scripts/coverage_move.sh
             move-packages.json
       - name: sui version pin
@@ -191,6 +192,7 @@ jobs:
             packages/control
             packages/seed
             packages/kares
+            packages/rewards
             packages/indexer
             packages/protocol
             scripts/coverage_indexer.sh
@@ -306,14 +308,13 @@ jobs:
           restore-keys: bun-${{ runner.os }}-
       - name: install
         run: bun install --frozen-lockfile
-      - name: bundle-cleanliness gate — game and independent launchpad
+      - name: bundle-cleanliness gate — game
         run: |
-          for application in frontend launchpad; do
-            bun run --cwd "packages/$application" build
-            if find "packages/$application/dist" -name "*.map" | grep .; then exit 1; fi
-            if grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
-              "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" "packages/$application/dist"; then exit 1; fi
-          done
+          bun run --cwd packages/frontend build
+          if find packages/frontend/dist -name "*.map" | grep .; then exit 1; fi
+          if grep -RlE --include="*.js" --include="*.css" --include="*.html" --include="*.json" \
+            "rpc\.aresrpg\.world|sponsor\.aresrpg\.world|suiprivkey1[a-z0-9]{20,}|BEGIN PRIVATE KEY" packages/frontend/dist; then exit 1; fi
+
   browsers:
     needs: changes
     if: needs.changes.outputs.browsers == 'true'

@@ -6,6 +6,8 @@ import { expect, test } from 'bun:test'
 import type { Receipt } from '../src/cache.ts'
 import { fight_actions } from '../src/fight.ts'
 
+import { kares_test_pins, kares_test_client } from './helpers/kares.ts'
+
 const id = (value: number) => `0x${String(value).padStart(64, '0')}`
 const digest = '11111111111111111111111111111111'
 const kiosk_cap = {
@@ -22,7 +24,8 @@ test.each([false, true])(
     const calls: { door: string; args: Record<string, unknown> }[] = []
     const execution_options: unknown[] = []
     const sdk = {
-      pins: { content_root: { id: id(61), shared_version: '1' }, seed_package_original: id(60) },
+      sui_client: kares_test_client().client,
+      pins: { ...kares_test_pins, content_root: { id: id(61), shared_version: '1' }, seed_package_original: id(60) },
       game_type_package: id(1),
       tx: () => ({}),
       hydrate_unknown: async () => undefined,
@@ -51,7 +54,7 @@ test.each([false, true])(
         } as unknown as Receipt
       },
       doors: {
-        prepare_boss_rewards: (_tx: unknown, input: Record<string, unknown>) =>
+        prepare_boss_rewards_token: (_tx: unknown, input: Record<string, unknown>) =>
           void calls.push({ door: 'boss', args: input }),
         prepare_fight_loot: (_tx: unknown, input: Record<string, unknown>) => {
           calls.push({ door: 'prepare', args: input })
@@ -114,6 +117,12 @@ test.each([false, true])(
     expect(result).toMatchObject({ digest, closable: true, closed: true })
     expect(result.item_ids).toEqual([id(71), id(72)])
     expect(result.kares_rewards).toEqual([{ fighter: 0n, amount: boss_rewards ? 7n : 0n }])
-    if (boss_rewards) expect(calls[0]?.args).toEqual({ fight_object: id(40), fighter_idx: 0n })
+    if (boss_rewards)
+      expect(calls[0]?.args).toEqual({
+        fight_object: id(40),
+        fighter_idx: 0n,
+        pot: kares_test_pins.kares_combat_pot.id,
+        coin_type: kares_test_pins.kares_coin_type,
+      })
   }
 )

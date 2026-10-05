@@ -82,10 +82,13 @@ test('SDK recovery feeds the existing object cache and returns the original outc
     },
   } as unknown as SuiTransport
   const sdk = SDK({ client, signer: new Ed25519Keypair(), pins: {}, transaction_storage: null })
+  const observed: unknown[] = []
+  sdk.on_transaction((execution) => observed.push(execution))
   const result = await sdk.execute(sdk.tx())
   expect(result.Transaction?.digest).toBe(expected_digest)
   expect(sdk.ref(object_id)).toMatchObject({ version: '2' })
   expect(executions).toBe(1)
+  expect(observed).toEqual([{ digest: expected_digest, outcome: 'success' }])
 })
 
 test('a lost submission response recovers its exact receipt with one execution', async () => {

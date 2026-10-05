@@ -17,6 +17,7 @@ const create_state = () => initial_app_state(settings)
 const auth_session = (address = '0xowner'): AuthSession =>
   Object.freeze({
     address,
+    on_transaction: () => () => {},
     suins: {
       snapshot: async () => ({ default_name: null, names: [] }),
       set_default: async () => {

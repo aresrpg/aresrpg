@@ -22,7 +22,6 @@ import {
   next_seed_batch,
   project_temp_admin_cap,
   SEED_SESSION_GAS,
-  verify_upgrade_cap_targets,
   type SeedApplyProgress,
 } from '../src/seed_admin.ts'
 import { seed_sync_rows } from '../src/seed_sync.ts'
@@ -323,27 +322,6 @@ describe('seed admin progress', () => {
       })
     ).rejects.toThrow('spell Legacy Name was removed from the files')
     expect(executions).toBe(0)
-  })
-
-  test('the permanent freeze verifies five distinct caps against their active packages', async () => {
-    const caps = [object_id(20), object_id(21), object_id(22), object_id(23), object_id(24)]
-    const packages = [object_id(30), object_id(31), object_id(32), object_id(33), object_id(34)]
-    const sdk = sdk_with(
-      new Set(caps),
-      Object.freeze(Object.fromEntries(caps.map((cap, index) => [cap, { package: packages[index] }])))
-    )
-    const targets = caps.map((cap, index) => ({ cap, package: packages[index]! }))
-
-    expect(await verify_upgrade_cap_targets(sdk, targets)).toEqual(caps)
-    await expect(
-      verify_upgrade_cap_targets(
-        sdk,
-        targets.map((target, index) => (index === 4 ? { ...target, package: object_id(40) } : target))
-      )
-    ).rejects.toThrow('does not control active package')
-    await expect(
-      verify_upgrade_cap_targets(sdk, [targets[0]!, targets[0]!, targets[2]!, targets[3]!, targets[4]!])
-    ).rejects.toThrow('five distinct')
   })
 
   test('recovers finished progress from chain state alone — every target already exists', async () => {

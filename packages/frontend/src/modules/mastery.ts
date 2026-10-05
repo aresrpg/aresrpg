@@ -22,7 +22,7 @@ export type MasteryState = Readonly<{
 
 export type MasteryInput =
   | Readonly<{ type: 'mastery/start'; world: string }>
-  | Readonly<{ type: 'mastery/redeem'; item_type: string; payment?: 'mastery' | 'kares' }>
+  | Readonly<{ type: 'mastery/redeem'; item_type: string; payment?: 'mastery' | 'kares'; count?: number }>
   | Readonly<{ type: 'mastery/pending'; operation: string | null }>
   | Readonly<{ type: 'mastery/reconciled'; mastery: MasteryRow | null }>
   | Readonly<{ type: 'mastery/failed'; error: string }>
@@ -57,8 +57,18 @@ const reduce = (state: AppState, input: AppInput): AppState => {
   return state
 }
 
-const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state }) => {
-  const fail = (error: unknown): void => {
+const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_state, signal }) => {
+  type Wallet = NonNullable<AppState['session']['wallet']>
+  const current = (wallet: Wallet): boolean => !signal.aborted && get_state().session.wallet === wallet
+  const finish = (wallet: Wallet, mastery: MasteryRow | null, message: 'quest_started' | 'offer_purchased'): void => {
+    if (!current(wallet)) return
+    dispatch({ type: 'mastery/reconciled', mastery })
+    const { copy } = get_state()
+    toast.add(copy ? copy_text(copy.mastery_page)(message) : message, 'success')
+  }
+  const fail = (wallet: Wallet, error: unknown): void => {
+    console.error('Mastery operation failed.', error)
+    if (!current(wallet)) return
     const message = error instanceof Error ? error.message : String(error)
     dispatch({ type: 'mastery/failed', error: message })
     toast.add(error)
@@ -72,14 +82,10 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
     dispatch({ type: 'mastery/pending', operation: 'start' })
     void wallet.mastery
       .start({ world: world.world, character_id: witness.id, custody: character_custody(witness) })
-      .then(({ mastery }) => {
-        dispatch({ type: 'mastery/reconciled', mastery })
-        const text = state.copy ? copy_text(state.copy.mastery_page) : (key: string) => key
-        toast.add(text('quest_started'), 'success')
-      })
-      .catch(fail)
+      .then(({ mastery }) => finish(wallet, mastery, 'quest_started'))
+      .catch((error: unknown) => fail(wallet, error))
   })
-  events.on('mastery/redeem', ({ item_type, payment }) => {
+  events.on('mastery/redeem', ({ item_type, payment, count }) => {
     const state = get_state()
     const { wallet, inventory, characters } = state.session
     if (!wallet || state.mastery.pending) return
@@ -96,15 +102,12 @@ const observe: NonNullable<AppModule['observe']> = ({ events, dispatch, get_stat
         item_type,
         payment,
         expected_cost: BigInt(offer.cost),
+        count,
         existing: existing?.id ?? null,
         custody: custody_character ? character_custody(custody_character) : undefined,
       })
-      .then(({ mastery }) => {
-        dispatch({ type: 'mastery/reconciled', mastery })
-        const text = state.copy ? copy_text(state.copy.mastery_page) : (key: string) => key
-        toast.add(text('offer_purchased'), 'success')
-      })
-      .catch(fail)
+      .then(({ mastery }) => finish(wallet, mastery, 'offer_purchased'))
+      .catch((error: unknown) => fail(wallet, error))
   })
 }
 
