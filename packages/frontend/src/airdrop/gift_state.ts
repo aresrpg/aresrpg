@@ -86,7 +86,16 @@ const completions: {
 } = {
   ready: (state) => ({ ...state, task: null, ready: true }),
   connected: (state, result) =>
-    task({ ...state, ready: true, wallet: result.wallet, status: null }, 'check', result.advance),
+    task(
+      {
+        ...state,
+        ready: true,
+        wallet: result.wallet,
+        status: state.wallet?.address === result.wallet.address ? state.status : null,
+      },
+      'check',
+      result.advance
+    ),
   checked,
   executed: (state, result) =>
     task({ ...state, status: state.status && { ...state.status, proof: result.proof ?? state.status.proof } }, 'check'),

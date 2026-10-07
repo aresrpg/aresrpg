@@ -24,6 +24,8 @@ test('a portrait recipient reaches a saved gift without canvas, funding or a sec
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
   await page.screenshot({ path: 'test-results/gift-onboarding-production-mobile.png', fullPage: true })
   await page.reload()
+  await expect(page.getByRole('heading', { name: 'This card is unavailable' })).toBeVisible()
+  await page.getByRole('button', { name: 'Check my gifts', exact: true }).click()
   await expect(page.getByText('✓ Reward collected · All gift fees covered')).toBeVisible()
   await expect(page.locator('.boxreveal__reel')).toHaveCount(0)
   await expect(page.locator('body')).toHaveAttribute('data-gift-calls', 'transfer,redeem,open,collect')
@@ -38,7 +40,7 @@ test('failed sponsorship is not automatically retried across reload', async ({ p
   await expect(page.getByRole('alert')).toContainText('you do not need to add SUI')
   await expect(page.locator('body')).toHaveAttribute('data-gift-calls', 'transfer,redeem')
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Receive my free crate' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'This card is unavailable' })).toBeVisible()
   await expect(page.locator('body')).toHaveAttribute('data-gift-calls', 'transfer,redeem')
 })
 

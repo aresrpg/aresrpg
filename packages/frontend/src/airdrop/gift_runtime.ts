@@ -77,8 +77,12 @@ export const create_gift_runtime = ({
         if (!restored) throw new GiftError('unauthorized')
         return connected(restored, state.task!.advance)
       }
-      const card = !state.status && link && !state.skip_link ? await wallet.inspect_giftcard_link(link) : null
-      const proof = state.status?.proof ?? (card ? { giftcard: card.id } : null)
+      let proof = state.status?.proof ?? null
+      if (!state.status && link && !state.skip_link) {
+        const card = await wallet.inspect_giftcard_link(link)
+        if (!card) return { kind: 'checked', status: { stage: 'missing', proof: null } }
+        proof = { giftcard: card.id }
+      }
       return { kind: 'checked', status: await wallet.gift.status(proof) }
     }
     const write =

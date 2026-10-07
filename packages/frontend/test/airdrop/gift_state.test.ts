@@ -105,3 +105,15 @@ test('every carousel result lands on its confirmed item and each crossing gets a
     expect(crossings.some((time, index) => index > 0 && time - crossings[index - 1]! < 240)).toBe(true)
   }
 })
+
+test('refreshing the same wallet session retains the selected card, while changing accounts clears it', () => {
+  const state = reduce_gift(checked(ready(), 'crate'), { type: 'request', kind: 'check' })
+  for (const address of ['alice', 'bob']) {
+    const next = reduce_gift(state, {
+      type: 'completed',
+      task: state.task!.id,
+      result: { kind: 'connected', wallet: { ...wallet, address }, advance: true },
+    })
+    expect(next.status).toEqual(address === 'alice' ? state.status : null)
+  }
+})
