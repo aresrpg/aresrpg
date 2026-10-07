@@ -41,16 +41,16 @@ const post_gift = async (body: object, signal?: AbortSignal): Promise<Record<str
 }
 
 const sponsored_gift = (proof: GiftProof, result: Record<string, unknown>): SponsoredGift => {
-  if (typeof result.bytes !== 'string' || typeof result.digest !== 'string' || !isValidTransactionDigest(result.digest))
+  if (
+    typeof result.bytes !== 'string' ||
+    typeof result.digest !== 'string' ||
+    !isValidTransactionDigest(result.digest) ||
+    typeof result.sponsor_signature !== 'string'
+  )
     throw new GiftError('invalid')
   const status = decode_gift_status(result.status)
   if (status.proof?.giftcard !== proof.giftcard) throw new GiftError('invalid')
-  return { bytes: result.bytes, digest: result.digest, status }
-}
-
-const submit_gift = async (digest: string, signature: string, signal?: AbortSignal): Promise<void> => {
-  const result = await post_gift({ digest, signature }, signal)
-  if (result.digest !== digest) throw new GiftError('unavailable')
+  return { bytes: result.bytes, digest: result.digest, sponsor_signature: result.sponsor_signature, status }
 }
 
 export const create_gift_actions = (sdk: Sdk, address: string, sign: SignMessage) => {
@@ -68,7 +68,7 @@ export const create_gift_actions = (sdk: Sdk, address: string, sign: SignMessage
     return post_gift({ request: intent, signature })
   }
   const prepare = async (action: GiftAction, proof: GiftProof): Promise<SponsoredGift> => {
-    const { bytes, digest, status } = sponsored_gift(proof, await request(action, proof))
+    const { bytes, digest, sponsor_signature, status } = sponsored_gift(proof, await request(action, proof))
     const { content_root, seed_package_original } = living_content(sdk, 'Gift sponsorship')
     // Before asking the wallet to sign, independently restrict the returned PTB to gift doors.
     validate_gift_transaction(
@@ -83,12 +83,12 @@ export const create_gift_actions = (sdk: Sdk, address: string, sign: SignMessage
       Transaction.from(bytes).getData(),
       status
     )
-    return { bytes, digest, status }
+    return { bytes, digest, sponsor_signature, status }
   }
   return Object.freeze({
     status: async (proof: GiftProof | null): Promise<GiftStatus> => decode_gift_status(await request('status', proof)),
     execute: async (action: GiftAction, proof: GiftProof): Promise<Readonly<{ digest: string }>> => {
-      const receipt = await sdk.execute_sponsored(() => prepare(action, proof), submit_gift)
+      const receipt = await sdk.execute_sponsored(() => prepare(action, proof))
       return { digest: receipt_digest(receipt) }
     },
     transfer: async (url: string, proof: GiftProof): Promise<Readonly<{ digest: string }>> => {
@@ -105,7 +105,7 @@ export const create_gift_actions = (sdk: Sdk, address: string, sign: SignMessage
         const returned_kind = await transaction.build({ onlyTransactionKind: true })
         if (toBase64(returned_kind) !== toBase64(kind)) throw new GiftError('invalid')
         return prepared
-      }, submit_gift)
+      })
       return { digest: receipt_digest(receipt) }
     },
     recover: sdk.recover_pending_transaction,

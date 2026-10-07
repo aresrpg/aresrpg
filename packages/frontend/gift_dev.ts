@@ -28,7 +28,7 @@ export const gift_dev_plugin = (env: Readonly<Record<string, string>>): Plugin =
         })
         const result = await serve_gift(web_request, {
           pins,
-          secret: env.ENOKI_SECRET_KEY,
+          private_key: env.GIFT_SPONSOR_PRIVATE_KEY,
           rpc_url: env.VITE_SUI_RPC_URL,
           graphql_url: env.VITE_GRAPHQL_URL,
         })

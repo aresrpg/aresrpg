@@ -170,12 +170,7 @@ export const create_transaction_execution = ({
         )
       }
     },
-    submit: async (
-      raw: Uint8Array,
-      signature: string,
-      options: ReceiptOptions = {},
-      send: ExecutionCore['executeTransaction'] = (input) => core.executeTransaction(input)
-    ): Promise<Receipt> => {
+    submit: async (raw: Uint8Array, signatures: readonly string[], options: ReceiptOptions = {}): Promise<Receipt> => {
       const previous = read_pending()
       if (previous && previous.phase !== 'visible')
         throw new Error(
@@ -191,7 +186,8 @@ export const create_transaction_execution = ({
       storage?.setItem(storage_key, JSON.stringify(record))
       pending = record
       const receipt = await bounded_request(
-        (signal) => send({ transaction: raw, signatures: [signature], include: record.include, signal }),
+        (signal) =>
+          core.executeTransaction({ transaction: raw, signatures: [...signatures], include: record.include, signal }),
         response_timeout_ms
       )
         .then((receipt) => verify_receipt(receipt, record))

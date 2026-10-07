@@ -26,7 +26,7 @@ export type GiftStatus = Readonly<{
   amount?: number
   item?: string
 }>
-export type SponsoredGift = Readonly<{ bytes: string; digest: string; status: GiftStatus }>
+export type SponsoredGift = Readonly<{ bytes: string; digest: string; sponsor_signature: string; status: GiftStatus }>
 export type GiftErrorCode = 'invalid' | 'ineligible' | 'unavailable' | 'unauthorized' | 'sponsor_unavailable'
 
 export class GiftError extends Error {

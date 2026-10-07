@@ -456,7 +456,7 @@ export function SDK({
     options: { include?: object; gas_scope?: string } = {}
   ) => {
     const raw = typeof bytes === 'string' ? fromBase64(bytes) : bytes
-    const receipt = await execution.submit(raw, signature, options)
+    const receipt = await execution.submit(raw, [signature], options)
     const failure = failure_of(receipt)
     if (failure !== null) {
       throw new Error(`[sdk] transaction ${receipt_digest(receipt)} failed on-chain: ${failure}`)
@@ -499,12 +499,6 @@ export function SDK({
     sign,
     execution,
     simulate: (transaction) => sui_client.core.simulateTransaction({ transaction, include: { effects: true } }),
-    receipt: (digest, signal) =>
-      sui_client.core.waitForTransaction({
-        digest,
-        signal,
-        include: { effects: true, events: true, objectTypes: true },
-      }),
   })
 
   const execute_personal_kiosk = async (

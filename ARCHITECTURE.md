@@ -1050,7 +1050,7 @@ attempt never creates an automatic retry timer.
 Voucher pre/post ownership invalidates both custodians through the indexer, including plain transfers
 without game events. Certified redemption tombstones prevent stale snapshots resurrecting spent cards.
 Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
-which survives Google login without reaching the server. The printed URLs remain unchanged. Enoki pays for the fixed zkSend voucher transport;
+which survives Google login without reaching the server. The printed URLs remain unchanged. A dedicated sponsor pays for the fixed zkSend voucher transport;
 the QR key signs in the browser and never reaches the gateway. The 100 seed-authored Basecamp vouchers use the lightweight gift reducer and a Vercel
 `/api/gift` gateway for sponsored transfer, redemption, opening and collection. The page derives progress from gateway status after each operation. Restoring a session only checks
 status; it does not automatically submit another transaction. Uncertain submissions use the existing SDK
@@ -1061,9 +1061,11 @@ verifies an expiring wallet signature over the complete intent, resolves campaig
 from seed-derived voucher identities, and proves each descendant crate/claim through certified receipts.
 It accepts fixed operations, never caller-built transaction bytes. Transfer proves one campaign voucher
 in the supplied public bag, fixes its recipient to the authenticated account, and rejects other assets. The SDK composes each PTB, and the
-server-owned Enoki client supplies its exact Move targets and recipient per request. Both server and SDK
+server builds gas data using a lightly funded signer and returns its signature for those exact bytes.
+The SDK verifies the sponsor signature, obtains the sender signature, and submits both through its
+existing execution boundary. There is no execution relay or gas pool. Both server and SDK
 validate the sponsored envelope and simulate before signing; sponsor gas never becomes player-paid gas
-in the wallet ledger. The Enoki private key exists only in the server environment. Node function entry points import SDK
+in the wallet ledger. The sponsor private key exists only in the server environment. Enoki remains the login provider. Node function entry points import SDK
 source by relative path so Vercel rewrites TypeScript extensions; workspace exports retain their source extensions.
 Gift status is a narrow SDK read exception: current voucher/claim custody and exact receipt provenance,
 with bounded archived event hints for recovery. Historical single-gift receipts may use GraphQL after

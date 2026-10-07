@@ -554,11 +554,6 @@
       "create_upload_queue > drain": [
         12
       ]
-    },
-    "packages/sdk/src/gift_gateway.ts": {
-      "create_gift_gateway > anonymous(request: Request)": [
-        11
-      ]
     }
   },
   "cyclomatic": {
@@ -2177,10 +2172,13 @@
         9
       ],
       "create_gift_gateway > anonymous(request: Request)": [
-        11
+        10
       ],
       "authorize": [
         9
+      ],
+      "prepare": [
+        10
       ]
     },
     "packages/sdk/src/gift_provenance.ts": {

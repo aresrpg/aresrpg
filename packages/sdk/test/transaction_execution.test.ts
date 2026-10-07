@@ -112,7 +112,7 @@ test('a lost submission response recovers its exact receipt with one execution',
       folds.push(value)
     },
   })
-  expect(await lane.submit(raw, 'signature', { include: { objectTypes: true } })).toBe(receipt)
+  expect(await lane.submit(raw, ['signature'], { include: { objectTypes: true } })).toBe(receipt)
   expect(executions).toBe(1)
   expect(folds).toEqual([receipt])
   expect(reads[0]).toMatchObject({ digest, include: { effects: true, events: true, objectTypes: true } })
@@ -133,7 +133,7 @@ test('an unknown outcome survives executor recreation and blocks another intent'
     },
   }
   const options = { key: 'testnet:alice', storage: journal, core, on_receipt: () => {} }
-  await expect(create_transaction_execution(options).submit(raw, 'signature')).rejects.toThrow('outcome unknown')
+  await expect(create_transaction_execution(options).submit(raw, ['signature'])).rejects.toThrow('outcome unknown')
   await expect(create_transaction_execution(options).before_next()).rejects.toThrow('outcome unknown')
   available = true
   const restored = create_transaction_execution(options)
@@ -156,7 +156,7 @@ test('a mismatched recovery receipt never clears the pending digest', async () =
     },
     on_receipt: () => {},
   })
-  await expect(lane.submit(raw, 'signature')).rejects.toThrow('outcome unknown')
+  await expect(lane.submit(raw, ['signature'])).rejects.toThrow('outcome unknown')
   expect(journal.getItem('testnet:alice')).toContain(digest)
 })
 
@@ -181,7 +181,7 @@ test('a hanging response is bounded and a late response cannot fold twice', asyn
       folds += 1
     },
   })
-  expect(await lane.submit(raw, 'signature')).toBe(receipt)
+  expect(await lane.submit(raw, ['signature'])).toBe(receipt)
   finish(receipt)
   await Promise.resolve()
   expect({ executions, folds }).toEqual({ executions: 1, folds: 1 })
@@ -206,7 +206,7 @@ test('storage failure refuses submission and cannot be bypassed by recreating th
     },
     on_receipt: () => {},
   })
-  await expect(lane.submit(raw, 'signature')).rejects.toThrow('storage unavailable')
+  await expect(lane.submit(raw, ['signature'])).rejects.toThrow('storage unavailable')
   expect(executions).toBe(0)
 })
 
@@ -227,8 +227,8 @@ test('another submission cannot overwrite an uncertain transaction', async () =>
     },
     on_receipt: () => {},
   }
-  await expect(create_transaction_execution(options).submit(raw, 'signature')).rejects.toThrow('outcome unknown')
-  await expect(create_transaction_execution(options).submit(new Uint8Array([4]), 'signature')).rejects.toThrow(digest)
+  await expect(create_transaction_execution(options).submit(raw, ['signature'])).rejects.toThrow('outcome unknown')
+  await expect(create_transaction_execution(options).submit(new Uint8Array([4]), ['signature'])).rejects.toThrow(digest)
   expect(executions).toBe(1)
 })
 
@@ -258,7 +258,7 @@ test('recovery rejects partial receipts and preserves the unresolved identity', 
     },
     on_receipt: () => {},
   })
-  await expect(lane.submit(raw, 'signature')).rejects.toThrow('outcome unknown')
+  await expect(lane.submit(raw, ['signature'])).rejects.toThrow('outcome unknown')
   expect(journal.getItem('testnet:alice')).toContain(digest)
 })
 
@@ -276,7 +276,7 @@ test('direct responses obey the same identity and completeness checks as recover
     },
     on_receipt: () => {},
   })
-  expect(await lane.submit(raw, 'signature')).toBe(receipt)
+  expect(await lane.submit(raw, ['signature'])).toBe(receipt)
   expect(reads).toBe(1)
 })
 

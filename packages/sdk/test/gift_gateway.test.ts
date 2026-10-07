@@ -7,6 +7,7 @@ import { fromBase64, toBase64 } from '@mysten/sui/utils'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
 import { MAINNET_CONTRACT_IDS, ZkSendClient } from '@mysten/zksend'
 import { bcs } from '@mysten/sui/bcs'
+import { verifyTransactionSignature } from '@mysten/sui/verify'
 
 import { create_gift_gateway, type GiftGatewayOptions } from '../src/gift_gateway.ts'
 import { gift_request_message, GIFT_GAS_LIMIT_MIST, type GiftRequest } from '../src/gift_contract.ts'
@@ -62,48 +63,62 @@ const signed = async (request: GiftRequest) => ({
   signature: (await signature_key.signPersonalMessage(gift_request_message(request))).signature,
 })
 const request: GiftRequest = { action: 'redeem', network: 'mainnet', address, time: 1000, proof }
-const setup = (modify?: (transaction: Transaction) => void, rpc_client = client) => {
-  const sponsored: unknown[] = []
+const sponsor_key = new Ed25519Keypair()
+const setup = (modify?: (data: TransactionDataBuilder) => void, rpc_client = client) => {
+  const sponsored: string[] = []
   const executed: unknown[] = []
+  const resolve_inputs = rpc_client.core.resolveTransactionPlugin()
+  const funding: TransactionPlugin = async (data, options, next) => {
+    await resolve_inputs(data, options, async () => {
+      if (!options.onlyTransactionKind) {
+        data.gasData.price = '1000'
+        data.gasData.payment = [{ objectId: id('7'), version: '1', digest: '11111111111111111111111111111111' }]
+        modify?.(data)
+      }
+      await next()
+    })
+  }
   const options: GiftGatewayOptions = {
     policy,
-    client: rpc_client,
+    client: {
+      ...rpc_client,
+      core: {
+        ...rpc_client.core,
+        resolveTransactionPlugin: () => funding,
+        executeTransaction: async (input: unknown) => {
+          executed.push(input)
+          throw new Error('The gateway must not execute transactions')
+        },
+      },
+    } as unknown as SuiGrpcClient,
     now: () => 1000,
-    sponsor: () => ({
-      createSponsoredTransaction: async (input) => {
-        sponsored.push(input)
-        const tx = Transaction.fromKind(fromBase64(input.transactionKindBytes))
-        tx.setSender(input.sender!)
-        tx.setGasOwner(id('6'))
-        tx.setGasBudget(10_000_000)
-        tx.setGasPrice(1000)
-        tx.setGasPayment([{ objectId: id('7'), version: '1', digest: '11111111111111111111111111111111' }])
-        modify?.(tx)
-        const bytes = await tx.build()
-        return { bytes: toBase64(bytes), digest: TransactionDataBuilder.getDigestFromBytes(bytes) }
+    signer: {
+      toSuiAddress: () => sponsor_key.toSuiAddress(),
+      signTransaction: async (bytes) => {
+        sponsored.push(toBase64(bytes))
+        return sponsor_key.signTransaction(bytes)
       },
-      executeSponsoredTransaction: async (input) => {
-        executed.push(input)
-        return { digest: input.digest }
-      },
-    }),
+    },
   }
   return { serve: create_gift_gateway(options), sponsored, executed }
 }
 
-test('the SDK supplies exact call targets and the recipient after validating an owned campaign voucher', async () => {
-  const test = setup()
-  const response = await test.serve(http(await signed(request)))
+test('the server funds and signs only the owned campaign voucher transaction', async () => {
+  const service = setup()
+  const response = await service.serve(http(await signed(request)))
   expect(response.status).toBe(200)
-  expect(test.sponsored).toHaveLength(1)
-  expect(test.sponsored[0]).toMatchObject({ sender: address, network: 'mainnet', allowedAddresses: [address] })
-  const targets = (test.sponsored[0] as { allowedMoveCallTargets: string[] }).allowedMoveCallTargets
-  expect(targets).toContain(`${policy.pins.package}::api::redeem_giftcard`)
-  expect(targets).toContain(`${policy.pins.kiosk_package}::personal_kiosk::new`)
-  expect(targets.some((target) => target.includes('create_character'))).toBe(false)
-  const value = (await response.json()) as { bytes: string }
-  expect(Transaction.from(value.bytes).getData().gasData.owner).toBe(id('6'))
-  expect(test.executed).toEqual([])
+  expect(service.sponsored).toHaveLength(1)
+  const value = (await response.json()) as { bytes: string; sponsor_signature: string }
+  const tx = Transaction.from(value.bytes)
+  expect(tx.getData().sender).toBe(address)
+  expect(tx.getData().gasData.owner).toBe(sponsor_key.toSuiAddress())
+  expect(tx.getData().gasData.budget).toBe(String(GIFT_GAS_LIMIT_MIST))
+  const targets = tx.getData().commands.flatMap((command) => (command.MoveCall ? [command.MoveCall.function] : []))
+  expect(targets).toContain('redeem_giftcard')
+  expect(targets).not.toContain('create_character')
+  expect((await verifyTransactionSignature(fromBase64(value.bytes), value.sponsor_signature)).toSuiAddress()).toBe(
+    sponsor_key.toSuiAddress()
+  )
 })
 
 test('unsigned, expired, cross-origin and cross-network intents cannot reach the sponsor', async () => {
@@ -125,10 +140,17 @@ test('the server rejects arbitrary transaction bytes, another voucher and the wr
 
 test('the sponsor cannot alter the approved intent, charge the recipient, or exceed the gas ceiling', async () => {
   for (const modify of [
-    (tx: Transaction) => tx.setGasOwner(address),
-    (tx: Transaction) => tx.setGasBudget(GIFT_GAS_LIMIT_MIST + 1n),
-    (tx: Transaction) => {
-      tx.moveCall({ target: `${id('8')}::attacker::call` })
+    (data: TransactionDataBuilder) => {
+      data.gasData.owner = address
+    },
+    (data: TransactionDataBuilder) => {
+      data.gasData.budget = String(GIFT_GAS_LIMIT_MIST + 1n)
+    },
+    (data: TransactionDataBuilder) => {
+      data.commands.push({
+        $kind: 'MoveCall',
+        MoveCall: { package: id('8'), module: 'attacker', function: 'call', typeArguments: [], arguments: [] },
+      })
     },
   ]) {
     const test = setup(modify)
@@ -137,14 +159,10 @@ test('the sponsor cannot alter the approved intent, charge the recipient, or exc
   }
 })
 
-test('execution forwards only the previously sponsored digest and user signature, once', async () => {
-  const test = setup()
-  const { digest } = fixture.redeem.Transaction
-  expect((await test.serve(http({ digest, signature: 'transaction-signature' }))).status).toBe(200)
-  expect(test.executed).toEqual([{ digest, signature: 'transaction-signature' }])
-  expect(test.sponsored).toEqual([])
-  expect((await test.serve(http({ digest, signature: 's', bytes: 'arbitrary' }))).status).toBe(400)
-  expect(test.executed).toHaveLength(1)
+test('the gateway rejects execution payloads instead of becoming a transaction relay', async () => {
+  const service = setup()
+  expect((await service.serve(http({ digest: fixture.redeem.Transaction.digest, signature: 's' }))).status).toBe(400)
+  expect(service.sponsored).toEqual([])
 })
 
 test('oversized and malformed bodies fail before any sponsorship call', async () => {
@@ -197,14 +215,13 @@ const transport_client = (extra_asset = false): SuiGrpcClient =>
     },
   }) as unknown as SuiGrpcClient
 
-test('Enoki sponsors only the captured one-card transport to the authenticated recipient', async () => {
+test('the local signer sponsors only the captured one-card transport to the authenticated recipient', async () => {
   const rpc_client = transport_client()
   const service = setup(undefined, rpc_client)
   const intent: GiftRequest = { ...request, action: 'transfer', sender: transport_fixture.sender }
   const response = await service.serve(http(await signed(intent)))
   expect(response.status).toBe(200)
   expect(service.sponsored).toHaveLength(1)
-  expect(service.sponsored[0]).toMatchObject({ sender: transport_fixture.sender, allowedAddresses: [address] })
   const value = (await response.json()) as { bytes: string }
   const tx = Transaction.from(value.bytes)
   expect(tx.getData().sender).toBe(transport_fixture.sender)
@@ -232,9 +249,14 @@ test('another bag, extra assets, altered recipients and recipient-paid gas are r
   expect((await extra.serve(http(await signed(intent)))).status).toBe(403)
   expect(extra.sponsored).toEqual([])
   for (const modify of [
-    (tx: Transaction) => tx.setGasOwner(address),
-    (tx: Transaction) => {
-      tx.transferObjects([], id('9'))
+    (data: TransactionDataBuilder) => {
+      data.gasData.owner = address
+    },
+    (data: TransactionDataBuilder) => {
+      data.commands.push({
+        $kind: 'TransferObjects',
+        TransferObjects: { objects: [], address: { $kind: 'Input', Input: 0 } },
+      })
     },
   ]) {
     const service = setup(modify, transport_client())

@@ -17,8 +17,9 @@ import fixture from './fixtures/basecamp_gift.mainnet.json'
 
 const id = (digit: string) => `0x${digit.repeat(64)}`
 
-test('QR transfer signs with the bearer key and uses only the same-origin Enoki gateway', async () => {
+test('QR transfer signs with the bearer key and submits both signatures through the SDK', async () => {
   const key = new Ed25519Keypair()
+  const gas_key = new Ed25519Keypair()
   const recipient = id('2')
   const url = `https://aresrpg.world/claim#$${toBase64(decodeSuiPrivateKey(key.getSecretKey()).secretKey)}`
   const status = { stage: 'available', proof: { giftcard: capture.object.objectId } }
@@ -50,6 +51,14 @@ test('QR transfer signs with the bearer key and uses only the same-origin Enoki 
       }),
       getObjects: async () => ({ objects: [capture.object] }),
       resolveTransactionPlugin: () => resolver,
+      executeTransaction: async ({ transaction, signatures }: { transaction: Uint8Array; signatures: string[] }) => {
+        expect(signatures).toHaveLength(2)
+        expect((await verifyTransactionSignature(transaction, signatures[0]!)).toSuiAddress()).toBe(key.toSuiAddress())
+        expect((await verifyTransactionSignature(transaction, signatures[1]!)).toSuiAddress()).toBe(
+          gas_key.toSuiAddress()
+        )
+        return client.core.waitForTransaction({ digest: TransactionDataBuilder.getDigestFromBytes(transaction) })
+      },
       simulateTransaction: async () => ({ Transaction: { effects: { status: { success: true } } } }),
       waitForTransaction: async ({ digest }: { digest: string }) => ({
         Transaction: {
@@ -63,12 +72,13 @@ test('QR transfer signs with the bearer key and uses only the same-origin Enoki 
   } as unknown as SuiGrpcClient
   const link = await new ZkSendClient(client).loadLinkFromUrl(url)
   const tx = link.createClaimTransaction(recipient)
-  tx.setGasOwner(id('6'))
+  tx.setGasOwner(gas_key.toSuiAddress())
   tx.setGasBudget(10_000_000)
   tx.setGasPrice(1000)
   tx.setGasPayment([{ objectId: id('7'), version: '1', digest: '11111111111111111111111111111111' }])
   const bytes = await tx.build({ client })
   const digest = TransactionDataBuilder.getDigestFromBytes(bytes)
+  const { signature: sponsor_signature } = await gas_key.signTransaction(bytes)
   const fetch_original = globalThis.fetch
   const requests: string[] = []
   globalThis.fetch = (async (input, init) => {
@@ -83,11 +93,9 @@ test('QR transfer signs with the bearer key and uses only the same-origin Enoki 
         proof: status.proof,
       })
       expect(JSON.stringify(body)).not.toContain(new URL(url).hash)
-      return Response.json({ bytes: toBase64(bytes), digest, status })
+      return Response.json({ bytes: toBase64(bytes), digest, sponsor_signature, status })
     }
-    expect(body.digest).toBe(digest)
-    expect((await verifyTransactionSignature(bytes, body.signature)).toSuiAddress()).toBe(key.toSuiAddress())
-    return Response.json({ digest })
+    throw new Error('Only sponsorship preparation should use HTTP')
   }) as typeof fetch
   try {
     const sdk = SDK({
@@ -98,7 +106,7 @@ test('QR transfer signs with the bearer key and uses only the same-origin Enoki 
     })
     const actions = create_gift_actions(sdk, recipient, async () => ({ signature: 'recipient-intent' }))
     expect(await actions.transfer(url, status.proof)).toEqual({ digest })
-    expect(requests).toEqual(['/api/gift', '/api/gift'])
+    expect(requests).toEqual(['/api/gift'])
   } finally {
     globalThis.fetch = fetch_original
   }
