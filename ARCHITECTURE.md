@@ -101,8 +101,9 @@ input ──▶ pure reducer ──▶ new state ──▶ observer ──▶ ef
   authoritative.
 
 The frontend has one entry, build, environment and authentication lifecycle. That entry selects
-`packages/mobile` for compact or touch-capable gameplay viewports; demo, gifts and finance retain their existing
-responsive surfaces. `PlayerRuntime.tsx` owns the canvas, shared login (including Play Demo), and
+`packages/mobile` for compact or touch-capable gameplay viewports; demo and finance retain their responsive surfaces.
+Printed gifts select a portrait-friendly DOM entry before gameplay imports. That entry reuses Wallet Standard
+authentication and shared UI materials, mounts no canvas, and defers the game and its offline cache until handoff. `PlayerRuntime.tsx` owns the canvas, shared login (including Play Demo), and
 global recovery. Desktop and mobile share the full-viewport canvas HUD and `GamePageWindow` feature host.
 The mobile surface adds touch input beneath the shared HUD in the same canvas stacking context.
 Feature windows consume the same equipment, allocation, spell, crafting, forge and marketplace
@@ -1032,7 +1033,7 @@ expand in the SDK into ordinary per-recipient vouchers. Giftcard rows may select
 one network; creation and reconciliation use the same network filter. Prime Machin allocations target
 mainnet NFT object IDs. The local Sui CLI batch sender transfers already-issued vouchers; collection
 snapshots and partner-specific receiving remain outside the runtime projection.
-`/claim` imports wallet-held vouchers into the authenticated zkLogin account and automatically
+Without a bearer link, `/claim` imports wallet-held vouchers into the authenticated zkLogin account and automatically
 redeems them. The external wallet pays transport; the game wallet pays redemption.
 Imports and redemptions each use one atomic PTB for up to 100 vouchers. Redemption
 constructs ordinary stack fragments in one personal kiosk and uses the Sui resolver's gas estimate.
@@ -1049,8 +1050,26 @@ attempt never creates an automatic retry timer.
 Voucher pre/post ownership invalidates both custodians through the indexer, including plain transfers
 without game events. Certified redemption tombstones prevent stale snapshots resurrecting spent cards.
 Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
-which survives Google login without reaching the server. zkSend transports the voucher, then ordinary
-redemption runs. The SDK administrative adapter creates links from previously retained bearer keys.
+which survives Google login without reaching the server. The printed URLs remain unchanged. zkSend pays the
+voucher transport. The 100 seed-authored Basecamp vouchers use the lightweight gift reducer and a Vercel
+`/api/gift` gateway for sponsored redemption, opening and collection. The page derives progress from gateway status after each operation. Restoring a session only checks
+status; it does not automatically submit another transaction. Uncertain submissions use the existing SDK
+transaction tracking; there is no separate gift journal. Character creation and ordinary gameplay keep their normal SUI costs.
+
+The gateway verifies an expiring wallet signature over the complete intent, resolves campaign membership
+from seed-derived voucher identities, and proves each descendant crate/claim through certified receipts.
+It accepts fixed operations, never caller-built transaction bytes. The SDK composes each PTB, and the
+server-owned Enoki client supplies its exact Move targets and recipient per request. Both server and SDK
+validate the sponsored envelope and simulate before signing; sponsor gas never becomes player-paid gas
+in the wallet ledger. The Enoki private key exists only in the server environment.
+Gift status is a narrow SDK read exception: current voucher/claim custody and exact receipt provenance,
+with bounded archived event hints for recovery. Historical single-gift receipts may use GraphQL after
+gRPC pruning; their validated fixed PTBs emit fewer than its fifty-event cap. Historical package calls
+must prove the same original game lineage. Signed write receipts still require gRPC.
+The shared box presentation runs charge, burst, carousel and reveal from the confirmed result. Each reel
+contains the authored reward pool and lands on that result; one lead reel schedules overlapping recorded
+ticks for batches. Skip and teardown cancel its sounds, while reduced motion shows the result directly.
+The SDK administrative adapter creates links from previously retained bearer keys.
 The distribution reducer retains a dismissible reward summary from observed additions to wallet-held
 voucher IDs. It survives automatic redemption, and the existing funding modal explains the received
 gift when gas is missing. Funding never automatically retries a failed claim. Missing zkSend links

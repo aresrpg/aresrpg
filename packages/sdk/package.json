@@ -37,7 +37,10 @@
     "./sui-transfer": "./src/sui_transfer.ts",
     "./seed-ids": "./src/seed_ids.ts",
     "./blast": "./src/blast.ts",
-    "./freeze-targets": "./src/freeze_targets.ts"
+    "./freeze-targets": "./src/freeze_targets.ts",
+    "./gift": "./src/gift_contract.ts",
+    "./gift-provenance": "./src/gift_provenance.ts",
+    "./gift-gateway": "./src/gift_gateway.ts"
   },
   "scripts": {
     "generate": "node scripts/generate_doors.mjs && node scripts/generate_seed_doors.mjs",

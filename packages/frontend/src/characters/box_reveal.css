@@ -252,6 +252,86 @@
   animation: boxreveal-spin 0.9s linear infinite;
 }
 
+.boxreveal__reel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+}
+.boxreveal__reel-track {
+  position: relative;
+  display: flex;
+  gap: clamp(3px, calc(var(--cell) / 35), 8px);
+  width: max-content;
+  align-items: center;
+  will-change: transform;
+}
+.boxreveal__reel-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--cell) * 0.34);
+  height: calc(var(--cell) * 0.44);
+  padding: calc(var(--cell) * 0.018);
+  border-color: color-mix(in srgb, var(--aui-muted) 22%, transparent);
+  transition:
+    scale 180ms,
+    border-color 180ms;
+}
+.boxreveal__reel-card img {
+  width: 90%;
+  height: 72%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 4px #0005);
+}
+.boxreveal__reel-card span {
+  width: 100%;
+  color: var(--aui-ink);
+  font-size: clamp(6px, calc(var(--cell) / 30), 12px);
+  line-height: 1.1;
+  text-align: center;
+}
+.boxreveal__reel-card--landed {
+  border-color: var(--aui-orange);
+  scale: 1.06;
+  box-shadow: inset 0 0 25px color-mix(in srgb, var(--aui-orange) 12%, transparent);
+}
+.boxreveal__reel-pointer {
+  position: absolute;
+  top: calc(50% - var(--cell) * 0.27);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: clamp(3px, calc(var(--cell) / 55), 7px) solid transparent;
+  border-right: clamp(3px, calc(var(--cell) / 55), 7px) solid transparent;
+  border-top: clamp(5px, calc(var(--cell) / 40), 10px) solid var(--aui-orange);
+  filter: drop-shadow(0 2px 2px #0008);
+}
+.boxreveal__reel--landed {
+  animation: boxreveal-impact 450ms ease-out;
+}
+@keyframes boxreveal-impact {
+  20% {
+    transform: translateY(3px);
+  }
+  45% {
+    transform: translateY(-2px);
+  }
+  70% {
+    transform: translateY(1px);
+  }
+  100% {
+    transform: none;
+  }
+}
+
 @keyframes boxreveal-arrive {
   from {
     opacity: 0;

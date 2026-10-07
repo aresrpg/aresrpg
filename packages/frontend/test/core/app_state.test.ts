@@ -52,6 +52,8 @@ const auth_session = (address = '0xowner'): AuthSession =>
     estimate_sui_transfer: async () => 0n,
     send_sui: async () => ({ digest: 'digest' }),
     read_giftcards: async () => [],
+    gift: {} as never,
+    inspect_giftcard_link: async () => null,
     transfer_giftcards: async () => ({ digest: '', giftcards: [] }),
     claim_giftcard_link: async () => ({
       digest: '',

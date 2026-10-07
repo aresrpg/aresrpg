@@ -6,7 +6,7 @@ import { isValidTransactionDigest } from '@mysten/sui/utils'
 
 import { receipt_digest, type Receipt } from './cache.ts'
 
-type ReceiptOptions = Readonly<{ include?: object; gas_scope?: string }>
+type ReceiptOptions = Readonly<{ include?: object; gas_scope?: string; gas_payer?: string }>
 type PendingTransaction = ReceiptOptions & Readonly<{ digest: string; phase: 'submitted' | 'visible' | 'recovered' }>
 export type TransactionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 export type ExecutionCore = Readonly<{
@@ -29,7 +29,10 @@ export type ExecutionCore = Readonly<{
 export const browser_transaction_storage = (): TransactionStorage | null =>
   typeof window === 'undefined' ? null : window.sessionStorage
 
-const bounded_request = async <T>(request: (signal: AbortSignal) => Promise<T>, milliseconds: number): Promise<T> => {
+export const bounded_request = async <T>(
+  request: (signal: AbortSignal) => Promise<T>,
+  milliseconds: number
+): Promise<T> => {
   const signal = AbortSignal.timeout(milliseconds)
   let stop = (): void => {}
   const aborted = new Promise<never>((_, reject) => {
@@ -50,10 +53,11 @@ const decode_pending = (source: string): PendingTransaction => {
     typeof value.digest !== 'string' ||
     !isValidTransactionDigest(value.digest) ||
     value.phase !== 'submitted' ||
-    (value.include !== undefined && (value.include === null || typeof value.include !== 'object')) ||
-    (value.gas_scope !== undefined && typeof value.gas_scope !== 'string')
+    (value.include !== undefined && (value.include === null || typeof value.include !== 'object'))
   )
     throw new Error('[sdk] invalid pending transaction record; refusing to submit')
+  if (!(['gas_scope', 'gas_payer'] as const).every((key) => value[key] === undefined || typeof value[key] === 'string'))
+    throw new Error('[sdk] invalid pending transaction metadata; refusing to submit')
   return value
 }
 
@@ -83,11 +87,12 @@ export const create_transaction_execution = ({
   core: ExecutionCore
   key: string
   storage?: TransactionStorage | null
-  on_receipt: (receipt: Receipt, gas_scope?: string) => void
+  on_receipt: (receipt: Receipt, gas_scope?: string, gas_payer?: string) => void
   response_timeout_ms?: number
   recovery_timeout_ms?: number
 }>) => {
   let pending: PendingTransaction | null = null
+  let execution_tail: Promise<unknown> = Promise.resolve()
   const storage_key = key.toLowerCase()
   const read_pending = (): PendingTransaction | null => {
     const stored = storage?.getItem(storage_key)
@@ -115,11 +120,28 @@ export const create_transaction_execution = ({
   }
   const accept = (receipt: Receipt, record: PendingTransaction): void => {
     // Keep recovery evidence until receipt processing succeeds. This callback accounts for failures too.
-    on_receipt(receipt, record.gas_scope)
+    on_receipt(receipt, record.gas_scope, record.gas_payer)
     pending = { digest: receipt_digest(receipt), phase: 'visible' }
     storage?.removeItem(storage_key)
   }
+  const recover_pending = async (): Promise<boolean> => {
+    const record = read_pending()
+    if (!record || record.phase !== 'submitted') return false
+    accept(await recover(record), record)
+    pending = { digest: record.digest, phase: 'recovered' }
+    return true
+  }
   return Object.freeze({
+    enqueue: <T>(action: () => Promise<T>): Promise<T> => {
+      const result = execution_tail.then(action, action)
+      // Only the queue tail absorbs rejection; the caller retains the original failing promise.
+      execution_tail = result.then(
+        () => undefined,
+        () => undefined
+      )
+      return result
+    },
+    recover_pending,
     before_next: async (): Promise<void> => {
       const record = read_pending()
       if (!record) return
@@ -128,8 +150,7 @@ export const create_transaction_execution = ({
           `[sdk] previous transaction recovered: ${record.digest}; refresh your game state before trying again`
         )
       if (record.phase === 'submitted') {
-        accept(await recover(record), record)
-        pending = { digest: record.digest, phase: 'recovered' }
+        await recover_pending()
         // The original caller is gone. Invalidate this session's queued work until fresh state is loaded.
         throw new Error(
           `[sdk] previous transaction recovered: ${record.digest}; refresh your game state before trying again`
@@ -149,7 +170,12 @@ export const create_transaction_execution = ({
         )
       }
     },
-    submit: async (raw: Uint8Array, signature: string, options: ReceiptOptions = {}): Promise<Receipt> => {
+    submit: async (
+      raw: Uint8Array,
+      signature: string,
+      options: ReceiptOptions = {},
+      send: ExecutionCore['executeTransaction'] = (input) => core.executeTransaction(input)
+    ): Promise<Receipt> => {
       const previous = read_pending()
       if (previous && previous.phase !== 'visible')
         throw new Error(
@@ -165,8 +191,7 @@ export const create_transaction_execution = ({
       storage?.setItem(storage_key, JSON.stringify(record))
       pending = record
       const receipt = await bounded_request(
-        (signal) =>
-          core.executeTransaction({ transaction: raw, signatures: [signature], include: record.include, signal }),
+        (signal) => send({ transaction: raw, signatures: [signature], include: record.include, signal }),
         response_timeout_ms
       )
         .then((receipt) => verify_receipt(receipt, record))

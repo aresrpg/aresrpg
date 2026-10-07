@@ -34,9 +34,10 @@ import { coin_of, receipt_personal_kiosk_cap, with_kiosk, with_personal_kiosk } 
 import { create_gas_ledger, gas_mist_from_receipt, log_transaction_receipt } from './gas.ts'
 import { GAS_BUDGET_MIST } from './gas_budget.ts'
 import { create_transaction_execution, type ExecutionCore, type TransactionStorage } from './transaction_execution.ts'
+import { create_sponsored_execution } from './sponsored_execution.ts'
+import { transaction_resolution_error } from './transaction_error.ts'
 
-export { doors }
-export type { Pins } from './pins.ts'
+export { doors, type Pins }
 export { DOORS } from './doors.gen.ts'
 export * from './ptb.ts'
 export * from './cache.ts'
@@ -44,23 +45,7 @@ export * from './gas.ts'
 export * from './gas_budget.ts'
 
 export type SharedPin = { id: string | null; shared_version: string | null }
-/** The living-content derivation pair: the registry ROOT object id + the seed package's
- * ORIGINAL id — every content address (mob/spell templates, world content, the board
- * catalog) derives from these two. The ORIGINAL, never `pins.seed_package`: a derived object
- * id is computed from a type tag, and on Sui a type is named by its FIRST-publish address
- * forever, while the latest id is a move-call target only (2026-08-22: deriving with the
- * upgraded address produced ids that never existed — every mob engage died unresolved). */
-export const living_content = (
-  sdk: Readonly<{ pins: Pins }>,
-  what: string
-): Readonly<{ content_root: string; seed_package_original: string }> => {
-  const root = sdk.pins.content_root
-  const root_id = typeof root === 'object' && root !== null ? Reflect.get(root, 'id') : null
-  const original = sdk.pins.seed_package_original
-  if (typeof root_id !== 'string' || typeof original !== 'string')
-    throw new Error(`${what} unavailable: pins.json has no living-content ids for this network.`)
-  return Object.freeze({ content_root: root_id, seed_package_original: original })
-}
+export { living_content } from './pins.ts'
 
 const is_shared_pin = (value: unknown): value is Readonly<{ id: string; shared_version: string }> =>
   typeof value === 'object' &&
@@ -105,11 +90,28 @@ export const sui_transport = (client: SuiGraphQLClient | SuiGrpcClient): SuiTran
   client as unknown as SuiTransport
 
 export type SdkNetwork = 'testnet' | 'mainnet'
-export type TransactionExecution = Readonly<{ digest: string; outcome: 'success' | 'failure'; gas_mist?: string }>
+export type TransactionExecution = Readonly<{
+  digest: string
+  outcome: 'success' | 'failure'
+  gas_mist?: string
+}>
 
 export type TransactionSigner = (
   transaction: Transaction
 ) => Promise<Readonly<{ bytes: string | Uint8Array; signature: string }>>
+
+const signing_method =
+  (signer: Signer | undefined, callback: TransactionSigner | undefined): TransactionSigner =>
+  (tx) => {
+    if (signer) return tx.sign({ signer })
+    if (callback) return callback(tx)
+    throw new Error('[sdk] execute needs a signer')
+  }
+
+const require_write_transport = (client: SuiTransport): void => {
+  if (isSuiGraphQLClient(client))
+    throw new Error('[sdk] writes require a gRPC client or rpc_url for complete transaction receipts')
+}
 
 export type SdkOptions = {
   /** injected transport for tests and existing callers */
@@ -132,18 +134,6 @@ export type SdkOptions = {
    *  transaction itself (variable-cost batches); otherwise the game-door default applies */
   gas_budget?: bigint | 'estimate'
   transaction_storage?: TransactionStorage | null
-}
-
-const GAS_BUDGET_REFUSAL = /insufficient.?gas|gas.?budget/i
-const refusal_error = (refusal: string): Error =>
-  GAS_BUDGET_REFUSAL.test(refusal)
-    ? new Error(`[sdk] gas budget exceeded — this action needs more than ${GAS_BUDGET_MIST} MIST; NOT submitted`)
-    : new Error(`[sdk] dry run failed — transaction NOT submitted (zero gas): ${refusal}`)
-const transaction_resolution_error = (error: unknown): unknown => {
-  const message = error instanceof Error ? error.message : String(error)
-  if (GAS_BUDGET_REFUSAL.test(message)) return refusal_error(message)
-  if (message.includes('NOT submitted')) return error
-  return new Error(`[sdk] transaction resolution failed — NOT submitted: ${message}`, { cause: error })
 }
 
 /** What the resolver accepts: a bare id (cache-resolved), an explicit ref, or an in-PTB value. */
@@ -272,8 +262,8 @@ export function SDK({
       : kiosk_client
   const cache = create_cache()
   const pure_inputs = new WeakMap<Transaction, Map<string, TransactionArgument>>()
-  let execution_tail: Promise<unknown> = Promise.resolve()
   const sender = address ?? signer?.toSuiAddress() ?? null
+  const sign = signing_method(signer, sign_transaction)
   const gas_ledger = create_gas_ledger({ address: sender, network })
   const transaction_listeners = new Set<(execution: TransactionExecution) => void>()
   const balance = create_balance_cache({
@@ -438,10 +428,12 @@ export function SDK({
     core: sui_client.core,
     key: `aresrpg:transaction:${network}:${sender}`,
     storage: transaction_storage,
-    on_receipt: (receipt, gas_scope) => {
+    on_receipt: (receipt, gas_scope, gas_payer = sender ?? undefined) => {
       log_transaction_receipt(receipt)
-      gas_ledger.record(receipt)
-      if (gas_scope) gas_ledger.tag(receipt, gas_scope)
+      if (gas_payer === sender) {
+        gas_ledger.record(receipt)
+        if (gas_scope) gas_ledger.tag(receipt, gas_scope)
+      }
       if (sender) balance.invalidate(sender)
       absorb_receipt(cache, receipt)
       const execution: TransactionExecution = {
@@ -490,12 +482,10 @@ export function SDK({
     }: { budget?: bigint | 'estimate'; include?: object; gas_scope?: string } = {}
   ) => {
     if (!sender) throw new Error('[sdk] execute needs an address')
-    if (isSuiGraphQLClient(sui_client))
-      throw new Error('[sdk] writes require a gRPC client or rpc_url for complete transaction receipts')
+    require_write_transport(sui_client)
     await execution.before_next()
     await prepare_transaction(tx, sender, { budget })
-    const signed = signer ? await tx.sign({ signer }) : sign_transaction ? await sign_transaction(tx) : null
-    if (!signed) throw new Error('[sdk] execute needs a signer')
+    const signed = await sign(tx)
     const { bytes, signature } = signed
     return execute_signed(bytes, signature, { include, gas_scope })
   }
@@ -503,17 +493,19 @@ export function SDK({
   const execute = (
     tx: Transaction,
     options: Readonly<{ budget?: bigint | 'estimate'; include?: object; gas_scope?: string }> = {}
-  ): Promise<Receipt> => {
-    const submitted = execution_tail.then(
-      () => execute_now(tx, options),
-      () => execute_now(tx, options)
-    )
-    execution_tail = submitted.then(
-      () => undefined,
-      () => undefined
-    )
-    return submitted
-  }
+  ): Promise<Receipt> => execution.enqueue(() => execute_now(tx, options))
+  const sponsored = create_sponsored_execution({
+    address: sender,
+    sign,
+    execution,
+    simulate: (transaction) => sui_client.core.simulateTransaction({ transaction, include: { effects: true } }),
+    receipt: (digest, signal) =>
+      sui_client.core.waitForTransaction({
+        digest,
+        signal,
+        include: { effects: true, events: true, objectTypes: true },
+      }),
+  })
 
   const execute_personal_kiosk = async (
     tx: Transaction,
@@ -564,6 +556,12 @@ export function SDK({
     door_context: ctx,
     doors: bound_doors,
     execute,
+    execute_sponsored: (...args: Parameters<typeof sponsored>) =>
+      execution.enqueue(() => {
+        require_write_transport(sui_client)
+        return sponsored(...args)
+      }),
+    recover_pending_transaction: () => execution.enqueue(execution.recover_pending),
     execute_personal_kiosk,
     read_sui_balance: () => {
       if (!sender) throw new Error('[sdk] balance reads need an address')

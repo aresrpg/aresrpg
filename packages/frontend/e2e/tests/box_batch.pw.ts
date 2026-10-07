@@ -3,6 +3,10 @@
 
 import { expect, test } from '@playwright/test'
 
+import { BOX_CHARGE_MS, BOX_BURST_MS, BOX_SPIN_MS } from '../../src/characters/box_carousel.ts'
+
+const REVEAL_WAIT = { timeout: BOX_CHARGE_MS + BOX_BURST_MS + BOX_SPIN_MS + 1_500 }
+
 test('unsealing keeps an opaque foreground above an already-open inventory', async ({ page }) => {
   await page.goto('/e2e/fixtures/box_batch.html?nested=1&count=2')
   await page.getByRole('spinbutton').fill('2')
@@ -15,7 +19,7 @@ test('unsealing keeps an opaque foreground above an already-open inventory', asy
   })
   expect(foreground.owned).toBe(true)
   expect(foreground.color).toMatch(/^rgb\(/)
-  await expect(page.locator('.boxreveal__reward-name')).toHaveCount(2)
+  await expect(page.locator('.boxreveal__reward-name')).toHaveCount(2, REVEAL_WAIT)
   await expect(page.locator('body')).toHaveAttribute('data-openings', '1')
 })
 
@@ -34,9 +38,9 @@ test('a stack asks for an amount, defaults to one, and opens a simultaneous grid
   await page.getByRole('button', { name: 'Consume', exact: true }).click()
   await expect(page.locator('body')).toHaveAttribute('data-openings', '1')
   await expect(page.locator('body')).toHaveAttribute('data-amount', '14')
-  await expect(page.locator('.boxreveal__box-art')).toHaveCount(14)
+  await expect(page.locator('.boxreveal__box-art')).toHaveCount(14, REVEAL_WAIT)
   await expect(page.locator('.boxreveal')).toHaveAttribute('data-phase', 'charging')
-  await expect(page.locator('.boxreveal__reward-name')).toHaveCount(14)
+  await expect(page.locator('.boxreveal__reward-name')).toHaveCount(14, REVEAL_WAIT)
   await expect(page.locator('.boxreveal__quantity').first()).toHaveText('×50')
   const columns = await page
     .locator('.boxreveal__grid')
@@ -55,7 +59,7 @@ test('one remaining box opens directly and a rejected batch is never replayed', 
   await page.goto('/e2e/fixtures/box_batch.html?count=1')
   await expect(page.getByRole('spinbutton')).toHaveCount(0)
   await expect(page.locator('body')).toHaveAttribute('data-openings', '1')
-  await expect(page.locator('.boxreveal__reward-name')).toHaveCount(1)
+  await expect(page.locator('.boxreveal__reward-name')).toHaveCount(1, REVEAL_WAIT)
   await page.goto('/e2e/fixtures/box_batch.html?fail=1')
   await page.getByRole('button', { name: 'Consume', exact: true }).click()
   await expect(page.getByText('Closed', { exact: true })).toBeVisible()
@@ -67,7 +71,7 @@ test('fifty rewards fit a short mobile viewport without hiding quantities or the
   await page.goto('/e2e/fixtures/box_batch.html?nested=1&count=50')
   await page.getByRole('button', { name: 'MAX', exact: true }).click()
   await page.getByRole('button', { name: 'Consume', exact: true }).click()
-  await expect(page.locator('.boxreveal__quantity')).toHaveCount(50)
+  await expect(page.locator('.boxreveal__quantity')).toHaveCount(50, REVEAL_WAIT)
   await expect(page.locator('.boxreveal__quantity').last()).toBeInViewport()
   const fits = await page.locator('.boxreveal__grid').evaluate((element) => {
     const grid = element.getBoundingClientRect()

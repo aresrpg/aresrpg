@@ -39,6 +39,7 @@ import {
 } from './wallet_standard.ts'
 import { receipt_digest } from './cache.ts'
 import { create_personal_kiosk_runner } from './kiosk_runner.ts'
+import { create_gift_actions, type GiftActions } from './gift_actions.ts'
 
 export type { CharacterActions } from './character_actions.ts'
 export type { ScribeOutcome } from './forgemagie.ts'
@@ -99,6 +100,8 @@ export type AuthSession = Readonly<{
   estimate_sui_transfer: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<bigint>
   send_sui: (recipient: string, amount_mist: bigint, drain: boolean) => Promise<Readonly<{ digest: string }>>
   read_giftcards: () => Promise<readonly GiftcardRow[]>
+  gift: GiftActions
+  inspect_giftcard_link: (url: string) => Promise<GiftcardRow | null>
   transfer_giftcards: (
     transfers: readonly GiftcardTransfer[]
   ) => Promise<Readonly<{ digest: string; giftcards: readonly GiftcardRow[] }>>
@@ -270,6 +273,11 @@ const create_wallet_session = (
     read_giftcards: async () => {
       const { read_giftcards } = await import('./distribution.ts')
       return read_giftcards(resolution_client, sdk, account.address)
+    },
+    gift: create_gift_actions(sdk, account.address, binding.sign_personal_message),
+    inspect_giftcard_link: async (url) => {
+      const { inspect_giftcard_link } = await import('./distribution.ts')
+      return inspect_giftcard_link(resolution_client, sdk, url)
     },
     transfer_giftcards: async (transfers) => {
       const { transfer_giftcards } = await import('./distribution.ts')

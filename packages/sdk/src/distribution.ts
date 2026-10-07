@@ -72,12 +72,7 @@ const gift_link_missing = async (client: SuiGrpcClient, address: string): Promis
 /** Claims one bearer voucher through zkSend's hosted claim service. That service pays this
  * transport leg; the authenticated game wallet pays only the later AresRPG redemption.
  * A missing link returns null: it was already claimed, reclaimed, or never issued. */
-export const claim_giftcard_link = async (
-  client: SuiGrpcClient,
-  sdk: Sdk,
-  url: string,
-  recipient: string
-): Promise<Readonly<{ digest: string; giftcard: GiftcardRow }> | null> => {
+const load_giftcard_link = async (client: SuiGrpcClient, sdk: Sdk, url: string) => {
   const expected_type = giftcard_type(sdk)
   const link = await new ZkSendClient(client).loadLinkFromUrl(canonical_zksend_gift_url(url, sdk.network))
   if (!link.assets) {
@@ -92,6 +87,24 @@ export const claim_giftcard_link = async (
   if (!object || object instanceof Error || object.objectId !== asset.objectId)
     throw new Error('The zkSend giftcard is unavailable')
   const giftcard = canonical_giftcard(object, expected_type)
+  return { link, giftcard }
+}
+
+export const inspect_giftcard_link = async (
+  client: SuiGrpcClient,
+  sdk: Sdk,
+  url: string
+): Promise<GiftcardRow | null> => (await load_giftcard_link(client, sdk, url))?.giftcard ?? null
+
+export const claim_giftcard_link = async (
+  client: SuiGrpcClient,
+  sdk: Sdk,
+  url: string,
+  recipient: string
+): Promise<Readonly<{ digest: string; giftcard: GiftcardRow }> | null> => {
+  const loaded = await load_giftcard_link(client, sdk, url)
+  if (!loaded) return null
+  const { link, giftcard } = loaded
   const claimed = await link.claimAssets(recipient)
   return Object.freeze({ digest: claimed.Transaction.digest, giftcard })
 }

@@ -6,6 +6,7 @@ import { injectSpeedInsights as inject_speed_insights } from '@vercel/speed-insi
 
 import { capture_demo_boot_failure, init_analytics } from './analytics.ts'
 import { init_reporting, report_error } from './reporting.ts'
+import { is_gift_entry, saved_gift_route } from './airdrop/gift_intent.ts'
 
 import './tailwind.css'
 
@@ -27,8 +28,13 @@ const boot = async (): Promise<void> => {
     inject({ mode: 'production', beforeSend: before_send })
     inject_speed_insights({ beforeSend: before_send })
   }
-  const { boot_game } = await import('./game_entry.tsx')
-  boot_game()
+  if (is_gift_entry(location.pathname, location.hash, saved_gift_route())) {
+    const { boot_gift } = await import('./airdrop/gift_entry.tsx')
+    await boot_gift()
+  } else {
+    const { boot_game } = await import('./game_entry.tsx')
+    boot_game()
+  }
 }
 
 void boot().catch((error: unknown) => {

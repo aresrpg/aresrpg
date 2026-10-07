@@ -1,0 +1,358 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* Geometry for the claim page; @aresrpg/ui owns its type, materials and controls. */
+.gift-page {
+  --color-bg: var(--aui-bg);
+  --color-surface-low: var(--aui-surface);
+  --color-surface: var(--aui-surface);
+  --color-surface-high: var(--aui-raised);
+  --color-border: var(--aui-border);
+  --color-gold: var(--aui-orange);
+  --color-gold-light: var(--aui-orange);
+  --color-cyan: var(--aui-blue);
+  --color-text: var(--aui-ink);
+  min-height: 100svh;
+  padding: env(safe-area-inset-top, 0px) 14px calc(30px + env(safe-area-inset-bottom, 0px));
+  background: var(--aui-bg);
+  color: var(--aui-ink);
+  font: 400 14px/1.5 var(--aui-font);
+}
+.gift-page *,
+.gift-page *::before,
+.gift-page *::after {
+  box-sizing: border-box;
+}
+.gift-masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: 970px;
+  margin: auto;
+  padding: 20px 10px;
+}
+.gift-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+}
+.gift-brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+.gift-masthead > span {
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.gift-masthead .aui-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.gift-window {
+  width: min(482px, 100%);
+  margin: 10px auto 0;
+}
+.gift-window > .aui-window-header {
+  min-height: 58px;
+}
+.gift-window .aui-window-title h1 {
+  font-size: 21px;
+}
+.gift-window .aui-carved-icon {
+  width: 30px;
+  height: 30px;
+}
+.gift-journey {
+  display: flex;
+  justify-content: center;
+  gap: 26px;
+  padding: 12px;
+  border-bottom: 1px solid var(--aui-border);
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.gift-journey > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gift-journey b {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 11px;
+}
+.gift-journey .active {
+  color: var(--aui-orange);
+}
+.gift-journey .done b {
+  color: var(--aui-blue);
+}
+.gift-content {
+  padding: 24px 26px 18px;
+  text-align: center;
+}
+.gift-eyebrow {
+  margin: 0 0 10px;
+  color: var(--aui-orange);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.gift-content h2 {
+  margin: 0 0 12px;
+  font-size: 29px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.3px;
+}
+.gift-content h2:focus {
+  outline: none;
+}
+.gift-intro {
+  max-width: 370px;
+  margin: 0 auto;
+  color: var(--aui-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.gift-art {
+  --cell: 225px;
+  position: relative;
+  width: var(--cell);
+  height: var(--cell);
+  margin: 14px auto 5px;
+  overflow: visible;
+}
+.gift-art .boxreveal__box {
+  width: 80%;
+  height: 80%;
+}
+.gift-art .boxreveal__stage::before {
+  border-color: color-mix(in srgb, var(--aui-blue) 25%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--aui-blue) 3%, transparent);
+}
+.gift-art .boxreveal__aura {
+  background: radial-gradient(circle, color-mix(in srgb, var(--aui-blue) 18%, transparent), transparent 68%);
+}
+.gift-art--carousel {
+  --cell: min(480px, calc(100vw - 30px));
+  width: calc(100% + 52px);
+  height: 225px;
+  margin-left: -26px;
+}
+.gift-art .boxreveal__reward-name {
+  font-size: 20px;
+}
+.gift-edition {
+  display: inline-flex;
+  gap: 7px;
+  padding: 5px 12px;
+  margin: 0 0 15px;
+  border: 1px solid color-mix(in srgb, var(--aui-orange) 28%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--aui-orange) 6%, transparent);
+  color: var(--aui-orange);
+  font-size: 12px;
+  font-weight: 700;
+}
+.gift-actions {
+  padding: 0 26px 24px;
+  text-align: center;
+}
+.gift-actions > .aui-button {
+  width: 100%;
+  min-height: 48px;
+  font-size: 15px;
+}
+.gift-help {
+  margin: 12px 0 0;
+  color: var(--aui-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.gift-help strong {
+  color: var(--aui-ink);
+  font-weight: 700;
+}
+.gift-link {
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: var(--aui-muted);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.gift-link:focus-visible {
+  outline: 2px solid var(--aui-blue);
+  outline-offset: 2px;
+}
+.gift-contents {
+  padding: 16px 22px 20px;
+  border-top: 1px solid var(--aui-border);
+  background: color-mix(in srgb, var(--aui-bg) 25%, transparent);
+}
+.gift-contents-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--aui-muted);
+  font-size: 12px;
+}
+.gift-contents-heading strong {
+  color: var(--aui-ink);
+  font-weight: 700;
+}
+.gift-possibilities {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.gift-possible {
+  min-width: 0;
+  padding: 5px 2px;
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
+  border-radius: 5px;
+  background: var(--aui-surface);
+  text-align: center;
+}
+.gift-possible img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.gift-possible small {
+  display: block;
+  min-height: 22px;
+  font-size: 9px;
+  line-height: 1.2;
+  color: var(--aui-muted);
+  overflow-wrap: anywhere;
+}
+.gift-contents > small {
+  display: block;
+  margin-top: 12px;
+  color: var(--aui-muted);
+  font-size: 11px;
+  text-align: center;
+}
+.gift-note {
+  margin: 0 0 20px;
+  padding: 14px;
+  text-align: left;
+}
+.gift-note p {
+  margin: 6px 0;
+  color: var(--aui-muted);
+  font-size: 13px;
+}
+.gift-note strong {
+  font-size: 14px;
+}
+.gift-metric {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  font-size: 13px;
+}
+.gift-metric + .gift-metric {
+  border-top: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
+}
+.gift-metric span {
+  color: var(--aui-muted);
+}
+.gift-metric b {
+  font-weight: 700;
+}
+.gift-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 34px;
+  margin: 10px 0 4px;
+  color: var(--aui-blue);
+  font-size: 13px;
+}
+.gift-saved {
+  margin: 14px 0 3px;
+  color: var(--aui-blue);
+  font-size: 13px;
+}
+.gift-error {
+  margin-top: 16px;
+}
+@media (max-width: 370px) {
+  .gift-page {
+    padding-inline: 10px;
+  }
+  .gift-masthead {
+    padding: 12px 6px;
+    gap: 7px;
+  }
+  .gift-masthead > span {
+    font-size: 10px;
+  }
+  .gift-brand {
+    gap: 6px;
+    font-size: 17px;
+  }
+  .gift-content {
+    padding: 20px 20px 14px;
+  }
+  .gift-content h2 {
+    font-size: 26px;
+  }
+  .gift-actions {
+    padding: 0 20px 22px;
+  }
+  .gift-art {
+    --cell: 200px;
+    margin-top: 10px;
+  }
+  .gift-art--carousel {
+    --cell: calc(100vw - 22px);
+    width: calc(100% + 40px);
+    margin-left: -20px;
+  }
+  .gift-possibilities {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .gift-possible {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    text-align: left;
+  }
+  .gift-possible img {
+    width: 33px;
+  }
+  .gift-possible small {
+    min-height: 0;
+  }
+  .gift-intro {
+    font-size: 13px;
+  }
+  .gift-journey {
+    gap: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gift-page *,
+  .gift-page *::before,
+  .gift-page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

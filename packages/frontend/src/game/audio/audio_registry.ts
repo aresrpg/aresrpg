@@ -5,6 +5,7 @@
 import authored from '../../../../../seed/content/audio.json'
 
 import { scale_audio_volume } from '../core/audio_volume.ts'
+import { create_carousel_audio } from './carousel_audio.ts'
 
 const FIXED_AUDIO = Object.freeze({
   absorb_1: '/sound_effect/absorb-1.ogg',
@@ -74,6 +75,10 @@ export const AUDIO_ASSETS: Readonly<Record<string, string>> = Object.freeze({
   ...Object.fromEntries(Object.entries(AUTHORED_AUDIO).map(([key, { file }]) => [key, `/sound_effect/${file}`])),
 })
 
+const carousel_audio = create_carousel_audio(AUDIO_ASSETS.menu_carousel!, () => scale_audio_volume(1))
+export const prime_carousel_audio = carousel_audio.prime
+export const schedule_carousel_audio = carousel_audio.schedule
+
 const SHARED_FIGHT_AUDIO = Object.freeze([
   'fight_over',
   'absorb_1',
@@ -132,6 +137,7 @@ export const preload_audio = (keys: readonly string[]): void => {
 }
 
 export const sync_audio_volumes = (): void => {
+  carousel_audio.sync()
   audio_pool.forEach((voices) =>
     voices.forEach((voice) => {
       const { player, volume } = voice
@@ -141,6 +147,7 @@ export const sync_audio_volumes = (): void => {
 }
 
 export const dispose_audio = (): void => {
+  carousel_audio.dispose()
   audio_pool.forEach((voices) =>
     voices.forEach(({ player }) => {
       player.pause()

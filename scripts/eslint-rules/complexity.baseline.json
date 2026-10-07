@@ -554,6 +554,11 @@
       "create_upload_queue > drain": [
         12
       ]
+    },
+    "packages/sdk/src/gift_gateway.ts": {
+      "create_gift_gateway > anonymous(request: Request)": [
+        11
+      ]
     }
   },
   "cyclomatic": {
@@ -1549,7 +1554,7 @@
     },
     "packages/sdk/src/transaction_execution.ts": {
       "decode_pending": [
-        10
+        9
       ],
       "verify_receipt": [
         12
@@ -1601,6 +1606,9 @@
       ],
       "SDK > failure_of": [
         18
+      ],
+      "SDK > on_receipt": [
+        10
       ]
     },
     "packages/sdk/src/ptb.ts": {
@@ -2129,6 +2137,66 @@
     "packages/sdk/src/kares_economy.ts": {
       "read_rewards_economy": [
         11
+      ]
+    },
+    "packages/frontend/src/airdrop/GiftPage.tsx": {
+      "GiftPage": [
+        9
+      ]
+    },
+    "packages/frontend/src/airdrop/GiftScene.tsx": {
+      "GiftScene": [
+        9
+      ]
+    },
+    "packages/frontend/src/airdrop/gift_runtime.ts": {
+      "create_gift_runtime > observe > check": [
+        9
+      ]
+    },
+    "packages/frontend/src/airdrop/gift_state.ts": {
+      "checked": [
+        9
+      ]
+    },
+    "packages/frontend/src/characters/BoxReveal.tsx": {
+      "BoxReveal": [
+        11
+      ]
+    },
+    "packages/sdk/src/gift_contract.ts": {
+      "decode_gift_proof": [
+        11
+      ],
+      "decode_gift_request": [
+        10
+      ],
+      "decode_gift_status": [
+        11
+      ]
+    },
+    "packages/sdk/src/gift_gateway.ts": {
+      "bounded_json": [
+        9
+      ],
+      "create_gift_gateway > anonymous(request: Request)": [
+        11
+      ],
+      "prepare": [
+        9
+      ]
+    },
+    "packages/sdk/src/gift_provenance.ts": {
+      "gift_collection": [
+        9
+      ],
+      "gift_opening": [
+        11
+      ]
+    },
+    "packages/sdk/src/gift_sponsor.ts": {
+      "create_gift_reader > follow_reward": [
+        9
       ]
     }
   }

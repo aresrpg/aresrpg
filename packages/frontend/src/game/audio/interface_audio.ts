@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Local activation feedback belongs to the shared app lifecycle, not account gameplay state.
 
-import { audio_playback_revision, play_audio } from './audio_registry.ts'
+import { audio_playback_revision, play_audio, prime_carousel_audio } from './audio_registry.ts'
 
 const CONTROL_SELECTOR =
   'button, [role="button"], [role="tab"], [role="switch"], input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]'
@@ -28,6 +28,7 @@ export const observe_interface_audio = (signal: Readonly<AbortSignal>): void => 
     'click',
     (event) => {
       if (!event.isTrusted || !audible_control(event)) return
+      prime_carousel_audio()
       const revision = audio_playback_revision()
       // A task boundary waits for the entire native dispatch, including React handlers.
       // Microtasks can run between capture and bubble listeners for trusted clicks.

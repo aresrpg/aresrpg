@@ -15,7 +15,8 @@ import {
 import { completed_tutorials_from, type TutorialId } from '../../tutorial/tutorial.ts'
 import { DEFAULT_MASTER_VOLUME, master_volume_from } from './audio_volume.ts'
 
-export const SETTINGS_STORAGE_KEY = 'aresrpg.settings'
+import { SETTINGS_STORAGE_KEY } from './settings_storage.ts'
+export { SETTINGS_STORAGE_KEY } from './settings_storage.ts'
 
 // render_distance: the player's chunk radius override (null = the quality tier's default)
 export const RENDER_DISTANCE_MIN = QUALITY_PROFILES.low.chunks.far_radius

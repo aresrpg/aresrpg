@@ -31,7 +31,6 @@ import type {
 } from '@aresrpg/sdk/seed'
 import type { WorldMaterial } from '@aresrpg/engine'
 
-import items_source from '../../../../seed/content/items.json'
 import mastery_source from '../../../../seed/content/mastery.json'
 import mobs_source from '../../../../seed/content/mobs.json'
 import recipes_source from '../../../../seed/content/recipes.json'
@@ -40,6 +39,7 @@ import spells_source from '../../../../seed/content/spells.json'
 import dungeons_source from '../../../../seed/content/dungeons.json'
 
 import { worlds_source } from './worlds.ts'
+import { items, items_by_type } from './items.ts'
 import { derive_item_filter_rows } from './item_filters.ts'
 import { derive_mob_filter_rows, derive_mob_locations } from './mob_filters.ts'
 
@@ -115,7 +115,6 @@ type RawSeedWorld = Omit<SeedWorld, 'mobs' | 'resources'> &
     }>[]
   }>
 
-const items = Object.freeze(items_source as unknown as readonly SeedItem[])
 const mobs = Object.freeze(mobs_source as unknown as readonly SeedMob[])
 const recipes = Object.freeze(recipes_source as unknown as readonly SeedRecipe[])
 const spells = Object.freeze(spells_source as unknown as readonly SeedSpell[])
@@ -163,7 +162,6 @@ const group_entries = <T>(entries: readonly (readonly [string, T])[]): Readonly<
   return Object.freeze(Object.fromEntries([...grouped].map(([key, rows]) => [key, Object.freeze(rows)])))
 }
 
-const items_by_type = keyed(items, ({ item_type }) => item_type)
 const mobs_by_type = keyed(mobs, ({ mob_type }) => mob_type)
 const recipes_by_output = keyed(recipes, ({ output_type }) => output_type)
 const dungeons_by_id = keyed(dungeons, ({ dungeon }) => dungeon)

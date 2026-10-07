@@ -20,6 +20,7 @@ import { display_assets_plugin } from './display_assets.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 import { solana_rpc_plugin } from './solana_rpc_dev.ts'
+import { gift_dev_plugin } from './gift_dev.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
@@ -101,6 +102,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_RELEASE': JSON.stringify(loaded_env.VERCEL_GIT_COMMIT_SHA || loaded_env.GITHUB_SHA || ''),
     },
     plugins: [
+      gift_dev_plugin(loaded_env),
       solana_rpc_plugin(loaded_env.SOLANA_RPC_URL),
       browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),
       html_env_plugin(env),

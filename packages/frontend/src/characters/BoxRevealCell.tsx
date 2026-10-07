@@ -3,11 +3,13 @@
 
 import type { CSSProperties } from 'react'
 
-import { encyclopedia_catalog } from '../content/catalog.ts'
+import { items_by_type } from '../content/items.ts'
 import { item_detail_icon } from '../content/item_detail_assets.ts'
 import type { CopyText } from '../i18n/copy.ts'
 
-export type BoxPhase = 'pending' | 'charging' | 'burst' | 'resolving' | 'reveal'
+import { BoxCarousel } from './BoxCarousel.tsx'
+import type { BoxPhase } from './useBoxAnimation.ts'
+export type { BoxPhase } from './useBoxAnimation.ts'
 export type BoxResult = Readonly<{ claim_id: string; item_type: string; amount: number }>
 
 const OpeningBox = ({ item_type }: Readonly<{ item_type: string }>) => (
@@ -34,8 +36,10 @@ export const BoxRevealCell = ({
   phase,
   roll,
   text,
-}: Readonly<{ item_type: string; phase: BoxPhase; roll?: BoxResult; text: CopyText }>) => {
-  if (phase !== 'reveal' && phase !== 'resolving') return <OpeningBox item_type={item_type} />
+  sound = true,
+}: Readonly<{ item_type: string; phase: BoxPhase; roll?: BoxResult; text: CopyText; sound?: boolean }>) => {
+  if (phase === 'spinning' && roll) return <BoxCarousel box={item_type} reward={roll.item_type} sound={sound} />
+  if (phase !== 'reveal') return <OpeningBox item_type={item_type} />
   return (
     <div className="boxreveal__card-wrap" onClick={(event) => event.stopPropagation()}>
       {roll ? (
@@ -46,7 +50,7 @@ export const BoxRevealCell = ({
             draggable={false}
             src={item_detail_icon(roll.item_type) ?? undefined}
           />
-          <div className="boxreveal__reward-name">{encyclopedia_catalog.item(roll.item_type)!.item.name}</div>
+          <div className="boxreveal__reward-name">{items_by_type[roll.item_type]?.name}</div>
           <strong className="boxreveal__quantity">×{roll.amount}</strong>
         </div>
       ) : (

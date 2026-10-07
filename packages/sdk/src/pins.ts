@@ -26,3 +26,21 @@ export const resolve_pins = (network: DeploymentNetwork, override?: Pins): Pins 
     throw new Error(`Deployment pins belong to ${String(pins.network)}, not ${network}`)
   return pins as Pins
 }
+
+/** The living-content derivation pair: the registry ROOT object id + the seed package's
+ * ORIGINAL id — every content address (mob/spell templates, world content, the board
+ * catalog) derives from these two. The ORIGINAL, never `pins.seed_package`: a derived object
+ * id is computed from a type tag, and on Sui a type is named by its FIRST-publish address
+ * forever, while the latest id is a move-call target only (2026-08-22: deriving with the
+ * upgraded address produced ids that never existed — every mob engage died unresolved). */
+export const living_content = (
+  sdk: Readonly<{ pins: Pins }>,
+  what: string
+): Readonly<{ content_root: string; seed_package_original: string }> => {
+  const root = sdk.pins.content_root
+  const root_id = typeof root === 'object' && root !== null ? Reflect.get(root, 'id') : null
+  const original = sdk.pins.seed_package_original
+  if (typeof root_id !== 'string' || typeof original !== 'string')
+    throw new Error(`${what} unavailable: pins.json has no living-content ids for this network.`)
+  return Object.freeze({ content_root: root_id, seed_package_original: original })
+}

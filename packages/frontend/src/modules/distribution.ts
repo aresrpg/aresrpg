@@ -12,6 +12,7 @@ import type { AppInput, AppModule, AppState } from '../store.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { env } from '../env.ts'
 import { browser_auth_storage } from '../auth_storage.ts'
+import { gift_link_from_url, GIFT_LINK_STORAGE_KEY } from '../airdrop/gift_intent.ts'
 import { toast } from '../toast.ts'
 
 import { rolled_item_types } from './claims.ts'
@@ -56,14 +57,7 @@ export const initial_distribution_state = (): DistributionState =>
     notice: null,
   })
 
-const GIFT_LINK_STORAGE_KEY = 'aresrpg:gift-link'
-
-export const gift_link_from_url = (href: string): string | null => {
-  const url = new URL(href)
-  return ['/gift', '/claim'].includes(url.pathname) && url.hash.startsWith('#$') && url.hash.length > 2
-    ? url.toString()
-    : null
-}
+export { gift_link_from_url } from '../airdrop/gift_intent.ts'
 
 const gift_intent_from_url = (href: string): string | null =>
   ['/gift', '/claim'].includes(new URL(href).pathname) ? href : null
