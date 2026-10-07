@@ -9,11 +9,12 @@ export const GIFT_ACTIONS = ['redeem', 'open', 'collect'] as const
 export type GiftAction = (typeof GIFT_ACTIONS)[number]
 export type GiftProof = Readonly<{ giftcard: string; redeem?: string; open?: string; collect?: string }>
 export type GiftRequest = Readonly<{
-  action: GiftAction | 'status'
+  action: GiftAction | 'status' | 'transfer'
   network: 'mainnet' | 'testnet'
   address: string
   time: number
   proof: GiftProof | null
+  sender?: string
 }>
 export type GiftStatus = Readonly<{
   stage: 'missing' | 'available' | 'voucher' | 'crate' | 'reward' | 'collected'
@@ -57,15 +58,16 @@ export const decode_gift_proof = (value: unknown): GiftProof => {
 }
 
 export const decode_gift_request = (value: unknown): GiftRequest => {
-  if (!is_record(value) || !exact_keys(value, ['action', 'network', 'address', 'time', 'proof']))
+  if (!is_record(value) || !exact_keys(value, ['action', 'network', 'address', 'time', 'proof', 'sender']))
     throw new GiftError('invalid')
-  if (
-    !['status', ...GIFT_ACTIONS].includes(value.action as string) ||
-    !['mainnet', 'testnet'].includes(value.network as string) ||
-    !valid_address(value.address) ||
-    !Number.isSafeInteger(value.time)
-  )
-    throw new GiftError('invalid')
+  const valid = [
+    ['status', 'transfer', ...GIFT_ACTIONS].includes(value.action as string),
+    ['mainnet', 'testnet'].includes(value.network as string),
+    valid_address(value.address),
+    Number.isSafeInteger(value.time),
+    value.action === 'transfer' ? valid_address(value.sender) : value.sender === undefined,
+  ].every(Boolean)
+  if (!valid) throw new GiftError('invalid')
   const proof = value.proof === null ? null : decode_gift_proof(value.proof)
   if (value.action !== 'status' && !proof) throw new GiftError('invalid')
   return { ...(value as GiftRequest), proof }
@@ -79,6 +81,7 @@ export const gift_request_message = (request: GiftRequest): Uint8Array =>
       network: request.network,
       address: request.address,
       time: request.time,
+      ...(request.sender ? { sender: request.sender } : {}),
       proof: request.proof
         ? {
             giftcard: request.proof.giftcard,

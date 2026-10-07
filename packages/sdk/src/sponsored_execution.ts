@@ -11,7 +11,7 @@ import { GIFT_GAS_LIMIT_MIST } from './gift_contract.ts'
 export type SponsoredPreparation = Readonly<{ bytes: string; digest: string }>
 export type SponsorSubmit = (digest: string, signature: string, signal?: AbortSignal) => Promise<void>
 
-export const read_sponsored_transaction = (prepared: SponsoredPreparation, address: string) => {
+export const read_sponsored_transaction = (prepared: SponsoredPreparation, address: string, recipient = address) => {
   const raw = fromBase64(prepared.bytes)
   const transaction = Transaction.from(raw)
   const data = transaction.getData()
@@ -20,6 +20,7 @@ export const read_sponsored_transaction = (prepared: SponsoredPreparation, addre
     data.sender === address,
     typeof data.gasData.owner === 'string',
     data.gasData.owner !== address,
+    data.gasData.owner !== recipient,
     budget > 0n,
     budget <= GIFT_GAS_LIMIT_MIST,
     TransactionDataBuilder.getDigestFromBytes(raw) === prepared.digest,

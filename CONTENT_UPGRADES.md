@@ -170,7 +170,7 @@ and current object custody; never retry automatically.
 The frontend Vercel project needs server-only `ENOKI_SECRET_KEY`, enabled for sponsored transactions
 on the selected network. Keep the existing public Enoki key and Google client configuration.
 Use a sensitive variable for Production and the controlled `edge` preview; never prefix it with `VITE_`.
-The backend Enoki SDK supplies exact allowed Move calls and recipient addresses per transaction.
+The backend Enoki SDK supplies exact allowed Move calls and recipient addresses for transfer, redemption, opening and collection. The QR key signs transport locally; Slush’s hosted sponsor is not used.
 No dashboard-wide Move allowlist or QR reprint is needed. The existing 100 vouchers remain the supply.
 Sponsorship failure leaves the gift recoverable and never asks the recipient to fund this claim.
 Release this frontend/API change through the normal preparation and activation workflow above.

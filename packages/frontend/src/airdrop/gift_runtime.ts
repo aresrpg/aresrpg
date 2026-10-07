@@ -115,8 +115,7 @@ export const create_gift_runtime = ({
       },
       transfer: async (state) => {
         if (!link || !state.status?.proof) throw new GiftError('invalid')
-        const result = await require_wallet(state).claim_giftcard_link(link)
-        if (!result || result.giftcard.id !== state.status.proof.giftcard) throw new GiftError('unavailable')
+        await require_wallet(state).gift.transfer(link, state.status.proof)
         return { kind: 'executed' }
       },
       redeem: write('redeem'),

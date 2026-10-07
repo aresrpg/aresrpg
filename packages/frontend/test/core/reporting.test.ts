@@ -5,6 +5,7 @@ import { expect, test } from 'bun:test'
 import { close, flush, type ErrorEvent } from '@sentry/react'
 import type { EngineStatus } from '@aresrpg/engine'
 
+import deployment from '../../vercel.json' with { type: 'json' }
 import { on_error_translate, toast } from '../../src/toast.ts'
 import {
   before_send,
@@ -170,4 +171,16 @@ test('caught engine failures reach Sentry once with original diagnostics and red
     stop()
     await close()
   }
+})
+
+test('production CSP allows the European Sentry ingestion endpoint', () => {
+  const policy = deployment.headers
+    .flatMap(({ headers }) => headers)
+    .find(({ key }) => key === 'Content-Security-Policy')!.value
+  const connections = policy
+    .split(';')
+    .find((directive) => directive.trim().startsWith('connect-src'))!
+    .split(/\s+/u)
+  expect(connections).toContain('https://*.ingest.de.sentry.io')
+  expect(connections).not.toContain('*')
 })

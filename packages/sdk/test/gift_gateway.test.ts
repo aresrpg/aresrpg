@@ -5,12 +5,15 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { Transaction, TransactionDataBuilder, type TransactionPlugin } from '@mysten/sui/transactions'
 import { fromBase64, toBase64 } from '@mysten/sui/utils'
 import type { SuiGrpcClient } from '@mysten/sui/grpc'
+import { MAINNET_CONTRACT_IDS, ZkSendClient } from '@mysten/zksend'
+import { bcs } from '@mysten/sui/bcs'
 
 import { create_gift_gateway, type GiftGatewayOptions } from '../src/gift_gateway.ts'
 import { gift_request_message, GIFT_GAS_LIMIT_MIST, type GiftRequest } from '../src/gift_contract.ts'
 import type { GiftPolicy } from '../src/gift_provenance.ts'
 
 import fixture from './fixtures/basecamp_gift.mainnet.json'
+import transport_fixture from './fixtures/basecamp_transport.mainnet.json'
 
 const id = (digit: string) => `0x${digit.repeat(64)}`
 const signature_key = new Ed25519Keypair()
@@ -59,12 +62,12 @@ const signed = async (request: GiftRequest) => ({
   signature: (await signature_key.signPersonalMessage(gift_request_message(request))).signature,
 })
 const request: GiftRequest = { action: 'redeem', network: 'mainnet', address, time: 1000, proof }
-const setup = (modify?: (transaction: Transaction) => void) => {
+const setup = (modify?: (transaction: Transaction) => void, rpc_client = client) => {
   const sponsored: unknown[] = []
   const executed: unknown[] = []
   const options: GiftGatewayOptions = {
     policy,
-    client,
+    client: rpc_client,
     now: () => 1000,
     sponsor: () => ({
       createSponsoredTransaction: async (input) => {
@@ -154,4 +157,98 @@ test('oversized and malformed bodies fail before any sponsorship call', async ()
   })
   expect((await test.serve(invalid)).status).toBe(400)
   expect(test.sponsored).toEqual([])
+})
+
+// Captured mainnet bag 0x93109e…68b4 and voucher 0x5acf01…6d5a, version 1034707540, 2026-10-08.
+const transport_client = (extra_asset = false): SuiGrpcClient =>
+  ({
+    network: 'mainnet',
+    core: {
+      ...client.core,
+      getObject: async () => ({ object: transport_fixture.object }),
+      getDynamicField: async ({ name }: { name: { bcs: Uint8Array } }) => {
+        if (bcs.Address.parse(name.bcs) !== transport_fixture.sender) throw new Error('Unknown bag')
+        const field = transport_fixture.field.dynamicField
+        return { dynamicField: { ...field, value: { ...field.value, bcs: fromBase64(field.value.bcs) } } }
+      },
+      getObjects: async () => ({
+        objects: extra_asset
+          ? [transport_fixture.object, { ...transport_fixture.object, objectId: id('9') }]
+          : [transport_fixture.object],
+      }),
+      resolveTransactionPlugin: () =>
+        (async (data, _options, next) => {
+          data.inputs.forEach((input, index) => {
+            if (input.UnresolvedObject)
+              data.inputs[index] = {
+                $kind: 'Object',
+                Object: {
+                  $kind: 'SharedObject',
+                  SharedObject: {
+                    objectId: MAINNET_CONTRACT_IDS.bagStoreId,
+                    initialSharedVersion: '1',
+                    mutable: true,
+                  },
+                },
+              }
+          })
+          await next()
+        }) satisfies TransactionPlugin,
+    },
+  }) as unknown as SuiGrpcClient
+
+test('Enoki sponsors only the captured one-card transport to the authenticated recipient', async () => {
+  const rpc_client = transport_client()
+  const service = setup(undefined, rpc_client)
+  const intent: GiftRequest = { ...request, action: 'transfer', sender: transport_fixture.sender }
+  const response = await service.serve(http(await signed(intent)))
+  expect(response.status).toBe(200)
+  expect(service.sponsored).toHaveLength(1)
+  expect(service.sponsored[0]).toMatchObject({ sender: transport_fixture.sender, allowedAddresses: [address] })
+  const value = (await response.json()) as { bytes: string }
+  const tx = Transaction.from(value.bytes)
+  expect(tx.getData().sender).toBe(transport_fixture.sender)
+  expect(tx.getData().commands.map((command) => command.$kind)).toEqual([
+    'MoveCall',
+    'MoveCall',
+    'TransferObjects',
+    'MoveCall',
+  ])
+  // Compare the complete kind with the official SDK claim builder; the test never calls claimAssets().
+  const link = new ZkSendClient(rpc_client).getLink({ keypair: signature_key })
+  const captured = await new ZkSendClient(rpc_client).loadLink({ address: transport_fixture.sender })
+  link.assets = captured.assets
+  const expected = await link.createClaimTransaction(address).build({ client: rpc_client, onlyTransactionKind: true })
+  expect(toBase64(await tx.build({ onlyTransactionKind: true }))).toBe(toBase64(expected))
+  expect(service.executed).toEqual([])
+})
+
+test('another bag, extra assets, altered recipients and recipient-paid gas are refused', async () => {
+  const intent: GiftRequest = { ...request, action: 'transfer', sender: transport_fixture.sender }
+  const wrong = setup(undefined, transport_client())
+  expect((await wrong.serve(http(await signed({ ...intent, sender: id('9') })))).status).toBe(403)
+  expect(wrong.sponsored).toEqual([])
+  const extra = setup(undefined, transport_client(true))
+  expect((await extra.serve(http(await signed(intent)))).status).toBe(403)
+  expect(extra.sponsored).toEqual([])
+  for (const modify of [
+    (tx: Transaction) => tx.setGasOwner(address),
+    (tx: Transaction) => {
+      tx.transferObjects([], id('9'))
+    },
+  ]) {
+    const service = setup(modify, transport_client())
+    expect((await service.serve(http(await signed(intent)))).status).toBe(503)
+    expect(service.executed).toEqual([])
+  }
+})
+
+test('public status reads need no wallet proof and cannot allocate sponsorship', async () => {
+  const service = setup()
+  const response = await service.serve(http({ request: { ...request, action: 'status' } }))
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ stage: 'voucher', proof })
+  expect((await service.serve(http({ request }))).status).toBe(400)
+  expect(service.sponsored).toEqual([])
+  expect(service.executed).toEqual([])
 })

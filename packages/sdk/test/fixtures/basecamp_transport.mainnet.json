@@ -1,0 +1,43 @@
+{
+  "provenance": {
+    "network": "mainnet",
+    "captured": "2026-10-08",
+    "object": "0x5acf013a7cffaa40659c82ebf74548d73ea5600da08ce8262260ce40d8e46d5a",
+    "version": "1034707540",
+    "drop": "HHJheC5z9CGLWRvbz5b1bYtxwGWnDpYMb4six4rwgTyy"
+  },
+  "sender": "0x9d0ef7cb85e7bd9cdd45bc01ddcddebee8b161211967a337d50738818668ee7d",
+  "field": {
+    "dynamicField": {
+      "$kind": "DynamicField",
+      "fieldId": "0x93109e5ea6815c16a4fd230ff2eb62068146383f5a989a52d976ea1ff4a068b4",
+      "digest": "5CfkrL5r1px5oFS4wjXfXTy2YF7jRdhhsd9mJQ8UXxWQ",
+      "version": "1034707540",
+      "type": "0x0000000000000000000000000000000000000000000000000000000000000002::dynamic_field::Field<address,0x5bb7d0bb3240011336ca9015f553b2646302a4f05f821160344e9ec5a988f740::zk_bag::ZkBag>",
+      "previousTransaction": "HHJheC5z9CGLWRvbz5b1bYtxwGWnDpYMb4six4rwgTyy",
+      "name": {
+        "type": "address",
+        "bcs": "nQ73y4XnvZzdRbwB3c3evuixYSEZZ6M31Qc4gYZo7n0="
+      },
+      "value": {
+        "type": "0x5bb7d0bb3240011336ca9015f553b2646302a4f05f821160344e9ec5a988f740::zk_bag::ZkBag",
+        "bcs": "OoWR47UkLPvMO2s55mRDCQC0gbwg/hETdkjsBV0Dhu03z0a0mfdA5lNkS9L3qO2X8kjos8adXRLJfXhFpUwM2AFazwE6fP+qQGWcguv3RUjXPqVgDaCM6CYiYM5A2ORtWg=="
+      }
+    }
+  },
+  "object": {
+    "objectId": "0x5acf013a7cffaa40659c82ebf74548d73ea5600da08ce8262260ce40d8e46d5a",
+    "version": "1034707540",
+    "digest": "Evzs3ifRnyC9sR1Yz5fDg5q5vwbgmr5z4ee6qdTLuDu6",
+    "owner": {
+      "AddressOwner": "0x3a8591e3b5242cfbcc3b6b39e664430900b481bc20fe11137648ec055d0386ed",
+      "$kind": "AddressOwner"
+    },
+    "type": "0x427af9b0d1cc5145a5112bd5b473dd615d48b5389de296eb7c512afdec160e1d::distribution::Giftcard",
+    "json": {
+      "amount": 1,
+      "id": "0x5acf013a7cffaa40659c82ebf74548d73ea5600da08ce8262260ce40d8e46d5a",
+      "template": "0x250989d2d2175ce368d387573f339e3f55fc1f661ca344dabd015ea6408b51bd"
+    }
+  }
+}

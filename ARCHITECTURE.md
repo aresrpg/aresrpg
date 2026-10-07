@@ -1050,15 +1050,17 @@ attempt never creates an automatic retry timer.
 Voucher pre/post ownership invalidates both custodians through the indexer, including plain transfers
 without game events. Certified redemption tombstones prevent stale snapshots resurrecting spent cards.
 Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
-which survives Google login without reaching the server. The printed URLs remain unchanged. zkSend pays the
-voucher transport. The 100 seed-authored Basecamp vouchers use the lightweight gift reducer and a Vercel
-`/api/gift` gateway for sponsored redemption, opening and collection. The page derives progress from gateway status after each operation. Restoring a session only checks
+which survives Google login without reaching the server. The printed URLs remain unchanged. Enoki pays for the fixed zkSend voucher transport;
+the QR key signs in the browser and never reaches the gateway. The 100 seed-authored Basecamp vouchers use the lightweight gift reducer and a Vercel
+`/api/gift` gateway for sponsored transfer, redemption, opening and collection. The page derives progress from gateway status after each operation. Restoring a session only checks
 status; it does not automatically submit another transaction. Uncertain submissions use the existing SDK
 transaction tracking; there is no separate gift journal. Character creation and ordinary gameplay keep their normal SUI costs.
 
-The gateway verifies an expiring wallet signature over the complete intent, resolves campaign membership
+Read-only gift status is public and does not request a wallet signature. For sponsorship, the gateway
+verifies an expiring wallet signature over the complete intent, resolves campaign membership
 from seed-derived voucher identities, and proves each descendant crate/claim through certified receipts.
-It accepts fixed operations, never caller-built transaction bytes. The SDK composes each PTB, and the
+It accepts fixed operations, never caller-built transaction bytes. Transfer proves one campaign voucher
+in the supplied public bag, fixes its recipient to the authenticated account, and rejects other assets. The SDK composes each PTB, and the
 server-owned Enoki client supplies its exact Move targets and recipient per request. Both server and SDK
 validate the sponsored envelope and simulate before signing; sponsor gas never becomes player-paid gas
 in the wallet ledger. The Enoki private key exists only in the server environment. Node function entry points import SDK

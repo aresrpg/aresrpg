@@ -2168,9 +2168,6 @@
       "decode_gift_proof": [
         11
       ],
-      "decode_gift_request": [
-        10
-      ],
       "decode_gift_status": [
         11
       ]
@@ -2182,7 +2179,7 @@
       "create_gift_gateway > anonymous(request: Request)": [
         11
       ],
-      "prepare": [
+      "authorize": [
         9
       ]
     },

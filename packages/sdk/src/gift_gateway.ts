@@ -8,6 +8,7 @@ import { isValidTransactionDigest, toBase64 } from '@mysten/sui/utils'
 
 import { SDK, sui_transport } from './client.ts'
 import { build_gift_transaction, create_gift_reader } from './gift_sponsor.ts'
+import { build_gift_transport } from './gift_transport.ts'
 import {
   GiftError,
   decode_gift_request,
@@ -16,7 +17,7 @@ import {
   type GiftRequest,
   type SponsoredGift,
 } from './gift_contract.ts'
-import { validate_gift_transaction, type GiftPolicy } from './gift_provenance.ts'
+import type { GiftPolicy } from './gift_provenance.ts'
 import { bounded_request } from './transaction_execution.ts'
 import { read_sponsored_transaction } from './sponsored_execution.ts'
 
@@ -110,14 +111,16 @@ const authorize = async (
   client: SuiGrpcClient,
   body: Readonly<Record<string, unknown>>
 ): Promise<GiftRequest> => {
-  if (Object.keys(body).some((key) => !['request', 'signature'].includes(key)) || !valid_signature(body.signature))
-    throw new GiftError('invalid')
+  if (Object.keys(body).some((key) => !['request', 'signature'].includes(key))) throw new GiftError('invalid')
   const request = decode_gift_request(body.request)
   if (
     request.network !== options.policy.pins.network ||
     Math.abs((options.now ?? Date.now)() - request.time) > GIFT_AUTH_LIFETIME_MS
   )
     throw new GiftError('unauthorized')
+  // Status exposes public chain state and cannot allocate sponsored gas.
+  if (request.action === 'status') return request
+  if (!valid_signature(body.signature)) throw new GiftError('invalid')
   try {
     const key = await verifyPersonalMessageSignature(gift_request_message(request), body.signature, { client })
     if (!key.verifyAddress(request.address)) throw new GiftError('unauthorized')
@@ -142,29 +145,28 @@ const prepare = async (options: GiftGatewayOptions, client: SuiGrpcClient, reque
     address: request.address,
     pins: options.policy.pins,
   })
-  const { tx, kind } = await build_gift_transaction(sdk, options.policy, request.address, request.action, status)
-  const allowed_calls = tx.getData().commands.map((command) => {
-    if (!command.MoveCall) throw new GiftError('ineligible')
+  const { tx, kind } =
+    request.action === 'transfer'
+      ? await build_gift_transport(client, options.policy, request.address, request.sender!, status)
+      : await build_gift_transaction(sdk, options.policy, request.address, request.action, status)
+  const allowed_calls = tx.getData().commands.flatMap((command) => {
+    if (!command.MoveCall) return []
     const { package: package_id, module, function: function_name } = command.MoveCall
     return `${package_id}::${module}::${function_name}`
   })
   const sponsored = await enoki_call(() =>
     sponsor(options).createSponsoredTransaction({
       network: request.network,
-      sender: request.address,
+      sender: tx.getData().sender!,
       transactionKindBytes: toBase64(kind),
       allowedMoveCallTargets: allowed_calls,
       allowedAddresses: [request.address],
     })
   )
-  if (typeof sponsored.bytes !== 'string' || typeof sponsored.digest !== 'string')
-    throw new GiftError('sponsor_unavailable')
-  const { raw, transaction: resolved } = read_sponsored_transaction(sponsored, request.address)
-  const data = resolved.getData()
+  const { raw, transaction: resolved } = read_sponsored_transaction(sponsored, tx.getData().sender!, request.address)
   // Enoki may only fill gas and expiration. Its returned application intent must remain exact.
   const returned_kind = await resolved.build({ onlyTransactionKind: true })
   if (toBase64(returned_kind) !== toBase64(kind)) throw new GiftError('sponsor_unavailable')
-  validate_gift_transaction(options.policy, request.action, data, status)
   const simulation = await client.core.simulateTransaction({ transaction: raw, include: { effects: true } })
   if (!simulation.Transaction?.effects.status.success) throw new GiftError('ineligible')
   return response({ bytes: sponsored.bytes, digest: sponsored.digest, status } satisfies SponsoredGift)

@@ -11,7 +11,6 @@ export type GiftWallet = Pick<
   | 'identity'
   | 'gift'
   | 'inspect_giftcard_link'
-  | 'claim_giftcard_link'
   | 'on_invalidated'
   | 'dispose'
   | 'disconnect'

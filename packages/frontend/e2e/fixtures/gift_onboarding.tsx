@@ -67,13 +67,13 @@ const create_wallet = (): GiftWallet => {
       params.has('used') || read_ledger().stage !== 'available'
         ? null
         : { id: giftcard, template: template('sui_crate'), amount: 1 },
-    claim_giftcard_link: async () => {
-      await wait()
-      const ledger = read_ledger()
-      save({ ...ledger, stage: 'voucher', calls: [...ledger.calls, 'transfer'] })
-      return { digest: digests.redeem, giftcard: { id: giftcard, template: template('sui_crate'), amount: 1 } }
-    },
     gift: {
+      transfer: async () => {
+        await wait()
+        const ledger = read_ledger()
+        save({ ...ledger, stage: 'voucher', calls: [...ledger.calls, 'transfer'] })
+        return { digest: digests.redeem }
+      },
       status: async () => {
         await wait()
         return status()

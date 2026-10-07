@@ -109,3 +109,13 @@ test('sponsored receipts retain their payer across recovery without counting spo
   expect(submissions).toBe(1)
   expect(sdk.gas_spent_24h()).toBe(0n)
 })
+
+test('only transport intents permit a separate QR sender, and authorization binds it', () => {
+  const transfer = { ...request, action: 'transfer', sender: giftcard }
+  expect(decode_gift_request(transfer).sender).toBe(giftcard)
+  expect(() => decode_gift_request({ ...request, sender: giftcard })).toThrow()
+  expect(() => decode_gift_request({ ...transfer, sender: undefined })).toThrow()
+  expect(gift_request_message({ ...request, action: 'transfer', sender: giftcard })).not.toEqual(
+    gift_request_message({ ...request, action: 'transfer', sender: address })
+  )
+})

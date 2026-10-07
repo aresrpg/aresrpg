@@ -72,7 +72,7 @@ const gift_link_missing = async (client: SuiGrpcClient, address: string): Promis
 /** Claims one bearer voucher through zkSend's hosted claim service. That service pays this
  * transport leg; the authenticated game wallet pays only the later AresRPG redemption.
  * A missing link returns null: it was already claimed, reclaimed, or never issued. */
-const load_giftcard_link = async (client: SuiGrpcClient, sdk: Sdk, url: string) => {
+export const load_giftcard_link = async (client: SuiGrpcClient, sdk: Sdk, url: string) => {
   const expected_type = giftcard_type(sdk)
   const link = await new ZkSendClient(client).loadLinkFromUrl(canonical_zksend_gift_url(url, sdk.network))
   if (!link.assets) {
