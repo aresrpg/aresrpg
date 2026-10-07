@@ -157,6 +157,7 @@ export const create_gift_gateway =
   async (request: Request): Promise<Response> => {
     if (request.method !== 'POST') return response({ error: 'invalid' }, 405)
     if (request.headers.get('origin') !== new URL(request.url).origin) return response({ error: 'unauthorized' }, 403)
+    let action: GiftRequest['action'] | undefined
     try {
       const body = await bounded_json(request.body, MAX_REQUEST_BYTES)
       const { network } = options.policy.pins
@@ -165,10 +166,11 @@ export const create_gift_gateway =
         options.client ??
         new SuiGrpcClient({ network, baseUrl: options.rpc_url ?? `https://fullnode.${network}.sui.io:443` })
       const intent = await authorize(options, client, body)
+      ;({ action } = intent)
       return await prepare(options, client, intent)
     } catch (error) {
       const code = error instanceof GiftError ? error.code : error instanceof SyntaxError ? 'invalid' : 'unavailable'
-      console.warn('Gift request refused.', { code })
+      console.warn('Gift request refused.', { action, code }, error)
       const status = { invalid: 400, ineligible: 403, unauthorized: 401, unavailable: 503, sponsor_unavailable: 503 }[
         code
       ]

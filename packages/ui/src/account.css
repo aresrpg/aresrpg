@@ -415,11 +415,15 @@
 .aui-funding-body {
   display: grid;
   grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
   max-height: calc(100dvh - 100px);
   padding: 14px;
   overflow: hidden;
+}
+.aui-funding-body:has(> [role='alert']) {
+  grid-template-rows: auto minmax(0, 1fr);
 }
 .aui-funding-methods {
   display: flex;
@@ -526,6 +530,32 @@
 .aui-funding-detail > section > p {
   font-size: 11px;
   line-height: 1.45;
+}
+@media (max-width: 600px) {
+  .aui-funding-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .aui-funding-body:has(> [role='alert']) {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .aui-funding-methods {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .aui-funding-methods .aui-funding-choice {
+    display: flex;
+    flex-direction: column;
+    padding: 7px;
+    text-align: center;
+  }
+  .aui-funding-method-title {
+    align-self: center;
+    font-size: 11px;
+  }
+  .aui-funding-method-description {
+    display: none;
+  }
 }
 @media (orientation: landscape) and (max-height: 500px) {
   .aui-funding-window {

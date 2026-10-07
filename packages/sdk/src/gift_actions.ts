@@ -20,7 +20,13 @@ import {
   type GiftStatus,
   type SponsoredGift,
 } from './gift_contract.ts'
-import { validate_gift_transaction } from './gift_provenance.ts'
+import {
+  gift_redemption,
+  gift_opening,
+  gift_collection,
+  validate_gift_transaction,
+  type GiftReceipt,
+} from './gift_provenance.ts'
 
 type SignMessage = (message: Uint8Array) => Promise<Readonly<{ signature: string }>>
 
@@ -67,31 +73,45 @@ export const create_gift_actions = (sdk: Sdk, address: string, sign: SignMessage
     const { signature } = await sign(gift_request_message(intent))
     return post_gift({ request: intent, signature })
   }
-  const prepare = async (action: GiftAction, proof: GiftProof): Promise<SponsoredGift> => {
-    const { bytes, digest, sponsor_signature, status } = sponsored_gift(proof, await request(action, proof))
+  const policy = (proof: GiftProof) => {
     const { content_root, seed_package_original } = living_content(sdk, 'Gift sponsorship')
+    return {
+      pins: sdk.pins,
+      game_type: sdk.game_type_package!,
+      box_template: item_template_id(content_root, seed_package_original, 'sui_crate'),
+      giftcards: new Set([proof.giftcard]),
+      reward_templates: new Set<string>(),
+    }
+  }
+  const prepare = async (action: GiftAction, proof: GiftProof): Promise<SponsoredGift> => {
+    const prepared = sponsored_gift(proof, await request(action, proof))
     // Before asking the wallet to sign, independently restrict the returned PTB to gift doors.
-    validate_gift_transaction(
-      {
-        pins: sdk.pins,
-        game_type: sdk.game_type_package!,
-        box_template: item_template_id(content_root, seed_package_original, 'sui_crate'),
-        giftcards: new Set([proof.giftcard]),
-        reward_templates: new Set(),
-      },
-      action,
-      Transaction.from(bytes).getData(),
-      status
-    )
-    return { bytes, digest, sponsor_signature, status }
+    validate_gift_transaction(policy(proof), action, Transaction.from(prepared.bytes).getData(), prepared.status)
+    return prepared
   }
   return Object.freeze({
     status: async (proof: GiftProof | null): Promise<GiftStatus> => decode_gift_status(await request('status', proof)),
-    execute: async (action: GiftAction, proof: GiftProof): Promise<Readonly<{ digest: string }>> => {
-      const receipt = await sdk.execute_sponsored(() => prepare(action, proof))
-      return { digest: receipt_digest(receipt) }
+    execute: async (action: GiftAction, proof: GiftProof): Promise<GiftStatus> => {
+      let prepared: SponsoredGift | undefined
+      const receipt = await sdk.execute_sponsored(async () => {
+        prepared = await prepare(action, proof)
+        return prepared
+      })
+      if (!prepared || !receipt.Transaction) throw new GiftError('unavailable')
+      // These exact signed bytes and the certified receipt already prove the next stage.
+      const certified = {
+        ...receipt,
+        Transaction: { ...receipt.Transaction, transaction: Transaction.from(prepared.bytes).getData() },
+      } as unknown as GiftReceipt
+      const prior = { ...prepared.status, proof: { ...prepared.status.proof!, [action]: receipt_digest(receipt) } }
+      const rules = policy(proof)
+      return {
+        redeem: () => gift_redemption(rules, address, prior.proof, certified),
+        open: () => gift_opening(rules, address, prior, certified),
+        collect: () => gift_collection(rules, address, prior, certified),
+      }[action]()
     },
-    transfer: async (url: string, proof: GiftProof): Promise<Readonly<{ digest: string }>> => {
+    transfer: async (url: string, proof: GiftProof): Promise<GiftStatus> => {
       const { load_giftcard_link } = await import('./distribution.ts')
       const loaded = await load_giftcard_link(sdk.sui_client as unknown as SuiGrpcClient, sdk, url)
       if (!loaded?.link.keypair || loaded.giftcard.id !== proof.giftcard) throw new GiftError('ineligible')
@@ -106,7 +126,9 @@ export const create_gift_actions = (sdk: Sdk, address: string, sign: SignMessage
         if (toBase64(returned_kind) !== toBase64(kind)) throw new GiftError('invalid')
         return prepared
       })
-      return { digest: receipt_digest(receipt) }
+      // The QR and recipient use different SDK sessions; finish the visibility barrier before handing off.
+      await transport.sui_client.core.waitForTransaction({ digest: receipt_digest(receipt), timeout: 15_000 })
+      return { stage: 'voucher', proof }
     },
     recover: sdk.recover_pending_transaction,
   })

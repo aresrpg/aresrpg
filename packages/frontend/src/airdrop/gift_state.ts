@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import type { GiftProof, GiftStatus } from '@aresrpg/sdk/gift'
+import type { GiftStatus } from '@aresrpg/sdk/gift'
 
 import type { AuthSession } from '../auth.ts'
 
@@ -16,7 +16,7 @@ export type GiftWallet = Pick<
   | 'disconnect'
 >
 export type GiftTaskKind = 'boot' | 'login' | 'check' | 'transfer' | 'redeem' | 'open' | 'collect' | 'logout'
-export type GiftTask = Readonly<{ id: number; kind: GiftTaskKind; advance: boolean }>
+export type GiftTask = Readonly<{ id: number; kind: GiftTaskKind; advance: boolean | 'open' }>
 export type GiftState = Readonly<{
   ready: boolean
   wallet: GiftWallet | null
@@ -26,14 +26,14 @@ export type GiftState = Readonly<{
   error: string | null
   skip_link: boolean
   celebrate: boolean
-  view: 'gift' | 'play' | 'later'
+  view: 'gift' | 'later'
   muted: boolean
 }>
 export type GiftResult =
   | Readonly<{ kind: 'ready' }>
-  | Readonly<{ kind: 'connected'; wallet: GiftWallet; advance: boolean }>
+  | Readonly<{ kind: 'connected'; wallet: GiftWallet; advance: GiftTask['advance'] }>
   | Readonly<{ kind: 'checked'; status: GiftStatus }>
-  | Readonly<{ kind: 'executed'; proof?: GiftProof }>
+  | Readonly<{ kind: 'executed'; status: GiftStatus }>
   | Readonly<{ kind: 'disconnected' }>
 export type GiftInput =
   | Readonly<{ type: 'start' }>
@@ -58,7 +58,7 @@ export const initial_gift_state = (): GiftState => ({
   view: 'gift',
   muted: false,
 })
-const task = (state: GiftState, kind: GiftTaskKind, advance = true): GiftState => ({
+const task = (state: GiftState, kind: GiftTaskKind, advance: GiftTask['advance'] = true): GiftState => ({
   ...state,
   error: null,
   sequence: state.sequence + 1,
@@ -67,7 +67,6 @@ const task = (state: GiftState, kind: GiftTaskKind, advance = true): GiftState =
 
 const checked = (state: GiftState, result: Extract<GiftResult, { kind: 'checked' }>): GiftState => {
   const { status } = result
-  const changed = state.status?.stage !== status.stage
   const next = {
     ...state,
     task: null,
@@ -75,9 +74,14 @@ const checked = (state: GiftState, result: Extract<GiftResult, { kind: 'checked'
     error: null,
     celebrate: state.celebrate || (state.status?.stage === 'crate' && status.stage === 'reward'),
   }
-  const actions = { available: 'transfer', voucher: 'redeem', reward: 'collect' } as const
+  const actions = {
+    available: 'transfer',
+    voucher: 'redeem',
+    reward: 'collect',
+    crate: state.task?.advance === 'open' ? 'open' : null,
+  } as const
   const action = actions[status.stage as keyof typeof actions]
-  return state.task?.advance && changed && action ? task(next, action) : next
+  return state.task?.advance && action ? task(next, action) : next
 }
 
 const completions: {
@@ -96,8 +100,7 @@ const completions: {
       result.advance
     ),
   checked,
-  executed: (state, result) =>
-    task({ ...state, status: state.status && { ...state.status, proof: result.proof ?? state.status.proof } }, 'check'),
+  executed: (state, result) => checked(state, { kind: 'checked', status: result.status }),
   disconnected: (state) => ({ ...initial_gift_state(), ready: true, sequence: state.sequence }),
 }
 
@@ -114,7 +117,14 @@ const inputs: {
   [Type in GiftInput['type']]: (state: GiftState, input: Extract<GiftInput, { type: Type }>) => GiftState
 } = {
   start: (state) => task({ ...initial_gift_state(), sequence: state.sequence }, 'boot'),
-  request: (state, input) => (request_allowed(state, input.kind) ? task(state, input.kind) : state),
+  request: (state, input) =>
+    request_allowed(state, input.kind)
+      ? task(
+          state,
+          input.kind,
+          input.kind === 'check' && state.status?.stage === 'crate' && state.error !== 'uncertain' ? 'open' : true
+        )
+      : state,
   completed: (state, input) =>
     state.task?.id === input.task ? completions[input.result.kind](state, input.result as never) : state,
   failed: (state, input) => (state.task?.id === input.task ? { ...state, task: null, error: input.error } : state),

@@ -105,7 +105,7 @@ test('QR transfer signs with the bearer key and submits both signatures through 
       pins: { ...fixture.policy.pins, network: 'mainnet' },
     })
     const actions = create_gift_actions(sdk, recipient, async () => ({ signature: 'recipient-intent' }))
-    expect(await actions.transfer(url, status.proof)).toEqual({ digest })
+    expect(await actions.transfer(url, status.proof)).toEqual({ stage: 'voucher', proof: status.proof })
     expect(requests).toEqual(['/api/gift'])
   } finally {
     globalThis.fetch = fetch_original
@@ -127,6 +127,46 @@ test('checking gift status does not ask the wallet to generate a zkLogin proof',
     >
     expect(await create_gift_actions(sdk, id('2'), sign).status(null)).toEqual({ stage: 'missing', proof: null })
     expect(sign).not.toHaveBeenCalled()
+  } finally {
+    globalThis.fetch = fetch_original
+  }
+})
+
+test('a captured redemption receipt advances the gift without a follow-up status lookup', async () => {
+  const proof = { giftcard: String(fixture.redeem.Transaction.events[0]!.json!.giftcard) }
+  const source = structuredClone(fixture.redeem)
+  let requests = 0
+  const fetch_original = globalThis.fetch
+  globalThis.fetch = (async (_input, init) => {
+    requests++
+    expect(JSON.parse(String(init?.body)).request.action).toBe('redeem')
+    return Response.json({
+      bytes: fixture.redeem.Transaction.bcs,
+      digest: fixture.redeem.Transaction.digest,
+      sponsor_signature: 'fixture-sponsor-signature',
+      status: { stage: 'voucher', proof },
+    })
+  }) as typeof fetch
+  try {
+    const sdk = {
+      network: 'mainnet',
+      pins: { ...fixture.policy.pins, network: 'mainnet', package: fixture.package_lineage.id },
+      game_type_package: fixture.policy.game_type,
+      execute_sponsored: async (prepare: () => Promise<unknown>) => {
+        await prepare()
+        return source
+      },
+    } as unknown as ReturnType<typeof SDK>
+    const actions = create_gift_actions(sdk, source.Transaction.transaction.sender, async () => ({
+      signature: 'intent',
+    }))
+    const status = await actions.execute('redeem', proof)
+    expect(status).toMatchObject({
+      stage: 'crate',
+      proof: { ...proof, redeem: source.Transaction.digest },
+      crate: '0x2458af09ad8778e1f6990c90c3d57b9a406f2efe880b3b5025590d3a9306b577',
+    })
+    expect(requests).toBe(1)
   } finally {
     globalThis.fetch = fetch_original
   }

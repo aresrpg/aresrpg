@@ -99,14 +99,14 @@ export const create_gift_reader = (
     if (status.proof?.collect) return finish(status, 'collect')
     const claim = await read_object(client, status.claim!)
     if (!claim) return recover_stage(status, 'collect')
-    if (
-      !claim.json ||
-      claim.owner.AddressOwner !== address ||
-      claim.json.rolled_template !== status.reward_template ||
-      claim.json.box_template !== policy.box_template ||
-      claim.json.amount !== status.amount
-    )
-      throw new GiftError('ineligible')
+    const valid = [
+      policy.reward_templates.has(status.reward_template!),
+      claim.owner.AddressOwner === address,
+      claim.json?.rolled_template === status.reward_template,
+      claim.json?.box_template === policy.box_template,
+      claim.json?.amount === status.amount,
+    ].every(Boolean)
+    if (!valid) throw new GiftError('ineligible')
     return status
   }
 

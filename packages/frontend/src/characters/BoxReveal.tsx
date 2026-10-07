@@ -15,7 +15,6 @@ import { Loader2 } from 'lucide-react'
 import { Button, NativeModal } from '@aresrpg/ui'
 
 import { rolled_item_types } from '../modules/claims.ts'
-import { box_rewards } from '../content/items.ts'
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
 import { encumbered_asset_ids, stack_merge_sources } from '../inventory_stacks.ts'
@@ -44,10 +43,7 @@ export const BoxReveal = ({
   const wallet = useAppStore(({ session }) => session.wallet)
   const claims = useAppStore(({ session }) => session.claims)
   const [rolled, set_rolled] = useState<readonly BoxResult[] | null>(null)
-  const { phase, skip } = useBoxAnimation(
-    rolled?.map(({ claim_id }) => claim_id).join(',') ?? null,
-    box_rewards(box.item_type).length > 1
-  )
+  const { phase, skip } = useBoxAnimation(rolled?.map(({ claim_id }) => claim_id).join(',') ?? null, box.item_type)
   const [escape_ready, set_escape_ready] = useState(false)
   /** the settle is durable and runs without this overlay — after a wait, stop pretending the
    *  player has to watch it (2026-08-22: a claim whose roll had not been projected yet left

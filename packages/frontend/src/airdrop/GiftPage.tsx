@@ -56,7 +56,7 @@ export const GiftPage = ({ runtime, copy }: Readonly<{ runtime: GiftRuntime; cop
   const text = copy_text(copy.gift_page)
   const content = useMemo(gift_content, [])
   const roll = content.reward(state.status)
-  const animation = useBoxAnimation(state.celebrate && roll ? roll.claim_id : null)
+  const animation = useBoxAnimation(state.celebrate && roll ? roll.claim_id : null, content.box.item_type)
   const view = gift_presentation(state)
   const volume = useMemo(saved_volume, [])
   const phase = !state.celebrate && roll ? 'reveal' : animation.phase
@@ -116,15 +116,7 @@ export const GiftPage = ({ runtime, copy }: Readonly<{ runtime: GiftRuntime; cop
           ))}
         </nav>
         <GiftScene view={view} state={state} content={content} roll={roll} phase={phase} copy={copy} text={text} />
-        <GiftActions
-          view={view}
-          state={state}
-          runtime={runtime}
-          copy={copy}
-          text={text}
-          skip={roll ? animation.skip : null}
-          enter={enter_game}
-        />
+        <GiftActions view={view} state={state} runtime={runtime} text={text} enter={enter_game} />
         {view.contents && <GiftContents content={content} text={text} />}
       </GameWindow>
     </main>

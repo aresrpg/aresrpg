@@ -2134,11 +2134,6 @@
         11
       ]
     },
-    "packages/frontend/src/airdrop/GiftPage.tsx": {
-      "GiftPage": [
-        9
-      ]
-    },
     "packages/frontend/src/airdrop/GiftScene.tsx": {
       "GiftScene": [
         9
@@ -2187,11 +2182,6 @@
       ],
       "gift_opening": [
         11
-      ]
-    },
-    "packages/sdk/src/gift_sponsor.ts": {
-      "create_gift_reader > follow_reward": [
-        9
       ]
     }
   }

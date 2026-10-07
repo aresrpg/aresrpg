@@ -38,8 +38,8 @@ test('a failed automatic redemption stops until an explicit retry', () => {
   expect(started.task?.kind).toBe('redeem')
   const failed = reduce_gift(started, { type: 'failed', task: started.task!.id, error: 'sponsor_unavailable' })
   const refreshed = checked(failed, 'voucher')
-  expect(refreshed.task).toBeNull()
-  expect(reduce_gift(refreshed, { type: 'request', kind: 'redeem' }).task?.kind).toBe('redeem')
+  expect(failed.task).toBeNull()
+  expect(refreshed.task?.kind).toBe('redeem')
 })
 
 test('restoring a session checks status without submitting transactions', () => {
@@ -62,17 +62,12 @@ test('restoring a session checks status without submitting transactions', () => 
 test('duplicate clicks cannot open twice and repeated status cannot restart the reveal', () => {
   const opening = reduce_gift(checked(ready(), 'crate'), { type: 'request', kind: 'open' })
   expect(reduce_gift(opening, { type: 'request', kind: 'open' })).toBe(opening)
-  const completed = reduce_gift(opening, {
+  const revealed = reduce_gift(opening, {
     type: 'completed',
     task: opening.task!.id,
-    result: { kind: 'executed', proof: { ...proof, open: 'confirmed-open' } },
+    result: { kind: 'executed', status: { stage: 'reward', proof: { ...proof, open: 'confirmed-open' } } },
   })
-  expect(completed.status?.proof?.open).toBe('confirmed-open')
-  const revealed = reduce_gift(completed, {
-    type: 'completed',
-    task: completed.task!.id,
-    result: { kind: 'checked', status: { stage: 'reward', proof } },
-  })
+  expect(revealed.status?.proof?.open).toBe('confirmed-open')
   expect(revealed.celebrate).toBe(true)
   expect(revealed.task?.kind).toBe('collect')
   const shown = reduce_gift({ ...revealed, task: null }, { type: 'celebrated' })
@@ -86,7 +81,7 @@ test('an expired completion cannot overwrite a disconnected account', () => {
     reduce_gift(stopped, {
       type: 'completed',
       task: opening.task!.id,
-      result: { kind: 'executed' },
+      result: { kind: 'executed', status: { stage: 'reward', proof } },
     })
   ).toBe(stopped)
 })
@@ -116,4 +111,33 @@ test('refreshing the same wallet session retains the selected card, while changi
     })
     expect(next.status).toEqual(address === 'alice' ? state.status : null)
   }
+})
+
+test('a confirmed redemption advances from its receipt without another status request', () => {
+  const redeeming = checked(ready(), 'voucher')
+  const status = {
+    stage: 'crate' as const,
+    proof: { ...proof, redeem: 'confirmed-redeem' },
+    crate: 'crate',
+    kiosk: 'kiosk',
+  }
+  const next = reduce_gift(redeeming, {
+    type: 'completed',
+    task: redeeming.task!.id,
+    result: { kind: 'executed', status },
+  })
+  expect(next.status).toEqual(status)
+  expect(next.task).toBeNull()
+})
+
+test('one explicit continuation retries a refused claim after checking the same stage', () => {
+  const started = checked(ready(), 'voucher')
+  const failed = reduce_gift(started, { type: 'failed', task: started.task!.id, error: 'unavailable' })
+  expect(checked(failed, 'voucher').task?.kind).toBe('redeem')
+})
+
+test('an uncertain opening is never repeated when recovery still sees the old crate', () => {
+  const opening = reduce_gift(checked(ready(), 'crate'), { type: 'request', kind: 'open' })
+  const uncertain = reduce_gift(opening, { type: 'failed', task: opening.task!.id, error: 'uncertain' })
+  expect(checked(uncertain, 'crate').task).toBeNull()
 })

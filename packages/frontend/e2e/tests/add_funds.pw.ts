@@ -91,3 +91,41 @@ test('a funding dialog chunk failure still exposes the direct deposit address', 
   await expect(page.getByRole('alert')).toContainText('The bridge could not load')
   await expect(page.getByRole('button').filter({ hasText: `0x${'11'.repeat(32)}` })).toBeVisible()
 })
+
+test.describe('mobile bridge scrolling', () => {
+  test.use({ hasTouch: true, isMobile: true })
+
+  for (const viewport of [
+    { width: 844, height: 390 },
+    { width: 390, height: 800 },
+  ])
+    for (const warning of [false, true])
+      test(`touch scroll reaches bridge controls at ${viewport.width}px, warning=${warning}`, async ({ page }) => {
+        await page.setViewportSize(viewport)
+        await mock_funding(page)
+        await page.goto(`/e2e/fixtures/add_funds.html${warning ? '?warning' : ''}`)
+        await page.getByRole('button', { name: /Bridge deposit/ }).tap()
+        const bridge = page.locator('[data-bridge-funding]')
+        await expect(bridge.getByText('SUI', { exact: true }).first()).toBeVisible({ timeout: 15_000 })
+        const panel = page.locator('.aui-funding-detail:not([hidden])')
+        const bounds = (await panel.boundingBox())!
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(viewport.height)
+        const cdp = await page.context().newCDPSession(page)
+        const x = bounds.x + bounds.width / 2
+        const y = bounds.y + bounds.height - 20
+        await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x, y }] })
+        for (let step = 1; step <= 5; step++) {
+          await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+          await cdp.send('Input.dispatchTouchEvent', {
+            type: 'touchMove',
+            touchPoints: [{ id: 1, x, y: y - step * 25 }],
+          })
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+        await expect.poll(() => panel.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+        await bridge.getByRole('button', { name: 'Connect wallet', exact: true }).first().tap()
+        await page.getByText('Fixture wallet', { exact: true }).tap()
+        await expect(page.locator('html')).toHaveAttribute('data-wallet-calls', /eth_requestAccounts/)
+      })
+})

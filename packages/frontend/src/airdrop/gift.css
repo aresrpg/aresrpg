@@ -246,35 +246,6 @@
   font-size: 11px;
   text-align: center;
 }
-.gift-note {
-  margin: 0 0 20px;
-  padding: 14px;
-  text-align: left;
-}
-.gift-note p {
-  margin: 6px 0;
-  color: var(--aui-muted);
-  font-size: 13px;
-}
-.gift-note strong {
-  font-size: 14px;
-}
-.gift-metric {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 12px 0;
-  font-size: 13px;
-}
-.gift-metric + .gift-metric {
-  border-top: 1px solid color-mix(in srgb, var(--aui-muted) 15%, transparent);
-}
-.gift-metric span {
-  color: var(--aui-muted);
-}
-.gift-metric b {
-  font-weight: 700;
-}
 .gift-status {
   display: flex;
   align-items: center;

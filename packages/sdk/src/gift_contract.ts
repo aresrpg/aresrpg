@@ -31,8 +31,8 @@ export type GiftErrorCode = 'invalid' | 'ineligible' | 'unavailable' | 'unauthor
 
 export class GiftError extends Error {
   readonly code: GiftErrorCode
-  constructor(code: GiftErrorCode) {
-    super(`Gift ${code}`)
+  constructor(code: GiftErrorCode, options?: ErrorOptions) {
+    super(`Gift ${code}`, options)
     // eslint-disable-next-line functional/no-this-expressions -- Error subclasses retain their typed failure code.
     this.code = code
   }

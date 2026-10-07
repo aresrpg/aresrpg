@@ -53,7 +53,7 @@ export const create_gift_runtime = ({
     const controller = new AbortController()
     let auth: GiftAuth | null = null
     let release_wallet = (): void => {}
-    const connected = (wallet: GiftWallet, advance: boolean): GiftResult => {
+    const connected = (wallet: GiftWallet, advance: GiftTask['advance']): GiftResult => {
       if (wallet.identity !== 'zklogin') {
         wallet.dispose?.()
         return { kind: 'ready' }
@@ -89,8 +89,7 @@ export const create_gift_runtime = ({
       (action: 'redeem' | 'open' | 'collect') =>
       async (state: GiftState): Promise<GiftResult> => {
         if (!state.status?.proof) throw new GiftError('invalid')
-        const { digest } = await require_wallet(state).gift.execute(action, state.status.proof)
-        return { kind: 'executed', proof: { ...state.status.proof, [action]: digest } }
+        return { kind: 'executed', status: await require_wallet(state).gift.execute(action, state.status.proof) }
       }
     const tasks: Record<GiftTask['kind'], (state: GiftState) => Promise<GiftResult>> = {
       boot: async () => {
@@ -115,8 +114,7 @@ export const create_gift_runtime = ({
       },
       transfer: async (state) => {
         if (!link || !state.status?.proof) throw new GiftError('invalid')
-        await require_wallet(state).gift.transfer(link, state.status.proof)
-        return { kind: 'executed' }
+        return { kind: 'executed', status: await require_wallet(state).gift.transfer(link, state.status.proof) }
       },
       redeem: write('redeem'),
       open: write('open'),

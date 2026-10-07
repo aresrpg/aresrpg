@@ -37,7 +37,10 @@ export const read_gift_history = async (
       collect: `${policy.game_type}::loot_box::LootClaimed`,
     },
   })
-  if (result.errors?.length || !result.data) throw new GiftError('unavailable')
+  if (result.errors?.length || !result.data)
+    throw new GiftError('unavailable', {
+      cause: new Error(result.errors?.map(({ message }) => message).join('; ') || 'Gift history is missing'),
+    })
   return result.data
 }
 

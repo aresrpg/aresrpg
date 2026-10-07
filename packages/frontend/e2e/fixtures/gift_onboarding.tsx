@@ -11,6 +11,7 @@ import { create_gift_runtime } from '../../src/airdrop/gift_runtime.ts'
 import type { GiftWallet } from '../../src/airdrop/gift_state.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
 import { env } from '../../src/env.ts'
+import { capture_audio } from '../support/audio_capture.ts'
 import '../../src/tailwind.css'
 
 // Real view/reducer/observer; only the external account and chain adapters are fixtures.
@@ -72,7 +73,7 @@ const create_wallet = (): GiftWallet => {
         await wait()
         const ledger = read_ledger()
         save({ ...ledger, stage: 'voucher', calls: [...ledger.calls, 'transfer'] })
-        return { digest: digests.redeem }
+        return status()
       },
       status: async () => {
         await wait()
@@ -95,11 +96,15 @@ const create_wallet = (): GiftWallet => {
           throw new Error('transaction outcome unknown')
         }
         confirm(action)
-        return { digest: digests[action] }
+        return status()
       },
     },
   }
 }
+capture_audio(({ source }) => {
+  if (source.endsWith('/level_up.ogg'))
+    document.body.dataset.victorySounds = String(Number(document.body.dataset.victorySounds ?? 0) + 1)
+})
 save(read_ledger())
 const runtime = create_gift_runtime({
   link: `${location.origin}/gift#$fixture-card`,

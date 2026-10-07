@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { GiftState, GiftTaskKind } from './gift_state.ts'
 
-export type GiftScreen =
-  'welcome' | 'working' | 'received' | 'opening' | 'reward' | 'reserved' | 'missing' | 'play' | 'later'
+export type GiftScreen = 'welcome' | 'working' | 'received' | 'opening' | 'reward' | 'reserved' | 'missing' | 'later'
 const STATUS_SCREENS = {
   missing: 'missing',
   available: 'working',
@@ -13,15 +12,14 @@ const STATUS_SCREENS = {
   collected: 'reward',
 } as const
 const SCENES = {
-  welcome: { step: 0, art: true, contents: true, help: 'welcome' },
-  working: { step: 0, art: true, contents: false, help: null },
-  received: { step: 1, art: true, contents: true, help: 'open_hint' },
-  opening: { step: 1, art: true, contents: true, help: null },
-  reserved: { step: 1, art: true, contents: false, help: null },
-  reward: { step: 1, art: true, contents: false, help: null },
-  missing: { step: 0, art: false, contents: false, help: null },
-  play: { step: 2, art: false, contents: false, help: null },
-  later: { step: 2, art: true, contents: false, help: null },
+  welcome: { step: 0, art: true, contents: true },
+  working: { step: 0, art: true, contents: false },
+  received: { step: 1, art: true, contents: true },
+  opening: { step: 1, art: true, contents: true },
+  reserved: { step: 1, art: true, contents: false },
+  reward: { step: 1, art: true, contents: false },
+  missing: { step: 0, art: false, contents: false },
+  later: { step: 2, art: true, contents: false },
 } as const
 
 const screen_for = (state: GiftState): GiftScreen => {
@@ -59,5 +57,5 @@ export const GIFT_ACTION_LABELS: Partial<Record<GiftTaskKind, string>> = {
   redeem: 'redeem_cta',
   open: 'open_cta',
   collect: 'collect_cta',
-  check: 'check_status',
+  check: 'continue_cta',
 }

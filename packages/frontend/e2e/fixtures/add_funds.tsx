@@ -25,6 +25,7 @@ const Fixture = () => {
           address={address}
           copy={copy}
           network={new URLSearchParams(location.search).has('testnet') ? 'testnet' : 'mainnet'}
+          warning={new URLSearchParams(location.search).has('warning') ? 'Add SUI to collect your gift.' : undefined}
           on_close={() => set_open(false)}
         />
       )}

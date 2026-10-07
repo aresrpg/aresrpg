@@ -1052,9 +1052,9 @@ without game events. Certified redemption tombstones prevent stale snapshots res
 Printed `/gift` URLs (also accepted on `/claim`) carry the zkSend bearer key only in their fragment,
 which survives Google login without reaching the server. The printed URLs remain unchanged. A dedicated sponsor pays for the fixed zkSend voucher transport;
 the QR key signs in the browser and never reaches the gateway. The 100 seed-authored Basecamp vouchers use the lightweight gift reducer and a Vercel
-`/api/gift` gateway for sponsored transfer, redemption, opening and collection. The page derives progress from gateway status after each operation. Restoring a session only checks
+`/api/gift` gateway for sponsored transfer, redemption, opening and collection. Confirmed SDK receipts advance the gift reducer directly; gateway status is used only for restoration and explicit recovery. Restoring a session only checks
 status; it does not automatically submit another transaction. Uncertain submissions use the existing SDK
-transaction tracking; there is no separate gift journal. Character creation and ordinary gameplay keep their normal SUI costs.
+transaction tracking; there is no separate gift journal. One explicit continuation checks current state and resumes the unfinished step. The gift page hands players to the normal game entry, which owns character selection and creation. Character creation and ordinary gameplay keep their normal SUI costs.
 
 Read-only gift status is public and does not request a wallet signature. For sponsorship, the gateway
 verifies an expiring wallet signature over the complete intent, resolves campaign membership
@@ -1071,7 +1071,7 @@ Gift status is a narrow SDK read exception: current voucher/claim custody and ex
 with bounded archived event hints for recovery. Historical single-gift receipts may use GraphQL after
 gRPC pruning; their validated fixed PTBs emit fewer than its fifty-event cap. Historical package calls
 must prove the same original game lineage. Signed write receipts still require gRPC.
-The shared box presentation runs charge, burst, carousel and reveal from the confirmed result. Each reel
+The shared box presentation preloads and decodes its box and reward images before starting charge, burst, carousel and reveal from the confirmed result. Failed artwork skips the carousel so a confirmed reward remains accessible. The reveal plays the existing level-up cue once; restoring a reward never replays it. Each reel
 contains the authored reward pool and lands on that result; one lead reel schedules overlapping recorded
 ticks for batches. Skip and teardown cancel its sounds, while reduced motion shows the result directly.
 The SDK administrative adapter creates links from previously retained bearer keys.

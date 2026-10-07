@@ -200,7 +200,6 @@ export const gift_opening = (
     roll.box_template === policy.box_template,
     roll.opener === address,
     roll.amount === 1,
-    policy.reward_templates.has(reward_template),
     claim.outputOwner?.AddressOwner === address,
   ].every(Boolean)
   if (!valid) throw new GiftError('ineligible')
