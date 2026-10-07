@@ -13,7 +13,7 @@
     "@aresrpg/immutable": "workspace:*",
     "@aresrpg/server": "workspace:*",
     "@aresrpg/ui": "workspace:*",
-    "@mysten/sui": "2.31.3",
+    "@mysten/sui": "2.34.0",
     "@napi-rs/canvas": "1.0.10",
     "ioredis": "^6.0.0"
   },
