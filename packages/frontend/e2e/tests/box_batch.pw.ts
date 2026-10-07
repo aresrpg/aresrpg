@@ -35,11 +35,17 @@ test('a stack asks for an amount, defaults to one, and opens a simultaneous grid
   await amount.fill('15')
   await expect(page.getByRole('button', { name: 'Consume', exact: true })).toBeDisabled()
   await amount.fill('14')
+  // Hold the presentation clock while asserting short phases, even on a busy CI runner.
+  await page.clock.install()
+  await page.clock.pauseAt(new Date(Date.now() + 1_000))
   await page.getByRole('button', { name: 'Consume', exact: true }).click()
   await expect(page.locator('body')).toHaveAttribute('data-openings', '1')
   await expect(page.locator('body')).toHaveAttribute('data-amount', '14')
   await expect(page.locator('.boxreveal__box-art')).toHaveCount(14, REVEAL_WAIT)
   await expect(page.locator('.boxreveal')).toHaveAttribute('data-phase', 'charging')
+  await page.clock.runFor(BOX_CHARGE_MS)
+  await expect(page.locator('.boxreveal')).toHaveAttribute('data-phase', 'burst')
+  await page.clock.runFor(BOX_BURST_MS)
   await expect(page.locator('.boxreveal__reward-name')).toHaveCount(14, REVEAL_WAIT)
   await expect(page.locator('.boxreveal__quantity').first()).toHaveText('×50')
   const columns = await page
