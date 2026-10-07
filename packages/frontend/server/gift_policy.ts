@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { living_content, type Pins } from '@aresrpg/sdk'
-import { giftcard_id, item_template_id } from '@aresrpg/sdk/seed-ids'
-import type { GiftPolicy } from '@aresrpg/sdk/gift-provenance'
-
+import { living_content, type Pins } from '../../sdk/src/pins.ts'
+import { giftcard_id, item_template_id } from '../../sdk/src/seed_ids.ts'
+import type { GiftPolicy } from '../../sdk/src/gift_provenance.ts'
 import distribution from '../../../seed/content/airdrop.json' with { type: 'json' }
 import items from '../../../seed/content/items.json' with { type: 'json' }
 

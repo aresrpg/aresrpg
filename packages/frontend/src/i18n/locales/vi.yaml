@@ -2625,6 +2625,7 @@ ui:
   mobile_use_item: 'Dùng / trang bị'
   mobile_language: 'Ngôn ngữ'
   mobile_menu: 'Menu'
+  mobile_rotate_title: 'Xoay ngang để chơi'
   mobile_rotate: 'Xoay thiết bị để chơi ở chế độ ngang.'
   character: Nhân vật
   spell_action: '{{name}}, cấp {{level}}, {{cost}} {{unit}}'

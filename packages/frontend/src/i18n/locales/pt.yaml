@@ -2622,6 +2622,7 @@ ui:
   mobile_use_item: 'Usar / equipar'
   mobile_language: 'Idioma'
   mobile_menu: 'Menu'
+  mobile_rotate_title: 'Gire para jogar'
   mobile_rotate: 'Gire seu dispositivo para jogar na horizontal.'
   character: Personagem
   spell_action: '{{name}}, nível {{level}}, {{cost}} {{unit}}'

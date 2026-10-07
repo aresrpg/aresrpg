@@ -2660,6 +2660,7 @@ ui:
   mobile_use_item: 'Benutzen / ausrüsten'
   mobile_language: 'Sprache'
   mobile_menu: 'Menü'
+  mobile_rotate_title: 'Drehen und spielen'
   mobile_rotate: 'Drehe dein Gerät, um im Querformat zu spielen.'
   character: 'Charakter'
   spell_action: '{{name}}, Stufe {{level}}, {{cost}} {{unit}}'

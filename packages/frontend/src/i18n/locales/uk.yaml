@@ -2658,6 +2658,7 @@ ui:
   mobile_use_item: 'Використати / спорядити'
   mobile_language: 'Мова'
   mobile_menu: 'Меню'
+  mobile_rotate_title: 'Поверніть, щоб грати'
   mobile_rotate: 'Поверніть пристрій, щоб грати в альбомному режимі.'
   character: 'Персонаж'
   spell_action: '{{name}}, рівень {{level}}, {{cost}} {{unit}}'

@@ -2625,6 +2625,7 @@ ui:
   mobile_use_item: '사용 / 장착'
   mobile_language: '언어'
   mobile_menu: '메뉴'
+  mobile_rotate_title: '가로로 돌려 플레이'
   mobile_rotate: '기기를 가로로 돌려 플레이하세요.'
   character: 캐릭터
   spell_action: '{{name}}, 레벨 {{level}}, {{cost}} {{unit}}'

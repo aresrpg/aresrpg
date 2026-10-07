@@ -1061,7 +1061,8 @@ from seed-derived voucher identities, and proves each descendant crate/claim thr
 It accepts fixed operations, never caller-built transaction bytes. The SDK composes each PTB, and the
 server-owned Enoki client supplies its exact Move targets and recipient per request. Both server and SDK
 validate the sponsored envelope and simulate before signing; sponsor gas never becomes player-paid gas
-in the wallet ledger. The Enoki private key exists only in the server environment.
+in the wallet ledger. The Enoki private key exists only in the server environment. Node function entry points import SDK
+source by relative path so Vercel rewrites TypeScript extensions; workspace exports retain their source extensions.
 Gift status is a narrow SDK read exception: current voucher/claim custody and exact receipt provenance,
 with bounded archived event hints for recovery. Historical single-gift receipts may use GraphQL after
 gRPC pruning; their validated fixed PTBs emit fewer than its fifty-event cap. Historical package calls

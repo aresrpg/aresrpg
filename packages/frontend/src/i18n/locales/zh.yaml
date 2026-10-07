@@ -2625,6 +2625,7 @@ ui:
   mobile_use_item: '使用 / 装备'
   mobile_language: '语言'
   mobile_menu: '菜单'
+  mobile_rotate_title: '横屏开始游戏'
   mobile_rotate: '请将设备横置以开始游戏。'
   character: 角色
   spell_action: '{{name}}，等级{{level}}，消耗{{cost}}{{unit}}'

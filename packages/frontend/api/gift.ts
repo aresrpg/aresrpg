@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { DEFAULT_NETWORK, resolve_pins } from '@aresrpg/sdk/pins'
-
+import { DEFAULT_NETWORK, resolve_pins } from '../../sdk/src/pins.ts'
 import { serve_gift } from '../server/gift.ts'
 
 export default {

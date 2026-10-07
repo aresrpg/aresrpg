@@ -2663,6 +2663,7 @@ ui:
   mobile_use_item: 'Use / equip'
   mobile_language: 'Language'
   mobile_menu: 'Menu'
+  mobile_rotate_title: 'Rotate to play'
   mobile_rotate: 'Rotate your device to play in landscape.'
   character: 'Character'
   spell_action: '{{name}}, level {{level}}, {{cost}} {{unit}}'

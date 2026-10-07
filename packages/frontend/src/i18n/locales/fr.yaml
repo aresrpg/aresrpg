@@ -2665,6 +2665,7 @@ ui:
   mobile_use_item: 'Utiliser / équiper'
   mobile_language: 'Langue'
   mobile_menu: 'Menu'
+  mobile_rotate_title: 'Tournez pour jouer'
   mobile_rotate: 'Tournez votre appareil pour jouer en mode paysage.'
   character: 'Personnage'
   spell_action: '{{name}}, niveau {{level}}, {{cost}} {{unit}}'

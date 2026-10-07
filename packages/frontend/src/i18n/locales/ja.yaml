@@ -2637,6 +2637,7 @@ ui:
   mobile_use_item: '使う / 装備する'
   mobile_language: '言語'
   mobile_menu: 'メニュー'
+  mobile_rotate_title: '横向きでプレイ'
   mobile_rotate: '端末を横向きにしてプレイしてください。'
   character: 'キャラクター'
   spell_action: '{{name}}、レベル{{level}}、{{cost}}{{unit}}'
