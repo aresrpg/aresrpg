@@ -486,9 +486,6 @@
     "packages/engine/src/fight_board_surface.ts": {
       "bake_fight_board_surface": [
         82
-      ],
-      "bake_fight_board_water_surface": [
-        22
       ]
     },
     "packages/engine/src/entity_labels.ts": {
@@ -1777,9 +1774,6 @@
     "packages/engine/src/fight_board_surface.ts": {
       "bake_fight_board_surface": [
         51
-      ],
-      "bake_fight_board_water_surface": [
-        10
       ]
     },
     "packages/engine/src/greedy_mesher.ts": {

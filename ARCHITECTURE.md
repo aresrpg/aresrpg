@@ -850,7 +850,10 @@ opens the normal entry modal; absence produces a localized speech caption naming
 The dungeon frame and membrane derive their shared offset from one seed profile; the offset is presentation only. Guide models, captions and pending appearance loads
 retire with their markers and world, and immersive fights exclude them with other world actors.
 
-Water uses one calm Genshin-derived material on every quality tier. A single sea-level plane
+World and fight water use one calm Genshin-derived material on every quality tier. Fight basins
+keep their hole-cell geometry and own their surface resources. They borrow the active sky and
+lights without applying world-board clearance to themselves. Inverse projection reconstructs
+bed depth for perspective, orthographic and blended cameras. A single sea-level plane
 reconstructs world-space bed depth from the rendered scene; there is no water sampling worker,
 heightfield mesh or legacy quality shader. Depth-checked refraction, moving normal maps, bounded
 caustics and shoreline foam share per-target color/depth copies. Those copies are released with
@@ -1285,6 +1288,10 @@ If the explanation needs two owners for one fact, the data model is wrong.
 
 ## Documentation ownership
 
+- `packages/frontend/public/llms.txt` indexes the public agent gameplay playbook under `public/agents/`.
+  These static text resources bypass both deployment and service-worker page fallbacks. They explain
+  the existing gameplay owners; live state remains on-chain and indexed. SDK examples under
+  `packages/sdk/examples/` are typechecked with that package and reuse its builders and the fight twin.
 - `seed/content/journal/`: English editorial articles and publication catalogue. `seed/icons/journal/`
   owns their cover artwork. Only explicitly published entries enter the journal's static output;
   drafts remain source-only. The journal deploys independently of game releases and seed transactions.

@@ -5,7 +5,7 @@
 import { DepthTexture, FramebufferTexture, LinearMipmapLinearFilter, RepeatWrapping, TextureLoader } from 'three'
 import {
   cameraFar,
-  cameraNear,
+  cameraProjectionMatrixInverse,
   cameraViewMatrix,
   cameraWorldMatrix,
   cameraPosition,
@@ -14,7 +14,7 @@ import {
   dFdy,
   float,
   mix,
-  perspectiveDepthToViewZ,
+  getViewPosition,
   positionView,
   positionWorld,
   screenUV,
@@ -30,7 +30,7 @@ import type { Node } from 'three/webgpu'
 
 import { create_viewport_capture } from './viewport_capture.ts'
 
-/** One world owns three small repeat textures and the shared color/depth copy nodes. */
+/** Each surface owns three small repeat textures and its color/depth copy nodes. */
 export const create_water_optics = () => {
   const loader = new TextureLoader()
   const load = (url: string) => {
@@ -60,15 +60,15 @@ export const create_water_optics = () => {
   const normal = vec3(slopes.x.mul(-0.7), 1, slopes.y.mul(-0.7)).normalize()
   const surface_normal = mix(vec3(0, 1, 0), normal, detail.mul(0.8).add(0.2)).normalize()
   const noise = texture(noise_map, uv.mul(0.91).add(vec2(0.01, 0.001).mul(time))).r
-  const scene_depth = (at: Node<'vec2'>) =>
-    perspectiveDepthToViewZ(depth_copy.sample(at), cameraNear, cameraFar).negate()
+  const scene_position = (at: Node<'vec2'>) => getViewPosition(at, depth_copy.sample(at), cameraProjectionMatrixInverse)
 
   const sample = () => {
     const eye_depth = positionView.z.negate()
-    const scene_eye = scene_depth(screenUV)
+    const bed_view = scene_position(screenUV).toVar()
+    const scene_eye = bed_view.z.negate()
     // Differentiate camera-relative positions. At distant world coordinates, subtracting
     // absolute positions loses subpixel precision and can collapse the reconstructed normal.
-    const bed_relative = cameraWorldMatrix.mul(vec4(positionView.mul(scene_eye.div(eye_depth.max(0.001))), 0)).xyz
+    const bed_relative = cameraWorldMatrix.mul(vec4(bed_view, 0)).xyz
     const bed_position = cameraPosition.add(bed_relative)
     const depth = scene_eye
       .greaterThan(cameraFar.mul(0.99))
@@ -86,7 +86,7 @@ export const create_water_optics = () => {
       .mul(smoothstep(0, 0.6, depth))
       .mul(detail)
     const distorted = screenUV.add(offset).clamp(0.001, 0.999)
-    const behind = scene_depth(distorted).sub(eye_depth)
+    const behind = scene_position(distorted).z.negate().sub(eye_depth)
     // Fade the offset at opaque foreground silhouettes instead of pulling dry objects into water.
     const refraction_uv = screenUV.add(offset.mul(smoothstep(0.05, 0.4, behind)))
     const scene_color = color_copy.sample(refraction_uv).rgb

@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable max-lines -- the WebGPU backend remains one cohesive device adapter pending a behavior-neutral extraction. */
 import {
+  Color,
   NeutralToneMapping,
   Matrix4,
   DirectionalLight,
@@ -53,7 +54,7 @@ import { create_upload_queue } from './upload_queue.ts'
 import { create_terrain_pool } from './terrain_pool.ts'
 import { create_board_occlusion, project_board_screen } from './board_occlusion.ts'
 import { is_submerged } from './underwater.ts'
-import { create_water } from './water.ts'
+import { create_water, create_water_surface } from './water.ts'
 import { couple_lighting, fill_dir_of, is_moon_key, shadow_direction_changed } from './lighting/sky_light_coupling.ts'
 import { create_sky_node, palette_for_sun } from './sky/sky_node.ts'
 import { create_hillaire_sky } from './sky/hillaire/hillaire_sky.ts'
@@ -166,7 +167,20 @@ export const create_webgpu_backend = async (
 
     const scene = new Scene()
     const camera = new PerspectiveCamera(70, 1, 0.1, 3000)
-    const fight_board = own(create_fight_board_layer({ scene, camera, canvas }))
+    const fight_board = own(
+      create_fight_board_layer({
+        scene,
+        camera,
+        canvas,
+        create_water: () =>
+          create_water_surface({
+            sky: { ...analytic_sky, sample_sky_dome: hillaire?.sample_sky ?? analytic_sky.sample_sky_dome },
+            clouds,
+            palette: water_palette,
+            lights: { key: sun, ambient: hemisphere },
+          }),
+      })
+    )
     let fight_swords: ReturnType<typeof create_fight_sword_layer> | null = null
     let audio_volume = 1
     const entities = own(create_entity_layer({ scene }))
@@ -193,7 +207,9 @@ export const create_webgpu_backend = async (
       world.liquid === undefined
         ? null
         : compiled_world.materials.entries[compiled_world.materials.id_for(world.liquid)]!
-    const water_palette = liquid_palette(liquid_material ? liquid_material.color : [0, 0, 0])
+    const water_palette = liquid_palette(
+      liquid_material ? liquid_material.color : (new Color(0x2e609e).toArray() as [number, number, number])
+    )
     const atmosphere = atmosphere_profile(world.atmosphere)
     const light_baseline = Object.freeze({
       sun_color: [sun.color.r, sun.color.g, sun.color.b] as const,
@@ -378,6 +394,7 @@ export const create_webgpu_backend = async (
         hillaire = null
         scene.backgroundNode = analytic_sky.background_node
         water.set_sky(analytic_sky.sample_sky_dome)
+        fight_board.set_water_sky(analytic_sky.sample_sky_dome)
         scene.fogNode = null
         sky_ready = true
         report_issue()
@@ -405,6 +422,7 @@ export const create_webgpu_backend = async (
         hillaire.set_tuning(atmosphere_overrides)
         scene.backgroundNode = replacement.background_node
         water.set_sky(replacement.sample_sky)
+        fight_board.set_water_sky(replacement.sample_sky)
         scene.fogNode = replacement.fog_node
         sky_ready = true
         report_issue()
@@ -415,6 +433,7 @@ export const create_webgpu_backend = async (
         hillaire = null
         scene.backgroundNode = analytic_sky.background_node
         water.set_sky(analytic_sky.sample_sky_dome)
+        fight_board.set_water_sky(analytic_sky.sample_sky_dome)
         scene.fogNode = null
         sky_ready = true
         report_issue({ code: 'advanced_sky_failed', detail: error instanceof Error ? error.message : String(error) })

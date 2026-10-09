@@ -1,0 +1,96 @@
+# Spending, trading, and market opportunities
+
+Keep the player's spending agreement alongside the plan. Reading market data is not permission to buy, sell, gamble, or transfer assets. Routine transactions can proceed within an explicit allowance; new commitments outside it need a decision.
+
+## Keep exact accounts
+
+One SUI equals 1,000,000,000 MIST. Use bigint or decimal strings for amounts. Never use floating-point SUI to construct payments. KARES is a separate asset; do not add token quantities to SUI or count an unverified token price as cash.
+
+Maintain an append-only private activity ledger with:
+
+- Network, deployment identity, address, objective, action, and attempt ID.
+- Intent time, object identities, approved maximum payment, and status.
+- Digest when known, certified success/failure, and signed net gas in MIST.
+- Purchase/payment amount, royalty, proceeds, and actual inventory changes.
+- Beginning/ending wallet balance, unresolved commitments, and any external deposits or withdrawals.
+
+Deduplicate by digest. One SDK receipt and a later websocket projection describe the same transaction. An action can involve several transactions, such as crush reveal and redemption; record every digest, not just the last returned by a helper. Never infer success from a closed dialog, a timeout, or a balance movement.
+
+`sdk.on_transaction` and `AuthSession.on_transaction` report certified outcomes, including failures, and gas when available. `gas_spent_24h` is a rolling gas summary, not a lifetime ledger, total spending, or profit. Gas is computation cost + storage cost − storage rebate. It can be negative; retain that value, but do not rely on future rebates to fund the next submission. Missing gas evidence is unknown, not zero.
+
+Track gross outflow separately from net cost. A sale or rebate does not silently expand the user's gross spending ceiling. Reserve enough liquid SUI for the next required action and settlement. Available wallet balance, kiosk sale proceeds awaiting collection, speculative inventory value, and future boss rewards are different things.
+
+Reconcile expected wallet change against certified flows. Deposits, withdrawals, fee sponsorship, another wallet client, and uncollected kiosk proceeds can explain differences. Stop discretionary spending if the difference remains unexplained.
+
+## Native marketplace costs
+
+Items, including resources, trade through native kiosk listings. Stackable paid lots are 1, 10, 100, or 1,000 units. Characters have their own eligibility rules; verify the live character can transfer, including level and equipment/custody restrictions.
+
+The buyer pays the listed price plus the policy royalty and gas. The current SDK policy setup uses 10% royalty with a 0.01 SUI minimum. Use `marketplace_royalty_bps`, `basis_points`, and `ROYALTY_FLOOR_MIST`; verify the active policy through the exact purchase simulation. The floor is per purchase, which can make tiny lots expensive.
+
+For a listed lot price P:
+
+    estimated royalty = max(floor(P × 1,000 / 10,000), 10,000,000 MIST)
+    acquisition cost = P + royalty + purchase gas
+    effective unit cost = acquisition cost / lot quantity
+
+The seller's listed price becomes kiosk proceeds; collection is another action. Do not subtract the buyer-paid royalty a second time from the seller's quoted proceeds. Include listing, delisting, and collection gas in a strategy's actual expenses. Use receipt effects to settle the final account.
+
+At a 0.02 SUI listed price, the 0.01 SUI minimum royalty alone adds 50% before gas. A visually cheap listing can therefore be an expensive source. Compare complete lots, not just the displayed unit asking price.
+
+## Research before recommending an opportunity
+
+Observe item types, then offers for the exact type/category through the authenticated market protocol. Pages contain bounded groups and offers; one page is not the entire market. Use fresh cursors and request identities. The server excludes your own public listings from its competitive offer ranking; inspect owned listings separately.
+
+For stackables, observe completed-sale price history. Calculate unit-weighted prices from total MIST divided by units, not the arithmetic mean of daily averages. Keep total units, sale count, recent activity, and history coverage with the price. A day without trades has no observed price. History begins when the indexer started collecting; a missing window does not prove zero demand.
+
+For equipment, compare actual rolled stats, damage lines, forging changes, and suitability for the target build. For pets, include feed power and diet. Unknown rolls must remain unknown; do not treat them as average or perfect. Asking prices are not completed transactions, and scarce listings do not prove buyers will pay them.
+
+Possible opportunities include cheaper useful gear, ingredient substitutions between acquisition routes, larger lots with lower effective fees, crafting an item with real demand, and reselling a genuinely underpriced exact object. Each needs a current cost model and a plausible exit.
+
+For a resale:
+
+    expected realized margin = conservative seller proceeds
+                               − purchase price − purchase royalty
+                               − all strategy gas − other costs
+
+For crafting:
+
+    expected output = sum of per-attempt success probabilities across job levels
+    expected margin = conservative proceeds from sellable output
+                      − all consumed materials − acquisition fees − all gas
+
+Also calculate a downside case: failed crafts, slower sales, a lower exit price, or unsold inventory. XP and enjoyment can justify a negative financial margin, but state that explicitly. “Gathered for free” ignores time, gathering gas, and the resource's alternative use or sale value.
+
+Present an opportunity with exact items, quantity, maximum all-in spend, comparable evidence, exit assumption, estimated margin, and the event that cancels it. Rank by the player's objective. Do not describe expected value as guaranteed profit.
+
+## Execute carefully
+
+Refresh the exact offer before buying. Match object ID, seller kiosk, price, quantity, stats, and observation generation. Use `marketplace.buy`; the SDK composes payment and required transfer-policy proofs. A price or custody mismatch requires a new plan, not an automatic higher bid.
+
+Keep exposure bounded by quantity and total SUI. Do not repeatedly buy because an old snapshot still shows the same bargain. After every purchase, reconcile the receipt and inventory, then request a fresh observation. An absent row on a bounded page does not prove it sold or disappeared.
+
+List only reviewed surplus. Preserve equipment, reserved ingredients, keys, healing, and agreed collection items. Collect proceeds through the SDK; do not report them as liquid wallet balance before collection is certified.
+
+Private trades use a distinct escrow/acceptance lifecycle. Inspect both participants, exact object quantities, SUI/KARES amounts, and current acceptance state before accepting. Rebuild the trade builder from each fresh `TradeRow`. If either offer changes, re-evaluate the deal. Verify settlement or cancellation by receipt and custody. Never substitute a direct transfer for the agreed escrow exchange.
+
+Private item claims still resolve the transfer policy. The SDK passes a zero sale price, so the minimum royalty can apply to each claimed item object, plus gas. Trading resources is not automatically fee-free. Reserve claim costs on both sides and complete any remaining claims after acceptance; an accepted trade is not proof that every asset has reached its destination.
+
+Do not perform wash trades to inflate rankings. Public-volume leaderboards are not a reason to burn the player's fees or coordinate misleading market activity.
+
+## Forging, boxes, and high-variance spending
+
+Forging consumes runes and can lose other stats. Evaluate the entire resulting item, not only the target line. Read the exact forging math, signed-stat eligibility, sink, and current rolled revision. Scribing grants no profession XP. Do not justify it as job leveling.
+
+Crushing destroys equipment and creates a durable claim, followed by reveal and redemption. Confirm exact gear identities and destruction scope first. Loot boxes also use durable claims. Never open or crush again to recover an unclaimed previous outcome. Read pending claims and complete the missing phase.
+
+Keep these activities outside ordinary progression automation unless the user explicitly selected them and set a loss limit. A better predictable gear purchase may beat repeated attempts at a perfect roll.
+
+## Source owners
+
+- [Marketplace SDK and minimum royalty](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/marketplace.ts)
+- [Lots and royalty basis points](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/immutable/src/marketplace.ts)
+- [Gas accounting](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/gas.ts)
+- [Price-history protocol](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/protocol/src/market_prices.ts)
+- [Trade actions](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/trade.ts)
+- [Aggregate craft rules](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/move-math/sources/craft_batch.move)

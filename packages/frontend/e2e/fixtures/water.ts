@@ -10,6 +10,7 @@ import {
 
 import { create_chunk_manager } from '../../src/game/core/chunks.ts'
 
+const fight = new URLSearchParams(location.search).has('fight')
 const floor = new URLSearchParams(location.search).has('shore') ? 60 : 59
 const world = compile_world_recipe({
   seed: 'water-regression',
@@ -69,6 +70,21 @@ engine.set_clouds_visible(false)
 engine.set_time_of_day(0.32)
 engine.set_audio_volume(0)
 engine.set_camera([5, 63, 0], [-5, 60, 0], { fov: 45 })
+if (fight) {
+  engine.set_fight_board({
+    width: 8,
+    height: 8,
+    cell_size: 2,
+    origin: { x: -8, y: 64, z: -8 },
+    cells: Array.from({ length: 64 }, (_, cell) => ({
+      cell,
+      x: cell % 8,
+      y: Math.floor(cell / 8),
+      kind: cell % 8 === 0 || cell % 8 === 7 || cell < 8 || cell >= 56 ? 'floor' : 'hole',
+    })),
+  })
+  engine.set_camera([16, 84, 16], [0, 64, 0], { ortho_blend: 1, ortho_height: 22 })
+}
 engine.start(() => {
   chunks.tick()
   const { resident, planning, queued, in_flight, evicting } = chunks.stats()

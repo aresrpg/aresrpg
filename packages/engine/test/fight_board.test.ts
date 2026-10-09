@@ -14,6 +14,8 @@ import {
   Vector4,
   WebGPUCoordinateSystem,
 } from 'three'
+import { MeshBasicNodeMaterial } from 'three/webgpu'
+import { vec3 } from 'three/tsl'
 
 import { create_fight_board_layer, fight_board_instances } from '../src/fight_board.ts'
 import { create_fight_blob_layer, fight_blob_cartoon_scale, plan_fight_blob } from '../src/fight_blobs.ts'
@@ -27,6 +29,11 @@ import {
   build_fight_board_slab,
 } from '../src/fight_board_surface.ts'
 import { write_orthographic_projection } from '../src/webgpu_backend.ts'
+
+const create_water = () => {
+  const material = new MeshBasicNodeMaterial()
+  return { material, illumination: vec3(1), set_sky: () => {}, dispose: () => material.dispose() }
+}
 
 const instance_transform = (mesh: InstancedMesh, index: number) => {
   const matrix = new Matrix4()
@@ -425,6 +432,7 @@ describe('fight board rendering projection', () => {
   test('renders pits as depth-tested cavities instead of overlays above the board', () => {
     const scene = new Scene()
     const layer = create_fight_board_layer({
+      create_water,
       scene,
       camera: new PerspectiveCamera(),
       canvas: { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1, height: 1 }) } as HTMLCanvasElement,
@@ -443,6 +451,41 @@ describe('fight board rendering projection', () => {
     expect(material.depthTest).toBeTrue()
     expect(material.depthWrite).toBeTrue()
     layer.dispose()
+  })
+
+  test('uses and releases the supplied water shader only for boards with basins', () => {
+    const scene = new Scene()
+    const surface = create_water()
+    let created = 0
+    let released = 0
+    let sky_changes = 0
+    surface.material.addEventListener('dispose', () => released++)
+    const layer = create_fight_board_layer({
+      scene,
+      camera: new PerspectiveCamera(),
+      canvas: {} as HTMLCanvasElement,
+      create_water: () => {
+        created++
+        return { ...surface, set_sky: () => sky_changes++ }
+      },
+    })
+    const board = {
+      width: 1,
+      height: 1,
+      cell_size: 2,
+      origin: { x: 0, y: 20, z: 0 },
+      cells: [{ cell: 0, x: 0, y: 0, kind: 'hole' as const }],
+    }
+    layer.set(board)
+    expect((scene.getObjectByName('board_water') as Mesh).material).toBe(surface.material)
+    layer.set_water_sky(() => vec3(1))
+    expect(sky_changes).toBe(1)
+    layer.set({ ...board, cells: [{ cell: 0, x: 0, y: 0, kind: 'floor' }] })
+    expect(released).toBe(1)
+    expect(created).toBe(1)
+    expect(scene.getObjectByName('board_water')).toBeUndefined()
+    layer.dispose()
+    expect(released).toBe(1)
   })
 
   test('keeps floor, blockers, pits, and both starting bands distinct', () => {
@@ -479,7 +522,7 @@ describe('fight board rendering projection', () => {
     const canvas = {
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 200 }),
     } as unknown as HTMLCanvasElement
-    const layer = create_fight_board_layer({ scene, camera, canvas })
+    const layer = create_fight_board_layer({ scene, camera, canvas, create_water })
     layer.set({
       width: 2,
       height: 1,

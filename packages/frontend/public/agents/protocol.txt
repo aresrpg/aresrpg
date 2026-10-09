@@ -1,0 +1,132 @@
+# Live state, timing, and transaction discipline
+
+The system has one authority chain: Move owns game truth, the indexer projects it, the server streams it, and the SDK submits writes. Seed authors content. An agent should preserve those boundaries.
+
+## Connect to the correct account
+
+Use the same deployment's SDK pins, network, and websocket endpoint. The production game endpoint is `wss://server.aresrpg.world`. Do not pair it with testnet pins. Obtain testnet/dev endpoints from that environment's configuration. Source branch `edge` can be ahead of production; use the matching release when integrating a deployed game.
+
+Browser integrations use the existing Wallet Standard/Enoki `AuthSession`. A standalone process needs its own authorized signer and must explicitly select the intended account. A Google game account is not interchangeable with an external wallet, and an OAuth session is not an exportable private key.
+
+One address has one live connection. A new agent connection can replace its browser session. Coordinate that handoff; do not build a reconnect war. `REPLACED` and `ALREADY_CONNECTED` are terminal takeover signals. Invalid proof, rate, or speed violations need diagnosis, not rapid retries.
+
+The websocket upgrade also requires an allowed `Origin` header. Production accepts the game's `https://aresrpg.world` origin. A standalone Bun client must set it explicitly; a default headless WebSocket without Origin receives HTTP 403 before any signature challenge. Use the environment's configured allowed origin for development. This admission header does not replace the account signature.
+
+The wire is JSON with a `type: 'packet/...'` discriminator:
+
+1. Open the websocket with `?address=<signing-address>`.
+2. Receive `packet/signature_request` with `payload`.
+3. Sign the UTF-8 personal message `aresrpg::${payload}` using the authorized account.
+4. Send `packet/signature_response` with the signer's returned `bytes` and `signature`.
+5. Wait for `packet/connection_accepted` and verify its address.
+6. Accumulate the baseline; `packet/characters` is the initial ready barrier after prerequisite account reads.
+
+Do not send application packets before acceptance. Use `parse_server_packet` and the typed `ClientPacket`/`ServerPacket` union from `@aresrpg/protocol`. Bigint chain values generally travel as decimal strings; preserve them.
+
+## Observe rather than repeatedly scan
+
+The baseline and deltas include characters, inventory, equipment, trades, listings, claims, Mastery, fight recovery, and nearby world state. Retain one state owner per domain. Account replacement clears the prior account's state and pending intents.
+
+Keep certified versions/tombstones when reconciling inventory and listing changes. A delayed snapshot must not resurrect an item spent by a newer receipt. Do not interpret a bounded market page or tracked-zone window as the complete global inventory. Initializing from a snapshot should not replay purchases, level celebrations, or automated claims.
+
+Useful observation packets include:
+
+| Intent | Result |
+| --- | --- |
+| `packet/market_observe` with `{ observation: { kind: 'offers', category, item_type, request } }` | Correlated `packet/market_slice` with live offers and pagination |
+| `packet/market_prices_observe` with `{ observation: { item_type, id } }` | `packet/market_prices` with recorded daily sales and supply |
+| `packet/leaderboard_observe` with `{ observation: { metric, id } }` | Current monthly standings and personal rank |
+| `packet/inspection_request` | One correlated player/equipment profile |
+| `packet/fight_preview` / `packet/spectate` | Eligible nearby fight state |
+
+Complete wire examples (send only after authentication):
+
+```json
+{"type":"packet/market_observe","observation":{"kind":"offers","category":"resource","item_type":"wheat","request":1}}
+```
+
+```json
+{"type":"packet/market_prices_observe","observation":{"item_type":"wheat","id":2}}
+```
+
+```json
+{"type":"packet/leaderboard_observe","observation":{"metric":"jobs","id":3}}
+```
+
+Send an explicit null observation when finished; repeat for each active observation type:
+
+```json
+{"type":"packet/market_observe","observation":null}
+```
+
+Use monotonically increasing request identities and ignore replies for superseded selections. Do not invent generic REST endpoints such as `/api/inventory` or `/api/market`. The SDK has narrow direct-read exceptions, not a broad player-state reader.
+
+World presence uses `packet/position` with the character ID, exact `character_checkpoint` string, chain-space pose, and riding state. A new chain checkpoint invalidates old movement provenance. Publish physically plausible movement within the protocol rate/speed limits. For headless world traversal, adapt the existing server-link/world behavior; a transaction script alone is not a navigation client.
+
+## Freshness and clocks
+
+`packet/server_info` supplies `indexing_lag`, `current_epoch`, `chain_timestamp_ms`, and `chain_sample_age_ms`. `packet/game_state` supplies the gameplay freeze state. Do not transact while readiness/freshness is unknown, indexing lag exceeds 300 checkpoints, or gameplay is frozen. Connection success alone is insufficient.
+
+A chain sample carries its age at receipt. Retain the monotonic receipt time and preserve that age. Interpolation can estimate elapsed chain time for planning, but a timer is only a wake-up hint. Stop authorizing actions when the sample becomes stale or the connection drops. Never use `Date.now()` or a changed device clock to unlock a transaction.
+
+For conservative scripted timing, wait until a newly observed chain timestamp itself satisfies the deadline. This may wait slightly longer than interpolation but avoids using a prediction as proof. Recheck all inputs on wake: character, world, checkpoint, target, custody, root, fight turn, and budget.
+
+### Travel calculation
+
+The chain's integer speed budget is 1,150 / 100,000 blocks per millisecond, or 11.5 blocks per second. With a pet both at the stored checkpoint and now, it is 1,725 / 100,000. This is a validation allowance, not a command to move the browser at that exact speed.
+
+Let D² = (target_x − checkpoint_x)² + (target_z − checkpoint_z)². Let L be the smallest integer with L² ≥ D². The earliest travel deadline is:
+
+    checkpoint_at_ms + ceil(L × 100,000 / speed_integer)
+
+This inversion includes the chain's floor on distance budget. An ordinary floating-point distance/speed estimate can unlock too early at rounding boundaries. Use the existing `travel_proof_ready` helper to check the final candidate timestamp. The example planner finds the first eligible millisecond with that helper rather than duplicating the formula.
+
+A future checkpoint timestamp represents a root. At the same location, its timestamp is already the earliest release; a new travel leg needs additional time after it. An unresolved protector is an obligation, not a timer worth waiting out. `checkpoint_world` must match the current world.
+
+### Other timing rules
+
+| Activity | Authority |
+| --- | --- |
+| Gather again or move after harvesting | New character checkpoint root and travel proof |
+| Refresh depleted zone population | Zone search timestamp + `ZONE_RESEARCH_TTL_MS` |
+| End Turn / timeout crank / force start | Fight checkpoint + generated `CONTRACT_CONSTANTS` |
+| Feed a pet | `floor(chain_timestamp_ms / 86,400,000)` greater than its last feed day |
+| Start/complete Mastery | Current Sui epoch and assignment fields |
+| Leaderboard reset | Returned UTC calendar-month reset timestamp |
+
+## Submit once and recover honestly
+
+Use SDK domain builders wherever possible. They hydrate unknown inputs, resolve custody, simulate the exact transaction before signing, submit once, and project receipts. Original package IDs identify types; latest package IDs are call targets. Read both from the selected pins; never swap them or hand-copy object addresses from an old guide.
+
+Random-consuming doors must remain terminal in their SDK composition. Do not attach a generic kiosk close or extra gameplay call after them. Serialize dependent writes using one SDK session; it maintains a previous-digest visibility barrier and receipt-fed object refs.
+
+Distinguish these outcomes:
+
+| Outcome | Response |
+| --- | --- |
+| Proven unsigned refusal or wallet cancellation | No chain execution; correct the cause and re-evaluate the intent |
+| Certified success with digest | Record it once, fold receipts, reconcile projections |
+| Certified on-chain failure with digest | Record paid gas and stop; inspect state before any new authorized attempt |
+| Submission response lost or incomplete | Retain the exact pending digest and recover its receipt; do not submit a replacement |
+| Projection delayed after success | Wait/reconcile; never repeat the successful action to force the UI to catch up |
+
+The SDK derives the digest before submission and recovers the exact transaction. A headless writer must supply durable `transaction_storage`; the browser's session storage does not exist in Bun. Preserve the SDK's pending record across process restarts. Do not delete it to unblock a script. Keep a separate durable activity ledger for spending and multi-step intents. Only one process may use a wallet's writer state at a time.
+
+Recovery can invalidate the intent that was queued before the outcome became known. Refresh game state and rebuild the plan. An error after a successful first phase does not mean the phase failed. Never blindly retry a whole craft, purchase, fight settlement, claim, or batch because its wrapper threw.
+
+## A bounded automation loop
+
+Each routine needs a target, stop conditions, quantity/turn/time limits, spending ceiling, and recovery policy. Persist intent and status before submission. After each result, consume only certified facts, observe fresh state, and decide again.
+
+Stop new writes on budget exhaustion, identity change, manual takeover, unexpected custody, stale/frozen state, missing timing evidence, or failed/uncertain execution. Complete necessary recovery only within the retained authority. Surface the smallest decision needed from the player rather than silently switching activities or increasing risk.
+
+Use push updates for live facts. Timers schedule inspection, not unconditional transactions. Finite gathering, crafting targets, and one dungeon run are better initial scripts than an unbounded “play forever” loop.
+
+## Source owners
+
+- [Wire contract and travel helper](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/protocol/src/packets.ts)
+- [Browser server-link reference](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/server_link.ts)
+- [Server websocket admission](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/index.ts)
+- [Clock reducer](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/modules/chain_clock.ts)
+- [Transaction execution and recovery](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/transaction_execution.ts)
+- [World travel authority](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/move-math/sources/world_map.move)

@@ -18,7 +18,7 @@
       "destination": "https://us.i.posthog.com/:path"
     },
     {
-      "source": "/((?!api/|ingest(?:/|$)|assets/|item/|classe/|sw\\.js$|workbox-[^/]+\\.js$).*)",
+      "source": "/((?!api/|ingest(?:/|$)|assets/|agents(?:/|$)|llms\\.txt$|item/|classe/|sw\\.js$|workbox-[^/]+\\.js$).*)",
       "destination": "/index.html"
     }
   ],

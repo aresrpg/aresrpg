@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Genshin-inspired calm water. Rendered terrain depth owns the shore, transmission and
-// caustics. One material and one plane serve every quality tier.
+// caustics. One surface shader serves world seas and fight basins on every quality tier.
 
 import { PlaneGeometry, DoubleSide, Mesh, type Scene, type DirectionalLight, type HemisphereLight } from 'three'
 import { MeshBasicNodeMaterial } from 'three/webgpu'
 import {
-  cameraPosition,
+  cameraProjectionMatrixInverse,
+  cameraWorldMatrix,
+  getViewPosition,
+  positionView,
+  screenUV,
   clamp,
   float,
   max,
@@ -54,7 +58,7 @@ const build_material = (
   cloud_light: Node<'float'>,
   palette: LiquidPalette,
   optics: ReturnType<typeof create_water_optics>,
-  board_occlusion: BoardOcclusion,
+  visibility: Node<'float'>,
   glows: readonly SceneryGlow[],
   reflection: ReturnType<typeof create_water_reflection> | null,
   frozen: boolean,
@@ -68,7 +72,10 @@ const build_material = (
   const daylight = smoothstep(-0.08, 0.18, sky.sun_direction.y)
   const diffuse_light = illumination
   const { normal, ripple } = optics
-  const view = cameraPosition.sub(positionWorld).normalize()
+  // Unproject the near plane so perspective, orthographic and blended fight cameras agree.
+  const view = cameraWorldMatrix
+    .mul(vec4(getViewPosition(screenUV, float(0), cameraProjectionMatrixInverse).sub(positionView), 0))
+    .xyz.normalize()
   // Reconstructed WORLD depth keeps the shore fixed while the camera moves and includes
   // actual voxel ledges and props. No interpolated heightfield can paint water onto dry sand.
   const { depth: optical_depth, scene_color, caustics, foam } = optics.sample()
@@ -115,7 +122,7 @@ const build_material = (
   const ice = frozen_shore(optical_depth, sky_color, diffuse_light)
   material.colorNode = frozen ? mix(water_color, ice.color, ice.amount) : water_color
   // Water exits during the first projection phase; terrain does not move until it is gone.
-  material.opacityNode = smoothstep(0.02, 0.2, optical_depth).mul(occlusion_fade_node(board_occlusion))
+  material.opacityNode = smoothstep(0.02, 0.2, optical_depth).mul(visibility)
   const liquid = frozen ? float(1).sub(ice.amount) : float(1)
   const transmission = float(1)
     .sub(mix(float(0.098), float(0.98), tint_t))
@@ -129,6 +136,63 @@ const build_material = (
   material.alphaTest = 0.02
   material.fog = true
   return material
+}
+
+/** Shared surface optics; each mounted surface owns its viewport captures and textures. */
+export const create_water_surface = ({
+  sky,
+  clouds,
+  palette,
+  lights,
+  visibility = float(1),
+  glows = [],
+  reflection = null,
+  frozen = false,
+}: Readonly<{
+  sky: WaterSky
+  clouds: Clouds
+  palette: LiquidPalette
+  lights: WaterLights
+  visibility?: Node<'float'>
+  glows?: readonly SceneryGlow[]
+  reflection?: ReturnType<typeof create_water_reflection> | null
+  frozen?: boolean
+}>) => {
+  const optics = create_water_optics()
+  // Read the same live lights as terrain. A shallow night orbit must not leave water at a fixed fraction of noon.
+  const key = reference('color', 'color', lights.key).rgb.mul(reference('intensity', 'float', lights.key))
+  const ambient = reference('color', 'color', lights.ambient).rgb.mul(reference('intensity', 'float', lights.ambient))
+  const direct = key.mul(sky.sun_direction.y.abs())
+  const illumination = ambient.add(direct).div(Math.PI)
+  const cloud_light = clouds.shadow_at(positionWorld.xz, positionWorld.y)
+  const surface_illumination = ambient.add(direct.mul(cloud_light)).div(Math.PI)
+  const material_for = (sample_sky_dome: WaterSky['sample_sky_dome']) =>
+    build_material(
+      { sun_direction: sky.sun_direction, sample_sky_dome },
+      cloud_light,
+      palette,
+      optics,
+      visibility,
+      glows,
+      reflection,
+      frozen,
+      surface_illumination
+    )
+  const material = material_for(sky.sample_sky_dome)
+  return {
+    material,
+    illumination,
+    set_sky: (sample: WaterSky['sample_sky_dome']) => {
+      const replacement = material_for(sample)
+      material.copy(replacement)
+      material.needsUpdate = true
+      replacement.dispose()
+    },
+    dispose: () => {
+      material.dispose()
+      optics.dispose()
+    },
+  }
 }
 
 export const create_water = ({
@@ -159,31 +223,21 @@ export const create_water = ({
       set_visible: () => {},
       dispose: () => {},
     })
-  const optics = create_water_optics()
-  // Read the same live lights as terrain. A shallow night orbit must not leave water at a fixed fraction of noon.
-  const key = reference('color', 'color', lights.key).rgb.mul(reference('intensity', 'float', lights.key))
-  const ambient = reference('color', 'color', lights.ambient).rgb.mul(reference('intensity', 'float', lights.ambient))
-  const direct = key.mul(sky.sun_direction.y.abs())
-  const illumination = ambient.add(direct).div(Math.PI)
-  const cloud_light = clouds.shadow_at(positionWorld.xz, positionWorld.y)
-  const surface_illumination = ambient.add(direct.mul(cloud_light)).div(Math.PI)
   const reflection =
     world.recipe.water_reflection === 'planar' ? create_water_reflection(scene, world.recipe.sea_level, quality) : null
 
   const surface_geometry = new PlaneGeometry(8192, 8192).rotateX(-Math.PI / 2)
-  const material_for = (sample_sky_dome: WaterSky['sample_sky_dome']) =>
-    build_material(
-      { sun_direction: sky.sun_direction, sample_sky_dome },
-      cloud_light,
-      palette,
-      optics,
-      board_occlusion,
-      world.recipe.scenery?.glows ?? [],
-      reflection,
-      world.recipe.water_surface === 'frozen_shore',
-      surface_illumination
-    )
-  const surface = new Mesh(surface_geometry, material_for(sky.sample_sky_dome))
+  const water_surface = create_water_surface({
+    sky,
+    clouds,
+    palette,
+    lights,
+    visibility: occlusion_fade_node(board_occlusion),
+    glows: world.recipe.scenery?.glows ?? [],
+    reflection,
+    frozen: world.recipe.water_surface === 'frozen_shore',
+  })
+  const surface = new Mesh(surface_geometry, water_surface.material)
   surface.frustumCulled = false
   surface.matrixAutoUpdate = false
   surface.position.y = world.recipe.sea_level
@@ -192,11 +246,8 @@ export const create_water = ({
   scene.add(surface)
 
   return Object.freeze({
-    illumination,
-    set_sky: (sample) => {
-      surface.material.dispose()
-      surface.material = material_for(sample)
-    },
+    illumination: water_surface.illumination,
+    set_sky: water_surface.set_sky,
     set_visible: (next: boolean) => {
       surface.visible = next
     },
@@ -210,9 +261,8 @@ export const create_water = ({
     dispose: () => {
       scene.remove(surface)
       reflection?.dispose()
-      optics.dispose()
+      water_surface.dispose()
       surface_geometry.dispose()
-      surface.material.dispose()
     },
   })
 }

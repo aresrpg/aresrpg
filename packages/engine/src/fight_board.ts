@@ -19,13 +19,14 @@ import {
   BOARD_CELL_VOID,
   BOARD_FLOOR_THICKNESS,
   bake_fight_board_surface,
-  bake_fight_board_water_surface,
   build_fight_board_pits,
   build_fight_board_slab,
   build_fight_board_water,
 } from './fight_board_surface.ts'
 import { bake_stone_texture, build_obstacle_rocks } from './fight_board_rocks.ts'
 import { create_fight_blob_layer } from './fight_blobs.ts'
+import { TRANSPARENT_ORDER } from './transparent_order.ts'
+import type { create_water_surface } from './water.ts'
 import type { FightBoardRender, FightBoardRenderCell } from './types.ts'
 
 export type FightBoardInstance = Readonly<{
@@ -91,7 +92,13 @@ export const create_fight_board_layer = ({
   scene,
   camera,
   canvas,
-}: Readonly<{ scene: Scene; camera: Camera; canvas: HTMLCanvasElement }>) => {
+  create_water,
+}: Readonly<{
+  scene: Scene
+  camera: Camera
+  canvas: HTMLCanvasElement
+  create_water: () => ReturnType<typeof create_water_surface>
+}>) => {
   const group = new Group()
   group.name = 'fight_board'
   scene.add(group)
@@ -103,7 +110,11 @@ export const create_fight_board_layer = ({
   let pick_cells: Readonly<Record<number, number>> | null = null
   let resources: BoardResources | null = null
 
+  let water_surface: ReturnType<typeof create_water_surface> | null = null
+
   const clear = (): void => {
+    water_surface?.dispose()
+    water_surface = null
     group.clear()
     resources?.geometries.forEach((geometry) => geometry.dispose())
     resources?.materials.forEach((material) => material.dispose())
@@ -167,18 +178,15 @@ export const create_fight_board_layer = ({
     holes.name = 'board_hole'
     holes.receiveShadow = true
 
-    // a hole is water: an OPAQUE still sheet just under the paving — the basin swallows whatever
-    // terrain or herbs the world grows beneath it instead of letting them show through
     const water_geometry = build_fight_board_water(mask, next.width, next.height, next.cell_size, next.origin)
-    const water_texture = bake_fight_board_water_surface(mask, next.width, next.height)
-    const water_material = new MeshStandardMaterial({
-      map: water_texture,
-      roughness: 0.14,
-      metalness: 0,
-    })
-    const water = new Mesh(water_geometry, water_material)
-    water.frustumCulled = false
-    water.name = 'board_water'
+    if (water_geometry.getAttribute('position').count > 0) {
+      water_surface = create_water()
+      const water = new Mesh(water_geometry, water_surface.material)
+      water.renderOrder = TRANSPARENT_ORDER.water
+      water.frustumCulled = false
+      water.name = 'board_water'
+      group.add(water)
+    }
 
     pick_cells = Object.freeze(
       Object.fromEntries(
@@ -186,16 +194,18 @@ export const create_fight_board_layer = ({
       )
     )
 
-    group.add(slab, obstacles, holes, water)
+    group.add(slab, obstacles, holes)
     resources = Object.freeze({
       geometries: Object.freeze([slab_geometry, obstacle_geometry, hole_geometry, water_geometry]),
-      materials: Object.freeze([slab_top, slab_side, obstacle_material, hole_material, water_material]),
-      textures: Object.freeze([surface_texture, stone_texture, water_texture]),
+      materials: Object.freeze([slab_top, slab_side, obstacle_material, hole_material]),
+      textures: Object.freeze([surface_texture, stone_texture]),
     })
   }
 
   return Object.freeze({
     set,
+    set_water_sky: (sample: Parameters<ReturnType<typeof create_water_surface>['set_sky']>[0]) =>
+      water_surface?.set_sky(sample),
     upsert_blob: blobs.upsert,
     remove_blob: blobs.remove,
     tick: blobs.tick,

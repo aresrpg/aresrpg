@@ -1,0 +1,103 @@
+# Tactical combat
+
+Combat is a deterministic state machine with committed randomness. Move enforces it; `@aresrpg/fight` is the TypeScript twin. Use the twin to inspect legal actions and simulate drafts. Never replace it with an approximate damage calculator for transaction planning.
+
+## Before engagement
+
+Inspect the actual mob group: identities, scaled levels, HP, resistances, AP/MP, and spell kits. Archimobs are separate stronger identities, not cosmetic names. Check your current HP, equipped weapon, allocated stats, raised spells, consumables for later recovery, and available gas for the whole fight including settlement.
+
+Choose encounters by expected success, turns, XP, loot relevance, and recovery cost. Do not equate “I meet the world entry level” with “I can beat every group here.” Start with a small safe sample and measure actual outcomes before increasing difficulty.
+
+For groups, agree on access, participants, roles, and who starts. Each participant must join legally before readiness closes placement. A player controls only their own seats. Six lifetime admissions per side limit the fight; rotating forfeited characters does not create unlimited reinforcements.
+
+## Fight lifecycle
+
+1. Engage the exact live group or join an eligible fight. Dungeon fights use the dungeon builder.
+2. Read the authoritative fight checkpoint and identify each owned seat.
+3. Place on allowed, unoccupied start cells. Cover useful lanes and avoid immediate enemy area damage.
+4. Ready after the intended team is seated. Final readiness can start combat atomically.
+5. For each owned active turn, simulate a legal ordered action sequence, then commit it once.
+6. Observe the certified boundary and reconcile the next checkpoint before planning again.
+7. At the terminal state, settle every owned seat with its correct loot plan and custody.
+8. Confirm returned characters, HP, XP, loot, and any pending recovery before continuing.
+
+Force start becomes eligible after the placement deadline, currently 60 seconds. End Turn has a minimum elapsed time, currently 3 seconds from the current turn start. Timeout crank for a living active fighter requires 45 seconds. Use `CONTRACT_CONSTANTS` and fresh chain time, not local wall time. Do not assume a dead active fighter uses the living timeout path; the normal SDK terminal door handles the post-action boundary.
+
+## Read the board and active state
+
+Use the checkpoint's cells, closed mask, queue, active pointer, living fighters, current AP/MP, effects, cast ledger, cooldowns, and source spell data. Cell IDs are fight-grid identifiers, not overworld coordinates. Keep integers as bigint in the fight runtime.
+
+The normal base pools are 6 AP and 3 MP, but gear and effects change them. The current state is the usable budget. A unit with enough MP may still suffer tackle losses when leaving an adjacent enemy. `fight_path_to` and `reachable_fight_cells` find geometric routes; applying the movement command determines actual tackle, trap, and movement effects.
+
+For every spell, inspect:
+
+- Learned level, AP cost, minimum/maximum range, and whether range is modifiable.
+- Line launch, line of sight, and free-cell requirements.
+- Casts per turn, casts per target, and cooldown.
+- Area shape, size, target filters, normal effects, and critical effects.
+- Push/pull/swap, healing, shields, buffs, removals, traps, glyphs, summons, or other state changes.
+
+Use `spell_target_cells`, `weapon_target_cells`, `preview_spell_cast`, and `preview_weapon_strike` for legal targeting and explanation. Use `project_spell_turn` and `project_weapon_turn` or a cloned `create_fight` runtime for actual sequential outcomes. A preview is neither submission nor authority.
+
+## Damage, defense, and effects
+
+Elemental damage uses the matching characteristic and raw damage, then the target's resistance and active effect rules. Integer rounding matters. Multi-line weapons can behave differently from one large hit. Inspect critical effects separately; a critical does not always mean multiplying normal damage by a fixed number.
+
+Resistance is element-specific and capped by the combat rules; weaknesses can increase damage. Shields/reductions, redirection, reflection, spell return, healing conversion, and immunity can change the target or result. Calculate through the twin instead of estimating from the tooltip headline. Healing scales differently from damage. Player drains heal from actual HP lost by the intended target; redirected or converted damage can yield no drain heal.
+
+AP/MP removal and tackle are contests, not guaranteed effects from their displayed magnitude. Evaluate both the expected benefit and the consequence of failing. Use the current state after each command; a buff, debuff, push, death, or displacement can invalidate the next action.
+
+Timed fighter effects count down at the affected fighter's turn end. A zero row remains active until that fighter's next start, where expiration precedes AP/MP modifiers, poison/regeneration, and glyph refresh. Glyph lifetimes and spell cooldowns have their own clocks. Do not implement one generic “decrement everything each round” rule.
+
+## Plan a turn
+
+First prevent a likely loss. Then remove enemy actions efficiently. A useful priority order is:
+
+1. Avoid lethal incoming damage to a critical teammate or yourself.
+2. Kill or disable a dangerous enemy before its next action.
+3. Preserve a safe end position and reachable allied support.
+4. Exploit elemental weaknesses, efficient areas, and AP combinations.
+5. Improve next-turn positioning without wasting current damage or healing.
+
+Compare attack-before-move and move-before-attack sequences. Moving first can leave range, trigger tackle, or consume the MP needed to escape. Focus fire often prevents more damage than spreading it, but a control spell or area finish can be better. Avoid damaging allies through area effects. Leave lanes for teammates and respect their declared plans.
+
+Bound the search. Enumerate legal targets for a few useful spells and weapons, plus safe movement destinations. Simulate candidate prefixes on independent clones. Rank survival first, then enemy actions prevented, useful damage/healing, control, and final position. Keep a short beam of alternatives until AP or a small search budget is exhausted. Do not block the real turn deadline chasing an exhaustive optimum.
+
+Evaluate uncertain future enemy turns with multiple scenarios if useful. Label them forecasts. The current committed turn stream can be simulated; future entropy is not yours to invent. `mode: 'local'` is for offline scenarios, not proof of future on-chain outcomes. In `mode: 'remote'`, a boundary may await certified seed witnesses; wait or replace from the indexed checkpoint rather than fabricating a seed.
+
+## Commit exactly the reviewed draft
+
+`fight.commit_turn({ fight, actions })` accepts ordered SDK actions:
+
+- `{ type: 'move', path: bigint[] }`
+- `{ type: 'cast', fighter_idx: bigint, spell: string, target_cell: bigint }`
+- `{ type: 'strike', fighter_idx: bigint, target_cell: bigint }`
+
+This is a different vocabulary from the simulator's `move_to`, `cast_spell`, and `weapon_strike` commands. The [action example](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts) maps them explicitly.
+
+The builder appends the terminal End Turn door. Do not send one transaction per spell or append a second boundary yourself. Do not append arbitrary calls after a Random-consuming terminal door. If a final strike kills the last enemy, use the same builder; Move decides whether to advance or seal the fight.
+
+Recheck fight ID, owned active seat, round, turn pointer, turn-start timestamp, and checkpoint freshness immediately before signing. Discard a stale draft. Courtesy websocket actions are only previews; a received draft never authorizes the agent to spend SUI or commit another player's turn.
+
+After a rejected unsigned draft, read current truth and replan. After an executed failure or uncertain submission, stop and inspect the digest. Do not “fix” a path and automatically submit again while the first outcome is unknown.
+
+## Rewards, group scaling, and settlement
+
+Group XP comes from the defeated mob pool, a party coefficient, level matching, each player's level share, and Wisdom. Personal damage is not an XP ownership meter. Very low-level members do not necessarily increase the party coefficient. Use `xp_award_of` for the actual terminal checkpoint instead of promising simple multiplied XP.
+
+Defeated mobs produce shared loot rolls; winning seats share successful drops. Adding players does not duplicate each mob's loot table. Plan with group allocation and prospective costs in mind. A low-damage support can still be worth bringing because it changes the chance or speed of victory.
+
+Use terminal source loot tables and the existing result planner as the model for settlement inputs. A winning seat needs the complete eligible loot-template set, not only the item you hoped to get. Group settlements by destination custody. Use `dungeon.settle` for dungeon progression and Mastery eligibility, and request boss reward preparation when the terminal fight is eligible. Do not default every encounter to a boss.
+
+Characters remain unavailable while held by a fight even if the UI animation has ended. Settlement returns custody and writes persistent HP/XP. Failed or interrupted settlement remains recoverable through `packet/fight_resolutions`; fully settled leftover fights can appear in `packet/closable_fights`. Resolve only the remaining work. Fight discovery expiring does not erase your seat or its owed settlement.
+
+Losing or forfeiting costs time, gas, and health. Explain that tradeoff before an unapproved retreat. When retreat was authorized, use the correct normal/dungeon forfeit path and verify the return. Report losses honestly; do not call a forfeit a win because the resource harvest survived.
+
+## Source owners
+
+- [Fight runtime exports](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/fight/src/index.ts)
+- [Simulator and types](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/fight/src/types.ts)
+- [SDK fight builder](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/fight.ts)
+- [Dungeon builder](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/dungeon.ts)
+- [Existing result and loot planning](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/modules/fight_result.ts)
+- [Move combat authority](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/move-combat/sources/combat.move)

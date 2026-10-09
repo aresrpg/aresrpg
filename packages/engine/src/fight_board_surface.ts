@@ -373,8 +373,7 @@ export const build_fight_board_pits = (
 /** how far below the walkable floor the water surface rests */
 export const BOARD_WATER_DROP = 0.22
 
-/** One flat sheet over every hole cell — the water surface of the basin, uv-mapped to the
- * board-spanning water bake so shore foam lands exactly on the basin's rim. */
+/** One flat sheet over every hole cell; the shared water shader uses world coordinates. */
 export const build_fight_board_water = (
   mask: BoardMask,
   width: number,
@@ -383,7 +382,6 @@ export const build_fight_board_water = (
   origin: BoardOrigin
 ): BufferGeometry => {
   const positions: number[] = []
-  const uvs: number[] = []
   const water_y = origin.y + BOARD_FLOOR_THICKNESS - BOARD_WATER_DROP
   for (let cell_y = 0; cell_y < height; cell_y += 1)
     for (let cell_x = 0; cell_x < width; cell_x += 1) {
@@ -392,10 +390,6 @@ export const build_fight_board_water = (
       const x1 = x0 + cell_size
       const z0 = origin.z + cell_y * cell_size
       const z1 = z0 + cell_size
-      const u0 = cell_x / width
-      const u1 = (cell_x + 1) / width
-      const v0 = cell_y / height
-      const v1 = (cell_y + 1) / height
       positions.push(
         x0,
         water_y,
@@ -416,62 +410,9 @@ export const build_fight_board_water = (
         water_y,
         z0
       )
-      uvs.push(u0, v0, u0, v1, u1, v1, u0, v0, u1, v1, u1, v0)
     }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2))
   geometry.computeVertexNormals()
   return geometry
-}
-
-/** The basin's water bake: deep still blue, ripple bands, and a foam rim wherever the water
- * meets a wall. Opaque on purpose — the basin must swallow whatever the world grows under it. */
-export const bake_fight_board_water_surface = (mask: BoardMask, width: number, height: number): DataTexture => {
-  const seed = board_seed(mask, width, height) ^ 0x77a1
-  const px = Math.max(16, Math.min(PX_PER_CELL, Math.floor(2048 / Math.max(width, height))))
-  const texture_width = width * px
-  const texture_height = height * px
-  const data = new Uint8Array(texture_width * texture_height * 4)
-  const DEEP = [0x2c, 0x64, 0x8c] as const
-  const hole_at = (x: number, y: number): boolean => read_board_cell(mask, x, y, width, height) === BOARD_CELL_HOLE
-  for (let y = 0; y < texture_height; y += 1) {
-    const cell_y = Math.floor(y / px)
-    for (let x = 0; x < texture_width; x += 1) {
-      const cell_x = Math.floor(x / px)
-      const offset = (x + y * texture_width) * 4
-      if (!hole_at(cell_x, cell_y)) {
-        data[offset + 3] = 255
-        continue
-      }
-      // still-water ripple bands: two slow interfering waves warped by patch noise
-      const warp = patch_noise(seed, x / (px * 1.6), y / (px * 1.6)) * 6
-      const bands = Math.sin((x + y) * 0.11 + warp) * 0.5 + Math.sin((x - y * 0.7) * 0.07 + warp * 0.6) * 0.5
-      const ripple = 1 + Math.max(0, bands - 0.55) * 0.5
-      // foam rim: distance in texels to the nearest non-water neighbour cell
-      const local_x = x - cell_x * px
-      const local_y = y - cell_y * px
-      const rim = Math.min(
-        hole_at(cell_x - 1, cell_y) ? px : local_x,
-        hole_at(cell_x + 1, cell_y) ? px : px - 1 - local_x,
-        hole_at(cell_x, cell_y - 1) ? px : local_y,
-        hole_at(cell_x, cell_y + 1) ? px : px - 1 - local_y
-      )
-      const foam_band = px * 0.09
-      const foam = rim < foam_band && hash2(seed ^ 0x3f, x, y) < 0.85 ? 1 + (1 - rim / foam_band) * 1.1 : 1
-      const brightness = ripple * foam
-      data[offset] = Math.min(255, DEEP[0] * brightness)
-      data[offset + 1] = Math.min(255, DEEP[1] * brightness)
-      data[offset + 2] = Math.min(255, DEEP[2] * brightness)
-      data[offset + 3] = 255
-    }
-  }
-  const texture = new DataTexture(data, texture_width, texture_height)
-  texture.colorSpace = SRGBColorSpace
-  texture.magFilter = LinearFilter
-  texture.minFilter = LinearMipmapLinearFilter
-  texture.generateMipmaps = true
-  texture.anisotropy = 8
-  texture.needsUpdate = true
-  return texture
 }

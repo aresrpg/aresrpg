@@ -133,7 +133,7 @@ export default defineConfig(({ mode }) => {
           globIgnores: ['logo-192.png', 'logo-512.png'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/api\//, /^\/ingest(?:\/|$)/],
+          navigateFallbackDenylist: [/^\/api\//, /^\/ingest(?:\/|$)/, /^\/agents(?:\/|$)/, /^\/llms\.txt$/],
         },
       }),
     ],

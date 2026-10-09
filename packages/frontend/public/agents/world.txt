@@ -1,0 +1,102 @@
+# Worlds, professions, dungeons, and goals
+
+Read [state and timing](https://aresrpg.world/agents/protocol.txt) before automating world actions. World maps and content describe possible encounters; live zone state determines what remains available.
+
+## Travel and discovery
+
+Chain coordinates are unsigned integers within a 100,000-block world. Its portal is (50,000, 50,000). Browser coordinates subtract 50,000; use the conversion helpers in `@aresrpg/immutable` rather than mixing spaces. Zones are 512-block squares; `zone_of` comes from `@aresrpg/protocol`.
+
+Each character retains a world checkpoint: x, z, timestamp, and pet flag. Every gathering, discovery, or engagement transaction proves enough chain time has elapsed to reach its action anchor. Moving the camera or sending a position packet does not move this checkpoint. Browser presence also has its own speed validation; do not send a teleport to pretend you walked.
+
+Use `character.search_zone` with `refresh: false` for first discovery and `true` for an existing zone. Existing zones refresh their population only after the two-hour TTL. Calling refresh earlier still costs a transaction; it does not replenish a depleted pack. A zone's seed and consumption bitmaps identify its generation. Re-evaluate every target if that generation changes.
+
+Read `packet/tracked_zones`, `packet/zones`, and `packet/zone_spawns`. Apply `live_mob_groups` and `live_resource_packs` from the protocol to the current consumption state. Preserve the server's group/member order and pack indexes when constructing actions. Do not choose a new random population locally.
+
+Search nearby eligible biomes and authored cities for the resource or mob family you need. Record depleted visits to avoid expensive loops. Increase exploration distance or change world only when the target and expected benefit justify the travel and discovery gas. Harder zones can contain stronger members of the same family; inspect actual scaled opponents.
+
+World entry level is a minimum requirement, not a safety recommendation. `character.join_world` proves travel to the current world's center and arrives at the destination center. Check the destination's content, your health/build, supply stock, and return plan before leaving. Read the world roster from `seed/content/worlds.json`; do not keep a separate hardcoded list of unlocks.
+
+## Gathering jobs
+
+There are three gathering professions: FARMER, HERBALIST, and MINER. Jobs belong to individual characters. Equip the matching tool. Resource tier gates use job level, not character level or tool level. Use the shared `tier_unlock_level`, `job_level_from_xp`, `gather_quantity_bounds`, and `gather_time_ms` helpers.
+
+One harvest consumes one node and executes one transaction. It grants job XP and resources immediately, then roots the character for the job-dependent duration. The new checkpoint timestamp is the deadline; do not add the duration twice. Wait for its confirmed consumption and checkpoint before gathering again.
+
+A harvest can award an additional rare resource (0.1%) and can trigger its authored protector (2%). The harvest is retained. A fired protector creates an obligation: call `character.resolve_ambush` with the retained protector identity, then handle the resulting fight. Waiting cannot improve its gather-moment HP cap. Recall, changing activity, and treating its very distant root as an ordinary cooldown do not solve it.
+
+Prepare for protectors before starting. Prefer a character capable of winning; otherwise agree on the cost and consequences of forfeiting. Do not automatically forfeit merely because the browser has an automation mode that can do so. A headless routine needs its own explicit player policy.
+
+Evaluate XP per minute, gas per harvested unit, resource demand, and travel overhead. A higher tier is not automatically better. Stop a run on protector, changed identity/world/generation, unavailable clock, exhausted budget, manual takeover, or failed/uncertain transaction. The browser's finite Collect All unlocks at job level 30; its broader journey automation has a separate local beginner-journey unlock.
+
+## Crafting and supply chains
+
+Dedicated craft jobs are FORGER, CARVER, TAILOR, JEWELER, TANNER, HANDYMAN, ALCHEMIST, and BAKER. Gathering professions also own some processing recipes, such as FARMER's flour. `craft_job_of(category)` owns category-derived jobs; otherwise use the recipe's authored job. Read `seed/content/recipes.json` and the current output template.
+
+Eligibility is based on distinct ingredient slots: two at job level 1, then three/four/five/six/seven/eight at levels 10/20/40/60/80/100. Use `craft_required_level` and the published recipe. Output item level is not the crafting gate.
+
+Every attempt consumes its full ingredients, including failures. Job XP is granted on attempts according to ingredient count and current job level. Recipes at least four slots below current capacity grant no XP. The success chance begins at 50%, gains 0.5 percentage points per job level, and caps at 99%. No craft is guaranteed solely by reaching maximum profession level.
+
+Stackable recipes allow up to 1,000 attempts per transaction. Unique equipment allows one. Batches account for XP level changes during the batch; their aggregate randomness is not a list of independent one-item outcomes. Use certified `attempts`, `successes`, and `job_xp_gained`. A convenient batch maximum is not a sensible spending target.
+
+For each target:
+
+1. Expand its recipe into needed quantities and current available holdings.
+2. Identify shortages; keep healing, keys, and reserved trade stock out of the available total.
+3. Compare buying each shortage against gathering, drops, and intermediate crafts.
+4. Include failure consumption, travel, protector risk, fees, gas, and player time.
+5. Choose the crafter with the right job and usable kiosk holdings.
+6. Arrange inputs in the recipe's canonical order, one selected stack per ingredient; merge fragments through the SDK where needed.
+7. Craft a bounded batch, reconcile actual output, then recalculate shortages.
+
+Do not use a retry-until-success loop. A successful transaction with zero crafted outputs is a valid paid outcome. If the player authorized further attempts, treat the next as a new budgeted decision with fresh holdings.
+
+The offline planner in [the cookbook](https://aresrpg.world/agents/sdk.txt) prints the real recipe and its sources. It does not pretend that authored resources are currently available or that quoted odds guarantee output.
+
+## Recall and preparation
+
+Recall potions return a character to the current world's origin; city consumables target their authored city. Read their template behavior. They cannot be used to escape an active dungeon run, a gathering root, or a pending protector.
+
+Inspect `recall_potion` in the recipe planner instead of copying a shopping list. Its three ingredient types currently require ALCHEMIST level 10. A fresh level-one alchemist cannot immediately craft it. Compare leveling through eligible recipes, buying the potion, or acquiring ingredients through trades. Carry supplies before a long trip when their expected time saving justifies their cost.
+
+Outside fights, HP regenerates from the persisted HP/time state; use the game's projection and fresh chain time. A loss or forfeit leaves one HP, while a character level-up restores maximum HP. Healing consumes inventory and gas; compare it with waiting. Never enter another fight based on an old full-health snapshot.
+
+## Parties and group combat
+
+A social party coordinates members; it does not automatically seat them. Every character needs a legal join transaction before combat starts. Coordinate world, anchor, access policy, HP, fight seat, and readiness. The SDK can batch multiple owned characters with compatible custody. Other wallets must authorize their own actions; never assume their signer is yours.
+
+Fight sides have six lifetime admission slots. A forfeit does not refund an admission slot. Ready only after the intended team has joined and placed. Group composition should complement damage, sustain, control, and positioning. More characters can increase expense and divide loot; they do not multiply every drop roll.
+
+## Dungeons
+
+Find the dungeon's city anchor in world content. Read the ordered rooms and matching key in `seed/content/dungeons.json`. Inspect the entire run, especially the boss, rather than judging only room one. Carry healing, choose useful gear/spells, reserve settlement gas, and coordinate every participant's entry/key requirements.
+
+The flow is `dungeon.enter` → `dungeon.start_fight` or `dungeon.join_fight` → ordinary fight turns → `dungeon.settle` → inspect the next room. Use the dungeon-specific join and settlement methods. A live run is character state, not a separate randomly invented instance. Joining requires compatible run/room state.
+
+Between rooms the character returns to kiosk custody. Healing, equipment preparation, allocation, and reset consumables are possible when their normal rules permit. Recall and city travel remain refused throughout the run. To stop, use the explicit dungeon give-up/abandon flow and inspect the resulting state; keys already spent are not a refundable deposit.
+
+Settlement belongs to the actual terminal checkpoint. Use its complete loot plan and final-room/boss identity. Eligible boss fights may award KARES, but an unfunded reward economy pays zero. Do not promise a fixed SUI return or count unclaimed rewards as spendable cash.
+
+## Mastery: the epoch quest
+
+Mastery is one address-wide quest per Sui epoch, not one per character or UTC day. Choose an accessible world before requesting its random city dungeon. Prefer a world where the party can complete any possible assignment before rollover. A higher accessible world offers more points but may turn an achievable quest into a failed expedition.
+
+World entry levels 1/51/101/151/200 correspond to rewards of 1/2/3/4/5 points. Read the assignment's snapshotted reward, world, dungeon, epoch, and start time. The qualifying final-room fight must be created in that world strictly after the assignment. An old parked boss victory cannot be claimed retroactively.
+
+Any owned qualifying winner may complete it. Include the eligible Mastery identity and seat in `dungeon.settle` so completion precedes removal of the fight proof. Check the certified result. Missed epochs do not erase earned points. Offers may exchange points or explicitly selected KARES; KARES spending does not increase earned points. Do not buy rewards using a different currency from the player's choice.
+
+## Leaderboards
+
+Rankings are address-wide and reset at the UTC calendar-month boundary. Metrics are `xp`, `kills`, `dungeons`, `jobs`, `marketplace`, `kolizeum`, `zones`, `feeding`, and `gathering`. Observe the selected metric and your own rank through the protocol. Use the returned reset time and timestamp.
+
+Earned XP stays with the earning address across character sales. Public market volumes count; private trades do not. First zone discovery counts differently from repeatedly refreshing the same zone. Feeding and gathering measure actual actions/resources; holdings alone do not earn those scores. Verify the current metric owner before optimizing it.
+
+Set a reachable target and estimate the gap from measured score gain per activity. Recheck the competition periodically rather than polling constantly. Suggest a change if the remaining month, budget, or team makes the target unrealistic. Kolizeum and wagered competition require a separate risk agreement; ranking ambition never overrides spending limits.
+
+## Source owners
+
+- [World content](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/seed/content/worlds.json)
+- [Recipes](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/seed/content/recipes.json)
+- [Dungeon content](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/seed/content/dungeons.json)
+- [Profession math](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/immutable/src/experience.ts)
+- [Gathering authority](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/move/sources/gathering.move)
+- [Mastery actions](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/mastery.ts)

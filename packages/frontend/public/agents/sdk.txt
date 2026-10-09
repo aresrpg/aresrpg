@@ -1,0 +1,173 @@
+# SDK scripting cookbook
+
+Use scripts for bounded, measurable work: inspect recipes, rank acquisition choices, calculate travel eligibility, evaluate combat drafts, or execute an approved finite routine. Keep observation, planning, authorization, and execution separate.
+
+## Get the source
+
+The SDK and fight simulator are public source workspace packages. Their `private` package flags prevent treating them as independently published npm packages. Use the repository's Bun version and lockfile. Select a release compatible with the deployed pins/server; `edge` links below are source navigation, not proof that its newest content is already live.
+
+In a fresh local checkout:
+
+```sh
+git clone https://github.com/aresrpg/aresrpg.git
+cd aresrpg
+bun install --frozen-lockfile --ignore-scripts
+bun packages/sdk/examples/agent_plan.ts recall_potion 1
+bun packages/sdk/examples/agent_plan.ts recall_potion 10 5
+bun run --cwd packages/sdk typecheck
+```
+
+The planner requires no wallet, network request, or payment. Its arguments are output item type, current job level, and attempted quantity. It prints eligibility, required job/level, initial displayed success chance, initial XP per attempt, ingredients, and authored sources. At job level one it correctly marks recall potions ineligible. At level ten it expands the materials for five attempts, not five guaranteed outputs.
+
+The displayed percentage uses the existing UI helper, which floors fractional percentages. Batch odds and XP can change as attempts level the job. Inspect the exact aggregate craft owner for financial modeling. Authored source rows do not establish live availability: a listed mob may belong to a dungeon or protector encounter, and a resource row may have no spawning biomes/cities.
+
+- [Offline planner source](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_plan.ts)
+- [Typed action/simulation source](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts)
+
+## Choose a signing integration
+
+In the browser, use the existing authenticated `AuthSession` from `@aresrpg/sdk/auth`. It already exposes `character`, `fight`, `dungeon`, `marketplace`, `party`, `mastery`, trade builders, balance reads, personal-message signing, and transaction observation. Do not read a private wallet key out of the browser.
+
+In a trusted local process, `SDK` accepts a Sui `Signer` or an explicit address plus `sign_transaction` adapter. Supply matching network/pins and a compatible gRPC endpoint. A read-only SDK can use an address without a signer. An agent must obtain player authorization before connecting a signer or replacing a live browser session.
+
+This integration fragment assumes the host has already supplied `signer`, `network`, `pins`, `rpc_url`, and durable `transaction_storage`:
+
+```ts
+import { SDK } from './packages/sdk/src/client.ts'
+import { create_agent_actions } from './packages/sdk/examples/agent_actions.ts'
+
+const address = signer.toSuiAddress()
+const sdk = SDK({ signer, network, pins, rpc_url, transaction_storage })
+const actions = create_agent_actions(sdk, address)
+const balance_mist = await sdk.read_sui_balance()
+```
+
+Paths above are for a script at the repository root. Inside a workspace, use declared package exports where available. Some domain builders are reached through `AuthSession` or source-relative imports; inspect `packages/sdk/package.json` before inventing subpath imports such as `@aresrpg/sdk/fight`.
+
+`create_agent_actions` demonstrates construction of existing domain builders with a personal-kiosk loader. It adds no budget enforcement, wallet permission UI, autonomous loop, or general read client. Its methods perform real transactions. Merely constructing it or calling the offline preview does not.
+
+A headless writer's `transaction_storage` must implement synchronous `getItem`, `setItem`, and `removeItem`, preserving the SDK's exact string values across restarts. Use a private, durable store with atomic writes and one writer process per wallet. Persist before submission; propagate storage failures. Do not replace this with an in-memory Map for paid unattended work. Do not store signatures or signed bytes in the activity journal.
+
+## Obtain live inputs
+
+Implement the small authenticated websocket handshake described in [the protocol guide](https://aresrpg.world/agents/protocol.txt), or adapt the existing `server_link.ts`. For a Sui signer, the proof operation is:
+
+For a standalone Bun client targeting production, construct the connection with its required origin:
+
+```ts
+const url = new URL('wss://server.aresrpg.world/')
+url.searchParams.set('address', address)
+const socket = new WebSocket(url, { headers: { Origin: 'https://aresrpg.world' } })
+```
+
+This constructor overload is Bun-specific; browser WebSocket supplies its page origin. When the configured server issues its challenge, sign and send:
+
+```ts
+const proof = await signer.signPersonalMessage(
+  new TextEncoder().encode(`aresrpg::${challenge_payload}`)
+)
+socket.send(JSON.stringify({ type: 'packet/signature_response', ...proof }))
+```
+
+Only sign a challenge from the configured trusted server. Check acceptance and baseline readiness. Retain the current typed rows and freshness state. `packet/fight_state` supplies a machine document and player-source rows; it is not already a `HydratedFightCheckpoint`. Follow the frontend's fight hydration owner to attach authored spells and normalize integers before simulation. Never cast wire JSON to the hydrated type just to satisfy TypeScript.
+
+Source content comes from the matching checkout's `seed/content` files. Current custody/populations/listings come from the stream. The SDK resolves transaction references. Do not scrape rendered labels to derive object IDs or create a second broad RPC inventory scanner.
+
+## Existing action map
+
+The names below are methods on the authenticated session or the example's `actions` object. Read their TypeScript signatures for exact input types.
+
+| Intent | Existing method |
+| --- | --- |
+| Create character | `create_character(input, first_world)` |
+| Equip or unequip a reviewed set | `character.equip` |
+| Allocate capital / raise a spell | `character.raise_stats` / `character.raise_spell` |
+| Change world / discover a zone | `character.join_world` / `character.search_zone` |
+| Harvest / resolve protector | `character.gather` / `character.resolve_ambush` |
+| Craft / consume / feed | `character.craft` / `character.use_consumable` / `character.feed_pet` |
+| Start/join/place/ready fight | `fight.engage` / `fight.join` / `fight.place` / `fight.ready` |
+| Submit a complete turn | `fight.commit_turn` |
+| Timeout / forfeit / settle | `fight.crank` / `fight.forfeit` / `fight.settle` |
+| Enter dungeon / start or join room | `dungeon.enter` / `dungeon.start_fight` / `dungeon.join_fight` |
+| Progress dungeon / leave | `dungeon.settle` / `dungeon.give_up_fight` / `dungeon.abandon` |
+| Buy/list/delist/collect | `marketplace.buy` / `marketplace.list` / `marketplace.delist` / `marketplace.collect` |
+| Start Mastery / redeem offer | `mastery.start` / `mastery.redeem` |
+| Invite/accept party | `party.invite` / `party.accept` |
+| Operate a current trade | `trade(fresh_trade_row)` then its typed methods |
+
+The browser session also exposes Kolizeum, friends, giftcards, finance, and other specialized actions. Consult its exact surface before using them. The example factory intentionally covers the core playbook; it does not impersonate every `AuthSession` facility.
+
+## Example: one approved gather
+
+Given a fresh owned character row, a current live resource pack, and the matching published resource row:
+
+```ts
+const result = await actions.character.gather({
+  character_id: character.id,
+  custody: { kiosk: character.kiosk, kiosk_cap: character.kiosk_cap },
+  world: character.world,
+  zone_x,
+  zone_z,
+  pack_index: pack.index,
+  item_type: resource.item_type,
+  rare_item_type: resource.rare_item_type || null,
+  existing: null,
+  existing_rare: null,
+})
+```
+
+This is an integration fragment, not a complete loop: prove current world, tool/job eligibility, generation, travel, readiness, and spending before calling it. `existing: null` permits a new stack instead of guessing a merge target. Prefer a verified available compatible stack when practical. After success, log the digest and await the new checkpoint/consumption. If `ambushed` is true, stop harvesting and resolve the retained protector policy.
+
+## Example: calculate when to act
+
+`earliest_travel_ms(character, { x, z })` from `agent_plan.ts` finds the first integer millisecond accepted by the protocol's existing travel predicate. It returns null for missing/mismatched checkpoint state, out-of-world coordinates, active dungeon runs, or a pending protector. It is a travel calculation, not complete authorization: also require free custody, fresh connected state, live target, and budget.
+
+Schedule an inspection around that result. Execute only after a fresh observed chain timestamp satisfies `travel_proof_ready` for the latest character and target. A checkpoint change invalidates the previous deadline. Keep the original packet's sample age; receiving cached clock data does not make it new.
+
+## Example: plan and commit a combat turn
+
+Use a fully hydrated, current authoritative checkpoint. Derive the active seat from its queue and verify ownership. Use target/path helpers to construct a short array of SDK actions, then:
+
+```ts
+import { preview_turn } from './packages/sdk/examples/agent_actions.ts'
+
+const predicted = preview_turn(checkpoint, planned_actions)
+```
+
+The helper clones the checkpoint, maps SDK actions to simulator commands, and rejects illegal actions or missing witnesses. It previews the current ordered actions only; it does not generate future randomness, finish the turn, or spend anything. Compare independent candidates by survival, useful damage/control, and end position. Inspect `predicted.contract` to score outcomes.
+
+After the player policy, fresh turn identity, minimum deadline, and spending checks pass:
+
+```ts
+const result = await actions.fight.commit_turn({
+  fight: checkpoint.contract.id,
+  actions: planned_actions,
+})
+```
+
+The SDK appends the correct terminal boundary. Observe `result.turn_witnesses` and the authoritative stream. Never reuse the same action array against a different turn or submit it again because the receipt arrived before the server update.
+
+## Example: bounded crafting
+
+Run the planner first. Read the published recipe and arrange `input_item_ids` in its actual ingredient order. Select available holdings in the crafter's custody and provide explicit merges for fragments. Then call `character.craft` with `character_id`, `custody`, `output_type`, `input_item_ids`, `existing`, `attempts`, and optional `merges`.
+
+Use `existing: null` for a unique output. For stackables, a verified compatible destination may be supplied. Spend only ingredients for the approved attempted quantity. Record actual successes and job XP, then recalculate the remaining target. Do not interpret a zero-success receipt as a network failure.
+
+## Spending observation and stop behavior
+
+Subscribe to `sdk.on_transaction` before the first paid operation. Its callback receives `{ digest, outcome, gas_mist? }`; persist those certified facts by digest. The host must stop further writes if ledger persistence fails. Treat quoted payment and actual balance effects separately from gas.
+
+Do not use `Promise.all` for dependent wallet actions. Do not add catch-and-retry around a domain method. The SDK already handles its narrow proven-unsigned preparation cases; unknown or executed outcomes must enter recovery. A loop should select a new intent only after its previous intent is reconciled.
+
+When extending beyond the examples, first exercise pure planning against fixtures. Typecheck with the repository packages. Test an explicitly authorized testnet account before mainnet execution. A successful typecheck proves API compatibility, not combat success, profitability, or permission to spend.
+
+## Source navigation
+
+- [SDK entry and options](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/client.ts)
+- [Authenticated session surface](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/auth.ts)
+- [Character action inputs](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/character_actions.ts)
+- [Fight source hydration](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/content/fight_sources.ts)
+- [Wire checkpoint assembly](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/modules/fight_observer.ts)
+- [Fight simulator entry](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/fight/src/index.ts)
+- [Generated Move doors](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/doors.gen.ts)
+- [SDK export map](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/package.json)

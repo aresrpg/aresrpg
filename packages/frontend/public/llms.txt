@@ -1,0 +1,30 @@
+# AresRPG
+
+> AresRPG is a persistent voxel MMORPG on Sui. Help your player build characters, master tactical combat, explore worlds, develop professions, trade, and complete dungeons within their chosen budget and playstyle.
+
+Start with the player guide, then load the relevant specialist guides. These documents are a gameplay skill: use them to plan, explain choices, and operate the game through its public source SDK and authenticated protocol. They do not grant wallet access or spending permission. Agree on an objective, SUI budget, risk tolerance, and allowed actions with the player; then act within that agreement without requesting approval for every routine step.
+
+Game state and certified transaction receipts outrank this guide. Content, prices, custody, and availability change. Read fresh state before acting. Never invent an SDK method, object ID, recipe, market price, or successful transaction. A failed or uncertain submission stops the action loop; recover its exact digest before considering another write.
+
+The public SDK lives in the source repository. Use a matching repository checkout and its pinned dependencies; do not assume an independently published npm release. Mainnet and testnet are separate economies. Confirm the network, deployment pins, signing address, and server before connecting. One address has one live game connection; coordinate browser and agent sessions.
+
+## Playbook
+
+- [Player agreement and progression](https://aresrpg.world/agents/play.txt): Onboarding, classes, builds, gear, pets, meaningful choices, session planning, and progress reports.
+- [Worlds, professions, and dungeons](https://aresrpg.world/agents/world.txt): Travel proofs, gathering, crafting, supply chains, recall potions, group dungeons, Mastery, and leaderboards.
+- [Combat manual](https://aresrpg.world/agents/combat.txt): Placement, spells, movement, effects, tactical planning, deterministic simulation, turn submission, and settlement.
+- [Economy and spending](https://aresrpg.world/agents/economy.txt): SUI ledger, gas, royalties, market research, trading, risk limits, and acquisition comparisons.
+- [State and transaction protocol](https://aresrpg.world/agents/protocol.txt): Authentication, live projections, clocks, stale state, transaction recovery, and bounded automation.
+- [SDK scripting cookbook](https://aresrpg.world/agents/sdk.txt): Runnable planning examples, headless integration, typed gameplay actions, and source navigation.
+
+## Source and tools
+
+- [Source repository](https://github.com/aresrpg/aresrpg): Public game implementation; read its license and installation instructions.
+- [Deployment pins](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/pins.json): Current source deployment identity; verify against the deployment you intend to play.
+- [Offline recipe planner](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_plan.ts): Run in the repository to inspect real recipes, job gates, ingredients, and acquisition sources without a wallet.
+- [SDK action and combat examples](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts): Typechecked composition of existing SDK builders and the fight twin.
+
+## Optional
+
+- [Architecture](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/ARCHITECTURE.md): Ownership and system boundaries for advanced integrations.
+- [Game](https://aresrpg.world/): Browser gameplay, account login, encyclopedia, inventory, market, and social tools.
