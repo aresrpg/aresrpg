@@ -3,9 +3,9 @@
 
 import { Button } from '@aresrpg/ui'
 import { AtSign, RefreshCw } from 'lucide-react'
+import { display_suins_name } from '@aresrpg/immutable'
 
 import { copy_text, type AppCopy } from '../i18n/copy.ts'
-import { display_suins_name } from '../leaderboards/presentation.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 const SuinsMessages = ({ copy }: Readonly<{ copy: AppCopy }>) => {

@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test'
 
+test('equipped profession and level fit the jobs rail without horizontal scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/demo#ui')
+  await page.locator('.ui-workshop-navigation').getByRole('button', { name: 'Jobs', exact: true }).click()
+  const rail = page.locator('.jobs__list')
+  const equipped = rail.getByRole('button', { name: /Herbalist.*Equipped.*Lv 100/ })
+  await expect(equipped).toBeVisible()
+  expect(await rail.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  expect(
+    await equipped.locator('.jobs__list-name').evaluate((element) => element.scrollWidth <= element.clientWidth)
+  ).toBe(true)
+})
+
 test('recipe groups separate job-level access while locked recipes remain inspectable', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/demo#ui')

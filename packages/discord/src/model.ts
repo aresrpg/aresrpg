@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { fileURLToPath } from 'node:url'
 
-import { roll_quality, stat_names } from '@aresrpg/immutable'
+import { display_address, display_suins_name, roll_quality, stat_names } from '@aresrpg/immutable'
 
 import items from '../../../seed/content/items.json'
 import mobs from '../../../seed/content/mobs.json'
@@ -39,8 +39,10 @@ export const actors = (notification: Notification): readonly string[] => {
       return notification.winners
   }
 }
-const player = (names: Readonly<Record<string, string | null>>, address: string) =>
-  names[address] ?? `${address.slice(0, 6)}…${address.slice(-4)}`
+const player = (names: Readonly<Record<string, string | null>>, address: string) => {
+  const name = names[address]
+  return name ? display_suins_name(name) : display_address(address)
+}
 const message = (template: string, values: Readonly<Record<string, string>>) =>
   interpolate(template, Object.fromEntries(Object.entries(values).map(([key, value]) => [key, markdown(value)])))
 const sale_announcement = (

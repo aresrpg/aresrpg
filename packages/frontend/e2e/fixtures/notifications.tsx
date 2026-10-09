@@ -93,7 +93,7 @@ const Card = ({ kind, names }: Readonly<{ kind: Kind; names: boolean }>) => {
               .map((name, index) =>
                 player(names, name, `0x${['7a2f…91c4', '3c91…d8e2', '5b04…a237', '9e61…f803'][index]}`)
               )
-              .join(' · ')}
+              .join('  ·  ')}
           </p>
         </NotificationCard>
       )
@@ -107,7 +107,7 @@ const Card = ({ kind, names }: Readonly<{ kind: Kind; names: boolean }>) => {
           image={item_icon(hood.item_type)!}
           summary={`${quality.toFixed(1)}%`}
         >
-          <div data-active-item-stats="">
+          <div className="aui-notification__stats" data-active-item-stats="">
             {stats.map((stat) => (
               <StatLine
                 key={stat.key}
@@ -187,7 +187,7 @@ const Gallery = () => {
         <div>
           <span className="notification-gallery__eyebrow">CARD PREVIEW</span>
           <h1>Discord notifications</h1>
-          <p>Compact cards, shown at their actual size.</p>
+          <p>Full-width cards, shown at their actual size.</p>
         </div>
         <div className="notification-gallery__destination">
           <span>#</span>

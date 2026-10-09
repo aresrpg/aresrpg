@@ -14,6 +14,5 @@ export const notification_card = (content: string, marker: string, digest: strin
   allowed_mentions: { parse: [] },
   nonce: marker,
   enforce_nonce: true,
-  embeds: [{ image: { url: `attachment://ares-${marker}.png` } }],
 })
 export type Card = ReturnType<typeof notification_card>

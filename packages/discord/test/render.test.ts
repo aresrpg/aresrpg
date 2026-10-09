@@ -7,7 +7,7 @@ import { load_copy } from '../src/copy.ts'
 
 import { examples } from './fixtures.ts'
 
-test('the delivered PNGs retain compact dimensions with real fonts, icons and colored stat rows', async () => {
+test('the delivered PNGs fill Discord attachment width at double density with real fonts, icons and stat rows', async () => {
   const render = await create_renderer()
   const copy = await load_copy('en')
   for (const event of examples) {
@@ -15,9 +15,9 @@ test('the delivered PNGs retain compact dimensions with real fonts, icons and co
     const png = await render(model.visual)
     expect([...png.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
     const image = await loadImage(png)
-    expect(image.width).toBe(400)
-    expect(image.height).toBeLessThan(220)
-    expect(image.height).toBeGreaterThanOrEqual(84)
+    expect(image.width).toBe(1100)
+    expect(image.height).toBeLessThanOrEqual(700)
+    expect(image.height).toBeGreaterThanOrEqual(264)
   }
 })
 test('long identities and maximum SUI amounts remain bounded', async () => {
@@ -31,6 +31,6 @@ test('long identities and maximum SUI amounts remain bounded', async () => {
     { ...sale, name: 'M'.repeat(512), price_mist: '18446744073709551615' }
   )!
   const image = await loadImage(await render(model.visual))
-  expect(image.width).toBe(400)
-  expect(image.height).toBeLessThan(120)
+  expect(image.width).toBe(1100)
+  expect(image.height).toBe(264)
 })

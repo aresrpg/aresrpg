@@ -103,7 +103,7 @@ describe('The Ruins city', () => {
     expect(first.target_heights[anchor_index]).toBeGreaterThan(world.recipe.sea_level)
   })
 
-  test('builds one connected detailed mine beneath a dense ruined stronghold', () => {
+  test('builds one connected detailed mine beneath terrain-supported fortress walls', () => {
     const { world, city } = the_ruins_world()
     const terrain = terrain_the_ruins(world, city)
     const floor_y =
@@ -125,21 +125,9 @@ describe('The Ruins city', () => {
     expect(drafts.filter(({ id }) => id.includes(':monumental-stair:'))).toHaveLength(3)
     expect(operation_voxels(drafts, world.materials.id_for('the_ruins_bone')).size).toBeGreaterThan(4_000)
     drafts.forEach(({ type }) => type.size.forEach((size) => expect(size).toBeLessThanOrEqual(256)))
-  }, 15_000)
 
-  test('routes cobwebs through the standard ground-scatter grammar', () => {
-    const { city } = the_ruins_world()
-    const ruins = compile_the_ruins(city.area)
-
-    expect(ruins.nature_at('ravine').some(({ kind }) => kind === 'cobweb')).toBeTrue()
-    expect(ruins.nature_at('fortress').some(({ kind }) => kind === 'cobweb')).toBeTrue()
-  })
-
-  test('anchors surviving fortress walls instead of bridging terrain cuts', () => {
-    const { world, city } = the_ruins_world()
-    const terrain = terrain_the_ruins(world, city)
     const unsupported: string[] = []
-    plan_the_ruins(world, city)
+    drafts
       .filter(({ id }) => id.includes(':fortress-'))
       .forEach((placement) => {
         const bottoms = new Map<string, number>()
@@ -157,6 +145,14 @@ describe('The Ruins city', () => {
       })
 
     expect(unsupported.slice(0, 10)).toEqual([])
+  }, 15_000)
+
+  test('routes cobwebs through the standard ground-scatter grammar', () => {
+    const { city } = the_ruins_world()
+    const ruins = compile_the_ruins(city.area)
+
+    expect(ruins.nature_at('ravine').some(({ kind }) => kind === 'cobweb')).toBeTrue()
+    expect(ruins.nature_at('fortress').some(({ kind }) => kind === 'cobweb')).toBeTrue()
   })
 })
 

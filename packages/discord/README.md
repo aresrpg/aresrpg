@@ -1,8 +1,8 @@
 # Discord notification bot
 
 One process subscribes to `evt:notifications:<PACKAGE_ORIGINAL>` on the existing indexer Redis.
-For each received event, it filters, resolves verified SuiNS names, renders a compact PNG and posts
-to Discord. Nothing is persisted or replayed. There is no polling, SQLite, cursor or persistent volume.
+For each received event, it filters, resolves verified SuiNS names, renders a PNG card and posts
+it to Discord as a plain image attachment. Nothing is persisted or replayed. There is no polling, SQLite, cursor or persistent volume.
 Messages missed while offline and failed sends are not replayed. Discord's explicit rate limits are
 respected; other send errors are logged and the next received event proceeds.
 
@@ -22,7 +22,7 @@ Run `bun run --cwd packages/discord start` with:
 | `GRAPH_URL`          | Existing indexer Redis URL                              |
 | `DISCORD_LOCALE`     | App locale; defaults to `en`                            |
 
-The bot needs View Channel, Send Messages, Embed Links and Attach Files. It needs no Gateway
+The bot needs View Channel, Send Messages and Attach Files. It needs no Gateway
 connection or privileged intents. `/health` reports subscription-connection readiness; `/live`
 reports process liveness.
 

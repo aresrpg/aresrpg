@@ -85,7 +85,7 @@
   color: #ffe3b1;
 }
 .aui-jobs-port .jobs {
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr);
   gap: 0;
   height: 100%;
   min-height: 0;

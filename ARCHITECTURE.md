@@ -61,7 +61,7 @@ different times, so reducers are monotonic and idempotent. Arrival order is neve
 | `packages/sdk`         | Every client-side Sui transaction plus the explicit one-shot Party checkpoint and linked-Item tooltip reads, PTB composition, object-ref cache, receipt projection, gas accounting | General player-facing reads, app state                                                       |
 | `packages/indexer`     | Checkpoint decoding and the only writes to the FalkorDB projection and indexer pub/sub                                                                                             | Game authority, authored content                                                             |
 | `packages/server`      | Initial snapshots, graph reads, subscriptions, presence/chat/fight relay, one reducer per connection                                                                               | Durable game truth, chain writes                                                             |
-| `packages/discord`     | Live Redis notification forwarding and compact PNG cards                                                                                                                           | Game authority, graph writes, realtime connections                                           |
+| `packages/discord`     | Live Redis notification forwarding and PNG cards                                                                                                                                   | Game authority, graph writes, realtime connections                                           |
 | `packages/protocol`    | Client/server packet types, parsing, domain routing lists, shared wire-safe projections                                                                                            | Independent gameplay state                                                                   |
 | `packages/frontend`    | App reducers, effect observers, UI, local prediction, reconciliation                                                                                                               | Direct `@mysten` access, authoritative game state                                            |
 | `packages/ui`          | Shared visual tokens, accessible React controls, windows, and responsive game layouts                                                                                              | Stores, wallet/SDK calls, gameplay calculations, or authored content                         |
@@ -393,8 +393,10 @@ FightEnded produces one party event, independent of later per-character settleme
 `packages/discord` runs from its own `ghcr.io/aresrpg/discord` image and one-replica Helm release.
 It only forwards events received by its live Redis subscription. It filters gear using the exact
 unweighted mean of normalized variable rolls, strictly above 90%, excluding fixed stats. It resolves
-verified SuiNS names and renders compact PNGs with canonical seed artwork, shared UI stat identities,
-the SUI logo, palette and bundled Nunito fonts. Copy comes from the existing YAML locales.
+verified SuiNS names, shortens self-subnames to their handle, and renders double-density PNG
+attachments at Discord's full image width, without an embed frame. Cards use canonical seed artwork,
+shared UI stat identities, the SUI logo, palette and bundled Nunito fonts. Copy comes from the
+existing YAML locales.
 There is no polling, notification store, replay, delivery cursor, SQLite or persistent volume.
 Missed events stay missed. Received events are serialized in memory; explicit Discord rate limits
 are respected, while other failures are logged without replay. Bot image updates and scaling remain

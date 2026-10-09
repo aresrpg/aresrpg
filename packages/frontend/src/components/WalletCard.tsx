@@ -4,12 +4,12 @@
 import { Check, Copy, LogOut, Plus, Send, Wallet } from 'lucide-react'
 import { Button, IconButton, WalletBalances } from '@aresrpg/ui'
 import { useCallback, useId, useRef, useState } from 'react'
+import { display_suins_name } from '@aresrpg/immutable'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
-import { display_suins_name } from '../leaderboards/presentation.ts'
 import type { Network } from '../env.ts'
 
 import { AddFundsModal } from './AddFundsModal.tsx'

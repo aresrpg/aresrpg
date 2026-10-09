@@ -23,13 +23,14 @@ test('exact MIST formatting never rounds through a floating point number', () =>
   expect(format_sui('1')).toBe('0.000000001')
   expect(format_sui('9007199254740993')).toBe('9007199.254740993')
 })
-test('PNG attachment carries the permanent marker and untrusted names cannot create mentions', async () => {
+test('the card posts as a bare attachment, carries its marker, and untrusted names cannot create mentions', async () => {
   const model = announcement(await load_copy('en'), { [row.seller]: '**@everyone**' }, parse_notification(row))!
   const card = notification_card(model.content, 'marker', row.digest, 'mainnet')
   expect(card.content).toContain('10× Gnawed branch')
   expect(card.content).toContain('2.5 SUI')
   expect(card.content).not.toContain('@everyone')
-  expect(card.embeds[0]?.image.url).toBe('attachment://ares-marker.png')
+  expect(card).not.toHaveProperty('embeds')
+  expect(card.nonce).toBe('marker')
   expect(card.allowed_mentions.parse).toEqual([])
   expect(model.visual.currency).toBe(true)
   expect(notification_marker('channel-a', row.id)).not.toBe(notification_marker('channel-b', row.id))

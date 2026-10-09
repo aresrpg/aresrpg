@@ -20,6 +20,13 @@ test('all four types select canonical artwork and use verified names or addresse
   expect(models[3]?.visual.stats.map(({ value }) => value)).toEqual([49, 48, 2])
   expect(announcement(copy, {}, examples[1]!)?.content).toContain('0xaaaa…aaaa')
 })
+test('a self-subname is announced by its short handle in the message and on the card', () => {
+  const victory = announcement(copy, { [address]: 'sceat.sceat.sui' }, examples[2]!)!
+  expect(victory.visual.party).toEqual(['@sceat'])
+  expect(victory.content).toContain('sceat')
+  expect(victory.content).not.toContain('sceat.sceat.sui')
+  expect(announcement(copy, { [address]: 'other.sceat.sui' }, examples[2]!)?.visual.party).toEqual(['other.sceat.sui'])
+})
 test('ordinary gear is filtered before rendering or delivery', () => {
   const loot = examples[3]!
   if (loot.kind !== 'loot') throw new Error('bad fixture')

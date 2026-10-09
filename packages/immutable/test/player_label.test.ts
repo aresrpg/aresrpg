@@ -3,7 +3,7 @@
 
 import { expect, test } from 'bun:test'
 
-import { display_suins_name } from '../../src/leaderboards/presentation.ts'
+import { display_suins_name } from '../src/player_label.ts'
 
 test('a self-subname displays as its root handle without changing other names', () => {
   expect(display_suins_name('sceat.sceat.sui')).toBe('@sceat')

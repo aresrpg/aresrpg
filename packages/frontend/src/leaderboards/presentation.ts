@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+import { display_address, display_suins_name } from '@aresrpg/immutable'
 import type { LeaderboardMetric, LeaderboardEntry } from '@aresrpg/protocol'
 
 /** Retained Hytale leaderboard colors; identities follow the current game vocabulary. */
@@ -29,11 +30,6 @@ export const BADGE_COLORS: Readonly<Record<string, readonly [string, string]>> =
   ALCHEMIST: ['#1A5276', '#2980B9'],
   BAKER: ['#D4AC0D', '#F1C40F'],
 }
-
-export const display_address = (address: string): string => `${address.slice(0, 6)}…${address.slice(-4)}`
-
-/** A self-subname keeps its full identity in state; only the visible label is shortened. */
-export const display_suins_name = (name: string): string => name.replace(/^([a-z0-9-]+)(?:\.\1\.sui|@\1)$/i, '@$1')
 
 export const leaderboard_score = (score: string, metric: LeaderboardMetric, locale: string): string => {
   const amount = BigInt(score)

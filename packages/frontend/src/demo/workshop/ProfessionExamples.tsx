@@ -2,6 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useMemo } from 'react'
 import { Workspace } from '@aresrpg/ui'
+import { job_xp_for_level } from '@aresrpg/immutable'
 import { Hammer, Pickaxe } from 'lucide-react'
 
 import JobsTab from '../../characters/JobsTab.tsx'
@@ -15,7 +16,13 @@ import { WorkshopSurface } from './shared.tsx'
 import '../../characters/characters.css'
 
 export const JobsExample = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const character = useMemo(() => adventure_character_row(adventure_character()), [])
+  const character = useMemo(() => {
+    const tools = adventure_inventory(content_catalog.items.filter((item) => item.category === 'tool_herbalist'))
+    return {
+      ...adventure_character_row({ ...adventure_character(), loadout: { tool: tools[0]!.item_type } }, tools),
+      jobs: { HERBALIST: String(job_xp_for_level(100)) },
+    }
+  }, [])
   return (
     <WorkshopSurface copy={copy} title={copy_text(copy.characters_page)('tab_jobs')} icon={<Pickaxe />}>
       {(header) => (
