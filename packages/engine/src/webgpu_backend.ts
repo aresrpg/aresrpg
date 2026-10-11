@@ -39,6 +39,7 @@ import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import { create_frame_renderer } from './frame_renderer.ts'
 import { create_speed_wind } from './speed_wind.ts'
+import { create_pet_wing_layer } from './pet_wing_layer.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
 import { create_lantern } from './lantern.ts'
@@ -192,6 +193,7 @@ export const create_webgpu_backend = async (
       entity_height: (id: string) => entities.entity_height(id) ?? character_crowd.entity_height(id),
     })
     const auras = own(create_character_aura_layer(scene, camera, entity_anchors, initial_quality))
+    const pet_wings = own(create_pet_wing_layer(scene, camera, entities.mount_anchor, initial_quality))
     const world_panels = own(create_world_panels(scene))
     const captions = own(create_caption_layer({ renderer, canvas, camera }))
     const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
@@ -471,6 +473,7 @@ export const create_webgpu_backend = async (
       water.set_quality(next)
       scenery.set_quality(next)
       auras.set_quality(next)
+      pet_wings.set_quality(next)
       frame_renderer.set_quality(next)
       if (update_sky) void use_sky_quality(profile.sky)
     }
@@ -709,6 +712,7 @@ export const create_webgpu_backend = async (
         entities.tick(now)
         character_crowd.tick(now)
         auras.tick(now)
+        pet_wings.tick(now)
         effects.tick(now)
         fight_swords?.tick(now)
       },
@@ -810,6 +814,7 @@ export const create_webgpu_backend = async (
         character_crowd.set(Object.freeze(crowd))
         entities.set(Object.freeze(individual))
         auras.set(next)
+        pet_wings.set(next)
         sun.shadow.needsUpdate = true
       },
       set_fight_swords: (url, impact_sound_url, markers) => {

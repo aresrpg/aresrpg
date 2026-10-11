@@ -2026,6 +2026,7 @@ characters_page:
       ingredients: '{{count}} Zutaten'
       required_level: 'Benötigt Berufsstufe {{level}}'
       best_progress: 'Beste'
+      chain_missing: 'Diesem Charakter fehlen die nötigen Berufsstufen für einige Zutatenrezepte. Gekaufte oder erbeutete Zutaten können trotzdem verwendet werden.'
     gather:
       in_progress: 'Sammle {{name}}…'
       button: '{{name}} sammeln'

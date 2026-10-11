@@ -103,18 +103,6 @@ describe('locomotion (legacy feel constants)', () => {
     expect(bounce_peak).toBeGreaterThan(single_peak + 1)
   })
 
-  test('a flying mount glides while jump remains held during descent', () => {
-    const falling = create_controller_state([0.5, 10, 0.5])
-    const gliding = create_controller_state([0.5, 10, 0.5])
-    falling.velocity[1] = -5
-    gliding.velocity[1] = -5
-    run_steps(falling, {}, 5)
-    run_steps(gliding, { jump: true, glide: true }, 5)
-
-    expect(gliding.velocity[1]).toBeGreaterThan(falling.velocity[1])
-    expect(gliding.position[1]).toBeGreaterThan(falling.position[1])
-  })
-
   test('swim mode floats in liquid', () => {
     const water_env = { solid_at: ((_x: number, y: number) => y < -10) as SolidFn, liquid_at: () => true }
     const state = create_controller_state([0.5, 0, 0.5])

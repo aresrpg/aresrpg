@@ -75,6 +75,7 @@ describe('shared character rendering', () => {
           title: 'title_veteran',
           pet: 'tofu',
           riding: false,
+          gliding: false,
           x: 50_000,
           y: 64,
           z: 50_000,

@@ -1,5 +1,13 @@
 {
   "sounds": {
+    "glide_deploy": {
+      "file": "glide_deploy.aac",
+      "volume": 0.5
+    },
+    "glide_wind": {
+      "file": "glide_wind.ogg",
+      "volume": 0.65
+    },
     "level_up": {
       "file": "level_up.ogg",
       "volume": 0.55

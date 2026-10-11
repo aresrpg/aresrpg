@@ -18,6 +18,7 @@ import {
   type CharacterAppearanceRender,
   type CharacterAnimationRender,
   type MobEntityRender,
+  type PetWingStyle,
   type Vec3,
 } from '@aresrpg/engine'
 
@@ -26,6 +27,7 @@ import { world_daylight } from './daylight.ts'
 import { world_character_entity, type LoadedCharacterRender } from '../character_entities.ts'
 import { preload_audio } from '../audio/audio_registry.ts'
 import { create_footsteps, footstep_preset } from '../audio/footsteps.ts'
+import { create_gliding_audio } from '../audio/gliding.ts'
 import {
   camera_mode_after,
   create_camera_director,
@@ -54,7 +56,7 @@ import {
   publish_dungeon_portal_prompt,
 } from './dungeon_portal_feed.ts'
 import { publish_pose, type WorldPose } from './pose_feed.ts'
-import { pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
+import { pet_animation, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
 import { run_to_mount, type RunTarget } from './run_to.ts'
 import { create_world_collision } from './world_collision.ts'
 import { walking_edge, type WalkPoint } from './walkable.ts'
@@ -155,7 +157,12 @@ export const create_world = ({
     position: [initial_focus[0], surface_y(initial_focus[0], initial_focus[1]), initial_focus[1]],
   })
   const footsteps = create_footsteps()
-  preload_audio(['water_enter'])
+  const glide_audio = create_gliding_audio()
+  const unlock_audio = (): void => {
+    footsteps.unlock()
+    glide_audio.unlock()
+  }
+  preload_audio(['water_enter', 'glide_deploy'])
   const liquid_preset: MaterialPreset =
     compiled.recipe.liquid === undefined
       ? 'water'
@@ -171,7 +178,7 @@ export const create_world = ({
   let character_render: LoadedCharacterRender | null = null
   let controlled_entity: EntityRender | null = null
   let character_animation: CharacterAnimationRender | null = null
-  let pet: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null = null
+  let pet: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion; wings: PetWingStyle }> | null = null
   let pet_entity: MobEntityRender | null = null
   let pet_motion: PetMotion = empty_pet_motion()
   let pet_elapsed_seconds = 0
@@ -276,7 +283,7 @@ export const create_world = ({
     walking = step.state
     run_route = { x: run_target.x, z: run_target.z, remaining: step.remaining }
     if (step.status === 'arrived') return stop_run(step.status)
-    footsteps.unlock()
+    unlock_audio()
     character.set_input({ yaw: step.yaw, forward: step.forward, strafe: 0, phase_target: step.phase_target })
   }
 
@@ -332,6 +339,7 @@ export const create_world = ({
     }
     clear_movement()
     footsteps.reset()
+    glide_audio.reset()
     mode = next
     director.use(addon_for(next))
     rendered_transform = null
@@ -346,7 +354,7 @@ export const create_world = ({
     const next = enabled && !action_lock && mode === 'follow' && (buttons & 3) === 3
     if (next === mouse_forward) return
     mouse_forward = next
-    if (next) footsteps.unlock()
+    if (next) unlock_audio()
     apply_axes()
   }
 
@@ -402,8 +410,11 @@ export const create_world = ({
   }
   const set_jump = (down: boolean): void => {
     if (!enabled || mode !== 'follow' || action_lock) return
-    if (down) stop_run('manual')
-    character.set_input({ jump: down, glide: down && riding && pet?.locomotion === 'fly' })
+    if (down) {
+      unlock_audio()
+      stop_run('manual')
+    }
+    character.set_input({ jump: down, glide: down && riding })
   }
   const on_key = (event: KeyboardEvent, down: boolean): void => {
     const move = WORLD_MOVE_KEYS[event.code]
@@ -531,7 +542,7 @@ export const create_world = ({
   }
   const on_key_down = (event: KeyboardEvent): void => {
     if (!enabled || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
-    if (mode === 'follow' && (WORLD_MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) footsteps.unlock()
+    if (mode === 'follow' && (WORLD_MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) unlock_audio()
     on_key(event, true)
   }
   const on_key_up = (event: KeyboardEvent): void => on_key(event, false)
@@ -638,22 +649,17 @@ export const create_world = ({
       : pet_ground_height(x, z, owner_y) + pet_vertical_offset(pet.locomotion, pet_elapsed_seconds)
     // a FOLLOWING pet animates from ITS OWN motion — the owner's pose drives it only when ridden
     // (a follower jumping in sync with the player was the bug, owner 2026-08-21)
-    const animation =
-      pet.locomotion === 'swim'
-        ? ('SWIM' as const)
-        : riding
-          ? !transform.on_ground
-            ? transform.anim
-            : transform.speed > 0.5
-              ? ('RUN' as const)
-              : ('IDLE' as const)
-          : pet_motion.moving
-            ? ('RUN' as const)
-            : ('IDLE' as const)
+    const animation = pet_animation(
+      pet.locomotion,
+      riding ? transform.speed > 0.5 : pet_motion.moving,
+      riding && !transform.on_ground ? transform.anim : undefined,
+      transform.gliding
+    )
     pet_entity = Object.freeze({
       id: pet.id,
       kind: 'mob',
       model_url: pet.model_url,
+      wings: { ...pet.wings, deployed: transform.gliding },
       anchor: Object.freeze({ kind: 'world', position: Object.freeze([x, y, z] as const) }),
       facing: Object.freeze({ kind: 'yaw', yaw: riding ? transform.facing_yaw : pet_motion.yaw }),
       // the companion covers ground at 1.5× the player's run — its gait plays at the same
@@ -706,6 +712,7 @@ export const create_world = ({
         speed: transform.speed,
         water_entered: transform.water_entered,
       })
+      glide_audio.tick(transform.gliding)
       if (transform.air_jumped) engine.play_jump_puff(transform.visual_position)
       const rendered_position = rendered_character_position(0, transform.visual_position)
       const eye = rendered_character_position(CHARACTER_EYE_HEIGHT, transform.visual_position)
@@ -726,6 +733,7 @@ export const create_world = ({
         z: transform.position[2],
         yaw: director.active().get_yaw(),
         riding,
+        gliding: transform.gliding,
         time_of_day: world_time_of_day,
         manual_movement: Math.hypot(held.forward, held.strafe) > 0,
         route: run_route,
@@ -852,7 +860,9 @@ export const create_world = ({
     set_dungeon_stage: engine.set_dungeon_stage,
     set_resource_node_label: (id: string, element: HTMLElement | null) => engine.set_resource_node_label(id, element),
     entity_height: engine.entity_height,
-    set_pet: (next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null) => {
+    set_pet: (
+      next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion; wings: PetWingStyle }> | null
+    ) => {
       pet = next ? Object.freeze(next) : null
       rendered_transform = null
       pet_motion = empty_pet_motion()
@@ -879,6 +889,7 @@ export const create_world = ({
     /// Cross-world pointing waits on more worlds having terrain recipes.
     point_at: (position: Readonly<{ x: number; y?: number; z: number }>, reconcile = false) => {
       footsteps.reset()
+      glide_audio.reset()
       character.teleport([position.x, position.y ?? surface_y(position.x, position.z), position.z], {
         smooth: reconcile && mode === 'follow',
       })
@@ -943,7 +954,7 @@ export const create_world = ({
       if (magnitude > 0) stop_run('manual')
       const length = Math.max(1, magnitude)
       touch_axes = { forward: axes.forward / length, strafe: axes.strafe / length }
-      footsteps.unlock()
+      unlock_audio()
       apply_axes()
     },
     set_run_target: (next: RunTarget | null) => {
@@ -963,6 +974,7 @@ export const create_world = ({
         stop_run('inactive')
         clear_movement()
         footsteps.reset()
+        glide_audio.reset()
         dragging = null
         engine.stop()
         publish_pose(null)
@@ -1034,6 +1046,7 @@ export const create_world = ({
       director.set_enabled(false)
       character.dispose()
       footsteps.dispose()
+      glide_audio.dispose()
       chunks.dispose()
       terrain_planner.dispose()
       engine.dispose()

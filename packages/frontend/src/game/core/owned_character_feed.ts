@@ -77,6 +77,7 @@ export const owned_character_presence_rows = (
                   color_3: character.color_3,
                   ...visible_equipment(character.equipment),
                   riding: false,
+                  gliding: false,
                   x: position.x,
                   y: position.y,
                   z: position.z,

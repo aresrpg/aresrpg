@@ -2002,6 +2002,7 @@ characters_page:
       ingredients: 재료 {{count}}종
       required_level: 생산 직업 {{level}}레벨 필요
       best_progress: 최적
+      chain_missing: '이 캐릭터는 일부 재료를 제작하는 데 필요한 직업 레벨이 부족합니다. 구매하거나 전리품으로 얻은 재료는 사용할 수 있습니다.'
     gather:
       in_progress: '{{name}} 채집 중…'
       button: '{{name}} 채집'

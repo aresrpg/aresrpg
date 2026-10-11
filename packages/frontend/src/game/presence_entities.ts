@@ -6,7 +6,7 @@
 // positions ride packet/players_moved through the store. The riding flag binds a seated
 // character to its pet's animated mount socket; otherwise the pet follows independently.
 
-import type { CharacterAura, CharacterAnimationName, EntityRender, WorldCaption } from '@aresrpg/engine'
+import type { CharacterAura, CharacterAnimationName, EntityRender, PetWingStyle, WorldCaption } from '@aresrpg/engine'
 import { chain_to_client_coordinate, worn_appearance } from '@aresrpg/immutable'
 import type { PresenceRow } from '@aresrpg/protocol'
 
@@ -16,7 +16,7 @@ import {
   world_character_entity,
   character_aura,
 } from './character_entities.ts'
-import { pet_locomotion_of, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
+import { pet_animation, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
 import { create_caption_target } from './core/caption_target.ts'
 import { publish_other_tag } from './core/nametag_feed.ts'
@@ -41,7 +41,7 @@ const raf: (callback: (now: number) => void) => void =
 
 type LoadedPresence = {
   appearance: Awaited<ReturnType<typeof load_character_appearance>>
-  pet: Readonly<{ model_url: string; locomotion: PetLocomotion }> | null
+  pet: Readonly<{ model_url: string; locomotion: PetLocomotion; wings: PetWingStyle }> | null
 }
 
 type PresenceSlot = {
@@ -60,6 +60,7 @@ type PresenceSlot = {
   moved_at: number
   /** actually mounted (the wire's riding flag) — an unridden pet FOLLOWS on foot instead */
   riding: boolean
+  gliding: boolean
   /** the follower's own local walk — the same pure sim the own pet runs */
   pet_motion: PetMotion
 }
@@ -190,17 +191,19 @@ export const create_presence_renderer = ({
       const follower = !mounted && Number.isFinite(slot.pet_motion.x)
       const pet_position = pet_world_position(slot, mounted, slot.loaded.pet.locomotion, now, pet_ground_height)
       const pet_moving = follower ? slot.pet_motion.moving : moving
+      const pet_anim = pet_animation(slot.loaded.pet.locomotion, pet_moving, undefined, slot.gliding)
       return [
         character,
         Object.freeze({
           id: pet_id,
           kind: 'mob' as const,
           model_url: slot.loaded.pet.model_url,
+          wings: { ...slot.loaded.pet.wings, deployed: slot.gliding },
           anchor: Object.freeze({ kind: 'world' as const, position: pet_position }),
           facing: Object.freeze({ kind: 'yaw' as const, yaw: follower ? slot.pet_motion.yaw : slot.yaw }),
           animation: Object.freeze({
-            name: pet_moving ? ('RUN' as const) : ('IDLE' as const),
-            time_scale: pet_moving ? 1.5 * time_scale : time_scale,
+            name: pet_anim,
+            time_scale: pet_anim === 'RUN' ? 1.5 * time_scale : time_scale,
           }),
         }),
       ]
@@ -219,13 +222,8 @@ export const create_presence_renderer = ({
     // content modules stay dynamic — pet_models uses Vite's import.meta.glob, a build-only door
     const load_pet = async (): Promise<LoadedPresence['pet']> => {
       if (!pet_type) return null
-      const [{ load_pet_model_url }, { content_catalog }] = await Promise.all([
-        import('../content/pet_models.ts'),
-        import('../content/catalog.ts'),
-      ])
-      const model_url = await load_pet_model_url(pet_type)
-      const item = content_catalog.item(pet_type)?.item
-      return model_url && item ? Object.freeze({ model_url, locomotion: pet_locomotion_of(item) }) : null
+      const { load_pet_companion } = await import('../content/pet_models.ts')
+      return load_pet_companion(`${character_id}:pet`, pet_type)
     }
     void Promise.all([appearance_loader(presence_render_source(row)), load_pet()])
       .then(([appearance, pet]) => {
@@ -289,6 +287,7 @@ export const create_presence_renderer = ({
             yaw: initial.yaw,
             moved_at: 0,
             riding: row.riding,
+            gliding: row.gliding,
             pet_motion: initial.pet_motion,
           })
           load(character_id, row, source_key)
@@ -300,14 +299,15 @@ export const create_presence_renderer = ({
           slot.aura = aura
           changed = true
         }
-        if (row.riding !== slot.riding) {
+        if (row.riding !== slot.riding || row.gliding !== slot.gliding) {
           slot.riding = row.riding
+          slot.gliding = row.gliding
           changed = true
           wake_tick()
         }
         const dx = x - slot.tx
         const dz = z - slot.tz
-        if (dx !== 0 || dz !== 0 || row.y !== slot.ty) {
+        if (Math.hypot(dx, row.y - slot.ty, dz) > 0) {
           slot.yaw = dx * dx + dz * dz > 0.000_1 ? Math.atan2(dx, dz) : slot.yaw
           slot.tx = x
           slot.ty = row.y

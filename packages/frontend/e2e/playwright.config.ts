@@ -19,6 +19,7 @@ const CRITICAL_TESTS = [
   'inventory_actions',
   'marketplace',
   'mastery_shop',
+  'pwa_update',
   'staking',
   'wallet_switcher',
 ].map((name) => `**/${name}.pw.ts`)

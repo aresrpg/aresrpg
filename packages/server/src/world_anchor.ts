@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { character_checkpoint, position_checkpoint, type CharacterRow } from '@aresrpg/protocol'
+import { character_checkpoint, position_checkpoint, type CharacterRow, type PresenceRow } from '@aresrpg/protocol'
 
 import type { Embodied, TrackedCharacter } from './player.ts'
+
+export const mounted_motion = ({ pet, riding, gliding }: Pick<PresenceRow, 'pet' | 'riding' | 'gliding'>) => ({
+  riding: riding && pet !== null,
+  gliding: gliding && riding && pet !== null,
+})
 
 export const refreshed_world_anchor = (
   existing: Readonly<TrackedCharacter> | undefined,
@@ -14,7 +19,7 @@ export const refreshed_world_anchor = (
   if (existing?.checkpoint !== checkpoint)
     return Object.freeze({
       checkpoint,
-      presence: character,
+      presence: { ...character, riding: false, gliding: false },
       move_anchor: { x: character.x, z: character.z, at_ms, blocks: 0 },
     })
   return Object.freeze({
@@ -24,7 +29,7 @@ export const refreshed_world_anchor = (
       x: existing.presence.x,
       y: existing.presence.y,
       z: existing.presence.z,
-      riding: existing.presence.riding && character.pet !== null,
+      ...mounted_motion({ ...existing.presence, pet: character.pet }),
     }),
     move_anchor: existing.move_anchor,
   })

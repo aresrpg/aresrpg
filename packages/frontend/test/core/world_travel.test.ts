@@ -44,6 +44,7 @@ const presence = (character_id: string, x: number, z: number): PresenceRow => ({
   title: null,
   pet: null,
   riding: false,
+  gliding: false,
 })
 const tracked = (world: string, zones: { zx: number; zz: number }[]): ServerPacket => ({
   type: 'packet/tracked_zones',

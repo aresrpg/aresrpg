@@ -6,7 +6,7 @@ import { expect, test } from 'bun:test'
 import { refreshed_world_anchor } from '../src/world_anchor.ts'
 
 const presence = (world: string, x: number, z: number) =>
-  ({ character_id: '0xc', world, x, y: 0, z, riding: false, pet: null }) as never
+  ({ character_id: '0xc', world, x, y: 0, z, riding: false, gliding: false, pet: null }) as never
 
 test('same-world rereads preserve validated walking while real travel resets it', () => {
   const move_anchor = { x: 130, z: 100, at_ms: 20, blocks: 4 }
@@ -100,6 +100,7 @@ test('late pre-recall movement is ignored; new-checkpoint walking works and over
       y: 0,
       z: 50_000,
       riding: false,
+      gliding: false,
     }
     events.emit('packet/position', packet)
     expect(dropped).toEqual([])
@@ -112,4 +113,34 @@ test('late pre-recall movement is ignored; new-checkpoint walking works and over
   } finally {
     abort.abort()
   }
+})
+
+test('a changed checkpoint clears carried flight, while an ordinary reread preserves valid gliding', () => {
+  const airborne = {
+    character_id: '0xc',
+    world: 'nauvis',
+    x: 100,
+    y: 20,
+    z: 100,
+    pet: 'beru',
+    riding: true,
+    gliding: true,
+  }
+  const existing = {
+    presence: airborne,
+    checkpoint: 'nauvis:100:100:30',
+    move_anchor: { x: 100, z: 100, at_ms: 30, blocks: 0 },
+  } as never
+  expect(refreshed_world_anchor(existing, airborne as never, 30).presence).toMatchObject({
+    riding: true,
+    gliding: true,
+  })
+  expect(refreshed_world_anchor(existing, airborne as never, 40).presence).toMatchObject({
+    riding: false,
+    gliding: false,
+  })
+  expect(refreshed_world_anchor(existing, { ...airborne, pet: null } as never, 30).presence).toMatchObject({
+    riding: false,
+    gliding: false,
+  })
 })

@@ -31,6 +31,7 @@ const rows_at = (x: number) =>
         y: 0,
         z: 50_000,
         riding: false,
+        gliding: false,
         hat: null,
         cloak: null,
         cosmetic_hat: null,

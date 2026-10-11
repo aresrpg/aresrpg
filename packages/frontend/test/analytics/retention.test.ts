@@ -94,7 +94,17 @@ test('world readiness gates movement and only reports initial loading, failure a
     ...baseline,
     session: { ...baseline.session, characters: [hero], selected_character_id: hero.id, link_status: 'ready' as const },
   }
-  const pose = { character_id: hero.id, x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0, manual_movement: true }
+  const pose = {
+    character_id: hero.id,
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    riding: false,
+    gliding: false,
+    time_of_day: 0,
+    manual_movement: true,
+  }
   expect(movement_sample(ready, pose, 1_000, true)).toBeNull()
   const started = reduce_app_state(ready, {
     type: 'analytics/world_loading',

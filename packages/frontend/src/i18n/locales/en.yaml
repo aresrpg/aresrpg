@@ -2029,6 +2029,7 @@ characters_page:
       ingredients: '{{count}} ingredients'
       required_level: 'Requires job Lv {{level}}'
       best_progress: 'Best'
+      chain_missing: 'This character lacks the job levels for some ingredient recipes. You can still use bought or dropped ingredients.'
     gather:
       in_progress: 'Gathering {{name}}…'
       button: 'Gather {{name}}'

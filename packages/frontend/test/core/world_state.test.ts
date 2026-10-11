@@ -64,6 +64,7 @@ const presence = (character_id: string, x: number, z: number): PresenceRow => ({
   title: null,
   pet: null,
   riding: false,
+  gliding: false,
   x,
   y: 64,
   z,
@@ -229,20 +230,20 @@ test('players appear, move by id, and leave — unknown identities and wrong-wor
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     {
       type: 'packet/players_moved',
-      positions: [{ world: 'overworld', character_id: '0xc1', x: 11, y: 64, z: 12, riding: false }],
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 11, y: 64, z: 12, riding: false, gliding: false }],
     },
     {
       type: 'packet/players_moved',
       positions: [
-        { world: 'overworld', character_id: '0xghost', x: 1, y: 1, z: 1, riding: false },
-        { world: 'yakutia', character_id: '0xc1', x: 200, y: 1, z: 200, riding: true },
+        { world: 'overworld', character_id: '0xghost', x: 1, y: 1, z: 1, riding: false, gliding: false },
+        { world: 'yakutia', character_id: '0xc1', x: 200, y: 1, z: 200, riding: true, gliding: false },
       ],
     },
     { type: 'packet/player_appeared', player: presence('0xc2', 5, 5) },
     { type: 'packet/player_left', character_id: '0xc2' },
   ])
 
-  expect(state.players['0xc1']).toMatchObject({ x: 11, z: 12, name: 'Yogan', riding: false })
+  expect(state.players['0xc1']).toMatchObject({ x: 11, z: 12, name: 'Yogan', riding: false, gliding: false })
   expect(state.players['0xghost']).toBeUndefined()
   expect(state.players['0xc2']).toBeUndefined()
 })
@@ -255,7 +256,7 @@ test('mounting rides the position stream — the riding flag folds onto the pres
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     {
       type: 'packet/players_moved',
-      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true }],
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true, gliding: false }],
     },
   ])
   const dismounted = fold([
@@ -263,16 +264,16 @@ test('mounting rides the position stream — the riding flag folds onto the pres
     { type: 'packet/player_appeared', player: presence('0xc1', 10, 10) },
     {
       type: 'packet/players_moved',
-      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true }],
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: true, gliding: false }],
     },
     {
       type: 'packet/players_moved',
-      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: false }],
+      positions: [{ world: 'overworld', character_id: '0xc1', x: 10, y: 64, z: 10, riding: false, gliding: false }],
     },
   ])
 
-  expect(state.players['0xc1']).toMatchObject({ riding: true })
-  expect(dismounted.players['0xc1']).toMatchObject({ riding: false })
+  expect(state.players['0xc1']).toMatchObject({ riding: true, gliding: false })
+  expect(dismounted.players['0xc1']).toMatchObject({ riding: false, gliding: false })
 })
 
 test('a visible slot change folds onto the known presence row — unknown ids are dropped', () => {

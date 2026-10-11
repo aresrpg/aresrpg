@@ -2002,6 +2002,7 @@ characters_page:
       ingredients: '{{count}} nguyên liệu'
       required_level: Cần nghề cấp {{level}}
       best_progress: Tốt nhất
+      chain_missing: 'Nhân vật này chưa đủ cấp nghề để chế tạo một số nguyên liệu. Bạn vẫn có thể dùng nguyên liệu mua được hoặc nhặt từ chiến lợi phẩm.'
     gather:
       in_progress: Đang thu {{name}}…
       button: Thu thập {{name}}

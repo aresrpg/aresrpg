@@ -30,7 +30,7 @@ const fixture = (): AppState => {
   const state = automation_fixture()
   return { ...state, world: { ...state.world, fights: { fight }, all_fights: { fight } } }
 }
-const pose = { character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0 }
+const pose = { character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0 }
 
 test('nearby discovery converts coordinates, sorts distance, and excludes other worlds and managed fights', () => {
   const fights = {

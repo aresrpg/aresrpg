@@ -49,7 +49,7 @@ const DamageVitals = () => {
   )
 }
 if (new URLSearchParams(location.search).has('map')) {
-  publish_pose({ character_id: 'fixture', x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0.5 })
+  publish_pose({ character_id: 'fixture', x: 0, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0.5 })
   const compiled = compile_runtime_world_recipe(world_terrain('nauvis'))
   root.render(
     <WorldMap compiled={compiled} copy={copy} on_close={() => undefined} resource_icons={create_map_resource_icons()} />

@@ -142,6 +142,8 @@ loads Three.js. Surface lifecycles import rendering. Fight cue projection choose
 the engine consumes that cue rather than exporting a renderer-bound helper for the choice.
 Deployment headers give content-hashed `/assets/` files immutable browser caching. Stable asset
 names, HTML and the service worker retain revalidation.
+Page navigations bypass the service-worker cache so reloads fetch the current app shell and its
+matching asset URLs. The worker precaches scripts and styles, never HTML; PWA installation remains.
 
 `@aresrpg/ui` owns the shared visual system and browser modal lifecycle. Its components consume
 presentation props and emit callbacks; they import neither application stores nor game services.
@@ -156,6 +158,11 @@ so mock item details cannot fall back to a connected account.
 Layout adapts to both viewport and window-container width; touch controls retain native keyboard
 semantics and at least 44px targets. Migration replaces each old primitive at its existing owner;
 unmigrated feature layouts remain in their application package until converted.
+
+Jobs recipe cards derive full-chain job-level access from the selected character’s job XP and the compiled
+recipe catalogue through the immutable recipe graph. A yellow corner `~` marks an unlocked final recipe
+with unavailable ingredient recipes; its explanation also appears in item details. The existing XP
+recommendation keeps its green border. These hints preserve recipe order and ordinary crafting authority.
 
 The player app and `/demo` arm different observers. The player app owns wallet/server effects;
 the demo owns content editing and local simulation. The public adventure remains local until its
@@ -1016,6 +1023,27 @@ mixers advance, the engine aligns the character GLB's `Rider` socket with the pe
 not change when ridden, and no bounding-height seat estimate remains. Missing attachment models
 hide the rider until the pair is ready. Camera and carried-light placement use the rendered
 character position; controller collision and published world positions remain independent.
+
+Every ridden pet can glide while jump is held during descent after a short airborne delay.
+The controller owns that delay independently of coyote-time consumption. Gliding preserves
+camera-relative movement controls, redirects horizontal momentum through bounded turns, and coasts
+within the ordinary mounted speed limit. Release, solid contact, swimming and dismount end the glide.
+The actual `gliding` state travels beside `riding` in existing position and presence packets.
+The server clamps it to an equipped, ridden pet; equipment removal and new checkpoints clear it.
+Flight transitions bypass movement-distance suppression and distant-player position thinning.
+Controller retirement publishes cleared mount/glide flags at its last validated pose, so selection
+changes and world disposal cannot leave a remote character's wings deployed indefinitely.
+
+`seed/content/pet_wings.json` owns each pet's wing shape, trail and palette, separate from published
+item definitions. Local and remote companions use the same projection. The engine attaches two
+procedural wing quads and bounded segmented trails to the animated `Mount` socket. One wing batch
+and one trail batch share resources across a bounded set of gliders; quality bounds range, trail count
+and the secondary glow layer. Deployment follows observed flight state, and removal releases its
+retained transition. Pet banking derives from observed movement before rider alignment, so rider,
+pet and wings share the same tilted frame. It adds no orientation packet or per-pet render pass.
+Wings unfold and fade in over 250 ms, with transient shader motes during materialization.
+Local glide transitions play the authored deployment cue once and fade a seamlessly looped wind
+recording in or out. World audio disposal, mode changes and teleports retire the loop.
 
 The localized spawn welcome display uses a fixed, depth-tested world plane with the canonical
 AresRPG wordmark. Seed owns its position, orientation and size. The shared game world controller

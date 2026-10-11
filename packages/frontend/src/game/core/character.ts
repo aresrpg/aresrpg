@@ -10,6 +10,7 @@
 import { COLLISION_SKIN, eject_from_solid, type SolidFn, type Vec3Mut } from './collision.ts'
 import {
   create_controller_state,
+  is_gliding,
   step_controller,
   type ControllerEnv,
   type ControllerInput,
@@ -31,6 +32,7 @@ export type CharacterTransform = Readonly<{
   visual_position: Readonly<Vec3Mut>
   facing_yaw: number
   on_ground: boolean
+  gliding: boolean
   in_water: boolean
   feet_in_water: boolean
   water_entered: boolean
@@ -110,6 +112,7 @@ export const create_character_controller = ({
       ] as const,
       facing_yaw: prev.facing_yaw + dyaw * a,
       on_ground: state.on_ground,
+      gliding: is_gliding(state, input),
       in_water: state.in_water,
       feet_in_water: feet_in_water(),
       water_entered: water_entry_event,
@@ -167,6 +170,7 @@ export const create_character_controller = ({
       ;[prev.position[0], prev.position[1], prev.position[2]] = state.position
       prev.visual_y = state.visual_y
       state.velocity = [0, 0, 0]
+      state._airborne_seconds = 0
       input.phase_target = null
       air_jump_event = false
       water_entry_event = false

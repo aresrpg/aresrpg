@@ -23,6 +23,7 @@ import {
 import { update_skinned_bounds } from './skinned_bounds.ts'
 import { create_entity_model, type EntityModel } from './entity_model.ts'
 import { align_mount } from './entity_mount.ts'
+import { advance_pet_flight_tilt, type PetFlightTilt } from './pet_flight_tilt.ts'
 import { BOARD_FLOOR_THICKNESS } from './fight_board_surface.ts'
 import { attach_invisibility, type InvisibilityEffect } from './invisibility.ts'
 import type {
@@ -197,6 +198,21 @@ export const create_entity_layer = ({
   const active_animations = new Map<string, ActiveAnimation>()
   const dead_entities = new Set<string>()
   const retained_facing = new Map<string, number>()
+  const flight_tilts = new Map<string, PetFlightTilt>()
+
+  const tilt_pet = (entity: MountedEntity, dt: number): void => {
+    const root = entity.object
+    if (!root || entity.spec.kind !== 'mob' || !entity.spec.wings) return
+    const pose = advance_pet_flight_tilt(
+      flight_tilts.get(entity.spec.id),
+      [root.position.x, root.position.y, root.position.z],
+      root.rotation.y,
+      entity.spec.wings.deployed,
+      dt
+    )
+    flight_tilts.set(entity.spec.id, pose)
+    root.rotation.set(pose.pitch, pose.yaw, pose.bank, 'YXZ')
+  }
   let board: FightBoardRender | null = null
   let serial = 0
   let previous_tick = performance.now()
@@ -354,6 +370,7 @@ export const create_entity_layer = ({
     active_animations.delete(id)
     dead_entities.delete(id)
     retained_facing.delete(id)
+    flight_tilts.delete(id)
     entity.invisibility?.dispose()
     if (!entity.model) return
     if (entity.object) scene.remove(entity.object)
@@ -595,6 +612,10 @@ export const create_entity_layer = ({
       root.updateWorldMatrix(true, true)
       return root.localToWorld(entity.anchor_offset.clone())
     },
+    mount_anchor: (id: string): Object3D | null => {
+      const entity = entities.get(id)
+      return entity?.object?.visible ? (entity.mount_socket ?? null) : null
+    },
     entity_position: (id: string, height = 0): Vec3 | null => {
       const entity = entities.get(id)
       if (!entity?.object) return null
@@ -684,6 +705,7 @@ export const create_entity_layer = ({
         }
         motion.resolve(true)
       })
+      entities.forEach((entity) => tilt_pet(entity, delta))
       entities.forEach(place_rider)
     },
     dispose: (): void => {

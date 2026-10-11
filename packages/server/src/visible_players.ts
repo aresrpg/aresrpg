@@ -17,15 +17,14 @@ type VisiblePlayer = {
   position: PlayerPosition
   presented: boolean
   skipped: number
-  riding: boolean
   stop_move: () => void
   stop: () => void
 }
 
 const position_of = (
   world: string,
-  { character_id, x, y, z, riding }: Omit<PlayerPosition, 'world'>
-): PlayerPosition => ({ world, character_id, x, y, z, riding })
+  { character_id, x, y, z, riding, gliding }: Omit<PlayerPosition, 'world'>
+): PlayerPosition => ({ world, character_id, x, y, z, riding, gliding })
 
 export const create_visible_players = ({
   address,
@@ -80,7 +79,6 @@ export const create_visible_players = ({
       known.stop_move()
       known.player = fact.player
       known.position = position_of(world, fact.player)
-      known.riding = fact.player.riding
       known.stop_move = listen(known)
       if (known.presented)
         send({
@@ -94,7 +92,6 @@ export const create_visible_players = ({
       position: position_of(world, fact.player),
       presented: false,
       skipped: 0,
-      riding: fact.player.riding,
       stop_move: () => {},
       stop: () => {},
     }
@@ -105,6 +102,7 @@ export const create_visible_players = ({
   const move = (world: string, fact: Extract<RemoteFact, { kind: 'move' }>): void => {
     const row = visible.get(fact.character_id)
     if (!row || row.position.world !== world) return
+    const previous = row.position
     row.position = position_of(world, fact)
     if (!row.presented) return
     const near = Object.values(get_state().characters).some(({ presence }) => {
@@ -112,10 +110,10 @@ export const create_visible_players = ({
       const dz = fact.z - presence.z
       return presence.world === world && dx * dx + dz * dz <= FAR_PLAYER_BLOCKS ** 2
     })
-    row.skipped = !near && row.riding === fact.riding ? row.skipped + 1 : FAR_MOVE_INTERVAL
+    const unchanged = previous.riding === fact.riding && previous.gliding === fact.gliding
+    row.skipped = !near && unchanged ? row.skipped + 1 : FAR_MOVE_INTERVAL
     if (row.skipped < FAR_MOVE_INTERVAL) return
     row.skipped = 0
-    row.riding = fact.riding
     send_position(row.position)
   }
   const listen = (row: VisiblePlayer): (() => void) => {

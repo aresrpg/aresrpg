@@ -17,6 +17,7 @@ export type WorldPose = Readonly<{
   yaw: number
   /** mounted on the equipped pet right now — rides the position stream to other players */
   riding: boolean
+  gliding: boolean
   /** 0..1 through the celestial cycle — feeds the day/night bar */
   time_of_day: number
   /** Actual manual world input; automatic travel and companion following do not qualify. */

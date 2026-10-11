@@ -137,18 +137,11 @@ export default defineConfig(({ mode }) => {
           skipWaiting: true,
           // Content art loads on demand and is never precached. Chain, auth, and world requests stay network-owned.
           // Manifest icons are added by VitePWA independently of this versioned app-file glob.
-          globPatterns: ['**/*.{js,css,html,ico,webmanifest}'],
-          // Route shells under a directory exist for crawlers; navigations fall back to the root shell.
-          globIgnores: ['logo-192.png', 'logo-512.png', '*/**/index.html'],
+          globPatterns: ['**/*.{js,css,ico,webmanifest}'],
+          globIgnores: ['logo-192.png', 'logo-512.png'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-          navigateFallback: '/index.html',
-          navigateFallbackDenylist: [
-            /^\/api\//,
-            /^\/ingest(?:\/|$)/,
-            /^\/agents(?:\/|$)/,
-            /^\/links(?:\/|$)/,
-            /^\/llms\.txt$/,
-          ],
+          // Reload must fetch the current shell: an old shell can reference retired lazy art URLs.
+          navigateFallback: null,
         },
       }),
     ],

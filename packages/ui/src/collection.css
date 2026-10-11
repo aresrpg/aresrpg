@@ -1,3 +1,20 @@
+.aui-collection-corner-badge {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: #d8b4581a;
+  color: #d8b458;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
 .aui-collection {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));

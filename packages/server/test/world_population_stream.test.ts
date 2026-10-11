@@ -34,6 +34,7 @@ const tracked_state = (): PlayerState =>
           title: null,
           pet: null,
           riding: false,
+          gliding: false,
           world: 'nauvis',
           x: 50_000,
           y: 64,

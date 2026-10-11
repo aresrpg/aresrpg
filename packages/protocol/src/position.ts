@@ -25,4 +25,5 @@ export type PlayerPosition = Readonly<{
   y: number
   z: number
   riding: boolean
+  gliding: boolean
 }>

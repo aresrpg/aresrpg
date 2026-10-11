@@ -69,7 +69,16 @@ export const mesh = {
  *  presence needs no stored snapshot because the occupants themselves are the state. */
 export type MeshFact =
   | { kind: 'appear'; player: import('@aresrpg/protocol').PresenceRow; address: string }
-  | { kind: 'move'; character_id: string; address: string; x: number; y: number; z: number; riding: boolean }
+  | {
+      kind: 'move'
+      character_id: string
+      address: string
+      x: number
+      y: number
+      z: number
+      riding: boolean
+      gliding: boolean
+    }
   | { kind: 'leave'; character_id: string; address: string }
   | { kind: 'who'; address: string; world: string; zx: number; zz: number; reply_to: string; request: string }
   | { kind: 'reply'; address: string; player: import('@aresrpg/protocol').PresenceRow; request: string }

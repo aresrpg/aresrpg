@@ -5,6 +5,7 @@ export { ATMOSPHERE_CONTROLS, resolve_atmosphere_tuning, type AtmosphereTuning }
 export { create_engine } from './renderer.ts'
 export { create_character_preview } from './character_preview.ts'
 export { mob_entity_scale } from './entities.ts'
+export type { PetWingStyle, PetWingsRender } from './pet_wing_style.ts'
 export { fight_placement_blobs } from './fight_blobs.ts'
 export { fight_blob_preset } from './fight_blob_presets.ts'
 export type { FightBlobPreset } from './fight_blob_presets.ts'

@@ -2,8 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { CharacterRow, ClaimRow, ItemAmountChange, GiftcardRow, ItemRow, ServerPacket } from '@aresrpg/protocol'
 import { fight_action_to_wire } from '@aresrpg/fight'
-import { character_checkpoint, POSITION_INTERVAL_MS } from '@aresrpg/protocol'
-import { client_to_chain_coordinate, type CharacteristicName } from '@aresrpg/immutable'
+import type { CharacteristicName } from '@aresrpg/immutable'
 
 import type { Auth, AuthSession } from '../auth.ts'
 import { send_admin_dashboard_requests } from '../admin/admin_requests.ts'
@@ -16,9 +15,6 @@ import {
   remember_selected_character_change,
 } from '../auth_storage.ts'
 import { env } from '../env.ts'
-import { pose_matches_character, read_pose, subscribe_pose } from '../game/core/pose_feed.ts'
-import { record_owned_character_position } from '../game/core/owned_character_feed.ts'
-import { create_position_publisher } from '../game/core/position_publication.ts'
 import { connect_server, type ServerLink } from '../server_link.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
 import { toast } from '../toast.ts'
@@ -33,6 +29,7 @@ import { fight_environment } from './fight.ts'
 import { nearby_watch_changes } from './nearby_fight.ts'
 import { spectator_changes } from './fight_identity.ts'
 import { observe_failure_toasts } from './session_toasts.ts'
+import { observe_session_positions } from './session_positions.ts'
 import { fold_link_input } from './session_link.ts'
 export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
@@ -548,32 +545,10 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     if (state.session.wallet !== previous.session.wallet && !state.session.wallet)
       forget_session(previous.session.wallet)
   })
-  const positions = create_position_publisher({
-    send: (character_id, position) => link?.send({ type: 'packet/position', character_id, ...position }) ?? false,
-  })
-  const publish_selected_position = (force = false): void => {
-    const pose = read_pose()
-    const state = get_state()
-    if (state.session.link_status !== 'ready' || !pose_matches_character(pose, state.session.selected_character_id))
-      return
-    const character = state.session.characters.find(({ id }) => id === pose.character_id)
-    const checkpoint = character ? character_checkpoint(character) : null
-    if (!checkpoint) return
-    const next = {
-      checkpoint,
-      x: client_to_chain_coordinate(pose.x),
-      y: pose.y,
-      z: client_to_chain_coordinate(pose.z),
-      riding: pose.riding,
-    }
-    record_owned_character_position(pose.character_id, character!.world!, next)
-    positions.publish(pose.character_id, next, POSITION_INTERVAL_MS, force)
-  }
-  const unsubscribe_pose = subscribe_pose(publish_selected_position)
-  events.on('party/follower_moved', ({ character_id, checkpoint, x, y, z }) => {
-    if (get_state().session.link_status !== 'ready') return
-    positions.publish(character_id, Object.freeze({ checkpoint, x, y, z, riding: false }), 100)
-  })
+  const publish_selected_position = observe_session_positions(
+    { events, get_state, signal },
+    (packet) => link?.send(packet) ?? false
+  )
   events.on('fight/input', ({ fight, input, origin }) => {
     const state = get_state()
     if (input.type === 'end_turn') return
@@ -588,7 +563,6 @@ const observe = ({ events, dispatch, signal, get_state }: Parameters<NonNullable
     })
   })
   signal.addEventListener('abort', () => {
-    unsubscribe_pose()
     clearInterval(balance_timer)
     dispose_link()
     auth?.dispose()

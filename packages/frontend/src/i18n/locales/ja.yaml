@@ -2003,6 +2003,7 @@ characters_page:
       ingredients: '材料{{count}}個'
       required_level: '必要職業レベル {{level}}'
       best_progress: '最適'
+      chain_missing: 'このキャラクターは一部の素材を製作するための職業レベルが足りません。購入した素材やドロップした素材は使用できます。'
     gather:
       in_progress: '{{name}}を採集中…'
       button: '{{name}}を採集'

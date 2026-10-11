@@ -400,23 +400,21 @@ export const acquisition_catalog = (content: AcquisitionContent): Readonly<Recor
   return Object.freeze(Object.fromEntries(content.items.map(({ item_type }) => [item_type, estimate(item_type)])))
 }
 
-const reachable_recipe_outputs = (
+/** Level-only reachability through every supplied recipe. Unproduced inputs are external/raw;
+ * inventory and transaction eligibility are deliberately outside this graph. Cycles never unlock. */
+export const unlocked_recipe_chains = (
   recipes: readonly RecipeProgressionInput[],
-  recipes_by_output: ReadonlyMap<string, RecipeProgressionInput>,
-  job: string,
-  level: number
+  job_levels: Readonly<Record<string, number>>
 ): ReadonlySet<string> => {
+  const outputs = new Set(recipes.map((recipe) => recipe.output_type))
   const candidates = recipes.filter(
-    (recipe) => recipe.job === job && craft_required_level(Object.keys(recipe.inputs).length) <= level
+    (recipe) => craft_required_level(Object.keys(recipe.inputs).length) <= (job_levels[recipe.job] ?? 1)
   )
   const extend = (reachable: ReadonlySet<string>): ReadonlySet<string> => {
     const unlocked = candidates.filter(
       (recipe) =>
         !reachable.has(recipe.output_type) &&
-        Object.keys(recipe.inputs).every((input_type) => {
-          const producer = recipes_by_output.get(input_type)
-          return !producer || producer.job !== job || reachable.has(input_type)
-        })
+        Object.keys(recipe.inputs).every((input_type) => !outputs.has(input_type) || reachable.has(input_type))
     )
     return unlocked.length === 0
       ? reachable
@@ -431,21 +429,19 @@ export const recipe_progression_issues = (
   recipes: readonly RecipeProgressionInput[],
   jobs: readonly string[]
 ): readonly RecipeProgressionIssue[] => {
-  const recipes_by_output = new Map(recipes.map((recipe) => [recipe.output_type, recipe]))
   const levels = Array.from({ length: job_max_level - 1 }, (_, index) => index + 1)
   return Object.freeze(
     jobs.flatMap((job) => {
+      const job_recipes = recipes.filter((recipe) => recipe.job === job)
       const blocked = levels.find((level) => {
-        const reachable = reachable_recipe_outputs(recipes, recipes_by_output, job, level)
-        return !recipes.some(
+        const reachable = unlocked_recipe_chains(job_recipes, { [job]: level })
+        return !job_recipes.some(
           (recipe) =>
-            recipe.job === job &&
-            reachable.has(recipe.output_type) &&
-            craft_xp_at_level(Object.keys(recipe.inputs).length, level) > 0
+            reachable.has(recipe.output_type) && craft_xp_at_level(Object.keys(recipe.inputs).length, level) > 0
         )
       })
       if (blocked === undefined) return []
-      const reachable = reachable_recipe_outputs(recipes, recipes_by_output, job, blocked)
+      const reachable = unlocked_recipe_chains(job_recipes, { [job]: blocked })
       return [
         Object.freeze({
           job,
@@ -478,11 +474,11 @@ export const best_recipe_for_job_progression = (
   input_seconds: (item_type: string) => number | null
 ): RecipeProgressRecommendation | null => {
   if (level >= job_max_level) return null
-  const recipes_by_output = new Map(recipes.map((recipe) => [recipe.output_type, recipe]))
-  const reachable = reachable_recipe_outputs(recipes, recipes_by_output, job, level)
+  const job_recipes = recipes.filter((recipe) => recipe.job === job)
+  const reachable = unlocked_recipe_chains(job_recipes, { [job]: level })
   return (
-    recipes
-      .filter((recipe) => recipe.job === job && reachable.has(recipe.output_type))
+    job_recipes
+      .filter((recipe) => reachable.has(recipe.output_type))
       .flatMap((recipe): readonly RecipeProgressRecommendation[] => {
         const xp = craft_xp_at_level(Object.keys(recipe.inputs).length, level)
         const acquisition_seconds = recipe_acquisition_seconds(recipe, input_seconds)

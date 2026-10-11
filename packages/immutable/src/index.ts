@@ -98,6 +98,7 @@ export {
   item_acquisition,
   best_recipe_for_job_progression,
   recipe_progression_issues,
+  unlocked_recipe_chains,
   type AcquisitionContent,
   type AcquisitionEstimate,
   type AcquisitionIngredient,

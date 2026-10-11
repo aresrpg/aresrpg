@@ -10,6 +10,7 @@ export type CollectionEntry = Readonly<{
   image?: string
   meta?: string
   badge?: string
+  corner_badge?: Readonly<{ text: string; label: string }>
   muted?: boolean
 }>
 export const CollectionTile = ({
@@ -43,6 +44,16 @@ export const CollectionTile = ({
         {entry.meta && <small>{entry.meta}</small>}
       </span>
       {entry.badge && <span className="aui-collection-badge">{entry.badge}</span>}
+      {entry.corner_badge && (
+        <span
+          className="aui-collection-corner-badge"
+          role="img"
+          aria-label={entry.corner_badge.label}
+          title={entry.corner_badge.label}
+        >
+          {entry.corner_badge.text}
+        </span>
+      )}
     </Button>
   )
 }

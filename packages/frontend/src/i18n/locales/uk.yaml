@@ -2024,6 +2024,7 @@ characters_page:
       ingredients: 'Інгредієнтів: {{count}}'
       required_level: 'Потрібен рівень професії {{level}}'
       best_progress: 'Найкраще'
+      chain_missing: 'Цьому персонажу бракує рівнів професій для виготовлення деяких інгредієнтів. Можна використовувати придбані інгредієнти або здобич.'
     gather:
       in_progress: 'Збір {{name}}…'
       button: 'Зібрати {{name}}'

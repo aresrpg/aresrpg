@@ -1999,6 +1999,7 @@ characters_page:
       ingredients: '{{count}} ingredientes'
       required_level: Requer profissão nv. {{level}}
       best_progress: Melhor
+      chain_missing: 'Este personagem não tem os níveis de profissão necessários para fabricar alguns ingredientes. Você ainda pode usar ingredientes comprados ou obtidos como saque.'
     gather:
       in_progress: Coletando {{name}}…
       button: Coletar {{name}}

@@ -99,6 +99,7 @@ test('nearby player equipment stays removed when an older equip lookup completes
       y: 0,
       z: 100,
       riding: false,
+      gliding: false,
       ...visible_equipment(base_equipment),
     }
     harness.pubsub.emitter.emit(mesh.pos('overworld', 0, 0), { kind: 'appear', address: remote.owner, player: remote })
@@ -163,6 +164,7 @@ test('a repeated stale presence cannot erase newer indexed cosmetics', async () 
       y: 0,
       z: 100,
       riding: false,
+      gliding: false,
       ...visible_equipment(base_equipment),
     }
     const appear = () =>

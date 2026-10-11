@@ -75,6 +75,7 @@ while (performance.now() - started < duration) {
         y: Math.max(0, Math.sin(tick / 10)),
         z: character.z!,
         riding: false,
+        gliding: false,
       })
     )
     if (tick % 20 === 0) {

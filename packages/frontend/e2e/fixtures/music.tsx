@@ -22,7 +22,7 @@ dispatch_app({ type: 'auth/connecting' })
 dispatch_app({ type: 'auth/connected', session: { address: 'owner' } as AuthSession })
 dispatch_app({ type: 'server/packet', packet: { type: 'packet/characters', characters: [character()] } })
 dispatch_app({ type: 'character/select', character_id: 'alice' })
-publish_pose({ character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0 })
+publish_pose({ character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0 })
 
 const settings = (changes: Partial<ReturnType<typeof read_app_state>['settings']>): void =>
   dispatch_app({ type: 'settings/changed', settings: { ...read_app_state().settings, ...changes } })

@@ -88,7 +88,7 @@ Send an explicit null observation when finished; repeat for each active observat
 
 Use monotonically increasing request identities and ignore replies for superseded selections. Do not invent generic REST endpoints such as `/api/inventory` or `/api/market`. The SDK has narrow direct-read exceptions, not a broad player-state reader. Independent chain-native agents build their own bounded Sui GraphQL read adapter; that does not add a second read path to the browser app.
 
-World presence uses `packet/position` with the character ID, exact `character_checkpoint` string, chain-space pose, and riding state. A new chain checkpoint invalidates old movement provenance. Publish physically plausible movement within the protocol rate/speed limits. For headless world traversal, adapt the existing server-link/world behavior; a transaction script alone is not a navigation client.
+World presence uses `packet/position` with the character ID, exact `character_checkpoint` string, chain-space pose, and required boolean `riding` and `gliding` states. `gliding` reports an active mounted descent, not held jump input. A new chain checkpoint invalidates old movement provenance. Publish physically plausible movement within the protocol rate/speed limits. For headless world traversal, adapt the existing server-link/world behavior; a transaction script alone is not a navigation client.
 
 ## Indexed freshness and service limits
 

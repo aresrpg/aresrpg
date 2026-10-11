@@ -46,20 +46,21 @@ const position = (id = 'character', x = 1): PlayerPosition => ({
   y: 0,
   z: 0,
   riding: false,
+  gliding: false,
 })
 
 test('positions coalesce by identity while reliable packets retain their order', () => {
   const { output, sent, tick, timers, controller } = fixture()
   output.send({ type: 'packet/player_appeared', player: { ...position() } } as never)
   for (let index = 0; index < 100; index++) output.position(position('character', index))
-  output.position({ ...position('other'), riding: true })
+  output.position({ ...position('other'), riding: true, gliding: false })
   output.send({ type: 'packet/pong', id: 42 })
   expect(timers.size).toBe(1)
   expect(sent.map(({ type }) => type)).toEqual(['packet/player_appeared', 'packet/pong'])
   tick()
   expect(sent.at(-1)).toEqual({
     type: 'packet/players_moved',
-    positions: [position('character', 99), { ...position('other'), riding: true }],
+    positions: [position('character', 99), { ...position('other'), riding: true, gliding: false }],
   })
   expect(timers.size).toBe(0)
   controller.abort()
@@ -87,12 +88,14 @@ test('slow sockets retain only latest positions and resume without losing a moun
   state.buffered = 100_000
   output.position(position())
   tick()
-  output.position({ ...position('character', 4), riding: true })
+  output.position({ ...position('character', 4), riding: true, gliding: false })
   tick()
   expect(sent).toEqual([])
   state.buffered = 0
   tick()
-  expect(sent).toEqual([{ type: 'packet/players_moved', positions: [{ ...position('character', 4), riding: true }] }])
+  expect(sent).toEqual([
+    { type: 'packet/players_moved', positions: [{ ...position('character', 4), riding: true, gliding: false }] },
+  ])
   controller.abort()
 })
 

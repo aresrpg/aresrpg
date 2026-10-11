@@ -13,7 +13,7 @@ test('wandering mobs stay outside a raised wall instead of teleporting through i
   const { create_spawn_renderer } = await import('../../src/game/spawn_entities.ts')
   const positions: number[] = []
   const solid_at = (x: number, y: number) => y < 0 || (x >= 2 && y < 4)
-  publish_pose({ character_id: 'observer', x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0.5 })
+  publish_pose({ character_id: 'observer', x: 0, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0.5 })
   const renderer = create_spawn_renderer({
     submit: (entities) => {
       for (const entity of entities) {

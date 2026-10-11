@@ -2,6 +2,10 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Pet identity is its item identity: one same-named GLB, no catalog or fallback lookup.
 
+import type { PetWingStyle } from '@aresrpg/engine'
+
+import { pet_wing_style } from './pet_wings.ts'
+
 const modules = import.meta.glob('../../../../seed/models/pets/*.glb', {
   import: 'default',
   query: '?url',
@@ -32,6 +36,7 @@ export const load_pet_companion = async (
   id: string
   model_url: string
   locomotion: import('../game/core/pet_locomotion.ts').PetLocomotion
+  wings: PetWingStyle
 }> | null> => {
   const [{ content_catalog }, { pet_locomotion_of }] = await Promise.all([
     import('./catalog.ts'),
@@ -39,5 +44,8 @@ export const load_pet_companion = async (
   ])
   const model_url = await load_pet_model_url(item_type)
   const item = content_catalog.item(item_type)?.item
-  return model_url && item ? Object.freeze({ id, model_url, locomotion: pet_locomotion_of(item) }) : null
+  const wings = pet_wing_style(item_type)
+  return model_url && item && wings
+    ? Object.freeze({ id, model_url, locomotion: pet_locomotion_of(item), wings })
+    : null
 }

@@ -14,6 +14,7 @@ import {
   job_slugs,
   rune_effect,
   tier_unlock_level,
+  unlocked_recipe_chains,
   type GatheringJob,
   type JobSlug,
   type AcquisitionContent,
@@ -350,6 +351,8 @@ export const content_catalog = Object.freeze({
   world: (id: string): SeedWorld | null => worlds_by_id[id] ?? null,
   dungeon: (id: string): SeedDungeon | null => dungeons_by_id[id] ?? null,
   progress_recipe,
+  unlocked_recipe_chains: (job_levels: Readonly<Record<string, number>>) =>
+    unlocked_recipe_chains(progression_recipes, job_levels),
 })
 
 export { content_catalog as encyclopedia_catalog }

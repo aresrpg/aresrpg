@@ -3,6 +3,7 @@
 import type { AtmosphereTuning } from './atmosphere_tuning.ts'
 import type { DetailCell } from './detail_artifact.ts'
 import type { WorldCaption } from './caption_types.ts'
+import type { PetWingsRender } from './pet_wing_style.ts'
 
 export type Vec3 = readonly [number, number, number]
 export type EngineQuality = 'low' | 'medium' | 'high'
@@ -75,6 +76,7 @@ export type CharacterAnimationRender = Readonly<{
   loop?: boolean
 }>
 export type MobEntityRender = Readonly<{
+  wings?: PetWingsRender
   id: string
   kind: 'mob'
   model_url: string

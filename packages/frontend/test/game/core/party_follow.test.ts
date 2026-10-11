@@ -178,7 +178,7 @@ test('position publication throttles and suppresses stationary follower packets'
       return true
     },
   })
-  const position = { checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0, riding: false }
+  const position = { checkpoint: 'nauvis:0:0:0', x: 0, y: 0, z: 0, riding: false, gliding: false }
   expect(publisher.publish('0xb', position, 100)).toBeTrue()
   now = 100
   expect(publisher.publish('0xb', position, 100)).toBeFalse()

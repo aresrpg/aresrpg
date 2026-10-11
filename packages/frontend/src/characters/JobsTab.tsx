@@ -75,7 +75,13 @@ const JobRecipeDetails = ({
   id,
   copy,
   craft_session,
-}: Readonly<{ id: string; copy: AppCopy; craft_session: ComponentProps<typeof ItemDetailView>['craft_session'] }>) => {
+  missing_chain,
+}: Readonly<{
+  id: string
+  copy: AppCopy
+  craft_session: ComponentProps<typeof ItemDetailView>['craft_session']
+  missing_chain: boolean
+}>) => {
   const item = encyclopedia_catalog.item(id)?.item
   const text = encyclopedia_text(copy)
   if (!item) return null
@@ -91,6 +97,9 @@ const JobRecipeDetails = ({
         range_to: text('range_to'),
       }}
     >
+      {missing_chain && (
+        <p className="jobs__chain-note">{copy_text(copy.characters_page)('jobs.recipes.chain_missing')}</p>
+      )}
       <ConsumableEffectSection consumable={item.consumable} text={text} />
     </ItemDetailView>
   )
@@ -188,6 +197,17 @@ export default function JobsTab({
     }
   }, [detail, level])
   const best_progress = useMemo(() => encyclopedia_catalog.progress_recipe(selected_job, level), [level, selected_job])
+  const unlocked_chains = useMemo(
+    () =>
+      encyclopedia_catalog.unlocked_recipe_chains(
+        Object.fromEntries(
+          Object.entries(character.jobs).map(([job, experience]) => [job, job_level_from_xp(Number(experience))])
+        )
+      ),
+    [character.jobs]
+  )
+  const has_missing_chain = (id: string): boolean =>
+    unlocked.some(({ output_type }) => output_type === id) && !unlocked_chains.has(id)
   const recipe_sections = [
     { id: 'unlocked', rows: unlocked, groups: recipe_tiers(unlocked), locked: false },
     { id: 'locked', rows: locked, groups: recipe_tiers(locked), locked: true },
@@ -208,6 +228,9 @@ export default function JobsTab({
           image: item_icon(recipe.output_type) ?? undefined,
           meta: `${t('jobs.lv_badge', { level: craft_required_level(Object.keys(recipe.inputs).length) })} · ${t('jobs.recipes.ingredients', { count: Object.keys(recipe.inputs).length })}`,
           badge: is_best_progress ? t('jobs.recipes.best_progress') : undefined,
+          corner_badge: has_missing_chain(recipe.output_type)
+            ? { text: '~', label: t('jobs.recipes.chain_missing') }
+            : undefined,
           muted: is_locked,
         }}
       />
@@ -406,7 +429,9 @@ export default function JobsTab({
               range_to: encyclopedia('range_to'),
             },
           }}
-          render_item={(id) => <JobRecipeDetails id={id} copy={copy} craft_session={craft_session} />}
+          render_item={(id) => (
+            <JobRecipeDetails id={id} copy={copy} craft_session={craft_session} missing_chain={has_missing_chain(id)} />
+          )}
         />
       ))}
     </div>

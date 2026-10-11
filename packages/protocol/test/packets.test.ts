@@ -19,6 +19,7 @@ describe('the wire contract', () => {
           y: 2,
           z: 3,
           riding: false,
+          gliding: false,
         })
       )
     ).toEqual({
@@ -29,6 +30,7 @@ describe('the wire contract', () => {
       y: 2,
       z: 3,
       riding: false,
+      gliding: false,
     })
     expect(() =>
       parse_client_packet(
@@ -95,7 +97,15 @@ describe('the wire contract', () => {
     expect(() => parse_client_packet(JSON.stringify({ type: 'packet/position', x: 'a' }))).toThrow(/needs/)
     expect(() =>
       parse_client_packet(
-        JSON.stringify({ type: 'packet/position', character_id: 'nope', x: 1, y: 2, z: 3, riding: false })
+        JSON.stringify({
+          type: 'packet/position',
+          character_id: 'nope',
+          x: 1,
+          y: 2,
+          z: 3,
+          riding: false,
+          gliding: false,
+        })
       )
     ).toThrow(/character_id/)
     expect(() =>
@@ -326,24 +336,40 @@ describe('the wire contract', () => {
 })
 
 test('movement needs bounded checkpoint provenance', () => {
-  const position = { type: 'packet/position', character_id: '0xabc', x: 50_000, y: 0, z: 50_000, riding: false }
+  const position = {
+    type: 'packet/position',
+    character_id: '0xabc',
+    x: 50_000,
+    y: 0,
+    z: 50_000,
+    riding: false,
+    gliding: false,
+  }
   for (const checkpoint of [undefined, null, '', 'x'.repeat(257), 20])
     expect(() => parse_client_packet(JSON.stringify({ ...position, checkpoint }))).toThrow(/checkpoint/)
 })
 
-test('captured browser movement retains its recalled checkpoint identity', async () => {
-  // Captured from the real browser position publisher over a local WebSocket on 2026-09-09.
-  // Synthetic origin pose using the confirmed testnet recall projection for Character
-  // 0x79ebc67c18575a6b20f7d69faecfd318c6136a23e687aae6cb92caa89db32e2c,
-  // object version 1009255742; checkpoint (50000, 50000) at 1788970808124 ms.
+test('the captured pre-glide client is rejected rather than guessing its missing flight state', async () => {
+  // Captured from the real browser publisher over a local WebSocket on 2026-09-09.
+  // Character 0x79ebc67c18575a6b20f7d69faecfd318c6136a23e687aae6cb92caa89db32e2c,
+  // testnet object version 1009255742. Retained verbatim across this coordinated wire change.
   const raw = await Bun.file(new URL('./fixtures/recall-position.json', import.meta.url)).text()
+  expect(() => parse_client_packet(raw)).toThrow(/gliding/)
+})
+
+test('captured browser gliding preserves the flight state and checkpoint on the position stream', async () => {
+  // Captured on 2026-10-12 from create_position_publisher over a real local WebSocket.
+  // glide_relay fixture v1: Character 0xabc, checkpoint nauvis:50000:50000:1791720000000.
+  // This is a browser/server transport capture using fixture indexed facts, not a Sui object capture.
+  const raw = await Bun.file(new URL('./fixtures/gliding-position.json', import.meta.url)).text()
   expect(parse_client_packet(raw)).toEqual({
     type: 'packet/position',
-    character_id: '0x79ebc67c18575a6b20f7d69faecfd318c6136a23e687aae6cb92caa89db32e2c',
-    checkpoint: 'nauvis:50000:50000:1788970808124',
+    character_id: '0xabc',
+    checkpoint: 'nauvis:50000:50000:1791720000000',
     x: 50000,
-    y: 0,
-    z: 50000,
-    riding: false,
+    y: 24.141309434921983,
+    z: 49997.17800053436,
+    riding: true,
+    gliding: true,
   })
 })

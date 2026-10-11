@@ -94,6 +94,7 @@ export type PlayerAction =
       y: number
       z: number
       riding: boolean
+      gliding: boolean
       at_ms: number
       budget_blocks: number
     }

@@ -293,6 +293,8 @@ export type PresenceRow = Record<VisibleSlot, string | null> & {
   /** actually mounted right now — rides the position stream (one flag, no extra packets);
    *  only meaningful while `pet` is non-null (the server clamps a petless claim) */
   riding: boolean
+  /** Active mounted descent, rather than the held jump input. */
+  gliding: boolean
   x: number
   y: number
   z: number
@@ -724,7 +726,15 @@ export type ClientPackets = {
   /** Deprecated rolling-compatibility no-op. The server tracks its capped roster itself. */
   'packet/track_character': { character_id: string; tracked: boolean }
   /** The player's live position — drives zone tracking, visibility, and the presence mesh. */
-  'packet/position': { character_id: string; checkpoint: string; x: number; y: number; z: number; riding: boolean }
+  'packet/position': {
+    character_id: string
+    checkpoint: string
+    x: number
+    y: number
+    z: number
+    riding: boolean
+    gliding: boolean
+  }
   /** World chat — heard by everyone standing in the same world, never stored. */
   'packet/chat': { character_id: string; parts: readonly ChatMessagePart[] }
   /** Party chat — rides the party's channel; refused when partyless. */
@@ -1271,15 +1281,15 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
     return packet as ClientPacket
   }
   if (type === 'packet/position') {
-    const { character_id, checkpoint, x, y, z, riding } = packet
+    const { character_id, checkpoint, x, y, z, riding, gliding } = packet
     if (
       !is_id(character_id) ||
       typeof checkpoint !== 'string' ||
       !/^.{1,256}$/.test(checkpoint) ||
       ![x, y, z].every(is_finite_number) ||
-      typeof riding !== 'boolean'
+      ![riding, gliding].every((value) => typeof value === 'boolean')
     )
-      throw new Error('packet/position needs { character_id, checkpoint, x, y, z, riding }')
+      throw new Error('packet/position needs { character_id, checkpoint, x, y, z, riding, gliding }')
     return packet as ClientPacket
   }
   if (type === 'packet/chat' || type === 'packet/chat_party') {

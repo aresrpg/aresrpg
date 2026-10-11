@@ -26,6 +26,7 @@ test('one second of six-character movement leaves room for ordinary control pack
             y: 0,
             z: 100,
             riding: false,
+            gliding: false,
           })
         )
       )

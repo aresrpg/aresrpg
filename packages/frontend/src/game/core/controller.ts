@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable complexity, functional/immutable-data, functional/prefer-immutable-types, no-param-reassign -- the frame controller mutates its owned simulation state and vectors in one measured hot path. */
-// The locomotion brain — LOSSLESS PORT of the proven legacy controller
+// The locomotion brain — ground/swim/jump feel from the proven legacy controller
 // (deprecated/engine/src/player/controller.js): WASD relative to camera yaw, linear accel/brake
 // ground curves with a minecraft-style multiplicative no-input stop, sprint, a real jump
 // (asymmetric gravity + coyote-time + jump-buffer + release-to-cut + double-jump), air control
-// preserving momentum, swim-float, auto-step visual smoothing. Pure state + math over
-// `{ solid_at, liquid_at }` oracles — every feel constant carried verbatim, do not retune casually.
+// preserving momentum, swim-float, auto-step visual smoothing, and mounted glide steering. Pure state + math over
+// `{ solid_at, liquid_at }` oracles. Flight tuning is separate from the established ground controls.
 
 import { CHARACTER_HEIGHT, ground_height_below, resolve_movement, type SolidFn, type Vec3Mut } from './collision.ts'
+import { accelerate_horizontal, airborne_velocity, AIR_ACCEL } from './air_motion.ts'
 
 // ═══ GAME-FEEL TUNABLES (ported verbatim — the A/B history lives in the legacy source) ═══
 const WALK_SPEED = 4.8
@@ -19,7 +20,6 @@ const GROUND_ACCEL = 50
 const GROUND_BRAKE = 160
 const MC_STOP_FACTOR = 0.3
 const STOP_SNAP_SPEED = 0.2
-const AIR_ACCEL = 31.5
 const JUMP_APEX_M = 1.44
 const RISE_GRAVITY = 40
 const FALL_GRAVITY_MULT = 1.6
@@ -31,8 +31,9 @@ const GRAVITY_UNDERWATER = 5
 const SWIM_LAMBDA = 12
 const SWIM_UP_SPEED = 1.5 * GRAVITY_UNDERWATER
 const TERMINAL_FALL = -60
-const GLIDE_GRAVITY = 8
-const GLIDE_TERMINAL_FALL = -5
+const GLIDE_GRAVITY = 2.5
+const GLIDE_TERMINAL_FALL = -1.8
+const GLIDE_DELAY_SECONDS = 0.25
 const COYOTE_TIME = 0.12
 const JUMP_BUFFER = 0.12
 const FALL_ANIM_THRESHOLD = 3
@@ -67,6 +68,7 @@ export type ControllerState = {
   speed: number
   gait_scale: number
   _since_ground: number
+  _airborne_seconds: number
   _jump_buffer: number
   _jump_was_down: boolean
   _air_jumped: boolean
@@ -89,6 +91,7 @@ export const create_controller_state = (spawn: Readonly<Vec3Mut>, yaw = 0): Cont
   speed: 0,
   gait_scale: 1,
   _since_ground: 999,
+  _airborne_seconds: 0,
   _jump_buffer: 0,
   _jump_was_down: false,
   _air_jumped: false,
@@ -114,16 +117,6 @@ export const move_direction = (forward: number, strafe: number, yaw: number): re
     wz = 0
   }
   return [wx, wz]
-}
-
-const accelerate_horizontal = (vel: Vec3Mut, tx: number, tz: number, rate: number, dt: number): void => {
-  const dx = tx - vel[0]
-  const dz = tz - vel[2]
-  const dist = Math.hypot(dx, dz)
-  if (dist < 1e-9) return
-  const step = Math.min(dist, rate * dt)
-  vel[0] += (dx / dist) * step
-  vel[2] += (dz / dist) * step
 }
 
 const turn_toward = (facing: number, target: number, lambda: number, dt: number): number => {
@@ -183,6 +176,7 @@ export const step_controller = (
   state.in_water = in_water
 
   const [dir_x, dir_z] = move_direction(input.forward, input.strafe, input.yaw)
+  let facing: readonly [number, number] = [dir_x, dir_z]
   const has_move = dir_x !== 0 || dir_z !== 0
   const ground_speed = (input.walk ? WALK_SPEED : RUN_SPEED) * (input.speed_scale || 1)
 
@@ -193,7 +187,12 @@ export const step_controller = (
   } else if (state.on_ground) {
     if (has_move) {
       const rate = vel[0] * dir_x + vel[2] * dir_z < -0.01 ? GROUND_BRAKE : GROUND_ACCEL
-      accelerate_horizontal(vel, dir_x * ground_speed, dir_z * ground_speed, rate, dt)
+      ;[vel[0], vel[2]] = accelerate_horizontal(
+        [vel[0], vel[2]],
+        [dir_x * ground_speed, dir_z * ground_speed],
+        rate,
+        dt
+      )
     } else {
       // Minecraft-style multiplicative stop: a minimal present glide with a soft tail, then snap
       // only the imperceptible crawl.
@@ -205,8 +204,9 @@ export const step_controller = (
         vel[2] = 0
       }
     }
-  } else if (has_move) {
-    accelerate_horizontal(vel, dir_x * ground_speed, dir_z * ground_speed, AIR_ACCEL, dt)
+  } else {
+    ;[vel[0], vel[2]] = airborne_velocity([vel[0], vel[2]], [dir_x, dir_z], ground_speed, is_gliding(state, input), dt)
+    facing = [vel[0], vel[2]]
   }
 
   const jump_pressed = input.jump && !state._jump_was_down
@@ -240,7 +240,7 @@ export const step_controller = (
       state._jump_buffer = 0
       state._air_jump_fired = true
     } else {
-      const gliding = input.glide && vel[1] <= 0
+      const gliding = is_gliding(state, input)
       const gravity = gliding ? GLIDE_GRAVITY : vel[1] > 0 ? RISE_GRAVITY : RISE_GRAVITY * FALL_GRAVITY_MULT
       vel[1] = Math.max(gliding ? GLIDE_TERMINAL_FALL : TERMINAL_FALL, vel[1] - gravity * dt)
     }
@@ -252,9 +252,14 @@ export const step_controller = (
 
   if (res.on_ground) {
     state._since_ground = 0
+    state._airborne_seconds = 0
     state._air_jumped = false // the air-jump charge refills on landing
-  } else state._since_ground += dt
+  } else {
+    state._since_ground += dt
+    state._airborne_seconds += dt
+  }
   state.on_ground = res.on_ground
+  if (in_water) state._airborne_seconds = 0
 
   if (res.on_ground) [, state._fall_peak_y] = state.position
   else state._fall_peak_y = Math.max(state._fall_peak_y, state.position[1])
@@ -268,7 +273,7 @@ export const step_controller = (
 
   const sp = Math.hypot(state.velocity[0], state.velocity[2])
   state.speed = sp
-  if (has_move) state.facing_yaw = turn_toward(state.facing_yaw, Math.atan2(dir_x, dir_z), 12, dt)
+  if (has_move) state.facing_yaw = turn_toward(state.facing_yaw, Math.atan2(...facing), 12, dt)
 
   state.anim = classify_anim(state)
   state.gait_scale =
@@ -279,6 +284,14 @@ export const step_controller = (
         : 1
   return state
 }
+
+/** Actual flight state, shared by gravity and presentation; the coyote counter is not an airborne clock. */
+export const is_gliding = (state: Readonly<ControllerState>, input: Readonly<ControllerInput>): boolean =>
+  input.glide &&
+  !state.on_ground &&
+  !state.in_water &&
+  state._airborne_seconds >= GLIDE_DELAY_SECONDS &&
+  state.velocity[1] < 0
 
 export const classify_anim = (
   state: Readonly<ControllerState>,
@@ -310,6 +323,7 @@ export const ground_controller = (state: ControllerState, env: ControllerEnv, fr
     state.velocity[1] = 0
     state.on_ground = true
     state._since_ground = 0
+    state._airborne_seconds = 0
   }
 }
 
@@ -319,6 +333,7 @@ export const CONTROLLER_CONSTANTS = Object.freeze({
   SWIM_SPEED,
   GLIDE_GRAVITY,
   GLIDE_TERMINAL_FALL,
+  GLIDE_DELAY_SECONDS,
   GROUND_ACCEL,
   GROUND_BRAKE,
   MC_STOP_FACTOR,

@@ -95,7 +95,16 @@ test('rapid duel challenges create one fight transaction', async () => {
   app.dispatch({ type: 'auth/connecting' })
   app.dispatch({ type: 'auth/connected', session: wallet as never })
   app.dispatch({ type: 'server/packet', packet: { type: 'packet/characters', characters: [character] as never } })
-  publish_pose({ character_id: character.id, x: 1, y: 2, z: 3, yaw: 0, riding: false, time_of_day: 0.5 })
+  publish_pose({
+    character_id: character.id,
+    x: 1,
+    y: 2,
+    z: 3,
+    yaw: 0,
+    riding: false,
+    gliding: false,
+    time_of_day: 0.5,
+  })
   app.dispatch({ type: 'duel/challenged', character_id: '0xtarget', name: 'Target' })
   app.dispatch({ type: 'duel/challenged', character_id: '0xtarget', name: 'Target' })
   await tick()

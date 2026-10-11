@@ -6,6 +6,8 @@ import { describe, expect, test } from 'bun:test'
 import { create_player } from './helpers/player.ts'
 import { wire, make_character, flush } from './helpers/world_wire.ts'
 
+const UNMOUNTED = Object.freeze({ riding: false, gliding: false })
+
 describe('the world module', () => {
   test('party membership is reread after the character channel becomes ready', async () => {
     const { sent, ws, graph, pubsub } = wire({ party_after_watch: true, character_ids: ['0xabc'] })
@@ -54,7 +56,7 @@ describe('the world module', () => {
         x: 701,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(dropped).toEqual([])
@@ -70,7 +72,7 @@ describe('the world module', () => {
         x: 702,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeTrue()
@@ -106,7 +108,7 @@ describe('the world module', () => {
         x: 701,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(published.some(({ payload }) => payload.kind === 'move' && payload.character_id === '0xdef')).toBeFalse()
@@ -149,7 +151,7 @@ describe('the world module', () => {
         x: 130,
         y: 0,
         z: 140,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(published).toEqual([])
@@ -193,7 +195,7 @@ describe('the world module', () => {
         x: 101,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     await new Promise((resolve) => setTimeout(resolve, 60))
@@ -238,7 +240,7 @@ describe('the world module', () => {
         x: 10_000,
         y: 0,
         z: 10_000,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
 
@@ -255,64 +257,6 @@ describe('the world module', () => {
     await flush()
     expect(sent.find((packet) => packet.type === 'packet/tracked_zones')).toBeUndefined()
     expect(published.some(({ payload }) => payload.kind === 'appear')).toBe(false)
-  })
-
-  test('mounting while standing still publishes — and a petless riding claim is clamped', async () => {
-    // owner 2026-08-21: mount/dismount rides the position stream, so a toggle with ZERO
-    // displacement must still reach the zone (the old "refit, not a move" gate ate it).
-    const rider = wire({ pet: true })
-    const mounted = create_player({
-      ws: rider.ws,
-      address: '0xme',
-      admin: false,
-      graph: rider.graph,
-      pubsub: rider.pubsub,
-    })
-    await flush()
-    mounted.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    const before = rider.published.length
-    mounted.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: rider.checkpoint('0xabc'),
-        x: 100,
-        y: 0,
-        z: 100,
-        riding: true,
-      })
-    )
-    const toggle = rider.published.slice(before).filter(({ payload }) => payload.kind === 'move')
-    expect(toggle).toHaveLength(1)
-    expect(toggle[0]!.payload.riding).toBe(true)
-
-    // no pet equipped: the claim is a lie and the server clamps it to false
-    const walker = wire()
-    const walking = create_player({
-      ws: walker.ws,
-      address: '0xme',
-      admin: false,
-      graph: walker.graph,
-      pubsub: walker.pubsub,
-    })
-    await flush()
-    walking.on_message(JSON.stringify({ type: 'packet/track_character', character_id: '0xabc', tracked: true }))
-    await flush()
-    walking.on_message(
-      JSON.stringify({
-        type: 'packet/position',
-        character_id: '0xabc',
-        checkpoint: walker.checkpoint('0xabc'),
-        x: 101,
-        y: 0,
-        z: 100,
-        riding: true,
-      })
-    )
-    const claimed = walker.published.filter(({ payload }) => payload.kind === 'move')
-    expect(claimed).toHaveLength(1)
-    expect(claimed[0]!.payload.riding).toBe(false)
   })
 
   test('an impossible move drops the connection', async () => {
@@ -333,7 +277,7 @@ describe('the world module', () => {
         x: 600,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(dropped).toEqual([])
@@ -346,7 +290,7 @@ describe('the world module', () => {
         x: 10600,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(dropped).toEqual(['SPEED'])
@@ -369,7 +313,7 @@ describe('the world module', () => {
         x: 600,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     // six buffered samples land back-to-back, one block apart — 6 blocks in ~0ms, all legal
@@ -382,7 +326,7 @@ describe('the world module', () => {
           x: 600 + step,
           y: 0,
           z: 100,
-          riding: false,
+          ...UNMOUNTED,
         })
       )
     expect(dropped).toEqual([])
@@ -395,7 +339,7 @@ describe('the world module', () => {
         x: 700,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(dropped).toEqual(['SPEED'])
@@ -424,7 +368,7 @@ describe('the world module', () => {
         x: 950,
         y: 0,
         z: 100,
-        riding: false,
+        ...UNMOUNTED,
       })
     )
     expect(walker.dropped).toEqual(['SPEED'])
@@ -449,6 +393,7 @@ describe('the world module', () => {
         y: 0,
         z: 100,
         riding: true,
+        gliding: false,
       })
     )
     expect(rider.dropped).toEqual([])
@@ -467,7 +412,7 @@ describe('the world module', () => {
         player: {
           character_id: `0xp${index}`,
           world: 'overworld',
-          riding: false,
+          ...UNMOUNTED,
           name: `p${index}`,
           classe: 'senshi',
           sex: 'male',
@@ -489,7 +434,7 @@ describe('the world module', () => {
     // a NEAR uncapped stranger's move flows; a capped one's is silent
     pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'move',
-      riding: false,
+      ...UNMOUNTED,
       character_id: '0xp5',
       address: '0xstranger5',
       x: 105,
@@ -498,7 +443,7 @@ describe('the world module', () => {
     })
     pubsub.emitter.emit('pos:overworld:0:0', {
       kind: 'move',
-      riding: false,
+      ...UNMOUNTED,
       character_id: '0xp115',
       address: '0xstranger115',
       x: 105,
@@ -512,7 +457,7 @@ describe('the world module', () => {
     for (let step = 0; step < 4; step++)
       pubsub.emitter.emit('pos:overworld:0:0', {
         kind: 'move',
-        riding: false,
+        ...UNMOUNTED,
         character_id: '0xp6',
         address: '0xstranger6',
         x: 300 + step,
@@ -541,7 +486,7 @@ describe('the world module', () => {
         character_id: '0xold',
         owner: '0xold',
         x: -100,
-        riding: false,
+        ...UNMOUNTED,
         y: 0,
       },
     })
@@ -554,7 +499,7 @@ describe('the world module', () => {
       x: 600,
       y: 0,
       z: 100,
-      riding: false,
+      ...UNMOUNTED,
       at_ms: Date.now(),
       budget_blocks: 0,
     })

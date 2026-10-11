@@ -49584,6 +49584,17 @@
       "hash": "7082aa387a17bba4",
       "label": "board #49",
       "domain": "board"
+    },
+    "0x8d4505f9ad0b1bab1ed23ebc4fd22fcc3d6df48c4118934a6a9915c6f98f5af7": {
+      "hash": "f40c50dffd28c2f7",
+      "label": "item crew_helmet",
+      "revisions": {
+        "0x8d4505f9ad0b1bab1ed23ebc4fd22fcc3d6df48c4118934a6a9915c6f98f5af7": "1042716970:5dYAc7XZiKk1m3JrHaMitREoGZr59V58dstQkLvdTNXo"
+      },
+      "domain": "item",
+      "item": {
+        "category": "cosmetic_hat"
+      }
     }
   },
   "kares_rewards_package": "0x1fbcc2f95306b6db869466c8b2c1461d5102b158584cced9036ee758c4b8cfce",

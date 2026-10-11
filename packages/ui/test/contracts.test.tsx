@@ -4,7 +4,7 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { Button, CombatHud, Toggle } from '../src/index.ts'
+import { Button, CollectionTile, CombatHud, Toggle } from '../src/index.ts'
 
 test('pending actions cannot be submitted again', () => {
   const markup = renderToStaticMarkup(<Button busy>Confirm</Button>)
@@ -22,6 +22,20 @@ test('toggles retain native keyboard and touch semantics', () => {
   expect(markup).toContain('type="checkbox"')
   expect(markup).toContain('role="switch"')
   expect(markup).toContain('checked=""')
+})
+
+test('a collection corner hint is named for assistive tools without disabling the tile', () => {
+  const markup = renderToStaticMarkup(
+    <CollectionTile
+      entry={{ id: 'ring', label: 'Ring', corner_badge: { text: '~', label: 'Ingredient chain unavailable' } }}
+      on_select={() => undefined}
+    />
+  )
+  expect(markup).toContain('class="aui-collection-corner-badge"')
+  expect(markup).toContain('role="img"')
+  expect(markup).toContain('aria-label="Ingredient chain unavailable"')
+  expect(markup).toContain('title="Ingredient chain unavailable"')
+  expect(markup).not.toContain('disabled')
 })
 
 test('combat clock handles expired data without negative progress or a second timer', () => {

@@ -3,9 +3,16 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { pet_locomotion_of, pet_vertical_offset } from '../../src/game/core/pet_locomotion.ts'
+import { pet_animation, pet_locomotion_of, pet_vertical_offset } from '../../src/game/core/pet_locomotion.ts'
 
 describe('pet locomotion', () => {
+  test('local and remote pet animation uses a quiet flight pose and preserves ordinary swim and gait', () => {
+    expect(pet_animation('walk', true, 'FALL', true)).toBe('IDLE')
+    expect(pet_animation('walk', true, 'FALL', false)).toBe('FALL')
+    expect(pet_animation('walk', true, undefined, false)).toBe('RUN')
+    expect(pet_animation('walk', false, undefined, false)).toBe('IDLE')
+    expect(pet_animation('swim', true, undefined, false)).toBe('SWIM')
+  })
   test('uses authored families instead of guessing from item names', () => {
     expect(pet_locomotion_of({ pet_movement: 'swim' })).toBe('swim')
     expect(pet_locomotion_of({ pet_movement: 'fly' })).toBe('fly')

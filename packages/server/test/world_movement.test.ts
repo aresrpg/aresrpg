@@ -22,6 +22,7 @@ test('a plausible move within the zone publishes a move fact, not a re-track', a
       y: 0,
       z: 100.3,
       riding: false,
+      gliding: false,
     })
   )
   expect(published.every(({ payload }) => payload.kind === 'move')).toBe(true)

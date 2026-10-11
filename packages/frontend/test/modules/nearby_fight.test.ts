@@ -16,7 +16,7 @@ import { create_app, reduce_app_state } from '../../src/store.ts'
 
 import { automation_fixture } from './automation_fixture.ts'
 
-const pose = { character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0 }
+const pose = { character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0 }
 const row = (id: string, x: number): FightRow => ({
   id,
   x: 50_000 + x,

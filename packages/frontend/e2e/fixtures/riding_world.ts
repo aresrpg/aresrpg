@@ -2,10 +2,8 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { create_world } from '../../src/game/core/world.ts'
 import { world_terrain } from '../../src/content/worlds.ts'
-import { content_catalog } from '../../src/content/catalog.ts'
-import { load_pet_model_url } from '../../src/content/pet_models.ts'
+import { load_pet_companion } from '../../src/content/pet_models.ts'
 import { load_character_appearance } from '../../src/game/character_entities.ts'
-import { pet_locomotion_of } from '../../src/game/core/pet_locomotion.ts'
 import { read_pose } from '../../src/game/core/pose_feed.ts'
 
 export const create_riding_world_probe = async (canvas: HTMLCanvasElement) => {
@@ -26,10 +24,9 @@ export const create_riding_world_probe = async (canvas: HTMLCanvasElement) => {
     loadout: {},
   })
   const set_pet = async (item_type: string) => {
-    const model_url = await load_pet_model_url(item_type)
-    const item = content_catalog.item(item_type)?.item
-    if (!model_url || !item) throw new Error(`Missing pet ${item_type}`)
-    world.set_pet({ id: 'ride_pet', model_url, locomotion: pet_locomotion_of(item) })
+    const companion = await load_pet_companion('ride_pet', item_type)
+    if (!companion) throw new Error(`Missing pet ${item_type}`)
+    world.set_pet(companion)
   }
   world.set_character({ id: 'ride_world', appearance })
   await set_pet('suicune')

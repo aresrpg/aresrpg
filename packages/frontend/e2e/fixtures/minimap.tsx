@@ -63,7 +63,7 @@ populate('nauvis')
 const root = createRoot(document.getElementById('root')!)
 const move = (x: number) => {
   publish_pose(null)
-  publish_pose({ character_id: 'alice', x, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0.3 })
+  publish_pose({ character_id: 'alice', x, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0.3 })
 }
 Reflect.set(window, 'minimap_fixture', {
   travel: () => populate('yakutia'),

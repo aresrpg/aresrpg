@@ -74,7 +74,7 @@ export const tick = (now_ms = 1_000): Extract<AutomationInput, { type: 'automati
   type: 'automation/tick',
   monotonic_ms: now_ms,
   world_ms: 100_000 + now_ms,
-  pose: { character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, time_of_day: 0 },
+  pose: { character_id: 'alice', x: 0, y: 0, z: 0, yaw: 0, riding: false, gliding: false, time_of_day: 0 },
 })
 export const ready_to_gather = (): AppState => {
   const planned = reduce_automation(automation_fixture(), tick())

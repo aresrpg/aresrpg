@@ -120,7 +120,16 @@ dispatch_app({
   }[step] ?? ['welcome'],
 })
 
-publish_pose({ character_id: character.id, x: 0, y: 0.001, z: 0, yaw: 0, riding: false, time_of_day: 0.5 })
+publish_pose({
+  character_id: character.id,
+  x: 0,
+  y: 0.001,
+  z: 0,
+  yaw: 0,
+  riding: false,
+  gliding: false,
+  time_of_day: 0.5,
+})
 
 /** Drive the production walking/controller pair on flat terrain, without a renderer or signer. */
 const MapLesson = () => {

@@ -15,7 +15,7 @@ import { channels, mesh, type EventEnvelope, type MeshFact } from '../protocol.t
 import { get_owned_character } from '../reads/get_owned_character.ts'
 import { get_world_fights } from '../reads/get_world_fights.ts'
 import { get_fight } from '../reads/get_fight.ts'
-import { refreshed_roster_anchors, refreshed_world_anchor } from '../world_anchor.ts'
+import { mounted_motion, refreshed_roster_anchors, refreshed_world_anchor } from '../world_anchor.ts'
 import logger from '../logger.ts'
 import { create_visible_players } from '../visible_players.ts'
 import { presence_discovery } from '../presence_discovery.ts'
@@ -98,7 +98,14 @@ export default {
           ...state.characters,
           [action.character_id]: {
             ...tracked,
-            presence: { ...tracked.presence, x: action.x, y: action.y, z: action.z, riding: action.riding },
+            presence: {
+              ...tracked.presence,
+              x: action.x,
+              y: action.y,
+              z: action.z,
+              riding: action.riding,
+              gliding: action.gliding,
+            },
             move_anchor: { x: action.x, z: action.z, at_ms: action.at_ms, blocks: action.budget_blocks },
           },
         },
@@ -107,13 +114,14 @@ export default {
     if (action.type === 'action/equip') {
       const tracked = state.characters[action.character_id]
       if (!tracked) return state
+      const presence = { ...tracked.presence, [action.slot]: action.item_type }
       return {
         ...state,
         characters: {
           ...state.characters,
           [action.character_id]: {
             ...tracked,
-            presence: { ...tracked.presence, [action.slot]: action.item_type },
+            presence: { ...presence, ...mounted_motion(presence) },
           },
         },
       }
@@ -308,7 +316,8 @@ export default {
         before.x === current.x &&
         before.y === current.y &&
         before.z === current.z &&
-        before.riding === current.riding
+        before.riding === current.riding &&
+        before.gliding === current.gliding
       )
         return
       const previous_zone = zone_of(before.x, before.z)
@@ -335,6 +344,7 @@ export default {
         y: current.y,
         z: current.z,
         riding: current.riding,
+        gliding: current.gliding,
       })
     }
 
@@ -377,6 +387,7 @@ export default {
             y: 0,
             z: (character.z as number) ?? 0,
             riding: false,
+            gliding: false,
             world,
           },
           party,
@@ -424,7 +435,7 @@ export default {
         y: action.y,
         z: action.z,
         // a petless rider is a lie — the flag only stands while a pet is equipped (chain truth)
-        riding: action.riding && character.pet !== null,
+        ...mounted_motion({ ...action, pet: character.pet }),
         at_ms: now,
         budget_blocks: Math.min(Math.max(available - step, 0), ceiling * BUDGET_CAP_S),
       })

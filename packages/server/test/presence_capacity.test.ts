@@ -97,6 +97,7 @@ test.each([
         cloak: null,
         pet: null,
         riding: false,
+        gliding: false,
       },
     }
     try {
@@ -161,6 +162,7 @@ test('failed appearance hydration closes the session so reconnect can recover wi
       y: 0,
       z: 100,
       riding: false,
+      gliding: false,
     },
   }
   const first = mount()
@@ -212,9 +214,19 @@ test('targeted movement respects hydration, retired zones, world replacement and
       y: 0,
       z: 100,
       riding: false,
+      gliding: false,
     },
   }
-  const move = { kind: 'move', address: 'other', character_id: 'remote', x: 104, y: 0, z: 100, riding: true }
+  const move = {
+    kind: 'move',
+    address: 'other',
+    character_id: 'remote',
+    x: 104,
+    y: 0,
+    z: 100,
+    riding: true,
+    gliding: false,
+  }
   try {
     await flush()
     fixture.pubsub.emitter.emit(zone, appear)
@@ -225,6 +237,7 @@ test('targeted movement respects hydration, retired zones, world replacement and
     expect(fixture.sent.filter((packet) => packet.type === 'packet/player_appeared').at(-1)?.player).toMatchObject({
       x: 104,
       riding: true,
+      gliding: false,
     })
     // Capture an already-dispatched callback: removing a listener alone cannot retire that reference.
     const old_callback = fixture.pubsub.emitter.listeners(channel)[0]!
@@ -247,6 +260,7 @@ test('targeted movement respects hydration, retired zones, world replacement and
       y: 0,
       z: 100,
       riding: false,
+      gliding: false,
       at_ms: Date.now(),
       budget_blocks: 0,
     })

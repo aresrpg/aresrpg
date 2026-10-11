@@ -2025,6 +2025,7 @@ characters_page:
       ingredients: '{{count}} ingredientes'
       required_level: 'Requiere oficio Nv. {{level}}'
       best_progress: 'Mejor'
+      chain_missing: 'Este personaje no tiene los niveles de oficio necesarios para fabricar algunos ingredientes. Puedes usar ingredientes comprados u obtenidos como botín.'
     gather:
       in_progress: 'Recolectando {{name}}…'
       button: 'Recolectar {{name}}'

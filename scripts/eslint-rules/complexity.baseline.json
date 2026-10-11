@@ -195,7 +195,7 @@
     },
     "packages/frontend/src/game/core/world.ts": {
       "create_world > render_pet": [
-        21
+        11
       ],
       "create_world > sync_dungeon_portal_labels": [
         13
@@ -203,7 +203,7 @@
     },
     "packages/frontend/src/game/presence_entities.ts": {
       "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [
-        18
+        17
       ],
       "create_presence_renderer > tick": [
         12
@@ -905,7 +905,7 @@
         14
       ],
       "step_controller": [
-        37
+        36
       ]
     },
     "packages/frontend/src/game/core/world.ts": {
@@ -919,7 +919,7 @@
         16
       ],
       "create_world > render_pet": [
-        17
+        15
       ],
       "create_world > set_action_lock": [
         9
@@ -933,13 +933,13 @@
     },
     "packages/frontend/src/game/presence_entities.ts": {
       "create_presence_renderer > build > [...slots.entries()].flatMap[0]([character_id, slot])": [
-        16
+        15
       ],
       "create_presence_renderer > tick": [
         14
       ],
       "create_presence_renderer > update": [
-        16
+        15
       ]
     },
     "packages/frontend/src/game/audio/fight_audio.ts": {
@@ -1857,7 +1857,7 @@
       "observe > track": [
         11
       ],
-      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
+      "observe > track_character > async () => { const owned = await get_owned_character(graph, { address, character_id }) if ( signal.aborted || generation !== tracking_generations.get(character_id) || !get_state().allowed_characters.has(character_id) ) return if (!owned) { send({ type: 'packet/error', reason: 'not your character' }) return } const { character, visuals, party, fight } = owned const world = (character.world ?? character.checkpoint_world) as string | undefined if (!world) return // never joined a world yet \u2014 nothing to mount const { id: fight_id, seat: fight_seat } = fight ?? { id: null, seat: null } dispatch({ type: 'action/track_character', character: { character_id: character.id as string, owner: address, name: character.name as string, classe: character.classe as string, sex: character.sex as string, level: character.level as number, color_1: character.color_1 as number, color_2: character.color_2 as number, color_3: character.color_3 as number, ...visuals, x: (character.x as number) ?? 0, y: 0, z: (character.z as number) ?? 0, riding: false, gliding: false, world, }, party, fight: fight_id, fight_seat, dungeon_run: (character.dungeon_run as CharacterRow['dungeon_run']) ?? null, // THE CHECKPOINT'S OWN TIMESTAMP, never the tracking-request wall-clock (chain travel_ok // semantics): the travel budget accrues from the last PROVEN position \u2014 a player // legitimately far off an old anchor must not read as a speed hack on first move // (2026-08-19: that misread drop-looped every session into load-snapshot spam). at_ms: (character.at_ms as number) ?? 0, }) }[-1]()": [
         12
       ],
       "reduce": [

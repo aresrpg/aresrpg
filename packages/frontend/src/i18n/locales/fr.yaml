@@ -2031,6 +2031,7 @@ characters_page:
       ingredients: '{{count}} ingrédients'
       required_level: 'Métier niv. {{level}} requis'
       best_progress: 'Idéal'
+      chain_missing: 'Ce personnage n’a pas le niveau de métier requis pour fabriquer certains ingrédients. Vous pouvez toujours utiliser des ingrédients achetés ou obtenus en butin.'
     gather:
       in_progress: 'Récolte de {{name}}…'
       button: 'Récolter {{name}}'

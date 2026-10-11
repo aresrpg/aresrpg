@@ -2002,6 +2002,7 @@ characters_page:
       ingredients: '{{count}}种材料'
       required_level: 需要专业达到{{level}}级
       best_progress: 最佳
+      chain_missing: '此角色的职业等级不足，无法制作部分材料。仍可使用购买或掉落的材料。'
     gather:
       in_progress: 正在采集{{name}}…
       button: 采集{{name}}

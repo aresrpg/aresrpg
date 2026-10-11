@@ -230,6 +230,12 @@
   border-color: #ceb27b;
   background: #4c4433;
 }
+.aui-jobs-port .jobs__recipe.is-best-progress {
+  border-color: #76ad87;
+}
+.aui-jobs-port .jobs__recipe.is-best-progress .aui-collection-badge {
+  color: #9dcbaa;
+}
 .aui-jobs-port .jobs__recipe.is-locked {
   opacity: 0.65;
 }

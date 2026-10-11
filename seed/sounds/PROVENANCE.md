@@ -125,3 +125,18 @@ The existing footstep player normalizes each decoded recording and avoids immedi
 `water_enter.aac` is an unchanged copy of `~/misc/water_enter.aac`.
 SHA-256: `81e81bed83dca1d9764224bfca76d1dfb5ee7f715688676d6b4b1494e88feca5`.
 It plays once when an airborne character descends into water, rather than on every swimming frame.
+
+## Owner-provided gliding sounds
+
+`glide_deploy.aac` comes from the owner-provided `80167_606011_606010_Skydive_-_Parachute-_Open-_Large_normal.aac`.
+Source SHA-256: `07a65af273d1326126f56ebd298831e242afd6efa2917519e0a65f17a4ba8d0e`.
+Asset SHA-256: `07a65af273d1326126f56ebd298831e242afd6efa2917519e0a65f17a4ba8d0e`.
+
+`glide_wind.ogg` comes from the owner-provided `855982_855934_Northern_Ireland___Ireland_Nature_-_Wind-_Soft-_Whoosing_Through_Rushes_-_SFE-22-000472__-_MASTERED_-_2496.aac`.
+Source SHA-256: `c8634354c0305fdf733b0c8004eedbc7d9b7e75dd233f676c3698858c6752ea7`.
+Asset SHA-256: `9c643656d78b57858cc975f583d50c62c46be6fbeaa783cb95ea22463fbbe5fd`.
+
+The deployment recording is copied unchanged. The wind uses source seconds 20–29.
+Its final second crossfades into its first with equal-power quarter-sine curves; the joined
+second precedes source seconds 21–28, producing an eight-second loop at 48 kHz, Vorbis quality 5.
+Web Audio loops the decoded buffer without gaps, with 250 ms entry and 300 ms exit fades.
