@@ -12,3 +12,7 @@ and socket data. The four extended clothing rigs are already present in those GL
 
 author_riding.py retains the initial pose construction helpers. Baked actions and marker objects
 are the editable export inputs. Generated renders and intermediate GLBs are not source artifacts.
+
+Suicune's Baked AO point-color attribute includes its cavity and directional shading.
+Run export_suicune_ao.py in Blender after editing that attribute. It preserves geometry,
+animation, palette variants and mount sockets. The riding exporter preserves this shading too.

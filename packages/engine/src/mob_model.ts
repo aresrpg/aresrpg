@@ -107,10 +107,12 @@ export const prepare_mob_model_root = (
   }
   const appearance_scale = root.scale.clone()
   root.scale.setScalar(1)
-  root.updateWorldMatrix(true, true)
+  // Cloned skins refresh bindMatrixInverse in updateMatrixWorld, not updateWorldMatrix.
+  // Measure the same binding the renderer will use, or the floor correction lifts the whole rig.
+  root.updateMatrixWorld(true)
   const min_y = idle_floor(root, source, label)
   root.scale.copy(appearance_scale)
-  root.updateWorldMatrix(true, true)
+  root.updateMatrixWorld(true)
   // Creature GLBs already author meaningful relative sizes: spiders are short, skeletons are
   // tall, sheep are squat. Preserve those proportions; the entity layer adds only context and
   // level scaling. Flattening every species to one height made small fauna character-sized.
