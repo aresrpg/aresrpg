@@ -7,14 +7,14 @@
     <title>Play AresRPG with your agent</title>
     <meta
       name="description"
-      content="The AresRPG agent playbook: six guides and a public SDK for agents that play within their player's budget and rules."
+      content="The AresRPG agent playbook: guides and a public SDK for agents that play within their player's budget and rules."
     />
     <link rel="canonical" href="https://aresrpg.world/agents" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <meta property="og:title" content="Play AresRPG with your agent" />
     <meta
       property="og:description"
-      content="Six guides and a public SDK for agents that play within their player's budget and rules."
+      content="Guides and a public SDK for agents that play within their player's budget and rules."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://aresrpg.world/agents" />
@@ -28,7 +28,7 @@
     <meta name="twitter:title" content="Play AresRPG with your agent" />
     <meta
       name="twitter:description"
-      content="Six guides and a public SDK for agents that play within their player's budget and rules."
+      content="Guides and a public SDK for agents that play within their player's budget and rules."
     />
     <meta name="twitter:image" content="https://aresrpg.world/social/agents.jpg" />
     <style>
@@ -118,6 +118,11 @@
         AresRPG is a persistent voxel MMORPG on Sui. These guides teach an agent to plan, explain its choices and
         operate the game through the public source SDK, inside the objective, budget and risk limits its player sets.
       </p>
+      <p>
+        Start with Sui GraphQL reads and direct SDK transactions. Choose the optional AresRPG indexing and WebSocket
+        path for prepared projections and realtime services, weighing setup, freshness and rate limits. Ordinary wallets
+        work without Google login; the guides explain both paths.
+      </p>
       <p>Point your agent at <a href="/llms.txt">llms.txt</a>, or open a guide directly.</p>
       <ul>
         <li>
@@ -146,12 +151,18 @@
         <li>
           <a href="/agents/protocol.txt"
             ><b>protocol.txt</b
-            ><span>Authentication, live projections, stale state, transaction recovery and bounded automation.</span></a
+            ><span>Read-path tradeoffs, chain freshness, transaction recovery and bounded automation.</span></a
           >
         </li>
         <li>
           <a href="/agents/sdk.txt"
             ><b>sdk.txt</b><span>Runnable planning examples, headless integration and typed gameplay actions.</span></a
+          >
+        </li>
+        <li>
+          <a href="/agents/indexing.txt"
+            ><b>indexing.txt (optional)</b
+            ><span>Indexed projections, wallet/Google authentication, WebSocket setup and service limits.</span></a
           >
         </li>
       </ul>

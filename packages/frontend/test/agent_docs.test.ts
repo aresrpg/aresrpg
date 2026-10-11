@@ -40,8 +40,19 @@ test('deployment serves static pages without rewriting them to the game shell', 
 })
 
 test('documented wire examples pass the actual client-packet parser', () => {
-  const guide = readFileSync(resolve(public_dir, 'agents/protocol.txt'), 'utf8')
+  const guide = readFileSync(resolve(public_dir, 'agents/indexing.txt'), 'utf8')
   const examples = [...guide.matchAll(/```json\s*([\s\S]*?)```/g)].map((match) => match[1]!)
   expect(examples.length).toBeGreaterThan(0)
   for (const example of examples) expect(parse_client_packet(example)).toEqual(JSON.parse(example))
+})
+
+test('chain-native entry points keep socket setup in the optional indexed guide', () => {
+  for (const path of ['llms.txt', 'agents/protocol.txt', 'agents/sdk.txt']) {
+    const guide = readFileSync(resolve(public_dir, path), 'utf8')
+    expect(guide).toContain('GraphQL')
+    expect(guide).toContain('gRPC')
+    expect(guide).toContain('https://aresrpg.world/agents/indexing.txt')
+    expect(guide).not.toContain('packet/signature_response')
+    expect(guide).not.toContain('new WebSocket')
+  }
 })

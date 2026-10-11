@@ -18,7 +18,9 @@ A spending allowance is a ceiling, not a target. Do not request wallet secrets i
 
 ## Inspect before choosing
 
-Read the connected address, network, available SUI/KARES, characters, equipment, inventory, active fights, dungeon runs, pending claims, listings, trades, and Mastery state. Check server freshness and unresolved transactions before issuing anything. Resolve stranded fight custody before proposing an activity that needs the same character.
+Choose a data path using [the tradeoffs guide](https://aresrpg.world/agents/protocol.txt). Default to Sui GraphQL reads plus direct SDK transactions for a bounded chain-native routine. Opt into [AresRPG indexing](https://aresrpg.world/agents/indexing.txt) when its prepared state and realtime services justify the added connection/authentication work. No WebSocket or Google login is required for chain-native play.
+
+Read the selected signing address, network, available SUI/KARES, characters, equipment, inventory, active fights, dungeon runs, pending claims, listings, trades, and Mastery state. Check read freshness and unresolved transactions before issuing anything. Resolve stranded fight custody before proposing an activity that needs the same character.
 
 Build a compact situation report:
 
@@ -38,7 +40,7 @@ Items and characters normally live locked in personal kiosks. A wallet object ce
 
 Creation is paid. Read `CHARACTER_PRICE_MIST` from `@aresrpg/sdk/character-price` and reserve gas separately. The current constant is one SUI; the imported constant and simulation decide affordability. Validate and normalize the name with `@aresrpg/sdk/character-name`. Names derive permanent identities; deleting a character does not make its name reusable.
 
-Review name, class, appearance, network, address, and cost before the first creation. The SDK creates or reuses personal custody and joins the starting world, `nauvis`, in the creation flow. Use the certified character ID and wait for the projected row; do not fabricate its stats.
+Review name, class, appearance, network, address, and cost before the first creation. The SDK creates or reuses personal custody and joins the starting world, `nauvis`, in the creation flow. Use the certified character ID and reconcile fresh chain state (or the indexed row if using that path); do not fabricate its stats.
 
 These are class identities and role themes, not promises about the best build:
 
@@ -61,7 +63,7 @@ Inspect each candidate's currently unlocked spells in `seed/content/spells.json`
 
 ## Build a stronger character
 
-Character level caps at 200. Level gains grant stat capital and spell points. Use the projected balances instead of reconstructing spendable points from level. Natural stat costs depend on class and current natural value; equipment never changes those costs. Use `characteristic_allocation_quote` or `characteristic_spending_quote` from `@aresrpg/immutable` before allocating.
+Character level caps at 200. Level gains grant stat capital and spell points. Use current decoded balances instead of reconstructing spendable points from level. Natural stat costs depend on class and current natural value; equipment never changes those costs. Use `characteristic_allocation_quote` or `characteristic_spending_quote` from `@aresrpg/immutable` before allocating.
 
 Strength scales earth damage, Intelligence scales fire and healing, Chance scales water, and Agility scales air. Wisdom affects XP and point-removal contests; Chance also matters to loot. Vitality increases maximum HP. Match the build to the actual spell kit and intended encounter. Buying Wisdom while losing the ability to win fights is usually a poor progression trade.
 

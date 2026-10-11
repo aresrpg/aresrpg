@@ -4,7 +4,7 @@ Use scripts for bounded, measurable work: inspect recipes, rank acquisition choi
 
 ## Get the source
 
-The SDK and fight simulator are public source workspace packages. Their `private` package flags prevent treating them as independently published npm packages. Use the repository's Bun version and lockfile. Select a release compatible with the deployed pins/server; `edge` links below are source navigation, not proof that its newest content is already live.
+The SDK and fight simulator are public source workspace packages. Their `private` package flags prevent treating them as independently published npm packages. Use the repository's Bun version and lockfile. Select a release compatible with the deployed pins and chosen services; `edge` links below are source navigation, not proof that its newest content is already live.
 
 In a fresh local checkout:
 
@@ -28,7 +28,7 @@ The displayed percentage uses the existing UI helper, which floors fractional pe
 
 In the browser, use the existing authenticated `AuthSession` from `@aresrpg/sdk/auth`. It already exposes `character`, `fight`, `dungeon`, `marketplace`, `party`, `mastery`, trade builders, balance reads, personal-message signing, and transaction observation. Do not read a private wallet key out of the browser.
 
-In a trusted local process, `SDK` accepts a Sui `Signer` or an explicit address plus `sign_transaction` adapter. Supply matching network/pins and a compatible gRPC endpoint. A read-only SDK can use an address without a signer. An agent must obtain player authorization before connecting a signer or replacing a live browser session.
+In a trusted local process, `SDK` accepts a Sui `Signer` or an explicit address plus `sign_transaction` adapter. Supply matching network/pins and a compatible gRPC endpoint. A read-only SDK can use an address without a signer. Chain-native play needs no Google client or WebSocket login. Obtain player authorization before connecting a signer; coordinate session replacement only when opting into the WebSocket path.
 
 This integration fragment assumes the host has already supplied `signer`, `network`, `pins`, `rpc_url`, and durable `transaction_storage`:
 
@@ -48,30 +48,33 @@ Paths above are for a script at the repository root. Inside a workspace, use dec
 
 A headless writer's `transaction_storage` must implement synchronous `getItem`, `setItem`, and `removeItem`, preserving the SDK's exact string values across restarts. Use a private, durable store with atomic writes and one writer process per wallet. Persist before submission; propagate storage failures. Do not replace this with an in-memory Map for paid unattended work. Do not store signatures or signed bytes in the activity journal.
 
-## Obtain live inputs
+## Obtain live inputs: default chain-native path
 
-Implement the small authenticated websocket handshake described in [the protocol guide](https://aresrpg.world/agents/protocol.txt), or adapt the existing `server_link.ts`. For a Sui signer, the proof operation is:
-
-For a standalone Bun client targeting production, construct the connection with its required origin:
+Use a separate Sui GraphQL reader and keep the SDK writer on gRPC. This bounded object-read fragment assumes `graphql_url`, `network`, and exact `object_ids` have already been selected for the deployment:
 
 ```ts
-const url = new URL('wss://server.aresrpg.world/')
-url.searchParams.set('address', address)
-const socket = new WebSocket(url, { headers: { Origin: 'https://aresrpg.world' } })
+import { SuiGraphQLClient } from '@mysten/sui/graphql'
+
+const reader = new SuiGraphQLClient({ url: graphql_url, network })
+const { objects } = await reader.core.getObjects({
+  objectIds: object_ids,
+  include: { json: true },
+})
 ```
 
-This constructor overload is Bun-specific; browser WebSocket supplies its page origin. When the configured server issues its challenge, sign and send:
+This returns chain objects, not SDK-ready gameplay rows. Validate each result's identity/type/version and missing/error state before decoding it. Read the necessary dynamic fields and related custody objects, paginate discovery, and retain certified versions. Inspect the installed client's `core` API and current provider schema instead of inventing GraphQL field names. The reader is an external script integration; the game frontend continues to use its existing indexed read owners.
 
-```ts
-const proof = await signer.signPersonalMessage(
-  new TextEncoder().encode(`aresrpg::${challenge_payload}`)
-)
-socket.send(JSON.stringify({ type: 'packet/signature_response', ...proof }))
-```
+Follow [the read-model checklist](https://aresrpg.world/agents/protocol.txt) before passing inputs to an action. Source content comes from the matching published deployment, with `seed/content` as its authored reference. Live custody, consumed zone slots, listings, checkpoints and fights come from fresh chain reads. The SDK resolves transaction references; it does not build your inventory, zone population or hydrated combat model.
 
-Only sign a challenge from the configured trusted server. Check acceptance and baseline readiness. Retain the current typed rows and freshness state. `packet/fight_state` supplies a machine document and player-source rows; it is not already a `HydratedFightCheckpoint`. Follow the frontend's fight hydration owner to attach authored spells and normalize integers before simulation. Never cast wire JSON to the hydrated type just to satisfy TypeScript.
+For combat, decode the complete current Fight and player-source state, then attach matching authored spells and normalize integers through the existing fight/content owners. Neither a raw GraphQL object nor `packet/fight_state` is already a `HydratedFightCheckpoint`. Do not cast JSON to that type just to satisfy TypeScript. The existing zone population twin is likewise needed to derive targets from seed/generation and consumption. These docs do not provide a complete standalone decoder/discovery client.
 
-Source content comes from the matching checkout's `seed/content` files. Current custody/populations/listings come from the stream. The SDK resolves transaction references. Do not scrape rendered labels to derive object IDs or create a second broad RPC inventory scanner.
+Keep GraphQL reads bounded, account for provider quotas and checkpoint visibility, and wait until post-write reads include the certified versions. Do not pass the reader as the SDK write transport: writes require `rpc_url`/gRPC for full receipts.
+
+## Alternative: consume AresRPG's indexed inputs
+
+Choose [optional indexing and WebSocket integration](https://aresrpg.world/agents/indexing.txt) when prepared account/world/fight rows, market discovery/history or social services are worth its added lifecycle. That guide owns the handshake, ordinary-wallet and Google-account constraints, subscriptions, readiness and limits. It is not a prerequisite for constructing `SDK` or `create_agent_actions`.
+
+Both integrations use the same action builders below. The host supplies validated current inputs and policy; switching the read source does not change gas costs, signer authority or transaction recovery.
 
 ## Existing action map
 
@@ -120,9 +123,9 @@ This is an integration fragment, not a complete loop: prove current world, tool/
 
 ## Example: calculate when to act
 
-`earliest_travel_ms(character, { x, z })` from `agent_plan.ts` finds the first integer millisecond accepted by the protocol's existing travel predicate. It returns null for missing/mismatched checkpoint state, out-of-world coordinates, active dungeon runs, or a pending protector. It is a travel calculation, not complete authorization: also require free custody, fresh connected state, live target, and budget.
+`earliest_travel_ms(character, { x, z })` from `agent_plan.ts` finds the first integer millisecond accepted by the protocol's existing travel predicate. It returns null for missing/mismatched checkpoint state, out-of-world coordinates, active dungeon runs, or a pending protector. It is a travel calculation, not complete authorization: also require free custody, fresh state from the chosen read path, live target, and budget.
 
-Schedule an inspection around that result. Execute only after a fresh observed chain timestamp satisfies `travel_proof_ready` for the latest character and target. A checkpoint change invalidates the previous deadline. Keep the original packet's sample age; receiving cached clock data does not make it new.
+Schedule an inspection around that result. Execute only after a fresh observed chain timestamp satisfies `travel_proof_ready` for the latest character and target. A checkpoint change invalidates the previous deadline. Keep the original chain sample age; receiving cached clock data does not make it new.
 
 ## Example: plan and commit a combat turn
 
@@ -145,7 +148,7 @@ const result = await actions.fight.commit_turn({
 })
 ```
 
-The SDK appends the correct terminal boundary. Observe `result.turn_witnesses` and the authoritative stream. Never reuse the same action array against a different turn or submit it again because the receipt arrived before the server update.
+The SDK appends the correct terminal boundary. Observe `result.turn_witnesses` and fresh chain state (or the chosen indexed stream). Never reuse the same action array against a different turn or submit it again because the receipt arrived before the server update.
 
 ## Example: bounded crafting
 

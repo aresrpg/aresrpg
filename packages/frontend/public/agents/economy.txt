@@ -14,7 +14,7 @@ Maintain an append-only private activity ledger with:
 - Purchase/payment amount, royalty, proceeds, and actual inventory changes.
 - Beginning/ending wallet balance, unresolved commitments, and any external deposits or withdrawals.
 
-Deduplicate by digest. One SDK receipt and a later websocket projection describe the same transaction. An action can involve several transactions, such as crush reveal and redemption; record every digest, not just the last returned by a helper. Never infer success from a closed dialog, a timeout, or a balance movement.
+Deduplicate by digest. One SDK receipt and a later chain read or optional websocket projection describe the same transaction. An action can involve several transactions, such as crush reveal and redemption; record every digest, not just the last returned by a helper. Never infer success from a closed dialog, a timeout, or a balance movement.
 
 `sdk.on_transaction` and `AuthSession.on_transaction` report certified outcomes, including failures, and gas when available. `gas_spent_24h` is a rolling gas summary, not a lifetime ledger, total spending, or profit. Gas is computation cost + storage cost − storage rebate. It can be negative; retain that value, but do not rely on future rebates to fund the next submission. Missing gas evidence is unknown, not zero.
 
@@ -40,9 +40,9 @@ At a 0.02 SUI listed price, the 0.01 SUI minimum royalty alone adds 50% before g
 
 ## Research before recommending an opportunity
 
-Observe item types, then offers for the exact type/category through the authenticated market protocol. Pages contain bounded groups and offers; one page is not the entire market. Use fresh cursors and request identities. The server excludes your own public listings from its competitive offer ranking; inspect owned listings separately.
+For chain-native play, discover relevant kiosk listings through Sui GraphQL and verify the exact listing, seller custody, item fields and transfer policy before using the SDK. Paginate within provider quotas; a partial scan is not a complete market. The SDK does not supply a general marketplace discovery reader. Alternatively, choose [AresRPG indexing](https://aresrpg.world/agents/indexing.txt) to observe item types and bounded grouped offers. Its server excludes your own public listings from competitive ranking; inspect owned listings separately. Use fresh cursors and request identities for that path.
 
-For stackables, observe completed-sale price history. Calculate unit-weighted prices from total MIST divided by units, not the arithmetic mean of daily averages. Keep total units, sale count, recent activity, and history coverage with the price. A day without trades has no observed price. History begins when the indexer started collecting; a missing window does not prove zero demand.
+For stackables, use completed-sale price history when available. AresRPG's daily history is an optional indexer projection; chain-native clients must aggregate their own historical sales evidence or report that history is unavailable. Calculate unit-weighted prices from total MIST divided by units, not the arithmetic mean of daily averages. Keep total units, sale count, recent activity, and history coverage with the price. A day without trades has no observed price. History begins when the indexer started collecting; a missing window does not prove zero demand.
 
 For equipment, compare actual rolled stats, damage lines, forging changes, and suitability for the target build. For pets, include feed power and diet. Unknown rolls must remain unknown; do not treat them as average or perfect. Asking prices are not completed transactions, and scarce listings do not prove buyers will pay them.
 
@@ -66,9 +66,9 @@ Present an opportunity with exact items, quantity, maximum all-in spend, compara
 
 ## Execute carefully
 
-Refresh the exact offer before buying. Match object ID, seller kiosk, price, quantity, stats, and observation generation. Use `marketplace.buy`; the SDK composes payment and required transfer-policy proofs. A price or custody mismatch requires a new plan, not an automatic higher bid.
+Refresh the exact offer before buying. Match object ID, seller kiosk, price, quantity, stats, and current read version (or indexed observation generation). Use `marketplace.buy`; the SDK composes payment and required transfer-policy proofs. A price or custody mismatch requires a new plan, not an automatic higher bid.
 
-Keep exposure bounded by quantity and total SUI. Do not repeatedly buy because an old snapshot still shows the same bargain. After every purchase, reconcile the receipt and inventory, then request a fresh observation. An absent row on a bounded page does not prove it sold or disappeared.
+Keep exposure bounded by quantity and total SUI. Do not repeatedly buy because an old snapshot still shows the same bargain. After every purchase, reconcile the receipt and inventory, then obtain a fresh read/observation. An absent row on a bounded page does not prove it sold or disappeared.
 
 List only reviewed surplus. Preserve equipment, reserved ingredients, keys, healing, and agreed collection items. Collect proceeds through the SDK; do not report them as liquid wallet balance before collection is certified.
 

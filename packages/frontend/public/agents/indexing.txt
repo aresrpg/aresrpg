@@ -1,0 +1,118 @@
+# Optional AresRPG indexing and WebSocket integration
+
+Choose this path when indexed inventory, market discovery/history, leaderboard rankings, live fight rows, or social presence justify a persistent authenticated connection. It is a separate, more involved integration, not a prerequisite for on-chain play. Start with [the two-path comparison](https://aresrpg.world/agents/protocol.txt); both paths submit gameplay transactions directly through the SDK.
+
+Sui GraphQL is a Sui data service. The AresRPG indexer is the game's checkpoint-to-graph projection behind its realtime server. They are different services. The indexer is not a public GraphQL endpoint and the WebSocket is not a transaction relay.
+
+## Wallet authentication and Google accounts
+
+A normal Sui wallet/signer can authenticate: the server verifies a personal-message signature for the requested address. No Google OAuth client is required for that path. Connecting an authorized external wallet is supported; it does not give control of an existing Google-backed game address.
+
+The game's browser Google login uses Enoki/Wallet Standard with its configured Google client ID, Enoki API key, allowed origins, redirect and proof flow. Creating your own Google OAuth client is not a drop-in way to access the same account: zkLogin address derivation includes the JWT audience (client ID), issuer, subject and salt. A separately configured OAuth/zkLogin integration can only act for the address it actually derives and can validly sign for. Its provider/prover setup and network support must be verified; this guide does not supply a turnkey headless Google login. For the existing game account, use its authorized wallet/session rather than extracting OAuth tokens or ephemeral keys.
+
+## Connect to the correct account (optional integration)
+
+Use the same deployment's SDK pins, network, and websocket endpoint. The production game endpoint is `wss://server.aresrpg.world`. Do not pair it with testnet pins. Obtain testnet/dev endpoints from that environment's configuration. Source branch `edge` can be ahead of production; use the matching release when integrating a deployed game.
+
+Browser integrations use the existing Wallet Standard/Enoki `AuthSession`. A standalone process needs its own authorized signer and must explicitly select the intended account. A Google game account is not interchangeable with an external wallet, and an OAuth session is not an exportable private key.
+
+One address has one live connection. A new agent connection can replace its browser session. Coordinate that handoff; do not build a reconnect war. `REPLACED` and `ALREADY_CONNECTED` are terminal takeover signals. Invalid proof, rate, or speed violations need diagnosis, not rapid retries.
+
+The websocket upgrade also requires an allowed `Origin` header. Production accepts the game's `https://aresrpg.world` origin. An authorized standalone Bun client must set it explicitly; a default headless WebSocket without Origin receives HTTP 403 before any signature challenge. Use the environment's configured allowed origin for development. This admission header does not replace the account signature.
+
+The wire is JSON with a `type: 'packet/...'` discriminator:
+
+1. Open the websocket with `?address=<signing-address>`.
+2. Receive `packet/signature_request` with `payload`.
+3. Sign the UTF-8 personal message `aresrpg::${payload}` using the authorized account.
+4. Send `packet/signature_response` with the signer's returned `bytes` and `signature`.
+5. Wait for `packet/connection_accepted` and verify its address.
+6. Accumulate the baseline; `packet/characters` is the initial ready barrier after prerequisite account reads.
+
+For a trusted standalone Bun host, the connection and proof fragments are:
+
+```ts
+const url = new URL('wss://server.aresrpg.world/')
+url.searchParams.set('address', address)
+const socket = new WebSocket(url, { headers: { Origin: 'https://aresrpg.world' } })
+```
+
+After receiving this socket's challenge from the configured trusted server:
+
+```ts
+const proof = await signer.signPersonalMessage(
+  new TextEncoder().encode(`aresrpg::${challenge_payload}`)
+)
+socket.send(JSON.stringify({ type: 'packet/signature_response', ...proof }))
+```
+
+The constructor overload is Bun-specific; browser WebSocket supplies its page origin. These fragments assume an authorized signer and do not implement the packet/reconnect lifecycle.
+
+Do not send application packets before acceptance. Use `parse_server_packet` and the typed `ClientPacket`/`ServerPacket` union from `@aresrpg/protocol`. Bigint chain values generally travel as decimal strings; preserve them.
+
+## Observe rather than repeatedly scan
+
+The bounded baseline and deltas include characters, inventory, equipment, trades, listings, claims, Mastery, fight recovery, and nearby world state. Retain one state owner per domain. Account replacement clears the prior account's state and pending intents. The tracked roster is capped at six characters; it is not a complete census of every holding at an address.
+
+Keep certified versions/tombstones when reconciling inventory and listing changes. A delayed snapshot must not resurrect an item spent by a newer receipt. Do not interpret a bounded market page or tracked-zone window as the complete global inventory. Initializing from a snapshot should not replay purchases, level celebrations, or automated claims.
+
+Useful observation packets include:
+
+| Intent | Result |
+| --- | --- |
+| `packet/market_observe` with `{ observation: { kind: 'offers', category, item_type, request } }` | Correlated `packet/market_slice` with live offers and pagination |
+| `packet/market_prices_observe` with `{ observation: { item_type, id } }` | `packet/market_prices` with recorded daily sales and supply |
+| `packet/leaderboard_observe` with `{ observation: { metric, id } }` | Current monthly standings and personal rank |
+| `packet/inspection_request` | One correlated player/equipment profile |
+| `packet/fight_preview` / `packet/spectate` | Eligible nearby fight state |
+
+Complete wire examples (send only after authentication):
+
+```json
+{"type":"packet/market_observe","observation":{"kind":"offers","category":"resource","item_type":"wheat","request":1}}
+```
+
+```json
+{"type":"packet/market_prices_observe","observation":{"item_type":"wheat","id":2}}
+```
+
+```json
+{"type":"packet/leaderboard_observe","observation":{"metric":"jobs","id":3}}
+```
+
+Send an explicit null observation when finished; repeat for each active observation type:
+
+```json
+{"type":"packet/market_observe","observation":null}
+```
+
+Use monotonically increasing request identities and ignore replies for superseded selections. Do not invent generic REST endpoints such as `/api/inventory` or `/api/market`. The SDK has narrow direct-read exceptions, not a broad player-state reader. Independent chain-native agents build their own bounded Sui GraphQL read adapter; that does not add a second read path to the browser app.
+
+World presence uses `packet/position` with the character ID, exact `character_checkpoint` string, chain-space pose, and riding state. A new chain checkpoint invalidates old movement provenance. Publish physically plausible movement within the protocol rate/speed limits. For headless world traversal, adapt the existing server-link/world behavior; a transaction script alone is not a navigation client.
+
+## Indexed freshness and service limits
+
+`packet/server_info` supplies `indexing_lag`, `current_epoch`, `chain_timestamp_ms`, and `chain_sample_age_ms`; `packet/game_state` supplies the gameplay freeze state. Wait for baseline readiness and known freshness. Stop writes based on this stream when indexing lag exceeds 300 checkpoints, the sample becomes stale, the connection drops, or gameplay is frozen. Connection success alone is insufficient. Keep the sample's age at receipt; a cached timestamp is not a new sample.
+
+Indexed rows can lag certified SDK receipts. Reconcile by version and digest; never repeat a successful write to force a projection to catch up. Push updates reduce repeated broad reads but do not eliminate provider, server, or account limits. Use one connection, bounded subscriptions, correlation IDs, and explicit null observations when finished. Respect close codes and backoff; do not reconnect to evade admission or rate limits.
+
+These source defaults can differ by deployment; they are not an availability guarantee:
+
+- Graph-reaching read requests: 60 per 60 seconds per authenticated address per server process. Repeated observation commands count; pushed updates do not. Throttled requests return an error; wait instead of opening another connection.
+- Incoming packet flood ceiling: 150 per second per connection. Exceeding it disconnects with `RATE_LIMIT`; the default local cool-off is ten minutes. This is not a target sending rate or a way around the separate read budget.
+- Authentication timeout: 15 seconds. Incoming message maximum: 64 KiB. Outgoing buffering is bounded at 8 MiB; slow consumers are disconnected.
+- The client presence/presentation cadence is 50 ms per character, with at most six tracked characters; this is not a separate per-character inbound quota. Read the position validation rules; this does not authorize arbitrary speed or teleportation.
+
+## Source owners
+
+- [Sui zkLogin identity and integration](https://docs.sui.io/sui-stack/zklogin-integration/zklogin)
+
+- [Read-request budget](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/request_limiter.ts)
+- [Packet flood handling](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/player.ts)
+- [Connection timeout](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/connection.ts)
+- [Slow-consumer limits](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/player_output.ts)
+- [Signature verification](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/auth.ts)
+- [Server admission and limits](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/index.ts)
+- [Browser authentication](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/src/auth.ts)
+- [Wire contract](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/protocol/src/packets.ts)
+- [Browser server-link reference](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/frontend/src/server_link.ts)

@@ -25,6 +25,8 @@ Force start becomes eligible after the placement deadline, currently 60 seconds.
 
 ## Read the board and active state
 
+Chain-native agents must decode and hydrate the current Fight plus its source data; the optional indexed path prepares wire rows but still needs hydration. See [the SDK cookbook](https://aresrpg.world/agents/sdk.txt). Do not assume a generic GraphQL object read is a ready-to-simulate checkpoint.
+
 Use the checkpoint's cells, closed mask, queue, active pointer, living fighters, current AP/MP, effects, cast ledger, cooldowns, and source spell data. Cell IDs are fight-grid identifiers, not overworld coordinates. Keep integers as bigint in the fight runtime.
 
 The normal base pools are 6 AP and 3 MP, but gear and effects change them. The current state is the usable budget. A unit with enough MP may still suffer tackle losses when leaving an adjacent enemy. `fight_path_to` and `reachable_fight_cells` find geometric routes; applying the movement command determines actual tackle, trap, and movement effects.
@@ -63,7 +65,7 @@ Compare attack-before-move and move-before-attack sequences. Moving first can le
 
 Bound the search. Enumerate legal targets for a few useful spells and weapons, plus safe movement destinations. Simulate candidate prefixes on independent clones. Rank survival first, then enemy actions prevented, useful damage/healing, control, and final position. Keep a short beam of alternatives until AP or a small search budget is exhausted. Do not block the real turn deadline chasing an exhaustive optimum.
 
-Evaluate uncertain future enemy turns with multiple scenarios if useful. Label them forecasts. The current committed turn stream can be simulated; future entropy is not yours to invent. `mode: 'local'` is for offline scenarios, not proof of future on-chain outcomes. In `mode: 'remote'`, a boundary may await certified seed witnesses; wait or replace from the indexed checkpoint rather than fabricating a seed.
+Evaluate uncertain future enemy turns with multiple scenarios if useful. Label them forecasts. The current committed turn stream can be simulated; future entropy is not yours to invent. `mode: 'local'` is for offline scenarios, not proof of future on-chain outcomes. In `mode: 'remote'`, a boundary may await certified seed witnesses; wait or replace from a freshly decoded chain checkpoint (or the optional indexed checkpoint) rather than fabricating a seed.
 
 ## Commit exactly the reviewed draft
 
@@ -89,7 +91,7 @@ Defeated mobs produce shared loot rolls; winning seats share successful drops. A
 
 Use terminal source loot tables and the existing result planner as the model for settlement inputs. A winning seat needs the complete eligible loot-template set, not only the item you hoped to get. Group settlements by destination custody. Use `dungeon.settle` for dungeon progression and Mastery eligibility, and request boss reward preparation when the terminal fight is eligible. Do not default every encounter to a boss.
 
-Characters remain unavailable while held by a fight even if the UI animation has ended. Settlement returns custody and writes persistent HP/XP. Failed or interrupted settlement remains recoverable through `packet/fight_resolutions`; fully settled leftover fights can appear in `packet/closable_fights`. Resolve only the remaining work. Fight discovery expiring does not erase your seat or its owed settlement.
+Characters remain unavailable while held by a fight even if the UI animation has ended. Settlement returns custody and writes persistent HP/XP. For chain-native recovery, inspect the retained Fight identity, owned seats, settlement flags and current custody through chain reads and certified receipts. The optional indexed path prepares `packet/fight_resolutions` and `packet/closable_fights` for remaining settlement/cleanup. Neither packet is a prerequisite for direct SDK settlement. Resolve only the remaining work. Fight discovery expiring does not erase your seat or its owed settlement.
 
 Losing or forfeiting costs time, gas, and health. Explain that tradeoff before an unapproved retreat. When retreat was authorized, use the correct normal/dungeon forfeit path and verify the return. Report losses honestly; do not call a forfeit a win because the resource harvest survived.
 

@@ -2,11 +2,11 @@
 
 > AresRPG is a persistent voxel MMORPG on Sui. Help your player build characters, master tactical combat, explore worlds, develop professions, trade, and complete dungeons within their chosen budget and playstyle.
 
-Start with the player guide, then load the relevant specialist guides. These documents are a gameplay skill: use them to plan, explain choices, and operate the game through its public source SDK and authenticated protocol. They do not grant wallet access or spending permission. Agree on an objective, SUI budget, risk tolerance, and allowed actions with the player; then act within that agreement without requesting approval for every routine step.
+Start with the player guide, then load the relevant specialist guides. These documents are a gameplay skill: use them to plan, explain choices, and operate the game through Sui GraphQL reads and direct public-source SDK transactions by default. Optional AresRPG indexing/WebSocket integration is a separate path with different setup and tradeoffs; choose it deliberately with the player. They do not grant wallet access or spending permission. Agree on an objective, SUI budget, risk tolerance, and allowed actions with the player; then act within that agreement without requesting approval for every routine step.
 
 Game state and certified transaction receipts outrank this guide. Content, prices, custody, and availability change. Read fresh state before acting. Never invent an SDK method, object ID, recipe, market price, or successful transaction. A failed or uncertain submission stops the action loop; recover its exact digest before considering another write.
 
-The public SDK lives in the source repository. Use a matching repository checkout and its pinned dependencies; do not assume an independently published npm release. Mainnet and testnet are separate economies. Confirm the network, deployment pins, signing address, and server before connecting. One address has one live game connection; coordinate browser and agent sessions.
+The public SDK lives in the source repository. Use a matching repository checkout and its pinned dependencies; do not assume an independently published npm release. Mainnet and testnet are separate economies. Confirm the network, deployment pins, signing address, and Sui endpoints. SDK writes require gRPC for complete receipts; GraphQL is the read path. Chain-native play needs no AresRPG WebSocket or Google login. Only the optional indexed path has a one-live-game-connection-per-address constraint; coordinate browser and agent sessions if choosing it.
 
 ## Playbook
 
@@ -14,7 +14,7 @@ The public SDK lives in the source repository. Use a matching repository checkou
 - [Worlds, professions, and dungeons](https://aresrpg.world/agents/world.txt): Travel proofs, gathering, crafting, supply chains, recall potions, group dungeons, Mastery, and leaderboards.
 - [Combat manual](https://aresrpg.world/agents/combat.txt): Placement, spells, movement, effects, tactical planning, deterministic simulation, turn submission, and settlement.
 - [Economy and spending](https://aresrpg.world/agents/economy.txt): SUI ledger, gas, royalties, market research, trading, risk limits, and acquisition comparisons.
-- [State and transaction protocol](https://aresrpg.world/agents/protocol.txt): Authentication, live projections, clocks, stale state, transaction recovery, and bounded automation.
+- [State and transaction protocol](https://aresrpg.world/agents/protocol.txt): Choose between chain-native and indexed reads; freshness, clocks, transaction recovery, and bounded automation.
 - [SDK scripting cookbook](https://aresrpg.world/agents/sdk.txt): Runnable planning examples, headless integration, typed gameplay actions, and source navigation.
 
 ## Source and tools
@@ -25,6 +25,8 @@ The public SDK lives in the source repository. Use a matching repository checkou
 - [SDK action and combat examples](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/sdk/examples/agent_actions.ts): Typechecked composition of existing SDK builders and the fight twin.
 
 ## Optional
+
+- [AresRPG indexing and WebSocket integration](https://aresrpg.world/agents/indexing.txt): Prepared projections, direct-wallet versus Google authentication, subscriptions, rate/session limits, and additional complexity. Not required for chain-native play.
 
 - [Architecture](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/ARCHITECTURE.md): Ownership and system boundaries for advanced integrations.
 - [Game](https://aresrpg.world/): Browser gameplay, account login, encyclopedia, inventory, market, and social tools.

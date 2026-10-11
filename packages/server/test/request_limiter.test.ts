@@ -6,6 +6,18 @@ import { describe, expect, test } from 'bun:test'
 import { create_request_limiter } from '../src/request_limiter.ts'
 
 describe('global request limiter', () => {
+  test('documented default permits sixty requests per address per minute', () => {
+    let now_ms = 0
+    const limiter = create_request_limiter({ now: () => now_ms })
+    for (let request = 0; request < 60; request += 1) expect(limiter.take('0xA')).toBeTrue()
+    expect(limiter.take('0xa')).toBeFalse()
+    expect(limiter.take('0xB')).toBeTrue()
+    now_ms = 59_999
+    expect(limiter.take('0xA')).toBeFalse()
+    now_ms = 60_000
+    expect(limiter.take('0xa')).toBeTrue()
+  })
+
   test('shares one allowance across request kinds for an address', () => {
     let now_ms = 0
     const limiter = create_request_limiter({ capacity: 2, window_ms: 1_000, now: () => now_ms })

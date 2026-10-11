@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Integration examples, not an autonomous spender. The caller owns authorization, fresh state,
-// durable transaction storage, budgets, and the authenticated websocket lifecycle.
+// durable transaction storage, budgets, and its chosen chain/indexed read lifecycle.
 
 import type { TradeRow } from '@aresrpg/protocol'
 

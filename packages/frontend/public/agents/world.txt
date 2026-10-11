@@ -10,7 +10,7 @@ Each character retains a world checkpoint: x, z, timestamp, and pet flag. Every 
 
 Use `character.search_zone` with `refresh: false` for first discovery and `true` for an existing zone. Existing zones refresh their population only after the two-hour TTL. Calling refresh earlier still costs a transaction; it does not replenish a depleted pack. A zone's seed and consumption bitmaps identify its generation. Re-evaluate every target if that generation changes.
 
-Read `packet/tracked_zones`, `packet/zones`, and `packet/zone_spawns`. Apply `live_mob_groups` and `live_resource_packs` from the protocol to the current consumption state. Preserve the server's group/member order and pack indexes when constructing actions. Do not choose a new random population locally.
+For chain-native play, read the current World/Zone and matching published content through Sui GraphQL. Derive the population from its certified seed/generation using the existing deterministic zone-spawn twin, then apply current consumption through `live_mob_groups` and `live_resource_packs`. Preserve group/member order and pack indexes; a raw Zone object is not a list of target packs. With the optional indexed path, `packet/tracked_zones`, `packet/zones`, and `packet/zone_spawns` supply these prepared inputs. Do not choose a new random population locally. See [read-model requirements](https://aresrpg.world/agents/protocol.txt).
 
 Search nearby eligible biomes and authored cities for the resource or mob family you need. Record depleted visits to avoid expensive loops. Increase exploration distance or change world only when the target and expected benefit justify the travel and discovery gas. Harder zones can contain stronger members of the same family; inspect actual scaled opponents.
 
@@ -86,13 +86,16 @@ Any owned qualifying winner may complete it. Include the eligible Mastery identi
 
 ## Leaderboards
 
-Rankings are address-wide and reset at the UTC calendar-month boundary. Metrics are `xp`, `kills`, `dungeons`, `jobs`, `marketplace`, `kolizeum`, `zones`, `feeding`, and `gathering`. Observe the selected metric and your own rank through the protocol. Use the returned reset time and timestamp.
+Rankings are address-wide and reset at the UTC calendar-month boundary. Metrics are `xp`, `kills`, `dungeons`, `jobs`, `marketplace`, `kolizeum`, `zones`, `feeding`, and `gathering`. These rankings are an AresRPG indexer projection, not a ready-made on-chain leaderboard object. Choose the [optional indexed protocol](https://aresrpg.world/agents/indexing.txt) to observe a metric and your rank, using its returned reset time and timestamp. A chain-native client would need its own historical checkpoint/event aggregation; current holdings alone cannot reconstruct the score.
 
 Earned XP stays with the earning address across character sales. Public market volumes count; private trades do not. First zone discovery counts differently from repeatedly refreshing the same zone. Feeding and gathering measure actual actions/resources; holdings alone do not earn those scores. Verify the current metric owner before optimizing it.
 
 Set a reachable target and estimate the gap from measured score gain per activity. Recheck the competition periodically rather than polling constantly. Suggest a change if the remaining month, budget, or team makes the target unrealistic. Kolizeum and wagered competition require a separate risk agreement; ranking ambition never overrides spending limits.
 
 ## Source owners
+
+- [Deterministic zone population twin](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/server/src/zone_spawns.ts)
+- [Zone chain state](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/packages/move/sources/zone.move)
 
 - [World content](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/seed/content/worlds.json)
 - [Recipes](https://raw.githubusercontent.com/aresrpg/aresrpg/edge/seed/content/recipes.json)
