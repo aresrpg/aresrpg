@@ -6,7 +6,12 @@ import type { MeshStandardNodeMaterial } from 'three/webgpu'
 import { float, uniform } from 'three/tsl'
 
 import { detail_builder } from '../src/detail_builder.ts'
-import { decode_detail_vertices, DETAIL_STRIDE, validate_details } from '../src/detail_artifact.ts'
+import {
+  decode_detail_vertices,
+  DETAIL_STRIDE,
+  validate_detail_metadata,
+  validate_details,
+} from '../src/detail_artifact.ts'
 import { create_upload_queue } from '../src/upload_queue.ts'
 import { create_detail_layer } from '../src/detail_layer.ts'
 import { compile_materials } from '../src/world_materials.ts'
@@ -15,6 +20,21 @@ import { terrain_recipe, parse_world_recipe } from '../src/world_recipe.ts'
 import { world_terrain } from '../src/world_catalog.ts'
 
 const palette = { wood: { color: '#785533', preset: 'wood' } } as const
+
+test('metadata enforces the whole archive budget before any column is decoded', () => {
+  const builder = detail_builder()
+  builder.box([1, 1, 1], [2, 2, 2], 'wood')
+  builder.box([33, 1, 1], [34, 2, 2], 'wood')
+  const cells = builder.finish()
+  expect(validate_detail_metadata(cells, palette, { cells: 2, triangles: 24 })).toEqual([])
+  expect(validate_detail_metadata(cells, palette, { cells: 2, triangles: 23 })).toContain(
+    'details: Detail data exceeds geometry budget'
+  )
+  expect(validate_detail_metadata(cells, palette, { cells: 1, triangles: 24 })).toContain('details exceeds cell budget')
+  expect(validate_detail_metadata([{ ...cells[0], vertices: 'A' }], palette)).toContain(
+    'details: Detail data must contain whole encoded triangles'
+  )
+})
 
 test('mirrored prop geometry retains outward normals rather than turning inside out', () => {
   const builder = detail_builder()
@@ -111,6 +131,10 @@ test('malformed or incompatible baked details fail validation instead of substit
   builder.box([1, 1, 1], [2, 2, 2], 'wood')
   const [cell] = builder.finish()
   expect(validate_details([{ ...cell, vertices: '!' }], palette).length).toBeGreaterThan(0)
+  expect(validate_details([{ ...cell, vertices: '!'.repeat(144) }], palette).length).toBeGreaterThan(0)
+  expect(validate_details([{ ...cell, vertices: 'A'.repeat(144) }], palette)).toContain(
+    'details: Invalid detail vertex or normal'
+  )
   expect(validate_details([{ ...cell, palette: ['missing'] }], palette).length).toBeGreaterThan(0)
   expect(validate_details([{ ...cell, origin: [1, 0, 0] }], palette).length).toBeGreaterThan(0)
   expect(validate_details([cell, cell], palette)).toContain('details contains duplicate cells')

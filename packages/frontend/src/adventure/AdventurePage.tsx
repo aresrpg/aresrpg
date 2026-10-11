@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { EngineStatus, Vec3 } from '@aresrpg/engine'
 
 import { AdventureTouchControls } from '../../../mobile/src/AdventureTouchControls.tsx'
 import { WorldLoading } from '../components/WorldLoading.tsx'
+import { OnboardingFeedback } from '../analytics/OnboardingFeedback.tsx'
 import { BiomeMusic } from '../game/audio/BiomeMusic.tsx'
 import { LocaleScope } from '../i18n/LocaleScope.tsx'
 import { WorldSocialDock } from '../game/hud/WorldSocialDock.tsx'
@@ -16,16 +17,11 @@ import { read_pose } from '../game/core/pose_feed.ts'
 import { FightLayer } from '../game/fight/FightLayer.tsx'
 import { load_character_appearance } from '../game/character_entities.ts'
 import type { AppCopy } from '../i18n/copy.ts'
-import { dispatch_app, useAppStore } from '../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../store.ts'
+import { report_error } from '../reporting.ts'
 import environment from '../../../../seed/content/adventure_environment.json'
 
-import {
-  adventure_terrain,
-  adventure_plants,
-  adventure_floor,
-  adventure_movement_area,
-  ADVENTURE_SPAWN,
-} from './terrain.ts'
+import { adventure_floor, adventure_movement_area, ADVENTURE_SPAWN } from './terrain.ts'
 import { AdventureEnding } from './AdventureEnding.tsx'
 import { AdventureHud, AdventurePartyFrame } from './AdventureHud.tsx'
 import { ADVENTURE_NAMES, adventure_fight_position } from './content.ts'
@@ -34,10 +30,11 @@ import { create_adventure_actors } from './actors.ts'
 import { selected_adventurer } from './quest.ts'
 import { useDemoAnalytics } from './useDemoAnalytics.ts'
 import { CompanionInteraction } from './CompanionInteraction.tsx'
+import { load_adventure_scene } from './scene.ts'
 
 export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }>) => {
   const copy = useAppStore((state) => state.copy ?? initial_copy)
-  const terrain = useMemo(adventure_terrain, [])
+  const [scene, set_scene] = useState<Awaited<ReturnType<typeof load_adventure_scene>> | null>(null)
   const adventure = useAppStore((state) => state.adventure)
   const character = selected_adventurer(adventure)
   const route_unlocked = useAppStore((state) => state.adventure.encounter > 0)
@@ -65,26 +62,53 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
 
   useEffect(() => {
     if (!canvas) return
-    const created = create_world({
-      canvas,
-      world: terrain,
-      quality: settings.quality,
-      initial_focus: [ADVENTURE_SPAWN.x, ADVENTURE_SPAWN.z],
-      initial_yaw: Math.PI,
-      initial_pitch: environment.initial_pitch,
-    })
-    const unsubscribe = created.subscribe_status(set_status)
-    created.set_resource_nodes(adventure_plants(), adventure_floor)
-    created.set_time_of_day(environment.time_of_day)
-    created.set_active(true)
-    created.set_interactive(true)
-    set_world(created)
+    const request = new AbortController()
+    let created: ReturnType<typeof create_world> | null = null
+    let unsubscribe: (() => void) | undefined
+    const release = () => {
+      unsubscribe?.()
+      unsubscribe = undefined
+      created?.dispose()
+      created = null
+    }
+    set_scene(null)
+    set_world(null)
+    set_model_failed(false)
+    set_status({ state: 'initializing', backend: 'none' })
+    void load_adventure_scene(request.signal)
+      .then((loaded) => {
+        if (request.signal.aborted) return
+        const { quality } = read_app_state().settings
+        created = create_world({
+          canvas,
+          world: loaded.world,
+          quality,
+          initial_focus: [ADVENTURE_SPAWN.x, ADVENTURE_SPAWN.z],
+          initial_yaw: Math.PI,
+          initial_pitch: environment.initial_pitch,
+        })
+        unsubscribe = created.subscribe_status(set_status)
+        created.set_resource_nodes(loaded.resources, adventure_floor)
+        created.set_time_of_day(environment.time_of_day)
+        created.set_active(true)
+        created.set_interactive(true)
+        set_scene(loaded)
+        set_world(created)
+      })
+      .catch((error: unknown) => {
+        if (request.signal.aborted) return
+        release()
+        const failure: EngineStatus = { state: 'failed', backend: 'none', issue: { code: 'terrain_failed' } }
+        set_status(failure)
+        demo_loading.on_progress({ stage: 'failed', fraction: null }, failure)
+        report_error(error, { area: 'adventure', action: 'scene' })
+      })
     return () => {
-      unsubscribe()
-      created.dispose()
+      request.abort()
+      release()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- canvas owns the lifetime; settings use the existing device doors.
-  }, [canvas, terrain])
+  }, [canvas])
 
   useEffect(() => {
     world?.set_quality(settings.quality, settings.render_distance)
@@ -160,8 +184,8 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
     <LocaleScope locale={locale}>
       <main className="fixed inset-0 overflow-hidden bg-bg font-mono text-[#e8e4dc]">
         <BiomeMusic area="demo:mosswood" />
-        {!finale && (
-          <WorldSocialDock copy={copy} terrain={terrain}>
+        {scene && !finale && (
+          <WorldSocialDock copy={copy} terrain={scene.world}>
             <AdventurePartyFrame copy={copy} />
           </WorldSocialDock>
         )}
@@ -170,7 +194,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
           source={world}
           quality={settings.quality}
           render_distance={settings.render_distance}
-          failed={model_failed}
+          failed={display_status.state === 'failed'}
           {...demo_loading}
         />
         {mounted && world && (
@@ -187,9 +211,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
         <AdventureTouchControls copy={copy} device={world} />
         <AdventureEnding world={world} positions={positions.current} />
         <AdventureHud copy={copy} challenge={challenge} />
-        {display_status.state === 'initializing' && (
-          <p className="absolute top-1/2 left-1/2 -translate-1/2">{copy.loading_universe}</p>
-        )}
+        <OnboardingFeedback />
         {display_status.state === 'failed' && (
           <EngineNotice
             copy={copy}

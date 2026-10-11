@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./data": "./src/data.ts",
     "./recipe": "./src/world_recipe.ts",
     "./biomes": "./src/biome_grid.ts"
   },

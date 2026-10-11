@@ -24,6 +24,8 @@ import type {
 
 export type EngineBackend = Readonly<{
   kind: 'webgpu'
+  /** Advance CPU animation and cue completion, including while the canvas is hidden. */
+  tick: (now: number) => void
   render: (now: number) => void
   set_camera: (position: Vec3, target: Vec3, projection?: CameraProjection) => void
   /** The followed character's FEET — character-anchored presentation (the night lantern) rides
@@ -54,6 +56,7 @@ export type EngineBackend = Readonly<{
   set_world_panel: (id: string, panel: WorldPanel | null) => void
   set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
   entity_height: (id: string) => number | null
+  entity_position: (id: string, height?: number) => Vec3 | null
   upsert_fight_blob: (blob: FightBlobRender) => void
   remove_fight_blob: (id: string) => void
   pick_fight_cell: (client_x: number, client_y: number) => number | null

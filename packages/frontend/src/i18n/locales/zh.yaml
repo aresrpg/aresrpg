@@ -223,6 +223,8 @@ trade_panel:
 transaction_unknown_toast: 上一项操作仍在核查。在结果明确前，后续交易已被阻止。
 transaction_recovered_toast: 已找到上一笔交易。请刷新查看结果，再选择下一项操作。
 world_hud:
+  crew_talk: '与 Blast Girl 交谈'
+  crew_talk_touch: '与 Blast Girl 交谈'
   map_party_legend: '青色：队友 · 金色：队长'
   dismount_prompt_touch: '轻点以下坐骑'
   spawn_press_attack_touch: '轻点以攻击'
@@ -358,6 +360,8 @@ world_hud:
   resource_face_protector: 按{{key}}迎战
   zone_never_arrived: 探索已执行，但世界未显示结果，读取层可能仍有延迟
 demo_page:
+  animation_loop: 循环播放动画
+  animation_auto: 自动（随移动）
   asset_demo_city: 演示城市
   asset_house_1: 联排住宅 A
   asset_house_2: 联排住宅 B
@@ -438,6 +442,10 @@ demo_page:
   control_hint: 点击画布 · WASD移动 · 空格跳跃 · 鼠标转向
   back: 返回应用
 marketplace_page:
+  filter_all: '所有分类'
+  filter_empty: '没有匹配结果，请尝试其他筛选条件或搜索词。'
+  lot_price: '整组总价'
+  type_count_hint: '公开上架的不同物品类型数量'
   total_units: '总数量'
   market_cap: '总市值'
   market_cap_basis: '现存总数量 × 图表最近成交日的平均单价，不含手续费。'
@@ -560,6 +568,16 @@ mastery_page:
   quest_started: 每日任务已分配。
   offer_purchased: 已购买精通奖励。
 airdrop_page:
+  crew_view_sale: '查看 KARES 发售'
+  crew_dialogue:
+    intro: '参加 KARES 代币发售吧，我会为你准备一份礼物。'
+    connect: '连接你参与发售时使用的钱包，看看礼物到了没有。'
+    checking: '让我看看你的礼物……'
+    ready: '你的 Crew 头盔到了！'
+    claiming: '稍等，正在领取你的礼物。'
+    claimed: 'Crew 头盔已经交给你啦。戴上它吧！'
+    empty: '这个钱包目前没有可领取的 Crew 头盔。可能已经领过，也可能还在等待发放。'
+    unavailable: '没能查到你的礼物，请再试一次。'
   reward_title: '你收到了礼物！'
   reward_received: '你收到了{items}！'
   reward_needs_sui: '礼物已安全存入你的钱包。请充值少量 SUI 支付领取交易的手续费，然后领取奖励。'
@@ -600,6 +618,9 @@ airdrop_page:
     physical: 实体礼品卡
     game_wallet: Hytale老玩家奖励
   campaigns:
+    blast_crew:
+      title: 'Crew 头盔'
+      description: '送给 Blast 上 KARES 发售参与者的外观礼物。发放后，请连接参与时使用的钱包。'
     oeuftermath:
       title: Aftermath Eggs · Oeuftermath
       description: 快照时持有Aftermath Egg的玩家可获得Oeuftermath宠物礼品卡。请检查当时持有Egg的钱包；之后购买Egg不会获得资格。
@@ -2570,6 +2591,13 @@ spell_effects:
   short_stat: '属性'
   expires_next_turn: '持续至下回合开始'
 ui:
+  feedback_question: '是什么让你难以继续？'
+  feedback_unclear: '不知道该做什么'
+  feedback_controls: '操作方式'
+  feedback_performance: '卡顿或故障'
+  feedback_funding: '给钱包充值'
+  feedback_not_interested: '不适合我'
+  feedback_dismiss: '关闭'
   multiplayer: '多人游戏'
   nearby_fights: '附近战斗'
   nearby_fights_empty: '附近没有已追踪的战斗'

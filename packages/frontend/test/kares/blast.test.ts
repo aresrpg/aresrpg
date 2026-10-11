@@ -51,6 +51,30 @@ test('unmounting discards a delayed result and never schedules another read', as
   expect(runtime.store.getState()).toBe(before)
 })
 
+test('the sale card and NPC dialog share one reader until the last consumer leaves', async () => {
+  let reads = 0
+  let finish: (value: typeof snapshot) => void = () => undefined
+  const runtime = create_blast_runtime({ network: 'testnet' }, () => ({
+    configured: true,
+    url: 'https://www.blast.fun/',
+    read: () => {
+      reads++
+      return new Promise((resolve) => {
+        finish = resolve
+      })
+    },
+  }))
+  const card = runtime.start()
+  const dialog = runtime.start()
+  card()
+  finish(snapshot)
+  await Promise.resolve()
+  expect(reads).toBe(1)
+  expect(runtime.store.getState().snapshot).toEqual(snapshot)
+  dialog()
+  dialog()
+})
+
 test('a read error retains the version floor while hiding its progress', () => {
   const live = reduce_blast(initial_blast_state(), { type: 'snapshot', url: 'https://www.blast.fun/', snapshot })
   const failed = reduce_blast(live, { type: 'failed', url: live.url })

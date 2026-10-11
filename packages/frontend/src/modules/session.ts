@@ -27,7 +27,7 @@ import { market_price_subscription } from '../marketplace/price_history_state.ts
 import { leaderboard_subscription, inspection_subscription } from './leaderboards.ts'
 import { fold_character_creation, type CharacterCreation, type CharacterCreationInput } from './character_creation.ts'
 import { fold_character_deletion, with_character_roster } from './character_roster.ts'
-import { fold_character_receipt } from './character_folds.ts'
+import { fold_character_receipt, type CraftOutcome } from './character_folds.ts'
 import { reduce_craft_character_selection, with_craft_character_session } from './craft_character_lock.ts'
 import { fight_environment } from './fight.ts'
 import { nearby_watch_changes } from './nearby_fight.ts'
@@ -38,7 +38,6 @@ export type AuthStatus = 'idle' | 'connecting' | 'authenticated'
 export type AuthRequest = 'restore' | 'google' | Readonly<{ wallet: string }>
 export type LinkStatus = 'idle' | 'connecting' | 'connected' | 'ready' | 'replaced'
 const BALANCE_POLL_MS = 5_000
-type CraftOutcome = Readonly<{ digest: string; successes: number; attempts: number; output_type: string }>
 export type SessionState = Readonly<{
   character_creation: CharacterCreation | null
   auth_status: AuthStatus
@@ -123,7 +122,7 @@ export type SessionInput =
   | Readonly<{ type: 'inventory/claims_settled'; claim_ids: readonly string[] }>
   | Readonly<{ type: 'inventory/gear_crushed'; gear_ids: readonly string[]; claim_id: string }>
   | Readonly<{ type: 'inventory/pet_fed'; pet_id: string; food_id: string }>
-  | (CraftOutcome & Readonly<{ type: 'character/crafted'; character_id: string; job: string; xp: number }>)
+  | (CraftOutcome & Readonly<{ type: 'character/crafted'; character_id: string; xp: number }>)
   | Readonly<{
       type: 'wallet/resolve_character'
       name: string

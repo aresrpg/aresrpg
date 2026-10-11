@@ -5,6 +5,7 @@ import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
 import analytics, { type AnalyticsInput, type AnalyticsState } from './modules/analytics.ts'
+import { initial_analytics_state } from './analytics/state.ts'
 import adventure, { initial_adventure_state, type AdventureState, type AdventureInput } from './modules/adventure.ts'
 import type { GameSettings } from './game/core/settings.ts'
 import { CHAT_CHANNELS } from './game/core/chat_preferences.ts'
@@ -240,7 +241,7 @@ export const initial_app_state = (settings_state: GameSettings): AppState =>
     external_wallet: initial_external_wallet_state(),
     navigation: initial_navigation_state(),
     settings: settings_state,
-    analytics: null,
+    analytics: initial_analytics_state(),
     locale: 'en',
     engine: initial_engine_state(),
     fight: initial_fight_session_state(),

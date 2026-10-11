@@ -20,6 +20,14 @@ import type { AppInput } from '../store.ts'
 
 import type { SessionState } from './session.ts'
 
+export type CraftOutcome = Readonly<{
+  digest: string
+  job: string
+  successes: number
+  attempts: number
+  output_type: string
+}>
+
 const with_character = (
   session: SessionState,
   character_id: string,
@@ -222,6 +230,7 @@ const fold_inventory_receipt = (session: SessionState, input: AppInput): Session
       ...session,
       craft_result: Object.freeze({
         digest: input.digest,
+        job: input.job,
         successes: input.successes,
         attempts: input.attempts,
         output_type: input.output_type,

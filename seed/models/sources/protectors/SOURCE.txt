@@ -1,0 +1,10 @@
+Open protectors.blend. Select a Protector - <family> scene to edit its mesh and rig.
+All 33 palettes are packed in the project; palettes.json defines export order.
+
+Run the external export.py, then pack_variants.py, inside Blender with this project
+open. They write the three canonical family GLBs under seed/models/mobs/.
+pack_variants.py reads the packed images; no external palette PNGs are required.
+Delete the generated *_base.glb files after validation.
+
+Embedded construction text blocks are historical recipes. The external scripts
+above define the supported export path. Review renders and reports are disposable.

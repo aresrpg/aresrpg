@@ -3,8 +3,8 @@
 /* eslint-disable functional/immutable-data -- this renderer owns its mutable interpolation cache and Three.js-facing elements. */
 // Nearby players rendered in the world: folds the presence slice (PresenceRow by character id)
 // into the world scene's external-entity door. Appearances load once per identity change; live
-// positions ride packet/players_moved through the store. A row with a pet is MOUNTED by
-// definition (the presence contract) — the pet renders under a seated rider.
+// positions ride packet/players_moved through the store. The riding flag binds a seated
+// character to its pet's animated mount socket; otherwise the pet follows independently.
 
 import type { CharacterAura, CharacterAnimationName, EntityRender, WorldCaption } from '@aresrpg/engine'
 import { chain_to_client_coordinate, worn_appearance } from '@aresrpg/immutable'
@@ -16,7 +16,7 @@ import {
   world_character_entity,
   character_aura,
 } from './character_entities.ts'
-import { pet_locomotion_of, pet_seat_height, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
+import { pet_locomotion_of, pet_vertical_offset, type PetLocomotion } from './core/pet_locomotion.ts'
 import { empty_pet_motion, step_pet_follow, type PetMotion } from './core/pet_follow.ts'
 import { create_caption_target } from './core/caption_target.ts'
 import { publish_other_tag } from './core/nametag_feed.ts'
@@ -81,7 +81,6 @@ const pet_world_position = (
 
 export const create_presence_renderer = ({
   submit,
-  entity_height,
   pet_ground_height,
   label,
   next_frame = raf,
@@ -90,7 +89,6 @@ export const create_presence_renderer = ({
   next_frame?: typeof raf
   appearance_loader?: typeof load_character_appearance
   submit: (entities: readonly EntityRender[]) => void
-  entity_height: (id: string) => number | null
   pet_ground_height: (x: number, z: number, owner_y: number) => number
   /** the engine's crown-label door — nametags ride the SAME CSS2D pass as every other tag */
   label: (character_id: string, caption: WorldCaption | null) => void
@@ -174,13 +172,13 @@ export const create_presence_renderer = ({
       const moving = !far && now - slot.moved_at < IDLE_AFTER_MS
       const mounted = slot.riding && slot.loaded.pet !== null
       const pet_id = `${character_id}:pet`
-      const rider_y = mounted ? slot.y + pet_seat_height(entity_height(pet_id)) : slot.y
-      const anim: CharacterAnimationName = far ? 'IDLE' : mounted ? 'SIT' : moving ? 'RUN' : 'IDLE'
+      const anim: CharacterAnimationName = mounted ? 'SIT' : far ? 'IDLE' : moving ? 'RUN' : 'IDLE'
       const time_scale = far ? 0 : 1
       const character = world_character_entity(
         Object.freeze({ id: character_id, appearance: slot.loaded.appearance, aura: slot.aura }),
         Object.freeze({
-          position: Object.freeze([slot.x, rider_y, slot.z] as const),
+          position: Object.freeze([slot.x, slot.y, slot.z] as const),
+          mount: mounted ? pet_id : null,
           facing_yaw: slot.yaw,
           anim,
           gait_scale: time_scale,

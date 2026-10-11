@@ -1,0 +1,574 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available -->
+<!-- Authoring template for the hand-composed social cards. `bun run social:cards` renders each `.card`. -->
+<meta charset="utf-8" />
+<style>
+  @font-face {
+    font-family: 'JBM';
+    src: url('../../packages/journal/public/assets/jetbrains-mono.woff2');
+    font-weight: 100 800;
+  }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --raised: #1b1b25;
+    --border: #1e1e2e;
+    --line: #2a2a3a;
+    --gold: #c8963c;
+    --gold-light: #f5d0a9;
+    --cyan: #4a9eff;
+    --text: #e8e4dc;
+    --muted: #899097;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    background: #000;
+    font-family: 'JBM', monospace;
+  }
+  .card {
+    width: 1200px;
+    height: 630px;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    margin-bottom: 40px;
+  }
+  .micro {
+    font-size: 17px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .gold {
+    color: var(--gold);
+  }
+  .cyan {
+    color: var(--cyan);
+  }
+  .light {
+    color: var(--gold-light);
+  }
+  .hero {
+    position: absolute;
+    inset: 0;
+    background: url('../../seed/scenes/main_menu_capture.jpg') center / cover;
+  }
+  .abs {
+    position: absolute;
+  }
+  .logo {
+    content: url('../../seed/scenes/aresrpg_text_logo.png');
+  }
+  .helmet {
+    content: url('../../packages/frontend/public/logo-512.png');
+  }
+  h1 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  .rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+  }
+
+  /* serious frame */
+  .frame::before {
+    content: '';
+    position: absolute;
+    inset: 28px;
+    border: 1px solid var(--border);
+    pointer-events: none;
+  }
+  .frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--gold), var(--gold)) 28px 28px / 26px 2px no-repeat,
+      linear-gradient(var(--gold), var(--gold)) 28px 28px / 2px 26px no-repeat,
+      linear-gradient(var(--gold), var(--gold)) calc(100% - 28px) calc(100% - 28px) / 26px 2px no-repeat,
+      linear-gradient(var(--gold), var(--gold)) calc(100% - 28px) calc(100% - 28px) / 2px 26px no-repeat;
+  }
+  .grid-bg {
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(900px 500px at 85% 10%, rgba(74, 62, 140, 0.28), transparent 70%),
+      linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size:
+      auto,
+      40px 40px,
+      40px 40px;
+  }
+  .top {
+    position: absolute;
+    top: 62px;
+    left: 72px;
+    right: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .bottom {
+    position: absolute;
+    bottom: 62px;
+    left: 72px;
+    right: 72px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .mark {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .mark img {
+    width: 44px;
+    height: 44px;
+  }
+  .stat {
+    display: flex;
+    justify-content: space-between;
+    font-size: 24px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat b {
+    color: var(--gold-light);
+    font-weight: 600;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    padding: 8px 16px;
+    font-size: 17px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    background: rgba(18, 18, 26, 0.8);
+  }
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+  }
+  .tile img {
+    width: 78%;
+    height: 78%;
+    object-fit: contain;
+  }
+  .door {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    height: 76px;
+    padding: 0 22px 0 14px;
+    font-size: 25px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(14, 14, 22, 0.66);
+    backdrop-filter: blur(16px) saturate(160%);
+  }
+  .door i {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(10, 10, 15, 0.6);
+  }
+  .door svg {
+    width: 26px;
+    height: 26px;
+    fill: currentColor;
+  }
+  .door span {
+    margin-left: auto;
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+</style>
+
+<!-- ───────── IN-GAME REGISTER ───────── -->
+
+<div class="card" id="home">
+  <div class="hero"></div>
+  <div
+    class="abs"
+    style="
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(6, 8, 18, 0.86) 0%, rgba(6, 8, 18, 0.55) 42%, rgba(6, 8, 18, 0) 68%),
+        linear-gradient(0deg, rgba(6, 8, 18, 0.75), transparent 38%);
+    "
+  ></div>
+  <img class="logo abs" style="left: 56px; top: 150px; width: 590px" />
+  <div class="abs" style="left: 76px; top: 372px; width: 560px">
+    <div style="font-size: 31px; line-height: 1.3; font-weight: 500">
+      Fully on-chain, turn-based<br />voxel MMORPG on Sui.
+    </div>
+    <div class="rule" style="margin: 30px 0 22px; width: 420px"></div>
+    <div class="micro"><span class="gold">Play in your browser</span> · aresrpg.world</div>
+  </div>
+</div>
+
+<div class="card" id="gift">
+  <div class="hero" style="filter: saturate(0.9) brightness(0.55)"></div>
+  <div
+    class="abs"
+    style="
+      inset: 0;
+      background:
+        radial-gradient(700px 420px at 50% 46%, rgba(200, 150, 60, 0.22), transparent 70%),
+        linear-gradient(0deg, rgba(6, 8, 18, 0.9), rgba(6, 8, 18, 0.35) 55%, rgba(6, 8, 18, 0.7));
+    "
+  ></div>
+  <img class="logo abs" style="left: 50%; top: 44px; width: 250px; transform: translateX(-50%)" />
+  <div class="abs" style="left: 0; right: 0; top: 170px; display: flex; justify-content: center; gap: 22px">
+    <div
+      class="tile"
+      style="width: 150px; height: 150px; border-color: var(--gold); background: rgba(18, 18, 26, 0.85)"
+    >
+      <img src="../../seed/icons/items/suicune_hd.png" />
+    </div>
+    <div
+      class="tile"
+      style="width: 150px; height: 150px; border-color: var(--gold); background: rgba(18, 18, 26, 0.85)"
+    >
+      <img src="../../seed/icons/items/suifren_capy_hd.png" />
+    </div>
+    <div
+      class="tile"
+      style="width: 150px; height: 150px; border-color: var(--gold); background: rgba(18, 18, 26, 0.85)"
+    >
+      <img src="../../seed/icons/items/oeuftermath_hd.png" />
+    </div>
+  </div>
+  <div class="abs" style="left: 0; right: 0; top: 362px; text-align: center">
+    <h1 style="font-size: 66px" class="light">A gift is waiting for you</h1>
+    <div style="font-size: 27px; margin-top: 20px; color: var(--text)">
+      Sign in with Google to claim it into your game wallet.
+    </div>
+    <div class="micro" style="margin-top: 38px"><span class="gold">No wallet needed</span> · aresrpg.world/claim</div>
+  </div>
+</div>
+
+<div class="card grid-bg" id="marketplace">
+  <div class="top">
+    <img class="logo" style="width: 150px" />
+    <div class="chip gold">Royalties fund stakers</div>
+  </div>
+  <div class="abs" style="left: 72px; top: 150px">
+    <div class="micro gold">Marketplace</div>
+    <h1 style="font-size: 78px; margin-top: 14px">Player listings on Sui.</h1>
+    <div style="font-size: 26px; margin-top: 20px; color: var(--muted)">
+      Gear and characters at any price you set. Buyers pay instantly.
+    </div>
+  </div>
+  <div
+    class="abs"
+    style="left: 72px; right: 72px; top: 392px; display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px"
+    id="market"
+  ></div>
+  <div class="bottom"><div class="micro">aresrpg.world/marketplace</div></div>
+</div>
+
+<div class="card grid-bg" id="leaderboard">
+  <div class="top"><img class="logo" style="width: 150px" /></div>
+  <div class="abs" style="left: 72px; top: 180px; width: 600px">
+    <div class="micro gold">Leaderboard</div>
+    <h1 style="font-size: 74px; margin-top: 14px">Who runs<br />the world?</h1>
+    <div style="font-size: 26px; margin-top: 26px; color: var(--muted)">Ranked from on-chain history.</div>
+  </div>
+  <div
+    class="abs"
+    style="
+      right: 84px;
+      top: 190px;
+      display: flex;
+      align-items: flex-end;
+      gap: 30px;
+      image-rendering: pixelated;
+      padding: 44px 40px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    "
+  >
+    <img src="../../packages/frontend/src/assets/leaderboards/podium-2.png" style="width: 130px" />
+    <img src="../../packages/frontend/src/assets/leaderboards/podium-1.png" style="width: 170px" />
+    <img src="../../packages/frontend/src/assets/leaderboards/podium-3.png" style="width: 110px" />
+  </div>
+  <div class="bottom"><div class="micro">aresrpg.world/leaderboard</div></div>
+</div>
+
+<div class="card" id="mastery">
+  <div class="hero" style="filter: brightness(0.5) saturate(0.85); background-position: 70% 50%"></div>
+  <div
+    class="abs"
+    style="
+      inset: 0;
+      background: linear-gradient(90deg, rgba(8, 8, 16, 0.95) 0%, rgba(8, 8, 16, 0.7) 55%, rgba(8, 8, 16, 0.2));
+    "
+  ></div>
+  <div class="top">
+    <img class="logo" style="width: 150px" />
+    <div class="chip cyan">Daily challenges</div>
+  </div>
+  <div class="abs" style="left: 72px; top: 190px; width: 1000px">
+    <div class="micro gold">Mastery</div>
+    <h1 style="font-size: 66px; margin-top: 14px">Clear dungeons. Earn<br />what can't be bought.</h1>
+    <div style="font-size: 25px; margin-top: 26px; color: var(--text)">
+      Daily dungeon quests pay Mastery points<br />for unique loot boxes.
+    </div>
+  </div>
+  <div class="bottom"><div class="micro">aresrpg.world/mastery</div></div>
+</div>
+
+<div class="card grid-bg" id="links">
+  <div
+    class="abs"
+    style="inset: 0; background: radial-gradient(520px 320px at 24% 30%, rgba(74, 158, 255, 0.18), transparent 70%)"
+  ></div>
+  <img class="logo abs" style="left: 56px; top: 100px; width: 470px" />
+  <div class="abs" style="left: 76px; top: 284px; width: 580px">
+    <h1 style="font-size: 68px; white-space: nowrap">Every way in.</h1>
+    <div style="font-size: 26px; line-height: 1.4; margin-top: 22px">
+      Play, meet the players,<br />follow the build.
+    </div>
+    <div class="rule" style="margin: 30px 0 22px; width: 420px"></div>
+    <div class="micro"><span class="gold">All the links</span> · aresrpg.world/links</div>
+  </div>
+  <div class="abs" style="right: 72px; top: 91px; width: 430px; display: grid; gap: 14px">
+    <div
+      class="door"
+      style="
+        padding-left: 24px;
+        color: #17110a;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        border-color: var(--gold-light);
+        background: linear-gradient(180deg, #e2b25c, var(--gold) 58%, #a87a2c);
+        backdrop-filter: none;
+      "
+    >
+      Play<span style="color: #17110a; letter-spacing: 0; text-transform: none">aresrpg.world</span>
+    </div>
+    <div class="door" style="">
+      <i style="color: #8b94ff"
+        ><svg viewBox="0 0 24 24">
+          <path
+            d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.6986.7719 1.3634 1.225 1.9935a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419-.0189 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1569 2.419 0 1.3332-.946 2.4189-2.1569 2.4189Z"
+          /></svg></i
+      >Discord<span>discord.gg/aresrpg</span>
+    </div>
+    <div class="door" style="">
+      <i style="color: #4fb8f0"
+        ><svg viewBox="0 0 24 24">
+          <path
+            d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"
+          /></svg></i
+      >Telegram<span>t.me/aresrpg</span>
+    </div>
+    <div class="door" style="">
+      <i style="color: var(--gold-light)"
+        ><svg viewBox="0 0 24 24">
+          <path d="M11 6.2A5 5 0 0 0 7 4H2v15h6a3 3 0 0 1 3 2zm2 0A5 5 0 0 1 17 4h5v15h-6a3 3 0 0 0-3 2z" /></svg></i
+      >Journal<span>journal.aresrpg.world</span>
+    </div>
+    <div class="door" style="border-color: #ff419388; background: rgba(40, 20, 38, 0.78)">
+      <i style="border-color: #ff419355"><img src="../../seed/icons/branding/blast/helmet.svg" style="width: 30px" /></i
+      >KARES sale<span style="color: #ff8dbe">blast.fun</span>
+    </div>
+  </div>
+</div>
+
+<!-- ───────── /links PAGE ART (packages/frontend/public/links) ───────── -->
+
+<div
+  class="card"
+  id="links_loot"
+  style="width: 1040px; height: 390px; display: grid; grid-template-columns: repeat(8, 120px); gap: 10px"
+></div>
+
+<div class="card" id="links_logo" style="width: 720px; height: 241px; background: none">
+  <img class="logo" style="width: 100%" />
+</div>
+
+<!-- ───────── SERIOUS REGISTER ───────── -->
+
+<div class="card grid-bg frame" id="kares">
+  <div class="top">
+    <div class="mark"><img class="helmet" /><span class="micro" style="color: var(--text)">AresRPG</span></div>
+    <div class="micro">Staking</div>
+  </div>
+  <img
+    class="abs"
+    src="../../packages/frontend/public/kares.png"
+    style="right: 96px; top: 150px; width: 330px; height: 330px; filter: drop-shadow(0 0 60px rgba(74, 158, 255, 0.25))"
+  />
+  <div class="abs" style="left: 72px; top: 176px; width: 680px">
+    <h1 style="font-size: 120px; letter-spacing: -0.03em">KARES</h1>
+    <div style="font-size: 28px; line-height: 1.4; margin-top: 22px">
+      Stakers share <span class="light">20%</span> of marketplace royalties, paid in SUI.
+    </div>
+    <div style="font-size: 21px; line-height: 1.5; margin-top: 18px; color: var(--muted)">
+      Rewards vary with revenue and participating stake.
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="micro">aresrpg.world/kares</div>
+    <div class="micro gold">Sui</div>
+  </div>
+</div>
+
+<div class="card grid-bg frame" id="agents">
+  <div class="top">
+    <div class="mark"><img class="helmet" /><span class="micro" style="color: var(--text)">AresRPG</span></div>
+    <div class="micro">llms.txt</div>
+  </div>
+  <div class="abs" style="left: 72px; top: 178px; width: 600px">
+    <div class="micro gold">Agent playbook</div>
+    <h1 style="font-size: 58px; margin-top: 16px">Play AresRPG<br />with your agent.</h1>
+    <div style="font-size: 23px; line-height: 1.5; margin-top: 26px; color: var(--muted)">
+      Six guides. A public SDK.<br />Your budget, your rules.
+    </div>
+  </div>
+  <div
+    class="abs"
+    style="right: 72px; top: 144px; width: 440px; background: var(--surface); border: 1px solid var(--line)"
+  >
+    <div style="padding: 13px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center">
+      <i style="width: 10px; height: 10px; background: var(--line); display: block"></i
+      ><i style="width: 10px; height: 10px; background: var(--line); display: block"></i
+      ><i style="width: 10px; height: 10px; background: var(--gold); display: block"></i>
+      <span class="micro" style="font-size: 14px; margin-left: 10px">/agents</span>
+    </div>
+    <div style="padding: 20px 24px; font-size: 22px; line-height: 1.9">
+      <div><span class="gold">›</span> play.txt <span style="color: var(--muted)">· builds</span></div>
+      <div><span class="gold">›</span> world.txt <span style="color: var(--muted)">· dungeons</span></div>
+      <div><span class="gold">›</span> combat.txt <span style="color: var(--muted)">· tactics</span></div>
+      <div><span class="gold">›</span> economy.txt <span style="color: var(--muted)">· spending</span></div>
+      <div><span class="gold">›</span> protocol.txt <span style="color: var(--muted)">· state</span></div>
+      <div>
+        <span class="gold">›</span> sdk.txt <span style="color: var(--muted)">· scripting</span
+        ><span class="cyan"> ▍</span>
+      </div>
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="micro">aresrpg.world/agents</div>
+    <div class="micro gold">Sui</div>
+  </div>
+</div>
+
+<div class="card grid-bg frame" id="github" style="width: 1280px; height: 640px">
+  <div class="top">
+    <div class="mark">
+      <img class="helmet" /><span class="micro" style="color: var(--text)">aresrpg / aresrpg</span>
+    </div>
+    <div class="micro">Source-available</div>
+  </div>
+  <div class="abs" style="left: 72px; top: 176px; width: 740px">
+    <h1 style="font-size: 70px">A fully on-chain<br />voxel MMORPG.</h1>
+    <div style="font-size: 24px; line-height: 1.45; margin-top: 28px; color: var(--muted)">
+      Contracts, engine, indexer, server, client.<br />Developed in the open.
+    </div>
+  </div>
+  <div
+    class="abs"
+    style="right: 72px; top: 156px; width: 380px; height: 300px; border: 1px solid var(--line); overflow: hidden"
+  >
+    <div
+      style="
+        position: absolute;
+        inset: 0;
+        background: url('../../seed/scenes/main_menu_capture.jpg') 62% 55% / 230% auto;
+      "
+    ></div>
+    <div style="position: absolute; inset: 0; box-shadow: inset 0 0 60px rgba(10, 10, 15, 0.8)"></div>
+  </div>
+  <div class="bottom">
+    <div style="display: flex; gap: 12px">
+      <span class="chip">Sui Move</span><span class="chip">TypeScript</span><span class="chip">Rust</span
+      ><span class="chip">Three.js · WebGPU</span>
+    </div>
+    <div class="micro gold">aresrpg.world</div>
+  </div>
+</div>
+
+<!-- ───────── BANNERS ───────── -->
+
+<div class="card" id="readme" style="width: 1280px; height: 400px">
+  <div class="hero" style="background-position: 50% 42%"></div>
+  <div
+    class="abs"
+    style="inset: 0; background: linear-gradient(0deg, rgba(6, 8, 18, 0.9), rgba(6, 8, 18, 0.15) 60%)"
+  ></div>
+  <img class="logo abs" style="left: 50%; top: 70px; width: 520px; transform: translateX(-50%)" />
+  <div class="abs micro" style="left: 0; right: 0; bottom: 44px; text-align: center; color: var(--text)">
+    Fully on-chain · turn-based · voxel MMORPG on Sui
+  </div>
+</div>
+
+<div class="card" id="discord" style="width: 1100px; height: 220px">
+  <div class="hero" style="background-position: 50% 36%; background-size: 118% auto"></div>
+  <div
+    class="abs"
+    style="inset: 0; background: radial-gradient(520px 200px at 50% 50%, rgba(6, 8, 18, 0.55), transparent)"
+  ></div>
+  <img class="logo abs" style="left: 50%; top: 50%; width: 440px; transform: translate(-50%, -50%)" />
+</div>
+
+<script>
+  const base = '../../seed/icons/items/'
+  const fill = (id, names) => {
+    document.getElementById(id).innerHTML = names
+      .map((n) => `<div class="tile" style="aspect-ratio:1"><img src="${base}${n}_hd.png"></div>`)
+      .join('')
+  }
+  fill('links_loot', [
+    'sunbound_concord',
+    'suicune',
+    'gravebrand',
+    'lorito_hat__agility',
+    'infinity_diamond',
+    'boar_tusk_glaive',
+    'cloudstep_greaves',
+    'suifren_capy',
+    'five_biome_greatbow',
+    'rooftop_locket',
+    'cape_fuwa__black',
+    'gilded_talon',
+    'oeuftermath',
+    'mossbound_broadaxe',
+    'quartz_set_trinket',
+    'fleecehorn_bow',
+    'golden_lorito_amulet',
+    'broodstep_boots',
+    'lorito_pike',
+    'suifren_bullshark',
+    'broodglass_twins',
+    'moka_arms_binding',
+    'drakar',
+    'potion_of_thebes',
+  ])
+  fill('market', [
+    'sunbound_concord',
+    'five_biome_greatbow',
+    'lorito_hat__agility',
+    'cape_fuwa__black',
+    'golden_lorito_amulet',
+    'broodglass_twins',
+    'mossbound_broadaxe',
+    'cloudstep_greaves',
+  ])
+</script>

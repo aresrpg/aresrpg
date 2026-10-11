@@ -452,7 +452,7 @@
         16
       ],
       "create_entity_layer > play_clip": [
-        12
+        11
       ],
       "create_entity_layer > tick > beats.forEach[0](beat,id)": [
         11
@@ -787,11 +787,6 @@
       ],
       "MasteryPage > world_cards.map[0](card)": [
         10
-      ]
-    },
-    "packages/frontend/src/marketplace/SellPanel.tsx": {
-      "SellPanel > items.map[0](selection)": [
-        9
       ]
     },
     "packages/frontend/src/server_link.ts": {
@@ -1691,7 +1686,7 @@
         12
       ],
       "create_entity_layer > play_clip": [
-        19
+        17
       ],
       "create_entity_layer > tick > beats.forEach[0](beat,id)": [
         15
@@ -1722,7 +1717,7 @@
         11
       ],
       "create_webgpu_backend > draw": [
-        22
+        21
       ],
       "create_webgpu_backend > resize": [
         10
@@ -2001,10 +1996,10 @@
       ]
     },
     "packages/engine/src/detail_artifact.ts": {
-      "validate_cell": [
+      "validate_cell_metadata": [
         12
       ],
-      "validate_details": [
+      "validate_detail_metadata": [
         9
       ]
     },
@@ -2175,6 +2170,24 @@
         9
       ],
       "gift_opening": [
+        11
+      ]
+    },
+    "packages/frontend/src/analytics/errors.ts": {
+      "error_analytics": [
+        9
+      ]
+    },
+    "packages/frontend/src/analytics/fights.ts": {
+      "fight_events > Object.entries(state.analytics.fights).flatMap[0]([id, next])": [
+        11
+      ],
+      "observe_fight": [
+        11
+      ]
+    },
+    "packages/frontend/src/analytics/gameplay.ts": {
+      "gathering_events > Object.values(state.world.gathering).flatMap[0](gathering)": [
         11
       ]
     }

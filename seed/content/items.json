@@ -8514,5 +8514,11 @@
         "air_resistance": 0
       }
     }
+  },
+  {
+    "item_type": "crew_helmet",
+    "name": "Crew Helmet",
+    "category": "cosmetic_hat",
+    "level": 1
   }
 ]

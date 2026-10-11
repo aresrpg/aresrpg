@@ -2,17 +2,15 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
 import { ArrowUpRight } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
-import { useStore } from 'zustand'
 
 import pilot from '../../../../seed/icons/branding/blast/pilot.png'
 import helmet from '../../../../seed/icons/branding/blast/helmet.svg'
 import wordmark from '../../../../seed/icons/branding/blast/wordmark.svg'
-import { env } from '../env.ts'
 import type { AppCopy } from '../i18n/copy.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 
-import { blast_phase, create_blast_runtime, type BlastState } from './blast.ts'
+import { blast_phase, type BlastState } from './blast.ts'
+import { useBlastSale } from './useBlastSale.ts'
 import './blast.css'
 
 export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; state: BlastState }>) => {
@@ -59,8 +57,6 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
 }
 
 export const BlastSaleCard = ({ copy }: Readonly<{ copy: AppCopy }>) => {
-  const runtime = useMemo(() => create_blast_runtime({ network: env.network, rpc_url: env.sui_rpc_url }), [])
-  const state = useStore(runtime.store)
-  useEffect(() => runtime.start(), [runtime])
+  const state = useBlastSale()
   return <BlastSaleCardView copy={copy} state={state} />
 }

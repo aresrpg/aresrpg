@@ -29,6 +29,8 @@ test('crafting attempts and net gas describe the current journey step without tr
       name: 'craft_completed',
       properties: {
         output_type: 'old_hoe',
+        job: 'HANDYMAN',
+        control: 'manual',
         attempts: 1,
         successes: 0,
         journey_step: 'first_craft',
@@ -36,7 +38,13 @@ test('crafting attempts and net gas describe the current journey step without tr
     },
   ])
   expect(analytics_events(reduce_app_state(after, action), after)).toEqual([])
-  const transaction = { ...after, analytics: { digest: 'private', outcome: 'success' as const, gas_mist: '-10000' } }
+  const transaction = {
+    ...after,
+    analytics: {
+      ...after.analytics,
+      execution: { digest: 'private', outcome: 'success' as const, gas_mist: '-10000' },
+    },
+  }
   const [event] = analytics_events(transaction, after)
   expect(event).toEqual({
     name: 'transaction_executed',

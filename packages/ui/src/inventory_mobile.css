@@ -57,12 +57,12 @@
     padding: 6px;
     gap: 6px;
   }
-  .game-character-body .chr-equip__bagtabs {
+  .inventory-filters .chr-equip__bagtabs {
     height: 50px;
     gap: 10px;
     padding: 0 10px;
   }
-  .game-character-body .chr-bagtab {
+  .inventory-filters .chr-bagtab {
     flex-basis: 58px;
     height: 48px;
   }
@@ -123,7 +123,7 @@
   .game-character-body .inv__rig [data-equipment-slot] {
     grid-area: auto;
   }
-  .game-character-body .chr-bagtab {
+  .inventory-filters .chr-bagtab {
     gap: 3px;
     padding: 4px;
   }
@@ -134,7 +134,7 @@
     font-size: 8px;
     top: 4px;
   }
-  .game-character-body .chr-bagtab img {
+  .inventory-filters .chr-bagtab img {
     width: 28px;
     height: 28px;
   }

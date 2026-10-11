@@ -220,6 +220,8 @@ trade_panel:
 transaction_unknown_toast: 前の操作を確認しています。結果が判明するまで、新しい取引は実行できません。
 transaction_recovered_toast: 前の取引が見つかりました。ページを更新して結果を確認してから、次の操作を選んでください。
 world_hud:
+  crew_talk: 'Blast Girlと話す'
+  crew_talk_touch: 'Blast Girlと話す'
   map_party_legend: '水色：パーティー · 金色：リーダー'
   dismount_prompt_touch: 'タップして降りる'
   spawn_press_attack_touch: 'タップして攻撃'
@@ -355,6 +357,8 @@ world_hud:
   resource_face_protector: '{{key}} で立ち向かう'
   zone_never_arrived: '探索は成立したが、世界に反映されなかった — 読み取り層が遅れている可能性がある'
 demo_page:
+  animation_loop: アニメーションをループ
+  animation_auto: 自動（移動に連動）
   asset_demo_city: デモ都市
   asset_house_1: 町家 A
   asset_house_2: 町家 B
@@ -435,6 +439,10 @@ demo_page:
   control_hint: キャンバスをクリック · WASDで移動 · Spaceでジャンプ · マウスで視点操作
   back: アプリに戻る
 marketplace_page:
+  filter_all: 'すべてのカテゴリ'
+  filter_empty: '該当なし。フィルターや検索語を変更してください。'
+  lot_price: 'セットの合計価格'
+  type_count_hint: '公開出品されているアイテムの種類数'
   total_units: '総数量'
   market_cap: '時価総額'
   market_cap_basis: '現存する総数量 × チャートの直近取引日の平均単価（手数料を除く）。'
@@ -558,6 +566,16 @@ mastery_page:
   offer_purchased: マスタリー報酬を購入しました。
 
 airdrop_page:
+  crew_view_sale: 'KARESの販売を見る'
+  crew_dialogue:
+    intro: 'KARESトークンの販売に参加してね。あなたへのプレゼントを用意するよ。'
+    connect: '販売で使ったウォレットを接続して、プレゼントが届いているか確認しよう。'
+    checking: 'プレゼントを確認するね…'
+    ready: 'Crewヘルメットが届いているよ！'
+    claiming: '少し待ってね。プレゼントを受け取り中だよ。'
+    claimed: 'Crewヘルメットはもう渡したよ。ぜひかぶってね！'
+    empty: '今、このウォレットで受け取れるCrewヘルメットはないよ。受け取り済みか、まだ配布待ちかもしれないね。'
+    unavailable: 'プレゼントを確認できなかったよ。もう一度試してね。'
   reward_title: 'ギフトを受け取りました！'
   reward_received: '{items}を受け取りました！'
   reward_needs_sui: 'ギフトはウォレットに保管されています。取引手数料を支払うために少量のSUIを追加してから、報酬を受け取ってください。'
@@ -598,6 +616,9 @@ airdrop_page:
     physical: '紙のギフトカード'
     game_wallet: 'Hytaleベテラン報酬'
   campaigns:
+    blast_crew:
+      title: 'Crewヘルメット'
+      description: 'BlastのKARES販売参加者向けの外見アイテムです。配布後に参加時のウォレットを接続してください。'
     oeuftermath:
       title: 'Aftermath Eggs · Oeuftermath'
       description: 'スナップショットでAftermath Eggを保有していたウォレットが、Oeuftermathのペットギフト券の対象です。当時のウォレットを確認してください。後からEggを購入しても対象にはなりません。'
@@ -2582,6 +2603,13 @@ spell_effects:
   expires_next_turn: '次のターンまで'
 
 ui:
+  feedback_question: '先に進むうえで何が難しいですか？'
+  feedback_unclear: '何をすればいいか分からない'
+  feedback_controls: '操作方法'
+  feedback_performance: '動作が遅い・不具合'
+  feedback_funding: 'ウォレットへの入金'
+  feedback_not_interested: '自分には合わない'
+  feedback_dismiss: '閉じる'
   multiplayer: 'マルチプレイ'
   nearby_fights: '近くの戦闘'
   nearby_fights_empty: '近くに追跡中の戦闘はありません'

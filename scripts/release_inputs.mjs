@@ -9,6 +9,9 @@ export const JOURNAL_CONTENT_PREFIXES = ['seed/content/journal/', 'seed/icons/jo
 
 export const SCENE_COMPILER_FILES = Object.freeze([
   'scripts/generate_main_menu.mjs',
+  'scripts/generate_adventure.mjs',
+  'scripts/adventure_scene.ts',
+  'scripts/encode_voxel_runs.mjs',
   'scripts/generate_asset_workshop.mjs',
   'scripts/bake_schematic.mjs',
   'scripts/partition_blocks.mjs',

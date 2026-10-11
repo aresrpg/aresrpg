@@ -31,8 +31,8 @@ test('every published guide and linked source resolves to an existing file', () 
   expect(missing).toEqual([])
 })
 
-test('deployment serves agent resources without rewriting them to the game shell', () => {
-  for (const path of [...guide_paths, 'agents/missing.txt']) {
+test('deployment serves static pages without rewriting them to the game shell', () => {
+  for (const path of [...guide_paths, 'agents/missing.txt', 'links', 'links/logo.png']) {
     expect(app_rewrites.some((pattern) => pattern.test(`/${path}`))).toBe(false)
   }
   expect(app_rewrites.some((pattern) => pattern.test('/inventory'))).toBe(true)

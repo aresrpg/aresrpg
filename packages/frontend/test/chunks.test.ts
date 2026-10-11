@@ -40,6 +40,7 @@ const create_engine_spy = () => {
     set_world_panel: () => {},
     set_world_label: () => {},
     entity_height: () => null,
+    entity_position: () => null,
     create_fight_blob: () => 'test_blob',
     update_fight_blob: () => false,
     remove_fight_blob: () => {},

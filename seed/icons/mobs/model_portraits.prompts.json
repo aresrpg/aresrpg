@@ -1,0 +1,422 @@
+[
+  {
+    "mob_type": "protector_quartz",
+    "hd": "seed/icons/mobs/protector_quartz_hd.png",
+    "runtime": "seed/icons/mobs/protector_quartz.png",
+    "generation": "exec-a9a08ba5-82c2-4276-b3b7-2ffb1740228e.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "Create one square 1024x1024 transparent game creature portrait for AresRPG: QUARTZ MINER PROTECTOR. First reference is SUBJECT IDENTITY: use only the left blue-gray humanoid stone golem with cyan crystals; exclude the other two figures and all labels/scenery. Preserve its recognizable stepped square helmet, small cyan rectangular eyes in recessed dark face, heavy broad rectangular shoulders each topped by rising cyan quartz crystals, square cyan chest gem, block fists and articulated short stout legs. Rich deep blue-gray stone (#454D60), saturated turquoise cyan crystals (#20C9D2), restrained slate trim. Second reference is STYLE ONLY: crisp dark silhouette outline, rich hand-painted 3D cartoon shading, chunky faceted volumes, broad deliberate highlights. Translate the exact new golem model into that illustrated icon language, retaining its angular block anatomy. One complete full-body creature at three-quarter view, centered, assertive stance, fills 86% of square with comfortable transparent margins and no cropped extremities. Transparent background with real alpha. No floor, cast shadow, scenery, frame, text, badge, other creatures, pixel art, or photographic detail. Bright resource accents and deep readable shadows; no washed-out pastel veil. Save as a distinct single portrait.",
+    "hd_sha256": "af2ac9c5adf3f9ef07e2ab7d22e63c852718c23696429747edfaf005fee529cb",
+    "runtime_sha256": "d6abb12b19d392e7521266597dcdd168821f3b41fb961604e4c961e96f14ec8c"
+  },
+  {
+    "mob_type": "protector_amber",
+    "hd": "seed/icons/mobs/protector_amber_hd.png",
+    "runtime": "seed/icons/mobs/protector_amber.png",
+    "generation": "exec-306e95b1-eb9b-471d-af1e-207ff2a7c7b9.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: AMBER MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #63402B, resource accents / chest rune / eyes #F29416, secondary trim or foliage #B86824. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "838e37cb93a363616148c0d35cf1e15ede1374bd48548d8392b56db9b0b7c63e",
+    "runtime_sha256": "f46dbe78f6fe0fb03780efd9150335109e434d14a3e752c6d4b2ece91ea9846b"
+  },
+  {
+    "mob_type": "protector_jade",
+    "hd": "seed/icons/mobs/protector_jade_hd.png",
+    "runtime": "seed/icons/mobs/protector_jade.png",
+    "generation": "exec-942dc219-83af-4403-97ab-7ef8668f53ce.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: JADE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #294F48, resource accents / chest rune / eyes #25BC72, secondary trim or foliage #75A13C. Use darker related hues for joints. Keep distinct pale highlights small. First reference is the exact subject silhouette (select the specified family only); second reference is the approved illustration style and identical golem anatomy.",
+    "hd_sha256": "694ba851e1442dc498403690aa32255109e3f19531e0e66cc58c9b4d46a05df4",
+    "runtime_sha256": "2a76c8798d14511502e3a864c8769e23750e5606bbaee2b5ddb2cb37d9abf829"
+  },
+  {
+    "mob_type": "protector_moonstone",
+    "hd": "seed/icons/mobs/protector_moonstone_hd.png",
+    "runtime": "seed/icons/mobs/protector_moonstone.png",
+    "generation": "exec-973309f3-8b38-488d-b536-f940fd324772.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: MOONSTONE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #384060, resource accents / chest rune / eyes #9A7DE6, secondary trim or foliage #728DD0. Use darker related hues for joints. Keep distinct pale highlights small. First reference is the exact subject silhouette (select the specified family only); second reference is the approved illustration style and identical golem anatomy.",
+    "hd_sha256": "864caf9c3f986db6d1f49ad85a28c978866825adc759a7db345a55ca3631f685",
+    "runtime_sha256": "2bd2bb7bc13814676fd2336566573ba376025acaea1cfa234e94bbf92a29f2f1"
+  },
+  {
+    "mob_type": "protector_wheat_bricheton",
+    "hd": "seed/icons/mobs/protector_wheat_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_wheat_bricheton.png",
+    "generation": "exec-b0ab315b-804b-4584-b8b8-e987c5f83474.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: WHEAT BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. Match the CENTER figure of the model lineup. No crystals or stone helmet. Palette: primary body #BC781C, resource accents / chest rune / eyes #F3B62E, secondary trim or foliage #3F702F. Use darker related hues for joints. Keep distinct pale highlights small. First reference is the exact subject silhouette (select the specified family only); second reference is the approved illustration style.",
+    "hd_sha256": "13fab27e110718fa726ed84a5d2dc0138973d009676d9db8353c1865b75bd18c",
+    "runtime_sha256": "dc03522967d5e34415c5fb9fa7c06f298b8e34601ec3dec877258978f91ed4a8"
+  },
+  {
+    "mob_type": "protector_shrooms_gaia",
+    "hd": "seed/icons/mobs/protector_shrooms_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_shrooms_gaia.png",
+    "generation": "exec-1bbae872-b464-485e-a363-ef0ce04556ad.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: SHROOMS GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. Match the RIGHT figure of the model lineup. No straw hat or crystals. Palette: primary body #684021, resource accents / chest rune / eyes #ED8A24, secondary trim or foliage #3F922F. Use darker related hues for joints. Keep distinct pale highlights small. First reference is the exact subject silhouette (select the specified family only); second reference is the approved illustration style.",
+    "hd_sha256": "0490bff962c8fed1bee063822d5340bd5b9ffe869467ba5eb47f551e5153de6a",
+    "runtime_sha256": "f33ec8152f18b937945bf949387b10b9e1b8403380a54c28146cf6056891621c"
+  },
+  {
+    "mob_type": "protector_bloodstone",
+    "hd": "seed/icons/mobs/protector_bloodstone_hd.png",
+    "runtime": "seed/icons/mobs/protector_bloodstone.png",
+    "generation": "exec-042961cd-4b7d-432c-adb5-0fd8a7b87bb0.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: BLOODSTONE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #482D40, resource accents / chest rune / eyes #D6294F, secondary trim or foliage #9B4C57. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "d20e14a529ab88a114e4877d7e7152287f39390af3f86b977555cf9c8fbba188",
+    "runtime_sha256": "3d7e5f5aabb6e60449f0448d5eb023ae41f95949fa2b286efae735710072a617"
+  },
+  {
+    "mob_type": "protector_duskite",
+    "hd": "seed/icons/mobs/protector_duskite_hd.png",
+    "runtime": "seed/icons/mobs/protector_duskite.png",
+    "generation": "exec-3f5046da-260c-46c2-a120-5d6c5299d63d.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: DUSKITE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #29223F, resource accents / chest rune / eyes #9650D0, secondary trim or foliage #655183. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "3a170284b9dc81af64f2a8b0ce3789ed5faf5da51818919ccbc903ee1baeda0c",
+    "runtime_sha256": "6d03e6184424d0ca340168bbcf6e404fd3c8832c890f918d740211ded18d2e02"
+  },
+  {
+    "mob_type": "protector_diamond",
+    "hd": "seed/icons/mobs/protector_diamond_hd.png",
+    "runtime": "seed/icons/mobs/protector_diamond.png",
+    "generation": "exec-e607f2b9-a9c0-4c7e-a10d-1bfc7de7d3cc.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: DIAMOND MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #426A7A, resource accents / chest rune / eyes #77E7E7, secondary trim or foliage #7CB9CD. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "c2cf06237c69fa394a2b48ed8d5dfcee0112280e56050a15c844b3475f00f0e0",
+    "runtime_sha256": "729775e0f1efdbf2de1dce57117c8dec46e23f9215d81565258526f68931c514"
+  },
+  {
+    "mob_type": "protector_cursed_gem",
+    "hd": "seed/icons/mobs/protector_cursed_gem_hd.png",
+    "runtime": "seed/icons/mobs/protector_cursed_gem.png",
+    "generation": "exec-5861ad74-a2ac-49ce-8f21-11d2bccb0eff.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: CURSED_GEM MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #373149, resource accents / chest rune / eyes #A6D62D, secondary trim or foliage #725291. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "82a997b78027d3381b08733840ae3b82e5ca98ff9a7e0ae81d7f63b7add12ffe",
+    "runtime_sha256": "bc89bfe22da5b711f95d63c5f80c07f977fe73015d86234c37877794f06c2e76"
+  },
+  {
+    "mob_type": "protector_obsidianite",
+    "hd": "seed/icons/mobs/protector_obsidianite_hd.png",
+    "runtime": "seed/icons/mobs/protector_obsidianite.png",
+    "generation": "exec-df8cd138-6ef5-4357-a68e-ec2a53754e34.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: OBSIDIANITE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #202537, resource accents / chest rune / eyes #426AC4, secondary trim or foliage #49446D. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "82e30820364ad9aaa1427bbe8a3c297871e44cc0ba3f01d153dd052bb3fabeab",
+    "runtime_sha256": "3365f2d053e3f23ead8c52189efe8bc841b148702edfcf5a9cce5c3b696aada1"
+  },
+  {
+    "mob_type": "protector_arcanite",
+    "hd": "seed/icons/mobs/protector_arcanite_hd.png",
+    "runtime": "seed/icons/mobs/protector_arcanite.png",
+    "generation": "exec-a155a836-e990-492f-9138-f1bcf256a1a1.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: ARCANITE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #284668, resource accents / chest rune / eyes #20CDE2, secondary trim or foliage #5B89D0. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "f2eaeb3a724926cbbb471108f0b0d5de8337e2a270c7c2d0312a89402d1b6211",
+    "runtime_sha256": "d19a0a4576fa42ef868f934f2b00618597440062573b1c6daaa43dfca9ff6973"
+  },
+  {
+    "mob_type": "protector_draconite",
+    "hd": "seed/icons/mobs/protector_draconite_hd.png",
+    "runtime": "seed/icons/mobs/protector_draconite.png",
+    "generation": "exec-e619f815-f5d0-4d89-90e6-7a3eeb44a245.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: DRACONITE MINER PROTECTOR. Humanoid stone golem: stepped square helmet, small rectangular luminous eyes in recessed black face, huge rectangular shoulder plates each with tall angular crystal columns, square chest gem, broad block fists, squat articulated legs. Preserve the Quartz portrait design exactly; this is only a resource palette variant. Palette: primary body #592923, resource accents / chest rune / eyes #F37419, secondary trim or foliage #B54225. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Preserve its identical helmet shape, silhouette, pose, face, crystals, framing and painted style. ONLY recolor the material groups to the specified palette. Do not add crown stalks or a straw hat.",
+    "hd_sha256": "1ced32fa251aa5f5e0382575200a2bee135e424fd4793fc0cbf55c0a548bf013",
+    "runtime_sha256": "2bf113995dad38123ad251a24468c05f45da3cc94774253b6bab6f9724842098"
+  },
+  {
+    "mob_type": "protector_barley_bricheton",
+    "hd": "seed/icons/mobs/protector_barley_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_barley_bricheton.png",
+    "generation": "exec-34441cf1-6d0c-4450-b82d-592633afd6d8.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: BARLEY BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #A8893C, resource accents / chest rune / eyes #DECA71, secondary trim or foliage #53723B. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "b88c998b90da0ed32966d22e7d2936bb5ddb8f9663d4a92279ef347eb4a13236",
+    "runtime_sha256": "eda921bb95af50feedae1ecde1559ea40c88d29c9aafcae9d2173920cbafd5a8"
+  },
+  {
+    "mob_type": "protector_malt_bricheton",
+    "hd": "seed/icons/mobs/protector_malt_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_malt_bricheton.png",
+    "generation": "exec-53f65fee-d5e7-48c6-ad6b-3849d35bac9a.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: MALT BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #91571E, resource accents / chest rune / eyes #D28D20, secondary trim or foliage #654A2B. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "e2c4b4e777e66edb89ce33be8d8c11a710f84b22db925a4fd1626ba533900298",
+    "runtime_sha256": "08c8eb5b5ab3245f73c40cc3d0e17addd648dfb8c04291c0960798721921ecc0"
+  },
+  {
+    "mob_type": "protector_burnt_bricheton",
+    "hd": "seed/icons/mobs/protector_burnt_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_burnt_bricheton.png",
+    "generation": "exec-e774525f-0334-42d4-b73d-76b9df2ef6bd.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: BURNT BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #33292C, resource accents / chest rune / eyes #E56820, secondary trim or foliage #714026. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "c93ad2ccf44a264573a20ffbe236a4aae66dbd70169df9f00d6b9b68f415862f",
+    "runtime_sha256": "5d43496a2926d034e6e088a39e27e22569d30d6e7907bcd88e9c3dc4ac42173d"
+  },
+  {
+    "mob_type": "protector_cursed_bricheton",
+    "hd": "seed/icons/mobs/protector_cursed_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_cursed_bricheton.png",
+    "generation": "exec-c8ee6bb7-dd58-4b59-8cb3-e10671a74957.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: CURSED BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #615221, resource accents / chest rune / eyes #A6BB27, secondary trim or foliage #58416B. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "1d3e9345f829e228a850bb7dd8a4b0486fd5e5814ee6ccc16349c5d4768ec867",
+    "runtime_sha256": "6dc05d09503157681ab7e4a079e825b1888c6b3c5100e270ac08dfdf0ff83926"
+  },
+  {
+    "mob_type": "protector_blood_bricheton",
+    "hd": "seed/icons/mobs/protector_blood_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_blood_bricheton.png",
+    "generation": "exec-7edd2147-489c-466f-b47d-cc8144ead9e5.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: BLOOD BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #882D31, resource accents / chest rune / eyes #DF7138, secondary trim or foliage #482335. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "9a9cfc0d30e102e2fa9517c7d65548a6c728685636c00d54b57aa6bd279da281",
+    "runtime_sha256": "cef9697680f9a42eff8d74f6ab69e48261b3c375bbd31a998df1d44cbb1673d2"
+  },
+  {
+    "mob_type": "protector_suize_bricheton",
+    "hd": "seed/icons/mobs/protector_suize_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_suize_bricheton.png",
+    "generation": "exec-e8fc29e7-efab-4a11-abfb-ca85f8b040b8.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: SUIZE BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #315891, resource accents / chest rune / eyes #60BDD9, secondary trim or foliage #C1A042. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "92b07dd1e2dc00fb26e29e4539b11d6b8627155d8b9ec6c99207284cd9ccc6e3",
+    "runtime_sha256": "da77b7a8b1d046db4953d50bfe7c723578b8c4d7b4fd6da4f14a4078b3adcad8"
+  },
+  {
+    "mob_type": "protector_tanjirize_bricheton",
+    "hd": "seed/icons/mobs/protector_tanjirize_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_tanjirize_bricheton.png",
+    "generation": "exec-9dedcd89-b018-420a-9601-c6ef400d6a6f.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: TANJIRIZE BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #8D4228, resource accents / chest rune / eyes #F79338, secondary trim or foliage #704066. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "156685c0b900dc8f6931b024e9dab05ede1a6a3bee6c766f521cca8d8d0cc8f3",
+    "runtime_sha256": "163294e0ea904057384a8056f2bfa49bf09e630236dda7301de8aeee3a179796"
+  },
+  {
+    "mob_type": "protector_arcanize_bricheton",
+    "hd": "seed/icons/mobs/protector_arcanize_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_arcanize_bricheton.png",
+    "generation": "exec-a7473142-d6cb-4209-ab7d-c8082ea36f38.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: ARCANIZE BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #51388C, resource accents / chest rune / eyes #A883E4, secondary trim or foliage #4269A1. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "6b9c491dd02343fd78119f6bb80dfb3cd65af037c9708f5f85d7dcc9c746adf9",
+    "runtime_sha256": "0dfd2b69ac8db44d62ca24a7ecc7196f12c5c2f2cd7d54e59df1d0bc047f7aa9"
+  },
+  {
+    "mob_type": "protector_draconize_bricheton",
+    "hd": "seed/icons/mobs/protector_draconize_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_draconize_bricheton.png",
+    "generation": "exec-1c001bec-64d0-4d02-981c-3fcd03248e91.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: DRACONIZE BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #793724, resource accents / chest rune / eyes #DB6D25, secondary trim or foliage #543C3A. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "e0d4a9ca1ed07bcb7ac85fb8751aff8b142b0410fa2bcd0cd307df7c7f9015da",
+    "runtime_sha256": "68be8d863ba07d43b38e88358ad4aa6622bfc43dadcf29e1607560f366990732"
+  },
+  {
+    "mob_type": "protector_ukranize_bricheton",
+    "hd": "seed/icons/mobs/protector_ukranize_bricheton_hd.png",
+    "runtime": "seed/icons/mobs/protector_ukranize_bricheton.png",
+    "generation": "exec-2e8e994d-f628-4afe-9ee2-99f8057e0226.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: UKRANIZE BRICHETON PROTECTOR. Humanoid straw-and-grain harvest golem: broad stepped straw hat with three short square grain stalks rising on crown, dark recessed face with two amber square eyes, broad rectangular layered shoulders, straw ribbed torso with a grain motif, green plant bindings at waist and wrists, large angular fists and short stout articulated legs. No crystals or stone helmet. Palette: primary body #285E9D, resource accents / chest rune / eyes #EDB51B, secondary trim or foliage #B38A32. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "42f86930aed429c6112e24e0569df5ebf86e05dff3bad6ef65e10ebc9e2c839b",
+    "runtime_sha256": "94753f70a05d0eee907b9e5fd9b100d55152becf66a691697b2ba5321f3e1fcb"
+  },
+  {
+    "mob_type": "protector_orchid_gaia",
+    "hd": "seed/icons/mobs/protector_orchid_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_orchid_gaia.png",
+    "generation": "exec-aefe0a6c-4b4b-439b-a518-a980a601356e.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: ORCHID GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #573360, resource accents / chest rune / eyes #D748AE, secondary trim or foliage #329673. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "fc1a5d02148b999c381492cc1998d0168bcec02362e694aed80a2b61ed81f905",
+    "runtime_sha256": "0d6d4090cfa54220882610b642b53953250d3e9a4fa8fb88befb1f594d721055"
+  },
+  {
+    "mob_type": "protector_ivory_gaia",
+    "hd": "seed/icons/mobs/protector_ivory_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_ivory_gaia.png",
+    "generation": "exec-6261695c-f305-4565-be04-a7d42a6a8039.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: IVORY GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #878054, resource accents / chest rune / eyes #E1CB88, secondary trim or foliage #59845A. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "27c28dbae8b26e3d3b4b28846c1ad1e51396a480ef107ccb6363ddf907baf297",
+    "runtime_sha256": "fc5d13800082b400fb966a22eb661a61ec3ecee2c7c5ba7fa63195b58b97f3f0"
+  },
+  {
+    "mob_type": "protector_aloe_gaia",
+    "hd": "seed/icons/mobs/protector_aloe_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_aloe_gaia.png",
+    "generation": "exec-d4a51b92-db36-4e86-82b7-acb9e13ae5f4.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: ALOE GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #2B6A38, resource accents / chest rune / eyes #89CE3B, secondary trim or foliage #207F61. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "15514db61b2554fcda3c3ee72ccb36c1042127bfcde593d03f96dbb80a2ec667",
+    "runtime_sha256": "94780e5318a743797ca9a871558510e11a9f4775b8eebdf3f4aaa3b9ee3382b0"
+  },
+  {
+    "mob_type": "protector_nightcap_gaia",
+    "hd": "seed/icons/mobs/protector_nightcap_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_nightcap_gaia.png",
+    "generation": "exec-c070de18-08cd-4c5b-88cd-c174c20f394c.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: NIGHTCAP GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #382653, resource accents / chest rune / eyes #954ED3, secondary trim or foliage #45669A. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "d2679d3bf3e5c6966568cb6742dde8c6e6a4d601b71333c662cfbdbea8324e90",
+    "runtime_sha256": "c9024cbea93a9172f39e2ed1c3b1531b9ca98c4856b317890695bd72939017d3"
+  },
+  {
+    "mob_type": "protector_truffle_gaia",
+    "hd": "seed/icons/mobs/protector_truffle_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_truffle_gaia.png",
+    "generation": "exec-1e679c11-3d0f-4bf7-980f-b3d2cae6d22f.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: TRUFFLE GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #624024, resource accents / chest rune / eyes #AE8030, secondary trim or foliage #706329. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "0ae8e0cf3666d7ca0941176bab3ff1742906d06d0b0576b5a800d9a11d06e58e",
+    "runtime_sha256": "56d8e263f96e6a82fc1665edb8a00105150c9d8797eb429fee4057b89d6341c9"
+  },
+  {
+    "mob_type": "protector_cursed_gaia",
+    "hd": "seed/icons/mobs/protector_cursed_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_cursed_gaia.png",
+    "generation": "exec-e4f11262-9ead-4377-9828-e35bcc99764c.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: CURSED GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #504921, resource accents / chest rune / eyes #B0C833, secondary trim or foliage #347448. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "f9f0e36c9a71c2e217645734667171ad8abb307bdea8a84c197d12a3d70ba260",
+    "runtime_sha256": "c84d4f63b836d56b08b84f69beeec6534f60f9251a9b5110b07ce97b6013940d"
+  },
+  {
+    "mob_type": "protector_phantom_gaia",
+    "hd": "seed/icons/mobs/protector_phantom_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_phantom_gaia.png",
+    "generation": "exec-f47f6674-411c-4ba5-9c9f-776744f31ad6.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: PHANTOM GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #294B59, resource accents / chest rune / eyes #39CBBB, secondary trim or foliage #437CB0. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "77a06ea92545ef5e532f5504d5df35876864ac9ae338c07027aed6ff846b7ac3",
+    "runtime_sha256": "040dbbbbd6ace90c19a9178b7d2c2161c15ad5ba7014964b0389801cbf12eaa1"
+  },
+  {
+    "mob_type": "protector_dragon_gaia",
+    "hd": "seed/icons/mobs/protector_dragon_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_dragon_gaia.png",
+    "generation": "exec-31506672-0983-4a08-88f7-6f5cc75ba7a0.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: DRAGON GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #642D20, resource accents / chest rune / eyes #E87023, secondary trim or foliage #AA382A. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "974f806d6d8b1edeb63ae18015dcdadb22c6f80740e82243d7bdfa18972940f1",
+    "runtime_sha256": "a5fe6cafa3f03a219caf66731a01aef8f137e7f6b3331bd3c382b214c5f34fe7"
+  },
+  {
+    "mob_type": "protector_arcane_gaia",
+    "hd": "seed/icons/mobs/protector_arcane_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_arcane_gaia.png",
+    "generation": "exec-43955c22-1c32-4d21-ad6b-667da2508569.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: ARCANE GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #343B72, resource accents / chest rune / eyes #6C9BE7, secondary trim or foliage #4C67A1. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "4193c3a3d4ed2ebf932bfb3566ab3fcbd979d8252d2c7646c07d52b3364311ea",
+    "runtime_sha256": "91ac2f9246b9adc95eff60bcf395879b00585979c2d54cc09d1ed51dde9d4cb3"
+  },
+  {
+    "mob_type": "protector_wither_gaia",
+    "hd": "seed/icons/mobs/protector_wither_gaia_hd.png",
+    "runtime": "seed/icons/mobs/protector_wither_gaia.png",
+    "generation": "exec-6492fdcb-60f6-483c-989a-a6c3b2011f1e.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "One square game creature portrait for AresRPG, complete full body, three-quarter view, centered with 8% transparent margins, bold hand-painted 3D-cartoon illustration, chunky faceted forms, crisp dark silhouette outline, broad controlled highlights, rich saturated colors and deep readable shadows. Match the exact new model anatomy. Transparent background with real alpha. No text, labels, frame, badge, scenery, floor, ground shadow, extra creatures, photographic microtexture, or pixel-art treatment. Keep all limbs and extremities within frame. Subject: WITHER GAIA PROTECTOR. Humanoid living bark guardian: stepped rectangular wooden head, dark recessed face with two warm square eyes, branching angular leaf-green antlers, leaf clusters covering broad shoulders, dark chest panel with a small golden plant rune, moss-green collar and wrist bands, broad block fists and short sturdy jointed legs. No straw hat or crystals. Palette: primary body #4F3630, resource accents / chest rune / eyes #BA6745, secondary trim or foliage #786345. Use darker related hues for joints. Keep distinct pale highlights small. The reference is the EDIT TARGET. Keep exactly this family anatomy, pose, framing, silhouette and painted shading. Only recolor its body, resource accents and secondary foliage/bindings as specified. Do not add or remove body parts.",
+    "hd_sha256": "99b6d82d9881bb82542a8e8c53d0f947e1952ee27cd43c58a71cbf28c9d2c02b",
+    "runtime_sha256": "22ff691a81145dc4869d16b1895df72059886454771127e675cf5bce274d2df6"
+  },
+  {
+    "mob_type": "lorito__earth",
+    "hd": "seed/icons/mobs/lorito__earth_hd.png",
+    "runtime": "seed/icons/mobs/lorito__earth.png",
+    "generation": "exec-0c8a65c9-5558-41f3-bdb2-fe636f057d6b.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "Edit target: the attached existing AresRPG Stone Lorito mob portrait. Preserve exactly this chunky faceted cartoon parrot design, framing, spread wings, hooked beak, three-prong crest, cheerful face, cream breast, dark outlines, warm golden beak and accents. Change ALL green plumage to rich earthy BROWN: dark umber shadows #3D2B23, chestnut body #895B37, ochre-brown lit facets #B5814B, restrained sandstone highlights #D5AE70. Wings dark brown #463028 through #9C7048. No green plumage, no gray plumage. Native transparent background, complete silhouette, no text or scenery. One square game mob portrait.",
+    "hd_sha256": "6f82a4758c213fed6d73b4726ae9bd5598209216ebb14288fe3c64a92da44372",
+    "runtime_sha256": "c43825df3dca86b5b146a8e30ddc2aa2ae65eb65bd53e7bae1a009dcba97b581"
+  },
+  {
+    "mob_type": "lorito__fire",
+    "hd": "seed/icons/mobs/lorito__fire_hd.png",
+    "runtime": "seed/icons/mobs/lorito__fire.png",
+    "generation": "exec-c0dd5fbb-92fe-493b-a1d3-4e1df2e939a5.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "Edit the reference portrait to create the FIRE LORITO palette variant for AresRPG. The reference is the EDIT TARGET: preserve exactly its full-body crested parrot anatomy, three-pronged crest, hooked beak, expressive eyes, slightly spread layered wings, three-toed feet, long stepped tail, pose, framing, hand-painted 3D cartoon shading, crisp dark outline and transparent background. Only recolor existing material groups. Palette: body rich red-orange #CB3D29; head highlights #E66A31; deep crimson wings #B52932 and shadows #631C35; warm cream breast #E6CC8A; ochre beak #9E6025; gold accents #F2B927 and crest #E89418; ochre feet. Keep dark eyes and light eye patches. Rich controlled saturation and deep shadows, small highlights. One complete bird, square image, no cropping, no text, frame, badges, scenery, floor or cast shadow. Genuine transparent alpha, retain existing transparency.",
+    "hd_sha256": "57a58a5e5715eac82ef202719ca86acd7625a1f7e6cf14fb82e5155b6ba411d0",
+    "runtime_sha256": "4078e17f5a241800928baed2a72b841a56cc8f7452898d291936779e97e0d648"
+  },
+  {
+    "mob_type": "lorito__water",
+    "hd": "seed/icons/mobs/lorito__water_hd.png",
+    "runtime": "seed/icons/mobs/lorito__water.png",
+    "generation": "exec-38eddfd8-ea19-477c-9851-1dc787a9a0f6.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "Edit the reference portrait to create the WATER LORITO palette variant for AresRPG. The reference is the EDIT TARGET: preserve exactly its full-body crested parrot anatomy, three-pronged crest, hooked beak, expressive eyes, slightly spread layered wings, three-toed feet, long stepped tail, pose, framing, hand-painted 3D cartoon shading, crisp dark outline and transparent background. Only recolor existing material groups. Palette: body ocean turquoise blue #1D8BAE; cyan head highlights #48B8D0; cobalt wings #285F9E and deep blue shadows #1B366B; pale gray-cream breast #D6DCC0; ochre beak #AF882F; mint teal wing accents #52D2BC and crest #34B9CD; ochre feet with cyan tips. Keep dark eyes and light eye patches. Rich controlled saturation and deep shadows, small highlights. One complete bird, square image, no cropping, no text, frame, badges, scenery, floor or cast shadow. Genuine transparent alpha, retain existing transparency.",
+    "hd_sha256": "445661923ae95ad241279a4ad5bd30db397697eebceb86d2579ff187c29f3d95",
+    "runtime_sha256": "5d6d819f53373143bdf887c0ad0ab77d99163068857e9fa229e95e268c3fd7eb"
+  },
+  {
+    "mob_type": "lorito__air",
+    "hd": "seed/icons/mobs/lorito__air_hd.png",
+    "runtime": "seed/icons/mobs/lorito__air.png",
+    "generation": "exec-bf5d2bf1-100d-4c36-a525-44c49cc10782.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "Edit target: the attached existing AresRPG Gale Lorito mob portrait. Preserve exactly this chunky faceted cartoon parrot design, framing, spread wings, hooked beak, three-prong crest, cheerful face, cream breast, crisp dark outlines, warm golden beak. Recolor ALL purple plumage to rich lively GREEN because this is the AIR elemental bird: forest shadows #194D34, green body #419C48, fresh green lit facets #75BD54, restrained pale green highlights #A7DC78. Wing shadows #174D37 and green feathers #2A7845 through #58A651. Keep small yellow-green crest tips and wing stripes. No purple anywhere. Native transparent background, complete silhouette, no text or scenery. One square game mob portrait.",
+    "hd_sha256": "fe45d97d40621186245b26e0d674908a409ac8b43a7eead87e4762ac3a8fe4cd",
+    "runtime_sha256": "3da98fc0321571dee4a8296f1948dfb6888cb9a47b4963fc6a892a011f8d48ea"
+  },
+  {
+    "mob_type": "golden_lorito",
+    "hd": "seed/icons/mobs/golden_lorito_hd.png",
+    "runtime": "seed/icons/mobs/golden_lorito.png",
+    "generation": "exec-64bf8aad-c1ee-4786-b1dd-438851625967.png",
+    "mode": "built-in image generation; native transparent alpha",
+    "prompt": "Edit the reference portrait to create the GOLDEN LORITO palette variant for AresRPG. The reference is the EDIT TARGET: preserve exactly its full-body crested parrot anatomy, three-pronged crest, hooked beak, expressive eyes, slightly spread layered wings, three-toed feet, long stepped tail, pose, framing, hand-painted 3D cartoon shading, crisp dark outline and transparent background. Only recolor existing material groups. Palette: body rich gold #D59519; bright golden head highlights #EFB941; amber wings #B77614 and warm brown shadows #71401B; pale gold-cream breast #F1D58A; dark blue beak #2B5273; bright turquoise wing accents #25B4C8 and crest tips #31ACC1; dark blue feet with cyan toes. Keep dark eyes and light eye patches. Rich controlled saturation and deep shadows, small highlights. One complete bird, square image, no cropping, no text, frame, badges, scenery, floor or cast shadow. Genuine transparent alpha, retain existing transparency.",
+    "hd_sha256": "62181db4ee1feef103c09a64d88dab140caaced4bc5bea0a7d55713f3777b51c",
+    "runtime_sha256": "82eda024fed622b4b78f31f958c19a95c76a32b6b0b696947293821f094d9832"
+  },
+  {
+    "mob_type": "aragne__earth",
+    "hd": "seed/icons/mobs/aragne__earth_hd.png",
+    "runtime": "seed/icons/mobs/aragne__earth.png",
+    "generation": "exec-3154e1d9-8d70-49c2-ba27-845596b0654e.png",
+    "prompt": "Create one AresRPG mob portrait matching the newly approved Aragne 3D model. First reference is SUBJECT GEOMETRY: preserve its compact low thorax, round plated rear abdomen, shield-shaped brow, eight sharply jointed widely spread tapering spider legs, two upright dorsal spines, eight amber/cyan eyes in the small forward dark eye mask, and two curved fangs. Second reference is STYLE AND FAMILY IDENTITY ONLY: hand-painted 3D cartoon, crisp dark contour, broad faceted shaded color clusters. Use the new model's shape, but illustrated chunky faceted surfaces rather than individually outlined voxel stair steps. EARTH spider: rich earthy brown carapace #806A4B with umber #40372F recesses, warm ochre #A78D60 lit facets, sandstone trim, amber eyes. Strong readable single creature at elevated front three-quarter angle, entire eight-legged silhouette with margin, fills 85% of a square. Native transparent background. No scenery, floor, shadow, text, badge, frame, other creatures, or photorealism. Rich controlled colors, no washed-out veil.",
+    "mode": "built-in image generation; native transparent alpha",
+    "hd_sha256": "2cdb47cf2f1495d80d49361e9c3fb62b544c3b558f6ab124ec99fecf2c679de1",
+    "runtime_sha256": "502ea62ca5744caadf1dc7d74ebcf36225f15e76e661639ab139f033d2c56e57"
+  },
+  {
+    "mob_type": "aragne__fire",
+    "hd": "seed/icons/mobs/aragne__fire_hd.png",
+    "runtime": "seed/icons/mobs/aragne__fire.png",
+    "generation": "exec-a9af3fbb-44eb-41c7-9c58-e08f948291ff.png",
+    "prompt": "Create one AresRPG mob portrait matching the newly approved Aragne 3D model. First reference is SUBJECT GEOMETRY: preserve its compact low thorax, round plated rear abdomen, shield-shaped brow, eight sharply jointed widely spread tapering spider legs, two upright dorsal spines, eight amber/cyan eyes in the small forward dark eye mask, and two curved fangs. Second reference is STYLE AND FAMILY IDENTITY ONLY: hand-painted 3D cartoon, crisp dark contour, broad faceted shaded color clusters. Use the new model's shape, but illustrated chunky faceted surfaces rather than individually outlined voxel stair steps. FIRE spider: rich crimson red #932D36 carapace, burgundy #51222A recesses, vivid scarlet red #BF4050 lit facets, vermilion pointed tips, amber eyes. Strong readable single creature at elevated front three-quarter angle, entire eight-legged silhouette with margin, fills 85% of a square. Native transparent background. No scenery, floor, shadow, text, badge, frame, other creatures, or photorealism. Rich controlled colors, no washed-out veil.",
+    "mode": "built-in image generation; native transparent alpha",
+    "hd_sha256": "3c91bb3f0e3544b37185f2868183ce443e132dd1e06a220ed43685a1963abc0e",
+    "runtime_sha256": "91237af39eceef1400c5caf903cb63e99cfdd71e0b62f8821ecd4b61cb7be72a"
+  },
+  {
+    "mob_type": "aragne__water",
+    "hd": "seed/icons/mobs/aragne__water_hd.png",
+    "runtime": "seed/icons/mobs/aragne__water.png",
+    "generation": "exec-8c8bdc12-54cf-4e39-af7a-af946a030e9b.png",
+    "prompt": "Create one AresRPG mob portrait matching the newly approved Aragne 3D model. First reference is SUBJECT GEOMETRY: preserve its compact low thorax, round plated rear abdomen, shield-shaped brow, eight sharply jointed widely spread tapering spider legs, two upright dorsal spines, eight amber/cyan eyes in the small forward dark eye mask, and two curved fangs. Second reference is STYLE AND FAMILY IDENTITY ONLY: hand-painted 3D cartoon, crisp dark contour, broad faceted shaded color clusters. Use the new model's shape, but illustrated chunky faceted surfaces rather than individually outlined voxel stair steps. WATER spider: saturated cobalt blue #205DB8 carapace, midnight blue #182E54 recesses, bright blue #3386DD lit facets, cyan tips and cyan eyes. Strong readable single creature at elevated front three-quarter angle, entire eight-legged silhouette with margin, fills 85% of a square. Native transparent background. No scenery, floor, shadow, text, badge, frame, other creatures, or photorealism. Rich controlled colors, no washed-out veil.",
+    "mode": "built-in image generation; native transparent alpha",
+    "hd_sha256": "447528e688a913b7b4c6999dd2da56c76cc99a83e9b93f7ee373d871e0154bea",
+    "runtime_sha256": "45eec5a9de81b02ab86cb233505296a695a4b6c1f6f2316f84abbfabdf55b2d3"
+  },
+  {
+    "mob_type": "aragne__air",
+    "hd": "seed/icons/mobs/aragne__air_hd.png",
+    "runtime": "seed/icons/mobs/aragne__air.png",
+    "generation": "exec-00ffdf7c-b80e-41c7-b043-849fb3861dea.png",
+    "prompt": "Create one AresRPG mob portrait matching the newly approved Aragne 3D model. First reference is SUBJECT GEOMETRY: preserve its compact low thorax, round plated rear abdomen, shield-shaped brow, eight sharply jointed widely spread tapering spider legs, two upright dorsal spines, eight amber/cyan eyes in the small forward dark eye mask, and two curved fangs. Second reference is STYLE AND FAMILY IDENTITY ONLY: hand-painted 3D cartoon, crisp dark contour, broad faceted shaded color clusters. Use the new model's shape, but illustrated chunky faceted surfaces rather than individually outlined voxel stair steps. AIR spider: fresh leaf green #638F45 carapace, forest green #284831 recesses, bright green #8FB85A lit facets, pale green pointed tips and yellow-green eyes. Strong readable single creature at elevated front three-quarter angle, entire eight-legged silhouette with margin, fills 85% of a square. Native transparent background. No scenery, floor, shadow, text, badge, frame, other creatures, or photorealism. Rich controlled colors, no washed-out veil.",
+    "mode": "built-in image generation; native transparent alpha",
+    "hd_sha256": "f113962a6e1e0415dbafdbfe2270e707e292cb75a4596dd7f0b5306ba0104d34",
+    "runtime_sha256": "10609825235b0afec051b237b4bcaed7bcaef1e387f056fc5802c093ea9403d4"
+  }
+]

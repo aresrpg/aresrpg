@@ -38,6 +38,7 @@ import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
 import { create_frame_renderer } from './frame_renderer.ts'
+import { create_speed_wind } from './speed_wind.ts'
 import type { GreedyMeshData } from './greedy_mesher.ts'
 import { create_mesh_pool } from './mesh_pool.ts'
 import { create_lantern } from './lantern.ts'
@@ -284,6 +285,7 @@ export const create_webgpu_backend = async (
     const water_level = float(world.sea_level)
     let was_submerged = false
     const mesh_pool = own(create_mesh_pool(world))
+    const speed_wind = own(create_speed_wind(scene))
     const frame_renderer = own(
       create_frame_renderer(
         renderer,
@@ -595,7 +597,6 @@ export const create_webgpu_backend = async (
         })
         hillaire?.tick(renderer, camera, delta_seconds)
       }
-      fight_board.tick(now)
       // Only immersive boards open the camera peephole. Every board retains its local clearance,
       // including when its screen projection crosses or passes behind the eye.
       if (board_footprint) {
@@ -611,10 +612,6 @@ export const create_webgpu_backend = async (
         )
         board_occlusion.set_frame(projected)
       }
-      entities.tick(now)
-      character_crowd.tick(now)
-      auras.tick(now)
-      effects.tick(now)
       const show_resource_nodes =
         !dungeon_stage_active &&
         should_show_resource_nodes({
@@ -631,7 +628,6 @@ export const create_webgpu_backend = async (
         portal?.tick(camera.position.x, camera.position.y, camera.position.z)
         dungeon_portals.tick(now, camera.position.x, camera.position.y, camera.position.z)
       }
-      fight_swords?.tick(now)
       if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
       const shock = Math.max(0, 1 - (now - shock_at) / CRIT_SHOCK_MS)
       if (shock > 0) {
@@ -708,10 +704,19 @@ export const create_webgpu_backend = async (
     }
     return Object.freeze({
       kind: 'webgpu',
+      tick: (now: number) => {
+        fight_board.tick(now)
+        entities.tick(now)
+        character_crowd.tick(now)
+        auras.tick(now)
+        effects.tick(now)
+        fight_swords?.tick(now)
+      },
       render: (now = performance.now()) => {
         if (resize()) draw(now)
       },
       set_camera: (position: Vec3, target: Vec3, projection: CameraProjection = {}) => {
+        speed_wind.set_strength(projection.speed_wind)
         const { fov, ortho_blend: next_ortho_blend, ortho_height: next_ortho_height } = projection
         camera.position.set(...position)
         camera.lookAt(...target)
@@ -865,6 +870,7 @@ export const create_webgpu_backend = async (
       set_world_label: (id, element, position) =>
         entity_labels.set_static(id, element, new Vector3(...(position ?? [0, 0, 0]))),
       entity_height: entity_anchors.entity_height,
+      entity_position: entities.entity_position,
       upsert_fight_blob: fight_board.upsert_blob,
       remove_fight_blob: fight_board.remove_blob,
       pick_fight_cell: fight_board.pick,

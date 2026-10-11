@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>Play AresRPG with your agent</title>
+    <meta
+      name="description"
+      content="The AresRPG agent playbook: six guides and a public SDK for agents that play within their player's budget and rules."
+    />
+    <link rel="canonical" href="https://aresrpg.world/agents" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <meta property="og:title" content="Play AresRPG with your agent" />
+    <meta
+      property="og:description"
+      content="Six guides and a public SDK for agents that play within their player's budget and rules."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://aresrpg.world/agents" />
+    <meta property="og:site_name" content="AresRPG" />
+    <meta property="og:image" content="https://aresrpg.world/social/agents.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:alt" content="Play AresRPG with your agent" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Play AresRPG with your agent" />
+    <meta
+      name="twitter:description"
+      content="Six guides and a public SDK for agents that play within their player's budget and rules."
+    />
+    <meta name="twitter:image" content="https://aresrpg.world/social/agents.jpg" />
+    <style>
+      :root {
+        --bg: #0a0a0f;
+        --surface: #12121a;
+        --border: #1e1e2e;
+        --gold: #c8963c;
+        --text: #e8e4dc;
+        --muted: #899097;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.6 'JetBrains Mono',
+          ui-monospace,
+          Menlo,
+          Consolas,
+          monospace;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 64px 20px 96px;
+      }
+      .micro {
+        font-size: 12px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--gold);
+      }
+      h1 {
+        font-size: clamp(30px, 6vw, 46px);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        margin: 12px 0 20px;
+      }
+      p {
+        color: var(--muted);
+        margin: 0 0 16px;
+      }
+      ul {
+        list-style: none;
+        margin: 36px 0;
+        padding: 0;
+        border: 1px solid var(--border);
+        background: var(--surface);
+      }
+      li + li {
+        border-top: 1px solid var(--border);
+      }
+      li a {
+        display: block;
+        padding: 16px 20px;
+        color: var(--text);
+        text-decoration: none;
+      }
+      li a:hover,
+      li a:focus-visible {
+        background: #171720;
+        outline: none;
+      }
+      li a span {
+        display: block;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      li a b::before {
+        content: '› ';
+        color: var(--gold);
+      }
+      p a {
+        color: var(--gold);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="micro">Agent playbook</div>
+      <h1>Play AresRPG with your agent.</h1>
+      <p>
+        AresRPG is a persistent voxel MMORPG on Sui. These guides teach an agent to plan, explain its choices and
+        operate the game through the public source SDK, inside the objective, budget and risk limits its player sets.
+      </p>
+      <p>Point your agent at <a href="/llms.txt">llms.txt</a>, or open a guide directly.</p>
+      <ul>
+        <li>
+          <a href="/agents/play.txt"
+            ><b>play.txt</b
+            ><span>Onboarding, classes, builds, gear, pets, session planning and progress reports.</span></a
+          >
+        </li>
+        <li>
+          <a href="/agents/world.txt"
+            ><b>world.txt</b
+            ><span>Travel, gathering, crafting, supply chains, group dungeons, Mastery and leaderboards.</span></a
+          >
+        </li>
+        <li>
+          <a href="/agents/combat.txt"
+            ><b>combat.txt</b
+            ><span>Placement, spells, movement, effects, deterministic simulation and turn submission.</span></a
+          >
+        </li>
+        <li>
+          <a href="/agents/economy.txt"
+            ><b>economy.txt</b><span>SUI ledger, gas, royalties, market research, trading and risk limits.</span></a
+          >
+        </li>
+        <li>
+          <a href="/agents/protocol.txt"
+            ><b>protocol.txt</b
+            ><span>Authentication, live projections, stale state, transaction recovery and bounded automation.</span></a
+          >
+        </li>
+        <li>
+          <a href="/agents/sdk.txt"
+            ><b>sdk.txt</b><span>Runnable planning examples, headless integration and typed gameplay actions.</span></a
+          >
+        </li>
+      </ul>
+      <p>
+        The guides grant no wallet access or spending permission. Game state and certified transaction receipts outrank
+        them. Source: <a href="https://github.com/aresrpg/aresrpg">github.com/aresrpg/aresrpg</a> ·
+        <a href="/">Play the game</a>
+      </p>
+    </main>
+  </body>
+</html>

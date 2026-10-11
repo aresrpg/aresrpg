@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { CITY_DETAIL_LIMITS, validate_details, type DetailCell } from '../detail_artifact.ts'
+import { CITY_DETAIL_LIMITS, validate_detail_metadata, validate_details, type DetailCell } from '../detail_artifact.ts'
 import type { StructurePlacement } from '../structure_placement.ts'
 import type { CompiledStructureType } from '../structures.ts'
 import type { CompiledWorld } from '../world_recipe.ts'
@@ -46,6 +46,7 @@ const LAND_USE_CELLS: Readonly<Record<string, string>> = Object.freeze(
 )
 const generated_cities = new Map<string, GeneratedCityArtifact>()
 const loading = new Map<string, Promise<void>>()
+const validated_details = new WeakSet<DetailCell>()
 type HorizontalArea = Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>
 type AuthoredCityArea = HorizontalArea & Readonly<{ id: string }>
 const placement_caches = new WeakMap<CompiledWorld, Map<string, StructurePlacement>>()
@@ -86,7 +87,7 @@ const load_generated_city_artifact = (id: string): Promise<void> => {
       if (artifact.version !== 3 || artifact.id !== id || definition.map.source_hash !== artifact.source_hash)
         throw new TypeError(`Generated ${id} voxel and map artifacts do not share provenance`)
       if (!Array.isArray(artifact.details)) throw new TypeError(`Generated ${id} is missing baked details`)
-      const errors = validate_details(
+      const errors = validate_detail_metadata(
         artifact.details,
         Object.fromEntries(definition.material_names.map((name) => [name, {}])),
         CITY_DETAIL_LIMITS
@@ -123,10 +124,21 @@ export const load_generated_city_artifacts_for = (
 
 /** Worker projection: only the requested column's baked details travel with its terrain result. */
 export const generated_city_details = (cities: readonly CompiledCity[], x: number, z: number): readonly DetailCell[] =>
-  cities.flatMap(
-    (city) =>
+  cities.flatMap((city) => {
+    const details =
       generated_cities.get(city.id)?.details.filter((cell) => cell.origin[0] === x && cell.origin[2] === z) ?? []
-  )
+    const pending = details.filter((cell) => !validated_details.has(cell))
+    if (!pending.length) return details
+    const definition = city_definition(city.id)!
+    const errors = validate_details(
+      pending,
+      Object.fromEntries(definition.material_names.map((name) => [name, {}])),
+      CITY_DETAIL_LIMITS
+    )
+    if (errors.length) throw new TypeError(`Generated ${city.id}: ${errors.join('; ')}`)
+    pending.forEach((cell) => validated_details.add(cell))
+    return details
+  })
 
 const assert_matching_area = (city: CompiledCity, artifact: Pick<GeneratedCityArtifact, 'id' | 'area'>): void => {
   const authored = city.area

@@ -33,7 +33,7 @@ const valid_vertices = (values: Float32Array, palette_size: number): boolean => 
   return true
 }
 
-const validate_cell = (value: unknown, names: ReadonlySet<string>, remaining: number): number => {
+const validate_cell_metadata = (value: unknown, names: ReadonlySet<string>, remaining: number): number => {
   if (!value || typeof value !== 'object') throw new TypeError('Detail cell must be an object')
   const row = value as DetailCell
   if (
@@ -46,12 +46,14 @@ const validate_cell = (value: unknown, names: ReadonlySet<string>, remaining: nu
     throw new TypeError('Detail palette must reference world materials')
   if (typeof row.vertices !== 'string' || row.vertices.length > remaining * DETAIL_STRIDE * 16)
     throw new TypeError('Detail data exceeds geometry budget')
-  const vertices = decode_detail_vertices(row.vertices)
-  if (!valid_vertices(vertices, row.palette.length)) throw new TypeError('Invalid detail vertex or normal')
-  return vertices.length / (DETAIL_STRIDE * 3)
+  // Each baked triangle is 108 bytes, encoded as 144 base64 characters without padding.
+  // Count the archive budget without decoding geometry that may never become resident.
+  const triangles = row.vertices.length / (DETAIL_STRIDE * 16)
+  if (!Number.isInteger(triangles)) throw new TypeError('Detail data must contain whole encoded triangles')
+  return triangles
 }
 
-export const validate_details = (
+export const validate_detail_metadata = (
   value: unknown,
   materials: unknown,
   limits: Readonly<{ cells: number; triangles: number }> = DETAIL_LIMITS
@@ -60,11 +62,29 @@ export const validate_details = (
   if (!Array.isArray(value) || value.length > limits.cells) return ['details exceeds cell budget']
   const names = new Set(Object.keys(materials instanceof Object ? materials : {}))
   try {
-    value.reduce((sum: number, row: unknown) => sum + validate_cell(row, names, limits.triangles - sum), 0)
+    value.reduce((sum: number, row: unknown) => sum + validate_cell_metadata(row, names, limits.triangles - sum), 0)
     if (new Set(value.map((row: DetailCell) => row.origin.join(','))).size !== value.length)
       return ['details contains duplicate cells']
     return []
-    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- The caught decode failure becomes recipe validation errors, never successful geometry.
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Metadata failures become recipe validation errors, never successful geometry.
+  } catch (error) {
+    return [`details: ${error instanceof Error ? error.message : String(error)}`]
+  }
+}
+
+export const validate_details = (
+  value: unknown,
+  materials: unknown,
+  limits: Readonly<{ cells: number; triangles: number }> = DETAIL_LIMITS
+): readonly string[] => {
+  const errors = validate_detail_metadata(value, materials, limits)
+  if (errors.length || value === undefined) return errors
+  try {
+    for (const row of value as readonly DetailCell[])
+      if (!valid_vertices(decode_detail_vertices(row.vertices), row.palette.length))
+        throw new TypeError('Invalid detail vertex or normal')
+    return []
+    // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Decode failures remain validation errors, never admitted geometry.
   } catch (error) {
     return [`details: ${error instanceof Error ? error.message : String(error)}`]
   }

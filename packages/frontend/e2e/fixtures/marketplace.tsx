@@ -11,6 +11,8 @@ import { copy_text, load_app_copy } from '../../src/i18n/copy.ts'
 import { BrowsePanel } from '../../src/marketplace/BrowsePanel.tsx'
 import { dispatch_app, read_app_state, useAppStore } from '../../src/store.ts'
 
+import { SellFixture } from './market_sell.tsx'
+
 import '../../src/tailwind.css'
 import '../../src/marketplace/marketplace.css'
 
@@ -211,7 +213,11 @@ const Fixture = () => {
       style={{ containerType: 'inline-size', containerName: 'app-content' }}
       data-pending-listing={pending ?? ''}
     >
-      <BrowsePanel text={copy_text(copy.marketplace_page)} />
+      {new URLSearchParams(location.search).has('sell') ? (
+        <SellFixture copy={copy} />
+      ) : (
+        <BrowsePanel text={copy_text(copy.marketplace_page)} />
+      )}
     </main>
   )
 }

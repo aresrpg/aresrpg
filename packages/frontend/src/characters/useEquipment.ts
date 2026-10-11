@@ -28,12 +28,7 @@ import {
 } from './equipment_stage.ts'
 import { select_inventory_item } from './inventory_selection.ts'
 import { is_loot_box, type ItemMenuState } from './InventoryOverlays.tsx'
-import {
-  bag_category_of,
-  bag_item_matches,
-  type BagCategory,
-  type ResourceFilter,
-} from './InventoryResourceFilters.tsx'
+import { bag_item_matches, type BagCategory, type ResourceFilter } from './InventoryResourceFilters.tsx'
 
 const consumable_action = (item: Readonly<ItemRow>) => {
   const effect = encyclopedia_catalog.item(item.item_type)?.item.consumable
@@ -97,18 +92,6 @@ export function useEquipment({
     [inventory, staged_ids, freed]
   )
   const display_bag = useMemo(() => inventory_groups(bag), [bag])
-  const counts = useMemo(
-    () =>
-      display_bag.reduce(
-        (totals, { item }) => ({ ...totals, [bag_category_of(item)]: totals[bag_category_of(item)] + 1 }),
-        {
-          equipment: 0,
-          consumables: 0,
-          resources: 0,
-        }
-      ),
-    [display_bag]
-  )
   const grid_items = useMemo(
     () => display_bag.filter(({ item }) => bag_item_matches(item, category, resource_filter)),
     [display_bag, category, resource_filter]
@@ -282,7 +265,6 @@ export function useEquipment({
     freed,
     bag,
     display_bag,
-    counts,
     grid_items,
     selected_items,
     select_item,

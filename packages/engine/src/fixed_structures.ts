@@ -46,6 +46,8 @@ const valid_source = (value: unknown): value is FixedStructure['source'] => {
 const validate_placement = (value: unknown, index: number, materials: unknown): readonly string[] => {
   const row = record(value)
   const prefix = `fixed_structures[${index}]`
+  const { source } = row
+  const source_valid = valid_source(source)
   const errors = [
     [tuple(row.origin), `${prefix}.origin must contain three integer coordinates`],
     [
@@ -56,13 +58,13 @@ const validate_placement = (value: unknown, index: number, materials: unknown): 
       row.scale === undefined || (Number.isSafeInteger(row.scale) && Number(row.scale) >= 1 && Number(row.scale) <= 5),
       `${prefix}.scale must be an integer in 1..5`,
     ],
-    [valid_source(row.source), `${prefix}.source must be an existing structure or valid voxel source`],
+    [source_valid, `${prefix}.source must be an existing structure or valid voxel source`],
   ].flatMap(([valid, message]) => (valid ? [] : [String(message)]))
-  if (!valid_source(row.source)) return errors
+  if (!source_valid) return errors
   const available = record(materials)
   return [
     ...errors,
-    ...material_names(row.source)
+    ...material_names(source)
       .filter((name) => name !== 'air' && !(name in available))
       .map((name) => `${prefix} references missing material ${name}`),
   ]

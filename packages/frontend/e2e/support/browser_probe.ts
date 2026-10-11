@@ -12,6 +12,7 @@ type Adapter = Readonly<{
 declare global {
   interface Window {
     workload_frame_count: number
+    workload_submissions: number
     workload_on_frame?: (at_ms: number) => void
     workload_adapter: Adapter | null
     workload_resources: () => Resources
@@ -29,6 +30,7 @@ export const install_probe = (): void => {
   }
   const allocations = new Set<Allocation>()
   window.workload_frame_count = 0
+  window.workload_submissions = 0
   let frame_time = -1
   let presented_time = -2
   const request_frame = window.requestAnimationFrame.bind(window)
@@ -82,6 +84,11 @@ export const install_probe = (): void => {
     const request_device = adapter.requestDevice.bind(adapter)
     adapter.requestDevice = async (descriptor) => {
       const device = await request_device(descriptor)
+      const submit = device.queue.submit.bind(device.queue)
+      device.queue.submit = (buffers) => {
+        window.workload_submissions += 1
+        submit(buffers)
+      }
       window.workload_gpu_done = () => device.queue.onSubmittedWorkDone()
       const identity = Symbol('device')
       const track = <Resource extends GPUBuffer | GPUTexture>(

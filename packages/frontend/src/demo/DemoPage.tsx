@@ -3,7 +3,7 @@
 // Public composition lab. It owns controls only; every rendered fact crosses a production boundary.
 
 import { DEFAULT_ADMIN_ADDRESS } from '@aresrpg/protocol'
-import { type EngineQuality, type EngineStatus } from '@aresrpg/engine'
+import { type CharacterAnimationRender, type EngineQuality, type EngineStatus } from '@aresrpg/engine'
 import { class_names } from '@aresrpg/immutable'
 import { FlaskConical, UserRound } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -13,6 +13,7 @@ import { FpsPanel } from '../components/FpsPanel.tsx'
 import { fight_lab_surface } from '../components/app_layout.ts'
 import { HudPanel } from '../components/ui/HudPanel.tsx'
 import { content_catalog, titleize } from '../content/catalog.ts'
+import { NPC_CHARACTER_MODELS } from '../content/character_model_catalog.ts'
 import { client_world_position, worlds_source, world_terrain } from '../content/worlds.ts'
 import { load_pet_companion } from '../content/pet_models.ts'
 import { worn_equipment_options } from '../content/worn_equipment.ts'
@@ -43,6 +44,21 @@ type DemoWorld = ReturnType<typeof create_world>
 const renderable_worlds = Object.freeze(content_catalog.worlds.filter(({ terrain }) => terrain !== undefined))
 const initial_world = renderable_worlds[0] ?? null
 const DEFAULT_COLORS = Object.freeze(['#f3eadb', '#2f8fe8', '#d9af57'] as const)
+const ANIMATIONS = Object.freeze([
+  'IDLE',
+  'WALK',
+  'RUN',
+  'JUMP',
+  'JUMP_RUN',
+  'FALL',
+  'SWIM',
+  'ATTACK',
+  'BUFF',
+  'SPELL_TARGET',
+  'SIT',
+  'DANCE',
+  'DEATH',
+] as const satisfies readonly CharacterAnimationRender['name'][])
 const { hats, cloaks } = worn_equipment_options
 const pets = Object.freeze(content_catalog.items.filter(({ category }) => category === 'pet'))
 
@@ -79,10 +95,11 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
   const [time, set_time] = useState(0.31)
   const [live_time, set_live_time] = useState(true)
   const [clouds_visible, set_clouds_visible] = useState(true)
-  const [classe, set_classe] = useState<(typeof class_names)[number]>('senshi')
+  const [classe, set_classe] = useState<string>('senshi')
   const [male, set_male] = useState(true)
   const [colors, set_colors] = useState<readonly [string, string, string]>(DEFAULT_COLORS)
   const [character_enabled, set_character_enabled] = useState(false)
+  const [animation, set_animation] = useState('')
   const [hat, set_hat] = useState('')
   const [cloak, set_cloak] = useState('')
   const [title, set_title] = useState('')
@@ -169,6 +186,11 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
       current = false
     }
   }, [character_enabled, classe, cloak, colors, hat, male, title, admin_preview, world_api])
+
+  useEffect(() => {
+    const name = ANIMATIONS.find((name) => name === animation)
+    world_api?.set_character_animation(character_enabled && name ? { name, time_scale: 1, loop: true } : null)
+  }, [animation, character_enabled, world_api])
 
   // handing over control spawns at the camera's current focus — never a hardcoded origin;
   // worn-equipment re-renders keep the character exactly where it stands
@@ -281,12 +303,8 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
             <div className="grid grid-cols-2 gap-2">
               <label className={label_class}>
                 {copy.class_label}
-                <select
-                  className={field_class}
-                  onChange={(event) => set_classe(event.target.value as typeof classe)}
-                  value={classe}
-                >
-                  {class_names.map((name) => (
+                <select className={field_class} onChange={(event) => set_classe(event.target.value)} value={classe}>
+                  {[...class_names, ...Object.keys(NPC_CHARACTER_MODELS)].map((name) => (
                     <option key={name} value={name}>
                       {name.toUpperCase()}
                     </option>
@@ -362,6 +380,22 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
                 {pets.map(({ item_type, name }) => (
                   <option key={item_type} value={item_type}>
                     {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={label_class}>
+              {text.animation_loop}
+              <select
+                className={field_class}
+                disabled={!character_enabled}
+                onChange={(event) => set_animation(event.target.value)}
+                value={animation}
+              >
+                <option value="">{text.animation_auto}</option>
+                {ANIMATIONS.map((name) => (
+                  <option key={name} value={name}>
+                    {name === 'BUFF' ? 'SPELL_BUFF' : name}
                   </option>
                 ))}
               </select>

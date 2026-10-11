@@ -23,7 +23,10 @@ export type FightBoardRender = Readonly<{
   show_start_cells?: boolean
   cells: readonly FightBoardRenderCell[]
 }>
-export type EntityAnchor = Readonly<{ kind: 'fight_cell'; cell: number }> | Readonly<{ kind: 'world'; position: Vec3 }>
+export type EntityAnchor =
+  | Readonly<{ kind: 'fight_cell'; cell: number }>
+  | Readonly<{ kind: 'world'; position: Vec3 }>
+  | Readonly<{ kind: 'mount'; entity_id: string }>
 export type FightSide = 'a' | 'b'
 /** A planted fight sword — the join-window clock made physical. `y` is the anchor's ground
  *  level; every height the layer animates measures from there. */
@@ -65,7 +68,12 @@ export type CharacterAppearanceRender = Readonly<{
   worn: Readonly<{ head: WornModelRender | null; back: WornModelRender | null }>
 }>
 export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM' | 'SIT' | 'DANCE'
-export type CharacterAnimationRender = Readonly<{ name: CharacterAnimationName; time_scale: number }>
+export type CharacterAnimationRender = Readonly<{
+  name: CharacterAnimationName | 'ATTACK' | 'BUFF' | 'SPELL_TARGET' | 'DEATH'
+  time_scale: number
+  /** Override the clip's normal locomotion/action repeat policy. */
+  loop?: boolean
+}>
 export type MobEntityRender = Readonly<{
   id: string
   kind: 'mob'
@@ -167,7 +175,14 @@ export type EngineFrame = Readonly<{ now: number; delta_seconds: number }>
 
 export type QualityProfile = Readonly<{
   name: EngineQuality
-  render: Readonly<{ scale: number; scene_scale: number; sharpness: number | null; dpr_max: number; pixel_max: number }>
+  render: Readonly<{
+    fps: number
+    scale: number
+    scene_scale: number
+    sharpness: number | null
+    dpr_max: number
+    pixel_max: number
+  }>
   chunks: Readonly<{
     near_radius: number
     mid_radius: number
@@ -240,6 +255,8 @@ export type RenderedChunk = Readonly<
 
 export type CameraProjection = Readonly<{
   fov?: number
+  /** Smoothed mounted speed envelope, 0–1. Omission clears the edge streaks. */
+  speed_wind?: number
   ortho_blend?: number
   /** Visible world-space height when fully orthographic. Omit to match the perspective framing. */
   ortho_height?: number
@@ -421,6 +438,7 @@ export type Engine = Readonly<{
   set_world_panel: (id: string, panel: WorldPanel | null) => void
   set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) => void
   entity_height: (id: string) => number | null
+  entity_position: (id: string, height?: number) => Vec3 | null
   create_fight_blob: (blob: FightBlobSpec) => string
   update_fight_blob: (id: string, blob: FightBlobSpec) => boolean
   remove_fight_blob: (id: string) => void

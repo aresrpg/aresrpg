@@ -11,6 +11,7 @@ import {
   type EngineQuality,
 } from '@aresrpg/engine'
 import { generate_board } from '@aresrpg/fight'
+import { get_quality_profile } from '@aresrpg/engine/data'
 
 import { LIFECYCLE_WORLD } from '../../../engine/test/browser_lifecycle.ts'
 import { load_generated_city_artifacts_for } from '../../../engine/src/cities/generated_city.ts'
@@ -125,7 +126,10 @@ const measure = async (
     frames: elapsed.length,
     p95_ms: percentile(ordered, 0.95),
     p50_ms: percentile(ordered, 0.5),
-    over_budget_percent: (elapsed.filter((delta) => delta > 1000 / 120).length * 100) / elapsed.length,
+    over_budget_percent:
+      (elapsed.filter((delta) => delta > 1000 / get_quality_profile(state.chunks.quality).render.fps + 0.5).length *
+        100) /
+      elapsed.length,
     completed_fps,
     p99_ms: percentile(ordered, 0.99),
     max_ms: ordered.at(-1)!,

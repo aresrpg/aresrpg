@@ -1,0 +1,14 @@
+Open riding.blend to edit the twelve playable SIT actions and fourteen pet mount sockets.
+The Senshi review scene follows the exported contact frames at game scale.
+
+Each character has a RIDING_SIT_<body> action and an editable Rider marker parented to Hips.
+Each pet has an editable Mount marker parented to its carrying bone.
+Other imported animations remain as reference tracks. Small pets retain their authored size.
+
+Run the packed export_riding.py text from this file to update seed/models/characters and
+seed/models/pets. It reads the baked actions and marker transforms. It preserves the canonical
+GLBs' geometry, texture masks, skin bindings and unrelated animation data while replacing SIT
+and socket data. The four extended clothing rigs are already present in those GLB templates.
+
+author_riding.py retains the initial pose construction helpers. Baked actions and marker objects
+are the editable export inputs. Generated renders and intermediate GLBs are not source artifacts.

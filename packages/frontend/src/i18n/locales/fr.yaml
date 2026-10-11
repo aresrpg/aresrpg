@@ -220,6 +220,8 @@ trade_panel:
 transaction_unknown_toast: Votre dernière action est encore en cours de vérification. Les transactions suivantes sont bloquées tant que son résultat reste inconnu.
 transaction_recovered_toast: Votre transaction précédente a été retrouvée. Actualisez pour voir son résultat avant de choisir votre prochaine action.
 world_hud:
+  crew_talk: 'Parler à Blast Girl'
+  crew_talk_touch: 'Parler à Blast Girl'
   map_party_legend: 'Cyan : groupe · Or : chef'
   dismount_prompt_touch: 'Touchez pour descendre'
   spawn_press_attack_touch: 'Touchez pour attaquer'
@@ -355,6 +357,8 @@ world_hud:
   resource_face_protector: 'Appuyez sur {{key}} pour l’affronter'
   zone_never_arrived: "La recherche est passée, mais le monde ne l'a jamais montrée — la couche de lecture est peut-être en retard"
 demo_page:
+  animation_loop: Animation en boucle
+  animation_auto: Automatique (déplacement)
   asset_demo_city: Cité de démonstration
   asset_house_1: Maison de ville A
   asset_house_2: Maison de ville B
@@ -435,6 +439,10 @@ demo_page:
   control_hint: Cliquer sur le canvas · WASD pour bouger · Espace pour sauter · Souris pour regarder
   back: Retour à l’application
 marketplace_page:
+  filter_all: 'Toutes les catégories'
+  filter_empty: 'Aucun résultat. Essayez un autre filtre ou une autre recherche.'
+  lot_price: 'Prix total du lot'
+  type_count_hint: 'Types d’objets distincts en vente publique'
   total_units: 'Unités totales'
   market_cap: 'Capitalisation'
   market_cap_basis: 'Total des unités existantes × prix unitaire moyen du dernier jour échangé sur le graphique, hors frais.'
@@ -558,6 +566,16 @@ mastery_page:
   offer_purchased: Récompense de maîtrise achetée.
 
 airdrop_page:
+  crew_view_sale: 'Voir la vente KARES'
+  crew_dialogue:
+    intro: 'Participe à la vente du token KARES et j’aurai un cadeau pour toi.'
+    connect: 'Connecte le portefeuille utilisé pour la vente et voyons si ton cadeau est là.'
+    checking: 'Laisse-moi vérifier tes cadeaux…'
+    ready: 'Ton casque Crew est là !'
+    claiming: 'Un instant, tes cadeaux sont en cours de récupération.'
+    claimed: 'Je t’ai déjà remis ton casque Crew. Porte-le fièrement !'
+    empty: 'Je n’ai pas de cadeau Crew disponible pour ce portefeuille. Il a peut-être déjà été récupéré, ou la distribution est encore en attente.'
+    unavailable: 'Je n’ai pas pu vérifier tes cadeaux. Réessaie.'
   reward_title: 'Vous avez reçu un cadeau !'
   reward_received: 'Vous avez reçu {items} !'
   reward_needs_sui: 'Votre cadeau est en sécurité dans votre portefeuille. Ajoutez un peu de SUI pour payer la transaction, puis récupérez votre récompense.'
@@ -598,6 +616,9 @@ airdrop_page:
     physical: 'Carte cadeau physique'
     game_wallet: 'Récompenses des vétérans Hytale'
   campaigns:
+    blast_crew:
+      title: 'Casque Crew'
+      description: 'Un cadeau cosmétique pour les participants à la vente KARES sur Blast. Connectez le portefeuille utilisé après la distribution.'
     oeuftermath:
       title: 'Aftermath Eggs · Oeuftermath'
       description: 'Les détenteurs d’un Aftermath Egg lors du snapshot reçoivent un bon pour le familier Oeuftermath. Vérifiez le portefeuille qui détenait l’œuf à cette date ; un achat ultérieur ne donne pas droit au cadeau.'
@@ -2610,6 +2631,13 @@ spell_effects:
   expires_next_turn: 'Jusqu’au prochain tour'
 
 ui:
+  feedback_question: 'Qu’est-ce qui vous empêche d’avancer ?'
+  feedback_unclear: 'Je ne sais pas quoi faire'
+  feedback_controls: 'Commandes'
+  feedback_performance: 'Lenteurs ou bugs'
+  feedback_funding: 'Approvisionner mon portefeuille'
+  feedback_not_interested: 'Ce jeu ne me plaît pas'
+  feedback_dismiss: 'Fermer'
   multiplayer: 'Multijoueur'
   nearby_fights: 'Combats proches'
   nearby_fights_empty: 'Aucun combat suivi à proximité'

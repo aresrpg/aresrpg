@@ -17,6 +17,7 @@ import { map_thebes, plan_thebes, terrain_thebes } from '../packages/engine/src/
 import { world_terrain } from '../packages/engine/src/world_catalog.ts'
 
 import { bake_thebes_assets } from './bake_thebes_assets.mjs'
+import { encode_voxel_runs } from './encode_voxel_runs.mjs'
 
 const ROOT = resolve(import.meta.dir, '..')
 const CHUNK_EDGE = 32
@@ -43,6 +44,7 @@ const source_paths = async (id) => {
   const city_sources = [...new Bun.Glob(`packages/engine/src/cities/${id}/**/*.ts`).scanSync({ cwd: ROOT })]
   return [
     'scripts/generate_cities.mjs',
+    'scripts/encode_voxel_runs.mjs',
     'scripts/bake_thebes_assets.mjs',
     'scripts/bake_schematic.mjs',
     'scripts/partition_blocks.mjs',
@@ -123,30 +125,17 @@ const city_voxel_chunks = (world, drafts) => {
   return [...chunks.values()].sort((left, right) => left.y - right.y || left.z - right.z || left.x - right.x)
 }
 
-const encoded_runs = (voxels, palette) => {
-  const material_index = new Map(palette.map((material, index) => [material, index]))
-  const entries = [...voxels].sort(([left], [right]) => left - right)
-  const runs = []
-  for (const [linear, material] of entries) {
-    const palette_index = material_index.get(material)
-    const previous = runs.at(-1)
-    if (previous && previous.start + previous.count === linear && previous.material === palette_index)
-      previous.count += 1
-    else runs.push({ start: linear, count: 1, material: palette_index })
-  }
-  const bytes = new Uint8Array(runs.length * 5)
-  const view = new DataView(bytes.buffer)
-  runs.forEach(({ start, count, material }, index) => {
-    view.setUint16(index * 5, start, true)
-    view.setUint16(index * 5 + 2, count, true)
-    view.setUint8(index * 5 + 4, material)
-  })
-  return Buffer.from(bytes).toString('base64')
-}
-
 const serialized_chunk = ({ x, y, z, voxels }) => {
   const palette = [...new Set(voxels.values())].toSorted()
-  return Object.freeze({ x, y, z, palette, runs: encoded_runs(voxels, palette), voxels: voxels.size })
+  const ids = new Map(palette.map((material, index) => [material, index]))
+  return Object.freeze({
+    x,
+    y,
+    z,
+    palette,
+    runs: encode_voxel_runs([...voxels].map(([cell, material]) => [cell, ids.get(material)])),
+    voxels: voxels.size,
+  })
 }
 
 const generate_city = async (generator) => {

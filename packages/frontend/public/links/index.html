@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0a0a0f" />
+    <title>AresRPG · Every way in</title>
+    <meta
+      name="description"
+      content="Play the fully on-chain voxel MMORPG in your browser, join the Discord and Telegram, read the Journal and find the KARES public sale on Blast."
+    />
+    <link rel="canonical" href="https://aresrpg.world/links" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="preload" href="/links/jetbrains-mono.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:title" content="AresRPG · Every way in" />
+    <meta
+      property="og:description"
+      content="Play in your browser, join the Discord and Telegram, read the Journal and find the KARES public sale."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://aresrpg.world/links" />
+    <meta property="og:site_name" content="AresRPG" />
+    <meta property="og:image" content="https://aresrpg.world/social/links.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:alt" content="AresRPG: play, Discord, Telegram, Journal and the KARES sale" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AresRPG · Every way in" />
+    <meta
+      name="twitter:description"
+      content="Play in your browser, join the Discord and Telegram, read the Journal and find the KARES public sale."
+    />
+    <meta name="twitter:image" content="https://aresrpg.world/social/links.jpg" />
+    <meta name="twitter:image:alt" content="AresRPG: play, Discord, Telegram, Journal and the KARES sale" />
+    <style>
+      @font-face {
+        font-family: 'JetBrains Mono';
+        src: url('/links/jetbrains-mono.woff2') format('woff2');
+        font-weight: 100 800;
+        font-display: swap;
+      }
+      :root {
+        --bg: #0a0a0f;
+        --surface: #12121a;
+        --surface-high: #171720;
+        --border: #1e1e2e;
+        --line: #2a2a3a;
+        --gold: #c8963c;
+        --gold-light: #f5d0a9;
+        --text: #e8e4dc;
+        --muted: #899097;
+        --discord: #8b94ff;
+        --telegram: #4fb8f0;
+        --blast: #ff8dbe;
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
+        --gutter: 16px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        position: relative;
+        min-height: 100svh;
+        overflow-x: hidden;
+        background:
+          radial-gradient(520px 300px at 50% 150px, rgba(74, 158, 255, 0.16), transparent 70%),
+          radial-gradient(760px 460px at 88% 0, rgba(74, 62, 140, 0.3), transparent 70%),
+          linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px) 50% 0 / 40px 40px,
+          linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px) 50% 0 / 40px 40px,
+          var(--bg);
+        color: var(--text);
+        font:
+          15px/1.5 'JetBrains Mono',
+          ui-monospace,
+          Menlo,
+          Consolas,
+          monospace;
+        -webkit-font-smoothing: antialiased;
+      }
+      /* Film grain, so flat surfaces never read as dead boxes. */
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 3;
+        pointer-events: none;
+        opacity: 0.16;
+        mix-blend-mode: soft-light;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      a:focus-visible {
+        outline: 2px solid var(--gold-light);
+        outline-offset: 3px;
+      }
+      svg {
+        display: block;
+        flex: none;
+      }
+      .micro {
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .arrow {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: square;
+        transition: transform 200ms var(--ease);
+      }
+      a:hover .arrow {
+        transform: translate(2px, -2px);
+      }
+
+      .shell {
+        position: relative;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      /* A ribbon of real loot scrolls behind the logo. */
+      .loot {
+        position: absolute;
+        inset: 24px 0 auto;
+        height: 250px;
+        overflow: hidden;
+        opacity: 0.42;
+        mask-image: linear-gradient(180deg, transparent, #000 34%, #000 58%, transparent);
+      }
+      .loot::before {
+        content: '';
+        position: absolute;
+        top: 48px;
+        left: -60px;
+        width: calc(100% + 700px);
+        height: 195px;
+        background: url('/links/loot.jpg') 0 0 / 520px 195px repeat-x;
+        transform: rotate(-4deg);
+        animation: loot 50s linear infinite;
+      }
+
+      /* ── hero: the game is the header ── */
+      .hero {
+        display: flex;
+        flex-direction: column;
+        padding: 88px var(--gutter) 24px;
+      }
+      .hero__logo {
+        display: block;
+        width: 100%;
+        height: auto;
+        filter: drop-shadow(0 10px 28px rgba(5, 6, 12, 0.9));
+      }
+      .hero__pitch {
+        max-width: 26ch;
+        margin-top: 14px;
+        font-size: clamp(17px, 4.6vw, 22px);
+        font-weight: 500;
+        line-height: 1.35;
+      }
+      .play {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 24px;
+        padding: 17px 20px;
+        color: #17110a;
+        border: 1px solid var(--gold-light);
+        border-radius: 3px;
+        background:
+          repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 2px, transparent 2px 7px),
+          linear-gradient(180deg, #e2b25c, var(--gold) 58%, #a87a2c);
+        transition: filter 200ms var(--ease);
+      }
+      .play:hover {
+        filter: brightness(1.1);
+      }
+      .play__label {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .play .arrow {
+        margin-left: auto;
+      }
+
+      /* ── doors: everything that is not the game ── */
+      .doors {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px var(--gutter) 40px;
+      }
+      .label {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 16px;
+      }
+      .label::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--line), transparent);
+      }
+      .rows {
+        display: grid;
+        gap: 8px;
+        list-style: none;
+      }
+      .row {
+        --tint: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 58px;
+        padding: 8px 16px 8px 8px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background:
+          linear-gradient(120deg, color-mix(in srgb, var(--tint) 13%, transparent), transparent 46%), var(--surface);
+        transition:
+          background-color 200ms var(--ease),
+          border-color 200ms var(--ease);
+      }
+      .row:hover {
+        border-color: color-mix(in srgb, var(--tint) 55%, var(--line));
+        background-color: var(--surface-high);
+      }
+      .row__icon {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        flex: none;
+        color: var(--tint);
+        border: 1px solid color-mix(in srgb, var(--tint) 30%, var(--line));
+        border-radius: 2px;
+        background: rgba(10, 10, 15, 0.6);
+      }
+      .row__icon svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+      .row__name {
+        font-size: 16px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .row__leader {
+        flex: 1;
+        min-width: 12px;
+        height: 2px;
+        background: radial-gradient(circle, var(--line) 1px, transparent 1.2px) 0 50% / 7px 2px repeat-x;
+      }
+      .row__host {
+        overflow: hidden;
+        font-size: 12px;
+        color: var(--muted);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .row .arrow {
+        color: var(--tint);
+      }
+
+      /* Blast owns the pink pilot identity, exactly as on the in-game sale card. */
+      .sale {
+        position: relative;
+        display: grid;
+        gap: 6px;
+        overflow: hidden;
+        padding: 16px 124px 16px 16px;
+        color: #fff0f8;
+        border: 1px solid #ff419361;
+        border-radius: 3px;
+        background:
+          radial-gradient(ellipse at 100% 20%, #75315888, transparent 65%), linear-gradient(110deg, #201322, #17111e);
+        transition: border-color 200ms var(--ease);
+      }
+      .sale:hover {
+        border-color: #ff64ac;
+      }
+      .sale__brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--blast);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+      .sale__brand span {
+        opacity: 0.5;
+      }
+      .sale__title {
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+      .sale__note {
+        color: #be9bb2;
+        font-size: 13px;
+      }
+      .sale__action {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        color: #ff9bca;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .sale__pilot {
+        position: absolute;
+        right: 2px;
+        top: 50%;
+        width: 124px;
+        height: 124px;
+        object-fit: contain;
+        image-rendering: pixelated;
+        transform: translateY(-50%);
+      }
+      .repo {
+        display: grid;
+        gap: 6px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        background:
+          repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 6px),
+          linear-gradient(160deg, var(--surface-high), var(--surface) 60%);
+        transition: border-color 200ms var(--ease);
+      }
+      .repo:hover {
+        border-color: var(--muted);
+      }
+      .repo__head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .repo__head svg:first-child {
+        width: 20px;
+        height: 20px;
+        fill: var(--text);
+      }
+      .repo__head .arrow {
+        margin-left: auto;
+        color: var(--text);
+      }
+      .repo__title {
+        margin-top: 6px;
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.25;
+      }
+      .repo__note {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .repo__stack {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+        list-style: none;
+      }
+      .repo__stack li {
+        padding: 4px 8px;
+        color: var(--text);
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        border: 1px solid var(--line);
+        border-radius: 2px;
+        background: rgba(10, 10, 15, 0.6);
+      }
+      .foot {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .rise {
+        animation: rise 700ms var(--ease) both;
+        animation-delay: calc(var(--i) * 60ms);
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+      }
+      @keyframes loot {
+        to {
+          transform: rotate(-4deg) translateX(-520px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .loot::before {
+          animation: none;
+        }
+        @keyframes rise {
+          from {
+            opacity: 0;
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loot" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="hero">
+        <h1 class="rise" style="--i: 0">
+          <img class="hero__logo" src="/links/logo.png" alt="AresRPG" width="720" height="241" />
+        </h1>
+        <p class="hero__pitch rise" style="--i: 1">Fully on-chain, turn-based voxel MMORPG on Sui.</p>
+        <a class="play rise" style="--i: 2" href="/">
+          <span class="play__label">Play in your browser</span>
+          <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
+        </a>
+      </header>
+
+      <section class="doors">
+        <h2 class="micro label rise" style="--i: 3">Community</h2>
+        <ul class="rows">
+          <li class="rise" style="--i: 4">
+            <a class="row" style="--tint: var(--discord)" href="https://discord.gg/aresrpg" rel="noopener">
+              <span class="row__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.6986.7719 1.3634 1.225 1.9935a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419-.0189 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1569 2.419 0 1.3332-.946 2.4189-2.1569 2.4189Z"
+                  />
+                </svg>
+              </span>
+              <span class="row__name">Discord</span>
+              <span class="row__leader"></span>
+              <span class="row__host">discord.gg/aresrpg</span>
+              <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
+            </a>
+          </li>
+          <li class="rise" style="--i: 5">
+            <a class="row" style="--tint: var(--telegram)" href="https://t.me/aresrpg" rel="noopener">
+              <span class="row__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"
+                  />
+                </svg>
+              </span>
+              <span class="row__name">Telegram</span>
+              <span class="row__leader"></span>
+              <span class="row__host">t.me/aresrpg</span>
+              <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
+            </a>
+          </li>
+          <li class="rise" style="--i: 6">
+            <a class="row" style="--tint: var(--gold-light)" href="https://journal.aresrpg.world" rel="noopener">
+              <span class="row__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M11 6.2A5 5 0 0 0 7 4H2v15h6a3 3 0 0 1 3 2zm2 0A5 5 0 0 1 17 4h5v15h-6a3 3 0 0 0-3 2z" />
+                </svg>
+              </span>
+              <span class="row__name">Journal</span>
+              <span class="row__leader"></span>
+              <span class="row__host">journal.aresrpg.world</span>
+              <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
+            </a>
+          </li>
+        </ul>
+
+        <h2 class="micro label rise" style="--i: 7">Token sale</h2>
+        <a class="sale rise" style="--i: 8" href="https://www.blast.fun/" rel="noopener">
+          <img class="sale__pilot" src="/links/blast_pilot.png" alt="" width="124" height="124" />
+          <span class="sale__brand">
+            <img src="/links/blast_helmet.svg" alt="" width="23" height="16" /> KARES <span>×</span>
+            <img src="/links/blast_wordmark.svg" alt="Blast" width="56" height="16" />
+          </span>
+          <strong class="sale__title">KARES public sale</strong>
+          <span class="sale__note">Help build the next chapter of AresRPG.</span>
+          <span class="sale__action">
+            Explore on Blast
+            <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
+          </span>
+        </a>
+
+        <h2 class="micro label rise" style="--i: 9">Source</h2>
+        <a class="repo rise" style="--i: 10" href="https://github.com/aresrpg/aresrpg" rel="noopener">
+          <span class="repo__head">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+              />
+            </svg>
+            github.com/aresrpg/aresrpg
+            <svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
+          </span>
+          <strong class="repo__title">Developed in the open.</strong>
+          <span class="repo__note">Contracts, engine, indexer, server, client.</span>
+          <ul class="repo__stack">
+            <li>Sui Move</li>
+            <li>TypeScript</li>
+            <li>Rust</li>
+            <li>Three.js · WebGPU</li>
+          </ul>
+        </a>
+
+        <footer class="micro foot rise" style="--i: 11">aresrpg.world</footer>
+      </section>
+    </main>
+  </body>
+</html>

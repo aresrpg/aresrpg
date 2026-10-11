@@ -19,6 +19,19 @@ const source = {
 } as const
 const placement = { source, origin: [128, 72, 128], rotation: 1, scale: 3 } as const
 
+test('fixed structure validation scans each voxel coordinate once', () => {
+  let reads = 0
+  const block = [0, 0, 0, 'stone']
+  Object.defineProperty(block, 0, {
+    get: () => {
+      reads += 1
+      return 0
+    },
+  })
+  expect(validate_fixed_structures([{ ...placement, source: { ...source, blocks: [block] } }], materials)).toEqual([])
+  expect(reads).toBe(1)
+})
+
 test('fixed structures reject fractional and unbounded scaling', () => {
   for (const scale of [0, -1, 1.5, 6, '2', NaN]) {
     expect(validate_fixed_structures([{ ...placement, scale }], materials)).toContain(

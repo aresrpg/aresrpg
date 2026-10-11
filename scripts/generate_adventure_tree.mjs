@@ -3,6 +3,8 @@
 // Retain the existing tree's trunk and branches; author a fuller crown in the same voxel format.
 import { readFileSync, writeFileSync } from 'node:fs'
 
+import { encode_voxel_runs } from './encode_voxel_runs.mjs'
+
 const types_path = new URL('../seed/structures/types.json', import.meta.url)
 const recipe = JSON.parse(
   readFileSync(new URL('../seed/structures/adventure_ancient_tree.recipe.json', import.meta.url), 'utf8')
@@ -33,22 +35,6 @@ const in_crown = (index) => {
   const radial = ((x - center[0]) / radius[0]) ** 2 + ((z - center[1]) / radius[1]) ** 2
   const ripple = Math.sin(x * 0.43 + z * 0.17) * Math.cos(z * 0.37 - x * 0.13) * wave
   return radial < 1 && y >= bottom + radial * bottom_curve + ripple * 0.5 && y <= top - radial * top_curve + ripple
-}
-
-const encode = (voxels) => {
-  const runs = []
-  for (const [index, material] of [...voxels].sort(([left], [right]) => left - right)) {
-    const previous = runs.at(-1)
-    if (previous && previous.start + previous.count === index && previous.material === material) previous.count += 1
-    else runs.push({ start: index, count: 1, material })
-  }
-  const bytes = Buffer.alloc(runs.length * 5)
-  runs.forEach(({ start, count, material }, index) => {
-    bytes.writeUInt16LE(start, index * 5)
-    bytes.writeUInt16LE(count, index * 5 + 2)
-    bytes[index * 5 + 4] = material
-  })
-  return bytes.toString('base64')
 }
 
 const crown = Array.from({ length: width * height * depth }, (_, index) => index)
@@ -87,7 +73,7 @@ const tips = retained
     ([index, material]) => material === wood && Math.floor(index / (width * depth)) >= recipe.branch_canopy.from_y
   )
   .flatMap(([index]) => branch_leaves(index))
-const generated = { ...source, runs: encode(new Map([...crown, ...tips, ...retained])) }
+const generated = { ...source, runs: encode_voxel_runs(new Map([...crown, ...tips, ...retained])) }
 if (process.argv.includes('--check')) {
   if (JSON.stringify(catalog.types[recipe.name]) !== JSON.stringify(generated))
     throw new Error('Adventure tree is stale; run bun scripts/generate_adventure_tree.mjs')

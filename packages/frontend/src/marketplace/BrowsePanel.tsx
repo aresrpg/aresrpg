@@ -12,6 +12,7 @@ import { ItemSnapshotTooltip, useItemDetailHover } from '../components/ItemSnaps
 import type { CopyText } from '../i18n/copy.ts'
 import { Text } from '../i18n/Text.tsx'
 import { useNumbers } from '../i18n/useNumbers.ts'
+import { useText } from '../i18n/useText.ts'
 import { market_categories, MARKET_GROUPS, type MarketGroup } from '../modules/marketplace.ts'
 import { useAppStore } from '../store.ts'
 
@@ -27,6 +28,7 @@ import {
   short_address,
   SuiUnit,
 } from './marketplace_model.tsx'
+import { MarketCategoryIcon } from './MarketCategoryIcon.tsx'
 import { PriceHistoryChart } from './PriceHistoryChart.tsx'
 
 const group_key = (group: MarketGroup): string => `group_${group.toLowerCase()}`
@@ -36,9 +38,10 @@ const TypeCount = ({
   categories,
 }: Readonly<{ counts: MarketTypeCounts | null; categories: readonly ItemCategory[] }>) => {
   const numbers = useNumbers()
+  const text = useText()
   if (!counts || !categories.length) return null
   return (
-    <span className="shrink-0 text-[9px] text-muted tabular-nums" data-marketplace-type-count>
+    <span className="market-count" title={text('marketplace_page.type_count_hint')} data-marketplace-type-count>
       {numbers.number(categories.reduce((total, category) => total + (counts[category] ?? 0), 0))}
     </span>
   )
@@ -79,7 +82,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
     <ItemDetailContext.Provider value="summary">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="market-browse flex min-h-0 flex-1 overflow-hidden bg-bg">
-          <aside className="market-groups flex w-36 shrink-0 flex-col border-r border-border bg-surface-low">
+          <aside className="market-groups flex w-48 shrink-0 flex-col border-r border-border bg-surface-low">
             <h3 className="border-b border-white/10 px-4 py-3 text-[10px] font-semibold tracking-[0.25em] text-[#c8963c] uppercase">
               {text('browse')}
             </h3>
@@ -92,7 +95,8 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                   onClick={() => select_group(group)}
                   type="button"
                 >
-                  <span>{text(group_key(group))}</span>
+                  <MarketCategoryIcon category={group} />
+                  <span className="min-w-0 flex-1">{text(group_key(group))}</span>
                   <TypeCount counts={market.type_counts} categories={market_categories(group)} />
                 </Button>
               ))}
@@ -161,7 +165,7 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
             <>
               {subcategories.length > 1 && (
                 <nav
-                  className="market-subcategories w-40 shrink-0 overflow-y-auto border-r border-border bg-surface py-1"
+                  className="market-subcategories w-48 shrink-0 overflow-y-auto border-r border-border bg-surface py-1"
                   data-marketplace-item-types
                 >
                   {subcategories.map((category) => (
@@ -174,12 +178,11 @@ export const BrowsePanel = ({ text }: Readonly<{ text: CopyText }>) => {
                       }}
                       type="button"
                     >
-                      <span className="flex items-center justify-between gap-3">
-                        <span>
-                          <CategoryName category={category} />
-                        </span>
-                        <TypeCount counts={market.type_counts} categories={[category]} />
+                      <MarketCategoryIcon category={category} />
+                      <span className="min-w-0 flex-1">
+                        <CategoryName category={category} />
                       </span>
+                      <TypeCount counts={market.type_counts} categories={[category]} />
                     </Button>
                   ))}
                 </nav>

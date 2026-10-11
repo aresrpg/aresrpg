@@ -18,7 +18,7 @@
       "destination": "https://us.i.posthog.com/:path"
     },
     {
-      "source": "/((?!api/|ingest(?:/|$)|assets/|agents(?:/|$)|llms\\.txt$|item/|classe/|sw\\.js$|workbox-[^/]+\\.js$).*)",
+      "source": "/((?!api/|ingest(?:/|$)|assets/|agents(?:/|$)|links(?:/|$)|llms\\.txt$|item/|classe/|social/|sw\\.js$|workbox-[^/]+\\.js$).*)",
       "destination": "/index.html"
     }
   ],
@@ -31,6 +31,10 @@
     }
   },
   "headers": [
+    {
+      "source": "/assets/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
     {
       "source": "/(.*)",
       "headers": [

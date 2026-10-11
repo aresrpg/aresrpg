@@ -11,7 +11,6 @@ test('only eligible received events are rendered and forwarded', async () => {
   const forward = create_forwarder({
     copy: await load_copy('en'),
     scope: 'test',
-    network: 'mainnet',
     resolve_name: async () => 'sceat.sui',
     render: async () => {
       rendered++

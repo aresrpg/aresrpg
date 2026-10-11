@@ -10,7 +10,6 @@ export const create_forwarder =
     ports: Readonly<{
       copy: Copy
       scope: string
-      network: string
       resolve_name: (address: string) => Promise<string | null>
       render: (card: VisualCard) => Promise<Uint8Array>
       send: (card: Card, png: Uint8Array, marker: string) => Promise<string>
@@ -24,9 +23,5 @@ export const create_forwarder =
     )
     const model = announcement(ports.copy, names, notification)!
     const marker = notification_marker(ports.scope, notification.id)
-    return ports.send(
-      notification_card(model.content, marker, notification.digest, ports.network),
-      await ports.render(model.visual),
-      marker
-    )
+    return ports.send(notification_card(model.content, marker), await ports.render(model.visual), marker)
   }

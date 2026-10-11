@@ -11,16 +11,14 @@
 import { IconButton } from '@aresrpg/ui'
 import { character_equipment_slots } from '@aresrpg/immutable'
 import { useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
 import type { CharacterRow } from '@aresrpg/protocol'
 
-import { item_icon } from '../content/assets.ts'
 import { CharacterPreviewCanvas } from '../components/CharacterPreviewCanvas.tsx'
 import { character_render_source } from '../game/character_entities.ts'
 import { EquipmentDoll } from '../components/EquipmentDoll.tsx'
 import { OwnedItemDetail } from '../components/OwnedItemDetail.tsx'
 import { titleize } from '../content/catalog.ts'
-import { copy_text, stat_name, type AppCopy } from '../i18n/copy.ts'
+import { stat_name, type AppCopy } from '../i18n/copy.ts'
 
 import { equipment_comparison } from './equipment_comparison.ts'
 import { useEquipment } from './useEquipment.ts'
@@ -32,7 +30,7 @@ import { InventoryItemCell } from './InventoryItemCell.tsx'
 import { inventory_action_selection, useInventoryActions } from './InventoryOverlays.tsx'
 import { InventoryItemActions } from './InventoryItemActions.tsx'
 import { select_inventory_item } from './inventory_selection.ts'
-import { BAG_CATEGORIES, InventoryResourceFilters } from './InventoryResourceFilters.tsx'
+import { InventoryFilters } from './InventoryFilters.tsx'
 import { PendingClaims } from './PendingClaims.tsx'
 
 export default function EquipmentTab({
@@ -67,7 +65,6 @@ export default function EquipmentTab({
     dirty,
     bag,
     display_bag,
-    counts,
     grid_items,
     selected_items,
     select_item,
@@ -82,7 +79,6 @@ export default function EquipmentTab({
 
   const [query, set_query] = useState('')
   const filtered = grid_items.filter(({ item }) => item.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()))
-  const category_art = { equipment: 'theban_scrapblade', consumables: 'recall_potion', resources: 'wheat_barley' }
 
   const preview_source = useMemo(
     () =>
@@ -247,42 +243,16 @@ export default function EquipmentTab({
 
       <div className="chr-equip__bag" data-tutorial-target="shared_inventory">
         <PendingClaims copy={copy} />
-        <div className="chr-equip__bagtabs">
-          {BAG_CATEGORIES.map((key) => (
-            <button
-              className={`chr-bagtab ${category === key ? 'is-active' : ''}`}
-              aria-label={t(`bag_${key}`)}
-              aria-pressed={category === key}
-              title={t(`bag_${key}`)}
-              key={key}
-              onClick={() => {
-                set_category(key)
-                set_selected_ids([])
-              }}
-              type="button"
-            >
-              <img src={item_icon(category_art[key]) ?? undefined} alt="" />
-              <span className="inventory-category-name">{t(`bag_${key}`)}</span>
-              <span className="inventory-category-count">{counts[key]}</span>
-            </button>
-          ))}
-        </div>
-        <label className="inventory-search">
-          <Search size={18} aria-hidden="true" />
-          <input
-            type="search"
-            aria-label={copy.ui.inventory_search}
-            placeholder={copy.ui.inventory_search}
-            value={query}
-            onChange={(event) => {
-              set_query(event.target.value)
-            }}
-          />
-        </label>
-        <InventoryResourceFilters
+        <InventoryFilters
           category={category}
-          filter={resource_filter}
-          select={set_resource_filter}
+          set_category={(value) => {
+            set_category(value)
+            set_selected_ids([])
+          }}
+          resource_filter={resource_filter}
+          set_resource_filter={set_resource_filter}
+          query={query}
+          set_query={set_query}
           items={display_bag}
           copy={copy}
         />

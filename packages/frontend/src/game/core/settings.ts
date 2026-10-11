@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { QUALITY_OPTIONS, QUALITY_PROFILES, type EngineQuality } from '@aresrpg/engine'
+import { QUALITY_OPTIONS, QUALITY_PROFILES, type EngineQuality } from '@aresrpg/engine/data'
 
 import {
   CHAT_CHANNELS,
@@ -24,7 +24,7 @@ export const RENDER_DISTANCE_MAX = 12
 
 // The one derivation door lives in the engine (voxels AND the far shell share it) — re-exported
 // here so frontend consumers keep their settings import.
-export { effective_render_distance } from '@aresrpg/engine'
+export { effective_render_distance } from '@aresrpg/engine/data'
 
 export type GameSettings = Readonly<{
   quality: EngineQuality

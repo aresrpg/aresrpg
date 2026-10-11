@@ -5,6 +5,7 @@ import { expect, test } from 'bun:test'
 import { create_fight, create_fight_state } from '@aresrpg/fight'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 
+import scene from '../../../../seed/scenes/adventure.json'
 import source from '../../../../seed/content/adventure.json'
 import { create_app } from '../../src/store.ts'
 import type { AuthSession } from '../../src/auth.ts'
@@ -116,10 +117,9 @@ test('the authored companion is valid, and its gear never enters the live catalo
 
 test('the companion walks the authored bridge using the same solid-world navigator', async () => {
   const { compile_runtime_world_recipe } = await import('@aresrpg/engine')
-  const { adventure_terrain } = await import('../../src/adventure/terrain.ts')
   const { create_world_collision } = await import('../../src/game/core/world_collision.ts')
   const { step_walking_follower } = await import('../../src/game/core/walking_follower.ts')
-  const collision = create_world_collision(compile_runtime_world_recipe(adventure_terrain()), (error) => {
+  const collision = create_world_collision(compile_runtime_world_recipe(scene.world), (error) => {
     throw error
   })
   let position: readonly [number, number, number] = [129, 80, 196]

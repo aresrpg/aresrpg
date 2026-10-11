@@ -3,7 +3,7 @@
 // Effect-only client automation. Party owns the toggle fact; this module advances the external
 // presentation feed, emits existing position intents, and composes existing fight join doors.
 
-import { compile_runtime_world_recipe, parse_world_recipe, world_terrain } from '@aresrpg/engine'
+import { compile_runtime_world_recipe, world_terrain } from '@aresrpg/engine/data'
 import { client_to_chain_coordinate } from '@aresrpg/immutable'
 import type { HydratedFightCheckpoint } from '@aresrpg/fight'
 import { character_checkpoint, type CharacterRow, type FightRow, type PartyRow } from '@aresrpg/protocol'

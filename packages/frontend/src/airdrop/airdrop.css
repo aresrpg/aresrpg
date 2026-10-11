@@ -328,3 +328,6 @@
   height: auto;
   max-height: calc(100cqh - 24px);
 }
+.aui-window.aui-airdrop-port:has([data-crew-dialogue]) {
+  width: min(620px, calc(100cqw - 28px));
+}

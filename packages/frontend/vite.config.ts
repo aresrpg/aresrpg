@@ -17,6 +17,7 @@ import { locale_manifest_plugin } from './locale_assets.ts'
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { require_reporting_dsn } from './src/reporting_config.ts'
 import { display_assets_plugin } from './display_assets.ts'
+import { escape_html, social_cards_plugin } from './social_cards.ts'
 import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 import { solana_rpc_plugin } from './solana_rpc_dev.ts'
@@ -24,14 +25,6 @@ import { gift_dev_plugin } from './gift_dev.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
-
-const escape_html = (value: string): string =>
-  value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
 
 const html_env_plugin = (env: PublicEnv): Plugin => {
   const values = {
@@ -83,6 +76,7 @@ export default defineConfig(({ mode }) => {
       { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/logo-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
+    screenshots: [{ src: '/social/home.jpg', sizes: '1200x630', type: 'image/jpeg', form_factor: 'wide' }],
   }
   return {
     // Local clients opt in through VITE_SERVER_WS_URL; production still verifies every login.
@@ -114,6 +108,20 @@ export default defineConfig(({ mode }) => {
         characters_dir: resolve(repo_dir, 'seed/icons/characters'),
         items_dir: resolve(repo_dir, 'seed/icons/items'),
       }),
+      social_cards_plugin(
+        {
+          cards_dir: resolve(repo_dir, 'seed/icons/social'),
+          content_dir: resolve(repo_dir, 'seed/content'),
+          copy_path: resolve(frontend_dir, 'src/i18n/locales/en.yaml'),
+          icons_dir: resolve(repo_dir, 'seed/icons'),
+        },
+        {
+          app_url: env.app_url,
+          font_path: resolve(repo_dir, 'packages/journal/public/assets/jetbrains-mono.woff2'),
+          logo_path: resolve(repo_dir, 'seed/scenes/aresrpg_text_logo.png'),
+          tokens_path: resolve(frontend_dir, 'src/tailwind.css'),
+        }
+      ),
       ...(mode === 'development'
         ? [seed_dev_plugin({ repo_dir, content_dir: resolve(repo_dir, 'seed/content') })]
         : []),
@@ -130,10 +138,17 @@ export default defineConfig(({ mode }) => {
           // Content art loads on demand and is never precached. Chain, auth, and world requests stay network-owned.
           // Manifest icons are added by VitePWA independently of this versioned app-file glob.
           globPatterns: ['**/*.{js,css,html,ico,webmanifest}'],
-          globIgnores: ['logo-192.png', 'logo-512.png'],
+          // Route shells under a directory exist for crawlers; navigations fall back to the root shell.
+          globIgnores: ['logo-192.png', 'logo-512.png', '*/**/index.html'],
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/api\//, /^\/ingest(?:\/|$)/, /^\/agents(?:\/|$)/, /^\/llms\.txt$/],
+          navigateFallbackDenylist: [
+            /^\/api\//,
+            /^\/ingest(?:\/|$)/,
+            /^\/agents(?:\/|$)/,
+            /^\/links(?:\/|$)/,
+            /^\/llms\.txt$/,
+          ],
         },
       }),
     ],

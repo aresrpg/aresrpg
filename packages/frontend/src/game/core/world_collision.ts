@@ -8,7 +8,7 @@ import {
   load_generated_city_artifacts_for,
   sample_world_column,
   structure_voxels,
-} from '@aresrpg/engine'
+} from '@aresrpg/engine/data'
 import { walkable_spawn_height } from './collision.ts'
 
 export const city_collision_readiness = (

@@ -19,6 +19,8 @@ export type WorldPose = Readonly<{
   riding: boolean
   /** 0..1 through the celestial cycle — feeds the day/night bar */
   time_of_day: number
+  /** Actual manual world input; automatic travel and companion following do not qualify. */
+  manual_movement?: boolean
   /** Remaining planned walking distance; absent until a complete route is known. */
   route?: Readonly<{ x: number; z: number; remaining: number | null }> | null
 }>

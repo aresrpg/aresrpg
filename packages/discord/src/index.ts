@@ -19,7 +19,6 @@ const main = async () => {
   const forward = create_forwarder({
     copy: await load_copy(process.env.DISCORD_LOCALE ?? 'en'),
     scope: `${config.scope}:${bot.id}`,
-    network: config.network,
     resolve_name: create_suins_resolver({
       client: new SuiGrpcClient({ network: config.network, baseUrl: config.rpc_url }),
     }),

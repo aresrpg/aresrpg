@@ -82,6 +82,9 @@ test('crowd identity ignores colors but separates animation and topology', () =>
   )
   expect(is_character_crowd_spec(first)).toBeTrue()
   expect(is_character_crowd_spec({ ...first, presentation: 'individual' })).toBeFalse()
+  expect(is_character_crowd_spec({ ...first, animation: { name: 'DEATH', time_scale: 1 } })).toBeFalse()
+  expect(is_character_crowd_spec({ ...first, animation: { name: 'DEATH', time_scale: 1, loop: true } })).toBeTrue()
+  expect(is_character_crowd_spec({ ...first, animation: { name: 'RUN', time_scale: 1, loop: false } })).toBeFalse()
 })
 
 test('compatible world characters become one skinned instance batch with retained anchors', async () => {

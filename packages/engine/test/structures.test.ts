@@ -58,8 +58,12 @@ const recipe = {
 } as const satisfies WorldRecipe
 
 describe('voxel structures', () => {
-  test('loads every preprocessed type through human-editable packs', () => {
-    expect(Object.keys(STRUCTURE_TYPES)).toHaveLength(179)
+  test('human-editable packs resolve their named preprocessed types', () => {
+    expect(
+      Object.values(STRUCTURE_PACKS).flatMap(({ types }) =>
+        types.filter(({ type }) => !Object.hasOwn(STRUCTURE_TYPES, type))
+      )
+    ).toEqual([])
     expect(STRUCTURE_PACKS.temperate_trees?.types.length).toBeGreaterThan(5)
     expect(STRUCTURE_PACKS.temperate_ruins?.types).toEqual([{ type: 'temperate_ruined_arch', weight: 1 }])
   })

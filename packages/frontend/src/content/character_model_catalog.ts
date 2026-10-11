@@ -39,8 +39,15 @@ const CHARACTER_MODELS: Readonly<
 
 export const authored_character_model_classes = Object.freeze(Object.keys(CHARACTER_MODELS))
 
+/** Bodies no class owns. They obey the same body/hair contract and share the character model home. */
+export const NPC_CHARACTER_MODELS: Readonly<Record<string, CharacterModelBasenames>> = Object.freeze({
+  blast_girl: Object.freeze({ body: 'blast_girl' }),
+})
+
 export const character_model_basenames = (classe: string, male: boolean): CharacterModelBasenames =>
-  CHARACTER_MODELS[classe.toLowerCase()]?.[male ? 'male' : 'female'] ?? SENSHI_MODELS[male ? 'male' : 'female']
+  NPC_CHARACTER_MODELS[classe.toLowerCase()] ??
+  CHARACTER_MODELS[classe.toLowerCase()]?.[male ? 'male' : 'female'] ??
+  SENSHI_MODELS[male ? 'male' : 'female']
 
 export const worn_equipment_category = (category: string): 'hat' | 'cloak' | null => {
   if (category === 'hat' || category === 'cosmetic_hat') return 'hat'

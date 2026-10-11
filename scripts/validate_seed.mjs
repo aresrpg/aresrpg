@@ -322,7 +322,7 @@ const used_mob_models = new Set()
 for (const { mob_type } of mobs) {
   const model = model_variant_identity(mob_type, mob_model_basenames)
   if (!model) {
-    red('M-MOB-MODEL', `mob ${mob_type} has no exact or __-variant model`)
+    red('M-MOB-MODEL', `mob ${mob_type} has no exact, explicit-variant, or protector-family model`)
     continue
   }
   used_mob_models.add(model.basename)

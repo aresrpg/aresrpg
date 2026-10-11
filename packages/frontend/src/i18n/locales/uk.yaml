@@ -220,6 +220,8 @@ trade_panel:
 transaction_unknown_toast: Вашу останню дію ще перевіряють. Наступні транзакції заблоковано, доки її результат не стане відомим.
 transaction_recovered_toast: Вашу попередню транзакцію знайдено. Оновіть сторінку, щоб побачити результат, перш ніж обирати наступну дію.
 world_hud:
+  crew_talk: 'Поговорити з Blast Girl'
+  crew_talk_touch: 'Поговорити з Blast Girl'
   map_party_legend: 'Бірюзовий: група · Золотий: лідер'
   dismount_prompt_touch: 'Торкніться, щоб спішитися'
   spawn_press_attack_touch: 'Торкніться, щоб атакувати'
@@ -355,6 +357,8 @@ world_hud:
   resource_face_protector: 'Натисніть {{key}}, щоб битися'
   zone_never_arrived: 'Пошук пройшов, але світ його не показав — шар читання, можливо, відстає'
 demo_page:
+  animation_loop: Циклічна анімація
+  animation_auto: Автоматично (рух)
   asset_demo_city: Демонстраційне місто
   asset_house_1: Міський будинок A
   asset_house_2: Міський будинок B
@@ -435,6 +439,10 @@ demo_page:
   control_hint: Натисніть на canvas · WASD для руху · Пробіл для стрибка · Миша для огляду
   back: Назад до застосунку
 marketplace_page:
+  filter_all: 'Усі категорії'
+  filter_empty: 'Нічого не знайдено. Змініть фільтр або запит.'
+  lot_price: 'Загальна ціна лота'
+  type_count_hint: 'Різні типи предметів у публічному продажу'
   total_units: 'Усього одиниць'
   market_cap: 'Капіталізація'
   market_cap_basis: 'Усі наявні одиниці × середня ціна одиниці за останній день із продажами на графіку, без комісій.'
@@ -558,6 +566,16 @@ mastery_page:
   offer_purchased: Нагороду майстерності придбано.
 
 airdrop_page:
+  crew_view_sale: 'Відкрити продаж KARES'
+  crew_dialogue:
+    intro: 'Візьми участь у продажу токена KARES, і я матиму для тебе подарунок.'
+    connect: 'Підключи гаманець, який використав для продажу, і перевірмо, чи тут твій подарунок.'
+    checking: 'Зараз перевірю твої подарунки…'
+    ready: 'Твій шолом Crew тут!'
+    claiming: 'Зачекай трохи, триває отримання подарунків.'
+    claimed: 'Я вже віддала тобі шолом Crew. Носи з гордістю!'
+    empty: 'Зараз для цього гаманця немає доступного шолома Crew. Можливо, його вже отримали або розподіл ще триває.'
+    unavailable: 'Не вдалося перевірити подарунки. Спробуй ще раз.'
   reward_title: 'Ви отримали подарунок!'
   reward_received: 'Ви отримали {items}!'
   reward_needs_sui: 'Ваш подарунок у безпеці в гаманці. Додайте трохи SUI для оплати транзакції, а потім заберіть нагороду.'
@@ -598,6 +616,9 @@ airdrop_page:
     physical: 'Фізична подарункова картка'
     game_wallet: 'Нагороди ветеранів Hytale'
   campaigns:
+    blast_crew:
+      title: 'Шолом Crew'
+      description: 'Косметичний подарунок учасникам продажу KARES на Blast. Після розподілу підключіть використаний гаманець.'
     oeuftermath:
       title: 'Aftermath Eggs · Oeuftermath'
       description: 'Власники Aftermath Egg на знімку отримують ваучер на улюбленця Oeuftermath. Перевірте гаманець, на якому тоді було яйце. Пізніша купівля не дає права на нагороду.'
@@ -2603,6 +2624,13 @@ spell_effects:
   expires_next_turn: 'До наступного ходу'
 
 ui:
+  feedback_question: 'Що заважає вам продовжити?'
+  feedback_unclear: 'Не знаю, що робити'
+  feedback_controls: 'Керування'
+  feedback_performance: 'Повільна робота чи помилки'
+  feedback_funding: 'Поповнення гаманця'
+  feedback_not_interested: 'Ця гра не для мене'
+  feedback_dismiss: 'Закрити'
   multiplayer: 'Мультиплеєр'
   nearby_fights: 'Бої поруч'
   nearby_fights_empty: 'Поруч немає відстежуваних боїв'

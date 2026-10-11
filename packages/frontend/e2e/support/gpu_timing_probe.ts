@@ -80,7 +80,13 @@ export const install_gpu_timing_probe = (): void => {
         const before = metrics(true)
         large_uploads.length = 0
         active = frame
-        await new Promise(requestAnimationFrame)
+        // The engine may skip display callbacks to honor the selected quality's frame budget.
+        for (let attempt = 0; attempt < 120 && frame.count === 0; attempt += 1) await new Promise(requestAnimationFrame)
+        if (frame.count === 0) {
+          active = null
+          query.destroy()
+          throw new Error('GPU probe observed no rendered passes')
+        }
         active = null
         const after = metrics()
         const resolved = device.createBuffer({
@@ -89,7 +95,6 @@ export const install_gpu_timing_probe = (): void => {
         })
         const read = device.createBuffer({ size: 4096, usage: usage.copy_dst | usage.map_read })
         try {
-          if (!frame.count) throw new Error('GPU probe observed no rendered passes')
           const encoder = create_encoder()
           encoder.resolveQuerySet(query, 0, frame.count, resolved, 0)
           encoder.copyBufferToBuffer(resolved, 0, read, 0, frame.count * 8)

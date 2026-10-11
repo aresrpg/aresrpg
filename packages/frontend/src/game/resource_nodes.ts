@@ -3,7 +3,8 @@
 // One chain resource pack becomes adjacent visual seats. Every seat keeps the same pack
 // identity for gathering; only its ordinal is presentation.
 
-import { mulberry, type ResourceNodeMarker } from '@aresrpg/engine'
+import { mulberry } from '@aresrpg/engine/data'
+import type { ResourceNodeMarker } from '@aresrpg/engine'
 
 import { publish_spawn_tag } from './core/nametag_feed.ts'
 import { read_pose } from './core/pose_feed.ts'

@@ -1,0 +1,13 @@
+Open lorito.blend. Select Lorito - Redesign to edit the mesh and rig.
+All five palettes are packed; palettes.json defines export order.
+
+Export Lorito_Rig and Lorito_Mesh to lorito_base.glb beside this file. Use GLB,
+selected objects, active scene, NLA tracks, animation slide-to-zero, Draco level 6,
+position 14, normal 10, UV 12 and generic 12 bits. Disable single-armature action
+export and retain IDLE, RUN, ATTACK and DEATH. Clear the active action for export,
+then restore IDLE.
+
+Run the external pack_variants.py inside Blender with this project open. It reads
+packed images and writes lorito.glb and golden_lorito.glb under seed/models/mobs/.
+The golden export shares geometry and keeps its 1.48 scale. Delete lorito_base.glb
+after validation. Embedded construction text blocks are historical recipes.

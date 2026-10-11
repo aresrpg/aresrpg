@@ -16,6 +16,8 @@ const png_dimensions = (path: string): Readonly<{ width: number; height: number 
 }
 
 type GlbJson = Readonly<{
+  nodes?: readonly Readonly<{ name?: string; children?: readonly number[] }>[]
+  skins?: readonly Readonly<{ joints: readonly number[] }>[]
   animations?: readonly Readonly<{ name?: string }>[]
   meshes?: readonly Readonly<{
     primitives: readonly Readonly<{ attributes: Readonly<Record<string, number>> }>[]
@@ -40,6 +42,15 @@ test('every authored pet owns its model and canonical icon pair', () => {
   const pets = items_source.filter(({ category }) => category === 'pet')
 
   for (const { item_type } of pets) {
+    const model = glb_json(seed('models/pets', `${item_type}.glb`))
+    const nodes = model.nodes ?? []
+    const mounts = nodes.flatMap((node, index) => (node.name === 'Mount' ? [index] : []))
+    expect(mounts, `${item_type}: one authored mount socket`).toHaveLength(1)
+    const parent = nodes.findIndex((node) => node.children?.includes(mounts[0]!))
+    expect(
+      model.skins?.some(({ joints }) => joints.includes(parent)),
+      `${item_type}: socket follows the rig`
+    ).toBeTrue()
     expect(
       glb_animations(seed('models/pets', `${item_type}.glb`)).some((name) => name.toUpperCase().includes('IDLE'))
     ).toBeTrue()

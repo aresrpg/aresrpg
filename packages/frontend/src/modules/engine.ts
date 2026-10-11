@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 /* eslint-disable functional/immutable-data, functional/prefer-immutable-types -- this module is the explicit lifecycle boundary for mutable engine and browser handles. */
 
-import { parse_world_recipe, type EntityRender } from '@aresrpg/engine'
+import type { EntityRender } from '@aresrpg/engine'
 import { chain_to_client_coordinate } from '@aresrpg/immutable'
 
 import { attach_context_menu_input } from '../game/core/context_menu_input.ts'
@@ -30,6 +30,7 @@ import { publish_self_tag } from '../game/core/nametag_feed.ts'
 import { world_terrain } from '../content/worlds.ts'
 import { content_catalog } from '../content/catalog.ts'
 import type { AppInput, AppModule, AppState } from '../store.ts'
+import { report_error } from '../reporting.ts'
 
 import { engage_sword_markers, live_spawns, mob_group_id, resource_pack_id } from './world.ts'
 import {
@@ -76,7 +77,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
   let character_key: string | null = null
   let target_generation = 0
   const storage = browser_position_storage()
-
   const resolve_selected_position = async (state: AppState): Promise<Readonly<{ x: number; z: number }> | null> => {
     const live = state.session.link_status === 'ready' ? selected_live_position(state) : null
     const checkpoint = live ?? selected_checkpoint_position(state)
@@ -145,8 +145,8 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       },
       (error: unknown) => {
         if (own_generation !== character_generation || !world) return
-        console.error(`Character ${source.id} failed to resolve its appearance.`, error)
         world.set_character(null)
+        report_error(error, { area: 'engine', action: 'character' })
       }
     )
   }
@@ -454,7 +454,6 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
             presence_entities = entities
             submit_world_entities()
           },
-          entity_height: created.entity_height,
           pet_ground_height: created.pet_ground_height,
           label: created.set_entity_caption,
         })
@@ -485,7 +484,7 @@ const observe = ({ events, dispatch, get_state, signal }: Parameters<NonNullable
       })
       .catch((error) => {
         if (signal.aborted || canvas !== next_canvas || generation !== own_generation) return
-        console.error('World engine failed to load.', error)
+        report_error(error, { area: 'engine', action: 'boot' })
         dispatch({
           type: 'engine/status',
           status: {

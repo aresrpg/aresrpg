@@ -80,6 +80,13 @@
       "spending_threshold_sui": 100,
       "name": "Hytale supporters",
       "visibility": "public"
+    },
+    {
+      "id": "blast_crew",
+      "name": "Blast crew",
+      "visibility": "public",
+      "items": ["crew_helmet"],
+      "delivery": "wallet"
     }
   ],
   "giftcards": [

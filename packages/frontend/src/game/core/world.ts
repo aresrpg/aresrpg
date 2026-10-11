@@ -16,6 +16,7 @@ import {
   type ResourceNodeMarker,
   type MaterialPreset,
   type CharacterAppearanceRender,
+  type CharacterAnimationRender,
   type MobEntityRender,
   type Vec3,
 } from '@aresrpg/engine'
@@ -45,14 +46,15 @@ import { empty_pet_motion, step_pet_follow, type PetMotion } from './pet_follow.
 import { publish_mount_prompt } from './mount_prompt_feed.ts'
 import { publish_portal_prompt } from './portal_prompt_feed.ts'
 import { fight_prompt_targets, publish_fight_prompt } from './fight_prompt_feed.ts'
-import { create_dungeon_guides, DUNGEON_GUIDE_LABEL_HEIGHT } from '../dungeon_guides.ts'
+import { create_npc_guides, DUNGEON_GUIDE_LABEL_HEIGHT } from '../npc_guides.ts'
+import { create_crew_npc } from '../crew_npc.ts'
 import {
   clear_dungeon_portal_prompt,
   dungeon_portal_targets,
   publish_dungeon_portal_prompt,
 } from './dungeon_portal_feed.ts'
 import { publish_pose, type WorldPose } from './pose_feed.ts'
-import { pet_seat_height, pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
+import { pet_vertical_offset, type PetLocomotion } from './pet_locomotion.ts'
 import { run_to_mount, type RunTarget } from './run_to.ts'
 import { create_world_collision } from './world_collision.ts'
 import { walking_edge, type WalkPoint } from './walkable.ts'
@@ -82,6 +84,7 @@ export const compose_world_entities = (
 
 /** X mounts only inside this radius — the nametag shows exactly while it would work */
 const MOUNT_RANGE = 4
+const CHARACTER_EYE_HEIGHT = CHARACTER_HEIGHT * 0.9
 /** T travels only this close to the star gate (client 0;0 — the chain's own portal law) */
 const PORTAL_RANGE = 10
 /** the gate stands at the world origin — eligibility is just the body's horizontal offset */
@@ -167,12 +170,14 @@ export const create_world = ({
   }
   let character_render: LoadedCharacterRender | null = null
   let controlled_entity: EntityRender | null = null
+  let character_animation: CharacterAnimationRender | null = null
   let pet: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null = null
   let pet_entity: MobEntityRender | null = null
   let pet_motion: PetMotion = empty_pet_motion()
   let pet_elapsed_seconds = 0
   let riding = false
   let dungeon_guide_entities: readonly EntityRender[] = []
+  let crew_entities: readonly EntityRender[] = []
   let external_entities: readonly EntityRender[] = Object.freeze([])
   let nearby_entities: readonly EntityRender[] = Object.freeze([])
   let rendered_transform: Readonly<{
@@ -286,10 +291,11 @@ export const create_world = ({
           ...external_entities,
           ...nearby_entities,
           ...dungeon_guide_entities,
+          ...crew_entities,
         ])
 
   const submit_entities = (): void => engine.set_entities(submitted_entities())
-  const dungeon_guides = create_dungeon_guides({
+  const dungeon_guides = create_npc_guides({
     submit: (entities) => {
       dungeon_guide_entities = entities
       submit_entities()
@@ -299,6 +305,16 @@ export const create_world = ({
     ground_height: surface_y,
   })
 
+  const crew_npc = create_crew_npc({
+    submit: (entities) => {
+      crew_entities = entities
+      submit_entities()
+    },
+    caption: engine.set_entity_caption,
+    ground_height: surface_y,
+    set_label: engine.set_world_label,
+  })
+
   const set_mode = (next: typeof mode): void => {
     if (next === mode) return
     if (next !== 'follow') stop_run('inactive')
@@ -306,6 +322,7 @@ export const create_world = ({
       publish_pose(null)
       engine.set_character_anchor(null)
       label_portal(false)
+      crew_npc.hide()
     }
     if (next === 'spectate') {
       const { position } = character.get_transform()
@@ -525,8 +542,7 @@ export const create_world = ({
 
   const render_character = (transform = character.get_transform()): boolean => {
     if (!character_render) return false
-    const [x, visual_y, z] = transform.visual_position
-    const y = visual_y + (riding && pet ? pet_seat_height(engine.entity_height(pet.id)) : 0)
+    const [x, y, z] = transform.visual_position
     const animation = riding ? ('SIT' as const) : transform.anim
     const visible = mode !== 'follow' || !follow_addon.is_first_person()
     if (
@@ -558,7 +574,9 @@ export const create_world = ({
         anim: animation,
         gait_scale: transform.gait_scale,
         visible,
-      })
+        mount: riding ? pet!.id : null,
+      }),
+      riding ? null : character_animation
     )
     return true
   }
@@ -646,6 +664,9 @@ export const create_world = ({
     return true
   }
 
+  const rendered_character_position = (height: number, fallback: Vec3): Vec3 =>
+    engine.entity_position(character_render?.id ?? '', height) ?? [fallback[0], fallback[1] + height, fallback[2]]
+
   const tick = (now: number, delta_seconds: number): void => {
     const world_time_of_day = world_daylight(now, pinned_time, day_night_cycle_enabled)
     let anchor: CameraAnchor
@@ -673,6 +694,7 @@ export const create_world = ({
       const character_changed = render_character(transform)
       const pet_changed = render_pet(transform, delta_seconds)
       dungeon_guides.face_player(transform.position)
+      crew_npc.update(transform.position, enabled, action_lock !== null)
       if (character_changed || pet_changed) submit_entities()
       label_portal(portal_eligible())
       sync_fight_labels()
@@ -685,13 +707,17 @@ export const create_world = ({
         water_entered: transform.water_entered,
       })
       if (transform.air_jumped) engine.play_jump_puff(transform.visual_position)
+      const rendered_position = rendered_character_position(0, transform.visual_position)
+      const eye = rendered_character_position(CHARACTER_EYE_HEIGHT, transform.visual_position)
       anchor = {
-        x: transform.visual_position[0],
-        y: transform.visual_position[1],
-        z: transform.visual_position[2],
-        eye_height: CHARACTER_HEIGHT * 0.9,
+        x: eye[0],
+        y: eye[1] - CHARACTER_EYE_HEIGHT,
+        z: eye[2],
+        eye_height: CHARACTER_EYE_HEIGHT,
         speed: transform.speed,
         on_ground: transform.on_ground,
+        velocity: transform.velocity,
+        riding,
       }
       publish_pose({
         character_id: character_render?.id ?? '',
@@ -701,11 +727,12 @@ export const create_world = ({
         yaw: director.active().get_yaw(),
         riding,
         time_of_day: world_time_of_day,
+        manual_movement: Math.hypot(held.forward, held.strafe) > 0,
         route: run_route,
       })
       // the night lantern (and any character-anchored presentation) follows the FEET, never
       // the camera target — the follow camera leads ahead of the body
-      engine.set_character_anchor([anchor.x, anchor.y, anchor.z])
+      engine.set_character_anchor(rendered_position)
     } else {
       const width = fight_board.grid_w * fight_board.cell_size
       const height = fight_board.grid_h * fight_board.cell_size
@@ -724,6 +751,7 @@ export const create_world = ({
     holograms.forEach((hologram) => hologram.update(view, mode !== 'fight'))
     engine.set_camera(view.position, view.target, {
       fov: view.fov,
+      speed_wind: view.speed_wind,
       ortho_blend: view.ortho_blend,
       ortho_height: view.ortho_height,
     })
@@ -792,6 +820,11 @@ export const create_world = ({
       render_pet()
       submit_entities()
     },
+    set_character_animation: (next: CharacterAnimationRender | null) => {
+      character_animation = next ? Object.freeze({ ...next }) : null
+      rendered_transform = null
+      if (render_character()) submit_entities()
+    },
     set_nearby_entities: (next: readonly EntityRender[]) => {
       nearby_entities = next
       submit_entities()
@@ -809,6 +842,7 @@ export const create_world = ({
     },
     set_resource_nodes: (markers: readonly ResourceNodeMarker[], height_at = surface_y) =>
       engine.set_resource_nodes(markers.map((marker) => ({ ...marker, y: height_at(marker.x, marker.z) }))),
+    set_crew_world: crew_npc.set_world,
     set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => {
       dungeon_portal_markers = Object.freeze([...markers])
       engine.set_dungeon_portals(markers)
@@ -820,12 +854,12 @@ export const create_world = ({
     entity_height: engine.entity_height,
     set_pet: (next: Readonly<{ id: string; model_url: string; locomotion: PetLocomotion }> | null) => {
       pet = next ? Object.freeze(next) : null
+      rendered_transform = null
       pet_motion = empty_pet_motion()
       pet_elapsed_seconds = 0
       if (!pet && riding) {
         riding = false
         character.set_input({ speed_scale: 1, glide: false })
-        rendered_transform = null
       }
       render_character()
       render_pet()
@@ -932,6 +966,7 @@ export const create_world = ({
         dragging = null
         engine.stop()
         publish_pose(null)
+        crew_npc.hide()
       }
     },
     set_interactive: (next: boolean) => {
@@ -939,6 +974,7 @@ export const create_world = ({
       enabled = next
       if (!next) {
         clear_movement()
+        crew_npc.hide()
       }
       canvas.style.cursor = next ? 'grab' : 'default'
     },
@@ -984,6 +1020,7 @@ export const create_world = ({
       clear_fight_labels()
       clear_dungeon_portal_labels()
       dungeon_guides.dispose()
+      crew_npc.dispose()
       canvas.removeEventListener('pointerdown', on_pointer_down)
       canvas.removeEventListener('pointermove', on_pointer_move)
       globalThis.removeEventListener('pointerup', on_pointer_up)

@@ -14,7 +14,7 @@ import {
   type HydratedFightCheckpoint,
   type SpellEffect,
 } from '@aresrpg/fight'
-import { fight_path_gait, type FightCastStyle, type FightPresentationCue } from '@aresrpg/engine'
+import type { FightCastStyle, FightPresentationCue } from '@aresrpg/engine'
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import { fight_entity_id as entity_id, fight_zone_change_cues } from './fight_cue_projection.ts'
@@ -326,7 +326,7 @@ const assign_walk_mp = (cues: readonly FightPresentationCue[]): readonly FightPr
       return Object.freeze({
         ...cue,
         mp_spent: total?.last === index ? total.total : 0,
-        gait: fight_path_gait(total?.cells ?? cue.cells.length),
+        gait: (total?.cells ?? cue.cells.length) >= 3 ? 'run' : 'walk',
       })
     })
   )

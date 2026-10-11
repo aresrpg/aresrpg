@@ -3,6 +3,7 @@
 
 import { AmbushPrompt } from '../components/AmbushPrompt.tsx'
 import { DungeonPortalPrompt } from '../components/DungeonPortalPrompt.tsx'
+import { CrewNpcPrompt } from '../components/CrewNpcPrompt.tsx'
 import { FightPrompt } from '../components/FightPrompt.tsx'
 import { MountPrompt } from '../components/MountPrompt.tsx'
 import { PlayerNametag } from '../components/PlayerNametag.tsx'
@@ -15,6 +16,7 @@ export const WorldInteractions = ({ copy }: Readonly<{ copy: AppCopy }>) => (
     <MountPrompt copy={copy} />
     <FightPrompt copy={copy} />
     <DungeonPortalPrompt copy={copy} />
+    <CrewNpcPrompt copy={copy} />
     <PortalPrompt copy={copy} />
     <PlayerNametag />
     <SpawnNametag copy={copy} />

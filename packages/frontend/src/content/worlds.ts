@@ -4,11 +4,10 @@
 
 import {
   compile_runtime_world_recipe,
-  parse_world_recipe,
   sample_biome_cell,
   worlds_source,
   type CompiledWorld,
-} from '@aresrpg/engine'
+} from '@aresrpg/engine/data'
 import { world_center } from '@aresrpg/immutable'
 import { ZONE_SIZE } from '@aresrpg/protocol'
 
@@ -18,8 +17,8 @@ export {
   world_city_areas,
   world_terrain,
   worlds_source,
-} from '@aresrpg/engine'
-export type { WorldCityArea as ClientCityArea } from '@aresrpg/engine'
+} from '@aresrpg/engine/data'
+export type { WorldCityArea as ClientCityArea } from '@aresrpg/engine/data'
 
 const biome_worlds = new Map<string, CompiledWorld>()
 

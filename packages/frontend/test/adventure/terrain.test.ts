@@ -4,17 +4,18 @@
 import { beforeAll, expect, test } from 'bun:test'
 import { compile_runtime_world_recipe, sample_world_column, structure_voxels } from '@aresrpg/engine'
 
+import scene from '../../../../seed/scenes/adventure.json'
 import adventure from '../../../../seed/content/adventure.json'
 import environment from '../../../../seed/content/adventure_environment.json'
-import { adventure_terrain, adventure_movement_area } from '../../src/adventure/terrain.ts'
-import { adventure_axis, cavern_floor } from '../../src/adventure/biome.ts'
+import { adventure_movement_area } from '../../src/adventure/terrain.ts'
+import { adventure_axis, cavern_floor } from '../../src/adventure/terrain.ts'
 import { create_world_collision } from '../../src/game/core/world_collision.ts'
 import { walking_edge, type WalkPoint } from '../../src/game/core/walkable.ts'
 
 let world: ReturnType<typeof compile_runtime_world_recipe>
 let collision: ReturnType<typeof create_world_collision>
 beforeAll(() => {
-  world = compile_runtime_world_recipe(structuredClone(adventure_terrain()))
+  world = compile_runtime_world_recipe(structuredClone(scene.world))
   collision = create_world_collision(world, (error) => {
     throw error
   })

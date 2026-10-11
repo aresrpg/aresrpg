@@ -11,6 +11,9 @@ import { ThinkingOrb } from 'thinking-orbs'
 
 import { read_scene, subscribe_scene } from './game/core/scene_feed.ts'
 import { WorldLoading } from './components/WorldLoading.tsx'
+import type { LoadingProgress } from './game/core/loading_progress.ts'
+import { OnboardingFeedback } from './analytics/OnboardingFeedback.tsx'
+import { selected_world as selected_world_name } from './modules/engine_selection.ts'
 import { character_creation_failure_message, character_creation_insufficient } from './character_creation_funding.ts'
 import { CrushResultModal } from './characters/CrushResultModal.tsx'
 import { Login } from './components/Login.tsx'
@@ -74,6 +77,20 @@ export function PlayerRuntime({
   const dungeon_active = useAppStore((state) => selected_dungeon_run(state) !== null)
   const dungeon_lobby_open = dungeon_lobby_visible(navigation.page, fight_active, dungeon_active)
   const { wallet } = session
+  const selected_world = useAppStore(selected_world_name)
+  const on_loading_progress = useCallback(
+    ({ stage }: LoadingProgress) => {
+      if (wallet && selected_world)
+        dispatch_app({
+          type: 'analytics/world_loading',
+          wallet,
+          world: selected_world,
+          stage,
+          at_ms: performance.now(),
+        })
+    },
+    [wallet, selected_world]
+  )
   const [show_wallets, set_show_wallets] = useState(false)
   const [graphics_notice_dismissed, set_graphics_notice_dismissed] = useState<string | null>(null)
   const attached_canvas = useRef<HTMLCanvasElement | null>(null)
@@ -159,6 +176,7 @@ export function PlayerRuntime({
                 source={loading_scene}
                 quality={settings.quality}
                 render_distance={settings.render_distance}
+                on_progress={on_loading_progress}
               />
 
               {!fight_active && !dungeon_active && (
@@ -230,6 +248,7 @@ export function PlayerRuntime({
         )}
         {in_app && navigation.dialog === 'travel' && <TravelModal copy={copy} />}
         <Toasts />
+        <OnboardingFeedback />
         <BackgroundGatherProgress copy={copy} />
         <CrushResultModal copy={copy} />
         <SessionIndexingCatchup copy={copy} indexing_lag={session.indexing_lag} status={session.link_status} />

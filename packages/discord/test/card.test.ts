@@ -25,7 +25,8 @@ test('exact MIST formatting never rounds through a floating point number', () =>
 })
 test('the card posts as a bare attachment, carries its marker, and untrusted names cannot create mentions', async () => {
   const model = announcement(await load_copy('en'), { [row.seller]: '**@everyone**' }, parse_notification(row))!
-  const card = notification_card(model.content, 'marker', row.digest, 'mainnet')
+  const card = notification_card(model.content, 'marker')
+  expect(card.content).toBe(model.content)
   expect(card.content).toContain('10× Gnawed branch')
   expect(card.content).toContain('2.5 SUI')
   expect(card.content).not.toContain('@everyone')

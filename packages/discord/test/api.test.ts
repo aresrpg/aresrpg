@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test'
 import { create_discord_api } from '../src/api.ts'
 import { notification_card } from '../src/card.ts'
 
-const card = notification_card('Sold an item', 'abc', '1'.repeat(44), 'mainnet')
+const card = notification_card('Sold an item', 'abc')
 const png = new Uint8Array([137, 80, 78, 71])
 const mock_fetch = (handler: (url: string, options: RequestInit) => Response): typeof fetch =>
   ((url: string, options: RequestInit) => Promise.resolve(handler(url, options))) as typeof fetch

@@ -5,6 +5,7 @@ import { expect, test } from 'bun:test'
 
 for (const name of [
   'renderer_background',
+  'renderer_cadence',
   'renderer_failure',
   'fight_swords_lifecycle',
   'webgpu_cleanup',

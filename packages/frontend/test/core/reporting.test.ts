@@ -184,3 +184,27 @@ test('production CSP allows the European Sentry ingestion endpoint', () => {
   expect(connections).toContain('https://*.ingest.de.sentry.io')
   expect(connections).not.toContain('*')
 })
+
+test('Sentry retains browser attribution without retaining credentials or arbitrary request headers', () => {
+  const agent =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1'
+  for (const key of ['User-Agent', 'user-agent']) {
+    const report = before_send(
+      {
+        type: undefined,
+        request: {
+          url: 'https://aresrpg.world/play-demo#private-bearer',
+          headers: {
+            [key]: agent,
+            Authorization: 'Bearer private-token',
+            Cookie: 'session=private-cookie',
+            'X-Wallet': 'private-wallet',
+          },
+        },
+      },
+      {}
+    )
+    expect(report?.request?.headers).toEqual({ 'User-Agent': agent })
+    expect(JSON.stringify(report)).not.toContain('private-')
+  }
+})

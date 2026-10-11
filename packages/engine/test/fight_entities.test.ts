@@ -11,9 +11,8 @@ import {
   create_entity_layer,
   fight_flash_envelope,
   fight_gait_cell_ms,
-  fight_path_gait,
   fight_reaction_envelope,
-  resolve_entity_locomotion_clip,
+  resolve_entity_animation_clip,
 } from '../src/entities.ts'
 
 const board = Object.freeze({
@@ -33,11 +32,6 @@ describe('fight entity rendering', () => {
     const pins: readonly { why: string; actual: unknown; expected: unknown }[] = [
       { why: 'world height is unscaled', actual: character_entity_scale('world'), expected: 1 },
       { why: 'the fight-only player scale', actual: character_entity_scale('fight_cell'), expected: 0.7 },
-      {
-        why: 'the path-length gait boundary',
-        actual: [1, 2, 3, 4].map(fight_path_gait),
-        expected: ['walk', 'walk', 'run', 'run'],
-      },
       { why: 'the walk pace', actual: fight_gait_cell_ms('walk'), expected: 480 },
       { why: 'the run pace', actual: fight_gait_cell_ms('run'), expected: 170 },
       { why: 'facing quantizes east', actual: cardinal_target_yaw(origin, new Vector3(1, 0, 4)), expected: 0 },
@@ -85,7 +79,7 @@ describe('fight entity rendering', () => {
     ]
 
     cases.forEach(({ clips: available, requested, resolved }) => {
-      expect(resolve_entity_locomotion_clip(available, requested)?.name, requested).toBe(resolved)
+      expect(resolve_entity_animation_clip(available, requested)?.name, requested).toBe(resolved)
     })
   })
 

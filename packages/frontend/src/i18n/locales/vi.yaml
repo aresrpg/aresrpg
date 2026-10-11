@@ -223,6 +223,8 @@ trade_panel:
 transaction_unknown_toast: Thao tác trước vẫn đang được kiểm tra. Giao dịch tiếp theo bị chặn cho đến khi biết kết quả.
 transaction_recovered_toast: Đã tìm thấy giao dịch trước. Hãy tải lại để xem kết quả trước khi chọn thao tác tiếp theo.
 world_hud:
+  crew_talk: 'Nói chuyện với Blast Girl'
+  crew_talk_touch: 'Nói chuyện với Blast Girl'
   map_party_legend: 'Xanh ngọc: tổ đội · Vàng: trưởng nhóm'
   dismount_prompt_touch: 'Chạm để xuống thú'
   spawn_press_attack_touch: 'Chạm để tấn công'
@@ -358,6 +360,8 @@ world_hud:
   resource_face_protector: Nhấn {{key}} để đối mặt
   zone_never_arrived: Đã khám phá nhưng thế giới chưa hiển thị kết quả — dữ liệu đọc có thể đang chậm
 demo_page:
+  animation_loop: Lặp hoạt ảnh
+  animation_auto: Tự động (theo di chuyển)
   asset_demo_city: Thành phố mẫu
   asset_house_1: Nhà phố A
   asset_house_2: Nhà phố B
@@ -438,6 +442,10 @@ demo_page:
   control_hint: Nhấp vùng vẽ · WASD di chuyển · Space nhảy · Chuột để nhìn
   back: Quay lại ứng dụng
 marketplace_page:
+  filter_all: 'Tất cả danh mục'
+  filter_empty: 'Không có kết quả. Thử bộ lọc hoặc từ khóa khác.'
+  lot_price: 'Tổng giá cho lô'
+  type_count_hint: 'Các loại vật phẩm khác nhau đang được rao bán công khai'
   total_units: 'Tổng số lượng'
   market_cap: 'Vốn hóa'
   market_cap_basis: 'Tổng số đơn vị hiện có × giá trung bình mỗi đơn vị của ngày giao dịch gần nhất trên biểu đồ, không gồm phí.'
@@ -560,6 +568,16 @@ mastery_page:
   quest_started: Đã giao nhiệm vụ hằng ngày.
   offer_purchased: Đã mua phần thưởng Tinh thông.
 airdrop_page:
+  crew_view_sale: 'Xem đợt bán KARES'
+  crew_dialogue:
+    intro: 'Tham gia đợt bán token KARES nhé, tôi sẽ có một món quà dành cho bạn.'
+    connect: 'Kết nối ví bạn đã dùng để tham gia đợt bán, rồi xem quà của bạn đã đến chưa nhé.'
+    checking: 'Để tôi kiểm tra quà của bạn…'
+    ready: 'Mũ Crew của bạn đã đến!'
+    claiming: 'Chờ một chút, quà của bạn đang được nhận.'
+    claimed: 'Tôi đã trao mũ Crew cho bạn rồi. Hãy đội nó thật tự hào nhé!'
+    empty: 'Hiện chưa có quà mũ Crew cho ví này. Có thể bạn đã nhận rồi, hoặc việc phân phối vẫn đang chờ hoàn tất.'
+    unavailable: 'Tôi không kiểm tra được quà của bạn. Vui lòng thử lại.'
   reward_title: 'Bạn đã nhận được quà!'
   reward_received: 'Bạn đã nhận được {items}!'
   reward_needs_sui: 'Quà của bạn đã được giữ an toàn trong ví. Hãy nạp một ít SUI để trả phí giao dịch, rồi nhận phần thưởng.'
@@ -600,6 +618,9 @@ airdrop_page:
     physical: Thẻ quà tặng giấy
     game_wallet: Thưởng kỳ cựu Hytale
   campaigns:
+    blast_crew:
+      title: 'Mũ Crew'
+      description: 'Quà ngoại hình dành cho người tham gia đợt bán KARES trên Blast. Kết nối ví đã tham gia sau khi quà được phân phối.'
     oeuftermath:
       title: Aftermath Eggs · Oeuftermath
       description: Người giữ Aftermath Egg lúc chụp dữ liệu nhận thẻ thú Oeuftermath. Kiểm tra ví đã giữ Egg khi đó; mua Egg sau này không tạo điều kiện nhận.
@@ -2570,6 +2591,13 @@ spell_effects:
   short_stat: 'CHỈ SỐ'
   expires_next_turn: 'Đến lượt tiếp theo'
 ui:
+  feedback_question: 'Điều gì khiến bạn khó tiếp tục?'
+  feedback_unclear: 'Không biết phải làm gì'
+  feedback_controls: 'Cách điều khiển'
+  feedback_performance: 'Chậm hoặc gặp lỗi'
+  feedback_funding: 'Nạp tiền vào ví'
+  feedback_not_interested: 'Không hợp với tôi'
+  feedback_dismiss: 'Đóng'
   multiplayer: 'Nhiều người chơi'
   nearby_fights: 'Trận đấu gần đây'
   nearby_fights_empty: 'Không có trận đấu được theo dõi ở gần'

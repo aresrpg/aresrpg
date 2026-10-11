@@ -220,6 +220,8 @@ trade_panel:
 transaction_unknown_toast: Your last action is still being checked. Further transactions are blocked until its outcome is known.
 transaction_recovered_toast: Your previous transaction was found. Refresh to see its result before choosing your next action.
 world_hud:
+  crew_talk: 'Talk to Blast Girl'
+  crew_talk_touch: 'Talk to Blast Girl'
   map_party_legend: 'Cyan: party · Gold: leader'
   dismount_prompt_touch: 'Tap to dismount'
   spawn_press_attack_touch: 'Tap to attack'
@@ -355,6 +357,8 @@ world_hud:
   resource_face_protector: 'Press {{key}} to face it'
   zone_never_arrived: 'The search went through, but the world never showed it — the read layer may be behind'
 demo_page:
+  animation_loop: Loop animation
+  animation_auto: Automatic (movement)
   asset_demo_city: Demo city
   asset_house_1: Townhouse A
   asset_house_2: Townhouse B
@@ -435,6 +439,10 @@ demo_page:
   control_hint: Click canvas · WASD to move · Space to jump · Mouse to look
   back: Back to app
 marketplace_page:
+  filter_all: 'All categories'
+  filter_empty: 'No matches. Try another filter or search.'
+  lot_price: 'Total price for the lot'
+  type_count_hint: 'Distinct item types with public listings'
   total_units: 'Total units'
   market_cap: 'Market cap'
   market_cap_basis: 'Total existing units × the chart’s latest traded-day average unit price, excluding fees.'
@@ -558,6 +566,16 @@ mastery_page:
   offer_purchased: Mastery reward purchased.
 
 airdrop_page:
+  crew_view_sale: 'View the KARES sale'
+  crew_dialogue:
+    intro: 'Participate in the KARES token sale and I’ll have a gift for you.'
+    connect: 'Connect the wallet you used for the sale and let’s see whether your gift is here.'
+    checking: 'Let me check your gifts…'
+    ready: 'Your Crew Helmet is here!'
+    claiming: 'One moment—your gifts are being collected.'
+    claimed: 'I’ve already handed over your Crew Helmet. Wear it with pride!'
+    empty: 'I don’t have a Crew Helmet gift for this wallet right now. It may already be claimed, or distribution may still be pending.'
+    unavailable: 'I couldn’t check your gifts. Please try again.'
   reward_title: 'You got a gift!'
   reward_received: 'You got {items}!'
   reward_needs_sui: 'Your gift is safe in your wallet. Add a little SUI to pay for the claim transaction, then claim your reward.'
@@ -598,6 +616,9 @@ airdrop_page:
     physical: 'Physical gift card'
     game_wallet: 'Hytale veteran rewards'
   campaigns:
+    blast_crew:
+      title: 'Crew Helmet'
+      description: 'A cosmetic gift for KARES sale participants on Blast. Connect your participating wallet after distribution.'
     oeuftermath:
       title: 'Aftermath Eggs · Oeuftermath'
       description: 'Aftermath Egg holders during the snapshot receive an Oeuftermath pet giftcard. Check the wallet that held your Egg at the snapshot; buying an Egg later does not add eligibility.'
@@ -2608,6 +2629,13 @@ spell_effects:
   expires_next_turn: 'Until next turn'
 
 ui:
+  feedback_question: 'What is making it hard to continue?'
+  feedback_unclear: 'Unsure what to do'
+  feedback_controls: 'Controls'
+  feedback_performance: 'Slow or broken'
+  feedback_funding: 'Funding my wallet'
+  feedback_not_interested: 'Not for me'
+  feedback_dismiss: 'Dismiss'
   multiplayer: 'Multiplayer'
   nearby_fights: 'Nearby fights'
   nearby_fights_empty: 'No tracked fights nearby'

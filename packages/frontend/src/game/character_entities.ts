@@ -5,6 +5,7 @@
 
 import type {
   CharacterAnimationName,
+  CharacterAnimationRender,
   CharacterAura,
   CharacterAppearanceRender,
   CharacterEntityRender,
@@ -110,7 +111,9 @@ export const world_character_entity = (
     gait_scale: number
     visible?: boolean
     presentation?: 'individual' | 'crowd'
-  }>
+    mount?: string | null
+  }>,
+  animation?: CharacterAnimationRender | null
 ): CharacterEntityRender =>
   Object.freeze({
     id: character.id,
@@ -118,8 +121,10 @@ export const world_character_entity = (
     ...(transform.presentation ? { presentation: transform.presentation } : {}),
     appearance: character.appearance,
     ...(character.aura ? { aura: character.aura } : {}),
-    anchor: Object.freeze({ kind: 'world', position: transform.position }),
+    anchor: transform.mount
+      ? Object.freeze({ kind: 'mount', entity_id: transform.mount })
+      : Object.freeze({ kind: 'world', position: transform.position }),
     facing: Object.freeze({ kind: 'yaw', yaw: transform.facing_yaw }),
-    animation: Object.freeze({ name: transform.anim, time_scale: transform.gait_scale }),
+    animation: animation ?? Object.freeze({ name: transform.anim, time_scale: transform.gait_scale }),
     visible: transform.visible,
   })

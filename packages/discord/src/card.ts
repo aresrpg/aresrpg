@@ -9,8 +9,8 @@ export const format_sui = (mist: string): string => {
 }
 export const notification_marker = (scope: string, id: string): string =>
   createHash('sha256').update(`${scope}:${id}`).digest('hex').slice(0, 24)
-export const notification_card = (content: string, marker: string, digest: string, network: string) => ({
-  content: `${content} [↗](https://suiscan.xyz/${network}/tx/${digest})`,
+export const notification_card = (content: string, marker: string) => ({
+  content,
   allowed_mentions: { parse: [] },
   nonce: marker,
   enforce_nonce: true,

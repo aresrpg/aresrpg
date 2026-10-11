@@ -45,7 +45,7 @@ export const create_blast_runtime = (
 ) => {
   const store = createStore<BlastState>(initial_blast_state)
   const dispatch = (input: BlastInput): void => store.setState((state) => reduce_blast(state, input), true)
-  const start = (): (() => void) => {
+  const begin = (): (() => void) => {
     let stopped = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let reader: ReturnType<typeof create_blast_reader>
@@ -80,6 +80,22 @@ export const create_blast_runtime = (
     return () => {
       stopped = true
       clearTimeout(timer)
+    }
+  }
+  let users = 0
+  let stop: (() => void) | null = null
+  const start = (): (() => void) => {
+    users++
+    stop ??= begin()
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      users--
+      if (users === 0) {
+        stop?.()
+        stop = null
+      }
     }
   }
   return { store, start }

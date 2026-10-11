@@ -8,7 +8,8 @@ import type { TransactionExecution } from '@aresrpg/sdk'
 
 import { analytics_enabled, analytics_properties } from '../src/analytics.ts'
 import { analytics_events } from '../src/modules/analytics.ts'
-import { create_app } from '../src/store.ts'
+import { initial_analytics_state } from '../src/analytics/state.ts'
+import { create_app, reduce_app_state } from '../src/store.ts'
 import type { AuthSession } from '../src/auth.ts'
 
 const wallet = { address: 'test-account' } as AuthSession
@@ -36,10 +37,10 @@ test('transaction observation follows the game wallet and stops on observer tear
   app.dispatch({ type: 'auth/connected', session })
   expect(listeners.size).toBe(1)
   listeners.forEach((listener) => listener({ digest: 'confirmed', outcome: 'success' }))
-  expect(app.store.getState().analytics).toEqual({ digest: 'confirmed', outcome: 'success' })
+  expect(app.store.getState().analytics.execution).toEqual({ digest: 'confirmed', outcome: 'success' })
   app.dispatch({ type: 'auth/disconnected' })
   expect(listeners.size).toBe(0)
-  expect(app.store.getState().analytics).toBeNull()
+  expect(app.store.getState().analytics).toEqual(initial_analytics_state())
   app.dispatch({ type: 'auth/connecting' })
   app.dispatch({ type: 'auth/connected', session })
   expect(listeners.size).toBe(1)
@@ -79,26 +80,40 @@ test('real fights count once per fight, excluding spectators, demo and restored 
     contract: {
       id: 'fight',
       round: 0n,
+      turn_ptr: 0n,
+      turn_started_ms: 0n,
+      queue: [0n, 1n],
+      started_ms: null,
+      ended_ms: null,
       fighters: ['hero', 'companion'].map((character) => ({
         kind: { type: 'player', character, owner: wallet.address },
         settled: false,
       })),
     },
   } as HydratedFightCheckpoint
-  const before = {
+  const roster = {
     ...base,
     session: { ...base.session, characters: [{ id: 'hero' }, { id: 'companion' }] as CharacterRow[] },
     fight: { ...base.fight, mode: 'remote' as const, cached: { fight: checkpoint } },
   }
+  const before = reduce_app_state(roster, { type: 'fight/checkpoint_confirmed', checkpoint })
+  const combat = { ...checkpoint, contract: { ...checkpoint.contract, round: 1n } }
   const after = {
     ...before,
-    fight: { ...before.fight, cached: { fight: { ...checkpoint, contract: { ...checkpoint.contract, round: 1n } } } },
+    fight: { ...before.fight, cached: { fight: combat } },
   }
-  expect(analytics_events(after, before)).toEqual([{ name: 'fight_started' }])
+  expect(analytics_events(after, before)).toEqual([]) // Speculative presentation is not execution.
+  const confirmed = reduce_app_state(after, { type: 'fight/checkpoint_confirmed', checkpoint: combat })
+  expect(analytics_events(confirmed, after)).toEqual([
+    { name: 'fight_started', properties: { control: 'manual', fight_kind: 'world', party_size: 2 } },
+  ])
+  expect(reduce_app_state(confirmed, { type: 'fight/checkpoint_confirmed', checkpoint: combat })).toBe(confirmed)
   expect(analytics_events(after, after)).toEqual([])
   expect(analytics_events(after, { ...before, fight: { ...before.fight, cached: {} } })).toEqual([])
   expect(analytics_events({ ...after, session: { ...after.session, characters: [] } }, before)).toEqual([])
   expect(analytics_events({ ...after, fight: { ...after.fight, mode: 'local' } }, before)).toEqual([])
+  const restored = reduce_app_state(roster, { type: 'fight/checkpoint_confirmed', checkpoint: combat })
+  expect(analytics_events(restored, roster)).toEqual([])
 })
 
 test('remote analytics is absent from development, tests, editor and OAuth callbacks', () => {
@@ -165,6 +180,29 @@ test('demo fights and duplicate state updates produce only real milestone change
   expect(analytics_events(app.store.getState(), entered)).toEqual([
     { name: 'demo_fight_started', properties: { encounter: 1 } },
   ])
+})
+
+test('demo combat starts only when placement advances into a real turn', () => {
+  const app = create_app()
+  const stop = app.observe(['adventure', 'fight'])
+  try {
+    app.dispatch({ type: 'adventure/entered' })
+    const exploring = app.store.getState()
+    app.dispatch({ type: 'adventure/challenge' })
+    const placement = app.store.getState()
+    expect(analytics_events(placement, exploring).map(({ name }) => name)).not.toContain('demo_combat_started')
+    app.dispatch({ type: 'fight/input', fight: null, origin: 'local', input: { type: 'ready', fighter: 0n } })
+    const fighting = app.store.getState()
+    expect(analytics_events(fighting, placement)).toContainEqual({
+      name: 'demo_combat_started',
+      properties: { encounter: 1 },
+    })
+    expect(analytics_events(fighting, fighting)).toEqual([])
+    expect(analytics_events({ ...fighting, fight: { ...fighting.fight } }, fighting)).toEqual([])
+    expect(analytics_events(fighting, { ...placement, fight: { ...placement.fight, checkpoint: null } })).toEqual([])
+  } finally {
+    stop()
+  }
 })
 
 test('restored authentication completes login without inventing an interactive start', () => {

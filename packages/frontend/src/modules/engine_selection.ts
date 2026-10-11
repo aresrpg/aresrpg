@@ -80,9 +80,11 @@ export const sync_dungeon_scene = (world: ReturnType<typeof create_world> | null
   const run = selected?.dungeon_run
   world.set_dungeon_portals(run ? Object.freeze([]) : dungeon_portal_markers(selected_world(state)))
   if (!run) {
+    world.set_crew_world(selected_world(state))
     world.set_dungeon_stage(null)
     return
   }
+  world.set_crew_world(null)
   const city = content_catalog.world(selected.world ?? '')?.cities.find(({ dungeon }) => dungeon === run.dungeon)
   const x = chain_to_client_coordinate(city?.x ?? 50_000)
   const z = chain_to_client_coordinate(city?.z ?? 50_000)

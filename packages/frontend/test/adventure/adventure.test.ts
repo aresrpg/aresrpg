@@ -5,8 +5,9 @@ import { expect, test } from 'bun:test'
 import { characteristic_value_cost } from '@aresrpg/immutable'
 import { compile_runtime_world_recipe, structure_voxels } from '@aresrpg/engine'
 
+import scene from '../../../../seed/scenes/adventure.json'
 import { adventure_character } from '../../src/adventure/character.ts'
-import { adventure_terrain, ADVENTURE_SPAWN } from '../../src/adventure/terrain.ts'
+import { ADVENTURE_SPAWN } from '../../src/adventure/terrain.ts'
 import { valid_simulator_character } from '../../src/modules/simulator.ts'
 import { ADVENTURE_APP_MODULES, DEMO_APP_MODULES, PLAYER_APP_MODULES, create_app } from '../../src/store.ts'
 
@@ -35,7 +36,7 @@ test('the public demo has no wallet, game network, editor, or saved simulator ob
 })
 
 test('the cave uses explicit air over a solid floor at the spawn across a worker recipe clone', () => {
-  const world = compile_runtime_world_recipe(structuredClone(adventure_terrain()))
+  const world = compile_runtime_world_recipe(structuredClone(scene.world))
   const { x, y, z } = ADVENTURE_SPAWN
   const voxels = structure_voxels(world, { min_x: x, max_x: x, min_z: z, max_z: z })
   const material_at = (height: number) =>
@@ -49,7 +50,7 @@ test('the cave uses explicit air over a solid floor at the spawn across a worker
 })
 
 test('the route beyond the first encounter is always clear in the terrain', () => {
-  const world = compile_runtime_world_recipe(adventure_terrain())
+  const world = compile_runtime_world_recipe(scene.world)
   const voxel = structure_voxels(world, { min_x: 144, max_x: 144, min_z: 151, max_z: 151 }).findLast(
     ({ x, y, z }) => x === 144 && y === 75 && z === 151
   )

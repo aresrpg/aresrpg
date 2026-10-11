@@ -183,7 +183,10 @@ test('the observer establishes a silent baseline and stops effects on disposal',
   const previous = state
   state = {
     ...state,
-    session: { ...state.session, craft_result: { digest: 'craft', successes: 1, attempts: 1, output_type: 'hat' } },
+    session: {
+      ...state.session,
+      craft_result: { digest: 'craft', job: 'TAILOR', successes: 1, attempts: 1, output_type: 'hat' },
+    },
   }
   listener?.(state, previous)
   listener?.(state, state)
@@ -191,7 +194,10 @@ test('the observer establishes a silent baseline and stops effects on disposal',
   controller.abort()
   state = {
     ...state,
-    session: { ...state.session, craft_result: { digest: 'later', successes: 1, attempts: 1, output_type: 'hat' } },
+    session: {
+      ...state.session,
+      craft_result: { digest: 'later', job: 'TAILOR', successes: 1, attempts: 1, output_type: 'hat' },
+    },
   }
   listener?.(state, previous)
   expect(played).toEqual(['craft_completed'])

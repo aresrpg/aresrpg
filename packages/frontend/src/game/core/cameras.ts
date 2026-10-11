@@ -19,6 +19,7 @@ export type CameraFrame = Readonly<{
   position: Vec3
   target: Vec3
   fov: number
+  speed_wind?: number
   ortho_blend: number
   ortho_height?: number
 }>
@@ -29,6 +30,8 @@ export type CameraAnchor = Readonly<{
   eye_height: number
   speed: number
   on_ground: boolean
+  velocity?: Vec3
+  riding?: boolean
 }>
 export type CameraAddon = Readonly<{
   frame: (anchor: CameraAnchor, dt: number) => CameraFrame
@@ -118,6 +121,26 @@ const FP_EXIT_DIST = 1.4
 const FP_MIN_DIST = 1.0
 const FP_BLEND_S = 0.2
 
+// Keep small body motions inside the frame. Prediction uses physics velocity, never animated sockets.
+const create_follow_focus = () => {
+  let center: Vec3 | null = null
+  let lead_x = 0
+  let lead_z = 0
+  return (head: Vec3, dt: number, velocity: Vec3 = [0, 0, 0]): Vec3 => {
+    center ??= head
+    const dx = head[0] - center[0]
+    const dz = head[2] - center[2]
+    const distance = Math.hypot(dx, dz)
+    const outside = Math.max(0, 1 - 0.12 / Math.max(distance, 0.0001))
+    center = [center[0] + dx * outside, head[1] - clamp(head[1] - center[1], -0.12, 0.12), center[2] + dz * outside]
+    const speed = Math.hypot(velocity[0], velocity[2])
+    const prediction = Math.min(0.16, 1.4 / Math.max(speed, 0.0001)) * clamp((speed - 0.5) / 2, 0, 1)
+    lead_x = damp(lead_x, velocity[0] * prediction, 6, dt)
+    lead_z = damp(lead_z, velocity[2] * prediction, 6, dt)
+    return [center[0] + lead_x, center[1], center[2] + lead_z]
+  }
+}
+
 /** Critically-damped 3D spring (Game Programming Gems 4 form) — ported verbatim, closure shape. */
 const create_spring = (initial_halflife: number) => {
   const spring = { halflife: initial_halflife }
@@ -185,7 +208,9 @@ export const create_follow_addon = (
   let zoom_dist = target_dist
   let arm = target_dist
   const follow = create_spring(FOLLOW_HALFLIFE)
+  const focus = create_follow_focus()
   let fov = BASE_FOV
+  let speed_wind = 0
   let bob_phase = 0
   let bob_amp_env = 0
   let last_bob_y = 0
@@ -210,7 +235,7 @@ export const create_follow_addon = (
   const frame = (anchor: CameraAnchor, dt: number): CameraFrame => {
     azimuth = damp(azimuth, target_azimuth, LOOK_LAMBDA, dt)
     polar = damp(polar, target_polar, LOOK_LAMBDA, dt)
-    const { x: head_x, y: feet_y, z: head_z, eye_height, speed, on_ground } = anchor
+    const { x: head_x, y: feet_y, z: head_z, eye_height, speed, on_ground, velocity, riding } = anchor
     const speed_ratio = clamp((speed - BOB_WALK_SPEED) / (BOB_RUN_SPEED - BOB_WALK_SPEED), 0, 1)
     follow.halflife = FOLLOW_HALFLIFE + (RUN_FOLLOW_HALFLIFE - FOLLOW_HALFLIFE) * speed_ratio
     zoom_dist = damp(zoom_dist, target_dist, ZOOM_LAMBDA, dt)
@@ -226,10 +251,11 @@ export const create_follow_addon = (
     const head_y = feet_y + Math.max(eye_height, HEAD_HEIGHT)
     const right_x = Math.cos(azimuth)
     const right_z = -Math.sin(azimuth)
+    const focused = focus([head_x, head_y, head_z], dt, velocity)
     const [pivot_x, pivot_y, pivot_z] = follow.update(
-      head_x + right_x * shoulder,
-      head_y,
-      head_z + right_z * shoulder,
+      focused[0] + right_x * shoulder,
+      focused[1],
+      focused[2] + right_z * shoulder,
       dt
     )
 
@@ -271,12 +297,15 @@ export const create_follow_addon = (
 
     // Dynamic FOV — widens with speed (ratio² easing), spring-damped.
     const ratio = Math.min(speed / MAX_SPEED, 1)
-    fov = damp(fov, BASE_FOV + ratio * ratio * MAX_FOV_BOOST, FOV_LAMBDA, dt)
+    const mounted_speed = Number(Boolean(riding)) * clamp((speed - BOB_WALK_SPEED) / (MAX_SPEED - BOB_WALK_SPEED), 0, 1)
+    fov = damp(fov, BASE_FOV + ratio * ratio * MAX_FOV_BOOST + 6 * mounted_speed ** 2, FOV_LAMBDA, dt)
+    speed_wind = damp(speed_wind, mounted_speed ** 2, FOV_LAMBDA, dt)
 
     // Head-bob: pure vertical eye translation, eased envelope, zero when idle/airborne.
     const bob_on = Reflect.get(globalThis, '__ARES_BOB') !== false
+    const foot_speed = speed * Number(!riding)
     const bob_target =
-      bob_on && on_ground && speed > BOB_MIN_SPEED ? BOB_WALK_AMP + (BOB_RUN_AMP - BOB_WALK_AMP) * speed_ratio : 0
+      bob_on && on_ground && foot_speed > BOB_MIN_SPEED ? BOB_WALK_AMP + (BOB_RUN_AMP - BOB_WALK_AMP) * speed_ratio : 0
     if (bob_target > 0) {
       const bob_hz = BOB_WALK_HZ + (BOB_RUN_HZ - BOB_WALK_HZ) * speed_ratio
       bob_phase = (bob_phase + 2 * Math.PI * bob_hz * dt) % (2 * Math.PI)
@@ -293,7 +322,7 @@ export const create_follow_addon = (
       eye_z + (fp_z - eye_z) * fp_e,
     ]
     last_arm_blend = arm * (1 - fp_e)
-    return { position: out, target: look_target(out, view_yaw, pitch), fov, ortho_blend: 0 }
+    return { position: out, target: look_target(out, view_yaw, pitch), fov, speed_wind, ortho_blend: 0 }
   }
 
   return Object.freeze({
@@ -456,6 +485,7 @@ const mix_frames = (from: CameraFrame, to: CameraFrame, amount: number): CameraF
     lerp(from.target[2], to.target[2], amount),
   ],
   fov: lerp(from.fov, to.fov, amount),
+  speed_wind: lerp(from.speed_wind ?? 0, to.speed_wind ?? 0, amount),
   ortho_blend: lerp(from.ortho_blend, to.ortho_blend, amount),
   ortho_height:
     from.ortho_height === undefined || to.ortho_height === undefined

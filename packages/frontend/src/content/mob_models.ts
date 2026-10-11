@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Mob identity owns its explicit material suffix: aragne__fire -> aragne.glb variant fire.
+// The shared identity parser resolves exact models, explicit skins, and published protector families.
 
 import { model_variant_identity, type ModelVariantIdentity } from '@aresrpg/immutable'
 

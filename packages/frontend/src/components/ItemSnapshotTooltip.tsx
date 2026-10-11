@@ -151,7 +151,7 @@ export const ItemSnapshotTooltip = ({ copy, hover }: Readonly<{ copy: AppCopy; h
   hover && typeof document !== 'undefined'
     ? createPortal(
         <ItemTooltipSurface copy={copy} hover={hover} />,
-        hover.anchor.closest('dialog, .aui-floating-window') ?? document.body
+        hover.anchor.closest('dialog, [popover]') ?? document.body
       )
     : null
 

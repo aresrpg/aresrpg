@@ -139,3 +139,37 @@ test('the client admin-address aura overrides equipped titles without changing e
   expect(character_aura(null, '0xother')).toBeUndefined()
   expect(character_aura(null, `${DEFAULT_ADMIN_ADDRESS}0`)).toBeUndefined()
 })
+
+test('animation preview overrides presentation while preserving movement and can return to automatic animation', () => {
+  const render = {
+    id: 'preview',
+    appearance: {
+      body_url: '/senshi.glb',
+      hair_url: null,
+      colors: ['#ffffff', '#ffffff', '#ffffff'] as const,
+      worn: { head: null, back: null },
+    },
+  }
+  const transform = { position: [7, 3, 11] as const, facing_yaw: 0.5, anim: 'WALK' as const, gait_scale: 1.4 }
+  const animation = { name: 'DEATH' as const, time_scale: 1, loop: true }
+  const preview = world_character_entity(render, transform, animation)
+  expect(preview.animation).toEqual(animation)
+  expect(preview.anchor).toEqual({ kind: 'world', position: [7, 3, 11] })
+  expect(preview.facing).toEqual({ kind: 'yaw', yaw: 0.5 })
+  expect(world_character_entity(render, transform, null).animation).toEqual({ name: 'WALK', time_scale: 1.4 })
+})
+
+test('own and nearby riders use an entity attachment instead of an estimated world height', () => {
+  const transform = {
+    position: [7, 3, 11] as const,
+    facing_yaw: 0,
+    anim: 'SIT' as const,
+    gait_scale: 1,
+    mount: 'companion',
+  }
+  for (const presentation of ['individual', 'crowd'] as const) {
+    const entity = world_character_entity({ id: character.id, appearance }, { ...transform, presentation })
+    expect(entity.anchor).toEqual({ kind: 'mount', entity_id: 'companion' })
+    expect(entity.animation?.name).toBe('SIT')
+  }
+})

@@ -13,11 +13,15 @@ import { world_terrain } from '../src/world_catalog.ts'
 const document = Object.assign(new EventTarget(), { visibilityState: 'hidden' })
 let updates = 0
 let renders = 0
+let ticks = 0
 let requested_frames = 0
 let frame: FrameRequestCallback = () => undefined
 const backend = new Proxy(
   {
     kind: 'webgpu',
+    tick: () => {
+      ticks += 1
+    },
     render: () => {
       renders += 1
     },
@@ -52,7 +56,8 @@ engine.start(() => {
 }, true)
 await Bun.sleep(140)
 assert(updates > 0)
-assert.equal(renders, updates)
+assert.equal(renders, 0)
+assert.equal(ticks, updates)
 assert.equal(requested_frames, 0)
 document.visibilityState = 'visible'
 document.dispatchEvent(new Event('visibilitychange'))
@@ -60,6 +65,20 @@ assert.equal(requested_frames, 1)
 const before = updates
 frame(performance.now())
 assert.equal(updates, before + 1)
+assert.equal(renders, 1)
+assert.equal(ticks, updates)
+document.visibilityState = 'hidden'
+document.dispatchEvent(new Event('visibilitychange'))
+await Bun.sleep(140)
+assert(updates > before + 1)
+assert.equal(renders, 1)
+assert.equal(ticks, updates)
+engine.start(() => {
+  updates += 1
+}, false)
+const paused = updates
+await Bun.sleep(140)
+assert.equal(updates, paused)
 engine.stop()
 const stopped = updates
 await Bun.sleep(140)

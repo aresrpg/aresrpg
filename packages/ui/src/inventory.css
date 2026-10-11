@@ -166,7 +166,7 @@
   box-shadow: inset 0 1px #b9c0d32a;
   overflow: hidden;
 }
-.game-character-body .chr-equip__bagtabs {
+.inventory-filters .chr-equip__bagtabs {
   display: flex;
   flex: none;
   align-items: center;
@@ -177,7 +177,7 @@
   border: 0;
   background: none;
 }
-.game-character-body .chr-bagtab {
+.inventory-filters .chr-bagtab {
   --category-face: #222a35;
   position: relative;
   isolation: isolate;
@@ -194,7 +194,7 @@
   clip-path: polygon(50% 0, 94% 15%, 100% 23%, 100% 77%, 94% 85%, 50% 100%, 6% 85%, 0 77%, 0 23%, 6% 15%);
   box-shadow: none;
 }
-.game-character-body .chr-bagtab::before {
+.inventory-filters .chr-bagtab::before {
   content: '';
   position: absolute;
   inset: 2px;
@@ -208,25 +208,25 @@
     inset 0 5px 10px #ffffff0a,
     inset 0 -5px 10px #050b1266;
 }
-.game-character-body .chr-bagtab img {
+.inventory-filters .chr-bagtab img {
   width: 39px;
   height: 39px;
   transform: translateY(6px);
   object-fit: contain;
   filter: drop-shadow(0 3px 2px #0007);
 }
-.game-character-body .chr-bagtab.is-active {
+.inventory-filters .chr-bagtab.is-active {
   --category-face: #695335;
   background: #d6b16b;
   color: #ffe6b6;
 }
-.game-character-body .chr-bagtab:hover {
+.inventory-filters .chr-bagtab:hover {
   background: #9faab4;
 }
-.game-character-body .chr-bagtab.is-active:hover {
+.inventory-filters .chr-bagtab.is-active:hover {
   background: #f1cd8a;
 }
-.game-character-body .chr-bagtab:focus-visible {
+.inventory-filters .chr-bagtab:focus-visible {
   background: #f4db9b;
   outline: none;
 }
@@ -294,6 +294,59 @@
   scrollbar-width: thin;
   scrollbar-color: #656d81 #252c3b;
 }
+.chr-cell {
+  position: relative;
+  display: flex;
+  aspect-ratio: 1;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.015);
+  transition: border-color 0.15s;
+}
+
+.chr-cell:hover {
+  border-color: rgba(200, 150, 60, 0.4);
+}
+
+.chr-cell.is-selected {
+  border-color: var(--color-gold);
+  background: rgba(200, 150, 60, 0.09);
+}
+
+.chr-cell--empty {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.chr-cell__art {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+}
+
+.chr-cell__fallback {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.chr-cell__amount {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 8px;
+  color: var(--color-gold-light);
+}
+
+.chr-cell__lvl {
+  position: absolute;
+  top: 1px;
+  left: 3px;
+  font-size: 7px;
+  color: var(--color-muted);
+}
+
 .game-character-body .chr-cell {
   width: 100%;
   height: auto;

@@ -1,0 +1,10 @@
+{
+  "campaign": "blast_crew",
+  "npc": {
+    "name": "Blast Girl",
+    "model": "blast_girl",
+    "world": "nauvis",
+    "x": -10,
+    "z": 18
+  }
+}

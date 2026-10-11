@@ -44,7 +44,7 @@ test('a certified failed craft completes practice once; a restored result never 
     ...before,
     session: {
       ...before.session,
-      craft_result: { digest: 'attempt', attempts: 1, successes: 0, output_type: 'old_hoe' },
+      craft_result: { digest: 'attempt', job: 'HANDYMAN', attempts: 1, successes: 0, output_type: 'old_hoe' },
     },
   }
   expect(action_quest_ids(after, before)).toContain('first_craft')

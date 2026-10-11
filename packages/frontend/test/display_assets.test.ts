@@ -13,6 +13,21 @@ import { display_asset_for_route, display_asset_rows } from '../display_assets.t
 
 const repo_dir = resolve(import.meta.dir, '../../..')
 
+test('only content-addressed assets receive immutable browser caching', async () => {
+  const config = (await Bun.file(new URL('../vercel.json', import.meta.url)).json()) as {
+    headers: readonly { source: string; headers: readonly { key: string; value: string }[] }[]
+  }
+  const cache_policy = (path: string) =>
+    config.headers
+      .filter(({ source }) => new RegExp(`^${source.replace(':path*', '(.*)')}$`).test(path))
+      .flatMap(({ headers }) => headers)
+      .find(({ key }) => key.toLowerCase() === 'cache-control')?.value ?? ''
+  for (const path of ['/assets/index-abcdefgh.js', '/assets/thebes-abcdefgh.json'])
+    expect(cache_policy(path)).toBe('public, max-age=31536000, immutable')
+  for (const path of ['/', '/index.html', '/sw.js', '/item/sword.png', '/classe/senshi.jpg', '/music/nauvis.mp3'])
+    expect(cache_policy(path)).not.toMatch(/immutable|max-age=[1-9]/)
+})
+
 test('every emitted Sui Display image URL resolves to one authored source asset', async () => {
   const rows = await display_asset_rows({
     characters_dir: resolve(repo_dir, 'seed/icons/characters'),

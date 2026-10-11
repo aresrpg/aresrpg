@@ -120,6 +120,9 @@ The canvas camera adapter owns mouse and touch dragging across exposed game spac
 HUD controls never enter that adapter. Releasing a touch clears its manual input without cancelling an automated run.
 Camera rotation is manual. Touch drags turn faster than mouse drags, and the joystick and canvas
 retain separate pointer identities so movement and looking work together with two thumbs.
+Third-person translation uses a small dead zone and smoothed controller-velocity lookahead;
+first person follows the rendered eye directly. The follow camera owns mounted FOV and wind intensity.
+The engine draws edge streaks as one transparent clip-space quad on every quality tier, hidden at rest.
 World prompts expose the same actions through buttons and keyboard shortcuts, with localized tap
 instructions on touch devices. Character taps open the existing context menu through the same body
 picker as desktop. Camera drags and cancelled touches never become menu taps.
@@ -133,6 +136,12 @@ of HUD controls; the focus remains bounded to the board footprint.
 
 Development module reloads retain the same app-store instance for mounted and lazy consumers.
 Stateful core edits restart the app to rebuild reducer and observer lifecycles together.
+
+Game boot consumes engine data through `@aresrpg/engine/data`; its static dependency graph never
+loads Three.js. Surface lifecycles import rendering. Fight cue projection chooses movement gait;
+the engine consumes that cue rather than exporting a renderer-bound helper for the choice.
+Deployment headers give content-hashed `/assets/` files immutable browser caching. Stable asset
+names, HTML and the service worker retain revalidation.
 
 `@aresrpg/ui` owns the shared visual system and browser modal lifecycle. Its components consume
 presentation props and emit callbacks; they import neither application stores nor game services.
@@ -207,7 +216,17 @@ owners of production cities; the module workshop does not introduce another runt
 
 The public adventure owns its local hero, recruited companion, selection, dialogue and combat progress in
 one adventure reducer. `seed/content/adventure.json` authors its encounters, companion and quest order;
-these never enter the published catalogue. Quest progress derives from those facts. After the first
+these never enter the published catalogue. `scripts/adventure_scene.ts` compiles its deterministic
+terrain and decoration offline from those inputs and `adventure_environment.json`.
+`generate_adventure.mjs` partitions raw construction into ordinary 32³ named structures in
+`seed/structures/types.json` and emits the height grid, placements and resources in
+`seed/scenes/adventure.json`. The scene and shared catalogue use the existing voxel format;
+explicit air, material identity and placement order remain unchanged. Asset freshness checks both
+outputs. Runtime retains only coordinate and movement rules, loads the scene through one abortable
+request, and initializes the ordinary world lifecycle after success. Cancellation cannot mount a late
+world; failed requests use the shared loading recovery and emit a loading failure. Workers receive
+named placements and the height grid, never raw construction tuples or an adventure generator.
+Quest progress derives from those facts. After the first
 victory, the equipment quest requires confirming every earned item, including the pet, through the
 ordinary inventory staging and acceptance flow before Sceat becomes interactive. Its completion is
 retained even if equipment later changes. The tutorial explains that confirmation is a Sui transaction
@@ -256,22 +275,51 @@ Certified game-wallet transactions feed the analytics reducer through the SDK's 
 `transaction_executed` reports success or failure and certified net gas without sending its digest.
 Craft outcome deltas report the recipe, attempts and successes. Both carry the loaded beginner journey
 step to measure early crafting friction without identifying characters or wallets. Simulations and unsigned
-refusals emit nothing. `fight_started` observes owned participation moving from placement into real combat,
-once per fight rather than per character; spectators, local demos and restored active fights emit nothing.
+refusals emit no transaction event. Live fight analytics folds a small per-fight slice of accepted
+canonical checkpoints, never the speculative combat cache. Starts, observed owned-turn advancement and
+completion count once per transition rather than per character. Spectators, local demos, restored
+baselines and duplicate or regressing checkpoints emit nothing.
 Demo request capture precedes the lazy game/demo download. The existing loading observer reports
 playability only after terrain, rendering and the hero model are ready; navigation-to-playable duration
 and playable-to-first-horizontal-movement duration use the monotonic browser clock. Initial failures
 report only a bounded loading stage. Quality changes and repeated samples do not replay startup events.
-Fight start/completion retains the encounter number and outcome. Quest completion uses authored quest
+Demo fight entry retains the historical `demo_fight_started` event at placement; `demo_combat_started`
+observes that same fight advancing from placement into its first turn. Completion retains the encounter
+number and outcome. Quest completion uses authored quest
 IDs and real progress deltas, including the confirmed equipment quest; restored journey progress emits
 nothing. Funding captures modal opens, method views, successful address copies and deduplicated bridge
 execution transitions. Viewing direct deposit is not a payment; a balance change cannot infer its source.
 The first-character funding welcome and creation form have separate events. Shared telemetry metadata
 marks the tutorial revision so the equipment-quest funnel can be compared with earlier cohorts.
-The session retains the submitted creation outcome; only the SDK's certified creation receipt marks activation,
-never an acquired roster member. PostHog retains a browser-local anonymous identity across reloads; no wallet
-address or player name identifies it. An outbound property allowlist excludes URLs, referrers and nested person
-properties. Autocapture, replay, surveys and remote feature flags are disabled. Events use the same-origin `/ingest` Vercel proxy, with static and remote-config routes sent to
+The session retains the submitted creation outcome; only the SDK's certified receipt marks character
+creation, never an acquired roster member. Activation measures creation followed by meaningful gameplay.
+The analytics reducer scopes its measurements to the observed wallet lifetime. Async identity results
+re-enter that reducer and stale wallets cannot identify a later account. PostHog retains browser-local
+anonymous identities and links authenticated sessions to one network-scoped SHA-256 account pseudonym.
+This is pseudonymization, not anonymization: a known public address can be matched by recomputing its hash.
+Raw addresses and player names are not transmitted. Logout and account changes reset the browser identity;
+restored authentication identifies again. The outbound allowlist retains identity-merge fields and only
+the internal/test marker from person properties; URLs, referrers and other nested person data are excluded.
+
+`gameplay_active` is the sole meaningful-return event, bounded to once per minute after manual movement,
+receipt-confirmed gathering or crafting, or owned canonical combat progression. Idle presence, restored
+state, automatic travel, companion following, automated gathering and generic transactions do not qualify.
+The existing pose feed exposes its manual input, sampled at most once per second; physical displacement,
+playability and visibility gates reject teleports, stale gaps and other characters. World readiness and
+load failures observe the existing loading projection, without a second readiness model. Profession and
+character levels, equipment, dungeon entry, navigation and connection changes are separate diagnostic
+events; they do not independently establish player activity. Shared metadata includes telemetry revision,
+release, deployment, onboarding step, journey step, quality and automation presence. Each gameplay event
+classifies its own control source; background automation cannot erase unrelated manual activity.
+
+An anonymous `/play-demo` replay pilot samples ten percent of sessions. Its bundled recorder loads lazily
+and stops before authentication or the ending. It masks text and inputs, blocks canvases and iframes,
+and excludes network payloads, URLs and console output. The analytics reducer also owns an optional,
+localized feedback question after two minutes on an unchanged eligible tutorial or first-character
+welcome step. It offers bounded answers once per browser; there is no free-text collection or remote
+survey renderer. Autocapture and remote feature-flag evaluation remain disabled. JSON remote configuration
+supplies replay settings; external script loading remains disabled.
+Events use the same-origin `/ingest` Vercel proxy, with static and remote-config routes sent to
 PostHog's US asset host before the US ingestion route. Both the deployment and service-worker page
 fallbacks exclude that namespace. The document referrer policy is origin-only, including same-origin
 requests that the proxy forwards. The public project-token build variable overrides the default project;
@@ -281,9 +329,15 @@ exception before translation; React root failures and boot failures use the same
 world observer reports terminal engine failures once per failed-state transition, before UI recovery.
 Reports retain caught stacks, device-loss reasons, quality, elapsed time, and browser capability context;
 missing WebGPU is a compatibility warning. Disposal removes the observer. The outbound
-filter removes credentials and bearer URL data, and Move aborts group by package, module, function and
+filter removes credentials and bearer URL data. Only the SDK-provided User-Agent survives request-header
+scrubbing, so Sentry can attribute failures to browser, OS and device. Move aborts group by package, module, function and
 code. Deployed builds require a public Sentry DSN and label events with their network, deployment target
-and available commit SHA. Development and browser-test builds do not initialize remote reporting.
+and available commit SHA. Both transports read one lifecycle-bound projection of application context.
+Caught errors retain capture-time PostHog identity and session context; Sentry uses that identity for
+affected-user counts. Sanitized `application_error` events carry the exact Sentry event ID and a bounded
+failure category. Explicit cancellations remain separate from errors; routine aborts are ignored.
+Analytics transport failures cannot recursively report themselves. Development and browser-test builds
+do not initialize remote reporting.
 
 ## Chain write law
 
@@ -554,6 +608,14 @@ each cosmetic before its regular hat or cloak. Equip and unequip refresh the ind
 through latest-request-wins reads, so delayed enrichment cannot restore removed equipment.
 Browser builds emit GLB models as files regardless of size. The model loader fetches them under
 the production security policy; embedded data URLs are not an allowed connection source.
+Creature model identities resolve through one immutable parser shared with seed validation. Exact
+files and explicit `basename__variant` skins coexist with the published protector naming grammar:
+`protector_<skin>_gaia`, `protector_<skin>_bricheton`, and `protector_<skin>` select the Gaia,
+Bricheton, and Miner family GLBs. Three geometries contain all thirty-three protector palettes;
+chain identities and gameplay content remain unchanged. Grounding retains the GLB-local variant
+scale and derives its floor from cached unscaled source bounds. Entity placement supplies horizontal
+caption anchors; rendered bounds supply their height, so weapons and tails cannot move captions
+away from a fighter cell. Exact animation names take precedence over partial action-name matches.
 
 Equipped title identity uses those same visible-equipment snapshots and deltas, including owned followers.
 Fight appearance rows retain that title through normalization for participants and spectators. The frontend
@@ -604,8 +666,9 @@ readiness. Device wall time cannot release an automated action early. Pose and s
 advance ready actions immediately.
 Only the exact gather-correlated protector is automatically forfeited, once; confirmed return and
 fight presentation gate resumption. Browser visibility and app navigation never own the run's
-lifetime. Active automation keeps the same world simulation and renderer alive behind other pages;
-hidden browsers use timer frames, with bounded physics substeps and no suspended-time teleport.
+lifetime. Active automation keeps the same world simulation and renderer alive behind other pages.
+Hidden browsers use timer ticks for simulation and animation completion, with bounded physics substeps
+and no suspended-time teleport. They submit no render frames; browsers without an active background run pause entirely.
 Temporary connection or clock gaps retain the run and suppress writes until readiness returns.
 Unsigned movement/cooldown refusals wait 500 ms before re-entering inspection; the target and
 travel proof are checked again. Stop, manual control, identity changes, and all other failed or
@@ -774,6 +837,11 @@ engine state; teardown cancels its frame callbacks and polling.
 
 ### Terrain presentation
 
+The shared engine scheduler caps visible frames at 30 FPS on Low and 60 FPS on Medium/High,
+using the existing quality profile as the sole cadence policy. Display refresh cannot increase that budget.
+Elapsed time drives simulation and animation; missed frames never accumulate into catch-up renders.
+Backend CPU animation ticks remain separate from GPU rendering so hidden automation can finish fight cues.
+
 The WebGPU backend owns one Neutral tone mapper and fixed exposure for world and fight rendering.
 The post-processing pipeline reads those renderer settings instead of declaring a second tone mapper.
 This preserves stronger authored colors without adding a saturation pass; existing quality-specific
@@ -851,6 +919,12 @@ chain anchor. Interaction uses the same unlocked-key selector as the entry trans
 opens the normal entry modal; absence produces a localized speech caption naming the required key.
 The dungeon frame and membrane derive their shared offset from one seed profile; the offset is presentation only. Guide models, captions and pending appearance loads
 retire with their markers and world, and immersive fights exclude them with other world actors.
+Blast girl's appearance and position near the Nauvis origin portal come from `seed/content/crew.json`.
+She reuses the guide renderer and opens the airdrop modal at its Crew dialog route.
+That route shows her dialogue, the shared wallet connection and the Crew Helmet campaign only;
+the regular airdrop page retains giftcard collection and the full campaign catalogue.
+The portrait header reads existing sale, connected-wallet, held-voucher and receipt state; it adds
+no entitlement inspection or claim path. The existing distribution authoring owns post-sale recipients.
 
 World and fight water use one calm Genshin-derived material on every quality tier. Fight basins
 keep their hole-cell geometry and own their surface resources. They borrow the active sky and
@@ -936,6 +1010,12 @@ Nearby character bodies batch by rig and animation pose. Hair and equipment sele
 subsets without changing body identity. Shared model loading owns part preparation, bone mounting and
 disposal. Native skinning precedes geometry-bound instance transforms; immutable texture expressions
 share shader plans without sharing skeletons or instance data. Interactive/tactical characters retain individual models. This rendering path does not use temporal motion vectors.
+Mounted characters also retain individual models. Their entity anchor names the pet; after both
+mixers advance, the engine aligns the character GLB's `Rider` socket with the pet GLB's animated
+`Mount` socket. Each playable body authors a closed, sex-specific `SIT` pose. Pet dimensions do
+not change when ridden, and no bounding-height seat estimate remains. Missing attachment models
+hide the rider until the pair is ready. Camera and carried-light placement use the rendered
+character position; controller collision and published world positions remain independent.
 
 The localized spawn welcome display uses a fixed, depth-tested world plane with the canonical
 AresRPG wordmark. Seed owns its position, orientation and size. The shared game world controller
@@ -997,8 +1077,10 @@ store or gameplay coordinate system; dungeon entrances remain at the authored su
 partitions final operations into provenance-hashed, palette-compressed 32³ chunks. Runtime solves nothing:
 workers compile terrain immediately and request only intersecting city artifacts. Voxel decoding and
 caching are scoped to intersecting chunks. The active version stores voxel runs and unindexed float32
-detail triangles as base64 inside JSON; each loading worker currently parses the whole city and validates
-all detail vertices before returning requested columns. The ordinary collision and WebGPU voxel-mesh paths remain the consumers. City detail archives permit
+detail triangles as base64 inside JSON; each loading realm parses the whole city and validates its
+metadata and aggregate geometry budget. Vertex decoding and validation occur once per requested
+detail cell, before its mesh-worker reply. Collision and planning never decode decorative vertices.
+The ordinary collision and WebGPU voxel-mesh paths remain the consumers. City detail archives permit
 4,096 cells and 500,000 triangles across the complete settlement; small scenes retain their 512-cell,
 100,000-triangle limits. Per-column residency and GPU upload budgets remain unchanged.
 
@@ -1291,9 +1373,12 @@ If the explanation needs two owners for one fact, the data model is wrong.
 ## Documentation ownership
 
 - `packages/frontend/public/llms.txt` indexes the public agent gameplay playbook under `public/agents/`.
+  `public/agents/index.html` is its human-readable landing page and the link to share.
   These static text resources bypass both deployment and service-worker page fallbacks. They explain
   the existing gameplay owners; live state remains on-chain and indexed. SDK examples under
   `packages/sdk/examples/` are typechecked with that package and reuse its builders and the fight twin.
+- `packages/frontend/public/links/index.html` is the script-free link hub for social bios. Its logo and
+  loot ribbon are rendered by `bun run social:cards`; its font and Blast branding are symlinks to their owners.
 - `seed/content/journal/`: English editorial articles and publication catalogue. `seed/icons/journal/`
   owns their cover artwork. Only explicitly published entries enter the journal's static output;
   drafts remain source-only. The journal deploys independently of game releases and seed transactions.

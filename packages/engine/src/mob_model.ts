@@ -105,9 +105,12 @@ export const prepare_mob_model_root = (
     // where the creature actually stands, so off-centre rigs still land on their feet.
     reference_pose.setTime(idle.duration / 2)
   }
+  const appearance_scale = root.scale.clone()
   root.scale.setScalar(1)
   root.updateWorldMatrix(true, true)
   const min_y = idle_floor(root, source, label)
+  root.scale.copy(appearance_scale)
+  root.updateWorldMatrix(true, true)
   // Creature GLBs already author meaningful relative sizes: spiders are short, skeletons are
   // tall, sheep are squat. Preserve those proportions; the entity layer adds only context and
   // level scaling. Flattening every species to one height made small fauna character-sized.
@@ -125,7 +128,7 @@ export const prepare_mob_model_root = (
     mesh.frustumCulled = false
     material_rows(mesh.material).forEach((material) => prepare_material(material as RenderMaterial))
   })
-  return min_y
+  return min_y * appearance_scale.y
 }
 
 export const create_mob_model = async (url: string, label = url, variant: string | null = null): Promise<MobModel> => {

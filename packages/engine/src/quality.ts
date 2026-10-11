@@ -8,7 +8,14 @@ export const QUALITY_OPTIONS = Object.freeze(['low', 'medium', 'high'] as const)
 export const QUALITY_PROFILES = Object.freeze({
   low: Object.freeze({
     name: 'low',
-    render: Object.freeze({ scale: 0.75, scene_scale: 0.88, sharpness: 0.45, dpr_max: 1, pixel_max: 1_500_000 }),
+    render: Object.freeze({
+      fps: 30,
+      scale: 0.75,
+      scene_scale: 0.88,
+      sharpness: 0.45,
+      dpr_max: 1,
+      pixel_max: 1_500_000,
+    }),
     chunks: Object.freeze({
       near_radius: 1,
       mid_radius: 2,
@@ -29,7 +36,14 @@ export const QUALITY_PROFILES = Object.freeze({
   }),
   medium: Object.freeze({
     name: 'medium',
-    render: Object.freeze({ scale: 0.9, scene_scale: 0.82, sharpness: 0.5, dpr_max: 1.5, pixel_max: 3_500_000 }),
+    render: Object.freeze({
+      fps: 60,
+      scale: 0.9,
+      scene_scale: 0.82,
+      sharpness: 0.5,
+      dpr_max: 1.5,
+      pixel_max: 3_500_000,
+    }),
     chunks: Object.freeze({
       near_radius: 2,
       mid_radius: 4,
@@ -50,7 +64,7 @@ export const QUALITY_PROFILES = Object.freeze({
   }),
   high: Object.freeze({
     name: 'high',
-    render: Object.freeze({ scale: 1, scene_scale: 1, sharpness: null, dpr_max: 2, pixel_max: 6_000_000 }),
+    render: Object.freeze({ fps: 60, scale: 1, scene_scale: 1, sharpness: null, dpr_max: 2, pixel_max: 6_000_000 }),
     chunks: Object.freeze({
       near_radius: 3,
       mid_radius: 6,

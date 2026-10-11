@@ -4,6 +4,7 @@
 import type { AtmosphereTuning } from './atmosphere_tuning.ts'
 import type { WorldCaption } from './caption_types.ts'
 import { type EngineBackend } from './backend.ts'
+import { get_quality_profile } from './quality.ts'
 import type {
   WorldPanel,
   CameraProjection,
@@ -105,6 +106,7 @@ export const create_engine = ({
   let background_timer: ReturnType<typeof setTimeout> | null = null
   let background = false
   let previous_frame = performance.now()
+  let next_frame_at = previous_frame
   let update: (frame: EngineFrame) => void = () => {}
   let disposed = false
 
@@ -117,16 +119,29 @@ export const create_engine = ({
   const schedule_frame = (): void => {
     cancel_frame()
     if (!started) return
-    if (background && globalThis.document?.visibilityState === 'hidden')
-      background_timer = setTimeout(() => draw(performance.now()), 100)
-    else animation_frame = requestAnimationFrame(draw)
+    if (globalThis.document?.visibilityState === 'hidden') {
+      if (background) background_timer = setTimeout(() => draw(performance.now()), 100)
+      return
+    }
+    animation_frame = requestAnimationFrame((now) => {
+      // Allow sub-millisecond rAF jitter without dropping a whole display refresh.
+      if (now + 0.5 < next_frame_at) return schedule_frame()
+      const interval = 1000 / get_quality_profile(quality).render.fps
+      // Retain the cadence's phase, but never replay frames missed during a stall.
+      next_frame_at = now + interval - (Math.max(0, now - next_frame_at) % interval)
+      draw(now)
+    })
   }
-  globalThis.document?.addEventListener('visibilitychange', schedule_frame)
+  const visibility_changed = (): void => {
+    next_frame_at = performance.now()
+    schedule_frame()
+  }
+  globalThis.document?.addEventListener('visibilitychange', visibility_changed)
 
   const release = (outcome: ChunkRenderOutcome): void => {
     started = false
     cancel_frame()
-    globalThis.document?.removeEventListener('visibilitychange', schedule_frame)
+    globalThis.document?.removeEventListener('visibilitychange', visibility_changed)
     pending_chunks.clear()
     fight_blobs.clear()
     entities = Object.freeze([])
@@ -154,6 +169,8 @@ export const create_engine = ({
   }
 
   const draw = (now: number): void => {
+    if (!started) return
+    const hidden = globalThis.document?.visibilityState === 'hidden'
     const delta_seconds = Math.min(0.1, Math.max(0, now - previous_frame) / 1000)
     previous_frame = now
     fight_blobs.forEach((blob, id) => {
@@ -163,7 +180,8 @@ export const create_engine = ({
     })
     try {
       update(Object.freeze({ now, delta_seconds }))
-      backend?.render(now)
+      backend?.tick(now)
+      if (!hidden) backend?.render(now)
     } catch (error) {
       console.error('World rendering failed.', error)
       report_failure({
@@ -284,6 +302,7 @@ export const create_engine = ({
       if (started) return
       started = true
       previous_frame = performance.now()
+      next_frame_at = previous_frame
       schedule_frame()
     },
     stop: () => {
@@ -387,6 +406,7 @@ export const create_engine = ({
       backend?.set_world_label(id, element, position)
     },
     entity_height: (id) => backend?.entity_height(id) ?? null,
+    entity_position: (id, height) => backend?.entity_position(id, height) ?? null,
     create_fight_blob: (blob: FightBlobSpec) => {
       fight_blob_serial += 1
       const id = `fight_blob_${fight_blob_serial}`

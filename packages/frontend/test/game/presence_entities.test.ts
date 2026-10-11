@@ -46,7 +46,6 @@ test('asset arrivals and position bursts submit one crowd per animation frame', 
   const submitted: (readonly EntityRender[])[] = []
   const renderer = create_presence_renderer({
     submit: (entities) => submitted.push(entities),
-    entity_height: () => 2,
     pet_ground_height: () => 0,
     label: () => {},
     next_frame: (frame) => {
@@ -90,7 +89,6 @@ test('scene disposal retires pending appearance loads and scheduled frames', asy
   const submitted: (readonly EntityRender[])[] = []
   const renderer = create_presence_renderer({
     submit: (entities) => submitted.push(entities),
-    entity_height: () => 2,
     pet_ground_height: () => 0,
     label: () => {},
     next_frame: (frame) => {
@@ -114,7 +112,6 @@ test('equipping and removing a title updates a remote aura without reloading mod
   let loads = 0
   const renderer = create_presence_renderer({
     submit: (entities) => submitted.push(entities),
-    entity_height: () => 2,
     pet_ground_height: () => 0,
     label: () => {},
     next_frame: (frame) => {

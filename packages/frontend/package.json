@@ -44,6 +44,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@napi-rs/canvas": "1.0.10",
     "@tailwindcss/vite": "^4.3.3",
     "@types/bun": "^1.4.2",
     "@types/react": "^19.3.0",

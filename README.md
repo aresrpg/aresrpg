@@ -1,5 +1,5 @@
 <p align=center>
-  <img src="https://user-images.githubusercontent.com/11330271/208825167-77d7bc78-17d0-4f33-ad35-d108b6fac730.gif" height="237px" width="344"/>
+  <img src=".github/assets/readme_header.jpg" alt="AresRPG — a voxel harbor town at dusk" width="100%"/>
 </p>
 <h1 align=center>AresRPG</h1>
 <p align=center>

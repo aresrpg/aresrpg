@@ -33,10 +33,10 @@ import {
   load_character_part,
   type CharacterModel,
 } from './character_model.ts'
-import { resolve_entity_locomotion_clip } from './entities.ts'
-import type { CharacterAnimationName, CharacterAppearanceRender, CharacterEntityRender } from './types.ts'
+import { entity_animation_loops, resolve_entity_animation_clip } from './entities.ts'
+import type { CharacterAnimationRender, CharacterAppearanceRender, CharacterEntityRender } from './types.ts'
 
-type CrowdAnimation = Readonly<{ name: CharacterAnimationName; time_scale: number }>
+type CrowdAnimation = CharacterAnimationRender
 type LoadedBatch = Readonly<{
   root: Group
   model: CharacterModel
@@ -68,7 +68,11 @@ const crowd_animation = (spec: Readonly<CharacterEntityRender>): CrowdAnimation 
   spec.animation ?? Object.freeze({ name: 'IDLE', time_scale: 1 })
 
 export const is_character_crowd_spec = (spec: Readonly<CharacterEntityRender>): spec is CrowdSpec =>
-  spec.presentation === 'crowd' && spec.anchor.kind === 'world' && spec.visible !== false && !spec.visual_effect
+  spec.presentation === 'crowd' &&
+  spec.anchor.kind === 'world' &&
+  spec.visible !== false &&
+  !spec.visual_effect &&
+  entity_animation_loops(spec.animation?.name ?? 'IDLE', spec.animation?.loop)
 
 const parent_bone = (parent: Object3D | null, root: Object3D): Object3D | null => {
   if (!parent || parent === root) return null
@@ -124,7 +128,7 @@ const load_batch = async (
   let action: AnimationAction | null = null
   const set_animation = (next: CrowdAnimation): void => {
     action?.stop()
-    const clip = resolve_entity_locomotion_clip(model.clips, next.name)
+    const clip = resolve_entity_animation_clip(model.clips, next.name)
     action = mixer && clip ? mixer.clipAction(clip).reset().play() : null
     action?.setEffectiveTimeScale(next.time_scale)
   }

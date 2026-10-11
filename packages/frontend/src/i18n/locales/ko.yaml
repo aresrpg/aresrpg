@@ -223,6 +223,8 @@ trade_panel:
 transaction_unknown_toast: 마지막 작업의 결과를 확인하고 있습니다. 결과가 확인될 때까지 추가 거래가 차단됩니다.
 transaction_recovered_toast: 이전 거래를 찾았습니다. 다음 작업을 선택하기 전에 새로고침해 결과를 확인하세요.
 world_hud:
+  crew_talk: 'Blast Girl과 대화'
+  crew_talk_touch: 'Blast Girl과 대화'
   map_party_legend: '청록색: 파티 · 금색: 리더'
   dismount_prompt_touch: '탭하여 내리기'
   spawn_press_attack_touch: '탭하여 공격'
@@ -358,6 +360,8 @@ world_hud:
   resource_face_protector: '{{key}}을(를) 눌러 맞서기'
   zone_never_arrived: 탐색은 실행되었지만 월드에 반영되지 않았습니다. 데이터 갱신이 지연될 수 있습니다
 demo_page:
+  animation_loop: 애니메이션 반복
+  animation_auto: 자동 (이동에 맞춤)
   asset_demo_city: 시연 도시
   asset_house_1: 도시 주택 A
   asset_house_2: 도시 주택 B
@@ -438,6 +442,10 @@ demo_page:
   control_hint: 캔버스 클릭 · WASD 이동 · Space 점프 · 마우스로 둘러보기
   back: 앱으로 돌아가기
 marketplace_page:
+  filter_all: '모든 카테고리'
+  filter_empty: '검색 결과가 없습니다. 다른 필터나 검색어를 사용하세요.'
+  lot_price: '묶음 총가격'
+  type_count_hint: '공개 판매 중인 서로 다른 아이템 종류 수'
   total_units: '총수량'
   market_cap: '시가총액'
   market_cap_basis: '현재 존재하는 총수량 × 차트의 최근 거래일 평균 단가. 수수료 제외.'
@@ -560,6 +568,16 @@ mastery_page:
   quest_started: 일일 퀘스트가 배정되었습니다.
   offer_purchased: 숙련 보상을 구매했습니다.
 airdrop_page:
+  crew_view_sale: 'KARES 판매 보기'
+  crew_dialogue:
+    intro: 'KARES 토큰 판매에 참여하면 선물을 준비해 둘게요.'
+    connect: '판매에 사용한 지갑을 연결하고 선물이 도착했는지 확인해 봐요.'
+    checking: '선물을 확인할게요…'
+    ready: 'Crew 헬멧이 도착했어요!'
+    claiming: '잠시만요. 선물을 받는 중이에요.'
+    claimed: 'Crew 헬멧은 이미 드렸어요. 멋지게 쓰고 다니세요!'
+    empty: '지금 이 지갑으로 받을 수 있는 Crew 헬멧이 없어요. 이미 받았거나 아직 배포를 기다리는 중일 수 있어요.'
+    unavailable: '선물을 확인하지 못했어요. 다시 시도해 주세요.'
   reward_title: '선물을 받았어요!'
   reward_received: '{items}을(를) 받았어요!'
   reward_needs_sui: '선물은 지갑에 안전하게 보관되어 있어요. 거래 수수료를 낼 소량의 SUI를 충전한 뒤 보상을 수령하세요.'
@@ -600,6 +618,9 @@ airdrop_page:
     physical: 실물 기프트카드
     game_wallet: Hytale 베테랑 보상
   campaigns:
+    blast_crew:
+      title: 'Crew 헬멧'
+      description: 'Blast의 KARES 판매 참여자를 위한 외형 선물입니다. 배포 후 참여에 사용한 지갑을 연결하세요.'
     oeuftermath:
       title: Aftermath Eggs · Oeuftermath
       description: 스냅샷 당시 Aftermath Egg 보유자는 Oeuftermath 펫 기프트카드 대상입니다. 당시 Egg를 보유한 지갑을 확인하세요. 나중에 Egg를 사도 자격이 생기지 않습니다.
@@ -2570,6 +2591,13 @@ spell_effects:
   short_stat: '능력'
   expires_next_turn: '다음 턴까지'
 ui:
+  feedback_question: '계속 진행하기 어려운 이유가 무엇인가요?'
+  feedback_unclear: '무엇을 해야 할지 모르겠어요'
+  feedback_controls: '조작 방법'
+  feedback_performance: '느리거나 오류가 있어요'
+  feedback_funding: '지갑에 자금 넣기'
+  feedback_not_interested: '취향에 맞지 않아요'
+  feedback_dismiss: '닫기'
   multiplayer: '멀티플레이'
   nearby_fights: '주변 전투'
   nearby_fights_empty: '주변에 추적 중인 전투가 없습니다'

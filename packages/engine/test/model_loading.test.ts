@@ -11,6 +11,33 @@ import { create_mob_model } from '../src/mob_model.ts'
 
 const source = (root: Group, animations: AnimationClip[] = []) => ({ scene: root, animations }) as GLTF
 
+test('variant scale survives floor preparation without contaminating the shared source floor', async () => {
+  const root = new Group()
+  const material = new MeshBasicMaterial()
+  const body = new Mesh(new BoxGeometry(1, 2, 1), material)
+  body.userData.gltfExtensions = { KHR_materials_variants: { mappings: [{ variants: [0], material: 0 }] } }
+  root.add(body)
+  const gltf = {
+    ...source(root, []),
+    parser: {
+      json: { extensions: { KHR_materials_variants: { variants: [{ name: 'royal', extras: { scale: 1.25 } }] } } },
+      getDependency: () => Promise.resolve(material),
+    },
+  } as unknown as GLTF
+  const load = spyOn(sources, 'load_gltf_source').mockResolvedValue(gltf)
+  try {
+    const royal = await create_mob_model('fuwa.glb', 'royal', 'royal')
+    const ordinary = await create_mob_model('fuwa.glb')
+    expect(royal.root.scale.toArray()).toEqual([1.25, 1.25, 1.25])
+    expect(royal.min_y).toBeCloseTo(-1.25)
+    expect(ordinary.min_y).toBeCloseTo(-1)
+    royal.dispose()
+    ordinary.dispose()
+  } finally {
+    load.mockRestore()
+  }
+})
+
 test('characters read shared source pixels once while keeping recolored textures independent', async () => {
   const document_before = Object.getOwnPropertyDescriptor(globalThis, 'document')
   const image_data_before = Object.getOwnPropertyDescriptor(globalThis, 'ImageData')

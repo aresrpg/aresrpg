@@ -6,6 +6,8 @@ import type { ErrorInfo } from 'react'
 import type { create_engine, EngineStatus } from '@aresrpg/engine'
 
 import { reporting_config } from './reporting_config.ts'
+import { capture_analytics, reporting_analytics_context } from './analytics.ts'
+import { correlate_error, error_analytics, exception_message } from './analytics/errors.ts'
 
 export type ReportContext = Readonly<Record<string, string | number | boolean | null | undefined>>
 
@@ -31,13 +33,21 @@ export const scrub_report = (value: unknown): unknown => {
   )
 }
 
+/** Sentry derives browser, OS and device from this SDK-provided header; all other headers stay private. */
+const browser_header = (event: Readonly<ErrorEvent>): Record<string, string> | undefined => {
+  const agent = Object.entries(event.request?.headers ?? {}).find(([key]) => key.toLowerCase() === 'user-agent')?.[1]
+  return typeof agent === 'string' ? { 'User-Agent': redact_text(agent) } : undefined
+}
+
 export const before_send = (event: Readonly<ErrorEvent>, hint: Readonly<EventHint>): ErrorEvent | null => {
   const original = hint.originalException
   if (original instanceof Error && original.name === 'AbortError') return null
-  const messages = [event.message, ...(event.exception?.values ?? []).map(({ value }) => value)].join('\n')
+  const messages = exception_message(event)
   if (/user rejected|user denied|user cancel(?:l)?ed|ResizeObserver loop/i.test(messages)) return null
   const abort = /abort code:\s*(\d+),\s*in\s*['"](0x[a-f0-9]+)::([a-z0-9_]+)::([a-z0-9_]+)/i.exec(messages)
-  const clean = scrub_report(event) as ErrorEvent
+  const scrubbed = scrub_report(event) as ErrorEvent
+  const headers = browser_header(event)
+  const clean = headers ? { ...scrubbed, request: { ...scrubbed.request, headers } } : scrubbed
   return abort ? { ...clean, fingerprint: ['move-abort', abort[2]!, abort[3]!, abort[4]!, abort[1]!] } : clean
 }
 
@@ -54,7 +64,13 @@ export const init_reporting = (
   init({
     ...config,
     sendDefaultPii: false,
-    beforeSend: before_send,
+    beforeSend: (event, hint) => {
+      const correlated = correlate_error(event, reporting_analytics_context())
+      const clean = before_send(correlated, hint)
+      const analytics = error_analytics(clean ?? correlated, hint)
+      if (analytics) capture_analytics(analytics.name, analytics.properties)
+      return clean
+    },
     // No session analytics or console breadcrumbs containing wallet/session objects.
     integrations: (defaults) => defaults.filter(({ name }) => !['Breadcrumbs', 'BrowserSession'].includes(name)),
     ...(transport ? { transport } : {}),
@@ -64,7 +80,7 @@ export const init_reporting = (
 export const report_error = (error: unknown, context: ReportContext = {}): void => {
   console.error('Application error.', error, context)
   capture_exception(error instanceof Error ? error : new Error(String(error)), {
-    contexts: { application: context },
+    contexts: { application: context, telemetry: reporting_analytics_context() },
   })
 }
 
@@ -90,6 +106,7 @@ export const observe_engine_reporting = (
       tags: { area: 'engine', engine_issue: issue.code, surface },
       fingerprint: ['engine', issue.code, '{{ default }}'],
       contexts: {
+        telemetry: reporting_analytics_context(),
         application: {
           backend: status.backend,
           quality: engine.quality(),

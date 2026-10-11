@@ -19,6 +19,8 @@ import type { SessionState } from '../modules/session.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 
 import { group_giftcards, type GiftcardGroup } from './gift_rewards.ts'
+import { CrewDialogue } from './CrewDialogue.tsx'
+import { crew_campaign, crew_path } from './crew_campaign.ts'
 
 type CampaignRow = (typeof content_catalog.airdrop.campaigns)[number]
 
@@ -165,9 +167,24 @@ export const AirdropCollection = ({
 export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy; session: SessionState }>) {
   const t = copy_text(copy.airdrop_page)
   const distribution = useAppStore((state) => state.distribution)
+  const crew_dialogue = useAppStore((state) => state.navigation.pathname === crew_path)
   const external_wallet = useAppStore((state) => state.external_wallet)
   const busy = distribution.pending
   const cards = [...(distribution.holder_giftcards ?? []), ...session.giftcards]
+  const wallet_control = (
+    <HolderWalletConnect wallet={{ state: external_wallet, dispatch: dispatch_app }} copy={copy} t={t} />
+  )
+
+  if (crew_dialogue)
+    return (
+      <section className="airdrop-page">
+        <CrewDialogue copy={copy} />
+        <div className="min-h-0 space-y-3 overflow-y-auto">
+          <CampaignCard row={crew_campaign} t={t} />
+          <div className="aui-panel airdrop-connect p-3">{wallet_control}</div>
+        </div>
+      </section>
+    )
 
   return (
     <AirdropPageView
@@ -180,9 +197,7 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
         connected: !!external_wallet.session,
         gift_ready: distribution.gift_link_ready,
         error: distribution.error ? player_error_text(copy, distribution.error) : null,
-        wallet_control: (
-          <HolderWalletConnect wallet={{ state: external_wallet, dispatch: dispatch_app }} copy={copy} t={t} />
-        ),
+        wallet_control,
         refresh: () => dispatch_app({ type: 'distribution/refresh_holder' }),
         claim: () => dispatch_app({ type: 'distribution/claim_all' }),
         recover: () => dispatch_app({ type: 'distribution/claim_gift_link' }),
@@ -194,7 +209,10 @@ export default function AirdropPage({ copy, session }: Readonly<{ copy: AppCopy;
 export const AirdropPageView = ({
   copy,
   collection,
-}: Readonly<{ copy: AppCopy; collection: Omit<ComponentProps<typeof AirdropCollection>, 'copy'> }>) => {
+}: Readonly<{
+  copy: AppCopy
+  collection: Omit<ComponentProps<typeof AirdropCollection>, 'copy'>
+}>) => {
   const t = copy_text(copy.airdrop_page)
   return (
     <section className="airdrop-page">

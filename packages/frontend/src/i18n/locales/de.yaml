@@ -220,6 +220,8 @@ trade_panel:
 transaction_unknown_toast: Deine letzte Aktion wird noch geprüft. Weitere Transaktionen bleiben gesperrt, bis ihr Ergebnis bekannt ist.
 transaction_recovered_toast: Deine vorherige Transaktion wurde gefunden. Lade die Seite neu, um ihr Ergebnis vor der nächsten Aktion zu sehen.
 world_hud:
+  crew_talk: 'Mit Blast Girl sprechen'
+  crew_talk_touch: 'Mit Blast Girl sprechen'
   map_party_legend: 'Cyan: Gruppe · Gold: Anführer'
   dismount_prompt_touch: 'Tippen zum Absteigen'
   spawn_press_attack_touch: 'Tippen zum Angreifen'
@@ -355,6 +357,8 @@ world_hud:
   resource_face_protector: 'Drücke {{key}}, um zu kämpfen'
   zone_never_arrived: 'Die Suche ging durch, aber die Welt zeigte sie nie — die Leseschicht hängt womöglich zurück'
 demo_page:
+  animation_loop: Animation wiederholen
+  animation_auto: Automatisch (Bewegung)
   asset_demo_city: Demostadt
   asset_house_1: Stadthaus A
   asset_house_2: Stadthaus B
@@ -435,6 +439,10 @@ demo_page:
   control_hint: Canvas anklicken · WASD zum Bewegen · Leertaste zum Springen · Maus zum Umschauen
   back: Zurück zur App
 marketplace_page:
+  filter_all: 'Alle Kategorien'
+  filter_empty: 'Keine Treffer. Versuche einen anderen Filter oder Suchbegriff.'
+  lot_price: 'Gesamtpreis des Pakets'
+  type_count_hint: 'Verschiedene Gegenstandstypen mit öffentlichen Angeboten'
   total_units: 'Gesamte Einheiten'
   market_cap: 'Marktkapitalisierung'
   market_cap_basis: 'Alle vorhandenen Einheiten × durchschnittlicher Stückpreis des letzten Handelstags im Diagramm, ohne Gebühren.'
@@ -558,6 +566,16 @@ mastery_page:
   offer_purchased: Meisterschaftsbelohnung gekauft.
 
 airdrop_page:
+  crew_view_sale: 'KARES-Verkauf ansehen'
+  crew_dialogue:
+    intro: 'Nimm am KARES-Tokenverkauf teil, dann habe ich ein Geschenk für dich.'
+    connect: 'Verbinde die Wallet, die du beim Verkauf verwendet hast. Mal sehen, ob dein Geschenk da ist.'
+    checking: 'Ich prüfe deine Geschenke…'
+    ready: 'Dein Crew-Helm ist da!'
+    claiming: 'Einen Moment, deine Geschenke werden abgeholt.'
+    claimed: 'Ich habe dir deinen Crew-Helm bereits gegeben. Trage ihn mit Stolz!'
+    empty: 'Für diese Wallet ist gerade kein Crew-Helm verfügbar. Er wurde vielleicht schon abgeholt, oder die Verteilung steht noch aus.'
+    unavailable: 'Ich konnte deine Geschenke nicht prüfen. Bitte versuche es erneut.'
   reward_title: 'Du hast ein Geschenk erhalten!'
   reward_received: 'Du hast {items} erhalten!'
   reward_needs_sui: 'Dein Geschenk ist sicher in deiner Wallet. Füge etwas SUI für die Transaktionsgebühr hinzu und hole dann deine Belohnung ab.'
@@ -598,6 +616,9 @@ airdrop_page:
     physical: 'Physische Geschenkkarte'
     game_wallet: 'Belohnungen für Hytale-Veteranen'
   campaigns:
+    blast_crew:
+      title: 'Crew-Helm'
+      description: 'Ein kosmetisches Geschenk für Teilnehmer am KARES-Verkauf auf Blast. Verbinde nach der Verteilung die verwendete Wallet.'
     oeuftermath:
       title: 'Aftermath Eggs · Oeuftermath'
       description: 'Inhaber eines Aftermath Egg im Snapshot erhalten einen Gutschein für das Oeuftermath-Haustier. Prüfe die damalige Wallet; ein späterer Kauf macht dich nicht berechtigt.'
@@ -2605,6 +2626,13 @@ spell_effects:
   expires_next_turn: 'Bis zum nächsten Zug'
 
 ui:
+  feedback_question: 'Was erschwert dir das Weiterspielen?'
+  feedback_unclear: 'Ich weiß nicht, was zu tun ist'
+  feedback_controls: 'Steuerung'
+  feedback_performance: 'Langsam oder fehlerhaft'
+  feedback_funding: 'Wallet aufladen'
+  feedback_not_interested: 'Nicht mein Spiel'
+  feedback_dismiss: 'Schließen'
   multiplayer: 'Mehrspieler'
   nearby_fights: 'Kämpfe in der Nähe'
   nearby_fights_empty: 'Keine erfassten Kämpfe in der Nähe'

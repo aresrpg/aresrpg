@@ -9,6 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import { indexed_asset_key, spell_asset_basename, spell_asset_key } from '../../src/content/asset_keys.ts'
 import { spell_icon } from '../../src/content/assets.ts'
 import {
+  NPC_CHARACTER_MODELS,
   authored_character_model_classes,
   character_model_basenames,
 } from '../../src/content/character_model_catalog.ts'
@@ -24,6 +25,8 @@ import {
 import items_source from '../../../../seed/content/items.json'
 import mobs_source from '../../../../seed/content/mobs.json'
 import spells_source from '../../../../seed/content/spells.json'
+import crew_source from '../../../../seed/content/crew.json'
+import airdrop_source from '../../../../seed/content/airdrop.json'
 
 const seed = (...parts: readonly string[]) => resolve(import.meta.dir, '../../../../seed', ...parts)
 
@@ -80,14 +83,15 @@ const png_dimensions = (path: string): Readonly<{ width: number; height: number 
 const assert_character_model_asset = (
   character_dir: string,
   available: ReadonlySet<string>,
-  model: ReturnType<typeof character_model_basenames>
+  model: ReturnType<typeof character_model_basenames>,
+  customizable = true
 ): void => {
   const parts = [model.body, ...(model.hair ? [model.hair] : [])]
   expect(parts.every((basename) => available.has(basename))).toBeTrue()
   const body_path = resolve(character_dir, `${model.body}.glb`)
   const bones = glb_nodes(body_path).map((name) => name.toLowerCase())
   expect(bones.some((name) => name.includes('head'))).toBeTrue()
-  expect(bones.some((name) => name.includes('cape'))).toBeTrue()
+  if (customizable) expect(bones.some((name) => name.includes('cape'))).toBeTrue()
   const body = glb_manifest(body_path)
   const clip_names = body.animations.map((name) =>
     name
@@ -96,7 +100,11 @@ const assert_character_model_asset = (
       .at(-1)
   )
   expect(['IDLE', 'WALK', 'RUN'].every((name) => clip_names.includes(name))).toBeTrue()
-  for (const basename of parts) {
+  if (customizable) {
+    expect(clip_names.includes('SIT')).toBeTrue()
+    expect(bones.filter((name) => name === 'rider')).toHaveLength(1)
+  }
+  for (const basename of customizable ? parts : []) {
     const { textures } = glb_manifest(resolve(character_dir, `${basename}.glb`))
     expect(
       ['diffuse_base', 'diffuse_color1', 'diffuse_color2', 'diffuse_color3'].every((name) => textures.includes(name))
@@ -105,6 +113,20 @@ const assert_character_model_asset = (
 }
 
 describe('shipped content assets', () => {
+  test('the authored crew NPC resolves an existing world, campaign, model and portrait', () => {
+    expect(worlds_source.some(({ world }) => world === crew_source.npc.world)).toBeTrue()
+    expect([crew_source.npc.x, crew_source.npc.z].every(Number.isFinite)).toBeTrue()
+    const campaign = airdrop_source.campaigns.find(({ id }) => id === crew_source.campaign)
+    expect(campaign?.visibility).toBe('public')
+    expect(campaign?.items.every((item_type) => items_source.some((item) => item.item_type === item_type))).toBeTrue()
+    const model = NPC_CHARACTER_MODELS[crew_source.npc.model]
+    expect(model).toBeDefined()
+    expect(basenames(seed('models/characters'), '.glb').has(model!.body)).toBeTrue()
+    const portrait = png_dimensions(seed('icons/characters', `${model!.body}.png`))
+    expect(portrait.width).toBeGreaterThanOrEqual(256)
+    expect(portrait.height).toBeGreaterThanOrEqual(256)
+  })
+
   test('every declared model exists on disk with the nodes its renderer expects', () => {
     // Characters: one body (plus optional hair) per class and gender, rigged.
     const character_dir = seed('models/characters')
@@ -112,9 +134,14 @@ describe('shipped content assets', () => {
     for (const classe of authored_character_model_classes)
       for (const male of [true, false])
         assert_character_model_asset(character_dir, characters, character_model_basenames(classe, male))
-    const declared_characters = authored_character_model_classes.flatMap((classe) =>
-      [true, false].flatMap((male) => Object.values(character_model_basenames(classe, male)))
-    )
+    for (const model of Object.values(NPC_CHARACTER_MODELS))
+      assert_character_model_asset(character_dir, characters, model, false)
+    const declared_characters = [
+      ...authored_character_model_classes.flatMap((classe) =>
+        [true, false].flatMap((male) => Object.values(character_model_basenames(classe, male)))
+      ),
+      ...Object.values(NPC_CHARACTER_MODELS).flatMap((model) => Object.values(model)),
+    ]
     expect([...characters].toSorted()).toEqual([...new Set(declared_characters)].toSorted())
 
     expect(items_source.every((item) => !('appearance' in item))).toBe(true)
