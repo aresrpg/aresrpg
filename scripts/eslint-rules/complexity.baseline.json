@@ -393,11 +393,6 @@
         15
       ]
     },
-    "packages/sdk/src/seed_session.ts": {
-      "create_seed_session > release": [
-        13
-      ]
-    },
     "packages/sdk/src/seed.ts": {
       "validate_biome_maps": [
         15
@@ -1547,17 +1542,6 @@
     "packages/sdk/src/marketplace.ts": {
       "marketplace_actions > list": [
         22
-      ]
-    },
-    "packages/sdk/src/seed_session.ts": {
-      "browser_seed_session_store > read": [
-        9
-      ],
-      "create_seed_session > ensure": [
-        12
-      ],
-      "create_seed_session > release": [
-        15
       ]
     },
     "packages/sdk/src/seed.ts": {

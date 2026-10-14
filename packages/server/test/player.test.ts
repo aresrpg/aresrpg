@@ -354,7 +354,14 @@ describe('the player harness (push model)', () => {
           return params?.id === '0xcape'
             ? [
                 {
-                  item: { properties: { id: '0xcape', name: 'Lorito Cloak', item_type: 'cape_lorito' } },
+                  item: {
+                    properties: {
+                      id: '0xcape',
+                      name: 'Lorito Cloak',
+                      item_type: 'cape_lorito',
+                      version: '9007199254740993',
+                    },
+                  },
                   kiosk: '0xk',
                   address: '0xme',
                 },
@@ -386,7 +393,10 @@ describe('the player harness (push model)', () => {
 
     const updates = sent.filter((packet) => packet.type === 'packet/item_updated')
     expect(updates).toHaveLength(1)
-    expect(updates[0]).toMatchObject({ type: 'packet/item_updated', item: { id: '0xcape', kiosk: '0xk' } })
+    expect(updates[0]).toMatchObject({
+      type: 'packet/item_updated',
+      item: { id: '0xcape', kiosk: '0xk', version: '9007199254740993' },
+    })
     expect(sent.filter((packet) => packet.type === 'packet/item_removed')).toEqual(
       expect.arrayContaining([
         { type: 'packet/item_removed', item: '0xburned', version: '13' },
