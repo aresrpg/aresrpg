@@ -158,6 +158,9 @@ so mock item details cannot fall back to a connected account.
 Layout adapts to both viewport and window-container width; touch controls retain native keyboard
 semantics and at least 44px targets. Migration replaces each old primitive at its existing owner;
 unmigrated feature layouts remain in their application package until converted.
+Shared menu glyphs use rendered gray-slate carvings over slate material, with one per-destination rim palette.
+Character shortcut hints derive from the same key mapping as input handling. Inventory uses E, Jobs uses J,
+and map retains M; opened character windows omit shortcut badges from their headers.
 
 Jobs recipe cards derive full-chain job-level access from the selected character’s job XP and the compiled
 recipe catalogue through the immutable recipe graph. A yellow corner `~` marks an unlocked final recipe
@@ -795,7 +798,22 @@ all results for that fight, including storage rebates. Results disclose the ledg
 `seed/sounds/` owns the file-backed effects; `seed/content/audio.json` assigns semantic cues and
 spell names to those files. The frontend audio registry is the one bounded playback pool for
 fight and interface sounds. It applies the master volume to both new and active voices and releases
-players with the app observer lifetime. Named spells play through the ordered fight cue edge;
+players with the app observer lifetime. Every character cast uses its model’s forward `ATTACK` animation, including buffs and spells without line of sight.
+All twelve approved spell classes run the captured program under `seed/content/spell_effects/`.
+A mechanical extraction preserves its shader, presets, flight equations, timing and sound plans.
+The native WebGL adapter binds the current board, camera and actor silhouettes, then composites
+into the world renderer before captions. Gameplay owns affected cells and trap triggers.
+The original visual windup retimes the model's `ATTACK` anticipation to its release marker.
+Shader and audio programs load lazily at fight entry; the board lifecycle prewarms their GPU
+pipelines and decoded sounds before casting. Actor masks use the model's cached vertex attributes
+and current bone matrices on the GPU. The original effect shader is unchanged.
+The presentation queue awaits each renderer-owned cue completion before starting its successor.
+Damage, healing, forced movement, death and turn changes cannot bypass this ordering. Input recovery
+is not visual completion; an early-input feature must not acknowledge a cue or release its batch.
+Spell aftermath and independent sound tails may outlive their completed causal presentation beat.
+The audio lifecycle loads the selected recordings and runs the original Web Audio player; its buses
+are owned per accepted cast so a following cast cannot silence an earlier impact. Mobs and unmapped spells retain elemental effects.
+Effect travel is independent of the body gesture. Named spells play through the ordered fight cue edge;
 unmapped spells retain their elemental fallback. Game feedback observes copied state slices,
 not receipt or packet arrivals. The fight-over cue follows the newly visible result once, for
 both player and local-demo fights, regardless of outcome or boss rewards. Payout updates do not replay it. Craft and consumable

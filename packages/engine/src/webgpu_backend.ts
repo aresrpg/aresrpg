@@ -34,6 +34,7 @@ import { create_character_aura_layer } from './character_aura_layer.ts'
 import { create_entity_layer } from './entities.ts'
 import { create_caption_layer } from './caption_layer.ts'
 import { create_entity_label_layer } from './entity_labels.ts'
+import { create_spell_effect_layer } from './spell_effect_layer.ts'
 import { create_fight_presentation } from './fight_presentation.ts'
 import { create_transient_effects } from './transient_effects.ts'
 import { project_screen_anchor } from './screen_projection.ts'
@@ -198,7 +199,15 @@ export const create_webgpu_backend = async (
     const captions = own(create_caption_layer({ renderer, canvas, camera }))
     const entity_labels = own(create_entity_label_layer({ canvas, camera, entities: entity_anchors }))
     const effects = own(create_transient_effects({ scene, entities, captions }))
-    const fight_presentation = create_fight_presentation({ entities, vfx: effects, shock: () => crit_shock() })
+    const motion_preference = globalThis.matchMedia('(prefers-reduced-motion: reduce)')
+    const reduced_motion = (): boolean => motion_preference.matches
+    const spell_effects = own(create_spell_effect_layer({ camera, renderer, anchors: entities, reduced_motion }))
+    const fight_presentation = create_fight_presentation({
+      entities,
+      vfx: effects,
+      spells: spell_effects,
+      shock: () => crit_shock(),
+    })
     const sun = new DirectionalLight(0xfff2dd, 3)
     const back_fill = new DirectionalLight(0xffd6a8, 1.35)
     const hemisphere = new HemisphereLight(0xbcb2a0, 0x977f56, 0.9)
@@ -573,7 +582,7 @@ export const create_webgpu_backend = async (
     let shock_at = -10_000
     const CRIT_SHOCK_MS = 260
     const crit_shock = (): void => {
-      if (board_footprint) shock_at = previous_frame
+      if (board_footprint && !reduced_motion()) shock_at = previous_frame
     }
 
     const draw = (now = performance.now()): void => {
@@ -633,23 +642,20 @@ export const create_webgpu_backend = async (
       }
       if (has_dynamic_entities && sun.castShadow && sun.shadow.intensity > 0) sun.shadow.needsUpdate = true
       const shock = Math.max(0, 1 - (now - shock_at) / CRIT_SHOCK_MS)
-      if (shock > 0) {
-        const amplitude = 0.11 * shock * shock
-        const offset_x = Math.sin(now * 0.09) * amplitude
-        const offset_y = Math.cos(now * 0.117) * amplitude * 0.6
-        camera.position.x += offset_x
-        camera.position.y += offset_y
-        frame_renderer.render()
-        captions.render()
-        entity_labels.render()
-        if (!terrain_presented && terrain.count() > 0) terrain_presented = true
-        camera.position.x -= offset_x
-        camera.position.y -= offset_y
-        return
-      }
+      const amplitude = 0.11 * shock * shock
+      const spell_offset = spell_effects.camera_offset()
+      const offset_x = Math.sin(now * 0.09) * amplitude + spell_offset[0]
+      const offset_y = Math.cos(now * 0.117) * amplitude * 0.6 + spell_offset[1]
+      camera.position.x += offset_x
+      camera.position.y += offset_y
+      camera.position.z += spell_offset[2]
       frame_renderer.render()
+      spell_effects.render()
       captions.render()
       entity_labels.render()
+      camera.position.x -= offset_x
+      camera.position.y -= offset_y
+      camera.position.z -= spell_offset[2]
       if (!terrain_presented && terrain.count() > 0) terrain_presented = true
     }
 
@@ -714,6 +720,7 @@ export const create_webgpu_backend = async (
         auras.tick(now)
         pet_wings.tick(now)
         effects.tick(now)
+        spell_effects.tick(now)
         fight_swords?.tick(now)
       },
       render: (now = performance.now()) => {
@@ -777,6 +784,7 @@ export const create_webgpu_backend = async (
       },
       set_clouds_visible: clouds.set_enabled,
       set_fight_board: (board) => {
+        spell_effects.set_board(board)
         fight_board.set(board)
         const immersive = board !== null && !board.ambient
         clouds.set_active(!immersive)
@@ -862,6 +870,8 @@ export const create_webgpu_backend = async (
         sun.shadow.needsUpdate = true
       },
       animate_entity: entities.animate,
+      prepare_fight_effects: spell_effects.prepare,
+      prepare_fight_cue: fight_presentation.prepare,
       play_fight_cue: fight_presentation.play,
       play_jump_puff: effects.play_jump_puff,
       project_entity: (id) => {

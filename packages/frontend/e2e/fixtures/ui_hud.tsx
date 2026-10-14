@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { createRoot } from 'react-dom/client'
-import { useState } from 'react'
+import { useEffect, useState, type ComponentProps } from 'react'
 import { Button, CombatHud } from '@aresrpg/ui'
+import { Flag } from 'lucide-react'
 import { compile_runtime_world_recipe, parse_world_recipe } from '@aresrpg/engine'
 
 import { WorldMap } from '../../src/game/hud/WorldMap.tsx'
@@ -32,6 +33,29 @@ const copy = await load_app_copy('en')
 dispatch_app({ type: 'locale/loaded', locale: 'en', copy })
 const spells = content_catalog.spells.filter(({ classe }) => classe === 'senshi')
 const root = createRoot(document.getElementById('root')!)
+const TimedCombatHud = (props: ComponentProps<typeof CombatHud>) => {
+  const [remaining, set_remaining] = useState<number | null>(null)
+  useEffect(() => {
+    const update = (event: Event) => set_remaining((event as CustomEvent<number | null>).detail)
+    window.addEventListener('hud-timer', update)
+    return () => window.removeEventListener('hud-timer', update)
+  }, [])
+  return (
+    <CombatHud
+      {...props}
+      timer={
+        remaining === null
+          ? null
+          : {
+              label: copy.fight_hud.end_turn,
+              hint: copy.fight_hud.turn_timer_hint,
+              remaining,
+              duration: 60,
+            }
+      }
+    />
+  )
+}
 const DamageVitals = () => {
   const [hp, set_hp] = useState(1040n)
   return (
@@ -60,7 +84,7 @@ if (new URLSearchParams(location.search).has('map')) {
       <div className="fight-hud" data-chat-viewport="">
         <WorldChat copy={copy} />
         <div className="fight-hud__bottom">
-          <CombatHud
+          <TimedCombatHud
             label="Combat"
             vitals={<DamageVitals />}
             spells={spells.map((spell) => {
@@ -91,7 +115,18 @@ if (new URLSearchParams(location.search).has('map')) {
                 />
               )
             })}
-            controls={<Button tone="primary">End turn</Button>}
+            controls={
+              <>
+                <Button tone="primary">End turn</Button>
+                {new URLSearchParams(location.search).has('timer') && (
+                  <div className="aui-combat-utilities">
+                    <Button tone="danger" aria-label="Forfeit">
+                      <Flag size={14} />
+                    </Button>
+                  </div>
+                )}
+              </>
+            }
           />
         </div>
         <div style={{ position: 'absolute', top: 20, right: 20, pointerEvents: 'auto' }}>

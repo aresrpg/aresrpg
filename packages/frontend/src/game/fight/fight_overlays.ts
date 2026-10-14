@@ -12,6 +12,11 @@ export type FightZoneVisualState = Readonly<{
   zone_ids: readonly string[]
 }>
 
+export const create_fight_zone_visual_state = (
+  checkpoint: Readonly<HydratedFightCheckpoint> | null,
+  zone_ids: readonly string[]
+): FightZoneVisualState | null => (checkpoint ? Object.freeze({ checkpoint, zone_ids }) : null)
+
 export const fight_range_seat = (owned_active_seat: bigint | null, hovered_seat: bigint | null): bigint | null =>
   hovered_seat ?? owned_active_seat
 
@@ -93,7 +98,7 @@ const with_fighter = (
     }),
   })
 
-/** Advance display truth only when its matching cue has actually played. Canonical state may
+/** Advance display truth only when its matching cue has completed. Canonical state may
  * already contain the whole mob wave; cards, rings, and bodies must not reveal its future. */
 export const fight_visual_checkpoint_after_cue = (
   checkpoint: Readonly<HydratedFightCheckpoint>,

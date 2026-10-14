@@ -1,0 +1,23 @@
+Ikari male and female voxel character models
+
+Open ikari.blend. The Male and Female Voxel Warrior Study scenes contain the
+registered pair. Earlier study scenes remain references. Each sex uses its own canonical
+bind frames, Rider socket, native locomotion, seated pose, and one-second death.
+Body and hair export separately. Hair and ears follow the head rigidly.
+
+The four packed palette textures contain authored color plus three customization masks.
+The packed build_ikari_voxel_warrior.py and build_ikari_female_voxel_warrior.py
+texts rebuild the current geometry from the canonical references in this file.
+The matching validate texts check head/hair fit and attachment.
+Run export_ikari.py to generate candidate body/hair GLBs in work/ikari.
+The exporter retains constant pose channels and uses the actual exported head frame
+for standalone hair. It exports only the family scene and embeds Draco geometry.
+
+The accepted exports live in seed/models/characters and resolve through the shared
+character catalog for both sexes. The attack gesture uses the canonical reference
+animation. Female ATTACK_CAC exports as ATTACK; death remains exactly one second.
+
+Checked: front/back/three-quarter views, running and seated articulation, normalized
+weights, packed palettes, Rider parent, and one-second death. All ten candidate body
+and hair pairs decoded through Three.js with 85 sampled poses per pair. Texture
+appearance was checked in Blender; offline Three.js texture decoding was stubbed.

@@ -33,6 +33,8 @@ export type SceneHandle = Pick<
   | 'set_entities'
   | 'set_nearby_entities'
   | 'animate_entity'
+  | 'prepare_fight_cue'
+  | 'prepare_fight_effects'
   | 'play_fight_cue'
   | 'project_entity'
   | 'set_entity_caption'

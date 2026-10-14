@@ -81,6 +81,22 @@ export const project_weapon_turn = (
   caster: bigint
 ): SpellTurnProjection | null => project_level_turn(checkpoint, caster, 'strike', weapon_level_of(checkpoint, caster))
 
+/** Presentation and previews share the combat grid; empty cells remain part of an effect's area. */
+export const spell_effect_area_cells = (
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  caster: bigint,
+  target_cell: bigint,
+  row: Readonly<SpellEffect>
+): readonly bigint[] => {
+  const fighter = checkpoint.contract.fighters[Number(caster)]
+  if (!fighter) return Object.freeze([])
+  const cells =
+    row.target_filter === TARGET_FILTERS.only_caster
+      ? [fighter.cell]
+      : zone_cells(row.area_shape, row.area_size, target_cell, fighter.cell)
+  return Object.freeze(cells.filter((cell) => legal_cell(checkpoint, cell)))
+}
+
 const level_area_cells = (
   checkpoint: Readonly<HydratedFightCheckpoint>,
   caster: bigint,
@@ -91,11 +107,7 @@ const level_area_cells = (
   const fighter = checkpoint.contract.fighters[Number(caster)]
   if (!level || !fighter) return Object.freeze([])
   const { rows } = spell_turn_rows(checkpoint, caster, name, level)
-  const cells = new Set(
-    rows
-      .flatMap((row) => zone_cells(row.area_shape, row.area_size, target_cell, fighter.cell))
-      .filter((cell) => legal_cell(checkpoint, cell))
-  )
+  const cells = new Set(rows.flatMap((row) => spell_effect_area_cells(checkpoint, caster, target_cell, row)))
   return Object.freeze([...cells].sort((left, right) => Number(left - right)))
 }
 

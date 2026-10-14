@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import type { SpellEffectRecipe } from './spell_effect_recipe.ts'
 import type { AtmosphereTuning } from './atmosphere_tuning.ts'
 import type { DetailCell } from './detail_artifact.ts'
 import type { WorldCaption } from './caption_types.ts'
@@ -70,7 +71,7 @@ export type CharacterAppearanceRender = Readonly<{
 }>
 export type CharacterAnimationName = 'IDLE' | 'WALK' | 'RUN' | 'JUMP' | 'JUMP_RUN' | 'FALL' | 'SWIM' | 'SIT' | 'DANCE'
 export type CharacterAnimationRender = Readonly<{
-  name: CharacterAnimationName | 'ATTACK' | 'BUFF' | 'SPELL_TARGET' | 'DEATH'
+  name: CharacterAnimationName | 'ATTACK' | 'DEATH'
   time_scale: number
   /** Override the clip's normal locomotion/action repeat policy. */
   loop?: boolean
@@ -272,8 +273,7 @@ export type FightPresentationCue =
       id: string
       type: 'cast'
       caster_id: string
-      /** the caster aimed its own cell — plays the buff pose instead of the attack swing */
-      self_cast: boolean
+      effect?: SpellEffectRecipe | null
       spell: string
       cast_level: number
       target_cell: number
@@ -336,6 +336,7 @@ export type FightPresentationCue =
   | Readonly<{
       id: string
       type: 'zone'
+      effect?: SpellEffectRecipe | null
       action: 'trap_triggered' | 'glyph_triggered'
       zone_id: string
       owner_id: string
@@ -429,6 +430,8 @@ export type Engine = Readonly<{
   set_dungeon_portals: (markers: readonly DungeonPortalMarker[]) => void
   set_dungeon_stage: (stage: DungeonStageRender | null) => void
   animate_entity: (motion: EntityPathMotion) => Promise<boolean>
+  prepare_fight_effects: (atlas_urls: readonly string[]) => Promise<void>
+  prepare_fight_cue: (cue: FightPresentationCue) => Promise<FightPresentationCue>
   play_fight_cue: (cue: FightPresentationCue) => Promise<boolean>
   play_jump_puff: (position: Vec3) => void
   project_entity: (id: string) => EntityScreenAnchor | null

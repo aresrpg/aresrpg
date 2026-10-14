@@ -5,10 +5,11 @@
 
 import { Package, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { NativeModal } from '@aresrpg/ui'
+import { NativeModal, NavigationRow } from '@aresrpg/ui'
 
 import { useItemCategoryName } from '../i18n/useItemCategoryName.ts'
 import { useAppStore } from '../store.ts'
+import './search_picker.css'
 
 export type PickerItem = Readonly<{
   id: string
@@ -204,29 +205,31 @@ export const SearchPickerModal = ({
           </button>
         </header>
         {pills.length > 0 && (
-          <div className="flex shrink-0 flex-wrap gap-1 border-b border-border px-4 py-2">
+          <div className="search-picker-pills flex shrink-0 flex-wrap gap-1 border-b border-border px-4 py-2">
             {pills.map((pill) => (
-              <button
-                className={`min-h-11 cursor-pointer border px-1.5 py-0.5 text-[8px] uppercase ${active_pills.has(pill) ? 'aui-button--primary' : 'border-white/8 text-[#6b7280]'}`}
+              <NavigationRow
+                className="aui-navigation-row--compact"
+                selected={active_pills.has(pill)}
                 key={pill}
                 onClick={() => toggle_pill(pill)}
                 type="button"
               >
                 {pill}
-              </button>
+              </NavigationRow>
             ))}
           </div>
         )}
         <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
           {categories.length > 0 && (
-            <nav className="flex max-h-32 shrink-0 overflow-auto border-b border-border sm:block sm:max-h-none sm:w-48 sm:border-r sm:border-b-0 [&>div]:shrink-0">
-              <button
-                className={`block min-h-11 shrink-0 cursor-pointer aui-button aui-button--neutral px-3 py-2 text-left text-[10px] tracking-[0.15em] uppercase sm:w-full ${category === null ? 'aui-button--primary' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+            <nav className="search-picker-categories flex max-h-32 shrink-0 overflow-auto border-b border-border sm:block sm:max-h-none sm:w-48 sm:border-r sm:border-b-0 [&>div]:shrink-0">
+              <NavigationRow
+                className="aui-navigation-row--compact whitespace-nowrap"
+                selected={category === null}
                 onClick={() => set_category(null)}
                 type="button"
               >
-                {copy.all} <span className="ml-1 text-[#6b7280]">({items.length})</span>
-              </button>
+                {copy.all} <span className="ml-auto text-muted">({items.length})</span>
+              </NavigationRow>
               {categories.map(({ id, label, count, section, parent }) => (
                 <div key={id}>
                   {section && (
@@ -234,13 +237,14 @@ export const SearchPickerModal = ({
                       {section}
                     </p>
                   )}
-                  <button
-                    className={`block min-h-11 w-full cursor-pointer aui-button aui-button--neutral py-2 pr-3 text-left text-[10px] tracking-[0.15em] uppercase ${parent ? 'pl-6' : 'pl-3'} ${category === id ? 'aui-button--primary' : 'border-transparent text-[#e8e4dc] hover:bg-[#c8963c]/5'}`}
+                  <NavigationRow
+                    className={`aui-navigation-row--compact whitespace-nowrap ${parent ? 'aui-navigation-row--nested' : ''}`}
+                    selected={category === id}
                     onClick={() => set_category(id)}
                     type="button"
                   >
-                    {label} <span className="ml-1 text-[#6b7280]">({count})</span>
-                  </button>
+                    {label} <span className="ml-auto text-muted">({count})</span>
+                  </NavigationRow>
                 </div>
               ))}
             </nav>
@@ -255,8 +259,10 @@ export const SearchPickerModal = ({
               const selected = item.id === value
               const locked = locked_ids?.has(item.id) ?? false
               return (
-                <button
-                  className={`flex min-h-11 w-full items-start gap-3 aui-button aui-button--neutral px-4 py-2 text-left ${selected ? 'aui-button--primary' : locked ? 'border-transparent text-[#555b66] opacity-45' : 'cursor-pointer border-transparent hover:bg-[#c8963c]/10 hover:text-[#c8963c]'}`}
+                <NavigationRow
+                  className={`aui-navigation-row--compact ${locked ? 'opacity-45' : ''}`}
+                  selected={selected}
+                  aria-disabled={locked || undefined}
                   key={item.id}
                   onClick={() => {
                     if (locked || press_read.current) {
@@ -321,7 +327,7 @@ export const SearchPickerModal = ({
                   {item.icon && <PickerIcon src={item.icon} />}
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-semibold tracking-wide" style={{ color: item.color }}>
+                      <span className="text-[12px] font-semibold" style={{ color: item.color }}>
                         {item.label}
                       </span>
                       {item.is_new && (
@@ -333,9 +339,9 @@ export const SearchPickerModal = ({
                         </span>
                       )}
                     </span>
-                    {item.sublabel && <span className="mt-0.5 block text-[9px] text-[#6b7280]">{item.sublabel}</span>}
+                    {item.sublabel && <span className="mt-0.5 block text-[11px] text-muted">{item.sublabel}</span>}
                   </span>
-                </button>
+                </NavigationRow>
               )
             })}
           </div>

@@ -25,3 +25,8 @@ node_modules/
 deprecated/
 .claude/
 packages-old/
+
+# Captured author program and its verbatim generated modules.
+seed/content/spell_effects/source.html
+seed/content/spell_effects/synth.js
+packages/engine/src/generated/*.js

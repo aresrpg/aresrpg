@@ -23,6 +23,7 @@ const CRITICAL_TESTS = [
   'staking',
   'wallet_switcher',
 ].map((name) => `**/${name}.pw.ts`)
+const PERFORMANCE_TESTS = ['**/performance.pw.ts', '**/spell_performance.pw.ts']
 const RENDERER_SMOKE = '**/renderer_smoke.pw.ts'
 
 export default defineConfig({
@@ -63,11 +64,11 @@ export default defineConfig({
     { name: 'regression-renderer', testMatch: RENDERER_SMOKE, workers: 1, timeout: 60_000 },
     {
       name: 'diagnostics',
-      testIgnore: ['**/performance.pw.ts', RENDERER_SMOKE, ...CRITICAL_TESTS],
+      testIgnore: [...PERFORMANCE_TESTS, RENDERER_SMOKE, ...CRITICAL_TESTS],
       workers: 1,
       timeout: 60_000,
     },
-    { name: 'performance', testMatch: '**/performance.pw.ts', workers: 1, timeout: 600_000 },
+    { name: 'performance', testMatch: PERFORMANCE_TESTS, workers: 1, timeout: 600_000 },
   ],
   webServer: {
     command:

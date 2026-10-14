@@ -72,3 +72,8 @@ export type {
 export { CAPTION_STYLE, type WorldCaption, type CaptionLine, type CaptionTarget } from './caption_types.ts'
 
 export { wrap_caption, create_caption_raster } from './caption_raster.ts'
+
+export { SPELL_EFFECT_CLASSES, spell_effect_timing } from './spell_effect_recipe.ts'
+export type { SpellEffectClass, SpellEffectArea, SpellEffectRecipe, SpellEffectTiming } from './spell_effect_recipe.ts'
+export { create_source as create_authored_spell_source } from './generated/claude_spell_source.js'
+export type { ClaudeSpell, ClaudeSoundEvent } from './generated/claude_spell_source.js'

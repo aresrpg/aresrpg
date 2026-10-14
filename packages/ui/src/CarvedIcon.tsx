@@ -39,7 +39,7 @@ const ART = {
 }
 export type CarvedSymbol = keyof typeof ART
 export const CarvedIcon = ({ name }: Readonly<{ name: CarvedSymbol }>) => (
-  <span className="aui-carved-icon" aria-hidden="true">
+  <span className="aui-carved-icon" data-carved-symbol={name} aria-hidden="true">
     <img src={ART[name]} alt="" draggable={false} />
   </span>
 )

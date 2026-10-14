@@ -53,8 +53,6 @@ const ANIMATIONS = Object.freeze([
   'FALL',
   'SWIM',
   'ATTACK',
-  'BUFF',
-  'SPELL_TARGET',
   'SIT',
   'DANCE',
   'DEATH',
@@ -395,7 +393,7 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
                 <option value="">{text.animation_auto}</option>
                 {ANIMATIONS.map((name) => (
                   <option key={name} value={name}>
-                    {name === 'BUFF' ? 'SPELL_BUFF' : name}
+                    {name}
                   </option>
                 ))}
               </select>

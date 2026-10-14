@@ -131,7 +131,9 @@ const has_direct_damage = (rows: readonly SpellEffect[]): boolean =>
 
 const is_placement = (row: SpellEffect): boolean => row.kind === KINDS.trap || row.kind === KINDS.glyph
 
-const split_placements = (rows: readonly SpellEffect[]): { placements: SpellEffect[]; payload: SpellEffect[] } => ({
+export const split_placements = (
+  rows: readonly SpellEffect[]
+): { placements: SpellEffect[]; payload: SpellEffect[] } => ({
   placements: rows.filter(is_placement),
   payload: rows.filter((row) => !is_placement(row)),
 })

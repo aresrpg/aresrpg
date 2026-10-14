@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 import { class_names } from '@aresrpg/immutable'
+import { loadImage } from '@napi-rs/canvas'
 import { expect, test } from 'bun:test'
 
-import { display_asset_for_route, display_asset_rows } from '../display_assets.ts'
+import { display_asset_bytes, display_asset_for_route, display_asset_rows } from '../display_assets.ts'
 
 const repo_dir = resolve(import.meta.dir, '../../..')
 
@@ -39,6 +40,21 @@ test('every emitted Sui Display image URL resolves to one authored source asset'
   for (const classe of class_names)
     for (const sex of ['male', 'female']) expect(routes.has(`/classe/${classe}_${sex}.jpg`)).toBeTrue()
   expect(rows.every(({ source_path }) => existsSync(source_path))).toBeTrue()
+})
+
+test('wallet portraits derive valid JPEGs from PNGs without stored JPEG copies', async () => {
+  const characters_dir = resolve(repo_dir, 'seed/icons/characters')
+  expect(readdirSync(characters_dir).filter((name) => /\.jpe?g$/iu.test(name))).toEqual([])
+  const rows = await display_asset_rows({ characters_dir, items_dir: resolve(repo_dir, 'seed/icons/items') })
+  const portraits = rows.filter(({ content_type }) => content_type === 'image/jpeg')
+  expect(portraits).toHaveLength(24)
+  for (const row of portraits) {
+    expect(row.source_path.endsWith('.png')).toBeTrue()
+    const bytes = await display_asset_bytes(row)
+    expect([...bytes.slice(0, 3)]).toEqual([255, 216, 255])
+    const image = await loadImage(Buffer.from(bytes))
+    expect([image.width, image.height]).toEqual([512, 512])
+  }
 })
 
 test('the dev display route discovers HD item art added after server startup', async () => {

@@ -5,6 +5,7 @@
 import authored from '../../../../../seed/content/audio.json'
 
 import { scale_audio_volume } from '../core/audio_volume.ts'
+import { spell_audio } from './spell_effect_audio.ts'
 import { create_carousel_audio } from './carousel_audio.ts'
 
 const FIXED_AUDIO = Object.freeze({
@@ -94,6 +95,7 @@ const SHARED_FIGHT_AUDIO = Object.freeze([
   'knockback',
   'turn_start',
 ])
+
 type AudioVoice = Readonly<{ player: HTMLAudioElement; volume: number }>
 const audio_pool = new Map<string, readonly AudioVoice[]>()
 const MAX_VOICES_PER_SOUND = 3
@@ -138,6 +140,7 @@ export const preload_audio = (keys: readonly string[]): void => {
 
 export const sync_audio_volumes = (): void => {
   carousel_audio.sync()
+  spell_audio.sync()
   audio_pool.forEach((voices) =>
     voices.forEach((voice) => {
       const { player, volume } = voice
@@ -148,6 +151,7 @@ export const sync_audio_volumes = (): void => {
 
 export const dispose_audio = (): void => {
   carousel_audio.dispose()
+  spell_audio.dispose()
   audio_pool.forEach((voices) =>
     voices.forEach(({ player }) => {
       player.pause()

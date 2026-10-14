@@ -5,6 +5,7 @@
 import type { EntityRender, FightBlobShape, FightBlobSpec } from '@aresrpg/engine'
 import { useEffect, useMemo, useState } from 'react'
 
+import { prepare_spell_resources } from '../game/fight/fight_resources.ts'
 import { FightViewport } from '../game/fight/FightViewport.tsx'
 import type { SceneHandle } from '../game/core/scene_feed.ts'
 import {
@@ -63,6 +64,13 @@ export const SimulatorBoardPane = ({
     () => character_entity_sources(simulator.characters, simulator.character_placements, 'a'),
     [simulator.character_placements, simulator.characters]
   )
+
+  useEffect(() => {
+    prepare_spell_resources(
+      simulator.characters.map((character) => character.classe),
+      scene
+    )
+  }, [simulator.characters, entities, scene])
 
   useEffect(() => {
     let current = true

@@ -13,6 +13,7 @@ import { create_grade_node } from './grading.ts'
 import { create_local_shafts, type LocalShaftEnvironment } from './local_shafts.ts'
 import { create_lens_water } from './lens_water.ts'
 import type { LiquidPalette } from './liquid_palette.ts'
+import { create_outline } from './outline.ts'
 import { get_quality_profile, uses_world_post_processing } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import { create_sun_shafts } from './sun_shafts.ts'
@@ -50,6 +51,7 @@ const create_scene_view = (camera: PerspectiveCamera) => {
   return Object.freeze({
     ray: world_matrix.mul(vec4(view_direction, 0)).xyz.normalize() as unknown as Node<'vec3'>,
     forward_cos: view_direction.z.abs().max(1e-4),
+    projection_inverse: projection_inverse as unknown as Node<'mat4'>,
     eye_y: eye.y as unknown as Node<'float'>,
     sync: () => {
       eye.value.copy(camera.position)
@@ -98,13 +100,16 @@ const create_pipeline = (
     illumination: water_illumination,
   })
   const view = create_scene_view(camera)
-  const scene_color = scene_pass.getTextureNode().sample(underwater.warp_uv(screenUV as unknown as Node<'vec2'>))
+  const scene_uv = underwater.warp_uv(screenUV as unknown as Node<'vec2'>)
+  // Lines are inked into the raw scene colour, so immersion, bloom, grading and FXAA treat them
+  // as part of the world.
+  const outline = create_outline({
+    depth: scene_pass.getTextureNode('depth'),
+    projection_inverse: view.projection_inverse,
+  })
+  const scene_color = outline.ink(scene_pass.getTextureNode().sample(scene_uv).rgb as unknown as Node<'vec3'>, scene_uv)
   const frag_dist = scene_pass.getViewZNode().negate().div(view.forward_cos)
-  const immersed = underwater.apply(
-    scene_color.rgb as unknown as Node<'vec3'>,
-    frag_dist as unknown as Node<'float'>,
-    view
-  )
+  const immersed = underwater.apply(scene_color, frag_dist as unknown as Node<'float'>, view)
   const local_shafts = create_local_shafts({
     camera,
     sun,
@@ -162,6 +167,7 @@ const create_pipeline = (
   return Object.freeze({
     render: () => {
       view.sync()
+      outline.set_pixel_density(renderer.getPixelRatio() * profile.render.scene_scale)
       local_shafts.update(local_suppressed)
       reconstructed_texture.textureNeedsUpdate = true
       const shafts_visible = shafts?.update(submerged) ?? false

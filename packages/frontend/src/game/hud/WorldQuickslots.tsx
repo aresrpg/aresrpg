@@ -10,6 +10,7 @@ import { dispatch_app, useAppStore } from '../../store.ts'
 import { CHARACTER_TABS } from './CharacterWindow.tsx'
 import { pages, type Page } from '../../modules/navigation.ts'
 import { HUD_PAGE_META } from './hud_pages.ts'
+import { CHARACTER_SHORTCUTS } from '../core/hud_input.ts'
 
 export const WorldQuickslots = () => {
   const copy = useAppStore((state) => state.copy)
@@ -24,7 +25,7 @@ export const WorldQuickslots = () => {
       dialog: `character_${tab}` as const,
       icon: <CarvedIcon name={icon} />,
       label: text(`tab_${tab}`),
-      key: tab === 'equipment' ? 'E' : '',
+      key: CHARACTER_SHORTCUTS.find((shortcut) => shortcut.tab === tab)?.key ?? '',
     })),
     {
       dialog: 'world_map',
@@ -52,6 +53,7 @@ export const WorldQuickslots = () => {
           label={slot.label}
           icon={slot.icon}
           hotkey={slot.key}
+          aria-keyshortcuts={slot.key || undefined}
           aria-pressed={dialog === slot.dialog}
           onClick={() => dispatch_app({ type: 'dialog/open', dialog: dialog === slot.dialog ? null : slot.dialog })}
         />

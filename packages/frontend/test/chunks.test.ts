@@ -31,6 +31,8 @@ const create_engine_spy = () => {
     set_resource_node_label: () => {},
     set_portal_label: () => {},
     animate_entity: () => Promise.resolve(false),
+    prepare_fight_effects: async () => {},
+    prepare_fight_cue: async (cue) => cue,
     play_fight_cue: () => Promise.resolve(false),
     play_jump_puff: () => {},
     project_entity: () => null,

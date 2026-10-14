@@ -26,6 +26,7 @@ import { align_mount } from './entity_mount.ts'
 import { advance_pet_flight_tilt, type PetFlightTilt } from './pet_flight_tilt.ts'
 import { BOARD_FLOOR_THICKNESS } from './fight_board_surface.ts'
 import { attach_invisibility, type InvisibilityEffect } from './invisibility.ts'
+import { FIGHT_VFX_BEAT } from './fight_vfx_presets.ts'
 import type {
   CharacterAnimationRender,
   EntityPathMotion,
@@ -61,13 +62,23 @@ type ActiveMotion = Readonly<{
   resolve: (completed: boolean) => void
 }>
 
-type EntityBeatKind = 'attack' | 'buff' | 'hit' | 'heal' | 'death'
+type EntityBeatKind = 'attack' | 'hit' | 'heal' | 'death'
+
+const BEAT_STYLE: Readonly<
+  Record<EntityBeatKind, Readonly<{ clip: EntityAnimation | null; minimum_ms: number; color: number; peak: number }>>
+> = {
+  attack: { clip: 'ATTACK', minimum_ms: 500, color: 0, peak: 0 },
+  death: { clip: 'DEATH', minimum_ms: 450, color: 0xff4747, peak: 0.55 },
+  hit: { clip: null, minimum_ms: 300, color: 0xff4747, peak: 0.55 },
+  heal: { clip: null, minimum_ms: 400, color: 0x4caf50, peak: 0.4 },
+}
 
 type ActiveBeat = Readonly<{
   entity: MountedEntity
   kind: EntityBeatKind
   started_at: number
   duration_ms: number
+  windup?: Readonly<{ seconds: number; release: number }>
   resolve: (completed: boolean) => void
 }>
 
@@ -111,14 +122,11 @@ const ANIMATION_PREFERENCES: Readonly<Record<EntityAnimation, readonly string[]>
   SIT: Object.freeze(['SIT', 'IDLE']),
   DANCE: Object.freeze(['DANCE', 'IDLE']),
   ATTACK: Object.freeze(['ATTACK', 'SPELL', 'CAST']),
-  // a self-cast plays the buff pose — models carry SPELL_BUFF; older names stay reachable
-  BUFF: Object.freeze(['SPELL_BUFF', 'CAST_BUFF', 'BUFF', 'SPELL', 'CAST', 'ATTACK']),
-  SPELL_TARGET: Object.freeze(['SPELL_TARGET', 'CAST_TARGET', 'SPELL', 'CAST', 'ATTACK']),
   DEATH: Object.freeze(['DEATH', 'DIE', 'KO']),
 })
 
 export const entity_animation_loops = (name: EntityAnimation, loop?: boolean): boolean =>
-  loop ?? (name !== 'ATTACK' && name !== 'BUFF' && name !== 'SPELL_TARGET' && name !== 'DEATH')
+  loop ?? (name !== 'ATTACK' && name !== 'DEATH')
 
 export const resolve_entity_animation_clip = (
   clips: readonly AnimationClip[],
@@ -135,6 +143,16 @@ export const resolve_entity_animation_clip = (
     if (partial) return partial.clip
   }
   return undefined
+}
+
+export const entity_attack_release_seconds = (clips: readonly AnimationClip[]): number => {
+  const clip = resolve_entity_animation_clip(clips, 'ATTACK')
+  if (!clip) return FIGHT_VFX_BEAT.windup_seconds
+  const marker = (clip as AnimationClip & { userData?: Readonly<{ release_seconds?: unknown }> }).userData
+    ?.release_seconds
+  return typeof marker === 'number' && marker >= 0 && marker <= clip.duration
+    ? marker
+    : Math.min(FIGHT_VFX_BEAT.windup_seconds, clip.duration)
 }
 
 export const fight_reaction_envelope = (progress: number, peak = 0.32): number => {
@@ -192,6 +210,7 @@ export const create_entity_layer = ({
   attach_invisibility?: (root: Object3D) => InvisibilityEffect
 }>) => {
   const entities = new Map<string, MountedEntity>()
+  const pending_models = new Map<string, Promise<void>>()
   const motions = new Map<string, ActiveMotion>()
   const beats = new Map<string, ActiveBeat>()
   const flashes = new Map<string, ActiveFlash>()
@@ -292,6 +311,7 @@ export const create_entity_layer = ({
     const time_scale = requested_time_scale * (name === 'SWIM' && resolved_name === 'WALK' ? 0.7 : 1)
     const active = active_animations.get(entity.spec.id)
     if (!restart && active?.clip === selected && active.loop === loop) {
+      active.action.paused = false
       active.action.setEffectiveTimeScale(time_scale)
       return selected
     }
@@ -418,7 +438,7 @@ export const create_entity_layer = ({
         invisibility: null,
       })
     )
-    void load_model(spec).then(
+    const pending_model = load_model(spec).then(
       (model) => {
         const pending = entities.get(spec.id)
         if (!pending || pending.generation !== generation) {
@@ -475,9 +495,26 @@ export const create_entity_layer = ({
         console.error(`Failed to render entity ${spec.id}.`, error)
       }
     )
+    pending_models.set(spec.id, pending_model)
+    void pending_model
+      .finally(() => {
+        if (pending_models.get(spec.id) === pending_model) pending_models.delete(spec.id)
+      })
+      .catch((error: unknown) => console.error(`Character preparation failed for ${spec.id}.`, error))
   }
 
   return Object.freeze({
+    spell_context: () => ({
+      board,
+      roots: [...entities.values()].flatMap((entity) => (entity.object ? [entity.object] : [])),
+    }),
+    prepare_models: async (): Promise<void> => {
+      await Promise.all([...pending_models.values()])
+    },
+    prepare_attack: async (id: string): Promise<number> => {
+      await pending_models.get(id)
+      return entity_attack_release_seconds(entities.get(id)?.model?.clips ?? [])
+    },
     set_board: (next: FightBoardRender | null): void => {
       if (board !== next) retained_facing.clear()
       board = next
@@ -501,12 +538,15 @@ export const create_entity_layer = ({
       const destinations = motion.cells.map((cell) => position_at(entity, cell))
       if (destinations.some((point) => point === null)) return Promise.resolve(false)
       motions.get(motion.id)?.resolve(false)
-      if (motion.gait !== 'slide')
+      if (motion.gait !== 'slide') {
+        // Locomotion replaces the previous beat; its windup/finish must not retime or idle this stride.
+        cancel_beat(motion.id)
         play_clip(
           entity,
           motion.gait === 'run' ? 'RUN' : 'WALK',
           GAIT_CLIP_REFERENCE_MS[motion.gait] / fight_gait_cell_ms(motion.gait)
         )
+      }
       return new Promise<boolean>((resolve) => {
         motions.set(
           motion.id,
@@ -532,10 +572,16 @@ export const create_entity_layer = ({
       retained_facing.set(id, yaw)
       return true
     },
-    beat: (id: string, kind: EntityBeatKind, face_id?: string, critical = false): Promise<boolean> => {
+    beat: (
+      id: string,
+      kind: EntityBeatKind,
+      face_id?: string,
+      critical = false,
+      windup_seconds?: number
+    ): Promise<boolean> => {
       const entity = entities.get(id)
-      const root = entity?.object
-      if (!entity || !root) return Promise.resolve(false)
+      if (!entity?.object) return Promise.resolve(false)
+      const root = entity.object
       motions.get(id)?.resolve(false)
       motions.delete(id)
       cancel_beat(id)
@@ -544,27 +590,18 @@ export const create_entity_layer = ({
         root.rotation.y = Math.atan2(face.x - root.position.x, face.z - root.position.z)
         retained_facing.set(id, root.rotation.y)
       }
-      const clip =
-        kind === 'attack'
-          ? play_clip(entity, 'ATTACK', 1, undefined, true)
-          : kind === 'buff'
-            ? play_clip(entity, 'BUFF', 1, undefined, true)
-            : kind === 'death'
-              ? play_clip(entity, 'DEATH', 1, undefined, true)
-              : null
-      const duration_ms =
-        kind === 'hit'
-          ? 300
-          : kind === 'heal'
-            ? 400
-            : kind === 'death'
-              ? Math.max(450, (clip?.duration ?? 0) * 1_000)
-              : Math.max(500, (clip?.duration ?? 0) * 1_000)
-      if (kind === 'hit') arm_flash(id, critical ? 0xffd070 : 0xff4747, critical ? 0.6 : 0.55)
-      else if (kind === 'heal') arm_flash(id, 0x4caf50, 0.4)
-      else if (kind === 'death') arm_flash(id, 0xff4747, 0.55)
+      const style = BEAT_STYLE[kind]
+      const clip = style.clip ? play_clip(entity, style.clip, 1, undefined, true) : null
+      const windup =
+        windup_seconds === undefined
+          ? undefined
+          : { seconds: windup_seconds, release: entity_attack_release_seconds(entity.model?.clips ?? []) }
+      const extra_seconds = windup ? windup.seconds - windup.release : 0
+      const duration_ms = Math.max(style.minimum_ms, ((clip?.duration ?? 0) + extra_seconds) * 1000)
+      const flash = critical ? { color: 0xffd070, peak: 0.6 } : style
+      if (style.peak) arm_flash(id, flash.color, flash.peak)
       return new Promise<boolean>((resolve) => {
-        beats.set(id, Object.freeze({ entity, kind, started_at: previous_tick, duration_ms, resolve }))
+        beats.set(id, Object.freeze({ entity, kind, started_at: previous_tick, duration_ms, windup, resolve }))
       })
     },
     snap: (id: string, cell?: number): boolean => {
@@ -638,6 +675,16 @@ export const create_entity_layer = ({
     tick: (now: number): void => {
       const delta = Math.min(0.1, Math.max(0, now - previous_tick) / 1000)
       previous_tick = now
+      beats.forEach((beat, id) => {
+        const action = active_animations.get(id)?.action
+        if (!beat.windup || !action) return
+        const elapsed = Math.max(0, now - beat.started_at) / 1000
+        action.paused = true
+        action.time =
+          elapsed <= beat.windup.seconds
+            ? (elapsed * beat.windup.release) / beat.windup.seconds
+            : beat.windup.release + elapsed - beat.windup.seconds
+      })
       entities.forEach(({ mixer }) => mixer?.update(delta))
       entities.forEach(({ invisibility }) => invisibility?.update(delta))
       flashes.forEach((flash, id) => {

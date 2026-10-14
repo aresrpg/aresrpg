@@ -5,6 +5,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { describe, expect, test } from 'bun:test'
+import { class_names } from '@aresrpg/immutable'
 
 import { indexed_asset_key, spell_asset_basename, spell_asset_key } from '../../src/content/asset_keys.ts'
 import { spell_icon } from '../../src/content/assets.ts'
@@ -106,8 +107,10 @@ const assert_character_model_asset = (
   }
   for (const basename of customizable ? parts : []) {
     const { textures } = glb_manifest(resolve(character_dir, `${basename}.glb`))
+    const prefixes = textures.filter((name) => name.endsWith('_base')).map((name) => name.slice(0, -5))
+    expect(prefixes.length).toBeGreaterThan(0)
     expect(
-      ['diffuse_base', 'diffuse_color1', 'diffuse_color2', 'diffuse_color3'].every((name) => textures.includes(name))
+      prefixes.every((prefix) => [1, 2, 3].every((channel) => textures.includes(`${prefix}_color${channel}`)))
     ).toBeTrue()
   }
 }
@@ -219,6 +222,13 @@ describe('shipped content assets', () => {
   })
 
   test('the character catalog uses every authored pair and the gender-matching Senshi fallback', () => {
+    expect(authored_character_model_classes).toEqual(class_names)
+    for (const classe of class_names)
+      for (const male of [true, false]) {
+        const body = `${classe}_${male ? 'male' : 'female'}`
+        expect(character_model_basenames(classe, male)).toEqual({ body, hair: `${body}_hair` })
+      }
+
     expect(character_model_basenames('senshi', true)).toEqual({
       body: 'senshi_male',
       hair: 'senshi_male_hair',
@@ -233,9 +243,11 @@ describe('shipped content assets', () => {
     })
     expect(character_model_basenames('rojin', true)).toEqual({ body: 'rojin_male', hair: 'rojin_male_hair' })
     expect(character_model_basenames('tokei', false)).toEqual({ body: 'tokei_female', hair: 'tokei_female_hair' })
-    expect(character_model_basenames('yogan', true)).toEqual({
-      body: 'senshi_male',
-      hair: 'senshi_male_hair',
+    expect(character_model_basenames('yogan', true)).toEqual({ body: 'yogan_male', hair: 'yogan_male_hair' })
+    expect(character_model_basenames('yogan', false)).toEqual({ body: 'yogan_female', hair: 'yogan_female_hair' })
+    expect(character_model_basenames('unknown', false)).toEqual({
+      body: 'senshi_female',
+      hair: 'senshi_female_hair',
     })
   })
 

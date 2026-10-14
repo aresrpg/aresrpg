@@ -55,7 +55,7 @@ export const CharacterHud = ({
       )
       const action = hud_key_action({
         code: event.code,
-        panel: own_panel !== null,
+        panel: own_panel,
         blocked: modal !== null,
         fighting: current.fight.mounted,
       })
@@ -67,6 +67,7 @@ export const CharacterHud = ({
         },
         close,
         inventory: () => dispatch_app({ type: 'dialog/open', dialog: 'character_equipment' }),
+        jobs: () => dispatch_app({ type: 'dialog/open', dialog: 'character_jobs' }),
         leave: () => dispatch_app({ type: 'dialog/open', dialog: 'leave_game' }),
       }
       commands[action]()

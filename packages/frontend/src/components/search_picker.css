@@ -1,0 +1,10 @@
+.search-picker-pills .aui-navigation-row,
+.search-picker-categories > .aui-navigation-row {
+  width: auto;
+  flex-shrink: 0;
+}
+@media (min-width: 640px) {
+  .search-picker-categories > .aui-navigation-row {
+    width: 100%;
+  }
+}

@@ -24,9 +24,10 @@ import type { AppCopy } from '../../i18n/copy.ts'
 import { fight_render_state } from '../../modules/nearby_fight.ts'
 import { fight_placement_changes } from '../../modules/fight.ts'
 import type { SceneHandle } from '../core/scene_feed.ts'
-import { dispatch_app, useAppStore } from '../../store.ts'
+import { dispatch_app, read_app_state, useAppStore } from '../../store.ts'
 
-import { create_fight_audio_observer, play_fight_turn_start, preload_fight_sounds } from '../audio/fight_audio.ts'
+import { useFightResources } from './fight_resources.ts'
+import { create_fight_audio_observer, play_fight_turn_start } from '../audio/fight_audio.ts'
 import { character_render_source } from '../character_entities.ts'
 import { fight_character_entities_from_loaded, load_fight_character_entities } from './character_entities.ts'
 import {
@@ -42,13 +43,13 @@ import {
   fight_range_seat,
   fight_viewer_team,
   fight_zone_visual_state,
+  create_fight_zone_visual_state,
   project_fight_overlays,
   type FightZoneVisualState,
 } from './fight_overlays.ts'
 import type { FightCuePhase } from './fight_presenter.ts'
 import { TouchFightConfirmation } from './TouchFightConfirmation.tsx'
 import { initial_fight_interaction, reduce_fight_interaction, reviewed_cell } from './fight_interaction.ts'
-import { read_app_state } from '../../store.ts'
 import { resolve_fight_hover, type FightHover } from './fight_hover.ts'
 import { FightViewport } from './FightViewport.tsx'
 import { FightHud } from './FightHud.tsx'
@@ -63,11 +64,6 @@ import { fight_mob_entity_sources, type FightMobRenderSource } from './mob_entit
 import { fight_mob_entities } from './mob_entities.ts'
 import { usePlacementGasWarning } from './PlacementGasWarning.tsx'
 import { FightTargetPreviews, type FightTargetPreviewView } from './FightTargetPreviews.tsx'
-
-const zone_visual_state = (
-  checkpoint: Readonly<HydratedFightCheckpoint> | null,
-  zone_ids: readonly string[]
-): FightZoneVisualState | null => (checkpoint ? Object.freeze({ checkpoint, zone_ids }) : null)
 
 const EMPTY_CELLS = Object.freeze<bigint[]>([])
 
@@ -102,7 +98,6 @@ export const FightLayer = ({
   const [loaded_characters, set_loaded_characters] = useState<
     Readonly<{ fight: string | null; entities: readonly CharacterEntityRender[] }>
   >(Object.freeze({ fight: null, entities: Object.freeze([]) }))
-  const fight_audio = useMemo(() => (ambient ? () => {} : create_fight_audio_observer()), [ambient])
   const [interaction, interact] = useReducer(reduce_fight_interaction, initial_fight_interaction)
   const { hover, action: selected_action } = interaction
   const set_hover = (hover: FightHover): void => interact({ type: 'hover', hover })
@@ -114,11 +109,15 @@ export const FightLayer = ({
   const [restore_applied, set_restore_applied] = useState(0)
   const [chimed_turn, set_chimed_turn] = useState<string | null>(null)
   const checkpoint = fight.checkpoint
+  const fight_id = checkpoint?.contract.id ?? null
+  useFightResources(checkpoint, scene, ambient, loaded_characters.entities)
+  const fight_audio = useMemo(() => create_fight_audio_observer(ambient ? () => {} : undefined), [ambient])
+  useEffect(() => fight_audio.dispose, [fight_audio])
   const { cell: hovered_cell, seat: hovered_seat } = resolve_fight_hover(checkpoint, hover)
-  const command_fight = fight.mode === 'remote' ? (checkpoint?.contract.id ?? null) : null
+  const command_fight = fight.mode === 'remote' ? (fight_id ?? null) : null
   const presentation = fight.presentations[0] ?? null
   const [presented_checkpoint, set_presented_checkpoint] = useState<HydratedFightCheckpoint | null>(checkpoint)
-  const canonical_zone_state = zone_visual_state(checkpoint, fight.zone_ids)
+  const canonical_zone_state = create_fight_zone_visual_state(checkpoint, fight.zone_ids)
   const [presented_zone_state, set_presented_zone_state] = useState<FightZoneVisualState | null>(canonical_zone_state)
   const presentation_queued = fight.presentations.length > 0 || fight.awaiting_turn_witness
   const presented_turn_seat = presentation_queued ? (turn_announcement?.seat ?? null) : null
@@ -160,6 +159,7 @@ export const FightLayer = ({
         ? project_fight_cues({
             checkpoint: presentation.checkpoint,
             initial_checkpoint: presentation.before,
+            initial_zone_ids: presentation.before_zone_ids,
             events: presentation.events,
             batch: presentation.batch,
             viewer_team,
@@ -192,7 +192,7 @@ export const FightLayer = ({
   const character_appearance_sources = useMemo(
     () => (checkpoint ? fight_character_entity_sources(checkpoint, appearances, viewer_team) : Object.freeze([])),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- roster/appearance identity reload models; cells remain a synchronous projection.
-    [appearances, character_roster_key, checkpoint?.contract.id, viewer_team]
+    [appearances, character_roster_key, fight_id, viewer_team]
   )
   const character_voices = useMemo(
     () => Object.freeze(Object.fromEntries(character_sources.map(({ id, male }) => [id, male]))),
@@ -405,15 +405,13 @@ export const FightLayer = ({
   }, [chimed_turn, fight.presentations.length, own_turn_key, presentation_pending])
 
   useEffect(() => {
+    fight_audio.dispose()
     set_turn_announcement(null)
     set_crit_serial(0)
-    if (checkpoint && !ambient) preload_fight_sounds(checkpoint)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- preload once per fight identity.
-  }, [checkpoint?.contract.id])
+  }, [fight_id, fight_audio])
 
   useEffect(() => {
     let current = true
-    const fight_id = checkpoint?.contract.id ?? null
     void load_fight_character_entities(character_appearance_sources).then(
       (characters) => {
         if (current) set_loaded_characters(Object.freeze({ fight: fight_id, entities: characters }))
@@ -426,7 +424,7 @@ export const FightLayer = ({
     return () => {
       current = false
     }
-  }, [character_appearance_sources, checkpoint?.contract.id])
+  }, [character_appearance_sources, fight_id])
 
   const world_anchor = useMemo(
     () =>
@@ -441,7 +439,7 @@ export const FightLayer = ({
   const stable_board = useMemo(
     () => checkpoint?.contract.board ?? null,
     // eslint-disable-next-line react-hooks/exhaustive-deps -- a board is immutable under its contract identity.
-    [checkpoint?.contract.id]
+    [fight_id]
   )
 
   const select_cell = (cell: bigint | null): void => {
@@ -508,6 +506,7 @@ export const FightLayer = ({
   return (
     <section className="pointer-events-none absolute inset-0 z-30 overflow-hidden">
       <FightViewport
+        prepare_presentation_cue={fight_audio.prepare}
         ambient={ambient}
         board={stable_board ?? checkpoint.contract.board}
         board_key={checkpoint.contract.id}
@@ -519,7 +518,7 @@ export const FightLayer = ({
         on_presentation_active={set_presentation_active}
         on_presentation_cue={(cue: FightPresentationCue, phase: FightCuePhase) => {
           dispatch_app({ type: 'fight/presentation_cue', presentation, cue, phase })
-          fight_audio(cue, phase, character_voices)
+          fight_audio.observe(cue, phase, character_voices)
           if (
             cue.type === 'turn' &&
             phase === 'start' &&

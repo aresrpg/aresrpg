@@ -45,11 +45,10 @@ test('entity routes are the ones the encyclopedia itself resolves', () => {
     expect(entities.some(({ route }) => route === `/encyclopedia/classes/${classe}`)).toBeTrue()
 })
 
-test('a class without its own portrait falls back to the encyclopedia card', () => {
+test('every class uses its own portrait in its encyclopedia card', () => {
   const image = (classe: string) =>
     catalog.cards.find(({ route }) => route === `/encyclopedia/classes/${classe}`)?.image
-  expect(image('senshi')).toBe('/social/classe/senshi.jpg')
-  expect(image('yogan')).toBe('/social/encyclopedia.jpg')
+  for (const classe of class_names) expect(image(classe)).toBe(`/social/classe/${classe}.jpg`)
 })
 
 test('a route shell swaps every preview tag and leaves the application untouched', () => {

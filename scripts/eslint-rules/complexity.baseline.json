@@ -212,11 +212,6 @@
         18
       ]
     },
-    "packages/frontend/src/game/audio/fight_audio.ts": {
-      "create_fight_audio_observer > anonymous(cue: FightPresentationCue,phase: FightCuePhase,character_voices: CharacterVoices)": [
-        17
-      ]
-    },
     "packages/frontend/src/game/resource_nodes.ts": {
       "create_resource_renderer > update": [
         12
@@ -279,7 +274,7 @@
     },
     "packages/frontend/src/components/SearchPickerModal.tsx": {
       "SearchPickerModal > filtered.map[0](item)": [
-        30
+        28
       ]
     },
     "packages/frontend/src/characters/RuneforgeTab.tsx": {
@@ -445,9 +440,6 @@
       ]
     },
     "packages/engine/src/entities.ts": {
-      "create_entity_layer > beat": [
-        22
-      ],
       "create_entity_layer > mount": [
         16
       ],
@@ -470,12 +462,12 @@
     },
     "packages/engine/src/webgpu_backend.ts": {
       "create_webgpu_backend > draw": [
-        18
+        14
       ]
     },
     "packages/engine/src/fight_presentation.ts": {
       "create_fight_presentation > play": [
-        27
+        25
       ]
     },
     "packages/engine/src/material_presets.ts": {
@@ -795,9 +787,6 @@
       ]
     },
     "packages/frontend/src/game/fight/fight_cues.ts": {
-      "cast_rows": [
-        13
-      ],
       "cast_style": [
         16
       ],
@@ -805,12 +794,12 @@
         12
       ],
       "project_fight_cues > events.forEach[0](event,index)": [
-        42
+        40
       ]
     },
     "packages/frontend/src/game/fight/fight_presenter.ts": {
       "create_fight_presenter > present_one": [
-        10
+        9
       ]
     },
     "packages/frontend/src/game/fight/FightPlacementBanner.tsx": {
@@ -863,7 +852,7 @@
     },
     "packages/frontend/src/game/fight/FightLayer.tsx": {
       "FightLayer": [
-        55
+        52
       ],
       "FightLayer > anonymous(cue: FightPresentationCue,phase: FightCuePhase)": [
         9
@@ -943,9 +932,6 @@
       ]
     },
     "packages/frontend/src/game/audio/fight_audio.ts": {
-      "create_fight_audio_observer > anonymous(cue: FightPresentationCue,phase: FightCuePhase,character_voices: CharacterVoices)": [
-        15
-      ],
       "play_cast": [
         9
       ]
@@ -1070,7 +1056,7 @@
         12
       ],
       "SearchPickerModal": [
-        13
+        12
       ],
       "SearchPickerModal > filtered.map[0](item)": [
         17
@@ -1674,7 +1660,7 @@
         10
       ],
       "create_entity_layer > beat": [
-        25
+        18
       ],
       "create_entity_layer > mount": [
         16
@@ -1717,7 +1703,7 @@
         11
       ],
       "create_webgpu_backend > draw": [
-        21
+        18
       ],
       "create_webgpu_backend > resize": [
         10
@@ -1734,7 +1720,7 @@
     },
     "packages/engine/src/fight_presentation.ts": {
       "create_fight_presentation > play": [
-        22
+        20
       ]
     },
     "packages/engine/src/world_recipe.ts": {
@@ -2189,6 +2175,16 @@
     "packages/frontend/src/analytics/gameplay.ts": {
       "gathering_events > Object.values(state.world.gathering).flatMap[0](gathering)": [
         11
+      ]
+    },
+    "packages/engine/src/claude_spell_actor_mask.ts": {
+      "create_spell_actor_mask > get_buffers": [
+        11
+      ]
+    },
+    "packages/frontend/src/game/fight/spell_effect_context.ts": {
+      "resolve_zone_effect": [
+        10
       ]
     }
   }

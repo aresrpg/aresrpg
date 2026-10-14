@@ -4,11 +4,16 @@
 // /sound_effect/<file> contract without a second checked-in asset home.
 
 import { readdir, readFile } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { basename, extname, join } from 'node:path'
 
 import type { Plugin } from 'vite'
 
 const SOUND_ROUTE = '/sound_effect/'
+const SOUND_CONTENT_TYPES: Readonly<Record<string, string>> = Object.freeze({
+  '.aac': 'audio/aac',
+  '.ogg': 'audio/ogg',
+  '.mp3': 'audio/mpeg',
+})
 
 const audio_assets_plugin = ({
   name,
@@ -80,8 +85,8 @@ export const sound_assets_plugin = (sounds_dir: string): readonly Plugin[] =>
     source_dir: sounds_dir,
     route: SOUND_ROUTE,
     output_dir: 'sound_effect',
-    accepts: (file) => file.endsWith('.aac') || file.endsWith('.ogg'),
-    content_type: (file) => (file.endsWith('.aac') ? 'audio/aac' : 'audio/ogg'),
+    accepts: (file) => Object.hasOwn(SOUND_CONTENT_TYPES, extname(file)),
+    content_type: (file) => SOUND_CONTENT_TYPES[extname(file)]!,
   })
 
 export const music_assets_plugin = (music_dir: string): readonly Plugin[] =>

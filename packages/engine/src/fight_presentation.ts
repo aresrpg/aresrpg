@@ -5,6 +5,8 @@
 
 import type { create_entity_layer } from './entities.ts'
 import type { create_transient_effects } from './transient_effects.ts'
+import type { create_spell_effect_layer } from './spell_effect_layer.ts'
+import { spell_effect_timing } from './spell_effect_recipe.ts'
 import type { FightPresentationCue } from './types.ts'
 
 type EntityLayer = ReturnType<typeof create_entity_layer>
@@ -14,17 +16,39 @@ export const create_fight_presentation = ({
   entities,
   vfx,
   shock = () => {},
-}: Readonly<{ entities: EntityLayer; vfx: TransientEffects; shock?: () => void }>) => {
+  spells,
+}: Readonly<{
+  entities: EntityLayer
+  vfx: TransientEffects
+  shock?: () => void
+  spells?: ReturnType<typeof create_spell_effect_layer>
+}>) => {
+  const play_cast = (cue: Extract<FightPresentationCue, { type: 'cast' }>): Promise<boolean> => {
+    entities.face_cell(cue.caster_id, cue.target_cell)
+    void entities.beat(cue.caster_id, 'attack', undefined, false, cue.effect?.preset.cast)
+    return cue.effect && spells ? spells.play(cue) : vfx.play_cast(cue)
+  }
+  const play_zone = async (cue: Extract<FightPresentationCue, { type: 'zone' }>): Promise<boolean> => {
+    const played = await (cue.effect && spells ? spells.play_zone(cue) : vfx.play_zone(cue))
+    if (!played) return false
+    await Promise.all((cue.affected_ids ?? []).map((id) => entities.beat(id, 'hit', cue.owner_id)))
+    return true
+  }
   return Object.freeze({
+    prepare: async (cue: FightPresentationCue): Promise<FightPresentationCue> => {
+      if ((cue.type !== 'cast' && cue.type !== 'zone') || !cue.effect || !spells) return cue
+      const release_time = cue.type === 'cast' ? entities.prepare_attack(cue.caster_id) : Promise.resolve(0)
+      const [release] = await Promise.all([release_time, spells.prepare(cue.effect.atlas_urls)])
+      return Object.freeze({
+        ...cue,
+        effect: Object.freeze({ ...cue.effect, timing: spell_effect_timing(cue.effect, release) }),
+      })
+    },
     play: async (cue: FightPresentationCue): Promise<boolean> => {
-      // Checkpoint edges advance when their ordered cue starts. The engine has no independent
-      // turn, visibility, or status state to mutate.
+      // The presenter reports completion only after this promise settles.
+      // Combat and checkpoint state remain outside the renderer.
       if (['turn', 'visibility', 'status'].includes(cue.type)) return true
-      if (cue.type === 'cast') {
-        entities.face_cell(cue.caster_id, cue.target_cell)
-        void entities.beat(cue.caster_id, cue.self_cast ? 'buff' : 'attack')
-        return vfx.play_cast(cue)
-      }
+      if (cue.type === 'cast') return play_cast(cue)
       if (cue.type === 'movement') {
         const moved =
           cue.mode === 'teleport' || cue.mode === 'swap' || cue.mode === 'place'
@@ -62,11 +86,7 @@ export const create_fight_presentation = ({
         if (cue.mp !== 0) vfx.play_float(cue.entity_id, cue.mp, 'mp')
         return true
       }
-      if (cue.type === 'zone') {
-        const played = await vfx.play_zone(cue)
-        await Promise.all((cue.affected_ids ?? []).map((id) => entities.beat(id, 'hit', cue.owner_id)))
-        return played
-      }
+      if (cue.type === 'zone') return play_zone(cue)
       return true
     },
   })

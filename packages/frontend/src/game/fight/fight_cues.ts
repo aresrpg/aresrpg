@@ -18,6 +18,17 @@ import type { FightCastStyle, FightPresentationCue } from '@aresrpg/engine'
 import { CHANNELS, CONTRACT_CONSTANTS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 
 import { fight_entity_id as entity_id, fight_zone_change_cues } from './fight_cue_projection.ts'
+import {
+  cast_effect_rows,
+  cast_spell_level,
+  resolve_spell_effect,
+  spell_effect_element,
+} from './spell_effect_recipe.ts'
+import {
+  create_spell_effect_context,
+  advance_spell_effect_context,
+  resolve_zone_effect,
+} from './spell_effect_context.ts'
 import { trap_placement_visible } from './trap_visibility.ts'
 
 type CastEvent = Extract<FightEvent, Readonly<{ type: 'spell_cast' }>>
@@ -43,27 +54,11 @@ const max_hp = (checkpoint: Readonly<HydratedFightCheckpoint>, seat: bigint): bi
     : player_max_hp(checkpoint.sources.players[fighter.kind.character])
 }
 
-const cast_rows = (
-  checkpoint: Readonly<HydratedFightCheckpoint>,
-  event: Readonly<CastEvent>
-): readonly SpellEffect[] => {
-  const fighter = checkpoint.contract.fighters[Number(event.payload.caster)]
-  if (!fighter) return Object.freeze([])
-  if (fighter.kind.type === 'mob') {
-    const level = fighter.kind.snapshot.kit.find(({ name }) => name === event.payload.spell)?.level
-    if (!level) return Object.freeze([])
-    return event.payload.critical && level.crit_effects.length > 0 ? level.crit_effects : level.effects
-  }
-  const source = checkpoint.sources.players[fighter.kind.character]
-  const spell = checkpoint.sources.spells[event.payload.spell]
-  const invested = source?.spell_levels[event.payload.spell] ?? 1n
-  const level = spell?.levels[Number(invested - 1n)]
-  if (!level) return Object.freeze([])
-  return event.payload.critical && level.crit_effects.length > 0 ? level.crit_effects : level.effects
-}
+const cast_rows = (checkpoint: Readonly<HydratedFightCheckpoint>, event: Readonly<CastEvent>): readonly SpellEffect[] =>
+  cast_effect_rows(cast_spell_level(checkpoint, event), event.payload.critical)
 
 const authored_element = (checkpoint: Readonly<HydratedFightCheckpoint>, event: Readonly<CastEvent>): string =>
-  cast_rows(checkpoint, event).find(({ element }) => element.length > 0)?.element ?? 'neutral'
+  spell_effect_element(cast_rows(checkpoint, event))
 
 const cast_style = (
   rows: readonly SpellEffect[],
@@ -335,23 +330,30 @@ const assign_walk_mp = (cues: readonly FightPresentationCue[]): readonly FightPr
 export const project_fight_cues = ({
   checkpoint,
   initial_checkpoint = checkpoint,
+  initial_zone_ids = [],
   events,
   batch,
   viewer_team = null,
 }: Readonly<{
   checkpoint: HydratedFightCheckpoint
   initial_checkpoint?: HydratedFightCheckpoint
+  initial_zone_ids?: readonly string[]
   events: readonly FightEvent[]
   batch: number
   viewer_team?: bigint | null
 }>): readonly FightPresentationCue[] => {
   const cues: FightPresentationCue[] = []
   let effect_ledger = initial_effect_ledger(initial_checkpoint)
+  let effect_context = create_spell_effect_context(
+    Object.freeze({ ...initial_checkpoint, sources: checkpoint.sources }),
+    initial_zone_ids
+  )
   let cast_critical = false
   // Fighters whose LIVE pool already floated in the current resolution segment — an active
   // target emits both the spend and the lasting row for one contested removal (one fact).
   let pool_floated = new Set<string>()
   events.forEach((event, index) => {
+    effect_context = advance_spell_effect_context(effect_context, event)
     const id = cue_id(checkpoint.contract.id, batch, index)
     pool_floated = pool_ledger_for(event.type, pool_floated)
     if (concealed_trap_placement(checkpoint, events, event, index, viewer_team)) return
@@ -365,7 +367,7 @@ export const project_fight_cues = ({
         : segment.some(({ type }) => type === 'glyph_placed')
           ? 'glyph'
           : null
-      const targets = affected_seats(segment)
+      const targets = [...new Set([...affected_seats(segment), ...affected_status_seats(segment)])]
       const primary = damage.reduce<(typeof damage)[number] | null>(
         (found, row) => (!found || row.amount > found.amount ? row : found),
         null
@@ -380,9 +382,7 @@ export const project_fight_cues = ({
           id,
           type: 'cast',
           caster_id: entity_id(checkpoint, event.payload.caster),
-          self_cast:
-            Number(checkpoint.contract.fighters[Number(event.payload.caster)]?.cell ?? -1) ===
-            Number(event.payload.target_cell),
+          effect: resolve_spell_effect(effect_context.checkpoint, event),
           spell: event.payload.spell,
           cast_level: Number(event.payload.cast_level),
           target_cell: Number(event.payload.target_cell),
@@ -393,7 +393,7 @@ export const project_fight_cues = ({
           target_max_hp: primary ? Number(max_hp(checkpoint, primary.target)) : null,
           affected_cells: Object.freeze(
             targets.flatMap((seat) => {
-              const fighter = checkpoint.contract.fighters[Number(seat)]
+              const fighter = effect_context.checkpoint.contract.fighters[Number(seat)]
               return fighter ? [Number(fighter.cell)] : []
             })
           ),
@@ -546,6 +546,7 @@ export const project_fight_cues = ({
     if (event.type === 'trap_triggered' || event.type === 'glyph_triggered') {
       const segment = zone_segment(events, index)
       const damage_targets = new Set(affected_seats(segment))
+      const element = zone_element(events, index, event.type === 'trap_triggered' ? 'trap' : 'glyph')
       cues.push(
         Object.freeze({
           id,
@@ -560,7 +561,8 @@ export const project_fight_cues = ({
               .map((seat) => entity_id(checkpoint, seat))
           ),
           cell: Number(event.payload.cell),
-          element: zone_element(events, index, event.type === 'trap_triggered' ? 'trap' : 'glyph'),
+          element,
+          effect: resolve_zone_effect(effect_context, event, element),
         })
       )
       return

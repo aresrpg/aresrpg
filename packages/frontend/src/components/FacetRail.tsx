@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { Button } from '@aresrpg/ui'
+import { NavigationRow } from '@aresrpg/ui'
 
 export type FacetOption = Readonly<{
   value: string
@@ -31,16 +31,15 @@ export const FacetRail = ({
     className={`${class_name} min-h-0 overflow-y-auto border-r border-white/10 bg-surface py-3`}
     data-facet-rail=""
   >
-    <Button
-      className="w-full justify-between"
-      tone={selected === null ? 'primary' : 'neutral'}
-      aria-pressed={selected === null}
+    <NavigationRow
+      className="aui-navigation-row--compact"
+      selected={selected === null}
       onClick={() => on_select(null)}
       type="button"
     >
       <span>{all_label}</span>
-      <span className="tabular-nums opacity-55">{total}</span>
-    </Button>
+      <span className="ml-auto tabular-nums opacity-55">{total}</span>
+    </NavigationRow>
     {options.map(({ value, label, count, section, indent }) => (
       <div key={value}>
         {section && (
@@ -48,17 +47,16 @@ export const FacetRail = ({
             {section}
           </p>
         )}
-        <Button
-          className={`w-full justify-between ${indent ? 'pl-6' : 'pl-3'}`}
-          tone={selected === value ? 'primary' : 'neutral'}
-          aria-pressed={selected === value}
+        <NavigationRow
+          className={`aui-navigation-row--compact ${indent ? 'aui-navigation-row--nested' : ''}`}
+          selected={selected === value}
           data-facet-option={value}
           onClick={() => on_select(value)}
           type="button"
         >
           <span className="truncate">{label}</span>
-          <span className="tabular-nums opacity-55">{count}</span>
-        </Button>
+          <span className="ml-auto tabular-nums opacity-55">{count}</span>
+        </NavigationRow>
       </div>
     ))}
   </aside>

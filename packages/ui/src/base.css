@@ -554,56 +554,10 @@
   cursor: grabbing;
 }
 
-.aui-carved-icon {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  max-width: 100%;
-  max-height: 100%;
-  flex: none;
-  color: #c8b488;
-}
-.aui-carved-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.aui-icon-button > .aui-carved-icon {
-  width: 100%;
-  height: 100%;
-  padding: 0;
-}
-.aui-window-title > .aui-carved-icon {
-  width: 28px;
-  height: 28px;
-}
-.aui-icon-button:where(:hover, [aria-pressed='true']) > .aui-carved-icon {
-  color: #efd09a;
-}
 .aui-icon-button > .aui-key {
   position: absolute;
   right: 2px;
   bottom: 2px;
-}
-
-.aui-button.aui-icon-button:has(> .aui-carved-icon) {
-  background: #11151b url('./assets/panel_grain.webp');
-  background-size: 256px 256px;
-  background-blend-mode: soft-light;
-  border-color: #59616c50;
-  box-shadow:
-    inset 0 1px #ffffff0b,
-    inset 0 -2px #06090d88,
-    0 2px 4px #0006;
-}
-.aui-button.aui-icon-button:has(> .aui-carved-icon):hover {
-  background-color: #202630;
-  border-color: #a88c5666;
-}
-.aui-button.aui-icon-button:has(> .aui-carved-icon)[aria-pressed='true'] {
-  background-color: #28271e;
-  border-color: #c2a063;
 }
 
 .aui-hud-shortcut-row {
@@ -729,6 +683,13 @@
   height: 26px;
   object-fit: contain;
   flex: none;
+}
+.aui-navigation-row--compact {
+  min-height: 28px;
+  padding: 3px 9px;
+}
+.aui-navigation-row--nested {
+  padding-inline-start: 24px;
 }
 @media (pointer: coarse) {
   .aui-navigation-row {

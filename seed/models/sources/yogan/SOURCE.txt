@@ -1,0 +1,37 @@
+Yogan male and female character models
+
+Open yogan.blend. The two named model scenes contain editable meshes, packed palettes,
+independent playable rigs, removable hair, and native animation actions. No cape is part
+of either costume. Existing equipped hats and cloaks use the original attachment frames.
+
+The male and female rigs retain their own Rider socket and folded SIT pose. The body and
+hair export separately. Three masks follow the Senshi convention:
+  color1: primary cloth
+  color2: hair and trim
+  color3: secondary leather armor
+Skin, eyes, and pale fur remain authored colors. Mask swatches retain shading differences.
+
+ATTACK includes stepping, weight transfer, torso rotation, bow draw, release, and recovery.
+The draw hand anchors outside the right cheek; the forearm clears the head throughout the clip.
+The spectral bow is rigged animation geometry, not inventory gear. It is hidden in every
+other clip. RELEASE is an action pose marker; the exporter derives animation.extras.release_seconds
+from that marker. ATTACK and DEATH last one second. Legacy cast actions and the upward shot
+remain source references; the runtime export contains only one attack animation.
+
+Both faces use the original roster eye silhouette and stepped voxel geometry. The female
+has narrower cheeks, a tapered chin, a smaller nose, and an upward-corner smile guided
+by her profile illustration. The male keeps a broader jaw. The neck remains connected.
+The packed build_yogan_roster_faces.py reconstructs both faces from the preserved
+references. Its hair clearances retain the exterior locks and clear the head and ears.
+Run validate_yogan_head_fit.py to check fit, skin weights, palette names and sockets.
+Run the packed validate_yogan.py text to check head/arm intersections at 48 Hz for both rigs
+and reject a disconnected female neck.
+Run the packed export_yogan.py text to produce the four candidate GLBs in work/yogan.
+The source must stay in this directory so the exporter can find the repository root.
+The script exports only this family, retains constant non-rest pose channels such as SIT,
+and resolves standalone hair against the actual exported head frame. Blender's imported
+bone editing axes are not the runtime attachment frame.
+
+The accepted exports live in seed/models/characters and are registered as the Yogan class pair.
+All classes select ATTACK for every cast. Effect travel is independent of the body gesture.
+The runtime uses the exported release marker to align ATTACK anticipation with the authored spell windup.

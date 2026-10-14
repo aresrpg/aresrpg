@@ -1,0 +1,2283 @@
+<title>Yogan Spell Effects</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+:root { color-scheme: dark; --bg: #0c0a14; --panel: #151122; --line: #2a2340; --fg: #e9e4f5; --dim: #9a90b5; --gold: #f2c55c; --cyan: #6fe3ea; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.55 'JetBrains Mono', ui-monospace, Menlo, monospace; padding-inline: 16px; padding-block: 20px 48px; }
+main { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+h2 { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--gold); margin: 0 0 8px; }
+p { margin: 0; color: var(--dim); max-width: 76ch; }
+.stage { position: relative; border: 1px solid var(--line); background: #000; }
+#stage { display: block; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; }
+.hud { position: absolute; left: 12px; top: 10px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+#hud_name { font-weight: 700; text-shadow: 0 1px 6px #000; }
+#hud_does { font-size: 12px; color: var(--fg); opacity: .8; text-shadow: 0 1px 6px #000; }
+.beats { display: flex; gap: 6px; }
+.beats span { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border: 1px solid var(--line); color: var(--dim); background: #0009; }
+.beats span.on { color: #000; background: var(--gold); border-color: var(--gold); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: inherit; font-size: 12px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); padding: 6px 9px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+button:hover { border-color: var(--dim); }
+button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+#sound { border-color: var(--cyan); color: var(--cyan); }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line); background: var(--panel); padding: 12px 14px; min-width: 0; }
+ol { margin: 0; padding-left: 20px; display: grid; gap: 5px; }
+ol li::marker { color: var(--dim); }
+.snd { margin-top: 10px; font-size: 12px; color: var(--cyan); }
+.err { padding: 40px 16px; color: var(--gold); white-space: pre-wrap; }
+</style>
+
+<main>
+  <div>
+    <h1>Spell effects</h1>
+    <p>All twenty spells of the Yogan (bow), the Yajin (shadow, no weapon), the Senshi (sword), the Tomoda (spell book), the Tokei (time) and the Rojin (pickaxe and gold). Each effect is assembled from what the spell does in the game data: element, area, push, steal, buff or debuff. Sound uses the Dofus Retro sounds of the matching class where one exists for the step, and mine where none does. Press Sound to hear it.</p>
+  </div>
+
+  <div class="stage">
+    <canvas id="stage"></canvas>
+    <div class="hud">
+      <div><div id="hud_name"></div><div id="hud_does"></div></div>
+      <div class="beats"><span id="b0">Start</span><span id="b1">Travel</span><span id="b2">Impact</span></div>
+    </div>
+  </div>
+
+  <div class="row"><button type="button" id="cls_yogan">Yogan</button><button type="button" id="cls_yajin">Yajin</button><button type="button" id="cls_senshi">Senshi</button><button type="button" id="cls_tomoda">Tomoda</button><button type="button" id="cls_tokei">Tokei</button><button type="button" id="cls_rojin">Rojin</button><button type="button" id="cls_shugo">Shugo</button><button type="button" id="cls_iyashi">Iyashi</button><button type="button" id="cls_ikari">Ikari</button><button type="button" id="cls_shusen">Shusen</button><button type="button" id="cls_asobi">Asobi</button><button type="button" id="cls_mori">Mori</button></div>
+  <div class="row" id="spells"></div>
+  <div class="row">
+    <button type="button" id="sound" aria-pressed="false">Sound</button>
+    <button type="button" id="slow" aria-pressed="false">Slow motion</button>
+    <button type="button" id="pause">Pause</button>
+    <button type="button" id="replay">Replay</button>
+    <button type="button" id="next">Next spell</button>
+  </div>
+
+  <div class="cards">
+    <div class="card"><h2>Start</h2><ol id="t0"></ol><p class="snd" id="s0"></p></div>
+    <div class="card"><h2>Travel</h2><ol id="t1"></ol><p class="snd" id="s1"></p></div>
+    <div class="card"><h2>Impact</h2><ol id="t2"></ol><p class="snd" id="s2"></p></div>
+  </div>
+</main>
+
+<script>
+/*SYNTH*/
+/*DOFUS*/
+/*SWORDS*/
+/*ICONS*/
+/*ROJIN*/
+/*PROPS*/
+const EL = {
+  fire:    { id: 0, dot: '#ff7a2a', c1: [1, .88, .42], c2: [1, .42, .07], c3: [.62, .08, .03] },
+  water:   { id: 1, dot: '#3aa0ff', c1: [.78, .97, 1], c2: [.14, .56, 1], c3: [.04, .15, .6] },
+  air:     { id: 2, dot: '#27e08a', c1: [.8, 1, .88], c2: [.1, .92, .5], c3: [.02, .36, .22] },
+  earth:   { id: 3, dot: '#e0a03a', c1: [1, .9, .55], c2: [.9, .52, .14], c3: [.34, .16, .05] },
+  neutral: { id: 4, dot: '#ffd870', c1: [1, .97, .8], c2: [1, .76, .25], c3: [.5, .27, .05] },
+  // Yajin: everything is shadow. Earth leans violet, air leans indigo
+  shade_e: { id: 3, dot: '#b04af0', c1: [.95, .75, 1], c2: [.72, .28, .95], c3: [.2, .05, .34] },
+  shade_a: { id: 2, dot: '#6a66ff', c1: [.8, .9, 1], c2: [.42, .4, 1], c3: [.1, .08, .4] },
+  shade_n: { id: 4, dot: '#b04af0', c1: [.95, .75, 1], c2: [.72, .28, .95], c3: [.2, .05, .34] },
+  gold0: { id: 0, dot: '#f2b632', c1: [1, .95, .6], c2: [1, .72, .18], c3: [.5, .28, .04] },
+  gold1: { id: 1, dot: '#f2b632', c1: [1, .95, .6], c2: [1, .72, .18], c3: [.5, .28, .04] },
+  gold2: { id: 2, dot: '#f2b632', c1: [1, .95, .6], c2: [1, .72, .18], c3: [.5, .28, .04] },
+  gold3: { id: 3, dot: '#f2b632', c1: [1, .95, .6], c2: [1, .72, .18], c3: [.5, .28, .04] },
+  gold4: { id: 4, dot: '#f2b632', c1: [1, .95, .6], c2: [1, .72, .18], c3: [.5, .28, .04] },
+  gold5: { id: 5, dot: '#f2b632', c1: [1, .95, .6], c2: [1, .72, .18], c3: [.5, .28, .04] },
+  sand: { id: 5, dot: '#e8c060', c1: [1, .95, .7], c2: [.95, .72, .25], c3: [.4, .25, .08] },
+  plain: { id: 5, dot: '#cfd6e6', c1: [1, 1, 1], c2: [.75, .85, 1], c3: [.25, .3, .5] },
+  ward:  { id: 5, dot: '#9fd8ff', c1: [.92, .98, 1], c2: [.45, .75, 1], c3: [.12, .22, .55] },
+  word:  { id: 5, dot: '#ff9ac0', c1: [1, .97, .9], c2: [1, .58, .74], c3: [.5, .14, .34] },
+  blood: { id: 5, dot: '#e0202c', c1: [1, .78, .7], c2: [.92, .1, .14], c3: [.3, 0, .05] },
+  brew:  { id: 5, dot: '#b8d848', c1: [.97, 1, .72], c2: [.62, .82, .26], c3: [.2, .34, .08] },
+  luck:  { id: 5, dot: '#3ddc97', c1: [1, .96, .7], c2: [.2, .86, .55], c3: [.04, .32, .22] },
+  thorn: { id: 3, dot: '#6cc93a', c1: [.88, 1, .62], c2: [.38, .8, .2], c3: [.1, .3, .05] },
+  toxin: { id: 5, dot: '#a45cf0', c1: [.85, 1, .6], c2: [.62, .3, .9], c3: [.2, .06, .34] },
+  shade_x: { id: 5, dot: '#b04af0', c1: [.95, .75, 1], c2: [.72, .28, .95], c3: [.2, .05, .34] },
+};
+// colour pairs for the secondary effect
+const TOK = { hp: [[1, .35, .45], [1, .8, .82]], ap: [[.3, .65, 1], [.8, .92, 1]], mp: [[.45, .9, .3], [.85, 1, .7]], range: [[.7, .45, 1], [.9, .8, 1]],
+  dmg: [[1, .5, .2], [1, .85, .6]], crit: [[1, .85, .3], [1, 1, .8]], power: [[1, .3, .2], [1, .75, .5]], poison: [[.55, .9, .15], [.85, 1, .5]], fire: [[1, .42, .07], [1, .88, .42]], water: [[.14, .56, 1], [.78, .97, 1]], earth: [[.9, .52, .14], [1, .9, .55]], ward: [[.45, .75, 1], [.92, .98, 1]], air: [[.1, .92, .5], [.8, 1, .88]] };
+// fx: 0 none · 1 push · 2 steal life · 3 steal stat · 4 debuff · 5 poison · 6 buff · 7 second element · 8 blind
+// shape: 0 point · 1 circle · 3 line.  stat (buffs): 0 crit · 1 power · 2 damage · 3 range
+const finish = cls => (s, i) => ({ shape: 0, size: 1, push: 0, stat: 0, heavy: 0, frost: 0, trap: 0, ghost: '', tok: 'hp', cx: -4, tx: 2, st: 0, icon: 0, stay: 0, refund: 0, on: '', proj: 0, swap: 0, ...s, cls, seed: i + 1 + (cls === 'yajin' ? 30 : 0),
+  cast: .45 + .04 * s.ap + (s.heavy ? .2 : 0),
+  fly: { line: .3, arc: .55, sky: .42, self: cls === 'yogan' ? .42 : .12, melee: .14, bolt: .32, ground: .5, tele: .4, slash: .22, wave: .3, leap: .5, hand: .34, ray: .3 }[s.path] });
+const YOGAN = [
+  { name: 'Magic Arrow', el: 'fire', path: 'arc', ap: 4, fx: 3, tok: 'range', does: 'Fire 20–22 · steals 2 range' },
+  { name: 'Poisoned Arrow', el: 'earth', path: 'arc', ap: 4, fx: 5, tok: 'poison', does: 'Poison: 9–10 life for 2 turns' },
+  { name: 'Retreat Arrow', el: 'air', path: 'line', ap: 4, fx: 1, push: 4, does: 'Air 18–21 · pushes back 4 cells' },
+  { name: 'Frozen Arrow', el: 'fire', path: 'arc', ap: 3, fx: 4, tok: 'ap', frost: 1, does: 'Fire 9–10 · removes 2 AP' },
+  { name: 'Burning Arrow', el: 'fire', path: 'line', ap: 4, shape: 3, size: 4, fx: 1, push: 1, does: 'Fire 21–23 on a line of 4 · pushes 1 cell' },
+  { name: 'Distant Shooting', el: 'neutral', path: 'self', ap: 2, shape: 1, size: 3, fx: 6, stat: 3, tok: 'range', does: 'Allies within 3 cells: +6 range, 3 turns' },
+  { name: 'Atonement Arrow', el: 'water', path: 'line', ap: 4, fx: 3, tok: 'mp', heavy: 1, does: 'Water 22–28 · steals 1 MP' },
+  { name: "Bat's Eye", el: 'water', path: 'arc', ap: 3, shape: 1, size: 3, fx: 8, tok: 'range', does: 'Circle of 3: −6 range, steals 15–17 life' },
+  { name: 'Critical Shooting', el: 'neutral', path: 'self', ap: 2, fx: 6, stat: 0, tok: 'crit', does: '+14 critical hits, 3 turns' },
+  { name: 'Paralyzing Arrow', el: 'water', path: 'arc', ap: 2, fx: 3, tok: 'mp', does: 'Water 9–10 · steals 1 MP' },
+  { name: 'Punitive Arrow', el: 'earth', path: 'line', ap: 5, fx: 0, heavy: 1, does: 'Earth 22–52 · long range, in a line' },
+  { name: 'Powerful Shooting', el: 'neutral', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'power', does: '+250 power, 2 turns' },
+  { name: 'Plaguing Arrow', el: 'air', path: 'sky', ap: 3, fx: 0, does: 'Air 13–15 · no line of sight needed' },
+  { name: 'Lashing Arrow', el: 'earth', path: 'arc', ap: 3, fx: 4, tok: 'mp', does: 'Earth 13–14 · removes 3 MP' },
+  { name: 'Tormenting Arrow', el: 'fire', path: 'line', ap: 3, fx: 7, tok: 'air', does: 'Fire 11–13, then Air 11–13' },
+  { name: 'Destructive Arrow', el: 'earth', path: 'arc', ap: 4, fx: 4, tok: 'dmg', does: 'Earth 26–28 · −20 damage for 1 turn' },
+  { name: 'Absorptive Arrow', el: 'air', path: 'arc', ap: 4, fx: 2, tok: 'hp', does: 'Air: steals 26–28 life' },
+  { name: 'Slow Down Arrow', el: 'water', path: 'line', ap: 4, shape: 1, size: 2, fx: 4, tok: 'ap', does: 'Circle of 2: Water 21–23, removes 2 AP' },
+  { name: 'Explosive Arrow', el: 'fire', path: 'arc', ap: 4, shape: 1, size: 3, fx: 0, heavy: 1, does: 'Fire 20–24 on a circle of 3' },
+  { name: 'Bow Skill', el: 'neutral', path: 'self', ap: 2, fx: 6, stat: 2, tok: 'dmg', does: '+60 damage, 2 turns' },
+].map(finish('yogan'));
+const NEAR = { cx: -1, tx: 0 };
+const YAJIN = [
+  { name: 'Deviousness', el: 'shade_e', path: 'bolt', ap: 2, does: 'Earth 12–15' },
+  { name: 'Tricky Trap', el: 'shade_e', path: 'sky', ap: 2, trap: 1, does: 'Trap: Earth 15–19 to enemies, heals allies 7–10' },
+  { name: 'Invisibility', el: 'shade_x', path: 'self', ap: 2, fx: 9, ghost: 'self', ...NEAR, tx: 4, does: 'Invisible for 4 turns · +2 MP' },
+  { name: 'Insidious Poison', el: 'shade_x', path: 'sky', ap: 2, fx: 5, tok: 'poison', tx: 0, does: 'Poison: 10–12 life for 2 turns · no line of sight' },
+  { name: 'Mistake', el: 'shade_a', path: 'self', ap: 4, shape: 1, size: 1, fx: 3, tok: 'mp', ...NEAR, does: 'Around the Yajin: Air 11–25 · steals 60 agility and strength' },
+  { name: 'Tricky Blow', el: 'shade_e', path: 'melee', ap: 2, fx: 1, push: 4, ...NEAR, does: 'Earth 12–16 · pushes back 4 cells' },
+  { name: 'Shadowstep', el: 'shade_a', path: 'tele', ap: 3, shape: 1, size: 1, fx: 2, tok: 'hp', does: 'Teleports · steals 8–10 life around the landing cell' },
+  { name: 'Silent Mark', el: 'shade_n', path: 'self', ap: 2, shape: 1, size: 1, fx: 6, stat: 3, tok: 'range', ...NEAR, tx: 4, does: 'Allies around the Yajin: +3 range, 2 turns' },
+  { name: 'Mass Trap', el: 'shade_e', path: 'sky', ap: 3, trap: 1, shape: 1, size: 3, does: 'Trap over a circle of 3: Earth 15–24' },
+  { name: 'Invisibility of Others', el: 'shade_x', path: 'bolt', ap: 2, fx: 9, ghost: 'ally', does: 'An ally turns invisible for 3 turns' },
+  { name: 'Poisoned Trap', el: 'shade_x', path: 'sky', ap: 2, trap: 1, shape: 1, size: 3, fx: 5, tok: 'poison', does: 'Trap over a circle of 3: poison 10–12 for 3 turns' },
+  { name: 'Chakra Concentration', el: 'shade_n', path: 'self', ap: 3, shape: 1, size: 1, fx: 6, stat: 1, tok: 'power', ...NEAR, tx: 4, does: 'Allies around: +80 strength, +1 AP' },
+  { name: 'Paralyzing Trap', el: 'shade_x', path: 'sky', ap: 4, trap: 1, shape: 1, size: 3, fx: 4, tok: 'mp', does: 'Trap over a circle of 3: −4 MP' },
+  { name: 'Trap of Silence', el: 'shade_x', path: 'sky', ap: 3, trap: 1, shape: 1, size: 2, fx: 4, tok: 'ap', does: 'Trap over a circle of 2: −5 AP' },
+  { name: 'Repelling Trap', el: 'shade_x', path: 'sky', ap: 3, trap: 1, shape: 1, size: 1, fx: 1, push: 2, does: 'Trap over a circle of 1: pushes 2 cells' },
+  { name: 'Fear', el: 'shade_x', path: 'bolt', ap: 2, fx: 1, push: 4, tx: 0, does: 'Pushes back 4 cells · no damage' },
+  { name: 'Con', el: 'shade_a', path: 'melee', ap: 4, fx: 3, tok: 'mp', ...NEAR, does: 'Air 22–30 · steals 50 agility' },
+  { name: 'Chakra Impulse', el: 'shade_n', path: 'self', ap: 3, fx: 6, stat: 0, tok: 'crit', ...NEAR, tx: 4, does: '+10 critical hits, 4 turns' },
+  { name: 'Lethal Attack', el: 'shade_e', path: 'melee', ap: 4, heavy: 1, ...NEAR, does: 'Earth 41–60 · close range' },
+  { name: 'Lethal Trap', el: 'shade_e', path: 'sky', ap: 3, trap: 1, heavy: 1, does: 'Trap: Earth 41–60' },
+].map((s, i) => ({ st: [3, 4, 0, 1, 5, 2][i % 6], ...s })).map(finish('yajin'));
+const SENSHI = [
+  { name: 'Concentration', el: 'earth', path: 'slash', ap: 2, ...NEAR, does: 'Earth 13–21' },
+  { name: 'Increase', el: 'neutral', path: 'self', ap: 1, fx: 6, stat: 2, tok: 'dmg', ...NEAR, tx: 4, does: '+11–12 damage, 1 turn' },
+  { name: 'Pressure', el: 'earth', path: 'slash', ap: 2, ...NEAR, does: 'Earth 9–13' },
+  { name: 'Intimidation', el: 'earth', path: 'slash', ap: 2, fx: 1, push: 4, ...NEAR, does: 'Earth 5–9 · pushes back 4 cells' },
+  { name: 'Sword of Fate', el: 'fire', path: 'slash', ap: 4, shape: 3, size: 4, ...NEAR, does: 'Fire 10–17 on a line of 4' },
+  { name: 'Compulsion', el: 'neutral', path: 'self', ap: 2, fx: 6, stat: 2, tok: 'dmg', ...NEAR, tx: 4, does: '+9–16 damage, 5 turns' },
+  { name: 'Divine Sword', el: 'air', path: 'self', ap: 3, shape: 1, size: 1, ...NEAR, does: 'Around the Senshi: Air 11–20 · +3 damage' },
+  { name: 'Cut', el: 'fire', path: 'wave', ap: 3, shape: 3, size: 2, fx: 4, tok: 'mp', tx: -1, does: 'Fire 11–16 on a line of 2 · removes 2 MP' },
+  { name: 'Jump', el: 'plain', path: 'leap', ap: 5, tx: 1, dx: 4, does: 'Leaps to a cell up to 6 away · no line of sight' },
+  { name: 'Bravery Guide', el: 'neutral', path: 'self', ap: 2, shape: 6, size: 6, fx: 6, stat: 2, tok: 'dmg', ...NEAR, tx: 4, does: 'Every ally on the map: +5–10 damage' },
+  { name: "Senshi's Sword", el: 'earth', path: 'wave', ap: 4, shape: 2, size: 3, tx: 0, does: 'Earth 13–39 on a cross of 3' },
+  { name: 'Blow', el: 'plain', path: 'sky', ap: 2, shape: 1, size: 1, fx: 1, push: 1, tx: 1, dx: 2, does: 'Pushes 1 cell around the target cell · no line of sight' },
+  { name: 'Destructive Sword', el: 'fire', path: 'wave', ap: 4, fx: 4, tok: 'crit', tx: -2, does: 'Fire 11–40 · removes 2–3 critical hits' },
+  { name: 'Power', el: 'neutral', path: 'self', ap: 4, fx: 6, stat: 1, tok: 'power', ...NEAR, tx: 4, does: '+100 power, 5 turns' },
+  { name: 'Sword of Judgement', el: 'air', path: 'sky', ap: 4, fx: 2, tok: 'hp', tx: -1, does: 'Air 1–40 · steals life · no line of sight' },
+  { name: 'Mutilation', el: 'neutral', path: 'self', ap: 2, fx: 6, stat: 1, tok: 'power', frost: 1, ...NEAR, tx: 4, does: 'Loses 10% life · +120 power, +10 damage' },
+  { name: 'Celestial Sword', el: 'air', path: 'wave', ap: 4, shape: 1, size: 2, tx: 0, does: 'Air 26–40 on a circle of 2' },
+  { name: 'Second Wind', el: 'neutral', path: 'self', ap: 3, fx: 6, stat: 4, tok: 'hp', ...NEAR, tx: 4, does: 'Heals himself 34' },
+  { name: 'Strengthstorm', el: 'fire', path: 'wave', ap: 3, tx: 1, does: 'Fire 36–40 at range 3–5' },
+  { name: "Senshi's Wrath", el: 'earth', path: 'slash', ap: 6, heavy: 1, ...NEAR, does: 'Earth 120–150 · the big one' },
+].map((s, i) => ({ st: [0, 3, 1, 4, 2, 5][i % 6], ...s })).map(finish('senshi'));
+// order matters: it is the order of the illustrations in the picture sheet
+const TOMODA = [
+  { name: 'Animal Healing', el: 'neutral', path: 'bolt', ap: 4, fx: 10, tok: 'hp', does: 'Heals an ally 29–35' },
+  { name: 'Chimeric Venom', el: 'plain', path: 'sky', ap: 3, shape: 1, size: 1, fx: 5, tok: 'poison', does: 'Poison around the cell, 3 turns · no line of sight' },
+  { name: 'Stampede', el: 'earth', path: 'bolt', ap: 4, shape: 7, size: 3, fx: 1, push: 2, tx: 0, does: 'Earth 18–24 in a cone of 3 · pushes 2 cells' },
+  { name: 'Crow', el: 'fire', path: 'sky', ap: 3, fx: 2, tok: 'hp', does: 'Fire 3–10 · steals 9–12 life · no line of sight' },
+  { name: 'Ghostly Claw', el: 'fire', path: 'bolt', ap: 4, shape: 1, size: 1, does: 'Fire 17–29 on a cross of 1, then burns 3 turns' },
+  { name: 'High-Energy Shot', el: 'neutral', path: 'self', ap: 3, shape: 1, size: 1, fx: 6, stat: 4, tok: 'ap', ...NEAR, tx: 4, does: 'Allies around: +2 AP, 2 turns' },
+  { name: 'Seismic Command', el: 'earth', path: 'bolt', ap: 5, shape: 1, size: 3, fx: 1, push: -2, heavy: 1, tx: 1, dx: 3, does: 'Earth 25–35 on a circle of 3 · pulls 2 cells · −1 MP' },
+  { name: 'Whip', el: 'earth', path: 'sky', ap: 4, does: 'Earth 9–13 · no line of sight' },
+  { name: 'Fangs of Boowolf', el: 'neutral', path: 'self', ap: 2, shape: 1, size: 1, fx: 6, stat: 1, tok: 'power', ...NEAR, tx: 4, does: 'Allies around: +80 power, 2 turns' },
+  { name: 'Mountain Punch', el: 'fire', path: 'melee', ap: 4, shape: 1, size: 2, ...NEAR, does: 'Fire 18–37 on a circle of 2 · close range' },
+  { name: 'Bear Cry', el: 'neutral', path: 'bolt', ap: 1, shape: 1, size: 2, fx: 10, tok: 'dmg', does: 'Allies in a circle of 2: +9–16 damage' },
+  { name: 'Suppressing Roar', el: 'plain', path: 'sky', ap: 5, shape: 1, size: 2, fx: 4, tok: 'power', does: 'Circle of 2: −70 power, −3 range · no line of sight' },
+  { name: 'Feline Movement', el: 'neutral', path: 'self', ap: 1, shape: 1, size: 1, fx: 6, stat: 4, tok: 'mp', ...NEAR, tx: 4, does: 'Allies around: +4 MP, 4 turns' },
+  { name: 'Binding Howl', el: 'plain', path: 'sky', ap: 3, shape: 2, size: 2, fx: 4, tok: 'mp', does: 'Cross of 2: −2 MP · no line of sight' },
+  { name: 'Lashing Claw', el: 'water', path: 'bolt', ap: 3, does: 'Water 11–14' },
+  { name: 'Rending Pounce', el: 'air', path: 'bolt', ap: 3, tx: 0, does: 'Air 13–17' },
+  { name: 'Pack Totem', el: 'neutral', path: 'bolt', ap: 3, shape: 1, size: 1, stay: 1, tx: 0, dx: 4, does: 'A totem for 3 turns: allies on it +25 damage, enemies −25' },
+  { name: 'Toad', el: 'neutral', path: 'bolt', ap: 1, fx: 10, tok: 'ap', does: 'An ally takes 14 less damage, 2 turns' },
+  { name: 'Blood Scent', el: 'neutral', path: 'self', ap: 3, fx: 6, stat: 0, tok: 'crit', ...NEAR, tx: 4, does: '+12 critical hits, +2 range, 3 turns' },
+  { name: 'Primal Cataclysm', el: 'fire', path: 'bolt', ap: 6, shape: 1, size: 3, heavy: 1, does: 'Fire 42–52 on a circle of 3' },
+].map((s, i) => ({ st: [0, 5, 3, 1, 4, 2][i % 6], icon: i, ...s })).map(finish('tomoda'));
+const TOKEI = [
+  { name: 'Slow Down', el: 'sand', path: 'hand', ap: 1, fx: 4, tok: 'ap', refund: 1, does: '−3 AP · 1 AP comes back to him' },
+  { name: 'Shriveling', el: 'air', path: 'ray', ap: 3, refund: 1, does: 'Air 15–24, in a line · 1 AP back' },
+  { name: 'Hand', el: 'fire', path: 'hand', ap: 4, refund: 1, does: 'Fire 12–22 · 1 AP back' },
+  { name: 'Counter', el: 'neutral', path: 'self', ap: 2, fx: 11, ...NEAR, tx: 4, does: 'Sends back 8 damage for 3 turns' },
+  { name: 'Flight', el: 'sand', path: 'tele', ap: 1, tx: -2, dx: 3, does: 'Blinks 1 cell · no line of sight' },
+  { name: 'Dark Ray', el: 'fire', path: 'ray', ap: 4, fx: 3, tok: 'range', does: 'Fire 13–29, in a line · steals 1 range' },
+  { name: 'Devotion', el: 'neutral', path: 'self', ap: 2, shape: 2, size: 3, fx: 6, stat: 4, tok: 'ap', ...NEAR, tx: 4, does: 'Allies on a cross of 3: +2 AP' },
+  { name: "Tokei's Sandglass", el: 'fire', path: 'sky', ap: 2, fx: 4, tok: 'ap', refund: 1, does: 'Fire 6–13 · −2 AP · no line of sight' },
+  { name: 'Time Theft', el: 'sand', path: 'hand', ap: 4, fx: 3, tok: 'ap', does: 'Steals 2 AP' },
+  { name: 'Clock', el: 'water', path: 'hand', ap: 4, fx: 3, tok: 'ap', tx: 0, does: 'Water 31–35 · steals 1 AP' },
+  { name: 'Blinding Protection', el: 'neutral', path: 'hand', ap: 3, fx: 11, on: 'ally', does: 'An ally: +130 wisdom, sends back 5 damage' },
+  { name: 'Frostbite', el: 'air', path: 'hand', ap: 3, fx: 4, tok: 'ap', refund: 1, does: 'Air 10–15 · −2 AP · 1 AP back' },
+  { name: 'Loss of Motivation', el: 'sand', path: 'hand', ap: 3, fx: 4, tok: 'range', does: '−150 wisdom, −2 AP' },
+  { name: "Tokei's Punch", el: 'earth', path: 'hand', ap: 4, refund: 1, tx: 0, does: 'Earth 41–45, in a line · 1 AP back' },
+  { name: 'Clockwork Pursuit', el: 'air', path: 'tele', ap: 4, shape: 1, size: 1, does: 'Blinks · Air 20–25 around the landing cell' },
+  { name: 'Temporal Dust', el: 'fire', path: 'hand', ap: 5, shape: 1, size: 2, fx: 4, tok: 'ap', refund: 1, does: 'Circle of 2: Fire 9–20, −1 AP' },
+  { name: 'Temporal Dial', el: 'sand', path: 'hand', ap: 5, shape: 1, size: 3, fx: 4, tok: 'ap', stay: 1, heavy: 1, does: 'A dial over a circle of 3 for 4 turns: −2 AP, −150 wisdom' },
+  { name: 'Haziness', el: 'sand', path: 'self', ap: 5, shape: 6, size: 6, fx: 4, tok: 'ap', ...NEAR, tx: 2, does: 'Everyone on the map: −2 AP for 2 turns' },
+  { name: 'Mummification', el: 'neutral', path: 'self', ap: 5, fx: 6, stat: 1, tok: 'power', frost: 1, ...NEAR, tx: 4, does: '+100 to all stats, +120 power · −2 MP, −2 range' },
+  { name: "Tokei's Teleportation", el: 'sand', path: 'tele', ap: 4, tx: 5, dx: 0, does: 'Blinks anywhere on the map' },
+].map((s, i) => ({ st: [0, 4, 1, 5, 3, 2][i % 6], ...s })).map(finish('tokei'));
+// proj: what he throws. 0 coins · 1 pickaxe · 2 nugget · 3 gem · 6 key
+const ROJIN = [
+  { name: 'Coins Throwing', el: 'gold1', path: 'arc', ap: 2, proj: 0, does: 'Water 1–8 · cheap, long range' },
+  { name: 'Clumsiness', el: 'gold5', path: 'arc', ap: 1, fx: 4, tok: 'mp', proj: 0, does: '−3 MP' },
+  { name: 'Reducing Key', el: 'gold5', path: 'arc', ap: 1, fx: 4, tok: 'range', proj: 6, does: '−5 range for 5 turns' },
+  { name: 'Shovel Throwing', el: 'gold3', path: 'arc', ap: 4, proj: 1, does: 'Earth 11–16' },
+  { name: 'Shovel Kiss', el: 'gold0', path: 'sky', ap: 3, proj: 1, does: 'Fire 9–15 · no line of sight' },
+  { name: "Pandora's Box", el: 'gold4', path: 'sky', ap: 2, fx: 10, tok: 'hp', proj: 3, does: 'An ally: heals 30, +10 critical hits · no line of sight' },
+  { name: 'Shovel of Judgement', el: 'gold1', path: 'arc', ap: 4, proj: 1, does: 'Water 12–20' },
+  { name: 'Mound', el: 'gold3', path: 'arc', ap: 4, shape: 2, size: 3, proj: 2, does: 'Earth 7–12 on a cross of 3' },
+  { name: 'Fortune', el: 'gold4', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'crit', ...NEAR, tx: 4, does: '+61–70 chance, 5 turns' },
+  { name: 'Prime of Life', el: 'gold2', path: 'arc', ap: 4, fx: 3, tok: 'mp', proj: 0, tx: 0, does: 'Air 21–25 · steals 1 MP' },
+  { name: 'Unsummoning', el: 'gold2', path: 'arc', ap: 3, proj: 0, does: 'Air 15–25' },
+  { name: 'Acceleration', el: 'gold4', path: 'sky', ap: 3, fx: 10, tok: 'mp', proj: 4, does: 'An ally anywhere: +3 MP, 3 turns' },
+  { name: 'Dead Weight', el: 'gold5', path: 'arc', ap: 3, fx: 1, push: -2, proj: 2, tx: 0, dx: 2, does: 'Pulls 2 cells · −1 MP' },
+  { name: 'Ghostly Shovel', el: 'gold0', path: 'arc', ap: 4, proj: 1, frost: 1, does: 'Fire 16–20' },
+  { name: 'Greed', el: 'gold4', path: 'self', ap: 3, shape: 6, size: 6, fx: 6, stat: 1, tok: 'crit', ...NEAR, tx: 2, does: 'Everyone on the map: +150 strength and intelligence' },
+  { name: 'Shovel Uprising', el: 'gold3', path: 'arc', ap: 4, shape: 3, size: 4, fx: 1, push: 4, proj: 1, tx: -1, does: 'Earth 26–34 on a line of 4 · pushes 4 cells' },
+  { name: 'Bribery', el: 'gold5', path: 'arc', ap: 5, fx: 4, tok: 'ap', proj: 0, heavy: 1, does: 'Heals the enemy 100, but takes all its AP and MP for a turn' },
+  { name: 'Golden Fever', el: 'gold4', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'crit', ...NEAR, tx: 4, does: '+220 chance, +10 critical hits · he burns and slows' },
+  { name: 'Mass Clumsiness', el: 'gold5', path: 'self', ap: 5, shape: 1, size: 6, fx: 4, tok: 'ap', ...NEAR, tx: 2, does: 'Enemies within 8 cells: −1 to 3 AP' },
+  { name: 'Slaughtering Shovel', el: 'gold1', path: 'arc', ap: 5, proj: 1, heavy: 1, does: 'Water 45–50' },
+].map((s, i) => ({ st: [0, 2, 4, 1, 5, 3][i % 6], ...s })).map(finish('rojin'));
+// ---- the six later classes. proj picks a painted prop: 1 card · 2 dice · 3 clover · 4 flask · 5 doll · 6 flower · 7 coin · 8 wheel · -1 breath
+const SELF = { cx: -1, tx: 0, dx: 4 };
+const SHUGO = [
+  { name: 'Immunity', el: 'ward', path: 'sky', ap: 3, fx: 11, on: 'ally', does: 'An ally takes less damage' },
+  { name: "Shugo's Shield", el: 'ward', path: 'self', ap: 7, fx: 11, heavy: 1, ...SELF, does: 'Big damage reduction · +AP' },
+  { name: "Shugo's Teleportation", el: 'ward', path: 'tele', ap: 4, dx: 5, does: 'Teleports, no line of sight needed' },
+  { name: 'Art of Staff', el: 'ward', path: 'sky', ap: 2, fx: 10, tok: 'dmg', on: 'ally', does: '+damage for an ally' },
+  { name: 'Burning Glyph', el: 'fire', path: 'sky', ap: 3, shape: 1, size: 1, stay: 1, does: 'Glyph: Fire damage to whoever stands in it' },
+  { name: 'Natural Attack', el: 'fire', path: 'bolt', ap: 3, does: 'Fire damage, long range' },
+  { name: 'Glowing Armour', el: 'fire', path: 'self', ap: 2, fx: 11, ...SELF, does: 'Fire resistance · +intelligence' },
+  { name: 'Wind Armour', el: 'air', path: 'self', ap: 2, fx: 11, ...SELF, does: 'Air resistance · +agility' },
+  { name: 'Glyph of Blindness', el: 'ward', path: 'sky', ap: 3, shape: 1, size: 2, stay: 1, fx: 4, tok: 'ap', does: 'Glyph: removes AP' },
+  { name: 'Glyph of Silence', el: 'ward', path: 'sky', ap: 4, shape: 1, size: 3, stay: 1, fx: 4, tok: 'ap', does: 'Large glyph: removes AP' },
+  { name: 'Paralyzing Glyph', el: 'ward', path: 'bolt', ap: 3, shape: 1, size: 2, stay: 1, fx: 4, tok: 'mp', does: 'Glyph: removes MP' },
+  { name: 'Blindness', el: 'earth', path: 'bolt', ap: 3, fx: 4, tok: 'ap', does: 'Earth damage · removes AP' },
+  { name: 'Backlash', el: 'earth', path: 'bolt', ap: 3, fx: 3, tok: 'dmg', does: 'Earth damage · steals from the target' },
+  { name: 'Spell Rebound', el: 'ward', path: 'sky', ap: 3, fx: 11, on: 'ally', does: 'Sends spells back' },
+  { name: 'Cloudy Attack', el: 'fire', path: 'bolt', ap: 4, heavy: 1, does: 'Fire damage' },
+  { name: 'Bubble', el: 'water', path: 'bolt', ap: 3, does: 'Water damage, range 4 to 8' },
+  { name: 'Earth Armour', el: 'earth', path: 'self', ap: 2, fx: 11, ...SELF, does: 'Earth resistance · +strength' },
+  { name: 'Aqueous Armour', el: 'water', path: 'self', ap: 2, fx: 11, ...SELF, does: 'Water resistance · +chance' },
+  { name: 'Truce', el: 'ward', path: 'self', ap: 4, fx: 11, shape: 6, heavy: 1, ...SELF, does: 'Nobody takes damage' },
+  { name: 'Aggressive Glyph', el: 'fire', path: 'sky', ap: 3, shape: 1, size: 2, stay: 1, does: 'Glyph: Fire damage, no line of sight' },
+].map((s, i) => ({ st: [2, 3, 0, 5, 1, 4][i % 6], ...s })).map(finish('shugo'));
+const IYASHI = [
+  { name: 'Lifting Word', el: 'word', path: 'bolt', ap: 1, fx: 10, tok: 'range', on: 'ally', does: '+range for an ally' },
+  { name: 'Wounding Word', el: 'air', path: 'bolt', ap: 3, does: 'Air damage' },
+  { name: 'Word of Thorn', el: 'word', path: 'bolt', ap: 2, fx: 11, on: 'ally', ...NEAR, does: 'Sends damage back' },
+  { name: 'Word of Sacrifice', el: 'word', path: 'bolt', ap: 4, fx: 10, tok: 'hp', on: 'ally', heavy: 1, does: 'Hurts herself to heal an ally' },
+  { name: 'Draining Word', el: 'word', path: 'bolt', ap: 2, fx: 4, tok: 'ap', does: 'Removes AP, very long range' },
+  { name: 'Vampiric Word', el: 'water', path: 'bolt', ap: 4, fx: 2, does: 'Steals life (Water)' },
+  { name: 'Healing Word', el: 'word', path: 'bolt', ap: 2, fx: 10, tok: 'hp', on: 'ally', does: 'Heals' },
+  { name: 'Frightening Word', el: 'word', path: 'bolt', ap: 1, fx: 1, push: 2, does: 'Pushes back' },
+  { name: 'Word of Silence', el: 'word', path: 'bolt', ap: 3, fx: 4, tok: 'ap', ...NEAR, does: 'Removes AP, close range' },
+  { name: 'Regenerating Word', el: 'word', path: 'bolt', ap: 3, fx: 10, tok: 'hp', on: 'ally', does: 'Heals every turn' },
+  { name: 'Curative Word', el: 'word', path: 'self', ap: 3, fx: 6, stat: 4, tok: 'hp', ...SELF, does: 'Heals herself' },
+  { name: 'Word of Recovery', el: 'word', path: 'bolt', ap: 4, fx: 10, tok: 'hp', on: 'ally', heavy: 1, does: 'Big heal' },
+  { name: 'Stimulating Word', el: 'word', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'ap', ...SELF, does: '+AP' },
+  { name: 'Forbidden Word', el: 'fire', path: 'bolt', ap: 3, heavy: 1, does: 'Fire damage' },
+  { name: 'Word of Youth', el: 'word', path: 'bolt', ap: 3, fx: 10, tok: 'crit', on: 'ally', does: 'Strips every effect off the target' },
+  { name: 'Word of Altruism', el: 'word', path: 'self', ap: 5, fx: 6, stat: 4, tok: 'hp', shape: 6, heavy: 1, ...SELF, does: 'Heals everyone, costs her life' },
+  { name: 'Revitalising Word', el: 'word', path: 'bolt', ap: 2, fx: 10, tok: 'hp', on: 'ally', shape: 1, size: 1, does: 'Heals an area' },
+  { name: 'Bonding Word', el: 'word', path: 'bolt', ap: 3, fx: 10, tok: 'hp', on: 'ally', swap: 1, does: 'Heals and trades places' },
+  { name: 'Paralyzing Word', el: 'word', path: 'bolt', ap: 3, fx: 4, tok: 'mp', does: 'Removes MP' },
+  { name: 'Preventing Word', el: 'word', path: 'sky', ap: 3, fx: 11, on: 'ally', does: 'An ally takes less damage, no line of sight' },
+].map((s, i) => ({ st: [0, 3, 1, 4, 2, 5][i % 6], ...s })).map(finish('iyashi'));
+const IKARI = [
+  { name: "Ikari's Foot", el: 'blood', path: 'melee', ap: 3, fx: 3, tok: 'air', ...NEAR, does: 'Earth damage · steals agility' },
+  { name: 'Bloodthirsty Madness', el: 'blood', path: 'bolt', ap: 4, fx: 2, does: 'Steals life (Earth)' },
+  { name: 'Forced Punishment', el: 'blood', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'earth', ...SELF, does: 'Each hit taken gives strength' },
+  { name: 'Transposition', el: 'blood', path: 'sky', ap: 4, swap: 1, does: 'Trades places with anyone, no line of sight' },
+  { name: 'Bold Punishment', el: 'blood', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'water', ...SELF, does: 'Each hit taken gives chance' },
+  { name: 'Dissolution', el: 'blood', path: 'self', ap: 4, fx: 2, shape: 1, size: 1, cx: -1, tx: 0, dx: 0, does: 'Steals life from everyone next to them (Water)' },
+  { name: 'Assault', el: 'blood', path: 'bolt', ap: 3, does: 'Air damage' },
+  { name: 'Attraction', el: 'blood', path: 'bolt', ap: 3, fx: 1, push: -4, cx: -5, tx: 3, does: 'Drags the target to them' },
+  { name: 'Vital Exchange', el: 'blood', path: 'bolt', ap: 4, fx: 10, tok: 'hp', on: 'ally', does: 'Gives their own life to an ally' },
+  { name: 'Blood Blade', el: 'blood', path: 'bolt', ap: 4, fx: 1, push: -1, heavy: 1, does: 'Earth damage · steals life · pulls 1 cell' },
+  { name: 'Punishment', el: 'blood', path: 'melee', ap: 4, heavy: 1, ...NEAR, does: 'The lower their life, the harder it hits' },
+  { name: 'Bloodstep', el: 'blood', path: 'bolt', ap: 2, swap: 1, does: 'Trades places with the target' },
+  { name: 'Absorption', el: 'blood', path: 'bolt', ap: 4, fx: 2, does: 'Steals life (Fire)' },
+  { name: 'Sacrifice', el: 'blood', path: 'sky', ap: 3, fx: 11, on: 'ally', does: 'Takes the damage meant for an ally' },
+  { name: 'Swap', el: 'blood', path: 'melee', ap: 1, swap: 1, ...NEAR, does: 'Trades places, close range' },
+  { name: 'Spiritual Punishment', el: 'blood', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'fire', ...SELF, does: 'Each hit taken gives intelligence' },
+  { name: 'Cooperation', el: 'blood', path: 'sky', ap: 4, swap: 1, does: 'Trades places with an ally, no line of sight' },
+  { name: 'Fury', el: 'blood', path: 'bolt', ap: 3, heavy: 1, does: 'Water damage · grows stronger each cast' },
+  { name: 'Nimble Punishment', el: 'blood', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'air', ...SELF, does: 'Each hit taken gives agility' },
+  { name: 'Life Transfer', el: 'blood', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'hp', shape: 1, size: 2, ...SELF, does: 'Gives their life to allies around' },
+].map((s, i) => ({ st: [0, 3, 2, 5, 1, 4][i % 6], ...s })).map(finish('ikari'));
+const SHUSEN = [
+  { name: 'Pandatak', el: 'earth', path: 'bolt', ap: 4, heavy: 1, does: 'Earth damage' },
+  { name: 'Rooted Guard', el: 'brew', path: 'self', ap: 2, fx: 11, ...SELF, does: 'Sends damage back · cannot move' },
+  { name: 'Pandiniuras', el: 'brew', path: 'arc', ap: 2, fx: 10, tok: 'mp', on: 'ally', proj: 4, does: '+MP for an ally' },
+  { name: 'Blazing Fist', el: 'fire', path: 'melee', ap: 3, ...NEAR, does: 'Fire damage, close range' },
+  { name: 'Melancholy', el: 'water', path: 'bolt', ap: 4, does: 'Water damage' },
+  { name: 'Explosive Flask', el: 'fire', path: 'arc', ap: 2, shape: 1, size: 1, proj: 4, does: 'Fire damage in an area' },
+  { name: 'Bamboo Milk', el: 'brew', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'hp', ...SELF, does: 'Clears his effects · heals' },
+  { name: 'Hangover', el: 'earth', path: 'melee', ap: 3, fx: 3, tok: 'mp', ...NEAR, does: 'Earth damage · steals MP' },
+  { name: 'Terror', el: 'brew', path: 'bolt', ap: 2, fx: 1, push: 2, does: 'Pushes back · removes critical chance' },
+  { name: 'Wind Vulnerability', el: 'air', path: 'bolt', ap: 2, fx: 4, tok: 'air', does: 'Lowers Air resistance' },
+  { name: 'Alcoholic Breath', el: 'air', path: 'bolt', ap: 3, fx: 1, push: 2, proj: -1, does: 'Air damage · pushes back' },
+  { name: 'Hurl', el: 'brew', path: 'melee', ap: 3, fx: 1, push: 4, ...NEAR, does: 'Throws the target far away' },
+  { name: 'Zatoishwan Stance', el: 'brew', path: 'self', ap: 3, fx: 6, stat: 1, tok: 'power', ...SELF, does: '+power +MP · costs AP and burns him' },
+  { name: 'Undertow', el: 'water', path: 'bolt', ap: 3, fx: 1, push: -3, cx: -5, tx: 3, does: 'Pulls the target in' },
+  { name: 'Earth Vulnerability', el: 'earth', path: 'bolt', ap: 2, fx: 4, tok: 'earth', does: 'Lowers Earth resistance' },
+  { name: 'Boozer', el: 'earth', path: 'melee', ap: 3, heavy: 1, ...NEAR, does: 'Earth damage, close range' },
+  { name: 'Blazing Vulnerability', el: 'fire', path: 'bolt', ap: 2, fx: 4, tok: 'fire', does: 'Lowers Fire resistance' },
+  { name: 'Stain', el: 'air', path: 'bolt', ap: 4, fx: 4, tok: 'range', does: 'Air damage · removes power, critical and range' },
+  { name: 'Spirit Rift', el: 'air', path: 'bolt', ap: 4, swap: 1, does: 'Air damage · trades places' },
+  { name: 'Aqueous Vulnerability', el: 'water', path: 'bolt', ap: 2, fx: 4, tok: 'water', does: 'Lowers Water resistance' },
+].map((s, i) => ({ st: [2, 5, 0, 3, 1, 4][i % 6], ...s })).map(finish('shusen'));
+const ASOBI = [
+  { name: 'Topkaj', el: 'fire', path: 'bolt', ap: 3, proj: 1, does: 'Fire damage, a thrown card' },
+  { name: 'All or Nothing', el: 'luck', path: 'self', ap: 3, fx: 6, stat: 4, tok: 'hp', proj: 2, shape: 1, size: 2, ...SELF, does: 'Hurts allies now, heals them after' },
+  { name: 'Feline Leap', el: 'luck', path: 'leap', ap: 1, cx: -3, tx: 0, dx: 4, does: 'Jumps one cell' },
+  { name: 'Read the Table', el: 'luck', path: 'self', ap: 2, fx: 6, stat: 3, tok: 'range', proj: 1, ...SELF, does: '+range +critical' },
+  { name: 'Reflex', el: 'luck', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'air', ...SELF, does: '+agility' },
+  { name: 'Clover', el: 'luck', path: 'self', ap: 2, fx: 6, stat: 0, tok: 'crit', proj: 3, ...SELF, does: '+critical chance' },
+  { name: 'Heads or Tails', el: 'earth', path: 'bolt', ap: 3, proj: 7, does: 'Earth damage, or a heal' },
+  { name: 'Bluff', el: 'water', path: 'bolt', ap: 3, fx: 7, tok: 'air', proj: 1, does: 'Water damage or Air damage' },
+  { name: 'Repercussion', el: 'luck', path: 'self', ap: 3, fx: 11, proj: 2, ...SELF, does: 'Takes less damage · loses a share of life' },
+  { name: "Asobi's Fate", el: 'earth', path: 'slash', ap: 4, heavy: 1, ...NEAR, does: 'Big Earth hit, close range' },
+  { name: "Asobi's Luck", el: 'luck', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'hp', proj: 3, ...SELF, does: 'Damage taken may turn into healing' },
+  { name: 'Playful Claw', el: 'earth', path: 'sky', ap: 4, does: 'Earth damage, no line of sight' },
+  { name: 'Smell', el: 'luck', path: 'self', ap: 5, fx: 6, stat: 4, tok: 'ap', proj: 2, ...SELF, does: 'Random AP and MP, up or down' },
+  { name: 'Lucky Pounce', el: 'earth', path: 'leap', ap: 3, cx: -3, tx: 2, does: 'Jumps on the target · Earth damage' },
+  { name: 'Rough Tongue', el: 'fire', path: 'wave', ap: 4, does: 'Fire damage' },
+  { name: 'Rekop', el: 'earth', path: 'bolt', ap: 4, heavy: 1, proj: 2, does: 'A delayed hit of random strength' },
+  { name: 'Wheel of Fortune', el: 'luck', path: 'self', ap: 2, fx: 6, stat: 1, tok: 'power', proj: 8, st: 3, ...SELF, does: '+power · costs a share of life' },
+  { name: 'Claw of Ceangal', el: 'earth', path: 'slash', ap: 4, ...NEAR, does: 'Earth damage, close range' },
+  { name: 'Feline Spirit', el: 'earth', path: 'slash', ap: 3, ...NEAR, does: 'Earth damage · hurts himself too' },
+  { name: 'Roulette', el: 'luck', path: 'self', ap: 4, fx: 6, stat: 4, tok: 'ap', proj: 8, shape: 6, st: 3, ...SELF, does: 'A random bonus or loss for everyone' },
+].map((s, i) => ({ st: [0, 1, 5, 4, 2, 3][i % 6], ...s })).map(finish('asobi'));
+const MORI = [
+  { name: 'Maddening Spores', el: 'toxin', path: 'arc', ap: 4, fx: 4, tok: 'ap', does: 'Removes AP and wisdom' },
+  { name: 'Reviving Spores', el: 'thorn', path: 'arc', ap: 4, fx: 10, tok: 'hp', on: 'ally', does: 'Heals · +MP' },
+  { name: 'Tear', el: 'water', path: 'bolt', ap: 4, does: 'Water damage' },
+  { name: 'Root Snare', el: 'thorn', path: 'ground', ap: 3, fx: 4, tok: 'mp', does: 'Earth damage · removes MP' },
+  { name: 'Sylvan Power', el: 'thorn', path: 'self', ap: 2, fx: 6, stat: 4, tok: 'hp', ...SELF, does: 'Becomes a tree: heals, takes less damage, cannot act' },
+  { name: 'Wild Grass', el: 'fire', path: 'ground', ap: 3, fx: 4, tok: 'mp', does: 'Fire damage · removes MP' },
+  { name: 'Toxic Knowledge', el: 'toxin', path: 'self', ap: 2, fx: 6, stat: 3, tok: 'range', proj: 5, ...SELF, does: '+power +range · costs MP' },
+  { name: 'Overgrowth', el: 'thorn', path: 'self', ap: 4, fx: 5, tok: 'poison', shape: 6, ...SELF, does: 'Poisons everyone · removes MP and range' },
+  { name: 'Paralyzing Poison', el: 'toxin', path: 'sky', ap: 3, fx: 5, tok: 'poison', does: 'Poison, no line of sight' },
+  { name: 'Soothing Bramble', el: 'thorn', path: 'ground', ap: 2, fx: 10, tok: 'hp', on: 'ally', does: 'Heals · costs the target MP' },
+  { name: 'Dolly Sacrifice', el: 'thorn', path: 'bolt', ap: 2, fx: 2, proj: 5, does: 'Steals life through the doll (Air)' },
+  { name: 'Earthquake', el: 'fire', path: 'self', ap: 2, fx: 5, tok: 'poison', shape: 6, heavy: 1, ...SELF, does: 'Poisons the whole map (Fire)' },
+  { name: 'Tree', el: 'thorn', path: 'self', ap: 3, fx: 6, stat: 4, tok: 'hp', ...SELF, does: 'Roots himself and heals' },
+  { name: 'Poisoned Wind', el: 'toxin', path: 'self', ap: 3, fx: 5, tok: 'poison', shape: 1, size: 3, ...SELF, does: 'Poison around him · removes intelligence' },
+  { name: 'Sacrificial Bloom', el: 'air', path: 'bolt', ap: 3, proj: 6, does: 'Air damage · costs him life' },
+  { name: 'Aggressive Brambles', el: 'thorn', path: 'ground', ap: 4, heavy: 1, does: 'Big Earth damage' },
+  { name: 'Insolent Bramble', el: 'thorn', path: 'ground', ap: 3, fx: 10, tok: 'crit', on: 'ally', does: 'Strips every effect off the target' },
+  { name: 'Manifold Bramble', el: 'thorn', path: 'ground', ap: 3, shape: 2, size: 1, does: 'Earth damage on several cells' },
+  { name: 'Bramble', el: 'thorn', path: 'ground', ap: 3, does: 'Earth damage' },
+  { name: 'Bush Fire', el: 'fire', path: 'ground', ap: 3, fx: 7, tok: 'water', does: 'Fire damage, then Water damage' },
+].map((s, i) => ({ st: [1, 2, 5, 0, 4, 3][i % 6], ...s })).map(finish('mori'));
+const CLASSES = { yogan: YOGAN, yajin: YAJIN, senshi: SENSHI, tomoda: TOMODA, tokei: TOKEI, rojin: ROJIN, shugo: SHUGO, iyashi: IYASHI, ikari: IKARI, shusen: SHUSEN, asobi: ASOBI, mori: MORI };
+const CLASS_NAME = { yogan: 'Yogan', yajin: 'Yajin', senshi: 'Senshi', tomoda: 'Tomoda', tokei: 'Tokei', rojin: 'Rojin', shugo: 'Shugo', iyashi: 'Iyashi', ikari: 'Ikari', shusen: 'Shusen', asobi: 'Asobi', mori: 'Mori' };
+const NEW_CLASS = { shugo: 6, iyashi: 7, ikari: 8, shusen: 9, asobi: 10, mori: 11 };
+
+const EL_WORD = { fire: 'Fire', water: 'Water', air: 'Wind', earth: 'Stone', neutral: 'Light' };
+const describe_yajin = s => {
+  const start = ['A rune circle draws itself under the Yajin. No weapon.', ['A shroud of shadow climbs his body.', 'Strands of shadow spiral up around him.', 'Three dark orbs circle him, then fall into his fist.', 'Wings of shadow unfold from his back, in front of a rune disc.', 'A pool of shadow spreads and hands rise from it.', 'Light is pulled into his body from all around.'][s.st]];
+  if (s.heavy) start.push('Three rune gates form in front of the fist.');
+  if (s.path === 'sky') start.push('He punches upward: a signal of shadow leaves his fist.');
+  const travel = { melee: ['A shadow fist strikes the cell next to him.'], bolt: ['A ball of shadow is thrown straight at the target.'],
+    ground: ['The shadow runs along the ground to the cell.'], sky: ['No line of sight: nothing crosses the board. A gate opens above the cell and the shadow drops straight out of it.'], self: ['The shadow bursts out from his body.'],
+    tele: ['He sinks into his shadow. It runs along the ground to the landing cell.'] }[s.path];
+  const impact = [];
+  if (s.trap) impact.push('The trap is shown on its cells, then fades until it is almost hidden.', 'An enemy walks in: two shadow blades snap shut on every cell.');
+  if (s.path === 'tele') impact.push('He rises out of the shadow on the landing cell.');
+  if (s.heavy) impact.push('White frame, then inverted frame.');
+  if (s.el === 'shade_e') impact.push('A fan of shadow blades rises: black, with a pulsing vein of light and violet fire on the edge.', 'Rune rings climb the target, and the blades dissolve into wisps.');
+  if (s.el === 'shade_a') impact.push('A whirl of shadow rises and dark blades slash across.');
+  const fx = ['', 'The target is thrown back ' + s.push + ' cells.', 'Orbs of life fly from the enemy back to the Yajin.', 'Tokens are pulled out of the enemy and fly back to the Yajin.',
+    'Rune rings clamp around the target and strands of light drain out of it, in the colour of the stat removed.', 'Green bubbles rise and a pool of poison stays on the cell.',
+    ['A reticle closes and locks on the Yajin.', 'An aura of shadow breathes around the Yajin, and thin wisps tear off it upward.', '', 'An eye opens and range rings spread over the area.'][s.stat],
+    '', '', 'A puff of shadow, and only a faint outline is left.'][s.fx];
+  if (fx) impact.push(fx);
+  return [start, travel, impact];
+};
+const describe_senshi = s => {
+  const start = ['A rune circle draws itself under the Senshi.', ['He raises the sword. Light runs from hilt to tip and flares.', 'He plants the sword in the ground. Rays spread and light climbs the blade.', 'The blade whirls round him and leaves a ring of light.',
+    'Four phantom swords fan out behind him.', 'He draws the blade across and a line of light runs out past the tip.', 'A shaft of light falls on the raised sword.'][s.st]];
+  if (s.heavy) start.push('Three rune gates form in front of him.');
+  const travel = { slash: ['One wide cut: a bright edge sweeps round with light streaming off it.'], wave: ['The cut flies off the blade and travels to the target.'],
+    sky: ['No line of sight: he calls it with a signal, and the strike falls straight from a gate above the cell.'], self: ['The light bursts out from him.'],
+    leap: ['He jumps in a high arc, trailing light.'] }[s.path];
+  const impact = [];
+  if (s.heavy) impact.push('White frame, then inverted frame.');
+  if (EL[s.el].id < 4) impact.push('Three crossing cuts land on the target.');
+  if (s.shape || s.path === 'sky' || s.heavy) impact.push('A spirit copy of his sword drops onto ' + (s.shape ? 'each cell hit' : 'the cell') + ', then frays into wisps.');
+  if (s.el === 'fire') impact.push('Flames catch where it lands.');
+  if (s.path === 'leap') impact.push('He lands with a ring of light.');
+  if (s.frost) impact.push('A red cut crosses his own body: the price of the power.');
+  const fx = ['', 'The target is thrown back ' + s.push + (s.push > 1 ? ' cells.' : ' cell.'), 'Orbs of life fly from the enemy back to the Senshi.', '',
+    'Rune rings clamp around the target and strands of light drain out of it.', '',
+    ['', 'A battle aura hugs his body and light streams up off it.', 'Small blades of light orbit him.', '', 'Soft rings of light rise through him.'][s.stat]][s.fx];
+  if (fx) impact.push(fx);
+  return [start, travel, impact];
+};
+const describe_tomoda = s => {
+  const start = ['A rune circle draws itself under the Tomoda and his spell book opens.', ['Runes lift off the page in a spiral.', 'The book spins shut, snaps open, and a beam rises from it.', 'The book rises above his head and light falls on him.',
+    'Loose pages circle him.', 'A quill of light writes on the page.', 'Stars appear above the book and join into a figure.'][s.st], 'The spell\'s own illustration rises out of the page as a vision.'];
+  if (s.heavy) start.push('Three rune gates form in front of him.');
+  const travel = { bolt: ['The vision flies straight to the target, trailing light.'], melee: ['The vision strikes the cell next to him.'], self: ['The vision spreads out from him.'],
+    sky: ['No line of sight: he calls it with a signal, and the vision falls straight from a gate above the cell.'] }[s.path];
+  const impact = ['The vision blooms large over the target, with rays behind it, then frays into wisps.'];
+  if (s.heavy) impact.unshift('White frame, then inverted frame.');
+  if (s.stay) impact[0] = 'The vision blooms over the cell and stays there as the totem.';
+  if (s.shape) impact.push('The hit spreads cell by cell from the centre.');
+  const fx = ['', s.push < 0 ? 'The enemy is dragged ' + -s.push + ' cells toward the centre.' : 'The target is thrown back ' + s.push + ' cells.', 'Orbs of life fly from the enemy back to the Tomoda.', '',
+    'Rune rings clamp around the target and strands of light drain out of it.', 'Green bubbles rise and a pool of poison stays on the cell.',
+    ['A reticle closes and locks on him.', 'A red flame aura surges up around him.', '', '', 'Soft rings of light rise through him.'][s.stat], '', '', '', 'Strands and rings of light rise through the ally.'][s.fx];
+  if (fx) impact.push(fx);
+  return [start, travel, impact];
+};
+const describe_tokei = s => {
+  const start = ['A rune circle draws itself under the Tokei. A small clock turns at his hand, faster as he charges.', ['A great dial opens behind him and its hands spin up.', 'An hourglass runs out above his hand.', 'Three gears turn around him.',
+    'Echoes of himself slide back into him.', 'A pendulum swings above him.', 'Twelve marks circle him and close in.'][s.st]];
+  if (s.heavy) start.push('Three rune gates form in front of him.');
+  const travel = { hand: ['A clock hand of light flies to the target, with two echoes behind it.'], ray: ['A ray: it is simply there, all at once, from his hand to the target.'],
+    sky: ['No line of sight: he calls it with a signal, and the strike falls straight from a gate above the cell.'], self: ['Time ripples out from him.'],
+    tele: ['He blinks. Echoes of where he was a moment ago hang in the air behind him.'] }[s.path];
+  travel.push('A clock is stamped on the ground at the target and ticks.');
+  const impact = ['The ground clock\'s hands spin fast, slow down, and stop.', 'Twelve marks and two rings fly out, then run backwards to where they started.'];
+  if (s.heavy) impact.unshift('White frame, then inverted frame.');
+  if (s.stay) impact.push('The clock stays on the ground for its 4 turns.');
+  if (s.fx === 3 || s.fx === 4) impact.push('A small clock above the target winds down and stops.');
+  const fx = ['', '', '', 'Tokens are pulled out of the target and fly back to the Tokei.', 'Rune rings clamp around the target and strands of light drain out of it.', '',
+    ['', 'A red flame aura surges up around him.', '', '', 'Soft rings of light rise through him.'][s.stat], '', '', '', '', 'Two turning clock rings guard ' + (s.on === 'ally' ? 'the ally.' : 'him.')][s.fx];
+  if (fx) impact.push(fx);
+  if (s.refund) impact.push('One blue point of time flies back to him.');
+  if (s.frost) impact.push('Wrappings wind around him.');
+  return [start, travel, impact];
+};
+const describe_rojin = s => {
+  const thing = { 0: 'A handful of gold coins', 1: 'His pickaxe', 2: 'A gold nugget', 3: 'A gem', 4: 'A gem', 6: 'A golden key' }[s.proj];
+  const start = ['A rune circle draws itself under the Rojin, pickaxe in hand.', ['He flips one coin high. It spins and glints.', 'He strikes the ground and nuggets jump out.', 'He juggles three coins.',
+    'A vein of gold opens under him and gems rise from it.', 'A bag tips coins into his hand.', 'Three gems circle his head.'][s.st]];
+  if (s.heavy) start.push('Three rune gates form in front of him.');
+  const travel = { arc: [thing + (s.proj === 1 ? ' spins end over end in a high arc.' : s.proj ? ' is lobbed in a high arc.' : ' is lobbed in a high arc, each coin flipping.')],
+    sky: ['No line of sight: he calls it with a signal, and ' + thing.toLowerCase() + ' falls straight from a gate above the cell.'], self: ['Gold light spreads out from him.'] }[s.path];
+  const impact = [];
+  if (s.heavy) impact.push('White frame, then inverted frame.');
+  if (s.proj === 0 || s.shape) impact.push('Coins scatter, bounce and settle on the ground.');
+  if (s.proj === 1 && s.path !== 'self') impact.push('The pickaxe bites into the ground and quivers.' + (s.frost ? ' It is a ghost of the pickaxe, with a pale glow.' : ''));
+  if (s.proj > 1 && s.path !== 'self') impact.push(thing + ' hangs over the target, then fades.');
+  if (s.shape === 6 || s.size > 5) impact.push('It rains gold over the whole area.');
+  else if (s.shape) impact.push('A nugget jumps out of every cell hit.');
+  impact.push('Glints flash around the target.');
+  const fx = ['', s.push < 0 ? 'The enemy is dragged ' + -s.push + ' cells toward him.' : 'The target is thrown back ' + s.push + ' cells.', '', 'Tokens are pulled out of the target and fly back to the Rojin.',
+    'Rune rings clamp around the target and strands of light drain out of it.', '', ['', 'A golden flame aura surges up around him.', '', '', 'Soft rings of light rise through him.'][s.stat], '', '', '', 'Strands and rings of light rise through the ally.'][s.fx];
+  if (fx) impact.push(fx);
+  return [start, travel, impact];
+};
+const LATER = {
+  shugo: { who: 'the Shugo, staff in hand', starts: ['The staff is planted. Written rings roll out from its foot.', 'The staff spins.', 'A glyph draws itself in the air beside him.',
+      'Panes of glass assemble into a shield around him.', 'Four columns of script rise around him.', 'A seal drops from above and stamps him.'],
+    fly: 'A small turning glyph flies from the staff, with a trail.', self: 'The ward spreads out from him.' },
+  iyashi: { who: 'the Iyashi. Two small wings of light flutter behind her', starts: ['She speaks one glowing word.', 'She writes a line in the air with her finger.', 'A page of script unrolls line by line.',
+      'Her wings open wide.', 'A ring of script turns around her head.', 'She holds a note; rings leave her mouth.'],
+    fly: 'The word flies as a ribbon of script.', self: 'The word spreads out from her.' },
+  ikari: { who: 'the Ikari', starts: ['A cut across the palm. Drops fall.', 'Blood rises from the ground around them.', 'Veins light up along the body.',
+      'A roar: two red shock rings.', 'Two ribbons of blood cross in front of them.', 'Ribbons of blood wind around the body.'],
+    fly: 'A whip of blood lashes out from the hand, all the way to the target.', self: 'The blood surges around them.' },
+  shusen: { who: 'the Shusen, flask in hand', starts: ['He drinks. Bubbles rise.', 'Dizzy rings turn above his head.', 'He cracks his knuckles: two flashes.',
+      'A deep breath: motes are sucked in.', 'He shakes the flask; foam sprays.', 'He drops into a stance; a ring slams out along the ground.'],
+    fly: 'A comet of liquid flies to the target.', self: 'The brew takes hold.' },
+  asobi: { who: 'the Asobi', starts: ['A fan of five cards opens in his hand.', 'Two dice are thrown up and spin.', 'He flips a coin high.',
+      'A wheel of fortune spins up behind him.', 'A four-leaf clover opens above him.', 'Three claw strokes light up at his hand.'],
+    fly: 'Claws of light fly at the target.', self: 'Luck gathers on him.' },
+  mori: { who: 'the Mori', starts: ['A seed falls from his hand and sprouts.', 'Four brambles push up around him.', 'He blows spores from his palm.',
+      'He raises the doll.', 'Vines coil up his body.', 'A flower opens above him.'],
+    fly: 'A drift of spores flies to the target.', self: 'The growth spreads from him.' },
+};
+const describe_later = s => {
+  const k = LATER[s.cls], prop = { 1: 'a card', 2: 'the dice', 3: 'a clover', 4: 'the flask', 5: 'the doll', 6: 'a flower', 7: 'a coin', 8: 'the wheel' }[s.proj];
+  const start = ['A rune circle draws itself under ' + k.who + '.', k.starts[s.st]];
+  if (s.heavy) start.push('Three rune gates form in front.');
+  const travel = [{ sky: 'No line of sight: he calls it with a signal, and it falls straight from a gate above the cell.', self: k.self, tele: 'He blinks to the cell.',
+    leap: 'He pounces in a high arc.', slash: 'Three claw arcs sweep across.', wave: 'A wave of claws rolls forward.', melee: 'A short rush into the target.',
+    ground: 'Roots run under the ground to the target. Nothing flies.', arc: (prop ? prop[0].toUpperCase() + prop.slice(1) + ' is lobbed' : 'A cloud of spores drifts') + ' in a high arc.' }[s.path]
+    || (s.proj === -1 ? 'A cone of vapour rolls out from his mouth.' : prop && s.cls !== 'mori' ? prop[0].toUpperCase() + prop.slice(1) + ' is thrown, spinning.' : k.fly)];
+  if (s.cls === 'mori' && s.proj === 5) travel.push('A thread links the doll to the target.');
+  const impact = [];
+  if (s.heavy) impact.push('White frame, then inverted frame.');
+  if (s.cls === 'shugo') impact.push(s.stay ? 'The glyph is written on the ground and stays, turning slowly.' : s.fx === 11 ? 'Panes of glass close into a faceted shield.' : s.path === 'tele' ? 'He arrives; echoes of where he was fade.' : 'A column of flame in the element\'s colour, with rune rings climbing the target.');
+  if (s.cls === 'iyashi') impact.push('Bands of script wrap the target and turn.', s.fx === 10 || s.fx === 6 ? 'Petals of light rise.' : 'Motes spiral up.');
+  if (s.cls === 'ikari') impact.push('Blood bursts out in drops.', s.swap || s.fx === 1 || s.fx === 2 || s.fx === 11 ? 'A ribbon of blood ties the two together.' : '');
+  if (s.cls === 'shusen') impact.push('A crown of drops and a ring of foam.', s.fx === 4 ? 'A ward in the element\'s colour forms on the target, then cracks and breaks.' : '');
+  if (s.cls === 'asobi') impact.push(s.el === 'luck' ? '' : 'Three claw marks cut across the target.', prop ? prop[0].toUpperCase() + prop.slice(1) + (s.proj === 8 ? ' spins above, slows, and stops.' : s.proj === 7 ? ' lands above the target and shows its face.' : ' settles above the target: the result of the gamble.') : '');
+  if (s.cls === 'mori') impact.push(s.fx === 6 ? 'Brambles climb around him like bark.' : s.fx === 10 ? 'Soft growth rises through the ally.' : 'Thorned brambles erupt from the ground.', s.proj === 6 ? 'A flower opens over the target.' : '');
+  if (s.shape) impact.push('The hit spreads cell by cell from the centre.');
+  if (s.swap) impact.push('The two trade places.');
+  const fx = ['', s.push < 0 ? 'The target is dragged ' + -s.push + ' cells closer.' : 'The target is thrown back ' + s.push + ' cells.', 'Orbs of life fly from the target back to the caster.', 'Tokens are pulled out of the target and fly back.',
+    'Rune rings clamp around the target and strands of light drain out of it.', 'Green bubbles rise and a pool of poison stays.',
+    ['A reticle closes and locks.', 'A flame aura surges up, in the colour of the stat gained.', '', 'An eye opens and range rings spread.', 'Soft rings of light rise.'][s.stat],
+    'A second hit follows in another colour.', '', '', 'Strands and rings of light rise through the ally.', 'A guard of turning rings holds around ' + (s.on === 'ally' ? 'the ally.' : 'the caster.')][s.fx];
+  if (fx) impact.push(fx);
+  return [start, travel, impact.filter(Boolean)];
+};
+const describe = s => {
+  if (NEW_CLASS[s.cls]) return describe_later(s);
+  if (s.cls === 'rojin') return describe_rojin(s);
+  if (s.cls === 'tokei') return describe_tokei(s);
+  if (s.cls === 'tomoda') return describe_tomoda(s);
+  if (s.cls === 'yajin') return describe_yajin(s);
+  if (s.cls === 'senshi') return describe_senshi(s);
+  const w = EL_WORD[s.el];
+  const start = ['A rune circle draws itself under the Yogan. Its design is different for every spell.', w + ' gathers on the arrow while the string is drawn.'];
+  if (s.heavy) start.push('Three rune gates form in front of the bow.');
+  if (s.path === 'sky' || s.path === 'self') start.push('The bow points up and looses a signal of light.');
+  const travel = { line: ['Straight and fast along the line.'], arc: ['A high arc over the board.'],
+    sky: ['No arrow crosses the board. A gate opens above the target and the arrow falls straight out of it.'], self: ['A gate opens above the Yogan and the arrow falls straight back down on him.'] }[s.path];
+  travel.push(s.shape ? 'Every cell the spell will hit lights up before the arrow lands.' : 'The target cell lights up before the arrow lands.');
+  const main = { fire: 'Cartoon flames burst on each cell hit.', water: 'A ball of water bursts into a crown, with ripples.', air: 'A twister rises and wind blades slash across.',
+    earth: 'Blocky stone spikes punch up and rubble flies.', neutral: 'A pillar of light falls on the Yogan.' }[s.el];
+  const fx = ['', 'The target is thrown back ' + s.push + (s.push > 1 ? ' cells' : ' cell') + ', with speed lines and arrows on the ground.',
+    'Orbs of life fly from the target back to the Yogan.', 'Tokens are pulled out of the target and fly back to the Yogan.',
+    'Rune rings clamp around the target and arrows fall, in the colour of the stat removed.', 'Green bubbles rise and a pool of poison stays on the cell.',
+    ['A reticle closes and locks on the Yogan.', 'A red flame aura surges up around the Yogan.', 'Glowing arrows orbit the Yogan.', 'An eye opens and range rings spread over the area.'][s.stat],
+    'A second hit follows in green: wind blades over the fire.', 'An eye closes on the ground, bats circle the area, and life orbs fly back.'][s.fx];
+  const impact = [main];
+  if (s.heavy) impact.unshift('White frame, then inverted frame.');
+  if (s.shape) impact.push('The hit spreads cell by cell from the centre.');
+  if (fx) impact.push(fx);
+  return [start, travel, impact];
+};
+
+const FRAG = `
+precision highp float;
+uniform sampler2D uSw, uIc, uRj;
+uniform float uProj;
+uniform float uIcon, uStay, uRefund, uOnAlly;
+uniform vec3 uFrom;
+const vec3 GOLD = vec3(1., .78, .3);
+uniform vec2 uRes; uniform float uT, uS, uTr, uI, uL, uPow, uHeavy, uSky, uSeed, uSize, uPushK, uFrost, uCrawl, uTrap, uSet, uGhostC, uGhostD;
+uniform int uEl, uShape, uFx, uStat, uClass, uStart, uMove;
+uniform vec3 uP, uV, uAim, uCst, uTgt, uDum, uDum2, uC1, uC2, uC3, uX1, uX2, uCam, uLook, uPa, uPb;
+const float F = 1.9; const float PI = 3.14159265; const float TAU = 6.2831853;
+vec3 ro, fw, rt, up; vec2 uv;
+
+float h1(float n){ return fract(sin(n * 127.1) * 43758.5453); }
+float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float ns(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f);
+  return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+float fbm(vec2 p){ float a = .5, s = 0.; for (int i = 0; i < 4; i++) { s += a * ns(p); p = p * 2.03 + 7.1; a *= .5; } return s; }
+float sat(float x){ return clamp(x, 0., 1.); }
+float sq(float x){ return x * x; }
+float eo(float x){ x = 1. - sat(x); return 1. - x * x * x; }
+float pop(float x){ return eo(x) * (1. + .3 * exp(-max(x, 0.) * 2.5) * sin(max(x, 0.) * 9.)); }
+float ln(float d, float w){ return 1. - smoothstep(0., w, abs(d)); }
+float win(float t, float a, float b, float f){ return smoothstep(a, a + .08, t) * (1. - smoothstep(b - f, b, t)); }
+vec3 prj(vec3 P){ vec3 d = P - ro; float z = max(dot(d, fw), .05); return vec3(vec2(dot(d, rt), dot(d, up)) * F / z, z); }
+vec2 bb(vec3 P){ vec3 s = prj(P); return (uv - s.xy) * s.z / F; }
+float pt(vec3 P, float k){ vec3 s = prj(P); return exp(-length(uv - s.xy) * s.z / F * k); }
+vec2 rot(vec2 p, float a){ float c = cos(a), s = sin(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
+vec3 ramp(float d){ return uC3 * smoothstep(0., .3, d) * .8 + uC2 * smoothstep(.12, .6, d) + uC1 * smoothstep(.45, .95, d) + vec3(1.) * smoothstep(.9, 1.6, d); }
+float cube(vec3 P, float s, float a){ vec2 q = rot(bb(P), a); return step(max(abs(q.x), abs(q.y)), s); }
+
+// flat cartoon bands with a dark rim, painted opaque
+void paint(inout vec3 col, float d, vec3 a, vec3 b, vec3 c){
+  vec3 k = c * .45; k = mix(k, c * 1.25, smoothstep(.1, .12, d)); k = mix(k, b, smoothstep(.3, .32, d));
+  k = mix(k, a, smoothstep(.58, .6, d)); k = mix(k, vec3(1., 1., .94), smoothstep(.92, .94, d));
+  col = mix(col, k, smoothstep(.03, .05, d));
+}
+// shadow: violet rim, black inside
+void shade(inout vec3 col, float d){
+  col = mix(col, uC2, smoothstep(.03, .05, d)); col = mix(col, uC3 * .7, smoothstep(.13, .15, d)); col = mix(col, vec3(.025, 0., .05), smoothstep(.3, .32, d));
+}
+float fire_d(vec2 q, float w, float h, float sd){
+  if (h < .03) return 0.;
+  float y = q.y / h; if (y < -.2 || y > 1.3 || abs(q.x) > w * 3.) return 0.;
+  vec2 u = vec2(q.x * 2., q.y * 1.3 - uT * 3.2) + sd * 7.;
+  float n1 = fbm(u), n2 = ns(u * 1.6 + vec2(n1 * 2., -uT * 1.5));
+  float x = (q.x + (n1 - .5) * w * 1.9 * sat(y)) / (w * (1. - .6 * sat(y)));
+  float dn = exp(-x * x * 1.5) * (1. - smoothstep(.15, 1.15, y)) * smoothstep(-.18, .04, y);
+  return max(dn * (.55 + 1.1 * n2) - .14 * sat(y), 0.) * 1.35;
+}
+void tfire(inout vec3 col, vec2 q, float w, float h, float sd){ paint(col, fire_d(q, w, h, sd), uC1, uC2, uC3); }
+float ball_d(vec2 q, float R, float sd){
+  float r = length(q) / max(R, .01); if (r > 1.5) return 0.;
+  return max((1. - r * r) * (.55 + 1.1 * fbm(q * 1.5 + vec2(sd, -uT * 1.6))), 0.) * 1.3;
+}
+
+float glyphs(float a, float r, float R, float hw, float n, float sd){
+  float y = (r - R) / hw; if (abs(y) > 1.) return 0.;
+  float ai = a * n / TAU, id = floor(ai), f = (fract(ai) - .5) * 2.;
+  float h = h1(id + sd * 17.), s = 0.;
+  s += ln(f - (h - .5) * .9, .2) * step(abs(y), .85) * step(.25, h);
+  s += ln(y - (fract(h * 7.) - .5) * 1.4, .3) * step(abs(f), .62) * step(.35, fract(h * 3.));
+  s += ln(y + f * (h > .5 ? 1. : -1.), .3) * step(abs(f), .6) * step(.55, fract(h * 11.));
+  return min(s, 1.);
+}
+// a rune circle whose layers turn on their own and whose inner figure changes with the seed
+float emblem(vec2 p, float sd, float k){
+  float r = length(p); if (r > 1.3 || k <= 0.) return 0.;
+  float a = atan(p.y, p.x), t = uT, st = floor(h1(sd * 1.7) * 4.), n = 3. + floor(h1(sd * 2.3) * 4.);
+  float k1 = sat(k * 2.), k2 = sat(k * 2. - .5), k3 = sat(k * 2. - 1.);
+  float s = ln(r - 1., .026) * step(fract((a + t * .3) / TAU + .5), k1) + exp(-abs(r - 1.) * 14.) * .2 * k1;
+  s += ln(r - .84, .016) * step(.35, fract((a - t * .9) * n * 2. / TAU)) * k2;
+  s += glyphs(a + t * .35, r, .92, .06, 16. + n, sd) * .9 * k2;
+  float br = .62 + .05 * sin(t * 2. + sd);
+  if (st < 1.) {
+    float seg = TAU / n, inr = br * cos(seg * .5);
+    float a1 = mod(a - t * .6, seg) - seg * .5, a2 = mod(a + t * .6 + seg * .5, seg) - seg * .5;
+    s += (ln(r * cos(a1) - inr, .018) + ln(r * cos(a2) - inr, .018)) * step(r, br + .02) * k3;
+  } else if (st < 2.) {
+    s += (ln(r - (.45 + .17 * cos(n * (a + t * .5))), .02) + ln(r - (.3 + .1 * cos(n * (a - t * .8))), .016)) * k3;
+  } else if (st < 3.) {
+    vec2 q = rot(p, t * .7), q2 = rot(p, -t * .7);
+    s += (ln(max(abs(q.x), abs(q.y)) - br * .7, .018) + ln(abs(q2.x) + abs(q2.y) - br, .018)) * k3;
+    for (int i = 0; i < 4; i++) { float ao = float(i) * 1.5708 - t * 1.3; s += ln(length(p - vec2(cos(ao), sin(ao)) * .84) - .07, .02) * k3; }
+  } else {
+    s += ln(sin(n * (a + t * .4)) * r, .03) * step(.2, r) * step(r, br) * k3;
+    for (int i = 0; i < 3; i++) { float ao = float(i) * 2.094 + t; vec2 c = vec2(cos(ao), sin(ao)) * .5; s += ln(length(p - c) - .16, .018) * step(.14, length(p - c * 1.25)) * k3; }
+  }
+  s += ln(r - .14 - .03 * sin(t * 5.), .014) * k3 + (1. - smoothstep(0., .14, r)) * .6 * k3;
+  s += ln(r - fract(t * .5 + sd) * 1.05, .03) * (1. - fract(t * .5 + sd)) * .5 * k2;
+  return s;
+}
+vec3 inks(float s){ return (uC2 + uC1 * s * .5) * s; }
+
+float box(vec3 o, vec3 d, vec3 c, vec3 b, out vec3 n){
+  vec3 m = 1. / d, k = abs(m) * b, q = m * (o - c), t1 = -q - k, t2 = -q + k;
+  float tn = max(max(t1.x, t1.y), t1.z), tf = min(min(t2.x, t2.y), t2.z);
+  if (tn > tf || tf < 0.) return 1e9;
+  n = -sign(d) * step(t1.yzx, t1.xyz) * step(t1.zxy, t1.xyz);
+  return tn;
+}
+// a spike built from stacked blocks: lit top faces, light and dark sides, dark outline
+void vspike(inout vec3 col, vec3 P, float h, float w){
+  if (h < .05) return;
+  vec2 q = bb(P); float y = q.y / h; if (y < 0. || y > 1.) return;
+  float steps = 5., lvl = floor(y * steps), wl = w * (1. - lvl / steps) + .03, fy = fract(y * steps);
+  if (abs(q.x) > wl) return;
+  vec3 c = mix(uC3 * 1.1 + uC2 * .2, uC2 * .95 + uC1 * .1, step(q.x, -wl * .1));
+  c = mix(c, uC1, step(.7, fy));
+  c = mix(c, uC3 * .3, max(step(wl - .035, abs(q.x)), step(fy, .08)));
+  col = c;
+}
+
+// a blade of shadow: black body, a pulsing vein of light, violet fire on the edge, and it dissolves into wisps
+void sblade(inout vec3 col, vec2 q, float len, float w, float ang, float hook, float life, float ghost){
+  if (len < .05) return;
+  vec2 p = rot(q, ang); float u = p.y / len; if (u < -.05 || u > 1.08) return;
+  float lat = p.x - hook * u * u * len;
+  float wid = w * pow(max(1. - u, 0.), .65) * smoothstep(-.05, .12, u);
+  if (abs(lat) > wid * 2.6 + .08) return;
+  float n = fbm(vec2(p.x * 5., p.y * 3. - uT * 2.5) + ang * 7.);
+  float e = 1. - abs(lat) / max(wid, .001), keep = smoothstep(life * 1.3 - .3, life * 1.3 - .2, n);
+  float inside = smoothstep(0., .08, e) * keep;
+  if (ghost > .5) { col += uC2 * inside * .2; return; }
+  col += uC2 * smoothstep(-1.5, 0., e) * step(e, 0.) * smoothstep(.42, .8, n) * keep * .9;
+  col = mix(col, vec3(.02, 0., .05), inside * .96);
+  col += uC2 * (1. - smoothstep(0., .22, abs(e))) * keep * .9;
+  col += uC1 * ln(lat + sin(u * 9. - uT * 6.) * wid * .18, .022) * inside * (.45 + .55 * sin(u * 12. - uT * 10.));
+}
+// a fan of blades rising from one cell, with a larger, later ghost behind it
+void sfan(inout vec3 col, vec3 S, float tj, float size, float count){
+  vec2 q = bb(S) + vec2(0., .05);
+  float life = smoothstep(1.5, 2.9, tj);
+  for (int j = 0; j < 5; j++) {
+    float fj = float(j), k = fj - 2.; if (abs(k) > count) continue;
+    float ang = k * .44 + sin(uT * 1.6 + fj) * .07, lenj = (1.7 + .6 * h1(fj + S.x)) * size * (1. - .12 * abs(k));
+    sblade(col, q / 1.22, lenj * pop((tj - .1 - .03 * fj) / .2), .2 * size, ang, k * .16, life, 1.);
+    sblade(col, q, lenj * pop((tj - .03 * fj) / .18), .2 * size, ang, k * .16, life, 0.);
+  }
+}
+
+// a sword cut: a bright edge that sweeps round, with light streaming off its inner side
+void slash(inout vec3 col, vec2 q, float R, float a0, float sweep, float tk, vec3 ca, vec3 cb){
+  if (tk <= 0. || tk >= 1.) return;
+  float r = length(q) / R; if (r > 1.25 || r < .25) return;
+  float a = mod(atan(q.y, q.x) - a0 + PI, TAU) - PI, sg = sign(sweep), s = a * sg / abs(sweep);
+  if (sg < 0. && a > 0.) s = (a - TAU) * sg / abs(sweep);
+  if (sg > 0. && a < 0.) s = (a + TAU) * sg / abs(sweep);
+  float head = eo(tk * 1.8), tail = eo((tk - .35) * 1.6);
+  if (s < tail || s > head) return;
+  float k = (s - tail) / max(head - tail, .001), th = .3 * sqrt(sin(PI * k)) * (.5 + .5 * k), d = r - 1.;
+  float n = fbm(vec2(s * 9. - uT * 4., r * 7.));
+  float body = smoothstep(-th, -th * .15, d) * step(d, 0.) * (.35 + 1.1 * n);
+  col += cb * body * (1. - tk * .5) + ca * (ln(d, .03) * 1.6 + smoothstep(.55, .9, n) * body) + vec3(1.) * ln(d, .012) * k;
+  col += ca * smoothstep(.6, .95, fbm(vec2(s * 14., r * 12. + uT * 3.))) * step(0., d) * step(d, .16) * k * .7;
+}
+// the game's own sword art. p.x runs across the blade, p.y from pommel (0) to tip (1); the icons are drawn on the diagonal
+vec4 swtex(vec2 p, float id){
+  vec2 uv = .5 + (vec2(p.y - .5) + vec2(p.x, -p.x)) * .76;
+  if (uv.x < .01 || uv.x > .99 || uv.y < .01 || uv.y > .99) return vec4(0.);
+  return texture2D(uSw, vec2((uv.x + id) / 3., uv.y));
+}
+float sword_id(){ return uEl == 0 ? 0. : uEl == 2 ? 2. : 1.; }
+// that sword as a spirit: it shimmers, wears a soft halo, light runs down it, and it frays into wisps as life goes to 1.
+// Tip at the origin, hilt above
+void ssword(inout vec3 col, vec2 q, float len, float life, vec3 ca, vec3 cb){
+  if (len < .1) return;
+  vec2 p = vec2(q.x / len * 1.45, 1. - q.y / len);
+  if (abs(p.x) > .55 || p.y < -.12 || p.y > 1.12) return;
+  float id = sword_id(), n = fbm(vec2(q.x * 5., q.y * 3. - uT * 2.));
+  vec2 pw = p + vec2((n - .5) * .05 / len, 0.);
+  vec4 t = swtex(pw, id);
+  float halo = 0., wide = 0.;
+  for (int i = 0; i < 8; i++) { float a = float(i) * .785; vec2 o = vec2(cos(a), sin(a)); halo += swtex(pw + o * .045 / len, id).a; wide += swtex(pw + o * .13 / len, id).a; }
+  halo /= 8.; wide /= 8.;
+  float keep = smoothstep(life * 1.3 - .3, life * 1.3 - .2, n), a = t.a * keep;
+  vec3 body = mix(t.rgb, ca, .3) * (1. + .7 * smoothstep(.5, .9, fbm(vec2(p.x * 9., p.y * 6. - uT * 3.))));
+  col += cb * wide * (.35 + .5 * smoothstep(.4, .8, n)) * keep * (1. - t.a);
+  col += ca * max(halo - t.a, 0.) * 1.5 * keep + ca * halo * (1. - keep) * smoothstep(.3, .7, n) * .7;
+  col = mix(col, body, a * .82);
+  col += ca * a * ln(fract(p.y * 3. - uT * 1.2) - .5, .07) * .6;
+}
+
+// a clock face of light. The minute hand drags two fading copies of itself behind it
+float dial(vec2 p, float ha, float ma, float k){
+  float r = length(p); if (r > 1.25 || k <= 0.) return 0.;
+  float a = atan(p.x, p.y);
+  float s = ln(r - 1., .025) * step(fract(a / TAU + .5), k * 1.2) + ln(r - .9, .012) * k + exp(-abs(r - 1.) * 12.) * .2 * k;
+  float major = step(abs(fract(a * 4. / TAU + .5) - .5), .04);
+  s += step(abs(fract(a * 12. / TAU + .5) - .5), .035) * step(.78 - .08 * major, r) * step(r, .9) * k;
+  s += glyphs(a, r, .66, .07, 12., 3.) * .7 * k;
+  s += ln(r - (.42 + .03 * step(.5, fract(a * 9. / TAU + uT * .3))), .014) * .6 * k;
+  vec2 hp = rot(p, ha); s += step(abs(hp.x), .035 * (1. - hp.y / .5)) * step(0., hp.y) * step(hp.y, .5) * k;
+  for (int j = 0; j < 3; j++) { vec2 mp = rot(p, ma - float(j) * .16); s += step(abs(mp.x), .02 * (1. - mp.y / .82) + .004) * step(-.1, mp.y) * step(mp.y, .82) * k * (1. - float(j) * .38); }
+  s += ln(r - .05, .02) * k + (1. - smoothstep(0., .05, r)) * k;
+  return s * (.85 + .15 * sin(uT * 7. + r * 9.));
+}
+// the Rojin's things, from the game's own art: 0 coin · 1 pickaxe · 2 nugget · 3 diamond · 4 amber · 5 jade · 6 key · 7 bag
+vec4 rjtex(vec2 p, float id){
+  vec2 uv = p + .5; if (uv.x < .02 || uv.x > .98 || uv.y < .02 || uv.y > .98) return vec4(0.);
+  return texture2D(uRj, vec2((uv.x + mod(id, 4.)) / 4., (uv.y + 1. - floor(id / 4.)) / 2.));
+}
+// one of them, turned, flipped edge-on like a spinning coin, gilded, with a sheen that slides across it
+void sprite(inout vec3 col, vec2 q, float size, float ang, float flip, float id, float gild, float glow){
+  if (size < .02) return;
+  col += GOLD * exp(-length(q) / size * 3.5) * glow * .45;
+  vec2 p = rot(q, ang) / size; p.x /= max(abs(flip), .14);
+  if (abs(p.x) > .5 || abs(p.y) > .5) return;
+  vec4 t = rjtex(p, id);
+  float l = dot(t.rgb, vec3(.3, .6, .1));
+  vec3 c = mix(t.rgb, vec3(1., .78, .22) * (l * 1.7 + .12) + vec3(1., .95, .7) * smoothstep(.5, .8, l), gild);
+  col = mix(col, c, t.a);
+  col += vec3(1., .92, .6) * t.a * glow * smoothstep(.75, 1., sin(p.x * 5. + p.y * 5. + uT * 5.)) * .6;
+}
+void glint(inout vec3 col, vec2 q, float k){ col += vec3(1., .95, .75) * (exp(-length(q) * 30.) + exp(-abs(q.y) * 70.) * exp(-abs(q.x) * 9.) + exp(-abs(q.x) * 70.) * exp(-abs(q.y) * 9.)) * k; }
+float sd_seg(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; return length(pa - ba * clamp(dot(pa, ba) / dot(ba, ba), 0., 1.)); }
+// the spell's own illustration, shown as a vision: round, with an edge eaten by mist, a living rim, and wisps coming off it
+vec4 ictex(vec2 p, float id){
+  vec2 uv = p + .5; if (uv.x < .02 || uv.x > .98 || uv.y < .02 || uv.y > .98) return vec4(0.);
+  return texture2D(uIc, vec2((uv.x + mod(id, 5.)) / 5., (uv.y + 3. - floor(id / 5.)) / 4.));
+}
+void vision(inout vec3 col, vec2 q, float R, float life, float id){
+  if (R < .03) return;
+  vec2 p = q / (R * 2.); float r = length(p) * 2.; if (r > 1.6) return;
+  float n = fbm(q * 3. + vec2(0., -uT * 1.5)), n2 = fbm(q * 6. + uT);
+  vec4 t = ictex((p + (vec2(n, n2) - .5) * .05) * 1.06, id);
+  float keep = smoothstep(life * 1.3 - .3, life * 1.3 - .2, n);
+  float a = t.a * (1. - smoothstep(.6, 1., r + (n - .5) * .55)) * keep;
+  col += uC2 * (1. - smoothstep(.5, 1.5, r)) * (.2 + .5 * n) * keep;
+  col = mix(col, t.rgb * (1.1 + .5 * smoothstep(.5, .9, n2)), a * .92);
+  col += t.rgb * a * .35;
+  col += uC1 * ln(r - 1. - .07 * sin(atan(p.y, p.x) * 6. + uT * 3.), .07) * keep * .8;
+  col += uC2 * smoothstep(.55, .9, fbm(vec2(q.x * 4., q.y * 2. - uT * 2.))) * (1. - smoothstep(.8, 1.6, r)) * step(.7, r) * keep * .6;
+}
+// the grimoire: two cream pages in a V, lines of runes that light up, a page turning, light in the gutter
+void book(inout vec3 col, vec2 q, float open, float glow){
+  float ax = abs(q.x), w = .34 * open + .03, h = .23, yy = q.y - ax * .32 + .05;
+  if (ax > w + .08 || abs(yy) > h + .12) return;
+  col = mix(col, vec3(.3, .1, .26), step(ax, w + .035) * step(abs(yy + .025), h + .035));
+  float page = step(ax, w) * step(abs(yy), h);
+  col = mix(col, vec3(.95, .9, .78) * (1. - ax * .5), page);
+  float row = floor((yy + h) * 24.), lit = step(row, glow * 12.);
+  col = mix(col, mix(vec3(.45, .35, .3), uC2, lit), page * step(.45, fract((yy + h) * 24.)) * step(.05, ax) * step(ax, w - .04) * step(.35, fract(ax * 9. + row * .37)) * .75);
+  float f = fract(uT * 1.6), xf = cos(f * PI) * w * step(.01, glow);
+  col = mix(col, vec3(.98, .94, .84), step(min(0., xf), q.x) * step(q.x, max(0., xf)) * step(abs(yy - sin(f * PI) * .1), h) * step(.01, glow) * .9);
+  col += (uC1 * exp(-ax * 20.) + uC2 * exp(-ax * 6.) * .4) * step(-h, yy) * (1. - smoothstep(h, h + .7, yy)) * glow;
+}
+
+// which cells the spell hits, relative to the target cell
+uniform sampler2D uPr; uniform float uSwap;
+// painted props for the six later classes: 0 staff · 1 card · 2 dice · 3 clover · 4 flask · 5 doll · 6 flower
+void prop(inout vec3 col, vec2 q, float size, float ang, float flip, float id, float glow){
+  if (size < .02) return;
+  col += uC2 * exp(-length(q) / size * 3.5) * glow * .4;
+  vec2 p = rot(q, ang) / size; p.x /= max(abs(flip), .14);
+  vec2 u = p + .5; if (u.x < .02 || u.x > .98 || u.y < .02 || u.y > .98) return;
+  vec4 t = texture2D(uPr, vec2((u.x + mod(id, 4.)) / 4., (u.y + 1. - floor(id / 4.)) / 2.));
+  col = mix(col, t.rgb + uC1 * glow * .1, t.a);
+  col += uC1 * t.a * glow * smoothstep(.8, 1., sin(p.x * 5. + p.y * 5. + uT * 4.)) * .45;
+}
+// a faceted ward, like stained glass. k assembles it pane by pane, crack breaks it
+void ward(inout vec3 col, vec2 q, float R, float k, float crack, vec3 ca, vec3 cb){
+  if (k <= 0. || R < .03 || crack >= 1.) return;
+  vec2 p = q / R; p.y *= .82; float r = length(p); if (r > 1.2) return;
+  float seg = TAU / 7., a = atan(p.y, p.x) + .2, fa = floor(a / seg + .5), la = a - fa * seg;
+  float rr = r * cos(la) / cos(seg * .5), ring = floor(rr * 3.), id = h1(fa * 3.1 + ring * 7.7 + 2.);
+  float on = step(id, k * 1.2) * step(rr, 1.) * step(crack * 1.1, h1(fa + ring * 3. + 5.) + .1);
+  float lines = ln(abs(la) - seg * .5, .05 / max(r, .25)) + ln(fract(rr * 3. + .5) - .5, .07) * step(rr, .95) + ln(rr - 1., .05) * 1.5;
+  col += (cb * (.1 + .22 * id) * (.7 + .3 * sin(uT * 2. + id * 9.)) + ca * lines * .55 + ca * smoothstep(.75, 1., sin(p.x * 4. + p.y * 4. + uT * 2.5 + id * 6.)) * .12) * on;
+}
+// a line of written marks. p.x runs 0..1 along the line, p.y -1..1 across it
+float script(vec2 p, float n, float sd){
+  if (p.x < 0. || p.x > 1. || abs(p.y) > 1.) return 0.;
+  float c = floor(p.x * n), f = fract(p.x * n) - .5, r = h1(c + sd * 7.);
+  float s = ln(f + (r - .5) * .3 * p.y, .09) * step(abs(p.y), .5 + .5 * h1(c + sd));
+  s += ln(p.y - (r - .5), .12) * step(abs(f), .32) * step(.4, h1(c + 3. + sd));
+  s += ln(length(vec2(f, p.y * .6 - (r - .5) * .5)) - .22, .08) * step(.6, h1(c + 5. + sd));
+  return sat(s) * step(.12, h1(c + 9. + sd));
+}
+// a bramble growing up from q = 0 to height h, with thorns
+void vine(inout vec3 col, vec2 q, float h, float sd, vec3 ca, vec3 cb){
+  if (h < .04 || q.y < -.02 || q.y > h || abs(q.x) > .6) return;
+  float u = q.y / h, x = q.x - sin(q.y * 4. + sd * 5.) * .13 * u - (h1(sd) - .5) * .5 * u, w = .075 * (1. - u * .85);
+  float body = 1. - smoothstep(w * .6, w, abs(x));
+  float th = fract(q.y * 7. + sd), side = step(.5, fract(q.y * 3.5 + sd)) * 2. - 1., tx = x * side - w * .8;
+  float spike = step(0., tx) * step(tx, .12 * (1. - u) * (1. - th * 1.7)) * step(th, .58);
+  col = mix(col, mix(cb * .3, cb, smoothstep(-w, w, x)), body);
+  col = mix(col, ca, spike);
+  col += ca * exp(-abs(x) * 16.) * .14;
+}
+// a living ribbon from A to B: blood, a whip, a thread. k is how much of it is drawn
+void ribbon(inout vec3 col, vec3 A, vec3 B, float k, float w, float wav, vec3 ca, vec3 cb){
+  if (k <= 0. || w < .004) return;
+  vec3 a = prj(A), b = prj(B); vec2 pa = uv - a.xy, ba = b.xy - a.xy; float L = max(length(ba), 1e-4); vec2 n = ba / L;
+  float x = dot(pa, n) / L; if (x < 0. || x > k) return;
+  float sc = mix(a.z, b.z, x) / F, y = (pa.x * n.y - pa.y * n.x) * sc;
+  y += sin(x * 9. - uT * 7.) * wav * sin(PI * x) + (fbm(vec2(x * 6., uT * 1.5)) - .5) * wav;
+  float ww = w * (.5 + .5 * sin(PI * x)) * (.7 + .5 * fbm(vec2(x * 14. - uT * 3., 2.)));
+  col = mix(col, cb * (.45 + .55 * smoothstep(ww, 0., abs(y))), (1. - smoothstep(ww * .5, ww, abs(y))) * .92);
+  col += ca * (ln(abs(y) - ww, .02) * .8 + exp(-abs(y) * 14.) * .15);
+}
+// a wheel of fortune: it spins, slows, and a light marks the winning segment
+void wheel(inout vec3 col, vec2 q, float R, float ang, float k){
+  if (R < .03 || k <= 0.) return; float r = length(q) / R; if (r > 1.25) return;
+  float a = atan(q.y, q.x) + ang, s = floor(a / TAU * 8.), f = fract(a / TAU * 8.);
+  vec3 c = mod(s, 2.) < .5 ? uC2 : uC1 * .8; if (mod(s + 80., 8.) > 6.5) c = vec3(1., .3, .25);
+  float soft = .75 + .5 * fbm(q * 5. + uT * .3);
+  col += ((c * step(.18, r) * (.2 + .14 * soft) + uC1 * ln(min(f, 1. - f), .05 / max(r, .25)) * .6) * step(r, 1.) + uC1 * (ln(r - 1., .05) + exp(-r * 9.))) * k;
+  col += vec3(1., .95, .8) * exp(-length(q - vec2(0., R * 1.1)) * 12.) * k;
+}
+float in_area(vec2 c){
+  if (uShape == 1) return step(abs(c.x) + abs(c.y), uSize + .01);
+  if (uShape == 2) return step(min(abs(c.x), abs(c.y)), .01) * step(max(abs(c.x), abs(c.y)), uSize + .01);
+  if (uShape == 6) return 1.;
+  if (uShape == 7) return step(abs(c.y), c.x + .01) * step(-.01, c.x) * step(c.x, uSize - .99);
+  if (uShape == 3) return step(abs(c.y), .01) * step(-.01, c.x) * step(c.x, uSize - .99);
+  return step(abs(c.x) + abs(c.y), .01);
+}
+vec3 spot(int i){
+  float fi = float(i);
+  if (uShape == 3 || uShape == 7) return uTgt + vec3(fi, 0., 0.);
+  if (uShape == 2 && i > 0) { float k = fi - 1., dd = k < 4. ? min(2., uSize) : uSize; vec2 dr = k < 1. ? vec2(1., 0.) : k < 2. ? vec2(-1., 0.) : k < 3. ? vec2(0., 1.) : k < 4. ? vec2(0., -1.) : k < 5. ? vec2(1., 0.) : vec2(-1., 0.); return uTgt + vec3(dr.x * dd, 0., dr.y * dd); }
+  if (uShape == 1 && i > 0) { float a = fi * 1.047 + .5, r = uSize * .66; return uTgt + vec3(floor(cos(a) * r + .5), 0., floor(sin(a) * r + .5)); }
+  return uTgt;
+}
+float spot_on(int i){ return (uShape == 3 || uShape == 7) ? step(float(i), uSize - .5) : (uShape == 1 || uShape == 2) ? 1. : (i == 0 ? 1. : 0.); }
+
+void ground(inout vec3 col, vec2 g){
+  vec2 c = floor(g + .5), fc = g - c;
+  float inb = step(abs(c.x), 7.) * step(abs(c.y), 3.);
+  vec3 gc = mix(vec3(.085, .075, .13), vec3(.115, .1, .17), mod(c.x + c.y, 2.));
+  float edge = max(abs(fc.x), abs(fc.y));
+  gc = mix(gc, vec3(.04, .035, .07), smoothstep(.45, .5, edge));
+  col = mix(col, gc, inb);
+
+  vec2 d = g - uCst.xz;
+  float k = 1. - sat(uTr * 2.5);
+  col += inks(emblem(d / 1.3, uSeed, uS * 1.3)) * k * inb;
+  col += uC2 * (1. - smoothstep(0., 1.3, length(d))) * .2 * sat(uS * 2.) * k;
+  if (uTr > 0.) col += uC1 * ln(length(d) - (1.3 + 2.6 * eo(uTr / .5)), .12) * (1. - sat(uTr / .5)) * inb;
+  if (uClass == 1 && uStart == 4 && uS > 0.) shade(col, (1. - length(d) / max(1.5 * eo(uS) * k, .01)) * (.7 + .7 * fbm(d * 3. + uT)));
+
+  // the cells the spell will hit, then the hit itself spreading cell by cell
+  vec2 rc = c - floor(uTgt.xz + .5); d = g - uTgt.xz;
+  float area = in_area(rc) * inb, dist = (uShape == 3 || uShape == 7) ? rc.x : abs(rc.x) + abs(rc.y), ti = uI;
+  float r = length(d), a = atan(d.y, d.x);
+  if (area > 0. && uTr > 0.) {
+    float show = sat(uTr * (uSize + 3.) - dist) * (ti < 0. ? 1. : 1. - sat(ti * 3.)) * (uSet < 0. ? 1. : 1. - sat(uSet * 2.5));
+    float mark = ln(edge - .4, .035) * (.6 + .4 * sin(uT * 8. - dist)) + ln(abs(fc.x) + abs(fc.y) - .14 - .04 * sin(uT * 6.), .03) + .1;
+    col += (uC2 + uC1 * .3) * mark * show;
+  }
+  if (uClass == 2 && uStart == 1 && uS > 0.) { vec2 sd = g - uCst.xz - vec2(.28, 0.); float sr = length(sd); col += (uC2 + uC1 * .4) * smoothstep(.75, 1., sin(atan(sd.y, sd.x) * 7. + fbm(vec2(sr * 2., uT)) * 2.5)) * (1. - smoothstep(0., 2.2 * uS, sr)) * k * inb; }
+  if (uClass == 1 && uCrawl > .5 && uTr > 0. && uTr < 1.) {       // a shadow running along the ground
+    vec2 hA = uCst.xz, ab = mix(uCst.xz, uTgt.xz, uTr) - hA; float L = max(length(ab), .01);
+    vec2 pa = g - hA; float h = clamp(dot(pa, ab) / (L * L), 0., 1.);
+    float wd = (.1 + .34 * h) * (.6 + .8 * fbm(g * 3. + uT * 2.)) * smoothstep(0., .25, h - max(uTr - .55, 0.) * 2.);
+    shade(col, 1. - length(pa - ab * h) / max(wd, .01));
+  }
+  if (uTrap > .5 && uSet >= 0. && area > 0.) {     // the trap: shown as it is set, then hidden
+    float vis = ti < 0. ? mix(1., .14, smoothstep(.5, 1.1, uSet)) : 1. - sat(ti * 4.);
+    float teeth = emblem(fc / .46, uSeed + floor(h2(c) * 9.), 1.) * .8;
+    col = mix(col, vec3(.02, 0., .05), (1. - smoothstep(.36, .5, length(fc) * (.9 + .25 * fbm(g * 4. + uT)))) * .8 * vis);
+    col += (uC2 + uC1 * .3) * teeth * vis * (1. + 2. * exp(-uSet * 5.));
+  }
+  if (uClass == 11 && uCrawl > .5 && uTr > 0. && length(uTgt - uFrom) > .5) {     // the Mori: roots run under the ground to the target
+    vec2 A = uFrom.xz, ab = uTgt.xz - A; float L = length(ab); vec2 n = ab / L;
+    float x = dot(g - A, n), y = dot(g - A, vec2(-n.y, n.x)), kk = L * sat(uTr), fade = uI < 0. ? 1. : 1. - sat(uI / 1.4);
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i), yy = y - sin(x * 2.3 + fi * 2.1 + uSeed) * .16 * (1. + fi * .4) * sin(PI * sat(x / L));
+      float w = .05 * (1. - .5 * sat(x / L)), on = step(0., x) * step(x, kk - fi * .25);
+      col = mix(col, uC3 * 1.6, (1. - smoothstep(w * .5, w, abs(yy))) * on * fade * .9);
+      col += (uC2 * ln(abs(yy) - w, .025) + uC1 * step(fract(x * 4. + fi * .3), .12) * ln(abs(yy) - w - .05, .05)) * on * fade;
+    }
+    col += uC1 * exp(-length(g - A - n * kk) * 6.) * fade * 1.5;
+  }
+  if (uClass == 6 && uStay > .5 && uI >= 0.) {      // the Shugo: a glyph written on the ground, turning slowly
+    vec2 e = (g - uTgt.xz) / (.75 + uSize);
+    col += inks(emblem(rot(e, uI * .25), uSeed + 6., sat(uI * 2.))) * (1.1 + .3 * sin(uT * 2.)) * inb;
+    col += uC2 * (1. - smoothstep(.6, 1., length(e))) * .12 * inb;
+  }
+  if (uClass == 5 && uStart == 3 && uS > 0.) { vec2 vd = g - uCst.xz; float vf = fbm(g * 2.6 + 4.); col += (GOLD * ln(vf - .5, .07) * .5 + vec3(1., .95, .7) * ln(vf - .5, .022)) * (1. - smoothstep(0., 2.4 * uS, length(vd))) * k * inb; }
+  if (uClass == 4 && (uTr > 0. || ti >= 0.)) {     // a clock stamped on the ground: it ticks while the spell flies, then its hands spin down and stop
+    vec2 dc = uShape == 6 ? uCst.xz : uTgt.xz; float Rg = uShape == 6 ? 6.5 : uShape == 0 ? .95 : uSize + .6;
+    float ang = 30. * (1. - exp(-max(ti, 0.) * 1.6)) + (ti < 0. ? uT * 6. : 0.);
+    col += GOLD * dial((g - dc) / Rg, ang / 12., ang, ti < 0. ? uTr * .5 : 1.) * (ti < 0. ? .5 : uStay > .5 ? 1. : 1. - smoothstep(2.6, 4., ti)) * inb;
+  }
+  if (ti < 0.) return;
+  if (area > 0.) {
+    float tw = ti * 13. - dist * 1.2;
+    col += uC1 * exp(-sq(tw - .6) * 2.5) * step(0., tw) * step(edge, .47) * 1.6;
+    float live = win(ti, dist * .09, 4.3, 1.8);
+    if (uEl == 0) {
+      float em = fbm(g * 5. + vec2(0., -uT * .6));
+      col = mix(col, col * .35, live);
+      col = mix(col, uC3 * 1.2, step(.5, em) * live); col = mix(col, uC2, step(.62, em) * live); col = mix(col, uC1, step(.74, em) * live);
+    } else if (uEl == 1) {
+      float rr = length(fc);
+      col += (uC2 * .5 + uC1 * ln(fract(rr * 3.5 - uT * 1.4) - .5, .12) * (1. - rr * 1.7)) * live * step(edge, .46);
+    } else if (uEl == 2) {
+      col += (uC2 * .25 + uC1 * smoothstep(.75, .95, sin(a * 5. + r * 4. - uT * 9.)) * .8) * live * step(edge, .46);
+    } else if (uEl == 3) {
+      float f1 = fbm(g * 2.3 + 3. + (uClass == 1 ? vec2(uT * .25, -uT * .18) : vec2(0.)));
+      col = mix(col, uClass == 1 ? vec3(.02, 0., .05) : col * .45, live * (uClass == 1 ? .8 : 1.));
+      col += (uC2 * ln(f1 - .5, .09) * .5 + uC1 * ln(f1 - .5, .03)) * live * (1.1 + .4 * sin(uT * 4. + dist));
+    } else {
+      col += (uC2 * .22 + uC1 * ln(edge - .38, .03) * .7) * win(ti, dist * .09, 9., .4) * (.7 + .3 * sin(uT * 3. - dist));
+    }
+  }
+  col += uC1 * ln(r - (1.3 + (uShape == 1 ? uSize : 0.)) * eo(ti / .45), .14) * (1. - sat(ti / .5)) * 1.3 * inb * uPow;
+
+  if (uFx == 1 && uPushK > 0.) {      // arrows on the ground showing the shove
+    vec2 e = g - uTgt.xz; float len = uDum.x - uTgt.x;
+    float ch = ln(fract(e.x * 1.4 - uT * 3.) - .5 + abs(e.y) * .9, .16) * step(abs(e.y), .38) * step(.3, e.x) * step(e.x, len + .2);
+    col += uC1 * ch * (1. - smoothstep(.6, 1.6, ti));
+  }
+  if (uFx == 5) {                     // poison pool
+    float pm = fbm(g * 4. + vec2(uT * .3, -uT * .2)), w = win(ti, .15, 4.4, 1.) * (1. - smoothstep(.5, .95, r + pm * .4));
+    col = mix(col, uX1 * .35, w * .8); col = mix(col, uX1, step(.52, pm) * w); col = mix(col, uX2, step(.66, pm) * w);
+  }
+  if (uFx == 8) {                     // an eye closing over the area
+    float w = win(ti, .1, 4.2, 1.), open = mix(1., .08, eo((ti - .3) / .5));
+    float lid = open * .7 * (1. - sq(d.x / 1.5));
+    col = mix(col, col * .3 + uX1 * .1, area * w * .8);
+    if (abs(d.x) < 1.5) col += (uX1 * 1.2 + uX2 * .5) * (ln(abs(d.y) - lid, .05) + ln(length(d) - .28, .05) * step(abs(d.y), lid) + (1. - smoothstep(.0, .14, length(d))) * step(abs(d.y), lid)) * w;
+  }
+  if (uFx == 6 && uStat == 3) {       // range rings rolling out
+    for (int i = 0; i < 3; i++) { float p = fract(ti * .35 + float(i) / 3.); col += uX1 * ln(abs(d.x) + abs(d.y) - p * (uSize + .5), .07) * (1. - p) * win(ti, .1, 9., .3); }
+  }
+}
+
+void dummy(inout vec3 col, vec3 rd, vec3 at, float flash, vec3 tint, float ghost){
+  vec3 n, nn; float t = 1e9, tt; vec3 bc = vec3(0.);
+  tt = box(ro, rd, at + vec3(0., .5, 0.), vec3(.24, .5, .2), nn); if (tt < t) { t = tt; n = nn; bc = vec3(.5, .13, .14); }
+  tt = box(ro, rd, at + vec3(0., 1.2, 0.), vec3(.2, .2, .2), nn); if (tt < t) { t = tt; n = nn; bc = vec3(.62, .17, .17); }
+  if (t < 1e8) col = mix(col, mix(mix(bc, tint, .45 * step(.01, dot(tint, vec3(1.)))) * (.4 + .6 * max(dot(n, normalize(vec3(.3, .8, .5))), 0.)), vec3(1.), flash), 1. - ghost * .86) + uC2 * ghost * .14;
+}
+// strands of light streaming up (gain) or down (loss), with motes
+void chevrons(inout vec3 col, vec3 P, float dir, vec3 c, float w){
+  if (w <= 0.) return;
+  vec2 q = bb(P); if (abs(q.x) > .7 || q.y < -.2 || q.y > 1.7) return;
+  float env = sin(PI * sat(q.y / 1.5));
+  for (int j = 0; j < 3; j++) {
+    float fj = float(j), ph = q.y * 4. - dir * uT * 5. + fj * 2.1;
+    float x = sin(ph + fbm(vec2(q.y * 2., uT + fj)) * 3.) * (.1 + .08 * fj) + (fj - 1.) * .17;
+    col += c * ln(q.x - x, .035) * (.45 + .55 * sin(ph * 2.)) * w * env;
+  }
+  for (int j = 0; j < 5; j++) {
+    float fj = float(j), p = fract(uT * .6 + fj / 5.), y = dir > 0. ? p * 1.5 : 1.5 - p * 1.5;
+    col += c * exp(-length(q - vec2(sin(fj * 2. + uT * 2.) * .28, y)) * 30.) * sin(PI * p) * w;
+  }
+}
+
+void main(){
+  uv = (gl_FragCoord.xy - .5 * uRes) / uRes.y;
+  ro = uCam; fw = normalize(uLook - ro); rt = normalize(cross(fw, vec3(0., 1., 0.))); up = cross(rt, fw);
+  vec3 rd = normalize(fw * F + rt * uv.x + up * uv.y);
+  vec3 col = mix(vec3(.03, .025, .055), vec3(.075, .05, .13), uv.y + .5);
+  if (rd.y < -.001) { vec3 g = ro + rd * (-ro.y / rd.y); ground(col, g.xz); }
+
+  vec3 n, nn; float t = 1e9, tt; vec3 bc = vec3(0.);
+  float charge = sat(uS * 2.) * (1. - sat(uTr * 3.));
+  if (uClass == 4) {                                // behind the Tokei: a great dial, or echoes of himself
+    if (charge > 0. && uStart == 0) { float sp = uS * uS * 40.; col += GOLD * dial(bb(uCst + vec3(0., 1.05, 0.)) / 1.3, sp / 12., sp, uS * 1.5) * charge; }
+    if (charge > 0. && uStart == 3) for (int j = 0; j < 3; j++) {
+      float off = (float(j) - 1.) * (1. - eo(uS)); vec2 eq = bb(uCst + vec3(off * 1.5 + (j == 1 ? -1.2 * (1. - eo(uS)) : 0.), 0., off * .6));
+      col += uC2 * step(abs(eq.x), .2 + .05 * fbm(eq * 6. + uT)) * step(0., eq.y) * step(eq.y, 1.4) * .32 * charge;
+    }
+    if (uCrawl > .5 && length(uFrom - uCst) > .5) for (int j = 0; j < 5; j++) {       // where he was a moment ago
+      vec2 eq = bb(mix(uFrom, uCst, (float(j) + .3) / 5.));
+      col += uC2 * step(abs(eq.x), .2 + .05 * fbm(eq * 6. + uT)) * step(0., eq.y) * step(eq.y, 1.4) * .38 * (uI < 0. ? 1. : 1. - sat(uI / .8)) * (float(j) + 1.) / 6.;
+    }
+  }
+  if (uClass == 1 && charge > 0.) {
+    vec2 cq = bb(uCst);
+    if (uStart == 0) shade(col, fire_d(cq + vec2(0., .12), .55, 2.2 * charge, 9.));
+    if (uStart == 3) {                              // wings of shadow unfold in front of a rune disc
+      col += inks(emblem((cq - vec2(0., .95)) / 1.3, uSeed + 2., uS * 1.4)) * charge * .55;
+      for (int i = 0; i < 6; i++) {
+        float fj = floor(float(i) * .5), sg = mod(float(i), 2.) * 2. - 1.;
+        sblade(col, cq - vec2(0., .8), (1.7 - .28 * fj) * pop(uS * 1.6 - .12 * fj) * charge, .17, sg * (.8 + .34 * fj + .07 * sin(uT * 3. + fj)), -sg * .3, 1. - charge, 0.);
+      }
+    }
+  }
+  tt = box(ro, rd, uCst + vec3(0., .5, 0.), vec3(.2, .5, .16), nn); if (tt < t) { t = tt; n = nn; bc = uClass == 1 ? vec3(.3, .22, .44) : uClass == 2 ? vec3(.62, .22, .16) : uClass == 3 ? vec3(.16, .42, .4) : uClass == 4 ? vec3(.2, .3, .62) : uClass == 5 ? vec3(.45, .3, .16) : uClass == 6 ? vec3(.2, .34, .6) : uClass == 7 ? vec3(.75, .45, .6) : uClass == 8 ? vec3(.5, .1, .12) : uClass == 9 ? vec3(.85, .85, .82) : uClass == 10 ? vec3(.8, .6, .25) : uClass == 11 ? vec3(.25, .45, .2) : vec3(.3, .42, .3); }
+  tt = box(ro, rd, uCst + vec3(0., 1.2, 0.), vec3(.19, .19, .19), nn); if (tt < t) { t = tt; n = nn; bc = uClass == 1 ? vec3(.52, .44, .66) : vec3(.82, .68, .55); }
+  if (t < 1e8) col = mix(col, bc * (.4 + .6 * max(dot(n, normalize(vec3(.3, .8, .5))), 0.)) + uC2 * charge * .35, 1. - uGhostC * .88) + uC2 * uGhostC * .14;
+  float ti = uI;
+  float hit = (uEl == 4 || ti < 0. || uFx == 9 || uFx == 10) ? 0. : (1. - sat(ti / .25));
+  vec3 tint = (uFx == 5 && ti > .2) ? uX1 * (.7 + .3 * sin(uT * 5.)) : vec3(0.);
+  dummy(col, rd, uDum, hit * (1. - uGhostD), tint, uGhostD);
+  if (uDum2.y > -1.) dummy(col, rd, uDum2, (ti < 0.) ? 0. : (1. - sat((ti - .12) / .25)) * step(.12, ti), vec3(0.), 0.);
+
+  if (uSky > .5 && rd.y < -.001) {
+    vec3 P = ro + rd * ((uPa.y - ro.y) / rd.y);
+    // the gate opens above the target while he is still calling
+    float kb = sat((uS - .15) / .5), fb = ti < 0. ? 1. : 1. - sat(ti / .5);
+    col += inks(emblem((P.xz - uPb.xz) / 1.4, uSeed + 5., kb)) * fb * (1. + 3. * exp(-sq(max(uTr, 0.) * 7.)) * step(0., uTr));
+    col += uC2 * (1. - smoothstep(0., 1.5, length(P.xz - uPb.xz))) * .18 * kb * fb;
+  }
+
+  if (uSky > .5) {
+    vec2 sg = bb(uFrom + vec3(0., 1.2, 0.)); float call = exp(-sq((uS - .92) * 7.)) * step(uTr, .001) + exp(-max(uTr, 0.) * 9.) * step(.001, uTr);
+    col += (uC1 * exp(-abs(sg.x) * 26.) + uC2 * exp(-abs(sg.x) * 7.) * .35) * step(0., sg.y) * exp(-sg.y * .22) * call * 1.6;
+    for (int i = 0; i < 6; i++) { float fi = float(i), p = fract(uS * 2.2 + fi / 6.); col += uC1 * pt(uFrom + vec3((h1(fi) - .5) * .5, 1.2 + p * 3.2, (h1(fi + 3.) - .5) * .3), 40.) * (1. - p) * step(uTr, .001) * sat(uS * 3.); }
+  }
+  // ---------- START ----------
+  vec3 H = uCst + vec3(0., .95, 0.) + uAim * .38;
+  vec3 hs = prj(H), as = prj(H + uAim * .6);
+  vec2 ad = normalize(as.xy - hs.xy + vec2(1e-5, 0.));
+  vec2 q = (uv - hs.xy) * hs.z / F;
+  float lx = dot(q, ad), ly = dot(q, vec2(-ad.y, ad.x));
+  float charging = step(.001, uS) * step(uTr, 0.);
+  float pull = .32 * eo((uS - .4) / .6) * charging;
+  if (uClass == 0) {
+    float limb = ln(lx - (.14 - ly * ly * 1.15), .035) * step(abs(ly), .56);
+    col = mix(col, mix(vec3(.75, .62, .42), uC1, charge), limb);
+    col += uC2 * exp(-abs(lx - (.14 - ly * ly * 1.15)) * 22.) * step(abs(ly), .6) * charge * .6;
+    col += (vec3(.7) + uC1 * charge) * ln(lx - mix(-.22 - pull, -.22, abs(ly) / .56), .014) * step(abs(ly), .56) * .8;
+  }
+  if (uClass == 1 && charge > 0.) {
+    vec2 e = bb(uCst);
+    if (uStart == 1 && e.y > 0. && e.y < 2.3 * eo(uS)) for (int i = 0; i < 3; i++) {       // strands spiralling up the body
+      float ph = e.y * 5. - uT * 8. + float(i) * 2.094, x = sin(ph) * (.5 - .12 * e.y), fr = step(0., cos(ph)) * charge;
+      col = mix(col, vec3(.02, 0., .05), ln(e.x - x, .05) * fr);
+      col += uC2 * (ln(e.x - x, .1) - ln(e.x - x, .05)) * fr + uC1 * ln(e.x - x, .012) * fr * (.5 + .5 * sin(ph * 3.));
+    }
+    if (uStart == 2) for (int i = 0; i < 3; i++) {                                          // dark orbs circle him, then fall into the fist
+      float an = float(i) * 2.094 + uT * 4. * (1. + uS), rad = .95 * (1. - eo((uS - .6) / .4) * .4);
+      vec3 P = mix(uCst + vec3(cos(an) * rad, .8 + .3 * sin(uT * 3. + float(i)), sin(an) * rad), H, eo((uS - .78) / .22));
+      float lo = length(bb(P));
+      shade(col, (1. - lo / .17) * charge); col += uC2 * exp(-lo * 7.) * .5 * charge;
+      col += uC1 * pt(P - vec3(-sin(an), 0., cos(an)) * .25, 30.) * .6 * charge;
+    }
+    if (uStart == 4) for (int i = 0; i < 5; i++) {                                          // hands of shadow rise from the pool
+      float an = float(i) * 1.257 + .6;
+      sblade(col, bb(uCst + vec3(cos(an) * 1.05, 0., sin(an) * .8)), .8 * pop(uS * 2. - float(i) * .18) * charge, .09, cos(an) * .5 + .12 * sin(uT * 4. + float(i)), cos(an) * .5, 1. - charge, 0.);
+    }
+    if (uStart == 5) {                                                                      // light is pulled into the body
+      vec2 m = bb(uCst + vec3(0., .8, 0.)); float r = length(m), a = atan(m.y, m.x);
+      col += uC1 * smoothstep(.88, 1., sin(a * 11. + floor(a * 11. / TAU) * 2.)) * ln(r - 2.2 * (1. - fract(uS * 2.5)), .5) * charge * .7;
+      col += uC2 * (ln(r - 1.9 * (1. - uS), .04) + ln(r - 1.2 * (1. - fract(uS * 2. + .5)), .03) * .6) * charge;
+    }
+  }
+  if (uClass == 5) {                                // the Rojin: an old miner with his pickaxe, and gold
+    float swing = (charging > 0. && uStart == 1) ? 1.5 * abs(sin(uS * 9.)) : (uTr > 0. && uTr < .5) ? 2. * sin(uTr * TAU) : 0.;
+    if (!(uProj > .5 && uProj < 1.5 && uTr > 0. && uI < 1.)) sprite(col, bb(uCst + vec3(.34, .95, 0.)), 1.15, -.3 - swing, 1., 1., 0., charge);
+    if (charging > 0.) {
+      if (uStart == 0) {                            // he flips one coin high
+        vec2 cq = bb(uCst + vec3(.3, 1.3 + 1.9 * 4. * uS * (1. - uS), 0.));
+        sprite(col, cq, .3, 0., cos(uT * 15.), 0., 1., 1.5); glint(col, cq - vec2(.08, .08), smoothstep(.4, .5, uS) * (1. - smoothstep(.5, .7, uS)) * 2.);
+      } else if (uStart == 1) {                     // he strikes the ground and nuggets jump out
+        for (int i = 0; i < 5; i++) {
+          float fi = float(i), p = fract(uS * 4.5 + fi * .37), an = fi * 1.9;
+          sprite(col, bb(uCst + vec3(.9 + cos(an) * p * .9, 2.2 * p * (1. - p) * 2., sin(an) * p * .6)), .17, uT * 6. + fi, 1., 2., 0., 1.);
+        }
+        glint(col, bb(uCst + vec3(.9, .05, 0.)), abs(sin(uS * 9.)) * 1.5);
+      } else if (uStart == 2) for (int i = 0; i < 3; i++) {   // he juggles three coins
+        float ph = uT * 4.5 + float(i) * 2.094;
+        sprite(col, bb(uCst + vec3(.15 + .5 * cos(ph), 1.5 + .55 * abs(sin(ph)), 0.)), .22, 0., cos(uT * 11. + float(i) * 2.), 0., 1., 1.2);
+      } else if (uStart == 3) for (int i = 0; i < 3; i++) {   // a vein of gold opens under him and gems rise from it
+        float fi = float(i), p = fract(uS * 1.6 + fi * .33);
+        vec2 gq = bb(uCst + vec3((fi - 1.) * .7, p * 2., .3 * sin(fi * 3.)));
+        sprite(col, gq, .24 * sin(PI * p), uT + fi, 1., 3. + fi, 0., 1.5); glint(col, gq, sin(PI * p) * .6);
+      } else if (uStart == 4) {                     // a bag tips coins into his hand
+        sprite(col, bb(uCst + vec3(.3, 2.05, 0.)), .5 * eo(uS * 3.), 2.4, 1., 7., 0., .8);
+        for (int i = 0; i < 6; i++) { float p = fract(uT * 1.9 + float(i) / 6.); sprite(col, bb(uCst + vec3(.42 + .05 * sin(float(i) * 4.), 1.85 - p * .8, 0.)), .12, 0., cos(uT * 13. + float(i)), 0., 1., 1.) ; }
+      } else for (int i = 0; i < 3; i++) {          // three gems circle his head
+        float fi = float(i), an = uT * 3. + fi * 2.094;
+        vec2 gq = bb(uCst + vec3(cos(an) * .65, 1.6 + .1 * sin(an * 2.), sin(an) * .65));
+        sprite(col, gq, .24 * eo(uS * 2.), 0., 1., 3. + fi, 0., 1.5); glint(col, gq + vec2(.05, -.05), step(.9, sin(uT * 6. + fi * 2.)));
+      }
+    }
+  }
+  if (uClass >= 6) {
+    vec3 Hd = uCst + vec3(.34, .95, 0.), Hh = uCst + vec3(0., 1.25, 0.);
+    float cs = charging * sat(uS * 3.);
+    if (uClass == 6) {                              // the Shugo: a guardian's staff that writes on the world
+      float spin = (charging > 0. && uStart == 1) ? uT * 9. : (uTr > 0. && uTr < 1.) ? -.9 * sin(uTr * PI) : 0.;
+      float plant = (charging > 0. && uStart == 0) ? 1. : 0.;
+      prop(col, bb(uCst + vec3(.36, 1.05 - .12 * plant * abs(sin(uS * 9.)), 0.)), 1.7, -.78 + spin + .78 * plant, 1., 0., charge);
+      if (charging > 0.) {
+        if (uStart == 0) for (int i = 0; i < 3; i++) { float p = fract(uS * 2.2 + float(i) / 3.); vec2 e = bb(uCst + vec3(.36, .05, 0.)); e.y *= 2.7; col += inks(ln(length(e) - 1.6 * p, .04) + glyphs(atan(e.y, e.x) + uT, length(e), 1.6 * p, .08, 12., float(i) + uSeed)) * (1. - p); }
+        else if (uStart == 1) { vec2 e = bb(uCst + vec3(.36, 1.05, 0.)); col += uC1 * ln(length(e) - .85, .05) * smoothstep(.2, 1., sin(atan(e.y, e.x) * 2. - uT * 18.)) * cs; }
+        else if (uStart == 2) col += inks(emblem(bb(uCst + vec3(1.1, 1.3, 0.)) / .75, uSeed + 9., uS * 1.3)) * 1.3;
+        else if (uStart == 3) ward(col, bb(uCst + vec3(0., .8, 0.)), 1.25, uS * 1.2, 0., uC1, uC2);
+        else if (uStart == 4) for (int i = 0; i < 4; i++) { float fi = float(i), an = fi * 1.571 + .6; vec2 e = bb(uCst + vec3(cos(an) * .95, 0., sin(an) * .7)); col += inks(script(vec2(e.y / (2.4 * eo(uS * 1.5) + .05), e.x / .1), 9., fi + uSeed)) * cs; }
+        else { float dn = 3.2 * (1. - eo(uS * 1.6)); vec2 e = bb(uCst + vec3(0., .1 + dn, 0.)); e.y *= 2.7; col += inks(emblem(e / 1.2, uSeed + 3., 1.)) * (1. + 2. * exp(-dn * 4.)) * cs; }
+      }
+    }
+    if (uClass == 7) {                              // the Iyashi: words of power, and small wings of light
+      float wo = (uStart == 3 && charging > 0.) ? .3 + 1.1 * eo(uS * 1.6) : .75;
+      for (int i = 0; i < 2; i++) {
+        float sg = float(i) * 2. - 1.; vec2 e = rot(bb(uCst + vec3(0., .8, 0.)) * vec2(sg, 1.) / 1.5, -.35 - .25 * wo + .14 * sin(uT * 7.));
+        float lobe = 1. - length(vec2((e.x - .2 - .5 * wo) / (.55 * wo + .02), (e.y - .25 * e.x * e.x) / (.2 + .12 * wo))) - .4 * fbm(e * 5. + uT * .8);
+        float vein = smoothstep(.7, 1., sin(e.y * 26. / (.4 + e.x) + fbm(e * 4.) * 4.));
+        col += (uC2 * smoothstep(0., .5, lobe) * (.45 + .35 * vein) + uC1 * smoothstep(.45, .95, lobe) * .6 + uC1 * ln(lobe - .05, .06) * .5) * (1. - uGhostC);
+      }
+      if (charging > 0.) {
+        vec2 m = bb(uCst + vec3(.25, 1.25, 0.));
+        if (uStart == 0) col += inks(script(vec2(m.x / (1.3 * eo(uS * 1.5) + .05), (m.y - .2) / .2), 6., uSeed)) * 1.6 + uC2 * exp(-abs(m.y - .2) * 8.) * step(0., m.x) * step(m.x, 1.3 * eo(uS * 1.5)) * .35;
+        else if (uStart == 1) col += inks(script(vec2(m.x / 1.9, (m.y - .2) / .12), 10., uSeed) * step(m.x / 1.9, uS)) * 1.3 + uC1 * exp(-length(m - vec2(1.9 * uS, .2)) * 22.) * 2.;
+        else if (uStart == 2) for (int i = 0; i < 4; i++) { float fi = float(i); col += inks(script(vec2((m.x + .2) / 1.3, (m.y - .9 + fi * .3) / .1), 8., uSeed + fi) * step(fi / 4., uS * 1.3)); }
+        else if (uStart == 3) col += uC1 * exp(-length(bb(Hh)) * 3.) * cs * .6;
+        else if (uStart == 4) { vec2 e = bb(Hh); e.y *= 2.2; col += inks(glyphs(atan(e.y, e.x) - uT * 1.5, length(e), .8 * eo(uS * 2.), .1, 16., uSeed)) * 1.3; }
+        else for (int i = 0; i < 3; i++) { float p = fract(uS * 1.5 + float(i) / 3.); col += uC1 * ln(length(m) - 1.4 * p, .035) * (1. - p) * step(0., m.x + .3); }
+      }
+    }
+    if (uClass == 8 && charging > 0.) {             // the Ikari: their own blood, pulled out and thrown
+      if (uStart == 0) { vec2 e = bb(Hd); col += uC1 * ln(e.y + e.x * .6, .02) * step(abs(e.x), .22 * sat(uS * 4.)) * 2.; for (int i = 0; i < 5; i++) { float p = fract(uS * 2.5 + float(i) * .21); col = mix(col, uC2, step(length(bb(Hd + vec3((h1(float(i)) - .5) * .3, -p * .9, 0.))), .035 * (1. - p))); } }
+      else if (uStart == 1) for (int i = 0; i < 9; i++) { float fi = float(i), p = fract(uS * 1.4 + h1(fi)), an = fi * 2.4; vec2 e = bb(uCst + vec3(cos(an) * .9, p * 2.1, sin(an) * .7)); e.y *= .45; col = mix(col, mix(uC3, uC2, p), step(length(e), .04 * sin(PI * p))); }
+      else if (uStart == 2) { vec2 e = bb(uCst + vec3(0., .8, 0.)); float v = fbm(e * 5. + 3.); col += (uC2 * ln(v - .5, .06) + uC1 * ln(v - .5, .02)) * step(abs(e.x), .3) * step(abs(e.y), .85) * (.5 + .5 * sin(uT * 9. - e.y * 6.)) * cs * 1.6; }
+      else if (uStart == 3) for (int i = 0; i < 2; i++) { float p = fract(uS * 1.6 + float(i) * .5); vec2 e = bb(Hh); col += uC2 * ln(length(e) - 2.2 * p, .09 * (1. - p) + .01) * (1. - p) * (.6 + .8 * fbm(vec2(atan(e.y, e.x) * 3., uT))) * 1.5; }
+      else if (uStart == 4) { ribbon(col, uCst + vec3(-.3, .6, 0.), uCst + vec3(.75, 1.6, 0.), eo(uS * 2.), .07, .05, uC1, uC2); ribbon(col, uCst + vec3(-.3, 1.6, 0.), uCst + vec3(.75, .6, 0.), eo(uS * 2. - .3), .07, .05, uC1, uC2); }
+      else for (int i = 0; i < 3; i++) { float fi = float(i), a0 = uS * 5. + fi * 2.1; ribbon(col, uCst + vec3(cos(a0) * .45, .3 + fi * .4, sin(a0) * .45), uCst + vec3(cos(a0 + 2.) * .45, .6 + fi * .4, sin(a0 + 2.) * .45), 1., .05, .03, uC1, uC2); }
+    }
+    if (uClass == 9) {                              // the Shusen: a flask, fists and breath
+      float tip = (charging > 0. && uStart == 0) ? eo(uS * 2.) : 0., shk = (charging > 0. && uStart == 4) ? sin(uT * 40.) * .08 : 0.;
+      if (!(uProj > .5 && uTr > 0. && uI < 0.)) prop(col, bb(uCst + vec3(.38 - .25 * tip + shk, .8 + .55 * tip, 0.)), .62, 2.2 * tip + shk * 3., 1., 4., charge);
+      if (charging > 0.) {
+        if (uStart == 0) for (int i = 0; i < 5; i++) { float p = fract(uT * .9 + float(i) * .2); col += uC1 * ln(length(bb(Hh + vec3((h1(float(i)) - .5) * .5, .2 + p * .9, 0.))) - .05 * (1. - p), .012) * (1. - p) * tip; }
+        else if (uStart == 1) for (int i = 0; i < 3; i++) { vec2 e = bb(Hh + vec3(0., .35 + .12 * float(i), 0.)); e.y *= 3.; float a = atan(e.y, e.x) + uT * 5. * (mod(float(i), 2.) * 2. - 1.); col += uC1 * ln(length(e) - .3 - .08 * float(i), .03) * smoothstep(-.2, .9, sin(a)) * cs; }
+        else if (uStart == 2) for (int i = 0; i < 2; i++) { float k = fract(uS * 3. + float(i) * .5); vec2 e = bb(uCst + vec3(.42, .9, .25 * (float(i) * 2. - 1.))); col += uC1 * (ln(length(e) - .5 * k, .03) * (1. - k) + exp(-length(e) * 16.) * (1. - k) * 2.); }
+        else if (uStart == 3) for (int i = 0; i < 12; i++) { float fi = float(i), p = 1. - fract(uS * 1.8 + h1(fi)), an = fi * 2.4; col += mix(uC1, uC2, h1(fi + 3.)) * pt(Hh + vec3(.2 + cos(an) * 1.6 * p, sin(an) * 1.1 * p, 0.), 34.) * (1. - p) * 1.6; }
+        else if (uStart == 4) for (int i = 0; i < 8; i++) { float fi = float(i), p = fract(uT * 2.2 + h1(fi)); col += uC1 * pt(uCst + vec3(.38 + (h1(fi + 2.) - .5) * 1.2 * p, 1.1 + 1.4 * p - 1.6 * p * p, 0.), 40.) * (1. - p) * 1.5; }
+        else { vec2 e = bb(uCst + vec3(0., .05, 0.)); e.y *= 2.7; float k = sat(uS * 2.5 - .5); col += uC1 * ln(length(e) - 2.2 * eo(k), .08) * (1. - k) * step(.2, uS) * 1.5 + uC2 * exp(-length(e) * 1.5) * exp(-sq((uS - .25) * 12.)); }
+      }
+    }
+    if (uClass == 10 && charging > 0.) {            // the Asobi: cards, dice, a coin, a wheel, and claws
+      if (uStart == 0) for (int i = 0; i < 5; i++) { float fi = float(i) - 2., op = eo(uS * 1.6); prop(col, bb(Hd + vec3(.1 + fi * .2 * op, .55 - abs(fi) * .06 * op, 0.)), .55, -fi * .32 * op, 1., 1., .8); }
+      else if (uStart == 1) for (int i = 0; i < 2; i++) { float fi = float(i), u = sat(uS * 1.1 - fi * .1); prop(col, bb(Hd + vec3(.2 + fi * .45, .3 + 5.2 * u * (1. - u), 0.)), .42, uT * (9. + 3. * fi), 1., 2., 1.); }
+      else if (uStart == 2) { vec2 cq = bb(uCst + vec3(.3, 1.3 + 1.9 * 4. * uS * (1. - uS), 0.)); sprite(col, cq, .32, 0., cos(uT * 15.), 0., 1., 1.5); glint(col, cq - vec2(.08), smoothstep(.4, .5, uS) * (1. - smoothstep(.5, .7, uS)) * 2.); }
+      else if (uStart == 3) wheel(col, bb(uCst + vec3(-1.3, 1.9, 0.)), 1.4 * pop(uS * 2.), 30. * (1. - exp(-uS * 2.5)), cs);
+      else if (uStart == 4) { vec2 e = bb(Hh + vec3(.2, .75, 0.)); prop(col, e, .8 * pop(uS * 1.6), sin(uT * 2.) * .2, 1., 3., 1.4); glint(col, e + vec2(.2, -.15), step(.85, sin(uT * 8.))); }
+      else for (int i = 0; i < 3; i++) slash(col, bb(Hd + vec3(.15, .15 * (float(i) - 1.), 0.)), .5, 1.2, -1.6, fract(uS * 2. - .15 * float(i)), uC1, uC2);
+    }
+    if (uClass == 11) {                             // the Mori: seeds, spores, brambles and a doll
+      if (uProj > 4.5 && uProj < 5.5 && !(charging > 0. && uStart == 3)) prop(col, bb(uCst + vec3(.42, 1.3 + .06 * sin(uT * 3.), 0.)), .6, .25 * sin(uT * 2.5), 1., 5., charge);
+      if (charging > 0.) {
+        if (uStart == 0) { float fall = sat(uS * 2.2); col += uC1 * pt(Hd + vec3(.2, -.9 * fall * fall, 0.), 30.) * (1. - step(1., fall)) * 2.; vine(col, bb(uCst + vec3(.54, 0., 0.)), 1.5 * eo(uS * 2.2 - 1.), uSeed, uC1, uC2); }
+        else if (uStart == 1) for (int i = 0; i < 4; i++) { float fi = float(i); vine(col, bb(uCst + vec3(cos(fi * 1.7 + 1.) * .9, 0., sin(fi * 1.7 + 1.) * .6)), (.7 + .3 * h1(fi)) * eo(uS * 1.6 - fi * .15), fi + uSeed, uC1, uC2); }
+        else if (uStart == 2) for (int i = 0; i < 16; i++) { float fi = float(i), p = fract(uS * 1.3 + h1(fi)); col += mix(uC1, uC2, h1(fi + 2.)) * pt(Hd + vec3(.2 + p * 1.8, (h1(fi + 5.) - .5) * 1.2 * p + .15 * sin(uT * 3. + fi), (h1(fi + 7.) - .5) * p), 42.) * sin(PI * p) * 1.6; }
+        else if (uStart == 3) { vec2 e = bb(uCst + vec3(.42, 1.75, 0.)); prop(col, e, .75 * pop(uS * 2.), .3 * sin(uT * 4.), 1., 5., 1.4); col += uC2 * ln(length(e) - .6 - .1 * sin(uT * 5.), .04) * cs * .7; }
+        else if (uStart == 4) for (int i = 0; i < 3; i++) { float fi = float(i), a0 = uS * 4. + fi * 2.1, k = eo(uS * 1.5); ribbon(col, uCst + vec3(cos(a0) * .4, .2 + fi * .45 * k, sin(a0) * .4), uCst + vec3(cos(a0 + 2.2) * .4, .6 + fi * .45 * k, sin(a0 + 2.2) * .4), 1., .04, .02, uC1, uC2 * .6); }
+        else prop(col, bb(Hh + vec3(.25, .7, 0.)), .95 * pop(uS * 1.5), uS * 2.5, 1., 6., 1.5);
+      }
+    }
+  }
+  if (uClass == 4) {                                // the Tokei: a small clock turns at his hand, faster as he charges
+    float sp = uT * 2. + uS * uS * 30.;
+    col += GOLD * dial(bb(uCst + vec3(.34, 1., 0.)) / .2, sp / 12., sp, 1.) * (.5 + .5 * charge);
+    if (charging > 0.) {
+      vec2 e = bb(uCst);
+      if (uStart == 1) {                            // an hourglass runs out above his hand
+        vec2 g2 = bb(uCst + vec3(.34, 1.8, 0.)); float hgt = .32, ay = abs(g2.y), wall = .2 * ay / hgt + .015;
+        if (ay < hgt + .03 && abs(g2.x) < .25) {
+          col += GOLD * (ln(abs(g2.x) - wall, .014) + ln(ay - hgt, .014) * step(abs(g2.x), .22));
+          float fill = g2.y > 0. ? step(g2.y, hgt * (1. - uS)) : step(g2.y, -hgt + hgt * uS * .9);
+          col += vec3(1., .85, .45) * step(abs(g2.x), wall) * fill * (.6 + .4 * ns(g2 * 40. + uT * 9.)) + vec3(1., .9, .6) * ln(g2.x, .012) * step(g2.y, 0.);
+        }
+      } else if (uStart == 2) for (int i = 0; i < 3; i++) {    // three gears turn around him
+        float fi = float(i), sg = mod(fi, 2.) * 2. - 1.;
+        vec2 c2 = e - vec2((fi - 1.) * .62, .75 + .28 * mod(fi, 2.)); float r2 = length(c2), a2 = atan(c2.y, c2.x) + uT * 2.5 * sg;
+        col += GOLD * (ln(r2 - (.3 + .035 * step(.5, fract(a2 * 10. / TAU))), .014) + ln(r2 - .135, .012) + step(abs(fract(a2 * 5. / TAU) - .5), .05) * step(r2, .3) * step(.135, r2) * .5) * uS;
+      } else if (uStart == 4) {                     // a pendulum swings above him
+        vec2 pv = e - vec2(0., 2.5); float an = .95 * sin(uT * 4.5) * uS; vec2 bob = vec2(sin(an), -cos(an)) * 1.25;
+        col += GOLD * (ln(sd_seg(pv, vec2(0.), bob), .012) + exp(-length(pv - bob) * 16.) * 2. + ln(length(pv - bob) - .1, .02));
+        col += uC2 * ln(length(pv) - 1.25, .012) * step(pv.y, -.7) * .5 * uS;
+      } else if (uStart == 5) for (int i = 0; i < 12; i++) {   // twelve marks circle him and close in
+        float an = float(i) * .5236 + uT * 1.5; vec2 c2 = e - vec2(0., .85) - vec2(sin(an), cos(an) * .55) * mix(1.4, .55, eo(uS));
+        col += GOLD * (exp(-length(c2) * 34.) + ln(length(c2) - .05, .012) * .7) * step(float(i), uS * 14.);
+      }
+    }
+  }
+  if (uClass == 3) {                                // the Tomoda's grimoire
+    float open = charging > 0. ? eo(uS * 3.) : (uTr > 0. && uTr < 1.) ? 1. : 0.;
+    vec3 B = uCst + vec3(.42, .95 + (uStart == 2 ? .95 * eo(uS * 2.) * charging : 0.), 0.);
+    vec2 bq = bb(B);
+    if (uStart == 1 && charging > 0.) bq = rot(bq, (1. - eo(uS * 2.2)) * 9.);
+    book(col, bq, .25 + .75 * open, charge);
+    if (charging > 0.) {
+      if (uStart == 0) for (int i = 0; i < 9; i++) {           // runes lift off the page in a spiral
+        float fi = float(i), p = fract(h1(fi) + uS * 1.3 + uT * .2), le = length(bq - vec2(sin(p * 9. + fi) * .4 * p, p * 1.6));
+        col += uC1 * (exp(-le * 30.) + ln(le - .045, .012) * .6) * sin(PI * p);
+      } else if (uStart == 1) {                                // it spins shut, snaps open, and a beam rises from the gutter
+        col += (uC1 * exp(-abs(bq.x) * 14.) + uC2 * exp(-abs(bq.x) * 4.) * .4) * step(0., bq.y) * smoothstep(.3, .6, uS) * (1. - sat(bq.y / (3.2 * uS)));
+      } else if (uStart == 2) {                                // it rises above his head and light falls on him
+        col += uC2 * (1. - smoothstep(0., .15 - bq.y * .42, abs(bq.x))) * step(bq.y, 0.) * step(-1.9, bq.y) * .55 * uS * (.6 + .4 * fbm(vec2(bq.x * 6., bq.y * 3. + uT * 4.)));
+      } else if (uStart == 3) for (int i = 0; i < 5; i++) {    // loose pages circle him
+        float an = float(i) * 1.257 + uT * 2.5;
+        vec3 P = uCst + vec3(cos(an), .9 + .3 * sin(an * 2. + uT), sin(an));
+        vec2 pq = rot(bb(P), an);
+        col = mix(col, vec3(.96, .92, .8), step(abs(pq.x), .11 * abs(cos(an * 1.3)) + .02) * step(abs(pq.y), .15) * uS);
+        col += uC2 * exp(-length(bb(P)) * 6.) * .35 * uS;
+      } else if (uStart == 4) for (int j = 0; j < 7; j++) {    // a quill of light writes on the page
+        float tt = uT * 5. - float(j) * .12;
+        col += uC1 * exp(-length(bq - vec2(sin(tt) * .22, .04 + sin(tt * 2.) * .08)) * 42.) * (2. - float(j) * .28);
+      } else {                                                 // stars appear above the book and join into a figure
+        vec2 prev = vec2(0.);
+        for (int i = 0; i < 6; i++) {
+          float fi = float(i), kk = sat(uS * 7. - fi);
+          vec2 st = vec2((h1(fi + uSeed) - .5) * 1.1, .55 + h1(fi + uSeed + 3.) * .9), sq3 = bq - st;
+          col += uC1 * (exp(-length(sq3) * 26.) * 1.6 + exp(-abs(sq3.y) * 70.) * exp(-abs(sq3.x) * 9.) + exp(-abs(sq3.x) * 70.) * exp(-abs(sq3.y) * 9.)) * kk;
+          if (i > 0) col += uC2 * ln(sd_seg(bq, prev, st), .014) * kk * .8;
+          prev = st;
+        }
+      }
+      vision(col, bq - vec2(0., .28 + .6 * eo((uS - .5) / .5)), .36 * eo((uS - .5) / .4), 0., uIcon);
+    }
+  }
+  if (uClass == 2) {                                // the Senshi's sword, and how he readies it
+    vec2 hq = bb(uCst + vec3(.28, .85, 0.));
+    float sa = 1.2;
+    if (charging > 0.) sa = (uStart == 0 || uStart == 5) ? 1.57 + .12 * sin(uT * 2.) : uStart == 1 ? -1.57 : uStart == 2 ? 1.2 + uS * uS * 15. : uStart == 3 ? .9 : mix(3., .1, eo(uS));
+    if (uTr > 0. && uTr < 1. && (uMove == 1 || uMove == 2)) sa = mix(2.6, -.9, eo(uTr * 1.5));
+    vec2 sq2 = rot(hq, 1.5708 - sa); float by = sq2.y, bx = sq2.x, bl = 1.28;
+    float lit = max(charge, (uTr > 0. && uTr < 1.) ? 1. : 0.);
+    vec2 sp = vec2(bx / 1.55, by / 1.55 + .17);
+    if (abs(sp.x) < .55 && sp.y > -.1 && sp.y < 1.1) {
+      float sid = sword_id(), sn = fbm(vec2(by * 5. - uT * 5., bx * 8.));
+      vec4 st = swtex(sp, sid);
+      float sh = 0.;
+      for (int i = 0; i < 8; i++) { float a = float(i) * .785; sh += swtex(sp + vec2(cos(a), sin(a)) * (.03 + .03 * lit), sid).a; }
+      sh /= 8.;
+      col += (uC2 * sh * (.5 + sn) + uC1 * max(sh - st.a, 0.)) * lit * (1. - st.a);
+      col = mix(col, st.rgb * (1. + lit * .5 * smoothstep(.5, .85, sn)) + uC1 * lit * .12, st.a);
+    }
+    if (charging > 0.) {
+      vec2 tq = sq2 - vec2(0., bl), e = bb(uCst); float ld = length(tq);
+      if (uStart == 0) {                            // light runs from hilt to tip and flares
+        col += uC1 * ln(by - bl * fract(uS * 3.), .09) * exp(-abs(bx) * 25.) * 2.;
+        col += uC1 * (exp(-ld * 12.) * 2. + exp(-abs(tq.y) * 50.) * exp(-abs(tq.x) * 4.) + exp(-abs(tq.x) * 50.) * exp(-abs(tq.y) * 4.)) * uS * uS;
+      } else if (uStart == 1) {                     // planted in the ground: light climbs the blade
+        col += uC1 * ln(by - bl * (1. - fract(uS * 3.)), .1) * exp(-abs(bx) * 20.) * 2.;
+        for (int i = 0; i < 7; i++) { float fi = float(i), p = fract(h1(fi) + uT * .6); col += uC1 * pt(uCst + vec3(.28 + (h1(fi + 2.) - .5) * 1.6, p * 1.8, (h1(fi + 5.) - .5) * 1.2), 40.) * sin(PI * p) * uS; }
+      } else if (uStart == 2) {                     // the blade whirls and leaves a ring of light
+        float rr = length(hq), ra = atan(hq.y, hq.x);
+        col += ramp(exp(-sq((rr - 1.15) * 9.)) * (.3 + 1.3 * fbm(vec2(ra * 3. - uT * 9., rr * 4.))) * uS * 1.3);
+      } else if (uStart == 3) {                     // phantom swords fan out behind him
+        for (int i = 0; i < 4; i++) {
+          float fi = float(i), ang = (fi - 1.5) * .55, L = 1.9 * pop(uS * 2. - fi * .25);
+          vec2 pq = rot(e - vec2(0., .5), ang);
+          ssword(col, vec2(pq.x, L + .25 - pq.y), L, 0., uC1, uC2);
+        }
+      } else if (uStart == 4) {                     // drawn across: a line of light runs out past the tip
+        float run = 3. * eo(uS);
+        col += (uC1 * exp(-abs(bx) * 45.) + uC2 * exp(-abs(bx) * 9.) * .4) * step(bl, by) * step(by, bl + run) * (1. - (by - bl) / (run + .01)) * 1.6;
+        col += uC1 * exp(-length(sq2 - vec2(0., bl + run)) * 14.) * 2.;
+      } else {                                      // a shaft of light falls on the raised sword
+        float px = abs(e.x - .28);
+        col += (uC1 * exp(-px * 9.) + uC2 * exp(-px * 2.5) * .4) * step(1.9, e.y) * uS * (.7 + .3 * sin(e.y * 5. + uT * 9.));
+        col += uC1 * exp(-ld * 9.) * 2. * uS;
+      }
+    }
+  }
+  if (charging > 0. && uClass == 1) {              // shadow gathering on the fist
+    float ld = length(q), an = atan(q.y, q.x), R = .05 + .09 * uS;
+    float sw = fbm(vec2(an * 2. + ld * 3., ld * 4. + uT * 4.));
+    shade(col, (1. - ld / (R * 2.2)) * (.6 + .9 * sw));
+    col += uC2 * ln(ld - R * 1.7 - .05 * sin(uT * 9. + an * 3.), .03) * uS + uC1 * exp(-ld * 22.) * uS * uS * .5;
+    for (int i = 0; i < 8; i++) {
+      float fi = float(i), p = fract(h1(fi) + uS * 1.5), a2 = fi * 2.4 + uT * 2. + p * 3.;
+      float le = length(q - vec2(cos(a2), sin(a2)) * (1. - p) * 1.1);
+      col = mix(col, vec3(.03, 0., .06), step(le, .05 * p + .012)); col += uC2 * ln(le - .05 * p - .012, .02) * .6;
+    }
+  }
+  if (uHeavy > .5) for (int i = 0; i < 3; i++) {
+    float fi = float(i), gc = .8 + .5 * fi, R = .52 - .1 * fi;
+    float kf = sat((uS - .22 - .16 * fi) / .22);
+    float pass = uTr > 0. ? sat(uTr / .32 - .22 * fi) : 0.;
+    vec2 gp = vec2((lx - gc) * 3.4, ly) / (R * (1. + 1.6 * eo(pass)));
+    col += inks(emblem(gp, uSeed + 7. + fi * 2., kf)) * (1. - pass) * (1. + 4. * pass * (1. - pass));
+  }
+  if (charging > 0. && uClass == 0) {
+    float form = sat((uS - .35) / .5);
+    float nx = -.22 - pull, on = step(nx, lx) * step(lx, nx + .95);
+    col += (vec3(1.) * exp(-ly * ly * 1400.) + uC2 * exp(-ly * ly * 90.) * .7) * on * form * (.5 + uS);
+    vec2 tip = ad * (nx + .95), dq = q - tip;
+    dq += vec2(sin(uT * 70.), cos(uT * 83.)) * uHeavy * uS * .012;
+    float ld = length(dq), an = atan(dq.y, dq.x);
+    col += uC1 * (exp(-ld * 14.) * 2. + exp(-abs(dq.y) * 60.) * exp(-abs(dq.x) * 4.) + exp(-abs(dq.x) * 60.) * exp(-abs(dq.y) * 4.)) * form * form;
+    if (uEl == 0) tfire(col, vec2(dot(dq, vec2(-ad.y, ad.x)), -dot(dq, ad)) + vec2(0., .05), .13, .6 * form, 3.);
+    else if (uEl == 1) for (int i = 0; i < 4; i++) { float ao = float(i) * 1.571 + uT * 5.; col += uC1 * ln(length(dq - vec2(cos(ao), sin(ao) * .5) * .28) - .05, .02) * form; }
+    else if (uEl == 2) col += uC1 * ln(ld - (.08 + fract(an / TAU + .5 - uT * 1.5) * .3), .03) * form * step(ld, .4);
+    for (int i = 0; i < 9; i++) {
+      float fi = float(i), p = fract(h1(fi) + uS * 1.6), a2 = fi * 2.4 + uT * 2. + p * 2.;
+      vec2 e = rot(dq - vec2(cos(a2), sin(a2) * (uEl == 3 ? -1. : 1.) - (uEl == 3 ? 1.2 : 0.)) * (1. - p) * .95, uT * 3. + fi);
+      if (uEl == 3) col = mix(col, mix(uC2, uC3, h1(fi + 2.)), step(max(abs(e.x), abs(e.y)), .035) * step(.05, p));
+      else col += uC1 * exp(-length(e) * 38.) * p * 1.4;
+    }
+  }
+  if (uTr > 0. && uTr < .4) { float kk = uTr / .4, rr = length(vec2(lx * 2.4, ly)); col += uC1 * (ln(rr - (.15 + 1.1 * eo(kk)), .07) + exp(-rr * 5.) * 1.5) * (1. - kk); }
+
+  // ---------- TRAVEL ----------
+  if (uTr > 0. && uTr < 1. && uCrawl < .5) {
+    vec3 a3 = prj(uP), b3 = prj(uP - uV * uL);
+    vec2 pa = uv - a3.xy, ba = b3.xy - a3.xy; float bl = max(length(ba), 1e-4); vec2 bn = ba / bl;
+    float h = sat(dot(pa, bn) / bl), sc = a3.z / F;
+    float e = (pa.x * bn.y - pa.y * bn.x) * sc, al = dot(pa, bn) * sc;
+    float d = length(pa - ba * h) * sc, tail = (1. - h) * step(h, .995) * smoothstep(-.06, .02, al);
+    float nz = fbm(vec2(h * 5. - uT * 9., e * 6.)), wide = .7 + .5 * uPow;
+    col += ramp(exp(-e * e / (.004 + .05 * h * h * wide)) * tail * (.35 + 1.5 * nz) * 1.2);
+    for (int i = 0; i < 2; i++) {
+      float ph = h * 15. - uT * 28. + float(i) * PI;
+      vec3 rc = (uFx == 7 && i == 1) ? mix(uX1, uX2, .5 + .5 * cos(ph)) : mix(uC2, uC1, .5 + .5 * cos(ph));
+      col += rc * ln(e - sin(ph) * .17 * smoothstep(0., .2, h) * wide, .03) * tail * (.6 + .4 * cos(ph));
+    }
+    for (int i = 0; i < 3; i++) { float hi = fract(float(i) / 3. + uT * 1.7); col += uC1 * ln(length(vec2((al - hi * uL) * 3., e)) - (.08 + .38 * hi), .025) * (1. - hi) * .9; }
+    col += vec3(1.) * (1. - smoothstep(.006, .006 + .04 * (1. - h), d)) * (1. - h) * step(h, .4);
+    float hd = length(pa) * sc;
+    col += uC1 * (exp(-hd * 8.) * 1.8 + exp(-abs(pa.y) * 80.) * exp(-abs(pa.x) * 5.) * .9 + exp(-abs(pa.x) * 80.) * exp(-abs(pa.y) * 9.) * .5);
+    for (int i = 0; i < 7; i++) {
+      float fi = float(i), p = fract(h1(fi + 4.) + uT * 2.2);
+      vec3 P = uP - uV * uL * p + vec3(h1(fi) - .5, h1(fi + 9.) - .5 - p * (uFx == 5 ? 1.6 : .4), h1(fi + 2.) - .5) * .5 * p;
+      col = mix(col, uFx == 5 ? uX1 : mix(uC1, uC2, h1(fi)), cube(P, .035 * (1. - p), uT * 4. + fi) * step(p, .9));
+    }
+    if (uClass == 1) shade(col, (1. - hd / (.34 * uPow)) * (.7 + .6 * fbm(pa * sc * 6. + uT * 3.)));
+    if (uClass == 3) vision(col, bb(uP), .4 * uPow, 0., uIcon);
+    if (uClass == 5) {                               // what he throws
+      if (uProj < .5) for (int i = 0; i < 5; i++) {
+        float fi = float(i);
+        sprite(col, bb(uP - uV * fi * .32 + vec3(0., .16 * sin(fi * 2. + uT * 9.), (h1(fi) - .5) * .5)), .3 * uPow, 0., cos(uT * 16. + fi * 2.), 0., 1., 1.2);
+      } else sprite(col, bb(uP), uProj < 1.5 ? 1. : .5, uT * (uProj < 1.5 ? 18. : 5.), 1., uProj, uProj > 5.5 ? 1. : 0., 1.6);
+    }
+    if (uClass == 6) { vec2 e6 = bb(uP); col += inks(emblem(rot(e6, uT * 4.) / (.42 * uPow), uSeed + 2., 1.)) * 1.2; }
+    if (uClass == 7) col += inks(script(vec2(h, (e + .09 * sin(h * 9. - uT * 12.)) / .1), 9., uSeed)) * step(h, .995) * (1. - .5 * h) * 1.6;
+    if (uClass == 8) ribbon(col, uFrom + vec3(.3, .95, 0.), uP, 1., .07 * uPow, .12, uC1, uC2);
+    if (uClass == 9) {
+      if (uProj > .5) prop(col, bb(uP), .6, uT * 14., 1., 4., 1.3);
+      else if (uProj < -.5) for (int i = 0; i < 6; i++) { float fi = float(i); vec3 P = mix(uFrom + vec3(.4, 1.15, 0.), uP, fi / 5.); paint(col, ball_d(bb(P + vec3(0., .1 * sin(uT * 4. + fi), 0.)), (.2 + .1 * fi) * uPow, fi + uSeed) * .75, uC1, uC2, uC3); }
+      else paint(col, ball_d(bb(uP), .28 * uPow, uSeed), uC1, uC2, uC3);
+    }
+    if (uClass == 10) {
+      if (uProj > .5 && uProj < 1.5) for (int i = 0; i < 3; i++) { float fi = float(i); prop(col, bb(uP - uV * fi * .45 + vec3(0., .12 * sin(fi * 2. + uT * 9.), 0.)), .5 * uPow, uT * 16. + fi * 2., 1., 1., 1.2); }
+      else if (uProj > 6.5 && uProj < 7.5) sprite(col, bb(uP), .34, 0., cos(uT * 16.), 0., 1., 1.5);
+      else if (uProj > 1.5 && uProj < 2.5) for (int i = 0; i < 2; i++) prop(col, bb(uP - uV * float(i) * .5), .42, uT * 13. + float(i), 1., 2., 1.2);
+      else if (uMove == 1) for (int i = 0; i < 2; i++) slash(col, bb(uCst + vec3(.3, .8 + .28 * (float(i) * 2. - 1.), 0.)), 1.5 * uPow, 2.4, -3.6, uTr * .85 + .05, uC1, uC2);
+      else for (int i = 0; i < 3; i++) slash(col, bb(uP - vec3(.6, .22 * (float(i) - 1.), 0.)), .7 * uPow, 1.2, -2.4, .42, uC1, uC2);
+    }
+    if (uClass == 11) {
+      if (uProj > 5.5) prop(col, bb(uP), .55, uT * 6., 1., 6., 1.4);
+      else if (uProj > 4.5) ribbon(col, uFrom + vec3(.42, 1.3, 0.), uP, 1., .03, .1, uC1, uC2 * .7);
+      for (int i = 0; i < 10; i++) { float fi = float(i), p = fract(h1(fi) + uT * 1.5); col += mix(uC1, uC2, h1(fi + 3.)) * pt(uP - uV * uL * p + vec3(h1(fi + 1.) - .5, (h1(fi + 4.) - .5) + .2 * sin(uT * 5. + fi), h1(fi + 6.) - .5) * .7 * p, 40.) * (1. - p) * 1.4; }
+    }
+    if (uClass == 4 && uMove == 5) for (int j = 0; j < 3; j++) {            // a clock hand in flight, with two echoes behind it
+      float x = al - float(j) * .45;
+      float sh = step(abs(e), .018) * step(0., x) * step(x, 1.5) + step(abs(e), .1 * (1. - abs(x - .28) / .28)) * step(0., x) * step(x, .56);
+      col += (GOLD * sh + vec3(1.) * sh * step(abs(e), .008) + GOLD * ln(length(vec2(x - 1.5, e)) - .09, .02)) * (1. - float(j) * .35);
+    }
+    if (uClass == 4 && uMove == 4) {                                        // a ray: it is simply there, all at once
+      vec3 r0 = prj(uCst + vec3(.4, .95, 0.)), r1 = prj(uTgt + vec3(0., .6, 0.));
+      float dd = sd_seg(uv, r0.xy, r1.xy) * r0.z / F, fl = .6 + .4 * fbm(vec2(dot(uv - r0.xy, normalize(r1.xy - r0.xy)) * 9. - uT * 20., 1.));
+      col += (vec3(1.) * exp(-dd * 30.) + uC1 * exp(-dd * 12.) + uC2 * exp(-dd * 4.) * .5) * fl * sin(PI * uTr) * 1.6;
+    }
+    if (uMove == 1) slash(col, bb(uCst + vec3(.3, .8, 0.)), 1.6 * uPow, 2.4, -3.6, uTr * .85 + .05, uC1, uC2);
+    if (uMove == 2) slash(col, bb(uP - vec3(.9, 0., 0.)), 1.1 * uPow, 1.2, -2.4, .42, uC1, uC2);
+  }
+
+  // ---------- IMPACT ----------
+  if (ti >= 0.) {
+    vec3 T = uTgt;
+    vec2 fq = bb(T + vec3(0., .5, 0.));
+    float fk = 1. - sat(ti / .2);
+    col += uC1 * fk * (exp(-length(fq) * 2.2) * 2.2 + exp(-abs(fq.y) * 26.) * exp(-abs(fq.x) * 1.) + exp(-abs(fq.x) * 26.) * exp(-abs(fq.y) * 1.5) * .6) * uPow;
+    if ((uClass == 1 && uEl < 4) || uClass == 3 || uClass == 4 || uClass == 5 || uClass == 6 || uClass == 7 || uClass == 11) {
+      for (int i = 0; i < 14; i++) {                    // motes spiralling up
+        float fi = float(i), p = fract(h1(fi) + ti * (.3 + .25 * h1(fi + 4.))), an = fi * 2.399 + ti * 2.5;
+        col += mix(uC1, uC2, h1(fi + 1.)) * pt(T + vec3(cos(an) * (.4 + 1.1 * p), p * 2.8, sin(an) * (.4 + 1.1 * p)), 36.) * sin(PI * p) * win(ti, 0., 3.2, 1.2) * 1.3;
+      }
+      for (int i = 0; i < 2; i++) {                     // rune rings climbing the target
+        float fi = float(i), tk = ti - .12 * fi;
+        vec2 e2 = bb(T + vec3(0., .2 + 1.9 * eo(tk / .9), 0.)); e2.y *= 2.7;
+        float r2 = length(e2), an = atan(e2.y, e2.x) + uT * (fi < .5 ? 2.2 : -2.2);
+        col += inks(ln(r2 - .95, .03) + glyphs(an, r2, .82, .08, 14., fi + uSeed)) * step(0., tk) * (1. - sat(tk / 1.1));
+      }
+    }
+    if (uClass == 0 && uEl < 4) for (int i = 0; i < 14; i++) {        // debris cubes
+      float fi = float(i), an = fi * 2.399, sp = (1.6 + 3. * h1(fi)) * uPow;
+      vec3 P = T + vec3(cos(an) * sp * ti, .3 + (3. + 3.5 * h1(fi + 5.)) * ti - 7. * ti * ti, sin(an) * sp * ti);
+      if (P.y > 0. && ti < 1.4) col = mix(col, mix(uC1, mix(uC2, uC3, h1(fi + 1.)), step(.35, h1(fi + 7.))), cube(P, .045 + .04 * h1(fi + 3.), ti * 9. + fi));
+    }
+
+    for (int i = 0; i < 7; i++) {
+      if (spot_on(i) < .5) continue;
+      float fi = float(i), tj = ti - .07 * fi - (i > 0 && uShape == 1 ? .12 : 0.), big = i == 0 ? 1. : .62;
+      if (tj < 0.) continue;
+      vec3 S = spot(i);
+      if (uClass == 5) {                            // gold jumps out of every cell hit
+        if (uShape != 0) { sprite(col, bb(S + vec3(0., .3, 0.)), (i == 0 ? .75 : .55) * pop(tj / .2) * (1. - smoothstep(2.3, 2.9, tj)), .3 * sin(fi * 3.), 1., 2., 0., 1.5); glint(col, bb(S + vec3(.12, .5, 0.)), step(.92, sin(uT * 7. + fi * 2.)) * step(tj, 2.3)); }
+        continue;
+      }
+      if (uClass >= 6) {
+        float life = pop(tj / .2) * (1. - smoothstep(1.6, 2.4, tj));
+        if (life > .03) {
+          if (uClass == 11) { if (uShape != 0) for (int j = 0; j < 3; j++) { float fj = float(j); vine(col, bb(S + vec3((fj - 1.) * .22, 0., (h1(fj + fi) - .5) * .3)), (1.5 - .35 * abs(fj - 1.)) * big * life, fi * 3. + fj + uSeed, uC1, uC2); } }
+          else if (uClass == 9) paint(col, ball_d(bb(S + vec3(0., .25, 0.)) * vec2(.6, 1.3), .5 * big * life, fi), uC1, uC2, uC3);
+          else if (uClass == 7) for (int j = 0; j < 5; j++) { float fj = float(j), p = fract(tj * .5 + fj * .2); col += mix(uC1, uC2, fj / 5.) * pt(S + vec3(cos(fj * 2.4) * .3, p * 1.8, sin(fj * 2.4) * .3), 26.) * sin(PI * p) * life; }
+          else if ((uClass == 6 && uEl < 4 && uCrawl < .5) || (uShape != 0 && uClass != 6)) tfire(col, bb(S + vec3(0., .05, 0.)), .32 * big, 1.5 * big * life, fi + uSeed);
+        }
+        continue;
+      }
+      if (uClass == 3 || uClass == 4) continue;
+      if (uClass == 2) {                            // a sword of light drops onto the cell
+        if (uShape != 0 || uSky > .5 || uHeavy > .5) {
+          float L = (i == 0 ? 2.6 : 1.8) * uPow * (uHeavy > .5 ? 1.7 : 1.);
+          ssword(col, bb(S) + vec2(0., .12 - 7. * (1. - eo(tj / .16))), L, smoothstep(1.3, 2.6, tj), uC1, uC2);
+          col += uC1 * pt(S + vec3(0., .1, 0.), 5.) * (1. - sat((tj - .14) / .2)) * step(.14, tj) * 1.5;
+        }
+        if (uEl == 0) tfire(col, bb(S) + vec2(0., .06), .26, .8 * pop((tj - .15) / .2) * (1. - smoothstep(1.2, 2.3, tj)) * step(.15, tj), fi);
+        continue;
+      }
+      if (uTrap > .5) for (int j = 0; j < 2; j++) { float sj = float(j) * 2. - 1.; sblade(col, bb(S + vec3(sj * .34, 0., 0.)), 1.25 * pop(tj / .12), .15, sj * .5, sj * .5, smoothstep(.5, 1.3, tj), 0.); }
+      if (uEl == 0) {
+        float hh = 2.5 * big * uPow * pop(tj / .22) * (1. - smoothstep(1.7, 2.9, tj));
+        if (uFrost > .5) paint(col, fire_d(bb(S) + vec2(0., .08), .55 * big, hh, fi), vec3(.85, .97, 1.), vec3(.3, .7, 1.), vec3(.1, .25, .7));
+        else tfire(col, bb(S) + vec2(0., .08), .55 * big, hh, fi);
+      } else if (uEl == 1) {
+        vec2 e = bb(S + vec3(0., .65, 0.));
+        float R = (.25 + .6 * eo(tj / .22)) * big, rr = length(e) / R;
+        if (tj < .24) { col = mix(col, mix(uC2, uC3, smoothstep(.2, .9, rr)), step(rr, 1.) * .85); col += uC1 * (ln(rr - .96, .1) + step(length(e - vec2(-.25, .3) * R), .12 * R)); }
+        paint(col, fire_d(bb(S) + vec2(0., .05), .8 * big, 2. * big * uPow * sin(PI * sat((tj - .2) / .7)) * step(.2, tj) * step(tj, .9), fi + 2.), uC1, uC2, uC3);
+        for (int j = 0; j < 4; j++) {
+          float fj = float(j) + fi * 4., p = fract(h1(fj) + tj * .4);
+          vec2 e3 = bb(S + vec3((h1(fj + 2.) - .5) * 1.2 + sin(tj * 4. + fj) * .08, p * 2.2, (h1(fj + 6.) - .5)));
+          col += uC1 * ln(length(e3) - .05 - .04 * h1(fj), .02) * sin(PI * p) * win(tj, .5, 3.2, .8);
+        }
+      } else if (uEl == 2) {
+        vec2 e = bb(S); float w = win(tj, 0., 2.6, 1.), y = e.y, top = 3. * big * uPow;
+        if (y > 0. && y < top) {
+          float wid = (.25 + .3 * y) * big, fall = 1. - y / top;
+          col += ramp(max((1. - sq(e.x / wid)) * (.3 + fbm(vec2(e.x * 3. - uT * 6., y * 2. - uT * 3.5))), 0.) * .5) * w * fall;
+          for (int j = 0; j < 3; j++) {
+            float ph = y * 4.2 - uT * 13. + float(j) * 2.094;
+            col = mix(col, mix(uC2, uC1, .5 + .5 * cos(ph)), ln(e.x - sin(ph) * wid * .95, .06) * step(0., cos(ph)) * w * fall * eo(tj / .3));
+          }
+        }
+      } else if (uEl == 3 && uClass == 1) {
+        sfan(col, S, tj, big * uPow, i == 0 ? 2. : 1.);
+      } else if (uEl == 3) {
+        vspike(col, S, 2.3 * big * uPow * pop((tj) / .16) * (1. - smoothstep(2.5, 3.1, tj)), .36 * big);
+        if (i == 0 && uShape == 0) for (int j = 0; j < 5; j++) {
+          float fj = float(j), an = fj * 1.257 + .5, tk = tj - .05 - .03 * fj;
+          vspike(col, S + vec3(cos(an) * .85, 0., sin(an) * .6), (.8 + .6 * h1(fj)) * uPow * pop(tk / .16) * (1. - smoothstep(2.3, 2.9, tj)) * step(0., tk), .2);
+        }
+      } else if (uEl == 4) {
+        vec2 e = bb(S);
+        col += (uC1 * exp(-abs(e.x) * (3. + tj * 14.)) + uC2 * exp(-abs(e.x) * 1.5) * .5) * step(0., e.y) * (1. - sat(tj / .55)) * 1.8 * step(float(i), .5);
+      }
+    }
+    if (uClass == 5) {
+      float gone = 1. - smoothstep(3., 3.8, ti);
+      if (uProj < .5 || uShape != 0) for (int i = 0; i < 10; i++) {          // coins scatter, bounce, and settle
+        float fi = float(i), an = fi * 2.399, sp = (1. + 1.8 * h1(fi)) * uPow, dd = sp * (1. - exp(-ti * 2.2)) * .8;
+        vec3 P = T + vec3(cos(an) * dd, .09 + abs(sin(ti * (4. + 2. * h1(fi + 3.)))) * 1.3 * exp(-ti * 1.7), sin(an) * dd);
+        sprite(col, bb(P), .25 * gone, 0., mix(cos(uT * 13. + fi), 1., smoothstep(1.4, 2.2, ti)), 0., 1., .9);
+      }
+      if (uProj > .5 && uProj < 1.5) {                                       // the pickaxe bites into the ground and quivers
+        sprite(col, bb(T + vec3(.1, .55, 0.)), 1.05 * (1. - smoothstep(2.6, 3.2, ti)), 2.5 + .18 * exp(-ti * 6.) * sin(ti * 32.), 1., 1., uFrost, 1.2);
+        if (uFrost > .5) col += vec3(.5, .8, 1.) * exp(-length(bb(T + vec3(.1, .6, 0.))) * 2.5) * .5 * (1. - smoothstep(2.4, 3.2, ti));
+      }
+      if (uProj > 1.5) { vec2 kq = bb(T + vec3(0., 1.7, 0.)); sprite(col, kq, .65 * pop(ti / .25) * (1. - smoothstep(1.8, 2.6, ti)), sin(ti * 3.) * .3, 1., uProj, uProj > 5.5 ? 1. : 0., 1.6); }
+      if (uShape == 6 || uSize > 5.5) for (int i = 0; i < 14; i++) {         // it rains gold
+        float fi = float(i), p = fract(ti * .45 + h1(fi));
+        sprite(col, bb(vec3((h1(fi + 1.) - .5) * 12., 5. * (1. - p), (h1(fi + 8.) - .5) * 5.)), .16 * win(ti, .1, 4., .8), 0., cos(uT * 12. + fi), 0., 1., 1.);
+      }
+      for (int i = 0; i < 6; i++) { float fi = float(i); glint(col, bb(T + vec3((h1(fi + floor(ti * 3.)) - .5) * 2.4, .2 + h1(fi + 4. + floor(ti * 3.)) * 1.6, (h1(fi + 9.) - .5) * 1.4)), step(.5, fract(ti * 3. + fi * .3)) * gone * .8); }
+    }
+    if (uClass >= 6) {
+      float gone = 1. - smoothstep(2.2, 3., ti);
+      if (uClass == 6 && uFx == 11) { vec3 W = uOnAlly > .5 ? uDum : uCst; ward(col, bb(W + vec3(0., .8, 0.)), 1.45 * pop(ti / .35), sat(ti * 2.5), 0., uC1, uC2); }
+      if (uClass == 7) {                             // the word lands and wraps the target
+        vec3 W = (uFx == 10 || uFx == 11) ? uDum : T;
+        for (int j = 0; j < 3; j++) {
+          float fj = float(j); vec2 e = bb(W + vec3(0., .35 + .5 * fj, 0.)); float a = atan(e.y * 2.7, e.x), r = length(vec2(e.x, e.y * 2.7));
+          col += inks(script(vec2(fract(a / TAU + uT * .15 * (mod(fj, 2.) * 2. - 1.)), (r - .8 + .1 * fj) / .09), 18., fj + uSeed)) * win(ti, .1 * fj, 3., .8) * 1.2;
+        }
+        if (uFx == 10 || uFx == 6) for (int j = 0; j < 8; j++) { float fj = float(j), p = fract(ti * .45 + h1(fj)); vec2 e = rot(bb((uFx == 6 ? uCst : uDum) + vec3(cos(fj * 2.4) * .7, p * 2.4, sin(fj * 2.4) * .5)), fj + ti * 2.); e.x *= 2.2; col += mix(uC1, uC2, .4) * (1. - smoothstep(.05, .09, length(e))) * sin(PI * p) * win(ti, 0., 3.2, 1.); }
+      }
+      if (uClass == 8) {                             // blood bursts, and a ribbon ties the two together
+        if (uFx != 6) for (int j = 0; j < 14; j++) { float fj = float(j), an = fj * 2.399, sp = (1.2 + 2.4 * h1(fj)) * uPow; vec3 P = T + vec3(cos(an) * sp * ti, .5 + (2.5 + 2.5 * h1(fj + 5.)) * ti - 7. * ti * ti, sin(an) * sp * ti * .6); if (P.y > 0. && ti < 1.2) { vec2 e = bb(P); e.y *= .55; float rd2 = .05 + .04 * h1(fj + 3.), dr = length(e) / rd2; col = mix(col, mix(uC2, uC3, h1(fj + 1.)), 1. - smoothstep(.6, 1., dr)); col += uC1 * exp(-length(e - vec2(-.3, .5) * rd2) / rd2 * 5.) * .7 + uC2 * exp(-dr * 1.6) * .25; } }
+        if (uFx == 1 || uFx == 2 || uFx == 11 || uFx == 10 || uSwap > .5) ribbon(col, uCst + vec3(0., .9, 0.), uDum + vec3(0., .8, 0.), 1., .055 * win(ti, 0., 2.4, .8), .1, uC1, uC2);
+      }
+      if (uClass == 9 && uFx != 6 && uFx != 11) {    // a splash: a crown of drops and a ring of foam
+        for (int j = 0; j < 12; j++) { float fj = float(j), an = fj * .5236; vec3 P = T + vec3(cos(an) * 1.5 * ti * uPow, .1 + 3.4 * ti - 6.5 * ti * ti, sin(an) * 1.5 * ti * uPow); if (P.y > 0.) col = mix(col, mix(uC1, uC2, .5), step(length(bb(P) * vec2(1., .6)), .06)); }
+        vec2 e = bb(T + vec3(0., .05, 0.)); e.y *= 2.7; col += uC1 * ln(length(e) - 2.4 * eo(ti / .5) * uPow, .1) * (1. - sat(ti / .7));
+        if (uFx == 4) {
+          ward(col, bb(T + vec3(0., .8, 0.)), 1.2, sat(ti * 4.), sat((ti - .6) / .6), uX2, uX1);
+          for (int j = 0; j < 8; j++) { float fj = float(j), tk = max(ti - .6, 0.); vec3 P = T + vec3(cos(fj * .8) * 2. * tk, .8 + sin(fj * 2.) * tk + 1.5 * tk - 4. * tk * tk, 0.); col = mix(col, uX1, cube(P, .06, tk * 8. + fj) * step(.6, ti) * step(ti, 1.5)); }
+        }
+      }
+      if (uClass == 10) {                            // claw marks, and the gamble shows its result
+        if (uEl < 4) {
+          for (int j = 0; j < 3; j++) slash(col, bb(T + vec3(-.25 + .25 * float(j), .8, 0.)), 1.1 * uPow, 1.1, -2.2, (ti - .05 * float(j)) / .3, uC1, uC2);
+          vec2 e = bb(T + vec3(0., .8, 0.));
+          for (int j = 0; j < 3; j++) col += uC1 * ln(e.y + e.x * .9 - (float(j) - 1.) * .3, .018 + .02 * fbm(e * 9.)) * step(abs(e.x), .5) * (1. - sat(ti / 1.4)) * step(.15, ti);
+        }
+        vec2 rq = bb(T + vec3(0., 2., 0.)); float rk = pop(ti / .25) * gone;
+        if (uProj > .5 && uProj < 1.5) prop(col, rq, .8 * rk, .2 * sin(ti * 3.), mix(cos(ti * 14.), 1., sat(ti * 1.4)), 1., 1.4);
+        else if (uProj > 1.5 && uProj < 2.5) prop(col, rq, .75 * rk, 6. * exp(-ti * 2.5), 1., 2., 1.4);
+        else if (uProj > 2.5 && uProj < 3.5) prop(col, rq, .8 * rk, .2 * sin(ti * 3.), 1., 3., 1.4);
+        else if (uProj > 6.5 && uProj < 7.5) sprite(col, rq, .5 * rk, 0., mix(cos(ti * 18.), 1., sat(ti * 1.2)), 0., 1., 1.5);
+        else if (uProj > 7.5) wheel(col, bb(T + vec3(0., 2.3, 0.)), 1.3 * rk, 40. * (1. - exp(-ti * 1.6)), 1.);
+      }
+      if (uClass == 11) {
+        if (uShape == 0 && uFx != 10 && uFx != 6) for (int j = 0; j < 5; j++) { float fj = float(j), an = fj * 1.257; vine(col, bb(T + vec3(cos(an) * .45, 0., sin(an) * .3)), (1.9 - .25 * fj) * pop((ti - .05 * fj) / .22) * gone * uPow, fj + uSeed, uC1, uC2); }
+        if (uFx == 6) for (int j = 0; j < 4; j++) { float fj = float(j); vine(col, bb(uCst + vec3(cos(fj * 1.571 + .5) * .3, 0., sin(fj * 1.571 + .5) * .2)), 2.2 * eo((ti - .1 * fj) / .5) * (1. - smoothstep(3., 3.8, ti)), fj * 2. + uSeed, uC1, uC2); }
+        if (uProj > 5.5) prop(col, bb(T + vec3(0., 1.6, 0.)), 1.1 * pop(ti / .3) * gone, ti * .6, 1., 6., 1.5);
+      }
+    }
+    if (uClass == 4) {                               // time breaks: everything flies out, then runs backwards
+      vec2 e = bb(T + vec3(0., .8, 0.)); float r = length(e), back = sin(PI * sat(ti / 1.));
+      col += uC1 * exp(-r * 2.) * (1. - sat(ti / .3)) * 1.5 * step(float(uEl), 3.5);
+      col += uC2 * ln(r - 1.9 * back * uPow, .045) + GOLD * ln(r - 1.2 * sin(PI * sat((ti - .15) / 1.)), .03) * step(.15, ti);
+      if (ti < 1.) for (int i = 0; i < 12; i++) {
+        float an = float(i) * .5236, rr = (.5 + 1.5 * back) * uPow; vec2 d0 = vec2(sin(an), cos(an));
+        col += GOLD * ln(sd_seg(e, d0 * rr, d0 * (rr + (mod(float(i), 3.) < .5 ? .28 : .14))), .022);
+      }
+      if (uFx == 4 || uFx == 3) { float sp = 30. * (1. - exp(-ti * 2.2)); col += GOLD * dial(bb(T + vec3(0., 2.2, 0.)) / .42, sp / 12., sp, sat(ti * 4.)) * win(ti, .1, 3.4, .6); }
+      float rp = (ti - .3) / .7;
+      if (uRefund > .5 && rp > 0. && rp < 1.) {      // one point of time comes back to him
+        float pe = rp * rp * (3. - 2. * rp);
+        vec2 d2 = rot(bb(mix(T + vec3(0., .8, 0.), uCst + vec3(0., .9, 0.), pe) + vec3(0., sin(PI * pe) * 1.2, 0.)), .785 + uT * 3.);
+        col = mix(col, vec3(.3, .65, 1.), step(max(abs(d2.x), abs(d2.y)), .09)); col += vec3(.3, .65, 1.) * exp(-length(d2) * 7.) * .7;
+      }
+      vec2 w2 = bb(uCst);
+      if (uFrost > .5 && w2.y > 0. && w2.y < 1.5) for (int i = 0; i < 3; i++) {       // wrappings wind around him
+        float ph = w2.y * 7. - uT * 3. + float(i) * 2.094;
+        col = mix(col, vec3(.92, .86, .7), ln(w2.x - sin(ph) * .3, .045) * step(0., cos(ph)) * win(ti, .2, 9., .3) * eo(ti / .6));
+      }
+    }
+    if (uFx == 11) {                                 // a guard of turning clock rings: blows are sent back
+      vec3 W = uOnAlly > .5 ? uDum : uCst; float w = win(ti, .1, 9., .3) * pop(ti / .4);
+      for (int i = 0; i < 2; i++) {
+        float sg = float(i) * 2. - 1.; vec2 e2 = rot(bb(W + vec3(0., .8, 0.)), sg * .55); e2.x *= 2.4;
+        float r2 = length(e2), a2 = atan(e2.y, e2.x) + uT * 1.5 * sg;
+        col += GOLD * (ln(r2 - 1.15, .04) + step(abs(fract(a2 * 12. / TAU) - .5), .08) * step(abs(r2 - 1.05), .1) * .8) * w;
+      }
+      col += GOLD * exp(-length(bb(W + vec3(0., .8, 0.))) * 1.5) * exp(-ti * 3.);
+    }
+    if (uClass == 3) {                               // the vision blooms over the target
+      float vision_scale = .5;
+      float size = vision_scale * (uShape == 0 ? 1.2 : 1.3 + .42 * min(uSize, 3.)) * uPow, R = size * pop(ti / .28);
+      vec3 V = T + vec3(0., 1.1 + .3 * size, 0.);
+      vec2 e = bb(V); float r = length(e), a = atan(e.y, e.x);
+      col += uC1 * smoothstep(.8, 1., sin(a * 9. + fbm(vec2(a * 2., uT)) * 3.)) * ln(r - R * 1.35 * eo(ti / .3), .5 * vision_scale) * (1. - sat(ti / .6));
+      vision(col, e, R, uStay > .5 ? 0. : smoothstep(1.4, 2.8, ti), uIcon);
+    }
+    if (uFx == 10) {                                 // a gift to an ally: strands and rings of light rise through it
+      float w = win(ti, .15, 9., .3);
+      chevrons(col, uDum + vec3(0., .3, 0.), 1., uX1, w);
+      for (int j = 0; j < 3; j++) { float p = fract(ti * .5 + float(j) / 3.); vec2 r2 = bb(uDum + vec3(0., p * 1.9, 0.)); r2.y *= 2.7; col += (uX1 + uX2 * .5) * ln(length(r2) - .75 + .25 * p, .04) * sin(PI * p) * w; }
+    }
+    if (uClass == 2) {
+      if (uEl < 4) for (int j = 0; j < 3; j++) {     // crossing cuts on the target
+        float fj = float(j);
+        slash(col, bb(T + vec3(0., .75, 0.)), (1.15 + .3 * fj) * uPow, fj < .5 ? 2.4 : fj < 1.5 ? -.6 : 1.2, fj < .5 ? -3.2 : fj < 1.5 ? 3. : -2.8, (ti - .09 * fj) / .34, uC1, uC2);
+      }
+      if (uEl == 2 && uShape == 1 && uSize < 1.5) slash(col, bb(T + vec3(0., .7, 0.)), 1.9, 0., TAU, ti / .5, uC1, uC2);
+      for (int i = 0; i < 12; i++) { float fi = float(i), an = fi * 2.399, sp = (2. + 3. * h1(fi)) * uPow; col += uC1 * pt(T + vec3(cos(an) * sp * ti, .6 + (2. + 2. * h1(fi + 5.)) * ti - 5. * ti * ti, sin(an) * sp * ti), 34.) * (1. - sat(ti / .9)) * step(uEl < 4 ? 0. : 9., ti + (uEl < 4 ? 0. : 0.)); }
+      if (uFrost > .5) {                             // he cuts himself: the price of the power
+        slash(col, bb(uCst + vec3(0., .8, 0.)), .9, 2.2, -3., ti / .3, vec3(1., .5, .5), vec3(.9, .1, .12));
+        for (int i = 0; i < 8; i++) { float fi = float(i), an = fi * .8; col += vec3(1., .15, .18) * pt(uCst + vec3(cos(an) * ti * 1.6, .9 + 1.5 * ti - 5. * ti * ti, sin(an) * ti), 30.) * (1. - sat(ti / .7)); }
+      }
+    }
+    if (uEl == 0 && uClass != 2 && (uHeavy > .5 || uShape == 1)) paint(col, ball_d(bb(T + vec3(0., .7, 0.)), (1.2 + .5 * uSize) * eo(ti / .2), 1.) * (1. - smoothstep(.2, .6, ti)), uC1, uC2, uC3);
+    if (uEl == 2 || uFx == 7) {          // wind blades: thick cartoon crescents
+      vec3 ca = uFx == 7 ? uX2 : uC1, cb = uFx == 7 ? uX1 : uC2; float t0 = uFx == 7 ? .22 : .08;
+      for (int j = 0; j < 3; j++) {
+        float fj = float(j), tk = (ti - t0 - .11 * fj) / .28;
+        if (tk < 0. || tk > 1.) continue;
+        vec2 e = rot(bb(T + vec3(0., .7, 0.)), fj * 2.2 + 1. + tk * 1.4) / (1.15 * uPow);
+        float r1 = length(e), r2 = length(e - vec2(.1, 0.));
+        float cres = step(r1, 1.) * step(.96, r2) * step(-.2, e.x - 1. + tk * 2.4) * step(e.x - 1. + tk * 2.4, .9);
+        if (uClass == 1) { col = mix(col, vec3(.02, 0., .05), cres); col += uC2 * cres * (1. - smoothstep(.0, .05, r2 - .96)) + uC1 * cres * smoothstep(.96, 1., r1); }
+        else col = mix(col, mix(cb, ca, smoothstep(.97, 1.03, r2)), cres);
+      }
+    }
+
+    // ----- what the spell does besides damage -----
+    if (uFx == 1 && uPushK > 0. && uPushK < 1.) {
+      vec2 e = bb(uDum + vec3(0., .7, 0.));
+      for (int j = 0; j < 5; j++) { float y = (float(j) - 2.) * .22; col += uC1 * ln(e.y - y, .02) * step(-1.6 - .5 * h1(float(j)), e.x) * step(e.x, -.3) * (1. - uPushK); }
+      paint(col, ball_d(bb(uDum + vec3(-.45, .1, 0.)), .3, 3.) * (1. - uPushK), vec3(.8, .78, .85), vec3(.5, .47, .58), vec3(.3, .27, .36));
+    }
+    if (uFx == 2 || uFx == 3 || uFx == 8) {
+      vec3 A0 = uDum + vec3(0., .8, 0.), B0 = uCst + vec3(0., .9, 0.);
+      for (int j = 0; j < 5; j++) {
+        float fj = float(j), p = (ti - .4 - .1 * fj) / .75;
+        if (p < 0. || p > 1.) continue;
+        float pe = p * p * (3. - 2. * p);
+        for (int s = 0; s < 3; s++) {
+          float ps = max(pe - float(s) * .05, 0.);
+          vec3 P = mix(A0, B0, ps) + vec3(0., sin(PI * ps) * (1.4 + .3 * fj), sin(PI * ps) * (fj - 2.) * .7);
+          if (s == 0) {
+            vec2 e = rot(bb(P), uFx == 3 ? .785 + uT * 3. : 0.);
+            float body = uFx == 3 ? step(max(abs(e.x), abs(e.y)), .1) : step(length(e), .11);
+            col = mix(col, uX1, body); col = mix(col, uX2, uFx == 3 ? step(max(abs(e.x), abs(e.y)), .05) : step(length(e - vec2(-.03, .03)), .05));
+            col += uX1 * exp(-length(e) * 7.) * .7;
+          } else col += uX1 * pt(P, 26.) * (1. - float(s) * .3);
+        }
+      }
+      float arrive = (ti - 1.1) / .9;
+      if (arrive > 0. && arrive < 1.) { col += uX1 * ln(length(bb(B0)) - 1.1 * eo(arrive), .07) * (1. - arrive); chevrons(col, uCst + vec3(0., .9, 0.), 1., uX2, 1. - arrive); }
+    }
+    if (uFx == 4 || uFx == 3 || uFx == 8) {      // rune shackles and falling arrows on the target
+      for (int i = 0; i < 2; i++) {
+        float fi = float(i);
+        vec2 e2 = bb(T + vec3(0., .4 + .75 * fi, 0.)); e2.y *= 2.7;
+        float r2 = length(e2), an = atan(e2.y, e2.x) + uT * (fi < .5 ? 1.6 : -1.6);
+        float close = mix(1.9, .78, pop((ti - .3 - .12 * fi) / .35));
+        col += (uX1 + uX2 * .4) * (ln(r2 - close, .035) + glyphs(an, r2, close - .1, .07, 14., fi + 2.)) * win(ti, .3 + .12 * fi, 3.4, .6);
+      }
+      chevrons(col, T + vec3(0., 1.5, 0.), -1., uX1 + uX2 * .3, win(ti, .3, 3.4, .6));
+    }
+    if (uFx == 5) {
+      for (int j = 0; j < 7; j++) {
+        float fj = float(j), p = fract(h1(fj) + ti * (.35 + .2 * h1(fj + 1.)));
+        vec2 e = bb(T + vec3((h1(fj + 2.) - .5) * 1.1, p * 2., (h1(fj + 6.) - .5) * .7));
+        float R = (.08 + .1 * h1(fj + 4.)) * (.4 + p), rr = length(e);
+        float w = win(ti, .15, 4.2, .8) * step(p, .9);
+        col = mix(col, uX1, step(rr, R) * w * .85); col = mix(col, uX1 * .4, ln(rr - R, .025) * w);
+        col = mix(col, uX2, step(length(e - vec2(-.3, .3) * R), R * .28) * w);
+      }
+      chevrons(col, T + vec3(0., 1.5, 0.), -1., uX1, win(ti, .4, 4.2, .8));
+    }
+    if (uFx == 8) for (int j = 0; j < 8; j++) {  // bats
+      float fj = float(j), an = fj * .785 + ti * (1.6 + .3 * h1(fj)), rad = (1.2 + 1.6 * h1(fj + 1.)) * eo(ti / .5);
+      vec2 e = bb(T + vec3(cos(an) * rad, 1. + .5 * sin(ti * 3. + fj), sin(an) * rad * .8));
+      float flap = .5 + .45 * sin(uT * 22. + fj), wing = step(abs(e.x), .2) * step(abs(e.y - abs(e.x) * flap + .02), .05 + .04 * (1. - abs(e.x) * 5.));
+      float w = win(ti, .1, 3.8, .7);
+      col = mix(col, vec3(.07, .03, .13), max(wing, step(length(e), .05)) * w);
+      col += uX1 * step(length(vec2(abs(e.x) - .018, e.y - .012)), .008) * w * 2.;
+    }
+    if (uFx == 9) {                                // vanishing: a puff of shadow, then only an outline is left
+      vec3 W = uGhostD > 0. ? uDum : uCst;
+      shade(col, ball_d(bb(W + vec3(0., .7 + ti * .9, 0.)), .75, 2.) * (1. - smoothstep(.1, .7, ti)) - .22);
+      col += uC2 * ln(length(bb(W + vec3(0., .7, 0.))) - 1.3 * eo(ti / .4), .05) * (1. - sat(ti / .5));
+      for (int j = 0; j < 8; j++) { float fj = float(j), p = fract(h1(fj) + ti * .5); col += uC1 * pt(W + vec3((h1(fj + 2.) - .5) * .9, p * 2.2, (h1(fj + 5.) - .5) * .6), 40.) * sin(PI * p) * win(ti, .1, 4.2, .6); }
+    }
+    if (uFx == 6) {
+      vec3 B0 = uCst; float w = win(ti, .15, 9., .3);
+      chevrons(col, B0 + vec3(0., .3, 0.), 1., uX1, w);
+      chevrons(col, B0 + vec3(.5, .1, .3), 1., uX2, w * .7);
+      vec2 e = bb(B0 + vec3(0., .75, 0.));
+      if (uStat == 0) {                 // reticle locks on
+        float R = mix(2.2, .62, pop((ti - .2) / .4)), rr = length(e), an = atan(e.y, e.x) + ti * 3. * (1. - eo((ti - .2) / .6));
+        float tick = step(abs(fract(an * 4. / TAU + .5) - .5), .06) * step(abs(rr - R), .16);
+        col += (uX1 * (ln(rr - R, .035) + tick) + uX2 * (ln(e.x, .012) + ln(e.y, .012)) * step(rr, R * .5) * step(R, .7)) * w;
+        col += uX2 * (exp(-abs(e.y) * 40.) * exp(-abs(e.x) * 2.) + exp(-abs(e.x) * 40.) * exp(-abs(e.y) * 2.)) * exp(-sq((ti - .6) * 7.)) * 1.5;
+      } else if (uStat == 1 && uClass == 1) {   // the Yajin: an aura of shadow breathing around the body, with wisps climbing off it
+        float grow = pop((ti - .1) / .35) * (1. - smoothstep(3., 3.8, ti)) * step(.1, ti);
+        vec2 a2 = bb(B0 + vec3(0., .85, 0.)); float ar = length(vec2(a2.x / .62, a2.y / 1.25)), aa = atan(a2.y, a2.x);
+        float n1 = fbm(vec2(aa * 2.2 + uT * .5, ar * 2. - uT * 1.6)), n2 = fbm(vec2(a2.x * 5., a2.y * 3.5 - uT * 2.8));
+        float upk = sat(a2.y / 2.5 + .5), edge = 1.12 + (.2 + .75 * upk) * (n2 - .35) + .12 * (n1 - .5) + .05 * sin(uT * 2.4);
+        float d1 = min(edge - ar, (ar - .66 - .12 * n1) * 1.5);                 // hollow: the body stays visible inside
+        shade(col, d1 * .9 * grow);
+        col += uC2 * exp(-abs(ar - .95) * 3.) * .14 * grow * (.6 + .4 * sin(uT * 2.4));
+        for (int j = 0; j < 7; j++) {                                            // thin wisps tearing off upward
+          float fj = float(j), p = fract(ti * (.4 + .25 * h1(fj)) + h1(fj + 3.)), an = fj * 2.399;
+          vec2 w2 = bb(B0 + vec3(cos(an) * (.6 - .3 * p), .9 + p * 2.2, sin(an) * .4)); w2.x += sin(w2.y * 9. + fj + uT * 3.) * .05; 
+          float wd = 1. - length(vec2(w2.x / (.07 * (1. - p) + .01), w2.y / .32));
+          shade(col, wd * (.35 + .5 * fbm(w2 * 12. + uT * 2.)) * grow * sin(PI * p));
+        }
+      } else if (uStat == 1 && uClass == 2) {   // the Senshi: a battle aura hugging the body, with light streaming up off it
+        float grow = pop((ti - .1) / .3) * (1. - smoothstep(3., 3.8, ti)) * step(.1, ti);
+        vec2 a2 = bb(B0 + vec3(0., .85, 0.)); float ar = length(vec2(a2.x / .66, a2.y / 1.3)), aa = atan(a2.y, a2.x);
+        float n1 = fbm(vec2(aa * 2.2 + uT * .5, ar * 2. - uT * 1.6)), n2 = fbm(vec2(a2.x * 5., a2.y * 3. - uT * 4.));
+        float upk = sat(a2.y / 2.6 + .5), edge = 1.1 + (.15 + .9 * upk) * (n2 - .35) + .1 * (n1 - .5) + .06 * sin(uT * 5.);
+        float d1 = min(edge - ar, (ar - .7 - .1 * n1) * 1.6);
+        float au = max(d1, 0.) * grow;                                           // soft light, not flame: a glow with a bright skin
+        col += uC2 * smoothstep(0., .3, au) * .5 + uC1 * smoothstep(.12, .45, au) * .45 + uX1 * smoothstep(.0, .12, au) * (1. - smoothstep(.12, .3, au)) * .5;
+        col += uC1 * ln(d1, .035) * grow * .9;
+        col += uX1 * exp(-abs(ar - .95) * 2.6) * .22 * grow * (.7 + .3 * sin(uT * 5.));
+        for (int j = 0; j < 8; j++) {                                            // streaks of light rising off him
+          float fj = float(j), p = fract(ti * (.7 + .4 * h1(fj)) + h1(fj + 3.)), an = fj * 2.399;
+          vec2 w2 = bb(B0 + vec3(cos(an) * .62, .2 + p * 2.9, sin(an) * .4));
+          col += mix(uX2, uX1, p) * exp(-abs(w2.x) * 60.) * exp(-abs(w2.y) * 5.) * sin(PI * p) * grow * 1.3;
+        }
+        vec2 g2 = bb(B0 + vec3(0., .05, 0.)); g2.y *= 2.7; col += uX2 * ln(length(g2) - 1.2 * fract(ti * 1.2), .05) * (1. - fract(ti * 1.2)) * grow;
+      } else if (uStat == 1) {          // flame aura
+        float hh = 2.6 * pop((ti - .15) / .3) * (1. - .45 * smoothstep(.6, 1.4, ti)) * step(.15, ti);
+        float dn = fire_d(bb(B0) + vec2(0., .1), .75, hh, 5.);
+        paint(col, dn * (1. - smoothstep(.0, .5, dn) * smoothstep(.9, 1.5, ti) * .0), uX2, uX1, uX1 * .45);
+      } else if (uStat == 2) {          // arrows in orbit
+        for (int j = 0; j < 5; j++) {
+          float an = float(j) * 1.257 + ti * 2.2;
+          vec2 a = bb(B0 + vec3(cos(an) * .9, .75 + .25 * sin(ti * 2. + float(j)), sin(an) * .9));
+          float sh = step(abs(a.x), .018) * step(abs(a.y), .3) + step(abs(a.x) + (a.y - .3) * .8, .1) * step(.2, a.y) * step(a.y, .42);
+          if (uClass == 2) ssword(col, vec2(a.x, .5 - a.y) , .9 * w * eo((ti - .15) / .3), 0., uX2, uX1);
+          else col = mix(col, mix(uX1, uX2, .5 + .5 * sin(an)), min(sh, 1.) * w * eo((ti - .15) / .3));
+        }
+      } else if (uStat == 4) {          // healing: soft rings rise through him
+        for (int j = 0; j < 3; j++) { float p = fract(ti * .5 + float(j) / 3.); vec2 r2 = bb(B0 + vec3(0., p * 1.9, 0.)); r2.y *= 2.7; col += (uX1 + uX2 * .5) * ln(length(r2) - .75 + .25 * p, .04) * sin(PI * p) * w; }
+        col += uX1 * exp(-length(e) * 1.6) * .5 * exp(-ti * 1.2);
+      } else {                          // an eye opens above
+        vec2 o = bb(B0 + vec3(0., 2.1, 0.)); float open = pop((ti - .2) / .4) * .34, lid = open * (1. - sq(o.x / .6));
+        if (abs(o.x) < .6) col += (uX1 * ln(abs(o.y) - lid, .035) + uX2 * step(length(o), min(.13, lid)) + uX1 * ln(length(o) - .2, .03) * step(abs(o.y), lid)) * w * 1.4;
+      }
+    }
+
+    if (uHeavy > .5) {
+      float l = dot(col, vec3(.4));
+      col = mix(col, mix(uC1, vec3(.02, .01, .05), smoothstep(.12, .4, l)), step(.05, ti) * step(ti, .11));
+      col = mix(col, uC1 * .7 + .5, step(ti, .05) * .9);
+    } else col += uC1 * (1. - sat(ti / .07)) * .3 * uPow;
+  }
+
+  col = col / (1. + col * .22);
+  col *= 1. - .35 * dot(uv, uv);
+  gl_FragColor = vec4(pow(max(col, 0.), vec3(.9)), 1.);
+}`;
+
+// ---------------- sound: Dofus Retro's Cra sounds where one exists for the step, mine where it does not ----------------
+const A = { on: false, ready: false, s: {} };
+const boot_audio = async () => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  A.ctx = ctx;
+  const sr = ctx.sampleRate;
+  const make = (seconds, channels, fill) => { const b = ctx.createBuffer(channels, Math.floor(seconds * sr), sr); for (let c = 0; c < channels; c++) fill(b.getChannelData(c)); return b; };
+  A.s.white = make(2, 1, d => { for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; });
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = .003; comp.release.value = .2;
+  const verb = ctx.createConvolver();
+  verb.buffer = make(1.8, 2, d => { for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 4); });
+  const wet = ctx.createGain(); wet.gain.value = .14;
+  A.master = ctx.createGain(); A.master.gain.value = .9;
+  A.master.connect(comp); A.master.connect(verb); verb.connect(wet); wet.connect(comp); comp.connect(ctx.destination);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  Object.entries(synth_all()).forEach(([name, data]) => { const b = ctx.createBuffer(1, data.length, SR); b.copyToChannel(data, 0); A.s[name] = b; });
+  await Promise.all(Object.entries(DOFUS).map(async ([name, b64]) => {
+    const bytes = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+    A.s['d_' + name] = await ctx.decodeAudioData(bytes.buffer);
+  }));
+  A.ready = true;
+};
+const fresh_bus = () => {
+  const old = A.bus;
+  if (old) { old.gain.setTargetAtTime(0, A.ctx.currentTime, .05); setTimeout(() => old.disconnect(), 600); }
+  A.bus = A.ctx.createGain(); A.bus.connect(A.master);
+};
+const rnd = (a, b) => a + Math.random() * (b - a);
+// one recorded sound: pitch, level, optional filter, position left to right
+const smp = (t0, name, o = {}) => {
+  const s = A.ctx.createBufferSource(); s.buffer = A.s[name];
+  s.playbackRate.value = (o.rate || 1) * rnd(.96, 1.04);
+  const g = A.ctx.createGain(); g.gain.value = o.gain === undefined ? .8 : o.gain;
+  let tail = s;
+  if (o.lp) { const f = A.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; tail.connect(f); tail = f; }
+  if (o.hp) { const f = A.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = o.hp; tail.connect(f); tail = f; }
+  const p = A.ctx.createStereoPanner(); const pan = o.pan === undefined ? [0, 0] : Array.isArray(o.pan) ? o.pan : [o.pan, o.pan];
+  p.pan.setValueAtTime(pan[0], t0); p.pan.linearRampToValueAtTime(pan[1], t0 + (o.dur || 1));
+  tail.connect(g); g.connect(p); p.connect(A.bus);
+  if (o.dur) { g.gain.setValueAtTime(g.gain.value, t0 + o.dur * .7); g.gain.linearRampToValueAtTime(0, t0 + o.dur); }
+  s.start(t0, o.from || 0);
+};
+// the arrow passing through air: broadband noise, no pitch
+const whoosh = (t0, dur, f0, f1, gain, pan) => {
+  const s = A.ctx.createBufferSource(); s.buffer = A.s.white; s.loop = true;
+  const f = A.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = .9;
+  f.frequency.setValueAtTime(f0, t0); f.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+  const g = A.ctx.createGain(); g.gain.setValueAtTime(1e-4, t0); g.gain.exponentialRampToValueAtTime(gain, t0 + dur * .45); g.gain.exponentialRampToValueAtTime(1e-4, t0 + dur);
+  const p = A.ctx.createStereoPanner(); p.pan.setValueAtTime(pan[0], t0); p.pan.linearRampToValueAtTime(pan[1], t0 + dur);
+  s.connect(f); f.connect(g); g.connect(p); p.connect(A.bus);
+  s.start(t0, Math.random()); s.stop(t0 + dur + .05);
+};
+// seconds of lead-in before the loud part of each Dofus sound, so it can be lined up with the picture
+const TRAP_WAIT = 1.7;
+const LEAD = { jet_903: .2, jet_904: 1.57, jet_905: .08, jet_912: .15, jet_912b: .16, impact_lourd: .25, explosion: .14, air: .2, vol: .2, boo_up: .2, gelee: .04, chaffer_arc: .79, wab_2005b: .66 };
+// which sound plays on which step. "d:" is a Dofus Retro sound, "m:" is one of mine filling a gap
+const sound_plan_yajin = spell => {
+  const cp = spell.cx / 8, tp = spell.path === 'self' ? cp : spell.tx / 8 + .2, c = spell.cast, set = c + spell.fly, hit = set + (spell.trap ? TRAP_WAIT : 0), fx = spell.fx;
+  const pow = .65 + .09 * spell.ap + (spell.heavy ? .25 : 0);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  add(0, 0, 'm:cast_shadow', { gain: .6, pan: cp, rate: Math.min(1.4, Math.max(.8, 1.3 / c)) });
+  if (spell.heavy) add(0, c, 'd:lakam_401a', { gain: .8, pan: cp });
+  if (spell.path === 'melee') add(1, c, 'd:rapid_swish', { gain: .8, pan: [cp, tp] });
+  else if (spell.path === 'bolt') add(1, c, 'd:lakam_404', { gain: .8, pan: [cp, tp] });
+  else if (spell.path === 'self') add(1, c, 'd:gonfle', { gain: .6, pan: cp });
+  else if (spell.path === 'sky') { add(1, c, 'd:lakam_404', { gain: .8, pan: cp, dur: spell.fly * .6 }); add(1, c + spell.fly * .45, 'm:cast_shadow', { gain: .55, pan: tp, rate: 1.8, dur: spell.fly * .7 }); }
+  else add(1, c, 'm:cast_shadow', { gain: .5, pan: [cp, tp], rate: 1.7, dur: spell.fly + .3 });
+  if (spell.trap) add(1, set, 'd:pose', { gain: .9, pan: tp });
+  if (spell.trap) { add(2, hit, 'd:lakam_409', { gain: .9, pan: tp }); add(2, hit, 'd:pic', { gain: .8, pan: tp }); if (spell.shape && spell.el === 'shade_e') add(2, hit + .05, 'd:explosion', { gain: .8, pan: tp, rate: .9 }); }
+  else if (spell.path === 'melee') { add(2, hit, 'd:punch', { gain: .9 * pow, pan: tp }); add(2, hit, 'd:lakam_401b', { gain: .8, pan: tp }); }
+  else if (spell.el === 'shade_n') { add(2, hit, 'd:boo_up', { gain: .9, pan: tp }); if (spell.stat !== 0) add(2, hit + .15, 'd:guerison', { gain: .6, pan: tp, rate: .8 }); }
+  else if (fx === 9) add(2, hit, 'd:gonfle', { gain: .9, pan: tp, rate: 1.2 });
+  else if (spell.path === 'tele') { add(2, hit, 'd:lakam_401a', { gain: .9, pan: tp }); add(2, hit + .1, 'd:lakam_405', { gain: .7, pan: tp }); }
+  else add(2, hit, 'd:lakam_405', { gain: .9 * pow, pan: tp });
+  if (spell.heavy) add(2, hit, 'd:impact_lourd', { gain: .9, pan: tp, rate: .85 });
+  if (fx === 1) { add(2, hit + .05, 'd:air', { gain: .8, pan: [tp, tp + .4] }); add(2, hit + .2 + .09 * spell.push, 'd:impact_lourd', { gain: .5, pan: .8, rate: 1.3 }); }
+  if (fx === 2 || fx === 3) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3, rate: fx === 3 ? 1.15 : 1 });
+  if (fx === 4) add(2, hit + .25, 'm:debuff', { gain: .5, pan: tp, rate: 1.1 });
+  if (fx === 5) { add(2, hit + .15, 'm:debuff', { gain: .55, pan: tp, rate: .7 }); add(2, hit + .3, 'm:cast_water', { gain: .45, pan: tp, rate: .6, lp: 1800 }); }
+  if (fx === 6 && spell.stat === 0) add(2, hit + .1, 'd:coup_critique', { gain: .8, pan: tp });
+  return out;
+};
+const sound_plan_senshi = spell => {
+  const cp = spell.cx / 8, tp = spell.path === 'self' ? cp : spell.tx / 8 + .2, c = spell.cast, hit = c + spell.fly, fx = spell.fx, el = spell.el === 'plain' ? 'neutral' : spell.el;
+  const pow = .65 + .07 * spell.ap + (spell.heavy ? .25 : 0);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  add(0, 0, 'm:cast_' + el, { gain: .5, pan: cp, rate: Math.min(1.4, Math.max(.8, 1.3 / c)) });
+  if (spell.heavy) add(0, c, 'd:vlad_801', { gain: .8, pan: cp });
+  if (spell.path === 'slash') add(1, c, 'd:epee_2m', { gain: .9, pan: [cp, tp] });
+  else if (spell.path === 'wave') { add(1, c, 'd:epee_1m', { gain: .9, pan: cp }); add(1, c + .05, 'd:vlad_804', { gain: .7, pan: [cp, tp] }); }
+  else if (spell.path === 'sky') { add(1, c, 'd:vlad_812', { gain: .8, pan: cp }); add(1, c + spell.fly * .45, 'm:cast_neutral', { gain: .5, pan: tp, rate: 1.8, dur: spell.fly * .7 }); }
+  else if (spell.path === 'leap') add(1, c, 'd:jump', { gain: .9, pan: [cp, tp] });
+  else add(1, c, 'd:vlad_805', { gain: .7, pan: cp });
+  if (el === 'neutral') { if (fx === 6) { add(2, hit, 'd:boo_up', { gain: .9, pan: tp }); add(2, hit + .15, spell.stat === 4 ? 'd:guerison' : 'd:vlad_813', { gain: .7, pan: tp }); } else add(2, hit, 'd:impact_lourd', { gain: .8, pan: tp }); }
+  else add(2, hit, { fire: 'd:vlad_802', air: 'd:vlad_803', earth: 'd:vlad_806' }[el], { gain: .9 * pow, pan: tp });
+  if (el === 'earth') add(2, hit, 'd:punch', { gain: .7 * pow, pan: tp });
+  if (spell.shape && el !== 'neutral') add(2, hit + .08, 'd:vlad_807', { gain: .8, pan: tp });
+  if (spell.heavy) { add(2, hit, 'd:impact_lourd', { gain: 1, pan: tp, rate: .8 }); add(2, hit + .05, 'd:explosion', { gain: .9, pan: tp, rate: .75 }); }
+  if (spell.frost) add(2, hit, 'd:cc_vlad', { gain: .7, pan: tp });
+  if (fx === 1) { add(2, hit + .05, 'd:air', { gain: .8, pan: [tp, tp + .4] }); add(2, hit + .2 + .09 * spell.push, 'd:impact_lourd', { gain: .5, pan: .8, rate: 1.3 }); }
+  if (fx === 2) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3 });
+  if (fx === 4) add(2, hit + .25, 'm:debuff', { gain: .5, pan: tp, rate: 1.1 });
+  return out;
+};
+const BEAST = ['crockette_201', 'crockette_202', 'grrr1', 'crockette_206', 'grrr2', 'crockette_207', 'crockette_211', 'crockette_213', 'crockette_214'];
+const sound_plan_tomoda = spell => {
+  const cp = spell.cx / 8, tp = spell.path === 'self' ? cp : spell.tx / 8 + .2, c = spell.cast, hit = c + spell.fly, fx = spell.fx, el = spell.el === 'plain' ? 'neutral' : spell.el;
+  const pow = .65 + .07 * spell.ap + (spell.heavy ? .25 : 0);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  add(0, .05, 'd:pages', { gain: .9, pan: cp });
+  add(0, 0, 'm:cast_' + el, { gain: .45, pan: cp, rate: Math.min(1.4, Math.max(.8, 1.3 / c)) });
+  if (spell.path === 'sky') { add(1, c, 'd:crockette_205', { gain: .8, pan: cp }); add(1, c + spell.fly * .45, 'm:cast_neutral', { gain: .5, pan: tp, rate: 1.8, dur: spell.fly * .7 }); }
+  else if (spell.path === 'self') add(1, c, 'm:cast_neutral', { gain: .5, pan: cp, rate: 2, dur: .5 });
+  else add(1, c, 'd:lance02', { gain: .8, pan: [cp, tp] });
+  if (fx === 6 || fx === 10) { add(2, hit, 'd:boo_up', { gain: .9, pan: tp }); add(2, hit + .15, 'd:guerison', { gain: .7, pan: tp }); }
+  add(2, hit, 'd:' + BEAST[spell.icon % BEAST.length], { gain: .9 * pow, pan: tp });
+  if (spell.heavy) { add(2, hit, 'd:impact_lourd', { gain: 1, pan: tp, rate: .8 }); add(2, hit + .05, 'd:explosion', { gain: .9, pan: tp, rate: .75 }); }
+  if (fx === 1) { add(2, hit + .05, 'd:air', { gain: .8, pan: tp }); add(2, hit + .2 + .09 * Math.abs(spell.push), 'd:impact_lourd', { gain: .5, pan: tp, rate: 1.3 }); }
+  if (fx === 2) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3 });
+  if (fx === 4) add(2, hit + .25, 'm:debuff', { gain: .5, pan: tp, rate: 1.1 });
+  if (fx === 5) { add(2, hit + .15, 'm:debuff', { gain: .55, pan: tp, rate: .7 }); add(2, hit + .3, 'm:cast_water', { gain: .45, pan: tp, rate: .6, lp: 1800 }); }
+  return out;
+};
+const TICK = ['many_502', 'many_503', 'many_509', 'many_512b', 'many_501'];
+const sound_plan_tokei = spell => {
+  const cp = spell.cx / 8, tp = spell.path === 'self' ? cp : spell.tx / 8 + .2, c = spell.cast, hit = c + spell.fly, fx = spell.fx, el = spell.el === 'sand' ? 'neutral' : spell.el;
+  const pow = .65 + .07 * spell.ap + (spell.heavy ? .25 : 0), i = TOKEI.indexOf(spell);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  add(0, 0, spell.heavy ? 'd:many_load2' : 'd:many_load', { gain: .8, pan: cp });
+  add(0, 0, 'm:cast_' + el, { gain: .35, pan: cp, rate: Math.min(1.4, Math.max(.8, 1.3 / c)) });
+  if (spell.path === 'hand') add(1, c, 'd:lance', { gain: .8, pan: [cp, tp] });
+  else if (spell.path === 'ray') add(1, c, 'd:many_507', { gain: .9, pan: [cp, tp] });
+  else if (spell.path === 'sky') { add(1, c, 'd:many_508', { gain: .8, pan: cp }); add(1, c + spell.fly * .45, 'm:cast_neutral', { gain: .5, pan: tp, rate: 1.8, dur: spell.fly * .7 }); }
+  else if (spell.path === 'tele') add(1, c, 'd:many_505', { gain: .9, pan: [cp, tp] });
+  else add(1, c, 'm:cast_neutral', { gain: .5, pan: cp, rate: 2, dur: .5 });
+  add(2, hit, 'd:' + TICK[i % TICK.length], { gain: .9 * pow, pan: tp });
+  if (fx === 4) add(2, hit + .1, 'd:many_504', { gain: .7, pan: tp, rate: 1.4, dur: 2.2 });
+  if (fx === 3) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3, rate: 1.15 });
+  if (fx === 6 || fx === 11) { add(2, hit, 'd:boo_up', { gain: .9, pan: tp }); add(2, hit + .15, 'd:guerison', { gain: .6, pan: tp }); }
+  if (spell.heavy) { add(2, hit, 'd:impact_lourd', { gain: 1, pan: tp, rate: .8 }); add(2, hit + .05, 'd:cc_many', { gain: .8, pan: tp }); }
+  return out;
+};
+const sound_plan_rojin = spell => {
+  const cp = spell.cx / 8, tp = spell.path === 'self' ? cp : spell.tx / 8 + .2, c = spell.cast, hit = c + spell.fly, fx = spell.fx;
+  const pow = .65 + .07 * spell.ap + (spell.heavy ? .25 : 0);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  add(0, 0, 'd:setag_load', { gain: .8, pan: cp });
+  if (spell.st === 1) add(0, c * .5, 'd:pic', { gain: .7, pan: cp }); else if (spell.st === 4) add(0, c * .3, 'd:coffre', { gain: .6, pan: cp }); else add(0, c * .4, 'd:tchak', { gain: .6, pan: cp });
+  if (spell.path === 'self') add(1, c, 'm:cast_neutral', { gain: .5, pan: cp, rate: 2, dur: .5 });
+  else add(1, c, { 0: 'd:setag_305', 1: 'd:setag_302' }[spell.proj] || 'd:setag_307', { gain: .8, pan: [cp, tp] });
+  if (spell.path === 'sky') add(1, c + spell.fly * .45, 'm:cast_neutral', { gain: .5, pan: tp, rate: 1.8, dur: spell.fly * .7 });
+  if (fx === 6 || fx === 10) { add(2, hit, 'd:coffre', { gain: .8, pan: tp }); add(2, hit + .1, 'd:boo_up', { gain: .8, pan: tp }); }
+  else if (spell.proj === 1) { add(2, hit, 'd:setag_303', { gain: .9 * pow, pan: tp }); add(2, hit, 'd:pic', { gain: .8, pan: tp }); }
+  else { add(2, hit, 'd:setag_310', { gain: .9 * pow, pan: tp }); add(2, hit + .08, 'd:clang', { gain: .5, pan: tp }); }
+  if (spell.shape) { add(2, hit + .06, 'd:setag_309a', { gain: .8, pan: tp }); add(2, hit + .5, 'd:setag_309b', { gain: .6, pan: tp }); }
+  if (spell.heavy) { add(2, hit, 'd:impact_lourd', { gain: 1, pan: tp, rate: .8 }); add(2, hit + .05, 'd:cc_setag', { gain: .8, pan: tp }); }
+  if (fx === 1) { add(2, hit + .05, 'd:air', { gain: .8, pan: tp }); add(2, hit + .2 + .09 * Math.abs(spell.push), 'd:impact_lourd', { gain: .5, pan: tp, rate: 1.3 }); }
+  if (fx === 3) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3, rate: 1.15 });
+  if (fx === 4) add(2, hit + .25, 'm:debuff', { gain: .5, pan: tp, rate: 1.1 });
+  return out;
+};
+// the six later classes: each has its own Dofus set (Feca, Eniripsa, Sacrier, Pandawa, Ecaflip, Sadida)
+const KIT = {
+  shugo: { load: 'arty_spell', st: ['ecu_cast', 'rapid_swishes_shorter', 'mage_incantations', 'arty_111', 'mage_incantations', 'arty_104'], go: 'arty_104', hit: 'arty_105', big: 'arty_102', buff: 'arty_101', cc: 'cc_arty' },
+  iyashi: { load: 'grina_load', st: ['grina_709', 'grina_709b', 'pages', 'bat_ailes', 'mage_incantations', 'grina_709b'], go: 'grina_709', hit: 'grina_711', big: 'grina_710', buff: 'grina_701', cc: 'cc_grina' },
+  ikari: { load: 'sacrieur_load1', st: ['sacrieur_1050', 'sacrieur_load2', 'sacrieur_load3', 'sacrieur_load2', 'sacrieur_1050b', 'sacrieur_load3'], go: 'sacrieur_1050b', hit: 'sacrieur_1053', big: 'sacrieur_1051', buff: 'sacrieur_1054', cc: 'coup_critique' },
+  shusen: { load: 'panda_load', st: ['drink1', 'drink_burp', 'punch', 'aspiration', 'panda_gloups', 'impact_lourd'], go: 'rapid_swish', hit: 'panda_vague', big: 'explosion', buff: 'panda_gloups', cc: 'coup_critique' },
+  asobi: { load: 'dodge_604', st: ['pages', 'dodge_607', 'tchak', 'dodge_616b', 'boo_up', 'little_cat'], go: 'dodge_610', hit: 'dodge_601', big: 'dodge_614', buff: 'dodge_605', cc: 'cc_dodge' },
+  mori: { load: 'licrounch_1014', st: ['herbe', 'feuillage', 'pissenli', 'poupee', 'feuillage', 'licrounch_arbre'], go: 'licrounch_1001b', hit: 'licrounch_1001', big: 'licrounch_1008', buff: 'licrounch_1003', cc: 'cc_licrounch' },
+};
+const HEALS = ['grina_701', 'grina_702', 'grina_703', 'grina_704', 'grina_705', 'grina_706', 'grina_707'];
+const sound_plan_later = spell => {
+  const k = KIT[spell.cls], cp = spell.cx / 8, tp = spell.path === 'self' ? cp : spell.tx / 8 + .2, c = spell.cast, hit = c + spell.fly, fx = spell.fx;
+  const pow = .65 + .07 * spell.ap + (spell.heavy ? .25 : 0);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  add(0, 0, 'd:' + k.load, { gain: .8, pan: cp });
+  add(0, c * .4, 'd:' + k.st[spell.st], { gain: .6, pan: cp });
+  // travel
+  if (spell.path === 'self') add(1, c, 'm:cast_neutral', { gain: .5, pan: cp, rate: 2, dur: .5 });
+  else if (spell.path === 'ground') { add(1, c, 'd:herbe', { gain: .8, pan: [cp, tp] }); add(1, c + spell.fly * .5, 'd:feuillage', { gain: .6, pan: tp }); }
+  else if (spell.path === 'leap') add(1, c, 'd:jump', { gain: .8, pan: [cp, tp] });
+  else if (spell.path === 'slash' || spell.path === 'wave') { add(1, c, 'd:eca_attak', { gain: .8, pan: cp }); add(1, c, 'd:rapid_swish', { gain: .7, pan: [cp, tp] }); }
+  else if (spell.proj === 4) add(1, c, 'd:panda_molotov', { gain: .8, pan: [cp, tp] });
+  else if (spell.proj === -1) add(1, c, 'd:panda_gaz', { gain: .9, pan: [cp, tp] });
+  else if (spell.path === 'melee') add(1, c, 'd:punch', { gain: .8, pan: cp });
+  else add(1, c, 'd:' + k.go, { gain: .8, pan: [cp, tp] });
+  if (spell.path === 'sky') add(1, c + spell.fly * .45, 'm:cast_neutral', { gain: .5, pan: tp, rate: 1.8, dur: spell.fly * .7 });
+  // impact
+  if (spell.cls === 'iyashi' && (fx === 10 || fx === 6)) add(2, hit, 'd:' + HEALS[spell.seed % HEALS.length], { gain: .8, pan: tp });
+  else if (fx === 6 || fx === 10 || fx === 11) add(2, hit, 'd:' + k.buff, { gain: .8, pan: tp });
+  else if (spell.stay) add(2, hit, 'd:' + k.big, { gain: .8, pan: tp });
+  else if (spell.heavy) { add(2, hit, 'd:' + k.big, { gain: .9, pan: tp }); add(2, hit, 'd:impact_lourd', { gain: 1, pan: tp, rate: .8 }); add(2, hit + .05, 'd:' + k.cc, { gain: .8, pan: tp }); }
+  else add(2, hit, 'd:' + k.hit, { gain: .9 * pow, pan: tp });
+  if (spell.cls === 'mori' && spell.el === 'thorn' && fx !== 6 && fx !== 10) add(2, hit + .04, 'd:cassage_bois', { gain: .7, pan: tp });
+  if (spell.cls === 'shusen' && fx === 4) add(2, hit + .6, 'd:panda_souillure', { gain: .8, pan: tp });
+  if (spell.cls === 'shusen' && spell.path === 'melee') add(2, hit, 'd:impact_lourd', { gain: .8 * pow, pan: tp, rate: 1.1 });
+  if (spell.cls === 'asobi' && spell.proj > 0) add(2, hit + .25, 'd:' + (spell.proj === 8 ? 'dodge_616a' : spell.proj === 2 ? 'dodge_613a' : 'dodge_615'), { gain: .7, pan: tp });
+  if (spell.swap) add(2, hit + .05, 'd:vol', { gain: .7, pan: [tp, cp] });
+  if (fx === 1) { add(2, hit + .05, 'd:air', { gain: .8, pan: tp }); add(2, hit + .2 + .09 * Math.abs(spell.push), 'd:impact_lourd', { gain: .5, pan: tp, rate: 1.3 }); }
+  if (fx === 2 || fx === 3) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3, rate: fx === 3 ? 1.15 : 1 });
+  if (fx === 4) add(2, hit + .25, 'm:debuff', { gain: .5, pan: tp, rate: 1.1 });
+  if (fx === 5) { add(2, hit + .1, 'd:licrounch_1013', { gain: .7, pan: tp }); add(2, hit + .3, 'm:cast_water', { gain: .45, pan: tp, rate: .6, lp: 1800 }); }
+  if (fx === 7) add(2, hit + .25, 'd:panda_vague', { gain: .7, pan: tp });
+  return out;
+};
+const sound_plan = spell => {
+  if (NEW_CLASS[spell.cls]) return sound_plan_later(spell);
+  if (spell.cls === 'rojin') return sound_plan_rojin(spell);
+  if (spell.cls === 'tokei') return sound_plan_tokei(spell);
+  if (spell.cls === 'tomoda') return sound_plan_tomoda(spell);
+  if (spell.cls === 'yajin') return sound_plan_yajin(spell);
+  if (spell.cls === 'senshi') return sound_plan_senshi(spell);
+  const el = spell.el, cp = -.5, tp = spell.path === 'self' ? -.5 : .45, c = spell.cast, hit = c + spell.fly, fx = spell.fx;
+  const pow = .65 + .09 * spell.ap + (spell.heavy ? .25 : 0);
+  const out = [], add = (step, t, name, o = {}) => out.push({ step, t, name, o });
+  // start
+  add(0, c, 'd:chaffer_arc', { gain: .9, pan: cp });
+  if (spell.heavy) add(0, c, 'd:jet_904', { gain: .8, pan: cp });
+  else add(0, 0, 'm:cast_' + el, { gain: .45, pan: cp, rate: Math.min(1.3, Math.max(.75, 1.5 / c)) });
+  // travel
+  if (spell.path === 'sky' || spell.path === 'self') {
+    add(1, c, 'd:jet_912', { gain: .9, pan: cp });
+    add(1, c + spell.fly * .45, 'd:jet_912', { gain: .8, pan: tp, rate: .8 });
+  } else if (el === 'air') { add(1, c, 'd:jet_912', { gain: .9, pan: [cp, tp] }); add(1, c, 'd:vol', { gain: .7, pan: [cp, tp] }); }
+  else add(1, c, 'd:jet_903', { gain: .8 * pow, pan: [cp, tp] });
+  if (spell.heavy && spell.shape) add(1, hit, 'd:wab_2005b', { gain: .8, pan: tp });
+  // impact
+  if (el === 'neutral') { add(2, hit, 'd:boo_up', { gain: .9, pan: tp }); if (spell.stat !== 0) add(2, hit + .15, 'd:guerison', { gain: .7, pan: tp, rate: spell.stat === 1 ? .8 : 1 }); }
+  else if (el === 'fire' && spell.shape) { add(2, hit, 'd:explosion', { gain: 1, pan: tp, rate: spell.heavy ? .85 : 1.15 }); if (spell.heavy) add(2, hit + .3, 'd:explosion', { gain: .7, pan: tp + .3, rate: .7 }); }
+  else if (spell.heavy) { add(2, hit, 'd:jet_912b', { gain: 1, pan: tp }); add(2, hit, 'd:impact_lourd', { gain: .9, pan: tp, rate: .85 }); }
+  else if (el === 'earth') add(2, hit, 'd:impact_lourd', { gain: .9 * pow, pan: tp });
+  else if (spell.path === 'sky') add(2, hit, 'd:jet_912b', { gain: .9, pan: tp });
+  else add(2, hit, 'd:jet_905', { gain: .9 * pow, pan: tp });
+  if (fx === 1) { add(2, hit + .05, 'd:air', { gain: .8, pan: [tp, tp + .4] }); add(2, hit + .2 + .09 * spell.push, 'd:impact_lourd', { gain: .5, pan: .8, rate: 1.3 }); }
+  if (fx === 2 || fx === 3 || fx === 8) add(2, hit + .3, 'd:aspiration', { gain: .9, pan: [tp, cp], dur: 1.3, rate: fx === 3 ? 1.15 : 1 });
+  if (fx === 4 && spell.frost) add(2, hit + .05, 'd:gelee', { gain: 1, pan: tp });
+  else if (fx === 4 && spell.shape) add(2, hit + .1, 'd:many_504', { gain: .8, pan: tp, rate: 1.4 });
+  else if (fx === 4) add(2, hit + .25, 'm:debuff', { gain: .5, pan: tp, rate: 1.1 });
+  if (fx === 5) { add(2, hit + .15, 'm:debuff', { gain: .55, pan: tp, rate: .7 }); add(2, hit + .3, 'm:cast_water', { gain: .45, pan: tp, rate: .6, lp: 1800 }); }
+  if (fx === 6 && spell.stat === 0) { add(2, hit + .1, 'd:coup_critique', { gain: .8, pan: tp }); add(2, hit + .55, 'd:cc_jet', { gain: .7, pan: tp }); }
+  if (fx === 7) { add(2, hit + .22, 'd:air', { gain: .9, pan: tp }); add(2, hit + .3, 'd:vol', { gain: .7, pan: tp, rate: .8 }); }
+  if (fx === 8) add(2, hit + .15, 'm:debuff', { gain: .5, pan: tp, rate: .75 });
+  return out;
+};
+const play_spell = (spell, stretch) => {
+  fresh_bus();
+  const now = A.ctx.currentTime + .04;
+  const landed = spell.cast + spell.fly + (spell.trap ? TRAP_WAIT : 0);
+  sound_plan(spell).forEach(({ step, t: at, name, o }) => {
+    const t = step === 2 && at > landed ? landed + (at - landed) / IMPACT_SPEED : at;
+    const dofus = name.startsWith('d:'), key = name.slice(2), rate = o.rate || 1;
+    const lead = dofus ? (LEAD[key] === undefined ? LEAD_AUTO[key] || 0 : LEAD[key]) / rate : 0, start = t * stretch - lead;
+    smp(now + Math.max(0, start), dofus ? 'd_' + key : key, { ...o, from: Math.max(0, -start) * rate });
+  });
+};
+
+// ---------------- stage ----------------
+const $ = id => document.getElementById(id);
+const stage = $('stage');
+const gl = stage.getContext('webgl', { antialias: false, alpha: false });
+const params = new URLSearchParams(location.search);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const state = { cls: params.get('c') || 'rojin', spell: +(params.get('s') || 0), clock: 0, last: 0, slow: false, paused: false, cycle: -1 };
+const spells = () => CLASSES[state.cls];
+const IMPACT_SPEED = 1.4;
+const HOLD = 3.2, GAP = .4, PORTAL = 4.4;
+
+const fail = message => {
+  const box = document.createElement('div');
+  box.className = 'err';
+  box.textContent = 'The preview cannot run in this browser.\n' + message;
+  stage.replaceWith(box);
+};
+const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+const norm = v => { const l = Math.hypot(...v) || 1; return v.map(x => x / l); };
+const ease_out = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+
+const flight = (spell, u) => {
+  const CASTER = [spell.cx, 0, 0], DUMMY = [spell.path === 'tele' ? spell.tx - 1 : spell.tx, 0, 0];
+  const self = spell.path === 'self';
+  const target = self ? CASTER : DUMMY;
+  const to = add(target, [0, .45, 0]);
+  const flat = [1, 0, 0];
+  const up_aim = norm([self ? .04 : .2, 1, 0]);
+  const hand = add(CASTER, [0, .95, 0]);
+  const gate_in = add(hand, up_aim, (PORTAL - .95) / up_aim[1]);
+  const gate_out = [to[0], PORTAL, to[2]];
+  const base = { target, gate_in, gate_out };
+  if (spell.cls !== 'yogan' && spell.path !== 'sky' && spell.path !== 'arc') {
+    const from = add(hand, flat, .45);
+    return { ...base, aim: flat, pos: add(from, add(to, from, -1), u), dir: norm(add(to, from, -1)), len: spell.path === 'melee' || spell.path === 'slash' ? .6 : 2 };
+  }
+  if (spell.path === 'line') {
+    const from = add(hand, flat, .9);
+    return { ...base, aim: flat, pos: add(from, add(to, from, -1), u), dir: norm(add(to, from, -1)), len: 2.6 };
+  }
+  if (spell.path === 'arc') {
+    const aim = norm([1, .75, 0]);
+    const from = add(hand, aim, .9);
+    const at = v => { const p = add(from, add(to, from, -1), v); return [p[0], p[1] + 3.2 * 4 * v * (1 - v), p[2]]; };
+    return { ...base, aim, pos: at(u), dir: norm(add(at(Math.min(1, u + .02)), at(Math.max(0, u - .02)), -1)), len: 2.1 };
+  }
+  // no line of sight: nothing travels from the caster. He calls it, and it falls from above the target
+  return { ...base, aim: up_aim, pos: add(gate_out, add(to, gate_out, -1), u * u), dir: [0, -1, 0], len: Math.min(4, (PORTAL - .45) * u * u + .2) };
+};
+
+const sync = () => {
+  const spell = spells()[state.spell];
+  $('hud_name').textContent = CLASS_NAME[spell.cls] + ' · ' + spell.name + ' · ' + spell.ap + ' AP';
+  $('hud_does').textContent = spell.does;
+  describe(spell).forEach((steps, i) => {
+    $('t' + i).replaceChildren(...steps.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
+  });
+  const plan = sound_plan(spell);
+  [0, 1, 2].forEach(i => {
+    const names = [...new Set(plan.filter(e => e.step === i).map(e => e.name.slice(2) + (e.name.startsWith('d:') ? ' (Dofus)' : ' (mine)')))];
+    $('s' + i).textContent = 'Sound: ' + names.join(' + ');
+  });
+  spells().forEach((s, i) => $('pick_' + i).setAttribute('aria-pressed', String(i === state.spell)));
+  Object.keys(CLASSES).forEach(c => $('cls_' + c).setAttribute('aria-pressed', String(c === state.cls)));
+  $('slow').setAttribute('aria-pressed', String(state.slow));
+  $('sound').setAttribute('aria-pressed', String(A.on));
+  $('sound').textContent = A.on ? (A.ready ? 'Sound on' : 'Loading sound') : 'Sound';
+  $('pause').textContent = state.paused ? 'Play' : 'Pause';
+};
+const restart = () => { state.clock = 0; state.cycle = -1; };
+
+const build_buttons = () => {
+  $('spells').replaceChildren(...spells().map((spell, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'pick_' + i;
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = EL[spell.el].dot;
+    b.append(dot, spell.name);
+    b.addEventListener('click', () => { state.spell = i; restart(); sync(); });
+    return b;
+  }));
+};
+Object.keys(CLASSES).forEach(c => $('cls_' + c).addEventListener('click', () => { state.cls = c; state.spell = 0; build_buttons(); restart(); sync(); }));
+build_buttons();
+
+if (!gl) fail('WebGL is not available.');
+else try {
+  const compile = (kind, src) => {
+    const sh = gl.createShader(kind);
+    gl.shaderSource(sh, src);
+    gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+    return sh;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }'));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FRAG));
+  gl.bindAttribLocation(prog, 0, 'p');
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  // the sword art: three of the game's own sword icons side by side
+  const sword_tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, sword_tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  const sword_img = new Image();
+  sword_img.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D, sword_tex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sword_img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  };
+  sword_img.src = SWORDS;
+  // the Tomoda's spell illustrations: twenty of the game's own spell icons on one sheet
+  const load_sheet = (unit, src) => {
+    const tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    const img = new Image();
+    img.onload = () => {
+      gl.activeTexture(gl.TEXTURE0 + unit);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.activeTexture(gl.TEXTURE0);
+    };
+    img.src = src;
+    gl.activeTexture(gl.TEXTURE0);
+  };
+  load_sheet(1, ICONS);
+  load_sheet(2, ROJIN_ART);
+  load_sheet(3, PROPS);
+  const locs = {};
+  const U = name => locs[name] || (locs[name] = gl.getUniformLocation(prog, name));
+
+  const draw = time => {
+    const scale = Math.min(devicePixelRatio || 1, 1.25);
+    const w = Math.max(2, Math.round(stage.clientWidth * scale)), h = Math.max(2, Math.round(stage.clientHeight * scale));
+    if (stage.width !== w || stage.height !== h) { stage.width = w; stage.height = h; }
+    gl.viewport(0, 0, w, h);
+
+    const spell = spells()[state.spell], el = EL[spell.el];
+    const wait = spell.trap ? TRAP_WAIT : 0, land = spell.cast + spell.fly, CASTER = [spell.cx, 0, 0];
+    const total = land + wait + HOLD + GAP;
+    const cycle = Math.floor(state.clock / total), t = state.clock - cycle * total;
+    if (cycle !== state.cycle) {
+      state.cycle = cycle;
+      if (A.on && A.ready && !state.paused) play_spell(spell, state.slow ? 4 : 1);
+    }
+    const done = t >= land + wait + HOLD;
+    const start = Math.min(1, t / spell.cast);
+    const travel = t < spell.cast ? -1 : Math.min(1, (t - spell.cast) / spell.fly);
+    const set = done || t < land || !spell.trap ? -1 : t - land;
+    const impact = done || t < land + wait ? -1 : (t - land - wait) * IMPACT_SPEED;
+    const beat = impact >= 0 ? 2 : travel >= 0 ? 1 : 0;
+    [0, 1, 2].forEach(i => $('b' + i).classList.toggle('on', i === beat && !done));
+    const f = flight(spell, Math.max(0, travel));
+
+    const push_k = spell.push && impact >= 0 ? Math.min(1, Math.max(0, (impact - .04) / (.16 + .09 * Math.abs(spell.push)))) : 0;
+    const shove = spell.push * ease_out(push_k);
+    const second = spell.cls !== 'yogan' ? [0, -9, 0] : spell.shape === 3 ? [4, 0, 0] : spell.shape === 1 && spell.path !== 'self' ? [3, 0, -1] : [0, -9, 0];
+    // a trap waits for the enemy to walk in
+    const walk = spell.trap ? 1 - ease_out(Math.max(0, set < 0 ? (t < land ? 0 : 1) : (set - .8) / .7)) : 0;
+    const hop = spell.trap && set > .8 && set < 1.5 ? Math.abs(Math.sin((set - .8) / .7 * Math.PI * 2)) * .25 : 0;
+    const teleported = spell.path === 'tele' && travel >= .55;
+    const leap = spell.path === 'leap' && travel >= 0;
+    const lu = Math.min(1, Math.max(0, travel)), leap_at = [spell.cx + (spell.tx - spell.cx) * lu, 2.6 * 4 * lu * (1 - lu), 0];
+    const traded = spell.swap && impact >= .12;
+    const caster_at = traded ? [spell.tx, 0, 0] : leap ? leap_at : teleported ? [spell.tx - 1, 0, 0] : CASTER;
+    if (leap) { f.pos = add(leap_at, [0, .8, 0]); f.dir = norm([1, 2.6 * 4 * (1 - 2 * lu) / (spell.tx - spell.cx), 0]); f.len = 1.8; }
+    const ghost_c = spell.path === 'tele' ? (impact >= 0 ? Math.max(0, 1 - impact / .3) : travel > 0 ? 1 : 0) : spell.ghost === 'self' && impact >= 0 ? ease_out(impact / .5) : 0;
+    const ghost_d = spell.ghost === 'ally' && impact >= 0 ? ease_out(impact / .5) : 0;
+    const pow = .7 + .1 * spell.ap + (spell.heavy ? .25 : 0);
+    const kick = impact >= 0 && !reduced ? Math.exp(-impact * 9) * (spell.heavy ? .22 : .07 * pow) : 0;
+    const shake = [Math.sin(time * 91) * kick, Math.cos(time * 77) * kick, 0];
+    const tok = TOK[spell.tok];
+    gl.uniform1i(U('uSw'), 0);
+    gl.uniform2f(U('uRes'), w, h);
+    gl.uniform1f(U('uT'), time);
+    gl.uniform1f(U('uS'), done ? 0 : start);
+    gl.uniform1f(U('uTr'), done ? -1 : travel);
+    gl.uniform1f(U('uI'), impact);
+    gl.uniform1f(U('uL'), f.len);
+    gl.uniform1f(U('uPow'), pow);
+    gl.uniform1f(U('uHeavy'), reduced ? 0 : spell.heavy);
+    gl.uniform1f(U('uSky'), spell.path === 'sky' || (spell.cls === 'yogan' && spell.path === 'self') ? 1 : 0);
+    gl.uniform1f(U('uSeed'), spell.seed);
+    gl.uniform1f(U('uSize'), spell.size);
+    gl.uniform1f(U('uPushK'), push_k);
+    gl.uniform1f(U('uFrost'), spell.frost);
+    gl.uniform1i(U('uEl'), el.id);
+    gl.uniform1i(U('uShape'), spell.shape);
+    gl.uniform1i(U('uFx'), spell.fx);
+    gl.uniform1i(U('uStat'), spell.stat);
+    gl.uniform3fv(U('uP'), f.pos);
+    gl.uniform3fv(U('uV'), f.dir);
+    gl.uniform3fv(U('uAim'), f.aim);
+    gl.uniform3fv(U('uCst'), caster_at);
+    gl.uniform1f(U('uCrawl'), spell.path === 'ground' || spell.path === 'tele' || (spell.cls !== 'yogan' && spell.path === 'self') ? 1 : 0);
+    gl.uniform1i(U('uMove'), { slash: 1, wave: 2, leap: 3, ray: 4, hand: 5 }[spell.path] || 0);
+    gl.uniform1f(U('uTrap'), spell.trap);
+    gl.uniform1f(U('uSet'), set);
+    gl.uniform1f(U('uGhostC'), ghost_c);
+    gl.uniform1f(U('uGhostD'), ghost_d);
+    gl.uniform1i(U('uClass'), NEW_CLASS[spell.cls] || { yogan: 0, yajin: 1, senshi: 2, tomoda: 3, tokei: 4, rojin: 5 }[spell.cls]);
+    gl.uniform1i(U('uPr'), 3);
+    gl.uniform1f(U('uSwap'), spell.swap);
+    gl.uniform1i(U('uRj'), 2);
+    gl.uniform1f(U('uProj'), spell.proj);
+    gl.uniform1f(U('uRefund'), spell.refund);
+    gl.uniform1f(U('uOnAlly'), spell.on === 'ally' ? 1 : 0);
+    gl.uniform3fv(U('uFrom'), CASTER);
+    gl.uniform1i(U('uIc'), 1);
+    gl.uniform1f(U('uIcon'), spell.icon);
+    gl.uniform1f(U('uStay'), spell.stay);
+    gl.uniform1i(U('uStart'), spell.st);
+    gl.uniform3fv(U('uTgt'), f.target);
+    gl.uniform3fv(U('uDum'), [traded ? spell.cx : (spell.dx === undefined ? spell.tx : spell.dx) + shove + walk * 2, hop, 0]);
+    gl.uniform3fv(U('uDum2'), add(second, [second[1] < 0 ? 0 : shove, 0, 0]));
+    gl.uniform3fv(U('uPa'), f.gate_in);
+    gl.uniform3fv(U('uPb'), f.gate_out);
+    gl.uniform3fv(U('uC1'), el.c1);
+    gl.uniform3fv(U('uC2'), el.c2);
+    gl.uniform3fv(U('uC3'), el.c3);
+    gl.uniform3fv(U('uX1'), tok[0]);
+    gl.uniform3fv(U('uX2'), tok[1]);
+    gl.uniform3fv(U('uCam'), add([0, 8.2, 10.5], shake));
+    gl.uniform3fv(U('uLook'), add([0, .9, 0], shake));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  };
+
+  const frame = now => {
+    const dt = Math.min((now - state.last) / 1000, .1);
+    state.last = now;
+    if (!state.paused) state.clock += dt * (state.slow ? .25 : 1);
+    if (!document.hidden) draw(state.clock);
+    requestAnimationFrame(frame);
+  };
+
+  $('sound').addEventListener('click', () => {
+    A.on = !A.on;
+    if (A.on && !A.ctx) boot_audio().then(() => { restart(); sync(); }, error => { A.on = false; $('sound').textContent = 'Sound failed: ' + error.message; });
+    else if (A.on) { void A.ctx.resume(); restart(); }
+    else if (A.bus) A.bus.gain.setTargetAtTime(0, A.ctx.currentTime, .05);
+    sync();
+  });
+  $('slow').addEventListener('click', () => { state.slow = !state.slow; restart(); sync(); });
+  $('pause').addEventListener('click', () => { state.paused = !state.paused; sync(); });
+  $('replay').addEventListener('click', restart);
+  $('next').addEventListener('click', () => { state.spell = (state.spell + 1) % spells().length; restart(); sync(); });
+  sync();
+  if (params.has('t')) { state.paused = true; state.clock = +params.get('t'); sync(); }
+  requestAnimationFrame(now => { state.last = now; frame(now); });
+} catch (error) { fail(String(error.message || error)); }
+</script>

@@ -185,6 +185,731 @@
       "file": "water_enter.aac",
       "volume": 0.45,
       "restart": true
+    },
+    "spell_fx_air": {
+      "file": "spell_fx_air.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_aspiration": {
+      "file": "spell_fx_aspiration.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.16
+    },
+    "spell_fx_boo_up": {
+      "file": "spell_fx_boo_up.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_chaffer_arc": {
+      "file": "spell_fx_chaffer_arc.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.25
+    },
+    "spell_fx_clang": {
+      "file": "spell_fx_clang.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_coffre": {
+      "file": "spell_fx_coffre.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.06
+    },
+    "spell_fx_coup_critique": {
+      "file": "spell_fx_coup_critique.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.07
+    },
+    "spell_fx_crockette_201": {
+      "file": "spell_fx_crockette_201.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.24
+    },
+    "spell_fx_crockette_202": {
+      "file": "spell_fx_crockette_202.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.42
+    },
+    "spell_fx_crockette_205": {
+      "file": "spell_fx_crockette_205.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.11
+    },
+    "spell_fx_crockette_206": {
+      "file": "spell_fx_crockette_206.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_crockette_207": {
+      "file": "spell_fx_crockette_207.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_crockette_211": {
+      "file": "spell_fx_crockette_211.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.06
+    },
+    "spell_fx_crockette_213": {
+      "file": "spell_fx_crockette_213.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_crockette_214": {
+      "file": "spell_fx_crockette_214.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.22
+    },
+    "spell_fx_epee_1m": {
+      "file": "spell_fx_epee_1m.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.12
+    },
+    "spell_fx_epee_2m": {
+      "file": "spell_fx_epee_2m.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_explosion": {
+      "file": "spell_fx_explosion.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_gelee": {
+      "file": "spell_fx_gelee.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_gonfle": {
+      "file": "spell_fx_gonfle.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.49
+    },
+    "spell_fx_grrr1": {
+      "file": "spell_fx_grrr1.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.26
+    },
+    "spell_fx_grrr2": {
+      "file": "spell_fx_grrr2.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.26
+    },
+    "spell_fx_guerison": {
+      "file": "spell_fx_guerison.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.21
+    },
+    "spell_fx_impact_lourd": {
+      "file": "spell_fx_impact_lourd.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.28
+    },
+    "spell_fx_jet_903": {
+      "file": "spell_fx_jet_903.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.27
+    },
+    "spell_fx_jet_905": {
+      "file": "spell_fx_jet_905.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.11
+    },
+    "spell_fx_jet_912": {
+      "file": "spell_fx_jet_912.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_jump": {
+      "file": "spell_fx_jump.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.23
+    },
+    "spell_fx_lakam_401a": {
+      "file": "spell_fx_lakam_401a.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.37
+    },
+    "spell_fx_lakam_401b": {
+      "file": "spell_fx_lakam_401b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_lakam_404": {
+      "file": "spell_fx_lakam_404.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.16
+    },
+    "spell_fx_lakam_405": {
+      "file": "spell_fx_lakam_405.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.06
+    },
+    "spell_fx_lakam_409": {
+      "file": "spell_fx_lakam_409.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_lance": {
+      "file": "spell_fx_lance.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.22
+    },
+    "spell_fx_lance02": {
+      "file": "spell_fx_lance02.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.24
+    },
+    "spell_fx_many_501": {
+      "file": "spell_fx_many_501.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_many_502": {
+      "file": "spell_fx_many_502.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.15
+    },
+    "spell_fx_many_503": {
+      "file": "spell_fx_many_503.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.36
+    },
+    "spell_fx_many_504": {
+      "file": "spell_fx_many_504.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.37
+    },
+    "spell_fx_many_505": {
+      "file": "spell_fx_many_505.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.37
+    },
+    "spell_fx_many_507": {
+      "file": "spell_fx_many_507.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_many_508": {
+      "file": "spell_fx_many_508.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_many_509": {
+      "file": "spell_fx_many_509.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.03
+    },
+    "spell_fx_many_512b": {
+      "file": "spell_fx_many_512b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.04
+    },
+    "spell_fx_many_load": {
+      "file": "spell_fx_many_load.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_pages": {
+      "file": "spell_fx_pages.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.41
+    },
+    "spell_fx_pic": {
+      "file": "spell_fx_pic.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_pose": {
+      "file": "spell_fx_pose.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_punch": {
+      "file": "spell_fx_punch.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_rapid_swish": {
+      "file": "spell_fx_rapid_swish.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_setag_302": {
+      "file": "spell_fx_setag_302.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_setag_307": {
+      "file": "spell_fx_setag_307.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_setag_309a": {
+      "file": "spell_fx_setag_309a.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_setag_309b": {
+      "file": "spell_fx_setag_309b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_setag_310": {
+      "file": "spell_fx_setag_310.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.22
+    },
+    "spell_fx_setag_load": {
+      "file": "spell_fx_setag_load.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_tchak": {
+      "file": "spell_fx_tchak.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_vlad_801": {
+      "file": "spell_fx_vlad_801.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_vlad_802": {
+      "file": "spell_fx_vlad_802.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.35
+    },
+    "spell_fx_vlad_803": {
+      "file": "spell_fx_vlad_803.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.21
+    },
+    "spell_fx_vlad_804": {
+      "file": "spell_fx_vlad_804.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.12
+    },
+    "spell_fx_vlad_806": {
+      "file": "spell_fx_vlad_806.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.13
+    },
+    "spell_fx_vlad_807": {
+      "file": "spell_fx_vlad_807.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.14
+    },
+    "spell_fx_vlad_812": {
+      "file": "spell_fx_vlad_812.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.03
+    },
+    "spell_fx_vlad_813": {
+      "file": "spell_fx_vlad_813.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.11
+    },
+    "spell_fx_cc_jet": {
+      "file": "spell_fx_cc_jet.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.01
+    },
+    "spell_fx_cc_lakam": {
+      "file": "spell_fx_cc_lakam.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.07
+    },
+    "spell_fx_vlad_805": {
+      "file": "spell_fx_vlad_805.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.06
+    },
+    "spell_fx_setag_305": {
+      "file": "spell_fx_setag_305.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.49
+    },
+    "spell_fx_setag_303": {
+      "file": "spell_fx_setag_303.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.49
+    },
+    "spell_fx_wab_2005b": {
+      "file": "spell_fx_wab_2005b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.37
+    },
+    "spell_fx_setag_301": {
+      "file": "spell_fx_setag_301.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_cc_vlad": {
+      "file": "spell_fx_cc_vlad.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.42
+    },
+    "spell_fx_vol": {
+      "file": "spell_fx_vol.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_cc_many": {
+      "file": "spell_fx_cc_many.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.35
+    },
+    "spell_fx_many_load2": {
+      "file": "spell_fx_many_load2.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_jet_912b": {
+      "file": "spell_fx_jet_912b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_cc_setag": {
+      "file": "spell_fx_cc_setag.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.09
+    },
+    "spell_fx_jet_904": {
+      "file": "spell_fx_jet_904.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.5
+    },
+    "spell_fx_arty_101": {
+      "file": "spell_fx_arty_101.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.21
+    },
+    "spell_fx_arty_102": {
+      "file": "spell_fx_arty_102.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_arty_104": {
+      "file": "spell_fx_arty_104.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_arty_105": {
+      "file": "spell_fx_arty_105.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_arty_111": {
+      "file": "spell_fx_arty_111.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_arty_spell": {
+      "file": "spell_fx_arty_spell.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_bat_ailes": {
+      "file": "spell_fx_bat_ailes.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.13
+    },
+    "spell_fx_cassage_bois": {
+      "file": "spell_fx_cassage_bois.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.1
+    },
+    "spell_fx_cc_arty": {
+      "file": "spell_fx_cc_arty.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.12
+    },
+    "spell_fx_cc_dodge": {
+      "file": "spell_fx_cc_dodge.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.22
+    },
+    "spell_fx_cc_grina": {
+      "file": "spell_fx_cc_grina.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.15
+    },
+    "spell_fx_cc_licrounch": {
+      "file": "spell_fx_cc_licrounch.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_dodge_601": {
+      "file": "spell_fx_dodge_601.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.5
+    },
+    "spell_fx_dodge_604": {
+      "file": "spell_fx_dodge_604.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.12
+    },
+    "spell_fx_dodge_605": {
+      "file": "spell_fx_dodge_605.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_dodge_607": {
+      "file": "spell_fx_dodge_607.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.12
+    },
+    "spell_fx_dodge_610": {
+      "file": "spell_fx_dodge_610.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_dodge_613a": {
+      "file": "spell_fx_dodge_613a.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.29
+    },
+    "spell_fx_dodge_614": {
+      "file": "spell_fx_dodge_614.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.15
+    },
+    "spell_fx_dodge_615": {
+      "file": "spell_fx_dodge_615.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.03
+    },
+    "spell_fx_dodge_616a": {
+      "file": "spell_fx_dodge_616a.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.24
+    },
+    "spell_fx_dodge_616b": {
+      "file": "spell_fx_dodge_616b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_drink1": {
+      "file": "spell_fx_drink1.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_drink_burp": {
+      "file": "spell_fx_drink_burp.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_eca_attak": {
+      "file": "spell_fx_eca_attak.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.1
+    },
+    "spell_fx_ecu_cast": {
+      "file": "spell_fx_ecu_cast.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.22
+    },
+    "spell_fx_feuillage": {
+      "file": "spell_fx_feuillage.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.1
+    },
+    "spell_fx_grina_701": {
+      "file": "spell_fx_grina_701.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_grina_702": {
+      "file": "spell_fx_grina_702.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.07
+    },
+    "spell_fx_grina_703": {
+      "file": "spell_fx_grina_703.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_grina_704": {
+      "file": "spell_fx_grina_704.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.07
+    },
+    "spell_fx_grina_705": {
+      "file": "spell_fx_grina_705.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_grina_706": {
+      "file": "spell_fx_grina_706.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_grina_707": {
+      "file": "spell_fx_grina_707.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.05
+    },
+    "spell_fx_grina_709": {
+      "file": "spell_fx_grina_709.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_grina_709b": {
+      "file": "spell_fx_grina_709b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_grina_710": {
+      "file": "spell_fx_grina_710.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_grina_711": {
+      "file": "spell_fx_grina_711.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_grina_load": {
+      "file": "spell_fx_grina_load.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_herbe": {
+      "file": "spell_fx_herbe.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.29
+    },
+    "spell_fx_licrounch_1001": {
+      "file": "spell_fx_licrounch_1001.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.31
+    },
+    "spell_fx_licrounch_1001b": {
+      "file": "spell_fx_licrounch_1001b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.2
+    },
+    "spell_fx_licrounch_1003": {
+      "file": "spell_fx_licrounch_1003.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_licrounch_1008": {
+      "file": "spell_fx_licrounch_1008.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.23
+    },
+    "spell_fx_licrounch_1013": {
+      "file": "spell_fx_licrounch_1013.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.22
+    },
+    "spell_fx_licrounch_1014": {
+      "file": "spell_fx_licrounch_1014.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_licrounch_arbre": {
+      "file": "spell_fx_licrounch_arbre.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_little_cat": {
+      "file": "spell_fx_little_cat.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.11
+    },
+    "spell_fx_mage_incantations": {
+      "file": "spell_fx_mage_incantations.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.34
+    },
+    "spell_fx_panda_gaz": {
+      "file": "spell_fx_panda_gaz.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.04
+    },
+    "spell_fx_panda_gloups": {
+      "file": "spell_fx_panda_gloups.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.12
+    },
+    "spell_fx_panda_load": {
+      "file": "spell_fx_panda_load.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.25
+    },
+    "spell_fx_panda_molotov": {
+      "file": "spell_fx_panda_molotov.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.04
+    },
+    "spell_fx_panda_souillure": {
+      "file": "spell_fx_panda_souillure.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.07
+    },
+    "spell_fx_panda_vague": {
+      "file": "spell_fx_panda_vague.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.08
+    },
+    "spell_fx_pissenli": {
+      "file": "spell_fx_pissenli.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.36
+    },
+    "spell_fx_poupee": {
+      "file": "spell_fx_poupee.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.3
+    },
+    "spell_fx_rapid_swishes_shorter": {
+      "file": "spell_fx_rapid_swishes_shorter.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
+    },
+    "spell_fx_sacrieur_1050": {
+      "file": "spell_fx_sacrieur_1050.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.03
+    },
+    "spell_fx_sacrieur_1050b": {
+      "file": "spell_fx_sacrieur_1050b.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.03
+    },
+    "spell_fx_sacrieur_1051": {
+      "file": "spell_fx_sacrieur_1051.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.15
+    },
+    "spell_fx_sacrieur_1053": {
+      "file": "spell_fx_sacrieur_1053.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_sacrieur_1054": {
+      "file": "spell_fx_sacrieur_1054.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.31
+    },
+    "spell_fx_sacrieur_load1": {
+      "file": "spell_fx_sacrieur_load1.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.23
+    },
+    "spell_fx_sacrieur_load2": {
+      "file": "spell_fx_sacrieur_load2.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.18
+    },
+    "spell_fx_sacrieur_load3": {
+      "file": "spell_fx_sacrieur_load3.mp3",
+      "volume": 0.8,
+      "onset_seconds": 0.19
     }
   },
   "spells": {

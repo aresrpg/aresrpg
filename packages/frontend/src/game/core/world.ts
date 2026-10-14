@@ -926,6 +926,8 @@ export const create_world = ({
     pick_fight_cell: engine.pick_fight_cell,
     // the rest of the fight presentation, forwarded beside the board doors above — the surface
     // that mounts a board here drives its cues and its models through the same handle
+    prepare_fight_effects: engine.prepare_fight_effects,
+    prepare_fight_cue: engine.prepare_fight_cue,
     play_fight_cue: engine.play_fight_cue,
     animate_entity: engine.animate_entity,
     project_entity: engine.project_entity,
@@ -1007,7 +1009,6 @@ export const create_world = ({
           id: `gather:${next.character_id}:${Date.now()}`,
           type: 'cast',
           caster_id: next.character_id,
-          self_cast: true,
           spell: 'gather',
           cast_level: 0,
           target_cell: 0,

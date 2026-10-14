@@ -46,3 +46,8 @@ export {
   type WorldRecipe,
 } from './world_recipe.ts'
 export { sample_biome_cell, sample_biome_grid, type BiomeGrid } from './biome_grid.ts'
+
+export { SPELL_EFFECT_CLASSES, spell_effect_timing } from './spell_effect_recipe.ts'
+export { create_source as create_authored_spell_source } from './generated/claude_spell_source.js'
+export type { ClaudeSpell, ClaudeSoundEvent } from './generated/claude_spell_source.js'
+export type { SpellEffectClass, SpellEffectRecipe } from './spell_effect_recipe.ts'

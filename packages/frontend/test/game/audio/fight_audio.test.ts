@@ -19,7 +19,6 @@ const cast_cue = Object.freeze({
   id: 'fight:1:0',
   type: 'cast',
   caster_id: 'fight_character_0',
-  self_cast: false,
   spell: 'Inferno',
   cast_level: 1,
   target_cell: 12,
@@ -48,7 +47,7 @@ describe('fight audio', () => {
 
   test('keeps the exact cast, impact, critical, death, and area layers on cue phases', () => {
     const played: string[] = []
-    const observe = create_fight_audio_observer(
+    const { observe } = create_fight_audio_observer(
       (key) => played.push(key),
       () => 0
     )
@@ -73,7 +72,7 @@ describe('fight audio', () => {
 
   test('plays the resolved impact family when a trap triggers', () => {
     const played: string[] = []
-    const observe = create_fight_audio_observer(
+    const { observe } = create_fight_audio_observer(
       (key) => played.push(key),
       () => 0
     )
@@ -96,7 +95,7 @@ describe('fight audio', () => {
 
   test('keeps the landing impact sound when a trap stores its damage', () => {
     const played: string[] = []
-    const observe = create_fight_audio_observer(
+    const { observe } = create_fight_audio_observer(
       (key) => played.push(key),
       () => 0
     )
@@ -137,7 +136,7 @@ describe('fight audio', () => {
 
 test('a named buff plays its recovered cast once, even with zero damage', () => {
   const played: string[] = []
-  const observe = create_fight_audio_observer((key) => played.push(key))
+  const { observe } = create_fight_audio_observer((key) => played.push(key))
   const buff = { ...cast_cue, spell: 'Power', amount: 0, critical: false, killed: false } as const
   observe(buff, 'start', {})
   observe(buff, 'complete', {})
@@ -146,7 +145,7 @@ test('a named buff plays its recovered cast once, even with zero damage', () => 
 
 test('a named damage spell retains critical/death cues without generic cast masking', () => {
   const played: string[] = []
-  const observe = create_fight_audio_observer((key) => played.push(key))
+  const { observe } = create_fight_audio_observer((key) => played.push(key))
   const wrath = { ...cast_cue, spell: "Senshi's Wrath" } as const
   observe(wrath, 'start', {})
   observe(wrath, 'complete', {})

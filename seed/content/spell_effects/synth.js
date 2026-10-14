@@ -1,0 +1,96 @@
+// Sound built from scratch. Recipe taken from studying recorded spell sounds:
+// dense noise, strongest below 1 kHz, chopped into fast gusts, highs dying sooner than lows, no musical pitch.
+const SR = 32000;
+const BANDS = [70, 140, 280, 560, 1100, 2200, 4400, 8000, 12500];
+const synth_all = () => {
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const white = n => Float32Array.from({ length: n }, () => Math.random() * 2 - 1);
+  const bandpass = (x, f, q) => {
+    const w = 2 * Math.PI * f / SR, alpha = Math.sin(w) / (2 * q), a0 = 1 + alpha;
+    const b0 = alpha / a0, a1 = -2 * Math.cos(w) / a0, a2 = (1 - alpha) / a0;
+    const y = new Float32Array(x.length);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let i = 0; i < x.length; i++) {
+      const v = b0 * (x[i] - x2) - a1 * y1 - a2 * y2;
+      x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+    }
+    return y;
+  };
+  // gusts: the level jumps to a new random value many times a second
+  const gusts = (n, rate, depth) => {
+    const g = new Float32Array(n);
+    let i = 0, cur = 1;
+    while (i < n) {
+      const len = Math.max(48, Math.floor(SR / rate * rnd(.4, 1.6))), target = 1 - depth * Math.random();
+      for (let j = 0; j < len && i < n; j++, i++) { cur += (target - cur) * .03; g[i] = cur; }
+    }
+    return g;
+  };
+  const sound = o => {
+    const n = Math.floor(o.dur * SR), out = new Float32Array(n), src = white(n);
+    BANDS.forEach((f, bi) => {
+      if (f < (o.lo || 0) || f > (o.hi || 2e4)) return;
+      const u = bi / (BANDS.length - 1), decay = o.dec[0] * Math.pow(o.dec[1] / o.dec[0], u);
+      const gain = Math.pow(10, -(o.tilt || 0) * Math.log2(f / 70) / 20);
+      const band = bandpass(src, f, 1.1), g = gusts(n, (o.rate || 30) * (.7 + u * .8), o.depth === undefined ? .7 : o.depth);
+      for (let i = 0; i < n; i++) {
+        const t = i / SR;
+        const env = o.env ? o.env(t, u) : Math.min(1, t / o.att) * Math.exp(-Math.max(0, t - o.att) / decay);
+        out[i] += band[i] * g[i] * env * gain;
+      }
+    });
+    // narrow ringing bands: wind whistle, a blade edge
+    (o.res || []).forEach(r => {
+      const band = bandpass(src, r.f, r.q), g = gusts(n, 9, .5);
+      for (let i = 0; i < n; i++) { const t = i / SR; out[i] += band[i] * g[i] * Math.min(1, t / (r.att || .01)) * Math.exp(-t / r.dec) * r.gain * 14; }
+    });
+    let peak = 0;
+    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(out[i]));
+    for (let i = 0; i < n; i++) out[i] /= peak || 1;
+    // body: a short low thud whose pitch falls
+    if (o.sub) { let ph = 0; for (let i = 0; i < n; i++) { const t = i / SR; ph += 2 * Math.PI * (o.sub[1] + (o.sub[0] - o.sub[1]) * Math.exp(-t / .04)) / SR; out[i] += Math.sin(ph) * Math.exp(-t / o.sub[2]) * o.sub[3]; } }
+    if (o.click) { const len = Math.floor(SR * .01); for (let i = 0; i < len; i++) out[i] += (Math.random() * 2 - 1) * o.click * (1 - i / len); }
+    // small events scattered in time: bubbles for water, falling stones for earth
+    (o.ticks || []).forEach(k => {
+      for (let j = 0; j < k.count; j++) {
+        const start = Math.floor(rnd(k.from, k.to) * SR), len = Math.floor(rnd(k.len[0], k.len[1]) * SR), f = rnd(k.f[0], k.f[1]), amp = rnd(.3, 1) * k.gain;
+        let lp = 0, ph = Math.random() * 6;
+        for (let i = 0; i < len && start + i < n; i++) {
+          const e = Math.exp(-i / (len / 4)) * Math.min(1, i / 16);
+          if (k.kind === 'bubble') { ph += 2 * Math.PI * f * (1 + 1.2 * i / len) / SR; out[start + i] += Math.sin(ph) * e * amp; }
+          else { lp += ((Math.random() * 2 - 1) - lp) * Math.min(1, 2 * Math.PI * f / SR); out[start + i] += lp * e * amp * 3; }
+        }
+      }
+    });
+    const fade = Math.floor(SR * .03);
+    for (let i = 0; i < n; i++) out[i] = Math.tanh(out[i] * (o.drive || 1.6)) * Math.min(1, (n - i) / fade) * (o.level || .9);
+    return out;
+  };
+  const swell = (rise, fall) => (t, u) => t < rise ? Math.pow(t / rise, 1.6) : Math.exp(-(t - rise) / (fall * (1 - .65 * u)));
+  const stones = (from, to, count) => ({ kind: 'rock', count, from, to, len: [.03, .09], f: [250, 1100], gain: .5 });
+  const bubbles = (from, to, count) => ({ kind: 'bubble', count, from, to, len: [.015, .05], f: [500, 2200], gain: .28 });
+  return {
+    cast_fire: sound({ dur: 1.8, env: swell(.3, .55), dec: [1, 1], tilt: 5, rate: 38, depth: .85, lo: 100 }),
+    impact_fire: sound({ dur: 1.9, att: .008, dec: [.55, .13], tilt: 4, rate: 40, depth: .8, sub: [110, 45, .12, 0.48], click: .5 }),
+    aoe_fire: sound({ dur: 2.4, att: .02, dec: [.9, .2], tilt: 5, rate: 30, depth: .85, sub: [90, 38, .2, 0.42] }),
+    cast_water: sound({ dur: 1.6, env: swell(.25, .4), dec: [1, 1], tilt: 3.5, rate: 22, depth: .9, lo: 200, ticks: [bubbles(.05, 1.2, 14)] }),
+    impact_water: sound({ dur: 1.1, att: .005, dec: [.16, .24], tilt: 1.5, rate: 45, depth: .95, lo: 250, sub: [100, 50, .08, 0.3], ticks: [bubbles(.05, .8, 18)] }),
+    aoe_water: sound({ dur: 1.7, att: .01, dec: [.5, .3], tilt: 3, rate: 28, depth: .9, lo: 120, ticks: [bubbles(.1, 1.4, 22)] }),
+    cast_air: sound({ dur: 1.5, env: swell(.4, .35), dec: [1, 1], tilt: 2.5, rate: 10, depth: .5, lo: 250, res: [{ f: 1800, q: 7, dec: .7, att: .3, gain: .5 }] }),
+    impact_air: sound({ dur: 1.1, att: .01, dec: [.3, .2], tilt: 3, rate: 14, depth: .6, lo: 130, click: .4, sub: [120, 60, .06, 0.24] }),
+    aoe_air: sound({ dur: 2.4, att: .05, dec: [.5, .3], tilt: 3, rate: 12, depth: .6, lo: 130, res: [{ f: 2100, q: 5, dec: 1.1, att: .1, gain: .6 }, { f: 1300, q: 6, dec: .8, att: .2, gain: .4 }] }),
+    cast_earth: sound({ dur: 1.8, env: swell(.35, .4), dec: [1, 1], tilt: 6, rate: 30, depth: .9, hi: 5000, ticks: [stones(.1, 1.2, 9)] }),
+    impact_earth: sound({ dur: 1.3, att: .005, dec: [.45, .1], tilt: 5.5, rate: 34, depth: .9, sub: [95, 34, .2, 0.66], click: .8, ticks: [stones(.05, .7, 8)] }),
+    aoe_earth: sound({ dur: 2.1, att: .02, dec: [.8, .15], tilt: 6, rate: 26, depth: .9, sub: [80, 30, .3, 0.54], ticks: [stones(.2, 1.7, 16)] }),
+    cast_shadow: sound({ dur: 1.6, env: swell(.45, .4), dec: [1, 1], tilt: 7, rate: 9, depth: .55, hi: 3000, sub: [60, 44, .7, .25] }),
+    cast_neutral: sound({ dur: 1.6, env: swell(.55, .4), dec: [1, 1], tilt: 1.5, rate: 16, depth: .5, lo: 500 }),
+    shot: sound({ dur: .5, att: .002, dec: [.1, .05], tilt: 2, rate: 60, depth: .5, lo: 250, click: 1, sub: [190, 70, .05, 0.42] }),
+    heavy: sound({ dur: 1.2, att: .003, dec: [.6, .03], tilt: 7, rate: 25, depth: .7, sub: [125, 30, .3, 0.78], click: 1 }),
+    knock: sound({ dur: 1.2, att: .004, dec: [.35, .1], tilt: 4.5, rate: 30, depth: .8, sub: [140, 50, .1, 0.6], click: .8 }),
+    absorb: sound({ dur: 1.5, env: t => t < 1.1 ? Math.pow(t / 1.1, 2.2) : Math.exp(-(t - 1.1) / .07), dec: [1, 1], tilt: 3, rate: 20, depth: .7, lo: 130,
+      res: [{ f: 6000, q: 8, dec: .9, att: .9, gain: .25 }] }),
+    debuff: sound({ dur: 2.2, env: t => Math.min(1, t / .12) * Math.exp(-t / 1.1) * (.75 + .25 * Math.sin(t * 38)), dec: [1, 1], tilt: 0, rate: 6, depth: .4, lo: 250, hi: 2500, drive: 2.4 }),
+    buff: sound({ dur: 1.8, env: swell(.5, .45), dec: [1, 1], tilt: 0, rate: 26, depth: .85, lo: 800, res: [{ f: 5200, q: 9, dec: .8, att: .4, gain: .25 }] }),
+    crit: sound({ dur: 1, att: .003, dec: [.3, .12], tilt: 3, rate: 30, depth: .6, click: 1, res: [{ f: 3000, q: 12, dec: .35, gain: .5 }, { f: 6500, q: 14, dec: .25, gain: .4 }] }),
+  };
+};

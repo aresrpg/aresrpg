@@ -78,6 +78,7 @@ export const scene_fight_view = (scene: SceneHandle, ambient = false) => {
     set_entities: (entities: readonly EntityRender[]) =>
       ambient ? scene.set_nearby_entities(entities) : scene.set_entities(entities),
     animate_entity: scene.animate_entity,
+    prepare_fight_cue: scene.prepare_fight_cue,
     play_fight_cue: scene.play_fight_cue,
     project_entity: scene.project_entity,
     create_blob: scene.create_fight_blob,
@@ -107,6 +108,7 @@ export const FightViewport = ({
   blob_overlays = Object.freeze([]),
   presentation_request,
   on_presentation_cue,
+  prepare_presentation_cue,
   on_presentation_active,
   show_start_cells = true,
   entities = EMPTY_ENTITIES,
@@ -122,6 +124,7 @@ export const FightViewport = ({
   on_cell_hover?: (cell: bigint | null) => void
   blob_request?: Readonly<{ sequence: number; blob: FightBlobSpec }> | null
   blob_overlays?: readonly FightBlobOverlay[]
+  prepare_presentation_cue?: (cue: FightPresentationCue) => Promise<void>
   on_presentation_cue?: (cue: FightPresentationCue, phase: FightCuePhase) => void
   on_presentation_active?: (active: boolean) => void
   presentation_request?: Readonly<{
@@ -138,6 +141,8 @@ export const FightViewport = ({
    *  could find "the live scene" on its own will eventually draw into somebody else's. */
   scene: SceneHandle
 }>) => {
+  const prepare_ref = useRef(prepare_presentation_cue)
+  prepare_ref.current = prepare_presentation_cue
   const view_ref = useRef<ReturnType<typeof scene_fight_view> | null>(null)
   const presenter_ref = useRef<ReturnType<typeof create_fight_presenter> | null>(null)
   const initial_quality_ref = useRef(quality)
@@ -180,6 +185,10 @@ export const FightViewport = ({
       hover_ref.current?.(cell === null ? null : BigInt(cell))
     }
     presenter_ref.current = create_fight_presenter({
+      prepare: async (cue) => {
+        const [prepared] = await Promise.all([view.prepare_fight_cue(cue), prepare_ref.current?.(cue)])
+        return prepared
+      },
       play: view.play_fight_cue,
       observe: (cue, phase) => cue_observer_ref.current?.(cue, phase),
     })

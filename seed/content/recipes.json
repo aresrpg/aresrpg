@@ -922,24 +922,24 @@
   {
     "output_type": "potion_of_thebes",
     "inputs": {
-      "golden_lorito_feather": 1,
-      "water": 5
+      "water": 3,
+      "lorito_down": 3
     },
     "job": "ALCHEMIST"
   },
   {
     "output_type": "potion_of_the_ruins",
     "inputs": {
-      "water": 5,
-      "araknomath_venom_gland": 1
+      "water": 3,
+      "aragne_carapace": 3
     },
     "job": "ALCHEMIST"
   },
   {
     "output_type": "potion_of_fuwage",
     "inputs": {
-      "water": 5,
-      "golden_fleece": 1
+      "water": 10,
+      "fuwa_horn": 5
     },
     "job": "ALCHEMIST"
   },

@@ -7,6 +7,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { class_names } from '@aresrpg/immutable'
+import { createCanvas, loadImage } from '@napi-rs/canvas'
 import type { Plugin } from 'vite'
 
 import { character_model_basenames } from './src/content/character_model_catalog.ts'
@@ -44,7 +45,7 @@ const character_asset_rows = (characters_dir: string): readonly DisplayAssetRow[
     class_names.flatMap((classe) =>
       ([true, false] as const).map((male) => {
         const sex = male ? 'male' : 'female'
-        const source_name = `${character_model_basenames(classe, male).body}.jpg`
+        const source_name = `${character_model_basenames(classe, male).body}.png`
         return Object.freeze({
           content_type: 'image/jpeg' as const,
           output_name: `classe/${classe}_${sex}.jpg`,
@@ -66,6 +67,17 @@ export const display_asset_for_route = async (
   route: string
 ): Promise<DisplayAssetRow | null> => (await display_asset_rows(directories)).find((row) => row.route === route) ?? null
 
+export const display_asset_bytes = async (row: DisplayAssetRow): Promise<Uint8Array> => {
+  if (row.content_type === 'image/png') return readFile(row.source_path)
+  const image = await loadImage(row.source_path)
+  const canvas = createCanvas(image.width, image.height)
+  const context = canvas.getContext('2d')
+  context.fillStyle = '#09090e'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(image, 0, 0)
+  return canvas.encode('jpeg', 92)
+}
+
 export const display_assets_plugin = (
   directories: Readonly<{ characters_dir: string; items_dir: string }>
 ): readonly Plugin[] => {
@@ -75,7 +87,7 @@ export const display_assets_plugin = (
     async buildStart() {
       for (const row of await display_asset_rows(directories))
         // eslint-disable-next-line functional/no-this-expressions -- Vite binds its required plugin context to this hook.
-        this.emitFile({ type: 'asset', fileName: row.output_name, source: await readFile(row.source_path) })
+        this.emitFile({ type: 'asset', fileName: row.output_name, source: await display_asset_bytes(row) })
     },
   }
   const serve_plugin: Plugin = {
@@ -90,7 +102,7 @@ export const display_assets_plugin = (
         void display_asset_for_route(directories, path)
           .then(async (row) => {
             if (!row) return next()
-            const source = await readFile(row.source_path)
+            const source = await display_asset_bytes(row)
             response.writeHead(200, {
               'cache-control': 'public, max-age=3600',
               'content-length': source.byteLength,

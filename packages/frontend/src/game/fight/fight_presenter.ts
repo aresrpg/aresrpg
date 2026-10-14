@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// One serial presentation queue for local, streamed, and reconciled fight event batches.
+// One strict presentation queue for local, streamed, and reconciled fight event batches.
 
 import type { FightPresentationCue } from '@aresrpg/engine'
 
@@ -10,10 +10,12 @@ const MOB_TURN_ANTICIPATION_MS = 1_000
 
 export const create_fight_presenter = ({
   play,
+  prepare = (cue) => Promise.resolve(cue),
   observe = () => {},
   now = () => performance.now(),
   wait = (milliseconds) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
 }: Readonly<{
+  prepare?: (cue: FightPresentationCue) => Promise<FightPresentationCue>
   play: (cue: FightPresentationCue) => Promise<boolean>
   observe?: (cue: FightPresentationCue, phase: FightCuePhase) => void
   now?: () => number
@@ -33,20 +35,21 @@ export const create_fight_presenter = ({
 
   const present_one = async (cue: FightPresentationCue): Promise<void> => {
     if (disposed) return
-    if (cue.type === 'turn') {
-      const remaining = turn_floor_remaining()
-      if (remaining > 0) await wait(remaining)
-      if (disposed) return
-      turn_shown_at = now()
-      turn_min_ms = cue.min_ms ?? 0
-    }
-    observe(cue, 'start')
+    let prepared = cue
     try {
-      await play(cue)
+      prepared = await prepare(cue)
+      if (prepared.type === 'turn') {
+        await wait_for_turn_floor()
+        turn_shown_at = now()
+        turn_min_ms = prepared.min_ms ?? 0
+      }
+      if (disposed) return
+      observe(prepared, 'start')
+      await play(prepared)
     } catch (error) {
       console.error(`Fight presentation cue ${cue.id} failed.`, error)
     }
-    if (!disposed) observe(cue, 'complete')
+    if (!disposed) observe(prepared, 'complete')
     if (cue.type === 'turn' && turn_min_ms > 0) await wait(Math.min(MOB_TURN_ANTICIPATION_MS, turn_min_ms))
   }
 

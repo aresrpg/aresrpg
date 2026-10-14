@@ -117,6 +117,7 @@ const reconcile_fight = (
           Object.freeze({
             batch: input.presentation_batch,
             before: presentation_start_checkpoint(previous_checkpoint, input.checkpoint),
+            before_zone_ids: Object.freeze([...previous.zone_ids]),
             checkpoint: input.checkpoint,
             zone_ids: Object.freeze([...input.zone_ids]),
             events: Object.freeze([...input.events]),

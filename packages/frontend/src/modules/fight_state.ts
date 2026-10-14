@@ -15,6 +15,7 @@ import type { NearbyFight } from './nearby_fight.ts'
 export type FightPresentationBatch = Readonly<{
   batch: number
   before: HydratedFightCheckpoint
+  before_zone_ids?: readonly string[]
   checkpoint: HydratedFightCheckpoint
   zone_ids: readonly string[]
   events: readonly FightEvent[]

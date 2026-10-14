@@ -376,6 +376,14 @@ export const create_engine = ({
       backend?.set_portal_label(element)
     },
     animate_entity: (motion) => backend?.animate_entity(motion) ?? Promise.resolve(false),
+    prepare_fight_effects: async (urls) => {
+      await boot_task
+      await backend?.prepare_fight_effects(urls)
+    },
+    prepare_fight_cue: async (cue) => {
+      await boot_task
+      return backend?.prepare_fight_cue(cue) ?? cue
+    },
     play_fight_cue: (cue) =>
       disposed || status.state === 'failed'
         ? Promise.resolve(false)

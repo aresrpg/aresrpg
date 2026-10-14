@@ -10,6 +10,7 @@ import * as entities from '../src/entities.ts'
 import { world_terrain } from '../src/world_catalog.ts'
 import { compile_runtime_world_recipe } from '../src/world_recipe.ts'
 
+Reflect.set(globalThis, 'matchMedia', () => ({ matches: false }))
 const released: string[] = []
 let device_destroyed = 0
 let original_loss = 0
@@ -59,6 +60,7 @@ mock.module('../src/character_crowd.ts', () => ({
 mock.module('../src/caption_layer.ts', () => ({ create_caption_layer: () => resource('captions') }))
 mock.module('../src/entity_labels.ts', () => ({ create_entity_label_layer: () => resource('labels') }))
 mock.module('../src/transient_effects.ts', () => ({ create_transient_effects: () => resource('effects') }))
+mock.module('../src/spell_effect_layer.ts', () => ({ create_spell_effect_layer: () => resource('spells') }))
 mock.module('../src/clouds.ts', () => ({ create_clouds: () => resource('clouds') }))
 mock.module('../src/terrain_pool.ts', () => ({
   create_terrain_pool: () => {
@@ -72,6 +74,7 @@ await assert.rejects(
 )
 assert.deepEqual(released, [
   'clouds',
+  'spells',
   'effects',
   'labels',
   'captions',

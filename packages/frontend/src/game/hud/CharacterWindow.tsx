@@ -62,7 +62,6 @@ export const CharacterWindow = ({
         data-character-panel={tab}
         title={title}
         icon={<CarvedIcon name={tab_layout.icon} />}
-        hotkey="E"
         meta={`${character.name} · ${character.level}`}
         close={close}
         close_label={copy.wallet_close}

@@ -28,7 +28,7 @@ describe('fight presenter', () => {
 
     const batch = presenter.present([turn('a'), turn('b')])
     expect(batch).toBeInstanceOf(Promise)
-    await Promise.resolve()
+    await Bun.sleep(0)
     expect(log).toEqual(['start:a', 'play:a'])
     pending.shift()?.()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -81,4 +81,93 @@ describe('fight presenter', () => {
       'complete:player',
     ])
   })
+})
+
+test('cast, forced displacement and damage retain their completion barriers', async () => {
+  const log: string[] = []
+  const pending: Array<() => void> = []
+  const presenter = create_fight_presenter({
+    wait: async () => {},
+    play: (cue) =>
+      new Promise<boolean>((resolve) => {
+        log.push(`play:${cue.type}`)
+        pending.push(() => resolve(true))
+      }),
+    observe: (cue, phase) => log.push(`${phase}:${cue.type}`),
+  })
+  const cast = {
+    id: 'cast',
+    type: 'cast',
+    caster_id: 'aragne',
+    spell: 'Undertow Fang',
+    cast_level: 0,
+    target_cell: 1,
+    element: 'water',
+    style: 'pull',
+    critical: false,
+    amount: 30,
+    target_max_hp: 100,
+    affected_cells: [1],
+    killed: false,
+  } as const
+  const pull = {
+    id: 'pull',
+    type: 'movement',
+    entity_id: 'hero',
+    source_id: 'aragne',
+    cells: [2, 3],
+    mode: 'pull',
+    gait: 'slide',
+    mp_spent: 0,
+  } as const
+  const damage = {
+    id: 'damage',
+    type: 'damage',
+    source_id: 'aragne',
+    target_id: 'hero',
+    amount: 30,
+    hp_before: 100,
+    hp_after: 70,
+    element: 'water',
+    cause: 'spell',
+    critical: false,
+  } as const
+  const batch = presenter.present([cast, pull, damage])
+  await Bun.sleep(0)
+  expect(log).toEqual(['start:cast', 'play:cast'])
+  pending.shift()!()
+  await Bun.sleep(0)
+  expect(log).toEqual(['start:cast', 'play:cast', 'complete:cast', 'start:movement', 'play:movement'])
+  pending.shift()!()
+  await Bun.sleep(0)
+  expect(log.at(-1)).toBe('play:damage')
+  expect(log).not.toContain('complete:damage')
+  pending.shift()!()
+  await batch
+  expect(log.at(-1)).toBe('complete:damage')
+  presenter.dispose()
+})
+
+test('terminal presentation does not release its batch before the death animation finishes', async () => {
+  let finish = (_shown: boolean) => {},
+    released = false
+  const presenter = create_fight_presenter({
+    play: () =>
+      new Promise<boolean>((resolve) => {
+        finish = resolve
+      }),
+  })
+  const batch = presenter
+    .present([
+      { id: 'death', type: 'death', entity_id: 'fight_mob_1', source_id: 'fight_character_0', cell: 2, cause: 'spell' },
+    ])
+    .then(() => {
+      released = true
+    })
+  await Bun.sleep(0)
+  expect(released).toBeFalse()
+  finish(true)
+  await batch
+  expect(released).toBeTrue()
+  presenter.dispose()
 })

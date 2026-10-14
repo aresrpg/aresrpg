@@ -271,6 +271,8 @@ export default [
     // Move and the Rust indexer keep their own language-specific gates.
     ignores: [
       '**/generated/*',
+      // Captured author source is checksum-verified, never rewritten by lint.
+      'seed/content/spell_effects/synth.js',
       'packages/move/**',
       'packages/indexer/**',
       '.claude/**',

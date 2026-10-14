@@ -1,0 +1,99 @@
+/* Broad engravings cut into the existing slate buttons. Color identifies the rim, not the symbol. */
+.aui-carved-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  max-width: 100%;
+  max-height: 100%;
+  flex: none;
+}
+.aui-carved-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.aui-window-title > .aui-carved-icon {
+  width: 28px;
+  height: 28px;
+}
+.aui-icon-button > .aui-carved-icon {
+  width: 100%;
+  height: 100%;
+  padding: 1px;
+}
+.aui-button.aui-icon-button:has(> .aui-carved-icon) {
+  --carved-accent: #94a3b2;
+  background: url('./assets/panel_grain.webp'), linear-gradient(155deg, #35404b, #272f39 54%, #202831);
+  background-size:
+    256px 256px,
+    100% 100%;
+  background-blend-mode: soft-light, normal;
+  border-color: color-mix(in srgb, var(--carved-accent) 42%, #424d59);
+  box-shadow:
+    inset 0 1px #d1dae327,
+    inset 0 -2px #11192399,
+    0 2px 4px #0006;
+}
+.aui-button.aui-icon-button:has(> .aui-carved-icon):hover {
+  border-color: color-mix(in srgb, var(--carved-accent) 75%, #65717d);
+  box-shadow:
+    inset 0 1px #e0e7ee38,
+    inset 0 -2px #11192399,
+    0 2px 4px #0006;
+}
+.aui-button.aui-icon-button:has(> .aui-carved-icon)[aria-pressed='true'] {
+  border-color: var(--carved-accent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--carved-accent) 22%, transparent),
+    inset 0 1px #e0e7ee27,
+    inset 0 -2px #11192399;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='inventory']) {
+  --carved-accent: #b7a282;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='stats']) {
+  --carved-accent: #80a7c7;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='spells']) {
+  --carved-accent: #ae91c4;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='jobs']) {
+  --carved-accent: #92ad78;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='runeforge']) {
+  --carved-accent: #c49273;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='map']) {
+  --carved-accent: #75a8a5;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='characters']) {
+  --carved-accent: #a1afa0;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='leaderboard']) {
+  --carved-accent: #c6ae6f;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='mastery']) {
+  --carved-accent: #8ca5be;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='kares']) {
+  --carved-accent: #b8b981;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='encyclopedia']) {
+  --carved-accent: #8c91bf;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='marketplace']) {
+  --carved-accent: #78ad92;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='airdrop']) {
+  --carved-accent: #bc91aa;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='kolizeum']) {
+  --carved-accent: #bb8580;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='settings']) {
+  --carved-accent: #a0abb6;
+}
+.aui-button.aui-icon-button:has(> [data-carved-symbol='admin']) {
+  --carved-accent: #b87979;
+}

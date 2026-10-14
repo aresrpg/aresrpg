@@ -7,6 +7,7 @@ import type { FightPresentationCue } from '@aresrpg/engine'
 import { CHANNELS, EFFECT_KINDS } from '@aresrpg/fight/move_contract'
 import type { HydratedFightCheckpoint, SpellEffect } from '@aresrpg/fight'
 
+import { spell_audio } from './spell_effect_audio.ts'
 import type { FightCuePhase } from '../fight/fight_presenter.ts'
 import {
   ELEMENT_AUDIO_VARIANTS,
@@ -128,6 +129,39 @@ const play_cast = (
   if (cue.affected_cells.length >= 3 && cue.element !== 'heal') emit(variant(cue.element, 'aoe'), 0.32)
 }
 
+const play_damage_audio = (
+  cue: Extract<FightPresentationCue, { type: 'damage' }>,
+  voices: CharacterVoices,
+  emit: (key: string, volume?: number) => void
+): void => {
+  const heavy = cue.critical || cue.hp_after === 0 || cue.amount >= Math.max(1, cue.hp_before * 0.37)
+  emit(heavy ? 'hit_heavy' : 'hit_medium')
+  const male = voices[cue.target_id]
+  if (cue.source_id.startsWith('fight_mob_') && typeof male === 'boolean') emit(male ? 'hurt_male' : 'hurt_female')
+}
+const play_event_audio = (
+  cue: FightPresentationCue,
+  voices: CharacterVoices,
+  variant: (family: string, layer: string) => string,
+  emit: (key: string, volume?: number) => void
+): void => {
+  switch (cue.type) {
+    case 'zone':
+      emit(cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'), 0.5)
+      return
+    case 'damage':
+      return play_damage_audio(cue, voices, emit)
+    case 'absorb':
+      emit(ABSORB[stable_index(cue.id, ABSORB.length)])
+      return
+    case 'movement':
+      if (cue.mode === 'knockback') emit('knockback', 0.32)
+      return
+    default:
+      return
+  }
+}
+
 export const create_fight_audio_observer = (
   emit: (key: string, volume?: number) => void = play_audio,
   random: () => number = Math.random
@@ -139,24 +173,22 @@ export const create_fight_audio_observer = (
     last_variant.set(resolved.family_layer, resolved.variant)
     return resolved.key
   }
-  return (cue: FightPresentationCue, phase: FightCuePhase, character_voices: CharacterVoices): void => {
+  const observe = (cue: FightPresentationCue, phase: FightCuePhase, character_voices: CharacterVoices): void => {
+    if ((cue.type === 'cast' || cue.type === 'zone') && cue.effect) {
+      if (phase === 'start' && emit === play_audio) spell_audio.play(cue.effect)
+      return
+    }
     if (cue.type === 'cast') return play_cast(cue, phase, variant, emit)
     if (phase !== 'start') return
-    if (cue.type === 'zone') {
-      emit(cue.element === 'heal' ? variant('heal', 'cast') : variant(cue.element, 'impact'), 0.5)
-      return
-    }
-    if (cue.type === 'damage') {
-      const heavy = cue.critical || cue.hp_after === 0 || cue.amount >= Math.max(1, cue.hp_before * 0.37)
-      emit(heavy ? 'hit_heavy' : 'hit_medium')
-      const male = character_voices[cue.target_id]
-      if (cue.source_id.startsWith('fight_mob_') && typeof male === 'boolean') emit(male ? 'hurt_male' : 'hurt_female')
-      return
-    }
-    if (cue.type === 'absorb') {
-      emit(ABSORB[stable_index(cue.id, ABSORB.length)])
-      return
-    }
-    if (cue.type === 'movement' && cue.mode === 'knockback') emit('knockback', 0.32)
+    play_event_audio(cue, character_voices, variant, emit)
   }
+  return Object.freeze({
+    observe,
+    prepare: async (cue: FightPresentationCue): Promise<void> => {
+      if (emit === play_audio && (cue.type === 'cast' || cue.type === 'zone') && cue.effect) await spell_audio.prepare()
+    },
+    dispose: (): void => {
+      if (emit === play_audio) spell_audio.cancel()
+    },
+  })
 }

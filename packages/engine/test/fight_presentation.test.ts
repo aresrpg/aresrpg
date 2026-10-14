@@ -5,7 +5,7 @@ import { expect, test } from 'bun:test'
 
 import { create_fight_presentation } from '../src/fight_presentation.ts'
 
-test('cast facing, movement cost, and damage numbers use the serialized presentation edge', async () => {
+test.each(['push', 'buff', 'damage'] as const)('%s uses the shared cast edge', async (style) => {
   const log: string[] = []
   const entities = {
     face_cell: (id: string, cell: number) => {
@@ -40,12 +40,11 @@ test('cast facing, movement cost, and damage numbers use the serialized presenta
     id: 'cast',
     type: 'cast',
     caster_id: 'caster',
-    self_cast: false,
     spell: 'Push',
     cast_level: 1,
     target_cell: 22,
     element: 'air',
-    style: 'push',
+    style,
     critical: false,
     amount: 8,
     target_max_hp: 100,
@@ -112,4 +111,37 @@ test('cast facing, movement cost, and damage numbers use the serialized presenta
     'float:caster:2:mp',
     'beat:target:hit',
   ])
+})
+
+test('a cancelled zone cannot start reactions after its scene has gone away', async () => {
+  const hits: string[] = []
+  let finish_zone = (_played: boolean) => {}
+  const presentation = create_fight_presentation({
+    entities: {
+      beat: (id: string) => {
+        hits.push(id)
+        return Promise.resolve(true)
+      },
+    } as never,
+    vfx: {
+      play_zone: () =>
+        new Promise<boolean>((resolve) => {
+          finish_zone = resolve
+        }),
+    } as never,
+  })
+  const played = presentation.play({
+    id: 'zone',
+    type: 'zone',
+    action: 'trap_triggered',
+    zone_id: 'old-zone',
+    owner_id: 'old-caster',
+    target_id: 'old-target',
+    affected_ids: ['old-target'],
+    cell: 1,
+    element: 'earth',
+  })
+  finish_zone(false)
+  expect(await played).toBeFalse()
+  expect(hits).toEqual([])
 })

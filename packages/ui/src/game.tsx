@@ -18,8 +18,9 @@ export const ProgressBar = ({
   value,
   max,
   detail,
-}: Readonly<{ label: string; value: number; max: number; detail?: ReactNode }>) => (
-  <label className="aui-progress">
+  hint,
+}: Readonly<{ label: string; value: number; max: number; detail?: ReactNode; hint?: string }>) => (
+  <label className="aui-progress" title={hint} aria-label={hint} tabIndex={hint ? 0 : undefined}>
     <span>
       {label}
       <strong>{detail}</strong>
@@ -146,14 +147,13 @@ export const CombatHud = ({
     <div className="aui-combat-spells">{spells}</div>
     <div className="aui-combat-controls">
       {timer && (
-        <div title={timer.hint} aria-label={timer.hint} tabIndex={timer.hint ? 0 : undefined}>
-          <ProgressBar
-            label={timer.label}
-            value={timer.remaining}
-            max={timer.duration}
-            detail={Math.max(0, Math.ceil(timer.remaining))}
-          />
-        </div>
+        <ProgressBar
+          label={timer.label}
+          value={timer.remaining}
+          max={timer.duration}
+          detail={Math.max(0, Math.ceil(timer.remaining))}
+          hint={timer.hint}
+        />
       )}
       {controls}
     </div>
