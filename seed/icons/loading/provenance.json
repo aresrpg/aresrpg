@@ -1,0 +1,22 @@
+{
+  "tool": "OpenAI built-in image_gen; screenshot edits",
+  "retouch_prompt": "LIGHT-TOUCH SCREENSHOT RETOUCH ONLY. The attached image is the edit target, a real AresRPG game screenshot. Preserve every pixel-art texture pattern, large angular polygon leaf clump, voxel cliff face, flat color surface, thick dark outline, camera and all geometry. DO NOT repaint or reconstruct the scene. Do not add leaves, grass, vines, moss, flowers, rocks, buildings, clouds or any detail not in this screenshot. Do not smooth shapes or replace flat stylized surfaces with realistic texture. Keep the exact low-detail game-renderer style. Adjust exposure and local contrast mildly to make the existing shapes read more crisply; reduce some blue haze; add only very subtle warm sunlight and a few soft translucent sun shafts. The result should look like this same engine with a better color grade, not a cinematic remaster or photorealistic Minecraft image. Preserve the full original 16:9 composition. No text, logo, UI or watermark.",
+  "views": [
+    "harbor",
+    "quayside",
+    "valley",
+    "waterfalls",
+    "thebes",
+    "market"
+  ],
+  "note": "Original captures were removed; camera settings remain in sources/cameras.json. WebP exports use quality 88, width 1600. Valley uses the stricter retouch prompt. Geometry, outlines and camera are to be preserved; only lighting and clarity are enhanced.",
+  "prompt": "Use case: lighting-weather. Edit target: this exact AresRPG voxel-engine screenshot. Create a polished 16:9 loading-screen postcard, around 1920x1080 or higher. Keep the exact camera, buildings, terrain, boats, trees, water, snow, composition, silhouettes, block sizes, and distinctive dark voxel outlines unchanged. This must still look like a screenshot of THIS game, not concept art or a different renderer. Improve crisp edge readability and local contrast, clear excessive blue haze while retaining depth, enrich warm sunlight and cool shaded surfaces subtly, add restrained soft directional sun rays consistent with the existing sky. Preserve the game's pixel-textured surfaces. No new objects, people, architecture, labels, text, logos, UI, watermark, photorealism, smooth geometry, excessive bloom or oversharpening halos.",
+  "direction": {
+    "harbor": "Warm sunset; preserve snow, lanterns, turquoise water and existing sun.",
+    "quayside": "Crisp winter daylight, cool turquoise water, slightly warm snow and wood, softly lifted shadows. Preserve boats and architecture.",
+    "valley": "Use retouch_prompt. Preserve flat angular foliage and cliff geometry; do not add realistic foliage.",
+    "waterfalls": "Lush green highlands, clearer distant forest, subtle sun shafts; maintain cliff steps and trees.",
+    "thebes": "Preserve outlined timber houses, warm lanterns and shaded facades; restrained diagonal sunlight.",
+    "market": "Twilight market, lift shadow detail, warm wood and lanterns against cool stone, delicate sunset shafts. No merchandise or people."
+  }
+}

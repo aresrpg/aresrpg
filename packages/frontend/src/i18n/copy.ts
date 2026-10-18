@@ -14,6 +14,31 @@ export type AppCopy = Readonly<{
   item_categories: Readonly<Record<string, string>>
   title: string
   body: string
+  loading_screen: Readonly<{
+    eyebrow: string
+    home_eyebrow: string
+    home_title: string
+    home_description: string
+    demo_eyebrow: string
+    demo_title: string
+    demo_description: string
+    world_eyebrow: string
+    world_title: string
+    world_description: string
+    tip: string
+    previous_tip: string
+    next_tip: string
+    tip_tools: string
+    tip_combat: string
+    tip_party: string
+    tip_map: string
+    step: string
+    resources: string
+    graphics: string
+    world: string
+    final_checks: string
+    ready: string
+  }>
   world_loading_assets: string
   world_loading_graphics: string
   world_loading_terrain: string

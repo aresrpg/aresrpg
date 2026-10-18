@@ -17,6 +17,8 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
   await page.addInitScript(() => {
     let calls: Record<string, { count: number; ms: number; max: number }> = {}
     let draw_counts: Record<number, number> = {}
+    let stalls: { call: string; ms: number; uniform?: string; length?: number }[] = []
+    const uniform_names = new WeakMap<object, string>()
     const wrap = (prototype: object, key: string, label: string) => {
       const original = Reflect.get(prototype, key)
       Reflect.set(
@@ -29,6 +31,15 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
             const start = performance.now()
             const result = Reflect.apply(target, receiver, args)
             const elapsed = performance.now() - start
+            if (label === 'gl.getUniformLocation' && result) uniform_names.set(result, String(args[1]))
+            if (elapsed > 50)
+              stalls.push({
+                call: label,
+                ms: elapsed,
+                ...(label === 'gl.uniformMatrix4fv'
+                  ? { uniform: uniform_names.get(args[0]), length: args[2].length }
+                  : {}),
+              })
             const row = (calls[label] ??= { count: 0, ms: 0, max: 0 })
             row.count += 1
             row.ms += elapsed
@@ -43,7 +54,10 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
       'linkProgram',
       'getShaderParameter',
       'getProgramParameter',
+      'getUniformLocation',
+      'uniformMatrix4fv',
       'texImage2D',
+      'texSubImage2D',
       'drawArrays',
       'drawElements',
       'bufferData',
@@ -54,6 +68,7 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
     Reflect.set(window, 'spell_measure', async (action: () => void | Promise<void>, milliseconds: number) => {
       calls = {}
       draw_counts = {}
+      stalls = []
       const frames: number[] = []
       let previous = performance.now()
       window.workload_on_frame = (now) => {
@@ -75,6 +90,7 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
         max: Math.max(...frames),
         over50: frames.filter((value) => value > 50).length,
         calls,
+        stalls,
       }
     })
   })
@@ -83,14 +99,16 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
   const quality = process.env.PERF_QUALITY ?? 'high'
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpu_rate })
   await cdp.send('Profiler.enable')
+  await cdp.send('Profiler.start')
   await page.goto(`/e2e/fixtures/fight_spells.html?quality=${quality}`)
   await page.waitForFunction(() => Reflect.has(window, 'demo_spell_probe') && window.workload_frame_count > 30, null, {
     timeout: 60000,
   })
-  await page.evaluate(() => Reflect.get(window, 'demo_spell_probe').open('yajin'))
-  const entry = await page.evaluate(() => Reflect.get(window, 'spell_measure')(() => {}, 3000))
+  await expect(page.locator('[data-world-loading]:visible')).toHaveCount(0, { timeout: 60000 })
+  const entry = await page.evaluate(() =>
+    Reflect.get(window, 'spell_measure')(() => Reflect.get(window, 'demo_spell_probe').open('yajin'), 3000)
+  )
   const idle = await page.evaluate(() => Reflect.get(window, 'spell_measure')(() => {}, 3000))
-  await cdp.send('Profiler.start')
   const cold = await page.evaluate(() =>
     Reflect.get(window, 'spell_measure')(() => Reflect.get(window, 'demo_spell_probe').cast('Deviousness'), 6500)
   )
@@ -196,6 +214,12 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
   expect(cold.calls['gl.compileShader']).toBeUndefined()
   expect(cold.calls['gl.bufferData']).toBeUndefined()
   expect(warm.calls['gl.bufferData']).toBeUndefined()
+  expect(entry.max, 'fight entry must not perform multi-second cold preparation').toBeLessThan(500)
+  expect(cold.max, 'the first spell must use a warmed render path').toBeLessThan(100)
+  expect(warm.max, 'actor-mask uploads must not stall a later turn').toBeLessThan(200)
+  expect(followup.max, 'a following spell must not trigger deferred driver work').toBeLessThan(100)
+  expect(sequence.max, 'repeated spells must not stall on bulk skeleton uniforms').toBeLessThan(200)
+  expect(sequence.p95, 'overlapping spells must keep a bounded frame cost').toBeLessThan(50)
   expect(followup.max_spell_passes).toBeGreaterThanOrEqual(2)
   expect(sequence.max_spell_passes).toBeGreaterThanOrEqual(2)
   expect(errors).toEqual([])

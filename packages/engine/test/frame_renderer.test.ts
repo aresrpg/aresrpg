@@ -19,7 +19,6 @@ test('leaving high quality and disposing the pipeline release owned bloom target
     new Scene(),
     new PerspectiveCamera(),
     'high',
-    'world',
     new DirectionalLight(),
     create_sky_node().sun_direction,
     float(0),

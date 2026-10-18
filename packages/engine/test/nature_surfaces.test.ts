@@ -8,7 +8,7 @@ import { herb_fern } from '../src/nature/herb_fern.ts'
 import { herb_tall_grass } from '../src/nature/herb_tall_grass.ts'
 import { herb_bush } from '../src/nature/herb_bush.ts'
 import { flower_bloom } from '../src/nature/flower_bloom.ts'
-import { nature_surface, nature_uv } from '../src/nature/surface_texture.ts'
+import { nature_surface, nature_uv } from '../src/nature/surface.ts'
 
 test('botanical and mineral variants remain deterministic, opaque geometry with bounded triangle budgets', () => {
   for (const builder of [ore_vein, herb_fern, herb_tall_grass, herb_bush, flower_bloom]) {

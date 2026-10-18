@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { readdirSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { renderToStaticMarkup } from 'react-dom/server'
+import { createElement } from 'react'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
@@ -13,6 +15,7 @@ import { parse } from 'yaml'
 
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
+import { LoadingPostcard, type LoadingCopy } from './src/components/LoadingPostcard.tsx'
 import { locale_manifest_plugin } from './locale_assets.ts'
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { require_reporting_dsn } from './src/reporting_config.ts'
@@ -26,7 +29,22 @@ import { gift_dev_plugin } from './gift_dev.ts'
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
 
-const html_env_plugin = (env: PublicEnv): Plugin => {
+const html_env_plugin = (env: PublicEnv, development: boolean): Plugin => {
+  const copy = parse(readFileSync(resolve(frontend_dir, 'src/i18n/locales/en.yaml'), 'utf8')) as LoadingCopy
+  const asset_root = development ? `/@fs/${repo_dir}/seed/icons/loading` : '../../seed/icons/loading'
+  const loading = renderToStaticMarkup(
+    createElement(LoadingPostcard, {
+      copy,
+      context: 'home',
+      image: `${asset_root}/harbor.webp`,
+      wordmark: `${asset_root}/wordmark.webp`,
+      progress: { stage: 'assets', fraction: null },
+      phase: 0,
+      fraction: null,
+      boot: true,
+    })
+  )
+  const loading_css = readFileSync(resolve(frontend_dir, 'src/components/world_loading.css'), 'utf8')
   const values = {
     APP_NAME: env.app_name,
     APP_URL: env.app_url,
@@ -38,11 +56,14 @@ const html_env_plugin = (env: PublicEnv): Plugin => {
   }
   return {
     name: 'aresrpg-html-env',
-    transformIndexHtml: (html) =>
-      Object.entries(values).reduce(
-        (rendered, [name, value]) => rendered.replaceAll(`{{${name}}}`, escape_html(value)),
-        html
-      ),
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html) =>
+        Object.entries(values).reduce(
+          (rendered, [name, value]) => rendered.replaceAll(`{{${name}}}`, escape_html(value)),
+          html.replace('{{LOADING_SCREEN}}', loading).replace('{{LOADING_STYLES}}', loading_css)
+        ),
+    },
   }
 }
 
@@ -52,7 +73,7 @@ const yaml_plugin = (): Plugin => ({
     id.endsWith('.yaml') ? { code: `export default ${JSON.stringify(parse(source))}` } : null,
 })
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   // Env is PER-DEPLOYABLE (owner 2026-08-16): this package's own .env, never a repo-root file.
   const loaded_env = loadEnv(mode, frontend_dir, '')
   if (mode === 'production') require_reporting_dsn(loaded_env)
@@ -99,7 +120,7 @@ export default defineConfig(({ mode }) => {
       gift_dev_plugin(loaded_env),
       solana_rpc_plugin(loaded_env.SOLANA_RPC_URL),
       browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),
-      html_env_plugin(env),
+      html_env_plugin(env, command === 'serve'),
       yaml_plugin(),
       locale_manifest_plugin(manifest),
       ...sound_assets_plugin(resolve(repo_dir, 'seed/sounds')),

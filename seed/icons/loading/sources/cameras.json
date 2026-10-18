@@ -1,0 +1,98 @@
+[
+  {
+    "id": "harbor",
+    "world": "menu",
+    "position": [
+      -12,
+      86,
+      -125
+    ],
+    "target": [
+      0,
+      54,
+      35
+    ],
+    "time": 0.71,
+    "fov": 58
+  },
+  {
+    "id": "quayside",
+    "world": "menu",
+    "position": [
+      0,
+      58,
+      -50
+    ],
+    "target": [
+      0,
+      52,
+      110
+    ],
+    "time": 0.32,
+    "fov": 62
+  },
+  {
+    "id": "valley",
+    "world": "adventure",
+    "position": [
+      190,
+      125,
+      110
+    ],
+    "target": [
+      125,
+      72,
+      235
+    ],
+    "time": 0.31,
+    "fov": 62
+  },
+  {
+    "id": "waterfalls",
+    "world": "adventure",
+    "position": [
+      170,
+      140,
+      310
+    ],
+    "target": [
+      85,
+      80,
+      210
+    ],
+    "time": 0.34,
+    "fov": 60
+  },
+  {
+    "id": "thebes",
+    "world": "nauvis",
+    "position": [
+      440,
+      145,
+      0
+    ],
+    "target": [
+      280,
+      140,
+      0
+    ],
+    "time": 0.31,
+    "fov": 62
+  },
+  {
+    "id": "market",
+    "world": "nauvis",
+    "position": [
+      470,
+      143,
+      0
+    ],
+    "target": [
+      630,
+      137,
+      0
+    ],
+    "time": 0.68,
+    "fov": 62
+  }
+]

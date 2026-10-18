@@ -191,6 +191,7 @@ export const AdventurePage = ({ copy: initial_copy }: Readonly<{ copy: AppCopy }
         )}
         <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
         <WorldLoading
+          context="demo"
           source={world}
           quality={settings.quality}
           render_distance={settings.render_distance}

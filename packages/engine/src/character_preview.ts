@@ -164,12 +164,12 @@ export const create_character_preview = async (
 
   return Object.freeze({
     set_appearance: async (appearance) => {
+      generation += 1
       const next_assets_key = model_assets_key(appearance)
       if (model && next_assets_key === assets_key) {
         model.set_colors(appearance.colors)
         return true
       }
-      generation += 1
       const load_generation = generation
       const next = await create_character_model(appearance)
       if (disposed || load_generation !== generation) {

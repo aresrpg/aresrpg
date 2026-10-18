@@ -41,7 +41,6 @@ export type {
   EngineFrame,
   EngineIssue,
   EngineIssueCode,
-  EnginePresentation,
   EngineRenderState,
   EngineStatus,
   FightBlobRender,

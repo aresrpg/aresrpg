@@ -1,0 +1,8 @@
+[
+  { "id": "harbor", "context": "home" },
+  { "id": "quayside", "context": "home" },
+  { "id": "valley", "context": "demo" },
+  { "id": "waterfalls", "context": "demo" },
+  { "id": "thebes", "context": "world" },
+  { "id": "market", "context": "world" }
+]

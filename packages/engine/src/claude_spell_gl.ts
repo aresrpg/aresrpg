@@ -5,26 +5,57 @@
 export type SpellUniforms = Readonly<Record<string, number | readonly number[] | Float32Array>>
 export const SPELL_VERTEX = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }'
 
-export const spell_gl_program = (gl: WebGLRenderingContext, vertex: string, fragment: string) => {
+const compile_program = async (
+  gl: WebGLRenderingContext,
+  vertex: string,
+  fragment: string,
+  signal: AbortSignal = new AbortController().signal
+) => {
   const program = gl.createProgram()!
-  for (const [type, source] of [
-    [gl.VERTEX_SHADER, vertex],
-    [gl.FRAGMENT_SHADER, fragment],
-  ] as const) {
+  const parallel = gl.getExtension('KHR_parallel_shader_compile')
+  const shaders = (
+    [
+      [gl.VERTEX_SHADER, vertex],
+      [gl.FRAGMENT_SHADER, fragment],
+    ] as const
+  ).map(([type, source]) => {
     const shader = gl.createShader(type)!
     gl.shaderSource(shader, source)
     gl.compileShader(shader)
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
-      throw new Error(gl.getShaderInfoLog(shader) ?? 'Spell shader compilation failed')
     gl.attachShader(program, shader)
-    gl.deleteShader(shader)
-  }
+    return shader
+  })
   gl.bindAttribLocation(program, 0, 'p')
   gl.linkProgram(program)
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS))
-    throw new Error(gl.getProgramInfoLog(program) ?? 'Spell shader link failed')
+  try {
+    // Querying COMPILE_STATUS/LINK_STATUS immediately turns driver work into a main-thread stall.
+    while (parallel && !gl.getProgramParameter(program, parallel.COMPLETION_STATUS_KHR)) {
+      signal.throwIfAborted()
+      if (gl.isContextLost()) throw new Error('Spell context was lost during compilation')
+      await new Promise((resolve) => setTimeout(resolve, 16))
+    }
+    signal.throwIfAborted()
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+      throw new Error(gl.getProgramInfoLog(program) ?? 'Spell shader link failed')
+    return program
+  } catch (error) {
+    gl.deleteProgram(program)
+    throw error
+  } finally {
+    shaders.forEach((shader) => gl.deleteShader(shader))
+  }
+}
+
+export const spell_gl_program = async (
+  gl: WebGLRenderingContext,
+  vertex: string,
+  fragment: string,
+  signal?: AbortSignal
+) => {
+  const program = await compile_program(gl, vertex, fragment, signal)
   const uniforms = new Map<string, Readonly<{ location: WebGLUniformLocation; type: number }>>()
-  for (let index = 0; index < gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS); index += 1) {
+  const count = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS) as number
+  for (let index = 0; index < count; index += 1) {
     const info = gl.getActiveUniform(program, index)!
     uniforms.set(info.name.replace(/\[0\]$/u, ''), {
       location: gl.getUniformLocation(program, info.name)!,
@@ -38,11 +69,10 @@ export const spell_gl_program = (gl: WebGLRenderingContext, vertex: string, frag
     [gl.INT]: (location, value) => gl.uniform1i(location, Number(value)),
     [gl.BOOL]: (location, value) => gl.uniform1i(location, Number(value)),
     [gl.SAMPLER_2D]: (location, value) => gl.uniform1i(location, Number(value)),
-    [gl.FLOAT_VEC2]: (location, value) => gl.uniform2fv(location, new Float32Array(value as readonly number[])),
-    [gl.FLOAT_VEC3]: (location, value) => gl.uniform3fv(location, new Float32Array(value as readonly number[])),
-    [gl.FLOAT_VEC4]: (location, value) => gl.uniform4fv(location, new Float32Array(value as readonly number[])),
-    [gl.FLOAT_MAT4]: (location, value) =>
-      gl.uniformMatrix4fv(location, false, new Float32Array(value as readonly number[])),
+    [gl.FLOAT_VEC2]: (location, value) => gl.uniform2fv(location, value as Float32Array),
+    [gl.FLOAT_VEC3]: (location, value) => gl.uniform3fv(location, value as Float32Array),
+    [gl.FLOAT_VEC4]: (location, value) => gl.uniform4fv(location, value as Float32Array),
+    [gl.FLOAT_MAT4]: (location, value) => gl.uniformMatrix4fv(location, false, value as Float32Array),
   }
   return {
     program,
@@ -65,11 +95,19 @@ const image_from = (url: string): Promise<HTMLImageElement> =>
     image.src = url
   })
 
-export const create_spell_gl = (fragment: string) => {
+export const create_spell_gl = async (fragment: string, signal?: AbortSignal) => {
   const canvas = document.createElement('canvas')
-  const gl = canvas.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: true })
+  const gl = canvas.getContext('webgl', {
+    alpha: true,
+    premultipliedAlpha: false,
+    antialias: false,
+    preserveDrawingBuffer: true,
+  })
   if (!gl) throw new Error('The authored spell shader requires WebGL')
-  const program = spell_gl_program(gl, SPELL_VERTEX, fragment)
+  const program = await spell_gl_program(gl, SPELL_VERTEX, fragment, signal).catch((error: unknown) => {
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+    throw error
+  })
   const vertices = gl.createBuffer()!
   gl.bindBuffer(gl.ARRAY_BUFFER, vertices)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
@@ -85,7 +123,7 @@ export const create_spell_gl = (fragment: string) => {
   let atlas: readonly WebGLTexture[] = []
   const cell_texture = make_texture()
   const surfaces = Array.from({ length: 2 }, () => ({ texture: make_texture(), framebuffer: gl.createFramebuffer()! }))
-  const scene_texture = surfaces[0]!.texture
+  const scene_texture = make_texture()
   let loaded: Promise<void> | null = null
   let disposed = false
   const bind = (unit: number, texture: WebGLTexture): void => {
@@ -138,12 +176,14 @@ export const create_spell_gl = (fragment: string) => {
       gl.viewport(0, 0, canvas.width, canvas.height)
       const scene_unit = atlas.length,
         actor_unit = scene_unit + 1,
-        cell_unit = actor_unit + 1
+        cell_unit = actor_unit + 1,
+        original_unit = cell_unit + 1
       atlas.forEach((texture, index) => bind(index, texture))
       bind(scene_unit, scene_texture)
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
       if (input) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, input)
       else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4))
+      bind(original_unit, scene_texture)
       bind(actor_unit, masks)
       let previous = scene_texture
       frames.forEach((frame, index) => {
@@ -155,7 +195,14 @@ export const create_spell_gl = (fragment: string) => {
         const output = surfaces[(index + 1) % 2]!
         gl.bindFramebuffer(gl.FRAMEBUFFER, index + 1 === frames.length ? null : output.framebuffer)
         bind(scene_unit, previous)
-        program.use({ ...frame.uniforms, aresScene: scene_unit, aresActors: actor_unit, aresCells: cell_unit })
+        program.use({
+          ...frame.uniforms,
+          aresScene: scene_unit,
+          aresActors: actor_unit,
+          aresCells: cell_unit,
+          aresOriginal: original_unit,
+          aresComposite: Number(input !== null && index + 1 === frames.length),
+        })
         fullscreen()
         previous = output.texture
       })
@@ -165,7 +212,7 @@ export const create_spell_gl = (fragment: string) => {
       disposed = true
       program.dispose()
       gl.deleteBuffer(vertices)
-      for (const texture of [...atlas, cell_texture, ...surfaces.map((surface) => surface.texture)])
+      for (const texture of [...atlas, cell_texture, scene_texture, ...surfaces.map((surface) => surface.texture)])
         gl.deleteTexture(texture)
       surfaces.forEach((surface) => gl.deleteFramebuffer(surface.framebuffer))
       gl.getExtension('WEBGL_lose_context')?.loseContext()

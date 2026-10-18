@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path'
 
 import { format, resolveConfig } from 'prettier'
 
+import { CITY_ARTIFACT_VERSION } from '../packages/engine/src/cities/types.ts'
 import { detail_builder } from '../packages/engine/src/detail_builder.ts'
 import { CITY_DETAIL_LIMITS, validate_details } from '../packages/engine/src/detail_artifact.ts'
 import { validate_height_grid } from '../packages/engine/src/height_grid.ts'
@@ -154,7 +155,7 @@ const generate_city = async (generator) => {
   const errors = validate_height_grid(generated_terrain ?? null)
   if (errors.length) throw new Error(`Invalid ${city.id} terrain: ${errors.join('; ')}`)
   return Object.freeze({
-    version: 3,
+    version: CITY_ARTIFACT_VERSION,
     details,
     id: city.id,
     source_hash: await source_hash(city.id),
@@ -172,43 +173,32 @@ const json_output = async (value, filepath) =>
 
 const generated = await Promise.all(GENERATORS.map(generate_city))
 const outputs = await Promise.all(
-  generated.map(async (city) => {
-    const output_path = resolve(ROOT, `packages/engine/src/cities/generated/${city.id}.json`)
-    const map_path = resolve(ROOT, `packages/engine/src/cities/generated/${city.id}_map.json`)
-    return Object.freeze({
-      output_path,
-      map_path,
-      output: await json_output({ ...city, map: undefined }, output_path),
-      map_output: await json_output(
-        {
-          version: city.version,
-          id: city.id,
-          source_hash: city.source_hash,
-          area: city.area,
-          map: city.map,
-          terrain: city.terrain,
-        },
-        map_path
-      ),
+  generated.flatMap((city) => {
+    const { version, id, source_hash, area, chunks, details, map, terrain } = city
+    const provenance = { version, id, source_hash }
+    return [
+      [id, { ...provenance, area, chunks }],
+      [`${id}_details`, { ...provenance, details }],
+      [`${id}_map`, { ...provenance, area, map, terrain }],
+    ].map(async ([name, value]) => {
+      const path = resolve(ROOT, `packages/engine/src/cities/generated/${name}.json`)
+      return { path, output: await json_output(value, path) }
     })
   })
 )
 if (process.argv.includes('--check')) {
   const stale = (
     await Promise.all(
-      outputs.map(async ({ output_path, map_path, output, map_output }) => {
-        const current = await readFile(output_path, 'utf8').catch(() => '')
-        const current_map = await readFile(map_path, 'utf8').catch(() => '')
-        return current === output && current_map === map_output ? [] : [output_path]
-      })
+      outputs.map(async ({ path, output }) => ((await readFile(path, 'utf8').catch(() => '')) === output ? [] : [path]))
     )
   ).flat()
   if (stale.length > 0) throw new Error(`Generated city artifacts are stale: ${stale.join(', ')}`)
 } else {
   await Promise.all(
-    outputs.flatMap(({ output_path, map_path, output, map_output }) => [
-      mkdir(dirname(output_path), { recursive: true }).then(() => writeFile(output_path, output)),
-      mkdir(dirname(map_path), { recursive: true }).then(() => writeFile(map_path, map_output)),
-    ])
+    outputs.map(async ({ path, output }) => {
+      await mkdir(dirname(path), { recursive: true })
+      await writeFile(path, output)
+    })
   )
 }
+console.log(`Generated ${generated.length} city voxel, decoration and map artifacts.`)

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { GreedyMeshData } from './greedy_mesher.ts'
-import type { ScatterInstance } from './scatter.ts'
+import type { ScatterMeshData } from './scatter_mesh.ts'
 import type { RenderChunkRequest, RenderedChunk } from './types.ts'
 import { terrain_recipe, type WorldRecipe } from './world_recipe.ts'
 import type { WorkerReply } from './worker_reply.ts'
@@ -9,7 +9,7 @@ import type { WorkerReply } from './worker_reply.ts'
 export type MeshResult = Readonly<{
   chunk: RenderedChunk
   mesh: GreedyMeshData
-  scatter: readonly ScatterInstance[]
+  scatter: ScatterMeshData | null
 }>
 
 type Job = Readonly<{

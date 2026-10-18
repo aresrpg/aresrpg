@@ -387,24 +387,6 @@ export const create_transient_effects = ({
     })
   }
 
-  const create_warmup = () => {
-    const root = new Group()
-    const mesh_material = material(0xffffff, 0)
-    const instance_material = material(0xffffff, 0)
-    root.add(new Mesh(ring_geometry, mesh_material), new InstancedMesh(particle_geometry, instance_material, 1))
-    let disposed = false
-    return Object.freeze({
-      object: root,
-      dispose: (): void => {
-        if (disposed) return
-        disposed = true
-        root.clear()
-        mesh_material.dispose()
-        instance_material.dispose()
-      },
-    })
-  }
-
   const update_particles = (now: number): void => {
     for (let effect_index = particles.length - 1; effect_index >= 0; effect_index -= 1) {
       const effect = particles[effect_index]!
@@ -527,7 +509,6 @@ export const create_transient_effects = ({
   }
 
   return Object.freeze({
-    create_warmup,
     play_sword_impact: (feet: Vec3): void => {
       const profile = FIGHT_VFX_PROFILES.earth
       spawn_impact(

@@ -5,7 +5,9 @@ import { FRAGMENT } from './generated/claude_spell_fragment.js'
 
 const BRIDGE = `
 uniform bool aresGame;
+uniform bool aresComposite;
 uniform sampler2D aresScene, aresActors, aresCells;
+uniform sampler2D aresOriginal;
 uniform mat4 aresProjection, aresInverseProjection, aresLocalToWorld;
 uniform vec4 aresBoard;
 uniform vec2 aresBoardSize;
@@ -36,6 +38,15 @@ vec3 aresRay() {
   if (!aresGame) return normalize(fw * F + rt * uv.x + up * uv.y);
   vec4 farPoint = aresInverseProjection * vec4(aresPixel() * 2. - 1., 1., 1.);
   return normalize(farPoint.xyz / farPoint.w - ro);
+}
+// Separate the authored change from its background so only the effect is upsampled.
+// The canvas compositor blends display-space colors; an unchanged pixel has zero opacity.
+vec4 aresOverlay(vec3 color) {
+  vec3 background = texture2D(aresOriginal, aresPixel()).rgb;
+  vec3 difference = clamp(color, 0., 1.) - background;
+  vec3 opacity = max(difference / max(vec3(.001), 1. - background), -difference / max(vec3(.001), background));
+  float alpha = clamp(max(opacity.r, max(opacity.g, opacity.b)), 0., 1.);
+  return alpha < .001 ? vec4(0.) : vec4(background + difference / alpha, alpha);
 }
 `
 const replace_once = (source: string, before: string, after: string): string => {
@@ -118,6 +129,12 @@ export const claude_spell_game_shader = (): string => {
     source,
     '  if (uClass == 0) {\n    float limb',
     '  if (uClass == 0 && !aresGame) {\n    float limb'
+  )
+  source = replace_once(
+    source,
+    '  gl_FragColor = vec4(pow(max(col, 0.), vec3(.9)), 1.);',
+    `  gl_FragColor = vec4(pow(max(col, 0.), vec3(.9)), 1.);
+  if (aresGame && aresComposite) gl_FragColor = aresOverlay(gl_FragColor.rgb);`
   )
   return source
 }

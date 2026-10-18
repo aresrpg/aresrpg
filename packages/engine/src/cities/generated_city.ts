@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { CITY_DETAIL_LIMITS, validate_detail_metadata, validate_details, type DetailCell } from '../detail_artifact.ts'
 import type { StructurePlacement } from '../structure_placement.ts'
 import type { CompiledStructureType } from '../structures.ts'
 import type { CompiledWorld } from '../world_recipe.ts'
 import type { CompiledMaterials } from '../world_materials.ts'
 
 import { generated_city_surface_height } from './city_terrain.ts'
-import { CITY_DEFINITIONS, city_definition } from './registry.ts'
+import { CITY_DEFINITIONS, city_definition, read_city_artifact } from './registry.ts'
 import type { CityMapStructure, CompiledCity, GeneratedCityArtifact } from './types.ts'
 
 const CHUNK_EDGE = 32
@@ -46,7 +45,6 @@ const LAND_USE_CELLS: Readonly<Record<string, string>> = Object.freeze(
 )
 const generated_cities = new Map<string, GeneratedCityArtifact>()
 const loading = new Map<string, Promise<void>>()
-const validated_details = new WeakSet<DetailCell>()
 type HorizontalArea = Readonly<{ min_x: number; max_x: number; min_z: number; max_z: number }>
 type AuthoredCityArea = HorizontalArea & Readonly<{ id: string }>
 const placement_caches = new WeakMap<CompiledWorld, Map<string, StructurePlacement>>()
@@ -70,29 +68,13 @@ export const generated_city_surface_y = (
   return generated ? generated_city_surface_height(generated.terrain, x, z, surface_y) : surface_y
 }
 
-const load_json = async <T>(url: URL): Promise<T> => {
-  if (typeof Bun !== 'undefined') return Bun.file(url).json() as Promise<T>
-  const response = await fetch(url)
-  if (!response.ok) throw new Error(`Generated city artifact failed to load: ${response.status}`)
-  return response.json() as Promise<T>
-}
-
 const load_generated_city_artifact = (id: string): Promise<void> => {
   const pending = loading.get(id)
   if (pending) return pending
   const definition = city_definition(id)
   if (!definition) return Promise.resolve()
-  const next = load_json<GeneratedCityArtifact>(definition.artifact_url)
+  const next = read_city_artifact<GeneratedCityArtifact>(definition, definition.artifact_url)
     .then((artifact) => {
-      if (artifact.version !== 3 || artifact.id !== id || definition.map.source_hash !== artifact.source_hash)
-        throw new TypeError(`Generated ${id} voxel and map artifacts do not share provenance`)
-      if (!Array.isArray(artifact.details)) throw new TypeError(`Generated ${id} is missing baked details`)
-      const errors = validate_detail_metadata(
-        artifact.details,
-        Object.fromEntries(definition.material_names.map((name) => [name, {}])),
-        CITY_DETAIL_LIMITS
-      )
-      if (errors.length) throw new TypeError(`Generated ${id}: ${errors.join('; ')}`)
       generated_cities.set(id, Object.freeze(artifact))
     })
     .catch((error: unknown) => {
@@ -121,24 +103,6 @@ export const load_generated_city_artifacts_for = (
       .filter((city) => GENERATED_MAPS[city.id] !== undefined && overlaps_area(city.area, area))
       .map(({ id }) => load_generated_city_artifact(id))
   ).then(() => undefined)
-
-/** Worker projection: only the requested column's baked details travel with its terrain result. */
-export const generated_city_details = (cities: readonly CompiledCity[], x: number, z: number): readonly DetailCell[] =>
-  cities.flatMap((city) => {
-    const details =
-      generated_cities.get(city.id)?.details.filter((cell) => cell.origin[0] === x && cell.origin[2] === z) ?? []
-    const pending = details.filter((cell) => !validated_details.has(cell))
-    if (!pending.length) return details
-    const definition = city_definition(city.id)!
-    const errors = validate_details(
-      pending,
-      Object.fromEntries(definition.material_names.map((name) => [name, {}])),
-      CITY_DETAIL_LIMITS
-    )
-    if (errors.length) throw new TypeError(`Generated ${city.id}: ${errors.join('; ')}`)
-    pending.forEach((cell) => validated_details.add(cell))
-    return details
-  })
 
 const assert_matching_area = (city: CompiledCity, artifact: Pick<GeneratedCityArtifact, 'id' | 'area'>): void => {
   const authored = city.area

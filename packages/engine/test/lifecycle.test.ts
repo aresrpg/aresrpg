@@ -10,6 +10,8 @@ for (const name of [
   'fight_swords_lifecycle',
   'webgpu_cleanup',
   'generated_city_recovery',
+  'city_occupancy',
+  'character_preview',
 ]) {
   test(`${name} exercises production lifecycle owners with isolated hardware boundaries`, async () => {
     const child = Bun.spawn([process.execPath, `${import.meta.dir}/${name}_probe.ts`], {

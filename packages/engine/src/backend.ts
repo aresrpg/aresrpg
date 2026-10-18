@@ -27,6 +27,7 @@ export type EngineBackend = Readonly<{
   /** Advance CPU animation and cue completion, including while the canvas is hidden. */
   tick: (now: number) => void
   render: (now: number) => void
+  prepare_scene: () => Promise<boolean>
   set_camera: (position: Vec3, target: Vec3, projection?: CameraProjection) => void
   /** The followed character's FEET — character-anchored presentation (the night lantern) rides
    * this, never the camera target (which leads the character). Null when nobody is followed. */

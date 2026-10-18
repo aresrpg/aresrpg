@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import type { EnginePresentation, EngineQuality, QualityProfile } from './types.ts'
+import type { EngineQuality, QualityProfile } from './types.ts'
 
 export const QUALITY_OPTIONS = Object.freeze(['low', 'medium', 'high'] as const)
 
@@ -32,7 +32,7 @@ export const QUALITY_PROFILES = Object.freeze({
     terrain: Object.freeze({ kind: 'flat', texture_size: 16 }),
     fog: Object.freeze({ near: 200, far: 640 }),
     shadows: Object.freeze({ kind: 'none', map_size: 0 }),
-    effects: Object.freeze({ bloom: null, sun_shafts: null, local_shafts: null }),
+    effects: Object.freeze({ spell_pixels: 230_400, bloom: null, sun_shafts: null, local_shafts: null }),
   }),
   medium: Object.freeze({
     name: 'medium',
@@ -60,7 +60,7 @@ export const QUALITY_PROFILES = Object.freeze({
     terrain: Object.freeze({ kind: 'lit', texture_size: 32 }),
     fog: Object.freeze({ near: 250, far: 1000 }),
     shadows: Object.freeze({ kind: 'basic', map_size: 1024 }),
-    effects: Object.freeze({ bloom: null, sun_shafts: null, local_shafts: null }),
+    effects: Object.freeze({ spell_pixels: 518_400, bloom: null, sun_shafts: null, local_shafts: null }),
   }),
   high: Object.freeze({
     name: 'high',
@@ -82,6 +82,7 @@ export const QUALITY_PROFILES = Object.freeze({
     fog: Object.freeze({ near: 500, far: 1750 }),
     shadows: Object.freeze({ kind: 'soft', map_size: 2048 }),
     effects: Object.freeze({
+      spell_pixels: 921_600,
       local_shafts: Object.freeze({ samples: 32, resolution: 0.35, range: 80, density: 0.022, strength: 1 }),
       bloom: Object.freeze({ strength: 0.18, radius: 0.65, threshold: 1.6 }),
       sun_shafts: Object.freeze({
@@ -103,28 +104,27 @@ export const effective_render_distance = (tier_far_radius: number, override: num
 
 export const get_quality_profile = (quality: EngineQuality): QualityProfile => QUALITY_PROFILES[quality]
 
-export const uses_world_post_processing = (quality: EngineQuality, presentation: EnginePresentation): boolean =>
-  presentation === 'world' && quality !== 'low'
+/** Effects have their own pixel budget; the world and captions retain their native resolution. */
+export const spell_effect_size = (quality: EngineQuality, width: number, height: number): readonly [number, number] => {
+  const scale = Math.min(1, Math.sqrt(get_quality_profile(quality).effects.spell_pixels / Math.max(1, width * height)))
+  return [Math.max(1, Math.floor(width * scale)), Math.max(1, Math.floor(height * scale))]
+}
+
+export const uses_world_post_processing = (quality: EngineQuality): boolean => quality !== 'low'
 
 export const quality_pixel_ratio = ({
   quality,
   css_width,
   css_height,
   device_pixel_ratio,
-  presentation = 'world',
 }: Readonly<{
   quality: EngineQuality
   css_width: number
   css_height: number
   device_pixel_ratio: number
-  presentation?: EnginePresentation
 }>): number => {
   const { scale, dpr_max, pixel_max } = get_quality_profile(quality).render
-  const fight_dpr_max = quality === 'low' ? 1 : quality === 'medium' ? 1.5 : 2
-  const requested =
-    presentation === 'fight'
-      ? Math.min(device_pixel_ratio, fight_dpr_max) * (quality === 'low' ? 0.66 : 1)
-      : Math.min(device_pixel_ratio, dpr_max) * scale
+  const requested = Math.min(device_pixel_ratio, dpr_max) * scale
   const pixel_limit = Math.sqrt(pixel_max / Math.max(1, css_width * css_height))
   return Math.min(requested, pixel_limit)
 }

@@ -25,7 +25,8 @@ import { compare_spell_mask } from './browser_spell_mask.ts'
 
 type CastCue = Extract<FightPresentationCue, { type: 'cast' }>
 export const create_spell_effect_probe = async (canvas: HTMLCanvasElement) => {
-  const renderer = new WebGPURenderer({ canvas, antialias: true })
+  // Match the production canvas: post-process AA, never a second multisampled overlay target.
+  const renderer = new WebGPURenderer({ canvas, antialias: false })
   await renderer.init()
   renderer.setSize(1000, 700, false)
   renderer.outputColorSpace = SRGBColorSpace

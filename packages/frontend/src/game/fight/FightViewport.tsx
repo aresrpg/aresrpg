@@ -186,8 +186,8 @@ export const FightViewport = ({
     }
     presenter_ref.current = create_fight_presenter({
       prepare: async (cue) => {
-        const [prepared] = await Promise.all([view.prepare_fight_cue(cue), prepare_ref.current?.(cue)])
-        return prepared
+        await prepare_ref.current?.(cue)
+        return view.prepare_fight_cue(cue)
       },
       play: view.play_fight_cue,
       observe: (cue, phase) => cue_observer_ref.current?.(cue, phase),
@@ -249,7 +249,7 @@ export const FightViewport = ({
       globalThis.removeEventListener('mousemove', move)
       dispose()
     }
-  }, [scene, ambient])
+  }, [scene, ambient, board_key])
 
   useEffect(() => {
     view_ref.current?.set_board(render_board)

@@ -4,10 +4,10 @@ import { Float32BufferAttribute, Group, Matrix4, Mesh, Vector3, type Camera, typ
 
 import { create_spell_actor_mask } from '../src/claude_spell_actor_mask.ts'
 
-export const compare_spell_mask = (roots: readonly Object3D[], camera: Camera) => {
+export const compare_spell_mask = async (roots: readonly Object3D[], camera: Camera) => {
   const canvas = document.createElement('canvas'),
     gl = canvas.getContext('webgl')!
-  const mask = create_spell_actor_mask(gl),
+  const mask = await create_spell_actor_mask(gl),
     reference = new Group(),
     point = new Vector3()
   const geometries: Mesh['geometry'][] = []

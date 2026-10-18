@@ -66,10 +66,10 @@ export const SimulatorBoardPane = ({
   )
 
   useEffect(() => {
-    prepare_spell_resources(
+    void prepare_spell_resources(
       simulator.characters.map((character) => character.classe),
       scene
-    )
+    ).catch((error) => console.error('Fight spell preparation failed.', error))
   }, [simulator.characters, entities, scene])
 
   useEffect(() => {

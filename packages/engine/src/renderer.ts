@@ -15,7 +15,6 @@ import type {
   EngineFrame,
   Engine,
   EngineIssue,
-  EnginePresentation,
   EngineQuality,
   EngineStatus,
   FightBlobRender,
@@ -49,14 +48,12 @@ export const create_engine = ({
   canvas,
   world: world_value,
   quality: initial_quality = 'medium',
-  presentation = 'world',
   initial_focus = [0, 0],
   render_distance: initial_render_distance = null,
 }: Readonly<{
   canvas: HTMLCanvasElement
   world: CompiledWorld
   quality?: EngineQuality
-  presentation?: EnginePresentation
   initial_focus?: readonly [number, number]
   render_distance?: number | null
 }>): Engine => {
@@ -109,6 +106,7 @@ export const create_engine = ({
   let next_frame_at = previous_frame
   let update: (frame: EngineFrame) => void = () => {}
   let disposed = false
+  let rendered_frames = 0
 
   const cancel_frame = (): void => {
     if (animation_frame !== null) cancelAnimationFrame(animation_frame)
@@ -181,7 +179,10 @@ export const create_engine = ({
     try {
       update(Object.freeze({ now, delta_seconds }))
       backend?.tick(now)
-      if (!hidden) backend?.render(now)
+      if (!hidden && backend) {
+        backend.render(now)
+        rendered_frames += 1
+      }
     } catch (error) {
       console.error('World rendering failed.', error)
       report_failure({
@@ -266,14 +267,14 @@ export const create_engine = ({
       let sky_issue: EngineIssue | undefined
       const report_issue = (issue?: EngineIssue): void => {
         if (disposed || status.state === 'failed') return
-        if (issue?.code === 'webgpu_device_lost') return report_failure(issue)
+        if (issue && ['webgpu_device_lost', 'graphics_unavailable'].includes(issue.code)) return report_failure(issue)
         sky_issue = issue
         if (backend?.kind === 'webgpu')
           publish_status(
             issue ? { state: 'degraded', backend: 'webgpu', issue } : { state: 'ready', backend: 'webgpu' }
           )
       }
-      attach(await create_webgpu_backend(canvas, quality, world, report_issue, presentation, initial_focus), sky_issue)
+      attach(await create_webgpu_backend(canvas, quality, world, report_issue, initial_focus), sky_issue)
       return
     } catch (error) {
       const issue = {
@@ -376,6 +377,10 @@ export const create_engine = ({
       backend?.set_portal_label(element)
     },
     animate_entity: (motion) => backend?.animate_entity(motion) ?? Promise.resolve(false),
+    prepare_scene: async () => {
+      await boot_task
+      return backend ? backend.prepare_scene() : false
+    },
     prepare_fight_effects: async (urls) => {
       await boot_task
       await backend?.prepare_fight_effects(urls)
@@ -456,6 +461,7 @@ export const create_engine = ({
       backend?.remove_chunk(key)
     },
     chunk_count: () => backend?.chunk_count() ?? 0,
+    frame_count: () => rendered_frames,
     render_state: () =>
       backend?.render_state() ?? {
         settled: false,

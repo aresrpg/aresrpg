@@ -457,7 +457,7 @@
     },
     "packages/engine/src/webgpu_backend.ts": {
       "create_webgpu_backend > draw": [
-        14
+        11
       ]
     },
     "packages/engine/src/fight_presentation.ts": {
@@ -1574,10 +1574,10 @@
       ]
     },
     "packages/sdk/src/mastery.ts": {
-      "option_u64": [
+      "mastery_actions > redeem": [
         9
       ],
-      "mastery_actions > redeem": [
+      "option_u64": [
         9
       ]
     },
@@ -1683,11 +1683,8 @@
       ]
     },
     "packages/engine/src/webgpu_backend.ts": {
-      "create_webgpu_backend": [
-        11
-      ],
       "create_webgpu_backend > draw": [
-        18
+        16
       ],
       "create_webgpu_backend > resize": [
         10
@@ -1695,11 +1692,8 @@
       "create_webgpu_backend > set_camera": [
         9
       ],
-      "create_webgpu_backend > set_fight_board": [
-        9
-      ],
       "create_webgpu_backend > use_sky_quality": [
-        13
+        12
       ]
     },
     "packages/engine/src/fight_presentation.ts": {
@@ -1995,7 +1989,10 @@
     },
     "packages/frontend/src/components/WorldLoading.tsx": {
       "WorldLoading": [
-        10
+        9
+      ],
+      "WorldLoading > useEffect[0]() > sample": [
+        12
       ]
     },
     "packages/frontend/src/game/core/loading_progress.ts": {
@@ -2122,14 +2119,14 @@
       ]
     },
     "packages/sdk/src/gift_gateway.ts": {
+      "authorize": [
+        9
+      ],
       "bounded_json": [
         9
       ],
       "create_gift_gateway > anonymous(request: Request)": [
         10
-      ],
-      "authorize": [
-        9
       ],
       "prepare": [
         10
@@ -2168,6 +2165,16 @@
     },
     "packages/frontend/src/game/fight/spell_effect_context.ts": {
       "resolve_zone_effect": [
+        10
+      ]
+    },
+    "packages/frontend/src/components/LoadingPostcard.tsx": {
+      "LoadingPostcard": [
+        11
+      ]
+    },
+    "packages/frontend/src/boot_loading.ts": {
+      "prepare_boot_loading": [
         10
       ]
     }

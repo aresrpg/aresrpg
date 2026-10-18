@@ -3,18 +3,18 @@ import { create_source } from '../src/generated/claude_spell_source.js'
 import { create_spell_gl } from '../src/claude_spell_gl.ts'
 import { claude_spell_game_shader } from '../src/claude_spell_shader.ts'
 
-export const create_spell_fidelity_probe = async (urls: readonly string[]) => {
-  const original = create_spell_gl(FRAGMENT),
-    adapted = create_spell_gl(claude_spell_game_shader()),
-    control = create_spell_gl(
-      claude_spell_game_shader().replace('uniform bool aresGame;', 'const bool aresGame = false;')
-    )
+export const create_spell_fidelity_probe = async (urls: readonly string[], fragment = claude_spell_game_shader()) => {
+  const [original, adapted, control] = await Promise.all([
+    create_spell_gl(FRAGMENT),
+    create_spell_gl(fragment),
+    create_spell_gl(fragment.replace('uniform bool aresGame;', 'const bool aresGame = false;')),
+  ])
   await Promise.all([original.prepare(urls), adapted.prepare(urls), control.prepare(urls)])
   const width = 320,
     height = 224
   for (const renderer of [original, adapted, control]) renderer.resize(width, height)
   const pixels = (
-    renderer: ReturnType<typeof create_spell_gl>,
+    renderer: Awaited<ReturnType<typeof create_spell_gl>>,
     uniforms: ReturnType<ReturnType<typeof create_source>['frame']>
   ) => {
     const { gl } = renderer,

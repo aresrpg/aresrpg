@@ -48,14 +48,15 @@ import { nearby_fight } from './nearby_fight.ts'
 import { sword_fights } from './world_engage.ts'
 import { sync_world_activity } from './engine_activity.ts'
 import { run_to_target } from './run_to.ts'
-import { receive_engine_status } from './engine_state.ts'
+import { receive_engine_status, receive_frame_rate } from './engine_state.ts'
 
 export { initial_engine_state, type EngineState, type EngineInput } from './engine_state.ts'
-
-const reduce = (state: AppState, input: AppInput): AppState =>
-  input.type === 'engine/status'
-    ? Object.freeze({ ...state, engine: receive_engine_status(state.engine, input.status) })
-    : state
+const reduce = (state: AppState, input: AppInput): AppState => {
+  if (input.type === 'engine/status') return { ...state, engine: receive_engine_status(state.engine, input.status) }
+  if (input.type !== 'engine/frames') return state
+  const engine = receive_frame_rate(state.engine, input)
+  return engine === state.engine ? state : { ...state, engine }
+}
 
 type VisualControl = Readonly<{
   stage: (scene: WorldView & Readonly<{ time_of_day: number }>) => void

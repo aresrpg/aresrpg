@@ -3,7 +3,13 @@
 
 import { describe, expect, test } from 'bun:test'
 
-import { QUALITY_OPTIONS, QUALITY_PROFILES, quality_pixel_ratio, uses_world_post_processing } from '../src/quality.ts'
+import {
+  QUALITY_OPTIONS,
+  QUALITY_PROFILES,
+  quality_pixel_ratio,
+  spell_effect_size,
+  uses_world_post_processing,
+} from '../src/quality.ts'
 
 describe('engine quality profiles', () => {
   test('only high renders the exploration scene at native scale', () => {
@@ -17,9 +23,9 @@ describe('engine quality profiles', () => {
 
   test('reserves selective HDR bloom and bounded sun shafts for high quality', () => {
     expect(Object.values(QUALITY_PROFILES).map(({ effects }) => Object.keys(effects).sort())).toEqual([
-      ['bloom', 'local_shafts', 'sun_shafts'],
-      ['bloom', 'local_shafts', 'sun_shafts'],
-      ['bloom', 'local_shafts', 'sun_shafts'],
+      ['bloom', 'local_shafts', 'spell_pixels', 'sun_shafts'],
+      ['bloom', 'local_shafts', 'spell_pixels', 'sun_shafts'],
+      ['bloom', 'local_shafts', 'spell_pixels', 'sun_shafts'],
     ])
     expect(QUALITY_PROFILES.low.effects.bloom).toBeNull()
     expect(QUALITY_PROFILES.medium.effects.bloom).toBeNull()
@@ -46,6 +52,15 @@ describe('engine quality profiles', () => {
     expect(5120 * 1440 * ratio * ratio).toBeCloseTo(6_000_000)
   })
 
+  test('spell pixels remain bounded on dense displays without upscaling a small canvas', () => {
+    for (const quality of QUALITY_OPTIONS) {
+      const [width, height] = spell_effect_size(quality, 3265, 1837)
+      expect(width * height).toBeLessThanOrEqual(QUALITY_PROFILES[quality].effects.spell_pixels)
+      expect(width / height).toBeCloseTo(3265 / 1837, 2)
+      expect(spell_effect_size(quality, 320, 224)).toEqual([320, 224])
+    }
+  })
+
   test('the pixel ceiling protects dense displays independently of DPR', () => {
     const ratio = quality_pixel_ratio({
       quality: 'medium',
@@ -57,24 +72,7 @@ describe('engine quality profiles', () => {
     expect(3840 * 2160 * ratio * ratio).toBeCloseTo(3_500_000)
   })
 
-  test('the isolated fight presentation keeps the former medium-tier sharpness', () => {
-    expect(
-      quality_pixel_ratio({
-        quality: 'medium',
-        css_width: 1000,
-        css_height: 800,
-        device_pixel_ratio: 2,
-        presentation: 'fight',
-      })
-    ).toBe(1.5)
-  })
-
-  test('fight rendering stays direct at every quality instead of running exploration post effects', () => {
-    expect(QUALITY_OPTIONS.map((quality) => uses_world_post_processing(quality, 'fight'))).toEqual([
-      false,
-      false,
-      false,
-    ])
-    expect(QUALITY_OPTIONS.map((quality) => uses_world_post_processing(quality, 'world'))).toEqual([false, true, true])
+  test('only Medium and High run world post effects', () => {
+    expect(QUALITY_OPTIONS.map(uses_world_post_processing)).toEqual([false, true, true])
   })
 })

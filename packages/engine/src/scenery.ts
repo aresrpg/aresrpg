@@ -25,7 +25,7 @@ import { particle_geometry, type Particle } from './scenery_particles.ts'
 import { create_seasonal_scenery } from './seasonal_scenery.ts'
 import { mulberry } from './nature/sprite_kit.ts'
 import { SCENERY_BUDGET, type WorldScenery } from './scenery_data.ts'
-import type { EnginePresentation, EngineQuality } from './types.ts'
+import type { EngineQuality } from './types.ts'
 
 const PARTICLE_STYLE = Object.freeze({
   mist: { speed: 0.12, drift: [3, 1.5, 2], edge: 0.12, opacity: 0.15 },
@@ -163,12 +163,8 @@ const particle_rows = (scenery: WorldScenery, mist: boolean): readonly Particle[
 }
 
 /** Four bounded batches, no textures, lights, timers, CPU particle simulation or extra render passes. */
-export const create_scenery = ({
-  scene,
-  scenery,
-  presentation,
-}: Readonly<{ scene: Scene; scenery?: WorldScenery; presentation: EnginePresentation }>) => {
-  if (!scenery || presentation !== 'world')
+export const create_scenery = ({ scene, scenery }: Readonly<{ scene: Scene; scenery?: WorldScenery }>) => {
+  if (!scenery)
     return Object.freeze({
       set_visible: (_visible: boolean): void => {},
       set_quality: (_quality: EngineQuality): void => {},

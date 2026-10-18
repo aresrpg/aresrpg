@@ -17,7 +17,7 @@ import { create_outline } from './outline.ts'
 import { get_quality_profile, uses_world_post_processing } from './quality.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 import { create_sun_shafts } from './sun_shafts.ts'
-import type { EnginePresentation, EngineQuality } from './types.ts'
+import type { EngineQuality } from './types.ts'
 import { create_underwater_pass, type UnderwaterFrameState, type UnderwaterPass } from './underwater.ts'
 
 type FramePipeline = Readonly<{
@@ -66,7 +66,6 @@ const create_pipeline = (
   scene: Scene,
   camera: PerspectiveCamera,
   quality: EngineQuality,
-  presentation: EnginePresentation,
   sun: DirectionalLight,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   water_gate: Node<'float'>,
@@ -75,9 +74,9 @@ const create_pipeline = (
   water_illumination: Node<'vec3'>,
   environment?: LocalShaftEnvironment
 ): FramePipeline => {
-  // Fights and low-quality worlds render directly. Higher world tiers pay for the common display
+  // Low-quality worlds render directly. Higher tiers pay for the common display
   // grammar; scene fog remains the sole exploration-atmosphere owner.
-  if (!uses_world_post_processing(quality, presentation))
+  if (!uses_world_post_processing(quality))
     return Object.freeze({
       render: () => renderer.render(scene, camera),
       set_underwater: () => {},
@@ -206,7 +205,6 @@ export const create_frame_renderer = (
   scene: Scene,
   camera: PerspectiveCamera,
   initial_quality: EngineQuality,
-  presentation: EnginePresentation,
   sun: DirectionalLight,
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction'],
   water_gate: Node<'float'>,
@@ -221,7 +219,6 @@ export const create_frame_renderer = (
     scene,
     camera,
     quality,
-    presentation,
     sun,
     sun_direction,
     water_gate,
@@ -243,7 +240,6 @@ export const create_frame_renderer = (
         scene,
         camera,
         next,
-        presentation,
         sun,
         sun_direction,
         water_gate,

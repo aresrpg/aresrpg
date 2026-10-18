@@ -9,7 +9,7 @@ import thebes_map_source from './generated/thebes_map.json'
 import { compile_the_ruins, THE_RUINS_MATERIAL_NAMES } from './the_ruins/runtime.ts'
 import { compile_fuwage, FUWAGE_MATERIAL_NAMES } from './fuwage/runtime.ts'
 import { compile_thebes, THEBES_MATERIAL_NAMES, THEBES_LAND_USES } from './thebes/runtime.ts'
-import type { CityRuntimeDefinition, GeneratedCityMapArtifact } from './types.ts'
+import { CITY_ARTIFACT_VERSION, type CityRuntimeDefinition, type GeneratedCityMapArtifact } from './types.ts'
 
 const definition = (
   id: string,
@@ -26,6 +26,7 @@ const definition = (
     material_names,
     compile,
     artifact_url: new URL(`./generated/${id}.json`, import.meta.url),
+    details_url: new URL(`./generated/${id}_details.json`, import.meta.url),
     map: generated_map,
     land_uses,
   })
@@ -47,3 +48,20 @@ export const CITY_DEFINITIONS = Object.freeze([
 
 export const city_definition = (id: string): CityRuntimeDefinition | undefined =>
   CITY_DEFINITIONS.find((candidate) => candidate.id === id)
+
+/** Occupancy and decoration share provenance, but each consumer loads only its own artifact. */
+export const read_city_artifact = async <T extends Pick<GeneratedCityMapArtifact, 'id' | 'version' | 'source_hash'>>(
+  definition: CityRuntimeDefinition,
+  url: URL
+): Promise<T> => {
+  const response = typeof Bun !== 'undefined' ? Bun.file(url) : await fetch(url)
+  if ('ok' in response && !response.ok) throw new Error(`Generated city artifact failed to load: ${response.status}`)
+  const artifact = (await response.json()) as T
+  if (
+    artifact.version !== CITY_ARTIFACT_VERSION ||
+    artifact.id !== definition.id ||
+    artifact.source_hash !== definition.map.source_hash
+  )
+    throw new TypeError(`Generated ${definition.id} artifacts do not share provenance`)
+  return artifact
+}

@@ -804,9 +804,16 @@ A mechanical extraction preserves its shader, presets, flight equations, timing 
 The native WebGL adapter binds the current board, camera and actor silhouettes, then composites
 into the world renderer before captions. Gameplay owns affected cells and trap triggers.
 The original visual windup retimes the model's `ATTACK` anticipation to its release marker.
-Shader and audio programs load lazily at fight entry; the board lifecycle prewarms their GPU
-pipelines and decoded sounds before casting. Actor masks use the model's cached vertex attributes
-and current bone matrices on the GPU. The original effect shader is unchanged.
+Gameplay-world startup prepares spell graphics and audio before its loading projection becomes ready.
+Parallel shader compilation yields while the driver works; real warmup draws precede readiness.
+The authored sound synthesizer runs in a disposable worker and transfers PCM to the existing Web Audio
+player. Recordings reach its decoder as bytes, without a base64 round trip. Fight entry prepares any
+new actor masks through the same resource door. Those masks use cached vertex attributes and one
+floating-point bone texture per skeleton, uploaded once per frame and shared across its meshes.
+The original effect formulas remain unchanged. Fight resources own appearance resolution and preparation;
+input and cue playback wait for the current request, including replacement and cancellation.
+Quality bounds spell pixels independently of the world. Native composition separates the authored
+color change from its background, so upsampling effects preserves full-resolution world pixels and captions.
 The presentation queue awaits each renderer-owned cue completion before starting its successor.
 Damage, healing, forced movement, death and turn changes cannot bypass this ordering. Input recovery
 is not visual completion; an early-input feature must not acknowledge a cue or release its batch.
@@ -853,10 +860,20 @@ existing sign-in actions. Seed also authors three slow, collision-checked reside
 projects these into ordinary character world anchors and animation clips; it creates no gameplay
 actors or network observers. Reduced motion pins the camera and keeps residents idle.
 Menu and biome music share the mounted `MusicBed` media lifecycle and volume settings.
-Menu, gameplay, adventure and editor stages share one centered world-loading presentation. It reads
+Menu, gameplay, adventure and editor stages share one opaque, viewport-sized postcard loading presentation.
+A native modal contains focus while the world prepares. Six AI-retouched engine captures live under
+`seed/icons/loading/`; `seed/content/loading_screens.json` selects two views per home/demo/world context.
+Artwork changes only after decoding, rotates within its context, and respects reduced motion.
+Localized tips and four preparation phases share markup between the initial document and React. It reads
 the owning world's engine and chunk snapshots during startup and explicit quality/distance changes,
 then stops sampling after readiness. Terrain progress counts completed requested chunks; graphics,
 asset and atmosphere preparation remain indeterminate because no shader-completion percentage exists.
+The document already displays the loading shell before importing the game; its initial copy comes from
+the existing English locale. A small bootstrap gives it a paint before importing application dependencies.
+Gameplay readiness includes prepared fight graphics and audio. Menu and world owners also await model
+preparation, scene shader compilation, and a submitted GPU frame before revealing the scene.
+Configuration changes invalidate pending preparation; stale completions cannot reveal a replacement.
+World movement remains disabled until preparation completes. Inactive editor worlds do not prewarm spells.
 Ordinary movement streaming does not reopen the overlay. Its local presentation reducer owns no
 engine state; teardown cancels its frame callbacks and polling.
 
@@ -866,7 +883,11 @@ The shared engine scheduler caps visible frames at 30 FPS on Low and 60 FPS on M
 using the existing quality profile as the sole cadence policy. Display refresh cannot increase that budget.
 Elapsed time drives simulation and animation; missed frames never accumulate into catch-up renders.
 Backend CPU animation ticks remain separate from GPU rendering so hidden automation can finish fight cues.
+The FPS display samples the engine's successful visible-render counter through the frontend engine reducer.
+Display callbacks and hidden simulation ticks never count as rendered frames; retired scene samples cannot
+clear a replacement scene's measurement.
 
+All gameplay fights mount in the world renderer; there is no isolated fight-renderer construction mode.
 The WebGPU backend owns one Neutral tone mapper and fixed exposure for world and fight rendering.
 The post-processing pipeline reads those renderer settings instead of declaring a second tone mapper.
 This preserves stronger authored colors without adding a saturation pass; existing quality-specific
@@ -903,10 +924,11 @@ These surfaces are explicitly non-colliding ornament; walkable floors, walls and
 remain voxel-owned. A thin visual snow cap does not define a second collision surface. Worker recipe
 projection excludes baked details and scenery before transfer, preserving identical terrain inputs
 without cloning rendering assets into planning, meshing or horizon workers. Worlds without
-baked details allocate no detail material or geometry. Generated city artifacts carry the same detail cells.
-Meshing workers return only the requested column; the existing layer registers them on terrain admission,
-retains them across vertical layers, and releases them at final column eviction. City artifacts and maps
-share one provenance; the current version is required rather than accepting an older geometry path. The home screen authors its lantern kit in
+baked details allocate no detail material or geometry. Generated cities publish separate occupancy and decoration artifacts. Collision, planning and meshing
+load only occupancy; the presentation owner loads decoration once and selects the requested column.
+Vertex validation and decoding occur together inside bounded detail admission, not during archive loading.
+The existing layer retains details across vertical layers and releases them at final column eviction.
+Occupancy, decoration and maps share one provenance; the current version is required rather than accepting an older geometry path. The home screen authors its lantern kit in
 `seed/structures/harbor_details.json`; its old voxel lamp, railing, rigging and window-trim emitters
 are replaced rather than retained as quality alternatives.
 
@@ -982,7 +1004,10 @@ vertices and the material palette stay resident. Vertex-stage palette lookups pr
 appearance without resending colors and roughness. Opaque baked details omit their color graph
 during shadow passes, so chunk-owned material lifetimes reuse one constant shadow program. Its texture cache is bounded by quality resolution and released with
 the world. Nature rendering shares one neutral four-tile atlas definition across resources, ground scatter and authored
-scenery. Each layer owns one texture lifetime; palettes and climate tint still own color. Padded tiles supply
+scenery. Ground-scatter workers expand the original recipes into transferable vertex buffers and compute
+their culling bounds. Admission accounts for voxel and vegetation bytes together; the renderer attaches
+those buffers without rebuilding geometry and retains one merged draw per chunk. The time budget
+is checked between indivisible jobs, while one oversized job may advance to avoid starvation. Each layer owns one texture lifetime; palettes and climate tint still own color. Padded tiles supply
 leaf veins, mineral striations, mushroom caps, gills and stem fibres. Bent botanical ribbons and faceted ore
 reuse the existing merged or instanced batches, wind, culling and disposal. The dedicated mushroom-only
 texture factory and old city shrub silhouette are removed.
@@ -1007,8 +1032,7 @@ The source PNG and generation prompt live beside the derived atlas data in `seed
 Authored local shaft bounds opt High quality into one reduced-resolution sunlight pass. It borrows
 scene depth and the existing sun shadow texture, integrates only inside those bounds, and reconstructs
 against depth to protect foreground silhouettes. The shared cloud field modulates that light. Quality
-owns finite sampling and distance budgets; Low, Medium, worlds without bounds, and fight-only renderers
-allocate no local shaft target. The pass stops outside the visible bounds, underwater, during fights and
+owns finite sampling and distance budgets; Low, Medium, worlds without bounds allocate no local shaft target. The pass stops outside the visible bounds, underwater, during fights and
 dungeons; quality changes and world teardown release its owned material and target, never the borrowed shadow map.
 
 Biome structure packs own sparse deterministic slots, weighted voxel types, terrain-fit limits, and an optional
@@ -1021,8 +1045,9 @@ The game chunk manager owns effective terrain residency. It starts at the reques
 distance, then contracts outer rings when the engine reports blocked GPU uploads. The visible voxel footprint drives the far-terrain opening. Movement retains that capacity bound; an explicit quality or
 distance change starts a new request. The GPU pool never grows to absorb an oversized residency plan.
 That manager also owns bounded planning and meshing retries, including stationary focus. Worker
-replies settle their exact request, and cancelled or superseded requests settle explicitly. Backend
-request serials remain monotonic while per-key metadata follows only live work. Exhaustion or device
+replies settle their exact request, and cancelled or superseded requests settle explicitly. Horizon worker failures also terminate through the engine recovery owner, including stationary startup;
+no worker fault can leave required readiness pending forever. Backend request serials remain monotonic
+while per-key metadata follows only live work. Exhaustion or device
 loss terminates that world lifetime; late callbacks cannot revive a failed engine. The player app
 retries once on a fresh canvas with persisted low quality and the minimum render distance. A second
 failure stops the world and exposes Reload. Missing WebGPU blocks world rendering immediately and

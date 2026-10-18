@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "the_ruins",
-  "source_hash": "38f0d9bbe3714fbc0c61c4eff7da8df537d5083fccd9b3ceb120d129271e0aa9",
+  "source_hash": "2721a85c2dc03561679e969853c1e0d9a9abc2d4560e6669efa8b6c7da2586f4",
   "area": {
     "id": "the_ruins",
     "dungeon": "tangled_aftermath",

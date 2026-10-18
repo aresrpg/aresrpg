@@ -1,9 +1,11 @@
 import type { ClaudeSoundEvent, ClaudeSpell } from './claude_spell_source.js'
+import type { SpellSynthesis } from './claude_spell_synth.js'
 export const create_audio_source: (
-  recordings: Readonly<Record<string, string>>,
+  recordings: Readonly<Record<string, ArrayBuffer>>,
   onset: Readonly<Record<string, number>>,
   lead: Readonly<Record<string, number>>,
-  plan: (spell: ClaudeSpell) => readonly ClaudeSoundEvent[]
+  plan: (spell: ClaudeSpell) => readonly ClaudeSoundEvent[],
+  synthesis: SpellSynthesis
 ) => Readonly<{
   A: {
     on: boolean

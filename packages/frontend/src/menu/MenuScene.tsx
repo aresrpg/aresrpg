@@ -8,6 +8,8 @@ import type { WorldLoadingSource } from '../game/core/loading_progress.ts'
 import scene_url from '../../../../seed/scenes/main_menu.json?url'
 import type scene_shape from '../../../../seed/scenes/main_menu.json'
 import { read_app_state, useAppStore } from '../store.ts'
+import { observe_frame_rate } from '../game/core/frame_rate.ts'
+import { create_scene_preparation, scene_work_complete } from '../game/core/scene_preparation.ts'
 
 import { menu_camera_at } from './camera.ts'
 import { load_menu_actors, menu_entities, type MenuActor } from './residents.ts'
@@ -61,7 +63,9 @@ export const MenuScene = () => {
             render_distance: 9,
           })
         )
+        const preparation = own(create_scene_preparation(engine))
         const planner = own(engine_module.create_terrain_planner(recipe))
+        own({ dispose: observe_frame_rate(engine) })
         const chunks = own(
           create_chunk_manager({
             engine,
@@ -74,13 +78,19 @@ export const MenuScene = () => {
         set_source({
           state: () => ({
             engine: engine.status(),
-            render: engine.render_state(),
+            render: { ...engine.render_state(), settled: engine.render_state().settled && preparation.ready() },
             chunks: chunks.stats(),
             displayed_chunks: engine.chunk_count(),
           }),
         })
         // eslint-disable-next-line functional/immutable-data -- this effect owns the disposable runtime callback ref.
-        runtime.current = (next) => chunks.set_quality(next, 9)
+        runtime.current = (next) => {
+          if (next !== engine.quality()) {
+            preparation.reset()
+            canvas.dataset.ready = ''
+          }
+          chunks.set_quality(next, 9)
+        }
         chunks.set_focus(target[0], target[2])
         engine.set_camera(position, target, { fov: scene_data.camera.fov })
         engine.set_time_of_day(scene_data.time_of_day)
@@ -88,26 +98,36 @@ export const MenuScene = () => {
         engine.set_resource_nodes(scene_data.resources)
         engine.set_character_anchor(scene_data.character.position as [number, number, number])
         let actors: readonly MenuActor[] = []
+        let actors_loaded = false
         void load_menu_actors(scene_data.character, scene_data.residents)
           .then((loaded) => {
-            if (!request.signal.aborted) actors = loaded
+            if (!request.signal.aborted) {
+              actors = loaded
+              actors_loaded = true
+            }
           })
-          .catch((error: unknown) => console.error('Menu characters could not load.', error))
+          .catch((error: unknown) => {
+            if (!request.signal.aborted) {
+              console.error('Menu characters could not load.', error)
+              engine.fail({ code: 'graphics_unavailable', detail: String(error) })
+            }
+          })
         const reduced_motion = globalThis.matchMedia('(prefers-reduced-motion: reduce)')
         let seconds = 0
         const frame = ({ delta_seconds }: EngineFrame) => {
           chunks.tick()
-          const pending = canvas.dataset.ready ? null : chunks.stats()
-          if (
-            pending &&
-            pending.resident > 0 &&
-            pending.queued + pending.in_flight + pending.evicting + Math.max(0, pending.planning) === 0 &&
-            engine.render_state().settled
-          ) {
-            canvas.dataset.ready = 'true'
-          }
           engine.set_entities(menu_entities(actors, seconds, reduced_motion.matches))
-          seconds += Math.min(0.05, delta_seconds)
+          preparation.tick(() =>
+            scene_work_complete(
+              engine.render_state().settled,
+              chunks.stats(),
+              actors_loaded && actors.every(({ entity }) => engine.entity_height(entity.id) !== null)
+            )
+          )
+          if (preparation.ready()) {
+            canvas.dataset.ready = 'true'
+            seconds += Math.min(0.05, delta_seconds)
+          }
           const view = menu_camera_at(scene_data.camera, seconds, reduced_motion.matches)
           engine.set_camera(view.position, view.target, { fov: scene_data.camera.fov })
         }
@@ -142,7 +162,7 @@ export const MenuScene = () => {
       <div className="main-menu-scene" aria-hidden="true">
         <canvas ref={set_canvas} />
       </div>
-      <WorldLoading source={source} quality={quality} render_distance={9} failed={failed} />
+      <WorldLoading context="home" source={source} quality={quality} render_distance={9} failed={failed} />
     </>
   )
 }

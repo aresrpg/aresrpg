@@ -5,6 +5,7 @@ import { Mesh, Scene } from 'three'
 
 import { create_board_occlusion } from '../src/board_occlusion.ts'
 import { create_scatter_layer } from '../src/scatter_layer.ts'
+import { build_scatter_mesh } from '../src/scatter_mesh.ts'
 import type { ScatterInstance } from '../src/scatter.ts'
 
 const instance: ScatterInstance = {
@@ -25,11 +26,11 @@ test('evicting scatter releases its render bindings without invalidating a neigh
   const layer = create_scatter_layer({ scene, board_occlusion: create_board_occlusion() })
   layer.add(
     { key: 'first', lod: 'near', origin: [0, 0, 0], coordinate: { x: 0, y: 0, z: 0 }, resolution: 32, cell_size: 1 },
-    [instance]
+    build_scatter_mesh([0, 0, 0], [instance])
   )
   layer.add(
     { key: 'second', lod: 'near', origin: [32, 0, 0], coordinate: { x: 1, y: 0, z: 0 }, resolution: 32, cell_size: 1 },
-    [instance]
+    build_scatter_mesh([32, 0, 0], [instance])
   )
   const [first, second] = scene.children[0]!.children as Mesh[]
   const disposed: string[] = []

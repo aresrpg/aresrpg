@@ -14,14 +14,14 @@ import { Fn, attribute, float, int, mix, normalWorld, positionWorld, smoothstep,
 import { get_quality_profile } from './quality.ts'
 import type { UploadQueue } from './upload_queue.ts'
 import type { Clouds } from './clouds.ts'
-import { decode_detail_vertices, DETAIL_STRIDE, type DetailCell } from './detail_artifact.ts'
+import { decode_detail_cell, DETAIL_STRIDE, type DetailCell } from './detail_artifact.ts'
 import { macro_tint_nodes, material_emission_node } from './terrain_tint.ts'
 import type { CompiledMaterials } from './world_materials.ts'
 import type { EngineQuality, Vec3 } from './types.ts'
 import type { create_sky_node } from './sky/sky_node.ts'
 
 const detail_geometry = (cell: DetailCell, materials: CompiledMaterials): BufferGeometry => {
-  const values = decode_detail_vertices(cell.vertices)
+  const values = decode_detail_cell(cell)
   const ids = cell.palette.map((name) => materials.id_for(name))
   for (let index = 8; index < values.length; index += DETAIL_STRIDE) values[index] = ids[values[index]!]!
   const buffer = new InterleavedBuffer(values, DETAIL_STRIDE)

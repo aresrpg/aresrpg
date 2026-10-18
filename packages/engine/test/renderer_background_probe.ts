@@ -57,6 +57,7 @@ engine.start(() => {
 await Bun.sleep(140)
 assert(updates > 0)
 assert.equal(renders, 0)
+assert.equal(engine.frame_count(), 0)
 assert.equal(ticks, updates)
 assert.equal(requested_frames, 0)
 document.visibilityState = 'visible'
@@ -66,6 +67,7 @@ const before = updates
 frame(performance.now())
 assert.equal(updates, before + 1)
 assert.equal(renders, 1)
+assert.equal(engine.frame_count(), 1)
 assert.equal(ticks, updates)
 document.visibilityState = 'hidden'
 document.dispatchEvent(new Event('visibilitychange'))

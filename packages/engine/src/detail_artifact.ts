@@ -33,6 +33,13 @@ const valid_vertices = (values: Float32Array, palette_size: number): boolean => 
   return true
 }
 
+/** Decode and validate once, at bounded geometry admission or during offline validation. */
+export const decode_detail_cell = (cell: DetailCell): Float32Array => {
+  const values = decode_detail_vertices(cell.vertices)
+  if (!valid_vertices(values, cell.palette.length)) throw new TypeError('Invalid detail vertex or normal')
+  return values
+}
+
 const validate_cell_metadata = (value: unknown, names: ReadonlySet<string>, remaining: number): number => {
   if (!value || typeof value !== 'object') throw new TypeError('Detail cell must be an object')
   const row = value as DetailCell
@@ -80,9 +87,7 @@ export const validate_details = (
   const errors = validate_detail_metadata(value, materials, limits)
   if (errors.length || value === undefined) return errors
   try {
-    for (const row of value as readonly DetailCell[])
-      if (!valid_vertices(decode_detail_vertices(row.vertices), row.palette.length))
-        throw new TypeError('Invalid detail vertex or normal')
+    for (const row of value as readonly DetailCell[]) decode_detail_cell(row)
     return []
     // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- Decode failures remain validation errors, never admitted geometry.
   } catch (error) {

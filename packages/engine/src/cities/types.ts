@@ -4,6 +4,8 @@
 import type { DetailCell } from '../detail_artifact.ts'
 import type { CompiledStructureType, StructureAreaSource } from '../structures.ts'
 
+export const CITY_ARTIFACT_VERSION = 4
+
 export type CityArea = StructureAreaSource & Readonly<{ anchor_x: number; anchor_z: number }>
 export type CityNatureKind = 'cobweb' | 'dry_reed' | 'city_shrub' | 'field_crop'
 export type CityNatureRule = Readonly<{
@@ -58,8 +60,14 @@ export type GeneratedCityArtifact = Readonly<{
   id: string
   source_hash: string
   area: CityArea
-  details: readonly DetailCell[]
   chunks: readonly GeneratedCityChunk[]
+}>
+
+export type GeneratedCityDetails = Readonly<{
+  version: number
+  id: string
+  source_hash: string
+  details: readonly DetailCell[]
 }>
 
 export type GeneratedCityMapArtifact = Readonly<{
@@ -76,6 +84,7 @@ export type CityRuntimeDefinition = Readonly<{
   material_names: readonly string[]
   compile: (area: CityArea) => CompiledCity
   artifact_url: URL
+  details_url: URL
   map: GeneratedCityMapArtifact
   land_uses: Readonly<Record<string, string>>
 }>

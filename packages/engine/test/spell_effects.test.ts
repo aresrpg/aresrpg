@@ -34,6 +34,12 @@ test('the approved source is preserved byte-for-byte and every original effect f
     expect(shader).toContain(line)
 })
 
+test('worker synthesis retains the complete authored DSP program', () => {
+  const source = readFileSync(new URL('../../../seed/content/spell_effects/synth.js', import.meta.url), 'utf8')
+  const extracted = readFileSync(new URL('../src/generated/claude_spell_synth.js', import.meta.url), 'utf8')
+  expect(extracted).toContain(source)
+})
+
 test('all 240 presets retain original three-stage clocks and sound plans', () => {
   const source = create_source()
   expect(Object.values(source.catalog).flat()).toHaveLength(240)

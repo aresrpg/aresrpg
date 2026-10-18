@@ -48,7 +48,7 @@ export const WorldStage = ({
   return (
     <>
       <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
-      <WorldLoading source={scene} quality={quality} />
+      <WorldLoading context="demo" source={scene} quality={quality} />
       {scene ? children(scene) : null}
     </>
   )

@@ -32,7 +32,7 @@ test('authored scenery accepts the demo and refuses unbounded or malformed effec
 test('scenery stays within four draws and reuses GPU buffers across quality changes', () => {
   const scene = new Scene()
 
-  const layer = create_scenery({ scene, scenery, presentation: 'world' })
+  const layer = create_scenery({ scene, scenery })
   const meshes = [...scene.children] as Mesh[]
   expect(meshes).toHaveLength(4)
   expect(meshes.every(({ visible }) => !visible)).toBeTrue()
@@ -56,17 +56,12 @@ test('scenery stays within four draws and reuses GPU buffers across quality chan
   expect(disposed).toHaveLength(8)
 })
 
-test('ordinary worlds and fight-only renderers allocate no scenery resources', () => {
+test('worlds without authored scenery allocate no scenery resources', () => {
   const scene = new Scene()
-
-  for (const layer of [
-    create_scenery({ scene, presentation: 'world' }),
-    create_scenery({ scene, scenery, presentation: 'fight' }),
-  ]) {
-    layer.set_visible(true)
-    layer.set_quality('high')
-    layer.dispose()
-  }
+  const layer = create_scenery({ scene })
+  layer.set_visible(true)
+  layer.set_quality('high')
+  layer.dispose()
   expect(scene.children).toHaveLength(0)
 })
 
@@ -87,7 +82,7 @@ test('seasonal effects keep bounded buffers and dispose with the world', () => {
   ])
     expect(validate_scenery(invalid).length).toBeGreaterThan(0)
   const scene = new Scene()
-  const layer = create_scenery({ scene, scenery: seasonal, presentation: 'world' })
+  const layer = create_scenery({ scene, scenery: seasonal })
   const meshes = scene.children as Mesh[]
   const snow = meshes.at(-2)!
   const { geometry } = snow

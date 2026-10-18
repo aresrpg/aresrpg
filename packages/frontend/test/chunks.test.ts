@@ -10,6 +10,8 @@ const create_engine_spy = () => {
   const rendered: RenderChunkRequest[] = []
   const removed: string[] = []
   const engine: Engine = {
+    prepare_scene: async () => true,
+    frame_count: () => 0,
     fail: () => {},
     start: () => {},
     stop: () => {},

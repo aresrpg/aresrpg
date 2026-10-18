@@ -60,6 +60,7 @@ for (const quality of ['low', 'medium', 'high'] as const) {
       `${quality} at ${refresh_rate} Hz rendered ${renders}, expected ${expected}`
     )
     assert.equal(ticks, renders)
+    assert.equal(engine.frame_count(), renders, 'FPS counts presented engine frames, not display callbacks')
     assert(elapsed > 1.9 && elapsed < 2.01, `simulation elapsed ${elapsed}`)
     engine.dispose()
   }

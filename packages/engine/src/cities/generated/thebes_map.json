@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "thebes",
-  "source_hash": "9832f41abce99fed05caeffda8ec2eb3997260cda47ae84a7fd8e5084aac57dd",
+  "source_hash": "066868ec24341b392730ac196476479f66ea47f2446c85945f9b124ccf5744ad",
   "area": {
     "id": "thebes",
     "dungeon": "gilded_lorito",

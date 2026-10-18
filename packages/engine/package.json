@@ -5,7 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./spell-audio": "./src/generated/claude_spell_audio.js",
+    "./spell-audio": "./src/spell_audio.ts",
     "./data": "./src/data.ts",
     "./recipe": "./src/world_recipe.ts",
     "./biomes": "./src/biome_grid.ts"

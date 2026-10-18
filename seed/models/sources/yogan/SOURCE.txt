@@ -1,6 +1,6 @@
 Yogan male and female character models
 
-Open yogan.blend. The two named model scenes contain editable meshes, packed palettes,
+Open yogan.blend in Blender 5.2 or newer. The two named model scenes contain editable meshes, packed palettes,
 independent playable rigs, removable hair, and native animation actions. No cape is part
 of either costume. Existing equipped hats and cloaks use the original attachment frames.
 
@@ -18,11 +18,14 @@ other clip. RELEASE is an action pose marker; the exporter derives animation.ext
 from that marker. ATTACK and DEATH last one second. Legacy cast actions and the upward shot
 remain source references; the runtime export contains only one attack animation.
 
-Both faces use the original roster eye silhouette and stepped voxel geometry. The female
-has narrower cheeks, a tapered chin, a smaller nose, and an upward-corner smile guided
-by her profile illustration. The male keeps a broader jaw. The neck remains connected.
-The packed build_yogan_roster_faces.py reconstructs both faces from the preserved
-references. Its hair clearances retain the exterior locks and clear the head and ears.
+The female face follows the existing Iyashi female voxel geometry: stepped cheeks,
+simple notched eyes, a block nose and small mouth. It fits Yogan's own head envelope,
+with stepped pointed ears and the retained layered blonde bob with swept bangs.
+Her fitted tunic covers the midriff; narrower arm depth preserves the original rig.
+The hair has continuous backing beneath its tapered locks and a compact feathered tuft.
+The male retains his broader stepped jaw. Both necks remain connected.
+The editable meshes own the current design. Packed build/refine scripts are historical
+studies; rerunning them would replace the current face and hair with an older design.
 Run validate_yogan_head_fit.py to check fit, skin weights, palette names and sockets.
 Run the packed validate_yogan.py text to check head/arm intersections at 48 Hz for both rigs
 and reject a disconnected female neck.

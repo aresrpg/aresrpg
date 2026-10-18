@@ -8,7 +8,6 @@ import type { PetWingsRender } from './pet_wing_style.ts'
 
 export type Vec3 = readonly [number, number, number]
 export type EngineQuality = 'low' | 'medium' | 'high'
-export type EnginePresentation = 'world' | 'fight'
 export type FightBoardRenderCell = Readonly<{
   cell: number
   x: number
@@ -203,6 +202,7 @@ export type QualityProfile = Readonly<{
   fog: Readonly<{ near: number; far: number }>
   shadows: Readonly<{ kind: 'none' | 'basic' | 'soft'; map_size: number }>
   effects: Readonly<{
+    spell_pixels: number
     bloom: Readonly<{ strength: number; radius: number; threshold: number }> | null
     local_shafts: Readonly<{
       samples: number
@@ -405,6 +405,10 @@ export type FightPresentationCue =
     }>
 
 export type Engine = Readonly<{
+  /** Warm the current scene and wait for its submitted GPU work before revealing it. */
+  prepare_scene: () => Promise<boolean>
+  /** Successful visible render submissions; hidden simulation ticks never increment it. */
+  frame_count: () => number
   start: (update?: (frame: EngineFrame) => void, background?: boolean) => void
   stop: () => void
   // projection.fov drives the perspective lens; projection.ortho_blend (0 = perspective,

@@ -3,7 +3,6 @@
 
 import { QUALITY_OPTIONS, type EngineQuality } from '@aresrpg/engine'
 import { Button, Panel } from '@aresrpg/ui'
-import { useEffect, useState } from 'react'
 import { Users } from 'lucide-react'
 
 import { useAppStore } from '../store.ts'
@@ -31,29 +30,7 @@ export const FpsPanel = ({
   toggle_fight_access?: () => void
 }>) => {
   const session = useAppStore((state) => state.session)
-  const [fps, set_fps] = useState<number | null>(null)
-
-  useEffect(() => {
-    if (!active) {
-      set_fps(null)
-      return
-    }
-    let animation_frame = 0
-    let frame_count = 0
-    let sampled_at = performance.now()
-    const sample = (now: number): void => {
-      frame_count += 1
-      const elapsed = now - sampled_at
-      if (elapsed >= 500) {
-        set_fps(Math.round((frame_count * 1000) / elapsed))
-        frame_count = 0
-        sampled_at = now
-      }
-      animation_frame = requestAnimationFrame(sample)
-    }
-    animation_frame = requestAnimationFrame(sample)
-    return () => cancelAnimationFrame(animation_frame)
-  }, [active])
+  const fps = useAppStore((state) => (active ? state.engine.frame_rate?.fps : null))
 
   return (
     <Panel className="aui-performance" data-tutorial-target="fps">

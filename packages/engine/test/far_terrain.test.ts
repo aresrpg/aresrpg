@@ -15,6 +15,60 @@ import { compile_runtime_world_recipe, parse_world_recipe } from '../src/world_r
 import { world_terrain } from '../src/world_catalog.ts'
 import { CHUNK_EDGE } from '../src/voxel_data.ts'
 
+test.each(['error', 'messageerror', 'post'])(
+  'far worker %s reaches its owner once without waiting for movement',
+  (kind) => {
+    const original_worker = globalThis.Worker
+    const events = new EventTarget()
+    let sent = 0
+    let terminated = 0
+    const worker = {
+      addEventListener: events.addEventListener.bind(events),
+      postMessage: () => {
+        sent++
+        if (kind === 'post') throw new Error('worker transport failed')
+      },
+      terminate: () => {
+        terminated++
+      },
+    }
+    globalThis.Worker = new Proxy(original_worker, { construct: () => worker })
+    const scene = new Scene()
+    const sky = create_sky_node()
+    const clouds = create_clouds({ scene, sky, quality: 'low', seed: 'failure' })
+    const world = parse_world_recipe(world_terrain('nauvis'))
+    const failures: Error[] = []
+    try {
+      const far = create_far_terrain({
+        scene,
+        clouds,
+        quality: 'low',
+        world,
+        sun_direction: sky.sun_direction,
+        materials: compile_runtime_world_recipe(world, { structures: false }).materials,
+        on_failure: (error: Error) => failures.push(error),
+      })
+      try {
+        if (kind !== 'post') events.dispatchEvent(new Event(kind))
+        expect(failures).toHaveLength(1)
+        expect(terminated).toBe(1)
+        const before = sent
+        far.set_focus(0, 0)
+        far.set_focus(1000, 1000)
+        events.dispatchEvent(new Event('error'))
+        expect(sent).toBe(before)
+        expect(failures).toHaveLength(1)
+        expect(far.ready()).toBeFalse()
+      } finally {
+        far.dispose()
+      }
+    } finally {
+      clouds.dispose()
+      globalThis.Worker = original_worker
+    }
+  }
+)
+
 describe('the far shell hole', () => {
   test('opens exactly where the effective chunk radius ends', () => {
     expect(seam_radius(6)).toBe(6 * CHUNK_EDGE - CHUNK_EDGE)
@@ -42,6 +96,9 @@ test('radius changes preserve vertex data and focus updates upload only heights 
   const far = create_far_terrain({
     scene,
     quality: 'high',
+    on_failure: (error) => {
+      throw error
+    },
 
     clouds,
     sun_direction: sky.sun_direction,

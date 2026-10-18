@@ -21,6 +21,7 @@ import { load_game_settings } from './game/core/settings.ts'
 import { register_service_worker } from './pwa.ts'
 import { react_error_handlers, report_error } from './reporting.ts'
 import { MOBILE_VIEWPORT_QUERY, uses_mobile_overlays } from './player_layout.ts'
+import { show_boot_failure } from './boot_loading.ts'
 
 const activate_player = () => observe_app(PLAYER_APP_MODULES)
 
@@ -55,7 +56,9 @@ const load_surface = async (
     dispatch_app({ type: 'locale/loaded', locale, copy })
     return { Surface: () => <DemoPage copy={copy} />, modules: DEMO_APP_MODULES }
   }
-  return { Surface: await load_player_surface(globalThis.location.pathname), modules: PLAYER_APP_MODULES }
+  const [Surface, copy] = await Promise.all([load_player_surface(globalThis.location.pathname), load_app_copy(locale)])
+  dispatch_app({ type: 'locale/loaded', locale, copy })
+  return { Surface, modules: PLAYER_APP_MODULES }
 }
 
 export const boot_game = (): void => {
@@ -77,6 +80,6 @@ export const boot_game = (): void => {
     .catch((error: unknown) => {
       capture_demo_boot_failure('boot')
       report_error(error, { area: 'boot' })
-      root.render(<main className="fixed inset-0 bg-bg" />)
+      show_boot_failure()
     })
 }

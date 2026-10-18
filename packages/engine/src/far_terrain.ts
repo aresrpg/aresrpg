@@ -199,6 +199,7 @@ export const create_far_terrain = ({
   sun_direction,
   clouds,
   initial_focus = [0, 0],
+  on_failure,
 }: Readonly<{
   scene: Scene
   quality: EngineQuality
@@ -207,6 +208,7 @@ export const create_far_terrain = ({
   sun_direction: ReturnType<typeof create_sky_node>['sun_direction']
   clouds: Clouds
   initial_focus?: readonly [number, number]
+  on_failure: (error: Error) => void
 }>): FarTerrain => {
   const worker = new Worker(new URL('./far_worker.ts', import.meta.url), { type: 'module' })
   const centers = Object.freeze({
@@ -264,12 +266,24 @@ export const create_far_terrain = ({
   let applied_id = 0
   let in_flight_id: number | null = null
   let disposed = false
+  let failed = false
   let visible = true
 
+  const report_error = (error: unknown): void => {
+    if (disposed || failed) return
+    failed = true
+    worker.terminate()
+    on_failure(error instanceof Error ? error : new Error(String(error)))
+  }
+
   const dispatch_latest = (): void => {
-    if (in_flight_id !== null) return
+    if (disposed || failed || in_flight_id !== null) return
     in_flight_id = request_id
-    worker.postMessage({ type: 'sample', id: request_id, quality: active_quality, center: desired_center })
+    try {
+      worker.postMessage({ type: 'sample', id: request_id, quality: active_quality, center: desired_center })
+    } catch (error) {
+      report_error(error)
+    }
   }
 
   const request = (): void => {
@@ -278,8 +292,9 @@ export const create_far_terrain = ({
   }
 
   worker.addEventListener('message', ({ data }: MessageEvent<FarSample>) => {
+    if (disposed || failed) return
     if (data.id === in_flight_id) in_flight_id = null
-    if (!disposed && data.id === request_id && data.quality === active_quality) {
+    if (data.id === request_id && data.quality === active_quality) {
       applied_id = data.id
       const mesh = meshes[data.quality]
       const heights = mesh.geometry.getAttribute('height') as BufferAttribute
@@ -295,17 +310,18 @@ export const create_far_terrain = ({
         candidate.visible = visible && tier === active_quality
       })
     }
-    if (!disposed && request_id > data.id) dispatch_latest()
+    if (request_id > data.id) dispatch_latest()
   })
-  // A failed job never answers, so the in-flight slot would stay taken forever and
-  // `dispatch_latest` would refuse every later focus — one exception freezing the far shell
-  // for the whole session. Free the slot so the next focus recovers. Deliberately NO retry
-  // here: a worker that throws on every message would answer each error with a fresh post.
-  worker.addEventListener('error', (event) => {
-    console.error('[engine] far-terrain worker failed.', event.error)
-    in_flight_id = null
-  })
-  worker.postMessage({ type: 'initialize', world: terrain_recipe(world) })
+  // Required horizon work must reach the engine's recovery owner, including stationary startup.
+  worker.addEventListener('error', (event) => report_error(new Error(event.message || 'Far terrain worker failed')))
+  worker.addEventListener('messageerror', () =>
+    report_error(new Error('Far terrain worker reply could not be decoded'))
+  )
+  try {
+    worker.postMessage({ type: 'initialize', world: terrain_recipe(world) })
+  } catch (error) {
+    report_error(error)
+  }
   request()
 
   return Object.freeze({
@@ -329,8 +345,9 @@ export const create_far_terrain = ({
       desired_center = [Math.round(desired_center[0] / step) * step, Math.round(desired_center[1] / step) * step]
       request()
     },
-    ready: () => applied_id === request_id && in_flight_id === null,
+    ready: () => !failed && applied_id === request_id && in_flight_id === null,
     dispose: () => {
+      if (disposed) return
       disposed = true
       worker.terminate()
       textures.forEach((atlas) => atlas.dispose())

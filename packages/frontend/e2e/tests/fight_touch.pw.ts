@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 test.use({ hasTouch: true })
 const tap_board = async (page: Page): Promise<void> => {
+  await expect(page.locator('[data-world-loading]')).toHaveCount(0)
   await page.touchscreen.tap(70, 300)
 }
 
@@ -29,6 +30,7 @@ test('another canvas and a dragged finger never select the board; a new checkpoi
 }) => {
   await page.goto('/e2e/fixtures/fight_placement_race.html')
   await expect(page.getByLabel('Participants', { exact: true })).toHaveText('2')
+  await expect(page.locator('[data-world-loading]')).toHaveCount(0)
   await page.locator('[data-other-canvas]').tap()
   await expect(page.locator('[data-touch-fight-confirm]')).toHaveCount(0)
   const canvas = page.locator('canvas').first()
@@ -47,6 +49,7 @@ test('another canvas and a dragged finger never select the board; a new checkpoi
 test('a pinch never previews or submits a board action', async ({ page }) => {
   await page.goto('/e2e/fixtures/fight_placement_race.html')
   await expect(page.getByLabel('Participants', { exact: true })).toHaveText('2')
+  await expect(page.locator('[data-world-loading]')).toHaveCount(0)
   const canvas = page.locator('canvas').first()
   await canvas.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 1, clientX: 70, clientY: 300 })
   await canvas.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 2, clientX: 120, clientY: 300 })

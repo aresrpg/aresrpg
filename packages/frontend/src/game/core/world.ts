@@ -21,6 +21,7 @@ import {
   type PetWingStyle,
   type Vec3,
 } from '@aresrpg/engine'
+import { SPELL_EFFECT_CLASSES } from '@aresrpg/engine/data'
 
 import { create_spawn_hologram, hologram_city } from './spawn_hologram.ts'
 import { world_daylight } from './daylight.ts'
@@ -64,6 +65,9 @@ import { begin_walking, step_walking } from './walking.ts'
 import { create_world_ticker } from './world_ticker.ts'
 import type { DungeonPortalMarker } from '../../modules/world.ts'
 import { observe_engine_reporting } from '../../reporting.ts'
+import { prepare_spell_resources } from '../fight/fight_resources.ts'
+import { observe_frame_rate } from './frame_rate.ts'
+import { create_scene_preparation, scene_work_complete } from './scene_preparation.ts'
 
 export type WorldView = Readonly<{
   focus: readonly [number, number]
@@ -125,6 +129,19 @@ export const create_world = ({
   const compiled = compile_runtime_world_recipe(world)
   const engine = create_engine({ canvas, quality, world: compiled, initial_focus, render_distance })
   const stop_reporting = observe_engine_reporting(engine)
+  const stop_frame_rate = observe_frame_rate(engine)
+  const scene_preparation = create_scene_preparation(engine)
+  let requested_quality = quality
+  let requested_distance = render_distance
+  let disposed = false
+  let resources_ready = false
+  let fight_resources: Promise<void> | null = null
+  const prepare_resources = (): Promise<void> => {
+    fight_resources ??= prepare_spell_resources(SPELL_EFFECT_CLASSES, engine).then(() => {
+      if (!disposed) resources_ready = true
+    })
+    return fight_resources
+  }
   const terrain_planner = create_terrain_planner(compiled.recipe)
   const chunks = create_chunk_manager({
     engine,
@@ -214,6 +231,7 @@ export const create_world = ({
   let fight_board: FightBoardFrame = { origin: { x: 0, y: 0, z: 0 }, grid_w: 1, grid_h: 1, cell_size: 1 }
   let active = false
   let enabled = false
+  const interactive = (): boolean => enabled && resources_ready && scene_preparation.ready()
   let action_lock: Readonly<{ character_id: string; animation: 'gather' | null }> | null = null
   let run_target: RunTarget | null = null
   let walking: ReturnType<typeof begin_walking> | null = null
@@ -351,7 +369,7 @@ export const create_world = ({
   let touch_axes = { forward: 0, strafe: 0 }
   let mouse_forward = false
   const update_mouse_forward = (buttons: number): void => {
-    const next = enabled && !action_lock && mode === 'follow' && (buttons & 3) === 3
+    const next = interactive() && !action_lock && mode === 'follow' && (buttons & 3) === 3
     if (next === mouse_forward) return
     mouse_forward = next
     if (next) unlock_audio()
@@ -361,7 +379,7 @@ export const create_world = ({
   // ── spectate drag-pan (the pre-login overview keeps its own gesture) ──
   const on_pointer_down = (event: PointerEvent): void => {
     update_mouse_forward(event.buttons)
-    if (!enabled || (event.button !== 0 && event.button !== 2)) return
+    if (!interactive() || (event.button !== 0 && event.button !== 2)) return
     if (mode !== 'spectate') return
     dragging = event.button === 2 ? 'orbit' : 'pan'
     pointer = [event.clientX, event.clientY]
@@ -369,7 +387,7 @@ export const create_world = ({
   }
   const on_pointer_move = (event: PointerEvent): void => {
     update_mouse_forward(event.buttons)
-    if (!enabled || !dragging || mode !== 'spectate') return
+    if (!interactive() || !dragging || mode !== 'spectate') return
     const dx = event.clientX - pointer[0]
     const dy = event.clientY - pointer[1]
     if (dragging === 'orbit') {
@@ -390,10 +408,10 @@ export const create_world = ({
   }
   const on_context_menu = (event: MouseEvent): void => {
     // follow mode owns the right button (camera + the both-buttons run) — no browser menu
-    if (enabled && (mode === 'spectate' || mode === 'follow')) event.preventDefault()
+    if (interactive() && (mode === 'spectate' || mode === 'follow')) event.preventDefault()
   }
   const on_wheel = (event: WheelEvent): void => {
-    if (!enabled || mode !== 'spectate') return
+    if (!interactive() || mode !== 'spectate') return
     event.preventDefault()
     spectate_zoom = Math.min(
       overview.max_zoom,
@@ -409,7 +427,7 @@ export const create_world = ({
     character.set_input({ forward: held.forward, strafe: held.strafe })
   }
   const set_jump = (down: boolean): void => {
-    if (!enabled || mode !== 'follow' || action_lock) return
+    if (!interactive() || mode !== 'follow' || action_lock) return
     if (down) {
       unlock_audio()
       stop_run('manual')
@@ -541,7 +559,7 @@ export const create_world = ({
     clear_dungeon_portal_prompt()
   }
   const on_key_down = (event: KeyboardEvent): void => {
-    if (!enabled || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
+    if (!interactive() || mode !== 'follow' || action_lock || !world_keyboard_eligible(event)) return
     if (mode === 'follow' && (WORLD_MOVE_KEYS[event.code] !== undefined || event.code === 'Space')) unlock_audio()
     on_key(event, true)
   }
@@ -624,12 +642,12 @@ export const create_world = ({
   }
 
   const toggle_mount = (): void => {
-    if (!enabled || mode !== 'follow' || action_lock) return
+    if (!interactive() || mode !== 'follow' || action_lock) return
     if (riding) set_riding(false)
     else if (pet_interactable()) set_riding(true)
   }
   const travel = (): void => {
-    if (enabled && !action_lock && portal_eligible()) on_travel?.()
+    if (interactive() && !action_lock && portal_eligible()) on_travel?.()
   }
 
   const render_pet = (transform = character.get_transform(), delta_seconds = 0): boolean => {
@@ -767,6 +785,7 @@ export const create_world = ({
     chunks.set_focus(focus[0], focus[1])
     chunks.tick()
     engine.set_time_of_day(time_of_day_for_camera_mode(mode, world_time_of_day))
+    scene_preparation.tick(() => scene_work_complete(engine.render_state().settled, chunks.stats(), resources_ready))
   }
 
   canvas.addEventListener('pointerdown', on_pointer_down)
@@ -794,6 +813,9 @@ export const create_world = ({
   return Object.freeze({
     canvas,
     set_quality: (quality: 'low' | 'medium' | 'high', render_distance: number | null) => {
+      if (quality !== requested_quality || render_distance !== requested_distance) scene_preparation.reset()
+      requested_quality = quality
+      requested_distance = render_distance
       // one radius for both terrains: voxel chunks AND the far shell's hole track the override
       chunks.set_quality(quality, render_distance)
     },
@@ -926,7 +948,10 @@ export const create_world = ({
     pick_fight_cell: engine.pick_fight_cell,
     // the rest of the fight presentation, forwarded beside the board doors above — the surface
     // that mounts a board here drives its cues and its models through the same handle
-    prepare_fight_effects: engine.prepare_fight_effects,
+    prepare_fight_effects: async (urls: readonly string[]) => {
+      await prepare_resources()
+      await engine.prepare_fight_effects(urls)
+    },
     prepare_fight_cue: engine.prepare_fight_cue,
     play_fight_cue: engine.play_fight_cue,
     animate_entity: engine.animate_entity,
@@ -941,17 +966,19 @@ export const create_world = ({
     set_entity_label: (id: string, element: HTMLElement | null) => engine.set_entity_label(id, element),
     set_world_label: (id: string, element: HTMLElement | null, position: Vec3 | null) =>
       engine.set_world_label(id, element, position),
-    state: (): WorldState =>
-      Object.freeze({
+    state: (): WorldState => {
+      const render = engine.render_state()
+      return Object.freeze({
         engine: engine.status(),
-        render: engine.render_state(),
+        render: { ...render, settled: render.settled && resources_ready && scene_preparation.ready() },
         chunks: chunks.stats(),
         displayed_chunks: engine.chunk_count(),
-      }),
+      })
+    },
     set_jump,
     set_movement_area: character.set_movement_area,
     set_movement: (axes: Readonly<{ forward: number; strafe: number }>) => {
-      if (!enabled || mode !== 'follow' || action_lock) return
+      if (!interactive() || mode !== 'follow' || action_lock) return
       const magnitude = Math.hypot(axes.forward, axes.strafe)
       if (magnitude > 0) stop_run('manual')
       const length = Math.max(1, magnitude)
@@ -968,7 +995,14 @@ export const create_world = ({
     },
     set_active: (next: boolean, background = false) => {
       ticker.set_active(next, background)
-      if (next) engine.start(({ now }) => ticker.advance(now), background)
+      if (next) {
+        engine.start(({ now }) => ticker.advance(now), background)
+        // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- engine.fail publishes a terminal status observed by the shared reporter and recovery UI.
+        void prepare_resources().catch((error: unknown) => {
+          if (!disposed)
+            engine.fail({ code: 'graphics_unavailable', detail: `Fight preparation failed: ${String(error)}` })
+        })
+      }
       if (next === active) return
       active = next
       director.set_enabled(next)
@@ -1025,6 +1059,9 @@ export const create_world = ({
       action_animation_timer = setInterval(play, 2_200)
     },
     dispose: () => {
+      disposed = true
+      scene_preparation.dispose()
+      stop_frame_rate()
       stop_reporting()
       ticker.dispose()
       holograms.forEach((hologram) => hologram.dispose())

@@ -3,8 +3,9 @@
 
 import { opaque_canopy_mesh } from './opaque_canopy.ts'
 import { greedy_mesh } from './greedy_mesher.ts'
-import { load_generated_city_artifacts_for, generated_city_details } from './cities/generated_city.ts'
+import { load_generated_city_artifacts_for } from './cities/generated_city.ts'
 import { chunk_scatter } from './scatter.ts'
+import { build_scatter_mesh } from './scatter_mesh.ts'
 import { structure_placements, type StructurePlacement } from './structure_placement.ts'
 import { generate_chunk } from './terrain_generator.ts'
 import type { RenderChunkRequest, RenderedChunk } from './types.ts'
@@ -43,7 +44,6 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
       }
       const generated = generate_chunk(world, data.chunk, structures)
       const chunk: RenderedChunk = {
-        details: generated_city_details(world.structures.cities, generated.origin[0], generated.origin[2]),
         key: generated.key,
         coordinate: generated.coordinate,
         origin: generated.origin,
@@ -57,12 +57,14 @@ self.addEventListener('message', ({ data }: MessageEvent<WorkerRequest>) => {
           ? opaque_canopy_mesh(source_mesh, world.materials, data.chunk.lod, generated.origin)
           : source_mesh
       // Scatter consumes this exact generated voxel state; only near chunks carry clutter.
-      const scatter = data.chunk.lod === 'near' ? chunk_scatter(world, generated) : []
-      // Never transfer a zero-length buffer — transferring detaches, and a detached buffer in a
-      // later message is a DataCloneError that kills the chunk.
+      const scatter =
+        data.chunk.lod === 'near' ? build_scatter_mesh(generated.origin, chunk_scatter(world, generated)) : null
+      // Each result owns fresh buffers; transfer them once instead of cloning expanded vegetation.
       self.postMessage(
         { id: data.id, result: { chunk, mesh, scatter } },
-        { transfer: mesh.quads.length > 0 ? [mesh.quads.buffer] : [] }
+        {
+          transfer: [mesh.quads.buffer, ...Object.values(scatter?.attributes ?? {}).map(({ values }) => values.buffer)],
+        }
       )
     })
     // eslint-disable-next-line no-silent-failures/no-swallowed-failure -- the failure is returned through its exact worker request ID.

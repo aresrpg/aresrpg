@@ -16,11 +16,10 @@ export const spell_effect_audio_plan = (recipe: SpellEffectRecipe) => {
   }
   return preset.trap ? plan.filter((event) => event.step !== 2) : plan
 }
-const recording = async (file: string): Promise<string> => {
-  const response = await fetch(`/sound_effect/${file}`)
+const recording = async (file: string, signal: Readonly<AbortSignal>): Promise<ArrayBuffer> => {
+  const response = await fetch(`/sound_effect/${file}`, { signal })
   if (!response.ok) throw new Error(`Spell recording failed: ${file} (${response.status})`)
-  const bytes = new Uint8Array(await response.arrayBuffer())
-  return btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(''))
+  return response.arrayBuffer()
 }
 
 const create_spell_audio = () => {
@@ -29,22 +28,31 @@ const create_spell_audio = () => {
   let plan: readonly ClaudeSoundEvent[] = []
   const buses = new Map<GainNode, number>()
   let generation = 0
+  let request: AbortController | null = null
   const sync = (): void => {
     if (player?.A.master) player.A.master.gain.value = scale_audio_volume(0.9)
   }
   const prepare = (): Promise<void> => {
     if (typeof window === 'undefined') return Promise.resolve()
     const revision = generation
-    pending ??= Promise.all(
-      RECORDINGS.map(async ([name, row]) => [name.slice(9), await recording(row.file)] as const)
-    ).then(async (rows) => {
+    request ??= new AbortController()
+    const { signal } = request
+    pending ??= import('@aresrpg/engine/spell-audio').then(async ({ create_audio_source, load_spell_synthesis }) => {
+      const [rows, synthesis] = await Promise.all([
+        Promise.all(RECORDINGS.map(async ([name, row]) => [name.slice(9), await recording(row.file, signal)] as const)),
+        load_spell_synthesis(signal),
+      ])
       if (revision !== generation) return
       const onset = Object.fromEntries(
         RECORDINGS.map(([name, row]) => [name.slice(9), 'onset_seconds' in row ? row.onset_seconds : 0])
       )
-      const { create_audio_source } = await import('@aresrpg/engine/spell-audio')
-      if (revision !== generation) return
-      player = create_audio_source(Object.fromEntries(rows), onset, create_authored_spell_source().lead, () => plan)
+      player = create_audio_source(
+        Object.fromEntries(rows),
+        onset,
+        create_authored_spell_source().lead,
+        () => plan,
+        synthesis
+      )
       const loading = player
       await loading.boot_audio()
       if (revision !== generation) {
@@ -91,6 +99,8 @@ const create_spell_audio = () => {
     cancel,
     dispose: (): void => {
       generation += 1
+      request?.abort()
+      request = null
       cancel()
       const context = player?.A.ctx
       if (context && context.state !== 'closed')

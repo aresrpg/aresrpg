@@ -45,7 +45,6 @@ test('fire participates in scenery visibility, quality and resource disposal', (
   const scene = new Scene()
   const scenery = create_scenery({
     scene,
-    presentation: 'world',
     scenery: { waterfalls: [], spores: [], vines: [], fires: [{ center: [0, 32, 0], scale: 1 }] },
   })
   const batches = scene.children.filter(

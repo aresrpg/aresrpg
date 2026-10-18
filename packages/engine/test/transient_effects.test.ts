@@ -42,16 +42,6 @@ describe('transient effects', () => {
     expect(fight_vfx_magnitude(40, 100)).toBeGreaterThan(fight_vfx_magnitude(4, 100))
   })
 
-  test('exposes one disposable warmup object for both fight shader pipelines', () => {
-    const scene = new Scene()
-    const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })
-    const warmup = vfx.create_warmup()
-
-    expect(warmup.object.children).toHaveLength(2)
-    warmup.dispose()
-    vfx.dispose()
-  })
-
   test('holds a triggered trap beat before movement can resume', async () => {
     const scene = new Scene()
     const vfx = create_transient_effects({ scene, entities: anchors, captions: { set: () => {} } })

@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "id": "fuwage",
-  "source_hash": "8d7590c06e52f384ea818b5af4c3b708bd12e61720b8fa88f802dccebe968638",
+  "source_hash": "cb5c76436cbe0574414ea67ed037c2a5d3230e70cc36c90291abadc053fb25ee",
   "area": {
     "id": "fuwage",
     "dungeon": "ivory_rampart",

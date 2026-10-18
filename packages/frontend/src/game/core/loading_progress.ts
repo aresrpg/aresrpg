@@ -20,3 +20,21 @@ export const loading_progress = (state: WorldState | null): LoadingProgress => {
   if (!render.sky_ready || !render.far_ready) return { stage: 'sky', fraction: null }
   return { stage: render.settled && chunks.resident > 0 ? 'ready' : 'finishing', fraction: null }
 }
+
+/** Completed preparation phases, not an estimate of elapsed time or driver compilation percentage. */
+export const loading_phase = (stage: LoadingProgress['stage']): number => {
+  switch (stage) {
+    case 'assets':
+      return 0
+    case 'graphics':
+      return 1
+    case 'terrain':
+      return 2
+    case 'sky':
+    case 'finishing':
+    case 'failed':
+      return 3
+    case 'ready':
+      return 4
+  }
+}
