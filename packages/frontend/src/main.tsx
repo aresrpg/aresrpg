@@ -3,7 +3,11 @@
 import { prepare_boot_loading, show_boot_failure } from './boot_loading.ts'
 
 const boot = async (): Promise<void> => {
-  if (location.pathname.replace(/\/+$/, '') === '/enoki') return
+  if (location.pathname.replace(/\/+$/, '') === '/enoki') {
+    // The opener owns the OAuth result. Leave this callback passive, including its static shell.
+    document.getElementById('root')?.replaceChildren()
+    return
+  }
   prepare_boot_loading()
   if (!document.hidden) {
     await new Promise(requestAnimationFrame)
