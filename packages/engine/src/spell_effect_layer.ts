@@ -75,17 +75,27 @@ export const create_spell_effect_layer = ({
     mask.prepare(roots)
     mask.render(roots, new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse), 2, 2)
     const source = create_source()
+    const identity = new Matrix4().toArray()
     for (const [classe, presets] of Object.entries(source.catalog)) {
       const preset = source.select(classe, presets[0]!.name)
       const frame = {
-        uniforms: { ...source.frame(preset.cast + preset.fly + 0.2, 2, 2), aresGame: 0 },
+        uniforms: {
+          ...source.frame(preset.cast + preset.fly + 0.2, 2, 2),
+          aresProjection: identity,
+          aresInverseProjection: identity,
+          aresLocalToWorld: identity,
+          aresBoard: [0, 0, 1, 0],
+          aresBoardSize: [1, 1],
+          aresVerticalScale: 1,
+          aresSpotCount: 0,
+        },
         cells: new Uint8Array(4),
         width: 1,
         height: 1,
       }
       // Overlapping casts use both offscreen targets before the canvas. Warm every target format.
       native.render(null, mask.texture, [frame, frame, frame])
-      // Export completion waits for the submitted GL work without a synchronous finish/readPixels.
+      // Exercise the canvas export used by composition without a synchronous finish/readPixels.
       const image = await createImageBitmap(native.canvas)
       image.close()
       lifetime.signal.throwIfAborted()
@@ -95,9 +105,9 @@ export const create_spell_effect_layer = ({
   const initialize = async (atlas_urls: readonly string[]): Promise<void> => {
     if (disposed) return
     if (!native) {
-      const { claude_spell_game_shader } = await import('./claude_spell_shader.ts')
+      const { FRAGMENT } = await import('./generated/claude_spell_game_fragment.js')
       if (disposed) return
-      native = await create_spell_gl(claude_spell_game_shader(), lifetime.signal)
+      native = await create_spell_gl(FRAGMENT, lifetime.signal)
       mask = await create_spell_actor_mask(native.gl, lifetime.signal)
       copied = new CanvasTexture(native.canvas)
       // This is a display-mapped overlay, not a scene-linear surface.

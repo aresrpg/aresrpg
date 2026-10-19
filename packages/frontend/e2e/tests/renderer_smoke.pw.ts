@@ -5,7 +5,14 @@ import type {} from '../fixtures/workload.ts'
 
 import { install_probe } from '../support/browser_probe.ts'
 
-test('the renderer presents terrain and releases its GPU resources', async ({ page }) => {
+test('the renderer presents terrain and releases its GPU resources', async ({ page, browser }, info) => {
+  const diagnostics = await browser.newBrowserCDPSession()
+  const { gpu } = await diagnostics.send('SystemInfo.getInfo')
+  await info.attach('graphics-environment', {
+    body: JSON.stringify({ browser: browser.version(), gpu }, null, 2),
+    contentType: 'application/json',
+  })
+  await diagnostics.detach()
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {

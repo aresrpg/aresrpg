@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Extract the owner's approved program verbatim. The game adapter is maintained separately.
+// Preserve the approved source and generate its gameplay integration offline.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
+
+import { compile_spell_shader } from './spell_shader.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const source = readFileSync(resolve(root, 'seed/content/spell_effects/source.html'), 'utf8')
@@ -95,17 +97,30 @@ ${synth}
 return { sample_rate: SR, samples: synth_all() };
 };
 `
-const catalog_json = JSON.stringify(runInNewContext(catalog + '\nCLASSES'), null, 2) + '\n'
-for (const [name, text] of [
-  ['claude_spell_source.js', program],
-  ['claude_spell_fragment.js', `${header}export const FRAGMENT = ${JSON.stringify(shader)};\n`],
-  ['claude_spell_audio.js', audio_program],
-  ['claude_spell_synth.js', synth_program],
-  ['claude_spell_catalog.json', catalog_json],
-]) {
-  const path = resolve(root, 'packages/engine/src/generated', name)
+const write_artifact = (directory, name, text) => {
+  const path = resolve(root, directory, name)
   if (process.argv.includes('--check')) {
     if (readFileSync(path, 'utf8') !== text) throw new Error(`Stale authored spell program: ${name}`)
   } else writeFileSync(path, text)
 }
+
+const catalog_json = JSON.stringify(runInNewContext(catalog + '\nCLASSES'), null, 2) + '\n'
+for (const [name, text] of [
+  ['claude_spell_source.js', program],
+  [
+    'claude_spell_game_fragment.js',
+    `${header}export const FRAGMENT = ${JSON.stringify(compile_spell_shader(shader))};\n`,
+  ],
+  ['claude_spell_audio.js', audio_program],
+  ['claude_spell_synth.js', synth_program],
+  ['claude_spell_catalog.json', catalog_json],
+]) {
+  write_artifact('packages/engine/src/generated', name, text)
+}
+write_artifact(
+  'packages/engine/test/fixtures',
+  'claude_spell_fragment.json',
+  JSON.stringify({ source_sha256: hash, fragment: shader }, null, 2) + '\n'
+)
+
 console.log(`Exact spell-source extraction verified: ${hash.slice(0, 12)}`)

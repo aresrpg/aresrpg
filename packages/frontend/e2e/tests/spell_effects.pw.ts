@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('all 240 original shaders match the game adapter at each beat', async ({ page }) => {
+test('all 240 spells match the captured gameplay shader at each beat', async ({ page }) => {
   test.setTimeout(240_000)
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
@@ -22,9 +22,8 @@ test('all 240 original shaders match the game adapter at each beat', async ({ pa
     )
   )
   expect(results).toHaveLength(720)
-  // A runtime camera branch can round a single RGB ray/noise edge differently on Metal.
-  // The compile-time-disabled bridge must still match every source pixel exactly.
-  expect(results.filter((result) => result.control_changed !== 0 || result.significant > 3)).toEqual([])
+  // Preview removal must preserve every captured gameplay pixel exactly.
+  expect(results.filter((result) => result.changed !== 0)).toEqual([])
   expect(errors).toEqual([])
 })
 

@@ -806,6 +806,10 @@ into the world renderer before captions. Gameplay owns affected cells and trap t
 The original visual windup retimes the model's `ATTACK` anticipation to its release marker.
 Gameplay-world startup prepares spell graphics and audio before its loading projection becomes ready.
 Parallel shader compilation yields while the driver works; real warmup draws precede readiness.
+The asset generator integrates the game camera, board and actor mask offline and removes preview-only
+drawing code. Runtime imports only that gameplay artifact; the intact authored shader and captured
+pre-cleanup integration remain test references. Guarded source boundaries stop generation if the
+authored layout changes. Warmup uses valid game-camera and board uniforms through the gameplay path.
 The authored sound synthesizer runs in a disposable worker and transfers PCM to the existing Web Audio
 player. Recordings reach its decoder as bytes, without a base64 round trip. Fight entry prepares any
 new actor masks through the same resource door. Those masks use cached vertex attributes and one

@@ -45,7 +45,6 @@ export const spell_space = (board: FightBoardRender, from: Vec3, to: Vec3, recip
         .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
         .multiply(local_to_world)
       return {
-        aresGame: 1,
         aresSpots: packed_spots,
         aresSpotCount: spots.length,
         aresProjection: projection.elements,
