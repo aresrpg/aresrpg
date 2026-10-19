@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 // Run the author's shader unchanged at its effect boundaries, between world and caption rendering.
-import { CanvasTexture, ColorManagement, LinearFilter, Matrix4, NoColorSpace, NoToneMapping, type Camera } from 'three'
-import { MeshBasicNodeMaterial, QuadMesh, type Renderer } from 'three/webgpu'
-import { texture, uv } from 'three/tsl'
+import { Matrix4, type Camera } from 'three'
+import type { Renderer } from 'three/webgpu'
 
 import { create_source, type ClaudeSpellRuntime } from './generated/claude_spell_source.js'
-import { create_spell_gl, type SpellUniforms } from './claude_spell_gl.ts'
-import { create_spell_actor_mask } from './claude_spell_actor_mask.ts'
+import type { SpellUniforms } from './spell_effect_material.ts'
+import { create_spell_actor_mask } from './spell_actor_mask.ts'
 import { spell_space } from './claude_spell_space.ts'
 import { spell_effect_size } from './quality.ts'
 import { spell_effect_timing, type SpellEffectRecipe, type SpellEffectTiming } from './spell_effect_recipe.ts'
@@ -41,116 +40,68 @@ export const create_spell_effect_layer = ({
   camera,
   renderer,
   anchors,
+  wait_for_gpu,
   quality = () => 'high',
   reduced_motion = () => false,
 }: Readonly<{
   camera: Camera
   renderer: Renderer
   anchors: Anchors
+  wait_for_gpu: () => Promise<void>
   quality?: () => EngineQuality
   reduced_motion?: () => boolean
 }>) => {
-  // Native contexts belong to the prepared gameplay world, never to module import or the menu.
-  let native: Awaited<ReturnType<typeof create_spell_gl>> | null = null
-  let mask: Awaited<ReturnType<typeof create_spell_actor_mask>> | null = null
-  let copied: CanvasTexture | null = null
-  let quad: QuadMesh | null = null
-  let compiled: Promise<void> | null = null
+  let native: ReturnType<typeof import('./spell_effect_pass.ts').create_spell_effect_pass> | null = null
+  let mask: ReturnType<typeof create_spell_actor_mask> | null = null
   const active: ActiveCast[] = []
   let previous_tick = performance.now()
   let disposed = false
-  const lifetime = new AbortController()
   const clear = (): void => {
     active.forEach((cast) => cast.resolve?.(false))
     active.length = 0
   }
   let preparing: Promise<void> | null = null
-  const warmup = async (): Promise<void> => {
-    if (!native || !mask) return
-    // A linked program is not a presented pipeline. Exercise its real draws before releasing readiness.
-    // Prepare the targets that composition will actually import; resizing later discards the backbuffer.
-    native.resize(...spell_effect_size(quality(), renderer.domElement.width, renderer.domElement.height))
-    await anchors.prepare_models()
-    lifetime.signal.throwIfAborted()
-    const { roots } = anchors.spell_context()
-    mask.prepare(roots)
-    mask.render(roots, new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse), 2, 2)
-    const source = create_source()
-    const identity = new Matrix4().toArray()
-    const { gl } = native
-    // Bound warmup raster work without replacing the prepared targets before WebGPU imports them.
-    gl.enable(gl.SCISSOR_TEST)
-    gl.scissor(0, 0, 2, 2)
-    try {
-      for (const [classe, presets] of Object.entries(source.catalog)) {
-        const preset = source.select(classe, presets[0]!.name)
-        const frame = {
-          uniforms: {
-            ...source.frame(preset.cast + preset.fly + 0.2, 2, 2),
-            aresProjection: identity,
-            aresInverseProjection: identity,
-            aresLocalToWorld: identity,
-            aresBoard: [0, 0, 1, 0],
-            aresBoardSize: [1, 1],
-            aresVerticalScale: 1,
-            aresSpotCount: 0,
-          },
-          cells: new Uint8Array(4),
-          width: 1,
-          height: 1,
-        }
-        // Overlapping casts use both offscreen targets before the canvas. Warm every target format.
-        native.render(null, mask.texture, [frame, frame, frame])
-        // Exercise the canvas export used by composition without a synchronous finish/readPixels.
-        const image = await createImageBitmap(native.canvas)
-        image.close()
-        lifetime.signal.throwIfAborted()
-      }
-    } finally {
-      gl.disable(gl.SCISSOR_TEST)
-    }
-  }
   const initialize = async (atlas_urls: readonly string[]): Promise<void> => {
+    const { create_spell_effect_pass } = await import('./spell_effect_pass.ts')
     if (disposed) return
-    if (!native) {
-      const { FRAGMENT } = await import('./generated/claude_spell_game_fragment.js')
-      if (disposed) return
-      native = await create_spell_gl(FRAGMENT, lifetime.signal)
-      mask = await create_spell_actor_mask(native.gl, lifetime.signal)
-      copied = new CanvasTexture(native.canvas)
-      // This is a display-mapped overlay, not a scene-linear surface.
-      copied.colorSpace = NoColorSpace
-      copied.flipY = false
-      copied.generateMipmaps = false
-      copied.minFilter = LinearFilter
-      const material = new MeshBasicNodeMaterial({
-        toneMapped: false,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-      })
-      material.fragmentNode = texture(copied, uv())
-      quad = new QuadMesh(material)
+    native = create_spell_effect_pass(renderer)
+    mask = create_spell_actor_mask(renderer, camera)
+    await anchors.prepare_models()
+    if (disposed) return
+    const { roots } = anchors.spell_context()
+    await mask.prepare(roots)
+    if (disposed) return
+    mask.render(roots, 2, 2)
+    native.resize(2, 2)
+    const source = create_source()
+    const preset = source.select('yogan', source.catalog.yogan![0]!.name)
+    const identity = new Matrix4().toArray()
+    const frame = {
+      uniforms: {
+        ...source.frame(preset.cast + preset.fly + 0.2, 2, 2),
+        aresProjection: identity,
+        aresInverseProjection: identity,
+        aresLocalToWorld: identity,
+        aresBoard: [0, 0, 1, 0],
+        aresBoardSize: [1, 1],
+        aresVerticalScale: 1,
+        aresSpotCount: 0,
+      },
+      cells: new Uint8Array(4),
+      width: 1,
+      height: 1,
     }
-    await native.prepare(atlas_urls)
-    if (disposed || !quad) return
-    await warmup()
-    const tone_mapping = renderer.toneMapping
-    const output_color_space = renderer.outputColorSpace
-    renderer.toneMapping = NoToneMapping
-    renderer.outputColorSpace = ColorManagement.workingColorSpace
-    try {
-      compiled ??= renderer.compileAsync(quad, quad.camera)
-    } finally {
-      renderer.toneMapping = tone_mapping
-      renderer.outputColorSpace = output_color_space
-    }
-    await compiled
+    await native.prepare(atlas_urls, [frame, frame], mask.target.texture)
   }
   const prepare = async (atlas_urls: readonly string[]): Promise<void> => {
     preparing ??= initialize(atlas_urls)
     await Promise.all([preparing, anchors.prepare_models()])
-    if (!disposed) mask?.prepare(anchors.spell_context().roots)
+    if (disposed || !mask) return
+    const { roots } = anchors.spell_context()
+    await mask.prepare(roots)
+    if (disposed) return
+    mask.render(roots, 2, 2)
+    await wait_for_gpu()
   }
   const start = (recipe: SpellEffectRecipe, caster_id: string, from: Vec3, to: Vec3): Promise<boolean> => {
     const { board } = anchors.spell_context()
@@ -214,15 +165,11 @@ export const create_spell_effect_layer = ({
         [0, 0, 0]
       ),
     render: (): void => {
-      if (!active.length || !native || !mask || !copied || !quad) return
+      if (!active.length || !native || !mask) return
       const canvas = renderer.domElement
       const [width, height] = spell_effect_size(quality(), canvas.width, canvas.height)
-      if (native.canvas.width !== width || native.canvas.height !== height) {
-        copied.dispose()
-        native.resize(width, height)
-      }
-      const projection = new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-      mask.render(anchors.spell_context().roots, projection, width, height)
+      native.resize(width, height)
+      mask.render(anchors.spell_context().roots, width, height)
       const frames = active.map((cast) => {
         const { preset, triggered } = cast.recipe
         const authored = authored_frame(cast, previous_tick, width, height, reduced_motion())
@@ -231,31 +178,13 @@ export const create_spell_effect_layer = ({
         const trap: SpellUniforms = preset.trap && !triggered ? { uI: -1 } : {}
         return { ...cast.space, uniforms: { ...authored, ...cast.space.uniforms(camera), ...actor, ...trap } }
       })
-      native.render(canvas, mask.texture, frames)
-      copied.needsUpdate = true
-      const tone_mapping = renderer.toneMapping
-      const auto_clear = renderer.autoClear
-      const output_color_space = renderer.outputColorSpace
-      renderer.toneMapping = NoToneMapping
-      renderer.autoClear = false
-      // As with captions, bypass Three's HDR framebuffer and its output blit entirely.
-      renderer.outputColorSpace = ColorManagement.workingColorSpace
-      try {
-        quad.render(renderer)
-      } finally {
-        renderer.toneMapping = tone_mapping
-        renderer.autoClear = auto_clear
-        renderer.outputColorSpace = output_color_space
-      }
+      native.render(mask.target.texture, frames)
     },
     dispose: (): void => {
       disposed = true
-      lifetime.abort()
       clear()
       mask?.dispose()
       native?.dispose()
-      copied?.dispose()
-      if (quad) (quad.material as MeshBasicNodeMaterial).dispose()
     },
   }
 }

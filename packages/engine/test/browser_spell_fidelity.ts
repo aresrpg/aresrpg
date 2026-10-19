@@ -1,16 +1,47 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Matrix4, PerspectiveCamera } from 'three'
+import {
+  CanvasTexture,
+  DataTexture,
+  LinearFilter,
+  Matrix4,
+  NoToneMapping,
+  LinearSRGBColorSpace,
+  PerspectiveCamera,
+  TextureLoader,
+} from 'three'
+import { WebGPURenderer, QuadMesh, RenderTarget } from 'three/webgpu'
 
-import { FRAGMENT } from '../src/generated/claude_spell_game_fragment.js'
+import { create_spell_effect_material } from '../src/spell_effect_material.ts'
 import { create_source } from '../src/generated/claude_spell_source.js'
-import { create_spell_gl, type SpellUniforms } from '../src/claude_spell_gl.ts'
 
+import { create_spell_gl, type SpellUniforms } from './fixtures/spell_gl_reference.ts'
 import reference from './fixtures/spell_game_shader.json'
+
+const display_colors = (overlay: Uint8Array, background: Uint8ClampedArray): Float32Array =>
+  new Float32Array((overlay.length / 4) * 3).map((_, index) => {
+    const pixel = Math.floor(index / 3) * 4
+    const channel = index % 3
+    const alpha = overlay[pixel + 3]! / 255
+    return overlay[pixel + channel]! * alpha + background[pixel + channel]! * (1 - alpha)
+  })
+
+const pixel_difference = (left: Float32Array, right: Float32Array) => {
+  let total = 0,
+    maximum = 0,
+    changed = 0
+  for (let index = 0; index < left.length; index += 1) {
+    const delta = Math.abs(left[index]! - right[index]!)
+    total += delta
+    maximum = Math.max(maximum, delta)
+    changed += Number(delta > 8)
+  }
+  return { mean: total / left.length, maximum, changed }
+}
 
 /** Compare the generated gameplay artifact with the captured pre-cleanup integration, not itself. */
 export const create_spell_fidelity_probe = async (urls: readonly string[]) => {
-  const renderers = await Promise.all([create_spell_gl(reference.fragment), create_spell_gl(FRAGMENT)])
+  const renderers = [await create_spell_gl(reference.fragment)]
   await Promise.all(renderers.map((renderer) => renderer.prepare(urls)))
   const width = 320,
     height = 224
@@ -52,7 +83,38 @@ export const create_spell_fidelity_probe = async (urls: readonly string[]) => {
     if (renderer.gl.getError() !== renderer.gl.NO_ERROR) throw new Error('Shader fidelity GL error')
     return bytes
   }
-  return (classe: string, name: string, seconds: number) => {
+  const renderer = new WebGPURenderer({ antialias: false })
+  await renderer.init()
+  renderer.toneMapping = NoToneMapping
+  renderer.outputColorSpace = LinearSRGBColorSpace
+  const target = new RenderTarget(width, height, { depthBuffer: false })
+  const atlas = await Promise.all(urls.map((url) => new TextureLoader().loadAsync(url)))
+  atlas.forEach((map) => {
+    map.generateMipmaps = false
+    map.minFilter = map.magFilter = LinearFilter
+  })
+  const scene = new CanvasTexture(background)
+  scene.flipY = false
+  scene.generateMipmaps = false
+  scene.minFilter = scene.magFilter = LinearFilter
+  const board = new DataTexture(cells, 15, 7)
+  board.needsUpdate = true
+  const mask = new DataTexture(new Uint8Array([255, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 0, 0, 255]), 2, 2)
+  mask.needsUpdate = true
+  const native = create_spell_effect_material({
+    uSw: atlas[0]!,
+    uIc: atlas[1]!,
+    uRj: atlas[2]!,
+    uPr: atlas[3]!,
+    aresScene: scene,
+    aresOriginal: scene,
+    aresActors: mask,
+    aresCells: board,
+  })
+  const quad = new QuadMesh(native.material)
+  renderer.setRenderTarget(target)
+  await renderer.compileAsync(quad, quad.camera)
+  return async (classe: string, name: string, seconds: number, verify_overlay = false) => {
     const source = create_source()
     source.select(classe, name)
     const frame = source.frame(seconds, width, height)
@@ -72,15 +134,28 @@ export const create_spell_fidelity_probe = async (urls: readonly string[]) => {
       aresSpotCount: 3,
       aresSpots: [0, 0, 0, 1, 0, 0, 0, 0, 1, ...new Array<number>(12).fill(0)],
     }
-    const left = pixels(0, uniforms),
-      right = pixels(1, uniforms)
-    let maximum = 0,
-      changed = 0
-    for (let index = 0; index < left.length; index += 1) {
-      const difference = Math.abs(left[index]! - right[index]!)
-      maximum = Math.max(maximum, difference)
-      changed += Number(difference > 0)
+    const bottom_up = pixels(0, uniforms)
+    const left = new Uint8Array(bottom_up.length)
+    for (let row = 0; row < height; row += 1)
+      left.set(bottom_up.subarray(row * width * 4, (row + 1) * width * 4), (height - 1 - row) * width * 4)
+    native.update({ ...uniforms, aresComposite: 1 })
+    quad.render(renderer)
+    const right = (await renderer.readRenderTargetPixelsAsync(target, 0, 0, width, height)) as Uint8Array
+    const background_pixels = context.getImageData(0, 0, width, height).data
+    const colors = display_colors(right, background_pixels)
+    const difference = pixel_difference(display_colors(left, background_pixels), colors)
+    let overlay_maximum: number | null = null
+    if (verify_overlay) {
+      native.update({ ...uniforms, aresComposite: 0 })
+      quad.render(renderer)
+      const composited = (await renderer.readRenderTargetPixelsAsync(target, 0, 0, width, height)) as Uint8Array
+      overlay_maximum = pixel_difference(display_colors(composited, background_pixels), colors).maximum
     }
-    return { maximum, changed }
+    return {
+      composite_mean: difference.mean,
+      composite_maximum: difference.maximum,
+      composite_changed: difference.changed,
+      overlay_maximum,
+    }
   }
 }

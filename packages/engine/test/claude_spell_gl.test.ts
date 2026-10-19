@@ -2,7 +2,7 @@
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { expect, test } from 'bun:test'
 
-import { spell_gl_program } from '../src/claude_spell_gl.ts'
+import { spell_gl_program } from './fixtures/spell_gl_reference.ts'
 
 const compiler = () => {
   let complete = false

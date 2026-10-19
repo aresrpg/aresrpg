@@ -53,7 +53,13 @@ export const create_spell_effect_probe = async (canvas: HTMLCanvasElement) => {
   }))
   entities.set_board({ origin: { x: -4.5, y: 0, z: -4.5 }, cell_size: 1, cells: grid, width: 9, height: 9 })
   let reduced = false
-  const effects = create_spell_effect_layer({ renderer, camera, anchors: entities, reduced_motion: () => reduced })
+  const effects = create_spell_effect_layer({
+    renderer,
+    camera,
+    anchors: entities,
+    wait_for_gpu: () => (Reflect.get(renderer.backend, 'device') as GPUDevice).queue.onSubmittedWorkDone(),
+    reduced_motion: () => reduced,
+  })
   const legacy = create_transient_effects({ scene, entities, captions: { set: () => {} } })
   const presentation = create_fight_presentation({ entities, vfx: legacy, spells: effects })
   let clock = 0,
@@ -83,7 +89,7 @@ export const create_spell_effect_probe = async (canvas: HTMLCanvasElement) => {
       camera.aspect = width / height
       camera.updateProjectionMatrix()
     },
-    mask_parity: () => compare_spell_mask(entities.spell_context().roots, camera),
+    mask_parity: () => compare_spell_mask(entities.spell_context().roots, camera, renderer),
     roundtrip: () => {
       const read = () => {
         const copy = document.createElement('canvas')

@@ -236,15 +236,19 @@ const WorldLab = ({ active, copy }: Readonly<{ active: boolean; copy: AppCopy }>
     )
 
   return (
-    <section className={`absolute inset-0 ${active ? 'visible opacity-100' : 'invisible opacity-0'}`}>
+    <section className="absolute inset-0" hidden={!active}>
       <canvas className="absolute inset-0 size-full touch-none" ref={set_canvas} />
-      <DungeonPortalPrompt copy={copy} />
-      <WorldLoading
-        context="demo"
-        source={world_api}
-        quality={settings.quality}
-        render_distance={settings.render_distance}
-      />
+      {active && (
+        <>
+          <DungeonPortalPrompt copy={copy} />
+          <WorldLoading
+            context="demo"
+            source={world_api}
+            quality={settings.quality}
+            render_distance={settings.render_distance}
+          />
+        </>
+      )}
       <div className="pointer-events-none absolute inset-0 z-10 p-3">
         <FpsPanel
           active={active}

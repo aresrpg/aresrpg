@@ -7,6 +7,7 @@ import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 
 import { compile_spell_shader } from './spell_shader.mjs'
+import { compile_spell_wgsl } from './spell_wgsl.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const source = readFileSync(resolve(root, 'seed/content/spell_effects/source.html'), 'utf8')
@@ -108,8 +109,8 @@ const catalog_json = JSON.stringify(runInNewContext(catalog + '\nCLASSES'), null
 for (const [name, text] of [
   ['claude_spell_source.js', program],
   [
-    'claude_spell_game_fragment.js',
-    `${header}export const FRAGMENT = ${JSON.stringify(compile_spell_shader(shader))};\n`,
+    'claude_spell_wgsl.js',
+    `${header}export const SPELL_SHADER = ${JSON.stringify(compile_spell_wgsl(compile_spell_shader(shader)))};\n`,
   ],
   ['claude_spell_audio.js', audio_program],
   ['claude_spell_synth.js', synth_program],

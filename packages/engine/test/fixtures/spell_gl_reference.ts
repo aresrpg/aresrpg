@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-// Native GLSL transport. No effect formulas live here.
+// Test-only WebGL transport for the independent authored-shader reference.
 
 export type SpellUniforms = Readonly<Record<string, number | readonly number[] | Float32Array>>
 export const SPELL_VERTEX = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0., 1.); }'

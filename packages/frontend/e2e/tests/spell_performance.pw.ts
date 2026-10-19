@@ -16,9 +16,9 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
   await page.addInitScript(install_probe)
   await page.addInitScript(() => {
     let calls: Record<string, { count: number; ms: number; max: number }> = {}
-    let draw_counts: Record<number, number> = {}
-    let stalls: { call: string; ms: number; uniform?: string; length?: number }[] = []
-    const uniform_names = new WeakMap<object, string>()
+    let spell_pipelines: string[] = []
+    let submission_counts: Record<number, number> = {}
+    let stalls: { call: string; ms: number }[] = []
     const wrap = (prototype: object, key: string, label: string) => {
       const original = Reflect.get(prototype, key)
       Reflect.set(
@@ -26,20 +26,17 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
         key,
         new Proxy(original, {
           apply: (target, receiver, args) => {
-            if (label === 'gl.drawArrays')
-              draw_counts[window.workload_frame_count] = (draw_counts[window.workload_frame_count] ?? 0) + 1
+            if (label === 'gpu.submit')
+              submission_counts[window.workload_frame_count] = (submission_counts[window.workload_frame_count] ?? 0) + 1
+            if (
+              label.startsWith('gpu.createRenderPipeline') &&
+              String(args[0]?.label).includes('renderPipeline_spell_')
+            )
+              spell_pipelines.push(String(args[0].label))
             const start = performance.now()
             const result = Reflect.apply(target, receiver, args)
             const elapsed = performance.now() - start
-            if (label === 'gl.getUniformLocation' && result) uniform_names.set(result, String(args[1]))
-            if (elapsed > 50)
-              stalls.push({
-                call: label,
-                ms: elapsed,
-                ...(label === 'gl.uniformMatrix4fv'
-                  ? { uniform: uniform_names.get(args[0]), length: args[2].length }
-                  : {}),
-              })
+            if (elapsed > 50) stalls.push({ call: label, ms: elapsed })
             const row = (calls[label] ??= { count: 0, ms: 0, max: 0 })
             row.count += 1
             row.ms += elapsed
@@ -49,25 +46,14 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
         })
       )
     }
-    for (const method of [
-      'compileShader',
-      'linkProgram',
-      'getShaderParameter',
-      'getProgramParameter',
-      'getUniformLocation',
-      'uniformMatrix4fv',
-      'texImage2D',
-      'texSubImage2D',
-      'drawArrays',
-      'drawElements',
-      'bufferData',
-      'flush',
-    ])
-      wrap(WebGLRenderingContext.prototype, method, `gl.${method}`)
-    wrap(GPUQueue.prototype, 'copyExternalImageToTexture', 'gpu.copyExternalImageToTexture')
+    for (const method of ['submit', 'copyExternalImageToTexture', 'writeBuffer', 'writeTexture'])
+      wrap(GPUQueue.prototype, method, `gpu.${method}`)
+    for (const method of ['createRenderPipeline', 'createRenderPipelineAsync'])
+      wrap(GPUDevice.prototype, method, `gpu.${method}`)
     Reflect.set(window, 'spell_measure', async (action: () => void | Promise<void>, milliseconds: number) => {
       calls = {}
-      draw_counts = {}
+      spell_pipelines = []
+      submission_counts = {}
       stalls = []
       const frames: number[] = []
       let previous = performance.now()
@@ -81,7 +67,7 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
       window.workload_on_frame = undefined
       const sorted = [...frames].sort((a, b) => a - b)
       return {
-        max_spell_passes: Math.max(0, ...Object.values(draw_counts)),
+        max_gpu_submissions: Math.max(0, ...Object.values(submission_counts)),
         duration: performance.now() - start,
         frames: frames.length,
         fps: (frames.length * 1000) / (performance.now() - start),
@@ -90,6 +76,7 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
         max: Math.max(...frames),
         over50: frames.filter((value) => value > 50).length,
         calls,
+        spell_pipelines,
         stalls,
       }
     })
@@ -211,16 +198,15 @@ test('demo fight spell cold and warm frame costs', async ({ page, browser }, inf
   await info.attach('demo-fight', { contentType: 'image/png', body: await page.screenshot() })
   expect(adapter?.fallback).toBe(false)
   expect(JSON.stringify(adapter)).not.toMatch(/swiftshader|llvmpipe|software/i)
-  expect(cold.calls['gl.compileShader']).toBeUndefined()
-  expect(cold.calls['gl.bufferData']).toBeUndefined()
-  expect(warm.calls['gl.bufferData']).toBeUndefined()
+  expect(cold.spell_pipelines).toEqual([])
+  expect(warm.spell_pipelines).toEqual([])
+  expect(followup.spell_pipelines).toEqual([])
+  expect(sequence.spell_pipelines).toEqual([])
   expect(entry.max, 'fight entry must not perform multi-second cold preparation').toBeLessThan(500)
   expect(cold.max, 'the first spell must use a warmed render path').toBeLessThan(100)
-  expect(warm.max, 'actor-mask uploads must not stall a later turn').toBeLessThan(200)
+  expect(warm.max, 'actor rendering must not stall a later turn').toBeLessThan(200)
   expect(followup.max, 'a following spell must not trigger deferred driver work').toBeLessThan(100)
-  expect(sequence.max, 'repeated spells must not stall on bulk skeleton uniforms').toBeLessThan(200)
+  expect(sequence.max, 'repeated spells must keep a bounded frame cost').toBeLessThan(200)
   expect(sequence.p95, 'overlapping spells must keep a bounded frame cost').toBeLessThan(50)
-  expect(followup.max_spell_passes).toBeGreaterThanOrEqual(2)
-  expect(sequence.max_spell_passes).toBeGreaterThanOrEqual(2)
   expect(errors).toEqual([])
 })

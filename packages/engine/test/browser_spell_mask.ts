@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { Float32BufferAttribute, Group, Matrix4, Mesh, Vector3, type Camera, type Object3D } from 'three'
+import { Float32BufferAttribute, Group, Mesh, Vector3, type Camera, type Object3D } from 'three'
+import type { Renderer } from 'three/webgpu'
 
-import { create_spell_actor_mask } from '../src/claude_spell_actor_mask.ts'
+import { create_spell_actor_mask } from '../src/spell_actor_mask.ts'
 
-export const compare_spell_mask = async (roots: readonly Object3D[], camera: Camera) => {
-  const canvas = document.createElement('canvas'),
-    gl = canvas.getContext('webgl')!
-  const mask = await create_spell_actor_mask(gl),
+export const compare_spell_mask = async (roots: readonly Object3D[], camera: Camera, renderer: Renderer) => {
+  const mask = create_spell_actor_mask(renderer, camera),
     reference = new Group(),
     point = new Vector3()
   const geometries: Mesh['geometry'][] = []
@@ -30,28 +29,19 @@ export const compare_spell_mask = async (roots: readonly Object3D[], camera: Cam
     })
   )
   reference.updateMatrixWorld(true)
-  const framebuffer = gl.createFramebuffer()!,
-    projection = new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
-  const read = (objects: readonly Object3D[]) => {
-    mask.render(objects, projection, 320, 224)
-    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer)
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, mask.texture, 0)
-    const pixels = new Uint8Array(320 * 224 * 4)
-    gl.readPixels(0, 0, 320, 224, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
-    return pixels
+  const read = async (objects: readonly Object3D[]) => {
+    mask.render(objects, 320, 224)
+    return renderer.readRenderTargetPixelsAsync(mask.target, 0, 0, 320, 224)
   }
-  const gpu = read(roots),
-    cpu = read([reference])
+  const gpu = await read(roots),
+    cpu = await read([reference])
   let different = 0,
     filled = 0
   for (let index = 0; index < gpu.length; index += 4) {
     if (gpu[index] !== cpu[index]) different += 1
     if (cpu[index]) filled += 1
   }
-  const error = gl.getError()
   mask.dispose()
-  gl.deleteFramebuffer(framebuffer)
   geometries.forEach((geometry) => geometry.dispose())
-  gl.getExtension('WEBGL_lose_context')?.loseContext()
-  return { different, filled, error }
+  return { different, filled }
 }

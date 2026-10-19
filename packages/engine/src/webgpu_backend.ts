@@ -200,8 +200,19 @@ export const create_webgpu_backend = async (
     const effects = own(create_transient_effects({ scene, entities, captions }))
     const motion_preference = globalThis.matchMedia('(prefers-reduced-motion: reduce)')
     const reduced_motion = (): boolean => motion_preference.matches
+    const wait_for_gpu = async (): Promise<void> => {
+      const device = Reflect.get(gpu_backend, 'device') as { queue: { onSubmittedWorkDone: () => Promise<void> } }
+      await device.queue.onSubmittedWorkDone()
+    }
     const spell_effects = own(
-      create_spell_effect_layer({ camera, renderer, anchors: entities, reduced_motion, quality: () => quality })
+      create_spell_effect_layer({
+        camera,
+        renderer,
+        anchors: entities,
+        wait_for_gpu,
+        reduced_motion,
+        quality: () => quality,
+      })
     )
     const fight_presentation = create_fight_presentation({
       entities,
@@ -731,8 +742,7 @@ export const create_webgpu_backend = async (
         await renderer.compileAsync(scene, camera)
         if (disposed) return false
         draw(performance.now())
-        const device = Reflect.get(gpu_backend, 'device') as { queue: { onSubmittedWorkDone: () => Promise<void> } }
-        await device.queue.onSubmittedWorkDone()
+        await wait_for_gpu()
         return !disposed
       },
       set_camera: (position: Vec3, target: Vec3, projection: CameraProjection = {}) => {

@@ -801,21 +801,23 @@ fight and interface sounds. It applies the master volume to both new and active 
 players with the app observer lifetime. Every character cast uses its model’s forward `ATTACK` animation, including buffs and spells without line of sight.
 All twelve approved spell classes run the captured program under `seed/content/spell_effects/`.
 A mechanical extraction preserves its shader, presets, flight equations, timing and sound plans.
-The native WebGL adapter binds the current board, camera and actor silhouettes, then composites
-into the world renderer before captions. Gameplay owns affected cells and trap triggers.
-The original visual windup retimes the model's `ATTACK` anticipation to its release marker.
-Gameplay-world startup prepares spell graphics and audio before its loading projection becomes ready.
-Parallel shader compilation yields while the driver works; real warmup draws precede readiness.
-The asset generator integrates the game camera, board and actor mask offline and removes preview-only
-drawing code. Runtime imports only that gameplay artifact; the intact authored shader and captured
-pre-cleanup integration remain test references. Guarded source boundaries stop generation if the
-authored layout changes. Warmup uses valid game-camera and board uniforms through the gameplay path.
-Spell targets use their final dimensions before warmup; a 2×2 scissor bounds raster work.
-The prepared backbuffer remains intact until WebGPU imports it for composition.
+One WebGPU renderer owns the world, spell passes and real actor silhouettes, composing effects before captions.
+Gameplay owns affected cells and trap triggers. The original visual windup retimes the model's
+`ATTACK` anticipation to its release marker. Gameplay-world startup prepares spell graphics and audio
+before its loading projection becomes ready. Shader compilation yields while the driver works;
+bounded warmup draws and completion on the same GPU queue precede readiness.
+The asset generator integrates the game camera, board and actor mask, removes preview drawing,
+and compiles the approved formulas to WGSL offline with the pinned build-only Naga compiler.
+Runtime imports only the native WGSL artifact, with Three owning every binding and resource lifetime.
+The intact authored shader and captured pre-cleanup integration remain test references. Guarded source
+boundaries stop generation if the authored layout changes. Reference checks cover all 240 spells at
+three beats and bound visible color differences from GPU transcendental precision.
+Spell composition snapshots the display-mapped world on the same device, renders bounded ping-pong
+targets for overlapping casts, and blends their transparent difference over the full-resolution world.
+Actor masks borrow the live meshes and Three's existing GPU skinning; they own no duplicate poses or geometry.
 The authored sound synthesizer runs in a disposable worker and transfers PCM to the existing Web Audio
-player. Recordings reach its decoder as bytes, without a base64 round trip. Fight entry prepares any
-new actor masks through the same resource door. Those masks use cached vertex attributes and one
-floating-point bone texture per skeleton, uploaded once per frame and shared across its meshes.
+player. Recordings reach its decoder as bytes, without a base64 round trip. Fight entry prepares new
+actor-mask pipelines through the same resource door.
 The original effect formulas remain unchanged. Fight resources own appearance resolution and preparation;
 input and cue playback wait for the current request, including replacement and cancellation.
 Quality bounds spell pixels independently of the world. Native composition separates the authored
@@ -879,7 +881,8 @@ the existing English locale. A small bootstrap gives it a paint before importing
 Gameplay readiness includes prepared fight graphics and audio. Menu and world owners also await model
 preparation, scene shader compilation, and a submitted GPU frame before revealing the scene.
 Configuration changes invalidate pending preparation; stale completions cannot reveal a replacement.
-World movement remains disabled until preparation completes. Inactive editor worlds do not prewarm spells.
+World movement remains disabled until preparation completes. Inactive editor worlds do not prewarm spells
+or mount loading modals; a body-level portal follows its owning pane’s active lifetime, not its parent’s CSS visibility.
 Ordinary movement streaming does not reopen the overlay. Its local presentation reducer owns no
 engine state; teardown cancels its frame callbacks and polling.
 

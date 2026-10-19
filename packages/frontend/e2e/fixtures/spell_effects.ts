@@ -11,6 +11,7 @@ import { create_fight_audio_observer } from '../../src/game/audio/fight_audio.ts
 import catalog from '../../../engine/src/generated/claude_spell_catalog.json'
 import sounds from '../../../../seed/content/audio.json'
 import { spell_effect_atlases } from '../../src/content/spell_effect_assets.ts'
+import { compare_spell_composition } from '../../../engine/test/browser_spell_composition.ts'
 import { create_spell_fidelity_probe } from '../../../engine/test/browser_spell_fidelity.ts'
 const probe = await create_spell_effect_probe(document.querySelector('canvas')!)
 const classes = document.getElementById('class') as HTMLSelectElement
@@ -95,6 +96,7 @@ classes.onchange = () => {
 }
 spells.onchange = () => void play()
 document.getElementById('play')!.onclick = () => void play()
+const fidelity = await create_spell_fidelity_probe(spell_effect_atlases())
 const exposed = {
   ...probe,
   cancel_sound: audio.dispose,
@@ -103,7 +105,9 @@ const exposed = {
     await audio.prepare(cue)
     audio.observe(cue, 'start', {})
   },
-  fidelity: await create_spell_fidelity_probe(spell_effect_atlases()),
+  fidelity,
+  overlay_parity: () => fidelity('yajin', 'Deviousness', 1.2, true),
+  overlap_parity: () => compare_spell_composition(spell_effect_atlases()),
   choose,
   classes: catalog,
   portrait_url: character_icon,

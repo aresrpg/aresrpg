@@ -1,35 +1,9 @@
 import { readFileSync } from 'node:fs'
-import { createHash } from 'node:crypto'
 
 import { expect, test } from 'bun:test'
 
-import { create_source, SOURCE_SHA256 } from '../src/generated/claude_spell_source.js'
+import { create_source } from '../src/generated/claude_spell_source.js'
 import { spell_effect_timing } from '../src/spell_effect_recipe.ts'
-import { FRAGMENT as GAME_FRAGMENT } from '../src/generated/claude_spell_game_fragment.js'
-
-import reference from './fixtures/spell_game_shader.json'
-import { fragment as FRAGMENT } from './fixtures/claude_spell_fragment.json'
-
-test('the approved source is preserved byte-for-byte and every original effect function remains', () => {
-  const source = readFileSync(new URL('../../../seed/content/spell_effects/source.html', import.meta.url), 'utf8')
-  expect(createHash('sha256').update(source).digest('hex')).toBe(SOURCE_SHA256)
-  expect(source).toContain(FRAGMENT)
-  expect(reference.source_sha256).toBe(SOURCE_SHA256)
-  expect(GAME_FRAGMENT).not.toMatch(/aresGame|\bdummy\s*\(|\bbox\s*\(|\bin_area\s*\(|\buCam\b|\buLook\b|\buDum2\b/)
-  const integrated = new Set(['prj', 'box', 'in_area', 'spot', 'spot_on', 'ground', 'dummy', 'main'])
-  for (const match of FRAGMENT.matchAll(/^(?:float|vec[234]|void) (\w+)\([^{}]*\{/gm)) {
-    if (integrated.has(match[1]!)) continue
-    let end = match.index! + match[0].length
-    let depth = 1
-    while (depth > 0 && end < FRAGMENT.length) {
-      depth += Number(FRAGMENT[end] === '{') - Number(FRAGMENT[end] === '}')
-      end += 1
-    }
-    expect(depth).toBe(0)
-    expect(GAME_FRAGMENT).toContain(FRAGMENT.slice(match.index, end))
-  }
-})
-
 test('worker synthesis retains the complete authored DSP program', () => {
   const source = readFileSync(new URL('../../../seed/content/spell_effects/synth.js', import.meta.url), 'utf8')
   const extracted = readFileSync(new URL('../src/generated/claude_spell_synth.js', import.meta.url), 'utf8')

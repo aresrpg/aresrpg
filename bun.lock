@@ -16,6 +16,7 @@
         "eslint-plugin-react-hooks": "^7.1.1",
         "eslint-plugin-sonarjs": "4.2.1",
         "globals": "^17.12.0",
+        "naga-wasi-cli": "0.1.0",
         "prettier": "^3.9.8",
         "typescript": "~6.0.3",
         "typescript-eslint": "^8.70.0",
@@ -2083,6 +2084,8 @@
     "ms": ["ms@2.1.3", "", {}, "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="],
 
     "multiformats": ["multiformats@9.9.0", "", {}, "sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg=="],
+
+    "naga-wasi-cli": ["naga-wasi-cli@0.1.0", "", { "bin": { "naga-wasi-cli": "bin/naga.mjs", "naga": "bin/naga.mjs" } }, "sha512-MUqUe+Xu2eRbRf8UCgbXSHoGx3P8PF4rjuD2Q1EonNFfvT57iYcVnbZQi0pIlA2GxHA+K4X8Q9CKxjqBnFW7EA=="],
 
     "nanoid": ["nanoid@3.3.18", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w=="],
 
