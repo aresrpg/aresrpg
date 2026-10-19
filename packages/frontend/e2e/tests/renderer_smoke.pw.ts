@@ -36,6 +36,11 @@ test('the renderer presents terrain and releases its GPU resources', async ({ pa
       textures: 0,
     })
     expect(errors).toEqual([])
+    const webgl_uploads = startup
+      .map((line) => JSON.parse(line.slice('[renderer-startup] '.length)) as { webgl_drawn_after_resize?: boolean })
+      .filter((event) => event.webgl_drawn_after_resize !== undefined)
+    expect(webgl_uploads.length).toBeGreaterThan(0)
+    expect(webgl_uploads.every((event) => event.webgl_drawn_after_resize)).toBe(true)
   } finally {
     await info.attach('renderer-startup-trace', { body: startup.join('\n'), contentType: 'text/plain' })
   }

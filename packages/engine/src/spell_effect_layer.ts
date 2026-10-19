@@ -68,7 +68,8 @@ export const create_spell_effect_layer = ({
   const warmup = async (): Promise<void> => {
     if (!native || !mask) return
     // A linked program is not a presented pipeline. Exercise its real draws before releasing readiness.
-    native.resize(2, 2)
+    // Prepare the targets that composition will actually import; resizing later discards the backbuffer.
+    native.resize(...spell_effect_size(quality(), renderer.domElement.width, renderer.domElement.height))
     await anchors.prepare_models()
     lifetime.signal.throwIfAborted()
     const { roots } = anchors.spell_context()
@@ -76,31 +77,38 @@ export const create_spell_effect_layer = ({
     mask.render(roots, new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse), 2, 2)
     const source = create_source()
     const identity = new Matrix4().toArray()
-    for (const [classe, presets] of Object.entries(source.catalog)) {
-      const preset = source.select(classe, presets[0]!.name)
-      const frame = {
-        uniforms: {
-          ...source.frame(preset.cast + preset.fly + 0.2, 2, 2),
-          aresProjection: identity,
-          aresInverseProjection: identity,
-          aresLocalToWorld: identity,
-          aresBoard: [0, 0, 1, 0],
-          aresBoardSize: [1, 1],
-          aresVerticalScale: 1,
-          aresSpotCount: 0,
-        },
-        cells: new Uint8Array(4),
-        width: 1,
-        height: 1,
+    const { gl } = native
+    // Bound warmup raster work without replacing the prepared targets before WebGPU imports them.
+    gl.enable(gl.SCISSOR_TEST)
+    gl.scissor(0, 0, 2, 2)
+    try {
+      for (const [classe, presets] of Object.entries(source.catalog)) {
+        const preset = source.select(classe, presets[0]!.name)
+        const frame = {
+          uniforms: {
+            ...source.frame(preset.cast + preset.fly + 0.2, 2, 2),
+            aresProjection: identity,
+            aresInverseProjection: identity,
+            aresLocalToWorld: identity,
+            aresBoard: [0, 0, 1, 0],
+            aresBoardSize: [1, 1],
+            aresVerticalScale: 1,
+            aresSpotCount: 0,
+          },
+          cells: new Uint8Array(4),
+          width: 1,
+          height: 1,
+        }
+        // Overlapping casts use both offscreen targets before the canvas. Warm every target format.
+        native.render(null, mask.texture, [frame, frame, frame])
+        // Exercise the canvas export used by composition without a synchronous finish/readPixels.
+        const image = await createImageBitmap(native.canvas)
+        image.close()
+        lifetime.signal.throwIfAborted()
       }
-      // Overlapping casts use both offscreen targets before the canvas. Warm every target format.
-      native.render(null, mask.texture, [frame, frame, frame])
-      // Exercise the canvas export used by composition without a synchronous finish/readPixels.
-      const image = await createImageBitmap(native.canvas)
-      image.close()
-      lifetime.signal.throwIfAborted()
+    } finally {
+      gl.disable(gl.SCISSOR_TEST)
     }
-    native.resize(...spell_effect_size(quality(), renderer.domElement.width, renderer.domElement.height))
   }
   const initialize = async (atlas_urls: readonly string[]): Promise<void> => {
     if (disposed) return

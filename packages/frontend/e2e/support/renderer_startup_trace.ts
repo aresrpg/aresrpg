@@ -3,6 +3,28 @@
 
 /** Browser-API observations only: no retries, fences, readiness changes or discarded failures. */
 export const install_renderer_startup_trace = (): void => {
+  const drawn = new WeakSet<object>()
+  const webgl_canvases = new WeakSet<object>()
+  const framebuffers = new WeakMap<object, WebGLFramebuffer | null>()
+  const bind_framebuffer = WebGLRenderingContext.prototype.bindFramebuffer
+  WebGLRenderingContext.prototype.bindFramebuffer = new Proxy(bind_framebuffer, {
+    apply: (target, receiver, args: [number, WebGLFramebuffer | null]) => {
+      framebuffers.set(receiver, args[1])
+      return Reflect.apply(target, receiver, args)
+    },
+  })
+  for (const name of ['width', 'height']) {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, name)!
+    Object.defineProperty(HTMLCanvasElement.prototype, name, {
+      ...descriptor,
+      set: new Proxy(descriptor.set!, {
+        apply: (target, receiver, args) => {
+          drawn.delete(receiver)
+          return Reflect.apply(target, receiver, args)
+        },
+      }),
+    })
+  }
   const counts = new Map<string, number>()
   const record = (operation: string, data: Readonly<Record<string, unknown>> = {}): void => {
     const count = counts.get(operation) ?? 0
@@ -19,7 +41,7 @@ export const install_renderer_startup_trace = (): void => {
   const wrap = (
     owner: object,
     name: string,
-    describe: (args: readonly unknown[]) => Readonly<Record<string, unknown>>
+    describe: (args: readonly unknown[], receiver: object) => Readonly<Record<string, unknown>>
   ): void => {
     const native = Reflect.get(owner, name) as (...args: unknown[]) => unknown
     Reflect.set(
@@ -27,7 +49,7 @@ export const install_renderer_startup_trace = (): void => {
       name,
       new Proxy(native, {
         apply: (target, receiver, args: unknown[]) => {
-          const data = { call: ++serial, ...describe(args) }
+          const data = { call: ++serial, ...describe(args, receiver) }
           record(`${name}:start`, data)
           const result = Reflect.apply(target, receiver, args) as unknown
           // Observe settlement but return the original promise, preserving the caller's identity and rejection.
@@ -55,9 +77,13 @@ export const install_renderer_startup_trace = (): void => {
     'createComputePipelineAsync',
   ])
     wrap(GPUDevice.prototype, name, ([input]) => ({ label: (input as GPUObjectDescriptorBase).label }))
-  wrap(GPUQueue.prototype, 'copyExternalImageToTexture', ([input]) => ({
-    source: image_kind((input as GPUCopyExternalImageSourceInfo).source),
-  }))
+  wrap(GPUQueue.prototype, 'copyExternalImageToTexture', ([input]) => {
+    const { source } = input as GPUCopyExternalImageSourceInfo
+    return {
+      source: image_kind(source),
+      webgl_drawn_after_resize: webgl_canvases.has(source) ? drawn.has(source) : undefined,
+    }
+  })
   wrap(GPUQueue.prototype, 'onSubmittedWorkDone', () => ({}))
   wrap(WebGLRenderingContext.prototype, 'shaderSource', ([shader, source]) => ({
     shader: id(shader as object),
@@ -65,7 +91,12 @@ export const install_renderer_startup_trace = (): void => {
   }))
   wrap(WebGLRenderingContext.prototype, 'compileShader', ([shader]) => ({ shader: id(shader as object) }))
   wrap(WebGLRenderingContext.prototype, 'linkProgram', ([program]) => ({ program: id(program as object) }))
-  wrap(WebGLRenderingContext.prototype, 'drawArrays', () => ({}))
+  wrap(WebGLRenderingContext.prototype, 'drawArrays', (_args, receiver) => {
+    const { canvas } = receiver as WebGLRenderingContext
+    webgl_canvases.add(canvas)
+    if (!framebuffers.get(receiver)) drawn.add(canvas)
+    return {}
+  })
   const completed = new WeakSet<WebGLProgram>()
   const parameter = WebGLRenderingContext.prototype.getProgramParameter
   WebGLRenderingContext.prototype.getProgramParameter = new Proxy(parameter, {

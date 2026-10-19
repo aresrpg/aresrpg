@@ -810,6 +810,8 @@ The asset generator integrates the game camera, board and actor mask offline and
 drawing code. Runtime imports only that gameplay artifact; the intact authored shader and captured
 pre-cleanup integration remain test references. Guarded source boundaries stop generation if the
 authored layout changes. Warmup uses valid game-camera and board uniforms through the gameplay path.
+Spell targets use their final dimensions before warmup; a 2×2 scissor bounds raster work.
+The prepared backbuffer remains intact until WebGPU imports it for composition.
 The authored sound synthesizer runs in a disposable worker and transfers PCM to the existing Web Audio
 player. Recordings reach its decoder as bytes, without a base64 round trip. Fight entry prepares any
 new actor masks through the same resource door. Those masks use cached vertex attributes and one
