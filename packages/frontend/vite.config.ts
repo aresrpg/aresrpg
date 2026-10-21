@@ -25,6 +25,7 @@ import { seed_dev_plugin } from './seed_dev_server.ts'
 import { music_assets_plugin, sound_assets_plugin } from './sound_assets.ts'
 import { solana_rpc_plugin } from './solana_rpc_dev.ts'
 import { gift_dev_plugin } from './gift_dev.ts'
+import { public_pages_plugin } from './public_pages.ts'
 
 const frontend_dir = dirname(fileURLToPath(import.meta.url))
 const repo_dir = resolve(frontend_dir, '../..')
@@ -103,6 +104,7 @@ export default defineConfig(({ mode, command }) => {
     // Local clients opt in through VITE_SERVER_WS_URL; production still verifies every login.
     server: {
       proxy: {
+        '/api/allocation': { target: loaded_env.ALLOCATION_API_ORIGIN ?? 'http://localhost:9800', changeOrigin: true },
         '/__game_server': {
           target: 'wss://server.aresrpg.world',
           ws: true,
@@ -117,6 +119,7 @@ export default defineConfig(({ mode, command }) => {
       'import.meta.env.VITE_RELEASE': JSON.stringify(loaded_env.VERCEL_GIT_COMMIT_SHA || loaded_env.GITHUB_SHA || ''),
     },
     plugins: [
+      public_pages_plugin(),
       gift_dev_plugin(loaded_env),
       solana_rpc_plugin(loaded_env.SOLANA_RPC_URL),
       browser_pins_plugin(loaded_env.ARES_PINS_FILE, env.network),

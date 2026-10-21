@@ -32,6 +32,7 @@ export const RELEASE_INPUTS = Object.freeze({
   frontend: Object.freeze([
     ...SCENE_COMPILER_FILES,
     'packages/ui/',
+    'packages/journal/public/assets/jetbrains-mono.woff2',
     'packages/frontend/',
     'packages/mobile/',
     'packages/engine/',
@@ -40,6 +41,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/immutable/',
     'packages/protocol/',
     'seed/',
+    'seed/icons/journal/helmet-favicon.png',
     'pins.json',
     'bun.lock',
     'vercel.json',
@@ -49,6 +51,10 @@ export const RELEASE_INPUTS = Object.freeze({
   ]),
   server: Object.freeze([
     'packages/server/',
+    'packages/frontend/src/i18n/locales/',
+    'packages/ui/src/assets/font/',
+    'seed/icons/currency/kares.png',
+    'seed/icons/journal/helmet-favicon.png',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.
     'packages/engine/package.json',
     'packages/ui/package.json',
@@ -102,8 +108,9 @@ export const RELEASE_INPUTS = Object.freeze({
 })
 
 export const component_owns_path = (component, path) =>
-  !JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix)) &&
-  RELEASE_INPUTS[component].some((prefix) => path.startsWith(prefix))
+  RELEASE_INPUTS[component].includes(path) ||
+  (!JOURNAL_CONTENT_PREFIXES.some((prefix) => path.startsWith(prefix)) &&
+    RELEASE_INPUTS[component].some((prefix) => path.startsWith(prefix)))
 
 export const classify_release = (paths) =>
   Object.freeze(

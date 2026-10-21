@@ -187,9 +187,11 @@
         "@aresrpg/immutable": "workspace:*",
         "@aresrpg/protocol": "workspace:*",
         "@mysten/sui": "2.31.3",
+        "@napi-rs/canvas": "1.0.10",
         "falkordb": "^6.8.0",
         "ioredis": "^6.0.0",
         "pino": "^10.3.1",
+        "yaml": "^2.9.1",
       },
       "devDependencies": {
         "@types/bun": "^1.4.2",

@@ -66,6 +66,14 @@ seed/icons/items/*_hd.*
 !seed/icons/mobs
 seed/icons/mobs/*_hd.*
 
+# Public campaign card artwork only; other journal/currency assets stay outside these images.
+!seed/icons/currency
+seed/icons/currency/*
+!seed/icons/currency/kares.png
+!seed/icons/journal
+seed/icons/journal/*
+!seed/icons/journal/helmet-favicon.png
+
 # Never, whatever the ladder above re-admits.
 **/node_modules
 node_modules

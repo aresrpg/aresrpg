@@ -1,0 +1,105 @@
+{
+  "provenance": {
+    "network": "mainnet",
+    "captured_at": "2026-10-21",
+    "source": "https://fullnode.mainnet.sui.io:443",
+    "purpose": "Blast test-only deployed sale; not KARES"
+  },
+  "objects": [
+    {
+      "objectId": "0x0917591d2d15673427a28dea07dac978a9463ae56543ec381f62813f75ffacba",
+      "version": "1056407653",
+      "digest": "58wbR9Yi3ceCmzGPBL2nLFgSH5UqGYHFvvjr67nWA6L4",
+      "owner": {
+        "$kind": "Shared",
+        "Shared": {
+          "initialSharedVersion": "1056407562"
+        }
+      },
+      "type": "0xafc415fa1187577c60205ccff10151fca540b088a3b84f798b90ae0642fa83f8::blast_presale::Presale<0x38a57732b36bac98a9c0bc533d02ecf8442cb5181d605bde8bfc2da80e06e331::sale_tokens::SALE_A,0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI>",
+      "json": {
+        "duration_ms": "14722",
+        "eligibility": {
+          "@variant": "Open",
+          "max_participants": "10",
+          "min_commitment": "1000000",
+          "wallet_cap": "2000000000000"
+        },
+        "fee_split": {
+          "fee_recipients": [
+            {
+              "bps": {
+                "pos0": "6000"
+              },
+              "recipient": "0x612fa27ba229021c5a1c32022fd6341ffbd58a87ac928a0dc32d8d6d1dba9fed",
+              "vesting": null
+            }
+          ],
+          "holder_rewards_bps": {
+            "pos0": "4000"
+          }
+        },
+        "hard_cap": {
+          "closes_when_filled": true,
+          "starts_after_ms": "0"
+        },
+        "id": "0x0917591d2d15673427a28dea07dac978a9463ae56543ec381f62813f75ffacba",
+        "lifecycle": {
+          "@variant": "Migrated"
+        },
+        "liquidity_tokens": "0",
+        "liquidity_window_ms": "604800000",
+        "migration_witness": "afc415fa1187577c60205ccff10151fca540b088a3b84f798b90ae0642fa83f8::cetus::Witness",
+        "participant_vesting": null,
+        "participants": "0",
+        "partner_id": null,
+        "presale_cap_id": "0x671a017f5863f41ed5874951ffbfbd0f27589d0a093009955abd386041b66562",
+        "protocol_fees": {
+          "lp_fee_meme_bps": {
+            "pos0": "2500"
+          },
+          "lp_fee_quote_bps": {
+            "pos0": "2500"
+          },
+          "raise_bps": {
+            "pos0": "200"
+          },
+          "token_bps": {
+            "pos0": "100"
+          }
+        },
+        "protocol_quote": "200000",
+        "protocol_tokens": "0",
+        "quote": "0",
+        "raise_payouts": [],
+        "raise_target": "10000000",
+        "recipient_payouts": [],
+        "recipient_tokens": "0",
+        "sale_tokens": "0",
+        "start_ms": "1792535046202",
+        "token_allocation": "495000000000000",
+        "total_commitments": "10000000",
+        "uncapped": null,
+        "unpaid_protocol_quote": null
+      }
+    },
+    {
+      "objectId": "0xe7634c9e47c0ad15c02e52e73cf7b261f064cb00aaedbf6393683ca31ddee7f0",
+      "version": "1056244915",
+      "digest": "FdSJWBy5xSJS6BXjtzEyASnqeAzBQmyQHV6JyywSSGHt",
+      "owner": {
+        "$kind": "Shared",
+        "Shared": {
+          "initialSharedVersion": "1056244915"
+        }
+      },
+      "type": "0xafc415fa1187577c60205ccff10151fca540b088a3b84f798b90ae0642fa83f8::blast_presale_package::PackageVersion",
+      "json": {
+        "generation": {
+          "generation": "1"
+        },
+        "id": "0xe7634c9e47c0ad15c02e52e73cf7b261f064cb00aaedbf6393683ca31ddee7f0"
+      }
+    }
+  ]
+}

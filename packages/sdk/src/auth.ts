@@ -30,6 +30,7 @@ import { friends_actions, type FriendsActions } from './friends.ts'
 import { party_actions, type PartyActions } from './party.ts'
 import { mastery_actions, type MasteryActions } from './mastery.ts'
 import { kares_actions, type KaresActions } from './kares_actions.ts'
+import { blast_purchase_actions, type BlastPurchaseActions } from './blast_purchase.ts'
 import {
   create_wallet_binding,
   installed_wallets,
@@ -66,6 +67,7 @@ export type AuthSession = Readonly<{
   wallet_name: string
   identity: 'zklogin' | 'wallet'
   sign_personal_message: (message: Uint8Array) => Promise<{ bytes: string; signature: string }>
+  blast: BlastPurchaseActions
   read_sui_balance: () => Promise<bigint>
   read_kares_balance: () => Promise<bigint | null>
   gas_spent_24h: () => bigint
@@ -224,6 +226,7 @@ const create_wallet_session = (
     party: party_actions(sdk, { kiosk_cap }),
     mastery: mastery_actions(sdk, { address: account.address, kiosk_cap }),
     kares: kares_actions({ sdk, client: resolution_client, address: account.address }),
+    blast: blast_purchase_actions({ sdk, client: resolution_client, address: account.address }),
     character: character_actions(sdk, { kiosk_cap }),
     read_character_checkpoint: (id, world) => read_checkpoint(client, sdk.game_type_package, id, world),
     read_item,

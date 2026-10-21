@@ -2864,3 +2864,124 @@ loading_screen:
   world: 'Mundo'
   final_checks: 'Últimos preparativos'
   ready: 'Tu aventura está lista.'
+
+allocation_page:
+  before: Antes de la sobresuscripción
+  buy_up_to: Comprar hasta
+  pending: Resultados pendientes
+  no_spot: Sin spot esta vez
+  source_reserved: Spot reservado
+  source_pending: Selección pendiente
+  link_wallets: Vincula tus wallets
+  wallet_rule: Firma con cada wallet para demostrar que es tuya.
+  verified: Verificada
+  remove_wallet: Quitar {{wallet}}
+  add_wallet: Vincular wallet Sui
+  wallet_count: '{{count}} / {{max}} wallets'
+  close: Cerrar
+  signature_note: Firma un mensaje gratuito. No se envían transacciones ni pagos.
+  no_wallet_app: Instala una wallet Sui para continuar.
+  wallet_failed: Error de conexión. Inténtalo de nuevo.
+  x_entry: Tu participación en X
+  x_connect_note: Conecta X para enviar tus publicaciones.
+  closed: Inscripciones cerradas
+  edit: Editar
+  saved_posts: Guardado · {{count}} de {{max}} publicaciones
+  metrics_note: Contaremos las interacciones durante la revisión del sábado.
+  recipient_locked: Fijada tras la primera participación.
+  post_number: Publicación {{number}}
+  optional: opcional
+  post_limit: Hasta {{max}} publicaciones por cuenta X
+  cancel: Cancelar
+  save: Guardar
+  get_spot: Consigue un spot
+  get_spot_note: Sube en las clasificaciones o publica en X.
+  leaderboard_title: Sube en las clasificaciones
+  leaderboard_note: Tomaremos las clasificaciones de octubre el sábado. Tu wallet de juego gana puntos; vincularla no cambia su elegibilidad.
+  veteran_boards: Los primeros 1 o 2 jugadores elegibles de cada clasificación obtienen Veteran.
+  member_boards: Los 7 siguientes obtienen Member.
+  skip_duplicates: Se omiten wallets ya seleccionadas.
+  board_legend: 'Spots por clasificación: Veteran / Member'
+  play: Jugar AresRPG
+  x_title: Publica en X
+  x_note: Publica sobre AresRPG y envía tus enlaces.
+  one_entry: Envía 1–3 publicaciones. Una participación por cuenta X.
+  score_rule: 'Media: likes + 3× republicaciones + 3× citas. Respuestas y vistas no cuentan.'
+  x_winners: Los primeros {{veteran}} obtienen Veteran; los siguientes {{member}}, Member.
+  leftovers: Los spots de clasificación sin usar pasan a X con el mismo nivel.
+  quality_rule: Las interacciones compradas y publicaciones copiadas pueden excluirse tras revisión.
+  sale_title: La venta se realiza en Blast
+  sale_time: Domingo 25 de octubre. Hora por confirmar.
+  results_title: Resultados del sábado
+  results_note: Tus tarjetas revelan los resultados antes de la venta.
+  entries_close: Cierre de inscripciones
+  your_time: tu hora local
+  cards_revealed: Se revelan las tarjetas
+  results_time: Sábado, tras el cierre y la revisión.
+  spot_gives: Qué ofrece un spot
+  days: días
+  hours: horas
+  minutes: min
+  seconds: s
+  signing: Confirma la firma en tu wallet…
+  close_in: Las inscripciones cierran en
+  no_spot_yet: Aún sin spot
+  your_allocation: Tu asignación
+  total_cap: Hasta {{sui}} SUI en {{count}} spots
+  allocation_note: Inicia sesión y vincula wallets para ver tus spots.
+  google_first: Empieza con Google
+  google_first_note: Accede con tu cuenta de juego antes de añadir wallets o participar en X.
+  card_placeholder: Tu tarjeta aparecerá aquí
+  one_card: Una tarjeta por wallet verificada.
+  share_x: Compartir en X
+  footer: Un spot fija el límite de contribución, no una cantidad fija de tokens.
+  entry_note: 'La primera participación fija la wallet. Editar reemplaza publicaciones y reinicia la fecha. Empates: envío más antiguo y luego ID de X.'
+  error_wallet_limit: Hasta diez wallets, incluida tu wallet Google.
+  title: Lista de acceso KARES
+  veteran: Veteran
+  member: Member
+  public_note: El acceso público sigue las condiciones de Blast. Los resultados pueden estar pendientes.
+  connect_x: Conectar X
+  recipient: Billetera receptora
+  choose_wallet: Elige una billetera conectada
+  preview: Vista previa
+  share: Compartir
+  dilution: Los límites no garantizan tokens. Si hay sobresuscripción, todos los compradores se diluyen proporcionalmente.
+  google_wallet: Billetera de juego Google
+  loading: Cargando campaña
+  registration: Inscripciones abiertas
+  final: Lista final · pendiente de importar a Blast
+  refresh: Actualizar
+  wallet: Wallet
+  error_unavailable: No se pudo completar la solicitud. Comprueba tu conexión e inténtalo de nuevo. X o la campaña pueden no estar disponibles.
+  error_wallet_locked: El primer envío fija la billetera receptora. Reconéctala para actualizar publicaciones.
+  error_wallet_taken: Esta billetera ya está vinculada a otra cuenta X.
+  error_invalid_address: Introduce una dirección Sui válida que empiece por 0x.
+  error_closed: Las inscripciones están cerradas para la captura.
+  metric_xp: XP de combate
+  board_xp: XP de combate · Clasificación
+  metric_kills: Monstruos derrotados
+  board_kills: Monstruos derrotados · Clasificación
+  metric_dungeons: Mazmorras
+  board_dungeons: Mazmorras · Clasificación
+  metric_jobs: XP de oficios
+  board_jobs: XP de oficios · Clasificación
+  metric_marketplace: Mercado
+  board_marketplace: Mercado · Clasificación
+  metric_kolizeum: Kolizeum
+  board_kolizeum: Kolizeum · Clasificación
+  metric_zones: Descubrimientos
+  board_zones: Descubrimientos · Clasificación
+  metric_feeding: Alimentación de mascotas
+  board_feeding: Alimentación de mascotas · Clasificación
+  metric_gathering: Recolección
+  board_gathering: Recolección · Clasificación
+  source_leaderboard: Sube en las clasificaciones
+  source_social: Publica en X
+  spots_count: '{{count}} spots'
+  error_unauthorized: Conecta y verifica primero la wallet receptora.
+  error_invalid_post: Usa 1–3 enlaces distintos de publicaciones de X.
+  error_rate_limited: Demasiadas solicitudes. Inténtalo en un momento.
+  error_foreign_post: Usa 1–3 enlaces distintos de publicaciones de X.
+  error_missing_post: Usa 1–3 enlaces distintos de publicaciones de X.
+  error_x_unavailable: No se pudo completar la solicitud. Comprueba tu conexión e inténtalo de nuevo. X o la campaña pueden no estar disponibles.

@@ -53,6 +53,8 @@ import player_friends from './modules/player_friends.ts'
 import player_admin from './modules/player_admin.ts'
 import player_inspection from './modules/player_inspection.ts'
 import player_requests from './modules/player_requests.ts'
+import player_allocation from './modules/player_allocation.ts'
+import type { Allocation } from './allocation/runtime.ts'
 import { create_request_limiter, type RequestLimiter } from './request_limiter.ts'
 
 const log = logger(import.meta)
@@ -137,6 +139,7 @@ export type PlayerState = {
 }
 
 export type PlayerContext = {
+  allocation?: Allocation
   public_world: PublicWorld
   public_market: PublicMarket
   address: string
@@ -193,14 +196,16 @@ const MODULES: PlayerModule[] = [
   player_trade,
   player_kolizeum,
   player_requests,
+  player_allocation,
   player_inspection,
   player_admin,
 ]
 
-/** The packets whose handling reaches the graph — the ONE list the read gate matches on.
+/** Database-reaching packets — the ONE list the read gate matches on.
  *  Modules never rate-limit themselves; the door does (owner 2026-08-16: one global gate,
  *  loose enough — never per-module sprinkling). */
 const READ_PACKETS = new Set<string>([
+  'packet/allocation_request',
   'packet/spectate',
   'packet/fight_preview',
   'packet/fight_nearby',
@@ -236,6 +241,7 @@ type PlayerWires = Pick<
   PlayerContext,
   'address' | 'admin' | 'graph' | 'pubsub' | 'resolve_name' | 'public_world' | 'public_market'
 > & {
+  allocation?: Allocation
   game_state?: GameState
   indexing_health?: () => Promise<IndexingHealth>
   request_limiter?: RequestLimiter
@@ -252,6 +258,7 @@ const UNKNOWN_GAME_STATE: GameState = Object.freeze({
 /** Mount one verified connection — returns the ws handler's whole surface. */
 export function create_player({
   ws,
+  allocation,
   address,
   resolve_name,
   admin,
@@ -274,6 +281,7 @@ export function create_player({
   const events = new EventEmitter()
   events.setMaxListeners(0)
   const context: PlayerContext = {
+    allocation,
     address,
     resolve_name,
     admin,

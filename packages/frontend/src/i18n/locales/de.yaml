@@ -2865,3 +2865,124 @@ loading_screen:
   world: 'Welt'
   final_checks: 'Letzte Vorbereitungen'
   ready: 'Dein Abenteuer ist bereit.'
+
+allocation_page:
+  before: Vor Überzeichnung
+  buy_up_to: Kaufen bis zu
+  pending: Ergebnisse ausstehend
+  no_spot: Diesmal kein Spot
+  source_reserved: Reservierter Spot
+  source_pending: Auswahl ausstehend
+  link_wallets: Wallets verknüpfen
+  wallet_rule: Signiere mit jedem Wallet als Eigentumsnachweis.
+  verified: Verifiziert
+  remove_wallet: '{{wallet}} entfernen'
+  add_wallet: Sui-Wallet verknüpfen
+  wallet_count: '{{count}} / {{max}} Wallets'
+  close: Schließen
+  signature_note: Signiere eine kostenlose Nachricht. Keine Transaktion oder Zahlung.
+  no_wallet_app: Installiere ein Sui-Wallet.
+  wallet_failed: Wallet-Verbindung fehlgeschlagen. Erneut versuchen.
+  x_entry: Dein X-Beitrag
+  x_connect_note: Verbinde X, um Beiträge einzureichen.
+  closed: Teilnahme geschlossen
+  edit: Bearbeiten
+  saved_posts: Gespeichert · {{count}} von {{max}} Beiträgen
+  metrics_note: Interaktionen werden bei der Prüfung am Samstag erfasst.
+  recipient_locked: Nach der ersten Einreichung festgelegt.
+  post_number: Beitrag {{number}}
+  optional: optional
+  post_limit: Bis zu {{max}} Beiträge pro X-Konto
+  cancel: Abbrechen
+  save: Speichern
+  get_spot: Einen Spot erhalten
+  get_spot_note: Steige in Ranglisten auf oder poste auf X.
+  leaderboard_title: In Ranglisten aufsteigen
+  leaderboard_note: Die Oktober-Ranglisten werden am Samstag erfasst. Dein Spiel-Wallet sammelt Punkte; die Verknüpfung ändert die Berechtigung nicht.
+  veteran_boards: Die besten 1 oder 2 berechtigten Spieler jeder Rangliste erhalten Veteran.
+  member_boards: Die nächsten 7 erhalten Member.
+  skip_duplicates: Bereits ausgewählte Wallets werden übersprungen.
+  board_legend: 'Spots pro Rangliste: Veteran / Member'
+  play: AresRPG spielen
+  x_title: Auf X posten
+  x_note: Poste über AresRPG und reiche die Links ein.
+  one_entry: 1–3 Beiträge. Eine Teilnahme pro X-Konto.
+  score_rule: 'Durchschnitt: Likes + 3× Reposts + 3× Zitate. Antworten und Aufrufe zählen nicht.'
+  x_winners: Die besten {{veteran}} erhalten Veteran; die nächsten {{member}} Member.
+  leftovers: Unbesetzte Ranglisten-Spots gehen mit derselben Stufe an X.
+  quality_rule: Gekaufte Interaktionen und kopierte Beiträge können ausgeschlossen werden.
+  sale_title: Der Verkauf findet auf Blast statt
+  sale_time: Sonntag, 25. Oktober. Uhrzeit folgt.
+  results_title: Ergebnisse am Samstag
+  results_note: Deine Karten zeigen die Ergebnisse vor dem Verkauf.
+  entries_close: Teilnahmeschluss
+  your_time: deine Ortszeit
+  cards_revealed: Karten werden aufgedeckt
+  results_time: Samstag nach Teilnahmeschluss und Prüfung.
+  spot_gives: Was ein Spot bietet
+  days: Tage
+  hours: Stunden
+  minutes: Min
+  seconds: Sek
+  signing: Bestätige die Signatur in deinem Wallet…
+  close_in: Teilnahmeschluss in
+  no_spot_yet: Noch kein Spot
+  your_allocation: Deine Zuteilung
+  total_cap: Bis zu {{sui}} SUI für {{count}} Spots
+  allocation_note: Melde dich an und verknüpfe Wallets, um deine Spots zu prüfen.
+  google_first: Mit Google starten
+  google_first_note: Melde dich mit deinem Spielkonto an, bevor du Wallets hinzufügst oder auf X teilnimmst.
+  card_placeholder: Hier erscheint deine Karte
+  one_card: Eine Karte pro verifiziertem Wallet.
+  share_x: Auf X teilen
+  footer: Ein Spot begrenzt deinen Beitrag, nicht eine feste Tokenmenge.
+  entry_note: 'Die erste Einreichung legt das Wallet fest. Bearbeiten ersetzt Beiträge und setzt die Zeit zurück. Gleichstand: frühere Einreichung, dann X-Konto-ID.'
+  error_wallet_limit: Bis zu zehn Wallets einschließlich Google-Wallet.
+  title: KARES-Whitelist
+  veteran: Veteran
+  member: Member
+  public_note: Der öffentliche Zugang folgt den Blast-Bedingungen. Ergebnisse können noch ausstehen.
+  connect_x: X verbinden
+  recipient: Empfangs-Wallet
+  choose_wallet: Verbundene Wallet wählen
+  preview: Linkvorschau
+  share: Teilen
+  dilution: Limits garantieren keine Token. Bei Überzeichnung werden alle Käufer proportional verwässert.
+  google_wallet: Google-Spielwallet
+  loading: Kampagne wird geladen
+  registration: Einreichungen offen
+  final: Endgültige Liste · Blast-Import ausstehend
+  refresh: Aktualisieren
+  wallet: Wallet
+  error_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
+  error_wallet_locked: Die erste Einreichung legt die Empfangs-Wallet fest. Verbinde sie erneut, um Beiträge zu ändern.
+  error_wallet_taken: Diese Wallet ist bereits mit einem anderen X-Konto verbunden.
+  error_invalid_address: Gib eine gültige Sui-Adresse mit 0x ein.
+  error_closed: Einreichungen sind für die Momentaufnahme geschlossen.
+  metric_xp: Kampf-EP
+  board_xp: Kampf-EP · Rangliste
+  metric_kills: Besiegte Monster
+  board_kills: Besiegte Monster · Rangliste
+  metric_dungeons: Dungeons
+  board_dungeons: Dungeons · Rangliste
+  metric_jobs: Berufs-EP
+  board_jobs: Berufs-EP · Rangliste
+  metric_marketplace: Marktplatz
+  board_marketplace: Marktplatz · Rangliste
+  metric_kolizeum: Kolizeum
+  board_kolizeum: Kolizeum · Rangliste
+  metric_zones: Entdeckungen
+  board_zones: Entdeckungen · Rangliste
+  metric_feeding: Tierfütterung
+  board_feeding: Tierfütterung · Rangliste
+  metric_gathering: Sammeln
+  board_gathering: Sammeln · Rangliste
+  source_leaderboard: In Ranglisten aufsteigen
+  source_social: Auf X posten
+  spots_count: '{{count}} Spots'
+  error_unauthorized: Verbinde und verifiziere zuerst das Empfänger-Wallet.
+  error_invalid_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
+  error_rate_limited: Zu viele Anfragen. Versuche es gleich erneut.
+  error_foreign_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
+  error_missing_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
+  error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.

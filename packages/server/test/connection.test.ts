@@ -52,7 +52,10 @@ describe('websocket admission', () => {
     connection.on_close()
   })
 
-  test('gameplay packets are refused before admission', async () => {
+  test.each([
+    { type: 'packet/track_character', character_id: '0xcharacter', tracked: true },
+    { type: 'packet/allocation_request', id: 1, request: { action: 'link_x' } },
+  ])('application packets are refused before admission: %j', async (packet) => {
     const closed: string[] = []
     const connection = create_authenticated_connection({
       address: '0xowner',
@@ -63,9 +66,7 @@ describe('websocket admission', () => {
       promote: () => ({ dispatch: () => undefined, on_message: () => undefined, on_close: () => undefined }),
     })
 
-    await connection.on_message(
-      JSON.stringify({ type: 'packet/track_character', character_id: '0xcharacter', tracked: true })
-    )
+    await connection.on_message(JSON.stringify(packet))
     expect(closed).toEqual(['INVALID_PACKET'])
     connection.on_close()
   })

@@ -80,6 +80,12 @@ export const MainMenu = ({
         ) : (
           children
         )}
+        <a
+          className="mt-6 border border-emerald-300/30 bg-black/30 px-5 py-3 font-mono text-xs text-emerald-200 hover:border-emerald-300"
+          href="/allocation"
+        >
+          KARES · {copy.allocation_page.check} ↗
+        </a>
       </div>
     </section>
   )

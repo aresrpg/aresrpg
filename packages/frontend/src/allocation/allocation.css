@@ -1,0 +1,526 @@
+/* JetBrains Mono is shared with the journal; its OFL accompanies the canonical font asset. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../../../journal/public/assets/jetbrains-mono.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: swap;
+}
+/* Shared by every allocation option: the journal's paper, ink and type, plus the shared blocks.
+   Options own layout and the card itself. */
+@font-face {
+  font-family: 'Ares UI';
+  src: url('../../../ui/src/assets/font/nunito-700.ttf');
+  font-weight: 700;
+}
+@font-face {
+  font-family: 'Ares UI';
+  src: url('../../../ui/src/assets/font/nunito-800.ttf');
+  font-weight: 800;
+}
+
+:root {
+  color-scheme: light;
+  --paper: #faf8f2;
+  --paper-deep: #f2eee5;
+  --card: #fffdf8;
+  --ink: #30283c;
+  --ink-soft: #4a4056;
+  --muted: #817889;
+  --line: #dfd9df;
+  --purple: #685174;
+  --teal: #579b87;
+  --vet: #1d7f55;
+  --vet-hi: #65e5ac;
+  --vet-soft: #e3f3ea;
+  --mem: #2a5fbf;
+  --mem-hi: #7cb6ff;
+  --mem-soft: #e4ecfa;
+  --blast: #ff4f9e;
+  --blast-deep: #c01f69;
+  --blast-soft: #ffeaf3;
+  --blast-plum: #2b1530;
+  --bad: #b3413a;
+  /* game HUD tokens (packages/ui) */
+  --hud: #1b2026;
+  --hud-head: #26323e;
+  --hud-cell: #20232e;
+  --hud-border: #11131c;
+  --hud-gold: #e2c895;
+  --hud-orange: #e9ac58;
+  --hud-muted: #a9bdcd;
+  --game: 'Ares UI', 'Nunito', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --serif: Georgia, 'Times New Roman', serif;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image: radial-gradient(#7462801a 0.7px, transparent 0.7px);
+  background-size: 5px 5px;
+  font: 14px/1.55 var(--mono);
+  -webkit-font-smoothing: antialiased;
+}
+img {
+  display: block;
+  max-width: 100%;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+a {
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
+}
+::selection {
+  background: #dfd1e7;
+}
+.t-vet {
+  color: var(--vet);
+}
+.t-mem {
+  color: var(--mem);
+}
+
+/* masthead, like the journal */
+.masthead {
+  max-width: 1120px;
+  margin: 0 auto;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--line);
+  font: 11px/1.6 var(--mono);
+}
+.wordmark {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+.wordmark img {
+  width: 30px;
+  height: 30px;
+  image-rendering: pixelated;
+}
+.wordmark span {
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.phase-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--ink-soft);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.kicker {
+  margin: 0 0 12px;
+  color: var(--purple);
+  font: 10px/1.8 var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* buttons: the game's primary orange, a journal-ink secondary */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+  font: 700 13.5px/1 var(--game);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    filter 120ms,
+    transform 120ms;
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-ink {
+  border-color: #4c371d;
+  background: #dea855;
+  color: #231e19;
+  box-shadow:
+    inset 0 1px #ffe3a566,
+    inset 0 -2px #754e3266;
+}
+.btn-google .g {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+}
+.btn-small {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.btn-icon:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* timer: just big numbers */
+.t-clock {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(6px, 1.4vw, 18px);
+  font-variant-numeric: tabular-nums;
+}
+.t-unit {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+}
+.t-unit b {
+  display: block;
+  min-width: 2ch;
+  font: 800 clamp(58px, 12vw, 136px)/0.9 var(--game);
+  color: var(--ink);
+  letter-spacing: -0.03em;
+  text-align: center;
+}
+.t-unit:last-of-type b {
+  color: #c97d22;
+}
+.t-unit small {
+  margin-top: 8px;
+  color: var(--muted);
+  font: 700 10px var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.t-sep {
+  font: 800 clamp(40px, 8vw, 92px)/1 var(--game);
+  font-style: normal;
+  color: #cfc7d4;
+}
+.t-clock.is-done b {
+  color: #c9c1cf;
+}
+.deadline {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.deadline b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.estimate-note {
+  margin: 0;
+  color: var(--muted);
+  font: 13px/1.6 var(--serif);
+}
+.estimate-note b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ways to get a spot */
+.way {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+}
+.way header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.way h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.way > p {
+  margin: 0;
+  color: var(--ink-soft);
+  font: 15px/1.6 var(--serif);
+}
+.way-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 20px;
+  font-weight: 800;
+}
+.way-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.way-count {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.way-count b {
+  color: var(--ink);
+}
+.way-steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.way-steps li {
+  position: relative;
+  padding-left: 18px;
+}
+.way-steps li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--purple);
+}
+.boards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 4px;
+}
+.board {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: var(--paper-deep);
+  font-size: 11px;
+}
+.board span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board b {
+  min-width: 18px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 10.5px;
+}
+.board b.t-vet {
+  background: var(--vet-soft);
+}
+.board b.t-mem {
+  background: var(--mem-soft);
+}
+.way-legend,
+.way-fine {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+/* X entry, nested in the X way card */
+.way .xpanel {
+  margin-top: 4px;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+}
+.xpanel {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--ink);
+  border-radius: 10px;
+  background: var(--card);
+}
+.xp-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.xp-head > div {
+  flex: 1;
+  min-width: 0;
+}
+.xp-head h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.xp-head p {
+  margin: 1px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.xp-head p b {
+  color: var(--ink);
+}
+.xp-logo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #111;
+  color: #fff;
+  font-weight: 800;
+}
+.xp-ok {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.xp-posts {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 20px;
+  font-size: 11.5px;
+}
+.xp-posts a {
+  overflow-wrap: anywhere;
+  text-underline-offset: 3px;
+}
+.xp-wallet {
+  margin: 0;
+  font-size: 12px;
+}
+.xp-wallet code,
+.message code {
+  color: var(--purple);
+}
+.xp-fine,
+.xp-closed {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.xp-fields {
+  display: grid;
+  gap: 8px;
+}
+.xp-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.xp-max {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 11px;
+}
+.field {
+  display: grid;
+  gap: 5px;
+}
+.field > span {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.field small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.field small.warn {
+  color: var(--bad);
+}
+.field input,
+.field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12.5px;
+}
+.field input:focus,
+.field select:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px #68517422;
+}
+.error {
+  margin: 0;
+  color: var(--bad);
+  font-size: 12px;
+  font-weight: 600;
+}

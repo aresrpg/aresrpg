@@ -2830,3 +2830,124 @@ loading_screen:
   world: '월드'
   final_checks: '마지막 준비'
   ready: '모험 준비가 끝났어요.'
+
+allocation_page:
+  before: 초과 청약 조정 전
+  buy_up_to: 구매 한도
+  pending: 결과 대기 중
+  no_spot: 이번에는 슬롯 없음
+  source_reserved: 예약된 슬롯
+  source_pending: 선정 대기 중
+  link_wallets: 지갑 연결
+  wallet_rule: 각 지갑으로 서명하여 소유권을 확인하세요.
+  verified: 확인됨
+  remove_wallet: '{{wallet}} 제거'
+  add_wallet: Sui 지갑 연결
+  wallet_count: 지갑 {{count}} / {{max}}
+  close: 닫기
+  signature_note: 무료 메시지에 서명합니다. 거래나 결제는 발생하지 않습니다.
+  no_wallet_app: Sui 지갑을 설치하세요.
+  wallet_failed: 지갑 연결 실패. 다시 시도하세요.
+  x_entry: 내 X 응모
+  x_connect_note: 게시물을 보내려면 X를 연결하세요.
+  closed: 응모가 마감되었습니다
+  edit: 수정
+  saved_posts: 저장됨 · {{max}}개 중 {{count}}개
+  metrics_note: 토요일 검토 시 반응을 집계합니다.
+  recipient_locked: 첫 응모 후 고정됩니다.
+  post_number: 게시물 {{number}}
+  optional: 선택 사항
+  post_limit: X 계정당 최대 {{max}}개 게시물
+  cancel: 취소
+  save: 저장
+  get_spot: 슬롯 획득
+  get_spot_note: 순위를 올리거나 X에 게시하세요.
+  leaderboard_title: 순위 올리기
+  leaderboard_note: 토요일에 10월 순위를 기록합니다. 점수는 게임 지갑에 귀속되며 연결 여부는 자격에 영향을 주지 않습니다.
+  veteran_boards: 각 순위표의 자격 있는 상위 1~2명이 Veteran을 받습니다.
+  member_boards: 다음 7명이 Member를 받습니다.
+  skip_duplicates: 이미 선정된 지갑은 건너뜁니다.
+  board_legend: '순위표별 슬롯: Veteran / Member'
+  play: AresRPG 플레이
+  x_title: X에 게시
+  x_note: AresRPG에 대해 게시하고 링크를 보내세요.
+  one_entry: 게시물 1~3개. X 계정당 응모 1회.
+  score_rule: '평균 점수: 좋아요 + 3× 재게시 + 3× 인용. 답글과 조회수는 제외됩니다.'
+  x_winners: 상위 {{veteran}}명은 Veteran, 다음 {{member}}명은 Member를 받습니다.
+  leftovers: 남은 순위표 슬롯은 같은 등급으로 X에 배정됩니다.
+  quality_rule: 구매한 반응과 복사한 게시물은 검토 후 제외될 수 있습니다.
+  sale_title: 판매는 Blast에서 진행
+  sale_time: 10월 25일 일요일. 시간은 추후 발표.
+  results_title: 토요일 결과
+  results_note: 판매 전에 카드에서 결과를 확인하세요.
+  entries_close: 응모 마감
+  your_time: 현지 시간
+  cards_revealed: 카드 공개
+  results_time: 토요일, 응모 마감 및 검토 완료 후.
+  spot_gives: 슬롯 혜택
+  days: 일
+  hours: 시간
+  minutes: 분
+  seconds: 초
+  signing: 지갑에서 서명을 확인하세요…
+  close_in: 응모 마감까지
+  no_spot_yet: 아직 슬롯 없음
+  your_allocation: 내 할당량
+  total_cap: '{{count}}개 슬롯에서 최대 {{sui}} SUI'
+  allocation_note: 로그인하고 지갑을 연결하여 슬롯을 확인하세요.
+  google_first: Google로 시작
+  google_first_note: 지갑 추가 또는 X 응모 전에 게임 계정으로 로그인하세요.
+  card_placeholder: 여기에 카드가 표시됩니다
+  one_card: 확인된 지갑당 카드 1장.
+  share_x: X에 공유
+  footer: 슬롯은 고정 토큰 수가 아닌 기여 한도입니다.
+  entry_note: 첫 응모로 지갑이 고정됩니다. 수정하면 게시물과 제출 시간이 바뀝니다. 동점은 빠른 제출, 그다음 X 계정 ID 순입니다.
+  error_wallet_limit: Google 지갑을 포함하여 최대 10개입니다.
+  title: KARES 화이트리스트
+  veteran: Veteran
+  member: Member
+  public_note: 공개 참여는 Blast 판매 조건을 따릅니다. 결과가 아직 대기 중일 수 있습니다.
+  connect_x: X 연결
+  recipient: 수령 지갑
+  choose_wallet: 연결된 지갑 선택
+  preview: 링크 미리보기
+  share: 공유
+  dilution: 한도는 토큰 수량을 보장하지 않습니다. 초과 청약 시 모든 구매자의 배정이 같은 비율로 줄어듭니다.
+  google_wallet: Google 게임 지갑
+  loading: 캠페인 로딩 중
+  registration: 신청 접수 중
+  final: 최종 명단 · Blast 등록 대기
+  refresh: 새로고침
+  wallet: 지갑
+  error_unavailable: 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요. X 또는 캠페인 서비스가 일시 중단되었을 수 있습니다.
+  error_wallet_locked: 첫 제출로 수령 지갑이 고정되었습니다. 게시물을 수정하려면 해당 지갑을 다시 연결하세요.
+  error_wallet_taken: 이 지갑은 다른 X 계정에 연결되어 있습니다.
+  error_invalid_address: 0x로 시작하는 올바른 Sui 주소를 입력하세요.
+  error_closed: 스냅샷을 위해 신청이 마감되었습니다.
+  metric_xp: 전투 경험치
+  board_xp: 전투 경험치 · 순위표
+  metric_kills: 몬스터 처치
+  board_kills: 몬스터 처치 · 순위표
+  metric_dungeons: 던전
+  board_dungeons: 던전 · 순위표
+  metric_jobs: 생산 직업 경험치
+  board_jobs: 생산 직업 경험치 · 순위표
+  metric_marketplace: 거래소
+  board_marketplace: 거래소 · 순위표
+  metric_kolizeum: 콜리제움
+  board_kolizeum: 콜리제움 · 순위표
+  metric_zones: 발견
+  board_zones: 발견 · 순위표
+  metric_feeding: 펫 먹이 주기
+  board_feeding: 펫 먹이 주기 · 순위표
+  metric_gathering: 채집
+  board_gathering: 채집 · 순위표
+  source_leaderboard: 순위 올리기
+  source_social: X에 게시
+  spots_count: '{{count}} 슬롯'
+  error_unauthorized: 먼저 수령 지갑을 연결하고 확인하세요.
+  error_invalid_post: 서로 다른 X 게시물 링크 1~3개를 사용하세요.
+  error_rate_limited: 요청이 너무 많습니다. 잠시 후 다시 시도하세요.
+  error_foreign_post: 서로 다른 X 게시물 링크 1~3개를 사용하세요.
+  error_missing_post: 서로 다른 X 게시물 링크 1~3개를 사용하세요.
+  error_x_unavailable: 요청을 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요. X 또는 캠페인 서비스가 일시 중단되었을 수 있습니다.

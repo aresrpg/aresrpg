@@ -13,7 +13,9 @@
     "./mob_power": "./src/mob_power.ts",
     "./pet": "./src/pet.ts",
     "./rune": "./src/rune.ts",
-    "./world": "./src/world.ts"
+    "./world": "./src/world.ts",
+    "./allocation": "./src/allocation.ts",
+    "./leaderboards": "./src/leaderboards.ts"
   },
   "scripts": {
     "test": "bun test"

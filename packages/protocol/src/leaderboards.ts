@@ -1,17 +1,8 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-export const LEADERBOARD_METRICS = [
-  'xp',
-  'kills',
-  'dungeons',
-  'jobs',
-  'marketplace',
-  'kolizeum',
-  'zones',
-  'feeding',
-  'gathering',
-] as const
+import { LEADERBOARD_METRICS } from '@aresrpg/immutable/leaderboards'
+export { LEADERBOARD_METRICS } from '@aresrpg/immutable/leaderboards'
 export const LEADERBOARD_LIMIT = 100
 export type LeaderboardMetric = (typeof LEADERBOARD_METRICS)[number]
 export type LeaderboardObservation = Readonly<{ metric: LeaderboardMetric; id: number }>

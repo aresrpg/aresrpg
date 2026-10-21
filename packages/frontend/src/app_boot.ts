@@ -29,7 +29,10 @@ const boot = async (): Promise<void> => {
     inject({ mode: 'production', beforeSend: before_send })
     inject_speed_insights({ beforeSend: before_send })
   }
-  if (is_gift_entry(location.pathname, location.hash, saved_gift_route())) {
+  if (location.pathname.replace(/\/+$/, '') === '/allocation') {
+    const { boot_allocation } = await import('./allocation/entry.tsx')
+    await boot_allocation()
+  } else if (is_gift_entry(location.pathname, location.hash, saved_gift_route())) {
     const { boot_gift } = await import('./airdrop/gift_entry.tsx')
     await boot_gift()
   } else {

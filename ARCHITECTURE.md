@@ -1363,8 +1363,35 @@ verifies the package and KARES/SUI type pair, and projects authoritative lifecyc
 Without a presale pin it shows an upcoming sale and performs no network request. Failed reads hide
 progress; an expired open window shows settlement pending, never an invented successful launch.
 The card's reducer rejects older object versions; its observer stops polling on disposal or a final
-sale state. The encyclopedia owns tokenomics. Token art lives in seed and the game's public metadata
+sale state. Before the sale it links to the allocation campaign. The encyclopedia owns tokenomics.
+Token art lives in seed and the game's public metadata
 asset uses that same image; there is no separate token website.
+
+The temporary `/allocation` campaign uses a canvas-free entry and mandatory normal Google
+sign-in. Its paper layout follows the approved standalone HTML reference. Seed owns quotas,
+scoring and the cutoff. The normal wallet-authenticated WebSocket is its private request door;
+a temporary server module owns a separate persistent Redis, never the disposable game index.
+The admitted game-wallet proof establishes the first card. Up to ten distinct wallets, including
+that wallet, belong to the account's retained portfolio. Adding another requires a fresh,
+expiring, one-use signature challenge binding the account, address and campaign. Redis enforces
+the limit atomically. Only verified wallets receive cards, and totals deduplicate addresses.
+
+X is a uniquely linked identity, not another application login. An authenticated one-use ticket
+starts browser-bound PKCE. The callback returns a short-lived result that only the original game
+account can confirm. Post submissions use that admitted connection, prove X authorship and require
+a verified receiving wallet. The first submission locks its recipient. Redis time enforces the
+cutoff atomically. Manual tools freeze admissions, capture consistent leaderboards and metrics,
+then produce reproducible results and the Blast CSV. Unfilled leaderboard slots retain their tier
+when passed to social selection. Reserved records precede leaderboard and social selection.
+
+Public HTTP has no address lookup or private-session access. Only an authenticated verified owner
+can issue an opaque share link. Its HTML metadata and server-rendered PNG show tier, pending state
+and allocation without wallet addresses, X identity, ranks or operator notes. Account cards expose
+only a validated leaderboard name or a generic reserved/social source. Vercel proxies these public
+share and linking callbacks to the existing HTTPS server; it has no campaign credentials. The
+server image includes the same localized copy, fonts and seed artwork, and its release inputs track
+those dependencies. The campaign accepts no sale payments until real sale pins and allowlist proof
+delivery have been verified. Snapshot files and CSV exports outlive the temporary database.
 
 Community tokens vest over 1,825 wall-clock days from setup. Only the immutable treasury can claim
 unlocked tokens. Cumulative entitlement minus prior withdrawals makes claim cadence irrelevant.

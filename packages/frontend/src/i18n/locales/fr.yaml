@@ -2870,3 +2870,124 @@ loading_screen:
   world: 'Monde'
   final_checks: 'Derniers préparatifs'
   ready: 'Votre aventure est prête.'
+
+allocation_page:
+  before: Avant sursouscription
+  buy_up_to: Acheter jusqu’à
+  pending: Résultats en attente
+  no_spot: Aucun spot cette fois
+  source_reserved: Spot réservé
+  source_pending: Sélection en attente
+  link_wallets: Liez vos portefeuilles
+  wallet_rule: Signez avec chaque portefeuille pour prouver qu’il vous appartient.
+  verified: Vérifié
+  remove_wallet: Retirer {{wallet}}
+  add_wallet: Lier un portefeuille Sui
+  wallet_count: '{{count}} / {{max}} portefeuilles'
+  close: Fermer
+  signature_note: Signez un message gratuit. Aucune transaction ni aucun paiement.
+  no_wallet_app: Installez un portefeuille Sui pour continuer.
+  wallet_failed: Connexion échouée. Réessayez.
+  x_entry: Votre candidature X
+  x_connect_note: Connectez X pour envoyer vos publications.
+  closed: Inscriptions closes
+  edit: Modifier
+  saved_posts: Enregistré · {{count}} publications sur {{max}}
+  metrics_note: Nous relevons les interactions lors de la vérification samedi.
+  recipient_locked: Fixé après votre première candidature.
+  post_number: Publication {{number}}
+  optional: facultatif
+  post_limit: '{{max}} publications maximum par compte X'
+  cancel: Annuler
+  save: Enregistrer
+  get_spot: Obtenir un spot
+  get_spot_note: Progressez au classement ou publiez sur X.
+  leaderboard_title: Progressez au classement
+  leaderboard_note: Nous relevons les classements d’octobre samedi. Le score appartient au portefeuille de jeu ; le lier ne change pas son éligibilité.
+  veteran_boards: Les 1 ou 2 premiers joueurs éligibles de chaque classement obtiennent Veteran.
+  member_boards: Les 7 suivants obtiennent Member.
+  skip_duplicates: Les portefeuilles déjà sélectionnés sont ignorés.
+  board_legend: 'Spots par classement : Veteran / Member'
+  play: Jouer à AresRPG
+  x_title: Publiez sur X
+  x_note: Parlez d’AresRPG, puis envoyez vos liens.
+  one_entry: Envoyez 1 à 3 publications. Une candidature par compte X.
+  score_rule: 'Score moyen : likes + 3× republications + 3× citations. Réponses et vues exclues.'
+  x_winners: Les {{veteran}} premiers obtiennent Veteran ; les {{member}} suivants, Member.
+  leftovers: Les spots de classement inutilisés passent à X au même niveau.
+  quality_rule: Les interactions achetées et publications copiées peuvent être exclues après vérification.
+  sale_title: La vente se déroule sur Blast
+  sale_time: Dimanche 25 octobre. Horaire à confirmer.
+  results_title: Résultats de samedi
+  results_note: Vos cartes révèlent les résultats avant la vente.
+  entries_close: Clôture des inscriptions
+  your_time: heure locale
+  cards_revealed: Révélation des cartes
+  results_time: Samedi, après la clôture et la vérification.
+  spot_gives: Ce qu’offre un spot
+  days: jours
+  hours: heures
+  minutes: min
+  seconds: s
+  signing: Confirmez la signature dans votre portefeuille…
+  close_in: Clôture dans
+  no_spot_yet: Pas encore de spot
+  your_allocation: Votre allocation
+  total_cap: Jusqu’à {{sui}} SUI pour {{count}} spots
+  allocation_note: Connectez-vous et liez vos portefeuilles pour voir vos spots.
+  google_first: Commencez avec Google
+  google_first_note: Connectez votre compte de jeu avant d’ajouter des portefeuilles ou de participer via X.
+  card_placeholder: Votre carte apparaîtra ici
+  one_card: Une carte par portefeuille vérifié.
+  share_x: Partager sur X
+  footer: Un spot fixe votre plafond de contribution, pas un nombre de tokens.
+  entry_note: 'La première candidature fixe le portefeuille. Modifier remplace les publications et réinitialise la date. Égalités : candidature la plus ancienne, puis identifiant X.'
+  error_wallet_limit: Dix portefeuilles maximum, portefeuille Google compris.
+  title: Whitelist KARES
+  veteran: Veteran
+  member: Member
+  public_note: L’accès public suit les conditions de Blast. Les résultats peuvent être en attente.
+  connect_x: Connecter X
+  recipient: Portefeuille bénéficiaire
+  choose_wallet: Choisir un portefeuille connecté
+  preview: Aperçu du lien
+  share: Partager
+  dilution: Les plafonds ne garantissent pas de jetons. En cas de sursouscription, tous les acheteurs sont dilués proportionnellement.
+  google_wallet: Portefeuille de jeu Google
+  loading: Chargement de la campagne
+  registration: Candidatures ouvertes
+  final: Liste finale · import Blast en attente
+  refresh: Actualiser
+  wallet: Portefeuille
+  error_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.
+  error_wallet_locked: Le premier envoi fixe votre portefeuille bénéficiaire. Reconnectez-le pour modifier vos publications.
+  error_wallet_taken: Ce portefeuille est déjà lié à un autre compte X.
+  error_invalid_address: Saisissez une adresse Sui valide commençant par 0x.
+  error_closed: Les candidatures sont closes pour l’instantané.
+  metric_xp: XP de combat
+  board_xp: XP de combat · Classement
+  metric_kills: Monstres vaincus
+  board_kills: Monstres vaincus · Classement
+  metric_dungeons: Donjons
+  board_dungeons: Donjons · Classement
+  metric_jobs: XP métiers
+  board_jobs: XP métiers · Classement
+  metric_marketplace: Marché
+  board_marketplace: Marché · Classement
+  metric_kolizeum: Kolizéum
+  board_kolizeum: Kolizéum · Classement
+  metric_zones: Découvertes
+  board_zones: Découvertes · Classement
+  metric_feeding: Repas des familiers
+  board_feeding: Repas des familiers · Classement
+  metric_gathering: Récolte
+  board_gathering: Récolte · Classement
+  source_leaderboard: Progressez au classement
+  source_social: Publiez sur X
+  spots_count: '{{count}} spots'
+  error_unauthorized: Connectez et vérifiez d’abord le portefeuille destinataire.
+  error_invalid_post: Utilisez 1 à 3 liens de publications X distincts.
+  error_rate_limited: Trop de requêtes. Réessayez dans un instant.
+  error_foreign_post: Utilisez 1 à 3 liens de publications X distincts.
+  error_missing_post: Utilisez 1 à 3 liens de publications X distincts.
+  error_x_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.

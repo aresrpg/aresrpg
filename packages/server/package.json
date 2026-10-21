@@ -18,7 +18,9 @@
     "@mysten/sui": "2.31.3",
     "falkordb": "^6.8.0",
     "ioredis": "^6.0.0",
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "yaml": "^2.9.1",
+    "@napi-rs/canvas": "1.0.10"
   },
   "devDependencies": {
     "typescript": "~6.0.3",

@@ -41,6 +41,7 @@ const auth_session = (address = '0xowner'): AuthSession =>
     party: {} as never,
     mastery: {} as never,
     kares: {} as never,
+    blast: {} as never,
     character: {} as never,
     read_character_checkpoint: async () => null,
     read_item: async () => ({}) as never,

@@ -6,9 +6,10 @@
 import type { ServerWebSocket } from 'bun'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
+import { create_allocation } from './allocation/runtime.ts'
 import { create_public_market } from './public_market.ts'
 import { create_public_world } from './public_world.ts'
-import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID } from './env.ts'
+import { PORT, ADMIN_ADDRESSES, ALLOWED_ORIGINS, MAX_PLAYERS, SERVER_ID, ALLOCATION_OPTIONS } from './env.ts'
 import { BANNABLE_REASONS, create_ban_list } from './ban_list.ts'
 import { verify_login } from './auth.ts'
 import { create_authenticated_connection, type AuthenticatedConnection } from './connection.ts'
@@ -37,6 +38,8 @@ const public_market = create_public_market(graph, pubsub.graph)
 const pending = create_pending_admission()
 const handlers = new Map<Connection, AuthenticatedConnection>()
 const request_limiter = create_request_limiter()
+const allocation = create_allocation(ALLOCATION_OPTIONS)
+const allocation_http_limiter = create_request_limiter({ capacity: 600, window_ms: 60_000 })
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()
 const indexing_health = create_indexing_health({
@@ -65,11 +68,27 @@ pubsub.mesh.emitter.on(mesh.player_connect, (payload) => {
 })
 void pubsub.mesh.subscribe(mesh.player_connect)
 
+const http_routes = new Map<
+  string,
+  (request: Request, server: Readonly<import('bun').Server<ConnectionData>>) => Response | Promise<Response>
+>([
+  ['/health', () => new Response('ok')],
+  [
+    '/api/allocation',
+    (request, server) => {
+      const peer = server.requestIP(request)?.address ?? 'unknown'
+      if (!allocation_http_limiter.take(peer)) return new Response('rate limited', { status: 429 })
+      return allocation.http(request)
+    },
+  ],
+])
+
 const server = Bun.serve<ConnectionData>({
   port: PORT,
   async fetch(request, bun_server) {
     const url = new URL(request.url)
-    if (url.pathname === '/health') return new Response('ok')
+    const route = http_routes.get(url.pathname)
+    if (route) return route(request, bun_server)
     if (url.pathname !== '/') return new Response('not found', { status: 404 })
 
     const origin = request.headers.get('origin')?.replace(/\/+$/, '')
@@ -108,6 +127,7 @@ const server = Bun.serve<ConnectionData>({
             connections.get(address)?.ws.close(1000, 'REPLACED')
             const player = create_player({
               ws,
+              allocation,
               address,
               admin: ADMIN_ADDRESSES.has(address),
               graph,

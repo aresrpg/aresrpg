@@ -2868,3 +2868,124 @@ loading_screen:
   world: 'World'
   final_checks: 'Final checks'
   ready: 'Your adventure is ready.'
+
+allocation_page:
+  before: Before oversubscription
+  buy_up_to: Buy up to
+  pending: Results pending
+  no_spot: No spot this time
+  source_reserved: Reserved spot
+  source_pending: Selection pending
+  link_wallets: Link your wallets
+  wallet_rule: Sign with each wallet to prove it’s yours.
+  verified: Verified
+  remove_wallet: Remove {{wallet}}
+  add_wallet: Link a Sui wallet
+  wallet_count: '{{count}} / {{max}} wallets'
+  close: Close
+  signature_note: Sign a free message. No transaction or payment is sent.
+  no_wallet_app: Install a Sui wallet to continue.
+  wallet_failed: Wallet connection failed. Try again.
+  x_entry: Your X entry
+  x_connect_note: Connect X to send your posts.
+  closed: Entries are closed
+  edit: Edit
+  saved_posts: Saved · {{count}} of {{max}} posts
+  metrics_note: We count engagement during Saturday’s review.
+  recipient_locked: Locked after your first entry.
+  post_number: Post {{number}}
+  optional: optional
+  post_limit: Up to {{max}} posts per X account
+  cancel: Cancel
+  save: Save
+  get_spot: Get a spot
+  get_spot_note: Climb a leaderboard or post on X.
+  leaderboard_title: Climb a leaderboard
+  leaderboard_note: We take the October rankings on Saturday. Your game wallet earns the score; linking it does not affect eligibility.
+  veteran_boards: The top 1 or 2 eligible players per board get Veteran.
+  member_boards: The next 7 eligible players get Member.
+  skip_duplicates: Previously selected wallets are skipped.
+  board_legend: 'Spots per board: Veteran / Member'
+  play: Play AresRPG
+  x_title: Post on X
+  x_note: Post about AresRPG, then send your links.
+  one_entry: Send 1–3 posts. One entry per X account.
+  score_rule: 'Average score: likes + 3× reposts + 3× quotes. Replies and views do not count.'
+  x_winners: The top {{veteran}} get Veteran; the next {{member}} get Member.
+  leftovers: Unused leaderboard spots go to X, at the same tier.
+  quality_rule: Bought engagement and copied posts may be excluded after review.
+  sale_title: The sale happens on Blast
+  sale_time: Sunday 25 October. Time to be announced.
+  results_title: Saturday’s results
+  results_note: Your cards reveal the results before the sale.
+  entries_close: Entries close
+  your_time: your time
+  cards_revealed: Cards are revealed
+  results_time: Saturday, after entries close and review finishes.
+  spot_gives: What a spot gives
+  days: days
+  hours: hours
+  minutes: min
+  seconds: sec
+  signing: Confirm the signature in your wallet…
+  close_in: Entries close in
+  no_spot_yet: No spot yet
+  your_allocation: Your allocation
+  total_cap: Buy up to {{sui}} SUI across {{count}} spots
+  allocation_note: Sign in and link your wallets to check your spots.
+  google_first: Start with Google
+  google_first_note: Sign in with your game account before adding wallets or entering on X.
+  card_placeholder: Your card shows up here
+  one_card: One card per verified wallet.
+  share_x: Share on X
+  footer: A spot sets your contribution cap, not a fixed number of tokens.
+  entry_note: Your first entry locks its wallet. Editing replaces the posts and resets submission time. Ties favor earlier entries, then X account ID.
+  error_wallet_limit: You can link up to ten wallets, including your Google wallet.
+  title: KARES whitelist
+  veteran: Veteran
+  member: Member
+  public_note: Public access follows Blast’s sale terms. Results may still be pending.
+  connect_x: Connect X
+  recipient: Receiving wallet
+  choose_wallet: Choose a connected wallet
+  preview: Preview link
+  share: Share
+  dilution: Caps are not guaranteed tokens. Every buyer is diluted proportionally if the sale is oversubscribed.
+  google_wallet: Google game wallet
+  loading: Loading campaign
+  registration: Submissions open
+  final: Final whitelist · pending Blast import
+  refresh: Refresh
+  wallet: Wallet
+  error_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
+  error_wallet_locked: Your receiving wallet is fixed by your first submission. Reconnect that wallet to update your posts.
+  error_wallet_taken: This wallet is already linked to another X account.
+  error_invalid_address: Enter a valid Sui address beginning with 0x.
+  error_closed: Submissions are closed for the snapshot.
+  metric_xp: Combat XP
+  board_xp: Combat XP · Leaderboard
+  metric_kills: Mob kills
+  board_kills: Mob kills · Leaderboard
+  metric_dungeons: Dungeons
+  board_dungeons: Dungeons · Leaderboard
+  metric_jobs: Job XP
+  board_jobs: Job XP · Leaderboard
+  metric_marketplace: Marketplace
+  board_marketplace: Marketplace · Leaderboard
+  metric_kolizeum: Kolizeum
+  board_kolizeum: Kolizeum · Leaderboard
+  metric_zones: Discoveries
+  board_zones: Discoveries · Leaderboard
+  metric_feeding: Pet feeding
+  board_feeding: Pet feeding · Leaderboard
+  metric_gathering: Gathering
+  board_gathering: Gathering · Leaderboard
+  source_leaderboard: Climb a leaderboard
+  source_social: Post on X
+  spots_count: '{{count}} spots'
+  error_unauthorized: Connect and verify the receiving wallet first.
+  error_invalid_post: Use 1–3 different X post links.
+  error_rate_limited: Too many requests. Try again shortly.
+  error_foreign_post: Use 1–3 different X post links.
+  error_missing_post: Use 1–3 different X post links.
+  error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.

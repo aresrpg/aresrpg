@@ -282,7 +282,13 @@ jobs:
           filter: blob:none
           sparse-checkout: |
             /*
-            !seed/icons
+            !seed/icons/*
+            /seed/icons/currency/
+            !seed/icons/currency/*
+            /seed/icons/currency/kares.png
+            /seed/icons/journal/
+            !seed/icons/journal/*
+            /seed/icons/journal/helmet-favicon.png
             !seed/models
             !music
           sparse-checkout-cone-mode: false

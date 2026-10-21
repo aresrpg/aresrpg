@@ -66,13 +66,14 @@ export type BlastPresale = Readonly<{
   lifecycle: BlastLifecycle
   total_commitments: bigint
   raise_target: bigint
+  start_ms: bigint
   end_ms: bigint
 }>
 export const project_blast_presale = (sale: BlastPresale, clock_ms: bigint, version: string): BlastSnapshot => {
   if (sale.raise_target <= 0n) throw new Error('Blast presale has no funding target')
   const phases = {
     Pending: 'soon',
-    Open: clock_ms >= sale.end_ms ? 'closing' : 'live',
+    Open: clock_ms < sale.start_ms ? 'soon' : clock_ms >= sale.end_ms ? 'closing' : 'live',
     Funded: 'funded',
     Migrated: 'complete',
     Cancelled: 'cancelled',
@@ -97,7 +98,8 @@ export const decode_blast_presale = (json: Readonly<Record<string, unknown>>): B
     lifecycle: variant as BlastLifecycle,
     total_commitments: u64(json.total_commitments),
     raise_target: u64(json.raise_target),
-    end_ms: u64(json.end_ms),
+    start_ms: u64(json.start_ms),
+    end_ms: u64((u64(json.start_ms) + u64(json.duration_ms)).toString()),
   }
 }
 

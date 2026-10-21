@@ -20,13 +20,21 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
   const { snapshot } = state
   const show_progress = snapshot && ['live', 'closing', 'funded', 'complete'].includes(phase)
   return (
-    <a className="blast-sale-card" data-blast-phase={phase} href={state.url} target="_blank" rel="noopener noreferrer">
+    <a
+      className="blast-sale-card"
+      data-blast-phase={phase}
+      href={phase === 'soon' ? '/allocation' : state.url}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <img className="blast-sale-pilot" src={pilot} alt="" />
       <span className="blast-sale-brand">
         <img src={helmet} alt="" /> KARES <span>×</span>
         <img className="blast-sale-wordmark" src={wordmark} alt="Blast" />
       </span>
-      <strong className="blast-sale-title">{text[`blast_${phase}`]}</strong>
+      <strong className="blast-sale-title">
+        {phase === 'soon' ? copy.allocation_page.campaign : text[`blast_${phase}`]}
+      </strong>
       <span className="blast-sale-note">{text.blast_note}</span>
       {show_progress && (
         <span className="blast-sale-funding">
@@ -49,7 +57,7 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
         </span>
       )}
       <span className="blast-sale-action">
-        {text.blast_action}
+        {phase === 'soon' ? copy.allocation_page.check : text.blast_action}
         <ArrowUpRight size={14} aria-hidden="true" />
       </span>
     </a>

@@ -3,7 +3,7 @@
 # =============================================================================
 # AresRPG server — the one realtime door.
 # zkLogin-verified websocket serving the bound indexer set's graph and relaying
-# player ephemera over the cluster mesh redis. Writes nothing.
+# player ephemera over the cluster mesh redis. Owns the temporary off-chain allocation module.
 #
 # Build from the REPO ROOT (the workspace lockfile + sibling packages are the
 # build context): docker build -f packages/server/Dockerfile .
@@ -16,6 +16,8 @@
 
 FROM oven/bun:1.3.5-slim@sha256:6111acec4c5a703f2069d6e681967c047920ff2883e7e5a5e64f4ac95ddeb27f AS runtime
 WORKDIR /app
+# CJK fallback for localized campaign OG cards.
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk && rm -rf /var/lib/apt/lists/*
 
 # The frozen lockfile spans the whole workspace, so every member's manifest must be
 # present for the install to resolve; only the server's own dependency closure is
@@ -41,8 +43,12 @@ COPY packages/fight packages/fight
 COPY packages/immutable packages/immutable
 # the zone-population twin: engine's pure recipe/biome sampling + the seed content it derives from
 COPY packages/engine/src packages/engine/src
+COPY packages/frontend/src/i18n/locales packages/frontend/src/i18n/locales
 COPY seed/content seed/content
 COPY seed/structures seed/structures
+COPY packages/ui/src/assets/font packages/ui/src/assets/font
+COPY seed/icons/currency/kares.png seed/icons/currency/kares.png
+COPY seed/icons/journal/helmet-favicon.png seed/icons/journal/helmet-favicon.png
 USER bun
 EXPOSE 9800
 CMD ["bun", "run", "packages/server/src/index.ts"]

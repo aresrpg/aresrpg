@@ -511,7 +511,7 @@
     },
     "packages/protocol/src/packets.ts": {
       "parse_client_packet": [
-        33
+        29
       ]
     },
     "packages/frontend/seed_dev_server.ts": {
@@ -537,6 +537,11 @@
     "packages/engine/src/upload_queue.ts": {
       "create_upload_queue > drain": [
         12
+      ]
+    },
+    "packages/frontend/src/allocation/runtime.ts": {
+      "create_allocation_runtime > observe > run": [
+        11
       ]
     }
   },
@@ -1851,7 +1856,7 @@
         9
       ],
       "parse_client_packet": [
-        33
+        29
       ]
     },
     "packages/protocol/src/marketplace.ts": {
@@ -2176,6 +2181,34 @@
     "packages/frontend/src/boot_loading.ts": {
       "prepare_boot_loading": [
         10
+      ]
+    },
+    "packages/frontend/src/allocation/runtime.ts": {
+      "create_allocation_runtime > observe > bind": [
+        9
+      ],
+      "create_allocation_runtime > observe > run": [
+        11
+      ]
+    },
+    "packages/frontend/src/allocation/AllocationPage.tsx": {
+      "AllocationPage": [
+        9
+      ]
+    },
+    "packages/frontend/src/allocation/Wallets.tsx": {
+      "Wallets": [
+        10
+      ]
+    },
+    "packages/server/src/allocation/preview.ts": {
+      "share_preview": [
+        11
+      ]
+    },
+    "packages/server/src/allocation/service.ts": {
+      "allocation_request": [
+        9
       ]
     }
   }

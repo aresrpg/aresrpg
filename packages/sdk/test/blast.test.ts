@@ -6,10 +6,28 @@ import { normalizeStructTag } from '@mysten/sui/utils'
 import { blast_url, create_blast_reader, decode_blast_presale, project_blast_presale } from '../src/blast.ts'
 
 import { id } from './helpers/transport.ts'
+import captured from './fixtures/blast_presale.mainnet.json' with { type: 'json' }
+
+// Mainnet object 0x091759…facba, version 1056407653, captured 2026-10-21 via gRPC.
+test('deployed Blast derives its commitment window from start and duration', () => {
+  const fields = captured.objects[0].json
+  const sale = decode_blast_presale(fields)
+  expect(sale.end_ms).toBe(1792535060924n)
+  const scheduled = { ...sale, lifecycle: 'Open' as const }
+  expect(project_blast_presale(scheduled, 1792535046201n, '1056407653').phase).toBe('soon')
+  expect(project_blast_presale(scheduled, 1792535046202n, '1056407653').phase).toBe('live')
+  expect(project_blast_presale(scheduled, 1792535060924n, '1056407653').phase).toBe('closing')
+})
 
 // JSON presentation projection, not a replacement Move/BCS codec. Enum JSON is decoded by Sui.
 // Field/lifecycle owner: interest-protocol/blast-v2-contracts/sui/presale/sources/blast_presale.move.
-const fields = { lifecycle: { '@variant': 'Open' }, total_commitments: '75', raise_target: '100', end_ms: '200' }
+const fields = {
+  lifecycle: { '@variant': 'Open' },
+  total_commitments: '75',
+  raise_target: '100',
+  start_ms: '0',
+  duration_ms: '200',
+}
 
 test('presale stages follow certified lifecycle, with an explicit wait after the clock expires', () => {
   expect(project_blast_presale(decode_blast_presale(fields), 199n, '3')).toMatchObject({

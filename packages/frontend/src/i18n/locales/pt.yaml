@@ -2827,3 +2827,124 @@ loading_screen:
   world: 'Mundo'
   final_checks: 'Últimos preparativos'
   ready: 'Sua aventura está pronta.'
+
+allocation_page:
+  before: Antes da sobressubscrição
+  buy_up_to: Comprar até
+  pending: Resultados pendentes
+  no_spot: Sem spot desta vez
+  source_reserved: Spot reservado
+  source_pending: Seleção pendente
+  link_wallets: Vincule suas carteiras
+  wallet_rule: Assine com cada carteira para comprovar que é sua.
+  verified: Verificada
+  remove_wallet: Remover {{wallet}}
+  add_wallet: Vincular carteira Sui
+  wallet_count: '{{count}} / {{max}} carteiras'
+  close: Fechar
+  signature_note: Assine uma mensagem gratuita. Nenhuma transação ou pagamento é enviado.
+  no_wallet_app: Instale uma carteira Sui para continuar.
+  wallet_failed: Falha na conexão. Tente novamente.
+  x_entry: Sua inscrição no X
+  x_connect_note: Conecte o X para enviar publicações.
+  closed: Inscrições encerradas
+  edit: Editar
+  saved_posts: Salvo · {{count}} de {{max}} publicações
+  metrics_note: Contaremos as interações na revisão de sábado.
+  recipient_locked: Fixada após a primeira inscrição.
+  post_number: Publicação {{number}}
+  optional: opcional
+  post_limit: Até {{max}} publicações por conta X
+  cancel: Cancelar
+  save: Salvar
+  get_spot: Consiga um spot
+  get_spot_note: Suba nos rankings ou publique no X.
+  leaderboard_title: Suba nos rankings
+  leaderboard_note: Registraremos os rankings de outubro no sábado. Sua carteira de jogo ganha pontos; vinculá-la não altera a elegibilidade.
+  veteran_boards: Os primeiros 1 ou 2 jogadores elegíveis de cada ranking recebem Veteran.
+  member_boards: Os próximos 7 recebem Member.
+  skip_duplicates: Carteiras já selecionadas são ignoradas.
+  board_legend: 'Spots por ranking: Veteran / Member'
+  play: Jogar AresRPG
+  x_title: Publique no X
+  x_note: Publique sobre AresRPG e envie seus links.
+  one_entry: Envie 1–3 publicações. Uma inscrição por conta X.
+  score_rule: 'Média: curtidas + 3× reposts + 3× citações. Respostas e visualizações não contam.'
+  x_winners: Os primeiros {{veteran}} recebem Veteran; os próximos {{member}}, Member.
+  leftovers: Spots não utilizados dos rankings passam ao X no mesmo nível.
+  quality_rule: Interações compradas e publicações copiadas podem ser excluídas após revisão.
+  sale_title: A venda acontece na Blast
+  sale_time: Domingo, 25 de outubro. Horário a confirmar.
+  results_title: Resultados de sábado
+  results_note: Suas cartas revelam os resultados antes da venda.
+  entries_close: Encerramento das inscrições
+  your_time: seu horário local
+  cards_revealed: Cartas reveladas
+  results_time: Sábado, após o encerramento e a revisão.
+  spot_gives: O que um spot oferece
+  days: dias
+  hours: horas
+  minutes: min
+  seconds: s
+  signing: Confirme a assinatura na carteira…
+  close_in: Inscrições encerram em
+  no_spot_yet: Ainda sem spot
+  your_allocation: Sua alocação
+  total_cap: Até {{sui}} SUI em {{count}} spots
+  allocation_note: Entre e vincule carteiras para consultar seus spots.
+  google_first: Comece com Google
+  google_first_note: Entre com sua conta do jogo antes de adicionar carteiras ou participar no X.
+  card_placeholder: Sua carta aparecerá aqui
+  one_card: Uma carta por carteira verificada.
+  share_x: Compartilhar no X
+  footer: Um spot define o limite de contribuição, não uma quantidade fixa de tokens.
+  entry_note: 'A primeira inscrição fixa a carteira. Editar substitui publicações e reinicia a data. Empates: envio mais antigo, depois ID do X.'
+  error_wallet_limit: Até dez carteiras, incluindo a carteira Google.
+  title: Lista de acesso KARES
+  veteran: Veteran
+  member: Member
+  public_note: O acesso público segue os termos do Blast. Os resultados podem estar pendentes.
+  connect_x: Conectar X
+  recipient: Carteira destinatária
+  choose_wallet: Escolha uma carteira conectada
+  preview: Prévia do link
+  share: Compartilhar
+  dilution: Os limites não garantem tokens. Se houver excesso de demanda, todos os compradores serão diluídos proporcionalmente.
+  google_wallet: Carteira de jogo Google
+  loading: Carregando campanha
+  registration: Inscrições abertas
+  final: Lista final · aguardando importação no Blast
+  refresh: Atualizar
+  wallet: Carteira
+  error_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
+  error_wallet_locked: O primeiro envio fixa a carteira destinatária. Reconecte-a para atualizar suas publicações.
+  error_wallet_taken: Esta carteira já está vinculada a outra conta X.
+  error_invalid_address: Insira um endereço Sui válido começando com 0x.
+  error_closed: Inscrições encerradas para o snapshot.
+  metric_xp: XP de combate
+  board_xp: XP de combate · Classificação
+  metric_kills: Monstros derrotados
+  board_kills: Monstros derrotados · Classificação
+  metric_dungeons: Masmorras
+  board_dungeons: Masmorras · Classificação
+  metric_jobs: XP de profissão
+  board_jobs: XP de profissão · Classificação
+  metric_marketplace: Mercado
+  board_marketplace: Mercado · Classificação
+  metric_kolizeum: Kolizeum
+  board_kolizeum: Kolizeum · Classificação
+  metric_zones: Descobertas
+  board_zones: Descobertas · Classificação
+  metric_feeding: Alimentação de mascotes
+  board_feeding: Alimentação de mascotes · Classificação
+  metric_gathering: Coleta
+  board_gathering: Coleta · Classificação
+  source_leaderboard: Suba nos rankings
+  source_social: Publique no X
+  spots_count: '{{count}} spots'
+  error_unauthorized: Conecte e verifique primeiro a carteira destinatária.
+  error_invalid_post: Use 1–3 links diferentes de publicações do X.
+  error_rate_limited: Muitas solicitações. Tente novamente em instantes.
+  error_foreign_post: Use 1–3 links diferentes de publicações do X.
+  error_missing_post: Use 1–3 links diferentes de publicações do X.
+  error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.

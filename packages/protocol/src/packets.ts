@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-/* eslint-disable complexity, max-lines -- the wire keeps packet shapes and their exhaustive parser in one auditable contract. */
+/* eslint-disable max-lines -- the wire keeps packet shapes and their exhaustive parser in one auditable contract. */
 // THE WIRE CONTRACT (owner 2026-08-12, legacy model): every packet is a REAL shape with a
 // `packet/<name>` discriminant — no generic envelopes, no `kind: string`. The app and the
 // server both import THIS module; a packet that isn't declared here does not exist.
@@ -14,6 +14,8 @@ import { cosmetic_slots } from '@aresrpg/immutable'
 import { experience_progress } from '@aresrpg/immutable'
 import { parse_fight_wire_action, type FightWireAction } from '@aresrpg/fight'
 
+import { valid_allocation_request, type AllocationRequest, type AllocationResult } from './allocation.ts'
+export type { AllocationRequest, AllocationResult } from './allocation.ts'
 import { parse_inspection_request, type InspectionQuery, type InspectionResult } from './inspection.ts'
 import { parse_leaderboard_observation, type LeaderboardObservation, type LeaderboardSnapshot } from './leaderboards.ts'
 import {
@@ -721,6 +723,7 @@ export const DEFAULT_ADMIN_ADDRESS = '0x3d1342fb7de99c69ce821183bcfc5b6374d81453
 // ╔════════════════ [ client → server (intents, never queries) ] ══════════════ ]
 
 export type ClientPackets = {
+  'packet/allocation_request': { id: number; request: AllocationRequest }
   /** The sole pre-auth packet: proof over the challenge issued by this exact socket. */
   'packet/signature_response': { bytes: string; signature: string }
   /** Deprecated rolling-compatibility no-op. The server tracks its capped roster itself. */
@@ -781,6 +784,7 @@ export type ClientPackets = {
 // ╔════════════════ [ server → client (the push stream) ] ═════════════════════ ]
 
 export type ServerPackets = {
+  'packet/allocation_response': { id: number; result: AllocationResult }
   /** Pre-auth challenge. No player state exists until its matching proof verifies. */
   'packet/signature_request': { payload: string }
   'packet/connection_accepted': { address: string }
@@ -1006,8 +1010,8 @@ export const FRIEND_PACKETS = ['packet/friends'] as const
 export const PARTY_PACKETS = ['packet/party', 'packet/party_invites'] as const
 export const TRADE_PACKETS = ['packet/trades', 'packet/trade_destroyed'] as const
 
-/** Parseable but folded by NO store — arrives only on surfaces without a UI yet. */
-export const IGNORED_PACKETS = ['packet/admin_response'] as const
+/** Consumed outside game-domain stores by the admin dashboard or standalone campaign. */
+export const IGNORED_PACKETS = ['packet/admin_response', 'packet/allocation_response'] as const
 
 /** Consumed at the transport boundary before packets enter a domain reducer. */
 export const TRANSPORT_PACKETS = ['packet/pong'] as const
@@ -1059,6 +1063,7 @@ void UNROUTED_SERVER_PACKETS
 
 /** Every declared client packet type — the parse door's allowlist. */
 export const CLIENT_PACKET_TYPES = [
+  'packet/allocation_request',
   'packet/signature_response',
   'packet/track_character',
   'packet/position',
@@ -1261,6 +1266,26 @@ const OBSERVATION_PARSERS: ReadonlyMap<string, ObservationParser> = new Map<stri
   ],
 ])
 
+const REQUEST_PARSERS = new Map<string, (packet: Record<string, unknown>) => ClientPacket>([
+  ['packet/character_owner_request', parse_character_owner_request],
+  ['packet/admin_request', parse_admin_request_packet],
+  [
+    'packet/ping',
+    (packet) => {
+      if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')
+      return packet as ClientPacket
+    },
+  ],
+  [
+    'packet/allocation_request',
+    (packet) => {
+      if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0 || !valid_allocation_request(packet.request))
+        throw new Error('invalid allocation request')
+      return packet as ClientPacket
+    },
+  ],
+])
+
 /** Parse one raw client message into a declared packet, or throw — never coerce. The server
  *  calls this at its door; an undeclared or malformed packet is refused before any module. */
 export function parse_client_packet(raw: string | Buffer): ClientPacket {
@@ -1313,12 +1338,8 @@ export function parse_client_packet(raw: string | Buffer): ClientPacket {
     if (packet.fight !== null && !is_id(packet.fight)) throw new Error('packet/spectate needs a fight id or null')
     return packet as ClientPacket
   }
-  if (type === 'packet/character_owner_request') return parse_character_owner_request(packet)
-  if (type === 'packet/admin_request') return parse_admin_request_packet(packet)
-  if (type === 'packet/ping') {
-    if (!Number.isSafeInteger(packet.id) || Number(packet.id) < 0) throw new Error('packet/ping needs a safe id')
-    return packet as ClientPacket
-  }
+  const parse = REQUEST_PARSERS.get(String(type))
+  if (parse) return parse(packet)
   throw new Error(`unknown packet type "${String(type)}"`)
 }
 

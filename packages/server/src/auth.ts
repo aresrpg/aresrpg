@@ -31,3 +31,9 @@ export async function verify_login({ bytes, signature, address, uuid }: LoginPro
     return false
   }
 }
+
+/** Recipient proof for a campaign submission, using the ordinary server network. */
+export const verify_wallet_message = async (message: string, signature: string, address: string): Promise<boolean> => {
+  const key = await verifyPersonalMessageSignature(new TextEncoder().encode(message), signature, { client: sui_client })
+  return key.verifyAddress(address)
+}

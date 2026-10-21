@@ -2830,3 +2830,124 @@ loading_screen:
   world: 'Thế giới'
   final_checks: 'Chuẩn bị cuối cùng'
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
+
+allocation_page:
+  before: Trước khi điều chỉnh do đăng ký vượt mức
+  buy_up_to: Mua tối đa
+  pending: Đang chờ kết quả
+  no_spot: Lần này không có suất
+  source_reserved: Suất đặt trước
+  source_pending: Đang chờ xét chọn
+  link_wallets: Liên kết ví
+  wallet_rule: Ký bằng từng ví để xác minh quyền sở hữu.
+  verified: Đã xác minh
+  remove_wallet: Xóa {{wallet}}
+  add_wallet: Liên kết ví Sui
+  wallet_count: '{{count}} / {{max}} ví'
+  close: Đóng
+  signature_note: Ký thông điệp miễn phí. Không gửi giao dịch hay thanh toán.
+  no_wallet_app: Cài ví Sui để tiếp tục.
+  wallet_failed: Kết nối ví thất bại. Hãy thử lại.
+  x_entry: Bài dự thi X của bạn
+  x_connect_note: Kết nối X để gửi bài đăng.
+  closed: Đã đóng đăng ký
+  edit: Sửa
+  saved_posts: Đã lưu · {{count}} trên {{max}} bài
+  metrics_note: Tương tác được ghi nhận trong đợt xét duyệt thứ Bảy.
+  recipient_locked: Cố định sau lần gửi đầu.
+  post_number: Bài đăng {{number}}
+  optional: tùy chọn
+  post_limit: Tối đa {{max}} bài mỗi tài khoản X
+  cancel: Hủy
+  save: Lưu
+  get_spot: Nhận một suất
+  get_spot_note: Tăng hạng hoặc đăng bài trên X.
+  leaderboard_title: Tăng hạng
+  leaderboard_note: Chúng tôi chụp bảng xếp hạng tháng Mười vào thứ Bảy. Điểm thuộc ví chơi game; liên kết không thay đổi điều kiện tham gia.
+  veteran_boards: 1 hoặc 2 người đủ điều kiện đứng đầu mỗi bảng nhận Veteran.
+  member_boards: 7 người tiếp theo nhận Member.
+  skip_duplicates: Bỏ qua ví đã được chọn.
+  board_legend: 'Suất mỗi bảng: Veteran / Member'
+  play: Chơi AresRPG
+  x_title: Đăng trên X
+  x_note: Đăng về AresRPG rồi gửi liên kết.
+  one_entry: Gửi 1–3 bài. Mỗi tài khoản X một lượt đăng ký.
+  score_rule: 'Điểm trung bình: lượt thích + 3× đăng lại + 3× trích dẫn. Không tính trả lời và lượt xem.'
+  x_winners: '{{veteran}} người đầu nhận Veteran; {{member}} người tiếp nhận Member.'
+  leftovers: Suất xếp hạng còn lại chuyển sang X cùng cấp.
+  quality_rule: Tương tác mua và bài sao chép có thể bị loại sau xét duyệt.
+  sale_title: Đợt bán diễn ra trên Blast
+  sale_time: Chủ nhật 25 tháng Mười. Giờ sẽ thông báo sau.
+  results_title: Kết quả thứ Bảy
+  results_note: Thẻ hiện kết quả trước đợt bán.
+  entries_close: Đóng đăng ký
+  your_time: giờ địa phương
+  cards_revealed: Lật thẻ kết quả
+  results_time: Thứ Bảy, sau khi đóng đăng ký và xét duyệt.
+  spot_gives: Quyền lợi của suất
+  days: ngày
+  hours: giờ
+  minutes: phút
+  seconds: giây
+  signing: Xác nhận chữ ký trong ví…
+  close_in: Đóng đăng ký sau
+  no_spot_yet: Chưa có suất
+  your_allocation: Phân bổ của bạn
+  total_cap: Tối đa {{sui}} SUI qua {{count}} suất
+  allocation_note: Đăng nhập và liên kết ví để xem suất.
+  google_first: Bắt đầu với Google
+  google_first_note: Đăng nhập tài khoản game trước khi thêm ví hoặc tham gia trên X.
+  card_placeholder: Thẻ của bạn hiện ở đây
+  one_card: Một thẻ cho mỗi ví đã xác minh.
+  share_x: Chia sẻ lên X
+  footer: Suất xác định giới hạn đóng góp, không phải số token cố định.
+  entry_note: 'Lần gửi đầu khóa ví. Chỉnh sửa thay bài và đặt lại thời gian gửi. Hòa điểm: gửi sớm hơn, rồi ID X.'
+  error_wallet_limit: Tối đa mười ví, gồm cả ví Google.
+  title: Danh sách ưu tiên KARES
+  veteran: Veteran
+  member: Member
+  public_note: Quyền tham gia công khai theo điều khoản Blast. Kết quả có thể vẫn đang chờ.
+  connect_x: Kết nối X
+  recipient: Ví nhận
+  choose_wallet: Chọn ví đã kết nối
+  preview: Xem trước liên kết
+  share: Chia sẻ
+  dilution: Hạn mức không bảo đảm số token. Khi đăng ký vượt mức, mọi người mua đều bị pha loãng theo cùng tỷ lệ.
+  google_wallet: Ví game Google
+  loading: Đang tải chiến dịch
+  registration: Đang nhận bài
+  final: Danh sách cuối · chờ nhập vào Blast
+  refresh: Làm mới
+  wallet: Ví
+  error_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
+  error_wallet_locked: Lần gửi đầu đã cố định ví nhận. Kết nối lại ví đó để cập nhật bài.
+  error_wallet_taken: Ví này đã liên kết với tài khoản X khác.
+  error_invalid_address: Nhập địa chỉ Sui hợp lệ bắt đầu bằng 0x.
+  error_closed: Đã đóng nhận bài để chụp dữ liệu.
+  metric_xp: Kinh nghiệm chiến đấu
+  board_xp: Kinh nghiệm chiến đấu · Bảng xếp hạng
+  metric_kills: Hạ quái
+  board_kills: Hạ quái · Bảng xếp hạng
+  metric_dungeons: Ngục tối
+  board_dungeons: Ngục tối · Bảng xếp hạng
+  metric_jobs: Kinh nghiệm nghề
+  board_jobs: Kinh nghiệm nghề · Bảng xếp hạng
+  metric_marketplace: Chợ
+  board_marketplace: Chợ · Bảng xếp hạng
+  metric_kolizeum: Đấu trường
+  board_kolizeum: Đấu trường · Bảng xếp hạng
+  metric_zones: Khám phá
+  board_zones: Khám phá · Bảng xếp hạng
+  metric_feeding: Cho thú ăn
+  board_feeding: Cho thú ăn · Bảng xếp hạng
+  metric_gathering: Thu thập
+  board_gathering: Thu thập · Bảng xếp hạng
+  source_leaderboard: Tăng hạng
+  source_social: Đăng trên X
+  spots_count: '{{count}} suất'
+  error_unauthorized: Hãy kết nối và xác minh ví nhận trước.
+  error_invalid_post: Dùng 1–3 liên kết bài đăng X khác nhau.
+  error_rate_limited: Quá nhiều yêu cầu. Hãy thử lại sau ít phút.
+  error_foreign_post: Dùng 1–3 liên kết bài đăng X khác nhau.
+  error_missing_post: Dùng 1–3 liên kết bài đăng X khác nhau.
+  error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
