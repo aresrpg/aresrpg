@@ -81,3 +81,10 @@ test('failed or missing source verification cannot certify a release', () => {
   check_gate('source', 'success', 'true')()
   for (const result of ['failure', 'cancelled', 'skipped', '']) expect(check_gate('source', result, 'true')).toThrow()
 })
+
+test('indexer parity checkout includes the shared leaderboard vocabulary', () => {
+  const checkout = jobs.tests_indexer.steps.find((step) => step.uses?.startsWith('actions/checkout@'))
+  const paths = checkout.with['sparse-checkout'].trim().split('\n')
+  expect(paths).toContain('packages/protocol')
+  expect(paths).toContain('packages/immutable')
+})

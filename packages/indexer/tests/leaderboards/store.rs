@@ -276,6 +276,10 @@ async fn obsolete_ranking_tables_are_removed_when_the_current_month_initializes(
 #[test]
 fn wire_metric_vocabulary_matches_the_indexer() {
     let protocol = include_str!("../../../protocol/src/leaderboards.ts");
+    let vocabulary = include_str!("../../../immutable/src/leaderboards.ts");
+    assert!(
+        protocol.contains("export { LEADERBOARD_METRICS } from '@aresrpg/immutable/leaderboards'")
+    );
     for metric in [
         Metric::Xp,
         Metric::Kills,
@@ -287,6 +291,6 @@ fn wire_metric_vocabulary_matches_the_indexer() {
         Metric::Feeding,
         Metric::Gathering,
     ] {
-        assert!(protocol.contains(&format!("'{}'", metric.key())));
+        assert!(vocabulary.contains(&format!("'{}'", metric.key())));
     }
 }

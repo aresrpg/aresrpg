@@ -195,6 +195,7 @@ jobs:
             packages/rewards
             packages/indexer
             packages/protocol
+            packages/immutable
             scripts/coverage_indexer.sh
             move-packages.json
       - name: sui version pin

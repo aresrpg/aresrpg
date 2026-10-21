@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { Hero } from '../../src/allocation/Hero.tsx'
-import { initial_allocation, type AllocationRuntime } from '../../src/allocation/runtime.ts'
+import { initial_allocation, create_allocation_runtime } from '../../src/allocation/runtime.ts'
 import { allocation_view } from '../../src/allocation/view.ts'
 import type { AuthSession } from '../../src/auth.ts'
 
@@ -13,7 +13,7 @@ const render = (google: AuthSession | null) =>
     <Hero
       state={{ ...initial_allocation(), google }}
       view={allocation_view(null, 0)}
-      runtime={{ dispatch: () => {} } as AllocationRuntime}
+      runtime={create_allocation_runtime()}
       text={(key) => key}
       locale="en"
       open

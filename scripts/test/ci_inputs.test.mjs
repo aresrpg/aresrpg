@@ -96,6 +96,7 @@ for (const path of [
 
 for (const path of [
   'packages/indexer/Cargo.lock',
+  'packages/immutable/src/leaderboards.ts',
   'packages/indexer/tests/layout_snapshot.txt',
   'packages/protocol/src/leaderboards.ts',
   'scripts/coverage_indexer.sh',

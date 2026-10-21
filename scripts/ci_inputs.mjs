@@ -90,7 +90,12 @@ export const ci_checks_required = (paths, manifest_changed, workflow = ALL_CHECK
       paths.some(
         (path) =>
           ['packages/indexer/', 'packages/protocol/', '.cargo/'].some((prefix) => path.startsWith(prefix)) ||
-          ['scripts/coverage_indexer.sh', 'rust-toolchain', 'rust-toolchain.toml'].includes(path)
+          [
+            'packages/immutable/src/leaderboards.ts',
+            'scripts/coverage_indexer.sh',
+            'rust-toolchain',
+            'rust-toolchain.toml',
+          ].includes(path)
       ),
   }
 }
