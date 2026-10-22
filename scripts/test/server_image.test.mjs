@@ -50,10 +50,13 @@ test('indexer dependency cooking and final builds both preserve the committed Ca
 test('server share artwork survives the deny-by-default Docker context', () => {
   const dockerfile = readFileSync(new URL('../../packages/server/Dockerfile', import.meta.url), 'utf8')
   const context = readFileSync(new URL('../../.dockerignore', import.meta.url), 'utf8')
-  const assets = [...dockerfile.matchAll(/^COPY (seed\/icons\/\S+\.png) /gm)].map((match) => match[1])
+  const assets = [...dockerfile.matchAll(/^COPY (seed\/icons\/\S+\.(?:png|webp)) /gm)].map((match) => match[1])
   expect(assets.length).toBeGreaterThan(0)
   for (const asset of assets) {
     const directory = dirname(asset)
+    for (let parent = directory; parent !== '.'; parent = dirname(parent)) {
+      expect(context.split('\n')).toContain(`!${parent}`)
+    }
     expect(context).toContain(`\n!${directory}\n${directory}/*\n!${asset}\n`)
   }
 })
@@ -63,7 +66,7 @@ test('release checkout materializes every explicitly copied server share image',
   const checkout = release.jobs['build-server'].steps.find((step) => step.uses?.startsWith('actions/checkout@'))
   const patterns = checkout.with['sparse-checkout'].trim().split('\n')
   const dockerfile = readFileSync(new URL('../../packages/server/Dockerfile', import.meta.url), 'utf8')
-  const assets = [...dockerfile.matchAll(/^COPY (seed\/icons\/\S+\.png) /gm)].map((match) => match[1])
+  const assets = [...dockerfile.matchAll(/^COPY (seed\/icons\/\S+\.(?:png|webp)) /gm)].map((match) => match[1])
   expect(patterns).not.toContain('!seed/icons')
   expect(patterns).toContain('!seed/icons/*')
   for (const asset of assets) {

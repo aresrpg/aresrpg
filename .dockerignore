@@ -74,6 +74,12 @@ seed/icons/currency/*
 seed/icons/journal/*
 !seed/icons/journal/helmet-favicon.png
 
+!seed/icons/branding
+seed/icons/branding/*
+!seed/icons/branding/kares
+seed/icons/branding/kares/*
+!seed/icons/branding/kares/*.webp
+
 # Never, whatever the ladder above re-admits.
 **/node_modules
 node_modules

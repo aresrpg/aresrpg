@@ -2833,12 +2833,11 @@ loading_screen:
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
 
 allocation_page:
-  review_saturday: 'Xét duyệt thứ Bảy'
-  pending_note: 'Kết quả sẽ được xác nhận sau đợt xét duyệt thứ Bảy. Chưa có suất nào được bảo đảm.'
+  pending_note: 'Kết quả sẽ được xác nhận sau khi đóng đăng ký và hoàn tất xét duyệt. Chưa có suất nào được bảo đảm.'
   current_rank: 'Thứ hạng hiện tại'
   projected_tier: 'Hiện có triển vọng đạt {{tier}}'
   rank_warning: 'Tạm thời: người chơi khác có thể vượt bạn trước lúc chụp dữ liệu. Hãy tiếp tục chơi.'
-  share_pending: 'Đơn đăng ký whitelist KARES của tôi đang chờ xét duyệt thứ Bảy. Kiểm tra đơn của bạn:'
+  share_pending: 'Đơn đăng ký whitelist KARES của tôi đang chờ xét duyệt cuối cùng. Kiểm tra đơn của bạn:'
   share_post: 'Tôi có suất whitelist {{tier}} cho đợt bán KARES trên @blastdotfun. Kiểm tra suất của bạn:'
   menu_title: 'Kiểm tra suất whitelist của bạn'
   menu_note: 'Phân bổ hạng Kỳ cựu và Thành viên cho đợt bán KARES.'
@@ -2864,7 +2863,7 @@ allocation_page:
   closed: Đã đóng đăng ký
   edit: Sửa
   saved_posts: Đã lưu · {{count}} trên {{max}} bài
-  metrics_note: Tương tác được ghi nhận trong đợt xét duyệt thứ Bảy.
+  metrics_note: 'Chúng tôi đo tương tác trong đợt xét duyệt cuối cùng.'
   recipient_locked: Cố định sau lần gửi đầu.
   post_number: Bài đăng {{number}}
   optional: tùy chọn
@@ -2874,7 +2873,7 @@ allocation_page:
   get_spot: Nhận một suất
   get_spot_note: Tăng hạng hoặc đăng bài trên X.
   leaderboard_title: Tăng hạng
-  leaderboard_note: Chúng tôi chụp bảng xếp hạng tháng Mười vào thứ Bảy. Điểm thuộc ví chơi game; liên kết không thay đổi điều kiện tham gia.
+  leaderboard_note: 'Chúng tôi chụp bảng xếp hạng sau khi đóng đăng ký. Ví trong game tích điểm; liên kết ví không ảnh hưởng đến điều kiện tham gia.'
   veteran_boards: 1 hoặc 2 người đủ điều kiện đứng đầu mỗi bảng nhận Veteran.
   member_boards: 7 người tiếp theo nhận Member.
   skip_duplicates: Bỏ qua ví đã được chọn.
@@ -2888,13 +2887,13 @@ allocation_page:
   leftovers: Suất xếp hạng còn lại chuyển sang X cùng cấp.
   quality_rule: Tương tác mua và bài sao chép có thể bị loại sau xét duyệt.
   sale_title: Đợt bán diễn ra trên Blast
-  sale_time: Chủ nhật 25 tháng Mười. Giờ sẽ thông báo sau.
-  results_title: Kết quả thứ Bảy
+  sale_time: 'Ngày và giờ mở bán sẽ được thông báo sau.'
+  results_title: 'Kết quả chiến dịch'
   results_note: Thẻ hiện kết quả trước đợt bán.
   entries_close: Đóng đăng ký
   your_time: giờ địa phương
   cards_revealed: Lật thẻ kết quả
-  results_time: Thứ Bảy, sau khi đóng đăng ký và xét duyệt.
+  results_time: 'Sau khi đóng đăng ký và hoàn tất xét duyệt.'
   spot_gives: Quyền lợi của suất
   days: ngày
   hours: giờ

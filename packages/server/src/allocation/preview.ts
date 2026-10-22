@@ -30,7 +30,7 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
   const award = current.awards.find((row) => row.address === address)
   const tier = award?.tier ?? (current.phase === 'final' ? 'no_spot' : 'pending')
   const review: Readonly<Partial<Record<string, string>>> = {
-    pending: `${copy.review_saturday} · ${new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(campaign.submissions_close_at))}`,
+    pending: `${copy.entries_close} · ${new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(campaign.submissions_close_at))}`,
   }
   const title = `${copy[tier]} · KARES · AresRPG`
   const amount = award

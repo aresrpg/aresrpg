@@ -41,11 +41,11 @@ test('login and signing are exclusive; logout clears private cards immediately',
   ).toBeNull()
 })
 test('server closure and local cutoff both close entries without inventing final results', () => {
-  expect(allocation_view(status, Date.parse('2026-10-24T15:00:00Z')).open).toBe(false)
+  expect(allocation_view(status, Date.parse('2026-10-28T15:00:00Z')).open).toBe(false)
   expect(allocation_view({ ...status, submissions_open: false }, 0).open).toBe(false)
   expect(allocation_view(status, 0).final).toBe(false)
   expect(allocation_view({ ...status, phase: 'final' }, 0).final).toBe(true)
-  expect(countdown(Date.parse('2026-10-25T00:00:00Z'))).toEqual([0, 0, 0, 0])
+  expect(countdown(Date.parse('2026-10-29T00:00:00Z'))).toEqual([0, 0, 0, 0])
 })
 test('totals deduplicate verified addresses', () => {
   const view = allocation_view({ ...status, wallets: [...status.wallets, ...status.wallets] }, 0)
@@ -174,4 +174,11 @@ test('game wallets and submitted X entries get pending cards without increasing 
   expect(view.sui).toBe(0)
   expect(allocation_view({ ...portfolio, phase: 'final' }, 0).cards).toEqual([])
   expect(allocation_view({ ...status, awards: [] }, 0, wallet).cards).toHaveLength(1)
+})
+
+test('campaign remains open past the old cutoff and closes Wednesday at 23:00 UTC+8', () => {
+  expect(allocation_view(status, Date.parse('2026-10-24T15:00:00Z')).open).toBe(true)
+  expect(countdown(Date.parse('2026-10-24T15:00:00Z'))).toEqual([4, 0, 0, 0])
+  expect(allocation_view(status, Date.parse('2026-10-28T14:59:59Z')).open).toBe(true)
+  expect(allocation_view(status, Date.parse('2026-10-28T15:00:00Z')).open).toBe(false)
 })

@@ -218,6 +218,7 @@ export const blast_csv = (awards: readonly Award[]): string => {
 export const share_version = (phase: CampaignPhase, award?: Pick<Award, 'tier'>): string =>
   [
     'voxel-bank-v2',
+    campaign.submissions_close_at,
     phase,
     award?.tier ?? 'pending',
     award ? cap_mist(award.tier).toString() : '0',

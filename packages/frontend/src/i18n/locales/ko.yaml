@@ -2833,12 +2833,11 @@ loading_screen:
   ready: '모험 준비가 끝났어요.'
 
 allocation_page:
-  review_saturday: '토요일 심사'
-  pending_note: '토요일 심사 후 결과가 확정됩니다. 아직 자리가 보장되지는 않습니다.'
+  pending_note: '신청 마감 및 심사 완료 후 결과가 확정됩니다. 아직 자리가 보장되지는 않습니다.'
   current_rank: '현재 순위'
   projected_tier: '현재 {{tier}} 예상'
   rank_warning: '잠정 순위입니다. 스냅샷 전에 다른 플레이어에게 추월당할 수 있으니 계속 플레이하세요.'
-  share_pending: '제 KARES 화이트리스트 신청은 토요일 심사를 기다리고 있어요. 여러분의 신청도 확인하세요:'
+  share_pending: '제 KARES 화이트리스트 신청은 최종 심사를 기다리고 있어요. 여러분의 신청도 확인하세요:'
   share_post: '@blastdotfun의 KARES 판매에서 {{tier}} 화이트리스트 자리를 받았어요. 여러분의 자리도 확인하세요:'
   menu_title: '화이트리스트 자리 확인'
   menu_note: 'KARES 판매의 베테랑 및 멤버 배정 물량.'
@@ -2864,7 +2863,7 @@ allocation_page:
   closed: 응모가 마감되었습니다
   edit: 수정
   saved_posts: 저장됨 · {{max}}개 중 {{count}}개
-  metrics_note: 토요일 검토 시 반응을 집계합니다.
+  metrics_note: '최종 심사 시 참여 지표를 집계합니다.'
   recipient_locked: 첫 응모 후 고정됩니다.
   post_number: 게시물 {{number}}
   optional: 선택 사항
@@ -2874,7 +2873,7 @@ allocation_page:
   get_spot: 슬롯 획득
   get_spot_note: 순위를 올리거나 X에 게시하세요.
   leaderboard_title: 순위 올리기
-  leaderboard_note: 토요일에 10월 순위를 기록합니다. 점수는 게임 지갑에 귀속되며 연결 여부는 자격에 영향을 주지 않습니다.
+  leaderboard_note: '신청 마감 후 순위표 스냅샷을 기록합니다. 점수는 게임 지갑에 쌓이며, 연결 여부는 자격에 영향을 주지 않습니다.'
   veteran_boards: 각 순위표의 자격 있는 상위 1~2명이 Veteran을 받습니다.
   member_boards: 다음 7명이 Member를 받습니다.
   skip_duplicates: 이미 선정된 지갑은 건너뜁니다.
@@ -2888,13 +2887,13 @@ allocation_page:
   leftovers: 남은 순위표 슬롯은 같은 등급으로 X에 배정됩니다.
   quality_rule: 구매한 반응과 복사한 게시물은 검토 후 제외될 수 있습니다.
   sale_title: 판매는 Blast에서 진행
-  sale_time: 10월 25일 일요일. 시간은 추후 발표.
-  results_title: 토요일 결과
+  sale_time: '판매 날짜와 시간은 추후 발표됩니다.'
+  results_title: '캠페인 결과'
   results_note: 판매 전에 카드에서 결과를 확인하세요.
   entries_close: 응모 마감
   your_time: 현지 시간
   cards_revealed: 카드 공개
-  results_time: 토요일, 응모 마감 및 검토 완료 후.
+  results_time: '신청 마감 및 심사 완료 후.'
   spot_gives: 슬롯 혜택
   days: 일
   hours: 시간

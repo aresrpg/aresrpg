@@ -2845,12 +2845,11 @@ loading_screen:
   ready: '冒険の準備ができました。'
 
 allocation_page:
-  review_saturday: '土曜日に審査'
-  pending_note: '土曜日の審査後に結果が確定します。現時点では枠は保証されません。'
+  pending_note: '応募締切と審査の完了後に結果が確定します。現時点では枠は保証されません。'
   current_rank: '現在の順位'
   projected_tier: '現在は{{tier}}の見込み'
   rank_warning: '暫定順位です。スナップショット前に他のプレイヤーに抜かれる可能性があります。プレイを続けましょう。'
-  share_pending: 'KARESホワイトリストの応募は土曜日の審査待ちです。あなたの応募も確認：'
+  share_pending: 'KARESホワイトリストの応募は最終審査待ちです。あなたの応募も確認：'
   share_post: '@blastdotfun のKARES販売で{{tier}}のホワイトリスト枠を獲得しました。あなたの枠も確認：'
   menu_title: 'ホワイトリストの枠を確認'
   menu_note: 'KARES販売のベテラン・メンバー向け割当。'
@@ -2876,7 +2875,7 @@ allocation_page:
   closed: 応募は終了しました
   edit: 編集
   saved_posts: 保存済み · {{max}}件中{{count}}件
-  metrics_note: 土曜日の審査時に反応を集計します。
+  metrics_note: '最終審査時に反応数を集計します。'
   recipient_locked: 最初の応募後は変更できません。
   post_number: 投稿{{number}}
   optional: 任意
@@ -2886,7 +2885,7 @@ allocation_page:
   get_spot: 枠を獲得
   get_spot_note: ランキングを上げるかXに投稿しましょう。
   leaderboard_title: ランキングを上げる
-  leaderboard_note: 土曜日に10月のランキングを記録します。スコアはゲームのウォレットに属し、連携の有無で参加資格は変わりません。
+  leaderboard_note: '応募締切後にランキングのスナップショットを取得します。スコアはゲームウォレットに紐づき、連携の有無で資格は変わりません。'
   veteran_boards: 各ランキングの対象者上位1～2名がVeteranを獲得します。
   member_boards: 次の7名がMemberを獲得します。
   skip_duplicates: 選出済みのウォレットは除外します。
@@ -2900,13 +2899,13 @@ allocation_page:
   leftovers: ランキングの空き枠は同じティアのX応募者に回ります。
   quality_rule: 購入した反応やコピー投稿は審査で除外される場合があります。
   sale_title: 販売はBlastで実施
-  sale_time: 10月25日（日）。開始時刻は後日発表。
-  results_title: 土曜日の結果
+  sale_time: '販売日時は後日発表します。'
+  results_title: 'キャンペーン結果'
   results_note: 販売前にカードで結果を確認できます。
   entries_close: 応募締切
   your_time: 現地時間
   cards_revealed: カード公開
-  results_time: 土曜日、応募締切と審査の完了後。
+  results_time: '応募締切と審査の完了後。'
   spot_gives: 枠で得られるもの
   days: 日
   hours: 時間

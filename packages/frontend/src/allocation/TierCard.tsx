@@ -20,7 +20,7 @@ const describe_card = (card: CardView, text: CopyText, locale: Locale) => {
       tier: 'pending',
       face: 'cc-pending',
       source: text(card.pending_source === 'social' ? 'x_entry' : 'leaderboard_title'),
-      label: text('review_saturday'),
+      label: text('entries_close'),
       value: review,
       cap: null,
     }

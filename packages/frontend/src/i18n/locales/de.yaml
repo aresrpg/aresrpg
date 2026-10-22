@@ -2868,12 +2868,11 @@ loading_screen:
   ready: 'Dein Abenteuer ist bereit.'
 
 allocation_page:
-  review_saturday: 'Prüfung am Samstag'
-  pending_note: 'Die Ergebnisse werden nach der Prüfung am Samstag bestätigt. Noch ist kein Platz garantiert.'
+  pending_note: 'Die Ergebnisse werden nach Anmeldeschluss und abgeschlossener Prüfung bestätigt. Noch ist kein Platz garantiert.'
   current_rank: 'Dein aktueller Rang'
   projected_tier: 'Derzeit auf Kurs für {{tier}}'
   rank_warning: 'Vorläufig: Andere Spieler können dich vor der Momentaufnahme überholen. Spiele weiter.'
-  share_pending: 'Mein KARES-Whitelist-Eintrag wartet auf die Prüfung am Samstag. Prüfe deinen:'
+  share_pending: 'Mein KARES-Whitelist-Eintrag wartet auf die abschließende Prüfung. Prüfe deinen:'
   share_post: 'Ich habe einen {{tier}}-Whitelist-Platz für den KARES-Verkauf auf @blastdotfun. Prüfe deinen:'
   menu_title: 'Prüfe deinen Whitelist-Platz'
   menu_note: 'Veteranen- und Mitglieder-Zuteilungen für den KARES-Verkauf.'
@@ -2899,7 +2898,7 @@ allocation_page:
   closed: Teilnahme geschlossen
   edit: Bearbeiten
   saved_posts: Gespeichert · {{count}} von {{max}} Beiträgen
-  metrics_note: Interaktionen werden bei der Prüfung am Samstag erfasst.
+  metrics_note: 'Wir messen die Interaktionen während der abschließenden Prüfung.'
   recipient_locked: Nach der ersten Einreichung festgelegt.
   post_number: Beitrag {{number}}
   optional: optional
@@ -2909,7 +2908,7 @@ allocation_page:
   get_spot: Einen Spot erhalten
   get_spot_note: Steige in Ranglisten auf oder poste auf X.
   leaderboard_title: In Ranglisten aufsteigen
-  leaderboard_note: Die Oktober-Ranglisten werden am Samstag erfasst. Dein Spiel-Wallet sammelt Punkte; die Verknüpfung ändert die Berechtigung nicht.
+  leaderboard_note: 'Wir erfassen die Ranglisten nach Anmeldeschluss. Deine Spiel-Wallet sammelt die Punkte; ihre Verknüpfung ändert die Teilnahmeberechtigung nicht.'
   veteran_boards: Die besten 1 oder 2 berechtigten Spieler jeder Rangliste erhalten Veteran.
   member_boards: Die nächsten 7 erhalten Member.
   skip_duplicates: Bereits ausgewählte Wallets werden übersprungen.
@@ -2923,13 +2922,13 @@ allocation_page:
   leftovers: Unbesetzte Ranglisten-Spots gehen mit derselben Stufe an X.
   quality_rule: Gekaufte Interaktionen und kopierte Beiträge können ausgeschlossen werden.
   sale_title: Der Verkauf findet auf Blast statt
-  sale_time: Sonntag, 25. Oktober. Uhrzeit folgt.
-  results_title: Ergebnisse am Samstag
+  sale_time: 'Datum und Uhrzeit des Verkaufs werden noch bekannt gegeben.'
+  results_title: 'Kampagnenergebnisse'
   results_note: Deine Karten zeigen die Ergebnisse vor dem Verkauf.
   entries_close: Teilnahmeschluss
   your_time: deine Ortszeit
   cards_revealed: Karten werden aufgedeckt
-  results_time: Samstag nach Teilnahmeschluss und Prüfung.
+  results_time: 'Nach Anmeldeschluss und abgeschlossener Prüfung.'
   spot_gives: Was ein Spot bietet
   days: Tage
   hours: Stunden

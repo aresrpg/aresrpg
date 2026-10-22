@@ -6,9 +6,9 @@
   "liquidity_bps": 1600,
   "raise_liquidity_bps": 4000,
   "raise_fee_bps": 300,
-  "snapshot_date": "2026-10-24",
-  "submissions_close_at": "2026-10-24T15:00:00Z",
-  "launch_date": "2026-10-25",
+  "snapshot_date": "2026-10-28",
+  "submissions_close_at": "2026-10-28T15:00:00Z",
+  "launch_date": null,
   "tiers": {
     "veteran": { "cap_sui": 125, "existing": 18, "community": 3, "manual": 10, "leaderboard": 12, "social": 5 },
     "member": { "cap_sui": 70, "existing": 0, "community": 17, "manual": 0, "leaderboard": 63, "social": 50 }

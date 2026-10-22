@@ -2833,12 +2833,11 @@ loading_screen:
   ready: '冒险已准备就绪。'
 
 allocation_page:
-  review_saturday: '周六审核'
-  pending_note: '结果将在周六审核后确认。目前尚未保证名额。'
+  pending_note: '结果将在报名截止并完成审核后确认。目前尚未保证名额。'
   current_rank: '你的当前排名'
   projected_tier: '目前有望获得 {{tier}}'
   rank_warning: '暂定：其他玩家可能在快照前超过你。继续游戏以保持排名。'
-  share_pending: '我的 KARES 白名单申请正在等待周六审核。查看你的申请：'
+  share_pending: '我的 KARES 白名单申请正在等待最终审核。查看你的申请：'
   share_post: '我获得了 @blastdotfun 上 KARES 发售的 {{tier}} 白名单名额。查看你的名额：'
   menu_title: '查看你的白名单名额'
   menu_note: 'KARES 发售的资深玩家与成员配额。'
@@ -2864,7 +2863,7 @@ allocation_page:
   closed: 报名已截止
   edit: 编辑
   saved_posts: 已保存 · {{count}} / {{max}} 篇帖子
-  metrics_note: 互动数据将在周六审核时采集。
+  metrics_note: '我们在最终审核时统计互动数据。'
   recipient_locked: 首次提交后锁定。
   post_number: 帖子 {{number}}
   optional: 选填
@@ -2874,7 +2873,7 @@ allocation_page:
   get_spot: 获取名额
   get_spot_note: 提升排行榜名次或在 X 发帖。
   leaderboard_title: 提升排行榜名次
-  leaderboard_note: 周六记录十月排行榜。分数属于游戏钱包，是否关联不影响资格。
+  leaderboard_note: '我们将在报名截止后对排行榜进行快照。游戏钱包获得积分；关联钱包不会影响资格。'
   veteran_boards: 每个榜单前 1 或 2 位符合条件的玩家获得 Veteran。
   member_boards: 接下来的 7 位获得 Member。
   skip_duplicates: 已入选的钱包会被跳过。
@@ -2888,13 +2887,13 @@ allocation_page:
   leftovers: 排行榜剩余名额按相同等级转给 X 参与者。
   quality_rule: 购买的互动和抄袭帖子可能在审核后被排除。
   sale_title: 发售将在 Blast 进行
-  sale_time: 10 月 25 日星期日，具体时间待定。
-  results_title: 周六公布结果
+  sale_time: '发售日期和时间将另行公布。'
+  results_title: '活动结果'
   results_note: 发售前在卡片上查看结果。
   entries_close: 报名截止
   your_time: 你的当地时间
   cards_revealed: 揭晓卡片
-  results_time: 周六报名截止且审核结束后。
+  results_time: '报名截止并完成审核后。'
   spot_gives: 名额权益
   days: 天
   hours: 小时

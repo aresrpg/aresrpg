@@ -95,12 +95,12 @@ bun scripts/allocation_campaign.ts import /private/path/reserved.json
 
 Rules and quotas come from `seed/content/allocation_campaign.json`. Keep private
 addresses and operational exports out of seed and Git. `submissions_close_at` is
-2026-10-24 at 15:00 UTC: Saturday at 23:00 in Bali (WITA, UTC+8). The UI countdown
+2026-10-28 at 15:00 UTC: Wednesday at 23:00 UTC+8. The UI countdown
 must use this exact instant. Redis checks its own clock inside the atomic submission
 write, so a challenge signed before the deadline cannot be submitted afterward.
-The API also reports whether submissions are open. Sunday's opening hour remains unset.
+The API also reports whether submissions are open. The sale date and time are unannounced.
 
-## Saturday snapshot and CSV
+## Campaign-close snapshot and CSV
 
 Run only when the owner requests the snapshot. This closes submissions before
 reading any inputs. A failed capture remains closed for an explicit retry.

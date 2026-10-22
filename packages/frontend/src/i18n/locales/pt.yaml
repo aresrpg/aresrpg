@@ -2830,12 +2830,11 @@ loading_screen:
   ready: 'Sua aventura está pronta.'
 
 allocation_page:
-  review_saturday: 'Revisão de sábado'
-  pending_note: 'Os resultados serão confirmados após a revisão de sábado. Nenhuma vaga está garantida ainda.'
+  pending_note: 'Os resultados serão confirmados após o encerramento das inscrições e a revisão. Nenhuma vaga está garantida ainda.'
   current_rank: 'Sua posição atual'
   projected_tier: 'Atualmente a caminho de {{tier}}'
   rank_warning: 'Provisório: outros jogadores podem ultrapassar você antes do registro. Continue jogando.'
-  share_pending: 'Minha inscrição na whitelist KARES aguarda a revisão de sábado. Confira a sua:'
+  share_pending: 'Minha inscrição na whitelist KARES aguarda a revisão final. Confira a sua:'
   share_post: 'Tenho uma vaga {{tier}} na whitelist para a venda de KARES na @blastdotfun. Confira a sua:'
   menu_title: 'Confira sua vaga na whitelist'
   menu_note: 'Alocações de Veterano e Membro para a venda de KARES.'
@@ -2861,7 +2860,7 @@ allocation_page:
   closed: Inscrições encerradas
   edit: Editar
   saved_posts: Salvo · {{count}} de {{max}} publicações
-  metrics_note: Contaremos as interações na revisão de sábado.
+  metrics_note: 'Medimos o engajamento durante a revisão final.'
   recipient_locked: Fixada após a primeira inscrição.
   post_number: Publicação {{number}}
   optional: opcional
@@ -2871,7 +2870,7 @@ allocation_page:
   get_spot: Consiga um spot
   get_spot_note: Suba nos rankings ou publique no X.
   leaderboard_title: Suba nos rankings
-  leaderboard_note: Registraremos os rankings de outubro no sábado. Sua carteira de jogo ganha pontos; vinculá-la não altera a elegibilidade.
+  leaderboard_note: 'Registramos os rankings após o encerramento das inscrições. Sua carteira do jogo acumula pontos; vinculá-la não altera a elegibilidade.'
   veteran_boards: Os primeiros 1 ou 2 jogadores elegíveis de cada ranking recebem Veteran.
   member_boards: Os próximos 7 recebem Member.
   skip_duplicates: Carteiras já selecionadas são ignoradas.
@@ -2885,13 +2884,13 @@ allocation_page:
   leftovers: Spots não utilizados dos rankings passam ao X no mesmo nível.
   quality_rule: Interações compradas e publicações copiadas podem ser excluídas após revisão.
   sale_title: A venda acontece na Blast
-  sale_time: Domingo, 25 de outubro. Horário a confirmar.
-  results_title: Resultados de sábado
+  sale_time: 'A data e o horário da venda serão anunciados.'
+  results_title: 'Resultados da campanha'
   results_note: Suas cartas revelam os resultados antes da venda.
   entries_close: Encerramento das inscrições
   your_time: seu horário local
   cards_revealed: Cartas reveladas
-  results_time: Sábado, após o encerramento e a revisão.
+  results_time: 'Após o encerramento das inscrições e a revisão.'
   spot_gives: O que um spot oferece
   days: dias
   hours: horas

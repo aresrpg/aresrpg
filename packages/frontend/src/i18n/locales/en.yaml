@@ -2871,12 +2871,11 @@ loading_screen:
   ready: 'Your adventure is ready.'
 
 allocation_page:
-  review_saturday: 'Saturday review'
-  pending_note: 'Results will be confirmed after Saturday’s review. No spot is guaranteed yet.'
+  pending_note: 'Results will be confirmed after entries close and review finishes. No spot is guaranteed yet.'
   current_rank: 'Your current rank'
   projected_tier: 'Currently on track for {{tier}}'
   rank_warning: 'Provisional: other players can overtake you before the snapshot. Keep playing.'
-  share_pending: 'My KARES whitelist entry is pending Saturday’s review. Check yours:'
+  share_pending: 'My KARES whitelist entry is awaiting the final review. Check yours:'
   share_post: 'I have a {{tier}} whitelist spot for the KARES sale on @blastdotfun. Check yours:'
   menu_title: 'Check your whitelist spot'
   menu_note: 'Veteran and Member allocations for the KARES sale.'
@@ -2902,7 +2901,7 @@ allocation_page:
   closed: Entries are closed
   edit: Edit
   saved_posts: Saved · {{count}} of {{max}} posts
-  metrics_note: We count engagement during Saturday’s review.
+  metrics_note: 'We measure engagement during the final review.'
   recipient_locked: Locked after your first entry.
   post_number: Post {{number}}
   optional: optional
@@ -2912,7 +2911,7 @@ allocation_page:
   get_spot: Get a spot
   get_spot_note: Climb a leaderboard or post on X.
   leaderboard_title: Climb a leaderboard
-  leaderboard_note: We take the October rankings on Saturday. Your game wallet earns the score; linking it does not affect eligibility.
+  leaderboard_note: 'We snapshot leaderboard rankings after entries close. Your game wallet earns the score; linking it does not affect eligibility.'
   veteran_boards: The top 1 or 2 eligible players per board get Veteran.
   member_boards: The next 7 eligible players get Member.
   skip_duplicates: Previously selected wallets are skipped.
@@ -2926,13 +2925,13 @@ allocation_page:
   leftovers: Unused leaderboard spots go to X, at the same tier.
   quality_rule: Bought engagement and copied posts may be excluded after review.
   sale_title: The sale happens on Blast
-  sale_time: Sunday 25 October. Time to be announced.
-  results_title: Saturday’s results
+  sale_time: 'Sale date and time to be announced.'
+  results_title: 'Campaign results'
   results_note: Your cards reveal the results before the sale.
   entries_close: Entries close
   your_time: your time
   cards_revealed: Cards are revealed
-  results_time: Saturday, after entries close and review finishes.
+  results_time: 'After entries close and review finishes.'
   spot_gives: What a spot gives
   days: days
   hours: hours

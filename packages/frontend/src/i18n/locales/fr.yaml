@@ -2873,12 +2873,11 @@ loading_screen:
   ready: 'Votre aventure est prête.'
 
 allocation_page:
-  review_saturday: 'Examen samedi'
-  pending_note: 'Les résultats seront confirmés après l’examen de samedi. Aucune place n’est encore garantie.'
+  pending_note: 'Les résultats seront confirmés après la clôture des inscriptions et la fin de l’examen. Aucune place n’est encore garantie.'
   current_rank: 'Votre rang actuel'
   projected_tier: 'En voie d’obtenir le rang {{tier}}'
   rank_warning: 'Provisoire : d’autres joueurs peuvent vous dépasser avant le relevé. Continuez à jouer.'
-  share_pending: 'Ma candidature à la whitelist KARES attend l’examen de samedi. Vérifiez la vôtre :'
+  share_pending: 'Ma candidature à la whitelist KARES attend l’examen final. Vérifiez la vôtre :'
   share_post: 'J’ai une place {{tier}} en whitelist pour la vente KARES sur @blastdotfun. Vérifiez la vôtre :'
   menu_title: 'Vérifiez votre place en whitelist'
   menu_note: 'Allocations Vétéran et Membre pour la vente KARES.'
@@ -2904,7 +2903,7 @@ allocation_page:
   closed: Inscriptions closes
   edit: Modifier
   saved_posts: Enregistré · {{count}} publications sur {{max}}
-  metrics_note: Nous relevons les interactions lors de la vérification samedi.
+  metrics_note: 'Nous mesurons l’engagement lors de l’examen final.'
   recipient_locked: Fixé après votre première candidature.
   post_number: Publication {{number}}
   optional: facultatif
@@ -2914,7 +2913,7 @@ allocation_page:
   get_spot: Obtenir un spot
   get_spot_note: Progressez au classement ou publiez sur X.
   leaderboard_title: Progressez au classement
-  leaderboard_note: Nous relevons les classements d’octobre samedi. Le score appartient au portefeuille de jeu ; le lier ne change pas son éligibilité.
+  leaderboard_note: 'Nous relevons les classements après la clôture des inscriptions. Votre portefeuille de jeu gagne le score ; le lier ne change pas l’éligibilité.'
   veteran_boards: Les 1 ou 2 premiers joueurs éligibles de chaque classement obtiennent Veteran.
   member_boards: Les 7 suivants obtiennent Member.
   skip_duplicates: Les portefeuilles déjà sélectionnés sont ignorés.
@@ -2928,13 +2927,13 @@ allocation_page:
   leftovers: Les spots de classement inutilisés passent à X au même niveau.
   quality_rule: Les interactions achetées et publications copiées peuvent être exclues après vérification.
   sale_title: La vente se déroule sur Blast
-  sale_time: Dimanche 25 octobre. Horaire à confirmer.
-  results_title: Résultats de samedi
+  sale_time: 'La date et l’heure de la vente seront annoncées ultérieurement.'
+  results_title: 'Résultats de la campagne'
   results_note: Vos cartes révèlent les résultats avant la vente.
   entries_close: Clôture des inscriptions
   your_time: heure locale
   cards_revealed: Révélation des cartes
-  results_time: Samedi, après la clôture et la vérification.
+  results_time: 'Après la clôture des inscriptions et la fin de l’examen.'
   spot_gives: Ce qu’offre un spot
   days: jours
   hours: heures
