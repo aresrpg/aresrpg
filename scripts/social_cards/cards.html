@@ -430,6 +430,231 @@
   </div>
 </div>
 
+<!-- The allocation page's own look: journal paper and ink, game type, Veteran green and Member blue cards.
+     No amounts: they are content and would go stale in an authored image. -->
+<style>
+  @font-face {
+    font-family: 'Ares';
+    src: url('../../packages/ui/src/assets/font/nunito-800.ttf');
+    font-weight: 800;
+  }
+  @font-face {
+    font-family: 'Ares';
+    src: url('../../packages/ui/src/assets/font/nunito-700.ttf');
+    font-weight: 700;
+  }
+  #allocation {
+    --paper: #faf8f2;
+    --ink: #30283c;
+    --ink-muted: #817889;
+    --rule: #dfd9df;
+    background: var(--paper) radial-gradient(circle, #d9d2dc 1.2px, transparent 1.4px) 0 0 / 24px 24px;
+    color: var(--ink);
+  }
+  #allocation .micro {
+    color: var(--ink-muted);
+  }
+  #allocation .pixel {
+    width: 40px;
+    height: 40px;
+    image-rendering: pixelated;
+  }
+  #allocation h1 {
+    font:
+      800 92px/0.98 'Ares',
+      sans-serif;
+    letter-spacing: -0.02em;
+  }
+  #allocation .lead {
+    font:
+      700 30px/1.3 'Ares',
+      sans-serif;
+  }
+  #allocation .lead b {
+    color: #c97d22;
+  }
+  #allocation .blast-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 54px;
+    padding: 0 18px 0 14px;
+    border-radius: 6px;
+    background: #2b1530;
+    box-shadow: 0 0 0 3px #ff4f9e;
+    font:
+      700 21px 'Ares',
+      sans-serif;
+    color: #ffeaf3;
+  }
+  #allocation .blast-badge img {
+    height: 26px;
+  }
+  .bank {
+    position: absolute;
+    width: 420px;
+    height: 265px;
+    border-radius: 20px;
+    overflow: hidden;
+    padding: 26px 30px;
+    color: #fff;
+    font-family: 'Ares', sans-serif;
+    box-shadow:
+      0 30px 60px -18px rgba(48, 40, 60, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .bank::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.045) 0 3px, transparent 3px 6px),
+      repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.12) 0 3px, transparent 3px 6px);
+  }
+  .bank::after {
+    content: '';
+    position: absolute;
+    top: -40px;
+    bottom: -40px;
+    left: 58%;
+    width: 120px;
+    transform: skewX(-24deg);
+    background: var(--hi);
+    opacity: 0.18;
+  }
+  .bank > * {
+    position: relative;
+    z-index: 1;
+  }
+  .bank.veteran {
+    background: #0b4a35;
+    --hi: #65e5ac;
+  }
+  .bank.member {
+    background: #133b85;
+    --hi: #7cb6ff;
+  }
+  .bank .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .bank .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+  }
+  .bank .brand img {
+    width: 30px;
+    height: 30px;
+    image-rendering: pixelated;
+  }
+  .bank .source {
+    padding: 6px 11px;
+    border-radius: 4px;
+    background: var(--hi);
+    color: #10151b;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
+  .bank .chip {
+    width: 58px;
+    height: 44px;
+    border: 0;
+    border-radius: 8px;
+    padding: 0;
+    background:
+      linear-gradient(
+        90deg,
+        transparent 18px,
+        #8a6d2f 18px 20px,
+        transparent 20px 38px,
+        #8a6d2f 38px 40px,
+        transparent 40px
+      ),
+      linear-gradient(transparent 14px, #8a6d2f 14px 16px, transparent 16px 28px, #8a6d2f 28px 30px, transparent 30px),
+      #e2bd62;
+  }
+  .bank .tier {
+    font-weight: 800;
+    font-size: 44px;
+    color: var(--hi);
+  }
+  .bank .number {
+    margin-top: 20px;
+    font:
+      500 21px 'JBM',
+      monospace;
+    letter-spacing: 0.14em;
+    color: rgba(255, 255, 255, 0.78);
+  }
+  .bank .coin {
+    position: absolute;
+    right: 26px;
+    bottom: 22px;
+    width: 52px;
+    height: 52px;
+  }
+</style>
+<div class="card" id="allocation">
+  <div class="top">
+    <div class="mark">
+      <img class="pixel" src="../../seed/icons/journal/helmet-favicon.png" />
+      <span class="micro" style="color: var(--ink)">AresRPG</span>
+    </div>
+  </div>
+  <div class="abs" style="left: 72px; top: 158px; width: 560px">
+    <h1>KARES<br />whitelist</h1>
+    <div class="lead" style="margin-top: 26px">Climb a <b>leaderboard</b> or post on <b>X</b><br />to get a spot.</div>
+    <div
+      style="
+        font:
+          500 20px/1.5 'JBM',
+          monospace;
+        margin-top: 16px;
+        color: var(--ink-muted);
+      "
+    >
+      Veteran and Member spots for the KARES sale.
+    </div>
+  </div>
+  <div class="bottom" style="justify-content: flex-start; align-items: center; gap: 28px">
+    <div class="blast-badge">
+      Sale on
+      <img src="../../seed/icons/branding/blast/helmet.svg" />
+      <img src="../../seed/icons/branding/blast/wordmark.svg" />
+    </div>
+    <div class="micro">aresrpg.world/allocation</div>
+  </div>
+  <div class="bank member" style="left: 650px; top: 84px; transform: rotate(-7deg)">
+    <div class="row">
+      <div class="brand"><img src="../../seed/icons/journal/helmet-favicon.png" />KARES</div>
+      <div class="source">Posts on X</div>
+    </div>
+    <div class="row" style="justify-content: flex-start; gap: 20px; margin-top: 30px">
+      <div class="chip"></div>
+      <div class="tier">Member</div>
+    </div>
+    <div class="number">0x2a5f •••• •••• 7cb6</div>
+  </div>
+  <div class="bank veteran" style="left: 716px; top: 276px; transform: rotate(4deg)">
+    <div class="row">
+      <div class="brand"><img src="../../seed/icons/journal/helmet-favicon.png" />KARES</div>
+      <div class="source">Kills leaderboard</div>
+    </div>
+    <div class="row" style="justify-content: flex-start; gap: 20px; margin-top: 30px">
+      <div class="chip"></div>
+      <div class="tier">Veteran</div>
+    </div>
+    <div class="number">0x7c3e •••• •••• a91f</div>
+    <img class="coin" src="../../seed/icons/currency/kares.png" />
+  </div>
+</div>
+
 <div class="card grid-bg frame" id="agents">
   <div class="top">
     <div class="mark"><img class="helmet" /><span class="micro" style="color: var(--text)">AresRPG</span></div>

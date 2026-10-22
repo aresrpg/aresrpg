@@ -75,6 +75,12 @@ const PAGE_CARDS: readonly SocialCard[] = Object.freeze([
   page('/leaderboard', 'leaderboard', 'Leaderboard', 'Who runs the world? Ranked from on-chain history.'),
   page('/mastery', 'mastery', 'Mastery', 'Complete daily dungeon quests to earn unique rewards.'),
   page('/kares', 'kares', 'KARES staking', 'Stakers share 20% of collected marketplace royalties in SUI.'),
+  page(
+    '/allocation',
+    'allocation',
+    'KARES whitelist',
+    'Climb a leaderboard or post on X to get a Veteran or Member spot for the KARES sale on Blast.'
+  ),
   ...['', '/items', '/bestiary', '/classes'].map((tab) =>
     page(`/encyclopedia${tab}`, 'encyclopedia', ...ENCYCLOPEDIA_COPY)
   ),
