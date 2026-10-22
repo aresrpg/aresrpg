@@ -2872,6 +2872,9 @@ loading_screen:
   ready: 'Votre aventure est prête.'
 
 allocation_page:
+  menu_title: 'Vérifiez votre place en whitelist'
+  menu_note: 'Allocations Vétéran et Membre pour la vente KARES.'
+  menu_action: 'Voir les allocations'
   before: Avant sursouscription
   buy_up_to: Acheter jusqu’à
   pending: Résultats en attente

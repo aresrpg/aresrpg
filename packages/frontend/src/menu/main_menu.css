@@ -384,3 +384,79 @@
     transition: none;
   }
 }
+
+.main-menu-allocation {
+  display: flex;
+  flex-direction: column;
+  width: min(304px, calc(100vw - 48px));
+  margin-top: 12px;
+  border: 1px solid #d986ac60;
+  background: #211c28f5;
+  color: #f4eaf0;
+  text-decoration: none;
+  box-shadow: 0 8px 24px #0003;
+}
+.main-menu-allocation-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 18px 0;
+  color: #f5c2d9;
+  font:
+    12px 'JetBrains Mono',
+    monospace;
+}
+.main-menu-allocation-brand img {
+  object-fit: contain;
+}
+.main-menu-allocation > strong {
+  padding: 12px 18px 0;
+  font: 700 21px/1.2 var(--aui-font, sans-serif);
+}
+.main-menu-allocation-note {
+  padding: 8px 18px 16px;
+  color: #c6b7c4;
+  font: 13px/1.5 var(--aui-font, sans-serif);
+}
+.main-menu-allocation-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 12px 18px;
+  background: #f3a4c6;
+  color: #301d2b;
+  font: 700 13px/1.4 var(--aui-font, sans-serif);
+}
+.main-menu-allocation:hover {
+  border-color: #f3a4c6;
+}
+.main-menu-allocation:hover .main-menu-allocation-action {
+  background: #ffc0db;
+}
+.main-menu-allocation:focus-visible {
+  outline: 2px solid #f3a4c6;
+  outline-offset: 4px;
+}
+@media (max-height: 650px) {
+  .main-menu-allocation-note {
+    display: none;
+  }
+  .main-menu-allocation > strong {
+    padding-bottom: 12px;
+    font-size: 17px;
+  }
+}
+@media (max-height: 450px) and (min-width: 650px) {
+  .main-menu-allocation {
+    margin-top: 8px;
+  }
+  .main-menu-allocation-brand {
+    padding-top: 8px;
+  }
+  .main-menu-allocation > strong {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+}

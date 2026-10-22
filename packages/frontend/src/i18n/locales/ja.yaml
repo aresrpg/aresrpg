@@ -2844,6 +2844,9 @@ loading_screen:
   ready: '冒険の準備ができました。'
 
 allocation_page:
+  menu_title: 'ホワイトリストの枠を確認'
+  menu_note: 'KARES販売のベテラン・メンバー向け割当。'
+  menu_action: '割当を確認'
   before: 超過申込による調整前
   buy_up_to: 購入上限
   pending: 結果待ち

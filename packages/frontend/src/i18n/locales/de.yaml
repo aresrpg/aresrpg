@@ -2867,6 +2867,9 @@ loading_screen:
   ready: 'Dein Abenteuer ist bereit.'
 
 allocation_page:
+  menu_title: 'Prüfe deinen Whitelist-Platz'
+  menu_note: 'Veteranen- und Mitglieder-Zuteilungen für den KARES-Verkauf.'
+  menu_action: 'Zuteilungen ansehen'
   before: Vor Überzeichnung
   buy_up_to: Kaufen bis zu
   pending: Ergebnisse ausstehend

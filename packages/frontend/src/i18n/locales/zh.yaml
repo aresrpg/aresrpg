@@ -2832,6 +2832,9 @@ loading_screen:
   ready: '冒险已准备就绪。'
 
 allocation_page:
+  menu_title: '查看你的白名单名额'
+  menu_note: 'KARES 发售的资深玩家与成员配额。'
+  menu_action: '查看配额'
   before: 超额认购调整前
   buy_up_to: 最高可购买
   pending: 等待结果

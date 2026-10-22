@@ -2832,6 +2832,9 @@ loading_screen:
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
 
 allocation_page:
+  menu_title: 'Kiểm tra suất whitelist của bạn'
+  menu_note: 'Phân bổ hạng Kỳ cựu và Thành viên cho đợt bán KARES.'
+  menu_action: 'Xem phân bổ'
   before: Trước khi điều chỉnh do đăng ký vượt mức
   buy_up_to: Mua tối đa
   pending: Đang chờ kết quả

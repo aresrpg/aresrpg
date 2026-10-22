@@ -2832,6 +2832,9 @@ loading_screen:
   ready: 'Всё готово к приключению.'
 
 allocation_page:
+  menu_title: 'Проверьте место в белом списке'
+  menu_note: 'Квоты ветеранов и участников для продажи KARES.'
+  menu_action: 'Посмотреть квоты'
   before: До переподписки
   buy_up_to: Купить на сумму до
   pending: Ожидаются результаты

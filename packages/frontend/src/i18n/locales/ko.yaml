@@ -2832,6 +2832,9 @@ loading_screen:
   ready: '모험 준비가 끝났어요.'
 
 allocation_page:
+  menu_title: '화이트리스트 자리 확인'
+  menu_note: 'KARES 판매의 베테랑 및 멤버 배정 물량.'
+  menu_action: '배정 물량 보기'
   before: 초과 청약 조정 전
   buy_up_to: 구매 한도
   pending: 결과 대기 중

@@ -6,6 +6,8 @@ import { useEffect, type ReactNode } from 'react'
 import { version } from '../../../../package.json'
 import { FpsPanel } from '../components/FpsPanel.tsx'
 import { music } from '../../../../seed/scenes/main_menu.recipe.json'
+import blast_helmet from '../../../../seed/icons/branding/blast/helmet.svg'
+import blast_wordmark from '../../../../seed/icons/branding/blast/wordmark.svg'
 import title_logo from '../../../../seed/scenes/aresrpg_text_logo.png'
 import { MusicBed } from '../game/audio/MusicBed.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
@@ -47,6 +49,19 @@ export const MainMenu = ({
           copy={copy}
           change_quality={(quality) => dispatch_app({ type: 'settings/changed', settings: { ...settings, quality } })}
         />
+        <a className="main-menu-allocation" href="/allocation">
+          <span className="main-menu-allocation-brand">
+            KARES <span aria-hidden="true">×</span>
+            <img src={blast_helmet} alt="" width={24} height={22} />
+            <img src={blast_wordmark} alt="Blast" width={52} height={22} />
+          </span>
+          <strong>{copy.allocation_page.menu_title}</strong>
+          <span className="main-menu-allocation-note">{copy.allocation_page.menu_note}</span>
+          <span className="main-menu-allocation-action">
+            {copy.allocation_page.menu_action}
+            <span aria-hidden="true">→</span>
+          </span>
+        </a>
       </div>
       <span className="main-menu-build">
         {copy.menu_build} <b>v{version}</b>
@@ -80,12 +95,6 @@ export const MainMenu = ({
         ) : (
           children
         )}
-        <a
-          className="mt-6 border border-emerald-300/30 bg-black/30 px-5 py-3 font-mono text-xs text-emerald-200 hover:border-emerald-300"
-          href="/allocation"
-        >
-          KARES · {copy.allocation_page.check} ↗
-        </a>
       </div>
     </section>
   )

@@ -2829,6 +2829,9 @@ loading_screen:
   ready: 'Sua aventura está pronta.'
 
 allocation_page:
+  menu_title: 'Confira sua vaga na whitelist'
+  menu_note: 'Alocações de Veterano e Membro para a venda de KARES.'
+  menu_action: 'Ver alocações'
   before: Antes da sobressubscrição
   buy_up_to: Comprar até
   pending: Resultados pendentes

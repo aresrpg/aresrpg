@@ -2870,6 +2870,9 @@ loading_screen:
   ready: 'Your adventure is ready.'
 
 allocation_page:
+  menu_title: 'Check your whitelist spot'
+  menu_note: 'Veteran and Member allocations for the KARES sale.'
+  menu_action: 'View allocations'
   before: Before oversubscription
   buy_up_to: Buy up to
   pending: Results pending
