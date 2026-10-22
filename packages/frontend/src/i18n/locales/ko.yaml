@@ -2832,6 +2832,7 @@ loading_screen:
   ready: '모험 준비가 끝났어요.'
 
 allocation_page:
+  share_post: '@blastdotfun의 KARES 판매에서 {{tier}} 화이트리스트 자리를 받았어요. 여러분의 자리도 확인하세요:'
   menu_title: '화이트리스트 자리 확인'
   menu_note: 'KARES 판매의 베테랑 및 멤버 배정 물량.'
   menu_action: '배정 물량 보기'

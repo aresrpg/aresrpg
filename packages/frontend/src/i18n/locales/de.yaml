@@ -2867,6 +2867,7 @@ loading_screen:
   ready: 'Dein Abenteuer ist bereit.'
 
 allocation_page:
+  share_post: 'Ich habe einen {{tier}}-Whitelist-Platz für den KARES-Verkauf auf @blastdotfun. Prüfe deinen:'
   menu_title: 'Prüfe deinen Whitelist-Platz'
   menu_note: 'Veteranen- und Mitglieder-Zuteilungen für den KARES-Verkauf.'
   menu_action: 'Zuteilungen ansehen'

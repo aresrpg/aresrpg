@@ -2832,6 +2832,7 @@ loading_screen:
   ready: '冒险已准备就绪。'
 
 allocation_page:
+  share_post: '我获得了 @blastdotfun 上 KARES 发售的 {{tier}} 白名单名额。查看你的名额：'
   menu_title: '查看你的白名单名额'
   menu_note: 'KARES 发售的资深玩家与成员配额。'
   menu_action: '查看配额'

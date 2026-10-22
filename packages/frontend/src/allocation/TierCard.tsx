@@ -11,20 +11,10 @@ import type { CardView } from './view.ts'
 import type { AllocationRuntime } from './runtime.ts'
 
 const describe_card = (card: CardView, text: CopyText, locale: Locale) => {
-  const { award, pending, wallet } = card
-  const tier = award?.tier ?? (pending ? 'pending' : 'no_spot')
-  const base = {
-    tier,
-    face: pending ? 'cc-back' : 'cc-none',
-    source: text(tier),
-    label: text('wallet'),
-    value: wallet.label || text('google_wallet'),
-    cap: null as string | null,
-  }
-  if (!award) return base
+  const { award } = card
   return {
-    ...base,
-    face: `cc-spot ${tier}`,
+    tier: award.tier,
+    face: `cc-spot ${award.tier}`,
     source: award.board ? text(`board_${award.board}`) : text(`source_${award.source}`),
     label: text('before'),
     value: `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(nominal_tokens(award.tier))} KARES`,
@@ -101,7 +91,17 @@ export const TierCard = ({
         <button
           className="btn btn-small"
           disabled={busy}
-          onClick={() => runtime.dispatch({ type: 'request', task: { kind: 'share', address: wallet.address } })}
+          onClick={() =>
+            runtime.dispatch({
+              type: 'request',
+              task: {
+                kind: 'share',
+                address: wallet.address,
+                locale,
+                text: text('share_post', { tier: text(card.award.tier) }),
+              },
+            })
+          }
         >
           {text('share')}
         </button>

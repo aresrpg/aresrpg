@@ -12,13 +12,14 @@ import { create_allocation_client } from './client.ts'
 export type AllocationTask =
   | Readonly<{ kind: 'boot' | 'google' | 'logout' | 'load' | 'link_x' }>
   | Readonly<{ kind: 'verify'; wallet: AuthSession }>
-  | Readonly<{ kind: 'remove' | 'share'; address: string }>
+  | Readonly<{ kind: 'remove'; address: string }>
+  | Readonly<{ kind: 'share'; address: string; locale: string; text: string }>
   | Readonly<{ kind: 'submit'; address: string; urls: readonly string[] }>
 type Result = Readonly<{
   google: AuthSession | null
   status: AllocationStatus | null
   error: string | null
-  share_url: string | null
+  share_intent_url: string | null
 }>
 export type AllocationState = Result & Readonly<{ task: AllocationTask | null; sequence: number }>
 type Input =
@@ -31,20 +32,32 @@ export const initial_allocation = (): AllocationState => ({
   task: null,
   sequence: 0,
   error: null,
-  share_url: null,
+  share_intent_url: null,
 })
 export const reduce_allocation = (state: AllocationState, input: Input): AllocationState => {
   switch (input.type) {
     case 'request': {
       if (state.task) return state
-      const cleared = input.task.kind === 'logout' ? { status: null, share_url: null } : {}
-      return { ...state, ...cleared, task: input.task, sequence: state.sequence + 1, error: null }
+      const cleared = input.task.kind === 'logout' ? { status: null } : {}
+      return {
+        ...state,
+        ...cleared,
+        share_intent_url: null,
+        task: input.task,
+        sequence: state.sequence + 1,
+        error: null,
+      }
     }
     case 'invalidated':
       return state.google !== input.wallet ? state : { ...initial_allocation(), sequence: state.sequence + 1 }
     case 'result':
       return state.sequence !== input.sequence ? state : { ...state, ...input.result, task: null }
   }
+}
+export const share_intent = (url: string, locale: string, text: string): string => {
+  const preview = new URL(url)
+  preview.searchParams.set('locale', locale)
+  return `https://x.com/intent/tweet?${new URLSearchParams({ text, url: preview.href })}`
 }
 type Request = (request: AllocationRequest) => Promise<AllocationResult>
 const verify = async (request: Request, wallet: AuthSession): Promise<void> => {
@@ -75,7 +88,7 @@ const operate = async (request: Request, task: AllocationTask): Promise<string |
     case 'share': {
       const result = await request({ action: 'share', address: task.address })
       if (result.action !== 'share') throw new Error('unavailable')
-      return result.url
+      return share_intent(result.url, task.locale, task.text)
     }
     case 'link_x': {
       const result = await request({ action: 'link_x' })
@@ -144,11 +157,11 @@ export const create_allocation_runtime = () => {
         }
         bind(google)
         let status: AllocationStatus | null = null
-        let share_url: string | null = null
+        let share_intent_url: string | null = null
         if (client) {
           const { request } = client
           await complete_link(request)
-          share_url = (await operate(request, state.task!)) ?? state.share_url
+          share_intent_url = (await operate(request, state.task!)) ?? state.share_intent_url
           const result = await request({ action: 'status' })
           if (result.action !== 'status') throw new Error('unavailable')
           ;({ status } = result)
@@ -157,7 +170,7 @@ export const create_allocation_runtime = () => {
           dispatch({
             type: 'result',
             sequence: state.sequence,
-            result: { google, status, share_url, error: new URLSearchParams(location.search).get('error') },
+            result: { google, status, share_intent_url, error: new URLSearchParams(location.search).get('error') },
           })
       } catch (error) {
         console.warn('Allocation operation could not be confirmed')
@@ -168,7 +181,7 @@ export const create_allocation_runtime = () => {
             result: {
               google,
               status: state.status,
-              share_url: null,
+              share_intent_url: null,
               error: error instanceof Error ? error.message : 'unavailable',
             },
           })
@@ -179,6 +192,8 @@ export const create_allocation_runtime = () => {
         bind(null)
         clear_auth_wallet(storage)
       }
+      if (state.share_intent_url && state.share_intent_url !== previous.share_intent_url)
+        location.assign(state.share_intent_url)
       if (state.task && state.sequence !== previous.sequence) void run(state)
     })
     dispatch({ type: 'request', task: { kind: 'boot' } })

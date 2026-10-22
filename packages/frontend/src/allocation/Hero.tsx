@@ -30,19 +30,11 @@ const Total = ({ view, text, locale }: Readonly<{ view: View; text: CopyText; lo
     </p>
   )
 }
-const Share = ({ url, text, locale }: Readonly<{ url: string | null; text: CopyText; locale: Locale }>) => {
+const Share = ({ url, text }: Readonly<{ url: string | null; text: CopyText }>) => {
   if (!url) return null
-  const preview = `${url}&locale=${locale}`
+  const preview = new URL(url).searchParams.get('url')!
   return (
     <div className="share-actions">
-      <a
-        className="btn btn-ink"
-        href={`https://twitter.com/intent/tweet?${new URLSearchParams({ url: preview })}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {text('share_x')} ↗
-      </a>
       <a className="btn" href={preview} target="_blank" rel="noopener noreferrer">
         {text('preview')}
       </a>
@@ -98,28 +90,22 @@ export const Hero = ({
         </button>
       </section>
     ) : (
-      <div className={`stage ${view.cards.length < 2 ? 'is-one' : ''}`}>
-        {view.cards.map((card) => (
-          <TierCard
-            key={card.wallet.address}
-            card={card}
-            text={text}
-            locale={locale}
-            runtime={runtime}
-            busy={!!state.task}
-          />
-        ))}
-        {view.cards.length === 0 && (
-          <div className="slot">
-            <div className="cc-ghost">
-              <b>{text('card_placeholder')}</b>
-              <span>{text('one_card')}</span>
-            </div>
-          </div>
-        )}
-      </div>
+      view.cards.length > 0 && (
+        <div className={`stage ${view.cards.length < 2 ? 'is-one' : ''}`}>
+          {view.cards.map((card) => (
+            <TierCard
+              key={card.wallet.address}
+              card={card}
+              text={text}
+              locale={locale}
+              runtime={runtime}
+              busy={!!state.task}
+            />
+          ))}
+        </div>
+      )
     )}
     {view.spots > 0 && <p className="estimate-note">{text('dilution')}</p>}
-    <Share url={state.share_url} text={text} locale={locale} />
+    <Share url={state.share_intent_url} text={text} />
   </section>
 )

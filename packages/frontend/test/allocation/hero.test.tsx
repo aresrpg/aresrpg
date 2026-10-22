@@ -28,6 +28,6 @@ test('logged-out visitors see login without an empty wallet card', () => {
   expect(html).not.toContain('class="stage')
 })
 
-test('the card placeholder remains available after login while the portfolio loads', () => {
-  expect(render({ address: '0x1' } as AuthSession)).toContain('card_placeholder')
+test('login alone does not show a card before an allocation is known', () => {
+  expect(render({ address: '0x1' } as AuthSession)).not.toContain('class="stage')
 })

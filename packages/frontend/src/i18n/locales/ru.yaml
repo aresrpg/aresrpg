@@ -2832,6 +2832,7 @@ loading_screen:
   ready: 'Всё готово к приключению.'
 
 allocation_page:
+  share_post: 'У меня место {{tier}} в белом списке на продажу KARES на @blastdotfun. Проверьте своё:'
   menu_title: 'Проверьте место в белом списке'
   menu_note: 'Квоты ветеранов и участников для продажи KARES.'
   menu_action: 'Посмотреть квоты'

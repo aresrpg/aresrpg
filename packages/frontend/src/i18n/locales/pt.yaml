@@ -2829,6 +2829,7 @@ loading_screen:
   ready: 'Sua aventura está pronta.'
 
 allocation_page:
+  share_post: 'Tenho uma vaga {{tier}} na whitelist para a venda de KARES na @blastdotfun. Confira a sua:'
   menu_title: 'Confira sua vaga na whitelist'
   menu_note: 'Alocações de Veterano e Membro para a venda de KARES.'
   menu_action: 'Ver alocações'

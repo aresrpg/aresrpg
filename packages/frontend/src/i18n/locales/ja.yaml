@@ -2844,6 +2844,7 @@ loading_screen:
   ready: '冒険の準備ができました。'
 
 allocation_page:
+  share_post: '@blastdotfun のKARES販売で{{tier}}のホワイトリスト枠を獲得しました。あなたの枠も確認：'
   menu_title: 'ホワイトリストの枠を確認'
   menu_note: 'KARES販売のベテラン・メンバー向け割当。'
   menu_action: '割当を確認'

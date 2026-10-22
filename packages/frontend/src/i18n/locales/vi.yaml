@@ -2832,6 +2832,7 @@ loading_screen:
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
 
 allocation_page:
+  share_post: 'Tôi có suất whitelist {{tier}} cho đợt bán KARES trên @blastdotfun. Kiểm tra suất của bạn:'
   menu_title: 'Kiểm tra suất whitelist của bạn'
   menu_note: 'Phân bổ hạng Kỳ cựu và Thành viên cho đợt bán KARES.'
   menu_action: 'Xem phân bổ'

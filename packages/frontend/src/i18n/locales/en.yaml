@@ -2870,6 +2870,7 @@ loading_screen:
   ready: 'Your adventure is ready.'
 
 allocation_page:
+  share_post: 'I have a {{tier}} whitelist spot for the KARES sale on @blastdotfun. Check yours:'
   menu_title: 'Check your whitelist spot'
   menu_note: 'Veteran and Member allocations for the KARES sale.'
   menu_action: 'View allocations'

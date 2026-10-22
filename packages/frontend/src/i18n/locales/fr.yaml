@@ -2872,6 +2872,7 @@ loading_screen:
   ready: 'Votre aventure est prête.'
 
 allocation_page:
+  share_post: 'J’ai une place {{tier}} en whitelist pour la vente KARES sur @blastdotfun. Vérifiez la vôtre :'
   menu_title: 'Vérifiez votre place en whitelist'
   menu_note: 'Allocations Vétéran et Membre pour la vente KARES.'
   menu_action: 'Voir les allocations'

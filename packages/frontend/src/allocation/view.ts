@@ -10,19 +10,17 @@ import {
 } from '@aresrpg/immutable/allocation'
 
 export const short_address = (address: string): string => `${address.slice(0, 6)}…${address.slice(-4)}`
-export type CardView = Readonly<{ wallet: AllocationWallet; award?: PublicAward; pending: boolean }>
+export type CardView = Readonly<{ wallet: AllocationWallet; award: PublicAward }>
 export const allocation_view = (status: AllocationStatus | null, now: number) => {
   const final = status?.phase === 'final'
   const open = !!status?.submissions_open && now < Date.parse(campaign.submissions_close_at)
-  const cards: readonly CardView[] =
-    status?.wallets.map((wallet) => ({
-      wallet,
-      award: status.awards.find(({ address }) => address === wallet.address),
-      pending: !final,
-    })) ?? []
-  const awards = [
-    ...new Map(cards.filter(({ award }) => !!award).map(({ award }) => [award!.address, award!])).values(),
-  ]
+  const cards: readonly CardView[] = status
+    ? [...new Map(status.wallets.map((wallet) => [wallet.address, wallet])).values()].flatMap((wallet) => {
+        const award = status.awards.find(({ address }) => address === wallet.address)
+        return award ? [{ wallet, award }] : []
+      })
+    : []
+  const awards = cards.map(({ award }) => award)
   return {
     cards,
     final,
