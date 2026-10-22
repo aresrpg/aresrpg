@@ -1,6 +1,7 @@
 use super::*;
 use crate::decode::{
-    Addr, DungeonTag, DynamicObjectFieldWrapper, Field, Item, KioskItemKey, RolledDrop, RolledStats,
+    Addr, DungeonTag, DynamicObjectFieldWrapper, Field, FighterKind, Item, KioskItemKey, LootEntry,
+    RolledDrop, RolledStats,
 };
 use crate::ownership::{OwnerKind, TypeKey, SUI_FRAMEWORK};
 
@@ -75,7 +76,17 @@ fn boss_victory_is_one_party_card_and_never_a_defeat_or_ordinary_room() {
 
 #[test]
 fn gear_requires_settlement_budget_new_identity_natural_stats_and_personal_custody() {
-    let mut before = fight(1, &[7], 1);
+    let mut before = fight(1, &[7], 2);
+    // Only the defeated mob whose loot table holds the item is its source.
+    if let FighterKind::Mob(mob) = &mut before.combat.fighters[1].kind {
+        mob.mob_type = "golden_lorito".into();
+        mob.loot = vec![LootEntry {
+            item_type: "lorito_hat__golden".into(),
+            chance_bp: 100,
+            min_qty: 1,
+            max_qty: 1,
+        }];
+    }
     before.drops_rolled = true;
     before.combat.fighters[0].drops = vec![RolledDrop {
         item_type: "lorito_hat__golden".into(),
@@ -201,6 +212,7 @@ fn gear_requires_settlement_budget_new_identity_natural_stats_and_personal_custo
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["stats"]["vitality"], 49);
     assert_eq!(rows[0]["address"], Addr([7; 32]).hex());
+    assert_eq!(rows[0]["mob_types"], json!(["golden_lorito"]));
     assert!(crate::notification_loot::extract(
         12,
         &TxView {

@@ -2744,7 +2744,7 @@ discord_marketplace:
   victory_title: '地牢胜利'
   victory: '**{party}** 击败了 **{boss}**！'
   loot_title: '极品战利品'
-  loot: '**{player}** 获得了属性品质为 **{quality}%** 的 **{item}**。'
+  loot: '**{player}** 从 **{mob}** 身上获得了属性品质为 **{quality}%** 的 **{item}**。'
   sold_by: '卖家：{player}'
   found_by: '发现者：{player}'
   boss_defeated: '已击败最终首领'

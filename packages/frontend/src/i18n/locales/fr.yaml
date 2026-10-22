@@ -2784,7 +2784,7 @@ discord_marketplace:
   victory_title: 'Victoire en donjon'
   victory: '**{party}** a vaincu **{boss}** !'
   loot_title: 'Butin exceptionnel'
-  loot: '**{player}** a obtenu **{item}** avec un **jet de {quality} %**.'
+  loot: '**{player}** a obtenu **{item}** sur **{mob}** avec un **jet de {quality} %**.'
   sold_by: 'Vendu par {player}'
   found_by: 'Trouvé par {player}'
   boss_defeated: 'Boss final vaincu'

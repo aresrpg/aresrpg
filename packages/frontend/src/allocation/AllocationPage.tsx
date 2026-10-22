@@ -19,6 +19,7 @@ import { Entries } from './Entries.tsx'
 import { Hero } from './Hero.tsx'
 import { Blast, Results } from './Results.tsx'
 import { useCampaignClosed, useCampaignRefresh } from './clock.tsx'
+import { useWalletFeedback } from './wallet_feedback.ts'
 import { helmet } from './assets.ts'
 import './allocation.css'
 import './layout.css'
@@ -65,6 +66,7 @@ export const AllocationPage = ({
   locale,
 }: Readonly<{ runtime: AllocationRuntime; copy: AppCopy; locale: Locale }>) => {
   const state = useStore(runtime.store)
+  const feedback = useWalletFeedback(state)
   const text = copy_text(copy.allocation_page)
   const closed = useCampaignClosed()
   useCampaignRefresh(runtime, !!state.google)
@@ -83,7 +85,7 @@ export const AllocationPage = ({
   useEffect(() => runtime.observe(), [runtime])
   useEffect(() => external.start(), [external])
   return (
-    <div className="allocation-root">
+    <div className="allocation-root" ref={feedback}>
       <header className="masthead">
         <a className="wordmark" href="/">
           <img src={helmet} alt="" />

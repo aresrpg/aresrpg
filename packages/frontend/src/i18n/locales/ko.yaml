@@ -2744,7 +2744,7 @@ discord_marketplace:
   victory_title: '던전 승리'
   victory: '**{party}** 파티가 **{boss}**을 물리쳤습니다!'
   loot_title: '뛰어난 전리품'
-  loot: '**{player}**님이 **품질 {quality}%**의 **{item}**을 획득했습니다.'
+  loot: '**{player}**님이 **{mob}**에게서 **품질 {quality}%**의 **{item}**을 획득했습니다.'
   sold_by: '판매자: {player}'
   found_by: '발견자: {player}'
   boss_defeated: '최종 보스 처치'

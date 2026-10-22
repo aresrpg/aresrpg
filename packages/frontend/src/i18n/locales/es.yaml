@@ -2778,7 +2778,7 @@ discord_marketplace:
   victory_title: 'Victoria en mazmorra'
   victory: '¡**{party}** derrotó a **{boss}**!'
   loot_title: 'Botín excepcional'
-  loot: '**{player}** encontró **{item}** con **{quality}% de calidad**.'
+  loot: '**{player}** obtuvo **{item}** de **{mob}** con **{quality}% de calidad**.'
   sold_by: 'Vendido por {player}'
   found_by: 'Encontrado por {player}'
   boss_defeated: 'Jefe final derrotado'

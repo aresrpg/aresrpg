@@ -2777,7 +2777,7 @@ discord_marketplace:
   victory_title: 'Перемога в підземеллі'
   victory: '**{party}** перемогли **{boss}**!'
   loot_title: 'Виняткова здобич'
-  loot: '**{player}** знайшов **{item}** з **якістю {quality}%**.'
+  loot: '**{player}** знайшов **{item}** з **якістю {quality}%**. Джерело: **{mob}**.'
   sold_by: 'Продавець: {player}'
   found_by: 'Знайшов: {player}'
   boss_defeated: 'Фінального боса переможено'

@@ -62,7 +62,8 @@ export const TierCard = ({
   return (
     <div className="slot">
       <article
-        className={`cc ${description.face} is-new`}
+        className={`cc ${description.face}`}
+        data-allocation-wallet={wallet.address}
         onPointerMove={tilt}
         onPointerLeave={(event) => stop_tilt(event.currentTarget)}
         key={`${wallet.address}:${description.tier}`}

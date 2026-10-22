@@ -30,6 +30,7 @@ export type Loot = Base &
     category: string
     level: number
     stats: Readonly<Record<string, number>>
+    mob_types: readonly string[]
   }>
 export type Notification = Sale | Gathering | Victory | Loot
 
@@ -114,6 +115,7 @@ export const parse_notification = (value: unknown): Notification => {
         category: slug(row.category),
         level: integer(row.level),
         stats: parse_stats(row.stats),
+        mob_types: strings(row.mob_types, slug, 32),
       }
     default:
       throw new Error('Unknown notification kind')

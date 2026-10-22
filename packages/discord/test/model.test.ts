@@ -17,6 +17,9 @@ test('all four types select canonical artwork and use verified names or addresse
   ])
   expect(models[2]?.visual.party).toEqual(['sceat.sui'])
   expect(models[3]?.visual.summary).toBe('97.5%')
+  expect(models[3]?.content).toBe(
+    '**sceat.sui** found **Golden Lorito Hood** with a **97.5% roll** on **Golden Lorito**.'
+  )
   expect(models[3]?.visual.stats.map(({ value }) => value)).toEqual([49, 48, 2])
   expect(announcement(copy, {}, examples[1]!)?.content).toContain('0xaaaa…aaaa')
 })

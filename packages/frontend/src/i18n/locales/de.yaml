@@ -2779,7 +2779,7 @@ discord_marketplace:
   victory_title: 'Dungeon-Sieg'
   victory: '**{party}** hat **{boss}** besiegt!'
   loot_title: 'Außergewöhnliche Beute'
-  loot: '**{player}** hat **{item}** mit **{quality} % Wurfqualität** gefunden.'
+  loot: '**{player}** hat **{item}** bei **{mob}** mit **{quality} % Wurfqualität** gefunden.'
   sold_by: 'Verkauft von {player}'
   found_by: 'Gefunden von {player}'
   boss_defeated: 'Endboss besiegt'

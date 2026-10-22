@@ -33,5 +33,6 @@ export const examples: readonly Notification[] = [
     category: 'hat',
     level: 16,
     stats: { vitality: 49, intelligence: 48, critical: 2 },
+    mob_types: ['golden_lorito'],
   },
 ]

@@ -2782,7 +2782,7 @@ discord_marketplace:
   victory_title: 'Dungeon victory'
   victory: '**{party}** defeated **{boss}**!'
   loot_title: 'Exceptional loot'
-  loot: '**{player}** found a **{quality}% roll** on **{item}**.'
+  loot: '**{player}** found **{item}** with a **{quality}% roll** on **{mob}**.'
   sold_by: 'Sold by {player}'
   found_by: 'Found by {player}'
   boss_defeated: 'Final boss defeated'

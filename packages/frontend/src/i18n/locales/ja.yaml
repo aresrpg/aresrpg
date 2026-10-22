@@ -2756,7 +2756,7 @@ discord_marketplace:
   victory_title: 'ダンジョン勝利'
   victory: '**{party}** が **{boss}** を倒しました！'
   loot_title: '極上の戦利品'
-  loot: '**{player}** が **品質 {quality}%** の **{item}** を獲得しました。'
+  loot: '**{player}** が **{mob}** から **品質 {quality}%** の **{item}** を獲得しました。'
   sold_by: '販売者：{player}'
   found_by: '発見者：{player}'
   boss_defeated: '最終ボスを撃破'

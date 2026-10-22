@@ -2744,7 +2744,7 @@ discord_marketplace:
   victory_title: 'Chiến thắng hầm ngục'
   victory: '**{party}** đã đánh bại **{boss}**!'
   loot_title: 'Chiến lợi phẩm xuất sắc'
-  loot: '**{player}** tìm thấy **{item}** với **chất lượng {quality}%**.'
+  loot: '**{player}** tìm thấy **{item}** với **chất lượng {quality}%** từ **{mob}**.'
   sold_by: 'Người bán: {player}'
   found_by: 'Người tìm thấy: {player}'
   boss_defeated: 'Đã hạ trùm cuối'

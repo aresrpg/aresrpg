@@ -142,7 +142,8 @@ const DiscordMessage = ({ children, kind, names }: Readonly<{ children: ReactNod
     ),
     loot: (
       <>
-        <strong>{name}</strong> found a <strong>{quality.toFixed(1)}% roll</strong> on {hood.name}.
+        <strong>{name}</strong> found <strong>{hood.name}</strong> with a <strong>{quality.toFixed(1)}% roll</strong> on{' '}
+        <strong>{boss.name}</strong>.
       </>
     ),
   }

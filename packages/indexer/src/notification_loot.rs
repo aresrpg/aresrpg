@@ -3,16 +3,22 @@
 //! New rolled gear must reconcile to a winning seat's consumed drop budget.
 use anyhow::Result;
 use serde_json::{json, Value};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::decode::{self, Field, FighterAuthority, Item, MarkerKey, RolledStats};
+use crate::decode::{self, Field, FighterAuthority, FighterKind, Item, MarkerKey, RolledStats};
 use crate::events;
 use crate::graph::field_key;
 use crate::notification_events::{fights, game_object};
 use crate::ownership::{self, Custody, OwnerKind};
 use crate::publish::TxView;
 
-type Budget = BTreeMap<String, u64>;
+/// Each drop came from a defeated mob's loot snapshot; drops record only the item.
+#[derive(Default)]
+struct Claim {
+    quantity: u64,
+    mob_types: BTreeSet<String>,
+}
+type Budget = BTreeMap<String, Claim>;
 
 fn claimed(tx: &TxView<'_>, game: &str) -> Result<Budget> {
     let after = fights(tx.outputs, game)?;
@@ -22,6 +28,15 @@ fn claimed(tx: &TxView<'_>, game: &str) -> Result<Budget> {
             continue;
         }
         let output = after.iter().find(|other| other.id == fight.id);
+        let defeated = fight
+            .combat
+            .fighters
+            .iter()
+            .filter_map(|row| match &row.kind {
+                FighterKind::Mob(mob) if fight.combat.winner != Some(row.team) => Some(mob),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
         for (seat, (authority, row)) in fight
             .authorities
             .iter()
@@ -59,7 +74,14 @@ fn claimed(tx: &TxView<'_>, game: &str) -> Result<Budget> {
                 }
             }
             for drop in drops {
-                *budgets.entry(drop.item_type).or_default() += u64::from(drop.qty);
+                let claim = budgets.entry(drop.item_type.clone()).or_default();
+                claim.quantity += u64::from(drop.qty);
+                claim.mob_types.extend(
+                    defeated
+                        .iter()
+                        .filter(|mob| mob.loot.iter().any(|row| row.item_type == drop.item_type))
+                        .map(|mob| mob.mob_type.clone()),
+                );
             }
         }
     }
@@ -112,9 +134,9 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
     }
     let mut notifications = Vec::new();
     for (item, statistics) in minted {
-        let quantity = budgets[&item.item_type];
+        let claim = &budgets[&item.item_type];
         // Extra same-type mints (e.g. crafting in the PTB) cannot be attributed to fight loot.
-        if totals[&item.item_type] != quantity {
+        if totals[&item.item_type] != claim.quantity {
             continue;
         }
         let stats = serde_json::to_value(statistics)?
@@ -125,7 +147,8 @@ pub fn extract(checkpoint: u64, tx: &TxView<'_>, game: &str) -> Result<Vec<Value
             .collect::<serde_json::Map<String, Value>>();
         notifications.push(json!({ "kind": "loot", "id": format!("{checkpoint}:{}:{}:loot", tx.tx_index, item.id.hex()),
             "address": tx.sender.hex(), "object": item.id.hex(), "item_type": item.item_type,
-            "name": item.name, "category": item.category, "level": item.level, "stats": stats }));
+            "name": item.name, "category": item.category, "level": item.level, "stats": stats,
+            "mob_types": claim.mob_types }));
     }
     Ok(notifications)
 }

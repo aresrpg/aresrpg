@@ -45,7 +45,7 @@ export const Wallets = ({
       </div>
       <div className="wallets">
         {state.status?.wallets.map((wallet) => (
-          <div className="wrow" key={wallet.address}>
+          <div className="wrow" key={wallet.address} data-allocation-wallet={wallet.address}>
             <span className="mark">{wallet.label ? wallet.label.slice(0, 1) : 'G'}</span>
             <div className="who">
               <b>{wallet.label || text('google_wallet')}</b>
