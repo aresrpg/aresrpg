@@ -22,3 +22,18 @@ test('an occupied placement rollback keeps the joining character and hovered fig
   await expect(participants).toHaveText('3')
   expect(crashes).toEqual([])
 })
+
+test('real fight models and audio finish preparation', async ({ page }) => {
+  const failures: string[] = []
+  page.on('pageerror', (error) => failures.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') failures.push(message.text())
+  })
+  await page.goto('/e2e/fixtures/fight_placement_race.html?real_resources')
+  // This integration budget covers cold model loading, DSP synthesis and audio decoding.
+  // The attribute reports the pending phase if preparation does not finish.
+  await expect(page.locator('body')).toHaveAttribute('data-preparation', 'ready', { timeout: 30_000 })
+  await expect(page.locator('[data-world-loading]')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Ready', exact: true })).toBeEnabled()
+  expect(failures).toEqual([])
+})

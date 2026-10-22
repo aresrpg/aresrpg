@@ -26,7 +26,7 @@ import { fight_placement_changes } from '../../modules/fight.ts'
 import type { SceneHandle } from '../core/scene_feed.ts'
 import { dispatch_app, read_app_state, useAppStore } from '../../store.ts'
 
-import { useFightResources } from './fight_resources.ts'
+import { useFightResources, type FightResourceLoader } from './fight_resources.ts'
 import { create_fight_audio_observer, play_fight_turn_start } from '../audio/fight_audio.ts'
 import { character_render_source } from '../character_entities.ts'
 import { fight_character_entities_from_loaded } from './character_entities.ts'
@@ -75,6 +75,7 @@ const timeline_targetable_cells = (
 
 export const FightLayer = ({
   nearby_id,
+  resource_loader,
   copy,
   scene,
   model_for,
@@ -83,6 +84,7 @@ export const FightLayer = ({
   world_anchor: supplied_anchor,
 }: Readonly<{
   nearby_id?: string
+  resource_loader?: FightResourceLoader
   copy: AppCopy
   scene: SceneHandle
   world_anchor?: Readonly<{ x: number; y?: number; z: number }> | null
@@ -182,7 +184,7 @@ export const FightLayer = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- roster/appearance identity reload models; cells remain a synchronous projection.
     [appearances, character_roster_key, fight_id, viewer_team]
   )
-  const resources = useFightResources(checkpoint, scene, ambient, character_appearance_sources)
+  const resources = useFightResources(checkpoint, scene, ambient, character_appearance_sources, resource_loader)
   const actions_locked = presentation_pending || fight.transaction_pending || resources.status !== 'ready'
   const placement = usePlacementGasWarning({
     actions_locked,

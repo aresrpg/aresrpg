@@ -8,6 +8,7 @@ import type { CharacterRow } from '@aresrpg/protocol'
 import { catalog_spell_sources } from '../../src/content/fight_sources.ts'
 import { encyclopedia_catalog } from '../../src/content/catalog.ts'
 import type { AuthSession } from '../../src/auth.ts'
+import { fight_resource_loader, type FightResourceLoader } from '../../src/game/fight/fight_resources.ts'
 import { FightLayer } from '../../src/game/fight/FightLayer.tsx'
 import type { SceneHandle } from '../../src/game/core/scene_feed.ts'
 import { load_app_copy } from '../../src/i18n/copy.ts'
@@ -15,7 +16,26 @@ import { dispatch_app, observe_app, useAppStore, type AppInput } from '../../src
 import '../../src/tailwind.css'
 
 // Real fight reducers, observers and React UI; GPU presentation and chain execution are isolated.
-const spell_probe = new URLSearchParams(location.search).has('spell')
+const params = new URLSearchParams(location.search)
+const spell_probe = params.has('spell')
+const phase = (value: string): void => {
+  document.body.dataset.preparation = value
+}
+const resource_loader: FightResourceLoader = {
+  characters: async (sources) => {
+    phase('characters')
+    return params.has('real_resources') ? fight_resource_loader.characters(sources) : []
+  },
+  prepare: async (checkpoint, scene, ambient) => {
+    phase('effects_and_audio')
+    if (params.has('hold_resources'))
+      await new Promise<void>((resolve) =>
+        window.addEventListener('release-resources', () => resolve(), { once: true })
+      )
+    if (params.has('real_resources')) await fight_resource_loader.prepare(checkpoint, scene, ambient)
+    phase('ready')
+  },
+}
 const picking = { cell: null as number | null }
 const scene: SceneHandle = {
   get canvas() {
@@ -173,7 +193,7 @@ const boot = async (): Promise<void> => {
     <main className="fixed inset-0 bg-[#24202e] font-mono text-white">
       <canvas className="absolute inset-0 size-full" />
       <canvas data-other-canvas className="absolute top-20 right-4 h-20 w-32 bg-black" />
-      <FightLayer copy={copy} scene={scene} />
+      <FightLayer copy={copy} scene={scene} resource_loader={resource_loader} />
       <div className="absolute top-3 left-3 z-[200] flex gap-3">
         <RosterCount />
         <ActionPoints />

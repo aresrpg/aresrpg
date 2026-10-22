@@ -140,3 +140,19 @@ test('a spell target hides its tooltip and requires a fresh checkmark press befo
   await confirm.tap()
   await expect(ap).not.toHaveText('6')
 })
+
+test('board input stays locked until resource preparation completes', async ({ page }) => {
+  await page.goto('/e2e/fixtures/fight_placement_race.html?hold_resources')
+  await expect(page.locator('body')).toHaveAttribute('data-preparation', 'effects_and_audio')
+  const canvas = page.locator('canvas').first()
+  // Dispatch past the modal to exercise the input lock itself.
+  await canvas.dispatchEvent('pointerdown', { pointerType: 'touch', pointerId: 1, clientX: 70, clientY: 300 })
+  await canvas.dispatchEvent('pointerup', { pointerType: 'touch', pointerId: 1, clientX: 70, clientY: 300 })
+  await expect(page.locator('[data-touch-fight-confirm]')).toHaveCount(0)
+  await expect(page.locator('body')).toHaveAttribute('data-placement_calls', '0')
+  await expect(page.locator('[data-world-loading]')).toHaveCount(1)
+  await page.evaluate(() => window.dispatchEvent(new Event('release-resources')))
+  await tap_board(page)
+  await expect(page.locator('[data-touch-fight-confirm]')).toBeVisible()
+  await expect(page.locator('body')).toHaveAttribute('data-placement_calls', '0')
+})

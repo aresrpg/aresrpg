@@ -24,6 +24,24 @@ export const prepare_spell_resources = async (
   ])
 }
 
+export const fight_resource_loader = {
+  characters: load_fight_character_entities,
+  prepare: async (
+    checkpoint: Readonly<HydratedFightCheckpoint>,
+    scene: SceneHandle,
+    ambient: boolean
+  ): Promise<void> => {
+    if (!ambient) preload_fight_sounds(checkpoint)
+    await prepare_spell_resources(
+      Object.values(checkpoint.sources.players).map((player) => player.classe),
+      scene,
+      ambient
+    )
+  },
+}
+
+export type FightResourceLoader = Readonly<typeof fight_resource_loader>
+
 const preparation_request = () => {
   let complete: (error: Readonly<Error> | null) => void = () => {}
   const task = new Promise<Error | null>((resolve) => {
@@ -51,18 +69,20 @@ export const useFightResources = (
   checkpoint: Readonly<HydratedFightCheckpoint> | null,
   scene: SceneHandle,
   ambient: boolean,
-  sources: readonly FightCharacterRenderSource[]
+  sources: readonly FightCharacterRenderSource[],
+  loader: FightResourceLoader = fight_resource_loader
 ) => {
   const fight_id = checkpoint?.contract.id
   const appearance_key = JSON.stringify(
     sources.map(({ id, classe, male, colors, loadout }) => [id, classe, male, colors, worn_appearance(loadout)])
   )
   // eslint-disable-next-line react-hooks/exhaustive-deps -- these identities own one preparation lifetime.
-  const identity = useMemo(() => ({}), [fight_id, scene, ambient, appearance_key])
+  const identity = useMemo(() => ({}), [fight_id, scene, ambient, appearance_key, loader])
   const latest = useRef<ReturnType<typeof preparation_request> | null>(null)
   const [models, set_models] = useState<Readonly<{
     identity: object
-    result: readonly CharacterEntityRender[] | Error
+    characters: readonly CharacterEntityRender[]
+    error: Error | null
   }> | null>(null)
   const [prepared, set_prepared] = useState<Readonly<{ identity: object; error: Error | null }> | null>(null)
   const wait = useCallback(() => wait_for_fight_resources(() => latest.current?.task ?? null), [])
@@ -72,12 +92,17 @@ export const useFightResources = (
     const request = preparation_request()
     // eslint-disable-next-line functional/immutable-data -- effect setup owns a fresh gate, including StrictMode's cleanup/setup replay.
     latest.current = request
-    void load_fight_character_entities(sources).then(
+    void loader.characters(sources).then(
       (result) => {
-        if (current) set_models({ identity, result })
+        if (current) set_models({ identity, characters: result, error: null })
       },
       (error: unknown) => {
-        if (current) set_models({ identity, result: error instanceof Error ? error : new Error(String(error)) })
+        if (current)
+          set_models({
+            identity,
+            characters: NO_CHARACTERS,
+            error: error instanceof Error ? error : new Error(String(error)),
+          })
       }
     )
     return () => {
@@ -99,16 +124,11 @@ export const useFightResources = (
       set_prepared({ identity, error })
       request.complete(error)
     }
-    if (models.result instanceof Error) {
-      finish(models.result)
+    if (models.error) {
+      finish(models.error)
       return
     }
-    if (!ambient) preload_fight_sounds(checkpoint)
-    void prepare_spell_resources(
-      Object.values(checkpoint.sources.players).map((player) => player.classe),
-      scene,
-      ambient
-    ).then(
+    void loader.prepare(checkpoint, scene, ambient).then(
       () => finish(null),
       (error: unknown) => finish(error instanceof Error ? error : new Error(String(error)))
     )
@@ -119,7 +139,7 @@ export const useFightResources = (
   }, [identity, models])
 
   return {
-    characters: models?.identity === identity && !(models.result instanceof Error) ? models.result : NO_CHARACTERS,
+    characters: models?.identity === identity ? models.characters : NO_CHARACTERS,
     status: prepared?.identity !== identity ? 'loading' : prepared.error ? 'failed' : 'ready',
     wait,
   } as const
