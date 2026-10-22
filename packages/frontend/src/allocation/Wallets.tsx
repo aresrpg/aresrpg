@@ -8,7 +8,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import type { WalletView } from '../wallet/model.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
-import { short_address } from './view.ts'
+import { short_address, wallet_label } from './view.ts'
 
 export const Wallets = ({
   state,
@@ -46,14 +46,14 @@ export const Wallets = ({
       <div className="wallets">
         {state.status?.wallets.map((wallet) => (
           <div className="wrow" key={wallet.address} data-allocation-wallet={wallet.address}>
-            <span className="mark">{wallet.label ? wallet.label.slice(0, 1) : 'G'}</span>
+            <span className="mark">{wallet_label(wallet, state.session).slice(0, 1) || 'W'}</span>
             <div className="who">
-              <b>{wallet.label || text('google_wallet')}</b>
+              <b>{wallet_label(wallet, state.session) || text('wallet')}</b>
               <span>
                 {text('verified')} · {short_address(wallet.address)}
               </span>
             </div>
-            {wallet.address !== state.google?.address && (
+            {wallet.address !== state.session?.address && (
               <button
                 className="btn-icon"
                 disabled={busy}

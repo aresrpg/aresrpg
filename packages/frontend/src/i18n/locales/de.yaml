@@ -2934,8 +2934,8 @@ allocation_page:
   your_allocation: Deine Zuteilung
   total_cap: Bis zu {{sui}} SUI für {{count}} Spots
   allocation_note: Melde dich an und verknüpfe Wallets, um deine Spots zu prüfen.
-  google_first: Mit Google starten
-  google_first_note: Melde dich mit deinem Spielkonto an, bevor du Wallets hinzufügst oder auf X teilnimmst.
+  login_title: 'Melde dich an, um deine Zuteilung zu sehen'
+  login_note: 'Nutze Google oder eine Sui-Wallet. Bestätige den Besitz mit einer kostenlosen Nachrichtensignatur.'
   card_placeholder: Hier erscheint deine Karte
   one_card: Eine Karte pro verifiziertem Wallet.
   share_x: Auf X teilen

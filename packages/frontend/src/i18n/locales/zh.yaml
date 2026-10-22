@@ -2899,8 +2899,8 @@ allocation_page:
   your_allocation: 你的分配
   total_cap: '{{count}} 个名额合计最高 {{sui}} SUI'
   allocation_note: 登录并关联钱包以查看名额。
-  google_first: 先使用 Google 登录
-  google_first_note: 添加钱包或参加 X 活动前，请先登录游戏账户。
+  login_title: '登录查看你的配额'
+  login_note: '使用 Google 或连接 Sui 钱包。签署免费消息以验证钱包所有权。'
   card_placeholder: 你的卡片将在这里显示
   one_card: 每个已验证钱包一张卡片。
   share_x: 分享到 X

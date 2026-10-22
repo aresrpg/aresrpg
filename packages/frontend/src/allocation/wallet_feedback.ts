@@ -18,7 +18,7 @@ export const useWalletFeedback = (state: AllocationState) => {
   const previous = useRef<Portfolio | null>(null)
   useEffect(() => {
     const current = state.status
-      ? { owner: state.google?.address ?? null, addresses: state.status.wallets.map(({ address }) => address) }
+      ? { owner: state.session?.address ?? null, addresses: state.status.wallets.map(({ address }) => address) }
       : null
     const added = current ? added_wallets(previous.current, current) : []
     // eslint-disable-next-line functional/immutable-data -- this effect retains only the observed portfolio identity and address set to prevent replay.
@@ -30,6 +30,6 @@ export const useWalletFeedback = (state: AllocationState) => {
     )
     elements.forEach((element) => element.classList.add('is-new'))
     return () => elements.forEach((element) => element.classList.remove('is-new'))
-  }, [state.google?.address, state.status])
+  }, [state.session?.address, state.status])
   return root
 }

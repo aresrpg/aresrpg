@@ -9,6 +9,11 @@ import {
   type PublicAward,
 } from '@aresrpg/immutable/allocation'
 
+import type { AuthSession } from '../auth.ts'
+
+export const wallet_label = (wallet: AllocationWallet, session: AuthSession | null): string =>
+  wallet.label || (wallet.address === session?.address ? session.wallet_name : '')
+
 export const short_address = (address: string): string => `${address.slice(0, 6)}…${address.slice(-4)}`
 export type CardView = Readonly<{ wallet: AllocationWallet; award: PublicAward }>
 export const allocation_view = (status: AllocationStatus | null, now: number) => {

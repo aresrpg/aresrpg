@@ -1367,14 +1367,14 @@ sale state. Before the sale it links to the allocation campaign. The encyclopedi
 Token art lives in seed and the game's public metadata
 asset uses that same image; there is no separate token website.
 
-The temporary `/allocation` campaign uses a canvas-free entry and mandatory normal Google
-sign-in. Its paper layout follows the approved standalone HTML reference. Seed owns quotas,
+The temporary `/allocation` campaign uses a canvas-free entry with normal Google or Wallet Standard
+sign-in. Both use the same signed server admission; Google is not required inside wallet browsers. Its paper layout follows the approved standalone HTML reference. Seed owns quotas,
 scoring and the cutoff. The normal wallet-authenticated WebSocket is its private request door;
 a temporary server module owns a separate persistent Redis, never the disposable game index.
-The admitted game-wallet proof establishes the first card. Up to ten distinct wallets, including
+The admitted wallet proof establishes the portfolio owner. Up to ten distinct wallets, including
 that wallet, belong to the account's retained portfolio. Adding another requires a fresh,
 expiring, one-use signature challenge binding the account, address and campaign. Redis enforces
-the limit atomically. Only verified wallets receive cards, and totals deduplicate addresses.
+the limit atomically. Verified wallets stay listed even without an award; only awarded wallets receive cards. Totals deduplicate addresses.
 
 X is a uniquely linked identity, not another application login. An authenticated one-use ticket
 starts browser-bound PKCE. The callback returns a short-lived result that only the original game

@@ -2937,8 +2937,8 @@ allocation_page:
   your_allocation: Your allocation
   total_cap: Buy up to {{sui}} SUI across {{count}} spots
   allocation_note: Sign in and link your wallets to check your spots.
-  google_first: Start with Google
-  google_first_note: Sign in with your game account before adding wallets or entering on X.
+  login_title: 'Sign in to check your allocation'
+  login_note: 'Use Google or connect a Sui wallet. Sign a free message to verify ownership.'
   card_placeholder: Your card shows up here
   one_card: One card per verified wallet.
   share_x: Share on X

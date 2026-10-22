@@ -11,12 +11,13 @@ import { create_allocation_client } from './client.ts'
 
 export type AllocationTask =
   | Readonly<{ kind: 'boot' | 'google' | 'logout' | 'load' | 'link_x' }>
+  | Readonly<{ kind: 'wallet'; name: string }>
   | Readonly<{ kind: 'verify'; wallet: AuthSession }>
   | Readonly<{ kind: 'remove'; address: string }>
   | Readonly<{ kind: 'share'; address: string; locale: string; text: string }>
   | Readonly<{ kind: 'submit'; address: string; urls: readonly string[] }>
 type Result = Readonly<{
-  google: AuthSession | null
+  session: AuthSession | null
   status: AllocationStatus | null
   error: string | null
   share_intent_url: string | null
@@ -27,7 +28,7 @@ type Input =
   | Readonly<{ type: 'result'; sequence: number; result: Result }>
   | Readonly<{ type: 'invalidated'; wallet: AuthSession }>
 export const initial_allocation = (): AllocationState => ({
-  google: null,
+  session: null,
   status: null,
   task: null,
   sequence: 0,
@@ -49,7 +50,7 @@ export const reduce_allocation = (state: AllocationState, input: Input): Allocat
       }
     }
     case 'invalidated':
-      return state.google !== input.wallet ? state : { ...initial_allocation(), sequence: state.sequence + 1 }
+      return state.session !== input.wallet ? state : { ...initial_allocation(), sequence: state.sequence + 1 }
     case 'result':
       return state.sequence !== input.sequence ? state : { ...state, ...input.result, task: null }
   }
@@ -58,6 +59,15 @@ export const share_intent = (url: string, locale: string, text: string): string 
   const preview = new URL(url)
   preview.searchParams.set('locale', locale)
   return `https://x.com/intent/tweet?${new URLSearchParams({ text, url: preview.href })}`
+}
+export const connect_allocation_account = async (
+  auth: Pick<Auth, 'connect_google' | 'wallets'>,
+  provider: string | null
+): Promise<AuthSession> => {
+  if (provider === null) return auth.connect_google()
+  const wallet = auth.wallets().find(({ name }) => name === provider)
+  if (!wallet) throw new Error('no_wallet_app')
+  return wallet.connect()
 }
 type Request = (request: AllocationRequest) => Promise<AllocationResult>
 const verify = async (request: Request, wallet: AuthSession): Promise<void> => {
@@ -134,8 +144,9 @@ export const create_allocation_runtime = () => {
           const name = read_auth_wallet(storage)
           return name ? (await get_auth()).restore(name) : null
         }
-        case 'google': {
-          const session = await (await get_auth()).connect_google()
+        case 'google':
+        case 'wallet': {
+          const session = await connect_allocation_account(await get_auth(), task.kind === 'wallet' ? task.name : null)
           remember_auth_wallet(storage, session.wallet_name)
           return session
         }
@@ -148,14 +159,14 @@ export const create_allocation_runtime = () => {
       }
     }
     const run = async (state: AllocationState): Promise<void> => {
-      let { google } = state
+      let { session } = state
       try {
-        google = await authenticate(state.task!, google)
+        session = await authenticate(state.task!, session)
         if (!current(state.sequence)) {
-          google?.dispose?.()
+          session?.dispose?.()
           return
         }
-        bind(google)
+        bind(session)
         let status: AllocationStatus | null = null
         let share_intent_url: string | null = null
         if (client) {
@@ -170,7 +181,7 @@ export const create_allocation_runtime = () => {
           dispatch({
             type: 'result',
             sequence: state.sequence,
-            result: { google, status, share_intent_url, error: new URLSearchParams(location.search).get('error') },
+            result: { session, status, share_intent_url, error: new URLSearchParams(location.search).get('error') },
           })
       } catch (error) {
         console.warn('Allocation operation could not be confirmed')
@@ -179,7 +190,7 @@ export const create_allocation_runtime = () => {
             type: 'result',
             sequence: state.sequence,
             result: {
-              google,
+              session,
               status: state.status,
               share_intent_url: null,
               error: error instanceof Error ? error.message : 'unavailable',
@@ -188,7 +199,7 @@ export const create_allocation_runtime = () => {
       }
     }
     const stop = store.subscribe((state, previous) => {
-      if (previous.google && !state.google) {
+      if (previous.session && !state.session) {
         bind(null)
         clear_auth_wallet(storage)
       }

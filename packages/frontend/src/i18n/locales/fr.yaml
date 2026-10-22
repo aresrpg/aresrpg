@@ -2939,8 +2939,8 @@ allocation_page:
   your_allocation: Votre allocation
   total_cap: Jusqu’à {{sui}} SUI pour {{count}} spots
   allocation_note: Connectez-vous et liez vos portefeuilles pour voir vos spots.
-  google_first: Commencez avec Google
-  google_first_note: Connectez votre compte de jeu avant d’ajouter des portefeuilles ou de participer via X.
+  login_title: 'Connectez-vous pour voir votre allocation'
+  login_note: 'Utilisez Google ou un portefeuille Sui. Signez un message gratuit pour prouver que vous en êtes propriétaire.'
   card_placeholder: Votre carte apparaîtra ici
   one_card: Une carte par portefeuille vérifié.
   share_x: Partager sur X

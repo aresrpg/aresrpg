@@ -8,6 +8,7 @@ import type { Locale } from '../i18n/locale.ts'
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
 import type { allocation_view } from './view.ts'
 import { Timer } from './clock.tsx'
+import { SignIn } from './SignIn.tsx'
 import { TierCard } from './TierCard.tsx'
 
 export type View = ReturnType<typeof allocation_view>
@@ -49,6 +50,8 @@ export const Hero = ({
   locale,
   open,
   google_label,
+  wallet_label,
+  wallets,
 }: Readonly<{
   view: View
   state: AllocationState
@@ -57,6 +60,8 @@ export const Hero = ({
   locale: Locale
   open: boolean
   google_label: string
+  wallet_label: string
+  wallets: readonly string[]
 }>) => (
   <section className="hero">
     <p className="hero-label">{text(view.final ? 'title' : open ? 'close_in' : 'closed')}</p>
@@ -76,19 +81,15 @@ export const Hero = ({
     </p>
     <span className="rule" />
     <Total view={view} text={text} locale={locale} />
-    {!state.google ? (
-      <section className="login-gate">
-        <h1>{text('google_first')}</h1>
-        <p>{text('google_first_note')}</p>
-        <button
-          className="btn btn-google"
-          disabled={!!state.task}
-          onClick={() => runtime.dispatch({ type: 'request', task: { kind: 'google' } })}
-        >
-          <span className="g">G</span>
-          {google_label}
-        </button>
-      </section>
+    {!state.session ? (
+      <SignIn
+        runtime={runtime}
+        text={text}
+        busy={!!state.task}
+        wallets={wallets}
+        google_label={google_label}
+        wallet_label={wallet_label}
+      />
     ) : (
       view.cards.length > 0 && (
         <div className={`stage ${view.cards.length < 2 ? 'is-one' : ''}`}>

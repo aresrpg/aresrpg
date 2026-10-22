@@ -2899,8 +2899,8 @@ allocation_page:
   your_allocation: 내 할당량
   total_cap: '{{count}}개 슬롯에서 최대 {{sui}} SUI'
   allocation_note: 로그인하고 지갑을 연결하여 슬롯을 확인하세요.
-  google_first: Google로 시작
-  google_first_note: 지갑 추가 또는 X 응모 전에 게임 계정으로 로그인하세요.
+  login_title: '로그인하여 배정 물량 확인'
+  login_note: 'Google 또는 Sui 지갑으로 로그인하세요. 무료 메시지 서명으로 소유권을 확인합니다.'
   card_placeholder: 여기에 카드가 표시됩니다
   one_card: 확인된 지갑당 카드 1장.
   share_x: X에 공유

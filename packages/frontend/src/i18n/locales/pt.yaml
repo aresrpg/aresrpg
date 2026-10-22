@@ -2896,8 +2896,8 @@ allocation_page:
   your_allocation: Sua alocação
   total_cap: Até {{sui}} SUI em {{count}} spots
   allocation_note: Entre e vincule carteiras para consultar seus spots.
-  google_first: Comece com Google
-  google_first_note: Entre com sua conta do jogo antes de adicionar carteiras ou participar no X.
+  login_title: 'Entre para conferir sua alocação'
+  login_note: 'Use o Google ou conecte uma carteira Sui. Assine uma mensagem gratuita para comprovar que ela é sua.'
   card_placeholder: Sua carta aparecerá aqui
   one_card: Uma carta por carteira verificada.
   share_x: Compartilhar no X

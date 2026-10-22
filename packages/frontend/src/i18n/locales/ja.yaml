@@ -2911,8 +2911,8 @@ allocation_page:
   your_allocation: あなたの割当
   total_cap: '{{count}}枠で最大{{sui}} SUI'
   allocation_note: ログインしてウォレットを連携し、枠を確認してください。
-  google_first: Googleで開始
-  google_first_note: ウォレットの追加やX応募の前にゲームアカウントでログインしてください。
+  login_title: 'ログインして割当を確認'
+  login_note: 'GoogleまたはSuiウォレットでログイン。無料のメッセージ署名で所有権を確認します。'
   card_placeholder: ここにカードが表示されます
   one_card: 確認済みウォレットごとに1枚。
   share_x: Xで共有

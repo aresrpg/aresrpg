@@ -7,7 +7,7 @@ import { LEADERBOARD_METRICS } from '@aresrpg/protocol'
 import type { CopyText } from '../i18n/copy.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
-import { short_address } from './view.ts'
+import { short_address, wallet_label } from './view.ts'
 
 const SavedEntry = ({ state, text }: Readonly<{ state: AllocationState; text: CopyText }>) => {
   const { submission, wallets } = state.status!
@@ -29,7 +29,9 @@ const SavedEntry = ({ state, text }: Readonly<{ state: AllocationState; text: Co
       </ol>
       <p className="xp-wallet">
         {text('recipient')}:{' '}
-        <b>{recipient ? recipient.label || text('google_wallet') : short_address(submission.address)}</b>{' '}
+        <b>
+          {recipient ? wallet_label(recipient, state.session) || text('wallet') : short_address(submission.address)}
+        </b>{' '}
         <code>{short_address(submission.address)}</code>
       </p>
       <p className="xp-fine">{text('metrics_note')}</p>
@@ -65,7 +67,7 @@ const EntryForm = ({
           <option value="">{text('choose_wallet')}</option>
           {wallets.map((wallet) => (
             <option key={wallet.address} value={wallet.address}>
-              {wallet.label || text('google_wallet')} · {short_address(wallet.address)}
+              {wallet_label(wallet, state.session) || text('wallet')} · {short_address(wallet.address)}
             </option>
           ))}
         </select>
@@ -243,7 +245,9 @@ export const Entries = ({
           <li>{text('leftovers')}</li>
         </ul>
         <p className="way-fine">{text('quality_rule')}</p>
-        {state.status && <XEntry key={state.google?.address} state={state} runtime={runtime} text={text} open={open} />}
+        {state.status && (
+          <XEntry key={state.session?.address} state={state} runtime={runtime} text={text} open={open} />
+        )}
       </article>
     </div>
   </section>

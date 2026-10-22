@@ -69,7 +69,7 @@ export const AllocationPage = ({
   const feedback = useWalletFeedback(state)
   const text = copy_text(copy.allocation_page)
   const closed = useCampaignClosed()
-  useCampaignRefresh(runtime, !!state.google)
+  useCampaignRefresh(runtime, !!state.session)
   const external = useMemo(
     () =>
       create_wallet_runtime<AuthSession>({
@@ -92,7 +92,7 @@ export const AllocationPage = ({
           AresRPG <span>{text('title')}</span>
         </a>
         <CampaignStatus state={state} phase={view.final ? 'final' : open ? 'registration' : 'closed'} text={text} />
-        {state.google && (
+        {state.session && (
           <button
             className="btn btn-small"
             disabled={!!state.task}
@@ -112,8 +112,10 @@ export const AllocationPage = ({
           locale={locale}
           open={open}
           google_label={copy.continue_google}
+          wallet_label={copy.connect_wallet}
+          wallets={external_state.wallets.map(({ name }) => name)}
         />
-        {state.google ? (
+        {state.session ? (
           <div className="steps">
             <Wallets
               state={state}

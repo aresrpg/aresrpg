@@ -17,16 +17,16 @@ const status: AllocationStatus = {
   submission: null,
 }
 test('Google invalidation clears cards and rejects an earlier asynchronous result', () => {
-  const connected = { ...initial_allocation(), google: wallet, status }
+  const connected = { ...initial_allocation(), session: wallet, status }
   const pending = reduce_allocation(connected, { type: 'request', task: { kind: 'load' } })
   const invalidated = reduce_allocation(pending, { type: 'invalidated', wallet })
-  expect(invalidated.google).toBeNull()
+  expect(invalidated.session).toBeNull()
   expect(invalidated.status).toBeNull()
   expect(
     reduce_allocation(invalidated, {
       type: 'result',
       sequence: pending.sequence,
-      result: { google: wallet, status, error: null, share_intent_url: null },
+      result: { session: wallet, status, error: null, share_intent_url: null },
     })
   ).toBe(invalidated)
 })
@@ -35,7 +35,7 @@ test('login and signing are exclusive; logout clears private cards immediately',
   expect(reduce_allocation(pending, { type: 'request', task: { kind: 'verify', wallet } })).toBe(pending)
   expect(
     reduce_allocation(
-      { ...initial_allocation(), google: wallet, status },
+      { ...initial_allocation(), session: wallet, status },
       { type: 'request', task: { kind: 'logout' } }
     ).status
   ).toBeNull()
@@ -84,4 +84,28 @@ test('sharing opens an X composer with the localized card link and prefilled tex
     }
   )
   expect(sharing.share_intent_url).toBeNull()
+})
+
+test('Slush login uses the selected wallet without invoking Google', async () => {
+  const { connect_allocation_account } = await import('../../src/allocation/runtime.ts')
+  let connections = 0
+  const external = { ...wallet, wallet_name: 'Slush' }
+  const auth = {
+    connect_google: async () => {
+      throw new Error('Google is unavailable in this browser')
+    },
+    wallets: () => [
+      {
+        name: 'Slush',
+        connect: async () => {
+          connections += 1
+          return external
+        },
+      },
+    ],
+  }
+  expect(await connect_allocation_account(auth, 'Slush')).toBe(external)
+  expect(connections).toBe(1)
+  await expect(connect_allocation_account(auth, 'Missing')).rejects.toThrow('no_wallet_app')
+  expect(connections).toBe(1)
 })

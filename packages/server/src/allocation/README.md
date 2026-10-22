@@ -20,11 +20,11 @@ The encrypted source remains `domains/aresrpg/secrets.yaml` in the Kubernetes re
 Redis has no public endpoint. It uses its own retained 1 GiB PVC, synchronous AOF and no eviction.
 The game server connects lazily; a campaign database outage does not prevent game boot.
 
-Google sign-in creates the ordinary Enoki wallet. The existing WebSocket challenge
-admits that wallet through the same game connection. Private campaign requests use
+Google sign-in creates the ordinary Enoki wallet; Wallet Standard sign-in supports wallet browsers directly.
+The existing WebSocket challenge admits either wallet through the same game connection. Private campaign requests use
 `packet/allocation_request`; the server takes the owner from that connection, never
 from supplied JSON. The existing global request budget applies, with one in-flight
-campaign operation per connection. Google logout disposes that connection.
+campaign operation per connection. Logout disposes that connection.
 
 X is an optional linked identity, not a second login session. An authenticated
 connection issues a five-minute, one-use linking ticket. The public redirect consumes
@@ -37,9 +37,9 @@ discarded after identity verification; no X session cookie exists.
 Register `https://aresrpg.world/api/allocation?action=callback` in the X app.
 The app requests only `tweet.read users.read`; it cannot publish posts for users.
 
-An admitted game wallet establishes the first portfolio card. Additional wallets sign a
+An admitted wallet establishes the portfolio owner. Verified wallets remain listed; cards require an award. Additional wallets sign a
 five-minute one-use challenge binding their address, campaign and the admitted owner.
-The server stores at most ten distinct verified wallets per account, including the game
+The server stores at most ten distinct verified wallets per account, including the login
 wallet. Card reads never accept caller-selected unverified addresses. Removal affects the
 portfolio, not an existing X entry or an already shared public summary.
 

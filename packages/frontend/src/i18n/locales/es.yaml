@@ -2933,8 +2933,8 @@ allocation_page:
   your_allocation: Tu asignación
   total_cap: Hasta {{sui}} SUI en {{count}} spots
   allocation_note: Inicia sesión y vincula wallets para ver tus spots.
-  google_first: Empieza con Google
-  google_first_note: Accede con tu cuenta de juego antes de añadir wallets o participar en X.
+  login_title: 'Inicia sesión para consultar tu asignación'
+  login_note: 'Usa Google o conecta una cartera Sui. Firma un mensaje gratuito para verificar que es tuya.'
   card_placeholder: Tu tarjeta aparecerá aquí
   one_card: Una tarjeta por wallet verificada.
   share_x: Compartir en X

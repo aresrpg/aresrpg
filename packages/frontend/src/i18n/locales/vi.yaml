@@ -2899,8 +2899,8 @@ allocation_page:
   your_allocation: Phân bổ của bạn
   total_cap: Tối đa {{sui}} SUI qua {{count}} suất
   allocation_note: Đăng nhập và liên kết ví để xem suất.
-  google_first: Bắt đầu với Google
-  google_first_note: Đăng nhập tài khoản game trước khi thêm ví hoặc tham gia trên X.
+  login_title: 'Đăng nhập để xem phân bổ'
+  login_note: 'Dùng Google hoặc kết nối ví Sui. Ký tin nhắn miễn phí để xác minh quyền sở hữu.'
   card_placeholder: Thẻ của bạn hiện ở đây
   one_card: Một thẻ cho mỗi ví đã xác minh.
   share_x: Chia sẻ lên X
