@@ -2304,7 +2304,8 @@ kares_page:
   upgradeability_note: '報酬コントラクトはプロジェクトの最終凍結まで更新できます。新規トークン発行は引き続き無効です。'
   claim_batch: '{{total}}件中{{count}}件の報酬を受け取る'
   withdraw_batch: '1回につき最大{{count}}件を引き出せます。残りのステークは再度引き出してください。'
-  unallocated_supply: '残りの供給量'
+  token_sale: 'トークン販売'
+  locked_liquidity: 'ロックされた流動性'
   stake_more: '追加ステーク'
   additional_daily: '追加 / 日'
   max: '最大'
@@ -2345,7 +2346,7 @@ kares_page:
   inactive: '報酬準備金の入金後にステーキングが開始されます。'
   position: 'ポジション'
   tokenomics: 'KARESトークン設計'
-  community: 'コミュニティ報酬'
+  community: 'PvP大会とシーズンランキング'
   team: 'チーム配分'
   five_years: 'コミュニティのステーキング報酬'
   mastery_title: 'プレイで獲得。またはKARESをバーン。'
@@ -2356,7 +2357,7 @@ kares_page:
   buy_kares: '購入 - {{cost}} KARES'
   kares_missing: 'KARESが不足しています'
   language: '言語'
-  community_detail: 'コミュニティ準備金はイベント、エアドロップ、貢献者、シーズンランキング、PvP賞品に使われます。解除されたトークンは財務ウォレットが手動で配布します。'
+  community_detail: 'この準備金はPvP大会とシーズンランキングの賞品に充てられます。解除済みトークンは財務管理者が手動で配布します。'
   supply_detail: '一度だけ発行されます。追加発行はありません。バーンにより供給量が減少します。'
   emissions_detail: '報酬には既存のトークンを使用します。報酬支払いで新規発行は行いません。'
   confirmed_refresh: '取引が確定しました。更新して最新の残高を読み込んでください。'
@@ -2844,6 +2845,12 @@ loading_screen:
   ready: '冒険の準備ができました。'
 
 allocation_page:
+  review_saturday: '土曜日に審査'
+  pending_note: '土曜日の審査後に結果が確定します。現時点では枠は保証されません。'
+  current_rank: '現在の順位'
+  projected_tier: '現在は{{tier}}の見込み'
+  rank_warning: '暫定順位です。スナップショット前に他のプレイヤーに抜かれる可能性があります。プレイを続けましょう。'
+  share_pending: 'KARESホワイトリストの応募は土曜日の審査待ちです。あなたの応募も確認：'
   share_post: '@blastdotfun のKARES販売で{{tier}}のホワイトリスト枠を獲得しました。あなたの枠も確認：'
   menu_title: 'ホワイトリストの枠を確認'
   menu_note: 'KARES販売のベテラン・メンバー向け割当。'
@@ -2911,8 +2918,6 @@ allocation_page:
   your_allocation: あなたの割当
   total_cap: '{{count}}枠で最大{{sui}} SUI'
   allocation_note: ログインしてウォレットを連携し、枠を確認してください。
-  login_title: 'ログインして割当を確認'
-  login_note: 'GoogleまたはSuiウォレットでログイン。無料のメッセージ署名で所有権を確認します。'
   card_placeholder: ここにカードが表示されます
   one_card: 確認済みウォレットごとに1枚。
   share_x: Xで共有

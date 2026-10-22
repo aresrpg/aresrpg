@@ -17,7 +17,7 @@ import { allocation_view } from './view.ts'
 import { Wallets } from './Wallets.tsx'
 import { Entries } from './Entries.tsx'
 import { Hero } from './Hero.tsx'
-import { Blast, Results } from './Results.tsx'
+import { Results } from './Results.tsx'
 import { useCampaignClosed, useCampaignRefresh } from './clock.tsx'
 import { useWalletFeedback } from './wallet_feedback.ts'
 import { helmet } from './assets.ts'
@@ -80,7 +80,7 @@ export const AllocationPage = ({
     []
   )
   const external_state = useStore(external.store)
-  const view = allocation_view(state.status, closed ? Date.parse(campaign.submissions_close_at) : 0)
+  const view = allocation_view(state.status, closed ? Date.parse(campaign.submissions_close_at) : 0, state.session)
   const open = !closed && (state.status?.submissions_open ?? true)
   useEffect(() => runtime.observe(), [runtime])
   useEffect(() => external.start(), [external])
@@ -104,31 +104,18 @@ export const AllocationPage = ({
       </header>
       <main className="page">
         <Notices state={state} runtime={runtime} copy={copy} text={text} />
-        <Hero
-          view={view}
-          state={state}
-          runtime={runtime}
-          text={text}
-          locale={locale}
-          open={open}
-          google_label={copy.continue_google}
-          wallet_label={copy.connect_wallet}
-          wallets={external_state.wallets.map(({ name }) => name)}
-        />
-        {state.session ? (
-          <div className="steps">
-            <Wallets
-              state={state}
-              runtime={runtime}
-              external={{ state: external_state, dispatch: external.dispatch }}
-              text={text}
-            />
-            <Entries state={state} runtime={runtime} text={text} open={view.open} />
-            <Results text={text} final={view.final} open={open} locale={locale} />
-          </div>
-        ) : (
-          <Blast text={text} />
-        )}
+        <Hero view={view} state={state} runtime={runtime} text={text} locale={locale} open={open} />
+        <div className="steps">
+          <Wallets
+            state={state}
+            runtime={runtime}
+            external={{ state: external_state, dispatch: external.dispatch }}
+            google_label={copy.continue_google}
+            text={text}
+          />
+          <Entries state={state} runtime={runtime} text={text} open={open} />
+          <Results text={text} final={view.final} open={open} locale={locale} kares_copy={copy.kares_page} />
+        </div>
         <p className="fine">{text('footer')}</p>
       </main>
     </div>

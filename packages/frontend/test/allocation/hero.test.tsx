@@ -17,25 +17,16 @@ const render = (session: AuthSession | null) =>
       text={(key) => key}
       locale="en"
       open
-      google_label="Google"
-      wallet_label="Connect wallet"
-      wallets={['Slush']}
     />
   )
 
-test('logged-out visitors see login without an empty wallet card', () => {
+test('logged-out visitors see the campaign without an onboarding gate or empty card', () => {
   const html = render(null)
-  expect(html).toContain('login_title')
+  expect(html).not.toContain('login_title')
   expect(html).not.toContain('card_placeholder')
   expect(html).not.toContain('class="stage')
 })
 
 test('login alone does not show a card before an allocation is known', () => {
   expect(render({ address: '0x1' } as AuthSession)).not.toContain('class="stage')
-})
-
-test('wallet login is available before Google authentication', () => {
-  const html = render(null)
-  expect(html).toContain('Connect wallet')
-  expect(html).toContain('Google')
 })

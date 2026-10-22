@@ -1,27 +1,18 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
-import { COMBAT_DAILY_BUDGET, KARES_ALLOCATION, KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
+import { COMBAT_DAILY_BUDGET, KARES_SUPPLY } from '@aresrpg/sdk/kares-economics'
 import { Flame, Gem, Waves } from 'lucide-react'
 
 import { useNumbers } from '../i18n/useNumbers.ts'
 
 import type { KaresCopy } from './copy.ts'
+import { kares_distribution } from './distribution.ts'
 import { finance_label } from './components.tsx'
 
 export const TokenomicsTab = ({ copy }: Readonly<{ copy: KaresCopy }>) => {
   const { amount: format_amount } = useNumbers()
-  const allocations = [
-    { label: `${copy.community} (${copy.vested_five_years})`, amount: KARES_ALLOCATION.community, color: '#b395dd' },
-    { label: `${copy.five_years} (${copy.vested_five_years})`, amount: KARES_ALLOCATION.rewards, color: '#4a9eff' },
-    { label: copy.combat_rewards, amount: KARES_ALLOCATION.combat, color: '#bd795c' },
-    { label: copy.team, amount: KARES_ALLOCATION.team, color: '#899097' },
-    {
-      label: copy.unallocated_supply,
-      amount: KARES_SUPPLY - Object.values(KARES_ALLOCATION).reduce((sum, value) => sum + value, 0n),
-      color: '#60bca9',
-    },
-  ].map((row) => ({ ...row, share: Number((row.amount * 100n) / KARES_SUPPLY) }))
+  const allocations = kares_distribution(copy)
   return (
     <section className="mx-auto w-full max-w-5xl p-5 lg:p-10">
       <div className={finance_label}>{copy.tokenomics}</div>

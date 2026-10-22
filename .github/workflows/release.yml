@@ -283,6 +283,11 @@ jobs:
           sparse-checkout: |
             /*
             !seed/icons/*
+            /seed/icons/branding/
+            !seed/icons/branding/*
+            /seed/icons/branding/kares/
+            !seed/icons/branding/kares/*
+            /seed/icons/branding/kares/*.webp
             /seed/icons/currency/
             !seed/icons/currency/*
             /seed/icons/currency/kares.png

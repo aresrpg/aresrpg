@@ -4,7 +4,7 @@ import { readFile, readdir } from 'node:fs/promises'
 
 import type { Redis } from 'ioredis'
 import { parse } from 'yaml'
-import { cap_mist, sui_amount, nominal_tokens, share_version } from '@aresrpg/immutable/allocation'
+import { cap_mist, sui_amount, nominal_tokens, share_version, campaign } from '@aresrpg/immutable/allocation'
 
 import { read_campaign } from './store.ts'
 import { shared_address } from './wallets.ts'
@@ -29,6 +29,9 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
   const current = await read_campaign(redis)
   const award = current.awards.find((row) => row.address === address)
   const tier = award?.tier ?? (current.phase === 'final' ? 'no_spot' : 'pending')
+  const review: Readonly<Partial<Record<string, string>>> = {
+    pending: `${copy.review_saturday} · ${new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(campaign.submissions_close_at))}`,
+  }
   const title = `${copy[tier]} · KARES · AresRPG`
   const amount = award
     ? `≈ ${new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(nominal_tokens(award.tier))} KARES`
@@ -45,6 +48,7 @@ export const share_preview = async (request: Request, redis: Redis, origin: stri
         cap,
         before: copy.before,
         buy_up_to: copy.buy_up_to,
+        review: review[tier],
       }),
       { headers: { ...headers, 'content-type': 'image/png' } }
     )

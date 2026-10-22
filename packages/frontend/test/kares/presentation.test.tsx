@@ -52,13 +52,26 @@ test('unconfigured staking renders an honest unavailable state and independent w
   expect(html).not.toContain('Google')
 })
 
-test('tokenomics derives funded reserves and remaining supply and explains burns and variable rewards', async () => {
+test('tokenomics separates sale and locked liquidity and explains burns and variable rewards', async () => {
   const copy = (await load_app_copy('en')).kares_page
   const html = renderToStaticMarkup(<TokenomicsTab copy={copy} />)
-  for (const amount of ['1,000,000,000', '110,000,000', '200,000,000', '100,000,000', '30,000,000', '560,000,000'])
+  for (const amount of [
+    '1,000,000,000',
+    '110,000,000',
+    '200,000,000',
+    '100,000,000',
+    '30,000,000',
+    '400,000,000',
+    '160,000,000',
+  ])
     expect(html).toContain(amount)
   expect(html).toContain('11%')
   expect(html).toContain('3%')
+  expect(html).toContain('40%')
+  expect(html).toContain('16%')
+  expect(html).toContain(copy.token_sale)
+  expect(html).toContain(copy.locked_liquidity)
+  expect(html).not.toContain('560,000,000')
   expect(html).toContain(copy.mastery_note)
   expect(html).toContain(copy.revenue_note)
   expect(html).not.toContain('APR')

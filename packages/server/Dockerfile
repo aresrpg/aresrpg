@@ -49,6 +49,7 @@ COPY seed/structures seed/structures
 COPY packages/ui/src/assets/font packages/ui/src/assets/font
 COPY seed/icons/currency/kares.png seed/icons/currency/kares.png
 COPY seed/icons/journal/helmet-favicon.png seed/icons/journal/helmet-favicon.png
+COPY seed/icons/branding/kares/*.webp seed/icons/branding/kares/
 USER bun
 EXPOSE 9800
 CMD ["bun", "run", "packages/server/src/index.ts"]

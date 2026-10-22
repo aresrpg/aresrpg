@@ -34,3 +34,12 @@ test('refreshing an existing campaign projection does not show a loading indicat
   expect(html).not.toContain('class="spinner"')
   expect(html).not.toContain('class="banner"')
 })
+
+test('the real campaign and wallet linking are visible before login, with Google in the chooser', () => {
+  const html = render(initial_allocation())
+  expect(html).toContain('Link your wallets')
+  expect(html).toContain('Link a Sui wallet')
+  expect(html).toContain('Continue with Google')
+  expect(html).toContain('class="steps"')
+  expect(html).not.toContain('login-gate')
+})

@@ -10,7 +10,7 @@ import { browser_auth_storage, clear_auth_wallet, read_auth_wallet, remember_aut
 import { create_allocation_client } from './client.ts'
 
 export type AllocationTask =
-  | Readonly<{ kind: 'boot' | 'google' | 'logout' | 'load' | 'link_x' }>
+  | Readonly<{ kind: 'boot' | 'google' | 'link_google' | 'logout' | 'load' | 'link_x' }>
   | Readonly<{ kind: 'wallet'; name: string }>
   | Readonly<{ kind: 'verify'; wallet: AuthSession }>
   | Readonly<{ kind: 'remove'; address: string }>
@@ -76,6 +76,14 @@ const verify = async (request: Request, wallet: AuthSession): Promise<void> => {
   const { signature } = await wallet.sign_personal_message(new TextEncoder().encode(challenge.message))
   await request({ action: 'wallet_verify', nonce: challenge.nonce, signature })
 }
+export const link_game_wallet = async (request: Request, connect: () => Promise<AuthSession>): Promise<void> => {
+  const wallet = await connect()
+  try {
+    await verify(request, wallet)
+  } finally {
+    wallet.dispose?.()
+  }
+}
 const complete_link = async (request: Request): Promise<void> => {
   const url = new URL(location.href)
   const token = url.searchParams.get('linked')
@@ -84,8 +92,15 @@ const complete_link = async (request: Request): Promise<void> => {
   url.searchParams.delete('linked')
   history.replaceState(null, '', url)
 }
-const operate = async (request: Request, task: AllocationTask): Promise<string | null> => {
+const operate = async (
+  request: Request,
+  task: AllocationTask,
+  get_auth: () => Promise<Auth>
+): Promise<string | null> => {
   switch (task.kind) {
+    case 'link_google':
+      await link_game_wallet(request, (await get_auth()).connect_google)
+      break
     case 'verify':
       await verify(request, task.wallet)
       break
@@ -172,7 +187,7 @@ export const create_allocation_runtime = () => {
         if (client) {
           const { request } = client
           await complete_link(request)
-          share_intent_url = (await operate(request, state.task!)) ?? state.share_intent_url
+          share_intent_url = (await operate(request, state.task!, get_auth)) ?? state.share_intent_url
           const result = await request({ action: 'status' })
           if (result.action !== 'status') throw new Error('unavailable')
           ;({ status } = result)

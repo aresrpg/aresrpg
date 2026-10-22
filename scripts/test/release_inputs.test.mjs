@@ -170,6 +170,9 @@ test('allocation preview copy and artwork invalidate the server image', () => {
   for (const path of [
     'packages/frontend/src/i18n/locales/en.yaml',
     'packages/ui/src/assets/font/nunito-800.ttf',
+    'seed/icons/branding/kares/card-relief.webp',
+    'seed/icons/branding/kares/card-veteran.webp',
+    'seed/icons/branding/kares/card-member.webp',
     'seed/icons/currency/kares.png',
     'seed/icons/journal/helmet-favicon.png',
   ]) {

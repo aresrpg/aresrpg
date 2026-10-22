@@ -2298,7 +2298,8 @@ kares_page:
   upgradeability_note: 'Os contratos de recompensas poderão ser atualizados até ao congelamento definitivo do projeto. A emissão de tokens permanece desativada.'
   claim_batch: 'Resgatar {{count}} de {{total}} posições'
   withdraw_batch: 'Até {{count}} posições por saque. Repita para sacar o saldo restante.'
-  unallocated_supply: 'Oferta restante'
+  token_sale: 'Venda de tokens'
+  locked_liquidity: 'Liquidez bloqueada'
   stake_more: Adicionar ao staking
   additional_daily: Adicional / dia
   max: Máx
@@ -2339,7 +2340,7 @@ kares_page:
   inactive: 'O staking abre quando as reservas estiverem financiadas.'
   position: Posição
   tokenomics: Economia do token KARES
-  community: Recompensas da comunidade
+  community: 'Competições PvP e rankings sazonais'
   team: Alocação da equipe
   five_years: Recompensas comunitárias de staking
   mastery_title: Jogue por recompensas. Ou queime KARES.
@@ -2350,7 +2351,7 @@ kares_page:
   buy_kares: 'Comprar - {{cost}} KARES'
   kares_missing: KARES insuficientes
   language: Idioma
-  community_detail: 'A reserva comunitária financia eventos, airdrops, colaboradores, classificações sazonais e prémios PvP. A tesouraria distribui manualmente os tokens desbloqueados.'
+  community_detail: 'Esta reserva financia competições PvP e prêmios dos rankings sazonais. A tesouraria distribui manualmente os tokens liberados.'
   supply_detail: 'Emitida uma única vez. Não há nova emissão. A queima reduz a oferta.'
   emissions_detail: 'Todas as recompensas usam tokens existentes. Os pagamentos nunca criam nova oferta.'
   confirmed_refresh: Transação confirmada. Atualize para carregar seus saldos atuais.
@@ -2829,6 +2830,12 @@ loading_screen:
   ready: 'Sua aventura está pronta.'
 
 allocation_page:
+  review_saturday: 'Revisão de sábado'
+  pending_note: 'Os resultados serão confirmados após a revisão de sábado. Nenhuma vaga está garantida ainda.'
+  current_rank: 'Sua posição atual'
+  projected_tier: 'Atualmente a caminho de {{tier}}'
+  rank_warning: 'Provisório: outros jogadores podem ultrapassar você antes do registro. Continue jogando.'
+  share_pending: 'Minha inscrição na whitelist KARES aguarda a revisão de sábado. Confira a sua:'
   share_post: 'Tenho uma vaga {{tier}} na whitelist para a venda de KARES na @blastdotfun. Confira a sua:'
   menu_title: 'Confira sua vaga na whitelist'
   menu_note: 'Alocações de Veterano e Membro para a venda de KARES.'
@@ -2896,8 +2903,6 @@ allocation_page:
   your_allocation: Sua alocação
   total_cap: Até {{sui}} SUI em {{count}} spots
   allocation_note: Entre e vincule carteiras para consultar seus spots.
-  login_title: 'Entre para conferir sua alocação'
-  login_note: 'Use o Google ou conecte uma carteira Sui. Assine uma mensagem gratuita para comprovar que ela é sua.'
   card_placeholder: Sua carta aparecerá aqui
   one_card: Uma carta por carteira verificada.
   share_x: Compartilhar no X

@@ -2301,7 +2301,8 @@ kares_page:
   upgradeability_note: '보상 계약은 프로젝트의 최종 동결까지 업그레이드할 수 있습니다. 신규 토큰 발행은 계속 비활성화됩니다.'
   claim_batch: '{{total}}개 중 {{count}}개 포지션 보상 받기'
   withdraw_batch: '한 번에 최대 {{count}}개 포지션을 출금합니다. 남은 스테이크는 다시 출금하세요.'
-  unallocated_supply: '남은 공급량'
+  token_sale: '토큰 판매'
+  locked_liquidity: '잠긴 유동성'
   stake_more: 추가 스테이킹
   additional_daily: 하루 추가 보상
   max: 최대
@@ -2342,7 +2343,7 @@ kares_page:
   inactive: '보상 준비금이 입금되면 스테이킹이 시작됩니다.'
   position: 포지션
   tokenomics: KARES 토큰 경제
-  community: 커뮤니티 보상
+  community: 'PvP 대회 및 시즌 순위표'
   team: 팀 배분
   five_years: 커뮤니티 스테이킹 보상
   mastery_title: 플레이로 보상을 얻거나 KARES를 소각하세요.
@@ -2353,7 +2354,7 @@ kares_page:
   buy_kares: '구매 - {{cost}} KARES'
   kares_missing: KARES 부족
   language: 언어
-  community_detail: '커뮤니티 준비금은 이벤트, 에어드롭, 기여자, 시즌 순위 및 PvP 상금에 사용됩니다. 재무 지갑이 해제된 토큰을 수동으로 배분합니다.'
+  community_detail: '이 준비금은 PvP 대회와 시즌 순위표 보상에 사용됩니다. 재무 담당자가 해제된 토큰을 수동으로 분배합니다.'
   supply_detail: '한 번만 발행됩니다. 추가 발행은 없습니다. 소각하면 공급량이 줄어듭니다.'
   emissions_detail: '모든 보상은 기존 토큰을 사용합니다. 보상 지급으로 새 토큰을 발행하지 않습니다.'
   confirmed_refresh: 거래가 확인되었습니다. 새로고침해 갱신된 잔액을 불러오세요.
@@ -2832,6 +2833,12 @@ loading_screen:
   ready: '모험 준비가 끝났어요.'
 
 allocation_page:
+  review_saturday: '토요일 심사'
+  pending_note: '토요일 심사 후 결과가 확정됩니다. 아직 자리가 보장되지는 않습니다.'
+  current_rank: '현재 순위'
+  projected_tier: '현재 {{tier}} 예상'
+  rank_warning: '잠정 순위입니다. 스냅샷 전에 다른 플레이어에게 추월당할 수 있으니 계속 플레이하세요.'
+  share_pending: '제 KARES 화이트리스트 신청은 토요일 심사를 기다리고 있어요. 여러분의 신청도 확인하세요:'
   share_post: '@blastdotfun의 KARES 판매에서 {{tier}} 화이트리스트 자리를 받았어요. 여러분의 자리도 확인하세요:'
   menu_title: '화이트리스트 자리 확인'
   menu_note: 'KARES 판매의 베테랑 및 멤버 배정 물량.'
@@ -2899,8 +2906,6 @@ allocation_page:
   your_allocation: 내 할당량
   total_cap: '{{count}}개 슬롯에서 최대 {{sui}} SUI'
   allocation_note: 로그인하고 지갑을 연결하여 슬롯을 확인하세요.
-  login_title: '로그인하여 배정 물량 확인'
-  login_note: 'Google 또는 Sui 지갑으로 로그인하세요. 무료 메시지 서명으로 소유권을 확인합니다.'
   card_placeholder: 여기에 카드가 표시됩니다
   one_card: 확인된 지갑당 카드 1장.
   share_x: X에 공유

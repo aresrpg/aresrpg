@@ -6,6 +6,7 @@
 import type { ServerWebSocket } from 'bun'
 import { isValidSuiAddress, normalizeSuiAddress } from '@mysten/sui/utils'
 
+import { create_campaign_boards } from './allocation/leaderboards.ts'
 import { create_allocation } from './allocation/runtime.ts'
 import { create_public_market } from './public_market.ts'
 import { create_public_world } from './public_world.ts'
@@ -38,7 +39,10 @@ const public_market = create_public_market(graph, pubsub.graph)
 const pending = create_pending_admission()
 const handlers = new Map<Connection, AuthenticatedConnection>()
 const request_limiter = create_request_limiter()
-const allocation = create_allocation(ALLOCATION_OPTIONS)
+const allocation = create_allocation({
+  ...ALLOCATION_OPTIONS,
+  boards: create_campaign_boards((observation, address) => pubsub.graph.leaderboard!(observation, address)),
+})
 const allocation_http_limiter = create_request_limiter({ capacity: 600, window_ms: 60_000 })
 /** dropped-for-cheating addresses cool off before the door opens again (owner 2026-08-19) */
 const bans = create_ban_list()

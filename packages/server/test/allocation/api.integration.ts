@@ -82,6 +82,24 @@ describe('campaign integration', () => {
     expect((await allocation_status(redis, options, other)).awards).toEqual([])
     expect((await allocation_status(redis, options, other)).user).toBeNull()
   })
+  test('predictions expose only verified wallets and fail independently of confirmed reservations', async () => {
+    const boards = async () => ({ observed_at: Date.now(), boards: [{ metric: 'kills', addresses: [other, owner] }] })
+    const status = await allocation_status(redis, { ...options, boards }, owner)
+    expect(status.predictions?.map((row) => row.address)).toEqual([owner])
+    expect(JSON.stringify(status)).not.toContain(other)
+    const unavailable = await allocation_status(
+      redis,
+      {
+        ...options,
+        boards: async () => {
+          throw new Error('offline')
+        },
+      },
+      owner
+    )
+    expect(unavailable.predictions).toEqual([])
+    expect(unavailable.wallets.map((row) => row.address)).toEqual([owner])
+  })
   test('cards are returned only after a real signature verifies and replay is refused', async () => {
     const signer = new Ed25519Keypair()
     await redis.set(

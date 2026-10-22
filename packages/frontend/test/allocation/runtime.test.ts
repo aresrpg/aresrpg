@@ -109,3 +109,69 @@ test('Slush login uses the selected wallet without invoking Google', async () =>
   await expect(connect_allocation_account(auth, 'Missing')).rejects.toThrow('no_wallet_app')
   expect(connections).toBe(1)
 })
+
+test('linking a Google game wallet signs the existing account challenge and releases only the temporary signer', async () => {
+  const { link_game_wallet } = await import('../../src/allocation/runtime.ts')
+  let released = 0
+  const calls: string[] = []
+  const signer = {
+    address: 'game-wallet',
+    wallet_name: 'Google',
+    sign_personal_message: async (bytes: Uint8Array) => {
+      expect(new TextDecoder().decode(bytes)).toBe('bound-to-current-account')
+      return { signature: 'signed' }
+    },
+    dispose: () => {
+      released += 1
+    },
+  } as unknown as AuthSession
+  await link_game_wallet(
+    async (request) => {
+      calls.push(request.action)
+      if (request.action === 'wallet_challenge')
+        return { action: 'wallet_challenge', nonce: 'nonce', message: 'bound-to-current-account' }
+      expect(request).toEqual({ action: 'wallet_verify', nonce: 'nonce', signature: 'signed' })
+      return { action: 'wallet_verify' }
+    },
+    async () => signer
+  )
+  expect(calls).toEqual(['wallet_challenge', 'wallet_verify'])
+  expect(released).toBe(1)
+  await expect(
+    link_game_wallet(
+      async () => {
+        throw new Error('refused')
+      },
+      async () => signer
+    )
+  ).rejects.toThrow('refused')
+  expect(released).toBe(2)
+})
+
+test('game wallets and submitted X entries get pending cards without increasing confirmed totals', () => {
+  const portfolio = {
+    ...status,
+    awards: [],
+    wallets: [
+      { address: 'game', label: '', game_wallet: true },
+      { address: 'social', label: 'Slush' },
+      { address: 'other', label: 'Suiet' },
+    ],
+    submission: {
+      user_id: '1',
+      username: 'test',
+      address: 'social',
+      posts: ['1'],
+      submitted_at: '2026-10-22T00:00:00Z',
+    },
+  }
+  const view = allocation_view(portfolio, 0)
+  expect(view.cards.map((row) => [row.wallet.address, row.pending_source])).toEqual([
+    ['game', 'game'],
+    ['social', 'social'],
+  ])
+  expect(view.spots).toBe(0)
+  expect(view.sui).toBe(0)
+  expect(allocation_view({ ...portfolio, phase: 'final' }, 0).cards).toEqual([])
+  expect(allocation_view({ ...status, awards: [] }, 0, wallet).cards).toHaveLength(1)
+})

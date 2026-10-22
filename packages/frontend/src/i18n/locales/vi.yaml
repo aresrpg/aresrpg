@@ -2301,7 +2301,8 @@ kares_page:
   upgradeability_note: 'Hợp đồng phần thưởng vẫn có thể nâng cấp cho đến khi dự án đóng băng vĩnh viễn. Việc phát hành token mới vẫn bị vô hiệu hóa.'
   claim_batch: 'Nhận từ {{count}} trên {{total}} vị thế'
   withdraw_batch: 'Tối đa {{count}} vị thế mỗi lần rút. Lặp lại để rút số đã stake còn lại.'
-  unallocated_supply: 'Nguồn cung còn lại'
+  token_sale: 'Bán token'
+  locked_liquidity: 'Thanh khoản bị khóa'
   stake_more: Stake thêm
   additional_daily: Thêm mỗi ngày
   max: Tối đa
@@ -2342,7 +2343,7 @@ kares_page:
   inactive: 'Staking mở sau khi quỹ dự trữ được nạp đủ.'
   position: Vị thế
   tokenomics: Kinh tế token KARES
-  community: Thưởng cộng đồng
+  community: 'Thi đấu PvP và bảng xếp hạng theo mùa'
   team: Phân bổ đội ngũ
   five_years: Thưởng staking cộng đồng
   mastery_title: Chơi để nhận thưởng. Hoặc đốt KARES.
@@ -2353,7 +2354,7 @@ kares_page:
   buy_kares: 'Mua - {{cost}} KARES'
   kares_missing: Không đủ KARES
   language: Ngôn ngữ
-  community_detail: 'Quỹ cộng đồng hỗ trợ sự kiện, airdrop, người đóng góp, bảng xếp hạng mùa và giải PvP. Kho bạc phân phối thủ công các token đã mở khóa.'
+  community_detail: 'Quỹ này tài trợ các cuộc thi PvP và phần thưởng bảng xếp hạng theo mùa. Ngân quỹ phân phối thủ công số token đã được mở khóa.'
   supply_detail: 'Chỉ phát hành một lần. Không đúc thêm. Đốt token làm giảm nguồn cung.'
   emissions_detail: 'Mọi phần thưởng dùng token hiện có. Chi trả thưởng không tạo thêm nguồn cung.'
   confirmed_refresh: Đã xác nhận giao dịch. Làm mới để tải số dư mới.
@@ -2832,6 +2833,12 @@ loading_screen:
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
 
 allocation_page:
+  review_saturday: 'Xét duyệt thứ Bảy'
+  pending_note: 'Kết quả sẽ được xác nhận sau đợt xét duyệt thứ Bảy. Chưa có suất nào được bảo đảm.'
+  current_rank: 'Thứ hạng hiện tại'
+  projected_tier: 'Hiện có triển vọng đạt {{tier}}'
+  rank_warning: 'Tạm thời: người chơi khác có thể vượt bạn trước lúc chụp dữ liệu. Hãy tiếp tục chơi.'
+  share_pending: 'Đơn đăng ký whitelist KARES của tôi đang chờ xét duyệt thứ Bảy. Kiểm tra đơn của bạn:'
   share_post: 'Tôi có suất whitelist {{tier}} cho đợt bán KARES trên @blastdotfun. Kiểm tra suất của bạn:'
   menu_title: 'Kiểm tra suất whitelist của bạn'
   menu_note: 'Phân bổ hạng Kỳ cựu và Thành viên cho đợt bán KARES.'
@@ -2899,8 +2906,6 @@ allocation_page:
   your_allocation: Phân bổ của bạn
   total_cap: Tối đa {{sui}} SUI qua {{count}} suất
   allocation_note: Đăng nhập và liên kết ví để xem suất.
-  login_title: 'Đăng nhập để xem phân bổ'
-  login_note: 'Dùng Google hoặc kết nối ví Sui. Ký tin nhắn miễn phí để xác minh quyền sở hữu.'
   card_placeholder: Thẻ của bạn hiện ở đây
   one_card: Một thẻ cho mỗi ví đã xác minh.
   share_x: Chia sẻ lên X

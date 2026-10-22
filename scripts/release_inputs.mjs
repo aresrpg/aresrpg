@@ -53,6 +53,7 @@ export const RELEASE_INPUTS = Object.freeze({
     'packages/server/',
     'packages/frontend/src/i18n/locales/',
     'packages/ui/src/assets/font/',
+    'seed/icons/branding/kares/',
     'seed/icons/currency/kares.png',
     'seed/icons/journal/helmet-favicon.png',
     // The frozen workspace install reads every manifest copied by the server Dockerfile.

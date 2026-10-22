@@ -2330,7 +2330,8 @@ kares_page:
   upgradeability_note: 'Reward contracts remain upgradeable until the final project freeze. Token minting stays disabled.'
   claim_batch: 'Claim {{count}} of {{total}} positions'
   withdraw_batch: 'Up to {{count}} positions per withdrawal. Repeat to withdraw the remaining stake.'
-  unallocated_supply: 'Remaining supply'
+  token_sale: 'Token sale'
+  locked_liquidity: 'Locked liquidity'
   stake_more: 'Stake more'
   additional_daily: 'Additional / day'
   max: 'Max'
@@ -2371,7 +2372,7 @@ kares_page:
   inactive: 'Staking opens after its reserves are funded.'
   position: 'Position'
   tokenomics: 'KARES tokenomics'
-  community: 'Community rewards'
+  community: 'PvP competitions and seasonal leaderboards'
   team: 'Team allocation'
   five_years: 'Community staking rewards'
   mastery_title: 'Play for rewards. Or burn KARES.'
@@ -2382,7 +2383,7 @@ kares_page:
   buy_kares: 'Buy - {{cost}} KARES'
   kares_missing: 'Not enough KARES'
   language: 'Language'
-  community_detail: 'The community reserve supports events, airdrops, contributors, seasonal rankings and PvP prizes. The treasury distributes vested tokens manually.'
+  community_detail: 'This reserve funds PvP competitions and seasonal leaderboard prizes. The treasury distributes vested tokens manually.'
   supply_detail: 'Issued once. No new minting. Burning tokens reduces supply.'
   emissions_detail: 'All rewards use existing tokens. Reward payouts never mint new supply.'
   confirmed_refresh: 'Transaction confirmed. Refresh to load your updated balances.'
@@ -2870,6 +2871,12 @@ loading_screen:
   ready: 'Your adventure is ready.'
 
 allocation_page:
+  review_saturday: 'Saturday review'
+  pending_note: 'Results will be confirmed after Saturday’s review. No spot is guaranteed yet.'
+  current_rank: 'Your current rank'
+  projected_tier: 'Currently on track for {{tier}}'
+  rank_warning: 'Provisional: other players can overtake you before the snapshot. Keep playing.'
+  share_pending: 'My KARES whitelist entry is pending Saturday’s review. Check yours:'
   share_post: 'I have a {{tier}} whitelist spot for the KARES sale on @blastdotfun. Check yours:'
   menu_title: 'Check your whitelist spot'
   menu_note: 'Veteran and Member allocations for the KARES sale.'
@@ -2937,8 +2944,6 @@ allocation_page:
   your_allocation: Your allocation
   total_cap: Buy up to {{sui}} SUI across {{count}} spots
   allocation_note: Sign in and link your wallets to check your spots.
-  login_title: 'Sign in to check your allocation'
-  login_note: 'Use Google or connect a Sui wallet. Sign a free message to verify ownership.'
   card_placeholder: Your card shows up here
   one_card: One card per verified wallet.
   share_x: Share on X

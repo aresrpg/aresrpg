@@ -1,17 +1,29 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import type { PointerEvent } from 'react'
-import { nominal_tokens, cap_mist, sui_amount } from '@aresrpg/immutable/allocation'
+import { campaign, nominal_tokens, cap_mist, sui_amount } from '@aresrpg/immutable/allocation'
 
 import type { CopyText } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
 
-import { helmet, kares } from './assets.ts'
+import { helmet, kares, card_relief, card_veteran, card_member } from './assets.ts'
 import type { CardView } from './view.ts'
 import type { AllocationRuntime } from './runtime.ts'
 
 const describe_card = (card: CardView, text: CopyText, locale: Locale) => {
   const { award } = card
+  const review = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(
+    new Date(campaign.submissions_close_at)
+  )
+  if (!award)
+    return {
+      tier: 'pending',
+      face: 'cc-pending',
+      source: text(card.pending_source === 'social' ? 'x_entry' : 'leaderboard_title'),
+      label: text('review_saturday'),
+      value: review,
+      cap: null,
+    }
   return {
     tier: award.tier,
     face: `cc-spot ${award.tier}`,
@@ -49,11 +61,17 @@ export const TierCard = ({
 }: Readonly<{ card: CardView; text: CopyText; locale: Locale; runtime: AllocationRuntime; busy: boolean }>) => {
   const { wallet } = card
   const description = describe_card(card, text, locale)
+  const backgrounds: Readonly<Record<string, string>> = {
+    veteran: card_veteran,
+    member: card_member,
+    pending: card_relief,
+  }
   return (
     <div className="slot">
       <article
         className={`cc ${description.face}`}
         data-allocation-wallet={wallet.address}
+        style={{ backgroundImage: `url("${backgrounds[description.tier]}")` }}
         onPointerMove={tilt}
         onPointerLeave={(event) => stop_tilt(event.currentTarget)}
         key={`${wallet.address}:${description.tier}`}
@@ -66,7 +84,7 @@ export const TierCard = ({
           <span className="cc-src">{description.source}</span>
         </div>
         <div className="cc-mid">
-          <span className="cc-chip" />
+          <span className="cc-chip" aria-hidden="true" />
           <span className="cc-tier">{text(description.tier)}</span>
         </div>
         <div className="cc-number" title={wallet.address}>
@@ -87,6 +105,22 @@ export const TierCard = ({
         </div>
         <span className="cc-sheen" />
       </article>
+      {!card.award && (
+        <div className="card-outlook">
+          {card.prediction && (
+            <>
+              <p className="card-rank">
+                <span>{text('current_rank')}</span>
+                <b>#{card.prediction.rank}</b>
+              </p>
+              <p>{text(`board_${card.prediction.board}`)}</p>
+              {card.prediction.tier && <p>{text('projected_tier', { tier: text(card.prediction.tier) })}</p>}
+              <small>{text('rank_warning')}</small>
+            </>
+          )}
+          <p>{text('pending_note')}</p>
+        </div>
+      )}
       <div className="slot-actions">
         <button
           className="btn btn-small"
@@ -98,7 +132,7 @@ export const TierCard = ({
                 kind: 'share',
                 address: wallet.address,
                 locale,
-                text: text('share_post', { tier: text(card.award.tier) }),
+                text: card.award ? text('share_post', { tier: text(card.award.tier) }) : text('share_pending'),
               },
             })
           }

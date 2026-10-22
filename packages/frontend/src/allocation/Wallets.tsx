@@ -8,6 +8,7 @@ import type { CopyText } from '../i18n/copy.ts'
 import type { WalletView } from '../wallet/model.ts'
 
 import type { AllocationRuntime, AllocationState } from './runtime.ts'
+import { WalletPicker } from './WalletPicker.tsx'
 import { short_address, wallet_label } from './view.ts'
 
 export const Wallets = ({
@@ -15,24 +16,30 @@ export const Wallets = ({
   runtime,
   external,
   text,
-}: Readonly<{ state: AllocationState; runtime: AllocationRuntime; external: WalletView; text: CopyText }>) => {
+  google_label,
+}: Readonly<{
+  state: AllocationState
+  runtime: AllocationRuntime
+  external: WalletView
+  text: CopyText
+  google_label: string
+}>) => {
   const [open, set_open] = useState(false)
   const initial_selection = useRef<AuthSession | null>(null)
-  const dialog = useRef<HTMLDialogElement>(null)
   const busy = !!state.task || !!external.state.request
   const count = state.status?.wallets.length ?? 0
   const selected = external.state.session as AuthSession | null
-  useEffect(() => {
-    if (open) dialog.current?.showModal()
-    else dialog.current?.close()
-  }, [open])
   useEffect(() => {
     if (!selected || selected === initial_selection.current || state.task || !open) return
     set_open(false)
     runtime.dispatch({ type: 'request', task: { kind: 'verify', wallet: selected } })
   }, [selected, runtime, open, state.task])
   const choose = (wallet_name: string) => {
-    external.dispatch({ type: 'external_wallet/authorize', wallet_name })
+    if (state.session) external.dispatch({ type: 'external_wallet/authorize', wallet_name })
+    else {
+      set_open(false)
+      runtime.dispatch({ type: 'request', task: { kind: 'wallet', name: wallet_name } })
+    }
   }
   return (
     <section className={`step ${count ? 'is-done' : ''}`}>
@@ -69,6 +76,7 @@ export const Wallets = ({
       <div className="link-buttons">
         <button
           className="btn btn-ink"
+          aria-haspopup="dialog"
           disabled={busy || count >= MAX_ALLOCATION_WALLETS}
           onClick={() => {
             // eslint-disable-next-line functional/immutable-data -- This owned DOM ref distinguishes a new signing session from the one present when the picker opened.
@@ -81,38 +89,22 @@ export const Wallets = ({
         </button>
       </div>
       <p className="xp-fine">{text('wallet_count', { count, max: MAX_ALLOCATION_WALLETS })}</p>
-      <dialog className="wallet-picker" ref={dialog} onCancel={() => set_open(false)} onClose={() => set_open(false)}>
-        <header>
-          <h2>{text('add_wallet')}</h2>
-          <button className="btn-icon" aria-label={text('close')} onClick={() => set_open(false)}>
-            ×
-          </button>
-        </header>
-        <p>{text('signature_note')}</p>
-        <div className="choices">
-          {external.state.wallets.map(({ name }) => (
-            <button className="btn btn-ink" key={name} disabled={busy} onClick={() => choose(name)}>
-              {name}
-            </button>
-          ))}
-          {external.state.accounts.map((account) => (
-            <button
-              className="btn"
-              key={`${account.wallet_name}:${account.address}`}
-              disabled={busy}
-              onClick={() => external.dispatch({ type: 'external_wallet/select', ...account })}
-            >
-              {account.wallet_name} · {short_address(account.address)}
-            </button>
-          ))}
-          {!external.state.wallets.length && <p>{text('no_wallet_app')}</p>}
-        </div>
-        {external.state.error && (
-          <p role="alert" className="error">
-            {text('wallet_failed')}
-          </p>
-        )}
-      </dialog>
+      <WalletPicker
+        open={open}
+        close={() => set_open(false)}
+        text={text}
+        busy={busy}
+        wallets={external.state.wallets.map(({ name }) => name)}
+        accounts={external.state.accounts}
+        choose={choose}
+        select={(account) => external.dispatch({ type: 'external_wallet/select', ...account })}
+        google_label={google_label}
+        error={!!external.state.error}
+        google={() => {
+          set_open(false)
+          runtime.dispatch({ type: 'request', task: { kind: state.session ? 'link_google' : 'google' } })
+        }}
+      />
     </section>
   )
 }

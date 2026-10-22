@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { parseSerializedSignature } from '@mysten/sui/cryptography'
 import type { Redis } from 'ioredis'
 import {
   campaign,
@@ -64,7 +65,11 @@ export const verify_wallet = async (
   if (!value) throw new Error('unauthorized')
   const proof = JSON.parse(value) as { owner: string; address: string; label: string; message: string }
   if (proof.owner !== owner || !(await verify(proof.message, signature, proof.address))) throw new Error('unauthorized')
-  const wallet: AllocationWallet = { address: proof.address, label: proof.address === owner ? '' : proof.label }
+  const wallet: AllocationWallet = {
+    address: proof.address,
+    label: proof.address === owner ? '' : proof.label,
+    game_wallet: parseSerializedSignature(signature).signatureScheme === 'ZkLogin',
+  }
   if (
     !(await redis.eval(ADD_WALLET, 1, collection(owner), proof.address, JSON.stringify(wallet), MAX_ALLOCATION_WALLETS))
   )

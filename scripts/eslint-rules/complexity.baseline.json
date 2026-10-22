@@ -2189,16 +2189,9 @@
       ],
       "create_allocation_runtime > observe > run": [
         11
-      ]
-    },
-    "packages/frontend/src/allocation/AllocationPage.tsx": {
-      "AllocationPage": [
+      ],
+      "operate": [
         9
-      ]
-    },
-    "packages/frontend/src/allocation/Wallets.tsx": {
-      "Wallets": [
-        10
       ]
     },
     "packages/server/src/allocation/preview.ts": {

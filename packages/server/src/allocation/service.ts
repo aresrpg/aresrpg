@@ -13,6 +13,7 @@ import {
 
 import { verify_wallet_message } from '../auth.ts'
 
+import { predict_leaderboards, type create_campaign_boards } from './leaderboards.ts'
 import {
   verified_wallets,
   wallet_challenge,
@@ -25,7 +26,12 @@ import { key, phase, read_campaign, save_submission } from './store.ts'
 import { fetch_posts, linked_user, link_ticket, complete_x, type XOptions } from './x.ts'
 
 export type AllocationOptions = XOptions &
-  Readonly<{ redis_url?: string; verify?: typeof verify_wallet_message; cutoff_ms?: number }>
+  Readonly<{
+    redis_url?: string
+    verify?: typeof verify_wallet_message
+    cutoff_ms?: number
+    boards?: ReturnType<typeof create_campaign_boards>
+  }>
 const deadline = (options: AllocationOptions): number => options.cutoff_ms ?? Date.parse(campaign.submissions_close_at)
 export const allocation_status = async (
   redis: Redis,
@@ -37,7 +43,18 @@ export const allocation_status = async (
   const user = await linked_user(redis, owner)
   const submission = user ? await redis.hget(key('submissions'), user.id) : null
   const current = await read_campaign(redis)
+  const predictions =
+    current.phase === 'registration' && options.boards
+      ? await options
+          .boards()
+          .then((snapshot) => predict_leaderboards(current.awards, snapshot, requested))
+          .catch(() => {
+            console.warn('Allocation leaderboard prediction unavailable')
+            return []
+          })
+      : []
   return {
+    predictions,
     wallets,
     phase: current.phase,
     submissions_open: current.phase === 'registration' && Date.now() < deadline(options),

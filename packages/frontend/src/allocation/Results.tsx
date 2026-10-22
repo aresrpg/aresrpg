@@ -3,8 +3,10 @@
 import { campaign, cap_mist, nominal_tokens, sui_amount } from '@aresrpg/immutable/allocation'
 
 import type { CopyText } from '../i18n/copy.ts'
+import type { KaresCopy } from '../kares/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
 
+import { SupplyCard } from './SupplyCard.tsx'
 import { blast_helmet, blast_wordmark } from './assets.ts'
 export const Blast = ({ text }: Readonly<{ text: CopyText }>) => (
   <section className="blast">
@@ -23,7 +25,8 @@ export const Results = ({
   final,
   open,
   locale,
-}: Readonly<{ text: CopyText; final: boolean; open: boolean; locale: Locale }>) => (
+  kares_copy,
+}: Readonly<{ text: CopyText; final: boolean; open: boolean; locale: Locale; kares_copy: KaresCopy }>) => (
   <section className={`step ${final ? 'is-done' : ''}`}>
     <div className="step-head">
       <span className="step-num">{final ? '✓' : '3'}</span>
@@ -65,6 +68,7 @@ export const Results = ({
     </div>
     <p className="way-fine">{text('before')}</p>
     <Blast text={text} />
+    <SupplyCard copy={kares_copy} />
     <p className="way-fine">{text('public_note')}</p>
   </section>
 )

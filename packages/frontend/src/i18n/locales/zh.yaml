@@ -2301,7 +2301,8 @@ kares_page:
   upgradeability_note: '奖励合约在项目最终冻结前仍可升级。新增代币铸造始终禁用。'
   claim_batch: '领取 {{total}} 个仓位中的 {{count}} 个'
   withdraw_batch: '每次最多提取 {{count}} 个仓位。重复操作可提取剩余质押。'
-  unallocated_supply: '剩余供应量'
+  token_sale: '代币发售'
+  locked_liquidity: '锁定流动性'
   stake_more: 增加质押
   additional_daily: 每日新增
   max: 最大
@@ -2342,7 +2343,7 @@ kares_page:
   inactive: '奖励储备注资后开放质押。'
   position: 仓位
   tokenomics: KARES代币经济
-  community: 社区奖励
+  community: 'PvP 竞赛与赛季排行榜'
   team: 团队分配
   five_years: 社区质押奖励
   mastery_title: 通过游戏获奖，或销毁KARES。
@@ -2353,7 +2354,7 @@ kares_page:
   buy_kares: '购买 - {{cost}} KARES'
   kares_missing: KARES不足
   language: 语言
-  community_detail: '社区储备用于活动、空投、贡献者奖励、赛季排名及 PvP 奖品。国库手动分配已解锁的代币。'
+  community_detail: '该储备为 PvP 竞赛和赛季排行榜奖励提供资金。国库手动分配已解锁的代币。'
   supply_detail: '仅发行一次，不再增发。销毁代币会减少供应量。'
   emissions_detail: '所有奖励均使用已有代币。发放奖励不会增发代币。'
   confirmed_refresh: 交易已确认。请刷新以加载最新余额。
@@ -2832,6 +2833,12 @@ loading_screen:
   ready: '冒险已准备就绪。'
 
 allocation_page:
+  review_saturday: '周六审核'
+  pending_note: '结果将在周六审核后确认。目前尚未保证名额。'
+  current_rank: '你的当前排名'
+  projected_tier: '目前有望获得 {{tier}}'
+  rank_warning: '暂定：其他玩家可能在快照前超过你。继续游戏以保持排名。'
+  share_pending: '我的 KARES 白名单申请正在等待周六审核。查看你的申请：'
   share_post: '我获得了 @blastdotfun 上 KARES 发售的 {{tier}} 白名单名额。查看你的名额：'
   menu_title: '查看你的白名单名额'
   menu_note: 'KARES 发售的资深玩家与成员配额。'
@@ -2899,8 +2906,6 @@ allocation_page:
   your_allocation: 你的分配
   total_cap: '{{count}} 个名额合计最高 {{sui}} SUI'
   allocation_note: 登录并关联钱包以查看名额。
-  login_title: '登录查看你的配额'
-  login_note: '使用 Google 或连接 Sui 钱包。签署免费消息以验证钱包所有权。'
   card_placeholder: 你的卡片将在这里显示
   one_card: 每个已验证钱包一张卡片。
   share_x: 分享到 X

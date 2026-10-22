@@ -2327,7 +2327,8 @@ kares_page:
   upgradeability_note: 'Die Belohnungsverträge bleiben bis zur endgültigen Sperrung des Projekts aktualisierbar. Neue Token können weiterhin nicht geprägt werden.'
   claim_batch: '{{count}} von {{total}} Positionen beanspruchen'
   withdraw_batch: 'Bis zu {{count}} Positionen pro Auszahlung. Wiederholen, um den restlichen Einsatz abzuheben.'
-  unallocated_supply: 'Verbleibender Vorrat'
+  token_sale: 'Token-Verkauf'
+  locked_liquidity: 'Gesperrte Liquidität'
   stake_more: 'Mehr staken'
   additional_daily: 'Zusätzlich / Tag'
   max: 'Max'
@@ -2368,7 +2369,7 @@ kares_page:
   inactive: 'Staking öffnet, sobald seine Reserven finanziert sind.'
   position: 'Position'
   tokenomics: 'KARES-Tokenökonomie'
-  community: 'Gemeinschaftsbelohnungen'
+  community: 'PvP-Wettbewerbe und saisonale Ranglisten'
   team: 'Team-Zuteilung'
   five_years: 'Staking-Belohnungen der Gemeinschaft'
   mastery_title: 'Spiele für Belohnungen. Oder verbrenne KARES.'
@@ -2379,7 +2380,7 @@ kares_page:
   buy_kares: 'Kaufen - {{cost}} KARES'
   kares_missing: 'Nicht genug KARES'
   language: 'Sprache'
-  community_detail: 'Die Gemeinschaftsreserve finanziert Events, Airdrops, Mitwirkende, saisonale Ranglisten und PvP-Preise. Die Schatzkammer verteilt freigegebene Token manuell.'
+  community_detail: 'Diese Reserve finanziert PvP-Wettbewerbe und Preise für saisonale Ranglisten. Die Schatzkammer verteilt freigegebene Token manuell.'
   supply_detail: 'Einmal ausgegeben. Keine weitere Prägung. Verbrennen verringert das Angebot.'
   emissions_detail: 'Alle Belohnungen verwenden vorhandene Token. Auszahlungen prägen keine neuen Token.'
   confirmed_refresh: 'Transaktion bestätigt. Aktualisiere, um deine neuen Guthaben zu laden.'
@@ -2867,6 +2868,12 @@ loading_screen:
   ready: 'Dein Abenteuer ist bereit.'
 
 allocation_page:
+  review_saturday: 'Prüfung am Samstag'
+  pending_note: 'Die Ergebnisse werden nach der Prüfung am Samstag bestätigt. Noch ist kein Platz garantiert.'
+  current_rank: 'Dein aktueller Rang'
+  projected_tier: 'Derzeit auf Kurs für {{tier}}'
+  rank_warning: 'Vorläufig: Andere Spieler können dich vor der Momentaufnahme überholen. Spiele weiter.'
+  share_pending: 'Mein KARES-Whitelist-Eintrag wartet auf die Prüfung am Samstag. Prüfe deinen:'
   share_post: 'Ich habe einen {{tier}}-Whitelist-Platz für den KARES-Verkauf auf @blastdotfun. Prüfe deinen:'
   menu_title: 'Prüfe deinen Whitelist-Platz'
   menu_note: 'Veteranen- und Mitglieder-Zuteilungen für den KARES-Verkauf.'
@@ -2934,8 +2941,6 @@ allocation_page:
   your_allocation: Deine Zuteilung
   total_cap: Bis zu {{sui}} SUI für {{count}} Spots
   allocation_note: Melde dich an und verknüpfe Wallets, um deine Spots zu prüfen.
-  login_title: 'Melde dich an, um deine Zuteilung zu sehen'
-  login_note: 'Nutze Google oder eine Sui-Wallet. Bestätige den Besitz mit einer kostenlosen Nachrichtensignatur.'
   card_placeholder: Hier erscheint deine Karte
   one_card: Eine Karte pro verifiziertem Wallet.
   share_x: Auf X teilen

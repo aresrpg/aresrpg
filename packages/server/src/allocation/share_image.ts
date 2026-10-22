@@ -13,13 +13,26 @@ const fit = (context: SKRSContext2D, value: string, x: number, y: number, size: 
   context.fillText(value, x, y)
 }
 export const render_card = async (
-  card: Readonly<{ tier: string; title: string; amount: string; cap: string; before: string; buy_up_to: string }>
+  card: Readonly<{
+    tier: string
+    title: string
+    amount: string
+    cap: string
+    before: string
+    buy_up_to: string
+    review?: string
+  }>
 ): Promise<ArrayBuffer> => {
   if (!GlobalFonts.has('Allocation'))
     GlobalFonts.registerFromPath(path('../../../ui/src/assets/font/nunito-800.ttf'), 'Allocation')
-  const [helmet, kares] = await Promise.all([
+  const [helmet, kares, texture] = await Promise.all([
     loadImage(path('../../../../seed/icons/journal/helmet-favicon.png')),
     loadImage(path('../../../../seed/icons/currency/kares.png')),
+    loadImage(
+      path(
+        `../../../../seed/icons/branding/kares/card-${['veteran', 'member'].includes(card.tier) ? card.tier : 'relief'}.webp`
+      )
+    ),
   ])
   const canvas = createCanvas(1200, 630)
   const context = canvas.getContext('2d')
@@ -29,30 +42,19 @@ export const render_card = async (
     veteran: ['#0b4a35', '#65e5ac'],
     member: ['#133b85', '#7cb6ff'],
   }
-  const [surface, accent] = palette[card.tier] ?? ['#1f252d', '#e2c895']
+  const [surface, accent] = palette[card.tier] ?? ['#494944', '#edd7ad']
   context.fillStyle = surface
   context.beginPath()
   context.roundRect(160, 45, 880, 540, 32)
   context.fill()
   context.save()
   context.clip()
-  context.strokeStyle = '#ffffff0b'
-  context.lineWidth = 3
-  for (let x = -600; x < 1400; x += 12) {
-    context.beginPath()
-    context.moveTo(x, 45)
-    context.lineTo(x + 600, 645)
-    context.stroke()
-  }
-  context.fillStyle = accent
-  context.globalAlpha = 0.16
+  context.drawImage(texture, 160, 45, 880, 540)
+  context.strokeStyle = '#ffffff24'
+  context.lineWidth = 1
   context.beginPath()
-  context.moveTo(820, 45)
-  context.lineTo(1000, 45)
-  context.lineTo(740, 585)
-  context.lineTo(560, 585)
-  context.closePath()
-  context.fill()
+  context.roundRect(174, 59, 852, 512, 22)
+  context.stroke()
   context.restore()
   context.imageSmoothingEnabled = false
   context.drawImage(helmet, 205, 88, 42, 42)
@@ -69,9 +71,9 @@ export const render_card = async (
   context.fillStyle = '#ffffff'
   fit(context, card.title, 322, 257, 58, 670)
   context.fillStyle = accent
-  fit(context, card.amount || card.title, 208, 410, 48, 740)
+  fit(context, card.amount || card.review || card.title, 208, 410, 48, 740)
   context.fillStyle = '#ffffffb3'
-  fit(context, card.amount ? card.before : 'aresrpg.world', 208, 450, 23, 740)
+  fit(context, card.amount ? card.before : 'aresrpg.world/allocation', 208, 450, 23, 740)
   if (card.cap) {
     context.fillStyle = '#ffffff'
     fit(context, `${card.buy_up_to} ${card.cap}`, 208, 520, 28, 630)

@@ -37,7 +37,7 @@ discarded after identity verification; no X session cookie exists.
 Register `https://aresrpg.world/api/allocation?action=callback` in the X app.
 The app requests only `tweet.read users.read`; it cannot publish posts for users.
 
-An admitted wallet establishes the portfolio owner. Verified wallets remain listed; cards require an award. Additional wallets sign a
+An admitted wallet establishes the portfolio owner. Verified wallets remain listed. Confirmed awards receive tier cards; game wallets and submitted X recipients receive pending cards until review. Additional wallets sign a
 five-minute one-use challenge binding their address, campaign and the admitted owner.
 The server stores at most ten distinct verified wallets per account, including the login
 wallet. Card reads never accept caller-selected unverified addresses. Removal affects the
@@ -46,6 +46,10 @@ portfolio, not an existing X entry or an already shared public summary.
 Post submissions require the linked X author and a verified receiving wallet. The first
 entry locks that recipient. Edits replace posts and reset submission time. Redis checks
 its own clock inside the atomic write; a stale browser cannot submit past the deadline.
+
+Live leaderboard predictions reuse the final selection rules, excluding reserved wallets and cross-board duplicates.
+A shared thirty-second read rejects inconsistent or stale checkpoints and times out after two seconds.
+Only verified wallets receive ranks; predictions do not increase confirmed totals or enter public share metadata.
 
 Public HTTP supports only ticketed X linking and opaque share-token previews/images.
 There is no public address lookup. Share links expose tier, pending state and allocation,

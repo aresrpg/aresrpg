@@ -63,7 +63,8 @@ export type KaresCopy = ErrorCopy &
     withdraw_batch: string
     inactive: string
     position: string
-    unallocated_supply: string
+    token_sale: string
+    locked_liquidity: string
     tokenomics: string
     community: string
     team: string

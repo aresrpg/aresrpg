@@ -20,7 +20,14 @@ export const public_award = ({ address, tier, source, evidence }: Award): Public
   const board = LEADERBOARD_METRICS.find((metric) => metric === evidence.split(':')[0])
   return { address, tier, source, ...(source === 'leaderboard' && board ? { board } : {}) }
 }
-export type AllocationWallet = Readonly<{ address: string; label: string }>
+export type AllocationWallet = Readonly<{ address: string; label: string; game_wallet?: boolean }>
+export type LeaderboardPrediction = Readonly<{
+  address: string
+  board: string
+  rank: number
+  tier?: Tier
+  observed_at: number
+}>
 
 export type Submission = Readonly<{
   user_id: string
@@ -44,6 +51,7 @@ export type AllocationStatus = Readonly<{
   submissions_open: boolean
   wallets: readonly AllocationWallet[]
   awards: readonly PublicAward[]
+  predictions?: readonly LeaderboardPrediction[]
   user: Readonly<{ id: string; username: string }> | null
   submission: Submission | null
 }>
@@ -209,6 +217,7 @@ export const blast_csv = (awards: readonly Award[]): string => {
 /** A newly revealed tier or changed cap must not reuse a cached pending social preview. */
 export const share_version = (phase: CampaignPhase, award?: Pick<Award, 'tier'>): string =>
   [
+    'voxel-bank-v2',
     phase,
     award?.tier ?? 'pending',
     award ? cap_mist(award.tier).toString() : '0',
