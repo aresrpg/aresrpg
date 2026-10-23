@@ -22,10 +22,17 @@ const verified_name = async (client: NameClient, address: string): Promise<strin
 /** One network-bound resolver per server process. Names are disposable display enrichment. */
 export const create_suins_resolver = ({
   client,
+  fallback,
   now = Date.now,
   capacity = 2_000,
   concurrency = 8,
-}: Readonly<{ client: NameClient; now?: () => number; capacity?: number; concurrency?: number }>): ResolveName => {
+}: Readonly<{
+  client: NameClient
+  fallback?: NameClient
+  now?: () => number
+  capacity?: number
+  concurrency?: number
+}>): ResolveName => {
   const cache = new Map<string, Readonly<{ name: string | null; expires: number }>>()
   const pending = new Map<string, Promise<string | null>>()
   const waiting = new Set<() => void>()
@@ -41,7 +48,11 @@ export const create_suins_resolver = ({
     if (active >= concurrency) await new Promise<void>((resolve) => waiting.add(resolve))
     else active++
     try {
-      const verified = await verified_name(client, address)
+      const verified = await verified_name(client, address).catch(async (error: unknown) => {
+        if (!fallback) throw error
+        log.warn('Primary SuiNS provider failed; trying fallback')
+        return verified_name(fallback, address)
+      })
       remember(address, verified, verified ? 300_000 : 60_000)
       return verified
     } catch (error) {

@@ -97,3 +97,59 @@ test('temporary RPC failures have a short cache lifetime instead of triggering a
   expect(await resolve(address(0))).toBeNull()
   expect(calls).toBe(2)
 })
+
+test('SuiNS fails over once and verifies both name directions on the fallback', async () => {
+  const calls: string[] = []
+  const resolve = create_suins_resolver({
+    client: {
+      defaultNameServiceName: async () => {
+        calls.push('primary')
+        throw new Error('no available node')
+      },
+    } as never,
+    fallback: {
+      defaultNameServiceName: async () => {
+        calls.push('reverse')
+        return { data: { name: 'hero.sui' } }
+      },
+      resolveNameServiceAddress: async () => {
+        calls.push('forward')
+        return { address: address(1) }
+      },
+    } as never,
+  })
+  expect(await resolve(address(1))).toBe('hero.sui')
+  expect(await resolve(address(1))).toBe('hero.sui')
+  expect(calls).toEqual(['primary', 'reverse', 'forward'])
+})
+
+test('SuiNS does not fail over for a valid missing name', async () => {
+  let fallback_calls = 0
+  const resolve = create_suins_resolver({
+    client: {
+      defaultNameServiceName: async () => ({ data: { name: null } }),
+    } as never,
+    fallback: {
+      defaultNameServiceName: async () => {
+        fallback_calls++
+        throw new Error('unexpected fallback')
+      },
+    } as never,
+  })
+  expect(await resolve(address(1))).toBeNull()
+  expect(fallback_calls).toBe(0)
+})
+
+test('SuiNS caches failure briefly when both providers fail', async () => {
+  let calls = 0
+  const client = {
+    defaultNameServiceName: async () => {
+      calls++
+      throw new Error('offline')
+    },
+  } as never
+  const resolve = create_suins_resolver({ client, fallback: client })
+  expect(await resolve(address(1))).toBeNull()
+  expect(await resolve(address(1))).toBeNull()
+  expect(calls).toBe(2)
+})

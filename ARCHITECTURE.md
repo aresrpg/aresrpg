@@ -457,8 +457,9 @@ FightEnded produces one party event, independent of later per-character settleme
 `packages/discord` runs from its own `ghcr.io/aresrpg/discord` image and one-replica Helm release.
 It only forwards events received by its live Redis subscription. It filters gear using the exact
 unweighted mean of normalized variable rolls, strictly above 90%, excluding fixed stats. It resolves
-verified SuiNS names, shortens self-subnames to their handle, and renders double-density PNG
-attachments at Discord's full image width, without an embed frame. Cards use canonical seed artwork,
+verified SuiNS names. Failed name reads fall back once to the official network RPC, with a two-second
+deadline per provider; missing or mismatched names do not trigger fallback. It shortens self-subnames
+to their handle and renders double-density PNG attachments at Discord's full image width, without an embed frame. Cards use canonical seed artwork,
 shared UI stat identities, the SUI logo, palette and bundled Nunito fonts. Copy comes from the
 existing YAML locales.
 There is no polling, notification store, replay, delivery cursor, SQLite or persistent volume.

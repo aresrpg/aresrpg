@@ -21,6 +21,10 @@ const main = async () => {
     scope: `${config.scope}:${bot.id}`,
     resolve_name: create_suins_resolver({
       client: new SuiGrpcClient({ network: config.network, baseUrl: config.rpc_url }),
+      fallback: new SuiGrpcClient({
+        network: config.network,
+        baseUrl: `https://fullnode.${config.network}.sui.io:443`,
+      }),
     }),
     render: await create_renderer((message) => log.warn(message)),
     send: api.send,
