@@ -1,0 +1,112 @@
+/* SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available */
+/* © 2026 Sceat — All rights reserved. See LICENSE. */
+/* Stats window: Characteristics / Skills switch and the read-only Skills tab. */
+[data-sheet='skills'].aui-character-sheet {
+  grid-template-rows: 76px 37px minmax(0, 1fr) 46px;
+}
+.chr-sheet-tabs {
+  flex: none;
+  padding: 4px 6px;
+  background: #303943;
+  border-bottom: 1px solid #101f2e;
+  box-shadow: inset 0 1px #bad1e121;
+}
+.chr-sheet-tabs .aui-segments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.chr-sheet-tabs .aui-button {
+  min-height: 28px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.chr-skills {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.chr-skills-group > h4 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  padding: 4px 10px;
+  background: #252d36;
+  border-bottom: 1px solid #101f2e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.chr-skills-group > h4 > small {
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8197ae;
+}
+.chr-skill-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 0.8fr) 52px minmax(0, 1.6fr);
+  align-items: center;
+  gap: 10px;
+  padding: 5px 10px;
+  border-bottom: 1px solid #899bb014;
+}
+.chr-skill-row:nth-child(even) {
+  background: #7e9bb008;
+}
+.chr-skill-row .aui-job-emblem {
+  width: 26px;
+  height: 26px;
+}
+.chr-skill-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.chr-skill-level {
+  font-size: 15px;
+  font-weight: 800;
+  text-align: right;
+}
+.chr-skill-progress {
+  display: grid;
+  gap: 3px;
+}
+.chr-skill-progress > small {
+  font-size: 9px;
+  color: #aebed0;
+}
+.chr-skill-bar {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #0f141b;
+  border: 1px solid #425a7133;
+}
+.chr-skill-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #e9bc7c;
+}
+.chr-skills-note > span {
+  font-size: 11px;
+}
+@container aui-viewport (max-height:500px) and (min-width:501px) {
+  [data-sheet='skills'].aui-character-sheet {
+    grid-template-rows: 48px 25px minmax(0, 1fr) 34px;
+  }
+  .chr-sheet-tabs .aui-button {
+    min-height: 24px;
+    font-size: 11px;
+  }
+  .chr-skill-row {
+    padding-block: 3px;
+  }
+}

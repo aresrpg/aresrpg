@@ -32,17 +32,12 @@ import { GatheringTime } from './GatheringTime.tsx'
 import { job_from_path, job_path } from './job_navigation.ts'
 import { JobEmblem } from './JobEmblem.tsx'
 import { JobItemIcon } from './JobItemIcon.tsx'
+import { CATEGORY_LABEL_KEY, covers_label } from './job_labels.ts'
 
 import './jobs.css'
 import './jobs_adviser.css'
 import './jobs_recipe_sections.css'
 const CATEGORY_ORDER = Object.freeze(Object.keys(job_groups) as JobKind[])
-const CATEGORY_LABEL_KEY: Readonly<Record<JobKind, string>> = Object.freeze({
-  gathering: 'jobs.category.gathering',
-  weapon_craft: 'jobs.category.weapon',
-  equipment_craft: 'jobs.category.equipment',
-  consumable_craft: 'jobs.category.consumable',
-})
 const CATEGORY_GLYPH: Readonly<Record<JobKind, ReactNode>> = Object.freeze({
   gathering: <path d="M2 22 16 8M17 7l5-5M14 4l6 6M9 9l4 4" />,
   weapon_craft: <path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4" />,
@@ -63,13 +58,6 @@ const JobGlyph = ({ kind }: Readonly<{ kind: JobKind }>) => (
     {CATEGORY_GLYPH[kind]}
   </svg>
 )
-const covers_label = (copy: AppCopy, kind: JobKind): string =>
-  ({
-    gathering: copy_text(copy.characters_page)('bag_resources'),
-    weapon_craft: encyclopedia_text(copy)('group_weapons'),
-    equipment_craft: copy_text(copy.characters_page)('bag_equipment'),
-    consumable_craft: copy_text(copy.characters_page)('bag_consumables'),
-  })[kind]
 
 const JobRecipeDetails = ({
   id,

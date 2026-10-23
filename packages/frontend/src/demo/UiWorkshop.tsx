@@ -15,7 +15,12 @@ import {
   Toggle,
   GameWindow,
 } from '@aresrpg/ui'
-import { characteristic_names, characteristic_spending_quote, type CharacteristicValues } from '@aresrpg/immutable'
+import {
+  characteristic_names,
+  characteristic_spending_quote,
+  job_xp_for_level,
+  type CharacteristicValues,
+} from '@aresrpg/immutable'
 
 import { CharacterLevelUpView } from '../game/fight/CharacterLevelUpView.tsx'
 import { JobLevelUpView } from '../game/jobs/JobLevelUpView.tsx'
@@ -205,7 +210,61 @@ const CharacterExample = ({ copy, initial_tab }: Readonly<{ copy: AppCopy; initi
 }
 const Spells = ({ copy }: Readonly<{ copy: AppCopy }>) => <CharacterExample copy={copy} initial_tab="spells" />
 const Equipment = ({ copy }: Readonly<{ copy: AppCopy }>) => <CharacterExample copy={copy} initial_tab="equipment" />
-const Stats = ({ copy }: Readonly<{ copy: AppCopy }>) => <CharacterExample copy={copy} initial_tab="stats" />
+/** Three owned characters with uneven job levels, to preview the Skills tab under a craft lock. */
+const workshop_jobs = (levels: Readonly<Record<string, number>>) =>
+  Object.fromEntries(
+    Object.entries(levels).map(([job, level]) => [
+      job,
+      String(Math.round(((job_xp_for_level(level) ?? 0) * 3 + (job_xp_for_level(level + 1) ?? 0) * 2) / 5)),
+    ])
+  )
+const WORKSHOP_TEAM_JOBS = [
+  { FARMER: 55, MINER: 50, HERBALIST: 38, TAILOR: 30, JEWELER: 23, CARVER: 20, FORGER: 21, HANDYMAN: 12, TANNER: 15 },
+  { FARMER: 27, MINER: 35, HERBALIST: 12 },
+  { FARMER: 6, MINER: 23, HERBALIST: 34, HANDYMAN: 1 },
+] as const
+const Stats = ({ copy }: Readonly<{ copy: AppCopy }>) => {
+  const { character, session } = useWorkshopCharacter()
+  const [viewed, set_viewed] = useState(0)
+  const [crafter, set_crafter] = useState('')
+  const [open, set_open] = useState(true)
+  const settings = copy_text(copy.settings_page)
+  const roster = WORKSHOP_TEAM_JOBS.map((levels, index) => ({
+    ...character,
+    id: `${character.id}-${index}`,
+    name: index === 0 ? character.name : `${character.name} ${index + 1}`,
+    jobs: workshop_jobs(levels),
+  }))
+  return (
+    <>
+      <SegmentedControl
+        label={copy.characters}
+        value={String(viewed)}
+        on_change={(value) => set_viewed(Number(value))}
+        options={roster.map(({ name }, index) => ({ value: String(index), label: name }))}
+      />
+      <Select
+        label={settings('always_craft_from_label')}
+        value={crafter}
+        onChange={(event) => set_crafter(event.target.value)}
+        options={[
+          { value: '', label: settings('always_craft_from_none') },
+          ...roster.map(({ id, name }) => ({ value: id, label: name })),
+        ]}
+      />
+      <Button onClick={() => set_open(true)}>{copy_text(copy.characters_page)('tab_stats')}</Button>
+      {open && (
+        <CharacterWindow
+          tab="stats"
+          character={roster[viewed]!}
+          copy={copy}
+          session={{ ...session, roster, crafter_id: crafter || null }}
+          close={() => set_open(false)}
+        />
+      )}
+    </>
+  )
+}
 
 const Combat = ({ copy }: Readonly<{ copy: AppCopy }>) => {
   const [selected, set_selected] = useState('Pressure')

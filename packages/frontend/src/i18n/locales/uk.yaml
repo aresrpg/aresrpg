@@ -1917,6 +1917,11 @@ characters_page:
     tx_pending: 'Розподіл…'
     point_cost: '{{cost}} оч. → +{{gain}}'
     tx_success: 'Очки характеристик розподілено'
+    sheet_label: 'Аркуш персонажа'
+    skills: 'Навички'
+    crafter_self: '{{name}} — ваш персонаж для крафту: кожне виготовлення підвищує ці професії.'
+    crafter_other: 'Ви крафтите за {{crafter}}. Ремісничі професії {{name}} зростають, лише коли крафтить {{name}}.'
+    skills_no_crafter: 'Кожен персонаж підвищує власні професії збиранням і крафтом.'
   spells:
     range_modifiable: 'Змінна дальність'
     no_character: 'Персонажа не вибрано'

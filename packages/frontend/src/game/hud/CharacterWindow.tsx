@@ -29,7 +29,7 @@ const PanelBody = ({
     case 'equipment':
       return <Equipment character={character} copy={copy} session={session} />
     case 'stats':
-      return <Stats character={character} copy={copy} raise_stats={session?.raise_stats} />
+      return <Stats character={character} copy={copy} session={session} />
     case 'jobs':
       return <Jobs character={character} copy={copy} preview={!!session} />
     case 'runeforge':

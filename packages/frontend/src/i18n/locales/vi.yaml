@@ -1895,6 +1895,11 @@ characters_page:
     tx_pending: Đang phân bổ…
     point_cost: '{{cost}} điểm → +{{gain}}'
     tx_success: Đã phân điểm thuộc tính
+    sheet_label: 'Bảng nhân vật'
+    skills: 'Kỹ năng'
+    crafter_self: '{{name}} là nhân vật chế tạo của bạn: mỗi lần chế tạo đều nâng cấp các nghề này.'
+    crafter_other: 'Bạn đang chế tạo bằng {{crafter}}. Nghề chế tạo của {{name}} chỉ tăng khi {{name}} chế tạo.'
+    skills_no_crafter: 'Mỗi nhân vật tự nâng nghề của mình bằng thu thập và chế tạo.'
   spells:
     range_modifiable: Tầm có thể thay đổi
     no_character: Chưa chọn nhân vật
