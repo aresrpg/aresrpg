@@ -16,6 +16,7 @@ import { parse } from 'yaml'
 import { browser_pins_plugin } from '../../scripts/browser_pins.ts'
 
 import { LoadingPostcard, type LoadingCopy } from './src/components/LoadingPostcard.tsx'
+import { asset_inline_limit } from './asset_inline.ts'
 import { locale_manifest_plugin } from './locale_assets.ts'
 import { resolve_env, type PublicEnv } from './src/env.ts'
 import { require_reporting_dsn } from './src/reporting_config.ts'
@@ -178,8 +179,8 @@ export default defineConfig(({ mode, command }) => {
     optimizeDeps: { exclude: ['@aresrpg/engine', '@aresrpg/sdk'] },
     // Three.js is isolated in the lazy world chunk; 550 kB keeps the warning meaningful for accidental growth.
     build: {
-      // GLTFLoader fetches models; production connect-src deliberately excludes data URLs.
-      assetsInlineLimit: (path) => (path.endsWith('.glb') ? false : undefined),
+      // Fetched models and city artifacts stay files: production connect-src excludes data URLs.
+      assetsInlineLimit: asset_inline_limit,
       chunkSizeWarningLimit: 550,
       ...(mode === 'test'
         ? {
