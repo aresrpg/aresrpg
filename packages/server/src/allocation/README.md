@@ -32,7 +32,7 @@ it and binds PKCE/state to that owner and the browser's HTTP-only state cookie.
 The callback verifies both and returns a short-lived result token. Only the original
 game account can consume that token over its authenticated connection to finish linking.
 This prevents a shared linking URL from binding a visitor’s X identity to its sender. X accounts and game addresses bind uniquely
-in both directions. Relinking cannot replace an existing identity. Access tokens are
+in both directions. Before the cutoff, a successful new OAuth identity atomically replaces the old link and withdraws its old submission. Reauthorizing the same identity preserves the entry. Access tokens are
 discarded after identity verification; no X session cookie exists.
 Register `https://aresrpg.world/api/allocation?action=callback` in the X app.
 The app requests only `tweet.read users.read`; it cannot publish posts for users.
@@ -44,7 +44,7 @@ wallet. Card reads never accept caller-selected unverified addresses. Removal af
 portfolio, not an existing X entry or an already shared public summary.
 
 Post submissions require the linked X author and a verified receiving wallet. The first
-entry locks that recipient. Edits replace posts and reset submission time. Redis checks
+entry locks that recipient. Edits replace the current 1–3 posts and reset submission time. A second author-binding check at the atomic write rejects in-flight posts from an account that was replaced. Redis checks
 its own clock inside the atomic write; a stale browser cannot submit past the deadline.
 
 Live leaderboard predictions reuse the final selection rules, excluding reserved wallets and cross-board duplicates.

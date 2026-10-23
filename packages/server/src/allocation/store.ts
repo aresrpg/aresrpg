@@ -41,6 +41,8 @@ if redis.call('GET', KEYS[1]) ~= 'registration' then return 'closed' end
 local clock = redis.call('TIME')
 local now = tonumber(clock[1]) * 1000 + math.floor(tonumber(clock[2]) / 1000)
 if now >= tonumber(ARGV[4]) then return 'closed' end
+local linked = redis.call('HGET', KEYS[4], ARGV[5])
+if not linked or cjson.decode(linked).id ~= ARGV[2] then return 'x_changed' end
 local owner = redis.call('HGET', KEYS[2], ARGV[1])
 if owner and owner ~= ARGV[2] then return 'wallet_taken' end
 local old = redis.call('HGET', KEYS[3], ARGV[2])
@@ -51,19 +53,22 @@ return 'ok'
 `
 export const save_submission = async (
   redis: Redis,
+  account: string,
   submission: Submission,
   cutoff_ms = Date.parse(campaign.submissions_close_at)
 ): Promise<void> => {
   const result = await redis.eval(
     SAVE_SUBMISSION,
-    3,
+    4,
     key('phase'),
     key('wallets'),
     key('submissions'),
+    key('linked_x'),
     submission.address,
     submission.user_id,
     JSON.stringify(submission),
-    cutoff_ms
+    cutoff_ms,
+    account
   )
   if (result !== 'ok') throw new Error(String(result))
 }

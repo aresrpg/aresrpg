@@ -2871,6 +2871,21 @@ loading_screen:
   ready: 'Your adventure is ready.'
 
 allocation_page:
+  error_connection_timeout: 'The server did not respond in time. Reconnect to try again.'
+  error_connection_failed: 'The server connection was lost. Reconnect to try again.'
+  error_connection_replaced: 'This wallet connected in another tab. Reconnect here when you are ready.'
+  error_restore_timeout: 'Wallet restoration took too long. Connect your wallet again.'
+  error_x_changed: 'Your X account changed while submitting. Reload your entry and submit posts from the new account.'
+  open_x: 'Open X'
+  replace_x_note: 'Switch to your other account on X, then continue. After a successful change, your old submission is removed. Submit posts from the new account.'
+  replace_x: 'Change X account'
+  edit_note: 'You can edit and resubmit your 1–3 posts until entries close.'
+  edit_posts: 'Edit or add posts'
+  checking_posts: 'Checking your X posts'
+  connecting: 'Connecting and verifying wallet'
+  restoring: 'Restoring wallet'
+  reconnect: 'Reconnect'
+  error_title: 'Could not complete this action'
   pending_note: 'Results will be confirmed after entries close and review finishes. No spot is guaranteed yet.'
   current_rank: 'Your current rank'
   projected_tier: 'Currently on track for {{tier}}'
@@ -2994,6 +3009,6 @@ allocation_page:
   error_unauthorized: Connect and verify the receiving wallet first.
   error_invalid_post: Use 1–3 different X post links.
   error_rate_limited: Too many requests. Try again shortly.
-  error_foreign_post: Use 1–3 different X post links.
-  error_missing_post: Use 1–3 different X post links.
+  error_foreign_post: 'These posts must be authored by your connected X account. Change the account or the links.'
+  error_missing_post: 'One or more posts could not be found. Check that they are public and the links are correct.'
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.

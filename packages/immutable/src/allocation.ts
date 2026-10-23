@@ -72,9 +72,14 @@ export const sui_amount = (mist: bigint): string =>
 
 export const post_id = (value: string): string => {
   const url = new URL(value)
-  if (url.protocol !== 'https:' || !['x.com', 'twitter.com', 'www.x.com', 'www.twitter.com'].includes(url.hostname))
+  if (
+    url.protocol !== 'https:' ||
+    !['x.com', 'twitter.com', 'www.x.com', 'www.twitter.com', 'mobile.twitter.com'].includes(url.hostname)
+  )
     throw new Error('invalid_post')
-  const match = /^\/[A-Za-z0-9_]+\/status\/(\d{1,25})\/?$/.exec(url.pathname)
+  const match = /^\/(?:[A-Za-z0-9_]+\/status|i\/web\/status)\/(\d{1,25})(?:\/(?:photo|video)\/[1-4])?\/?$/.exec(
+    url.pathname
+  )
   if (!match || url.username || url.password || url.port) throw new Error('invalid_post')
   return match[1]
 }

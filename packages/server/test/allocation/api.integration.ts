@@ -13,7 +13,7 @@ import { serve_allocation } from '../../src/allocation/api.ts'
 import { allocation_request, allocation_status } from '../../src/allocation/service.ts'
 import { link_x, linked_user, complete_x } from '../../src/allocation/x.ts'
 import { wallet_challenge, verify_wallet, verified_wallets, share_wallet } from '../../src/allocation/wallets.ts'
-import { connect_redis, key } from '../../src/allocation/store.ts'
+import { connect_redis, key, save_submission } from '../../src/allocation/store.ts'
 
 describe('campaign integration', () => {
   let directory: string
@@ -189,6 +189,41 @@ describe('campaign integration', () => {
     const state = new URL(response.headers.get('location')!).searchParams.get('state')!
     const callback = await call(`action=callback&state=${state}&code=bad`)
     expect(callback.headers.get('location')).toContain('error=unauthorized')
+  })
+  test('X replacement retires the old entry and rejects a submission verified against the old account', async () => {
+    await verified_wallets(redis, owner)
+    await link_x(redis, owner, { id: '42', username: 'old_account' })
+    const submission = {
+      user_id: '42',
+      username: 'old_account',
+      address: owner,
+      posts: ['1'],
+      submitted_at: new Date().toISOString(),
+    }
+    await save_submission(redis, owner, submission)
+    await link_x(redis, owner, { id: '43', username: 'new_account' })
+    expect((await linked_user(redis, owner))?.id).toBe('43')
+    expect(await redis.hget(key('submissions'), '42')).toBeNull()
+    expect(await redis.hget(key('wallets'), owner)).toBeNull()
+    await expect(save_submission(redis, owner, submission)).rejects.toThrow('x_changed')
+    expect(await redis.hget(key('submissions'), '42')).toBeNull()
+  })
+  test('resubmission replaces the current posts and survives reconnecting the same X account', async () => {
+    await verified_wallets(redis, owner)
+    await link_x(redis, owner, { id: '42', username: 'tester' })
+    const first = {
+      user_id: '42',
+      username: 'tester',
+      address: owner,
+      posts: ['1'],
+      submitted_at: new Date().toISOString(),
+    }
+    await save_submission(redis, owner, first)
+    await save_submission(redis, owner, { ...first, posts: ['1', '2'] })
+    await link_x(redis, owner, { id: '42', username: 'tester' })
+    expect((await allocation_status(redis, options, owner)).submission?.posts).toEqual(['1', '2'])
+    await expect(link_x(redis, owner, { id: '43', username: 'replacement' }, 0)).rejects.toThrow('closed')
+    expect((await linked_user(redis, owner))?.id).toBe('42')
   })
   test('submissions enforce verified recipient, X author, recipient lock and the atomic deadline', async () => {
     await verified_wallets(redis, owner)

@@ -2833,6 +2833,21 @@ loading_screen:
   ready: 'Cuộc phiêu lưu đã sẵn sàng.'
 
 allocation_page:
+  error_connection_timeout: 'Máy chủ không phản hồi kịp. Hãy kết nối lại.'
+  error_connection_failed: 'Mất kết nối máy chủ. Hãy kết nối lại.'
+  error_connection_replaced: 'Ví này đã kết nối ở tab khác. Kết nối lại ở đây khi bạn sẵn sàng.'
+  error_restore_timeout: 'Khôi phục ví quá lâu. Hãy kết nối ví lại.'
+  error_x_changed: 'Tài khoản X đã đổi trong lúc gửi. Tải lại đăng ký và gửi bài từ tài khoản mới.'
+  open_x: 'Mở X'
+  replace_x_note: 'Chuyển sang tài khoản khác trên X rồi tiếp tục. Sau khi đổi thành công, đăng ký cũ sẽ bị xóa. Gửi bài đăng từ tài khoản mới.'
+  replace_x: 'Đổi tài khoản X'
+  edit_note: 'Bạn có thể sửa và gửi lại 1–3 bài đăng cho đến khi đóng đăng ký.'
+  edit_posts: 'Sửa hoặc thêm bài đăng'
+  checking_posts: 'Đang kiểm tra bài đăng X'
+  connecting: 'Đang kết nối và xác minh ví'
+  restoring: 'Đang khôi phục ví'
+  reconnect: 'Kết nối lại'
+  error_title: 'Không thể hoàn tất thao tác'
   pending_note: 'Kết quả sẽ được xác nhận sau khi đóng đăng ký và hoàn tất xét duyệt. Chưa có suất nào được bảo đảm.'
   current_rank: 'Thứ hạng hiện tại'
   projected_tier: 'Hiện có triển vọng đạt {{tier}}'
@@ -2956,6 +2971,6 @@ allocation_page:
   error_unauthorized: Hãy kết nối và xác minh ví nhận trước.
   error_invalid_post: Dùng 1–3 liên kết bài đăng X khác nhau.
   error_rate_limited: Quá nhiều yêu cầu. Hãy thử lại sau ít phút.
-  error_foreign_post: Dùng 1–3 liên kết bài đăng X khác nhau.
-  error_missing_post: Dùng 1–3 liên kết bài đăng X khác nhau.
+  error_foreign_post: 'Bài đăng phải do tài khoản X đang kết nối viết. Hãy đổi tài khoản hoặc liên kết.'
+  error_missing_post: 'Không tìm thấy một số bài đăng. Kiểm tra liên kết và đảm bảo bài đăng công khai.'
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.

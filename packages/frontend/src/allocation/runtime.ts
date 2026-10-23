@@ -7,23 +7,32 @@ import type { AllocationStatus } from '@aresrpg/immutable/allocation'
 import type { Auth, AuthSession } from '../auth.ts'
 import { browser_auth_storage, clear_auth_wallet, read_auth_wallet, remember_auth_wallet } from '../auth_storage.ts'
 
+import { restore_allocation_wallet } from './restoration.ts'
 import { create_allocation_client } from './client.ts'
 
 export type AllocationTask =
-  | Readonly<{ kind: 'boot' | 'google' | 'link_google' | 'logout' | 'load' | 'link_x' }>
+  | Readonly<{ kind: 'boot' | 'google' | 'link_google' | 'logout' | 'load' | 'reconnect' | 'link_x' }>
   | Readonly<{ kind: 'wallet'; name: string }>
   | Readonly<{ kind: 'verify'; wallet: AuthSession }>
   | Readonly<{ kind: 'remove'; address: string }>
   | Readonly<{ kind: 'share'; address: string; locale: string; text: string }>
   | Readonly<{ kind: 'submit'; address: string; urls: readonly string[] }>
+export type AllocationProgress = 'restoring' | 'connecting' | 'loading'
+const INITIAL_PROGRESS: Readonly<Record<string, AllocationProgress>> = {
+  boot: 'restoring',
+  google: 'connecting',
+  wallet: 'connecting',
+}
 type Result = Readonly<{
   session: AuthSession | null
   status: AllocationStatus | null
   error: string | null
   share_intent_url: string | null
 }>
-export type AllocationState = Result & Readonly<{ task: AllocationTask | null; sequence: number }>
+export type AllocationState = Result &
+  Readonly<{ task: AllocationTask | null; sequence: number; progress: AllocationProgress | null }>
 type Input =
+  | Readonly<{ type: 'progress'; sequence: number; progress: AllocationProgress }>
   | Readonly<{ type: 'request'; task: AllocationTask }>
   | Readonly<{ type: 'result'; sequence: number; result: Result }>
   | Readonly<{ type: 'invalidated'; wallet: AuthSession }>
@@ -32,11 +41,14 @@ export const initial_allocation = (): AllocationState => ({
   status: null,
   task: null,
   sequence: 0,
+  progress: null,
   error: null,
   share_intent_url: null,
 })
 export const reduce_allocation = (state: AllocationState, input: Input): AllocationState => {
   switch (input.type) {
+    case 'progress':
+      return state.sequence === input.sequence && state.task ? { ...state, progress: input.progress } : state
     case 'request': {
       if (state.task) return state
       const cleared = input.task.kind === 'logout' ? { status: null } : {}
@@ -45,6 +57,7 @@ export const reduce_allocation = (state: AllocationState, input: Input): Allocat
         ...cleared,
         share_intent_url: null,
         task: input.task,
+        progress: INITIAL_PROGRESS[input.task.kind] ?? 'loading',
         sequence: state.sequence + 1,
         error: null,
       }
@@ -52,7 +65,7 @@ export const reduce_allocation = (state: AllocationState, input: Input): Allocat
     case 'invalidated':
       return state.session !== input.wallet ? state : { ...initial_allocation(), sequence: state.sequence + 1 }
     case 'result':
-      return state.sequence !== input.sequence ? state : { ...state, ...input.result, task: null }
+      return state.sequence !== input.sequence ? state : { ...state, ...input.result, task: null, progress: null }
   }
 }
 export const share_intent = (url: string, locale: string, text: string): string => {
@@ -84,13 +97,22 @@ export const link_game_wallet = async (request: Request, connect: () => Promise<
     wallet.dispose?.()
   }
 }
+const consume_callback_error = (): string | null => {
+  const url = new URL(location.href)
+  const error = url.searchParams.get('error')
+  if (error) {
+    url.searchParams.delete('error')
+    history.replaceState(null, '', url)
+  }
+  return error
+}
 const complete_link = async (request: Request): Promise<void> => {
   const url = new URL(location.href)
   const token = url.searchParams.get('linked')
   if (!token) return
-  await request({ action: 'complete_x', token })
   url.searchParams.delete('linked')
   history.replaceState(null, '', url)
+  await request({ action: 'complete_x', token })
 }
 const operate = async (
   request: Request,
@@ -143,7 +165,11 @@ export const create_allocation_runtime = () => {
       client?.dispose()
       client_wallet?.dispose?.()
       client_wallet = wallet
-      client = wallet ? create_allocation_client(wallet) : null
+      client = wallet
+        ? create_allocation_client(wallet, undefined, (progress) =>
+            dispatch({ type: 'progress', sequence: store.getState().sequence, progress })
+          )
+        : null
       stop_wallet = wallet?.on_invalidated?.(() => dispatch({ type: 'invalidated', wallet })) ?? (() => {})
     }
     const get_auth = async (): Promise<Auth> => {
@@ -157,7 +183,7 @@ export const create_allocation_runtime = () => {
       switch (task.kind) {
         case 'boot': {
           const name = read_auth_wallet(storage)
-          return name ? (await get_auth()).restore(name) : null
+          return name ? restore_allocation_wallet(async () => (await get_auth()).restore(name)) : null
         }
         case 'google':
         case 'wallet': {
@@ -165,6 +191,9 @@ export const create_allocation_runtime = () => {
           remember_auth_wallet(storage, session.wallet_name)
           return session
         }
+        case 'reconnect':
+          client?.reconnect()
+          return wallet
         case 'logout':
           await wallet?.disconnect()
           clear_auth_wallet(storage)
@@ -196,7 +225,7 @@ export const create_allocation_runtime = () => {
           dispatch({
             type: 'result',
             sequence: state.sequence,
-            result: { session, status, share_intent_url, error: new URLSearchParams(location.search).get('error') },
+            result: { session, status, share_intent_url, error: consume_callback_error() },
           })
       } catch (error) {
         console.warn('Allocation operation could not be confirmed')

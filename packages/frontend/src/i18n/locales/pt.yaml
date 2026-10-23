@@ -2830,6 +2830,21 @@ loading_screen:
   ready: 'Sua aventura está pronta.'
 
 allocation_page:
+  error_connection_timeout: 'O servidor não respondeu a tempo. Reconecte.'
+  error_connection_failed: 'A conexão com o servidor foi perdida. Reconecte.'
+  error_connection_replaced: 'Esta carteira foi conectada em outra aba. Reconecte aqui quando estiver pronto.'
+  error_restore_timeout: 'A restauração demorou demais. Conecte sua carteira novamente.'
+  error_x_changed: 'Sua conta do X mudou durante o envio. Recarregue e envie publicações da nova conta.'
+  open_x: 'Abrir X'
+  replace_x_note: 'Entre na outra conta no X e continue. Após a troca bem-sucedida, sua inscrição anterior será removida. Envie publicações da nova conta.'
+  replace_x: 'Trocar conta do X'
+  edit_note: 'Você pode editar e reenviar suas 1–3 publicações até o encerramento.'
+  edit_posts: 'Editar ou adicionar publicações'
+  checking_posts: 'Verificando publicações no X'
+  connecting: 'Conectando e verificando carteira'
+  restoring: 'Restaurando carteira'
+  reconnect: 'Reconectar'
+  error_title: 'Não foi possível concluir a ação'
   pending_note: 'Os resultados serão confirmados após o encerramento das inscrições e a revisão. Nenhuma vaga está garantida ainda.'
   current_rank: 'Sua posição atual'
   projected_tier: 'Atualmente a caminho de {{tier}}'
@@ -2953,6 +2968,6 @@ allocation_page:
   error_unauthorized: Conecte e verifique primeiro a carteira destinatária.
   error_invalid_post: Use 1–3 links diferentes de publicações do X.
   error_rate_limited: Muitas solicitações. Tente novamente em instantes.
-  error_foreign_post: Use 1–3 links diferentes de publicações do X.
-  error_missing_post: Use 1–3 links diferentes de publicações do X.
+  error_foreign_post: 'As publicações devem ser da conta do X conectada. Troque a conta ou os links.'
+  error_missing_post: 'Algumas publicações não foram encontradas. Confira os links e se elas são públicas.'
   error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.

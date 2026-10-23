@@ -6,7 +6,6 @@ import { campaign } from '@aresrpg/immutable/allocation'
 
 import type { AppCopy, CopyText } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
-import { error_text } from '../i18n/error_text.ts'
 import { copy_text } from '../i18n/copy.ts'
 import { create_wallet_runtime } from '../wallet/runtime.ts'
 import type { AuthSession } from '../auth.ts'
@@ -20,38 +19,23 @@ import { Hero } from './Hero.tsx'
 import { Results } from './Results.tsx'
 import { useCampaignClosed, useCampaignRefresh } from './clock.tsx'
 import { useWalletFeedback } from './wallet_feedback.ts'
+import { Notices } from './Notices.tsx'
 import { helmet } from './assets.ts'
 import './allocation.css'
 import './layout.css'
 
-const Notices = ({
-  state,
-  runtime,
-  copy,
-  text,
-}: Readonly<{ state: AllocationState; runtime: AllocationRuntime; copy: AppCopy; text: CopyText }>) => (
-  <>
-    {state.error && (
-      <div className="banner bad" role="alert">
-        <span>{copy.allocation_page[`error_${state.error}`] ?? error_text(copy.kares_page, state.error)}</span>
-        <button
-          className="btn"
-          disabled={!!state.task}
-          onClick={() => runtime.dispatch({ type: 'request', task: { kind: 'load' } })}
-        >
-          {text('refresh')}
-        </button>
-      </div>
-    )}
-  </>
-)
 const CampaignStatus = ({
   state,
   phase,
   text,
 }: Readonly<{ state: AllocationState; phase: string; text: CopyText }>) => {
   const pending = state.task && !(state.task.kind === 'load' && state.status)
-  const label = pending ? text(state.task?.kind === 'verify' ? 'signing' : 'loading') : text(phase)
+  const labels: Readonly<Record<string, string>> = {
+    verify: 'signing',
+    link_google: 'signing',
+    submit: 'checking_posts',
+  }
+  const label = pending ? text(labels[state.task!.kind] ?? state.progress ?? 'loading') : text(phase)
   return (
     <span className="phase-chip" role="status">
       {pending && <span className="spinner" aria-hidden="true" />}
@@ -69,7 +53,7 @@ export const AllocationPage = ({
   const feedback = useWalletFeedback(state)
   const text = copy_text(copy.allocation_page)
   const closed = useCampaignClosed()
-  useCampaignRefresh(runtime, !!state.session)
+  useCampaignRefresh(runtime, !!state.session && !state.error)
   const external = useMemo(
     () =>
       create_wallet_runtime<AuthSession>({

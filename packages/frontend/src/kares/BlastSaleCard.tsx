@@ -17,14 +17,30 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
   const phase = blast_phase(state)
   const text = copy.kares_page
   const { sui, number } = useNumbers()
+  const destination =
+    phase === 'soon'
+      ? {
+          href: '/allocation',
+          title: copy.allocation_page.menu_title,
+          note: copy.allocation_page.menu_note,
+          action: copy.allocation_page.menu_action,
+          target: undefined,
+        }
+      : {
+          href: state.url,
+          title: text[`blast_${phase}`],
+          note: text.blast_note,
+          action: text.blast_action,
+          target: '_blank',
+        }
   const { snapshot } = state
   const show_progress = snapshot && ['live', 'closing', 'funded', 'complete'].includes(phase)
   return (
     <a
       className="blast-sale-card"
       data-blast-phase={phase}
-      href={phase === 'soon' ? '/allocation' : state.url}
-      target="_blank"
+      href={destination.href}
+      target={destination.target}
       rel="noopener noreferrer"
     >
       <img className="blast-sale-pilot" src={pilot} alt="" />
@@ -32,10 +48,8 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
         <img src={helmet} alt="" /> KARES <span>×</span>
         <img className="blast-sale-wordmark" src={wordmark} alt="Blast" />
       </span>
-      <strong className="blast-sale-title">
-        {phase === 'soon' ? copy.allocation_page.campaign : text[`blast_${phase}`]}
-      </strong>
-      <span className="blast-sale-note">{text.blast_note}</span>
+      <strong className="blast-sale-title">{destination.title}</strong>
+      <span className="blast-sale-note">{destination.note}</span>
       {show_progress && (
         <span className="blast-sale-funding">
           <span className="blast-sale-amount">
@@ -57,7 +71,7 @@ export const BlastSaleCardView = ({ copy, state }: Readonly<{ copy: AppCopy; sta
         </span>
       )}
       <span className="blast-sale-action">
-        {phase === 'soon' ? copy.allocation_page.check : text.blast_action}
+        {destination.action}
         <ArrowUpRight size={14} aria-hidden="true" />
       </span>
     </a>

@@ -84,7 +84,7 @@ const submit = async (
     posts,
     submitted_at: new Date().toISOString(),
   }
-  await save_submission(redis, submission, deadline(options))
+  await save_submission(redis, owner, submission, deadline(options))
   return { action: 'submit', submission }
 }
 
@@ -114,7 +114,7 @@ export const allocation_request = async (
     case 'link_x':
       return { action: 'link_x', url: await link_ticket(redis, owner, options.origin) }
     case 'complete_x':
-      await complete_x(redis, owner, request.token)
+      await complete_x(redis, owner, request.token, deadline(options))
       return { action: 'complete_x' }
     case 'submit':
       return submit(redis, owner, request, options)
@@ -131,6 +131,7 @@ const PUBLIC_ERRORS = new Set([
   'wallet_locked',
   'missing_post',
   'foreign_post',
+  'x_changed',
   'rate_limited',
   'x_unavailable',
 ])

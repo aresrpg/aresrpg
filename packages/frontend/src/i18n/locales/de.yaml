@@ -2868,6 +2868,21 @@ loading_screen:
   ready: 'Dein Abenteuer ist bereit.'
 
 allocation_page:
+  error_connection_timeout: 'Der Server hat nicht rechtzeitig geantwortet. Verbinde dich erneut.'
+  error_connection_failed: 'Die Serververbindung wurde unterbrochen. Verbinde dich erneut.'
+  error_connection_replaced: 'Diese Wallet wurde in einem anderen Tab verbunden. Verbinde sie hier erneut, wenn du bereit bist.'
+  error_restore_timeout: 'Die Wallet-Wiederherstellung dauerte zu lange. Verbinde deine Wallet erneut.'
+  error_x_changed: 'Dein X-Konto hat sich beim Senden geändert. Lade neu und sende Beiträge des neuen Kontos.'
+  open_x: 'X öffnen'
+  replace_x_note: 'Wechsle auf X zu deinem anderen Konto und fahre fort. Nach erfolgreichem Wechsel wird deine alte Einreichung entfernt. Sende Beiträge des neuen Kontos.'
+  replace_x: 'X-Konto wechseln'
+  edit_note: 'Du kannst deine 1–3 Beiträge bis zum Teilnahmeschluss bearbeiten und erneut senden.'
+  edit_posts: 'Beiträge bearbeiten oder hinzufügen'
+  checking_posts: 'X-Beiträge prüfen'
+  connecting: 'Wallet verbinden und prüfen'
+  restoring: 'Wallet wiederherstellen'
+  reconnect: 'Neu verbinden'
+  error_title: 'Aktion nicht abgeschlossen'
   pending_note: 'Die Ergebnisse werden nach Anmeldeschluss und abgeschlossener Prüfung bestätigt. Noch ist kein Platz garantiert.'
   current_rank: 'Dein aktueller Rang'
   projected_tier: 'Derzeit auf Kurs für {{tier}}'
@@ -2991,6 +3006,6 @@ allocation_page:
   error_unauthorized: Verbinde und verifiziere zuerst das Empfänger-Wallet.
   error_invalid_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
   error_rate_limited: Zu viele Anfragen. Versuche es gleich erneut.
-  error_foreign_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
-  error_missing_post: Verwende 1–3 unterschiedliche X-Beitragslinks.
+  error_foreign_post: 'Die Beiträge müssen vom verbundenen X-Konto stammen. Ändere das Konto oder die Links.'
+  error_missing_post: 'Einige Beiträge wurden nicht gefunden. Prüfe die Links und ob sie öffentlich sind.'
   error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.

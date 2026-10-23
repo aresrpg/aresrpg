@@ -2833,6 +2833,21 @@ loading_screen:
   ready: '冒险已准备就绪。'
 
 allocation_page:
+  error_connection_timeout: '服务器响应超时。请重新连接。'
+  error_connection_failed: '与服务器的连接已断开。请重新连接。'
+  error_connection_replaced: '该钱包已在其他标签页连接。准备好后可在此重新连接。'
+  error_restore_timeout: '钱包恢复超时。请重新连接钱包。'
+  error_x_changed: '提交时 X 账户发生变化。请刷新申请并提交新账户的帖子。'
+  open_x: '打开 X'
+  replace_x_note: '先在 X 切换到另一个账户，再继续。成功更换后，旧申请将被移除。请提交新账户的帖子。'
+  replace_x: '更换 X 账户'
+  edit_note: '截止前可随时编辑并重新提交你的 1–3 篇帖子。'
+  edit_posts: '编辑或添加帖子'
+  checking_posts: '正在检查 X 帖子'
+  connecting: '正在连接并验证钱包'
+  restoring: '正在恢复钱包'
+  reconnect: '重新连接'
+  error_title: '无法完成操作'
   pending_note: '结果将在报名截止并完成审核后确认。目前尚未保证名额。'
   current_rank: '你的当前排名'
   projected_tier: '目前有望获得 {{tier}}'
@@ -2956,6 +2971,6 @@ allocation_page:
   error_unauthorized: 请先连接并验证接收钱包。
   error_invalid_post: 请使用 1–3 个不同的 X 帖子链接。
   error_rate_limited: 请求过多，请稍后重试。
-  error_foreign_post: 请使用 1–3 个不同的 X 帖子链接。
-  error_missing_post: 请使用 1–3 个不同的 X 帖子链接。
+  error_foreign_post: '帖子必须由已连接的 X 账户发布。请更换账户或链接。'
+  error_missing_post: '找不到部分帖子。请检查链接，并确认帖子为公开状态。'
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。

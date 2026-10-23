@@ -1386,7 +1386,9 @@ ranks. Predictions never enter confirmed totals or public share metadata.
 X is a uniquely linked identity, not another application login. An authenticated one-use ticket
 starts browser-bound PKCE. The callback returns a short-lived result that only the original game
 account can confirm. Post submissions use that admitted connection, prove X authorship and require
-a verified receiving wallet. The first submission locks its recipient. Redis time enforces the
+a verified receiving wallet. The first submission locks its recipient. Before the cutoff, users may edit their current posts or
+replace X through a fresh OAuth proof. Replacement atomically removes the old entry and recipient lock;
+the submission write rechecks the linked author to reject in-flight old-account results. Redis time enforces the
 cutoff atomically. Manual tools freeze admissions, capture consistent leaderboards and metrics,
 then produce reproducible results and the Blast CSV. Unfilled leaderboard slots retain their tier
 when passed to social selection. Reserved records precede leaderboard and social selection.

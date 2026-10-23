@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { campaign } from '@aresrpg/immutable/allocation'
 import { LEADERBOARD_METRICS } from '@aresrpg/protocol'
 
@@ -124,29 +124,70 @@ const XHeader = ({
   edit: () => void
 }>) => {
   const { user } = state.status!
+  const [replacing, set_replacing] = useState(false)
+  const dialog = useRef<HTMLDialogElement>(null)
+  const title = useId()
+  useEffect(() => {
+    if (replacing) dialog.current?.showModal()
+    else dialog.current?.close()
+  }, [replacing])
   const busy = !!state.task
   return (
-    <header className="xp-head">
-      <span className="xp-logo">𝕏</span>
-      <div>
-        <h3>{text('x_entry')}</h3>
-        <p>{user ? `@${user.username}` : text(open ? 'x_connect_note' : 'closed')}</p>
-      </div>
-      {!user && open && (
-        <button
-          className="btn btn-ink"
-          disabled={busy}
-          onClick={() => runtime.dispatch({ type: 'request', task: { kind: 'link_x' } })}
-        >
-          {text('connect_x')}
-        </button>
-      )}
-      {saved && open && (
-        <button className="btn" disabled={busy} onClick={edit}>
-          {text('edit')}
-        </button>
-      )}
-    </header>
+    <>
+      <header className="xp-head">
+        <span className="xp-logo">𝕏</span>
+        <div>
+          <h3>{text('x_entry')}</h3>
+          <p>{user ? `@${user.username}` : text(open ? 'x_connect_note' : 'closed')}</p>
+        </div>
+        {open && (
+          <button
+            className="btn btn-ink"
+            disabled={busy}
+            onClick={() =>
+              user ? set_replacing(true) : runtime.dispatch({ type: 'request', task: { kind: 'link_x' } })
+            }
+          >
+            {text(user ? 'replace_x' : 'connect_x')}
+          </button>
+        )}
+        {saved && open && (
+          <button className="btn" disabled={busy} onClick={edit}>
+            {text('edit_posts')}
+          </button>
+        )}
+      </header>
+      <dialog
+        className="wallet-picker allocation-error-dialog"
+        ref={dialog}
+        aria-labelledby={title}
+        onCancel={() => set_replacing(false)}
+        onClose={() => set_replacing(false)}
+      >
+        <header>
+          <h2 id={title}>{text('replace_x')}</h2>
+        </header>
+        <p>{text('replace_x_note')}</p>
+        <a className="btn" href="https://x.com" target="_blank" rel="noopener noreferrer">
+          {text('open_x')} ↗
+        </a>
+        <footer>
+          <button className="btn" onClick={() => set_replacing(false)}>
+            {text('cancel')}
+          </button>
+          <button
+            className="btn btn-ink"
+            disabled={busy}
+            onClick={() => {
+              set_replacing(false)
+              runtime.dispatch({ type: 'request', task: { kind: 'link_x' } })
+            }}
+          >
+            {text('connect_x')}
+          </button>
+        </footer>
+      </dialog>
+    </>
   )
 }
 
@@ -167,6 +208,7 @@ const XEntry = ({
       {user && !saved && open && (
         <EntryForm state={state} runtime={runtime} text={text} cancel={() => set_editing(false)} />
       )}
+      <p className="xp-fine">{text('edit_note')}</p>
       <p className="xp-fine">{text('entry_note')}</p>
     </section>
   )

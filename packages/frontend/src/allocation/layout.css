@@ -1023,3 +1023,35 @@ fieldset[disabled] {
     grid-template-columns: 1fr;
   }
 }
+
+.allocation-error-dialog {
+  text-align: left;
+}
+.allocation-error-dialog::backdrop {
+  background: #30283c80;
+  backdrop-filter: blur(4px);
+}
+.allocation-error-dialog header {
+  color: var(--bad);
+}
+.allocation-error-dialog h2 {
+  flex: 1;
+  margin: 0;
+  font:
+    800 20px 'Ares UI',
+    sans-serif;
+}
+.allocation-error-dialog p {
+  margin: 0 0 20px;
+  font: 13px/1.7 var(--mono);
+}
+.allocation-error-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+.xp-head {
+  flex-wrap: wrap;
+}

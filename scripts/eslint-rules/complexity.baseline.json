@@ -542,6 +542,9 @@
     "packages/frontend/src/allocation/runtime.ts": {
       "create_allocation_runtime > observe > run": [
         11
+      ],
+      "reduce_allocation": [
+        12
       ]
     }
   },
@@ -2184,6 +2187,9 @@
       ]
     },
     "packages/frontend/src/allocation/runtime.ts": {
+      "create_allocation_runtime > observe > authenticate": [
+        10
+      ],
       "create_allocation_runtime > observe > bind": [
         9
       ],
@@ -2192,6 +2198,9 @@
       ],
       "operate": [
         9
+      ],
+      "reduce_allocation": [
+        12
       ]
     },
     "packages/server/src/allocation/preview.ts": {
@@ -2202,6 +2211,16 @@
     "packages/server/src/allocation/service.ts": {
       "allocation_request": [
         9
+      ]
+    },
+    "packages/frontend/src/allocation/AllocationPage.tsx": {
+      "AllocationPage": [
+        9
+      ]
+    },
+    "packages/frontend/src/allocation/client.ts": {
+      "create_allocation_client > start > dispatch": [
+        10
       ]
     }
   }

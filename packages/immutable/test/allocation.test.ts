@@ -125,3 +125,12 @@ describe('allocation conservation and ranking', () => {
     )
   })
 })
+
+test('accepts standard X mobile, web and media links without changing duplicate detection', () => {
+  expect(
+    submitted_posts(['https://x.com/i/web/status/123?x=1', 'https://mobile.twitter.com/user/status/456/photo/1'])
+  ).toEqual(['123', '456'])
+  expect(() => submitted_posts(['https://x.com/user/status/123', 'https://x.com/i/web/status/123'])).toThrow(
+    'invalid_post'
+  )
+})

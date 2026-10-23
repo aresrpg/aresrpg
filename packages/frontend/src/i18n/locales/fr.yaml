@@ -2873,6 +2873,21 @@ loading_screen:
   ready: 'Votre aventure est prête.'
 
 allocation_page:
+  error_connection_timeout: 'Le serveur n’a pas répondu à temps. Reconnectez-vous.'
+  error_connection_failed: 'La connexion au serveur a été perdue. Reconnectez-vous.'
+  error_connection_replaced: 'Ce portefeuille est connecté dans un autre onglet. Reconnectez-vous ici lorsque vous êtes prêt.'
+  error_restore_timeout: 'La restauration du portefeuille a pris trop de temps. Reconnectez-le.'
+  error_x_changed: 'Votre compte X a changé pendant l’envoi. Rechargez et envoyez des publications du nouveau compte.'
+  open_x: 'Ouvrir X'
+  replace_x_note: 'Passez à votre autre compte sur X, puis continuez. Après un changement réussi, votre ancienne candidature est supprimée. Envoyez des publications du nouveau compte.'
+  replace_x: 'Changer de compte X'
+  edit_note: 'Vous pouvez modifier et renvoyer vos 1 à 3 publications jusqu’à la clôture.'
+  edit_posts: 'Modifier ou ajouter des publications'
+  checking_posts: 'Vérification des publications X'
+  connecting: 'Connexion et vérification du portefeuille'
+  restoring: 'Restauration du portefeuille'
+  reconnect: 'Reconnecter'
+  error_title: 'Action impossible'
   pending_note: 'Les résultats seront confirmés après la clôture des inscriptions et la fin de l’examen. Aucune place n’est encore garantie.'
   current_rank: 'Votre rang actuel'
   projected_tier: 'En voie d’obtenir le rang {{tier}}'
@@ -2996,6 +3011,6 @@ allocation_page:
   error_unauthorized: Connectez et vérifiez d’abord le portefeuille destinataire.
   error_invalid_post: Utilisez 1 à 3 liens de publications X distincts.
   error_rate_limited: Trop de requêtes. Réessayez dans un instant.
-  error_foreign_post: Utilisez 1 à 3 liens de publications X distincts.
-  error_missing_post: Utilisez 1 à 3 liens de publications X distincts.
+  error_foreign_post: 'Ces publications doivent appartenir au compte X connecté. Changez de compte ou de liens.'
+  error_missing_post: 'Une ou plusieurs publications sont introuvables. Vérifiez leur visibilité publique et les liens.'
   error_x_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.

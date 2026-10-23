@@ -196,3 +196,14 @@ test('staking always shows both panels and keeps external signing separate', asy
   expect(occurrences(duplicate, 'data-staking-account=')).toBe(2)
   expect(duplicate).toContain(copy.kares_page.same_account)
 })
+
+test('the pre-sale chat card advertises allocations and navigates without opening a competing game session', async () => {
+  const { BlastSaleCardView } = await import('../../src/kares/BlastSaleCard.tsx')
+  const { initial_blast_state } = await import('../../src/kares/blast.ts')
+  const copy = await load_app_copy('en')
+  const html = renderToStaticMarkup(<BlastSaleCardView copy={copy} state={{ ...initial_blast_state(), ready: true }} />)
+  expect(html).toContain('href="/allocation"')
+  expect(html).toContain(copy.allocation_page.menu_title)
+  expect(html).toContain(copy.allocation_page.menu_action)
+  expect(html).not.toContain('target="_blank"')
+})

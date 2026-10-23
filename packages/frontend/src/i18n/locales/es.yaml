@@ -2867,6 +2867,21 @@ loading_screen:
   ready: 'Tu aventura está lista.'
 
 allocation_page:
+  error_connection_timeout: 'El servidor no respondió a tiempo. Reconecta.'
+  error_connection_failed: 'Se perdió la conexión con el servidor. Reconecta.'
+  error_connection_replaced: 'Esta cartera se conectó en otra pestaña. Reconecta aquí cuando quieras continuar.'
+  error_restore_timeout: 'La restauración tardó demasiado. Conecta tu cartera de nuevo.'
+  error_x_changed: 'Tu cuenta de X cambió durante el envío. Recarga y envía publicaciones de la nueva cuenta.'
+  open_x: 'Abrir X'
+  replace_x_note: 'Cambia a tu otra cuenta en X y continúa. Tras un cambio correcto, se elimina tu solicitud anterior. Envía publicaciones de la nueva cuenta.'
+  replace_x: 'Cambiar cuenta de X'
+  edit_note: 'Puedes editar y reenviar tus 1–3 publicaciones hasta el cierre.'
+  edit_posts: 'Editar o añadir publicaciones'
+  checking_posts: 'Comprobando publicaciones de X'
+  connecting: 'Conectando y verificando cartera'
+  restoring: 'Restaurando cartera'
+  reconnect: 'Reconectar'
+  error_title: 'No se pudo completar la acción'
   pending_note: 'Los resultados se confirmarán tras el cierre de las inscripciones y la revisión. Aún no hay ninguna plaza garantizada.'
   current_rank: 'Tu puesto actual'
   projected_tier: 'Por ahora, en camino a {{tier}}'
@@ -2990,6 +3005,6 @@ allocation_page:
   error_unauthorized: Conecta y verifica primero la wallet receptora.
   error_invalid_post: Usa 1–3 enlaces distintos de publicaciones de X.
   error_rate_limited: Demasiadas solicitudes. Inténtalo en un momento.
-  error_foreign_post: Usa 1–3 enlaces distintos de publicaciones de X.
-  error_missing_post: Usa 1–3 enlaces distintos de publicaciones de X.
+  error_foreign_post: 'Las publicaciones deben pertenecer a tu cuenta de X conectada. Cambia la cuenta o los enlaces.'
+  error_missing_post: 'No se encontraron algunas publicaciones. Comprueba los enlaces y que sean públicas.'
   error_x_unavailable: No se pudo completar la solicitud. Comprueba tu conexión e inténtalo de nuevo. X o la campaña pueden no estar disponibles.

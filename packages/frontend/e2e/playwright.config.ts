@@ -9,9 +9,11 @@ const mobile_viewport = process.env.PERF_VIEWPORT === 'mobile'
 // New browser scenarios are manual diagnostics unless they protect a critical interaction here.
 const CRITICAL_TESTS = [
   'auth_callback',
+  'allocation_entries',
   'add_funds',
   'box_batch',
   'character_delete',
+  'city_artifacts',
   'character_progression',
   'fight_placement_race',
   'fight_touch',

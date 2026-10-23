@@ -59,8 +59,38 @@ test('disconnect rejects pending private operations without replaying writes', a
     (error: unknown) => error
   )
   connection.receive({ type: 'link/failed', error: 'lost' })
-  expect(await refused).toEqual(new Error('unavailable'))
+  expect(await refused).toEqual(new Error('connection_failed'))
   connection.receive({ type: 'server/packet', packet: { type: 'packet/connection_accepted', address: '0x1' } })
+  expect(connection.sent).toHaveLength(1)
+  connection.client.dispose()
+})
+
+test('a connection replaced by another tab fails immediately instead of waiting on a dead socket', async () => {
+  const connection = setup()
+  connection.receive({ type: 'link/replaced' })
+  const result = connection.client.request({ action: 'status' }).catch((error: Error) => error.message)
+  expect(await Promise.race([result, new Promise((resolve) => setTimeout(() => resolve('still waiting'), 25))])).toBe(
+    'connection_replaced'
+  )
+  connection.client.dispose()
+})
+
+test('only an explicit reconnect starts a fresh admission; failed writes are never replayed', async () => {
+  const connection = setup()
+  connection.receive({ type: 'link/replaced' })
+  connection.client.reconnect()
+  connection.receive({ type: 'link/connecting' })
+  const pending = connection.client.request({ action: 'status' })
+  expect(connection.sent).toHaveLength(0)
+  connection.receive({ type: 'server/packet', packet: { type: 'packet/connection_accepted', address: '0x1' } })
+  await Promise.resolve()
+  const [request] = connection.sent
+  if (request.type !== 'packet/allocation_request') throw new Error('missing request')
+  connection.receive({
+    type: 'server/packet',
+    packet: { type: 'packet/allocation_response', id: request.id, result: { action: 'error', error: 'closed' } },
+  })
+  await expect(pending).rejects.toThrow('closed')
   expect(connection.sent).toHaveLength(1)
   connection.client.dispose()
 })

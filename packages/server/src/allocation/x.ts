@@ -3,6 +3,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 
 import type { Redis } from 'ioredis'
+import { campaign } from '@aresrpg/immutable/allocation'
 
 import { key } from './store.ts'
 
@@ -90,16 +91,47 @@ export const finish_x = async (request: Request, redis: Redis, options: XOptions
 }
 
 const LINK_X = `
+if redis.call('GET', KEYS[3]) ~= 'registration' then return 'closed' end
+local clock = redis.call('TIME')
+if tonumber(clock[1])*1000 + math.floor(tonumber(clock[2])/1000) >= tonumber(ARGV[4]) then return 'closed' end
 local owner = redis.call('HGET', KEYS[1], ARGV[1])
 if owner and owner ~= ARGV[2] then return 'wallet_taken' end
 local linked = redis.call('HGET', KEYS[2], ARGV[2])
-if linked and cjson.decode(linked).id ~= ARGV[1] then return 'wallet_locked' end
+if linked then
+  local old = cjson.decode(linked).id
+  if old ~= ARGV[1] then
+    local entry = redis.call('HGET', KEYS[4], old)
+    if entry then
+      local address = cjson.decode(entry).address
+      if redis.call('HGET', KEYS[5], address) == old then redis.call('HDEL', KEYS[5], address) end
+      redis.call('HDEL', KEYS[4], old)
+    end
+    redis.call('HDEL', KEYS[1], old)
+  end
+end
 redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
 redis.call('HSET', KEYS[2], ARGV[2], ARGV[3])
 return 'ok'
 `
-export const link_x = async (redis: Redis, owner: string, user: XUser): Promise<void> => {
-  const result = await redis.eval(LINK_X, 2, key('x_owners'), key('linked_x'), user.id, owner, JSON.stringify(user))
+export const link_x = async (
+  redis: Redis,
+  owner: string,
+  user: XUser,
+  cutoff_ms = Date.parse(campaign.submissions_close_at)
+): Promise<void> => {
+  const result = await redis.eval(
+    LINK_X,
+    5,
+    key('x_owners'),
+    key('linked_x'),
+    key('phase'),
+    key('submissions'),
+    key('wallets'),
+    user.id,
+    owner,
+    JSON.stringify(user),
+    cutoff_ms
+  )
   if (result !== 'ok') throw new Error(String(result))
 }
 export const linked_user = async (redis: Redis, owner: string): Promise<XUser | null> => {
@@ -133,11 +165,16 @@ export const fetch_posts = async (
 }
 
 /** An X callback alone cannot link accounts: the original game identity must confirm it. */
-export const complete_x = async (redis: Redis, owner: string, token: string): Promise<void> => {
+export const complete_x = async (
+  redis: Redis,
+  owner: string,
+  token: string,
+  cutoff_ms = Date.parse(campaign.submissions_close_at)
+): Promise<void> => {
   if (!/^[a-f0-9]{64}$/.test(token)) throw new Error('unauthorized')
   const value = await redis.getdel(key(`link_result:${token}`))
   if (!value) throw new Error('unauthorized')
   const result = JSON.parse(value) as { owner: string; user: XUser }
   if (result.owner !== owner) throw new Error('unauthorized')
-  await link_x(redis, owner, result.user)
+  await link_x(redis, owner, result.user, cutoff_ms)
 }

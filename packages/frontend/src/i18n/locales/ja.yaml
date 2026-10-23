@@ -2845,6 +2845,21 @@ loading_screen:
   ready: '冒険の準備ができました。'
 
 allocation_page:
+  error_connection_timeout: 'サーバーの応答がタイムアウトしました。再接続してください。'
+  error_connection_failed: 'サーバー接続が切れました。再接続してください。'
+  error_connection_replaced: 'このウォレットは別のタブで接続されました。準備ができたらここで再接続してください。'
+  error_restore_timeout: 'ウォレットの復元がタイムアウトしました。再接続してください。'
+  error_x_changed: '送信中にXアカウントが変更されました。再読み込みして新しいアカウントの投稿を送信してください。'
+  open_x: 'Xを開く'
+  replace_x_note: 'Xで別のアカウントに切り替えてから続けてください。変更が成功すると以前の応募は削除されます。新しいアカウントの投稿を送信してください。'
+  replace_x: 'Xアカウントを変更'
+  edit_note: '締切まで1〜3件の投稿を編集して再送信できます。'
+  edit_posts: '投稿を編集・追加'
+  checking_posts: 'Xの投稿を確認中'
+  connecting: 'ウォレットの接続と確認中'
+  restoring: 'ウォレットを復元中'
+  reconnect: '再接続'
+  error_title: '操作を完了できませんでした'
   pending_note: '応募締切と審査の完了後に結果が確定します。現時点では枠は保証されません。'
   current_rank: '現在の順位'
   projected_tier: '現在は{{tier}}の見込み'
@@ -2968,6 +2983,6 @@ allocation_page:
   error_unauthorized: 先に受取ウォレットを接続して確認してください。
   error_invalid_post: 異なるX投稿のリンクを1～3件入力してください。
   error_rate_limited: リクエストが多すぎます。少し待って再試行してください。
-  error_foreign_post: 異なるX投稿のリンクを1～3件入力してください。
-  error_missing_post: 異なるX投稿のリンクを1～3件入力してください。
+  error_foreign_post: '接続中のXアカウントが投稿したリンクを使用してください。アカウントかリンクを変更してください。'
+  error_missing_post: '一部の投稿が見つかりません。リンクと公開設定を確認してください。'
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
