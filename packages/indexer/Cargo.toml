@@ -59,4 +59,4 @@ url = "2"
 move-binary-format = { git = "https://github.com/MystenLabs/sui.git", rev = "bf4073918ed33cfa0b09c500658fa116a774bcfd" }
 
 # Exercise captured checkpoint bytes through the framework's actual store decoder.
-object_store = "0.13.2"
+object_store = "0.14.2"
