@@ -134,7 +134,35 @@
     padding: 10px;
   }
   .tourney-pedestal.is-place-1 {
-    min-height: 140px;
+    min-height: 260px;
+  }
+  .tourney-pedestal.is-place-2 {
+    min-height: 235px;
+  }
+  .tourney-pedestal.is-place-3 {
+    min-height: 210px;
+  }
+  .tourney-rank {
+    gap: 8px;
+  }
+  .tourney-rank-emblem {
+    width: 36px;
+    height: 44px;
+  }
+  .tourney-rank strong {
+    font-size: 32px;
+  }
+  .tourney-pedestal.is-place-1 .tourney-rank strong {
+    font-size: 40px;
+  }
+  .tourney-practice-button.aui-button {
+    min-height: 44px;
+  }
+  .tourney-practice-window {
+    padding: 0;
+  }
+  .tourney-practice-heading {
+    padding: 10px 12px;
   }
   .tourney-reward.aui-button,
   .tourney-personal-seat .aui-button {
@@ -147,6 +175,9 @@
   .tourney-contribution {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+  .tourney-contribution-fields {
+    grid-template-columns: 120px minmax(0, 1fr) max-content;
   }
   .tourney-contribution-fields :is(select, input, .aui-button) {
     min-height: 44px;
@@ -208,7 +239,7 @@
   .tourney-pool-summary .tourney-coin:first-child {
     font-size: 13px;
   }
-  .tourney-dock-actions > .aui-button:not(.aui-button--primary) {
+  .tourney-dock-actions > .aui-button:not(.aui-button--primary, .tourney-practice-button) {
     display: none;
   }
   .tourney-character {
@@ -267,5 +298,24 @@
 @media (max-width: 1023px), (pointer: coarse) {
   .tourney-dialog :is(input:not([type='checkbox']), select) {
     min-height: 44px;
+  }
+}
+
+@media (max-width: 600px) {
+  .tourney-contribution {
+    padding: 14px;
+  }
+  .tourney-contribution-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .tourney-contribution-fields > .aui-button {
+    grid-column: 1 / -1;
+  }
+  .tourney-tier-coins,
+  .tourney-pedestal.is-place-1 .tourney-tier-coins {
+    font-size: 12px;
+  }
+  .tourney-rank-emblem {
+    display: none;
   }
 }

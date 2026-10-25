@@ -8,6 +8,8 @@ import type { TournamentRow } from '@aresrpg/protocol'
 import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
+import { SuiLogo } from '../components/SuiLogo.tsx'
+import { KaresLogo } from '../components/KaresLogo.tsx'
 import type { CopyText } from '../i18n/copy.ts'
 import {
   tournament_review_available,
@@ -62,10 +64,14 @@ export const TournamentCoin = ({
 }: Readonly<{ amount: bigint; asset: 'SUI' | 'KARES'; reveal?: boolean }>) => {
   const numbers = useNumbers()
   const id = useId()
+  const Logo = asset === 'SUI' ? SuiLogo : KaresLogo
   const exact = `${numbers.sui(amount, 9)} ${asset}`
   const amount_label = (
     <span className="tourney-coin" title={exact}>
-      {numbers.sui(amount, 2)} <small>{asset}</small>
+      {reveal && <Logo size={17} />}
+      <span>
+        {numbers.sui(amount, 2)} <small>{asset}</small>
+      </span>
     </span>
   )
   if (!reveal) return amount_label

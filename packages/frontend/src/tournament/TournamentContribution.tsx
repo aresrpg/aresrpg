@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { Gift, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@aresrpg/ui'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
 
+import { SuiLogo } from '../components/SuiLogo.tsx'
+import { KaresLogo } from '../components/KaresLogo.tsx'
 import { env } from '../env.ts'
 import { useNumbers } from '../i18n/useNumbers.ts'
 import type { CopyText } from '../i18n/copy.ts'
@@ -82,34 +85,48 @@ export const TournamentContribution = ({
   const value = parse_kolizeum_pledge(amount)
   const token_available = Boolean(resolve_pins(env.network).kares_coin_type)
   const enabled = view.can_register
+  const Logo = asset === 'sui' ? SuiLogo : KaresLogo
   return (
     <section className="tourney-contribution">
-      <div>
-        <h3>{t('donate')}</h3>
-        <p>{t('donation_notice')}</p>
+      <div className="tourney-contribution-intro">
+        <span className="tourney-contribution-icon">
+          <Gift size={22} aria-hidden="true" />
+        </span>
+        <div>
+          <h3>{t('contribution_title')}</h3>
+          <p>{t('contribution_description')}</p>
+        </div>
       </div>
       <div className="tourney-contribution-fields">
         <label className="aui-field">
           {t('asset')}
-          <select value={asset} onChange={(e) => set_asset(e.target.value === 'sui' ? 'sui' : 'kares')}>
-            <option value="sui">SUI</option>
-            <option value="kares" disabled={!token_available}>
-              KARES
-            </option>
-          </select>
+          <span className="tourney-currency-field">
+            <Logo size={18} />
+            <select value={asset} onChange={(e) => set_asset(e.target.value === 'sui' ? 'sui' : 'kares')}>
+              <option value="sui">SUI</option>
+              <option value="kares" disabled={!token_available}>
+                KARES
+              </option>
+            </select>
+          </span>
         </label>
         <label className="aui-field">
           {t('amount')}
-          <input inputMode="decimal" value={amount} onChange={(e) => set_amount(e.target.value)} />
+          <span className="tourney-amount-field">
+            <input inputMode="decimal" placeholder="0.00" value={amount} onChange={(e) => set_amount(e.target.value)} />
+            <span aria-hidden="true">{asset.toUpperCase()}</span>
+          </span>
         </label>
         <Button
           tone="primary"
           disabled={!enabled || value === null || value <= 0n || (asset === 'kares' && !token_available)}
           onClick={() => value !== null && set_review({ asset, amount: value, submitted: false })}
         >
+          <Plus size={15} aria-hidden="true" />
           {t('donate')}
         </Button>
       </div>
+      <p className="tourney-contribution-notice">{t('donation_notice')}</p>
       {!token_available && <p className="tourney-note">{t('token_unavailable')}</p>}
       {review && (
         <ContributionReview

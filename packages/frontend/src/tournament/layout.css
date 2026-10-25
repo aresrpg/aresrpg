@@ -171,6 +171,9 @@
   color: var(--aui-muted);
 }
 .tourney-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   white-space: nowrap;
 }
 .tourney-coin small {
@@ -496,4 +499,42 @@
 }
 .tourney-dock-state > time {
   flex-shrink: 0;
+}
+
+.tourney-practice-button.aui-button {
+  min-height: 34px;
+  padding: 5px 10px;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--aui-blue);
+  background: color-mix(in srgb, var(--aui-blue) 6%, transparent);
+  border-color: color-mix(in srgb, var(--aui-blue) 28%, transparent);
+  box-shadow: none;
+  white-space: nowrap;
+}
+.tourney-practice-button.aui-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--aui-blue) 12%, transparent);
+}
+.tourney-practice-window {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  container-type: size;
+}
+.tourney-practice-heading {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #ffffff12;
+}
+.tourney-practice-heading .tourney-note {
+  margin-top: 6px;
+}
+.tourney-practice-exit.aui-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 50;
 }

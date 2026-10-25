@@ -13,49 +13,131 @@
   margin: 14px 0;
 }
 .tourney-pedestal {
-  padding: 14px;
-  min-height: 145px;
-  border: 1px solid #ffffff12;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #ffffff04, transparent);
+  --podium-accent: var(--aui-muted);
+  padding: 18px;
+  min-height: 230px;
+  border: 1px solid color-mix(in srgb, var(--podium-accent) 28%, transparent);
+  border-top: 3px solid var(--podium-accent);
+  border-radius: 5px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--podium-accent) 9%, var(--aui-surface)),
+    var(--aui-surface) 65%
+  );
 }
-.tourney-pedestal > small {
+.tourney-rank {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  color: var(--podium-accent);
+}
+.tourney-rank-emblem {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 60px;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--podium-accent) 45%, transparent);
+  border-radius: 5px 5px 18px 18px;
+  background: color-mix(in srgb, var(--podium-accent) 10%, transparent);
+}
+.tourney-rank-emblem svg {
+  width: 27px;
+  height: 27px;
+}
+.tourney-rank > div {
+  display: flex;
+  flex-direction: column;
+}
+.tourney-rank small {
+  color: var(--podium-accent);
   font:
-    10px/1.5 'Tournament Mono',
+    600 9px/1.5 'Tournament Mono',
     monospace;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+.tourney-rank strong {
+  font:
+    800 40px/1 'Tournament Mono',
+    monospace;
+}
 .tourney-pedestal h3 {
-  margin: 5px 0;
+  margin: 0 0 14px;
   overflow-wrap: anywhere;
 }
+.tourney-pedestal h3[data-awarded='false'] {
+  color: var(--aui-muted);
+  font-weight: 500;
+  font-size: 13px;
+}
 .tourney-pedestal.is-place-1 {
-  min-height: 175px;
-  border-color: color-mix(in srgb, var(--aui-orange) 40%, transparent);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--aui-orange) 7%, transparent), transparent);
+  --podium-accent: #e5bb68;
+  min-height: 350px;
+  box-shadow: 0 0 28px #e5bb6809;
 }
-.tourney-pedestal.is-place-1 > small {
-  color: var(--aui-orange);
+.tourney-pedestal.is-place-1 .tourney-rank strong {
+  font-size: 52px;
 }
-.tourney-pedestal.is-place-4 {
-  min-height: 100px;
+.tourney-pedestal.is-place-2 {
+  --podium-accent: #b7c9df;
+  min-height: 300px;
+}
+.tourney-pedestal.is-place-3 {
+  --podium-accent: #cc9877;
+}
+.tourney-pedestal:is(.is-place-4, .is-place-5) {
+  min-height: 0;
+  border-top-width: 1px;
+}
+.tourney-pedestal:is(.is-place-4, .is-place-5) .tourney-rank {
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.tourney-pedestal:is(.is-place-4, .is-place-5) .tourney-rank-emblem {
+  width: 32px;
+  height: 38px;
+}
+.tourney-pedestal:is(.is-place-4, .is-place-5) .tourney-rank-emblem svg {
+  width: 18px;
+  height: 18px;
+}
+.tourney-pedestal:is(.is-place-4, .is-place-5) .tourney-rank strong {
+  font-size: 24px;
 }
 .tourney-pedestal.is-place-5 {
   grid-column: 2 / 4;
-  min-height: 100px;
 }
 .tourney-tier-coins {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  font-size: 13px;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.tourney-pedestal.is-place-1 .tourney-tier-coins {
+  font-size: 18px;
+  font-weight: 800;
+}
+.tourney-tier-coins > small {
+  margin-top: 2px;
+  font-weight: 400;
+  font-size: 10px;
 }
 .tourney-tier-items {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #ffffff0c;
+}
+.tourney-tier-items > small {
+  flex-basis: 100%;
+  font-size: 10px;
 }
 .tourney-reward.aui-button {
   min-height: 36px;
@@ -106,23 +188,93 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 18px;
+  gap: 14px 24px;
   margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #ffffff12;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--aui-blue) 22%, transparent);
+  border-radius: 5px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--aui-blue) 5%, var(--aui-bg)), var(--aui-bg));
+}
+.tourney-contribution-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.tourney-contribution-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  color: var(--aui-blue);
+  background: color-mix(in srgb, var(--aui-blue) 10%, transparent);
+  border-radius: 5px;
 }
 .tourney-contribution p {
   color: var(--aui-muted);
   font-size: 12px;
+  line-height: 1.6;
   margin-top: 5px;
+  max-width: 440px;
 }
 .tourney-contribution-fields {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 120px minmax(140px, 180px) max-content;
+  align-items: end;
+  gap: 10px;
 }
-.tourney-contribution-fields input {
-  width: 150px;
+.tourney-contribution-fields .aui-field {
+  gap: 6px;
+  font:
+    500 10px/1.4 'Tournament Mono',
+    monospace;
+}
+.tourney-currency-field,
+.tourney-amount-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.tourney-currency-field > :first-child {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  color: var(--aui-blue);
+}
+.tourney-currency-field select {
+  width: 100%;
+  padding-left: 36px;
+}
+.tourney-contribution-fields :is(input, select) {
+  min-height: 42px;
+  font-size: 14px;
+}
+.tourney-amount-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 58px 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--aui-muted) 28%, transparent);
+  border-radius: 4px;
+  background: var(--aui-bg);
+  font-family: 'Tournament Mono', monospace;
+}
+.tourney-amount-field > span {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--aui-muted);
+  font-size: 10px;
+}
+.tourney-contribution-fields > .aui-button {
+  min-height: 42px;
+}
+.tourney-contribution .tourney-contribution-notice {
+  grid-column: 1 / -1;
+  max-width: none;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #ffffff0c;
+  font-size: 10px;
 }
 .tourney-dialog {
   width: min(560px, calc(100cqw - 24px));

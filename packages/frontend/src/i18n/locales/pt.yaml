@@ -2980,6 +2980,19 @@ allocation_page:
   error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
 
 tournament_page:
+  practice_hint: 'Jogue grátis um torneio 1 contra 1 contra bots.'
+  contribution_title: 'Aumente a premiação'
+  contribution_description: 'Qualquer pessoa pode contribuir, mesmo sem participar. Sua contribuição aumenta a premiação compartilhada do torneio.'
+  practice_free: 'Praticar grátis'
+  practice_title: 'TREINO LOCAL · 1v1'
+  practice_notice: 'Seis participantes. Lutas locais, vida cheia a cada rodada. Sem custos, recompensas ou progresso salvo.'
+  practice_missing: 'Abra o treino em um torneio com um personagem selecionado.'
+  practice_leave: 'Sair do treino'
+  practice_won: 'Torneio vencido!'
+  practice_lost: 'Você foi eliminado'
+  practice_next: 'Jogar a próxima partida'
+  practice_again: 'Tentar novamente'
+  practice_error: 'Treino interrompido. Saia e tente novamente.'
   title: Torneio
   no_event: Nenhum torneio anunciado.
   open: Inscrições abertas

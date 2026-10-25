@@ -11,6 +11,7 @@ import { copy_text, type CopyText } from '../i18n/copy.ts'
 import { player_error_text } from '../i18n/player_error.ts'
 import { match_kind, tournament_registration, tournament_rounds } from '../modules/tournament_selectors.ts'
 import { tournament_claims, type TournamentAction } from '../modules/tournament.ts'
+import { PracticeButton } from '../practice/PracticeButton.tsx'
 
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
 import { countdown, match_label, match_opponent, round_label } from './presentation.ts'
@@ -148,7 +149,7 @@ const ActionDock = ({
           </option>
           {view.characters.map((character) => (
             <option key={character.id} value={character.id}>
-              {character.name} · {t(`custody_${character.custody}`)}
+              {character.name}
             </option>
           ))}
         </select>
@@ -167,6 +168,7 @@ const ActionDock = ({
         )}
       </div>
       <div className="tourney-dock-actions">
+        <PracticeButton open={row.status === 'open'} t={t} />
         {view.can_create_team && (
           <Button disabled={disabled} onClick={create}>
             {t('create_team')}

@@ -862,6 +862,16 @@ reviewed intents, rechecking current eligibility without replacing the reviewed 
 The tournament reducer retains the latest operation outcome for confirmation dialogs; only certified
 execution establishes confirmation, while indexed rows remain the owner of displayed game state.
 
+Tournament practice boots `/practice` with only the shared local observers and its own reducer.
+The open-event action passes an unsigned character snapshot through browser history; the practice
+runtime has no wallet, server, transaction or settlement observer. Six entrants play a disposable
+single-elimination bracket with two byes. Random class opponents use bounded, ordinary player
+commands for simple spells, self-support and approaching attacks. Every round starts at full health;
+only the player's matches mount the shared fight runtime and viewport. Other matches resolve locally.
+Live tournaments and practice share the same bracket tree, match cards and game-window presentation;
+plain presentation props keep practice independent of live tournament actions and projections.
+Practice results never enter live tournament or character state. Reloading starts a fresh bracket.
+
 ### Sound presentation
 
 `seed/sounds/` owns the file-backed effects; `seed/content/audio.json` assigns semantic cues and

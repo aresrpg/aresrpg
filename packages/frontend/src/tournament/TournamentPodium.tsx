@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
+import { Award, Medal, Trophy } from 'lucide-react'
 import { Button } from '@aresrpg/ui'
 import { tournament_coin_claims, type TournamentRow } from '@aresrpg/protocol'
 
@@ -13,37 +14,49 @@ import { character_label, tournament_act } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
 type Tier = ReturnType<typeof tournament_podium>[number]
+const rank_icons = [Trophy, Medal, Award, Award, Award] as const
 
-const PodiumTier = ({ row, tier, t }: Readonly<{ row: TournamentRow; tier: Tier; t: CopyText }>) => (
-  <article className={`tourney-pedestal is-place-${tier.place}`}>
-    <small>{tier.place === 5 ? t('joint_fifth') : t('place_number', { place: tier.place })}</small>
-    <h3>
-      {tier.teams.length
-        ? tier.teams.map((index) => row.teams[index].name).join(', ')
-        : t(tier.final ? 'not_awarded' : 'to_be_decided')}
-    </h3>
-    <div className="tourney-tier-coins">
-      {tier.sui > 0n && <TournamentCoin amount={tier.sui} asset="SUI" reveal />}
-      {tier.kares > 0n && <TournamentCoin amount={tier.kares} asset="KARES" reveal />}
-      {!tier.final && (
-        <small>
-          {t('allocation_percent', {
-            sui: row.sui_bps[tier.place - 1] / 100,
-            kares: row.token_bps[tier.place - 1] / 100,
-          })}
-        </small>
-      )}
-    </div>
-    {tier.items.length > 0 && (
-      <div className="tourney-tier-items">
-        <small>{t('items')}</small>
-        {tier.items.map((reward) => (
-          <TournamentReward key={reward.index} template={reward.template} amount={reward.amount} />
-        ))}
+const PodiumTier = ({ row, tier, t }: Readonly<{ row: TournamentRow; tier: Tier; t: CopyText }>) => {
+  const RankIcon = rank_icons[tier.place - 1]!
+  return (
+    <article className={`tourney-pedestal is-place-${tier.place}`}>
+      <header className="tourney-rank">
+        <span className="tourney-rank-emblem">
+          <RankIcon aria-hidden="true" />
+        </span>
+        <div>
+          <small>{tier.place === 5 ? t('joint_fifth') : t('place_number', { place: tier.place })}</small>
+          <strong aria-hidden="true">{tier.place}</strong>
+        </div>
+      </header>
+      <h3 data-awarded={tier.teams.length > 0}>
+        {tier.teams.length
+          ? tier.teams.map((index) => row.teams[index].name).join(', ')
+          : t(tier.final ? 'not_awarded' : 'to_be_decided')}
+      </h3>
+      <div className="tourney-tier-coins">
+        {tier.sui > 0n && <TournamentCoin amount={tier.sui} asset="SUI" reveal />}
+        {tier.kares > 0n && <TournamentCoin amount={tier.kares} asset="KARES" reveal />}
+        {!tier.final && (
+          <small>
+            {t('allocation_percent', {
+              sui: row.sui_bps[tier.place - 1] / 100,
+              kares: row.token_bps[tier.place - 1] / 100,
+            })}
+          </small>
+        )}
       </div>
-    )}
-  </article>
-)
+      {tier.items.length > 0 && (
+        <div className="tourney-tier-items">
+          <small>{t('items')}</small>
+          {tier.items.map((reward) => (
+            <TournamentReward key={reward.index} template={reward.template} amount={reward.amount} />
+          ))}
+        </div>
+      )}
+    </article>
+  )
+}
 
 const PersonalRewards = ({
   row,

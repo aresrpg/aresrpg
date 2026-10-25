@@ -11,6 +11,7 @@ import {
   observe_app,
   ADVENTURE_APP_MODULES,
   DEMO_APP_MODULES,
+  PRACTICE_APP_MODULES,
   PLAYER_APP_MODULES,
   type AppModuleName,
 } from './store.ts'
@@ -52,6 +53,11 @@ const load_surface = async (
       Surface: () => <AdventureRuntime copy={copy} Player={Player} activate_player={activate_player} />,
       modules: ADVENTURE_APP_MODULES,
     }
+  }
+  if (route === '/practice') {
+    const [{ PracticePage }, copy] = await Promise.all([import('./practice/PracticePage.tsx'), load_app_copy(locale)])
+    dispatch_app({ type: 'locale/loaded', locale, copy })
+    return { Surface: () => <PracticePage copy={copy} />, modules: PRACTICE_APP_MODULES }
   }
   if (route === '/demo') {
     const [{ DemoPage }, copy] = await Promise.all([import('./demo/DemoPage.tsx'), load_app_copy(locale)])

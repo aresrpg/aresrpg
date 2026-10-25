@@ -2995,6 +2995,19 @@ allocation_page:
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
 
 tournament_page:
+  practice_hint: 'ボットとの1対1の大会を無料で練習できます。'
+  contribution_title: '賞金総額を増やす'
+  contribution_description: '大会に参加しなくても、誰でも寄付できます。寄付は大会全体の賞金に加算されます。'
+  practice_free: '無料で練習'
+  practice_title: 'ローカル練習 · 1v1'
+  practice_notice: '参加者6人。ローカル対戦で、各ラウンド開始時に体力が全回復します。費用・報酬・進行状況の保存はありません。'
+  practice_missing: 'キャラクターを選択し、大会画面から練習を開いてください。'
+  practice_leave: '練習を終了'
+  practice_won: '大会優勝！'
+  practice_lost: '敗退しました'
+  practice_next: '次の試合へ'
+  practice_again: 'もう一度挑戦'
+  practice_error: '練習が停止しました。終了して、もう一度お試しください。'
   title: トーナメント
   no_event: 開催予定の大会はありません。
   open: 参加受付中

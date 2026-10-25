@@ -2983,6 +2983,19 @@ allocation_page:
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
 
 tournament_page:
+  practice_hint: 'Chơi giải đấu 1 đấu 1 miễn phí với bot.'
+  contribution_title: 'Tăng tổng giải thưởng'
+  contribution_description: 'Ai cũng có thể đóng góp, kể cả khi không tham gia. Đóng góp của bạn sẽ tăng quỹ giải thưởng chung của giải đấu.'
+  practice_free: 'Luyện tập miễn phí'
+  practice_title: 'LUYỆN TẬP CỤC BỘ · 1v1'
+  practice_notice: 'Sáu người tham gia. Đấu cục bộ, hồi đầy máu mỗi vòng. Không phí, không thưởng, không lưu tiến trình.'
+  practice_missing: 'Chọn nhân vật rồi mở luyện tập từ giải đấu.'
+  practice_leave: 'Thoát luyện tập'
+  practice_won: 'Đã vô địch!'
+  practice_lost: 'Bạn đã bị loại'
+  practice_next: 'Đấu trận tiếp theo'
+  practice_again: 'Thử lại'
+  practice_error: 'Luyện tập đã dừng. Hãy thoát và thử lại.'
   title: Giải đấu
   no_event: Chưa có giải đấu được công bố.
   open: Đang mở đăng ký

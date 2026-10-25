@@ -2233,11 +2233,6 @@
         11
       ]
     },
-    "packages/frontend/src/tournament/TournamentBracket.tsx": {
-      "BracketSide": [
-        10
-      ]
-    },
     "packages/frontend/src/tournament/TournamentPanel.tsx": {
       "TournamentEvent": [
         10
@@ -2262,6 +2257,16 @@
       ],
       "HudEvent": [
         9
+      ]
+    },
+    "packages/frontend/src/practice/PracticePage.tsx": {
+      "PracticePage": [
+        12
+      ]
+    },
+    "packages/frontend/src/practice/policy.ts": {
+      "practice_bot_input": [
+        12
       ]
     }
   }

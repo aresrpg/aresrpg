@@ -3018,6 +3018,19 @@ allocation_page:
   error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
 
 tournament_page:
+  practice_hint: 'Spiele kostenlos ein 1-gegen-1-Turnier gegen Bots.'
+  contribution_title: 'Vergrößere den Preispool'
+  contribution_description: 'Jeder kann beitragen, auch ohne teilzunehmen. Dein Beitrag erhöht den gemeinsamen Preispool des Turniers.'
+  practice_free: 'Kostenlos üben'
+  practice_title: 'LOKALES TRAINING · 1v1'
+  practice_notice: 'Sechs Teilnehmer. Lokale Kämpfe, volle Gesundheit pro Runde. Keine Gebühren, Belohnungen oder gespeicherten Fortschritte.'
+  practice_missing: 'Öffne das Training in einem Turnier mit einem ausgewählten Charakter.'
+  practice_leave: 'Training verlassen'
+  practice_won: 'Turnier gewonnen!'
+  practice_lost: 'Du bist ausgeschieden'
+  practice_next: 'Nächstes Match spielen'
+  practice_again: 'Erneut versuchen'
+  practice_error: 'Training angehalten. Verlasse es und versuche es erneut.'
   title: Turnier
   no_event: Kein Turnier angekündigt.
   open: Anmeldung offen

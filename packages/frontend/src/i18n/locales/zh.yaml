@@ -2983,6 +2983,19 @@ allocation_page:
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
 
 tournament_page:
+  practice_hint: '免费参加与机器人的1对1练习赛。'
+  contribution_title: '增加总奖池'
+  contribution_description: '任何人都可以捐赠，无需参赛。你的捐赠将增加锦标赛的公共奖池。'
+  practice_free: '免费练习'
+  practice_title: '本地练习 · 1v1'
+  practice_notice: '六名参赛者。本地战斗，每轮开始时恢复全部生命值。无费用、无奖励，也不保存进度。'
+  practice_missing: '请选择角色，然后从锦标赛页面进入练习。'
+  practice_leave: '退出练习'
+  practice_won: '赢得锦标赛！'
+  practice_lost: '你已被淘汰'
+  practice_next: '开始下一场'
+  practice_again: '再试一次'
+  practice_error: '练习已停止。请退出后重试。'
   title: 锦标赛
   no_event: 暂无已公布的赛事。
   open: 报名开放

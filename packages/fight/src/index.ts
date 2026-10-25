@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 
+export { CARDINAL_DIRECTIONS, step_cell } from './combat_grid.ts'
 export { create_fight } from './fight.ts'
 export {
   create_character_source,

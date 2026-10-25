@@ -3021,6 +3021,19 @@ allocation_page:
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
 
 tournament_page:
+  practice_hint: 'Play a free 1v1 tournament against bots.'
+  contribution_title: 'Grow the prize pool'
+  contribution_description: 'Anyone can contribute, even without entering. Your contribution increases the shared tournament prize pool.'
+  practice_free: 'Practice for free'
+  practice_title: 'LOCAL PRACTICE · 1v1'
+  practice_notice: 'Six entrants. Local fights, full health each round. No fees, rewards, or saved progress.'
+  practice_missing: 'Open practice from a tournament with a selected character.'
+  practice_leave: 'Leave practice'
+  practice_won: 'Tournament won!'
+  practice_lost: 'You were eliminated'
+  practice_next: 'Play next match'
+  practice_again: 'Try again'
+  practice_error: 'Practice stopped. Leave and try again.'
   title: Tournament
   no_event: No tournament announced.
   open: Registration open

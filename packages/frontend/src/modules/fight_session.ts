@@ -57,16 +57,15 @@ const replay_boundary_ms = (
 const stamp_boundary = (
   input: Readonly<FightInput>,
   now: () => bigint,
-  remote: Readonly<HydratedFightCheckpoint> | null
+  checkpoint: Readonly<HydratedFightCheckpoint>,
+  mode: FightMode | null
 ): FightInput => {
   if (input.type !== 'start' && input.type !== 'end_turn' && input.type !== 'crank' && input.type !== 'forfeit')
     return input
-  if (remote) {
-    const minimum = replay_boundary_ms(input, remote)
-    const observed = now()
-    return Object.freeze({ ...input, observed_ms: observed < minimum ? minimum : observed })
-  }
-  return input.observed_ms !== undefined ? input : Object.freeze({ ...input, observed_ms: now() })
+  if (mode === 'local' && input.observed_ms !== undefined) return input
+  const minimum = replay_boundary_ms(input, checkpoint)
+  const observed = now()
+  return Object.freeze({ ...input, observed_ms: observed < minimum ? minimum : observed })
 }
 
 /** Owns the one stateful @aresrpg/fight instance mounted by every fight surface. */
@@ -117,7 +116,7 @@ export const create_fight_session = ({
     },
     apply: (input: Readonly<FightInput>): boolean => {
       if (!runtime) return false
-      const result = runtime.apply(stamp_boundary(input, now, mode === 'remote' ? runtime.state() : null))
+      const result = runtime.apply(stamp_boundary(input, now, runtime.state(), mode))
       publish(result)
       if (
         mode === 'local' &&
@@ -125,7 +124,7 @@ export const create_fight_session = ({
         result.error === null &&
         players_ready_after(result.state.contract.fighters, null)
       )
-        publish(runtime.apply(stamp_boundary({ type: 'start' }, now, null)))
+        publish(runtime.apply(stamp_boundary({ type: 'start' }, now, runtime.state(), mode)))
       return true
     },
     simulate_turn: (): boolean => {

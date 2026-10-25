@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
-import { useEffect, useRef } from 'react'
 import type { TournamentRow } from '@aresrpg/protocol'
 import { CONTRACT_CONSTANTS } from '@aresrpg/fight/move_contract'
 import { TOURNAMENT_MATCH_MS } from '@aresrpg/sdk/tournament'
@@ -14,8 +13,9 @@ import {
   type AdvancingSide,
 } from '../modules/tournament_selectors.ts'
 
+import { BracketCard, BracketTeam, BracketTree } from './BracketView.tsx'
 import { TeamPips, TournamentActionButton } from './TournamentControls.tsx'
-import { countdown, own_team, round_label, team_initial } from './presentation.ts'
+import { countdown, own_team, round_label } from './presentation.ts'
 import type { TournamentView } from './useTournamentView.ts'
 
 type MatchView = ReturnType<typeof tournament_rounds>['rounds'][number]['matches'][number]
@@ -35,28 +35,26 @@ const BracketSide = ({
 }>) => {
   if (!('team' in side))
     return (
-      <div className="tourney-match-team is-unresolved">
-        <span className="tourney-monogram" aria-hidden="true">
-          —
-        </span>
-        <span>{side.kind === 'pending' ? t(`from_${side.via}`, { match: side.match + 1 }) : t('empty_bracket')}</span>
-      </div>
+      <BracketTeam
+        unresolved
+        name={side.kind === 'pending' ? t(`from_${side.via}`, { match: side.match + 1 }) : t('empty_bracket')}
+        t={t}
+      />
     )
   const team = row.teams[side.team]
-  const won = match.winner === side.team
-  const lost = match.state === 2 && match.winner !== side.team
   return (
-    <div className={`tourney-match-team${side.team === own ? ' is-own' : ''}${lost ? ' is-lost' : ''}`}>
-      <span className="tourney-monogram" aria-hidden="true">
-        {team_initial(team.name)}
-      </span>
-      <span title={team.name}>{team.name}</span>
-      {won && <span aria-label={t('winner')}>✓</span>}
+    <BracketTeam
+      name={team.name}
+      own={side.team === own}
+      won={match.winner === side.team}
+      lost={match.state === 2 && match.winner !== side.team}
+      t={t}
+    >
       {side.kind === 'advancing' && <small>{t('advancing')}</small>}
       {match.state === 1 && (
         <TeamPips t={t} seats={team.seats} format={row.format} joined={match.fight === null ? [] : match.joined} />
       )}
-    </div>
+    </BracketTeam>
   )
 }
 
@@ -82,22 +80,16 @@ const BracketMatch = ({
     node.match.available_ms +
     (node.kind === 'admission' ? Number(CONTRACT_CONSTANTS.placement_force_ms) : TOURNAMENT_MATCH_MS)
   return (
-    <article
+    <BracketCard
       id={`tournament-${row.id}-match-${node.index}`}
-      data-match-index={node.index}
-      className={`tourney-match is-${node.kind}${yours ? ' is-own' : ''}`}
-    >
-      <header>
-        <span>
-          M{node.index + 1} · {t(`match_${node.kind}`)}
-        </span>
-        {['admission', 'live'].includes(node.kind) && <time>{countdown(deadline, view.viewer.now_ms)}</time>}
-      </header>
-      {node.sides.map((side, index) => (
-        <BracketSide key={index} side={side} row={row} match={node.match} own={own} t={t} />
-      ))}
-      {action && action.kind !== 'status' && (
-        <div className="tourney-match-action">
+      index={node.index}
+      kind={node.kind}
+      own={yours}
+      label={t(`match_${node.kind}`)}
+      deadline={['admission', 'live'].includes(node.kind) && <time>{countdown(deadline, view.viewer.now_ms)}</time>}
+      action={
+        action &&
+        action.kind !== 'status' && (
           <TournamentActionButton
             row={row}
             action={action}
@@ -106,9 +98,13 @@ const BracketMatch = ({
             navigate={navigate}
             disabled={view.tournament.pending !== null || view.tournament.feed_status !== 'loaded'}
           />
-        </div>
-      )}
-    </article>
+        )
+      }
+    >
+      {node.sides.map((side, index) => (
+        <BracketSide key={index} side={side} row={row} match={node.match} own={own} t={t} />
+      ))}
+    </BracketCard>
   )
 }
 
@@ -125,43 +121,32 @@ export const TournamentBracket = ({
   confirm: (action: TournamentAction) => void
   navigate: (tab: 'main' | 'podium') => void
 }>) => {
-  const root = useRef<HTMLDivElement>(null)
   const { rounds, bronze } = tournament_rounds(row, view.viewer.now_ms)
   const selected = tournament_owned_match(row, view.viewer)
-  useEffect(() => {
-    root.current
-      ?.querySelector(`[data-match-index="${selected}"]`)
-      ?.scrollIntoView({ block: 'center', inline: 'center' })
-  }, [row.id, selected])
-  const leaves = rounds[0]?.matches.length ?? 1
   const fifth = row.teams.filter((team) => team.place === 5)
-  if (!rounds.length) return <p className="tourney-empty">{t('no_matches')}</p>
   return (
-    <div className="tourney-bracket-scroll" ref={root} tabIndex={0} role="region" aria-label={t('bracket')}>
-      <div
-        className={`tourney-tree${leaves >= 8 ? ' is-dense' : ''}`}
-        style={{ '--tourney-leaves': leaves } as React.CSSProperties}
-      >
-        {rounds.map((round, index) => (
-          <section className="tourney-round" key={round.depth}>
-            <header>
-              <b>{round_label(round.depth, t)}</b>
-              <span>{t('round_counts', { live: round.live, done: round.done, count: round.matches.length })}</span>
-            </header>
-            <div className="tourney-round-matches">
-              {round.matches.map((node, ordinal) => (
-                <div
-                  className={`tourney-match-slot${index > 0 ? ' has-feeders' : ''}${index < rounds.length - 1 ? ' has-parent' : ''}`}
-                  key={node.index}
-                  style={{ gridRow: `${ordinal * 2 ** index + 1} / span ${2 ** index}` }}
-                >
-                  <BracketMatch row={row} node={node} view={view} t={t} confirm={confirm} navigate={navigate} />
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-        {bronze && (
+    <BracketTree
+      identity={row.id}
+      selected={selected}
+      t={t}
+      rounds={rounds.map((round) => ({
+        depth: round.depth,
+        title: round_label(round.depth, t),
+        summary: t('round_counts', { live: round.live, done: round.done, count: round.matches.length }),
+        matches: round.matches.map((node) => (
+          <BracketMatch
+            key={node.index}
+            row={row}
+            node={node}
+            view={view}
+            t={t}
+            confirm={confirm}
+            navigate={navigate}
+          />
+        )),
+      }))}
+      placement={
+        bronze && (
           <section className="tourney-placement">
             <header>{t('placement')}</header>
             <div>
@@ -178,8 +163,8 @@ export const TournamentBracket = ({
               </section>
             </div>
           </section>
-        )}
-      </div>
-    </div>
+        )
+      }
+    />
   )
 }

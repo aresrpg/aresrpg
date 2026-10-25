@@ -150,8 +150,10 @@ export const ready_all_inputs = (remote: boolean, fight: string, fighters: reado
         input: { type: 'ready', fighter },
       }))
 
-export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number): number =>
-  Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
+export const end_turn_wait_ms = (observed_at_ms: number, now_ms: number, mode: string | null = 'remote'): number =>
+  mode === 'local'
+    ? 0
+    : Math.max(0, observed_at_ms + Number(CONTRACT_CONSTANTS.turn_min_ms) + END_TURN_SUBMIT_GUARD_MS - now_ms)
 
 const inactive_turn_clock = Object.freeze({ progress: null, seconds: null })
 
@@ -309,7 +311,8 @@ export const FightHud = ({
   useEffect(() => {
     if (crank_attempt && !crank_hidden) set_crank_attempt(null)
   }, [crank_attempt, crank_hidden])
-  const wait_ms = observed_turn.key === turn_key ? end_turn_wait_ms(observed_turn.at_ms, performance.now()) : Infinity
+  const wait_ms =
+    observed_turn.key === turn_key ? end_turn_wait_ms(observed_turn.at_ms, performance.now(), fight.mode) : Infinity
   const min_turn_ready = wait_ms === 0
 
   useEffect(() => {

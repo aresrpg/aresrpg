@@ -51,6 +51,7 @@ const record = (kind: string, args: unknown) => {
 }
 const wallet = {
   address: 'owner',
+  is_transaction_idle: () => true,
   derive_character_id: (name: string) => `character-${name}`,
   tournament: {
     donate: (id: string, asset: string, amount: bigint) => record('donate', { id, asset, amount }),

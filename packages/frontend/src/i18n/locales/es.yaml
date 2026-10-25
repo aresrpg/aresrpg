@@ -3017,6 +3017,19 @@ allocation_page:
   error_x_unavailable: No se pudo completar la solicitud. Comprueba tu conexión e inténtalo de nuevo. X o la campaña pueden no estar disponibles.
 
 tournament_page:
+  practice_hint: 'Juega gratis un torneo 1 contra 1 frente a bots.'
+  contribution_title: 'Aumenta el premio total'
+  contribution_description: 'Cualquiera puede contribuir, incluso sin participar. Tu contribución aumenta el premio total compartido del torneo.'
+  practice_free: 'Practicar gratis'
+  practice_title: 'PRÁCTICA LOCAL · 1v1'
+  practice_notice: 'Seis participantes. Combates locales y salud completa en cada ronda. Sin costes, recompensas ni progreso guardado.'
+  practice_missing: 'Abre la práctica desde un torneo con un personaje seleccionado.'
+  practice_leave: 'Salir de la práctica'
+  practice_won: '¡Torneo ganado!'
+  practice_lost: 'Has sido eliminado'
+  practice_next: 'Jugar el siguiente combate'
+  practice_again: 'Intentar de nuevo'
+  practice_error: 'Práctica detenida. Sal y vuelve a intentarlo.'
   title: Torneo
   no_event: No hay torneos anunciados.
   open: Inscripción abierta

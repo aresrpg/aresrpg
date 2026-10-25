@@ -3023,6 +3023,19 @@ allocation_page:
   error_x_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.
 
 tournament_page:
+  practice_hint: 'Jouez gratuitement un tournoi 1 contre 1 face à des bots.'
+  contribution_title: 'Augmentez la cagnotte'
+  contribution_description: 'Tout le monde peut contribuer, même sans participer. Votre contribution augmente la cagnotte commune du tournoi.'
+  practice_free: 'S’entraîner gratuitement'
+  practice_title: 'ENTRAÎNEMENT LOCAL · 1v1'
+  practice_notice: 'Six participants. Combats locaux, vie restaurée à chaque tour. Aucun frais, gain ou progrès sauvegardé.'
+  practice_missing: 'Ouvrez l’entraînement depuis un tournoi avec un personnage sélectionné.'
+  practice_leave: 'Quitter l’entraînement'
+  practice_won: 'Tournoi remporté !'
+  practice_lost: 'Vous êtes éliminé'
+  practice_next: 'Jouer le prochain match'
+  practice_again: 'Réessayer'
+  practice_error: 'Entraînement arrêté. Quittez puis réessayez.'
   title: Tournoi
   no_event: Aucun tournoi annoncé.
   open: Inscriptions ouvertes

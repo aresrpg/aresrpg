@@ -4,6 +4,7 @@
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
+import practice, { initial_practice_state, type PracticeState, type PracticeInput } from './modules/practice.ts'
 import tournament, {
   initial_tournament_state,
   type TournamentInput,
@@ -85,6 +86,7 @@ import external_wallet, {
 } from './modules/external_wallet.ts'
 
 export type AppState = Readonly<{
+  practice: PracticeState
   analytics: AnalyticsState
   adventure: AdventureState
   claim_failures: readonly string[]
@@ -122,6 +124,7 @@ export type AppState = Readonly<{
 }>
 
 export type AppInput =
+  | PracticeInput
   | AnalyticsInput
   | AdventureInput
   | JourneyInput
@@ -180,6 +183,7 @@ export type AppModule = Readonly<{
 
 // Registration owns observer availability. Keep reducer order explicit: session folds first.
 const MODULE_REGISTRY = [
+  [practice, 'practice'],
   [adventure, 'adventure'],
   [session, 'player'],
   [suins, 'player'],
@@ -218,7 +222,10 @@ const MODULE_REGISTRY = [
   [mastery, 'player'],
   [distribution, 'player'],
   [job_level_up, 'player'],
-] as const satisfies readonly (readonly [AppModule, 'player' | 'demo' | 'adventure' | 'shared' | 'public'])[]
+] as const satisfies readonly (readonly [
+  AppModule,
+  'player' | 'demo' | 'adventure' | 'shared' | 'public' | 'practice',
+])[]
 
 const MODULES = MODULE_REGISTRY.map(([module]) => module)
 export type AppModuleName = (typeof MODULES)[number]['name']
@@ -228,6 +235,10 @@ export const PLAYER_APP_MODULES = Object.freeze(
     ([module]) => module.name
   )
 )
+export const PRACTICE_APP_MODULES = Object.freeze(
+  MODULE_REGISTRY.filter(([, runtime]) => runtime === 'practice' || runtime === 'shared').map(([module]) => module.name)
+)
+
 export const DEMO_APP_MODULES = Object.freeze(
   MODULE_REGISTRY.filter(([, runtime]) => runtime === 'demo' || runtime === 'shared').map(([module]) => module.name)
 )
@@ -240,6 +251,7 @@ export const ADVENTURE_APP_MODULES = Object.freeze(
 
 export const initial_app_state = (settings_state: GameSettings): AppState =>
   Object.freeze({
+    practice: initial_practice_state(),
     claim_failures: [],
     adventure: initial_adventure_state(),
     chain_clock: null,
