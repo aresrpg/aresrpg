@@ -4,6 +4,8 @@ use aresrpg_kares::kares::KARES;
 use sui::balance::Balance;
 use std::type_name::TypeName;
 
+// These inactive fields must retain the published ABI.
+#[allow(unused_field)]
 public struct CombatPot has key {
     id: UID,
     balance: Balance<KARES>,

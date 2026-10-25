@@ -100,3 +100,59 @@ test('failed or invalid package metadata stops compilation once with network and
     expect(builds).toBe(0)
   }
 })
+
+test('preflight meters the exact candidate modules against the selected network protocol', async () => {
+  const module_bytes = []
+  const compiler = create_contract_build_service({
+    repo_dir: import.meta.dir,
+    read_protocol: async (network) => {
+      expect(network).toBe('mainnet')
+      return '139'
+    },
+    run: async (_command, args) => {
+      if (args[0] === '--version')
+        return { stdout: `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`, stderr: '' }
+      expect(args.slice(0, 4)).toEqual(['client', 'verify-bytecode-meter', '--protocol-version', '139'])
+      for (const [index, arg] of args.entries()) {
+        if (arg === '--module') module_bytes.push([...new Uint8Array(await Bun.file(args[index + 1]).arrayBuffer())])
+      }
+      return { stdout: 'Running bytecode verifier\n{"success":true}', stderr: '' }
+    },
+  })
+  await compiler.verify_bytecode('mainnet', {
+    package_name: 'aresrpg',
+    modules: ['AQID', 'BAUG'],
+    dependencies: [],
+    digest: [1],
+  })
+  expect(module_bytes).toEqual([
+    [1, 2, 3],
+    [4, 5, 6],
+  ])
+})
+
+test('meter rejection or missing protocol data cannot approve an upgrade', async () => {
+  const artifact = { package_name: 'aresrpg', modules: ['AQID'], dependencies: [], digest: [1] }
+  for (const success of [false, undefined]) {
+    const compiler = create_contract_build_service({
+      repo_dir: import.meta.dir,
+      read_protocol: async () => '139',
+      run: async (_command, args) => ({
+        stdout:
+          args[0] === '--version'
+            ? `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`
+            : JSON.stringify({ success }),
+        stderr: '',
+      }),
+    })
+    await expect(compiler.verify_bytecode('mainnet', artifact)).rejects.toThrow('bytecode verifier')
+  }
+  const compiler = create_contract_build_service({
+    repo_dir: import.meta.dir,
+    read_protocol: async () => {
+      throw new Error('protocol unavailable')
+    },
+    run: async () => ({ stdout: `sui ${move_packages.sui_cli.release.split('-v')[1]}-test`, stderr: '' }),
+  })
+  await expect(compiler.verify_bytecode('mainnet', artifact)).rejects.toThrow('protocol unavailable')
+})

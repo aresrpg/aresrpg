@@ -4,6 +4,8 @@ use aresrpg_kares::kares::KARES;
 use sui::balance::Balance;
 use sui::sui::SUI;
 
+// These inactive fields must retain the published ABI.
+#[allow(unused_field)]
 public struct Offering has key {
     id: UID,
     pool: ID,

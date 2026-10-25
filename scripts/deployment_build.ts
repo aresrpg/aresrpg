@@ -23,6 +23,7 @@ type PackagePublication = Readonly<{
 }>
 type CommandResult = Readonly<{ stdout: string; stderr: string }>
 type ReadVersion = (network: Network, package_id: string) => Promise<string>
+type ReadProtocol = (network: Network) => Promise<string>
 type Execute = (command: string, args: readonly string[], cwd: string) => Promise<CommandResult>
 
 const exec_file = promisify(execFile)
@@ -57,6 +58,12 @@ const read_publication_version: ReadVersion = async (network, package_id) => {
   if (!object) throw new Error('Package object was not returned')
   if (object instanceof Error) throw object
   return object.version
+}
+
+const read_protocol_version: ReadProtocol = async (network) => {
+  const client = new SuiGrpcClient({ network, baseUrl: `https://fullnode.${network}.sui.io:443` })
+  const { protocolConfig: protocol } = await client.core.getProtocolConfig()
+  return protocol.protocolVersion
 }
 
 const revision_of = (source: string): string => createHash('sha256').update(source).digest('hex')
@@ -135,7 +142,8 @@ export const create_contract_build_service = ({
   repo_dir,
   run = run_build_command,
   read_version = read_publication_version,
-}: Readonly<{ repo_dir: string; run?: Execute; read_version?: ReadVersion }>) => {
+  read_protocol = read_protocol_version,
+}: Readonly<{ repo_dir: string; run?: Execute; read_version?: ReadVersion; read_protocol?: ReadProtocol }>) => {
   const math_dir = join(repo_dir, 'packages', 'move-math')
   const control_dir = join(repo_dir, 'packages', 'control')
   const combat_dir = join(repo_dir, 'packages', 'move-combat')
@@ -182,16 +190,45 @@ export const create_contract_build_service = ({
         ].join('\n')
       )
     )
+  const ensure_compiler = async (): Promise<void> => {
+    const [, expected_version] = move_packages.sui_cli.release.split('-v')
+    const { stdout: compiler_version } = await run('sui', ['--version'], repo_dir)
+    if (!compiler_version.trim().startsWith(`sui ${expected_version}-`))
+      throw new Error(`Sui compiler must match ${move_packages.sui_cli.release}; found ${compiler_version.trim()}`)
+  }
+  const verify_bytecode = async (network: Network, artifact: ContractArtifact): Promise<void> => {
+    await ensure_compiler()
+    const protocol = await read_protocol(network)
+    if (!/^[1-9]\d*$/.test(protocol)) throw new Error('Sui protocol version is unavailable')
+    if (!artifact.modules.length) throw new Error('Sui bytecode verifier requires candidate modules')
+    const directory = await mkdtemp(join(tmpdir(), 'aresrpg-verify-'))
+    try {
+      const modules = await Promise.all(
+        artifact.modules.map(async (bytes, index) => {
+          const path = join(directory, `${index}.mv`)
+          await writeFile(path, Buffer.from(bytes, 'base64'), { flag: 'wx' })
+          return ['--module', path]
+        })
+      )
+      const { stdout } = await run(
+        'sui',
+        ['client', 'verify-bytecode-meter', '--protocol-version', protocol, '--json', ...modules.flat()],
+        repo_dir
+      )
+      const result = JSON.parse(stdout.slice(stdout.indexOf('{'))) as { success?: unknown }
+      if (result.success !== true)
+        throw new Error(`${artifact.package_name} failed the Sui bytecode verifier for protocol ${protocol}`)
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  }
   const compile_with_publications = async (
     network: Network,
     path: string,
     package_name: ContractArtifact['package_name'],
     publications: readonly Readonly<{ path: string; publication: PackagePublication; version?: number }>[]
   ): Promise<ContractArtifact> => {
-    const [, expected_version] = move_packages.sui_cli.release.split('-v')
-    const { stdout: compiler_version } = await run('sui', ['--version'], repo_dir)
-    if (!compiler_version.trim().startsWith(`sui ${expected_version}-`))
-      throw new Error(`Sui compiler must match ${move_packages.sui_cli.release}; found ${compiler_version.trim()}`)
+    await ensure_compiler()
     if (!publications.length) {
       const { stdout } = await run('sui', dump_args(path, network), repo_dir)
       return parse_contract_artifact(package_name, stdout)
@@ -326,6 +363,7 @@ export const create_contract_build_service = ({
     compile_seed,
     compile_rewards,
     compile_game,
+    verify_bytecode,
     prepare_upgrade,
     game_version,
   })

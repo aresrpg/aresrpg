@@ -2,8 +2,9 @@
   "schema": 1,
   "max_bytecode_bytes": 96000,
   "sui_cli": {
-    "release": "testnet-v1.78.1",
-    "linux_archive_sha256": "87ac74d50009d69419e617a017f1e46eb9c11e409238830d8b66e7f17456805e"
+    "release": "mainnet-v1.82.3",
+    "revision": "bf4073918ed33cfa0b09c500658fa116a774bcfd",
+    "linux_archive_sha256": "d616d63d90309926cf7f544633c8dd4132f762fdbba555a35c4842cfa4129379"
   },
   "packages": [
     {

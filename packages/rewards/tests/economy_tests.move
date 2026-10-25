@@ -101,8 +101,9 @@ fun mastery_prices_preserve_points_and_scale_only_tokens() {
 #[test, expected_failure(abort_code = 0, location = aresrpg_rewards::amounts)]
 fun mastery_prices_reject_u64_overflow() { amounts::mastery_price(std::u64::max_value!()); }
 
-#[test, expected_failure(abort_code = 0, location = aresrpg_rewards::economy)]
-fun setup_requires_its_initial_publication_capability() {
+// test_upgrade produces a synthetic ID, not a published package. Real upgraded-cap success is exercised on localnet.
+#[test, expected_failure(abort_code = 6, location = sui::package)]
+fun an_unresolvable_upgraded_cap_cannot_authorize_setup() {
     let mut scenario = test_scenario::begin(@0xA);
     test_coin::mint(amounts::reserve_tokens(), 9, true, scenario.ctx());
     scenario.next_tx(@0xA);

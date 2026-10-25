@@ -221,8 +221,8 @@ administrative SDK publishes and funds reward reserves; it never issues currency
 Mainnet publication, funding, upgrades and permanent freeze require explicit owner approval.
 
 1. Publish `packages/rewards` from the intended reserve-funding wallet. Record the shared Economy,
-   unique Setup and genuine version-one UpgradeCap. Publication creates no token and funds no pool.
-   Keep the package at version one until initial funding; Setup checks that original capability.
+   unique Setup and genuine unrestricted UpgradeCap. Publication creates no token and funds no pool.
+   Compatible upgrades may precede funding. Keep Setup and UpgradeCap; funding verifies their original rewards lineage.
 2. Compile and deploy the game with both the compatibility ABI and active rewards dependency.
    Record the unfunded Economy pin. Follow the normal Version activation runbook. Boss settlement
    pays zero KARES while that Economy is unfunded; ordinary gameplay does not require a token.

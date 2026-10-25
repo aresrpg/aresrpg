@@ -191,13 +191,9 @@ export const as_admin_session = (session: AuthSession): AdminAuthSession => {
     read_package_upgrade,
     setup_rewards: async (terms) => {
       const upgrade = await read_package_upgrade(terms.upgrade_cap)
-      if (
-        normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(terms.package) ||
-        upgrade.version !== 1 ||
-        upgrade.policy !== 0
-      )
+      if (normalizeSuiObjectId(upgrade.package) !== normalizeSuiObjectId(terms.package) || upgrade.policy !== 0)
         throw new Error(
-          'Reward setup requires its original, never-upgraded publication capability with unrestricted upgrade authority'
+          'Reward setup requires the published rewards package capability with unrestricted upgrade authority'
         )
       await context.sdk.hydrate([terms.setup, terms.upgrade_cap])
       return context.sdk.execute(create_rewards_setup_transaction(context.sdk, terms), {

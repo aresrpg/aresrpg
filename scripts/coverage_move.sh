@@ -59,6 +59,11 @@ cover_package() {
     exit 1
   fi
   printf '%s\n' "$summary"
+  if [ "$package_path" = packages/rewards ]; then
+    # Validate the sole owner-approved native-return gap; every other instruction must be covered.
+    printf '%s\n' "$summary" | bun scripts/assert_rewards_coverage.mjs
+    return
+  fi
   # Type-only compatibility packages contain no executable instructions to cover.
   if [ "$coverage" = NaN ] && printf '%s\n' "$summary" | awk '
     /^Module / { modules++ }

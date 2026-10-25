@@ -48,10 +48,11 @@ public fun setup<Token, Victory: drop>(
 ) {
     assert!(economy.token.is_empty(), EAlreadyFunded);
     let original = std::type_name::with_original_ids<Setup>().address_string();
-    assert!(package::version(upgrade_cap) == 1
-        && package::upgrade_policy(upgrade_cap) == package::compatible_policy()
-        && sui::address::to_ascii_string(package::upgrade_package(upgrade_cap).to_address()) == original,
-        EWrongUpgradeCap);
+    // A first-publication cap already names its original. Later versions resolve the same lineage.
+    let cap_original = if (package::version(upgrade_cap) == 1) package::upgrade_package(upgrade_cap)
+        else package::original_package_id(upgrade_cap);
+    assert!(package::upgrade_policy(upgrade_cap) == package::compatible_policy()
+        && sui::address::to_ascii_string(cap_original.to_address()) == original, EWrongUpgradeCap);
     assert!(currency.decimals() == 9 && currency.is_supply_burn_only(), EWrongCurrency);
     assert!(reserve.value() == amounts::reserve_tokens(), EWrongFunding);
     assert!(treasury != @0x0 && treasury == ctx.sender(), EInvalidTreasury);

@@ -15,6 +15,14 @@ if (manifest.schema !== 1 || !Array.isArray(manifest.packages)) throw new Error(
 if (manifest.packages.map(({ slot }) => slot).join(',') !== expected_slots.join(','))
   throw new Error(`Move package slots must be ${expected_slots.join(', ')}`)
 
+if (!/^[0-9a-f]{40}$/.test(manifest.sui_cli.revision)) throw new Error('Sui source revision must be pinned')
+const indexer_manifest = readFileSync(join(root, 'packages/indexer/Cargo.toml'), 'utf8')
+const sui_revisions = [
+  ...indexer_manifest.matchAll(/git = "https:\/\/github\.com\/MystenLabs\/sui\.git", rev = "([^"]+)"/g),
+]
+if (!sui_revisions.length || sui_revisions.some(([, revision]) => revision !== manifest.sui_cli.revision))
+  throw new Error('Indexer Sui dependencies must match the compiler source revision')
+
 const by_path = new Map(manifest.packages.map((row) => [normalize(row.path), row.slot]))
 for (const row of manifest.packages) {
   const move_toml = readFileSync(join(root, row.path, 'Move.toml'), 'utf8')

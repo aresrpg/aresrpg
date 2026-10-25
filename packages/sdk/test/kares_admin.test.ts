@@ -10,7 +10,7 @@ import { as_admin_session } from '../src/admin_auth.ts'
 
 import { digest, id } from './helpers/transport.ts'
 
-test('setup passes the retained original capability and rejects a foreign or upgraded package', async () => {
+test('setup retains authority across upgrades and rejects foreign or restricted capabilities', async () => {
   const account = {
     address: id(200),
     publicKey: new Uint8Array(32),
@@ -82,16 +82,20 @@ test('setup passes the retained original capability and rejects a foreign or upg
       read.mockResolvedValue({
         objects: [{ objectId: id(101), json: { package: id(999), version: '1', policy: 0 } }],
       } as never)
-      await expect(admin.setup_rewards(terms)).rejects.toThrow('original, never-upgraded')
+      await expect(admin.setup_rewards(terms)).rejects.toThrow()
       read.mockResolvedValue({
-        objects: [{ objectId: id(101), json: { package: id(100), version: '2', policy: 0 } }],
+        objects: [{ objectId: id(101), json: { package: id(102), version: '2', policy: 0 } }],
       } as never)
-      await expect(admin.setup_rewards(terms)).rejects.toThrow('original, never-upgraded')
+      await admin.setup_rewards({ ...terms, package: id(102) })
+      const upgraded = (submitted as Transaction | null)!
+        .getData()
+        .commands.find((command) => command.MoveCall)?.MoveCall
+      expect(upgraded?.package).toBe(id(102))
       read.mockResolvedValue({
         objects: [{ objectId: id(101), json: { package: id(100), version: '1', policy: 192 } }],
       } as never)
       await expect(admin.setup_rewards(terms)).rejects.toThrow('unrestricted upgrade authority')
-      expect(execute).toHaveBeenCalledTimes(1)
+      expect(execute).toHaveBeenCalledTimes(2)
     } finally {
       read.mockRestore()
       hydrate.mockRestore()
