@@ -18,10 +18,12 @@ test.beforeEach(async ({ page }) => {
 })
 
 for (const asset of ['app_boot', 'game_entry']) {
-  test(`missing ${asset} exposes reload without automatic retries`, async ({ page }) => {
-    let attempts = 0
+  test(`missing ${asset} stays on the failed page until explicit reload`, async ({ page }) => {
+    let navigations = 0
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) navigations++
+    })
     await page.route(new RegExp(`/assets/${asset}-[^/]+\\.js$`), (route) => {
-      attempts++
       return route.fulfill({ status: 404, body: 'missing' })
     })
     await page.goto('/play-demo?source=test#test-claim-key')
@@ -29,9 +31,10 @@ for (const asset of ['app_boot', 'game_entry']) {
     await expect(shell).toHaveAttribute('data-world-loading', 'failed')
     const reload = shell.getByRole('button', { name: 'Reload', exact: true })
     await expect(reload).toBeVisible()
-    expect(attempts).toBe(1)
+    // Preload and dynamic import may each request the missing asset. Navigation is the recovery invariant.
+    expect(navigations).toBe(1)
     await reload.click()
-    await expect.poll(() => attempts).toBe(2)
+    await expect.poll(() => navigations).toBe(2)
     expect(page.url()).toContain('/play-demo?source=test#test-claim-key')
   })
 }
