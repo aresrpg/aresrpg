@@ -59,6 +59,7 @@ jobs:
           sparse-checkout: |
             /package.json
             /bun.lock
+            /patches/
             /packages/*/package.json
           sparse-checkout-cone-mode: false
       - name: setup Bun

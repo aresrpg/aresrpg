@@ -18,6 +18,22 @@ const activation = Bun.YAML.parse(
 const certified_digest = `sha256:${'b'.repeat(64)}`
 const moved_tag_digest = `sha256:${'a'.repeat(64)}`
 
+test('activation checkout contains every patch required by the locked install', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  const checkout = activation.jobs.activate.steps.find(({ uses }) => uses?.startsWith('actions/checkout@'))
+  const paths = checkout.with['sparse-checkout']
+    .trim()
+    .split('\n')
+    .map((path) => path.replace(/^\//, ''))
+  const files = execFileSync('git', ['ls-files', '--', ...paths], {
+    cwd: new URL('../../', import.meta.url),
+    encoding: 'utf8',
+  })
+    .trim()
+    .split('\n')
+  for (const patch of Object.values(manifest.patchedDependencies ?? {})) expect(files).toContain(patch)
+})
+
 const run_baseline_plan = (network, include_discord = true) => {
   const directory = mkdtempSync(join(tmpdir(), 'ares-release-baseline-'))
   const output = join(directory, 'output')
