@@ -3016,6 +3016,7 @@ allocation_page:
   error_x_unavailable: Не вдалося виконати запит. Перевірте з’єднання й повторіть. X або сервіс кампанії може бути недоступний.
 
 tournament_page:
+  manage_event: 'Керувати турніром'
   practice_hint: 'Зіграйте безкоштовний турнір 1 на 1 проти ботів.'
   contribution_title: 'Збільште призовий фонд'
   contribution_description: 'Зробити внесок може кожен, навіть не беручи участі в турнірі. Ваш внесок збільшує спільний призовий фонд.'
@@ -3057,7 +3058,6 @@ tournament_page:
   joint_fifth: Спільне п’яте місце
   asset: Валюта
   admin: Керування турніром
-  admin_cap: ID об’єкта AdminCap
   create_event: Створити турнір
   start: Почати турнір
   setup_display: Налаштувати Display один раз

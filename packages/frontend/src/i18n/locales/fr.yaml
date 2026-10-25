@@ -3023,6 +3023,7 @@ allocation_page:
   error_x_unavailable: La demande a échoué. Vérifiez votre connexion et réessayez. X ou le service de campagne peut être indisponible.
 
 tournament_page:
+  manage_event: 'Gérer le tournoi'
   practice_hint: 'Jouez gratuitement un tournoi 1 contre 1 face à des bots.'
   contribution_title: 'Augmentez la cagnotte'
   contribution_description: 'Tout le monde peut contribuer, même sans participer. Votre contribution augmente la cagnotte commune du tournoi.'
@@ -3064,7 +3065,6 @@ tournament_page:
   joint_fifth: Cinquièmes ex æquo
   asset: Monnaie
   admin: Administration du tournoi
-  admin_cap: Identifiant de l’objet AdminCap
   create_event: Créer un tournoi
   start: Démarrer le tournoi
   setup_display: Configurer Display une fois

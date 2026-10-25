@@ -1,20 +1,19 @@
 // SPDX-License-Identifier: LicenseRef-AresRPG-Source-Available
 // © 2026 Sceat — All rights reserved. See LICENSE.
 import { useState } from 'react'
-import { Button } from '@aresrpg/ui'
+import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
 import { resolve_pins } from '@aresrpg/sdk/pins'
 import type { TournamentRow } from '@aresrpg/protocol'
 
 import { env } from '../env.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { copy_text, type CopyText } from '../i18n/copy.ts'
-import { AdminWalletControl } from '../admin/AdminWalletControl.tsx'
 import type { TournamentAdminAction } from '../modules/tournament.ts'
 import { minimum_tournament_teams, tournament_registration } from '../modules/tournament_selectors.ts'
 
 import { TournamentDialog, TournamentOperationNotice } from './TournamentControls.tsx'
 import { TournamentReward } from './TournamentReward.tsx'
-import { TournamentSettingsForm } from './TournamentSettingsForm.tsx'
+import { initial_tournament_draft, TournamentSettingsForm } from './TournamentSettingsForm.tsx'
 import { useTournamentView, type TournamentView } from './useTournamentView.ts'
 import { operation_status } from './presentation.ts'
 import './tournament.css'
@@ -210,64 +209,78 @@ export const TournamentAdmin = () => {
   const copy = useAppStore((state) => state.copy)
   const connected = useAppStore((state) => !!state.external_wallet.session)
   const view = useTournamentView()
-  const [admin, set_admin] = useState(() => String(resolve_pins(env.network).admin_cap ?? ''))
+  const admin = String(resolve_pins(env.network).admin_cap ?? '')
+  const [open, set_open] = useState(false)
+  const [draft, set_draft] = useState(initial_tournament_draft)
   const [review, set_review] = useState<Review | null>(null)
   if (!copy) return null
   const t = copy_text(copy.tournament_page)
   const current = view.tournament.rows.filter((row) => ['open', 'in_progress'].includes(row.status))
-  const disabled = view.tournament.pending !== null || !connected || view.tournament.feed_status !== 'loaded'
+  const disabled = ![view.tournament.pending === null, connected, view.tournament.feed_status === 'loaded'].every(
+    Boolean
+  )
+  const label = t(current.length > 0 ? 'manage_event' : 'create_event')
+  const close = (): void => set_open(false)
   return (
-    <details className="tourney-admin">
-      <summary>{t('admin')}</summary>
-      {current.length > 0 ? (
-        <div className="tourney-admin-events">
-          <AdminWalletControl />
-          <label className="aui-field">
-            {t('admin_cap')}
-            <input value={admin} onChange={(e) => set_admin(e.target.value)} />
-          </label>
-          {current.map((row) => (
-            <AdminEvent
-              key={row.id}
-              row={row}
-              view={view}
-              disabled={disabled}
-              admin={admin}
-              review={set_review}
-              t={t}
-            />
-          ))}
-        </div>
-      ) : (
-        <TournamentSettingsForm
-          admin={admin}
-          set_admin={set_admin}
-          disabled={disabled}
-          now={view.viewer.now_ms}
-          t={t}
-          review={(settings) => set_review({ action: { kind: 'create', settings }, row: null, submitted: false })}
-        />
+    <>
+      <Button aria-haspopup="dialog" onClick={() => set_open(true)}>
+        {label}
+      </Button>
+      {open && (
+        <NativeModal close={close} label={label} className="aui-modal-scrim">
+          <GameWindow title={label} close={close} close_label={t('close')} className="tourney-admin-window">
+            <section className="tourney-admin">
+              {current.length > 0 ? (
+                <div className="tourney-admin-events">
+                  {current.map((row) => (
+                    <AdminEvent
+                      key={row.id}
+                      row={row}
+                      view={view}
+                      disabled={disabled}
+                      admin={admin}
+                      review={set_review}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <TournamentSettingsForm
+                  admin={admin}
+                  draft={draft}
+                  change={set_draft}
+                  disabled={disabled}
+                  now={view.viewer.now_ms}
+                  t={t}
+                  review={(settings) =>
+                    set_review({ action: { kind: 'create', settings }, row: null, submitted: false })
+                  }
+                />
+              )}
+              <details className="tourney-admin-metadata">
+                <summary>{t('deployment_metadata')}</summary>
+                <p className="tourney-note">{t('display_notice')}</p>
+                <Button
+                  disabled={disabled}
+                  onClick={() => set_review({ action: { kind: 'display' }, row: null, submitted: false })}
+                >
+                  {t('setup_display')}
+                </Button>
+              </details>
+              {review && (
+                <AdminReview
+                  review={review}
+                  update={set_review}
+                  close={() => set_review(null)}
+                  view={view}
+                  disabled={disabled}
+                  t={t}
+                />
+              )}
+            </section>
+          </GameWindow>
+        </NativeModal>
       )}
-      <details className="tourney-admin-metadata">
-        <summary>{t('deployment_metadata')}</summary>
-        <p className="tourney-note">{t('display_notice')}</p>
-        <Button
-          disabled={disabled}
-          onClick={() => set_review({ action: { kind: 'display' }, row: null, submitted: false })}
-        >
-          {t('setup_display')}
-        </Button>
-      </details>
-      {review && (
-        <AdminReview
-          review={review}
-          update={set_review}
-          close={() => set_review(null)}
-          view={view}
-          disabled={disabled}
-          t={t}
-        />
-      )}
-    </details>
+    </>
   )
 }

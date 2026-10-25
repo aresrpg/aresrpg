@@ -3018,6 +3018,7 @@ allocation_page:
   error_x_unavailable: Anfrage fehlgeschlagen. Prüfe die Verbindung und versuche es erneut. X oder die Kampagne ist möglicherweise nicht verfügbar.
 
 tournament_page:
+  manage_event: 'Turnier verwalten'
   practice_hint: 'Spiele kostenlos ein 1-gegen-1-Turnier gegen Bots.'
   contribution_title: 'Vergrößere den Preispool'
   contribution_description: 'Jeder kann beitragen, auch ohne teilzunehmen. Dein Beitrag erhöht den gemeinsamen Preispool des Turniers.'
@@ -3059,7 +3060,6 @@ tournament_page:
   joint_fifth: Geteilter fünfter Platz
   asset: Währung
   admin: Turnierverwaltung
-  admin_cap: AdminCap-Objekt-ID
   create_event: Turnier erstellen
   start: Turnier starten
   setup_display: Display einmal einrichten

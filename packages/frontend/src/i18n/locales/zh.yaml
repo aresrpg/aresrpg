@@ -2983,6 +2983,7 @@ allocation_page:
   error_x_unavailable: 请求未完成。请检查网络后重试，X 或活动服务可能暂时不可用。
 
 tournament_page:
+  manage_event: '管理锦标赛'
   practice_hint: '免费参加与机器人的1对1练习赛。'
   contribution_title: '增加总奖池'
   contribution_description: '任何人都可以捐赠，无需参赛。你的捐赠将增加锦标赛的公共奖池。'
@@ -3024,7 +3025,6 @@ tournament_page:
   joint_fifth: 并列第五
   asset: 货币
   admin: 赛事管理
-  admin_cap: AdminCap 对象 ID
   create_event: 创建赛事
   start: 开始赛事
   setup_display: 首次配置 Display

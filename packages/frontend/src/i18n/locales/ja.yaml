@@ -2995,6 +2995,7 @@ allocation_page:
   error_x_unavailable: 処理できませんでした。接続を確認して再試行してください。X またはキャンペーンが利用できない可能性があります。
 
 tournament_page:
+  manage_event: '大会を管理'
   practice_hint: 'ボットとの1対1の大会を無料で練習できます。'
   contribution_title: '賞金総額を増やす'
   contribution_description: '大会に参加しなくても、誰でも寄付できます。寄付は大会全体の賞金に加算されます。'
@@ -3036,7 +3037,6 @@ tournament_page:
   joint_fifth: 同率5位
   asset: 通貨
   admin: 大会管理
-  admin_cap: AdminCapオブジェクトID
   create_event: 大会を作成
   start: 大会を開始
   setup_display: Displayの初回設定

@@ -3,17 +3,12 @@
 .tourney-admin {
   padding: 16px;
   overflow: auto;
-  border-bottom: 1px solid #ffffff12;
-}
-.tourney-admin > summary {
-  cursor: pointer;
-  font-weight: 800;
-  color: var(--aui-orange);
-  min-height: 30px;
+  min-height: 0;
 }
 .tourney-admin-grid {
+  max-width: 1040px;
   display: grid;
-  grid-template-columns: 1fr 1.1fr 1fr;
+  grid-template-columns: minmax(220px, 260px) 260px minmax(260px, 1fr);
   gap: 18px;
   margin-top: 14px;
 }
@@ -36,7 +31,7 @@
   width: 100%;
 }
 .tourney-admin-split {
-  width: 100%;
+  width: auto;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -46,7 +41,10 @@
   text-align: left;
 }
 .tourney-admin-split input {
-  width: 100%;
+  width: 76px;
+  text-align: right;
+  font-family: 'Tournament Mono', monospace;
+  font-variant-numeric: tabular-nums;
 }
 .tourney-allocation {
   display: flex;
@@ -59,14 +57,54 @@
 .tourney-allocation.is-invalid {
   color: var(--aui-danger);
 }
-.tourney-admin-item {
+.tourney-admin-item,
+.tourney-admin-item-head {
   display: grid;
-  grid-template-columns: 1fr 60px 60px auto;
-  align-items: end;
-  gap: 6px;
-  padding: 8px 0;
+  grid-template-columns: minmax(0, 1fr) 56px 56px 36px;
+  align-items: center;
+  gap: 8px;
+}
+.tourney-admin-item {
+  padding: 5px 0;
   border-bottom: 1px solid #ffffff12;
 }
+.tourney-admin-item-head {
+  color: var(--aui-muted);
+  font-size: 10px;
+  text-align: center;
+}
+.tourney-admin-rewards {
+  gap: 8px;
+}
+.tourney-admin-rewards > .aui-button {
+  align-self: flex-start;
+}
+.tourney-admin-item > .tourney-reward {
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 2px 0;
+}
+.tourney-admin-item .tourney-reward > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tourney-admin-item .tourney-reward img {
+  width: 24px;
+  height: 24px;
+}
+.tourney-admin-item .aui-field :is(input, select) {
+  padding: 6px;
+  text-align: center;
+}
+.tourney-admin-item > .aui-button:last-child {
+  width: 36px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+}
+
 .tourney-admin-review {
   display: flex;
   flex-direction: column;
@@ -101,4 +139,20 @@
 }
 .tourney-admin-event > div:first-child {
   flex: 1;
+}
+
+.tourney-admin .tourney-admin-format {
+  width: 90px;
+}
+.tourney-create-summary {
+  max-width: 760px;
+  gap: 8px;
+}
+.tourney-create-summary > .aui-button {
+  align-self: flex-start;
+}
+
+.tourney-admin-window {
+  width: min(1080px, calc(100cqw - 24px));
+  max-height: calc(100cqh - 24px);
 }

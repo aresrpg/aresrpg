@@ -349,17 +349,29 @@ test('older events with rewards remain selectable without becoming the primary o
 
 test('admin reviews exact percentages and rejects excess precision', async ({ page }) => {
   await visit(page, '?admin')
-  await page.locator('.tourney-admin > summary').click()
-  await page.getByLabel('AdminCap object ID', { exact: true }).fill('0x1')
+  await page.locator('.aui-admin-controls').getByRole('button', { name: 'Create tournament', exact: true }).click()
+  await expect(page.getByLabel('AdminCap object ID', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.tourney-admin [data-wallet-menu]')).toHaveCount(0)
   await page.getByLabel('Name', { exact: true }).fill('Exact cup')
   await page.getByLabel('Latest start', { exact: true }).fill('2027-01-01T12:00')
   const values = ['0.14', '12.34', '23.45', '34.56', '29.51']
   for (const [index, value] of values.entries()) await page.getByLabel(`SUI ${index + 1}`, { exact: true }).fill(value)
-  await expect(page.getByRole('button', { name: 'Create tournament', exact: true })).toBeEnabled()
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Create tournament', exact: true })
+      .getByRole('button', { name: 'Create tournament', exact: true })
+  ).toBeEnabled()
   await page.getByLabel('SUI 1', { exact: true }).fill('0.140')
-  await expect(page.getByRole('button', { name: 'Create tournament', exact: true })).toBeDisabled()
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Create tournament', exact: true })
+      .getByRole('button', { name: 'Create tournament', exact: true })
+  ).toBeDisabled()
   await page.getByLabel('SUI 1', { exact: true }).fill('0.14')
-  await page.getByRole('button', { name: 'Create tournament', exact: true }).click()
+  await page
+    .getByRole('dialog', { name: 'Create tournament', exact: true })
+    .getByRole('button', { name: 'Create tournament', exact: true })
+    .click()
   const dialog = page.getByRole('dialog', { name: 'Confirm · Create tournament', exact: true })
   await expect(dialog.getByText('29.51', { exact: true })).toBeVisible()
   await expect(dialog.getByText('These settings cannot be edited.', { exact: false })).toBeVisible()
@@ -369,8 +381,9 @@ test('admin selects a canonical item and cannot mint multiple copies of unstacka
   page,
 }) => {
   await visit(page, '?admin')
-  await page.locator('.tourney-admin > summary').click()
-  await page.getByLabel('AdminCap object ID', { exact: true }).fill('0x1')
+  await page.locator('.aui-admin-controls').getByRole('button', { name: 'Create tournament', exact: true }).click()
+  await expect(page.getByLabel('AdminCap object ID', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.tourney-admin [data-wallet-menu]')).toHaveCount(0)
   await page.getByLabel('Name', { exact: true }).fill('Equipment cup')
   await page.getByLabel('Latest start', { exact: true }).fill('2027-01-01T12:00')
   await page.getByRole('button', { name: 'Add item reward', exact: true }).click()
@@ -380,15 +393,23 @@ test('admin selects a canonical item and cannot mint multiple copies of unstacka
   const quantity = page.getByLabel('Quantity for reward 1', { exact: true })
   await expect(quantity).toHaveAttribute('max', '1')
   await quantity.fill('2')
-  await expect(page.getByRole('button', { name: 'Create tournament', exact: true })).toBeDisabled()
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Create tournament', exact: true })
+      .getByRole('button', { name: 'Create tournament', exact: true })
+  ).toBeDisabled()
   await quantity.fill('1')
-  await expect(page.getByRole('button', { name: 'Create tournament', exact: true })).toBeEnabled()
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Create tournament', exact: true })
+      .getByRole('button', { name: 'Create tournament', exact: true })
+  ).toBeEnabled()
   await expect(page.getByLabel('Item template ID', { exact: true })).toHaveCount(0)
 })
 
 test('admin start review shows excluded teams and refuses a changed event', async ({ page }) => {
   await visit(page, '?scenario=admin_start')
-  await page.locator('.tourney-admin > summary').click()
+  await page.getByRole('button', { name: 'Manage tournament', exact: true }).click()
   await page.getByRole('button', { name: 'Start tournament', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Confirm · Start tournament', exact: true })
   await expect(dialog.getByText('Excluded incomplete teams: Incomplete', { exact: true })).toBeVisible()
@@ -489,7 +510,7 @@ for (const [width, height] of [
       await page.screenshot({ path: info.outputPath(`${scenario}-${width}x${height}.png`) })
     }
     await visit(page, '?admin')
-    await page.locator('.tourney-admin > summary').click()
+    await page.locator('.aui-admin-controls').getByRole('button', { name: 'Create tournament', exact: true }).click()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: info.outputPath(`admin-${width}x${height}.png`) })
     expect(errors).toEqual([])

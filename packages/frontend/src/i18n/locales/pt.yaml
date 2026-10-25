@@ -2980,6 +2980,7 @@ allocation_page:
   error_x_unavailable: Não foi possível concluir. Verifique a conexão e tente novamente. O X ou a campanha podem estar indisponíveis.
 
 tournament_page:
+  manage_event: 'Gerenciar torneio'
   practice_hint: 'Jogue grátis um torneio 1 contra 1 contra bots.'
   contribution_title: 'Aumente a premiação'
   contribution_description: 'Qualquer pessoa pode contribuir, mesmo sem participar. Sua contribuição aumenta a premiação compartilhada do torneio.'
@@ -3021,7 +3022,6 @@ tournament_page:
   joint_fifth: Quinto lugar compartilhado
   asset: Moeda
   admin: Administração do torneio
-  admin_cap: ID do objeto AdminCap
   create_event: Criar torneio
   start: Iniciar torneio
   setup_display: Configurar Display uma vez

@@ -3,7 +3,6 @@
 import { lazy, memo, Suspense, type ReactNode } from 'react'
 import { CarvedIcon, GameWindow, NativeModal } from '@aresrpg/ui'
 
-import { AdminWalletControl } from '../admin/AdminWalletControl.tsx'
 import type { AppCopy } from '../i18n/copy.ts'
 import type { Locale } from '../i18n/locale.ts'
 import type { Page } from '../modules/navigation.ts'
@@ -12,6 +11,7 @@ import type { GameSettings } from '../game/core/settings.ts'
 import { dispatch_app, useAppStore } from '../store.ts'
 import { HUD_PAGE_META } from '../game/hud/hud_pages.ts'
 const EncyclopediaPage = lazy(() => import('../encyclopedia/EncyclopediaPage.tsx'))
+const AdminControls = lazy(() => import('../admin/AdminControls.tsx'))
 const AdminPage = lazy(() => import('../admin/AdminPage.tsx'))
 const KaresPage = lazy(() => import('../kares/KaresPage.tsx'))
 const MasteryPage = lazy(() => import('../mastery/MasteryPage.tsx'))
@@ -92,7 +92,13 @@ export const GamePageWindow = ({ copy }: Readonly<{ copy: AppCopy }>) => {
     <NativeModal close={close} label={copy[meta.label]} className="aui-modal-scrim">
       <GameWindow
         title={copy[meta.label]}
-        meta={page === 'admin' ? <AdminWalletControl /> : undefined}
+        meta={
+          page === 'admin' ? (
+            <Suspense fallback={null}>
+              <AdminControls />
+            </Suspense>
+          ) : undefined
+        }
         icon={<CarvedIcon name={meta.icon} />}
         close={close}
         close_label={copy.wallet_close}

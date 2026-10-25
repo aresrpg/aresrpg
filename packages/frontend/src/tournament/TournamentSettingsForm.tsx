@@ -10,13 +10,30 @@ import { item_icon } from '../content/assets.ts'
 import { SearchPickerModal } from '../components/SearchPickerModal.tsx'
 import { rolled_item_types } from '../modules/claims.ts'
 import type { CopyText } from '../i18n/copy.ts'
-import { AdminWalletControl } from '../admin/AdminWalletControl.tsx'
 import { minimum_tournament_teams } from '../modules/tournament_selectors.ts'
 
 import { parse_prize_percentages, prize_percentage_balance } from './percentages.ts'
 import { tournament_item, TournamentReward } from './TournamentReward.tsx'
 
 type Reward = TournamentSettings['rewards'][number]
+
+export type TournamentDraft = Readonly<{
+  name: string
+  format: 1 | 3 | 6
+  deadline: string
+  sui: readonly string[]
+  kares: readonly string[]
+  rewards: readonly Reward[]
+}>
+
+export const initial_tournament_draft = (): TournamentDraft => ({
+  name: '',
+  format: 3,
+  deadline: '',
+  sui: ['60', '25', '10', '5', '0'],
+  kares: ['60', '25', '10', '5', '0'],
+  rewards: [],
+})
 
 const AllocationBalance = ({
   values,
@@ -104,14 +121,21 @@ const RewardSettings = ({
     []
   )
   return (
-    <section className="tourney-admin-column">
+    <section className="tourney-admin-column tourney-admin-rewards">
       <h3>{t('items')}</h3>
       <p className="tourney-note">{t('rolled_items_notice')}</p>
+      {rewards.length > 0 && (
+        <div className="tourney-admin-item-head" aria-hidden="true">
+          <span />
+          <span>{t('place')}</span>
+          <span>{t('quantity_short')}</span>
+          <span />
+        </div>
+      )}
       {rewards.map((reward, index) => (
         <div className="tourney-admin-item" key={index}>
           <TournamentReward template={reward.template} amount={reward.amount} />
           <label className="aui-field">
-            <small>{t('place')}</small>
             <select
               aria-label={t('reward_place', { number: index + 1 })}
               value={reward.place}
@@ -127,7 +151,6 @@ const RewardSettings = ({
             </select>
           </label>
           <label className="aui-field">
-            <small>{t('quantity_short')}</small>
             <input
               aria-label={t('reward_quantity', { number: index + 1 })}
               type="number"
@@ -191,25 +214,22 @@ export const valid_tournament_rewards = (rewards: readonly Reward[]): boolean =>
 
 export const TournamentSettingsForm = ({
   admin,
-  set_admin,
+  draft,
+  change,
   disabled,
   now,
   review,
   t,
 }: Readonly<{
   admin: string
-  set_admin: (value: string) => void
+  draft: TournamentDraft
+  change: (draft: TournamentDraft) => void
   disabled: boolean
   now: number | null
   review: (settings: TournamentSettings) => void
   t: CopyText
 }>) => {
-  const [name, set_name] = useState('')
-  const [format, set_format] = useState<1 | 3 | 6>(3)
-  const [deadline, set_deadline] = useState('')
-  const [sui, set_sui] = useState<readonly string[]>(['60', '25', '10', '5', '0'])
-  const [kares, set_kares] = useState<readonly string[]>(['60', '25', '10', '5', '0'])
-  const [rewards, set_rewards] = useState<readonly Reward[]>([])
+  const { name, format, deadline, sui, kares, rewards } = draft
   const sui_bps = parse_prize_percentages(sui)
   const token_bps = parse_prize_percentages(kares)
   const start_before_ms = Date.parse(deadline)
@@ -229,18 +249,13 @@ export const TournamentSettingsForm = ({
       <div className="tourney-admin-grid">
         <section className="tourney-admin-column">
           <h3>{t('organizer_event')}</h3>
-          <AdminWalletControl />
-          <label className="aui-field">
-            {t('admin_cap')}
-            <input value={admin} onChange={(e) => set_admin(e.target.value)} />
-          </label>
           <label className="aui-field">
             {t('name')}
-            <input maxLength={80} value={name} onChange={(e) => set_name(e.target.value)} />
+            <input maxLength={80} value={name} onChange={(e) => change({ ...draft, name: e.target.value })} />
           </label>
-          <label className="aui-field">
+          <label className="aui-field tourney-admin-format">
             {t('format')}
-            <select value={format} onChange={(e) => set_format(Number(e.target.value) as 1 | 3 | 6)}>
+            <select value={format} onChange={(e) => change({ ...draft, format: Number(e.target.value) as 1 | 3 | 6 })}>
               {[1, 3, 6].map((size) => (
                 <option value={size} key={size}>
                   {size}v{size}
@@ -250,15 +265,25 @@ export const TournamentSettingsForm = ({
           </label>
           <label className="aui-field">
             {t('deadline')}
-            <input type="datetime-local" value={deadline} onChange={(e) => set_deadline(e.target.value)} />
+            <input
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => change({ ...draft, deadline: e.target.value })}
+            />
           </label>
           <small>{t('timezone', { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</small>
           <p className="tourney-note">{t('latest_start_notice')}</p>
         </section>
-        <PrizeSplit sui={sui} kares={kares} set_sui={set_sui} set_kares={set_kares} t={t} />
-        <RewardSettings rewards={rewards} change={set_rewards} t={t} />
+        <PrizeSplit
+          sui={sui}
+          kares={kares}
+          set_sui={(sui) => change({ ...draft, sui })}
+          set_kares={(kares) => change({ ...draft, kares })}
+          t={t}
+        />
+        <RewardSettings rewards={rewards} change={(rewards) => change({ ...draft, rewards })} t={t} />
       </div>
-      <div className="tourney-admin-review">
+      <div className="tourney-admin-review tourney-create-summary">
         <p>{minimum === null ? t('invalid_percentage') : t('minimum_teams', { count: minimum })}</p>
         <p className="tourney-note">{t('minimum_notice')}</p>
         <p className="tourney-note">{t('immutable_notice')}</p>

@@ -7,7 +7,7 @@ import { Button, GameWindow, NativeModal } from '@aresrpg/ui'
 import type { AuthSession } from '@aresrpg/sdk/auth'
 import type { TournamentRow } from '@aresrpg/protocol'
 
-import { TournamentAdmin } from '../../src/tournament/TournamentAdmin.tsx'
+import AdminControls from '../../src/admin/AdminControls.tsx'
 import { AddFundsModal } from '../../src/components/AddFundsModal.tsx'
 import { on_gas_empty } from '../../src/toast.ts'
 import { WorldChat } from '../../src/components/Chat.tsx'
@@ -208,13 +208,12 @@ createRoot(document.getElementById('root')!).render(
         <NativeModal label={copy.tournament_page.admin} close={close} className="aui-modal-scrim">
           <GameWindow
             title={copy.tournament_page.admin}
+            meta={<AdminControls />}
             close={close}
             close_label={copy.wallet_close}
-            className="aui-feature-port aui-live-page"
+            className="aui-feature-port aui-live-page aui-admin-port"
           >
-            <div className="aui-live-page-content aui-workspace-main">
-              <TournamentAdmin />
-            </div>
+            <div className="aui-live-page-content aui-workspace-main" />
           </GameWindow>
         </NativeModal>
       ) : (

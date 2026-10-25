@@ -3021,6 +3021,7 @@ allocation_page:
   error_x_unavailable: The request could not complete. Check your connection and try again. X and campaign services may be unavailable.
 
 tournament_page:
+  manage_event: 'Manage tournament'
   practice_hint: 'Play a free 1v1 tournament against bots.'
   contribution_title: 'Grow the prize pool'
   contribution_description: 'Anyone can contribute, even without entering. Your contribution increases the shared tournament prize pool.'
@@ -3062,7 +3063,6 @@ tournament_page:
   joint_fifth: Joint fifth
   asset: Currency
   admin: Tournament administration
-  admin_cap: AdminCap object ID
   create_event: Create tournament
   start: Start tournament
   setup_display: Set up Display once

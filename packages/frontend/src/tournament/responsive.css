@@ -183,7 +183,15 @@
     min-height: 44px;
   }
   .tourney-admin-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(220px, 300px) minmax(240px, 300px);
+  }
+  .tourney-admin-item,
+  .tourney-admin-item-head {
+    grid-template-columns: minmax(0, 1fr) 60px 60px 44px;
+  }
+  .tourney-admin-item > .aui-button:last-child {
+    width: 44px;
+    min-height: 44px;
   }
   .tourney-admin-column:last-child {
     grid-column: 1 / -1;
@@ -317,5 +325,14 @@
   }
   .tourney-rank-emblem {
     display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .tourney-admin-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tourney-admin-column:last-child {
+    grid-column: auto;
   }
 }

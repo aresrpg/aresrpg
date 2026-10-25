@@ -2983,6 +2983,7 @@ allocation_page:
   error_x_unavailable: Không thể hoàn tất. Kiểm tra kết nối rồi thử lại. X hoặc dịch vụ chiến dịch có thể tạm ngừng.
 
 tournament_page:
+  manage_event: 'Quản lý giải đấu'
   practice_hint: 'Chơi giải đấu 1 đấu 1 miễn phí với bot.'
   contribution_title: 'Tăng tổng giải thưởng'
   contribution_description: 'Ai cũng có thể đóng góp, kể cả khi không tham gia. Đóng góp của bạn sẽ tăng quỹ giải thưởng chung của giải đấu.'
@@ -3024,7 +3025,6 @@ tournament_page:
   joint_fifth: Đồng hạng năm
   asset: Tiền tệ
   admin: Quản lý giải đấu
-  admin_cap: ID đối tượng AdminCap
   create_event: Tạo giải đấu
   start: Bắt đầu giải đấu
   setup_display: Thiết lập Display lần đầu
